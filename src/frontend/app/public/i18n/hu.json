@@ -3828,6 +3828,7 @@
       "noMoves": "A fényképen nem találtunk lépéseket.",
       "refused": "Az MI elutasította a kép beolvasását.",
       "truncated": "A válasz megszakadt — próbáld újra.",
+      "timeout": "Az olvasás túl sokáig tartott, ezért leállt — próbáld újra. Ha ismét előfordul, vágd a fotót a lépéstáblázatra.",
       "notConfigured": "A játszmalapok beolvasása ezen a szerveren nincs beállítva.",
       "unsupportedImage": "JPEG, PNG vagy WebP fényképet használj.",
       "tooLarge": "A fénykép túl nagy.",

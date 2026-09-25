@@ -50,12 +50,13 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
     public string? LastRaw { get; private set; }
 
     public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
-        CancellationToken ct = default)
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
         if (!IsConfigured) return new(null, "notConfigured");
         var useSchema = _settings.UseJsonSchema && !_schemaRejected;
+        var system = mode == ScoresheetReadMode.Transcribe ? ScoresheetPrompt.TranscribeSystem : _settings.SystemPrompt;
         var reply = await OpenAiChat.SendAsync(_http, _settings.BaseUrl, _settings.ApiKey,
-            Body(jpeg, instructions, maxTokens, useSchema), ct);
+            Body(jpeg, instructions, maxTokens, useSchema, system), ct);
         if (useSchema && reply.Status == HttpStatusCode.BadRequest)
         {
             // Kein strukturiertes Ausgeben auf diesem Server: einmal ohne, und dabei bleibt es.
@@ -63,7 +64,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
                 _settings.BaseUrl, reply.Error);
             _schemaRejected = true;
             reply = await OpenAiChat.SendAsync(_http, _settings.BaseUrl, _settings.ApiKey,
-                Body(jpeg, instructions, maxTokens, useSchema: false), ct);
+                Body(jpeg, instructions, maxTokens, useSchema: false, system), ct);
         }
         LastRaw = reply.Content;
         if (reply.Error != null)
@@ -79,7 +80,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
             : new(json, null, reply.InputTokens, reply.OutputTokens);
     }
 
-    private JsonObject Body(byte[] jpeg, string instructions, int maxTokens, bool useSchema)
+    private JsonObject Body(byte[] jpeg, string instructions, int maxTokens, bool useSchema, string system)
     {
         var body = new JsonObject
         {
@@ -88,7 +89,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
             ["temperature"] = _settings.Temperature,
             ["messages"] = new JsonArray
             {
-                new JsonObject { ["role"] = "system", ["content"] = _settings.SystemPrompt },
+                new JsonObject { ["role"] = "system", ["content"] = system },
                 new JsonObject
                 {
                     ["role"] = "user",

@@ -257,7 +257,11 @@ public class ScoresheetScanService
     }
 
     /// <summary>Liest eine übernommene Einlesung und legt die Partie an. Scheitert sie, steht der Grund an der Zeile.</summary>
-    public async Task ProcessAsync(int scanId, CancellationToken ct)
+    /// <param name="ct">Bricht die Einlesung ab — beim Herunterfahren ODER am Laufzeit-Deckel des Workers.</param>
+    /// <param name="shutdown">Der Token des Herunterfahrens: nur er lässt die Einlesung auf <c>Running</c> stehen (sie
+    /// kommt beim nächsten Start zurück). Jeder andere Abbruch ist der Laufzeit-Deckel → gescheitert mit
+    /// <c>timeout</c>, Glocke, und der laufende Aufruf wird mit seinem ungünstigsten Fall verbucht.</param>
+    public async Task ProcessAsync(int scanId, CancellationToken ct, CancellationToken shutdown = default)
     {
         var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
         if (scan == null || scan.Status != ScoresheetScanStatus.Running) return;
@@ -265,16 +269,34 @@ public class ScoresheetScanService
         var jpeg = ScoresheetImage.Prepare(scan.Photo, ModelEdge);
         if (jpeg == null) { await FailAsync(scan, "unreadable", ct); return; }
 
-        var outcome = await _reader.ReadAsync(jpeg, scan.NotationLanguage, ct,
-            beforeCall: token => AllowanceAsync(scan.UserId, token),
-            afterCall: async (input, output, token) =>
+        ScoresheetReader.ReadOutcome outcome;
+        try
+        {
+            outcome = await _reader.ReadAsync(jpeg, scan.NotationLanguage, ct,
+                beforeCall: token => AllowanceAsync(scan.UserId, token),
+                afterCall: async (input, output, token) =>
+                {
+                    // SOFORT verbuchen: stürzt der Worker danach ab, ist das Geld trotzdem ausgegeben.
+                    scan.InputTokens += input;
+                    scan.OutputTokens += output;
+                    scan.CostMicroUsd += _budget.CostMicroUsd(input, output);
+                    await _db.SaveChangesAsync(token);
+                });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested && !shutdown.IsCancellationRequested)
+        {
+            // Laufzeit-Deckel mitten in einem Aufruf: was er gekostet hat, meldet die API nicht mehr. Verbucht wird
+            // der ungünstigste Fall — lieber zu viel als eine Kostenbremse, die abgebrochene Aufrufe übersieht.
+            if (_reader.InFlightMaxTokens is int max)
             {
-                // SOFORT verbuchen: stürzt der Worker danach ab, ist das Geld trotzdem ausgegeben.
-                scan.InputTokens += input;
-                scan.OutputTokens += output;
-                scan.CostMicroUsd += _budget.CostMicroUsd(input, output);
-                await _db.SaveChangesAsync(token);
-            });
+                scan.InputTokens += ScoresheetBudget.ReserveInputTokens;
+                scan.OutputTokens += max;
+                scan.CostMicroUsd += _budget.WorstCaseMicroUsd(max);
+            }
+            scan.Model = _vision.Model;
+            await FailAsync(scan, "timeout", CancellationToken.None);
+            return;
+        }
         scan.Model = _vision.Model;
         scan.Rounds = outcome.Rounds;
         if (outcome.Error != null) { await FailAsync(scan, outcome.Error, ct, outcome.Json); return; }

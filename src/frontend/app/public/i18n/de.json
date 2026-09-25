@@ -3828,6 +3828,7 @@
       "noMoves": "Auf dem Foto wurden keine Züge gefunden.",
       "refused": "Die KI hat das Lesen dieses Bildes abgelehnt.",
       "truncated": "Die Antwort wurde abgeschnitten — bitte noch einmal versuchen.",
+      "timeout": "Das Lesen hat zu lange gedauert und wurde abgebrochen — bitte noch einmal versuchen. Passiert es wieder, das Foto auf die Zugtabelle zuschneiden.",
       "notConfigured": "Das Einlesen von Partieformularen ist auf diesem Server nicht eingerichtet.",
       "unsupportedImage": "Bitte ein JPEG-, PNG- oder WebP-Foto verwenden.",
       "tooLarge": "Das Foto ist zu groß.",

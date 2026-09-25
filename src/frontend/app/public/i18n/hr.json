@@ -3828,6 +3828,7 @@
       "noMoves": "Na fotografiji nisu pronađeni potezi.",
       "refused": "AI je odbio čitati ovu sliku.",
       "truncated": "Odgovor je prekinut — pokušaj ponovno.",
+      "timeout": "Čitanje je trajalo predugo i prekinuto je — pokušaj ponovno. Ako se ponovi, izreži fotografiju na tablicu poteza.",
       "notConfigured": "Učitavanje zapisnika nije postavljeno na ovom poslužitelju.",
       "unsupportedImage": "Koristi JPEG, PNG ili WebP fotografiju.",
       "tooLarge": "Fotografija je prevelika.",

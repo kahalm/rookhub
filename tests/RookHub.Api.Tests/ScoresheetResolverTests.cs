@@ -34,6 +34,22 @@ public class ScoresheetResolverTests
     private static readonly ScoresheetResolver.Options German = new(ScoresheetNotation.Find("de"));
 
     [Fact]
+    public void Resolve_BranchBudgetUsedUp_StillMarksEveryBentMove()
+    {
+        // Jeder Eintrag „medium" (so liefert der Rückfall ohne Nachdenken fast alles): die glatten Züge verbrauchen
+        // das Budget für Lesarten (MaxBranchPoints) lange vor 25. Qxd4 — der Lesefehler muss trotzdem markiert sein.
+        var scanned = SheetGerman.Select(w => new ScannedPly(w, null, null, "medium")).ToList();
+
+        var r = ScoresheetResolver.Resolve(scanned, German);
+
+        Assert.True(r.Plies.Count(p => p.Options != null) <= ScoresheetResolver.MaxBranchPoints);
+        Assert.Equal("exd4", r.Plies[48].San);
+        Assert.True(r.Plies[48].Uncertain);
+        Assert.All(r.Plies.Where(p => p.Match is ScoresheetResolver.Matches.Fuzzy or ScoresheetResolver.Matches.Guess),
+            p => Assert.True(p.Uncertain));
+    }
+
+    [Fact]
     public void Resolve_GermanSheetWithoutModelReading_ReconstructsTheWholeGame()
     {
         var sw = Stopwatch.StartNew();

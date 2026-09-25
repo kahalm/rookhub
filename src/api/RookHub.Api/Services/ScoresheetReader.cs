@@ -17,6 +17,21 @@ public sealed class ScoresheetReader
     /// <summary>Lese-Durchgänge insgesamt (1 + Nachfragen).</summary>
     public const int MaxRounds = ScoresheetScanService.MaxRounds;
 
+    /// <summary>
+    /// Antwort-Deckel eines Aufrufs MIT Nachdenken. Am Testsatz brauchte die längste Lesung (92 Halbzüge) 23 142
+    /// Tokens; eine Lesung, die 40 000 übersteigt, hat sich festgedacht (Prod 25.09.: 64 000 Tokens Nachdenken, kein
+    /// Zeichen Antwort). Der Deckel begrenzt den Schaden auf rund 1 $ und lässt im Tagesbudget eines Nutzers
+    /// (2 $) Platz für den Rückfall ohne Nachdenken.
+    /// </summary>
+    public const int FullCallMaxTokens = 40_000;
+
+    /// <summary>Antwort-Deckel ohne Nachdenken: nur das JSON — bei 120 Halbzügen grob 10 000 Tokens.</summary>
+    public const int TranscribeCallMaxTokens = 32_000;
+
+    /// <summary>Deckel des gerade laufenden Aufrufs (<c>null</c> zwischen den Aufrufen) — damit ein von außen
+    /// abgebrochener Aufruf mit seinem ungünstigsten Fall verbucht werden kann.</summary>
+    public int? InFlightMaxTokens { get; private set; }
+
     /// <summary>Ergebnis des Lesens: Transkription + Auflösung, oder ein Fehlergrund.</summary>
     public sealed record ReadOutcome(ScoresheetTranscription? Transcription, ScoresheetResolution? Resolution,
         string? Json, string? Language, int Rounds, string? Error);
@@ -32,15 +47,22 @@ public sealed class ScoresheetReader
     /// <param name="afterCall">Nach jedem Aufruf: verbrauchte Tokens (auch bei Fehlern) verbuchen.</param>
     /// <param name="maxRounds">Durchgänge höchstens — 1 für einen Leser, der den Auftrag nicht liest (dots.ocr:
     /// eine Nachfrage ergäbe dieselbe Lesung noch einmal).</param>
+    /// <remarks>
+    /// Wird ein Aufruf MIT Nachdenken am Deckel abgeschnitten, ist der nächste Durchgang derselbe Auftrag OHNE
+    /// Nachdenken (<see cref="ScoresheetReadMode.Transcribe"/>), und dabei bleibt es auch für die Nachfragen — ein
+    /// weiterer Aufruf mit Nachdenken würde sich an derselben Partie wieder festdenken.
+    /// </remarks>
     public async Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
         Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null,
         int maxRounds = MaxRounds)
     {
         ReadOutcome? best = null;
+        var mode = ScoresheetReadMode.Full;
+        var rounds = Math.Clamp(maxRounds, 1, MaxRounds);
         string? previousJson = null;
         ScoresheetTranscription? previous = null;
         ScoresheetResolution? previousResolution = null;
-        for (var round = 1; round <= Math.Clamp(maxRounds, 1, MaxRounds); round++)
+        for (var round = 1; round <= rounds; round++)
         {
             var instructions = round == 1 || previous == null || previousResolution?.StuckAt is not int stuck
                 ? ScoresheetPrompt.FirstRead(language)
@@ -56,9 +78,19 @@ public sealed class ScoresheetReader
                 if (best != null) return best with { Rounds = round - 1 };
                 return new ReadOutcome(null, null, null, null, 0, blocked);
             }
-            var answer = await _vision.ReadAsync(jpeg, instructions, allowance.MaxTokens, ct);
+            var maxTokens = Math.Min(allowance.MaxTokens,
+                mode == ScoresheetReadMode.Full ? FullCallMaxTokens : TranscribeCallMaxTokens);
+            InFlightMaxTokens = maxTokens;
+            var answer = await _vision.ReadAsync(jpeg, instructions, maxTokens, ct, mode);
+            InFlightMaxTokens = null;
             if (afterCall != null && (answer.InputTokens > 0 || answer.OutputTokens > 0))
                 await afterCall(answer.InputTokens, answer.OutputTokens, ct);
+            if (answer.Error == "truncated" && mode == ScoresheetReadMode.Full && round < rounds)
+            {
+                // Festgedacht: derselbe Auftrag noch einmal, ohne Nachdenken (siehe remarks).
+                mode = ScoresheetReadMode.Transcribe;
+                continue;
+            }
             if (answer.Error != null || answer.Json == null)
             {
                 // Eine gescheiterte NACHFRAGE verwirft die erste Lesung nicht.
@@ -89,7 +121,7 @@ public sealed class ScoresheetReader
             previous = transcription;
             previousResolution = resolution;
         }
-        return best!;
+        return best ?? new ReadOutcome(null, null, null, null, rounds, "failed");
     }
 
     private static bool IsBetter(ScoresheetResolution a, ScoresheetResolution b)

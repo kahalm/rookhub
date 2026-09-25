@@ -55,11 +55,19 @@ public class ScoresheetScanServiceTests : IDisposable
 
         public List<int> MaxTokens { get; } = new();
 
-        public Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default)
+        public List<ScoresheetReadMode> Modes { get; } = new();
+
+        /// <summary>Hängen, bis abgebrochen wird — ein Aufruf, der den Laufzeit-Deckel reißt.</summary>
+        public bool Hang { get; set; }
+
+        public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+            CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
         {
             Instructions.Add(instructions);
             MaxTokens.Add(maxTokens);
-            return Task.FromResult(Answers.Count > 0 ? Answers.Dequeue() : new ScoresheetVisionResult(null, "failed"));
+            Modes.Add(mode);
+            if (Hang) await Task.Delay(Timeout.Infinite, ct);
+            return Answers.Count > 0 ? Answers.Dequeue() : new ScoresheetVisionResult(null, "failed");
         }
     }
 
@@ -449,10 +457,76 @@ public class ScoresheetScanServiceTests : IDisposable
     {
         var u = await UserAsync();
         _vision.Answers.Enqueue(new(null, "truncated", 8_000, 24_000));
+        _vision.Answers.Enqueue(new(null, "truncated", 8_000, 10_000)); // auch der Rückfall ohne Nachdenken
         var scan = await UploadAndProcessAsync(u.Id);
         Assert.Equal("failed", scan.Status);
         Assert.Equal("truncated", scan.Error);
-        Assert.Equal(8_000 * 5 + 24_000 * 25, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+        Assert.Equal([ScoresheetReadMode.Full, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(16_000 * 5 + 34_000 * 25, (await _db.ScoresheetScans.SingleAsync()).CostMicroUsd);
+    }
+
+    // ── Festgedacht (Prod 25.09.: 64 000 Tokens Nachdenken, keine Antwort) ─────────────────────────
+
+    [Fact]
+    public async Task Process_ThinkingCutOff_ReadsAgainWithoutThinking_AndStaysThereForTheSecondLook()
+    {
+        var u = await UserAsync();
+        var broken = Written.ToArray();
+        broken[40] = "Zz9";
+        broken[41] = "Yy8";
+        _vision.Answers.Enqueue(new(null, "truncated", 5_500, 40_000));  // mit Nachdenken: nichts
+        _vision.Answers.Enqueue(new(Answer(broken), null, 5_500, 9_000)); // ohne: bleibt bei Zug 21 hängen
+        _vision.Answers.Enqueue(new(Answer(Written), null, 9_000, 9_000)); // Nachfrage, ebenfalls ohne
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        Assert.Equal(Written.Length, scan.MoveCount);
+        Assert.Equal(3, scan.Rounds);
+        Assert.Equal([ScoresheetReadMode.Full, ScoresheetReadMode.Transcribe, ScoresheetReadMode.Transcribe], _vision.Modes);
+        Assert.Equal(ScoresheetReader.FullCallMaxTokens, _vision.MaxTokens[0]);
+        Assert.Equal(ScoresheetReader.TranscribeCallMaxTokens, _vision.MaxTokens[1]);
+        Assert.DoesNotContain("second look", _vision.Instructions[1]); // derselbe erste Auftrag, nur ohne Nachdenken
+        Assert.Contains("second look", _vision.Instructions[2]);
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal(20_000 * 5 + 58_000 * 25, row.CostMicroUsd); // alle drei Aufrufe verbucht
+    }
+
+    [Fact]
+    public async Task Process_RuntimeCapMidCall_FailsWithTimeout_BooksTheWorstCase_AndRingsTheBell()
+    {
+        var u = await UserAsync();
+        _vision.Hang = true;
+        var (created, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        await _service.ClaimNextAsync(default);
+        using var cap = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await _service.ProcessAsync(created!.Id, cap.Token, shutdown: CancellationToken.None);
+
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Equal(ScoresheetScanStatus.Failed, row.Status);
+        Assert.Equal("timeout", row.Error);
+        // Was der abgebrochene Aufruf gekostet hat, meldet niemand mehr — verbucht wird sein Deckel.
+        Assert.Equal(ScoresheetReader.FullCallMaxTokens, row.OutputTokens);
+        Assert.Equal(ScoresheetBudget.ReserveInputTokens * 5L + ScoresheetReader.FullCallMaxTokens * 25L, row.CostMicroUsd);
+        var note = await _db.Notifications.SingleAsync(n => n.UserId == u.Id);
+        Assert.Equal(NotificationType.ScoresheetFailed, note.Type);
+        Assert.Contains("\"reason\":\"timeout\"", note.DataJson);
+    }
+
+    [Fact]
+    public async Task Process_Shutdown_LeavesTheScanRunning_ForTheNextStart()
+    {
+        var u = await UserAsync();
+        _vision.Hang = true;
+        var (created, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de");
+        await _service.ClaimNextAsync(default);
+        using var stop = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _service.ProcessAsync(created!.Id, stop.Token, stop.Token));
+
+        Assert.Equal(ScoresheetScanStatus.Running, (await _db.ScoresheetScans.SingleAsync()).Status);
+        Assert.Empty(_db.Notifications);
     }
 
     [Fact]

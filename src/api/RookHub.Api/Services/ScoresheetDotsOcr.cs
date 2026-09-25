@@ -66,7 +66,7 @@ public sealed class DotsOcrScoresheetVisionClient : IScoresheetVisionClient
     public string? LastRaw { get; private set; }
 
     public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
-        CancellationToken ct = default)
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
         if (!IsConfigured) return new(null, "notConfigured");
         var body = new JsonObject

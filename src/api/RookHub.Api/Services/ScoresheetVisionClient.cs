@@ -10,6 +10,21 @@ namespace RookHub.Api.Services;
 /// <param name="OutputTokens">Verbrauchte Ausgabe-Tokens inklusive Nachdenken.</param>
 public sealed record ScoresheetVisionResult(string? Json, string? Error, int InputTokens = 0, int OutputTokens = 0);
 
+/// <summary>Wie gelesen wird.</summary>
+public enum ScoresheetReadMode
+{
+    /// <summary>Mit Nachdenken und dem vollen Auftrag (<see cref="ScoresheetPrompt.System"/>: Partie im Kopf mitspielen).</summary>
+    Full,
+
+    /// <summary>
+    /// Ohne Nachdenken, nur abschreiben (<see cref="ScoresheetPrompt.TranscribeSystem"/>) — der Rückfall, wenn eine
+    /// Lesung mit Nachdenken am Deckel abgeschnitten wurde: bei einem langen, verbesserten Formular (60 Züge,
+    /// Streichungen, Pfeile) dachte Claude am 25.09. auf Prod 64 000 Tokens lang nach und schrieb kein einziges Zeichen
+    /// Antwort (1,63 $). Die Legalität prüft ohnehin der Auflöser.
+    /// </summary>
+    Transcribe,
+}
+
 /// <summary>
 /// Liest ein Partieformular vom Foto — hinter einem Interface, damit <see cref="ScoresheetScanService"/>
 /// ohne echten API-Aufruf testbar ist (dasselbe Muster wie <see cref="IClaudeJsonClient"/>).
@@ -24,7 +39,9 @@ public interface IScoresheetVisionClient
 
     /// <summary>Bild + Auftrag → JSON nach <see cref="ScoresheetPrompt.Schema"/>.</summary>
     /// <param name="maxTokens">Antwort-Deckel (Nachdenken + JSON) — aus dem Budget (<see cref="ScoresheetBudget.Allowance"/>).</param>
-    Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default);
+    /// <param name="mode">Mit Nachdenken (Vorgabe) oder nur abschreiben — siehe <see cref="ScoresheetReadMode"/>.</param>
+    Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default,
+        ScoresheetReadMode mode = ScoresheetReadMode.Full);
 }
 
 /// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Bild + structured output).</summary>
@@ -49,17 +66,18 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
     public string Model { get; }
 
     public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
-        CancellationToken ct = default)
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
         if (_client == null) return new(null, "notConfigured");
         try
         {
+            var transcribe = mode == ScoresheetReadMode.Transcribe;
             var parameters = new MessageCreateParams
             {
                 Model = Model,
                 MaxTokens = Math.Clamp(maxTokens, 1024, ScoresheetBudget.MaxOutputTokens),
-                System = ScoresheetPrompt.System,
-                Thinking = new ThinkingConfigAdaptive(),
+                System = transcribe ? ScoresheetPrompt.TranscribeSystem : ScoresheetPrompt.System,
+                Thinking = transcribe ? new ThinkingConfigDisabled() : new ThinkingConfigAdaptive(),
                 OutputConfig = new OutputConfig { Format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema() } },
                 Messages =
                 [

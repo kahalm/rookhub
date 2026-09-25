@@ -535,7 +535,7 @@ public static class ScoresheetResolver
 
         var points = 0;
         var plyIndex = -1;
-        for (var i = 0; i < steps.Count && points < MaxBranchPoints; i++)
+        for (var i = 0; i < steps.Count; i++)
         {
             var step = steps[i];
             if (step.Match == Matches.Skip) continue;       // kein Zug — steht in result.Skipped
@@ -548,6 +548,15 @@ public static class ScoresheetResolver
                 continue;
             }
             var scannedPly = scanned[step.W];
+            var bent = step.Match is Matches.Fuzzy or Matches.Guess or Matches.Alternative;
+            if (points >= MaxBranchPoints)
+            {
+                // Das Budget für die Lesarten ist verbraucht — MARKIERT wird trotzdem, nur ohne Lesarten. Vorher endete
+                // die Schleife hier: an einem langen Formular (Kufstein, 120 Halbzüge, fast alles „medium") verbrauchten
+                // die glatten Züge die 40 Punkte, und ab Zug 28 stand jeder zurechtgebogene Zug da wie ein sicherer.
+                if (bent || scannedPly.Confidence is "low") ply.Uncertain = true;
+                continue;
+            }
             var candidates = Scored(step.FenBefore, step.W, scanned, options, guess: false, cache)
                 .Where(c => c.Uci != step.Uci).OrderBy(c => c.Cost).ToList();
             var smooth = step.Match is Matches.Exact or Matches.Written;
@@ -597,7 +606,6 @@ public static class ScoresheetResolver
                 if (altCost <= chosenCost + RivalMargin) rival = true;
             }
 
-            var bent = step.Match is Matches.Fuzzy or Matches.Guess or Matches.Alternative or Matches.Inserted;
             ply.Uncertain = bent || doubted || conflict || rival;
             ply.Options = ply.Uncertain ? opts : null;
         }

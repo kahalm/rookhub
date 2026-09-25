@@ -162,7 +162,9 @@ foreach (var b in belege)
     r.SollHalbzuege = truth.Count;
     r.SollHinweis = truthNote;
     r.FormularEintraege = sheet.Count;
-    var lang = b.Notation.StartsWith("port", StringComparison.OrdinalIgnoreCase) ? "pt" : "en";
+    // Sprache: ausdrücklich aus belege.json („sprache": Code oder auto), sonst aus der Notation geraten.
+    var lang = b.Sprache ?? (b.Notation.StartsWith("port", StringComparison.OrdinalIgnoreCase) ? "pt"
+        : b.Notation.StartsWith("deut", StringComparison.OrdinalIgnoreCase) ? "de" : "en");
     var sw = Stopwatch.StartNew();
 
     ScoresheetResolution? resolution;
@@ -470,6 +472,7 @@ sealed class BelegInfo
     public string Bild { get; set; } = "";
     public string Quelle { get; set; } = "";
     public string Notation { get; set; } = "";
+    public string? Sprache { get; set; }
     public int Halbzuege { get; set; }
     public int? FormularWeichtAbVonPgn { get; set; }
 }

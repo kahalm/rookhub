@@ -26,8 +26,13 @@ public class ScoresheetScanWorker : BackgroundService
     /// <summary>So oft schaut der Worker ohne Weckruf nach.</summary>
     public static readonly TimeSpan IdlePoll = TimeSpan.FromSeconds(30);
 
-    /// <summary>Deckel für EINE Einlesung (Modell-Aufrufe inklusive Nachfragen).</summary>
-    public static readonly TimeSpan MaxRuntime = TimeSpan.FromMinutes(15);
+    /// <summary>
+    /// Deckel für EINE Einlesung (Modell-Aufrufe inklusive Rückfall und Nachfragen). Ein Aufruf mit Nachdenken bis
+    /// zum Deckel (<see cref="ScoresheetReader.FullCallMaxTokens"/>) dauert bei Opus rund zehn Minuten — die ersten
+    /// 15 Minuten reichten gerade für EINEN solchen Aufruf (Prod 25.09.: 14 min, dann abgeschnitten), für den Rückfall
+    /// und eine Nachfrage blieb keine Zeit.
+    /// </summary>
+    public static readonly TimeSpan MaxRuntime = TimeSpan.FromMinutes(40);
 
     private readonly IServiceScopeFactory _scopes;
     private readonly ScoresheetScanSignal _signal;
@@ -66,7 +71,7 @@ public class ScoresheetScanWorker : BackgroundService
                 {
                     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
                     timeout.CancelAfter(MaxRuntime);
-                    await service.ProcessAsync(scanId, timeout.Token);
+                    await service.ProcessAsync(scanId, timeout.Token, stoppingToken);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

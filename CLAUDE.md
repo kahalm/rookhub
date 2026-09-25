@@ -2116,6 +2116,20 @@ bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/g
   FRÜHERER Eintrag falsch"), höchstens drei Durchgänge; behalten wird die beste Lesung (weitester Weg, dann die
   wenigsten Unsicherheiten). Im PGN stehen `{sheet: Qxd4}` an zurechtgebogenen Zügen und
   `{sheet, not resolved: …}` am letzten Zug.
+* **Festgedacht → ohne Nachdenken abschreiben** (0.532.1, `ScoresheetReadMode`): am 25.09. auf Prod dachte Claude an
+  einem vollen, verbesserten 60-Zug-Formular (Kufstein) 14 Minuten und 64 000 Tokens nach und schrieb kein Zeichen
+  Antwort — 1,63 $, gescheitert mit `truncated`. Seither: ein Aufruf MIT Nachdenken hat höchstens
+  `ScoresheetReader.FullCallMaxTokens` (40 000; am Testsatz brauchte die längste Lesung 23 142), und wird er
+  abgeschnitten, liest der nächste Durchgang denselben Auftrag OHNE Nachdenken (`ThinkingConfigDisabled` +
+  `ScoresheetPrompt.TranscribeSystem`, Deckel `TranscribeCallMaxTokens` 32 000) — und bleibt dabei, auch für die
+  Nachfragen. Der Laufzeit-Deckel des Workers (`ScoresheetScanWorker.MaxRuntime`) steht auf 40 statt 15 Minuten: die
+  15 reichten gerade für EINEN Aufruf. Reißt er trotzdem, ist die Einlesung `timeout` (Glocke), und der laufende Aufruf
+  wird mit seinem ungünstigsten Fall verbucht (Reserve-Eingabe + sein Deckel) — die API meldet dann keine Tokens mehr.
+  Nur das HERUNTERFAHREN lässt eine Einlesung auf `Running` (`ProcessAsync(…, shutdown)`), sie kommt beim Start zurück.
+  Beim Gegenlesen fiel ein zweiter Fehler auf: `AddBranches` hörte nach `MaxBranchPoints` (40) GANZ auf — bei einer
+  langen Lesung mit fast nur „medium" war das Budget nach 28 Zügen verbraucht, und jeder spätere zurechtgebogene Zug
+  stand da wie ein sicherer (Kufstein: 42 repariert, 14 markiert). Jetzt wird über das Budget hinaus weiter MARKIERT
+  (zurechtgebogen oder „low"), nur ohne Lesarten. Am 10er-Testsatz unverändert (578/591, dieselben Markierungen).
 
 **Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
 GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT
@@ -2125,7 +2139,8 @@ Ausgabe, abgebrochene und abgeschnittene Aufrufe zählen mit). Drei Budgets, all
 Nutzer zusammen — schützt das Konto auch bei vielen Nutzern); Preise `Scoresheet:InputUsdPerMTok` (5) /
 `Scoresheet:OutputUsdPerMTok` (25) = Claude Opus 5 — wer das Modell wechselt, stellt sie mit um. **Der
 Antwort-Deckel (max_tokens) kommt aus dem verbleibenden Budget** (`ScoresheetBudget.Allowance`, seit 0.531.0): so viel
-Ausgabe, wie nach 12 000 Eingabe-Tokens Reserve noch bezahlbar ist, höchstens 64 000; unter 16 000 startet der Aufruf
+Ausgabe, wie nach 12 000 Eingabe-Tokens Reserve noch bezahlbar ist, höchstens 64 000 (je Aufruf mit Nachdenken seit
+0.532.1 höchstens 40 000, siehe oben); unter 16 000 startet der Aufruf
 nicht — so wird kein Budget überzogen, und lange Partien bekommen trotzdem Platz (ein fester Deckel von 24 000 schnitt
 am Testsatz die 92-Halbzug-Partie nach 0,63 $ ab). Der Stoppgrund im Stream wird über Gleichheit mit der API-Zeichenkette
 geprüft (`reason == "max_tokens"`), NICHT über `ToString()` — das meldete ein abgeschnittenes Ende als „failed". Geprüft beim Upload (Absage 400 `userDailyBudget`/`userMonthlyBudget`/

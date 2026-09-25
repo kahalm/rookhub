@@ -3828,6 +3828,7 @@
       "noMoves": "No moves were found on the photo.",
       "refused": "The AI declined to read this image.",
       "truncated": "The answer was cut off — please try again.",
+      "timeout": "Reading took too long and was stopped — please try again. If it happens again, crop the photo to the move table.",
       "notConfigured": "Reading scoresheets is not set up on this server.",
       "unsupportedImage": "Please use a JPEG, PNG or WebP photo.",
       "tooLarge": "The photo is too large.",
