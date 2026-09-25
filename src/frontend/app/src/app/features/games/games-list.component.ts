@@ -18,6 +18,9 @@ import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
+import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 /** Solange eine Analyse läuft, holt die Liste alle zehn Sekunden den Stand — derselbe Takt wie die Kurve. */
 export const ANALYSIS_POLL_MS = 10_000;
@@ -31,7 +34,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, TranslatePipe,
+    MatProgressSpinnerModule, MatCheckboxModule, MatMenuModule, MatDialogModule, TranslatePipe,
   ],
   template: `
     <div class="games-page">
@@ -71,7 +74,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
           @for (g of shownGames(); track g.id) {
             <div class="row game">
               <div class="kind">
-                <mat-icon class="src" [matTooltip]="g.source">{{ sourceIcon(g.source) }}</mat-icon>
+                <mat-icon class="src" [matTooltip]="sourceLabel(g.source)">{{ sourceIcon(g.source) }}</mat-icon>
                 @if (timeControl(g); as tc) { <span class="tc">{{ 'games.tc.' + tc.key | translate: tc.params }}</span> }
               </div>
               <!-- Die Namen führen auf die Partie-SEITE (/games/:id) — kein Dialog mehr (gemeldet 2026-09-23). -->
@@ -125,6 +128,18 @@ export type AnalysisState = 'none' | 'running' | 'done';
                   <button mat-menu-item (click)="share(g)">
                     <mat-icon>share</mat-icon><span>{{ 'games.share' | translate }}</span>
                   </button>
+                  <!-- Partieformular (0.529.0): das Foto bleibt an der Partie; korrigieren geht bei jeder Partie. -->
+                  @if (g.scanId) {
+                    <button mat-menu-item (click)="photo(g, false)">
+                      <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
+                    </button>
+                    <button mat-menu-item (click)="photo(g, true)">
+                      <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
+                    </button>
+                  }
+                  <a mat-menu-item [routerLink]="['/games', g.id, 'edit']">
+                    <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                  </a>
                   @if (g.sourceUrl) {
                     <a mat-menu-item [href]="g.sourceUrl" target="_blank" rel="noopener">
                       <mat-icon>open_in_new</mat-icon><span>{{ 'games.openOriginal' | translate }}</span>
@@ -279,6 +294,8 @@ export class GamesListComponent implements OnInit {
 
   private destroyRef = inject(DestroyRef);
   private analyzeGame = inject(AnalyzeGameService);
+  private scoresheets = inject(ScoresheetService);
+  private dialog = inject(MatDialog);
   private poll?: Subscription;
 
   constructor(
@@ -352,7 +369,20 @@ export class GamesListComponent implements OnInit {
   }
 
   sourceIcon(source: string): string {
-    return source === 'lichess' ? 'public' : 'sports_esports';
+    return source === 'lichess' ? 'public' : source === 'scoresheet' ? 'photo_camera' : 'sports_esports';
+  }
+
+  sourceLabel(source: string): string {
+    return source === 'scoresheet' ? this.translate.instant('games.source.scoresheet') : source;
+  }
+
+  /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
+  photo(g: SavedGame, download: boolean): void {
+    if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, g.id); return; }
+    this.scoresheets.photo(g.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: blob => openPhotoBlob(blob, photoFileName(g.id, blob)),
+      error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
+    });
   }
 
   /** PGN nachladen und in der Analyse-Seite öffnen (Übergabe via Router-State). */

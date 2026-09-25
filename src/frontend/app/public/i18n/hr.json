@@ -230,7 +230,8 @@
     "guess": "Bodovna partija",
     "tournamentCalendar": "Kalendar turnira",
     "tournamentHistory": "Moji turniri",
-    "reconstruct": "Rekonstrukcija partije"
+    "reconstruct": "Rekonstrukcija partije",
+    "scoresheet": "Učitaj zapisnik partije"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -2232,7 +2233,8 @@
         "install": "Instaliraj aplikaciju",
         "help": "Pomoć",
         "leaderboards": "Ljestvice",
-        "tournament-calendar": "Kalendar turnira"
+        "tournament-calendar": "Kalendar turnira",
+        "scoresheet": "Učitaj zapisnik partije (fotografija)"
       }
     },
     "messages": {
@@ -2539,7 +2541,56 @@
       "sec": "{{count}} s",
       "days": "{{count}} d/potez"
     },
-    "moreActions": "Više radnji"
+    "moreActions": "Više radnji",
+    "source": {
+      "scoresheet": "Zapisnik"
+    },
+    "photo": {
+      "show": "Prikaži fotografiju zapisnika",
+      "download": "Preuzmi fotografiju",
+      "title": "Zapisnik partije",
+      "loadError": "Fotografiju nije bilo moguće učitati."
+    },
+    "edit": {
+      "menu": "Ispravi partiju",
+      "notFound": "Partija nije pronađena.",
+      "title": "Ispravi partiju",
+      "help": "Klik na potez postavlja ploču na poziciju PRIJE njega. Potez odigran na ploči ga zamjenjuje (ili se u načinu umetanja stavlja ispred njega); potezi nakon njega ostaju dok su legalni. „Obriši potez\" uklanja potez. Spremaju se samo legalni potezi.",
+      "helpScoresheet": "Klik na potez postavlja ploču na poziciju PRIJE njega — dosadašnji potez je žuta strelica. Narančasti potezi su nesigurni: odaberi jedno od ponuđenih čitanja ili odigraj drugi potez na ploči. Nakon svake promjene ostatak partije ponovno se sastavlja iz zapisa na zapisniku.\n\nUmetanje: za potez koji nedostaje na zapisniku. Brisanje: za zapis koji je dvaput ili pogrešno upisan.",
+      "white": "Bijeli",
+      "black": "Crni",
+      "result": "Rezultat",
+      "event": "Turnir",
+      "site": "Mjesto",
+      "round": "Kolo",
+      "date": "Datum",
+      "photo": "Zapisnik partije",
+      "zoomIn": "Povećaj",
+      "zoomOut": "Smanji",
+      "nextUncertain": "Sljedeći nesigurni ({{count}})",
+      "modeReplace": "Zamijeni",
+      "modeInsert": "Umetni ispred",
+      "written": "Na zapisniku: {{text}}",
+      "uncertain": "nesigurno",
+      "confirmed": "potvrđeno",
+      "illegal": "nije legalno",
+      "options": "Najvjerojatnija čitanja:",
+      "reach": "odgovara sljedećim zapisima: {{count}}",
+      "confirm": "Točno",
+      "delete": "Obriši potez",
+      "comment": "Komentar uz ovaj potez",
+      "tipReplace": "Odigraj potez na ploči da zamijeniš ovaj.",
+      "tipInsert": "Odigraj potez na ploči da ga umetneš ispred ovoga.",
+      "tipAppend": "Kraj partije — potez odigran na ploči se dodaje.",
+      "nextWritten": "Sljedeći zapis na zapisniku: {{text}}",
+      "end": "kraj",
+      "unresolvedTitle": "Zapisi na kraju koje nije bilo moguće pridružiti ({{count}}):",
+      "illegalHint": "Poteza koji nakon tvoje promjene više nisu legalni i neće se spremiti: {{count}}.",
+      "resolveFailed": "Ostatak nije bilo moguće ponovno sastaviti — ostaje kakav je bio, dokle je legalan.",
+      "dropIllegal": "Poteza koji nisu legalni i bit će izostavljeni: {{count}}. Ipak spremiti?",
+      "saved": "Partija spremljena.",
+      "saveFailed": "Spremanje nije uspjelo."
+    }
   },
   "analysis": {
     "title": "Analiza",
@@ -3742,5 +3793,47 @@
     "generated": "generirano",
     "generatedHint": "Prijedlog pretrage praznine — dio partije postaje tek kad ga potvrdiš.",
     "showGenerated": "Prikaži prijedloge ({{count}})"
+  },
+  "scoresheet": {
+    "title": "Učitaj zapisnik partije",
+    "hint": "Fotografija zapisnika — partija se pročita, provjeri potez po potez i spremi u tvoje partije.",
+    "help": "Claude (AI model) čita fotografiju; RookHub zatim provjerava svaki potez na ploči i nejasne ranije poteze razrješava pomoću kasnijih. Gdje potez ostane nesiguran, stranica za ispravke prikazuje najvjerojatnija čitanja.\n\nFotografija ostaje uz partiju (⋮ izbornik: prikaži / preuzmi). Rade svi uobičajeni jezici notacije (K D T L S, K Q R B N, R D T F C …).",
+    "notConfigured": "Učitavanje zapisnika nije postavljeno na ovom poslužitelju (nema AI ključa).",
+    "takePhoto": "Snimi fotografiju",
+    "choosePhoto": "Odaberi sliku",
+    "previewAlt": "Odabrani zapisnik",
+    "language": "Notacija na zapisniku",
+    "languageAuto": "Prepoznaj automatski",
+    "read": "Učitaj zapisnik",
+    "quota": "danas {{used}} od {{limit}}",
+    "pending": "Čeka na čitanje …",
+    "running": "Zapisnik se čita …",
+    "runningHint": "Obično traje pola minute do dvije minute ({{seconds}} s). Možeš napustiti stranicu — partija će se pojaviti u tvojim partijama.",
+    "doneTitle": "Učitano: {{moves}} polupoteza",
+    "uncertain": "nesigurno: {{count}}",
+    "unresolved": "nepridruženo: {{count}}",
+    "allClear": "Svaki potez provjeren.",
+    "review": "Provjeri i ispravi",
+    "openGame": "Otvori partiju",
+    "recent": "Nedavno učitano",
+    "moves": "{{count}} polupoteza",
+    "error": {
+      "failed": "Učitavanje nije uspjelo.",
+      "unreadable": "Sliku nije bilo moguće otvoriti.",
+      "noMoves": "Na fotografiji nisu pronađeni potezi.",
+      "refused": "AI je odbio čitati ovu sliku.",
+      "truncated": "Odgovor je prekinut — pokušaj ponovno.",
+      "notConfigured": "Učitavanje zapisnika nije postavljeno na ovom poslužitelju.",
+      "unsupportedImage": "Koristi JPEG, PNG ili WebP fotografiju.",
+      "tooLarge": "Fotografija je prevelika.",
+      "dailyLimit": "Dnevno ograničenje dosegnuto — pokušaj sutra.",
+      "tooManyOpen": "Pričekaj dok se tvoji drugi zapisnici ne pročitaju.",
+      "invalidLanguage": "Nepoznat jezik notacije.",
+      "noFile": "Najprije odaberi fotografiju.",
+      "userDailyBudget": "Tvoj budžet za čitanje za danas je potrošen — pokušaj sutra.",
+      "userMonthlyBudget": "Tvoj budžet za čitanje za zadnjih 30 dana je potrošen.",
+      "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen."
+    },
+    "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje"
   }
 }

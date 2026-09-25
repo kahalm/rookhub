@@ -25,6 +25,8 @@ export interface SavedGame {
   analysis?: SavedGameAnalysis | null;
   /** Stand des Fehler-Trainings (0.524.0); `null` = noch nie trainiert. */
   mistakes?: GameMistakeProgress | null;
+  /** Die Formular-Einlesung, aus der die Partie stammt (0.529.0); `null` = kein Foto. */
+  scanId?: number | null;
 }
 
 /** Kopf der verknüpften Analyse für die Partienliste: Fortschritt, und wenn fertig die Genauigkeit je Seite. */

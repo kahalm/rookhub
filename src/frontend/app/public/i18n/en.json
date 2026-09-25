@@ -230,7 +230,8 @@
     "guess": "Point game",
     "tournamentCalendar": "Tournament calendar",
     "tournamentHistory": "My tournaments",
-    "reconstruct": "Reconstruct game"
+    "reconstruct": "Reconstruct game",
+    "scoresheet": "Read a scoresheet"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2232,7 +2233,8 @@
         "install": "Install app",
         "help": "Help",
         "leaderboards": "Leaderboards",
-        "tournament-calendar": "Tournament calendar"
+        "tournament-calendar": "Tournament calendar",
+        "scoresheet": "Read a scoresheet (photo)"
       }
     },
     "messages": {
@@ -2539,7 +2541,56 @@
       "sec": "{{count}} s",
       "days": "{{count}} d/move"
     },
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "source": {
+      "scoresheet": "Scoresheet"
+    },
+    "photo": {
+      "show": "Show scoresheet photo",
+      "download": "Download photo",
+      "title": "Scoresheet",
+      "loadError": "The photo could not be loaded."
+    },
+    "edit": {
+      "menu": "Correct game",
+      "notFound": "Game not found.",
+      "title": "Correct game",
+      "help": "Click a move to put the board on the position BEFORE it. A move played on the board replaces it (or, in insert mode, goes in front of it); moves after it are kept as long as they stay legal. Delete removes a move. Save keeps only legal moves.",
+      "helpScoresheet": "Click a move to put the board on the position BEFORE it — the current move is the yellow arrow. Orange moves are uncertain: pick one of the offered readings or play a different move on the board. After every change the rest of the game is rebuilt from the scoresheet entries.\n\nInsert mode: for a move that is missing on the sheet. Delete: for an entry that was written twice or does not belong there.",
+      "white": "White",
+      "black": "Black",
+      "result": "Result",
+      "event": "Event",
+      "site": "Site",
+      "round": "Round",
+      "date": "Date",
+      "photo": "Scoresheet",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "nextUncertain": "Next uncertain ({{count}})",
+      "modeReplace": "Replace",
+      "modeInsert": "Insert before",
+      "written": "On the sheet: {{text}}",
+      "uncertain": "uncertain",
+      "confirmed": "confirmed",
+      "illegal": "not legal",
+      "options": "Most likely readings:",
+      "reach": "fits the next {{count}} entries",
+      "confirm": "Correct",
+      "delete": "Delete move",
+      "comment": "Comment on this move",
+      "tipReplace": "Play a move on the board to replace this one.",
+      "tipInsert": "Play a move on the board to insert it before this one.",
+      "tipAppend": "End of the game — a move played on the board is added.",
+      "nextWritten": "Next entry on the sheet: {{text}}",
+      "end": "end",
+      "unresolvedTitle": "{{count}} entries at the end could not be matched:",
+      "illegalHint": "{{count}} moves are no longer legal after your change and will be dropped when saving.",
+      "resolveFailed": "The rest could not be rebuilt — it stays as it was, as far as it is still legal.",
+      "dropIllegal": "{{count}} moves are not legal and will be dropped. Save anyway?",
+      "saved": "Game saved.",
+      "saveFailed": "Saving failed."
+    }
   },
   "analysis": {
     "title": "Analysis",
@@ -3742,5 +3793,47 @@
     "generated": "generated",
     "generatedHint": "Proposed by the gap search — not part of the game until you confirm it.",
     "showGenerated": "Show proposals ({{count}})"
+  },
+  "scoresheet": {
+    "title": "Read a scoresheet",
+    "hint": "Take a photo of a scoresheet — the game is read, checked move by move and stored in your games.",
+    "help": "Claude (an AI model) reads the photo; RookHub then checks every move on a board and uses later moves to settle unclear earlier ones. Where a move stays uncertain, the correction page shows the most likely readings.\n\nThe photo is kept with the game (⋮ menu: show / download). All common notation languages work (K Q R B N, K D T L S, R D T F C …).",
+    "notConfigured": "Reading scoresheets is not set up on this server (no AI key).",
+    "takePhoto": "Take photo",
+    "choosePhoto": "Choose image",
+    "previewAlt": "Selected scoresheet",
+    "language": "Notation on the sheet",
+    "languageAuto": "Detect automatically",
+    "read": "Read scoresheet",
+    "quota": "{{used}} of {{limit}} today",
+    "pending": "Waiting to be read …",
+    "running": "Reading the scoresheet …",
+    "runningHint": "Usually takes half a minute to two minutes ({{seconds}} s). You can leave the page — the game will appear in your games.",
+    "doneTitle": "Read: {{moves}} half-moves",
+    "uncertain": "{{count}} uncertain",
+    "unresolved": "{{count}} not matched",
+    "allClear": "Every move checked.",
+    "review": "Review and correct",
+    "openGame": "Open game",
+    "recent": "Recent scoresheets",
+    "moves": "{{count}} half-moves",
+    "error": {
+      "failed": "Reading failed.",
+      "unreadable": "The image could not be opened.",
+      "noMoves": "No moves were found on the photo.",
+      "refused": "The AI declined to read this image.",
+      "truncated": "The answer was cut off — please try again.",
+      "notConfigured": "Reading scoresheets is not set up on this server.",
+      "unsupportedImage": "Please use a JPEG, PNG or WebP photo.",
+      "tooLarge": "The photo is too large.",
+      "dailyLimit": "Daily limit reached — please try again tomorrow.",
+      "tooManyOpen": "Please wait until your other scoresheets have been read.",
+      "invalidLanguage": "Unknown notation language.",
+      "noFile": "Please choose a photo first.",
+      "userDailyBudget": "Your reading budget for today is used up — please try again tomorrow.",
+      "userMonthlyBudget": "Your reading budget for the last 30 days is used up.",
+      "globalBudget": "Reading is paused for today — the budget for all users is used up."
+    },
+    "budget": "{{percent}} % of your reading budget used"
   }
 }

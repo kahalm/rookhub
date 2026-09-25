@@ -230,7 +230,8 @@
     "guess": "Punktepartie",
     "tournamentCalendar": "Turnierkalender",
     "tournamentHistory": "Meine Turniere",
-    "reconstruct": "Partie rekonstruieren"
+    "reconstruct": "Partie rekonstruieren",
+    "scoresheet": "Partieformular einlesen"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -2232,7 +2233,8 @@
         "install": "App installieren",
         "help": "Hilfe",
         "leaderboards": "Bestenlisten",
-        "tournament-calendar": "Turnierkalender"
+        "tournament-calendar": "Turnierkalender",
+        "scoresheet": "Partieformular einlesen (Foto)"
       }
     },
     "messages": {
@@ -2539,7 +2541,56 @@
       "sec": "{{count}} s",
       "days": "{{count}} T/Zug"
     },
-    "moreActions": "Weitere Aktionen"
+    "moreActions": "Weitere Aktionen",
+    "source": {
+      "scoresheet": "Partieformular"
+    },
+    "photo": {
+      "show": "Formular-Foto anzeigen",
+      "download": "Foto herunterladen",
+      "title": "Partieformular",
+      "loadError": "Das Foto konnte nicht geladen werden."
+    },
+    "edit": {
+      "menu": "Partie korrigieren",
+      "notFound": "Partie nicht gefunden.",
+      "title": "Partie korrigieren",
+      "help": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR. Ein Zug am Brett ersetzt ihn (oder kommt im Einfügen-Modus davor); die Züge danach bleiben, solange sie legal sind. „Zug löschen\" nimmt einen Zug heraus. Gespeichert werden nur legale Züge.",
+      "helpScoresheet": "Ein Klick auf einen Zug stellt das Brett auf die Stellung DAVOR — der bisherige Zug ist der gelbe Pfeil. Orange Züge sind unsicher: eine der angebotenen Lesarten wählen oder am Brett einen anderen Zug spielen. Nach jeder Änderung wird der Rest der Partie aus den Formular-Einträgen neu aufbereitet.\n\nEinfügen: für einen Zug, der auf dem Formular fehlt. Löschen: für einen doppelt oder falsch notierten Eintrag.",
+      "white": "Weiß",
+      "black": "Schwarz",
+      "result": "Ergebnis",
+      "event": "Veranstaltung",
+      "site": "Ort",
+      "round": "Runde",
+      "date": "Datum",
+      "photo": "Partieformular",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "nextUncertain": "Nächste unsichere ({{count}})",
+      "modeReplace": "Ersetzen",
+      "modeInsert": "Davor einfügen",
+      "written": "Auf dem Formular: {{text}}",
+      "uncertain": "unsicher",
+      "confirmed": "bestätigt",
+      "illegal": "nicht legal",
+      "options": "Wahrscheinlichste Lesarten:",
+      "reach": "passt zu den nächsten {{count}} Einträgen",
+      "confirm": "Stimmt",
+      "delete": "Zug löschen",
+      "comment": "Kommentar zu diesem Zug",
+      "tipReplace": "Einen Zug am Brett spielen, um diesen zu ersetzen.",
+      "tipInsert": "Einen Zug am Brett spielen, um ihn vor diesem einzufügen.",
+      "tipAppend": "Ende der Partie — ein Zug am Brett wird angehängt.",
+      "nextWritten": "Nächster Eintrag auf dem Formular: {{text}}",
+      "end": "Ende",
+      "unresolvedTitle": "{{count}} Einträge am Ende ließen sich nicht zuordnen:",
+      "illegalHint": "{{count}} Züge sind nach deiner Änderung nicht mehr legal und fallen beim Speichern weg.",
+      "resolveFailed": "Der Rest konnte nicht neu aufbereitet werden — er bleibt, soweit er noch legal ist.",
+      "dropIllegal": "{{count}} Züge sind nicht legal und fallen weg. Trotzdem speichern?",
+      "saved": "Partie gespeichert.",
+      "saveFailed": "Speichern fehlgeschlagen."
+    }
   },
   "analysis": {
     "title": "Analyse",
@@ -3742,5 +3793,47 @@
     "generated": "generiert",
     "generatedHint": "Vorschlag der Lückensuche — gehört erst zur Partie, wenn du ihn bestätigst.",
     "showGenerated": "Vorschläge anzeigen ({{count}})"
+  },
+  "scoresheet": {
+    "title": "Partieformular einlesen",
+    "hint": "Ein Foto vom Partieformular — die Partie wird gelesen, Zug für Zug geprüft und in deinen Partien abgelegt.",
+    "help": "Claude (ein KI-Modell) liest das Foto; RookHub prüft danach jeden Zug am Brett und entscheidet unklare frühere Züge anhand der späteren. Wo ein Zug unsicher bleibt, zeigt die Korrekturseite die wahrscheinlichsten Lesarten.\n\nDas Foto bleibt bei der Partie (⋮-Menü: anzeigen / herunterladen). Alle gängigen Notationssprachen gehen (K D T L S, K Q R B N, R D T F C …).",
+    "notConfigured": "Das Einlesen von Partieformularen ist auf diesem Server nicht eingerichtet (kein KI-Schlüssel).",
+    "takePhoto": "Foto aufnehmen",
+    "choosePhoto": "Bild auswählen",
+    "previewAlt": "Gewähltes Partieformular",
+    "language": "Notation auf dem Formular",
+    "languageAuto": "Automatisch erkennen",
+    "read": "Formular einlesen",
+    "quota": "{{used}} von {{limit}} heute",
+    "pending": "Wartet aufs Einlesen …",
+    "running": "Das Formular wird gelesen …",
+    "runningHint": "Dauert meist eine halbe bis zwei Minuten ({{seconds}} s). Du kannst die Seite verlassen — die Partie erscheint in deinen Partien.",
+    "doneTitle": "Eingelesen: {{moves}} Halbzüge",
+    "uncertain": "{{count}} unsicher",
+    "unresolved": "{{count}} nicht zugeordnet",
+    "allClear": "Jeder Zug geprüft.",
+    "review": "Prüfen und korrigieren",
+    "openGame": "Partie öffnen",
+    "recent": "Zuletzt eingelesen",
+    "moves": "{{count}} Halbzüge",
+    "error": {
+      "failed": "Das Einlesen ist fehlgeschlagen.",
+      "unreadable": "Das Bild ließ sich nicht öffnen.",
+      "noMoves": "Auf dem Foto wurden keine Züge gefunden.",
+      "refused": "Die KI hat das Lesen dieses Bildes abgelehnt.",
+      "truncated": "Die Antwort wurde abgeschnitten — bitte noch einmal versuchen.",
+      "notConfigured": "Das Einlesen von Partieformularen ist auf diesem Server nicht eingerichtet.",
+      "unsupportedImage": "Bitte ein JPEG-, PNG- oder WebP-Foto verwenden.",
+      "tooLarge": "Das Foto ist zu groß.",
+      "dailyLimit": "Tageskontingent erreicht — bitte morgen wieder.",
+      "tooManyOpen": "Bitte warten, bis deine anderen Formulare gelesen sind.",
+      "invalidLanguage": "Unbekannte Notationssprache.",
+      "noFile": "Bitte zuerst ein Foto wählen.",
+      "userDailyBudget": "Dein Lese-Budget für heute ist aufgebraucht — bitte morgen wieder.",
+      "userMonthlyBudget": "Dein Lese-Budget für die letzten 30 Tage ist aufgebraucht.",
+      "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht."
+    },
+    "budget": "{{percent}} % deines Lese-Budgets verbraucht"
   }
 }

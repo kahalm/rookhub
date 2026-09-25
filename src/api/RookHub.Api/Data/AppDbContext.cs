@@ -149,6 +149,7 @@ public class AppDbContext : DbContext
     public DbSet<RememberedPosition> RememberedPositions => Set<RememberedPosition>();
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
+    public DbSet<ScoresheetScan> ScoresheetScans => Set<ScoresheetScan>();
     public DbSet<GameMistakeProgress> GameMistakeProgresses => Set<GameMistakeProgress>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();
     public DbSet<GameReconstruction> GameReconstructions => Set<GameReconstruction>();
@@ -1184,6 +1185,25 @@ public class AppDbContext : DbContext
             // nicht doppelt gespeichert werden, auch nicht bei parallelem Doppel-Klick. MySQL behandelt
             // NULL-ExternalId als verschieden → mehrere Saves OHNE externe Id (manuell) bleiben erlaubt.
             e.HasIndex(g => new { g.UserId, g.Source, g.ExternalId }).IsUnique();
+        });
+
+        modelBuilder.Entity<ScoresheetScan>(e =>
+        {
+            e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Das Foto gehoert zur Partie: wird sie geloescht, geht es mit.
+            e.HasOne(s => s.Game).WithMany().HasForeignKey(s => s.SavedGameId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(s => s.Photo).HasColumnType("LONGBLOB");
+            e.Property(s => s.ContentType).HasMaxLength(40);
+            e.Property(s => s.FileName).HasMaxLength(200);
+            e.Property(s => s.NotationLanguage).HasMaxLength(8);
+            e.Property(s => s.Error).HasMaxLength(40);
+            e.Property(s => s.Model).HasMaxLength(60);
+            e.Property(s => s.TranscriptionJson).HasColumnType("LONGTEXT");
+            e.Property(s => s.ResolutionJson).HasColumnType("LONGTEXT");
+            // Der Worker sucht die naechste wartende Einlesung; die Tagesgrenze zaehlt je User.
+            e.HasIndex(s => new { s.Status, s.CreatedAt });
+            e.HasIndex(s => new { s.UserId, s.CreatedAt });
+            e.HasIndex(s => s.SavedGameId);
         });
 
         modelBuilder.Entity<GameReconstruction>(e =>

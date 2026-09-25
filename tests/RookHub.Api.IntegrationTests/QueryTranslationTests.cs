@@ -49,6 +49,40 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     }
 
     /// <summary>
+    /// Partieformular (0.529.0): die Partienliste holt die Einlesung je Partie als korrelierte Unterabfrage,
+    /// die Einlesungs-Liste projiziert OHNE das Foto (LONGBLOB) in die Entität, und das Löschen der Partie
+    /// entfernt die Einlesung über einen Platzhalter — alle drei nur gegen echtes SQL prüfbar. Die Einlesung
+    /// steht auf Done, damit der laufende Worker der Test-Anwendung sie nicht anfasst.
+    /// </summary>
+    [MySqlFact]
+    public async Task Partieformular_ListeTraegtScanId_UndLoeschenLaedtDasFotoNicht()
+    {
+        var userId = await SeedUserAsync("sheet");
+        var games = Get<SavedGameService>();
+        var game = await games.CreateGeneratedAsync(userId, SavedGameService.ScoresheetSource, new[] { "e4", "e5" }, null,
+            new RookHub.Api.DTOs.GameHeaderInput("Simultan", null, "2026-06-05", "1", "A", "B", "0-1"));
+        Db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = userId, SavedGameId = game.Id, Photo = new byte[] { 1, 2, 3 }, Status = ScoresheetScanStatus.Done,
+            ResolutionJson = "{\"plies\":[]}",
+        });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var list = await games.ListAsync(userId);
+        var scanId = Assert.Single(list).ScanId;
+        Assert.NotNull(scanId);
+        var scans = Get<ScoresheetScanService>();
+        Assert.Single(await scans.ListAsync(userId));
+        Assert.Equal("done", (await scans.GetAsync(userId, scanId!.Value))!.Status);
+        Assert.Equal(3, (await scans.PhotoForGameAsync(userId, game.Id))!.Value.Data.Length);
+
+        Assert.True(await games.DeleteAsync(userId, game.Id));
+        Db.ChangeTracker.Clear();
+        Assert.False(await Db.ScoresheetScans.AnyAsync());
+    }
+
+    /// <summary>
     /// Der Publikumsfilter des Turnierverzeichnisses rechnet BITWEISE: die Alters-/Nachwuchsklassen
     /// liegen als Bitfeld in einer Spalte, und ein Turnier passt, wenn sich Gesuchtes und
     /// Gefuehrtes ueberschneiden. Genau die Sorte Ausdruck, die EF InMemory im Speicher ausrechnet

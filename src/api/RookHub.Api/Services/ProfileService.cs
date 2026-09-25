@@ -287,6 +287,10 @@ public class ProfileService
         _db.AuthHandoffTokens.RemoveRange(await _db.AuthHandoffTokens.Where(t => t.UserId == userId).ToListAsync());
         // Öffentlich abrufbare Inhalte mit Klarnamen/Fremddaten: geteilte Partien (/g/{token}) und
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
+        // Formular-Fotos zuerst (sie hängen an den Partien, tragen aber auch Namen und Handschrift — und eine
+        // gescheiterte Einlesung hat gar keine Partie). Ohne das Foto zu laden: es ist das Schwergewicht der Zeile.
+        ScoresheetScanService.RemoveWithoutLoading(_db,
+            await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.UserId == userId)));
         _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());
         // „Partie rekonstruieren": erst die Teile, dann die Kopfzeilen — die Löschung anonymisiert
         // nur die Nutzerzeile, es feuert also kein Cascade-FK (und InMemory cascadet ohnehin nicht).

@@ -28,6 +28,8 @@ public static class MenuRegistry
         new MenuItemDef("guess", MenuVisibilityLevel.All),
         new MenuItemDef("games", MenuVisibilityLevel.Registered),
         new MenuItemDef("reconstruct", MenuVisibilityLevel.Registered),
+        // Partieformular einlesen (0.529.0) — jede Einlesung kostet beim Modell; Tagesdeckel je Nutzer.
+        new MenuItemDef("scoresheet", MenuVisibilityLevel.Registered),
         new MenuItemDef("remembered", MenuVisibilityLevel.Registered),
         new MenuItemDef("weekly", MenuVisibilityLevel.Registered),
         new MenuItemDef("courses", MenuVisibilityLevel.Registered),

@@ -73,6 +73,10 @@ public class SavedGameDto
     /// <summary>Bedenkzeit in PGN-Schreibweise (<c>180+2</c>); <c>null</c> = unbekannt.</summary>
     public string? TimeControl { get; set; }
 
+    /// <summary>Die Formular-Einlesung, aus der die Partie stammt (0.529.0) — <c>null</c> = kein Foto. Das ⋮-Menü
+    /// bietet damit „Foto anzeigen/herunterladen", die Korrekturseite die Formular-Einträge.</summary>
+    public int? ScanId { get; set; }
+
     /// <summary>Stand der VERKNUEPFTEN Analyse (<see cref="Models.SavedGame.GameAnalysisId"/>); <c>null</c> =
     /// keine verknuepft oder die Analyse gibt es nicht mehr. Die Liste zeigt damit statt des Analysieren-Knopfs
     /// den Fortschritt und, wenn fertig, die Genauigkeit beider Seiten.</summary>

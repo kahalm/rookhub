@@ -2068,6 +2068,75 @@ statt erst nach einer halben Stunde Rechnen.
 Kommentar, und so bleibt das LONGTEXT-Feld ausserhalb der Antwort. Menue-Key `guess`, Stufe **All**;
 die Route traegt entsprechend keinen `authGuard` mehr.
 
+### Partieformular einlesen (auth, 0.529.0)
+
+Foto eines handgeschriebenen Partieformulars → legale Partie in „Meine Partien" (Quelle `scoresheet`), das Foto
+bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/games/scoresheet` (Upload) und
+`/games/:id/edit` (Korrekturseite, für JEDE eigene Partie). Braucht `Anthropic:ApiKey` (derselbe wie Tipps und
+Übersetzungen); ohne Schlüssel antwortet der Upload 503 `notConfigured` und die Seite sagt es.
+
+**Drei Schichten, jede für sich testbar:**
+* **Lesen** (`ClaudeScoresheetVisionClient`, Modell `Anthropic:ScoresheetModel`, Vorgabe `claude-opus-5`, adaptives
+  Nachdenken, gestreamt, structured output nach `ScoresheetPrompt.Schema`): je Halbzug, was DASTEHT (`written`, in der
+  Sprache des Formulars), die Lesart des Modells als englische SAN, bis zu drei Ersatz-Lesarten und eine Sicherheit.
+  Das Modell soll zuerst das GANZE Formular lesen und die Partie im Kopf mitspielen; Korrekturen (Streichungen,
+  Pfeile, übersprungene Zeilen) löst es selbst und nummeriert neu. Bild vorher aufrecht (EXIF) und auf 2000 px
+  (`ScoresheetImage`).
+* **Auflösen** (`ScoresheetResolver`, rein, ohne Modell): macht daraus die LEGALE Partie, die das ganze Formular am
+  besten erklärt — Strahlsuche über 32 Stellungen statt einer Entscheidung je Zug. Kosten je Halbzug: Lesart des
+  Modells 0, Eintrag in seiner Sprache 0,2 (`ScoresheetNotation`: 18 Sprachen, Groß/klein egal, Langschrift,
+  Figurinen, jede Lesart ist nur ein KANDIDAT — die Stellung entscheidet), Ersatz-Lesart 1, fehlender Zusatz
+  („Sd2" für Sbd2) +0,3, Lesefehler 2,5 je Zeichen, Joker 8. **Der Joker braucht eine Bestätigung** durch den
+  nächsten Eintrag (sonst „löst" die Suche jeden Unsinn auf), höchstens 1 + einer je 15 Einträge, und bei einer
+  Sackgasse geht die Suche bis zu drei Einträge zurück. **Unsichere Stellen** bekommen die drei wahrscheinlichsten
+  Lesarten, jede bis zu 60 Einträge weitergespielt; gemessen wird die GLATTE Reichweite (bis zum ersten Lesefehler
+  oder Joker — mit genug Reparaturen käme fast jede falsche Lesart bis zum Ende). Unsicher bleibt eine Stelle nur,
+  wenn der Zug zurechtgebogen ist, das Modell zweifelte oder eine andere Lesart gleich weit trägt, ohne teurer zu
+  sein; eine Zugumstellung (17. Sbd4/Sfd4 Sxd4 18. Sxd4) gilt als ebenbürtig. Anlass-Partie als Test:
+  `ScoresheetResolverTests` rekonstruiert alle 66 Halbzüge allein aus den deutschen Einträgen.
+* **Ablauf** (`ScoresheetScanService` + `ScoresheetScanWorker`): der Upload legt einen `ScoresheetScan` an
+  (Foto in der DB, `LONGBLOB`, über 12 MB auf 3000 px verkleinert), der Worker liest im Hintergrund — DB-gestützt,
+  eigener Weckruf (`ScoresheetScanSignal`), NICHT die Arbeitsspeicher-Queue (Watchtower-Neustart, Chessable-Import).
+  Beim Start kommen `Running` zurück auf `Pending`, nach `MaxAttempts` (3) ist Schluss. Geht die Lesung irgendwo
+  nicht auf, fragt der Dienst NACH (`ScoresheetPrompt.Repair`: akzeptierte Züge, FEN, legale Züge, „oft ist ein
+  FRÜHERER Eintrag falsch"), höchstens drei Durchgänge; behalten wird die beste Lesung (weitester Weg, dann die
+  wenigsten Unsicherheiten). Im PGN stehen `{sheet: Qxd4}` an zurechtgebogenen Zügen und
+  `{sheet, not resolved: …}` am letzten Zug.
+
+**Kostenbremse** (`ScoresheetBudget`, gewünscht 2026-09-25: „nicht dass einer mein Konto leerräumt"): gerechnet in
+GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dreifache. Jeder Aufruf verbucht SOFORT
+die Tokens, die die API meldet (`InputTokens`/`OutputTokens`/`CostMicroUsd` an der Einlesung; Nachdenken zählt als
+Ausgabe, abgebrochene und abgeschnittene Aufrufe zählen mit). Drei Budgets, alle als Konfiguration mit Vorgabe:
+`Scoresheet:UserDailyUsd` (2), `Scoresheet:UserMonthlyUsd` (10, über 30 Tage), `Scoresheet:GlobalDailyUsd` (15, alle
+Nutzer zusammen — schützt das Konto auch bei vielen Nutzern); Preise `Scoresheet:InputUsdPerMTok` (5) /
+`Scoresheet:OutputUsdPerMTok` (25) = Claude Opus 5 — wer das Modell wechselt, stellt sie mit um. **Ein Aufruf startet
+nur, wenn die RESERVE noch passt** (ungünstigster Fall eines Aufrufs: `MaxTokens` 24 000 Ausgabe + 12 000 Eingabe
+≈ 0,66 $) — so wird kein Budget überzogen. Geprüft beim Upload (Absage 400 `userDailyBudget`/`userMonthlyBudget`/
+`globalBudget`) und vor JEDEM Aufruf im Worker: vor der ersten Lesung scheitert die Einlesung mit dem Grund, vor
+einer Nachfrage entfallen nur die Nachfragen (die Lesung bis dahin bleibt). Admins: keine Nutzerbudgets und keine
+Tageszahl, das Gesamtbudget gilt auch für sie. Dazu weiter `Scoresheet:DailyLimit` (20 Einlesungen je 24 h) und 3
+offene je Nutzer. Die Upload-Seite zeigt den Verbrauch in Prozent (`budgetUsedPercent`, das knappere Budget).
+
+**Korrekturseite**: das Brett zeigt die Stellung VOR dem gewählten Halbzug, ein Zug am Brett ersetzt ihn (oder fügt
+ein), `Zug löschen` streicht ihn. Bei einer eingelesenen Partie wird danach der REST neu aufbereitet
+(`POST …/scoresheet/resolve`, ohne Modell-Aufruf): Präfix = die festen Züge, `writtenFrom` = welcher Formular-Eintrag
+zum nächsten Halbzug gehört (ersetzen: der nächste, einfügen: derselbe, löschen: der übernächste —
+`resolveRequest` in `game-edit.util.ts`). Gespeichert wird über `PUT /api/games/{id}`: Züge werden nachgespielt
+(illegal → 400, nichts geschrieben), nicht bearbeitete Header (Elo, Bedenkzeit, FEN) bleiben, und **ändern sich die
+Züge, fallen `GameAnalysisId` und der Stand des Fehler-Trainings weg** — sie gehörten zu einer anderen Partie. Der
+Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt als `ResolutionJson` an der Einlesung.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/scoresheets/status` | `{ available, dailyLimit, usedToday, budgetUsedPercent, blocked, unlimited, languages[{ code, name, pieces }] }` |
+| GET | `/api/scoresheets?take=` | Die letzten Einlesungen (ohne Foto) |
+| POST | `/api/scoresheets` | Multipart `file` + `language` (Code oder `auto`) → 202 mit der Einlesung; 400 `reason` ∈ `noFile`/`unsupportedImage`/`tooLarge`/`dailyLimit`/`tooManyOpen`/`invalidLanguage`/`userDailyBudget`/`userMonthlyBudget`/`globalBudget`, 503 `notConfigured` |
+| GET | `/api/scoresheets/{id}` | Stand: `pending`/`running`/`done`/`failed` (+ `error`), `savedGameId`, Zähler |
+| PUT | `/api/games/{id}` | Partie korrigieren `{ moves[{ san, comment? }], white, black, result, event, site, round, date, scoresheetPlies? }` (`GameCorrectionController`, eigene Klasse unter derselben Route wie `GamesController`) |
+| GET | `/api/games/{id}/photo?download=` | Das Formular-Foto (404 ohne) |
+| GET | `/api/games/{id}/scoresheet` | Formular-Einträge + Stand je Halbzug für die Korrekturseite |
+| POST | `/api/games/{id}/scoresheet/resolve` | Rest neu aufbereiten `{ prefix[], writtenFrom }` → `{ plies, unresolved, unresolvedFrom }` |
+
 ### Partie rekonstruieren (auth)
 
 Eine am Brett gespielte Partie aus Bruchstücken wieder zusammensetzen. Der Ausgangspunkt ist die
@@ -2317,6 +2386,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), **WhiteElo?/BlackElo? + TimeControl? (≤32, „180+2“) + HeadersScanned (0.526.0 — die Partienliste zeigt Wertung und Bedenkzeit wie chess.coms Übersicht; das PGN dafür zu laden wäre derselbe Fehler, den `MoveCount` schon behoben hat. Der Altbestand bekommt seine Wertungen portionsweise aus dem PGN (`HeaderBackfillPerCall` = 50 je Listenaufruf), und die Marke `HeadersScanned` unterscheidet „noch nicht nachgesehen“ von „nennt keine Wertung“; die Bedenkzeit steht in keinem alten PGN und bleibt dort leer)**, ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
+| ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade (Partie, Konto) räumen OHNE das Foto zu laden ab (`ScoresheetScanService.RemoveWithoutLoading`) |
 | GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), **ShareToken? (≤32, UNIQUE — öffentlicher Link `/r/{token}`, NULL = nicht geteilt) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
 | GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. **`BlackToMove`** gilt nur für eine Zugfolge OHNE Anschluss (sonst sagt es die Stellung davor bzw. die FEN); beim ersten Teil heißt es „das ist nicht die Eröffnung". `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), **Certain (Vorgabe true — „hier bin ich mir nicht sicher" ist die Auskunft; ein per Lückensuche eingesetztes Teil steht auf false)**, FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |

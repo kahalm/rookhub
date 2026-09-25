@@ -289,6 +289,11 @@ try
     builder.Services.AddScoped<TrainingGoalService>();
     builder.Services.AddScoped<RememberedPositionService>();
     builder.Services.AddScoped<SavedGameService>();
+    // Partieformular einlesen (0.529.0): Foto → Claude → legale Partie; eigener DB-gestützter Worker.
+    builder.Services.AddSingleton<IScoresheetVisionClient, ClaudeScoresheetVisionClient>();
+    builder.Services.AddScoped<ScoresheetScanService>();
+    builder.Services.AddSingleton<ScoresheetScanSignal>();
+    builder.Services.AddHostedService<ScoresheetScanWorker>();
     builder.Services.AddScoped<GameMistakeProgressService>();
     builder.Services.AddScoped<GameReconstructionService>();
     builder.Services.AddScoped<SharedLineService>();

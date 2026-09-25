@@ -128,6 +128,8 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `/analysis/jobs` | AnalysisJobsComponent (Hintergrund-Analyseaufträge: Liste + gespeicherte Linien + Tiefe/Linien anpassen; steht VOR `/analysis`) | `authGuard` |
 | `/reconstruct` | ReconstructListComponent („Partie rekonstruieren": Liste anlegen/öffnen/löschen) | `authGuard` + `menuGuard('reconstruct')` |
 | `/games/:id` | SharedGameComponent im Modus `own` (`data.mode`): eigene gespeicherte Partie als Seite — Brett, Zugliste, Bewertungskurve, Analysieren, Teilen-Link; seit 0.513.0 statt des PGN-Viewer-Dialogs | `authGuard` + `menuGuard('games')` |
+| `/games/scoresheet` | ScoresheetUploadComponent (Partieformular einlesen: Foto + Notationssprache, fragt alle 3 s nach, bis die Partie da ist; die letzten Einlesungen darunter; Literal VOR `/games/:id`) | `authGuard` + `menuGuard('scoresheet')` |
+| `/games/:id/edit` | GameEditComponent (Partie korrigieren: Kopfdaten, Cursor-Brett ersetzen/einfügen/löschen; bei eingelesenen Partien Foto, Formular-Einträge, Lesarten mit Reichweite, Rest wird nach jeder Änderung serverseitig neu aufbereitet — Logik rein in `game-edit.util.ts`) | `authGuard` + `menuGuard('games')` |
 | `/reconstruct/:id` | ReconstructDetailComponent (Arbeitsplatz: Teile links, Brett rechts; Zugfolgen werden lokal mit chess.js mitgespielt, geprüft wird serverseitig) | `authGuard` + `menuGuard('reconstruct')` |
 | `/analysis` | AnalysisComponent | nein (öffentlich; Stockfish-MultiPV-Analyse — lokal per WASM, eingeloggt wahlweise über eine externe Engine des eigenen Lichess-Kontos, siehe „Externe Engine" im Haupt-CLAUDE.md) |
 | `/install` | InstallComponent | nein (öffentlich; APK-Download + PWA-Install, plattformabhängig via `PwaInstallService`) |

@@ -171,6 +171,7 @@ public class SavedGameService
                 g.SourceUrl, g.ShareToken, g.MoveCount, g.CreatedAt, g.GameAnalysisId,
                 g.WhiteElo, g.BlackElo, g.TimeControl, g.HeadersScanned,
                 PgnIfUncounted = g.MoveCount == null ? g.Pgn : null,
+                ScanId = _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefault(),
             })
             .ToListAsync();
 
@@ -217,6 +218,7 @@ public class SavedGameService
             BlackElo = r.BlackElo ?? (elos.TryGetValue(r.Id, out var e2) ? e2.Black : null),
             TimeControl = r.TimeControl,
             Analysis = r.GameAnalysisId is int aid && analyses.TryGetValue(aid, out var state) ? state : null,
+            ScanId = r.ScanId,
         }).ToList();
     }
 
@@ -325,6 +327,7 @@ public class SavedGameService
         // beim Teilen-Link, damit die beiden Seiten nicht verschieden herum aufgehen.
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
         dto.OwnerSide = DetermineOwnerSide(g, profile);
+        dto.ScanId = await _db.ScoresheetScans.Where(sc => sc.SavedGameId == g.Id).Select(sc => (int?)sc.Id).FirstOrDefaultAsync();
         return dto;
     }
 
@@ -333,6 +336,9 @@ public class SavedGameService
     {
         var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
         if (g == null) return false;
+        // Das Formular-Foto geht mit (in MariaDB per Cascade — hier ausdrücklich, ohne das Foto zu laden).
+        ScoresheetScanService.RemoveWithoutLoading(_db,
+            await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.SavedGameId == id)));
         _db.SavedGames.Remove(g);
         await _db.SaveChangesAsync();
         return true;
@@ -560,6 +566,145 @@ public class SavedGameService
         if (string.Equals(g.Black?.Trim(), myName.Trim(), StringComparison.OrdinalIgnoreCase)) return "black";
         if (string.Equals(g.White?.Trim(), myName.Trim(), StringComparison.OrdinalIgnoreCase)) return "white";
         return null;
+    }
+
+    // ── Vom Server angelegt + korrigiert (Partieformular, 0.529.0) ─────
+
+    /// <summary>Quelle einer aus einem Formular-Foto eingelesenen Partie.</summary>
+    public const string ScoresheetSource = "scoresheet";
+
+    /// <summary>Die sieben Pflicht-Header in ihrer PGN-Reihenfolge — beim Neuschreiben kommen sie zuerst.</summary>
+    private static readonly string[] SevenTags = { "Event", "Site", "Date", "Round", "White", "Black", "Result" };
+
+    /// <summary>
+    /// Legt eine Partie an, die der SERVER gebaut hat (Formular-Einlesung) — anders als
+    /// <see cref="SaveAsync"/> ohne Dedup und mit freier Quelle. Die Züge müssen legal sein; Kommentare hängen
+    /// am Halbzug-Index wie bei <see cref="PgnWriter.MoveText"/>.
+    /// </summary>
+    public async Task<SavedGame> CreateGeneratedAsync(int userId, string source, IReadOnlyList<string> sans,
+        IReadOnlyDictionary<int, string>? comments, GameHeaderInput header)
+    {
+        var result = header.Result is { } r && AllowedResults.Contains(r) ? r : "*";
+        var entity = new SavedGame
+        {
+            UserId = userId,
+            Source = source,
+            White = Clip(header.White, 120),
+            Black = Clip(header.Black, 120),
+            Result = result,
+            PlayedAt = ParseDate(header.Date),
+            Pgn = BuildHeaderedPgn(new Dictionary<string, string>(), header, result, sans, null, comments),
+            MoveCount = sans.Count,
+            HeadersScanned = true,
+            ShareToken = await GenerateUniqueTokenAsync(),
+            CreatedAt = DateTime.UtcNow,
+        };
+        _db.SavedGames.Add(entity);
+        await _db.SaveChangesAsync();
+        return entity;
+    }
+
+    /// <summary>
+    /// Korrigiert eine eigene Partie: Züge (mit Kommentaren) und Kopfdaten. Die Züge werden ab der
+    /// Ausgangsstellung nachgespielt — ist einer nicht legal, gibt es eine <see cref="ArgumentException"/>
+    /// und nichts wird geschrieben. Header, die hier nicht bearbeitet werden (Elo, Bedenkzeit, FEN), bleiben.
+    ///
+    /// <para>Ändern sich die ZÜGE, gehört die verknüpfte Analyse nicht mehr zur Partie (Kurve, Fehler und
+    /// Genauigkeit rechneten eine andere) — der Verweis fällt, ebenso der Stand des Fehler-Trainings.</para>
+    /// </summary>
+    /// <returns><c>null</c>, wenn die Partie nicht existiert oder fremd ist.</returns>
+    public async Task<SavedGameDetailDto?> UpdateAsync(int userId, int id, GameUpdateDto dto)
+    {
+        var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+        if (g == null) return null;
+
+        var old = PgnParser.SplitGames(g.Pgn).FirstOrDefault();
+        var headers = old.Headers ?? new Dictionary<string, string>();
+        headers.TryGetValue("FEN", out var fenHeader);
+        var startFen = string.IsNullOrWhiteSpace(fenHeader) ? null : fenHeader.Trim();
+
+        var moves = (dto.Moves ?? new()).Where(m => !string.IsNullOrWhiteSpace(m.San)).ToList();
+        if (moves.Count > 600) throw new ArgumentException("Too many moves (max 600 plies).");
+        var sans = LegalSans(moves.Select(m => m.San!.Trim()).ToList(), startFen);
+        var comments = new Dictionary<int, string>();
+        for (var i = 0; i < moves.Count; i++)
+            if (!string.IsNullOrWhiteSpace(moves[i].Comment)) comments[i] = moves[i].Comment!.Trim();
+
+        var result = dto.Result is { } r && AllowedResults.Contains(r.Trim()) ? r.Trim() : "*";
+        var header = new GameHeaderInput(dto.Event, dto.Site, dto.Date, dto.Round, dto.White, dto.Black, result);
+        var oldSans = GamePlies.Parse(g.Pgn, 600)?.Plies.Select(p => p.San).ToList() ?? new List<string>();
+        var movesChanged = !oldSans.SequenceEqual(sans);
+
+        g.Pgn = BuildHeaderedPgn(headers, header, result, sans, startFen, comments);
+        g.White = Clip(dto.White, 120);
+        g.Black = Clip(dto.Black, 120);
+        g.Result = result;
+        g.PlayedAt = ParseDate(dto.Date) ?? (string.IsNullOrWhiteSpace(dto.Date) ? null : g.PlayedAt);
+        g.MoveCount = sans.Count;
+        if (movesChanged)
+        {
+            g.GameAnalysisId = null;
+            var progress = await _db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync();
+            _db.GameMistakeProgresses.RemoveRange(progress);
+        }
+        await _db.SaveChangesAsync();
+        return MapDetail(g);
+    }
+
+    /// <summary>Spielt die Züge nach und gibt sie in der Schreibweise des Bretts zurück; wirft beim ersten
+    /// illegalen Zug (mit seiner Nummer).</summary>
+    public static List<string> LegalSans(IReadOnlyList<string> sans, string? startFen = null)
+    {
+        var board = string.IsNullOrWhiteSpace(startFen) ? new Chess.ChessBoard() : Chess.ChessBoard.LoadFromFen(startFen);
+        var result = new List<string>(sans.Count);
+        for (var i = 0; i < sans.Count; i++)
+        {
+            var legal = board.Moves(generateSan: true);
+            var key = ScoresheetNotation.Key(sans[i]);
+            var move = legal.FirstOrDefault(m => ScoresheetNotation.Key(m.San ?? string.Empty) == key);
+            if (move == null || !board.Move(move))
+                throw new ArgumentException($"Illegal move {sans[i]} at ply {i + 1}.");
+            result.Add(string.IsNullOrEmpty(move.San) ? sans[i] : move.San);
+        }
+        return result;
+    }
+
+    /// <summary>PGN aus vorhandenen Headern (bleiben, soweit hier nicht bearbeitet) + neuen Kopfdaten + Zügen.</summary>
+    private static string BuildHeaderedPgn(Dictionary<string, string> existing, GameHeaderInput header, string result,
+        IReadOnlyList<string> sans, string? startFen, IReadOnlyDictionary<int, string>? comments)
+    {
+        var tags = new Dictionary<string, string>(existing, StringComparer.Ordinal)
+        {
+            ["Event"] = Header(header.Event),
+            ["Site"] = Header(header.Site),
+            ["Date"] = PgnDate(header.Date),
+            ["Round"] = Header(header.Round),
+            ["White"] = Header(header.White),
+            ["Black"] = Header(header.Black),
+            ["Result"] = result,
+        };
+        var sb = new StringBuilder();
+        foreach (var t in SevenTags) sb.Append('[').Append(t).Append(" \"").Append(tags[t]).Append("\"]\n");
+        foreach (var (k, v) in tags.Where(kv => !SevenTags.Contains(kv.Key)))
+            sb.Append('[').Append(k).Append(" \"").Append(Header(v)).Append("\"]\n");
+        sb.Append('\n');
+        sb.Append(PgnWriter.MoveText(sans, startFen, comments, result));
+        return sb.ToString();
+    }
+
+    /// <summary>Datum aus dem Formular: <c>2026-06-05</c>, <c>2026.06.05</c> oder <c>5.6.2026</c> → PGN
+    /// <c>2026.06.05</c>; sonst <c>????.??.??</c>.</summary>
+    private static string PgnDate(string? date)
+        => ParseDate(date) is { } d ? d.ToString("yyyy.MM.dd") : "????.??.??";
+
+    private static DateTime? ParseDate(string? date)
+    {
+        if (string.IsNullOrWhiteSpace(date)) return null;
+        var formats = new[] { "yyyy-MM-dd", "yyyy.MM.dd", "d.M.yyyy", "dd.MM.yyyy", "d.M.yy", "dd.MM.yy", "yyyy/MM/dd" };
+        return DateTime.TryParseExact(date.Trim(), formats, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var d)
+            ? DateTime.SpecifyKind(d.Date, DateTimeKind.Utc)
+            : null;
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

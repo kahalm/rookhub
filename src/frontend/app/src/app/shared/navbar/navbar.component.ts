@@ -131,6 +131,7 @@ import {
         <mat-menu #libraryMenu="matMenu">
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
+          @if (can('scoresheet')) { <button mat-menu-item routerLink="/games/scoresheet">{{ 'nav.scoresheet' | translate }}</button> }
           @if (can('reconstruct')) { <button mat-menu-item routerLink="/reconstruct">{{ 'nav.reconstruct' | translate }}</button> }
           @if (can('remembered')) { <button mat-menu-item routerLink="/remembered">{{ 'nav.remembered' | translate }}</button> }
           @if (showCatalog && can('catalog')) {
@@ -294,7 +295,7 @@ export class NavbarComponent implements OnInit {
       || this.can('worksheets') || (this.showCourses && this.can('courses'));
   }
   get anyLibrary(): boolean {
-    return this.can('analysis') || this.can('games') || this.can('reconstruct') || this.can('remembered')
+    return this.can('analysis') || this.can('games') || this.can('scoresheet') || this.can('reconstruct') || this.can('remembered')
       || (this.showCatalog && this.can('catalog'));
   }
 

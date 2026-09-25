@@ -31,6 +31,10 @@ import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-
 import { LiveEngineSession } from './live-engine-session';
 import { LiveEnginePanelComponent } from './live-engine-panel.component';
 import { PositionMenuComponent } from '../analysis/position-menu.component';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
+import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
@@ -47,7 +51,7 @@ import { PositionMenuComponent } from '../analysis/position-menu.component';
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
-    MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent,
+    MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MatMenuModule, MatDialogModule,
   ],
   providers: [PgnViewerService],
   template: `
@@ -75,7 +79,7 @@ import { PositionMenuComponent } from '../analysis/position-menu.component';
               </span>
               <span class="meta">
                 @if (game.result && game.result !== '*') { <span class="result">{{ game.result }}</span> }
-                <span>{{ game.source }}</span>
+                <span>{{ game.source === 'scoresheet' ? ('games.source.scoresheet' | translate) : game.source }}</span>
                 <span class="date">{{ (game.playedAt || game.createdAt) | date:'mediumDate' }}</span>
               </span>
             </div>
@@ -110,6 +114,26 @@ import { PositionMenuComponent } from '../analysis/position-menu.component';
                 <button mat-stroked-button class="share" (click)="share()">
                   <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
                 </button>
+              }
+              <!-- Die eigene Partie: korrigieren und — bei einer eingelesenen — das Formular-Foto (0.529.0). -->
+              @if (own && gameId) {
+                <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu"
+                        [matTooltip]="'games.moreActions' | translate" [attr.aria-label]="'games.moreActions' | translate">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #gameMenu="matMenu">
+                  <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
+                    <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                  </a>
+                  @if (scanId) {
+                    <button mat-menu-item (click)="photo(false)">
+                      <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
+                    </button>
+                    <button mat-menu-item (click)="photo(true)">
+                      <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
+                    </button>
+                  }
+                </mat-menu>
               }
             </div>
           </div>
@@ -278,6 +302,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private analyzeGame = inject(AnalyzeGameService);
   private mistakeJudge = inject(MistakeJudgeService);
   private externalEngines = inject(ExternalEngineService);
+  private scoresheets = inject(ScoresheetService);
+  private dialog = inject(MatDialog);
 
   game: SharedGame | null = null;
   loading = true;
@@ -319,7 +345,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Laufendes Training „Eigene Fehler nachspielen" — `null` = die Seite zeigt die Partie. */
   readonly training = signal<MistakesSession | null>(null);
   /** Id der eigenen Partie (`/games/:id`) — ohne sie wird nichts gemeldet (geteilte Ansicht). */
-  private gameId: number | null = null;
+  gameId: number | null = null;
+  /** Formular-Einlesung der eigenen Partie (0.529.0) — `null` = kein Foto. */
+  scanId: number | null = null;
   /** Schon gemeldete Halbzüge und Aufgabenzahl: verhindert, dass jeder Zug dieselbe Meldung wiederholt. */
   private readonly reportedPlies = new Set<number>();
   private reportedTotal = -1;
@@ -515,7 +543,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       this.evalsUrl = this.games.evalsUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
       this.games.get(id).subscribe({
-        next: g => { this.shareToken = g.shareToken; this.show(g); },
+        next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); },
         error: () => { this.notFound = true; this.loading = false; },
       });
       return;
@@ -547,6 +575,16 @@ export class SharedGameComponent implements OnInit, DoCheck {
     if (this.auth.isLoggedIn) {
       this.analyzeGame.status().subscribe(u => this.uploadStatus.set(u));
     }
+  }
+
+  /** Das Formular-Foto der eigenen, eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
+  photo(download: boolean): void {
+    if (!this.gameId) return;
+    if (!download) { ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId); return; }
+    this.scoresheets.photo(this.gameId).subscribe({
+      next: blob => openPhotoBlob(blob, photoFileName(this.gameId!, blob)),
+      error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
+    });
   }
 
   /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */

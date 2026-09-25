@@ -73,7 +73,8 @@
     "guess": "Pontjátszma",
     "tournamentCalendar": "Versenynaptár",
     "tournamentHistory": "Versenyeim",
-    "reconstruct": "Játszma rekonstruálása"
+    "reconstruct": "Játszma rekonstruálása",
+    "scoresheet": "Játszmalap beolvasása"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -1847,7 +1848,8 @@
         "install": "Alkalmazás telepítése",
         "help": "Súgó",
         "leaderboards": "Ranglisták",
-        "tournament-calendar": "Versenynaptár"
+        "tournament-calendar": "Versenynaptár",
+        "scoresheet": "Játszmalap beolvasása (fénykép)"
       }
     },
     "messages": {
@@ -2801,7 +2803,56 @@
       "sec": "{{count}} mp",
       "days": "{{count}} nap/lépés"
     },
-    "moreActions": "További műveletek"
+    "moreActions": "További műveletek",
+    "source": {
+      "scoresheet": "Játszmalap"
+    },
+    "photo": {
+      "show": "Játszmalap fényképének megjelenítése",
+      "download": "Fénykép letöltése",
+      "title": "Játszmalap",
+      "loadError": "A fényképet nem sikerült betölteni."
+    },
+    "edit": {
+      "menu": "Játszma javítása",
+      "notFound": "A játszma nem található.",
+      "title": "Játszma javítása",
+      "help": "Egy lépésre kattintva a tábla az ELŐTTE lévő állásra ugrik. A táblán megtett lépés felülírja (beszúrás módban elé kerül); az utána következő lépések megmaradnak, amíg szabályosak. A „Lépés törlése” kivesz egy lépést. Csak a szabályos lépések kerülnek mentésre.",
+      "helpScoresheet": "Egy lépésre kattintva a tábla az ELŐTTE lévő állásra ugrik — az eddigi lépés a sárga nyíl. A narancssárga lépések bizonytalanok: válassz a felkínált olvasatok közül, vagy lépj mást a táblán. Minden változtatás után a játszma hátralévő része újra összeáll a játszmalap bejegyzéseiből.\n\nBeszúrás: a lapról hiányzó lépéshez. Törlés: kétszer vagy tévesen felírt bejegyzéshez.",
+      "white": "Világos",
+      "black": "Sötét",
+      "result": "Eredmény",
+      "event": "Esemény",
+      "site": "Helyszín",
+      "round": "Forduló",
+      "date": "Dátum",
+      "photo": "Játszmalap",
+      "zoomIn": "Nagyítás",
+      "zoomOut": "Kicsinyítés",
+      "nextUncertain": "Következő bizonytalan ({{count}})",
+      "modeReplace": "Felülírás",
+      "modeInsert": "Beszúrás elé",
+      "written": "A lapon: {{text}}",
+      "uncertain": "bizonytalan",
+      "confirmed": "megerősítve",
+      "illegal": "szabálytalan",
+      "options": "Legvalószínűbb olvasatok:",
+      "reach": "illik a következő {{count}} bejegyzéshez",
+      "confirm": "Helyes",
+      "delete": "Lépés törlése",
+      "comment": "Megjegyzés ehhez a lépéshez",
+      "tipReplace": "Lépj a táblán, hogy felülírd ezt a lépést.",
+      "tipInsert": "Lépj a táblán, hogy ez elé szúrd be.",
+      "tipAppend": "A játszma vége — a táblán megtett lépés a végére kerül.",
+      "nextWritten": "Következő bejegyzés a lapon: {{text}}",
+      "end": "vége",
+      "unresolvedTitle": "A végén {{count}} bejegyzést nem sikerült hozzárendelni:",
+      "illegalHint": "A változtatásod után {{count}} lépés már nem szabályos, mentéskor kimaradnak.",
+      "resolveFailed": "A hátralévő részt nem sikerült újra összeállítani — marad, ameddig szabályos.",
+      "dropIllegal": "{{count}} lépés nem szabályos és kimarad. Mégis mented?",
+      "saved": "Játszma mentve.",
+      "saveFailed": "A mentés nem sikerült."
+    }
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",
@@ -3742,5 +3793,47 @@
     "generated": "generált",
     "generatedHint": "A hézagkereső javaslata — csak akkor lesz a parti része, ha megerősíted.",
     "showGenerated": "Javaslatok mutatása ({{count}})"
+  },
+  "scoresheet": {
+    "title": "Játszmalap beolvasása",
+    "hint": "Egy fénykép a játszmalapról — a játszmát beolvassuk, lépésenként ellenőrizzük és elmentjük a játszmáid közé.",
+    "help": "Claude (egy MI-modell) olvassa el a fényképet; a RookHub ezután minden lépést táblán ellenőriz, és a későbbi lépések alapján dönti el a korábbi bizonytalanokat. Ahol egy lépés bizonytalan marad, a javító oldal a legvalószínűbb olvasatokat mutatja.\n\nA fénykép a játszmánál marad (⋮ menü: megjelenítés / letöltés). Minden szokásos lejegyzési nyelv működik (K V B F H, K Q R B N, K D T L S …).",
+    "notConfigured": "A játszmalapok beolvasása ezen a szerveren nincs beállítva (nincs MI-kulcs).",
+    "takePhoto": "Fénykép készítése",
+    "choosePhoto": "Kép kiválasztása",
+    "previewAlt": "Kiválasztott játszmalap",
+    "language": "Lejegyzés a lapon",
+    "languageAuto": "Automatikus felismerés",
+    "read": "Játszmalap beolvasása",
+    "quota": "ma {{used}} / {{limit}}",
+    "pending": "Beolvasásra vár …",
+    "running": "A játszmalap olvasása folyik …",
+    "runningHint": "Általában fél–két percig tart ({{seconds}} mp). Elhagyhatod az oldalt — a játszma megjelenik a játszmáid között.",
+    "doneTitle": "Beolvasva: {{moves}} féllépés",
+    "uncertain": "{{count}} bizonytalan",
+    "unresolved": "{{count}} nincs hozzárendelve",
+    "allClear": "Minden lépés ellenőrizve.",
+    "review": "Ellenőrzés és javítás",
+    "openGame": "Játszma megnyitása",
+    "recent": "Legutóbb beolvasott",
+    "moves": "{{count}} féllépés",
+    "error": {
+      "failed": "A beolvasás nem sikerült.",
+      "unreadable": "A képet nem sikerült megnyitni.",
+      "noMoves": "A fényképen nem találtunk lépéseket.",
+      "refused": "Az MI elutasította a kép beolvasását.",
+      "truncated": "A válasz megszakadt — próbáld újra.",
+      "notConfigured": "A játszmalapok beolvasása ezen a szerveren nincs beállítva.",
+      "unsupportedImage": "JPEG, PNG vagy WebP fényképet használj.",
+      "tooLarge": "A fénykép túl nagy.",
+      "dailyLimit": "Elérted a napi keretet — próbáld holnap.",
+      "tooManyOpen": "Várj, amíg a többi játszmalapod beolvasása befejeződik.",
+      "invalidLanguage": "Ismeretlen lejegyzési nyelv.",
+      "noFile": "Előbb válassz egy fényképet.",
+      "userDailyBudget": "A mai olvasási kereted elfogyott — próbáld holnap.",
+      "userMonthlyBudget": "Az elmúlt 30 napra szóló olvasási kereted elfogyott.",
+      "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott."
+    },
+    "budget": "az olvasási kereted {{percent}} %-a elfogyott"
   }
 }
