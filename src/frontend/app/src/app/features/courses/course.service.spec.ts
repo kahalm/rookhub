@@ -128,4 +128,66 @@ describe('CourseService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ bookId: 9, isCalculation: true, chapter: 'KW 46/47', chapterIndex: null });
   });
+
+  // ---- Kurs-Übersetzung (Stufe C): `?lang=` an allen Kurs-Endpunkten aus Stufe A ----------------
+
+  it('schickt die gewählte Sprache als lang mit (Kurs-Einstiege)', () => {
+    svc.getNext(7, 'random', undefined, 3, 2, 'de').subscribe();
+    const next = http.expectOne(r => r.url === '/api/courses/7/next');
+    expect(next.request.params.get('lang')).toBe('de');
+    expect(next.request.params.get('chapterIndex')).toBe('2');
+    next.flush({ puzzle: null, solvedCount: 0, total: 0, completed: true });
+
+    svc.getBookPuzzles(7, 'fr').subscribe();
+    const all = http.expectOne(r => r.url === '/api/courses/7/puzzles');
+    expect(all.request.params.get('lang')).toBe('fr');
+    all.flush([]);
+
+    svc.getPublicCourse(7, 0, 300, 'hr').subscribe();
+    const pub = http.expectOne(r => r.url === '/api/courses/7/public');
+    expect(pub.request.params.get('lang')).toBe('hr');
+    expect(pub.request.params.get('take')).toBe('300');
+    pub.flush([]);
+
+    svc.getChapters(7, 'de').subscribe();
+    const ch = http.expectOne(r => r.url === '/api/courses/7/chapters');
+    expect(ch.request.params.get('lang')).toBe('de');
+    ch.flush([]);
+
+    svc.getDetail(7, 'de').subscribe();
+    const det = http.expectOne(r => r.url === '/api/courses/7');
+    expect(det.request.params.get('lang')).toBe('de');
+    det.flush({});
+  });
+
+  it('ohne Sprache kein lang-Parameter — der Server liefert dann exakt das Original', () => {
+    svc.getBookPuzzles(7).subscribe();
+    const req = http.expectOne('/api/courses/7/puzzles');
+    expect(req.request.params.has('lang')).toBeFalse();
+    req.flush([]);
+    svc.getNext(7, 'sequential', undefined, undefined, undefined, null).subscribe();
+    const next = http.expectOne(r => r.url === '/api/courses/7/next');
+    expect(next.request.params.has('lang')).toBeFalse();
+    next.flush({ puzzle: null, solvedCount: 0, total: 0, completed: true });
+  });
+
+  it('Übersetzungen: lesen, anfordern (mit Status), zurückziehen', () => {
+    svc.getTranslations(7).subscribe();
+    const get = http.expectOne('/api/courses/7/translations');
+    expect(get.request.method).toBe('GET');
+    get.flush({ sourceLanguage: 'en', languages: [], jobs: [], available: true, canRequest: true });
+
+    let status = 0;
+    svc.requestTranslation(7, 'de').subscribe(res => status = res.status);
+    const post = http.expectOne('/api/courses/7/translations');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({ language: 'de' });
+    post.flush({ id: 1 }, { status: 202, statusText: 'Accepted' });
+    expect(status).toBe(202);
+
+    svc.withdrawTranslation(7, 12).subscribe();
+    const del = http.expectOne('/api/courses/7/translations/12');
+    expect(del.request.method).toBe('DELETE');
+    del.flush(null, { status: 204, statusText: 'No Content' });
+  });
 });

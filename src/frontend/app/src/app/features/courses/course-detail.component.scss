@@ -21,6 +21,19 @@
   word-break: break-word;
 }
 
+/* Sprachwahl rechts in der Kopfzeile (nur sichtbar, wenn der Kurs mehr als eine Sprache hat). */
+.topbar-spacer { flex: 1 1 auto; }
+
+.offline-lang-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
 .center {
   display: flex;
   justify-content: center;

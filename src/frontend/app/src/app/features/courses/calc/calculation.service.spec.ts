@@ -15,6 +15,15 @@ describe('CalculationService', () => {
 
   afterEach(() => http.verify());
 
+  it('schickt die Sprache der Kurs-Übersetzung als lang mit (Buch, öffentliches Buch, Stellung)', () => {
+    svc.getBook(7, 'de').subscribe();
+    expect(http.expectOne(r => r.url === '/api/calculations/books/7').request.params.get('lang')).toBe('de');
+    svc.getPublicBook(7, 'fr').subscribe();
+    expect(http.expectOne(r => r.url === '/api/calculations/books/7/public').request.params.get('lang')).toBe('fr');
+    svc.getPosition(11, 'hr').subscribe();
+    expect(http.expectOne(r => r.url === '/api/calculations/positions/11').request.params.get('lang')).toBe('hr');
+  });
+
   it('holt das eingeloggte Buch vom nutzerbezogenen Endpoint', () => {
     svc.getBook(7).subscribe();
     expect(http.expectOne('/api/calculations/books/7').request.method).toBe('GET');

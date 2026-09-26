@@ -27,12 +27,18 @@ import { SharePuzzleDialogComponent } from '../puzzles/share-puzzle-dialog.compo
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { groupByChapter } from '../../shared/lines/chapter-groups.util';
 import { MarkSet } from '../../shared/lines/mark-set';
+import { CourseLanguageService, CourseRef } from './course-language.service';
+import { labelOr } from './course-language.util';
+import { CourseLangPickerComponent, MachineNoteComponent } from './course-lang-picker.component';
 
 /** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). Die Gruppierung selbst
  *  liegt in `shared/lines/chapter-groups.util` — sie teilt sich diese Ansicht mit der
  *  Repertoire-Linienliste. */
 interface ChapterGroup {
+  /** Kapitel-SCHLÜSSEL (Original); null = „ohne Kapitel". */
   name: string | null;
+  /** Angezeigter Name (Übersetzung, sonst das Original). */
+  label: string | null;
   lines: BookPuzzleDto[];
 }
 
@@ -52,7 +58,7 @@ interface ChapterGroup {
   imports: [
     CommonModule, RouterModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, ReviewNavComponent, LoadingSpinnerComponent,
-    SendToWorksheetComponent,
+    SendToWorksheetComponent, CourseLangPickerComponent, MachineNoteComponent,
   ],
   template: `
     <div class="browse-container">
@@ -64,11 +70,14 @@ interface ChapterGroup {
         <div class="head-text">
           <h1>{{ bookTitle || ('courses.browse.title' | translate) }}</h1>
           <p class="sub">
-            {{ chapterName !== undefined ? (chapterName || ('courses.browse.noChapter' | translate)) : ('courses.browse.allChapters' | translate) }}
+            {{ chapterName !== undefined ? (chapterDisplay || ('courses.browse.noChapter' | translate)) : ('courses.browse.allChapters' | translate) }}
             <span class="dot">·</span>{{ 'courses.browse.lineCount' | translate:{ count: lines.length } }}
           </p>
         </div>
         <span class="head-spacer"></span>
+        <app-course-lang-picker [languages]="courseLang.languages(langRef)"
+                                [value]="courseLang.effective(langRef)"
+                                (picked)="pickLanguage($event)" />
         @if (marked.size > 0) {
           <button mat-stroked-button class="fc-btn fc-btn--marked" (click)="openMarkedFlashcards()"
                   [matTooltip]="'courses.flashcards.markedTooltip' | translate">
@@ -93,7 +102,7 @@ interface ChapterGroup {
           <aside class="line-list" role="listbox">
             @for (g of groups; track g.name) {
               @if (chapterName === undefined && groups.length > 1) {
-                <div class="chapter-head">{{ g.name || ('courses.browse.noChapter' | translate) }}</div>
+                <div class="chapter-head">{{ g.label || ('courses.browse.noChapter' | translate) }}</div>
               }
               @for (line of g.lines; track line.id) {
                 <div class="line-row" [class.active]="selected?.id === line.id">
@@ -115,7 +124,7 @@ interface ChapterGroup {
                       </span>
                     }
                     <span class="line-idx">{{ lineNumber(line) }}</span>
-                    <span class="line-label">{{ line.title || line.round || ('courses.browse.line' | translate) }}</span>
+                    <span class="line-label">{{ lineTitle(line) || line.round || ('courses.browse.line' | translate) }}</span>
                     @if (line.isInfoOnly) {
                       <mat-icon class="info-badge" [matTooltip]="'courses.browse.infoLine' | translate">menu_book</mat-icon>
                     }
@@ -197,6 +206,9 @@ interface ChapterGroup {
                           <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
                         </button>
                       </div>
+                    }
+                    @if (selected.commentMachine) {
+                      <app-machine-note [clickable]="!!courseLang.source(langRef)" (original)="showOriginal()" />
                     }
                   </mat-card-content>
                 </mat-card>
@@ -308,7 +320,13 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   bookId!: number;
   /** undefined = ganzes Buch; sonst der (aufgelöste) Kapitelname (null = „ohne Kapitel"). */
   chapterName: string | null | undefined = undefined;
+  /** Angezeigter Name des gefilterten Kapitels (Übersetzung aus der Kapitelliste, sonst das Original). */
+  chapterDisplay: string | null = null;
   bookTitle = '';
+  /** Gewählter Kapitel-Index (Route) — für das Neuladen in einer anderen Sprache. */
+  private chapterIndex: number | null = null;
+  /** Dateiname des Kurses (aus den Linien) — Schlüssel für die Sprachwahl am Einzel-Puzzle. */
+  private fileName: string | null = null;
 
   loading = true;
   lines: BookPuzzleDto[] = [];
@@ -359,7 +377,30 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     private favorites: FavoritesService,
     private dialog: MatDialog,
     private worksheets: WorksheetService,
+    readonly courseLang: CourseLanguageService,
   ) {}
+
+  /** Dieser Kurs für die Sprachwahl. */
+  get langRef(): CourseRef {
+    return { bookId: this.bookId, fileName: this.fileName };
+  }
+
+  /** Angezeigter Linien-Titel (Übersetzung, sonst das Original). */
+  lineTitle(line: BookPuzzleDto): string | null {
+    return labelOr(line.titleLabel, line.title);
+  }
+
+  /** Sprache gewählt: merken und die Linien in ihr neu laden — Linie und Zug bleiben stehen. */
+  pickLanguage(lang: string): void {
+    this.courseLang.setChoice(this.langRef, lang);
+    this.load(this.chapterIndex, true);
+  }
+
+  /** „maschinell übersetzt" angeklickt → aufs Original. */
+  showOriginal(): void {
+    const source = this.courseLang.source(this.langRef);
+    if (source) this.pickLanguage(source);
+  }
 
   get isLoggedIn(): boolean { return this.auth.isLoggedIn; }
 
@@ -395,8 +436,11 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
     const chapIdxRaw = this.route.snapshot.paramMap.get('chapterIndex');
     const chapterIndex = chapIdxRaw != null ? Number(chapIdxRaw) : null;
+    this.chapterIndex = chapterIndex;
     this.load(chapterIndex);
     this.loadStatus();
+    // Welche Sprachen der Kurs hat (für die Auswahl) — still, die Linien nennen sie ohnehin mit.
+    this.courseLang.ensureLanguages(this.bookId, () => this.courseService.getTranslations(this.bookId));
   }
 
   /** Lädt den Pro-Linien-Bearbeitungsstatus (✓/✗) + die favorisierten Buch-Linien des Users. */
@@ -447,25 +491,37 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     this.stopAutoplay();
   }
 
-  private load(chapterIndex: number | null): void {
-    this.loading = true;
-    this.courseService.getBookPuzzles(this.bookId).subscribe({
+  /**
+   * Linien laden — in der gewählten Sprache (`?lang=`). `keepPosition`: nach einem Sprachwechsel
+   * dieselbe Linie und denselben Halbzug wieder aufschlagen (nur die Texte ändern sich).
+   */
+  private load(chapterIndex: number | null, keepPosition = false): void {
+    const keep = keepPosition && this.selected ? { id: this.selected.id, ply: this.plyIndex } : null;
+    if (!keep) this.loading = true;
+    const lang = this.courseLang.requestLang(this.langRef);
+    this.courseService.getBookPuzzles(this.bookId, lang).subscribe({
       next: puzzles => {
         this.bookTitle = puzzles.find(p => p.bookTitle)?.bookTitle || puzzles[0]?.bookFileName || '';
+        this.fileName = puzzles[0]?.bookFileName ?? this.fileName;
+        this.courseLang.rememberFile(this.bookId, this.fileName);
+        this.courseLang.noteLines(this.langRef, puzzles);
         if (chapterIndex != null) {
-          // Kapitelname über die Kapitel-Übersicht auflösen, dann Linien darauf filtern.
-          this.courseService.getChapters(this.bookId).subscribe({
+          // Kapitelname über die Kapitel-Übersicht auflösen, dann Linien darauf filtern. Gefiltert wird
+          // über den SCHLÜSSEL (Original), angezeigt das Label.
+          this.courseService.getChapters(this.bookId, lang).subscribe({
             next: chapters => {
               const ch = chapters.find(c => c.index === chapterIndex);
               this.chapterName = ch ? ch.name : null;
-              this.setLines(puzzles.filter(p => (p.chapter || null) === (this.chapterName ?? null)));
+              this.chapterDisplay = ch ? labelOr(ch.label, ch.name) : null;
+              this.setLines(puzzles.filter(p => (p.chapter || null) === (this.chapterName ?? null)), keep);
               this.loading = false;
             },
-            error: () => { this.setLines(puzzles); this.loading = false; }
+            error: () => { this.setLines(puzzles, keep); this.loading = false; }
           });
         } else {
           this.chapterName = undefined;
-          this.setLines(puzzles);
+          this.chapterDisplay = null;
+          this.setLines(puzzles, keep);
           this.loading = false;
         }
       },
@@ -476,16 +532,27 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     });
   }
 
-  private setLines(lines: BookPuzzleDto[]): void {
+  private setLines(lines: BookPuzzleDto[], keep: { id: number; ply: number } | null = null): void {
     this.lines = lines;
     this.groups = this.groupByChapter(lines);
-    if (lines.length) this.selectLine(lines[0]);
+    const again = keep ? lines.find(l => l.id === keep.id) : undefined;
+    if (again) {
+      this.selectLine(again);
+      this.goTo(keep!.ply);
+    } else if (lines.length) {
+      this.selectLine(lines[0]);
+    }
   }
 
-  /** Gruppiert die Linien nach Kapitel in Vorkommens-Reihenfolge (Server liefert bereits nach Round sortiert). */
+  /** Gruppiert die Linien nach Kapitel in Vorkommens-Reihenfolge (Server liefert bereits nach Round sortiert).
+   *  Gruppiert wird über den SCHLÜSSEL (`chapter`), beschriftet mit dem Label der ersten Linie, die eins trägt. */
   private groupByChapter(lines: BookPuzzleDto[]): ChapterGroup[] {
     return groupByChapter(lines, line => line.chapter || null)
-      .map(g => ({ name: g.key, lines: g.lines }));
+      .map(g => ({
+        name: g.key,
+        label: labelOr(g.lines.find(l => l.chapterLabel)?.chapterLabel, g.key),
+        lines: g.lines,
+      }));
   }
 
   /** 1-basierte laufende Nummer der Linie in der aktuellen (gefilterten) Liste. */

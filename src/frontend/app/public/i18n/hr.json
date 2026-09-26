@@ -1525,6 +1525,51 @@
       "attachPgn": "Odaberi PGN datoteku",
       "pgnNote": "Radi svaki PGN: vlastite partije, preuzeta zbirka ili puzzle-PGN u Chessable stilu. Komentari u vitičastim zagradama ostaju i prikazuju se dok prolaziš partiju. Pitanja?",
       "button": "Uvezi partije"
+    },
+    "lang": {
+      "label": "Jezik komentara",
+      "original": "Izvornik",
+      "machine": "strojni prijevod",
+      "machineHint": "Strojni prijevod — klikni za izvornik.",
+      "offlineStale": "Tvoja izvanmrežna kopija ovog tečaja je na drugom jeziku.",
+      "offlineRedownload": "Ponovno preuzmi",
+      "offlineUpdated": "Izvanmrežna kopija je osvježena.",
+      "offlineUpdateFailed": "Izvanmrežnu kopiju nije bilo moguće osvježiti.",
+      "offlineStaleSolver": "Izvanmrežna kopija je na drugom jeziku — ponovno je preuzmi kad budeš na mreži."
+    },
+    "translations": {
+      "title": "Prijevodi",
+      "help": "Svatko tko može otvoriti ovaj tečaj može zatražiti njegove komentare, naslove linija i nazive poglavlja na jednom od jezika aplikacije. Prevodi umjetna inteligencija na našem vlastitom hardveru, u pozadini; strojni prijevodi su označeni.\n\nJedan otvoreni zahtjev po osobi. Od ponedjeljka do četvrtka 8:00–17:00 i petkom 8:00–14:00 (bečko vrijeme) hardver je zauzet drugim poslom — zahtjev se tada prihvaća i čeka.",
+      "source": "Izvorni jezik: {{name}}",
+      "sourceUnknown": "nije određen",
+      "lines": "{{name}} · {{done}} / {{total}} linija",
+      "mine": "(tvoj)",
+      "withdraw": "Povuci",
+      "request": "Prevedi na …",
+      "requested": "Prijevod zatražen — izvodi se u pozadini.",
+      "joined": "Za ovaj jezik već čeka zahtjev — tvoj mu se pridružuje.",
+      "requestFailed": "Prijevod nije bilo moguće zatražiti.",
+      "withdrawn": "Zahtjev povučen.",
+      "withdrawFailed": "Zahtjev nije bilo moguće povući.",
+      "loginHint": "Prijavi se da bi zatražio prijevod.",
+      "unavailable": "Prijevodi trenutno nisu dostupni.",
+      "limit": "Jedan zahtjev po osobi — tvoj je još otvoren:",
+      "limitHere": "Tvoj zahtjev ({{language}}) je još otvoren — jedan po osobi.",
+      "status": {
+        "queued": "čeka · mjesto {{pos}}",
+        "waiting": "čeka",
+        "running": "u tijeku · {{percent}} %",
+        "paused": "pauzirano do {{time}}",
+        "failed": "neuspjelo"
+      },
+      "reason": {
+        "unsupported-language": "Na ovaj jezik se ne prevodi.",
+        "same-language": "Tečaj je već napisan na ovom jeziku.",
+        "nothing-to-translate": "Na ovom jeziku je već sve prevedeno.",
+        "user-limit": "Već imaš otvoren zahtjev — jedan po osobi.",
+        "not-configured": "Prijevodi trenutno nisu dostupni.",
+        "not-waiting": "Povući se može samo zahtjev koji čeka."
+      }
     }
   },
   "calc": {

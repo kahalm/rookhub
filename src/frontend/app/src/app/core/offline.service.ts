@@ -9,6 +9,9 @@ export const BOOK_OFFLINE_PREFIX = 'rookhub_book_offline_';
  *  Buch (per fileName gekeyt) auflösen kann. Bewusst ANDERER Präfix als BOOK_OFFLINE_PREFIX,
  *  sonst würde er als „gecachtes Buch" mitgezählt/durchsucht. */
 export const BOOK_ID_MAP_KEY = 'rookhub_book_idmap';
+/** Sprache einer offline gespeicherten Kurskopie (Kurs-Übersetzung, 0.549.0) je Dateiname —
+ *  eigener Präfix aus demselben Grund wie beim Index: sonst zählte er als gecachtes Buch. */
+export const BOOK_LANG_PREFIX = 'rookhub_book_lang_';
 /** Tagespuzzle-Cache (Datum→Puzzle); auto-befüllt beim Online-Abruf eines Tagespuzzles. */
 export const DAILY_CACHE_KEY = 'rookhub_daily_offline';
 /** Heruntergeladene Repertoires (PGN + SR-Zustände + Intervalle) je Repertoire-Id. */
@@ -62,7 +65,7 @@ export class OfflineService {
     return allKeys(localStore()).filter(k =>
       k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY
       || k === COURSES_CACHE_KEY
-      || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX));
+      || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(BOOK_LANG_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX));
   }
 
   /** Geräte-lokale Nutzer-SPUREN, die beim Abmelden verschwinden müssen — mehr als die Caches oben.
@@ -80,6 +83,7 @@ export class OfflineService {
     'rookhub_calc_local_',         // Analysebäume/Bewertungen ohne Konto
     'rookhub_course_local_solved_',// lokal gelöste Kurs-Linien
     'rookhub_solve_modes',         // Spielweise je Bereich
+    'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)
     'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
     'rookhub_puzzle_session',      // anonyme Puzzle-Sitzung
   ];

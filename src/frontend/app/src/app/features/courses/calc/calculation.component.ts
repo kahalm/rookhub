@@ -45,10 +45,16 @@ import {
 } from './calc-timer-dialog.component';
 import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
 import { AuthService } from '../../../core/auth.service';
+import { CourseLanguageService, CourseRef } from '../course-language.service';
+import { labelOr } from '../course-language.util';
+import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
 
 /** Stellungen EINES Kapitels — die Arbeitseinheit dieses Modus, samt der Kapitel-Summen. */
 export interface CalcPositionGroup {
+  /** Kapitel-SCHLÜSSEL (Original); `null` = ohne Kapitel. */
   chapter: string | null;
+  /** Angezeigter Name (Kurs-Übersetzung, sonst das Original); `null` = ohne Kapitel. */
+  label?: string | null;
   /**
    * Schlüssel des Kapitels — EXAKT der des Servers ({@link chapterKey}): ordinal über den ROHEN
    * Namen. Gruppenbildung und das Nachschlagen der Server-Summen benutzen ihn gemeinsam, sonst
@@ -120,6 +126,7 @@ function normChapter(value: string | null | undefined): string {
     MatSelectModule, MatMenuModule, MatProgressSpinnerModule, MatTooltipModule, TranslatePipe,
     RouterLink,
     PuzzleBoardComponent, CalcLinesComponent, BoardFullscreenButtonComponent,
+    CourseLangPickerComponent, MachineNoteComponent,
   ],
   templateUrl: './calculation.component.html',
   styleUrls: ['./calculation.component.scss'],
@@ -445,7 +452,69 @@ export class CalculationComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private auth: AuthService,
     private dialog: MatDialog,
+    readonly courseLang: CourseLanguageService,
   ) {}
+
+  // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =================
+
+  /** Dieser Kurs für die Sprachwahl. */
+  get langRef(): CourseRef {
+    return { bookId: this.bookId };
+  }
+
+  /** Sprache gewählt: merken und NUR die Texte nachladen — Baum, Uhr und Bewertung bleiben stehen. */
+  pickLanguage(lang: string): void {
+    this.courseLang.setChoice(this.langRef, lang);
+    this.refreshTexts();
+  }
+
+  /** „maschinell übersetzt" angeklickt → aufs Original. */
+  showOriginal(): void {
+    const source = this.courseLang.source(this.langRef);
+    if (source) this.pickLanguage(source);
+  }
+
+  /**
+   * Überschriften und Aufgabentext in der gewählten Sprache holen. Übernommen werden nur die TEXTE
+   * (Labels, Kommentar, Sprache, maschinell?) — die Stellungsliste trägt daneben Festlegung, Zeit und
+   * Bewertung, die hier gerade in Arbeit sein können.
+   */
+  private refreshTexts(): void {
+    const lang = this.courseLang.requestLang(this.langRef);
+    this.subs.add(this.backend.getBook(this.bookId, lang).subscribe({
+      next: book => {
+        const byId = new Map(book.positions.map(p => [p.id, p]));
+        for (const item of this.positions) {
+          const fresh = byId.get(item.id);
+          if (!fresh) continue;
+          item.titleLabel = fresh.titleLabel ?? null;
+          item.chapterLabel = fresh.chapterLabel ?? null;
+        }
+        for (const g of this.groups) g.label = this.groupLabel(g.items, g.chapter);
+        const pos = this.position;
+        if (!pos) return;
+        this.subs.add(this.backend.getPosition(pos.id, lang).subscribe({
+          next: fresh => {
+            if (this.position?.id !== fresh.id) return;   // inzwischen weitergeblättert
+            Object.assign(this.position, {
+              comment: fresh.comment,
+              titleLabel: fresh.titleLabel ?? null,
+              chapterLabel: fresh.chapterLabel ?? null,
+              commentLanguage: fresh.commentLanguage ?? null,
+              commentMachine: !!fresh.commentMachine,
+            });
+          },
+          error: () => { /* der Text bleibt, wie er war */ },
+        }));
+      },
+      error: () => { /* Beiwerk — die Arbeit an der Stellung geht weiter */ },
+    }));
+  }
+
+  /** Beschriftung eines Kapitels: das Label der ersten Stellung, die eins trägt, sonst der Name. */
+  private groupLabel(items: CalcPositionListItem[], chapter: string | null): string | null {
+    return labelOr(items.find(i => i.chapterLabel)?.chapterLabel, chapter);
+  }
 
   ngOnInit(): void {
     this.enterMode();
@@ -457,6 +526,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
       this.localBackend = new LocalCalculationBackend(this.api, this.bookId);
     }
     this.noticeDismissed = readCalcNoticeDismissed(this.bookId);
+    // Welche Sprachen der Kurs hat (Auswahl in der Befehlszeile) — still, ohne Übersicht keine Auswahl.
+    this.courseLang.ensureLanguages(this.bookId);
     const requested = Number(this.route.snapshot.queryParamMap.get('pos')) || null;
     this.loadBook(requested);
     // Nur Anzeige: die Stoppuhr selbst zählt ohne Takt weiter (und pausiert bei verstecktem Tab).
@@ -543,7 +614,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private loadBook(requestedPositionId: number | null): void {
     this.loading = true;
     this.loadError = false;
-    this.subs.add(this.backend.getBook(this.bookId).subscribe({
+    this.subs.add(this.backend.getBook(this.bookId, this.courseLang.requestLang(this.langRef)).subscribe({
       next: book => {
         this.book = book;
         this.positions = book.positions.map(p => this.normalizeItem(p));
@@ -566,7 +637,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private loadPosition(bookPuzzleId: number): void {
     this.loading = true;
     const epoch = ++this.loadEpoch;
-    this.subs.add(this.backend.getPosition(bookPuzzleId).subscribe({
+    this.subs.add(this.backend.getPosition(bookPuzzleId, this.courseLang.requestLang(this.langRef)).subscribe({
       next: pos => {
         if (epoch !== this.loadEpoch) return;
         this.position = pos;
@@ -643,7 +714,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get chapterName(): string {
     const group = this.chapter;
     if (!group) return '';
-    return group.chapter || this.translate.instant('courses.noChapter');
+    return group.label || group.chapter || this.translate.instant('courses.noChapter');
   }
 
   get hasNextChapter(): boolean { return this.chapterIndex >= 0 && this.chapterIndex < this.groups.length - 1; }
@@ -651,7 +722,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   get nextChapterName(): string {
     const next = this.groups[this.chapterIndex + 1];
     if (!next) return '';
-    return next.chapter || this.translate.instant('courses.noChapter');
+    return next.label || next.chapter || this.translate.instant('courses.noChapter');
   }
 
   /**
@@ -746,7 +817,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
       const key = chapterKey(chapter);
       let group = byKey.get(key);
       if (!group) {
-        group = { chapter, key, items: [], points: 0, maxPoints: 0, seconds: 0 };
+        group = { chapter, label: chapter, key, items: [], points: 0, maxPoints: 0, seconds: 0 };
         byKey.set(key, group);
         out.push(group);
       }
@@ -755,6 +826,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
       // unangetastet — an ihnen hängen Fortschritt und gespeicherte Bäume.
       this.chapterNumbers.set(p.id, group.items.length);
     }
+    // Beschriftung: die Kurs-Übersetzung, wo eine Stellung des Kapitels sie trägt — gruppiert wird
+    // weiter über den Original-Schlüssel.
+    for (const g of out) g.label = this.groupLabel(g.items, g.chapter);
     return out;
   }
 
@@ -1269,7 +1343,8 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   positionLabel(item: CalcPositionListItem): string {
-    return item.title?.trim() ? item.title : `#${this.chapterNumberOf(item)}`;
+    const title = labelOr(item.titleLabel, item.title);
+    return title?.trim() ? title : `#${this.chapterNumberOf(item)}`;
   }
 
   /**
@@ -1313,7 +1388,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /** Kapitel-Kopf der Sprungliste: Name plus die Summen des Kapitels („14 / 24 Pkt · 12:30"). */
   chapterLabel(group: CalcPositionGroup): string {
-    const name = group.chapter || this.translate.instant('courses.noChapter');
+    const name = group.label || group.chapter || this.translate.instant('courses.noChapter');
     const score = formatScore(group.points, group.maxPoints);
     const summary = group.seconds
       ? this.translate.instant('calc.review.chapterSummary', { score, time: formatSeconds(group.seconds) })

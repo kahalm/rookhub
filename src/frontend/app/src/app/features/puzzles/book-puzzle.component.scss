@@ -84,6 +84,9 @@
     .context-card .ctx-switch { flex-shrink: 0; align-self: flex-start; max-width: 45%; height: 30px; line-height: 30px; padding: 0 8px; }
     .context-card .ctx-switch .ctx-switch-label { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; font-size: 0.8rem; }
     .context-card .ctx-switch mat-icon { font-size: 18px; width: 18px; height: 18px; vertical-align: middle; }
+    /* Sprachwahl der Kurs-Kommentare (nur sichtbar mit mehr als einer Sprache). */
+    .context-card .ctx-lang { flex-shrink: 0; align-self: flex-start; }
+    .context-card .ctx-offline-lang { margin: 0.2rem 0 0; font-size: 0.8rem; color: color-mix(in srgb, currentColor 65%, transparent); }
     .context-card .ctx-badges { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
     .context-card .ctx-progress { margin-top: 0.6rem; }
     /* Spielweisen-Umschalter (Kurs/Tagespuzzle/Buch) — gleiche Optik wie der Wochenpost-Knopf. */

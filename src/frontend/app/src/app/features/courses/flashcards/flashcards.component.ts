@@ -15,6 +15,7 @@ import { forkJoin } from 'rxjs';
 import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcard.util';
 import { FlashcardBoardComponent } from './flashcard-board.component';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
+import { CourseLanguageService } from '../course-language.service';
 
 /**
  * Druckansicht „Flashcards": je Kurs-Linie eine Karteikarte — VORN die Endstellung mit den
@@ -72,6 +73,7 @@ export class FlashcardsComponent implements OnInit {
     private courses: CourseService,
     private training: RepertoireTrainingService,
     prefs: PreferencesService,
+    private courseLang: CourseLanguageService,
   ) {
     this.pieceSet = prefs.pieceSet || 'cburnett';
   }
@@ -88,7 +90,10 @@ export class FlashcardsComponent implements OnInit {
       this.bookId = Number(pm.get('bookId'));
       this.backLink = ['/courses', this.bookId];
       const ids = rawLines.map(Number).filter(n => Number.isFinite(n) && n > 0);
-      const load = (markedIds: Set<number> | null) => this.courses.getBookPuzzles(this.bookId).subscribe({
+      // In der gewählten Sprache des Kurses (Kurs-Übersetzung): Kommentare und Überschriften übersetzt,
+      // das Kapitel-Filter bleibt auf dem Original-Schlüssel.
+      const lang = this.courseLang.requestLang({ bookId: this.bookId });
+      const load = (markedIds: Set<number> | null) => this.courses.getBookPuzzles(this.bookId, lang).subscribe({
         next: puzzles => {
           let picked = puzzles;
           if (markedIds) {

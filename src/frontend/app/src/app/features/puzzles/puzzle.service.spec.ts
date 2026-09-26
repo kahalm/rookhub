@@ -18,6 +18,26 @@ describe('PuzzleService', () => {
 
   afterEach(() => { httpMock.verify(); localStorage.clear(); });
 
+  it('Einzel-/Nächste-/Zufalls-Linie im Buch schicken die Sprache als lang mit (Kurs-Übersetzung)', () => {
+    service.getBookPuzzleById(5, 'de').subscribe();
+    const one = httpMock.expectOne(r => r.url === '/api/book-puzzles/5');
+    expect(one.request.params.get('lang')).toBe('de');
+    one.flush({});
+    service.getNextBookPuzzle(5, 'fr').subscribe();
+    const next = httpMock.expectOne(r => r.url === '/api/book-puzzles/5/next');
+    expect(next.request.params.get('lang')).toBe('fr');
+    next.flush({});
+    service.getRandomBookPuzzle(5, 'hr').subscribe();
+    const rnd = httpMock.expectOne(r => r.url === '/api/book-puzzles/5/random');
+    expect(rnd.request.params.get('lang')).toBe('hr');
+    rnd.flush({});
+    // Ohne Sprache (Tagespuzzle, geteilte Links alter Clients) bleibt es beim Original.
+    service.getBookPuzzleById(5).subscribe();
+    const plain = httpMock.expectOne('/api/book-puzzles/5');
+    expect(plain.request.params.has('lang')).toBeFalse();
+    plain.flush({});
+  });
+
   it('recordBookAttempt schickt die Spielweise als mode mit', () => {
     service.recordBookAttempt(42, true, 30, 1, 'easy').subscribe();
     const req = httpMock.expectOne('/api/book-puzzles/42/attempt');

@@ -3,6 +3,7 @@ import { DrawShape } from 'chessground/draw';
 import { BookPuzzleDto } from '../../puzzles/puzzle.service';
 import { applyUci, tryLoadFen } from '../../puzzles/puzzle-move.util';
 import { parseMoveShapes } from '../../puzzles/move-shapes.util';
+import { labelOr } from '../course-language.util';
 
 /**
  * Eine druckbare/lernbare Karteikarte. Zwei Spielarten:
@@ -37,8 +38,10 @@ export function buildFlashcard(p: BookPuzzleDto): Flashcard | null {
   if (!p?.fen) return null;
   const uciMoves = (p.moves || '').split(' ').filter(m => m.length >= 4);
   const shapesByPly = parseMoveShapes(p.moveShapes);
-  const heading = (p.title && p.title.trim()) || `#${p.round}`;
-  const chapter = p.chapter?.trim() || null;
+  // Angezeigt wird die Kurs-Übersetzung, wo es eine gibt (Label), sonst das Original.
+  const title = labelOr(p.titleLabel, p.title);
+  const heading = (title && title.trim()) || `#${p.round}`;
+  const chapter = labelOr(p.chapterLabel, p.chapter)?.trim() || null;
 
   // Kommentare: Schlüssel = Halbzug NACH dem Zug; -1 = Einleitung. Abschluss = letzter Zug.
   const mc = p.moveComments || {};

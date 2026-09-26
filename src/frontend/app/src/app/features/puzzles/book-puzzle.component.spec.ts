@@ -1,9 +1,10 @@
 import { of, Subject, throwError } from 'rxjs';
 import { BookPuzzleComponent } from './book-puzzle.component';
-import { saveBookOffline, getBookOfflineByBookId } from './book-offline.util';
+import { saveBookOffline, getBookOfflineByBookId, getBookOfflineLanguageByBookId, isBookCacheComplete, markBookCacheComplete } from './book-offline.util';
 import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
 import { CommentSegment } from './comment-variation.util';
+import { CourseLanguageService } from '../courses/course-language.service';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -65,7 +66,7 @@ function makeComponent(): any {
   return new BookPuzzleComponent(
     puzzleService, stockfish, prefs, route, dialog, courseService, weeklyService,
     router, translate, auth, snackbar, offlineQueue, challengeService, longSolve, favorites,
-    solveMode, worksheets
+    solveMode, worksheets, new CourseLanguageService(translate),
   );
 }
 
@@ -621,8 +622,9 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
   it('lädt die öffentlichen Puzzles und serviert das erste (ohne Login)', () => {
     const c = anonCourse('sequential');
     (c as any).loadCourseNext();
-    // Seitenweises Laden: erste Seite ab skip 0 mit einer Seitengröße.
-    expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID, 0, jasmine.any(Number));
+    // Seitenweises Laden: erste Seite ab skip 0 mit einer Seitengröße — in der gewählten Sprache
+    // (ohne Wahl die der Oberfläche; der Stub kennt keine, also 'en').
+    expect(c.courseService.getPublicCourse).toHaveBeenCalledWith(BOOK_ID, 0, jasmine.any(Number), 'en');
     expect(c.puzzle?.id).toBe(1);
     expect(c.courseTotal).toBe(2);
     expect(c.loadError).toBeFalse();
@@ -1544,5 +1546,150 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
     const c = anonPagedCourse([pageOf(1, 5)]);
     (c as any).loadCourseNext();
     expect(c.loadError).toBeTrue();   // anonym wird NUR aus dem Cache bedient — ehrlich melden
+  });
+});
+
+/** Kurs-Übersetzung (Stufe C, 0.549.0): Sprache mitschicken, Texte tauschen, Labels anzeigen. */
+describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
+  const FILE = 'lang-course.pgn';
+  const BOOK_ID = 88;
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  function course(): any {
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    c.auth.isLoggedIn = true;
+    c.inCourse = true;
+    c.courseBookId = BOOK_ID;
+    c.courseModeKind = 'sequential';
+    return c;
+  }
+
+  it('Kurs: das nächste Puzzle kommt in der gewählten Sprache (Vorgabe = Oberfläche)', () => {
+    const c = course();
+    const calls: any[][] = [];
+    c.courseService.getNext = (...args: any[]) => {
+      calls.push(args);
+      return of({ puzzle: { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, commentLanguages: ['en', 'de'] },
+        solvedCount: 0, total: 1, completed: false });
+    };
+    (c as any).loadCourseNext();
+    expect(calls[0][5]).toBe('en');   // Oberflächensprache des Stubs (keine gesetzt → en)
+    c.courseLang.setChoice({ bookId: BOOK_ID }, 'de');
+    (c as any).loadCourseNext();
+    expect(calls[1][5]).toBe('de');
+    // Die Linie meldet ihre Sprachen an die Auswahl, und Kurs-Id ↔ Dateiname werden verknüpft.
+    expect(c.courseLang.languages({ bookId: BOOK_ID })).toEqual(['en', 'de']);
+    expect(c.courseLang.key({ fileName: FILE })).toBe('b' + BOOK_ID);
+  });
+
+  it('Tagespuzzle und Wochenpost bleiben im Original (keine Sprachwahl)', () => {
+    const daily = makeComponent();
+    daily.dailyDate = '20260926';
+    expect(daily.langEnabled).toBeFalse();
+    expect((daily as any).requestLang).toBeNull();
+    const weekly = makeComponent();
+    weekly.inWeekly = true;
+    expect(weekly.langEnabled).toBeFalse();
+    const book = makeComponent();   // Einzel-Linie im Buch
+    expect(book.langEnabled).toBeTrue();
+  });
+
+  it('zeigt Titel und Kapitel mit Label; Kapitel-Statistik nur, wenn sie zum Puzzle gehört', () => {
+    const c = course();
+    c.puzzle = { id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE,
+      title: 'Main line', titleLabel: 'Hauptvariante', chapter: 'Openings', chapterLabel: 'Eröffnungen' };
+    expect(c.titleDisplay).toBe('Hauptvariante');
+    expect(c.chapterDisplay).toBe('Eröffnungen');
+    c.courseChapterName = 'Openings';        // Original-Schlüssel vom Server
+    expect(c.courseChapterDisplay).toBe('Eröffnungen');
+    c.courseChapterName = 'Endgames';        // anderes Kapitel → Original stehen lassen
+    expect(c.courseChapterDisplay).toBe('Endgames');
+    c.puzzle.titleLabel = null;
+    expect(c.titleDisplay).toBe('Main line');
+  });
+
+  it('Sprachwahl tauscht nur die TEXTE der aktuellen Linie — der Versuch startet nicht neu', () => {
+    const c = course();
+    c.puzzle = { id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: FILE, comment: 'Original',
+      moveComments: { '0': 'orig' }, commentLanguages: ['en', 'de'] };
+    const requested: any[] = [];
+    c.puzzleService.getBookPuzzleById = (id: number, lang: string) => {
+      requested.push([id, lang]);
+      return of({ id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: FILE, comment: 'Übersetzt',
+        moveComments: { '0': 'übersetzt' }, chapterLabel: 'Kapitel', commentLanguage: 'de',
+        commentLanguages: ['en', 'de'], commentMachine: true });
+    };
+    c.courseService.getBookPuzzles = () => of([]);   // Offline-Kopie in der neuen Sprache (autoCache)
+    (c as any).setupPuzzle.calls.reset();
+    c.pickLanguage('de');
+    expect(requested).toEqual([[7, 'de']]);
+    expect(c.puzzle.comment).toBe('Übersetzt');
+    expect(c.puzzle.moveComments['0']).toBe('übersetzt');
+    expect(c.puzzle.commentMachine).toBeTrue();
+    expect((c as any).setupPuzzle).not.toHaveBeenCalled();
+    expect(c.courseLang.choice({ bookId: BOOK_ID })).toBe('de');
+
+    // „maschinell übersetzt" angeklickt → zurück aufs Original (die Quelle).
+    c.puzzleService.getBookPuzzleById = (_id: number, lang: string) => {
+      requested.push([7, lang]);
+      return of({ id: 7, fen: FEN, moves: 'e2e4 e7e5', bookFileName: FILE, comment: 'Original',
+        commentLanguages: ['en', 'de'], commentMachine: false });
+    };
+    c.showOriginal();
+    expect(requested[1]).toEqual([7, 'en']);
+    expect(c.puzzle.comment).toBe('Original');
+  });
+
+  it('Einzel-Linie im Buch: Wahl am Dateinamen → Texte werden in ihr nachgeholt', () => {
+    const c = makeComponent();
+    spyOn(c as any, 'setupPuzzle');
+    c.courseLang.setChoice({ fileName: FILE }, 'fr');
+    const requested: any[] = [];
+    c.puzzleService.getBookPuzzleById = (id: number, lang: string) => {
+      requested.push(lang);
+      return of({ id, fen: FEN, moves: 'e2e4', bookFileName: FILE, comment: lang === 'fr' ? 'français' : 'english',
+        commentLanguages: ['en', 'fr'] });
+    };
+    (c as any).loadPuzzle(3);
+    expect(requested).toEqual(['en', 'fr']);   // erst ohne Kurs-Wissen, dann in der gemerkten Wahl
+    expect(c.puzzle.comment).toBe('français');
+  });
+
+  it('offline: meldet eine Kopie in anderer Sprache als der gewählten', () => {
+    saveBookOffline(FILE, [{ id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, commentLanguages: ['en', 'de'] }] as any,
+      BOOK_ID, 'de');
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try {
+      const c = course();
+      c.courseLang.setChoice({ bookId: BOOK_ID }, 'de');
+      (c as any).loadCourseNext();
+      expect(c.offlineLangStale).toBeFalse();
+      c.courseLang.setChoice({ bookId: BOOK_ID }, 'en');
+      (c as any).loadCourseNext();
+      expect(c.offlineLangStale).toBeTrue();
+    } finally { spy.and.callThrough(); }
+  });
+
+  it('anonym: eine Kopie in anderer Sprache wird online im Hintergrund ersetzt (erst am Ende geschrieben)', () => {
+    saveBookOffline(FILE, [{ id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, commentLanguages: ['en', 'de'] }] as any,
+      BOOK_ID, 'en');
+    markBookCacheComplete(BOOK_ID, true);
+    const c = course();
+    c.auth.isLoggedIn = false;
+    c.courseLang.setChoice({ bookId: BOOK_ID }, 'de');
+    const calls: any[][] = [];
+    c.courseService.getPublicCourse = (...args: any[]) => {
+      calls.push(args);
+      return of([{ id: 1, fen: FEN, moves: 'e2e4', bookFileName: FILE, comment: 'de', commentLanguages: ['en', 'de'] }]);
+    };
+    (c as any).loadCourseNext();
+    expect(c.puzzle?.id).toBe(1);             // sofort aus der alten Kopie spielbar
+    expect(calls.length).toBe(1);
+    expect(calls[0][3]).toBe('de');           // neu geholt in der gewählten Sprache
+    expect(getBookOfflineLanguageByBookId(BOOK_ID)?.lang).toBe('de');
+    expect(isBookCacheComplete(BOOK_ID)).toBeTrue();
+    expect(c.offlineLangStale).toBeFalse();
   });
 });

@@ -28,8 +28,8 @@ export class LocalCalculationBackend implements CalcBackend {
 
   constructor(private api: CalculationService, private bookId: number) {}
 
-  getBook(bookId: number): Observable<CalcBook> {
-    return this.api.getPublicBook(bookId).pipe(map(book => {
+  getBook(bookId: number, lang?: string | null): Observable<CalcBook> {
+    return this.api.getPublicBook(bookId, lang).pipe(map(book => {
       this.book = book;
       this.positions = book.positions ?? [];
       this.bookId = book.bookId || bookId;
@@ -51,6 +51,8 @@ export class LocalCalculationBackend implements CalcBackend {
         round: p.round,
         title: p.title,
         chapter: p.chapter,
+        titleLabel: p.titleLabel ?? null,
+        chapterLabel: p.chapterLabel ?? null,
         hasTree: !!entry?.tree,
         chosenSan: entry?.chosenSan ?? null,
         chosenUci: entry?.chosenUci ?? null,
@@ -66,7 +68,9 @@ export class LocalCalculationBackend implements CalcBackend {
     };
   }
 
-  getPosition(bookPuzzleId: number): Observable<CalcPosition> {
+  /** Aus dem EINEN Abruf von {@link getBook} — die Sprache steckt schon darin (`lang` wird hier nicht
+   *  gebraucht; wer sie wechselt, holt das Buch neu). */
+  getPosition(bookPuzzleId: number, _lang?: string | null): Observable<CalcPosition> {
     const found = this.positions.find(p => p.id === bookPuzzleId);
     if (!found) return throwError(() => new Error('position not in public book'));
     const entry = readCalcLocalEntry(this.bookId, bookPuzzleId);
@@ -79,6 +83,10 @@ export class LocalCalculationBackend implements CalcBackend {
       fen: found.fen,
       setupMoves: found.setupMoves ?? '',
       comment: found.comment,
+      titleLabel: found.titleLabel ?? null,
+      chapterLabel: found.chapterLabel ?? null,
+      commentLanguage: found.commentLanguage ?? null,
+      commentMachine: !!found.commentMachine,
       treeJson: entry?.tree ?? null,
       treeUpdatedAt: entry?.updatedAt ?? null,
       chosenSan: entry?.chosenSan ?? null,

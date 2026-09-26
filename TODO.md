@@ -9,7 +9,7 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0, Stufe B in 0.548.0, C offen)
+## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0, Stufe B in 0.548.0, Stufe C in 0.549.0)
 
 ### Stand (Stufe A, 0.547.0)
 
@@ -43,7 +43,40 @@ Abweichungen vom Plan (bewusst):
 * **Zusatz nach Review: Kurs-Lauf in zwei Phasen** — jeder verschiedene Text geht je Lauf genau einmal ans Modell,
   auch mit `--parallel` (Phase 1: Fingerabdruck gehört der ersten Linie, Phase 2: Wiederverwendung).
 
-### Stand (Stufe B, 0.548.0 — C offen)
+### Stand (Stufe C, 0.549.0 — Oberfläche)
+
+Gebaut: Abschnitt **8** samt Frontend-Tests aus 10 und Doku (`src/frontend/CLAUDE.md` → „Kurs-Kommentare mehrsprachig").
+`course-language.util.ts` (reine Regeln: Sprachliste Quelle zuerst, wirksame Sprache, Offline-Vergleich, `labelOr`),
+`CourseLanguageService` (Wahl je Kurs im localStorage `rookhub_course_lang`, bekannte Sprachen als Signal, Übersicht
+einmal je Sitzung), `CourseLangPickerComponent` + `MachineNoteComponent`, `CourseTranslationsComponent` (Kasten auf der
+Kursseite). `lang` an allen Einstiegen: Kursseite, Kapitelliste der Kurskarte, Solver (sequenziell/zufällig/Kapitel,
+anonymer öffentlicher Kurs), Einzel-Linie im Buch (samt Nächste/Zufällig), Durchsehen, Karteikarten, Kalkulation
+(angemeldet + öffentlich), Offline-Download. Anzeige überall `label ?? original`.
+
+Abweichungen/Ergänzungen (bewusst):
+* **„Original" = das Kürzel der QUELLE**, kein eigenes Wort: `?lang=<Quelle>` liefert laut Stufe A das Original und
+  trotzdem `commentLanguages`. Ohne Wahl geht die Oberflächensprache als `lang` raus — damit ist „Oberflächensprache,
+  wenn der Kurs sie hat, sonst Original" die Server-Antwort selbst.
+* **Einzel-Linie im Buch** kennt keine Kurs-Id (`BookPuzzleDto` trägt keine): die Wahl hängt dort am DATEINAMEN,
+  `rememberFile` verknüpft Dateiname ↔ Kurs-Id (Kursliste, Kursseite, Solver, Durchsehen). Der erste Abruf geht in der
+  Oberflächensprache; weicht die gemerkte Wahl ab, werden die Texte nachgeholt (ein zweiter Abruf).
+* **Sprachwechsel im Solver/in der Kalkulation tauscht nur die TEXTE** der aktuellen Linie/Stellung (Kommentar,
+  Zug-Kommentare, Labels) — der laufende Versuch, Baum, Uhr und Bewertung bleiben. Durchsehen lädt neu und bleibt auf
+  Linie und Zug.
+* **Offline-Kopie**: eigener Vermerk `rookhub_book_lang_<Datei>` (`{ lang, langs }`), verglichen wird „übersetzt in X"
+  gegen „Original" (`offlineLanguageStale`). Hinweis mit „Neu herunterladen" auf der Kursseite, im Solver ein Satz,
+  wenn er offline aus einer abweichenden Kopie serviert. Die AUTOMATISCHE Kopie des Solvers (angemeldet) und die
+  anonyme Arbeitskopie werden online von selbst in der neuen Sprache ersetzt — die anonyme erst am ENDE der
+  Seiten-Kette geschrieben (eine halbe neue Kopie mit altem „vollständig"-Marker meldete sonst „fertig").
+* **„Übersetzen in …" lässt auch Sprachen mit OFFENEM Auftrag weg** (Anfordern gäbe nur denselben Auftrag zurück).
+  Der Kasten zeigt zusätzlich den eigenen zuletzt GESCHEITERTEN Auftrag (sonst stünde man ohne Auskunft da).
+* **i18n auch in `hu`**: `hu` steht in `FORMAT_LOCALES`, die Parity-Spec verlangt dort dieselben Schlüssel.
+* **Bewusst Original**: Tagespuzzle, Wochenpost (auch der Admin-Dialog „Wochenpost aus Kapitel"), Favoriten- und
+  Verlaufslisten (ihre Endpunkte kennen kein `lang`), Aufgabenblätter (tragen keinen Kurstext), Linienliste der
+  Kapitel-Verwaltung (`/lines`, Bearbeiten).
+* Keine Oberfläche für `PUT comment-language` und die Admin-Liste (Plan: nur API).
+
+### Stand (Stufe B, 0.548.0)
 
 Gebaut: Abschnitte **5 und 6** samt Tests aus 10 und Doku aus 11 (CLAUDE.md KURSE → „Aufträge", „Hintergrunddienst",
 „Automatik", „Nachziehen"; REST-Zeilen unter „Kurse"; Konvention „Kurs-Übersetzung: zwei Einstellungen"). Keine
@@ -230,7 +263,7 @@ Repertoires sind NICHT Teil dieses Plans (ein PGN-Text je Datei, eigener Umbau).
 - `tools/LibraryImport translate --to <lang> --course <bookId> [--parallel p]` → `TranslateCourseAsync`
   direkt (ohne Auftrag), für Messungen und Nachhilfe von Hand. Env wie beim Bibliothekslauf (`TextLlm__*`).
 
-### 8. Oberfläche (Angular, Projekt `app`)
+### 8. Oberfläche (Angular, Projekt `app`) — ✅ Stufe C (0.549.0)
 
 - `course.service.ts`: `lang` an allen Aufrufen aus Abschnitt 4; `translations`-Aufrufe (lesen, anfordern,
   zurückziehen). `BookPuzzle`-Interface um `commentLanguage`, `commentLanguages`, `commentMachine`,

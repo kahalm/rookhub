@@ -1,3 +1,4 @@
+import { CourseLanguageService } from './course-language.service';
 import { of, throwError } from 'rxjs';
 import { CourseBrowseComponent } from './course-browse.component';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
@@ -38,6 +39,7 @@ describe('CourseBrowseComponent', () => {
     const comp = new CourseBrowseComponent(
       route, {} as any, courseService, prefs, { info: () => {} } as any, { instant: (k: string) => k } as any,
       auth, favorites, dialog, worksheets,
+      new CourseLanguageService({ currentLang: () => 'de', getFallbackLang: () => 'en' } as any),
     );
     comp.ngOnInit();
     return comp;
@@ -186,5 +188,70 @@ describe('CourseBrowseComponent', () => {
     expect(comp.selected?.id).toBe(1);
     comp.prevLine(); // clamp at start
     expect(comp.selected?.id).toBe(1);
+  });
+
+  describe('Sprache der Kommentare (Kurs-Übersetzung)', () => {
+    beforeEach(() => localStorage.removeItem('rookhub_course_lang'));
+    afterEach(() => localStorage.removeItem('rookhub_course_lang'));
+
+    function withLang(puzzlesFor: (lang: string | null | undefined) => BookPuzzleDto[], chapterIndex: number | null = null,
+                      chapters: any[] = []) {
+      const langs: (string | null | undefined)[] = [];
+      const route: any = { snapshot: { paramMap: { get: (k: string) => k === 'bookId' ? '5' : (k === 'chapterIndex' ? (chapterIndex == null ? null : String(chapterIndex)) : null) } } };
+      const courseService: any = {
+        getBookPuzzles: (_id: number, lang?: string | null) => { langs.push(lang); return of(puzzlesFor(lang)); },
+        getChapters: () => of(chapters),
+        getLineStatus: () => of({ solvedIds: [], failedIds: [] }),
+        getFlashcardMarks: () => of({ lineIds: [] }),
+        getTranslations: () => of({ sourceLanguage: 'en', languages: [{ language: 'de', linesTranslated: 2, linesTotal: 2 }] }),
+      };
+      const comp = new CourseBrowseComponent(
+        route, {} as any, courseService, { boardTheme: 'brown', pieceSet: 'cburnett' } as any, { info: () => {} } as any,
+        { instant: (k: string) => k } as any, { isLoggedIn: true } as any, { list: () => of([]) } as any, {} as any,
+        { sendAndNotify: () => {} } as any,
+        new CourseLanguageService({ currentLang: () => 'de', getFallbackLang: () => 'en' } as any),
+      );
+      comp.ngOnInit();
+      return { comp, langs };
+    }
+
+    it('lädt in der Oberflächensprache und zeigt Kapitel-/Titel-Labels (gruppiert wird über das Original)', () => {
+      const { comp, langs } = withLang(() => [
+        line({ id: 1, chapter: 'Openings', chapterLabel: 'Eröffnungen', title: 'Main', titleLabel: 'Haupt' }),
+        line({ id: 2, chapter: 'Openings', chapterLabel: 'Eröffnungen' }),
+        line({ id: 3, chapter: 'Endgames' }),
+      ]);
+      expect(langs).toEqual(['de']);
+      expect(comp.groups.map(g => [g.name, g.label, g.lines.length])).toEqual([
+        ['Openings', 'Eröffnungen', 2], ['Endgames', 'Endgames', 1],
+      ]);
+      expect(comp.lineTitle(comp.lines[0])).toBe('Haupt');
+      expect(comp.lineTitle(comp.lines[2])).toBeNull();
+      expect(comp.courseLang.languages({ bookId: 5 })).toEqual(['en', 'de']);
+    });
+
+    it('Kapitel-Filter über den Schlüssel, Überschrift mit dem Label', () => {
+      const { comp } = withLang(() => [
+        line({ id: 1, chapter: 'Openings' }), line({ id: 2, chapter: 'Endgames' }),
+      ], 0, [{ index: 0, name: 'Openings', label: 'Eröffnungen', puzzleCount: 1, solvedCount: 0, progressPercent: 0, infoCount: 0 }]);
+      expect(comp.chapterName).toBe('Openings');
+      expect(comp.chapterDisplay).toBe('Eröffnungen');
+      expect(comp.lines.map(l => l.id)).toEqual([1]);
+    });
+
+    it('Sprachwechsel lädt neu und bleibt auf derselben Linie und demselben Zug', () => {
+      const { comp, langs } = withLang(lang => [
+        line({ id: 1 }),
+        line({ id: 2, moves: 'e2e4 e7e5 g1f3', moveComments: { '1': lang === 'en' ? 'english' : 'deutsch' } }),
+      ]);
+      comp.selectLine(comp.lines[1]);
+      comp.goTo(2);
+      expect(comp.comment).toBe('deutsch');
+      comp.pickLanguage('en');
+      expect(langs).toEqual(['de', 'en']);
+      expect(comp.selected?.id).toBe(2);
+      expect(comp.plyIndex).toBe(2);
+      expect(comp.comment).toBe('english');
+    });
   });
 });

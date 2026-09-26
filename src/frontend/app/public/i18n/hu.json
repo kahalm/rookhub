@@ -1292,6 +1292,51 @@
       "attachPgn": "PGN-fájl kiválasztása",
       "pgnNote": "Bármilyen PGN működik: saját játszmák, letöltött gyűjtemény vagy Chessable-stílusú feladvány-PGN. A kapcsos zárójelben lévő megjegyzések megmaradnak, és a végigkattintáskor megjelennek. Kérdés?",
       "button": "Játszmák importálása"
+    },
+    "lang": {
+      "label": "A kommentárok nyelve",
+      "original": "Eredeti",
+      "machine": "gépi fordítás",
+      "machineHint": "Gépi fordítás — kattints az eredetiért.",
+      "offlineStale": "A kurzus offline másolata más nyelvű.",
+      "offlineRedownload": "Újra letöltés",
+      "offlineUpdated": "Offline másolat frissítve.",
+      "offlineUpdateFailed": "Az offline másolatot nem sikerült frissíteni.",
+      "offlineStaleSolver": "Az offline másolat más nyelvű — töltsd le újra, amint online vagy."
+    },
+    "translations": {
+      "title": "Fordítások",
+      "help": "Aki megnyithatja ezt a kurzust, kérheti a kommentárjait, a változatok címeit és a fejezetneveket az alkalmazás egyik nyelvén. A fordítást egy MI végzi a saját hardverünkön, a háttérben; a gépi fordítások meg vannak jelölve.\n\nSzemélyenként egy nyitott kérés. Hétfőtől csütörtökig 8:00–17:00 és pénteken 8:00–14:00 (bécsi idő szerint) a hardver más munkát végez — a kérést ilyenkor elfogadjuk, és vár.",
+      "source": "Eredeti nyelv: {{name}}",
+      "sourceUnknown": "nem meghatározott",
+      "lines": "{{name}} · {{done}} / {{total}} változat",
+      "mine": "(a tiéd)",
+      "withdraw": "Visszavonás",
+      "request": "Fordítás erre: …",
+      "requested": "Fordítás kérve — a háttérben fut.",
+      "joined": "Erre a nyelvre már vár egy kérés — a tiéd csatlakozik hozzá.",
+      "requestFailed": "A fordítást nem sikerült kérni.",
+      "withdrawn": "Kérés visszavonva.",
+      "withdrawFailed": "A kérést nem sikerült visszavonni.",
+      "loginHint": "Fordítás kéréséhez jelentkezz be.",
+      "unavailable": "A fordítások jelenleg nem érhetők el.",
+      "limit": "Személyenként egy kérés — a tiéd még nyitott:",
+      "limitHere": "A kérésed ({{language}}) még nyitott — személyenként egy.",
+      "status": {
+        "queued": "vár · {{pos}}. hely",
+        "waiting": "vár",
+        "running": "fut · {{percent}} %",
+        "paused": "szünetel eddig: {{time}}",
+        "failed": "sikertelen"
+      },
+      "reason": {
+        "unsupported-language": "Erre a nyelvre nem fordítunk.",
+        "same-language": "A kurzus már ezen a nyelven íródott.",
+        "nothing-to-translate": "Ezen a nyelven már minden le van fordítva.",
+        "user-limit": "Már van nyitott kérésed — személyenként egy.",
+        "not-configured": "A fordítások jelenleg nem érhetők el.",
+        "not-waiting": "Csak váró kérés vonható vissza."
+      }
     }
   },
   "weekly": {

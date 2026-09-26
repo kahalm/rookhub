@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CalcGrade, CalcReviewPatch, toReviewBody } from './calc-review.util';
 
@@ -8,8 +8,11 @@ export interface CalcPositionListItem {
   id: number;
   round: string;
   title: string | null;
-  /** null = ohne Kapitel. */
+  /** null = ohne Kapitel. Bleibt der SCHLÜSSEL (Gruppen, `?chapter=`) — angezeigt wird `chapterLabel ?? chapter`. */
   chapter: string | null;
+  /** Kurs-Übersetzung (nur mit `?lang=`): übersetzter Titel/Kapitelname, `null` = keine. */
+  titleLabel?: string | null;
+  chapterLabel?: string | null;
   /** Der Nutzer hat zu dieser Stellung schon einen Analysebaum gespeichert. */
   hasTree: boolean;
   /** Festlegung: erster Zug, auf den sich der Nutzer festgelegt hat (SAN); null = keine. */
@@ -30,6 +33,8 @@ export interface CalcPositionListItem {
 export interface CalcChapterSummary {
   /** null = Sammelgruppe „ohne Kapitel". */
   chapter: string | null;
+  /** Übersetzter Kapitelname (nur mit `?lang=`), `null` = keine. */
+  label?: string | null;
   /** Zahl der BEWERTETEN Stellungen des Kapitels (>0 ⇒ „vom Nutzer bewertet"). */
   ratedCount?: number;
   /** Summe der erreichten Punkte. */
@@ -72,6 +77,11 @@ export interface CalcPosition {
   /** UCI-Züge von `fen` bis zur Aufgabenstellung (leer bei reinen Stellungs-Linien). */
   setupMoves: string;
   comment: string | null;
+  /** Kurs-Übersetzung (nur mit `?lang=`): Labels, tatsächlich gelieferte Sprache, maschinell? */
+  titleLabel?: string | null;
+  chapterLabel?: string | null;
+  commentLanguage?: string | null;
+  commentMachine?: boolean;
   treeJson: string | null;
   treeUpdatedAt: string | null;
   /** Festlegung/Zeit/Stufe — die Sprungliste führt dieselben Werte; hier nur, falls der
@@ -113,6 +123,10 @@ export interface CalcPublicPosition {
   fen: string;
   setupMoves: string;
   comment: string | null;
+  titleLabel?: string | null;
+  chapterLabel?: string | null;
+  commentLanguage?: string | null;
+  commentMachine?: boolean;
 }
 
 /** Ein öffentlich freigegebenes Kalkulationsbuch am Stück (ein Abruf, danach arbeitet alles lokal). */
@@ -130,11 +144,17 @@ export interface CalcPublicBook {
  * „bin ich eingeloggt?" fragen.
  */
 export interface CalcBackend {
-  getBook(bookId: number): Observable<CalcBook>;
-  getPosition(bookPuzzleId: number): Observable<CalcPosition>;
+  /** `lang` = Sprache der Kurs-Übersetzung (Labels/Kommentar); fehlt sie, kommt das Original. */
+  getBook(bookId: number, lang?: string | null): Observable<CalcBook>;
+  getPosition(bookPuzzleId: number, lang?: string | null): Observable<CalcPosition>;
   saveTree(bookPuzzleId: number, treeJson: string): Observable<CalcTreeSaved>;
   deleteTree(bookPuzzleId: number): Observable<void>;
   saveReview(bookPuzzleId: number, patch: CalcReviewPatch): Observable<CalcReviewSaved>;
+}
+
+/** `?lang=` nur mit Sprache — ohne liefert der Server exakt das Original. */
+function langParams(lang?: string | null): HttpParams {
+  return lang ? new HttpParams().set('lang', lang) : new HttpParams();
 }
 
 /** HTTP-Zugang zum Kalkulations-Modus (`/api/calculations`). */
@@ -148,16 +168,16 @@ export class CalculationService implements CalcBackend {
    * freigegeben" (Slug/IsPublic) und antwortet auf jede andere bookId mit 404; geschrieben wird
    * anonym gar nichts (siehe `calc-local.util.ts`).
    */
-  getPublicBook(bookId: number): Observable<CalcPublicBook> {
-    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`);
+  getPublicBook(bookId: number, lang?: string | null): Observable<CalcPublicBook> {
+    return this.http.get<CalcPublicBook>(`/api/calculations/books/${bookId}/public`, { params: langParams(lang) });
   }
 
-  getBook(bookId: number): Observable<CalcBook> {
-    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`);
+  getBook(bookId: number, lang?: string | null): Observable<CalcBook> {
+    return this.http.get<CalcBook>(`/api/calculations/books/${bookId}`, { params: langParams(lang) });
   }
 
-  getPosition(bookPuzzleId: number): Observable<CalcPosition> {
-    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`);
+  getPosition(bookPuzzleId: number, lang?: string | null): Observable<CalcPosition> {
+    return this.http.get<CalcPosition>(`/api/calculations/positions/${bookPuzzleId}`, { params: langParams(lang) });
   }
 
   saveTree(bookPuzzleId: number, treeJson: string): Observable<CalcTreeSaved> {

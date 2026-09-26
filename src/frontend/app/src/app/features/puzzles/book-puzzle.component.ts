@@ -43,7 +43,10 @@ import { CourseService, CourseMode, CourseScopeStats } from '../courses/course.s
 import { LongSolveService } from './long-solve.service';
 import { isElementFullscreen } from '../../shared/fullscreen/fullscreen.util';
 import { AuthService } from '../../core/auth.service';
-import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, isBookCacheComplete, markBookCacheComplete, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
+import { getBookOffline, findCachedBookPuzzle, getBookOfflineByBookId, getBookOfflineLanguageByBookId, isBookCacheComplete, markBookCacheComplete, saveBookOffline, saveDailyOffline, getDailyOffline, loadCourseLocalSolved, saveCourseLocalSolved, clearCourseLocalSolved } from './book-offline.util';
+import { CourseLanguageService, CourseRef } from '../courses/course-language.service';
+import { labelOr, offlineLanguageStale } from '../courses/course-language.util';
+import { CourseLangPickerComponent, MachineNoteComponent } from '../courses/course-lang-picker.component';
 import { loadDailyElapsed, saveDailyElapsed, clearDailyElapsed } from './daily-elapsed.util';
 import { loadSolveElapsed, saveSolveElapsed, clearSolveElapsed } from './solve-elapsed.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
@@ -72,7 +75,7 @@ const ANON_COURSE_PAGE_SIZE = 300;
     MatProgressSpinnerModule, MatProgressBarModule, MatTooltipModule, MatDialogModule,
     PuzzleBoardComponent, BoardFsActionsComponent, PuzzleTagsComponent,
     TranslatePipe, PuzzleStatusCardComponent, ChallengeFriendsComponent, PuzzleActionBarComponent,
-    RouterLink
+    RouterLink, CourseLangPickerComponent, MachineNoteComponent,
   ],
   templateUrl: './book-puzzle.component.html',
   styleUrls: ['./book-puzzle.component.scss'],
@@ -317,7 +320,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     private longSolve: LongSolveService,
     private favorites: FavoritesService,
     private solveMode: SolveModeService,
-    private worksheets: WorksheetService
+    private worksheets: WorksheetService,
+    readonly courseLang: CourseLanguageService,
   ) {
     super(stockfish);
     // Wochenpost-Puzzles haben keine echte BookPuzzle-Id (Index) → nie favorisierbar.
@@ -329,6 +333,100 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.loadConfig();
     this.loadSettingsOpen();
     this.stockfish.init().catch(() => {});
+  }
+
+  // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =====
+
+  /** Gibt es hier eine Sprachwahl? Kurs und Einzel-Linie im Buch — nicht Tagespuzzle/Wochenpost
+   *  (die bleiben bewusst im Original). */
+  get langEnabled(): boolean {
+    return (this.inCourse || this.standalone) && !this.isDaily && !this.inWeekly;
+  }
+
+  /** Der Kurs dieser Ansicht für die Sprachwahl: im Kurs über die bookId, beim Einzel-Puzzle über den
+   *  Dateinamen der Linie (`BookPuzzleDto` trägt keine Kurs-Id). */
+  get langRef(): CourseRef | null {
+    if (!this.langEnabled) return null;
+    return { bookId: this.inCourse ? this.courseBookId : null, fileName: this.puzzle?.bookFileName ?? null };
+  }
+
+  /** `?lang=` für die nächste Anfrage — `null` außerhalb von Kurs/Buch (Tagespuzzle, Wochenpost). */
+  private get requestLang(): string | null {
+    return this.langEnabled ? this.courseLang.requestLang(this.langRef) : null;
+  }
+
+  /** Angezeigter Titel/Kapitel der Linie: die Übersetzung, sonst das Original (Schlüssel bleiben). */
+  get titleDisplay(): string | null { return labelOr(this.puzzle?.titleLabel, this.puzzle?.title); }
+  get chapterDisplay(): string | null { return labelOr(this.puzzle?.chapterLabel, this.puzzle?.chapter); }
+
+  /** Kapitel-Statistik: `courseChapterName` ist der Original-Schlüssel — gehört er zum aktuellen Puzzle,
+   *  zeigt die Anzeige dessen Übersetzung. */
+  get courseChapterDisplay(): string | null {
+    const name = this.courseChapterName;
+    if (name && this.puzzle && (this.puzzle.chapter ?? null) === name) return labelOr(this.puzzle.chapterLabel, name);
+    return name;
+  }
+
+  /** Die Offline-Kopie, aus der gerade serviert wird, hat eine andere Sprache als die gewählte. */
+  offlineLangStale = false;
+  /** Kurs, dessen anonyme Kopie gerade in der neuen Sprache nachgeladen wird (nur EINE Kette zugleich). */
+  private anonRefreshBook: number | null = null;
+
+  /** Sprache gewählt: merken, die Texte der aktuellen Linie tauschen (ohne den Versuch neu zu
+   *  starten) und die Offline-Kopie in der neuen Sprache nachziehen. */
+  pickLanguage(lang: string): void {
+    const ref = this.langRef;
+    if (!ref) return;
+    this.courseLang.setChoice(ref, lang);
+    this.refreshTexts();
+    if (this.inCourse && this.courseBookId != null) {
+      if (this.isAnonCourse) this.refreshAnonCache(this.courseBookId);
+      else this.autoCacheCourse();
+    }
+  }
+
+  /** „maschinell übersetzt" angeklickt → aufs Original (die Quelle ist die erste Sprache der Linie). */
+  showOriginal(): void {
+    const source = this.courseLang.source(this.langRef) ?? this.puzzle?.commentLanguages?.[0] ?? null;
+    if (source) this.pickLanguage(source);
+  }
+
+  /** Nur die TEXTE der aktuellen Linie in der gewählten Sprache holen — der laufende Versuch bleibt. */
+  private refreshTexts(): void {
+    const p = this.puzzle;
+    const lang = this.requestLang;
+    if (!p || !lang || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    this.puzzleService.getBookPuzzleById(p.id, lang).subscribe({
+      next: fresh => { if (this.puzzle?.id === fresh?.id) this.applyTexts(this.puzzle, fresh); },
+      error: () => { /* Texte bleiben, wie sie sind — die nächste Linie kommt in der neuen Sprache */ },
+    });
+  }
+
+  /** Texte einer frisch geholten Fassung übernehmen und die gerade angezeigte Stelle neu ziehen. */
+  private applyTexts(target: BookPuzzleDto, fresh: BookPuzzleDto): void {
+    target.comment = fresh.comment;
+    target.moveComments = fresh.moveComments;
+    target.titleLabel = fresh.titleLabel ?? null;
+    target.chapterLabel = fresh.chapterLabel ?? null;
+    target.commentLanguage = fresh.commentLanguage ?? null;
+    target.commentLanguages = fresh.commentLanguages ?? null;
+    target.commentMachine = !!fresh.commentMachine;
+    this.courseLang.noteLines(this.langRef, [fresh]);
+    // Im Durchklicken steht der Kommentar schon als `moveComment` fest — an derselben Stelle neu holen.
+    if (this.reviewMode) {
+      if (this.solutionReview) this.solutionReviewGoTo(this.reviewIndex);
+      else this.reviewGoTo(this.reviewIndex);
+    }
+  }
+
+  /** Nach dem Laden einer Linie: Sprachen merken; kam sie in einer anderen als der gewählten
+   *  (Einzel-Puzzle: Wahl erst mit dem Dateinamen bekannt), die Texte nachholen. */
+  private afterLineLoaded(p: BookPuzzleDto, sentLang: string | null): void {
+    if (!this.langEnabled) return;
+    if (this.inCourse) this.courseLang.rememberFile(this.courseBookId, p.bookFileName);
+    this.courseLang.noteLines(this.langRef, [p]);
+    const want = this.requestLang;
+    if (want && sentLang && want !== sentLang && (p.commentLanguages?.length ?? 0) > 1) this.refreshTexts();
   }
 
   sharePuzzle(): void {
@@ -405,7 +503,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle || this.bookNavLoading) return;
     if (!navigator.onLine) { this.navOfflineInBook(false); return; }
     this.bookNavLoading = true;
-    this.puzzleService.getNextBookPuzzle(this.puzzle.id).subscribe({
+    this.puzzleService.getNextBookPuzzle(this.puzzle.id, this.requestLang).subscribe({
       next: p => this.goToBookPuzzle(p),
       error: () => { this.bookNavLoading = false; }
     });
@@ -416,7 +514,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle || this.bookNavLoading) return;
     if (!navigator.onLine) { this.navOfflineInBook(true); return; }
     this.bookNavLoading = true;
-    this.puzzleService.getRandomBookPuzzle(this.puzzle.id).subscribe({
+    this.puzzleService.getRandomBookPuzzle(this.puzzle.id, this.requestLang).subscribe({
       next: p => this.goToBookPuzzle(p),
       error: () => { this.bookNavLoading = false; }
     });
@@ -447,6 +545,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.clearSolutionPlay();
     this.router.navigate(['/puzzles/book', p.id]);   // URL aktualisieren (Komponente wird wiederverwendet)
     this.puzzle = p;
+    this.courseLang.noteLines(this.langRef, [p]);
     this.setupPuzzle(p);
   }
 
@@ -729,6 +828,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         // Anonym: lokal gemerkten Fortschritt DIESES Buchs übernehmen (übersteht Reload; ersetzt den
         // Set-Inhalt, damit beim Wechsel auf ein anderes Kurs-Buch keine fremden Ids stehen bleiben).
         if (this.isAnonCourse) this.offlineCourseSolvedIds = new Set(loadCourseLocalSolved(bid));
+        // Welche Sprachen der Kurs hat (für die Auswahl) — still, die Linien nennen sie ohnehin mit.
+        this.courseLang.ensureLanguages(bid, () => this.courseService.getTranslations(bid));
         this.loadCourseNext();
         this.autoCacheCourse();   // Kurs im Hintergrund offline vorhalten (ohne manuelles ☁)
         this.loadCourseLink();    // verknüpften Partner-Kurs für den Schnellwechsel laden
@@ -925,9 +1026,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       return;
     }
 
-    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined).subscribe({
+    const lang = this.requestLang;
+    this.courseService.getNext(this.courseBookId, this.courseModeKind, after, exclude, this.courseChapterIndex ?? undefined, lang).subscribe({
       next: res => {
         if (epoch !== this.loadEpoch) return;
+        this.offlineLangStale = false;
         this.courseSolved = res.solvedCount;
         this.courseTotal = res.total;
         this.applyCourseStats(res.book, res.chapter, res.chapterName);
@@ -940,6 +1043,7 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
         this.courseCompleted = false;
         this.gaveUp = false;
         this.puzzle = res.puzzle;
+        this.afterLineLoaded(res.puzzle, lang);
         this.setupPuzzle(res.puzzle);
       },
       error: () => {
@@ -961,12 +1065,19 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const cached = getBookOfflineByBookId(this.courseBookId);
     if (cached?.length) {
       if (!this.loadCourseOffline(after, exclude, hadPuzzle)) { this.showCourseUnavailable(); return; }
+      const online = typeof navigator === 'undefined' || navigator.onLine;
+      const meta = getBookOfflineLanguageByBookId(this.courseBookId);
+      // Die lokale Kopie ist hier der ARBEITSBESTAND: weicht ihre Sprache von der Wahl ab, wird sie
+      // online im Hintergrund in der neuen Sprache ersetzt (die alte bleibt spielbar, bis die neue da ist).
+      if (online && this.offlineLangStale) { this.refreshAnonCache(this.courseBookId); return; }
       // TORSO nachladen: brach die Seiten-Kette beim ersten Besuch ab (Netzfehler auf einer
       // Folgeseite, Tab geschlossen), lag hier nur die erste Seite — und der Kurs galt mit 300 von
       // 3000 Linien als „abgeschlossen". Der Marker unterscheidet beides; ist er nicht gesetzt,
-      // wird die Kette im Hintergrund ab der gecachten Länge fortgesetzt (spielbar bleibt es sofort).
-      if (!isBookCacheComplete(this.courseBookId) && (typeof navigator === 'undefined' || navigator.onLine))
-        this.fetchAnonCoursePages(this.courseBookId, [...cached], cached.length, undefined, undefined, false);
+      // wird die Kette im Hintergrund ab der gecachten Länge fortgesetzt (spielbar bleibt es sofort) —
+      // in der Sprache der Kopie, sonst stünden zwei Sprachen in einem Bestand.
+      if (!isBookCacheComplete(this.courseBookId) && online)
+        this.fetchAnonCoursePages(this.courseBookId, [...cached], cached.length, undefined, undefined, false,
+          false, meta?.lang ?? this.requestLang);
       return;
     }
     // Kein lokaler Cache + offline → nicht ins Netz laufen, sondern „nicht verfügbar" zeigen.
@@ -989,22 +1100,27 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
    */
   private fetchAnonCoursePages(bookId: number, acc: BookPuzzleDto[], skip: number,
     after: number | undefined, exclude: number | undefined, hadPuzzle: boolean,
-    serveFirstPage = false): void {
+    serveFirstPage = false, lang: string | null = this.requestLang, replace = false): void {
     const flushCache = (): boolean => {
       const fileName = acc[0]?.bookFileName;
-      return fileName ? saveBookOffline(fileName, acc, bookId) : false;
+      return fileName ? saveBookOffline(fileName, acc, bookId, lang) : false;
     };
     const fetchPage = (pageSkip: number, first: boolean): void => {
-      this.courseService.getPublicCourse(bookId, pageSkip, ANON_COURSE_PAGE_SIZE).subscribe({
+      this.courseService.getPublicCourse(bookId, pageSkip, ANON_COURSE_PAGE_SIZE, lang).subscribe({
         next: page => {
           if (this.courseBookId !== bookId) return;   // zwischenzeitlich weitergewechselt
           if (page?.length) acc.push(...page);
+          if (page?.length) this.courseLang.noteLines({ bookId }, page);
           // Volle Seite → es gibt vermutlich mehr; sonst ist die Kette hier zu Ende.
           const hasMore = !!page && page.length === ANON_COURSE_PAGE_SIZE;
-          if (first || !hasMore) {
+          // ERSETZT die Kette eine vollständige Kopie (Sprachwechsel), wird erst am Ende geschrieben —
+          // eine halb neue Kopie mit dem alten „vollständig"-Marker meldete sonst nach 300 Linien „fertig".
+          if ((first && !replace) || !hasMore) {
             const written = flushCache();
             // Vollständig NUR melden, wenn der letzte Stand auch wirklich im Speicher liegt.
             if (!hasMore) markBookCacheComplete(bookId, written);
+            if (!hasMore && written) this.offlineLangStale = false;
+            if (!hasMore && replace) this.anonRefreshBook = null;
           }
           if (first && serveFirstPage) {
             // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — der anonyme Kurs wird NUR
@@ -1023,11 +1139,21 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
           // aufgelaufenen Stand festschreiben (die Zwischenseiten werden nicht mehr geschrieben);
           // der Marker bleibt AUS, damit der nächste Besuch die Kette fortsetzt.
           if (first && serveFirstPage && !acc.length) { this.showCourseUnavailable(); return; }
-          flushCache();
+          // Beim Ersetzen bleibt die alte (vollständige) Kopie liegen, statt einen Torso zu schreiben.
+          if (!replace) flushCache();
+          else this.anonRefreshBook = null;
         },
       });
     };
     fetchPage(skip, skip === 0);
+  }
+
+  /** Anonymer Kurs: die lokale Kopie in der gewählten Sprache neu holen (nur online, im Hintergrund). */
+  private refreshAnonCache(bookId: number): void {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (this.anonRefreshBook === bookId) return;   // läuft schon — jede weitere Linie würde sonst eine Kette starten
+    this.anonRefreshBook = bookId;
+    this.fetchAnonCoursePages(bookId, [], 0, undefined, undefined, true, false, this.requestLang, true);
   }
 
   /** Öffentlicher Kurs anonym nicht (mehr) verfügbar (nicht public / gelöscht). */
@@ -1048,6 +1174,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (this.courseBookId == null) return false;
     const book = getBookOfflineByBookId(this.courseBookId);
     if (!book || !book.length) return false;
+    // Weicht die Sprache der Kopie von der Wahl ab, sagt die Ansicht es („neu herunterladen").
+    this.offlineLangStale = offlineLanguageStale(getBookOfflineLanguageByBookId(this.courseBookId),
+      this.requestLang ?? '', this.courseLang.languages(this.langRef));
 
     // Fortschritt/Zähler nur über echte Quiz-Linien (Info-/Erklärlinien zählen nicht) — wie serverseitig.
     const quiz = book.filter(p => !p.isInfoOnly);
@@ -1096,12 +1225,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private autoCacheCourse(): void {
     if (this.courseBookId == null || this.isAnonCourse) return;   // anonym cacht loadAnonCourseNext über den public-Endpoint
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-    if (getBookOfflineByBookId(this.courseBookId)?.length) return;   // schon offline vorhanden
     const bookId = this.courseBookId;
-    this.courseService.getBookPuzzles(bookId).subscribe({
+    const lang = this.requestLang;
+    // Schon offline vorhanden — außer in einer anderen Sprache als der gewählten: dann neu holen.
+    const meta = getBookOfflineLanguageByBookId(bookId);
+    if (meta && !offlineLanguageStale(meta, lang ?? '', this.courseLang.languages(this.langRef))) return;
+    this.courseService.getBookPuzzles(bookId, lang).subscribe({
       next: puzzles => {
         const fileName = puzzles?.[0]?.bookFileName;
-        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId);
+        if (fileName && puzzles.length) saveBookOffline(fileName, puzzles, bookId, lang);
       },
       error: () => { /* offline/Fehler: ignorieren, ☁ bleibt als manueller Weg */ },
     });
@@ -1428,10 +1560,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       if (cached) { this.puzzle = cached; this.setupPuzzle(cached); return; }
     }
 
-    this.puzzleService.getBookPuzzleById(id).subscribe({
+    // Die Wahl hängt am Kurs der Linie — vor dem ersten Abruf ist nur der bekannt, von dem aus
+    // weitergeblättert wurde; sonst gilt die Oberflächensprache und `afterLineLoaded` holt nach.
+    const lang = this.requestLang;
+    this.puzzleService.getBookPuzzleById(id, lang).subscribe({
       next: puzzle => {
         if (epoch !== this.loadEpoch) return;
         this.puzzle = puzzle;
+        this.afterLineLoaded(puzzle, lang);
         this.setupPuzzle(puzzle);
       },
       error: () => {

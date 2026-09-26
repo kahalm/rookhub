@@ -27,6 +27,19 @@ describe('buildFlashcard', () => {
     expect(setup.notation).toBe('1…e5 2.Nf3');
   });
 
+  it('Überschrift und Kapitel zeigen die Kurs-Übersetzung (label ?? original)', () => {
+    const card = buildFlashcard(puzzle({
+      title: "King's Indian: Main line", titleLabel: 'Königsindisch: Hauptvariante',
+      chapter: 'Openings', chapterLabel: 'Eröffnungen',
+    }))!;
+    expect(card.heading).toBe('Königsindisch: Hauptvariante');
+    expect(card.chapter).toBe('Eröffnungen');
+
+    const plain = buildFlashcard(puzzle({ title: 'Main line', chapter: 'Openings', titleLabel: null, chapterLabel: null }))!;
+    expect(plain.heading).toBe('Main line');
+    expect(plain.chapter).toBe('Openings');
+  });
+
   it('Abschlussbeschreibung: Kommentar des LETZTEN Zugs schlägt den Linien-Kommentar', () => {
     const withLast = buildFlashcard(puzzle({
       comment: 'Linien-Kommentar',

@@ -24,7 +24,11 @@ function puzzle(id: number, over: Partial<BookPuzzleDto> = {}): BookPuzzleDto {
   } as BookPuzzleDto;
 }
 
+/** Welche Sprache die Karteikarten beim Laden verlangten (letzter make()-Aufruf). */
+let requestedLangs: (string | null | undefined)[] = [];
+
 function make(puzzles: BookPuzzleDto[], query: Record<string, string>, marks: number[] = []) {
+  requestedLangs = [];
   TestBed.resetTestingModule();   // erlaubt mehrere make()-Aufrufe in einem it
   TestBed.configureTestingModule({
     imports: [FlashcardsComponent],
@@ -32,7 +36,7 @@ function make(puzzles: BookPuzzleDto[], query: Record<string, string>, marks: nu
       provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
       { provide: CourseService, useValue: {
-        getBookPuzzles: () => of(puzzles),
+        getBookPuzzles: (_id: number, lang?: string | null) => { requestedLangs.push(lang); return of(puzzles); },
         getFlashcardMarks: () => of({ lineIds: marks }),
       } },
       { provide: RepertoireTrainingService, useValue: {
@@ -58,6 +62,18 @@ function make(puzzles: BookPuzzleDto[], query: Record<string, string>, marks: nu
 }
 
 describe('FlashcardsComponent', () => {
+  it('lädt die Linien in der gewählten Sprache des Kurses (Kurs-Übersetzung)', () => {
+    localStorage.setItem('rookhub_course_lang', JSON.stringify({ c: { b58: 'fr' }, f: {} }));
+    try {
+      const fixture = make([puzzle(1, { chapter: 'A', chapterLabel: 'Ä', title: 'T', titleLabel: 'Ü' })], {});
+      expect(requestedLangs).toEqual(['fr']);
+      expect(fixture.componentInstance.cards[0].heading).toBe('Ü');
+      expect(fixture.componentInstance.cards[0].chapter).toBe('Ä');
+    } finally {
+      localStorage.removeItem('rookhub_course_lang');
+    }
+  });
+
   it('filtert per lines=…-Auswahl und baut 4er-Blätter', () => {
     const fixture = make([puzzle(1), puzzle(2), puzzle(3), puzzle(4), puzzle(5)], { lines: '1,3,5' });
     const c = fixture.componentInstance;

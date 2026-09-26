@@ -12,6 +12,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ReprocessBannerComponent } from '../../shared/reprocess-banner/reprocess-banner.component';
+import { CourseLanguageService } from './course-language.service';
 import { saveBookOffline, removeBookOffline, cachedBookFileNames, saveCourseListCache, loadCourseListCache } from '../puzzles/book-offline.util';
 import { downloadBlob } from '../../shared/download.util';
 import { CreateCourseDialogComponent, CreateCourseDialogData, CreateCourseDialogResult } from './create-course-dialog.component';
@@ -258,7 +259,8 @@ export class CourseListComponent implements OnInit {
   /** Buch, dessen Kapitel gerade geladen werden. */
   loadingChapters: number | null = null;
 
-  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService, private router: Router) {}
+  constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService, private router: Router,
+              private courseLang: CourseLanguageService) {}
 
   /** Darf der aktuelle Nutzer die Themen-Tags dieses Kurses setzen? Admin (alle) oder Besitzer. */
   canManageThemes(course: CourseListItem): boolean {
@@ -359,7 +361,8 @@ export class CourseListComponent implements OnInit {
     this.expandedBook = c.bookId;
     if (this.chaptersByBook[c.bookId]) return; // schon geladen
     this.loadingChapters = c.bookId;
-    this.courseService.getChapters(c.bookId).subscribe({
+    // In der gewählten Sprache des Kurses (Kurs-Übersetzung): die Kapitel tragen dann ihr `label`.
+    this.courseService.getChapters(c.bookId, this.courseLang.requestLang({ bookId: c.bookId, fileName: c.fileName })).subscribe({
       next: chapters => {
         this.chaptersByBook[c.bookId] = chapters;
         this.loadingChapters = null;
@@ -380,11 +383,13 @@ export class CourseListComponent implements OnInit {
       return;
     }
     this.savingOffline = c.bookId;
-    this.courseService.getBookPuzzles(c.bookId).subscribe({
+    // Die Kopie merkt sich ihre Sprache — weicht die Wahl später ab, bietet die Kursseite „neu herunterladen" an.
+    const lang = this.courseLang.requestLang({ bookId: c.bookId, fileName: c.fileName });
+    this.courseService.getBookPuzzles(c.bookId, lang).subscribe({
       next: puzzles => {
         // Cache-Schreiben kann fehlschlagen (Quota/Privatmodus) — dann EHRLICH als Fehler melden
         // statt ein Offline-Häkchen zu zeigen, hinter dem keine Kopie liegt.
-        const saved = saveBookOffline(c.fileName, puzzles, c.bookId);
+        const saved = saveBookOffline(c.fileName, puzzles, c.bookId, lang);
         this.savingOffline = null;
         if (!saved) {
           this.snackbar.info(this.translate.instant('courses.offlineFailed'), { action: 'common.ok', duration: 3000 });
@@ -428,6 +433,8 @@ export class CourseListComponent implements OnInit {
         this.courses = this.sortCourses(courses);
         this.rebuildSections();
         this.offlineList = false;
+        // Dateiname ↔ Kurs-Id: damit ein einzelnes Buch-Puzzle die Sprachwahl seines Kurses findet.
+        this.courseLang.rememberFiles(courses.map(c => ({ bookId: c.bookId, fileName: c.fileName })));
         saveCourseListCache(courses);   // Offline-Fallback aktuell halten
         this.loading = false;
       },

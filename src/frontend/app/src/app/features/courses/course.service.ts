@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { BookPuzzleDto } from '../puzzles/puzzle.service';
 
@@ -98,6 +98,9 @@ export interface CourseChapter {
   progressPercent: number;
   /** Anzahl Info-/Erklärlinien im Kapitel (nicht in puzzleCount enthalten); in der Übersicht in Klammern. */
   infoCount: number;
+  /** Übersetzter Kapitelname (nur mit `?lang=`); `null` = keine. `name` bleibt der Schlüssel — angezeigt
+   *  wird `label ?? name`. */
+  label?: string | null;
 }
 
 /** Statistik eines Kurs-Bereichs (ganzes Buch ODER aktuelles Kapitel): Fortschritt + Zeit + Erst-Versuch-Trefferquote.
@@ -158,6 +161,9 @@ export interface CourseManageChapter {
   solverIndex: number | null;
   /** Erste Linie des Kapitels — Einstieg für den Kalkulations-Modus. */
   firstLineId: number | null;
+  /** Übersetzter Kapitelname (nur mit `?lang=`); `null` = keine. `name` bleibt der Schlüssel (Umbenennen,
+   *  Löschen, Kapitel-PGN) — angezeigt wird `label ?? name`. */
+  label?: string | null;
 }
 
 /** Vollbild der Kurs-Detailseite. */
@@ -256,6 +262,67 @@ export interface ReprocessResult {
   failed: number;
 }
 
+/** Eine Sprache, in der es für den Kurs Übersetzungen gibt (`GET /api/courses/{id}/translations`). */
+export interface CourseTranslationLanguage {
+  language: string;
+  /** Linien mit einem Satz in dieser Sprache (auch wenn einzelne Stellen inzwischen veraltet sind). */
+  linesTranslated: number;
+  /** Linien mit übersetzbarem Text. */
+  linesTotal: number;
+}
+
+export type CourseTranslationStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+
+/** Ein Übersetzungsauftrag (offen oder kürzlich erledigt). */
+export interface CourseTranslationJob {
+  id: number;
+  bookId: number;
+  language: string;
+  status: CourseTranslationStatus;
+  linesTotal: number;
+  linesDone: number;
+  linesFailed: number;
+  /** Von der Automatik angelegt (de/en für alle Kurse, Nachziehen nach dem Aktualisieren). */
+  automatic: boolean;
+  requestedByMe: boolean;
+  /** Platz in der Warteschlange (1 = der nächste), nur bei `queued`. */
+  queuePosition?: number | null;
+  createdAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  lastError?: string | null;
+}
+
+/** Der offene Auftrag des Aufrufers — irgendein Kurs (für den Hinweis beim Nutzer-Limit). */
+export interface CourseTranslationMyJob {
+  jobId: number;
+  bookId: number;
+  bookName: string;
+  language: string;
+  status: CourseTranslationStatus;
+}
+
+/** `GET /api/courses/{id}/translations` — Stufe B (0.548.0). */
+export interface CourseTranslations {
+  /** Quellsprache der Kommentare (`und` = nicht bestimmbar). */
+  sourceLanguage: string | null;
+  languages: CourseTranslationLanguage[];
+  /** Offene Aufträge (laufender zuerst, dann nach Platz), dahinter die jüngsten erledigten. */
+  jobs: CourseTranslationJob[];
+  /** Bis wann die Spark gerade anderen gehört (`null` = frei) — Aufträge werden trotzdem angenommen. */
+  quietUntil?: string | null;
+  myOpenJob?: CourseTranslationMyJob | null;
+  /** Es ist ein Text-Modell konfiguriert. */
+  available: boolean;
+  /** Der Aufrufer darf JETZT anfordern (angemeldet, Modell da, kein eigener offener Auftrag bzw. Admin). */
+  canRequest: boolean;
+}
+
+/** `?lang=` nur setzen, wenn es eine Sprache gibt — ohne `lang` liefert der Server exakt das Original. */
+function withLang(params: HttpParams, lang?: string | null): HttpParams {
+  return lang ? params.set('lang', lang) : params;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CourseService {
   constructor(private http: HttpClient) {}
@@ -335,20 +402,22 @@ export class CourseService {
     return this.http.put<{ themes: string[] }>(`/api/courses/${bookId}/themes`, { themes });
   }
 
-  /** Alle Puzzles eines Buchs (für das Offline-Speichern des ganzen Buchs). */
-  getBookPuzzles(bookId: number): Observable<BookPuzzleDto[]> {
-    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`);
+  /** Alle Puzzles eines Buchs (Offline-Speichern, Durchsehen, Karteikarten). `lang` = Sprache der
+   *  Kommentare (Kurs-Übersetzung); fehlt sie, kommt das Original. */
+  getBookPuzzles(bookId: number, lang?: string | null): Observable<BookPuzzleDto[]> {
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/puzzles`,
+      { params: withLang(new HttpParams(), lang) });
   }
 
   /** Puzzles eines ÖFFENTLICHEN Kurses — ohne Login. Basis für das registrierungsfreie
    *  Durchspielen eines als „public" markierten Kurses (404, wenn nicht öffentlich).
    *  Optional seitenweise (`skip`/`take`): große Kurse laden die erste Seite sofort, den Rest
    *  im Hintergrund — ohne Parameter kommt (rückwärtskompatibel) das ganze Buch. */
-  getPublicCourse(bookId: number, skip?: number, take?: number): Observable<BookPuzzleDto[]> {
+  getPublicCourse(bookId: number, skip?: number, take?: number, lang?: string | null): Observable<BookPuzzleDto[]> {
     let params = new HttpParams();
     if (skip != null) params = params.set('skip', String(skip));
     if (take != null) params = params.set('take', String(take));
-    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params });
+    return this.http.get<BookPuzzleDto[]>(`/api/courses/${bookId}/public`, { params: withLang(params, lang) });
   }
 
   /**
@@ -400,17 +469,20 @@ export class CourseService {
     return this.http.get<{ hasAccess: boolean }>('/api/courses/access');
   }
 
-  /** Kapitel eines Buchs in Lesereihenfolge inkl. Fortschritt (für die Kapitelübersicht). */
-  getChapters(bookId: number): Observable<CourseChapter[]> {
-    return this.http.get<CourseChapter[]>(`/api/courses/${bookId}/chapters`);
+  /** Kapitel eines Buchs in Lesereihenfolge inkl. Fortschritt (für die Kapitelübersicht). Mit `lang`
+   *  tragen sie ihren übersetzten Namen als `label`. */
+  getChapters(bookId: number, lang?: string | null): Observable<CourseChapter[]> {
+    return this.http.get<CourseChapter[]>(`/api/courses/${bookId}/chapters`,
+      { params: withLang(new HttpParams(), lang) });
   }
 
-  getNext(bookId: number, mode: CourseMode, after?: number, exclude?: number, chapterIndex?: number): Observable<CourseNextPuzzle> {
+  getNext(bookId: number, mode: CourseMode, after?: number, exclude?: number, chapterIndex?: number,
+          lang?: string | null): Observable<CourseNextPuzzle> {
     let params = new HttpParams().set('mode', mode);
     if (after != null) params = params.set('after', after);
     if (exclude != null) params = params.set('exclude', exclude);
     if (chapterIndex != null) params = params.set('chapterIndex', chapterIndex);
-    return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params });
+    return this.http.get<CourseNextPuzzle>(`/api/courses/${bookId}/next`, { params: withLang(params, lang) });
   }
 
   recordResult(bookId: number, bookPuzzleId: number, solved: boolean, mode?: CourseMode, timeSeconds = 0, chapterIndex?: number, hintsUsed = 0, solveMode?: string): Observable<CourseProgress> {
@@ -441,9 +513,30 @@ export class CourseService {
 
   // ---- Detailseite + Inhaltspflege ----------------------------------------
 
-  /** Vollbild der Kurs-Detailseite (Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht). */
-  getDetail(bookId: number): Observable<CourseDetail> {
-    return this.http.get<CourseDetail>(`/api/courses/${bookId}`);
+  /** Vollbild der Kurs-Detailseite (Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht). Mit
+   *  `lang` tragen die Kapitel ihren übersetzten Namen als `label`. */
+  getDetail(bookId: number, lang?: string | null): Observable<CourseDetail> {
+    return this.http.get<CourseDetail>(`/api/courses/${bookId}`, { params: withLang(new HttpParams(), lang) });
+  }
+
+  // ---- Kurs-Übersetzung (Stufe B, 0.548.0) --------------------------------
+
+  /** Welche Sprachen es gibt, was wartet/läuft, ob der Aufrufer anfordern darf. Anonym nur bei
+   *  öffentlichen Kursen (sonst 404). */
+  getTranslations(bookId: number): Observable<CourseTranslations> {
+    return this.http.get<CourseTranslations>(`/api/courses/${bookId}/translations`);
+  }
+
+  /** Übersetzung anfordern. 202 = neuer Auftrag, 200 = für (Kurs, Sprache) wartete schon einer —
+   *  deshalb die ganze Antwort. Absagen (400/409/503) tragen `reason`. */
+  requestTranslation(bookId: number, language: string): Observable<HttpResponse<CourseTranslationJob>> {
+    return this.http.post<CourseTranslationJob>(`/api/courses/${bookId}/translations`, { language },
+      { observe: 'response' });
+  }
+
+  /** Eigenen wartenden Auftrag zurückziehen (Admin: jeden offenen). */
+  withdrawTranslation(bookId: number, jobId: number): Observable<void> {
+    return this.http.delete<void>(`/api/courses/${bookId}/translations/${jobId}`);
   }
 
   /**

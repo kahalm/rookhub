@@ -7,6 +7,13 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { CourseDetailComponent } from './course-detail.component';
 import { CourseDetail, CourseLine, CourseManageChapter } from './course.service';
+import { CourseLanguageService } from './course-language.service';
+import { saveBookOffline } from '../puzzles/book-offline.util';
+
+/** Echte Sprachwahl mit fester Oberflächensprache — `getDetail` bekommt damit ein `lang`. */
+function courseLang(ui = 'de'): CourseLanguageService {
+  return new CourseLanguageService({ currentLang: () => ui, getFallbackLang: () => 'en' } as never);
+}
 
 function chapter(over: Partial<CourseManageChapter> = {}): CourseManageChapter {
   return {
@@ -74,6 +81,7 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     { warn: (m: string) => warnings.push(m), quick: () => undefined } as never,
     { instant: (k: string) => k } as never,
     { sendAndNotify: (target: number | null, items: unknown[]) => calls.push(`worksheet:${target}:${items.length}`) } as never,
+    courseLang(),
   );
   return { component, calls, warnings };
 }
@@ -376,5 +384,63 @@ describe('CourseDetailComponent — PGN je Kapitel/Linie', () => {
     component.downloadLinePgn(line());
 
     expect(warnings).toEqual(['courses.downloadFailed', 'courses.downloadFailed']);
+  });
+});
+
+/** Kurs-Übersetzung (Stufe C, 0.549.0): Sprache der Seite, Kapitel-Labels, Offline-Hinweis. */
+describe('CourseDetailComponent Sprache der Kommentare', () => {
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
+
+  it('fragt das Detail in der Oberflächensprache an (ohne gemerkte Wahl)', () => {
+    const langs: (string | null | undefined)[] = [];
+    const { component } = make({ getDetail: (_id: number, lang?: string | null) => { langs.push(lang); return of(detail()); } });
+    component.ngOnInit();
+    expect(langs).toEqual(['de']);
+  });
+
+  it('zeigt Kapitel mit ihrem Label, Schlüssel bleibt der Name', () => {
+    const { component } = make();
+    const ch = chapter({ name: "King's Indian", label: 'Königsindisch' });
+    expect(component.chapterLabel(ch)).toBe('Königsindisch');
+    expect(component.key(ch)).toBe("King's Indian");   // Umbenennen/Löschen/PGN adressieren das Original
+    expect(component.chapterLabel(chapter({ name: 'A', label: null }))).toBe('A');
+  });
+
+  it('eine Sprachwahl wird gemerkt und lädt die Seite in ihr neu', () => {
+    const langs: (string | null | undefined)[] = [];
+    const { component } = make({ getDetail: (_id: number, lang?: string | null) => { langs.push(lang); return of(detail()); } });
+    component.ngOnInit();
+    component.pickLanguage('en');
+    expect(langs).toEqual(['de', 'en']);
+    expect(component.courseLang.choice({ bookId: 58 })).toBe('en');
+  });
+
+  it('meldet eine Offline-Kopie in anderer Sprache und holt sie auf Wunsch neu', () => {
+    // Kopie auf Deutsch geholt, der Kurs kennt en (Quelle) + de; gewählt wird dann das Original.
+    saveBookOffline('testnoel.pgn', [{ id: 1, bookFileName: 'testnoel.pgn', commentLanguages: ['en', 'de'] } as never], 58, 'de');
+    const got: (string | null | undefined)[] = [];
+    const { component } = make({
+      getDetail: () => of(detail({ isCalculation: false })),
+      getBookPuzzles: (_id: number, lang?: string | null) => {
+        got.push(lang);
+        return of([{ id: 1, bookFileName: 'testnoel.pgn', commentLanguages: ['en', 'de'] }]);
+      },
+    });
+    component.ngOnInit();
+    expect(component.offlineStale).toBeFalse();   // Oberfläche 'de' = Sprache der Kopie
+    component.pickLanguage('en');
+    expect(component.offlineStale).toBeTrue();
+    component.redownloadOffline();
+    expect(got).toEqual(['en']);
+    expect(component.offlineStale).toBeFalse();
+  });
+
+  it('Kalkulationsbücher haben keine Offline-Kopie und damit keinen Hinweis', () => {
+    saveBookOffline('testnoel.pgn', [{ id: 1, bookFileName: 'testnoel.pgn' } as never], 58, 'fr');
+    const { component } = make();   // detail() ist ein Kalkulationsbuch
+    component.ngOnInit();
+    component.pickLanguage('en');
+    expect(component.offlineStale).toBeFalse();
   });
 });

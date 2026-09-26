@@ -4,6 +4,10 @@
       <mat-icon>arrow_back</mat-icon>{{ 'common.back' | translate }}
     </a>
     <h1 class="page-title">{{ detail?.displayName || ('courses.detail.title' | translate) }}</h1>
+    <span class="topbar-spacer"></span>
+    <app-course-lang-picker [languages]="courseLang.languages(langRef)"
+                            [value]="courseLang.effective(langRef)"
+                            (picked)="pickLanguage($event)" />
   </div>
 
   @if (loading && !detail) {
@@ -32,6 +36,17 @@
         </div>
 
         @if (d.description) { <p class="description">{{ d.description }}</p> }
+
+        <!-- Offline-Kopie in einer anderen Sprache als der gewählten (Kurs-Übersetzung). -->
+        @if (offlineStale) {
+          <p class="offline-lang-hint">
+            <mat-icon inline>cloud_off</mat-icon>
+            {{ 'courses.lang.offlineStale' | translate }}
+            <button mat-button type="button" (click)="redownloadOffline()" [disabled]="redownloading">
+              {{ 'courses.lang.offlineRedownload' | translate }}
+            </button>
+          </p>
+        }
 
         <div class="progress-row">
           <mat-progress-bar mode="determinate" [value]="d.progressPercent"></mat-progress-bar>
@@ -327,5 +342,9 @@
         }
       </mat-card-content>
     </mat-card>
+
+    <!-- ===== Übersetzungen (Kurs-Kommentare mehrsprachig) ===== -->
+    <app-course-translations class="translations-box" [bookId]="bookId"
+                             (languagesChanged)="onLanguagesChanged()" />
   }
 </div>

@@ -1,7 +1,8 @@
-import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
+import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, BOOK_LANG_PREFIX, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
 import { BoundedMapStore, hasKey, keysWithPrefix, localStore, readJson, readRaw, removeKey, writeJson, writeRaw }
   from '../../core/local-json-store';
 import { BookPuzzleDto } from './puzzle.service';
+import { OfflineLanguageMeta, languagesFromLines, normLang } from '../courses/course-language.util';
 
 /**
  * Offline-Cache ganzer Bücher (alle Puzzles eines Buchs) im localStorage, gekeyt per
@@ -12,6 +13,10 @@ import { BookPuzzleDto } from './puzzle.service';
  */
 function bookKey(fileName: string): string {
   return BOOK_OFFLINE_PREFIX + encodeURIComponent(fileName);
+}
+
+function langKey(fileName: string): string {
+  return BOOK_LANG_PREFIX + encodeURIComponent(fileName);
 }
 
 /** bookId→fileName-Index laden/speichern (der Kursmodus kennt nur die bookId). */
@@ -28,7 +33,8 @@ function saveIdMap(m: Record<string, string>): void {
  * melden, sonst glaubt der User an eine Offline-Kopie, die nicht existiert (und das
  * ☁-Häkchen spraenge nach dem Reload zurueck, weil `cachedBookFileNames()` sie nicht findet).
  */
-export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number): boolean {
+export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], bookId?: number,
+                                lang?: string | null): boolean {
   if (!fileName) return false;
   // Quota → gar nicht erst in den Index aufnehmen.
   if (!writeJson(localStore(), bookKey(fileName), puzzles ?? [])) return false;
@@ -37,7 +43,31 @@ export function saveBookOffline(fileName: string, puzzles: BookPuzzleDto[], book
     m[String(bookId)] = fileName;
     saveIdMap(m);
   }
+  // Sprache der Kopie (Kurs-Übersetzung): mit welchem `?lang=` geholt, und welche Sprachen die Linien
+  // nannten. Scheitert NUR dieser Vermerk, liegt die Kopie trotzdem — sie gilt dann wie eine alte
+  // Kopie als Original, und schlimmstenfalls erscheint der Hinweis „neu herunterladen" zu oft.
+  const meta: OfflineLanguageMeta = { lang: normLang(lang), langs: languagesFromLines(puzzles) };
+  writeJson(localStore(), langKey(fileName), meta);
   return true;
+}
+
+/**
+ * Was die Offline-Kopie über ihre Sprache weiß; `null`, wenn es keine Kopie gibt. Eine Kopie von vor
+ * 0.549.0 (ohne Vermerk) wurde ohne `?lang=` geholt und ist damit das Original.
+ */
+export function getBookOfflineLanguage(fileName: string | null | undefined): OfflineLanguageMeta | null {
+  if (!fileName || !hasBookOffline(fileName)) return null;
+  const meta = readJson<Partial<OfflineLanguageMeta>>(localStore(), langKey(fileName));
+  return {
+    lang: normLang(meta?.lang ?? null),
+    langs: Array.isArray(meta?.langs) ? meta!.langs.filter((l): l is string => typeof l === 'string') : [],
+  };
+}
+
+/** Wie {@link getBookOfflineLanguage}, über die (Kurs-)bookId aufgelöst. */
+export function getBookOfflineLanguageByBookId(bookId: number): OfflineLanguageMeta | null {
+  const fileName = loadIdMap()[String(bookId)];
+  return fileName ? getBookOfflineLanguage(fileName) : null;
 }
 
 /** Offline gespeichertes Buch über die (Kurs-)bookId auflösen. Null, wenn nicht gespeichert. */
@@ -57,6 +87,7 @@ export function hasBookOffline(fileName: string): boolean {
 
 export function removeBookOffline(fileName: string): void {
   removeKey(localStore(), bookKey(fileName));
+  removeKey(localStore(), langKey(fileName));
   const m = loadIdMap();
   let changed = false;
   for (const k of Object.keys(m)) if (m[k] === fileName) { delete m[k]; changed = true; }

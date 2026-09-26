@@ -158,3 +158,35 @@ describe('CourseCardComponent Kalkulations-Punkte', () => {
     expect(make({ isCalculation: true, calcPoints: 0, puzzleCount: 2 }).calcScore).toBe('0 / 8');
   });
 });
+
+/**
+ * Kurs-Übersetzung (0.549.0): die Kapitelliste der Karte zeigt die ÜBERSETZUNG (`label`), sonst das
+ * Original — geroutet wird weiter über den Index.
+ */
+describe('CourseCardComponent Kapitelnamen (label ?? name)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt das Label, fällt aufs Original und auf „ohne Kapitel" zurück', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    fixture.componentInstance.course = {
+      bookId: 42, displayName: 'K', puzzleCount: 5, solvedCount: 0, progressPercent: 0, lastMode: null,
+      isOwned: false, isPinned: false,
+    } as never;
+    fixture.componentInstance.expanded = true;
+    fixture.componentInstance.chapters = [
+      { index: 0, name: "King's Indian", label: 'Königsindisch', puzzleCount: 3, solvedCount: 0, progressPercent: 0, infoCount: 0 },
+      { index: 1, name: 'Endgames', label: null, puzzleCount: 2, solvedCount: 0, progressPercent: 0, infoCount: 0 },
+      { index: 2, name: null, puzzleCount: 1, solvedCount: 0, progressPercent: 0, infoCount: 0 },
+    ];
+    fixture.detectChanges();
+    const names = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.chapter-name'))
+      .map(e => e.textContent?.trim());
+    expect(names).toEqual(['Königsindisch', 'Endgames', 'courses.noChapter']);
+    const c = fixture.componentInstance;
+    expect(c.chapterName({ index: 0, name: 'A', label: 'B', puzzleCount: 0, solvedCount: 0, progressPercent: 0, infoCount: 0 })).toBe('B');
+  });
+});

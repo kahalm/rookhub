@@ -1,4 +1,5 @@
-import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline, saveDailyOffline, getDailyOffline, isBookCacheComplete, markBookCacheComplete } from './book-offline.util';
+import { saveBookOffline, getBookOffline, getBookOfflineByBookId, removeBookOffline, hasBookOffline, saveDailyOffline, getDailyOffline, isBookCacheComplete, markBookCacheComplete, getBookOfflineLanguage, getBookOfflineLanguageByBookId } from './book-offline.util';
+import { offlineLanguageStale } from '../courses/course-language.util';
 import { BookPuzzleDto } from './puzzle.service';
 
 function puzzle(id: number, fileName: string): BookPuzzleDto {
@@ -8,6 +9,33 @@ function puzzle(id: number, fileName: string): BookPuzzleDto {
 describe('book-offline.util', () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
+
+  it('merkt sich die Sprache der Kopie (lang + Sprachen der Linien) — Grundlage für „neu herunterladen"', () => {
+    const lines = [
+      { ...puzzle(1, 'book-a.pgn'), commentLanguages: ['en', 'de'] },
+      { ...puzzle(2, 'book-a.pgn'), commentLanguages: ['en', 'de', 'fr'] },
+    ];
+    saveBookOffline('book-a.pgn', lines, 42, 'DE');
+    const meta = getBookOfflineLanguage('book-a.pgn');
+    expect(meta).toEqual({ lang: 'de', langs: ['en', 'de', 'fr'] });
+    expect(getBookOfflineLanguageByBookId(42)).toEqual(meta);
+    // Wahl wie beim Herunterladen → passt; auf das Original gewechselt → Hinweis.
+    expect(offlineLanguageStale(meta, 'de', ['en', 'de', 'fr'])).toBeFalse();
+    expect(offlineLanguageStale(meta, 'en', ['en', 'de', 'fr'])).toBeTrue();
+  });
+
+  it('eine alte Kopie ohne Vermerk gilt als Original; ohne Kopie gibt es keinen Vermerk', () => {
+    localStorage.setItem('rookhub_book_offline_' + encodeURIComponent('old.pgn'), JSON.stringify([puzzle(1, 'old.pgn')]));
+    expect(getBookOfflineLanguage('old.pgn')).toEqual({ lang: null, langs: [] });
+    expect(getBookOfflineLanguage('missing.pgn')).toBeNull();
+  });
+
+  it('Entfernen räumt den Sprach-Vermerk mit weg', () => {
+    saveBookOffline('book-a.pgn', [puzzle(1, 'book-a.pgn')], 42, 'de');
+    removeBookOffline('book-a.pgn');
+    expect(getBookOfflineLanguage('book-a.pgn')).toBeNull();
+    expect(localStorage.getItem('rookhub_book_lang_' + encodeURIComponent('book-a.pgn'))).toBeNull();
+  });
 
   it('saves + reads a book by file name', () => {
     saveBookOffline('book-a.pgn', [puzzle(1, 'book-a.pgn'), puzzle(2, 'book-a.pgn')]);

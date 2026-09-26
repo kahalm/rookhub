@@ -26,6 +26,11 @@ import { WorksheetService } from '../worksheets/worksheet.service';
 import { itemsFromLines } from '../worksheets/worksheet-items.util';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName } from '../../shared/pgn-export.util';
+import { CourseLanguageService, CourseRef } from './course-language.service';
+import { OfflineLanguageMeta, labelOr, offlineLanguageStale } from './course-language.util';
+import { CourseLangPickerComponent } from './course-lang-picker.component';
+import { CourseTranslationsComponent } from './course-translations.component';
+import { getBookOfflineLanguage, saveBookOffline } from '../puzzles/book-offline.util';
 
 /**
  * Kurs-Detailseite (`/courses/:bookId`): Metadaten, eigener Fortschritt und — neu — die
@@ -44,6 +49,7 @@ import { pgnFileName } from '../../shared/pgn-export.util';
     CommonModule, FormsModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule,
     MatMenuModule, MatProgressBarModule, MatProgressSpinnerModule, MatSlideToggleModule,
     MatTooltipModule, MatDialogModule, TranslatePipe, SendToWorksheetComponent,
+    CourseLangPickerComponent, CourseTranslationsComponent,
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],
@@ -86,7 +92,60 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private worksheets: WorksheetService,
+    readonly courseLang: CourseLanguageService,
   ) {}
+
+  // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =================
+
+  /** Dieser Kurs für die Sprachwahl (Dateiname, sobald das Detail da ist). */
+  get langRef(): CourseRef {
+    return { bookId: this.bookId, fileName: this.detail?.fileName ?? null };
+  }
+
+  /** Was die Offline-Kopie dieses Kurses über ihre Sprache weiß (`null` = keine Kopie). */
+  private offlineMeta: OfflineLanguageMeta | null = null;
+  /** Läuft gerade das Neu-Herunterladen der Offline-Kopie? */
+  redownloading = false;
+
+  /** Liegt eine Offline-Kopie in einer anderen Sprache als der gewählten? (Kalkulationsbücher haben keine.) */
+  get offlineStale(): boolean {
+    if (!this.detail || this.detail.isCalculation) return false;
+    return offlineLanguageStale(this.offlineMeta, this.courseLang.requestLang(this.langRef),
+      this.courseLang.languages(this.langRef));
+  }
+
+  /** Sprache gewählt: merken und die Seite in ihr neu laden (Kapitelnamen). */
+  pickLanguage(lang: string): void {
+    this.courseLang.setChoice(this.langRef, lang);
+    this.load();
+  }
+
+  /** Die Übersicht nennt neue Sprachen — ist die gewählte darunter, stehen neue Kapitelnamen bereit. */
+  onLanguagesChanged(): void {
+    this.load();
+  }
+
+  /** Offline-Kopie in der gewählten Sprache neu holen (ersetzt die alte). */
+  redownloadOffline(): void {
+    const d = this.detail;
+    if (!d || this.redownloading) return;
+    const lang = this.courseLang.requestLang(this.langRef);
+    this.redownloading = true;
+    this.subs.add(this.courses.getBookPuzzles(this.bookId, lang).subscribe({
+      next: puzzles => {
+        this.redownloading = false;
+        const fileName = puzzles?.[0]?.bookFileName || d.fileName;
+        if (!puzzles?.length || !saveBookOffline(fileName, puzzles, this.bookId, lang)) {
+          this.fail('courses.lang.offlineUpdateFailed');
+          return;
+        }
+        this.courseLang.noteLines(this.langRef, puzzles);
+        this.offlineMeta = getBookOfflineLanguage(d.fileName);
+        this.snackbar.quick(this.translate.instant('courses.lang.offlineUpdated'));
+      },
+      error: () => { this.redownloading = false; this.fail('courses.lang.offlineUpdateFailed'); },
+    }));
+  }
 
   ngOnInit(): void {
     this.bookId = Number(this.route.snapshot.paramMap.get('bookId'));
@@ -100,10 +159,12 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   private load(): void {
     this.loading = true;
     this.loadError = false;
-    this.subs.add(this.courses.getDetail(this.bookId).subscribe({
+    this.subs.add(this.courses.getDetail(this.bookId, this.courseLang.requestLang(this.langRef)).subscribe({
       next: detail => {
         this.detail = detail;
         this.loading = false;
+        this.courseLang.rememberFile(this.bookId, detail.fileName);
+        this.offlineMeta = getBookOfflineLanguage(detail.fileName);
         // Kalkulationsbuch: Kapitel-Punkte der Selbstbewertung nachladen (eigener Endpoint, hält die
         // Kurs-Detail-DTO frei von Kalkulations-Feldern). Nur bewertete Kapitel bekommen eine Zahl.
         if (detail.isCalculation) { this.loadCalcChapterScores(); this.loadEditions(); }
@@ -210,8 +271,9 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     return key.length === 0 ? null : key;
   }
 
+  /** ANGEZEIGTER Kapitelname: die Übersetzung, sonst das Original — der Schlüssel bleibt `name`. */
   chapterLabel(chapter: CourseManageChapter): string {
-    return chapter.name ?? this.translate.instant('courses.noChapter');
+    return labelOr(chapter.label, chapter.name) ?? this.translate.instant('courses.noChapter');
   }
 
   /**

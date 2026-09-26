@@ -1525,6 +1525,51 @@
       "attachPgn": "PGN-Datei wählen",
       "pgnNote": "Jedes PGN geht: eigene Partien, eine heruntergeladene Sammlung oder ein Puzzle-PGN im Chessable-Stil. Kommentare in geschweiften Klammern bleiben erhalten und werden beim Durchklicken angezeigt. Fragen?",
       "button": "Partien importieren"
+    },
+    "lang": {
+      "label": "Sprache der Kommentare",
+      "original": "Original",
+      "machine": "maschinell übersetzt",
+      "machineHint": "Maschinell übersetzt — Klick zeigt das Original.",
+      "offlineStale": "Deine Offline-Kopie dieses Kurses ist in einer anderen Sprache.",
+      "offlineRedownload": "Neu herunterladen",
+      "offlineUpdated": "Offline-Kopie erneuert.",
+      "offlineUpdateFailed": "Die Offline-Kopie ließ sich nicht erneuern.",
+      "offlineStaleSolver": "Die Offline-Kopie ist in einer anderen Sprache — lade sie neu herunter, sobald du online bist."
+    },
+    "translations": {
+      "title": "Übersetzungen",
+      "help": "Wer diesen Kurs öffnen darf, kann seine Kommentare, Linien-Titel und Kapitelnamen in einer der Sprachen der App anfordern. Übersetzt wird von einer KI auf unserer eigenen Hardware, im Hintergrund; maschinelle Übersetzungen sind gekennzeichnet.\n\nJe Person ein offener Auftrag. Montag bis Donnerstag 8:00–17:00 und Freitag 8:00–14:00 (Wiener Zeit) gehört die Hardware anderer Arbeit — ein Auftrag wird dann angenommen und wartet.",
+      "source": "Originalsprache: {{name}}",
+      "sourceUnknown": "nicht bestimmt",
+      "lines": "{{name}} · {{done}} / {{total}} Linien",
+      "mine": "(deiner)",
+      "withdraw": "Zurückziehen",
+      "request": "Übersetzen in …",
+      "requested": "Übersetzung angefordert — sie läuft im Hintergrund.",
+      "joined": "Für diese Sprache wartet schon ein Auftrag — deine Anfrage schließt sich an.",
+      "requestFailed": "Die Übersetzung ließ sich nicht anfordern.",
+      "withdrawn": "Auftrag zurückgezogen.",
+      "withdrawFailed": "Der Auftrag ließ sich nicht zurückziehen.",
+      "loginHint": "Zum Anfordern bitte anmelden.",
+      "unavailable": "Übersetzungen sind gerade nicht verfügbar.",
+      "limit": "Je Person ein Auftrag — deiner läuft noch:",
+      "limitHere": "Dein Auftrag ({{language}}) läuft noch — je Person einer.",
+      "status": {
+        "queued": "wartet · Platz {{pos}}",
+        "waiting": "wartet",
+        "running": "läuft · {{percent}} %",
+        "paused": "pausiert bis {{time}}",
+        "failed": "fehlgeschlagen"
+      },
+      "reason": {
+        "unsupported-language": "In diese Sprache wird nicht übersetzt.",
+        "same-language": "Der Kurs ist schon in dieser Sprache geschrieben.",
+        "nothing-to-translate": "In dieser Sprache ist schon alles übersetzt.",
+        "user-limit": "Du hast schon einen offenen Auftrag — je Person einer.",
+        "not-configured": "Übersetzungen sind gerade nicht verfügbar.",
+        "not-waiting": "Nur ein wartender Auftrag lässt sich zurückziehen."
+      }
     }
   },
   "calc": {

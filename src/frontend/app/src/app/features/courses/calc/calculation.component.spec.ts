@@ -1,3 +1,4 @@
+import { CourseLanguageService } from '../course-language.service';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -112,6 +113,7 @@ function make(
     { instant: (k: string) => k } as never,
     { isLoggedIn: loggedIn } as never,
     dialog as never,
+    new CourseLanguageService({ currentLang: () => 'de', getFallbackLang: () => 'en' } as never),
   );
   return { component, saved, deleted, warnings, reviews, dialog, navigated, snackbarAction };
 }
@@ -2103,5 +2105,61 @@ describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
     // Nichts Modales — der Hinweis steht in der Seite.
     expect(document.querySelector('mat-dialog-container')).toBeNull();
     c.ngOnDestroy();
+  });
+});
+
+/** Kurs-Übersetzung (Stufe C, 0.549.0): Sprache mitschicken, Labels anzeigen, Texte tauschen. */
+describe('CalculationComponent Sprache der Kurs-Kommentare', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_course_lang'));
+  afterEach(() => localStorage.removeItem('rookhub_course_lang'));
+
+  it('holt Buch und Stellung in der gewählten Sprache (Vorgabe = Oberfläche)', () => {
+    const bookLangs: (string | null | undefined)[] = [];
+    const posLangs: (string | null | undefined)[] = [];
+    const book: CalcBook = { bookId: 1, displayName: 'B', isCalculation: true, positions: [item(7)] };
+    const { component } = make({
+      getBook: (_id: number, lang?: string | null) => { bookLangs.push(lang); return of(book); },
+      getPosition: (_id: number, lang?: string | null) => { posLangs.push(lang); return of(position()); },
+    });
+    (component as unknown as { loadBook(r: number | null): void }).loadBook(null);
+    expect(bookLangs).toEqual(['de']);
+    expect(posLangs).toEqual(['de']);
+  });
+
+  it('zeigt Kapitel- und Stellungsnamen mit ihren Labels (gruppiert wird über das Original)', () => {
+    const { component } = makeWithBook({ positions: [
+      item(1, { chapter: 'Week 1', chapterLabel: 'Woche 1', title: 'Task', titleLabel: 'Aufgabe' }),
+      item(2, { chapter: 'Week 1', chapterLabel: 'Woche 1' }),
+      item(3, { chapter: 'Week 2' }),
+    ] });
+    expect(component.groups.map(g => [g.chapter, g.label])).toEqual([['Week 1', 'Woche 1'], ['Week 2', 'Week 2']]);
+    expect(component.chapterName).toBe('Woche 1');
+    expect(component.nextChapterName).toBe('Week 2');
+    expect(component.positionLabel(component.groups[0].items[0])).toBe('Aufgabe');
+    expect(component.positionLabel(component.groups[0].items[1])).toBe('#2');
+    expect(component.chapterLabel(component.groups[0])).toContain('Woche 1');
+  });
+
+  it('Sprachwechsel tauscht nur die Texte — der Analysebaum bleibt', () => {
+    let lang: string | null | undefined = 'de';
+    const book = () => ({ bookId: 1, displayName: 'B', isCalculation: true,
+      positions: [item(7, { chapter: 'W', chapterLabel: lang === 'en' ? null : 'W-de' })] } as CalcBook);
+    const { component } = make({
+      getBook: (_id: number, l?: string | null) => { lang = l; return of(book()); },
+      getPosition: (_id: number, l?: string | null) => of(position({
+        chapter: 'W', comment: l === 'en' ? 'White to move' : 'Weiß am Zug', commentMachine: l !== 'en',
+      })),
+    });
+    component.bookId = 1;   // sonst setzt es ngOnInit aus der Route (hier ohne DOM-Aufbau)
+    (component as unknown as { loadBook(r: number | null): void }).loadBook(null);
+    expect(component.position?.comment).toBe('Weiß am Zug');
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });   // Arbeit am Baum
+    const tree = component.tree;
+    component.pickLanguage('en');
+    expect(component.position?.comment).toBe('White to move');
+    expect(component.position?.commentMachine).toBeFalse();
+    expect(component.groups[0].label).toBe('W');
+    expect(component.tree).toBe(tree);   // Baum nicht neu aufgesetzt
+    expect(component.lineCount).toBe(1);
   });
 });

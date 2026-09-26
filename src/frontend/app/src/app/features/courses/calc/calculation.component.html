@@ -16,6 +16,10 @@
       <img src="icons/icon.svg" alt="" width="26" height="26" />
     </a>
     <span class="calc-bar-book" *ngIf="book">{{ book.displayName }}</span>
+    <!-- Sprache der Kommentare (Kurs-Übersetzung) — nur sichtbar, wenn der Kurs mehr als eine hat. -->
+    <app-course-lang-picker [languages]="courseLang.languages(langRef)"
+                            [value]="courseLang.effective(langRef)"
+                            (picked)="pickLanguage($event)" />
 
     <!-- Stufe 1: Kapitel. Das Menü nennt je Kapitel Punkte und Zeit. -->
     <button mat-button class="calc-bar-pick" [matMenuTriggerFor]="chapterMenu"
@@ -183,7 +187,11 @@
         <mat-card class="calc-lines-card">
           <mat-card-content>
             @if (position?.comment; as taskText) {
-              <p class="calc-task-text">{{ taskText }}</p>
+              <p class="calc-task-text">{{ taskText }}
+                @if (position.commentMachine) {
+                  <app-machine-note [clickable]="!!courseLang.source(langRef)" (original)="showOriginal()" />
+                }
+              </p>
             }
 
             <app-calc-lines

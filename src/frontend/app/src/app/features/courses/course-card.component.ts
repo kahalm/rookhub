@@ -11,6 +11,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CourseListItem, CourseChapter } from './course.service';
 import { formatScore, maxPoints } from './calc/calc-review.util';
+import { labelOr } from './course-language.util';
 
 /**
  * Praesentationale Kurs-Karte: zeigt Titel/Badges/Fortschritt/Themen-Chips/Aktions-Menue/Kapitel
@@ -194,8 +195,9 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
                   <ul class="chapter-list">
                     @for (ch of chapters; track ch.index) {
                       <li class="chapter-row">
-                        <span class="chapter-name" [title]="ch.name || ('courses.noChapter' | translate)">
-                          {{ ch.name || ('courses.noChapter' | translate) }}
+                        <!-- Angezeigt wird die Übersetzung (label), geroutet weiter über den Index. -->
+                        <span class="chapter-name" [title]="chapterName(ch) || ('courses.noChapter' | translate)">
+                          {{ chapterName(ch) || ('courses.noChapter' | translate) }}
                         </span>
                         <div class="chapter-progress">
                           <mat-progress-bar class="chapter-bar" mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
@@ -332,6 +334,11 @@ import { formatScore, maxPoints } from './calc/calc-review.util';
 })
 export class CourseCardComponent {
   @Input({ required: true }) course!: CourseListItem;
+
+  /** Angezeigter Kapitelname: die Übersetzung (`label`, nur mit `?lang=`), sonst das Original. */
+  chapterName(ch: CourseChapter): string | null {
+    return labelOr(ch.label, ch.name);
+  }
   /** bookId dieses Kurses wird gerade an-/abgepinnt (Button-Sperre). */
   @Input() pinning = false;
   @Input() savingOffline = false;

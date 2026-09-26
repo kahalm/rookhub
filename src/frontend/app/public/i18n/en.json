@@ -1525,6 +1525,51 @@
       "attachPgn": "Choose PGN file",
       "pgnNote": "Any PGN works: your own games, a downloaded collection or a puzzle PGN in Chessable style. Comments in braces are kept and shown while clicking through. Questions?",
       "button": "Import games"
+    },
+    "lang": {
+      "label": "Language of the comments",
+      "original": "Original",
+      "machine": "machine-translated",
+      "machineHint": "Machine-translated — click to show the original.",
+      "offlineStale": "Your offline copy of this course is in a different language.",
+      "offlineRedownload": "Download again",
+      "offlineUpdated": "Offline copy updated.",
+      "offlineUpdateFailed": "Could not update the offline copy.",
+      "offlineStaleSolver": "The offline copy is in a different language — download it again once you are online."
+    },
+    "translations": {
+      "title": "Translations",
+      "help": "Anyone who can open this course can request its comments, line titles and chapter names in one of the app's languages. An AI on our own hardware translates in the background; machine translations are marked.\n\nOne open request per person. Monday to Thursday 8:00–17:00 and Friday 8:00–14:00 (Vienna time) the hardware belongs to other work — a request is then accepted and waits.",
+      "source": "Original language: {{name}}",
+      "sourceUnknown": "not determined",
+      "lines": "{{name}} · {{done}} / {{total}} lines",
+      "mine": "(yours)",
+      "withdraw": "Withdraw",
+      "request": "Translate into …",
+      "requested": "Translation requested — it runs in the background.",
+      "joined": "This language is already waiting — your request joins it.",
+      "requestFailed": "Could not request the translation.",
+      "withdrawn": "Request withdrawn.",
+      "withdrawFailed": "Could not withdraw the request.",
+      "loginHint": "Sign in to request a translation.",
+      "unavailable": "Translations are not available right now.",
+      "limit": "One request per person — yours is still open:",
+      "limitHere": "Your request ({{language}}) is still open — one per person.",
+      "status": {
+        "queued": "waiting · place {{pos}}",
+        "waiting": "waiting",
+        "running": "running · {{percent}} %",
+        "paused": "paused until {{time}}",
+        "failed": "failed"
+      },
+      "reason": {
+        "unsupported-language": "This language is not available for translations.",
+        "same-language": "The course is already written in this language.",
+        "nothing-to-translate": "Everything in this language is already translated.",
+        "user-limit": "You already have an open request — one per person.",
+        "not-configured": "Translations are not available right now.",
+        "not-waiting": "Only a waiting request can be withdrawn."
+      }
     }
   },
   "calc": {

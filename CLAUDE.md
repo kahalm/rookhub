@@ -2353,7 +2353,8 @@ Durchsatzes). Warnungen des Uebersetzers und des Modell-Clients gehen auf die Ko
 zu unterscheiden. Wiederholbar — was die Zielsprache hat, faellt aus der Auswahl.
 
 **KURSE** (Plan „Kurs-Kommentare mehrsprachig", TODO.md — Stufe A 0.547.0 Uebersetzen + Ausliefern, Stufe B 0.548.0
-Auftraege + Hintergrunddienst; die Oberflaeche folgt): je Kurs-LINIE und Sprache ein `CommentSet` mit `BookPuzzleId` (dritter Anker neben
+Auftraege + Hintergrunddienst, Stufe C 0.549.0 Oberflaeche — Sprachwahl, Uebersetzungs-Kasten, Labels, siehe
+`src/frontend/CLAUDE.md`): je Kurs-LINIE und Sprache ein `CommentSet` mit `BookPuzzleId` (dritter Anker neben
 Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Was dabei anders ist als bei Partien:
 * **Es gibt KEINEN Quell-Satz.** Die Quelle bleibt die Linie (`Comment`, `MoveComments`, `Title`, `Chapter`) —
   genau diese Felder ueberschreiben Aufbereitung (in-place per oid/LineId) und naechtliches Aktualisieren; ein

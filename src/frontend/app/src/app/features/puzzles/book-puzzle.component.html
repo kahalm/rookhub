@@ -122,10 +122,16 @@
                     </button>
                   }
                   <div class="ctx-text">
-                    @if (puzzle.title) { <p class="meta-title">{{ puzzle.title }}</p> }
-                    @if (puzzle.chapter) { <p class="meta-chapter">{{ puzzle.chapter }}</p> }
+                    <!-- Angezeigt wird die Kurs-Übersetzung (Label), wo es eine gibt — Schlüssel bleiben das Original. -->
+                    @if (titleDisplay; as t) { <p class="meta-title">{{ t }}</p> }
+                    @if (chapterDisplay; as ch) { <p class="meta-chapter">{{ ch }}</p> }
                     <span class="book-name">{{ displayBookName }}</span>
                   </div>
+                  @if (langEnabled) {
+                    <app-course-lang-picker class="ctx-lang" [languages]="courseLang.languages(langRef)"
+                                            [value]="courseLang.effective(langRef)"
+                                            (picked)="pickLanguage($event)" />
+                  }
                   @if (inCourse && linkedCourseBookId) {
                     <button mat-stroked-button class="ctx-switch" (click)="switchToLinkedCourse()"
                             [matTooltip]="'book.course.switchLinkedTooltip' | translate:{ name: linkedCourseName }">
@@ -154,8 +160,15 @@
                           </button>
                         </div>
                       }
+                      @if (langEnabled && puzzle.commentMachine) {
+                        <app-machine-note [clickable]="!!(courseLang.source(langRef) || puzzle.commentLanguages?.[0])"
+                                          (original)="showOriginal()" />
+                      }
                     </div>
                   </div>
+                }
+                @if (offlineLangStale) {
+                  <p class="ctx-offline-lang"><mat-icon inline>cloud_off</mat-icon> {{ 'courses.lang.offlineStaleSolver' | translate }}</p>
                 }
 
                 @if (puzzle.difficulty || puzzle.bookRating || puzzle.tags) {
@@ -242,7 +255,7 @@
                       <!-- Aktuelles Kapitel (nur wenn das Buch mehrere Kapitel hat) -->
                       @if (courseChapterStats; as ch) {
                         <div class="cs-scope cs-chapter">
-                          <span class="cs-label">{{ courseChapterName || ('book.course.noChapter' | translate) }}</span>
+                          <span class="cs-label">{{ courseChapterDisplay || ('book.course.noChapter' | translate) }}</span>
                           <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
                           <div class="cs-stats">
                             <span class="cs-prog">{{ ch.solvedCount }}/{{ ch.total }} ({{ ch.progressPercent }}%)</span>

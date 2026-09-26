@@ -105,6 +105,44 @@ Auftragsseite (`analysis-jobs.component.ts`) benutzen diese drei — keine eigen
   Browser-Erweiterung, Vorgabe; `engine` = Engine-Provider), die Liste zeigt ihn als Spalte. Ein Engine-Token erreicht
   serverseitig NUR `/api/external-engine/*`.
 
+## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
+
+Oberfläche zur Kurs-Übersetzung (Server: Haupt-CLAUDE.md „Anmerkungen in mehreren Sprachen" → KURSE). Drei Bausteine
+in `features/courses/`:
+
+- **`course-language.util.ts`** — die REINEN Regeln, mit literalen Vektoren getestet. Sprachliste eines Kurses = die
+  QUELLE zuerst („Original"), dann die Übersetzungen alphabetisch (dieselbe Form wie `commentLanguages` je Linie).
+  **Wirksame Sprache** = die gewünschte, wenn der Kurs sie hat, sonst die Quelle (`effectiveLanguage`). „Original" wird
+  als KÜRZEL der Quelle gemerkt, nicht als eigenes Wort — `?lang=<Quelle>` liefert das Original und trotzdem
+  `commentLanguages`. `labelOr(label, original)` ist die EINE Anzeige-Regel für Kapitel und Titel.
+- **`CourseLanguageService`** (root) — die Wahl je Kurs im localStorage `rookhub_course_lang` (`{ c: { b<id>|f<datei>:
+  lang }, f: { datei: id } }`, beim Abmelden geräumt), ohne Wahl gilt die Oberflächensprache (`requestLang` → das geht als
+  `?lang=` raus). Bekannte Sprachen je Kurs liegen in einem SIGNAL (Übersicht + `commentLanguages` gesehener Linien),
+  die Übersicht holt `ensureLanguages` je Kurs und Sitzung höchstens einmal, still. **Die Einzel-Linie im Buch
+  (`/puzzles/book/:id`) kennt keine Kurs-Id** — dort hängt die Wahl am Dateinamen, `rememberFile` verknüpft beide.
+- **`CourseLangPickerComponent`** (Menü-Knopf, unsichtbar bei EINER Sprache; Namen aus `LocaleService.languages`),
+  **`MachineNoteComponent`** („maschinell übersetzt", Klick = Original) und **`CourseTranslationsComponent`** (Kasten
+  auf der Kursseite: Sprachen mit Fortschritt, offene Aufträge „wartet · Platz n" / „läuft · n %" / „pausiert bis …"
+  über `formatQuietUntil`, „Übersetzen in …" über die 25 Sprachen ohne Quelle, vollständige und offene; Limit-Hinweis
+  mit Link auf den Kurs, der läuft; eigenen wartenden Auftrag zurückziehen, Admin jeden offenen; ohne Anmeldung
+  lesend; 404 → ausgeblendet). Alles aus HTTP in Signalen (OnPush). Er fragt alle `PollMs` (15 s) nach, SOLANGE ein
+  Auftrag wartet oder läuft.
+
+Regeln, die dabei nicht kippen dürfen:
+- **`chapter` und `title` bleiben SCHLÜSSEL** (`?chapter=`, `groupByChapter`, Umbenennen, Kapitel-PGN,
+  `course-detail.key()`, Kalkulations-Gruppen) — nur die ANZEIGE nimmt `chapterLabel ?? chapter` bzw. `label ?? name`.
+  `CourseNextPuzzleDto.chapterName` ist ebenfalls das Original; der Solver zeigt dafür `puzzle.chapterLabel`, wenn das
+  Kapitel zum aktuellen Puzzle gehört (`courseChapterDisplay`).
+- **Ein Sprachwechsel tauscht im Solver und in der Kalkulation nur die TEXTE** (`applyTexts` bzw. `refreshTexts`) —
+  ein laufender Versuch, Baum, Uhr und Bewertung bleiben. Wer dort `setupPuzzle`/`applyPosition` ruft, startet die
+  Aufgabe neu.
+- **Tagespuzzle und Wochenpost bleiben Original** (`langEnabled` im Solver); ebenso Favoriten, Verlauf, Bearbeiten und
+  Aufgabenblätter.
+- **Offline-Kopie merkt sich ihre Sprache** (`rookhub_book_lang_<Datei>`, NICHT unter dem Buch-Präfix — sonst zählte
+  sie als gecachtes Buch). Verglichen wird „übersetzt in X" gegen „Original" (`offlineLanguageStale`); eine alte Kopie
+  ohne Vermerk gilt als Original. Die anonyme Arbeitskopie wird bei abweichender Sprache im Hintergrund ERSETZT und erst
+  am Ende der Seiten-Kette geschrieben.
+
 ## Offline / PWA (Service Worker)
 
 - **Service Worker**: `@angular/service-worker` (ngsw), Konfig in `ngsw-config.json`, registriert in `app.config.ts` via `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() })` — **nur im Prod-Build aktiv** (`serviceWorker: "ngsw-config.json"` steht in der `production`-Configuration der `angular.json`). Cacht App-Shell, **alle Lazy-Chunks** (assetGroup `app`, prefetch → Routen wie `/puzzles`, `/endless` öffnen offline) + i18n (prefetch) + Google-Fonts (dataGroup, performance). `/api/*` wird **nicht** vom SW gecacht (immer Netz → App fällt offline auf lokale Caches/Queue zurück). **Stockfish (`/assets/stockfish/**`, ~7 MB `.wasm`) ist als eigene assetGroup `engine` (installMode `prefetch`) im SW** → Engine/Analyse/Eval funktionieren offline. Das `.wasm` wird vom dedizierten Worker per Subresource-Fetch geladen (geht über den SW-Cache); falls `WebAssembly.instantiateStreaming` an einem cache-servierten Response scheitert, fällt das Glue auf `WebAssembly.instantiate(arrayBuffer)` zurück (kein Hänger). Hinweis: Der frühere „Berechne…"-Hänger lag NICHT am SW, sondern am UCI-Sequencing in `AnalysisEngineService.analyze` (stop→isready→readyok→position+go; seit 0.64.2 behoben). Hash ist auf 16 MB begrenzt (OOM-Schutz). nginx: SW-Steuerdateien `no-cache`, CSP `connect-src` enthält die Font-Origins (SW-Caching).

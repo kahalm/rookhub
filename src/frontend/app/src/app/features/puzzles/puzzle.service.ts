@@ -96,6 +96,20 @@ export interface BookPuzzleDto {
   /** „Info-/Erklärlinie" (Chessable IsInfo): kein Quiz, nur Durchklicken — im Kurs sequenziell als
    *  schreibgeschützte Erklärlinie, nie in Random/Tagespuzzle, zählt nicht zum Kurs-Fortschritt. */
   isInfoOnly?: boolean;
+
+  // --- Kurs-Übersetzung (0.547.0/0.549.0) — nur mit `?lang=` an den Kurs-/Buch-Endpunkten ---
+  /** Übersetzter Linien-Titel; `null` = keine. `title` bleibt das Original — angezeigt wird
+   *  `titleLabel ?? title` (`labelOr` in `courses/course-language.util.ts`). */
+  titleLabel?: string | null;
+  /** Übersetzter Kapitelname; `null` = keine. `chapter` bleibt der SCHLÜSSEL (Filter, Routen,
+   *  Umbenennen, Kapitel-PGN) — angezeigt wird `chapterLabel ?? chapter`. */
+  chapterLabel?: string | null;
+  /** Sprache, in der die Texte TATSÄCHLICH kommen (die gewünschte, wo übersetzt, sonst die Quelle). */
+  commentLanguage?: string | null;
+  /** Sprachen, die es für die Linie gibt — die QUELLE zuerst („Original"). `null` ohne `?lang=`. */
+  commentLanguages?: string[] | null;
+  /** Mindestens eine ausgelieferte Stelle ist maschinell übersetzt → Hinweis im Kommentar. */
+  commentMachine?: boolean;
 }
 
 export interface BookInfoDto {
@@ -119,6 +133,11 @@ export interface CourseAttemptDto {
   solved: boolean;
   timeSeconds: number;
   attemptedAt: string;
+}
+
+/** `?lang=` nur mit Sprache — ohne liefern die Buch-Endpunkte exakt das Original (Tagespuzzle, Teilen-Links). */
+function langParams(lang?: string | null): HttpParams {
+  return lang ? new HttpParams().set('lang', lang) : new HttpParams();
 }
 
 @Injectable({ providedIn: 'root' })
@@ -255,8 +274,8 @@ export class PuzzleService {
     });
   }
 
-  getBookPuzzleById(id: number): Observable<BookPuzzleDto> {
-    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`);
+  getBookPuzzleById(id: number, lang?: string | null): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}`, { params: langParams(lang) });
   }
 
   /** Tagespuzzle eines UTC-Datums (`yyyyMMdd` oder `today`) — stabil/teilbar via Datums-Link. */
@@ -265,13 +284,13 @@ export class PuzzleService {
   }
 
   /** Nächstes Puzzle im selben Buch (Standalone-Buch-Navigation). */
-  getNextBookPuzzle(id: number): Observable<BookPuzzleDto> {
-    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/next`);
+  getNextBookPuzzle(id: number, lang?: string | null): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/next`, { params: langParams(lang) });
   }
 
   /** Zufälliges Puzzle aus demselben Buch. */
-  getRandomBookPuzzle(id: number): Observable<BookPuzzleDto> {
-    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/random`);
+  getRandomBookPuzzle(id: number, lang?: string | null): Observable<BookPuzzleDto> {
+    return this.http.get<BookPuzzleDto>(`/api/book-puzzles/${id}/random`, { params: langParams(lang) });
   }
 
   /** Lösungsversuch an einem Buch-Puzzle melden (eingeloggt; Basis für Tagespuzzle-Anzeige).
