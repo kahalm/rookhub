@@ -726,6 +726,104 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.True(await OpenJobsAsync(next.Id) > 0);
     }
 
+    // ===== Der Schwanz einer Partie (0.543.0) ==================================
+
+    /// <summary>Hat die aeltere Partie weniger offene Stellungen als Engines, stuenden Engines still —
+    /// dann bekommt die naechste schon Auftraege. Gemessen am 2026-09-26 auf Prod: 16 Engines, und
+    /// jede Partie endete mit 20–30 s, in denen 15 davon nichts taten.</summary>
+    [Fact]
+    public async Task Pump_naechstePartieRuecktNach_sobaldDieErsteWenigerOffeneStellungenHatAlsEngines()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 16);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 Halbzuege
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        // 14 offene Stellungen < 16 Engines: die zweite darf sofort mit — die erste bleibt vorn in der Schlange.
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
+    }
+
+    [Fact]
+    public async Task Pump_naechstePartieWartet_solangeDieErsteMehrOffeneStellungenHatAlsEngines()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 4);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });   // 14 offen
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite" });
+
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+
+        // Erst wenn von der ersten weniger als vier offen sind, rueckt die zweite nach.
+        await MarkAnalyzedAsync(first.Id, 11);
+        await _svc.PumpAllAsync();
+        Assert.Equal(3, await OpenJobsAsync(first.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(second.Id));
+    }
+
+    /// <summary>Die offenen Stellungen ALLER aelteren Partien zaehlen zusammen — drei kleine Reste
+    /// koennen die Engines genauso fuellen wie eine grosse Partie.</summary>
+    [Fact]
+    public async Task Pump_zaehltDieResteAllerAelterenPartienZusammen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 6);
+        var a = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game });
+        var b = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "B" });
+        var c = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "C" });
+        await MarkAnalyzedAsync(a.Id, 10);   // 4 offen
+        await MarkAnalyzedAsync(b.Id, 14);   // b hat noch keine Auftraege — alle 14 markieren = fertig
+        await _svc.PumpAllAsync();
+
+        Assert.Equal(4, await OpenJobsAsync(a.Id));
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(c.Id));   // 4 + 0 < 6
+
+        // Waeren es a: 4 und b: 3 offen (= 7 ≥ 6), muesste c warten.
+        var d = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "D" });
+        Assert.Equal(0, await OpenJobsAsync(d.Id));   // a 4 + c 14 = 18 ≥ 6
+    }
+
+    /// <summary>Eine fest gewaehlte Engine ist EINE Schlange: da hilft Nachruecken nichts.</summary>
+    [Fact]
+    public async Task Pump_festeEngine_bleibtBeiEinerPartieNachDerAnderen()
+    {
+        var user = await CreateUserWithEngineAsync();
+        await SetEnginesAsync(user, 16);
+        var first = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, EngineId = "eei_test" });
+        var second = await _svc.CreateAsync(user.Id, new CreateGameAnalysisRequest { Pgn = Game, Title = "Zweite", EngineId = "eei_test" });
+
+        Assert.Equal(BlockFor(14), await OpenJobsAsync(first.Id));
+        Assert.Equal(0, await OpenJobsAsync(second.Id));
+    }
+
+    private async Task SetEnginesAsync(AppUser user, int count)
+    {
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == user.Id);
+        cred.SetBackgroundEngines(Enumerable.Range(1, count).Select(i => $"eei_test{i}"));
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Die ersten <paramref name="count"/> Stellungen (nach Halbzug) als gerechnet eintragen — der
+    /// Auftrag dazu faellt weg, wie nach dem Uebernehmen durch die Pumpe.</summary>
+    private async Task MarkAnalyzedAsync(int analysisId, int count)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.CandidatesJson == null)
+            .OrderBy(p => p.Ply).Take(count).ToListAsync();
+        foreach (var pos in positions)
+        {
+            if (pos.AnalysisJobId is int jobId)
+            {
+                var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == jobId);
+                if (job is not null) _db.AnalysisJobs.Remove(job);
+            }
+            pos.CandidatesJson = "[{\"uci\":\"e2e4\"}]";
+            pos.AnalysisJobId = null;
+            pos.AnalyzedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync();
+    }
+
     private async Task<int> OpenJobsAsync(int analysisId) =>
         await _db.GameAnalysisPositions
             .CountAsync(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null);

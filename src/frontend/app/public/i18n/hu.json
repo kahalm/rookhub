@@ -3000,6 +3000,8 @@
     "rate": "{{rate}} állás/perc",
     "eta": "még kb. {{eta}}",
     "engines": "motorok: {{count}}",
+    "peak": "csúcs (24 h): {{engines}} motor · {{nps}}",
+    "peakHint": "Az utolsó 24 órában egyszerre számoló motorok legnagyobb száma és együttes sebességük",
     "restart": "Újraindítás",
     "restartHint": "Minden még ki nem számolt állás újra sorba kerül, újonnan választott motoron",
     "restarted": "A játszma elemzése újraindult.",

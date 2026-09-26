@@ -135,4 +135,10 @@ public class AnalysisThroughputDto
     public int RunningEngines { get; set; }
     /// <summary>Summe der zuletzt gemeldeten Knoten/s dieser Laeufe; 0 = noch keine Zeile mit Tempo.</summary>
     public long NodesPerSecond { get; set; }
+    /// <summary>Hoechste Zahl gleichzeitig rechnender Engines in den letzten 24 Stunden (0.543.0) — der
+    /// Vergleichswert zu <see cref="RunningEngines"/>: am Schwanz einer Partie rechnet oft nur eine, und
+    /// ohne die Spitze sah das wie ein Ausfall aus. Aus dem Arbeitsspeicher, nach einem API-Neustart 0.</summary>
+    public int MaxRunningEngines24h { get; set; }
+    /// <summary>Hoechstes Gesamttempo (Knoten/s ueber alle Laeufe) in den letzten 24 Stunden; 0 = keine Aufzeichnung.</summary>
+    public long MaxNodesPerSecond24h { get; set; }
 }

@@ -9,11 +9,17 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [ ] Eigener Engine-Broker ausrollen — NPM-Custom-Location zuerst (2026-09-26)
+## [~] Eigener Engine-Broker ausrollen — NPM-Custom-Location zuerst (2026-09-26)
 
 Der eigene Broker (0.537.0, `docs/eigener-engine-broker.md`, CLAUDE.md „Eigener Engine-Broker“) ist gebaut
 und gegen den E2E-Stack mit dem echten Provider gemessen. Fuer Dev/Prod fehlen Schritte AUSSERHALB des
-Repos, alle nur auf Zuruf:
+Repos, alle nur auf Zuruf. **Stand 2026-09-26 mittags**: Schritt 1 auf Dev UND Prod erledigt
+(`/data/nginx/custom/server_proxy.conf` im NPM, mit `location = /api/external-engine` gegen den 301),
+v0.539.1 ist auf Prod, die zweite Maschine rechnet direkt (13 `rhe_`, Hintergrund-Liste 12 `rhe_` + 4
+Server-`eei_`). Offen: der Server-Stack `/opt/stacks/rookhub-schach-engine` laeuft noch ueber Lichess
+(Schritt 3, zweiter Dienst DAZU). Achtung beim Provider-Neustart: die `rhe_`-Kennungen wechseln, danach
+Hintergrund-Liste neu setzen und die laufende Partie „Neu starten" — Auftraege auf einer Engine, die nicht
+mehr in der Liste steht, wechseln nie von selbst.
 
 1. **Nginx Proxy Manager, Host rookhub-dev**: Custom Location `/api/external-engine/` mit
    `proxy_http_version 1.1; proxy_request_buffering off; proxy_buffering off; proxy_cache off;

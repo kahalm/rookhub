@@ -3279,6 +3279,8 @@
     "rate": "{{rate}} pozicija/min",
     "eta": "još oko {{eta}}",
     "engines": "motori: {{count}}",
+    "peak": "vrhunac (24 h): {{engines}} motora · {{nps}}",
+    "peakHint": "Najveći broj motora koji su istodobno računali i njihova ukupna brzina u zadnja 24 sata",
     "restart": "Pokreni ponovno",
     "restartHint": "Sve još neizračunate pozicije idu ponovno u red, na novoodabranom motoru",
     "restarted": "Partija se ponovno analizira.",

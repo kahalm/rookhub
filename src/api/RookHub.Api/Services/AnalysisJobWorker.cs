@@ -162,6 +162,8 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     /// Verbindung — dafür darf der Auftrag nicht als gescheitert gelten.</summary>
     private readonly TimeSpan _fruitlessMinRuntime;
     private readonly ConcurrentDictionary<string, Running> _running = new();   // key = EngineId
+    /// <summary>Weckt die Schleife, sobald ein Lauf endet — die Engine soll nicht bis zum nächsten Tick warten.</summary>
+    private readonly WakeSignal _wake = new();
 
     public AnalysisJobWorker(IServiceScopeFactory scopeFactory, EngineActivityTracker tracker,
         IEngineBroker broker, ILogger<AnalysisJobWorker> logger, IConfiguration config, AnalysisJobLive live)
@@ -218,13 +220,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             _logger.LogError(ex, "AnalysisJobWorker: Start-Aufräumen fehlgeschlagen");
         }
 
-        using var timer = new PeriodicTimer(_tick);
+        // Fester Takt ODER Weckruf: ein beendeter Lauf weckt die Schleife (siehe WakeSignal), damit die
+        // frei gewordene Engine sofort den nächsten Auftrag bekommt statt bis zu einen Tick zu warten.
         while (!stoppingToken.IsCancellationRequested)
         {
             try { await TickAsync(stoppingToken); }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception ex) { _logger.LogError(ex, "AnalysisJobWorker: Tick fehlgeschlagen"); }
-            try { if (!await timer.WaitForNextTickAsync(stoppingToken)) break; }
+            try { await _wake.WaitAsync(_tick, stoppingToken); }
             catch (OperationCanceledException) { break; }
         }
         foreach (var r in _running.Values) TryCancel(r.Cts);
@@ -560,6 +563,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             _live.Stop(jobId);
             _running.TryRemove(new KeyValuePair<string, Running>(run.EngineId, run));
             run.Cts.Dispose();
+            _wake.Wake();   // die Engine ist frei — nächsten Auftrag sofort holen, nicht erst beim nächsten Tick
         }
     }
 

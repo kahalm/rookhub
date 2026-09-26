@@ -87,6 +87,71 @@ public class AnalysisJobLiveTests
         Assert.Equal(5_500_000, nps);
     }
 
+    // ===== Spitze der letzten 24 Stunden (0.543.0) ===========================
+
+    [Fact]
+    public void Peak_RemembersTheHighestConcurrencyAndSpeed_AfterRunsEnded()
+    {
+        // Anlass: „engines: 1 · 1 164 kN/s" am Schwanz einer Partie sah wie ein Ausfall aus — erst der
+        // Vergleich mit der Spitze sagt, ob gerade alle Engines rechnen.
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(2, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(3, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Update(1, depth: 20, nps: 1_000_000, nowUtc: Start);
+        live.Update(2, depth: 20, nps: 1_200_000, nowUtc: Start);
+        live.Update(3, depth: 20, nps: 900_000, nowUtc: Start);
+        live.Stop(2);
+        live.Stop(3);
+
+        Assert.Equal((1, 1_000_000L), live.Summary(5));                       // jetzt: eine Engine
+        Assert.Equal((3, 3_100_000L), live.Peak(5, Start.AddMinutes(30)));    // Spitze: drei, zusammen 3,1 MN/s
+    }
+
+    [Fact]
+    public void Peak_IsPerUser()
+    {
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(2, userId: 9, secondsBase: 0, startedUtc: Start);
+        live.Update(2, depth: 20, nps: 9_000_000, nowUtc: Start);
+
+        Assert.Equal((1, 0L), live.Peak(5, Start));
+        Assert.Equal((1, 9_000_000L), live.Peak(9, Start));
+        Assert.Equal((0, 0L), live.Peak(7, Start));   // nie gerechnet
+    }
+
+    [Fact]
+    public void Peak_ForgetsWhatIsOlderThanTheWindow()
+    {
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Start(2, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Update(1, depth: 20, nps: 5_000_000, nowUtc: Start);
+        live.Stop(1); live.Stop(2);
+
+        // Innerhalb des Fensters sichtbar, danach weg — auch ohne dass inzwischen etwas lief.
+        Assert.Equal((2, 5_000_000L), live.Peak(5, Start.AddHours(AnalysisJobLive.PeakHours - 1)));
+        Assert.Equal((0, 0L), live.Peak(5, Start.AddHours(AnalysisJobLive.PeakHours + 2)));
+
+        // Ein neuer Lauf viel später räumt die alten Körbe auch aus dem Speicher; die Spitze ist dann die neue.
+        var later = Start.AddHours(AnalysisJobLive.PeakHours + 2);
+        live.Start(3, userId: 5, secondsBase: 0, startedUtc: later);
+        live.Update(3, depth: 20, nps: 700_000, nowUtc: later);
+        Assert.Equal((1, 700_000L), live.Peak(5, later));
+    }
+
+    [Fact]
+    public void Peak_KeepsTheHighestValueWithinAnHour_NotTheLatest()
+    {
+        var live = new AnalysisJobLive();
+        live.Start(1, userId: 5, secondsBase: 0, startedUtc: Start);
+        live.Update(1, depth: 20, nps: 4_000_000, nowUtc: Start);
+        live.Update(1, depth: 25, nps: 2_000_000, nowUtc: Start.AddMinutes(5));   // wird langsamer (tiefer)
+
+        Assert.Equal((1, 4_000_000L), live.Peak(5, Start.AddMinutes(10)));
+    }
+
     [Fact]
     public void Summary_DropsStoppedRuns()
     {

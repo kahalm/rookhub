@@ -671,14 +671,42 @@ public class GameAnalysisService
     /// </summary>
     private async Task<bool> IsOwnersTurnAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        var current = await _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId
+        var olderOpen = await OpenPliesOfOlderGamesAsync(analysis, ct);
+        if (olderOpen == 0) return true;
+        // Der SCHWANZ (0.543.0): haben alle aelteren Partien zusammen weniger offene Stellungen, als
+        // Engines da sind, stuenden Engines still — dann darf diese Partie schon nachruecken. Die
+        // aelteren Auftraege bleiben vorn in der Schlange (FIFO im Worker), die aeltere Partie wird
+        // also weiterhin ZUERST fertig; nur der Leerlauf am Ende jeder Partie faellt weg. Gemessen
+        // am 2026-09-26 auf Prod mit 16 Engines: jede Partie endete mit 20–30 s, in denen 15 Engines
+        // nichts taten — bei Partien von drei Minuten ein Fuenftel der Zeit.
+        return olderOpen < await EngineSlotsAsync(analysis, ct);
+    }
+
+    /// <summary>Offene (ungerechnete) Stellungen aller unfertigen Partien dieses Nutzers, die VOR
+    /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id).</summary>
+    private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
+        => _db.GameAnalyses
+            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
-                && g.Positions.Any(p => p.CandidatesJson == null))
-            .OrderBy(g => g.CreatedAt).ThenBy(g => g.Id)
-            .Select(g => (int?)g.Id)
-            .FirstOrDefaultAsync(ct);
-        return current is null || current == analysis.Id;
+                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
+            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
+
+    /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
+    private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
+        => _db.GameAnalyses
+            .Where(g => g.UserId == userId
+                && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
+            .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
+
+    /// <summary>Wie viele Suchen fuer diese Partie nebeneinander laufen koennen: die Hintergrund-Engines
+    /// des ENGINE-BESITZERS (Haus-Engine: das Haus-Konto), bei fest gewaehlter Engine genau eine.
+    /// Mindestens 1 — ohne Engine scheitert das Einreihen ohnehin mit eigener Meldung.</summary>
+    private async Task<int> EngineSlotsAsync(GameAnalysis analysis, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(analysis.EngineId)) return 1;
+        var ownerId = analysis.EngineOwnerUserId ?? analysis.UserId;
+        var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
+        return Math.Max(1, cred?.BackgroundEngines.Count ?? 0);
     }
 
     /// <summary>Fertige Aufträge in die Stellungen kopieren.</summary>
@@ -829,10 +857,11 @@ public class GameAnalysisService
     /// </summary>
     private async Task<bool> IsOwnersRefineTurnAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        var firstPassOpen = await _db.GameAnalyses.AnyAsync(g => g.UserId == analysis.UserId
-            && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
-            && g.Positions.Any(p => p.CandidatesJson == null), ct);
-        if (firstPassOpen) return false;
+        // Dieselbe Schwanz-Regel wie im ersten Durchgang (0.543.0): solange der erste Durchgang mehr offene
+        // Stellungen hat als Engines da sind, wartet die Vertiefung; darunter darf sie die freien Engines
+        // nehmen — ihre Auftraege sind ohnehin Hintergrundarbeit, die der Worker nur ohne normalen Auftrag zieht.
+        var firstPassOpen = await OpenFirstPassPliesAsync(analysis.UserId, ct);
+        if (firstPassOpen > 0 && firstPassOpen >= await EngineSlotsAsync(analysis, ct)) return false;
         var current = await _db.GameAnalyses
             .Where(g => g.UserId == analysis.UserId && g.Status == GameAnalysisStatus.Done
                 && g.RefineDepth != null && g.RefinedAt == null)

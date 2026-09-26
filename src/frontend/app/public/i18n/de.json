@@ -3279,6 +3279,8 @@
     "rate": "{{rate}} Stellungen/Min",
     "eta": "noch ca. {{eta}}",
     "engines": "Engines: {{count}}",
+    "peak": "Spitze (24 h): {{engines}} Engines · {{nps}}",
+    "peakHint": "Höchste Zahl gleichzeitig rechnender Engines und ihr Tempo zusammen in den letzten 24 Stunden",
     "restart": "Neu anstoßen",
     "restartHint": "Alle noch nicht gerechneten Stellungen erneut einreihen — auf einer neu gewählten Engine",
     "restarted": "Die Partie wird wieder gerechnet.",

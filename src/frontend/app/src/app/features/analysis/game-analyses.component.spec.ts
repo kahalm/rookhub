@@ -31,9 +31,11 @@ describe('GameAnalysesComponent', () => {
   });
 
   /** Das Tempo holt die Seite bei JEDEM Abruf mit; fuer die meisten Tests ist es Beiwerk. */
-  function drainThroughput(perMinute = 0, etaMinutes: number | null = null, runningEngines = 0, nodesPerSecond = 0) {
+  function drainThroughput(perMinute = 0, etaMinutes: number | null = null, runningEngines = 0, nodesPerSecond = 0,
+                           maxRunningEngines24h = 0, maxNodesPerSecond24h = 0) {
     http.match('/api/game-analyses/throughput').forEach(r => r.flush({
       perMinute, analyzedInWindow: 0, windowMinutes: 0, remaining: 0, etaMinutes, runningEngines, nodesPerSecond,
+      maxRunningEngines24h, maxNodesPerSecond24h,
     }));
   }
 
@@ -192,5 +194,53 @@ describe('GameAnalysesComponent', () => {
     drainThroughput(0, null, 3, 0);
 
     expect(fixture.componentInstance.engines).toEqual({ count: 3, nps: null });
+  });
+
+  // Die Spitze der letzten 24 h (0.543.0): am Schwanz einer Partie rechnet oft nur noch eine Engine —
+  // „engines: 1 · 1 164 kN/s" allein sah wie ein Ausfall aus.
+  it('zeigt die Spitze der letzten 24 h, wenn gerade weniger rechnet', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ status: 'running', analyzedPlies: 28, plyCount: 47 })]);
+    drainThroughput(39, 3, 1, 1_164_000, 16, 17_900_000);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.peak?.engines).toBe(16);
+    expect(fixture.componentInstance.peak?.nps).toMatch(/^17.900 kN\/s$/);   // Tausendertrenner je Locale
+    const line = (fixture.nativeElement as HTMLElement).querySelector('.overall .muted')?.textContent ?? '';
+    expect(line).toContain('gameAnalysis.peak');
+  });
+
+  it('laesst die Spitze weg, wenn der Stand von jetzt die Spitze IST', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ status: 'running', analyzedPlies: 28, plyCount: 47 })]);
+    drainThroughput(39, 3, 16, 17_900_000, 16, 17_900_000);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.peak).toBeNull();
+    const line = (fixture.nativeElement as HTMLElement).querySelector('.overall .muted')?.textContent ?? '';
+    expect(line).not.toContain('gameAnalysis.peak');
+  });
+
+  it('zeigt die Spitze auch, wenn gerade gar nichts rechnet', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ status: 'running', analyzedPlies: 28, plyCount: 47 })]);
+    drainThroughput(0, null, 0, 0, 12, 13_000_000);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.engines).toBeNull();
+    expect(fixture.componentInstance.peak?.engines).toBe(12);
+    expect(fixture.componentInstance.peak?.nps).toMatch(/^13.000 kN\/s$/);
+  });
+
+  it('kennt keine Spitze, solange nichts aufgezeichnet ist (frisch gestartete API)', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis()]);
+    drainThroughput(2.5, 90, 0, 0, 0, 0);
+
+    expect(fixture.componentInstance.peak).toBeNull();
   });
 });

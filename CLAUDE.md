@@ -1909,6 +1909,21 @@ die Punktepartie nichts wert. Gemessen wird an den STELLUNGEN, nicht am Status; 
 Partien blockieren nicht; laufende Auftraege einer anderen Partie werden nicht abgebrochen, sie
 laufen aus. Je Nutzer und nicht global, damit sich zwei Leute nicht gegenseitig ausbremsen.
 
+**Der Schwanz einer Partie (0.543.0)**: die Regel „eine nach der anderen" hat eine Ausnahme — haben
+alle aelteren unfertigen Partien des Nutzers ZUSAMMEN weniger offene Stellungen, als Engines da sind
+(`GameAnalysisService.EngineSlotsAsync`: die Hintergrund-Engines des Engine-Besitzers, bei fest
+gewaehlter Engine 1), bekommt die naechste Partie schon Auftraege. Sonst stuenden am Ende jeder Partie
+Engines still: gemessen am 2026-09-26 auf Prod mit 16 Engines endete jede Partie mit 20–30 s, in denen
+15 Engines nichts taten — bei Partien von drei Minuten ein Fuenftel der Zeit. Die aeltere Partie wird
+trotzdem ZUERST fertig, ihre Auftraege stehen vorn (FIFO nach `CreatedAt` in `PickNextForEngineAsync`).
+Dieselbe Schwelle gilt fuer die Vertiefung (`IsOwnersRefineTurnAsync`): sie wartet, solange der erste
+Durchgang mindestens so viele offene Stellungen hat wie Engines. Zweite Haelfte derselben Messung: der
+Worker holte den naechsten Auftrag fuer eine frei gewordene Engine erst beim naechsten Tick (5 s) —
+seit 0.543.0 weckt ein beendeter Lauf die Schleife (`WakeSignal`), und `GET
+/api/game-analyses/throughput` traegt die SPITZE der letzten 24 h (`MaxRunningEngines24h`,
+`MaxNodesPerSecond24h`, Stundenkoerbe in `AnalysisJobLive`, nur Arbeitsspeicher): am Schwanz einer
+Partie rechnet oft nur eine Engine, und „engines: 1 · 1 164 kN/s" allein sah wie ein Ausfall aus.
+
 **Welche Einstellung wirklich schneller ist, wurde am 2026-09-13 auf Prod AUSGEMESSEN** — drei
 Fenster zu je zwanzig Minuten, und das Ergebnis widerlegt die naheliegende Annahme:
 

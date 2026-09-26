@@ -69,12 +69,16 @@ import { formatKiloNps } from './engine-lines.util';
               {{ 'gameAnalysis.engines' | translate:{ count: e.count } }}
               @if (e.nps) { · {{ e.nps }} }
             }
-            @if (openCount > 0) {
+            @if (peak; as p) {
               @if (rate || engines) { · }
+              <span class="peak" [title]="'gameAnalysis.peakHint' | translate">{{ 'gameAnalysis.peak' | translate:{ engines: p.engines, nps: p.nps } }}</span>
+            }
+            @if (openCount > 0) {
+              @if (rate || engines || peak) { · }
               {{ 'gameAnalysis.overallOpen' | translate:{ count: openCount } }}
             }
             @if (failedCount > 0) {
-              @if (openCount > 0 || rate || engines) { · }
+              @if (openCount > 0 || rate || engines || peak) { · }
               {{ 'gameAnalysis.overallFailed' | translate:{ count: failedCount } }}
             }
           </span>
@@ -278,6 +282,20 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
       count: t.runningEngines,
       nps: t.nodesPerSecond > 0 ? formatKiloNps(t.nodesPerSecond, this.locale) : null,
     };
+  }
+
+  /**
+   * Die Spitze der letzten 24 h — der Vergleichswert zu „engines: n · kN/s". Am Schwanz einer Partie
+   * rechnet oft nur noch eine Engine (die Pumpe fuettert die naechste Partie erst, wenn Engines frei
+   * sind), und „engines: 1 · 1 164 kN/s" allein sah wie ein Ausfall aus. Gezeigt wird die Spitze nur,
+   * wenn sie ueber dem Stand von jetzt liegt — sonst STEHT der Stand von jetzt schon da.
+   */
+  get peak(): { engines: number; nps: string } | null {
+    const t = this.throughput;
+    if (!t || !(t.maxRunningEngines24h > 0)) return null;
+    const above = t.maxRunningEngines24h > t.runningEngines || t.maxNodesPerSecond24h > t.nodesPerSecond;
+    if (!above) return null;
+    return { engines: t.maxRunningEngines24h, nps: formatKiloNps(t.maxNodesPerSecond24h, this.locale) };
   }
 
   private loadThroughput(): void {

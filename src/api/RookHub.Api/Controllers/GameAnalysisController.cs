@@ -67,6 +67,7 @@ public class GameAnalysisController : BaseApiController
         var userId = GetUserId();
         var dto = await _service.ThroughputAsync(userId, ct);
         (dto.RunningEngines, dto.NodesPerSecond) = _live.Summary(userId);
+        (dto.MaxRunningEngines24h, dto.MaxNodesPerSecond24h) = _live.Peak(userId, DateTime.UtcNow);
         return Ok(dto);
     }
 

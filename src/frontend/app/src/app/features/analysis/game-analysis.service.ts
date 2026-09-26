@@ -80,6 +80,10 @@ export interface AnalysisThroughput {
   runningEngines: number;
   /** Summe der zuletzt gemeldeten Knoten/s dieser Laeufe; 0 = noch keine Zeile mit Tempo. */
   nodesPerSecond: number;
+  /** Hoechste Zahl gleichzeitig rechnender Engines in den letzten 24 h (0 = keine Aufzeichnung). */
+  maxRunningEngines24h: number;
+  /** Hoechstes Gesamttempo (Knoten/s) in den letzten 24 h. */
+  maxNodesPerSecond24h: number;
 }
 
 @Injectable({ providedIn: 'root' })

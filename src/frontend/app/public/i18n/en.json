@@ -3279,6 +3279,8 @@
     "rate": "{{rate}} positions/min",
     "eta": "about {{eta}} left",
     "engines": "engines: {{count}}",
+    "peak": "peak (24 h): {{engines}} engines · {{nps}}",
+    "peakHint": "Highest number of engines computing at the same time and their combined speed in the last 24 hours",
     "restart": "Start again",
     "restartHint": "Queue every position that is not analysed yet, on a freshly chosen engine",
     "restarted": "The game is being analysed again.",
