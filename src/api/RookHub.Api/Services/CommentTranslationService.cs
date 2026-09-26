@@ -74,14 +74,22 @@ public class CommentTranslationService
     /// kommentierte Halbzuege, Textmenge; dieselbe Reihenfolge wie <c>comments --library</c>). Ob die Partie
     /// schon Quell-Saetze hat, spielt keine Rolle: der Lauf legt sie selbst an. Auf dem ganzen Bestand dauert
     /// die Uebersetzung Tage — was die Punktepartie zuerst zeigt, soll zuerst fertig sein.
+    ///
+    /// <para>Partien, deren Quellsprache beim Einlesen nicht zu bestimmen war (<c>Languages = "und"</c>),
+    /// bleiben aussen vor: das sind im Bestand 40 627 Stueck mit im Schnitt 183 Zeichen — Zeitangaben,
+    /// Auswertungen, Markup, kaum je ein Satz Prosa. Ein Modellaufruf je Stueck waere der halbe Bestand
+    /// fuer ein Ergebnis, das niemand liest. <paramref name="includeUndetermined"/> nimmt sie mit.</para>
     /// </summary>
     public static Task<List<int>> LibraryCandidatesAsync(AppDbContext db, string target, int take,
-        CancellationToken ct = default)
+        bool includeUndetermined = false, CancellationToken ct = default)
     {
         target = target.Trim().ToLowerInvariant();
         return db.LibraryGames.AsNoTracking()
             .Where(g => g.CommentedPlies > 0
                         && g.Status != LibraryGameStatus.Rejected && g.Status != LibraryGameStatus.Duplicate)
+            // `Languages == null` gehoert ausdruecklich dazu: in SQL ist `NULL <> 'und'` nicht wahr,
+            // sondern NULL — ohne die erste Haelfte fielen Partien ohne Sprachangabe lautlos heraus.
+            .Where(g => includeUndetermined || g.Languages == null || g.Languages != "und")
             .Where(g => !db.CommentSets.Any(s => s.LibraryGameId == g.Id && s.Language == target))
             .OrderByDescending(g => g.Score)
             .ThenByDescending(g => g.CommentedPlies)

@@ -795,12 +795,15 @@ async Task<int> TranslateAsync()
     var target = StringArg("--to");
     if (string.IsNullOrWhiteSpace(target))
     {
-        Console.Error.WriteLine("Aufruf: translate --to <sprache> [--library n [--parallel p]] [--limit n] [--force] [--game <analyse-id>] [--shard i/n]");
+        Console.Error.WriteLine("Aufruf: translate --to <sprache> [--library n [--parallel p]] [--limit n] [--force] [--include-und] [--game <analyse-id>] [--shard i/n]");
         return 1;
     }
     target = target.Trim().ToLowerInvariant();
     var limit = IntArg("--limit") ?? int.MaxValue;
     var force = args.Contains("--force");
+    // Standardmaessig ohne die Partien, deren Quellsprache nicht bestimmbar war — siehe
+    // CommentTranslationService.LibraryCandidatesAsync. --include-und nimmt sie mit.
+    var includeUnd = args.Contains("--include-und");
     var one = IntArg("--game");
 
     // Aufteilung fuer parallele Laeufe: „--shard 0/4" nimmt jede vierte Partie. Ohne die Aufteilung
@@ -838,7 +841,7 @@ async Task<int> TranslateAsync()
 
     if (IntArg("--library") is int top)
         return await TranslateLibraryAsync(client, loggers, target, Math.Min(top, limit), force,
-            Math.Clamp(IntArg("--parallel") ?? 1, 1, 64), shardIndex, shardCount);
+            Math.Clamp(IntArg("--parallel") ?? 1, 1, 64), shardIndex, shardCount, includeUnd);
 
     await using var db = NewDb();
     var service = new CommentTranslationService(db, client, loggers.CreateLogger<CommentTranslationService>());
@@ -874,13 +877,14 @@ async Task<int> TranslateAsync()
 // (vLLM) zahlt sich das aus — er buendelt gleichzeitige Anfragen, eine einzelne laeuft mit einem
 // Bruchteil seines Durchsatzes. Ueber ~16 hinaus wartet nur die Schlange des Servers.
 async Task<int> TranslateLibraryAsync(IClaudeJsonClient client, ILoggerFactory loggers, string target, int top,
-    bool force, int parallel, int shardIndex, int shardCount)
+    bool force, int parallel, int shardIndex, int shardCount, bool includeUnd)
 {
     List<int> ids;
     await using (var db = NewDb())
-        ids = await CommentTranslationService.LibraryCandidatesAsync(db, target, top);
+        ids = await CommentTranslationService.LibraryCandidatesAsync(db, target, top, includeUnd);
     if (shardCount > 1) ids = ids.Where(id => id % shardCount == shardIndex).ToList();
-    Console.WriteLine($"{ids.Count:N0} Partien ohne „{target}\" · {parallel} parallel · Modell {client.TranslationModel}");
+    Console.WriteLine($"{ids.Count:N0} Partien ohne „{target}\" · {parallel} parallel · Modell {client.TranslationModel}"
+                      + (includeUnd ? " · mit unbestimmter Quellsprache" : " · ohne unbestimmte Quellsprache"));
 
     var queue = new System.Collections.Concurrent.ConcurrentQueue<int>(ids);
     int seen = 0, done = 0, lines = 0, empty = 0, errors = 0;

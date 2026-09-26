@@ -224,4 +224,25 @@ public class CommentTranslationServiceTests : IDisposable
         Assert.Equal(new[] { best.Id, morePlies.Id, fewerPlies.Id, imported.Id }, ids);
         Assert.Equal(new[] { best.Id, morePlies.Id }, await CommentTranslationService.LibraryCandidatesAsync(_db, "de", 2));
     }
+
+    /// <summary>Partien, deren Quellsprache nicht bestimmbar war, sind fast immer Zeitangaben oder Markup —
+    /// sie kosten je einen Modellaufruf und bringen keinen Satz Prosa. Ohne Sprachangabe bleibt eine Partie
+    /// dabei, sonst faellt ein ganzer Bestand lautlos heraus, der nur noch nicht untersucht wurde.</summary>
+    [Fact]
+    public async Task LibraryCandidates_unbestimmteQuellsprache_nurAufWunsch()
+    {
+        LibraryGame Game(string? languages, int score)
+            => new() { Pgn = "x", Score = score, CommentedPlies = 10, CommentChars = 100, Languages = languages };
+
+        var englisch = Game("en", 80);
+        var unbestimmt = Game("und", 90);
+        var ohneAngabe = Game(null, 70);
+        _db.LibraryGames.AddRange(englisch, unbestimmt, ohneAngabe);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(new[] { englisch.Id, ohneAngabe.Id },
+            await CommentTranslationService.LibraryCandidatesAsync(_db, "de", 10));
+        Assert.Equal(new[] { unbestimmt.Id, englisch.Id, ohneAngabe.Id },
+            await CommentTranslationService.LibraryCandidatesAsync(_db, "de", 10, includeUndetermined: true));
+    }
 }
