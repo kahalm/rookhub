@@ -95,5 +95,13 @@ public class SavedGame
     /// </summary>
     public string? OwnerSide { get; set; }
 
+    /// <summary>
+    /// In welcher Sprache der Besitzer die Partie ansieht (0.540.0) — mitgeschickt mit „Partie analysieren" aus der
+    /// Seite. Darin entstehen nach der Analyse von selbst die Fehler-Erklärungen und die drei Roasts
+    /// (<c>GameReviewTexts</c>). <c>null</c> (über die Erweiterung angestoßen) = die zuletzt so gemerkte Sprache des
+    /// Nutzers, sonst Englisch.
+    /// </summary>
+    public string? ReviewLanguage { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

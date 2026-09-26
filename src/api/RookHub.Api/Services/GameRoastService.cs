@@ -42,7 +42,8 @@ public sealed class GameRoastService
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
 
     /// <summary>Ergebnis eines Würfelns: der Text, oder ein Grund (<c>notConfigured</c>, <c>notFound</c>,
-    /// <c>noAnalysis</c>, <c>invalidStyle</c>, <c>dailyLimit</c>, <c>failed</c>).</summary>
+    /// <c>noAnalysis</c>, <c>invalidStyle</c>, <c>dailyLimit</c>, <c>failed</c>; beim automatischen Schreiben
+    /// <c>exists</c>).</summary>
     public sealed record RoastResult(GameRoastDto? Roast, string? Reason);
 
     public async Task<GameRoastsDto?> GetAsync(int userId, int gameId, string? lang, CancellationToken ct = default)
@@ -63,7 +64,10 @@ public sealed class GameRoastService
         };
     }
 
-    public async Task<RoastResult> RoastAsync(int userId, int gameId, string? style, string? lang, CancellationToken ct = default)
+    /// <param name="automatic">Nach der Analyse von selbst geschrieben (<see cref="GameReviewTexts"/>): zählt nicht gegen
+    /// <see cref="MaxPerDay"/> und überschreibt keinen vorhandenen Text.</param>
+    public async Task<RoastResult> RoastAsync(int userId, int gameId, string? style, string? lang, CancellationToken ct = default,
+        bool automatic = false)
     {
         if (!Available) return new(null, "notConfigured");
         style = (style ?? "").Trim().ToLowerInvariant();
@@ -78,9 +82,14 @@ public sealed class GameRoastService
             : null;
         if (analysis == null) return new(null, "noAnalysis");
 
-        var since = DateTime.UtcNow.AddDays(-1);
-        var today = await _db.GameRoasts.CountAsync(r => r.SavedGame!.UserId == userId && r.CreatedAt >= since, ct);
-        if (today >= MaxPerDay) return new(null, "dailyLimit");
+        if (!automatic)
+        {
+            var since = DateTime.UtcNow.AddDays(-1);
+            var today = await _db.GameRoasts.CountAsync(r => r.SavedGame!.UserId == userId && !r.Automatic && r.CreatedAt >= since, ct);
+            if (today >= MaxPerDay) return new(null, "dailyLimit");
+        }
+        else if (await _db.GameRoasts.AnyAsync(r => r.SavedGameId == gameId && r.Language == language && r.Style == style, ct))
+            return new(null, "exists");
 
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysis.Id)
             .OrderBy(p => p.Ply).ToListAsync(ct);
@@ -108,6 +117,7 @@ public sealed class GameRoastService
             _db.GameRoasts.Add(row);
         }
         row.Text = text;
+        row.Automatic = automatic;
         row.Model = _llm.TranslationModel;
         row.CreatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);

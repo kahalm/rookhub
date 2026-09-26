@@ -130,13 +130,33 @@ public class GameMoveExplanationTests : IDisposable
     public void Prompt_CarriesOnlyTheCheckedFacts()
     {
         var f = GameMistakes.Find(Positions(), Moves.Length).Single();
-        var prompt = GameMoveExplanationService.UserPrompt(f);
-        Assert.Contains("The player is Black. Played move: 3... Nf6 — a serious blunder.", prompt);
-        Assert.Contains("Better was g6. Engine line from the position before the move: g6 Qf3 Nf6", prompt);
-        Assert.Contains("Opponent's best answer to Nf6, with the engine line: Qxf7#", prompt);
+        var prompt = GameMoveExplanationService.UserPrompt(f, "black");
+        Assert.Contains("Black played 3... Nf6 — a serious blunder.", prompt);
+        Assert.Contains("Better for Black was g6. Engine line from the position before the move: g6 Qf3 Nf6", prompt);
+        Assert.Contains("White's best answer to Nf6, with the engine line: Qxf7#", prompt);
         var system = GameMoveExplanationService.SystemPrompt("de");
         Assert.Contains("Explain in German", system);
+        Assert.Contains("\"you\" is always the reader", system);
         Assert.Contains("{\"explanation\": \"...\"}", system);
+    }
+
+    /// <summary>„Your move 14. Nb5" für Weiß, obwohl der Besitzer Schwarz spielte — „du" ist der Leser, nicht der Ziehende.</summary>
+    [Fact]
+    public void Prompt_SaysWhoTheReaderIs_NotTheMover()
+    {
+        var f = GameMistakes.Find(Positions(), Moves.Length).Single(); // 3…Sf6?? von Schwarz
+
+        var own = GameMoveExplanationService.UserPrompt(f, "black").Split('\n')[^1];
+        Assert.Contains("reader's OWN move", own);
+        Assert.Contains("White is \"your opponent\"", own);
+
+        var opponents = GameMoveExplanationService.UserPrompt(f, "white").Split('\n')[^1];
+        Assert.Contains("Reader: played White", opponents);
+        Assert.Contains("reader's OPPONENT (Black)", opponents);
+        Assert.Contains("Never call it \"your move\"", opponents);
+
+        var neutral = GameMoveExplanationService.UserPrompt(f, "").Split('\n')[^1];
+        Assert.Contains("do not use \"you\"", neutral);
     }
 
     [Theory]
@@ -152,7 +172,8 @@ public class GameMoveExplanationTests : IDisposable
 
     // ── Ablauf ─────────────────────────────────────────────────────────────────────────────────────
 
-    private async Task<(int UserId, int GameId, int AnalysisId)> SeedAsync(GameAnalysisStatus status = GameAnalysisStatus.Done)
+    private async Task<(int UserId, int GameId, int AnalysisId)> SeedAsync(GameAnalysisStatus status = GameAnalysisStatus.Done,
+        string? ownerSide = null)
     {
         var user = new AppUser { Username = "u" + Guid.NewGuid().ToString("N")[..8], PasswordHash = "x" };
         _db.AppUsers.Add(user);
@@ -165,7 +186,11 @@ public class GameMoveExplanationTests : IDisposable
         foreach (var p in Positions()) analysis.Positions.Add(p);
         _db.GameAnalyses.Add(analysis);
         await _db.SaveChangesAsync();
-        var game = new SavedGame { UserId = user.Id, Source = "lichess", Pgn = analysis.Pgn, ShareToken = "tok" + analysis.Id, GameAnalysisId = analysis.Id };
+        var game = new SavedGame
+        {
+            UserId = user.Id, Source = "lichess", Pgn = analysis.Pgn, ShareToken = "tok" + analysis.Id, GameAnalysisId = analysis.Id,
+            White = "weiss", Black = "schwarz", OwnerSide = ownerSide,
+        };
         _db.SavedGames.Add(game);
         await _db.SaveChangesAsync();
         return (user.Id, game.Id, analysis.Id);
@@ -174,12 +199,13 @@ public class GameMoveExplanationTests : IDisposable
     [Fact]
     public async Task Generate_StoresTheGroundedText_AndRetriesOnceWhenAMoveIsInvented()
     {
-        var (_, _, analysisId) = await SeedAsync();
+        var (userId, gameId, _) = await SeedAsync(ownerSide: "black");
         _llm.Answers.Enqueue("{\"explanation\":\"Besser war Be7.\"}");  // erfunden → Nachfrage
         _llm.Answers.Enqueue("{\"explanation\":\"Nach Nf6 folgt Qxf7# — g6 hätte das verhindert.\"}");
         var service = Service();
+        var game = (await service.OwnGameAsync(userId, gameId))!;
 
-        var saved = await service.GenerateAsync(analysisId, "de", CancellationToken.None);
+        var saved = await service.GenerateAsync(game, "de", CancellationToken.None);
 
         Assert.Equal(1, saved);
         var row = await _db.GameMoveExplanations.SingleAsync();
@@ -187,11 +213,59 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Equal("de", row.Language);
         Assert.Equal("blunder", row.Class);
         Assert.Equal("fake-local", row.Model);
+        Assert.Equal("black", row.Viewpoint);
         Assert.Equal(2, _llm.Prompts.Count);
+        Assert.Contains("reader's OWN move", _llm.Prompts[0]);
         Assert.Contains("not in the lines above", _llm.Prompts[1]);
 
         // Ein zweiter Lauf erzeugt nichts doppelt.
-        Assert.Equal(0, await service.GenerateAsync(analysisId, "de", CancellationToken.None));
+        Assert.Equal(0, await service.GenerateAsync(game, "de", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Viewpoint_IsTheOwnersSide_FromTheProfileName_OrNeutral()
+    {
+        var service = Service();
+        var (u1, g1, a1) = await SeedAsync();
+        Assert.Equal(new GameMoveExplanationService.ExplainedGame(a1, ""), await service.OwnGameAsync(u1, g1));
+
+        // Ohne festgelegte Seite: der lichess-Name im Profil (wie die Partienliste).
+        _db.UserProfiles.Add(new UserProfile { UserId = u1, LichessUsername = "Schwarz" });
+        await _db.SaveChangesAsync();
+        Assert.Equal("black", (await service.OwnGameAsync(u1, g1))!.Viewpoint);
+        Assert.Equal("black", (await service.SharedGameAsync("tok" + a1))!.Viewpoint);
+
+        // Selbst festgelegt schlägt den Namen.
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == g1);
+        game.OwnerSide = "white";
+        await _db.SaveChangesAsync();
+        Assert.Equal("white", (await service.OwnGameAsync(u1, g1))!.Viewpoint);
+    }
+
+    [Fact]
+    public async Task OtherSide_TextIsHidden_AndRewrittenFromTheNewView()
+    {
+        var (userId, gameId, analysisId) = await SeedAsync(ownerSide: "white");
+        var service = Service();
+        _llm.Answers.Enqueue("{\"explanation\":\"Nach Nf6 setzt du mit Qxf7# matt.\"}");
+        Assert.Equal(1, await service.GenerateAsync((await service.OwnGameAsync(userId, gameId))!, "de", CancellationToken.None));
+        Assert.Contains("reader's OPPONENT (Black)", _llm.Prompts[0]);
+        Assert.Equal("white", (await _db.GameMoveExplanations.SingleAsync()).Viewpoint);
+
+        // Der Besitzer stellt klar, dass er Schwarz war: der alte Text passt nicht mehr.
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == gameId);
+        game.OwnerSide = "black";
+        await _db.SaveChangesAsync();
+        var black = (await service.OwnGameAsync(userId, gameId))!;
+        var state = await service.GetAsync(black, "de", owner: true);
+        Assert.Empty(state.Items);
+        Assert.True(state.CanGenerate);
+
+        _llm.Answers.Enqueue("{\"explanation\":\"Nf6 lässt Qxf7# zu; g6 hält.\"}");
+        Assert.Equal(1, await service.GenerateAsync(black, "de", CancellationToken.None));
+        var row = await _db.GameMoveExplanations.AsNoTracking().SingleAsync(e => e.GameAnalysisId == analysisId);
+        Assert.Equal("black", row.Viewpoint);
+        Assert.Equal("Nf6 lässt Qxf7# zu; g6 hält.", Assert.Single((await service.GetAsync(black, "de", owner: true)).Items).Text);
     }
 
     [Fact]
@@ -201,7 +275,7 @@ public class GameMoveExplanationTests : IDisposable
         _llm.Answers.Enqueue("{\"explanation\":\"Be7!\"}");
         _llm.Answers.Enqueue("{\"explanation\":\"Nd4 war besser.\"}");
 
-        Assert.Equal(0, await Service().GenerateAsync(analysisId, "de", CancellationToken.None));
+        Assert.Equal(0, await Service().GenerateAsync(new(analysisId, ""), "de", CancellationToken.None));
         Assert.Empty(_db.GameMoveExplanations);
     }
 
@@ -212,7 +286,7 @@ public class GameMoveExplanationTests : IDisposable
         _llm.Local = false;
         var service = Service();
         Assert.False(service.Available);
-        Assert.Equal(0, await service.GenerateAsync(analysisId, "de", CancellationToken.None));
+        Assert.Equal(0, await service.GenerateAsync(new(analysisId, ""), "de", CancellationToken.None));
         Assert.Empty(_llm.Prompts);
     }
 
@@ -224,19 +298,19 @@ public class GameMoveExplanationTests : IDisposable
         await _db.SaveChangesAsync();
         var service = Service();
 
-        var own = await service.GetAsync(await service.AnalysisOfOwnGameAsync(userId, gameId), "de-AT", owner: true);
+        var own = await service.GetAsync(await service.OwnGameAsync(userId, gameId), "de-AT", owner: true);
         Assert.True(own.CanGenerate);
         Assert.Equal("de", own.Language);
         Assert.Equal("t", Assert.Single(own.Items).Text);
 
-        var shared = await service.GetAsync(await service.AnalysisOfSharedGameAsync("tok" + analysisId), "de", owner: false);
+        var shared = await service.GetAsync(await service.SharedGameAsync("tok" + analysisId), "de", owner: false);
         Assert.False(shared.CanGenerate);
         Assert.Single(shared.Items);
 
-        Assert.Null(await service.AnalysisOfOwnGameAsync(userId + 1, gameId)); // fremde Partie
+        Assert.Null(await service.OwnGameAsync(userId + 1, gameId)); // fremde Partie
 
         var (u2, g2, _) = await SeedAsync(GameAnalysisStatus.Running);
-        Assert.False((await service.GetAsync(await service.AnalysisOfOwnGameAsync(u2, g2), "de", owner: true)).CanGenerate);
+        Assert.False((await service.GetAsync(await service.OwnGameAsync(u2, g2), "de", owner: true)).CanGenerate);
     }
 
     [Fact]

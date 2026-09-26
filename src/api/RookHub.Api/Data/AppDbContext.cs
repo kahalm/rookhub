@@ -1180,6 +1180,7 @@ public class AppDbContext : DbContext
             e.Property(g => g.Black).HasMaxLength(120);
             e.Property(g => g.Result).HasMaxLength(12);
             e.Property(g => g.SourceUrl).HasMaxLength(1000);
+            e.Property(g => g.ReviewLanguage).HasMaxLength(8);
             e.Property(g => g.ShareToken).HasMaxLength(32);
             e.Property(g => g.TimeControl).HasMaxLength(32);
             e.Property(g => g.OwnerSide).HasMaxLength(5);

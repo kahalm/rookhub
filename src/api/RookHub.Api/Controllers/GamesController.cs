@@ -84,8 +84,9 @@ public class GamesController : BaseApiController
     /// <summary>„Partie analysieren" auf der geteilten Partie — jeder Angemeldete; Absage 400 mit
     /// <c>reason</c> wie beim Einwurf auf der Punktepartie-Seite. Literal-Route vor {id}.</summary>
     [HttpPost("shared/{token}/analyze")]
-    public async Task<ActionResult<GameAnalyzeResultDto>> AnalyzeShared(string token, CancellationToken ct)
-        => AnalyzeResult(await _service.AnalyzeSharedAsync(GetUserId(), token, ct));
+    public async Task<ActionResult<GameAnalyzeResultDto>> AnalyzeShared(string token, CancellationToken ct,
+        [FromBody] SavedGameAnalyzeRequest? body = null)
+        => AnalyzeResult(await _service.AnalyzeSharedAsync(GetUserId(), token, ct, body?.Lang));
 
     /// <summary>Detail einer eigenen Partie inkl. PGN (zum Nachspielen/Analysieren).</summary>
     [HttpGet("{id:int}")]
@@ -106,8 +107,9 @@ public class GamesController : BaseApiController
     /// <summary>„Partie analysieren" an einer eigenen Partie — rechnet nur, wenn es noch keine
     /// brauchbare Analyse gibt, und verknuepft sie mit der Partie.</summary>
     [HttpPost("{id:int}/analyze")]
-    public async Task<ActionResult<GameAnalyzeResultDto>> Analyze(int id, CancellationToken ct)
-        => AnalyzeResult(await _service.AnalyzeAsync(GetUserId(), id, ct));
+    public async Task<ActionResult<GameAnalyzeResultDto>> Analyze(int id, CancellationToken ct,
+        [FromBody] SavedGameAnalyzeRequest? body = null)
+        => AnalyzeResult(await _service.AnalyzeAsync(GetUserId(), id, ct, body?.Lang));
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)

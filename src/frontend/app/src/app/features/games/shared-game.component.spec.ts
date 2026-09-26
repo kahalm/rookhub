@@ -331,7 +331,8 @@ describe('SharedGameComponent', () => {
     (fixture.nativeElement.querySelector('button.analyze') as HTMLButtonElement).click();
 
     const post = http.expectOne({ method: 'POST', url: '/api/games/shared/tok/analyze' });
-    expect(post.request.body).toEqual({});
+    // Kein PGN (der Server hat es) — nur die Sprache der Seite für die Texte danach (0.540.0).
+    expect(post.request.body).toEqual({ lang: 'en' });
     post.flush({ analysis: { id: 7 }, reused: false });
     expect(navigate).not.toHaveBeenCalled();
     http.expectOne('/api/games/shared/tok/evals').flush(runningEvals);

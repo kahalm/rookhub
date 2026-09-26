@@ -158,8 +158,9 @@ export class GamesService {
   /** Bewertungen der geteilten Partie — auch ohne Anmeldung (dann nur die des Teilenden). */
   sharedEvalsUrl(token: string): string { return `/api/games/shared/${encodeURIComponent(token)}/evals`; }
 
-  analyze(url: string): Observable<GameAnalyzeResult> {
-    return this.http.post<GameAnalyzeResult>(url, {});
+  /** `lang` = Sprache der Seite: darin schreibt der Server nach der Analyse die Erklärungen und Roasts (0.540.0). */
+  analyze(url: string, lang?: string): Observable<GameAnalyzeResult> {
+    return this.http.post<GameAnalyzeResult>(url, lang ? { lang } : {});
   }
 
   evals(url: string): Observable<GameEvals> {

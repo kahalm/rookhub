@@ -43,6 +43,8 @@ describe('GamesListComponent', () => {
 
     http.expectNone('/api/games/4');
     const post = http.expectOne({ method: 'POST', url: '/api/games/4/analyze' });
+    // Die Sprache der Seite reist mit — darin schreibt der Server danach Erklärungen und Roasts (0.540.0).
+    expect(post.request.body).toEqual({ lang: 'en' });
     post.flush({ analysis: { id: 9 }, reused: true });
     expect(navigate).not.toHaveBeenCalled();
     expect(fixture.componentInstance.analyzingId).toBeNull();

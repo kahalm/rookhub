@@ -30,14 +30,18 @@ public class GameAnalysisService
     private readonly AnalysisJobService _jobs;
     private readonly CommentSetService _comments;
     private readonly ILogger<GameAnalysisService> _logger;
+    private readonly IGameReviewTextScheduler? _reviewTexts;
 
+    /// <param name="reviewTexts">Schreibt nach dem Ende einer Analyse die Texte zur Partie (0.540.0); ohne (Tests,
+    /// Werkzeuge) passiert nichts.</param>
     public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, CommentSetService comments,
-        ILogger<GameAnalysisService> logger)
+        ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null)
     {
         _db = db;
         _jobs = jobs;
         _comments = comments;
         _logger = logger;
+        _reviewTexts = reviewTexts;
     }
 
     // ===== Anlegen ==========================================================
@@ -615,8 +619,10 @@ public class GameAnalysisService
             changed |= await EnqueueNextAsync(analysis, ct);
 
         var analyzed = analysis.Positions.Count(p => p.CandidatesJson != null);
+        var finished = false;
         if (analyzed >= analysis.Positions.Count && analysis.Positions.Count > 0)
         {
+            finished = true;
             analysis.Status = GameAnalysisStatus.Done;
             analysis.FinishedAt = DateTime.UtcNow;
             // Einmal gerechnet, an der Analyse abgelegt: die Partienliste zeigt die Genauigkeit beider
@@ -637,6 +643,8 @@ public class GameAnalysisService
             analysis.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
         }
+        // Erst NACH dem Speichern: der Hintergrund-Lauf liest die Analyse aus einem eigenen Scope.
+        if (finished) _reviewTexts?.Schedule(analysis.Id, refined: false);
         return changed;
     }
 
@@ -794,8 +802,10 @@ public class GameAnalysisService
         if (await IsOwnersRefineTurnAsync(analysis, ct))
             changed |= await EnqueueRefineAsync(analysis, ct);
 
+        var refined = false;
         if (analysis.Positions.Count > 0 && analysis.Positions.All(p => p.Refined))
         {
+            refined = true;
             analysis.RefinedAt = DateTime.UtcNow;
             var accuracy = GameAccuracy.FromPositions(analysis.Positions, analysis.PlyCount);
             analysis.AccuracyWhite = accuracy.White;
@@ -807,6 +817,8 @@ public class GameAnalysisService
             analysis.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
         }
+        // Die genauere Rechnung kann Bestzug und Klasse verschieben — die Erklärungen werden neu geschrieben.
+        if (refined) _reviewTexts?.Schedule(analysis.Id, refined: true);
         return changed;
     }
 

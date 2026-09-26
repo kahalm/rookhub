@@ -35,7 +35,8 @@ export class AnalyzeGameService {
    *  Liefert `true`, wenn es eine Analyse gibt (neu oder wiederverwendet) — die Aufrufer halten nur
    *  ihren Busy-Zustand und laden danach die Kurve neu. */
   submit(url: string, status: GuessUploadStatus | null): Observable<boolean> {
-    return this.games.analyze(url).pipe(
+    const lang = this.translate.currentLang() || this.translate.getFallbackLang() || 'en';
+    return this.games.analyze(url, lang).pipe(
       map(result => {
         this.snackbar.success(this.translate.instant(result.reused ? 'games.review.reused' : 'games.review.started'));
         return true;

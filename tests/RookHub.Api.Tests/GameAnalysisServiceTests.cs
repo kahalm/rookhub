@@ -17,6 +17,14 @@ public class GameAnalysisServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly GameAnalysisService _svc;
+    private readonly RecordingReviewTexts _reviewTexts = new();
+
+    /// <summary>Merkt sich, wann die Pumpe die Texte zur Partie anstößt (0.540.0) — ohne Sprachmodell.</summary>
+    private sealed class RecordingReviewTexts : IGameReviewTextScheduler
+    {
+        public List<(int AnalysisId, bool Refined)> Calls { get; } = new();
+        public void Schedule(int analysisId, bool refined) => Calls.Add((analysisId, refined));
+    }
 
     public GameAnalysisServiceTests()
     {
@@ -29,7 +37,7 @@ public class GameAnalysisServiceTests : IDisposable
         }).Build();
         var jobs = new AnalysisJobService(_db, new EncryptionService(config), null);
         var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
-        _svc = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance);
+        _svc = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance, _reviewTexts);
     }
 
     public void Dispose() => _db.Dispose();
@@ -1066,6 +1074,8 @@ public class GameAnalysisServiceTests : IDisposable
         head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
         Assert.Equal(GameAnalysisStatus.Done, head.Status);    // Kurve und Fehler stehen schon
         Assert.Null(head.RefinedAt);
+        // Gleich danach entstehen Erklärungen und Roasts — einmal, nicht bei jedem weiteren Pumpen.
+        Assert.Equal([(id, false)], _reviewTexts.Calls);
 
         // Vertiefung: Hintergrund-Auftraege, Tiefe 25, fuenf Linien, hoechstens ein kleiner Block offen.
         await _svc.PumpOneAsync(id);
@@ -1087,6 +1097,8 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.NotNull(head.RefinedAt);
         Assert.Equal(GameAnalysisStatus.Done, head.Status);
         Assert.False(await _svc.PumpOneAsync(id));             // fertig = Ruhe
+        // Nach der Vertiefung genau einmal neu — die genauere Rechnung kann Bestzüge verschieben.
+        Assert.Equal([(id, false), (id, true)], _reviewTexts.Calls);
     }
 
     [Fact]

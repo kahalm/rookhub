@@ -20,6 +20,9 @@ namespace RookHub.Api.Services;
 /// verlässlich; eine Erklärung mit einem Zug, den es gar nicht gibt, wäre schlimmer als keine.</para>
 /// <para>Der Text hängt an der ANALYSE (<see cref="GameMoveExplanation"/>) und gilt für alle, die die Partie sehen.
 /// Erzeugt wird im Hintergrund, auf Wunsch des Besitzers, höchstens <see cref="MaxPerGame"/> je Partie und Sprache.</para>
+/// <para><b>Aus der Sicht des Besitzers</b> (0.540.0): „du" ist immer er, auch bei den Fehlern seines Gegners — vorher
+/// schrieb das Modell jeden Fehler an den, der ihn gemacht hatte („Your move 14. Nb5" für Weiß, obwohl der Besitzer
+/// Schwarz spielte). Welche Seite er hatte, sagt <see cref="SavedGameService.DetermineOwnerSide"/>; unbekannt → neutral.</para>
 /// </summary>
 public sealed class GameMoveExplanationService
 {
@@ -48,28 +51,46 @@ public sealed class GameMoveExplanationService
     /// <summary>Nur mit einem Modell auf eigener Hardware.</summary>
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
 
-    // ── Welche Analyse gehört zur Partie? ─────────────────────────────────────────────────────────
+    // ── Welche Analyse gehört zur Partie, aus wessen Sicht? ────────────────────────────────────────
 
-    /// <summary>Die verknüpfte Analyse einer EIGENEN Partie (oder <c>null</c>).</summary>
-    public Task<int?> AnalysisOfOwnGameAsync(int userId, int gameId, CancellationToken ct = default)
-        => _db.SavedGames.Where(g => g.Id == gameId && g.UserId == userId).Select(g => g.GameAnalysisId).FirstOrDefaultAsync(ct);
+    /// <summary>Die verknüpfte Analyse einer Partie und die Seite ihres Besitzers
+    /// (<see cref="GameMoveExplanation.Viewpoint"/>: <c>white</c>, <c>black</c> oder leer).</summary>
+    public sealed record ExplainedGame(int AnalysisId, string Viewpoint);
 
-    /// <summary>Die vom Besitzer verknüpfte Analyse einer GETEILTEN Partie (oder <c>null</c>).</summary>
-    public Task<int?> AnalysisOfSharedGameAsync(string token, CancellationToken ct = default)
-        => _db.SavedGames.Where(g => g.ShareToken == token).Select(g => g.GameAnalysisId).FirstOrDefaultAsync(ct);
+    /// <summary>Eine EIGENE Partie mit verknüpfter Analyse (oder <c>null</c>).</summary>
+    public Task<ExplainedGame?> OwnGameAsync(int userId, int gameId, CancellationToken ct = default)
+        => GameAsync(_db.SavedGames.Where(g => g.Id == gameId && g.UserId == userId), ct);
+
+    /// <summary>Eine GETEILTE Partie mit vom Besitzer verknüpfter Analyse (oder <c>null</c>).</summary>
+    public Task<ExplainedGame?> SharedGameAsync(string token, CancellationToken ct = default)
+        => GameAsync(_db.SavedGames.Where(g => g.ShareToken == token), ct);
+
+    private async Task<ExplainedGame?> GameAsync(IQueryable<SavedGame> query, CancellationToken ct)
+    {
+        var game = await query.AsNoTracking().Select(g => new SavedGame
+        {
+            UserId = g.UserId, Source = g.Source, White = g.White, Black = g.Black, OwnerSide = g.OwnerSide,
+            GameAnalysisId = g.GameAnalysisId,
+        }).FirstOrDefaultAsync(ct);
+        if (game?.GameAnalysisId is not int id) return null;
+        var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == game.UserId, ct);
+        return new ExplainedGame(id, SavedGameService.DetermineOwnerSide(game, profile) ?? "");
+    }
 
     // ── Lesen + Anstoßen ───────────────────────────────────────────────────────────────────────────
 
-    public async Task<GameExplanationsDto> GetAsync(int? analysisId, string lang, bool owner, CancellationToken ct = default)
+    public async Task<GameExplanationsDto> GetAsync(ExplainedGame? game, string lang, bool owner, CancellationToken ct = default)
     {
         lang = NormalizeLanguage(lang);
         var dto = new GameExplanationsDto { Available = Available, Language = lang };
-        if (analysisId is not int id) return dto;
+        if (game == null) return dto;
+        var id = game.AnalysisId;
         var analysis = await _db.GameAnalyses.AsNoTracking().Where(a => a.Id == id)
             .Select(a => new { a.Status }).FirstOrDefaultAsync(ct);
         if (analysis == null) return dto;
+        // Aus einer anderen Sicht geschrieben (Seite inzwischen festgelegt/geändert) = nicht mehr gültig.
         dto.Items = await _db.GameMoveExplanations.AsNoTracking()
-            .Where(e => e.GameAnalysisId == id && e.Language == lang).OrderBy(e => e.Ply)
+            .Where(e => e.GameAnalysisId == id && e.Language == lang && e.Viewpoint == game.Viewpoint).OrderBy(e => e.Ply)
             .Select(e => new GameExplanationDto { Ply = e.Ply, Class = e.Class, Text = e.Text }).ToListAsync(ct);
         dto.Running = _jobs.IsRunning(id, lang);
         dto.CanGenerate = owner && Available && !dto.Running && analysis.Status == GameAnalysisStatus.Done;
@@ -77,9 +98,10 @@ public sealed class GameMoveExplanationService
     }
 
     /// <summary>Erzeugen im Hintergrund anstoßen (idempotent: läuft schon eins, passiert nichts).</summary>
-    public bool Start(int analysisId, string lang)
+    public bool Start(ExplainedGame game, string lang)
     {
         lang = NormalizeLanguage(lang);
+        var analysisId = game.AnalysisId;
         if (!Available || !_jobs.TryStart(analysisId, lang)) return false;
         _ = Task.Run(async () =>
         {
@@ -87,7 +109,7 @@ public sealed class GameMoveExplanationService
             {
                 using var scope = _scopes.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<GameMoveExplanationService>();
-                await service.GenerateAsync(analysisId, lang, CancellationToken.None);
+                await service.GenerateAsync(game, lang, CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -102,15 +124,23 @@ public sealed class GameMoveExplanationService
     }
 
     /// <summary>Die fehlenden Erklärungen einer Analyse erzeugen; Rückgabe = neu gespeicherte.</summary>
-    public async Task<int> GenerateAsync(int analysisId, string lang, CancellationToken ct)
+    public async Task<int> GenerateAsync(ExplainedGame game, string lang, CancellationToken ct)
     {
         lang = NormalizeLanguage(lang);
         if (!Available) return 0;
+        var (analysisId, viewpoint) = (game.AnalysisId, game.Viewpoint);
         var analysis = await _db.GameAnalyses.AsNoTracking().FirstOrDefaultAsync(a => a.Id == analysisId, ct);
         if (analysis == null || analysis.Status != GameAnalysisStatus.Done) return 0;
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysisId).ToListAsync(ct);
-        var done = await _db.GameMoveExplanations.Where(e => e.GameAnalysisId == analysisId && e.Language == lang)
-            .Select(e => e.Ply).ToListAsync(ct);
+        var existing = await _db.GameMoveExplanations.Where(e => e.GameAnalysisId == analysisId && e.Language == lang).ToListAsync(ct);
+        // Aus einer anderen Sicht geschrieben: weg damit, sonst stünde der neue Text dem eindeutigen Index im Weg.
+        var stale = existing.Where(e => e.Viewpoint != viewpoint).ToList();
+        if (stale.Count > 0)
+        {
+            _db.GameMoveExplanations.RemoveRange(stale);
+            await _db.SaveChangesAsync(ct);
+        }
+        var done = existing.Where(e => e.Viewpoint == viewpoint).Select(e => e.Ply).ToHashSet();
         var todo = GameMistakes.Worst(GameMistakes.Find(positions, analysis.PlyCount), MaxPerGame)
             .Where(f => !done.Contains(f.Ply)).ToList();
         if (todo.Count == 0) return 0;
@@ -120,7 +150,7 @@ public sealed class GameMoveExplanationService
         var results = await Task.WhenAll(todo.Select(async flaw =>
         {
             await gate.WaitAsync(ct);
-            try { return (flaw, text: await ExplainOneAsync(flaw, system, ct)); }
+            try { return (flaw, text: await ExplainOneAsync(flaw, viewpoint, system, ct)); }
             finally { gate.Release(); }
         }));
 
@@ -129,7 +159,7 @@ public sealed class GameMoveExplanationService
         {
             _db.GameMoveExplanations.Add(new GameMoveExplanation
             {
-                GameAnalysisId = analysisId, Ply = flaw.Ply, Language = lang, Class = flaw.Class, Text = text!,
+                GameAnalysisId = analysisId, Ply = flaw.Ply, Language = lang, Class = flaw.Class, Viewpoint = viewpoint, Text = text!,
                 Model = _llm.TranslationModel,
             });
             saved++;
@@ -140,9 +170,9 @@ public sealed class GameMoveExplanationService
         return saved;
     }
 
-    private async Task<string?> ExplainOneAsync(GameMistakes.Flaw flaw, string system, CancellationToken ct)
+    private async Task<string?> ExplainOneAsync(GameMistakes.Flaw flaw, string viewpoint, string system, CancellationToken ct)
     {
-        var prompt = UserPrompt(flaw);
+        var prompt = UserPrompt(flaw, viewpoint);
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var json = await _llm.CompleteJsonAsync("explanation", system,
@@ -162,37 +192,58 @@ public sealed class GameMoveExplanationService
 
     internal static string SystemPrompt(string lang) =>
         $"""
-        You are a friendly, precise chess coach. A player made a mistake in their game. Explain in {LanguageName(lang)},
-        in one or two short sentences (at most 45 words), WHY the played move was bad and WHAT the better move achieves.
-        Speak to the player directly ("you"). Use ONLY the facts and lines given — never calculate your own variations and
-        never mention a move that is not in the given lines. Write moves exactly as given, in English algebraic notation
+        You are a friendly, precise chess coach going through a game with the reader. A move in it was a mistake.
+        Explain in {LanguageName(lang)}, in one or two short sentences (at most 45 words), WHY the played move was bad and
+        WHAT the better move would have achieved. The last line of the facts says which side the reader played: write from the
+        reader's point of view exactly as it says — "you" is always the reader, NOT automatically the side that moved.
+        Address the reader informally where the language distinguishes (German "du", French "tu", …).
+        Use ONLY the facts and lines given — never calculate your own variations and never mention a move that is not in
+        the given lines. Write moves exactly as given, in English algebraic notation
         (e.g. Nf3, Bxh7+, O-O). No numbers of centipawns or percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
         """;
 
-    internal static string UserPrompt(GameMistakes.Flaw f)
+    /// <param name="viewpoint">Seite des Lesers (<c>white</c>/<c>black</c>, leer = unbekannt) — NICHT die Seite,
+    /// die gezogen hat; die Fakten nennen deshalb die Farben statt „der Spieler".</param>
+    internal static string UserPrompt(GameMistakes.Flaw f, string viewpoint)
     {
-        var side = f.White ? "White" : "Black";
+        var mover = f.White ? "White" : "Black";
+        var other = f.White ? "Black" : "White";
         var number = MoveNumber(f.FenBefore) + (f.White ? "." : "...");
         var kind = f.Class switch
         {
             "inaccuracy" => "an inaccuracy (a small loss)",
             "mistake" => "a mistake",
             "blunder" => "a serious blunder",
-            "miss" => "a missed chance (the opponent had just erred, and this move let the advantage slip)",
+            "miss" => $"a missed chance ({other} had just erred, and this move let the advantage slip)",
             _ => "a mistake",
         };
         var lines = new List<string>
         {
             $"Position before the move (FEN): {f.FenBefore}",
-            $"The player is {side}. Played move: {number} {f.PlayedSan} — {kind}.",
-            $"Winning chance for the player: {Math.Round(f.WinBefore)} % before, {Math.Round(f.WinAfter)} % after the move.",
-            $"Engine evaluation from the player's view: {f.EvalBefore} before, {f.EvalAfter} after the played move.",
+            $"{mover} played {number} {f.PlayedSan} — {kind}.",
+            $"Winning chance for {mover}: {Math.Round(f.WinBefore)} % before, {Math.Round(f.WinAfter)} % after the move.",
+            $"Engine evaluation from {mover}'s view: {f.EvalBefore} before, {f.EvalAfter} after the played move.",
         };
         if (f.BestSan != null)
-            lines.Add($"Better was {f.BestSan}. Engine line from the position before the move: {string.Join(' ', f.BestLine)}");
+            lines.Add($"Better for {mover} was {f.BestSan}. Engine line from the position before the move: {string.Join(' ', f.BestLine)}");
         if (f.Refutation.Count > 0)
-            lines.Add($"Opponent's best answer to {f.PlayedSan}, with the engine line: {string.Join(' ', f.Refutation)}");
+            lines.Add($"{other}'s best answer to {f.PlayedSan}, with the engine line: {string.Join(' ', f.Refutation)}");
+        lines.Add(Perspective(f.White, viewpoint));
         return string.Join('\n', lines);
+    }
+
+    /// <summary>Die letzte Zeile der Fakten: wer „du" ist.</summary>
+    internal static string Perspective(bool moverWhite, string viewpoint)
+    {
+        var mover = moverWhite ? "White" : "Black";
+        var other = moverWhite ? "Black" : "White";
+        if (viewpoint is not ("white" or "black"))
+            return "Reader: unknown side. Write neutrally about White and Black in the third person — do not use \"you\".";
+        return (viewpoint == "white") == moverWhite
+            ? $"Reader: played {mover} — this is the reader's OWN move. Address the reader as \"you\"; {other} is \"your opponent\"."
+            : $"Reader: played {other} — this move was made by the reader's OPPONENT ({mover}), not by the reader. Address the "
+              + $"reader as \"you\" and call {mover} \"your opponent\"; explain why the move was bad for your opponent and how "
+              + "you can make use of it. Never call it \"your move\".";
     }
 
     private static string MoveNumber(string fen)

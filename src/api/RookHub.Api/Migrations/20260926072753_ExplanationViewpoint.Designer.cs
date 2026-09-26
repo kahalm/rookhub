@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926072753_ExplanationViewpoint")]
+    partial class ExplanationViewpoint
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2301,9 +2304,6 @@ namespace RookHub.Api.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Automatic")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -3694,10 +3694,6 @@ namespace RookHub.Api.Migrations
                     b.Property<string>("Result")
                         .HasMaxLength(12)
                         .HasColumnType("varchar(12)");
-
-                    b.Property<string>("ReviewLanguage")
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
 
                     b.Property<string>("ShareToken")
                         .IsRequired()

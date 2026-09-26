@@ -327,6 +327,8 @@ try
     builder.Services.AddSingleton<GameExplanationJobs>();
     builder.Services.AddScoped<GameMoveExplanationService>();
     builder.Services.AddScoped<GameRoastService>();
+    builder.Services.AddScoped<GameReviewTexts>();
+    builder.Services.AddSingleton<IGameReviewTextScheduler, GameReviewTextScheduler>();
     // „Frag die Kommentare" (0.536.0): Embedding-Modell (Embedding:BaseUrl, OpenAI-kompatibel) + Vektorsuche.
     builder.Services.AddHttpClient("embedding", c => c.Timeout = TimeSpan.FromMinutes(5));
     builder.Services.AddSingleton<ITextEmbedder>(sp => new OpenAiTextEmbedder(

@@ -168,6 +168,13 @@ public class SharedGameDto
     public int? OwnGameId { get; set; }
 }
 
+/// <summary>Rumpf von „Partie analysieren" (0.540.0, optional): die Sprache der Seite — darin entstehen nach der
+/// Analyse die Erklärungen und Roasts (<see cref="Models.SavedGame.ReviewLanguage"/>).</summary>
+public class SavedGameAnalyzeRequest
+{
+    [MaxLength(16)] public string? Lang { get; set; }
+}
+
 /// <summary>Antwort auf „Partie analysieren" (<c>POST /api/games/{id}/analyze</c> bzw.
 /// <c>…/shared/{token}/analyze</c>): entweder die Analyse — neu angelegt oder wiederverwendet — oder
 /// der Grund der Absage (<see cref="GuessUploadReason"/>, dieselben Gruende wie beim Einwurf auf der

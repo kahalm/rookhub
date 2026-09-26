@@ -23,5 +23,9 @@ public class GameRoast
 
     [MaxLength(80)] public string? Model { get; set; }
 
+    /// <summary>Nach der Analyse von selbst geschrieben (0.540.0, <c>GameReviewTexts</c>) — zählt nicht gegen den
+    /// Tagesdeckel des Würfelns; „Neu würfeln" macht daraus einen gewürfelten.</summary>
+    public bool Automatic { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

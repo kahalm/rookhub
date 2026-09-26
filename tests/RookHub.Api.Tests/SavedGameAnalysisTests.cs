@@ -236,6 +236,29 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(result!.Analysis!.Id, (await RowAsync(game.Id)).GameAnalysisId);
     }
 
+    /// <summary>Die Sprache der Seite (0.540.0): darin entstehen nach der Analyse Erklärungen und Roasts — gemerkt
+    /// nur beim Besitzer, auch wenn die Analyse wiederverwendet wird; ein Gast bestimmt nichts an fremden Partien.</summary>
+    [Fact]
+    public async Task Analyze_merktDieSpracheDesBesitzers_nichtDieDesGastes()
+    {
+        var owner = await UserAsync("owner");
+        var guest = await UserAsync("guest");
+        var game = await SaveAsync(owner.Id);
+
+        await _svc.AnalyzeAsync(owner.Id, game.Id, lang: "de-AT");
+        Assert.Equal("de", (await RowAsync(game.Id)).ReviewLanguage);
+
+        await _svc.AnalyzeSharedAsync(guest.Id, game.ShareToken, lang: "hr");
+        Assert.Equal("de", (await RowAsync(game.Id)).ReviewLanguage);
+
+        var again = await _svc.AnalyzeSharedAsync(owner.Id, game.ShareToken, lang: "en");   // wiederverwendet
+        Assert.True(again!.Reused);
+        Assert.Equal("en", (await RowAsync(game.Id)).ReviewLanguage);
+
+        await _svc.AnalyzeAsync(owner.Id, game.Id);                                         // Erweiterung: keine Sprache
+        Assert.Equal("en", (await RowAsync(game.Id)).ReviewLanguage);
+    }
+
     [Fact]
     public async Task Analyze_fremdeOderUnbekanntePartie_null()
     {

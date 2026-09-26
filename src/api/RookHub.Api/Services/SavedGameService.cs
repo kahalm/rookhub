@@ -376,19 +376,23 @@ public class SavedGameService
 
     /// <summary>„Partie analysieren" an einer EIGENEN Partie; <c>null</c>, wenn es sie nicht gibt oder
     /// sie jemand anderem gehoert.</summary>
-    public async Task<GameAnalyzeResultDto?> AnalyzeAsync(int userId, int savedGameId, CancellationToken ct = default)
+    /// <param name="lang">Sprache der Seite (0.540.0) — darin entstehen nach der Analyse die Texte zur Partie
+    /// (<see cref="SavedGame.ReviewLanguage"/>); die Erweiterung schickt keine.</param>
+    public async Task<GameAnalyzeResultDto?> AnalyzeAsync(int userId, int savedGameId, CancellationToken ct = default,
+        string? lang = null)
     {
         var game = await _db.SavedGames.FirstOrDefaultAsync(g => g.Id == savedGameId && g.UserId == userId, ct);
-        return game is null ? null : await AnalyzeCoreAsync(userId, game, ct);
+        return game is null ? null : await AnalyzeCoreAsync(userId, game, lang, ct);
     }
 
     /// <summary>„Partie analysieren" auf der geteilten Partie (<c>/g/{token}</c>) — das darf JEDER
     /// Angemeldete, genau dafuer steht der Knopf dort; <c>null</c> bei unbekanntem Token.</summary>
-    public async Task<GameAnalyzeResultDto?> AnalyzeSharedAsync(int userId, string token, CancellationToken ct = default)
+    public async Task<GameAnalyzeResultDto?> AnalyzeSharedAsync(int userId, string token, CancellationToken ct = default,
+        string? lang = null)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var game = await _db.SavedGames.FirstOrDefaultAsync(g => g.ShareToken == token, ct);
-        return game is null ? null : await AnalyzeCoreAsync(userId, game, ct);
+        return game is null ? null : await AnalyzeCoreAsync(userId, game, lang, ct);
     }
 
     /// <summary>
@@ -408,9 +412,19 @@ public class SavedGameService
     /// <para>Zwei Klicks binnen Millisekunden fangen diese Schritte nicht (beide sehen noch nichts);
     /// die sperrt der Knopf, solange sein Aufruf laeuft.</para>
     /// </summary>
-    private async Task<GameAnalyzeResultDto> AnalyzeCoreAsync(int userId, SavedGame game, CancellationToken ct)
+    private async Task<GameAnalyzeResultDto> AnalyzeCoreAsync(int userId, SavedGame game, string? lang, CancellationToken ct)
     {
         var isOwner = game.UserId == userId;
+        // Nur der Besitzer bestimmt, in welcher Sprache die Texte zu SEINER Partie entstehen.
+        if (isOwner && !string.IsNullOrWhiteSpace(lang))
+        {
+            var language = GameMoveExplanationService.NormalizeLanguage(lang);
+            if (game.ReviewLanguage != language)
+            {
+                game.ReviewLanguage = language;
+                await _db.SaveChangesAsync(ct);
+            }
+        }
 
         if (game.GameAnalysisId is int linkedId)
         {
@@ -559,7 +573,7 @@ public class SavedGameService
     /// <summary>Welche Seite spielte der Besitzer? Vergleich der Spielernamen mit seinem
     /// Plattform-Username (lichess/chess.com je nach Quelle, case-insensitiv) — dieselbe
     /// Logik wie das clientseitige Flippen der eigenen Nachspiel-Ansicht (games-list.isFlipped).</summary>
-    private static string? DetermineOwnerSide(SavedGame g, UserProfile? profile)
+    internal static string? DetermineOwnerSide(SavedGame g, UserProfile? profile)
     {
         // Selbst festgelegt schlägt jede Vermutung (0.531.0).
         if (g.OwnerSide is "white" or "black") return g.OwnerSide;

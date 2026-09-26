@@ -21,7 +21,7 @@ public class GameExplanationController : BaseApiController
 
     [HttpGet("{id:int}/explanations")]
     public async Task<ActionResult<GameExplanationsDto>> Get(int id, [FromQuery] string? lang)
-        => Ok(await _service.GetAsync(await _service.AnalysisOfOwnGameAsync(GetUserId(), id), lang ?? "en", owner: true));
+        => Ok(await _service.GetAsync(await _service.OwnGameAsync(GetUserId(), id), lang ?? "en", owner: true));
 
     /// <summary>Erzeugen anstoßen (Hintergrund). 404 ohne eigene Partie, 409 ohne verknüpfte fertige Analyse,
     /// 503 ohne Modell auf eigener Hardware.</summary>
@@ -30,16 +30,16 @@ public class GameExplanationController : BaseApiController
     {
         if (!_service.Available)
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason = "notConfigured" });
-        var analysisId = await _service.AnalysisOfOwnGameAsync(GetUserId(), id);
-        var state = await _service.GetAsync(analysisId, lang ?? "en", owner: true);
-        if (analysisId is not int aid) return NotFound();
+        var game = await _service.OwnGameAsync(GetUserId(), id);
+        var state = await _service.GetAsync(game, lang ?? "en", owner: true);
+        if (game == null) return NotFound();
         if (!state.CanGenerate && !state.Running) return Conflict(new { reason = "noAnalysis" });
-        _service.Start(aid, lang ?? "en");
-        return Ok(await _service.GetAsync(aid, lang ?? "en", owner: true));
+        _service.Start(game, lang ?? "en");
+        return Ok(await _service.GetAsync(game, lang ?? "en", owner: true));
     }
 
     [AllowAnonymous]
     [HttpGet("shared/{token}/explanations")]
     public async Task<ActionResult<GameExplanationsDto>> GetShared(string token, [FromQuery] string? lang)
-        => Ok(await _service.GetAsync(await _service.AnalysisOfSharedGameAsync(token), lang ?? "en", owner: false));
+        => Ok(await _service.GetAsync(await _service.SharedGameAsync(token), lang ?? "en", owner: false));
 }
