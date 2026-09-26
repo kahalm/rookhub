@@ -2535,6 +2535,8 @@
       "greatOnly": "Der einzige gute Zug",
       "missHint": "Den Fehler des Gegners nicht bestraft",
       "explain": "Fehler erklären lassen",
+      "master": "Mit einem Meisterkommentar zu dieser Stellung: {{game}}",
+      "masterBy": "kommentiert von {{name}}",
       "explaining": "Erklärungen werden geschrieben …",
       "bookHint": "In deinem Repertoire (für die Erweiterung markiert)",
       "lines": "Computer-Linien",

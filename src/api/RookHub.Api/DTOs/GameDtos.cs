@@ -320,6 +320,20 @@ public class GameExplanationDto
     public int Ply { get; set; }
     public string Class { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
+    /// <summary>Der Meisterkommentar zu dieser Stellung, mit dem die Erklärung geschrieben wurde (0.542.0) — oder <c>null</c>.</summary>
+    public GameExplanationMasterDto? Master { get; set; }
+}
+
+/// <summary>Quelle und Wortlaut eines Meisterkommentars (Kopfdaten der Bibliothekspartie, der Kommentar im Original).</summary>
+public class GameExplanationMasterDto
+{
+    public int LibraryGameId { get; set; }
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    public string? Event { get; set; }
+    public int? Year { get; set; }
+    public string? Annotator { get; set; }
+    public string Text { get; set; } = string.Empty;
 }
 
 /// <summary>„Roast my game" (0.535.0) — die gewürfelten Kommentare einer eigenen Partie in einer Sprache.</summary>

@@ -2799,6 +2799,8 @@
       "greatOnly": "Az egyetlen jó lépés",
       "missHint": "Kimaradt az ellenfél hibájának megbüntetése",
       "explain": "Hibáim magyarázata",
+      "master": "Egy mester erről az állásról írt kommentárjával: {{game}}",
+      "masterBy": "kommentálta: {{name}}",
       "explaining": "A magyarázatok készülnek …",
       "bookHint": "A repertoárodban (a bővítményhez megjelölve)",
       "lines": "Gépi változatok",

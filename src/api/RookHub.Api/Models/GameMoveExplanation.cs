@@ -31,6 +31,14 @@ public class GameMoveExplanation
 
     [Required, MaxLength(1200)] public string Text { get; set; } = string.Empty;
 
+    /// <summary>Die Meisterpartie, deren Kommentar zu DIESER Stellung dem Modell mitgegeben wurde (0.542.0,
+    /// <c>MasterComments</c>) — <c>null</c>, wenn es keine gab oder der Text ohne sie entstand. Kein Fremdschlüssel: der
+    /// Rohbestand ist ein Arbeitsvorrat und kann neu eingelesen werden; fehlt die Partie, fällt die Quellenangabe weg.</summary>
+    public int? MasterLibraryGameId { get; set; }
+
+    /// <summary>Der mitgegebene Kommentar („7...e6: …"), wie ihn die Seite unter der Erklärung zeigt.</summary>
+    [MaxLength(600)] public string? MasterText { get; set; }
+
     [MaxLength(80)] public string? Model { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

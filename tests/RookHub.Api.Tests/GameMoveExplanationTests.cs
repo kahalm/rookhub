@@ -270,6 +270,63 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Equal("Sf6 lässt Dxf7# zu; g6 hält.", Assert.Single((await service.GetAsync(black, "de", owner: true)).Items).Text);
     }
 
+    // ── Meisterkommentar zur selben Stellung (0.542.0) ──────────────────────────────────────────────
+
+    private async Task<LibraryGame> MasterGameAsync(string comment)
+    {
+        var g = new LibraryGame
+        {
+            OpeningLine = "e4 e5 Qh5 Nc6 Bc4 Nf6 Qxf7", White = "Anderssen", Black = "Kieseritzky", Event = "London",
+            PlayedOn = new DateOnly(1851, 6, 21), Annotator = "Steinitz", Score = 80, CommentedPlies = 1, Languages = "en",
+            Pgn = "[White \"Anderssen\"]\n[Black \"Kieseritzky\"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 {" + comment + "} 4. Qxf7# 1-0",
+        };
+        _db.LibraryGames.Add(g);
+        await _db.SaveChangesAsync();
+        return g;
+    }
+
+    [Fact]
+    public async Task MasterComment_OfTheSamePosition_GoesIntoThePrompt_AndIsShownWithItsSource()
+    {
+        var (userId, gameId, _) = await SeedAsync(ownerSide: "black");
+        var master = await MasterGameAsync("The classic blunder: queen and bishop both hit f7, and nothing covers it.");
+        _llm.Answers.Enqueue("{\"explanation\":\"Nf6 lässt Qxf7# zu — wie der Kommentator schreibt, hängt f7.\"}");
+        var service = Service();
+        var game = (await service.OwnGameAsync(userId, gameId))!;
+
+        Assert.Equal(1, await service.GenerateAsync(game, "de", CancellationToken.None));
+
+        Assert.Contains("A master game reached exactly this position: Anderssen – Kieseritzky, London 1851 (annotated by Steinitz). "
+            + "Its annotator wrote here: \"3...Nf6: The classic blunder", _llm.Prompts[0]);
+        Assert.Contains("never moves from the comment", _llm.Prompts[0]);
+        // Die Seite der Leser-Zeile bleibt die letzte (die Systemanweisung verlässt sich darauf).
+        Assert.StartsWith("Reader:", _llm.Prompts[0].Split('\n')[^1]);
+        Assert.Equal(master.Id, (await _db.GameMoveExplanations.SingleAsync()).MasterLibraryGameId);
+
+        var item = Assert.Single((await service.GetAsync(game, "de", owner: true)).Items);
+        Assert.Equal(("Anderssen", "Kieseritzky", "London", (int?)1851, "Steinitz"),
+            (item.Master!.White, item.Master.Black, item.Master.Event, item.Master.Year, item.Master.Annotator));
+        Assert.StartsWith("3...Nf6: The classic blunder", item.Master.Text);
+    }
+
+    [Fact]
+    public async Task MasterComment_TextBorrowsAMoveFromIt_AskedAgainWithoutIt_AndNoSourceIsClaimed()
+    {
+        var (userId, gameId, _) = await SeedAsync(ownerSide: "black");
+        await MasterGameAsync("A blunder; the calm 3...Qe7 was necessary, since f7 needs a defender.");
+        _llm.Answers.Enqueue("{\"explanation\":\"Besser war Qe7, wie der Meister schreibt.\"}");   // Qe7 steht in keiner Linie
+        _llm.Answers.Enqueue("{\"explanation\":\"Nf6 lässt Qxf7# zu; g6 hätte gehalten.\"}");
+        var service = Service();
+
+        Assert.Equal(1, await service.GenerateAsync((await service.OwnGameAsync(userId, gameId))!, "de", CancellationToken.None));
+
+        Assert.Contains("A master game reached", _llm.Prompts[0]);
+        Assert.DoesNotContain("A master game reached", _llm.Prompts[1]);
+        var row = await _db.GameMoveExplanations.SingleAsync();
+        Assert.Null(row.MasterLibraryGameId);
+        Assert.Null(row.MasterText);
+    }
+
     [Fact]
     public async Task Generate_TwiceInvented_StoresNothing()
     {

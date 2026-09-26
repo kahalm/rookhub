@@ -2535,6 +2535,8 @@
       "greatOnly": "Jedini dobar potez",
       "missHint": "Propuštena prilika da se kazni protivnikova pogreška",
       "explain": "Objasni moje pogreške",
+      "master": "Napisano uz komentar majstora o ovoj poziciji: {{game}}",
+      "masterBy": "komentirao {{name}}",
       "explaining": "Objašnjenja se pišu …",
       "bookHint": "U tvom repertoaru (označenom za proširenje)",
       "lines": "Računalne varijante",

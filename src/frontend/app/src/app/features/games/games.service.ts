@@ -88,6 +88,19 @@ export interface GameExplanation {
   ply: number;
   class: string;
   text: string;
+  /** Der Meisterkommentar zu DIESER Stellung, mit dem die Erklärung geschrieben wurde (0.542.0). */
+  master?: GameExplanationMaster | null;
+}
+
+/** Quelle und Wortlaut eines Meisterkommentars aus dem Rohbestand. */
+export interface GameExplanationMaster {
+  libraryGameId: number;
+  white?: string | null;
+  black?: string | null;
+  event?: string | null;
+  year?: number | null;
+  annotator?: string | null;
+  text: string;
 }
 
 /** „Warum war das ein Fehler?" (0.534.0) — die Erklärungen einer Partie in einer Sprache. */

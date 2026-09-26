@@ -93,11 +93,24 @@ public sealed class GameMoveExplanationService
             .Select(a => new { a.Status }).FirstOrDefaultAsync(ct);
         if (analysis == null) return dto;
         // Aus einer anderen Sicht geschrieben (Seite inzwischen festgelegt/geändert) = nicht mehr gültig.
-        dto.Items = await _db.GameMoveExplanations.AsNoTracking()
+        var rows = await _db.GameMoveExplanations.AsNoTracking()
             .Where(e => e.GameAnalysisId == id && e.Language == lang && e.Viewpoint == game.Viewpoint).OrderBy(e => e.Ply)
-            .Select(e => new GameExplanationDto { Ply = e.Ply, Class = e.Class, Text = e.Text }).ToListAsync(ct);
+            .Select(e => new { e.Ply, e.Class, e.Text, e.MasterLibraryGameId, e.MasterText }).ToListAsync(ct);
+        var masterIds = rows.Where(r => r.MasterLibraryGameId != null).Select(r => r.MasterLibraryGameId!.Value).Distinct().ToList();
+        var masters = masterIds.Count == 0 ? new() : await _db.LibraryGames.AsNoTracking().Where(g => masterIds.Contains(g.Id))
+            .Select(g => new { g.Id, g.White, g.Black, g.Event, g.PlayedOn, g.Annotator }).ToDictionaryAsync(g => g.Id, ct);
         // Gespeichert in englischer Notation (so wird geprüft), gezeigt mit den Figurenbuchstaben der Sprache (0.541.1).
-        foreach (var item in dto.Items) item.Text = PieceLetters.Convert(item.Text, "en", lang);
+        dto.Items = rows.Select(r => new GameExplanationDto
+        {
+            Ply = r.Ply, Class = r.Class, Text = PieceLetters.Convert(r.Text, "en", lang),
+            Master = r.MasterLibraryGameId is int mid && r.MasterText != null && masters.TryGetValue(mid, out var m)
+                ? new GameExplanationMasterDto
+                {
+                    LibraryGameId = mid, White = m.White, Black = m.Black, Event = m.Event == "?" ? null : m.Event,
+                    Year = m.PlayedOn?.Year, Annotator = m.Annotator, Text = r.MasterText,
+                }
+                : null,
+        }).ToList();
         dto.Running = _jobs.IsRunning(id, lang);
         dto.CanGenerate = owner && Available && !dto.Running && analysis.Status == GameAnalysisStatus.Done;
         return dto;
@@ -151,22 +164,25 @@ public sealed class GameMoveExplanationService
             .Where(f => !done.Contains(f.Ply)).ToList();
         if (todo.Count == 0) return 0;
 
+        // Meisterkommentare zur selben Stellung (0.542.0) — VOR dem parallelen Teil: der DbContext ist nicht threadsicher.
+        var masters = await MasterComments.ForFlawsAsync(_db, positions, todo, ct);
         var system = SystemPrompt(lang);
         using var gate = new SemaphoreSlim(Parallel);
         var results = await Task.WhenAll(todo.Select(async flaw =>
         {
             await gate.WaitAsync(ct);
-            try { return (flaw, text: await ExplainOneAsync(flaw, viewpoint, system, ct)); }
+            try { return (flaw, answer: await ExplainOneAsync(flaw, viewpoint, system, masters.GetValueOrDefault(flaw.Ply), ct)); }
             finally { gate.Release(); }
         }));
 
         var saved = 0;
-        foreach (var (flaw, text) in results.Where(r => r.text != null))
+        foreach (var (flaw, answer) in results.Where(r => r.answer.Text != null))
         {
             _db.GameMoveExplanations.Add(new GameMoveExplanation
             {
-                GameAnalysisId = analysisId, Ply = flaw.Ply, Language = lang, Class = flaw.Class, Viewpoint = viewpoint, Text = text!,
-                Model = _llm.TranslationModel,
+                GameAnalysisId = analysisId, Ply = flaw.Ply, Language = lang, Class = flaw.Class, Viewpoint = viewpoint,
+                Text = answer.Text!, Model = _llm.TranslationModel,
+                MasterLibraryGameId = answer.Master?.LibraryGameId, MasterText = answer.Master?.Text,
             });
             saved++;
         }
@@ -176,19 +192,24 @@ public sealed class GameMoveExplanationService
         return saved;
     }
 
-    private async Task<string?> ExplainOneAsync(GameMistakes.Flaw flaw, string viewpoint, string system, CancellationToken ct)
+    /// <summary>Eine Erklärung: der erste Versuch mit dem Meisterkommentar (falls es einen gibt), die Nachfrage OHNE ihn —
+    /// nennt der Text einen Zug aus dem Kommentar statt aus den Linien, soll das nicht die ganze Erklärung kosten. Die
+    /// Quelle wird nur vermerkt, wenn der angenommene Text mit ihr entstand.</summary>
+    private async Task<(string? Text, MasterComments.Found? Master)> ExplainOneAsync(GameMistakes.Flaw flaw, string viewpoint,
+        string system, MasterComments.Found? master, CancellationToken ct)
     {
-        var prompt = UserPrompt(flaw, viewpoint);
         for (var attempt = 0; attempt < 2; attempt++)
         {
+            var with = attempt == 0 ? master : null;
+            var prompt = UserPrompt(flaw, viewpoint, with);
             var json = await _llm.CompleteJsonAsync("explanation", system,
                 attempt == 0 ? prompt : prompt + "\n\nIMPORTANT: your previous answer mentioned a move that is not in the lines above. Mention ONLY moves that appear in the lines above.",
                 Schema, 1200, ct);
             var text = TextOf(json);
-            if (text != null && IsGrounded(text, flaw)) return text;
+            if (text != null && IsGrounded(text, flaw)) return (text, with);
             if (text != null) _logger.LogInformation("Fehler-Erklärung Halbzug {Ply} verworfen (nennt einen fremden Zug): {Text}", flaw.Ply, text);
         }
-        return null;
+        return (null, null);
     }
 
     // ── Prompt ─────────────────────────────────────────────────────────────────────────────────────
@@ -210,7 +231,8 @@ public sealed class GameMoveExplanationService
 
     /// <param name="viewpoint">Seite des Lesers (<c>white</c>/<c>black</c>, leer = unbekannt) — NICHT die Seite,
     /// die gezogen hat; die Fakten nennen deshalb die Farben statt „der Spieler".</param>
-    internal static string UserPrompt(GameMistakes.Flaw f, string viewpoint)
+    /// <param name="master">Kommentar eines Meisters zu DIESER Stellung (<see cref="MasterComments"/>) oder <c>null</c>.</param>
+    internal static string UserPrompt(GameMistakes.Flaw f, string viewpoint, MasterComments.Found? master = null)
     {
         var mover = f.White ? "White" : "Black";
         var other = f.White ? "Black" : "White";
@@ -234,6 +256,12 @@ public sealed class GameMoveExplanationService
             lines.Add($"Better for {mover} was {f.BestSan}. Engine line from the position before the move: {string.Join(' ', f.BestLine)}");
         if (f.Refutation.Count > 0)
             lines.Add($"{other}'s best answer to {f.PlayedSan}, with the engine line: {string.Join(' ', f.Refutation)}");
+        if (master != null)
+        {
+            lines.Add($"A master game reached exactly this position: {master.Source}. Its annotator wrote here: \"{master.Text}\"");
+            lines.Add("Use the annotator's ideas where they fit (plans, typical problems of this position) and you may say that a "
+                + "master annotator made the point — but mention only moves from the lines above, never moves from the comment.");
+        }
         lines.Add(Perspective(f.White, viewpoint));
         return string.Join('\n', lines);
     }

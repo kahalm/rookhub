@@ -304,6 +304,39 @@ describe('GameReviewComponent', () => {
     expect(el.querySelector('.explain')).toBeNull();
   }));
 
+  it('Meisterkommentar (0.542.0): Quelle unter der Erklärung, Wortlaut zum Aufklappen; ohne Kommentar keine Zeile', () => {
+    const { fixture, http, el } = setup();
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/games/4/explanations').flush({
+      available: true, canGenerate: false, running: false, language: 'en',
+      items: [
+        {
+          ply: 1, class: 'blunder', text: 'c5 hands White the centre.',
+          master: { libraryGameId: 7, white: 'Anderssen', black: 'Kieseritzky', event: 'London', year: 1851, annotator: 'Steinitz',
+                    text: '1...c5: Too early — White takes the centre at once.' },
+        },
+      ],
+    });
+    fixture.componentRef.setInput('currentIndex', 1);
+    fixture.detectChanges();
+
+    const master = el.querySelector('details.explain-master') as HTMLElement;
+    expect(master.querySelector('summary')!.textContent).toContain('games.review.master');
+    expect(fixture.componentInstance.masterGame({ libraryGameId: 7, white: 'Anderssen', black: 'Kieseritzky', event: 'London', year: 1851, text: '' }))
+      .toBe('Anderssen – Kieseritzky, London 1851');
+    expect(master.querySelector('q')!.textContent).toContain('Too early');
+
+    // Ohne Meisterkommentar: nur die Erklärung.
+    fixture.componentInstance.explanations.set({
+      available: true, canGenerate: false, running: false, language: 'en',
+      items: [{ ply: 1, class: 'blunder', text: 'Without a source.' }],
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('.explain')!.textContent).toContain('Without a source.');
+    expect(el.querySelector('details.explain-master')).toBeNull();
+  });
+
   it('Fehler-Erklärungen: fremde Partie (kein Erzeugen) und ohne Modell — kein Knopf', () => {
     const { fixture, http, el } = setup();
     http.expectOne(url).flush(evals('done'));

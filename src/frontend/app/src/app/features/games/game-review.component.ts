@@ -13,7 +13,7 @@ import { formatEta } from '../../shared/eta.util';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { bestMoveArrowAt, computerLinesAt } from './computer-lines.util';
-import { GameExplanations, GamesService } from './games.service';
+import { GameExplanationMaster, GameExplanations, GamesService } from './games.service';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
   reviewGame,
@@ -118,7 +118,18 @@ const MATE_GAP_PAWNS = 100;
           </div>
           <!-- „Warum war das ein Fehler?" (0.534.0): geschrieben vom Sprachmodell auf eigener Hardware, nur aus den
                Linien der Analyse. Im Fehler-Training aus — der Text nennt den besseren Zug. -->
-          @if (explanationFor(); as ex) { <p class="explain">💬 {{ ex }}</p> }
+          @if (explanationFor(); as ex) {
+            <p class="explain">💬 {{ ex.text }}</p>
+            <!-- Meisterkommentar zur selben Stellung (0.542.0): die Quelle als Zeile, der Wortlaut zum Aufklappen —
+                 im Original, er stammt aus der Sammlung und wird nicht übersetzt. -->
+            @if (ex.master; as m) {
+              <details class="explain-master">
+                <summary>📖 {{ 'games.review.master' | translate: { game: masterGame(m) } }}
+                  @if (m.annotator) { · {{ 'games.review.masterBy' | translate: { name: m.annotator } }} }</summary>
+                <q>{{ m.text }}</q>
+              </details>
+            }
+          }
         }
         @if (explainState() === 'can') {
           <button mat-stroked-button type="button" class="explain-btn" (click)="explain()">
@@ -185,6 +196,9 @@ const MATE_GAP_PAWNS = 100;
     .current { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 0.85rem; }
     .current .why { color: color-mix(in srgb, currentColor 70%, transparent); }
     .explain { margin: 2px 0 0; font-size: 0.88rem; line-height: 1.35; }
+    .explain-master { margin: 2px 0 0; font-size: 0.8rem; line-height: 1.35; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .explain-master summary { cursor: pointer; }
+    .explain-master q { display: block; margin: 4px 0 0 1.2em; font-style: italic; }
     .explain-btn { align-self: flex-start; }
     .explaining { font-size: 0.85rem; }
     /* Die chess.com-Farben sind hell (Gelb, Hellgrün) — ein Schatten hält die weiße Schrift darauf lesbar. */
@@ -298,8 +312,15 @@ export class GameReviewComponent {
     const m = this.current();
     const e = this.explanations();
     if (!m || !e || this.engineHidden()) return null;
-    return e.items.find(x => x.ply === m.ply)?.text ?? null;
+    return e.items.find(x => x.ply === m.ply) ?? null;
   });
+
+  /** „Anderssen – Kieseritzky, London 1851" — die Kopfzeile der Meisterpartie. */
+  masterGame(m: GameExplanationMaster): string {
+    const event = m.event ? `, ${m.event}` : '';
+    const year = m.year ? ` ${m.year}` : '';
+    return `${m.white || '?'} – ${m.black || '?'}${event}${year}`;
+  }
   /** Knopf „Fehler erklären lassen": nur der Besitzer, nur wenn es Fehler gibt und noch keine Erklärung. */
   readonly explainState = computed<'can' | 'running' | null>(() => {
     const e = this.explanations();

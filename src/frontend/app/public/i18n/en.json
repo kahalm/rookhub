@@ -2535,6 +2535,8 @@
       "greatOnly": "The only good move",
       "missHint": "Missed the chance to punish the opponent's mistake",
       "explain": "Explain my mistakes",
+      "master": "Written with a master's comment on this position: {{game}}",
+      "masterBy": "annotated by {{name}}",
       "explaining": "Writing explanations …",
       "bookHint": "In your repertoire (marked for the extension)",
       "lines": "Computer lines",
