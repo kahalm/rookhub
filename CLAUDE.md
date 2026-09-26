@@ -517,6 +517,18 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   Analyse verknüpfte Partie. Sprache: `SavedGame.ReviewLanguage` (die Seite schickt `{ lang }` mit „Partie analysieren"),
   sonst die jüngste gemerkte des Nutzers, sonst `en`. Die Pumpe kennt nur die Schnittstelle — die Texte hängen über
   `GameRoastService` → `SavedGameService` wieder an ihr (Zyklus), deshalb löst der Auslöser sie in einem eigenen Scope auf.
+* **Sperrzeiten der Spark** (0.546.0, `Services/QuietHours.cs`, Wunsch des Nutzers: „gleiches zeitfenster" wie die
+  Übersetzungen): `TextLlm:QuietHours` (Vorgabe `Mon-Thu 08:00-17:00; Fri 08:00-14:00`, Ende ausschließlich, LEER = nie
+  gesperrt) in `TextLlm:TimeZone` (Vorgabe `Europe/Vienna` — der Server läuft in UTC, die Sommerzeit verschöbe sonst die
+  Fenster). Gilt für Nacherzählung, Erklärungen und Roasts: der `GameReviewTextScheduler` stellt, was die Pumpe in der
+  Sperrzeit anstößt, ZURÜCK (je Analyse einmal, „vertieft" gewinnt beim Zusammenführen) und lässt es nach dem Ende los —
+  ein Wartender je Prozess, schläft höchstens 10 min am Stück; ein Neustart verliert die Liste, dann holt das nächste
+  Öffnen der Partie die Nacherzählung nach (`GET …/recap` stößt in der Sperrzeit NICHT an, meldet `quietUntil`). Die
+  Knöpfe sagen ab: Erklärungen `canGenerate=false` + `quietUntil` (nur für den Besitzer gesetzt), POST 503
+  `{ reason: "quietHours", until }`; Roast 503 `quietHours` — der AUTOMATISCHE Roast aus dem Scheduler läuft (der ist ja
+  schon zurückgestellt worden). Eine unlesbare Angabe wirft beim Start (`FormatException`) statt still „nie gesperrt" zu
+  bedeuten. Die Seite zeigt „wieder ab Fr., 14:00" (`quiet-hours.util.ts`). Dieselbe Klasse nutzt die Kurs-Übersetzung
+  (Stufe B); der Bibliothekslauf hält die Fenster außerhalb der App über die Schaltuhr `.jobs/spark-uebersetzung.sh` ein.
 * Frontend: `GameReviewComponent` lädt die Erklärungen, sobald die Analyse `done` ist (und bei Sprachwechsel), zeigt den
   Text unter dem Abzeichen des aktuellen Zugs, den Knopf „Fehler erklären lassen" nur mit `canGenerate`, keine Erklärung
   vorhanden und Fehlern in der Partie; fragt alle 5 s nach, solange es läuft; im Fehler-Training aus (nennt den besseren Zug).

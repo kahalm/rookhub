@@ -23,8 +23,9 @@ public class GameRoastController : BaseApiController
         return dto == null ? NotFound() : Ok(dto);
     }
 
-    /// <summary>Würfeln (ersetzt den vorigen Text desselben Stils). Absagen mit <c>reason</c>: 503 notConfigured,
-    /// 404 notFound, 409 noAnalysis, 400 invalidStyle, 429 dailyLimit, 502 failed.</summary>
+    /// <summary>Würfeln (ersetzt den vorigen Text desselben Stils). Absagen mit <c>reason</c>: 503 notConfigured bzw.
+    /// quietHours (+ <c>until</c>, Sperrzeit der Spark), 404 notFound, 409 noAnalysis, 400 invalidStyle, 429 dailyLimit,
+    /// 502 failed.</summary>
     [HttpPost("{id:int}/roasts")]
     public async Task<ActionResult<GameRoastDto>> Roast(int id, [FromQuery] string? style, [FromQuery] string? lang,
         CancellationToken ct)
@@ -35,6 +36,7 @@ public class GameRoastController : BaseApiController
         return result.Reason switch
         {
             "notConfigured" => StatusCode(StatusCodes.Status503ServiceUnavailable, body),
+            "quietHours" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason = result.Reason, until = _service.QuietUntil() }),
             "notFound" => NotFound(body),
             "noAnalysis" => Conflict(body),
             "invalidStyle" => BadRequest(body),

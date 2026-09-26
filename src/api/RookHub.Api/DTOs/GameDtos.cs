@@ -310,6 +310,8 @@ public class GameExplanationsDto
     public bool CanGenerate { get; set; }
     /// <summary>Gerade entstehen Erklärungen — der Client fragt nach.</summary>
     public bool Running { get; set; }
+    /// <summary>Sperrzeit der Spark (0.546.0): bis dahin entsteht nichts, der Knopf ist aus. <c>null</c> = frei.</summary>
+    public DateTimeOffset? QuietUntil { get; set; }
     public string Language { get; set; } = "en";
     public List<GameExplanationDto> Items { get; set; } = new();
 }
@@ -343,6 +345,8 @@ public class GameRoastsDto
     public bool Available { get; set; }
     /// <summary>Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu roasten.</summary>
     public bool HasAnalysis { get; set; }
+    /// <summary>Sperrzeit der Spark (0.546.0): bis dahin wird nicht gewürfelt. <c>null</c> = frei.</summary>
+    public DateTimeOffset? QuietUntil { get; set; }
     public List<GameRoastDto> Items { get; set; } = new();
 }
 
@@ -367,4 +371,6 @@ public class GameRecapDto
     public DateTime? CreatedAt { get; set; }
     /// <summary>Der Text fehlt noch, entsteht aber gerade (von diesem Aufruf angestoßen) — die Seite fragt später nach.</summary>
     public bool Pending { get; set; }
+    /// <summary>Sperrzeit der Spark (0.546.0): der fehlende Text entsteht erst danach (beim nächsten Öffnen). <c>null</c> = frei.</summary>
+    public DateTimeOffset? QuietUntil { get; set; }
 }

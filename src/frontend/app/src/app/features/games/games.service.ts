@@ -111,6 +111,8 @@ export interface GameExplanations {
   /** Der Aufrufer darf erzeugen lassen (Besitzer, Analyse fertig, nichts läuft). */
   canGenerate: boolean;
   running: boolean;
+  /** Sperrzeit der Spark (0.546.0): bis dahin entsteht nichts (nur für den Besitzer gesetzt). */
+  quietUntil?: string | null;
   language: string;
   items: GameExplanation[];
 }
@@ -130,6 +132,8 @@ export interface GameRoasts {
   available: boolean;
   /** Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu roasten. */
   hasAnalysis: boolean;
+  /** Sperrzeit der Spark (0.546.0): bis dahin wird nicht gewürfelt. */
+  quietUntil?: string | null;
   items: GameRoast[];
 }
 
@@ -143,6 +147,8 @@ export interface GameRecap {
   language?: string | null;
   /** Fehlt noch, entsteht aber gerade (von diesem Aufruf angestoßen) — später nachfragen. */
   pending: boolean;
+  /** Sperrzeit der Spark (0.546.0): der fehlende Text entsteht erst danach, beim nächsten Öffnen. */
+  quietUntil?: string | null;
 }
 
 /** „Ähnliche Meisterpartien" (0.544.0): Partien des Rohbestands mit der längsten gemeinsamen Zugfolge. */

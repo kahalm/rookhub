@@ -337,6 +337,29 @@ describe('GameReviewComponent', () => {
     expect(el.querySelector('details.explain-master')).toBeNull();
   });
 
+  it('Fehler-Erklärungen in der Sperrzeit der Spark (0.546.0): Hinweis mit Uhrzeit statt Knopf', () => {
+    const { fixture, http, el } = setup();
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/games/4/explanations').flush({
+      available: true, canGenerate: false, running: false, quietUntil: '2026-09-25T15:00:00Z', language: 'en', items: [],
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('.explain-btn')).toBeNull();
+    const quiet = el.querySelector('.explain-quiet') as HTMLElement;
+    expect(quiet).not.toBeNull();
+    expect(quiet.textContent).toContain('games.review.quietHours');
+    expect(fixture.componentInstance.explainQuietTime()).not.toBe('');
+
+    // Liegen schon Erklärungen vor, braucht es keinen Hinweis.
+    fixture.componentInstance.explanations.set({
+      available: true, canGenerate: false, running: false, quietUntil: '2026-09-25T15:00:00Z', language: 'en',
+      items: [{ ply: 1, class: 'blunder', text: 'Already there.' }],
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('.explain-quiet')).toBeNull();
+  });
+
   it('Fehler-Erklärungen: fremde Partie (kein Erzeugen) und ohne Modell — kein Knopf', () => {
     const { fixture, http, el } = setup();
     http.expectOne(url).flush(evals('done'));
@@ -346,6 +369,7 @@ describe('GameReviewComponent', () => {
     fixture.detectChanges();
     expect(el.querySelector('.explain-btn')).toBeNull();
     expect(el.querySelector('.explaining')).toBeNull();
+    expect(el.querySelector('.explain-quiet')).toBeNull();
   });
 
   it('Fehler und grobe Fehler gehen als Punkte in die Kurve', () => {

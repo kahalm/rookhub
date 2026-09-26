@@ -14,6 +14,7 @@ import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 import { bestMoveArrowAt, computerLinesAt } from './computer-lines.util';
 import { GameExplanationMaster, GameExplanations, GamesService } from './games.service';
+import { formatQuietUntil } from './quiet-hours.util';
 import {
   EvalScore, GameEvals, GameEvalsStatus, MOVE_CLASSES, MOVE_CLASS_COLORS, MoveClass, ReviewedMove, formatEval,
   reviewGame,
@@ -137,6 +138,8 @@ const MATE_GAP_PAWNS = 100;
           </button>
         } @else if (explainState() === 'running') {
           <span class="progress explaining">{{ 'games.review.explaining' | translate }}</span>
+        } @else if (explainState() === 'quiet') {
+          <span class="progress explain-quiet">{{ 'games.review.quietHours' | translate: { time: explainQuietTime() } }}</span>
         }
         <div class="table-wrap">
           <table class="summary">
@@ -321,14 +324,18 @@ export class GameReviewComponent {
     const year = m.year ? ` ${m.year}` : '';
     return `${m.white || '?'} – ${m.black || '?'}${event}${year}`;
   }
-  /** Knopf „Fehler erklären lassen": nur der Besitzer, nur wenn es Fehler gibt und noch keine Erklärung. */
-  readonly explainState = computed<'can' | 'running' | null>(() => {
+  /** Knopf „Fehler erklären lassen": nur der Besitzer, nur wenn es Fehler gibt und noch keine Erklärung.
+   *  In der Sperrzeit der Spark (0.546.0) steht statt des Knopfs, ab wann es wieder geht. */
+  readonly explainState = computed<'can' | 'running' | 'quiet' | null>(() => {
     const e = this.explanations();
     if (!e || this.engineHidden() || this.status() !== 'done') return null;
     if (e.running) return 'running';
     const hasErrors = this.review().moves.some(m => !!m && ERROR_CLASSES.has(m.base));
-    return e.canGenerate && e.items.length === 0 && hasErrors ? 'can' : null;
+    if (!hasErrors || e.items.length > 0) return null;
+    if (e.canGenerate) return 'can';
+    return this.explainQuietTime() ? 'quiet' : null;
   });
+  readonly explainQuietTime = computed(() => formatQuietUntil(this.explanations()?.quietUntil, this.language()));
 
   private loadSub?: Subscription;
   private pollSub?: Subscription;

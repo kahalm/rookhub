@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.546.0", date: "2026-09-26", changes: [
+    { en: "The AI texts about a game — recap, “Why was this a mistake?” and the roasts — keep the same quiet hours as the translations: Monday to Thursday 8:00–17:00 and Friday 8:00–14:00 (Vienna time) our own hardware belongs to other work. What an analysis triggers in that time is written right after it ends; the buttons say until when instead of failing.", de: "Die KI-Texte zur Partie — Nacherzählung, „Warum war das ein Fehler?“ und die Roasts — halten dieselben Sperrzeiten ein wie die Übersetzungen: Montag bis Donnerstag 8:00–17:00 und Freitag 8:00–14:00 (Wiener Zeit) gehört unsere eigene Hardware anderer Arbeit. Was eine Analyse in dieser Zeit anstößt, entsteht direkt danach; die Knöpfe sagen, bis wann, statt zu scheitern." },
+  ] },
   { version: "0.544.0", date: "2026-09-26", changes: [
     { en: "Similar master games: below a game (your own and a shared link) you can now open the annotated master games from our library that played the same moves the longest — with the spot where the master turned off (“same up to 7.Bb3, then 7...O-O instead of 7...d6”). A game that is already computed can be played right away as a points game, any other one can be requested.", de: "Ähnliche Meisterpartien: Unter einer Partie (der eigenen und hinter dem Teilen-Link) lassen sich jetzt die kommentierten Meisterpartien aus unserem Bestand aufklappen, die am längsten dieselben Züge gespielt haben — mit der Stelle, an der der Meister abbog („gleich bis 7.Bb3, dann 7...O-O statt 7...d6“). Eine schon gerechnete Partie lässt sich gleich als Punktepartie spielen, jede andere anfordern." },
   ] },

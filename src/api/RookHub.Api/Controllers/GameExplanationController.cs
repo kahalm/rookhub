@@ -24,7 +24,8 @@ public class GameExplanationController : BaseApiController
         => Ok(await _service.GetAsync(await _service.OwnGameAsync(GetUserId(), id), lang ?? "en", owner: true));
 
     /// <summary>Erzeugen anstoßen (Hintergrund). 404 ohne eigene Partie, 409 ohne verknüpfte fertige Analyse,
-    /// 503 ohne Modell auf eigener Hardware.</summary>
+    /// 503 ohne Modell auf eigener Hardware (<c>notConfigured</c>) bzw. in der Sperrzeit der Spark (<c>quietHours</c> +
+    /// <c>until</c>).</summary>
     [HttpPost("{id:int}/explanations")]
     public async Task<ActionResult<GameExplanationsDto>> Generate(int id, [FromQuery] string? lang)
     {
@@ -33,6 +34,8 @@ public class GameExplanationController : BaseApiController
         var game = await _service.OwnGameAsync(GetUserId(), id);
         var state = await _service.GetAsync(game, lang ?? "en", owner: true);
         if (game == null) return NotFound();
+        if (state.QuietUntil is { } until)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason = "quietHours", until });
         if (!state.CanGenerate && !state.Running) return Conflict(new { reason = "noAnalysis" });
         _service.Start(game, lang ?? "en");
         return Ok(await _service.GetAsync(game, lang ?? "en", owner: true));

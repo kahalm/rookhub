@@ -328,6 +328,8 @@ try
     builder.Services.AddScoped<GameMoveExplanationService>();
     builder.Services.AddScoped<GameRoastService>();
     builder.Services.AddScoped<GameRecapService>();
+    // Sperrzeiten der Spark (0.546.0): TextLlm:QuietHours / TextLlm:TimeZone.
+    builder.Services.AddSingleton(sp => new QuietHours(sp.GetRequiredService<IConfiguration>()));
     builder.Services.AddScoped<SimilarGamesService>();
     builder.Services.AddScoped<GameReviewTexts>();
     builder.Services.AddSingleton<IGameReviewTextScheduler, GameReviewTextScheduler>();

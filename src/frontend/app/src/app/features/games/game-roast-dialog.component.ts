@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { formatQuietUntil } from './quiet-hours.util';
 import { GameRoast, GameRoasts, GamesService, RoastStyle } from './games.service';
 
 export interface GameRoastData {
@@ -33,6 +34,7 @@ export interface GameRoastData {
         } @else if (!s.hasAnalysis) {
           <p class="note">{{ 'games.roast.noAnalysis' | translate }}</p>
         } @else {
+          @if (quietTime(); as t) { <p class="note">{{ 'games.roast.quietHours' | translate: { time: t } }}</p> }
           <div class="styles" role="radiogroup" [attr.aria-label]="'games.roast.style' | translate">
             @for (st of styles; track st.key) {
               <button type="button" mat-stroked-button class="style" [class.on]="style() === st.key" role="radio"
@@ -61,7 +63,7 @@ export interface GameRoastData {
         }
       }
       @if (state()?.available && state()?.hasAnalysis) {
-        <button mat-flat-button (click)="roast()" [disabled]="busy()">
+        <button mat-flat-button (click)="roast()" [disabled]="busy() || !!quietTime()">
           <mat-icon>local_fire_department</mat-icon>
           {{ (current() ? 'games.roast.again' : 'games.roast.go') | translate }}
         </button>
@@ -92,6 +94,8 @@ export class GameRoastDialogComponent implements OnInit {
   readonly style = signal<RoastStyle>('friendly');
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** Sperrzeit der Spark (0.546.0): bis wann gewürfelt werden kann — leer = frei. */
+  readonly quietTime = computed(() => formatQuietUntil(this.state()?.quietUntil, this.lang()));
   readonly canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
   private lang(): string {

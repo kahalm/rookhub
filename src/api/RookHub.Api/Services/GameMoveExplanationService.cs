@@ -42,15 +42,22 @@ public sealed class GameMoveExplanationService
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<GameMoveExplanationService> _logger;
 
+    private readonly QuietHours? _quiet;
+
     public GameMoveExplanationService(AppDbContext db, IClaudeJsonClient llm, GameExplanationJobs jobs,
-        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger)
+        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger, QuietHours? quiet = null)
     {
         _db = db;
         _llm = llm;
         _jobs = jobs;
         _scopes = scopes;
         _logger = logger;
+        _quiet = quiet;
     }
+
+    /// <summary>Bis wann die Spark gerade anderen gehört (<see cref="QuietHours"/>) — <c>null</c> = frei. Der Knopf
+    /// „Fehler erklären lassen" ist dann gesperrt; die automatischen Texte stellt der Scheduler zurück.</summary>
+    public DateTimeOffset? QuietUntil() => _quiet?.QuietUntil();
 
     /// <summary>Nur mit einem Modell auf eigener Hardware.</summary>
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
@@ -112,7 +119,9 @@ public sealed class GameMoveExplanationService
                 : null,
         }).ToList();
         dto.Running = _jobs.IsRunning(id, lang);
-        dto.CanGenerate = owner && Available && !dto.Running && analysis.Status == GameAnalysisStatus.Done;
+        // Nur für den Besitzer — ein Besucher des Teilen-Links kann ohnehin nichts erzeugen.
+        dto.QuietUntil = owner && Available ? QuietUntil() : null;
+        dto.CanGenerate = owner && Available && !dto.Running && dto.QuietUntil == null && analysis.Status == GameAnalysisStatus.Done;
         return dto;
     }
 
@@ -121,7 +130,7 @@ public sealed class GameMoveExplanationService
     {
         lang = NormalizeLanguage(lang);
         var analysisId = game.AnalysisId;
-        if (!Available || !_jobs.TryStart(analysisId, lang)) return false;
+        if (!Available || QuietUntil() != null || !_jobs.TryStart(analysisId, lang)) return false;
         _ = Task.Run(async () =>
         {
             try

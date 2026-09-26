@@ -46,6 +46,23 @@ describe('GameRoastDialogComponent', () => {
     expect(el.querySelector('.text')!.textContent).toContain('empty bunker');
   });
 
+  it('in der Sperrzeit der Spark (0.546.0): Hinweis mit Uhrzeit, Würfeln gesperrt; die Absage hat ihren Text', () => {
+    const { fixture, http, el } = setup();
+    http.expectOne('/api/games/7/roasts?lang=en')
+      .flush({ available: true, hasAnalysis: true, quietUntil: '2026-09-25T15:00:00Z', items: [] });
+    fixture.detectChanges();
+    expect(el.textContent).toContain('games.roast.quietHours');
+    const go = Array.from(el.querySelectorAll('button')).find(b => b.textContent!.includes('games.roast.go')) as HTMLButtonElement;
+    expect(go.disabled).toBeTrue();
+
+    // Kam die Sperre erst zwischen Öffnen und Klicken: der Server sagt ab.
+    fixture.componentInstance.state.set({ available: true, hasAnalysis: true, items: [] });
+    fixture.componentInstance.roast();
+    http.expectOne(r => r.method === 'POST').flush({ reason: 'quietHours', until: '2026-09-25T15:00:00Z' }, { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    expect(el.querySelector('.error')!.textContent).toContain('games.roast.error.quietHours');
+  });
+
   it('ohne Analyse bzw. ohne Modell: ein Hinweis statt Knopf; eine Absage nennt ihren Grund', () => {
     const { fixture, http, el } = setup();
     http.expectOne('/api/games/7/roasts?lang=en').flush({ available: true, hasAnalysis: false, items: [] });

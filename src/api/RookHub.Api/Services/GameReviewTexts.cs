@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -152,23 +153,89 @@ public interface IGameReviewTextScheduler
 
 /// <summary>Schreibt im Hintergrund, in einem eigenen Scope — die Pumpe wartet nicht auf das Modell (15 Erklärungen und
 /// drei Roasts brauchen auch auf eigener Hardware eine Minute). Ein Neustart verwirft den Lauf; der Knopf „Fehler erklären
-/// lassen" bzw. „Roast my game" holt dann nach.</summary>
-public sealed class GameReviewTextScheduler : IGameReviewTextScheduler
+/// lassen" bzw. „Roast my game" holt dann nach.
+///
+/// <para><b>Sperrzeiten</b> (<see cref="QuietHours"/>, 0.546.0): endet eine Analyse, während die Spark anderen gehört, wird
+/// sie ZURÜCKGESTELLT und nach dem Fenster geschrieben (ein Wartender je Prozess, in Schritten von höchstens zehn
+/// Minuten). Zurückgestellt wird nur im Arbeitsspeicher: ein Neustart dazwischen verliert die Liste — dann holen die
+/// Knöpfe bzw. der Abruf der Nacherzählung beim Öffnen der Partie nach. Der nächtliche Neustart (Watchtower ~02:00)
+/// liegt außerhalb jedes Fensters. Die Nacherzählung beim Öffnen (<see cref="ScheduleRecap"/>) wartet NICHT: sie wird beim
+/// nächsten Öffnen außerhalb der Sperrzeit ohnehin angestoßen.</para></summary>
+public class GameReviewTextScheduler : IGameReviewTextScheduler
 {
     private readonly IServiceScopeFactory _scopes;
+    private readonly QuietHours? _quiet;
     private readonly ILogger<GameReviewTextScheduler> _logger;
+    /// <summary>Zurückgestellt: Analyse → „nach der Vertiefung" (ODER — die Vertiefung schreibt mehr neu).</summary>
+    private readonly ConcurrentDictionary<int, bool> _deferred = new();
+    private int _waiting;
 
-    public GameReviewTextScheduler(IServiceScopeFactory scopes, ILogger<GameReviewTextScheduler> logger)
+    public GameReviewTextScheduler(IServiceScopeFactory scopes, ILogger<GameReviewTextScheduler> logger, QuietHours? quiet = null)
     {
         _scopes = scopes;
         _logger = logger;
+        _quiet = quiet;
     }
 
+    internal int DeferredCount => _deferred.Count;
+
     public void Schedule(int analysisId, bool refined)
+    {
+        if (_quiet?.IsQuietNow() == true)
+        {
+            _deferred.AddOrUpdate(analysisId, refined, (_, old) => old || refined);
+            _logger.LogInformation("Texte zur Analyse {AnalysisId} zurückgestellt (Sperrzeit der Spark bis {Until})",
+                analysisId, _quiet.QuietUntil());
+            StartWaiting();
+            return;
+        }
+        Execute(analysisId, refined);
+    }
+
+    public void ScheduleRecap(int savedGameId)
+    {
+        if (_quiet?.IsQuietNow() == true) return;
+        ExecuteRecap(savedGameId);
+    }
+
+    /// <summary>Alles Zurückgestellte jetzt anstoßen — der Wartende ruft es nach dem Fenster (Tests direkt).</summary>
+    internal void ReleaseDeferred()
+    {
+        foreach (var id in _deferred.Keys.ToList())
+            if (_deferred.TryRemove(id, out var refined)) Schedule(id, refined);
+    }
+
+    private void StartWaiting()
+    {
+        if (Interlocked.Exchange(ref _waiting, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (_quiet?.QuietUntil() is { } until)
+                {
+                    var wait = until - _quiet.Now;
+                    await Task.Delay(wait < TimeSpan.FromSeconds(5) ? TimeSpan.FromSeconds(5)
+                        : wait > TimeSpan.FromMinutes(10) ? TimeSpan.FromMinutes(10) : wait);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Warten auf das Ende der Sperrzeit gescheitert");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _waiting, 0);
+            }
+            ReleaseDeferred();
+        });
+    }
+
+    internal virtual void Execute(int analysisId, bool refined)
         => Run(t => t.WriteAsync(analysisId, refined, CancellationToken.None),
             ex => _logger.LogWarning(ex, "Texte zur Analyse {AnalysisId} (vertieft: {Refined}) gescheitert", analysisId, refined));
 
-    public void ScheduleRecap(int savedGameId)
+    internal virtual void ExecuteRecap(int savedGameId)
         => Run(t => t.WriteRecapAsync(savedGameId, CancellationToken.None),
             ex => _logger.LogWarning(ex, "Nacherzählung zu Partie {GameId} gescheitert", savedGameId));
 

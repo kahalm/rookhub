@@ -32,19 +32,26 @@ public sealed class GameRoastService
     private readonly SavedGameService _games;
     private readonly ILogger<GameRoastService> _logger;
 
-    public GameRoastService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRoastService> logger)
+    private readonly QuietHours? _quiet;
+
+    public GameRoastService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRoastService> logger,
+        QuietHours? quiet = null)
     {
         _db = db;
         _llm = llm;
         _games = games;
         _logger = logger;
+        _quiet = quiet;
     }
+
+    /// <summary>Sperrzeit der Spark (<see cref="QuietHours"/>) — bis dahin wird nicht gewürfelt. <c>null</c> = frei.</summary>
+    public DateTimeOffset? QuietUntil() => _quiet?.QuietUntil();
 
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
 
     /// <summary>Ergebnis eines Würfelns: der Text, oder ein Grund (<c>notConfigured</c>, <c>notFound</c>,
-    /// <c>noAnalysis</c>, <c>invalidStyle</c>, <c>dailyLimit</c>, <c>failed</c>; beim automatischen Schreiben
-    /// <c>exists</c>).</summary>
+    /// <c>noAnalysis</c>, <c>invalidStyle</c>, <c>dailyLimit</c>, <c>quietHours</c>, <c>failed</c>; beim automatischen
+    /// Schreiben <c>exists</c>).</summary>
     public sealed record RoastResult(GameRoastDto? Roast, string? Reason);
 
     public async Task<GameRoastsDto?> GetAsync(int userId, int gameId, string? lang, CancellationToken ct = default)
@@ -56,6 +63,7 @@ public sealed class GameRoastService
         return new GameRoastsDto
         {
             Available = Available,
+            QuietUntil = Available ? QuietUntil() : null,
             HasAnalysis = game.GameAnalysisId is int aid
                 && await _db.GameAnalyses.AnyAsync(a => a.Id == aid && a.Status == GameAnalysisStatus.Done, ct),
             Items = (await _db.GameRoasts.AsNoTracking().Where(r => r.SavedGameId == gameId && r.Language == language)
@@ -72,6 +80,8 @@ public sealed class GameRoastService
         bool automatic = false)
     {
         if (!Available) return new(null, "notConfigured");
+        // Der automatische Weg ist schon vom Scheduler zurückgestellt; hier geht es um „Neu würfeln".
+        if (!automatic && QuietUntil() != null) return new(null, "quietHours");
         style = (style ?? "").Trim().ToLowerInvariant();
         if (!Styles.Contains(style)) return new(null, "invalidStyle");
         var language = GameMoveExplanationService.NormalizeLanguage(lang);
