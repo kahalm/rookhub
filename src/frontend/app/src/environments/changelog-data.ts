@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.539.1", date: "2026-09-26", changes: [
+    { en: "“Ask the comments”: the connection to the embedding model on our own hardware now also works when the model server does not shorten the vectors itself — the model on the DGX Spark rejected the requested size, and every search and every indexing run would have failed. RookHub now asks once without the size and shortens the vectors itself, which gives the same result for this model.", de: "„Frag die Kommentare“: Die Anbindung an das Embedding-Modell auf unserer eigenen Hardware klappt jetzt auch, wenn der Modell-Server die Vektoren nicht selbst kürzt — das Modell auf dem DGX Spark lehnte die angeforderte Größe ab, und jede Suche und jeder Indexlauf wäre gescheitert. RookHub fragt dann einmal ohne die Größe nach und kürzt selbst, was bei diesem Modell dasselbe Ergebnis liefert." },
+  ] },
   { version: "0.539.0", date: "2026-09-26", changes: [
     { en: "Maintenance tool: the translation of the master-game collection can now run over the whole collection in one go — best-rated games first, several games at the same time against the model on our own hardware, and the comment sets it needs are prepared on the way. Failed translations are now reported instead of silently skipped. Nothing changes in the app itself; the translated comments appear in “Guess the move” as soon as they exist.", de: "Wartungswerkzeug: Die Übersetzung der Meisterpartien-Sammlung kann jetzt in einem Durchgang über den ganzen Bestand laufen — die am besten bewerteten Partien zuerst, mehrere Partien gleichzeitig gegen das Modell auf unserer eigenen Hardware, und die nötigen Kommentarsätze werden unterwegs angelegt. Gescheiterte Übersetzungen werden jetzt gemeldet statt still übersprungen. In der App selbst ändert sich nichts; die übersetzten Anmerkungen erscheinen in der Punktepartie, sobald es sie gibt." },
   ] },

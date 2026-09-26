@@ -142,6 +142,54 @@ public class CommentSearchTests : IDisposable
         Assert.Equal(v[0][0], v[0][1], 5);
     }
 
+    /// <summary>vLLM nimmt <c>dimensions</c> nur bei einem als Matryoshka gestarteten Modell (Spark, 2026-09-26:
+    /// „does not support Matryoshka embeddings; dimensions must be unset") — dann ohne, gekürzt wird hier.</summary>
+    [Fact]
+    public async Task Embedder_DimensionsRejected_RetriesWithoutAndRemembers()
+    {
+        var full = "{\"data\":[{\"index\":0,\"embedding\":[" + string.Join(",", Enumerable.Repeat("1", 2560)) + "]}]}";
+        var handler = new ChatCompletionHandler()
+            .Fail(System.Net.HttpStatusCode.BadRequest,
+                "{\"error\":{\"message\":\"Model 'qwen3-embedding-4b' does not support Matryoshka embeddings; dimensions must be unset\"}}")
+            .Raw(full)
+            .Raw(full);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Embedding:BaseUrl"] = "http://spark/v1", ["Embedding:Model"] = "qwen3-embedding-4b",
+        }).Build();
+        var embedder = new OpenAiTextEmbedder(new HttpClient(handler), config, NullLogger.Instance);
+
+        var first = await embedder.EmbedAsync(["Grundreihe"], query: false);
+        var second = await embedder.EmbedAsync(["Minoritätsangriff"], query: false);
+
+        Assert.Equal(CommentEmbedding.Dimensions, first![0].Length);
+        Assert.Equal(1.0, Math.Sqrt(first[0].Sum(x => (double)x * x)), 5);
+        Assert.NotNull(second);
+        Assert.Equal(3, handler.Requests.Count);                  // abgelehnt, ohne, und danach gleich ohne
+        Assert.NotNull(handler.Requests[0].Body["dimensions"]);
+        Assert.Null(handler.Requests[1].Body["dimensions"]);
+        Assert.Null(handler.Requests[2].Body["dimensions"]);
+    }
+
+    /// <summary>Ohne eingestelltes Modell das erste mit „embed" im Namen — steht ein Sprachmodell davor, ginge die
+    /// Anfrage sonst an das falsche.</summary>
+    [Fact]
+    public async Task Embedder_WithoutModel_PrefersAnEmbeddingModelFromTheList()
+    {
+        var handler = new ChatCompletionHandler()
+            .Raw("{\"data\":[{\"id\":\"qwen3.5-122b\"},{\"id\":\"qwen3-embedding-4b\"}]}")
+            .Raw("{\"data\":[{\"index\":0,\"embedding\":[" + string.Join(",", Enumerable.Repeat("1", 512)) + "]}]}");
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Embedding:BaseUrl"] = "http://spark/v1",
+        }).Build();
+        var embedder = new OpenAiTextEmbedder(new HttpClient(handler), config, NullLogger.Instance);
+
+        Assert.NotNull(await embedder.EmbedAsync(["x"], query: false));
+        Assert.Equal("qwen3-embedding-4b", (string?)handler.Requests[1].Body["model"]);
+        Assert.Equal("qwen3-embedding-4b", embedder.Model);
+    }
+
     [Fact]
     public async Task Embedder_TooShortVectors_AreAnError()
     {

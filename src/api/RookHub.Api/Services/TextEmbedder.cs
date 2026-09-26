@@ -19,10 +19,18 @@ public interface ITextEmbedder
 /// <summary>
 /// Embedding-Modell über eine OpenAI-kompatible Schnittstelle (<c>POST /embeddings</c>, vLLM mit einem Pooling-Modell
 /// auf dem DGX Spark, z. B. <c>Qwen/Qwen3-Embedding-0.6B</c>). Konfiguration <c>Embedding:BaseUrl</c> (bis <c>/v1</c>),
-/// <c>Embedding:ApiKey</c>, <c>Embedding:Model</c> (leer = erstes unter <c>/models</c>). Fordert
-/// <see cref="Models.CommentEmbedding.Dimensions"/> Werte an; liefert der Server mehr, wird gekürzt und neu normiert
-/// (bei Matryoshka-Modellen der vorgesehene Weg), liefert er weniger, ist das ein Fehler.
+/// <c>Embedding:ApiKey</c>, <c>Embedding:Model</c> (leer = das erste Modell unter <c>/models</c>, dessen Name „embed"
+/// enthält, sonst das erste). Fordert <see cref="Models.CommentEmbedding.Dimensions"/> Werte an; liefert der Server mehr,
+/// wird gekürzt und neu normiert (bei Matryoshka-Modellen der vorgesehene Weg), liefert er weniger, ist das ein Fehler.
 /// </summary>
+/// <remarks>
+/// <para><b>Lehnt der Server <c>dimensions</c> ab, geht es ohne weiter</b> (einmal nachgefragt, dann dabei geblieben):
+/// vLLM nimmt den Parameter nur, wenn das Modell als Matryoshka-Modell gestartet wurde
+/// (<c>--hf-overrides '{"is_matryoshka": true}'</c>), und antwortet sonst 400 — am 2026-09-26 auf dem Spark mit
+/// <c>qwen3-embedding-4b</c> gesehen (2560 Werte). Das Kürzen hier ist dasselbe, was der Server täte.</para>
+/// <para><b>Auf dem Spark hilft die Modellliste nicht</b>: der Proxy leitet <c>/embeddings</c> an den Embedding-Server,
+/// <c>/models</c> an den Chat-Server — dort steht nur das Sprachmodell. <c>Embedding:Model</c> gehört also gesetzt.</para>
+/// </remarks>
 public sealed class OpenAiTextEmbedder : ITextEmbedder
 {
     /// <summary>Qwen3-Embedding ist asymmetrisch: Suchfragen bekommen eine Anweisung, Dokumente nicht.</summary>
@@ -35,6 +43,7 @@ public sealed class OpenAiTextEmbedder : ITextEmbedder
     private readonly string? _apiKey;
     private readonly string? _configuredModel;
     private string? _resolvedModel;
+    private bool _dimensionsRejected;
 
     public OpenAiTextEmbedder(HttpClient http, IConfiguration config, ILogger logger)
     {
@@ -53,24 +62,30 @@ public sealed class OpenAiTextEmbedder : ITextEmbedder
         if (!IsConfigured || texts.Count == 0) return texts.Count == 0 ? Array.Empty<float[]>() : null;
         var model = await ModelAsync(ct);
         if (model == null) return null;
-        var body = new JsonObject
+        JsonObject Body(bool withDimensions)
         {
-            ["model"] = model,
-            ["input"] = new JsonArray(texts.Select(t => (JsonNode?)JsonValue.Create(query ? QueryInstruction + t : t)).ToArray()),
-            ["dimensions"] = Models.CommentEmbedding.Dimensions,
-        };
-        using var request = new HttpRequestMessage(HttpMethod.Post, _baseUrl.TrimEnd('/') + "/embeddings")
-        {
-            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
-        };
-        if (_apiKey != null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            var body = new JsonObject
+            {
+                ["model"] = model,
+                ["input"] = new JsonArray(texts.Select(t => (JsonNode?)JsonValue.Create(query ? QueryInstruction + t : t)).ToArray()),
+            };
+            if (withDimensions) body["dimensions"] = Models.CommentEmbedding.Dimensions;
+            return body;
+        }
         try
         {
-            using var response = await _http.SendAsync(request, ct);
-            var text = await response.Content.ReadAsStringAsync(ct);
-            if (!response.IsSuccessStatusCode)
+            var useDimensions = !_dimensionsRejected;
+            var (status, text) = await PostAsync(Body(useDimensions), ct);
+            if (useDimensions && status == System.Net.HttpStatusCode.BadRequest)
             {
-                _logger.LogWarning("Embedding: HTTP {Status}: {Body}", (int)response.StatusCode, OpenAiChat.Snippet(text));
+                _logger.LogInformation("Embedding: {Model} nimmt kein dimensions ({Body}) — weiter ohne, gekürzt wird hier.",
+                    model, OpenAiChat.Snippet(text));
+                _dimensionsRejected = true;
+                (status, text) = await PostAsync(Body(false), ct);
+            }
+            if ((int)status is < 200 or > 299)
+            {
+                _logger.LogWarning("Embedding: HTTP {Status}: {Body}", (int)status, OpenAiChat.Snippet(text));
                 return null;
             }
             using var doc = JsonDocument.Parse(text);
@@ -102,6 +117,17 @@ public sealed class OpenAiTextEmbedder : ITextEmbedder
         }
     }
 
+    private async Task<(System.Net.HttpStatusCode Status, string Text)> PostAsync(JsonObject body, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, _baseUrl.TrimEnd('/') + "/embeddings")
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        if (_apiKey != null) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        using var response = await _http.SendAsync(request, ct);
+        return (response.StatusCode, await response.Content.ReadAsStringAsync(ct));
+    }
+
     private async Task<string?> ModelAsync(CancellationToken ct)
     {
         if (_configuredModel != null) return _configuredModel;
@@ -113,8 +139,9 @@ public sealed class OpenAiTextEmbedder : ITextEmbedder
             using var response = await _http.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode) return null;
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-            _resolvedModel = doc.RootElement.GetProperty("data").EnumerateArray()
-                .Select(m => m.GetProperty("id").GetString()).FirstOrDefault(id => !string.IsNullOrWhiteSpace(id));
+            var ids = doc.RootElement.GetProperty("data").EnumerateArray()
+                .Select(m => m.GetProperty("id").GetString()).Where(id => !string.IsNullOrWhiteSpace(id)).ToList();
+            _resolvedModel = ids.FirstOrDefault(id => id!.Contains("embed", StringComparison.OrdinalIgnoreCase)) ?? ids.FirstOrDefault();
             return _resolvedModel;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

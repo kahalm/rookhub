@@ -2037,7 +2037,11 @@ Sprache (das Embedding-Modell ist mehrsprachig), je Partie der passendste Auszug
 * **Embedding-Modell** (`OpenAiTextEmbedder`, `Embedding:BaseUrl`/`ApiKey`/`Model`, Compose `EMBEDDING_*`): OpenAI-kompatibles
   `POST /embeddings` — gedacht ist ein Pooling-Modell auf dem DGX Spark, z. B. `Qwen/Qwen3-Embedding-0.6B`. Angefordert werden
   512 Werte (`dimensions`, Matryoshka); mehr wird gekürzt und neu normiert, weniger ist ein Fehler. Suchfragen bekommen die
-  Qwen3-Anweisung vorangestellt (`QueryInstruction`), Dokumente nicht.
+  Qwen3-Anweisung vorangestellt (`QueryInstruction`), Dokumente nicht. **Auf dem Spark läuft `qwen3-embedding-4b`** (2560
+  Werte, seit 2026-09-26) — OHNE Matryoshka-Schalter, vLLM antwortet auf `dimensions` mit 400. Der Client fragt dann einmal
+  ohne nach und kürzt selbst (0.539.1; bei Qwen3-Embedding dasselbe wie serverseitig). `EMBEDDING_MODEL` gehört GESETZT:
+  `/v1/models` des Spark-Proxys zeigt auf den Chat-Server und nennt das Embedding-Modell gar nicht (ohne Einstellung nimmt der
+  Client das erste mit „embed" im Namen, sonst das erste).
 * **Befüllen**: `tools/LibraryImport embed [--limit n] [--batch 32]` (Env `Embedding__BaseUrl` …): noch nicht eingebettete
   kommentierte Partien, beste Note zuerst, je Partie ganz oder gar nicht; wiederholbar. Dev: ~130 000 Partien, ~800 000
   kommentierte Halbzüge, ~95 Mio. Zeichen → geschätzt 150–250 000 Stücke, ~0,5 GB Vektoren.
