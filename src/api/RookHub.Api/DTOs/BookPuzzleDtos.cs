@@ -181,6 +181,23 @@ public class BookPuzzleDto
     /// abgefragt (siehe <c>BookPuzzle.IsInfoOnly</c>). Das Frontend schaltet solche Einträge im
     /// sequenziellen Kurs-Modus auf reines Durchspielen statt Lösen-Logik.</summary>
     public bool IsInfoOnly { get; set; }
+
+    // --- Kurs-Übersetzung (0.547.0, nur mit ?lang= an den Kurs-Endpunkten, siehe CourseCommentLocalizer) ---
+
+    /// <summary>Übersetzter Linien-Titel; <c>null</c> = keine (aktuelle) Übersetzung. <see cref="Title"/> bleibt
+    /// das Original — angezeigt wird <c>titleLabel ?? title</c>.</summary>
+    public string? TitleLabel { get; set; }
+    /// <summary>Übersetzter Kapitelname; <c>null</c> = keine. <see cref="Chapter"/> bleibt das Original, weil es
+    /// im Frontend ein SCHLÜSSEL ist (Filter, Routen, Umbenennen, Kapitel-PGN).</summary>
+    public string? ChapterLabel { get; set; }
+    /// <summary>Sprache, in der die Texte TATSÄCHLICH kommen: die gewünschte, wenn mindestens eine Stelle
+    /// übersetzt ausgeliefert wird, sonst die Quellsprache des Kurses (<c>null</c> = nie bestimmt).</summary>
+    public string? CommentLanguage { get; set; }
+    /// <summary>Welche Sprachen es für diese Linie gibt — die QUELLE zuerst (die Oberfläche nennt sie
+    /// „Original"), danach alphabetisch. <c>null</c> ohne <c>?lang=</c>.</summary>
+    public List<string>? CommentLanguages { get; set; }
+    /// <summary>Mindestens eine ausgelieferte Stelle ist maschinell übersetzt — die Oberfläche kennzeichnet das.</summary>
+    public bool CommentMachine { get; set; }
 }
 
 /// <summary>Body für das Admin-Tipp-Flag (POST /api/admin/book-puzzles/{id}/flag-hints).</summary>

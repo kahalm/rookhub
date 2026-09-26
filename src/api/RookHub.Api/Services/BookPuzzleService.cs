@@ -820,8 +820,9 @@ public class BookPuzzleService
     }
 
     /// <summary>Deserialisiert die in <see cref="BookPuzzle.MoveComments"/> gespeicherte JSON-Map
-    /// (Halbzug-Index → Kommentar). Defekte/leere Werte → <c>null</c> (nie werfen).</summary>
-    private static Dictionary<int, string>? ParseMoveComments(string? json)
+    /// (Halbzug-Index → Kommentar). Defekte/leere Werte → <c>null</c> (nie werfen). Oeffentlich, weil die
+    /// Kurs-Uebersetzung (<see cref="CourseTranslationService"/>) dieselben Texte liest wie das DTO.</summary>
+    public static Dictionary<int, string>? ParseMoveComments(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
         try

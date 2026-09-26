@@ -24,12 +24,15 @@ public class BookPuzzleController : BaseApiController
     private readonly IBackgroundTaskQueue _bgQueue;
     private readonly AppDbContext _db;
     private readonly ILogger<BookPuzzleController> _logger;
+    /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c> an Einzel-/Nächste-/Zufalls-Linie im Buch).</summary>
+    private readonly CourseCommentLocalizer? _localizer;
 
-    // logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    // logger/localizer optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
     public BookPuzzleController(BookPuzzleService service, DailyLeaderboardService leaderboard,
         HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db,
-        ILogger<BookPuzzleController>? logger = null)
+        ILogger<BookPuzzleController>? logger = null, CourseCommentLocalizer? localizer = null)
     {
+        _localizer = localizer;
         _service = service;
         _leaderboard = leaderboard;
         _hints = hints;
@@ -38,29 +41,45 @@ public class BookPuzzleController : BaseApiController
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<BookPuzzleController>.Instance;
     }
 
+    /// <summary>Einzelne Linie per Id. <c>?lang=</c> = Kurs-Übersetzung, wo aktuell (sonst Original).</summary>
     [AllowAnonymous]
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, [FromQuery] string? lang = null, CancellationToken ct = default)
     {
         var dto = await _service.GetByIdAsync(id);
-        return dto == null ? NotFound(new { message = "Book puzzle not found." }) : Ok(dto);
+        if (dto == null) return NotFound(new { message = "Book puzzle not found." });
+        await LocalizeAsync(dto, lang, ct);
+        return Ok(dto);
     }
 
     [AllowAnonymous]
     [HttpGet("{id:int}/next")]
-    public async Task<IActionResult> GetNextInBook(int id)
+    public async Task<IActionResult> GetNextInBook(int id, [FromQuery] string? lang = null, CancellationToken ct = default)
     {
-        try { return Ok(await _service.GetNextInBookAsync(id, GetUserIdOrNull(), IsAdmin)); }
+        try
+        {
+            var dto = await _service.GetNextInBookAsync(id, GetUserIdOrNull(), IsAdmin);
+            await LocalizeAsync(dto, lang, ct);
+            return Ok(dto);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
     [AllowAnonymous]
     [HttpGet("{id:int}/random")]
-    public async Task<IActionResult> GetRandomInBook(int id)
+    public async Task<IActionResult> GetRandomInBook(int id, [FromQuery] string? lang = null, CancellationToken ct = default)
     {
-        try { return Ok(await _service.GetRandomInBookAsync(id, GetUserIdOrNull(), IsAdmin)); }
+        try
+        {
+            var dto = await _service.GetRandomInBookAsync(id, GetUserIdOrNull(), IsAdmin);
+            await LocalizeAsync(dto, lang, ct);
+            return Ok(dto);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
+
+    private Task LocalizeAsync(BookPuzzleDto dto, string? lang, CancellationToken ct)
+        => _localizer is null ? Task.CompletedTask : _localizer.ApplyAsync(dto, lang, ct);
 
     [Authorize]
     [HttpPost("{id:int}/attempt")]

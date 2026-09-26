@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
@@ -19,6 +20,7 @@ using RookHub.Tools.LibraryImport;
 //   comments         die Kommentare eingereihter Partien nach Sprachen trennen
 //   analysis-openings  Eroeffnungszeile der eingereihten Partien nachtragen
 //   translate        fehlende Sprachen uebersetzen lassen (TextLlm__BaseUrl = eigene Hardware, sonst Anthropic:TextApiKey)
+//                    — auch einen KURS: translate --to de --course <bookId> [--parallel p]
 //   stats            zeigen, was drinsteht
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
@@ -785,6 +787,7 @@ async Task<int> AnalysisOpeningsAsync()
 // Die Anmerkungen eingereihter Partien in eine weitere Sprache uebersetzen lassen.
 //
 //   translate --to de [--limit n] [--force] [--game <analyse-id>] [--library n] [--shard i/n]
+//   translate --to de --course <bookId> [--parallel p]      (Kurs-Linien, siehe TranslateCourseAsync unten)
 //
 // Braucht ANTHROPIC__TEXTAPIKEY (bzw. Anthropic:TextApiKey) in der Umgebung — NICHT den Konto-Schluessel
 //   Anthropic:ApiKey, der gehoert allein dem Formular-Einlesen — ohne Schluessel passiert
@@ -796,6 +799,7 @@ async Task<int> TranslateAsync()
     if (string.IsNullOrWhiteSpace(target))
     {
         Console.Error.WriteLine("Aufruf: translate --to <sprache> [--library n [--parallel p]] [--limit n] [--force] [--include-und] [--game <analyse-id>] [--shard i/n]");
+        Console.Error.WriteLine("        translate --to <sprache> --course <bookId> [--parallel p]");
         return 1;
     }
     target = target.Trim().ToLowerInvariant();
@@ -838,6 +842,9 @@ async Task<int> TranslateAsync()
         Console.Error.WriteLine("Weder TextLlm__BaseUrl (eigene Hardware) noch Anthropic__TextApiKey gesetzt — ohne wird nicht uebersetzt.");
         return 1;
     }
+
+    if (IntArg("--course") is int course)
+        return await TranslateCourseAsync(client, loggers, config, target, course, IntArg("--parallel"));
 
     if (IntArg("--library") is int top)
         return await TranslateLibraryAsync(client, loggers, target, Math.Min(top, limit), force,
@@ -934,6 +941,56 @@ async Task<int> TranslateLibraryAsync(IClaudeJsonClient client, ILoggerFactory l
     await Task.WhenAll(Enumerable.Range(0, parallel).Select(_ => Task.Run(Worker)));
     Console.WriteLine($"Uebersetzt: {done:N0} Partien · {lines:N0} Zeilen · ohne Ergebnis {empty:N0} · Fehler {errors:N0} · Dauer {DateTime.UtcNow - started:d\\.hh\\:mm\\:ss}");
     return 0;
+}
+
+// Einen KURS uebersetzen (Zug-Kommentare, Einleitung, Linien-Titel, Kapitelnamen) — direkt, ohne Auftrag:
+// fuer Messungen und Nachhilfe von Hand.
+//
+//   translate --to de --course 123 [--parallel 4]
+//
+// Ruft CourseTranslationService.TranslateCourseAsync: Quellsprache bestimmen (einmal, steht danach am
+// Buch), nur fehlende/veraltete Texte ans Modell, Kapitelnamen in EINER Fuhre. Wiederholbar — was fertig
+// ist, kostet keinen Aufruf. Strg+C bricht ab; die laufenden Linien werden verworfen, das Fertige bleibt.
+// Der Dienst oeffnet je Linie einen eigenen Scope (eigener DbContext) — deshalb hier ein kleiner
+// Dienst-Container statt NewDb().
+async Task<int> TranslateCourseAsync(IClaudeJsonClient client, ILoggerFactory loggers, IConfiguration config,
+    string target, int bookId, int? parallel)
+{
+    var services = new ServiceCollection();
+    services.AddSingleton(config);
+    services.AddSingleton(client);
+    services.AddSingleton(loggers);
+    services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+    services.AddDbContext<AppDbContext>(o => o.UseMySql(connection, new MariaDbServerVersion(new Version(11, 0, 0))));
+    services.AddScoped<CourseTranslationService>();
+    await using var provider = services.BuildServiceProvider();
+    await using var scope = provider.CreateAsyncScope();
+    var service = scope.ServiceProvider.GetRequiredService<CourseTranslationService>();
+
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+    var started = DateTime.UtcNow;
+    Console.WriteLine($"Kurs {bookId} nach „{target}\" · Modell {client.TranslationModel}");
+    try
+    {
+        var run = await service.TranslateCourseAsync(bookId, target,
+            (p, _) =>
+            {
+                Console.WriteLine($"--- {p.LinesDone + p.LinesFailed:N0}/{p.LinesTotal:N0} · fertig {p.LinesDone:N0} · gescheitert {p.LinesFailed:N0} · {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+                return Task.CompletedTask;
+            },
+            parallel, cts.Token);
+        Console.WriteLine($"Ergebnis: {run.Status} · Quelle {run.SourceLanguage ?? "?"} · Linien {run.LinesDone:N0}/{run.LinesTotal:N0}"
+                          + $" · gescheitert {run.LinesFailed:N0} · Kapitel {run.ChaptersTotal:N0} (ohne Uebersetzung {run.ChaptersMissing:N0})"
+                          + $" · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+        return run.Status is CourseTranslationRunStatus.Done or CourseTranslationRunStatus.NothingToDo
+            or CourseTranslationRunStatus.SameLanguage ? 0 : 1;
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine("Abgebrochen — die laufenden Linien sind verworfen, das Fertige bleibt.");
+        return 130;
+    }
 }
 
 // ===== Uebersicht ===========================================================

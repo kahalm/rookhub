@@ -284,6 +284,9 @@ try
     builder.Services.AddScoped<CommentSetService>();
     builder.Services.AddScoped<GuessOpeningTree>();
     builder.Services.AddScoped<CommentTranslationService>();
+    // Kurs-Kommentare mehrsprachig (0.547.0): Übersetzen je Linie + Ausliefern über ?lang=.
+    builder.Services.AddScoped<CourseTranslationService>();
+    builder.Services.AddScoped<CourseCommentLocalizer>();
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();

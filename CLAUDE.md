@@ -1209,6 +1209,10 @@ Admin legt pro Menüeintrag eine Sichtbarkeitsstufe fest: `All` (jeder, auch ano
 ### Kurse (auth, gruppen-/admin-gated)
 „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Fortschritt pro Buch (gelöste Puzzles / gesamt), geteilt über beide Modi; der Modus bestimmt nur die Reihenfolge. Alles user-bezogen in der DB. **Sichtbarkeit**: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen via `BookGroupAccess` freigegeben sind. Zugriff wird je Buch in jedem Endpoint erzwungen (kein Zugriff → 404).
 
+**`?lang=`** (0.547.0) an `/{bookId}/puzzles`, `/{bookId}/public`, `/{bookId}/next`, `/{bookId}/chapters` und
+`GET /api/courses/{bookId:int}` liefert die Kurs-Uebersetzung, wo es eine aktuelle gibt (Kapitel/Titel als Label) —
+Regeln unter „Anmerkungen in mehreren Sprachen" → KURSE. Ohne `lang` alles wie bisher.
+
 Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `after` = überspringen) oder `random` (zufällig, `exclude` vermeidet Wiederholung); `completed` wenn alle gelöst. **Random-Pool: jedes Puzzle nur EINMAL pro Durchgang** — neben den gelösten (CoursePuzzleResults) werden auch die seit dem letzten Reset GESCHEITERTEN ausgeschlossen (CourseAttempt mit `AttemptedAt >= CourseProgress.ResetAt`; `ResetAt==null` ⇒ alle bisherigen Versuche zählen). Erst `POST /reset` (rückt `ResetAt` vor + leert die gelöste Menge) bringt sie zurück. Im Solver-„abgeschlossen"-Panel gibt es dafür im Random-Modus einen „Von vorn"-Knopf. Sequential bleibt unverändert (nur gelöste raus).
 
 | Methode | Endpoint | Auth | Zweck |
@@ -2342,6 +2346,64 @@ Durchsatzes). Warnungen des Uebersetzers und des Modell-Clients gehen auf die Ko
 „verworfen: n % der Quelllaenge" und „am Token-Deckel abgeschnitten" sind sonst von „nichts zu tun" nicht
 zu unterscheiden. Wiederholbar — was die Zielsprache hat, faellt aus der Auswahl.
 
+**KURSE** (Stufe A des Plans „Kurs-Kommentare mehrsprachig", TODO.md; Auftraege/Worker/Sperrzeiten und die
+Oberflaeche folgen): je Kurs-LINIE und Sprache ein `CommentSet` mit `BookPuzzleId` (dritter Anker neben
+Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Was dabei anders ist als bei Partien:
+* **Es gibt KEINEN Quell-Satz.** Die Quelle bleibt die Linie (`Comment`, `MoveComments`, `Title`, `Chapter`) —
+  genau diese Felder ueberschreiben Aufbereitung (in-place per oid/LineId) und naechtliches Aktualisieren; ein
+  zweiter Quell-Satz muesste staendig nachgezogen werden. Kurs-Saetze sind `Origin = Machine`,
+  `TranslatedFrom` = `Book.CommentLanguage` (Quellsprache, beim ersten Lauf aus einer Stichprobe der ersten 200
+  kommentierten Linien bestimmt, nicht bestimmbar = `und`; eine spaetere Korrektur macht nichts ungueltig).
+* **Stellen** (`Services/CourseTextSlots.cs`, NUR dort die Zahlen): `≥ -1` wie `MoveComments`, `-2` =
+  `Comment`, `-3` = `Title`, `-4` = `Chapter`. Ein Satz traegt alles, was die Linie an Text hat.
+* **Fingerabdruck** `CommentText.SourceHash` (`Services/CourseTextHash.cs`: 16 Hex-Zeichen SHA-256 ueber den
+  normalisierten Text, `\r\n`→`\n`, getrimmt; NIRGENDS selbst hashen) — Pflicht bei Kurs-Saetzen, `null` bei
+  Partien. Er entscheidet (1) VERALTET: passt er nicht mehr zum Text der Linie, liefert der Localizer das
+  Original und der naechste Lauf uebersetzt nur diesen Text neu; (2) WIEDERVERWENDEN: derselbe Text in einem
+  anderen Kurs-Satz gleicher Sprache (Doppel-Import, `_firstkey`-Kopie, gleicher Kapitelname) wird KOPIERT.
+* **Uebersetzt wird in `Services/CourseTranslationService.cs`** ueber denselben Kern wie Partien
+  (`Services/CommentTranslator.cs`: Fuhren, Auftrag, `PieceLetters`, Laengen- und Sprachpruefung — der Partie-Weg
+  ist woertlich unveraendert, `CommentTranslationServiceTests` unangetastet). Je Linie: nur fehlende/veraltete
+  Stellen ans Modell, gleiche Texte (Kommentar = Einleitung, bei 51 549 von 87 035 Prod-Linien) nur EINMAL,
+  Stellen mit verschwundener Vorlage fliegen raus; das Modell muss JEDEN Eintrag beantworten, sonst schreibt die
+  Linie NICHTS. Laenge und Sprache pruefen bei Kursen nur die Prosa-Stellen (`≥ -2`), die Laenge erst ab 150
+  Zeichen; der Auftrag nennt die Regeln fuer Partie-Zitate/Namen/Ueberschriften; Quelle `und` → „from the language
+  it is written in", Figurenbuchstaben bleiben.
+* **Ein Kurs-Lauf** (`TranslateCourseAsync`): Quellsprache sichern (Ziel = Quelle → nichts), offene Arbeit in C#
+  bestimmen (Fingerabdruck-Vergleich je Linie), alle dabei fehlenden KAPITELNAMEN in EINER Fuhre (Einheitlichkeit;
+  jede Linie traegt ihr Kapitel danach an `-4`; Kapitelnamen bekommen KEINE Laengen- und Sprachpruefung — kurz und
+  voller Namen, eine deutsche Liste mit englischen Eroeffnungsnamen laese sich als englisch), dann die Linien in
+  Kursreihenfolge, `CourseTranslation:Parallel` (Vorgabe 4) gleichzeitig mit je eigenem Scope/DbContext, in **zwei
+  Phasen**, damit jeder verschiedene Text je Lauf genau EINMAL ans Modell geht: Linien mit gemeinsamem Zuganfang
+  tragen dieselben Kommentare, liegen nebeneinander und landen gleichzeitig im Parallel-Fenster, die Wiederverwendung
+  greift aber erst nach dem Speichern (Prod, Buch 36: 1,90 Mio. Zeichen, davon 0,25 Mio. verschieden — ohne Phasen
+  gingen 0,36 Mio. ans Modell). Phase 1: jeder offene Fingerabdruck GEHOERT der ersten Linie, in der er offen ist,
+  jede Linie uebersetzt nur ihre eigenen (`ownedHashes`); Phase 2: alle noch offenen Linien normal, praktisch nur
+  Wiederverwendung — ans Modell nur noch, wo die Besitzer-Linie scheiterte. Eine Linie zaehlt, sobald sie fertig ist
+  (am Ende `LinesDone + LinesFailed = LinesTotal`), Zwischenstand alle 10 Linien an einen Rueckruf. Abbruch per
+  Token: die laufenden Linien schreiben nichts, der naechste Lauf ueberspringt das Fertige.
+* **Von Hand**: `tools/LibraryImport translate --to de --course <bookId> [--parallel p]` (Env wie beim
+  Bibliothekslauf: `TextLlm__*`, `ConnectionStrings__DefaultConnection`; Strg+C bricht sauber ab). Die Tabelle
+  `CourseTranslationJobs` steht schon im Modell, Anlegen/Warteschlange/Worker gibt es noch NICHT.
+* **Ausliefern ueber `?lang=`** (`Services/CourseCommentLocalizer.cs`, in den Controllern NACH dem Dienst): ersetzt
+  `Comment` und `MoveComments[ply]` NUR, wo der Fingerabdruck zum Original IM DTO passt. **`Title`/`Chapter` werden
+  NIE ersetzt** — der Kapitelname ist im Frontend ein SCHLUESSEL (`?chapter=`, Kapitel-PGN, Umbenennen,
+  Gruppieren); die Uebersetzung kommt als `TitleLabel`/`ChapterLabel` (bzw. `Label` an den Kapitellisten), Anzeige
+  `label ?? original`. Dazu `CommentLanguage` (was tatsaechlich kommt), `CommentLanguages` (was es fuer die Linie
+  gibt, **Quelle zuerst**) und `CommentMachine`. **`lang` fehlt oder ist kein Kuerzel → DTO exakt wie vorher**
+  (keine Abfrage — alte Clients, Offline-Kopien); `lang` = Quellsprache → Original. Endpunkte mit `lang` (per grep
+  erhoben): `GET /api/courses/{id}/puzzles`, `/{id}/public`, `/{id}/next`, `/{id}/chapters`, `GET /api/courses/{id}`
+  (Detail, Kapitel-Labels), `GET /api/book-puzzles/{id}`, `/{id}/next`, `/{id}/random`,
+  `GET /api/calculations/books/{id}`, `/books/{id}/public`, `/positions/{id}`. **Bewusst Original**: Bearbeiten
+  (`/{id}/lines`), alle PGN-Downloads, Tagespuzzle, Zufallspools (`/api/book-puzzles/random`), Wochenpost, Tipps,
+  Kurs→Repertoire. `/{id}/flashcards` liefert nur Linien-Ids (nichts zu uebersetzen).
+* **Loeschen**: jeder Pfad, der `BookPuzzles` loescht (`CourseAuthoringService.RemoveLinesAsync` = Linie/Kapitel,
+  `BookAdminService.DeleteBookAsync` = Buch/eigener Kurs/Kurs→Repertoire/Konto, der Rueckbau in
+  `CourseService.UploadPersonalCourseAsync`), raeumt die Kurs-Saetze AUSDRUECKLICH mit ab
+  (`CourseTranslationCleanup`), das Buch zusaetzlich seine `CourseTranslationJobs`. Die TEXTE uebernimmt in MariaDB
+  der Fremdschluessel (sie zu laden hiesse, jede Uebersetzung zu lesen und einzeln zu loeschen), unter InMemory
+  werden sie ausdruecklich geloescht.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/guess-sessions` | Auth | Eigene Durchlaeufe (max. 100, neueste zuerst) |
@@ -2747,7 +2809,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, **MoveComments (LONGTEXT, JSON `{plyIndex:text}`; Pro-Zug-Kommentare der Hauptlinie, Schlüssel = 0-basierter Halbzug NACH dem Zug, -1 = Einleitung; beim Durchspielen/Review angezeigt; der Kurs-Import faltet seit Pipeline 19 JEDE Hauptlinien-Variante mit ihren Zugnummern in den Kommentar ihres Zugs, `features/puzzles/comment-variation.util.ts` macht die Züge dort klickbar und verankert sie über die Zugnummer — NUR dort: geht ein Zug an seiner Nummer nicht (z. B. mehrdeutig, zwei Springer nach e4), bleibt er Text, statt in einer anderen Stellung der Partie zu landen)**, Difficulty, BookRating, Tags, **HintsJson (LONGTEXT, JSON `{lang:[h1,h2,h3]}`; vorberechnete gestufte Tipps de/en/hr, per LLM erzeugt) + HintsVersion (int, 0=keine; entkoppelt von Book.ImportVersion) + HintsFlagged (bool; Admin-Review-Flag „dumme Tipps", per Solver-Button)**, **Retired (indexed; ausgemustert → nicht mehr in Daily/Random/Blind-Pools)**, **Source (≤16, nullable; null = vollwertig/getGame, "review" = aus getReview vorbelegter Lücken-Füller — zählt als vollwertig gecacht (Overlay-✓, kein getGame-Re-Fetch; getReview≡getGame für die Linie) und wird, falls getGame doch mal für den oid importiert wird, per oid IN-PLACE ersetzt)** |
 | SharedPuzzleAttempts | „Track solves" geteilter Einzel-Puzzles (opt-in per Teilen-Link `?track=1`) — Erstversuch je Besucher | BookPuzzleId (indexed), **IdentityKey** (`u:{userId}` eingeloggt / `s:{sessionId}` anonym), Solved (true nur saubere Erstlösung; Fehlzug/Aufgeben/Reset = false), **HintsUsed (höchste angesehene Tipp-Stufe 0–3 beim Erstversuch)**, CreatedAt; **UNIQUE (BookPuzzleId, IdentityKey)** = nur 1. Versuch zählt. Kein harter FK (Index genügt) |
 | BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche | BookPuzzleId (Restrict) + UserId (Cascade, nullable für Anon) + AnonymousSessionId, Solved, TimeSeconds, AttemptedAt, **HintsUsed (höchste angesehene Tipp-Stufe 0–3)**; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) + **UNIQUE (BookPuzzleId, AnonymousSessionId)** (eine anonyme Lösung je Session; auth. Versuche = NULL-Session → mehrfach erlaubt) |
-| Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import; seit 0.508.3 per Tabellensplitting als eigene Entität `BookSource` gemappt, NICHT als Property von `Book`)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)** |
+| Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import; seit 0.508.3 per Tabellensplitting als eigene Entität `BookSource` gemappt, NICHT als Property von `Book`)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)**, **CommentLanguage? (≤8; Quellsprache der Kommentare fuer die Kurs-Uebersetzung, `und` = nicht bestimmbar, `null` = nie gefragt)** |
 | CalculationTrees | Selbst eingeklickter Analysebaum EINES Users zu EINER Stellung eines Kalkulationsbuchs (Kalkulations-Modus; es gibt keine Lösung, der Nutzer legt seine Varianten für beide Seiten selbst an) | UserId (Cascade) + BookId (denormalisiert für die „bearbeitet"-Zähler, Cascade) + BookPuzzleId (**Restrict**, wie CoursePuzzleResult — vermeidet doppelte Cascade-Pfade), **TreeJson (LONGTEXT; für den Server OPAK, nur JSON-Gültigkeit + Maximalgröße geprüft; LEER erlaubt = Zeile trägt nur Trainings-Werte, „hat Baum" ist überall `TreeJson != ''`, nicht „Zeile existiert")**, **ChosenSan (20)/ChosenUci (10) = die eine Festlegung, SecondsSpent (int, Default 0, aufsummiert), SecondsToken (64, nullable) + SecondsTokenApplied (int, Default 0) = Idempotenz-Marke des zuletzt verbuchten Zeit-Deltas samt darunter angerechneter Sekunden (Retry darf die addierte Zeit nicht doppelt buchen), Grade (int?, 0–4 = benannte Stufe `CalculationGrade`, `null` = unbewertet ≠ Stufe 0 „nicht gelöst"; Punkte sind eine Ableitung via `CalculationGrades.PointsFor` und werden NICHT gespeichert)**, CreatedAt, UpdatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
 | CalcEditions | Kalkulations-SERIE (Phase 1, eigener Bereich à la Wochenpost): terminiert EIN Wochen-Kapitel eines Kalkulationsbuchs (Video + Freigabe). Kapitel OHNE Ausgabe = ungegatet (Übergang); Gating im `CalculationService` (Wochen mit Ausgabe versteckt bis `PublishAt`, für Tester ab `TesterPreviewAt` — Phase 2; Owner/Admin sehen Entwürfe). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), Chapter (≤300, = Wochen-Kapitelname), Title? (≤300), VideoUrl? (≤500), PublishAt (DateTime), TesterPreviewAt? (DateTime, früher), CreatedAt, UpdatedAt, PublishAnnouncedAt?/TesterAnnouncedAt? (Ankündigungs-Marker, Phase 3b), TesterAnnouncedUserIds? (CSV der Tester-Runden-Empfänger); **UNIQUE (BookId, Chapter)** |
 | CalcSeriesMembers | Kalkulations-SERIE (Phase 2): privater VERTEILER eines Serien-Buchs. Mitgliedschaft ist ein zusätzlicher Zugriffspfad in `CourseAccess.CanAccessAsync` — sobald das Buch nicht mehr `IsPublic` ist, sehen nur noch Mitglieder (+ Owner/Admin/Share/Gruppe) den Kurs. `IsTester` gibt einem Mitglied Frühzugang (Wochen ab `TesterPreviewAt`). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), UserId, IsTester (bool), CreatedAt; **UNIQUE (BookId, UserId)** |
@@ -2775,8 +2837,9 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ChessableActivities | Append-only Zeit-Log aktiver Chessable-Trainingszeit (von RepCheck-Extension gemeldet) für die Kategorie „Chessable" im Trainingsziele-Tracker | UserId (Cascade), TimeSeconds, MovesTrained, **LinesTrained (abgeschlossene Varianten, seit RepCheck v1.34; 0 bei Altbestand)**, CourseKind?, CourseId?, CourseName? (Modus-Label-Müll wird beim Schreiben verworfen/über die Kurs-ID geheilt), AttemptedAt; Index (UserId, AttemptedAt) |
 | ManualActivities | Manuell (selbst) eingetragene Offline-Trainingsaktivität — speist bestehende Tracker-Kategorien, editier-/löschbar | UserId (Cascade), Date (DateOnly), Kind (Enum OtbGame/OfflinePuzzle/OfflineStudy/Coaching), Amount (Partien bzw. Minuten), Note? (≤200), CreatedAt; Index (UserId, Date) |
 | LibraryGames | **Rohbestand**: eingelesene PGN-Sammlungen, aus denen Punktepartien ausgewaehlt werden — noch nicht gerechnet, noch nicht sortiert (Details im Punktepartie-Kapitel) | SourceFile?/SourceTitle?/SourceRef?/ExternalGameId?, MovesHash? (Index), DuplicateOfId? (self, Restrict), Kopfdaten (White?/Black?/WhiteElo?/BlackElo?/Result?/Event?/Site?/Round?/PlayedOn?/Eco?/StartFen?/PlyCount?), Annotator? (Index), CommentCount?/CommentedPlies?/CommentChars?/NagCount?/VariationCount?, Languages?, Score?, Status, GameAnalysisId? (**kein FK** — die Bibliothekszeile ueberlebt das Loeschen der Analyse), Note?, Pgn (LONGTEXT); Indizes (Status, Score), (CommentedPlies, PlyCount), SourceTitle |
-| CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie — getrennt vom PGN, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade, genau EINES von beiden), Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** |
-| CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
+| CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie ODER einer Kurs-Linie — getrennt vom PGN bzw. von der Linie, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade) ODER **BookPuzzleId? (Cascade, Kurs-Linie, nur Uebersetzungen)** — genau EINES, Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** + **UNIQUE (BookPuzzleId, Language)** |
+| CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug; bei Kurs-Saetzen `-2` Kommentar, `-3` Titel, `-4` Kapitel — `CourseTextSlots`), Text (LONGTEXT), **SourceHash? (≤16, Index; Fingerabdruck der Vorlage, Pflicht bei Kurs-Saetzen, `null` bei Partien)**; **UNIQUE (CommentSetId, Ply)** |
+| CourseTranslationJobs | Auftrag „Kurs in Sprache uebersetzen" — Tabelle seit 0.547.0, Dienst/Worker folgen (Stufe B) | BookId (Cascade), Language (≤8), RequestedByUserId? (**kein FK**; `null` = Automatik), Status (Queued=0/Running=1/Done=2/Failed=3/Cancelled=4), LinesTotal/LinesDone/LinesFailed, CreatedAt, StartedAt?, FinishedAt?, LastError? (≤500); Index (Status, CreatedAt) + (BookId, Language, Status). „Ein offener je (Kurs, Sprache)/je Nutzer" erzwingt der Dienst, nicht die DB |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | GameRecaps | „Kurz erzählt" (0.541.0): je Partie und Sprache EINE Nacherzählung für Link-Vorschau + Partieseite (`GameRecapService`) | SavedGameId (Cascade), Language (≤8), Text (≤1000; der Dienst lässt höchstens 600 zu), Model? (≤80), CreatedAt; **UNIQUE (SavedGameId, Language)** |
 | GameRoasts | „Roast my game" (0.535.0): je eigener Partie, Sprache und Stil der zuletzt gewürfelte Kommentar (`GameRoastService`) | SavedGameId (Cascade), Style (≤12), Language (≤8), Text (≤2000), Model? (≤80), **Automatic (nach der Analyse von selbst geschrieben, 0.540.0 — zählt nicht im Tagesdeckel, „Neu würfeln" setzt false)**, CreatedAt; **UNIQUE (SavedGameId, Language, Style)** |
@@ -3192,7 +3255,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **Zwei Anthropic-Schluessel, und der Konto-Schluessel gehoert allein dem Formular-Einlesen** (seit 2026-09-25,
   Nutzer: „ausser Scoresheet soll nichts ueber den Key laufen"). `Anthropic:ApiKey` (Compose `ANTHROPIC_API_KEY`) liest
   NUR `ClaudeScoresheetVisionClient` (Foto → Partie, Kostenbremse `ScoresheetBudget`). Puzzle-Tipps (`HintGenerationService`)
-  und Kommentar-Uebersetzung (`CommentTranslationService`, `tools/LibraryImport translate`) gehen ueber den
+  und Kommentar-Uebersetzung (`CommentTranslationService`, `CourseTranslationService`, `tools/LibraryImport translate`) gehen ueber den
   `ClaudeJsonClient`, und der liest AUSSCHLIESSLICH `Anthropic:TextApiKey` (`ANTHROPIC_TEXT_API_KEY`) — ungesetzt sind
   beide aus, auch wenn der Konto-Schluessel da ist. Wer einen neuen Claude-Aufruf einbaut, entscheidet sich fuer einen
   der beiden und schreibt es hier dazu; `ClaudeJsonClientTests` haelt fest, dass der Konto-Schluessel den Text-Client NICHT

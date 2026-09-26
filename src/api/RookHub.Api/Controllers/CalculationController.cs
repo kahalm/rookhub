@@ -18,15 +18,26 @@ namespace RookHub.Api.Controllers;
 public class CalculationController : BaseApiController
 {
     private readonly CalculationService _service;
+    /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c>); optional wie in den übrigen Kurs-Controllern.</summary>
+    private readonly CourseCommentLocalizer? _localizer;
 
-    public CalculationController(CalculationService service) => _service = service;
+    public CalculationController(CalculationService service, CourseCommentLocalizer? localizer = null)
+    {
+        _service = service;
+        _localizer = localizer;
+    }
 
     /// <summary>Kopf + Stellungsliste eines Buchs (leicht: ohne FEN/Kommentar/Züge), inkl.
     /// „schon bearbeitet"-Markierung je Stellung.</summary>
     [HttpGet("books/{bookId}")]
-    public async Task<ActionResult<CalcBookDto>> GetBook(int bookId, CancellationToken ct)
+    public async Task<ActionResult<CalcBookDto>> GetBook(int bookId, CancellationToken ct, [FromQuery] string? lang = null)
     {
-        try { return Ok(await _service.GetBookAsync(GetUserId(), bookId, IsAdmin, ct)); }
+        try
+        {
+            var book = await _service.GetBookAsync(GetUserId(), bookId, IsAdmin, ct);
+            if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
+            return Ok(book);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -47,17 +58,29 @@ public class CalculationController : BaseApiController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("books/{bookId}/public")]
-    public async Task<ActionResult<CalcPublicBookDto>> GetPublicBook(int bookId, CancellationToken ct)
+    public async Task<ActionResult<CalcPublicBookDto>> GetPublicBook(int bookId, CancellationToken ct,
+        [FromQuery] string? lang = null)
     {
-        try { return Ok(await _service.GetPublicBookAsync(bookId, ct)); }
+        try
+        {
+            var book = await _service.GetPublicBookAsync(bookId, ct);
+            if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
+            return Ok(book);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
     /// <summary>Eine Stellung inkl. eigenem Analysebaum.</summary>
     [HttpGet("positions/{bookPuzzleId}")]
-    public async Task<ActionResult<CalcPositionDto>> GetPosition(int bookPuzzleId, CancellationToken ct)
+    public async Task<ActionResult<CalcPositionDto>> GetPosition(int bookPuzzleId, CancellationToken ct,
+        [FromQuery] string? lang = null)
     {
-        try { return Ok(await _service.GetPositionAsync(GetUserId(), bookPuzzleId, IsAdmin, ct)); }
+        try
+        {
+            var position = await _service.GetPositionAsync(GetUserId(), bookPuzzleId, IsAdmin, ct);
+            if (_localizer is not null) await _localizer.ApplyAsync(position, lang, ct);
+            return Ok(position);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 

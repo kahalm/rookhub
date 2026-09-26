@@ -12,6 +12,10 @@ public class CalcPositionListItemDto
     public string? Title { get; set; }
     /// <summary>Kapitel der Linie (<c>null</c> = ohne Kapitel) — fürs Gruppieren in der Sprungliste.</summary>
     public string? Chapter { get; set; }
+    /// <summary>Übersetzter Titel/Kapitelname (nur mit <c>?lang=</c>, <c>null</c> = keine) — Anzeige
+    /// <c>label ?? original</c>, das Original bleibt der Schlüssel.</summary>
+    public string? TitleLabel { get; set; }
+    public string? ChapterLabel { get; set; }
     /// <summary>Der Nutzer hat zu dieser Stellung schon einen Analysebaum gespeichert (= nicht-leeres
     /// <c>TreeJson</c>). Eine Zeile, die nur Zeit/Festlegung/Bewertung trägt, zählt hier NICHT.</summary>
     public bool HasTree { get; set; }
@@ -39,6 +43,8 @@ public class CalcChapterSummaryDto
 {
     /// <summary>Kapitelname; <c>null</c> = Stellungen ohne Kapitel.</summary>
     public string? Chapter { get; set; }
+    /// <summary>Übersetzter Kapitelname (nur mit <c>?lang=</c>); <c>null</c> = keine.</summary>
+    public string? Label { get; set; }
     /// <summary>Stellungen im Kapitel (alle Linien).</summary>
     public int PositionCount { get; set; }
     /// <summary>Stellungen mit eigenem Analysebaum.</summary>
@@ -94,8 +100,15 @@ public class CalcPositionDto
     /// <summary>Züge (UCI, leerzeichengetrennt) von <see cref="Fen"/> bis zur Aufgabenstellung; leer
     /// bei reinen Stellungs-Linien (Kalkulationsbuch) und bei Puzzles mit <c>StartPly &lt; 0</c>.</summary>
     public string SetupMoves { get; set; } = string.Empty;
-    /// <summary>Optionaler Erklär-/Aufgabentext zur Stellung (<c>BookPuzzle.Comment</c>).</summary>
+    /// <summary>Optionaler Erklär-/Aufgabentext zur Stellung (<c>BookPuzzle.Comment</c>) — mit <c>?lang=</c>
+    /// übersetzt, wo es eine aktuelle Übersetzung gibt.</summary>
     public string? Comment { get; set; }
+    /// <summary>Kurs-Übersetzung (nur mit <c>?lang=</c>): übersetzter Titel/Kapitelname (<c>null</c> = keine),
+    /// die tatsächlich gelieferte Sprache und ob maschinell übersetzt (siehe <c>BookPuzzleDto</c>).</summary>
+    public string? TitleLabel { get; set; }
+    public string? ChapterLabel { get; set; }
+    public string? CommentLanguage { get; set; }
+    public bool CommentMachine { get; set; }
     /// <summary>Eigener Analysebaum als JSON; <c>null</c> = noch keiner gespeichert.</summary>
     public string? TreeJson { get; set; }
     public DateTime? TreeUpdatedAt { get; set; }
@@ -223,8 +236,13 @@ public class CalcPublicPositionDto
     /// <summary>Züge (UCI) von <see cref="Fen"/> BIS zur Aufgabenstellung — nie darüber hinaus
     /// (<c>CalculationService.SetupMoves</c>). Leer bei reinen Stellungs-Linien.</summary>
     public string SetupMoves { get; set; } = string.Empty;
-    /// <summary>Optionaler Erklär-/Aufgabentext zur Stellung.</summary>
+    /// <summary>Optionaler Erklär-/Aufgabentext zur Stellung (mit <c>?lang=</c> übersetzt, wo aktuell).</summary>
     public string? Comment { get; set; }
+    /// <summary>Kurs-Übersetzung (nur mit <c>?lang=</c>), wie bei <see cref="CalcPositionDto"/>.</summary>
+    public string? TitleLabel { get; set; }
+    public string? ChapterLabel { get; set; }
+    public string? CommentLanguage { get; set; }
+    public bool CommentMachine { get; set; }
 }
 
 /// <summary>

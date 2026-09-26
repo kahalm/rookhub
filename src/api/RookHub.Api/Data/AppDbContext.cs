@@ -126,6 +126,7 @@ public class AppDbContext : DbContext
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
     public DbSet<CommentSet> CommentSets => Set<CommentSet>();
     public DbSet<CommentText> CommentTexts => Set<CommentText>();
+    public DbSet<CourseTranslationJob> CourseTranslationJobs => Set<CourseTranslationJob>();
     public DbSet<GameAnalysis> GameAnalyses => Set<GameAnalysis>();
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
@@ -599,6 +600,21 @@ public class AppDbContext : DbContext
              .WithOne(s => s.Book)
              .HasForeignKey<BookSource>(s => s.Id);
             e.Navigation(b => b.Source).IsRequired();
+            e.Property(b => b.CommentLanguage).HasMaxLength(8);
+        });
+
+        modelBuilder.Entity<CourseTranslationJob>(e =>
+        {
+            e.Property(j => j.Language).HasMaxLength(8).IsRequired();
+            e.Property(j => j.LastError).HasMaxLength(500);
+            // Die Warteschlange: „naechster wartender Auftrag, aelteste zuerst".
+            e.HasIndex(j => new { j.Status, j.CreatedAt });
+            // „Gibt es fuer (Kurs, Sprache) schon einen offenen Auftrag?"
+            e.HasIndex(j => new { j.BookId, j.Language, j.Status });
+            e.HasOne(j => j.Book)
+             .WithMany()
+             .HasForeignKey(j => j.BookId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BookSource>(e =>
@@ -1473,12 +1489,26 @@ public class AppDbContext : DbContext
              .WithMany()
              .HasForeignKey(c => c.GameAnalysisId)
              .OnDelete(DeleteBehavior.Cascade);
+            // Linie eines Kurses (0.547.0): je Linie und Sprache genau EIN Satz, wie bei Partien.
+            // Cascade, damit MariaDB mit der Linie auch ihre Uebersetzungen loescht; die Loeschpfade
+            // (CourseAuthoringService.RemoveLinesAsync, BookAdminService.DeleteBookAsync, der Rueckbau
+            // in CourseService.UploadPersonalCourseAsync) raeumen sie zusaetzlich AUSDRUECKLICH ab —
+            // InMemory kaskadiert nicht.
+            e.HasIndex(c => new { c.BookPuzzleId, c.Language }).IsUnique();
+            e.HasOne(c => c.BookPuzzle)
+             .WithMany()
+             .HasForeignKey(c => c.BookPuzzleId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<CommentText>(e =>
         {
             e.Property(c => c.Text).HasColumnType("LONGTEXT").IsRequired();
             e.HasIndex(c => new { c.CommentSetId, c.Ply }).IsUnique();
+            // Fingerabdruck der Vorlage (nur Kurs-Saetze): „gibt es diesen Text schon uebersetzt?" —
+            // die Wiederverwendung ueber Kurse hinweg sucht genau danach.
+            e.Property(c => c.SourceHash).HasMaxLength(16);
+            e.HasIndex(c => c.SourceHash);
             e.HasOne(c => c.CommentSet)
              .WithMany(c => c.Texts)
              .HasForeignKey(c => c.CommentSetId)

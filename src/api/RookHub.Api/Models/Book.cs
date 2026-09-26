@@ -117,6 +117,16 @@ public class Book
     /// </summary>
     public int ImportVersion { get; set; }
 
+    /// <summary>
+    /// Die QUELLSPRACHE der Kommentare dieses Kurses (ISO-Kuerzel, „und" = nicht bestimmbar), Ausgangspunkt
+    /// jeder Kurs-Uebersetzung (<see cref="CommentSet.BookPuzzleId"/>). <c>null</c> = noch nie gefragt:
+    /// bestimmt wird beim ersten Uebersetzungslauf ueber eine Stichprobe der Kommentare
+    /// (<c>CourseTranslationService.EnsureSourceLanguageAsync</c>) und dann hier festgehalten.
+    /// Eine spaetere Korrektur macht vorhandene Uebersetzungen NICHT ungueltig.
+    /// </summary>
+    [MaxLength(8)]
+    public string? CommentLanguage { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

@@ -153,6 +153,9 @@ public class CourseChapterDto
     /// <see cref="PuzzleCount"/> enthalten (die zählt nur Quiz-Linien). Chessable weist solche
     /// Muster-Einleitungen als eigene „Linien" aus; die Übersicht zeigt sie in Klammern separat.</summary>
     public int InfoCount { get; set; }
+    /// <summary>Übersetzter Kapitelname (nur mit <c>?lang=</c>); <c>null</c> = keine. <see cref="Name"/> bleibt
+    /// der Schlüssel.</summary>
+    public string? Label { get; set; }
 }
 
 /// <summary>

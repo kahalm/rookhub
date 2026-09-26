@@ -839,6 +839,10 @@ public class CourseService
         var puzzleCount = await _db.BookPuzzles.CountAsync(bp => bp.BookId == book.Id && !bp.IsInfoOnly, ct);
         if (puzzleCount == 0)
         {
+            // Frisch angelegtes Buch — Übersetzungen kann es noch keine geben; der Aufruf hält trotzdem die
+            // Regel „jeder Pfad, der BookPuzzles löscht, räumt ihre Übersetzungen mit ab" (ein leerer Griff).
+            await CourseTranslationCleanup.RemoveForLinesAsync(_db,
+                _db.BookPuzzles.Where(bp => bp.BookId == book.Id).Select(bp => bp.Id), ct);
             _db.BookPuzzles.RemoveRange(_db.BookPuzzles.Where(bp => bp.BookId == book.Id));
             _db.Books.Remove(book);
             await _db.SaveChangesAsync(ct);

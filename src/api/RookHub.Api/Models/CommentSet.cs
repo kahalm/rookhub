@@ -16,7 +16,18 @@ namespace RookHub.Api.Models;
 /// <para><b>Der Anker ist die BIBLIOTHEKSZEILE</b>, wo es eine gibt: fordern zwei Leute dieselbe
 /// Partie an, entstehen zwei Analysen — eine Uebersetzung je Analyse waere dieselbe Arbeit zweimal
 /// bezahlt. Eine selbst eingeworfene Partie hat keine Bibliothekszeile und haengt deshalb an der
-/// Analyse. Genau EINES von beiden ist gesetzt.</para>
+/// Analyse.</para>
+///
+/// <para><b>Die dritte Art ist die LINIE EINES KURSES</b> (<see cref="BookPuzzleId"/>, seit 0.547.0):
+/// Zug-Kommentare, Einleitung, Linien-Titel und Kapitelname in einer weiteren Sprache. Fuer Kurse gibt
+/// es KEINEN Quell-Satz — die Quelle bleibt <see cref="BookPuzzle.Comment"/>/<see cref="BookPuzzle.MoveComments"/>/
+/// <see cref="BookPuzzle.Title"/>/<see cref="BookPuzzle.Chapter"/>, denn genau diese Felder ueberschreiben
+/// Aufbereitung und naechtliches Aktualisieren; ein zweiter Quell-Satz muesste staendig nachgezogen werden.
+/// Jeder Text eines Kurs-Satzes traegt deshalb den Fingerabdruck seiner Vorlage
+/// (<see cref="CommentText.SourceHash"/>), die Belegung der Halbzug-Nummern steht in
+/// <c>Services.CourseTextSlots</c>.</para>
+///
+/// <para>Genau EINER der drei Anker ist gesetzt.</para>
 /// </summary>
 public class CommentSet
 {
@@ -29,6 +40,12 @@ public class CommentSet
     /// <summary>Eine selbst eingeworfene Partie ohne Bibliothekszeile.</summary>
     public int? GameAnalysisId { get; set; }
     public GameAnalysis? GameAnalysis { get; set; }
+
+    /// <summary>Eine Linie eines Kurses (Uebersetzung, nie Quelle). Faellt die Linie weg, faellt der
+    /// Satz mit (Cascade; die Loeschpfade raeumen ihn zusaetzlich AUSDRUECKLICH ab — InMemory
+    /// kaskadiert nicht).</summary>
+    public int? BookPuzzleId { get; set; }
+    public BookPuzzle? BookPuzzle { get; set; }
 
     /// <summary>ISO-Kuerzel, wie <see cref="LibraryGame.Languages"/> sie fuehrt („de", „en").</summary>
     public string Language { get; set; } = string.Empty;
@@ -77,8 +94,22 @@ public class CommentText
     public CommentSet? CommentSet { get; set; }
 
     /// <summary>Zaehlt wie <see cref="GameAnalysisPosition.Ply"/>; <c>-1</c> = der Text vor dem
-    /// ersten Zug (die Einleitung).</summary>
+    /// ersten Zug (die Einleitung). Bei Kurs-Saetzen zusaetzlich <c>-2</c> = <see cref="BookPuzzle.Comment"/>,
+    /// <c>-3</c> = Linien-Titel, <c>-4</c> = Kapitelname (<c>Services.CourseTextSlots</c>).</summary>
     public int Ply { get; set; }
 
     public string Text { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fingerabdruck der VORLAGE, aus der dieser Text entstand: 16 Hex-Zeichen, Praefix von SHA-256
+    /// ueber den normalisierten Quelltext (<c>Services.CourseTextHash</c>). Pflicht bei Kurs-Saetzen,
+    /// <c>null</c> bei Partien.
+    ///
+    /// <para>Zwei Aufgaben: (1) <b>Veraltet?</b> Aendert die Aufbereitung den Kommentar einer Linie, passt
+    /// der Fingerabdruck nicht mehr — ausgeliefert wird dann das Original, und der naechste Lauf
+    /// uebersetzt nur diesen Text neu. (2) <b>Schon einmal uebersetzt?</b> Derselbe Text steht oft in
+    /// mehreren Kursen (mehrfach importierte Chessable-Kurse, <c>_firstkey</c>-Kopien, gleiche
+    /// Kapitelnamen) — dann wird kopiert statt noch einmal bezahlt.</para>
+    /// </summary>
+    public string? SourceHash { get; set; }
 }

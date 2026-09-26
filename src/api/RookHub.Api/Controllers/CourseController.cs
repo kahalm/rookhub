@@ -26,12 +26,16 @@ public class CourseController : BaseApiController
     private readonly FlashcardMarkService _flashcards;
     /// <summary>Kurs ⇄ Repertoire — beide Richtungen, siehe <see cref="CourseRepertoireConversionService"/>.</summary>
     private readonly CourseRepertoireConversionService _conversion;
+    /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c>). Optional, damit bestehende Test-Konstruktionen
+    /// unverändert kompilieren — ohne ihn bleibt <c>lang</c> wirkungslos (Original).</summary>
+    private readonly CourseCommentLocalizer? _localizer;
 
     public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess,
         IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring, FlashcardMarkService flashcards,
-        CourseRepertoireConversionService conversion)
+        CourseRepertoireConversionService conversion, CourseCommentLocalizer? localizer = null)
     {
         _conversion = conversion;
+        _localizer = localizer;
         _service = service;
         _stats = stats;
         _reprocess = reprocess;
@@ -59,11 +63,18 @@ public class CourseController : BaseApiController
         return Accepted(new { started = true });
     }
 
-    /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.</summary>
+    /// <summary>Alle Puzzles eines (zugänglichen) Buchs am Stück — für das Offline-Speichern.
+    /// <c>?lang=</c> liefert die Kommentare übersetzt, wo es aktuelle Übersetzungen gibt (sonst Original).</summary>
     [HttpGet("{bookId}/puzzles")]
-    public async Task<ActionResult<List<BookPuzzleDto>>> GetAllPuzzles(int bookId)
+    public async Task<ActionResult<List<BookPuzzleDto>>> GetAllPuzzles(int bookId, [FromQuery] string? lang = null,
+        CancellationToken ct = default)
     {
-        try { return Ok(await _service.GetAllPuzzlesAsync(GetUserId(), bookId, IsAdmin)); }
+        try
+        {
+            var lines = await _service.GetAllPuzzlesAsync(GetUserId(), bookId, IsAdmin);
+            if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
+            return Ok(lines);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -73,11 +84,17 @@ public class CourseController : BaseApiController
     /// Seite sofort, Rest im Hintergrund); ohne Parameter das ganze Buch. 404, wenn nicht öffentlich.</summary>
     [AllowAnonymous]
     [HttpGet("{bookId}/public")]
-    public async Task<ActionResult<List<BookPuzzleDto>>> GetPublicCourse(int bookId, [FromQuery] int? skip, [FromQuery] int? take)
+    public async Task<ActionResult<List<BookPuzzleDto>>> GetPublicCourse(int bookId, [FromQuery] int? skip, [FromQuery] int? take,
+        [FromQuery] string? lang = null, CancellationToken ct = default)
     {
         int? clampedTake = take is int t ? Math.Clamp(t, 1, 1000) : null;
         int? clampedSkip = skip is int s && s > 0 ? s : null;
-        try { return Ok(await _service.GetPublicCoursePuzzlesAsync(bookId, clampedSkip, clampedTake)); }
+        try
+        {
+            var lines = await _service.GetPublicCoursePuzzlesAsync(bookId, clampedSkip, clampedTake);
+            if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
+            return Ok(lines);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -288,9 +305,15 @@ public class CourseController : BaseApiController
 
     /// <summary>Kapitel eines (zugänglichen) Buchs in Lesereihenfolge inkl. Fortschritt — Basis der Kapitelübersicht.</summary>
     [HttpGet("{bookId}/chapters")]
-    public async Task<ActionResult<List<CourseChapterDto>>> GetChapters(int bookId)
+    public async Task<ActionResult<List<CourseChapterDto>>> GetChapters(int bookId, [FromQuery] string? lang = null,
+        CancellationToken ct = default)
     {
-        try { return Ok(await _service.GetChaptersAsync(GetUserId(), bookId, IsAdmin)); }
+        try
+        {
+            var chapters = await _service.GetChaptersAsync(GetUserId(), bookId, IsAdmin);
+            if (_localizer is not null) await _localizer.ApplyAsync(bookId, chapters, lang, ct);
+            return Ok(chapters);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -302,9 +325,16 @@ public class CourseController : BaseApiController
         [FromQuery] string mode = "sequential",
         [FromQuery] int? after = null,
         [FromQuery] int? exclude = null,
-        [FromQuery] int? chapterIndex = null)
+        [FromQuery] int? chapterIndex = null,
+        [FromQuery] string? lang = null,
+        CancellationToken ct = default)
     {
-        try { return Ok(await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin, chapterIndex)); }
+        try
+        {
+            var next = await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin, chapterIndex);
+            if (_localizer is not null) await _localizer.ApplyAsync(next.Puzzle, lang, ct);
+            return Ok(next);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -367,9 +397,15 @@ public class CourseController : BaseApiController
     /// <summary>Vollbild der Kurs-Detailseite: Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht
     /// (inkl. reiner Stellungs-Kapitel). 404 wenn nicht zugänglich.</summary>
     [HttpGet("{bookId:int}")]
-    public async Task<ActionResult<CourseDetailDto>> GetDetail(int bookId, CancellationToken ct)
+    public async Task<ActionResult<CourseDetailDto>> GetDetail(int bookId, CancellationToken ct,
+        [FromQuery] string? lang = null)
     {
-        try { return Ok(await _authoring.GetDetailAsync(GetUserId(), bookId, IsAdmin, ct)); }
+        try
+        {
+            var detail = await _authoring.GetDetailAsync(GetUserId(), bookId, IsAdmin, ct);
+            if (_localizer is not null) await _localizer.ApplyAsync(detail, lang, ct);
+            return Ok(detail);
+        }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 

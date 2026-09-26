@@ -79,6 +79,9 @@ public class CourseManageChapterDto
     public int? SolverIndex { get; set; }
     /// <summary>Id der ERSTEN Linie des Kapitels — Einstiegspunkt für den Kalkulations-Modus.</summary>
     public int? FirstLineId { get; set; }
+    /// <summary>Übersetzter Kapitelname (nur mit <c>?lang=</c>); <c>null</c> = keine. <see cref="Name"/> bleibt
+    /// der Schlüssel (Umbenennen, Löschen, Kapitel-PGN).</summary>
+    public string? Label { get; set; }
 }
 
 /// <summary>Eingabe: Stellungen als Text einfügen (eine je Zeile, optional nummeriert + Kommentar).</summary>

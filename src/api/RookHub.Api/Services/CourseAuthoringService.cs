@@ -421,11 +421,13 @@ public class CourseAuthoringService
     /// <summary>
     /// Entfernt Linien samt aller Datensätze, die per Restrict-FK daran hängen (sonst blockt der
     /// DB-Constraint): Kurs-Ergebnisse/Versuche/Info-Ansichten, Buch-Puzzle-Versuche, Tagespuzzle-
-    /// Zuordnungen und die Analysebäume des Kalkulations-Modus.
+    /// Zuordnungen und die Analysebäume des Kalkulations-Modus — und die Kurs-Übersetzungen der Linien
+    /// (Cascade in MariaDB, ausdrücklich für InMemory, siehe <see cref="CourseTranslationCleanup"/>).
     /// </summary>
     private async Task RemoveLinesAsync(int bookId, List<BookPuzzle> lines, CancellationToken ct)
     {
         var ids = lines.Select(l => l.Id).ToList();
+        await CourseTranslationCleanup.RemoveForLinesAsync(_db, ids, ct);
         _db.CoursePuzzleResults.RemoveRange(
             await _db.CoursePuzzleResults.Where(cr => ids.Contains(cr.BookPuzzleId)).ToListAsync(ct));
         _db.CourseAttempts.RemoveRange(

@@ -9,6 +9,244 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0)
+
+### Stand (Stufe A, 0.547.0 — B und C offen)
+
+Gebaut: Abschnitte **1, 2, 3, 4, 7, 9** samt Tests aus 10 und Doku aus 11 (CLAUDE.md „Anmerkungen in mehreren
+Sprachen" → KURSE). Migration `CourseCommentTranslations` (BookPuzzleId + Unique, SourceHash + Index,
+`Book.CommentLanguage`, Tabelle `CourseTranslationJobs` NUR als Modell). Kern `CommentTranslator` (Partien
+unverändert), `CourseTranslationService` (Linie + Kurs, Kapitel in einer Fuhre, Wiederverwendung per Hash,
+Abbruch per Token), `CourseCommentLocalizer` an 11 Endpunkten, `CourseTranslationCleanup` in allen drei
+Löschpfaden, `tools/LibraryImport translate --course`. Offen für **B**: Aufträge/Endpunkte/Worker/Sperrzeiten,
+`PUT /api/courses/{id}/comment-language`, die 25-Sprachen-Liste (`unsupported-language`), Konto löschen → offene
+Aufträge des Nutzers abräumen (RequestedByUserId hat bewusst keinen FK). Für **C**: `CourseNextPuzzleDto.ChapterName`
+und `CourseProgressDto.ChapterName` bleiben der Original-Schlüssel — die Anzeige nimmt `puzzle.chapterLabel`.
+
+Abweichungen vom Plan (bewusst):
+* **`/{id}/flashcards` bekommt kein `lang`** — der Endpunkt liefert nur Linien-Ids. Dafür zusätzlich die drei
+  Kalkulations-Endpunkte (`/api/calculations/books/{id}`, `/books/{id}/public`, `/positions/{id}`) und alle drei
+  `/api/book-puzzles/{id}[/next|/random]`; `GET /api/book-puzzles/random?bookId=` (Zufallspool) bleibt Original.
+* **Texte beim Löschen**: die Sätze werden immer ausdrücklich gelöscht, die TEXTE nur unter InMemory — in MariaDB
+  nimmt sie der Cascade-FK in einer Anweisung mit (sie zu laden hieße, jede Übersetzung eines Kurses zu lesen und
+  einzeln zu löschen). Integrationstest belegt, dass nichts übrig bleibt.
+* **Das Modell muss bei Kursen JEDEN Eintrag beantworten** (sonst schreibt die Linie nichts, nächster Lauf holt
+  sie nach); bei Partien bleibt die alte, lässigere Regel.
+* **`CommentLanguages`: Quelle zuerst** (statt eines eigenen Felds für die Quellsprache); `CommentMachine` =
+  mindestens eine ausgelieferte Stelle (auch ein Label) aus einem maschinellen Satz.
+* **`lang` wird nur auf die FORM geprüft** (`de`, `und`, `pt-br`); die Liste der 25 Sprachen kommt mit B.
+* Der Localizer sitzt in den Controllern (optionaler Konstruktor-Parameter wie der Logger im
+  `BookPuzzleController`), nicht in den Diensten — die bleiben unverändert und ohne `lang`.
+* Kapitel-Fuhre: gestückelt wird nur über 8000 Zeichen (dann mehrere Aufrufe) — in der Praxis EINE Fuhre. Kapitelnamen
+  bekommen keine Sprachprüfung (Nachbesserung nach Review, sonst bliebe ein Kapitel mit englischen Eröffnungsnamen
+  für immer offen).
+* **Zusatz nach Review: Kurs-Lauf in zwei Phasen** — jeder verschiedene Text geht je Lauf genau einmal ans Modell,
+  auch mit `--parallel` (Phase 1: Fingerabdruck gehört der ersten Linie, Phase 2: Wiederverwendung).
+
+Gewünscht: Kurse (Bücher/`BookPuzzles`) in weiteren Sprachen durchspielen — Zug-Kommentare,
+Linien-Einleitung, Linien-Titel und Kapitelnamen. Heute gibt es Übersetzungen NUR für Partien
+(`CommentSets` an `LibraryGameId`/`GameAnalysisId`, siehe CLAUDE.md „Anmerkungen in mehreren Sprachen").
+Repertoires sind NICHT Teil dieses Plans (ein PGN-Text je Datei, eigener Umbau).
+
+### Entscheidungen des Nutzers (2026-09-26, wörtlich zusammengefasst)
+
+1. **Jeder** mit Zugang zum Kurs darf eine Übersetzung anfordern, in **jede** der 25 Oberflächensprachen
+   (`SUPPORTED_LANGS` in `core/locale.service.ts`). **Höchstens 1 offener Auftrag je Nutzer** (wartend oder
+   laufend), **Admin unbegrenzt**.
+2. **Sperrzeiten der Spark gelten auch hier**: Mo–Do 08:00–17:00, Fr 08:00–14:00 (Europe/Vienna). In diesen
+   Fenstern läuft KEINE Kurs-Übersetzung.
+3. **Angeforderte Kurse haben Vorrang vor dem Bibliothekslauf** (`.jobs/spark-uebersetzung.sh`).
+4. **Deutsch und Englisch automatisch für ALLE Kurse**, alle übrigen Sprachen auf Anforderung.
+5. **Kapitelnamen und Linien-Titel werden mitübersetzt.**
+
+### Messwerte (Prod, 2026-09-26)
+
+- 385 Bücher, 378 mit Kommentaren; 140 051 Linien, davon 123 104 kommentiert.
+- ~21 Mio. Zeichen `Comment` + ~124 Mio. Zeichen `MoveComments` (JSON samt Überbau).
+- Bei **51 549 von 87 035** Linien mit `Comment` steht derselbe Text auch in `MoveComments[-1]` → einmal
+  übersetzen, zweimal verwenden.
+- `ChessableOid`: 129 920 Zeilen, 125 479 verschieden (Dubletten durch mehrfach importierte Kurse, `_firstkey`-Kopien).
+- Spark-Durchsatz ~2 000 Zeichen/min (kleine Stichprobe, 21 Partien in 30 min). Die Automatik de+en über
+  den ganzen Bestand ist damit eine Sache von **Wochen bis Monaten** reiner Nachtarbeit — sie ist Hintergrund,
+  kein Versprechen. Nur 9 Kurse wurden in den letzten 30 Tagen überhaupt benutzt → benutzte zuerst.
+
+### 1. Datenmodell (eine Migration, z. B. `CourseCommentTranslations`) — ✅ Stufe A (0.547.0)
+
+- **`CommentSet.BookPuzzleId`** (`int?`, FK → `BookPuzzles`, `OnDelete Cascade`), eindeutiger Index
+  `(BookPuzzleId, Language)`. Genau EINER der drei Anker ist gesetzt — die Doku an `CommentSet` entsprechend
+  erweitern („Linie eines Kurses").
+- **Für Kurse gibt es KEINE Quell-Sätze.** Die Quelle bleibt `BookPuzzle.Comment`/`MoveComments`/`Title`/
+  `Chapter`: die Aufbereitung (`PgnImportService`, in-place per oid/LineId) und das nächtliche Chessable-
+  Aktualisieren überschreiben genau diese Felder; ein zweiter Quell-Satz müsste ständig nachgezogen werden.
+  Kurs-Sätze sind `Origin = Machine` (später `Human`), `TranslatedFrom` = Quellsprache des Kurses, `Model`.
+- **`CommentText.SourceHash`** (`string?`, 16 Hex-Zeichen = Präfix von SHA-256 über den NORMALISIERTEN
+  Quelltext: `\r\n`→`\n`, Trim). Pflicht bei Kurs-Sätzen, `null` bei Partien. Index auf `SourceHash`
+  (für die Wiederverwendung, s. u.). Eine Hilfsklasse `CourseTextHash.Of(string)` — nirgends selbst hashen.
+- **Ply-Konvention für Kurs-Sätze** als Konstanten (`CourseTextSlots`, keine magischen Zahlen verteilen):
+  `≥ -1` wie `MoveComments` (-1 = Einleitung vor dem ersten Zug), **`-2` = `BookPuzzle.Comment`**,
+  **`-3` = `Title`**, **`-4` = `Chapter`**.
+- **`Book.CommentLanguage`** (`string?`, max 8): Quellsprache des Kurses. Beim ersten Auftrag per
+  `CommentLanguage.Detect` über eine Stichprobe bestimmt (z. B. die ersten ~200 kommentierten Linien, ≤ 20 000
+  Zeichen) und gespeichert; nicht bestimmbar → `"und"`. Besitzer/Admin darf sie korrigieren
+  (`PUT /api/courses/{id}/comment-language { language }`); eine Korrektur macht vorhandene Sätze NICHT ungültig.
+- **`CourseTranslationJobs`** (neu): `Id`, `BookId` (FK Cascade), `Language` (8), `RequestedByUserId` (`int?`;
+  `null` = Automatik), `Status` (`Queued=0, Running=1, Done=2, Failed=3, Cancelled=4`), `LinesTotal`,
+  `LinesDone`, `LinesFailed`, `CreatedAt`, `StartedAt?`, `FinishedAt?`, `LastError?` (500). Index
+  `(Status, CreatedAt)` und `(BookId, Language, Status)`. „Ein offener Auftrag je (Kurs, Sprache)" und „einer
+  je Nutzer" im Service erzwingen (MariaDB kennt keinen gefilterten Unique-Index) — rennfest genug, weil ein
+  doppelter Auftrag nur doppelt prüft, nicht doppelt übersetzt.
+
+### 2. Übersetzungskern (Refactor, Verhalten der Partien unverändert) — ✅ Stufe A (0.547.0)
+
+- Aus `CommentTranslationService` den ankerunabhängigen Kern herauslösen (z. B. `CommentTranslator`):
+  `(Ply, Text)`-Liste + Quell- und Zielsprache hinein → `Dictionary<int,string>?` heraus. Darin bleiben:
+  Portionen (`ChunkChars`), System-/User-Prompt, `Parse`, `PieceLetters.Convert`, Längenprüfung
+  (`MinLengthShare`), Sprachprüfung (`CommentLanguage`). `null` = Fehlschlag, nichts schreiben.
+  `CommentTranslationServiceTests` müssen ohne Änderung grün bleiben.
+- Für Kurse zusätzlich: Längenprüfung nur über die Prosa-Slots (`≥ -2`) und erst ab einer Mindestmenge
+  (Titel/Kapitelnamen sind zu kurz dafür); Zusatzregel im Prompt: Partie-Zitate („Carlsen – Anand, Chennai
+  2013"), Spielernamen und Eröffnungsnamen in der in der Zielsprache üblichen Form, Überschriften kurz halten.
+  Quellsprache `"und"` → Prompt sagt „from the language it is written in", `PieceLetters` nur bei bekannter Quelle.
+
+### 3. `CourseTranslationService` (neu) — ✅ Stufe A (0.547.0)
+
+- **`TranslateLineAsync(bookPuzzleId, target)`**: lädt die Linie OHNE `Book.Source` (siehe
+  `BookSourceIncludeGuardTests`), baut die Quell-Slots (`MoveComments` geparst, `Comment` → -2, `Title` → -3;
+  `Chapter` → -4 kommt aus dem Kapitel-Wörterbuch des Kurses, s. u.). Gleicher Text in -2 und -1 → nur einmal
+  ans Modell, beide Slots bekommen dieselbe Übersetzung.
+- **Nur was fehlt oder veraltet ist, geht ans Modell**: vorhandener Satz (Linie, Zielsprache) → je Slot
+  behalten, wenn `SourceHash` zum aktuellen Quelltext passt; fehlende/veraltete Slots übersetzen; Slots, deren
+  Quelle verschwunden ist, löschen. Nichts offen → kein Modellaufruf.
+- **Erst nachschlagen, dann übersetzen**: für jeden offenen Slot einen vorhandenen `CommentText` mit gleichem
+  `SourceHash` in einem Kurs-Satz gleicher Sprache suchen (anderer Import desselben Chessable-Kurses,
+  `_firstkey`-Kopie, gleicher Kapitelname) → kopieren.
+- **Ein Fehlschlag schreibt für DIESE Linie nichts** (wie bei Partien), der Auftrag zählt `LinesFailed` und
+  macht mit der nächsten weiter.
+- **`TranslateCourseAsync(bookId, target, progress, ct)`**: (1) `Book.CommentLanguage` bestimmen, falls leer;
+  Ziel == Quelle → nichts zu tun. (2) Alle verschiedenen Kapitelnamen des Kurses in EINER Fuhre übersetzen
+  (Einheitlichkeit), Ergebnis als Wörterbuch; Wiederverwendung per Hash. (3) Linien in Kursreihenfolge
+  (dieselbe Ordnung wie `GetAllPuzzlesAsync`), `CourseTranslation:Parallel` (Vorgabe 4) Linien gleichzeitig mit
+  je eigenem Scope/DbContext. (4) Fortschritt alle n Linien in den Auftrag schreiben. (5) Abbruch per Token
+  (Sperrzeit beginnt, Dienst stoppt) → laufende Linien verwerfen, Auftrag zurück auf `Queued`; weil alles
+  inkrementell ist, überspringt der nächste Lauf das Fertige.
+- **Offene Arbeit** eines Kurses = Linien mit übersetzbarem Text, deren Satz fehlt oder einen veralteten/
+  fehlenden Slot hat (Hash in C#, je Kurs ≤ ~2 000 Linien — tragbar).
+
+### 4. Ausliefern (`?lang=`) — ✅ Stufe A (0.547.0)
+
+- **`CourseCommentLocalizer.ApplyAsync(IList<BookPuzzleDto>, lang)`**: EINE Abfrage lädt die Sätze aller
+  Linien-Ids in der Sprache; je DTO `Comment` (Slot -2) und `MoveComments[ply]` ersetzen — **nur wo
+  `SourceHash` zum Originaltext im DTO passt**, sonst bleibt das Original stehen.
+- **`Title`/`Chapter` NICHT ersetzen** — der Kapitelname ist im Frontend ein SCHLÜSSEL (`?chapter=`,
+  `chapter-pgn`, Umbenennen, `groupByChapter`, `course-detail.key()`). Stattdessen neue Felder
+  **`TitleLabel`/`ChapterLabel`** (`null` = keine Übersetzung). Ebenso `Label` an `CourseManageChapterDto`
+  und an der Solver-Kapitelliste (`GET /{bookId}/chapters`).
+- Neue DTO-Felder an `BookPuzzleDto`: **`CommentLanguage`** (was tatsächlich kommt), **`CommentLanguages`**
+  (was es für die Linie gibt, inkl. Quelle), **`CommentMachine`** (mindestens ein Slot maschinell).
+- **`lang` fehlt → Original, exakt wie heute** (alte Clients, Offline-Kopien, Wochenpost, Tagespuzzle).
+  Ungültiger Wert → ignorieren.
+- Endpunkte mit `lang`: alle, die Kursinhalt zum DURCHSPIELEN ausliefern — mindestens
+  `GET /api/courses/{id}/puzzles`, `/{id}/public`, `/{id}/next`, `/{id}/chapters`, `GET /{id}` (Detail),
+  `/{id}/flashcards`, die Einzel-/Nächste-/Zufalls-Linie im Buch (`BookPuzzleService`) und der
+  Kalkulations-Modus. Vollständige Liste beim Umsetzen per grep erheben und in CLAUDE.md festhalten.
+- **Bewusst Original**: Bearbeiten (`/{id}/lines`, Umbenennen, Löschen), PGN-Export (`/pgn`, `/chapter-pgn`,
+  Linien-PGN), Tipp-Erzeugung, Wochenpost, Kurs→Repertoire-Umwandlung.
+
+### 5. Aufträge anfordern (API)
+
+- `GET /api/courses/{id}/translations` → `{ sourceLanguage, languages: [{ language, linesTranslated,
+  linesTotal }], jobs: [{ id, language, status, linesDone, linesTotal, requestedByMe, queuePosition }],
+  quietUntil?, myOpenJob?: { bookId, bookName, language } }`. Zugang wie Kurs ansehen (`CourseAccess`), auch
+  anonym lesbar bei öffentlichem Kurs.
+- `POST /api/courses/{id}/translations { language }` (Auth) → 202 mit Auftrag. Gründe als `reason` (Seite
+  formuliert den Satz): `unsupported-language`, `same-language`, `nothing-to-translate`, `user-limit` (409,
+  offener Auftrag des Nutzers — Admin ausgenommen), `not-configured` (kein Text-Modell). Gibt es für (Kurs,
+  Sprache) schon einen offenen Auftrag → den zurückgeben (200), KEIN neuer, zählt nicht gegen das Limit.
+- `DELETE /api/courses/{id}/translations/{jobId}` → eigenen wartenden Auftrag zurückziehen (Admin: jeden).
+- `GET /api/admin/course-translations` (Admin) → Warteschlange + letzte Aufträge (nur Endpoint, keine UI nötig).
+
+### 6. Warteschlange + Hintergrunddienst
+
+- **`CourseTranslationWorker : BackgroundService`** in der API. Schleife: kein Text-Modell konfiguriert →
+  schlafen. Sperrzeit → schlafen bis zum Ende (in ≤ 10-min-Schritten). Sonst nächsten Auftrag: erst
+  angeforderte (`RequestedByUserId != null`, älteste zuerst), dann Automatik. Immer nur EIN Auftrag gleichzeitig.
+  Beim Start hängengebliebene `Running` → `Queued`.
+- **Automatik**: `CourseTranslation:AutoLanguages` (Vorgabe LEER = aus; nur Prod bekommt `de,en` über
+  Compose-Env `COURSE_TRANSLATION_AUTO_LANGUAGES` — Dev bleibt aus, sonst übersetzt Dev dieselben Kurse ein
+  zweites Mal auf der Spark). Ist kein angeforderter Auftrag offen, legt der Dienst EINEN Automatik-Auftrag für
+  den nächsten Kurs an, dem die Sprache fehlt: zuletzt benutzte Kurse zuerst (Kursversuche/-ergebnisse), dann
+  der Rest; Kurs in dieser Quellsprache → überspringen. Grobe SQL-Vorauswahl („Linien ohne Satz"), die
+  Hash-Prüfung macht der Lauf selbst.
+- **Nach Aktualisieren/Neu-Aufbereiten/Kapitel-Umbenennen eines Kurses**: für jede Sprache, in der der Kurs
+  schon Sätze hat, einen Automatik-Auftrag einreihen (erledigt nur Veraltetes, kostet sonst nichts).
+- **Sperrzeiten in der App**: `TextLlm:QuietHours` (Vorgabe `"Mon-Thu 08:00-17:00; Fri 08:00-14:00"`,
+  auch in `appsettings.json`) + `TextLlm:TimeZone` (Vorgabe `Europe/Vienna`). Eigene Klasse `QuietHours`
+  (`Parse`, `IsQuiet(DateTimeOffset)`, `EndOf(DateTimeOffset)`) mit Tests (Do 16:59/17:00, Fr 13:59/14:00,
+  Wochenende, Sommerzeitwechsel, leere Angabe = nie gesperrt). Zeitzonendaten im API-Image prüfen
+  (`TimeZoneInfo.FindSystemTimeZoneById("Europe/Vienna")` im Container).
+- **Vorrang vor dem Bibliothekslauf** (außerhalb des Repos, macht der Reviewer NACH dem Deploy):
+  `.jobs/spark-uebersetzung.sh` startet/beendet den Bibliothekslauf nicht, solange ein ANGEFORDERTER
+  Auftrag offen ist (`Status IN (0,1) AND RequestedByUserId IS NOT NULL`); Automatik-Aufträge teilen sich die
+  Spark mit dem Bibliothekslauf.
+
+### 7. Werkzeug — ✅ Stufe A (0.547.0)
+
+- `tools/LibraryImport translate --to <lang> --course <bookId> [--parallel p]` → `TranslateCourseAsync`
+  direkt (ohne Auftrag), für Messungen und Nachhilfe von Hand. Env wie beim Bibliothekslauf (`TextLlm__*`).
+
+### 8. Oberfläche (Angular, Projekt `app`)
+
+- `course.service.ts`: `lang` an allen Aufrufen aus Abschnitt 4; `translations`-Aufrufe (lesen, anfordern,
+  zurückziehen). `BookPuzzle`-Interface um `commentLanguage`, `commentLanguages`, `commentMachine`,
+  `titleLabel`, `chapterLabel`.
+- **Sprachwahl je Kurs**, gemerkt je Gerät (`localStorage`, try/catch), Vorgabe: Oberflächensprache, wenn der
+  Kurs sie hat, sonst Original. Auswahl (Chips/Menü) auf der Kursseite und im Solver-/Durchblätter-Kopf, wenn es
+  mehr als eine Sprache gibt; die Quellsprache heißt „Original".
+- Im Kommentar ein Hinweis **„maschinell übersetzt"** (wenn `commentMachine`), ein Klick schaltet aufs Original.
+- **Anzeige** überall `chapterLabel ?? chapter`, `titleLabel ?? title` — Schlüssel (Filter, Routen,
+  Umbenennen, Kapitel-PGN) bleiben das Original.
+- **Übersetzungs-Kasten auf der Kursseite**: vorhandene Sprachen mit Fortschritt („Deutsch · 1 234 / 1 881
+  Linien"), laufender/wartender Auftrag („wartet · Platz 3", „läuft · 42 %", „pausiert bis 17:00 — die Spark
+  gehört tagsüber der Firma"), Auswahl „Übersetzen in …" über alle 25 Sprachen (Namen wie in der
+  Sprachauswahl). Bei `user-limit`: Knopf aus, Hinweis mit Link auf den Kurs, der gerade läuft; zurückziehen möglich.
+- **Offline**: die gespeicherte Kopie merkt sich ihre Sprache; weicht die Wahl ab → Hinweis „neu herunterladen".
+- i18n-Schlüssel in **en/de/hr** (Parity-Spec), die übrigen 22 Sprachen fallen auf en zurück.
+
+### 9. Aufräumen — ✅ Stufe A (0.547.0)
+
+- Jeder Pfad, der `BookPuzzles` löscht (`CourseAuthoringService.RemoveLinesAsync`,
+  `BookAdminService.DeleteBookAsync`, `CourseService.UploadPersonalCourseAsync`-Rückbau, …; per grep
+  vollständig erheben), löscht die `CommentSets` (+Texte) dieser Linien AUSDRÜCKLICH mit (InMemory kaskadiert
+  nicht); Buch löschen → `CourseTranslationJobs` mit.
+
+### 10. Tests (Pflicht, InMemory + MariaDB)
+
+- Kern-Refactor: bestehende `CommentTranslationServiceTests` unverändert grün.
+- Linie: übersetzt alle Slots; -1/-2 gleicher Text → ein Modell-Item, zwei Slots; zweiter Lauf ohne Änderung →
+  kein Modellaufruf; geänderter Kommentar → nur dieser Slot neu; Fehlschlag → nichts geschrieben;
+  Wiederverwendung per Hash aus einem anderen Kurs → kein Modellaufruf.
+- Kurs: Kapitelnamen in einer Fuhre; Ziel == Quelle → nichts; Abbruch → Auftrag wieder `Queued`, Fortschritt bleibt.
+- Localizer: `lang` fehlt → DTO unverändert; veralteter Slot → Original; `Chapter`/`Title` bleiben, Labels
+  gesetzt; `CommentLanguages` korrekt.
+- Aufträge: Nutzer-Limit (409), Admin ohne Limit, bestehender Auftrag wird zurückgegeben, `same-language`,
+  `unsupported-language`, Zugriff verweigert ohne Kurszugang, Zurückziehen nur eigener.
+- Worker: angeforderte vor Automatik; Automatik aus bei leerer Einstellung; Sperrzeit → kein Auftrag startet.
+- `QuietHours`: Randfälle wie oben.
+- Löschen: Linie/Kurs löschen räumt Sätze + Aufträge ab.
+- MariaDB-Integrationstest: Migration, eindeutiger Index `(BookPuzzleId, Language)`, Localizer-Abfrage übersetzt.
+- Frontend: Sprachwahl-Vorgabe, Label-Fallback, Übersetzungs-Kasten (Limit-Hinweis), Offline-Sprachhinweis.
+
+### 11. Doku + Auslieferung
+
+- CLAUDE.md: Abschnitt „Anmerkungen in mehreren Sprachen" um Kurse erweitern (Slots, Hash, Localizer,
+  Endpunkte-Liste), REST-Tabelle unter „Kurse", neue Einstellungen unter „Wichtige Konventionen",
+  Compose-Env `COURSE_TRANSLATION_AUTO_LANGUAGES` (Vorgabe leer) in den Compose-Dateien im Repo.
+- Drei Commits, je Minor-Version: (A) Modell + Migration + Kern + `CourseTranslationService` + Localizer/`lang`
+  + Werkzeug, (B) Aufträge + Worker + Sperrzeiten + Endpunkte, (C) Oberfläche. Version erst unmittelbar vor dem
+  Commit nach frischem `git fetch` vergeben; Changelog en+de.
+- **Nicht im Repo, erst nach Tag + Deploy und nur auf Zuruf**: Prod-`.env`
+  `COURSE_TRANSLATION_AUTO_LANGUAGES=de,en`, Anpassung `.jobs/spark-uebersetzung.sh` (Abschnitt 6).
+
 ## [~] Eigener Engine-Broker ausrollen — NPM-Custom-Location zuerst (2026-09-26)
 
 Der eigene Broker (0.537.0, `docs/eigener-engine-broker.md`, CLAUDE.md „Eigener Engine-Broker“) ist gebaut

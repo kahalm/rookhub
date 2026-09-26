@@ -141,3 +141,4 @@ public sealed class EngineBrokerFixture() : MariaDbClassFixture("brk", withApp: 
     }
 }
 public sealed class CommentSearchFixture() : MariaDbClassFixture("vec", withApp: false);
+public sealed class CourseTranslationFixture() : MariaDbClassFixture("ctr", withApp: false);

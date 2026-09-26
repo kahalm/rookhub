@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -23,17 +21,19 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class CommentTranslationService
 {
-    /// <summary>So viel von der Quelllaenge muss eine Uebersetzung mindestens haben. Deutsch ist
-    /// eher laenger als Englisch — liegt das Ergebnis deutlich darunter, fehlt Text.</summary>
-    public const double MinLengthShare = 0.7;
+    /// <summary>So viel von der Quelllaenge muss eine Uebersetzung mindestens haben (siehe
+    /// <see cref="CommentTranslator.MinLengthShare"/> — der Kern, den Partien und Kurse teilen).</summary>
+    public const double MinLengthShare = CommentTranslator.MinLengthShare;
 
-    /// <summary>So viele Zeichen gehen hoechstens in EINE Fuhre. Grosszuegig, weil die Einheitlichkeit
-    /// der Begriffe an der gemeinsamen Fuhre haengt; die Antwort ist etwa so lang wie die Vorlage.</summary>
-    public const int ChunkChars = 8000;
+    /// <summary>So viele Zeichen gehen hoechstens in EINE Fuhre (<see cref="CommentTranslator.ChunkChars"/>).</summary>
+    public const int ChunkChars = CommentTranslator.ChunkChars;
 
     private readonly AppDbContext _db;
     private readonly IClaudeJsonClient _claude;
     private readonly ILogger<CommentTranslationService> _logger;
+    /// <summary>Portionen, Auftrag, Figurenbuchstaben, Laengen- und Sprachpruefung — seit 0.547.0 in
+    /// <see cref="CommentTranslator"/>, mit dem Logger DIESES Dienstes (die Kategorie bleibt).</summary>
+    private readonly CommentTranslator _translator;
 
     public CommentTranslationService(AppDbContext db, IClaudeJsonClient claude,
         ILogger<CommentTranslationService> logger)
@@ -41,6 +41,7 @@ public class CommentTranslationService
         _db = db;
         _claude = claude;
         _logger = logger;
+        _translator = new CommentTranslator(claude, logger);
     }
 
     /// <summary>True, wenn ueberhaupt uebersetzt werden kann (<c>Anthropic:TextApiKey</c> gesetzt — nicht der Konto-Schluessel).</summary>
@@ -131,61 +132,11 @@ public class CommentTranslationService
                          .FirstOrDefault() ?? sets[0];
         if (source.Texts.Count == 0) return 0;
 
-        var translated = new Dictionary<int, string>();
-        foreach (var chunk in Chunks(source.Texts.OrderBy(t => t.Ply).ToList()))
-        {
-            var json = await _claude.TranslateCommentsJsonAsync(
-                SystemPrompt(source.Language, target), UserPrompt(chunk), ct);
-            if (json is null)
-            {
-                _logger.LogWarning("Uebersetzung der Partie {Id} nach {Lang} abgebrochen.",
-                    libraryGameId ?? analysisId, target);
-                return 0;   // lieber gar kein Satz als ein halber
-            }
-            foreach (var (ply, text) in Parse(json))
-                // Die Figurenbuchstaben stehen zwar im Auftrag, aber welcher Buchstabe zu welcher
-                // Figur gehoert, ist nichts, was ein Modell entscheiden muss — siehe PieceLetters.
-                translated[ply] = PieceLetters.Convert(text, source.Language, target);
-        }
-        if (translated.Count == 0) return 0;
-
-        // DIE LAENGE PRUEFEN, bevor irgendetwas gespeichert wird. Am 2026-09-11 an echten Partien
-        // erlebt: ein sparsameres Modell lieferte 18 bis 53 Prozent der Quelllaenge — Saetze mitten
-        // im Absatz abgeschnitten, und zwar lautlos. Struktur und Zuege stimmten dabei, es fehlte
-        // nur Prosa, und genau die ist die Lehre der Partie.
-        //
-        // Die Grenze liegt bei 70 Prozent und nicht hoeher, weil manche Quell-Saetze selbst noch
-        // zweisprachig sind: dort wirft die Uebersetzung die doppelte Haelfte zu Recht weg
-        // (gemessen 53 bis 55 Prozent). Lieber ein paar Faelle von Hand nachsehen als stumme
-        // Luecken im Bestand.
-        var quellLaenge = source.Texts.Sum(t => t.Text.Length);
-        var zielLaenge = translated.Values.Sum(t => t.Length);
-        if (quellLaenge > 0 && zielLaenge < quellLaenge * MinLengthShare)
-        {
-            _logger.LogWarning(
-                "Uebersetzung der Partie {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
-                libraryGameId ?? analysisId, target, zielLaenge * 100 / quellLaenge);
-            return 0;
-        }
-
-        // IST ES UEBERHAUPT DIE ZIELSPRACHE? Ist die Quelle mehrsprachig — und im Rohbestand ist sie
-        // das oft: eine franzoesische Anmerkung mit englischen Einschueben —, laesst ein Modell gern
-        // ganze Absaetze stehen, wie sie waren. Die Laengenpruefung sieht davon nichts: der Text IST
-        // ja da. Gemessen 2026-09-26 an Partie 129683: halb franzoesisch, halb englisch zurueck.
-        // Geprueft wird nur, wenn wir die Zielsprache an Funktionswoertern erkennen koennen, und es
-        // muss die BESTE Erklaerung fuer den Text sein — sonst reicht ein deutscher Halbsatz in einem
-        // franzoesischen Absatz.
-        if (CommentLanguage.MarkersOf(target).Length > 0)
-        {
-            var erkannt = CommentLanguage.Detect(string.Join(" ", translated.Values));
-            if (erkannt is not null && !string.Equals(erkannt.Split(',')[0], target, StringComparison.Ordinal))
-            {
-                _logger.LogWarning(
-                    "Uebersetzung der Partie {Id} nach {Lang} verworfen: liest sich als {Erkannt}.",
-                    libraryGameId ?? analysisId, target, erkannt);
-                return 0;
-            }
-        }
+        var translated = await _translator.TranslateAsync(
+            source.Texts.OrderBy(t => t.Ply).Select(t => (t.Ply, t.Text)).ToList(),
+            source.Language, target, TranslationSubject.Game, libraryGameId ?? analysisId, ct);
+        // null = abgebrochen/verworfen (der Kern hat es geloggt), leer = nichts Brauchbares — beides schreibt nichts.
+        if (translated is null || translated.Count == 0) return 0;
 
         var set = new CommentSet
         {
@@ -210,84 +161,4 @@ public class CommentTranslationService
     /// <summary>Womit uebersetzt wurde — steht an jedem Satz, damit ein spaeteres Modell gezielt
     /// nachbessern kann. Kommt vom Client, weil nur der weiss, was tatsaechlich gelaufen ist.</summary>
     public string ModelName => _claude.TranslationModel;
-
-    private static IEnumerable<List<CommentText>> Chunks(List<CommentText> texts)
-    {
-        var current = new List<CommentText>();
-        var size = 0;
-        foreach (var t in texts)
-        {
-            if (current.Count > 0 && size + t.Text.Length > ChunkChars)
-            {
-                yield return current;
-                current = [];
-                size = 0;
-            }
-            current.Add(t);
-            size += t.Text.Length;
-        }
-        if (current.Count > 0) yield return current;
-    }
-
-    private static string SystemPrompt(string from, string to) =>
-        $"""
-        You translate chess annotations from {from} to {to}.
-
-        Rules:
-        - Translate ONLY the prose. Leave every move, evaluation symbol and coordinate exactly as it
-          is ({FigurineNote(to)}). Never add, remove or reorder moves.
-        - Keep the author's voice: an annotation is a person explaining a game, not a report.
-        - Do not explain, summarise or improve. If a sentence is wrong, it stays wrong.
-        - Keep one entry per input entry, with the same ply number.
-        """;
-
-    /// <summary>Die Figurenbuchstaben sind sprachabhaengig — und das ist der Punkt, an dem eine
-    /// woertliche Uebersetzung die Zuege unlesbar machen wuerde.</summary>
-    private static string FigurineNote(string to) => to switch
-    {
-        "de" => "German piece letters: K D T L S",
-        "fr" => "French piece letters: R D T F C",
-        "es" => "Spanish piece letters: R D T A C",
-        "it" => "Italian piece letters: R D T A C",
-        "nl" => "Dutch piece letters: K D T L P",
-        "hu" => "Hungarian piece letters: K V B F H",
-        "hr" => "Croatian piece letters: K D T L S",
-        _ => "English piece letters: K Q R B N",
-    };
-
-    private static string UserPrompt(List<CommentText> chunk)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("{\"items\":[");
-        for (var i = 0; i < chunk.Count; i++)
-        {
-            sb.Append("  {\"ply\":").Append(chunk[i].Ply).Append(",\"text\":")
-              .Append(JsonSerializer.Serialize(chunk[i].Text)).Append('}');
-            sb.AppendLine(i + 1 < chunk.Count ? "," : "");
-        }
-        sb.AppendLine("]}");
-        return sb.ToString();
-    }
-
-    private static IEnumerable<(int Ply, string Text)> Parse(string json)
-    {
-        List<(int, string)> result = [];
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("items", out var items)) return result;
-            foreach (var item in items.EnumerateArray())
-            {
-                if (!item.TryGetProperty("ply", out var ply) || !item.TryGetProperty("text", out var text))
-                    continue;
-                var value = text.GetString();
-                if (!string.IsNullOrWhiteSpace(value)) result.Add((ply.GetInt32(), value));
-            }
-        }
-        catch (JsonException)
-        {
-            // Ein unlesbares Ergebnis ist dasselbe wie keines — der Aufrufer bricht ab.
-        }
-        return result;
-    }
 }

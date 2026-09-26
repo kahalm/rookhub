@@ -191,6 +191,11 @@ public class BookAdminService
         // stehen (der Bereich ist anonym erreichbar, ein geteiltes Puzzle sammelt viele) und die
         // Zähler-Abfrage lieferte für die tote Id weiter Treffer.
         _db.SharedPuzzleAttempts.RemoveRange(_db.SharedPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
+        // Kurs-Übersetzungen der Linien (CommentSets mit BookPuzzleId) und die Übersetzungsaufträge des Buchs.
+        // Beides hat Cascade-FKs — ausdrücklich trotzdem, weil InMemory nicht kaskadiert (siehe
+        // CourseTranslationCleanup; dort auch, warum die TEXTE in MariaDB dem Fremdschlüssel überlassen bleiben).
+        await CourseTranslationCleanup.RemoveForLinesAsync(_db, puzzleIds);
+        _db.CourseTranslationJobs.RemoveRange(_db.CourseTranslationJobs.Where(j => j.BookId == id));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
         // Roh-PGN (BookSource, Tabellensplitting) mit entfernen, OHNE den (mehrere MB großen) Text zu
