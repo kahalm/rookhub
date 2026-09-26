@@ -37,6 +37,10 @@ import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.se
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 
+/** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
+const RECAP_TRIES = 8;
+const RECAP_RETRY_MS = 15_000;
+
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
  * - <c>/g/:token</c>: die geteilte Partie, öffentlich, kein Login nötig (Route ohne <c>data.mode</c>);
@@ -141,6 +145,13 @@ import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.com
               }
             </div>
           </div>
+          <!-- „Kurz erzählt" (0.541.0): dieselbe Zeile wie in der Link-Vorschau, vom Sprachmodell aus der Analyse. -->
+          @if (recap(); as text) {
+            <p class="recap">
+              <mat-icon [matTooltip]="'games.recap.hint' | translate" [attr.aria-label]="'games.recap.hint' | translate">auto_stories</mat-icon>
+              <span>{{ text }}</span>
+            </p>
+          }
           <div class="body">
             <div class="board-section">
               <div class="board-wrap">
@@ -241,6 +252,14 @@ import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.com
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .result { color: #1976d2; font-weight: 600; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
+    /* Breite 0 + Mindestbreite 100 %: der Satz trägt nichts zur Breite der Karte bei — sie umschließt Brett und Zugliste,
+       ein langer Absatz dehnte sie sonst auf die ganze Seite. */
+    .recap {
+      width: 0; min-width: 100%; box-sizing: border-box; margin: 0 0 12px;
+      display: flex; gap: 8px; align-items: flex-start;
+      font-size: 0.92rem; line-height: 1.45; color: color-mix(in srgb, currentColor 82%, transparent);
+    }
+    .recap mat-icon { flex: 0 0 auto; font-size: 20px; width: 20px; height: 20px; margin-top: 1px; opacity: 0.6; }
     .original, .analyze { white-space: nowrap; }
     .body { display: flex; gap: 20px; align-items: flex-start; }
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -271,6 +290,7 @@ import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.com
       .viewer { width: auto; padding: 0; border-radius: 0; }
       .header { flex-direction: column; align-items: stretch; padding: 12px 16px; }
       .header-actions { flex-direction: column; align-items: stretch; }
+      .recap { padding: 0 16px; }
       .body { flex-direction: column; align-items: stretch; }
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
@@ -357,6 +377,36 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private reportedTotal = -1;
   /** Pfeil für den besten Zug, geliefert vom Rückblick (Schalter dort); im Training leer. */
   readonly bestArrows = signal<BoardArrow[]>([]);
+
+  /**
+   * „Kurz erzählt" (0.541.0) über der Partie. Der Teilen-Link bringt den Text gleich mit; die eigene Seite holt ihn, sobald
+   * die Analyse fertig ist — er entsteht dann gerade (oder, bei einer älteren Analyse, durch genau diesen Abruf), deshalb
+   * fragt sie ein paar Mal nach.
+   */
+  readonly recap = signal<string | null>(null);
+  private recapTries = 0;
+  private recapTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly loadRecap = effect(() => {
+    if (this.reviewStatus() !== 'done') return;
+    untracked(() => {
+      if (this.own && this.gameId && !this.recap() && this.recapTries === 0) this.fetchRecap();
+    });
+  });
+  private readonly stopRecapOnDestroy = inject(DestroyRef).onDestroy(() => {
+    if (this.recapTimer) clearTimeout(this.recapTimer);
+  });
+
+  private fetchRecap(): void {
+    if (!this.gameId) return;
+    this.recapTries++;
+    this.games.recap(this.gameId).subscribe({
+      next: r => {
+        if (r.text) { this.recap.set(r.text); return; }
+        if (r.pending && this.recapTries < RECAP_TRIES) this.recapTimer = setTimeout(() => this.fetchRecap(), RECAP_RETRY_MS);
+      },
+      error: () => { /* ohne Nacherzählung bleibt die Seite wie bisher */ },
+    });
+  }
 
   /**
    * Zugliste und Kurve laufen mit: je Aufgabe springt die Partie auf die Stellung VOR dem Fehler — man
@@ -571,6 +621,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   private show(g: SharedGame): void {
     this.game = g;
+    this.recap.set(g.recap ?? null);
     this.ownerSide.set(g.ownerSide ?? null);
     // Aus der Sicht des Besitzers: spielte er Schwarz, startet das Brett gedreht (Flip-Knopf bleibt).
     this.flipped = g.ownerSide === 'black';

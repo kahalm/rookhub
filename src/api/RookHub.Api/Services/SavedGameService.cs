@@ -369,6 +369,7 @@ public class SavedGameService
             BlackElo = ParseEloHeader(g.Pgn, "BlackElo"),
             OwnerSide = DetermineOwnerSide(g, profile),
             OwnGameId = callerUserId is int caller && caller == g.UserId ? g.Id : null,
+            Recap = (await GameRecapService.CurrentAsync(_db, g.Id, g.ReviewLanguage))?.Text,
         };
     }
 

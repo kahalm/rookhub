@@ -71,6 +71,8 @@ export interface SharedGame {
   ownerSide?: 'white' | 'black' | null;
   /** Nur für den angemeldeten BESITZER: die Id seiner Partie — die Seite wechselt dann auf `/games/{id}`. */
   ownGameId?: number | null;
+  /** „Kurz erzählt" (0.541.0): die Partie in zwei, drei Sätzen — dieselbe Zeile steht in der Link-Vorschau. */
+  recap?: string | null;
 }
 
 /** Antwort auf „Partie analysieren" (`POST …/analyze`): neu eingereiht oder wiederverwendet. */
@@ -115,6 +117,18 @@ export interface GameRoasts {
   /** Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu roasten. */
   hasAnalysis: boolean;
   items: GameRoast[];
+}
+
+/** „Kurz erzählt" (0.541.0) — die Nacherzählung einer eigenen Partie. */
+export interface GameRecap {
+  /** Ein Sprachmodell auf eigener Hardware ist eingerichtet. */
+  available: boolean;
+  /** Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu erzählen. */
+  hasAnalysis: boolean;
+  text?: string | null;
+  language?: string | null;
+  /** Fehlt noch, entsteht aber gerade (von diesem Aufruf angestoßen) — später nachfragen. */
+  pending: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -183,6 +197,11 @@ export class GamesService {
   /** Würfeln — ersetzt den vorigen Text desselben Stils. Dauert ein paar Sekunden (Sprachmodell auf der Spark). */
   roast(id: number, style: RoastStyle, lang: string): Observable<GameRoast> {
     return this.http.post<GameRoast>(`/api/games/${id}/roasts`, {}, { params: { style, lang } });
+  }
+
+  /** „Kurz erzählt" (0.541.0) der eigenen Partie. Fehlt sie bei fertiger Analyse, stößt schon der Abruf sie an. */
+  recap(id: number): Observable<GameRecap> {
+    return this.http.get<GameRecap>(`/api/games/${id}/recap`);
   }
 
   /** Erzeugen anstoßen (nur der Besitzer; läuft im Hintergrund, der Client fragt nach). */

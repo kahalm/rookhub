@@ -24,6 +24,7 @@ public class GameAnalysisServiceTests : IDisposable
     {
         public List<(int AnalysisId, bool Refined)> Calls { get; } = new();
         public void Schedule(int analysisId, bool refined) => Calls.Add((analysisId, refined));
+        public void ScheduleRecap(int savedGameId) { }
     }
 
     public GameAnalysisServiceTests()

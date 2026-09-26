@@ -432,6 +432,72 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance.notFound).toBeTrue();
     expect(fixture.componentInstance.notFoundKey).toBe('games.loadError');
   });
+  // ----- „Kurz erzählt" (0.541.0) -----
+
+  it('shows the recap the share link brings along — and does not ask for it again', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush({ ...sharedGame('white'), recap: 'b gewinnt nach 1...c5.' });
+    fixture.detectChanges();
+
+    const recap = fixture.nativeElement.querySelector('p.recap') as HTMLElement;
+    expect(recap.textContent).toContain('b gewinnt nach 1...c5.');
+    fixture.componentInstance.reviewStatus.set('done');
+    fixture.detectChanges();
+    http.expectNone(req => req.url.endsWith('/recap'));
+  });
+
+  it('own mode: fetches the recap once the analysis is done and asks again while it is being written', async () => {
+    const { fixture, http } = await setup(true, true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush({
+      id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', shareToken: 'tok4', moveCount: 2,
+      pgn: '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1', createdAt: '2026-07-16T00:00:00Z', ownerSide: 'black',
+    });
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    http.expectNone('/api/games/4/recap');   // vor der fertigen Analyse gibt es nichts zu erzählen
+
+    jasmine.clock().install();
+    try {
+      page.reviewStatus.set('done');
+      fixture.detectChanges();
+      http.expectOne('/api/games/4/recap').flush({ available: true, hasAnalysis: true, text: null, pending: true });
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('p.recap')).toBeNull();
+
+      jasmine.clock().tick(15_000);
+      http.expectOne('/api/games/4/recap').flush({ available: true, hasAnalysis: true, text: 'b gewinnt nach 1...c5.', pending: false });
+      fixture.detectChanges();
+      expect((fixture.nativeElement.querySelector('p.recap') as HTMLElement).textContent).toContain('b gewinnt nach 1...c5.');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('own mode: no model on our own hardware — asks once, then leaves it', async () => {
+    const { fixture, http } = await setup(true, true);
+    fixture.detectChanges();
+    http.expectOne('/api/games/4').flush({
+      id: 4, source: 'lichess', white: 'a', black: 'b', result: '0-1', shareToken: 'tok4', moveCount: 2,
+      pgn: '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1', createdAt: '2026-07-16T00:00:00Z',
+    });
+    jasmine.clock().install();
+    try {
+      fixture.componentInstance.reviewStatus.set('done');
+      fixture.detectChanges();
+      http.expectOne('/api/games/4/recap').flush({ available: false, hasAnalysis: true, text: null, pending: false });
+      jasmine.clock().tick(60_000);
+      fixture.componentInstance.reviewStatus.set('running');
+      fixture.detectChanges();
+      fixture.componentInstance.reviewStatus.set('done');
+      fixture.detectChanges();
+      http.expectNone('/api/games/4/recap');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
   // Gewuenscht 2026-09-24: „Eigene Fehler nachspielen" auf dem Brett der Seite statt in einem Dialog mit eigenem Brett.
   it('replays the mistakes on the page board — no dialog, tap zones gone, the move list follows the task', async () => {
     const { fixture, http } = await setup();

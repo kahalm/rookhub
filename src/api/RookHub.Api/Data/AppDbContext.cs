@@ -130,6 +130,7 @@ public class AppDbContext : DbContext
     public DbSet<GameAnalysisPosition> GameAnalysisPositions => Set<GameAnalysisPosition>();
     public DbSet<GameMoveExplanation> GameMoveExplanations => Set<GameMoveExplanation>();
     public DbSet<GameRoast> GameRoasts => Set<GameRoast>();
+    public DbSet<GameRecap> GameRecaps => Set<GameRecap>();
     public DbSet<CommentEmbedding> CommentEmbeddings => Set<CommentEmbedding>();
     public DbSet<GuessSession> GuessSessions => Set<GuessSession>();
     public DbSet<GuessMove> GuessMoves => Set<GuessMove>();
@@ -1525,6 +1526,18 @@ public class AppDbContext : DbContext
         {
 
             e.HasIndex(x => new { x.SavedGameId, x.Language, x.Style }).IsUnique();
+
+            e.HasOne(x => x.SavedGame).WithMany().HasForeignKey(x => x.SavedGameId).OnDelete(DeleteBehavior.Cascade);
+
+        });
+
+        // Kurz erzaehlt (0.541.0): je Partie und Sprache EIN Text fuer Link-Vorschau + Partieseite; geht mit der Partie.
+
+        modelBuilder.Entity<GameRecap>(e =>
+
+        {
+
+            e.HasIndex(x => new { x.SavedGameId, x.Language }).IsUnique();
 
             e.HasOne(x => x.SavedGame).WithMany().HasForeignKey(x => x.SavedGameId).OnDelete(DeleteBehavior.Cascade);
 

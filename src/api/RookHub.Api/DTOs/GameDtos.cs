@@ -166,6 +166,11 @@ public class SharedGameDto
     /// eigenen Teilen-Link, wechselt die Seite damit auf <c>/games/{id}</c> und sieht dasselbe wie ueber die
     /// Partienliste (gewuenscht 2026-09-24). Fremden und anonymen Aufrufern bleibt die Id verborgen.</summary>
     public int? OwnGameId { get; set; }
+
+    /// <summary>„Kurz erzählt" (0.541.0): die Partie in zwei, drei Sätzen, vom Sprachmodell aus der Analyse des Besitzers
+    /// geschrieben (<see cref="Services.GameRecapService"/>) — dieselbe Zeile steht in der Link-Vorschau. <c>null</c>, solange
+    /// es keine gibt.</summary>
+    public string? Recap { get; set; }
 }
 
 /// <summary>Rumpf von „Partie analysieren" (0.540.0, optional): die Sprache der Seite — darin entstehen nach der
@@ -333,4 +338,19 @@ public class GameRoastDto
     public string Language { get; set; } = "en";
     public string Text { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>„Kurz erzählt" (0.541.0) — die Nacherzählung einer eigenen Partie (<c>GET /api/games/{id}/recap</c>); dieselbe
+/// steht in der Link-Vorschau des Teilen-Links und in <see cref="SharedGameDto.Recap"/>.</summary>
+public class GameRecapDto
+{
+    /// <summary>Ein Modell auf eigener Hardware ist eingerichtet.</summary>
+    public bool Available { get; set; }
+    /// <summary>Die Partie hat eine fertige Analyse — ohne sie gibt es nichts zu erzählen.</summary>
+    public bool HasAnalysis { get; set; }
+    public string? Text { get; set; }
+    public string? Language { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    /// <summary>Der Text fehlt noch, entsteht aber gerade (von diesem Aufruf angestoßen) — die Seite fragt später nach.</summary>
+    public bool Pending { get; set; }
 }

@@ -2473,6 +2473,9 @@
     "shared": {
       "notFound": "Ova dijeljena partija ne postoji ili je uklonjena."
     },
+    "recap": {
+      "hint": "Ukratko — napisala umjetna inteligencija na temelju analize enginea; isti tekst prikazuje se i u pregledu poveznice."
+    },
     "roast": {
       "menu": "Roast my game",
       "title": "Roast my game",

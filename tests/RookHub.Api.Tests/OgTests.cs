@@ -1,4 +1,5 @@
 using RookHub.Api.Controllers;
+using RookHub.Api.DTOs;
 using RookHub.Api.Services.Og;
 
 namespace RookHub.Api.Tests;
@@ -76,6 +77,66 @@ public class OgTests
         var a = svc.RenderBoard(StartFen);
         var b = svc.RenderBoard(StartFen);
         Assert.Same(a, b);
+    }
+
+    // ── Bewertungskurve im Vorschaubild (0.541.0) ────────────────────────────────────────────────
+
+    private static GameEvalsDto Evals(string status = "done") => new()
+    {
+        Status = status, Total = 4, AnalysisId = 17, Refined = 3,
+        Plies =
+        {
+            new GameEvalPlyDto { Ply = 0, Cp = 30 },
+            new GameEvalPlyDto { Ply = 1, Cp = -250 },
+            // Halbzug 2 nicht gerechnet → Lücke
+            new GameEvalPlyDto { Ply = 3, Cp = 1500 },
+        },
+        Final = new GameEvalScoreDto { Mate = -2 },
+    };
+
+    [Fact]
+    public void CurveOf_DoneAnalysis_LinearToTenPawns_MateAtTheEdge_GapsStayGaps()
+    {
+        Assert.Equal(new double?[] { 51.5, 37.5, null, 100, 0 }, OgMetaService.CurveOf(Evals()));
+        Assert.Equal("17-3", OgMetaService.CurveVersion(Evals()));
+    }
+
+    [Theory]
+    [InlineData("running")]
+    [InlineData("pending")]
+    [InlineData("none")]
+    public void CurveOf_NoFinishedAnalysis_NoCurve_NoNewImageAddress(string status)
+    {
+        // Eine halbe Kurve sähe im geteilten Bild wie das Ende der Partie aus.
+        Assert.Null(OgMetaService.CurveOf(Evals(status)));
+        Assert.Null(OgMetaService.CurveVersion(Evals(status)));
+    }
+
+    [Fact]
+    public void RenderBoard_WithCurve_IsAValidPng_DiffersFromTheBoardAlone_AndIsCachedPerCurve()
+    {
+        var svc = new OgImageService(new TestLogger<OgImageService>());
+        var curve = OgMetaService.CurveOf(Evals());
+        var plain = svc.RenderBoard(StartFen);
+        var withCurve = svc.RenderBoard(StartFen, curve: curve);
+        var otherCurve = svc.RenderBoard(StartFen, curve: new double?[] { 50, 90, 10 });
+
+        Assert.Equal(PngSignature, withCurve[..PngSignature.Length]);
+        Assert.NotEqual(plain, withCurve);
+        Assert.NotEqual(withCurve, otherCurve);
+        Assert.Same(withCurve, svc.RenderBoard(StartFen, curve: OgMetaService.CurveOf(Evals())));
+    }
+
+    [Fact]
+    public void SmoothPath_GoesThroughEveryPoint_AndNeverOvershootsAnExtreme()
+    {
+        var points = new[] { new SkiaSharp.SKPoint(0, 50), new SkiaSharp.SKPoint(10, 10), new SkiaSharp.SKPoint(20, 10), new SkiaSharp.SKPoint(30, 90) };
+        using var path = OgImageService.SmoothPath(points);
+
+        Assert.Equal(points[^1], path.LastPoint);
+        // Monoton: die Kurve bleibt im Band der Punkte (10..90), rundet aber zwischen ihnen.
+        Assert.InRange(path.TightBounds.Top, 9.99f, 10.01f);
+        Assert.InRange(path.TightBounds.Bottom, 89.99f, 90.01f);
     }
 
     // ── Zwei Seiten, zwei Shells (RookHub + turnier.oberschmid.homes) ──────────────────────────

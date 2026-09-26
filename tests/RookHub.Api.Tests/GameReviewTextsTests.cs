@@ -9,8 +9,9 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Tests;
 
 /// <summary>
-/// Texte zur Partie direkt nach der Analyse (0.540.0): erst die Fehler-Erklärungen aus Sicht des Besitzers, dann die
-/// drei Roasts — in der Sprache der Partie, nach der Vertiefung die Erklärungen noch einmal.
+/// Texte zur Partie direkt nach der Analyse (0.540.0): die Nacherzählung (0.541.0), dann die Fehler-Erklärungen aus Sicht
+/// des Besitzers, dann die drei Roasts — in der Sprache der Partie, nach der Vertiefung Nacherzählung und Erklärungen noch
+/// einmal.
 /// </summary>
 public class GameReviewTextsTests : IDisposable
 {
@@ -38,9 +39,12 @@ public class GameReviewTextsTests : IDisposable
         {
             Calls.Add((purpose, system, userPrompt));
             // Keine Züge im Text — so besteht jede Antwort die Prüfung auf erfundene Züge.
-            return Task.FromResult<string?>(purpose == "roast"
-                ? "{\"roast\":\"Roast " + Calls.Count + "\"}"
-                : "{\"explanation\":\"Erklärung " + Calls.Count + "\"}");
+            return Task.FromResult<string?>(purpose switch
+            {
+                "roast" => "{\"roast\":\"Roast " + Calls.Count + "\"}",
+                "recap" => "{\"recap\":\"Nacherzählung " + Calls.Count + "\"}",
+                _ => "{\"explanation\":\"Erklärung " + Calls.Count + "\"}",
+            });
         }
     }
 
@@ -50,6 +54,7 @@ public class GameReviewTextsTests : IDisposable
 
     private GameReviewTexts Service() => new(_db, Explanations(),
         new GameRoastService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRoastService>.Instance),
+        new GameRecapService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRecapService>.Instance),
         _jobs, NullLogger<GameReviewTexts>.Instance);
 
     // Schäfermatt: 3…Sf6?? ist der einzige Fehler — ein Zug von SCHWARZ.
@@ -99,16 +104,19 @@ public class GameReviewTextsTests : IDisposable
     }
 
     [Fact]
-    public async Task AfterTheAnalysis_FirstTheExplanationsFromTheOwnersView_ThenTheThreeRoasts()
+    public async Task AfterTheAnalysis_TheRecap_ThenTheExplanationsFromTheOwnersView_ThenTheThreeRoasts()
     {
         var (_, gameId, analysisId) = await SeedAsync(ownerSide: "white", reviewLanguage: "de");
 
         await Service().WriteAsync(analysisId, refined: false, CancellationToken.None);
 
-        Assert.Equal(["explanation", "roast", "roast", "roast"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Equal(["recap", "explanation", "roast", "roast", "roast"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Contains("Write in German", _llm.Calls[0].System);
+        var recap = await _db.GameRecaps.SingleAsync();
+        Assert.Equal((gameId, "de", "Nacherzählung 1"), (recap.SavedGameId, recap.Language, recap.Text));
         // Der Fehler ist der des GEGNERS: der Besitzer (Weiß) liest „dein Gegner", nicht „dein Zug".
-        Assert.Contains("reader's OPPONENT (Black)", _llm.Calls[0].User);
-        Assert.Contains("Explain in German", _llm.Calls[0].System);
+        Assert.Contains("reader's OPPONENT (Black)", _llm.Calls[1].User);
+        Assert.Contains("Explain in German", _llm.Calls[1].System);
         var explanation = await _db.GameMoveExplanations.SingleAsync();
         Assert.Equal(("de", "white", 5), (explanation.Language, explanation.Viewpoint, explanation.Ply));
 
@@ -118,11 +126,11 @@ public class GameReviewTextsTests : IDisposable
 
         // Ein zweiter Anstoß schreibt nichts doppelt.
         await Service().WriteAsync(analysisId, refined: false, CancellationToken.None);
-        Assert.Equal(4, _llm.Calls.Count);
+        Assert.Equal(5, _llm.Calls.Count);
     }
 
     [Fact]
-    public async Task AfterRefining_TheExplanationsAreRewrittenInEveryLanguage_TheRoastsStay()
+    public async Task AfterRefining_RecapAndExplanationsAreRewrittenInEveryLanguage_TheRoastsStay()
     {
         var (_, _, analysisId) = await SeedAsync(reviewLanguage: "de");
         await Service().WriteAsync(analysisId, refined: false, CancellationToken.None);
@@ -133,11 +141,14 @@ public class GameReviewTextsTests : IDisposable
         });
         await _db.SaveChangesAsync();
         var roastTexts = await _db.GameRoasts.OrderBy(r => r.Style).Select(r => r.Text).ToListAsync();
+        (await _db.GameRecaps.SingleAsync()).Text = "alt";
+        await _db.SaveChangesAsync();
         _llm.Calls.Clear();
 
         await Service().WriteAsync(analysisId, refined: true, CancellationToken.None);
 
-        Assert.Equal(["explanation", "explanation"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Equal(["recap", "explanation", "explanation"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Equal("Nacherzählung 1", (await _db.GameRecaps.AsNoTracking().SingleAsync()).Text);   // neu geschrieben
         var rows = await _db.GameMoveExplanations.AsNoTracking().OrderBy(e => e.Language).ToListAsync();
         Assert.Equal(["de", "en"], rows.Select(r => r.Language));
         Assert.DoesNotContain(rows, r => r.Text == "old en");
@@ -149,13 +160,14 @@ public class GameReviewTextsTests : IDisposable
     {
         var (userId, _, first) = await SeedAsync(reviewLanguage: null);
         await Service().WriteAsync(first, refined: false, CancellationToken.None);
-        Assert.Contains("Explain in English", _llm.Calls[0].System);
+        Assert.Contains("Explain in English", _llm.Calls[1].System);
 
         await SeedAsync(reviewLanguage: "hr", link: false, userId: userId);   // von der Seite analysiert, in Kroatisch
         var (_, _, third) = await SeedAsync(reviewLanguage: null, userId: userId);   // über die Erweiterung
         _llm.Calls.Clear();
         await Service().WriteAsync(third, refined: false, CancellationToken.None);
-        Assert.Contains("Explain in Croatian", _llm.Calls[0].System);
+        Assert.Contains("Write in Croatian", _llm.Calls[0].System);
+        Assert.Contains("Explain in Croatian", _llm.Calls[1].System);
         Assert.All(await _db.GameRoasts.Where(r => r.SavedGame!.GameAnalysisId == third).ToListAsync(), r => Assert.Equal("hr", r.Language));
     }
 
@@ -167,7 +179,7 @@ public class GameReviewTextsTests : IDisposable
 
         await Service().WriteAsync(analysisId, refined: false, CancellationToken.None);
 
-        Assert.Equal(["roast", "roast", "roast"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Equal(["recap", "roast", "roast", "roast"], _llm.Calls.Select(c => c.Purpose));
         Assert.True(_jobs.IsRunning(analysisId, "de"));   // der fremde Lauf wird nicht beendet
     }
 
@@ -187,6 +199,27 @@ public class GameReviewTextsTests : IDisposable
         await Service().WriteAsync(done, refined: false, CancellationToken.None);
 
         Assert.Empty(_llm.Calls);
+        Assert.Empty(_db.GameMoveExplanations);
+        Assert.Empty(_db.GameRoasts);
+        Assert.Empty(_db.GameRecaps);
+    }
+
+    [Fact]
+    public async Task OlderAnalysis_OnlyTheRecapIsWrittenLater_Once_AndNotWhileAnotherRunHoldsIt()
+    {
+        var (_, gameId, _) = await SeedAsync(reviewLanguage: "de");
+
+        // Der Lauf nach der Analyse hält gerade dieselbe Nacherzählung — der Nachtrag beim Öffnen wartet nicht, er lässt sie.
+        Assert.True(_jobs.TryStart(gameId, "recap:de"));
+        await Service().WriteRecapAsync(gameId, CancellationToken.None);
+        Assert.Empty(_llm.Calls);
+        _jobs.Finish(gameId, "recap:de");
+
+        await Service().WriteRecapAsync(gameId, CancellationToken.None);
+        await Service().WriteRecapAsync(gameId, CancellationToken.None);
+
+        Assert.Equal(["recap"], _llm.Calls.Select(c => c.Purpose));
+        Assert.Equal("de", (await _db.GameRecaps.SingleAsync()).Language);
         Assert.Empty(_db.GameMoveExplanations);
         Assert.Empty(_db.GameRoasts);
     }

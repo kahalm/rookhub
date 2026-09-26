@@ -2473,6 +2473,9 @@
     "shared": {
       "notFound": "This shared game does not exist or was removed."
     },
+    "recap": {
+      "hint": "In brief — written by the AI from the engine analysis; the link preview shows the same lines."
+    },
     "roast": {
       "menu": "Roast my game",
       "title": "Roast my game",

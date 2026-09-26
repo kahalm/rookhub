@@ -2473,6 +2473,9 @@
     "shared": {
       "notFound": "Diese geteilte Partie existiert nicht oder wurde entfernt."
     },
+    "recap": {
+      "hint": "Kurz erzählt — von der KI aus der Engine-Analyse geschrieben; so steht die Partie auch in der Link-Vorschau."
+    },
     "roast": {
       "menu": "Roast my game",
       "title": "Roast my game",

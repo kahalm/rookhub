@@ -469,6 +469,7 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/games/shared/{token}/explanations?lang=` | AllowAnonymous | Dasselbe lesend für den Teilen-Link (`canGenerate` immer false) |
 | GET | `/api/games/{id}/roasts?lang=` | Auth | „Roast my game" (0.535.0): die gewürfelten Kommentare der eigenen Partie `{ available, hasAnalysis, items[{ style, language, text, createdAt }] }`; 404 fremde Partie |
 | POST | `/api/games/{id}/roasts?style=&lang=` | Auth | Würfeln (ersetzt den vorigen Text desselben Stils; `style` ∈ friendly/cheeky/russian). Absagen mit `reason`: 503 notConfigured, 404 notFound, 409 noAnalysis, 400 invalidStyle, 429 dailyLimit (`MaxPerDay` 60), 502 failed |
+| GET | `/api/games/{id}/recap` | Auth | „Kurz erzählt" (0.541.0): die Nacherzählung der eigenen Partie `{ available, hasAnalysis, text?, language?, createdAt?, pending }`. Fehlt sie bei fertiger Analyse (Analyse von vor 0.541.0, gescheiterter Lauf), stößt schon dieser Abruf sie im Hintergrund an (`pending: true`, die Seite fragt alle 15 s nach, höchstens achtmal); 404 fremde Partie. Der Teilen-Link bekommt denselben Text als `recap` in `GET /api/games/shared/{token}` |
 
 **„Warum war das ein Fehler?" (0.534.0, `GameMoveExplanationService`).** Zu jedem Fehler der verknüpften Analyse
 (Ungenauigkeit/Fehler/grober Fehler/verpasste Chance, die schwersten `MaxPerGame` = 15) schreibt das Sprachmodell auf
@@ -490,8 +491,8 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   (legt der Besitzer später eine andere Seite fest, erscheint der Knopf wieder), `GenerateAsync` räumt die der alten weg.
   Migration `ExplanationViewpoint` hat alle Texte von vorher gelöscht.
 * **Entstehen von selbst** (0.540.0, `GameReviewTexts` + `IGameReviewTextScheduler`): die Pumpe (`GameAnalysisService`)
-  stößt nach dem ersten Durchgang (`Done`) und nach der Vertiefung (`RefinedAt`) je EINMAL an — erst die Erklärungen, dann
-  die drei Roasts (nur fehlende, `GameRoast.Automatic`, nicht im Tagesdeckel). Nach der Vertiefung werden die Erklärungen in
+  stößt nach dem ersten Durchgang (`Done`) und nach der Vertiefung (`RefinedAt`) je EINMAL an — seit 0.541.0 zuerst die
+  Nacherzählung („Kurz erzählt", unten), dann die Erklärungen, dann die drei Roasts (nur fehlende, `GameRoast.Automatic`, nicht im Tagesdeckel). Nach der Vertiefung werden die Erklärungen in
   JEDER vorhandenen Sprache neu geschrieben (Bestzug/Klasse können sich verschieben). Nur für die mit dem BESITZER der
   Analyse verknüpfte Partie. Sprache: `SavedGame.ReviewLanguage` (die Seite schickt `{ lang }` mit „Partie analysieren"),
   sonst die jüngste gemerkte des Nutzers, sonst `en`. Die Pumpe kennt nur die Schnittstelle — die Texte hängen über
@@ -510,6 +511,30 @@ Widerlegung (`GameMistakes`); genannte Züge müssen in der Partie oder diesen L
 (`GameMoveExplanationService.MentionsOnly`, eine Nachfrage). Synchron (ein Aufruf, Sekunden), je Partie/Sprache/Stil ein
 Text („Neu würfeln" ersetzt), `MaxPerDay` 60 je Nutzer. Nichts wird automatisch veröffentlicht: Kopieren (mit Partie-Link)
 bzw. Teilen-Blatt des Geräts.
+
+**„Kurz erzählt" (0.541.0, `GameRecapService`).** Die Partie in zwei, drei Sätzen für die Link-Vorschau
+(og:description von `/g/{token}` statt „1-0 · lichess · Partie auf RookHub nachspielen") und oben auf der Partieseite —
+geschrieben vom Modell auf eigener Hardware (`IsLocal`), im Muster des Roasts. Regeln:
+* **Fakten aus der Kurve** (`Course`): die Lage NACH jedem Halbzug in fünf Stufen aus der Gewinnchance von Weiß
+  (≥ 80 gewinnt, ≥ 60 besser, > 40 ausgeglichen, gespiegelt), zu Abschnitten zusammengefasst („after 13.Nxe5: Black is
+  winning"); ein Abschnitt aus EINEM Halbzug zwischen zwei gleichen fällt weg (Schlagen vor dem Zurückschlagen), mehr als
+  `MaxCourseSegments` (8) = Anfang + die letzten. Dazu Kopfdaten, Eröffnungsname aus `[Opening]` bzw. chess.coms
+  `[ECOUrl]`, die ersten zehn Halbzüge, Genauigkeit, die drei schwersten Fehler/Misses beider Seiten mit NUMMERIERTEM
+  Bestzug und Widerlegung (`Numbered`), das Ende (Matt auf dem Brett > `[Termination]` außer „Normal" > nur das Ergebnis).
+* **Dritte Person mit Namen** — den Text liest, wer den Link bekommt. Genannte Züge müssen in der Partie oder den
+  Engine-Linien stehen (`MentionsOnly`, eine Nachfrage, sonst kein Text); **danach** stellt `PieceLetters.Convert` die
+  Figurenbuchstaben auf die Sprache des Textes um (geprüft wird in englischer SAN, so stehen die Züge in den Fakten).
+* **Speicher je Partie und Sprache** (`GameRecaps`, geht mit der Partie). Gezeigt wird überall DERSELBE Text
+  (`GameRecapService.CurrentAsync`): der in der Sprache der Partie (`SavedGame.ReviewLanguage`), sonst der jüngste.
+* **Entsteht von selbst**: `GameReviewTexts` schreibt ihn als ERSTES nach der Analyse (ein Aufruf, und wer gleich teilt,
+  hat ihn schon), nach der Vertiefung in jeder vorhandenen Sprache neu (`replace`). Für ältere Analysen stößt
+  `GET /api/games/{id}/recap` ihn an (`IGameReviewTextScheduler.ScheduleRecap` → `WriteRecapAsync`). Doppelt gleichzeitig
+  verhindert `GameExplanationJobs` mit dem Schlüssel (Partie-Id, `recap:<lang>`). Kein Knopf, kein Tagesdeckel.
+* **Vorschaubild mit Kurve** (`OgImageService.RenderBoard(fen, flip, curve)`): mit FERTIGER Analyse rückt das Brett nach
+  links, rechts die Kurve wie `EvalGraphComponent` (Lichess-Fläche von der Mittellinie, monotone kubische Glättung,
+  linear bis ±10 Bauern, Matt am Rand; Lücken übernehmen den Wert davor), weiter ohne Schrift. Weil das Bild
+  `immutable` gecacht ist und Discord & Co. Bilder nach der ADRESSE merken, trägt og:image dann `?v={analysisId}-{refined}`
+  (`OgMetaService.CurveVersion`). Eine halbe Kurve (Analyse läuft) kommt nicht ins Bild.
 
 **Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)
 wirft die Partie über denselben Weg wie die Punktepartie-Seite ein (`GameAnalysisService.CreateForGuessAsync`:
@@ -2706,6 +2731,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie — getrennt vom PGN, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade, genau EINES von beiden), Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** |
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug), Text (LONGTEXT); **UNIQUE (CommentSetId, Ply)** |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
+| GameRecaps | „Kurz erzählt" (0.541.0): je Partie und Sprache EINE Nacherzählung für Link-Vorschau + Partieseite (`GameRecapService`) | SavedGameId (Cascade), Language (≤8), Text (≤1000; der Dienst lässt höchstens 600 zu), Model? (≤80), CreatedAt; **UNIQUE (SavedGameId, Language)** |
 | GameRoasts | „Roast my game" (0.535.0): je eigener Partie, Sprache und Stil der zuletzt gewürfelte Kommentar (`GameRoastService`) | SavedGameId (Cascade), Style (≤12), Language (≤8), Text (≤2000), Model? (≤80), **Automatic (nach der Analyse von selbst geschrieben, 0.540.0 — zählt nicht im Tagesdeckel, „Neu würfeln" setzt false)**, CreatedAt; **UNIQUE (SavedGameId, Language, Style)** |
 | CommentEmbeddings | „Frag die Kommentare" (0.536.0): Kommentar-Stück einer Bibliothekspartie + Vektor | LibraryGameId (Cascade, Index), FromPly/ToPly, Text (≤1600, zugleich der Auszug), **Vector (`VECTOR(512)`, Kosinus-Index per SQL)**, Model? (≤80), CreatedAt |
 | GameMoveExplanations | „Warum war das ein Fehler?" (0.534.0): ein Text je Analyse, Halbzug und Sprache, geschrieben vom Sprachmodell auf eigener Hardware (`GameMoveExplanationService`) | GameAnalysisId (Cascade), Ply, Language (≤8), Class (≤12: inaccuracy/mistake/blunder/miss), **Viewpoint (≤5: white/black = Seite des Besitzers, leer = neutral; 0.540.0)**, Text (≤1200), Model? (≤80), CreatedAt; **UNIQUE (GameAnalysisId, Ply, Language)** |

@@ -2737,6 +2737,9 @@
     "shared": {
       "notFound": "Ez a megosztott játszma nem létezik, vagy eltávolították."
     },
+    "recap": {
+      "hint": "Röviden — a mesterséges intelligencia írta a gépi elemzés alapján; a link előnézete ugyanezt mutatja."
+    },
     "roast": {
       "menu": "Roast my game",
       "title": "Roast my game",

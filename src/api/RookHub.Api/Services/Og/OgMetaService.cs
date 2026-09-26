@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Chess;
+using RookHub.Api.DTOs;
 using RookHub.Api.Validation;
 
 namespace RookHub.Api.Services.Og;
@@ -7,8 +8,9 @@ namespace RookHub.Api.Services.Og;
 /// <summary>Auflösung einer öffentlichen Route zu Open-Graph-Metadaten + der zu rendernden Brett-FEN.</summary>
 public record OgPage(string Title, string Description, string ImageUrl, string CanonicalUrl, string Type = "website");
 
-/// <summary>Die für das Brett-Bild aufgelöste Stellung (FEN + Perspektive).</summary>
-public record OgBoard(string Fen, bool Flip);
+/// <summary>Die für das Brett-Bild aufgelöste Stellung (FEN + Perspektive), bei einer analysierten Partie dazu die
+/// Bewertungskurve (<see cref="OgMetaService.CurveOf"/>).</summary>
+public record OgBoard(string Fen, bool Flip, IReadOnlyList<double?>? Curve = null);
 
 /// <summary>
 /// Liest aus einer öffentlichen SPA-Route (<c>/g/{token}</c>, <c>/puzzles/*</c>, <c>/t/{id}</c>) die Daten
@@ -86,7 +88,12 @@ public class OgMetaService
                     if (!string.IsNullOrWhiteSpace(g.Result)) descParts.Add(g.Result!);
                     if (!string.IsNullOrWhiteSpace(g.Source)) descParts.Add(g.Source!);
                     descParts.Add("Partie auf RookHub nachspielen");
-                    return new OgPage(title, string.Join(" · ", descParts), img, canonical, "article");
+                    // „Kurz erzählt" (0.541.0) statt der dürren Kopfzeile, sobald es die Nacherzählung gibt.
+                    var description = string.IsNullOrWhiteSpace(g.Recap) ? string.Join(" · ", descParts) : g.Recap!;
+                    // Mit der Analyse bekommt das Bild die Kurve — unter NEUER Adresse: das Bild ist „immutable" gecacht,
+                    // und Discord & Co. merken sich Bilder ohnehin nach der Adresse.
+                    var version = CurveVersion(await _games.GetSharedEvalsAsync(id, null, ct));
+                    return new OgPage(title, description, version == null ? img : $"{img}?v={version}", canonical, "article");
                 }
                 case "puzzle":
                 {
@@ -139,8 +146,10 @@ public class OgMetaService
                 {
                     var g = await _games.GetSharedAsync(id);
                     if (g is null) return null;
-                    // Aus der Sicht des Teilenden: spielte er Schwarz, wird auch die Vorschau gedreht.
-                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black");
+                    // Aus der Sicht des Teilenden: spielte er Schwarz, wird auch die Vorschau gedreht. Die Kurve dreht nicht
+                    // mit — wie auf der Seite steht Weiß unten.
+                    return new OgBoard(EndFenFromPgn(g.Pgn), Flip: g.OwnerSide == "black",
+                        Curve: CurveOf(await _games.GetSharedEvalsAsync(id, null, ct)));
                 }
                 case "puzzle":
                 {
@@ -171,6 +180,38 @@ public class OgMetaService
         }
         return null;
     }
+
+    /// <summary>Kurvenhöhe wie <c>graphHeight</c> im Client (<c>game-review.util.ts</c>): 0..100, 50 = ausgeglichen, Weiß-Sicht;
+    /// linear bis ±<see cref="GraphCapPawns"/> Bauern, Matt am Rand.</summary>
+    public const double GraphCapPawns = 10;
+
+    internal static double? GraphHeight(int? cp, int? mate)
+    {
+        if (mate is int m) return m > 0 ? 100 : m < 0 ? 0 : null;
+        if (cp is not int c) return null;
+        var pawns = Math.Clamp(c / 100.0, -GraphCapPawns, GraphCapPawns);
+        return 50 + 50 * pawns / GraphCapPawns;
+    }
+
+    /// <summary>
+    /// Die Bewertungskurve für das Vorschaubild: ein Punkt je Stellung vor jedem Halbzug plus der nach dem letzten
+    /// (<see cref="GameEvalsDto.Final"/>), <c>null</c> = Lücke. Nur mit FERTIGER Analyse — eine halbe Kurve sähe im geteilten
+    /// Bild wie das Ende der Partie aus. Weniger als zwei Punkte: keine Kurve.
+    /// </summary>
+    internal static IReadOnlyList<double?>? CurveOf(GameEvalsDto? evals)
+    {
+        if (evals is null || evals.Status != "done" || evals.Total <= 0) return null;
+        var byPly = evals.Plies.GroupBy(p => p.Ply).ToDictionary(g => g.Key, g => g.First());
+        var curve = new List<double?>(evals.Total + 1);
+        for (var i = 0; i < evals.Total; i++)
+            curve.Add(byPly.TryGetValue(i, out var p) ? GraphHeight(p.Cp, p.Mate) : null);
+        curve.Add(evals.Final is { } f ? GraphHeight(f.Cp, f.Mate) : null);
+        return curve.Count(v => v is not null) >= 2 ? curve : null;
+    }
+
+    /// <summary>Kennung der Kurve für die Bild-Adresse: Analyse + Stand der Vertiefung (die Kurve wird dabei genauer).</summary>
+    internal static string? CurveVersion(GameEvalsDto? evals)
+        => CurveOf(evals) is not null && evals!.AnalysisId is int id ? $"{id}-{evals.Refined}" : null;
 
     /// <summary>Endstellung einer Partie aus dem PGN (Fallback: Grundstellung).</summary>
     private static string EndFenFromPgn(string pgn)
