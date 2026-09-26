@@ -17,7 +17,8 @@ namespace RookHub.Api.Services;
 /// Kapazität des Spielers („free for all"). Eine Grenze steht auch dort im Auftrag: keine Angriffe auf Herkunft,
 /// Religion, Geschlecht, Sexualität oder Behinderung — der Text kann geteilt werden und landet bei anderen.</para>
 /// <para>Nur der Besitzer, nur mit fertiger Analyse, nie automatisch veröffentlicht. Genannte Züge müssen in der Partie
-/// bzw. den Engine-Linien stehen (<see cref="GameMoveExplanationService.MentionsOnly"/>), sonst eine Nachfrage.</para>
+/// bzw. den Engine-Linien stehen (<see cref="GameMoveExplanationService.MentionsOnly"/>), sonst eine Nachfrage. Gespeichert in
+/// englischer Notation, gezeigt mit den Figurenbuchstaben der Sprache (<see cref="PieceLetters"/>, 0.541.1).</para>
 /// </summary>
 public sealed class GameRoastService
 {
@@ -57,10 +58,11 @@ public sealed class GameRoastService
             Available = Available,
             HasAnalysis = game.GameAnalysisId is int aid
                 && await _db.GameAnalyses.AnyAsync(a => a.Id == aid && a.Status == GameAnalysisStatus.Done, ct),
-            Items = await _db.GameRoasts.AsNoTracking().Where(r => r.SavedGameId == gameId && r.Language == language)
+            Items = (await _db.GameRoasts.AsNoTracking().Where(r => r.SavedGameId == gameId && r.Language == language)
                 .OrderBy(r => r.Style)
                 .Select(r => new GameRoastDto { Style = r.Style, Language = r.Language, Text = r.Text, CreatedAt = r.CreatedAt })
-                .ToListAsync(ct),
+                .ToListAsync(ct))
+                .Select(r => { r.Text = PieceLetters.Convert(r.Text, "en", r.Language); return r; }).ToList(),
         };
     }
 
@@ -121,7 +123,10 @@ public sealed class GameRoastService
         row.Model = _llm.TranslationModel;
         row.CreatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return new(new GameRoastDto { Style = style, Language = language, Text = text, CreatedAt = row.CreatedAt }, null);
+        return new(new GameRoastDto
+        {
+            Style = style, Language = language, Text = PieceLetters.Convert(text, "en", language), CreatedAt = row.CreatedAt,
+        }, null);
     }
 
     // ── Auftrag ────────────────────────────────────────────────────────────────────────────────────

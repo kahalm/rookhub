@@ -125,11 +125,13 @@ public class GameRecapTests : IDisposable
         Assert.Contains("- 3...Nf6 by Black (blunder); better was 3...g6; answered by 4.Qxf7#", facts);
         Assert.Contains("The game ended in checkmate with 4.Qxf7#.", facts);
 
-        // Geprüft in englischer Notation, gespeichert mit deutschen Figurenbuchstaben (das Modell stellt sie nicht um).
+        // Geprüft und gespeichert in englischer Notation, gezeigt mit deutschen Figurenbuchstaben (das Modell stellt sie
+        // nicht um, und gespeichert umgestellt machte ein zweites Umstellen im Französischen aus dem König einen Turm).
         Assert.Equal("Ich greift mit 2.Dh5 früh an; Gegner übersieht nach 3...Sf6 das Matt 4.Dxf7#.", result.Text);
         var row = await _db.GameRecaps.SingleAsync();
         Assert.Equal((gameId, "de", "fake-local"), (row.SavedGameId, row.Language, row.Model));
-        Assert.Equal(result.Text, row.Text);
+        Assert.Equal("Ich greift mit 2.Qh5 früh an; Gegner übersieht nach 3...Nf6 das Matt 4.Qxf7#.", row.Text);
+        Assert.Equal(result.Text, (await GameRecapService.CurrentAsync(_db, gameId, "de"))!.Text);
     }
 
     [Fact]

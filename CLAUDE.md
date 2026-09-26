@@ -478,6 +478,10 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   `game-review.util.ts`, literale Grenzwerte in `GameMoveExplanationTests` ↔ `game-review.util.spec.ts`) liefert je Fehler
   Stellung, gespielten Zug, Bestzug + Engine-Linie (SAN, Rochade König-schlägt-Turm aufgelöst), Widerlegung (Linie der
   NÄCHSTEN Stellung) und Gewinnchance vorher/nachher. Das Modell soll erklären, nicht rechnen.
+* **Figurenbuchstaben beim LESEN** (0.541.1, gilt für Erklärungen, Roasts und „Kurz erzählt"): gespeichert wird in
+  englischer SAN (so stehen die Züge in den Fakten, und nur so prüft `MentionsOnly`), `PieceLetters.Convert(text, "en", lang)`
+  setzt beim Ausliefern die Buchstaben der Sprache („Sf3"). NIE umgestellt speichern: ein zweites Umstellen machte im
+  Französischen/Spanischen/Italienischen aus dem König („R") einen Turm. Qwen auf der Spark stellt sie selbst nie um.
 * **Kein erfundener Zug** (`IsGrounded`): jeder Figuren-/Schlag-/Rochadezug im Text muss in diesen Linien stehen (bloße
   Felder wie „e4" zählen nicht — vom Feldnamen im Satz nicht zu unterscheiden); sonst eine Nachfrage, dann verworfen.
 * **Speicher an der ANALYSE** (`GameMoveExplanations`), gilt für alle Betrachter; ERZEUGEN nur der Besitzer, im Hintergrund
@@ -522,8 +526,8 @@ geschrieben vom Modell auf eigener Hardware (`IsLocal`), im Muster des Roasts. R
   `[ECOUrl]`, die ersten zehn Halbzüge, Genauigkeit, die drei schwersten Fehler/Misses beider Seiten mit NUMMERIERTEM
   Bestzug und Widerlegung (`Numbered`), das Ende (Matt auf dem Brett > `[Termination]` außer „Normal" > nur das Ergebnis).
 * **Dritte Person mit Namen** — den Text liest, wer den Link bekommt. Genannte Züge müssen in der Partie oder den
-  Engine-Linien stehen (`MentionsOnly`, eine Nachfrage, sonst kein Text); **danach** stellt `PieceLetters.Convert` die
-  Figurenbuchstaben auf die Sprache des Textes um (geprüft wird in englischer SAN, so stehen die Züge in den Fakten).
+  Engine-Linien stehen (`MentionsOnly`, eine Nachfrage, sonst kein Text). Gespeichert in englischer SAN; die
+  Figurenbuchstaben der Sprache setzt erst das Lesen (`CurrentAsync` → `PieceLetters.Convert`, Regel unten bei den Erklärungen).
 * **Speicher je Partie und Sprache** (`GameRecaps`, geht mit der Partie). Gezeigt wird überall DERSELBE Text
   (`GameRecapService.CurrentAsync`): der in der Sprache der Partie (`SavedGame.ReviewLanguage`), sonst der jüngste.
 * **Entsteht von selbst**: `GameReviewTexts` schreibt ihn als ERSTES nach der Analyse (ein Aufruf, und wer gleich teilt,

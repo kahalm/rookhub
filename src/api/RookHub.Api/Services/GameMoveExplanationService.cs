@@ -15,6 +15,10 @@ namespace RookHub.Api.Services;
 /// ausschließlich aus GEPRÜFTEN Fakten der Partie-Analyse (<see cref="GameMistakes.Find"/>: Stellung, gespielter Zug,
 /// Bestzug mit Engine-Linie, Widerlegung, Gewinnchance vorher/nachher).
 ///
+/// <para><b>Figurenbuchstaben</b> (0.541.1): gespeichert wird der Text in englischer Notation — so steht er in den
+/// Fakten, und nur so lässt er sich gegen die Linien prüfen. Die Buchstaben der Sprache („Sf3" statt „Nf3") setzt ERST das
+/// Lesen (<see cref="PieceLetters"/>): gespeichert umgestellt, würde ein zweites Umstellen im Französischen aus dem König
+/// („R") einen Turm machen. Das Modell auf eigener Hardware stellt sie selbst praktisch nie um.</para>
 /// <para><b>Gegen erfundene Züge</b> (<see cref="IsGrounded"/>): jeder Zug, den der Text in Notation nennt, muss in den
 /// mitgegebenen Linien stehen — sonst wird einmal nachgefragt und danach verworfen. Ein lokales Modell rechnet nicht
 /// verlässlich; eine Erklärung mit einem Zug, den es gar nicht gibt, wäre schlimmer als keine.</para>
@@ -92,6 +96,8 @@ public sealed class GameMoveExplanationService
         dto.Items = await _db.GameMoveExplanations.AsNoTracking()
             .Where(e => e.GameAnalysisId == id && e.Language == lang && e.Viewpoint == game.Viewpoint).OrderBy(e => e.Ply)
             .Select(e => new GameExplanationDto { Ply = e.Ply, Class = e.Class, Text = e.Text }).ToListAsync(ct);
+        // Gespeichert in englischer Notation (so wird geprüft), gezeigt mit den Figurenbuchstaben der Sprache (0.541.1).
+        foreach (var item in dto.Items) item.Text = PieceLetters.Convert(item.Text, "en", lang);
         dto.Running = _jobs.IsRunning(id, lang);
         dto.CanGenerate = owner && Available && !dto.Running && analysis.Status == GameAnalysisStatus.Done;
         return dto;

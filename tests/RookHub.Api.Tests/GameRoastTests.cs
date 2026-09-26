@@ -121,6 +121,27 @@ public class GameRoastTests : IDisposable
     }
 
     [Fact]
+    public async Task PieceLetters_StoredInEnglish_ShownInTheLanguage_WithoutConvertingTwice()
+    {
+        var (userId, gameId) = await SeedAsync();
+        _llm.Answers.Enqueue("{\"roast\":\"Nf6? Qxf7#. Dein Schachhirn ist ein verlassener Bunker.\"}");
+        _llm.Answers.Enqueue("{\"roast\":\"Nf6? Qxf7#. Bravo.\"}");
+        var service = Service();
+
+        Assert.Equal("Sf6? Dxf7#. Dein Schachhirn ist ein verlassener Bunker.",
+            (await service.RoastAsync(userId, gameId, "friendly", "de")).Roast!.Text);
+        Assert.Equal("Sf6? Dxf7#. Dein Schachhirn ist ein verlassener Bunker.",
+            Assert.Single((await service.GetAsync(userId, gameId, "de"))!.Items).Text);
+        Assert.Equal("Nf6? Qxf7#. Dein Schachhirn ist ein verlassener Bunker.", (await _db.GameRoasts.SingleAsync()).Text);
+
+        // Französisch: der Springer heißt C, die Dame D — und jedes Lesen setzt auf dem englischen Text auf. Gespeichert
+        // umgestellt, machte das nächste Lesen aus einem „R" (roi, König) einen Turm.
+        Assert.Equal("Cf6? Dxf7#. Bravo.", (await service.RoastAsync(userId, gameId, "friendly", "fr")).Roast!.Text);
+        Assert.Equal("Cf6? Dxf7#. Bravo.", Assert.Single((await service.GetAsync(userId, gameId, "fr"))!.Items).Text);
+        Assert.Equal("Cf6? Dxf7#. Bravo.", Assert.Single((await service.GetAsync(userId, gameId, "fr"))!.Items).Text);
+    }
+
+    [Fact]
     public async Task Roast_InventedMove_IsRetried_ThenFails()
     {
         var (userId, gameId) = await SeedAsync();

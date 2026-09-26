@@ -18,9 +18,9 @@ namespace RookHub.Api.Services;
 /// <para><b>Dritte Person</b>, mit den Namen der Spieler: den Text liest, wer den Link bekommt — nicht der Besitzer.
 /// Genannte Züge müssen in der Partie bzw. den Engine-Linien stehen (<see cref="GameMoveExplanationService.MentionsOnly"/>),
 /// sonst eine Nachfrage; geht auch die schief, gibt es keinen Text (die Vorschau fällt auf die alte Beschreibung zurück).
-/// Geprüft wird in englischer Notation (so stehen die Züge in den Fakten); DANACH stellt <see cref="PieceLetters"/> die
-/// Figurenbuchstaben auf die Sprache des Textes um — die deutsche Vorschau liest „Sf3", nicht „Nf3". Das Modell auf eigener
-/// Hardware stellt sie selbst praktisch nie um.</para>
+/// Gespeichert und geprüft wird in englischer Notation (so stehen die Züge in den Fakten); beim LESEN
+/// (<see cref="CurrentAsync"/>) stellt <see cref="PieceLetters"/> die Figurenbuchstaben auf die Sprache des Textes um — die
+/// deutsche Vorschau liest „Sf3", nicht „Nf3". Dieselbe Regel wie bei Erklärungen und Roasts.</para>
 /// <para>Entsteht von selbst nach der Analyse (<see cref="GameReviewTexts"/>) und, für ältere Analysen, beim Öffnen der
 /// eigenen Partie (<c>GET /api/games/{id}/recap</c>). Kein Knopf und kein Tagesdeckel: je Partie und Sprache EIN Aufruf.</para>
 /// </summary>
@@ -47,20 +47,24 @@ public sealed class GameRecapService
 
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
 
-    /// <summary>Ergebnis des Schreibens: der Text, oder ein Grund (<c>notConfigured</c>, <c>exists</c>, <c>notFound</c>,
+    /// <summary>Ergebnis des Schreibens: der Text (wie gezeigt, mit den Figurenbuchstaben der Sprache), oder ein Grund (<c>notConfigured</c>, <c>exists</c>, <c>notFound</c>,
     /// <c>noAnalysis</c>, <c>failed</c>).</summary>
     public sealed record RecapResult(string? Text, string? Reason);
 
+    /// <summary>Eine Nacherzählung, wie sie gezeigt wird — mit den Figurenbuchstaben ihrer Sprache.</summary>
+    public sealed record RecapView(string Text, string Language, DateTime CreatedAt);
+
     /// <summary>Die Nacherzählung, die gezeigt wird: in der Sprache der Partie (<see cref="SavedGame.ReviewLanguage"/> — in ihr
     /// entsteht sie), sonst die jüngste. Link-Vorschau und Partieseite zeigen so denselben Text.</summary>
-    public static async Task<GameRecap?> CurrentAsync(AppDbContext db, int savedGameId, string? gameLanguage,
+    public static async Task<RecapView?> CurrentAsync(AppDbContext db, int savedGameId, string? gameLanguage,
         CancellationToken ct = default)
     {
         var rows = await db.GameRecaps.AsNoTracking().Where(r => r.SavedGameId == savedGameId)
             .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id).ToListAsync(ct);
         if (rows.Count == 0) return null;
         var language = string.IsNullOrWhiteSpace(gameLanguage) ? null : GameMoveExplanationService.NormalizeLanguage(gameLanguage);
-        return rows.FirstOrDefault(r => r.Language == language) ?? rows[0];
+        var row = rows.FirstOrDefault(r => r.Language == language) ?? rows[0];
+        return new RecapView(PieceLetters.Convert(row.Text, "en", row.Language), row.Language, row.CreatedAt);
     }
 
     /// <summary>Stand für die eigene Partieseite; <c>null</c>, wenn es die Partie nicht gibt oder sie fremd ist.</summary>
@@ -114,8 +118,7 @@ public sealed class GameRecapService
             var json = await _llm.CompleteJsonAsync("recap", system,
                 attempt == 0 ? facts : facts + "\n\nIMPORTANT: at most 50 words; mention only moves that appear above.", Schema, 800, ct);
             var candidate = TextOf(json);
-            if (candidate != null && GameMoveExplanationService.MentionsOnly(candidate, allowed))
-                text = PieceLetters.Convert(candidate, "en", language);
+            if (candidate != null && GameMoveExplanationService.MentionsOnly(candidate, allowed)) text = candidate;
             else if (candidate != null) _logger.LogInformation("Nacherzählung für Partie {GameId} verworfen (fremder Zug)", gameId);
         }
         if (text == null) return new(null, "failed");
@@ -130,7 +133,7 @@ public sealed class GameRecapService
         row.Model = _llm.TranslationModel;
         row.CreatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
-        return new(text, null);
+        return new(PieceLetters.Convert(text, "en", language), null);
     }
 
     // ── Auftrag ────────────────────────────────────────────────────────────────────────────────────

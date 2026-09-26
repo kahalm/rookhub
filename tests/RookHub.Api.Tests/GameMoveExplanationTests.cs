@@ -265,7 +265,9 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Equal(1, await service.GenerateAsync(black, "de", CancellationToken.None));
         var row = await _db.GameMoveExplanations.AsNoTracking().SingleAsync(e => e.GameAnalysisId == analysisId);
         Assert.Equal("black", row.Viewpoint);
-        Assert.Equal("Nf6 lässt Qxf7# zu; g6 hält.", Assert.Single((await service.GetAsync(black, "de", owner: true)).Items).Text);
+        Assert.Equal("Nf6 lässt Qxf7# zu; g6 hält.", row.Text);   // gespeichert in englischer Notation …
+        // … gezeigt mit den Figurenbuchstaben der Sprache (0.541.1).
+        Assert.Equal("Sf6 lässt Dxf7# zu; g6 hält.", Assert.Single((await service.GetAsync(black, "de", owner: true)).Items).Text);
     }
 
     [Fact]
