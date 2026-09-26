@@ -68,6 +68,30 @@ public class CommentTranslationService
         CancellationToken ct = default)
         => RunAsync(libraryGameId, null, target, force, ct);
 
+    /// <summary>
+    /// Welche Partien des Rohbestands als naechste uebersetzt werden (<c>tools/LibraryImport translate --library</c>):
+    /// kommentiert, weder aussortiert noch Dublette, ohne Satz in der Zielsprache — die BESTEN zuerst (Note,
+    /// kommentierte Halbzuege, Textmenge; dieselbe Reihenfolge wie <c>comments --library</c>). Ob die Partie
+    /// schon Quell-Saetze hat, spielt keine Rolle: der Lauf legt sie selbst an. Auf dem ganzen Bestand dauert
+    /// die Uebersetzung Tage — was die Punktepartie zuerst zeigt, soll zuerst fertig sein.
+    /// </summary>
+    public static Task<List<int>> LibraryCandidatesAsync(AppDbContext db, string target, int take,
+        CancellationToken ct = default)
+    {
+        target = target.Trim().ToLowerInvariant();
+        return db.LibraryGames.AsNoTracking()
+            .Where(g => g.CommentedPlies > 0
+                        && g.Status != LibraryGameStatus.Rejected && g.Status != LibraryGameStatus.Duplicate)
+            .Where(g => !db.CommentSets.Any(s => s.LibraryGameId == g.Id && s.Language == target))
+            .OrderByDescending(g => g.Score)
+            .ThenByDescending(g => g.CommentedPlies)
+            .ThenByDescending(g => g.CommentChars)
+            .ThenBy(g => g.Id)
+            .Select(g => g.Id)
+            .Take(take)
+            .ToListAsync(ct);
+    }
+
     private async Task<int> RunAsync(int? libraryGameId, int? analysisId, string target, bool force,
         CancellationToken ct)
     {

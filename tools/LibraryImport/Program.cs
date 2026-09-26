@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
 using RookHub.Tools.LibraryImport;
@@ -17,7 +18,7 @@ using RookHub.Tools.LibraryImport;
 //   queue            die besten Partien zum Rechnen einreihen
 //   comments         die Kommentare eingereihter Partien nach Sprachen trennen
 //   analysis-openings  Eroeffnungszeile der eingereihten Partien nachtragen
-//   translate        fehlende Sprachen uebersetzen lassen (Anthropic:TextApiKey noetig — nicht der Konto-Schluessel)
+//   translate        fehlende Sprachen uebersetzen lassen (TextLlm__BaseUrl = eigene Hardware, sonst Anthropic:TextApiKey)
 //   stats            zeigen, was drinsteht
 //
 // Verbindung ueber ConnectionStrings__DefaultConnection. Laeuft NICHT als API-Instanz —
@@ -794,18 +795,17 @@ async Task<int> TranslateAsync()
     var target = StringArg("--to");
     if (string.IsNullOrWhiteSpace(target))
     {
-        Console.Error.WriteLine("Aufruf: translate --to <sprache> [--limit n] [--force] [--game <analyse-id>]");
+        Console.Error.WriteLine("Aufruf: translate --to <sprache> [--library n [--parallel p]] [--limit n] [--force] [--game <analyse-id>] [--shard i/n]");
         return 1;
     }
+    target = target.Trim().ToLowerInvariant();
     var limit = IntArg("--limit") ?? int.MaxValue;
     var force = args.Contains("--force");
     var one = IntArg("--game");
 
-    // Aufteilung fuer parallele Laeufe: „--shard 0/4" nimmt jede vierte Partie. Sequenziell
-    // kostet eine Partie rund eine halbe Minute — bei tausend Partien sind das siebeneinhalb
-    // Stunden, bei vier Laeufen nebeneinander zwei. Ohne die Aufteilung greifen zwei Laeufe
-    // dieselben Partien: einer von beiden bezahlt dann ein Ergebnis, das der eindeutige Index
-    // wegwirft.
+    // Aufteilung fuer parallele Laeufe: „--shard 0/4" nimmt jede vierte Partie. Ohne die Aufteilung
+    // greifen zwei Laeufe dieselben Partien: einer von beiden bezahlt dann ein Ergebnis, das der
+    // eindeutige Index wegwirft. Innerhalb EINES Laufs geht es einfacher mit --parallel.
     int shardIndex = 0, shardCount = 1;
     var shard = StringArg("--shard");
     if (shard is not null)
@@ -821,42 +821,29 @@ async Task<int> TranslateAsync()
     }
 
     var config = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-    await using var db = NewDb();
+    // Warnungen auf die Konsole: ein gescheiterter Aufruf (Modell weg, abgeschnitten, zu kurz) gibt
+    // sonst nur eine 0 zurueck — genau wie „nichts zu tun", und ein Tage-Lauf liefe blind.
+    using var loggers = new Serilog.Extensions.Logging.SerilogLoggerFactory(
+        Serilog.ConsoleLoggerConfigurationExtensions.Console(
+                new Serilog.LoggerConfiguration().MinimumLevel.Warning().WriteTo,
+                outputTemplate: "{Timestamp:HH:mm:ss} {Level:u3} {Message:lj}{NewLine}{Exception}")
+            .CreateLogger(), dispose: true);
     // Dieselbe Regel wie die API: eigene Hardware (TextLlm__BaseUrl) vor Claude (Anthropic__TextApiKey).
-    var claude = TextJsonClients.Create(config, NullLoggerFactory.Instance);
-    if (!claude.IsConfigured)
+    var client = TextJsonClients.Create(config, loggers);
+    if (!client.IsConfigured)
     {
         Console.Error.WriteLine("Weder TextLlm__BaseUrl (eigene Hardware) noch Anthropic__TextApiKey gesetzt — ohne wird nicht uebersetzt.");
         return 1;
     }
-    var service = new CommentTranslationService(db, claude, NullLogger<CommentTranslationService>.Instance);
 
-    // Der Rohbestand (Saetze ohne Analyse) oder die eingereihten Partien.
-    var library = IntArg("--library");
-    List<int> ids;
-    var fromLibrary = library is not null;
-    if (fromLibrary)
-    {
-        // Nur Partien, die ueberhaupt Saetze haben und die Zielsprache noch nicht fuehren —
-        // sonst laeuft der Durchgang durch zehntausende Zeilen, um nichts zu tun.
-        var have = await db.CommentSets.AsNoTracking()
-            .Where(s => s.Language == target && s.LibraryGameId != null)
-            .Select(s => s.LibraryGameId!.Value).ToListAsync();
-        var known = have.ToHashSet();
-        ids = (await db.CommentSets.AsNoTracking()
-                .Where(s => s.LibraryGameId != null)
-                .Select(s => s.LibraryGameId!.Value)
-                .Distinct()
-                .ToListAsync())
-            .Where(id => !known.Contains(id))
-            .Take(library!.Value)
-            .ToList();
-    }
-    else
-    {
-        ids = one is int only ? [only] : await db.GameAnalyses.AsNoTracking()
-            .OrderBy(g => g.Id).Select(g => g.Id).ToListAsync();
-    }
+    if (IntArg("--library") is int top)
+        return await TranslateLibraryAsync(client, loggers, target, Math.Min(top, limit), force,
+            Math.Clamp(IntArg("--parallel") ?? 1, 1, 64), shardIndex, shardCount);
+
+    await using var db = NewDb();
+    var service = new CommentTranslationService(db, client, loggers.CreateLogger<CommentTranslationService>());
+    var ids = one is int only ? [only] : await db.GameAnalyses.AsNoTracking()
+        .OrderBy(g => g.Id).Select(g => g.Id).ToListAsync();
 
     int done = 0, lines = 0;
     var started = DateTime.UtcNow;
@@ -864,15 +851,84 @@ async Task<int> TranslateAsync()
     {
         if (done >= limit) break;
         if (shardCount > 1 && id % shardCount != shardIndex) continue;
-        var written = fromLibrary
-            ? await service.TranslateLibraryGameAsync(id, target!, force)
-            : await service.TranslateAsync(id, target!, force);
+        var written = await service.TranslateAsync(id, target, force);
         if (written == 0) continue;
         done++;
         lines += written;
         Console.WriteLine($"  #{id,-6} {written,3} Anmerkungen nach {target}");
     }
     Console.WriteLine($"Uebersetzt: {done:N0} Partien · {lines:N0} Zeilen · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+    return 0;
+}
+
+// Den ROHBESTAND uebersetzen, die besten Partien zuerst (CommentTranslationService.LibraryCandidatesAsync).
+//
+//   translate --to de --library 200000 --parallel 8
+//
+// Die Quell-Saetze legt der Lauf selbst an (was `comments --library` sonst vorab tut) — so beginnt die
+// Uebersetzung sofort bei den besten Partien, statt erst den ganzen Bestand zu zerlegen. Eine Partie,
+// deren Quelle schon die Zielsprache ist, kostet keinen Modell-Aufruf. Wiederholbar: was die Zielsprache
+// hat, faellt aus der Auswahl; ein Abbruch verliert hoechstens die Partien, die gerade in Arbeit waren.
+//
+// --parallel p: so viele Partien gleichzeitig, je eine eigene Datenbank-Verbindung. Auf dem Spark
+// (vLLM) zahlt sich das aus — er buendelt gleichzeitige Anfragen, eine einzelne laeuft mit einem
+// Bruchteil seines Durchsatzes. Ueber ~16 hinaus wartet nur die Schlange des Servers.
+async Task<int> TranslateLibraryAsync(IClaudeJsonClient client, ILoggerFactory loggers, string target, int top,
+    bool force, int parallel, int shardIndex, int shardCount)
+{
+    List<int> ids;
+    await using (var db = NewDb())
+        ids = await CommentTranslationService.LibraryCandidatesAsync(db, target, top);
+    if (shardCount > 1) ids = ids.Where(id => id % shardCount == shardIndex).ToList();
+    Console.WriteLine($"{ids.Count:N0} Partien ohne „{target}\" · {parallel} parallel · Modell {client.TranslationModel}");
+
+    var queue = new System.Collections.Concurrent.ConcurrentQueue<int>(ids);
+    int seen = 0, done = 0, lines = 0, empty = 0, errors = 0;
+    var started = DateTime.UtcNow;
+    var translationLogger = loggers.CreateLogger<CommentTranslationService>();
+
+    async Task Worker()
+    {
+        await using var db = NewDb();
+        var sets = new CommentSetService(db, NullLogger<CommentSetService>.Instance);
+        var service = new CommentTranslationService(db, client, translationLogger);
+        while (queue.TryDequeue(out var id))
+        {
+            try
+            {
+                await sets.EnsureSourceForLibraryAsync(id);
+                var written = await service.TranslateLibraryGameAsync(id, target, force);
+                if (written > 0)
+                {
+                    Interlocked.Increment(ref done);
+                    Interlocked.Add(ref lines, written);
+                    Console.WriteLine($"  #{id,-6} {written,3} Anmerkungen nach {target}");
+                }
+                else Interlocked.Increment(ref empty);
+            }
+            catch (Exception ex)
+            {
+                // Eine Partie darf den Lauf nicht beenden (Datenbank kurz weg, eine kaputte Quelle).
+                Interlocked.Increment(ref errors);
+                Console.Error.WriteLine($"  #{id,-6} FEHLER {ex.GetType().Name}: {ex.Message}");
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();   // sonst waechst der Kontext ueber zehntausende Partien
+            }
+
+            var n = Interlocked.Increment(ref seen);
+            if (n % 100 == 0)
+            {
+                var elapsed = DateTime.UtcNow - started;
+                var rest = TimeSpan.FromSeconds(elapsed.TotalSeconds / n * (ids.Count - n));
+                Console.WriteLine($"--- {n:N0}/{ids.Count:N0} · uebersetzt {done:N0} · ohne Ergebnis {empty:N0} · Fehler {errors:N0} · {elapsed:d\\.hh\\:mm} · Rest ~{rest:d\\.hh\\:mm}");
+            }
+        }
+    }
+
+    await Task.WhenAll(Enumerable.Range(0, parallel).Select(_ => Task.Run(Worker)));
+    Console.WriteLine($"Uebersetzt: {done:N0} Partien · {lines:N0} Zeilen · ohne Ergebnis {empty:N0} · Fehler {errors:N0} · Dauer {DateTime.UtcNow - started:d\\.hh\\:mm\\:ss}");
     return 0;
 }
 

@@ -2240,6 +2240,18 @@ rund 8000 Zeichen je Partie, und der Bestand hat 94 898 kommentierte.
 haengt nicht an der Engine, und eine angeforderte Partie steht damit sofort in beiden Sprachen da
 statt erst nach einer halben Stunde Rechnen.
 
+**Den GANZEN Bestand uebersetzen** (0.539.0): `translate --to de --library 200000 --parallel 8`
+(Env `TextLlm__BaseUrl`/`TextLlm__ApiKey` = Spark, `ConnectionStrings__DefaultConnection`). Die Auswahl
+ist `CommentTranslationService.LibraryCandidatesAsync` — kommentiert, weder aussortiert noch Dublette,
+ohne Satz in der Zielsprache, die BESTEN zuerst (Note, kommentierte Halbzuege, Textmenge): auf ~95 000
+Partien dauert es Tage, und was die Punktepartie zuerst zeigt, soll zuerst fertig sein. Die Quell-Saetze
+legt der Lauf je Partie selbst an (`EnsureSourceForLibraryAsync`) — ein vorgeschaltetes `comments
+--library` ueber den ganzen Bestand ist nicht noetig. `--parallel p` = p Partien gleichzeitig mit je
+eigenem DbContext (vLLM buendelt gleichzeitige Anfragen; eine einzelne nutzt nur einen Bruchteil des
+Durchsatzes). Warnungen des Uebersetzers und des Modell-Clients gehen auf die Konsole: „abgebrochen",
+„verworfen: n % der Quelllaenge" und „am Token-Deckel abgeschnitten" sind sonst von „nichts zu tun" nicht
+zu unterscheiden. Wiederholbar — was die Zielsprache hat, faellt aus der Auswahl.
+
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
 | GET | `/api/guess-sessions` | Auth | Eigene Durchlaeufe (max. 100, neueste zuerst) |

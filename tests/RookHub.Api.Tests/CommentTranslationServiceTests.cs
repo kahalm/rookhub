@@ -190,4 +190,38 @@ public class CommentTranslationServiceTests : IDisposable
 
         Assert.Equal(2, _claude.Prompts.Count);
     }
+
+    /// <summary>Der Tage-Lauf ueber den Rohbestand: die besten Partien zuerst, und was die Zielsprache
+    /// schon hat oder aussortiert ist, faellt heraus — Quell-Saetze braucht eine Partie dafuer NICHT.</summary>
+    [Fact]
+    public async Task LibraryCandidates_besteZuerst_ohneZielspracheUndOhneAussortierte()
+    {
+        LibraryGame Game(int score, int plies, int chars = 100,
+            LibraryGameStatus status = LibraryGameStatus.New)
+            => new() { Pgn = "x", Score = score, CommentedPlies = plies, CommentChars = chars, Status = status };
+
+        var best = Game(90, 10);
+        var morePlies = Game(80, 30);
+        var fewerPlies = Game(80, 5, chars: 9000);
+        var translated = Game(95, 40);
+        var imported = Game(70, 3, status: LibraryGameStatus.Imported);
+        var rejected = Game(99, 50, status: LibraryGameStatus.Rejected);
+        var duplicate = Game(99, 50, status: LibraryGameStatus.Duplicate);
+        var silent = Game(99, 0);
+        var sourceIsGerman = Game(98, 20);
+        _db.LibraryGames.AddRange(best, morePlies, fewerPlies, translated, imported, rejected, duplicate, silent,
+            sourceIsGerman);
+        await _db.SaveChangesAsync();
+        _db.CommentSets.AddRange(
+            new CommentSet { LibraryGameId = translated.Id, Language = "de", Origin = CommentOrigin.Machine },
+            new CommentSet { LibraryGameId = translated.Id, Language = "en", Origin = CommentOrigin.Source },
+            new CommentSet { LibraryGameId = sourceIsGerman.Id, Language = "de", Origin = CommentOrigin.Source },
+            new CommentSet { LibraryGameId = morePlies.Id, Language = "en", Origin = CommentOrigin.Source });
+        await _db.SaveChangesAsync();
+
+        var ids = await CommentTranslationService.LibraryCandidatesAsync(_db, " DE ", 10);
+
+        Assert.Equal(new[] { best.Id, morePlies.Id, fewerPlies.Id, imported.Id }, ids);
+        Assert.Equal(new[] { best.Id, morePlies.Id }, await CommentTranslationService.LibraryCandidatesAsync(_db, "de", 2));
+    }
 }
