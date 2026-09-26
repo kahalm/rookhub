@@ -43,7 +43,8 @@ public sealed record LineTranslationResult(LineTranslationStatus Status, int Kep
 /// aus dem Kapitel-Woerterbuch des Laufs).</summary>
 internal sealed record OpenLine(int Id, IReadOnlyList<string> OpenHashes);
 
-/// <summary>Zwischenstand eines Kurs-Laufs (fuer den spaeteren Auftrag: „Fortschritt alle n Linien").</summary>
+/// <summary>Zwischenstand eines Kurs-Laufs — zu Beginn und alle <see cref="CourseTranslationService.ProgressEvery"/> Linien
+/// (der Auftrag schreibt ihn mit, <see cref="CourseTranslationJobService.RunAsync"/>).</summary>
 public sealed record CourseTranslationProgress(int LinesTotal, int LinesDone, int LinesFailed);
 
 public enum CourseTranslationRunStatus
@@ -411,8 +412,8 @@ public class CourseTranslationService
     /// offen — Ziel = Quelle → nichts zu tun; (2) die offene Arbeit bestimmen (Linien, deren Satz fehlt, einen
     /// veralteten/fehlenden Text hat oder Reste einer verschwundenen Vorlage traegt); (3) die dabei fehlenden
     /// Kapitelnamen in EINER Fuhre uebersetzen (Wiederverwendung zuerst); (4) die Linien in Kursreihenfolge,
-    /// <c>CourseTranslation:Parallel</c> gleichzeitig, in ZWEI Phasen; (5) alle <see cref="ProgressEvery"/> Linien einen
-    /// Zwischenstand melden.
+    /// <c>CourseTranslation:Parallel</c> gleichzeitig, in ZWEI Phasen; (5) zu Beginn und alle <see cref="ProgressEvery"/>
+    /// Linien einen Zwischenstand melden.
     ///
     /// <para><b>Zwei Phasen, damit jeder verschiedene Text je Lauf genau EINMAL ans Modell geht.</b> Linien mit
     /// gemeinsamem Zuganfang tragen dieselben Kommentare und liegen in Kursreihenfolge direkt nebeneinander — sie
@@ -460,6 +461,8 @@ public class CourseTranslationService
             bookId, to, open.Count, neededChapters.Count, chaptersMissing, options.MaxDegreeOfParallelism);
 
         var tally = new RunTally(open.Count, onProgress);
+        // Gleich zu Beginn ein Zwischenstand: der Auftrag nennt die Zahl der offenen Linien, bevor die erste fertig ist.
+        await tally.ReportAsync(ct);
 
         // Phase 1: jeder offene Fingerabdruck gehoert der ERSTEN Linie (Kursreihenfolge), in der er offen ist.
         var owners = new Dictionary<string, int>(StringComparer.Ordinal);

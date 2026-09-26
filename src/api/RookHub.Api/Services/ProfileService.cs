@@ -379,6 +379,18 @@ public class ProfileService
         // Karten-Zustände hängen aber an (UserId, LineKey) und blieben sonst als Waisen liegen.
         _db.RepertoireCardStates.RemoveRange(await _db.RepertoireCardStates.Where(x => x.UserId == userId).ToListAsync());
         _db.RepertoireSrSettings.RemoveRange(await _db.RepertoireSrSettings.Where(x => x.UserId == userId).ToListAsync());
+        // Offene Kurs-Übersetzungsaufträge des Nutzers (RequestedByUserId hat bewusst keinen FK): nach der Löschung
+        // wartet niemand mehr darauf, und sie hielten den Platz in der Warteschlange. Zurückgezogen statt gelöscht —
+        // ein LAUFENDER bricht beim nächsten Zwischenstand von selbst ab (CourseTranslationJobService.RunAsync).
+        // Aufträge an EIGENEN Büchern sind oben schon mit dem Buch gegangen.
+        foreach (var job in await _db.CourseTranslationJobs.Where(j => j.RequestedByUserId == userId
+                     && (j.Status == CourseTranslationJobStatus.Queued || j.Status == CourseTranslationJobStatus.Running))
+                     .ToListAsync())
+        {
+            job.Status = CourseTranslationJobStatus.Cancelled;
+            job.FinishedAt = DateTime.UtcNow;
+            job.LastError = "account deleted";
+        }
         // Manuelle Aktivitäten bleiben als (anonyme) Trainingsstatistik, aber die Freitext-Notiz (PII) wird geleert.
         var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
         foreach (var a in manualWithNote) a.Note = null;

@@ -217,6 +217,9 @@ services:
       TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}
       TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}
       TextLlm__Model: ${TEXT_LLM_MODEL:-}
+      # Optional: Kurs-Übersetzung automatisch in diese Sprachen (Komma-Liste, z. B. de,en) — leer = aus.
+      # Nur Prod: Dev übersetzte sonst dieselben Kurse ein zweites Mal auf der Spark.
+      CourseTranslation__AutoLanguages: ${COURSE_TRANSLATION_AUTO_LANGUAGES:-}
       Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}
       Embedding__ApiKey: ${EMBEDDING_API_KEY:-}
       Embedding__Model: ${EMBEDDING_MODEL:-}

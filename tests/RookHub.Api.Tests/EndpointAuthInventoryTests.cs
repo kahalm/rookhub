@@ -40,6 +40,7 @@ public class EndpointAuthInventoryTests
         "GET /api/courses/by-slug/{slug}",                           // CourseController.ResolvePublicSlug
         "GET /api/courses/by-slug/{slug}/{chapter}",                 // CourseController.ResolvePublicSlugChapter
         "GET /api/courses/{bookId}/public",                          // CourseController.GetPublicCourse
+        "GET /api/courses/{bookId:int}/translations",                // CourseTranslationController: nur öffentliche Kurse anonym
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —

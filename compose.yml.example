@@ -43,6 +43,7 @@
 #   TEXT_LLM_BASE_URL=         own LLM for hints + translation (OpenAI-compatible, e.g. vLLM …/v1); wins over ANTHROPIC_TEXT_API_KEY
 #   TEXT_LLM_API_KEY=          its key (optional)
 #   TEXT_LLM_MODEL=            its model id (empty = first one the server lists)
+#   COURSE_TRANSLATION_AUTO_LANGUAGES=  translate every course into these languages in the background (e.g. de,en); empty = off
 #   EMBEDDING_BASE_URL=        embedding model for "ask the comments" (OpenAI-compatible /embeddings, e.g. vLLM Qwen3-Embedding); empty = off
 #   EMBEDDING_API_KEY=         its key (optional)
 #   EMBEDDING_MODEL=           its model id (empty = first one the server lists)
@@ -163,6 +164,9 @@ services:
       TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}
       TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}
       TextLlm__Model: ${TEXT_LLM_MODEL:-}
+      # Optional: Kurs-Übersetzung automatisch in diese Sprachen (Komma-Liste, z. B. de,en) — leer = aus.
+      # Nur Prod: Dev übersetzte sonst dieselben Kurse ein zweites Mal auf der Spark.
+      CourseTranslation__AutoLanguages: ${COURSE_TRANSLATION_AUTO_LANGUAGES:-}
       Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}
       Embedding__ApiKey: ${EMBEDDING_API_KEY:-}
       Embedding__Model: ${EMBEDDING_MODEL:-}

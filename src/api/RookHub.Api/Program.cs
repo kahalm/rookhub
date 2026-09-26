@@ -287,6 +287,11 @@ try
     // Kurs-Kommentare mehrsprachig (0.547.0): Übersetzen je Linie + Ausliefern über ?lang=.
     builder.Services.AddScoped<CourseTranslationService>();
     builder.Services.AddScoped<CourseCommentLocalizer>();
+    // … und die Aufträge dazu (0.548.0): anfordern/zurückziehen, ein Auftrag nach dem anderen im Hintergrund,
+    // Sperrzeiten der Spark (QuietHours unten), Automatik über CourseTranslation:AutoLanguages (leer = aus).
+    builder.Services.AddScoped<CourseTranslationJobService>();
+    builder.Services.AddSingleton<CourseTranslationSignal>();
+    builder.Services.AddHostedService<CourseTranslationWorker>();
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();

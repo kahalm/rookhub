@@ -528,7 +528,8 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   `{ reason: "quietHours", until }`; Roast 503 `quietHours` — der AUTOMATISCHE Roast aus dem Scheduler läuft (der ist ja
   schon zurückgestellt worden). Eine unlesbare Angabe wirft beim Start (`FormatException`) statt still „nie gesperrt" zu
   bedeuten. Die Seite zeigt „wieder ab Fr., 14:00" (`quiet-hours.util.ts`). Dieselbe Klasse nutzt die Kurs-Übersetzung
-  (Stufe B); der Bibliothekslauf hält die Fenster außerhalb der App über die Schaltuhr `.jobs/spark-uebersetzung.sh` ein.
+  (0.548.0, `CourseTranslationWorker`: Aufträge warten, ein Lauf bricht beim Beginn ab und kommt zurück in die Schlange);
+  der Bibliothekslauf hält die Fenster außerhalb der App über die Schaltuhr `.jobs/spark-uebersetzung.sh` ein.
 * Frontend: `GameReviewComponent` lädt die Erklärungen, sobald die Analyse `done` ist (und bei Sprachwechsel), zeigt den
   Text unter dem Abzeichen des aktuellen Zugs, den Knopf „Fehler erklären lassen" nur mit `canGenerate`, keine Erklärung
   vorhanden und Fehlern in der Partie; fragt alle 5 s nach, solange es läuft; im Fehler-Training aus (nennt den besseren Zug).
@@ -1241,6 +1242,11 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 | DELETE | `/api/courses/{bookId}/link` | Auth | Verknüpfung dieses Kurses lösen (beide Richtungen, idempotent) |
 | GET | `/api/courses/{bookId:int}/flashcards` | Auth | PERSISTENT als Flashcard markierte Linien des Users in diesem Kurs `{ lineIds }` (kein Zugriff → 404) |
 | POST/DELETE | `/api/courses/{bookId:int}/flashcards/{lineId:int}` | Auth | Flashcard-Markierung setzen/entfernen (idempotent) → `{ marked }`; 404 wenn kein Kurs-Zugriff oder Linie nicht im Buch. Logik in `FlashcardMarkService`; Frontend: Checkboxen im Durchsehen + „Markierte (n)"-Knopf bzw. ⋮-Menü der Detailseite → `/courses/:bookId/flashcards?marked=1` |
+| GET | `/api/courses/{bookId:int}/translations` | **AllowAnonymous** | Kurs-Übersetzungen (0.548.0, `CourseTranslationController`): `{ sourceLanguage, languages[{ language, linesTranslated, linesTotal }], jobs[{ id, bookId, language, status, linesTotal, linesDone, linesFailed, automatic, requestedByMe, queuePosition, createdAt, startedAt, finishedAt, lastError }], quietUntil, myOpenJob?{ jobId, bookId, bookName, language, status }, available, canRequest }` — `status` klein (`queued/running/done/failed/cancelled`), `jobs` = offene (laufender zuerst, dann nach Platz), dahinter die 5 jüngsten erledigten; `queuePosition` nur bei `queued` (1 = der nächste). Lesbar wie der Kurs, anonym nur ein öffentlicher (sonst 404). Bestimmt beim ersten Abruf die Quellsprache |
+| POST | `/api/courses/{bookId:int}/translations` | Auth | Übersetzung anfordern `{ language }` → **202** mit dem Auftrag (`jobs[]`-Form), **200** mit einem schon offenen für (Kurs, Sprache). 400 `{ reason, message }` mit `unsupported-language`/`same-language`/`nothing-to-translate`, **409** `user-limit` (+ `openJob`), **503** `not-configured`, 404 ohne Kurs-Zugang. In der Sperrzeit angenommen (wartet). Regeln unter „Anmerkungen in mehreren Sprachen" → KURSE |
+| DELETE | `/api/courses/{bookId:int}/translations/{jobId:int}` | Auth | Auftrag zurückziehen: den eigenen WARTENDEN (Admin: jeden offenen, ein laufender bricht sofort ab) → 204; 403 fremder, 409 `not-waiting`, 404 unbekannt/kein Zugang |
+| PUT | `/api/courses/{bookId:int}/comment-language` | Besitzer/Admin | Quellsprache der Kommentare korrigieren `{ language }` (nur die Form geprüft, `und` = nicht bestimmbar) → `{ sourceLanguage }`; 403 nicht Besitzer, 400 `invalid-language`. Vorhandene Übersetzungen bleiben gültig |
+| GET | `/api/admin/course-translations` | `books.manage` | Warteschlange (laufender zuerst, dann in Dienst-Reihenfolge, mit `bookName`/`requestedByUsername`) + 50 jüngste erledigte, `quietUntil`, `available`, `autoLanguages` — nur Endpoint, keine Oberfläche |
 
 ### Kurs-Detailseite + Inhaltspflege (auth)
 `/courses/:bookId` (Frontend) zeigt Metadaten, eigenen Fortschritt und die **Kapitel-Verwaltung**.
@@ -2346,8 +2352,8 @@ Durchsatzes). Warnungen des Uebersetzers und des Modell-Clients gehen auf die Ko
 „verworfen: n % der Quelllaenge" und „am Token-Deckel abgeschnitten" sind sonst von „nichts zu tun" nicht
 zu unterscheiden. Wiederholbar — was die Zielsprache hat, faellt aus der Auswahl.
 
-**KURSE** (Stufe A des Plans „Kurs-Kommentare mehrsprachig", TODO.md; Auftraege/Worker/Sperrzeiten und die
-Oberflaeche folgen): je Kurs-LINIE und Sprache ein `CommentSet` mit `BookPuzzleId` (dritter Anker neben
+**KURSE** (Plan „Kurs-Kommentare mehrsprachig", TODO.md — Stufe A 0.547.0 Uebersetzen + Ausliefern, Stufe B 0.548.0
+Auftraege + Hintergrunddienst; die Oberflaeche folgt): je Kurs-LINIE und Sprache ein `CommentSet` mit `BookPuzzleId` (dritter Anker neben
 Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Was dabei anders ist als bei Partien:
 * **Es gibt KEINEN Quell-Satz.** Die Quelle bleibt die Linie (`Comment`, `MoveComments`, `Title`, `Chapter`) —
   genau diese Felder ueberschreiben Aufbereitung (in-place per oid/LineId) und naechtliches Aktualisieren; ein
@@ -2383,8 +2389,45 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   (am Ende `LinesDone + LinesFailed = LinesTotal`), Zwischenstand alle 10 Linien an einen Rueckruf. Abbruch per
   Token: die laufenden Linien schreiben nichts, der naechste Lauf ueberspringt das Fertige.
 * **Von Hand**: `tools/LibraryImport translate --to de --course <bookId> [--parallel p]` (Env wie beim
-  Bibliothekslauf: `TextLlm__*`, `ConnectionStrings__DefaultConnection`; Strg+C bricht sauber ab). Die Tabelle
-  `CourseTranslationJobs` steht schon im Modell, Anlegen/Warteschlange/Worker gibt es noch NICHT.
+  Bibliothekslauf: `TextLlm__*`, `ConnectionStrings__DefaultConnection`; Strg+C bricht sauber ab) — ohne Auftrag,
+  an der Warteschlange vorbei.
+* **Auftraege** (0.548.0, `Services/CourseTranslationJobService.cs`, Tabelle `CourseTranslationJobs`, Endpunkte unter
+  „Kurse"): anfordern darf jeder mit Kurs-Zugang, in jede der 25 Oberflaechensprachen
+  (`Services/CourseTranslationLanguages.cs` — Spiegel von `SUPPORTED_LANGS`, beide Seiten mit LITERALER Liste im
+  Test), **hoechstens EIN offener angeforderter Auftrag je Nutzer** (wartend oder laufend), Admin unbegrenzt. Gibt es
+  fuer (Kurs, Sprache) schon einen offenen, kommt DER zurueck (200, egal wer ihn anlegte, zaehlt nicht gegen das
+  Limit). Beides erzwingt der Dienst, nicht die DB. Reihenfolge der Pruefungen: Zugang (404) → Sprache
+  (`unsupported-language`) → Modell (`not-configured`, 503) → Quellsprache (`same-language`, dafuer wird sie hier
+  bestimmt) → vorhandener Auftrag → offene Arbeit (`nothing-to-translate`, ueber `OpenWorkAsync`, `LinesTotal` =
+  offene Linien) → Limit (`user-limit`, 409, mit dem offenen Auftrag). **In der Sperrzeit angenommen, kein 503.**
+  Zurueckziehen: der Nutzer seinen WARTENDEN, der Admin jeden offenen (`Cancelled`). **Konto loeschen** setzt die
+  offenen Auftraege des Nutzers auf `Cancelled` („account deleted") — `RequestedByUserId` hat bewusst keinen FK.
+* **Hintergrunddienst** (`Services/CourseTranslationWorker.cs`, EIN Auftrag gleichzeitig — die Parallelitaet steckt
+  im Lauf): kein Text-Modell → schlafen (10 min); Sperrzeit (`QuietHours`) → schlafen bis `EndOf`, hoechstens 10 min
+  am Stueck; sonst `ClaimNextAsync` — **angeforderte vor der Automatik, je Gruppe die aeltesten** (`InQueueOrder`, EINE
+  Stelle fuer Dienst und Platzanzeige). Ohne Arbeit wartet er auf einen Weckruf (`CourseTranslationSignal`: Anfordern,
+  Nachziehen), hoechstens 5 min. Beim Start `Running` → `Queued`. **Abbruch mitten im Lauf** ueber einen eigenen Token:
+  Sperrzeit beginnt (alle 30 s geprueft) oder ein NEU angeforderter Auftrag kommt, waehrend AUTOMATIK laeuft
+  (`PreemptAutomatic` — ein grosser Kurs rechnet sonst einen halben Tag, und „Vorrang" hiesse nur „danach") → zurueck
+  auf `Queued`; Admin zieht zurueck → bleibt `Cancelled`; Dienst stoppt → bleibt `Running`, kommt beim Start zurueck.
+  Der Fortschritt landet je Zwischenstand (zu Beginn, dann alle 10 Linien) in einem EIGENEN Kontext am Auftrag —
+  nur die Zaehler; steht er dabei nicht mehr auf `Running` (zurueckgezogen, Konto geloescht), bricht der Lauf ab.
+  Ergebnis: `Done` (auch mit einzelnen gescheiterten Linien, `LastError` nennt sie), `Failed` (keine einzige Linie
+  ging durch), `Cancelled` + `same-language` (Quellsprache inzwischen = Ziel).
+* **Automatik** (`CourseTranslation:AutoLanguages`, Compose `COURSE_TRANSLATION_AUTO_LANGUAGES`, Vorgabe LEER = aus; nur
+  Prod bekommt `de,en`, sonst uebersetzte Dev dieselben Kurse ein zweites Mal auf der Spark): wartet nichts, legt der
+  Dienst EINEN Auftrag fuer den naechsten Kurs an, dem die Sprache fehlt — zuletzt benutzte Kurse zuerst (juengster
+  `CourseAttempt`), ueber die Sprachen hinweg (der frischeste Kurs bekommt de UND en vor dem naechsten), Kurse in der
+  Quellsprache nicht. Vorauswahl in SQL („Linie mit Text ohne Satz in der Sprache"), den Fingerabdruck prueft der
+  Lauf. **Sperrfrist `AutoCooldown` (7 Tage)** nach einem fertigen Auftrag der Sprache — sonst holte eine Linie, die nie
+  einen Satz bekommt, die Automatik in eine Schleife.
+* **Nachziehen** (`EnqueueRefreshAsync`/`NotifyCourseChangedAsync`): aendert sich ein Kurs mit Uebersetzungen — der
+  Import-Kern `PgnImportService.ImportIntoBookAsync` (Aktualisieren, Neu-Aufbereiten, Cache-Weg, angehaengte Linien,
+  auch nur geaenderte Etiketten), `CourseAuthoringService` (Kapitel umbenennen, Linien einfuegen) —, bekommt jede
+  Sprache mit Saetzen einen Automatik-Auftrag (erledigt nur Veraltetes). Ein WARTENDER genuegt, ein LAUFENDER nicht
+  (er hat seine Arbeit vorher bestimmt). Ein Fehler dabei laesst die Aenderung selbst nicht scheitern.
+* **Vorrang vor dem Bibliothekslauf** liegt AUSSERHALB der App: `.jobs/spark-uebersetzung.sh` haelt an, solange ein
+  angeforderter Auftrag offen ist (`Status IN (0,1) AND RequestedByUserId IS NOT NULL`).
 * **Ausliefern ueber `?lang=`** (`Services/CourseCommentLocalizer.cs`, in den Controllern NACH dem Dienst): ersetzt
   `Comment` und `MoveComments[ply]` NUR, wo der Fingerabdruck zum Original IM DTO passt. **`Title`/`Chapter` werden
   NIE ersetzt** — der Kapitelname ist im Frontend ein SCHLUESSEL (`?chapter=`, Kapitel-PGN, Umbenennen,
@@ -2839,7 +2882,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LibraryGames | **Rohbestand**: eingelesene PGN-Sammlungen, aus denen Punktepartien ausgewaehlt werden — noch nicht gerechnet, noch nicht sortiert (Details im Punktepartie-Kapitel) | SourceFile?/SourceTitle?/SourceRef?/ExternalGameId?, MovesHash? (Index), DuplicateOfId? (self, Restrict), Kopfdaten (White?/Black?/WhiteElo?/BlackElo?/Result?/Event?/Site?/Round?/PlayedOn?/Eco?/StartFen?/PlyCount?), Annotator? (Index), CommentCount?/CommentedPlies?/CommentChars?/NagCount?/VariationCount?, Languages?, Score?, Status, GameAnalysisId? (**kein FK** — die Bibliothekszeile ueberlebt das Loeschen der Analyse), Note?, Pgn (LONGTEXT); Indizes (Status, Score), (CommentedPlies, PlyCount), SourceTitle |
 | CommentSets | EIN Satz Zug-Kommentare in EINER Sprache zu EINER Partie ODER einer Kurs-Linie — getrennt vom PGN bzw. von der Linie, damit Quelle und Uebersetzung unterscheidbar bleiben (Details im Punktepartie-Kapitel) | LibraryGameId? (Cascade) ODER GameAnalysisId? (Cascade) ODER **BookPuzzleId? (Cascade, Kurs-Linie, nur Uebersetzungen)** — genau EINES, Language (≤8), Origin (Source/Machine/Human), TranslatedFrom? (≤8), Model? (≤60), Status (Draft/Ready), CreatedAt/UpdatedAt; **UNIQUE (LibraryGameId, Language)** + **UNIQUE (GameAnalysisId, Language)** + **UNIQUE (BookPuzzleId, Language)** |
 | CommentTexts | Die Zeilen eines Satzes — je Halbzug eine | CommentSetId (Cascade), Ply (zaehlt wie `GameAnalysisPosition.Ply`; `-1` = vor dem ersten Zug; bei Kurs-Saetzen `-2` Kommentar, `-3` Titel, `-4` Kapitel — `CourseTextSlots`), Text (LONGTEXT), **SourceHash? (≤16, Index; Fingerabdruck der Vorlage, Pflicht bei Kurs-Saetzen, `null` bei Partien)**; **UNIQUE (CommentSetId, Ply)** |
-| CourseTranslationJobs | Auftrag „Kurs in Sprache uebersetzen" — Tabelle seit 0.547.0, Dienst/Worker folgen (Stufe B) | BookId (Cascade), Language (≤8), RequestedByUserId? (**kein FK**; `null` = Automatik), Status (Queued=0/Running=1/Done=2/Failed=3/Cancelled=4), LinesTotal/LinesDone/LinesFailed, CreatedAt, StartedAt?, FinishedAt?, LastError? (≤500); Index (Status, CreatedAt) + (BookId, Language, Status). „Ein offener je (Kurs, Sprache)/je Nutzer" erzwingt der Dienst, nicht die DB |
+| CourseTranslationJobs | Auftrag „Kurs in Sprache uebersetzen" — Tabelle seit 0.547.0, Auftraege + Hintergrunddienst seit 0.548.0 (`CourseTranslationJobService`, `CourseTranslationWorker`) | BookId (Cascade), Language (≤8), RequestedByUserId? (**kein FK**; `null` = Automatik), Status (Queued=0/Running=1/Done=2/Failed=3/Cancelled=4), LinesTotal/LinesDone/LinesFailed, CreatedAt, StartedAt?, FinishedAt?, LastError? (≤500); Index (Status, CreatedAt) + (BookId, Language, Status). „Ein offener je (Kurs, Sprache)/je Nutzer" erzwingt der Dienst, nicht die DB |
 | RememberedPositions | Auf chessable.com „gemerkte" Stellungen (RepCheck „Remember line") **und Stellungen der Hintergrund-Analyseaufträge** (einmal je Stellung, `SourceUrl=/analysis/jobs`); die Liste trägt den jüngsten Auftrag als `Analysis` mit | UserId (Cascade), Fen (≤120), CourseId? (≤32), **CourseName? (≤200; über den Chessable-Bearer aufgelöst — Extension-mitgeliefert oder serverseitig aus der gecachten Kursliste)**, SourceUrl? (≤1000), CreatedAt; Index (UserId, CreatedAt) |
 | GameRecaps | „Kurz erzählt" (0.541.0): je Partie und Sprache EINE Nacherzählung für Link-Vorschau + Partieseite (`GameRecapService`) | SavedGameId (Cascade), Language (≤8), Text (≤1000; der Dienst lässt höchstens 600 zu), Model? (≤80), CreatedAt; **UNIQUE (SavedGameId, Language)** |
 | GameRoasts | „Roast my game" (0.535.0): je eigener Partie, Sprache und Stil der zuletzt gewürfelte Kommentar (`GameRoastService`) | SavedGameId (Cascade), Style (≤12), Language (≤8), Text (≤2000), Model? (≤80), **Automatic (nach der Analyse von selbst geschrieben, 0.540.0 — zählt nicht im Tagesdeckel, „Neu würfeln" setzt false)**, CreatedAt; **UNIQUE (SavedGameId, Language, Style)** |
@@ -3270,6 +3313,12 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   Spark sonst Minuten je Tipp —, gestreamt wegen des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
   JSON-Schema wie der Claude-Weg (vLLM erzwingt es per Grammatik; lehnt ein Server es ab, einmal ohne und dann dabei
   bleiben).
+- **Kurs-Übersetzung: zwei Einstellungen, Automatik nur auf Prod** (0.548.0) – `CourseTranslation:Parallel` (Vorgabe 4,
+  Linien je Lauf gleichzeitig) und `CourseTranslation:AutoLanguages` (Compose `COURSE_TRANSLATION_AUTO_LANGUAGES`,
+  Komma-Liste, nur die 25 Oberflächensprachen, Vorgabe LEER = aus). Prod bekommt `de,en` erst auf Zuruf in der `.env`;
+  Dev bleibt aus — beide teilen sich die Spark, und denselben Bestand zweimal zu übersetzen kostete Wochen Nachtarbeit.
+  Die Sperrzeiten (`TextLlm:QuietHours`) gelten für JEDEN Auftrag, auch angeforderte; das Werkzeug
+  (`tools/LibraryImport translate --course`) kennt sie nicht, dort hält die Schaltuhr sie ein.
 - **`SourcePgn` liegt in `BookSource` (Tabellensplitting auf `Books`), nie an `Book`** (seit 0.508.3) – Das Roh-PGN
   eines Buchs (Ø ~480 KB, bis 6 MB) hing als Property an `Book` und kam mit JEDEM `.Include(bp => bp.Book)` mit:
   `GET /api/courses/{id}/puzzles` zog 6 MB × 1.881 Linien = 11 GB aus der DB für einen Request, die Prod-API stand

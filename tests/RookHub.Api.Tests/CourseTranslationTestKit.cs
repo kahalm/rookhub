@@ -41,6 +41,21 @@ public sealed class FakeCourseTranslator : IClaudeJsonClient
     /// <summary>Beim n-ten Aufruf (1-basiert) wird dieser Token-Geber abgebrochen — die Antwort kommt trotzdem.</summary>
     public (int Call, CancellationTokenSource Cts)? CancelAt { get; set; }
 
+    /// <summary>Gesetzt: jeder Aufruf wartet, bis der Test ihn freigibt — oder bis der Lauf abgebrochen wird (der
+    /// Token zaehlt hier, anders als bei <see cref="Delay"/>). So laesst sich ein Lauf mitten im Modellaufruf anhalten.</summary>
+    public TaskCompletionSource? Hold { get; set; }
+
+    /// <summary>Wartet, bis mindestens <paramref name="count"/> Aufrufe angekommen sind.</summary>
+    public async Task WaitForCallsAsync(int count = 1, int timeoutMs = 10_000)
+    {
+        var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (Calls.Count < count)
+        {
+            if (DateTime.UtcNow > until) throw new TimeoutException($"Nur {Calls.Count} von {count} Modellaufrufen angekommen.");
+            await Task.Delay(10);
+        }
+    }
+
     public string Prefix { get; set; } = "DE:";
 
     public IReadOnlyList<(string System, List<(int Ply, string Text)> Items)> Calls
@@ -64,6 +79,7 @@ public sealed class FakeCourseTranslator : IClaudeJsonClient
             n = _calls.Count;
         }
         if (Delay > TimeSpan.Zero) await Task.Delay(Delay, CancellationToken.None);
+        if (Hold is { } hold) await hold.Task.WaitAsync(ct);
         if (CancelAt is { } c && c.Call == n) c.Cts.Cancel();
         if (Fail || (FailIfSystemContains is { } marker && system.Contains(marker))
                  || (FailIfPromptContains is { } text && items.Any(i => i.Text.Contains(text))))
@@ -86,8 +102,18 @@ public sealed class CourseTranslationTestKit : IDisposable
 
     public FakeCourseTranslator Llm { get; } = new();
 
-    public CourseTranslationTestKit(int parallel = 1)
+    /// <summary>Die Sperrzeiten dieses Containers — ohne Angabe NIE gesperrt, damit kein Test von der echten Uhr abhaengt.</summary>
+    public QuietHours Quiet { get; }
+
+    public CourseTranslationSignal Signal => _provider.GetRequiredService<CourseTranslationSignal>();
+
+    public IServiceScopeFactory Scopes => _provider.GetRequiredService<IServiceScopeFactory>();
+
+    /// <param name="autoLanguages"><c>CourseTranslation:AutoLanguages</c> (leer = Automatik aus).</param>
+    /// <param name="quiet">Sperrzeiten, z. B. mit einer gestellten Uhr (<see cref="QuietHoursTests.ManualTime"/>).</param>
+    public CourseTranslationTestKit(int parallel = 1, string? autoLanguages = null, QuietHours? quiet = null)
     {
+        Quiet = quiet ?? new QuietHours("");
         var root = new InMemoryDatabaseRoot();
         var name = Guid.NewGuid().ToString();
         var services = new ServiceCollection();
@@ -96,11 +122,15 @@ public sealed class CourseTranslationTestKit : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["CourseTranslation:Parallel"] = parallel.ToString(),
+                ["CourseTranslation:AutoLanguages"] = autoLanguages,
             }).Build());
         services.AddSingleton<IClaudeJsonClient>(Llm);
         services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(name, root));
         services.AddScoped<CourseTranslationService>();
         services.AddScoped<CourseCommentLocalizer>();
+        services.AddSingleton(Quiet);
+        services.AddSingleton<CourseTranslationSignal>();
+        services.AddScoped<CourseTranslationJobService>();
         _provider = services.BuildServiceProvider();
     }
 
@@ -118,13 +148,25 @@ public sealed class CourseTranslationTestKit : IDisposable
 
     public CourseCommentLocalizer Localizer() => Scope().GetRequiredService<CourseCommentLocalizer>();
 
-    public async Task<Book> SeedBookAsync(string? commentLanguage = "en", string name = "Kurs")
+    public CourseTranslationJobService Jobs() => Scope().GetRequiredService<CourseTranslationJobService>();
+
+    /// <summary>Der Hintergrunddienst, verdrahtet mit diesem Container (nicht gestartet — die Tests rufen
+    /// <see cref="CourseTranslationWorker.StepAsync"/> selbst).</summary>
+    public CourseTranslationWorker Worker(TimeSpan? quietCheck = null) =>
+        new(Scopes, Signal, Microsoft.Extensions.Logging.Abstractions.NullLogger<CourseTranslationWorker>.Instance, Quiet)
+        {
+            QuietCheck = quietCheck ?? TimeSpan.FromMilliseconds(20),
+        };
+
+    public async Task<Book> SeedBookAsync(string? commentLanguage = "en", string name = "Kurs", bool isPublic = false,
+        int? ownerUserId = null)
     {
         var db = Db();
         var book = new Book
         {
             FileName = $"b-{Guid.NewGuid():N}.pgn", DisplayName = name, CommentLanguage = commentLanguage,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource(),
+            IsPublic = isPublic, OwnerUserId = ownerUserId,
         };
         db.Books.Add(book);
         await db.SaveChangesAsync();

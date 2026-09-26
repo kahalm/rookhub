@@ -23,8 +23,15 @@ namespace RookHub.Api.Services;
 public class CourseAuthoringService
 {
     private readonly AppDbContext _db;
+    private readonly CourseTranslationJobService? _translationJobs;
 
-    public CourseAuthoringService(AppDbContext db) => _db = db;
+    /// <param name="translationJobs">Optional (per DI): nach dem Einfuegen von Linien und dem Umbenennen eines Kapitels
+    /// zieht ein Automatik-Auftrag vorhandene Uebersetzungen des Kurses nach (0.548.0). Tests ohne ihn: nichts.</param>
+    public CourseAuthoringService(AppDbContext db, CourseTranslationJobService? translationJobs = null)
+    {
+        _db = db;
+        _translationJobs = translationJobs;
+    }
 
     private const string NoChapterKey = "\0__none__";
 
@@ -318,6 +325,7 @@ public class CourseAuthoringService
             // im Aufbereitungs-Banner auftauchen (dort wären sie ohnehin nicht reprozessierbar).
             book.ImportVersion = ImportPipeline.CurrentVersion;
             await _db.SaveChangesAsync(ct);
+            if (_translationJobs is not null) await _translationJobs.NotifyCourseChangedAsync(bookId, ct);
         }
 
         return new AddCourseLinesResultDto
@@ -392,6 +400,8 @@ public class CourseAuthoringService
         foreach (var bp in affected) bp.Chapter = to;
         book.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        // Der neue Kapitelname hat noch keine Uebersetzung — die Linien behalten bis dahin das Original-Label.
+        if (_translationJobs is not null) await _translationJobs.NotifyCourseChangedAsync(bookId, ct);
         return affected.Count;
     }
 

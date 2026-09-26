@@ -21,13 +21,17 @@ public class PgnImportService
 {
     private readonly AppDbContext _db;
     private readonly IBackgroundTaskQueue? _bgQueue;
+    private readonly CourseTranslationJobService? _translationJobs;
 
     // bgQueue ist optional: per DI injiziert (reiht nach Import die Tipp-Generierung ein); bei direkter
-    // Instanziierung (Tests) null → kein Enqueue.
-    public PgnImportService(AppDbContext db, IBackgroundTaskQueue? bgQueue = null)
+    // Instanziierung (Tests) null → kein Enqueue. Ebenso translationJobs: hat sich an einem Kurs mit Uebersetzungen
+    // etwas geaendert, zieht ein Automatik-Auftrag sie nach (Kurs-Kommentare mehrsprachig, 0.548.0).
+    public PgnImportService(AppDbContext db, IBackgroundTaskQueue? bgQueue = null,
+        CourseTranslationJobService? translationJobs = null)
     {
         _db = db;
         _bgQueue = bgQueue;
+        _translationJobs = translationJobs;
     }
 
     /// <summary>Entfernt PGN-Suffixe für den Anzeigenamen (wie schach-bot _clean_book_name).</summary>
@@ -603,7 +607,15 @@ public class PgnImportService
             book.Source.SourcePgn = pgnText;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
+        // Auch ein bloss umbenannter Titel/Kapitelname zaehlt (Etiketten werden bei jedem Import nachgezogen).
+        var linesChanged = toAdd.Count > 0 || updated > 0
+            || _db.ChangeTracker.Entries<BookPuzzle>().Any(e => e.State == EntityState.Modified);
         await _db.SaveChangesAsync(ct);
+
+        // Uebersetzungen nachziehen (Aktualisieren, Neu-Aufbereiten, angehaengte Linien): nur Kurse, die schon Saetze
+        // haben, und nur Veraltetes — scheitert das, bleibt der Import trotzdem gelungen.
+        if (_translationJobs is not null && linesChanged)
+            await _translationJobs.NotifyCourseChangedAsync(book.Id, ct);
 
         // Tipp-Generierung (LLM + Stockfish) asynchron anstoßen — blockiert den Import nicht.
         // HintGenerationService ist idempotent (überspringt aktuelle Tipps) und no-op ohne API-Key.

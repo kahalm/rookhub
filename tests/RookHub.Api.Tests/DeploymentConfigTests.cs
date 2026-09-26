@@ -88,6 +88,8 @@ public class DeploymentConfigTests
         Assert.Contains("TextLlm__BaseUrl: ${TEXT_LLM_BASE_URL:-}", text);
         Assert.Contains("TextLlm__ApiKey: ${TEXT_LLM_API_KEY:-}", text);
         Assert.Contains("TextLlm__Model: ${TEXT_LLM_MODEL:-}", text);
+        // Kurs-Übersetzung automatisch (0.548.0): leer = aus — nur Prod setzt de,en; ohne die Zeile ginge es nie an.
+        Assert.Contains("CourseTranslation__AutoLanguages: ${COURSE_TRANSLATION_AUTO_LANGUAGES:-}", text);
         // „Frag die Kommentare" (0.536.0): Embedding-Modell — optional, leer = Suche aus.
         Assert.Contains("Embedding__BaseUrl: ${EMBEDDING_BASE_URL:-}", text);
         Assert.Contains("Embedding__ApiKey: ${EMBEDDING_API_KEY:-}", text);

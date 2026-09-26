@@ -50,12 +50,20 @@ public class CourseTranslationSqlTests(CourseTranslationFixture fixture)
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IConfiguration>(new ConfigurationBuilder().AddInMemoryCollection(
-            new Dictionary<string, string?> { ["CourseTranslation:Parallel"] = "3" }).Build());
+            new Dictionary<string, string?>
+            {
+                ["CourseTranslation:Parallel"] = "3",
+                ["CourseTranslation:AutoLanguages"] = "de",
+            }).Build());
         services.AddSingleton<IClaudeJsonClient>(_llm);
         services.AddDbContext<AppDbContext>(o =>
             o.UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0))));
         services.AddScoped<CourseTranslationService>();
         services.AddScoped<CourseCommentLocalizer>();
+        // Auftraege (Stufe B): nie gesperrt — der Test haengt nicht an der echten Uhr.
+        services.AddSingleton(new QuietHours(""));
+        services.AddSingleton<CourseTranslationSignal>();
+        services.AddScoped<CourseTranslationJobService>();
         _provider = services.BuildServiceProvider();
     }
 
@@ -207,5 +215,71 @@ public class CourseTranslationSqlTests(CourseTranslationFixture fixture)
         Assert.Empty(await after.CommentSets.ToListAsync());
         Assert.Empty(await after.CommentTexts.ToListAsync());
         Assert.Empty(await after.CourseTranslationJobs.ToListAsync());
+    }
+
+    /// <summary>Die Abfragen der Auftraege (Stufe B) gegen MariaDB: die Vorauswahl der Automatik (korrelierte
+    /// Unterabfragen, MAX ueber Kursversuche, Sortierung nach „zuletzt benutzt"), die Warteschlange (Sortierung nach
+    /// „angefordert"), die Kursansicht (GROUP BY Sprache) und die Admin-Ansicht (Benutzername per Unterabfrage), dazu ein
+    /// ganzer Lauf mit dem Fortschritt aus eigenen Kontexten.</summary>
+    [MySqlFact]
+    public async Task Auftraege_AutomatikWarteschlangeAnsichtenUndLauf_AufMariaDb()
+    {
+        var users = Get<AppDbContext>();
+        var alice = new AppUser { Username = "alice", PasswordHash = "x" };
+        users.AppUsers.Add(alice);
+        await users.SaveChangesAsync();
+
+        var old = await BookAsync("en", "Alt");
+        var fresh = await BookAsync("en", "Frisch");
+        var german = await BookAsync("de", "Deutsch");
+        var oldLine = await LineAsync(old, "001", "Kapitel", "Alter Kommentar");
+        var freshLine = await LineAsync(fresh, "001", "Kapitel", "Frischer Kommentar");
+        await LineAsync(fresh, "002", "Kapitel", "Zweiter Kommentar");
+        var germanLine = await LineAsync(german, "001", "Kapitel", "Deutscher Kommentar");
+        var attempts = Get<AppDbContext>();
+        attempts.CourseAttempts.AddRange(
+            new CourseAttempt { UserId = alice.Id, BookId = old.Id, BookPuzzleId = oldLine.Id, AttemptedAt = DateTime.UtcNow.AddDays(-5) },
+            new CourseAttempt { UserId = alice.Id, BookId = fresh.Id, BookPuzzleId = freshLine.Id, AttemptedAt = DateTime.UtcNow.AddHours(-1) },
+            new CourseAttempt { UserId = alice.Id, BookId = german.Id, BookPuzzleId = germanLine.Id, AttemptedAt = DateTime.UtcNow });
+        await attempts.SaveChangesAsync();
+
+        // (1) Automatik: der zuletzt benutzte Kurs zuerst, der deutsche gar nicht.
+        var first = await Get<CourseTranslationJobService>().ClaimNextAsync();
+        Assert.True(first!.Value.Automatic);
+        var job = await Get<AppDbContext>().CourseTranslationJobs.AsNoTracking().SingleAsync(j => j.Id == first.Value.Id);
+        Assert.Equal((fresh.Id, "de", CourseTranslationJobStatus.Running), (job.BookId, job.Language, job.Status));
+
+        // (2) Ein ganzer Lauf: Fortschritt und Ergebnis am Auftrag.
+        Assert.Equal(CourseTranslationJobOutcome.Done, await Get<CourseTranslationJobService>().RunAsync(first.Value.Id));
+        var done = await Get<AppDbContext>().CourseTranslationJobs.AsNoTracking().SingleAsync(j => j.Id == first.Value.Id);
+        Assert.Equal((CourseTranslationJobStatus.Done, 2, 2, 0), (done.Status, done.LinesTotal, done.LinesDone, done.LinesFailed));
+
+        var second = await Get<CourseTranslationJobService>().ClaimNextAsync();
+        Assert.Equal(old.Id, (await Get<AppDbContext>().CourseTranslationJobs.SingleAsync(j => j.Id == second!.Value.Id)).BookId);
+        await Get<CourseTranslationJobService>().RunAsync(second!.Value.Id);
+        Assert.Null(await Get<CourseTranslationJobService>().ClaimNextAsync());   // Rest: gleiche Quellsprache bzw. Sperrfrist
+
+        // (3) Anfordern + Warteschlange: angefordert vor Automatik.
+        Assert.Equal(1, await Get<CourseTranslationJobService>().EnqueueRefreshAsync(fresh.Id));
+        var requested = await Get<CourseTranslationJobService>().RequestAsync(alice.Id, false, german.Id, "fr");
+        Assert.Equal(CourseTranslationRequestStatus.NotFound, requested.Status);      // privater Kurs ohne Zugang
+        requested = await Get<CourseTranslationJobService>().RequestAsync(alice.Id, true, german.Id, "fr");
+        Assert.Equal(CourseTranslationRequestStatus.Created, requested.Status);
+        Assert.Equal(1, requested.Job!.QueuePosition);
+
+        // (4) Ansichten.
+        var overview = (await Get<CourseTranslationJobService>().GetOverviewAsync(fresh.Id, alice.Id, true))!;
+        Assert.Equal("en", overview.SourceLanguage);
+        var de = Assert.Single(overview.Languages);
+        Assert.Equal(("de", 2, 2), (de.Language, de.LinesTranslated, de.LinesTotal));
+        Assert.Equal(2, overview.Jobs.Single(j => j.Status == "queued").QueuePosition);
+        Assert.Equal(german.Id, overview.MyOpenJob!.BookId);
+        Assert.Equal("Deutsch", overview.MyOpenJob.BookName);
+
+        var admin = await Get<CourseTranslationJobService>().GetAdminOverviewAsync();
+        Assert.Equal(new[] { requested.Job.Id }, admin.Queue.Take(1).Select(j => j.Id));
+        Assert.Equal("alice", admin.Queue[0].RequestedByUsername);
+        Assert.Equal(2, admin.Recent.Count);
+        Assert.Equal(new[] { "de" }, admin.AutoLanguages);
     }
 }

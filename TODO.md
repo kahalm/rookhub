@@ -9,9 +9,9 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0)
+## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0, Stufe B in 0.548.0, C offen)
 
-### Stand (Stufe A, 0.547.0 — B und C offen)
+### Stand (Stufe A, 0.547.0)
 
 Gebaut: Abschnitte **1, 2, 3, 4, 7, 9** samt Tests aus 10 und Doku aus 11 (CLAUDE.md „Anmerkungen in mehreren
 Sprachen" → KURSE). Migration `CourseCommentTranslations` (BookPuzzleId + Unique, SourceHash + Index,
@@ -42,6 +42,42 @@ Abweichungen vom Plan (bewusst):
   für immer offen).
 * **Zusatz nach Review: Kurs-Lauf in zwei Phasen** — jeder verschiedene Text geht je Lauf genau einmal ans Modell,
   auch mit `--parallel` (Phase 1: Fingerabdruck gehört der ersten Linie, Phase 2: Wiederverwendung).
+
+### Stand (Stufe B, 0.548.0 — C offen)
+
+Gebaut: Abschnitte **5 und 6** samt Tests aus 10 und Doku aus 11 (CLAUDE.md KURSE → „Aufträge", „Hintergrunddienst",
+„Automatik", „Nachziehen"; REST-Zeilen unter „Kurse"; Konvention „Kurs-Übersetzung: zwei Einstellungen"). Keine
+Migration. `CourseTranslationJobService` (anfordern/zurückziehen/Quellsprache/Ansichten/Nachziehen/Worker-Seite),
+`CourseTranslationWorker` + `CourseTranslationSignal`, `CourseTranslationLanguages` (25er-Liste, Spiegel mit
+literalem Test in `locale.service.spec.ts`), `CourseTranslationController` + `AdminCourseTranslationController`,
+Compose-Env `COURSE_TRANSLATION_AUTO_LANGUAGES` in allen fünf Dateien. Sperrzeiten über die vorhandene
+`QuietHours` (0.546.0). MariaDB-Integrationstest für Automatik-Vorauswahl, Warteschlange, Ansichten und einen Lauf.
+Nicht im Repo (macht der Koordinator): Vorrang vor dem Bibliothekslauf in `.jobs/spark-uebersetzung.sh`, Prod-`.env`.
+
+Abweichungen/Ergänzungen (bewusst):
+* **Vorrang heißt auch Unterbrechen**: ein NEU angeforderter Auftrag stellt einen LAUFENDEN Automatik-Auftrag zurück
+  (`PreemptAutomatic`, zurück auf `Queued`) — ein großer Kurs rechnet sonst einen halben Tag, und „angeforderte
+  zuerst" hieße nur „danach". Angeforderte unterbrechen sich nicht gegenseitig.
+* **Nachziehen** hängt am Import-KERN (`ImportIntoBookAsync`: Aktualisieren, Neu-Aufbereiten, Cache-Weg,
+  angehängte Linien, geänderte Etiketten) und an `CourseAuthoringService` (Kapitel umbenennen UND Linien einfügen).
+  Ein WARTENDER Auftrag der Sprache genügt, ein LAUFENDER nicht.
+* **Automatik-Sperrfrist 7 Tage** je (Kurs, Sprache) nach einem fertigen Auftrag — sonst Schleife bei Linien, die nie
+  einen Satz bekommen. „Zuletzt benutzt" = jüngster `CourseAttempt`; der frischeste Kurs bekommt alle Auto-Sprachen,
+  bevor der nächste drankommt.
+* **Konto löschen** setzt offene Aufträge auf `Cancelled` („account deleted") statt sie zu löschen; ein laufender
+  merkt es beim nächsten Zwischenstand (≤ 10 Linien) und bricht ab.
+* **GET `/translations` bestimmt die Quellsprache** beim ersten Abruf (auch anonym — ein Schreibvorgang je Kurs, einmal).
+  Zusätzlich zu den geplanten Feldern: `available`, `canRequest`, je Auftrag `automatic`, `linesFailed`, Zeitstempel,
+  `lastError`; `jobs` enthält hinter den offenen die 5 jüngsten erledigten.
+* **Zurückziehen**: 403 fremder Auftrag, 409 `not-waiting` (Nutzer: nur wartende; Admin: jeder offene, ein
+  laufender bricht sofort ab). `PUT comment-language` prüft nur die FORM (`und` erlaubt), nicht die 25er-Liste —
+  ein Kurs darf in einer anderen Sprache geschrieben sein.
+* **Ergebnis eines Laufs**: `Done` auch mit einzelnen gescheiterten Linien (`LastError`), `Failed` nur, wenn keine
+  Linie durchging; Ziel = Quellsprache (inzwischen korrigiert) → `Cancelled` + `same-language`. Der Kurs-Lauf meldet
+  jetzt schon ZU BEGINN einen Zwischenstand (Auftrag nennt die offenen Linien sofort).
+* **Offen/Frage**: fordert ein Nutzer (Kurs, Sprache) an, für die nur ein WARTENDER Automatik-Auftrag existiert,
+  bekommt er diesen zurück (wie geplant) — der behält aber den Automatik-Rang. Hochstufen hieße, ihn dem Nutzer
+  zuzurechnen (zählt dann gegen sein Limit). Nicht gebaut, Entscheidung offen.
 
 Gewünscht: Kurse (Bücher/`BookPuzzles`) in weiteren Sprachen durchspielen — Zug-Kommentare,
 Linien-Einleitung, Linien-Titel und Kapitelnamen. Heute gibt es Übersetzungen NUR für Partien
@@ -152,7 +188,7 @@ Repertoires sind NICHT Teil dieses Plans (ein PGN-Text je Datei, eigener Umbau).
 - **Bewusst Original**: Bearbeiten (`/{id}/lines`, Umbenennen, Löschen), PGN-Export (`/pgn`, `/chapter-pgn`,
   Linien-PGN), Tipp-Erzeugung, Wochenpost, Kurs→Repertoire-Umwandlung.
 
-### 5. Aufträge anfordern (API)
+### 5. Aufträge anfordern (API) — ✅ Stufe B (0.548.0)
 
 - `GET /api/courses/{id}/translations` → `{ sourceLanguage, languages: [{ language, linesTranslated,
   linesTotal }], jobs: [{ id, language, status, linesDone, linesTotal, requestedByMe, queuePosition }],
@@ -165,7 +201,7 @@ Repertoires sind NICHT Teil dieses Plans (ein PGN-Text je Datei, eigener Umbau).
 - `DELETE /api/courses/{id}/translations/{jobId}` → eigenen wartenden Auftrag zurückziehen (Admin: jeden).
 - `GET /api/admin/course-translations` (Admin) → Warteschlange + letzte Aufträge (nur Endpoint, keine UI nötig).
 
-### 6. Warteschlange + Hintergrunddienst
+### 6. Warteschlange + Hintergrunddienst — ✅ Stufe B (0.548.0), außer dem Vorrang vor dem Bibliothekslauf (außerhalb des Repos)
 
 - **`CourseTranslationWorker : BackgroundService`** in der API. Schleife: kein Text-Modell konfiguriert →
   schlafen. Sperrzeit → schlafen bis zum Ende (in ≤ 10-min-Schritten). Sonst nächsten Auftrag: erst
@@ -179,7 +215,7 @@ Repertoires sind NICHT Teil dieses Plans (ein PGN-Text je Datei, eigener Umbau).
   Hash-Prüfung macht der Lauf selbst.
 - **Nach Aktualisieren/Neu-Aufbereiten/Kapitel-Umbenennen eines Kurses**: für jede Sprache, in der der Kurs
   schon Sätze hat, einen Automatik-Auftrag einreihen (erledigt nur Veraltetes, kostet sonst nichts).
-- **Sperrzeiten in der App**: `TextLlm:QuietHours` (Vorgabe `"Mon-Thu 08:00-17:00; Fri 08:00-14:00"`,
+- **Sperrzeiten in der App** (gebaut in 0.546.0 als `Services/QuietHours.cs`, hier nur benutzt): `TextLlm:QuietHours` (Vorgabe `"Mon-Thu 08:00-17:00; Fri 08:00-14:00"`,
   auch in `appsettings.json`) + `TextLlm:TimeZone` (Vorgabe `Europe/Vienna`). Eigene Klasse `QuietHours`
   (`Parse`, `IsQuiet(DateTimeOffset)`, `EndOf(DateTimeOffset)`) mit Tests (Do 16:59/17:00, Fr 13:59/14:00,
   Wochenende, Sommerzeitwechsel, leere Angabe = nie gesperrt). Zeitzonendaten im API-Image prüfen

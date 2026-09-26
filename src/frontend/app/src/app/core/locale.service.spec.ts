@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { LocaleService, resolveStartupLocale, FORMAT_LOCALES } from './locale.service';
+import { LocaleService, resolveStartupLocale, FORMAT_LOCALES, SUPPORTED_LANGS } from './locale.service';
 import { sharedCookieDomain } from './partner-site';
 
 const LANG_COOKIE = 'rookhub_lang';
@@ -10,6 +10,19 @@ function clearSharedLang(): void {
   const domain = sharedCookieDomain();
   if (domain) document.cookie = `${LANG_COOKIE}=; domain=${domain}; path=/; max-age=0`;
 }
+
+describe('SUPPORTED_LANGS', () => {
+  // Handgespiegelt: der Server nimmt Kurs-Uebersetzungen nur in genau diese Sprachen an
+  // (CourseTranslationLanguages.Supported, festgehalten in CourseTranslationLanguagesTests mit DERSELBEN
+  // literalen Liste). Kommt hier eine Sprache dazu, muss sie dort auch dazu — sonst bietet die Kursseite
+  // eine Sprache an, die der Server mit „unsupported-language" ablehnt.
+  it('is the literal list the server accepts for course translations', () => {
+    expect([...SUPPORTED_LANGS]).toEqual([
+      'en', 'de', 'hr', 'es', 'fr', 'it', 'pt', 'nl', 'sv', 'pl', 'cs', 'ro', 'hu',
+      'el', 'tr', 'ru', 'uk', 'ar', 'fa', 'hi', 'id', 'vi', 'zh', 'ja', 'ko',
+    ]);
+  });
+});
 
 describe('LocaleService', () => {
   let svc: LocaleService;
