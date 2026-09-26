@@ -2473,6 +2473,15 @@
     "shared": {
       "notFound": "This shared game does not exist or was removed."
     },
+    "similar": {
+      "title": "Similar master games",
+      "sharedLine": "Same moves up to: {{line}}",
+      "branch": "same up to {{last}}, then {{master}} instead of {{game}}",
+      "sameEnd": "same up to {{last}}",
+      "none": "No annotated master game in our library began like this.",
+      "loadFailed": "Similar games could not be loaded.",
+      "playFailed": "The game could not be started."
+    },
     "recap": {
       "hint": "In brief — written by the AI from the engine analysis; the link preview shows the same lines."
     },

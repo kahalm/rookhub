@@ -2473,6 +2473,15 @@
     "shared": {
       "notFound": "Ova dijeljena partija ne postoji ili je uklonjena."
     },
+    "similar": {
+      "title": "Slične majstorske partije",
+      "sharedLine": "Isti potezi do: {{line}}",
+      "branch": "isto do {{last}}, zatim {{master}} umjesto {{game}}",
+      "sameEnd": "isto do {{last}}",
+      "none": "Nijedna komentirana majstorska partija u našoj zbirci nije počela ovako.",
+      "loadFailed": "Slične partije nije moguće učitati.",
+      "playFailed": "Partiju nije moguće pokrenuti."
+    },
     "recap": {
       "hint": "Ukratko — napisala umjetna inteligencija na temelju analize enginea; isti tekst prikazuje se i u pregledu poveznice."
     },

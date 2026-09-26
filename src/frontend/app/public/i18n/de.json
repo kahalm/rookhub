@@ -2473,6 +2473,15 @@
     "shared": {
       "notFound": "Diese geteilte Partie existiert nicht oder wurde entfernt."
     },
+    "similar": {
+      "title": "Ähnliche Meisterpartien",
+      "sharedLine": "Gleiche Züge bis: {{line}}",
+      "branch": "gleich bis {{last}}, dann {{master}} statt {{game}}",
+      "sameEnd": "gleich bis {{last}}",
+      "none": "Keine kommentierte Meisterpartie in unserem Bestand begann so.",
+      "loadFailed": "Ähnliche Partien konnten nicht geladen werden.",
+      "playFailed": "Die Partie konnte nicht gestartet werden."
+    },
     "recap": {
       "hint": "Kurz erzählt — von der KI aus der Engine-Analyse geschrieben; so steht die Partie auch in der Link-Vorschau."
     },

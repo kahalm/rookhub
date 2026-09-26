@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { LibraryGame } from '../guess/library.service';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { GameEvals } from './game-review.util';
 
@@ -144,6 +145,25 @@ export interface GameRecap {
   pending: boolean;
 }
 
+/** „Ähnliche Meisterpartien" (0.544.0): Partien des Rohbestands mit der längsten gemeinsamen Zugfolge. */
+export interface SimilarGame {
+  game: LibraryGame;
+  sharedPlies: number;
+  /** Der letzte gemeinsame Zug („3...dxe4"). */
+  lastSharedMove?: string | null;
+  /** Der Zug des Meisters an der Abzweigung („4.Nc3"); fehlt, wenn seine Zeile dort endet. */
+  masterMove?: string | null;
+  /** Der Zug dieser Partie an derselben Stelle. */
+  gameMove?: string | null;
+}
+
+export interface SimilarGames {
+  opening?: string | null;
+  sharedPlies: number;
+  sharedLine?: string | null;
+  items: SimilarGame[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
@@ -215,6 +235,14 @@ export class GamesService {
   /** „Kurz erzählt" (0.541.0) der eigenen Partie. Fehlt sie bei fertiger Analyse, stößt schon der Abruf sie an. */
   recap(id: number): Observable<GameRecap> {
     return this.http.get<GameRecap>(`/api/games/${id}/recap`);
+  }
+
+  /** „Ähnliche Meisterpartien" (0.544.0) — eigene Partie bzw. Teilen-Link (auch ohne Anmeldung). */
+  similarUrl(id: number): string { return `/api/games/${id}/similar`; }
+  sharedSimilarUrl(token: string): string { return `/api/games/shared/${encodeURIComponent(token)}/similar`; }
+
+  similar(url: string): Observable<SimilarGames> {
+    return this.http.get<SimilarGames>(url);
   }
 
   /** Erzeugen anstoßen (nur der Besitzer; läuft im Hintergrund, der Client fragt nach). */

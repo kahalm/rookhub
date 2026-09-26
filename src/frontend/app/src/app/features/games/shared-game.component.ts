@@ -36,6 +36,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
+import { SimilarGamesComponent } from './similar-games.component';
 
 /** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
 const RECAP_TRIES = 8;
@@ -57,6 +58,7 @@ const RECAP_RETRY_MS = 15_000;
     CommonModule, RouterLink, MatButtonModule, MatIconModule, MatCardModule, MatProgressSpinnerModule, MatTooltipModule,
     TranslatePipe, ChessBoardComponent, MoveListComponent, PositionRepertoiresComponent, GameReviewComponent,
     MistakesTrainerComponent, LiveEnginePanelComponent, PositionMenuComponent, MatMenuModule, MatDialogModule,
+    SimilarGamesComponent,
   ],
   providers: [PgnViewerService],
   template: `
@@ -220,6 +222,8 @@ const RECAP_RETRY_MS = 15_000;
                                  (mistakesChange)="mistakes.set($event)" />
               }
               <app-position-repertoires class="pr-slot" [fen]="service.currentFen" />
+              <!-- „Ähnliche Meisterpartien" (0.544.0): eingeklappt, lädt erst beim Aufklappen. -->
+              <app-similar-games class="similar-slot" [url]="similarUrl" />
             </div>
             <div class="moves-section">
               @if (service.currentGame; as g) {
@@ -276,7 +280,7 @@ const RECAP_RETRY_MS = 15_000;
     .board-tap-prev { left: 0; }
     .board-tap-next { right: 0; }
     .nav { display: flex; gap: 4px; }
-    .pr-slot, .review-slot, .trainer-slot, .live-slot { display: block; width: 100%; }
+    .pr-slot, .review-slot, .trainer-slot, .live-slot, .similar-slot { display: block; width: 100%; }
     .live-toggle.on { color: #42a5f5; }
     /* Die Zugliste ist so hoch wie das Brett und scrollt in sich; eine feste Breite, damit die zwei Zugspalten
        nebeneinander stehen statt — bei einer Spalte, die den Rest der Karte füllt — mit einer Handbreit Luft
@@ -341,6 +345,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   get notFoundKey(): string { return this.own ? 'games.loadError' : 'games.shared.notFound'; }
   /** `GET …/evals` dieser Partie — anonym die Kurve des Teilenden, angemeldet ersatzweise die eigene. */
   evalsUrl: string | null = null;
+  /** `GET …/similar` — ähnliche Meisterpartien (0.544.0). */
+  similarUrl: string | null = null;
   private analyzeUrl = '';
   // Signale statt Felder: sie ändern sich in HTTP-Antworten und in der Ausgabe der Kind-Komponente,
   // und nur ein gelesenes Signal markiert die Ansicht zuverlässig zum Neuzeichnen (Angular 22).
@@ -595,6 +601,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
       const id = Number(this.route.snapshot.paramMap.get('id'));
       this.gameId = id;
       this.evalsUrl = this.games.evalsUrl(id);
+      this.similarUrl = this.games.similarUrl(id);
       this.analyzeUrl = this.games.analyzeUrl(id);
       this.games.get(id).subscribe({
         next: g => { this.shareToken = g.shareToken; this.scanId = g.scanId ?? null; this.show(g); },
@@ -604,6 +611,7 @@ export class SharedGameComponent implements OnInit, DoCheck {
     }
     const token = this.route.snapshot.paramMap.get('token') || '';
     this.evalsUrl = this.games.sharedEvalsUrl(token);
+    this.similarUrl = this.games.sharedSimilarUrl(token);
     this.analyzeUrl = this.games.sharedAnalyzeUrl(token);
     this.games.getShared(token).subscribe({
       next: g => {

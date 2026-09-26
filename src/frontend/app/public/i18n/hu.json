@@ -2737,6 +2737,15 @@
     "shared": {
       "notFound": "Ez a megosztott játszma nem létezik, vagy eltávolították."
     },
+    "similar": {
+      "title": "Hasonló mesterjátszmák",
+      "sharedLine": "Azonos lépések eddig: {{line}}",
+      "branch": "{{last}}-ig azonos, majd {{master}} {{game}} helyett",
+      "sameEnd": "{{last}}-ig azonos",
+      "none": "A gyűjteményünkben egyetlen kommentált mesterjátszma sem kezdődött így.",
+      "loadFailed": "A hasonló játszmákat nem sikerült betölteni.",
+      "playFailed": "A játszmát nem sikerült elindítani."
+    },
     "recap": {
       "hint": "Röviden — a mesterséges intelligencia írta a gépi elemzés alapján; a link előnézete ugyanezt mutatja."
     },

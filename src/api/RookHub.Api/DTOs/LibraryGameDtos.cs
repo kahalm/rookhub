@@ -87,3 +87,29 @@ public class LibrarySemanticMatchDto
     /// <summary>Ähnlichkeit 0..1 (1 − Kosinus-Abstand).</summary>
     public double Score { get; set; }
 }
+
+/// <summary>„Ähnliche Meisterpartien" (0.543.0) zu einer gespeicherten Partie (<c>GET /api/games/{id}/similar</c>,
+/// <c>…/shared/{token}/similar</c>).</summary>
+public class SimilarGamesDto
+{
+    /// <summary>Eröffnungsname aus dem PGN der Partie (<c>[Opening]</c> bzw. chess.coms <c>[ECOUrl]</c>), sonst <c>null</c>.</summary>
+    public string? Opening { get; set; }
+    /// <summary>So viele Halbzüge teilt die ähnlichste Meisterpartie (0 = keine gefunden).</summary>
+    public int SharedPlies { get; set; }
+    /// <summary>Diese Züge, nummeriert („1.e4 c6 2.d4 d5 3.f3").</summary>
+    public string? SharedLine { get; set; }
+    public List<SimilarGameDto> Items { get; set; } = new();
+}
+
+public class SimilarGameDto
+{
+    /// <summary>Die Meisterpartie — wie in der Bestandssuche, ohne Züge, mit <c>inPool</c>/<c>requested</c>.</summary>
+    public LibraryGameDto Game { get; set; } = new();
+    public int SharedPlies { get; set; }
+    /// <summary>Der letzte gemeinsame Zug („3...dxe4").</summary>
+    public string? LastSharedMove { get; set; }
+    /// <summary>Der Zug des Meisters an der Abzweigung („4.Nc3"); <c>null</c>, wenn seine Zeile dort endet.</summary>
+    public string? MasterMove { get; set; }
+    /// <summary>Der Zug der eigenen Partie an derselben Stelle („4.fxe4").</summary>
+    public string? GameMove { get; set; }
+}
