@@ -1497,9 +1497,11 @@ auf 503/ProviderTimeout, abgerissene Uploads und Lichess-Aufrufe. **Gemessen 202
 erste Zeile im Mittel 0,11 s, höchstens 0,18 s; **0 × 503**, 0 abgerissene Uploads, keine Lichess-Erwähnung.
 
 **Rollout** (nur auf Zuruf): Merge → NPM-Custom-Location auf Dev → Provider mit `ROOKHUB_URL` gegen Dev, Messung
-wiederholen → Tag → NPM-Custom-Location auf Prod → Provider-Stacks auf `ROOKHUB_URL`/`ROOKHUB_API_TOKEN` umstellen
-und die Hintergrund-Liste im Profil auf die `rhe_`-Engines. Die Lichess-Registrierungen bleiben liegen und stören
-nicht; der Lichess-Token bleibt optional für Cloud-Engines.
+wiederholen → Tag → NPM-Custom-Location auf Prod → in den Provider-Stacks einen ZWEITEN Dienst für den direkten Weg
+DAZU (`.env` mit `ROOKHUB_URL`/`ROOKHUB_API_TOKEN`, 1 Live + Hintergrund-Engines) und den bestehenden Lichess-Dienst
+auf die eine Live-Engine zurückfahren (0.538.0: beide Wege = zwei Container) und die Hintergrund-Liste im Profil auf
+die `rhe_`-Engines. Die Lichess-Registrierungen bleiben liegen und stören nicht; der Lichess-Token bleibt für
+Cloud-Engines und für das Analysebrett von lichess.org.
 
 ### Hintergrund-Analyseaufträge (auth) — „diese Stellung rechnen, sobald die Hintergrund-Engine frei ist"
 `AnalysisJobs`: eine Stellung mit Zieltiefe + Linienzahl, abgearbeitet vom `AnalysisJobWorker` (Hosted
@@ -1694,8 +1696,17 @@ Users (Anleitung dort in der `README.md`). Es startet den OFFIZIELLEN Lichess-Pr
 auf einen Commit gepinnt + per Prüfsumme verifiziert statt ins Repo kopiert (eindeutige Herkunft,
 Update = Zeilenwechsel im Dockerfile). Eigener Anteil: `entrypoint.sh` (Aufruf aus `.env`-Variablen)
 und `preflight.py` (prüft den Token via `POST /api/token/test` VOR dem Start). **Seit 0.537.0 zeigt `ROOKHUB_URL`
-beide Basen (`--lichess`, `--broker`) auf RookHub** und `ROOKHUB_API_TOKEN` ersetzt den Lichess-Token (eigener
-Broker, siehe oben); ohne `ROOKHUB_URL` läuft alles wie bisher über Lichess. **Das Lebenszeichen patcht das
+beide Basen (`--lichess`, `--broker`) auf RookHub** und `ROOKHUB_API_TOKEN` ist der Token dafür (eigener
+Broker, siehe oben; seit 0.538.0 hat er mit `ROOKHUB_URL` VORRANG vor einem daneben stehenden `LICHESS_API_TOKEN`,
+und ohne `ROOKHUB_URL` ist er ein Abbruch mit Klartext — bei Lichess gilt er nicht); ohne `ROOKHUB_URL` läuft alles
+wie bisher über Lichess. **EIN Container bedient EINEN Broker; beide Wege gleichzeitig sind ZWEI Container** (0.538.0,
+Wunsch 2026-09-26 „lichess & eigener Broker", bewusst nicht ein Container, der beides kann): `compose.yml` hat den
+zweiten Dienst `engine-provider-lichess` am Profil `lichess` mit eigener `.env.lichess` (Vorlage
+`.env.lichess.example`, OHNE `ROOKHUB_URL`); `docker compose --profile lichess up -d` bzw. dauerhaft
+`COMPOSE_PROFILES=lichess` in der `.env`. Compose braucht die `.env.lichess` nur bei aktivem Profil (geprüft). Über
+Lichess gehört nur die Live-Engine, die Hintergrund-Engines in den direkten Container (IP-Drosselung). In RookHub
+stehen Engines beider Quellen ohnehin in EINER Liste (`GET /api/engine/external`, `EngineRegistry`), die
+Hintergrund-Liste darf `rhe_` und `eei_` mischen. **Das Lebenszeichen patcht das
 Image seit 0.478.11 nicht mehr hinein** (bis dahin `patch_provider.py`): der gepinnte Stand (`d0eeb242`, 2026-09-06) erfüllt die zwei Regeln
 des Brokers, an denen RookHub hängt, und `test/provider.test.py` prüft sie gegen einen nachgebauten Broker.
 

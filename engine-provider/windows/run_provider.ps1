@@ -26,6 +26,9 @@ try { [CtrlCImmune]::Ignore() } catch {}
 # diesen Namen): direkt = der RookHub-API-Token (rkh_..., Profil -> API-Tokens -> Bereich "Engine"),
 # ueber Lichess = ein Lichess-Token mit engine:read + engine:write. Einmalig setzen:
 #   [Environment]::SetEnvironmentVariable("LICHESS_API_TOKEN", "rkh_...", "User")
+# BEIDES (RookHub direkt UND lichess.org): ein Skript = ein Provider = ein Ziel. Fuer das zweite Ziel eine
+# Kopie dieses Skripts anlegen ($rookhubUrl leer, eigene Log-Dateien, $name darf gleich bleiben) und den
+# Lichess-Token nur in dieser Kopie setzen, vor Start-Process:  $env:LICHESS_API_TOKEN = "lip_..."
 $rookhubUrl = "https://rookhub.oberschmid.homes"
 
 $pythonExe = "python.exe"                                       # ggf. Vollpfad, falls nicht auf PATH

@@ -1,7 +1,9 @@
 #!/bin/bash
 # Baut den Aufruf des Lichess-Providers aus den Umgebungsvariablen (siehe .env.example),
 # damit in compose.yml/`docker run` nichts als Kommandozeile gepflegt werden muss. Mit ROOKHUB_URL
-# spricht der Provider direkt mit RookHub (eigener Broker), sonst ueber Lichess.
+# spricht der Provider direkt mit RookHub (eigener Broker), sonst ueber Lichess. EIN Container = EIN
+# Broker; beide Wege gleichzeitig sind zwei Container aus demselben Abbild (compose.yml: der zweite
+# haengt am Profil `lichess` und liest .env.lichess — ohne ROOKHUB_URL).
 #
 # ENGINE_COUNT>1 startet MEHRERE Provider (= mehrere bei Lichess registrierte Engines, je ein
 # eigener Stockfish-Prozess) in diesem einen Container — z. B. „Server 1" für die Live-Analyse
@@ -23,19 +25,28 @@ set -eu
 # unveraendert. Ausdruecklich gesetzte LICHESS_URL/BROKER_URL gewinnen (z. B. Registrierung ueber eine
 # andere Adresse als die Arbeit).
 #
-# ROOKHUB_API_TOKEN (rkh_…, im RookHub-Profil mit Scope „Engine" angelegt) ist nur ein zweiter NAME fuer
-# den Token: der Provider liest ausschliesslich LICHESS_API_TOKEN. Steht beides da, gewinnt
-# LICHESS_API_TOKEN — so bleibt eine bestehende .env unveraendert gueltig.
+# ROOKHUB_API_TOKEN (rkh_…, im RookHub-Profil mit Scope „Engine" angelegt) ist der Token des direkten
+# Wegs; der Provider selbst liest ausschliesslich LICHESS_API_TOKEN, deshalb wird er unter diesem Namen
+# weitergereicht. Mit ROOKHUB_URL hat ROOKHUB_API_TOKEN Vorrang — ein daneben stehender Lichess-Token
+# (aus einer fuer beide Container kopierten .env) gilt bei RookHub nicht. Ein rkh_-Token unter
+# LICHESS_API_TOKEN (aeltere Anleitung, Windows-Skript) bleibt als Rueckfall gueltig. Ohne ROOKHUB_URL
+# ist ein alleiniger ROOKHUB_API_TOKEN dagegen ein Fehler: bei Lichess gilt er nicht, und die
+# Registrierung stuerbe erst spaeter mit einem 401 in der Neustart-Schleife.
 # ---------------------------------------------------------------------------
 TOKEN_SOURCE=LICHESS_API_TOKEN
-if [ -z "${LICHESS_API_TOKEN:-}" ] && [ -n "${ROOKHUB_API_TOKEN:-}" ]; then
-    LICHESS_API_TOKEN="$ROOKHUB_API_TOKEN"
-    TOKEN_SOURCE=ROOKHUB_API_TOKEN
-fi
 if [ -n "${ROOKHUB_URL:-}" ]; then
     ROOKHUB_URL="${ROOKHUB_URL%/}"
     LICHESS_URL="${LICHESS_URL:-$ROOKHUB_URL}"
     BROKER_URL="${BROKER_URL:-$ROOKHUB_URL}"
+    if [ -n "${ROOKHUB_API_TOKEN:-}" ]; then
+        LICHESS_API_TOKEN="$ROOKHUB_API_TOKEN"
+        TOKEN_SOURCE=ROOKHUB_API_TOKEN
+    fi
+elif [ -z "${LICHESS_API_TOKEN:-}" ] && [ -n "${ROOKHUB_API_TOKEN:-}" ]; then
+    echo "FEHLER: ROOKHUB_API_TOKEN ist gesetzt, aber ROOKHUB_URL fehlt — ein RookHub-Token gilt bei Lichess nicht." >&2
+    echo "        Direkt mit RookHub: ROOKHUB_URL dazu (siehe .env.example)." >&2
+    echo "        Ueber Lichess (.env.lichess): LICHESS_API_TOKEN statt ROOKHUB_API_TOKEN eintragen." >&2
+    exit 1
 fi
 # preflight.py liest LICHESS_URL (Token-Pruefung gegen denselben Server, bei dem registriert wird).
 if [ -n "${LICHESS_URL:-}" ]; then export LICHESS_URL; fi

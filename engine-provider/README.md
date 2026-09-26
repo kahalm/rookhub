@@ -31,9 +31,11 @@ Unterschied ist nur, wohin er sich verbindet. Praktische Folgen, für beide Wege
 **Warum direkt?** Über Lichess hängt alles an Lichess: dessen DDoS-Schutz drosselt je IP (acht
 Provider auf einer Maschine gehen, zwölf nicht — und eine Überschreitung endete am 2026-09-11 in einer
 IP-Sperre), Protokolländerungen kommen ohne Vorwarnung, und ohne Lichess-Konto geht es gar nicht.
-Direkt mit RookHub gibt es nichts davon. Den Lichess-Weg brauchst du nur noch für **Cloud-Anbieter**
-(stockfishcloud, Chessify), die selbst als Lichess-Provider auftreten — beide Quellen stehen im
-Analysebrett in derselben Auswahl.
+Direkt mit RookHub gibt es nichts davon. Den Lichess-Weg brauchst du noch für **Cloud-Anbieter**
+(stockfishcloud, Chessify), die selbst als Lichess-Provider auftreten — und wenn deine Engine **auch im
+Analysebrett von lichess.org** stehen soll. Beides geht nebeneinander: ein zweiter Container aus
+demselben Abbild (siehe „Beides gleichzeitig"). In RookHub stehen Engines beider Quellen in derselben
+Liste und derselben Auswahl.
 
 ## Direkt mit RookHub (ohne Lichess) — empfohlen
 
@@ -71,7 +73,7 @@ Windows ohne Docker: in `windows/run_provider.ps1` `$rookhubUrl` setzen und den 
 Umgebungsvariable `LICHESS_API_TOKEN` hinterlegen (der Provider kennt nur diesen Namen) — siehe
 „Auf Windows" unten.
 
-## Über Lichess (für Cloud-Anbieter)
+## Über Lichess (für Cloud-Anbieter und das Analysebrett von lichess.org)
 
 **1. Lichess-Token anlegen** — mit den Scopes `engine:read` **und** `engine:write`:
 
@@ -80,19 +82,20 @@ Umgebungsvariable `LICHESS_API_TOKEN` hinterlegen (der Provider kennt nur diesen
 `engine:write` ist nötig, weil dein Rechner die Engine bei Lichess *anmeldet*. (Der Token,
 den du später in RookHub hinterlegst, braucht nur `engine:read` — siehe Schritt 3.)
 
-**2. Container starten:**
+**2. Zweiten Container starten** — der Lichess-Weg hat seine eigene Datei `.env.lichess` (ohne
+`ROOKHUB_URL`) und hängt am Compose-Profil `lichess`:
 
 ```bash
 cd engine-provider
-cp .env.example .env
-# .env öffnen und LICHESS_API_TOKEN eintragen (ROOKHUB_URL leer lassen)
-docker compose up -d --build
+cp .env.lichess.example .env.lichess
+# .env.lichess öffnen und LICHESS_API_TOKEN eintragen
+docker compose --profile lichess up -d --build
 ```
 
 Läuft alles, steht im Log `Registering new engine` bzw. `Updating engine`:
 
 ```bash
-docker compose logs -f
+docker compose --profile lichess logs -f engine-provider-lichess
 ```
 
 **3. In RookHub hinterlegen** — Profil → *Externe Engine*: dort einen Lichess-Token
@@ -101,6 +104,30 @@ danach die gefundenen Engines auf. Im Analysebrett erscheint über den Varianten
 Auswahl **Browser / \<dein Engine-Name\>**. Über Lichess steht die Engine zusätzlich auch in
 Lichess' eigenem Analysebrett zur Verfügung.
 
+## Beides gleichzeitig: ein Container direkt, einer über Lichess
+
+Ein Provider-Prozess bedient genau EINEN Broker. Direkt mit RookHub *und* über Lichess heißt deshalb
+**zwei Container aus demselben Abbild**: `engine-provider` liest die `.env` (direkt), der zweite
+Dienst `engine-provider-lichess` liest die `.env.lichess` und hängt am Profil `lichess`. Ohne Profil
+läuft nur der direkte; mit Profil beide:
+
+```bash
+docker compose --profile lichess up -d --build   # beide Container
+docker compose --profile lichess down            # beide stoppen — ohne Profil bleibt der Lichess-Container stehen
+```
+
+Sollen dauerhaft beide laufen, gehört `COMPOSE_PROFILES=lichess` in die `.env`; dann gilt jedes
+`docker compose up`/`down` für beide. Fehlt die `.env.lichess` bei aktivem Profil, bricht Compose
+mit einer klaren Meldung ab; ohne Profil wird sie nicht gebraucht. Rechenlast entsteht nur dort, wo
+gerade gerechnet wird — ein wartender Provider kostet nichts.
+
+Zwei Dinge dabei: **Hintergrund-Engines gehören in den direkten Container** (jede Lichess-Registrierung
+zählt gegen die Drosselung je IP; über Lichess genügt meist die eine Live-Engine), und liegt der
+Lichess-Token zusätzlich im RookHub-Profil, steht dieselbe Engine in RookHub zweimal — einmal unter
+„Direkt mit RookHub", einmal in der Lichess-Liste mit Lichess-Markierung; ein Namenszusatz wie
+„(Lichess)" hält das auseinander. Für Hintergrund-Analysen die direkte wählen. Derselbe Rechner kann
+so auch während eines Umstiegs eine RookHub-Instanz über Lichess und eine direkt versorgen.
+
 ## Einstellungen
 
 Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
@@ -108,8 +135,9 @@ Alles über die `.env` (Details stehen als Kommentar an jeder Variable):
 | Variable | Wofür |
 |---|---|
 | `ROOKHUB_URL` | **Direkt mit RookHub:** Adresse von RookHub, z. B. `https://rookhub.oberschmid.homes`. Setzt Anmeldung (`--lichess`) und Arbeit (`--broker`) darauf; ausdrücklich gesetzte `LICHESS_URL`/`BROKER_URL` gewinnen. Leer = über Lichess |
-| `ROOKHUB_API_TOKEN` | **Direkt mit RookHub: Pflicht.** API-Token (`rkh_…`) mit Bereich „Engine" aus dem RookHub-Profil. Nur ein zweiter Name für `LICHESS_API_TOKEN` — steht beides da, gewinnt dieser |
-| `LICHESS_API_TOKEN` | **Über Lichess: Pflicht.** Token mit `engine:read` + `engine:write` |
+| `ROOKHUB_API_TOKEN` | **Direkt mit RookHub: Pflicht.** API-Token (`rkh_…`) mit Bereich „Engine" aus dem RookHub-Profil. Mit `ROOKHUB_URL` hat er Vorrang vor einem daneben stehenden `LICHESS_API_TOKEN`; ohne `ROOKHUB_URL` ist er ein Fehler (bei Lichess gilt er nicht) |
+| `LICHESS_API_TOKEN` | **Über Lichess (`.env.lichess`): Pflicht.** Token mit `engine:read` + `engine:write` |
+| `COMPOSE_PROFILES` | In der `.env`: `lichess` startet den zweiten Container dauerhaft mit (statt `--profile lichess` bei jedem Aufruf) |
 | `LICHESS_URL` / `BROKER_URL` | Nur für Sonderfälle: Anmeldung bzw. Arbeit an eine andere Adresse als `ROOKHUB_URL` |
 | `ENGINE_NAME` | Anzeigename in der RookHub-Auswahl |
 | `MAX_THREADS` | Rechenkerne (leer = alle Kerne des Rechners) |
@@ -489,6 +517,9 @@ zwei Namen) ist der bequemste Fall: Du wählst im Analysebrett, was gerade läuf
 |---|---|
 | `RookHub kennt diesen Token nicht` | Token vertippt, widerrufen, abgelaufen — oder mit Bereich „Extension" statt „Engine" angelegt. Im RookHub-Profil einen Token mit Bereich „Engine" anlegen |
 | `ROOKHUB_API_TOKEN ist nicht gesetzt` | `ROOKHUB_URL` steht in der `.env`, der Token fehlt |
+| `ROOKHUB_API_TOKEN ist gesetzt, aber ROOKHUB_URL fehlt` | Ein RookHub-Token in einer Lichess-Konfiguration (`.env.lichess`) — dort gehört `LICHESS_API_TOKEN` hin; oder in der `.env` fehlt die Zeile `ROOKHUB_URL` |
+| `env file …/.env.lichess not found` | Profil `lichess` aktiv (Aufruf oder `COMPOSE_PROFILES`), aber die Datei fehlt: `cp .env.lichess.example .env.lichess` |
+| Lichess-Container läuft nach `docker compose down` weiter | Er hängt am Profil: `docker compose --profile lichess down` — oder `COMPOSE_PROFILES=lichess` in die `.env` |
 | Direkt: Engine erscheint, rechnet aber nie (Analysebrett fällt nach 12 s auf „Browser" zurück) | Ein Proxy vor RookHub puffert den Upload der Suche. Auf dem Server braucht `/api/external-engine/` `proxy_request_buffering off` (der Frontend-nginx hat es; ein davor stehender Nginx Proxy Manager braucht eine eigene Location) |
 | `Lichess kennt diesen Token nicht` | Token vertippt, widerrufen oder abgelaufen — neu anlegen |
 | Container startet immer wieder neu | Genau das ist bei einem Token-Fehler erwartet (`restart: unless-stopped`). `.env` korrigieren, dann `docker compose up -d` |
@@ -512,7 +543,8 @@ Der Container startet den **offiziellen Provider von Lichess**
 RookHub). Er wird beim Bauen auf einen festen Commit gepinnt und per Prüfsumme verifiziert,
 statt ins Repo kopiert zu werden — so ist die Herkunft eindeutig, und ein Update ist ein
 Zeilenwechsel im `Dockerfile`. Ergänzt haben wir nur `entrypoint.sh` (baut den Aufruf aus den
-`.env`-Variablen und startet bei `ENGINE_COUNT`>1 mehrere Provider; `bash test/entrypoint.test.sh`
+`.env`-Variablen und startet bei `ENGINE_COUNT`>1 mehrere Provider; ein Container bedient EINEN Broker, der
+zweite Dienst in der `compose.yml` — Profil `lichess`, `.env.lichess` — ist derselbe Entrypoint ohne `ROOKHUB_URL`; `bash test/entrypoint.test.sh`
 prüft den Argument-Aufbau im Trockenlauf, `bash test/supervisor.test.sh` den echten Fehlerpfad bei
 mehreren Engines: stirbt einer, muss der Container mit DESSEN Code enden — sonst greift
 `restart: unless-stopped` nicht) und `preflight.py` (prüft den Token vorab — gegen RookHub oder Lichess —, damit ein fehlender Scope als

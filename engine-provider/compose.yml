@@ -1,10 +1,13 @@
 # Engine-Provider für die RookHub-Analyse (läuft auf DEINEM Rechner, nicht auf dem Server).
 #
-#   cp .env.example .env   # Token eintragen
+#   cp .env.example .env   # ROOKHUB_URL + Token eintragen (direkt mit RookHub)
 #   docker compose up -d --build
 #
-# Bewusst KEIN `ports:`-Eintrag: der Provider verbindet sich ausgehend zum Lichess-Broker
-# und wartet dort auf Arbeit. Es muss also nichts freigegeben oder weitergeleitet werden.
+# Zusätzlich über Lichess (Cloud-Anbieter, das Analysebrett von lichess.org): ZWEITER Container,
+# eigene .env.lichess, Profil `lichess` — siehe engine-provider-lichess unten.
+#
+# Bewusst KEIN `ports:`-Eintrag: der Provider verbindet sich ausgehend zum Broker (RookHub bzw.
+# Lichess) und wartet dort auf Arbeit. Es muss also nichts freigegeben oder weitergeleitet werden.
 services:
   engine-provider:
     build: .
@@ -31,6 +34,31 @@ services:
     # ENGINE_BACKGROUND_NAME/ENGINE_BACKGROUND_MAX_THREADS, ENGINE_BACKGROUND_COUNT) — siehe README. Die Aufteilung ist gemessen:
     # eine Suche wird von 1 auf 8 Threads nur um den Faktor 1,13 schneller, vier Suchen
     # nebeneinander um fast das Dreifache.
+
+  # ZWEITER CONTAINER ÜBER LICHESS (optional, neben dem direkten)
+  # -------------------------------------------------------------
+  # Ein Provider bedient genau EINEN Broker. Soll die Engine AUCH über Lichess laufen — für
+  # Cloud-Anbieter, für das Analysebrett von lichess.org oder für eine RookHub-Instanz, die noch den
+  # Lichess-Weg benutzt —, läuft dafür dieser zweite Container aus demselben Abbild mit eigener
+  # .env.lichess (Vorlage .env.lichess.example, OHNE ROOKHUB_URL). Er hängt am Profil `lichess`:
+  #   docker compose --profile lichess up -d --build     # beide Container
+  #   docker compose --profile lichess down              # beide stoppen — ohne Profil bleibt er stehen
+  # Dauerhaft beide: COMPOSE_PROFILES=lichess in die .env, dann gilt jedes `docker compose up/down`
+  # für beide. Fehlt die .env.lichess bei aktivem Profil, bricht Compose mit einer klaren Meldung ab;
+  # ohne Profil wird sie nicht gebraucht. Beide Container dürfen dieselben Engine-Namen tragen (zwei
+  # Server, zwei Registrierungen); liegt der Lichess-Token auch im RookHub-Profil, steht die Engine
+  # dort zusätzlich in der Lichess-Liste, als solche markiert. Über Lichess sparsam mit der Zahl der
+  # Engines: dessen DDoS-Schutz drosselt je IP (acht gehen, zwölf nicht) — Hintergrund-Engines gehören
+  # in den direkten Container.
+  engine-provider-lichess:
+    build: .
+    image: rookhub-engine-provider
+    container_name: rookhub-engine-provider-lichess
+    profiles: ["lichess"]
+    env_file: .env.lichess
+    restart: unless-stopped
+    init: true
+    # cpus: 4
 
   # ZWEI STOCKFISH-FASSUNGEN NEBENEINANDER (zum Vergleichen/Umschalten)
   # ------------------------------------------------------------------

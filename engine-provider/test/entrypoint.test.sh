@@ -143,8 +143,9 @@ check_fail "PROVIDER_START_DELAY=abc abgelehnt"  run ENGINE_COUNT=2 PROVIDER_STA
 check_fail "PROVIDER_START_DELAY=-1 abgelehnt"   run ENGINE_COUNT=2 PROVIDER_START_DELAY=-1
 
 # 9) DIREKT MIT ROOKHUB (eigener Broker, ohne Lichess): ROOKHUB_URL ist EINE Adresse fuer Registrierung
-#    (--lichess) UND Arbeit (--broker); ausdruecklich gesetzte Werte gewinnen. ROOKHUB_API_TOKEN ist nur ein
-#    zweiter Name fuer LICHESS_API_TOKEN (der Provider kennt nur diesen) und verliert gegen ihn.
+#    (--lichess) UND Arbeit (--broker); ausdruecklich gesetzte Werte gewinnen. Der Token dafuer ist
+#    ROOKHUB_API_TOKEN (der Provider kennt nur LICHESS_API_TOKEN, deshalb wird er unter diesem Namen
+#    weitergereicht); ein rkh_-Token unter LICHESS_API_TOKEN bleibt als Rueckfall gueltig.
 rh() { env -i PATH="$PATH" ENTRYPOINT_DRY_RUN=1 ENGINE_PATH="$fake" "$@" bash ./entrypoint.sh > "$out" 2>&1; }
 
 rh ROOKHUB_URL=https://rookhub.example ROOKHUB_API_TOKEN=rkh_x
@@ -164,8 +165,22 @@ check "LICHESS_URL bleibt ROOKHUB_URL"           grep -q -- '--lichess https://r
 rh ROOKHUB_URL=https://rookhub.example LICHESS_URL=https://lichess.example ROOKHUB_API_TOKEN=rkh_x
 check "ausdrueckliches LICHESS_URL gewinnt"      grep -q -- '--lichess https://lichess.example' "$out"
 
+# Beide Tokens da (eine fuer beide Container kopierte .env): direkt gilt der RookHub-Token, nie der Lichess-Token.
 rh ROOKHUB_URL=https://rookhub.example ROOKHUB_API_TOKEN=rkh_x LICHESS_API_TOKEN=lip_y
-check_fail "Alias verliert gegen LICHESS_API_TOKEN" grep -q 'TOKEN-QUELLE' "$out"
+check "direkt: ROOKHUB_API_TOKEN gewinnt"        grep -q '^TOKEN-QUELLE: ROOKHUB_API_TOKEN' "$out"
+# Rueckfall: der rkh_-Token unter LICHESS_API_TOKEN (aeltere Anleitung, Windows-Skript) traegt weiter.
+rh ROOKHUB_URL=https://rookhub.example LICHESS_API_TOKEN=rkh_alt
+check "direkt: Rueckfall auf LICHESS_API_TOKEN"  grep -q -- '--broker https://rookhub.example' "$out"
+check_fail "Rueckfall: keine TOKEN-QUELLE-Zeile" grep -q 'TOKEN-QUELLE' "$out"
+# ZWEITER CONTAINER (.env.lichess): ein rkh_-Token OHNE ROOKHUB_URL gilt bei Lichess nicht — Abbruch mit Klartext
+# statt eines 401 in der Neustart-Schleife.
+check_fail "ROOKHUB_API_TOKEN ohne ROOKHUB_URL abgelehnt" rh ROOKHUB_API_TOKEN=rkh_x
+rh ROOKHUB_API_TOKEN=rkh_x || true
+check "Meldung: ROOKHUB_URL fehlt"               grep -q 'ROOKHUB_URL fehlt' "$out"
+# … aber ein Lichess-Token daneben macht den Container zum Lichess-Container, der rkh_-Token bleibt liegen.
+rh LICHESS_API_TOKEN=lip_y ROOKHUB_API_TOKEN=rkh_x
+check "Lichess-Container trotz rkh_-Rest"        test "$(grep -c '^DRY-RUN [0-9]' "$out")" -eq 1
+check_fail "Lichess-Container: kein --broker"    grep -q -- '--broker' "$out"
 
 rh ROOKHUB_URL=https://rookhub.example ENGINE_COUNT=3 ROOKHUB_API_TOKEN=rkh_x
 check "mehrere Engines: alle direkt"             test "$(grep -c -- '--broker https://rookhub.example' "$out")" -eq 3

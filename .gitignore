@@ -18,6 +18,7 @@ dist/
 
 ## Environment
 .env
+.env.lichess
 .env.dev
 .env.vpn
 .env.dev.vpn

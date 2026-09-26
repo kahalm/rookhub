@@ -26,11 +26,15 @@ Repos, alle nur auf Zuruf:
    `ROOKHUB_API_TOKEN` (Token mit Bereich „Engine" im Dev-Profil) starten, 12-Engine-Messung wiederholen
    (`engine-provider/test/rookhub_broker_e2e.py wait`/`measure` mit `--base https://…` und einer
    `jwt`-Datei im Arbeitsordner — Kopf des Skripts; ACHTUNG: `measure` setzt die Hintergrund-Liste des Kontos).
-3. Tag → Prod; dieselbe Custom Location auf dem Prod-Host; Provider-Stacks
-   (`/opt/stacks/rookhub-schach-engine` und die zweite Maschine) auf `ROOKHUB_URL`/`ROOKHUB_API_TOKEN`
-   umstellen; im Profil die Hintergrund-Liste auf die `rhe_`-Engines umstellen.
-4. Die Lichess-Registrierungen bleiben liegen (stoeren nicht); der Lichess-Token bleibt optional fuer
-   Cloud-Engines.
+3. Tag → Prod; dieselbe Custom Location auf dem Prod-Host; in den Provider-Stacks
+   (`/opt/stacks/rookhub-schach-engine` und die zweite Maschine) NICHT umstellen, sondern DAZU (Wunsch
+   2026-09-26: „lichess & eigener Broker", zwei getrennte Container): einen zweiten Dienst mit `.env`
+   (`ROOKHUB_URL`/`ROOKHUB_API_TOKEN`, 1 Live + die Hintergrund-Engines) neben dem bestehenden
+   Lichess-Dienst, und den Lichess-Dienst auf die eine Live-Engine zurueckfahren (IP-Drosselung) — Muster:
+   `engine-provider/compose.yml` (Profil `lichess`, `.env.lichess`). Im Profil die Hintergrund-Liste auf die
+   `rhe_`-Engines umstellen.
+4. Die Lichess-Registrierungen bleiben liegen (stoeren nicht); der Lichess-Token bleibt fuer Cloud-Engines
+   und fuer das Analysebrett von lichess.org.
 
 ## [~] Sprachmodell auf dem DGX Spark für RookHub (2026-09-25)
 
