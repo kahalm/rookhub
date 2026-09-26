@@ -168,6 +168,30 @@ public class CommentTranslationServiceTests : IDisposable
         Assert.Empty(await _db.CommentSets.Where(s => s.Language == "de").ToListAsync());
     }
 
+    /// <summary>Die Laenge stimmt, die Sprache nicht: bei einer mehrsprachigen Quelle laesst ein
+    /// Modell gern ganze Absaetze stehen. Ein Satz, der sich als Franzoesisch liest, ist als deutsche
+    /// Fassung wertlos — und weil er vollstaendig aussieht, faellt es spaeter niemandem auf.</summary>
+    [Fact]
+    public async Task Translate_antwortInDerFalschenSprache_wirdVerworfen()
+    {
+        var id = await GameAsync("The rook belongs here.");
+        _claude.Answer = """{"items":[{"ply":0,"text":"Les blancs ont une position solide, mais les noirs peuvent jouer ce coup dans cette position."}]}""";
+
+        Assert.Equal(0, await _svc.TranslateAsync(id, "de"));
+        Assert.Empty(await _db.CommentSets.Where(s => s.Language == "de").ToListAsync());
+    }
+
+    /// <summary>Und die Gegenprobe: erkennbares Deutsch geht durch.</summary>
+    [Fact]
+    public async Task Translate_antwortInDerZielsprache_wirdGeschrieben()
+    {
+        var id = await GameAsync("The rook belongs here.");
+        _claude.Answer = """{"items":[{"ply":0,"text":"Der Turm gehoert auf die offene Linie, und die Stellung ist nicht schlecht, aber Weiss muss noch mit dem Springer spielen."}]}""";
+
+        Assert.Equal(1, await _svc.TranslateAsync(id, "de"));
+        Assert.Single(await _db.CommentSets.Where(s => s.Language == "de").ToListAsync());
+    }
+
     [Fact]
     public async Task Translate_ohneSchluessel_tutNichts()
     {

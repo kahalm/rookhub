@@ -143,7 +143,9 @@ public class CommentTranslationService
                 return 0;   // lieber gar kein Satz als ein halber
             }
             foreach (var (ply, text) in Parse(json))
-                translated[ply] = text;
+                // Die Figurenbuchstaben stehen zwar im Auftrag, aber welcher Buchstabe zu welcher
+                // Figur gehoert, ist nichts, was ein Modell entscheiden muss — siehe PieceLetters.
+                translated[ply] = PieceLetters.Convert(text, source.Language, target);
         }
         if (translated.Count == 0) return 0;
 
@@ -164,6 +166,25 @@ public class CommentTranslationService
                 "Uebersetzung der Partie {Id} nach {Lang} verworfen: {Anteil} % der Quelllaenge — es fehlt Text.",
                 libraryGameId ?? analysisId, target, zielLaenge * 100 / quellLaenge);
             return 0;
+        }
+
+        // IST ES UEBERHAUPT DIE ZIELSPRACHE? Ist die Quelle mehrsprachig — und im Rohbestand ist sie
+        // das oft: eine franzoesische Anmerkung mit englischen Einschueben —, laesst ein Modell gern
+        // ganze Absaetze stehen, wie sie waren. Die Laengenpruefung sieht davon nichts: der Text IST
+        // ja da. Gemessen 2026-09-26 an Partie 129683: halb franzoesisch, halb englisch zurueck.
+        // Geprueft wird nur, wenn wir die Zielsprache an Funktionswoertern erkennen koennen, und es
+        // muss die BESTE Erklaerung fuer den Text sein — sonst reicht ein deutscher Halbsatz in einem
+        // franzoesischen Absatz.
+        if (CommentLanguage.MarkersOf(target).Length > 0)
+        {
+            var erkannt = CommentLanguage.Detect(string.Join(" ", translated.Values));
+            if (erkannt is not null && !string.Equals(erkannt.Split(',')[0], target, StringComparison.Ordinal))
+            {
+                _logger.LogWarning(
+                    "Uebersetzung der Partie {Id} nach {Lang} verworfen: liest sich als {Erkannt}.",
+                    libraryGameId ?? analysisId, target, erkannt);
+                return 0;
+            }
         }
 
         var set = new CommentSet
