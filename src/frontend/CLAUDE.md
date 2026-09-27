@@ -421,6 +421,9 @@ und Live-Engine zeigen eine andere Stellung), die Seite legt es über `[badge]` 
 `ChessBoardComponent.applyArrows` zeichnet es als Chessground-`customSvg`-autoShape neben den Pfeilen (Raster
 0..100 über dem Feld; die `cg-custom-svgs`-Ebene ist um ein halbes Feld versetzt, der Ursprung ist also die obere
 linke Ecke des Felds). Eingebaut auf der Partieseite und im Nachspiel-Dialog (`PgnViewerComponent`).
+**Erst die Figur, dann das Symbol** (0.558.2): neue Stellung und neues Symbol kommen in ZWEI Prüfläufen an; das Brett nimmt
+das alte Symbol beim Stellungswechsel sofort weg und hält jedes Symbol, das in die Fahrzeit fällt
+(`AnimationMs` 200 + `BadgeSettleMs` 30), bis zu ihrem Ende zurück (`fenChangedAt`, `badgeTimer`).
 
 ## Computer-Linien + Pfeil für den besten Zug (0.521.0)
 

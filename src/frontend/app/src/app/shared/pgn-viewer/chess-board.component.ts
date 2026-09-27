@@ -80,6 +80,13 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    * gezeichnet als Chessground-`customSvg` zusammen mit den Pfeilen, Inhalt im Raster 0..100 über dem Feld.
    */
   @Input() badge: { square: string; svg: string } | null = null;
+  /** Fahrzeit der Figuren (Chessground-Animation). */
+  static readonly AnimationMs = 200;
+  /** Kurz nach der Ankunft, damit das Symbol nicht auf die letzten Pixel der Fahrt trifft. */
+  static readonly BadgeSettleMs = 30;
+  /** Wann zuletzt eine neue Stellung kam — solange die Figur fährt, wartet das Symbol. */
+  private fenChangedAt = 0;
+  private badgeTimer: number | null = null;
   @Output() userMove = new EventEmitter<UserBoardMove>();
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
@@ -128,7 +135,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
       turnColor: turnColorOf(this.fen),
       orientation: this.flipped ? 'black' : 'white',
       lastMove: this.lastMove as Key[] | undefined,
-      animation: { enabled: true, duration: 200 },
+      animation: { enabled: true, duration: ChessBoardComponent.AnimationMs },
       highlight: { lastMove: true, check: true },
       coordinates: true,
       ...this.interactionConfig(),
@@ -202,12 +209,32 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
         ...this.interactionConfig(),
       });
     }
-    if (changes['arrows'] || changes['badge']) this.applyArrows();
+    if (changes['fen'] && !changes['fen'].firstChange) this.fenChangedAt = Date.now();
+    if (changes['arrows'] || changes['badge'] || changes['fen']) this.applyArrows();
   }
 
+  /**
+   * Pfeile sofort, das Symbol erst, wenn die Figur angekommen ist (seit 0.558.2, gemeldet 2026-09-27: „erst erscheint
+   * das Symbol am Zielfeld, dann fährt die Figur hin"). Die neue Stellung und das neue Symbol kommen in ZWEI
+   * Prüfläufen an (das Symbol meldet der Rückblick erst, nachdem er die neue Stellung gesehen hat) — deshalb wird bei
+   * jedem Stellungswechsel das alte Symbol sofort weggenommen und jedes Symbol, das in die Fahrzeit fällt, bis zu
+   * ihrem Ende zurückgehalten.
+   */
   private applyArrows(): void {
+    if (this.badgeTimer !== null) { clearTimeout(this.badgeTimer); this.badgeTimer = null; }
     const shapes: DrawShape[] = (this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' }));
-    if (this.badge) shapes.push({ orig: this.badge.square as Key, customSvg: { html: this.badge.svg } });
+    const badge = this.badge;
+    const wait = badge ? this.fenChangedAt + ChessBoardComponent.AnimationMs + ChessBoardComponent.BadgeSettleMs - Date.now() : 0;
+    if (badge && wait > 0) {
+      this.ground?.setAutoShapes(shapes);
+      this.badgeTimer = window.setTimeout(() => {
+        this.badgeTimer = null;
+        if (this.destroyed || this.badge !== badge) return;
+        this.ground?.setAutoShapes([...shapes, { orig: badge.square as Key, customSvg: { html: badge.svg } }]);
+      }, wait);
+      return;
+    }
+    if (badge) shapes.push({ orig: badge.square as Key, customSvg: { html: badge.svg } });
     this.ground?.setAutoShapes(shapes);
   }
 
@@ -248,6 +275,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     if (this.rafId !== undefined) cancelAnimationFrame(this.rafId);
     this.settleTimers.forEach(t => clearTimeout(t));
     this.settleTimers = [];
+    if (this.badgeTimer !== null) clearTimeout(this.badgeTimer);
     this.resizeObserver?.disconnect();
     this.ground?.destroy();
   }

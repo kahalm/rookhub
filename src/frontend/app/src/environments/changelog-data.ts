@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.558.2", date: "2026-09-27", changes: [
+    { en: "Game review: the move symbol on the board now appears once the piece has arrived on its square – before, it showed up at the target square first and the piece slid in afterwards.", de: "Partie-Rückblick: das Zug-Symbol auf dem Brett erscheint jetzt, wenn die Figur auf ihrem Feld angekommen ist – vorher stand es zuerst am Zielfeld, und die Figur fuhr erst danach hin." },
+  ] },
   { version: "0.558.1", date: "2026-09-27", changes: [
     { en: "Game correction page: editing next to a move that is not on the scoresheet no longer drops the next entry. When the writer forgot a move, the reader inserts it (“not on the sheet”); playing, replacing or deleting that inserted move re-read the rest one entry too late — the following written move fell away and the game shifted into nonsense from there (game 27, move 36: the forgotten 36…Bd5, White’s Rb4 written in Black’s column). An inserted move now uses no sheet entry, so the rest continues with the entry it belongs to.", de: "Korrekturseite: Wer neben einem Zug arbeitet, der nicht auf dem Formular steht, verliert nicht mehr den nächsten Eintrag. Hat der Spieler einen Zug vergessen, fügt die Lesung ihn ein („nicht auf dem Formular“). Diesen eingefügten Zug zu spielen, zu ersetzen oder zu löschen, las den Rest bisher einen Eintrag zu spät weiter. Der folgende notierte Zug fiel weg, ab dort verrutschte die Partie ins Unsinnige (Partie 27, Zug 36: 36…Ld5 vergessen, Weiß’ Tb4 in der Schwarz-Spalte notiert). Ein eingefügter Zug verbraucht jetzt keinen Formular-Eintrag, der Rest geht mit dem Eintrag weiter, zu dem er gehört." },
   ] },

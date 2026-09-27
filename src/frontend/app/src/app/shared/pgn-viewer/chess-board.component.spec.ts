@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -124,6 +124,45 @@ describe('ChessBoardComponent Symbol am Feld (Zug-Klasse)', () => {
     c.ngOnDestroy();
     document.body.removeChild(host);
   });
+});
+
+describe('ChessBoardComponent Symbol erst nach der Fahrt der Figur', () => {
+  it('neue Stellung: altes Symbol sofort weg, neues erst, wenn die Figur angekommen ist', fakeAsync(() => {
+    const host = document.createElement('div');
+    host.style.width = '320px';
+    document.body.appendChild(host);
+    const inner = document.createElement('div');
+    host.appendChild(inner);
+    const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+    const AFTER_E5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+
+    const c: any = new ChessBoardComponent();
+    c.boardEl = { nativeElement: inner };
+    c.fen = AFTER_E4;
+    c.badge = { square: 'e4', svg: '<circle r="1"/>' };
+    c.ngAfterViewInit();
+    expect(c.ground.state.drawable.autoShapes.length).toBe(1);        // erster Aufbau: sofort
+
+    c.fen = AFTER_E5;                                                   // → : die Figur fährt …
+    c.ngOnChanges({ fen: { firstChange: false } as never });
+    expect(c.ground.state.drawable.autoShapes).toEqual([]);            // … das alte Symbol ist sofort weg
+    c.badge = { square: 'e5', svg: '<circle r="2"/>' };                 // der Rückblick meldet das neue
+    c.ngOnChanges({ badge: {} as never });
+    expect(c.ground.state.drawable.autoShapes).toEqual([]);            // … und es wartet
+    tick(ChessBoardComponent.AnimationMs + ChessBoardComponent.BadgeSettleMs);
+    expect(c.ground.state.drawable.autoShapes).toEqual([{ orig: 'e5', customSvg: { html: '<circle r="2"/>' } }]);
+
+    c.fen = START;                                                      // an den Anfang: kein Symbol mehr
+    c.ngOnChanges({ fen: { firstChange: false } as never });
+    c.badge = null;
+    c.ngOnChanges({ badge: {} as never });
+    tick(500);
+    expect(c.ground.state.drawable.autoShapes).toEqual([]);
+
+    c.ngOnDestroy();
+    document.body.removeChild(host);
+  }));
 });
 
 describe('ChessBoardComponent Vollbild', () => {
