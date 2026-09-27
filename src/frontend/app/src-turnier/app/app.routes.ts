@@ -21,7 +21,8 @@ export const routes: Routes = [
   // Ein Turnier aus dem Verzeichnis. Drei Segmente, kollidiert also nicht mit 'tournaments/:id'
   // (das ist die Ansicht eines schon GEHOLTEN Turniers mit Teilnehmern und Paarungen).
   { path: 'tournaments/calendar/:id', loadComponent: () => import('./features/tournament-directory/tournament-directory-detail.component').then(m => m.TournamentDirectoryDetailComponent), canActivate: [authGuard] },
-  { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard] },
+  // reloadOnParamChange: die Gruppen-Umschaltung wechselt nur die Id — die Seite muss neu laden.
+  { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments/tournament-detail.component').then(m => m.TournamentDetailComponent), canActivate: [authGuard], data: { reloadOnParamChange: true } },
 
   // Name, Anzeigename, E-Mail und die Spielerkennungen. Dieselbe API wie in RookHub, aber ohne
   // deren Chessable-/Engine-/Token-Sammlung: die hat auf einer Turnierseite nichts zu tun.

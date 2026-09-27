@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -15,7 +16,8 @@ import { NotificationService } from '@rh/core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
 import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
-import { Tournament, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
+import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
+import { OpenTournamentService } from '../../core/open-tournament.service';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
 import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites, filterPairingsByFavorites } from './tournament-favorites.util';
@@ -24,7 +26,7 @@ import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites,
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })
@@ -79,6 +81,32 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   private teamFavoriteIdMap: Map<number, number> = new Map();
 
   constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
+
+  private readonly opener = inject(OpenTournamentService);
+  /** Welche Gruppe gerade geoeffnet wird — sperrt die Leiste, bis die Seite wechselt. */
+  readonly opening = this.opener.opening;
+
+  /**
+   * Die Gruppen derselben Veranstaltung (chess-results „Turnierauswahl"): an einem Rallye-Tag
+   * Gruppe A, B, Maedchen und Schnellschach, bei der Olympiade Open und Women. Unter zwei gibt es
+   * nichts umzuschalten.
+   */
+  get groups(): TournamentGroup[] {
+    const groups = this.tournament?.groups ?? [];
+    return groups.length > 1 ? groups : [];
+  }
+
+  /**
+   * In eine andere Gruppe wechseln — auf demselben Reiter. Ist sie noch nicht geholt, holt der
+   * Dienst sie (bis zu zwei Minuten, mit Meldung). Die Leiste springt sofort auf die eigene Gruppe
+   * zurueck: sie zeigt, wo man IST, und die neue Seite markiert dann die neue.
+   */
+  switchGroup(change: MatButtonToggleChange): void {
+    const target = change.value as string;
+    change.source.buttonToggleGroup.value = this.tournament?.chessResultsId;
+    if (!target || target === this.tournament?.chessResultsId) return;
+    this.opener.open(target, TournamentDetailComponent.TAB_NAMES[this.selectedTabIndex]);
+  }
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id')!;

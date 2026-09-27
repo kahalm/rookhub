@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.556.0", date: "2026-09-27", changes: [
+    { en: "Tournament page: groups of the same event are now connected. Where chess-results lists several groups under “Tournament selection” — a rally with Group A, Group B, Girls and Rapid, or the Olympiad with Open and Women — a row of buttons at the top lets you switch between them, staying on the same tab. A group that hasn’t been fetched yet is fetched when you pick it. Tournaments fetched earlier show the row after their next update.", de: "Turnierseite: Gruppen derselben Veranstaltung sind jetzt verbunden. Wo chess-results unter „Turnierauswahl“ mehrere Gruppen nennt — eine Rallye mit Gruppe A, Gruppe B, Mädchen und Schnellschach oder die Olympiade mit Open und Women —, schaltet eine Knopfleiste oben zwischen ihnen um, auf demselben Reiter. Eine noch nicht geholte Gruppe wird beim Anklicken geholt. Früher geholte Turniere zeigen die Leiste nach ihrer nächsten Aktualisierung." },
+  ] },
   { version: "0.555.1", date: "2026-09-27", changes: [
     { en: "Translations: quotations now use guillemets (German »like this«, English ‘like this’, other languages «like this»). With „…“ the language model still closed quotations with a straight quote and cut the text off; with guillemets all previously failing course lines came through completely in every attempt.", de: "Übersetzungen: Zitate stehen jetzt in Guillemets (Deutsch »so«, Englisch ‘so’, andere Sprachen «so»). Mit „…“ schloss das Sprachmodell Zitate weiterhin mit dem geraden Anführungszeichen und schnitt den Text ab; mit Guillemets kamen alle vorher gescheiterten Kurs-Linien bei jedem Versuch vollständig durch." },
   ] },

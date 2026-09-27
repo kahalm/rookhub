@@ -16,3 +16,8 @@
       }
       :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
     }
+
+/* Gruppen-Umschaltung: am Handy darf die Leiste seitlich scrollen statt die Seite zu verbreitern. */
+.group-switch { padding: 0 16px 8px; overflow-x: auto; }
+.group-switch mat-button-toggle-group { flex-wrap: nowrap; }
+.group-switch mat-button-toggle { white-space: nowrap; }

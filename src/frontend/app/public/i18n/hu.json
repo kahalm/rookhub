@@ -865,7 +865,8 @@
       "loadPlayersFailed": "Nem sikerült betölteni a játékosokat",
       "loadTeamsFailed": "Nem sikerült betölteni a csapatokat",
       "loadPairingsFailed": "Nem sikerült betölteni a párosításokat",
-      "loadTeamDetailsFailed": "Nem sikerült betölteni a csapat adatait"
+      "loadTeamDetailsFailed": "Nem sikerült betölteni a csapat adatait",
+      "groups": "Az esemény csoportjai"
     },
     "public": {
       "notFound": "A verseny nem található."

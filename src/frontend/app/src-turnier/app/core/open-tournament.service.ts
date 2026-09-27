@@ -44,20 +44,32 @@ export class OpenTournamentService {
    */
   readonly opening = signal<string | null>(null);
 
-  open(chessResultsId: string): void {
+  /**
+   * @param tab Reiter der Turnierseite (`players`/`teams`/`pairings`) — die Gruppen-Umschaltung
+   *   bleibt damit auf dem Reiter, auf dem man gerade ist.
+   */
+  open(chessResultsId: string, tab?: string): void {
     if (this.opening()) return;
     this.opening.set(chessResultsId);
+    this.tab = tab;
 
     this.tournaments.getTournament(chessResultsId).pipe(
       catchError(() => of(null)),
     ).subscribe(tournament => {
       if (tournament) {
         this.opening.set(null);
-        void this.router.navigate(['/tournaments', tournament.id]);
+        this.navigate(tournament.id);
         return;
       }
       this.fetchThenOpen(chessResultsId);
     });
+  }
+
+  private tab?: string;
+
+  private navigate(id: number): void {
+    const target = ['/tournaments', id];
+    void (this.tab ? this.router.navigate(target, { queryParams: { tab: this.tab } }) : this.router.navigate(target));
   }
 
   private fetchThenOpen(chessResultsId: string): void {
@@ -84,7 +96,7 @@ export class OpenTournamentService {
     ).subscribe(tournament => {
       if (tournament) {
         this.opening.set(null);
-        void this.router.navigate(['/tournaments', tournament.id]);
+        this.navigate(tournament.id);
       } else if (this.opening() === chessResultsId) {
         // Deckel erreicht: der Auftrag laeuft serverseitig weiter, hier wird nicht laenger gewartet.
         this.opening.set(null);

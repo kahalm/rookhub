@@ -1,5 +1,6 @@
 import { ApplicationConfig, isDevMode, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { RouteReuseStrategy, provideRouter } from '@angular/router';
+import { ReloadOnParamChangeStrategy } from './core/reload-on-param-change.strategy';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -33,6 +34,8 @@ export const turnierConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
+    // Gleiche Route, andere Id (Gruppen-Umschaltung): Seite neu aufbauen — siehe die Klasse.
+    { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
     provideTranslateService({

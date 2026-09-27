@@ -7,6 +7,19 @@
             <mat-card-title>{{ tournament.name }}</mat-card-title>
             <mat-card-subtitle>{{ subtitle }}</mat-card-subtitle>
           </mat-card-header>
+          <!-- Die Gruppen derselben Veranstaltung (chess-results „Turnierauswahl") — an einem
+               Rallye-Tag vier Turniere, zwischen denen man sonst ueber den Kalender springen musste. -->
+          @if (groups.length > 0) {
+            <div class="group-switch">
+              <mat-button-toggle-group [value]="tournament.chessResultsId" (change)="switchGroup($event)"
+                                       [disabled]="opening() !== null" hideSingleSelectionIndicator
+                                       [attr.aria-label]="'tournaments.detail.groups' | translate">
+                @for (g of groups; track g.chessResultsId) {
+                  <mat-button-toggle [value]="g.chessResultsId">{{ g.label }}</mat-button-toggle>
+                }
+              </mat-button-toggle-group>
+            </div>
+          }
           <!-- Mobil (<=768px) sind das nackte Icon-Kreise: .btn-label{display:none} nimmt den Text auch aus dem
                Accessibility-Tree. Tooltip + aria-label tragen die Beschriftung (Muster aus tournament-list); das
                color="primary"/"warn" war unter dem M3-Theme wirkungslos und ist weg. -->

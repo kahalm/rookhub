@@ -1098,7 +1098,8 @@
       "loadPlayersFailed": "Failed to load players",
       "loadTeamsFailed": "Failed to load teams",
       "loadPairingsFailed": "Failed to load pairings",
-      "loadTeamDetailsFailed": "Failed to load team details"
+      "loadTeamDetailsFailed": "Failed to load team details",
+      "groups": "Groups of this event"
     },
     "public": {
       "notFound": "Tournament not found."

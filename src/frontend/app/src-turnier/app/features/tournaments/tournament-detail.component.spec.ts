@@ -5,6 +5,8 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { TournamentDetailComponent } from './tournament-detail.component';
+import { TournamentGroup } from '@rh/core/models';
+import { OpenTournamentService } from '../../core/open-tournament.service';
 
 describe('TournamentDetailComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -23,7 +25,7 @@ describe('TournamentDetailComponent', () => {
   });
 
   /** Rendert die Detailseite bis zur Aktionsleiste; alle Start-Requests werden mit Leerdaten beantwortet. */
-  async function render(monitor: { active: boolean; activeUntil: string | null }): Promise<ComponentFixture<TournamentDetailComponent>> {
+  async function render(monitor: { active: boolean; activeUntil: string | null }, groups?: TournamentGroup[]): Promise<ComponentFixture<TournamentDetailComponent>> {
     await TestBed.configureTestingModule({
       imports: [TournamentDetailComponent],
       providers: [
@@ -42,6 +44,7 @@ describe('TournamentDetailComponent', () => {
     http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: false });
     http.expectOne('/api/tournaments/4711').flush({
       id: 1, name: 'Schach Tirol Open', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+      groups,
     });
     http.expectOne('/api/subscriptions').flush([]);
     // lastKnownRounds 0 => kein Monitor-Poll, der im Test weiterliefe.
@@ -89,5 +92,43 @@ describe('TournamentDetailComponent', () => {
     expect(monitorBtn).withContext('Monitor-Knopf mit monitoringUntil-Label').toBeTruthy();
     expect(monitorBtn!.querySelector('mat-icon')!.textContent!.trim()).toBe('visibility_off');
     expect(actionsOf(fixture).some(a => a.getAttribute('aria-label') === 'tournaments.actions.monitor')).toBeFalse();
+  });
+
+  // ----- Gruppen derselben Veranstaltung -----------------------------------
+
+  const rally: TournamentGroup[] = [
+    { chessResultsId: '1503214', label: 'Gruppe A', current: false },
+    { chessResultsId: '1503215', label: 'Gruppe B', current: false },
+    { chessResultsId: '1503219', label: 'Mädchen', current: false },
+    { chessResultsId: '4711', label: 'Schnellschach', current: true },
+  ];
+
+  /** Vier Gruppen am selben Rallye-Tag: eine Leiste, die eigene ist gewaehlt. */
+  it('zeigt die Gruppen der Veranstaltung als Umschalter, die eigene gewaehlt', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, rally);
+    const toggles = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.group-switch mat-button-toggle'));
+
+    expect(toggles.map(t => t.textContent?.trim())).toEqual(['Gruppe A', 'Gruppe B', 'Mädchen', 'Schnellschach']);
+    expect(toggles[3].classList.contains('mat-button-toggle-checked')).toBeTrue();
+  });
+
+  /** Ein Klick oeffnet die andere Gruppe — auf demselben Reiter —, die Leiste bleibt bis dahin bei der eigenen. */
+  it('oeffnet eine andere Gruppe auf demselben Reiter', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, rally);
+    const open = spyOn(TestBed.inject(OpenTournamentService), 'open');
+    fixture.componentInstance.selectedTabIndex = 2;
+
+    const button = (fixture.nativeElement as HTMLElement).querySelectorAll('.group-switch mat-button-toggle button')[1] as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    expect(open).toHaveBeenCalledWith('1503215', 'pairings');
+    const checked = (fixture.nativeElement as HTMLElement).querySelector('.group-switch .mat-button-toggle-checked');
+    expect(checked?.textContent?.trim()).toBe('Schnellschach');
+  });
+
+  it('zeigt ohne Gruppen keine Leiste', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    expect((fixture.nativeElement as HTMLElement).querySelector('.group-switch')).toBeNull();
   });
 });

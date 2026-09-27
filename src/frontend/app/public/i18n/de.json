@@ -1098,7 +1098,8 @@
       "loadPlayersFailed": "Spieler konnten nicht geladen werden",
       "loadTeamsFailed": "Teams konnten nicht geladen werden",
       "loadPairingsFailed": "Paarungen konnten nicht geladen werden",
-      "loadTeamDetailsFailed": "Team-Details konnten nicht geladen werden"
+      "loadTeamDetailsFailed": "Team-Details konnten nicht geladen werden",
+      "groups": "Gruppen dieser Veranstaltung"
     },
     "public": {
       "notFound": "Turnier nicht gefunden."

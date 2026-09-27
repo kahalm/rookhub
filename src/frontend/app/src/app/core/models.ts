@@ -13,6 +13,18 @@ export interface Tournament {
   knownRounds: number;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Die Gruppen derselben Veranstaltung („Turnierauswahl" auf chess-results — Rallye: Gruppe A/B,
+   * Maedchen, Schnellschach; Olympiade: Open/Women), die eigene mit `current`. Fehlt bei aelteren
+   * Crawlern und ist leer ohne Auswahl.
+   */
+  groups?: TournamentGroup[];
+}
+
+export interface TournamentGroup {
+  chessResultsId: string;
+  label: string;
+  current: boolean;
 }
 
 export interface TournamentPlayer {

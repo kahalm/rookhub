@@ -1098,7 +1098,8 @@
       "loadPlayersFailed": "Učitavanje igrača nije uspjelo",
       "loadTeamsFailed": "Učitavanje ekipa nije uspjelo",
       "loadPairingsFailed": "Učitavanje parova nije uspjelo",
-      "loadTeamDetailsFailed": "Učitavanje detalja ekipe nije uspjelo"
+      "loadTeamDetailsFailed": "Učitavanje detalja ekipe nije uspjelo",
+      "groups": "Skupine ovog događaja"
     },
     "public": {
       "notFound": "Turnir nije pronađen."
