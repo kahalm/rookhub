@@ -37,6 +37,14 @@ export interface TournamentPlayer {
   country: string | null;
   teamName: string | null;
   boardNumber: number | null;
+  /**
+   * Nur wenn die Startliste KEINEN Verein nennt: der uebernommene — aus der chess-results-
+   * Spielersuche („Vereine nachtragen") oder einem anderen geholten Turnier desselben Spielers.
+   * Eigenes Feld, weil `teamName` in Mannschaftsturnieren die Mannschaft traegt.
+   */
+  club?: string | null;
+  /** Das Turnier, aus dem `club` stammt. */
+  clubSource?: string | null;
 }
 
 export interface TournamentTeam {

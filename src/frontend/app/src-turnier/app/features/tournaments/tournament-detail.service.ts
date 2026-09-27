@@ -19,6 +19,16 @@ export class TournamentDetailService {
   getPlayers(id: string): Observable<TournamentPlayer[]> {
     return this.http.get<TournamentPlayer[]>(`/api/tournaments/${id}/players`);
   }
+
+  /** „Vereine nachtragen": wie viele Spieler noch zu suchen sind und ob gerade ein Lauf geht. */
+  getClubStatus(id: string): Observable<{ pending: number; running: boolean }> {
+    return this.http.get<{ pending: number; running: boolean }>(`/api/tournaments/${id}/clubs`);
+  }
+
+  /** Startet die Vereinssuche im Hintergrund; `queued` = so viele Spieler sucht dieser Lauf. */
+  fillClubs(id: string): Observable<{ queued: number }> {
+    return this.http.post<{ queued: number }>(`/api/tournaments/${id}/clubs`, {});
+  }
   getTeams(id: string): Observable<TournamentTeam[]> {
     return this.http.get<TournamentTeam[]>(`/api/tournaments/${id}/teams`);
   }

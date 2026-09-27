@@ -118,6 +118,28 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Stand von „Vereine nachtragen": wie viele Spieler noch zu suchen sind, ob ein Lauf geht.</summary>
+    [HttpGet("{id}/clubs")]
+    public async Task<IActionResult> GetClubStatus(string id)
+    {
+        if (ValidateId(id) is { } err) return err;
+        var result = await _proxy.GetAsync($"/api/tournaments/{id}/clubs", RequestCt);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// „Vereine nachtragen": der Crawler sucht die Spieler ohne Verein über die chess-results-
+    /// Spielersuche (ein Abruf je Spieler, gedeckelt, im Hintergrund). Läuft schon einer → 409
+    /// vom Crawler, durchgereicht.
+    /// </summary>
+    [HttpPost("{id}/clubs")]
+    public async Task<IActionResult> FillClubs(string id)
+    {
+        if (ValidateId(id) is { } err) return err;
+        var result = await _proxy.PostJsonAsync($"/api/tournaments/{id}/clubs", new { }, RequestCt);
+        return Ok(result);
+    }
+
     [HttpPost("crawl")]
     public async Task<IActionResult> Crawl([FromBody] JsonElement body)
     {

@@ -1050,7 +1050,14 @@
       "team": "Ekipa",
       "club": "Klub",
       "boardShort": "Pl.",
-      "none": "chess-results još ne navodi sudionike ovog turnira. Kad početna lista bude objavljena, „Osvježi“ će je preuzeti."
+      "none": "chess-results još ne navodi sudionike ovog turnira. Kad početna lista bude objavljena, „Osvježi“ će je preuzeti.",
+      "clubFrom": "Preuzeto iz „{{source}}“ — početna lista ovog turnira ne navodi klub.",
+      "fillClubs": "Dopuni klubove ({{count}})",
+      "fillClubsRunning": "Traže se klubovi …",
+      "fillClubsHint": "Traži igrače bez kluba u pretrazi igrača na chess-results i preuzima klub s njihovog najnovijeg turnira. Jedan upit po igraču, traje nekoliko minuta.",
+      "clubsStarted": "Traže se klubovi — {{count}} igrača, to traje nekoliko minuta.",
+      "clubsDone": "Pretraga klubova završena.",
+      "clubsFailed": "Pretraga klubova nije se mogla pokrenuti."
     },
     "teams": {
       "rank": "Mjesto",

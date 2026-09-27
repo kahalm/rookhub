@@ -1050,7 +1050,14 @@
       "team": "Team",
       "club": "Verein",
       "boardShort": "Br.",
-      "none": "chess-results führt für dieses Turnier noch keine Teilnehmer. Steht die Startliste dort, holt „Aktualisieren“ sie ab."
+      "none": "chess-results führt für dieses Turnier noch keine Teilnehmer. Steht die Startliste dort, holt „Aktualisieren“ sie ab.",
+      "clubFrom": "Übernommen aus „{{source}}“ — die Startliste dieses Turniers nennt keinen Verein.",
+      "fillClubs": "Vereine nachtragen ({{count}})",
+      "fillClubsRunning": "Vereine werden nachgesehen …",
+      "fillClubsHint": "Sucht die Spieler ohne Verein in der chess-results-Spielersuche und übernimmt den Verein aus ihrem jüngsten Turnier. Ein Abruf je Spieler, dauert einige Minuten.",
+      "clubsStarted": "Vereine werden nachgesehen — {{count}} Spieler, das dauert einige Minuten.",
+      "clubsDone": "Vereinssuche fertig.",
+      "clubsFailed": "Vereinssuche konnte nicht gestartet werden."
     },
     "teams": {
       "rank": "Rang",

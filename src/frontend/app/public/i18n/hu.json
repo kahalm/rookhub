@@ -817,7 +817,14 @@
       "team": "Csapat",
       "club": "Klub",
       "boardShort": "Táb.",
-      "none": "A chess-results még nem sorol fel résztvevőt ehhez a versenyhez. Ha ott megjelenik a kezdőlista, a „Frissítés“ letölti."
+      "none": "A chess-results még nem sorol fel résztvevőt ehhez a versenyhez. Ha ott megjelenik a kezdőlista, a „Frissítés“ letölti.",
+      "clubFrom": "Átvéve innen: „{{source}}“ — ennek a versenynek a kezdőlistája nem nevez meg klubot.",
+      "fillClubs": "Klubok pótlása ({{count}})",
+      "fillClubsRunning": "Klubok keresése …",
+      "fillClubsHint": "A klub nélküli játékosokat megkeresi a chess-results játékoskeresőjében, és átveszi a klubot a legutóbbi versenyükből. Játékosonként egy lekérés, néhány percig tart.",
+      "clubsStarted": "Klubok keresése — {{count}} játékos, ez néhány percig tart.",
+      "clubsDone": "A klubkeresés befejeződött.",
+      "clubsFailed": "A klubkeresést nem sikerült elindítani."
     },
     "teams": {
       "rank": "Helyezés",

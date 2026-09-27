@@ -2,6 +2,7 @@
     .table-scroll { overflow-x: auto; }
     .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
+    .club-derived { font-style: italic; color: color-mix(in srgb, currentColor 70%, transparent); }
     .empty-hint { padding: 1rem 0; color: color-mix(in srgb, currentColor 65%, transparent); }
 
     .fav-icon, .fav-icon-sm { cursor: pointer; color: #ccc; font-size: 20px; }

@@ -1050,7 +1050,14 @@
       "team": "Team",
       "club": "Club",
       "boardShort": "Bd.",
-      "none": "chess-results does not list any participants for this tournament yet. Once the starting list is up there, “Refresh” fetches it."
+      "none": "chess-results does not list any participants for this tournament yet. Once the starting list is up there, “Refresh” fetches it.",
+      "clubFrom": "Taken from “{{source}}” — this tournament’s starting list names no club.",
+      "fillClubs": "Look up clubs ({{count}})",
+      "fillClubsRunning": "Looking up clubs …",
+      "fillClubsHint": "Searches chess-results for the players without a club and takes the club from their most recent tournament. One request per player, takes a few minutes.",
+      "clubsStarted": "Looking up clubs — {{count}} players, this takes a few minutes.",
+      "clubsDone": "Club lookup finished.",
+      "clubsFailed": "Could not start the club lookup."
     },
     "teams": {
       "rank": "Rank",

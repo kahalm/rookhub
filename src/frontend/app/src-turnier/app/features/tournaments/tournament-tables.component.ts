@@ -5,6 +5,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +28,7 @@ import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/model
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],
   templateUrl: './tournament-tables.component.html',
   styleUrls: ['./tournament-tables.component.scss'],
 })
@@ -70,6 +72,20 @@ export class TournamentTablesComponent {
   @Output() toggleFavorite = new EventEmitter<TournamentPlayer>();
   @Output() toggleTeamFavorite = new EventEmitter<TournamentTeam>();
   @Output() showTeamPlayers = new EventEmitter<string>();
+
+  /** Laeuft „Vereine nachtragen" gerade? Sperrt den Knopf und zeigt es an. */
+  @Input() clubsBusy = false;
+  @Output() fillClubs = new EventEmitter<void>();
+
+  /**
+   * Spieler, bei denen gar kein Verein steht (weder aus der Startliste noch uebernommen) und die
+   * sich suchen lassen (FIDE-ID — ohne sie waere jeder Namensvetter ein Kandidat). Nur in
+   * Einzelturnieren: dort ist die Spalte der Verein, in Mannschaftsturnieren die Mannschaft.
+   */
+  get playersWithoutClub(): number {
+    if (this.hasTeamPairings) return 0;
+    return this.players.filter(p => !p.teamName && !p.club && !!p.fideId && p.fideId !== '0').length;
+  }
 
   isFavorite(player: TournamentPlayer): boolean {
     return this.favoriteSnrs.has(player.snr);

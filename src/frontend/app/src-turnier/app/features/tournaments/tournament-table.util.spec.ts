@@ -61,4 +61,14 @@ describe('tournament-table.util', () => {
     expect(PLAYER_COLUMNS).toContain('fav');
     expect(PLAYER_COLUMNS[0]).toBe('fav');
   });
+
+  it('sortiert die Vereinsspalte nach dem GEZEIGTEN Verein, auch dem uebernommenen', () => {
+    const rows = [
+      { name: 'B', teamName: null, club: 'ŠK Zagreb' },
+      { name: 'A', teamName: 'ASK Salzburg', club: null },
+      { name: 'C', teamName: null, club: null },
+    ];
+    const sorted = sortTableData(rows, { active: 'team', direction: 'asc' });
+    expect(sorted.map(r => r.name)).toEqual(['C', 'A', 'B']);
+  });
 });

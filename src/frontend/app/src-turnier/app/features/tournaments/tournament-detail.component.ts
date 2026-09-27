@@ -133,6 +133,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollInterval) clearInterval(this.pollInterval);
+    this.stopClubPoll();
     this.stopMonitorPoll();
   }
 
@@ -346,6 +347,61 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
       error: () => { this.playersLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPlayersFailed')); }
     });
+  }
+
+  // --- Vereine nachtragen ---
+
+  /** Laeuft die Vereinssuche fuer dieses Turnier? Traegt den Knopf-Zustand. */
+  clubsBusy = false;
+  private clubPoll: ReturnType<typeof setInterval> | null = null;
+  private static readonly ClubPollMs = 5000;
+
+  /**
+   * Startet die Suche ueber die chess-results-Spielersuche (ein Abruf je Spieler, im Hintergrund)
+   * und fragt nach, bis sie fertig ist — zwischendurch kommen die gefundenen Vereine schon in die
+   * Tabelle, weil die Seite die Spieler neu laedt, sobald sich die Zahl der offenen aendert.
+   */
+  fillClubs(): void {
+    if (this.clubsBusy) return;
+    this.clubsBusy = true;
+    this.api.fillClubs(this.id).subscribe({
+      next: (res) => {
+        if (!res.queued) { this.clubsBusy = false; this.loadPlayers(); return; }
+        this.snackbar.info(this.translate.instant('tournaments.players.clubsStarted', { count: res.queued }));
+        this.startClubPoll();
+      },
+      error: (err) => {
+        // 409: fuer dieses Turnier laeuft schon eine Suche — dann eben mitwarten.
+        if (err?.status === 409) { this.startClubPoll(); return; }
+        this.clubsBusy = false;
+        this.snackbar.info(this.translate.instant('tournaments.players.clubsFailed'));
+      },
+    });
+  }
+
+  private startClubPoll(): void {
+    this.stopClubPoll();
+    let lastPending: number | null = null;
+    this.clubPoll = setInterval(() => {
+      this.api.getClubStatus(this.id).subscribe({
+        next: (status) => {
+          if (lastPending !== null && status.pending !== lastPending) this.loadPlayers();
+          lastPending = status.pending;
+          if (!status.running) {
+            this.stopClubPoll();
+            this.clubsBusy = false;
+            this.loadPlayers();
+            this.snackbar.success(this.translate.instant('tournaments.players.clubsDone'));
+          }
+        },
+        error: () => { /* still: der naechste Takt fragt wieder */ },
+      });
+    }, TournamentDetailComponent.ClubPollMs);
+  }
+
+  private stopClubPoll(): void {
+    if (this.clubPoll) clearInterval(this.clubPoll);
+    this.clubPoll = null;
   }
 
   loadTeams(): void {

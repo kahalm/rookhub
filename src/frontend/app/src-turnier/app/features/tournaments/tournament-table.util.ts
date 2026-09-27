@@ -17,9 +17,11 @@ export function sortTableData<T>(data: T[], sort: Sort): T[] {
   if (!sort.active || sort.direction === '') return data;
   const dir = sort.direction === 'asc' ? 1 : -1;
   const key = sort.active === 'team' ? 'teamName' : sort.active === 'board' ? 'boardNumber' : sort.active;
+  // Die Vereinsspalte zeigt ohne eigenen Verein den uebernommenen — sortiert wird nach dem GEZEIGTEN.
+  const value = (row: any) => (key === 'teamName' ? row.teamName ?? row.club : row[key]) ?? '';
   return [...data].sort((a: any, b: any) => {
-    const valA = a[key] ?? '';
-    const valB = b[key] ?? '';
+    const valA = value(a);
+    const valB = value(b);
     if (typeof valA === 'number' && typeof valB === 'number') return (valA - valB) * dir;
     return String(valA).localeCompare(String(valB)) * dir;
   });

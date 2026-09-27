@@ -12,6 +12,17 @@
           <mat-slide-toggle [checked]="showFavoritesOnly" (change)="favoritesToggle.emit($event.checked)">{{ 'tournaments.favoritesOnly' | translate }}</mat-slide-toggle>
         </div>
       }
+      <!-- Startlisten ohne Vereinsspalte: auf Knopfdruck ueber die chess-results-Spielersuche
+           nachtragen (ein Abruf je Spieler, dauert Minuten — deshalb nicht von selbst). -->
+      @if (playersWithoutClub > 0 || clubsBusy) {
+        <div class="filter-bar">
+          <button mat-stroked-button type="button" class="fill-clubs" (click)="fillClubs.emit()" [disabled]="clubsBusy"
+                  [matTooltip]="'tournaments.players.fillClubsHint' | translate">
+            <mat-icon>{{ clubsBusy ? 'hourglass_top' : 'group_add' }}</mat-icon>
+            {{ (clubsBusy ? 'tournaments.players.fillClubsRunning' : 'tournaments.players.fillClubs') | translate: { count: playersWithoutClub } }}
+          </button>
+        </div>
+      }
       <!-- Desktop: full table -->
       <div class="table-scroll desktop-only">
         <table mat-table [dataSource]="displayedPlayers" matSort (matSortChange)="playerSort.emit($event)" class="full-width">
@@ -55,8 +66,11 @@
             <td mat-cell *matCellDef="let p">
               @if (p.teamName && hasTeamPairings) {
                 <span class="team-link" (click)="showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span>
-              } @else {
+              } @else if (p.teamName) {
                 {{ p.teamName }}
+              } @else if (p.club && !hasTeamPairings) {
+                <!-- Uebernommen, nicht aus DIESER Startliste: kursiv, mit Herkunft. -->
+                <span class="club-derived" [matTooltip]="'tournaments.players.clubFrom' | translate: { source: p.clubSource || '?' }">{{ p.club }}</span>
               }
             </td>
           </ng-container>
@@ -93,6 +107,8 @@
                 <span><span class="team-link" (click)="$event.stopPropagation(); showTeamPlayers.emit(p.teamName)">{{ p.teamName }}</span></span>
               } @else if (p.teamName) {
                 <span>{{ p.teamName }}</span>
+              } @else if (p.club && !hasTeamPairings) {
+                <span class="club-derived">{{ p.club }}</span>
               }
               @if (p.boardNumber) { <span>{{ 'tournaments.players.boardShort' | translate }} {{ p.boardNumber }}</span> }
             </div>

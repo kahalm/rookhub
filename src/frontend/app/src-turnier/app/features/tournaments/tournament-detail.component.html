@@ -95,7 +95,9 @@
           (roundChange)="onRoundChange($event)"
           (toggleFavorite)="toggleFavorite($event)"
           (toggleTeamFavorite)="toggleTeamFavorite($event)"
-          (showTeamPlayers)="showTeamPlayers($event)">
+          (showTeamPlayers)="showTeamPlayers($event)"
+          [clubsBusy]="clubsBusy"
+          (fillClubs)="fillClubs()">
         </app-tournament-tables>
       </div>
     }

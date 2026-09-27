@@ -39,6 +39,38 @@ describe('TournamentTablesComponent', () => {
   });
 
   /**
+   * Startliste ohne Vereinsspalte: der uebernommene Verein steht kursiv da (Herkunft im Tooltip),
+   * und fuer die, bei denen gar keiner steht, gibt es den Knopf „Vereine nachtragen".
+   */
+  it('zeigt uebernommene Vereine kursiv und bietet das Nachtragen fuer die uebrigen an', () => {
+    component.players = component.displayedPlayers = [
+      player({ id: 1, snr: 1, name: 'Martinovic, Sasa', fideId: '14509792', teamName: null, club: 'ŠK Zagreb', clubSource: 'Zagreb Open 2025' }),
+      player({ id: 2, snr: 2, name: 'Ohne, Otto', fideId: '555', teamName: null }),
+      player({ id: 3, snr: 3, name: 'Ohne FIDE, Fritz', fideId: null, teamName: null }),
+    ];
+    component.hasTeamPairings = false;
+    const fill = jasmine.createSpy('fillClubs');
+    component.fillClubs.subscribe(fill);
+    fixture.detectChanges();
+
+    const derived = fixture.nativeElement.querySelector('td .club-derived') as HTMLElement;
+    expect(derived.textContent?.trim()).toBe('ŠK Zagreb');
+    // Nur Otto: Martinovic hat einen (uebernommenen), Fritz laesst sich ohne FIDE-ID nicht sicher suchen.
+    expect(component.playersWithoutClub).toBe(1);
+    (fixture.nativeElement.querySelector('.fill-clubs') as HTMLButtonElement).click();
+    expect(fill).toHaveBeenCalled();
+  });
+
+  /** In Mannschaftsturnieren ist die Spalte die MANNSCHAFT — dort gibt es nichts nachzutragen. */
+  it('bietet in Mannschaftsturnieren kein Nachtragen an', () => {
+    component.players = component.displayedPlayers = [player({ teamName: null, fideId: '555' })];
+    component.hasTeamPairings = true;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.fill-clubs')).toBeNull();
+  });
+
+  /**
    * Ohne Teilnehmer steht ein Grund da, keine leere Tabelle — gemeldet an der Schachrallye Pradl,
    * deren Startliste auf chess-results erst am Turniermorgen eingetragen wird.
    */

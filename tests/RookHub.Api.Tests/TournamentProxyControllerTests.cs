@@ -301,6 +301,24 @@ public class TournamentProxyControllerTests : IDisposable
         await Assert.ThrowsAsync<HttpRequestException>(() => _controller.CheckRounds("123"));
     }
 
+    // ---- Vereine nachtragen ----
+
+    [Fact]
+    public async Task ClubStatus_And_FillClubs_PassThrough()
+    {
+        SetupResponse("{\"pending\":12,\"running\":false}");
+        Assert.NotNull(await _controller.GetClubStatus("123") as OkObjectResult);
+
+        SetupResponse("{\"queued\":12}", HttpStatusCode.Accepted);
+        Assert.NotNull(await _controller.FillClubs("123") as OkObjectResult);
+    }
+
+    [Fact]
+    public async Task FillClubs_InvalidId_IsRejected()
+    {
+        Assert.IsType<BadRequestObjectResult>(await _controller.FillClubs("../x"));
+    }
+
     // ---- Crawl ----
 
     [Fact]
