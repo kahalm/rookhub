@@ -13,6 +13,7 @@ import { PgnViewerService } from './pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { PositionRepertoiresComponent } from '../../features/repertoire/position-repertoires.component';
 import { GameReviewComponent } from '../../features/games/game-review.component';
+import { BoardBadge } from '../../features/games/move-badge.util';
 import { GameEvalsStatus } from '../../features/games/game-review.util';
 import { AnalyzeGameService } from '../../features/games/analyze-game.service';
 import { GuessUploadStatus } from '../../features/analysis/game-analysis.service';
@@ -93,6 +94,7 @@ export interface PgnViewerData {
         <div class="board-section">
           <div class="board-wrap">
             <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                             [badge]="moveBadge()"
                              [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
             <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
             <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
@@ -130,7 +132,7 @@ export interface PgnViewerData {
             <app-game-review class="review-slot" [evalsUrl]="data.evalsUrl" [fens]="game.fens" [moves]="game.moves"
                              [currentIndex]="service.currentMoveIndex"
                              (moveClicked)="service.goToMove($event)"
-                             (statusChange)="reviewStatus.set($event)" />
+                             (statusChange)="reviewStatus.set($event)" (badgeChange)="moveBadge.set($event)" />
           }
           <app-position-repertoires class="pr-slot" [fen]="service.currentFen" (navigated)="dialogRef.close()" />
         </div>
@@ -257,6 +259,8 @@ export class PgnViewerComponent implements OnInit {
   readonly analyzing = signal(false);
   readonly uploadStatus = signal<GuessUploadStatus | null>(null);
   readonly reviewStatus = signal<GameEvalsStatus>('none');
+  /** Klasse des aktuellen Zugs als Symbol am Zielfeld (vom Rückblick). */
+  readonly moveBadge = signal<BoardBadge | null>(null);
   private readonly review = viewChild(GameReviewComponent);
 
   constructor(

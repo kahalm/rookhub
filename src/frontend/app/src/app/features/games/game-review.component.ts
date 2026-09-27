@@ -1,3 +1,4 @@
+import { BoardBadge, MOVE_CLASS_SYMBOLS, moveBadgeSvg } from './move-badge.util';
 import {
   ChangeDetectionStrategy, Component, DestroyRef, LOCALE_ID, computed, effect, inject, input, output, signal,
   untracked,
@@ -22,14 +23,8 @@ import {
 import { uciOf } from './move-tactics.util';
 import { MistakesBySide, PlayedMove, collectMistakes } from './mistakes.util';
 
-/**
- * Zeichen je Klasse — dieselben Symbole wie in der Schachnotation, wo es sie gibt. „!" gehört seit den
- * Sonderklassen dem Great (so auch bei chess.com); Excellent trägt deshalb den Daumen wie dort.
- */
-const SYMBOLS: Record<MoveClass, string> = {
-  brilliant: '!!', great: '!', best: '★', excellent: '👍', good: '✓', book: '📖', inaccuracy: '?!', mistake: '?', miss: '✗',
-  blunder: '??',
-};
+/** Zeichen je Klasse — die Tabelle steht in `move-badge.util.ts`, das Brett-Symbol benutzt dieselbe. */
+const SYMBOLS = MOVE_CLASS_SYMBOLS;
 
 /** Diese Klassen bekommen einen Punkt in der Kurve — die Züge, bei denen man hinsehen will. */
 const MARKED: ReadonlySet<MoveClass> = new Set<MoveClass>(['brilliant', 'great', 'miss', 'mistake', 'blunder']);
@@ -261,6 +256,9 @@ export class GameReviewComponent {
    * Brett. Von hier, weil hier die Analyse liegt; das Brett gehört der Seite.
    */
   arrowsChange = output<BoardArrow[]>();
+  /** Die Klasse des aktuellen Zugs als Symbol am Zielfeld (seit 0.557.0, wie chess.com beim Durchsehen) — die Seite
+   *  legt es auf ihr Brett. Leer im Fehler-Training und mit der Live-Engine: dort zeigt das Brett etwas anderes. */
+  badgeChange = output<BoardBadge | null>();
 
   static readonly PollMs = 10_000;
   /** Während der Vertiefung (zweiter Durchgang, 0.523.0) gemächlicher — die Analyse ist schon nutzbar. */
@@ -294,6 +292,12 @@ export class GameReviewComponent {
     if (!this.showArrow() || this.engineHidden()) return [];
     const best = bestMoveArrowAt(this.evals(), this.currentIndex());
     return best ? [best] : [];
+  });
+  readonly badge = computed<BoardBadge | null>(() => {
+    if (this.engineHidden()) return null;
+    const m = this.current();
+    const move = this.moves()[this.currentIndex()];
+    return m && move?.to ? { square: move.to, svg: moveBadgeSvg(m.cls) } : null;
   });
   readonly rows = computed(() => [
     { key: 'white', summary: this.review().white },
@@ -354,6 +358,10 @@ export class GameReviewComponent {
     effect(() => {
       const a = this.arrows();
       untracked(() => this.arrowsChange.emit(a));
+    });
+    effect(() => {
+      const b = this.badge();
+      untracked(() => this.badgeChange.emit(b));
     });
     // Jede neue Analyse-Antwort kann Aufgaben bringen — die Seite erfährt es über die Ausgabe.
     effect(() => {

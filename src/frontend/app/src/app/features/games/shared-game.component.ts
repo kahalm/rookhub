@@ -33,6 +33,7 @@ import { ANALYSIS_DEPTH_KEY, ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-
 import { LiveEngineSession } from './live-engine-session';
 import { LiveEnginePanelComponent } from './live-engine-panel.component';
 import { PositionMenuComponent } from '../analysis/position-menu.component';
+import { BoardBadge } from './move-badge.util';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
@@ -190,7 +191,7 @@ const RECAP_RETRY_MS = 15_000;
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 } @else {
                   <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
-                                   [arrows]="bestArrows()"
+                                   [arrows]="bestArrows()" [badge]="moveBadge()"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                   <!-- Die Tippzonen blieben im Training über dem Brett liegen und schluckten jeden Zug. -->
                   <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
@@ -227,7 +228,7 @@ const RECAP_RETRY_MS = 15_000;
               @if (service.currentGame; as g) {
                 <app-game-review class="review-slot" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
                                  [currentIndex]="service.currentMoveIndex" [engineHidden]="!!training() || !!live()"
-                                 (arrowsChange)="bestArrows.set($event)"
+                                 (arrowsChange)="bestArrows.set($event)" (badgeChange)="moveBadge.set($event)"
                                  (moveClicked)="service.goToMove($event)"
                                  (statusChange)="reviewStatus.set($event)"
                                  (mistakesChange)="mistakes.set($event)" />
@@ -394,6 +395,8 @@ export class SharedGameComponent implements OnInit, DoCheck {
   private reportedTotal = -1;
   /** Pfeil für den besten Zug, geliefert vom Rückblick (Schalter dort); im Training leer. */
   readonly bestArrows = signal<BoardArrow[]>([]);
+  /** Klasse des aktuellen Zugs als Symbol am Zielfeld (vom Rückblick; im Training und mit Live-Engine leer). */
+  readonly moveBadge = signal<BoardBadge | null>(null);
 
   /**
    * „Kurz erzählt" (0.541.0) über der Partie. Der Teilen-Link bringt den Text gleich mit; die eigene Seite holt ihn, sobald

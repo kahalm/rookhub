@@ -99,6 +99,33 @@ describe('ChessBoardComponent Pfeile des Aufrufers (bester Zug)', () => {
   });
 });
 
+describe('ChessBoardComponent Symbol am Feld (Zug-Klasse)', () => {
+  it('zeichnet das Symbol als customSvg neben den Pfeilen und nimmt es beim Leeren wieder weg', () => {
+    const host = document.createElement('div');
+    host.style.width = '320px';
+    document.body.appendChild(host);
+    const inner = document.createElement('div');
+    host.appendChild(inner);
+
+    const c: any = new ChessBoardComponent();
+    c.boardEl = { nativeElement: inner };
+    c.arrows = [{ from: 'e2', to: 'e4' }];
+    c.badge = { square: 'e4', svg: '<circle r="10"/>' };
+    c.ngAfterViewInit();
+    expect(c.ground.state.drawable.autoShapes).toEqual([
+      { orig: 'e2', dest: 'e4', brush: 'green' },
+      { orig: 'e4', customSvg: { html: '<circle r="10"/>' } },
+    ]);
+
+    c.badge = null;
+    c.ngOnChanges({ badge: {} as never });
+    expect(c.ground.state.drawable.autoShapes).toEqual([{ orig: 'e2', dest: 'e4', brush: 'green' }]);
+
+    c.ngOnDestroy();
+    document.body.removeChild(host);
+  });
+});
+
 describe('ChessBoardComponent Vollbild', () => {
   it('schickt die äußere Hülle ins Vollbild und hängt den Knopf ans Brett', async () => {
     await TestBed.configureTestingModule({

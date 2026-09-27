@@ -410,6 +410,18 @@ nur mit `canGenerate` (Besitzer + Modell da), ohne vorhandene Erklärung und nur
 alle 5 s nachfragen (`ExplainPollMs`). Im Fehler-Training (`engineHidden`) weder Text noch Knopf — der Text nennt den besseren
 Zug. Fehler beim Laden sind still (ohne Modell gibt es schlicht keinen Text).
 
+## Zug-Klasse als Symbol an der Figur (0.557.0)
+
+Wie chess.com beim Durchsehen (gewünscht 2026-09-27): die Klasse des AKTUELLEN Zugs steht als runder Kreis in der
+oberen rechten Ecke seines Zielfelds (bei der Rochade das Feld des Königs). `features/games/move-badge.util.ts`
+(`moveBadgeSvg`) baut das SVG-Schnipsel — Farbe aus `MOVE_CLASS_COLORS`, Zeichen aus `MOVE_CLASS_SYMBOLS` (dieselbe
+Tabelle wie die Abzeichen im Rückblick); Satzzeichen als Text, Stern/Daumen/Haken/Kreuz/Buch GEZEICHNET (als Text
+wären es Emoji, je System anders). Der Rückblick meldet es über `badgeChange` (leer, wenn `engineHidden` — Training
+und Live-Engine zeigen eine andere Stellung), die Seite legt es über `[badge]` auf ihr Brett;
+`ChessBoardComponent.applyArrows` zeichnet es als Chessground-`customSvg`-autoShape neben den Pfeilen (Raster
+0..100 über dem Feld; die `cg-custom-svgs`-Ebene ist um ein halbes Feld versetzt, der Ursprung ist also die obere
+linke Ecke des Felds). Eingebaut auf der Partieseite und im Nachspiel-Dialog (`PgnViewerComponent`).
+
 ## Computer-Linien + Pfeil für den besten Zug (0.521.0)
 
 Zwei Schalter in der Kopfzeile des Rückblicks (`game-review.component.ts`), je Gerät gemerkt

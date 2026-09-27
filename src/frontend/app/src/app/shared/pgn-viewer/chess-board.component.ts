@@ -1,3 +1,4 @@
+import { DrawShape } from 'chessground/draw';
 import {
   Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output,
   AfterViewInit, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
@@ -74,6 +75,11 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    * zieht: die bleiben stehen, wenn sich diese Liste ändert.
    */
   @Input() arrows: readonly BoardArrow[] = [];
+  /**
+   * Ein Symbol an einem Feld (seit 0.557.0: die Klasse des aktuellen Zugs am Zielfeld, wie chess.com beim Durchsehen) —
+   * gezeichnet als Chessground-`customSvg` zusammen mit den Pfeilen, Inhalt im Raster 0..100 über dem Feld.
+   */
+  @Input() badge: { square: string; svg: string } | null = null;
   @Output() userMove = new EventEmitter<UserBoardMove>();
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
@@ -196,11 +202,13 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
         ...this.interactionConfig(),
       });
     }
-    if (changes['arrows']) this.applyArrows();
+    if (changes['arrows'] || changes['badge']) this.applyArrows();
   }
 
   private applyArrows(): void {
-    this.ground?.setAutoShapes((this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' })));
+    const shapes: DrawShape[] = (this.arrows ?? []).map(a => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush ?? 'green' }));
+    if (this.badge) shapes.push({ orig: this.badge.square as Key, customSvg: { html: this.badge.svg } });
+    this.ground?.setAutoShapes(shapes);
   }
 
   /** Figuren-Interaktion je nach `playable`: aus (reine Anzeige) oder legale Züge der Seite am Zug. */

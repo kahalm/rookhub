@@ -183,6 +183,26 @@ describe('GameReviewComponent', () => {
     });
   });
 
+  // Gewünscht 2026-09-27 (chess.com-Screenshot): die Klasse des aktuellen Zugs sitzt als Symbol an der Figur.
+  it('Brett-Symbol: die Klasse des aktuellen Zugs geht mit dem Zielfeld an die Seite; Startstellung und Training ohne', () => {
+    const { fixture, http } = setup({ moves: [{ from: 'e2', to: 'e4' }, { from: 'c7', to: 'c5' }] });
+    const badges: ({ square: string; svg: string } | null)[] = [];
+    fixture.componentInstance.badgeChange.subscribe(b => badges.push(b));
+    http.expectOne(url).flush(evals('done'));
+    fixture.detectChanges();
+    expect(badges.filter(b => b !== null)).toEqual([]);          // Startstellung: kein Zug, kein Symbol
+
+    fixture.componentRef.setInput('currentIndex', 1);
+    fixture.detectChanges();
+    const b = badges[badges.length - 1]!;
+    expect(b.square).toBe('c5');
+    expect(b.svg).toContain('#ca3431');                          // c5 verliert fast drei Bauern: grober Fehler
+
+    fixture.componentRef.setInput('engineHidden', true);         // Training / Live-Engine: das Brett zeigt anderes
+    fixture.detectChanges();
+    expect(badges[badges.length - 1]).toBeNull();
+  });
+
   // Gewünscht 2026-09-24: die Kurve standardmäßig eingeklappt, auf Wunsch aufklappen.
   it('die Kurve ist zu, bis man auf die Überschrift klickt — Zähler und Genauigkeit stehen trotzdem da', () => {
     const { fixture, http, el } = setup({ graphClosed: true });
