@@ -18,6 +18,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       turnier: ${{ steps.filter.outputs.turnier }}
       kidhub: ${{ steps.filter.outputs.kidhub }}
+      leaguehub: ${{ steps.filter.outputs.leaguehub }}
       crawler: ${{ steps.filter.outputs.crawler }}
       engine-provider: ${{ steps.filter.outputs.engine-provider }}
     permissions:
@@ -170,7 +171,8 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.frontend == 'true'
           || needs.changes.outputs.turnier == 'true'
-          || needs.changes.outputs.kidhub == 'true' }}
+          || needs.changes.outputs.kidhub == 'true'
+          || needs.changes.outputs.leaguehub == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -199,6 +201,8 @@ jobs:
         working-directory: src/frontend/app
       - run: npx ng test kidhub --watch=false --browsers=ChromeHeadlessNoSandbox
         working-directory: src/frontend/app
+      - run: npx ng test leaguehub --watch=false --browsers=ChromeHeadlessNoSandbox
+        working-directory: src/frontend/app
       # Seit der Turnier-Trennung hat der Workspace ZWEI Projekte — ohne Projektnamen bricht
       # `ng build` mit „Cannot determine project for command" ab. Beide bauen: das Gate soll
       # jedes der beiden Images abfangen, bevor es gepusht wird.
@@ -207,4 +211,6 @@ jobs:
       - run: npx ng build turnier --configuration=production
         working-directory: src/frontend/app
       - run: npx ng build kidhub --configuration=production
+        working-directory: src/frontend/app
+      - run: npx ng build leaguehub --configuration=production
         working-directory: src/frontend/app

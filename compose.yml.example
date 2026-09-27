@@ -52,6 +52,7 @@
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
 #   ${TURNIER_PORT}      -> Tournament site (nginx)
 #   ${KIDHUB_PORT}       -> KidHub, the kids' site (nginx)
+#   ${LEAGUEHUB_PORT}    -> LeagueHub, lineup forecasts for the Tyrolean leagues (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 ###############################################################################
@@ -245,6 +246,23 @@ services:
     restart: unless-stopped
     ports:
       - "${KIDHUB_PORT}:8080"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── LeagueHub (Aufstellungs-Prognosen, Angular + nginx) ───────────────────
+  # Eigene Domain (leaguehub.oberschmid.homes), eigenes Image, vorerst nur Admins — dieselbe API.
+  leaguehub:
+    image: ghcr.io/kahalm/rookhub-leaguehub:latest
+    container_name: rookhub-leaguehub
+    restart: unless-stopped
+    ports:
+      - "${LEAGUEHUB_PORT}:8080"
     depends_on:
       - api
     healthcheck:

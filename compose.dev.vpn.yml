@@ -48,6 +48,7 @@
 #   ${FRONTEND_PORT}     -> Frontend (nginx)
 #   ${TURNIER_PORT}      -> Turnierseite (nginx)
 #   ${KIDHUB_PORT}       -> KidHub, Kinderseite (nginx)
+#   ${LEAGUEHUB_PORT}    -> LeagueHub, Aufstellungs-Prognosen (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 #   ${ES_PORT:-9201}     -> Elasticsearch
@@ -369,6 +370,25 @@ services:
       start_period: 10s
     ports:
       - "${KIDHUB_PORT}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub-dev
+
+  # ── LeagueHub (Aufstellungs-Prognosen, Angular + nginx) ───────────────────
+  # Viertes Angular-Projekt, eigene Domain (leaguehub-dev.oberschmid.homes), vorerst nur Admins.
+  leaguehub:
+    image: ghcr.io/kahalm/rookhub-leaguehub:dev
+    container_name: rookhub-leaguehub-dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${LEAGUEHUB_PORT}:8080"
     depends_on:
       - api
     networks:

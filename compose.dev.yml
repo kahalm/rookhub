@@ -243,6 +243,29 @@ services:
     networks:
       - rookhub
 
+  # ── LeagueHub (Aufstellungs-Prognosen Tiroler Ligen, Angular + nginx) ─────
+  # Viertes Angular-Projekt (APP_PROJECT=leaguehub), eigene Domain, vorerst nur Admins — /api/league/*.
+  leaguehub:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        APP_PROJECT: leaguehub
+    container_name: rookhub-leaguehub
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${LEAGUEHUB_PORT:-8100}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub
+
   # ── Elasticsearch ──────────────────────────────────────────────────────────
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0

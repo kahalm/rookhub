@@ -1,0 +1,15 @@
+/* Build-Konfiguration von LeagueHub (TMM-Aufstellungs-Prognosen), viertes Projekt im selben Workspace. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/leaguehub",
+    "types": []
+  },
+  "files": [
+    "src-leaguehub/main.ts"
+  ],
+  "include": [
+    "src-leaguehub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

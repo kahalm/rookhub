@@ -55,8 +55,15 @@ kidhub:
   - 'src/frontend/app/public-kidhub/**'
   - 'src/frontend/app/ngsw-config.kidhub.json'
 
+# Was NUR LeagueHub (Aufstellungs-Prognosen der Tiroler Ligen) hat — plus alles Geteilte von oben.
+# LeagueHub importiert Anmeldung, HTTP-Kette und Sprachdateien per @rh/* aus `src/app/`.
+leaguehub:
+  - *frontend
+  - 'src/frontend/app/src-leaguehub/**'
+  - 'src/frontend/app/public-leaguehub/**'
+
 # Es gibt bewusst KEINEN weiteren Filter „alle Specs": der Spec-Job (`ng test app` UND
-# `ng test turnier` und `ng test kidhub`) fragt schlicht `frontend ODER turnier ODER kidhub` ab — ein weiterer Anker haette eine
+# `ng test turnier`, `ng test kidhub` und `ng test leaguehub`) fragt schlicht `frontend ODER turnier ODER kidhub ODER leaguehub` ab — ein weiterer Anker haette eine
 # zweite Verschachtelungsebene gebraucht (siehe Regel 2 oben).
 
 engine-provider:

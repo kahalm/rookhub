@@ -1,0 +1,16 @@
+/* Test-Konfiguration von LeagueHub. Eigene Datei, weil der Karma-Builder die Specs am PROJEKT entlang
+   einsammelt (dieselbe Falle wie bei Turnierseite und KidHub). */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec-leaguehub",
+    "types": [
+      "jasmine"
+    ]
+  },
+  "include": [
+    "src-leaguehub/**/*.spec.ts",
+    "src-leaguehub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

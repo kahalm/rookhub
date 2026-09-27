@@ -1,0 +1,235 @@
+/* LeagueHub — globale Gestaltung (nach src/styles.scss geladen, gilt nur in diesem Bündel).
+   Aus der Python-Fassung übernommen; hell/dunkel folgt dem geteilten Design-Modus der Familie
+   (ThemeService setzt html.dark-theme), nicht mehr nur prefers-color-scheme. */
+
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("/fonts/barlow-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("/fonts/barlow-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("/fonts/barlow-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 500; font-display: swap; src: url("/fonts/barlow-semi-condensed-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 600; font-display: swap; src: url("/fonts/barlow-semi-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Semi Condensed"; font-weight: 700; font-display: swap; src: url("/fonts/barlow-semi-condensed-latin-700-normal.woff2") format("woff2"); }
+
+html {
+  --paper: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #5a6878;
+  --line: #d9dfe7;
+  --red: #c8102e;          /* Tiroler Rot – nur für den wahrscheinlichsten Spieler */
+  --bar: #aab5c2;          /* weitere Kandidaten */
+  --track: #e8ecf1;
+  --sq-white: #ffffff;
+  --sq-black: #26303c;
+  --sq-border: #26303c;
+  --ok: #1f7a4d;
+  --focus: #1c5fd4;
+  --cond: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+html.dark-theme {
+  --paper: #0f141b;
+  --surface: #161d26;
+  --ink: #e6ebf1;
+  --muted: #97a5b5;
+  --line: #28323e;
+  --red: #ff4d63;
+  --bar: #5d6b7b;
+  --track: #222b36;
+  --sq-white: #e9edf2;
+  --sq-black: #0b0f14;
+  --sq-border: #97a5b5;   /* sonst verschwindet „Gegner hat Schwarz“ im dunklen Modus */
+  --ok: #4cc28a;
+  --focus: #7aa7ff;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+html, body { height: auto; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.5 var(--body);
+  font-variant-numeric: tabular-nums;
+}
+.wrap { max-width: 780px; margin: 0 auto; padding: 0 16px; }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Kopf: der Name als Wortmarke, darunter eine Zeile, wofür die Seite da ist */
+.top { padding: 28px 0 18px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand {
+  margin: 0; color: inherit; text-decoration: none;
+  font: 700 40px/1 var(--cond);
+  letter-spacing: -0.01em;
+}
+.account { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+.account .who { color: var(--muted); }
+.lede { margin: 6px auto 0; color: var(--muted); }
+
+/* Auswahl */
+.pick {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr;
+  gap: 12px;
+  margin: 8px 0 22px;
+}
+.pick label { display: grid; gap: 4px; font: 600 14px/1.2 var(--cond); color: var(--muted); }
+.pick select {
+  font: 500 16px/1.2 var(--body);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 10px;
+  min-width: 0;
+}
+
+/* Datenstand + Knopf „Daten aktualisieren" */
+.stand { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: -8px 0 18px; color: var(--muted); font-size: 15px; }
+.btn-sec {
+  display: inline-block; text-decoration: none;
+  font: 600 15px/1 var(--cond); color: var(--ink); background: transparent;
+  border: 1.5px solid var(--ink); border-radius: 6px; padding: 8px 12px; cursor: pointer;
+}
+.btn-sec:hover { background: var(--ink); color: var(--paper); }
+.btn-sec:disabled { opacity: .5; cursor: progress; background: transparent; color: var(--ink); }
+.update-msg { flex-basis: 100%; }
+.update-msg:empty { display: none; }
+.update-msg.err, .err { color: var(--red); }
+
+/* Begegnung */
+.fixture { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 8px; }
+.when { margin: 0; color: var(--muted); font: 500 15px/1.35 var(--body); }
+.match { margin: 4px 0 2px; font: 600 26px/1.15 var(--cond); }
+.match .vs { color: var(--muted); font-weight: 500; padding: 0 .25em; }
+.match .me { color: var(--muted); font-weight: 500; }
+.score { font: 700 26px/1 var(--cond); margin-left: .3em; }
+.note { margin: 8px 0 14px; color: var(--muted); font-size: 15px; max-width: 68ch; }
+
+/* Bretter wie auf dem Spielbericht: Nummer, Farbe des Gegners, Kandidaten */
+.boards { list-style: none; margin: 0; padding: 0; }
+.board {
+  display: grid;
+  grid-template-columns: 2.2rem 1.1rem 1fr;
+  gap: 0 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.bno { font: 700 26px/1 var(--cond); text-align: right; padding-top: 2px; }
+.sq { width: 16px; height: 16px; margin-top: 6px; border-radius: 2px; border: 1.5px solid var(--sq-border); }
+.sq.w { background: var(--sq-white); }
+.sq.s { background: var(--sq-black); }
+.cands { display: grid; gap: 7px; min-width: 0; }
+.cand {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.4rem 3.2rem;
+  grid-template-areas: "name elo pct" "bar bar bar";
+  gap: 2px 8px;
+  align-items: baseline;
+}
+.cand .name { grid-area: name; overflow-wrap: anywhere; }
+.cand .elo { grid-area: elo; color: var(--muted); text-align: right; font-size: 15px; }
+.cand .pct { grid-area: pct; text-align: right; font: 600 17px/1 var(--cond); }
+.cand .bar { grid-area: bar; height: 5px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.cand .bar i { display: block; height: 100%; background: var(--bar); border-radius: 3px; }
+.cand.first .name { font-weight: 600; }
+.cand.first .pct { font-size: 20px; }
+.cand.first .bar { height: 8px; }
+.cand.first .bar i { background: var(--red); }
+.cand:not(.first) { font-size: 15px; }
+.other { color: var(--muted); font-size: 14px; }
+.hit { color: var(--ok); font: 600 13px/1 var(--body); margin-left: .4em; white-space: nowrap; }
+.played { margin: 2px 0 4px; font-size: 15px; }
+.played b { font-weight: 600; }
+.played .miss { color: var(--muted); }
+
+/* Teilen */
+.share { margin: 0 0 14px; }
+.share .actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.share-out { margin-top: 10px; font-size: 15px; }
+.share-out p { margin: 0 0 6px; }
+.share-out a { color: var(--ink); font-weight: 600; text-underline-offset: 2px; }
+.share-text {
+  margin: 0; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+  font: 400 15px/1.45 var(--body);
+}
+.linkrow { display: flex; gap: 8px; margin: 8px 0; }
+.linkrow input {
+  flex: 1; min-width: 0; font: 400 15px/1.2 var(--body); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+}
+
+/* Meldeliste */
+details.roster { margin: 10px 0 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.roster summary { cursor: pointer; font: 600 17px/1.3 var(--cond); }
+.roster-scroll { overflow-x: auto; }
+.rtable { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+.rtable th { text-align: left; font: 600 14px/1.2 var(--cond); color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); }
+.rtable td { padding: 6px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.rtable td.num, .rtable th.num { text-align: right; white-space: nowrap; }
+.rtable .small { color: var(--muted); font-size: 14px; }
+.acc-cell a { color: inherit; }
+
+/* Leerzustände, Anmeldung */
+.gate, .empty { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 18px; }
+.gate h2, .empty h2 { margin: 0 0 6px; font: 600 24px/1.2 var(--cond); }
+.gate p, .empty p { margin: 6px 0; max-width: 62ch; }
+
+.foot-note { color: var(--muted); font-size: 14px; padding-top: 20px; }
+.foot-note p { margin: 4px 0; max-width: 72ch; }
+.foot { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 14px; padding-top: 20px; padding-bottom: 40px; }
+.foot a { color: inherit; }
+
+@media (max-width: 640px) {
+  .brand { font-size: 34px; }
+  .pick { grid-template-columns: 1fr; gap: 10px; }
+  .match { font-size: 22px; }
+  .fixture { padding: 14px 12px 6px; }
+  .board { grid-template-columns: 1.8rem 1rem 1fr; gap: 0 9px; }
+  .rtable .hide-s { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cand .bar i { transition: width .35s ease-out; }
+}
+
+/* Spielerkarte */
+button.pl {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px;
+}
+button.pl:hover { text-decoration-color: var(--ink); }
+.card {
+  width: min(680px, calc(100vw - 24px)); max-height: calc(100vh - 32px); padding: 0;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
+}
+.card::backdrop { background: rgb(10 14 20 / .55); }
+.card-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px 8px; position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.card-head h2 { margin: 0; font: 600 24px/1.15 var(--cond); }
+.card-meta { margin: 4px 0 6px; color: var(--muted); font-size: 15px; }
+.card-meta a { color: inherit; }
+.card-close { font-size: 20px; line-height: 1; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 4px 6px; height: fit-content; }
+.card-body { padding: 8px 18px 18px; }
+.card h3 { margin: 16px 0 6px; font: 600 18px/1.2 var(--cond); }
+.card .hint { margin: 10px 0 0; padding: 8px 10px; background: var(--paper); border-radius: 6px; font-size: 15px; }
+.card table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.card td { padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.card td.num { text-align: right; white-space: nowrap; }
+.card .tag { font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; margin-left: 6px; color: var(--muted); white-space: nowrap; }
+.card .acc a { color: var(--ink); font-weight: 600; }
+.card .actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 10px; }
+.card .sub { margin: 8px 0 2px; }
+.card .small-note { font-size: 13px; }
+.card .small-note.spaced { margin-top: 14px; }
+.sq.mini { display: inline-block; width: 11px; height: 11px; margin: 0 4px 0 0; vertical-align: -1px; border-width: 1px; }
+
+/* Umschalter Weiß / Schwarz / Beide */
+.seg { display: inline-flex; border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: 600 15px/1 var(--cond); color: var(--ink); background: transparent; border: 0; padding: 8px 12px; cursor: pointer;
+}
+.seg button + button { border-left: 1.5px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }

@@ -1296,6 +1296,18 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
   Wahrscheinlichkeit zuerst) → `LeagueProfileBuilder` führt Bestand + neue Partien zusammen (Dubletten über
   Datum + Nachnamen + Ergebnis; Farbe per FIDE-ID-Tag, sonst Nachname — 2022/23 ohne Komma) und baut die
   Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout).
+- **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
+  `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
+  **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,
+  `authGuard`; ohne `league.view` „Nur für Admins"), `/s/:token` (geteilte Begegnung OHNE Anmeldung), dazu RookHubs
+  Masken über `@rh/*` (`/login`, `/register`, …, `/impressum`, `/privacy`). Die Seite ist deutsch
+  (`LocaleService.applyUnsaved('de')`, die Wahl aus RookHub bleibt), hell/dunkel über den geteilten `ThemeService`,
+  eigene Gestaltung in `src-leaguehub/leaguehub.scss` (Barlow, nach `src/styles.scss` geladen). Kein Service Worker —
+  die Prognosen sollen frisch vom Server kommen. `partner-site.ts` kennt `leaguehub(-dev)` nur fürs geteilte
+  Sprach-/Design-Cookie, einen Sprung aus RookHub gibt es nicht. Bausteine: `shared/fixture-view.component.ts`
+  (Bretter, Meldeliste, WhatsApp-Text = drei Kandidaten je Brett, „Link teilen" nur mit `league.manage`),
+  `shared/player-card.component.ts` (Dialog, Vorgabe = Farbe an diesem Brett), reine Regeln in
+  `core/league-format.ts`. „Daten aktualisieren" fragt alle 4 s `/api/league/update/status` nach und lädt danach frisch.
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
@@ -3546,8 +3558,8 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build nötig.
   Seit 0.434.2 laufen Test- und Build-Jobs **pfadgefiltert** (`.github/filters.yml`, von `test.yml` UND
   `docker.yml` gelesen): ein Push startet nur, was er berührt. Zwei Regeln hängen an Tests
-  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle vier Images** (`:latest` entsteht nur dort), und der
-  `turnier`- und der `kidhub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
+  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle fünf Images** (`:latest` entsteht nur dort), und der
+  `turnier`-, `kidhub`- und `leaguehub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
   Ein neuer Job braucht also einen Filter — ein Tippfehler im Namen ist ein leerer Output und damit ein
   Job, der ab da nie mehr läuft.
   **Handstart** (seit 0.453.3): `gh workflow run docker.yml` baut ALLE Images und lässt vorher ALLE
@@ -3557,7 +3569,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
   lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
   (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
-  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier`/`-kidhub` in `docker.yml` bauen die
+  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier`/`-kidhub`/`-leaguehub` in `docker.yml` bauen die
   Images schon parallel zu den Tests und pushen sie unter einem Hilfs-Tag `ci-<run_id>`. Die Jobs hinter
   dem Gate bauen GAR NICHT mehr — sie haengen per `docker buildx imagetools create` nur die echten Tags
   (`:dev`/`:latest`/Semver) an dasselbe Image, eine Registry-Operation von Sekunden. Der Zwischenschritt

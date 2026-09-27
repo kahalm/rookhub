@@ -18,7 +18,7 @@ env:
 
 jobs:
   # Welche Bereiche hat dieser Push angefasst? Muster in `.github/filters.yml` (dieselbe Datei
-  # steuert die Test-Jobs). Ein TAG-Lauf baut IMMER alle vier Images: `:latest` entsteht nur dort,
+  # steuert die Test-Jobs). Ein TAG-Lauf baut IMMER alle fünf Images: `:latest` entsteht nur dort,
   # und ein Release mit einem ausgelassenen Image waere unvollstaendig.
   changes:
     runs-on: ubuntu-latest
@@ -27,6 +27,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       turnier: ${{ steps.filter.outputs.turnier }}
       kidhub: ${{ steps.filter.outputs.kidhub }}
+      leaguehub: ${{ steps.filter.outputs.leaguehub }}
     permissions:
       contents: read
     steps:
@@ -187,6 +188,34 @@ jobs:
             GIT_REF=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/kahalm/rookhub-kidhub:ci-${{ github.run_id }}
 
+  prebuild-leaguehub:
+    needs: changes
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.leaguehub == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: src/frontend
+          push: true
+          build-args: |
+            APP_PROJECT=leaguehub
+            GIT_SHA=${{ github.sha }}
+            GIT_REF=${{ github.ref_name }}
+          tags: ${{ env.REGISTRY }}/kahalm/rookhub-leaguehub:ci-${{ github.run_id }}
+
   # ------------------------------------------------------------------------------------------
   # DAS GATE: ab hier entstehen die Tags, die ausgeliefert werden. Kein Build mehr, nur Umhaengen.
   # Kein `actions/checkout` noetig — es wird nichts aus dem Arbeitsbaum gelesen.
@@ -343,6 +372,46 @@ jobs:
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           SOURCE: ${{ env.REGISTRY }}/kahalm/rookhub-kidhub:ci-${{ github.run_id }}
+        run: |
+          mapfile -t tags < <(grep -v '^[[:space:]]*$' <<< "$TAGS")
+          test ${#tags[@]} -gt 0
+          printf 'Quelle: %s\n' "$SOURCE"
+          printf 'Ziel:   %s\n' "${tags[@]}"
+          docker buildx imagetools create "${tags[@]/#/--tag=}" "$SOURCE"
+
+  # LeagueHub (leaguehub.oberschmid.homes, Aufstellungs-Prognosen der Tiroler Ligen): viertes Angular-
+  # Projekt desselben Workspaces, eigenes Image — wie KidHub.
+  build-leaguehub:
+    needs: [changes, tests, prebuild-leaguehub]
+    if: >-
+      ${{ needs.tests.result != 'failure' && needs.tests.result != 'cancelled'
+          && (github.event_name == 'workflow_dispatch'
+              || startsWith(github.ref, 'refs/tags/v')
+              || needs.changes.outputs.leaguehub == 'true') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v6
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/kahalm/rookhub-leaguehub
+          tags: |
+            type=raw,value=dev,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Echte Tags an das vorgebaute Image haengen
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          SOURCE: ${{ env.REGISTRY }}/kahalm/rookhub-leaguehub:ci-${{ github.run_id }}
         run: |
           mapfile -t tags < <(grep -v '^[[:space:]]*$' <<< "$TAGS")
           test ${#tags[@]} -gt 0
