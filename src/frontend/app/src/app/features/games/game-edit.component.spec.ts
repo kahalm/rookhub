@@ -211,4 +211,33 @@ describe('GameEditComponent', () => {
     expect(c.plies()[2].san).toBe('Nc3');
     expect(c.cursor()).toBe(4);                            // nicht bloß 3 (der nächste Halbzug)
   });
+
+  // Gemeldet 2026-09-27 (Prod-Partie 27, Zug 36): ein vergessener Zug, vom Auflöser eingefügt. Etwas an ihm zu tun, las
+  // den Rest einen Eintrag zu spät weiter — der nächste Eintrag fiel weg und die Partie verrutschte.
+  it('a scanned game: redoing an inserted move keeps the next sheet entry, and the move stays without one', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    http.expectOne('/api/games/5/scoresheet').flush({
+      scanId: 9, notationLanguage: 'en', written: ['e4', 'e5', 'Nf3', 'Bb5'], unresolved: [], unresolvedFrom: null,
+      plies: [
+        { w: 0, written: 'e4', san: 'e4', uci: 'e2e4', match: 'written', uncertain: false },
+        { w: 1, written: 'e5', san: 'e5', uci: 'e7e5', match: 'written', uncertain: false },
+        { w: 2, written: 'Nf3', san: 'Nf3', uci: 'g1f3', match: 'written', uncertain: false },
+        { w: null, written: '', san: 'Nc6', uci: 'b8c6', match: 'inserted', uncertain: true },
+        { w: 3, written: 'Bb5', san: 'Bb5', uci: 'f1b5', match: 'written', uncertain: false },
+      ],
+    });
+    fixture.detectChanges();
+    expect(c.cursor()).toBe(3);
+
+    c.onBoardMove({ from: 'b8', to: 'c6', san: 'Nc6', fen: '' });
+    const req = http.expectOne({ method: 'POST', url: '/api/games/5/scoresheet/resolve' });
+    expect(req.request.body).toEqual({ prefix: ['e4', 'e5', 'Nf3', 'Nc6'], writtenFrom: 3 });   // vorher 4
+    req.flush({ plies: [{ w: 3, written: 'Bb5', san: 'Bb5', uci: 'f1b5', match: 'written', uncertain: false }],
+      unresolved: [], unresolvedFrom: null });
+    expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
+    expect(c.plies()[3].w).toBeNull();
+  });
 });

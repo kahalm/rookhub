@@ -56,11 +56,23 @@ export function revalidate(plies: readonly EditPly[], startFen = START_FEN): Edi
   });
 }
 
-/** Der Formular-Eintrag, der zu Halbzug `i` gehört: sein eigener, sonst der nach dem letzten bekannten. */
+/** Der Formular-Eintrag, der zu Halbzug `i` gehört: sein eigener, sonst der nächste noch offene. */
 export function writtenIndexAt(plies: readonly EditPly[], i: number): number {
   if (i < plies.length && plies[i].w != null) return plies[i].w!;
+  return nextEntryAt(plies, i);
+}
+
+/**
+ * Der nächste Formular-Eintrag, den noch kein Halbzug vor `i` verbraucht hat: der nach dem letzten Halbzug MIT
+ * Eintrag. Ein eingefügter Zug („nicht auf dem Formular") oder ein selbst eingefügter (`w = null`) verbraucht KEINEN —
+ * vorher wurde jeder Halbzug dazwischen mitgezählt, und nach einem eingefügten Zug ging das Neuaufbereiten einen
+ * Eintrag zu weit (gemeldet 2026-09-27: Prod-Partie 27, Zug 36 — der Spieler hatte Bd5 vergessen, der Auflöser Rb4
+ * eingefügt; wer dort etwas tat, verlor den Eintrag „Kd7" und die Partie verrutschte). Ohne jeden Halbzug mit
+ * Eintrag (Stand passt nicht zur Partie) gilt wie bisher der Halbzug-Index.
+ */
+export function nextEntryAt(plies: readonly EditPly[], i: number): number {
   for (let k = Math.min(i, plies.length) - 1; k >= 0; k--) {
-    if (plies[k].w != null) return plies[k].w! + (i - k);
+    if (plies[k].w != null) return plies[k].w! + 1;
   }
   return i;
 }
@@ -100,14 +112,17 @@ export function toServer(plies: readonly EditPly[]): ScoresheetPly[] {
  * - ersetzen: der Eintrag von `i` ist verbraucht → weiter beim nächsten;
  * - einfügen: der Eintrag von `i` ist NOCH offen (der eingefügte Zug stand gar nicht auf dem Formular);
  * - löschen: der Eintrag von `i` war einer zu viel → weiter beim nächsten, ohne neuen Zug.
+ * Hat der Halbzug `i` GAR KEINEN Eintrag (eingefügt, `w = null`), verbraucht er beim Ersetzen und Löschen auch
+ * keinen: weiter beim nächsten offenen. Anhängen am Ende verbraucht dagegen den ersten offenen Eintrag.
  */
 export function resolveRequest(plies: readonly EditPly[], i: number, mode: 'replace' | 'insert' | 'delete',
   newSan?: string): { prefix: string[]; writtenFrom: number } {
   const before = plies.slice(0, i).filter(p => !p.illegal).map(p => p.san);
   const w = writtenIndexAt(plies, i);
-  if (mode === 'delete') return { prefix: before, writtenFrom: w + 1 };
+  const withoutEntry = i < plies.length && plies[i].w == null;
+  if (mode === 'delete') return { prefix: before, writtenFrom: withoutEntry ? w : w + 1 };
   const prefix = [...before, newSan!];
-  return { prefix, writtenFrom: mode === 'insert' ? w : w + 1 };
+  return { prefix, writtenFrom: mode === 'insert' || withoutEntry ? w : w + 1 };
 }
 
 /** Kommentare einer PGN je Halbzug (Index = Halbzug), über die Stellung nach dem Zug zugeordnet. */

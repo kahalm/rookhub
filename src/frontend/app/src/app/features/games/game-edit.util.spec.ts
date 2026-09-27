@@ -39,6 +39,18 @@ describe('game-edit.util', () => {
     expect(resolveRequest(list, 4, 'replace', 'Bb5')).toEqual({ prefix: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], writtenFrom: 5 });
   });
 
+  // Gemeldet 2026-09-27 (Prod-Partie 27, Zug 36): der Spieler hatte Bd5 vergessen, der Auflöser Rb4 als „nicht auf dem
+  // Formular" eingefügt. Wer an dem eingefügten Zug etwas tat, las ab Eintrag 73 statt 72 weiter — „Kd7" fiel weg.
+  it('resolveRequest: a move without a sheet entry (inserted) consumes none when replaced or deleted', () => {
+    const list = [ply('Kf1', 70), ply('Bd5', 71), ply('Rb4', null, { match: 'inserted' }), ply('Kd7', 72), ply('Rb6', 73)];
+    expect(writtenIndexAt(list, 2)).toBe(72);                 // der nächste offene Eintrag, nicht 73
+    expect(writtenIndexAt(list, 3)).toBe(72);
+    expect(resolveRequest(list, 2, 'replace', 'Rb4').writtenFrom).toBe(72);
+    expect(resolveRequest(list, 2, 'delete').writtenFrom).toBe(72);
+    expect(resolveRequest(list, 2, 'insert', 'Ke2').writtenFrom).toBe(72);
+    expect(resolveRequest(list, 3, 'replace', 'Kd7').writtenFrom).toBe(73);   // mit Eintrag: der ist verbraucht
+  });
+
   it('fromServer/toServer: round trip keeps the sheet state, confirmed moves are never uncertain', () => {
     const plies = fromServer([
       { w: 0, written: 'Sf3', san: 'Nf3', uci: 'g1f3', match: 'written', uncertain: false },

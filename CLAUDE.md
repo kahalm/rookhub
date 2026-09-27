@@ -2729,7 +2729,11 @@ haben keine Kästen → kein Ausschnitt.
 ein), `Zug löschen` streicht ihn. Bei einer eingelesenen Partie wird danach der REST neu aufbereitet
 (`POST …/scoresheet/resolve`, ohne Modell-Aufruf): Präfix = die festen Züge, `writtenFrom` = welcher Formular-Eintrag
 zum nächsten Halbzug gehört (ersetzen: der nächste, einfügen: derselbe, löschen: der übernächste —
-`resolveRequest` in `game-edit.util.ts`). Gespeichert wird über `PUT /api/games/{id}`: Züge werden nachgespielt
+`resolveRequest` in `game-edit.util.ts`). **Ein Halbzug OHNE Eintrag (`w = null`, eingefügt) verbraucht keinen**
+(0.558.1, `nextEntryAt`): ersetzen/löschen geht beim nächsten OFFENEN Eintrag weiter (nach dem letzten Halbzug mit
+Eintrag), und ein ersetzter eingefügter Zug bleibt ohne Eintrag. Vorher zählte jeder Halbzug dazwischen mit — an
+Prod-Partie 27 (36…Bd5 vergessen, Rb4 eingefügt) fiel beim Nachspielen von Rb4 der Eintrag „Kd7" weg und der Rest
+verrutschte. Gespeichert wird über `PUT /api/games/{id}`: Züge werden nachgespielt
 (illegal → 400, nichts geschrieben), nicht bearbeitete Header (Elo, Bedenkzeit, FEN) bleiben, und **ändern sich die
 Züge, fallen `GameAnalysisId` und der Stand des Fehler-Trainings weg** — sie gehörten zu einer anderen Partie. Der
 Stand je Halbzug (bestätigt, Lesarten) geht als `scoresheetPlies` mit und liegt als `ResolutionJson` an der Einlesung.

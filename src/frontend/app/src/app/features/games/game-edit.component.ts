@@ -521,7 +521,8 @@ export class GameEditComponent implements OnInit, OnDestroy {
     const list = this.plies();
     const old = list[i];
     const written = mode === 'insert' ? '' : old?.written ?? '';
-    const w = mode === 'insert' ? null : writtenIndexAt(list, i);
+    // Ein Halbzug ohne Eintrag (eingefügt) bleibt ohne; nur Anhängen am Ende verbraucht den nächsten offenen.
+    const w = mode === 'insert' ? null : i < list.length ? list[i].w : writtenIndexAt(list, i);
     const comment = mode === 'replace' ? stripSheetNotes(old?.comment) : null;
     const uci = this.uciOf(san, this.cursorFen());
     if (!uci) return;
