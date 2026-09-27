@@ -20,6 +20,8 @@ public class BookDto
     public bool ForBlind { get; set; }
     /// <summary>Auf der Kinderseite als Kurs angeboten (öffnet die Aufgaben dort ohne Anmeldung).</summary>
     public bool ForKids { get; set; }
+    /// <summary>Eigene Titel auf KidHub je Sprache (de/en/hr/hu); leer = der Buchname.</summary>
+    public Dictionary<string, string> KidsTitles { get; set; } = new();
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>
     public bool IsPublic { get; set; }
     /// <summary>Optionaler Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}); null = keiner.</summary>
@@ -59,6 +61,9 @@ public class UpdateBookDto
     public bool? ForBlind { get; set; }
     /// <summary>Auf der Kinderseite als Kurs anbieten.</summary>
     public bool? ForKids { get; set; }
+    /// <summary>Eigene Titel auf KidHub je Sprache (de/en/hr/hu) — ersetzt alle; leerer Wert = keiner in
+    /// dieser Sprache; <c>null</c> = unverändert.</summary>
+    public Dictionary<string, string?>? KidsTitles { get; set; }
     // Kein IsCalculation: der Kalkulations-Modus wird auf der KURS-Detailseite vom Besitzer (bzw.
     // einem Admin) geschaltet — siehe PUT /api/courses/{bookId}/calculation.
     /// <summary>Öffentlich = ohne Registrierung als Kurs über den Direkt-Link nutzbar.</summary>

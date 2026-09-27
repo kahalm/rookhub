@@ -228,4 +228,119 @@ public class KidsPuzzleServiceTests : IDisposable
         var again = await admin.UpdateBookAsync(book.Id, new UpdateBookDto { DisplayName = "Neu" });
         Assert.True(again.ForKids);
     }
+
+    // ---- Kindertitel + „erst, wenn Deutsch" (Wunsch 2026-09-27) ----
+
+    [Fact]
+    public async Task Kurse_ErscheinenErst_WennSieDeutschSind()
+    {
+        var english = await AddBookAsync("Learn Chess", forKids: true);
+        english.CommentLanguage = "en";
+        await AddLineAsync(english, "e1");
+        var german = await AddBookAsync("Mattbilder", forKids: true);
+        german.CommentLanguage = "de";
+        await AddLineAsync(german, "g1");
+        await _db.SaveChangesAsync();
+        var service = new KidsPuzzleService(_db, new[] { "de" });
+
+        Assert.Equal(new[] { german.Id }, (await service.GetCoursesAsync()).Select(c => c.BookId));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetCoursePuzzlesAsync(english.Id));
+
+        // Uebersetzung laeuft: weiter unsichtbar.
+        _db.CourseTranslationJobs.Add(new CourseTranslationJob { BookId = english.Id, Language = "de", Status = CourseTranslationJobStatus.Running, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Single(await service.GetCoursesAsync());
+
+        // Fertig uebersetzt: sichtbar, auch ueber den direkten Weg.
+        _db.CourseTranslationJobs.Add(new CourseTranslationJob { BookId = english.Id, Language = "de", Status = CourseTranslationJobStatus.Done, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal(2, (await service.GetCoursesAsync()).Count);
+        Assert.Single(await service.GetCoursePuzzlesAsync(english.Id));
+    }
+
+    [Fact]
+    public async Task Kurse_OhneSprachbedingung_SofortSichtbar()
+    {
+        var english = await AddBookAsync("Learn Chess", forKids: true);
+        english.CommentLanguage = "en";
+        await AddLineAsync(english, "e1");
+        await _db.SaveChangesAsync();
+
+        Assert.Single(await new KidsPuzzleService(_db, Array.Empty<string>()).GetCoursesAsync());
+    }
+
+    [Theory]
+    [InlineData("de", new[] { "de" })]
+    [InlineData(" de , HR,de ", new[] { "de", "hr" })]
+    [InlineData("", new string[0])]
+    public void Sprachbedingung_AusDerKonfiguration(string value, string[] expected) =>
+        Assert.Equal(expected, KidsPuzzleService.ParseLanguages(value));
+
+    [Fact]
+    public void Sprachbedingung_VorgabeIstDeutsch()
+    {
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+        Assert.Equal("de", KidsPuzzleService.DefaultRequiredCourseLanguages);
+        Assert.Null(config["Kids:RequiredCourseLanguages"]);   // nicht gesetzt → Vorgabe
+    }
+
+    [Fact]
+    public async Task Kindertitel_JeSprache_UndDieReihenfolgeFolgtIhnen()
+    {
+        var b1 = await AddBookAsync("Learn Chess the Right Way - Book 1", forKids: true);
+        b1.KidsTitles = KidsTitles.Normalize(new Dictionary<string, string?> { ["de"] = "Matt in einem Zug", ["en"] = "Checkmate in One" });
+        await AddLineAsync(b1, "a1");
+        var b2 = await AddBookAsync("Knight Fork Trainer", forKids: true);
+        b2.KidsTitles = KidsTitles.Normalize(new Dictionary<string, string?> { ["de"] = "Die Springergabel", ["en"] = "The Knight Fork" });
+        await AddLineAsync(b2, "b1");
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(new[] { "Die Springergabel", "Matt in einem Zug" }, (await _service.GetCoursesAsync("de")).Select(c => c.Title));
+        Assert.Equal(new[] { "Checkmate in One", "The Knight Fork" }, (await _service.GetCoursesAsync("hu")).Select(c => c.Title));   // hu fehlt → en
+        Assert.Equal("Matt in einem Zug", (await _service.GetCoursePuzzlesAsync(b1.Id, "de")).Single().BookTitle);
+        b2.KidsTitles = null;                                           // ohne eigene Titel: der Buchname
+        await _db.SaveChangesAsync();
+        Assert.Contains("Knight Fork Trainer", (await _service.GetCoursesAsync("de")).Select(c => c.Title));
+    }
+
+    [Theory]
+    [InlineData("de", "Matt")]
+    [InlineData("hr", "Checkmate")]      // keine hr-Fassung → Englisch
+    [InlineData(null, "Checkmate")]
+    public void Kindertitel_Rueckfall(string? lang, string expected) =>
+        Assert.Equal(expected, KidsTitles.Pick("{\"de\":\"Matt\",\"en\":\"Checkmate\"}", lang, "Buchname"));
+
+    [Fact]
+    public void Kindertitel_OhneEigene_DerBuchname()
+    {
+        Assert.Equal("Buchname", KidsTitles.Pick(null, "de", "Buchname"));
+        Assert.Equal("Buchname", KidsTitles.Pick("{kaputt", "de", "Buchname"));
+        Assert.Equal("Nur Deutsch", KidsTitles.Pick("{\"de\":\"Nur Deutsch\"}", "hu", "Buchname"));
+    }
+
+    [Fact]
+    public void Kindertitel_Eingabe_WirdGeprueft()
+    {
+        Assert.Equal("{\"de\":\"Matt\",\"en\":\"Mate\"}",
+            KidsTitles.Normalize(new Dictionary<string, string?> { ["EN"] = " Mate ", ["de"] = "Matt", ["hu"] = "  " }));
+        Assert.Null(KidsTitles.Normalize(new Dictionary<string, string?> { ["de"] = "" }));
+        Assert.Throws<ArgumentException>(() => KidsTitles.Normalize(new Dictionary<string, string?> { ["fr"] = "Mat" }));
+        Assert.Throws<ArgumentException>(() => KidsTitles.Normalize(new Dictionary<string, string?> { ["de"] = new string('x', KidsTitles.MaxLength + 1) }));
+    }
+
+    [Fact]
+    public async Task Buecherverwaltung_SpeichertKindertitel_OhneDieEloZuVerlieren()
+    {
+        var book = await AddBookAsync("Learn Chess", forKids: true);
+        book.MinElo = 800; book.MaxElo = 1200;
+        await _db.SaveChangesAsync();
+
+        var dto = await new BookAdminService(_db).UpdateBookAsync(book.Id, new UpdateBookDto
+        {
+            KidsTitles = new Dictionary<string, string?> { ["de"] = "Matt in einem Zug" }, MinElo = 800, MaxElo = 1200,
+        });
+
+        Assert.Equal("Matt in einem Zug", dto.KidsTitles["de"]);
+        Assert.Equal("{\"de\":\"Matt in einem Zug\"}", (await _db.Books.FindAsync(book.Id))!.KidsTitles);
+    }
 }

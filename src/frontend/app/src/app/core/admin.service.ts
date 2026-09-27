@@ -65,6 +65,8 @@ export interface Book {
   publicSlug: string | null;
   /** Auf der Kinderseite als Kurs angeboten (öffnet die Aufgaben dort ohne Anmeldung). */
   forKids: boolean;
+  /** Eigene Titel auf KidHub je Sprache (de/en/hr/hu); fehlt eine, gilt Englisch bzw. der Buchname. */
+  kidsTitles?: Record<string, string>;
   /** Art des Buchs fürs Trainingsziel-Routing der Kurszeit. */
   kind: 'Puzzle' | 'Study';
   puzzleCount: number;
@@ -87,6 +89,8 @@ export interface UpdateBook {
   forBlind?: boolean;
   isPublic?: boolean;
   forKids?: boolean;
+  /** Kindertitel je Sprache — ersetzt alle; leerer Wert = keiner in der Sprache; undefined = unverändert. */
+  kidsTitles?: Record<string, string>;
   /** Kurz-Alias setzen; Leerstring entfernt ihn, undefined lässt ihn unverändert. */
   publicSlug?: string | null;
   kind?: 'Puzzle' | 'Study';

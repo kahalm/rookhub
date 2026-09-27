@@ -179,13 +179,14 @@ describe('AdminComponent', () => {
   it('renameBook sends the new DisplayName and updates the row + filter', () => {
     const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
     const { c } = make({ updateBook });
-    const book = { id: 7, displayName: 'Old Name', fileName: 'x.pgn', tags: null } as any;
+    const book = { id: 7, displayName: 'Old Name', fileName: 'x.pgn', tags: null, minElo: 800, maxElo: 1200 } as any;
     c.books = [book];
     spyOn(window, 'prompt').and.returnValue('  New Name  ');
 
     c.renameBook(book);
 
-    expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name' });
+    // Die Elo-Spanne geht mit: der Endpunkt setzt sie immer, ohne sie leerte das Umbenennen sie.
+    expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name', minElo: 800, maxElo: 1200 });
     expect(book.displayName).toBe('New Name');
   });
 
@@ -198,6 +199,34 @@ describe('AdminComponent', () => {
     c.renameBook(book);
     promptSpy.and.returnValue('Same');                                  // unchanged
     c.renameBook(book);
+
+    expect(updateBook).not.toHaveBeenCalled();
+  });
+
+  it('editKidsTitles fragt je KidHub-Sprache und speichert alle, ohne die Elo zu verlieren', () => {
+    const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({ kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One' } }));
+    const { c } = make({ updateBook });
+    const book = { id: 9, displayName: 'Learn Chess', forKids: true, minElo: null, maxElo: 1000, kidsTitles: { de: 'Alt' } } as any;
+    const answers = [' Matt in einem Zug ', 'Checkmate in One', '', ''];
+    const promptSpy = spyOn(window, 'prompt').and.callFake(() => answers.shift()!);
+
+    c.editKidsTitles(book);
+
+    expect(promptSpy.calls.count()).toBe(4);
+    expect(promptSpy.calls.first().args[1]).toBe('Alt');               // vorhandener Titel vorbelegt
+    expect(updateBook).toHaveBeenCalledWith(9, {
+      kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One', hr: '', hu: '' }, minElo: null, maxElo: 1000,
+    });
+    expect(book.kidsTitles).toEqual({ de: 'Matt in einem Zug', en: 'Checkmate in One' });
+  });
+
+  it('editKidsTitles: Abbrechen bei einer Sprache speichert nichts', () => {
+    const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+    const { c } = make({ updateBook });
+    const answers: (string | null)[] = ['Matt', null];
+    spyOn(window, 'prompt').and.callFake(() => answers.shift() ?? null);
+
+    c.editKidsTitles({ id: 9, displayName: 'x', forKids: true } as any);
 
     expect(updateBook).not.toHaveBeenCalled();
   });

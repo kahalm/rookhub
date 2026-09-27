@@ -582,6 +582,8 @@ public class AppDbContext : DbContext
             e.HasOne(k => k.Puzzle).WithMany().HasForeignKey(k => k.PuzzleId).OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<Book>().Property(b => b.KidsTitles).HasMaxLength(1000);
+
         modelBuilder.Entity<KidsLevelProgress>(e =>
         {
             e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);

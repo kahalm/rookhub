@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '@rh/core/auth.service';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 
@@ -87,6 +87,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 export class KidsHomeComponent {
   private readonly api = inject(KidsApiService);
   readonly progress = inject(KidsProgressStore);
+  private readonly translate = inject(TranslateService);
   readonly user = toSignal(inject(AuthService).currentUser$, { initialValue: null });
 
   readonly levels = signal<KidsLevel[]>([]);
@@ -105,6 +106,6 @@ export class KidsHomeComponent {
       error: () => this.failed.set(true),
     });
     // Ohne Kurse bleibt die Kachel einfach weg — kein Fehlertext fuer etwas, das es nicht gibt.
-    this.api.courses().subscribe({ next: courses => this.courses.set(courses), error: () => {} });
+    this.api.courses(this.translate.currentLang() ?? undefined).subscribe({ next: courses => this.courses.set(courses), error: () => {} });
   }
 }

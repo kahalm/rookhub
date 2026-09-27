@@ -2197,7 +2197,9 @@
         "kind": "Art"
       },
       "publicHint": "Öffentlich: dieser Kurs ist ohne Registrierung über den Direkt-Link nutzbar. Fortschritt anonymer Besucher bleibt lokal im Browser.",
-      "kidsHint": "Kinder: dieser Kurs erscheint auf der Kinderseite und ist dort ohne Anmeldung spielbar (Kalkulationsbücher ausgenommen).",
+      "kidsHint": "Kinder: dieser Kurs erscheint auf der Kinderseite und ist dort ohne Anmeldung spielbar (Kalkulationsbücher ausgenommen). Er erscheint dort erst, wenn seine Kommentare Deutsch sind (Übersetzung fertig).",
+      "kidsTitles": "Titel auf KidHub",
+      "kidsTitlePrompt": "Titel auf KidHub – {{language}} (leer = Buchname):",
       "slugPlaceholder": "Alias z. B. mate1",
       "slugHint": "Optionaler Kurz-Alias für den öffentlichen Link: der Kurs ist dann unter /<Alias> erreichbar (z. B. /mate1). Kleinbuchstaben, Ziffern und Bindestriche, eindeutig. Leer = kein Alias.",
       "errors": {

@@ -72,6 +72,10 @@ public class Book
     /// </summary>
     public bool ForKids { get; set; }
 
+    /// <summary>Eigene Titel auf KidHub je Sprache, JSON <c>{"de":"…","en":"…"}</c> (<see cref="Services.KidsTitles"/>);
+    /// <c>null</c> = der Buchname. Der Name in RookHub bleibt davon unberuehrt.</summary>
+    public string? KidsTitles { get; set; }
+
     /// <summary>
     /// „Kalkulationsbuch": die Linien dieses Buchs werden NICHT abgefragt, sondern als reine
     /// Stellungen (FEN + optionaler Kommentar) zum Durchrechnen serviert. Der Kurs öffnet dann

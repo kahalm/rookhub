@@ -12,9 +12,45 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class KidsPuzzleService
 {
-    private readonly AppDbContext _db;
+    /// <summary>Vorgabe fuer <c>Kids:RequiredCourseLanguages</c>: ein Kinderkurs erscheint erst, wenn seine
+    /// Kommentare Deutsch sind (Wunsch 2026-09-27: „ausblenden, bis sie deutsch sind").</summary>
+    public const string DefaultRequiredCourseLanguages = "de";
 
-    public KidsPuzzleService(AppDbContext db) => _db = db;
+    private readonly AppDbContext _db;
+    private readonly string[] _requiredLanguages;
+
+    /// <summary>Ohne Sprachbedingung (Tests, Werkzeuge).</summary>
+    public KidsPuzzleService(AppDbContext db) : this(db, Array.Empty<string>()) { }
+
+    /// <summary>Aus der Konfiguration: <c>Kids:RequiredCourseLanguages</c> (Komma-Liste, Vorgabe <c>de</c>, leer = keine).</summary>
+    public KidsPuzzleService(AppDbContext db, IConfiguration config)
+        : this(db, ParseLanguages(config["Kids:RequiredCourseLanguages"] ?? DefaultRequiredCourseLanguages)) { }
+
+    internal KidsPuzzleService(AppDbContext db, string[] requiredLanguages)
+    {
+        _db = db;
+        _requiredLanguages = requiredLanguages;
+    }
+
+    internal static string[] ParseLanguages(string value) =>
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(l => l.ToLowerInvariant()).Distinct().ToArray();
+
+    /// <summary>
+    /// Die Kinderkurse, die gerade gezeigt werden: freigegeben (<see cref="Book.ForKids"/>), kein
+    /// Kalkulationsbuch — und in JEDER geforderten Sprache vorhanden: die Quelle ist diese Sprache, oder ein
+    /// Uebersetzungsauftrag in sie ist fertig (<see cref="CourseTranslationJobStatus.Done"/>, auch „nichts zu tun").
+    /// Ein Kurs, der noch uebersetzt wird, bleibt so lange unsichtbar — auch ueber den direkten Link.
+    /// </summary>
+    private IQueryable<Book> VisibleKidsBooks()
+    {
+        var books = _db.Books.Where(b => b.ForKids && !b.IsCalculation);
+        foreach (var lang in _requiredLanguages)
+            books = books.Where(b => b.CommentLanguage == lang
+                || _db.CourseTranslationJobs.Any(j => j.BookId == b.Id && j.Language == lang
+                                                      && j.Status == CourseTranslationJobStatus.Done));
+        return books;
+    }
 
     /// <summary>Steht eine Leiter im aktuellen Lehrplan-Stand da? Leer oder veraltet → nein.</summary>
     public async Task<bool> IsCurrentAsync(CancellationToken ct = default) =>
@@ -111,20 +147,23 @@ public class KidsPuzzleService
 
     /// <summary>Die fuer Kinder freigegebenen Kurse. Kalkulationsbuecher nie: sie haben keine Loesung zum
     /// Nachspielen, und ihre Zugfolge gehoert nicht ausgeliefert.</summary>
-    public async Task<List<KidsCourseDto>> GetCoursesAsync(CancellationToken ct = default)
+    public async Task<List<KidsCourseDto>> GetCoursesAsync(string? lang = null, CancellationToken ct = default)
     {
-        return await _db.Books.AsNoTracking()
-            .Where(b => b.ForKids && !b.IsCalculation)
-            .OrderBy(b => b.DisplayName)
-            .Select(b => new KidsCourseDto
-            {
-                BookId = b.Id,
-                Title = b.DisplayName,
-                Description = b.Description,
-                PuzzleCount = b.Puzzles.Count(p => !p.IsInfoOnly),
-            })
+        var rows = await VisibleKidsBooks().AsNoTracking()
+            .Select(b => new { b.Id, b.DisplayName, b.KidsTitles, b.Description, PuzzleCount = b.Puzzles.Count(p => !p.IsInfoOnly) })
             .Where(c => c.PuzzleCount > 0)
             .ToListAsync(ct);
+        // Titel (und damit die Reihenfolge) je Sprache: die Kindertitel stehen als JSON in einer Spalte.
+        return rows
+            .Select(r => new KidsCourseDto
+            {
+                BookId = r.Id,
+                Title = KidsTitles.Pick(r.KidsTitles, lang, r.DisplayName),
+                Description = r.Description,
+                PuzzleCount = r.PuzzleCount,
+            })
+            .OrderBy(c => c.Title, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     /// <summary>
@@ -133,15 +172,20 @@ public class KidsPuzzleService
     /// <see cref="KeyNotFoundException"/>. Die Freigabe <see cref="Book.ForKids"/> setzt nur ein Admin;
     /// sie oeffnet den Kurs bewusst auch ohne <see cref="Book.IsPublic"/>.
     /// </summary>
-    public async Task<List<BookPuzzleDto>> GetCoursePuzzlesAsync(int bookId, CancellationToken ct = default)
+    public async Task<List<BookPuzzleDto>> GetCoursePuzzlesAsync(int bookId, string? lang = null, CancellationToken ct = default)
     {
-        if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.ForKids && !b.IsCalculation, ct))
-            throw new KeyNotFoundException("Course not found.");
+        var book = await VisibleKidsBooks().AsNoTracking()
+            .Where(b => b.Id == bookId)
+            .Select(b => new { b.DisplayName, b.KidsTitles })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new KeyNotFoundException("Course not found.");
 
         var puzzles = await CourseService.PuzzlesWithBookInReadingOrder(_db, bookId)
             .Where(bp => !bp.IsInfoOnly)
             .AsNoTracking()
             .ToListAsync(ct);
-        return puzzles.Select(BookPuzzleService.MapToDto).ToList();
+        // Die Kopfzeile des Kurses liest den Titel aus der Linie — dort der Kindertitel statt des Buchnamens.
+        var title = KidsTitles.Pick(book.KidsTitles, lang, book.DisplayName);
+        return puzzles.Select(BookPuzzleService.MapToDto).Select(dto => { dto.BookTitle = title; return dto; }).ToList();
     }
 }

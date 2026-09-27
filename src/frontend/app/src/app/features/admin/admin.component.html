@@ -292,6 +292,13 @@
                   <td mat-cell *matCellDef="let b">
                     <mat-slide-toggle [(ngModel)]="b.forKids" (change)="saveBook(b)"
                                       [attr.title]="'admin.books.kidsHint' | translate"></mat-slide-toggle>
+                    @if (b.forKids) {
+                      <button mat-icon-button class="book-rename-btn" (click)="editKidsTitles(b)"
+                              [attr.title]="'admin.books.kidsTitles' | translate"
+                              [class.has-titles]="(b.kidsTitles?.['de'] ?? '') !== ''">
+                        <mat-icon>edit_note</mat-icon>
+                      </button>
+                    }
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="isPublic">

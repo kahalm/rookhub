@@ -8,6 +8,11 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.565.0", date: "2026-09-27", changes: [
+    { en: "KidHub courses get their own child-friendly titles in each language of the kids’ site (for example “Checkmate in One” instead of “Learn Chess the Right Way – Book 1: Must-know Checkmates”); the book keeps its name on RookHub. Admins set them with the pencil next to “Kids” in the book admin.", de: "KidHub-Kurse bekommen eigene, kindgerechte Titel in jeder Sprache der Kinderseite (etwa „Matt in einem Zug“ statt „Learn Chess the Right Way – Book 1: Must-know Checkmates“); in RookHub behält das Buch seinen Namen. Admins setzen sie über den Stift neben „Kinder“ in der Bücherverwaltung." },
+    { en: "A kids’ course only appears on KidHub once it is available in German — either written in German or translated completely. Until then it is hidden, direct links included.", de: "Ein Kinderkurs erscheint auf KidHub erst, wenn er auf Deutsch vorliegt — deutsch geschrieben oder fertig übersetzt. Bis dahin ist er ausgeblendet, auch über einen direkten Link." },
+    { en: "Book admin: renaming a book no longer clears its Elo range.", de: "Bücherverwaltung: Das Umbenennen eines Buchs leert seine Elo-Spanne nicht mehr." },
+  ] },
   { version: "0.564.0", date: "2026-09-27", changes: [
     { en: "Courses: a translation can now also be requested while playing through a course — ⋮ menu → “Request translation” → pick the language. The same rules as on the course page apply (one open request per person, quiet hours), and the menu shows what is already waiting or running.", de: "Kurse: Eine Übersetzung lässt sich jetzt auch beim Durchspielen anfordern — ⋮-Menü → „Übersetzung anfordern“ → Sprache wählen. Es gelten dieselben Regeln wie auf der Kursseite (ein offener Auftrag je Person, Sperrzeiten), und das Menü zeigt, was schon wartet oder läuft." },
     { en: "A running course translation now shows how long it will take — estimated from the speed of the run so far (“running · 12 % · about 25 min left”).", de: "Eine laufende Kurs-Übersetzung zeigt jetzt, wie lange sie noch braucht — geschätzt aus dem bisherigen Tempo des Laufs („läuft · 12 % · noch ca. 25 min“)." },

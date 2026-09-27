@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 
@@ -54,12 +54,13 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 export class CourseListComponent {
   private readonly api = inject(KidsApiService);
   private readonly progress = inject(KidsProgressStore);
+  private readonly translate = inject(TranslateService);
 
   readonly courses = signal<KidsCourse[]>([]);
   readonly loading = signal(true);
 
   constructor() {
-    this.api.courses().subscribe({
+    this.api.courses(this.translate.currentLang() ?? undefined).subscribe({
       next: courses => { this.courses.set(courses); this.loading.set(false); },
       error: () => this.loading.set(false),
     });

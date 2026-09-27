@@ -35,6 +35,7 @@ public class BookAdminService
                 ForRandom = b.ForRandom,
                 ForBlind = b.ForBlind,
                 ForKids = b.ForKids,
+                KidsTitles = KidsTitles.Parse(b.KidsTitles),
                 IsPublic = b.IsPublic,
                 PublicSlug = b.PublicSlug,
                 Kind = b.Kind,
@@ -102,6 +103,7 @@ public class BookAdminService
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
         if (dto.ForKids.HasValue) book.ForKids = dto.ForKids.Value;
+        if (dto.KidsTitles != null) book.KidsTitles = KidsTitles.Normalize(dto.KidsTitles);
         if (dto.IsPublic.HasValue) book.IsPublic = dto.IsPublic.Value;
         if (dto.PublicSlug != null) await ApplyPublicSlugAsync(book, dto.PublicSlug);
         if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
@@ -126,6 +128,7 @@ public class BookAdminService
             ForRandom = book.ForRandom,
             ForBlind = book.ForBlind,
             ForKids = book.ForKids,
+            KidsTitles = KidsTitles.Parse(book.KidsTitles),
             IsPublic = book.IsPublic,
             PublicSlug = book.PublicSlug,
             Kind = book.Kind,

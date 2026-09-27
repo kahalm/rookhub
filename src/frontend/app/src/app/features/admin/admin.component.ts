@@ -281,7 +281,8 @@ export class AdminComponent implements OnInit {
     if (next == null) return;
     const name = next.trim();
     if (!name || name === book.displayName) return;
-    this.adminService.updateBook(book.id, { displayName: name }).subscribe({
+    // min/max mitschicken: der Endpunkt setzt die Elo-Spanne immer — ohne sie leerte das Umbenennen sie.
+    this.adminService.updateBook(book.id, { displayName: name, minElo: book.minElo, maxElo: book.maxElo }).subscribe({
       next: () => {
         book.displayName = name;
         this.applyBookFilter();
@@ -310,6 +311,23 @@ export class AdminComponent implements OnInit {
         this.booksUploading = false;
         input.value = '';
       }
+    });
+  }
+
+  /**
+   * Titel auf KidHub, je Sprache der Kinderseite nacheinander abgefragt (wie das Umbenennen per Eingabefeld).
+   * Abbrechen bei einer Sprache verwirft alles; leer lassen = kein eigener Titel in dieser Sprache.
+   */
+  editKidsTitles(book: Book): void {
+    const titles: Record<string, string> = {};
+    for (const [code, name] of [['de', 'Deutsch'], ['en', 'English'], ['hr', 'Hrvatski'], ['hu', 'Magyar']]) {
+      const next = prompt(this.translate.instant('admin.books.kidsTitlePrompt', { language: name }), book.kidsTitles?.[code] ?? '');
+      if (next == null) return;
+      titles[code] = next.trim();
+    }
+    this.adminService.updateBook(book.id, { kidsTitles: titles, minElo: book.minElo, maxElo: book.maxElo }).subscribe({
+      next: saved => { book.kidsTitles = saved.kidsTitles; },
+      error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save')),
     });
   }
 

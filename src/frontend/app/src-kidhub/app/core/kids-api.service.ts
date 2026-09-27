@@ -72,8 +72,10 @@ export class KidsApiService {
     return this.http.get<KidsLanguageHint>(`${this.base}/language-hint`);
   }
 
-  courses(): Observable<KidsCourse[]> {
-    return this.http.get<KidsCourse[]>(`${this.base}/courses`);
+  /** Kinderkurse mit ihren Titeln in `lang` (Kindertitel je Sprache, sonst der Buchname). */
+  courses(lang?: string): Observable<KidsCourse[]> {
+    const params = lang ? new HttpParams().set('lang', lang) : undefined;
+    return this.http.get<KidsCourse[]>(`${this.base}/courses`, { params });
   }
 
   coursePuzzles(bookId: number, lang?: string): Observable<KidsCourseLine[]> {

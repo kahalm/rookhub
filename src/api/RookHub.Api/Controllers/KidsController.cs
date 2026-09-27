@@ -84,12 +84,13 @@ public class KidsController : BaseApiController
         return detail is null ? NotFound(new { message = "Level not found." }) : Ok(detail);
     }
 
-    /// <summary>Die fuer Kinder freigegebenen Kurse.</summary>
+    /// <summary>Die fuer Kinder freigegebenen Kurse, die gerade gezeigt werden (siehe
+    /// <see cref="KidsPuzzleService"/>: erst, wenn sie in den geforderten Sprachen vorliegen); Titel je <c>?lang=</c>.</summary>
     [HttpGet("courses")]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
-    public async Task<ActionResult<List<KidsCourseDto>>> GetCourses(CancellationToken ct) =>
-        Ok(await _service.GetCoursesAsync(ct));
+    public async Task<ActionResult<List<KidsCourseDto>>> GetCourses([FromQuery] string? lang, CancellationToken ct) =>
+        Ok(await _service.GetCoursesAsync(lang, ct));
 
     /// <summary>Die Aufgaben eines Kinderkurses am Stueck; <c>?lang=</c> liefert die Kommentare
     /// uebersetzt, wo es aktuelle Uebersetzungen gibt.</summary>
@@ -101,7 +102,7 @@ public class KidsController : BaseApiController
     {
         try
         {
-            var lines = await _service.GetCoursePuzzlesAsync(bookId, ct);
+            var lines = await _service.GetCoursePuzzlesAsync(bookId, lang, ct);
             if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
             return Ok(lines);
         }
