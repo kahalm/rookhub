@@ -76,6 +76,8 @@ public class KidHubAssetTests
     /// <summary>Die Vorlagen bleiben im Repo — ohne sie liesse sich keine Groesse nachziehen.</summary>
     [Theory]
     [InlineData("KidHub.png")]
+    [InlineData("KidHub2.png")]
+    [InlineData("KidHub3.png")]
     [InlineData("derive.py")]
     public void Designvorlage_LiegtImRepo(string name) =>
         Assert.True(File.Exists(Path.Combine(RepoRoot(), "design", "kidhub", name)),

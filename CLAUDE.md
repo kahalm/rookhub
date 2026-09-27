@@ -3210,9 +3210,11 @@ Kinderseite" unter REST API.
   zurücknehmen.
 - **Routen** `/`, `/levels`, `/levels/:level`, `/courses`, `/courses/:bookId`, `/impressum`, `/privacy` — bewusst
   keine mit `/g`, `/t`, `/puzzles`: diese Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
-- **Symbole** (0.560.0): gezeichnete Vorlage `design/kidhub/KidHub.png` (Bild-KI), alles in `public-kidhub/` leitet
-  `design/kidhub/derive.py` ab — es stellt die WEISSEN Ecken frei (die Vorlage hat keinen Alphakanal), färbt ein
-  rotlila Stück Umriss um und baut maskable/Vorschaubild aus dem Motiv, solange `KidHub2.png`/`KidHub3.png` fehlen.
+- **Symbole** (0.560.0, Vorlagen 2+3 seit 0.560.2): gezeichnete Vorlagen `design/kidhub/KidHub{,2,3}.png` (Bild-KI),
+  alles in `public-kidhub/` leitet `design/kidhub/derive.py` ab — es stellt bei `KidHub.png` die WEISSEN Ecken frei
+  (die Vorlage hat keinen Alphakanal) und färbt ein rotlila Stück Umriss um, schneidet `KidHub2.png` (maskable) um
+  das Motiv zu (dort nur ~23 % des Radius, danach 32 % — innerhalb Androids sicherer 40 %) und schreibt in die leere
+  rechte Hälfte von `KidHub3.png` Name und Satz (Vorschaubild).
   Rezept in `public-kidhub/ASSETS.md`; `KidHubAssetTests` hält Manifest, `index.html` und Dateien gegeneinander
   (dieselbe Falle wie bei der Turnierseite: was in `public-kidhub/` fehlt, kommt still aus `public/`).
 - **Sprache aus dem IP-Land** (0.560.0): nur wenn die ermittelte Sprache keine Kindersprache ist, fragt KidHub

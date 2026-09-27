@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.560.2", date: "2026-09-27", changes: [
+    { en: "KidHub: the home-screen icon on Android and the link preview picture now come from their own drawings. On the home screen the knight fills the round icon properly instead of sitting small in the middle; the preview shows the knight with a crown and pawns on the left and “KidHub — Schach-Puzzles für Kinder, ganz einfach!” on the right.", de: "KidHub: Das Symbol auf dem Android-Startbildschirm und das Bild der Link-Vorschau stammen jetzt aus eigenen Zeichnungen. Auf dem Startbildschirm füllt der Springer das runde Symbol richtig aus, statt klein in der Mitte zu sitzen; die Vorschau zeigt links den Springer mit Krone und Bauern und rechts „KidHub — Schach-Puzzles für Kinder, ganz einfach!“." },
+  ] },
   { version: "0.560.1", date: "2026-09-27", changes: [
     { en: "KidHub: a visitor from a country whose language the kids’ site does not have (France, Italy, Japan …) now gets English instead of German — English is more likely to be understood. German stays the default only when the country cannot be determined (local network, no country list).", de: "KidHub: Wer aus einem Land kommt, dessen Sprache die Kinderseite nicht hat (Frankreich, Italien, Japan …), bekommt jetzt Englisch statt Deutsch — das wird eher verstanden. Deutsch bleibt die Vorgabe nur, wenn sich das Land nicht bestimmen lässt (lokales Netz, keine Länderliste)." },
   ] },

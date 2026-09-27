@@ -3,8 +3,8 @@
 Vorlage: design/kidhub/KidHub.png (1254 x 1254, von einer Bild-KI, ohne Alphakanal: die Ecken
 ausserhalb des abgerundeten Quadrats sind WEISS). Aufruf aus dem Repo-Wurzelverzeichnis:
     python3 design/kidhub/derive.py
-Optional design/kidhub/KidHub2.png (maskable) — fehlt sie, entsteht die maskable-Fassung aus dem
-Motiv der ersten Vorlage (blauer Grund herausgerechnet, auf 72 % verkleinert, randloser Verlauf).
+design/kidhub/KidHub2.png (maskable, randloser Grund) und KidHub3.png (Vorschaubild 1536 x 1024,
+Motiv links) sind optional — fehlen sie, baut das Skript beide Fassungen aus der ersten Vorlage.
 """
 from collections import deque
 from pathlib import Path
@@ -110,7 +110,7 @@ def main() -> None:
 
     maskable_src = HERE / 'KidHub2.png'
     if maskable_src.exists():
-        mask = Image.open(maskable_src).convert('RGB')
+        mask = maskable_from_template(Image.open(maskable_src).convert('RGB'))
     else:
         motif = motif_only(a, bg, rgba)
         mask = full_bleed(1254, bg)
@@ -122,10 +122,7 @@ def main() -> None:
         mask.resize((size, size), Image.LANCZOS).save(OUT / 'icons' / f'icon-{size}-maskable.png', optimize=True)
     og_src = HERE / 'KidHub3.png'
     if og_src.exists():
-        # Gezeichnete Vorlage 1536 x 1024 → senkrecht mittig auf 1200 x 630 zuschneiden.
-        og = Image.open(og_src).convert('RGB')
-        w = 1200; h = round(og.height * w / og.width)
-        og = og.resize((w, h), Image.LANCZOS).crop((0, (h - 630) // 2, 1200, (h - 630) // 2 + 630))
+        og = og_from_template(Image.open(og_src).convert('RGB'))
     else:
         og = og_from_icon(icon, bg)
     og.save(OUT / 'og-image.png', optimize=True)
@@ -148,6 +145,73 @@ def og_from_icon(icon: Image.Image, bg: np.ndarray) -> Image.Image:
                                      ((632, 395), 'ganz einfach, Stufe für Stufe.', sub, (234, 246, 255))):
         draw.text((x + 3, y + 4), text, font=font, fill=shadow)
         draw.text((x, y), text, font=font, fill=fill)
+    return og
+
+
+def edge_background(a: np.ndarray, right_only: bool) -> np.ndarray:
+    """Farbe des Grunds je Zeile aus den Randspalten — dort steht in beiden Vorlagen kein Motiv."""
+    cols = a[:, -40:] if right_only else np.concatenate([a[:, :40], a[:, -40:]], axis=1)
+    return np.median(cols.astype(float), axis=1)
+
+
+def motif_mask(a: np.ndarray, bg: np.ndarray) -> np.ndarray:
+    return np.abs(a.astype(float) - bg[:, None, :]).sum(axis=2) > 60
+
+
+def maskable_from_template(img: Image.Image) -> Image.Image:
+    """Die Vorlage laesst das Motiv bei ~23 % des Radius — auf dem Handy waere es ein Knopf in der
+    Mitte. Android garantiert den Kreis bis 40 % der Breite; zugeschnitten wird so, dass das Motiv bis
+    32 % reicht (80 % der sicheren Zone), mittig um das Motiv."""
+    a = np.array(img)
+    ys, xs = np.nonzero(motif_mask(a, edge_background(a, right_only=False)))
+    cx, cy = (xs.min() + xs.max()) / 2, (ys.min() + ys.max()) / 2
+    radius = np.percentile(np.hypot(xs - cx, ys - cy), 99.9)
+    side = min(round(radius / 0.32), img.width, img.height)
+    left = int(np.clip(round(cx - side / 2), 0, img.width - side))
+    top = int(np.clip(round(cy - side / 2), 0, img.height - side))
+    return img.crop((left, top, left + side, top + side))
+
+
+def title_font(size: int):
+    from PIL import ImageFont
+    for path in ('/usr/share/fonts/opentype/urw-base35/URWGothic-Demi.otf',
+                 '/usr/share/fonts/X11/Type1/URWGothic-Demi.pfb',
+                 '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'):
+        if Path(path).exists():
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default(size)
+
+
+def og_from_template(img: Image.Image) -> Image.Image:
+    """Vorlage 1536 x 1024 → 1200 x 630, senkrecht um das Motiv zugeschnitten; in die leere rechte
+    Haelfte kommen Name und Satz — weiss mit dunkelblauem Umriss wie die Zeichnung."""
+    from PIL import ImageDraw
+    w = 1200
+    h = round(img.height * w / img.width)
+    img = img.resize((w, h), Image.LANCZOS)
+    a = np.array(img)
+    ys, xs = np.nonzero(motif_mask(a, edge_background(a, right_only=True)))
+    top = int(np.clip(round((ys.min() + ys.max()) / 2 - 315), 0, h - 630))
+    og = img.crop((0, top, w, top + 630))
+    navy = tuple(int(v) for v in NAVY)
+    left, right = int(xs.max()) + 55, w - 50
+    draw = ImageDraw.Draw(og)
+    title = title_font(150)
+    while draw.textlength('KidHub', font=title) > right - left:
+        title = title_font(title.size - 4)
+    lines = ('Schach-Puzzles', 'für Kinder –', 'ganz einfach!')
+    sub = title_font(58)
+    while max(draw.textlength(t, font=sub) for t in lines) > right - left:
+        sub = title_font(sub.size - 2)
+    tb = draw.textbbox((0, 0), 'KidHub', font=title, stroke_width=7)
+    line_h = round(sub.size * 1.22)
+    block = (tb[3] - tb[1]) + 34 + line_h * len(lines)
+    y = (630 - block) // 2 - tb[1]
+    draw.text((left, y), 'KidHub', font=title, fill=(255, 255, 255), stroke_width=7, stroke_fill=navy)
+    y += tb[3] + 34
+    for text in lines:
+        draw.text((left + 4, y), text, font=sub, fill=(255, 255, 255), stroke_width=3, stroke_fill=navy)
+        y += line_h
     return og
 
 
