@@ -121,13 +121,13 @@ describe('KidHubAppComponent', () => {
     expect(KIDS_LANGUAGES.map(l => l.code as string).sort()).toEqual([...FORMAT_LOCALES].sort());
   });
 
-  it('verlinkt Impressum und Datenschutz', () => {
+  it('verlinkt den Datenschutz, aber kein Impressum (Wunsch 2026-09-27)', () => {
     const f = TestBed.createComponent(KidHubAppComponent);
     f.detectChanges();
     const hrefs = Array.from(f.nativeElement.querySelectorAll('footer a') as NodeListOf<HTMLAnchorElement>)
       .map(a => a.getAttribute('href'));
-    expect(hrefs).toContain('/impressum');
     expect(hrefs).toContain('/privacy');
+    expect(hrefs).not.toContain('/impressum');
   });
 
   function account(f: { nativeElement: HTMLElement }): HTMLElement | null {

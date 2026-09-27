@@ -245,6 +245,7 @@ try
     builder.Services.AddScoped<CourseService>();
     // Kinderseite: Stufen-Leiter aus besonders einfachen Lichess-Puzzles + Kinderkurse.
     builder.Services.AddScoped<KidsPuzzleService>();
+    builder.Services.AddScoped<KidsProgressService>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();
     builder.Services.AddHttpClient(nameof(IpCountryService));

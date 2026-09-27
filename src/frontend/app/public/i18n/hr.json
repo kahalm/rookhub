@@ -694,6 +694,7 @@
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
       "controllerTitle": "Voditelj obrade",
       "controller": "Voditelj obrade podataka je operator naveden u impresumu",
+      "controllerContact": "Za obradu podataka odgovoran je operator ove stranice, dostupan na",
       "dataTitle": "Koje podatke obrađujemo",
       "dataIntro": "Ovisno o korištenju, obrađujemo:",
       "dataAccount": "Podaci računa: korisničko ime, adresa e-pošte, lozinka (pohranjena samo kao hash).",
@@ -3832,6 +3833,8 @@
     "home": {
       "title": "KidHub",
       "subtitle": "Šahovske zagonetke – kreni lagano, razinu po razinu.",
+      "savedAccount": "Tvoj napredak sprema se u tvoj račun – isti na svakom uređaju.",
+      "savedDevice": "Tvoj napredak ostaje na ovom uređaju. Prijavi se i imat ćeš ga na svakom uređaju.",
       "start": "Idemo: razina {{level}}",
       "continue": "Nastavi s razinom {{level}}",
       "puzzles": "Zagonetke",

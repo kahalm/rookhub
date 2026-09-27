@@ -694,6 +694,7 @@
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
       "controllerTitle": "Verantwortlicher",
       "controller": "Verantwortlich für die Datenverarbeitung ist der im Impressum genannte Betreiber",
+      "controllerContact": "Verantwortlich für die Datenverarbeitung ist der Betreiber dieser Seite, erreichbar unter",
       "dataTitle": "Welche Daten wir verarbeiten",
       "dataIntro": "Je nach Nutzung verarbeiten wir:",
       "dataAccount": "Kontodaten: Benutzername, E-Mail-Adresse, Passwort (nur als Hash gespeichert).",
@@ -3832,6 +3833,8 @@
     "home": {
       "title": "KidHub",
       "subtitle": "Schach-Puzzles zum Knobeln – ganz einfach anfangen, Stufe für Stufe.",
+      "savedAccount": "Dein Fortschritt wird in deinem Konto gespeichert – auf jedem Gerät derselbe.",
+      "savedDevice": "Dein Fortschritt bleibt auf diesem Gerät. Angemeldet ist er auf jedem Gerät da.",
       "start": "Los geht's: Stufe {{level}}",
       "continue": "Weiter mit Stufe {{level}}",
       "puzzles": "Puzzles",

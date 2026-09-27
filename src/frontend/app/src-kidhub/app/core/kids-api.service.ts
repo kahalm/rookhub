@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { KidsProgressDto } from './kids-progress.store';
 
 /** Thema einer Stufe — die Schluessel kommen so vom Server (`KidsCurriculum.Themes`). */
 export type KidsTheme = 'mate1' | 'promote' | 'capture' | 'fork' | 'skewer' | 'mate2' | 'pin' | 'discovered';
@@ -53,7 +54,7 @@ export interface KidsLanguageHint {
   language: string | null;
 }
 
-/** Offene Endpunkte der Kinderseite (`/api/kids/*`) — ohne Anmeldung. */
+/** Endpunkte der Kinderseite (`/api/kids/*`) — alle ohne Anmeldung, ausser dem Fortschritt im Konto. */
 @Injectable({ providedIn: 'root' })
 export class KidsApiService {
   private readonly http = inject(HttpClient);
@@ -78,5 +79,10 @@ export class KidsApiService {
   coursePuzzles(bookId: number, lang?: string): Observable<KidsCourseLine[]> {
     const params = lang ? new HttpParams().set('lang', lang) : undefined;
     return this.http.get<KidsCourseLine[]>(`${this.base}/courses/${bookId}/puzzles`, { params });
+  }
+
+  /** Nur angemeldet: den hiesigen Stand mit dem Konto zusammenfuehren, Antwort = gemeinsamer Stand. */
+  syncProgress(progress: KidsProgressDto): Observable<KidsProgressDto> {
+    return this.http.put<KidsProgressDto>(`${this.base}/progress`, progress);
   }
 }

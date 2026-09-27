@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -12,6 +12,7 @@ import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -53,8 +54,10 @@ import { sanitizeReturnUrl } from '../../core/return-url.util';
       </mat-card>
       <div class="legal-links">
         <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
-        <span>·</span>
-        <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
+        @if (legal.imprint) {
+          <span>·</span>
+          <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
+        }
       </div>
     </div>
   `,
@@ -87,8 +90,13 @@ export class LoginComponent {
 
   returnUrl: string;
   authRequired = false;
+  /** KidHub hat kein Impressum (siehe LEGAL_SITE). */
+  readonly legal: LegalSite;
 
-  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
+  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService,
+              // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
+              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
+    this.legal = legal ?? defaultLegalSite();
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
     this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';

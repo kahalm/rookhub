@@ -51,3 +51,40 @@ public class KidsLanguageHintDto
     /// bei unbekanntem Land — dann nimmt KidHub Deutsch.</summary>
     public string? Language { get; set; }
 }
+
+/// <summary>
+/// Der Fortschritt eines Kindes auf KidHub (<c>GET/PUT /api/kids/progress</c>) — dieselbe Form im Konto
+/// wie im Browser. Zeiten sind Millisekunden seit 1970 (UTC), so wie JavaScript sie zaehlt.
+/// </summary>
+public class KidsProgressDto
+{
+    public List<KidsLevelProgressDto> Levels { get; set; } = new();
+    public List<KidsCourseProgressDto> Courses { get; set; } = new();
+}
+
+public class KidsLevelProgressDto
+{
+    public int Level { get; set; }
+    /// <summary>Beste Sternzahl, 0–3.</summary>
+    public int Stars { get; set; }
+    public int RunIndex { get; set; }
+    public int RunMistakes { get; set; }
+    /// <summary>Letzte Aenderung des laufenden Durchgangs — der juengere gewinnt.</summary>
+    public long RunAt { get; set; }
+}
+
+public class KidsCourseProgressDto
+{
+    public int BookId { get; set; }
+    /// <summary>Zuletzt „von vorn" (0 = nie); Linien davor zaehlen nicht mehr.</summary>
+    public long ResetAt { get; set; }
+    public List<KidsSolvedLineDto> Solved { get; set; } = new();
+}
+
+public class KidsSolvedLineDto
+{
+    /// <summary>Die Linie (<c>BookPuzzle.Id</c>).</summary>
+    public int Id { get; set; }
+    /// <summary>Wann sie geloest wurde.</summary>
+    public long At { get; set; }
+}

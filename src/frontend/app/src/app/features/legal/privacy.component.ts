@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { OPERATOR } from '../../../environments/operator';
+import { LEGAL_SITE } from './legal-site';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -24,7 +24,11 @@ import { OPERATOR } from '../../../environments/operator';
           <p>{{ 'legal.privacy.intro' | translate }}</p>
 
           <h4>{{ 'legal.privacy.controllerTitle' | translate }}</h4>
-          <p>{{ 'legal.privacy.controller' | translate }} (<a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>).</p>
+          @if (site.imprint) {
+            <p>{{ 'legal.privacy.controller' | translate }} (<a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>).</p>
+          } @else {
+            <p>{{ 'legal.privacy.controllerContact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
+          }
 
           <h4>{{ 'legal.privacy.dataTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.dataIntro' | translate }}</p>
@@ -59,7 +63,7 @@ import { OPERATOR } from '../../../environments/operator';
           <p>{{ 'legal.privacy.rights' | translate }}</p>
 
           <h4>{{ 'legal.privacy.contactTitle' | translate }}</h4>
-          <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + operator.email">{{ operator.email }}</a></p>
+          <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
           <p class="back"><a routerLink="/login">{{ 'legal.privacy.back' | translate }}</a></p>
         </mat-card-content>
@@ -76,5 +80,6 @@ import { OPERATOR } from '../../../environments/operator';
   `]
 })
 export class PrivacyComponent {
-  readonly operator = OPERATOR;
+  /** Kontakt und Impressum je Oberflaeche (KidHub: eigene Adresse, kein Impressum). */
+  readonly site = inject(LEGAL_SITE);
 }

@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.563.0", date: "2026-09-27", changes: [
+    { en: "KidHub saves progress in the account: signed in, the stars of every level, the level in progress and the solved course lines are the same on every device. Whatever a child played before signing in is taken over at the first sign-in; after signing out the device starts fresh, so the next child on a shared tablet does not start with someone else’s stars. The start page says where the progress is kept.", de: "KidHub speichert den Fortschritt im Konto: Angemeldet sind die Sterne jeder Stufe, die angefangene Stufe und die gelösten Kurs-Linien auf jedem Gerät dieselben. Was ein Kind vor dem Anmelden gespielt hat, wird beim ersten Anmelden übernommen; nach dem Abmelden fängt das Gerät frisch an, damit das nächste Kind auf einem geteilten Tablet nicht mit fremden Sternen beginnt. Die Startseite sagt, wo der Fortschritt liegt." },
+    { en: "KidHub no longer has an imprint; questions about privacy go to kidhub@oberschm.id, and the privacy policy names that address.", de: "KidHub hat kein Impressum mehr; Fragen zum Datenschutz gehen an kidhub@oberschm.id, und die Datenschutzerklärung nennt diese Adresse." },
+  ] },
   { version: "0.562.1", date: "2026-09-27", changes: [
     { en: "KidHub: the owl no longer starts a puzzle with “Watch what your opponent plays …” — the sentence was gone again before anyone could read it. While the opponent’s move is shown, the owl already says whose turn it is.", de: "KidHub: Die Eule beginnt eine Aufgabe nicht mehr mit „Pass auf, was dein Gegner zieht …“ — der Satz war wieder weg, bevor man ihn lesen konnte. Während der Zug des Gegners gezeigt wird, sagt sie schon, wer am Zug ist." },
   ] },

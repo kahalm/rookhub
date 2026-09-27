@@ -10,8 +10,9 @@ namespace RookHub.Api.Controllers;
 
 /// <summary>
 /// Die Kinderseite KidHub (kidhub.oberschmid.homes): Stufen-Leiter aus besonders einfachen Lichess-Puzzles
-/// und die fuer Kinder freigegebenen Kurse. Alles ohne Anmeldung — ein Kind soll die Seite oeffnen und
-/// loslegen; der Fortschritt bleibt auf dem Geraet.
+/// und die fuer Kinder freigegebenen Kurse. Spielen geht ohne Anmeldung — ein Kind soll die Seite oeffnen
+/// und loslegen; der Fortschritt liegt dann auf dem Geraet. Angemeldet gleicht KidHub ihn mit dem Konto
+/// ab (<c>/api/kids/progress</c>).
 /// </summary>
 [ApiController]
 [Route("api/kids")]
@@ -20,13 +21,34 @@ public class KidsController : BaseApiController
     private readonly KidsPuzzleService _service;
     private readonly CourseCommentLocalizer? _localizer;
     private readonly IpCountryService? _ipCountry;
+    private readonly KidsProgressService? _progress;
 
     public KidsController(KidsPuzzleService service, CourseCommentLocalizer? localizer = null,
-        IpCountryService? ipCountry = null)
+        IpCountryService? ipCountry = null, KidsProgressService? progress = null)
     {
         _service = service;
         _localizer = localizer;
         _ipCountry = ipCountry;
+        _progress = progress;
+    }
+
+    /// <summary>Der Fortschritt im Konto (Stufen, Kurs-Linien).</summary>
+    [HttpGet("progress")]
+    [Authorize]
+    public async Task<ActionResult<KidsProgressDto>> GetProgress(CancellationToken ct) =>
+        Ok(await _progress!.GetAsync(GetUserId(), ct));
+
+    /// <summary>Den Stand des Browsers mit dem Konto zusammenfuehren (<see cref="KidsProgressMerge"/>) —
+    /// Antwort ist der gemeinsame Stand, den KidHub danach anzeigt.</summary>
+    [HttpPut("progress")]
+    [Authorize]
+    public async Task<ActionResult<KidsProgressDto>> PutProgress([FromBody] KidsProgressDto body, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _progress!.SyncAsync(GetUserId(), body, ct));
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>

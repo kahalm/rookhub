@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { OPERATOR } from '../../../environments/operator';
+import { LEGAL_SITE } from './legal-site';
 
 /**
  * Öffentlich (ohne Login) erreichbare Info-Seite zur Konto-Löschung — erfüllt die
@@ -39,7 +39,7 @@ import { OPERATOR } from '../../../environments/operator';
           <h4>{{ 'legal.accountDeletion.contactTitle' | translate }}</h4>
           <p>
             {{ 'legal.accountDeletion.contact' | translate }}:
-            <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
+            <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a>
           </p>
 
           <p class="back"><a routerLink="/login">{{ 'legal.accountDeletion.back' | translate }}</a></p>
@@ -56,5 +56,6 @@ import { OPERATOR } from '../../../environments/operator';
   `]
 })
 export class AccountDeletionComponent {
-  readonly operator = OPERATOR;
+  /** Kontakt je Oberflaeche (KidHub: eigene Adresse, siehe LEGAL_SITE). */
+  readonly site = inject(LEGAL_SITE);
 }

@@ -694,6 +694,7 @@
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
       "controllerTitle": "Controller",
       "controller": "The controller for data processing is the operator named in the imprint",
+      "controllerContact": "The operator of this site is responsible for processing your data and can be reached at",
       "dataTitle": "What data we process",
       "dataIntro": "Depending on your use, we process:",
       "dataAccount": "Account data: username, email address, password (stored only as a hash).",
@@ -3832,6 +3833,8 @@
     "home": {
       "title": "KidHub",
       "subtitle": "Chess puzzles to crack – start really easy, level by level.",
+      "savedAccount": "Your progress is saved in your account – the same on every device.",
+      "savedDevice": "Your progress stays on this device. Sign in to have it on every device.",
       "start": "Let's go: level {{level}}",
       "continue": "Continue with level {{level}}",
       "puzzles": "Puzzles",

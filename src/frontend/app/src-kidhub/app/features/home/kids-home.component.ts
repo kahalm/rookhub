@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { AuthService } from '@rh/core/auth.service';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
@@ -46,6 +48,11 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
       }
     </section>
 
+    <!-- Wo der Fortschritt liegt — angemeldet im Konto (KidsProgressSync), sonst nur auf dem Geraet. -->
+    <p class="saved">
+      @if (user()) { ☁️ {{ 'kids.home.savedAccount' | translate }} } @else { 💾 {{ 'kids.home.savedDevice' | translate }} }
+    </p>
+
     @if (failed()) {
       <p class="error">{{ 'kids.loadError' | translate }}</p>
     }
@@ -74,11 +81,13 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
     .error { text-align: center; margin-top: 20px; font-weight: 700; }
+    .saved { text-align: center; margin: 22px 0 0; font-size: .95rem; opacity: .8; }
   `],
 })
 export class KidsHomeComponent {
   private readonly api = inject(KidsApiService);
   readonly progress = inject(KidsProgressStore);
+  readonly user = toSignal(inject(AuthService).currentUser$, { initialValue: null });
 
   readonly levels = signal<KidsLevel[]>([]);
   readonly courses = signal<KidsCourse[]>([]);

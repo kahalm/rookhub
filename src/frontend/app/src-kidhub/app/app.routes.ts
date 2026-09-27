@@ -18,8 +18,10 @@ export const routes: Routes = [
   { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
   { path: 'forgot-password', loadComponent: () => import('@rh/features/auth/forgot-password.component').then(m => m.ForgotPasswordComponent) },
   { path: 'reset-password', loadComponent: () => import('@rh/features/auth/reset-password.component').then(m => m.ResetPasswordComponent) },
-  // Impressum und Datenschutz: dieselben Seiten wie in RookHub (eine oeffentliche Seite braucht beides).
-  { path: 'impressum', loadComponent: () => import('@rh/features/legal/impressum.component').then(m => m.ImpressumComponent) },
+  // Datenschutz: dieselbe Seite wie in RookHub, mit KidHubs Kontakt (LEGAL_SITE in kidhubConfig). Ein
+  // Impressum hat die Kinderseite bewusst nicht (Wunsch 2026-09-27) — /impressum faellt auf die Startseite.
   { path: 'privacy', loadComponent: () => import('@rh/features/legal/privacy.component').then(m => m.PrivacyComponent) },
+  // Die Datenschutzerklaerung verlinkt sie; ohne die Route fuehrte der Link still auf die Startseite.
+  { path: 'account-deletion', loadComponent: () => import('@rh/features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
   { path: '**', redirectTo: '' },
 ];

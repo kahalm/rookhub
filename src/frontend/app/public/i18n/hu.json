@@ -461,6 +461,7 @@
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
       "controllerTitle": "Adatkezelő",
       "controller": "Az adatkezelésért felelős adatkezelő az impresszumban megnevezett üzemeltető",
+      "controllerContact": "Az adatkezelésért az oldal üzemeltetője felel, elérhetősége",
       "dataTitle": "Milyen adatokat kezelünk",
       "dataIntro": "Használattól függően a következő adatokat kezeljük:",
       "dataAccount": "Fiókadatok: felhasználónév, e-mail cím, jelszó (csak hash formában tárolva).",
@@ -3553,6 +3554,8 @@
     "home": {
       "title": "KidHub",
       "subtitle": "Sakkfeladványok – kezdd egészen könnyen, szintről szintre.",
+      "savedAccount": "Az előrehaladásod a fiókodban mentődik – minden eszközön ugyanaz.",
+      "savedDevice": "Az előrehaladásod ezen az eszközön marad. Jelentkezz be, és minden eszközön meglesz.",
       "start": "Rajta: {{level}}. szint",
       "continue": "Folytatás: {{level}}. szint",
       "puzzles": "Feladványok",

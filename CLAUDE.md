@@ -1196,8 +1196,9 @@ Einzel-Puzzles/Zufallsziehungen, nicht den strukturierten Kurs (Kapitel/Fortschr
 den schach-bot: sein `/kurs`-Katalog (`/books` + `?bookId=`) enthält nur noch Pool-/öffentliche Bücher.
 
 ### KidHub — Kinderseite (offen, 0.554.0)
-Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, siehe „Drei Oberflächen"). Alles
-**ohne Anmeldung** — der Fortschritt liegt nur auf dem Gerät. `KidsController` + `KidsPuzzleService`.
+Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, siehe „Drei Oberflächen"). Spielen geht
+**ohne Anmeldung** — der Fortschritt liegt dann nur auf dem Gerät; angemeldet gleicht KidHub ihn mit dem Konto ab
+(0.563.0, `/api/kids/progress`). `KidsController` + `KidsPuzzleService` + `KidsProgressService`.
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -1205,6 +1206,8 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | GET | `/api/kids/levels/{level}` | AllowAnonymous | Eine Stufe am Stück `{ level, theme, puzzles[{ id, fen, moves }] }` (Lichess-Form: `moves[0]` stellt die Aufgabe), leichteste zuerst; 404 unbekannt |
 | GET | `/api/kids/courses` | AllowAnonymous | Für Kinder freigegebene Kurse (`Book.ForKids`, ohne Kalkulationsbücher, ohne leere) `[{ bookId, title, description, puzzleCount }]` — `puzzleCount` ohne Info-Linien |
 | GET | `/api/kids/courses/{bookId}/puzzles?lang=` | AllowAnonymous | Aufgaben eines Kinderkurses in Lesereihenfolge (`BookPuzzleDto`, OHNE `IsInfoOnly`); `lang` wie bei den Kursen. 404 wenn nicht `ForKids`/Kalkulationsbuch |
+| GET | `/api/kids/progress` | Auth | Fortschritt im Konto `{ levels[{ level, stars, runIndex, runMistakes, runAt }], courses[{ bookId, resetAt, solved[{ id, at }] }] }` — Zeiten in ms seit 1970 (0.563.0) |
+| PUT | `/api/kids/progress` | Auth | Den GANZEN Stand des Browsers schicken → zusammengeführt gespeichert, Antwort = gemeinsamer Stand (`KidsProgressMerge`, Regeln unten). 400 über den Deckeln (`MaxLevels` 1000, `MaxCourses` 500, `MaxLinesPerCourse` 10 000); Zeiten über jetzt + 1 Tag werden gekappt |
 | GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen; ein bekanntes Land ohne eigene Kindersprache → `en` (0.560.1); beides `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
 | POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
 
@@ -1226,6 +1229,20 @@ ein Zwei-Züger (250 Kandidaten ≤ 12 Figuren).
 fehlt oder `CurriculumVersion` ≠ `KidsCurriculum.Version`. **Wer Auswahl oder Stufenfolge ändert, erhöht
 `KidsCurriculum.Version`** — sonst bleibt überall die alte Leiter stehen. Ersetzt wird in EINER Transaktion
 (Execution-Strategy-Muster).
+
+**Fortschritt im Konto** (0.563.0, Wunsch 2026-09-27): drei Tabellen (`KidsLevelProgresses`, `KidsCourseProgresses`,
+`KidsCourseLines`), abgeglichen per „ganzer Stand hinauf, zusammengeführter zurück" statt einzelner Ereignisse — so
+übernimmt der erste Abgleich nach dem Anmelden auch, was das Kind vorher ohne Konto gespielt hat, und ein zweites Gerät
+bekommt denselben Stand. Die EINE Regel (`Services/KidsProgressMerge.cs`, SPIEGEL `mergeProgress` in
+`src-kidhub/app/core/kids-progress.store.ts`, LITERALE Fälle A–E auf beiden Seiten): Sterne nach Höhe; der laufende
+Durchgang der JÜNGERE (`runAt`, Gleichstand: der gespeicherte); Kurs-Linien vereinigt (je Linie die jüngste Zeit), aber
+nur NACH dem jüngsten „Von vorn" (`resetAt`) — ohne die Marke brächte ein anderes Gerät verworfene Linien zurück. Eine
+Linie ohne Zeit (im Browser vor 0.563.0 gelöst) gilt als 1 ms, nicht 0 (sonst fiele sie durch `at > resetAt`). Zwei
+Geräte gleichzeitig → eindeutiger Index schlägt an → neu laden, einmal wiederholen. `KidsCourseLine.BookPuzzleId` hat
+bewusst keinen FK; Buch löschen räumt beides ausdrücklich ab (`BookAdminService`, InMemory kaskadiert nicht).
+Browser: `KidsProgressSync` (hinauf beim Anmelden, 800 ms nach jeder Änderung, bei sichtbarem Tab und zurückkehrendem
+Netz). Abmelden LEERT den Stand im Browser (er liegt im Konto; auf einem geteilten Tablet soll das nächste Kind nicht
+mit fremden Sternen anfangen), und ein Stand mit fremdem `owner` wird beim Anmelden verworfen statt übernommen.
 
 **Kinderkurse**: `Book.ForKids` setzt nur ein Admin (Bücherverwaltung, Spalte „Kinder"). Das Flag öffnet die Aufgaben
 auf der Kinderseite bewusst OHNE `IsPublic` — wie die Pool-Flags eine absichtliche Freigabe; Kalkulationsbücher bleiben
@@ -2981,6 +2998,9 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentUserSettings | Per-Turnier-User-Einstellungen | UserId + TournamentId, Highlights/Notes/Pinning |
 | TournamentMonitors | Runden-Monitor | TournamentId, RoundsCount, LastSeenRound, AutoSubscribed; `RoundMonitorService` checkt periodisch |
 | Puzzles + PuzzleAttempts | Standard-Puzzle-Pool + Versuche | klassische Lichess-Puzzles + Pro-User-Versuche (UserId Cascade) |
+| KidsLevelProgresses | KidHub-Fortschritt eines angemeldeten Kindes je Stufe (0.563.0) | UserId (Cascade), Level, Stars (0–3, beste), RunIndex/RunMistakes (laufender Durchgang), RunAt (Zeit laut Gerät — der jüngere gewinnt), UpdatedAt; **UNIQUE (UserId, Level)** |
+| KidsCourseProgresses | KidHub: „Von vorn" je Kinderkurs | UserId (Cascade), BookId (Cascade), ResetAt? (Linien davor zählen nicht), UpdatedAt; **UNIQUE (UserId, BookId)** |
+| KidsCourseLines | KidHub: gelöste Linien eines Kinderkurses | UserId (Cascade), BookId (Cascade), BookPuzzleId (**kein FK**), SolvedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
 | KidsPuzzles | Kinder-Leiter (KidHub): als „besonders einfach" markierte Lichess-Puzzles mit Platz in der Stufenfolge | **PuzzleId (PK, FK → Puzzles, Cascade)**, Level (1-basiert), Position (0-basiert, leichteste zuerst), Theme (≤20: mate1/promote/capture/fork/skewer/mate2/pin/discovered), PieceCount, SolverMoves (1/2), CurriculumVersion (≠ Code ⇒ Seeder baut neu); Index (Level, Position). Gefüllt von `KidsPuzzleSeeder`/`POST /api/admin/kids/rebuild` |
 | Tags + PuzzleTags | Normalisierte Puzzle-Themen für schnellen Themen-Filter | Tag.Name (unique); PuzzleTag composite PK (PuzzleId, TagId) + denormalisiertes Rating, Index **(TagId, Rating)** → indexgestützter Themen-Filter statt LIKE-Scan. Import pflegt automatisch; **einmaliger Backfill bestehender Puzzles via `POST /api/admin/puzzles/backfill-tags`** (Hintergrund-Job). Bis Backfill: Fallback auf LIKE |
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, **MoveComments (LONGTEXT, JSON `{plyIndex:text}`; Pro-Zug-Kommentare der Hauptlinie, Schlüssel = 0-basierter Halbzug NACH dem Zug, -1 = Einleitung; beim Durchspielen/Review angezeigt; der Kurs-Import faltet seit Pipeline 19 JEDE Hauptlinien-Variante mit ihren Zugnummern in den Kommentar ihres Zugs, `features/puzzles/comment-variation.util.ts` macht die Züge dort klickbar und verankert sie über die Zugnummer — NUR dort: geht ein Zug an seiner Nummer nicht (z. B. mehrdeutig, zwei Springer nach e4), bleibt er Text, statt in einer anderen Stellung der Partie zu landen)**, Difficulty, BookRating, Tags, **HintsJson (LONGTEXT, JSON `{lang:[h1,h2,h3]}`; vorberechnete gestufte Tipps de/en/hr, per LLM erzeugt) + HintsVersion (int, 0=keine; entkoppelt von Book.ImportVersion) + HintsFlagged (bool; Admin-Review-Flag „dumme Tipps", per Solver-Button)**, **Retired (indexed; ausgemustert → nicht mehr in Daily/Random/Blind-Pools)**, **Source (≤16, nullable; null = vollwertig/getGame, "review" = aus getReview vorbelegter Lücken-Füller — zählt als vollwertig gecacht (Overlay-✓, kein getGame-Re-Fetch; getReview≡getGame für die Linie) und wird, falls getGame doch mal für den oid importiert wird, per oid IN-PLACE ersetzt)** |
@@ -3221,11 +3241,18 @@ Kinderseite" unter REST API.
   angemeldet der Name + „Abmelden" (führt zurück auf `/`, nicht auf die Maske). Die Masken sind RookHubs eigene
   (`/login`, `/register`, `/forgot-password`, `/reset-password` über `@rh/features/auth`, `guestGuard`), mit
   `authInterceptor`; beim Start tauscht `HandoffService.consumeIncoming()` das geteilte Cookie gegen eine eigene
-  Anmeldung — wer in RookHub oder auf der Turnierseite angemeldet ist, ist es hier auch. Am Fortschritt ändert die
-  Anmeldung (noch) nichts: er bleibt im localStorage des Geräts, und Abmelden räumt ihn nicht ab.
+  Anmeldung — wer in RookHub oder auf der Turnierseite angemeldet ist, ist es hier auch. Seit 0.563.0 liegt der
+  Fortschritt angemeldet im Konto (Abschnitt „Fortschritt im Konto" unter REST API); die Startseite sagt, wo er liegt.
+- **Kein Impressum** (0.563.0, Wunsch 2026-09-27): keine Route, kein Link im Fuß. `LEGAL_SITE`
+  (`src/app/features/legal/legal-site.ts`) sagt den geteilten Rechtsseiten je Oberfläche, ob es ein Impressum gibt und
+  welche Adresse für Datenschutzfragen gilt — KidHub setzt `{ contactEmail: 'kidhub@oberschm.id', imprint: false }` in
+  `kidhubConfig`; die Datenschutzerklärung nennt den Verantwortlichen dann über diese Adresse statt übers Impressum,
+  die Anmeldemaske lässt den Impressum-Link weg, und auch die Seite zur Konto-Löschung (`/account-deletion`, von der
+  Datenschutzerklärung verlinkt, deshalb auch in KidHub eine Route) nennt diese Adresse. RookHub und die Turnierseite
+  nehmen die Vorgabe (`OPERATOR`).
 - **Geteilt über `@rh/*`**: HTTP-Kette (connectivity, retry, renderAfterHttp), Sprachdateien (Namespace `kids.*`,
   gepflegt in en/de/hr/hu — nur diese vier bietet die Seite an), `PuzzleBoardComponent` (neues Input `autoQueen`:
-  Umwandlung ohne Auswahl zur Dame), Impressum/Datenschutz als eigene Routen.
+  Umwandlung ohne Auswahl zur Dame), Datenschutz als eigene Route.
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
   im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);
@@ -3240,7 +3267,8 @@ Kinderseite" unter REST API.
   Gegnerantwort kommen per Timer — Angular 22 zeichnet unmarkierte Ansichten danach nicht neu) und gibt dem Brett
   nach jedem Zug ein NEUES `dests`-Objekt: nur eine geänderte Eingabe lässt das Brett einen falschen Zug optisch
   zurücknehmen.
-- **Routen** `/`, `/levels`, `/levels/:level`, `/courses`, `/courses/:bookId`, `/impressum`, `/privacy` — bewusst
+- **Routen** `/`, `/levels`, `/levels/:level`, `/courses`, `/courses/:bookId`, `/login`, `/register`,
+  `/forgot-password`, `/reset-password`, `/privacy`, `/account-deletion` — bewusst
   keine mit `/g`, `/t`, `/puzzles`: diese Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
 - **Symbole** (0.560.0, Vorlagen 2+3 seit 0.560.2): gezeichnete Vorlagen `design/kidhub/KidHub{,2,3}.png` (Bild-KI),
   alles in `public-kidhub/` leitet `design/kidhub/derive.py` ab — es stellt bei `KidHub.png` die WEISSEN Ecken frei

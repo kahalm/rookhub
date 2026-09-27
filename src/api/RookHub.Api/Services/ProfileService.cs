@@ -267,6 +267,10 @@ public class ProfileService
         // geholte Verlauf bleibt (der gehoert dem Spieler, nicht dem Konto), die Liste geht.
         _db.TrackedPlayers.RemoveRange(await _db.TrackedPlayers.Where(t => t.UserId == userId).ToListAsync());
         _db.UserViewStates.RemoveRange(await _db.UserViewStates.Where(v => v.UserId == userId).ToListAsync());
+        // KidHub-Fortschritt: Spielstand des Kindes, keine Statistik fuer andere — geht mit dem Konto.
+        _db.KidsLevelProgresses.RemoveRange(await _db.KidsLevelProgresses.Where(p => p.UserId == userId).ToListAsync());
+        _db.KidsCourseProgresses.RemoveRange(await _db.KidsCourseProgresses.Where(p => p.UserId == userId).ToListAsync());
+        _db.KidsCourseLines.RemoveRange(await _db.KidsCourseLines.Where(l => l.UserId == userId).ToListAsync());
         // Aufgabenblätter: Überschriften und Begleittexte sind FREITEXT des Nutzers (und oft
         // über seine Schüler geschrieben) — die gehen mit; die Aufgaben cascaden am Blatt.
         _db.GameMistakeProgresses.RemoveRange(await _db.GameMistakeProgresses.Where(m => m.UserId == userId).ToListAsync());

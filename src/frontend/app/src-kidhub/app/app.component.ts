@@ -9,6 +9,7 @@ import { HandoffService } from '@rh/core/handoff.service';
 import { catchError, filter, map, of, timeout } from 'rxjs';
 import { environment } from '../../src/environments/environment';
 import { KidsApiService } from './core/kids-api.service';
+import { KidsProgressSync } from './core/kids-progress-sync.service';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
 export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
@@ -76,7 +77,6 @@ export function isHomeUrl(url: string): boolean {
         </select>
       </label>
       <span>v{{ version }}</span>
-      <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
       <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
       <!-- Pflichtangabe der Lizenz (CC BY 4.0) der Laenderliste, mit der die Startsprache bestimmt wird. -->
       <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
@@ -137,6 +137,8 @@ export class KidHubAppComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly handoff = inject(HandoffService);
   private readonly router = inject(Router);
+  /** Nur injizieren genuegt: der Dienst gleicht den Fortschritt ab, solange jemand angemeldet ist. */
+  private readonly progressSync = inject(KidsProgressSync);
 
   readonly languages = KIDS_LANGUAGES;
   /** Angemeldet? Als Signal — die Anmeldung kommt asynchron (geteiltes Cookie, Maske). */

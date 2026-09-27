@@ -16,6 +16,7 @@ import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { authInterceptor } from '@rh/core/auth.interceptor';
 import { resolveStartupLocale } from '@rh/core/locale.service';
+import { LEGAL_SITE } from '@rh/features/legal/legal-site';
 
 registerLocaleData(localeDe);
 registerLocaleData(localeHr);
@@ -34,6 +35,8 @@ export const kidhubConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
+    // Kein Impressum auf der Kinderseite, eigene Adresse fuer Datenschutzfragen (Wunsch 2026-09-27).
+    { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

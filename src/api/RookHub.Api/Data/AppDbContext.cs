@@ -89,6 +89,10 @@ public class AppDbContext : DbContext
     public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
     /// <summary>Als „besonders einfach" markierte Lichess-Puzzles der Kinderseite (Stufen-Leiter).</summary>
     public DbSet<KidsPuzzle> KidsPuzzles => Set<KidsPuzzle>();
+    /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
+    public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
+    public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
+    public DbSet<KidsCourseLine> KidsCourseLines => Set<KidsCourseLine>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<SharedPuzzleAttempt> SharedPuzzleAttempts => Set<SharedPuzzleAttempt>();
@@ -576,6 +580,26 @@ public class AppDbContext : DbContext
             e.Property(k => k.Theme).HasMaxLength(20);
             e.HasIndex(k => new { k.Level, k.Position });
             e.HasOne(k => k.Puzzle).WithMany().HasForeignKey(k => k.PuzzleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<KidsLevelProgress>(e =>
+        {
+            e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.UserId, p.Level }).IsUnique();
+        });
+        modelBuilder.Entity<KidsCourseProgress>(e =>
+        {
+            e.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.Book).WithMany().HasForeignKey(p => p.BookId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => new { p.UserId, p.BookId }).IsUnique();
+        });
+        modelBuilder.Entity<KidsCourseLine>(e =>
+        {
+            e.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Book).WithMany().HasForeignKey(l => l.BookId).OnDelete(DeleteBehavior.Cascade);
+            // Bewusst kein FK auf BookPuzzle (siehe KidsCourseLine.BookPuzzleId).
+            e.HasIndex(l => new { l.UserId, l.BookPuzzleId }).IsUnique();
+            e.HasIndex(l => new { l.UserId, l.BookId });
         });
 
         modelBuilder.Entity<PuzzleAttempt>(e =>
