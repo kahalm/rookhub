@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.568.4", date: "2026-09-27", changes: [
+    { en: "Build repaired (infrastructure only): a database test still expected that deleting a game removes its scoresheet reading entirely — since 0.568.1 the reading is kept without photo and data so that the daily limit can’t be bypassed. The test now checks exactly that; the release builds of 0.568.1 and 0.568.3 had stopped at it.", de: "Build repariert (reine Infrastruktur): Ein Datenbanktest erwartete noch, dass das Löschen einer Partie ihre Formular-Einlesung ganz entfernt — seit 0.568.1 bleibt die Einlesung ohne Foto und Daten stehen, damit sich das Tageskontingent nicht umgehen lässt. Der Test prüft jetzt genau das; die Release-Builds von 0.568.1 und 0.568.3 waren an ihm stehen geblieben." },
+  ] },
   { version: "0.568.3", date: "2026-09-27", changes: [
     { en: "New Android app (1.1.0): the tournament site now opens inside the app without the address bar. The app shows a hint to install the new version; the download on the install page is the new app.", de: "Neue Android-App (1.1.0): Die Turnierseite öffnet sich jetzt in der App ohne Adressleiste. Die App zeigt einen Hinweis, die neue Version zu installieren; der Download auf der Installationsseite ist die neue App." },
   ] },

@@ -51,7 +51,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     /// <summary>
     /// Partieformular (0.529.0): die Partienliste holt die Einlesung je Partie als korrelierte Unterabfrage,
     /// die Einlesungs-Liste projiziert OHNE das Foto (LONGBLOB) in die Entität, und das Löschen der Partie
-    /// entfernt die Einlesung über einen Platzhalter — alle drei nur gegen echtes SQL prüfbar. Die Einlesung
+    /// leert die Einlesung über einen Platzhalter (seit 0.568.1: Zeile bleibt fürs Kontingent) — alle drei nur
+    /// gegen echtes SQL prüfbar. Die Einlesung
     /// steht auf Done, damit der laufende Worker der Test-Anwendung sie nicht anfasst.
     /// </summary>
     [MySqlFact]
@@ -77,9 +78,16 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal("done", (await scans.GetAsync(userId, scanId!.Value))!.Status);
         Assert.Equal(3, (await scans.PhotoForGameAsync(userId, game.Id))!.Value.Data.Length);
 
+        // Seit 0.568.1 bleibt die Einlesung als Zeile fürs Tageskontingent stehen (DetachWithoutLoading) — ohne
+        // Partie, Foto und Modell-Antwort. Vorher ging sie ganz, und löschen + neu hochladen umging die Tageszahl.
         Assert.True(await games.DeleteAsync(userId, game.Id));
         Db.ChangeTracker.Clear();
-        Assert.False(await Db.ScoresheetScans.AnyAsync());
+        var kept = Assert.Single(await Db.ScoresheetScans.ToListAsync());
+        Assert.Null(kept.SavedGameId);
+        Assert.Empty(kept.Photo);
+        Assert.Null(kept.ResolutionJson);
+        Assert.Null(kept.TranscriptionJson);
+        Assert.False(await Db.SavedGames.AnyAsync(g => g.Id == game.Id));
     }
 
     /// <summary>
