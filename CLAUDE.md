@@ -2581,6 +2581,17 @@ ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); 
   ist der Eintrag illegal, trägt die Deutung). **Markiert** wird zusätzlich: Sicherheit „low", eine vom Modell genannte
   Alternative, die ein ANDERER legaler Zug ist (auch bei „high"), und ein Widerspruch Eintrag/Deutung zwischen gleich
   direkten Lesarten. „medium" allein markiert NICHT — das Modell vergibt es freigiebig (am Testsatz 13 % aller Züge).
+  **Kurzschrift beim Schlagen** (0.555.0, gemeldet 2026-09-27): „LxS", „SxB", „DxD", „exd" — schlagende Figur (bzw.
+  Linie des Bauern) und geschlagene Figur (bzw. Ziellinie) OHNE Zielfeld, die alte Schreibweise und die von Anfängern
+  und Kindern. `ScoresheetNotation.ShortCaptures` liest sie (Figurenbuchstaben wie sonst, der geschlagene Bauer heißt
+  deutsch/skandinavisch „B", sonst „P"; gemischte Schrift mit englischem „B" für den Läufer läuft über die Fremdsprache
+  mit), `ScoresheetResolver.Score` prüft sie gegen das Brett VOR dem Zug (`Squares`/`CaptureOf`: welche Figur zieht,
+  welche steht auf dem Zielfeld, en passant) — Kosten 0,2 (Eintrag) bzw. 0,3 (Deutung des Modells), ein zweiter
+  passender Schlagzug bleibt als ebenbürtige Lesart markiert. Anlass: Opus 5.5 „nur abschreiben" kopiert „BxB" wörtlich,
+  der Auflöser machte daraus „b3" (Lesefehler-Weg) → falsche Partie ab Zug 6 mit 17 Markierungen. Gemessen per
+  `--replay` (kostenlos): das gemeldete Formular 29–31 → 50/50 (drei gespeicherte Lesungen, 2–4 statt 17–22 unsicher),
+  10er-Testsatz mit der Referenz-Lesung 550 → 579/591 (Beleg 10: 59 → 88/92), Opus-5-mit-Nachdenken- und
+  Opus-5.5-effort-low-Lesungen unverändert.
   Unsicher bleibt eine Stelle nur,
   wenn der Zug zurechtgebogen ist, das Modell zweifelte oder eine andere Lesart gleich weit trägt, ohne teurer zu
   sein; eine Zugumstellung (17. Sbd4/Sfd4 Sxd4 18. Sxd4) gilt als ebenbürtig. Anlass-Partie als Test:

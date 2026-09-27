@@ -396,12 +396,13 @@ public static class ScoresheetResolver
         var board = ChessBoard.LoadFromFen(fen);
         var legal = board.Moves(generateSan: true);
         var ply = scanned[w];
+        var squares = Squares(fen);
         var scored = new List<(Move, string, string, string, double)>();
         foreach (var m in legal)
         {
             var san = string.IsNullOrEmpty(m.San) ? GamePlies.ToUci(m) : m.San;
             var uci = GamePlies.ToUci(m);
-            var (cost, match) = Score(ply, san, uci, options);
+            var (cost, match) = Score(ply, san, uci, options, squares);
             if (double.IsPositiveInfinity(cost))
             {
                 if (!guess) continue;
@@ -427,7 +428,10 @@ public static class ScoresheetResolver
     /// Wie gut passt der legale Zug (<paramref name="san"/>/<paramref name="uci"/>) zum Eintrag? Unendlich =
     /// gar nicht (dann bleibt nur der Joker).
     /// </summary>
-    public static (double Cost, string Match) Score(ScannedPly ply, string san, string uci, Options options)
+    /// <param name="squares">Das Brett VOR dem Zug (<see cref="Squares"/>) — nur damit lässt sich Kurzschrift wie
+    /// „LxS" prüfen (welche Figur steht auf dem Zielfeld?); ohne bleibt sie unberücksichtigt.</param>
+    public static (double Cost, string Match) Score(ScannedPly ply, string san, string uci, Options options,
+        char[]? squares = null)
     {
         var key = ScoresheetNotation.Key(san);
         var loose = ScoresheetNotation.LooseKey(key);
@@ -472,6 +476,16 @@ public static class ScoresheetResolver
                 else if (Loose(c.Key)) Consider(1.3 + c.Cost, Matches.Alternative);
             }
         }
+        // Kurzschrift beim Schlagen („LxS", „SxB", „exd"): passt, wenn schlagende und geschlagene Figur (bzw. die
+        // Linien) zu DIESEM Schlagzug gehören. Etwas teurer als ein vollständiger Eintrag (0,2): welches Feld gemeint
+        // ist, sagt der Eintrag nicht — trägt ein zweiter Schlagzug gleich weit, bleibt die Stelle markiert.
+        if (squares != null && CaptureOf(squares, uci) is { } cap)
+        {
+            foreach (var c in ScoresheetNotation.ShortCaptures(ply.San, null))
+                if (Fits(c, cap)) Consider(0.3 + c.Cost, Matches.Exact);
+            foreach (var c in ScoresheetNotation.ShortCaptures(ply.Written, sheet, others))
+                if (Fits(c, cap)) Consider(0.2 + c.Cost, Matches.Written);
+        }
         if (best <= 0.5) return (best, match);
 
         // Lesefehler: ein, zwei Zeichen daneben („Dc1" für De1, „Qxd4" für exd4).
@@ -487,6 +501,40 @@ public static class ScoresheetResolver
         }
         return (best, match);
     }
+
+    /// <summary>Das Brett einer FEN als 64 Felder (a8 = 0 … h1 = 63), FEN-Buchstaben, leer = <c>'\0'</c>.</summary>
+    public static char[] Squares(string fen)
+    {
+        var sq = new char[64];
+        int r = 0, f = 0;
+        foreach (var ch in fen.Split(' ')[0])
+        {
+            if (ch == '/') { r++; f = 0; }
+            else if (char.IsDigit(ch)) f += ch - '0';
+            else { if (r < 8 && f < 8) sq[r * 8 + f] = ch; f++; }
+        }
+        return sq;
+    }
+
+    private static int Index(string square) => (8 - (square[1] - '0')) * 8 + (square[0] - 'a');
+
+    /// <summary>Schlagende Figur (englisch, Bauer = <c>P</c>), ihre Linie, geschlagene Figur und Ziellinie — oder
+    /// <c>null</c>, wenn der Zug nichts schlägt. En passant: ein Bauer, der schräg auf ein leeres Feld zieht.</summary>
+    private static (char Mover, char FromFile, char Captured, char ToFile)? CaptureOf(char[] squares, string uci)
+    {
+        if (uci.Length < 4) return null;
+        var from = squares[Index(uci[..2])];
+        var to = squares[Index(uci[2..4])];
+        if (from == '\0') return null;
+        var mover = char.ToUpperInvariant(from);
+        if (to != '\0' && char.IsUpper(to) == char.IsUpper(from)) return null;      // Rochade als König-schlägt-Turm
+        if (to == '\0') return mover == 'P' && uci[0] != uci[2] ? (mover, uci[0], 'P', uci[2]) : null;
+        return (mover, uci[0], char.ToUpperInvariant(to), uci[2]);
+    }
+
+    private static bool Fits(ScoresheetNotation.ShortCapture c, (char Mover, char FromFile, char Captured, char ToFile) cap)
+        => (c.Mover is >= 'a' and <= 'h' ? cap.Mover == 'P' && cap.FromFile == c.Mover : cap.Mover == c.Mover)
+           && (c.Target is >= 'a' and <= 'h' ? cap.ToFile == c.Target : cap.Captured == c.Target);
 
     /// <summary>
     /// Wie viele Einträge passen GLATT hintereinander — bis zum ersten zurechtgebogenen (Lesefehler) oder

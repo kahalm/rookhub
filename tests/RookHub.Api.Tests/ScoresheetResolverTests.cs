@@ -259,4 +259,49 @@ public class ScoresheetResolverTests
         Assert.Equal(1.0, ScoresheetNotation.WeightedDistance("ba4", "bc4"));
         Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
     }
+
+    // ── Kurzschrift beim Schlagen („LxS", „SxB", „exd") ─────────────────
+
+    /// <summary>Die alte bzw. Anfänger-Schreibweise: schlagende und geschlagene Figur ohne Zielfeld. Gemeldet
+    /// 2026-09-27 an einem Formular mit „BxB", „SxB", „exd": der Auflöser machte aus „BxB" ein „b3", ab dort war die
+    /// Partie falsch (17 Markierungen).</summary>
+    [Fact]
+    public void Resolve_ShortCaptures_PieceTakesPiece_AndPawnFileTakesFile()
+    {
+        // 1.e4 e5 2.Sf3 Sc6 3.Lb5 a6 4.LxS dxL 5.d4 exd 6.SxB DxS — „dxL" = Bauer d schlägt Läufer, „exd" = Bauer e
+        // schlägt auf der d-Linie, „SxB" = Springer schlägt Bauer (deutsch B = Bauer), „DxS" = Dame schlägt Springer.
+        var sheet = WrittenOnly(new[] { "e4", "e5", "Sf3", "Sc6", "Lb5", "a6", "LxS", "dxL", "d4", "exd", "SxB", "DxS" });
+        var r = ScoresheetResolver.Resolve(sheet, German);
+        Assert.Null(r.StuckAt);
+        Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6", "dxc6", "d4", "exd4", "Nxd4", "Qxd4" },
+            r.Plies.Select(p => p.San));
+        Assert.All(r.Plies, p => Assert.NotEqual(ScoresheetResolver.Matches.Fuzzy, p.Match));
+    }
+
+    /// <summary>Gemischte Schrift wie auf dem gemeldeten Formular: englisches „B" für den Läufer, deutsches „S" für den
+    /// Springer — und das Modell hat die Kurzschrift wörtlich als „SAN" abgeschrieben.</summary>
+    [Fact]
+    public void Resolve_ShortCaptures_MixedEnglishAndGermanLetters_FromTheModelsCopy()
+    {
+        var moves = new[] { ("d4", "d4"), ("b6", "b6"), ("e4", "e4"), ("c5", "c5"), ("c3", "c3"), ("d5", "d5"),
+            ("dxc", "dxc"), ("Bb7", "Bb7"), ("Bb5+", "Bb5+"), ("Bc6", "Bc6"), ("BxB", "BxB"), ("SxB", "NxB"), ("exd", "exd") };
+        var r = ScoresheetResolver.Resolve(moves.Select(m => new ScannedPly(m.Item1, m.Item2)).ToList(), German);
+        Assert.Null(r.StuckAt);
+        Assert.Equal(new[] { "dxc5", "Bb7", "Bb5+", "Bc6", "Bxc6+", "Nxc6", "exd5" }, r.Plies.Skip(6).Select(p => p.San));
+    }
+
+    [Fact]
+    public void ShortCaptures_ParseOnlyCapturesWithoutASquare()
+    {
+        var de = ScoresheetNotation.Find("de");
+        Assert.Contains(ScoresheetNotation.ShortCaptures("LxS", de), c => c is { Mover: 'B', Target: 'N', Cost: 0 });
+        Assert.Contains(ScoresheetNotation.ShortCaptures("SxB", de), c => c is { Mover: 'N', Target: 'P', Cost: 0 });
+        Assert.Contains(ScoresheetNotation.ShortCaptures("exd", de), c => c is { Mover: 'e', Target: 'd' });
+        Assert.Contains(ScoresheetNotation.ShortCaptures("D:D+", de), c => c is { Mover: 'Q', Target: 'Q' });
+        Assert.Empty(ScoresheetNotation.ShortCaptures("Lxe5", de));        // gewöhnliche SAN
+        Assert.Empty(ScoresheetNotation.ShortCaptures("Lb5", de));         // kein Schlagzeug
+        Assert.Empty(ScoresheetNotation.ShortCaptures("DxK", de));         // den König schlägt niemand
+        // Englisch: B = Läufer, P = Bauer.
+        Assert.Contains(ScoresheetNotation.ShortCaptures("BxP", null), c => c is { Mover: 'B', Target: 'P', Cost: 0 });
+    }
 }

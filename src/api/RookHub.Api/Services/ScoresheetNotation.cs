@@ -99,6 +99,70 @@ public static class ScoresheetNotation
         return ToList(result);
     }
 
+    /// <summary>
+    /// Eine Lesart der KURZSCHRIFT beim Schlagen: schlagende Figur (oder die Linie des schlagenden Bauern) und
+    /// geschlagene Figur (oder die Linie, auf der geschlagen wird) — OHNE Zielfeld. „LxS" (Läufer schlägt Springer),
+    /// „SxB" (Springer schlägt Bauer bzw. — englisch — Läufer), „DxD", „exd". Die alte Schreibweise und die von
+    /// Anfängern und Kindern; welche Figur auf welchem Feld geschlagen wird, sagt erst die Stellung.
+    /// </summary>
+    /// <param name="Mover">Englischer Figurenbuchstabe (K Q R B N) oder die Linie a–h eines Bauern.</param>
+    /// <param name="Target">Englischer Figurenbuchstabe (K Q R B N, P = Bauer) oder die Linie a–h des Zielfelds.</param>
+    public readonly record struct ShortCapture(char Mover, char Target, double Cost);
+
+    /// <summary>
+    /// Alle Lesarten eines Eintrags als <see cref="ShortCapture"/> — leer, wenn es keine Kurzschrift ist (kein
+    /// Schlagzeichen, oder ein Feld mit Reihe dahinter: „Lxe5" ist gewöhnliche SAN). Figurenbuchstaben wie in
+    /// <see cref="Candidates"/> (Sprache des Formulars, weitere mit Aufschlag); der geschlagene BAUER heißt deutsch
+    /// und skandinavisch „B", sonst „P".
+    /// </summary>
+    public static List<ShortCapture> ShortCaptures(string? written, Language? primary, IEnumerable<Language>? others = null,
+        double otherCost = 0.6)
+    {
+        var result = new Dictionary<(char, char), double>();
+        if (string.IsNullOrWhiteSpace(written)) return new();
+        var s = new string(written.Where(ch => !char.IsWhiteSpace(ch)).ToArray()).TrimEnd('+', '#', '!', '?');
+        var sign = s.IndexOfAny(new[] { 'x', 'X', ':', '×' });
+        if (sign <= 0 || sign != s.LastIndexOfAny(new[] { 'x', 'X', ':', '×' }) || sign == s.Length - 1) return new();
+        var left = s[..sign];
+        var right = s[(sign + 1)..];
+        if (left.Any(char.IsDigit) || right.Any(char.IsDigit)) return new();
+
+        var langs = new List<(Language Lang, double Cost)> { (primary ?? Languages[0], 0) };
+        foreach (var o in others ?? Array.Empty<Language>())
+            if (langs.All(l => l.Lang.Code != o.Code)) langs.Add((o, otherCost));
+
+        var movers = new List<(char, double)>();
+        var targets = new List<(char, double)>();
+        if (left.Length == 1 && left[0] is >= 'a' and <= 'h') movers.Add((left[0], 0));
+        if (right.Length == 1 && right[0] is >= 'a' and <= 'h') targets.Add((right[0], 0));
+        foreach (var (lang, cost) in langs)
+        {
+            foreach (var (code, en) in PieceCodes(lang))
+            {
+                // Ein kleiner Buchstabe a–h, der zugleich Figurencode ist („b" portugiesisch, „c" französisch),
+                // bleibt als Linie billiger — wie in Candidates.
+                var lowerFile = (string s2) => s2.Length == 1 && s2[0] is >= 'a' and <= 'h';
+                if (string.Equals(left, code, StringComparison.OrdinalIgnoreCase)) movers.Add((en, cost + (lowerFile(left) ? 0.3 : 0)));
+                if (string.Equals(right, code, StringComparison.OrdinalIgnoreCase)) targets.Add((en, cost + (lowerFile(right) ? 0.3 : 0)));
+            }
+            var pawn = lang.Code is "de" or "sv" ? "B" : "P";
+            if (string.Equals(right, pawn, StringComparison.OrdinalIgnoreCase)) targets.Add(('P', cost));
+        }
+        foreach (var (m, mc) in movers)
+            foreach (var (t, tc) in targets)
+            {
+                if (t == 'K') continue;     // den König schlägt niemand
+                var key = (m, t);
+                if (!result.TryGetValue(key, out var old) || mc + tc < old) result[key] = mc + tc;
+            }
+        return result.Select(kv => new ShortCapture(kv.Key.Item1, kv.Key.Item2, kv.Value)).OrderBy(c => c.Cost).ToList();
+    }
+
+    private static IEnumerable<(string Code, char En)> PieceCodes(Language lang) => new[]
+    {
+        (lang.King, 'K'), (lang.Queen, 'Q'), (lang.Rook, 'R'), (lang.Bishop, 'B'), (lang.Knight, 'N'),
+    };
+
     private static List<Candidate> ToList(Dictionary<string, double> d)
         => d.Select(kv => new Candidate(kv.Key, kv.Value)).OrderBy(c => c.Cost).ToList();
 
