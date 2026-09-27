@@ -497,6 +497,16 @@ try
             client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
     });
 
+    // LeagueHub: eine Liga = vier chess-results-Seiten hintereinander (Rate-Limiter + ggf. VPN-Rotation
+    // im Crawler), die PGN-Suche eines starken Spielers liefert bis zu ~1 MB — daher eigener, langer Timeout.
+    builder.Services.AddHttpClient(RookHub.Api.Services.League.LeagueRefresh.CrawlerClient, client =>
+    {
+        client.BaseAddress = crawlerUri;
+        client.Timeout = TimeSpan.FromMinutes(5);
+        if (!string.IsNullOrEmpty(crawlerApiKey))
+            client.DefaultRequestHeaders.Add("X-Api-Key", crawlerApiKey);
+    });
+
     // Lichess External-Engine (Client-Modus): Engine-Liste via lichess.org, Analyse-Streams via
     // Broker (engine.lichess.ovh). Timeout bewusst unendlich — Analyse-Streams laufen lange und
     // enden über den Abbruch des Browsers (RequestAborted); die kurze Engine-Liste schützt sich

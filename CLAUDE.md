@@ -1288,6 +1288,14 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
   `POST /api/league/admin/rebuild`. Öffentlich (Rate-Limit `anonymous-tournament`):
   `GET /api/league/s/{token}` (+`/player/{fide}`, `/pgn`) — nur Spieler der geteilten Meldeliste, Online-Konten
   nur „sicher".
+- **Aktualisieren** (0.570.0, `Services/League/LeagueRefresh.cs`): je Liga der laufenden Saison
+  `GET {Crawler}/api/league/{tnr}` (vier Seiten, `zeilen=99999`), Zeilen der Liga ERSETZEN und dabei
+  Brettpaarung ↔ Meldeliste über `(Team, NameKey)` verknüpfen (FIDE-ID, Meldebrett, Elo = EloI, sonst EloN),
+  „Brett nicht besetzt"/„spielfrei" → null; Ansichten rechnen; dann `GET {Crawler}/api/league/games/{fide}`
+  für die wahrscheinlichen Gegner offener Runden (p ≥ 0,15, `CrFetchedAt` älter als 14 Tage, max. 40, höchste
+  Wahrscheinlichkeit zuerst) → `LeagueProfileBuilder` führt Bestand + neue Partien zusammen (Dubletten über
+  Datum + Nachnamen + Ergebnis; Farbe per FIDE-ID-Tag, sonst Nachname — 2022/23 ohne Komma) und baut die
+  Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout).
 
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
