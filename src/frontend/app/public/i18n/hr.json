@@ -4123,6 +4123,7 @@
     "side": "Igrao sam",
     "sideWhite": "Bijeli",
     "sideBlack": "Crni",
-    "sideAuto": "automatski"
+    "sideAuto": "automatski",
+    "nextAt": "Danas si već učitao jedan — sljedeći obrazac moguć je od {{time}}."
   }
 }

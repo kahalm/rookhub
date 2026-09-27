@@ -4123,6 +4123,7 @@
     "side": "Ezzel játszottam",
     "sideWhite": "Világos",
     "sideBlack": "Sötét",
-    "sideAuto": "automatikus"
+    "sideAuto": "automatikus",
+    "nextAt": "Ma már beolvastál egyet — a következő lap ekkortól lehetséges: {{time}}."
   }
 }

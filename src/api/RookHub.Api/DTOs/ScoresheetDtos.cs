@@ -72,6 +72,8 @@ public class ScoresheetStatusDto
     public bool Available { get; set; }
     public int DailyLimit { get; set; }
     public int UsedToday { get; set; }
+    /// <summary>Ab wann wieder eingelesen werden kann (UTC), wenn die Tageszahl erreicht ist; sonst <c>null</c>.</summary>
+    public DateTime? NextAllowedAt { get; set; }
     /// <summary>Wie viel vom Kostenbudget verbraucht ist (das knappere von Tag und 30 Tagen), 0–100.</summary>
     public int BudgetUsedPercent { get; set; }
     /// <summary>Warum gerade nichts geht (<c>userDailyBudget</c>, <c>userMonthlyBudget</c>, <c>globalBudget</c>);

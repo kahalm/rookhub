@@ -33,14 +33,27 @@ public class ScoresheetScanServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    /// <summary>Dienst mit eigenen Budgets (Dollar) — die Vorgaben sind für Tests zu großzügig.</summary>
+    /// <summary>Dienst mit eigenen Budgets (Dollar) — die Vorgaben sind für Tests zu großzügig. Die Tageszahl steht
+    /// dabei hoch, damit die Tests das BUDGET prüfen und nicht an der einen Einlesung je Tag hängen bleiben.</summary>
     private void WithBudgets(decimal userDaily, decimal userMonthly = 100m, decimal globalDaily = 1000m)
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["Scoresheet:DailyLimit"] = "20",
             ["Scoresheet:UserDailyUsd"] = userDaily.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["Scoresheet:UserMonthlyUsd"] = userMonthly.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["Scoresheet:GlobalDailyUsd"] = globalDaily.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        }).Build();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config);
+    }
+
+    /// <summary>Dienst mit eigener Tageszahl (<c>Scoresheet:DailyLimit</c>, Vorgabe 1).</summary>
+    private void WithDailyLimit(int limit)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:DailyLimit"] = limit.ToString(System.Globalization.CultureInfo.InvariantCulture),
         }).Build();
         _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
             NullLogger<ScoresheetScanService>.Instance, config);
@@ -164,6 +177,7 @@ public class ScoresheetScanServiceTests : IDisposable
     [Fact]
     public async Task Create_CapsOpenScansPerUser()
     {
+        WithDailyLimit(20);
         var u = await UserAsync();
         for (var i = 0; i < ScoresheetScanService.MaxOpenPerUser; i++)
             Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);
@@ -388,13 +402,72 @@ public class ScoresheetScanServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteGame_TakesThePhotoAlong()
+    public async Task DeleteGame_TakesThePhotoAlong_ButTheScanStillCountsForTheDay()
     {
         var u = await UserAsync();
         _vision.Answers.Enqueue(new(Answer(Written), null));
         var scan = await UploadAndProcessAsync(u.Id);
         Assert.True(await _games.DeleteAsync(u.Id, scan.SavedGameId!.Value));
-        Assert.Empty(_db.ScoresheetScans);
+        _db.ChangeTracker.Clear();
+
+        // Foto, Modell-Antwort und Stand sind weg, Zeitpunkt und Kosten bleiben.
+        var row = await _db.ScoresheetScans.SingleAsync();
+        Assert.Null(row.SavedGameId);
+        Assert.Empty(row.Photo);
+        Assert.Null(row.TranscriptionJson);
+        Assert.Null(row.ResolutionJson);
+        Assert.Equal(ScoresheetScanStatus.Done, row.Status);
+        Assert.Empty(await _service.ListAsync(u.Id));
+
+        // Löschen ist kein zweiter Versuch: das Kontingent bleibt verbraucht.
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    // Wunsch 2026-09-27: normale Nutzer lesen EIN Formular je Tag ein (vorher 20), Admins unbegrenzt.
+    [Fact]
+    public async Task Create_OneScanPer24Hours_StatusNamesWhenTheNextOneIsPossible_AdminsUnlimited()
+    {
+        var u = await UserAsync();
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).DailyLimit);
+        Assert.Null((await _service.StatusAsync(u.Id)).NextAllowedAt);
+
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+        var created = (await _db.ScoresheetScans.SingleAsync()).CreatedAt;
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+
+        var status = await _service.StatusAsync(u.Id);
+        Assert.Equal(1, status.UsedToday);
+        Assert.Equal(created.AddDays(1), status.NextAllowedAt);
+        Assert.Equal(DateTimeKind.Utc, status.NextAllowedAt!.Value.Kind);   // sonst liest der Browser Ortszeit
+
+        u.IsAdmin = true;
+        await _db.SaveChangesAsync();
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+        Assert.Null((await _service.StatusAsync(u.Id)).NextAllowedAt);
+    }
+
+    [Fact]
+    public async Task DailyLimit_IgnoresFreeFailuresAndScansOlderThanADay_ButCountsPaidFailures()
+    {
+        var u = await UserAsync();
+        _db.ScoresheetScans.AddRange(
+            // Modell nicht erreichbar, nichts gekostet — sperrt nicht für 24 h.
+            new ScoresheetScan { UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Failed, CostMicroUsd = 0 },
+            // Gestern.
+            new ScoresheetScan { UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Done,
+                CostMicroUsd = 80_000, CreatedAt = DateTime.UtcNow.AddHours(-25) });
+        await _db.SaveChangesAsync();
+        Assert.Equal(0, (await _service.StatusAsync(u.Id)).UsedToday);
+
+        // Gescheitert NACH einem bezahlten Aufruf: zählt.
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            UserId = u.Id, Photo = new byte[] { 1 }, Status = ScoresheetScanStatus.Failed, CostMicroUsd = 50_000,
+        });
+        await _db.SaveChangesAsync();
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
     }
 
     // ── Korrigieren (SavedGameService.UpdateAsync über den Controller) ─────────

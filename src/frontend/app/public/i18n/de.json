@@ -4123,6 +4123,7 @@
     "side": "Ich spielte",
     "sideWhite": "Weiß",
     "sideBlack": "Schwarz",
-    "sideAuto": "automatisch"
+    "sideAuto": "automatisch",
+    "nextAt": "Heute schon eingelesen — das nächste Formular geht ab {{time}}."
   }
 }

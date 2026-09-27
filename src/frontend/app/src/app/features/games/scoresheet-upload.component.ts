@@ -16,6 +16,7 @@ import { Subscription, timer } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
+import { formatQuietUntil } from './quiet-hours.util';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
 export const SCAN_POLL_MS = 3000;
@@ -102,6 +103,7 @@ export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
                   · {{ 'scoresheet.budget' | translate: { percent: st.budgetUsedPercent ?? 0 } }}</span>
               }
             </div>
+            @if (nextTime(); as t) { <p class="error">{{ 'scoresheet.nextAt' | translate: { time: t } }}</p> }
             @if (st.blocked) { <p class="error">{{ 'scoresheet.error.' + st.blocked | translate }}</p> }
             @if (error(); as e) { <p class="error">{{ e }}</p> }
           </mat-card>
@@ -233,6 +235,13 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     const st = this.status();
     if (!st || st.blocked) return false;
     return !!st.unlimited || st.usedToday < st.dailyLimit;
+  });
+
+  /** Tageszahl erreicht: ab wann wieder („Mo., 20:14“ in der Sprache der Oberfläche) — sonst leer. */
+  readonly nextTime = computed(() => {
+    const st = this.status();
+    if (!st || st.unlimited || st.usedToday < st.dailyLimit) return '';
+    return formatQuietUntil(st.nextAllowedAt, this.translate.currentLang());
   });
 
   language = 'auto';

@@ -35,6 +35,8 @@ export interface ScoresheetStatus {
   available: boolean;
   dailyLimit: number;
   usedToday: number;
+  /** Ab wann wieder eingelesen werden kann (ISO, UTC), wenn die Tageszahl erreicht ist; sonst `null`. */
+  nextAllowedAt?: string | null;
   /** Wie viel vom Kostenbudget verbraucht ist (das knappere von Tag und 30 Tagen), 0–100. */
   budgetUsedPercent?: number;
   /** Warum gerade nichts geht: `userDailyBudget`, `userMonthlyBudget`, `globalBudget`; `null` = es geht. */

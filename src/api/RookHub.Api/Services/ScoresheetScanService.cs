@@ -52,8 +52,10 @@ public class ScoresheetScanService
     /// <summary>So viele Einlesungen dürfen je Nutzer gleichzeitig warten oder laufen.</summary>
     public const int MaxOpenPerUser = 3;
 
-    /// <summary>Vorgabe für <c>Scoresheet:DailyLimit</c> — jede Einlesung kostet echtes Geld beim Modell.</summary>
-    public const int DefaultDailyLimit = 20;
+    /// <summary>Vorgabe für <c>Scoresheet:DailyLimit</c> — jede Einlesung kostet echtes Geld beim Modell. Seit 0.568.1
+    /// EINE je 24 h für normale Nutzer (Wunsch 2026-09-27; vorher 20), Admins zählen nicht. Was mitzählt:
+    /// <see cref="CountingSince"/>.</summary>
+    public const int DefaultDailyLimit = 1;
 
     public ScoresheetScanService(AppDbContext db, IScoresheetVisionClient vision, SavedGameService games,
         NotificationService notifications, ILogger<ScoresheetScanService> logger, IConfiguration? config = null)
@@ -94,6 +96,16 @@ public class ScoresheetScanService
         return (userToday, userMonth, globalToday, isAdmin);
     }
 
+    /// <summary>
+    /// Die Einlesungen eines Nutzers seit <paramref name="since"/>, die gegen das Tageskontingent zählen: alle außer den
+    /// gescheiterten, die keinen Cent gekostet haben (Modell nicht erreichbar, Budget schon vor dem ersten Aufruf leer) —
+    /// bei einer Einlesung am Tag sperrte ein Ausfall auf unserer Seite sonst für 24 h. Eine Einlesung, deren Partie
+    /// gelöscht wurde, zählt weiter (<see cref="DetachWithoutLoading"/>), sonst hieße „Partie löschen“ „noch einmal lesen“.
+    /// </summary>
+    private IQueryable<ScoresheetScan> CountingSince(int userId, DateTime since)
+        => _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= since
+            && !(s.Status == ScoresheetScanStatus.Failed && s.CostMicroUsd == 0));
+
     /// <summary>Darf für diesen Nutzer jetzt noch ein Modell-Aufruf starten, und wie lang darf die Antwort werden?</summary>
     internal async Task<CallAllowance> AllowanceAsync(int userId, CancellationToken ct = default)
     {
@@ -114,11 +126,21 @@ public class ScoresheetScanService
         var (today, month, global, admin) = await SpentAsync(userId);
         var dayShare = _budget.UserDailyMicroUsd > 0 ? (double)today / _budget.UserDailyMicroUsd : 1;
         var monthShare = _budget.UserMonthlyMicroUsd > 0 ? (double)month / _budget.UserMonthlyMicroUsd : 1;
+        var used = await CountingSince(userId, since).CountAsync();
+        // Das Fenster rollt über 24 h: frei wird es, wenn die älteste mitzählende Einlesung herausfällt.
+        DateTime? next = null;
+        if (!admin && used >= _dailyLimit)
+        {
+            var oldest = await CountingSince(userId, since).OrderBy(s => s.CreatedAt).Skip(used - _dailyLimit)
+                .Select(s => s.CreatedAt).FirstOrDefaultAsync();
+            next = DateTime.SpecifyKind(oldest.AddDays(1), DateTimeKind.Utc);
+        }
         return new ScoresheetStatusDto
         {
             Available = _vision.IsConfigured,
             DailyLimit = _dailyLimit,
-            UsedToday = await _db.ScoresheetScans.CountAsync(s => s.UserId == userId && s.CreatedAt >= since),
+            UsedToday = used,
+            NextAllowedAt = next,
             BudgetUsedPercent = admin ? 0 : (int)Math.Clamp(Math.Round(Math.Max(dayShare, monthShare) * 100), 0, 100),
             Blocked = _budget.Check(today, month, global, admin),
             Unlimited = admin,
@@ -145,7 +167,7 @@ public class ScoresheetScanService
 
         var (today, month, global, admin) = await SpentAsync(userId);
         var since = DateTime.UtcNow.AddDays(-1);
-        if (!admin && await _db.ScoresheetScans.CountAsync(s => s.UserId == userId && s.CreatedAt >= since) >= _dailyLimit)
+        if (!admin && await CountingSince(userId, since).CountAsync() >= _dailyLimit)
             return (null, "dailyLimit");
         if (_budget.Check(today, month, global, admin) is { } blocked) return (null, blocked);
         if (await _db.ScoresheetScans.CountAsync(s => s.UserId == userId
@@ -188,7 +210,9 @@ public class ScoresheetScanService
     /// <summary>Die letzten Einlesungen des Nutzers (ohne Foto) — für die Seite, falls man sie verlassen hat.</summary>
     public async Task<List<ScoresheetScanDto>> ListAsync(int userId, int take = 20)
     {
-        var scans = await ScanHeads().Where(s => s.UserId == userId)
+        // Einlesungen einer gelöschten Partie bleiben nur fürs Kontingent liegen (ohne Foto) — in der Liste nicht.
+        var scans = await ScanHeads().Where(s => s.UserId == userId
+                && !(s.Status == ScoresheetScanStatus.Done && s.SavedGameId == null))
             .OrderByDescending(s => s.CreatedAt).Take(Math.Clamp(take, 1, 50)).ToListAsync();
         var gameIds = scans.Where(s => s.SavedGameId != null).Select(s => s.SavedGameId!.Value).ToList();
         var names = await _db.SavedGames.Where(g => gameIds.Contains(g.Id))
@@ -529,6 +553,35 @@ public class ScoresheetScanService
             var stub = new ScoresheetScan { Id = id, UserId = userId, SavedGameId = gameId };
             db.ScoresheetScans.Attach(stub);
             db.ScoresheetScans.Remove(stub);
+        }
+    }
+
+    /// <summary>
+    /// Die Partie wird gelöscht, die Einlesung bleibt als Zeile fürs Kontingent und die Kostenbremse stehen (Zeitpunkt,
+    /// Tokens, Kosten) — Foto, Antwort des Modells und Stand je Halbzug gehen mit der Partie. Ohne das Foto zu laden. Vorher
+    /// ging die ganze Zeile, und mit ihr der Verbrauch: löschen und neu hochladen umging Tageszahl UND Budget.
+    /// </summary>
+    public static void DetachWithoutLoading(AppDbContext db, IEnumerable<(int Id, int UserId, int? SavedGameId)> scans)
+    {
+        foreach (var (id, userId, gameId) in scans)
+        {
+            var scan = db.ScoresheetScans.Local.FirstOrDefault(s => s.Id == id);
+            if (scan == null)
+            {
+                scan = new ScoresheetScan { Id = id, UserId = userId, SavedGameId = gameId };
+                db.ScoresheetScans.Attach(scan);
+            }
+            scan.SavedGameId = null;
+            scan.Photo = Array.Empty<byte>();
+            scan.FileName = null;
+            scan.TranscriptionJson = null;
+            scan.ResolutionJson = null;
+            var entry = db.Entry(scan);
+            // Am Stub gleichen die neuen Werte den Vorgaben — ohne ausdrückliche Markierung schriebe EF nichts.
+            foreach (var p in new[] { nameof(ScoresheetScan.SavedGameId), nameof(ScoresheetScan.Photo),
+                         nameof(ScoresheetScan.FileName), nameof(ScoresheetScan.TranscriptionJson),
+                         nameof(ScoresheetScan.ResolutionJson) })
+                entry.Property(p).IsModified = true;
         }
     }
 

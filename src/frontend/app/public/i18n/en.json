@@ -4123,6 +4123,7 @@
     "side": "I played",
     "sideWhite": "White",
     "sideBlack": "Black",
-    "sideAuto": "automatic"
+    "sideAuto": "automatic",
+    "nextAt": "Already read one today — the next scoresheet is possible from {{time}}."
   }
 }

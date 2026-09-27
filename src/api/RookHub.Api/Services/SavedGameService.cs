@@ -336,8 +336,8 @@ public class SavedGameService
     {
         var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
         if (g == null) return false;
-        // Das Formular-Foto geht mit (in MariaDB per Cascade — hier ausdrücklich, ohne das Foto zu laden).
-        ScoresheetScanService.RemoveWithoutLoading(_db,
+        // Das Formular-Foto geht mit; die Einlesung selbst bleibt ohne Foto fürs Kontingent stehen (ohne es zu laden).
+        ScoresheetScanService.DetachWithoutLoading(_db,
             await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.SavedGameId == id)));
         _db.SavedGames.Remove(g);
         await _db.SaveChangesAsync();

@@ -89,6 +89,22 @@ describe('ScoresheetUploadComponent', () => {
     expect(el.querySelector('.upload .error')?.textContent).toContain('scoresheet.error.userDailyBudget');
   });
 
+  // Seit 0.568.1 eine Einlesung je 24 h: die Seite sagt, ab wann die nächste geht, statt den Knopf stumm zu sperren.
+  it('with today\'s scoresheet used up it disables reading and names when the next one is possible', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush({
+      ...status(), dailyLimit: 1, usedToday: 1, nextAllowedAt: '2026-09-28T18:14:00Z',
+    });
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.canRead()).toBeFalse();
+    expect(c.nextTime()).not.toBe('');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.upload .error')?.textContent).toContain('scoresheet.nextAt');
+  });
+
   it('a refused upload shows the reason', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
