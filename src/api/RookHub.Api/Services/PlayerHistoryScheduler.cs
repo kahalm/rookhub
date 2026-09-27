@@ -24,6 +24,7 @@ public class PlayerHistoryScheduler : BackgroundService
     private readonly ILogger<PlayerHistoryScheduler> _logger;
     private readonly bool _enabled;
     private readonly int _maxCards;
+    private readonly int _maxTournamentCrawls;
     private readonly TimeSpan _startupDelay;
 
     public PlayerHistoryScheduler(
@@ -38,6 +39,11 @@ public class PlayerHistoryScheduler : BackgroundService
         // Wie viele SEITEN ein Lauf holt (Spielerkarten und Bedenkzeiten zusammen). Jede ist ein
         // Abruf hinter dem Rate-Limiter; was nicht mehr hineinpasst, kommt in der naechsten Nacht.
         _maxCards = Math.Clamp(configuration.GetValue("PlayerHistory:MaxCardsPerRun", 200), 0, 2000);
+
+        // Wie viele GANZE Turniere (Teilnehmer, Paarungen) ein Lauf beim Crawler anfordert — laufende
+        // zuerst, dann fehlende, neueste zuerst. Jedes sind ein Dutzend Seiten und mehr. 0 schaltet ab.
+        _maxTournamentCrawls = Math.Clamp(
+            configuration.GetValue("PlayerHistory:MaxTournamentCrawlsPerRun", 40), 0, 500);
 
         // 0 schaltet den Startlauf ab.
         _startupDelay = TimeSpan.FromMinutes(
@@ -104,6 +110,12 @@ public class PlayerHistoryScheduler : BackgroundService
                 _logger.LogInformation(
                     "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet",
                     sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified);
+
+            // NACH den Listen: die haben eben erst die neuen Turniere in die Verlaeufe gebracht.
+            var crawls = await history.CrawlHistoryTournamentsAsync(_maxTournamentCrawls, ct);
+            _logger.LogInformation(
+                "Turnierverlauf: {Missing} fehlende und {Refreshed} laufende Turniere beim Crawler angefordert ({Known} schon da)",
+                crawls.Missing, crawls.Refreshed, crawls.Known);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

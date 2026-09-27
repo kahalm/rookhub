@@ -6,6 +6,8 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RookHub.Api.Tests;
 
@@ -37,9 +39,16 @@ public class TournamentFavoriteTests : IDisposable
         return user.Id;
     }
 
-    private TournamentFavoriteController CreateController(int userId)
+    /// <param name="playersJson">Was der Crawler als Teilnehmerliste liefert — fuer den automatischen
+    /// Abgleich beim Laden eines Turniers.</param>
+    private TournamentFavoriteController CreateController(int userId, string playersJson = "[]")
     {
-        var controller = new TournamentFavoriteController(_db);
+        var crawler = new CrawlerProxyService(new HttpClient(new PlayersHandler(playersJson))
+        {
+            BaseAddress = new Uri("http://localhost:8080"),
+        });
+        var autoFavorites = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        var controller = new TournamentFavoriteController(_db, autoFavorites, crawler);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -325,4 +334,79 @@ public class TournamentFavoriteTests : IDisposable
 
         Assert.IsType<BadRequestObjectResult>(await controller.GetSettings("../../etc/passwd"));
     }
+
+    #region Automatische Favoriten
+
+    private sealed class PlayersHandler(string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json"),
+            });
+    }
+
+    private const string OlympiadPlayers =
+        """[{"snr":11,"name":"Martinovic, Sasa","fideId":"14502828"},{"snr":12,"name":"Anders, Jemand","fideId":"1"}]""";
+
+    private async Task TrackMartinovicAsync(int userId)
+    {
+        _db.TrackedPlayers.Add(new TrackedPlayer
+        {
+            UserId = userId, PlayerKey = "fide:14502828", DisplayName = "Martinovic, Sasa",
+            LastName = "Martinovic", FirstName = "Sasa", FideId = "14502828",
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Ein verfolgter Spieler ist in jedem Turnier, in dem er spielt, schon Favorit, sobald man das
+    /// Turnier oeffnet — auch ohne Abo und ohne naechtlichen Lauf.
+    /// </summary>
+    [Fact]
+    public async Task GetAll_ForTournament_FavoritesTrackedPlayerAutomatically()
+    {
+        var userId = await CreateUserAsync();
+        await TrackMartinovicAsync(userId);
+
+        var result = await CreateController(userId, OlympiadPlayers).GetAll("1469895");
+
+        var favs = Assert.IsType<List<TournamentFavoriteDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal(11, Assert.Single(favs).PlayerSnr);
+    }
+
+    /// <summary>
+    /// Wer den automatischen Stern entfernt, will ihn nicht beim naechsten Oeffnen zurueck — und
+    /// wer ihn wieder setzt, nimmt das Entfernen zurueck.
+    /// </summary>
+    [Fact]
+    public async Task RemovedAutoFavorite_StaysRemoved_UntilSetAgain()
+    {
+        var userId = await CreateUserAsync();
+        await TrackMartinovicAsync(userId);
+        await CreateController(userId, OlympiadPlayers).GetAll("1469895");
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).DeleteByPlayer("1469895", 11));
+        var again = await CreateController(userId, OlympiadPlayers).GetAll("1469895");
+        Assert.Empty(Assert.IsType<List<TournamentFavoriteDto>>(Assert.IsType<OkObjectResult>(again.Result).Value));
+        Assert.Single(await _db.TournamentFavoriteDismissals.ToListAsync());
+
+        await CreateController(userId).Create(new CreateTournamentFavoriteDto { CrawlerTournamentId = "1469895", PlayerSnr = 11 });
+        Assert.Empty(await _db.TournamentFavoriteDismissals.ToListAsync());
+        Assert.Single(await _db.TournamentFavorites.ToListAsync());
+    }
+
+    /// <summary>Ohne Turnier (die Liste ueber alle) wird nichts abgeglichen — und der Crawler nicht gefragt.</summary>
+    [Fact]
+    public async Task GetAll_WithoutTournament_DoesNotAutoFavorite()
+    {
+        var userId = await CreateUserAsync();
+        await TrackMartinovicAsync(userId);
+
+        await CreateController(userId, OlympiadPlayers).GetAll();
+
+        Assert.Empty(await _db.TournamentFavorites.ToListAsync());
+    }
+
+    #endregion
 }

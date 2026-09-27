@@ -66,6 +66,7 @@ public class AppDbContext : DbContext
     public DbSet<RepertoireFile> RepertoireFiles => Set<RepertoireFile>();
     public DbSet<TournamentSubscription> TournamentSubscriptions => Set<TournamentSubscription>();
     public DbSet<TournamentFavorite> TournamentFavorites => Set<TournamentFavorite>();
+    public DbSet<TournamentFavoriteDismissal> TournamentFavoriteDismissals => Set<TournamentFavoriteDismissal>();
     public DbSet<TournamentUserSetting> TournamentUserSettings => Set<TournamentUserSetting>();
     public DbSet<TournamentMonitor> TournamentMonitors => Set<TournamentMonitor>();
     public DbSet<TournamentDirectoryEntry> TournamentDirectoryEntries => Set<TournamentDirectoryEntry>();
@@ -79,6 +80,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayerTournamentResult> PlayerTournamentResults => Set<PlayerTournamentResult>();
     public DbSet<PlayerHistorySync> PlayerHistorySyncs => Set<PlayerHistorySync>();
     public DbSet<TrackedPlayer> TrackedPlayers => Set<TrackedPlayer>();
+    public DbSet<HistoryTournamentCrawl> HistoryTournamentCrawls => Set<HistoryTournamentCrawl>();
     public DbSet<TournamentTimeControl> TournamentTimeControls => Set<TournamentTimeControl>();
     public DbSet<GeoPlace> GeoPlaces => Set<GeoPlace>();
     public DbSet<Puzzle> Puzzles => Set<Puzzle>();
@@ -394,6 +396,16 @@ public class AppDbContext : DbContext
             e.HasIndex(tf => new { tf.UserId, tf.CrawlerTournamentId, tf.TeamSnr }).IsUnique();
         });
 
+        modelBuilder.Entity<TournamentFavoriteDismissal>(e =>
+        {
+            e.HasOne(d => d.User)
+             .WithMany()
+             .HasForeignKey(d => d.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(d => new { d.UserId, d.CrawlerTournamentId, d.PlayerSnr }).IsUnique();
+        });
+
         modelBuilder.Entity<TournamentUserSetting>(e =>
         {
             e.HasOne(s => s.User)
@@ -510,6 +522,8 @@ public class AppDbContext : DbContext
 
         // Die Bedenkzeit gehoert dem TURNIER — ein Abruf, den sich alle Konten teilen.
         modelBuilder.Entity<TournamentTimeControl>(e => e.HasKey(x => x.ChessResultsId));
+
+        modelBuilder.Entity<HistoryTournamentCrawl>(e => e.HasKey(x => x.ChessResultsId));
 
         modelBuilder.Entity<TournamentSearchProfile>(e =>
         {

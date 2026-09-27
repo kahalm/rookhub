@@ -319,20 +319,21 @@ public class AutoSubscriptionService : BackgroundService
             }
         }
 
-        // Auto-favorite players for subscriptions that don't have favorites yet
-        var subsWithoutFavorites = await db.TournamentSubscriptions
-            .Where(s => s.UserId == userId)
-            .Where(s => !db.TournamentFavorites.Any(f => f.UserId == userId
-                && f.CrawlerTournamentId == s.CrawlerTournamentId))
+        // Auto-Favoriten fuer alle laufenden und kommenden Abos. Frueher nur fuer Abos OHNE jeden
+        // Favoriten: stand dort schon der eigene Stern, bekam ein Freund, der sich spaeter anmeldete,
+        // nie seinen. Doppelte legt der Abgleich ohnehin nicht an, entfernte (Dismissal) auch nicht.
+        var since = DateOnly.FromDateTime(today).AddDays(-RefreshDaysAfter);
+        var activeSubs = await db.TournamentSubscriptions
+            .Where(s => s.UserId == userId && (s.EventDate == null || s.EventDate >= since))
             .Select(s => s.CrawlerTournamentId)
             .ToListAsync(ct);
 
-        // Profile (User + Freunde) EINMAL je User laden und über alle Turniere wiederverwenden,
-        // statt sie in AutoFavoritePlayersAsync je Turnier neu zu ziehen.
-        var favProfiles = subsWithoutFavorites.Count > 0
-            ? await LoadFavoriteProfilesAsync(db, userId, ct)
+        // Kandidaten (User + Freunde + Verfolgte) EINMAL je User laden und über alle Turniere
+        // wiederverwenden, statt sie in AutoFavoritePlayersAsync je Turnier neu zu ziehen.
+        var favProfiles = activeSubs.Count > 0
+            ? await LoadFavoriteCandidatesAsync(db, userId, ct)
             : null;
-        foreach (var tid in subsWithoutFavorites)
+        foreach (var tid in activeSubs)
         {
             try
             {
@@ -345,9 +346,15 @@ public class AutoSubscriptionService : BackgroundService
         }
     }
 
-    /// <summary>Profile, die für Auto-Favoriten in Frage kommen: der User selbst + seine akzeptierten Freunde.
-    /// Hängt nur am User → kann je User einmal geladen und über alle Turniere wiederverwendet werden.</summary>
-    private static async Task<List<UserProfile>> LoadFavoriteProfilesAsync(AppDbContext db, int userId, CancellationToken ct)
+    /// <summary>
+    /// Wer in einem Turnier automatisch Favorit wird: der User selbst, seine angenommenen Freunde und
+    /// die Spieler, die er im Turnierverlauf verfolgt. Haengt nur am User → kann je User einmal
+    /// geladen und über alle Turniere wiederverwendet werden.
+    /// </summary>
+    public sealed record FavoriteCandidate(string LastName, string? FirstName, string? FideId);
+
+    public static async Task<List<FavoriteCandidate>> LoadFavoriteCandidatesAsync(
+        AppDbContext db, int userId, CancellationToken ct)
     {
         var friendUserIds = await db.Friendships
             .Where(f => (f.RequesterId == userId || f.AddresseeId == userId)
@@ -355,16 +362,33 @@ public class AutoSubscriptionService : BackgroundService
             .Select(f => f.RequesterId == userId ? f.AddresseeId : f.RequesterId)
             .ToListAsync(ct);
         var allUserIds = friendUserIds.Prepend(userId).Distinct().ToList();
-        return await db.UserProfiles
-            .Where(p => allUserIds.Contains(p.UserId))
+
+        var profiles = await db.UserProfiles
+            .Where(p => allUserIds.Contains(p.UserId) && p.LastName != null && p.LastName != "")
+            .Select(p => new FavoriteCandidate(p.LastName!, p.FirstName, p.FideId))
             .ToListAsync(ct);
+
+        // Verfolgte Spieler haben kein Konto — genau deshalb verfolgt man sie. In ihren Turnieren
+        // sollen sie genauso markiert sein wie ein Freund.
+        var tracked = await db.TrackedPlayers
+            .Where(t => t.UserId == userId)
+            .Select(t => new FavoriteCandidate(t.LastName, t.FirstName, t.FideId))
+            .ToListAsync(ct);
+
+        return [.. profiles, .. tracked];
     }
 
     public async Task AutoFavoritePlayersAsync(AppDbContext db, CrawlerProxyService proxy,
         int userId, string crawlerTournamentId, CancellationToken ct,
-        IReadOnlyList<UserProfile>? preloadedProfiles = null)
+        IReadOnlyList<FavoriteCandidate>? preloadedCandidates = null)
     {
-        // 1. Fetch players from crawler
+        // 1. Kandidaten (User + Freunde + Verfolgte). Sie haengen NUR am User, nicht am Turnier — bei
+        // mehreren Abos reicht der Aufrufer sie deshalb vorgeladen durch (1× statt je Turnier neu laden).
+        // Zuerst, weil billiger: ohne Kandidaten braucht es keinen Crawler-Abruf.
+        var candidates = preloadedCandidates ?? await LoadFavoriteCandidatesAsync(db, userId, ct);
+        if (candidates.Count == 0) return;
+
+        // 2. Fetch players from crawler
         JsonElement playersJson;
         try
         {
@@ -393,58 +417,29 @@ public class AutoSubscriptionService : BackgroundService
 
         if (players.Count == 0) return;
 
-        // 2. Profile (User + akzeptierte Freunde). Diese hängen NUR am User, nicht am Turnier — bei mehreren
-        // Abos ohne Favoriten reicht der Aufrufer sie deshalb vorgeladen durch (1× statt je Turnier neu laden).
-        var profiles = preloadedProfiles ?? await LoadFavoriteProfilesAsync(db, userId, ct);
-        if (profiles.Count == 0) return;
-
-        // 3. Load existing favorites to avoid duplicates
+        // 3. Vorhandene Favoriten UND selbst entfernte Sterne: beide werden nicht (wieder) angelegt.
         var existingFavSnrs = await db.TournamentFavorites
             .Where(f => f.UserId == userId && f.CrawlerTournamentId == crawlerTournamentId && f.PlayerSnr != null)
             .Select(f => f.PlayerSnr!.Value)
             .ToListAsync(ct);
+        var dismissedSnrs = await db.TournamentFavoriteDismissals
+            .Where(d => d.UserId == userId && d.CrawlerTournamentId == crawlerTournamentId)
+            .Select(d => d.PlayerSnr)
+            .ToListAsync(ct);
         var existingSet = new HashSet<int>(existingFavSnrs);
+        existingSet.UnionWith(dismissedSnrs);
 
-        // 4. Match profiles against players
+        // 4. Match candidates against players
         var newFavorites = 0;
-        foreach (var profile in profiles)
+        foreach (var candidate in candidates)
         {
-            if (string.IsNullOrWhiteSpace(profile.LastName)) continue;
-
             foreach (var (snr, name, fideId) in players)
             {
-                if (existingSet.Contains(snr)) continue;
+                if (!Matches(candidate, name, fideId)) continue;
 
-                var matched = false;
-
-                // FIDE-ID match (primary)
-                if (!string.IsNullOrWhiteSpace(profile.FideId) && !string.IsNullOrWhiteSpace(fideId)
-                    && string.Equals(profile.FideId, fideId, StringComparison.OrdinalIgnoreCase))
-                {
-                    matched = true;
-                }
-                // Name match (fallback): chess-results liefert "Nachname, Vorname".
-                // Exakter Token-Vergleich statt Substring, sonst matcht z.B. "Ott"
-                // auf "Ottenweller"/"Scott" und favorisiert falsche Spieler.
-                else
-                {
-                    var comma = name.IndexOf(',');
-                    var lastToken = (comma >= 0 ? name[..comma] : name).Trim();
-                    var firstToken = comma >= 0 ? name[(comma + 1)..].Trim() : string.Empty;
-
-                    if (string.Equals(lastToken, profile.LastName.Trim(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!string.IsNullOrWhiteSpace(profile.FirstName))
-                            // Erstes Vornamens-Token vergleichen (CR listet teils mehrere Vornamen).
-                            matched = string.Equals(FirstWord(firstToken), FirstWord(profile.FirstName),
-                                StringComparison.OrdinalIgnoreCase);
-                        else
-                            // Ohne Vorname nur bei ausreichend eindeutigem (laengerem) Nachnamen.
-                            matched = lastToken.Length >= 3;
-                    }
-                }
-
-                if (matched)
+                // Schon Favorit oder bewusst entfernt: nichts anlegen — aber auch keinen
+                // Namensgleichen weiter unten in der Liste statt seiner nehmen.
+                if (!existingSet.Contains(snr))
                 {
                     db.TournamentFavorites.Add(new TournamentFavorite
                     {
@@ -454,8 +449,8 @@ public class AutoSubscriptionService : BackgroundService
                     });
                     existingSet.Add(snr);
                     newFavorites++;
-                    break; // One match per profile is enough
                 }
+                break; // One match per candidate is enough
             }
         }
 
@@ -474,6 +469,33 @@ public class AutoSubscriptionService : BackgroundService
                     entry.State = Microsoft.EntityFrameworkCore.EntityState.Detached;
             }
         }
+    }
+
+    /// <summary>
+    /// Ist dieser Teilnehmer der Kandidat? Die FIDE-ID entscheidet, wenn BEIDE sie tragen — auch
+    /// gegen den Namen: zwei „Martinovic, Ivan" mit verschiedenen Nummern sind zwei Leute. Sonst der
+    /// Name: chess-results liefert "Nachname, Vorname"; exakter Token-Vergleich statt Substring,
+    /// sonst matcht z.B. "Ott" auf "Ottenweller"/"Scott" und favorisiert falsche Spieler.
+    /// </summary>
+    internal static bool Matches(FavoriteCandidate candidate, string playerName, string? playerFideId)
+    {
+        if (!string.IsNullOrWhiteSpace(candidate.FideId) && !string.IsNullOrWhiteSpace(playerFideId))
+            return string.Equals(candidate.FideId.Trim(), playerFideId.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        var comma = playerName.IndexOf(',');
+        var lastToken = (comma >= 0 ? playerName[..comma] : playerName).Trim();
+        var firstToken = comma >= 0 ? playerName[(comma + 1)..].Trim() : string.Empty;
+
+        if (!string.Equals(lastToken, candidate.LastName.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Erstes Vornamens-Token vergleichen (CR listet teils mehrere Vornamen).
+        if (!string.IsNullOrWhiteSpace(candidate.FirstName))
+            return string.Equals(FirstWord(firstToken), FirstWord(candidate.FirstName),
+                StringComparison.OrdinalIgnoreCase);
+
+        // Ohne Vorname nur bei ausreichend eindeutigem (laengerem) Nachnamen.
+        return lastToken.Length >= 3;
     }
 
     /// <summary>

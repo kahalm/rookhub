@@ -414,6 +414,58 @@ public class AutoSubscriptionServiceTests : IDisposable
         Assert.Empty(favs);
     }
 
+    /// <summary>Verfolgte Spieler (ohne Konto) werden genauso Favorit wie Freunde.</summary>
+    [Fact]
+    public async Task AutoFavorite_MatchesTrackedPlayer_CreatesFavorite()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
+        _db.TrackedPlayers.Add(new TrackedPlayer
+        {
+            UserId = userId, PlayerKey = "fide:14502828", DisplayName = "Martinovic, Sasa",
+            LastName = "Martinovic", FirstName = "Sasa", FideId = "14502828",
+        });
+        await _db.SaveChangesAsync();
+
+        var proxy = CreateMockProxy(PlayersJson((7, "Martinovic, Sasa", "14502828"), (8, "Huber, Karl", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TT1", CancellationToken.None);
+
+        var snrs = await _db.TournamentFavorites.Where(f => f.UserId == userId).Select(f => f.PlayerSnr).OrderBy(x => x).ToListAsync();
+        Assert.Equal([7, 8], snrs);
+    }
+
+    /// <summary>Ein selbst entfernter Stern wird nicht wieder gesetzt — und kein Namensgleicher statt seiner.</summary>
+    [Fact]
+    public async Task AutoFavorite_Dismissed_IsNotRecreated()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl");
+        _db.TournamentFavoriteDismissals.Add(new TournamentFavoriteDismissal
+        { UserId = userId, CrawlerTournamentId = "TD1", PlayerSnr = 3 });
+        await _db.SaveChangesAsync();
+
+        var proxy = CreateMockProxy(PlayersJson((3, "Huber, Karl", null), (4, "Huber, Karl", null)));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TD1", CancellationToken.None);
+
+        Assert.Empty(await _db.TournamentFavorites.ToListAsync());
+    }
+
+    /// <summary>
+    /// Tragen BEIDE eine FIDE-ID und sind sie verschieden, ist es jemand anderes — auch bei gleichem
+    /// Namen. Vorher fiel der Abgleich dann auf den Namen zurueck und markierte den Namensvetter.
+    /// </summary>
+    [Fact]
+    public async Task AutoFavorite_DifferentFideIds_NoNameMatch()
+    {
+        var userId = await CreateUserAsync(lastName: "Huber", firstName: "Karl", fideId: "1111111");
+
+        var proxy = CreateMockProxy(PlayersJson((1, "Huber, Karl", "2222222")));
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.AutoFavoritePlayersAsync(_db, proxy, userId, "TD2", CancellationToken.None);
+
+        Assert.Empty(await _db.TournamentFavorites.ToListAsync());
+    }
+
     [Fact]
     public async Task CheckUserAsync_ProxyError_DoesNotThrow()
     {

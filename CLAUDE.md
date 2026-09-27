@@ -764,6 +764,24 @@ uebrigen Konten nicht aushungert; die LISTEN laufen auch nach dem Deckel weiter,
 neue Turniere ueberhaupt sichtbar. Vorher entstand der Verlauf nur beim Ansehen (25 Karten je
 Aufruf, Nachfragen rund eine Minute) — wer die Seite schloss, liess den Rest liegen.
 
+**Danach holt derselbe Lauf die GANZEN Turniere** (`CrawlHistoryTournamentsAsync`, seit 0.551.0):
+Teilnehmer und Paarungen standen vorher erst nach einem Klick im Verlauf bereit („wird gerade
+geholt", bis zu zwei Minuten). Reihenfolge: zuerst LAUFENDE (Ende zwischen −3 und +14 Tagen) —
+die werden jede Nacht neu angefordert, auch wenn sie schon da sind —, dann fehlende, neueste
+zuerst. `PlayerHistory:MaxTournamentCrawlsPerRun` (40, 0 = aus) deckelt die Anforderungen eines
+Laufs (eine Olympiade sind ~15 Seiten). `HistoryTournamentCrawls` merkt sich je Turnier, ob es
+beim Crawler steht (`FoundAt` → nie wieder nachfragen, ausser laufend) und wie oft es erfolglos
+angefordert wurde (Pause 7 Tage, nach 3 Versuchen aufgegeben) — sonst fraessen dauerhaft
+scheiternde Abrufe jede Nacht den Deckel.
+
+**Auto-Favoriten: man selbst, Freunde UND Verfolgte** (`AutoSubscriptionService.AutoFavoritePlayersAsync`,
+seit 0.551.0). Laeuft beim Oeffnen eines Turniers (`GET /api/tournament-favorites?tournamentId=`)
+und nachts fuer alle laufenden/kommenden Abos (vorher nur fuer Abos OHNE jeden Favoriten — ein
+spaeter angemeldeter Freund bekam dort nie seinen Stern). Ein selbst entfernter Spieler-Stern
+landet in `TournamentFavoriteDismissals` und wird nicht wieder gesetzt; wer ihn neu setzt, loescht
+die Zeile. Abgleich: tragen BEIDE eine FIDE-ID, entscheidet sie allein (verschieden = nicht der
+Kandidat, auch bei gleichem Namen); sonst Nachname exakt + erstes Vornamens-Token.
+
 **Ein Kartenabruf haengt am TERMIN, nicht am Platz.** Frueher stand dort `Rank is not null`, weil
 ein kuenftiges Turnier in der Trefferliste auf „-" steht — dasselbe „-" steht dort aber auch bei
 jedem MANNSCHAFTSturnier (chess-results weist in der Spielersuche keinen Einzelplatz aus). Am

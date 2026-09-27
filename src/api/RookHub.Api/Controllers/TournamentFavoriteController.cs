@@ -15,14 +15,44 @@ namespace RookHub.Api.Controllers;
 public class TournamentFavoriteController : BaseApiController
 {
     private readonly AppDbContext _db;
+    private readonly AutoSubscriptionService _autoFavorites;
+    private readonly CrawlerProxyService _crawler;
 
-    public TournamentFavoriteController(AppDbContext db) => _db = db;
+    public TournamentFavoriteController(
+        AppDbContext db, AutoSubscriptionService autoFavorites, CrawlerProxyService crawler)
+    {
+        _db = db;
+        _autoFavorites = autoFavorites;
+        _crawler = crawler;
+    }
 
-    /// <summary>Get all favorites for the current user, optionally filtered by tournament.</summary>
+    /// <summary>
+    /// Get all favorites for the current user, optionally filtered by tournament.
+    ///
+    /// <para>Mit Turnier werden vorher man selbst, die Freunde und die verfolgten Spieler als
+    /// Favorit eingetragen, soweit sie dort spielen. Bis hierher geschah das nur nachts und nur fuer
+    /// eigene Abos — ein Turnier, das man aus dem Verlauf eines Freundes oeffnete, zeigte ihn nicht
+    /// markiert. Selbst entfernte Sterne bleiben entfernt (<see cref="TournamentFavoriteDismissal"/>).</para>
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<List<TournamentFavoriteDto>>> GetAll([FromQuery] string? tournamentId = null)
     {
         var userId = GetUserId();
+
+        if (!string.IsNullOrEmpty(tournamentId) && TournamentIdValidator.IsValid(tournamentId))
+        {
+            // Der Abgleich ist eine Zugabe: faellt der Crawler aus, kommen die gespeicherten
+            // Favoriten trotzdem.
+            try
+            {
+                await _autoFavorites.AutoFavoritePlayersAsync(
+                    _db, _crawler, userId, tournamentId, HttpContext?.RequestAborted ?? default);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // AutoFavoritePlayersAsync protokolliert selbst; hier nur nicht scheitern.
+            }
+        }
         var query = _db.TournamentFavorites.Where(f => f.UserId == userId);
 
         if (!string.IsNullOrEmpty(tournamentId))
@@ -63,6 +93,11 @@ public class TournamentFavoriteController : BaseApiController
         };
 
         _db.TournamentFavorites.Add(fav);
+        // Wer den Stern selbst wieder setzt, nimmt sein „nicht mehr Favorit" zurueck.
+        _db.TournamentFavoriteDismissals.RemoveRange(await _db.TournamentFavoriteDismissals
+            .Where(d => d.UserId == userId && d.CrawlerTournamentId == dto.CrawlerTournamentId
+                        && d.PlayerSnr == dto.PlayerSnr)
+            .ToListAsync());
         // Race-Catch wie bei den Abos: der Unique-Index ist die eigentliche Wahrheit, die Prüfung
         // oben nur die schnelle Antwort (Doppelklick/zweiter Tab landete sonst auf 500).
         try { await _db.SaveChangesAsync(); }
@@ -93,6 +128,7 @@ public class TournamentFavoriteController : BaseApiController
 
         _db.TournamentFavorites.Remove(fav);
         await _db.SaveChangesAsync();
+        await DismissAsync(fav);
         return NoContent();
     }
 
@@ -112,7 +148,33 @@ public class TournamentFavoriteController : BaseApiController
 
         _db.TournamentFavorites.Remove(fav);
         await _db.SaveChangesAsync();
+        await DismissAsync(fav);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Einen entfernten SPIELER-Stern merken, damit der automatische Abgleich ihn nicht wieder
+    /// setzt. Team-Sterne setzt der Abgleich nie, sie brauchen das nicht. Eigenes Speichern NACH
+    /// dem Loeschen: scheitert die Merk-Zeile, ist der Stern trotzdem weg.
+    /// </summary>
+    private async Task DismissAsync(TournamentFavorite fav)
+    {
+        if (fav.PlayerSnr is { } snr
+            && !await _db.TournamentFavoriteDismissals.AnyAsync(d => d.UserId == fav.UserId
+                && d.CrawlerTournamentId == fav.CrawlerTournamentId && d.PlayerSnr == snr))
+        {
+            _db.TournamentFavoriteDismissals.Add(new TournamentFavoriteDismissal
+            {
+                UserId = fav.UserId,
+                CrawlerTournamentId = fav.CrawlerTournamentId,
+                PlayerSnr = snr,
+            });
+        }
+
+        try { await _db.SaveChangesAsync(); }
+        // Zwei Loeschungen gleichzeitig (Doppelklick): die zweite Merk-Zeile verletzt den Index,
+        // gemerkt ist er trotzdem.
+        catch (DbUpdateException ex) when (AuthService.IsUniqueViolation(ex)) { }
     }
 
     /// <summary>Add a team favorite.</summary>

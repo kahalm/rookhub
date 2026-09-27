@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -293,6 +294,147 @@ public class TournamentHistoryService
         }
 
         return new HistorySweep(players, cards, timeControls, reclassified, unavailable);
+    }
+
+    /// <summary>Was der Turnier-Abruf eines Durchgangs angefordert hat — fuers Protokoll.</summary>
+    public sealed record TournamentCrawlSweep(int Missing, int Refreshed, int Known);
+
+    /// <summary>Ab wann ein Turnier als laufend gilt: Ende hoechstens so viele Tage zurueck …</summary>
+    internal const int RunningDaysAfter = 3;
+
+    /// <summary>… und hoechstens so viele Tage voraus (laenger dauert kaum ein Turnier).</summary>
+    internal const int RunningDaysBefore = 14;
+
+    /// <summary>Nach so vielen erfolglosen Anforderungen gibt der Durchgang ein Turnier auf.</summary>
+    internal const int MaxCrawlAttempts = 3;
+
+    /// <summary>So lange wird ein angefordertes, noch nicht gefundenes Turnier nicht erneut angefordert.</summary>
+    internal static readonly TimeSpan CrawlRetryAfter = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// Die Turniere aus den Verlaeufen beim Crawler anfordern — Teilnehmer, Paarungen, Ergebnisse.
+    ///
+    /// <para><b>Warum.</b> Der Durchgang oben holt fuer jeden Spieler nur die eigene ZEILE (Platz,
+    /// Punkte, Performance). Wer im Verlauf ein Turnier anklickte, loeste erst dann den Abruf des
+    /// ganzen Turniers aus und wartete bis zu zwei Minuten („wird gerade geholt"). Jetzt stehen die
+    /// Turniere bereit, bevor jemand klickt.</para>
+    ///
+    /// <para><b>Reihenfolge und Deckel.</b> Zuerst die LAUFENDEN (Ende zwischen drei Tagen zurueck
+    /// und zwei Wochen voraus) — auch wenn sie schon geholt sind, denn ihre neuen Runden sind das,
+    /// was man sehen will. Danach die fehlenden, neueste zuerst. Jede Anforderung ist ein ganzer
+    /// Turnier-Abruf hinter dem Rate-Limiter des Crawlers (eine Olympiade: rund 15 Seiten), deshalb
+    /// gilt der Deckel fuer den ganzen Lauf; der Rest kommt in der naechsten Nacht. Ein Turnier, das
+    /// dreimal angefordert wurde und nie ankam, wird aufgegeben — sonst fraessen dauerhaft
+    /// scheiternde Abrufe den Deckel.</para>
+    /// </summary>
+    public async Task<TournamentCrawlSweep> CrawlHistoryTournamentsAsync(int maxCrawls, CancellationToken ct = default)
+    {
+        if (maxCrawls <= 0) return new TournamentCrawlSweep(0, 0, 0);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+
+        var tournaments = await _db.PlayerTournamentResults.AsNoTracking()
+            .GroupBy(r => r.ChessResultsId)
+            .Select(g => new { Id = g.Key, EndDate = g.Max(r => r.EndDate) })
+            .ToListAsync(ct);
+        var memo = await _db.HistoryTournamentCrawls
+            .ToDictionaryAsync(c => c.ChessResultsId, StringComparer.Ordinal, ct);
+
+        bool IsRunning(DateOnly? end) =>
+            end is { } e && e >= today.AddDays(-RunningDaysAfter) && e <= today.AddDays(RunningDaysBefore);
+
+        // Laufende zuerst, dann neueste zuerst; ohne Datum ans Ende.
+        var ordered = tournaments
+            .OrderByDescending(t => IsRunning(t.EndDate))
+            .ThenByDescending(t => t.EndDate ?? DateOnly.MinValue)
+            .ToList();
+
+        var missing = 0;
+        var refreshed = 0;
+        var known = 0;
+        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
+
+        foreach (var t in ordered)
+        {
+            if (ct.IsCancellationRequested || missing + refreshed >= maxCrawls) break;
+
+            memo.TryGetValue(t.Id, out var entry);
+            var running = IsRunning(t.EndDate);
+
+            // Schon da und fertig: nicht einmal nachfragen. Alles andere kostet eine Frage an den
+            // Crawler (seine eigene Datenbank, kein Abruf bei chess-results).
+            if (entry?.FoundAt is not null && !running) continue;
+
+            bool present;
+            try
+            {
+                using var response = await client.GetAsync($"/api/tournaments/{Uri.EscapeDataString(t.Id)}", ct);
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound) response.EnsureSuccessStatusCode();
+                present = response.StatusCode != System.Net.HttpStatusCode.NotFound;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                // Crawler nicht erreichbar: der ganze Rest hinge an derselben Stelle.
+                _log.LogWarning(ex, "Turnierverlauf: Crawler nicht erreichbar, Turnier-Abruf abgebrochen");
+                break;
+            }
+
+            if (entry is null)
+            {
+                entry = new HistoryTournamentCrawl { ChessResultsId = t.Id, LastRequestedAt = DateTime.MinValue };
+                _db.HistoryTournamentCrawls.Add(entry);
+                memo[t.Id] = entry;
+            }
+
+            if (present)
+            {
+                entry.FoundAt ??= now;
+                entry.Attempts = 0;
+                if (!running)
+                {
+                    known++;
+                    continue;
+                }
+            }
+            // Fehlt: aufgegeben, oder eben erst angefordert und noch unterwegs.
+            else if (entry.Attempts >= MaxCrawlAttempts || now - entry.LastRequestedAt < CrawlRetryAfter)
+                continue;
+
+            if (!await RequestCrawlAsync(client, t.Id, ct)) continue;
+
+            entry.LastRequestedAt = now;
+            if (present) refreshed++;
+            else
+            {
+                entry.Attempts++;
+                missing++;
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return new TournamentCrawlSweep(missing, refreshed, known);
+    }
+
+    /// <summary>
+    /// Einen ganzen Turnier-Abruf beim Crawler einreihen. 409 heisst „laeuft schon" — das ist
+    /// genau das, was hier gewollt ist, kein Fehler.
+    /// </summary>
+    private async Task<bool> RequestCrawlAsync(HttpClient client, string chessResultsId, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/api/crawl", new { chessResultsId, jobType = "Full" }, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict) return true;
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _log.LogWarning(ex, "Turnierverlauf: Abruf von Turnier {TournamentId} nicht angenommen", chessResultsId);
+            return false;
+        }
     }
 
     /// <summary>

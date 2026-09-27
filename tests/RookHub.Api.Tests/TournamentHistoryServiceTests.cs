@@ -749,6 +749,111 @@ public class TournamentHistoryServiceTests : IDisposable
     // ----- Attrappen --------------------------------------------------------
 
     /// <summary>Antwortet je nach Pfad — Trefferliste oder Spielerkarte.</summary>
+    // ----- Ganze Turniere im Voraus holen -------------------------------------
+
+    private async Task AddResultAsync(string chessResultsId, DateOnly? endDate, string key = "fide:1693034")
+    {
+        _db.PlayerTournamentResults.Add(new PlayerTournamentResult
+        {
+            PlayerKey = key, ChessResultsId = chessResultsId, TournamentName = $"Turnier {chessResultsId}",
+            EndDate = endDate,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
+
+    /// <summary>
+    /// Fehlende Turniere werden angefordert, neueste zuerst; eines, das beim Crawler schon steht,
+    /// nicht — und nach der ersten Nacht wird es auch nicht mehr nachgefragt.
+    /// </summary>
+    [Fact]
+    public async Task CrawlHistoryTournaments_RequestsMissing_NewestFirst_AndRemembersKnown()
+    {
+        await AddResultAsync("100", Today.AddYears(-2));
+        await AddResultAsync("200", Today.AddMonths(-2));
+        await AddResultAsync("300", Today.AddYears(-1));
+        _handler.Crawled.Add("300");
+
+        var sweep = await CreateService().CrawlHistoryTournamentsAsync(10);
+
+        Assert.Equal(["200", "100"], _handler.CrawlRequests);
+        Assert.Equal((2, 0, 1), (sweep.Missing, sweep.Refreshed, sweep.Known));
+
+        // Zweite Nacht: 300 ist bekannt (keine Frage mehr), 100/200 sind eben erst angefordert.
+        var lookups = _handler.TournamentLookups;
+        await CreateService().CrawlHistoryTournamentsAsync(10);
+        Assert.Equal(2, _handler.TournamentLookups - lookups);
+        Assert.Equal(2, _handler.CrawlRequests.Count);
+    }
+
+    /// <summary>
+    /// Ein LAUFENDES Turnier (wie die Olympiade) wird jede Nacht neu angefordert, auch wenn es schon
+    /// geholt ist — seine neuen Runden sind das, was man sehen will. Es geht vor den fehlenden.
+    /// </summary>
+    [Fact]
+    public async Task CrawlHistoryTournaments_RefreshesRunningTournaments_First()
+    {
+        await AddResultAsync("100", Today.AddMonths(-1));
+        await AddResultAsync("1469895", Today.AddDays(2));
+        _handler.Crawled.Add("1469895");
+
+        var sweep = await CreateService().CrawlHistoryTournamentsAsync(1);
+
+        Assert.Equal(["1469895"], _handler.CrawlRequests);
+        Assert.Equal(1, sweep.Refreshed);
+
+        await CreateService().CrawlHistoryTournamentsAsync(1);
+        Assert.Equal(["1469895", "1469895"], _handler.CrawlRequests);
+    }
+
+    /// <summary>Der Deckel gilt fuer den ganzen Lauf; der Rest kommt in der naechsten Nacht.</summary>
+    [Fact]
+    public async Task CrawlHistoryTournaments_StopsAtTheLimit()
+    {
+        for (var i = 1; i <= 5; i++) await AddResultAsync($"{i}", Today.AddMonths(-i));
+
+        var sweep = await CreateService().CrawlHistoryTournamentsAsync(2);
+
+        Assert.Equal(["1", "2"], _handler.CrawlRequests);
+        Assert.Equal(2, sweep.Missing);
+    }
+
+    /// <summary>
+    /// Ein Turnier, das nach drei Anforderungen nie beim Crawler ankam, wird aufgegeben — sonst fraesse
+    /// es jede Nacht den Deckel. Dazwischen liegt jeweils eine Woche.
+    /// </summary>
+    [Fact]
+    public async Task CrawlHistoryTournaments_GivesUpAfterThreeFailedAttempts()
+    {
+        await AddResultAsync("404", Today.AddMonths(-1));
+        _db.HistoryTournamentCrawls.Add(new HistoryTournamentCrawl
+        {
+            ChessResultsId = "404", Attempts = 3, LastRequestedAt = DateTime.UtcNow.AddDays(-30),
+        });
+        await _db.SaveChangesAsync();
+
+        await CreateService().CrawlHistoryTournamentsAsync(10);
+
+        Assert.Empty(_handler.CrawlRequests);
+    }
+
+    [Fact]
+    public async Task CrawlHistoryTournaments_RetriesAfterAWeek()
+    {
+        await AddResultAsync("500", Today.AddMonths(-1));
+        _db.HistoryTournamentCrawls.Add(new HistoryTournamentCrawl
+        {
+            ChessResultsId = "500", Attempts = 1, LastRequestedAt = DateTime.UtcNow.AddDays(-8),
+        });
+        await _db.SaveChangesAsync();
+
+        await CreateService().CrawlHistoryTournamentsAsync(10);
+
+        Assert.Equal(["500"], _handler.CrawlRequests);
+        Assert.Equal(2, (await _db.HistoryTournamentCrawls.SingleAsync()).Attempts);
+    }
+
     private sealed class RoutingHandler : HttpMessageHandler
     {
         public string History { get; set; } = "[]";
@@ -761,8 +866,32 @@ public class TournamentHistoryServiceTests : IDisposable
         public int HistoryCalls { get; private set; }
         public int CardCalls { get; private set; }
         public int InfoCalls { get; private set; }
+        /// <summary>Welche Turniere beim Crawler schon stehen (<c>GET /api/tournaments/{id}</c> → 200).</summary>
+        public HashSet<string> Crawled { get; } = [];
+        public int TournamentLookups { get; private set; }
+        /// <summary>Die angeforderten Turnier-Abrufe (<c>POST /api/crawl</c>), in Reihenfolge.</summary>
+        public List<string> CrawlRequests { get; } = [];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var path = request.RequestUri?.AbsolutePath ?? "";
+            if (path == "/api/crawl")
+            {
+                var body = await request.Content!.ReadAsStringAsync(ct);
+                CrawlRequests.Add(System.Text.Json.JsonDocument.Parse(body).RootElement
+                    .GetProperty("chessResultsId").GetString()!);
+                return await Reply(HttpStatusCode.OK, "{}");
+            }
+            if (path.StartsWith("/api/tournaments/", StringComparison.Ordinal))
+            {
+                TournamentLookups++;
+                var id = path["/api/tournaments/".Length..];
+                return await Reply(Crawled.Contains(id) ? HttpStatusCode.OK : HttpStatusCode.NotFound, "{}");
+            }
+            return await Route(request);
+        }
+
+        private Task<HttpResponseMessage> Route(HttpRequestMessage request)
         {
             var url = request.RequestUri?.ToString() ?? "";
             if (url.Contains("player-card", StringComparison.Ordinal))

@@ -257,6 +257,7 @@ public class ProfileService
         _db.Repertoires.RemoveRange(await _db.Repertoires.Where(r => r.UserId == userId).ToListAsync());
         _db.TournamentSubscriptions.RemoveRange(await _db.TournamentSubscriptions.Where(s => s.UserId == userId).ToListAsync());
         _db.TournamentFavorites.RemoveRange(await _db.TournamentFavorites.Where(f => f.UserId == userId).ToListAsync());
+        _db.TournamentFavoriteDismissals.RemoveRange(await _db.TournamentFavoriteDismissals.Where(d => d.UserId == userId).ToListAsync());
         _db.TournamentUserSettings.RemoveRange(await _db.TournamentUserSettings.Where(s => s.UserId == userId).ToListAsync());
         // Turnier-Suchprofile: sie tragen die Koordinaten des Wohnorts und benannte Zweitorte
         // ("Ferienhaus Kaernten") — das ist persoenlicher als jedes Turnier-Abo.
