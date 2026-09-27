@@ -55,11 +55,10 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
       </div>
 
       <div class="side">
-        <div class="bubble" [class]="'bubble status-' + status()" role="status" aria-live="polite">
+        <div class="bubble" [class]="'bubble status-' + bubble()" role="status" aria-live="polite">
           <span class="owl" aria-hidden="true">🦉</span>
           <p>
-            @switch (status()) {
-              @case ('watch') { {{ 'kids.feedback.watch' | translate }} }
+            @switch (bubble()) {
               @case ('yourTurn') {
                 {{ (orientation() === 'white' ? 'kids.feedback.yourTurnWhite' : 'kids.feedback.yourTurnBlack') | translate }}
               }
@@ -173,6 +172,9 @@ export class KidsPuzzleComponent {
   readonly finalComment = signal<string | null>(null);
   /** Ein falscher Zug steht gerade noch da (`WRONG_HOLD_MS`) — das Brett ist so lange gesperrt. */
   readonly holding = signal(false);
+  /** Was die Eule sagt. Waehrend des Stellungszugs schon „Du bist am Zug": ein eigener Satz dafuer („Pass auf, was dein
+   *  Gegner zieht") stand nur den Bruchteil einer Sekunde da — zu kurz zum Lesen (Wunsch 2026-09-27). */
+  readonly bubble = computed(() => this.status() === 'watch' ? 'yourTurn' : this.status());
   readonly interactive = computed(() => !this.holding() && (this.status() === 'yourTurn' || this.status() === 'good'
     || this.status() === 'wrong' || this.status() === 'alternative'));
 

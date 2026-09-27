@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.562.1", date: "2026-09-27", changes: [
+    { en: "KidHub: the owl no longer starts a puzzle with “Watch what your opponent plays …” — the sentence was gone again before anyone could read it. While the opponent’s move is shown, the owl already says whose turn it is.", de: "KidHub: Die Eule beginnt eine Aufgabe nicht mehr mit „Pass auf, was dein Gegner zieht …“ — der Satz war wieder weg, bevor man ihn lesen konnte. Während der Zug des Gegners gezeigt wird, sagt sie schon, wer am Zug ist." },
+  ] },
   { version: "0.562.0", date: "2026-09-27", changes: [
     { en: "KidHub on the computer: the board now uses the full height of the window and always fits on screen — before, its bottom row was cut off under the heading, the progress dots and the task. The task, the owl and the buttons sit to the right of the board, the progress dots in the title row, and the board is blue like KidHub. On phones everything stays stacked.", de: "KidHub am Computer: Das Brett nutzt jetzt die ganze Fensterhöhe und passt immer auf den Schirm — vorher lief die unterste Reihe unter Überschrift, Fortschrittspunkten und Aufgabe aus dem Bild. Aufgabe, Eule und Knöpfe stehen rechts neben dem Brett, die Fortschrittspunkte in der Titelzeile, und das Brett ist blau wie KidHub. Am Handy bleibt alles untereinander." },
     { en: "KidHub: after a wrong move the piece now stays where it was moved for two seconds, with the square marked, before the board takes the move back — so it is clear what happened.", de: "KidHub: Nach einem falschen Zug bleibt die Figur jetzt zwei Sekunden auf dem Feld stehen (das Feld ist markiert), bevor das Brett den Zug zurücknimmt — so sieht man, was passiert ist." },

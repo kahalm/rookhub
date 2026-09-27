@@ -27,9 +27,14 @@ describe('KidsPuzzleComponent', () => {
     expect(c.status()).toBe('watch');
     expect(c.interactive()).toBeFalse();
     expect(c.orientation()).toBe('white');
+    // Die Eule sagt gleich, wer dran ist — ein eigener „Pass auf"-Satz war zu kurz zum Lesen.
+    const bubble = () => (f.nativeElement as HTMLElement).querySelector('.bubble p')!.textContent!.trim();
+    expect(bubble()).toBe('kids.feedback.yourTurnWhite');
 
     tick(SETUP_DELAY_MS);
+    f.detectChanges();
     expect(c.status()).toBe('yourTurn');
+    expect(bubble()).toBe('kids.feedback.yourTurnWhite');
     expect(c.lastMove()).toEqual(['g4' as Key, 'g3' as Key]);
     expect(c.dests().get('b8' as Key)).toContain('h8' as Key);
   }));
