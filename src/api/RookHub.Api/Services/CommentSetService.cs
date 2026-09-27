@@ -78,7 +78,33 @@ public class CommentSetService
     {
         var sets = await LoadSetsAsync(analysisId, ct);
         if (sets.Count == 0) return await FromPgnAsync(analysisId, ct);
+        return Localize(sets, wanted);
+    }
 
+    /// <summary>
+    /// Dasselbe fuer eine Bibliothekspartie OHNE Analyse — „Anschauen" einer Meisterpartie (0.567.0). Die Quell-Saetze
+    /// entstehen dabei beim ersten Bedarf (<see cref="EnsureSourceForLibraryAsync"/>), wie beim Anfordern; eine schon
+    /// vorhandene Uebersetzung (der naechtliche Lauf) kommt so auch ohne Rechnen ins Bild.
+    /// </summary>
+    public async Task<GameComments> ForLibraryAsync(int libraryGameId, string? wanted,
+        CancellationToken ct = default)
+    {
+        await EnsureSourceForLibraryAsync(libraryGameId, ct);
+        var sets = await _db.CommentSets.AsNoTracking().Include(s => s.Texts)
+            .Where(s => s.LibraryGameId == libraryGameId).ToListAsync(ct);
+        if (sets.Count > 0) return Localize(sets, wanted);
+
+        var pgn = await _db.LibraryGames.AsNoTracking()
+            .Where(g => g.Id == libraryGameId).Select(g => g.Pgn).FirstOrDefaultAsync(ct);
+        var comments = ExtractComments(pgn);
+        return comments.Count == 0
+            ? GameComments.Empty
+            : new GameComments(comments.ToDictionary(c => c.Key, c => new GameComment(c.Value, string.Empty)), [], null);
+    }
+
+    /// <summary>Die gewuenschte Sprache, fehlende Halbzuege aus der Quelle — die EINE Regel fuer Analyse und Bibliothek.</summary>
+    private static GameComments Localize(List<CommentSet> sets, string? wanted)
+    {
         // Die Quelle ist der Rueckhalt: sie hat die meisten Zeilen und ist keine Uebersetzung.
         var source = sets.Where(s => s.Origin == CommentOrigin.Source)
                          .OrderByDescending(s => s.Texts.Count)

@@ -38,6 +38,17 @@ public class LibraryGameDto
     public int? GameAnalysisId { get; set; }
 }
 
+/// <summary>„Anschauen" einer Meisterpartie (0.567.0): das PGN aus Hauptvariante und Kommentaren in <see cref="Language"/>.</summary>
+public class LibraryGameViewDto
+{
+    public int Id { get; set; }
+    public string Pgn { get; set; } = string.Empty;
+    /// <summary>Die Sprache der Kommentare, die kommt (<c>null</c> = aus dem PGN, nicht bestimmt).</summary>
+    public string? Language { get; set; }
+    /// <summary>Alle Sprachen, in denen es Kommentare gibt.</summary>
+    public List<string> Languages { get; set; } = [];
+}
+
 /// <summary>Eine Seite der Bestandssuche.</summary>
 public class LibraryGamePageDto
 {

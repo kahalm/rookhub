@@ -69,6 +69,14 @@ export interface LibrarySemanticPage {
   items: LibrarySemanticHit[];
 }
 
+/** Eine Meisterpartie zum Anschauen: Hauptvariante + Anmerkungen in `language` (fehlende Stellen aus dem Original). */
+export interface LibraryGameView {
+  id: number;
+  pgn: string;
+  language: string | null;
+  languages: string[];
+}
+
 /** Warum eine Anforderung abgelehnt wurde. */
 export type LibraryRequestReason = 'not-found' | 'too-many-open' | 'no-engine' | 'invalid-pgn';
 
@@ -101,6 +109,12 @@ export class LibraryService {
   }
 
   /** Diese Partie rechnen lassen — oder, wenn sie schon spielbar ist, die vorhandene bekommen. */
+  /** „Anschauen" (0.567.0): die Partie als PGN mit den Anmerkungen in `lang` — ohne Rechnen, nur angemeldet. */
+  view(id: number, lang?: string): Observable<LibraryGameView> {
+    const params = lang ? new HttpParams().set('lang', lang) : undefined;
+    return this.http.get<LibraryGameView>(`/api/library-games/${id}/view`, { params });
+  }
+
   request(id: number): Observable<LibraryRequestResult> {
     return this.http.post<LibraryRequestResult>(`/api/library-games/${id}/request`, {});
   }

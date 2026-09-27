@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -22,10 +25,72 @@ public class LibraryGameService
     private readonly AppDbContext _db;
     private readonly GameAnalysisService _analyses;
 
-    public LibraryGameService(AppDbContext db, GameAnalysisService analyses)
+    /// <param name="comments">Fuer „Anschauen"; Werkzeuge und Tests, die es nicht brauchen, lassen es weg.</param>
+    public LibraryGameService(AppDbContext db, GameAnalysisService analyses, CommentSetService? comments = null)
     {
         _db = db;
         _analyses = analyses;
+        _comments = comments ?? new CommentSetService(db, NullLogger<CommentSetService>.Instance);
+    }
+
+    private readonly CommentSetService _comments;
+
+    /// <summary>
+    /// „Anschauen" einer Meisterpartie (0.567.0, gewuenscht 2026-09-27: die ähnlichen Meisterpartien nicht nur
+    /// nachspielen, sondern auch so ansehen) — ohne Rechnen, ohne Warten. Geliefert wird ein PGN aus der HAUPTVARIANTE
+    /// und den Kommentaren in der gewuenschten Sprache: dieselben Saetze wie beim Nachspielen (Figurenzeichen aufgeloest,
+    /// Nebenvarianten im Kommentar ihres Zugs), fehlende Stellen aus der Quelle. Nicht das rohe Quell-PGN: das traegt
+    /// beide Sprachen hintereinander und die ChessBase-Figurenschrift, die ohne die Schrift unsichtbar ist.
+    /// <c>null</c> = unbekannt, aussortiert oder nicht nachspielbar.
+    /// </summary>
+    public async Task<LibraryGameViewDto?> ViewAsync(int libraryGameId, string? language, CancellationToken ct = default)
+    {
+        var game = await _db.LibraryGames.AsNoTracking()
+            .Where(g => g.Id == libraryGameId && g.Status != LibraryGameStatus.Rejected)
+            .Select(g => new
+            {
+                g.Id, g.White, g.Black, g.WhiteElo, g.BlackElo, g.Result, g.Event, g.Site, g.Round, g.PlayedOn,
+                g.Eco, g.Annotator, g.Pgn,
+            })
+            .FirstOrDefaultAsync(ct);
+        if (game is null) return null;
+        var parsed = GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies);
+        if (parsed is null) return null;
+        var (header, plies) = parsed.Value;
+
+        var comments = await _comments.ForLibraryAsync(libraryGameId, language, ct);
+        var texts = comments.ByPly.Where(c => c.Key >= -1 && c.Key < plies.Count)
+            .ToDictionary(c => c.Key, c => c.Value.Text);
+
+        var result = (string.IsNullOrWhiteSpace(game.Result) ? header.Result : game.Result)?.Trim() is { Length: > 0 } r ? r : "*";
+        var sb = new StringBuilder();
+        sb.Append(PgnWriter.Tag("Event", game.Event ?? "?"));
+        sb.Append(PgnWriter.Tag("Site", game.Site ?? "?"));
+        sb.Append(PgnWriter.Tag("Date", game.PlayedOn?.ToString("yyyy.MM.dd", CultureInfo.InvariantCulture) ?? "????.??.??"));
+        sb.Append(PgnWriter.Tag("Round", game.Round ?? "?"));
+        sb.Append(PgnWriter.Tag("White", game.White ?? "?"));
+        sb.Append(PgnWriter.Tag("Black", game.Black ?? "?"));
+        sb.Append(PgnWriter.Tag("Result", result));
+        if (game.WhiteElo is int we) sb.Append(PgnWriter.Tag("WhiteElo", we.ToString(CultureInfo.InvariantCulture)));
+        if (game.BlackElo is int be) sb.Append(PgnWriter.Tag("BlackElo", be.ToString(CultureInfo.InvariantCulture)));
+        if (!string.IsNullOrWhiteSpace(game.Eco)) sb.Append(PgnWriter.Tag("ECO", game.Eco));
+        if (!string.IsNullOrWhiteSpace(game.Annotator)) sb.Append(PgnWriter.Tag("Annotator", game.Annotator));
+        if (header.StartFen != GamePlies.StartFen())
+        {
+            sb.Append(PgnWriter.Tag("SetUp", "1"));
+            sb.Append(PgnWriter.Tag("FEN", header.StartFen));
+        }
+        sb.Append('\n');
+        sb.Append(PgnWriter.MoveText(plies.Select(p => p.San).ToList(), header.StartFen, texts, result));
+        sb.Append('\n');
+
+        return new LibraryGameViewDto
+        {
+            Id = game.Id,
+            Pgn = sb.ToString(),
+            Language = comments.Language,
+            Languages = comments.Languages.ToList(),
+        };
     }
 
     public const int DefaultPageSize = 50;

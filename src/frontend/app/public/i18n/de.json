@@ -2542,7 +2542,13 @@
       "sameEnd": "gleich bis {{last}}",
       "none": "Keine kommentierte Meisterpartie in unserem Bestand begann so.",
       "loadFailed": "Ähnliche Partien konnten nicht geladen werden.",
-      "playFailed": "Die Partie konnte nicht gestartet werden."
+      "playFailed": "Die Partie konnte nicht gestartet werden.",
+      "view": "Mit Anmerkungen anschauen",
+      "viewFailed": "Die Partie ließ sich nicht laden.",
+      "computing": "Wird gerechnet … {{percent}} %",
+      "computingHint": "Nachspielen geht, sobald die Engine jede Stellung gerechnet hat.",
+      "retry": "Erneut anfordern",
+      "queued": "Die Partie wird gerechnet — nachspielen kannst du sie, sobald sie fertig ist."
     },
     "recap": {
       "hint": "Kurz erzählt — von der KI aus der Engine-Analyse geschrieben; so steht die Partie auch in der Link-Vorschau."

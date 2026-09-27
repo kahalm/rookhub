@@ -76,6 +76,67 @@ public class LibraryGameServiceTests : IDisposable
         return game;
     }
 
+    // ===== Anschauen (0.567.0) ================================================
+
+    private const string AnnotatedGame = """
+[Event "Kommentiert"]
+[White "Anderssen"]
+[Black "Kieseritzky"]
+[Result "1-0"]
+
+{A famous game.} 1. e4 {The best move.} e5 2. f4 {The King's Gambit.} exf4 3. Bc4 1-0
+""";
+
+    [Fact]
+    public async Task ViewAsync_ohneUebersetzung_liefertHauptvarianteMitDenKommentarenDerQuelle()
+    {
+        var game = await AddGameAsync("Anderssen", "Kieseritzky", annotator: "Tal");
+        game.Pgn = AnnotatedGame;
+        await _db.SaveChangesAsync();
+
+        var view = await _svc.ViewAsync(game.Id, "de");
+
+        Assert.NotNull(view);
+        Assert.Contains("[White \"Anderssen\"]", view!.Pgn);
+        Assert.Contains("[Annotator \"Tal\"]", view.Pgn);
+        Assert.Contains("[Date \"1951.06.01\"]", view.Pgn);
+        Assert.Contains("{A famous game.}", view.Pgn);
+        Assert.Contains("1. e4 {The best move.} e5 2. f4 {The King's Gambit.} exf4 3. Bc4 1-0", view.Pgn);
+        Assert.Equal("en", view.Language);
+        // Die Quell-Saetze sind dabei entstanden — wie beim Anfordern, nur ohne Rechnen.
+        Assert.True(await _db.CommentSets.AnyAsync(c => c.LibraryGameId == game.Id));
+    }
+
+    [Fact]
+    public async Task ViewAsync_mitUebersetzung_nimmtDieSprache_undFuelltLueckenAusDerQuelle()
+    {
+        var game = await AddGameAsync("Anderssen", "Kieseritzky");
+        game.Pgn = AnnotatedGame;
+        await _db.SaveChangesAsync();
+        await _svc.ViewAsync(game.Id, "en");   // legt die Quelle an
+        _db.CommentSets.Add(new CommentSet
+        {
+            LibraryGameId = game.Id, Language = "de", Origin = CommentOrigin.Machine, TranslatedFrom = "en",
+            Status = CommentSetStatus.Ready,
+            Texts = { new CommentText { Ply = -1, Text = "Eine berühmte Partie." }, new CommentText { Ply = 0, Text = "Der beste Zug." } },
+        });
+        await _db.SaveChangesAsync();
+
+        var view = await _svc.ViewAsync(game.Id, "de");
+
+        Assert.Equal("de", view!.Language);
+        Assert.Equal(["de", "en"], view.Languages);
+        Assert.Contains("{Eine berühmte Partie.} 1. e4 {Der beste Zug.} e5 2. f4 {The King's Gambit.}", view.Pgn);
+    }
+
+    [Fact]
+    public async Task ViewAsync_aussortiertOderUnbekannt_null()
+    {
+        var rejected = await AddGameAsync("A", "B", status: LibraryGameStatus.Rejected);
+        Assert.Null(await _svc.ViewAsync(rejected.Id, "de"));
+        Assert.Null(await _svc.ViewAsync(987654, "de"));
+    }
+
     // ===== Suchen =============================================================
 
     /// <summary>Ein Feld fuer alle vier Spalten: Spieler, Turnier UND Kommentator.</summary>

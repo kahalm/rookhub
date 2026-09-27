@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.567.0", date: "2026-09-27", changes: [
+    { en: "Similar master games under your game: every game can now simply be viewed – the eye button opens it with its annotations in the replay dialog, in your language where a translation exists (otherwise the original text), without any engine time. Signed in only, like requesting.", de: "Ähnliche Meisterpartien unter deiner Partie: jede Partie lässt sich jetzt auch einfach anschauen – der Augen-Knopf öffnet sie mit ihren Anmerkungen im Nachspiel-Dialog, in deiner Sprache, wo es eine Übersetzung gibt (sonst im Original), ganz ohne Rechenzeit. Nur angemeldet, wie das Anfordern." },
+    { en: "A requested master game no longer jumps straight to “Play”: until the engine has analysed every position, the row shows “Being analysed … n %” and checks again every 10 seconds; only then can you replay it. If the analysis failed, the button offers to request it again.", de: "Eine angeforderte Meisterpartie springt nicht mehr sofort auf „Spielen“: bis die Engine jede Stellung gerechnet hat, zeigt die Zeile „Wird gerechnet … n %“ und fragt alle 10 Sekunden nach; erst dann lässt sie sich nachspielen. Ist die Rechnung gescheitert, bietet der Knopf „Erneut anfordern“ an." },
+  ] },
   { version: "0.566.1", date: "2026-09-27", changes: [
     { en: "KidHub endless mode: the first hint in a puzzle is free (it only lights up the piece); only the second hint, which shows the whole move, costs a heart.", de: "KidHub-Endlos-Modus: Der erste Tipp in einer Aufgabe ist frei (er lässt nur die Figur leuchten); erst der zweite, der den ganzen Zug zeigt, kostet ein Herz." },
   ] },

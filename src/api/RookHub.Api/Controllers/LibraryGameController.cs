@@ -60,6 +60,18 @@ public class LibraryGameController : BaseApiController
                                          page, pageSize, ct, line, byPosition));
 
     /// <summary>
+    /// „Anschauen" (0.567.0): die Partie mit ihren Anmerkungen in <paramref name="lang"/> als PGN — ohne Rechnen. Nur
+    /// angemeldet, wie das Anfordern: die Suche liefert bewusst keine Zuege und keine Anmerkungen (gekaufte Sammlung),
+    /// und angemeldet bekommt man sie ohnehin, sobald man die Partie anfordert und nachspielt.
+    /// </summary>
+    [HttpGet("{id:int}/view")]
+    public async Task<ActionResult<LibraryGameViewDto>> View(int id, [FromQuery] string? lang, CancellationToken ct)
+    {
+        var view = await _service.ViewAsync(id, lang, ct);
+        return view is null ? NotFound() : Ok(view);
+    }
+
+    /// <summary>
     /// Diese Partie rechnen lassen. Antwortet mit der Analyse — der neuen oder, wenn sie schon
     /// spielbar ist, der vorhandenen (dann <c>alreadyPlayable</c>).
     ///

@@ -439,6 +439,15 @@ linke Ecke des Felds). Eingebaut auf der Partieseite und im Nachspiel-Dialog (`P
 das alte Symbol beim Stellungswechsel sofort weg und hält jedes Symbol, das in die Fahrzeit fällt
 (`AnimationMs` 200 + `BadgeSettleMs` 30), bis zu ihrem Ende zurück (`fenChangedAt`, `badgeTimer`).
 
+## Ähnliche Meisterpartien: anschauen + Fortschritt (0.567.0)
+
+`features/games/similar-games.component.ts` (Auswahl serverseitig, `SimilarGamesService`): je Zeile angemeldet ein
+Augen-Knopf „Mit Anmerkungen anschauen" → `GET /api/library-games/{id}/view?lang=<Oberfläche>` → der Nachspiel-Dialog
+(`PgnViewerComponent`, erst beim Klick per `import()` nachgeladen). Daneben `state(s)`: `play` (im Bestand oder die EIGENE
+Anforderung ist `done`), `computing` („Wird gerechnet … n %", aus `GameAnalysisService.list()`, alle `PollMs` 10 s, solange
+eine eigene Anforderung weder `done` noch `failed` ist), `request` (auch „Erneut anfordern" nach `failed`), `login`. Vorher
+sprang eine angeforderte Partie sofort auf „Spielen" — das Spiel stand dann vor ungerechneten Stellungen.
+
 ## Computer-Linien + Pfeil für den besten Zug (0.521.0)
 
 Zwei Schalter in der Kopfzeile des Rückblicks (`game-review.component.ts`), je Gerät gemerkt

@@ -2542,7 +2542,13 @@
       "sameEnd": "isto do {{last}}",
       "none": "Nijedna komentirana majstorska partija u našoj zbirci nije počela ovako.",
       "loadFailed": "Slične partije nije moguće učitati.",
-      "playFailed": "Partiju nije moguće pokrenuti."
+      "playFailed": "Partiju nije moguće pokrenuti.",
+      "view": "Pogledaj s komentarima",
+      "viewFailed": "Partiju nije moguće učitati.",
+      "computing": "Računa se … {{percent}} %",
+      "computingHint": "Ponavljanje je moguće kad motor izračuna svaku poziciju.",
+      "retry": "Ponovno zatraži",
+      "queued": "Partija se računa — možeš je ponoviti kad bude gotova."
     },
     "recap": {
       "hint": "Ukratko — napisala umjetna inteligencija na temelju analize enginea; isti tekst prikazuje se i u pregledu poveznice."

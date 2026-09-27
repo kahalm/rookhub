@@ -2806,7 +2806,13 @@
       "sameEnd": "{{last}}-ig azonos",
       "none": "A gyűjteményünkben egyetlen kommentált mesterjátszma sem kezdődött így.",
       "loadFailed": "A hasonló játszmákat nem sikerült betölteni.",
-      "playFailed": "A játszmát nem sikerült elindítani."
+      "playFailed": "A játszmát nem sikerült elindítani.",
+      "view": "Megtekintés megjegyzésekkel",
+      "viewFailed": "A játszmát nem sikerült betölteni.",
+      "computing": "Elemzés folyamatban … {{percent}} %",
+      "computingHint": "Akkor játszhatod újra, amikor a motor minden állást kiértékelt.",
+      "retry": "Újrakérés",
+      "queued": "A játszma elemzése folyamatban — ha kész, újrajátszhatod."
     },
     "recap": {
       "hint": "Röviden — a mesterséges intelligencia írta a gépi elemzés alapján; a link előnézete ugyanezt mutatja."

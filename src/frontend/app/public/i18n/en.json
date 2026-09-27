@@ -2542,7 +2542,13 @@
       "sameEnd": "same up to {{last}}",
       "none": "No annotated master game in our library began like this.",
       "loadFailed": "Similar games could not be loaded.",
-      "playFailed": "The game could not be started."
+      "playFailed": "The game could not be started.",
+      "view": "View with annotations",
+      "viewFailed": "The game could not be loaded.",
+      "computing": "Being analysed … {{percent}} %",
+      "computingHint": "You can replay it once the engine has analysed every position.",
+      "retry": "Request again",
+      "queued": "The game is being analysed — you can replay it once it is done."
     },
     "recap": {
       "hint": "In brief — written by the AI from the engine analysis; the link preview shows the same lines."
