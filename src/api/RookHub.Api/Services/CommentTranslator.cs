@@ -318,7 +318,7 @@ public sealed class CommentTranslator
             - Do not explain, summarise or improve. If a sentence is wrong, it stays wrong.
             - Keep one entry per input entry, with the same ply number.
             - Quotation marks: inside a text use ONLY {QuoteNote(to)}. Never write „ or “ or ”,
-              and never the straight double quote character.
+              and never the straight double quote character.{AddressNote(to)}
             """;
         return subject switch
         {
@@ -359,6 +359,18 @@ public sealed class CommentTranslator
         "de" => "the guillemets » and « (German: »like this«)",
         "en" => "the single quotation marks ‘ and ’ (‘like this’)",
         _ => "the guillemets « and » («like this»)",
+    };
+
+    /// <summary>
+    /// Wie der Leser angesprochen wird. Deutsch: „du" (Wunsch 2026-09-27). Ohne die Regel siezte Qwen fast immer — an acht
+    /// Prod-Kurslinien 22-mal „Sie" gegen einmal „du", mit ihr 0 gegen 18, auch in Aufforderungen („Finde den Weg",
+    /// „geh zurück und lies"). Andere Sprachen bekommen (noch) keine Vorgabe; eine neue Zeile hier aendert nur den Auftrag
+    /// der jeweiligen Zielsprache.
+    /// </summary>
+    private static string AddressNote(string to) => to switch
+    {
+        "de" => "\n- Address the reader informally with du (du, dich, dir, dein, ihr for several readers) — never with the formal Sie, Ihnen, Ihr.",
+        _ => "",
     };
 
     private static string FigurineNote(string to) => to switch

@@ -2452,6 +2452,12 @@ Regeln, die dabei nicht kippen duerfen:
   ging einer von zwei Versuchen glatt), bekommt eine Fuhre mit abgeschnittenem Zitat oder fehlenden Eintraegen EINEN
   zweiten Versuch (`MaxAttemptsPerChunk` = 2); ein abgebrochener Aufruf, zu wenig Text und die falsche Sprache nicht.
 
+* **Deutsch duzt den Leser** (0.565.1, `CommentTranslator.AddressNote`, Wunsch 2026-09-27): ohne Vorgabe siezte Qwen fast
+  immer („Beachten Sie …", „Finden Sie den Weg") — an acht Prod-Kurslinien 22-mal „Sie" gegen einmal „du"; mit der Zeile
+  „Address the reader informally with du …" 0 gegen 18, auch in Aufforderungen. Andere Zielsprachen bekommen (noch)
+  keine Vorgabe. Schon gespeicherte Uebersetzungen aendert das nicht — Stand 27.09.: 200 von 3 073
+  Bibliotheks-Saetzen und 234 von 1 486 Kurs-Saetzen siezen (Suche nach „Sie/Ihnen/Ihr…" mitten im Satz).
+
 Braucht `Anthropic:TextApiKey` (derselbe Schluessel wie die Puzzle-Tipps — NICHT der Konto-Schluessel
 `Anthropic:ApiKey`, der gehoert allein dem Formular-Einlesen). Ohne Schluessel passiert
 nichts — der Rest des Stacks laeuft unveraendert. **Das Modell ist ein eigener Schalter**

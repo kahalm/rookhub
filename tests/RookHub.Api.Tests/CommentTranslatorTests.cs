@@ -97,7 +97,8 @@ public class CommentTranslatorTests
     }
 
     /// <summary>Der Auftrag fuer Partien ist der von vor dem Umbau — auch bei „und" —, seit 0.551.1 mit der Regel zu
-    /// den Anfuehrungszeichen (ein gerades " beendet den JSON-String, siehe <c>ZitatMitGerademAnfuehrungszeichen_*</c>).</summary>
+    /// den Anfuehrungszeichen (ein gerades " beendet den JSON-String, siehe <c>ZitatMitGerademAnfuehrungszeichen_*</c>),
+    /// seit 0.565.1 fuer Deutsch mit der Du-Form.</summary>
     [Fact]
     public void GamePrompt_UnveraendertGegenueberVorher()
     {
@@ -112,6 +113,7 @@ public class CommentTranslatorTests
             - Keep one entry per input entry, with the same ply number.
             - Quotation marks: inside a text use ONLY the guillemets » and « (German: »like this«). Never write „ or “ or ”,
               and never the straight double quote character.
+            - Address the reader informally with du (du, dich, dir, dein, ihr for several readers) — never with the formal Sie, Ihnen, Ihr.
             """;
         Assert.Equal(expected, CommentTranslator.SystemPrompt("und", "de", TranslationSubject.Game));
         Assert.StartsWith(expected, CommentTranslator.SystemPrompt("en", "de", TranslationSubject.CourseLine)
@@ -227,5 +229,17 @@ public class CommentTranslatorTests
         var prompt = CommentTranslator.SystemPrompt("en", to, TranslationSubject.CourseLine);
         Assert.Contains(expected, prompt);
         Assert.Contains("Never write „ or “ or ”", prompt);
+    }
+
+    /// <summary>Deutsch duzt den Leser (Wunsch 2026-09-27); andere Zielsprachen bekommen keine solche Zeile.</summary>
+    [Theory]
+    [InlineData(TranslationSubject.Game)]
+    [InlineData(TranslationSubject.CourseLine)]
+    [InlineData(TranslationSubject.CourseChapters)]
+    public void Prompt_DeutschMitDuForm(TranslationSubject subject)
+    {
+        Assert.Contains("informally with du", CommentTranslator.SystemPrompt("en", "de", subject));
+        Assert.DoesNotContain("informally", CommentTranslator.SystemPrompt("de", "en", subject));
+        Assert.DoesNotContain("informally", CommentTranslator.SystemPrompt("en", "fr", subject));
     }
 }

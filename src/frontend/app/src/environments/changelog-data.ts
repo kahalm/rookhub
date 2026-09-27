@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.565.1", date: "2026-09-27", changes: [
+    { en: "German machine translations of course and game annotations now address the reader informally (“du”) instead of formally (“Sie”) — the model used the formal form almost every time.", de: "Deutsche Übersetzungen von Kurs- und Partiekommentaren sprechen den Leser jetzt mit „du“ an statt mit „Sie“ — das Modell hat bisher fast immer gesiezt." },
+  ] },
   { version: "0.565.0", date: "2026-09-27", changes: [
     { en: "KidHub courses get their own child-friendly titles in each language of the kids’ site (for example “Checkmate in One” instead of “Learn Chess the Right Way – Book 1: Must-know Checkmates”); the book keeps its name on RookHub. Admins set them with the pencil next to “Kids” in the book admin.", de: "KidHub-Kurse bekommen eigene, kindgerechte Titel in jeder Sprache der Kinderseite (etwa „Matt in einem Zug“ statt „Learn Chess the Right Way – Book 1: Must-know Checkmates“); in RookHub behält das Buch seinen Namen. Admins setzen sie über den Stift neben „Kinder“ in der Bücherverwaltung." },
     { en: "A kids’ course only appears on KidHub once it is available in German — either written in German or translated completely. Until then it is hidden, direct links included.", de: "Ein Kinderkurs erscheint auf KidHub erst, wenn er auf Deutsch vorliegt — deutsch geschrieben oder fertig übersetzt. Bis dahin ist er ausgeblendet, auch über einen direkten Link." },
