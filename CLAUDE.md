@@ -3212,10 +3212,17 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
 **8096** / Dev **8097** (`KIDHUB_PORT`). Name vom Nutzer („KidHub", 2026-09-27). API und Endpunkte: „KidHub —
 Kinderseite" unter REST API.
 
-- **Kein Konto, keine Anmeldung**: kein `authInterceptor`, kein `visitorInterceptor`; Fortschritt nur im
+- **Spielen ohne Konto**: kein `visitorInterceptor`; Fortschritt nur im
   localStorage (`rh-kids-progress-v1`, `KidsProgressStore`): Sterne je Stufe (0–1 Fehler = 3, 2–4 = 2, sonst 1 —
   Tipps zählen als Fehler), der laufende Durchgang (Aufgabe + Fehler), gelöste Kurs-Linien. Stufe n ist offen,
   sobald n−1 geschafft ist.
+- **Anmelden/Registrieren** (0.561.0, Wunsch 2026-09-27 „auf der ersten Seite rechts oben"): NUR auf der Startseite
+  rechts oben (`isHomeUrl`, mitten in einer Stufe lenkt ein Konto-Knopf ab) — abgemeldet „Anmelden" + „Registrieren",
+  angemeldet der Name + „Abmelden" (führt zurück auf `/`, nicht auf die Maske). Die Masken sind RookHubs eigene
+  (`/login`, `/register`, `/forgot-password`, `/reset-password` über `@rh/features/auth`, `guestGuard`), mit
+  `authInterceptor`; beim Start tauscht `HandoffService.consumeIncoming()` das geteilte Cookie gegen eine eigene
+  Anmeldung — wer in RookHub oder auf der Turnierseite angemeldet ist, ist es hier auch. Am Fortschritt ändert die
+  Anmeldung (noch) nichts: er bleibt im localStorage des Geräts, und Abmelden räumt ihn nicht ab.
 - **Geteilt über `@rh/*`**: HTTP-Kette (connectivity, retry, renderAfterHttp), Sprachdateien (Namespace `kids.*`,
   gepflegt in en/de/hr/hu — nur diese vier bietet die Seite an), `PuzzleBoardComponent` (neues Input `autoQueen`:
   Umwandlung ohne Auswahl zur Dame), Impressum/Datenschutz als eigene Routen.

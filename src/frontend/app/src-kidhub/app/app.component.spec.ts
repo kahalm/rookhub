@@ -1,20 +1,29 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { Component } from '@angular/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { SwUpdate } from '@angular/service-worker';
 import { Subject } from 'rxjs';
-import { KidHubAppComponent, KIDS_LANGUAGES } from './app.component';
+import { isHomeUrl, KidHubAppComponent, KIDS_LANGUAGES } from './app.component';
+import { AuthResponse, AuthService } from '@rh/core/auth.service';
 import { FORMAT_LOCALES, LocaleService } from '@rh/core/locale.service';
+
+@Component({ standalone: true, template: '' })
+class BlankComponent {}
+
+/** Ein Token ohne Ablauf — die Anmeldung prueft nur `exp`. */
+const USER: AuthResponse = { token: 'e30.e30.x', username: 'lena', userId: 7, isAdmin: false };
 
 describe('KidHubAppComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [KidHubAppComponent],
       providers: [
-        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideHttpClient(), provideHttpClientTesting(),
+        provideRouter([{ path: '', component: BlankComponent }, { path: 'levels', component: BlankComponent }]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         {
           provide: SwUpdate,
@@ -27,7 +36,7 @@ describe('KidHubAppComponent', () => {
     });
   });
 
-  afterEach(() => localStorage.removeItem('rookhub_lang'));
+  afterEach(() => { localStorage.removeItem('rookhub_lang'); localStorage.removeItem('rookhub_user'); });
 
   function selected(f: { nativeElement: HTMLElement }): string {
     return (f.nativeElement.querySelector('footer select') as HTMLSelectElement).value;
@@ -119,5 +128,56 @@ describe('KidHubAppComponent', () => {
       .map(a => a.getAttribute('href'));
     expect(hrefs).toContain('/impressum');
     expect(hrefs).toContain('/privacy');
+  });
+
+  function account(f: { nativeElement: HTMLElement }): HTMLElement | null {
+    return f.nativeElement.querySelector('header .account');
+  }
+
+  it('Startseite ohne Anmeldung: rechts oben Anmelden und Registrieren', async () => {
+    const f = TestBed.createComponent(KidHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    const links = Array.from(account(f)!.querySelectorAll('a') as NodeListOf<HTMLAnchorElement>)
+      .map(a => a.getAttribute('href'));
+    expect(links).toEqual(['/login?returnUrl=%2F', '/register?returnUrl=%2F']);
+  });
+
+  it('schon angemeldet (geteiltes Cookie): Name statt der Knoepfe', async () => {
+    const f = TestBed.createComponent(KidHubAppComponent);
+    f.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/session').flush(USER);
+    await f.whenStable();
+    f.detectChanges();
+    expect(account(f)!.textContent).toContain('lena');
+    expect(account(f)!.querySelector('a')).toBeNull();
+    expect(account(f)!.querySelector('button')).not.toBeNull();
+  });
+
+  it('Abmelden fuehrt zurueck zur Startseite und zeigt wieder die Knoepfe', async () => {
+    TestBed.inject(AuthService).adoptSession(USER);
+    const f = TestBed.createComponent(KidHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/');
+    f.detectChanges();
+    (account(f)!.querySelector('button') as HTMLButtonElement).click();
+    await f.whenStable();
+    f.detectChanges();
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(account(f)!.querySelectorAll('a').length).toBe(2);
+  });
+
+  it('in einer Stufe gibt es keinen Konto-Knopf', async () => {
+    const f = TestBed.createComponent(KidHubAppComponent);
+    await TestBed.inject(Router).navigateByUrl('/levels');
+    f.detectChanges();
+    expect(account(f)).toBeNull();
+  });
+
+  it('isHomeUrl: Abfrage und Anker zaehlen nicht', () => {
+    expect(isHomeUrl('/')).toBeTrue();
+    expect(isHomeUrl('/?quickstart=1')).toBeTrue();
+    expect(isHomeUrl('/#oben')).toBeTrue();
+    expect(isHomeUrl('/levels')).toBeFalse();
+    expect(isHomeUrl('/login?returnUrl=%2F')).toBeFalse();
   });
 });

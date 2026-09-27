@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, untracked } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AppLang, LocaleService } from '@rh/core/locale.service';
 import { AppUpdateService } from '@rh/core/app-update.service';
-import { catchError, of, timeout } from 'rxjs';
+import { AuthService } from '@rh/core/auth.service';
+import { HandoffService } from '@rh/core/handoff.service';
+import { catchError, filter, map, of, timeout } from 'rxjs';
 import { environment } from '../../src/environments/environment';
 import { KidsApiService } from './core/kids-api.service';
 
@@ -22,8 +25,15 @@ function isKidsLanguage(code: string): code is AppLang {
   return KIDS_LANGUAGES.some(l => l.code === code);
 }
 
+/** Pfad ohne Abfrage und Anker — `/?quickstart=1` (nach dem Registrieren) ist auch die Startseite. */
+export function isHomeUrl(url: string): boolean {
+  const path = url.split(/[?#]/)[0];
+  return path === '/' || path === '';
+}
+
 /**
- * Huelle der Kinderseite: eine schlichte Kopfzeile (Logo = zurueck zum Start), der Inhalt, unten
+ * Huelle der Kinderseite: eine schlichte Kopfzeile (Logo = zurueck zum Start; auf der Startseite
+ * rechts Anmelden/Registrieren bzw. der Name und Abmelden), der Inhalt, unten
  * Sprache, Version und die Pflichtseiten. Die Farben der ganzen Seite stehen hier als Variablen
  * (`--kid-*`) — hell und freundlich, bewusst unabhaengig vom Design-Modus von RookHub.
  */
@@ -38,6 +48,19 @@ function isKidsLanguage(code: string): code is AppLang {
         <img class="mark" src="icons/icon-192.png" alt="" width="40" height="40">
         <span>{{ 'kids.home.title' | translate }}</span>
       </a>
+      <!-- Nur auf der Startseite: mitten in einer Stufe lenkt ein Konto-Knopf ab. Spielen geht
+           ohne Konto; angemeldet ist es dasselbe Konto wie in RookHub. -->
+      @if (isHome()) {
+        <nav class="account">
+          @if (user(); as u) {
+            <span class="who">👋 {{ u.username }}</span>
+            <button type="button" class="acct" (click)="logout()">{{ 'nav.logout' | translate }}</button>
+          } @else {
+            <a class="acct" routerLink="/login" [queryParams]="{ returnUrl: '/' }">{{ 'nav.login' | translate }}</a>
+            <a class="acct primary" routerLink="/register" [queryParams]="{ returnUrl: '/' }">{{ 'nav.register' | translate }}</a>
+          }
+        </nav>
+      }
     </header>
     <main><router-outlet /></main>
     <footer class="foot">
@@ -78,7 +101,15 @@ function isKidsLanguage(code: string): code is AppLang {
       background: radial-gradient(circle at 10% 0%, #fff7d6 0, transparent 40%), var(--kid-bg);
       color: #1f2d3d; font-family: Roboto, "Helvetica Neue", sans-serif;
     }
-    .top { padding: 10px 16px; }
+    .top { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+           flex-wrap: wrap; gap: 8px 12px; }
+    .account { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+    .who { font-weight: 700; color: var(--kid-title); }
+    .acct { font: inherit; font-weight: 800; font-size: .95rem; text-decoration: none; cursor: pointer;
+            padding: 7px 14px; border-radius: 999px; border: 2px solid var(--kid-title);
+            background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow); }
+    .acct.primary { background: var(--kid-green); border-color: var(--kid-green); color: #fff; }
+    .acct:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
     .logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--kid-title);
             font-size: 1.35rem; font-weight: 900; }
     .mark { width: 40px; height: 40px; }
@@ -97,8 +128,20 @@ export class KidHubAppComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly translate = inject(TranslateService);
+  private readonly auth = inject(AuthService);
+  private readonly handoff = inject(HandoffService);
+  private readonly router = inject(Router);
 
   readonly languages = KIDS_LANGUAGES;
+  /** Angemeldet? Als Signal — die Anmeldung kommt asynchron (geteiltes Cookie, Maske). */
+  readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
+  readonly isHome = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(e => isHomeUrl(e.urlAfterRedirects)),
+    ),
+    { initialValue: isHomeUrl(this.router.url) },
+  );
   readonly version = environment.version;
   /** Die TATSAECHLICH aktive Sprache — nicht eine eigene Kopie, die mit ihr auseinanderlaufen kann. */
   readonly lang = computed(() => this.translate.currentLang());
@@ -140,6 +183,15 @@ export class KidHubAppComponent implements OnInit {
   ngOnInit(): void {
     this.locale.init();
     this.appUpdate.start(this.destroyRef);
+    // Schon in RookHub oder auf der Turnierseite angemeldet? Das geteilte Cookie gegen eine eigene
+    // Anmeldung tauschen (204 = keine, der Normalfall bleibt still).
+    void this.handoff.consumeIncoming();
+  }
+
+  /** Abmelden fuehrt zurueck auf die Startseite, nicht auf die Anmeldemaske wie in RookHub. */
+  logout(): void {
+    this.auth.logout();
+    void this.router.navigateByUrl('/');
   }
 
   /** Speichert die Wahl — geraetelokal und im geteilten Cookie, also auch fuer RookHub und die Turnierseite. */

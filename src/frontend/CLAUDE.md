@@ -23,7 +23,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 |---------|--------|--------|-------|--------|
 | `app` | `src/` | `dist/app/browser` | `rookhub-frontend` | rookhub(-dev).oberschmid.homes |
 | `turnier` | `src-turnier/` | `dist/turnier/browser` | `rookhub-turnier` | turnier(-dev).oberschmid.homes |
-| `kidhub` | `src-kidhub/` | `dist/kidhub/browser` | `rookhub-kidhub` | kidhub(-dev).oberschmid.homes (Kinderseite, ohne Konto) |
+| `kidhub` | `src-kidhub/` | `dist/kidhub/browser` | `rookhub-kidhub` | kidhub(-dev).oberschmid.homes (Kinderseite, spielbar ohne Konto) |
 
 - `src-turnier/` enthaelt nur, was die Turnierseite EIGEN hat: Einstiegspunkt, Routen, Navbar und
   die Turnier-Features. Alles Geteilte (Auth, Interceptors, i18n, shared/) kommt per Pfad-Alias

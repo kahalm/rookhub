@@ -14,6 +14,7 @@ import { routes } from './app.routes';
 import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.interceptor';
 import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
+import { authInterceptor } from '@rh/core/auth.interceptor';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 
 registerLocaleData(localeDe);
@@ -21,16 +22,17 @@ registerLocaleData(localeHr);
 registerLocaleData(localeHu);
 
 /**
- * Die Kinderseite teilt sich mit RookHub die HTTP-Kette, die Sprachdateien und das Brett (Import
- * ueber `@rh/*`). Bewusst NICHT dabei: Anmeldung (`authInterceptor`) und die anonyme Sitzungs-Id
- * (`visitorInterceptor`) — die Kinderseite kennt kein Konto, ihr Fortschritt bleibt auf dem Geraet.
+ * Die Kinderseite teilt sich mit RookHub die HTTP-Kette, die Sprachdateien, das Brett und die
+ * Anmeldung (Import ueber `@rh/*`). Spielen geht weiter OHNE Konto — der Fortschritt bleibt auf dem
+ * Geraet; Anmelden/Registrieren bietet die Startseite an, es ist dasselbe Konto wie in RookHub.
+ * Bewusst NICHT dabei: die anonyme Sitzungs-Id (`visitorInterceptor`).
  */
 export const kidhubConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
-    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, renderAfterHttpInterceptor])),
+    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
     provideTranslateService({
       fallbackLang: 'en',
