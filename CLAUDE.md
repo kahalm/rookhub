@@ -2152,7 +2152,8 @@ eine andere Entscheidung als „ich rechne mir meine Partie durch".
 
 **Befuellt wird mit `tools/LibraryImport`** (Wartungswerkzeug, kein Teil des API-Images; das
 Docker-Image baut nur aus `src/api/RookHub.Api`). Vier Schritte, jeder fuer sich wiederholbar:
-`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats` und `comments`.
+`import <datei>` · `dedupe` · `openings` · `languages` · `score`, dazu `stats`, `comments` und `resplit`
+(zweisprachige Partien, die als einsprachig vermerkt sind — siehe „Anmerkungen in mehreren Sprachen").
 
 **`queue [anzahl] --user <id>`** ist der Massen-Weg zu dem, was auf der Seite der Knopf „Partie
 anfordern" je Partie tut: die besten Partien des Bestands als `GameAnalysis` mit `Origin = Guess`
@@ -2361,6 +2362,23 @@ Drei Entscheidungen, die dabei tragen:
 * **Im Zweifel wird nicht geschnitten.** Reichen die Belege nicht oder widersprechen sie sich,
   bleibt der Block ganz und zaehlt zur ersten Sprache. Ein halbierter Satz ist schlimmer als ein
   zweisprachiger Block.
+
+**Zweisprachig, aber als einsprachig vermerkt** (0.560.3, `CommentSetService.ResplitLibraryAsync`,
+`tools/LibraryImport resplit [--dry-run] [--limit n] [--game id]`). Getrennt wird nur, wenn `Languages` ZWEI
+Sprachen nennt — und `CommentLanguage.Detect` nimmt die zweite erst ab 60 % der Treffer der ersten, gezaehlt in
+den ersten 4000 Zeichen. Eine ChessBase-Partie, deren Kommentar vorn fast nur Englisch traegt (Zugnummern,
+Varianten) und den deutschen Teil erst spaeter, stand damit als `en` da: EIN gemischter Quell-Satz, und die
+deutsche Uebersetzung warf die deutsche Haelfte zu Recht weg — und scheiterte an der Laengenpruefung („zu wenig
+Text", am 2026-09-27 an Partie 108403 nachgestellt: 46 % deutsche Treffer vorn, 67 % ueber den ganzen Text).
+Gemessen an 3 495 englischen Quell-Saetzen auf Prod: einsprachig Englisch liegt fast immer unter 5 %, zweisprachig
+zwischen 10 und 100 %. `resplit` zaehlt deshalb ueber den GANZEN Kommentar (`CommentLanguage.Rank`) und nimmt die
+zweite Sprache schon ab 20 % (`ResplitMinSecondShare`), verlangt aber, dass die Satz-Trennung sie auch TRAEGT: mindestens
+zwei Halbzuege und mindestens halb so viele wie die erste (`ResplitMinCoverage`). Ohne diese zweite Schranke bekaeme
+ein englischer Kommentar mit EINEM deutschen Zitat einen winzigen deutschen Quell-Satz — und der sperrte die Partie fuer
+die deutsche Uebersetzung. Umgebaut wird nur ohne von Hand gepflegte Fassung (`Human` → `Conflict`): `Languages` auf
+„erste,zweite", die Quell-Saetze neu, die maschinellen Saetze in BEIDEN Sprachen weg (sie entstanden aus dem Gemisch).
+Die Schwelle von `Detect` selbst bleibt — sie entscheidet beim Einlesen, und dort ist ein falsches „zweisprachig"
+teurer als ein verpasstes.
 
 **Gebaut wird beim Einreihen, nicht auf Vorrat** (`CommentSetService.EnsureSourceAsync`, gerufen
 aus `GameAnalysisService.CreateAsync` und aus `tools/LibraryImport queue`): der Rohbestand hat

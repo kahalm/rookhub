@@ -85,4 +85,16 @@ public class CommentLanguageTests
 
         Assert.True(CommentLanguage.CommentText(pgn, 1000).Length <= 1000 + 50);
     }
+
+    [Fact]
+    public void Rank_liefertTrefferJeSpracheMeisteZuerst()
+    {
+        var ranked = CommentLanguage.Rank(
+            "The move is good and the position is better now. Der Zug ist gut und die Stellung ist besser.");
+
+        Assert.Equal("en", ranked[0].Lang);
+        Assert.Equal("de", ranked[1].Lang);
+        Assert.True(ranked[0].Hits >= ranked[1].Hits);
+        Assert.Empty(CommentLanguage.Rank(""));
+    }
 }

@@ -171,4 +171,123 @@ public class CommentSetServiceTests : IDisposable
         Assert.Equal(0, await _svc.EnsureSourceAsync(id));
         Assert.Empty(await _db.CommentSets.ToListAsync());
     }
+
+    // ── Nachzug: zweisprachig, aber als einsprachig vermerkt (0.560.1) ──────────────────────────
+
+    private async Task<int> LibraryRowAsync(string pgn, string languages)
+    {
+        var row = new LibraryGame { Pgn = pgn, Languages = languages };
+        _db.LibraryGames.Add(row);
+        await _db.SaveChangesAsync();
+        return row.Id;
+    }
+
+    private async Task AddSetAsync(int libraryGameId, string language, CommentOrigin origin, string text)
+    {
+        var set = new CommentSet { LibraryGameId = libraryGameId, Language = language, Origin = origin };
+        set.Texts.Add(new CommentText { Ply = 0, Text = text });
+        _db.CommentSets.Add(set);
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Der Fall vom 2026-09-27 (Partie 108403): als „en" vermerkt, die Quelle traegt beide Sprachen, und die
+    /// maschinelle deutsche Uebersetzung entstand aus dem gemischten Text. Danach: zwei Quell-Saetze, keine Maschine.</summary>
+    [Fact]
+    public async Task Resplit_zerlegtZweisprachigeAlsEnVermerktePartie()
+    {
+        var id = await LibraryRowAsync(BilingualPgn, "en");
+        Assert.Equal(1, await _svc.EnsureSourceForLibraryAsync(id));   // heute: EIN gemischter en-Satz
+        await AddSetAsync(id, "de", CommentOrigin.Machine, "Maschinell aus dem Gemisch");
+
+        var r = await _svc.ResplitLibraryAsync(id);
+
+        Assert.Equal(ResplitStatus.Applied, r.Status);
+        Assert.Equal("en,de", r.Languages);
+        Assert.Equal(1, r.RemovedMachineSets);
+        Assert.Equal("en,de", (await _db.LibraryGames.AsNoTracking().SingleAsync(g => g.Id == id)).Languages);
+        var sets = await _db.CommentSets.AsNoTracking().Include(s => s.Texts).Where(s => s.LibraryGameId == id).ToListAsync();
+        Assert.Equal(2, sets.Count);
+        Assert.All(sets, s => Assert.Equal(CommentOrigin.Source, s.Origin));
+        var en = sets.Single(s => s.Language == "en");
+        var de = sets.Single(s => s.Language == "de");
+        Assert.Contains(en.Texts, t => t.Text.Contains("main move"));
+        Assert.DoesNotContain(en.Texts, t => t.Text.Contains("Hauptzug"));
+        Assert.Contains(de.Texts, t => t.Text.Contains("Hauptzug"));
+    }
+
+    /// <summary>Ein englischer Kommentar mit EINEM deutschen Zitat ist keine zweisprachige Partie — ein winziger deutscher
+    /// Quell-Satz sperrte sie sonst fuer die deutsche Uebersetzung.</summary>
+    [Fact]
+    public async Task Resplit_englischMitEinemDeutschenSatz_bleibtEinsprachig()
+    {
+        const string pgn = """
+            [White "A"]
+            [Black "B"]
+
+            1. e4 {This is the main move and the position is good for White, with a better game now.} e5 {Black
+            answers in the same way and that is the most popular move after this.} 2. Nf3 {The knight move is
+            very natural and it has been played in this position a lot.} Nc6 {Here the black knight defends the
+            pawn and the game is now balanced.} 3. Bb5 {The famous Spanish move, and a quote: Das ist der beste Zug
+            und die Stellung ist sehr gut.} *
+            """;
+        var id = await LibraryRowAsync(pgn, "en");
+        await AddSetAsync(id, "de", CommentOrigin.Machine, "Bleibt stehen");
+
+        var r = await _svc.ResplitLibraryAsync(id);
+
+        Assert.Equal(ResplitStatus.NotBilingual, r.Status);
+        Assert.Equal("en", (await _db.LibraryGames.AsNoTracking().SingleAsync(g => g.Id == id)).Languages);
+        Assert.Single(await _db.CommentSets.Where(s => s.LibraryGameId == id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task Resplit_Probelauf_schreibtNichts()
+    {
+        var id = await LibraryRowAsync(BilingualPgn, "en");
+        await _svc.EnsureSourceForLibraryAsync(id);
+        await AddSetAsync(id, "de", CommentOrigin.Machine, "Maschinell");
+
+        var r = await _svc.ResplitLibraryAsync(id, dryRun: true);
+
+        Assert.Equal(ResplitStatus.WouldApply, r.Status);
+        Assert.Equal(1, r.RemovedMachineSets);
+        Assert.Equal("en", (await _db.LibraryGames.AsNoTracking().SingleAsync(g => g.Id == id)).Languages);
+        Assert.Equal(2, await _db.CommentSets.CountAsync(s => s.LibraryGameId == id));
+    }
+
+    /// <summary>Eine von Hand gepflegte Fassung ist nicht wiederherstellbar — sie verhindert den Umbau.</summary>
+    [Fact]
+    public async Task Resplit_vonHandGepflegteFassung_verhindertUmbau()
+    {
+        var id = await LibraryRowAsync(BilingualPgn, "en");
+        await _svc.EnsureSourceForLibraryAsync(id);
+        await AddSetAsync(id, "de", CommentOrigin.Human, "Von Hand");
+
+        var r = await _svc.ResplitLibraryAsync(id);
+
+        Assert.Equal(ResplitStatus.Conflict, r.Status);
+        Assert.Equal("en", (await _db.LibraryGames.AsNoTracking().SingleAsync(g => g.Id == id)).Languages);
+        Assert.Equal(2, await _db.CommentSets.CountAsync(s => s.LibraryGameId == id));
+    }
+
+    /// <summary>Ohne Saetze wird nur die Sprache korrigiert — die Saetze entstehen beim ersten Bedarf, dann zerlegt.</summary>
+    [Fact]
+    public async Task Resplit_ohneSaetze_setztNurDieSprachen()
+    {
+        var id = await LibraryRowAsync(BilingualPgn, "en");
+
+        var r = await _svc.ResplitLibraryAsync(id);
+
+        Assert.Equal(ResplitStatus.Applied, r.Status);
+        Assert.Equal(0, await _db.CommentSets.CountAsync());
+        Assert.Equal(2, await _svc.EnsureSourceForLibraryAsync(id));
+    }
+
+    [Fact]
+    public async Task Resplit_schonZweisprachig_bleibtUnangetastet()
+    {
+        var id = await LibraryRowAsync(BilingualPgn, "en,de");
+
+        Assert.Equal(ResplitStatus.AlreadyBilingual, (await _svc.ResplitLibraryAsync(id)).Status);
+    }
 }

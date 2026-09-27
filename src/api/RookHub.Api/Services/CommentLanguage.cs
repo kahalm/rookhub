@@ -52,7 +52,7 @@ public static class CommentLanguage
 
     /// <summary>Ab so vielen erkannten Woertern trauen wir dem Ergebnis. Darunter ist es Zufall:
     /// „e4 e5" plus zwei Ausrufezeichen sagt ueber die Sprache nichts.</summary>
-    private const int MinHits = 5;
+    public const int MinHits = 5;
 
     /// <summary>Liegt die zweitbeste Sprache so nah an der besten, stehen vermutlich beide im Text
     /// (Sammlungen mischen das) — dann werden beide genannt.</summary>
@@ -77,6 +77,24 @@ public static class CommentLanguage
         }
         if (letters > 40 && cyrillic > letters / 5) return "ru";
 
+        var ranked = Rank(text);
+        if (ranked.Count == 0) return null;
+        if (ranked[0].Hits < MinHits) return null;
+
+        var result = ranked[0].Lang;
+        if (ranked.Count > 1 && ranked[1].Hits >= ranked[0].Hits * SecondShare && ranked[1].Hits >= MinHits)
+            result += "," + ranked[1].Lang;
+        return result;
+    }
+
+    /// <summary>
+    /// Die Treffer der Funktionswoerter je Sprache, meiste zuerst (bei Gleichstand nach Kuerzel) — die Rohzahlen hinter
+    /// <see cref="Detect"/>. Gebraucht vom Nachzug zweisprachiger Partien (<c>CommentSetService.ResplitLibraryAsync</c>):
+    /// dort ist die Schwelle fuer die zweite Sprache eine andere, weil die Aufteilung selbst noch entscheidet.
+    /// </summary>
+    public static IReadOnlyList<(string Lang, int Hits)> Rank(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return [];
         var hits = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var word in Words(text))
         {
@@ -84,15 +102,8 @@ public static class CommentLanguage
                 if (Array.IndexOf(markers, word) >= 0)
                     hits[lang] = hits.GetValueOrDefault(lang) + 1;
         }
-        if (hits.Count == 0) return null;
-
-        var ranked = hits.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
-        if (ranked[0].Value < MinHits) return null;
-
-        var result = ranked[0].Key;
-        if (ranked.Count > 1 && ranked[1].Value >= ranked[0].Value * SecondShare && ranked[1].Value >= MinHits)
-            result += "," + ranked[1].Key;
-        return result;
+        return hits.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => (kv.Key, kv.Value)).ToList();
     }
 
     /// <summary>
