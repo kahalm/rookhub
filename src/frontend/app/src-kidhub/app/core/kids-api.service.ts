@@ -1,0 +1,72 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+/** Thema einer Stufe — die Schluessel kommen so vom Server (`KidsCurriculum.Themes`). */
+export type KidsTheme = 'mate1' | 'promote' | 'capture' | 'fork' | 'skewer' | 'mate2' | 'pin' | 'discovered';
+
+export interface KidsLevel {
+  level: number;
+  theme: KidsTheme;
+  puzzleCount: number;
+}
+
+export interface KidsPuzzle {
+  id: number;
+  fen: string;
+  /** Lichess-Form: moves[0] stellt die Aufgabe, danach ist das Kind am Zug. */
+  moves: string;
+}
+
+export interface KidsLevelDetail {
+  level: number;
+  theme: KidsTheme;
+  puzzles: KidsPuzzle[];
+}
+
+export interface KidsCourse {
+  bookId: number;
+  title: string;
+  description: string | null;
+  puzzleCount: number;
+}
+
+/** Die Felder einer Kurs-Linie, die die Kinderseite braucht (Teilmenge von `BookPuzzleDto`). */
+export interface KidsCourseLine {
+  id: number;
+  bookTitle: string | null;
+  fen: string;
+  moves: string;
+  startPly: number;
+  title: string | null;
+  titleLabel?: string | null;
+  chapter: string | null;
+  chapterLabel?: string | null;
+  comment: string | null;
+  moveComments: Record<number, string> | null;
+  altMoves: string | null;
+}
+
+/** Offene Endpunkte der Kinderseite (`/api/kids/*`) — ohne Anmeldung. */
+@Injectable({ providedIn: 'root' })
+export class KidsApiService {
+  private readonly http = inject(HttpClient);
+  private readonly base = '/api/kids';
+
+  levels(): Observable<KidsLevel[]> {
+    return this.http.get<KidsLevel[]>(`${this.base}/levels`);
+  }
+
+  level(level: number): Observable<KidsLevelDetail> {
+    return this.http.get<KidsLevelDetail>(`${this.base}/levels/${level}`);
+  }
+
+  courses(): Observable<KidsCourse[]> {
+    return this.http.get<KidsCourse[]>(`${this.base}/courses`);
+  }
+
+  coursePuzzles(bookId: number, lang?: string): Observable<KidsCourseLine[]> {
+    const params = lang ? new HttpParams().set('lang', lang) : undefined;
+    return this.http.get<KidsCourseLine[]>(`${this.base}/courses/${bookId}/puzzles`, { params });
+  }
+}

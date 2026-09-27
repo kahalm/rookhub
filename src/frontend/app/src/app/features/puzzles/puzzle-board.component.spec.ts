@@ -52,6 +52,27 @@ describe('PuzzleBoardComponent Promotion-Anbindung', () => {
 
     expect(emit).not.toHaveBeenCalled();
   });
+
+  it('autoQueen: meldet sofort eine Dame, ohne Auswahl zu zeigen (Kinderseite)', () => {
+    const comp = new PuzzleBoardComponent();
+    comp.autoQueen = true;
+    const emit = spyOn(comp.moveMade, 'emit');
+
+    (comp as any).showPromotionDialog('a7' as Key, 'a8' as Key);
+
+    expect(emit).toHaveBeenCalledWith({ orig: 'a7' as Key, dest: 'a8' as Key, promotion: 'q' });
+    expect(comp.pendingPromotion).toBeNull();
+  });
+
+  it('ohne autoQueen bleibt es bei der Auswahl', () => {
+    const comp = new PuzzleBoardComponent();
+    const emit = spyOn(comp.moveMade, 'emit');
+
+    (comp as any).showPromotionDialog('a7' as Key, 'a8' as Key);
+
+    expect(emit).not.toHaveBeenCalled();
+    expect(comp.pendingPromotion).toEqual({ orig: 'a7' as Key, dest: 'a8' as Key });
+  });
 });
 
 /**

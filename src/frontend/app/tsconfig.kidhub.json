@@ -1,0 +1,15 @@
+/* Build-Konfiguration von KidHub (Kinderseite) (drittes Projekt im selben Workspace). */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/kidhub",
+    "types": []
+  },
+  "files": [
+    "src-kidhub/main.ts"
+  ],
+  "include": [
+    "src-kidhub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

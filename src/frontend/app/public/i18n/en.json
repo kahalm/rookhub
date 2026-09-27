@@ -2178,11 +2178,13 @@
         "random": "Random",
         "blind": "Blind",
         "public": "Public",
+        "kids": "Kids",
         "visibleFor": "Visible for (courses)",
         "actions": "Actions",
         "kind": "Type"
       },
       "publicHint": "Public: this course can be used without registration via its direct link. An anonymous visitor's progress stays local to the browser.",
+      "kidsHint": "Kids: this course appears on the kids' site and can be played there without logging in (calculation books excluded).",
       "slugPlaceholder": "alias e.g. mate1",
       "slugHint": "Optional short alias for the public link: the course is then reachable at /<alias> (e.g. /mate1). Lowercase letters, digits and hyphens, unique. Empty = no alias.",
       "errors": {
@@ -3815,6 +3817,93 @@
         "title": "Track a player"
       }
     }
+  },
+  "kids": {
+    "home": {
+      "title": "KidHub",
+      "subtitle": "Chess puzzles to crack – start really easy, level by level.",
+      "start": "Let's go: level {{level}}",
+      "continue": "Continue with level {{level}}",
+      "puzzles": "Puzzles",
+      "courses": "Courses",
+      "levelsDone": "{{done}} of {{total}} levels done",
+      "courseCount": "{{count}} courses"
+    },
+    "levels": {
+      "title": "Levels",
+      "level": "Level {{level}}",
+      "locked": "Still locked",
+      "lockedHint": "This level is still locked. Finish the one before it first!",
+      "empty": "The levels are being prepared – check back in a moment.",
+      "progress": "{{done}} of {{total}} puzzles",
+      "completed": "Level complete!",
+      "stars": "{{stars}} stars",
+      "nextLevel": "Next level",
+      "again": "Play again"
+    },
+    "courses": {
+      "title": "Courses",
+      "empty": "No courses for kids yet.",
+      "progress": "{{done}} of {{total}} done",
+      "completed": "Course complete!",
+      "restart": "Start over"
+    },
+    "themes": {
+      "mate1": {
+        "name": "Mate in 1",
+        "task": "Checkmate the king – with just one move!"
+      },
+      "promote": {
+        "name": "Promote",
+        "task": "Get the pawn to the end and turn it into a queen!"
+      },
+      "capture": {
+        "name": "Free piece",
+        "task": "A piece is left unprotected – grab it! Then there is one more move to find."
+      },
+      "fork": {
+        "name": "Fork",
+        "task": "Attack two pieces at once with one of yours!"
+      },
+      "skewer": {
+        "name": "Skewer",
+        "task": "Attack a big piece – there is another one waiting behind it!"
+      },
+      "mate2": {
+        "name": "Mate in 2",
+        "task": "Checkmate – you need two moves for it!"
+      },
+      "pin": {
+        "name": "Pin",
+        "task": "Pin a piece so it cannot move away!"
+      },
+      "discovered": {
+        "name": "Discovered attack",
+        "task": "Move one piece away – and the one behind it attacks!"
+      },
+      "other": {
+        "name": "Puzzle",
+        "task": "Find the best move!"
+      }
+    },
+    "feedback": {
+      "watch": "Watch what your opponent plays …",
+      "yourTurnWhite": "Your turn – you play White!",
+      "yourTurnBlack": "Your turn – you play Black!",
+      "good": "Right! Now keep going …",
+      "wrong": "Oops – not that one. Try again!",
+      "alternative": "That's a good move too! But here we are looking for another one.",
+      "solved1": "Great!",
+      "solved2": "Well done!",
+      "solved3": "Brilliant – solved!",
+      "solved4": "Awesome!"
+    },
+    "hint": "Hint",
+    "next": "Next",
+    "back": "Home",
+    "loading": "Just a moment …",
+    "loadError": "Sorry, that didn't work. Please try again later.",
+    "language": "Language"
   },
   "turnierAdmin": {
     "title": "Sign in as a user",

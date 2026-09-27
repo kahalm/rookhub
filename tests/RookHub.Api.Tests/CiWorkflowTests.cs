@@ -91,6 +91,20 @@ public class CiWorkflowTests
     }
 
     /// <summary>
+    /// Dasselbe fuer KidHub (Kinderseite): es importiert Brett, HTTP-Kette und Sprachdateien per
+    /// @rh/* aus `src/app` — ohne den geteilten Block bliebe sein Image nach einer Aenderung dort alt.
+    /// </summary>
+    [Fact]
+    public void KidHubFilter_CoversTheSharedFrontendCode()
+    {
+        var text = ReadRepoFile(Filters);
+        var block = Regex.Match(text, @"(?ms)^kidhub:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        Assert.Contains("*frontend", block);
+        Assert.Contains("src-kidhub/**", block);
+    }
+
+    /// <summary>
     /// Jedes Recht, das ein Job im AUFGERUFENEN Workflow verlangt, muss der aufrufende
     /// <c>tests:</c>-Job in <c>docker.yml</c> ebenfalls gewaehren.
     ///
@@ -161,6 +175,7 @@ public class CiWorkflowTests
     [InlineData("build-api")]
     [InlineData("build-frontend")]
     [InlineData("build-turnier")]
+    [InlineData("build-kidhub")]
     public void EveryImageJob_StillBuildsOnATag(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -179,6 +194,7 @@ public class CiWorkflowTests
     [InlineData("build-api")]
     [InlineData("build-frontend")]
     [InlineData("build-turnier")]
+    [InlineData("build-kidhub")]
     public void EveryImageJob_StillWaitsForTheTestGate(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -204,13 +220,14 @@ public class CiWorkflowTests
         Assert.Matches(@"(?m)^  workflow_dispatch:\s*$", ReadRepoFile(Docker));
 
     /// <summary>
-    /// Und dann muss er auch ALLE drei Images bauen — ein Handstart, der wieder nur einen Teil
+    /// Und dann muss er auch ALLE Images bauen — ein Handstart, der wieder nur einen Teil
     /// baut, loest genau das Problem nicht, fuer das er da ist.
     /// </summary>
     [Theory]
     [InlineData("build-api")]
     [InlineData("build-frontend")]
     [InlineData("build-turnier")]
+    [InlineData("build-kidhub")]
     public void EveryImageJob_AlsoBuildsOnAManualRun(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -229,6 +246,7 @@ public class CiWorkflowTests
     [InlineData("api")]
     [InlineData("frontend")]
     [InlineData("turnier")]
+    [InlineData("kidhub")]
     public void EveryPrebuildJob_OnlyPushesTheStagingTag(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -247,6 +265,7 @@ public class CiWorkflowTests
     [InlineData("api")]
     [InlineData("frontend")]
     [InlineData("turnier")]
+    [InlineData("kidhub")]
     public void EveryPrebuildJob_DoesNotWaitForTheTestGate(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -265,6 +284,7 @@ public class CiWorkflowTests
     [InlineData("api")]
     [InlineData("frontend")]
     [InlineData("turnier")]
+    [InlineData("kidhub")]
     public void EveryPrebuildJob_AlsoRunsOnATagAndOnAManualRun(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -284,6 +304,7 @@ public class CiWorkflowTests
     [InlineData("api")]
     [InlineData("frontend")]
     [InlineData("turnier")]
+    [InlineData("kidhub")]
     public void EveryImageJob_OnlyRetagsThePrebuiltImage(string image)
     {
         var block = Job($"build-{image}");

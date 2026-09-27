@@ -1075,6 +1075,19 @@ eine spaetere „laeuft gerade"-Ansicht dagegen die Hauptquelle.
 - https://clono.no/
 
 ## Nach dem naechsten PROD-Deploy erledigen
+- [ ] **KidHub (Kinderseite, 0.554.0) scharf schalten** — erst DEV, dann PROD. Die Kinder-Leiter
+  baut die API beim ersten Start mit dem neuen Code selbst (`KidsPuzzleSeeder`, ~20 s nach dem Start).
+  DEV (`/opt/stacks/rookhub-schach-dev`), sobald das Image `rookhub-kidhub:dev` gebaut ist:
+  1. `.env`: `KIDHUB_PORT=8097`.
+  2. `compose.yaml`: `kidhub`-Service (Image `ghcr.io/kahalm/rookhub-kidhub:dev`, Container
+     `rookhub-kidhub-dev`, Port `${KIDHUB_PORT}:8080`, Netz `rookhub-dev`) — Vorlage in `compose.dev.vpn.yml`.
+     Dann `docker compose pull kidhub api && docker compose up -d kidhub api`.
+  3. NPM-Proxy-Host `kidhub-dev.oberschmid.homes` → `http 10.24.13.6:8097`, Wildcard-Zertifikat
+     `*.oberschmid.homes` (id 4) — legt der User an.
+  PROD: Tag (nur mit Zustimmung) → `KIDHUB_PORT=8096` + Service mit `:latest` (Vorlage `compose.yml.example`)
+  → NPM-Host `kidhub.oberschmid.homes` → `http 10.24.13.6:8096`.
+  Danach in der Buecherverwaltung beim gewuenschten Kurs die Spalte „Kinder" einschalten.
+  Offen: gezeichnete Symbole statt der SVG-Platzhalter (Prompts hat der User, Rezept `public-kidhub/ASSETS.md`).
 - [ ] **Turnierseite auf PROD scharf schalten** (Dev laeuft seit 2026-09-06). Reihenfolge:
   1. Tag setzen (nur mit Zustimmung!) — `rookhub-turnier:latest` entsteht ausschliesslich im Tag-Lauf.
   2. `/opt/stacks/rookhub-schach/.env`: `TURNIER_PORT=8093`,

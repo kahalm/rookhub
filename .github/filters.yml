@@ -47,8 +47,16 @@ turnier:
   - 'src/frontend/app/public-turnier/**'
   - 'src/frontend/app/ngsw-config.turnier.json'
 
-# Es gibt bewusst KEINEN dritten Filter „alle Specs": der Spec-Job (`ng test app` UND
-# `ng test turnier`) fragt schlicht `frontend ODER turnier` ab — ein weiterer Anker haette eine
+# Was NUR KidHub (Kinderseite) hat — plus alles Geteilte von oben. KidHub importiert per @rh/* das
+# Brett, die HTTP-Kette und die Sprachdateien aus `src/app/`.
+kidhub:
+  - *frontend
+  - 'src/frontend/app/src-kidhub/**'
+  - 'src/frontend/app/public-kidhub/**'
+  - 'src/frontend/app/ngsw-config.kidhub.json'
+
+# Es gibt bewusst KEINEN weiteren Filter „alle Specs": der Spec-Job (`ng test app` UND
+# `ng test turnier` und `ng test kidhub`) fragt schlicht `frontend ODER turnier ODER kidhub` ab — ein weiterer Anker haette eine
 # zweite Verschachtelungsebene gebraucht (siehe Regel 2 oben).
 
 engine-provider:

@@ -2178,11 +2178,13 @@
         "random": "Zufall",
         "blind": "Blind",
         "public": "Öffentlich",
+        "kids": "Kinder",
         "visibleFor": "Sichtbar für (Kurse)",
         "actions": "Aktionen",
         "kind": "Art"
       },
       "publicHint": "Öffentlich: dieser Kurs ist ohne Registrierung über den Direkt-Link nutzbar. Fortschritt anonymer Besucher bleibt lokal im Browser.",
+      "kidsHint": "Kinder: dieser Kurs erscheint auf der Kinderseite und ist dort ohne Anmeldung spielbar (Kalkulationsbücher ausgenommen).",
       "slugPlaceholder": "Alias z. B. mate1",
       "slugHint": "Optionaler Kurz-Alias für den öffentlichen Link: der Kurs ist dann unter /<Alias> erreichbar (z. B. /mate1). Kleinbuchstaben, Ziffern und Bindestriche, eindeutig. Leer = kein Alias.",
       "errors": {
@@ -3815,6 +3817,93 @@
         "title": "Spieler verfolgen"
       }
     }
+  },
+  "kids": {
+    "home": {
+      "title": "KidHub",
+      "subtitle": "Schach-Puzzles zum Knobeln – ganz einfach anfangen, Stufe für Stufe.",
+      "start": "Los geht's: Stufe {{level}}",
+      "continue": "Weiter mit Stufe {{level}}",
+      "puzzles": "Puzzles",
+      "courses": "Kurse",
+      "levelsDone": "{{done}} von {{total}} Stufen geschafft",
+      "courseCount": "{{count}} Kurse"
+    },
+    "levels": {
+      "title": "Stufen",
+      "level": "Stufe {{level}}",
+      "locked": "Noch gesperrt",
+      "lockedHint": "Diese Stufe ist noch gesperrt. Schaff zuerst die Stufe davor!",
+      "empty": "Die Stufen werden gerade vorbereitet – schau gleich noch einmal vorbei.",
+      "progress": "{{done}} von {{total}} Aufgaben",
+      "completed": "Stufe geschafft!",
+      "stars": "{{stars}} Sterne",
+      "nextLevel": "Nächste Stufe",
+      "again": "Nochmal"
+    },
+    "courses": {
+      "title": "Kurse",
+      "empty": "Noch keine Kurse für Kinder.",
+      "progress": "{{done}} von {{total}} geschafft",
+      "completed": "Kurs geschafft!",
+      "restart": "Von vorn"
+    },
+    "themes": {
+      "mate1": {
+        "name": "Matt in 1",
+        "task": "Setze den König matt – mit einem einzigen Zug!"
+      },
+      "promote": {
+        "name": "Umwandeln",
+        "task": "Bring den Bauern ans Ende und mach eine Dame daraus!"
+      },
+      "capture": {
+        "name": "Freie Figur",
+        "task": "Da steht eine Figur ungeschützt – schnapp sie dir! Danach kommt noch ein Zug."
+      },
+      "fork": {
+        "name": "Gabel",
+        "task": "Greif mit einer Figur zwei auf einmal an!"
+      },
+      "skewer": {
+        "name": "Spieß",
+        "task": "Greif eine große Figur an – dahinter wartet noch eine!"
+      },
+      "mate2": {
+        "name": "Matt in 2",
+        "task": "Setze matt – dafür brauchst du zwei Züge!"
+      },
+      "pin": {
+        "name": "Fesselung",
+        "task": "Fessle eine Figur, damit sie nicht wegziehen kann!"
+      },
+      "discovered": {
+        "name": "Abzug",
+        "task": "Zieh eine Figur weg – und die dahinter greift an!"
+      },
+      "other": {
+        "name": "Puzzle",
+        "task": "Finde den besten Zug!"
+      }
+    },
+    "feedback": {
+      "watch": "Pass auf, was dein Gegner zieht …",
+      "yourTurnWhite": "Du bist dran – du spielst Weiß!",
+      "yourTurnBlack": "Du bist dran – du spielst Schwarz!",
+      "good": "Richtig! Und jetzt weiter …",
+      "wrong": "Hoppla – das war es nicht. Versuch es noch einmal!",
+      "alternative": "Auch ein guter Zug! Aber hier suchen wir einen anderen.",
+      "solved1": "Super!",
+      "solved2": "Toll gemacht!",
+      "solved3": "Klasse – gelöst!",
+      "solved4": "Spitze!"
+    },
+    "hint": "Tipp",
+    "next": "Weiter",
+    "back": "Start",
+    "loading": "Einen Moment …",
+    "loadError": "Das hat leider nicht geklappt. Bitte später noch einmal versuchen.",
+    "language": "Sprache"
   },
   "turnierAdmin": {
     "title": "Als Nutzer einsteigen",

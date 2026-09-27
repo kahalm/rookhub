@@ -107,6 +107,8 @@ public class AdminService
         // InMemory-Provider unterstützt keine Transaktionen → nur mit relationalem Provider umklammern.
         if (!_db.Database.IsRelational())
         {
+            // Relational raeumt der Fremdschluessel (Cascade) die Kinder-Leiter mit ab; InMemory nicht.
+            await _db.KidsPuzzles.ExecuteDeleteAsync();
             await _db.PuzzleAttempts.ExecuteDeleteAsync();
             await _db.Puzzles.ExecuteDeleteAsync();
             return;

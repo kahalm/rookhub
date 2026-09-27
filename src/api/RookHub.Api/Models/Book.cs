@@ -65,6 +65,14 @@ public class Book
     public bool ForBlind { get; set; }
 
     /// <summary>
+    /// Auf der Kinderseite als Kurs angeboten (<c>GET /api/kids/courses</c>). Setzt nur ein Admin in der
+    /// Bücherverwaltung — und öffnet damit die Aufgaben des Buchs OHNE Anmeldung, auch ohne
+    /// <see cref="IsPublic"/> (wie die Pool-Flags: eine bewusste Freigabe). Kalkulationsbücher bleiben
+    /// trotz Flag draußen.
+    /// </summary>
+    public bool ForKids { get; set; }
+
+    /// <summary>
     /// „Kalkulationsbuch": die Linien dieses Buchs werden NICHT abgefragt, sondern als reine
     /// Stellungen (FEN + optionaler Kommentar) zum Durchrechnen serviert. Der Kurs öffnet dann
     /// statt des Solvers den Kalkulations-Modus (<c>/courses/{id}/calc</c>): Brett bleibt strikt

@@ -2178,11 +2178,13 @@
         "random": "Nasumično",
         "blind": "Naslijepo",
         "public": "Javno",
+        "kids": "Djeca",
         "visibleFor": "Vidljivo za (tečajeve)",
         "actions": "Radnje",
         "kind": "Vrsta"
       },
       "publicHint": "Javno: ovaj se tečaj može koristiti bez registracije putem izravne poveznice. Napredak anonimnog posjetitelja ostaje lokalno u pregledniku.",
+      "kidsHint": "Djeca: ovaj se tečaj prikazuje na dječjoj stranici i tamo se može igrati bez prijave (osim knjiga za računanje).",
       "slugPlaceholder": "alias npr. mate1",
       "slugHint": "Neobavezni kratki alias za javnu poveznicu: tečaj je tada dostupan na /<alias> (npr. /mate1). Mala slova, brojke i crtice, jedinstveno. Prazno = bez aliasa.",
       "errors": {
@@ -3815,6 +3817,93 @@
         "title": "Prati igrača"
       }
     }
+  },
+  "kids": {
+    "home": {
+      "title": "KidHub",
+      "subtitle": "Šahovske zagonetke – kreni lagano, razinu po razinu.",
+      "start": "Idemo: razina {{level}}",
+      "continue": "Nastavi s razinom {{level}}",
+      "puzzles": "Zagonetke",
+      "courses": "Tečajevi",
+      "levelsDone": "{{done}} od {{total}} razina riješeno",
+      "courseCount": "Tečajeva: {{count}}"
+    },
+    "levels": {
+      "title": "Razine",
+      "level": "Razina {{level}}",
+      "locked": "Još zaključano",
+      "lockedHint": "Ova razina je još zaključana. Najprije riješi prethodnu!",
+      "empty": "Razine se upravo pripremaju – navrati za trenutak.",
+      "progress": "{{done}} od {{total}} zadataka",
+      "completed": "Razina riješena!",
+      "stars": "Zvjezdice: {{stars}}",
+      "nextLevel": "Sljedeća razina",
+      "again": "Ponovno"
+    },
+    "courses": {
+      "title": "Tečajevi",
+      "empty": "Još nema tečajeva za djecu.",
+      "progress": "{{done}} od {{total}} riješeno",
+      "completed": "Tečaj završen!",
+      "restart": "Ispočetka"
+    },
+    "themes": {
+      "mate1": {
+        "name": "Mat u 1",
+        "task": "Matiraj kralja – samo jednim potezom!"
+      },
+      "promote": {
+        "name": "Promocija",
+        "task": "Dovedi pješaka do kraja i pretvori ga u damu!"
+      },
+      "capture": {
+        "name": "Slobodna figura",
+        "task": "Jedna figura stoji nezaštićena – uzmi je! Zatim slijedi još jedan potez."
+      },
+      "fork": {
+        "name": "Viljuška",
+        "task": "Napadni dvije figure odjednom jednom svojom!"
+      },
+      "skewer": {
+        "name": "Ražanj",
+        "task": "Napadni veliku figuru – iza nje čeka još jedna!"
+      },
+      "mate2": {
+        "name": "Mat u 2",
+        "task": "Matiraj – za to trebaš dva poteza!"
+      },
+      "pin": {
+        "name": "Vezivanje",
+        "task": "Veži figuru tako da se ne može maknuti!"
+      },
+      "discovered": {
+        "name": "Otkriveni napad",
+        "task": "Makni jednu figuru – i ona iza nje napada!"
+      },
+      "other": {
+        "name": "Zagonetka",
+        "task": "Pronađi najbolji potez!"
+      }
+    },
+    "feedback": {
+      "watch": "Pazi što igra tvoj protivnik …",
+      "yourTurnWhite": "Ti si na potezu – igraš bijelima!",
+      "yourTurnBlack": "Ti si na potezu – igraš crnima!",
+      "good": "Točno! Sad nastavi …",
+      "wrong": "Ups – nije to. Pokušaj ponovno!",
+      "alternative": "I to je dobar potez! Ali ovdje tražimo neki drugi.",
+      "solved1": "Super!",
+      "solved2": "Bravo!",
+      "solved3": "Odlično – riješeno!",
+      "solved4": "Sjajno!"
+    },
+    "hint": "Savjet",
+    "next": "Dalje",
+    "back": "Početak",
+    "loading": "Trenutak …",
+    "loadError": "Nažalost, nije uspjelo. Pokušaj ponovno kasnije.",
+    "language": "Jezik"
   },
   "turnierAdmin": {
     "title": "Prijavi se kao korisnik",

@@ -62,7 +62,7 @@ export class AdminComponent implements OnInit {
   bookSearch = '';
   booksLoading = false;
   booksUploading = false;
-  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'groups', 'actions'];
+  bookColumns = ['displayName', 'puzzleCount', 'kind', 'difficulty', 'elo', 'forDaily', 'forRandom', 'forBlind', 'isPublic', 'forKids', 'groups', 'actions'];
 
   /** Per-Spalten-Filter über dem Bücher-Grid (UND-verknüpft, zusätzlich zur globalen Suche). */
   bookFilters = this.emptyBookFilters();
@@ -319,6 +319,7 @@ export class AdminComponent implements OnInit {
       forRandom: book.forRandom,
       forBlind: book.forBlind,
       isPublic: book.isPublic,
+      forKids: book.forKids,
       publicSlug: book.publicSlug ?? '',
       kind: book.kind,
       minElo: book.minElo,

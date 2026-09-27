@@ -34,6 +34,7 @@ public class BookAdminService
                 ForDaily = b.ForDaily,
                 ForRandom = b.ForRandom,
                 ForBlind = b.ForBlind,
+                ForKids = b.ForKids,
                 IsPublic = b.IsPublic,
                 PublicSlug = b.PublicSlug,
                 Kind = b.Kind,
@@ -100,6 +101,7 @@ public class BookAdminService
         if (dto.ForDaily.HasValue) book.ForDaily = dto.ForDaily.Value;
         if (dto.ForRandom.HasValue) book.ForRandom = dto.ForRandom.Value;
         if (dto.ForBlind.HasValue) book.ForBlind = dto.ForBlind.Value;
+        if (dto.ForKids.HasValue) book.ForKids = dto.ForKids.Value;
         if (dto.IsPublic.HasValue) book.IsPublic = dto.IsPublic.Value;
         if (dto.PublicSlug != null) await ApplyPublicSlugAsync(book, dto.PublicSlug);
         if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
@@ -123,6 +125,7 @@ public class BookAdminService
             ForDaily = book.ForDaily,
             ForRandom = book.ForRandom,
             ForBlind = book.ForBlind,
+            ForKids = book.ForKids,
             IsPublic = book.IsPublic,
             PublicSlug = book.PublicSlug,
             Kind = book.Kind,

@@ -1,0 +1,101 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { TranslatePipe } from '@ngx-translate/core';
+import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
+import { KidsProgressStore } from '../../core/kids-progress.store';
+
+/**
+ * Startseite: ein grosser „Los geht's"-Knopf zur naechsten offenen Stufe, darunter die zwei Wege —
+ * Puzzles (Stufen) und, wenn es welche gibt, Kurse. Kein Menue, kein Konto.
+ */
+@Component({
+  selector: 'kid-home',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [RouterLink, TranslatePipe],
+  template: `
+    <section class="hero">
+      <h1>{{ 'kids.home.title' | translate }}</h1>
+      <p>{{ 'kids.home.subtitle' | translate }}</p>
+      @if (current(); as level) {
+        <a class="go" [routerLink]="['/levels', level]">
+          {{ (progress.completedLevels() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
+        </a>
+      }
+    </section>
+
+    <section class="tiles">
+      <a class="tile puzzles" routerLink="/levels">
+        <span class="icon" aria-hidden="true">🧩</span>
+        <span class="name">{{ 'kids.home.puzzles' | translate }}</span>
+        @if (levels().length > 0) {
+          <span class="meta">
+            {{ 'kids.home.levelsDone' | translate: { done: progress.completedLevels(), total: levels().length } }}
+            · ⭐ {{ progress.totalStars() }}
+          </span>
+        }
+      </a>
+      @if (courses().length > 0) {
+        <a class="tile courses" [routerLink]="courseLink()">
+          <span class="icon" aria-hidden="true">📚</span>
+          <span class="name">{{ 'kids.home.courses' | translate }}</span>
+          <span class="meta">
+            {{ courses().length === 1 ? courses()[0].title : ('kids.home.courseCount' | translate: { count: courses().length }) }}
+          </span>
+        </a>
+      }
+    </section>
+
+    @if (failed()) {
+      <p class="error">{{ 'kids.loadError' | translate }}</p>
+    }
+  `,
+  styles: [`
+    :host { display: block; max-width: 900px; margin: 0 auto; padding: 16px; }
+    .hero { text-align: center; padding: 24px 12px 8px; }
+    h1 { font-size: clamp(2rem, 7vw, 3.4rem); margin: 0 0 6px; color: var(--kid-title); letter-spacing: .5px; }
+    .hero p { font-size: 1.25rem; margin: 0 0 22px; }
+    .go {
+      display: inline-block; text-decoration: none; background: var(--kid-green); color: #fff;
+      font-size: 1.6rem; font-weight: 800; padding: 16px 32px; border-radius: 999px;
+      box-shadow: 0 6px 0 var(--kid-shadow);
+    }
+    .go:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--kid-shadow); }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-top: 28px; }
+    .tile {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 18px;
+      border-radius: 28px; text-decoration: none; color: inherit; background: var(--kid-card);
+      box-shadow: 0 6px 0 var(--kid-shadow); transition: transform .12s;
+    }
+    .tile:hover { transform: translateY(-3px); }
+    .tile.puzzles { background: var(--kid-sky); }
+    .tile.courses { background: var(--kid-peach); }
+    .icon { font-size: 3.4rem; line-height: 1.1; }
+    .name { font-size: 1.7rem; font-weight: 800; }
+    .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
+    .error { text-align: center; margin-top: 20px; font-weight: 700; }
+  `],
+})
+export class KidsHomeComponent {
+  private readonly api = inject(KidsApiService);
+  readonly progress = inject(KidsProgressStore);
+
+  readonly levels = signal<KidsLevel[]>([]);
+  readonly courses = signal<KidsCourse[]>([]);
+  readonly failed = signal(false);
+
+  readonly current = computed(() => this.progress.currentLevel(this.levels().map(l => l.level)));
+  readonly courseLink = computed(() => {
+    const list = this.courses();
+    return list.length === 1 ? ['/courses', list[0].bookId] : ['/courses'];
+  });
+
+  constructor() {
+    this.api.levels().subscribe({
+      next: levels => this.levels.set(levels),
+      error: () => this.failed.set(true),
+    });
+    // Ohne Kurse bleibt die Kachel einfach weg — kein Fehlertext fuer etwas, das es nicht gibt.
+    this.api.courses().subscribe({ next: courses => this.courses.set(courses), error: () => {} });
+  }
+}

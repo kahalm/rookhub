@@ -1767,6 +1767,7 @@
         "daily": "Napi",
         "random": "Véletlenszerű",
         "blind": "Vakon",
+        "kids": "Gyerekek",
         "visibleFor": "Látható (tanfolyamok)",
         "actions": "Műveletek",
         "kind": "Type",
@@ -1788,6 +1789,7 @@
       "rename": "Könyv átnevezése",
       "renamePrompt": "Új könyvnév:",
       "publicHint": "Nyilvános: ez a tanfolyam regisztráció nélkül, a közvetlen linkjén keresztül használható. A névtelen látogatók haladása helyben, a böngészőben marad.",
+      "kidsHint": "Gyerekek: ez a kurzus megjelenik a gyerekoldalon, és ott bejelentkezés nélkül játszható (a számolókönyvek kivételével).",
       "slugPlaceholder": "álnév, pl. mate1",
       "slugHint": "Opcionális rövid álnév a nyilvános linkhez: a tanfolyam ekkor a /<álnév> címen érhető el (pl. /mate1). Kisbetűk, számjegyek és kötőjelek, egyedi. Üresen = nincs álnév.",
       "filters": {
@@ -3536,6 +3538,93 @@
         "title": "Játékos követése"
       }
     }
+  },
+  "kids": {
+    "home": {
+      "title": "KidHub",
+      "subtitle": "Sakkfeladványok – kezdd egészen könnyen, szintről szintre.",
+      "start": "Rajta: {{level}}. szint",
+      "continue": "Folytatás: {{level}}. szint",
+      "puzzles": "Feladványok",
+      "courses": "Kurzusok",
+      "levelsDone": "{{done}}/{{total}} szint kész",
+      "courseCount": "{{count}} kurzus"
+    },
+    "levels": {
+      "title": "Szintek",
+      "level": "{{level}}. szint",
+      "locked": "Még zárva",
+      "lockedHint": "Ez a szint még zárva van. Előbb teljesítsd az előzőt!",
+      "empty": "A szintek éppen készülnek – nézz vissza egy kicsit később.",
+      "progress": "{{done}}/{{total}} feladat",
+      "completed": "Szint teljesítve!",
+      "stars": "{{stars}} csillag",
+      "nextLevel": "Következő szint",
+      "again": "Újra"
+    },
+    "courses": {
+      "title": "Kurzusok",
+      "empty": "Még nincs kurzus gyerekeknek.",
+      "progress": "{{done}}/{{total}} kész",
+      "completed": "Kurzus teljesítve!",
+      "restart": "Elölről"
+    },
+    "themes": {
+      "mate1": {
+        "name": "Matt 1 lépésben",
+        "task": "Adj mattot a királynak – egyetlen lépéssel!"
+      },
+      "promote": {
+        "name": "Átváltozás",
+        "task": "Juttasd el a gyalogot a végére, és változtasd vezérré!"
+      },
+      "capture": {
+        "name": "Védtelen figura",
+        "task": "Egy figura védtelenül áll – üsd le! Utána még egy lépést kell megtalálnod."
+      },
+      "fork": {
+        "name": "Villa",
+        "task": "Támadj meg egyszerre két figurát egy saját figurával!"
+      },
+      "skewer": {
+        "name": "Nyárs",
+        "task": "Támadj meg egy nagy figurát – mögötte vár még egy!"
+      },
+      "mate2": {
+        "name": "Matt 2 lépésben",
+        "task": "Adj mattot – ehhez két lépés kell!"
+      },
+      "pin": {
+        "name": "Kötés",
+        "task": "Köss le egy figurát, hogy ne tudjon elmozdulni!"
+      },
+      "discovered": {
+        "name": "Felfedett támadás",
+        "task": "Lépj el egy figurával – és a mögötte álló támad!"
+      },
+      "other": {
+        "name": "Feladvány",
+        "task": "Találd meg a legjobb lépést!"
+      }
+    },
+    "feedback": {
+      "watch": "Figyeld, mit lép az ellenfeled …",
+      "yourTurnWhite": "Te jössz – világossal játszol!",
+      "yourTurnBlack": "Te jössz – sötéttel játszol!",
+      "good": "Helyes! Most folytasd …",
+      "wrong": "Hoppá – nem ez az. Próbáld újra!",
+      "alternative": "Ez is jó lépés! De itt egy másikat keresünk.",
+      "solved1": "Szuper!",
+      "solved2": "Ügyes vagy!",
+      "solved3": "Remek – megoldva!",
+      "solved4": "Nagyszerű!"
+    },
+    "hint": "Tipp",
+    "next": "Tovább",
+    "back": "Kezdőlap",
+    "loading": "Egy pillanat …",
+    "loadError": "Ez most nem sikerült. Próbáld újra később.",
+    "language": "Nyelv"
   },
   "turnierAdmin": {
     "title": "Belépés felhasználóként",

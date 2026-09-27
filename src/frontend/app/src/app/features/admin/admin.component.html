@@ -287,6 +287,13 @@
                     <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
                   </td>
                 </ng-container>
+                <ng-container matColumnDef="forKids">
+                  <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.kids' | translate }}</th>
+                  <td mat-cell *matCellDef="let b">
+                    <mat-slide-toggle [(ngModel)]="b.forKids" (change)="saveBook(b)"
+                                      [attr.title]="'admin.books.kidsHint' | translate"></mat-slide-toggle>
+                  </td>
+                </ng-container>
                 <ng-container matColumnDef="isPublic">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.public' | translate }}</th>
                   <td mat-cell *matCellDef="let b">

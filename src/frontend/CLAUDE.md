@@ -15,14 +15,15 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - `/api/*` wird in Docker von nginx auf die RookHub API geproxied (nginx.conf)
 - Bei `ng serve` muss ein Proxy oder die API auf einem erreichbaren Port laufen
 
-## Zwei Projekte in einem Workspace
+## Drei Projekte in einem Workspace
 
-`angular.json` enthaelt **zwei** Anwendungen, die sich node_modules und den Quellbaum teilen:
+`angular.json` enthaelt **drei** Anwendungen, die sich node_modules und den Quellbaum teilen:
 
 | Projekt | Quelle | Bundle | Image | Domain |
 |---------|--------|--------|-------|--------|
 | `app` | `src/` | `dist/app/browser` | `rookhub-frontend` | rookhub(-dev).oberschmid.homes |
 | `turnier` | `src-turnier/` | `dist/turnier/browser` | `rookhub-turnier` | turnier(-dev).oberschmid.homes |
+| `kidhub` | `src-kidhub/` | `dist/kidhub/browser` | `rookhub-kidhub` | kidhub(-dev).oberschmid.homes (Kinderseite, ohne Konto) |
 
 - `src-turnier/` enthaelt nur, was die Turnierseite EIGEN hat: Einstiegspunkt, Routen, Navbar und
   die Turnier-Features. Alles Geteilte (Auth, Interceptors, i18n, shared/) kommt per Pfad-Alias
@@ -30,7 +31,9 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - Eigene Dateien der Turnierseite: `src-turnier/`, `public-turnier/` (eigenes Manifest, wird ueber
   `public/` drueberkopiert), `tsconfig.turnier.json`, `ngsw-config.turnier.json`.
 - Bauen: `npx ng build turnier --configuration=production` bzw. `npx ng serve turnier`.
-- Testen: **beide Projekte namentlich** — `npx ng test app` UND `npx ng test turnier`. Der
+- KidHub genauso: `src-kidhub/`, `public-kidhub/`, `tsconfig.kidhub.json`, `ngsw-config.kidhub.json`;
+  `npx ng build kidhub` / `npx ng test kidhub` (Details im Haupt-CLAUDE.md „Dritte Oberfläche: KidHub").
+- Testen: **alle Projekte namentlich** — `npx ng test app`, `npx ng test turnier` UND `npx ng test kidhub`. Der
   Karma-Builder sammelt Specs je PROJEKT ein; ohne eigenes Test-Target liefen die 17
   Spec-Dateien der Turnierseite gar nicht mit. Und `ng test` OHNE Projektnamen waehlt bei zwei
   Test-Targets nicht mehr verlaesslich `app` (gemessen 81 statt 1911 Tests) — beides lautlos.

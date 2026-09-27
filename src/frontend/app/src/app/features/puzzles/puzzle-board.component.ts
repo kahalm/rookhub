@@ -108,6 +108,9 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() crazyPieceMode: CrazyPieceMode = 'piece';
   /** Vollbild-Knopf in der Brett-Ecke anbieten (Standard: ja). */
   @Input() allowFullscreen = true;
+  /** Umwandlung ohne Auswahl immer zur Dame (Kinderseite: ein Schritt weniger, Unterverwandlung
+   *  kommt dort nicht vor). Standard: Auswahl anzeigen. */
+  @Input() autoQueen = false;
   /** Visualisierungs-Level (0 = aus, >=1 = aktiv): Brett bleibt eingefroren, Klicks (Von→Nach)
    *  werden als Koordinaten erfasst und als moveMade emittiert (kein figurenbasiertes Ziehen). */
   @Input() visualization = 0;
@@ -582,6 +585,10 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   }
 
   private showPromotionDialog(orig: Key, dest: Key): void {
+    if (this.autoQueen) {
+      this.moveMade.emit({ orig, dest, promotion: 'q' });
+      return;
+    }
     this.pendingPromotion = { orig, dest };
     // Bei einem premovten Umwandlungszug steht der Bauer noch auf orig (dest leer/geschlagen) →
     // Farbe von dort ableiten, sonst vom bereits gezogenen Bauern auf dest.

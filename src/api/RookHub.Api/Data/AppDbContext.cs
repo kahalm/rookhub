@@ -87,6 +87,8 @@ public class AppDbContext : DbContext
     public DbSet<PuzzleAttempt> PuzzleAttempts => Set<PuzzleAttempt>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
+    /// <summary>Als „besonders einfach" markierte Lichess-Puzzles der Kinderseite (Stufen-Leiter).</summary>
+    public DbSet<KidsPuzzle> KidsPuzzles => Set<KidsPuzzle>();
     public DbSet<BookPuzzle> BookPuzzles => Set<BookPuzzle>();
     public DbSet<BookPuzzleAttempt> BookPuzzleAttempts => Set<BookPuzzleAttempt>();
     public DbSet<SharedPuzzleAttempt> SharedPuzzleAttempts => Set<SharedPuzzleAttempt>();
@@ -565,6 +567,15 @@ public class AppDbContext : DbContext
             e.HasIndex(pt => new { pt.TagId, pt.Rating });
             e.HasOne(pt => pt.Puzzle).WithMany().HasForeignKey(pt => pt.PuzzleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(pt => pt.Tag).WithMany(t => t.PuzzleTags).HasForeignKey(pt => pt.TagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<KidsPuzzle>(e =>
+        {
+            // Ein Puzzle steht hoechstens EINMAL in der Leiter.
+            e.HasKey(k => k.PuzzleId);
+            e.Property(k => k.Theme).HasMaxLength(20);
+            e.HasIndex(k => new { k.Level, k.Position });
+            e.HasOne(k => k.Puzzle).WithMany().HasForeignKey(k => k.PuzzleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PuzzleAttempt>(e =>

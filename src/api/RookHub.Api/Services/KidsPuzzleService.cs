@@ -1,0 +1,147 @@
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+
+namespace RookHub.Api.Services;
+
+/// <summary>
+/// Daten der Kinderseite: die Stufen-Leiter aus markierten Lichess-Puzzles (<see cref="KidsPuzzle"/>)
+/// und die fuer Kinder freigegebenen Kurse (<see cref="Book.ForKids"/>). Alles ohne Anmeldung lesbar —
+/// der Fortschritt bleibt auf dem Geraet des Kindes.
+/// </summary>
+public class KidsPuzzleService
+{
+    private readonly AppDbContext _db;
+
+    public KidsPuzzleService(AppDbContext db) => _db = db;
+
+    /// <summary>Steht eine Leiter im aktuellen Lehrplan-Stand da? Leer oder veraltet → nein.</summary>
+    public async Task<bool> IsCurrentAsync(CancellationToken ct = default) =>
+        await _db.KidsPuzzles.AnyAsync(ct)
+        && !await _db.KidsPuzzles.AnyAsync(k => k.CurriculumVersion != KidsCurriculum.Version, ct);
+
+    /// <summary>
+    /// Rechnet die Leiter aus dem Standard-Puzzle-Bestand neu und ersetzt die alte vollstaendig. Der
+    /// Vorfilter laeuft in der Datenbank (Rating-Index), die eigentliche Auswahl in
+    /// <see cref="KidsCurriculum.Select"/>. Ohne Standard-Puzzles bleibt die Leiter leer.
+    /// </summary>
+    public async Task<KidsRebuildResultDto> RebuildAsync(CancellationToken ct = default)
+    {
+        var candidates = await _db.Puzzles.AsNoTracking()
+            .Where(p => p.Rating <= KidsCurriculum.MaxRating
+                        && p.RatingDeviation <= KidsCurriculum.MaxRatingDeviation
+                        && p.Popularity >= KidsCurriculum.MinPopularity
+                        && p.NbPlays >= KidsCurriculum.MinPlays
+                        && p.Moves.Length <= KidsCurriculum.MaxMovesLength)
+            .Select(p => new KidsCurriculum.Candidate(p.Id, p.LichessId, p.Rating, p.RatingDeviation,
+                p.Popularity, p.NbPlays, p.Themes, p.Fen, p.Moves))
+            .ToListAsync(ct);
+
+        var placements = KidsCurriculum.Select(candidates);
+        var rows = placements.Select(p => new KidsPuzzle
+        {
+            PuzzleId = p.PuzzleId,
+            Level = p.Level,
+            Position = p.Position,
+            Theme = p.Theme,
+            PieceCount = p.PieceCount,
+            SolverMoves = p.SolverMoves,
+            CurriculumVersion = KidsCurriculum.Version,
+        }).ToList();
+
+        await ReplaceAsync(rows, ct);
+        return new KidsRebuildResultDto
+        {
+            Levels = rows.Select(r => r.Level).Distinct().Count(),
+            Puzzles = rows.Count,
+        };
+    }
+
+    /// <summary>Alte Leiter raus, neue rein — relational in EINER Transaktion, damit die Kinderseite nie
+    /// eine halbe Leiter sieht.</summary>
+    private async Task ReplaceAsync(List<KidsPuzzle> rows, CancellationToken ct)
+    {
+        if (!_db.Database.IsRelational())
+        {
+            _db.KidsPuzzles.RemoveRange(await _db.KidsPuzzles.ToListAsync(ct));
+            _db.KidsPuzzles.AddRange(rows);
+            await _db.SaveChangesAsync(ct);
+            return;
+        }
+
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+            await _db.KidsPuzzles.ExecuteDeleteAsync(ct);
+            _db.KidsPuzzles.AddRange(rows);
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        });
+    }
+
+    /// <summary>Alle Stufen in Reihenfolge, mit Thema und Aufgabenzahl.</summary>
+    public async Task<List<KidsLevelDto>> GetLevelsAsync(CancellationToken ct = default)
+    {
+        var rows = await _db.KidsPuzzles.AsNoTracking()
+            .GroupBy(k => new { k.Level, k.Theme })
+            .Select(g => new KidsLevelDto { Level = g.Key.Level, Theme = g.Key.Theme, PuzzleCount = g.Count() })
+            .ToListAsync(ct);
+        return rows.OrderBy(l => l.Level).ToList();
+    }
+
+    /// <summary>Eine Stufe mit ihren Aufgaben (leichteste zuerst); <c>null</c>, wenn es sie nicht gibt.</summary>
+    public async Task<KidsLevelDetailDto?> GetLevelAsync(int level, CancellationToken ct = default)
+    {
+        var rows = await _db.KidsPuzzles.AsNoTracking()
+            .Where(k => k.Level == level)
+            .OrderBy(k => k.Position)
+            .Select(k => new { k.Theme, k.Puzzle!.Id, k.Puzzle.Fen, k.Puzzle.Moves })
+            .ToListAsync(ct);
+        if (rows.Count == 0) return null;
+
+        return new KidsLevelDetailDto
+        {
+            Level = level,
+            Theme = rows[0].Theme,
+            Puzzles = rows.Select(r => new KidsPuzzleDto { Id = r.Id, Fen = r.Fen, Moves = r.Moves }).ToList(),
+        };
+    }
+
+    /// <summary>Die fuer Kinder freigegebenen Kurse. Kalkulationsbuecher nie: sie haben keine Loesung zum
+    /// Nachspielen, und ihre Zugfolge gehoert nicht ausgeliefert.</summary>
+    public async Task<List<KidsCourseDto>> GetCoursesAsync(CancellationToken ct = default)
+    {
+        return await _db.Books.AsNoTracking()
+            .Where(b => b.ForKids && !b.IsCalculation)
+            .OrderBy(b => b.DisplayName)
+            .Select(b => new KidsCourseDto
+            {
+                BookId = b.Id,
+                Title = b.DisplayName,
+                Description = b.Description,
+                PuzzleCount = b.Puzzles.Count(p => !p.IsInfoOnly),
+            })
+            .Where(c => c.PuzzleCount > 0)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Die Aufgaben eines Kinderkurses in Lesereihenfolge — ohne reine Info-Linien (die Kinderseite
+    /// fragt ab, sie erzaehlt nicht). Nicht freigegeben/Kalkulationsbuch/unbekannt →
+    /// <see cref="KeyNotFoundException"/>. Die Freigabe <see cref="Book.ForKids"/> setzt nur ein Admin;
+    /// sie oeffnet den Kurs bewusst auch ohne <see cref="Book.IsPublic"/>.
+    /// </summary>
+    public async Task<List<BookPuzzleDto>> GetCoursePuzzlesAsync(int bookId, CancellationToken ct = default)
+    {
+        if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.ForKids && !b.IsCalculation, ct))
+            throw new KeyNotFoundException("Course not found.");
+
+        var puzzles = await CourseService.PuzzlesWithBookInReadingOrder(_db, bookId)
+            .Where(bp => !bp.IsInfoOnly)
+            .AsNoTracking()
+            .ToListAsync(ct);
+        return puzzles.Select(BookPuzzleService.MapToDto).ToList();
+    }
+}

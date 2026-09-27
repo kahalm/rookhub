@@ -63,6 +63,8 @@ export interface Book {
   isPublic: boolean;
   /** Optionaler Kurz-Alias eines öffentlichen Kurses (Kurz-URL /{slug}); null = keiner. */
   publicSlug: string | null;
+  /** Auf der Kinderseite als Kurs angeboten (öffnet die Aufgaben dort ohne Anmeldung). */
+  forKids: boolean;
   /** Art des Buchs fürs Trainingsziel-Routing der Kurszeit. */
   kind: 'Puzzle' | 'Study';
   puzzleCount: number;
@@ -84,6 +86,7 @@ export interface UpdateBook {
   forRandom?: boolean;
   forBlind?: boolean;
   isPublic?: boolean;
+  forKids?: boolean;
   /** Kurz-Alias setzen; Leerstring entfernt ihn, undefined lässt ihn unverändert. */
   publicSlug?: string | null;
   kind?: 'Puzzle' | 'Study';

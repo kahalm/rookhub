@@ -392,6 +392,9 @@ namespace RookHub.Api.Migrations
                     b.Property<bool>("ForDaily")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("ForKids")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("ForRandom")
                         .HasColumnType("tinyint(1)");
 
@@ -2679,6 +2682,38 @@ namespace RookHub.Api.Migrations
                     b.HasKey("ChessResultsId");
 
                     b.ToTable("HistoryTournamentCrawls");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.KidsPuzzle", b =>
+                {
+                    b.Property<int>("PuzzleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CurriculumVersion")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PieceCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SolverMoves")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("PuzzleId");
+
+                    b.HasIndex("Level", "Position");
+
+                    b.ToTable("KidsPuzzles");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.LibraryGame", b =>
@@ -5898,6 +5933,17 @@ namespace RookHub.Api.Migrations
                     b.Navigation("GameAnalysis");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.KidsPuzzle", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.Puzzle", "Puzzle")
+                        .WithMany()
+                        .HasForeignKey("PuzzleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Puzzle");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.LibraryGame", b =>

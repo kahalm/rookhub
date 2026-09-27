@@ -1194,6 +1194,41 @@ Bot-Lookup per LineId. Bewusst NICHT identisch mit `CourseService.CanAccessAsync
 Einzel-Puzzles/Zufallsziehungen, nicht den strukturierten Kurs (Kapitel/Fortschritt/Offline-Export). Folge für
 den schach-bot: sein `/kurs`-Katalog (`/books` + `?bookId=`) enthält nur noch Pool-/öffentliche Bücher.
 
+### KidHub — Kinderseite (offen, 0.554.0)
+Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, siehe „Drei Oberflächen"). Alles
+**ohne Anmeldung** — der Fortschritt liegt nur auf dem Gerät. `KidsController` + `KidsPuzzleService`.
+
+| Methode | Endpoint | Auth | Zweck |
+|---------|----------|------|-------|
+| GET | `/api/kids/levels` | AllowAnonymous (`anonymous-puzzle`) | Stufen der Leiter in Reihenfolge `[{ level, theme, puzzleCount }]` — leer, solange die Leiter nicht aufgebaut ist |
+| GET | `/api/kids/levels/{level}` | AllowAnonymous | Eine Stufe am Stück `{ level, theme, puzzles[{ id, fen, moves }] }` (Lichess-Form: `moves[0]` stellt die Aufgabe), leichteste zuerst; 404 unbekannt |
+| GET | `/api/kids/courses` | AllowAnonymous | Für Kinder freigegebene Kurse (`Book.ForKids`, ohne Kalkulationsbücher, ohne leere) `[{ bookId, title, description, puzzleCount }]` — `puzzleCount` ohne Info-Linien |
+| GET | `/api/kids/courses/{bookId}/puzzles?lang=` | AllowAnonymous | Aufgaben eines Kinderkurses in Lesereihenfolge (`BookPuzzleDto`, OHNE `IsInfoOnly`); `lang` wie bei den Kursen. 404 wenn nicht `ForKids`/Kalkulationsbuch |
+| POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
+
+**Die Leiter** (`KidsPuzzles`, `Services/KidsCurriculum.cs`) = als „besonders einfach" markierte Lichess-Puzzles.
+Vorgabe des Nutzers (2026-09-27): die mit dem niedrigsten Rating, deren Lösung 1 (höchstens 2) eigene Züge lang ist
+und bei denen wenig Figuren auf dem Brett stehen. Vorfilter in der DB (Rating ≤ 900, RD ≤ 90, Popularity ≥ 80,
+NbPlays ≥ 50, `Moves` ≤ 23 Zeichen), dann in C#: 2 oder 4 Züge, ≤ 12 Figuren, ohne en passant/Rochade/
+Unterverwandlung. Thema je Puzzle: Ein-Züger `promote` (Lösungszug macht eine Dame) vor `mate1`; Zwei-Züger `mate2` >
+`fork` > `skewer` > `pin` > `discovered` > `capture` (hangingPiece UND der erste eigene Zug schlägt). Innerhalb eines
+Themas zählt die **Figurenzahl vor dem Rating** (`Score = Figuren·40 + Rating`). 40 Stufen à 10 im Themen-Wechsel
+(`KidsCurriculum.Levels`), jedes Thema teilt sich die `PoolFactor`·10·(Stufen) leichtesten Aufgaben der Reihe nach,
+gleichmäßig verteilt — die Stufen eines Themas werden also merklich schwerer. Zu dünne Themen (< 3) fallen weg, die
+Nummern bleiben lückenlos; Gleichstand → `LichessId`, damit Dev und Prod dieselbe Leiter bauen.
+Zwei Befunde, die den Lehrplan geformt haben (Dev-Bestand): unter Rating 700 ist praktisch ALLES „Matt in 1" (eine
+reine Rangliste wäre 30 Stufen lang dasselbe), und „freie Figur schlagen" gibt es als Ein-Züger ohne Matt so gut wie
+nicht (1 Stück unter 900) — Lichess-Puzzles ohne Matt brauchen fast immer zwei eigene Züge, deshalb ist `capture`
+ein Zwei-Züger (250 Kandidaten ≤ 12 Figuren).
+**Aufbau ohne Handgriff**: `KidsPuzzleSeeder` (BackgroundService, 20 s nach dem Start) baut die Leiter, wenn sie
+fehlt oder `CurriculumVersion` ≠ `KidsCurriculum.Version`. **Wer Auswahl oder Stufenfolge ändert, erhöht
+`KidsCurriculum.Version`** — sonst bleibt überall die alte Leiter stehen. Ersetzt wird in EINER Transaktion
+(Execution-Strategy-Muster).
+
+**Kinderkurse**: `Book.ForKids` setzt nur ein Admin (Bücherverwaltung, Spalte „Kinder"). Das Flag öffnet die Aufgaben
+auf der Kinderseite bewusst OHNE `IsPublic` — wie die Pool-Flags eine absichtliche Freigabe; Kalkulationsbücher bleiben
+trotz Flag draußen (ihre Zugfolge ist die Lösung, die der Kalkulations-Modus zurückhält).
+
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -2909,11 +2944,12 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | TournamentUserSettings | Per-Turnier-User-Einstellungen | UserId + TournamentId, Highlights/Notes/Pinning |
 | TournamentMonitors | Runden-Monitor | TournamentId, RoundsCount, LastSeenRound, AutoSubscribed; `RoundMonitorService` checkt periodisch |
 | Puzzles + PuzzleAttempts | Standard-Puzzle-Pool + Versuche | klassische Lichess-Puzzles + Pro-User-Versuche (UserId Cascade) |
+| KidsPuzzles | Kinder-Leiter (KidHub): als „besonders einfach" markierte Lichess-Puzzles mit Platz in der Stufenfolge | **PuzzleId (PK, FK → Puzzles, Cascade)**, Level (1-basiert), Position (0-basiert, leichteste zuerst), Theme (≤20: mate1/promote/capture/fork/skewer/mate2/pin/discovered), PieceCount, SolverMoves (1/2), CurriculumVersion (≠ Code ⇒ Seeder baut neu); Index (Level, Position). Gefüllt von `KidsPuzzleSeeder`/`POST /api/admin/kids/rebuild` |
 | Tags + PuzzleTags | Normalisierte Puzzle-Themen für schnellen Themen-Filter | Tag.Name (unique); PuzzleTag composite PK (PuzzleId, TagId) + denormalisiertes Rating, Index **(TagId, Rating)** → indexgestützter Themen-Filter statt LIKE-Scan. Import pflegt automatisch; **einmaliger Backfill bestehender Puzzles via `POST /api/admin/puzzles/backfill-tags`** (Hintergrund-Job). Bis Backfill: Fallback auf LIKE |
 | BookPuzzles | Buch-Puzzles | LineId (unique), BookFileName (indexed), Round, Fen, Moves, Title, Chapter, Comment, **MoveComments (LONGTEXT, JSON `{plyIndex:text}`; Pro-Zug-Kommentare der Hauptlinie, Schlüssel = 0-basierter Halbzug NACH dem Zug, -1 = Einleitung; beim Durchspielen/Review angezeigt; der Kurs-Import faltet seit Pipeline 19 JEDE Hauptlinien-Variante mit ihren Zugnummern in den Kommentar ihres Zugs, `features/puzzles/comment-variation.util.ts` macht die Züge dort klickbar und verankert sie über die Zugnummer — NUR dort: geht ein Zug an seiner Nummer nicht (z. B. mehrdeutig, zwei Springer nach e4), bleibt er Text, statt in einer anderen Stellung der Partie zu landen)**, Difficulty, BookRating, Tags, **HintsJson (LONGTEXT, JSON `{lang:[h1,h2,h3]}`; vorberechnete gestufte Tipps de/en/hr, per LLM erzeugt) + HintsVersion (int, 0=keine; entkoppelt von Book.ImportVersion) + HintsFlagged (bool; Admin-Review-Flag „dumme Tipps", per Solver-Button)**, **Retired (indexed; ausgemustert → nicht mehr in Daily/Random/Blind-Pools)**, **Source (≤16, nullable; null = vollwertig/getGame, "review" = aus getReview vorbelegter Lücken-Füller — zählt als vollwertig gecacht (Overlay-✓, kein getGame-Re-Fetch; getReview≡getGame für die Linie) und wird, falls getGame doch mal für den oid importiert wird, per oid IN-PLACE ersetzt)** |
 | SharedPuzzleAttempts | „Track solves" geteilter Einzel-Puzzles (opt-in per Teilen-Link `?track=1`) — Erstversuch je Besucher | BookPuzzleId (indexed), **IdentityKey** (`u:{userId}` eingeloggt / `s:{sessionId}` anonym), Solved (true nur saubere Erstlösung; Fehlzug/Aufgeben/Reset = false), **HintsUsed (höchste angesehene Tipp-Stufe 0–3 beim Erstversuch)**, CreatedAt; **UNIQUE (BookPuzzleId, IdentityKey)** = nur 1. Versuch zählt. Kein harter FK (Index genügt) |
 | BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche | BookPuzzleId (Restrict) + UserId (Cascade, nullable für Anon) + AnonymousSessionId, Solved, TimeSeconds, AttemptedAt, **HintsUsed (höchste angesehene Tipp-Stufe 0–3)**; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) + **UNIQUE (BookPuzzleId, AnonymousSessionId)** (eine anonyme Lösung je Session; auth. Versuche = NULL-Session → mehrfach erlaubt) |
-| Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import; seit 0.508.3 per Tabellensplitting als eigene Entität `BookSource` gemappt, NICHT als Property von `Book`)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)**, **CommentLanguage? (≤8; Quellsprache der Kommentare fuer die Kurs-Uebersetzung, `und` = nicht bestimmbar, `null` = nie gefragt)** |
+| Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import; seit 0.508.3 per Tabellensplitting als eigene Entität `BookSource` gemappt, NICHT als Property von `Book`)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)**, **CommentLanguage? (≤8; Quellsprache der Kommentare fuer die Kurs-Uebersetzung, `und` = nicht bestimmbar, `null` = nie gefragt)**, **ForKids (bool, Default false; Kurs auf der Kinderseite KidHub, nur Admin, öffnet die Aufgaben dort ohne Anmeldung)** |
 | CalculationTrees | Selbst eingeklickter Analysebaum EINES Users zu EINER Stellung eines Kalkulationsbuchs (Kalkulations-Modus; es gibt keine Lösung, der Nutzer legt seine Varianten für beide Seiten selbst an) | UserId (Cascade) + BookId (denormalisiert für die „bearbeitet"-Zähler, Cascade) + BookPuzzleId (**Restrict**, wie CoursePuzzleResult — vermeidet doppelte Cascade-Pfade), **TreeJson (LONGTEXT; für den Server OPAK, nur JSON-Gültigkeit + Maximalgröße geprüft; LEER erlaubt = Zeile trägt nur Trainings-Werte, „hat Baum" ist überall `TreeJson != ''`, nicht „Zeile existiert")**, **ChosenSan (20)/ChosenUci (10) = die eine Festlegung, SecondsSpent (int, Default 0, aufsummiert), SecondsToken (64, nullable) + SecondsTokenApplied (int, Default 0) = Idempotenz-Marke des zuletzt verbuchten Zeit-Deltas samt darunter angerechneter Sekunden (Retry darf die addierte Zeit nicht doppelt buchen), Grade (int?, 0–4 = benannte Stufe `CalculationGrade`, `null` = unbewertet ≠ Stufe 0 „nicht gelöst"; Punkte sind eine Ableitung via `CalculationGrades.PointsFor` und werden NICHT gespeichert)**, CreatedAt, UpdatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
 | CalcEditions | Kalkulations-SERIE (Phase 1, eigener Bereich à la Wochenpost): terminiert EIN Wochen-Kapitel eines Kalkulationsbuchs (Video + Freigabe). Kapitel OHNE Ausgabe = ungegatet (Übergang); Gating im `CalculationService` (Wochen mit Ausgabe versteckt bis `PublishAt`, für Tester ab `TesterPreviewAt` — Phase 2; Owner/Admin sehen Entwürfe). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), Chapter (≤300, = Wochen-Kapitelname), Title? (≤300), VideoUrl? (≤500), PublishAt (DateTime), TesterPreviewAt? (DateTime, früher), CreatedAt, UpdatedAt, PublishAnnouncedAt?/TesterAnnouncedAt? (Ankündigungs-Marker, Phase 3b), TesterAnnouncedUserIds? (CSV der Tester-Runden-Empfänger); **UNIQUE (BookId, Chapter)** |
 | CalcSeriesMembers | Kalkulations-SERIE (Phase 2): privater VERTEILER eines Serien-Buchs. Mitgliedschaft ist ein zusätzlicher Zugriffspfad in `CourseAccess.CanAccessAsync` — sobald das Buch nicht mehr `IsPublic` ist, sehen nur noch Mitglieder (+ Owner/Admin/Share/Gruppe) den Kurs. `IsTester` gibt einem Mitglied Frühzugang (Wochen ab `TesterPreviewAt`). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), UserId, IsTester (bool), CreatedAt; **UNIQUE (BookId, UserId)** |
@@ -3131,6 +3167,36 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   ein vollstaendiges Profil-Objekt zurueckzuschicken ueberschriebe die RookHub-Einstellungen mit
   dem Stand einer Seite, die sie nicht kennt.
 
+### Dritte Oberfläche: KidHub, die Kinderseite (0.554.0)
+
+`kidhub.oberschmid.homes` (Dev: `kidhub-dev.oberschmid.homes`) — eigenes Angular-Projekt `kidhub`
+(`src-kidhub/`, `public-kidhub/`, `tsconfig.kidhub.json`, `ngsw-config.kidhub.json`), eigenes Image
+`ghcr.io/kahalm/rookhub-kidhub:{dev,latest}` aus demselben Dockerfile (`APP_PROJECT=kidhub`), Host-Port Prod
+**8096** / Dev **8097** (`KIDHUB_PORT`). Name vom Nutzer („KidHub", 2026-09-27). API und Endpunkte: „KidHub —
+Kinderseite" unter REST API.
+
+- **Kein Konto, keine Anmeldung**: kein `authInterceptor`, kein `visitorInterceptor`; Fortschritt nur im
+  localStorage (`rh-kids-progress-v1`, `KidsProgressStore`): Sterne je Stufe (0–1 Fehler = 3, 2–4 = 2, sonst 1 —
+  Tipps zählen als Fehler), der laufende Durchgang (Aufgabe + Fehler), gelöste Kurs-Linien. Stufe n ist offen,
+  sobald n−1 geschafft ist.
+- **Geteilt über `@rh/*`**: HTTP-Kette (connectivity, retry, renderAfterHttp), Sprachdateien (Namespace `kids.*`,
+  gepflegt in en/de/hr/hu — nur diese vier bietet die Seite an), `PuzzleBoardComponent` (neues Input `autoQueen`:
+  Umwandlung ohne Auswahl zur Dame), Impressum/Datenschutz als eigene Routen.
+- **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
+  (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
+  im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);
+  falscher Zug → Stellung zurück, Fehlerpunkt. `KidsPuzzleComponent` hält ALLES in Signalen (Stellungszug und
+  Gegnerantwort kommen per Timer — Angular 22 zeichnet unmarkierte Ansichten danach nicht neu) und gibt dem Brett
+  nach jedem Zug ein NEUES `dests`-Objekt: nur eine geänderte Eingabe lässt das Brett einen falschen Zug optisch
+  zurücknehmen.
+- **Routen** `/`, `/levels`, `/levels/:level`, `/courses`, `/courses/:bookId`, `/impressum`, `/privacy` — bewusst
+  keine mit `/g`, `/t`, `/puzzles`: diese Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
+- **Symbole**: vorerst Platzhalter aus `design/kidhub/*.svg` (Springer vor Stern), Rezept in
+  `public-kidhub/ASSETS.md`; `KidHubAssetTests` hält Manifest, `index.html` und Dateien gegeneinander (dieselbe
+  Falle wie bei der Turnierseite: was in `public-kidhub/` fehlt, kommt still aus `public/`).
+- **Emojis** (Eule, Themenbilder, Sterne) brauchen eine Emoji-Schrift auf dem Gerät — Handys/Tablets haben sie,
+  der Headless-Chromium auf dem Server nicht (Screenshots zeigen dort Kästchen).
+
 ### Als ein Nutzer einsteigen — auf BEIDEN Oberflaechen (0.429.0)
 
 Der Einstieg selbst ist unveraendert (`POST /api/admin/users/{id}/impersonate`, das Token traegt
@@ -3304,18 +3370,18 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build nötig.
   Seit 0.434.2 laufen Test- und Build-Jobs **pfadgefiltert** (`.github/filters.yml`, von `test.yml` UND
   `docker.yml` gelesen): ein Push startet nur, was er berührt. Zwei Regeln hängen an Tests
-  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle drei Images** (`:latest` entsteht nur dort), und der
-  `turnier`-Filter enthält den GETEILTEN Frontend-Code (beide Angular-Projekte importieren aus `src/app`).
+  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle vier Images** (`:latest` entsteht nur dort), und der
+  `turnier`- und der `kidhub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
   Ein neuer Job braucht also einen Filter — ein Tippfehler im Namen ist ein leerer Output und damit ein
   Job, der ab da nie mehr läuft.
-  **Handstart** (seit 0.453.3): `gh workflow run docker.yml` baut ALLE drei Images und lässt vorher ALLE
+  **Handstart** (seit 0.453.3): `gh workflow run docker.yml` baut ALLE Images und lässt vorher ALLE
   Tests laufen — bei `workflow_dispatch` bleibt der Filter-Schritt aus (dorny hielte master gegen master
   und setzte jeden Filter auf `false`), die Job-Bedingungen fangen den Fall über `github.event_name` ab.
   Gebraucht für den Fall, den die Pfadfilter selbst erzeugen: master ist rot (hier fremdverschuldet
   geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
   lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
   (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
-  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier` in `docker.yml` bauen die
+  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier`/`-kidhub` in `docker.yml` bauen die
   Images schon parallel zu den Tests und pushen sie unter einem Hilfs-Tag `ci-<run_id>`. Die Jobs hinter
   dem Gate bauen GAR NICHT mehr — sie haengen per `docker buildx imagetools create` nur die echten Tags
   (`:dev`/`:latest`/Semver) an dasselbe Image, eine Registry-Operation von Sekunden. Der Zwischenschritt

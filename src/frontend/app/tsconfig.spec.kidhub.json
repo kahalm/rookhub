@@ -1,0 +1,17 @@
+/* Test-Konfiguration von KidHub (Kinderseite). Eigene Datei, weil der Karma-Builder die Spec-Dateien am
+   PROJEKT entlang einsammelt — ohne eigenes Test-Target liefen die Specs aus src-kidhub nie mit
+   (dieselbe Falle wie bei der Turnierseite, siehe tsconfig.spec.turnier.json). */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec-kidhub",
+    "types": [
+      "jasmine"
+    ]
+  },
+  "include": [
+    "src-kidhub/**/*.spec.ts",
+    "src-kidhub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

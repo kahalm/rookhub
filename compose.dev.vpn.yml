@@ -47,6 +47,7 @@
 # Ports:
 #   ${FRONTEND_PORT}     -> Frontend (nginx)
 #   ${TURNIER_PORT}      -> Turnierseite (nginx)
+#   ${KIDHUB_PORT}       -> KidHub, Kinderseite (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 #   ${ES_PORT:-9201}     -> Elasticsearch
@@ -349,6 +350,25 @@ services:
       start_period: 10s
     ports:
       - "${TURNIER_PORT}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub-dev
+
+  # ── KidHub (Kinderseite, Angular + nginx) ──────────────────────────────────
+  # Drittes Angular-Projekt, eigene Domain (kidhub-dev.oberschmid.homes), ohne Anmeldung.
+  kidhub:
+    image: ghcr.io/kahalm/rookhub-kidhub:dev
+    container_name: rookhub-kidhub-dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${KIDHUB_PORT}:8080"
     depends_on:
       - api
     networks:

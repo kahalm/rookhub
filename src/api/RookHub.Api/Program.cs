@@ -243,6 +243,8 @@ try
     builder.Services.AddScoped<BookPuzzleService>();
     builder.Services.AddScoped<DailyLeaderboardService>();
     builder.Services.AddScoped<CourseService>();
+    // Kinderseite: Stufen-Leiter aus besonders einfachen Lichess-Puzzles + Kinderkurse.
+    builder.Services.AddScoped<KidsPuzzleService>();
     // Kurs ⇄ Repertoire (beide Richtungen). Haengt an BEIDEN Diensten — deshalb ein eigener:
     // RepertoireService darf CourseService nicht bekommen (CourseService kennt Repertoire-Code schon).
     builder.Services.AddScoped<CourseRepertoireConversionService>();
@@ -405,6 +407,8 @@ try
     // bleibt die Gruppen-Zusammenfassung bis zum naechsten Sweep unsichtbar.
     builder.Services.AddHostedService<TournamentGroupingBackfillService>();
     builder.Services.AddHostedService<RepertoireCleanupBackfillService>();
+    // Baut die Kinder-Leiter, wenn sie fehlt oder aus einem aelteren Lehrplan stammt.
+    builder.Services.AddHostedService<KidsPuzzleSeeder>();
 
     // GitHub-Actions-Übersicht (Admin-CI-Seite). Token pro Request in GithubActionsService gesetzt.
     builder.Services.AddHttpClient<GithubActionsService>(client =>
