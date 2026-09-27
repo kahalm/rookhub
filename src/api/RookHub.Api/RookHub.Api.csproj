@@ -16,6 +16,8 @@
   <ItemGroup>
     <!-- Piece-SVGs (cburnett, App-Default) für den OG-Brett-Bild-Renderer als Embedded Resource. -->
     <EmbeddedResource Include="Assets\pieces\cburnett\*.svg" />
+    <!-- LeagueHub: Gewichte des Aufstellungs-Modells (trainiert in ~/claude/league-analyzer, export_weights.py) -->
+    <EmbeddedResource Include="Assets\league-model.json" />
   </ItemGroup>
 
   <ItemGroup>

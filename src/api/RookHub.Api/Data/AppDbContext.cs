@@ -89,6 +89,16 @@ public class AppDbContext : DbContext
     public DbSet<PuzzleTag> PuzzleTags => Set<PuzzleTag>();
     /// <summary>Als „besonders einfach" markierte Lichess-Puzzles der Kinderseite (Stufen-Leiter).</summary>
     public DbSet<KidsPuzzle> KidsPuzzles => Set<KidsPuzzle>();
+    // LeagueHub (TMM-Aufstellungs-Prognosen)
+    public DbSet<LeagueTournament> LeagueTournaments => Set<LeagueTournament>();
+    public DbSet<LeagueRound> LeagueRounds => Set<LeagueRound>();
+    public DbSet<LeagueMatch> LeagueMatches => Set<LeagueMatch>();
+    public DbSet<LeagueGame> LeagueGames => Set<LeagueGame>();
+    public DbSet<LeaguePlayer> LeaguePlayers => Set<LeaguePlayer>();
+    public DbSet<LeaguePlayerProfile> LeaguePlayerProfiles => Set<LeaguePlayerProfile>();
+    public DbSet<LeagueOnlineAccount> LeagueOnlineAccounts => Set<LeagueOnlineAccount>();
+    public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
+    public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
@@ -571,6 +581,85 @@ public class AppDbContext : DbContext
             e.HasIndex(pt => new { pt.TagId, pt.Rating });
             e.HasOne(pt => pt.Puzzle).WithMany().HasForeignKey(pt => pt.PuzzleId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(pt => pt.Tag).WithMany(t => t.PuzzleTags).HasForeignKey(pt => pt.TagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---- LeagueHub ----------------------------------------------------------------------
+        modelBuilder.Entity<LeagueTournament>(e =>
+        {
+            e.HasKey(t => t.Tnr);
+            e.Property(t => t.Tnr).ValueGeneratedNever();
+            e.Property(t => t.Name).HasMaxLength(200);
+            e.Property(t => t.Season).HasMaxLength(10);
+            e.Property(t => t.League).HasMaxLength(40);
+            e.Property(t => t.Grp).HasMaxLength(40);
+            e.Property(t => t.Stage).HasMaxLength(20);
+            e.Property(t => t.Start).HasMaxLength(12);
+            e.Property(t => t.End).HasMaxLength(12);
+            e.HasIndex(t => t.Season);
+        });
+        modelBuilder.Entity<LeagueRound>(e => e.HasIndex(r => new { r.Tnr, r.Round }).IsUnique());
+        modelBuilder.Entity<LeagueMatch>(e =>
+        {
+            e.Property(m => m.Home).HasMaxLength(80);
+            e.Property(m => m.Away).HasMaxLength(80);
+            e.Property(m => m.Date).HasMaxLength(12);
+            e.Property(m => m.Time).HasMaxLength(12);
+            e.Property(m => m.Venue).HasMaxLength(300);
+            e.HasIndex(m => new { m.Tnr, m.Round });
+        });
+        modelBuilder.Entity<LeagueGame>(e =>
+        {
+            e.Property(g => g.HomeTeam).HasMaxLength(80);
+            e.Property(g => g.AwayTeam).HasMaxLength(80);
+            e.Property(g => g.HomePlayer).HasMaxLength(120);
+            e.Property(g => g.AwayPlayer).HasMaxLength(120);
+            e.Property(g => g.HomeTitle).HasMaxLength(10);
+            e.Property(g => g.AwayTitle).HasMaxLength(10);
+            e.Property(g => g.HomeColor).HasMaxLength(1);
+            e.Property(g => g.Result).HasMaxLength(12);
+            e.Property(g => g.HomeFide).HasMaxLength(16);
+            e.Property(g => g.AwayFide).HasMaxLength(16);
+            e.Property(g => g.PgnId).HasMaxLength(20);
+            e.HasIndex(g => new { g.Tnr, g.Round });
+        });
+        modelBuilder.Entity<LeaguePlayer>(e =>
+        {
+            e.Property(p => p.Team).HasMaxLength(80);
+            e.Property(p => p.Title).HasMaxLength(10);
+            e.Property(p => p.Name).HasMaxLength(120);
+            e.Property(p => p.NameKey).HasMaxLength(120);
+            e.Property(p => p.FideId).HasMaxLength(16);
+            e.Property(p => p.Fed).HasMaxLength(5);
+            e.HasIndex(p => new { p.Tnr, p.Team });
+            e.HasIndex(p => p.FideId);
+        });
+        modelBuilder.Entity<LeaguePlayerProfile>(e =>
+        {
+            e.HasKey(p => p.FideId);
+            e.Property(p => p.FideId).HasMaxLength(16);
+            e.Property(p => p.Name).HasMaxLength(120);
+        });
+        modelBuilder.Entity<LeagueOnlineAccount>(e =>
+        {
+            e.Property(a => a.FideId).HasMaxLength(16);
+            e.Property(a => a.Site).HasMaxLength(20);
+            e.Property(a => a.UserName).HasMaxLength(60);
+            e.Property(a => a.Url).HasMaxLength(200);
+            e.Property(a => a.Confidence).HasMaxLength(20);
+            e.Property(a => a.Evidence).HasMaxLength(300);
+            e.HasIndex(a => a.FideId);
+        });
+        modelBuilder.Entity<LeagueShare>(e =>
+        {
+            e.HasKey(s => s.Token);
+            e.Property(s => s.Token).HasMaxLength(40);
+            e.Property(s => s.Team).HasMaxLength(80);
+            e.HasIndex(s => new { s.Tnr, s.Round, s.Team }).IsUnique();
+        });
+        modelBuilder.Entity<LeagueView>(e =>
+        {
+            e.HasKey(v => v.Tnr);
+            e.Property(v => v.Tnr).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<KidsPuzzle>(e =>

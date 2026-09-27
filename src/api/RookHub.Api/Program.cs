@@ -247,6 +247,12 @@ try
     builder.Services.AddScoped<KidsPuzzleService>();
     builder.Services.AddScoped<KidsProgressService>();
     builder.Services.AddScoped<KidsEndlessService>();
+    // LeagueHub (TMM-Aufstellungs-Prognosen): Modell einmal laden, Aktualisieren als Einzel-Lauf
+    builder.Services.AddSingleton(_ => RookHub.Api.Services.League.LeagueModel.FromEmbedded());
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueService>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
+    builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueUpdateService>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();
     builder.Services.AddHttpClient(nameof(IpCountryService));

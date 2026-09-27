@@ -51,6 +51,9 @@ public class EndpointAuthInventoryTests
         "GET /api/kids/levels",                                      // KidsController.GetLevels
         "GET /api/kids/levels/{level:int}",                          // KidsController.GetLevel
         "POST /api/kids/endless/batch",                              // KidsController.GetEndlessBatch (Endlos-Modus, Puzzles je Rating-Fenster)
+        "GET /api/league/s/{token}",                                 // LeagueShareController.Get (Teilen-Link: EINE Begegnung, Token 144 Bit)
+        "GET /api/league/s/{token}/player/{fide}",                   // LeagueShareController.Player (nur Spieler der geteilten Meldeliste)
+        "GET /api/league/s/{token}/player/{fide}/pgn",               // LeagueShareController.Pgn (dito)
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am

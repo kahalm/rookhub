@@ -51,12 +51,16 @@ public static class Permissions
     /// <summary>Rollen &amp; Berechtigungen verwalten (Rollen anlegen/bearbeiten/zuweisen). Sensibel —
     /// wer das hat, kann sich effektiv beliebige weitere Rechte geben; standardmäßig nur die admin-Rolle.</summary>
     public const string RolesManage = "roles.manage";
+    /// <summary>LeagueHub: Aufstellungs-Prognosen der Tiroler Ligen ansehen (vorerst nur Admins, Wunsch 2026-09-27).</summary>
+    public const string LeagueView = "league.view";
+    /// <summary>LeagueHub: Daten aktualisieren, Teilen-Links anlegen/widerrufen, Bestand importieren.</summary>
+    public const string LeagueManage = "league.manage";
 
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
     {
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
         GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
-        TournamentsManage, RolesManage,
+        TournamentsManage, RolesManage, LeagueView, LeagueManage,
     };
 }

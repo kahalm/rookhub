@@ -1257,6 +1257,38 @@ bis dahin 404; die Regel steht EINMAL in `KidsPuzzleService.VisibleKidsBooks`.
 auf der Kinderseite bewusst OHNE `IsPublic` — wie die Pool-Flags eine absichtliche Freigabe; Kalkulationsbücher bleiben
 trotz Flag draußen (ihre Zugfolge ist die Lösung, die der Kalkulations-Modus zurückhält).
 
+### LeagueHub — Tiroler Ligen, Aufstellungs-Prognosen (Admin + öffentliche Teilen-Links, 0.569.0)
+
+Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag unter
+`leaguehub.oberschmid.homes` als eigener Stack `/opt/stacks/leaguehub`). Vorerst NUR Admins
+(`league.view` lesen, `league.manage` aktualisieren/teilen/importieren — Admin erfüllt beides).
+
+- **Tabellen** (`Models/League.cs`): `LeagueTournaments` (PK = chess-results-tnr, Season/Level/League/Grp/Stage),
+  `LeagueRounds` (Datum je Runde), `LeagueMatches`, `LeagueGames` (Brettpartien, Spieler null = „Brett nicht
+  besetzt", Forfeit 0/1/2 — 2 = „- - -", z. B. Corona-Abbruch 2019/20), `LeaguePlayers` (Meldeliste;
+  `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
+  Eröffnungsprofil als JSON + alle Partien als PGN), `LeagueOnlineAccounts` (NUR selbst offengelegte Konten:
+  Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen),
+  `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab), `LeagueViews`
+  (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
+- **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
+  Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
+  `Assets/league-model.json` (trainiert in Python, `export_weights.py`), Normierung je Match auf B Bretter,
+  Brett-Wahrscheinlichkeiten über elementarsymmetrische Polynome (Bretter folgen der Meldeliste),
+  Sonntag vorab = Mischung aus „Samstag gespielt ja/nein". **Tor**: `LeaguePythonParityTests` gegen den
+  echten Bestand (`LEAGUE_BUNDLE`, `LEAGUE_PY_DATA`, sonst übersprungen) — 0.569.0: 88 Begegnungen,
+  1 676 Wahrscheinlichkeiten, größte Abweichung 0,000.
+- **Freigabe-Regel** (Wunsch des Nutzers): Prognose nur für die NÄCHSTE Runde einer Liga; Landesliga
+  Samstag + Sonntag gemeinsam; spätere Runden „gesperrt" bis die vorige gespielt ist. JSON-Feldnamen der
+  Ansicht bewusst wie in Python (snake_case), damit die Parität direkt prüfbar ist.
+- **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/{tnr}`,
+  `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
+  (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
+  `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),
+  `POST /api/league/admin/rebuild`. Öffentlich (Rate-Limit `anonymous-tournament`):
+  `GET /api/league/s/{token}` (+`/player/{fide}`, `/pgn`) — nur Spieler der geteilten Meldeliste, Online-Konten
+  nur „sicher".
+
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
