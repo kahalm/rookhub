@@ -816,7 +816,8 @@
       "country": "Ország",
       "team": "Csapat",
       "club": "Klub",
-      "boardShort": "Táb."
+      "boardShort": "Táb.",
+      "none": "A chess-results még nem sorol fel résztvevőt ehhez a versenyhez. Ha ott megjelenik a kezdőlista, a „Frissítés“ letölti."
     },
     "teams": {
       "rank": "Helyezés",

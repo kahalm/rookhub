@@ -2,6 +2,10 @@
   <mat-tab [label]="'tournaments.tabs.players' | translate:{ count: players.length }">
     @if (playersLoading) {
       <app-loading-spinner />
+    } @else if (players.length === 0) {
+      <!-- Keine leere Tabelle ohne Grund: vor dem Turnier (Schnellschach-Rallyes) steht auf
+           chess-results oft noch keine Startliste — die Schiedsrichter tragen sie am Morgen ein. -->
+      <p class="empty-hint">{{ 'tournaments.players.none' | translate }}</p>
     } @else {
       @if (hasFavorites) {
         <div class="filter-bar">

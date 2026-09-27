@@ -1049,7 +1049,8 @@
       "country": "Country",
       "team": "Team",
       "club": "Club",
-      "boardShort": "Bd."
+      "boardShort": "Bd.",
+      "none": "chess-results does not list any participants for this tournament yet. Once the starting list is up there, “Refresh” fetches it."
     },
     "teams": {
       "rank": "Rank",

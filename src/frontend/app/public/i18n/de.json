@@ -1049,7 +1049,8 @@
       "country": "Land",
       "team": "Team",
       "club": "Verein",
-      "boardShort": "Br."
+      "boardShort": "Br.",
+      "none": "chess-results führt für dieses Turnier noch keine Teilnehmer. Steht die Startliste dort, holt „Aktualisieren“ sie ab."
     },
     "teams": {
       "rank": "Rang",

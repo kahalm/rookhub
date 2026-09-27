@@ -39,11 +39,23 @@ describe('TournamentTablesComponent', () => {
   });
 
   /**
+   * Ohne Teilnehmer steht ein Grund da, keine leere Tabelle — gemeldet an der Schachrallye Pradl,
+   * deren Startliste auf chess-results erst am Turniermorgen eingetragen wird.
+   */
+  it('zeigt ohne Teilnehmer einen Hinweis statt einer leeren Tabelle', () => {
+    component.players = component.displayedPlayers = [];
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.empty-hint')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('table')).toBeNull();
+  });
+
+  /**
    * Mobil-Spielerkarte: der Verein oeffnet die Aufstellung, ohne dass die (selbst klickbare) Karte
    * darunter den Favoriten toggelt — vorher war der Name reiner Text und jeder Tipp ein Favoriten-Write.
    */
   it('oeffnet aus der Spielerkarte die Mannschaft, ohne den Favoriten zu toggeln', () => {
-    component.displayedPlayers = [player()];
+    component.players = component.displayedPlayers = [player()];
     component.hasTeamPairings = true;
     const teamSpy = jasmine.createSpy('showTeamPlayers');
     const favSpy = jasmine.createSpy('toggleFavorite');
@@ -60,7 +72,7 @@ describe('TournamentTablesComponent', () => {
 
   /** Ohne Mannschaftspaarungen (Einzelturnier mit Vereinsspalte) gibt es nichts zu oeffnen: Text bleibt Text. */
   it('zeigt den Verein ohne Mannschaftspaarungen als reinen Text', () => {
-    component.displayedPlayers = [player()];
+    component.players = component.displayedPlayers = [player()];
     component.hasTeamPairings = false;
     fixture.detectChanges();
 
@@ -74,7 +86,7 @@ describe('TournamentTablesComponent', () => {
    * stand auf jedem Handy der Text "\00b7" in der Karte. Letztes Detail traegt keinen Punkt.
    */
   it('trennt die Kartendetails mit einem Mittelpunkt statt dem Text \\00b7', () => {
-    component.displayedPlayers = [player()];
+    component.players = component.displayedPlayers = [player()];
     component.hasTeamPairings = true;
     fixture.detectChanges();
 

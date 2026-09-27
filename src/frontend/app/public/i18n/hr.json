@@ -1049,7 +1049,8 @@
       "country": "Država",
       "team": "Ekipa",
       "club": "Klub",
-      "boardShort": "Pl."
+      "boardShort": "Pl.",
+      "none": "chess-results još ne navodi sudionike ovog turnira. Kad početna lista bude objavljena, „Osvježi“ će je preuzeti."
     },
     "teams": {
       "rank": "Mjesto",
