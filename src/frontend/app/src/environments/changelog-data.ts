@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.550.2", date: "2026-09-27", changes: [
+    { en: "“Ask the comments”: building the search index over the master games no longer breaks off halfway — looking up which games still lack an index entry takes over half a minute on the full collection, and the run used to repeat that lookup for every 500 games until a database timeout stopped it. It now looks up once per run.", de: "„Frag die Kommentare“: Der Aufbau des Suchindex über die Meisterpartien bricht nicht mehr mittendrin ab — die Suche, welche Partien noch fehlen, dauert auf dem ganzen Bestand über eine halbe Minute, und der Lauf wiederholte sie für jede Portion von 500 Partien, bis ein Datenbank-Timeout ihn stoppte. Jetzt wird einmal je Lauf gesucht." },
+  ] },
   { version: "0.550.1", date: "2026-09-27", changes: [
     { en: "Tournament history: the tabs at the top now show friends with tournaments first, then the players you follow, and only then friends without any entries — before, every friend came ahead of the followed players, so a row of empty tabs pushed them to the end.", de: "Turnierverlauf: Die Reiter oben zeigen jetzt zuerst die Freunde mit Turnieren, danach die Spieler, denen du folgst, und erst dann die Freunde ohne Einträge — bisher standen alle Freunde vor den Gefolgten, und eine Reihe leerer Reiter schob sie ans Ende." },
   ] },

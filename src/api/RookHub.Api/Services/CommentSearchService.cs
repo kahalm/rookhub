@@ -131,15 +131,36 @@ public sealed class CommentSearchService
     public async Task<EmbedResult> EmbedPendingAsync(int maxGames, int batch, CancellationToken ct)
     {
         if (!Available) return new(0, 0, 0);
-        var ids = await _db.LibraryGames.AsNoTracking()
+        return await EmbedGamesAsync(await PendingGameIdsAsync(maxGames, ct), batch, ct);
+    }
+
+    /// <summary>
+    /// Welche kommentierten Partien noch keine Einbettung haben, die besten zuerst. <b>Teuer</b> — auf Prod mit ~10 000
+    /// eingebetteten Partien 37 s (Anti-Join gegen <c>CommentEmbeddings</c>, dazu jede Zeile für <c>CommentedPlies</c>
+    /// gelesen und sortiert); der Standard-Timeout von 30 s riss damit am 2026-09-26 den Lauf ab. Deshalb fragt
+    /// <c>tools/LibraryImport embed</c> EINMAL je Lauf (mit langem Timeout) und arbeitet die Liste dann mit
+    /// <see cref="EmbedGamesAsync"/> ab, statt je Portion von vorn zu suchen.
+    /// </summary>
+    public Task<List<int>> PendingGameIdsAsync(int maxGames, CancellationToken ct)
+        => _db.LibraryGames.AsNoTracking()
             .Where(g => g.CommentedPlies > 0 && g.Status != LibraryGameStatus.Duplicate && g.Status != LibraryGameStatus.Rejected
                 && !_db.CommentEmbeddings.Any(e => e.LibraryGameId == g.Id))
             .OrderByDescending(g => g.Score).ThenBy(g => g.Id)
             .Select(g => g.Id).Take(maxGames).ToListAsync(ct);
+
+    /// <summary>Genau diese Partien einbetten (je Partie ganz oder gar nicht). Eine inzwischen schon eingebettete
+    /// Partie wird übersprungen — ein zweiter Lauf daneben erzeugt so keine doppelten Stücke.</summary>
+    public async Task<EmbedResult> EmbedGamesAsync(IReadOnlyList<int> ids, int batch, CancellationToken ct)
+    {
+        if (!Available || ids.Count == 0) return new(0, 0, 0);
         int games = 0, chunksSaved = 0, failed = 0;
         foreach (var slice in ids.Chunk(Math.Max(1, batch / 4)))
         {
-            var rows = await _db.LibraryGames.AsNoTracking().Where(g => slice.Contains(g.Id)).ToListAsync(ct);
+            var done = await _db.CommentEmbeddings.AsNoTracking().Where(e => slice.Contains(e.LibraryGameId))
+                .Select(e => e.LibraryGameId).Distinct().ToListAsync(ct);
+            var todo = slice.Except(done).ToList();
+            if (todo.Count == 0) continue;
+            var rows = await _db.LibraryGames.AsNoTracking().Where(g => todo.Contains(g.Id)).ToListAsync(ct);
             var pending = rows.Select(g => (Game: g, Chunks: CommentChunks.Build(g))).Where(x => x.Chunks.Count > 0).ToList();
             var texts = pending.SelectMany(p => p.Chunks.Select(c => c.Text)).ToList();
             var vectors = new List<float[]>();

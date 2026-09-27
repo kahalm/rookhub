@@ -2139,7 +2139,11 @@ Sprache (das Embedding-Modell ist mehrsprachig), je Partie der passendste Auszug
   `/v1/models` des Spark-Proxys zeigt auf den Chat-Server und nennt das Embedding-Modell gar nicht (ohne Einstellung nimmt der
   Client das erste mit „embed" im Namen, sonst das erste).
 * **Befüllen**: `tools/LibraryImport embed [--limit n] [--batch 32]` (Env `Embedding__BaseUrl` …): noch nicht eingebettete
-  kommentierte Partien, beste Note zuerst, je Partie ganz oder gar nicht; wiederholbar. Dev: ~130 000 Partien, ~800 000
+  kommentierte Partien, beste Note zuerst, je Partie ganz oder gar nicht; wiederholbar. Die Auswahl
+  (`CommentSearchService.PendingGameIdsAsync`) läuft EINMAL je Lauf mit 10-min-Timeout und wird dann in Portionen zu 500
+  abgearbeitet (`EmbedGamesAsync`, überspringt schon eingebettete) — auf Prod dauerte sie bei ~10 000 eingebetteten
+  Partien 37 s, und als sie je Portion lief, riss der 30-s-Standard-Timeout den Lauf ab (2026-09-26, 0.550.2).
+  `--batch 256` = 256 Texte je Anfrage an den Spark (~18 Stücke/s gemessen; mit 32 rund ein Zehntel). Dev: ~130 000 Partien, ~800 000
   kommentierte Halbzüge, ~95 Mio. Zeichen → geschätzt 150–250 000 Stücke, ~0,5 GB Vektoren.
 
 ### Stellungsfilter (`/api/guess-tree`) — der Eroeffnungsbaum der Punktepartie

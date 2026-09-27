@@ -106,6 +106,29 @@ public class CommentSearchTests : IDisposable
         Assert.True(embedder.Queries.Last());        // die Frage wurde als Frage eingebettet
     }
 
+    /// <summary>Das Werkzeug holt die Auswahl EINMAL (teuer auf Prod) und arbeitet sie dann in Portionen ab — eine
+    /// Partie, die inzwischen eingebettet wurde (zweiter Lauf daneben, Wiederholung), darf keine doppelten Stücke
+    /// bekommen.</summary>
+    [Fact]
+    public async Task PendingIds_BestFirst_AndEmbedGames_SkipsAlreadyEmbedded()
+    {
+        var a = new LibraryGame { White = "A", CommentedPlies = 1, Score = 50, Pgn = "1. e4 {A quiet start.} e5 *" };
+        var b = new LibraryGame { White = "B", CommentedPlies = 1, Score = 90, Pgn = "1. d4 {Queen pawn.} d5 *" };
+        var silent = new LibraryGame { White = "C", CommentedPlies = 0, Score = 99, Pgn = "1. c4 c5 *" };
+        _db.LibraryGames.AddRange(a, b, silent);
+        await _db.SaveChangesAsync();
+        var service = Service(new AxisEmbedder());
+
+        var pending = await service.PendingGameIdsAsync(100, CancellationToken.None);
+        Assert.Equal(new[] { b.Id, a.Id }, pending);
+
+        Assert.Equal(1, (await service.EmbedGamesAsync(new[] { b.Id }, 8, CancellationToken.None)).Games);
+        var again = await service.EmbedGamesAsync(pending, 8, CancellationToken.None);   // b ist schon drin
+        Assert.Equal(1, again.Games);
+        Assert.Equal(1, _db.CommentEmbeddings.Count(e => e.LibraryGameId == b.Id));
+        Assert.Empty(await service.PendingGameIdsAsync(100, CancellationToken.None));
+    }
+
     [Fact]
     public async Task Search_WithoutModel_OrTooShort_ReturnsNothing()
     {

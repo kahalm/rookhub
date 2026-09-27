@@ -36,10 +36,11 @@ if (string.IsNullOrWhiteSpace(connection))
     return 1;
 }
 
-AppDbContext NewDb()
+AppDbContext NewDb(TimeSpan? commandTimeout = null)
 {
     var options = new DbContextOptionsBuilder<AppDbContext>()
-        .UseMySql(connection, new MariaDbServerVersion(new Version(11, 0, 0)))
+        .UseMySql(connection, new MariaDbServerVersion(new Version(11, 0, 0)),
+            o => { if (commandTimeout is { } t) o.CommandTimeout((int)t.TotalSeconds); })
         .EnableSensitiveDataLogging(false)
         .Options;
     var db = new AppDbContext(options);
@@ -84,20 +85,28 @@ async Task<int> EmbedAsync()
         return 1;
     }
     var started = DateTime.UtcNow;
+    // LibraryGameService braucht nur die Suche (MarkKnownAsync) — beim Einbetten wird sie nicht angefasst.
+    CommentSearchService Service(AppDbContext db)
+        => new(db, embedder, new LibraryGameService(db, null!), NullLogger<CommentSearchService>.Instance);
+
+    // Die Auswahl EINMAL je Lauf: sie ist teuer (Prod 37 s bei 10 000 eingebetteten Partien) und riss mit dem
+    // 30-s-Standard den Lauf vom 2026-09-26 ab — vorher lief sie für jede Portion von 500 Partien neu.
+    List<int> pending;
+    await using (var db = NewDb(TimeSpan.FromMinutes(10)))
+        pending = await Service(db).PendingGameIdsAsync(limit, CancellationToken.None);
+    Console.WriteLine($"{pending.Count:N0} Partien ohne Einbettung");
+
     int games = 0, chunks = 0, failed = 0;
-    while (games + failed < limit)
+    foreach (var slice in pending.Chunk(500))
     {
         await using var db = NewDb();
-        // LibraryGameService braucht nur die Suche (MarkKnownAsync) — beim Einbetten wird sie nicht angefasst.
-        var service = new CommentSearchService(db, embedder, new LibraryGameService(db, null!), NullLogger<CommentSearchService>.Instance);
-        var step = await service.EmbedPendingAsync(Math.Min(500, limit - games - failed), batch, CancellationToken.None);
-        if (step.Games == 0 && step.Failed == 0) break;
+        var step = await Service(db).EmbedGamesAsync(slice, batch, CancellationToken.None);
         games += step.Games;
         chunks += step.Chunks;
         failed += step.Failed;
         var rate = games / Math.Max(1, (DateTime.UtcNow - started).TotalSeconds);
         Console.WriteLine($"{games} Partien, {chunks} Stücke eingebettet ({rate:0.0} Partien/s), {failed} gescheitert");
-        if (step.Games == 0) break; // nur Fehlschläge — das Modell antwortet nicht, nicht endlos weiterversuchen
+        if (step.Games == 0 && step.Failed > 0) break; // nur Fehlschläge — das Modell antwortet nicht, nicht endlos weiterversuchen
     }
     Console.WriteLine($"Fertig: {games} Partien, {chunks} Stücke, {failed} gescheitert, {(DateTime.UtcNow - started).TotalMinutes:0.0} min");
     return failed > 0 && games == 0 ? 2 : 0;
