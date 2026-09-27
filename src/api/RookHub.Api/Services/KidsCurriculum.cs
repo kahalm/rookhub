@@ -68,7 +68,7 @@ public static class KidsCurriculum
     ];
 
     /// <summary>Themen, die ein Kind verwirren: en passant, Rochade als Loesung, Unterverwandlung.</summary>
-    private static readonly string[] ExcludedThemes = ["enPassant", "castling", "underPromotion"];
+    internal static readonly string[] ExcludedThemes = ["enPassant", "castling", "underPromotion"];
 
     /// <summary>Ein Puzzle aus dem Bestand, so weit die Auswahl es braucht.</summary>
     public sealed record Candidate(int PuzzleId, string LichessId, int Rating, int RatingDeviation,

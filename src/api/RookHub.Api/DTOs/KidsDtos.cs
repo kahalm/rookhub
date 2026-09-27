@@ -88,3 +88,26 @@ public class KidsSolvedLineDto
     /// <summary>Wann sie geloest wurde.</summary>
     public long At { get; set; }
 }
+
+/// <summary>Endlos-Modus: ein Rating-Fenster je gewuenschtem Puzzle (<c>POST /api/kids/endless/batch</c>).</summary>
+public class KidsEndlessBatchRequest
+{
+    public List<KidsEndlessWindowDto> Windows { get; set; } = new();
+    /// <summary>Schon gespielte Puzzles dieses Laufs — kommen nicht noch einmal.</summary>
+    public List<int> Exclude { get; set; } = new();
+}
+
+public class KidsEndlessWindowDto
+{
+    public int MinRating { get; set; }
+    public int MaxRating { get; set; }
+}
+
+/// <summary>Ein Puzzle des Endlos-Modus (Lichess-Form: <c>moves[0]</c> stellt die Aufgabe).</summary>
+public class KidsEndlessPuzzleDto
+{
+    public int Id { get; set; }
+    public string Fen { get; set; } = string.Empty;
+    public string Moves { get; set; } = string.Empty;
+    public int Rating { get; set; }
+}

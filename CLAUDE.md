@@ -1209,6 +1209,7 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | GET | `/api/kids/progress` | Auth | Fortschritt im Konto `{ levels[{ level, stars, runIndex, runMistakes, runAt }], courses[{ bookId, resetAt, solved[{ id, at }] }] }` — Zeiten in ms seit 1970 (0.563.0) |
 | PUT | `/api/kids/progress` | Auth | Den GANZEN Stand des Browsers schicken → zusammengeführt gespeichert, Antwort = gemeinsamer Stand (`KidsProgressMerge`, Regeln unten). 400 über den Deckeln (`MaxLevels` 1000, `MaxCourses` 500, `MaxLinesPerCourse` 10 000); Zeiten über jetzt + 1 Tag werden gekappt |
 | GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen; ein bekanntes Land ohne eigene Kindersprache → `en` (0.560.1); beides `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
+| POST | `/api/kids/endless/batch` | AllowAnonymous (`anonymous-puzzle`) | Endlos-Modus (0.566.0): `{ windows[{ minRating, maxRating }] (≤ 40), exclude[] (≤ 1000) }` → je Fenster ein kindgerechtes Lichess-Puzzle `[{ id, fen, moves, rating }]` in Fensterreihenfolge, im Lauf keins doppelt; Fenster ohne Treffer fehlen. 400 über den Deckeln |
 | POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
 
 **Die Leiter** (`KidsPuzzles`, `Services/KidsCurriculum.cs`) = als „besonders einfach" markierte Lichess-Puzzles.
@@ -3266,6 +3267,19 @@ Kinderseite" unter REST API.
 - **Geteilt über `@rh/*`**: HTTP-Kette (connectivity, retry, renderAfterHttp), Sprachdateien (Namespace `kids.*`,
   gepflegt in en/de/hr/hu — nur diese vier bietet die Seite an), `PuzzleBoardComponent` (neues Input `autoQueen`:
   Umwandlung ohne Auswahl zur Dame), Datenschutz als eigene Route.
+- **Endlos-Modus** (0.566.0, Wunsch 2026-09-27 „analog wie bei RookHub, nur mit sehr flacher Kurve … adaptiv"):
+  Route `/endless`, Kachel auf der Startseite. Die KURVE rechnet der Browser (`core/kids-endless.ts`, rein): Start 700,
+  +20 je Puzzle (5 Puzzles je 100 Elo), Anker wie RookHub — T1 nach 10 Puzzles = Ø Rating des ersten Fehlers der
+  letzten 10 Läufe, T2 nach 25 = Ø Höchst-Rating (sauber gelöst) der letzten 5, danach wieder +20; NIE flacher als die
+  Grundkurve (700 → 900 → 1200), keine steile Erst-Lauf-Kurve. Wer weit kommt, bekommt also steilere Läufe. Drei Herzen;
+  ein Fehler oder Tipp kostet eins, höchstens eins je Aufgabe, und das Kind löst die Aufgabe trotzdem zu Ende (dafür
+  meldet `KidsPuzzleComponent` jeden Fehler sofort per `mistake`). Das letzte Herz beendet den Lauf nach
+  `WRONG_HOLD_MS`. Läufe + Rekord liegen NUR im Browser (`KidsEndlessStore`, `rh-kids-endless-v1`, letzte 20) — nicht im
+  Konto. Die PUZZLES holt `KidsEndlessService` in Blöcken zu 20 (Nachladen bei < 5): je Fenster Zufalls-Sprung in den
+  Id-Raum, die nächsten 12 des Fensters, das erste kindgerechte (≤ 3 eigene Züge, Qualitätsgrenzen der Leiter, ohne
+  Rochade/en passant/Unterverwandlung; Figurenzahl frei), drei Sprünge, dann zufällig unter den ersten 200 des Fensters.
+  Auf Dev gemessen (5,36 Mio. Puzzles): ~10 ms je Sprung (Plan: Primärschlüssel-Scan), kindgerecht sind je 200er-Band
+  zwischen 30 % (2400) und 70 % (1000–1400).
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
   im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);

@@ -48,6 +48,11 @@ export interface KidsCourseLine {
   altMoves: string | null;
 }
 
+/** Ein Puzzle des Endlos-Modus (Lichess-Form wie `KidsPuzzle`) samt Rating. */
+export interface KidsEndlessPuzzle extends KidsPuzzle {
+  rating: number;
+}
+
 /** Sprache aus dem Land der Besucher-IP (Server schlaegt lokal nach, speichert nichts). */
 export interface KidsLanguageHint {
   country: string | null;
@@ -81,6 +86,11 @@ export class KidsApiService {
   coursePuzzles(bookId: number, lang?: string): Observable<KidsCourseLine[]> {
     const params = lang ? new HttpParams().set('lang', lang) : undefined;
     return this.http.get<KidsCourseLine[]>(`${this.base}/courses/${bookId}/puzzles`, { params });
+  }
+
+  /** Endlos-Modus: je Rating-Fenster ein kindgerechtes Puzzle (in Fensterreihenfolge; Fenster ohne Treffer fehlen). */
+  endlessBatch(windows: { minRating: number; maxRating: number }[], exclude: number[]): Observable<KidsEndlessPuzzle[]> {
+    return this.http.post<KidsEndlessPuzzle[]>(`${this.base}/endless/batch`, { windows, exclude });
   }
 
   /** Nur angemeldet: den hiesigen Stand mit dem Konto zusammenfuehren, Antwort = gemeinsamer Stand. */

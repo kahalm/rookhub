@@ -10,6 +10,8 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', loadComponent: () => import('./features/home/kids-home.component').then(m => m.KidsHomeComponent) },
   { path: 'levels', loadComponent: () => import('./features/levels/level-map.component').then(m => m.LevelMapComponent) },
   { path: 'levels/:level', loadComponent: () => import('./features/levels/level-play.component').then(m => m.LevelPlayComponent) },
+  // Endlos-Modus: Aufgabe um Aufgabe, jede etwas schwerer, bis die Herzen weg sind.
+  { path: 'endless', loadComponent: () => import('./features/endless/endless-play.component').then(m => m.EndlessPlayComponent) },
   { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent) },
   { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-play.component').then(m => m.CoursePlayComponent) },
   // Anmelden und Registrieren: dieselben Masken wie in RookHub und auf der Turnierseite — dasselbe

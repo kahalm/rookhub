@@ -5,6 +5,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
+import { KidsEndlessStore } from '../../core/kids-endless.store';
 
 /**
  * Startseite: ein grosser „Los geht's"-Knopf zur naechsten offenen Stufe, darunter die zwei Wege —
@@ -36,6 +37,14 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
             · ⭐ {{ progress.totalStars() }}
           </span>
         }
+      </a>
+      <a class="tile endless" routerLink="/endless">
+        <span class="icon" aria-hidden="true">♾️</span>
+        <span class="name">{{ 'kids.endless.title' | translate }}</span>
+        <span class="meta">
+          @if (endless.best() > 0) { 🏆 {{ 'kids.endless.best' | translate: { count: endless.best() } }} }
+          @else { {{ 'kids.endless.tileHint' | translate }} }
+        </span>
       </a>
       @if (courses().length > 0) {
         <a class="tile courses" [routerLink]="courseLink()">
@@ -77,6 +86,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
     .tile:hover { transform: translateY(-3px); }
     .tile.puzzles { background: var(--kid-sky); }
     .tile.courses { background: var(--kid-peach); }
+    .tile.endless { background: #e8e0ff; }
     .icon { font-size: 3.4rem; line-height: 1.1; }
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
@@ -87,6 +97,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 export class KidsHomeComponent {
   private readonly api = inject(KidsApiService);
   readonly progress = inject(KidsProgressStore);
+  readonly endless = inject(KidsEndlessStore);
   private readonly translate = inject(TranslateService);
   readonly user = toSignal(inject(AuthService).currentUser$, { initialValue: null });
 

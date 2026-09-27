@@ -3834,6 +3834,17 @@
     }
   },
   "kids": {
+    "endless": {
+      "title": "Beskonačno",
+      "tileHint": "Dokle god možeš – s tri srca",
+      "task": "Pronađi najbolji potez!",
+      "hearts": "Preostalo srca: {{count}}",
+      "over": "Nema više srca!",
+      "result": "Riješenih zadataka: {{count}}",
+      "best": "Rekord: {{count}}",
+      "newBest": "Novi rekord! 🎉",
+      "again": "Ponovno"
+    },
     "home": {
       "title": "KidHub",
       "subtitle": "Šahovske zagonetke – kreni lagano, razinu po razinu.",

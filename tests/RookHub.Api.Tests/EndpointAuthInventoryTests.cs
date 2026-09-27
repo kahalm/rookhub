@@ -50,6 +50,7 @@ public class EndpointAuthInventoryTests
         "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)
         "GET /api/kids/levels",                                      // KidsController.GetLevels
         "GET /api/kids/levels/{level:int}",                          // KidsController.GetLevel
+        "POST /api/kids/endless/batch",                              // KidsController.GetEndlessBatch (Endlos-Modus, Puzzles je Rating-Fenster)
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am

@@ -3834,6 +3834,17 @@
     }
   },
   "kids": {
+    "endless": {
+      "title": "Endless",
+      "tileHint": "As far as you can go – with three hearts",
+      "task": "Find the best move!",
+      "hearts": "{{count}} hearts left",
+      "over": "Out of hearts!",
+      "result": "You solved {{count}} puzzles.",
+      "best": "Best: {{count}}",
+      "newBest": "New record! 🎉",
+      "again": "Play again"
+    },
     "home": {
       "title": "KidHub",
       "subtitle": "Chess puzzles to crack – start really easy, level by level.",

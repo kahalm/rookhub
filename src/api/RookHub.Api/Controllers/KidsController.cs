@@ -22,14 +22,30 @@ public class KidsController : BaseApiController
     private readonly CourseCommentLocalizer? _localizer;
     private readonly IpCountryService? _ipCountry;
     private readonly KidsProgressService? _progress;
+    private readonly KidsEndlessService? _endless;
 
     public KidsController(KidsPuzzleService service, CourseCommentLocalizer? localizer = null,
-        IpCountryService? ipCountry = null, KidsProgressService? progress = null)
+        IpCountryService? ipCountry = null, KidsProgressService? progress = null, KidsEndlessService? endless = null)
     {
         _service = service;
         _localizer = localizer;
         _ipCountry = ipCountry;
         _progress = progress;
+        _endless = endless;
+    }
+
+    /// <summary>Endlos-Modus: je Rating-Fenster ein kindgerechtes Puzzle (die Kurve rechnet KidHub selbst).</summary>
+    [HttpPost("endless/batch")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    public async Task<ActionResult<List<KidsEndlessPuzzleDto>>> GetEndlessBatch([FromBody] KidsEndlessBatchRequest request,
+        CancellationToken ct)
+    {
+        try
+        {
+            return Ok(await _endless!.BatchAsync(request, ct));
+        }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Der Fortschritt im Konto (Stufen, Kurs-Linien).</summary>

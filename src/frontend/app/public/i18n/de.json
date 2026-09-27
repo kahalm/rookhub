@@ -3834,6 +3834,17 @@
     }
   },
   "kids": {
+    "endless": {
+      "title": "Endlos",
+      "tileHint": "So weit du kommst – mit drei Herzen",
+      "task": "Finde den besten Zug!",
+      "hearts": "Noch {{count}} Herzen",
+      "over": "Keine Herzen mehr!",
+      "result": "Du hast {{count}} Aufgaben geschafft.",
+      "best": "Rekord: {{count}}",
+      "newBest": "Neuer Rekord! 🎉",
+      "again": "Nochmal"
+    },
     "home": {
       "title": "KidHub",
       "subtitle": "Schach-Puzzles zum Knobeln – ganz einfach anfangen, Stufe für Stufe.",

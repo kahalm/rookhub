@@ -159,6 +159,8 @@ export class KidsPuzzleComponent {
   readonly solved = output<{ mistakes: number }>();
   /** Das Kind will weiter. */
   readonly next = output<void>();
+  /** Ein Fehler (falscher Zug oder Tipp) — sofort, nicht erst beim Loesen; der Endlos-Modus zieht dafuer ein Herz ab. */
+  readonly mistake = output<void>();
 
   readonly fen = signal('8/8/8/8/8/8/8/8 w - - 0 1');
   readonly orientation = signal<'white' | 'black'>('white');
@@ -221,6 +223,7 @@ export class KidsPuzzleComponent {
     switch (result) {
       case 'wrong':
         this.mistakes++;
+        this.mistake.emit();
         this.status.set('wrong');
         this.holdThenTakeBack(event, 'red');
         return;
@@ -292,6 +295,7 @@ export class KidsPuzzleComponent {
     const hint = this.solver?.hint();
     if (!hint) return;
     this.mistakes++;
+    this.mistake.emit();
     this.hintLevel = Math.min(this.hintLevel + 1, 2);
     this.shapes.set(this.hintLevel === 1
       ? [{ orig: hint.from as Key, brush: 'yellow' }]

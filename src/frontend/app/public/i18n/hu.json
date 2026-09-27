@@ -3555,6 +3555,17 @@
     }
   },
   "kids": {
+    "endless": {
+      "title": "Végtelen",
+      "tileHint": "Ameddig bírod – három szívvel",
+      "task": "Találd meg a legjobb lépést!",
+      "hearts": "Még {{count}} szív",
+      "over": "Elfogytak a szívek!",
+      "result": "{{count}} feladatot oldottál meg.",
+      "best": "Rekord: {{count}}",
+      "newBest": "Új rekord! 🎉",
+      "again": "Még egyszer"
+    },
     "home": {
       "title": "KidHub",
       "subtitle": "Sakkfeladványok – kezdd egészen könnyen, szintről szintre.",
