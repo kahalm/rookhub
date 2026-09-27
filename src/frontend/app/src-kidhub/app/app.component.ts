@@ -111,7 +111,8 @@ export class KidHubAppComponent implements OnInit {
   constructor() {
     // Nur de/en/hr/hu haben die Kindertexte vollstaendig; jede andere Sprache (Browser, Wahl auf
     // RookHub) stuende hier halb in Englisch. Dann zuerst das Land der IP fragen (AT → de, HU → hu,
-    // HR → hr, GB/US → en …), erst ohne Treffer Deutsch — ANGEZEIGT, ohne die Wahl zu ueberschreiben.
+    // HR → hr, jedes andere bekannte Land → en), erst ohne Land (LAN, Ausfall) Deutsch — ANGEZEIGT,
+    // ohne die Wahl zu ueberschreiben.
     effect(() => {
       const current = this.translate.currentLang();
       if (current && !isKidsLanguage(current)) untracked(() => this.fallBack());

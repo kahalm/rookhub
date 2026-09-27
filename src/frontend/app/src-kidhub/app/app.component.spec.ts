@@ -83,8 +83,13 @@ describe('KidHubAppComponent', () => {
     expect(localStorage.getItem('rookhub_lang')).toBe('fr');   // die Wahl bleibt unangetastet
   });
 
-  it('Land ohne Kindersprache → Deutsch', async () => {
-    await startWithForeignLanguage({ country: 'FR', language: null });
+  it('Frankreich → Englisch (der Server sagt es so)', async () => {
+    await startWithForeignLanguage({ country: 'FR', language: 'en' });
+    expect(TestBed.inject(TranslateService).currentLang()).toBe('en');
+  });
+
+  it('Land unbekannt (LAN) → Deutsch', async () => {
+    await startWithForeignLanguage({ country: null, language: null });
     expect(TestBed.inject(TranslateService).currentLang()).toBe('de');
     expect(TestBed.inject(LocaleService).current).toBe('de');
   });

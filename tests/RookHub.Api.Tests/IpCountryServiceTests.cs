@@ -184,8 +184,10 @@ public class IpCountryServiceTests : IDisposable
     [InlineData("HU", "hu")]
     [InlineData("US", "en")]
     [InlineData("GB", "en")]
-    [InlineData("FR", null)]
-    [InlineData(null, null)]
+    [InlineData("FR", "en")]    // bekanntes Land ohne eigene Kindersprache → Englisch
+    [InlineData("JP", "en")]
+    [InlineData(null, null)]    // unbekannt (LAN, keine Liste) → kein Hinweis, KidHub nimmt Deutsch
+    [InlineData("", null)]
     public void LandZuKindersprache(string? country, string? language) =>
         Assert.Equal(language, KidsLanguageHint.ForCountry(country));
 

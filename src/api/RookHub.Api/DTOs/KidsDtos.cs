@@ -47,6 +47,7 @@ public class KidsLanguageHintDto
 {
     /// <summary>ISO-Land der IP, <c>null</c> bei LAN-/privater Adresse oder ohne Länderliste.</summary>
     public string? Country { get; set; }
-    /// <summary>Passende Kindersprache (de/en/hr/hu) oder <c>null</c> — dann nimmt KidHub Deutsch.</summary>
+    /// <summary>Passende Kindersprache (de/en/hr/hu; ein bekanntes Land ohne eigene: en) oder <c>null</c>
+    /// bei unbekanntem Land — dann nimmt KidHub Deutsch.</summary>
     public string? Language { get; set; }
 }

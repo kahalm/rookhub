@@ -1205,7 +1205,7 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | GET | `/api/kids/levels/{level}` | AllowAnonymous | Eine Stufe am Stück `{ level, theme, puzzles[{ id, fen, moves }] }` (Lichess-Form: `moves[0]` stellt die Aufgabe), leichteste zuerst; 404 unbekannt |
 | GET | `/api/kids/courses` | AllowAnonymous | Für Kinder freigegebene Kurse (`Book.ForKids`, ohne Kalkulationsbücher, ohne leere) `[{ bookId, title, description, puzzleCount }]` — `puzzleCount` ohne Info-Linien |
 | GET | `/api/kids/courses/{bookId}/puzzles?lang=` | AllowAnonymous | Aufgaben eines Kinderkurses in Lesereihenfolge (`BookPuzzleDto`, OHNE `IsInfoOnly`); `lang` wie bei den Kursen. 404 wenn nicht `ForKids`/Kalkulationsbuch |
-| GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen, `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
+| GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen; ein bekanntes Land ohne eigene Kindersprache → `en` (0.560.1); beides `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
 | POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
 
 **Die Leiter** (`KidsPuzzles`, `Services/KidsCurriculum.cs`) = als „besonders einfach" markierte Lichess-Puzzles.
@@ -3216,7 +3216,8 @@ Kinderseite" unter REST API.
   Rezept in `public-kidhub/ASSETS.md`; `KidHubAssetTests` hält Manifest, `index.html` und Dateien gegeneinander
   (dieselbe Falle wie bei der Turnierseite: was in `public-kidhub/` fehlt, kommt still aus `public/`).
 - **Sprache aus dem IP-Land** (0.560.0): nur wenn die ermittelte Sprache keine Kindersprache ist, fragt KidHub
-  `GET /api/kids/language-hint` (Land der Besucher-IP → de/en/hr/hu, `KidsLanguageHint`), erst ohne Treffer Deutsch
+  `GET /api/kids/language-hint` (Land der Besucher-IP → de/en/hr/hu, `KidsLanguageHint`; seit 0.560.1 bekommt JEDES
+  andere bekannte Land Englisch — „Frankreich → Englisch"), erst ohne Land (LAN, Ausfall) Deutsch
   (Warten höchstens `HINT_TIMEOUT_MS` 4 s). Nachgeschlagen wird LOKAL (`IpCountryService`): die Länderliste von DB-IP
   („IP to Country Lite", CC BY 4.0 — daher „IP Geolocation by DB-IP" im Fuß und in der Datenschutzerklärung) lädt der
   Server beim ersten Bedarf selbst (4,5 MB, ~717 000 Bereiche, 2,2 s Einlesen, ~19 MB Speicher), cacht sie 35 Tage im
