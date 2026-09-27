@@ -111,7 +111,9 @@
         @if (entry.chessResultsId === null) {
           <span class="muted">{{ 'tournamentDirectory.detail.notOnChessResults' | translate }}</span>
         } @else if (!entry.subscribed) {
-          <button mat-flat-button color="primary" (click)="bookmark()">
+          <!-- Derselbe Rahmen-Knopf wie alle daneben: gefuellt stach er als einziger heraus und
+               sah aus wie aus einer anderen Seite (gemeldet 27.09.). -->
+          <button mat-stroked-button (click)="bookmark()">
             <mat-icon>bookmark_add</mat-icon>
             {{ 'tournamentDirectory.bookmark' | translate }}
           </button>

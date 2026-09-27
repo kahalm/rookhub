@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.552.1", date: "2026-09-27", changes: [
+    { en: "Tournament calendar, detail page: the “Bookmark” button now looks like the buttons next to it — it was the only filled one and stood out from the row.", de: "Turnierkalender, Detailseite: Der Knopf „Merken“ sieht jetzt aus wie die Knöpfe daneben — er war als einziger gefüllt und fiel aus der Reihe." },
+  ] },
   { version: "0.552.0", date: "2026-09-27", changes: [
     { en: "Tournament history: a tournament that is still running now shows its current standing — under a new heading “In progress” above “Coming up”, with points from the games played so far, current place, performance and rating change. Before, an Olympiad or a league in the middle of its season stood under “Coming up” without any result until after its last round. The standing is refreshed every two hours once games have been played (tournaments not yet begun are checked once a day), and after the last round it is replaced once by the final result.", de: "Turnierverlauf: Ein Turnier, das gerade läuft, zeigt jetzt seinen Zwischenstand — unter der neuen Überschrift „Läuft gerade“ über „Kommt noch“, mit den Punkten aus den bisher gespielten Partien, dem aktuellen Platz, der Performance und der Elo-Änderung. Bisher stand eine laufende Olympiade oder eine Liga mitten in der Saison ohne jedes Ergebnis unter „Kommt noch“, bis nach der letzten Runde. Der Stand wird alle zwei Stunden aufgefrischt, sobald Partien gespielt sind (noch nicht begonnene Turniere einmal am Tag), und nach der letzten Runde einmal durch das Endergebnis ersetzt." },
   ] },
