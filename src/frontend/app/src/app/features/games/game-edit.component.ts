@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -73,24 +73,24 @@ interface MoveRow { no: number; white: number; black: number | null; }
         </div>
 
         <mat-card class="headers">
-          <mat-form-field appearance="outline"><mat-label>{{ 'games.edit.white' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.white' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.white" name="white" maxlength="120" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>{{ 'games.edit.black' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.black' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.black" name="black" maxlength="120" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.result' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.result' | translate }}</mat-label>
             <mat-select [(ngModel)]="header.result" name="result" (ngModelChange)="dirty.set(true)">
               @for (r of results; track r) { <mat-option [value]="r">{{ r }}</mat-option> }
             </mat-select></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>{{ 'games.edit.event' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.event' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.event" name="event" maxlength="200" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>{{ 'games.edit.site' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>{{ 'games.edit.site' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.site" name="site" maxlength="200" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.round' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.round' | translate }}</mat-label>
             <input matInput [(ngModel)]="header.round" name="round" maxlength="40" (ngModelChange)="dirty.set(true)" /></mat-form-field>
-          <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.date' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.date' | translate }}</mat-label>
             <input matInput type="date" [(ngModel)]="header.date" name="date" (ngModelChange)="dirty.set(true)" /></mat-form-field>
           <!-- Meine Seite: dreht Partieseite, Teilen-Link und Vorschaubild — und hier gleich das Brett. -->
-          <mat-form-field appearance="outline" class="short"><mat-label>{{ 'games.edit.ownerSide' | translate }}</mat-label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="short"><mat-label>{{ 'games.edit.ownerSide' | translate }}</mat-label>
             <mat-select [(ngModel)]="header.ownerSide" name="ownerSide" (ngModelChange)="onSide($event)">
               <mat-option value="">{{ 'games.edit.sideNone' | translate }}</mat-option>
               <mat-option value="white">{{ 'scoresheet.sideWhite' | translate }}</mat-option>
@@ -119,7 +119,7 @@ interface MoveRow { no: number; white: number; black: number | null; }
                     {{ 'games.edit.cropTitle' | translate }}
                     @if (c.written) { <span class="written">{{ 'games.edit.written' | translate: { text: c.written } }}</span> }
                   </div>
-                  <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
+                  <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect" [style.--crop-aspect]="c.view.aspect">
                     <img [src]="src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
                          [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
                     <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
@@ -153,6 +153,12 @@ interface MoveRow { no: number; white: number; black: number | null; }
               <mat-button-toggle value="insert">{{ 'games.edit.modeInsert' | translate }}</mat-button-toggle>
             </mat-button-toggle-group>
 
+          </mat-card>
+
+          <!-- Rechte Spalte: der gewählte Zug (Lesarten, Aktionen, Kommentar) über der Zugliste. Am PC füllt der
+               Arbeitsbereich genau die Fensterhöhe, jede Spalte scrollt für sich (0.554.1). -->
+          <div class="side">
+          <mat-card class="cursor-card">
             <div class="cursor-panel">
               @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
               @if (current(); as p) {
@@ -183,7 +189,7 @@ interface MoveRow { no: number; white: number; black: number | null; }
                   }
                   <button mat-stroked-button (click)="remove()" [disabled]="busy()"><mat-icon>backspace</mat-icon> {{ 'games.edit.delete' | translate }}</button>
                 </div>
-                <mat-form-field appearance="outline" class="comment">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="comment">
                   <mat-label>{{ 'games.edit.comment' | translate }}</mat-label>
                   <textarea matInput rows="2" maxlength="2000" [ngModel]="p.comment ?? ''" (ngModelChange)="setComment($event)"></textarea>
                 </mat-form-field>
@@ -219,20 +225,25 @@ interface MoveRow { no: number; white: number; black: number | null; }
               <p class="warn-text">{{ 'games.edit.illegalHint' | translate: { count: illegalCount() } }}</p>
             }
           </mat-card>
+          </div>
         </div>
       }
     </div>
   `,
   styles: [`
-    .edit-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
+    /* Werkbank-Seite: am PC mehr Breite als die üblichen 1240 px (Foto + Brett + Zugliste nebeneinander). */
+    .edit-page { max-width: min(1800px, 98vw); margin: 0 auto; padding: 12px 16px; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; }
-    .head { display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
+    .head { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
     .head h1 { margin: 0; font-size: 1.4rem; }
     .spacer { flex: 1; }
-    .headers { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0 12px; padding: 12px 16px 0; margin-bottom: 16px; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-    .layout.with-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.8fr); }
+    /* Kopfdaten: kompakt, am PC in EINER Zeile (vorher zwei, die den Arbeitsbereich unter den Rand schoben). */
+    .headers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 12px; padding: 10px 12px;
+      margin-bottom: 12px; --mat-form-field-container-height: 44px; --mat-form-field-container-vertical-padding: 10px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+    .layout.with-photo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.8fr); }
+    .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     @media (max-width: 1100px) { .layout.with-photo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .photo { grid-column: 1 / -1; } }
     @media (max-width: 720px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
     .photo { padding: 8px; }
@@ -253,6 +264,7 @@ interface MoveRow { no: number; white: number; black: number | null; }
     .nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; }
     .next-uncertain { margin-left: 8px; }
     .mode { align-self: center; }
+    .cursor-card { padding: 12px; }
     .cursor-panel { display: flex; flex-direction: column; gap: 8px; }
     .where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .san { font-family: monospace; font-size: 1.1rem; }
@@ -286,6 +298,25 @@ interface MoveRow { no: number; white: number; black: number | null; }
     .ply.end { font-family: inherit; font-size: 0.8rem; opacity: 0.7; }
     .unresolved { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; color: var(--mat-sys-error, #c62828); font-size: 0.9rem; }
     .unresolved span { font-family: monospace; word-break: break-word; }
+    /* PC: der Arbeitsbereich füllt die Fensterhöhe (Navigationsleiste, Kopfzeile und Kopfdaten abgezogen), jede Spalte
+       scrollt für sich — Foto mit Ausschnitt, Brett und Zugliste sind zugleich sichtbar, ohne die Seite zu scrollen. */
+    @media (min-width: 1101px) {
+      .layout { --work-h: max(440px, calc(100dvh - 250px)); height: var(--work-h); align-items: stretch; }
+      .layout > * { min-height: 0; }
+      .photo { display: flex; flex-direction: column; overflow: hidden; }
+      .photo-scroll { flex: 1 1 auto; min-height: 0; max-height: none; display: flex; justify-content: center; align-items: flex-start; }
+      .photo-scroll img { max-height: 100%; }
+      .photo-scroll.zoom { display: block; }
+      .photo-scroll.zoom img { max-height: none; }
+      .crop { flex: none; }
+      .crop-frame { width: min(100%, calc(24vh * var(--crop-aspect, 3))); }
+      .board-card { overflow: auto; }
+      .board-wrap { width: min(100%, calc(var(--work-h) - 150px)); }
+      .side { overflow: hidden; }
+      .cursor-card { flex: none; max-height: 60%; overflow: auto; }
+      .moves-card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+      .moves { max-height: none; flex: 1 1 auto; min-height: 0; }
+    }
   `],
 })
 export class GameEditComponent implements OnInit, OnDestroy {
@@ -298,6 +329,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
   private translate = inject(TranslateService);
   private destroyRef = inject(DestroyRef);
   private dialog = inject(MatDialog);
+  private host = inject(ElementRef);
   readonly preferences = inject(PreferencesService);
 
   readonly results = ['*', '1-0', '0-1', '1/2-1/2'];
@@ -415,7 +447,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
       this.sheetEntries.set(state?.written ?? []);
       this.loading.set(false);
       const first = this.plies().findIndex(p => p.uncertain && !p.confirmed);
-      if (first >= 0) this.cursor.set(first);
+      if (first >= 0) { this.cursor.set(first); this.revealCursor(); }
     });
   }
 
@@ -431,6 +463,14 @@ export class GameEditComponent implements OnInit, OnDestroy {
 
   go(i: number): void {
     this.cursor.set(Math.max(0, Math.min(i, this.legalCount())));
+    this.revealCursor();
+  }
+
+  /** Am PC scrollt die Zugliste für sich — der gewählte Halbzug soll dort sichtbar bleiben (Pfeiltasten,
+   *  „nächste unsichere Stelle"). */
+  private revealCursor(): void {
+    setTimeout(() => (this.host.nativeElement as HTMLElement).querySelector('.moves .ply.cursor')
+      ?.scrollIntoView?.({ block: 'nearest' }));
   }
 
   nextUncertain(): void {
