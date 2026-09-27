@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal, viewChild } from '@angular/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
 import { Board, Fixture } from '../core/league.models';
@@ -10,6 +10,8 @@ import { PlayerCardComponent } from './player-card.component';
  * Knöpfe „Auf WhatsApp teilen" (Text) und „Link teilen" (nur im Admin-Bereich). Genutzt von der
  * Liga-Seite und der geteilten Ansicht (<see cref="shareToken"/> gesetzt = ohne Anmeldung).
  */
+interface ShareOut { kind: 'text' | 'link' | 'info' | 'error'; text: string; copied?: boolean; url: string; token: string; until: string }
+
 @Component({
   selector: 'lh-fixture',
   standalone: true,
@@ -147,7 +149,13 @@ export class FixtureViewComponent {
   /** Gesetzt = geteilte Ansicht: Karten/PGN über den Link, kein „Link teilen". */
   readonly shareToken = input<string | null>(null);
 
-  readonly shareOut = signal<{ kind: 'text' | 'link' | 'info' | 'error'; text: string; copied?: boolean; url: string; token: string; until: string } | null>(null);
+  /** Ergebnis von „Auf WhatsApp teilen"/„Link teilen" — gehört zu DIESER Begegnung: wechselt Runde, Verein oder
+   *  Liga, verschwindet es (sonst stünde der Link der vorigen Begegnung unter der neuen, und „In WhatsApp öffnen"
+   *  schickte die alte Adresse mit den neuen Mannschaftsnamen). */
+  readonly shareOut = linkedSignal({
+    source: () => [this.fixture(), this.round(), this.team()] as const,
+    computation: (): ShareOut | null => null,
+  });
   readonly copied = signal(false);
 
   readonly tn = tn;
@@ -175,7 +183,6 @@ export class FixtureViewComponent {
   }
 
   linkMessage(url: string): string {
-    const e = this.fixture()!;
     return `${this.leagueName()} R${this.round()}: ${shortTeam(this.home())} – ${shortTeam(this.away())}, Gegner-Prognose je Brett:\n${url}`;
   }
 

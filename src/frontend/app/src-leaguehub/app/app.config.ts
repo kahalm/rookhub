@@ -12,7 +12,6 @@ import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.intercept
 import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { authInterceptor } from '@rh/core/auth.interceptor';
-import { resolveStartupLocale } from '@rh/core/locale.service';
 
 registerLocaleData(localeDe);
 
@@ -24,7 +23,9 @@ registerLocaleData(localeDe);
 export const leaguehubConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    { provide: LOCALE_ID, useFactory: resolveStartupLocale },
+    // Die Seite ist deutsch und registriert nur die deutschen Locale-Daten — eine aus RookHub geerbte Wahl
+    // (hr, hu …) als LOCALE_ID ließe jede Datums-/Zahlen-Pipe mit „Missing locale data" scheitern.
+    { provide: LOCALE_ID, useValue: 'de' },
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),

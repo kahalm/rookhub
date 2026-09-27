@@ -44,7 +44,10 @@ public sealed class LeagueService
         var w = await LoadWorldAsync(ct);
         if (w.Seasons.Count == 0) return 0;
         var season = w.Seasons[^1];
-        var counts = await _db.LeaguePlayerProfiles.AsNoTracking().ToDictionaryAsync(p => p.FideId, p => p.GameCount, ct);
+        // Nur die Zählung: ohne Projektion käme jede Zeile samt Pgn/ProfileJson (bis ~2 MB je Spieler) mit —
+        // die Selektoren von ToDictionaryAsync laufen erst im Client.
+        var counts = await _db.LeaguePlayerProfiles.AsNoTracking().Select(p => new { p.FideId, p.GameCount })
+            .ToDictionaryAsync(p => p.FideId, p => p.GameCount, ct);
         var accounts = (await _db.LeagueOnlineAccounts.AsNoTracking().ToListAsync(ct))
             .GroupBy(a => a.FideId).ToDictionary(g => g.Key, g => g.ToList());
         var builder = new LeagueViewBuilder(w, _model, counts, accounts);
@@ -133,24 +136,34 @@ public sealed class LeagueService
         return Convert.ToBase64String(buf).Replace('+', '-').Replace('/', '_').TrimEnd('=');
     }
 
+    /// <summary>Ablauf: <see cref="ShareKeepDays"/> nach der Runde — bei einer schon gespielten Runde aber nie vor
+    /// heute + <see cref="ShareKeepDays"/>, sonst wäre ein frisch angelegter Link zu einer älteren Runde sofort tot.</summary>
     public static DateOnly ExpiresFor(string? date, DateOnly today)
     {
         var d = (date ?? "").Split(' ').LastOrDefault();
         var day = LeagueDates.Parse(d) ?? today.AddDays(30 - ShareKeepDays);
+        if (day < today) day = today;
         return day.AddDays(ShareKeepDays);
     }
 
-    /// <summary>Link anlegen (gleiche Begegnung = gleicher Link). null = nicht teilbar.</summary>
+    /// <summary>Link anlegen (gleiche Begegnung = gleicher Link, solange er gilt). null = nicht teilbar.</summary>
     public async Task<LeagueShare?> CreateShareAsync(int tnr, int round, string team, int? userId, CancellationToken ct)
     {
         var f = await FixtureAsync(tnr, round, team, ct);
         if (f is null || !Shareable(f.Value.Fixture)) return null;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var existing = await _db.LeagueShares.FirstOrDefaultAsync(s => s.Tnr == tnr && s.Round == round && s.Team == team, ct);
-        if (existing is not null) return existing;
+        if (existing is not null)
+        {
+            if (existing.Expires >= today) return existing;
+            // Abgelaufen, aber noch nicht aufgeräumt (das passiert nur beim Aktualisieren): der eindeutige Index
+            // ließe keinen zweiten Link zu, und den toten zurückzugeben hieße „Link ungültig" beim Empfänger.
+            _db.LeagueShares.Remove(existing);
+        }
         var share = new LeagueShare
         {
             Token = NewToken(), Tnr = tnr, Round = round, Team = team, CreatedByUserId = userId, CreatedAt = DateTime.UtcNow,
-            Expires = ExpiresFor(f.Value.Fixture["date"]?.GetValue<string>(), DateOnly.FromDateTime(DateTime.UtcNow)),
+            Expires = ExpiresFor(f.Value.Fixture["date"]?.GetValue<string>(), today),
         };
         _db.LeagueShares.Add(share);
         await _db.SaveChangesAsync(ct);

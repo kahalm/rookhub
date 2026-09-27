@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -102,6 +104,23 @@ public class LeagueRefreshTests : IDisposable
     }
 
     [Fact]
+    public async Task StalePlayers_OpponentsOfOwnClubFirst_ThenByProbability()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Season = "2026/27", Level = 1, League = "Landesliga" });
+        // „A" ist ein fremder Verein, Schwaz der eigene: dessen Gegner (Spieler 5, nur 20 %) kommt vor den 90 % von A.
+        _db.LeagueViews.Add(new LeagueView
+        {
+            Tnr = 1,
+            Json = "{\"fixtures\":{\"A\":{\"1\":{\"status\":\"open\",\"roster\":[{\"fide\":\"4\",\"p\":0.9},{\"fide\":\"6\",\"p\":0.7}]}},"
+                 + "\"Schwaz\":{\"1\":{\"status\":\"open\",\"roster\":[{\"fide\":\"5\",\"p\":0.2},{\"fide\":\"6\",\"p\":0.3}]}}}}",
+        });
+        await _db.SaveChangesAsync();
+        var stale = await Refresh().StalePlayersAsync("2026/27", default);
+        // 6 steht bei A (70 %) UND gegen Schwaz (30 %): der Schwaz-Rang zählt
+        Assert.Equal(new[] { "6", "5", "4" }, stale);
+    }
+
+    [Fact]
     public async Task Run_FetchesPagesAndGamesThroughTheCrawler()
     {
         _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
@@ -119,6 +138,108 @@ public class LeagueRefreshTests : IDisposable
         Assert.Contains("1 Ligen neu geholt", msg);
         Assert.Equal(2, _db.LeagueGames.Count(g => g.Tnr == 7));
         Assert.True(_db.LeagueViews.Any(v => v.Tnr == 7));
+    }
+
+    [Fact]
+    public async Task Replace_EmptyPages_KeepTheLeague()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "Landesliga" });
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 7, Round = 1, HomeTeam = "A", AwayTeam = "B" });
+        await _db.SaveChangesAsync();
+        var empty = new LeagueRefresh.Pages(7, new(), new(), new(), new(), new());   // Fehl-/Drosselseite von chess-results
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Refresh().ReplaceAsync(empty, default));
+        Assert.Equal(1, _db.LeagueGames.Count(g => g.Tnr == 7));
+    }
+
+    [Fact]
+    public async Task Run_OneLeagueFails_TheOthersAndTheViewsStillUpdate()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 2, League = "1. Klasse", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        await _db.SaveChangesAsync();
+        var json = System.Text.Json.JsonSerializer.Serialize(SamplePages(), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        var handler = new StubHandler(req => req.RequestUri!.AbsolutePath switch
+        {
+            "/api/league/6" => new HttpResponseMessage(HttpStatusCode.BadGateway),
+            "/api/league/7" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") },
+            _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("") },
+        });
+        var msg = await Refresh(handler).RunAsync(default);
+        Assert.Contains("1 Ligen neu geholt", msg);
+        Assert.Contains("nicht aktualisiert: Liga 6", msg);
+        Assert.Equal(2, _db.LeagueGames.Count(g => g.Tnr == 7));
+        Assert.True(_db.LeagueViews.Any(v => v.Tnr == 7));
+    }
+
+    [Fact]
+    public async Task Run_EveryLeagueFails_IsAFailedRun()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        await _db.SaveChangesAsync();
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Refresh(handler).RunAsync(default));
+    }
+
+    [Fact]
+    public async Task MergeGames_ALaterUnplayableMove_KeepsTheOpening()
+    {
+        // Zug 3 von Weiß ist auf dem Brett nicht spielbar — die Eröffnung davor zählt trotzdem (wie games_build.py)
+        const string broken = "[Event \"Open\"]\n[Date \"2025.01.05\"]\n[White \"Binder, Moriz\"]\n[Black \"X, Y\"]\n[Result \"1-0\"]\n\n"
+            + "1. e4 c5 2. Nf3 d6 3. Qxh8 Nf6 1-0";
+        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "111", Name = "Binder, Moriz" });
+        await _db.SaveChangesAsync();
+        await Refresh().MergeGamesAsync("111", broken, default);
+        var card = System.Text.Json.Nodes.JsonNode.Parse(_db.LeaguePlayerProfiles.Find("111")!.ProfileJson)!;
+        Assert.Equal(1, card["with_moves"]!.GetValue<int>());
+        Assert.Equal("e4", card["white"]!["first"]![0]![0]!.GetValue<string>());
+        Assert.Equal("1.e4 c5 2.Nf3 d6", card["recent"]![0]!["opening"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task Import_ReplacesTheLeagueData_AndUpsertsProfiles()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 99, Season = "2019/20", League = "alt" });
+        _db.LeagueGames.Add(new LeagueGame { Tnr = 99, HomeTeam = "alt", AwayTeam = "alt" });
+        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "111", Name = "alt", GameCount = 1 });
+        await _db.SaveChangesAsync();
+        var bundle = new LeagueImportService.Bundle(
+            new() { new(7, "TMM Landesliga 2026/2027", "2026/27", 1, "Landesliga", null, "Liga", false, null, null, 11) },
+            new() { new(7, 1, "03.10.2026") },
+            new() { new(7, 1, 1, "Schwaz", "Absam", null, null, null, null, null) },
+            new() { new(7, 1, 1, 1, "Schwaz", "Absam", "Binder, Moriz", "Hengl, Philip", null, null, "w", "½ - ½", .5, .5, 0, "111", "222", 2, 1, 2201, 2172, null) },
+            new() { new(7, "Schwaz", 2, 1, null, "Binder, Moriz", "binder, moriz", "111", 2201, null, "AUT", null, null, null) },
+            new() { new("111", "lichess", "moriz", "https://lichess.org/@/moriz", "sicher", null) },
+            new() { new("111", "Binder, Moriz", 3, new System.Text.Json.Nodes.JsonObject { ["n"] = 3 }, "[Event \"x\"]", null) });
+        var res = await new LeagueImportService(_db).ImportAsync(bundle, default);
+        Assert.Equal(1, res["tournaments"]!.GetValue<int>());
+        Assert.Equal(new[] { 7 }, _db.LeagueTournaments.Select(t => t.Tnr).ToArray());
+        Assert.Single(_db.LeagueGames);                                   // die alte Liga ist ersetzt
+        Assert.Equal(new DateOnly(2026, 10, 3), _db.LeagueRounds.Single().Date);
+        Assert.Single(_db.LeagueOnlineAccounts);
+        var prof = _db.LeaguePlayerProfiles.Find("111")!;
+        Assert.Equal(("Binder, Moriz", 3), (prof.Name, prof.GameCount));   // vorhandenes Profil aktualisiert
+    }
+
+    [Fact]
+    public async Task Update_AfterARun_NotAgainWithinTwoMinutes()
+    {
+        // Ohne registriertes LeagueRefresh scheitert der Lauf sofort — genug, um die Sperre danach zu prüfen.
+        var sp = new ServiceCollection().BuildServiceProvider();
+        var svc = new LeagueUpdateService(sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<LeagueUpdateService>.Instance, new StubLifetime());
+        Assert.Equal(LeagueUpdateService.StartResult.Started, svc.TryStart());
+        static System.Text.Json.JsonElement St(LeagueUpdateService u) => System.Text.Json.JsonSerializer.SerializeToElement(u.Status());
+        for (var i = 0; i < 200 && St(svc).GetProperty("running").GetBoolean(); i++) await Task.Delay(20);
+        Assert.False(St(svc).GetProperty("running").GetBoolean());
+        Assert.False(St(svc).GetProperty("ok").GetBoolean());
+        Assert.Equal(LeagueUpdateService.StartResult.TooSoon, svc.TryStart());
+    }
+
+    private sealed class StubLifetime : IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => CancellationToken.None;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() { }
     }
 
     private sealed class OneClientFactory(HttpClient client) : IHttpClientFactory

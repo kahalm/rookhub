@@ -16,7 +16,7 @@ type Show = 'w' | 's' | 'b';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog #dlg class="card" aria-labelledby="card-name" (click)="backdrop($event)" (close)="card.set(null)">
+    <dialog #dlg class="card" aria-labelledby="card-name" (click)="backdrop($event)" (close)="onClosed()">
       <div class="card-head">
         <div>
           <h2 id="card-name">{{ card()?.name || (loading() ? '…' : '') }}</h2>
@@ -127,6 +127,8 @@ export class PlayerCardComponent {
   readonly board = signal<number | null>(null);
   readonly show = signal<Show>('b');
   private token: string | null = null;
+  /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
+  private seq = 0;
 
   readonly options: { k: Show; label: string }[] = [{ k: 'w', label: 'Weiß' }, { k: 's', label: 'Schwarz' }, { k: 'b', label: 'Beide' }];
   readonly nameWhite = NAME_WHITE;
@@ -145,19 +147,27 @@ export class PlayerCardComponent {
     this.card.set(null);
     this.error.set(null);
     this.loading.set(true);
+    const my = ++this.seq;
     const d = this.dlg().nativeElement;
     if (!d.open) d.showModal();
     try {
-      this.card.set(await this.api.card(fide, token));
+      const c = await this.api.card(fide, token);
+      if (my === this.seq) this.card.set(c);
     } catch {
-      this.error.set('Keine Partien gefunden.');
+      if (my === this.seq) this.error.set('Keine Partien gefunden.');
     } finally {
-      this.loading.set(false);
+      if (my === this.seq) this.loading.set(false);
     }
   }
 
   close(): void {
     this.dlg().nativeElement.close();
+  }
+
+  onClosed(): void {
+    this.seq++;
+    this.card.set(null);
+    this.loading.set(false);
   }
 
   backdrop(ev: MouseEvent): void {
@@ -178,7 +188,13 @@ export class PlayerCardComponent {
   }
 
   async download(c: PlayerCard): Promise<void> {
-    const blob = await this.api.pgn(c.fide, this.token);
+    let blob: Blob;
+    try {
+      blob = await this.api.pgn(c.fide, this.token);
+    } catch {
+      this.error.set('Die PGN-Datei konnte nicht geladen werden.');
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

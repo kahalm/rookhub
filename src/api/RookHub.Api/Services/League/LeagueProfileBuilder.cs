@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Nodes;
+using Chess;
 
 namespace RookHub.Api.Services.League;
 
@@ -65,10 +66,35 @@ public static class LeagueProfileBuilder
     public static string StoredSource(Dictionary<string, string> headers) =>
         headers.ContainsKey("WhiteFideId") || headers.ContainsKey("BlackFideId") ? "Lumbra" : "chess-results";
 
+    /// <summary>Die ersten <paramref name="n"/> Halbzüge als SAN (Schreibweise von Gera.Chess wie in
+    /// <see cref="GamePlies"/>). Bewusst NICHT über <c>GamePlies.Parse</c>: das spielt die GANZE Partie nach und
+    /// verwirft sie komplett, sobald irgendein späterer Zug nicht spielbar ist — hier zählt nur die Eröffnung, und
+    /// games_build.py behält den lesbaren Anfang (<c>sans()</c> bricht beim ersten Fehler ab, der Präfix bleibt).</summary>
     private static List<string> Sans(Game g, int n)
     {
-        var parsed = GamePlies.Parse(g.Raw, maxPlies: n);
-        return parsed is null ? new() : parsed.Value.Plies.Select(p => p.San).ToList();
+        var result = new List<string>(n);
+        var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(moveText)) return result;
+        ChessBoard board;
+        try
+        {
+            board = g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)
+                ? ChessBoard.LoadFromFen(fen.Trim()) : new ChessBoard();
+        }
+        catch { return result; }
+        foreach (var san in PgnParser.ExtractMainlineSans(moveText).Take(n))
+        {
+            try
+            {
+                var legal = board.Moves(generateSan: true);
+                if (!board.Move(san)) break;
+                var uci = PgnParser.ToUci(board.ExecutedMoves[^1]);
+                var hit = Array.Find(legal, m => PgnParser.ToUci(m) == uci);
+                result.Add(string.IsNullOrEmpty(hit?.San) ? san : hit.San);
+            }
+            catch { break; }
+        }
+        return result;
     }
 
     private static string Line(IReadOnlyList<string> moves)

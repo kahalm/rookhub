@@ -9,6 +9,18 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [ ] LeagueHub: neue Saison findet sich nicht von selbst (2026-09-27, Code-Review des Umzugs)
+
+„Daten aktualisieren" (`LeagueRefresh.RunAsync`) holt nur die Ligen neu, die für `MAX(Season)` schon in
+`LeagueTournaments` stehen. Die Python-Fassung fand neue Saisonen über die chess-results-Turniersuche
+(`search.py` + `crawl.py`, Einordnung Liga/Klasse/Gruppe über `league_of()` in `parse.py`) — das ist NICHT
+portiert. Solange der Python-Stack lebt, kommt eine neue Saison per `export_bundle.py` + `POST
+/api/league/admin/import`; spätestens vor der Saison 2027/28 (Herbst 2027) braucht es den Weg in C#: Crawler-
+Endpunkt für die Turniersuche (TMM, Föderation AUT, Bundesland Tirol), Namensregeln → Level/Grp/Stage, neue
+`LeagueTournament`-Zeilen, dann der bestehende Lauf. Nebenbei offen: die Barlow-Schriften in
+`public-leaguehub/fonts/` tragen keinen Inhalts-Hash, der Frontend-nginx cached `/fonts/*.woff2` aber ein Jahr
+`immutable` — wer eine Schriftdatei ersetzt, gibt ihr einen neuen Namen.
+
 ## [~] Plan: Kurs-Kommentare mehrsprachig — Übersetzung je Linie (`CommentSets.BookPuzzleId`) (2026-09-26, Stufe A GEBAUT in 0.547.0, Stufe B in 0.548.0, Stufe C in 0.549.0)
 
 ### Stand (Stufe A, 0.547.0)

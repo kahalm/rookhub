@@ -1269,7 +1269,7 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
   `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
   Eröffnungsprofil als JSON + alle Partien als PGN), `LeagueOnlineAccounts` (NUR selbst offengelegte Konten:
   Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen),
-  `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab), `LeagueViews`
+  `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab — frühestens 7 Tage nach dem Anlegen; ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
   (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
   Merkmale NUR aus Wissen vor der Runde, logistische Regression mit den eingebetteten Gewichten
@@ -1292,10 +1292,13 @@ Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag
   `GET {Crawler}/api/league/{tnr}` (vier Seiten, `zeilen=99999`), Zeilen der Liga ERSETZEN und dabei
   Brettpaarung ↔ Meldeliste über `(Team, NameKey)` verknüpfen (FIDE-ID, Meldebrett, Elo = EloI, sonst EloN),
   „Brett nicht besetzt"/„spielfrei" → null; Ansichten rechnen; dann `GET {Crawler}/api/league/games/{fide}`
-  für die wahrscheinlichen Gegner offener Runden (p ≥ 0,15, `CrFetchedAt` älter als 14 Tage, max. 40, höchste
-  Wahrscheinlichkeit zuerst) → `LeagueProfileBuilder` führt Bestand + neue Partien zusammen (Dubletten über
+  für die wahrscheinlichen Gegner offener Runden (p ≥ 0,15, `CrFetchedAt` älter als 14 Tage, max. 40; Gegner von
+  `LeagueRefresh.OwnTeam` = Schwaz zuerst wie in stale_players.py, dann höchste Wahrscheinlichkeit) → `LeagueProfileBuilder` führt Bestand + neue Partien zusammen (Dubletten über
   Datum + Nachnamen + Ergebnis; Farbe per FIDE-ID-Tag, sonst Nachname — 2022/23 ohne Komma) und baut die
-  Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout).
+  Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout). Eine Liga bzw. ein Spieler,
+  der gerade nicht zu holen ist, hält den Rest NICHT auf (Warnung im Log, Meldung „nicht aktualisiert: Liga …“); erst
+  wenn KEINE Liga kommt, gilt der Lauf als gescheitert. Vier leere Seiten (Fehl-/Drosselseite) ersetzen nichts. Der
+  Import (`admin/import`) ersetzt in EINER Transaktion (Execution-Strategy-Muster).
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,

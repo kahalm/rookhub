@@ -112,6 +112,7 @@ export class LeaguePageComponent implements OnInit {
   readonly tn = tn;
   readonly label = roundLabel;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private polling = false;
   private destroyed = false;
 
   constructor() {
@@ -207,11 +208,15 @@ export class LeaguePageComponent implements OnInit {
   private poll(): void {
     this.updating.set(true);
     this.setMsg('Aktualisiere: lade Paarungen, Aufstellungen und neue Partien der Gegner von chess-results und rechne neu. Das dauert ein paar Minuten.', false);
+    // Höchstens EINE Nachfrage-Schleife: der Status-Blick beim Öffnen und ein 409 beim Klick können beide hierher führen.
+    if (this.polling) return;
+    this.polling = true;
     const tick = async () => {
       if (this.destroyed) return;
       let s;
       try { s = await this.api.updateStatus(); } catch { this.pollTimer = setTimeout(tick, POLL_MS); return; }
       if (s.running) { this.pollTimer = setTimeout(tick, POLL_MS); return; }
+      this.polling = false;
       this.updating.set(false);
       if (s.ok) {
         this.api.clearCache();

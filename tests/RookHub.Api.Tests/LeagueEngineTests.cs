@@ -94,6 +94,8 @@ public class LeagueEngineTests
     {
         Assert.Equal(new DateOnly(2026, 10, 10), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 9, 27)));
         Assert.Equal(new DateOnly(2026, 10, 27), LeagueService.ExpiresFor(null, new DateOnly(2026, 9, 27)));
+        // Runde längst gespielt: der frische Link gilt trotzdem sieben Tage ab heute, statt tot anzukommen
+        Assert.Equal(new DateOnly(2026, 10, 27), LeagueService.ExpiresFor("Sa 03.10.2026", new DateOnly(2026, 10, 20)));
     }
 
     [Fact]
@@ -237,6 +239,21 @@ public class LeagueEngineTests
         Assert.NotNull(s);
         Assert.True(await svc.DeleteShareAsync(s!.Token, default));
         Assert.Null(await svc.PublicShareAsync(s.Token, default));
+        db.Dispose();
+    }
+
+    [Fact]
+    public async Task Share_ExpiredButNotCleanedUp_IsReplacedByAFreshLink()
+    {
+        var (db, svc) = ShareFixture();
+        db.LeagueShares.Add(new LeagueShare { Token = "abgelaufenabgelaufen1234", Tnr = 1, Round = 1, Team = "A", Expires = new DateOnly(2020, 1, 1) });
+        db.SaveChanges();
+        var s = await svc.CreateShareAsync(1, 1, "A", 7, default);
+        Assert.NotNull(s);
+        Assert.NotEqual("abgelaufenabgelaufen1234", s!.Token);
+        Assert.True(s.Expires >= DateOnly.FromDateTime(DateTime.UtcNow).AddDays(LeagueService.ShareKeepDays));
+        Assert.NotNull(await svc.PublicShareAsync(s.Token, default));
+        Assert.Single(db.LeagueShares.Where(x => x.Tnr == 1 && x.Round == 1 && x.Team == "A"));
         db.Dispose();
     }
 

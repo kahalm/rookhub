@@ -29,9 +29,6 @@ public sealed class LeagueViewBuilder
     private readonly IReadOnlyDictionary<string, int> _gameCounts;
     private readonly IReadOnlyDictionary<string, List<LeagueOnlineAccount>> _accounts;
 
-    /// <summary>FIDE-IDs aller Spieler, die in einer sichtbaren Meldeliste stehen (für die Spielerkarten).</summary>
-    public HashSet<string> Used { get; } = new();
-
     public LeagueViewBuilder(LeagueWorld w, LeagueModel m, IReadOnlyDictionary<string, int> gameCounts,
         IReadOnlyDictionary<string, List<LeagueOnlineAccount>> accounts)
     {
@@ -238,7 +235,6 @@ public sealed class LeagueViewBuilder
                         ["rb"] = row.Rb, ["n"] = row.Name, ["elo"] = row.Elo > 0 ? row.Elo : null, ["p"] = R3(p[i]),
                         ["prev"] = prevN, ["cur"] = curN, ["fide"] = f, ["g"] = g, ["acc"] = AccShort(f),
                     });
-                    if (f is not null && (g > 0 || _accounts.ContainsKey(f))) Used.Add(f);
                 }
                 e["boards"] = boards;
                 e["roster"] = roster;

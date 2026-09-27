@@ -21,6 +21,9 @@ public sealed class LeagueRefresh
     public const int MaxPlayersPerRun = 40;
     public const double StaleDays = 14;
     public const double MinPlayProbability = 0.15;
+    /// <summary>Der eigene Verein (der Nutzer spielt für SK Schwaz): dessen Gegner bekommen die Plätze zuerst —
+    /// stale_players.py sortierte genauso („Gegner von Schwaz zuerst, dann nach Einsatzchance").</summary>
+    public const string OwnTeam = "Schwaz";
     private static readonly HashSet<string> Empty = new(StringComparer.Ordinal) { "Brett nicht besetzt", "spielfrei", "" };
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -50,29 +53,69 @@ public sealed class LeagueRefresh
         if (season is null) return "Kein Bestand — zuerst importieren.";
         var client = _http.CreateClient(CrawlerClient);
         var tnrs = await _db.LeagueTournaments.Where(t => t.Season == season).Select(t => t.Tnr).ToListAsync(ct);
+        // Eine Liga bzw. ein Spieler, der gerade nicht zu holen ist, hält den Rest NICHT auf (parse.py: „FEHLT",
+        // weiter). Ohne das bräche jeder Lauf an derselben Stelle ab — die Reihenfolge ist fest —, die Ligen
+        // dahinter und alle Spielerkarten blieben für immer stehen, und die Ansichten würden nicht neu gerechnet.
+        var failedLeagues = new List<int>();
         foreach (var tnr in tnrs)
         {
-            var pages = await client.GetFromJsonAsync<Pages>($"api/league/{tnr}", Web, ct)
-                        ?? throw new InvalidOperationException($"Crawler lieferte nichts für {tnr}");
-            await ReplaceAsync(pages, ct);
+            try
+            {
+                var pages = await client.GetFromJsonAsync<Pages>($"api/league/{tnr}", Web, ct)
+                            ?? throw new InvalidOperationException($"Crawler lieferte nichts für {tnr}");
+                if (pages.Tnr != tnr) throw new InvalidOperationException($"Crawler lieferte Liga {pages.Tnr} statt {tnr}");
+                await ReplaceAsync(pages, ct);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                _log.LogWarning(ex, "LeagueHub: Liga {Tnr} nicht aktualisiert", tnr);
+                failedLeagues.Add(tnr);
+            }
+            finally
+            {
+                // Ein gescheitertes SaveChanges ließe seine Löschungen/Zeilen im Tracker — der nächste Aufruf
+                // schriebe sie mit. Und die erfolgreichen braucht danach niemand mehr getrackt.
+                _db.ChangeTracker.Clear();
+            }
         }
+        if (tnrs.Count > 0 && failedLeagues.Count == tnrs.Count)
+            throw new InvalidOperationException($"Keine Liga zu holen ({string.Join(", ", failedLeagues)}) — ist der Crawler erreichbar?");
         await _league.RebuildViewsAsync(ct);
         var stale = await StalePlayersAsync(season, ct);
-        var fetched = 0;
+        int fetched = 0, failedPlayers = 0;
         foreach (var fide in stale)
         {
-            var pgn = await client.GetStringAsync($"api/league/games/{fide}", ct);
-            await MergeGamesAsync(fide, pgn, ct);
-            fetched++;
+            try
+            {
+                var pgn = await client.GetStringAsync($"api/league/games/{fide}", ct);
+                await MergeGamesAsync(fide, pgn, ct);
+                fetched++;
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                _log.LogWarning(ex, "LeagueHub: Partien von {Fide} nicht nachgeladen", fide);
+                failedPlayers++;
+            }
+            finally
+            {
+                _db.ChangeTracker.Clear();
+            }
         }
         if (fetched > 0) await _league.RebuildViewsAsync(ct);
-        return $"{tnrs.Count} Ligen neu geholt, Partien von {fetched} Spielern nachgeladen";
+        var msg = $"{tnrs.Count - failedLeagues.Count} Ligen neu geholt, Partien von {fetched} Spielern nachgeladen";
+        if (failedLeagues.Count > 0) msg += $"; nicht aktualisiert: Liga {string.Join(", ", failedLeagues)}";
+        if (failedPlayers > 0) msg += $"; {failedPlayers} Spieler ohne Partien";
+        return msg;
     }
 
     /// <summary>Paarungen/Aufstellungen einer Liga ersetzen — samt Abgleich Brettpaarung ↔ Meldeliste (parse.py main).</summary>
     public async Task ReplaceAsync(Pages p, CancellationToken ct)
     {
         var tnr = p.Tnr;
+        // Vier leere Seiten sind keine Liga, sondern eine Fehl- oder Drosselseite von chess-results (200, aber ohne
+        // Tabellen) — ersetzt würde damit der ganze Bestand der Liga durch nichts.
+        if (p.Matches.Count == 0 && p.Games.Count == 0 && p.Roster.Count == 0)
+            throw new InvalidOperationException($"Crawler lieferte für Liga {tnr} leere Seiten — der Bestand bleibt.");
         _db.LeagueRounds.RemoveRange(await _db.LeagueRounds.Where(x => x.Tnr == tnr).ToListAsync(ct));
         _db.LeagueMatches.RemoveRange(await _db.LeagueMatches.Where(x => x.Tnr == tnr).ToListAsync(ct));
         _db.LeagueGames.RemoveRange(await _db.LeagueGames.Where(x => x.Tnr == tnr).ToListAsync(ct));
@@ -123,32 +166,40 @@ public sealed class LeagueRefresh
         await _db.SaveChangesAsync(ct);
     }
 
-    /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind.</summary>
+    /// <summary>FIDE-IDs der wahrscheinlichen Gegner in offenen Runden, deren chess-results-Partien veraltet sind —
+    /// Gegner des eigenen Vereins zuerst, dann nach Einsatzchance.</summary>
     public async Task<List<string>> StalePlayersAsync(string season, CancellationToken ct)
     {
         var tnrs = await _db.LeagueTournaments.Where(t => t.Season == season).Select(t => t.Tnr).ToListAsync(ct);
-        var best = new Dictionary<string, double>();
+        // Rang je Spieler: (0 = Gegner des eigenen Vereins, sonst 1; dann höchste Einsatzchance) — der kleinste zählt.
+        var best = new Dictionary<string, (int Own, double P)>();
         foreach (var json in await _db.LeagueViews.Where(v => tnrs.Contains(v.Tnr)).Select(v => v.Json).ToListAsync(ct))
         {
             var fixtures = JsonNode.Parse(json)?["fixtures"]?.AsObject();
             if (fixtures is null) continue;
-            foreach (var (_, fx) in fixtures)
+            foreach (var (team, fx) in fixtures)
                 foreach (var (_, e) in fx!.AsObject())
                 {
                     if (e?["status"]?.GetValue<string>() != "open" || e["roster"] is not JsonArray roster) continue;
+                    var own = team == OwnTeam ? 0 : 1;
                     foreach (var r in roster)
                     {
                         var fide = r?["fide"]?.GetValue<string>();
                         var pr = r?["p"]?.GetValue<double>() ?? 0;
                         if (fide is null || pr < MinPlayProbability) continue;
-                        best[fide] = Math.Max(best.GetValueOrDefault(fide), pr);
+                        if (!best.TryGetValue(fide, out var cur) || own < cur.Own || (own == cur.Own && pr > cur.P))
+                            best[fide] = (own, pr);
                     }
                 }
         }
         var cutoff = _now().AddDays(-StaleDays);
-        var fetched = await _db.LeaguePlayerProfiles.Where(x => best.Keys.Contains(x.FideId))
+        var ids = best.Keys.ToList();
+        // Projektion: sonst käme je Kandidat das ganze Pgn mit (die Selektoren laufen erst im Client).
+        var fetched = await _db.LeaguePlayerProfiles.Where(x => ids.Contains(x.FideId))
+            .Select(x => new { x.FideId, x.CrFetchedAt })
             .ToDictionaryAsync(x => x.FideId, x => x.CrFetchedAt, ct);
-        return best.OrderByDescending(kv => kv.Value).Select(kv => kv.Key)
+        return best.OrderBy(kv => kv.Value.Own).ThenByDescending(kv => kv.Value.P).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => kv.Key)
             .Where(f => fetched.GetValueOrDefault(f) is not { } at || at < cutoff)
             .Take(MaxPlayersPerRun).ToList();
     }

@@ -45,51 +45,62 @@ public sealed class LeagueImportService
         var res = new JsonObject();
         if (b.Tournaments is not null)
         {
-            // Ersetzen: Paarungen/Aufstellungen sind Abbild von chess-results, kein eigener Stand.
-            await _db.LeagueGames.ExecuteDeleteAsync(ct);
-            await _db.LeaguePlayers.ExecuteDeleteAsync(ct);
-            await _db.LeagueMatches.ExecuteDeleteAsync(ct);
-            await _db.LeagueRounds.ExecuteDeleteAsync(ct);
-            await _db.LeagueTournaments.ExecuteDeleteAsync(ct);
+            // Ersetzen: Paarungen/Aufstellungen sind Abbild von chess-results, kein eigener Stand. Die Zeilen
+            // entstehen VOR der Transaktion — ein Wiederholversuch der Execution-Strategy fügt dieselben Objekte ein.
             var now = DateTime.UtcNow;
-            _db.LeagueTournaments.AddRange(b.Tournaments.Select(t => new LeagueTournament
+            var tournaments = b.Tournaments.Select(t => new LeagueTournament
             {
                 Tnr = t.Tnr, Name = t.Name, Season = t.Season, Level = t.Level, League = t.League, Grp = t.Grp ?? "",
                 Stage = t.Stage, Aborted = t.Aborted, Start = t.Start, End = t.End, Rounds = t.Rounds, UpdatedAt = now,
-            }));
-            _db.LeagueRounds.AddRange((b.Rounds ?? new()).Select(r => new LeagueRound { Tnr = r.Tnr, Round = r.Round, Date = LeagueDates.Parse(r.Date) }));
-            _db.LeagueMatches.AddRange((b.Matches ?? new()).Select(m => new LeagueMatch
+            }).ToList();
+            var rounds = (b.Rounds ?? new()).Select(r => new LeagueRound { Tnr = r.Tnr, Round = r.Round, Date = LeagueDates.Parse(r.Date) }).ToList();
+            var matches = (b.Matches ?? new()).Select(m => new LeagueMatch
             {
                 Tnr = m.Tnr, Round = m.Round, MatchNo = m.MatchNo, Home = m.Home, Away = m.Away, HomePts = m.HomePts,
                 AwayPts = m.AwayPts, Date = m.Date, Time = m.Time, Venue = Trim(m.Venue, 300),
-            }));
-            _db.LeagueGames.AddRange((b.Games ?? new()).Select(g => new LeagueGame
+            }).ToList();
+            var games = (b.Games ?? new()).Select(g => new LeagueGame
             {
                 Tnr = g.Tnr, Round = g.Round, MatchNo = g.MatchNo, Board = g.Board, HomeTeam = g.HomeTeam, AwayTeam = g.AwayTeam,
                 HomePlayer = g.HomePlayer, AwayPlayer = g.AwayPlayer, HomeTitle = g.HomeTitle, AwayTitle = g.AwayTitle,
                 HomeColor = g.HomeColor, Result = g.Result ?? "", HomeScore = g.HomeScore, AwayScore = g.AwayScore,
                 Forfeit = g.Forfeit, HomeFide = g.HomeFide, AwayFide = g.AwayFide, HomeRb = g.HomeRb, AwayRb = g.AwayRb,
                 HomeElo = g.HomeElo, AwayElo = g.AwayElo, PgnId = g.PgnId,
-            }));
-            _db.LeaguePlayers.AddRange((b.Players ?? new()).Select(p => new LeaguePlayer
+            }).ToList();
+            var players = (b.Players ?? new()).Select(p => new LeaguePlayer
             {
                 Tnr = p.Tnr, Team = p.Team, RosterBoard = p.RosterBoard, StartNr = p.StartNr, Title = p.Title, Name = p.Name,
                 NameKey = p.NameKey, FideId = string.IsNullOrEmpty(p.FideId) ? null : p.FideId, EloI = p.EloI, EloN = p.EloN,
                 Fed = p.Fed, Points = p.Points, Games = p.Games, EloPerf = p.EloPerf,
-            }));
-            await _db.SaveChangesAsync(ct);
+            }).ToList();
+            await ReplaceAllAsync(async () =>
+            {
+                await ClearAsync(_db.LeagueGames, ct);
+                await ClearAsync(_db.LeaguePlayers, ct);
+                await ClearAsync(_db.LeagueMatches, ct);
+                await ClearAsync(_db.LeagueRounds, ct);
+                await ClearAsync(_db.LeagueTournaments, ct);
+                _db.LeagueTournaments.AddRange(tournaments);
+                _db.LeagueRounds.AddRange(rounds);
+                _db.LeagueMatches.AddRange(matches);
+                _db.LeagueGames.AddRange(games);
+                _db.LeaguePlayers.AddRange(players);
+            }, ct);
             res["tournaments"] = b.Tournaments.Count;
             res["games"] = b.Games?.Count ?? 0;
             res["players"] = b.Players?.Count ?? 0;
         }
         if (b.Accounts is not null)
         {
-            await _db.LeagueOnlineAccounts.ExecuteDeleteAsync(ct);
-            _db.LeagueOnlineAccounts.AddRange(b.Accounts.Select(a => new LeagueOnlineAccount
+            var accounts = b.Accounts.Select(a => new LeagueOnlineAccount
             {
                 FideId = a.Fide, Site = a.Site, UserName = a.User, Url = a.Url, Confidence = a.Confidence, Evidence = Trim(a.Evidence, 300),
-            }));
-            await _db.SaveChangesAsync(ct);
+            }).ToList();
+            await ReplaceAllAsync(async () =>
+            {
+                await ClearAsync(_db.LeagueOnlineAccounts, ct);
+                _db.LeagueOnlineAccounts.AddRange(accounts);
+            }, ct);
             res["accounts"] = b.Accounts.Count;
         }
         if (b.Profiles is not null)
@@ -114,6 +125,34 @@ public sealed class LeagueImportService
             res["profiles"] = b.Profiles.Count;
         }
         return res;
+    }
+
+    /// <summary>Alte Zeilen raus, neue rein — relational in EINER Transaktion (Execution-Strategy-Muster, siehe
+    /// <c>KidsPuzzleService.ReplaceAsync</c>): scheitert das Einfügen (z. B. ein zu langer Wert), bleibt der alte
+    /// Bestand stehen statt leerer Tabellen. <paramref name="work"/> muss wiederholbar sein.</summary>
+    private async Task ReplaceAllAsync(Func<Task> work, CancellationToken ct)
+    {
+        if (!_db.Database.IsRelational())
+        {
+            await work();
+            await _db.SaveChangesAsync(ct);
+            return;
+        }
+        var strategy = _db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+            await work();
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        });
+    }
+
+    /// <summary>Tabelle leeren: relational per <c>DELETE</c> ohne Laden, unter InMemory (kennt kein ExecuteDelete) über den Tracker.</summary>
+    private async Task ClearAsync<T>(DbSet<T> set, CancellationToken ct) where T : class
+    {
+        if (_db.Database.IsRelational()) await set.ExecuteDeleteAsync(ct);
+        else set.RemoveRange(await set.ToListAsync(ct));
     }
 
     private static string? Trim(string? s, int max) => s is null || s.Length <= max ? s : s[..max];

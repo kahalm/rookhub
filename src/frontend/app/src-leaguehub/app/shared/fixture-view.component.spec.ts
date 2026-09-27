@@ -110,6 +110,18 @@ describe('FixtureViewComponent', () => {
     expect(el.querySelector('.linkrow')).toBeNull();
   });
 
+  it('Wechsel auf eine andere Begegnung räumt den Teilen-Kasten weg', async () => {
+    api.createShare.and.resolveTo({ token: 'TOKEN123', expires: '2026-10-10' });
+    render(OPEN, { tnr: 42 });
+    await fixture.componentInstance.shareLink();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.linkrow')).not.toBeNull();
+    fixture.componentRef.setInput('team', 'Absam');     // der Link gehört zu Schwaz, nicht zu Absam
+    fixture.detectChanges();
+    expect(el.querySelector('.share-out')).toBeNull();
+  });
+
   it('Teilen-Link: Absage des Servers steht als Fehler da', async () => {
     api.createShare.and.rejectWith({ error: { error: 'Runde ist gesperrt' } });
     render(OPEN, { tnr: 42 });

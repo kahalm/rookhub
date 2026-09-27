@@ -461,7 +461,7 @@ public static partial class PgnParser
     }
 
     /// <summary>Hauptvariante als gereinigte SAN-Liste (Kommentare/Varianten/NAGs/Zugnummern/Ergebnis raus).</summary>
-    private static List<string> ExtractMainlineSans(string moveText)
+    internal static List<string> ExtractMainlineSans(string moveText)
     {
         var s = CommentRegex().Replace(moveText, " ");
         s = RemoveVariations(s);
