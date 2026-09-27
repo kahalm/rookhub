@@ -422,10 +422,23 @@ export class TournamentHistoryComponent implements OnInit {
   // ----- Aufteilung -------------------------------------------------------
 
   /**
-   * Kuenftige zuerst, danach die gespielten. Beides in EINER Tabelle waere unlesbar: „Platz 56
-   * von 56" und „noch nicht gespielt" sind verschiedene Arten von Zeile.
+   * Laufende zuerst, dann kuenftige, danach die gespielten. Alles in EINER Tabelle waere unlesbar:
+   * „Platz 56 von 56" und „noch nicht gespielt" sind verschiedene Arten von Zeile.
    */
   upcoming(history: PlayerHistory): PlayerHistoryEntry[] {
+    return this.notOver(history).filter(e => !e.hasResult);
+  }
+
+  /**
+   * Was gerade LAEUFT: noch nicht vorbei, aber schon mit Partien auf der Spielerkarte. Stand
+   * vorher unter „Kommt noch" — ohne Punkte, mitten in einer Olympiade. Die Trefferliste kennt den
+   * Beginn nicht, also entscheidet die Karte: steht dort ein Ergebnis, wird gespielt.
+   */
+  running(history: PlayerHistory): PlayerHistoryEntry[] {
+    return this.notOver(history).filter(e => e.hasResult);
+  }
+
+  private notOver(history: PlayerHistory): PlayerHistoryEntry[] {
     const today = this.today();
     return this.filtered(history.entries)
       .filter(e => e.endDate !== null && e.endDate >= today)

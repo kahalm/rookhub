@@ -3744,6 +3744,7 @@
       "inexact": "ohne Kennung",
       "pending": "hole {{count}} Ergebnisse…",
       "upcoming": "Kommt noch",
+      "running": "Läuft gerade",
       "played": "Gespielt",
       "rankOf": "{{rank}} von {{of}}",
       "roundsShort": "{{count}} Runden",

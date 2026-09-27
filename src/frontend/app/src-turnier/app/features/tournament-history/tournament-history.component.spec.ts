@@ -214,6 +214,30 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * Ein noch nicht beendetes Turnier MIT Ergebnis auf der Karte laeuft gerade — es steht mit
+   * Zwischenstand unter „Laeuft gerade", nicht punktlos unter „Kommt noch".
+   */
+  it('zeigt laufende Turniere mit Zwischenstand getrennt von den kommenden', async () => {
+    const req = await setup();
+    const future = new Date(Date.now() + 5 * 86400_000).toISOString().slice(0, 10);
+    req.flush([history({
+      entries: [
+        played({ chessResultsId: '1469895', name: 'Olympiade', endDate: future, points: 3, gamesPlayed: 4 }),
+        played({ chessResultsId: '2', name: 'Open', endDate: future, rank: null, hasResult: false }),
+      ],
+    })]);
+    fixture.detectChanges();
+
+    const h = component.current()!;
+    expect(component.running(h).map(e => e.chessResultsId)).toEqual(['1469895']);
+    expect(component.upcoming(h).map(e => e.chessResultsId)).toEqual(['2']);
+    expect(component.past(h)).toEqual([]);
+
+    const running = fixture.nativeElement.querySelector('.row.running') as HTMLElement;
+    expect(running.querySelector('.pts')?.textContent?.replace(/\s/g, '')).toBe('3/4');
+  });
+
+  /**
    * „3" allein sagt nicht, ob das aus drei oder aus neun Partien kam. Die Partienzahl steht auf
    * der Spielerkarte und ist NICHT die Rundenzahl des Turniers — in einer Liga wird ein Spieler
    * an einem Teil der Termine aufgestellt.

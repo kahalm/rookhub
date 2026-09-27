@@ -3744,6 +3744,7 @@
       "inexact": "bez identifikatora",
       "pending": "dohvaćam {{count}} rezultata…",
       "upcoming": "Slijedi",
+      "running": "U tijeku",
       "played": "Odigrano",
       "rankOf": "{{rank}} od {{of}}",
       "roundsShort": "{{count}} kola",

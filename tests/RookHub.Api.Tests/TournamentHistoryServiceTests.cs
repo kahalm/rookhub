@@ -238,11 +238,12 @@ public class TournamentHistoryServiceTests : IDisposable
     // ----- Die Spielerkarten ------------------------------------------------
 
     /// <summary>
-    /// Ein KUENFTIGES Turnier bekommt keinen Kartenabruf: es hat noch kein Ergebnis, und der Platz
-    /// in der Trefferliste steht auf „-". Bei dem gemessenen Konto spart das elf von 23 Abrufen.
+    /// Gespielte UND noch nicht beendete Turniere bekommen ihren Kartenabruf. Frueher nur die
+    /// gespielten — eine laufende Olympiade oder Liga stand dann ohne jeden Zwischenstand unter
+    /// „Kommt noch". Die Trefferliste kennt den Beginn nicht; ob schon gespielt wird, sagt die Karte.
     /// </summary>
     [Fact]
-    public async Task GetAsync_OnlyPlayedTournaments_AreQueuedForTheirCard()
+    public async Task GetAsync_PlayedAndRunningTournaments_AreQueuedForTheirCard()
     {
         var userId = await CreateUserAsync();
         _handler.History = TwoRows;
@@ -250,8 +251,8 @@ public class TournamentHistoryServiceTests : IDisposable
 
         var history = Assert.Single(await CreateService(queue).GetAsync([userId]));
 
-        Assert.Equal(1, history.PendingResults);
-        Assert.Equal(1, queue.Count);
+        Assert.Equal(2, history.PendingResults);
+        Assert.Equal(2, queue.Count);
     }
 
     [Fact]
@@ -273,7 +274,10 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.NotNull(result.CardFetchedAt);
     }
 
-    /// <summary>Ein abgeschlossenes Turnier aendert sich nie wieder — die Karte kommt einmal.</summary>
+    /// <summary>
+    /// Ein abgeschlossenes Turnier aendert sich nie wieder — die Karte kommt einmal. Das laufende
+    /// daneben ist eben erst geholt und ruht bis zum naechsten Stand.
+    /// </summary>
     [Fact]
     public async Task GetAsync_AfterTheCardArrived_QueuesNothingMore()
     {
@@ -282,6 +286,7 @@ public class TournamentHistoryServiceTests : IDisposable
         _handler.Card = Card;
         await CreateService().GetAsync([userId]);
         await CreateService().FetchCardAsync("fide:1693034", "1107064", 44);
+        await CreateService().FetchCardAsync("fide:1693034", "1479344", 118);
 
         var queue = new CountingQueue();
         var history = Assert.Single(await CreateService(queue).GetAsync([userId]));
@@ -356,18 +361,67 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.Equal(1, queue.Count);
     }
 
-    /// <summary>Ein KUENFTIGES Turnier bleibt aussen vor — es hat noch kein Ergebnis.</summary>
+    /// <summary>
+    /// Ein KUENFTIGES Turnier ohne Partie wird einmal nachgesehen und ruht dann einen Tag — nicht bei
+    /// jedem Seitenaufruf eine Seite bei chess-results.
+    /// </summary>
     [Fact]
-    public async Task GetAsync_FutureTournament_IsNotQueued()
+    public async Task GetAsync_FutureTournament_IsCheckedOnce_ThenRestsForADay()
     {
         var userId = await CreateUserAsync();
         _handler.History = FutureRow;
-        var queue = new CountingQueue();
 
-        var history = Assert.Single(await CreateService(queue).GetAsync([userId]));
+        var first = new CountingQueue();
+        Assert.Equal(1, Assert.Single(await CreateService(first).GetAsync([userId])).PendingResults);
 
-        Assert.Equal(0, history.PendingResults);
-        Assert.Equal(0, queue.Count);
+        await CreateService().FetchCardAsync("fide:1693034", "1479344", 118);   // leere Karte: noch nicht gespielt
+
+        var second = new CountingQueue();
+        Assert.Equal(0, Assert.Single(await CreateService(second).GetAsync([userId])).PendingResults);
+        Assert.Equal(0, second.Count);
+    }
+
+    /// <summary>
+    /// Laeuft das Turnier schon (Partien auf der Karte), zeigt der Verlauf den Zwischenstand und
+    /// holt ihn nach zwei Stunden neu — die naechste Runde soll nicht bis nach dem Turnier warten.
+    /// </summary>
+    [Fact]
+    public void NeedsCard_RunningTournament_RefreshesAfterTwoHours()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        var running = new PlayerTournamentResult
+        {
+            Snr = 7, EndDate = today.AddDays(5), Points = 2.5m, CardVersion = TournamentHistoryService.CurrentCardVersion,
+            CardFetchedAt = now.AddMinutes(-30),
+        };
+
+        Assert.False(TournamentHistoryService.NeedsCard(running, today, now));
+        Assert.True(TournamentHistoryService.NeedsCard(running, today, now.AddHours(2)));
+    }
+
+    /// <summary>
+    /// Eine Karte, die WAEHREND des Turniers geholt wurde, ist ein Zwischenstand: nach dem Ende wird
+    /// sie einmal durch das Endergebnis ersetzt, danach nie wieder.
+    /// </summary>
+    [Fact]
+    public void NeedsCard_CardFromDuringTheTournament_IsReplacedOnceAfterTheEnd()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var end = today.AddDays(-2);
+        var interim = new PlayerTournamentResult
+        {
+            Snr = 7, EndDate = end, Points = 5m, CardVersion = TournamentHistoryService.CurrentCardVersion,
+            CardFetchedAt = end.ToDateTime(new TimeOnly(18, 0)),
+        };
+        var final = new PlayerTournamentResult
+        {
+            Snr = 7, EndDate = end, Points = 6m, CardVersion = TournamentHistoryService.CurrentCardVersion,
+            CardFetchedAt = end.AddDays(1).ToDateTime(new TimeOnly(4, 30)),
+        };
+
+        Assert.True(TournamentHistoryService.NeedsCard(interim, today));
+        Assert.False(TournamentHistoryService.NeedsCard(final, today));
     }
 
     /// <summary>

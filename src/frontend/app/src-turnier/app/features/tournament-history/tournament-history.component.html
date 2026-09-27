@@ -119,6 +119,30 @@
           <p class="hint warn">{{ 'turnier.history.sourceUnavailable' | translate }}</p>
         }
 
+        <!-- Laufende mit Zwischenstand: dieselben Spalten wie die gespielten, der Stand kommt alle
+             zwei Stunden neu von der Spielerkarte. -->
+        @if (running(history).length > 0) {
+          <h3>{{ 'turnier.history.running' | translate }}</h3>
+          <div class="rows-scroll">
+            <div class="rows">
+              @for (entry of running(history); track trackById($index, entry)) {
+                <button type="button" class="row running" (click)="open(entry)"
+                        [disabled]="opening() !== null"
+                        [class.busy]="opening() === entry.chessResultsId">
+                  <span class="row-date">{{ entry.endDate }}</span>
+                  <span class="row-name">
+                    {{ entry.name }}
+                    @if (entry.speed !== 'unknown') {
+                      <span class="speed-tag" [class]="'speed-' + entry.speed">{{ ('turnier.history.speed.' + entry.speed) | translate }}</span>
+                    }
+                  </span>
+                  <ng-container *ngTemplateOutlet="resultCells; context: { $implicit: entry }" />
+                </button>
+              }
+            </div>
+          </div>
+        }
+
         @if (upcoming(history).length > 0) {
           <h3>{{ 'turnier.history.upcoming' | translate }}</h3>
           <div class="rows">
@@ -179,28 +203,7 @@
                   </span>
 
                   @if (entry.hasResult) {
-                    <!-- Punkte AUS gespielten Partien: „3" allein sagt nicht, ob das aus
-                         drei oder aus neun Partien kam. Die Partienzahl steht auf der
-                         Spielerkarte und ist nicht die Rundenzahl - in einer Liga wird ein
-                         Spieler an einem TEIL der Termine aufgestellt. Ohne sie bleibt es
-                         bei der blanken Punktzahl statt eines erfundenen Nenners. -->
-                    <span class="row-num pts" [matTooltip]="'turnier.history.pointsTooltip' | translate">{{ entry.points }}@if (entry.gamesPlayed !== null) {<span class="of-games">/{{ entry.gamesPlayed }}</span>}</span>
-                    <span class="row-num rank">
-                      @if (entry.rank) {
-                        {{ 'turnier.history.rankOf' | translate: { rank: entry.rank, of: entry.playerCount } }}
-                      }
-                    </span>
-                    <span class="row-num perf"
-                          [matTooltip]="'turnier.history.performanceTooltip' | translate: { before: entry.ratingBefore }">
-                      {{ entry.performanceRating }}
-                    </span>
-                    <span class="row-num change"
-                          [class.up]="(entry.ratingChange ?? 0) > 0"
-                          [class.down]="(entry.ratingChange ?? 0) < 0">
-                      @if (entry.ratingChange !== null) {
-                        {{ entry.ratingChange > 0 ? '+' : '' }}{{ entry.ratingChange }}
-                      }
-                    </span>
+                    <ng-container *ngTemplateOutlet="resultCells; context: { $implicit: entry }" />
                   } @else if (entry.cardFetched) {
                     <!-- Karte ist da, Ergebnis nicht: chess-results fuehrt fuer diese Zeile keines
                          (kommt bei einzelnen Mannschaftsturnieren vor). Warten hilft nicht. -->
@@ -225,3 +228,29 @@
     }
   }
 </div>
+
+<!-- Die Ergebniszellen einer Zeile — fuer gespielte UND laufende Turniere dieselben. -->
+<ng-template #resultCells let-entry>
+  <!-- Punkte AUS gespielten Partien: „3" allein sagt nicht, ob das aus
+       drei oder aus neun Partien kam. Die Partienzahl steht auf der
+       Spielerkarte und ist nicht die Rundenzahl - in einer Liga wird ein
+       Spieler an einem TEIL der Termine aufgestellt. Ohne sie bleibt es
+       bei der blanken Punktzahl statt eines erfundenen Nenners. -->
+  <span class="row-num pts" [matTooltip]="'turnier.history.pointsTooltip' | translate">{{ entry.points }}@if (entry.gamesPlayed !== null) {<span class="of-games">/{{ entry.gamesPlayed }}</span>}</span>
+  <span class="row-num rank">
+    @if (entry.rank) {
+      {{ 'turnier.history.rankOf' | translate: { rank: entry.rank, of: entry.playerCount } }}
+    }
+  </span>
+  <span class="row-num perf"
+        [matTooltip]="'turnier.history.performanceTooltip' | translate: { before: entry.ratingBefore }">
+    {{ entry.performanceRating }}
+  </span>
+  <span class="row-num change"
+        [class.up]="(entry.ratingChange ?? 0) > 0"
+        [class.down]="(entry.ratingChange ?? 0) < 0">
+    @if (entry.ratingChange !== null) {
+      {{ entry.ratingChange > 0 ? '+' : '' }}{{ entry.ratingChange }}
+    }
+  </span>
+</ng-template>

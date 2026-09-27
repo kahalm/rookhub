@@ -252,15 +252,16 @@ public class TournamentHistoryService
             // Konto und sind das, was neue Turniere ueberhaupt sichtbar macht.
             if (cards + timeControls >= maxCards) continue;
 
-            // Dieselbe Auswahl wie <see cref="NeedsCard"/>, hier aber ausgeschrieben: die Methode
-            // uebersetzt der Provider nicht, und die Filterung gehoert in die Datenbank.
-            var missing = await _db.PlayerTournamentResults
-                .Where(r => r.PlayerKey == identity.Key && r.Snr > 0
-                            && (r.CardFetchedAt == null || r.CardVersion < CurrentCardVersion)
-                            && r.EndDate != null && r.EndDate < today)
+            // Dieselbe Auswahl wie <see cref="NeedsCard"/> — im Speicher, weil der Provider sie
+            // nicht uebersetzt (Datumsvergleich mit dem Abrufzeitpunkt). Vorgefiltert wird in der
+            // Datenbank; uebrig bleiben die Zeilen EINES Spielers, also hoechstens ein paar hundert.
+            var missing = (await _db.PlayerTournamentResults
+                    .Where(r => r.PlayerKey == identity.Key && r.Snr > 0 && r.EndDate != null)
+                    .ToListAsync(ct))
+                .Where(r => NeedsCard(r, today))
                 .OrderByDescending(r => r.EndDate)
                 .Take(maxCards - cards - timeControls)
-                .ToListAsync(ct);
+                .ToList();
 
             foreach (var result in missing)
             {
@@ -698,21 +699,43 @@ public class TournamentHistoryService
     };
 
     /// <summary>
-    /// Fehlt zu diesem Eintrag noch die Spielerkarte — und lohnt der Abruf?
-    ///
-    /// <para><b>Das Kriterium ist der TERMIN, nicht der Platz.</b> Urspruenglich stand hier
-    /// <c>Rank is not null</c>, weil ein kuenftiges Turnier in der Trefferliste auf „-" steht.
-    /// Dasselbe „-" steht dort aber auch bei jedem MANNSCHAFTSturnier — chess-results weist in
-    /// der Spielersuche keinen Einzelplatz aus. Am echten Konto waren das acht von elf offenen
-    /// Zeilen (Ligen, Mannschaftsmeisterschaften), die dauerhaft „noch kein Ergebnis" zeigten,
-    /// obwohl die Spielerkarte Punkte und Performance sehr wohl kennt. Ein gespieltes Turnier
-    /// erkennt man am Enddatum in der Vergangenheit — und erst am Tag DANACH, damit kein
-    /// Zwischenstand der letzten Runde als Endergebnis einfriert.</para>
+    /// Wie alt die Karte eines LAUFENDEN Turniers (schon mit Partien) werden darf. Eine Runde am Tag
+    /// ist der Normalfall; zwei Stunden heisst: nach der Runde steht der neue Stand bald da, ohne dass
+    /// jeder Seitenaufruf eine Seite bei chess-results kostet.
     /// </summary>
-    internal static bool NeedsCard(PlayerTournamentResult result, DateOnly today) =>
-        (result.CardFetchedAt is null || result.CardVersion < CurrentCardVersion)
-        && result.Snr > 0
-        && result.EndDate is not null && result.EndDate < today;
+    internal static readonly TimeSpan RunningCardTtl = TimeSpan.FromHours(2);
+
+    /// <summary>Wie alt die Karte eines KOMMENDEN Turniers (noch ohne Partie) werden darf.</summary>
+    internal static readonly TimeSpan UpcomingCardTtl = TimeSpan.FromHours(20);
+
+    /// <summary>
+    /// Braucht dieser Eintrag (wieder) eine Spielerkarte?
+    ///
+    /// <para><b>Vorbei</b> (Ende vor heute): wenn sie fehlt, veraltet ist oder noch WAEHREND des
+    /// Turniers geholt wurde — dieser Zwischenstand wird einmal durch das Endergebnis ersetzt, danach
+    /// aendert sich ein abgeschlossenes Turnier nie wieder. Das Kriterium ist der TERMIN, nicht der
+    /// Platz: dasselbe „-" wie bei einem kuenftigen Turnier steht in der Trefferliste auch bei jedem
+    /// MANNSCHAFTSturnier, obwohl die Spielerkarte Punkte und Performance sehr wohl kennt.</para>
+    ///
+    /// <para><b>Laeuft oder kommt</b> (Ende heute oder spaeter): bis hierher gar nicht — eine
+    /// laufende Olympiade stand unter „Kommt noch" ohne jeden Zwischenstand. Jetzt wird die Karte
+    /// nachgeholt, alle zwei Stunden, sobald Partien darauf stehen, sonst einmal am Tag. Den
+    /// Turnierbeginn kennt die Trefferliste nicht; eine Mannschaftsliga „laeuft" ohnehin ueber Monate.
+    /// Welche Turniere gerade laufen, sagt deshalb die Karte selbst.</para>
+    /// </summary>
+    internal static bool NeedsCard(PlayerTournamentResult result, DateOnly today, DateTime? now = null)
+    {
+        if (result.Snr <= 0 || result.EndDate is not { } end) return false;
+
+        if (end < today)
+            return result.CardFetchedAt is null
+                || result.CardVersion < CurrentCardVersion
+                || DateOnly.FromDateTime(result.CardFetchedAt.Value) <= end;
+
+        if (result.CardFetchedAt is null) return true;
+        var hasGames = result.Points is not null || result.PerformanceRating is not null;
+        return (now ?? DateTime.UtcNow) - result.CardFetchedAt.Value >= (hasGames ? RunningCardTtl : UpcomingCardTtl);
+    }
 
     /// <summary>
     /// Reiht die fehlenden Spielerkarten in den Hintergrund und sagt, wie viele es sind.
@@ -755,9 +778,9 @@ public class TournamentHistoryService
     {
         var result = await _db.PlayerTournamentResults
             .FirstOrDefaultAsync(r => r.PlayerKey == playerKey && r.ChessResultsId == chessResultsId, ct);
-        // Schon geholt UND auf dem aktuellen Stand? Dann nichts zu tun — ein abgeschlossenes
-        // Turnier aendert sich nie wieder. Eine aeltere Fassung wird dagegen einmal nachgeholt.
-        if (result is null || (result.CardFetchedAt is not null && result.CardVersion >= CurrentCardVersion)) return;
+        // Schon geholt UND auf dem aktuellen Stand? Dann nichts zu tun — zwei Auftraege fuer dieselbe
+        // Karte (zweiter Tab, Nachtlauf) holen sie so nur einmal. Dieselbe Regel wie beim Einreihen.
+        if (result is null || !NeedsCard(result, DateOnly.FromDateTime(DateTime.UtcNow))) return;
 
         CrawlerPlayerCard? card;
         try

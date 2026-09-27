@@ -3465,6 +3465,7 @@
       "inexact": "azonosító nélkül",
       "pending": "{{count}} eredmény letöltése…",
       "upcoming": "Még jön",
+      "running": "Folyamatban",
       "played": "Lejátszva",
       "rankOf": "{{rank}} / {{of}}",
       "roundsShort": "{{count}} forduló",

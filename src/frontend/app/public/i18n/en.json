@@ -3744,6 +3744,7 @@
       "inexact": "no identifier",
       "pending": "fetching {{count}} results…",
       "upcoming": "Coming up",
+      "running": "In progress",
       "played": "Played",
       "rankOf": "{{rank}} of {{of}}",
       "roundsShort": "{{count}} rounds",

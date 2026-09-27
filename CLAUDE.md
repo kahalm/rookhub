@@ -764,6 +764,14 @@ uebrigen Konten nicht aushungert; die LISTEN laufen auch nach dem Deckel weiter,
 neue Turniere ueberhaupt sichtbar. Vorher entstand der Verlauf nur beim Ansehen (25 Karten je
 Aufruf, Nachfragen rund eine Minute) — wer die Seite schloss, liess den Rest liegen.
 
+**Laufende Turniere haben einen Zwischenstand** (0.552.0, `NeedsCard`): Ende heute oder später →
+Karte holen, danach alle `RunningCardTtl` (2 h), sobald Partien draufstehen, sonst alle
+`UpcomingCardTtl` (20 h); vorbei → einmal neu, wenn die Karte noch WÄHREND des Turniers geholt
+wurde (`CardFetchedAt`-Datum ≤ Ende). Den Beginn kennt die Trefferliste nicht (eine Liga „läuft"
+über Monate) — ob gespielt wird, sagt die Karte; die Ansicht stellt solche Zeilen unter „Läuft
+gerade" (`running()` = nicht vorbei UND `hasResult`). Der Nachtlauf filtert dafür im Speicher
+(dieselbe Methode), vorgefiltert je Spieler in der Datenbank.
+
 **Danach holt derselbe Lauf die GANZEN Turniere** (`CrawlHistoryTournamentsAsync`, seit 0.551.0):
 Teilnehmer und Paarungen standen vorher erst nach einem Klick im Verlauf bereit („wird gerade
 geholt", bis zu zwei Minuten). Reihenfolge: zuerst LAUFENDE (Ende zwischen −3 und +14 Tagen) —
