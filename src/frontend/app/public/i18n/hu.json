@@ -467,6 +467,7 @@
       "dataProfile": "Profiladatok (opcionális): megjelenített/valódi név, FIDE azonosító, ChessResults azonosító, Chess.com/Lichess felhasználónév, opcionális Discord kapcsolat.",
       "dataUsage": "Használati adatok: megoldott feladványok, végtelen/tanfolyam haladás és statisztikák, játékértékelés, bejelentkezési időbélyegek.",
       "dataTechnical": "Technikai adatok: IP-cím, lekért végpontok időbélyegekkel és egy álnevesített látogatóazonosító (elérés mérése) a szervernaplókban.",
+      "dataIpCountry": "KidHub (gyerekoldal): ha a böngésző nyelve nem az oldal egyik nyelve, az IP-címből meghatározzuk az országot, hogy megfelelő nyelvet válasszunk — helyben, a saját szerverünkön, a DB-IP országlistájával (IP Geolocation by DB-IP, CC BY 4.0). A címet ehhez sem továbbítjuk, sem nem tároljuk.",
       "purposesTitle": "Célok és jogalapok",
       "purposes": "A fiók és a funkciók biztosítása (szerződés teljesítése, GDPR 6. cikk (1) b) pont), valamint az üzemeltetési biztonság, hibaelhárítás és elérés mérése naplókon keresztül (jogos érdek, GDPR 6. cikk (1) f) pont).",
       "thirdTitle": "Címzettek / harmadik fél szolgáltatások",

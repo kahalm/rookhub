@@ -75,10 +75,8 @@ public class KidHubAssetTests
 
     /// <summary>Die Vorlagen bleiben im Repo — ohne sie liesse sich keine Groesse nachziehen.</summary>
     [Theory]
-    [InlineData("icon.svg")]
-    [InlineData("icon-maskable.svg")]
-    [InlineData("og.svg")]
-    [InlineData("render.mjs")]
+    [InlineData("KidHub.png")]
+    [InlineData("derive.py")]
     public void Designvorlage_LiegtImRepo(string name) =>
         Assert.True(File.Exists(Path.Combine(RepoRoot(), "design", "kidhub", name)),
             $"design/kidhub/{name} fehlt — Vorlage der KidHub-Symbole");

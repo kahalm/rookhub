@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
@@ -60,15 +60,47 @@ describe('KidHubAppComponent', () => {
     expect(selected(f)).toBe('de');
   });
 
-  it('eine Sprache ohne Kindertexte zeigt Deutsch, ohne die Wahl zu ueberschreiben', async () => {
+  /** Seite mit einer Sprache ohne Kindertexte starten und die Frage nach dem IP-Land beantworten. */
+  async function startWithForeignLanguage(answer: { country: string | null; language: string | null } | 'error') {
     localStorage.setItem('rookhub_lang', 'fr');
     const f = TestBed.createComponent(KidHubAppComponent);
     f.detectChanges();
+    // NICHT vorher auf whenStable warten: das wartet auf genau diese offene Anfrage, bis der
+    // 4-s-Timeout der Seite sie abbricht.
+    const req = TestBed.inject(HttpTestingController).expectOne('/api/kids/language-hint');
+    if (answer === 'error') req.flush('weg', { status: 503, statusText: 'Service Unavailable' });
+    else req.flush(answer);
+    f.detectChanges();
     await f.whenStable();
     f.detectChanges();
+    return f;
+  }
+
+  it('Sprache ohne Kindertexte: erst das Land der IP (Ungarn → Ungarisch)', async () => {
+    const f = await startWithForeignLanguage({ country: 'HU', language: 'hu' });
+    expect(TestBed.inject(TranslateService).currentLang()).toBe('hu');
+    expect(selected(f)).toBe('hu');
+    expect(localStorage.getItem('rookhub_lang')).toBe('fr');   // die Wahl bleibt unangetastet
+  });
+
+  it('Land ohne Kindersprache → Deutsch', async () => {
+    await startWithForeignLanguage({ country: 'FR', language: null });
     expect(TestBed.inject(TranslateService).currentLang()).toBe('de');
-    expect(localStorage.getItem('rookhub_lang')).toBe('fr');
     expect(TestBed.inject(LocaleService).current).toBe('de');
+  });
+
+  it('Hinweis nicht erreichbar → Deutsch', async () => {
+    await startWithForeignLanguage('error');
+    expect(TestBed.inject(TranslateService).currentLang()).toBe('de');
+  });
+
+  it('eine Kindersprache fragt gar nicht erst nach dem Land', async () => {
+    localStorage.setItem('rookhub_lang', 'en');
+    const f = TestBed.createComponent(KidHubAppComponent);
+    f.detectChanges();
+    await f.whenStable();
+    TestBed.inject(HttpTestingController).expectNone('/api/kids/language-hint');
+    expect(TestBed.inject(TranslateService).currentLang()).toBe('en');
   });
 
   it('bietet nur die vollstaendig uebersetzten Sprachen an', () => {

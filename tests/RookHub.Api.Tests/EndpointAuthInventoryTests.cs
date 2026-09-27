@@ -47,6 +47,7 @@ public class EndpointAuthInventoryTests
         // Alle am "anonymous-puzzle"-Rate-Limiter. Der Neuaufbau (POST /api/admin/kids/rebuild) bleibt Admin.
         "GET /api/kids/courses",                                     // KidsController.GetCourses
         "GET /api/kids/courses/{bookId:int}/puzzles",                // KidsController.GetCoursePuzzles
+        "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)
         "GET /api/kids/levels",                                      // KidsController.GetLevels
         "GET /api/kids/levels/{level:int}",                          // KidsController.GetLevel
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand

@@ -700,6 +700,7 @@
       "dataProfile": "Podaci profila (neobavezno): prikazno/pravo ime, FIDE ID, ChessResults ID, Chess.com/Lichess korisničko ime, neobavezna Discord veza.",
       "dataUsage": "Podaci o korištenju: riješene zagonetke, napredak i statistika u beskonačnom načinu/tečajevima, rejting igre, vremenska oznaka prijave.",
       "dataTechnical": "Tehnički podaci: IP adresa, zahtijevane krajnje točke s vremenskim oznakama i pseudonimni identifikator posjetitelja (mjerenje dosega) u zapisima poslužitelja.",
+      "dataIpCountry": "KidHub (dječja stranica): ako jezik preglednika nije jedan od jezika stranice, iz IP adrese određuje se zemlja kako bi se odabrao odgovarajući — lokalno na našem poslužitelju s popisom zemalja DB-IP (IP Geolocation by DB-IP, CC BY 4.0). Adresa se pritom ne prosljeđuje niti pohranjuje.",
       "purposesTitle": "Svrhe i pravne osnove",
       "purposes": "Pružanje računa i funkcija (izvršenje ugovora, čl. 6(1)(b) GDPR-a) te operativna sigurnost, analiza pogrešaka i mjerenje dosega putem zapisa (legitimni interes, čl. 6(1)(f) GDPR-a).",
       "thirdTitle": "Primatelji / usluge trećih strana",

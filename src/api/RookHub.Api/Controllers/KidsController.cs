@@ -19,11 +19,30 @@ public class KidsController : BaseApiController
 {
     private readonly KidsPuzzleService _service;
     private readonly CourseCommentLocalizer? _localizer;
+    private readonly IpCountryService? _ipCountry;
 
-    public KidsController(KidsPuzzleService service, CourseCommentLocalizer? localizer = null)
+    public KidsController(KidsPuzzleService service, CourseCommentLocalizer? localizer = null,
+        IpCountryService? ipCountry = null)
     {
         _service = service;
         _localizer = localizer;
+        _ipCountry = ipCountry;
+    }
+
+    /// <summary>
+    /// Sprache aus dem Land der Besucher-IP — KidHub fragt das nur, wenn die Browsersprache keine der
+    /// Kindersprachen ist, und nimmt ohne Treffer Deutsch. Nachgeschlagen wird lokal
+    /// (<see cref="IpCountryService"/>); die IP wird dafür weder weitergegeben noch gespeichert.
+    /// </summary>
+    [HttpGet("language-hint")]
+    [AllowAnonymous]
+    [EnableRateLimiting("anonymous-puzzle")]
+    public async Task<ActionResult<KidsLanguageHintDto>> GetLanguageHint(CancellationToken ct)
+    {
+        var country = _ipCountry is null
+            ? null
+            : await _ipCountry.CountryOfAsync(HttpContext?.Connection.RemoteIpAddress, ct);
+        return Ok(new KidsLanguageHintDto { Country = country, Language = KidsLanguageHint.ForCountry(country) });
     }
 
     /// <summary>Alle Stufen in Reihenfolge (leer, solange die Leiter noch nicht aufgebaut ist).</summary>

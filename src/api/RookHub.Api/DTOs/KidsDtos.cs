@@ -41,3 +41,12 @@ public class KidsRebuildResultDto
     public int Levels { get; set; }
     public int Puzzles { get; set; }
 }
+
+/// <summary>Sprach-Hinweis aus dem Land der Besucher-IP (<c>GET /api/kids/language-hint</c>).</summary>
+public class KidsLanguageHintDto
+{
+    /// <summary>ISO-Land der IP, <c>null</c> bei LAN-/privater Adresse oder ohne Länderliste.</summary>
+    public string? Country { get; set; }
+    /// <summary>Passende Kindersprache (de/en/hr/hu) oder <c>null</c> — dann nimmt KidHub Deutsch.</summary>
+    public string? Language { get; set; }
+}

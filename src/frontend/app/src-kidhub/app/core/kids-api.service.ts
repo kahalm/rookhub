@@ -47,6 +47,12 @@ export interface KidsCourseLine {
   altMoves: string | null;
 }
 
+/** Sprache aus dem Land der Besucher-IP (Server schlaegt lokal nach, speichert nichts). */
+export interface KidsLanguageHint {
+  country: string | null;
+  language: string | null;
+}
+
 /** Offene Endpunkte der Kinderseite (`/api/kids/*`) — ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
 export class KidsApiService {
@@ -59,6 +65,10 @@ export class KidsApiService {
 
   level(level: number): Observable<KidsLevelDetail> {
     return this.http.get<KidsLevelDetail>(`${this.base}/levels/${level}`);
+  }
+
+  languageHint(): Observable<KidsLanguageHint> {
+    return this.http.get<KidsLanguageHint>(`${this.base}/language-hint`);
   }
 
   courses(): Observable<KidsCourse[]> {

@@ -245,6 +245,9 @@ try
     builder.Services.AddScoped<CourseService>();
     // Kinderseite: Stufen-Leiter aus besonders einfachen Lichess-Puzzles + Kinderkurse.
     builder.Services.AddScoped<KidsPuzzleService>();
+    // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
+    builder.Services.AddSingleton<IpCountryService>();
+    builder.Services.AddHttpClient(nameof(IpCountryService));
     // Kurs ⇄ Repertoire (beide Richtungen). Haengt an BEIDEN Diensten — deshalb ein eigener:
     // RepertoireService darf CourseService nicht bekommen (CourseService kennt Repertoire-Code schon).
     builder.Services.AddScoped<CourseRepertoireConversionService>();

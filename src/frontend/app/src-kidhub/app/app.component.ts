@@ -3,7 +3,9 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AppLang, LocaleService } from '@rh/core/locale.service';
 import { AppUpdateService } from '@rh/core/app-update.service';
+import { catchError, of, timeout } from 'rxjs';
 import { environment } from '../../src/environments/environment';
+import { KidsApiService } from './core/kids-api.service';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
 export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
@@ -12,6 +14,13 @@ export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
   { code: 'hr', label: 'Hrvatski' },
   { code: 'hu', label: 'Magyar' },
 ];
+
+/** Laenger wartet die Seite nicht auf den Sprach-Hinweis — danach Deutsch. */
+export const HINT_TIMEOUT_MS = 4000;
+
+function isKidsLanguage(code: string): code is AppLang {
+  return KIDS_LANGUAGES.some(l => l.code === code);
+}
 
 /**
  * Huelle der Kinderseite: eine schlichte Kopfzeile (Logo = zurueck zum Start), der Inhalt, unten
@@ -26,7 +35,7 @@ export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
   template: `
     <header class="top">
       <a class="logo" routerLink="/" [attr.aria-label]="'kids.home.title' | translate">
-        <span class="knight" aria-hidden="true">♞</span>
+        <img class="mark" src="icons/icon-192.png" alt="" width="40" height="40">
         <span>{{ 'kids.home.title' | translate }}</span>
       </a>
     </header>
@@ -46,6 +55,8 @@ export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
       <span>v{{ version }}</span>
       <a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
       <a routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+      <!-- Pflichtangabe der Lizenz (CC BY 4.0) der Laenderliste, mit der die Startsprache bestimmt wird. -->
+      <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>
     </footer>
   `,
   styles: [`
@@ -70,7 +81,7 @@ export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
     .top { padding: 10px 16px; }
     .logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--kid-title);
             font-size: 1.35rem; font-weight: 900; }
-    .knight { font-size: 2rem; line-height: 1; }
+    .mark { width: 40px; height: 40px; }
     main { flex: 1; }
     .foot { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center;
             padding: 14px; font-size: .85rem; opacity: .75; }
@@ -92,14 +103,36 @@ export class KidHubAppComponent implements OnInit {
   /** Die TATSAECHLICH aktive Sprache — nicht eine eigene Kopie, die mit ihr auseinanderlaufen kann. */
   readonly lang = computed(() => this.translate.currentLang());
 
+  private readonly api = inject(KidsApiService);
+  /** Die Antwort des Servers wird je Seitenaufruf nur EINMAL geholt. */
+  private hint: AppLang | null | undefined;
+  private hintPending = false;
+
   constructor() {
     // Nur de/en/hr/hu haben die Kindertexte vollstaendig; jede andere Sprache (Browser, Wahl auf
-    // RookHub) stuende hier halb in Englisch. Dann Deutsch ANZEIGEN, ohne die Wahl zu ueberschreiben.
+    // RookHub) stuende hier halb in Englisch. Dann zuerst das Land der IP fragen (AT → de, HU → hu,
+    // HR → hr, GB/US → en …), erst ohne Treffer Deutsch — ANGEZEIGT, ohne die Wahl zu ueberschreiben.
     effect(() => {
       const current = this.translate.currentLang();
-      if (current && !KIDS_LANGUAGES.some(l => l.code === current)) {
-        untracked(() => this.locale.applyUnsaved('de'));
-      }
+      if (current && !isKidsLanguage(current)) untracked(() => this.fallBack());
+    });
+  }
+
+  private fallBack(): void {
+    if (this.hint !== undefined) {
+      this.locale.applyUnsaved(this.hint ?? 'de');
+      return;
+    }
+    if (this.hintPending) return;
+    this.hintPending = true;
+    this.api.languageHint().pipe(
+      timeout(HINT_TIMEOUT_MS),
+      catchError(() => of({ country: null, language: null })),
+    ).subscribe(result => {
+      this.hintPending = false;
+      this.hint = result.language && isKidsLanguage(result.language) ? result.language : null;
+      // Hat inzwischen jemand selbst gewaehlt, bleibt es bei dieser Wahl.
+      if (!isKidsLanguage(this.translate.currentLang() ?? '')) this.locale.applyUnsaved(this.hint ?? 'de');
     });
   }
 

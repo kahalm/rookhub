@@ -700,6 +700,7 @@
       "dataProfile": "Profile data (optional): display/real name, FIDE ID, ChessResults ID, Chess.com/Lichess username, optional Discord link.",
       "dataUsage": "Usage data: solved puzzles, endless/course progress and statistics, play rating, login timestamps.",
       "dataTechnical": "Technical data: IP address, requested endpoints with timestamps and a pseudonymous visitor identifier (reach measurement) in server logs.",
+      "dataIpCountry": "KidHub (the kids' site): if your browser language is not one of its languages, the country of your IP address is determined to choose one — locally on our server with the country list of DB-IP (IP Geolocation by DB-IP, CC BY 4.0). The address is not passed on or stored for this.",
       "purposesTitle": "Purposes & legal bases",
       "purposes": "Providing the account and features (performance of a contract, Art. 6(1)(b) GDPR) as well as operational security, error analysis and reach measurement via logs (legitimate interest, Art. 6(1)(f) GDPR).",
       "thirdTitle": "Recipients / third-party services",

@@ -33,6 +33,7 @@ import { OPERATOR } from '../../../environments/operator';
             <li>{{ 'legal.privacy.dataProfile' | translate }}</li>
             <li>{{ 'legal.privacy.dataUsage' | translate }}</li>
             <li>{{ 'legal.privacy.dataTechnical' | translate }}</li>
+            <li>{{ 'legal.privacy.dataIpCountry' | translate }}</li>
           </ul>
 
           <h4>{{ 'legal.privacy.purposesTitle' | translate }}</h4>
