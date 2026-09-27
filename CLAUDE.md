@@ -2350,6 +2350,17 @@ Regeln, die dabei nicht kippen duerfen:
   waehrend Struktur und Zuege stimmten. Keine der uebrigen Pruefungen schlug an, weil in der Prosa
   keine Zuege stehen. Die Grenze liegt bei 70 % und nicht hoeher, weil manche Quell-Saetze selbst
   zweisprachig sind und die Uebersetzung die doppelte Haelfte zu Recht wegwirft (gemessen 53 %).
+* **Kein offenes Zitat** (0.551.1, `CommentTranslator.EndsInsideQuote`, gilt fuer Partien UND Kurse). Das Modell
+  oeffnet ein deutsches Zitat mit „ und schliesst es mit dem GERADEN `"` — das beendet in der JSON-Antwort den
+  String, die Grammatik laesst danach nur noch das Schliessen zu: der Text endet mitten im Zitat, alle Eintraege
+  dahinter fehlen. Am 2026-09-27 auf Prod gemessen: jede fuenfte Kurs-Linie verworfen (fehlende Eintraege), und
+  308 von 57 079 Bibliothekstexten mitten im Zitat abgeschnitten GESPEICHERT — bei Partien fing das nur die
+  Laengenpruefung, und die nur, wenn viel fehlte. Deterministisch, keine Laune (Linie 54177 dreimal an derselben
+  Stelle). Zwei Riegel: der Auftrag verbietet das gerade `"` im Text (typografische Zeichen der Zielsprache), und
+  ein Ergebnis, das in einem offenen „…/«…/“… endet, das die Vorlage NICHT offen hat, ist ein Fehlschlag (die Vorlage
+  darf offen sein: Chessable trennt Saetze auch mitten im Zitat auf zwei Zuege auf). Weil das Modell streut (an 54177
+  ging einer von zwei Versuchen glatt), bekommt eine Fuhre mit abgeschnittenem Zitat oder fehlenden Eintraegen EINEN
+  zweiten Versuch (`MaxAttemptsPerChunk` = 2); ein abgebrochener Aufruf, zu wenig Text und die falsche Sprache nicht.
 
 Braucht `Anthropic:TextApiKey` (derselbe Schluessel wie die Puzzle-Tipps — NICHT der Konto-Schluessel
 `Anthropic:ApiKey`, der gehoert allein dem Formular-Einlesen). Ohne Schluessel passiert

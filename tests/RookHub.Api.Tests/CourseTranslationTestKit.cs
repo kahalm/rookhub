@@ -26,6 +26,9 @@ public sealed class FakeCourseTranslator : IClaudeJsonClient
     /// <summary>Feste Antwort statt des Durchreichens (<c>null</c> = durchreichen).</summary>
     public string? Answer { get; set; }
 
+    /// <summary>Antworten der Reihe nach, je Aufruf eine (vor <see cref="Answer"/>) — fuer den zweiten Versuch.</summary>
+    public Queue<string> Answers { get; } = new();
+
     /// <summary>Scheitert (liefert <c>null</c>) — wie ein abgebrochener Modellaufruf.</summary>
     public bool Fail { get; set; }
 
@@ -84,6 +87,8 @@ public sealed class FakeCourseTranslator : IClaudeJsonClient
         if (Fail || (FailIfSystemContains is { } marker && system.Contains(marker))
                  || (FailIfPromptContains is { } text && items.Any(i => i.Text.Contains(text))))
             return null;
+        lock (_gate)
+            if (Answers.Count > 0) return Answers.Dequeue();
         if (Answer is not null) return Answer;
         var answer = items.Select(i => new { ply = i.Ply, text = Prefix + i.Text });
         return JsonSerializer.Serialize(new { items = answer });

@@ -7,7 +7,8 @@ namespace RookHub.Api.Services;
 public enum TranslationSubject
 {
     /// <summary>Die Anmerkungen einer Partie (<see cref="CommentTranslationService"/>). Verhalten und
-    /// Log-Meldungen sind WOERTLICH die von vor dem Umbau (Kibana/log-watcher haengen an den Vorlagen).</summary>
+    /// Log-Meldungen sind die von vor dem Umbau (Kibana/log-watcher haengen an den Vorlagen) — seit 0.551.1 plus die
+    /// Anfuehrungszeichen-Regel im Auftrag und die Pruefung auf ein abgeschnittenes Zitat.</summary>
     Game,
     /// <summary>Die Texte EINER Kurs-Linie (<see cref="CourseTranslationService"/>): Zug-Kommentare,
     /// Einleitung, Titel und ggf. Kapitelname, Schluessel nach <see cref="CourseTextSlots"/>.</summary>
@@ -51,6 +52,10 @@ public sealed class CommentTranslator
     /// schwanken zwischen den Sprachen zu stark, als dass 70 % etwas aussagten.</summary>
     public const int MinProseCharsForLengthCheck = 150;
 
+    /// <summary>So oft geht dieselbe Fuhre hoechstens ans Modell — der zweite Versuch nur fuer ein abgeschnittenes Zitat
+    /// oder fehlende Eintraege (die Spur desselben Fehlers, siehe <see cref="EndsInsideQuote"/>).</summary>
+    public const int MaxAttemptsPerChunk = 2;
+
     private readonly IClaudeJsonClient _llm;
     private readonly ILogger _logger;
 
@@ -83,28 +88,54 @@ public sealed class CommentTranslator
 
         foreach (var chunk in Chunks(items))
         {
-            var json = await _llm.TranslateCommentsJsonAsync(SystemPrompt(from, to, subject), UserPrompt(chunk), ct);
-            if (json is null)
+            var sourceByKey = chunk.ToDictionary(c => c.Key, c => c.Text);
+            List<(int Ply, string Text)>? accepted = null;
+            // EIN zweiter Versuch, aber nur fuer die beiden Folgen des Anfuehrungszeichen-Fehlers (unten): das Modell
+            // streut, derselbe Auftrag geht beim zweiten Mal oft glatt (Linie 54177: einer von zwei Versuchen). Ein
+            // abgebrochener Aufruf, zu wenig Text und die falsche Sprache werden NICHT wiederholt.
+            for (var attempt = 1; accepted is null; attempt++)
             {
-                LogAborted(subject, subjectId, to);
-                return null;   // lieber gar kein Satz als ein halber
-            }
-            var parsed = Parse(json);
-            if (strict)
-            {
-                // Kurse: eine Fuhre, die nicht JEDEN Schluessel beantwortet, ist ein Fehlschlag — und was
-                // nicht gefragt war, wird nicht uebernommen. Bei Partien bleibt es wie bisher (was kommt,
-                // zaehlt; die Laengenpruefung faengt den Rest).
-                var asked = chunk.Select(c => c.Key).ToHashSet();
-                parsed = parsed.Where(p => asked.Contains(p.Ply)).ToList();
-                var answered = parsed.Select(p => p.Ply).ToHashSet();
-                if (!asked.All(answered.Contains))
+                var last = attempt >= MaxAttemptsPerChunk;
+                var json = await _llm.TranslateCommentsJsonAsync(SystemPrompt(from, to, subject), UserPrompt(chunk), ct);
+                if (json is null)
                 {
-                    LogIncomplete(subject, subjectId, to, answered.Count, asked.Count);
+                    LogAborted(subject, subjectId, to);
+                    return null;   // lieber gar kein Satz als ein halber
+                }
+                var parsed = Parse(json);
+                if (strict)
+                {
+                    // Kurse: eine Fuhre, die nicht JEDEN Schluessel beantwortet, ist ein Fehlschlag — und was
+                    // nicht gefragt war, wird nicht uebernommen. Bei Partien bleibt es wie bisher (was kommt,
+                    // zaehlt; die Laengenpruefung faengt den Rest).
+                    var asked = chunk.Select(c => c.Key).ToHashSet();
+                    parsed = parsed.Where(p => asked.Contains(p.Ply)).ToList();
+                    var answered = parsed.Select(p => p.Ply).ToHashSet();
+                    if (!asked.All(answered.Contains))
+                    {
+                        if (!last) continue;
+                        LogIncomplete(subject, subjectId, to, answered.Count, asked.Count);
+                        return null;
+                    }
+                }
+                // ABGESCHNITTEN AN EINEM ANFUEHRUNGSZEICHEN? Das Modell oeffnet ein deutsches Zitat richtig mit „,
+                // schliesst es aber mit dem geraden " — und das beendet in der JSON-Antwort den STRING. Die Grammatik
+                // laesst danach nur noch das Schliessen der Antwort zu: der Text endet mitten im Zitat, und alle
+                // Eintraege dahinter fehlen. Am 2026-09-27 auf Prod gemessen: jede fuenfte Kurs-Linie verworfen,
+                // 308 von 57 079 Bibliothekstexten mitten im Zitat abgeschnitten gespeichert (Linie 54177 scheiterte
+                // dreimal an derselben Stelle). Bei Partien fiel das nur auf, wenn die Laenge litt. Geprueft wird
+                // deshalb JEDER Eintrag: offenes Zitat im Ergebnis, das die Vorlage nicht hat = Fehlschlag.
+                var cut = parsed.FindIndex(p => sourceByKey.TryGetValue(p.Ply, out var src)
+                                                && EndsInsideQuote(p.Text) && !EndsInsideQuote(src));
+                if (cut >= 0)
+                {
+                    if (!last) continue;
+                    LogCutAtQuote(subject, subjectId, to, parsed[cut].Ply);
                     return null;
                 }
+                accepted = parsed;
             }
-            foreach (var (ply, text) in parsed)
+            foreach (var (ply, text) in accepted)
                 // Die Figurenbuchstaben stehen zwar im Auftrag, aber welcher Buchstabe zu welcher
                 // Figur gehoert, ist nichts, was ein Modell entscheiden muss — siehe PieceLetters.
                 // Unbekannte Quelle („und") → Convert laesst den Text, wie er ist.
@@ -205,6 +236,39 @@ public sealed class CommentTranslator
                 id, to, share);
     }
 
+    private void LogCutAtQuote(TranslationSubject subject, int? id, string to, int ply)
+    {
+        if (subject == TranslationSubject.Game)
+            _logger.LogWarning(
+                "Uebersetzung der Partie {Id} nach {Lang} verworfen: Text {Ply} endet in einem offenen Zitat.",
+                id, to, ply);
+        else
+            _logger.LogWarning(
+                "Uebersetzung der Kurs-Linie {Id} nach {Lang} verworfen: Text {Ply} endet in einem offenen Zitat.",
+                id, to, ply);
+    }
+
+    /// <summary>
+    /// Steht der Text am Ende MITTEN in einem typografischen Zitat? Das ist die Spur des Fehlers, bei dem das
+    /// Modell ein Zitat mit dem geraden " schliesst und damit den JSON-String beendet (siehe <see cref="TranslateAsync"/>).
+    /// Drei Formen, je die der Sprachen, in die wir uebersetzen: deutsch „…“ (auch mit ” oder " geschlossen),
+    /// Guillemets «…»/»…« (ungerade Zahl = eines offen) und englisch “…” — letztere nur, wenn kein „ im Text steht,
+    /// denn im Deutschen IST “ das schliessende Zeichen.
+    /// </summary>
+    internal static bool EndsInsideQuote(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        var low = text.LastIndexOf('„');
+        if (low >= 0 && text.IndexOfAny(['“', '”', '"'], low + 1) < 0) return true;
+        if ((text.Count(c => c == '«') + text.Count(c => c == '»')) % 2 == 1) return true;
+        if (low < 0)
+        {
+            var open = text.LastIndexOf('“');
+            if (open >= 0 && text.IndexOfAny(['”', '"'], open + 1) < 0) return true;
+        }
+        return false;
+    }
+
     private void LogWrongLanguage(TranslationSubject subject, int? id, string to, string detected)
     {
         if (subject == TranslationSubject.Game)
@@ -235,12 +299,12 @@ public sealed class CommentTranslator
         if (current.Count > 0) yield return current;
     }
 
-    /// <summary>Der Auftrag. Fuer Partien WOERTLICH der bisherige (die Tests der Partie-Uebersetzung
-    /// pruefen ihn mit); fuer Kurse kommen die Kurs-Regeln dazu.</summary>
+    /// <summary>Der Auftrag. Fuer Partien der bisherige plus (seit 0.551.1) die Regel zu den Anfuehrungszeichen
+    /// (die Tests der Partie-Uebersetzung pruefen ihn mit); fuer Kurse kommen die Kurs-Regeln dazu.</summary>
     internal static string SystemPrompt(string? from, string to, TranslationSubject subject)
     {
-        // Partien: woertlich wie vor dem Umbau (auch bei „und"). Kurse: eine unbekannte Quelle wird nicht
-        // als Sprachkuerzel behauptet.
+        // Partien: wie vor dem Umbau (auch bei „und"), dazu die Anfuehrungszeichen-Regel. Kurse: eine unbekannte
+        // Quelle wird nicht als Sprachkuerzel behauptet.
         var source = subject == TranslationSubject.Game || IsKnown(from)
             ? $"from {from} "
             : "from the language it is written in ";
@@ -253,6 +317,8 @@ public sealed class CommentTranslator
             - Keep the author's voice: an annotation is a person explaining a game, not a report.
             - Do not explain, summarise or improve. If a sentence is wrong, it stays wrong.
             - Keep one entry per input entry, with the same ply number.
+            - Never write the straight double quote character inside a text. For quotations use the
+              typographic quotation marks of the target language (German „…“, French «…», English “…”).
             """;
         return subject switch
         {
