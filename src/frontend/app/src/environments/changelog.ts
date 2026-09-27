@@ -7,9 +7,9 @@
 // ~0,9 MB Prosa, die das Overlay per dynamic import() erst beim Oeffnen laedt.
 // Neue Eintraege gehoeren dort hinein; diese Datei bleibt bewusst winzig,
 // damit sie ohne Bundle-Kosten eager importierbar ist (Version im Footer).
-export const APP_VERSION = '0.568.2';
+export const APP_VERSION = '0.568.3';
 /** Bump this integer whenever a new APK must be installed by existing users. */
-export const APK_VERSION = 2;
+export const APK_VERSION = 3;
 
 export interface ChangelogEntry {
   version: string;

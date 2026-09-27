@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.568.3", date: "2026-09-27", changes: [
+    { en: "New Android app (1.1.0): the tournament site now opens inside the app without the address bar. The app shows a hint to install the new version; the download on the install page is the new app.", de: "Neue Android-App (1.1.0): Die Turnierseite öffnet sich jetzt in der App ohne Adressleiste. Die App zeigt einen Hinweis, die neue Version zu installieren; der Download auf der Installationsseite ist die neue App." },
+  ] },
   { version: "0.568.2", date: "2026-09-27", changes: [
     { en: "Android app build repaired (infrastructure only): the build machine no longer offered the Android SDK layout the app packager expects, and the packager now needs newer build tools — the build is set up for both again, so a new app version can be published.", de: "Bau der Android-App repariert (reine Infrastruktur): Die Build-Maschine bot die Ordnerstruktur des Android-SDK nicht mehr an, die das Verpackungswerkzeug erwartet, und das Werkzeug braucht inzwischen neuere Build-Tools — beides ist wieder eingerichtet, damit eine neue App-Version erscheinen kann." },
   ] },
