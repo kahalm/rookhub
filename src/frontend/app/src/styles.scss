@@ -280,3 +280,17 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 .board-tap, .cg-wrap, cg-container, cg-board {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Zug-Symbol am Brett (seit 0.559.0, Variante „D"): poppt nach der Ankunft der Figur kurz auf. Global, weil
+   Chessground das SVG per innerHTML einsetzt (`move-badge.util.ts`, Klasse BADGE_POP_CLASS) — Komponenten-Styles
+   erreichen es nicht. Chessground setzt ein Symbol nur neu ein, wenn es sich ändert; Pfeile schalten löst kein
+   zweites Aufpoppen aus. */
+@keyframes rh-badge-pop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.rh-badge-pop { animation: rh-badge-pop 220ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .rh-badge-pop { animation: none; }
+}

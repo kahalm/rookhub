@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.559.0", date: "2026-09-27", changes: [
+    { en: "The move symbol on the board is bigger now and sits right at the corner of the square (variant D from the comparison): a circle about half the width of a square with a white ring and a soft shadow. It pops up briefly once the piece has arrived; with reduced motion it simply appears.", de: "Das Zug-Symbol auf dem Brett ist jetzt größer und sitzt direkt an der Feldecke (Variante D aus dem Vergleich): ein Kreis von knapp halber Feldbreite mit weißem Ring und weichem Schatten. Es poppt kurz auf, sobald die Figur angekommen ist; mit reduzierter Bewegung erscheint es einfach." },
+  ] },
   { version: "0.558.3", date: "2026-09-27", changes: [
     { en: "KidHub: the language menu at the bottom now shows the language the page is really in — it always showed “Deutsch” (its first entry) even when the page was in English, and picking Deutsch then changed nothing. A language chosen on KidHub now also sticks after reloading (it lost against the language chosen on RookHub) and applies to RookHub and the tournament site as well. Languages without the kids’ texts show German instead of a half-English page.", de: "KidHub: Das Sprachmenü unten zeigt jetzt die Sprache, in der die Seite wirklich steht — es zeigte immer „Deutsch“ (seinen ersten Eintrag), auch wenn die Seite Englisch sprach, und ein Klick auf Deutsch änderte dann nichts. Eine auf KidHub gewählte Sprache hält jetzt auch nach dem Neuladen (sie verlor gegen die auf RookHub gewählte) und gilt ebenso für RookHub und die Turnierseite. Sprachen ohne die Kindertexte zeigen Deutsch statt einer halb englischen Seite." },
   ] },

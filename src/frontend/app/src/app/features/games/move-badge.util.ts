@@ -18,11 +18,18 @@ export interface BoardBadge {
   svg: string;
 }
 
-/** Mittelpunkt und Radius des Kreises in Feld-Koordinaten (0..100): oben rechts, ein Stück über den Rand wie bei
- *  chess.com — aber nur wenig, damit er am Brettrand (h-Linie, 8. Reihe) nicht abgeschnitten wird. */
-const CX = 84;
-const CY = 16;
-const R = 18;
+/** Mittelpunkt und Radius des Kreises in Feld-Koordinaten (0..100). Seit 0.559.0 Variante „D" aus dem
+ *  Vergleich vom 2026-09-27 (gewählt vom Nutzer): groß (⌀ knapp die Hälfte des Felds) und nahe der Ecke, mit weißem
+ *  Ring — auch am Handy lesbar. Er ragt ein Stück über das Feld hinaus; die Figur in der Mitte bleibt frei. */
+const CX = 90;
+const CY = 10;
+const R = 24;
+/** Glyphen und Schrift sind für R = 18 gezeichnet und wachsen mit. */
+const SCALE = R / 18;
+
+/** CSS-Klasse fürs kurze Aufpoppen nach der Ankunft der Figur — Keyframes in `styles.scss` (das SVG setzt
+ *  Chessground per innerHTML ein, außerhalb jeder Komponenten-Kapselung). */
+export const BADGE_POP_CLASS = 'rh-badge-pop';
 
 /**
  * Glyphen, die als TEXT nicht taugen: Daumen und Buch sind Emoji (farbig, je System anders), Stern, Haken und Kreuz
@@ -37,6 +44,11 @@ const GLYPHS: Partial<Record<MoveClass, string>> = {
   book: '<path d="M3 6.5c3-1.4 6-1.4 8.4 0v12.2c-2.4-1.4-5.4-1.4-8.4 0z M12.6 6.5c2.4-1.4 5.4-1.4 8.4 0v12.2c-3-1.4-6-1.4-8.4 0z" fill="#fff"/>',
 };
 
+/** Zahl für ein SVG-Attribut, ohne Gleitkomma-Schwanz. */
+function fmt(n: number): string {
+  return String(Math.round(n * 100) / 100);
+}
+
 /** Fünfzackiger Stern um (12, 12) — außen 9,5, innen 4. */
 function starPath(): string {
   const pts: string[] = [];
@@ -50,18 +62,21 @@ function starPath(): string {
 
 /**
  * Das Symbol einer Klasse als SVG-Schnipsel für Chessground (`DrawShape.customSvg.html`, Raster 0..100 über dem
- * Feld): farbiger Kreis mit weißem Rand und leichtem Schatten, darin das Zeichen der Klasse — dieselbe Farbe wie
- * überall im Rückblick (`MOVE_CLASS_COLORS`).
+ * Feld): farbiger Kreis mit weißem Rand und weichem Schatten, darin das Zeichen der Klasse — dieselbe Farbe wie
+ * überall im Rückblick (`MOVE_CLASS_COLORS`). Beim Einsetzen poppt er kurz auf (`BADGE_POP_CLASS`).
  */
 export function moveBadgeSvg(cls: MoveClass): string {
   const color = MOVE_CLASS_COLORS[cls];
   const glyph = GLYPHS[cls];
+  const g = 11.4 * SCALE;
   const inner = glyph
-    ? `<g transform="translate(${CX - 11.4} ${CY - 11.4}) scale(0.95)">${glyph}</g>`
+    ? `<g transform="translate(${fmt(CX - g)} ${fmt(CY - g)}) scale(${fmt(0.95 * SCALE)})">${glyph}</g>`
     : `<text x="${CX}" y="${CY}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-weight="700"`
-      + ` font-family="Roboto, Arial, sans-serif" font-size="${MOVE_CLASS_SYMBOLS[cls].length > 1 ? 19 : 24}">`
+      + ` font-family="Roboto, Arial, sans-serif" font-size="${fmt((MOVE_CLASS_SYMBOLS[cls].length > 1 ? 19 : 24) * SCALE)}">`
       + `${MOVE_CLASS_SYMBOLS[cls]}</text>`;
-  return `<circle cx="${CX + 1}" cy="${CY + 2.5}" r="${R}" fill="#000" fill-opacity="0.35"/>`
-    + `<circle cx="${CX}" cy="${CY}" r="${R}" fill="${color}" stroke="#fff" stroke-width="2.5"/>`
-    + inner;
+  // Die Hülle trägt das Aufpoppen; der Drehpunkt ist die Kreismitte (SVG-Benutzereinheiten = px im Feld-Raster).
+  return `<g class="${BADGE_POP_CLASS}" style="transform-origin:${CX}px ${CY}px">`
+    + `<circle cx="${CX + 0.5}" cy="${CY + 2}" r="${R + 1}" fill="#000" fill-opacity="0.22"/>`
+    + `<circle cx="${CX}" cy="${CY}" r="${R}" fill="${color}" stroke="#fff" stroke-width="3"/>`
+    + inner + '</g>';
 }

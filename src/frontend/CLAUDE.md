@@ -412,6 +412,12 @@ Zug. Fehler beim Laden sind still (ohne Modell gibt es schlicht keinen Text).
 
 ## Zug-Klasse als Symbol an der Figur (0.557.0)
 
+**Aussehen seit 0.559.0 = Variante „D“** aus dem Vergleich vom 2026-09-27 (Artefakt, vom Nutzer gewählt): Kreis R 24 um
+(90, 10), weißer Ring 3, weicher Schatten, Glyphen mit `R / 18` skaliert; poppt nach der Ankunft der Figur auf
+(`BADGE_POP_CLASS` → Keyframes `rh-badge-pop` GLOBAL in `styles.scss`, weil Chessground das SVG per innerHTML
+einsetzt; `prefers-reduced-motion` schaltet es ab). Verworfen: Feld in der Klassenfarbe tönen (chess.com-Art),
+Symbol nur bei auffälligen Zügen.
+
 Wie chess.com beim Durchsehen (gewünscht 2026-09-27): die Klasse des AKTUELLEN Zugs steht als runder Kreis in der
 oberen rechten Ecke seines Zielfelds (bei der Rochade das Feld des Königs). `features/games/move-badge.util.ts`
 (`moveBadgeSvg`) baut das SVG-Schnipsel — Farbe aus `MOVE_CLASS_COLORS`, Zeichen aus `MOVE_CLASS_SYMBOLS` (dieselbe

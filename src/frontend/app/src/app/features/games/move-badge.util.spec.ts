@@ -1,5 +1,5 @@
 import { MOVE_CLASSES, MOVE_CLASS_COLORS } from './game-review.util';
-import { MOVE_CLASS_SYMBOLS, moveBadgeSvg } from './move-badge.util';
+import { BADGE_POP_CLASS, MOVE_CLASS_SYMBOLS, moveBadgeSvg } from './move-badge.util';
 
 describe('moveBadgeSvg', () => {
   it('jede Klasse bekommt einen Kreis in ihrer Farbe', () => {
@@ -15,6 +15,12 @@ describe('moveBadgeSvg', () => {
       expect(svg).not.toContain('<text');
       expect(svg).not.toContain(MOVE_CLASS_SYMBOLS[c]);
     }
+  });
+
+  it('Variante D (gewählt 2026-09-27): groß nahe der Ecke, weißer Ring, poppt um die Kreismitte auf', () => {
+    const svg = moveBadgeSvg('blunder');
+    expect(svg).toContain('<circle cx="90" cy="10" r="24" fill="#ca3431" stroke="#fff" stroke-width="3"/>');
+    expect(svg).toContain(`class="${BADGE_POP_CLASS}" style="transform-origin:90px 10px"`);
   });
 
   it('ist gültiges SVG', () => {
