@@ -73,7 +73,7 @@
       "usernameLabel": "ユーザー名",
       "emailLabel": "メールアドレス",
       "passwordLabel": "パスワード",
-      "passwordHint": "4文字以上",
+      "passwordHint": "{{min}}文字以上",
       "submit": "登録",
       "submitting": "登録中...",
       "loginLink": "すでにアカウントをお持ちの方はログイン",

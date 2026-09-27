@@ -73,7 +73,7 @@
       "usernameLabel": "Имя пользователя",
       "emailLabel": "Эл. почта",
       "passwordLabel": "Пароль",
-      "passwordHint": "Не менее 4 символов",
+      "passwordHint": "Не менее {{min}} символов",
       "submit": "Зарегистрироваться",
       "submitting": "Регистрация…",
       "loginLink": "Уже есть аккаунт? Войти",

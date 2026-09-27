@@ -73,7 +73,7 @@
       "usernameLabel": "Όνομα χρήστη",
       "emailLabel": "Email",
       "passwordLabel": "Κωδικός πρόσβασης",
-      "passwordHint": "Τουλάχιστον 4 χαρακτήρες",
+      "passwordHint": "Τουλάχιστον {{min}} χαρακτήρες",
       "submit": "Εγγραφή",
       "submitting": "Εγγραφή…",
       "loginLink": "Έχετε ήδη λογαριασμό; Συνδεθείτε",

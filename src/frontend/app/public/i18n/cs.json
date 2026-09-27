@@ -73,7 +73,7 @@
       "usernameLabel": "Uživatelské jméno",
       "emailLabel": "E-mail",
       "passwordLabel": "Heslo",
-      "passwordHint": "Alespoň 4 znaky",
+      "passwordHint": "Alespoň {{min}} znaků",
       "submit": "Registrovat",
       "submitting": "Registruji...",
       "loginLink": "Máte již účet? Přihlaste se",

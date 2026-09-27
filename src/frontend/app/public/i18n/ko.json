@@ -73,7 +73,7 @@
       "usernameLabel": "사용자명",
       "emailLabel": "이메일",
       "passwordLabel": "비밀번호",
-      "passwordHint": "4자 이상",
+      "passwordHint": "{{min}}자 이상",
       "submit": "회원가입",
       "submitting": "가입 처리 중...",
       "loginLink": "이미 계정이 있으신가요? 로그인",

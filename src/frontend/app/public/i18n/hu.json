@@ -136,12 +136,17 @@
       "usernameLabel": "Felhasználónév",
       "emailLabel": "E-mail",
       "passwordLabel": "Jelszó",
-      "passwordHint": "Legalább 4 karakter",
+      "passwordHint": "Legalább {{min}} karakter",
       "submit": "Regisztráció",
       "submitting": "Regisztráció folyamatban...",
       "loginLink": "Már van fiókod? Jelentkezz be",
       "failed": "Sikertelen regisztráció",
-      "emailHint": "Optional"
+      "emailHint": "Optional",
+      "usernameTooShort": "Legalább {{min}} karakter",
+      "taken": "Ez a felhasználónév vagy e-mail már foglalt. A te fiókod? Akkor jelentkezz be. Ha nem, válassz másik felhasználónevet.",
+      "toLogin": "Tovább a bejelentkezéshez",
+      "passwordRejected": "Ez a jelszó nem használható. Legalább {{min}} karakter legyen, és ne túl gyakori, mint a „12345678”.",
+      "invalid": "Ellenőrizd az adataidat – valami még nem stimmel."
     },
     "forgot": {
       "title": "Jelszó visszaállítása",

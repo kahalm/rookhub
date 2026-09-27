@@ -295,12 +295,17 @@
       "usernameLabel": "Benutzername",
       "emailLabel": "E-Mail",
       "passwordLabel": "Passwort",
-      "passwordHint": "Mindestens 4 Zeichen",
+      "passwordHint": "Mindestens {{min}} Zeichen",
       "submit": "Registrieren",
       "submitting": "Registrierung läuft...",
       "loginLink": "Bereits ein Konto? Anmelden",
       "failed": "Registrierung fehlgeschlagen",
-      "emailHint": "Optional"
+      "emailHint": "Optional",
+      "usernameTooShort": "Mindestens {{min}} Zeichen",
+      "taken": "Diesen Benutzernamen oder diese E-Mail gibt es schon. Ist das dein Konto? Dann melde dich an. Sonst such dir einen anderen Namen aus.",
+      "toLogin": "Zur Anmeldung",
+      "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
+      "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",

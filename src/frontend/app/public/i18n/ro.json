@@ -73,7 +73,7 @@
       "usernameLabel": "Nume utilizator",
       "emailLabel": "Email",
       "passwordLabel": "Parolă",
-      "passwordHint": "Cel puțin 4 caractere",
+      "passwordHint": "Cel puțin {{min}} caractere",
       "submit": "Înregistrare",
       "submitting": "Se înregistrează...",
       "loginLink": "Ai deja un cont? Conectează-te",

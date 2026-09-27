@@ -73,7 +73,7 @@
       "usernameLabel": "उपयोगकर्ता नाम",
       "emailLabel": "ईमेल",
       "passwordLabel": "पासवर्ड",
-      "passwordHint": "कम से कम 4 अक्षर",
+      "passwordHint": "कम से कम {{min}} अक्षर",
       "submit": "पंजीकरण करें",
       "submitting": "पंजीकरण हो रहा है...",
       "loginLink": "पहले से खाता है? लॉगिन करें",

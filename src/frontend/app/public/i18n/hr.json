@@ -295,12 +295,17 @@
       "usernameLabel": "Korisničko ime",
       "emailLabel": "E-pošta",
       "passwordLabel": "Lozinka",
-      "passwordHint": "Najmanje 4 znaka",
+      "passwordHint": "Najmanje {{min}} znakova",
       "submit": "Registracija",
       "submitting": "Registracija u tijeku...",
       "loginLink": "Već imaš račun? Prijavi se",
       "failed": "Registracija nije uspjela",
-      "emailHint": "Neobavezno"
+      "emailHint": "Neobavezno",
+      "usernameTooShort": "Najmanje {{min}} znakova",
+      "taken": "To korisničko ime ili e-mail već postoji. Je li to tvoj račun? Onda se prijavi. Inače odaberi drugo korisničko ime.",
+      "toLogin": "Na prijavu",
+      "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
+      "invalid": "Provjeri svoje podatke – nešto još nije u redu."
     },
     "forgot": {
       "title": "Ponovno postavljanje lozinke",

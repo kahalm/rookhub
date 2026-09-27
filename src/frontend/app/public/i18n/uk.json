@@ -73,7 +73,7 @@
       "usernameLabel": "Ім'я користувача",
       "emailLabel": "Електронна пошта",
       "passwordLabel": "Пароль",
-      "passwordHint": "Мінімум 4 символи",
+      "passwordHint": "Мінімум {{min}} символів",
       "submit": "Зареєструватися",
       "submitting": "Реєстрація…",
       "loginLink": "Вже є акаунт? Увійти",

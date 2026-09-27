@@ -73,7 +73,7 @@
       "usernameLabel": "用户名",
       "emailLabel": "邮箱",
       "passwordLabel": "密码",
-      "passwordHint": "至少 4 个字符",
+      "passwordHint": "至少 {{min}} 个字符",
       "submit": "注册",
       "submitting": "注册中…",
       "loginLink": "已有账户？登录",

@@ -73,7 +73,7 @@
       "usernameLabel": "Gebruikersnaam",
       "emailLabel": "E-mailadres",
       "passwordLabel": "Wachtwoord",
-      "passwordHint": "Minimaal 4 tekens",
+      "passwordHint": "Minimaal {{min}} tekens",
       "submit": "Registreren",
       "submitting": "Bezig met registreren...",
       "loginLink": "Al een account? Inloggen",

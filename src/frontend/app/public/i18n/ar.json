@@ -73,7 +73,7 @@
       "usernameLabel": "اسم المستخدم",
       "emailLabel": "البريد الإلكتروني",
       "passwordLabel": "كلمة المرور",
-      "passwordHint": "4 أحرف على الأقل",
+      "passwordHint": "{{min}} أحرف على الأقل",
       "submit": "إنشاء حساب",
       "submitting": "جارٍ التسجيل...",
       "loginLink": "لديك حساب بالفعل؟ سجّل دخولك",

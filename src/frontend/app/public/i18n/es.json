@@ -73,7 +73,7 @@
       "usernameLabel": "Usuario",
       "emailLabel": "Correo electrónico",
       "passwordLabel": "Contraseña",
-      "passwordHint": "Al menos 4 caracteres",
+      "passwordHint": "Al menos {{min}} caracteres",
       "submit": "Registrarse",
       "submitting": "Registrando...",
       "loginLink": "¿Ya tienes cuenta? Inicia sesión",

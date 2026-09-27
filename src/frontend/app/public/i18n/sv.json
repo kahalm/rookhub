@@ -73,7 +73,7 @@
       "usernameLabel": "Användarnamn",
       "emailLabel": "E-post",
       "passwordLabel": "Lösenord",
-      "passwordHint": "Minst 4 tecken",
+      "passwordHint": "Minst {{min}} tecken",
       "submit": "Registrera",
       "submitting": "Registrerar...",
       "loginLink": "Har du redan ett konto? Logga in",

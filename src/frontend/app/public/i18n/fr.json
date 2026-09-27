@@ -73,7 +73,7 @@
       "usernameLabel": "Nom d'utilisateur",
       "emailLabel": "E-mail",
       "passwordLabel": "Mot de passe",
-      "passwordHint": "Au moins 4 caractères",
+      "passwordHint": "Au moins {{min}} caractères",
       "submit": "S'inscrire",
       "submitting": "Inscription en cours...",
       "loginLink": "Vous avez déjà un compte ? Se connecter",

@@ -73,7 +73,7 @@
       "usernameLabel": "نام کاربری",
       "emailLabel": "ایمیل",
       "passwordLabel": "رمز عبور",
-      "passwordHint": "حداقل ۴ کاراکتر",
+      "passwordHint": "حداقل {{min}} کاراکتر",
       "submit": "ثبت‌نام",
       "submitting": "در حال ثبت‌نام...",
       "loginLink": "قبلاً حساب دارید؟ وارد شوید",

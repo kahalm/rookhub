@@ -73,7 +73,7 @@
       "usernameLabel": "Kullanıcı adı",
       "emailLabel": "E-posta",
       "passwordLabel": "Şifre",
-      "passwordHint": "En az 4 karakter",
+      "passwordHint": "En az {{min}} karakter",
       "submit": "Kayıt Ol",
       "submitting": "Kayıt yapılıyor...",
       "loginLink": "Zaten hesabınız var mı? Giriş yapın",

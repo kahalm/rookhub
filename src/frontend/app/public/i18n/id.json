@@ -73,7 +73,7 @@
       "usernameLabel": "Nama pengguna",
       "emailLabel": "Email",
       "passwordLabel": "Kata sandi",
-      "passwordHint": "Minimal 4 karakter",
+      "passwordHint": "Minimal {{min}} karakter",
       "submit": "Daftar",
       "submitting": "Sedang mendaftar...",
       "loginLink": "Sudah punya akun? Masuk",

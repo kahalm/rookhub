@@ -73,7 +73,7 @@
       "usernameLabel": "Tên người dùng",
       "emailLabel": "Email",
       "passwordLabel": "Mật khẩu",
-      "passwordHint": "Ít nhất 4 ký tự",
+      "passwordHint": "Ít nhất {{min}} ký tự",
       "submit": "Đăng ký",
       "submitting": "Đang đăng ký...",
       "loginLink": "Đã có tài khoản? Đăng nhập",
