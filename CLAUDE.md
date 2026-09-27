@@ -2616,6 +2616,19 @@ Groß/klein, ohne Akzente) in den gelesenen Spielernamen — nur wenn genau EINE
 (`ScoresheetScanService.GuessOwnerSide`). Korrekturseite: `PUT /api/games/{id}` mit `ownerSide` (leer = zurücknehmen,
 weglassen = unverändert), für jede Partie.
 
+**Ausschnitt je Eintrag** (0.550.0, Wunsch 2026-09-27): das Modell liefert zu jedem Eintrag `box` = [x0, y0, x1, y1] in
+0..1000 des AUFRECHTEN Bildes (Schema-Pflichtfeld, in BEIDEN Aufträgen erklärt; Test an zwei Testsatz-Formularen: sitzt
+praktisch überall auf der Handschrift, ~15 Ausgabe-Tokens je Halbzug mehr, ~+0,02–0,04 $ je Formular). Gespeichert
+steckt es in `TranscriptionJson`, `GET /api/games/{id}/scoresheet` reicht es als `boxes` (Index wie `written`) durch —
+`ScoresheetTranscription.Entry.NormalizedBox` klemmt auf 0..1000, sortiert vertauschte Ecken, verwirft alles außer vier
+Werten mit Fläche (`null`). Die Korrekturseite zeigt unter dem Foto den Eintrag des gewählten Halbzugs (`ply.w`; am Ende
+der Liste den ersten unaufgelösten, `unresolvedFrom`) als Ausschnitt mit Umfeld — seitlich 60 % der Kastenbreite, oben/
+unten 130 % der Höhe (`cropView` in `game-edit.util.ts`) —, rot gerahmt, wenn der Zug unsicher ist. Ausgeschnitten wird
+per CSS aus dem schon geladenen Foto (Seitenverhältnis aus `naturalWidth/Height`), keine Bildbearbeitung am Server. Das
+gespeicherte Foto ist meist das ORIGINAL mit EXIF-Drehung, das Modell sah es gedreht (`ScoresheetImage.Prepare`); der
+Browser zeigt es ebenfalls gedreht, deshalb passen die Koordinaten ohne Umrechnung. Ältere Einlesungen und dots.ocr
+haben keine Kästen → kein Ausschnitt.
+
 **Korrekturseite**: das Brett zeigt die Stellung VOR dem gewählten Halbzug, ein Zug am Brett ersetzt ihn (oder fügt
 ein), `Zug löschen` streicht ihn. Bei einer eingelesenen Partie wird danach der REST neu aufbereitet
 (`POST …/scoresheet/resolve`, ohne Modell-Aufruf): Präfix = die festen Züge, `writtenFrom` = welcher Formular-Eintrag

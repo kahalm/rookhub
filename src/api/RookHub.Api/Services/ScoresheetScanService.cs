@@ -450,6 +450,7 @@ public class ScoresheetScanService
             ScanId = scan.Id,
             NotationLanguage = stored?.Language ?? scan.NotationLanguage,
             Written = t?.Moves.Select(m => m.Written).ToList() ?? new(),
+            Boxes = t?.Moves.Select(m => m.NormalizedBox()).ToList() ?? new(),
             Plies = stored?.Plies ?? new(),
             Unresolved = stored?.Unresolved ?? new(),
             UnresolvedFrom = stored?.UnresolvedFrom,
@@ -593,6 +594,20 @@ public sealed class ScoresheetTranscription
         public List<string>? Alternatives { get; set; }
         public string? Confidence { get; set; }
         public string? Note { get; set; }
+        /// <summary>Wo der Eintrag auf dem Foto steht: [x0, y0, x1, y1] in 0..1000 des AUFRECHTEN Bildes (so, wie der
+        /// Browser das Foto zeigt — EXIF-gedreht). Fehlt bei Einlesungen vor 0.550.0 und bei dots.ocr.</summary>
+        public List<int>? Box { get; set; }
+
+        /// <summary>Der Kasten, wenn er brauchbar ist: vier Werte, in 0..1000 geklemmt, Ecken sortiert, nicht leer —
+        /// sonst <c>null</c>. Ein Modell kann Ecken vertauschen oder über den Rand greifen; ein kaputter Kasten soll
+        /// die Korrekturseite nicht mit einem leeren Ausschnitt füllen.</summary>
+        public int[]? NormalizedBox()
+        {
+            if (Box is not { Count: 4 }) return null;
+            var c = Box.Select(v => Math.Clamp(v, 0, 1000)).ToArray();
+            int x0 = Math.Min(c[0], c[2]), x1 = Math.Max(c[0], c[2]), y0 = Math.Min(c[1], c[3]), y1 = Math.Max(c[1], c[3]);
+            return x1 - x0 < 2 || y1 - y0 < 2 ? null : new[] { x0, y0, x1, y1 };
+        }
 
         public ScannedPly ToScanned() => new(Written ?? string.Empty, string.IsNullOrWhiteSpace(San) ? null : San,
             Alternatives?.Where(a => !string.IsNullOrWhiteSpace(a)).Take(3).ToList(), Confidence);

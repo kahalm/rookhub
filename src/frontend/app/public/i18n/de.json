@@ -2685,6 +2685,7 @@
       "modeReplace": "Ersetzen",
       "modeInsert": "Davor einfügen",
       "written": "Auf dem Formular: {{text}}",
+      "cropTitle": "So steht es auf dem Formular",
       "uncertain": "unsicher",
       "confirmed": "bestätigt",
       "illegal": "nicht legal",

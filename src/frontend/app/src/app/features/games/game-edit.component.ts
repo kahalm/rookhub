@@ -28,7 +28,7 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetOption, ScoresheetService, openPhotoBlob } from './scoresheet.service';
 import {
-  EditPly, commentsForSave, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn, resolveRequest, revalidate,
+  EditPly, commentsForSave, cropView, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn, resolveRequest, revalidate,
   stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
@@ -111,8 +111,22 @@ interface MoveRow { no: number; white: number; black: number | null; }
                 <button mat-icon-button (click)="openPhoto(true)" [matTooltip]="'games.photo.download' | translate"><mat-icon>download</mat-icon></button>
               </div>
               <div class="photo-scroll" [class.zoom]="zoom()">
-                <img [src]="src" [alt]="'games.edit.photo' | translate" />
+                <img [src]="src" [alt]="'games.edit.photo' | translate" (load)="onPhotoLoad($event)" />
               </div>
+              @if (crop(); as c) {
+                <div class="crop">
+                  <div class="crop-label">
+                    {{ 'games.edit.cropTitle' | translate }}
+                    @if (c.written) { <span class="written">{{ 'games.edit.written' | translate: { text: c.written } }}</span> }
+                  </div>
+                  <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
+                    <img [src]="src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                         [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
+                    <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
+                         [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
+                  </div>
+                </div>
+              }
             </mat-card>
           }
 
@@ -226,6 +240,14 @@ interface MoveRow { no: number; white: number; black: number | null; }
     .photo-scroll { max-height: 72vh; overflow: auto; text-align: center; }
     .photo-scroll img { max-width: 100%; max-height: 70vh; object-fit: contain; }
     .photo-scroll.zoom img { max-width: none; max-height: none; width: 200%; }
+    .crop { margin-top: 8px; padding-top: 8px; border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+    .crop-label { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding: 0 4px 6px; font-size: 0.9rem; }
+    .crop-frame { position: relative; overflow: hidden; width: 100%; max-width: 560px; margin: 0 auto;
+      border-radius: 4px; outline: 2px solid color-mix(in srgb, currentColor 20%, transparent); }
+    .crop-frame.uncertain { outline-color: var(--mat-sys-error, #c62828); }
+    .crop-frame img { position: absolute; max-width: none; max-height: none; }
+    .crop-mark { position: absolute; border: 2px solid var(--mat-sys-error, #c62828); border-radius: 3px; pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.12); }
     .board-card { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
     .board-wrap { width: min(100%, 62vh); align-self: center; }
     .nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; }
@@ -294,6 +316,12 @@ export class GameEditComponent implements OnInit, OnDestroy {
   readonly isScoresheet = signal(false);
   readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
+  /** Je Formular-Eintrag der Kasten auf dem Foto (vom Modell; ältere Einlesungen haben keine). */
+  readonly boxes = signal<(number[] | null)[]>([]);
+  readonly sheetEntries = signal<string[]>([]);
+  readonly unresolvedFrom = signal<number | null>(null);
+  /** Pixelmaße des Fotos (aufrecht, wie der Browser es zeigt) — für das Seitenverhältnis des Ausschnitts. */
+  readonly photoSize = signal<{ w: number; h: number } | null>(null);
   private photoBlob: Blob | null = null;
   private photoName = 'scoresheet.jpg';
 
@@ -315,6 +343,21 @@ export class GameEditComponent implements OnInit, OnDestroy {
   readonly arrows = computed<BoardArrow[]>(() => {
     const p = this.current();
     return p && !p.illegal && p.uci ? [{ from: p.uci.slice(0, 2), to: p.uci.slice(2, 4), brush: 'yellow' }] : [];
+  });
+  /**
+   * Der Ausschnitt des Formulars zum gewählten Halbzug, unter dem ganzen Foto: der Eintrag, aus dem der Zug stammt,
+   * mit Umfeld. Am Ende der Zugliste der erste Eintrag, der sich nicht auflösen ließ. Ohne Kasten (vom Nutzer
+   * eingefügter Zug, ältere Einlesung) kein Ausschnitt.
+   */
+  readonly crop = computed(() => {
+    const size = this.photoSize();
+    if (!size) return null;
+    const p = this.current();
+    const w = p ? p.w : this.unresolved().length ? this.unresolvedFrom() : null;
+    if (w === null || w === undefined) return null;
+    const view = cropView(this.boxes()[w], size.w, size.h);
+    if (!view) return null;
+    return { view, written: this.sheetEntries()[w] ?? '', uncertain: p ? p.uncertain && !p.confirmed : true };
   });
   readonly uncertainLeft = computed(() => this.plies().filter(p => p.uncertain && !p.confirmed && !p.illegal).length);
   readonly rows = computed<MoveRow[]>(() => {
@@ -367,10 +410,18 @@ export class GameEditComponent implements OnInit, OnDestroy {
       const matches = state && state.plies.length === fromPgn.length && state.plies.every((p, i) => p.san === fromPgn[i].san);
       this.plies.set(matches ? fromServer(state!.plies, comments) : fromPgn.map((p, i) => ({ ...p, comment: comments[i] })));
       this.unresolved.set(matches ? state!.unresolved : []);
+      this.unresolvedFrom.set(matches ? state!.unresolvedFrom ?? null : null);
+      this.boxes.set(state?.boxes ?? []);
+      this.sheetEntries.set(state?.written ?? []);
       this.loading.set(false);
       const first = this.plies().findIndex(p => p.uncertain && !p.confirmed);
       if (first >= 0) this.cursor.set(first);
     });
+  }
+
+  onPhotoLoad(e: Event): void {
+    const img = e.target as HTMLImageElement;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) this.photoSize.set({ w: img.naturalWidth, h: img.naturalHeight });
   }
 
   onSide(side: string): void {
@@ -485,6 +536,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
       next: res => {
         this.plies.set(revalidate([...head, ...fromServer(res.plies)]));
         this.unresolved.set(res.unresolved);
+        this.unresolvedFrom.set(res.unresolvedFrom ?? null);
         this.busy.set(false);
         this.go(nextCursor);
       },

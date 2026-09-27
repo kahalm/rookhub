@@ -190,3 +190,48 @@ export function commentsForSave(plies: readonly EditPly[], unresolved: readonly 
   }
   return out;
 }
+
+/** Ein Ausschnitt des Formular-Fotos als CSS-Werte: das Foto liegt im Rahmen, verschoben und vergrößert, und die
+ *  Markierung umrahmt den Eintrag. Alle Angaben in Prozent des Rahmens, `aspect` = Breite/Höhe des Rahmens. */
+export interface CropView {
+  aspect: number;
+  imgW: number;
+  imgH: number;
+  left: number;
+  top: number;
+  markLeft: number;
+  markTop: number;
+  markW: number;
+  markH: number;
+}
+
+/**
+ * Der Ausschnitt um einen Formular-Eintrag. `box` = [x0, y0, x1, y1] in 0..1000 des aufrechten Fotos (vom Modell,
+ * `ScoresheetTranscription.Entry.NormalizedBox`); die Pixelmaße braucht es für das Seitenverhältnis.
+ *
+ * Gezeigt wird mehr als der Kasten: seitlich die halbe Nachbarzelle, darüber und darunter je gut eine Zeile — ob ein
+ * Eintrag verrutscht, in die falsche Zeile geschrieben oder durchgestrichen ist, sieht man erst mit dem Umfeld.
+ * `null` ohne brauchbaren Kasten oder bevor das Foto geladen ist.
+ */
+export function cropView(box: readonly number[] | null | undefined, naturalW: number, naturalH: number): CropView | null {
+  if (!box || box.length !== 4 || naturalW <= 0 || naturalH <= 0) return null;
+  const [x0, y0, x1, y1] = box;
+  const bw = x1 - x0, bh = y1 - y0;
+  if (bw <= 0 || bh <= 0) return null;
+  const clamp = (v: number) => Math.min(1000, Math.max(0, v));
+  const rx0 = clamp(x0 - Math.max(bw * 0.6, 40)), rx1 = clamp(x1 + Math.max(bw * 0.6, 40));
+  const ry0 = clamp(y0 - Math.max(bh * 1.3, 25)), ry1 = clamp(y1 + Math.max(bh * 1.3, 25));
+  const cw = rx1 - rx0, ch = ry1 - ry0;
+  const pct = (v: number) => Math.round(v * 1000) / 1000;
+  return {
+    aspect: pct((cw * naturalW) / (ch * naturalH)),
+    imgW: pct((1000 / cw) * 100),
+    imgH: pct((1000 / ch) * 100),
+    left: pct((-rx0 / cw) * 100),
+    top: pct((-ry0 / ch) * 100),
+    markLeft: pct(((x0 - rx0) / cw) * 100),
+    markTop: pct(((y0 - ry0) / ch) * 100),
+    markW: pct((bw / cw) * 100),
+    markH: pct((bh / ch) * 100),
+  };
+}

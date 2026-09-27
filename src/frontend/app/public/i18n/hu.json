@@ -2949,6 +2949,7 @@
       "modeReplace": "Felülírás",
       "modeInsert": "Beszúrás elé",
       "written": "A lapon: {{text}}",
+      "cropTitle": "Így áll a lapon",
       "uncertain": "bizonytalan",
       "confirmed": "megerősítve",
       "illegal": "szabálytalan",

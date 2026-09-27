@@ -97,6 +97,10 @@ public class ScoresheetEditStateDto
     public string NotationLanguage { get; set; } = "auto";
     /// <summary>Alle Formular-Einträge in Reihenfolge (was dasteht).</summary>
     public List<string> Written { get; set; } = new();
+    /// <summary>Je Formular-Eintrag (gleicher Index wie <see cref="Written"/>) der Kasten auf dem Foto,
+    /// [x0, y0, x1, y1] in 0..1000 des aufrechten Bildes; <c>null</c> = unbekannt (ältere Einlesung, kaputter Kasten).
+    /// Die Korrekturseite zeigt daraus den Ausschnitt des Eintrags unter dem Foto.</summary>
+    public List<int[]?> Boxes { get; set; } = new();
     /// <summary>Stand je Halbzug der gespeicherten Partie.</summary>
     public List<ScoresheetPly> Plies { get; set; } = new();
     /// <summary>Einträge am Ende ohne legalen Zug.</summary>

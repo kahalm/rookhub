@@ -135,4 +135,38 @@ describe('GameEditComponent', () => {
     expect(c.uncertainLeft()).toBe(0);
     expect(c.plies()[1].confirmed).toBeTrue();
   });
+
+  it('a scanned game: shows the entry of the selected move cut out of the photo, and nothing without a box', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    http.expectOne('/api/games/5/scoresheet').flush({
+      scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [],
+      boxes: [[100, 50, 180, 80], [400, 50, 470, 80], null, [400, 90, 480, 120], [100, 130, 190, 160]],
+      plies: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'].map((san, i) => ({
+        w: i, written: san, san, uci: '', match: i === 1 ? 'fuzzy' : 'written', uncertain: i === 1,
+      })),
+    });
+    // Das Foto hat im Test keine echten Pixel — die Maße meldet sonst das load-Ereignis.
+    c.photoSize.set({ w: 1500, h: 2000 });
+    fixture.detectChanges();
+
+    expect(c.cursor()).toBe(1);
+    expect(c.crop()?.written).toBe('e5');
+    expect(c.crop()?.uncertain).toBeTrue();
+    const frame = fixture.nativeElement.querySelector('.crop-frame') as HTMLElement;
+    expect(frame).not.toBeNull();
+    expect(frame.classList).toContain('uncertain');
+    expect(frame.querySelector('.crop-mark')).not.toBeNull();
+
+    c.go(2);                                   // Sf3: kein Kasten
+    fixture.detectChanges();
+    expect(c.crop()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.crop-frame')).toBeNull();
+
+    c.go(3);                                   // Sc6: Kasten, sicher gelesen
+    expect(c.crop()?.written).toBe('Sc6');
+    expect(c.crop()?.uncertain).toBeFalse();
+  });
 });

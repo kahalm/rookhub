@@ -72,6 +72,8 @@ export interface ScoresheetEditState {
   scanId: number;
   notationLanguage: string;
   written: string[];
+  /** Je Formular-Eintrag (Index wie `written`) der Kasten auf dem Foto, [x0, y0, x1, y1] in 0..1000; `null` = unbekannt. */
+  boxes?: (number[] | null)[];
   plies: ScoresheetPly[];
   unresolved: string[];
   unresolvedFrom?: number | null;

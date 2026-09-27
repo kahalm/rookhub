@@ -2685,6 +2685,7 @@
       "modeReplace": "Zamijeni",
       "modeInsert": "Umetni ispred",
       "written": "Na zapisniku: {{text}}",
+      "cropTitle": "Kako piše na obrascu",
       "uncertain": "nesigurno",
       "confirmed": "potvrđeno",
       "illegal": "nije legalno",

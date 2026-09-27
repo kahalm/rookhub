@@ -1,5 +1,5 @@
 import {
-  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, cropView, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn,
   resolveRequest, revalidate, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
@@ -91,5 +91,30 @@ describe('game-edit.util', () => {
     expect(h['Site']).toBe('');
     expect(isoDateOf(h['Date'])).toBe('2026-06-05');
     expect(isoDateOf('????.??.??')).toBe('');
+  });
+
+  it('cropView: frames the entry with its neighbourhood and marks the entry itself', () => {
+    // Eintrag 100..200 × 100..140 auf einem 2000×1000-Foto: seitlich 60 % der Breite, oben/unten 130 % der Höhe dazu.
+    const v = cropView([100, 100, 200, 140], 2000, 1000)!;
+    // Rahmen 40..260 × 48..192 → 220 × 144 Promille, in Pixeln 440 × 144.
+    expect(v.aspect).toBeCloseTo(440 / 144, 2);
+    expect(v.imgW).toBeCloseTo(100000 / 220, 2);
+    expect(v.imgH).toBeCloseTo(100000 / 144, 2);
+    expect(v.left).toBeCloseTo(-40 / 220 * 100, 2);
+    expect(v.top).toBeCloseTo(-48 / 144 * 100, 2);
+    expect(v.markLeft).toBeCloseTo(60 / 220 * 100, 2);
+    expect(v.markTop).toBeCloseTo(52 / 144 * 100, 2);
+    expect(v.markW).toBeCloseTo(100 / 220 * 100, 2);
+    expect(v.markH).toBeCloseTo(40 / 144 * 100, 2);
+  });
+
+  it('cropView: stays inside the photo at the edge, and gives nothing without a usable box or photo size', () => {
+    const v = cropView([0, 980, 50, 1000], 1000, 1000)!;
+    expect(v.left).toBeCloseTo(0, 5);                // links nicht über den Rand
+    expect(v.top + v.imgH).toBeCloseTo(100, 2);      // unten bündig mit dem Foto
+    expect(cropView(null, 1000, 1000)).toBeNull();
+    expect(cropView([10, 10, 20], 1000, 1000)).toBeNull();
+    expect(cropView([30, 10, 20, 40], 1000, 1000)).toBeNull();
+    expect(cropView([10, 10, 20, 40], 0, 0)).toBeNull();
   });
 });

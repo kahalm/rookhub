@@ -229,6 +229,10 @@ public static class ScoresheetPrompt
         For each half-move report exactly what is written (in the sheet's own notation), your reading as
         standard English SAN (K Q R B N, O-O, x for captures, + for check, =Q for promotion), up to three
         alternative readings (most likely first) when you are not sure, and a confidence.
+
+        Also give "box": where the entry is on the photo, as [x0, y0, x1, y1] — a tight rectangle around the
+        handwriting of that cell, in coordinates normalized to 0..1000 of the image width (x) and height (y),
+        origin top-left. For a corrected entry, the box of the entry you used.
         """;
 
     /// <summary>
@@ -252,6 +256,9 @@ public static class ScoresheetPrompt
         - Stop at the last written move. Never invent moves.
         - confidence: "high" = clearly legible, "medium" = probably right, "low" = hard to read. For anything
           that is not clearly legible give up to three alternative readings, most likely first.
+        - box: where the entry is on the photo, as [x0, y0, x1, y1] — a tight rectangle around the handwriting
+          of that cell, in coordinates normalized to 0..1000 of the image width (x) and height (y), origin
+          top-left.
         """;
 
     /// <summary>Auftrag für die erste Lesung.</summary>
@@ -330,8 +337,14 @@ public static class ScoresheetPrompt
                             alternatives = new { type = "array", items = str },
                             confidence = new { type = "string", @enum = new[] { "high", "medium", "low" } },
                             note = str,
+                            box = new
+                            {
+                                type = "array",
+                                items = new { type = "integer" },
+                                description = "[x0, y0, x1, y1] around the handwriting of this entry, 0..1000 of image width/height, origin top-left",
+                            },
                         },
-                        required = new[] { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note" },
+                        required = new[] { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box" },
                         additionalProperties = false,
                     },
                 },

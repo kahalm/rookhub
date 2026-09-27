@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
@@ -296,6 +297,44 @@ public class ScoresheetScanServiceTests : IDisposable
         await _service.ClaimNextAsync(default);
         Assert.Equal(1, await _service.RequeueInterruptedAsync(default));
         Assert.Equal(ScoresheetScanStatus.Pending, (await _db.ScoresheetScans.SingleAsync()).Status);
+    }
+
+    /// <summary>Die Korrekturseite zeigt je Eintrag einen Ausschnitt des Fotos — dafür reicht die Einlesung die
+    /// Kästen des Modells durch, am selben Index wie <c>Written</c>. Ein kaputter Kasten wird <c>null</c>, kein
+    /// leerer Ausschnitt.</summary>
+    [Fact]
+    public async Task EditState_PassesTheBoxesPerEntry_AndDropsBrokenOnes()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        moves[0]!["box"] = new JsonArray(100, 50, 180, 80);
+        moves[1]!["box"] = new JsonArray(420, 90, 350, 60);      // Ecken vertauscht → sortiert
+        moves[2]!["box"] = new JsonArray(10, 20, 30);             // drei Werte → unbrauchbar
+        moves[3]!["box"] = new JsonArray(-5, 900, 40, 1200);      // über den Rand → geklemmt
+        moves[4]!["box"] = new JsonArray(300, 300, 300, 330);     // keine Breite → unbrauchbar
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        var state = (await _service.EditStateAsync(u.Id, scan.SavedGameId!.Value))!;
+
+        Assert.Equal(state.Written.Count, state.Boxes.Count);
+        Assert.Equal(new[] { 100, 50, 180, 80 }, state.Boxes[0]);
+        Assert.Equal(new[] { 350, 60, 420, 90 }, state.Boxes[1]);
+        Assert.Null(state.Boxes[2]);
+        Assert.Equal(new[] { 0, 900, 40, 1000 }, state.Boxes[3]);
+        Assert.Null(state.Boxes[4]);
+        Assert.Null(state.Boxes[5]);                              // ohne Kasten (ältere Einlesung)
+    }
+
+    [Fact]
+    public void Schema_AsksForABoxPerEntry_AndBothPromptsExplainIt()
+    {
+        var items = ScoresheetPrompt.Schema()["properties"].GetProperty("moves").GetProperty("items");
+        Assert.Equal("array", items.GetProperty("properties").GetProperty("box").GetProperty("type").GetString());
+        Assert.Contains("box", items.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+        Assert.Contains("0..1000", ScoresheetPrompt.System);
+        Assert.Contains("0..1000", ScoresheetPrompt.TranscribeSystem);
     }
 
     [Fact]

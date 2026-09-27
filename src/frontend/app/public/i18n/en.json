@@ -2685,6 +2685,7 @@
       "modeReplace": "Replace",
       "modeInsert": "Insert before",
       "written": "On the sheet: {{text}}",
+      "cropTitle": "Where it is on the sheet",
       "uncertain": "uncertain",
       "confirmed": "confirmed",
       "illegal": "not legal",
