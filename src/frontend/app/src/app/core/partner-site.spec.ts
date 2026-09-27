@@ -32,4 +32,11 @@ describe('partner-site', () => {
     expect(sharedCookieDomain('localhost')).toBeNull();
     expect(sharedCookieDomain('tournament.oberschmid.homes')).toBe('.oberschmid.homes');
   });
+
+  it('KidHub teilt die Anzeige-Einstellungen, ist aber keine Partnerseite', () => {
+    expect(sharedCookieDomain('kidhub.oberschmid.homes')).toBe('.oberschmid.homes');
+    expect(sharedCookieDomain('kidhub-dev.oberschmid.homes')).toBe('.oberschmid.homes');
+    expect(siteKindOf('kidhub.oberschmid.homes')).toBeNull();
+    expect(partnerSiteUrl('kidhub.oberschmid.homes', 'https:')).toBeNull();
+  });
 });

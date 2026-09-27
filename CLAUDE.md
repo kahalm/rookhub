@@ -3212,6 +3212,13 @@ Kinderseite" unter REST API.
 - **Symbole**: vorerst Platzhalter aus `design/kidhub/*.svg` (Springer vor Stern), Rezept in
   `public-kidhub/ASSETS.md`; `KidHubAssetTests` hält Manifest, `index.html` und Dateien gegeneinander (dieselbe
   Falle wie bei der Turnierseite: was in `public-kidhub/` fehlt, kommt still aus `public/`).
+- **Sprache** (0.558.3): Startsprache wie überall (Cookie `rookhub_lang` auf `.oberschmid.homes` → localStorage →
+  Browser → en). KidHub steht in `partner-site.ts` als `KIDHUB_LABELS`: KEINE Partnerseite (kein Sprung), darf
+  aber das geteilte Cookie SCHREIBEN — vorher las es das Cookie nur, und eine in KidHub getroffene Wahl verlor beim
+  nächsten Laden gegen RookHubs. Die Auswahl im Fuß bindet `[selected]` je Option an `translate.currentLang()`
+  (mit `[value]` am `<select>` zeigte sie immer „Deutsch“, den ersten Eintrag, während die Seite Englisch sprach).
+  Jede Sprache außer de/en/hr/hu wird über `LocaleService.applyUnsaved('de')` als Deutsch ANGEZEIGT, ohne die Wahl
+  zu überschreiben.
 - **Emojis** (Eule, Themenbilder, Sterne) brauchen eine Emoji-Schrift auf dem Gerät — Handys/Tablets haben sie,
   der Headless-Chromium auf dem Server nicht (Screenshots zeigen dort Kästchen).
 

@@ -119,6 +119,15 @@ export class LocaleService {
     writeSharedPreference(LANG_COOKIE, lang);
   }
 
+  /**
+   * Eine Sprache ANZEIGEN, ohne sie als Wahl zu speichern (weder geraetelokal noch im geteilten
+   * Cookie). Gebraucht von KidHub: es hat nur vier vollstaendig uebersetzte Sprachen und zeigt fuer
+   * jede andere Deutsch — das darf die Wahl auf RookHub nicht ueberschreiben.
+   */
+  applyUnsaved(lang: AppLang): void {
+    this.apply(lang);
+  }
+
   /** Umschalten OHNE zu speichern — der Weg fuer eine anderswo getroffene Wahl. */
   private apply(lang: AppLang): void {
     this.translate.use(lang);

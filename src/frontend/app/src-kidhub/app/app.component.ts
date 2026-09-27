@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, untracked } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AppLang, LocaleService } from '@rh/core/locale.service';
 import { AppUpdateService } from '@rh/core/app-update.service';
 import { environment } from '../../src/environments/environment';
@@ -34,9 +34,12 @@ export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
     <footer class="foot">
       <label class="lang">
         <span class="sr-only">{{ 'kids.language' | translate }}</span>
-        <select [value]="lang()" (change)="setLang($any($event.target).value)">
+        <!-- [selected] je Option statt [value] am select: die Optionen entstehen erst NACH der
+             Bindung, der Wert ging verloren und die Liste zeigte immer den ersten Eintrag („Deutsch"),
+             waehrend die Seite Englisch sprach — ein Klick auf Deutsch aenderte dann nichts. -->
+        <select (change)="setLang($any($event.target).value)">
           @for (l of languages; track l.code) {
-            <option [value]="l.code">{{ l.label }}</option>
+            <option [value]="l.code" [selected]="l.code === lang()">{{ l.label }}</option>
           }
         </select>
       </label>
@@ -82,18 +85,31 @@ export class KidHubAppComponent implements OnInit {
   private readonly appUpdate = inject(AppUpdateService);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly translate = inject(TranslateService);
+
   readonly languages = KIDS_LANGUAGES;
   readonly version = environment.version;
-  readonly lang = signal<AppLang>('de');
+  /** Die TATSAECHLICH aktive Sprache — nicht eine eigene Kopie, die mit ihr auseinanderlaufen kann. */
+  readonly lang = computed(() => this.translate.currentLang());
+
+  constructor() {
+    // Nur de/en/hr/hu haben die Kindertexte vollstaendig; jede andere Sprache (Browser, Wahl auf
+    // RookHub) stuende hier halb in Englisch. Dann Deutsch ANZEIGEN, ohne die Wahl zu ueberschreiben.
+    effect(() => {
+      const current = this.translate.currentLang();
+      if (current && !KIDS_LANGUAGES.some(l => l.code === current)) {
+        untracked(() => this.locale.applyUnsaved('de'));
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.locale.init();
-    this.lang.set(this.locale.current);
     this.appUpdate.start(this.destroyRef);
   }
 
+  /** Speichert die Wahl — geraetelokal und im geteilten Cookie, also auch fuer RookHub und die Turnierseite. */
   setLang(code: AppLang): void {
     this.locale.use(code);
-    this.lang.set(code);
   }
 }

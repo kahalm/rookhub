@@ -21,6 +21,12 @@ export type SiteKind = 'rookhub' | 'turnier';
 /** Alle Label, unter denen die Turnierseite erreichbar ist. */
 const TOURNAMENT_LABELS = new Set(['turnier', 'tournament', 'turnier-dev', 'tournament-dev']);
 const ROOKHUB_LABELS = new Set(['rookhub', 'rookhub-dev']);
+/**
+ * KidHub, die Kinderseite: KEINE Partnerseite (kein Sprung, kein Konto), teilt aber die
+ * Anzeige-Einstellungen. Ohne diesen Eintrag las KidHub das Sprach-Cookie, durfte es aber nicht
+ * schreiben — eine dort getroffene Wahl verlor beim naechsten Laden gegen das Cookie von RookHub.
+ */
+const KIDHUB_LABELS = new Set(['kidhub', 'kidhub-dev']);
 
 /** Welche Seite gehoert zu welcher — die Tabelle, nicht geraten. */
 const PARTNER: Record<string, string> = {
@@ -52,13 +58,13 @@ export function partnerSiteUrl(host: string = location.hostname, protocol: strin
 }
 
 /**
- * Domaene fuer Cookies, die sich BEIDE Oberflaechen teilen sollen (z. B. der Design-Modus):
+ * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub eingeschlossen):
  * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden
  * Seiten ist — auf einer IP oder localhost gibt es keine gemeinsame Elterndomaene, und ein Cookie
  * darauf zu setzen wuerde stillschweigend nichts tun.
  */
 export function sharedCookieDomain(host: string = location.hostname): string | null {
-  if (!siteKindOf(host)) return null;
+  if (!siteKindOf(host) && !KIDHUB_LABELS.has(host.split('.')[0])) return null;
   const parts = host.split('.');
   return parts.length >= 2 ? '.' + parts.slice(1).join('.') : null;
 }

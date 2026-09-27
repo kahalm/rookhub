@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.558.3", date: "2026-09-27", changes: [
+    { en: "KidHub: the language menu at the bottom now shows the language the page is really in — it always showed “Deutsch” (its first entry) even when the page was in English, and picking Deutsch then changed nothing. A language chosen on KidHub now also sticks after reloading (it lost against the language chosen on RookHub) and applies to RookHub and the tournament site as well. Languages without the kids’ texts show German instead of a half-English page.", de: "KidHub: Das Sprachmenü unten zeigt jetzt die Sprache, in der die Seite wirklich steht — es zeigte immer „Deutsch“ (seinen ersten Eintrag), auch wenn die Seite Englisch sprach, und ein Klick auf Deutsch änderte dann nichts. Eine auf KidHub gewählte Sprache hält jetzt auch nach dem Neuladen (sie verlor gegen die auf RookHub gewählte) und gilt ebenso für RookHub und die Turnierseite. Sprachen ohne die Kindertexte zeigen Deutsch statt einer halb englischen Seite." },
+  ] },
   { version: "0.558.2", date: "2026-09-27", changes: [
     { en: "Game review: the move symbol on the board now appears once the piece has arrived on its square – before, it showed up at the target square first and the piece slid in afterwards.", de: "Partie-Rückblick: das Zug-Symbol auf dem Brett erscheint jetzt, wenn die Figur auf ihrem Feld angekommen ist – vorher stand es zuerst am Zielfeld, und die Figur fuhr erst danach hin." },
   ] },
