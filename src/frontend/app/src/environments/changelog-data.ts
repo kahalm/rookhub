@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.550.1", date: "2026-09-27", changes: [
+    { en: "Tournament history: the tabs at the top now show friends with tournaments first, then the players you follow, and only then friends without any entries — before, every friend came ahead of the followed players, so a row of empty tabs pushed them to the end.", de: "Turnierverlauf: Die Reiter oben zeigen jetzt zuerst die Freunde mit Turnieren, danach die Spieler, denen du folgst, und erst dann die Freunde ohne Einträge — bisher standen alle Freunde vor den Gefolgten, und eine Reihe leerer Reiter schob sie ans Ende." },
+  ] },
   { version: "0.550.0", date: "2026-09-27", changes: [
     { en: "Scoresheet correction page: below the whole photo you now also see the entry of the selected move cut out and enlarged — with the move number, the rows above and below and part of the neighbouring column, the entry itself framed. For a move marked as unclear the frame is red. The reader now also reports where each entry stands on the photo; this applies to scoresheets read from now on (older ones have no positions and show no cut-out).", de: "Korrekturseite beim Partieformular: Unter dem ganzen Foto steht jetzt zusätzlich der Eintrag des gewählten Zugs als vergrößerter Ausschnitt — mit Zugnummer, den Zeilen darüber und darunter und einem Stück der Nachbarspalte, der Eintrag selbst eingerahmt. Bei einem als unklar markierten Zug ist der Rahmen rot. Dafür meldet das Einlesen jetzt auch, wo jeder Eintrag auf dem Foto steht; das gilt für Formulare, die ab jetzt eingelesen werden (ältere haben keine Positionen und zeigen keinen Ausschnitt)." },
   ] },

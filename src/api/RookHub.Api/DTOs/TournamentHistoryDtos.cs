@@ -133,6 +133,12 @@ public class HistoryFriendDto
     /// nennt keinen Grund, ein ausgegrauter Eintrag schon.
     /// </summary>
     public bool HasName { get; set; }
+
+    /// <summary>
+    /// Wie viele Turniere im Verlauf stehen (Zwischenspeicher, ohne Abruf). Die Reiter sortieren
+    /// danach: Freunde ohne Eintraege stehen hinter den verfolgten Spielern statt davor.
+    /// </summary>
+    public int Entries { get; set; }
 }
 
 /// <summary>

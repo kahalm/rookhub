@@ -101,12 +101,27 @@ public class TournamentHistoryController : BaseApiController
             })
             .ToListAsync(ct);
 
-        return Ok(rows
+        var friends = rows
             .Select(r => new
             {
                 Row = r,
                 Identity = TournamentHistoryService.IdentityOf(r.LastName, r.FirstName, r.FideId, r.ChessResultsId),
             })
+            .ToList();
+
+        // Wie viele Turniere schon im Zwischenspeicher liegen — der naechtliche Durchgang fuellt
+        // ihn fuer JEDES Konto mit Namen, die Zahl ist also auch ohne Seitenaufruf aktuell. Nur
+        // lesen, kein Abruf bei chess-results: die Liste soll nicht N Trefferlisten kosten.
+        var keys = friends.Where(f => f.Identity is not null).Select(f => f.Identity!.Key).Distinct().ToList();
+        var counts = keys.Count == 0
+            ? new Dictionary<string, int>()
+            : await _db.PlayerTournamentResults.AsNoTracking()
+                .Where(r => keys.Contains(r.PlayerKey))
+                .GroupBy(r => r.PlayerKey)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.Key, g => g.Count, StringComparer.Ordinal, ct);
+
+        return Ok(friends
             .Select(x => new HistoryFriendDto
             {
                 UserId = x.Row.UserId,
@@ -117,9 +132,12 @@ public class TournamentHistoryController : BaseApiController
                 // Namensgleiche. Das gehoert gesagt, nicht verschwiegen.
                 Exact = x.Identity is not null
                     && (x.Identity.FideId is not null || x.Identity.IdentNumber is not null),
+                Entries = x.Identity is not null && counts.TryGetValue(x.Identity.Key, out var count) ? count : 0,
             })
-            // Die brauchbaren zuerst — sonst steht die Auswahl voll mit Konten ohne Verlauf.
+            // Die brauchbaren zuerst — sonst steht die Auswahl voll mit Konten ohne Verlauf: erst
+            // wer Turniere hat, dann wer einen Namen, aber (noch) keine hat, dann wer keinen Namen.
             .OrderByDescending(f => f.HasName)
+            .ThenByDescending(f => f.Entries > 0)
             .ThenBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList());
     }

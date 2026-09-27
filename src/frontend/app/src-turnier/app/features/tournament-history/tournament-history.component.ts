@@ -28,8 +28,8 @@ import { TrackPlayerDialogComponent } from './track-player-dialog.component';
 const MinPlausiblePerformance = 500;
 
 /**
- * Ein Reiter: ein KONTO oder ein verfolgter SPIELER. Der eigene steht vorn, danach die Freunde,
- * danach die verfolgten.
+ * Ein Reiter: ein KONTO oder ein verfolgter SPIELER. Der eigene steht vorn, danach die Freunde
+ * mit Eintraegen, danach die verfolgten, zuletzt die Freunde ohne Eintraege.
  *
  * <p>Freunde ohne Namen im Profil bekommen ihren Reiter trotzdem — nur gesperrt: ohne Nachnamen
  * gibt es keine chess-results-Spielersuche und damit keinen Verlauf. Sie ganz wegzulassen war der
@@ -117,9 +117,11 @@ export class TournamentHistoryComponent implements OnInit {
   });
 
   /**
-   * Ein Reiter je Konto und je verfolgtem Spieler: ich zuerst, danach die Freunde, danach die
-   * Verfolgten. Gesperrte (kein Name im Profil) bleiben sichtbar — mit Grund, statt kommentarlos
-   * zu fehlen.
+   * Ein Reiter je Konto und je verfolgtem Spieler: ich zuerst, danach die Freunde MIT Eintraegen,
+   * danach die Verfolgten, zuletzt die Freunde ohne Eintraege. Vorher kamen alle Freunde vor den
+   * Verfolgten — wer viele Freunde ohne Turniere hat, musste an einer Reihe leerer Reiter vorbei,
+   * um die Spieler zu erreichen, die er eigens hinzugefuegt hat. Gesperrte (kein Name im Profil)
+   * bleiben sichtbar — mit Grund, statt kommentarlos zu fehlen; der Server stellt sie ans Ende.
    */
   readonly tabs = computed<HistoryTab[]>(() => {
     const me = this.auth.currentUser;
@@ -130,16 +132,21 @@ export class TournamentHistoryComponent implements OnInit {
         }]
       : [];
 
+    const friendTab = (f: HistoryFriend): HistoryTab => ({
+      key: accountKey(f.userId), kind: 'account', id: f.userId,
+      label: f.displayName, enabled: f.hasName, exact: f.exact,
+    });
+    // Die Reihenfolge des Servers bleibt innerhalb beider Haelften erhalten.
+    const friends = this.friends();
+
     return [
       ...mine,
-      ...this.friends().map(f => ({
-        key: accountKey(f.userId), kind: 'account' as const, id: f.userId,
-        label: f.displayName, enabled: f.hasName, exact: f.exact,
-      })),
+      ...friends.filter(f => f.entries > 0).map(friendTab),
       ...this.tracked().map(t => ({
         key: trackedKey(t.id), kind: 'tracked' as const, id: t.id,
         label: t.displayName, enabled: true, exact: t.exact,
       })),
+      ...friends.filter(f => !(f.entries > 0)).map(friendTab),
     ];
   });
 

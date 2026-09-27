@@ -113,8 +113,8 @@ describe('TournamentHistoryComponent', () => {
   /** Ein Reiter je Konto: ich zuerst, danach die Freunde — auch die ohne Namen im Profil. */
   it('legt für jedes Konto einen Reiter an', async () => {
     const req = await setup([
-      { userId: 7, displayName: 'A', exact: true, hasName: true },
-      { userId: 8, displayName: 'B', exact: false, hasName: false },
+      { userId: 7, displayName: 'A', exact: true, hasName: true, entries: 1 },
+      { userId: 8, displayName: 'B', exact: false, hasName: false, entries: 0 },
     ]);
     req.flush([history()]);
 
@@ -127,7 +127,7 @@ describe('TournamentHistoryComponent', () => {
    * bei chess-results zu holen — auch fuer die, die niemand ansieht.
    */
   it('lädt beim Reiterwechsel genau das eine Konto', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
     first.flush([history()]);
 
     component.onTabChange(1);
@@ -141,7 +141,7 @@ describe('TournamentHistoryComponent', () => {
 
   /** Ein schon geoeffneter Reiter steht beim Zurueckwechseln sofort wieder da. */
   it('behält geladene Reiter im Zwischenspeicher', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
     first.flush([history()]);
 
     component.onTabChange(1);
@@ -416,8 +416,8 @@ describe('TournamentHistoryComponent', () => {
    */
   it('führt Freunde ohne Namen im Profil auf, aber gesperrt', async () => {
     const req = await setup([
-      { userId: 7, displayName: 'Mit Name', exact: true, hasName: true },
-      { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false },
+      { userId: 7, displayName: 'Mit Name', exact: true, hasName: true, entries: 1 },
+      { userId: 8, displayName: 'Ohne Name', exact: false, hasName: false, entries: 0 },
     ]);
     req.flush([history()]);
 
@@ -427,7 +427,7 @@ describe('TournamentHistoryComponent', () => {
 
   /** Ein gesperrter Reiter laedt nichts — dort gibt es nichts zu holen. */
   it('lädt für einen gesperrten Reiter nichts nach', async () => {
-    const req = await setup([{ userId: 8, displayName: 'Ohne Name', exact: false, hasName: false }]);
+    const req = await setup([{ userId: 8, displayName: 'Ohne Name', exact: false, hasName: false, entries: 0 }]);
     req.flush([history()]);
 
     // Material laesst einen gesperrten Reiter gar nicht erst waehlen; ruft ihn doch jemand auf,
@@ -646,7 +646,7 @@ describe('TournamentHistoryComponent', () => {
    * Abrufs umschaltet, bekaeme sonst den Stand der alten Auswahl.
    */
   it('verwirft die Antwort eines überholten Reiters', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
 
     component.onTabChange(1);
     const second = http.expectOne(r => r.url === '/api/tournament-history');
@@ -659,14 +659,14 @@ describe('TournamentHistoryComponent', () => {
   });
 
   it('merkt den Reiter über den Seitenwechsel hinweg', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
     first.flush([history()]);
     component.onTabChange(1);
     http.expectOne(r => r.url === '/api/tournament-history')
       .flush([history({ userId: 7, displayName: 'Freund' })]);
 
     TestBed.resetTestingModule();
-    const again = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const again = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
 
     expect(again.request.params.get('userIds')).toBe('7');
     again.flush([history({ userId: 7, displayName: 'Freund' })]);
@@ -677,7 +677,7 @@ describe('TournamentHistoryComponent', () => {
    * statt auf einen Reiter zu zeigen, den es nicht mehr gibt.
    */
   it('fällt auf den eigenen Reiter zurück, wenn der gemerkte fehlt', async () => {
-    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true }]);
+    const first = await setup([{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }]);
     first.flush([history()]);
     component.onTabChange(1);
     http.expectOne(r => r.url === '/api/tournament-history')
@@ -703,7 +703,7 @@ describe('TournamentHistoryComponent', () => {
    */
   it('stellt verfolgte Spieler als eigene Reiter neben die Konten', async () => {
     const req = await setup(
-      [{ userId: 7, displayName: 'Freund', exact: true, hasName: true }],
+      [{ userId: 7, displayName: 'Freund', exact: true, hasName: true, entries: 1 }],
       [tracked({ id: 3, displayName: 'Oberschmid, Patrik' })]);
     req.flush([history()]);
 
@@ -719,12 +719,29 @@ describe('TournamentHistoryComponent', () => {
   });
 
   /**
+   * Freunde OHNE Eintraege stehen hinter den verfolgten Spielern — vorher kamen alle Freunde
+   * zuerst, und wer viele leere Freunde hat, fand die eigens hinzugefuegten Spieler erst am Ende.
+   */
+  it('stellt Freunde ohne Eintraege hinter die verfolgten Spieler', async () => {
+    const req = await setup(
+      [
+        { userId: 7, displayName: 'Mit Turnieren', exact: true, hasName: true, entries: 4 },
+        { userId: 8, displayName: 'Ohne Turniere', exact: true, hasName: true, entries: 0 },
+        { userId: 9, displayName: 'Ohne Name', exact: false, hasName: false, entries: 0 },
+      ],
+      [tracked({ id: 3, displayName: 'Verfolgt' })]);
+    req.flush([history()]);
+
+    expect(component.tabs().map(t => t.key)).toEqual(['u:1', 'u:7', 't:3', 'u:8', 'u:9']);
+  });
+
+  /**
    * Zwei Reiter mit derselben ZAHL — Konto 3 und Verfolgt-Eintrag 3 — duerfen sich nicht
    * denselben Zwischenspeicher teilen. Genau dafuer ist der Schluessel zusammengesetzt.
    */
   it('haelt Konto und verfolgten Spieler mit derselben Nummer auseinander', async () => {
     const req = await setup(
-      [{ userId: 3, displayName: 'Freund Drei', exact: true, hasName: true }],
+      [{ userId: 3, displayName: 'Freund Drei', exact: true, hasName: true, entries: 1 }],
       [tracked({ id: 3, displayName: 'Verfolgt Drei' })]);
     req.flush([history()]);
 

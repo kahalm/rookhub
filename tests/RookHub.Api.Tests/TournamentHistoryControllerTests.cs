@@ -200,6 +200,34 @@ public class TournamentHistoryControllerTests : IDisposable
         Assert.False(Assert.Single(list).Exact);
     }
 
+    /// <summary>
+    /// Die Zahl der Eintraege kommt mit — und sortiert: wer Turniere hat, steht vor dem, der
+    /// (noch) keine hat, auch wenn der Name alphabetisch frueher kommt. Die Ansicht haengt die
+    /// verfolgten Spieler dazwischen, damit leere Freunde sie nicht nach hinten schieben.
+    /// </summary>
+    [Fact]
+    public async Task Friends_WithEntries_ComeBeforeFriendsWithout()
+    {
+        var me = await CreateUserAsync("ich");
+        var empty = await CreateUserAsync("aaa-leer");
+        var played = await CreateUserAsync("zzz-gespielt");
+        await BefriendAsync(me, empty);
+        await BefriendAsync(me, played);
+
+        foreach (var id in new[] { "1", "2" })
+            _db.PlayerTournamentResults.Add(new PlayerTournamentResult
+            {
+                PlayerKey = $"fide:999{played}", ChessResultsId = id, TournamentName = $"Open {id}",
+            });
+        await _db.SaveChangesAsync();
+
+        var result = await Controller(me).Friends();
+        var list = Assert.IsType<List<HistoryFriendDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal([played, empty], list.Select(f => f.UserId));
+        Assert.Equal([2, 0], list.Select(f => f.Entries));
+    }
+
     [Fact]
     public async Task Friends_WithoutFriends_IsEmpty()
     {

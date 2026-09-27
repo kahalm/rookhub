@@ -86,6 +86,11 @@ export interface HistoryFriend {
    * Eintrag schon.
    */
   hasName: boolean;
+  /**
+   * Wie viele Turniere im Verlauf stehen. Freunde ohne Eintraege ruecken damit hinter die
+   * verfolgten Spieler — sonst schieben leere Reiter die, die man sehen will, nach hinten.
+   */
+  entries: number;
 }
 
 /**
