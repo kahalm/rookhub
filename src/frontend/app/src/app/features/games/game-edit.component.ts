@@ -28,7 +28,7 @@ import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.compon
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetOption, ScoresheetService, openPhotoBlob } from './scoresheet.service';
 import {
-  EditPly, commentsForSave, cropView, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn, resolveRequest, revalidate,
+  EditPly, commentsForSave, cropView, fensOf, fromServer, nextUncertainFrom, headersOf, isoDateOf, pliesOfPgn, resolveRequest, revalidate,
   stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
@@ -474,11 +474,8 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   nextUncertain(): void {
-    const list = this.plies();
-    const from = this.cursor() + 1;
-    const idx = [...list.keys()].map(k => (from + k) % list.length)
-      .find(k => list[k].uncertain && !list[k].confirmed && !list[k].illegal);
-    if (idx !== undefined) this.go(idx);
+    const idx = nextUncertainFrom(this.plies(), this.cursor() + 1);
+    if (idx !== null) this.go(idx);
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -511,11 +508,15 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   /** Eine der angebotenen Lesarten wählen — wie „diesen Zug am Brett spielen". */
+  /** Eine Lesart wählen. Die schon gewählte anzuklicken heißt „passt so" — wie Bestätigen. Danach geht es wie
+   *  beim Bestätigen zur nächsten unsicheren Stelle, nicht bloß zum nächsten Halbzug (gewünscht 2026-09-27). */
   choose(o: ScoresheetOption): void {
-    this.apply(o.san, 'replace');
+    const p = this.current();
+    if (p && !p.illegal && o.uci === p.uci) { this.confirm(); return; }
+    this.apply(o.san, 'replace', true);
   }
 
-  private apply(san: string, mode: 'replace' | 'insert'): void {
+  private apply(san: string, mode: 'replace' | 'insert', thenNextUncertain = false): void {
     const i = this.cursor();
     const list = this.plies();
     const old = list[i];
@@ -534,7 +535,8 @@ export class GameEditComponent implements OnInit, OnDestroy {
       return;
     }
     const req = resolveRequest(list, i, mode, san);
-    this.reResolve(req, [...list.slice(0, i), mine], mode === 'insert' ? list.slice(i) : list.slice(i + 1), i + 1);
+    this.reResolve(req, [...list.slice(0, i), mine], mode === 'insert' ? list.slice(i) : list.slice(i + 1), i + 1,
+      thenNextUncertain);
   }
 
   /** Den Halbzug am Cursor streichen (ein doppelt notierter oder erfundener Eintrag). */
@@ -570,7 +572,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
    * das, bleibt der bisherige Rest stehen, soweit er noch legal ist — `fallbackTail`.
    */
   private reResolve(req: { prefix: string[]; writtenFrom: number }, head: EditPly[], fallbackTail: EditPly[],
-    nextCursor: number): void {
+    nextCursor: number, thenNextUncertain = false): void {
     this.busy.set(true);
     this.sheets.resolve(this.gameId, req.prefix, req.writtenFrom).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res => {
@@ -578,7 +580,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
         this.unresolved.set(res.unresolved);
         this.unresolvedFrom.set(res.unresolvedFrom ?? null);
         this.busy.set(false);
-        this.go(nextCursor);
+        this.go(thenNextUncertain ? nextUncertainFrom(this.plies(), nextCursor) ?? nextCursor : nextCursor);
       },
       error: () => {
         this.busy.set(false);

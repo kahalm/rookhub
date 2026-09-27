@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.557.1", date: "2026-09-27", changes: [
+    { en: "Game correction page: after choosing one of the offered readings of an uncertain move, the page now jumps straight to the next uncertain move — as it already did after “Confirm”. Clicking the reading that is already chosen counts as confirming it.", de: "Korrekturseite: Nach dem Wählen einer der angebotenen Lesarten eines unsicheren Zugs springt die Seite jetzt gleich zur nächsten unsicheren Stelle — wie schon nach „Bestätigen“. Die schon gewählte Lesart anzuklicken zählt als Bestätigen." },
+  ] },
   { version: "0.557.0", date: "2026-09-27", changes: [
     { en: "Game review: while you step through the game, the class of the current move now sits on the board as a small round symbol at the moved piece (top right of its square) – ★ best, 👍 excellent, ✓ good, book, !! brilliant, ! great, ?! inaccuracy, ? mistake, ✗ miss, ?? blunder – in the same colours as in the review below, like chess.com does. Not shown in the mistake training and with the live engine, where the board shows something else.", de: "Partie-Rückblick: beim Durchklicken steht die Klasse des aktuellen Zugs jetzt als kleines rundes Symbol an der gezogenen Figur (oben rechts auf ihrem Feld) – ★ bester Zug, 👍 exzellent, ✓ gut, Buch, !! brillant, ! stark, ?! Ungenauigkeit, ? Fehler, ✗ verpasst, ?? grober Fehler – in denselben Farben wie im Rückblick darunter, so wie bei chess.com. Nicht im Fehler-Training und nicht mit der Live-Engine, dort zeigt das Brett etwas anderes." },
   ] },

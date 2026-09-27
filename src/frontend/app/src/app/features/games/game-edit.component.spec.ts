@@ -169,4 +169,46 @@ describe('GameEditComponent', () => {
     expect(c.crop()?.written).toBe('Sc6');
     expect(c.crop()?.uncertain).toBeFalse();
   });
+
+  // Gewünscht 2026-09-27: nach dem Bestätigen/Wählen einer Lesart gleich zur nächsten unsicheren Stelle.
+  it('a scanned game: choosing a reading jumps to the next uncertain move, clicking the chosen one just confirms', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    const opts = [
+      { san: 'Nf3', uci: 'g1f3', match: 'fuzzy', reach: 2, preview: [] },
+      { san: 'Nc3', uci: 'b1c3', match: 'fuzzy', reach: 1, preview: [] },
+    ];
+    http.expectOne('/api/games/5/scoresheet').flush({
+      scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [], unresolvedFrom: null,
+      plies: [
+        { w: 0, written: 'e4', san: 'e4', uci: 'e2e4', match: 'written', uncertain: false },
+        { w: 1, written: 'e5', san: 'e5', uci: 'e7e5', match: 'written', uncertain: true },
+        { w: 2, written: 'Sf3', san: 'Nf3', uci: 'g1f3', match: 'fuzzy', uncertain: true, options: opts },
+        { w: 3, written: 'Sc6', san: 'Nc6', uci: 'b8c6', match: 'written', uncertain: false },
+        { w: 4, written: 'Lb5', san: 'Bb5', uci: 'f1b5', match: 'fuzzy', uncertain: true },
+      ],
+    });
+    fixture.detectChanges();
+    expect(c.cursor()).toBe(1);
+
+    c.go(2);
+    c.choose(opts[0]);                                     // die schon gewählte Lesart = passt so
+    http.expectNone('/api/games/5/scoresheet/resolve');
+    expect(c.plies()[2].confirmed).toBeTrue();
+    expect(c.cursor()).toBe(4);                            // nächste offene nach vorn
+
+    c.go(2);
+    c.choose(opts[1]);                                     // eine andere Lesart → Rest neu aufbereitet
+    http.expectOne({ method: 'POST', url: '/api/games/5/scoresheet/resolve' }).flush({
+      plies: [
+        { w: 3, written: 'Sc6', san: 'Nc6', uci: 'b8c6', match: 'written', uncertain: false },
+        { w: 4, written: 'Lb5', san: 'Bb5', uci: 'f1b5', match: 'fuzzy', uncertain: true },
+      ],
+      unresolved: [], unresolvedFrom: null,
+    });
+    expect(c.plies()[2].san).toBe('Nc3');
+    expect(c.cursor()).toBe(4);                            // nicht bloß 3 (der nächste Halbzug)
+  });
 });

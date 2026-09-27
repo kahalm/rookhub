@@ -1,5 +1,5 @@
 import {
-  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, cropView, fensOf, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
   resolveRequest, revalidate, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
@@ -116,5 +116,13 @@ describe('game-edit.util', () => {
     expect(cropView([10, 10, 20], 1000, 1000)).toBeNull();
     expect(cropView([30, 10, 20, 40], 1000, 1000)).toBeNull();
     expect(cropView([10, 10, 20, 40], 0, 0)).toBeNull();
+  });
+
+  it('nextUncertainFrom: the next open uncertain move from a position, wrapping round, skipping confirmed and illegal', () => {
+    const list = [ply('e4'), ply('e5', 1, { uncertain: true }), ply('Nf3', 2, { uncertain: true, confirmed: true }),
+      ply('Nc6', 3, { uncertain: true, illegal: true }), ply('Bb5', 4, { uncertain: true })];
+    expect(nextUncertainFrom(list, 2)).toBe(4);
+    expect(nextUncertainFrom(list, 5)).toBe(1);        // über das Ende hinweg
+    expect(nextUncertainFrom([ply('e4'), ply('e5')], 0)).toBeNull();
   });
 });

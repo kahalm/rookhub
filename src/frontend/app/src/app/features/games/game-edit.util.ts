@@ -235,3 +235,15 @@ export function cropView(box: readonly number[] | null | undefined, naturalW: nu
     markH: pct((bh / ch) * 100),
   };
 }
+
+/** Die nächste noch offene unsichere Stelle ab `from` (über das Ende hinweg wieder von vorn); `null` = keine mehr.
+ *  Nach dem Bestätigen oder Wählen einer Lesart geht die Korrekturseite dorthin. */
+export function nextUncertainFrom(plies: readonly EditPly[], from: number): number | null {
+  const n = plies.length;
+  for (let k = 0; k < n; k++) {
+    const i = (((from + k) % n) + n) % n;
+    const p = plies[i];
+    if (p.uncertain && !p.confirmed && !p.illegal) return i;
+  }
+  return null;
+}
