@@ -2657,7 +2657,8 @@
     },
     "moreActions": "Weitere Aktionen",
     "source": {
-      "scoresheet": "Partieformular"
+      "scoresheet": "Partieformular",
+      "pgn": "PGN-Upload"
     },
     "photo": {
       "show": "Formular-Foto anzeigen",
@@ -2708,6 +2709,32 @@
       "notOnSheet": "steht nicht auf dem Formular",
       "ownerSide": "Meine Seite",
       "sideNone": "nicht festgelegt"
+    },
+    "pgnCopy": "PGN kopieren",
+    "pgnDownload": "PGN herunterladen",
+    "pgnCopied": "PGN kopiert",
+    "pgnCopyFailed": "PGN konnte nicht kopiert werden",
+    "pgnUpload": {
+      "button": "PGN hochladen",
+      "title": "PGN hochladen",
+      "hint": "Eine Datei wählen oder das PGN einfügen — auch mehrere Partien auf einmal.",
+      "file": "Datei wählen",
+      "paste": "PGN einfügen",
+      "import": "Hochladen",
+      "summary": "{{imported}} neu, {{duplicates}} schon vorhanden, {{failed}} nicht übernommen",
+      "truncated": "Nur die ersten 200 Partien wurden übernommen.",
+      "failedTitle": "Nicht übernommen",
+      "reason": {
+        "illegal": "ein Zug der Hauptvariante ist nicht legal",
+        "noMoves": "keine Züge",
+        "tooLong": "mehr als 600 Halbzüge",
+        "badFen": "ungültige Ausgangsstellung (FEN)"
+      },
+      "error": {
+        "empty": "Erst ein PGN einfügen oder eine Datei wählen.",
+        "tooLarge": "Das PGN ist zu groß (höchstens 5 Millionen Zeichen).",
+        "failed": "Hochladen fehlgeschlagen — bitte noch einmal versuchen."
+      }
     }
   },
   "analysis": {

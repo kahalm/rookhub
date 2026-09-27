@@ -622,6 +622,120 @@ public class SavedGameService
         return entity;
     }
 
+    /// <summary>So viele Partien nimmt ein PGN-Upload höchstens auf; der Rest bleibt liegen (<c>Truncated</c>).</summary>
+    public const int MaxImportGames = 200;
+
+    /// <summary>Höchstens so viele Zeichen PGN je Upload (≈ 200 kommentierte Partien).</summary>
+    public const int MaxImportChars = 5_000_000;
+
+    /// <summary>
+    /// PGN-Upload (Datei oder eingefügt): jede Partie des Textes wird eine eigene Partie mit Quelle <c>pgn</c>.
+    /// Übernommen werden die HAUPTVARIANTE mit ihren Kommentaren (Varianten fallen weg — Analyse, Kurve und
+    /// Fehler-Training arbeiten auf einer Zugfolge) und alle Kopfdaten (Elo, Bedenkzeit, FEN …). Eine Partie, deren
+    /// Hauptvariante nicht bis zum Ende legal ist, wird NICHT gekürzt angelegt, sondern gemeldet — eine halbe Partie
+    /// sähe vollständig aus.
+    ///
+    /// <para><b>Zweimal hochgeladen = einmal da:</b> die Kennung ist ein Hash über Kopfdaten und Züge
+    /// (<c>ExternalId</c>, eindeutig je Nutzer und Quelle) — wer dieselbe Datei nach einer Ergänzung noch einmal
+    /// hochlädt, bekommt nur die neuen Partien.</para>
+    /// </summary>
+    public async Task<PgnImportResultDto> ImportPgnAsync(int userId, string pgn, CancellationToken ct = default)
+    {
+        var result = new PgnImportResultDto();
+        var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
+        if (games.Count > MaxImportGames) { result.Truncated = true; games = games.Take(MaxImportGames).ToList(); }
+
+        var index = 0;
+        foreach (var (rawHeaders, moveText) in games)
+        {
+            index++;
+            var headers = rawHeaders ?? new Dictionary<string, string>();
+            string? H(string key) => headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
+            PgnImportFailureDto Fail(string reason) => new() { Index = index, White = Clip(H("White"), 120), Black = Clip(H("Black"), 120), Reason = reason };
+
+            var startFen = H("FEN");
+            List<string> sans;
+            try
+            {
+                var fen = startFen ?? new Chess.ChessBoard().ToFen();
+                var uci = PgnParser.TryExtractUciMainline(fen, moveText);
+                if (uci == null) { result.Failed.Add(Fail(startFen != null && !IsLoadableFen(startFen) ? "badFen" : "illegal")); continue; }
+                if (uci.Count == 0) { result.Failed.Add(Fail("noMoves")); continue; }
+                if (uci.Count > 600) { result.Failed.Add(Fail("tooLong")); continue; }
+                sans = SansOf(fen, uci);
+                if (sans.Count != uci.Count) { result.Failed.Add(Fail("illegal")); continue; }
+            }
+            catch (Exception) { result.Failed.Add(Fail("illegal")); continue; }
+
+            var comments = PgnParser.ExtractMoveComments(moveText) ?? new Dictionary<int, string>();
+            var gameResult = H("Result") is { } r && AllowedResults.Contains(r) ? r : "*";
+            var header = new GameHeaderInput(H("Event"), H("Site"), H("Date"), H("Round"), H("White"), H("Black"), gameResult);
+            var externalId = "pgn:" + ImportKey(headers, sans);
+
+            var existing = await _db.SavedGames.AsNoTracking()
+                .Where(g => g.UserId == userId && g.Source == ImportSource && g.ExternalId == externalId)
+                .Select(g => (int?)g.Id).FirstOrDefaultAsync(ct);
+            if (existing is int id) { result.Duplicates++; result.Ids.Add(id); continue; }
+
+            var kept = new Dictionary<string, string>(headers.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+                .ToDictionary(kv => kv.Key, kv => kv.Value.Trim()), StringComparer.Ordinal);
+            var entity = new SavedGame
+            {
+                UserId = userId,
+                Source = ImportSource,
+                ExternalId = externalId,
+                White = Clip(H("White"), 120),
+                Black = Clip(H("Black"), 120),
+                Result = gameResult,
+                PlayedAt = ParseDate(H("Date")),
+                Pgn = BuildHeaderedPgn(kept, header, gameResult, sans, startFen, comments),
+                MoveCount = sans.Count,
+                WhiteElo = PlausibleElo(int.TryParse(H("WhiteElo"), out var we) ? we : null),
+                BlackElo = PlausibleElo(int.TryParse(H("BlackElo"), out var be) ? be : null),
+                TimeControl = CleanTimeControl(H("TimeControl")),
+                HeadersScanned = true,
+                ShareToken = await GenerateUniqueTokenAsync(),
+                CreatedAt = DateTime.UtcNow,
+            };
+            _db.SavedGames.Add(entity);
+            await _db.SaveChangesAsync(ct);
+            result.Imported++;
+            result.Ids.Add(entity.Id);
+        }
+        return result;
+    }
+
+    /// <summary>Quelle der hochgeladenen Partien.</summary>
+    public const string ImportSource = "pgn";
+
+    private static bool IsLoadableFen(string fen)
+    {
+        try { Chess.ChessBoard.LoadFromFen(fen); return true; } catch { return false; }
+    }
+
+    /// <summary>Die UCI-Hauptvariante als SAN in der Schreibweise des Bretts; bricht am ersten nicht spielbaren Zug ab.</summary>
+    private static List<string> SansOf(string fen, IReadOnlyList<string> uci)
+    {
+        var board = Chess.ChessBoard.LoadFromFen(fen);
+        var sans = new List<string>(uci.Count);
+        foreach (var u in uci)
+        {
+            var move = Array.Find(board.Moves(generateSan: true), m => GamePlies.ToUci(m) == u);
+            if (move == null || !board.Move(move)) break;
+            sans.Add(string.IsNullOrEmpty(move.San) ? u : move.San);
+        }
+        return sans;
+    }
+
+    /// <summary>Kennung einer hochgeladenen Partie: Hash über die Seven-Tag-Kopfdaten, die FEN und die Züge.</summary>
+    internal static string ImportKey(IReadOnlyDictionary<string, string> headers, IReadOnlyList<string> sans)
+    {
+        string V(string k) => headers.TryGetValue(k, out var v) ? v.Trim() : "";
+        var text = string.Join("|", SevenTags.Select(V).Append(V("FEN"))) + "|" + string.Join(' ', sans);
+        var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(hash)[..40].ToLowerInvariant();
+    }
+
     /// <summary>
     /// Korrigiert eine eigene Partie: Züge (mit Kommentaren) und Kopfdaten. Die Züge werden ab der
     /// Ausgangsstellung nachgespielt — ist einer nicht legal, gibt es eine <see cref="ArgumentException"/>

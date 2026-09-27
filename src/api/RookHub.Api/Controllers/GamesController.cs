@@ -37,6 +37,21 @@ public class GamesController : BaseApiController
         return Ok(games);
     }
 
+    /// <summary>
+    /// PGN hochladen (Datei oder eingefügt): jede Partie des Textes wird eine eigene Partie (Quelle <c>pgn</c>).
+    /// 400 <c>{ reason }</c> mit <c>empty</c> (kein Text) bzw. <c>tooLarge</c> (über
+    /// <see cref="SavedGameService.MaxImportChars"/> Zeichen); einzelne kaputte Partien stehen in <c>failed</c>.
+    /// </summary>
+    [HttpPost("import")]
+    [RequestSizeLimit(12_000_000)]
+    public async Task<ActionResult<PgnImportResultDto>> Import([FromBody] PgnImportRequestDto body, CancellationToken ct = default)
+    {
+        var pgn = body?.Pgn ?? "";
+        if (string.IsNullOrWhiteSpace(pgn)) return BadRequest(new { reason = "empty" });
+        if (pgn.Length > SavedGameService.MaxImportChars) return BadRequest(new { reason = "tooLarge" });
+        return Ok(await _service.ImportPgnAsync(GetUserId(), pgn, ct));
+    }
+
     /// <summary>Stand des Fehler-Trainings einer eigenen Partie (der Trainer markiert damit Gefundenes).</summary>
     [HttpGet("{id:int}/mistakes")]
     public async Task<ActionResult<GameMistakeProgressDto>> Mistakes(int id, CancellationToken ct)

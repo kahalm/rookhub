@@ -2921,7 +2921,8 @@
     },
     "moreActions": "További műveletek",
     "source": {
-      "scoresheet": "Játszmalap"
+      "scoresheet": "Játszmalap",
+      "pgn": "PGN-feltöltés"
     },
     "photo": {
       "show": "Játszmalap fényképének megjelenítése",
@@ -2972,6 +2973,32 @@
       "notOnSheet": "nincs a lapon",
       "ownerSide": "Az én oldalam",
       "sideNone": "nincs megadva"
+    },
+    "pgnCopy": "PGN másolása",
+    "pgnDownload": "PGN letöltése",
+    "pgnCopied": "PGN másolva",
+    "pgnCopyFailed": "A PGN-t nem sikerült másolni",
+    "pgnUpload": {
+      "button": "PGN feltöltése",
+      "title": "PGN feltöltése",
+      "hint": "Válassz fájlt, vagy illeszd be a PGN-t — egyszerre több játszma is mehet.",
+      "file": "Fájl kiválasztása",
+      "paste": "PGN beillesztése",
+      "import": "Feltöltés",
+      "summary": "{{imported}} új, {{duplicates}} már megvolt, {{failed}} nem került át",
+      "truncated": "Csak az első 200 játszma került át.",
+      "failedTitle": "Nem került át",
+      "reason": {
+        "illegal": "a főváltozat egyik lépése szabálytalan",
+        "noMoves": "nincsenek lépések",
+        "tooLong": "több mint 600 féllépés",
+        "badFen": "érvénytelen kiinduló állás (FEN)"
+      },
+      "error": {
+        "empty": "Előbb illessz be egy PGN-t vagy válassz fájlt.",
+        "tooLarge": "A PGN túl nagy (legfeljebb 5 millió karakter).",
+        "failed": "A feltöltés nem sikerült — próbáld újra."
+      }
     }
   },
   "analysisJobs": {

@@ -2657,7 +2657,8 @@
     },
     "moreActions": "More actions",
     "source": {
-      "scoresheet": "Scoresheet"
+      "scoresheet": "Scoresheet",
+      "pgn": "PGN upload"
     },
     "photo": {
       "show": "Show scoresheet photo",
@@ -2708,6 +2709,32 @@
       "notOnSheet": "not on the sheet",
       "ownerSide": "My side",
       "sideNone": "not set"
+    },
+    "pgnCopy": "Copy PGN",
+    "pgnDownload": "Download PGN",
+    "pgnCopied": "PGN copied",
+    "pgnCopyFailed": "Could not copy the PGN",
+    "pgnUpload": {
+      "button": "Upload PGN",
+      "title": "Upload PGN",
+      "hint": "Pick a file or paste the PGN — several games at once work too.",
+      "file": "Choose file",
+      "paste": "Paste PGN",
+      "import": "Upload",
+      "summary": "{{imported}} new, {{duplicates}} already there, {{failed}} not imported",
+      "truncated": "Only the first 200 games were taken.",
+      "failedTitle": "Not imported",
+      "reason": {
+        "illegal": "a move of the main line is not legal",
+        "noMoves": "no moves",
+        "tooLong": "more than 600 half-moves",
+        "badFen": "invalid starting position (FEN)"
+      },
+      "error": {
+        "empty": "Paste a PGN or choose a file first.",
+        "tooLarge": "The PGN is too large (max. 5 million characters).",
+        "failed": "Upload failed — please try again."
+      }
     }
   },
   "analysis": {

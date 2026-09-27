@@ -374,3 +374,33 @@ public class GameRecapDto
     /// <summary>Sperrzeit der Spark (0.546.0): der fehlende Text entsteht erst danach (beim nächsten Öffnen). <c>null</c> = frei.</summary>
     public DateTimeOffset? QuietUntil { get; set; }
 }
+
+/// <summary><c>POST /api/games/import</c> — eine oder mehrere Partien als PGN-Text (Datei oder eingefügt).</summary>
+public class PgnImportRequestDto
+{
+    public string? Pgn { get; set; }
+}
+
+/// <summary>Ergebnis des PGN-Uploads: was angelegt wurde, was schon da war, was nicht ging.</summary>
+public class PgnImportResultDto
+{
+    public int Imported { get; set; }
+    /// <summary>Schon vorhanden (dieselben Züge + Kopfdaten derselben Quelle) — nicht doppelt angelegt.</summary>
+    public int Duplicates { get; set; }
+    /// <summary>Mehr als <c>SavedGameService.MaxImportGames</c> Partien im Text — der Rest blieb liegen.</summary>
+    public bool Truncated { get; set; }
+    /// <summary>Die Ids der angelegten (und der schon vorhandenen) Partien, in Reihenfolge des Textes.</summary>
+    public List<int> Ids { get; set; } = new();
+    public List<PgnImportFailureDto> Failed { get; set; } = new();
+}
+
+public class PgnImportFailureDto
+{
+    /// <summary>1-basiert, in Reihenfolge des Textes.</summary>
+    public int Index { get; set; }
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    /// <summary><c>noMoves</c>, <c>illegal</c> (ein Zug der Hauptvariante geht nicht), <c>tooLong</c>, <c>badFen</c>.</summary>
+    public string Reason { get; set; } = "illegal";
+}
+

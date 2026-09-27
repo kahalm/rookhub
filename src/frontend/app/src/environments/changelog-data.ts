@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.553.0", date: "2026-09-27", changes: [
+    { en: "Games: new “Upload PGN” button on the games page — choose a file or paste the PGN, several games at once work too. Each game gets the main line with its comments and all headers (Elo, time control, event …); a game that cannot be played to the end is listed instead of being imported half, and uploading the same file again adds only the new games.", de: "Partien: Neuer Knopf „PGN hochladen“ auf der Partien-Seite — eine Datei wählen oder das PGN einfügen, auch mehrere Partien auf einmal. Übernommen werden die Hauptvariante mit ihren Kommentaren und alle Kopfdaten (Elo, Bedenkzeit, Turnier …); eine Partie, die sich nicht bis zum Ende nachspielen lässt, wird aufgelistet statt halb übernommen, und dieselbe Datei noch einmal hochgeladen bringt nur die neuen Partien." },
+    { en: "Game page: the ⋮ menu now offers “Copy PGN” and “Download PGN” — also for everyone who opens a shared game link.", de: "Partieseite: Das ⋮-Menü bietet jetzt „PGN kopieren“ und „PGN herunterladen“ — auch für alle, die einen geteilten Partie-Link öffnen." },
+  ] },
   { version: "0.552.1", date: "2026-09-27", changes: [
     { en: "Tournament calendar, detail page: the “Bookmark” button now looks like the buttons next to it — it was the only filled one and stood out from the row.", de: "Turnierkalender, Detailseite: Der Knopf „Merken“ sieht jetzt aus wie die Knöpfe daneben — er war als einziger gefüllt und fiel aus der Reihe." },
   ] },

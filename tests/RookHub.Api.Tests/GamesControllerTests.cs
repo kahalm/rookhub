@@ -389,4 +389,90 @@ public class GamesControllerTests : IDisposable
         Assert.Null(saved.WhiteElo);
         Assert.Null(saved.BlackElo);
     }
+
+    // ── PGN hochladen ──────────────────────────────────────────────────
+
+    private const string TwoGames = """
+        [Event "Klubturnier"]
+        [Site "Schwaz"]
+        [Date "2026.09.20"]
+        [Round "3"]
+        [White "Anna"]
+        [Black "Berta"]
+        [Result "1-0"]
+        [WhiteElo "1850"]
+        [BlackElo "1720"]
+        [TimeControl "5400+30"]
+
+        1. e4 {Mein Lieblingszug.} e5 2. Nf3 (2. f4 exf4) Nc6 3. Bb5 a6 1-0
+
+        [Event "Blitz"]
+        [White "Carla"]
+        [Black "Dora"]
+        [Result "0-1"]
+
+        1. d4 d5 2. c4 e6 0-1
+        """;
+
+    [Fact]
+    public async Task Import_CreatesOneGamePerPgnGame_KeepsHeadersAndComments_DropsVariations()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var ok = Assert.IsType<OkObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = TwoGames })).Result);
+        var res = Assert.IsType<PgnImportResultDto>(ok.Value);
+
+        Assert.Equal(2, res.Imported);
+        Assert.Empty(res.Failed);
+        var first = await _db.SavedGames.SingleAsync(g => g.Id == res.Ids[0]);
+        Assert.Equal(SavedGameService.ImportSource, first.Source);
+        Assert.Equal("Anna", first.White);
+        Assert.Equal("1-0", first.Result);
+        Assert.Equal(6, first.MoveCount);
+        Assert.Equal(1850, first.WhiteElo);
+        Assert.Equal(1720, first.BlackElo);
+        Assert.Equal(new DateTime(2026, 9, 20), first.PlayedAt?.Date);
+        Assert.Contains("[Event \"Klubturnier\"]", first.Pgn);
+        Assert.Contains("[TimeControl \"5400+30\"]", first.Pgn);
+        Assert.Contains("{Mein Lieblingszug.}", first.Pgn);
+        Assert.DoesNotContain("f4", first.Pgn);                     // Variante fällt weg
+        Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6" }, GamePlies.Parse(first.Pgn)!.Value.Plies.Select(p => p.San));
+    }
+
+    [Fact]
+    public async Task Import_Twice_CreatesNothingNew_AndReportsBrokenGamesWithoutCuttingThem()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        await _controller.Import(new PgnImportRequestDto { Pgn = TwoGames });
+
+        var broken = TwoGames + "\n\n[White \"Eva\"]\n[Black \"Fritz\"]\n\n1. e4 e5 2. Ke3 Ke6 *\n";
+        var ok = Assert.IsType<OkObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = broken })).Result);
+        var res = Assert.IsType<PgnImportResultDto>(ok.Value);
+
+        Assert.Equal(0, res.Imported);
+        Assert.Equal(2, res.Duplicates);
+        var fail = Assert.Single(res.Failed);
+        Assert.Equal(3, fail.Index);
+        Assert.Equal("Eva", fail.White);
+        Assert.Equal("illegal", fail.Reason);
+        Assert.Equal(2, await _db.SavedGames.CountAsync());          // keine halbe Partie angelegt
+    }
+
+    [Fact]
+    public async Task Import_EmptyOrHuge_IsABadRequest_AndGamesStayPrivatePerUser()
+    {
+        var user = await CreateUserAsync();
+        var other = await CreateUserAsync("other");
+        SetUser(user.Id);
+        Assert.IsType<BadRequestObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = "  " })).Result);
+        Assert.IsType<BadRequestObjectResult>((await _controller.Import(
+            new PgnImportRequestDto { Pgn = new string('x', SavedGameService.MaxImportChars + 1) })).Result);
+
+        await _controller.Import(new PgnImportRequestDto { Pgn = TwoGames });
+        SetUser(other.Id);
+        var ok = Assert.IsType<OkObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = TwoGames })).Result);
+        Assert.Equal(2, Assert.IsType<PgnImportResultDto>(ok.Value).Imported);   // Dublette gilt nur je Nutzer
+    }
 }

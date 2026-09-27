@@ -16,6 +16,8 @@ import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { downloadBlob } from '../../shared/download.util';
+import { pgnFileName } from '../../shared/pgn-export.util';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GamesService, SharedGame } from './games.service';
@@ -122,26 +124,35 @@ const RECAP_RETRY_MS = 15_000;
                   <mat-icon>share</mat-icon> {{ 'games.share' | translate }}
                 </button>
               }
-              <!-- Die eigene Partie: korrigieren und — bei einer eingelesenen — das Formular-Foto (0.529.0). -->
-              @if (own && gameId) {
+              <!-- ⋮: PGN kopieren/herunterladen für JEDEN Betrachter (das PGN liegt ohnehin im Browser, 0.553.0);
+                   für die eigene Partie dazu korrigieren, Roast und — bei einer eingelesenen — das Formular-Foto. -->
+              @if (game) {
                 <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu"
                         [matTooltip]="'games.moreActions' | translate" [attr.aria-label]="'games.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
-                  <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
-                    <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
-                  </a>
-                  <button mat-menu-item (click)="roast()">
-                    <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
+                  <button mat-menu-item (click)="copyPgn()">
+                    <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
                   </button>
-                  @if (scanId) {
-                    <button mat-menu-item (click)="photo(false)">
-                      <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
+                  <button mat-menu-item (click)="downloadPgn()">
+                    <mat-icon>file_download</mat-icon><span>{{ 'games.pgnDownload' | translate }}</span>
+                  </button>
+                  @if (own && gameId) {
+                    <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">
+                      <mat-icon>edit_note</mat-icon><span>{{ 'games.edit.menu' | translate }}</span>
+                    </a>
+                    <button mat-menu-item (click)="roast()">
+                      <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
                     </button>
-                    <button mat-menu-item (click)="photo(true)">
-                      <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
-                    </button>
+                    @if (scanId) {
+                      <button mat-menu-item (click)="photo(false)">
+                        <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
+                      </button>
+                      <button mat-menu-item (click)="photo(true)">
+                        <mat-icon>download</mat-icon><span>{{ 'games.photo.download' | translate }}</span>
+                      </button>
+                    }
                   }
                 </mat-menu>
               }
@@ -657,6 +668,25 @@ export class SharedGameComponent implements OnInit, DoCheck {
       next: blob => openPhotoBlob(blob, photoFileName(this.gameId!, blob)),
       error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
     });
+  }
+
+  /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */
+  copyPgn(): void {
+    const pgn = this.game?.pgn;
+    if (!pgn) return;
+    navigator.clipboard?.writeText(pgn).then(
+      () => this.snackbar.copy(this.translate.instant('games.pgnCopied')),
+      () => this.snackbar.warn(this.translate.instant('games.pgnCopyFailed')),
+    );
+  }
+
+  /** Das PGN als Datei „Weiß_Schwarz_Datum.pgn". */
+  downloadPgn(): void {
+    const g = this.game;
+    if (!g?.pgn) return;
+    const players = [g.white, g.black].filter(n => !!n).join(' ');
+    downloadBlob(new Blob([g.pgn.endsWith('\n') ? g.pgn : g.pgn + '\n'], { type: 'application/x-chess-pgn' }),
+      pgnFileName(players || 'game', (g.playedAt ?? g.createdAt ?? '').slice(0, 10)));
   }
 
   /** Teilen-Link der eigenen Partie in die Zwischenablage — wie in der Liste. */

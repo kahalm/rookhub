@@ -2657,7 +2657,8 @@
     },
     "moreActions": "Više radnji",
     "source": {
-      "scoresheet": "Zapisnik"
+      "scoresheet": "Zapisnik",
+      "pgn": "PGN učitavanje"
     },
     "photo": {
       "show": "Prikaži fotografiju zapisnika",
@@ -2708,6 +2709,32 @@
       "notOnSheet": "nije na zapisniku",
       "ownerSide": "Moja strana",
       "sideNone": "nije postavljeno"
+    },
+    "pgnCopy": "Kopiraj PGN",
+    "pgnDownload": "Preuzmi PGN",
+    "pgnCopied": "PGN kopiran",
+    "pgnCopyFailed": "PGN se nije mogao kopirati",
+    "pgnUpload": {
+      "button": "Učitaj PGN",
+      "title": "Učitaj PGN",
+      "hint": "Odaberi datoteku ili zalijepi PGN — može i više partija odjednom.",
+      "file": "Odaberi datoteku",
+      "paste": "Zalijepi PGN",
+      "import": "Učitaj",
+      "summary": "{{imported}} novih, {{duplicates}} već postoji, {{failed}} nije preuzeto",
+      "truncated": "Preuzeto je samo prvih 200 partija.",
+      "failedTitle": "Nije preuzeto",
+      "reason": {
+        "illegal": "potez glavne varijante nije ispravan",
+        "noMoves": "nema poteza",
+        "tooLong": "više od 600 polupoteza",
+        "badFen": "neispravna početna pozicija (FEN)"
+      },
+      "error": {
+        "empty": "Najprije zalijepi PGN ili odaberi datoteku.",
+        "tooLarge": "PGN je prevelik (najviše 5 milijuna znakova).",
+        "failed": "Učitavanje nije uspjelo — pokušaj ponovno."
+      }
     }
   },
   "analysis": {

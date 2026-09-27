@@ -53,6 +53,25 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance.flipped).toBeTrue();
   });
 
+  // Gewünscht 2026-09-27: ⋮ „PGN kopieren / herunterladen" — auch für Betrachter eines Teilen-Links.
+  it('copies the PGN to the clipboard and offers it as a file, also on a shared link', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame(null));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.game-menu')).not.toBeNull();
+
+    const written: string[] = [];
+    spyOn(navigator.clipboard, 'writeText').and.callFake((t: string) => { written.push(t); return Promise.resolve(); });
+    fixture.componentInstance.copyPgn();
+    expect(written).toEqual(['[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1']);
+
+    const clicked: string[] = [];
+    spyOn(HTMLAnchorElement.prototype, 'click').and.callFake(function (this: HTMLAnchorElement) { clicked.push(this.download); });
+    fixture.componentInstance.downloadPgn();
+    expect(clicked).toEqual(['a_b_2026_07_16.pgn']);
+  });
+
   // Gemeldet 2026-09-24: „Eigene Fehler nachspielen (1)", der Dialog fand nichts — der Knopf zählte beide Seiten,
   // der Trainer öffnete auf der des Besitzers, und der einzige Fehler (Analyse lief noch) war der des Gegners.
   it('the mistakes button counts only the side the trainer opens on', async () => {

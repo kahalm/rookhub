@@ -57,6 +57,25 @@ export interface SavedGameDetail extends SavedGame {
 }
 
 /** Öffentliche Sicht auf eine geteilte Partie (ohne Besitzer-Daten). */
+/** Antwort auf den PGN-Upload (`POST /api/games/import`). */
+export interface PgnImportResult {
+  imported: number;
+  /** Schon vorhanden (gleiche Kopfdaten + Züge) — nicht doppelt angelegt. */
+  duplicates: number;
+  /** Mehr als 200 Partien im Text — der Rest blieb liegen. */
+  truncated: boolean;
+  /** Angelegte und schon vorhandene Partien, in Reihenfolge des Textes. */
+  ids: number[];
+  failed: PgnImportFailure[];
+}
+
+export interface PgnImportFailure {
+  index: number;
+  white?: string | null;
+  black?: string | null;
+  reason: 'noMoves' | 'illegal' | 'tooLong' | 'badFen' | string;
+}
+
 export interface SharedGame {
   source: string;
   white?: string | null;
@@ -173,6 +192,11 @@ export interface SimilarGames {
 @Injectable({ providedIn: 'root' })
 export class GamesService {
   constructor(private http: HttpClient) {}
+
+  /** PGN hochladen (Datei oder eingefügt) — jede Partie des Textes wird eine eigene Partie (Quelle „pgn"). */
+  importPgn(pgn: string): Observable<PgnImportResult> {
+    return this.http.post<PgnImportResult>('/api/games/import', { pgn });
+  }
 
   list(take = 200): Observable<SavedGame[]> {
     return this.http.get<SavedGame[]>(`/api/games?take=${take}`);

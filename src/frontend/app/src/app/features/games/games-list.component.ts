@@ -13,7 +13,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, timer } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { GamesService, SavedGame } from './games.service';
+import { GamesService, PgnImportResult, SavedGame } from './games.service';
+import { PgnImportDialogComponent } from './pgn-import-dialog.component';
 import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
@@ -40,7 +41,12 @@ export type AnalysisState = 'none' | 'running' | 'done';
   template: `
     <div class="games-page">
       <div class="head">
-        <h1>{{ 'games.title' | translate }}</h1>
+        <div class="title-row">
+          <h1>{{ 'games.title' | translate }}</h1>
+          <button mat-stroked-button class="pgn-upload" (click)="uploadPgn()">
+            <mat-icon>upload_file</mat-icon> {{ 'games.pgnUpload.button' | translate }}
+          </button>
+        </div>
         <p class="hint">{{ 'games.hint' | translate }}</p>
         <!-- „Wo liegt noch Arbeit?" — der Filter zeigt nur Partien mit offenen Fehlern. Er erscheint erst,
              wenn es überhaupt welche gibt, sonst stünde ein Schalter da, der nichts tut. -->
@@ -175,6 +181,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
   styles: [`
     .games-page { max-width: 1040px; margin: 0 auto; padding: 16px; }
     .head h1 { margin: 0 0 4px; }
+    .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
     .center { display: flex; justify-content: center; padding: 40px; }
     .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px; text-align: center; }
@@ -373,11 +380,27 @@ export class GamesListComponent implements OnInit {
   }
 
   sourceIcon(source: string): string {
-    return source === 'lichess' ? 'public' : source === 'scoresheet' ? 'photo_camera' : 'sports_esports';
+    return source === 'lichess' ? 'public' : source === 'scoresheet' ? 'photo_camera' : source === 'pgn' ? 'description' : 'sports_esports';
   }
 
   sourceLabel(source: string): string {
-    return source === 'scoresheet' ? this.translate.instant('games.source.scoresheet') : source;
+    return source === 'scoresheet' || source === 'pgn' ? this.translate.instant('games.source.' + source) : source;
+  }
+
+  /** „PGN hochladen": Datei oder eingefügt; danach die Liste neu. Genau EINE neue Partie → gleich öffnen. */
+  uploadPgn(): void {
+    this.dialog.open(PgnImportDialogComponent, { maxWidth: '96vw' }).afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((r: PgnImportResult | undefined) => {
+        if (!r) return;
+        this.snackbar.info(this.translate.instant('games.pgnUpload.summary',
+          { imported: r.imported, duplicates: r.duplicates, failed: r.failed.length }));
+        if (r.imported === 1 && r.ids.length === 1 && !r.failed.length) {
+          this.router.navigate(['/games', r.ids[0]]);
+          return;
+        }
+        this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(list => { this.games = list; this.schedulePoll(); });
+      });
   }
 
   /** Das Formular-Foto einer eingelesenen Partie anzeigen (Dialog) oder herunterladen. */
