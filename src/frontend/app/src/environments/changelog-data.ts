@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.568.2", date: "2026-09-27", changes: [
+    { en: "Android app build repaired (infrastructure only): the build machine no longer offered the Android SDK layout the app packager expects, and the packager now needs newer build tools — the build is set up for both again, so a new app version can be published.", de: "Bau der Android-App repariert (reine Infrastruktur): Die Build-Maschine bot die Ordnerstruktur des Android-SDK nicht mehr an, die das Verpackungswerkzeug erwartet, und das Werkzeug braucht inzwischen neuere Build-Tools — beides ist wieder eingerichtet, damit eine neue App-Version erscheinen kann." },
+  ] },
   { version: "0.568.1", date: "2026-09-27", changes: [
     { en: "Reading scoresheets: regular users can now read one scoresheet per 24 hours (was 20); admins stay unlimited. When today’s is used up, the page says from when the next one is possible instead of just greying out the button. A reading that failed without costing anything (model unreachable) does not count. Deleting the game no longer frees the day’s reading again — the photo goes with the game, but the reading still counts.", de: "Formular einlesen: Normale Nutzer können jetzt ein Formular je 24 Stunden einlesen (vorher 20), Admins weiter unbegrenzt. Ist das heutige verbraucht, sagt die Seite, ab wann das nächste geht, statt den Knopf nur grau zu machen. Eine Einlesung, die gescheitert ist, ohne etwas zu kosten (Modell nicht erreichbar), zählt nicht. Die Partie zu löschen gibt die Einlesung des Tages nicht mehr frei — das Foto geht mit der Partie, die Einlesung zählt trotzdem." },
   ] },

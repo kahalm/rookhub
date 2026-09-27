@@ -108,11 +108,16 @@ jobs:
         with:
           accept-android-sdk-licenses: true
 
+      # Genau die Stände, die Bubblewrap braucht: Build-Tools = BUILD_TOOLS_VERSION aus @bubblewrap/core
+      # (1.25.0: 36.1.0), Plattform = compileSdkVersion der Vorlage (36). Fehlen die Build-Tools, installiert
+      # Bubblewrap sie selbst — interaktiv, in der CI ohne TTY ein Abbruch.
       - name: Install required Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.1.0"
 
+      # Festgenagelt: eine neue Bubblewrap-Version zieht neue Build-Tools/Plattformen nach sich (s. oben).
+      # Beim Anheben beide Zeilen gemeinsam ändern.
       - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+        run: npm install -g @bubblewrap/cli@1.25.0
 
       # Pflicht: Bubblewrap erkennt JDK/SDK NICHT automatisch (auch nicht ueber
       # JAVA_HOME/ANDROID_HOME) und fragt sonst interaktiv "Do you want Bubblewrap
@@ -129,6 +134,16 @@ jobs:
           EOF
           echo "JAVA_HOME=$JAVA_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          # Bubblewrap prüft, ob im SDK ein `tools/` oder `bin/` liegt (AndroidSdkTools.validatePath), und ruft
+          # dort `bin/sdkmanager` auf. Das Runner-Image hat den alten `tools`-Ordner nicht mehr — am 27.09.2026
+          # scheiterte der Build daran mit „The provided androidSdk isn't correct." (im Juni lief er noch). Also
+          # auf die Kommandozeilen-Tools zeigen, die setup-android eben installiert hat (die auf dem PATH).
+          if [ ! -e "$ANDROID_SDK_ROOT/tools" ] && [ ! -e "$ANDROID_SDK_ROOT/bin" ]; then
+            cmdline="$(dirname "$(dirname "$(command -v sdkmanager)")")"
+            ln -s "$cmdline" "$ANDROID_SDK_ROOT/tools"
+            echo "tools -> $cmdline"
+          fi
+          ls "$ANDROID_SDK_ROOT/tools/bin/sdkmanager"
 
       - name: Restore signing keystore
         working-directory: twa
