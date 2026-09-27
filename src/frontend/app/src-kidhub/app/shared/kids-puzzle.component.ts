@@ -1,11 +1,12 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, HostListener, computed, effect, inject, input, output, signal, untracked,
 } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
 import { KidsMove, KidsSolver, KidsTask } from '../core/kids-solver';
+import { isAdvanceKey } from '../core/kids-keys';
 
 /** Was die Eule gerade sagt. */
 export type KidsPuzzleStatus = 'watch' | 'yourTurn' | 'good' | 'wrong' | 'alternative' | 'solved';
@@ -13,13 +14,20 @@ export type KidsPuzzleStatus = 'watch' | 'yourTurn' | 'good' | 'wrong' | 'altern
 /** Pausen, damit das Kind sieht, was passiert (Stellungszug, Antwort des Gegners). */
 export const SETUP_DELAY_MS = 700;
 export const REPLY_DELAY_MS = 550;
+/** So lange bleibt ein falscher Zug stehen, bevor er zurueckgenommen wird — das Kind soll ihn sehen. */
+export const WRONG_HOLD_MS = 2000;
 
 const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.feedback.solved3', 'kids.feedback.solved4'];
 
 /**
  * Eine Aufgabe auf der Kinderseite: grosses Brett, eine Eule, die sagt, was los ist, ein Tipp-Knopf.
- * Falsche Zuege kosten nichts ausser einem Fehlerpunkt (fuer die Sterne) — das Brett springt zurueck
- * und das Kind probiert weiter. Aller Anzeige-Zustand steckt in Signalen: die Antworten des Gegners
+ * Falsche Zuege kosten nichts ausser einem Fehlerpunkt (fuer die Sterne) — der Zug bleibt
+ * `WRONG_HOLD_MS` rot markiert stehen, dann springt das Brett zurueck und das Kind probiert weiter.
+ * Am PC loest die Leertaste „Weiter" aus.
+ *
+ * <p>Aufbau: am PC Brett links (so hoch, wie das Fenster erlaubt), rechts die Aufgabe (`[kidTask]`,
+ * vom Aufrufer), die Eule und der Knopf; am Handy alles untereinander, die Aufgabe ueber dem Brett.</p>
+ * Aller Anzeige-Zustand steckt in Signalen: die Antworten des Gegners
  * kommen per Timer, und Angular 22 zeichnet nach einem Timer eine unmarkierte Ansicht nicht neu.
  */
 @Component({
@@ -29,6 +37,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
   imports: [PuzzleBoardComponent, TranslatePipe],
   template: `
     <div class="puzzle">
+      <div class="task-slot"><ng-content select="[kidTask]" /></div>
       <div class="board">
         <app-puzzle-board
           [fen]="fen()"
@@ -41,6 +50,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
           [reviewShapes]="shapes()"
           [allowFullscreen]="false"
           [autoQueen]="true"
+          boardTheme="blue"
           (moveMade)="onMove($event)" />
       </div>
 
@@ -67,7 +77,9 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
 
         <div class="actions">
           @if (status() === 'solved') {
-            <button type="button" class="big next" (click)="next.emit()">{{ 'kids.next' | translate }} ▶</button>
+            <button type="button" class="big next" (click)="next.emit()">
+              {{ 'kids.next' | translate }} ▶ <kbd class="key">{{ 'kids.spaceKey' | translate }}</kbd>
+            </button>
           } @else {
             <button type="button" class="big hint" (click)="showHint()" [disabled]="!interactive()">
               💡 {{ 'kids.hint' | translate }}
@@ -79,9 +91,22 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
   `,
   styles: [`
     :host { display: block; }
-    .puzzle { display: flex; gap: 20px; align-items: flex-start; justify-content: center; }
-    .board { width: min(92vw, 70vh, 640px); flex: 0 0 auto; }
-    .side { flex: 1 1 260px; max-width: 360px; display: flex; flex-direction: column; gap: 14px; }
+    /* PC: Brett links ueber beide Zeilen, rechts oben die Aufgabe, darunter Eule und Knopf. Das Brett
+       ist so gross, wie die Fensterhoehe erlaubt (--kid-board, gesetzt in der App-Huelle) — vorher
+       70vh, und unter Kopfzeile, Punkten und Aufgabe lief die unterste Reihe aus dem Bild. */
+    .puzzle {
+      display: grid; justify-content: center; align-items: start; column-gap: 28px; row-gap: 14px;
+      grid-template-columns: max(var(--kid-board, 640px), 300px) minmax(280px, 400px);
+      grid-template-rows: auto 1fr;
+      grid-template-areas: "board task" "board side";
+    }
+    .task-slot { grid-area: task; }
+    .task-slot:empty { display: none; }
+    .board {
+      grid-area: board; width: max(var(--kid-board, 640px), 300px);
+      border-radius: 14px; overflow: hidden; box-shadow: 0 6px 0 var(--kid-shadow);
+    }
+    .side { grid-area: side; display: flex; flex-direction: column; gap: 14px; }
     .bubble {
       display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 22px;
       background: var(--kid-card); box-shadow: 0 4px 0 var(--kid-shadow); font-size: 1.25rem; font-weight: 700;
@@ -103,11 +128,25 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
     .big:disabled { opacity: .5; cursor: default; }
     .hint { background: var(--kid-yellow); color: #3d2c00; }
     .next { background: var(--kid-green); }
+    /* Nur mit Maus/Tastatur: „Leertaste" am Weiter-Knopf. Am Tablet gibt es keine. */
+    .key { display: none; }
+    @media (hover: hover) and (pointer: fine) {
+      .key {
+        display: inline-block; margin-left: 10px; padding: 1px 8px; border-radius: 6px; vertical-align: middle;
+        font: inherit; font-size: .75rem; font-weight: 700; background: rgba(255, 255, 255, .25);
+        border: 1px solid rgba(255, 255, 255, .6);
+      }
+    }
     @keyframes wiggle { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
     @keyframes hop { 40% { transform: translateY(-10px) rotate(-8deg); } }
     @media (max-width: 760px) {
-      .puzzle { flex-direction: column; align-items: center; gap: 12px; }
-      .side { max-width: min(92vw, 640px); width: 100%; }
+      .puzzle {
+        grid-template-columns: min(92vw, 70vh, 640px);
+        grid-template-rows: auto;
+        grid-template-areas: "task" "board" "side";
+        row-gap: 12px;
+      }
+      .board { width: 100%; min-width: 0; }
       .bubble { font-size: 1.1rem; }
     }
   `],
@@ -132,8 +171,10 @@ export class KidsPuzzleComponent {
   readonly status = signal<KidsPuzzleStatus>('watch');
   readonly solvedKey = signal(SOLVED_KEYS[0]);
   readonly finalComment = signal<string | null>(null);
-  readonly interactive = computed(() => this.status() === 'yourTurn' || this.status() === 'good'
-    || this.status() === 'wrong' || this.status() === 'alternative');
+  /** Ein falscher Zug steht gerade noch da (`WRONG_HOLD_MS`) — das Brett ist so lange gesperrt. */
+  readonly holding = signal(false);
+  readonly interactive = computed(() => !this.holding() && (this.status() === 'yourTurn' || this.status() === 'good'
+    || this.status() === 'wrong' || this.status() === 'alternative'));
 
   private solver: KidsSolver | null = null;
   private mistakes = 0;
@@ -153,6 +194,7 @@ export class KidsPuzzleComponent {
     this.solver = new KidsSolver(task);
     this.mistakes = 0;
     this.hintLevel = 0;
+    this.holding.set(false);
     this.finalComment.set(null);
     this.shapes.set([]);
     this.lastMove.set(undefined);
@@ -178,11 +220,11 @@ export class KidsPuzzleComponent {
       case 'wrong':
         this.mistakes++;
         this.status.set('wrong');
-        this.sync();
+        this.holdThenTakeBack(event, 'red');
         return;
       case 'alternative':
         this.status.set('alternative');
-        this.sync();
+        this.holdThenTakeBack(event, 'yellow');
         return;
       case 'illegal':
         this.sync();
@@ -207,6 +249,40 @@ export class KidsPuzzleComponent {
         });
         return;
     }
+  }
+
+  /** Leertaste/Enter = „Weiter", sobald die Aufgabe geloest ist (Regeln in `isAdvanceKey`). */
+  @HostListener('document:keydown', ['$event'])
+  onKey(event: KeyboardEvent): void {
+    if (this.status() !== 'solved' || !isAdvanceKey(event)) return;
+    event.preventDefault();      // sonst scrollt die Leertaste die Seite
+    this.next.emit();
+  }
+
+  /**
+   * Der Zug bleibt stehen (Zielfeld markiert), dann nimmt das Brett ihn zurueck. Die Stellung danach
+   * wird AUSDRUECKLICH gesetzt: das Brett uebernimmt bei jeder geaenderten Eingabe die `fen` — schon
+   * das Sperren haette den Zug sonst sofort zurueckspringen lassen.
+   */
+  private holdThenTakeBack(event: { orig: Key; dest: Key; promotion?: string }, brush: 'red' | 'yellow'): void {
+    const shown = this.solver?.fenAfter(event.orig, event.dest, event.promotion);
+    if (!shown) {
+      this.sync();
+      return;
+    }
+    const before = this.lastMove();
+    this.holding.set(true);
+    this.fen.set(shown);
+    this.lastMove.set([event.orig, event.dest]);
+    this.check.set(false);
+    this.dests.set(new Map());
+    this.shapes.set([{ orig: event.dest, brush }]);
+    this.later(WRONG_HOLD_MS, () => {
+      this.holding.set(false);
+      this.lastMove.set(before);
+      this.shapes.set([]);
+      this.sync();
+    });
   }
 
   /** Erster Druck: die Figur leuchtet. Zweiter Druck: der Pfeil zeigt den Zug. Jeder Tipp zaehlt als Fehler. */

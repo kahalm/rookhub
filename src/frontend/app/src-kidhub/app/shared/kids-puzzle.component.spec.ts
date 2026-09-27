@@ -1,7 +1,7 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Key } from 'chessground/types';
-import { KidsPuzzleComponent, REPLY_DELAY_MS, SETUP_DELAY_MS } from './kids-puzzle.component';
+import { KidsPuzzleComponent, REPLY_DELAY_MS, SETUP_DELAY_MS, WRONG_HOLD_MS } from './kids-puzzle.component';
 import { KidsTask } from '../core/kids-solver';
 
 describe('KidsPuzzleComponent', () => {
@@ -44,6 +44,7 @@ describe('KidsPuzzleComponent', () => {
     const destsBefore = c.dests();
     c.onMove(move('b8', 'b1'));
     expect(c.status()).toBe('wrong');
+    tick(WRONG_HOLD_MS);
     // Neues Objekt, damit das Brett den falschen Zug optisch zuruecknimmt.
     expect(c.dests()).not.toBe(destsBefore);
 
@@ -96,5 +97,91 @@ describe('KidsPuzzleComponent', () => {
     expect(c.orientation()).toBe('white');
     tick(SETUP_DELAY_MS);
     expect(c.status()).toBe('yourTurn');
+  }));
+
+  it('ein falscher Zug bleibt zwei Sekunden stehen, dann springt das Brett zurueck', fakeAsync(() => {
+    const f = create(mate1);
+    const c = f.componentInstance;
+    tick(SETUP_DELAY_MS);
+    const before = c.fen();
+
+    c.onMove(move('b8', 'b1'));
+    expect(c.status()).toBe('wrong');
+    expect(c.fen().split(' ')[0]).toBe('8/8/8/8/8/6p1/r6k/1R3K2');   // der Zug steht noch da
+    expect(c.lastMove()).toEqual(['b8' as Key, 'b1' as Key]);
+    expect(c.shapes()).toEqual([{ orig: 'b1' as Key, brush: 'red' }]);
+    expect(c.interactive()).toBeFalse();                             // so lange gesperrt
+
+    tick(WRONG_HOLD_MS - 1);
+    expect(c.fen()).not.toBe(before);
+    tick(1);
+    expect(c.fen()).toBe(before);
+    expect(c.lastMove()).toEqual(['g4' as Key, 'g3' as Key]);        // wieder der Stellungszug
+    expect(c.shapes()).toEqual([]);
+    expect(c.interactive()).toBeTrue();
+    expect(c.status()).toBe('wrong');                                // die Eule sagt es weiter
+  }));
+
+  it('eine neue Aufgabe waehrend des Stehenbleibens bricht es ab', fakeAsync(() => {
+    const f = create(mate1);
+    const c = f.componentInstance;
+    tick(SETUP_DELAY_MS);
+    c.onMove(move('b8', 'b1'));
+    f.componentRef.setInput('task', fork);
+    f.detectChanges();
+    expect(c.holding()).toBeFalse();
+    tick(WRONG_HOLD_MS + SETUP_DELAY_MS);
+    expect(c.status()).toBe('yourTurn');
+  }));
+
+  function key(k: string, target: EventTarget = document.body, init: KeyboardEventInit = {}): KeyboardEvent {
+    const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init });
+    target.dispatchEvent(e);
+    return e;
+  }
+
+  it('Leertaste = Weiter, aber erst wenn geloest', fakeAsync(() => {
+    const f = create(mate1);
+    const c = f.componentInstance;
+    let next = 0;
+    c.next.subscribe(() => next++);
+    tick(SETUP_DELAY_MS);
+
+    key(' ');
+    expect(next).toBe(0);
+
+    c.onMove(move('b8', 'h8'));
+    const e = key(' ');
+    expect(next).toBe(1);
+    expect(e.defaultPrevented).toBeTrue();          // die Seite scrollt nicht
+    key(' ', document.body, { repeat: true });
+    expect(next).toBe(1);                           // gehaltene Taste zaehlt nicht
+    key('Enter');
+    expect(next).toBe(2);
+  }));
+
+  it('Leertaste in einem Feld oder auf einem Knopf loest kein zweites Weiter aus', fakeAsync(() => {
+    const f = create(mate1);
+    const c = f.componentInstance;
+    let next = 0;
+    c.next.subscribe(() => next++);
+    tick(SETUP_DELAY_MS);
+    c.onMove(move('b8', 'h8'));
+
+    for (const tag of ['select', 'input', 'button', 'a']) {
+      const el = document.createElement(tag);
+      document.body.appendChild(el);
+      key(' ', el);
+      el.remove();
+    }
+    expect(next).toBe(0);
+  }));
+
+  it('am Weiter-Knopf steht die Taste dabei', fakeAsync(() => {
+    const f = create(mate1);
+    tick(SETUP_DELAY_MS);
+    f.componentInstance.onMove(move('b8', 'h8'));
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('button.next kbd.key')).not.toBeNull();
   }));
 });

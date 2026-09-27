@@ -3910,6 +3910,7 @@
     },
     "hint": "Tipp",
     "next": "Weiter",
+    "spaceKey": "Leertaste",
     "back": "Start",
     "loading": "Einen Moment …",
     "loadError": "Das hat leider nicht geklappt. Bitte später noch einmal versuchen.",

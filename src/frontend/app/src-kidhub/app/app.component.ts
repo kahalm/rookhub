@@ -97,9 +97,15 @@ export function isHomeUrl(url: string): boolean {
       --kid-bad-bg: #ffe0e0;
       --kid-bad-fg: #9b1c1c;
       --kid-info-bg: #fff3c4;
+      /* Brettgroesse am PC: so hoch, wie das Fenster erlaubt (Kopfzeile + Titelzeile ≈ 170px), rechts
+         Platz fuer die Spalte daneben. Hier statt im Brett, damit die Titelzeile genauso breit wird. */
+      --kid-board: min(calc(100vh - 170px), calc(100vw - 500px), 820px);
       display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh;
       background: radial-gradient(circle at 10% 0%, #fff7d6 0, transparent 40%), var(--kid-bg);
       color: #1f2d3d; font-family: Roboto, "Helvetica Neue", sans-serif;
+    }
+    @supports (height: 100svh) {
+      :host { --kid-board: min(calc(100svh - 170px), calc(100vw - 500px), 820px); }
     }
     .top { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
            flex-wrap: wrap; gap: 8px 12px; }

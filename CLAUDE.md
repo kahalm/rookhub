@@ -3229,7 +3229,14 @@ Kinderseite" unter REST API.
 - **Löser** `src-kidhub/app/core/kids-solver.ts` (rein, ohne Angular): EINE Form für Lichess-Puzzles
   (`startPly` 0) und Kurs-Linien (eigener `StartPly`, `-1` = kein Stellungszug; alles davor stumm vorgespult);
   im LETZTEN Zug zählt jedes Matt; Kurs-`AltMoves` sind „auch gut, aber gesucht ist ein anderer" (kein Fehler);
-  falscher Zug → Stellung zurück, Fehlerpunkt. `KidsPuzzleComponent` hält ALLES in Signalen (Stellungszug und
+  falscher Zug → Fehlerpunkt, der Zug bleibt `WRONG_HOLD_MS` (2 s) mit markiertem Zielfeld stehen, dann Stellung
+  zurück (0.562.0, Wunsch des Nutzers; die Stellung danach wird per `KidsSolver.fenAfter` AUSDRÜCKLICH gesetzt —
+  jede geänderte Brett-Eingabe setzt sonst sofort die alte `fen`). Am PC ist Leertaste/Enter „Weiter" bzw. nach
+  einer geschafften Stufe „Nächste Stufe" (`isAdvanceKey`: nicht in Feldern, auf Knöpfen/Links, bei gehaltener
+  Taste; wer die Taste verbraucht, ruft `preventDefault`, sonst spränge dieselbe Taste über die Sterne hinweg).
+  **PC-Aufbau** (0.562.0): Brett links, so groß wie die Fensterhöhe erlaubt (`--kid-board` in der App-Hülle, auch
+  die Titelzeile richtet sich danach), rechts Aufgabentext (`[kidTask]`-Slot), Eule, Knopf; Punkte der Stufe in der
+  Titelzeile; Brett blau (`boardTheme="blue"`). Bis 760px alles untereinander, Aufgabe über dem Brett. `KidsPuzzleComponent` hält ALLES in Signalen (Stellungszug und
   Gegnerantwort kommen per Timer — Angular 22 zeichnet unmarkierte Ansichten danach nicht neu) und gibt dem Brett
   nach jedem Zug ein NEUES `dests`-Objekt: nur eine geänderte Eingabe lässt das Brett einen falschen Zug optisch
   zurücknehmen.

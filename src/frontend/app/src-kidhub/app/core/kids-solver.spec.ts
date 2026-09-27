@@ -31,6 +31,21 @@ describe('KidsSolver', () => {
     expect(s.isFinished()).toBeTrue();
   });
 
+  it('fenAfter zeigt die Stellung nach einem Zug, ohne ihn zu spielen', () => {
+    const s = new KidsSolver(mate1);
+    s.playSetup();
+    const before = s.fen();
+    expect(s.fenAfter('b8', 'b1')!.split(' ')[0]).toBe('8/8/8/8/8/6p1/r6k/1R3K2');
+    expect(s.fen()).toBe(before);
+    expect(s.fenAfter('b8', 'c7')).toBeNull();                 // Turm zieht nicht schraeg
+  });
+
+  it('fenAfter wandelt wie das Brett zur Dame um', () => {
+    const s = new KidsSolver(promote);
+    s.playSetup();
+    expect(s.fenAfter('h7', 'h8')!.split(' ')[0]).toContain('Q');
+  });
+
   it('nimmt einen falschen Zug zurueck', () => {
     const s = new KidsSolver(mate1);
     s.playSetup();

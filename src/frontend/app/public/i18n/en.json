@@ -3910,6 +3910,7 @@
     },
     "hint": "Hint",
     "next": "Next",
+    "spaceKey": "Space",
     "back": "Home",
     "loading": "Just a moment …",
     "loadError": "Sorry, that didn't work. Please try again later.",

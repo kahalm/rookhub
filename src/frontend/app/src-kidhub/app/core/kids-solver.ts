@@ -113,6 +113,21 @@ export class KidsSolver {
     return map;
   }
 
+  /**
+   * Stellung NACH einem Zug, ohne ihn zu spielen — so bleibt ein falscher Zug kurz stehen, bevor er
+   * zurueckgenommen wird. `null`, wenn der Zug nicht geht. Umwandlung wie beim Brett: Dame.
+   */
+  fenAfter(from: string, to: string, promotion?: string): string | null {
+    const probe = new Chess(this.chess.fen());
+    try {
+      probe.move({ from: from as Square, to: to as Square,
+        promotion: this.isPromotionMove(from, to) ? (promotion ?? 'q') : undefined });
+      return probe.fen();
+    } catch {
+      return null;
+    }
+  }
+
   /** Prueft den Zug des Kindes; bei einem Fehler steht danach wieder die alte Stellung. */
   tryMove(from: string, to: string, promotion?: string): KidsMoveResult {
     if (!this.isSolverTurn()) return 'illegal';

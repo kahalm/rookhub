@@ -3631,6 +3631,7 @@
     },
     "hint": "Tipp",
     "next": "Tovább",
+    "spaceKey": "Szóköz",
     "back": "Kezdőlap",
     "loading": "Egy pillanat …",
     "loadError": "Ez most nem sikerült. Próbáld újra később.",

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
+import { provideRouter, ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of } from 'rxjs';
 import { LevelPlayComponent } from './level-play.component';
@@ -77,5 +77,44 @@ describe('LevelPlayComponent', () => {
     expect(c.index()).toBe(0);
     expect(c.finished()).toBeNull();
     expect(TestBed.inject(KidsProgressStore).level(1).stars).toBe(3);
+  });
+
+  /** Gemeldet 2026-09-27 (Screenshot): der erste gruene Punkt war ein grosses Oval — er trug die
+   *  Klasse „done", und die Regeln des Abschlussbilds (30px Innenabstand) galten auch fuer ihn. */
+  it('ein geloester Punkt bleibt ein kleiner Kreis', () => {
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    f.componentInstance.onSolved(0);
+    f.componentInstance.onNext();
+    f.detectChanges();
+    const dots = f.nativeElement.querySelectorAll('.dots li') as NodeListOf<HTMLElement>;
+    expect(dots.length).toBe(2);
+    expect(dots[0].classList).toContain('solved');
+    expect(dots[0].offsetHeight).toBe(18);
+    expect(dots[0].offsetWidth).toBe(18);
+  });
+
+  it('Punkte in der Titelzeile, Aufgabentext neben dem Brett', () => {
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('header.head .dots')).not.toBeNull();
+    expect(el.querySelector('kid-puzzle .task-slot .task')).not.toBeNull();
+  });
+
+  it('Stufe geschafft: Leertaste fuehrt zur naechsten Stufe', () => {
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const space = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+
+    space();
+    expect(navigate).not.toHaveBeenCalled();         // mitten in der Stufe tut die Leertaste hier nichts
+
+    c.onSolved(0); c.onNext(); c.onSolved(0); c.onNext();
+    f.detectChanges();
+    space();
+    expect(navigate).toHaveBeenCalledWith(['/levels', 2]);
   });
 });

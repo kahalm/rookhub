@@ -3910,6 +3910,7 @@
     },
     "hint": "Savjet",
     "next": "Dalje",
+    "spaceKey": "Razmaknica",
     "back": "Početak",
     "loading": "Trenutak …",
     "loadError": "Nažalost, nije uspjelo. Pokušaj ponovno kasnije.",

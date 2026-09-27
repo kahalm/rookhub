@@ -40,11 +40,15 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     } @else if (loading()) {
       <p class="info">{{ 'kids.loading' | translate }}</p>
     } @else if (current(); as line) {
-      @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter">{{ chapter }}</p> }
-      @if (line.titleLabel ?? line.title; as heading) { <h2 class="line-title">{{ heading }}</h2> }
-      @if (line.comment) { <p class="intro">{{ line.comment }}</p> }
       @if (task(); as t) {
-        <kid-puzzle [task]="t" [moveComments]="line.moveComments" (solved)="onSolved()" (next)="onNext()" />
+        <kid-puzzle [task]="t" [moveComments]="line.moveComments" (solved)="onSolved()" (next)="onNext()">
+          <!-- Neben dem Brett (am Handy darueber): so bekommt das Brett am PC die Fensterhoehe. -->
+          <div kidTask class="line-text">
+            @if (line.chapterLabel ?? line.chapter; as chapter) { <p class="chapter">{{ chapter }}</p> }
+            @if (line.titleLabel ?? line.title; as heading) { <h2 class="line-title">{{ heading }}</h2> }
+            @if (line.comment) { <p class="intro">{{ line.comment }}</p> }
+          </div>
+        </kid-puzzle>
       }
     } @else if (lines().length > 0) {
       <section class="done">
@@ -60,16 +64,22 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     }
   `,
   styles: [`
-    :host { display: block; max-width: 1040px; margin: 0 auto; padding: 12px 16px 24px; }
-    .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
+    .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 12px;
+            max-width: calc(max(var(--kid-board, 640px), 300px) + 428px); }
     .head h1 { flex: 1; margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .back, .count { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .info { text-align: center; font-size: 1.2rem; }
-    .chapter { margin: 4px 0 0; text-align: center; font-weight: 700; opacity: .75; }
-    .line-title { margin: 2px 0 8px; text-align: center; font-size: 1.35rem; }
+    .line-text { display: flex; flex-direction: column; gap: 6px; }
+    .chapter { margin: 0; font-weight: 700; opacity: .75; }
+    .line-title { margin: 0; font-size: 1.35rem; color: var(--kid-title); }
     .intro {
-      max-width: 760px; margin: 0 auto 14px; padding: 12px 16px; border-radius: 16px; background: var(--kid-card);
-      font-size: 1.1rem; line-height: 1.45; white-space: pre-line; max-height: 30vh; overflow-y: auto;
+      margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--kid-card);
+      font-size: 1.1rem; line-height: 1.45; white-space: pre-line; max-height: 40vh; overflow-y: auto;
+    }
+    @media (max-width: 760px) {
+      .chapter, .line-title { text-align: center; }
+      .intro { max-height: 30vh; }
     }
     .done { text-align: center; padding: 30px 12px; }
     .confetti { font-size: 4.5rem; }
