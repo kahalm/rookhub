@@ -150,4 +150,49 @@ public class GameAccuracyTests
         Assert.Equal(GameAccuracy.WinPercent(-1000, null)!.Value, GameAccuracy.WinPercent(-4000, null)!.Value, 6);
         Assert.Equal(97.5447, GameAccuracy.WinPercent(1000, null)!.Value, 3);
     }
+
+    // ── Fehler „?" / Patzer „??" je Zug (Reihenfolge der Vertiefung, 27.09.) ─────────────────────────────
+    // Grenzen wie CLASS_LIMITS in game-review.util.ts: > 10 Prozentpunkte Verlust = Fehler, > 20 = Patzer.
+
+    [Fact]
+    public void MoveLosses_derPatzerDerTestpartieIstPly3_sonstKeiner()
+    {
+        var moves = GameAccuracy.MoveLosses(Plies(), new GameEvalScoreDto { Cp = 300 }, Fens, plyCount: 4);
+
+        Assert.Equal(new[] { 0, 1, 2, 3 }, moves.Select(m => m.Ply));
+        // 3…d6 statt 3…Nc6: Schwarz fällt von 46,32 % auf 24,89 %.
+        var d6 = moves.Single(m => m.Ply == 3);
+        Assert.Equal(21.44, d6.Loss, 2);
+        Assert.True(d6.Loss > GameAccuracy.BlunderMinLoss);
+        Assert.True(d6.IsMistakeOrWorse);
+        // 1…c5 statt 1…e5 kostet 0,92 Punkte — „excellent", kein Fehler.
+        Assert.Equal(0.92, moves.Single(m => m.Ply == 1).Loss, 2);
+        Assert.Equal(new[] { 3 }, moves.Where(m => m.IsMistakeOrWorse).Select(m => m.Ply));
+    }
+
+    [Theory]
+    [InlineData(-150, true)]    // 13,47 Punkte: Fehler „?"
+    [InlineData(-250, true)]    // 21,51 Punkte: Patzer „??"
+    [InlineData(-60, false)]    //  5,5 Punkte: Ungenauigkeit — zählt NICHT
+    public void MoveLoss_abMehrAls10PunktenIstEsEinFehler(int cpAfter, bool flagged)
+    {
+        var plies = new List<GameEvalPlyDto>
+        {
+            new() { Ply = 0, Cp = 0, Depth = 20, BestUci = "d2d4", PlayedUci = "e2e4" },
+        };
+        var move = GameAccuracy.MoveLosses(plies, new GameEvalScoreDto { Cp = cpAfter }, Fens, plyCount: 1).Single();
+        Assert.Equal(flagged, move.IsMistakeOrWorse);
+    }
+
+    [Fact]
+    public void MoveLoss_derBestzugIstNieEinFehler_auchWennDieNaechsteStellungSchlechterSteht()
+    {
+        var plies = new List<GameEvalPlyDto>
+        {
+            new() { Ply = 0, Cp = 0, Depth = 20, BestUci = "e2e4", PlayedUci = "e2e4" },
+        };
+        var move = GameAccuracy.MoveLosses(plies, new GameEvalScoreDto { Cp = -400 }, Fens, plyCount: 1).Single();
+        Assert.True(move.Loss > GameAccuracy.BlunderMinLoss);
+        Assert.False(move.IsMistakeOrWorse);   // wie classify(): playedIsBest → „best"
+    }
 }

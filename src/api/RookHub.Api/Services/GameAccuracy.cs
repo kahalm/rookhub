@@ -90,7 +90,50 @@ public static class GameAccuracy
     /// Gegenseite von n−1). Bewertbar ist ein Zug nur mit gerechneter Stellung davor UND einer Bewertung
     /// danach — die naechste Stellung, sonst der gespielte Kandidat.
     /// </summary>
+    /// <summary>
+    /// Ab MEHR als so viel Verlust (Prozentpunkte Gewinnchance, aus Sicht des Ziehenden) ist ein Zug mindestens ein
+    /// Fehler „?", ab mehr als <see cref="BlunderMinLoss"/> ein Patzer „??" — Spiegel von <c>CLASS_LIMITS.inaccuracy</c>
+    /// und <c>CLASS_LIMITS.mistake</c> in <c>game-review.util.ts</c> (dort ≤ 10 Ungenauigkeit, ≤ 20 Fehler, darüber Patzer).
+    /// </summary>
+    public const double MistakeMinLoss = 10;
+    public const double BlunderMinLoss = 20;
+
+    /// <summary>Ein bewertbarer Zug: Gewinnchance des Ziehenden vor und nach dem Zug, und ob er der Engine-Bestzug war.</summary>
+    public sealed record MoveLoss(int Ply, bool White, double WinBefore, double WinAfter, bool PlayedIsBest)
+    {
+        public double Loss => WinBefore - WinAfter;
+        /// <summary>„?" oder „??" — der Bestzug ist nie einer, auch wenn die tiefere Rechnung danach etwas verliert
+        /// (wie <c>classify</c> im Client).</summary>
+        public bool IsMistakeOrWorse => !PlayedIsBest && Loss > MistakeMinLoss;
+    }
+
     public static Result Compute(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens, int plyCount)
+    {
+        var (series, moves) = Walk(plies, final, fens, plyCount);
+        var weights = VolatilityWeights(series);
+        var white = new List<(double, double)>();
+        var black = new List<(double, double)>();
+        foreach (var m in moves)
+        {
+            var entry = (MoveAccuracy(m.WinBefore, m.WinAfter), m.Ply < weights.Length ? weights[m.Ply] : 0.5);
+            (m.White ? white : black).Add(entry);
+        }
+        return new Result(SideAccuracy(white), SideAccuracy(black));
+    }
+
+    /// <summary>Die bewertbaren Züge einer Partie — dieselbe Zug-Auswahl wie <see cref="Compute"/> und wie <c>reviewGame</c>
+    /// im Client (Bewertung vor dem Zug = diese Stellung, danach = die nächste, ersatzweise der gespielte Kandidat).</summary>
+    public static IReadOnlyList<MoveLoss> MoveLosses(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens, int plyCount)
+        => Walk(plies, final, fens, plyCount).Moves;
+
+    /// <summary><see cref="MoveLosses"/> aus den Positionszeilen einer Analyse (wie <see cref="FromPositions"/>).</summary>
+    public static IReadOnlyList<MoveLoss> MoveLossesFromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount)
+    {
+        var (plies, final, fens) = EvalsOf(positions, plyCount);
+        return MoveLosses(plies, final, fens, plyCount);
+    }
+
+    private static (double?[] Series, List<MoveLoss> Moves) Walk(IReadOnlyList<GameEvalPlyDto> plies, GameEvalScoreDto? final, IReadOnlyList<string> fens, int plyCount)
     {
         var n = Math.Max(0, Math.Min(plyCount, fens.Count));
         var rows = new Dictionary<int, GameEvalPlyDto>();
@@ -105,9 +148,7 @@ public static class GameAccuracy
         var series = new double?[n + 1];
         for (var j = 0; j <= n; j++) series[j] = evalAt[j] is { } s ? WinPercent(s.Cp, s.Mate, WhiteToMoveAt(j)) : null;
 
-        var weights = VolatilityWeights(series);
-        var white = new List<(double, double)>();
-        var black = new List<(double, double)>();
+        var moves = new List<MoveLoss>();
         for (var i = 0; i < n; i++)
         {
             if (!rows.TryGetValue(i, out var row) || evalAt[i] is null || series[i] is not double wb) continue;
@@ -119,14 +160,22 @@ public static class GameAccuracy
             var whiteMoves = WhiteToMoveAt(i);
             var mb = whiteMoves ? wb : 100 - wb;
             var ma = whiteMoves ? wa : 100 - wa;
-            var entry = (MoveAccuracy(mb, ma), i < weights.Length ? weights[i] : 0.5);
-            (whiteMoves ? white : black).Add(entry);
+            var playedIsBest = !string.IsNullOrEmpty(row.BestUci)
+                && string.Equals(row.BestUci, row.PlayedUci, StringComparison.OrdinalIgnoreCase);
+            moves.Add(new MoveLoss(i, whiteMoves, mb, ma, playedIsBest));
         }
-        return new Result(SideAccuracy(white), SideAccuracy(black));
+        return (series, moves);
     }
 
     /// <summary>Aus den Positionszeilen einer Analyse — der Weg beim Fertigwerden und beim Nachtrag.</summary>
     public static Result FromPositions(IEnumerable<GameAnalysisPosition> positions, int plyCount)
+    {
+        var (plies, final, fens) = EvalsOf(positions, plyCount);
+        return Compute(plies, final, fens, plyCount);
+    }
+
+    private static (List<GameEvalPlyDto> Plies, GameEvalScoreDto? Final, List<string> Fens) EvalsOf(
+        IEnumerable<GameAnalysisPosition> positions, int plyCount)
     {
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var fens = ordered.Select(p => p.Fen).ToList();
@@ -135,7 +184,7 @@ public static class GameAccuracy
             .OfType<GameEvalPlyDto>()
             .ToList();
         var final = GameEvals.FinalOf(plies.LastOrDefault(), plyCount);
-        return Compute(plies, final, fens, plyCount);
+        return (plies, final, fens);
     }
 
     /// <summary>Wie <c>whiteToMove</c> im Client: nur ein <c>b</c> im zweiten Feld heisst Schwarz.</summary>

@@ -604,7 +604,7 @@ flachere), aber mit eigenem Ursprung
   Stellung wird neu gerechnet und ERSETZT (`GameAnalysisPosition.Refined`), am Ende `RefinedAt` + Genauigkeit neu.
   Regeln: (1) Vertiefungs-Aufträge sind `AnalysisJob.Background` — `PickNextForEngineAsync` nimmt sie erst, wenn kein
   normaler wartet (die warme Hashtabelle zählt nur innerhalb derselben Stufe); (2) je Partie höchstens
-  `MaxOpenRefineJobsPerGame` (8) offen, damit `MaxOpenJobsPerUser` für den ersten Durchgang einer neuen Partie frei bleibt;
+  so viele Aufträge offen, wie der Engine-Besitzer Hintergrund-Engines hat (`RefineJobCap`: mindestens `MaxOpenRefineJobsPerGame` = 8, höchstens `MaxOpenJobsPerGame` = 32; bis 0.567.2 fest 8 — bei 16 Engines lag die Hälfte brach);
   (3) vertieft wird erst, wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt, dann die älteste
   (`IsOwnersRefineTurnAsync`); (4) scheitert die Vertiefung einer Stellung, bleibt das erste Ergebnis. `GameEvalsDto`
   meldet `Refining`/`Refined`, der Client fragt dann einmal je Minute nach. Punktepartie und von Hand eingereihte Partien

@@ -1236,4 +1236,133 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(GameAnalysisDefaults.GuessTargetDepth, head.TargetDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, head.MultiPv);
     }
+
+    // ── Vertiefung: so viele Auftraege wie Engines, Fehler zuerst (27.09.) ─────────────────────────────────
+    // Anlass: auf Prod rechneten beim Vertiefen nur Hintergrund 1–8 (fester Deckel 8), vier weitere Engines und
+    // die vier Server-Engines standen online in der Liste und taten nichts.
+
+    private async Task<AppUser> CreateUserWithEnginesAsync(int engines)
+    {
+        var user = new AppUser { Username = $"e{engines}", Email = $"e{engines}@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = user.Id, EncryptedToken = "enc",
+            BackgroundEngineIds = string.Join(",", Enumerable.Range(1, engines).Select(i => $"eei_t{i}")),
+        });
+        await _db.SaveChangesAsync();
+        return user;
+    }
+
+    /// <summary>Offene Auftraege mit Ergebnis versehen; <paramref name="pick"/> liefert je Stellung Bewertung
+    /// (Sicht von WEISS, wie im Engine-Ergebnis — der Parser dreht sie fuer die Ablage selbst) und Bestzug.</summary>
+    private async Task FinishOpenJobsWithAsync(int analysisId, int depth, Func<GameAnalysisPosition, (int Cp, string BestUci)> pick)
+    {
+        var positions = await _db.GameAnalysisPositions
+            .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null).ToListAsync();
+        foreach (var pos in positions)
+        {
+            var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == pos.AnalysisJobId);
+            var (cp, best) = pick(pos);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = depth;
+            job.ResultJson = "{\"depth\":" + depth + ",\"pvs\":[{\"depth\":" + depth + ",\"cp\":" + cp + ",\"moves\":[\"" + best + "\"]}]}";
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Gespeicherte Partie anlegen, den ersten Durchgang komplett durchrechnen und die Vertiefung anstossen.
+    /// Liefert die Halbzuege, fuer die dann Vertiefungs-Auftraege offen stehen.</summary>
+    private async Task<(int Id, List<int> RefinePlies)> RefineBatchAfterFirstPassAsync(
+        AppUser user, Func<GameAnalysisPosition, (int Cp, string BestUci)> pick)
+    {
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = LongGame },
+            origin: GameAnalysisOrigin.SavedGame);
+        var id = created.Analysis!.Id;
+        for (var round = 0; round < 10; round++)
+        {
+            _db.ChangeTracker.Clear();
+            if ((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status == GameAnalysisStatus.Done) break;
+            await FinishOpenJobsWithAsync(id, 20, pick);
+            await _svc.PumpOneAsync(id);
+        }
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+
+        await _svc.PumpOneAsync(id);   // legt die Vertiefung an
+        _db.ChangeTracker.Clear();
+        var plies = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == id && p.AnalysisJobId != null && !p.Refined)
+            .OrderBy(p => p.Ply).Select(p => p.Ply).ToListAsync();
+        return (id, plies);
+    }
+
+    private static (int, string) Quiet(GameAnalysisPosition p) => (0, p.GameMoveUci);
+
+    /// <summary>Ein legaler Zug, der NICHT der gespielte ist — Kandidaten muessen legal sein, sonst verwirft sie der Parser.</summary>
+    private static string OtherLegalMove(GameAnalysisPosition p) =>
+        Chess.ChessBoard.LoadFromFen(p.Fen).Moves(generateSan: false)
+            .Select(GamePlies.ToUci)
+            .First(u => !string.Equals(u, p.GameMoveUci, StringComparison.OrdinalIgnoreCase));
+
+    [Theory]
+    [InlineData(0, 8)]      // ohne Engine-Liste: Untergrenze
+    [InlineData(1, 8)]      // eine Engine: wie bisher
+    [InlineData(16, 16)]    // Prod 27.09.: 12 Hintergrund + 4 Server-Engines — alle bekommen Arbeit
+    [InlineData(40, 32)]    // gedeckelt beim Block des ersten Durchgangs
+    public void RefineJobCap_soVieleWieHintergrundEngines_mindestens8_hoechstens32(int engines, int cap)
+    {
+        Assert.Equal(cap, GameAnalysisService.RefineJobCap(engines));
+    }
+
+    [Fact]
+    public async Task Vertiefung_gibtSechzehnEnginesSechzehnAuftraege_stattFest8()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var (_, plies) = await RefineBatchAfterFirstPassAsync(user, Quiet);
+        Assert.Equal(16, plies.Count);
+        Assert.Equal(Enumerable.Range(0, 16), plies);   // ohne Fehler: schlicht in Zugreihenfolge
+    }
+
+    [Fact]
+    public async Task Vertiefung_rechnetZuerstDieStellungenUmEinenPatzer_dannDenRest()
+    {
+        // Halbzug 60 (Weiss) ist ein Patzer: vorher ausgeglichen, danach steht Schwarz +4 — und der gespielte Zug
+        // ist nicht der Bestzug. Halbzug 61 selbst ist in Ordnung (Schwarz spielt den Bestzug).
+        var user = await CreateUserWithEnginesAsync(1);
+        var (_, plies) = await RefineBatchAfterFirstPassAsync(user, p => p.Ply switch
+        {
+            60 => (0, OtherLegalMove(p)),     // Bestzug ≠ gespielter Zug
+            61 => (-400, p.GameMoveUci),       // Sicht von Weiss: Schwarz steht +4
+            _ => Quiet(p),
+        });
+
+        // Vor und nach dem Patzer zuerst — beide Bewertungen entscheiden die Klasse —, dann von vorn.
+        Assert.Equal(GameAnalysisDefaults.MaxOpenRefineJobsPerGame, plies.Count);
+        Assert.Contains(60, plies);
+        Assert.Contains(61, plies);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 60, 61 }, plies);
+    }
+
+    [Fact]
+    public void SuspectPlies_nimmtStellungVorUndNachDemFehler_nichtDenBestzug()
+    {
+        const string F0 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        const string F1 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
+        const string F2 = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+        var positions = new List<GameAnalysisPosition>
+        {
+            new() { Ply = 0, Fen = F0, GameMoveUci = "e2e4", CandidatesJson = CandidatesOf(F0, 0, "d2d4") },
+            new() { Ply = 1, Fen = F1, GameMoveUci = "e7e5", CandidatesJson = CandidatesOf(F1, -400, "e7e5") },  // Schwarz +4: 1.e4 war (hier) ein Patzer
+            new() { Ply = 2, Fen = F2, GameMoveUci = "g1f3", CandidatesJson = CandidatesOf(F2, -400, "g1f3") },
+        };
+        Assert.Equal(new HashSet<int> { 0, 1 }, GameAnalysisService.SuspectPlies(positions, plyCount: 3));
+    }
+
+    private static string CandidatesOf(string fen, int cp, string uci)
+    {
+        var result = "{\"depth\":20,\"pvs\":[{\"depth\":20,\"cp\":" + cp + ",\"moves\":[\"" + uci + "\"]}]}";
+        return BrokerCandidates.ToJson(BrokerCandidates.Parse(result, fen)!);
+    }
 }

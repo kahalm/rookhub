@@ -265,8 +265,9 @@ public static class GameAnalysisDefaults
     public const int SavedGameFastDepth = 20;
     public const int SavedGameFastMultiPv = 1;
 
-    /// <summary>So viele Vertiefungs-Auftraege stehen je Partie hoechstens offen. Klein, damit der Deckel der offenen
-    /// Auftraege je Nutzer (<c>AnalysisJobService.MaxOpenJobsPerUser</c>) fuer den ersten Durchgang einer neuen Partie
-    /// frei bleibt — die Vertiefung ist Hintergrundarbeit (<c>AnalysisJob.Background</c>), sie darf warten.</summary>
+    /// <summary>UNTERGRENZE der offenen Vertiefungs-Auftraege je Partie. Tatsaechlich gilt die Zahl der
+    /// Hintergrund-Engines des Engine-Besitzers, gedeckelt bei <see cref="MaxOpenJobsPerGame"/>
+    /// (<c>GameAnalysisService.RefineJobCap</c>) — bis 0.567.2 galt fest diese 8, und bei 16 Engines lag die Haelfte brach.
+    /// Die Untergrenze haelt kleinen Konten (eine Engine) den bisherigen Vorrat.</summary>
     public const int MaxOpenRefineJobsPerGame = 8;
 }
