@@ -230,9 +230,9 @@ public static class ScoresheetPrompt
         standard English SAN (K Q R B N, O-O, x for captures, + for check, =Q for promotion), up to three
         alternative readings (most likely first) when you are not sure, and a confidence.
 
-        Also give "box": where the entry is on the photo, as [x0, y0, x1, y1] — a tight rectangle around the
-        handwriting of that cell, in coordinates normalized to 0..1000 of the image width (x) and height (y),
-        origin top-left. For a corrected entry, the box of the entry you used.
+        Also give "box": where the entry is on the photo, as [x0, y0, x1, y1] in PIXELS of the photo (the
+        request states its size), origin top-left — a tight rectangle around the handwriting of that cell. For a
+        corrected entry, the box of the entry you used.
         """;
 
     /// <summary>
@@ -256,32 +256,39 @@ public static class ScoresheetPrompt
         - Stop at the last written move. Never invent moves.
         - confidence: "high" = clearly legible, "medium" = probably right, "low" = hard to read. For anything
           that is not clearly legible give up to three alternative readings, most likely first.
-        - box: where the entry is on the photo, as [x0, y0, x1, y1] — a tight rectangle around the handwriting
-          of that cell, in coordinates normalized to 0..1000 of the image width (x) and height (y), origin
-          top-left.
+        - box: where the entry is on the photo, as [x0, y0, x1, y1] in PIXELS of the photo (the request states
+          its size), origin top-left — a tight rectangle around the handwriting of that cell.
         """;
 
     /// <summary>Auftrag für die erste Lesung.</summary>
     /// <param name="languageHint">Code aus <see cref="ScoresheetNotation.Languages"/> oder <c>auto</c>.</param>
-    public static string FirstRead(string languageHint)
+    /// <param name="photoSize">Maße des Bildes, das das Modell bekommt — die Kästen kommen in DIESEN Pixeln zurück.
+    /// Um „0..1000" gebeten, lieferte Opus 5.5 am 2026-09-27 trotzdem Pixel des 1500×2000-Bildes (y bis 1790); mit
+    /// genannter Größe und Pixeln ist die Einheit eindeutig, umgerechnet wird am Server
+    /// (<see cref="ScoresheetTranscription.NormalizedBoxes"/>).</param>
+    public static string FirstRead(string languageHint, (int Width, int Height)? photoSize = null)
     {
         var lang = ScoresheetNotation.Find(languageHint);
         var hint = lang == null
             ? "The notation language is unknown; determine it from the sheet."
             : $"The user says the sheet is written in {lang.Name} notation (pieces: K={lang.King} Q={lang.Queen} R={lang.Rook} B={lang.Bishop} N={lang.Knight}).";
-        return hint + " Transcribe the scoresheet in the photo.";
+        var size = photoSize is { } s
+            ? $" The photo is {s.Width} × {s.Height} pixels (width × height); give every \"box\" in pixels of this photo."
+            : "";
+        return hint + " Transcribe the scoresheet in the photo." + size;
     }
 
     /// <summary>Nachfrage, wenn die Züge ab einer Stelle nicht mehr legal aufgehen.</summary>
     public static string Repair(string languageHint, string previousJson, IReadOnlyList<string> acceptedSans,
-        int stuckIndex, ScannedPly stuckPly, string fen, IReadOnlyList<string> legalMoves)
+        int stuckIndex, ScannedPly stuckPly, string fen, IReadOnlyList<string> legalMoves,
+        (int Width, int Height)? photoSize = null)
     {
         var moveNo = stuckIndex / 2 + 1;
         var side = stuckIndex % 2 == 0 ? "White" : "Black";
         var accepted = acceptedSans.Count == 0
             ? "(none)"
             : Services.PgnWriter.MoveText(acceptedSans, result: null);
-        return FirstRead(languageHint) + $"""
+        return FirstRead(languageHint, photoSize) + $"""
 
 
             This is a second look. Your previous transcription was:
@@ -341,7 +348,7 @@ public static class ScoresheetPrompt
                             {
                                 type = "array",
                                 items = new { type = "integer" },
-                                description = "[x0, y0, x1, y1] around the handwriting of this entry, 0..1000 of image width/height, origin top-left",
+                                description = "[x0, y0, x1, y1] around the handwriting of this entry, in pixels of the photo, origin top-left",
                             },
                         },
                         required = new[] { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box" },

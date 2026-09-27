@@ -28,6 +28,19 @@ public static class ScoresheetImage
         catch { return false; }
     }
 
+    /// <summary>Breite × Höhe laut Bildkopf (ohne zu dekodieren); <c>null</c>, wenn sich das Bild nicht lesen lässt.
+    /// Für ein mit <see cref="Prepare"/> erzeugtes JPEG sind das die Maße, die das Modell sieht — es ist schon aufrecht.</summary>
+    public static (int Width, int Height)? Size(byte[] data)
+    {
+        try
+        {
+            using var codec = SKCodec.Create(new SKMemoryStream(data));
+            return codec == null || codec.Info.Width <= 0 || codec.Info.Height <= 0
+                ? null : (codec.Info.Width, codec.Info.Height);
+        }
+        catch { return null; }
+    }
+
     /// <summary>Aufrecht, längste Seite höchstens <paramref name="maxEdge"/> Pixel, JPEG. <c>null</c>, wenn
     /// sich das Bild nicht lesen lässt.</summary>
     public static byte[]? Prepare(byte[] data, int maxEdge, int quality = 88)

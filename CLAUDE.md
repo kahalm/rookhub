@@ -2650,11 +2650,16 @@ Groß/klein, ohne Akzente) in den gelesenen Spielernamen — nur wenn genau EINE
 weglassen = unverändert), für jede Partie.
 
 **Ausschnitt je Eintrag** (0.550.0, Wunsch 2026-09-27): das Modell liefert zu jedem Eintrag `box` = [x0, y0, x1, y1] in
-0..1000 des AUFRECHTEN Bildes (Schema-Pflichtfeld, in BEIDEN Aufträgen erklärt; Test an zwei Testsatz-Formularen: sitzt
-praktisch überall auf der Handschrift, ~15 Ausgabe-Tokens je Halbzug mehr, ~+0,02–0,04 $ je Formular). Gespeichert
-steckt es in `TranscriptionJson`, `GET /api/games/{id}/scoresheet` reicht es als `boxes` (Index wie `written`) durch —
-`ScoresheetTranscription.Entry.NormalizedBox` klemmt auf 0..1000, sortiert vertauschte Ecken, verwirft alles außer vier
-Werten mit Fläche (`null`). Die Korrekturseite zeigt unter dem Foto den Eintrag des gewählten Halbzugs (`ply.w`; am Ende
+PIXELN des Bildes, das es bekam (Schema-Pflichtfeld, in BEIDEN Aufträgen erklärt; ~15 Ausgabe-Tokens je Halbzug mehr,
+~+0,02–0,04 $ je Formular). **Die Größe steht im Auftrag** (`ScoresheetPrompt.FirstRead`/`Repair` mit `photoSize`,
+„The photo is 1500 × 2000 pixels"), und die Einlesung hängt `imageWidth`/`imageHeight` an die gespeicherte Antwort
+(`ScoresheetTranscription.WithImageSize`). Warum Pixel (0.551.3): um „0..1000" gebeten, antwortete Opus 5.5 im echten
+Lauf trotzdem in Pixeln des 1500×2000-Bildes (y bis 1790) — die Ausschnitte saßen alle falsch; im Einzeltest vorher hatte
+es sich an 0..1000 gehalten. Die Einheit hängt also nicht verlässlich an der Bitte, die Pixel mit genannter Größe schon.
+`GET /api/games/{id}/scoresheet` reicht die Kästen als `boxes` in 0..1000 durch (Index wie `written`) —
+`ScoresheetTranscription.NormalizedBoxes` rechnet Pixel → Promille, verwirft Kästen, die über 3 % aus dem Bild ragen,
+sortiert vertauschte Ecken, verwirft alles ohne vier Werte mit Fläche (`null`). Einlesungen von 0.550.0 ohne Bildmaße:
+nur übernommen, wenn KEIN Wert über 1000 liegt, sonst alle `null`. Die Korrekturseite zeigt unter dem Foto den Eintrag des gewählten Halbzugs (`ply.w`; am Ende
 der Liste den ersten unaufgelösten, `unresolvedFrom`) als Ausschnitt mit Umfeld — seitlich 60 % der Kastenbreite, oben/
 unten 130 % der Höhe (`cropView` in `game-edit.util.ts`) —, rot gerahmt, wenn der Zug unsicher ist. Ausgeschnitten wird
 per CSS aus dem schon geladenen Foto (Seitenverhältnis aus `naturalWidth/Height`), keine Bildbearbeitung am Server. Das

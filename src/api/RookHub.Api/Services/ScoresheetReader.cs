@@ -62,15 +62,16 @@ public sealed class ScoresheetReader
         var mode = startMode;
         var rounds = Math.Clamp(maxRounds, 1, MaxRounds);
         string? previousJson = null;
+        var photoSize = ScoresheetImage.Size(jpeg);
         ScoresheetTranscription? previous = null;
         ScoresheetResolution? previousResolution = null;
         for (var round = 1; round <= rounds; round++)
         {
             var instructions = round == 1 || previous == null || previousResolution?.StuckAt is not int stuck
-                ? ScoresheetPrompt.FirstRead(language)
+                ? ScoresheetPrompt.FirstRead(language, photoSize)
                 : ScoresheetPrompt.Repair(language, previousJson!, previousResolution.Plies.Select(p => p.San).ToList(),
                     stuck, previous.Moves[stuck].ToScanned(), previousResolution.StuckFen!,
-                    LegalMoves(previousResolution.StuckFen!));
+                    LegalMoves(previousResolution.StuckFen!), photoSize);
 
             var allowance = beforeCall != null
                 ? await beforeCall(ct)
@@ -100,7 +101,10 @@ public sealed class ScoresheetReader
                 return new ReadOutcome(null, null, null, null, round, answer.Error ?? "failed");
             }
 
-            var transcription = ScoresheetTranscription.Parse(answer.Json);
+            // Gespeichert wird die Antwort samt den Maßen des Bildes, in dessen Pixeln die Kästen stehen — ohne sie
+            // ließe sich später nicht auf das Foto umrechnen. Die Nachfrage bekommt die unveränderte Antwort.
+            var storedJson = ScoresheetTranscription.WithImageSize(answer.Json, photoSize);
+            var transcription = ScoresheetTranscription.Parse(storedJson);
             if (transcription == null)
             {
                 if (best != null) return best with { Rounds = round };
@@ -109,13 +113,13 @@ public sealed class ScoresheetReader
             if (transcription.Moves.Count == 0)
             {
                 if (best != null) return best with { Rounds = round };
-                return new ReadOutcome(transcription, null, answer.Json, null, round, "noMoves");
+                return new ReadOutcome(transcription, null, storedJson, null, round, "noMoves");
             }
 
             var effective = EffectiveLanguage(language, transcription.NotationLanguage);
             var resolution = ScoresheetResolver.Resolve(transcription.Scanned(),
                 new ScoresheetResolver.Options(ScoresheetNotation.Find(effective)));
-            var outcome = new ReadOutcome(transcription, resolution, answer.Json, effective, round, null);
+            var outcome = new ReadOutcome(transcription, resolution, storedJson, effective, round, null);
             if (best == null || IsBetter(resolution, best.Resolution!)) best = outcome;
             if (resolution.StuckAt == null) return best with { Rounds = round };
 

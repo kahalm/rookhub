@@ -299,32 +299,58 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(ScoresheetScanStatus.Pending, (await _db.ScoresheetScans.SingleAsync()).Status);
     }
 
-    /// <summary>Die Korrekturseite zeigt je Eintrag einen Ausschnitt des Fotos — dafür reicht die Einlesung die
-    /// Kästen des Modells durch, am selben Index wie <c>Written</c>. Ein kaputter Kasten wird <c>null</c>, kein
-    /// leerer Ausschnitt.</summary>
+    /// <summary>Die Korrekturseite zeigt je Eintrag einen Ausschnitt des Fotos. Das Modell liefert die Kästen in
+    /// PIXELN des Bildes, das es bekam (hier das 40×30-Test-JPEG); die Einlesung hängt die Maße an die gespeicherte
+    /// Antwort, und die Korrekturseite bekommt 0..1000 — am selben Index wie <c>Written</c>.</summary>
     [Fact]
-    public async Task EditState_PassesTheBoxesPerEntry_AndDropsBrokenOnes()
+    public async Task EditState_ConvertsPixelBoxesToPromille_AndDropsBrokenOnes()
     {
         var u = await UserAsync();
         var json = JsonNode.Parse(Answer(Written))!;
         var moves = json["moves"]!.AsArray();
-        moves[0]!["box"] = new JsonArray(100, 50, 180, 80);
-        moves[1]!["box"] = new JsonArray(420, 90, 350, 60);      // Ecken vertauscht → sortiert
-        moves[2]!["box"] = new JsonArray(10, 20, 30);             // drei Werte → unbrauchbar
-        moves[3]!["box"] = new JsonArray(-5, 900, 40, 1200);      // über den Rand → geklemmt
-        moves[4]!["box"] = new JsonArray(300, 300, 300, 330);     // keine Breite → unbrauchbar
+        moves[0]!["box"] = new JsonArray(4, 3, 8, 6);            // → 100,100,200,200
+        moves[1]!["box"] = new JsonArray(20, 15, 10, 9);         // Ecken vertauscht → sortiert
+        moves[2]!["box"] = new JsonArray(10, 20, 30);            // drei Werte → unbrauchbar
+        moves[3]!["box"] = new JsonArray(4, 3, 400, 6);          // ragt weit aus dem Bild → anderes Bild, verworfen
+        moves[4]!["box"] = new JsonArray(10, 10, 10, 12);        // keine Breite → unbrauchbar
         _vision.Answers.Enqueue(new(json.ToJsonString(), null));
         var scan = await UploadAndProcessAsync(u.Id);
 
         var state = (await _service.EditStateAsync(u.Id, scan.SavedGameId!.Value))!;
 
         Assert.Equal(state.Written.Count, state.Boxes.Count);
-        Assert.Equal(new[] { 100, 50, 180, 80 }, state.Boxes[0]);
-        Assert.Equal(new[] { 350, 60, 420, 90 }, state.Boxes[1]);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[0]);
+        Assert.Equal(new[] { 250, 300, 500, 500 }, state.Boxes[1]);
         Assert.Null(state.Boxes[2]);
-        Assert.Equal(new[] { 0, 900, 40, 1000 }, state.Boxes[3]);
+        Assert.Null(state.Boxes[3]);
         Assert.Null(state.Boxes[4]);
-        Assert.Null(state.Boxes[5]);                              // ohne Kasten (ältere Einlesung)
+        Assert.Null(state.Boxes[5]);                              // ohne Kasten
+        var stored = JsonNode.Parse((await _db.ScoresheetScans.SingleAsync()).TranscriptionJson!)!;
+        Assert.Equal(40, (int)stored["imageWidth"]!);
+        Assert.Equal(30, (int)stored["imageHeight"]!);
+    }
+
+    /// <summary>Einlesungen von 0.550.0 haben keine Bildmaße: 0..1000 wird übernommen — greift aber ein Kasten über
+    /// 1000 hinaus, waren es Pixel eines unbekannten Bildes (Dev, y bis 1790), und alle Kästen fallen weg.</summary>
+    [Fact]
+    public void NormalizedBoxes_WithoutImageSize_TrustsPromilleOnly()
+    {
+        ScoresheetTranscription T(params int[][] boxes) => new()
+        {
+            Moves = boxes.Select(b => new ScoresheetTranscription.Entry { Written = "e4", Box = b.ToList() }).ToList(),
+        };
+        Assert.Equal(new[] { 100, 50, 180, 80 }, T(new[] { 100, 50, 180, 80 }, new[] { 400, 60, 470, 90 }).NormalizedBoxes()[0]);
+        Assert.All(T(new[] { 305, 470, 440, 540 }, new[] { 305, 1700, 440, 1790 }).NormalizedBoxes(), b => Assert.Null(b));
+    }
+
+    [Fact]
+    public void Prompts_NameThePhotoSize_ForThePixelBoxes()
+    {
+        Assert.Contains("1500 × 2000 pixels", ScoresheetPrompt.FirstRead("de", (1500, 2000)));
+        Assert.DoesNotContain("pixels", ScoresheetPrompt.FirstRead("de"));
+        var repair = ScoresheetPrompt.Repair("de", "{}", new[] { "e4" }, 1, new ScannedPly("e5", "e5"),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", new[] { "e5" }, (1500, 2000));
+        Assert.Contains("1500 × 2000 pixels", repair);
     }
 
     [Fact]
@@ -333,8 +359,8 @@ public class ScoresheetScanServiceTests : IDisposable
         var items = ScoresheetPrompt.Schema()["properties"].GetProperty("moves").GetProperty("items");
         Assert.Equal("array", items.GetProperty("properties").GetProperty("box").GetProperty("type").GetString());
         Assert.Contains("box", items.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
-        Assert.Contains("0..1000", ScoresheetPrompt.System);
-        Assert.Contains("0..1000", ScoresheetPrompt.TranscribeSystem);
+        Assert.Contains("PIXELS of the photo", ScoresheetPrompt.System);
+        Assert.Contains("PIXELS of the photo", ScoresheetPrompt.TranscribeSystem);
     }
 
     [Fact]
