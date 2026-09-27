@@ -3272,8 +3272,10 @@ Kinderseite" unter REST API.
   +20 je Puzzle (5 Puzzles je 100 Elo), Anker wie RookHub — T1 nach 10 Puzzles = Ø Rating des ersten Fehlers der
   letzten 10 Läufe, T2 nach 25 = Ø Höchst-Rating (sauber gelöst) der letzten 5, danach wieder +20; NIE flacher als die
   Grundkurve (700 → 900 → 1200), keine steile Erst-Lauf-Kurve. Wer weit kommt, bekommt also steilere Läufe. Drei Herzen;
-  ein Fehler oder Tipp kostet eins, höchstens eins je Aufgabe, und das Kind löst die Aufgabe trotzdem zu Ende (dafür
-  meldet `KidsPuzzleComponent` jeden Fehler sofort per `mistake`). Das letzte Herz beendet den Lauf nach
+  ein Fehler kostet eins, ein Tipp erst ab dem ZWEITEN in derselben Aufgabe (`ENDLESS_FREE_HINTS` = 1, Wunsch 2026-09-27 —
+  der erste lässt nur die Figur leuchten), höchstens eins je Aufgabe, und das Kind löst die Aufgabe trotzdem zu Ende
+  (dafür meldet `KidsPuzzleComponent` jeden falschen Zug sofort per `mistake` und jeden Tipp per `hinted` mit seiner Zahl
+  in der Aufgabe; für die Sterne der Stufen zählt weiter jeder Tipp). Das letzte Herz beendet den Lauf nach
   `WRONG_HOLD_MS`. Läufe + Rekord liegen NUR im Browser (`KidsEndlessStore`, `rh-kids-endless-v1`, letzte 20) — nicht im
   Konto. Die PUZZLES holt `KidsEndlessService` in Blöcken zu 20 (Nachladen bei < 5): je Fenster Zufalls-Sprung in den
   Id-Raum, die nächsten 12 des Fensters, das erste kindgerechte (≤ 3 eigene Züge, Qualitätsgrenzen der Leiter, ohne

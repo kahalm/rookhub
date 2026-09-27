@@ -20,6 +20,8 @@ export const ENDLESS_BLOCK = 20;
 /** Nachladen, wenn nur noch so viele in der Schlange sind. */
 export const ENDLESS_REFILL_AT = 5;
 export const ENDLESS_LIVES = 3;
+/** So viele Tipps je Aufgabe kosten kein Herz — erst der naechste (der zweite zeigt den ganzen Zug; Wunsch 2026-09-27). */
+export const ENDLESS_FREE_HINTS = 1;
 /** Laeufe, aus denen T1 (erster Fehler) gemittelt wird. */
 export const ENDLESS_T1_RUNS = 10;
 /** Laeufe, aus denen T2 (Hoechst-Rating) gemittelt wird. */

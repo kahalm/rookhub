@@ -53,6 +53,19 @@ describe('EndlessPlayComponent', () => {
     expect(c.current()?.rating).toBe(720);
   });
 
+  it('der erste Tipp je Aufgabe ist frei, der zweite kostet ein Herz', () => {
+    const c = create();
+    c.onHint(1);
+    expect(c.lives()).toBe(3);
+    c.onHint(2);
+    expect(c.lives()).toBe(2);
+    c.onHint(3);                         // hoechstens ein Herz je Aufgabe
+    expect(c.lives()).toBe(2);
+    c.onSolved(); c.onNext();
+    c.onHint(1);                         // neue Aufgabe: wieder frei
+    expect(c.lives()).toBe(2);
+  });
+
   it('drei Herzen weg: nach der Pause vorbei, Lauf mit erstem Fehler und bestem sauberen Rating gemerkt', fakeAsync(() => {
     const c = create();
     c.onSolved(); c.onNext();            // 700 sauber

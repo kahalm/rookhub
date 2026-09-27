@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsEndlessPuzzle } from '../../core/kids-api.service';
 import {
-  ENDLESS_BLOCK, ENDLESS_LIVES, ENDLESS_REFILL_AT, EndlessThresholds, endlessThresholds, endlessWindows,
+  ENDLESS_BLOCK, ENDLESS_FREE_HINTS, ENDLESS_LIVES, ENDLESS_REFILL_AT, EndlessThresholds, endlessThresholds, endlessWindows,
 } from '../../core/kids-endless';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
@@ -12,8 +12,8 @@ import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.com
 
 /**
  * Endlos-Modus: Aufgabe um Aufgabe, jede ein bisschen schwerer (Kurve in `kids-endless.ts`), bis die drei
- * Herzen weg sind. Ein Fehler oder Tipp kostet ein Herz — hoechstens eins je Aufgabe, und das Kind loest die
- * Aufgabe trotzdem zu Ende (wie in den Stufen). Die Puzzles kommen in Bloecken vom Server; die Kurve des
+ * Herzen weg sind. Ein Fehler kostet ein Herz, ein Tipp erst ab dem zweiten in derselben Aufgabe — hoechstens ein
+ * Herz je Aufgabe, und das Kind loest die Aufgabe trotzdem zu Ende (wie in den Stufen). Die Puzzles kommen in Bloecken vom Server; die Kurve des
  * Laufs steht beim Start fest (aus den bisherigen Laeufen).
  */
 @Component({
@@ -52,7 +52,7 @@ import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.com
       <p class="info">{{ 'kids.loadError' | translate }}</p>
       <p class="info"><button type="button" class="btn" (click)="start()">↻ {{ 'kids.endless.again' | translate }}</button></p>
     } @else if (task(); as t) {
-      <kid-puzzle [task]="t" (mistake)="onMistake()" (solved)="onSolved()" (next)="onNext()">
+      <kid-puzzle [task]="t" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()" (next)="onNext()">
         <div kidTask class="side-text">
           <p class="task">{{ 'kids.endless.task' | translate }}</p>
           @if (store.best() > 0) { <p class="best">🏆 {{ 'kids.endless.best' | translate: { count: store.best() } }}</p> }
@@ -148,7 +148,12 @@ export class EndlessPlayComponent {
     this.fetch();
   }
 
-  /** Erster Fehler oder Tipp in dieser Aufgabe: ein Herz weg. Beim letzten ist der Lauf nach der Pause vorbei. */
+  /** Der erste Tipp je Aufgabe ist frei, ab dem zweiten kostet er wie ein Fehler. */
+  onHint(count: number): void {
+    if (count > ENDLESS_FREE_HINTS) this.onMistake();
+  }
+
+  /** Erster Fehler (oder bezahlter Tipp) in dieser Aufgabe: ein Herz weg. Beim letzten ist der Lauf nach der Pause vorbei. */
   onMistake(): void {
     const puzzle = this.current();
     if (this.missedThis || this.over() || !puzzle) return;

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.566.1", date: "2026-09-27", changes: [
+    { en: "KidHub endless mode: the first hint in a puzzle is free (it only lights up the piece); only the second hint, which shows the whole move, costs a heart.", de: "KidHub-Endlos-Modus: Der erste Tipp in einer Aufgabe ist frei (er lässt nur die Figur leuchten); erst der zweite, der den ganzen Zug zeigt, kostet ein Herz." },
+  ] },
   { version: "0.566.0", date: "2026-09-27", changes: [
     { en: "KidHub has an endless mode: puzzle after puzzle, each a little harder, until the three hearts are gone. It starts very gently (rating 700, only 100 points harder every five puzzles) and adapts like RookHub’s endless mode — children who get far get steeper runs next time, but it never gets steeper than that for beginners. A mistake or a hint costs one heart (at most one per puzzle), and the puzzle is still finished. The start page shows the record.", de: "KidHub hat einen Endlos-Modus: Aufgabe um Aufgabe, jede etwas schwerer, bis die drei Herzen weg sind. Er fängt sehr sanft an (Rating 700, nur alle fünf Aufgaben 100 Punkte schwerer) und passt sich an wie RookHubs Endlos-Modus — wer weit kommt, bekommt beim nächsten Mal steilere Läufe, flacher als der Anfang wird es nie. Ein Fehler oder Tipp kostet ein Herz (höchstens eins je Aufgabe), die Aufgabe wird trotzdem fertig gelöst. Die Startseite zeigt den Rekord." },
   ] },

@@ -43,7 +43,11 @@ describe('KidsPuzzleComponent', () => {
     const f = create(mate1);
     const c = f.componentInstance;
     const solved: number[] = [];
+    const wrong: number[] = [];
+    const hints: number[] = [];
     c.solved.subscribe(e => solved.push(e.mistakes));
+    c.mistake.subscribe(() => wrong.push(1));
+    c.hinted.subscribe(n => hints.push(n));
     tick(SETUP_DELAY_MS);
 
     const destsBefore = c.dests();
@@ -57,6 +61,9 @@ describe('KidsPuzzleComponent', () => {
     expect(c.shapes()).toEqual([{ orig: 'b8' as Key, brush: 'yellow' }]);
     c.showHint();
     expect(c.shapes()).toEqual([{ orig: 'b8' as Key, dest: 'h8' as Key, brush: 'green' }]);
+    // Tipps melden sich getrennt vom falschen Zug, mit ihrer Zahl — der Endlos-Modus laesst den ersten frei.
+    expect(wrong.length).toBe(1);
+    expect(hints).toEqual([1, 2]);
 
     c.onMove(move('b8', 'h8'));
     expect(c.status()).toBe('solved');

@@ -159,8 +159,10 @@ export class KidsPuzzleComponent {
   readonly solved = output<{ mistakes: number }>();
   /** Das Kind will weiter. */
   readonly next = output<void>();
-  /** Ein Fehler (falscher Zug oder Tipp) — sofort, nicht erst beim Loesen; der Endlos-Modus zieht dafuer ein Herz ab. */
+  /** Ein falscher Zug — sofort, nicht erst beim Loesen; der Endlos-Modus zieht dafuer ein Herz ab. */
   readonly mistake = output<void>();
+  /** Ein Tipp — mit der Zahl der Tipps in DIESER Aufgabe (1, 2, …); ob er etwas kostet, entscheidet der Modus. */
+  readonly hinted = output<number>();
 
   readonly fen = signal('8/8/8/8/8/8/8/8 w - - 0 1');
   readonly orientation = signal<'white' | 'black'>('white');
@@ -183,6 +185,7 @@ export class KidsPuzzleComponent {
   private solver: KidsSolver | null = null;
   private mistakes = 0;
   private hintLevel = 0;
+  private hintsUsed = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   constructor() {
@@ -198,6 +201,7 @@ export class KidsPuzzleComponent {
     this.solver = new KidsSolver(task);
     this.mistakes = 0;
     this.hintLevel = 0;
+    this.hintsUsed = 0;
     this.holding.set(false);
     this.finalComment.set(null);
     this.shapes.set([]);
@@ -290,12 +294,13 @@ export class KidsPuzzleComponent {
     });
   }
 
-  /** Erster Druck: die Figur leuchtet. Zweiter Druck: der Pfeil zeigt den Zug. Jeder Tipp zaehlt als Fehler. */
+  /** Erster Druck: die Figur leuchtet. Zweiter Druck: der Pfeil zeigt den Zug. Fuer die Sterne zaehlt jeder Tipp als
+   *  Fehler; im Endlos-Modus ist der erste je Aufgabe frei (`ENDLESS_FREE_HINTS`). */
   showHint(): void {
     const hint = this.solver?.hint();
     if (!hint) return;
     this.mistakes++;
-    this.mistake.emit();
+    this.hinted.emit(++this.hintsUsed);
     this.hintLevel = Math.min(this.hintLevel + 1, 2);
     this.shapes.set(this.hintLevel === 1
       ? [{ orig: hint.from as Key, brush: 'yellow' }]
