@@ -260,6 +260,121 @@ public class ScoresheetResolverTests
         Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
     }
 
+    // ── Geschlagene Figur MIT Feld („LxLe7") und genannte Herkunft („Ta-e1") ─────────────────
+
+    /// <summary>
+    /// Die Schreibweise, die nennt, WAS geschlagen wird — samt Zielfeld: „LxLe7", „DxLe7", „dxSe4". Gemeldet
+    /// 2026-09-27 (Partie 32, 11 unsichere Stellen): nach dem Schlagzeichen blieb „LLe7" stehen, passte zu keinem
+    /// Zug, und jeder solche Schlag wurde zurechtgebogen und markiert.
+    /// </summary>
+    [Fact]
+    public void Resolve_CaptureNamingTheCapturedPiece_IsReadAsWritten_NotBent()
+    {
+        // 1.d4 e6 2.Lg5 Le7 3.LxLe7 DxLe7 4.Sc3 d5 5.Sf3 Sf6 6.Se5 Se4 7.SxSe4 dxSe4
+        var sheet = WrittenOnly(new[] { "d4", "e6", "Lg5", "Le7", "LxLe7", "DxLe7", "Sc3", "d5", "Sf3", "Sf6",
+            "Se5", "Se4", "SxSe4", "dxSe4" });
+        var r = ScoresheetResolver.Resolve(sheet, German);
+
+        Assert.Null(r.StuckAt);
+        Assert.Equal(new[] { "d4", "e6", "Bg5", "Be7", "Bxe7", "Qxe7", "Nc3", "d5", "Nf3", "Nf6",
+            "Ne5", "Ne4", "Nxe4", "dxe4" }, r.Plies.Select(p => p.San));
+        Assert.All(r.Plies, p => Assert.Equal(ScoresheetResolver.Matches.Written, p.Match));
+        Assert.DoesNotContain(r.Plies, p => p.Uncertain);
+    }
+
+    /// <summary>
+    /// Die Herkunft steht da („Ta-e1", beide Türme können nach e1): sie entscheidet. Vorher passte „Tae1" locker
+    /// auch zu Rfe1, beide galten als gleich gut, und die eindeutig notierte Stelle musste bestätigt werden.
+    /// </summary>
+    [Fact]
+    public void Resolve_WrittenOrigin_Decides_WhenBothRooksCouldGo()
+    {
+        var sheet = WrittenOnly(new[] { "e4", "e5", "Sf3", "Sc6", "Lc4", "Lc5", "0-0", "Sf6", "Sc3", "d6",
+            "d3", "0-0", "Le3", "Le6", "Dd2", "Dd7", "Ta-e1", "Tf-e8" });
+        var r = ScoresheetResolver.Resolve(sheet, German);
+
+        Assert.Null(r.StuckAt);
+        Assert.Equal(new[] { "Rae1", "Rfe8" }, r.Plies.Skip(16).Select(p => p.San));
+        Assert.DoesNotContain(r.Plies.Skip(16), p => p.Uncertain);
+    }
+
+    /// <summary>
+    /// Mehr Herkunft als nötig („Sbd2", obwohl nur EIN Springer nach d2 kann): so steht es da, und es stimmt —
+    /// das ist ein geschriebener Zug, kein zurechtgebogener. Eine Herkunft, die NICHT stimmt, passt dagegen nicht.
+    /// </summary>
+    [Fact]
+    public void Score_OriginThatFitsTheMove_IsWritten_OneThatDoesNot_IsNot()
+    {
+        var de = new ScoresheetResolver.Options(ScoresheetNotation.Find("de"));
+
+        var fits = ScoresheetResolver.Score(new ScannedPly("Sbd2", null), "Nd2", "b1d2", de);
+        Assert.Equal(ScoresheetResolver.Matches.Written, fits.Match);
+
+        var wrongFile = ScoresheetResolver.Score(new ScannedPly("Ta-e1", null), "Rfe1", "f1e1", de);
+        Assert.NotEqual(ScoresheetResolver.Matches.Written, wrongFile.Match);
+        Assert.NotEqual(ScoresheetResolver.Matches.Loose, wrongFile.Match);
+    }
+
+    /// <summary>
+    /// Die genannte geschlagene Figur ist eine PRÜFUNG, nicht nur Ballast: „LxLe7" — und auf e7 steht wirklich ein
+    /// Läufer — ist ein stimmiger, geschriebener Zug; „LxSe7" auf denselben Läufer widerspricht sich (Aufschlag,
+    /// zurechtgebogen); und ein Zug, der gar nichts schlägt, passt zu „LxLe7" genauso wenig.
+    /// </summary>
+    [Fact]
+    public void Score_NamedCapturedPiece_ChecksTheReading()
+    {
+        var de = new ScoresheetResolver.Options(ScoresheetNotation.Find("de"));
+        // 1.d4 e6 2.Lg5 Le7 — Weiß am Zug, auf e7 steht der schwarze Läufer.
+        var squares = ScoresheetResolver.Squares("rnbqk1nr/ppppbppp/4p3/6B1/3P4/8/PPP1PPPP/RN1QKBNR w KQkq - 2 3");
+
+        var fits = ScoresheetResolver.Score(new ScannedPly("LxLe7", null), "Bxe7", "g5e7", de, squares);
+        Assert.Equal((0.0, ScoresheetResolver.Matches.Written), fits);
+
+        var wrongPiece = ScoresheetResolver.Score(new ScannedPly("LxSe7", null), "Bxe7", "g5e7", de, squares);
+        Assert.Equal(ScoresheetResolver.Matches.Fuzzy, wrongPiece.Match);
+        Assert.True(wrongPiece.Cost >= 0.8);
+
+        // Lf4 schlägt nichts — „LxLf4" passt dazu nicht wie ein geschriebener Zug.
+        var noCapture = ScoresheetResolver.Score(new ScannedPly("LxLf4", null), "Bf4", "g5f4", de, squares);
+        Assert.NotEqual(ScoresheetResolver.Matches.Written, noCapture.Match);
+    }
+
+    /// <summary>Widerspricht die genannte Figur dem Brett, bleibt der Zug lesbar — aber die Stelle wird markiert.</summary>
+    [Fact]
+    public void Resolve_NamedCapturedPieceThatIsNotThere_IsMarked()
+    {
+        var sheet = WrittenOnly(new[] { "d4", "e6", "Lg5", "Le7", "LxSe7", "DxLe7" });
+        var r = ScoresheetResolver.Resolve(sheet, German);
+
+        Assert.Equal(new[] { "Bxe7", "Qxe7" }, r.Plies.Skip(4).Select(p => p.San));
+        Assert.True(r.Plies[4].Uncertain);
+        Assert.False(r.Plies[5].Uncertain);
+    }
+
+    [Fact]
+    public void NamedCapture_ReadsThePieceInTheSheetsLanguage()
+    {
+        var de = ScoresheetNotation.Find("de");
+        Assert.Equal('B', ScoresheetNotation.NamedCapture("LxLe7", de)[0].Piece);
+        Assert.Equal('P', ScoresheetNotation.NamedCapture("SxBe5", de)[0].Piece);      // deutsch B = Bauer
+        Assert.Equal('N', ScoresheetNotation.NamedCapture("dxSe4", de)[0].Piece);
+        Assert.Equal('B', ScoresheetNotation.NamedCapture("NxBe5", null)[0].Piece);    // englisch B = Läufer
+        Assert.Empty(ScoresheetNotation.NamedCapture("Lxe7", de));
+        Assert.Empty(ScoresheetNotation.NamedCapture("LxS", de));                      // Kurzschrift: ShortCaptures
+    }
+
+    [Theory]
+    [InlineData("LxLe7", "Le7")]
+    [InlineData("dxSe4", "de4")]
+    [InlineData("TxLd7+", "Td7")]
+    [InlineData("S:Be5", "Se5")]
+    [InlineData("Lxb5", "Lb5")]        // ein Feld direkt nach dem x bleibt unberührt
+    [InlineData("exd8D", "ed8D")]      // Umwandlung: kein Buchstabe VOR einem Feld
+    public void Clean_DropsTheCapturedPiece_ButNothingElse(string written, string cleaned)
+    {
+        Assert.Equal(cleaned, ScoresheetNotation.Clean(written));
+    }
+
     // ── Kurzschrift beim Schlagen („LxS", „SxB", „exd") ─────────────────
 
     /// <summary>Die alte bzw. Anfänger-Schreibweise: schlagende und geschlagene Figur ohne Zielfeld. Gemeldet

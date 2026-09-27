@@ -109,6 +109,12 @@ public static class ScoresheetResolver
     /// fehlende Zusatzangabe kostet 0,3, ein Lesefehler 2,5).</summary>
     private const double RivalMargin = 0.5;
 
+    /// <summary>
+    /// Aufschlag, wenn der Eintrag eine geschlagene Figur nennt, die auf dem Zielfeld nicht steht („LxLe7", dort steht
+    /// ein Springer). Mehr als <see cref="RivalMargin"/>: eine stimmige Lesart soll eine widersprüchliche schlagen.
+    /// </summary>
+    private const double CapturedPieceMismatchCost = 0.8;
+
     /// <summary>So viele Stellen bekommen höchstens Ausgänge berechnet (Rechenzeit-Deckel).</summary>
     public const int MaxBranchPoints = 40;
 
@@ -446,7 +452,16 @@ public static class ScoresheetResolver
         bool Same(string cand) => cand == key || cand == longKey || cand == longPiece
             // Umwandlung ohne Figur geschrieben („e8") — fast immer die Dame.
             || (key.Length == 3 && key[2] == 'Q' && cand == key[..2]);
-        bool Loose(string cand) => ScoresheetNotation.LooseKey(cand) == loose && cand.Length <= key.Length;
+        // Locker heißt: auf dem Formular FEHLT die Herkunft („Te1", beide Türme können hin) — dann entscheidet die
+        // Stellung. Steht eine da, zählt sie: vorher passte „Ta-e1" (→ Rae1) locker auch zu Rfe1, beide Lesarten
+        // galten als gleich gut, und eine eindeutig notierte Stelle musste bestätigt werden (Partie 32: 12.Ta-e1,
+        // 22.Tf-d1).
+        bool Loose(string cand) => ScoresheetNotation.LooseKey(cand) == loose && cand == ScoresheetNotation.LooseKey(cand);
+        // Eine genannte Herkunft, die zum Zug PASST, auch wenn die SAN sie nicht braucht („Sbd2" für Nd2, nur ein
+        // Springer kann hin): so steht es da, und es stimmt.
+        bool Origin(string cand) => cand.Length is 4 or 5 && piece.Length == 1 && cand[0] == piece[0]
+            && cand[^2..] == key[^2..] && uci.Length >= 4
+            && cand[1..^2].All(ch => ch is >= 'a' and <= 'h' ? ch == uci[0] : ch is >= '1' and <= '8' && ch == uci[1]);
 
         var english = new[] { ScoresheetNotation.Languages[0] };
         var sheet = options.Language;
@@ -459,13 +474,13 @@ public static class ScoresheetResolver
         // Stellung, nicht das Modell. Ist der Eintrag illegal, trägt die Deutung weiter (Beleg 01: „bxa4" → bxc4).
         foreach (var c in ScoresheetNotation.Candidates(ply.San, null))
         {
-            if (Same(c.Key)) Consider(0.1 + c.Cost, Matches.Exact);
+            if (Same(c.Key) || Origin(c.Key)) Consider(0.1 + c.Cost, Matches.Exact);
             else if (Loose(c.Key)) Consider(0.4 + c.Cost, Matches.Loose);
         }
         var writtenCands = ScoresheetNotation.Candidates(ply.Written, sheet, others);
         foreach (var c in writtenCands)
         {
-            if (Same(c.Key)) Consider(c.Cost, Matches.Written);
+            if (Same(c.Key) || Origin(c.Key)) Consider(c.Cost, Matches.Written);
             else if (Loose(c.Key)) Consider(0.3 + c.Cost, Matches.Loose);
         }
         foreach (var alt in ply.Alternatives ?? Array.Empty<string>())
@@ -486,7 +501,21 @@ public static class ScoresheetResolver
             foreach (var c in ScoresheetNotation.ShortCaptures(ply.Written, sheet, others))
                 if (Fits(c, cap)) Consider(0.2 + c.Cost, Matches.Written);
         }
-        if (best <= 0.5) return (best, match);
+
+        // Nennt der Eintrag die GESCHLAGENE Figur samt Feld („LxLe7"), prüft sie die Lesung: steht auf dem Zielfeld
+        // wirklich ein Läufer, ist der Eintrag in sich stimmig; steht dort etwas anderes (oder wird gar nicht
+        // geschlagen), widerspricht er sich — Aufschlag, und ein geschriebener Treffer gilt als zurechtgebogen, die
+        // Stelle wird also markiert. Bei einem verlesenen Feld gewinnt so unter den ähnlichen Lesarten die, die die
+        // genannte Figur schlägt. Ohne Brett (squares) bleibt die Angabe ungeprüft.
+        var named = ScoresheetNotation.NamedCapture(ply.Written, sheet, others);
+        if (named.Count == 0) named = ScoresheetNotation.NamedCapture(ply.San, null);
+        var contradicts = squares != null && named.Count > 0
+            && !(CaptureOf(squares, uci) is { } taken && named.Any(n => n.Piece == taken.Captured));
+        (double, string) Checked(double cost, string m) =>
+            !contradicts || double.IsPositiveInfinity(cost) ? (cost, m)
+            : (cost + CapturedPieceMismatchCost, m is Matches.Written or Matches.Exact ? Matches.Fuzzy : m);
+
+        if (best <= 0.5) return Checked(best, match);
 
         // Lesefehler: ein, zwei Zeichen daneben („Dc1" für De1, „Qxd4" für exd4).
         foreach (var c in ScoresheetNotation.Candidates(ply.San, null).Concat(writtenCands))
@@ -499,7 +528,7 @@ public static class ScoresheetResolver
             var similar = d == 1.0 && ScoresheetNotation.IsConfusable(c.Key, key);
             Consider(2.5 * d - (similar ? 0.5 : 0) + c.Cost, Matches.Fuzzy);
         }
-        return (best, match);
+        return Checked(best, match);
     }
 
     /// <summary>Das Brett einer FEN als 64 Felder (a8 = 0 … h1 = 63), FEN-Buchstaben, leer = <c>'\0'</c>.</summary>

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace RookHub.Api.Services;
 
@@ -205,6 +206,12 @@ public static class ScoresheetNotation
         if (castle is "0-0-0" or "O-O-O" or "000" or "OOO") return "O-O-O";
         if (castle is "0-0" or "O-O" or "00" or "OO") return "O-O";
 
+        // Die GESCHLAGENE Figur mit Zielfeld („LxLe7", „SxSe4", „dxSe4", „TxLd7+") — die ältere Schreibweise, die
+        // nennt, WAS geschlagen wird. Ein Buchstabe zwischen Schlagzeichen und Feld ist nie Teil der SAN: weg damit.
+        // Vorher blieb „LLe7" übrig, passte zu keinem Zug und jeder solche Schlag galt als zurechtgebogen (Partie 32:
+        // sechs von elf unsicheren Stellen). Die Kurzschrift OHNE Feld („LxS") liest ShortCaptures.
+        s = CapturedPiece.Replace(s, "$1");
+
         var sb = new StringBuilder(s.Length);
         foreach (var ch in s)
         {
@@ -229,6 +236,45 @@ public static class ScoresheetNotation
         // Schlagzeichen „x" (nicht die Linie!): ein x steht nie für eine Linie, Linien gehen nur bis h.
         t = t.Replace("x", "").Replace("X", "");
         return t;
+    }
+
+    /// <summary>Schlagzeichen, dann ein Buchstabe, dann ein Feld: der Buchstabe ist die geschlagene Figur.</summary>
+    private static readonly Regex CapturedPiece = new(@"([xX:×])\s*[A-Za-z](?=\s*[a-hA-H][1-8])", RegexOptions.Compiled);
+
+    /// <summary>Wie <see cref="CapturedPiece"/>, aber mit dem Buchstaben als Gruppe — zum Auswerten statt Wegwerfen.</summary>
+    private static readonly Regex NamedCapturePattern = new(@"[xX:×]\s*([A-Za-z])\s*[a-hA-H][1-8]", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Welche Figur der Eintrag als GESCHLAGEN nennt („LxLe7" → Läufer, „SxBe5" → deutsch Bauer, „BxNe4" → Springer),
+    /// als englischer Buchstabe (Q R B N, P = Bauer) je Sprache mit deren Aufschlag. Leer ohne diese Schreibweise.
+    /// <see cref="Clean"/> wirft den Buchstaben weg, damit der Zug als SAN passt; hier bleibt er als PRÜFUNG — der
+    /// Auflöser vergleicht ihn mit dem, was auf dem Zielfeld wirklich steht.
+    /// </summary>
+    public static List<(char Piece, double Cost)> NamedCapture(string? written, Language? primary,
+        IEnumerable<Language>? others = null, double otherCost = 0.6)
+    {
+        if (string.IsNullOrWhiteSpace(written)) return new();
+        var m = NamedCapturePattern.Match(written);
+        if (!m.Success) return new();
+        var letter = m.Groups[1].Value;
+
+        var langs = new List<(Language Lang, double Cost)> { (primary ?? Languages[0], 0) };
+        foreach (var o in others ?? Array.Empty<Language>())
+            if (langs.All(l => l.Lang.Code != o.Code)) langs.Add((o, otherCost));
+
+        var result = new Dictionary<char, double>();
+        void Add(char piece, double cost)
+        {
+            if (!result.TryGetValue(piece, out var old) || cost < old) result[piece] = cost;
+        }
+        foreach (var (lang, cost) in langs)
+        {
+            foreach (var (code, en) in PieceCodes(lang))
+                if (en != 'K' && string.Equals(letter, code, StringComparison.OrdinalIgnoreCase)) Add(en, cost);
+            var pawn = lang.Code is "de" or "sv" ? "B" : "P";
+            if (string.Equals(letter, pawn, StringComparison.OrdinalIgnoreCase)) Add('P', cost);
+        }
+        return result.Select(kv => (kv.Key, kv.Value)).OrderBy(x => x.Value).ToList();
     }
 
     /// <summary>Führenden Figurenbuchstaben einer Sprache abtrennen (längster Code zuerst, „Кр" vor „К").</summary>
