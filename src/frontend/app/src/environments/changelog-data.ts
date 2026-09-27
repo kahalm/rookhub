@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.567.1", date: "2026-09-27", changes: [
+    { en: "Android app: jumping to the tournament site now opens it inside the app without the address bar at the top — the app now trusts the tournament site as its own. Takes effect with the next app version (a new APK has to be installed); until then the site keeps opening with the bar.", de: "Android-App: Der Sprung auf die Turnierseite öffnet sie jetzt in der App ohne die Adressleiste oben — die App vertraut der Turnierseite jetzt wie ihrer eigenen. Wirkt ab der nächsten App-Version (eine neue APK muss installiert werden); bis dahin öffnet sie weiter mit Leiste." },
+  ] },
   { version: "0.567.0", date: "2026-09-27", changes: [
     { en: "Similar master games under your game: every game can now simply be viewed – the eye button opens it with its annotations in the replay dialog, in your language where a translation exists (otherwise the original text), without any engine time. Signed in only, like requesting.", de: "Ähnliche Meisterpartien unter deiner Partie: jede Partie lässt sich jetzt auch einfach anschauen – der Augen-Knopf öffnet sie mit ihren Anmerkungen im Nachspiel-Dialog, in deiner Sprache, wo es eine Übersetzung gibt (sonst im Original), ganz ohne Rechenzeit. Nur angemeldet, wie das Anfordern." },
     { en: "A requested master game no longer jumps straight to “Play”: until the engine has analysed every position, the row shows “Being analysed … n %” and checks again every 10 seconds; only then can you replay it. If the analysis failed, the button offers to request it again.", de: "Eine angeforderte Meisterpartie springt nicht mehr sofort auf „Spielen“: bis die Engine jede Stellung gerechnet hat, zeigt die Zeile „Wird gerechnet … n %“ und fragt alle 10 Sekunden nach; erst dann lässt sie sich nachspielen. Ist die Rechnung gescheitert, bietet der Knopf „Erneut anfordern“ an." },

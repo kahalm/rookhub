@@ -16,6 +16,14 @@ mit demselben Keystore; `src/frontend/app/public/.well-known/assetlinks.json` li
 beide Package-Ids mit demselben SHA-256-Fingerprint, sodass die Datei sowohl von
 Prod- als auch Dev-Host serviert beide Apps freigibt.
 
+**Turnierseite in der App ohne Adressleiste** (seit App 1.1.0 / Versionscode 2): die TWA vertraut
+nur Ursprüngen, die sie kennt — ein Sprung auf die Turnierseite (`tournament.oberschmid.homes`,
+Dev `turnier-dev.oberschmid.homes`) lief vorher als Custom Tab mit URL-Leiste. Deshalb stehen die
+Turnier-Hosts in `additionalTrustedOrigins`. Die zweite Hälfte liefert die Turnierseite selbst:
+ihr Build kopiert `public/` mit (angular.json, Projekt `turnier`), also dieselbe
+`/.well-known/assetlinks.json`. **Wer `public/` aus den Turnier-Assets nimmt, bekommt die Leiste
+zurück.** Wirkt erst mit einer neu gebauten APK — die Webseite allein ändert daran nichts.
+
 ## Voraussetzungen (einmalig)
 1. **Upload-Keystore erstellen** (geheim halten, NICHT committen):
    ```bash

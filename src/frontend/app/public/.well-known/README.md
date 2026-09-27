@@ -3,6 +3,10 @@
 Verknüpft die Android-**TWA** (Trusted Web Activity, Google Play) mit der Domain
 `rookhub.oberschmid.homes` und entfernt die Browser-URL-Leiste in der App.
 
+Dieselbe Datei liefert auch die **Turnierseite** aus (`tournament.oberschmid.homes`): ihr Build
+kopiert `public/` mit. Die App führt den Turnier-Host in `additionalTrustedOrigins`
+(`twa/twa-manifest.json`) — beides zusammen öffnet die Turnierseite in der App ohne Leiste.
+
 - Wird unter `https://rookhub.oberschmid.homes/.well-known/assetlinks.json` ausgeliefert
   (Angular kopiert `public/.well-known/**` ins Web-Root; nginx setzt `application/json`).
 - `package_name`: `homes.oberschmid.rookhub` (= Android `applicationId`, siehe TWA-Projekt).

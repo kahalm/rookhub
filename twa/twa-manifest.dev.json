@@ -17,8 +17,8 @@
   "startUrl": "/",
   "iconUrl": "https://rookhub-dev.oberschmid.homes/icons/icon-512.png",
   "maskableIconUrl": "https://rookhub-dev.oberschmid.homes/icons/icon-512-maskable.png",
-  "appVersionName": "1.0.0-dev",
-  "appVersionCode": 1,
+  "appVersionName": "1.1.0-dev",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://rookhub-dev.oberschmid.homes/manifest.webmanifest",
@@ -32,9 +32,9 @@
     "path": "./android.keystore",
     "alias": "rookhub"
   },
-  "appVersion": "1.0.0-dev",
+  "appVersion": "1.1.0-dev",
   "fingerprints": [],
-  "additionalTrustedOrigins": [],
+  "additionalTrustedOrigins": ["turnier-dev.oberschmid.homes"],
   "retainedBundles": [],
   "features": {}
 }
