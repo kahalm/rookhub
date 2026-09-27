@@ -317,8 +317,8 @@ public sealed class CommentTranslator
             - Keep the author's voice: an annotation is a person explaining a game, not a report.
             - Do not explain, summarise or improve. If a sentence is wrong, it stays wrong.
             - Keep one entry per input entry, with the same ply number.
-            - Never write the straight double quote character inside a text. For quotations use the
-              typographic quotation marks of the target language (German „…“, French «…», English “…”).
+            - Quotation marks: inside a text use ONLY {QuoteNote(to)}. Never write „ or “ or ”,
+              and never the straight double quote character.
             """;
         return subject switch
         {
@@ -348,6 +348,19 @@ public sealed class CommentTranslator
 
     /// <summary>Die Figurenbuchstaben sind sprachabhaengig — und das ist der Punkt, an dem eine
     /// woertliche Uebersetzung die Zuege unlesbar machen wuerde.</summary>
+    /// <summary>
+    /// Welche Anfuehrungszeichen das Modell benutzen soll — bewusst KEINE, die es mit dem geraden " verwechselt.
+    /// Mit „…“ im Auftrag schloss Qwen das Zitat trotzdem mit dem geraden Zeichen, und das beendet den JSON-String
+    /// (an vier Prod-Linien 0 von 4 Versuchen glatt); mit »…« waren es 8 von 8 (2026-09-27). Deutsch bekommt die
+    /// Buch-Form »…«, Englisch einfache Zeichen ‘…’ (ein gerades ' ist fuer JSON harmlos), der Rest «…».
+    /// </summary>
+    private static string QuoteNote(string to) => to switch
+    {
+        "de" => "the guillemets » and « (German: »like this«)",
+        "en" => "the single quotation marks ‘ and ’ (‘like this’)",
+        _ => "the guillemets « and » («like this»)",
+    };
+
     private static string FigurineNote(string to) => to switch
     {
         "de" => "German piece letters: K D T L S",

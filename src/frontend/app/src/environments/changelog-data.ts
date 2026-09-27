@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.555.1", date: "2026-09-27", changes: [
+    { en: "Translations: quotations now use guillemets (German »like this«, English ‘like this’, other languages «like this»). With „…“ the language model still closed quotations with a straight quote and cut the text off; with guillemets all previously failing course lines came through completely in every attempt.", de: "Übersetzungen: Zitate stehen jetzt in Guillemets (Deutsch »so«, Englisch ‘so’, andere Sprachen «so»). Mit „…“ schloss das Sprachmodell Zitate weiterhin mit dem geraden Anführungszeichen und schnitt den Text ab; mit Guillemets kamen alle vorher gescheiterten Kurs-Linien bei jedem Versuch vollständig durch." },
+  ] },
   { version: "0.555.0", date: "2026-09-27", changes: [
     { en: "Reading scoresheets: captures written in the short form — piece takes piece without the target square, such as “BxN”, “NxP”, “QxQ” or “exd”, the old notation that many beginners and children still use — are now understood and matched against the position. Before, such an entry was treated as a misreading and the game went wrong from there. On the reported scoresheet all 50 moves are now read correctly instead of about 30, with 2 to 4 marked instead of 17.", de: "Partieformular einlesen: Schlagzüge in Kurzschrift — schlagende und geschlagene Figur ohne Zielfeld, etwa „LxS“, „SxB“, „DxD“ oder „exd“, die alte Schreibweise, die viele Anfänger und Kinder noch benutzen — werden jetzt verstanden und mit der Stellung abgeglichen. Vorher galt so ein Eintrag als Lesefehler, und ab dort ging die Partie schief. Auf dem gemeldeten Formular sind jetzt alle 50 Züge richtig statt rund 30, markiert sind 2 bis 4 statt 17." },
   ] },

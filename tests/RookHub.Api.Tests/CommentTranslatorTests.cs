@@ -110,8 +110,8 @@ public class CommentTranslatorTests
             - Keep the author's voice: an annotation is a person explaining a game, not a report.
             - Do not explain, summarise or improve. If a sentence is wrong, it stays wrong.
             - Keep one entry per input entry, with the same ply number.
-            - Never write the straight double quote character inside a text. For quotations use the
-              typographic quotation marks of the target language (German „…“, French «…», English “…”).
+            - Quotation marks: inside a text use ONLY the guillemets » and « (German: »like this«). Never write „ or “ or ”,
+              and never the straight double quote character.
             """;
         Assert.Equal(expected, CommentTranslator.SystemPrompt("und", "de", TranslationSubject.Game));
         Assert.StartsWith(expected, CommentTranslator.SystemPrompt("en", "de", TranslationSubject.CourseLine)
@@ -213,5 +213,19 @@ public class CommentTranslatorTests
 
         Assert.Null(await Translator().TranslateAsync([(0, "Move")], "en", "de", TranslationSubject.CourseLine, 1));
         Assert.Single(_llm.Calls);
+    }
+
+    /// <summary>Welche Anfuehrungszeichen je Zielsprache verlangt werden — nie welche, die das Modell mit dem geraden "
+    /// verwechselt (siehe <c>CommentTranslator.QuoteNote</c>).</summary>
+    [Theory]
+    [InlineData("de", "»like this«")]
+    [InlineData("en", "‘like this’")]
+    [InlineData("fr", "«like this»")]
+    [InlineData("ru", "«like this»")]
+    public void Prompt_AnfuehrungszeichenJeSprache(string to, string expected)
+    {
+        var prompt = CommentTranslator.SystemPrompt("en", to, TranslationSubject.CourseLine);
+        Assert.Contains(expected, prompt);
+        Assert.Contains("Never write „ or “ or ”", prompt);
     }
 }

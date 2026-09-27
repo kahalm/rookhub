@@ -2400,7 +2400,9 @@ Regeln, die dabei nicht kippen duerfen:
   dahinter fehlen. Am 2026-09-27 auf Prod gemessen: jede fuenfte Kurs-Linie verworfen (fehlende Eintraege), und
   308 von 57 079 Bibliothekstexten mitten im Zitat abgeschnitten GESPEICHERT — bei Partien fing das nur die
   Laengenpruefung, und die nur, wenn viel fehlte. Deterministisch, keine Laune (Linie 54177 dreimal an derselben
-  Stelle). Zwei Riegel: der Auftrag verbietet das gerade `"` im Text (typografische Zeichen der Zielsprache), und
+  Stelle). Zwei Riegel: der Auftrag verlangt Anfuehrungszeichen, die das Modell NICHT mit dem geraden `"` verwechselt
+  (seit 0.555.1 `QuoteNote`: Deutsch »…«, Englisch ‘…’, sonst «…» — mit „…“ im Auftrag schloss Qwen trotzdem gerade:
+  an vier Prod-Linien 0 von 4 Versuchen glatt, mit »…« 8 von 8), und
   ein Ergebnis, das in einem offenen „…/«…/“… endet, das die Vorlage NICHT offen hat, ist ein Fehlschlag (die Vorlage
   darf offen sein: Chessable trennt Saetze auch mitten im Zitat auf zwei Zuege auf). Weil das Modell streut (an 54177
   ging einer von zwei Versuchen glatt), bekommt eine Fuhre mit abgeschnittenem Zitat oder fehlenden Eintraegen EINEN
