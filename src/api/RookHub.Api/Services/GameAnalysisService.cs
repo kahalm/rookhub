@@ -152,7 +152,7 @@ public class GameAnalysisService
     /// <c>null</c> = selbst eingeworfen.</param>
     /// <param name="origin"><see cref="GameAnalysisOrigin.SavedGame"/> fuer „Partie analysieren" an
     /// einer gespeicherten Partie: dort ist die Bewertung das Ergebnis, deshalb rechnet sie mit
-    /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (25) statt 20. Gedeckelt wird gemeinsam;
+    /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (30, fuenf Linien) in der Vertiefung statt 20. Gedeckelt wird gemeinsam;
     /// das Etikett entscheidet ausserdem, in welcher Liste die Analyse erscheint.</param>
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
         CancellationToken ct = default, int? libraryGameId = null,
@@ -170,7 +170,7 @@ public class GameAnalysisService
         {
             // „Partie analysieren" rechnet ZWEIMAL (seit 0.523.0, gewuenscht 2026-09-24): erst schnell (Tiefe 20, eine
             // Linie — Kurve, Genauigkeit und Fehler stehen nach wenigen Minuten), dann im Hintergrund die Vertiefung
-            // (Tiefe 25, fuenf Linien — Zweitbester fuer Great/Brilliant, Computer-Linien, gleichwertige Zuege).
+            // (Tiefe 30 seit 0.555.2, fuenf Linien — Zweitbester fuer Great/Brilliant, Computer-Linien, gleichwertige Zuege).
             var savedGame = origin == GameAnalysisOrigin.SavedGame;
             var dto = await CreateAsync(userId, new CreateGameAnalysisRequest
             {

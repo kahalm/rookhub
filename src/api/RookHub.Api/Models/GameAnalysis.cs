@@ -197,13 +197,16 @@ public static class GameAnalysisDefaults
     /// Tiefe fuer „Partie analysieren" an einer GESPEICHERTEN Partie (<see cref="GameAnalysisOrigin.SavedGame"/>).
     /// Anders als bei der Punktepartie ist hier die BEWERTUNG das Ergebnis: Kurve, Genauigkeit und
     /// Zug-Klassen haengen an den Zahlen, und ein Opfer, das die Engine erst zwei Zuege spaeter
-    /// versteht, steht bei 20 noch als Fehler in der Kurve. Deshalb tiefer als dort — aber 25 und
-    /// nicht 30 (so am 2026-09-23 eingefuehrt, am 2026-09-24 zurueckgenommen): bei fuenf Linien
-    /// kostet eine Stellung auf Tiefe 30 je Engine gut zwei Minuten, eine Partie mit 47 Stellungen
-    /// lief damit eine halbe Stunde, und fuer die Kurve reicht 25. Der Deckel
-    /// (<see cref="MaxOpenGuessGamesPerUser"/>) bleibt gemeinsam.
+    /// versteht, steht bei 20 noch als Fehler in der Kurve. Deshalb tiefer als dort.
+    ///
+    /// <para>Seit 0.523.0 ist das die Tiefe der VERTIEFUNG (<see cref="GameAnalysis.RefineDepth"/>, fuenf Linien), der
+    /// erste Durchgang rechnet schnell mit <see cref="SavedGameFastDepth"/>. Geschichte: 30 am 2026-09-23, 25 ab
+    /// 2026-09-24 (auf 30 mit fuenf Linien kostete eine Partie mit 47 Stellungen eine halbe Stunde, und damals
+    /// wartete man auf genau diese Rechnung), seit 0.555.2 wieder 30 (gewuenscht 2026-09-27): seit die Vertiefung
+    /// im Hintergrund laeuft, wartet niemand mehr auf sie — Kurve und Fehler stehen nach dem schnellen Durchgang.
+    /// Der Deckel (<see cref="MaxOpenGuessGamesPerUser"/>) bleibt gemeinsam.</para>
     /// </summary>
-    public const int SavedGameTargetDepth = 25;
+    public const int SavedGameTargetDepth = 30;
 
     /// <summary>So viele eingeworfene Partien darf ein Nutzer gleichzeitig offen haben. Der Deckel
     /// zaehlt <see cref="GameAnalysisOrigin.Guess"/> UND <see cref="GameAnalysisOrigin.SavedGame"/>

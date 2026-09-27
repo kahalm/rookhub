@@ -1159,7 +1159,7 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Equal(GameAnalysisDefaults.SavedGameFastDepth, head.TargetDepth);
         Assert.Equal(20, head.TargetDepth);
         Assert.Equal(1, head.MultiPv);
-        Assert.Equal(25, head.RefineDepth);
+        Assert.Equal(30, head.RefineDepth);   // gewuenscht 2026-09-27: schnell 20/1, danach voll 30/5
         Assert.Equal(5, head.RefineMultiPv);
 
         // Erster Durchgang: normale Auftraege, Tiefe 20, eine Linie.
@@ -1181,17 +1181,17 @@ public class GameAnalysisServiceTests : IDisposable
         _db.ChangeTracker.Clear();
         var refine = await OpenJobsOfAsync(id);
         Assert.Equal(GameAnalysisDefaults.MaxOpenRefineJobsPerGame, refine.Count);
-        Assert.All(refine, j => { Assert.True(j.Background); Assert.Equal(25, j.TargetDepth); Assert.Equal(5, j.MultiPv); });
+        Assert.All(refine, j => { Assert.True(j.Background); Assert.Equal(30, j.TargetDepth); Assert.Equal(5, j.MultiPv); });
 
         // Bis alles vertieft ist: die Ergebnisse ERSETZEN die des ersten Durchgangs.
         for (var round = 0; round < 5 && (await OpenJobsOfAsync(id)).Count > 0; round++)
         {
-            await FinishOpenJobsOfAsync(id, cp: 77, depth: 25);
+            await FinishOpenJobsOfAsync(id, cp: 77, depth: 30);
             await _svc.PumpOneAsync(id);
             _db.ChangeTracker.Clear();
         }
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
-        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(25, p.Depth); Assert.Contains("77", p.CandidatesJson); });
+        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(30, p.Depth); Assert.Contains("77", p.CandidatesJson); });
         head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
         Assert.NotNull(head.RefinedAt);
         Assert.Equal(GameAnalysisStatus.Done, head.Status);

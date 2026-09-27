@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.556.1", date: "2026-09-27", changes: [
+    { en: "“Analyse game”: the background refinement now goes to depth 30 with five lines (was 25). The quick first pass stays at depth 20 with one line – graph, accuracy and your mistakes are there after a few minutes as before; the deeper numbers replace them move by move afterwards.", de: "„Partie analysieren“: die Vertiefung im Hintergrund rechnet jetzt bis Tiefe 30 mit fünf Linien (vorher 25). Der schnelle erste Durchgang bleibt bei Tiefe 20 mit einer Linie – Kurve, Genauigkeit und deine Fehler stehen wie bisher nach wenigen Minuten, die tieferen Werte ersetzen sie danach Zug für Zug." },
+  ] },
   { version: "0.556.0", date: "2026-09-27", changes: [
     { en: "Tournament page: groups of the same event are now connected. Where chess-results lists several groups under “Tournament selection” — a rally with Group A, Group B, Girls and Rapid, or the Olympiad with Open and Women — a row of buttons at the top lets you switch between them, staying on the same tab. A group that hasn’t been fetched yet is fetched when you pick it. Tournaments fetched earlier show the row after their next update.", de: "Turnierseite: Gruppen derselben Veranstaltung sind jetzt verbunden. Wo chess-results unter „Turnierauswahl“ mehrere Gruppen nennt — eine Rallye mit Gruppe A, Gruppe B, Mädchen und Schnellschach oder die Olympiade mit Open und Women —, schaltet eine Knopfleiste oben zwischen ihnen um, auf demselben Reiter. Eine noch nicht geholte Gruppe wird beim Anklicken geholt. Früher geholte Turniere zeigen die Leiste nach ihrer nächsten Aktualisierung." },
   ] },

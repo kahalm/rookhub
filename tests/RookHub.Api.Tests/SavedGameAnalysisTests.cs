@@ -112,7 +112,7 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(20, analysis.TargetDepth);
         Assert.Equal(1, analysis.MultiPv);
         Assert.Equal(GameAnalysisDefaults.SavedGameTargetDepth, analysis.RefineDepth);
-        Assert.Equal(25, analysis.RefineDepth);
+        Assert.Equal(30, analysis.RefineDepth);
         Assert.Equal(GameAnalysisDefaults.MultiPv, analysis.RefineMultiPv);
         Assert.Equal("Anna – Bert", analysis.Title);
         Assert.Equal(owner.Id, analysis.UserId);

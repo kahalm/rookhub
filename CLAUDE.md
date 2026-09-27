@@ -572,8 +572,9 @@ geschrieben vom Modell auf eigener Hardware (`IsLocal`), im Muster des Roasts. R
 
 **Bewertungskurve aus der EIGENEN Analyse (0.512.0).** „Partie analysieren" (`/g/…`, Liste, Nachspiel-Dialog)
 wirft die Partie über denselben Weg wie die Punktepartie-Seite ein (`GameAnalysisService.CreateForGuessAsync`:
-Haus-Engine, fünf Linien, gemeinsamer Deckel — aber **Tiefe 25** statt 20, `GameAnalysisDefaults.SavedGameTargetDepth`
-(0.514.2 mit 30 eingeführt, seit 0.518.0 25 — auf 30 brauchte eine Partie mit 47 Stellungen eine halbe Stunde): hier ist die Bewertung das Ergebnis, und ein Opfer, das die Engine erst zwei Züge später versteht,
+Haus-Engine, fünf Linien, gemeinsamer Deckel — aber **Tiefe 30** statt 20, `GameAnalysisDefaults.SavedGameTargetDepth`
+(0.514.2 mit 30 eingeführt, 0.518.0 auf 25 — auf 30 brauchte eine Partie mit 47 Stellungen eine halbe Stunde —, seit 0.555.2 wieder 30, weil
+das inzwischen die Vertiefung im Hintergrund ist, siehe „Zwei Durchgänge"): hier ist die Bewertung das Ergebnis, und ein Opfer, das die Engine erst zwei Züge später versteht,
 stünde bei 20 als Fehler in der Kurve; eine schon vorhandene Analyse wird trotzdem wiederverwendet, auch eine
 flachere), aber mit eigenem Ursprung
 **`GameAnalysisOrigin.SavedGame`** — die Analyse gehört zur Partie und steht NICHT in „Eigene Analysen"
@@ -598,7 +599,7 @@ flachere), aber mit eigenem Ursprung
   `src/frontend/CLAUDE.md`.
 * **Zwei Durchgänge** (0.523.0, gewünscht 2026-09-24): „Partie analysieren" (`Origin.SavedGame`) rechnet ERST schnell
   (`SavedGameFastDepth` 20, `SavedGameFastMultiPv` 1 — Kurve, Genauigkeit und Fehler stehen nach Minuten, Status `done`),
-  DANN im Hintergrund die Vertiefung (`GameAnalysis.RefineDepth` = `SavedGameTargetDepth` 25, `RefineMultiPv` 5): jede
+  DANN im Hintergrund die Vertiefung (`GameAnalysis.RefineDepth` = `SavedGameTargetDepth` 30 seit 0.555.2, vorher 25, `RefineMultiPv` 5): jede
   Stellung wird neu gerechnet und ERSETZT (`GameAnalysisPosition.Refined`), am Ende `RefinedAt` + Genauigkeit neu.
   Regeln: (1) Vertiefungs-Aufträge sind `AnalysisJob.Background` — `PickNextForEngineAsync` nimmt sie erst, wenn kein
   normaler wartet (die warme Hashtabelle zählt nur innerhalb derselben Stufe); (2) je Partie höchstens
