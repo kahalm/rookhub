@@ -1324,6 +1324,7 @@
       "mine": "(a tiéd)",
       "withdraw": "Visszavonás",
       "request": "Fordítás erre: …",
+      "menu": "Fordítás kérése",
       "requested": "Fordítás kérve — a háttérben fut.",
       "joined": "Erre a nyelvre már vár egy kérés — a tiéd csatlakozik hozzá.",
       "requestFailed": "A fordítást nem sikerült kérni.",
@@ -1337,6 +1338,7 @@
         "queued": "vár · {{pos}}. hely",
         "waiting": "vár",
         "running": "fut · {{percent}} %",
+        "runningEta": "fut · {{percent}} % · még kb. {{eta}}",
         "paused": "szünetel eddig: {{time}}",
         "failed": "sikertelen"
       },

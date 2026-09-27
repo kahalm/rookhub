@@ -519,6 +519,7 @@
               (reviewLastClicked)="reviewLastPuzzle()"
               (loveLastClicked)="favoriteTracker.toggleLast()"
               [canWorksheetLast]="isLoggedIn"
+              [translateBookId]="inCourse && isLoggedIn ? courseBookId : null"
               (worksheetLastPicked)="sendLastToWorksheet($event)">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">

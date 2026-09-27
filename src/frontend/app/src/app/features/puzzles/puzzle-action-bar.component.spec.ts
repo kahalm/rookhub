@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
+import { CourseService } from '../courses/course.service';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 
 /**
@@ -55,6 +57,25 @@ describe('PuzzleActionBarComponent', () => {
 
     const full = openMenu(make({ hasLast: true, canLoveLast: true, showEndless: true }));
     expect(full.querySelectorAll('button[mat-menu-item]').length).toBe(4);
+  });
+
+  it('⋮-Menü: „Übersetzung anfordern" nur mit Kurs (translateBookId)', () => {
+    const without = openMenu(make({}));
+    expect(without.querySelector('.ctm-trigger')).toBeNull();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PuzzleActionBarComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getTranslations: () => of(null) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PuzzleActionBarComponent);
+    fixture.componentRef.setInput('translateBookId', 58);
+    fixture.detectChanges();
+    const panel = openMenu(fixture);
+    expect(panel.querySelector('.ctm-trigger')?.textContent).toContain('courses.translations.menu');
   });
 
   it('⋮-Menü-Einträge feuern die Outputs', () => {

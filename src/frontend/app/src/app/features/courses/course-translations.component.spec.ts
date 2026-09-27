@@ -7,7 +7,9 @@ import { Observable, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { CourseLanguageService } from './course-language.service';
-import { CourseTranslationsComponent, isOpenJob, jobPercent } from './course-translations.component';
+import {
+  CourseTranslationsComponent, EtaMinElapsedMs, isOpenJob, jobEtaMinutes, jobPercent, requestableLanguages,
+} from './course-translations.component';
 import { CourseService, CourseTranslationJob, CourseTranslations } from './course.service';
 
 const BOOK = 58;
@@ -217,5 +219,43 @@ describe('CourseTranslationsComponent', () => {
     expect(isOpenJob({ status: 'queued' })).toBeTrue();
     expect(isOpenJob({ status: 'running' })).toBeTrue();
     expect(isOpenJob({ status: 'done' })).toBeFalse();
+  });
+
+  describe('Restdauer (jobEtaMinutes)', () => {
+    const start = Date.parse('2026-09-27T12:00:00Z');
+    const running = (over: Partial<CourseTranslationJob> = {}) =>
+      job({ status: 'running', startedAt: '2026-09-27T12:00:00Z', linesTotal: 332, ...over });
+
+    it('rechnet aus dem Tempo DIESES Laufs: 20 Linien in 10 min → 312 übrig ≈ 156 min', () => {
+      expect(jobEtaMinutes(running({ linesDone: 18, linesFailed: 2 }), start + 10 * 60_000)).toBeCloseTo(156, 5);
+    });
+
+    it('keine Angabe bei zu dünner Grundlage, fertig, wartend oder ohne Start', () => {
+      expect(jobEtaMinutes(running({ linesDone: 9 }), start + 10 * 60_000)).toBeNull();          // < 10 Linien
+      expect(jobEtaMinutes(running({ linesDone: 50 }), start + EtaMinElapsedMs - 1)).toBeNull();  // < 1 min
+      expect(jobEtaMinutes(running({ linesDone: 332 }), start + 60 * 60_000)).toBeNull();          // nichts übrig
+      expect(jobEtaMinutes(job({ status: 'queued', linesDone: 50 }), start + 60 * 60_000)).toBeNull();
+      expect(jobEtaMinutes(running({ startedAt: null, linesDone: 50 }), start + 60 * 60_000)).toBeNull();
+    });
+
+    it('der Kasten hängt die Restdauer an „läuft"', () => {
+      const now = Date.now();
+      const started = new Date(now - 10 * 60_000).toISOString();
+      const { c } = setup({ answers: [overview({ jobs: [running({ startedAt: started, linesDone: 20 })] })] });
+      const tr = TestBed.inject(TranslateService);
+      const spy = spyOn(tr, 'instant').and.callThrough();
+      c.statusText(c.openJobs()[0]);
+      const call = spy.calls.all().find(x => x.args[0] === 'courses.translations.status.runningEta');
+      expect(call).toBeTruthy();
+      expect((call!.args[1] as { percent: number }).percent).toBe(6);
+    });
+  });
+
+  it('requestableLanguages: ohne Quelle, ohne Vollständige, ohne Offene', () => {
+    const langs = [{ code: 'en', label: 'English' }, { code: 'de', label: 'Deutsch' }, { code: 'hr', label: 'Hrvatski' },
+      { code: 'fr', label: 'Français' }, { code: 'it', label: 'Italiano' }];
+    const o = overview({ jobs: [job({ language: 'fr', status: 'running' })] });
+    expect(requestableLanguages(o, langs).map(l => l.code)).toEqual(['de', 'it']);
+    expect(requestableLanguages(null, langs)).toEqual([]);
   });
 });

@@ -16,6 +16,7 @@ import { LocaleService } from '../../core/locale.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { formatQuietUntil } from '../games/quiet-hours.util';
+import { formatEta } from '../../shared/eta.util';
 import { languageName } from './course-lang-picker.component';
 import { CourseLanguageService } from './course-language.service';
 import { languagesFromOverview } from './course-language.util';
@@ -30,6 +31,75 @@ export function isOpenJob(job: Pick<CourseTranslationJob, 'status'>): boolean {
 export function jobPercent(job: Pick<CourseTranslationJob, 'linesTotal' | 'linesDone' | 'linesFailed'>): number {
   if (!job.linesTotal || job.linesTotal <= 0) return 0;
   return Math.max(0, Math.min(100, Math.round(100 * (job.linesDone + job.linesFailed) / job.linesTotal)));
+}
+
+/** Unter so vielen abgearbeiteten Linien gibt es keine Restdauer — der Server schreibt den Stand nur alle zehn. */
+export const EtaMinLines = 10;
+/** … und unter so viel Laufzeit auch nicht: die ersten Linien sind oft Wiederverwendung und täuschen Tempo vor. */
+export const EtaMinElapsedMs = 60_000;
+
+/**
+ * Restdauer eines LAUFENDEN Auftrags in Minuten, aus dem Tempo DIESES Laufs: `startedAt` setzt der Server bei jedem
+ * Anlauf neu und die Zähler auf 0 (`ClaimNextAsync`), abgearbeitet heißt fertig ODER gescheitert. `null`, solange die
+ * Grundlage zu dünn ist ({@link EtaMinLines}, {@link EtaMinElapsedMs}). Eher zu hoch als zu niedrig: gegen Ende
+ * übernehmen viele Linien nur schon übersetzte Texte und gehen schneller.
+ */
+export function jobEtaMinutes(
+  job: Pick<CourseTranslationJob, 'status' | 'startedAt' | 'linesTotal' | 'linesDone' | 'linesFailed'>,
+  nowMs: number = Date.now(),
+): number | null {
+  if (job.status !== 'running' || !job.startedAt || !job.linesTotal) return null;
+  const processed = job.linesDone + job.linesFailed;
+  const elapsed = nowMs - Date.parse(job.startedAt);
+  if (processed < EtaMinLines || !(elapsed >= EtaMinElapsedMs)) return null;
+  const remaining = Math.max(0, job.linesTotal - processed);
+  return remaining === 0 ? null : (elapsed / processed) * remaining / 60_000;
+}
+
+/**
+ * „Übersetzen in …": alle Sprachen der App in ihrer Reihenfolge — ohne die Quelle, ohne schon VOLLSTÄNDIGE und ohne
+ * solche, für die schon ein Auftrag offen ist. Geteilt vom Kasten der Kursseite und vom ⋮-Menü des Lösers.
+ */
+export function requestableLanguages(
+  o: CourseTranslations | null, languages: ReadonlyArray<{ code: string; label: string }>,
+): { code: string; label: string }[] {
+  if (!o) return [];
+  const done = new Set((o.languages ?? [])
+    .filter(l => l.linesTotal > 0 && l.linesTranslated >= l.linesTotal).map(l => l.language));
+  const open = new Set((o.jobs ?? []).filter(isOpenJob).map(j => j.language));
+  return languages
+    .filter(l => l.code !== o.sourceLanguage && !done.has(l.code) && !open.has(l.code))
+    .map(l => ({ code: l.code, label: l.label }));
+}
+
+/** „wartet · Platz 3", „läuft · 42 % · noch ca. 25 min", „pausiert bis Fr., 14:00". */
+export function translationJobStatusText(
+  job: CourseTranslationJob, o: CourseTranslations | null, translate: TranslateService, uiLanguage: string,
+  nowMs: number = Date.now(),
+): string {
+  const quiet = formatQuietUntil(o?.quietUntil, uiLanguage);
+  if (quiet) return translate.instant('courses.translations.status.paused', { time: quiet });
+  if (job.status === 'running') {
+    const eta = jobEtaMinutes(job, nowMs);
+    return eta == null
+      ? translate.instant('courses.translations.status.running', { percent: jobPercent(job) })
+      : translate.instant('courses.translations.status.runningEta',
+          { percent: jobPercent(job), eta: formatEta(eta, translate) });
+  }
+  return job.queuePosition
+    ? translate.instant('courses.translations.status.queued', { pos: job.queuePosition })
+    : translate.instant('courses.translations.status.waiting');
+}
+
+/** Den Satz zur Absage formuliert die Seite — der Server schickt nur den Grund. */
+export function translationReasonText(err: HttpErrorResponse, fallbackKey: string, translate: TranslateService): string {
+  const reason = typeof err?.error?.reason === 'string' ? err.error.reason as string : null;
+  if (reason) {
+    const key = `courses.translations.reason.${reason}`;
+    const text = translate.instant(key);
+    if (text && text !== key) return text;
+  }
+  return translate.instant(fallbackKey);
 }
 
 /**
@@ -195,16 +265,7 @@ export class CourseTranslationsComponent {
    * „Übersetzen in …": alle 25 Sprachen der App (Reihenfolge der Sprachauswahl) — ohne die Quelle,
    * ohne schon VOLLSTÄNDIGE und ohne solche, für die schon ein Auftrag offen ist.
    */
-  readonly requestOptions = computed(() => {
-    const o = this.overview();
-    if (!o) return [];
-    const done = new Set((o.languages ?? [])
-      .filter(l => l.linesTotal > 0 && l.linesTranslated >= l.linesTotal).map(l => l.language));
-    const open = new Set((o.jobs ?? []).filter(isOpenJob).map(j => j.language));
-    return this.locale.languages
-      .filter(l => l.code !== o.sourceLanguage && !done.has(l.code) && !open.has(l.code))
-      .map(l => ({ code: l.code, label: l.label }));
-  });
+  readonly requestOptions = computed(() => requestableLanguages(this.overview(), this.locale.languages));
 
   constructor() {
     effect(() => {
@@ -232,16 +293,9 @@ export class CourseTranslationsComponent {
     return job.requestedByMe && job.status === 'queued';
   }
 
-  /** „wartet · Platz 3", „läuft · 42 %", „pausiert bis Fr., 14:00". */
+  /** „wartet · Platz 3", „läuft · 42 % · noch ca. 25 min", „pausiert bis Fr., 14:00". */
   statusText(job: CourseTranslationJob): string {
-    const quiet = formatQuietUntil(this.overview()?.quietUntil, this.courseLang.uiLanguage());
-    if (quiet) return this.translate.instant('courses.translations.status.paused', { time: quiet });
-    if (job.status === 'running') {
-      return this.translate.instant('courses.translations.status.running', { percent: jobPercent(job) });
-    }
-    return job.queuePosition
-      ? this.translate.instant('courses.translations.status.queued', { pos: job.queuePosition })
-      : this.translate.instant('courses.translations.status.waiting');
+    return translationJobStatusText(job, this.overview(), this.translate, this.courseLang.uiLanguage());
   }
 
   /** Übersicht (neu) laden; danach entscheidet {@link schedulePoll}, ob nachgefragt wird. */
@@ -315,14 +369,7 @@ export class CourseTranslationsComponent {
     });
   }
 
-  /** Den Satz zur Absage formuliert die Seite — der Server schickt nur den Grund. */
   private reasonText(err: HttpErrorResponse, fallbackKey: string): string {
-    const reason = typeof err?.error?.reason === 'string' ? err.error.reason as string : null;
-    if (reason) {
-      const key = `courses.translations.reason.${reason}`;
-      const text = this.translate.instant(key);
-      if (text && text !== key) return text;
-    }
-    return this.translate.instant(fallbackKey);
+    return translationReasonText(err, fallbackKey, this.translate);
   }
 }

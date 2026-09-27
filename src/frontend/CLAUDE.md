@@ -130,6 +130,14 @@ in `features/courses/`:
   mit Link auf den Kurs, der läuft; eigenen wartenden Auftrag zurückziehen, Admin jeden offenen; ohne Anmeldung
   lesend; 404 → ausgeblendet). Alles aus HTTP in Signalen (OnPush). Er fragt alle `PollMs` (15 s) nach, SOLANGE ein
   Auftrag wartet oder läuft.
+- **`CourseTranslateMenuComponent`** (0.564.0, Wunsch 2026-09-27) — „Übersetzung anfordern" mit Sprach-Untermenü im
+  ⋮-Menü des Kurs-Lösers (`PuzzleActionBarComponent.translateBookId`, nur angemeldet im Kursmodus). Holt die Übersicht
+  erst beim Aufklappen, zeigt offene Aufträge als gesperrte Zeilen und dieselben Regeln wie der Kasten — die Helfer
+  (`requestableLanguages`, `translationJobStatusText`, `translationReasonText`, `isOpenJob`) stehen EINMAL in
+  `course-translations.component.ts`. **Restdauer** (`jobEtaMinutes`, ebenda): aus dem Tempo DIESES Laufs — der Server
+  setzt `startedAt` bei jedem Anlauf neu und die Zähler auf 0 —, erst ab `EtaMinLines` (10, der Server schreibt den
+  Stand nur alle zehn Linien) und `EtaMinElapsedMs` (1 min); eher zu hoch, weil gegen Ende viele Linien nur schon
+  übersetzte Texte übernehmen. Schreibweise über `shared/eta.util.ts`.
 
 Regeln, die dabei nicht kippen dürfen:
 - **`chapter` und `title` bleiben SCHLÜSSEL** (`?chapter=`, `groupByChapter`, Umbenennen, Kapitel-PGN,

@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
 import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
+import { CourseTranslateMenuComponent } from '../courses/course-translate-menu.component';
 
 /**
  * DIE eine Aktionszeile unter der Status-Card — für alle drei Puzzle-Modi (Standard/Endless/
@@ -23,7 +24,7 @@ import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.compon
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule,
-    TranslatePipe, PuzzleTagsComponent, SendToWorksheetComponent,
+    TranslatePipe, PuzzleTagsComponent, SendToWorksheetComponent, CourseTranslateMenuComponent,
   ],
   template: `
     <div class="pab-row">
@@ -76,6 +77,10 @@ import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.compon
             <span>{{ 'solveMode.switch' | translate }}:
               {{ (solveModeChoice === 'easy' ? 'solveMode.easy' : 'solveMode.training') | translate }}</span>
           </button>
+        }
+        @if (translateBookId) {
+          <!-- Kurs-Löser: Übersetzung des Kurses anfordern, ohne das Brett zu verlassen. -->
+          <app-course-translate-menu [bookId]="translateBookId" />
         }
         <button mat-menu-item (click)="settingsClicked.emit()">
           <mat-icon>settings</mat-icon><span>{{ 'puzzles.settings.title' | translate }}</span>
@@ -131,6 +136,8 @@ export class PuzzleActionBarComponent {
   /** Gewählte Spielweise des Bereichs — `null` blendet den Umschalter aus (Bereiche ohne
    *  Spielweisen-Abfrage, z. B. geteiltes Einzel-Puzzle mit fester Ansicht). */
   @Input() solveModeChoice: 'training' | 'easy' | null = null;
+  /** Kurs, dessen Übersetzung das ⋮-Menü anbietet („Übersetzung anfordern"); `null` = kein Eintrag. */
+  @Input() translateBookId: number | null = null;
 
   @Output() shareClicked = new EventEmitter<void>();
   /** ⋮-Eintrag „Spielweise" geklickt (Umschalten Training ↔ Einfach). */

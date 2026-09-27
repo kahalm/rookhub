@@ -1557,6 +1557,7 @@
       "mine": "(tvoj)",
       "withdraw": "Povuci",
       "request": "Prevedi na …",
+      "menu": "Zatraži prijevod",
       "requested": "Prijevod zatražen — izvodi se u pozadini.",
       "joined": "Za ovaj jezik već čeka zahtjev — tvoj mu se pridružuje.",
       "requestFailed": "Prijevod nije bilo moguće zatražiti.",
@@ -1570,6 +1571,7 @@
         "queued": "čeka · mjesto {{pos}}",
         "waiting": "čeka",
         "running": "u tijeku · {{percent}} %",
+        "runningEta": "u tijeku · {{percent}} % · još oko {{eta}}",
         "paused": "pauzirano do {{time}}",
         "failed": "neuspjelo"
       },

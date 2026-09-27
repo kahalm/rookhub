@@ -1557,6 +1557,7 @@
       "mine": "(deiner)",
       "withdraw": "Zurückziehen",
       "request": "Übersetzen in …",
+      "menu": "Übersetzung anfordern",
       "requested": "Übersetzung angefordert — sie läuft im Hintergrund.",
       "joined": "Für diese Sprache wartet schon ein Auftrag — deine Anfrage schließt sich an.",
       "requestFailed": "Die Übersetzung ließ sich nicht anfordern.",
@@ -1570,6 +1571,7 @@
         "queued": "wartet · Platz {{pos}}",
         "waiting": "wartet",
         "running": "läuft · {{percent}} %",
+        "runningEta": "läuft · {{percent}} % · noch ca. {{eta}}",
         "paused": "pausiert bis {{time}}",
         "failed": "fehlgeschlagen"
       },

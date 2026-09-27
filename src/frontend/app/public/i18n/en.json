@@ -1557,6 +1557,7 @@
       "mine": "(yours)",
       "withdraw": "Withdraw",
       "request": "Translate into …",
+      "menu": "Request translation",
       "requested": "Translation requested — it runs in the background.",
       "joined": "This language is already waiting — your request joins it.",
       "requestFailed": "Could not request the translation.",
@@ -1570,6 +1571,7 @@
         "queued": "waiting · place {{pos}}",
         "waiting": "waiting",
         "running": "running · {{percent}} %",
+        "runningEta": "running · {{percent}} % · about {{eta}} left",
         "paused": "paused until {{time}}",
         "failed": "failed"
       },
