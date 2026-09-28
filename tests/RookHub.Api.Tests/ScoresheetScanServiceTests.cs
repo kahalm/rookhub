@@ -907,6 +907,36 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal((1, 1), ((await _service.StatusAsync(u.Id)).DailyLimit, (await _service.StatusAsync(u.Id)).UsedToday));
     }
 
+    /// <summary>Wunsch 2026-09-28: „wenn ich übers Partieformular etwas hinzufüge und dann nicht auf Prüfen gehe, sollte das
+    /// auch für die Admins zur Verfügung stehen, damit die nicht im Limbo sind".</summary>
+    [Fact]
+    public async Task LeagueScans_NeverChecked_AreOpenToManagers_IncludingShareLinkOnes()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (mine, _) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de", null, ScoresheetScan.PurposeLeague);
+        var (anon, key, _) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", "white", "ip");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(mine!.Id, default);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(anon!.Id, default);
+
+        var admin = ScoresheetScanService.ScanActor.ManagerOf(u.Id + 1);
+        var open = await _service.LeagueOpenScansAsync(u.Id + 1);
+        Assert.Equal(new[] { (anon.Id, true), (mine.Id, false) }.OrderBy(x => x.Item1),
+            open.Select(o => (o.Scan.Id, o.ViaShareLink)).OrderBy(x => x.Item1));
+        Assert.All(open, o => Assert.False(o.Mine));
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id + 1), mine.Id));          // ohne Verwalter-Recht: fremd
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(admin, mine.Id))!.Scan.Status);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(admin, anon.Id))!.Scan.Status);   // ohne Schlüssel
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(admin, anon.Id));
+        Assert.True(await _service.CloseLeagueScanAsync(admin, anon.Id));
+        Assert.Null(await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.Anonymous(key!), null));
+        Assert.Single(await _service.LeagueOpenScansAsync(u.Id + 1));                       // verworfen = weg
+        Assert.True((await _service.LeagueOpenScansAsync(u.Id)).Single().Mine);
+    }
+
     [Fact]
     public async Task AnonymousScan_ReachableOnlyWithItsKey_LimitedPerIpAndPerDay()
     {

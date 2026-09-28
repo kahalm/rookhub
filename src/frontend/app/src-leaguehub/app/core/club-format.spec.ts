@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { importSummary, normalizeResult, reasonText, scanAvailability, uploadErrorText, yearOf } from './club-format';
+import { importSummary, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf } from './club-format';
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
@@ -48,5 +48,24 @@ describe('club-format', () => {
     expect(normalizeResult('½-½')).toBe('1/2-1/2');
     expect(normalizeResult('1 - 0')).toBe('1-0');
     expect(normalizeResult('?')).toBe('*');
+  });
+
+  it('PGN einer geprüften Partie: Kopf, nummerierte Züge, Zeilen bis 80 Zeichen, Dateiname', () => {
+    const g = { moves: ['e4', 'c5', 'Nf3', 'd6'], white: 'Oberschmid, Patrik', black: 'Hengl "Phil"', result: '1/2-1/2', event: null, year: 2025 };
+    expect(sheetPgn(g)).toBe('[Event "?"]\n[Site "?"]\n[Date "2025.??.??"]\n[Round "?"]\n[White "Oberschmid, Patrik"]\n'
+      + '[Black "Hengl \\"Phil\\""]\n[Result "1/2-1/2"]\n\n1. e4 c5 2. Nf3 d6 1/2-1/2\n');
+    const long = sheetPgn({ ...g, moves: Array.from({ length: 60 }, (_, i) => i % 2 ? 'Nf6' : 'Nf3'), result: 'x', year: null });
+    expect(long).toContain('[Date "????.??.??"]');
+    expect(long.trimEnd().endsWith(' *')).toBeTrue();
+    expect(long.split('\n').every(l => l.length <= 80)).toBeTrue();
+    expect(sheetPgnFileName(g)).toBe('Oberschmid_HenglPhil_2025.pgn');
+    expect(sheetPgnFileName({ ...g, white: null, year: null })).toBe('Partie_HenglPhil.pgn');
+  });
+
+  it('Datum und Uhrzeit aus der API (ohne Zone = UTC) in Ortszeit', () => {
+    const d = new Date(Date.UTC(2026, 8, 28, 8, 52));
+    const two = (n: number) => String(n).padStart(2, '0');
+    expect(shortDateTime('2026-09-28T08:52:00')).toBe(`${two(d.getDate())}.${two(d.getMonth() + 1)}., ${two(d.getHours())}:${two(d.getMinutes())}`);
+    expect(shortDateTime(null)).toBe('');
   });
 });

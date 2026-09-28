@@ -20,7 +20,7 @@ const PREVIEW: ClubPreview = { truncated: false, games: [
 describe('ClubAddPageComponent', () => {
   let fixture: ComponentFixture<ClubAddPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
-  let service: { client: jasmine.Spy; savedGame: jasmine.Spy };
+  let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
 
@@ -31,17 +31,19 @@ describe('ClubAddPageComponent', () => {
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess']);
     api.scans.and.resolveTo([]);
     api.scoresheetStatus.and.resolveTo({ available: true, dailyLimit: 10, usedToday: 0, languages: [{ code: 'de', name: 'Deutsch', pieces: 'KDTLS' }] });
-    service = { client: jasmine.createSpy('client').and.returnValue(api), savedGame: jasmine.createSpy('savedGame') };
+    service = { client: jasmine.createSpy('client').and.returnValue(api), savedGame: jasmine.createSpy('savedGame'),
+      openScans: jasmine.createSpy('openScans').and.resolveTo([]) };
   });
 
-  function create(perms = true): HTMLElement {
+  function create(perms: boolean | string[] = true): HTMLElement {
+    const has = (p: string) => Array.isArray(perms) ? perms.includes(p) : perms;
     TestBed.configureTestingModule({
       imports: [ClubAddPageComponent],
       providers: [
         provideRouter([]),
         { provide: ClubApiService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query), paramMap: convertToParamMap(params) } } },
-        { provide: AuthService, useValue: { has: () => perms, currentUser: perms ? { username: 'patrik' } : null } },
+        { provide: AuthService, useValue: { has, currentUser: perms ? { username: 'patrik' } : null } },
       ],
     });
     fixture = TestBed.createComponent(ClubAddPageComponent);
@@ -155,6 +157,60 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     expect(api.preview).not.toHaveBeenCalled();
     expect(el.textContent).toContain('Die Partie aus RookHub ließ sich nicht laden');
+  }));
+
+  it('ein Formular, das gerade gelesen wird, zeigt eine mitlaufende Uhr ab dem Hochladen — fertig steht sie still', fakeAsync(() => {
+    query = { art: 'formular' };
+    const up = new Date(Date.now() - 30_000).toISOString().replace('Z', '');   // wie aus der Datenbank: ohne Zone
+    const scan = { id: 3, status: 'running', notationLanguage: 'de', createdAt: up, rounds: 0, moveCount: 0, uncertainCount: 0,
+      unresolvedCount: 0, white: 'Oberschmid', black: 'Hengl' };
+    api.scans.and.resolveTo([{ ref: '3', scan }] as never);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.scan-clock')?.textContent).toContain('0:30');
+    expect(el.textContent).toContain('Sekunden pro Zug');
+    tick(2000);
+    fixture.detectChanges();
+    expect(el.querySelector('.scan-clock')?.textContent).toContain('0:32');
+    api.scans.and.resolveTo([{ ref: '3', scan: { ...scan, status: 'done', moveCount: 40 } }] as never);
+    tick(1000);                                                                   // nächster Abruf (alle 3 s)
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('.scan-clock')).toBeNull();
+  }));
+
+  it('Verwalter sehen offene Formulare anderer (auch über Teilen-Links) und können sie prüfen oder verwerfen', fakeAsync(() => {
+    query = { art: 'formular' };
+    const done = (id: number, white: string) => ({ id, status: 'done', notationLanguage: 'de', createdAt: '2026-09-27T18:00:00', rounds: 1,
+      moveCount: 40, uncertainCount: 0, unresolvedCount: 0, white, black: 'Hengl' });
+    service.openScans.and.resolveTo([
+      { scan: done(8, 'Fremd'), viaShareLink: true, mine: false },
+      { scan: done(9, 'Meins'), viaShareLink: false, mine: true },
+    ]);
+    api.discard.and.resolveTo();
+    spyOn(window, 'confirm').and.returnValue(true);
+    const el = create(['league.contribute', 'league.manage']);
+    flushMicrotasks();
+    fixture.detectChanges();
+    const text = el.textContent ?? '';
+    expect(text).toContain('Offene Formulare anderer');
+    expect(text).toContain('Fremd – Hengl');
+    expect(text).toContain('über Teilen-Link');
+    expect(text).not.toContain('Meins – Hengl');                                     // die eigenen stehen oben
+    expect((el.querySelector('a[href="/verein/formular/8"]'))).not.toBeNull();
+    (Array.from(el.querySelectorAll('button')).filter(b => b.textContent?.trim() === 'Verwerfen').pop() as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.discard).toHaveBeenCalledWith('8');
+    expect(el.textContent).not.toContain('Fremd – Hengl');
+  }));
+
+  it('ohne Verwalter-Recht fragt die Seite die fremden Formulare gar nicht ab', fakeAsync(() => {
+    query = { art: 'formular' };
+    create(['league.contribute']);
+    flushMicrotasks();
+    expect(service.openScans).not.toHaveBeenCalled();
   }));
 
   it('angemeldet ohne Recht: nicht freigeschaltet', () => {

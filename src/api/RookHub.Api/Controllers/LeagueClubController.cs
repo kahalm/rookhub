@@ -35,7 +35,8 @@ public class LeagueClubController : BaseApiController
     private bool CanManage => User.IsInRole("Admin")
         || User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueManage);
 
-    private Actor Me => Actor.User(GetUserId());
+    /// <summary>Verwalter dürfen JEDE Liga-Einlesung öffnen, übernehmen und verwerfen — sonst nur die eigenen.</summary>
+    private Actor Me => CanManage ? Actor.ManagerOf(GetUserId()) : Actor.User(GetUserId());
 
     [HttpGet("games")]
     [HasPermission(Permissions.LeagueView)]
@@ -135,6 +136,12 @@ public class LeagueClubController : BaseApiController
         _signal.Wake();
         return Accepted(scan);
     }
+
+    /// <summary>Alle offenen Liga-Einlesungen, auch fremde und über Teilen-Links (Verwalter).</summary>
+    [HttpGet("admin/scans")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<ActionResult<List<LeagueOpenScanDto>>> OpenScans(CancellationToken ct) =>
+        Ok(await _scans.LeagueOpenScansAsync(GetUserId(), ct));
 
     [HttpGet("scans/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]

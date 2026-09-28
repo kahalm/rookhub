@@ -133,3 +133,6 @@ export interface ClubGameRequest {
 
 /** Eine eigene Einlesung: angemeldet über die Nummer, ohne Konto über den geheimen Schlüssel. */
 export interface ScanRef { ref: string; scan: ScoresheetScan }
+
+/** `GET …/admin/scans` — eine offene Liga-Einlesung für die Verwalter (auch fremde und über Teilen-Links). */
+export interface OpenScan { scan: ScoresheetScan; viaShareLink: boolean; mine: boolean }

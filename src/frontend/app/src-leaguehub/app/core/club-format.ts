@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { serverTime } from '@rh/features/games/scoresheet-timing';
 import { ClubImportResult, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 // Reine Texte und Regeln der Vereins-Datenbank (ohne Angular-Komponenten) — die Seite ist deutsch.
@@ -102,4 +103,53 @@ export function normalizeResult(r: string | null | undefined): string {
   if (s === '1-0' || s === '0-1' || s === '1/2-1/2') return s;
   if (s === '1/2' || s === '0.5-0.5' || s === '=') return '1/2-1/2';
   return '*';
+}
+
+/** Was ein geprüftes Formular als PGN hergibt (zum Herunterladen, Kopieren, für „Meine Partien"). */
+export interface SheetPgnInput {
+  moves: string[];
+  white: string | null;
+  black: string | null;
+  result: string;
+  event: string | null;
+  year: number | null;
+}
+
+/**
+ * Das PGN einer geprüften Partie (Wunsch 2026-09-28: „wenn ich fertig geprüft habe, PGN-Download + als Text kopieren").
+ * Mit den Namen, wie sie im Formular stehen — die Datei bleibt beim Nutzer, „Schwaz" gilt nur für die Vereins-Datenbank.
+ * Züge in englischer SAN (so versteht sie jedes Programm), Zeilen bis 80 Zeichen.
+ */
+export function sheetPgn(g: SheetPgnInput): string {
+  const tag = (k: string, v: string) => `[${k} "${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+  const result = ['1-0', '0-1', '1/2-1/2'].includes(g.result) ? g.result : '*';
+  const head = [
+    tag('Event', g.event?.trim() || '?'), tag('Site', '?'), tag('Date', g.year ? `${g.year}.??.??` : '????.??.??'), tag('Round', '?'),
+    tag('White', g.white?.trim() || '?'), tag('Black', g.black?.trim() || '?'), tag('Result', result),
+  ];
+  const tokens = g.moves.map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ` : '') + m);
+  tokens.push(result);
+  const lines: string[] = [];
+  let line = '';
+  for (const t of tokens) {
+    if (line && line.length + 1 + t.length > 80) { lines.push(line); line = t; }
+    else line = line ? `${line} ${t}` : t;
+  }
+  if (line) lines.push(line);
+  return `${head.join('\n')}\n\n${lines.join('\n')}\n`;
+}
+
+/** Dateiname fürs PGN: „Oberschmid_Hengl_2025.pgn". */
+export function sheetPgnFileName(g: SheetPgnInput): string {
+  const part = (s: string | null) => (s?.split(',')[0].trim() || '').replace(/[^\p{L}\p{N}-]+/gu, '') || 'Partie';
+  return `${part(g.white)}_${part(g.black)}${g.year ? '_' + g.year : ''}.pgn`;
+}
+
+/** „28.09., 10:52" (Ortszeit) aus einem Zeitpunkt der API. */
+export function shortDateTime(iso: string | null | undefined): string {
+  const t = serverTime(iso);
+  if (!Number.isFinite(t)) return '';
+  const d = new Date(t);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(d.getDate())}.${two(d.getMonth() + 1)}., ${two(d.getHours())}:${two(d.getMinutes())}`;
 }

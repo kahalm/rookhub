@@ -200,3 +200,13 @@ public class LeagueClubMatchDto
     public LeagueClubSideMatchDto White { get; set; } = new();
     public LeagueClubSideMatchDto Black { get; set; } = new();
 }
+
+/// <summary><c>GET /api/league/club/admin/scans</c> — eine offene Liga-Einlesung für die Verwalter.</summary>
+public class LeagueOpenScanDto
+{
+    public ScoresheetScanDto Scan { get; set; } = new();
+    /// <summary>Ohne Konto über einen Teilen-Link hochgeladen.</summary>
+    public bool ViaShareLink { get; set; }
+    /// <summary>Die eigene (steht ohnehin in „Deine Formulare").</summary>
+    public bool Mine { get; set; }
+}

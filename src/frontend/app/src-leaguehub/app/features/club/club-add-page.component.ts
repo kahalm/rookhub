@@ -4,8 +4,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubImportResult, ScanRef, ScoresheetStatus } from '../../core/club.models';
-import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, uploadErrorText } from '../../core/club-format';
+import { ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
+import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
+import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ImportReview } from './import-review';
 
@@ -113,8 +114,8 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
       } @else {
         <section class="panel">
           @if (status(); as s) {
-            <p class="muted">{{ availability()!.text }} Das Foto wird von einem Sprachmodell gelesen; danach prüfst du die Züge
-              und Namen selbst, bevor etwas gespeichert wird.</p>
+            <p class="muted">{{ availability()!.text }} Das Foto wird von einem Sprachmodell gelesen — das dauert etwa
+              {{ perMove }} Sekunden pro Zug —, danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars
                 <input type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
@@ -152,9 +153,27 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
               @for (sc of scans(); track sc.ref) {
                 <li>
                   <span>{{ sc.scan.white || '?' }} – {{ sc.scan.black || '?' }}</span>
-                  <span class="muted">{{ stateText(sc.scan) }}</span>
+                  <span class="muted">{{ stateText(sc.scan) }}@if (isOpen(sc.scan)) {
+                    <span class="scan-clock" [attr.aria-label]="'läuft seit ' + clockOf(sc.scan)"> · {{ clockOf(sc.scan) }}</span> }</span>
                   @if (sc.scan.status === 'done') { <a class="btn-sec" [routerLink]="scanLink(sc)">Prüfen und übernehmen</a> }
                   @if (sc.scan.status === 'failed') { <button type="button" class="btn-link" (click)="discard(sc)">Verwerfen</button> }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (isManager && othersOpen().length) {
+            <h3 class="club-h3">Offene Formulare anderer <span class="muted small">(nur Verwalter)</span></h3>
+            <p class="small muted">Hochgeladen, aber noch nicht geprüft — auch über Teilen-Links. Du kannst sie prüfen und
+              übernehmen oder verwerfen, damit nichts liegen bleibt.</p>
+            <ul class="scan-list">
+              @for (o of othersOpen(); track o.scan.id) {
+                <li>
+                  <span>{{ o.scan.white || '?' }} – {{ o.scan.black || '?' }}</span>
+                  <span class="muted">{{ stateText(o.scan) }}@if (isOpen(o.scan)) { <span class="scan-clock"> · {{ clockOf(o.scan) }}</span> }
+                    · {{ o.viaShareLink ? 'über Teilen-Link' : 'mit Konto' }} · {{ when(o.scan.createdAt) }}</span>
+                  @if (o.scan.status === 'done') { <a class="btn-sec" [routerLink]="['/verein/formular', o.scan.id]">Prüfen und übernehmen</a> }
+                  <button type="button" class="btn-link" (click)="discardOther(o)">Verwerfen</button>
                 </li>
               }
             </ul>
@@ -200,6 +219,18 @@ export class ClubAddPageComponent implements OnInit {
   readonly reason = reasonText;
   readonly summary = importSummary;
   readonly stateText = scanStateText;
+  readonly when = shortDateTime;
+  /** Verwalter sehen zusätzlich die offenen Formulare ALLER (Wunsch 2026-09-28: „damit die nicht im Limbo sind"). */
+  readonly isManager = !this.share && this.auth.has('league.manage');
+  readonly openScans = signal<OpenScan[]>([]);
+  readonly othersOpen = computed(() => this.openScans().filter(o => !o.mine));
+  readonly perMove = SECONDS_PER_MOVE;
+  /** Mitlaufende Uhr, solange ein Formular gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
+  private readonly ticker = new SecondsTicker();
+  readonly isOpen = (s: { status: string }) => s.status === 'pending' || s.status === 'running';
+  clockOf(s: { createdAt: string }): string {
+    return formatClock(readingSeconds(s.createdAt, this.ticker.now()));
+  }
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private destroyed = false;
 
@@ -207,6 +238,7 @@ export class ClubAddPageComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
       if (this.pollTimer) clearTimeout(this.pollTimer);
+      this.ticker.stop();
     });
   }
 
@@ -229,6 +261,16 @@ export class ClubAddPageComponent implements OnInit {
       return;
     }
     await this.startPreview();
+  }
+
+  async discardOther(o: OpenScan): Promise<void> {
+    if (!confirm(`Formular ${o.scan.white || '?'} – ${o.scan.black || '?'} verwerfen? Foto und Lesung werden gelöscht.`)) return;
+    try {
+      await this.client.discard(String(o.scan.id));
+      this.openScans.update(list => list.filter(x => x.scan.id !== o.scan.id));
+    } catch {
+      this.scanError.set('Verwerfen hat nicht geklappt.');
+    }
   }
 
   setKind(k: Kind): void {
@@ -300,7 +342,13 @@ export class ClubAddPageComponent implements OnInit {
       // Ohne Konto: Schlüssel übernommener/verworfener Einlesungen vergessen.
       if (this.share) for (const k of keys) if (!list.some(s => s.ref === k)) rememberAnonKey(this.share, k, false);
       this.scans.set(list);
-      if (list.some(s => s.scan.status === 'pending' || s.scan.status === 'running')) this.schedulePoll();
+      if (this.isManager) {
+        try { this.openScans.set(await this.clubApi.openScans()); } catch { /* Beiwerk */ }
+        if (this.destroyed) return;
+      }
+      const open = list.some(s => this.isOpen(s.scan)) || this.othersOpen().some(o => this.isOpen(o.scan));
+      this.ticker.run(open);
+      if (open) this.schedulePoll();
     } catch { /* die Liste ist Beiwerk */ }
   }
 

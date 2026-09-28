@@ -74,6 +74,14 @@ export function leagueHubUrl(host: string = location.hostname, protocol: string 
   return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
 }
 
+/** Der Rückweg: welches RookHub zu diesem LeagueHub gehört (für Links auf „Meine Partien"). */
+export function rookHubUrlForLeagueHub(host: string = location.hostname, protocol: string = location.protocol): string | null {
+  const parts = host.split('.');
+  const other = Object.entries(LEAGUEHUB_FOR).find(([, lh]) => lh === parts[0])?.[0];
+  if (!other || parts.length < 2) return null;
+  return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
+}
+
 /**
  * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub und LeagueHub eingeschlossen):
  * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden

@@ -36,6 +36,8 @@ describe('ClubScanPageComponent', () => {
   let fixture: ComponentFixture<ClubScanPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
   let params: Record<string, string>;
+  let clubApi: { client: () => ClubClient; addToMyGames: jasmine.Spy };
+  let loggedIn: boolean;
 
   beforeEach(() => {
     params = { id: '7' };
@@ -44,6 +46,8 @@ describe('ClubScanPageComponent', () => {
     api.photo.and.rejectWith(new Error('kein Foto'));
     api.match.and.resolveTo(MATCH(true));
     api.players.and.resolveTo([]);
+    clubApi = { client: () => api, addToMyGames: jasmine.createSpy('addToMyGames') };
+    loggedIn = true;
   });
 
   function create(): HTMLElement {
@@ -52,9 +56,9 @@ describe('ClubScanPageComponent', () => {
       providers: [
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }),
-        { provide: ClubApiService, useValue: { client: () => api } },
+        { provide: ClubApiService, useValue: clubApi },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params) } } },
-        { provide: AuthService, useValue: { has: () => true, currentUser: { username: 'patrik' } } },
+        { provide: AuthService, useValue: { has: () => true, currentUser: { username: 'patrik' }, get isLoggedIn() { return loggedIn; } } },
       ],
     });
     fixture = TestBed.createComponent(ClubScanPageComponent);
@@ -146,19 +150,48 @@ describe('ClubScanPageComponent', () => {
     tick(1000);
   }));
 
-  it('Übernehmen schickt Züge, Seiten und Einlesung und geht zur Liste', fakeAsync(() => {
-    create();
+  it('Übernehmen schickt Züge, Seiten und Einlesung; danach bleibt die Seite mit PGN und „Meine Partien" stehen', fakeAsync(() => {
+    const el = create();
     flushMicrotasks();
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);
     api.addGame.and.resolveTo({ id: 11, anonymized: true });
     void fixture.componentInstance.save();
     flushMicrotasks();
+    fixture.detectChanges();
     expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({
       moves: ['e4', 'e5', 'Nf3', 'Nc6'], white: 'Oberschmid', black: 'Hengl', year: 2026, result: '0-1',
       whiteReplace: true, blackReplace: false,
     }), '7');
-    expect(router.navigate).toHaveBeenCalledWith(['/verein'], jasmine.anything());
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('In die Vereins-Datenbank übernommen.');
+    expect(el.textContent).not.toContain('In die Vereins-Datenbank übernehmen');          // kein zweites Mal
+
+    // PGN mit den Namen wie im Formular (nicht „Schwaz"), als Text kopieren
+    const written: string[] = [];
+    spyOn(navigator.clipboard, 'writeText').and.callFake(async (t: string) => { written.push(t); });
+    (Array.from(el.querySelectorAll('button')).find(b => b.textContent?.trim() === 'PGN kopieren') as HTMLButtonElement).click();
+    flushMicrotasks();
+    expect(written[0]).toContain('[White "Oberschmid"]');
+    expect(written[0]).toContain('1. e4 e5 2. Nf3 Nc6 0-1');
+
+    clubApi.addToMyGames.and.resolveTo({ imported: 1, duplicates: 0, ids: [42] });
+    (Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Zu meinen Partien')) as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(clubApi.addToMyGames).toHaveBeenCalledWith(jasmine.stringContaining('[Black "Hengl"]'));
+    expect(el.textContent).toContain('In deinen Partien gespeichert.');
+    tick(1000);
+  }));
+
+  it('ohne Anmeldung gibt es „Zu meinen Partien" nicht', fakeAsync(() => {
+    loggedIn = false;
+    params = { token: 'TOK', key: 'geheim' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('PGN herunterladen');
+    expect(el.textContent).not.toContain('Zu meinen Partien');
     tick(1000);
   }));
 
@@ -172,8 +205,11 @@ describe('ClubScanPageComponent', () => {
     api.addGame.and.resolveTo({ id: 12, anonymized: true });
     void fixture.componentInstance.save();
     flushMicrotasks();
+    fixture.detectChanges();
     expect(api.addGame).toHaveBeenCalledWith(jasmine.any(Object), 'geheim');
-    expect(router.navigate).toHaveBeenCalledWith(['/s', 'TOK', 'hochladen'], jasmine.objectContaining({ queryParams: { art: 'formular' } }));
+    expect(router.navigate).not.toHaveBeenCalled();
+    const back = (fixture.nativeElement as HTMLElement).querySelector('.ok-text a') as HTMLAnchorElement;
+    expect(back.getAttribute('href')).toContain('/s/TOK/hochladen');                      // zurück auf die Hochladeseite des Links
     tick(1000);
   }));
 });

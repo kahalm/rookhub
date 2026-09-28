@@ -4085,7 +4085,7 @@
   },
   "scoresheet": {
     "title": "Učitaj zapisnik partije",
-    "hint": "Fotografija zapisnika — partija se pročita, provjeri potez po potez i spremi u tvoje partije.",
+    "hint": "Fotografija zapisnika — partija se pročita, provjeri potez po potez i spremi u tvoje partije. Čitanje traje oko 1–2 sekunde po potezu.",
     "help": "Claude (AI model) čita fotografiju; RookHub zatim provjerava svaki potez na ploči i nejasne ranije poteze razrješava pomoću kasnijih. Gdje potez ostane nesiguran, stranica za ispravke prikazuje najvjerojatnija čitanja.\n\nFotografija ostaje uz partiju (⋮ izbornik: prikaži / preuzmi). Rade svi uobičajeni jezici notacije (K D T L S, K Q R B N, R D T F C …).",
     "notConfigured": "Učitavanje zapisnika nije postavljeno na ovom poslužitelju (nema AI ključa).",
     "takePhoto": "Snimi fotografiju",
@@ -4097,7 +4097,7 @@
     "quota": "danas {{used}} od {{limit}}",
     "pending": "Čeka na čitanje …",
     "running": "Zapisnik se čita …",
-    "runningHint": "Obično traje pola minute do dvije minute ({{seconds}} s). Možeš napustiti stranicu — partija će se pojaviti u tvojim partijama.",
+    "runningHint": "Traje oko {{perMove}} sekunde po potezu — čita se već {{time}}. Možeš napustiti stranicu — partija će se pojaviti među tvojim partijama.",
     "doneTitle": "Učitano: {{moves}} polupoteza",
     "uncertain": "nesigurno: {{count}}",
     "unresolved": "nepridruženo: {{count}}",

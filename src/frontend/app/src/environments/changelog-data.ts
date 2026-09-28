@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.581.0", date: "2026-09-28", changes: [
+    { en: "Scoresheets (RookHub and LeagueHub): the page now says reading takes about 1–2 seconds per move, and a clock counts up from the upload — also after coming back to the page, instead of starting at zero again.", de: "Partieformulare (RookHub und LeagueHub): Die Seite sagt jetzt, dass das Lesen etwa 1–2 Sekunden pro Zug dauert, und eine Uhr zählt ab dem Hochladen mit — auch wenn man später zurückkommt, statt wieder bei null zu beginnen." },
+    { en: "LeagueHub scoresheets: after checking, the game can be downloaded as PGN or copied as text, and — when signed in — added to your own games in RookHub; the page now stays open after saving to the club database. Managers see the scoresheets of everyone else (including share-link uploads) that were uploaded but never checked, and can check, save or discard them.", de: "LeagueHub-Partieformulare: Nach dem Prüfen lässt sich die Partie als PGN herunterladen oder als Text kopieren und — angemeldet — zu den eigenen Partien in RookHub hinzufügen; nach dem Übernehmen in die Vereins-Datenbank bleibt die Seite dafür offen. Verwalter sehen die Formulare aller anderen (auch über Teilen-Links), die hochgeladen, aber nie geprüft wurden, und können sie prüfen, übernehmen oder verwerfen." },
+  ] },
   { version: "0.580.0", date: "2026-09-28", changes: [
     { en: "Game page: the ⋮ menu of your own game now offers “Add to the club database (LeagueHub)” — for members with the right to contribute. LeagueHub opens (signed in) with the game already in the import overview: players checked against the leagues, Schwaz players replaced, remembered name assignments applied.", de: "Partieseite: Das ⋮-Menü der eigenen Partie bietet jetzt „In die Vereins-Datenbank (LeagueHub)“ — für Mitglieder mit dem Recht zum Beitragen. LeagueHub öffnet sich (angemeldet) mit der Partie schon in der Importübersicht: Spieler gegen die Ligen geprüft, Spieler von Schwaz ersetzt, gemerkte Namens-Zuordnungen angewandt." },
   ] },

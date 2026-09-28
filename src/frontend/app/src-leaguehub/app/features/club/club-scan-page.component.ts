@@ -8,9 +8,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
+import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
-import { ANON_NAME, normalizeResult, reasonText, yearOf } from '../../core/club-format';
+import { ANON_NAME, SheetPgnInput, normalizeResult, reasonText, sheetPgn, sheetPgnFileName, yearOf } from '../../core/club-format';
+import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
 import { de } from '../../core/league-format';
@@ -44,7 +46,11 @@ const MATCH_DEBOUNCE_MS = 400;
         <p><a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
         <h2>Partieformular prüfen</h2>
         @if (st.scan.status !== 'done') {
-          <p class="muted" role="status">{{ st.scan.status === 'failed' ? 'Das Formular ließ sich nicht lesen.' : 'Das Formular wird noch gelesen …' }}</p>
+          @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
+          @else {
+            <p class="muted" role="status">Das Formular wird noch gelesen … <b class="scan-clock">{{ clock() }}</b>
+              <span class="small"> — das dauert etwa {{ perMove }} Sekunden pro Zug.</span></p>
+          }
         } @else {
           <p class="muted">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den Zug am Brett spielen
             — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p>
@@ -191,11 +197,29 @@ const MATCH_DEBOUNCE_MS = 400;
           <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ preview() }}</b></p>
           @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
-          <div class="actions">
-            <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
-              {{ saving() ? 'Übernehme …' : 'In die Vereins-Datenbank übernehmen' }}</button>
-            <button type="button" class="btn-link" [disabled]="saving()" (click)="discard()">Formular verwerfen</button>
-            <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
+          @if (saved()) {
+            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Das Foto ist gelöscht.
+              <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
+          } @else {
+            <div class="actions">
+              <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
+                {{ saving() ? 'Übernehme …' : 'In die Vereins-Datenbank übernehmen' }}</button>
+              <button type="button" class="btn-link" [disabled]="saving()" (click)="discard()">Formular verwerfen</button>
+              <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
+            </div>
+          }
+          <div class="actions pgn-actions">
+            <span class="muted small">Die geprüfte Partie:</span>
+            <button type="button" class="btn-sec" (click)="downloadPgn()">PGN herunterladen</button>
+            <button type="button" class="btn-sec" (click)="copyPgn()">PGN kopieren</button>
+            @if (loggedIn) {
+              <button type="button" class="btn-sec" [disabled]="adding() || !!myGameId()" (click)="addToMyGames()">
+                {{ adding() ? 'Speichere …' : 'Zu meinen Partien hinzufügen' }}</button>
+            }
+            @if (myGameId(); as id) {
+              @if (rookHub) { <a class="small" [href]="rookHub + '/games/' + id" target="_blank" rel="noopener">In RookHub öffnen</a> }
+            }
+            <span class="update-msg" [class.err]="pgnMsg()?.err" role="status">{{ pgnMsg()?.text ?? '' }}</span>
           </div>
         </section>
       }
@@ -213,7 +237,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   /** Token des Teilen-Links (ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
-  readonly client: ClubClient = inject(ClubApiService).client(this.share);
+  private readonly clubApi = inject(ClubApiService);
+  readonly client: ClubClient = this.clubApi.client(this.share);
   private readonly api = this.client;
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
@@ -226,11 +251,22 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   /** Nummer (angemeldet) bzw. geheimer Schlüssel (ohne Konto) der Einlesung. */
   scanRef = '';
   readonly state = signal<LeagueScanState | null>(null);
+  readonly perMove = SECONDS_PER_MOVE;
+  /** Uhr seit dem Hochladen, solange gelesen wird (Wunsch 2026-09-28: „ein Timer, der raufzählt"). */
+  private readonly ticker = new SecondsTicker();
+  readonly clock = computed(() => formatClock(readingSeconds(this.state()?.scan.createdAt, this.ticker.now())));
   readonly notFound = signal(false);
   readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  /** Übernommen — die Seite bleibt stehen, damit PGN und „Meine Partien" noch gehen. */
+  readonly saved = signal(false);
+  readonly adding = signal(false);
+  readonly myGameId = signal<number | null>(null);
+  readonly pgnMsg = signal<{ text: string; err: boolean } | null>(null);
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
+  readonly rookHub = rookHubUrlForLeagueHub();
 
   private readonly sideState = {
     white: { name: signal(''), fide: signal<string | null>(null), elo: signal<number | null>(null),
@@ -287,6 +323,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.ticker.stop();
     this.destroyed = true;
     for (const t of [this.pollTimer, this.matchTimer]) if (t) clearTimeout(t);
     const url = this.photoUrl();
@@ -304,7 +341,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     }
     if (this.destroyed) return;
     this.state.set(st);
-    if (st.scan.status === 'pending' || st.scan.status === 'running') {
+    const reading = st.scan.status === 'pending' || st.scan.status === 'running';
+    this.ticker.run(reading);
+    if (reading) {
       this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
       return;
     }
@@ -437,14 +476,58 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         scanId: null,
       }, this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);
-      void this.router.navigate(this.share ? ['/s', this.share, 'hochladen'] : ['/verein'],
-        { queryParams: this.share ? { art: 'formular' } : {}, state: { msg: 'Partie in die Vereins-Datenbank übernommen.' } });
+      this.saved.set(true);
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`
         : e?.error?.reason ? reasonText(e.error.reason) : 'Übernehmen hat nicht geklappt.');
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  /** Die geprüfte Partie: legale Züge, Namen wie im Formular. */
+  private pgnInput(): SheetPgnInput {
+    return {
+      moves: this.s.plies().filter(p => !p.illegal).map(p => p.san),
+      white: this.name('white')().trim() || null, black: this.name('black')().trim() || null,
+      result: this.result(), event: this.event().trim() || null, year: this.year(),
+    };
+  }
+
+  downloadPgn(): void {
+    const g = this.pgnInput();
+    const url = URL.createObjectURL(new Blob([sheetPgn(g)], { type: 'application/x-chess-pgn' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = sheetPgnFileName(g);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  async copyPgn(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(sheetPgn(this.pgnInput()));
+      this.pgnMsg.set({ text: 'PGN kopiert.', err: false });
+    } catch {
+      this.pgnMsg.set({ text: 'Kopieren ging nicht — bitte „PGN herunterladen".', err: true });
+    }
+  }
+
+  /** In RookHubs „Meine Partien" (nur angemeldet) — mit den Namen wie im Formular, ohne „Schwaz". */
+  async addToMyGames(): Promise<void> {
+    this.adding.set(true);
+    this.pgnMsg.set(null);
+    try {
+      const r = await this.clubApi.addToMyGames(sheetPgn(this.pgnInput()));
+      this.myGameId.set(r.ids[0] ?? null);
+      this.pgnMsg.set({ text: r.imported ? 'In deinen Partien gespeichert.' : 'Die Partie war schon in deinen Partien.', err: false });
+    } catch {
+      this.pgnMsg.set({ text: 'Speichern in deinen Partien hat nicht geklappt.', err: true });
+    } finally {
+      this.adding.set(false);
     }
   }
 

@@ -571,16 +571,19 @@ public class ScoresheetScanService
     // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
 
     /// <summary>Wem eine Liga-Einlesung gehört: einem Konto ODER (ohne Anmeldung, Teilen-Link) dem Browser, der den
-    /// geheimen Schlüssel hat.</summary>
-    public readonly record struct ScanActor(int? UserId, string? Key)
+    /// geheimen Schlüssel hat. <see cref="Manager"/> = Verwalter der Vereins-Datenbank: darf JEDE Liga-Einlesung prüfen,
+    /// übernehmen oder verwerfen (Wunsch 2026-09-28: was hochgeladen, aber nie geprüft wurde, soll nicht im Limbo hängen).</summary>
+    public readonly record struct ScanActor(int? UserId, string? Key, bool Manager = false)
     {
         public static ScanActor User(int userId) => new(userId, null);
         public static ScanActor Anonymous(string key) => new(null, key);
+        public static ScanActor ManagerOf(int userId) => new(userId, null, true);
     }
 
     private IQueryable<ScoresheetScan> LeagueOwned(IQueryable<ScoresheetScan> q, ScanActor a)
     {
         q = q.Where(s => s.Purpose == ScoresheetScan.PurposeLeague);
+        if (a.Manager) return q;
         if (a.UserId is int uid) return q.Where(s => s.UserId == uid);
         var key = a.Key ?? "";
         return q.Where(s => s.UserId == null && s.AccessKey == key && key != "");
@@ -679,6 +682,12 @@ public class ScoresheetScanService
     public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId) =>
         (await LeagueOwned(ScanHeads(), ScanActor.User(userId)).Where(s => s.FileName != DiscardedMark)
             .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync()).Select(ToDto).ToList();
+
+    /// <summary>Alle offenen Liga-Einlesungen (auch ohne Konto über einen Teilen-Link) — für die Verwalter, jüngste zuerst.</summary>
+    public async Task<List<LeagueOpenScanDto>> LeagueOpenScansAsync(int viewerId, CancellationToken ct = default) =>
+        (await ScanHeads().Where(s => s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark)
+            .OrderByDescending(s => s.CreatedAt).Take(50).ToListAsync(ct))
+        .Select(s => new LeagueOpenScanDto { Scan = ToDto(s), ViaShareLink = s.UserId == null, Mine = s.UserId == viewerId }).ToList();
 
     public async Task<List<(string Key, ScoresheetScanDto Scan)>> LeagueScansByKeysAsync(IEnumerable<string> keys)
     {

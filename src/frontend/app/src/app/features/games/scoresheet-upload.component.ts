@@ -16,6 +16,7 @@ import { Subscription, timer } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
+import { SECONDS_PER_MOVE, formatClock, serverTime } from './scoresheet-timing';
 import { formatQuietUntil } from './quiet-hours.util';
 
 /** So oft fragt die Seite nach, solange Claude liest. */
@@ -147,7 +148,7 @@ export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
                 <mat-spinner diameter="28"></mat-spinner>
                 <div>
                   <strong>{{ (scan.status === 'pending' ? 'scoresheet.pending' : 'scoresheet.running') | translate }}</strong>
-                  <div class="facts">{{ 'scoresheet.runningHint' | translate: { seconds: elapsed() } }}</div>
+                  <div class="facts">{{ 'scoresheet.runningHint' | translate: { time: clock(elapsed()), perMove: perMove } }}</div>
                 </div>
               </div>
             }
@@ -230,6 +231,8 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   readonly current = signal<ScoresheetScan | null>(null);
   readonly recent = signal<ScoresheetScan[]>([]);
   readonly elapsed = signal(0);
+  readonly clock = formatClock;
+  readonly perMove = SECONDS_PER_MOVE;
   /** Darf gerade eingelesen werden? Kostenbudget und Tageszahl — Admins nur das Gesamtbudget. */
   readonly canRead = computed(() => {
     const st = this.status();
@@ -309,8 +312,10 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     this.current.set(scan);
     this.poll?.unsubscribe();
     this.tick?.unsubscribe();
-    const started = Date.now();
-    this.elapsed.set(0);
+    // Ab dem Hochladen (Serverzeit), nicht ab dem Öffnen der Seite — wer zurückkommt, sieht die echte Dauer.
+    const up = serverTime(scan.createdAt);
+    const started = Number.isFinite(up) ? Math.min(up, Date.now()) : Date.now();
+    this.elapsed.set(Math.max(0, Math.round((Date.now() - started) / 1000)));
     this.tick = timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.elapsed.set(Math.round((Date.now() - started) / 1000)));
     this.poll = timer(SCAN_POLL_MS, SCAN_POLL_MS).pipe(

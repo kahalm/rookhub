@@ -1390,6 +1390,16 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   steht nirgends, der Vermerk wird nach zwei Tagen geleert. Übernehmen oder Verwerfen schließt die Einlesung
   (`CloseLeagueScanAsync` = `DetachWithoutLoading` + Dateiname „∅" + Schlüssel weg): Foto und Lesung gehen, die Zeile
   bleibt fürs Kontingent — und nichts verbindet sie mit der Partie.
+* **Nie geprüfte Formulare** (0.581.0, Wunsch „damit die nicht im Limbo sind"): Verwalter (`league.manage`) sehen unter
+  `GET /api/league/club/admin/scans` ALLE offenen Liga-Einlesungen (auch über Teilen-Links, `viaShareLink`, `mine`) und
+  dürfen jede öffnen, übernehmen, verwerfen (`ScanActor.ManagerOf`, `LeagueOwned` ohne Eigentümer-Filter; der Controller
+  nimmt ihn für jeden Verwalter). LeagueHub zeigt sie im Formular-Reiter unter „Offene Formulare anderer".
+* **Nach dem Prüfen** (0.581.0): „PGN herunterladen" / „PGN kopieren" (`sheetPgn` in `core/club-format.ts`, Namen wie im
+  Formular — die Datei bleibt beim Nutzer) und angemeldet „Zu meinen Partien hinzufügen" (`POST /api/games/import`,
+  Link zurück nach RookHub über `rookHubUrlForLeagueHub`). Nach dem Übernehmen bleibt die Seite dafür offen.
+* **Dauer** (0.581.0): Hinweis „etwa 1–2 Sekunden pro Zug" und eine Uhr ab dem Hochladen (`scoresheet-timing.ts`:
+  `serverTime` liest Zeiten ohne Zone als UTC — aus der Datenbank kommen sie so —, `SecondsTicker` läuft nur, solange
+  gelesen wird). Gemessen auf Prod: 43/59/104 Einträge in 22/31/73 s.
 * **Löschen**: `league.manage` alles, sonst nur eigene Partien ohne „Schwaz". Konto löschen setzt `UploadedByUserId` null.
 
 | Methode | Endpoint | Recht | Zweck |
@@ -1404,6 +1414,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/club/games/lichess` | contribute | `{ url }` einer öffentlichen Lichess-Studie → `{ pgn }` |
 | POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates, lastNameOnly, mega }` |
 | GET | `/api/league/club/scoresheet/status` | contribute | Tageszahl dieses Wegs (10) |
+| GET | `/api/league/club/admin/scans` | manage | Alle offenen Liga-Einlesungen `[{ scan, viaShareLink, mine }]` (jüngste 50) |
 | GET/POST | `/api/league/club/scans` | contribute | offene Liga-Einlesungen / Foto hochladen (multipart wie `POST /api/scoresheets`) |
 | GET | `/api/league/club/scans/{id}` (+`/photo`, `POST /resolve`, `DELETE`) | contribute | Stand / Foto / Rest neu aufbereiten / verwerfen |
 | POST | `/api/league/s/{token}/club/games/preview`, `/games/import` | Teilen-Link | wie oben, ohne Konto |

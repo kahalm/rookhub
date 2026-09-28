@@ -2,10 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import {
-  ClubGameRequest, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, RosterPerson,
-  ScanRef, ScoresheetScan, ScoresheetStatus,
-} from './club.models';
+import { ClubGameRequest, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
@@ -130,6 +127,16 @@ export class ClubApiService {
 
   client(share: string | null = null): ClubClient {
     return new ClubClient(this.http, share);
+  }
+
+  /** Alle offenen Liga-Einlesungen (Verwalter) — was hochgeladen, aber nie geprüft wurde, hängt sonst im Limbo. */
+  openScans(): Promise<OpenScan[]> {
+    return firstValueFrom(this.http.get<OpenScan[]>('/api/league/club/admin/scans'));
+  }
+
+  /** Eine geprüfte Partie in RookHubs „Meine Partien" (dasselbe Konto) — `POST /api/games/import`. */
+  addToMyGames(pgn: string): Promise<{ imported: number; duplicates: number; ids: number[] }> {
+    return firstValueFrom(this.http.post<{ imported: number; duplicates: number; ids: number[] }>('/api/games/import', { pgn }));
   }
 
   /** Eine eigene Partie aus RookHub (⋮ → „In die Vereins-Datenbank" auf der Partieseite) — dieselbe API, dasselbe Konto. */
