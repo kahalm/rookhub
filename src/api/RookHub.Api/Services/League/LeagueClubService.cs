@@ -121,7 +121,9 @@ public sealed class LeagueClubService
             {
                 try
                 {
-                    var uci = PgnParser.TryExtractUciMainline(start, moveText);
+                    // Nur ein Ergebnis („1-0", „*") ist KEINE Partie mit illegalem Zug — TryExtractUciMainline meldet beides null.
+                    var uci = PgnParser.ExtractMainlineSans(moveText).Count == 0 ? new List<string>()
+                        : PgnParser.TryExtractUciMainline(start, moveText);
                     if (uci == null) err = "illegal";
                     else if (uci.Count == 0) err = "noMoves";
                     else if (uci.Count > MaxPlies) err = "tooLong";

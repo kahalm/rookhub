@@ -124,7 +124,9 @@ public static partial class PgnParser
         // sogar wie ein Header aussehen — solche Zeilen sind KOMMENTAR-INHALT, kein Tag/Header.
         int openComments = 0;
 
-        foreach (var rawLine in pgnText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        // Ein BOM am Anfang (manche Windows-Programme schreiben es in UTF-8-Dateien) machte aus der ersten Kopfzeile Zugtext:
+        // die erste Partie zerfiel in zwei, beide unlesbar.
+        foreach (var rawLine in pgnText.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             var m = openComments == 0 ? HeaderLineRegex().Match(rawLine) : Match.Empty;
             bool keepRaw = true;

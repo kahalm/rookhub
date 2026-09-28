@@ -254,6 +254,17 @@ public class LeagueClubServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Preview_ResultOnlyGame_IsNoMoves_AndABomDoesNotShiftTheNumbers()
+    {
+        var me = await SeedAsync();
+        var pgn = "\uFEFF" + Pgn("Hengl, Philip", "Schnabl, Andreas") + Pgn("Oberschmid, Patrik", "Hengl, Philip", " *");
+        var p = await Club().PreviewAsync(me, pgn);
+        Assert.Equal(2, p.Games.Count);
+        Assert.Equal((null, "Hengl, Philip"), (p.Games[0].Error, p.Games[0].White.Match.Name));
+        Assert.Equal("noMoves", p.Games[1].Error);
+    }
+
+    [Fact]
     public async Task Import_ProfileFideId_FindsMySide()
     {
         var me = await SeedAsync();

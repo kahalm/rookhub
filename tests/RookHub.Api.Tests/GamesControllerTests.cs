@@ -461,6 +461,20 @@ public class GamesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Import_BomAtTheStart_AndResultOnlyGame_AreReadCorrectly()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        // Manche Windows-Programme schreiben ein BOM; eine Partie nur mit Ergebnis ist „keine Züge", kein illegaler Zug.
+        var pgn = "\uFEFF" + TwoGames + "\n\n[White \"Eva\"]\n[Black \"Fritz\"]\n[Result \"1-0\"]\n\n 1-0\n";
+        var ok = Assert.IsType<OkObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = pgn })).Result);
+        var res = Assert.IsType<PgnImportResultDto>(ok.Value);
+        Assert.Equal(2, res.Imported);
+        Assert.Equal((3, "noMoves"), (Assert.Single(res.Failed).Index, res.Failed[0].Reason));
+        Assert.Equal("Anna", (await _db.SavedGames.OrderBy(g => g.Id).FirstAsync()).White);
+    }
+
+    [Fact]
     public async Task Import_EmptyOrHuge_IsABadRequest_AndGamesStayPrivatePerUser()
     {
         var user = await CreateUserAsync();

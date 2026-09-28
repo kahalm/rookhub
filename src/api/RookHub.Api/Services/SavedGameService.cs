@@ -658,6 +658,8 @@ public class SavedGameService
             try
             {
                 var fen = startFen ?? new Chess.ChessBoard().ToFen();
+                // Nur ein Ergebnis („1-0", „*") ist eine Partie ohne Züge, kein illegaler Zug — TryExtractUciMainline meldet beides null.
+                if (PgnParser.ExtractMainlineSans(moveText).Count == 0) { result.Failed.Add(Fail("noMoves")); continue; }
                 var uci = PgnParser.TryExtractUciMainline(fen, moveText);
                 if (uci == null) { result.Failed.Add(Fail(startFen != null && !IsLoadableFen(startFen) ? "badFen" : "illegal")); continue; }
                 if (uci.Count == 0) { result.Failed.Add(Fail("noMoves")); continue; }

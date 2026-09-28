@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.575.2", date: "2026-09-28", changes: [
+    { en: "PGN import (LeagueHub club database and RookHub games): a game that only carries a result and no moves is now reported as “no moves” instead of “a move is not legal”. A file that starts with a byte-order mark (written by some Windows programs) no longer breaks the first game and no longer shifts the numbering by one.", de: "PGN-Import (LeagueHub-Vereins-Datenbank und RookHub-Partien): Eine Partie, die nur ein Ergebnis und keine Züge enthält, heißt jetzt „Keine Züge“ statt „Ein Zug ist nicht legal“. Eine Datei, die mit einer Byte-Order-Markierung beginnt (schreiben manche Windows-Programme), macht die erste Partie nicht mehr unlesbar und verschiebt die Nummerierung nicht mehr um eins." },
+  ] },
   { version: "0.575.1", date: "2026-09-28", changes: [
     { en: "LeagueHub club database: a player who appears in an older roster without FIDE ID (2022/23 was written without a comma, e.g. “Hengl Philip”) now counts as the same person as the entry with FIDE ID — before, the name looked ambiguous, the game got no FIDE ID and the player appeared twice in the search. Namesakes with different FIDE IDs stay apart.", de: "LeagueHub-Vereins-Datenbank: Ein Spieler, der in einer älteren Meldeliste ohne FIDE-ID steht (2022/23 ohne Komma geschrieben, etwa „Hengl Philip“), gilt jetzt als dieselbe Person wie der Eintrag mit FIDE-ID — vorher wirkte der Name mehrdeutig, die Partie bekam keine FIDE-ID und der Spieler stand in der Suche doppelt. Namensvettern mit verschiedenen FIDE-IDs bleiben getrennt." },
   ] },
