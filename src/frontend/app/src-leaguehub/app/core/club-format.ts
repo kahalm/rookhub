@@ -20,6 +20,7 @@ export function reasonText(reason: string): string {
     case 'noMoves': return 'Keine Züge.';
     case 'tooLong': return 'Zu lang (über 300 Züge).';
     case 'duplicate': return 'Diese Partie ist schon in der Vereins-Datenbank.';
+    case 'invalidResult': return 'Unbekanntes Ergebnis.';
     case 'empty': return 'Kein PGN.';
     case 'tooLarge': return 'Zu groß (höchstens 5 Millionen Zeichen je Upload).';
     default: return 'Nicht übernommen.';

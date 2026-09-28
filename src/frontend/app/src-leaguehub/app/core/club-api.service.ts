@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ClubGameRequest, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ClubGame, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
@@ -56,6 +56,11 @@ export class ClubClient {
 
   deleteGame(id: number): Promise<unknown> {
     return firstValueFrom(this.http.delete(`${this.base}/games/${id}`));
+  }
+
+  /** Namen und Ergebnis einer gespeicherten Partie korrigieren (angemeldet; wer löschen darf, darf korrigieren). */
+  updateGame(id: number, body: ClubGameUpdate): Promise<ClubGame> {
+    return firstValueFrom(this.http.put<ClubGame>(`${this.base}/games/${id}`, body));
   }
 
   /** Spieler zum Korrigieren: Ligaspieler, mit `all` dazu das Spielerverzeichnis der ganzen Megabase. */

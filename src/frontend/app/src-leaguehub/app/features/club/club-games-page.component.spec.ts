@@ -18,7 +18,8 @@ describe('ClubGamesPageComponent', () => {
 
   beforeEach(() => {
     perms = new Set(['league.view', 'league.contribute']);
-    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn']);
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn', 'updateGame', 'players']);
+    api.players.and.resolveTo([]);
     api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(1), G(2, { white: 'Oberschmid, Patrik', whiteFide: '900', anonymized: false, canDelete: true })] });
   });
 
@@ -53,13 +54,41 @@ describe('ClubGamesPageComponent', () => {
     expect(el.querySelector('a.btn-pri')?.textContent).toContain('Partien hinzufügen');
   }));
 
+  // Wunsch 2026-09-28: „die Spieler sollen alle klickbar sein (Kinsiz, Atlas ist nicht klickbar), Ergebnis anpassbar".
+  it('ein Name ohne FIDE-ID öffnet die Korrektur; Spieler wählen und Ergebnis ändern speichert, „Schwaz" bleibt', fakeAsync(() => {
+    api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50,
+      items: [G(53, { black: 'Kinsiz, Atlas', blackFide: null, blackElo: null, canDelete: true })] });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const unknown = el.querySelector('button.pl.unknown') as HTMLButtonElement;
+    expect(unknown.textContent).toContain('Kinsiz, Atlas');
+    unknown.click();
+    fixture.detectChanges();
+    const editRow = el.querySelector('tr.edit-row') as HTMLElement;
+    expect(editRow.textContent).toContain('bleibt anonym');                        // Weiß = Schwaz: kein Suchfeld
+    expect(editRow.querySelectorAll('lh-player-search').length).toBe(1);
+    const c = fixture.componentInstance;
+    c.picked('black', { name: 'Kinsiz, Onur', fide: '6301517', teams: [], club: false, league: false, source: 'mega' });
+    c.setResult('0-1');
+    api.updateGame.and.resolveTo(G(53, { black: 'Kinsiz, Onur', blackFide: '6301517', result: '0-1', canDelete: true }));
+    void c.save();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.updateGame).toHaveBeenCalledWith(53, { white: null, black: { name: 'Kinsiz, Onur', fide: '6301517', replace: false }, result: '0-1' });
+    const row = el.querySelector('tbody tr') as HTMLElement;
+    expect(row.querySelector('button.pl:not(.unknown)')?.textContent).toContain('Kinsiz, Onur');   // jetzt mit Karte
+    expect(row.textContent).toContain('0–1');
+    expect(el.querySelector('tr.edit-row')).toBeNull();
+  }));
+
   it('Löschen fragt nach und nimmt die Zeile heraus', fakeAsync(() => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
     spyOn(window, 'confirm').and.returnValue(true);
     api.deleteGame.and.resolveTo({});
-    (el.querySelectorAll('tbody tr')[1].querySelector('.btn-link') as HTMLButtonElement).click();
+    (Array.from(el.querySelectorAll('tbody tr')[1].querySelectorAll('.btn-link')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.deleteGame).toHaveBeenCalledWith(2);

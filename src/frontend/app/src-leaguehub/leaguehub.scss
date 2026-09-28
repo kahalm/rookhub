@@ -484,3 +484,4 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .review-table tr.edit-row, .review-table tr.edit-row > td { display: block; }
 }
 .scan-clock { font-variant-numeric: tabular-nums; }
+.club-table .pl.unknown { text-decoration: underline dotted; text-underline-offset: 3px; color: inherit; }

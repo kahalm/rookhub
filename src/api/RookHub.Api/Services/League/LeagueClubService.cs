@@ -513,13 +513,58 @@ public sealed class LeagueClubService
         return new LeagueClubListDto
         {
             Total = total, Page = page, PageSize = PageSize,
-            Items = rows.Select(g => new LeagueClubGameDto
-            {
-                Id = g.Id, Year = g.Year, White = g.White, Black = g.Black, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide,
-                WhiteElo = g.WhiteElo, BlackElo = g.BlackElo, Result = g.Result, Event = g.Event, Plies = g.Plies,
-                Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage),
-            }).ToList(),
+            Items = rows.Select(g => ToDto(g, userId, canManage)).ToList(),
         };
+    }
+
+    internal static LeagueClubGameDto ToDto(LeagueClubGame g, int userId, bool canManage) => new()
+    {
+        Id = g.Id, Year = g.Year, White = g.White, Black = g.Black, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide,
+        WhiteElo = g.WhiteElo, BlackElo = g.BlackElo, Result = g.Result, Event = g.Event, Plies = g.Plies,
+        Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage),
+    };
+
+    // ── Korrigieren ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Namen und Ergebnis einer gespeicherten Partie korrigieren (Wunsch 2026-09-28: „auf /verein die Namen anpassen,
+    /// Ergebnis soll auch anpassbar sein"). Wer darf: wie beim Löschen. Eine Seite „Schwaz" bleibt anonym (<c>anonymous</c>).
+    /// Eine geänderte Seite wird abgeglichen wie beim Import (Ligaspieler, Megabase, gemerkte Zuordnung); die unveränderte
+    /// gilt weiter als bekannt. Es gelten dieselben Regeln wie beim Hochladen (<c>noLeaguePlayer</c>, <c>onlyOwnClub</c>).
+    /// War ein Name vorher niemandem zugeordnet (ohne FIDE-ID), wird die Zuordnung gemerkt — die nächste Übersicht erkennt ihn.
+    /// </summary>
+    public async Task<(LeagueClubGame? Game, string? Reason)> UpdateAsync(int userId, bool canManage, int id,
+        LeagueClubGameUpdateRequest req, CancellationToken ct = default)
+    {
+        var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g == null) return (null, "notFound");
+        if (!CanDelete(g, userId, canManage)) return (null, "forbidden");
+        bool Anon(string name, string? fide) => g.Anonymized && fide == null && name == AnonymousName;
+        if ((req.White != null && Anon(g.White, g.WhiteFide)) || (req.Black != null && Anon(g.Black, g.BlackFide)))
+            return (null, "anonymous");
+        if (req.Result is { } r0 && !Results.Contains(r0)) return (null, "invalidResult");
+        var lk = await LookupsAsync(await RosterAsync(ct), new[] { g.White, g.Black, req.White?.Name, req.Black?.Name },
+            new[] { g.WhiteFide, g.BlackFide, req.White?.Fide, req.Black?.Fide }, ct);
+        Side Current(string name, string? fide, int? elo) => Anon(name, fide)
+            ? new Side(name, LeagueRosterIndex.None, null, true)
+            : new Side(name, LeagueRosterIndex.None, elo, false, fide, new LeagueMegaPlayers.Hit(name, fide));   // war schon angenommen
+        var w = req.White is { } dw ? Decided(dw with { Replace = false }, g.White, g.WhiteFide, g.WhiteElo, lk) : Current(g.White, g.WhiteFide, g.WhiteElo);
+        var b = req.Black is { } db ? Decided(db with { Replace = false }, g.Black, g.BlackFide, g.BlackElo, lk) : Current(g.Black, g.BlackFide, g.BlackElo);
+        var moveText = PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
+        var sans = PgnParser.ExtractMainlineSans(moveText);
+        var (built, reason) = Build(w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
+        if (built == null) return (null, reason);
+        var before = new[] { g.WhiteFide, g.BlackFide };
+        var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
+        if (req.White != null && g.WhiteFide == null && w.Identity is { } iw) remember.Add((g.White, iw));
+        if (req.Black != null && g.BlackFide == null && b.Identity is { } ib) remember.Add((g.Black, ib));
+        (g.White, g.Black, g.WhiteFide, g.BlackFide, g.WhiteElo, g.BlackElo, g.Result, g.Pgn) =
+            (built.White, built.Black, built.WhiteFide, built.BlackFide, built.WhiteElo, built.BlackElo, built.Result, built.Pgn);
+        await _db.SaveChangesAsync(ct);
+        await RefreshCardsAsync(before.Concat(new[] { g.WhiteFide, g.BlackFide }), ct);
+        await RememberAsync(remember, ct);
+        _log.LogInformation("Vereins-Datenbank: Partie {Id} korrigiert", g.Id);
+        return (g, null);
     }
 
     private static bool CanDelete(LeagueClubGame g, int userId, bool canManage) =>

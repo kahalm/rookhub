@@ -10,7 +10,7 @@ public class LeagueClubPreviewRequest
 }
 
 /// <summary>Wer an einer Seite sitzt — so, wie der Nutzer es in der Übersicht festgelegt hat.</summary>
-public class LeagueClubSideDecision
+public record LeagueClubSideDecision
 {
     /// <summary>Name (frei getippt oder aus der Meldeliste); leer = der Name aus dem PGN.</summary>
     public string? Name { get; set; }
@@ -209,4 +209,14 @@ public class LeagueOpenScanDto
     public bool ViaShareLink { get; set; }
     /// <summary>Die eigene (steht ohnehin in „Deine Formulare").</summary>
     public bool Mine { get; set; }
+}
+
+/// <summary><c>PUT /api/league/club/games/{id}</c> — Namen und Ergebnis einer gespeicherten Partie korrigieren. Eine Seite
+/// ohne Angabe bleibt, wie sie ist; „Schwaz" lässt sich nicht ändern.</summary>
+public class LeagueClubGameUpdateRequest
+{
+    public LeagueClubSideDecision? White { get; set; }
+    public LeagueClubSideDecision? Black { get; set; }
+    /// <summary><c>1-0</c>, <c>0-1</c>, <c>1/2-1/2</c>, <c>*</c>; fehlt = unverändert.</summary>
+    public string? Result { get; set; }
 }

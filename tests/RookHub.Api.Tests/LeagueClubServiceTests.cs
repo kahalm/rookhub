@@ -571,6 +571,40 @@ public class LeagueClubServiceTests : IDisposable
         })).Reason);
     }
 
+    /// <summary>Wunsch 2026-09-28: „auf /verein die Namen anpassen, Ergebnis soll auch anpassbar sein".</summary>
+    [Fact]
+    public async Task Update_NamesAndResult_RulesStay_SchwazStaysAnonymous_UnknownNameIsRemembered()
+    {
+        var me = await SeedAsync();
+        var club = Club();
+        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Kinsiz, Atlas"), null);                    // Schwarz unbekannt
+        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"), null);
+        var named = _db.LeagueClubGames.AsNoTracking().Single(g => !g.Anonymized);
+        var anon = _db.LeagueClubGames.AsNoTracking().Single(g => g.Anonymized);
+        Assert.Equal(("Kinsiz, Atlas", (string?)null), (named.Black, named.BlackFide));
+
+        var (game, reason) = await club.UpdateAsync(me, false, named.Id,
+            new LeagueClubGameUpdateRequest { Black = new() { Fide = "333" }, Result = "0-1" });
+        Assert.Null(reason);
+        Assert.Equal(("Schnabl, Andreas Dr.", "333", "0-1"), (game!.Black, game.BlackFide, game.Result));
+        Assert.Contains("[Black \"Schnabl, Andreas Dr.\"]", game.Pgn);
+        Assert.Contains("[Result \"0-1\"]", game.Pgn);
+        Assert.Equal(named.MovesHash, game.MovesHash);
+        Assert.Equal(("kinsiz, atlas", "333"), (_db.LeagueNameAliases.Single().NameKey, _db.LeagueNameAliases.Single().Fide));
+        Assert.Equal(1, _db.LeaguePlayerProfiles.Single(p => p.FideId == "333").GameCount);          // Karte nachgezogen
+
+        Assert.Equal("anonymous", (await club.UpdateAsync(me, true, anon.Id,
+            new LeagueClubGameUpdateRequest { White = new() { Name = "Wer auch immer" } })).Reason);
+        Assert.Equal("forbidden", (await club.UpdateAsync(me, false, anon.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
+        Assert.Null((await club.UpdateAsync(me + 1, true, anon.Id, new LeagueClubGameUpdateRequest { Result = "1/2-1/2" })).Reason);
+        Assert.Equal("Schwaz", _db.LeagueClubGames.AsNoTracking().Single(g => g.Id == anon.Id).White);   // bleibt anonym
+        Assert.Equal("forbidden", (await club.UpdateAsync(me + 1, false, named.Id, new LeagueClubGameUpdateRequest { Result = "*" })).Reason);
+        Assert.Equal("invalidResult", (await club.UpdateAsync(me, false, named.Id, new LeagueClubGameUpdateRequest { Result = "2-0" })).Reason);
+        Assert.Equal("noLeaguePlayer", (await club.UpdateAsync(me, false, named.Id, new LeagueClubGameUpdateRequest
+            { White = new() { Name = "Niemand, Bekannt" }, Black = new() { Name = "Auch, Niemand" } })).Reason);
+        Assert.Equal("notFound", (await club.UpdateAsync(me, true, 99999, new LeagueClubGameUpdateRequest())).Reason);
+    }
+
     [Fact]
     public async Task ListAndDelete_OwnNamedGames_AnonymousOnlyByManagers()
     {

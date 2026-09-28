@@ -1,22 +1,27 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal, viewChild } from '@angular/core';
+import { PlayerSearchComponent } from './player-search.component';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
-import { ClubGame } from '../../core/club.models';
+import { ClubGame, RosterPerson, SideDecision } from '../../core/club.models';
+import { reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
 
 /**
  * Vereinspartien (`/verein`): was die Mitglieder hochgeladen haben, neueste Jahre zuerst. Lesen darf, wer LeagueHub
- * sieht (`league.view`); hinzufügen die Vereinsgruppe (`league.contribute`). Ein Klick auf einen Ligaspieler öffnet
- * seine Spielerkarte — die Vereinspartien stehen dort mit drin.
+ * sieht (`league.view`); hinzufügen die Vereinsgruppe (`league.contribute`). Ein Klick auf einen Spieler mit FIDE-ID
+ * öffnet seine Spielerkarte — die Vereinspartien stehen dort mit drin —, ohne FIDE-ID die Korrektur. Namen und Ergebnis
+ * korrigiert, wer die Partie auch löschen darf (Wunsch 2026-09-28); „Schwaz" bleibt anonym.
  */
+type Side = 'white' | 'black';
+
 @Component({
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerCardComponent],
+  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
@@ -59,19 +64,53 @@ import { PlayerCardComponent } from '../../shared/player-card.component';
               @for (g of items(); track g.id) {
                 <tr>
                   <td class="num">{{ g.year ?? '–' }}</td>
-                  <td>@if (g.whiteFide) { <button type="button" class="pl" (click)="openCard(g.whiteFide, 'w')">{{ g.white }}</button> }
-                      @else { <span [class.anon]="g.white === anon">{{ g.white }}</span> }
-                      @if (g.whiteElo) { <span class="small"> {{ g.whiteElo }}</span> }</td>
-                  <td>@if (g.blackFide) { <button type="button" class="pl" (click)="openCard(g.blackFide, 's')">{{ g.black }}</button> }
-                      @else { <span [class.anon]="g.black === anon">{{ g.black }}</span> }
-                      @if (g.blackElo) { <span class="small"> {{ g.blackElo }}</span> }</td>
+                  @for (k of sides; track k) {
+                    <td>@if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
+                        @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
+                        @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
+                                  [attr.title]="'Kein Spieler zugeordnet — zum Zuordnen klicken'">{{ nameOf(g, k) }}</button> }
+                        @else { <span>{{ nameOf(g, k) }}</span> }
+                        @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }</td>
+                  }
                   <td class="num">{{ resultText(g.result) }}</td>
                   <td class="hide-s small">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
                   <td class="num">@if (g.canDelete) {
+                    <button type="button" class="btn-link" (click)="edit(g)"
+                            [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
                     <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
                             [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }</td>
                 </tr>
+                @if (editing(); as e) {
+                  @if (e.id === g.id) {
+                    <tr class="edit-row"><td colspan="7">
+                      <div class="side-edit">
+                        <div class="field-row">
+                          @for (k of sides; track k) {
+                            <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
+                              @if (isAnon(g, k)) { <span class="anon">{{ anon }}</span> <span class="small muted">bleibt anonym</span> }
+                              @else {
+                                <lh-player-search [client]="api" [text]="nameOf(g, k)" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
+                                                  (textChange)="typed(k, $event)" (picked)="picked(k, $event)" />
+                                @if (e[k]; as d) { <span class="small ok-text">{{ d.fide ? d.name + ' (FIDE ' + d.fide + ')' : 'getippt: ' + d.name }}</span> }
+                              }
+                            </div>
+                          }
+                          <label class="field narrow">Ergebnis
+                            <select (change)="setResult($any($event.target).value)">
+                              @for (r of results; track r) { <option [value]="r" [selected]="e.result === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
+                            </select>
+                          </label>
+                        </div>
+                        <div class="actions">
+                          <button type="button" class="btn-pri" [disabled]="saving()" (click)="save()">{{ saving() ? 'Speichere …' : 'Speichern' }}</button>
+                          <button type="button" class="btn-link" (click)="editing.set(null)">Abbrechen</button>
+                          @if (editError()) { <span class="err small">{{ editError() }}</span> }
+                        </div>
+                      </div>
+                    </td></tr>
+                  }
+                }
               }
             </tbody>
           </table>
@@ -85,7 +124,7 @@ import { PlayerCardComponent } from '../../shared/player-card.component';
   `,
 })
 export class ClubGamesPageComponent implements OnInit {
-  private readonly api = inject(ClubApiService).client();
+  readonly api = inject(ClubApiService).client();
   private readonly auth = inject(AuthService);
   private readonly card = viewChild(PlayerCardComponent);
 
@@ -102,6 +141,12 @@ export class ClubGamesPageComponent implements OnInit {
   readonly downloading = signal(false);
   readonly deleting = signal<number | null>(null);
   readonly error = signal<string | null>(null);
+  readonly sides: Side[] = ['white', 'black'];
+  readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
+  /** Die Partie, die gerade korrigiert wird — je Seite die Festlegung (fehlt = unverändert) und das Ergebnis. */
+  readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
+  readonly saving = signal(false);
+  readonly editError = signal<string | null>(null);
   /** Rückmeldung der Formular-Korrektur („übernommen"), per Router-Zustand mitgebracht. */
   readonly notice = signal<string | null>((history.state as { msg?: string } | null)?.msg ?? null);
   private page = 1;
@@ -148,6 +193,51 @@ export class ClubGamesPageComponent implements OnInit {
 
   moves(g: ClubGame): number {
     return Math.ceil(g.plies / 2);
+  }
+
+  nameOf(g: ClubGame, k: Side): string { return k === 'white' ? g.white : g.black; }
+  fideOf(g: ClubGame, k: Side): string | null { return k === 'white' ? g.whiteFide : g.blackFide; }
+  /** „Schwaz" ohne FIDE-ID an einer anonymisierten Partie — bleibt, wie es ist. */
+  isAnon(g: ClubGame, k: Side): boolean { return g.anonymized && !this.fideOf(g, k) && this.nameOf(g, k) === this.anon; }
+
+  edit(g: ClubGame): void {
+    const cur = this.editing();
+    if (cur?.id === g.id) { this.editing.set(null); return; }
+    this.editing.set({ id: g.id, white: null, black: null, result: g.result });
+    this.editError.set(null);
+  }
+
+  typed(k: Side, text: string): void {
+    const e = this.editing();
+    if (e) this.editing.set({ ...e, [k]: text.trim() ? { name: text.trim(), fide: null, replace: false } : null });
+  }
+
+  picked(k: Side, p: RosterPerson): void {
+    const e = this.editing();
+    if (e) this.editing.set({ ...e, [k]: { name: p.name, fide: p.fide, replace: false } });
+  }
+
+  setResult(r: string): void {
+    const e = this.editing();
+    if (e) this.editing.set({ ...e, result: r });
+  }
+
+  async save(): Promise<void> {
+    const e = this.editing();
+    if (!e) return;
+    this.saving.set(true);
+    this.editError.set(null);
+    try {
+      const g = await this.api.updateGame(e.id, { white: e.white, black: e.black, result: e.result });
+      this.items.set(this.items().map(x => x.id === g.id ? g : x));
+      this.editing.set(null);
+    } catch (err) {
+      const reason = err instanceof HttpErrorResponse ? err.error?.reason : null;
+      this.editError.set(reason === 'anonymous' ? '„Schwaz" bleibt anonym.' : reason ? reasonText(reason)
+        : err instanceof HttpErrorResponse && err.status === 403 ? 'Diese Partie darfst du nicht ändern.' : 'Speichern hat nicht geklappt.');
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   openCard(fide: string, color: 'w' | 's'): void {

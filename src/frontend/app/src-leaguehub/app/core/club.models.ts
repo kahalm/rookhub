@@ -136,3 +136,6 @@ export interface ScanRef { ref: string; scan: ScoresheetScan }
 
 /** `GET …/admin/scans` — eine offene Liga-Einlesung für die Verwalter (auch fremde und über Teilen-Links). */
 export interface OpenScan { scan: ScoresheetScan; viaShareLink: boolean; mine: boolean }
+
+/** `PUT …/games/{id}` — eine Seite ohne Angabe bleibt, wie sie ist; „Schwaz" lässt sich nicht ändern. */
+export interface ClubGameUpdate { white?: SideDecision | null; black?: SideDecision | null; result?: string | null }

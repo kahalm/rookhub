@@ -118,6 +118,22 @@ public class LeagueClubController : BaseApiController
     public async Task<ActionResult<ScoresheetStatusDto>> ScoresheetStatus() =>
         Ok(await _scans.StatusAsync(GetUserId(), ScoresheetScan.PurposeLeague));
 
+    /// <summary>Namen und Ergebnis korrigieren → die Partie; 400 <c>reason</c> (<c>anonymous</c>, <c>noLeaguePlayer</c>,
+    /// <c>onlyOwnClub</c>, <c>invalidResult</c>), 403 fremde, 404 unbekannt.</summary>
+    [HttpPut("games/{id:int}")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<ActionResult<LeagueClubGameDto>> Update(int id, [FromBody] LeagueClubGameUpdateRequest req, CancellationToken ct)
+    {
+        var (game, reason) = await _club.UpdateAsync(GetUserId(), CanManage, id, req ?? new(), ct);
+        return reason switch
+        {
+            null => Ok(LeagueClubService.ToDto(game!, GetUserId(), CanManage)),
+            "notFound" => NotFound(),
+            "forbidden" => Forbid(),
+            _ => BadRequest(new { reason }),
+        };
+    }
+
     [HttpGet("scans")]
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<ActionResult<List<ScoresheetScanDto>>> Scans() => Ok(await _scans.LeagueScansAsync(GetUserId()));

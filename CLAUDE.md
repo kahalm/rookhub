@@ -1410,6 +1410,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
 | POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteFide, blackFide, whiteElo, blackElo, whiteReplace, blackReplace, result, event, year, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate`, `illegal` (mit Meldung); schließt die Einlesung |
 | DELETE | `/api/league/club/games/{id}` | contribute | 204 / 403 / 404 |
+| PUT | `/api/league/club/games/{id}` | contribute | Namen/Ergebnis korrigieren `{ white?{ name, fide }, black?, result? }` (0.582.0; wer löschen darf; fehlende Seite = unverändert) → Partie; 400 `anonymous` („Schwaz" bleibt), `noLeaguePlayer`, `onlyOwnClub`, `invalidResult`; ein vorher unzugeordneter Name (ohne FIDE-ID) wird als Zuordnung gemerkt |
 | GET | `/api/league/club/players?q=&all=` | contribute | Ligaspieler-Vorschläge (jedes Wort irgendwo im Namen, Wortanfänge zuerst) samt `club`; `all=true` dazu das Megabase-Verzeichnis |
 | POST | `/api/league/club/games/lichess` | contribute | `{ url }` einer öffentlichen Lichess-Studie → `{ pgn }` |
 | POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates, lastNameOnly, mega }` |
