@@ -531,6 +531,14 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal((GameAnalysisOrigin.Club, (int?)club.Id), (analysis.Origin, analysis.LeagueClubGameId));
         Assert.Null(await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default));   // 6 offen ≥ 2 Engines
 
+        // Für alle im Verein (0.589.0): Stand in der Liste (IN über die nullbare Verknüpfung + gruppierte Zählung),
+        // Bewertungen und Detail.
+        var clubService = Get<RookHub.Api.Services.League.LeagueClubService>();
+        var row = Assert.Single((await clubService.ListAsync(owner, false, null, null, 1, default)).Items);
+        Assert.Equal(6, row.Analysis!.Total);
+        Assert.Equal(id, (await clubService.EvalsAsync(club.Id))!.AnalysisId);
+        Assert.Equal(club.Pgn, (await clubService.GetAsync(owner, false, club.Id))!.Pgn);
+
         Assert.Equal(RookHub.Api.Services.League.LeagueClubService.DeleteResult.Deleted,
             await Get<RookHub.Api.Services.League.LeagueClubService>().DeleteAsync(owner, true, club.Id));
         Assert.False(await Db.GameAnalyses.AnyAsync(g => g.Id == id));

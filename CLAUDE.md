@@ -1417,7 +1417,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` und `pgn` — „Analyse" öffnet RookHubs Analysebrett mit dem GANZEN PGN (`/analysis?pgn=`, 0.592.0; über 6 000 Zeichen Adresse nur die Züge `?moves=`) |
+| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` und `pgn` — „Analyse" öffnet RookHubs Analysebrett mit dem GANZEN PGN (`/analysis?pgn=`, 0.592.0; über 6 000 Zeichen Adresse nur die Züge `?moves=`), `analysis` (Stand der Hintergrund-Analyse, 0.593.0) |
+| GET | `/api/league/club/games/{id}` | view | Eine Partie wie in der Liste, mit frischem `analysis` (0.593.0) |
+| GET | `/api/league/club/games/{id}/evals` | view | Bewertungen aus der Hintergrund-Analyse (`GameEvalsDto`, ohne Buchzüge; Status `none` ohne Analyse, 404 unbekannt) |
 | GET | `/api/league/club/games/pgn?fide=&q=` | view | Alle (gefilterten) als PGN |
 | POST | `/api/league/club/games/preview` | contribute | `{ pgn }` → `{ games[{ index, year, result, event, plies, opening, error, duplicate, white/black{ raw, elo, match{ league, ambiguous, name, fide, club, candidates }, owner, replace } }], truncated }`; 400 `empty`/`tooLarge` (5 Mio. Zeichen), höchstens 500 Partien |
 | POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
@@ -2224,7 +2226,16 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   bekommt `GameAnalysisService` (optional, Tests ohne) — `DeleteAsync` löscht vorher die Analyse samt offenen Aufträgen
   (`DeleteForClubGameAsync`), `UpdateAsync` zieht Namen/Ergebnis/Veranstaltung/Titel/PGN nach (`SyncClubGameAsync`,
   die Züge ändert eine Korrektur nie) — sonst bliebe ein zu „Schwaz" korrigierter Name in der Analyse stehen.
-  Angezeigt wird die Analyse (noch) nirgends.
+- **Für alle im Verein** (0.593.0, Wunsch „die Partien sollen allen aus dem Verein zur Verfügung stehen"): die Analyse
+  liest jeder mit `league.view` — der Zugang hängt an der PARTIE, nicht am Besitzer der Analyse. `GET
+  /api/league/club/games` trägt je Zeile `analysis` (Stand + Genauigkeit wie in „Meine Partien"), `GET
+  …/games/{id}` dieselbe Zeile mit frischem Stand, `GET …/games/{id}/evals` die Bewertungen (ohne Buchzüge). Gelesen wird über
+  `Services/GameEvalsStore.cs` — DIESELBEN zwei Wege wie bei den gespeicherten Partien (`SavedGameService` nutzt ihn
+  seither auch): `ReadAsync` (Kurve/Zug-Klassen) und `StatesAsync` (Listen-Stand samt Genauigkeits-Nachtrag). Welche
+  Analyse zu einer Vereinspartie gehört: die jüngste mit `Origin = Club`. LeagueHub: Spalte „Analyse" (Genauigkeit
+  Weiß · Schwarz bzw. Fortschritt) und „Nachspielen" (klappt `lh-game-replay` mit `evalsUrl` auf — darunter RookHubs
+  `GameReviewComponent` mit `[withExplanations]="false"`: „Warum war das ein Fehler?" gibt es für Vereinspartien nicht,
+  jede Nachfrage wäre ein 404). Über Teilen-Links bleibt die Vereins-Datenbank unlesbar.
 
 ### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
 

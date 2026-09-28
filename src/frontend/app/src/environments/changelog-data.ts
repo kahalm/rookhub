@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.593.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub club games: the background analysis is now open to everyone in the club who can see the club games. The list has a new “Analysis” column with the accuracy of both sides (or the progress while it is still being computed), and “Replay” opens the game right below its row — board, moves and the review from RookHub: evaluation curve, move classes, computer lines and an arrow for the best move.", de: "LeagueHub-Vereinspartien: Die Hintergrund-Analyse steht jetzt allen im Verein zur Verfügung, die die Vereinspartien sehen. Die Liste hat eine neue Spalte „Analyse“ mit der Genauigkeit beider Seiten (bzw. dem Fortschritt, solange noch gerechnet wird), und „Nachspielen“ öffnet die Partie direkt unter ihrer Zeile — Brett, Züge und der Rückblick aus RookHub: Bewertungskurve, Zug-Klassen, Computer-Linien und ein Pfeil für den besten Zug." },
+  ] },
   { version: "0.592.0", date: "2026-09-28", changes: [
     { en: "Jump to the analysis board with the whole PGN: from your game page (⋮ → “Open in analysis”) and from LeagueHub's club games (“Analyse”) — names, year and event come along and the PGN stays in the board's PGN field, ready to copy.", de: "Sprung ins Analysebrett mit dem ganzen PGN: von der eigenen Partieseite (⋮ → „Im Analysebrett öffnen“) und von den Vereinspartien in LeagueHub („Analyse“) — Namen, Jahr und Turnier kommen mit, und das PGN steht danach im PGN-Feld zum Kopieren." },
     { en: "LeagueHub player card: when White or Black is selected at the top, “Recent games” shows the last eight games with that colour.", de: "LeagueHub-Spielerkarte: Ist oben Weiß oder Schwarz gewählt, zeigt „Letzte Partien“ die letzten acht Partien mit dieser Farbe." },

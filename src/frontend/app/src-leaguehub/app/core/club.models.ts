@@ -22,7 +22,22 @@ export interface ClubGame {
   uci?: string;
   /** Die Partie als PGN (0.592.0) — „Analyse" gibt sie mit (`?pgn=`). */
   pgn?: string;
+  /** Stand der Hintergrund-Analyse (0.593.0); fehlt/`null` = noch keine. */
+  analysis?: ClubGameAnalysis | null;
 }
+
+/** Stand der Analyse einer Vereinspartie — dieselbe Form wie `analysis` in RookHubs Partienliste. */
+export interface ClubGameAnalysis {
+  status: 'pending' | 'running' | 'done' | 'failed';
+  analyzed: number;
+  total: number;
+  /** Genauigkeit in Prozent, nur bei `done`; `null` = die Seite hat keinen bewertbaren Zug. */
+  accuracyWhite: number | null;
+  accuracyBlack: number | null;
+}
+
+/** Eine Vereinspartie zum Nachspielen (`GET …/club/games/{id}`). */
+export interface ClubGameDetail extends ClubGame { pgn: string }
 
 export interface ClubList { total: number; page: number; pageSize: number; items: ClubGame[] }
 

@@ -520,11 +520,55 @@ public sealed class LeagueClubService
         page = Math.Max(1, page);
         var rows = await query.OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)
             .Skip((page - 1) * PageSize).Take(PageSize).ToListAsync(ct);
-        return new LeagueClubListDto
-        {
-            Total = total, Page = page, PageSize = PageSize,
-            Items = rows.Select(g => ToDto(g, userId, canManage)).ToList(),
-        };
+        var items = rows.Select(g => ToDto(g, userId, canManage)).ToList();
+        await FillAnalysisAsync(items, ct);
+        return new LeagueClubListDto { Total = total, Page = page, PageSize = PageSize, Items = items };
+    }
+
+    // ── Analyse (0.593.0, Wunsch „die Partien sollen allen aus dem Verein zur Verfügung stehen") ──
+
+    /// <summary>Die Analyse einer Vereinspartie: die jüngste mit <see cref="GameAnalysisOrigin.Club"/>. Lesen darf, wer die
+    /// Vereinspartien sieht (<c>league.view</c>) — die Analyse gehört dem Haus-Engine-Konto, der Zugang hängt an der Partie.</summary>
+    private IQueryable<GameAnalysis> ClubAnalyses(int clubGameId) =>
+        _db.GameAnalyses.AsNoTracking()
+            .Where(a => a.LeagueClubGameId == clubGameId && a.Origin == GameAnalysisOrigin.Club)
+            .OrderByDescending(a => a.Id);
+
+    /// <summary>Stand der Analyse je Zeile (Fortschritt, Genauigkeit) — zwei Abfragen für die ganze Seite.</summary>
+    private async Task FillAnalysisAsync(List<LeagueClubGameDto> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+        var ids = items.Select(i => i.Id).ToList();
+        var links = await _db.GameAnalyses.AsNoTracking()
+            .Where(a => a.LeagueClubGameId != null && ids.Contains(a.LeagueClubGameId.Value)
+                && a.Origin == GameAnalysisOrigin.Club)
+            .Select(a => new { Game = a.LeagueClubGameId!.Value, a.Id })
+            .ToListAsync(ct);
+        var latest = links.GroupBy(l => l.Game).ToDictionary(g => g.Key, g => g.Max(l => l.Id));
+        var states = await GameEvalsStore.StatesAsync(_db, latest.Values.ToList(), SavedGameService.AccuracyBackfillPerCall, ct);
+        foreach (var item in items)
+            if (latest.TryGetValue(item.Id, out var analysisId) && states.TryGetValue(analysisId, out var state))
+                item.Analysis = state;
+    }
+
+    /// <summary>Eine Vereinspartie (samt PGN) mit frischem Stand der Analyse; <c>null</c> = gibt es nicht.</summary>
+    public async Task<LeagueClubGameDto?> GetAsync(int userId, bool canManage, int id, CancellationToken ct = default)
+    {
+        var g = await _db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (g == null) return null;
+        var dto = ToDto(g, userId, canManage);
+        await FillAnalysisAsync(new List<LeagueClubGameDto> { dto }, ct);
+        return dto;
+    }
+
+    /// <summary>Bewertungen der Vereinspartie für Kurve, Genauigkeit und Zug-Klassen (dieselben wie in „Meine Partien",
+    /// <see cref="GameEvalsStore"/>) — ohne Buchzüge: die hingen an den Repertoires des Betrachters. <c>null</c> = Partie
+    /// unbekannt; eine Partie ohne Analyse bekommt ein leeres Ergebnis (Status <c>none</c>).</summary>
+    public async Task<GameEvalsDto?> EvalsAsync(int id, CancellationToken ct = default)
+    {
+        if (!await _db.LeagueClubGames.AnyAsync(g => g.Id == id, ct)) return null;
+        var head = await GameEvalsStore.Heads(ClubAnalyses(id)).FirstOrDefaultAsync(ct);
+        return head is null ? new GameEvalsDto() : await GameEvalsStore.ReadAsync(_db, head, null, ct);
     }
 
     internal static LeagueClubGameDto ToDto(LeagueClubGame g, int userId, bool canManage) => new()

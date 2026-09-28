@@ -238,6 +238,10 @@ export class GameReviewComponent {
   /** Im Fehler-Training: keine Computer-Linien und kein Pfeil — sie verrieten die Lösung. */
   engineHidden = input<boolean>(false);
 
+  /** „Warum war das ein Fehler?" nachfragen (`…/explanations` neben `…/evals`). Aus, wo es den Endpunkt nicht gibt
+   *  (Vereinspartien in LeagueHub, 0.593.0) — sonst fragte jede Partie ins Leere, und jede Antwort wäre ein 404. */
+  withExplanations = input<boolean>(true);
+
   /** Klick in die Kurve — Halbzug-Index wie `currentMoveIndex`. */
   moveClicked = output<number>();
   /** Damit die Seite ihren Knopf sperren (läuft) oder ausblenden (fertig) kann. */
@@ -365,7 +369,7 @@ export class GameReviewComponent {
     });
     // Erklärungen: sobald die Analyse fertig ist, und neu bei einem Sprachwechsel.
     effect(() => {
-      const url = this.evalsUrl();
+      const url = this.withExplanations() ? this.evalsUrl() : null;
       const done = this.status() === 'done';
       const lang = this.language();
       untracked(() => this.loadExplanations(url, done, lang));

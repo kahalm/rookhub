@@ -1,9 +1,12 @@
-import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueApiService } from '../../core/league-api.service';
-import { ClubGame } from '../../core/club.models';
+import { ClubGame, ClubGameAnalysis } from '../../core/club.models';
 import { ClubGamesPageComponent } from './club-games-page.component';
 
 const G = (id: number, extra: Partial<ClubGame> = {}): ClubGame => ({
@@ -18,7 +21,8 @@ describe('ClubGamesPageComponent', () => {
 
   beforeEach(() => {
     perms = new Set(['league.view', 'league.contribute']);
-    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn', 'updateGame', 'players']);
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn', 'updateGame', 'players', 'game', 'evalsUrl']);
+    api.evalsUrl.and.callFake((id: number) => `/api/league/club/games/${id}/evals`);
     api.players.and.resolveTo([]);
     api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(1), G(2, { white: 'Oberschmid, Patrik', whiteFide: '900', anonymized: false, canDelete: true })] });
   });
@@ -28,6 +32,7 @@ describe('ClubGamesPageComponent', () => {
       imports: [ClubGamesPageComponent],
       providers: [
         provideRouter([]),
+        provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting(),
         { provide: ClubApiService, useValue: { client: () => api } },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
@@ -129,4 +134,57 @@ describe('ClubGamesPageComponent', () => {
     expect(el.textContent).toContain('Nicht freigeschaltet');
     expect(api.list).not.toHaveBeenCalled();
   });
+  // Wunsch 2026-09-28: „die Partien sollen allen aus dem Verein zur Verfügung stehen" — auch wer nur lesen darf.
+  it('Spalte „Analyse": Genauigkeit bzw. Fortschritt; „Nachspielen" klappt Brett und Rückblick auf', fakeAsync(() => {
+    perms = new Set(['league.view']);
+    const done: ClubGameAnalysis = { status: 'done', analyzed: 22, total: 22, accuracyWhite: 87.4, accuracyBlack: 71.6 };
+    api.list.and.resolveTo({ total: 3, page: 1, pageSize: 50, items: [
+      G(1, { analysis: done }),
+      G(2, { analysis: { status: 'running', analyzed: 5, total: 22, accuracyWhite: null, accuracyBlack: null } }),
+      G(3)] });
+    api.game.and.resolveTo({ ...G(1, { analysis: done }),
+      pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n[Result "1-0"]\n\n1. e4 c5 2. Nf3 d6 1-0\n' });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const cell = (r: number) => el.querySelectorAll('tbody tr')[r].querySelectorAll('td')[6].textContent?.trim();
+    expect(cell(0)).toBe('87 · 72');
+    expect(cell(1)).toBe('22 %');
+    expect(cell(2)).toBe('–');
+
+    const btn = el.querySelector('tbody tr button[aria-expanded]') as HTMLButtonElement;
+    expect(btn.textContent).toContain('Nachspielen');
+    btn.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.game).toHaveBeenCalledWith(1);
+    expect(el.querySelector('tr.edit-row lh-game-replay app-game-review')).not.toBeNull();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/league/club/games/1/evals').flush({ status: 'done', analyzed: 4, total: 4, targetDepth: 20,
+      analysisId: 9, plies: [], final: null, bookPlies: [], refining: false, refined: 0 });
+    fixture.detectChanges();
+    http.expectNone(r => r.url.includes('/explanations'));
+
+    btn.click();                                    // zuklappen
+    fixture.detectChanges();
+    expect(el.querySelector('tr.edit-row')).toBeNull();
+    discardPeriodicTasks();
+    flush();
+  }));
+
+  it('Partie ohne Analyse: nachspielen ohne Rückblick, mit Hinweis', fakeAsync(() => {
+    api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50, items: [G(4)] });
+    api.game.and.resolveTo({ ...G(4), pgn: '[White "A"]\n[Black "B"]\n[Result "*"]\n\n1. d4 d5 *\n' });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    (el.querySelector('tbody tr button[aria-expanded]') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('tr.edit-row lh-game-replay')).not.toBeNull();
+    expect(el.querySelector('app-game-review')).toBeNull();
+    expect(el.querySelector('tr.edit-row')?.textContent).toContain('Noch nicht analysiert');
+    TestBed.inject(HttpTestingController).verify();
+    flush();
+  }));
 });

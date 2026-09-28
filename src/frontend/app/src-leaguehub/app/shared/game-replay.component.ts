@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, computed, signal, viewChild } from '@angular/core';
-import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
+import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
+import { GameReviewComponent } from '@rh/features/games/game-review.component';
+import { BoardBadge } from '@rh/features/games/move-badge.util';
 import { ParsedGame, START_FEN, parsePgnText } from '@rh/shared/pgn-viewer/pgn-parser';
 import { de, pgnDate } from '../core/league-format';
 
@@ -7,12 +9,16 @@ import { de, pgnDate } from '../core/league-format';
  * Eine Partie nachspielen (Spielerkarte → „Letzte Partien", Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar
  * sein"): Brett, Züge in deutscher Notation, Blättern mit Knöpfen, Pfeiltasten und Klick auf einen Zug. Das Brett steht
  * aus Sicht des Spielers der Karte (`flipped`).
+ *
+ * <p>Mit `evalsUrl` (Vereinspartien, 0.593.0) steht darunter der Rückblick aus RookHub — Bewertungskurve, Genauigkeit,
+ * Zug-Klassen, Computer-Linien — aus der Hintergrund-Analyse der Partie; Pfeil und Zug-Symbol kommen auf dieses Brett.
+ * Ohne die Adresse (Spielerkarte) bleibt es beim bloßen Nachspielen.</p>
  */
 @Component({
   selector: 'lh-game-replay',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChessBoardComponent],
+  imports: [ChessBoardComponent, GameReviewComponent],
   template: `
     <div class="replay" #box tabindex="0" (keydown)="key($event)" aria-label="Partie nachspielen">
       <p class="replay-head"><b>{{ head('White') }} – {{ head('Black') }}</b>
@@ -21,7 +27,8 @@ import { de, pgnDate } from '../core/league-format';
         @if (g.moves.length) {
           <div class="replay-body">
             <div class="replay-board">
-              <app-chess-board [fen]="fen()" [lastMove]="last()" [flipped]="flipped" />
+              <app-chess-board [fen]="fen()" [lastMove]="last()" [flipped]="flipped"
+                               [arrows]="evalsUrl ? arrows() : []" [badge]="evalsUrl ? badge() : null" />
               <div class="replay-nav" role="group" aria-label="Züge">
                 <button type="button" class="btn-sec" aria-label="Zum Anfang" [disabled]="index() < 0" (click)="index.set(-1)">⏮</button>
                 <button type="button" class="btn-sec" aria-label="Zug zurück" [disabled]="index() < 0" (click)="step(-1)">◀</button>
@@ -45,6 +52,12 @@ import { de, pgnDate } from '../core/league-format';
               @if (comment()) { <p class="replay-comment small">{{ comment() }}</p> }
             </div>
           </div>
+          @if (evalsUrl) {
+            <app-game-review class="replay-review" [evalsUrl]="evalsUrl" [fens]="g.fens" [moves]="g.moves"
+                             [currentIndex]="index()" [withExplanations]="false"
+                             (moveClicked)="index.set($event)" (arrowsChange)="arrows.set($event)"
+                             (badgeChange)="badge.set($event)" />
+          }
         } @else {
           <p class="muted">Diese Partie hat keine Züge.</p>
         }
@@ -57,11 +70,16 @@ import { de, pgnDate } from '../core/league-format';
 export class GameReplayComponent implements OnChanges {
   @Input({ required: true }) pgn = '';
   @Input() flipped = false;
+  /** `GET …/evals` einer analysierten Partie — dann mit Rückblick; `null` = nur nachspielen. */
+  @Input() evalsUrl: string | null = null;
 
   private readonly box = viewChild<ElementRef<HTMLElement>>('box');
   readonly game = signal<ParsedGame | null>(null);
   /** Halbzug auf dem Brett, -1 = Ausgangsstellung. */
   readonly index = signal(-1);
+  /** Bester Zug und Zug-Klasse aus dem Rückblick (nur mit `evalsUrl`). */
+  readonly arrows = signal<BoardArrow[]>([]);
+  readonly badge = signal<BoardBadge | null>(null);
 
   readonly fen = computed(() => {
     const g = this.game();

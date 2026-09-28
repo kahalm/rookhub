@@ -264,57 +264,8 @@ public class SavedGameService
     /// ohne den Nachtrag. Verweise ins Leere (Analyse geloescht) fehlen im Ergebnis, die Partie zeigt dann
     /// wieder den Knopf.
     /// </summary>
-    private async Task<Dictionary<int, SavedGameAnalysisDto>> AnalysisStatesAsync(List<int> ids)
-    {
-        var result = new Dictionary<int, SavedGameAnalysisDto>();
-        if (ids.Count == 0) return result;
-
-        var heads = await _db.GameAnalyses.AsNoTracking()
-            .Where(a => ids.Contains(a.Id))
-            .Select(a => new { a.Id, a.Status, a.PlyCount, a.AccuracyWhite, a.AccuracyBlack })
-            .ToListAsync();
-        var analyzed = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => ids.Contains(p.GameAnalysisId) && p.CandidatesJson != null)
-            .GroupBy(p => p.GameAnalysisId)
-            .Select(g => new { g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count);
-
-        var backfilled = 0;
-        foreach (var h in heads)
-        {
-            var state = new SavedGameAnalysisDto
-            {
-                Status = h.Status.ToString().ToLowerInvariant(),
-                Analyzed = analyzed.TryGetValue(h.Id, out var n) ? n : 0,
-                Total = h.PlyCount,
-                AccuracyWhite = h.AccuracyWhite,
-                AccuracyBlack = h.AccuracyBlack,
-            };
-            if (h.Status == GameAnalysisStatus.Done && h.AccuracyWhite is null && h.AccuracyBlack is null
-                && backfilled < AccuracyBackfillPerCall)
-            {
-                backfilled++;
-                var positions = await _db.GameAnalysisPositions.AsNoTracking()
-                    .Where(p => p.GameAnalysisId == h.Id).ToListAsync();
-                var accuracy = GameAccuracy.FromPositions(positions, h.PlyCount);
-                state.AccuracyWhite = accuracy.White;
-                state.AccuracyBlack = accuracy.Black;
-                try
-                {
-                    var tracked = await _db.GameAnalyses.FirstOrDefaultAsync(a => a.Id == h.Id);
-                    if (tracked is not null)
-                    {
-                        tracked.AccuracyWhite = accuracy.White;
-                        tracked.AccuracyBlack = accuracy.Black;
-                        await _db.SaveChangesAsync();
-                    }
-                }
-                catch (DbUpdateException) { /* Anzeige stimmt auch ohne den Nachtrag */ }
-            }
-            result[h.Id] = state;
-        }
-        return result;
-    }
+    private Task<Dictionary<int, SavedGameAnalysisDto>> AnalysisStatesAsync(List<int> ids) =>
+        GameEvalsStore.StatesAsync(_db, ids, AccuracyBackfillPerCall);
 
     /// <summary>Detail einer eigenen Partie inkl. PGN; null wenn nicht gefunden / fremd.</summary>
     public async Task<SavedGameDetailDto?> GetAsync(int userId, int id)
@@ -494,8 +445,6 @@ public class SavedGameService
         return head is null ? null : await EvalsAsync(head.Id, head.GameAnalysisId, callerUserId, ct);
     }
 
-    private sealed record AnalysisHead(int Id, GameAnalysisStatus Status, int PlyCount, int TargetDepth,
-        int? RefineDepth, DateTime? RefinedAt);
 
     /// <summary>
     /// Welche Analyse: (a) die verknuepfte, solange es sie noch gibt — der Verweis hat keinen
@@ -509,66 +458,26 @@ public class SavedGameService
     /// </summary>
     private async Task<GameEvalsDto> EvalsAsync(int savedGameId, int? linkedId, int? callerUserId, CancellationToken ct)
     {
-        AnalysisHead? analysis = null;
+        GameEvalsStore.Head? analysis = null;
         if (linkedId is int id)
-            analysis = await _db.GameAnalyses.AsNoTracking()
-                .Where(a => a.Id == id)
-                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt))
+            analysis = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking().Where(a => a.Id == id))
                 .FirstOrDefaultAsync(ct);
         if (analysis is null && callerUserId is int caller)
         {
             var pgn = _db.SavedGames.Where(g => g.Id == savedGameId).Select(g => g.Pgn);
-            analysis = await _db.GameAnalyses.AsNoTracking()
-                .Where(a => a.UserId == caller && a.Status != GameAnalysisStatus.Failed && pgn.Contains(a.Pgn))
-                .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id)
-                .Select(a => new AnalysisHead(a.Id, a.Status, a.PlyCount, a.TargetDepth, a.RefineDepth, a.RefinedAt))
+            analysis = await GameEvalsStore.Heads(_db.GameAnalyses.AsNoTracking()
+                    .Where(a => a.UserId == caller && a.Status != GameAnalysisStatus.Failed && pgn.Contains(a.Pgn))
+                    .OrderByDescending(a => a.CreatedAt).ThenByDescending(a => a.Id))
                 .FirstOrDefaultAsync(ct);
         }
         if (analysis is null) return new GameEvalsDto();
 
-        var rows = await _db.GameAnalysisPositions.AsNoTracking()
-            .Where(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null)
-            .OrderBy(p => p.Ply)
-            .Select(p => new { p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth, p.AnalyzedAt, p.Refined })
-            .ToListAsync(ct);
-        var plies = rows
-            .Select(r => GameEvals.PlyOf(r.Ply, r.Fen, r.GameMoveUci, r.CandidatesJson, r.Depth))
-            .OfType<GameEvalPlyDto>()
-            .ToList();
-        var running = analysis.Status is GameAnalysisStatus.Pending or GameAnalysisStatus.Running;
-
         // Buchzüge nur für einen angemeldeten Aufrufer und aus SEINEN Repertoires: anonym gibt es keine, und die des
         // Teilenden bekäme ein Gast nie zu sehen — sonst verriete ein Teilen-Link, was jemand vorbereitet hat.
-        var bookPlies = new List<int>();
-        if (callerUserId is int viewer)
-        {
-            var fens = await _db.GameAnalysisPositions.AsNoTracking()
-                .Where(p => p.GameAnalysisId == analysis.Id)
-                .OrderBy(p => p.Ply)
-                .Select(p => p.Fen)
-                .ToListAsync(ct);
-            // Zeile p+1 ist die Stellung NACH Halbzug p; für den letzten Halbzug gibt es keine (Buch endet vorher).
-            bookPlies = await _repertoires.BookPliesAsync(viewer, fens.Skip(1).ToList());
-        }
-
-        return new GameEvalsDto
-        {
-            Status = analysis.Status.ToString().ToLowerInvariant(),
-            Analyzed = rows.Count,
-            Total = analysis.PlyCount,
-            TargetDepth = analysis.TargetDepth,
-            AnalysisId = analysis.Id,
-            Plies = plies,
-            Final = GameEvals.FinalOf(plies.LastOrDefault(), analysis.PlyCount),
-            BookPlies = bookPlies,
-            Refining = analysis.Status == GameAnalysisStatus.Done && analysis.RefineDepth != null && analysis.RefinedAt == null,
-            Refined = analysis.RefineDepth != null ? rows.Count(r => r.Refined) : 0,
-            EtaMinutes = running
-                ? GameEvals.EtaMinutes(
-                    rows.Where(r => r.AnalyzedAt != null).Select(r => r.AnalyzedAt!.Value),
-                    analysis.PlyCount - rows.Count, DateTime.UtcNow)
-                : null,
-        };
+        Func<List<string>, Task<List<int>>>? book = callerUserId is int viewer
+            ? fens => _repertoires.BookPliesAsync(viewer, fens)
+            : null;
+        return await GameEvalsStore.ReadAsync(_db, analysis, book, ct);
     }
 
     /// <summary>Welche Seite spielte der Besitzer? Vergleich der Spielernamen mit seinem

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ClubGame, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
@@ -30,6 +30,16 @@ export class ClubClient {
 
   list(fide: string | null, q: string | null, page: number): Promise<ClubList> {
     return firstValueFrom(this.http.get<ClubList>(`${this.base}/games`, { params: this.params(fide, q, page) }));
+  }
+
+  /** Eine Partie mit PGN und Stand der Analyse (angemeldet, `league.view`). */
+  game(id: number): Promise<ClubGameDetail> {
+    return firstValueFrom(this.http.get<ClubGameDetail>(`${this.base}/games/${id}`));
+  }
+
+  /** Adresse der Bewertungen aus der Hintergrund-Analyse — für RookHubs Rückblick (`GameReviewComponent`). */
+  evalsUrl(id: number): string {
+    return `${this.base}/games/${id}/evals`;
   }
 
   pgn(fide: string | null, q: string | null): Promise<Blob> {

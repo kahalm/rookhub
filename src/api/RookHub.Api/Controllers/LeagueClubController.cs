@@ -50,6 +50,18 @@ public class LeagueClubController : BaseApiController
         [FromQuery] int page = 1, CancellationToken ct = default) =>
         Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct));
 
+    /// <summary>Eine Vereinspartie zum Nachspielen (PGN + Stand der Analyse); 404 unbekannt.</summary>
+    [HttpGet("games/{id:int}")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<ActionResult<LeagueClubGameDto>> Get(int id, CancellationToken ct) =>
+        await _club.GetAsync(GetUserId(), await CanManageAsync(), id, ct) is { } g ? Ok(g) : NotFound();
+
+    /// <summary>Bewertungen aus der Hintergrund-Analyse (0.593.0) — für jeden, der die Vereinspartien sieht; 404 unbekannt.</summary>
+    [HttpGet("games/{id:int}/evals")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<ActionResult<GameEvalsDto>> Evals(int id, CancellationToken ct) =>
+        await _club.EvalsAsync(id, ct) is { } e ? Ok(e) : NotFound();
+
     [HttpGet("games/pgn")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Export([FromQuery] string? fide, [FromQuery] string? q, CancellationToken ct) =>

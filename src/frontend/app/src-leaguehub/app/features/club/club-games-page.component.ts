@@ -4,17 +4,22 @@ import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
-import { ClubGame, RosterPerson, SideDecision } from '../../core/club.models';
+import { ClubGame, ClubGameDetail, RosterPerson, SideDecision } from '../../core/club.models';
 import { reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
+import { GameReplayComponent } from '../../shared/game-replay.component';
 
 /**
  * Vereinspartien (`/verein`): was die Mitglieder hochgeladen haben, neueste Jahre zuerst. Lesen darf, wer LeagueHub
  * sieht (`league.view`); hinzufügen die Vereinsgruppe (`league.contribute`). Ein Klick auf einen Spieler mit FIDE-ID
  * öffnet seine Spielerkarte — die Vereinspartien stehen dort mit drin —, ohne FIDE-ID die Korrektur. Namen und Ergebnis
  * korrigiert, wer die Partie auch löschen darf (Wunsch 2026-09-28); „Schwaz" bleibt anonym.
+ *
+ * Jede Partie wird im Hintergrund analysiert (0.588.0), und die Analyse steht allen offen, die die Vereinspartien sehen
+ * (Wunsch 2026-09-28, 0.593.0): die Spalte „Analyse" zeigt die Genauigkeit beider Seiten bzw. den Fortschritt,
+ * „Nachspielen" klappt darunter Brett und Rückblick auf (Kurve, Zug-Klassen, Computer-Linien).
  */
 type Side = 'white' | 'black';
 
@@ -22,7 +27,7 @@ type Side = 'white' | 'black';
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent],
+  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
@@ -60,7 +65,9 @@ type Side = 'white' | 'black';
         <div class="roster-scroll">
           <table class="rtable club-table">
             <thead><tr><th class="num">Jahr</th><th>Weiß</th><th>Schwarz</th><th class="num">Ergebnis</th>
-              <th class="hide-s">Eröffnung</th><th class="num hide-s">Züge</th><th><span class="sr">Aktionen</span></th></tr></thead>
+              <th class="hide-s">Eröffnung</th><th class="num hide-s">Züge</th>
+              <th class="num" title="Genauigkeit Weiß · Schwarz aus der Hintergrund-Analyse">Analyse</th>
+              <th><span class="sr">Aktionen</span></th></tr></thead>
             <tbody>
               @for (g of items(); track g.id) {
                 <tr>
@@ -77,7 +84,10 @@ type Side = 'white' | 'black';
                   <td class="num">{{ resultText(g.result) }}</td>
                   <td class="hide-s small">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
+                  <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td>
                   <td class="num">
+                    <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
+                            [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' nachspielen'">Nachspielen</button>
                     @if (rookHub && g.uci) {
                       <a class="btn-link" [href]="analysisUrl(g)" target="_blank" rel="noopener"
                          [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' im Analysebrett von RookHub öffnen'">Analyse</a>
@@ -88,9 +98,20 @@ type Side = 'white' | 'black';
                     <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
                             [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }</td>
                 </tr>
+                @if (viewing(); as v) {
+                  @if (v.id === g.id) {
+                    <tr class="edit-row"><td colspan="8">
+                      @if (v.game; as d) {
+                        <lh-game-replay [pgn]="d.pgn" [evalsUrl]="d.analysis ? api.evalsUrl(d.id) : null" />
+                        @if (!d.analysis) { <p class="small muted">Noch nicht analysiert — die Analyse läuft abends und am Wochenende.</p> }
+                      } @else if (v.error) { <p class="err small">{{ v.error }}</p> }
+                      @else { <p class="small muted">Lade …</p> }
+                    </td></tr>
+                  }
+                }
                 @if (editing(); as e) {
                   @if (e.id === g.id) {
-                    <tr class="edit-row"><td colspan="7">
+                    <tr class="edit-row"><td colspan="8">
                       <div class="side-edit">
                         <div class="field-row">
                           @for (k of sides; track k) {
@@ -157,6 +178,8 @@ export class ClubGamesPageComponent implements OnInit {
   readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
   readonly saving = signal(false);
   readonly editError = signal<string | null>(null);
+  /** Die Partie, die gerade nachgespielt wird (aufgeklappt unter ihrer Zeile). */
+  readonly viewing = signal<{ id: number; game: ClubGameDetail | null; error: string | null } | null>(null);
   /** Rückmeldung der Formular-Korrektur („übernommen"), per Router-Zustand mitgebracht. */
   readonly notice = signal<string | null>((history.state as { msg?: string } | null)?.msg ?? null);
   private page = 1;
@@ -233,6 +256,39 @@ export class ClubGamesPageComponent implements OnInit {
     if (!e) return;
     const cur = e[k] ?? { name: this.nameOf(g, k), fide: this.fideOf(g, k), replace: false };
     this.editing.set({ ...e, [k]: { ...cur, replace: on } });
+  }
+
+  /** Spalte „Analyse": fertig die Genauigkeit beider Seiten, sonst der Fortschritt. */
+  analysisText(g: ClubGame): string {
+    const a = g.analysis;
+    if (!a) return '–';
+    if (a.status === 'done') return `${this.pct(a.accuracyWhite)} · ${this.pct(a.accuracyBlack)}`;
+    if (a.status === 'failed') return '–';
+    return a.total > 0 ? `${Math.floor(a.analyzed * 100 / a.total)} %` : '…';
+  }
+
+  analysisTitle(g: ClubGame): string {
+    const a = g.analysis;
+    if (!a) return 'Noch nicht analysiert';
+    if (a.status === 'done') return 'Genauigkeit Weiß · Schwarz';
+    if (a.status === 'failed') return 'Analyse gescheitert';
+    return `Wird analysiert: ${a.analyzed} von ${a.total} Stellungen`;
+  }
+
+  private pct(v: number | null): string {
+    return v === null ? '–' : `${Math.round(v)}`;
+  }
+
+  /** Nachspielen auf- bzw. zuklappen; die Partie (PGN + Stand) kommt erst beim Aufklappen. */
+  async view(g: ClubGame): Promise<void> {
+    if (this.viewing()?.id === g.id) { this.viewing.set(null); return; }
+    this.viewing.set({ id: g.id, game: null, error: null });
+    try {
+      const d = await this.api.game(g.id);
+      if (this.viewing()?.id === g.id) this.viewing.set({ id: g.id, game: d, error: null });
+    } catch {
+      if (this.viewing()?.id === g.id) this.viewing.set({ id: g.id, game: null, error: 'Die Partie konnte nicht geladen werden.' });
+    }
   }
 
   /** RookHubs Analysebrett mit der Partie (öffentlich, neuer Tab) — mit dem GANZEN PGN (`?pgn=`, 0.592.0: Namen, Jahr,

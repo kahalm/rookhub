@@ -143,6 +143,8 @@ public class LeagueClubGameDto
     /// <summary>Die Partie als PGN, wie gespeichert (Hauptvariante, Kopfdaten; „Schwaz" statt des Namens) — „Analyse"
     /// gibt sie ans Analysebrett mit (<c>?pgn=</c>, 0.592.0), dort steht sie dann im PGN-Feld.</summary>
     public string Pgn { get; set; } = string.Empty;
+    /// <summary>Stand der Hintergrund-Analyse dieser Partie (0.593.0) — wie in „Meine Partien"; <c>null</c> = noch keine.</summary>
+    public SavedGameAnalysisDto? Analysis { get; set; }
 }
 
 public class LeagueClubListDto

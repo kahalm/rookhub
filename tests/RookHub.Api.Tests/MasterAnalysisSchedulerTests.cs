@@ -302,4 +302,54 @@ public class MasterAnalysisSchedulerTests : IDisposable
         Assert.DoesNotContain("Unbekannt", analysis.Pgn);
         Assert.DoesNotContain("Vereinsmeisterschaft", analysis.Pgn);
     }
+
+    /// <summary>Wunsch 2026-09-28: „die Partien sollen allen aus dem Verein zur Verfügung stehen" — die Liste der
+    /// Vereins-Datenbank trägt den Stand der Analyse, und die Bewertungen liest jeder, der die Liste sieht (hier ein
+    /// fremdes Konto, nicht der Besitzer der Analyse).</summary>
+    [Fact]
+    public async Task Vereinspartie_StandInDerListe_undBewertungen_fuerJedenImVerein()
+    {
+        var svc = Analyses();
+        var analysed = ClubGame();
+        var other = ClubGame(Longer);
+        var dto = await svc.CreateClubBatchAsync(Owner, analysed.Id, Short);
+        var first = await _db.GameAnalysisPositions.OrderBy(p => p.Ply).FirstAsync(p => p.GameAnalysisId == dto.Id);
+        first.CandidatesJson = """[{"uci":"e2e4","cp":30},{"uci":"d2d4","cp":28}]""";
+        first.Depth = 20;
+        await _db.SaveChangesAsync();
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: svc);
+
+        var list = await club.ListAsync(Viewer, false, null, null, 1, default);
+        var row = list.Items.Single(i => i.Id == analysed.Id).Analysis;
+        Assert.NotNull(row);
+        Assert.Equal((1, 10), (row!.Analyzed, row.Total));
+        Assert.Null(list.Items.Single(i => i.Id == other.Id).Analysis);
+
+        var evals = await club.EvalsAsync(analysed.Id);
+        Assert.Equal(dto.Id, evals!.AnalysisId);
+        Assert.Equal(0, Assert.Single(evals.Plies).Ply);
+        Assert.Empty(evals.BookPlies);                                   // keine Repertoires des Betrachters
+        Assert.Equal("none", (await club.EvalsAsync(other.Id))!.Status);  // Partie da, Analyse noch nicht
+        Assert.Null(await club.EvalsAsync(99999));
+
+        var detail = await club.GetAsync(Viewer, false, analysed.Id);
+        Assert.Equal(analysed.Pgn, detail!.Pgn);
+        Assert.Equal(1, detail.Analysis!.Analyzed);
+        Assert.Null(await club.GetAsync(Viewer, false, 99999));
+    }
+
+    /// <summary>Nur das Etikett <see cref="GameAnalysisOrigin.Club"/> zählt: eine Analyse, die zufällig dieselbe Nummer
+    /// in LeagueClubGameId trüge, aber etwas anderes ist, taucht in der Vereinsliste nicht auf.</summary>
+    [Fact]
+    public async Task Vereinspartie_nurClubAnalysenZaehlen()
+    {
+        var game = ClubGame();
+        _db.GameAnalyses.Add(new GameAnalysis { UserId = Viewer, Title = "fremd", Pgn = Short, LeagueClubGameId = game.Id,
+            Origin = GameAnalysisOrigin.Manual, Status = GameAnalysisStatus.Done, PlyCount = 10 });
+        await _db.SaveChangesAsync();
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance, analyses: Analyses());
+
+        Assert.Null((await club.ListAsync(Viewer, false, null, null, 1, default)).Items.Single().Analysis);
+        Assert.Equal("none", (await club.EvalsAsync(game.Id))!.Status);
+    }
 }
