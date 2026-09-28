@@ -1,5 +1,5 @@
 import { DestroyRef } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { AdminComponent } from './admin.component';
 import { ADMIN_TAB_KEYS } from './admin-tabs';
@@ -100,10 +100,42 @@ describe('AdminComponent', () => {
   it('addMember is a no-op without a selected group', () => {
     const { c, adminService } = make();
     c.selectedGroup = null;
-    c.addMemberUserId = 5;
-    c.addMember();
+    c.addMember({ id: 5, username: 'x' } as any);
     expect(adminService.addGroupMember).not.toHaveBeenCalled();
   });
+
+  it('Mitglieder hinzufügen (0.591.0): Liste ohne Mitglieder, neueste zuerst; ein Klick fügt genau dieses Konto hinzu', () => {
+    const users = [
+      { id: 1, username: 'alt', createdAt: '2026-01-01T00:00:00Z', groups: [] },
+      { id: 2, username: 'mitglied', createdAt: '2026-05-01T00:00:00Z', groups: ['Schwaz'] },
+      { id: 136, username: 'FM>2200', createdAt: '2026-09-28T17:01:31Z', groups: [] },
+    ];
+    const { c, adminService } = make({
+      getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: users, totalCount: 3 })),
+      getGroupMembers: jasmine.createSpy('getGroupMembers').and.returnValue(of([{ userId: 2, username: 'mitglied' }])),
+      getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(of({ source: 'none' })),
+    });
+    c.loadAllUsers();
+    c.selectGroup({ id: 1, name: 'Schwaz', memberCount: 1 } as any);
+    expect(c.memberCandidates.map(u => u.username)).toEqual(['FM>2200', 'alt']);
+    c.addMember(c.memberCandidates[0]);
+    expect(adminService.addGroupMember).toHaveBeenCalledWith(1, 136);
+  });
+
+  it('Mitglieder hinzufügen: ab zwei Zeichen fragt die Suche den Server (auch jenseits der 500 vorab geladenen)', fakeAsync(() => {
+    const getUsers = jasmine.createSpy('getUsers').and.callFake((q: string) =>
+      of({ items: q ? [{ id: 900, username: 'Schnabl, Andreas', createdAt: '2025-01-01', groups: [] }] : [], totalCount: q ? 1 : 0 }));
+    const { c } = make({ getUsers, getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(of({ source: 'none' })) });
+    c.selectGroup({ id: 1, name: 'Schwaz', memberCount: 0 } as any);
+    c.memberSearch = 'schn';
+    c.onMemberSearch('schn');
+    tick(300);
+    expect(getUsers).toHaveBeenCalledWith('schn', 1, 50);
+    expect(c.memberCandidates.map(u => u.id)).toEqual([900]);
+    c.onMemberSearch('');                                   // leer → wieder die neuesten
+    tick(300);
+    expect(c.memberCandidates).toEqual([]);
+  }));
 
   it('applyBookFilter filters by name, file name and tags (case-insensitive)', () => {
     const { c } = make();

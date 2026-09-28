@@ -1859,7 +1859,10 @@
         }
       },
       "everyoneBadge": "Mindenki",
-      "everyoneHint": "Minden felhasználó automatikusan tagja ennek a csoportnak. A tagság nem szerkeszthető. Ossz meg egy könyvet/tanfolyamot ezzel a csoporttal, hogy mindenki számára látható legyen."
+      "everyoneHint": "Minden felhasználó automatikusan tagja ennek a csoportnak. A tagság nem szerkeszthető. Ossz meg egy könyvet/tanfolyamot ezzel a csoporttal, hogy mindenki számára látható legyen.",
+      "searchUser": "Név vagy annak egy része",
+      "noCandidates": "Nincs olyan találat, aki még nem tag.",
+      "added": "{{name}} hozzáadva a csoporthoz."
     },
     "daily": {
       "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",

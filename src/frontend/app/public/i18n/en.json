@@ -2265,7 +2265,10 @@
           "load": "Could not load the training goal.",
           "save": "Could not save the training goal."
         }
-      }
+      },
+      "searchUser": "Name or part of it",
+      "noCandidates": "No matching user who is not already a member.",
+      "added": "{{name}} added to the group."
     },
     "daily": {
       "intro": "Regenerate the daily puzzle for a date. The link stays the same — only the puzzle behind it changes. The previously assigned puzzle is retired and will never be drawn again for daily, random or blind puzzles.",

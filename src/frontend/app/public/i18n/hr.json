@@ -2265,7 +2265,10 @@
           "load": "Trening cilj nije moguće učitati.",
           "save": "Trening cilj nije moguće spremiti."
         }
-      }
+      },
+      "searchUser": "Ime ili dio imena",
+      "noCandidates": "Nema odgovarajućeg korisnika koji već nije član.",
+      "added": "{{name}} dodan u grupu."
     },
     "daily": {
       "intro": "Ponovno generiraj dnevnu zagonetku za odabrani datum. Poveznica ostaje ista — mijenja se samo zagonetka iza nje. Dosad dodijeljena zagonetka se umirovljuje i više se nikada neće izvući kao dnevna, nasumična ili slijepa zagonetka.",

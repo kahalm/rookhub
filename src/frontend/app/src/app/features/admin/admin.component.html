@@ -421,18 +421,27 @@
                       @if (selectedGroup.isEveryone) {
                         <p class="everyone-hint">{{ 'admin.groups.everyoneHint' | translate }}</p>
                       } @else {
+                        <!-- Hinzufügen: Suche + Liste statt Dropdown (0.591.0) — ohne Suche die neuesten Konten zuerst -->
                         <div class="member-add">
-                          <mat-form-field appearance="outline" class="member-select">
+                          <mat-form-field appearance="outline" class="member-search" subscriptSizing="dynamic">
                             <mat-label>{{ 'admin.groups.addUser' | translate }}</mat-label>
-                            <mat-select [(ngModel)]="addMemberUserId">
-                              @for (u of availableUsers; track u.id) {
-                                <mat-option [value]="u.id">{{ u.username }}</mat-option>
-                              }
-                            </mat-select>
+                            <input matInput [(ngModel)]="memberSearch" (ngModelChange)="onMemberSearch($event)"
+                                   [placeholder]="'admin.groups.searchUser' | translate" />
+                            <mat-icon matSuffix>search</mat-icon>
                           </mat-form-field>
-                          <button mat-raised-button color="primary" (click)="addMember()" [disabled]="!addMemberUserId">
-                            <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
-                          </button>
+                          <ul class="member-candidates">
+                            @for (u of memberCandidates; track u.id) {
+                              <li>
+                                <span class="cand-name">{{ u.username }}</span>
+                                <span class="cand-meta">{{ u.createdAt | date: 'dd.MM.yyyy' }}@if (u.groups?.length) { · {{ u.groups.join(', ') }} }</span>
+                                <button mat-stroked-button color="primary" [disabled]="addingUserId === u.id" (click)="addMember(u)">
+                                  <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
+                                </button>
+                              </li>
+                            } @empty {
+                              <li class="empty-hint">{{ 'admin.groups.noCandidates' | translate }}</li>
+                            }
+                          </ul>
                         </div>
                       }
 

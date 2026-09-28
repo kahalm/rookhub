@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.591.0", date: "2026-09-28", changes: [
+    { en: "Administration → Groups: members are now added via a search field with a list instead of a drop-down — without a search the newest accounts come first, typing searches all users, and each row has its own “Add” button.", de: "Verwaltung → Gruppen: Mitglieder kommen jetzt über ein Suchfeld mit Liste dazu statt über ein Dropdown — ohne Suche stehen die neuesten Konten oben, Tippen durchsucht alle Nutzer, und jede Zeile hat ihren eigenen „Hinzufügen“-Knopf." },
+  ] },
   { version: "0.590.0", date: "2026-09-28", changes: [
     { en: "LeagueHub PGN import in portions: the page now sends the games ten at a time, each portion is saved at once and the progress is shown (“Importing … 20 / 57”). If the connection breaks, what is saved stays saved and “Continue importing” sends only the rest.", de: "LeagueHub-PGN-Import in Portionen: Die Seite schickt die Partien jetzt zu je zehn, jede Portion wird sofort gespeichert, und der Fortschritt steht am Knopf („Importiere … 20 / 57“). Reißt die Verbindung ab, bleibt das Gespeicherte gespeichert, und „Weiter importieren“ schickt nur den Rest." },
   ] },

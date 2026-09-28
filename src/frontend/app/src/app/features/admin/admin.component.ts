@@ -1,5 +1,6 @@
 import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -76,7 +77,14 @@ export class AdminComponent implements OnInit {
   groupMembers: GroupMember[] = [];
   membersLoading = false;
   allUsers: AdminUser[] = [];
-  addMemberUserId: number | null = null;
+  /** Suche beim Hinzufügen (0.591.0): leer = die neuesten Konten aus {@link allUsers}, sonst Server-Suche. */
+  memberSearch = '';
+  memberCandidates: AdminUser[] = [];
+  addingUserId: number | null = null;
+  private searchResults: AdminUser[] | null = null;
+  private readonly memberSearch$ = new Subject<string>();
+  /** Höchstens so viele Treffer in der Liste — mehr liest niemand, die Suche grenzt weiter ein. */
+  static readonly CandidateLimit = 30;
 
   /** Trainingsziel-Vorlage der ausgewählten Gruppe (ein Tageszeit-Ziel + Wochenziele). */
   goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
@@ -93,7 +101,18 @@ export class AdminComponent implements OnInit {
   selectedTabIndex = 0;
   private destroyRef = inject(DestroyRef);
 
-  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
+    // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
+    this.memberSearch$.pipe(
+      debounceTime(250),
+      distinctUntilChanged(),
+      switchMap(q => q.trim().length < 2 ? of(null) : this.adminService.getUsers(q.trim(), 1, 50)),
+      takeUntilDestroyed(),
+    ).subscribe({
+      next: res => { this.searchResults = res?.items ?? null; this.recomputeAvailableUsers(); },
+      error: () => { this.searchResults = null; this.recomputeAvailableUsers(); },
+    });
+  }
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
   impersonate(u: AdminUser): void {
@@ -450,7 +469,8 @@ export class AdminComponent implements OnInit {
 
   selectGroup(group: Group): void {
     this.selectedGroup = group;
-    this.addMemberUserId = null;
+    this.memberSearch = '';
+    this.searchResults = null;
     this.loadMembers(group.id);
     this.loadGroupGoal(group.id);
   }
@@ -522,18 +542,30 @@ export class AdminComponent implements OnInit {
   private recomputeAvailableUsers(): void {
     const memberIds = new Set(this.groupMembers.map(m => m.userId));
     this.availableUsers = this.allUsers.filter(u => !memberIds.has(u.id));
+    // Ohne Suche die NEUESTEN zuerst (wer gerade dazukommen soll, hat sich meist eben registriert), mit Suche die Treffer
+    // des Servers — auch jenseits der 500 vorab geladenen.
+    const source = this.searchResults ?? [...this.availableUsers].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+    this.memberCandidates = source.filter(u => !memberIds.has(u.id)).slice(0, AdminComponent.CandidateLimit);
   }
 
-  addMember(): void {
-    if (!this.selectedGroup || !this.addMemberUserId) return;
+  onMemberSearch(q: string): void {
+    if (q.trim().length < 2) { this.searchResults = null; this.recomputeAvailableUsers(); }
+    this.memberSearch$.next(q);
+  }
+
+  addMember(user: AdminUser): void {
+    if (!this.selectedGroup || this.addingUserId) return;
     const groupId = this.selectedGroup.id;
-    this.adminService.addGroupMember(groupId, this.addMemberUserId).subscribe({
+    this.addingUserId = user.id;
+    this.adminService.addGroupMember(groupId, user.id).subscribe({
       next: () => {
-        this.addMemberUserId = null;
+        this.addingUserId = null;
+        this.snackbar.info(this.translate.instant('admin.groups.added', { name: user.username }));
         this.loadMembers(groupId);
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
+        this.addingUserId = null;
         this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.addMember'));
       }
     });

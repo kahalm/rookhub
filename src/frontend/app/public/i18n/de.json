@@ -2265,7 +2265,10 @@
           "load": "Trainingsziel konnte nicht geladen werden.",
           "save": "Trainingsziel konnte nicht gespeichert werden."
         }
-      }
+      },
+      "searchUser": "Name oder ein Teil davon",
+      "noCandidates": "Kein passender Nutzer, der nicht schon Mitglied ist.",
+      "added": "{{name}} zur Gruppe hinzugefügt."
     },
     "daily": {
       "intro": "Tagespuzzle für ein Datum neu generieren. Der Link bleibt gleich — nur das dahinterliegende Puzzle wechselt. Das bisher zugeordnete Puzzle wird ausgemustert und nie wieder als Tages-, Zufalls- oder Blindpuzzle gezogen.",

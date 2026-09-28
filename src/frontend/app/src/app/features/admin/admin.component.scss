@@ -31,8 +31,17 @@
     .group-desc { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.8rem; }
     .selected-group { background: rgba(25,118,210,0.15); }
     .member-panel { flex: 1; min-width: 300px; }
-    .member-add { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-    .member-select { min-width: 200px; }
+    .member-add { margin-bottom: 12px; }
+    .member-search { width: 100%; max-width: 420px; }
+    /* Kandidaten zum Hinzufügen (0.591.0): eine Zeile je Konto, der Knopf rechts — am Handy darunter. */
+    .member-candidates { list-style: none; margin: 4px 0 0; padding: 0; max-height: 320px; overflow-y: auto;
+      border: 1px solid var(--mat-sys-outline-variant, rgba(127, 127, 127, .3)); border-radius: 8px; }
+    .member-candidates li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 10px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant, rgba(127, 127, 127, .2)); }
+    .member-candidates li:last-child { border-bottom: 0; }
+    .member-candidates .cand-name { font-weight: 500; }
+    .member-candidates .cand-meta { opacity: .7; font-size: 12px; flex: 1; min-width: 0; }
+    .member-candidates .empty-hint { padding: 10px; }
 
     .goal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 8px; }
     .goal-actions { display: flex; gap: 8px; }
