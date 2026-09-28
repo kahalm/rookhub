@@ -118,21 +118,45 @@ public sealed class LeagueRosterIndex
     }
 
     /// <summary>Vorschläge beim Eintippen („like", Wunsch 2026-09-28): jedes getippte Wort muss IRGENDWO im Namen stehen
-    /// („bert rud" findet „Bertl, Rudolf", „ertl" auch „Bertl"); wer alle Wörter als Wortanfang trägt, steht vorn.</summary>
+    /// („bert rud" findet „Bertl, Rudolf", „ertl" auch „Bertl"), in jeder Umlaut-Schreibweise (<see cref="Spellings"/>);
+    /// wer alle Wörter als Wortanfang trägt, steht vorn. Eine reine Zahl ist eine FIDE-ID.</summary>
     public IEnumerable<Person> Suggest(string query, int take)
     {
-        var words = Tokens(Fold(query, false));
-        if (words.Count == 0 || words.All(w => w.Length < 2)) return Enumerable.Empty<Person>();
+        if (IsFideQuery(query)) return ByFide(query) is { } byId ? new[] { byId } : Enumerable.Empty<Person>();
+        var words = QueryWords(LeagueNames.StripTitles(query));
+        if (words.Count == 0 || words.All(w => w[0].Length < 2)) return Enumerable.Empty<Person>();
         return People.Select(p =>
             {
                 var folded = Fold(p.Name, false) + " " + Fold(p.Name, true);
-                if (!words.All(w => folded.Contains(w, StringComparison.Ordinal))) return (p, Rank: -1);
+                if (!words.All(w => w.Any(v => folded.Contains(v, StringComparison.Ordinal)))) return (p, Rank: -1);
                 var own = Tokens(folded);
-                return (p, Rank: words.All(w => own.Any(o => o.StartsWith(w, StringComparison.Ordinal))) ? 0 : 1);
+                return (p, Rank: words.All(w => own.Any(o => w.Any(v => o.StartsWith(v, StringComparison.Ordinal)))) ? 0 : 1);
             })
             .Where(x => x.Rank >= 0)
             .OrderBy(x => x.Rank).ThenBy(x => x.p.Name, StringComparer.CurrentCultureIgnoreCase).Take(take).Select(x => x.p);
     }
+
+    /// <summary>Eine reine Zahl (4–12 Ziffern) sucht die FIDE-ID statt eines Namens.</summary>
+    public static bool IsFideQuery(string? query) =>
+        query?.Trim() is { Length: >= 4 and <= 12 } t && t.All(char.IsAsciiDigit);
+
+    /// <summary>
+    /// Die Schreibweisen eines getippten Worts, klein und ohne Akzente: „Höcher" = „hocher" und „hoecher". ChessBase
+    /// schreibt Umlaute IMMER aus (im Megabase-Verzeichnis steht kein einziges „ä/ö/ü", „Hoecher, Michael"), die
+    /// Meldelisten meist nicht — gemeldet 2026-09-28: „Höcher" fand den Spieler in der Megabase nicht. Den umgekehrten
+    /// Weg („oe" → „o") braucht es deshalb nicht; er machte auch aus „Michael" ein „Michal".
+    /// </summary>
+    public static IReadOnlyList<string> Spellings(string word)
+    {
+        var list = new List<string>(2);
+        foreach (var s in new[] { Fold(word, false), Fold(word, true) })
+            if (s.Length > 0 && !list.Contains(s)) list.Add(s);
+        return list;
+    }
+
+    /// <summary>Die Wörter einer Suche, je mit ihren Schreibweisen.</summary>
+    public static List<IReadOnlyList<string>> QueryWords(string query) =>
+        Tokens(query.ToLowerInvariant()).Select(Spellings).Where(v => v.Count > 0).ToList();
 
     // ── Namensschlüssel ─────────────────────────────────────────────
 
@@ -154,7 +178,7 @@ public sealed class LeagueRosterIndex
     /// Vorname" (2022/23) — bei einer Partie ist die Reihenfolge offen, deshalb liefert <see cref="QueryKeys"/> beide.</summary>
     private static (List<string> Last, List<string> First, bool Comma) Parts(string name, bool transliterate)
     {
-        var key = Fold(LeagueNames.NameKey(name), transliterate);
+        var key = Fold(LeagueNames.NameKey(LeagueNames.StripTitles(name)), transliterate);
         var comma = key.IndexOf(',');
         if (comma >= 0) return (Tokens(key[..comma]), Tokens(key[(comma + 1)..]), true);
         var all = Tokens(key);

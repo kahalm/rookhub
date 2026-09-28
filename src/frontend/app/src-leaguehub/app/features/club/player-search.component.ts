@@ -38,7 +38,7 @@ export class PlayerSearchComponent implements OnInit, OnDestroy {
   @Input({ required: true }) client!: ClubClient;
   @Input() text = '';
   @Input() label = 'Spieler';
-  @Input() placeholder = 'Nachname, Vorname';
+  @Input() placeholder = 'Name oder FIDE-ID';
   /** Gleich beim Öffnen suchen (und ins Feld springen) — in der Übersicht öffnet das Feld erst ein Klick auf den Namen. */
   @Input() autoSearch = false;
   @Output() textChange = new EventEmitter<string>();

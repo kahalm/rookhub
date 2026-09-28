@@ -141,6 +141,35 @@ public class LeagueClubServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("FM Humer, Wolfgang", "Humer, Wolfgang")]
+    [InlineData("Humer, Wolfgang FM", "Humer, Wolfgang")]
+    [InlineData("WGM Humer Wolfgang", "Humer Wolfgang")]
+    [InlineData("Dr. Huber, Franz", "Huber, Franz")]
+    [InlineData("Dipl.-Ing. Berger, Hans", "Berger, Hans")]
+    [InlineData("DI Mair Josef", "Mair Josef")]
+    [InlineData("Im, Seong", "Im, Seong")]            // ein Name, kein Titel
+    [InlineData("Di Marco, Luca", "Di Marco, Luca")]
+    [InlineData("FM", "FM")]
+    public void StripTitles_ChessAndAcademicTitles_ButNotNames(string name, string expected) =>
+        Assert.Equal(expected, LeagueNames.StripTitles(name));
+
+    [Fact]
+    public void Match_WithATitleInFront_FindsThePlayer() =>
+        Assert.Equal("1600370", Roster(("Humer, Wolfgang", "1600370")).Match("FM Humer, Wolfgang", null).Person?.Fide);
+
+    [Fact]
+    public void Suggest_UmlautsInEverySpelling_AndAFideIdNumber()
+    {
+        // Gemeldet 2026-09-28: „Höcher" fand „Hoecher, Michael" nicht (ChessBase schreibt Umlaute aus).
+        var roster = Roster(("Hoecher, Michael", "1271145"), ("Müller, Hans", "444"));
+        Assert.Equal("Hoecher, Michael", roster.Suggest("Höcher", 5).Single().Name);
+        Assert.Equal("Müller, Hans", roster.Suggest("mueller ha", 5).Single().Name);
+        Assert.Equal("Hoecher, Michael", roster.Suggest("1271145", 5).Single().Name);
+        Assert.Empty(roster.Suggest("9999999", 5));
+        Assert.Equal("Hoecher, Michael", roster.Suggest("FM Hoecher", 5).Single().Name);
+    }
+
+    [Theory]
     [InlineData("Kostic")]
     [InlineData("Kostic, ?")]
     [InlineData("KOSTIC,")]
@@ -556,11 +585,29 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
         Assert.Equal(new[] { "Hengl, Peter" }, (await mega.SearchAsync("eng ete", 10, default)).Select(p => p.Name));
     }
 
+    [Fact]
+    public async Task Search_UmlautSpellings_FideIdNumber_AndTitles()
+    {
+        var mega = new LeagueMegaPlayers(_db);
+        await mega.ReplaceAsync(new StringReader("Hoecher, Michael\t1271145\t83\t2025\t2157\nMueller, Hans\t\t5\t2001\t\n" +
+            "Humer, Wolfgang\t1600370\t189\t2025\t2315\n"), default);
+        Assert.Equal("Hoecher, Michael", (await mega.SearchAsync("Höcher", 10, default)).Single().Name);
+        Assert.Equal("Mueller, Hans", (await mega.SearchAsync("Müller", 10, default)).Single().Name);
+        Assert.Equal("Hoecher, Michael", (await mega.SearchAsync("michael", 10, default)).Single().Name);
+        Assert.Equal("Hoecher, Michael", (await mega.SearchAsync("1271145", 10, default)).Single().Name);
+        Assert.Equal("Humer, Wolfgang", (await mega.SearchAsync("FM Humer", 10, default)).Single().Name);
+        var l = await mega.LookupAsync(new[] { "Höcher, Michael", "FM Humer, Wolfgang" }, Array.Empty<string?>(), default);
+        Assert.Equal("1271145", l.ByName("Höcher, Michael")?.Fide);
+        Assert.Equal("1600370", l.ByName("FM Humer, Wolfgang")?.Fide);
+    }
+
     [Theory]
     [InlineData("Angerer, Helmut", new[] { "angerer, helmut" })]
     [InlineData("Angerer,Helmut", new[] { "angerer,helmut", "angerer, helmut" })]
     [InlineData("Helmut Angerer", new[] { "helmut angerer", "angerer, helmut", "helmut, angerer" })]
     [InlineData("Kostic", new[] { "kostic" })]
+    [InlineData("Höcher, Michael", new[] { "hocher, michael", "hoecher, michael" })]
+    [InlineData("FM Humer, Wolfgang", new[] { "humer, wolfgang" })]
     [InlineData("", new string[0])]
     public void LookupKeys_CommaFormAndBothOrdersWithoutComma(string name, string[] keys) =>
         Assert.Equal(keys, LeagueMegaPlayers.LookupKeys(name).Distinct().ToArray());

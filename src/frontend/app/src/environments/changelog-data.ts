@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.577.1", date: "2026-09-28", changes: [
+    { en: "LeagueHub club database: names with umlauts are now found in both spellings — “Höcher” finds the Megabase entry “Hoecher, Michael” (ChessBase always writes umlauts out), “Mueller” finds “Müller”. A chess or academic title in front of or behind the name (“FM Humer, Wolfgang”, “Dr. Huber, Franz”) no longer stops a match or a search. Typing a FIDE ID in the player search finds that player.", de: "LeagueHub-Vereins-Datenbank: Namen mit Umlaut werden jetzt in beiden Schreibweisen gefunden — „Höcher“ findet den Megabase-Eintrag „Hoecher, Michael“ (ChessBase schreibt Umlaute immer aus), „Mueller“ findet „Müller“. Ein Schach- oder akademischer Titel vor oder hinter dem Namen („FM Humer, Wolfgang“, „Dr. Huber, Franz“) verhindert keinen Abgleich und keine Suche mehr. Eine FIDE-ID in der Spielersuche findet diesen Spieler." },
+  ] },
   { version: "0.577.0", date: "2026-09-28", changes: [
     { en: "LeagueHub import overview: a fourth filter “not yet present” shows only games that are not already in the club database; every filter button shows how many games it contains. The list also shows the tournament of each game (from the PGN), which makes it easier to tell the players apart.", de: "LeagueHub-Importübersicht: Ein vierter Filter „Noch nicht vorhanden“ zeigt nur die Partien, die noch nicht in der Vereins-Datenbank stehen; jeder Filterknopf nennt, wie viele Partien er zeigt. Die Liste zeigt außerdem das Turnier jeder Partie (aus dem PGN) — so lassen sich die Spieler leichter zuordnen." },
   ] },

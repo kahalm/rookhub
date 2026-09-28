@@ -25,25 +25,33 @@ public sealed class LeagueMegaPlayers
     /// Die Schlüssel, unter denen ein Name aus einer Partie im Verzeichnis stehen kann — das Verzeichnis schreibt
     /// „Nachname, Vorname" (ChessBase). Ohne Komma ist die Reihenfolge offen: „Helmut Angerer" und „Angerer Helmut"
     /// werden beide als „angerer, helmut" bzw. „helmut, angerer" gefragt.
+    /// Umlaute in beiden Formen („Höcher" → „hocher", „hoecher"; ChessBase schreibt „Hoecher, Michael").
     /// </summary>
     public static IEnumerable<string> LookupKeys(string? name)
     {
-        var folded = LeagueRosterIndex.Fold(LeagueNames.NameKey(name), false);
-        if (folded.Length == 0) yield break;
-        static string Clip(string k) => k.Length > 120 ? k[..120] : k;
-        yield return Clip(folded);
+        var key = LeagueNames.NameKey(LeagueNames.StripTitles(name));
+        var plain = LeagueRosterIndex.Fold(key, false);
+        if (plain.Length == 0) yield break;
+        foreach (var folded in new[] { plain, LeagueRosterIndex.Fold(key, true) }.Distinct())
+            foreach (var k in KeysOf(folded))
+                yield return k.Length > 120 ? k[..120] : k;
+    }
+
+    private static IEnumerable<string> KeysOf(string folded)
+    {
+        yield return folded;
         var comma = folded.IndexOf(',');
         if (comma >= 0)
         {
             var last = folded[..comma].Trim();
             var first = folded[(comma + 1)..].Trim();
-            yield return Clip(first.Length == 0 ? last : $"{last}, {first}");
+            yield return first.Length == 0 ? last : $"{last}, {first}";
             yield break;
         }
         var t = folded.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (t.Length < 2) yield break;
-        yield return Clip($"{t[^1]}, {string.Join(' ', t[..^1])}");
-        yield return Clip($"{t[0]}, {string.Join(' ', t[1..])}");
+        yield return $"{t[^1]}, {string.Join(' ', t[..^1])}";
+        yield return $"{t[0]}, {string.Join(' ', t[1..])}";
     }
 
     /// <summary>
@@ -144,26 +152,34 @@ public sealed class LeagueMegaPlayers
     }
 
     /// <summary>
-    /// Suche („like", Wunsch 2026-09-28): jedes getippte Wort muss IRGENDWO im Namen stehen (ohne Groß/klein, Akzente) —
-    /// in der Datenbank als <c>NameKey LIKE '%wort%'</c> je Wort (bei 432 000 Zeilen ein Durchlauf von Zehntelsekunden).
-    /// Wortanfänge zuerst, dann meistgespielte.
+    /// Suche („like", Wunsch 2026-09-28): jedes getippte Wort muss IRGENDWO im Namen stehen (ohne Groß/klein, Akzente,
+    /// Umlaute in allen Schreibweisen — <see cref="LeagueRosterIndex.Spellings"/>) — in der Datenbank als
+    /// <c>NameKey LIKE '%wort%'</c> je Wort und Schreibweise (bei 432 000 Zeilen ein Durchlauf von Zehntelsekunden).
+    /// Wortanfänge zuerst, dann meistgespielte. Eine reine Zahl sucht die FIDE-ID.
     /// </summary>
     public async Task<List<LeagueMegaPlayer>> SearchAsync(string query, int take, CancellationToken ct)
     {
-        var words = KeyOf(query).Split(new[] { ' ', ',', '.' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(w => w.Length >= 2).Distinct().Take(4).ToList();
+        if (LeagueRosterIndex.IsFideQuery(query))
+        {
+            var id = query.Trim();
+            return await _db.LeagueMegaPlayers.AsNoTracking().Where(p => p.FideId == id)
+                .OrderByDescending(p => p.Games).Take(take).ToListAsync(ct);
+        }
+        var words = LeagueRosterIndex.QueryWords(LeagueNames.StripTitles(query).Replace('.', ' '))
+            .Where(w => w[0].Length >= 2).DistinctBy(w => w[0]).Take(4).ToList();
         if (words.Count == 0) return new();
         var q = _db.LeagueMegaPlayers.AsNoTracking().AsQueryable();
         foreach (var w in words)
         {
-            var word = w;
-            q = q.Where(p => p.NameKey.Contains(word));
+            // Höchstens zwei Schreibweisen — ausgeschrieben, damit der Anbieter ein einfaches OR aus LIKEs übersetzt.
+            var (a, b) = (w[0], w.Count > 1 ? w[1] : w[0]);
+            q = q.Where(p => p.NameKey.Contains(a) || p.NameKey.Contains(b));
         }
         var hits = await q.OrderByDescending(p => p.Games).Take(300).ToListAsync(ct);
         bool Prefixes(LeagueMegaPlayer p)
         {
             var own = p.NameKey.Split(new[] { ' ', ',', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
-            return words.All(w => own.Any(o => o.StartsWith(w, StringComparison.Ordinal)));
+            return words.All(w => own.Any(o => w.Any(v => o.StartsWith(v, StringComparison.Ordinal))));
         }
         return hits.OrderBy(p => Prefixes(p) ? 0 : 1).ThenByDescending(p => p.Games).Take(take).ToList();
     }

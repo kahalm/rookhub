@@ -1424,7 +1424,12 @@ Akzente mit Index, FIDE-ID, Partien, jüngstes Jahr, höchste Elo). `GET …/clu
 wird seit 0.576.0 wie mit `LIKE` („bert rud" findet „Bertl, Rudolf"): jedes getippte Wort (ab zwei Zeichen, höchstens
 vier) muss IRGENDWO im Namen stehen — in der Megabase `NameKey LIKE '%wort%'` je Wort (bei 432 000 Zeilen Zehntelsekunden,
 höchstens 300 nach Partienzahl), Wortanfänge zuerst, dann meistgespielte; die Liga ebenso. Die Suche startet gleich beim
-Öffnen bzw. Hineinklicken ins Namensfeld (`autoSearch`, `onFocus`). Eine
+Öffnen bzw. Hineinklicken ins Namensfeld (`autoSearch`, `onFocus`). Seit 0.577.1: jedes Wort in BEIDEN Umlaut-Schreibweisen
+(`LeagueRosterIndex.Spellings`, „Höcher" → „hocher"/„hoecher" — das Megabase-Verzeichnis enthält kein einziges ä/ö/ü,
+ChessBase schreibt „Hoecher, Michael"; der Rückweg „oe" → „o" ist bewusst weg, er machte „Michael" zu „Michal"), eine
+reine Zahl (4–12 Ziffern) sucht die FIDE-ID, und Titel vor/hinter dem Namen fallen beim Abgleich und in der Suche weg
+(`LeagueNames.StripTitles`: Schachtitel nur in Großschreibung — „Im, Seong" bleibt ein Name —, akademische vorn; NICHT in
+`NameKey`, der Brettpaarung und Meldeliste beim Aktualisieren verknüpft). Eine
 gewählte FIDE-ID ohne Ligaspieler bleibt an der Partie stehen (`Side.Fide`). Eingespielt über
 `POST /api/league/admin/mega-players` (TSV, gern gzip; ersetzt alles) aus `scan_mega_players.py` im league-analyzer.
 

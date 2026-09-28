@@ -29,6 +29,30 @@ public static class LeagueNames
 
     public static string Clean(string? s) => Regex.Replace((s ?? "").Replace(' ', ' '), @"\s+", " ").Trim();
 
+    /// <summary>Schachtitel, die ein PGN VOR oder HINTER den Namen schreibt („FM Humer, Wolfgang") — nur in genau dieser
+    /// Großschreibung, damit ein Name wie „Im, Seong" nicht zum Titel wird.</summary>
+    private static readonly HashSet<string> ChessTitles = new(StringComparer.Ordinal)
+    {
+        "GM", "IM", "FM", "CM", "NM", "WGM", "WIM", "WFM", "WCM", "WNM", "AGM", "AIM", "AFM", "ACM",
+    };
+
+    /// <summary>
+    /// Titel vor und hinter dem Namen weg, zum ABGLEICH (Vereins-Datenbank): Schachtitel („FM Humer, Wolfgang",
+    /// gemeldet 2026-09-28), akademische Titel vorn („Dr. Huber, Franz", „DI Mair"). Hinten stehende akademische Titel
+    /// entfernt schon <see cref="NameKey"/>. Bewusst NICHT in <see cref="NameKey"/>: der verknüpft Brettpaarung und
+    /// Meldeliste beim Aktualisieren, und dort stehen Titel in einer eigenen Spalte.
+    /// </summary>
+    public static string StripTitles(string? name)
+    {
+        var toks = Clean(name).Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        static bool Title(string tok) => ChessTitles.Contains(tok.Trim(',', '(', ')'));
+        static bool Academic(string tok) => tok == "DI" || tok.EndsWith('.')
+            && tok.ToLowerInvariant().Split(new[] { '.', '-' }, StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } parts && parts.All(Suffix.Contains);
+        while (toks.Count > 1 && (Title(toks[0]) || Academic(toks[0]))) toks.RemoveAt(0);
+        while (toks.Count > 2 && Title(toks[^1])) toks.RemoveAt(toks.Count - 1);
+        return string.Join(' ', toks);
+    }
+
     /// <summary>„Schnabl, Andreas Dr." → „schnabl, andreas" (akad. Titel stehen nur in der Startrangliste).</summary>
     public static string NameKey(string? name)
     {

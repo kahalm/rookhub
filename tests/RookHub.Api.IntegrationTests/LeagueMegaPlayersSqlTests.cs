@@ -21,12 +21,15 @@ public class LeagueMegaPlayersSqlTests(LeagueMegaPlayersSqlFixture fixture)
         await using (var db = fixture.Schema.NewContext())
             await new LeagueMegaPlayers(db).ReplaceAsync(new StringReader(
                 "Bertl, Rudolf\t111\t40\t2024\t1900\nAngerer, Helmut\t1607162\t98\t2023\t2195\n" +
-                "Angerer, Helmut\t\t3\t1980\t\nHuber, Franz\t1\t10\t2020\t\nHuber, Franz\t2\t20\t2021\t\n"), default);
+                "Angerer, Helmut\t\t3\t1980\t\nHuber, Franz\t1\t10\t2020\t\nHuber, Franz\t2\t20\t2021\t\n" +
+                "Hoecher, Michael\t1271145\t83\t2025\t2157\n"), default);
 
         await using (var db = fixture.Schema.NewContext())
         {
             var mega = new LeagueMegaPlayers(db);
             Assert.Equal("Bertl, Rudolf", (await mega.SearchAsync("ert rud", 10, default)).Single().Name);
+            Assert.Equal("Hoecher, Michael", (await mega.SearchAsync("Höcher mich", 10, default)).Single().Name);   // OR aus LIKEs
+            Assert.Equal("Hoecher, Michael", (await mega.SearchAsync("1271145", 10, default)).Single().Name);
 
             var names = new[] { "Helmut Angerer", "Huber, Franz", "Niemand" }.Concat(Enumerable.Range(0, 600).Select(i => $"Name{i}, X"));
             var l = await mega.LookupAsync(names, new[] { "111", null }, default);   // mehr als eine Portion à 500
