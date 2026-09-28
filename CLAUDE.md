@@ -1336,7 +1336,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 * **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen): FIDE-ID aus der Partie zuerst, dann der
   Name in drei Stufen (alle Namensteile in beliebiger Reihenfolge → Nachname + erster Vorname → Nachname +
   Anfangsbuchstabe), ohne Groß/klein, Akzente, akad. Titel, Umlaute in beiden Schreibweisen. Mehrdeutig = Ligaspieler
-  OHNE FIDE-ID, die Kandidaten gehen zur Auswahl mit. Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
+  OHNE FIDE-ID, die Kandidaten gehen zur Auswahl mit. Eine Meldelisten-Zeile OHNE FIDE-ID gehört zu der Person MIT
+  FIDE-ID, deren Name genau so lautet, wenn es genau eine gibt (0.575.1 — 2022/23 steht „Hengl Philip" ohne Komma und ID
+  neben „Hengl, Philip" mit ID; als zwei Personen war jeder Abgleich „mehrdeutig"). Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
   eigene ID als Namenstreffer zu. Ist keine Seite ein Ligaspieler → `noLeaguePlayer`; bleibt nach dem Ersetzen keiner
   übrig → `onlyOwnClub`.
 * **Spieler von Schwaz werden durch „Schwaz" ersetzt** (Vorgabe: jeder, der in seiner JÜNGSTEN Saison für Schwaz gemeldet

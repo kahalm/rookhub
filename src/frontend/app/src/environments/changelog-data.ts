@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.575.1", date: "2026-09-28", changes: [
+    { en: "LeagueHub club database: a player who appears in an older roster without FIDE ID (2022/23 was written without a comma, e.g. “Hengl Philip”) now counts as the same person as the entry with FIDE ID — before, the name looked ambiguous, the game got no FIDE ID and the player appeared twice in the search. Namesakes with different FIDE IDs stay apart.", de: "LeagueHub-Vereins-Datenbank: Ein Spieler, der in einer älteren Meldeliste ohne FIDE-ID steht (2022/23 ohne Komma geschrieben, etwa „Hengl Philip“), gilt jetzt als dieselbe Person wie der Eintrag mit FIDE-ID — vorher wirkte der Name mehrdeutig, die Partie bekam keine FIDE-ID und der Spieler stand in der Suche doppelt. Namensvettern mit verschiedenen FIDE-IDs bleiben getrennt." },
+  ] },
   { version: "0.575.0", date: "2026-09-28", changes: [
     { en: "LeagueHub club database: correcting a player’s name now opens a search — among the league’s players by default, with a tick box across all players of the ChessBase Megabase (with FIDE ID, number of games, last year and highest rating); the FIDE ID of a player picked from the Megabase stays on the game. Imports also accept the address of a public Lichess study or chapter — the games are loaded from Lichess and go through the same overview.", de: "LeagueHub-Vereins-Datenbank: Beim Korrigieren eines Spielernamens öffnet sich eine Suche — standardmäßig unter den Spielern der Liga, per Häkchen über alle Spieler der ChessBase-Megabase (mit FIDE-ID, Partienzahl, letztem Jahr und höchster Elo); die FIDE-ID eines aus der Megabase gewählten Spielers bleibt an der Partie stehen. Der Import nimmt außerdem die Adresse einer öffentlichen Lichess-Studie oder eines Kapitels an — die Partien kommen von Lichess und laufen durch dieselbe Übersicht." },
   ] },

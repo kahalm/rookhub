@@ -107,6 +107,25 @@ public class LeagueClubServiceTests : IDisposable
     }
 
     [Fact]
+    public void RowWithoutFide_BelongsToTheSameNameWithFide_UnlessTwoCarryIt()
+    {
+        var roster = new LeagueRosterIndex(new[]
+        {
+            new LeagueRosterIndex.Row(1, "Absam", "Hengl, Philip", "hengl, philip", "222", "2026/27"),
+            new LeagueRosterIndex.Row(2, "Absam", "Hengl Philip", "hengl philip", null, "2022/23"),       // ohne Komma, ohne ID
+            new LeagueRosterIndex.Row(3, "Hall", "Huber, Franz", "huber, franz", "1", "2026/27"),
+            new LeagueRosterIndex.Row(4, "Rum", "Huber, Franz", "huber, franz", "2", "2026/27"),          // Namensvettern
+            new LeagueRosterIndex.Row(5, "Rum", "Huber Franz", "huber franz", null, "2022/23"),
+        });
+        var hit = roster.Match("Hengl Philip", null);
+        Assert.False(hit.Ambiguous);
+        Assert.Equal(("222", "Hengl, Philip"), (hit.Person!.Fide, hit.Person.Name));
+        Assert.Single(roster.People, p => p.Name.StartsWith("Hengl"));
+        Assert.True(roster.Match("Huber, Franz", null).Ambiguous);                                     // wer, bleibt offen
+        Assert.Equal(3, roster.People.Count(p => p.Name.StartsWith("Huber")));
+    }
+
+    [Fact]
     public void Suggest_MatchesWordPrefixes() =>
         Assert.Equal(new[] { "Schnabl, Andreas Dr." },
             Roster(("Schnabl, Andreas Dr.", "333"), ("Hengl, Philip", "222")).Suggest("schn and", 5).Select(p => p.Name));

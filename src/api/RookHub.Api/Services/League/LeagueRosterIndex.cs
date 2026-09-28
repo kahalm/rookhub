@@ -46,15 +46,38 @@ public sealed class LeagueRosterIndex
 
     public LeagueRosterIndex(IEnumerable<Row> rows)
     {
+        static string? Norm(string? f) => string.IsNullOrWhiteSpace(f) ? null : f.Trim();
+        var list = rows.ToList();
+        // Eine Zeile OHNE FIDE-ID gehört zu der Person MIT FIDE-ID, deren Name genau so lautet (alle Namensteile gleich) —
+        // wenn es genau eine solche gibt. Die Meldelisten 2022/23 schreiben „Hengl Philip" ohne Komma und oft ohne ID; als
+        // eigene Person stünde sie neben „Hengl, Philip" (FIDE-ID), und jeder Abgleich des Namens wäre „mehrdeutig".
+        var byFull = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var r in list)
+            if (Norm(r.Fide) is { } f)
+                foreach (var k in PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal)))
+                {
+                    if (!byFull.TryGetValue(k, out var set)) byFull[k] = set = new HashSet<string>(StringComparer.Ordinal);
+                    set.Add(f);
+                }
+        string KeyOf(Row r)
+        {
+            if (Norm(r.Fide) is { } f) return f;
+            var fides = PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal))
+                .SelectMany(k => byFull.TryGetValue(k, out var set) ? set : Enumerable.Empty<string>()).Distinct().ToList();
+            return fides.Count == 1 ? fides[0] : LeagueNames.Pid(null, r.NameKey);
+        }
+
         var people = new List<Person>();
-        foreach (var g in rows.GroupBy(r => LeagueNames.Pid(string.IsNullOrWhiteSpace(r.Fide) ? null : r.Fide, r.NameKey)))
+        foreach (var g in list.GroupBy(KeyOf))
         {
             var ordered = g.OrderByDescending(r => r.Season, StringComparer.Ordinal).ThenByDescending(r => r.Tnr).ToList();
-            var fide = string.IsNullOrWhiteSpace(ordered[0].Fide) ? null : ordered[0].Fide!.Trim();
+            var fide = ordered.Select(r => Norm(r.Fide)).FirstOrDefault(f => f != null);
             var latest = ordered[0].Season;
             var own = ordered.Where(r => r.Season == latest)
                 .Any(r => string.Equals(LeagueNames.Clean(r.Team).TrimEnd('/', '-', ' '), LeagueRefresh.OwnTeam, StringComparison.OrdinalIgnoreCase));
-            var p = new Person(g.Key, fide, LeagueNames.Clean(ordered[0].Name),
+            // Anzeige in der jüngsten Schreibweise MIT Komma („Nachname, Vorname"), sonst der jüngsten überhaupt.
+            var shown = (ordered.FirstOrDefault(r => r.Name.Contains(',')) ?? ordered[0]).Name;
+            var p = new Person(g.Key, fide, LeagueNames.Clean(shown),
                 ordered.Select(r => r.Team).Distinct(StringComparer.Ordinal).ToList(), own);
             people.Add(p);
             if (fide != null) _byFide[fide] = p;
