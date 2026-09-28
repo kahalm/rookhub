@@ -143,6 +143,20 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Contains("Never give the evaluation or the winning chances themselves as the reason", system);
         Assert.Contains("\"you\" is always the reader", system);
         Assert.Contains("{\"explanation\": \"...\"}", system);
+        // 0.585.1: keine ganze Engine-Linie aufsagen, kein „ahead" mitten im Deutschen.
+        Assert.Contains("Name at most the first two moves of a line", system);
+        Assert.Contains("every other word in German, no English", system);
+    }
+
+    /// <summary>Prod-Partie 35: 22.Txc4 dxc4 ist ein Tausch — der Auftrag darf keinen Materialgewinn behaupten.</summary>
+    [Fact]
+    public void Prompt_ARecaptureIsNoMaterialGain()
+    {
+        var f = new GameMistakes.Flaw(42, true, "mistake", 50, 34, ExplanationFactsTests.Game35Before22, "Rxc4", "c1c4",
+            "Rfd1", ["Rfd1", "Bxd4", "exd4", "Rxc1", "Rxc1"], ExplanationFactsTests.Game35Answer, "0.0", "-1.2");
+        var prompt = GameMoveExplanationService.UserPrompt(f, "black");
+        Assert.DoesNotContain("ahead in material", prompt);
+        Assert.Contains("the difference is positional", prompt);
     }
 
     /// <summary>„Your move 14. Nb5" für Weiß, obwohl der Besitzer Schwarz spielte — „du" ist der Leser, nicht der Ziehende.</summary>

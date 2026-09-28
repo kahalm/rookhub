@@ -226,8 +226,10 @@ public sealed class GameMoveExplanationService
 
     /// <summary>Fassung des Auftrags samt Fakten. Ältere Erklärungen gelten als veraltet: die Seite zeigt sie nicht mehr,
     /// der Besitzer bekommt den Knopf wieder, und beim Erzeugen fallen sie weg. 0 = bis 0.571.x, 1 = seit 0.572.0 (konkreter
-    /// Grund aus <see cref="ExplanationFacts"/> statt „senkt die Gewinnchancen", Lage in Worten).</summary>
-    public const int CurrentRevision = 1;
+    /// Grund aus <see cref="ExplanationFacts"/> statt „senkt die Gewinnchancen", Lage in Worten), 2 = seit 0.585.1
+    /// (Materialbilanz der Antwort-Linie ab der Stellung VOR dem Fehler — ein Zurückschlagen war ein „Turmgewinn"; höchstens
+    /// zwei Züge einer Linie nennen, kein englisches Wort im Text).</summary>
+    public const int CurrentRevision = 2;
 
     internal static string SystemPrompt(string lang) =>
         $"""
@@ -250,8 +252,9 @@ public sealed class GameMoveExplanationService
         says — "you" is always the reader, NOT automatically the side that moved.
         Address the reader informally where the language distinguishes (German "du", French "tu", …).
         Use ONLY the facts and lines given — never calculate your own variations and never mention a move that is not in
-        the given lines. Write moves exactly as given, in English algebraic notation (e.g. Nf3, Bxh7+, O-O). No centipawns,
-        no percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
+        the given lines. Name at most the first two moves of a line — never recite a whole engine line. Write moves exactly
+        as given, in English algebraic notation (e.g. Nf3, Bxh7+, O-O); every other word in {LanguageName(lang)}, no English
+        words. No centipawns, no percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
         """;
 
     /// <param name="viewpoint">Seite des Lesers (<c>white</c>/<c>black</c>, leer = unbekannt) — NICHT die Seite,
@@ -286,7 +289,8 @@ public sealed class GameMoveExplanationService
         if (f.Refutation.Count > 0 && AfterMove(f.FenBefore, f.PlayedSan) is { } fenAfter)
         {
             answer.AddRange(ExplanationFacts.FirstMoveAttacks(fenAfter, f.Refutation));
-            answer.AddRange(ExplanationFacts.LineEvents(fenAfter, f.Refutation, gainerWhite: !f.White));
+            // Die Bilanz ab der Stellung VOR dem Fehler: schlug er selbst, gleicht das Zurückschlagen es nur aus.
+            answer.AddRange(ExplanationFacts.LineEvents(f.FenBefore, f.Refutation, gainerWhite: !f.White, lead: f.PlayedSan));
         }
         var better = new List<string>();
         if (f.BestLine.Count > 0)

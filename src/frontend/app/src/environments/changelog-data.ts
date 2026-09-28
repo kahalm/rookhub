@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.585.1", date: "2026-09-28", changes: [
+    { en: "“Why was that a mistake?”: a recapture no longer counts as winning material — after 22.Rxc4 dxc4 the explanation claimed “you win a rook at once”, although it was just a rook trade; the material balance now starts from the position before the mistake. The explanations also name at most two moves of a line and no longer slip English words into other languages; existing explanations are written anew on the next request.", de: "„Warum war das ein Fehler?“: Zurückschlagen zählt nicht mehr als Materialgewinn — nach 22.Txc4 dxc4 behauptete die Erklärung „du gewinnst sofort einen Turm“, dabei war es nur ein Turmtausch; die Materialbilanz beginnt jetzt bei der Stellung vor dem Fehler. Die Erklärungen nennen außerdem höchstens zwei Züge einer Linie und mischen keine englischen Wörter mehr hinein; vorhandene Erklärungen werden beim nächsten Anfordern neu geschrieben." },
+  ] },
   { version: "0.585.0", date: "2026-09-28", changes: [
     { en: "Game texts from our own AI hardware: “Explain the mistakes”, “Roast my game” and the short recap when opening a game now also work during the day — the reserved hours only hold back the background runs (texts written automatically after an analysis, course and library translation).", de: "Texte zur Partie von unserer eigenen KI-Hardware: „Fehler erklären lassen“, „Roast my game“ und die Kurz-Nacherzählung beim Öffnen einer Partie gehen jetzt auch tagsüber — die reservierten Zeiten halten nur noch die Hintergrundläufe zurück (automatisch nach einer Analyse geschriebene Texte, Kurs- und Bibliotheksübersetzung)." },
   ] },

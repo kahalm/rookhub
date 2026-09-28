@@ -114,6 +114,32 @@ public class ExplanationFactsTests
         Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, []));
     }
 
+    /// <summary>Prod-Partie 35 (0.585.1): 21…Tc4 22.Txc4 dxc4 ist ein Turmtausch. Ab der Stellung NACH Txc4 gerechnet stand
+    /// „Black ends up ahead by 5", und das Modell schrieb „du gewinnst sofort einen Turm" — dabei schlägt Schwarz nur zurück.
+    /// Der Fehler selbst gehört in die Bilanz (<c>lead</c>).</summary>
+    internal const string Game35Before22 = "5rk1/p4pp1/1q3b2/3p3p/2rNb2P/4P1PB/P2Q1P2/2R2RK1 w - - 2 22";
+    internal static readonly string[] Game35Answer = ["dxc4", "Rd1", "Rd8", "Bf1", "Bf3", "Re1", "Ba8", "Bg2", "Bxg2", "Kxg2"];
+
+    [Fact]
+    public void LineEvents_TheMistakesOwnCapture_CountsToo_SoARecaptureIsNoGain()
+    {
+        Assert.Empty(ExplanationFacts.LineEvents(Game35Before22, Game35Answer, gainerWhite: false, lead: "Rxc4"));
+        Assert.Empty(ExplanationFacts.LineEvents(Game35Before22, Game35Answer, lead: "Rxc4"));
+        // Zum Vergleich der alte Weg ab der Stellung danach — genau diese Zeile ging ans Modell.
+        Assert.Contains(ExplanationFacts.LineEvents("5rk1/p4pp1/1q3b2/3p3p/2RNb2P/4P1PB/P2Q1P2/5RK1 b - - 0 22", Game35Answer),
+            e => e.StartsWith("Black ends up ahead in material by 5"));
+    }
+
+    [Fact]
+    public void LineEvents_Lead_OnlyCountsMaterial_ChecksAreAboutTheLine()
+    {
+        Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, ["Qxd5"], lead: "exd5"));                       // Tausch
+        Assert.Empty(ExplanationFacts.LineEvents(AfterE4D5, ["Nf6"], gainerWhite: false, lead: "exd5"));  // Schwarz holt nichts
+        // Der Vorzug gibt Schach — das ist kein Ereignis der Antwort-Linie; die Bilanz zählt ihn aber mit.
+        Assert.Equal(["Black ends up ahead in material by 2 (White took pawn, Black took bishop)"],
+            ExplanationFacts.LineEvents("r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3", ["Kxf7"], lead: "Bxf7+"));
+    }
+
     /// <summary>Holt in der Antwort-Linie die FALSCHE Seite etwas, ist das kein Grund für den Fehler (Partie 34, 33…La6).</summary>
     [Fact]
     public void LineEvents_GainerFilter()

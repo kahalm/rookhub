@@ -489,10 +489,13 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
   but gave away part of the advantage", „the opponent's move made the win even easier"), `FirstMoveAttacks` (was der erste
   Zug der Antwort bzw. der besseren Linie angreift, ohne Bauern/König) und `LineEvents` (Schach im ersten Zug, Matt,
   Umwandlung, Materialbilanz am Ende — nur, wenn die RICHTIGE Seite vorne liegt: in der Antwort-Linie der Gegner, in der
-  besseren der Ziehende; einzelne Schlagfälle bewusst nicht, das Modell verwechselte damit die Seiten). Ohne solche Fakten
+  besseren der Ziehende; einzelne Schlagfälle bewusst nicht, das Modell verwechselte damit die Seiten). **Die Bilanz der
+  Antwort-Linie zählt ab der Stellung VOR dem Fehler, samt dem gespielten Zug** (`LineEvents(…, lead: PlayedSan)`, 0.585.1):
+  ab der Stellung danach war ein Zurückschlagen ein Gewinn — Prod-Partie 35, 22.Txc4 dxc4 stand als „Black ends up ahead by
+  5", das Modell schrieb „du gewinnst sofort einen Turm". Ohne solche Fakten
   sagt der Auftrag „positional, name the moves, do not invent reasons". Der Auftrag verbietet die Bewertung als Grund, Zahlen
   nur als „+5.8 → +4.4". **Schon verloren = keine Erklärung** (`AlreadyLost`: vorher UND nachher Stufe −3, Wunsch „von −4
-  auf −6 muss das nicht kommentiert werden"). **Fassung** `GameMoveExplanation.Revision` (`CurrentRevision` = 1): ältere
+  auf −6 muss das nicht kommentiert werden"). **Fassung** `GameMoveExplanation.Revision` (`CurrentRevision` = 2 seit 0.585.1): ältere
   Texte zeigt `GetAsync` nicht, `GenerateAsync` räumt sie weg — wer den Auftrag spürbar ändert, erhöht die Zahl.
 * **Meisterkommentar zur SELBEN Stellung** (0.542.0, `Services/MasterComments.cs`): vor dem Schreiben sucht der Dienst
   im Rohbestand kommentierte Partien mit GENAU derselben Zugfolge bis zur Stellung vor dem Fehler (`LibraryGame.OpeningLine`,

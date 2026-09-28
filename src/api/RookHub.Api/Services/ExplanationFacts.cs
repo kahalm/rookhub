@@ -108,7 +108,11 @@ public static class ExplanationFacts
     /// der Antwort-Linie der Gegner, in der besseren Linie der Ziehende. Holt die ziehende Seite in der Antwort-Linie
     /// selbst etwas, ist das kein Grund für den Fehler (Partie 34, 33…La6: „ahead by 1" in BEIDEN Linien, das Modell
     /// schrieb daraus einen verpassten Bauerngewinn). <c>null</c> = immer.</param>
-    public static List<string> LineEvents(string fen, IReadOnlyList<string> sans, bool? gainerWhite = null)
+    /// <param name="lead">Ein Zug, der VOR der Linie ab <paramref name="fen"/> gespielt wird und NUR in die Materialbilanz
+    /// eingeht — der Fehler selbst, wenn die Antwort-Linie ausgewertet wird. Ohne ihn zählte ein Zurückschlagen als Gewinn:
+    /// Prod-Partie 35, 21…Tc4 22.Txc4 dxc4 — ab der Stellung NACH Txc4 gerechnet stand „Black ends up ahead by 5 (Black
+    /// took a rook)", und das Modell schrieb „du gewinnst sofort einen Turm" (0.585.1).</param>
+    public static List<string> LineEvents(string fen, IReadOnlyList<string> sans, bool? gainerWhite = null, string? lead = null)
     {
         var events = new List<string>();
         if (sans.Count == 0) return events;
@@ -116,13 +120,21 @@ public static class ExplanationFacts
         try
         {
             var board = ChessBoard.LoadFromFen(fen);
-            for (var i = 0; i < sans.Count; i++)
+            IReadOnlyList<string> moves = lead is null ? sans : [lead, .. sans];
+            var offset = lead is null ? 0 : 1;
+            for (var j = 0; j < moves.Count; j++)
             {
-                var san = sans[i];
+                var san = moves[j];
+                var i = j - offset;
                 var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
                 if (move is null) break;
                 var white = move.Piece?.Color == PieceColor.White;
                 if (move.CapturedPiece is { } captured) gained[white].Add(char.ToLowerInvariant(captured.Type.AsChar));
+                if (i < 0)
+                {
+                    board.Move(move);
+                    continue;
+                }
                 if (move.IsMate) events.Add($"the line ends in checkmate ({san})");
                 else if (i == 0 && move.IsCheck) events.Add($"{san} gives check");
                 if (move.IsPromotion) events.Add($"{san}: {(white ? "White" : "Black")} promotes a pawn");
