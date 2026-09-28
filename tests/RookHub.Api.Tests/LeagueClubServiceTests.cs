@@ -684,6 +684,29 @@ public class LeagueClubServiceTests : IDisposable
         Assert.StartsWith("e2e4 c7c5 g1f3 d7d6 d2d4 c5d4", item.Uci);
     }
 
+    /// <summary>0.594.0: eine Seite ohne FIDE-ID, deren Name in einer Meldeliste steht (Ligaspieler ohne FIDE-ID wie Kinsiz,
+    /// Atlas) — die Liste sagt es, damit die Seite dort keinen „bitte zuordnen"-Bleistift zeigt.</summary>
+    [Fact]
+    public async Task List_FlagsRosterPlayersWithoutFide_NotUnknownNamesNorSchwaz()
+    {
+        var me = await SeedAsync();
+        Player(7, "Absam", "Kinsiz, Atlas", null);
+        await _db.SaveChangesAsync();
+        var club = Club();
+        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Kinsiz, Atlas"), null);          // Schwaz – Ligaspieler ohne ID
+        await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Niemand, Kennt", "1. d4 d5 1-0"),
+            [new() { Index = 1, Black = new() { Name = "Niemand, Kennt" } }]);                   // Name, den keiner kennt
+
+        var items = (await club.ListAsync(me, true, null, null, 1, default)).Items;
+        var kinsiz = items.Single(i => i.Black == "Kinsiz, Atlas");
+        Assert.Null(kinsiz.BlackFide);
+        Assert.True(kinsiz.BlackInRoster);
+        Assert.False(kinsiz.WhiteInRoster);                                                   // „Schwaz" zählt nicht
+        var unknown = items.Single(i => i.Black == "Niemand, Kennt");
+        Assert.False(unknown.BlackInRoster);
+        Assert.False(unknown.WhiteInRoster);                                                  // Hengl hat eine FIDE-ID
+    }
+
     [Fact]
     public async Task ListAndDelete_OwnNamedGames_AnonymousOnlyByManagers()
     {

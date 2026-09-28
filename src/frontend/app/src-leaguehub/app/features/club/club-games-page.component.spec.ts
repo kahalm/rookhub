@@ -54,6 +54,20 @@ describe('ClubGamesPageComponent', () => {
     expect(c.analysisUrl(G(3, { uci: 'd2d4' }))).toBe('https://rookhub.example/analysis?moves=d2d4');   // ältere API ohne PGN
   }));
 
+  it('Ligaspieler ohne FIDE-ID: kein Bleistift, sondern „ohne FIDE-ID"; unbekannte Namen behalten ihn (0.594.0)', fakeAsync(() => {
+    api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [
+      G(1, { black: 'Kinsiz, Atlas', blackFide: null, blackInRoster: true, canDelete: true }),
+      G(2, { black: 'Niemand, Kennt', blackFide: null, canDelete: true }),
+    ] });
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const rows = el.querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('.pl-nofide')?.textContent).toContain('ohne FIDE-ID');
+    expect(rows[0].textContent).not.toContain('✎');
+    expect(rows[1].querySelector('.pl.unknown')?.textContent).toContain('✎');
+  }));
+
   it('zeigt die Partien: Jahr, Namen (Ligaspieler anklickbar), Eröffnung deutsch, Löschen nur wo erlaubt', fakeAsync(() => {
     const el = create();
     flushMicrotasks();

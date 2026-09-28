@@ -522,7 +522,23 @@ public sealed class LeagueClubService
             .Skip((page - 1) * PageSize).Take(PageSize).ToListAsync(ct);
         var items = rows.Select(g => ToDto(g, userId, canManage)).ToList();
         await FillAnalysisAsync(items, ct);
+        await FillRosterAsync(items, ct);
         return new LeagueClubListDto { Total = total, Page = page, PageSize = PageSize, Items = items };
+    }
+
+    /// <summary>Seiten OHNE FIDE-ID, deren Name in einer Meldeliste steht (0.594.0): ein Ligaspieler, der selbst keine
+    /// FIDE-ID hat (Kinsiz, Atlas bei Schach ohne Grenzen) — da gibt es nichts zuzuordnen, die Seite zeigt den Bleistift
+    /// nur bei Namen, die niemand kennt. Die Meldelisten werden nur geladen, wenn die Seite so eine Zeile hat.</summary>
+    private async Task FillRosterAsync(List<LeagueClubGameDto> items, CancellationToken ct)
+    {
+        bool Open(string name, string? fide, bool anonymized) => fide == null && !(anonymized && name == AnonymousName);
+        if (!items.Any(i => Open(i.White, i.WhiteFide, i.Anonymized) || Open(i.Black, i.BlackFide, i.Anonymized))) return;
+        var roster = await RosterAsync(ct);
+        foreach (var i in items)
+        {
+            i.WhiteInRoster = Open(i.White, i.WhiteFide, i.Anonymized) && roster.Match(i.White, null).League;
+            i.BlackInRoster = Open(i.Black, i.BlackFide, i.Anonymized) && roster.Match(i.Black, null).League;
+        }
     }
 
     // ── Analyse (0.593.0, Wunsch „die Partien sollen allen aus dem Verein zur Verfügung stehen") ──

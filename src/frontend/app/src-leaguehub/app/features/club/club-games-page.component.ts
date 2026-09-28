@@ -75,6 +75,8 @@ type Side = 'white' | 'black';
                   @for (k of sides; track k) {
                     <td>@if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
                         @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
+                        @else if (inRoster(g, k)) { <span class="pl-nofide" title="Ligaspieler ohne FIDE-ID — dazu gibt es keine Spielerkarte">{{ nameOf(g, k) }}
+                                  <span class="small muted">(ohne FIDE-ID)</span></span> }
                         @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
                                   [attr.title]="'Kein Spieler zugeordnet (keine FIDE-ID, also keine Spielerkarte) — zum Zuordnen klicken'">{{ nameOf(g, k) }}
                                   <span class="small muted" aria-hidden="true">✎</span></button> }
@@ -232,6 +234,9 @@ export class ClubGamesPageComponent implements OnInit {
   fideOf(g: ClubGame, k: Side): string | null { return k === 'white' ? g.whiteFide : g.blackFide; }
   /** „Schwaz" ohne FIDE-ID an einer anonymisierten Partie — bleibt, wie es ist. */
   isAnon(g: ClubGame, k: Side): boolean { return g.anonymized && !this.fideOf(g, k) && this.nameOf(g, k) === this.anon; }
+  /** Ligaspieler OHNE FIDE-ID (0.594.0): steht in einer Meldeliste, hat aber keine ID — keine Karte, aber auch nichts zuzuordnen,
+   *  also kein Bleistift. Der bleibt Namen, die niemand kennt. Korrigieren geht weiter über „Bearbeiten". */
+  inRoster(g: ClubGame, k: Side): boolean { return !!(k === 'white' ? g.whiteInRoster : g.blackInRoster); }
 
   edit(g: ClubGame): void {
     const cur = this.editing();

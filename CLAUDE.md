@@ -1417,7 +1417,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` und `pgn` — „Analyse" öffnet RookHubs Analysebrett mit dem GANZEN PGN (`/analysis?pgn=`, 0.592.0; über 6 000 Zeichen Adresse nur die Züge `?moves=`), `analysis` (Stand der Hintergrund-Analyse, 0.593.0) |
+| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` und `pgn` — „Analyse" öffnet RookHubs Analysebrett mit dem GANZEN PGN (`/analysis?pgn=`, 0.592.0; über 6 000 Zeichen Adresse nur die Züge `?moves=`), `analysis` (Stand der Hintergrund-Analyse, 0.593.0), `whiteInRoster`/`blackInRoster` = Seite ohne FIDE-ID, deren Name in einer Meldeliste steht (0.594.0) — dort zeigt die Seite „(ohne FIDE-ID)“ statt des Zuordnen-Bleistifts, den behalten nur Namen, die niemand kennt |
 | GET | `/api/league/club/games/{id}` | view | Eine Partie wie in der Liste, mit frischem `analysis` (0.593.0) |
 | GET | `/api/league/club/games/{id}/evals` | view | Bewertungen aus der Hintergrund-Analyse (`GameEvalsDto`, ohne Buchzüge; Status `none` ohne Analyse, 404 unbekannt) |
 | GET | `/api/league/club/games/pgn?fide=&q=` | view | Alle (gefilterten) als PGN |

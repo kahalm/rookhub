@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.594.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub club games: a league player without a FIDE ID (e.g. a youth player on a roster) now shows “(no FIDE ID)” instead of the pencil — there is nothing to assign; the pencil stays for names nobody knows.", de: "LeagueHub-Vereinspartien: Ein Ligaspieler ohne FIDE-ID (etwa ein Jugendspieler in einer Meldeliste) zeigt jetzt „(ohne FIDE-ID)“ statt des Bleistifts — da gibt es nichts zuzuordnen; den Bleistift behalten Namen, die niemand kennt." },
+  ] },
   { version: "0.593.0", date: "2026-09-28", changes: [
     { en: "LeagueHub club games: the background analysis is now open to everyone in the club who can see the club games. The list has a new “Analysis” column with the accuracy of both sides (or the progress while it is still being computed), and “Replay” opens the game right below its row — board, moves and the review from RookHub: evaluation curve, move classes, computer lines and an arrow for the best move.", de: "LeagueHub-Vereinspartien: Die Hintergrund-Analyse steht jetzt allen im Verein zur Verfügung, die die Vereinspartien sehen. Die Liste hat eine neue Spalte „Analyse“ mit der Genauigkeit beider Seiten (bzw. dem Fortschritt, solange noch gerechnet wird), und „Nachspielen“ öffnet die Partie direkt unter ihrer Zeile — Brett, Züge und der Rückblick aus RookHub: Bewertungskurve, Zug-Klassen, Computer-Linien und ein Pfeil für den besten Zug." },
   ] },

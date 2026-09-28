@@ -22,6 +22,9 @@ export interface ClubGame {
   uci?: string;
   /** Die Partie als PGN (0.592.0) — „Analyse" gibt sie mit (`?pgn=`). */
   pgn?: string;
+  /** Seite ohne FIDE-ID, deren Name in einer Meldeliste steht (Ligaspieler ohne FIDE-ID, 0.594.0). */
+  whiteInRoster?: boolean;
+  blackInRoster?: boolean;
   /** Stand der Hintergrund-Analyse (0.593.0); fehlt/`null` = noch keine. */
   analysis?: ClubGameAnalysis | null;
 }

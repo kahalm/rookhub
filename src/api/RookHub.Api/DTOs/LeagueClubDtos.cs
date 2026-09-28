@@ -143,6 +143,10 @@ public class LeagueClubGameDto
     /// <summary>Die Partie als PGN, wie gespeichert (Hauptvariante, Kopfdaten; „Schwaz" statt des Namens) — „Analyse"
     /// gibt sie ans Analysebrett mit (<c>?pgn=</c>, 0.592.0), dort steht sie dann im PGN-Feld.</summary>
     public string Pgn { get; set; } = string.Empty;
+    /// <summary>Seite ohne FIDE-ID, deren Name in einer Meldeliste steht (ein Ligaspieler ohne FIDE-ID, 0.594.0) — dann gibt es
+    /// keine Spielerkarte, aber auch nichts zuzuordnen.</summary>
+    public bool WhiteInRoster { get; set; }
+    public bool BlackInRoster { get; set; }
     /// <summary>Stand der Hintergrund-Analyse dieser Partie (0.593.0) — wie in „Meine Partien"; <c>null</c> = noch keine.</summary>
     public SavedGameAnalysisDto? Analysis { get; set; }
 }
