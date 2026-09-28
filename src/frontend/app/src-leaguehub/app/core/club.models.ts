@@ -90,6 +90,8 @@ export interface PreviewGame {
   duplicate: boolean;
   white: PreviewSide;
   black: PreviewSide;
+  /** Die Partie als eigener PGN-Text (0.590.0, fehlt bei harten Fehlern) — damit importiert die Seite portionsweise. */
+  pgn?: string | null;
 }
 
 export interface ClubPreview { games: PreviewGame[]; truncated: boolean }

@@ -84,6 +84,9 @@ public class LeagueClubPreviewGameDto
     public string? Error { get; set; }
     /// <summary>Schon in der Vereins-Datenbank (oder weiter oben in derselben Datei).</summary>
     public bool Duplicate { get; set; }
+    /// <summary>Die Partie als eigener PGN-Text (0.590.0, fehlt bei harten Fehlern) — die Seite importiert damit
+    /// portionsweise (<c>games/import</c> mit diesem Text und Nummer 1…n je Portion), jede Portion sofort gespeichert.</summary>
+    public string? Pgn { get; set; }
     public LeagueClubPreviewSideDto White { get; set; } = new();
     public LeagueClubPreviewSideDto Black { get; set; } = new();
 }

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
@@ -109,7 +110,9 @@ interface Editing { index: number; side: SideKey; text: string }
 
     <div class="actions">
       <button type="button" class="btn-pri" [disabled]="importing() || !review.counts().take" (click)="run()">
-        {{ importing() ? 'Importiere …' : review.counts().take + ' Partien importieren' }}</button>
+        @if (importing()) { Importiere … @if (progress(); as pr) { {{ pr.done }} / {{ pr.total }} } }
+        @else if (savedCount()) { Weiter importieren ({{ review.counts().take - savedCount() }} übrig) }
+        @else { {{ review.counts().take }} Partien importieren }</button>
       <button type="button" class="btn-link" [disabled]="importing()" (click)="cancel.emit()">Verwerfen</button>
       <span class="update-msg" [class.err]="!!error()" role="status">{{ error() ?? '' }}</span>
     </div>
@@ -145,6 +148,18 @@ export class ClubImportReviewComponent {
   readonly note = signal<string | null>(null);
   readonly importing = signal(false);
   readonly error = signal<string | null>(null);
+  /** Fortschritt des portionsweisen Imports (0.590.0). */
+  readonly progress = signal<{ done: number; total: number } | null>(null);
+  /** Schon gespeicherte Partien dieser Übersicht — nach einem Abbruch geht „Weiter importieren" nur den Rest an. */
+  readonly savedCount = signal(0);
+  private readonly saved = new Set<number>();
+  private acc: ClubImportResult | null = null;
+  /** Partien je Anfrage: jede Portion wird sofort gespeichert, und 500 Partien bleiben so bei 50 Anfragen — unter den
+   *  Drosseln (60 je Minute über einen Teilen-Link). */
+  static readonly Portion = 10;
+  /** Wartezeiten vor dem 2. und 3. Versuch einer Portion (ms); ein 429 wartet länger. */
+  retryDelays = [2000, 5000];
+  throttleDelay = 20_000;
 
   shown(s: ReviewSide): string {
     return s.replace ? ANON_NAME : s.name || s.raw || '?';
@@ -210,15 +225,65 @@ export class ClubImportReviewComponent {
     }
   }
 
+  /**
+   * Importieren — Portion für Portion (0.590.0, Wunsch: „damit Progress nicht verloren geht"): je
+   * {@link ClubImportReviewComponent.Portion} Partien eine Anfrage mit genau deren PGN-Text (aus der Übersicht), jede
+   * sofort gespeichert. Reißt eine Portion ab, wird sie zweimal wiederholt — war sie schon gespeichert und nur die Antwort
+   * verloren, erkennt der Server sie als doppelt. Scheitert es endgültig, bleibt das Gespeicherte gespeichert, und der
+   * Knopf macht beim Rest weiter. Kennt der Server den Text je Partie nicht (älterer Stand), geht alles in einer Anfrage.
+   */
   async run(): Promise<void> {
+    const decisions = this.review.decisions().filter(d => !this.saved.has(d.index));
+    const texts = new Map(this.review.games().map(r => [r.game.index, r.game.pgn ?? null]));
     this.importing.set(true);
     this.error.set(null);
     try {
-      this.imported.emit(await this.client.importPgn(this.pgn, this.review.decisions()));
+      if (decisions.some(d => !texts.get(d.index))) {
+        this.imported.emit(await this.client.importPgn(this.pgn, decisions));
+        return;
+      }
+      const acc = this.acc ??= { added: 0, duplicates: 0, anonymized: 0, remembered: 0, truncated: false, ids: [], failed: [] };
+      const total = this.saved.size + decisions.length;
+      this.progress.set({ done: this.saved.size, total });
+      for (let i = 0; i < decisions.length; i += ClubImportReviewComponent.Portion) {
+        const part = decisions.slice(i, i + ClubImportReviewComponent.Portion);
+        const r = await this.withRetry(() => this.client.importPgn(
+          part.map(d => texts.get(d.index)!).join('\n'), part.map((d, k) => ({ ...d, index: k + 1 }))));
+        acc.added += r.added;
+        acc.duplicates += r.duplicates;
+        acc.anonymized += r.anonymized;
+        acc.remembered = (acc.remembered ?? 0) + (r.remembered ?? 0);
+        acc.ids.push(...r.ids);
+        acc.failed.push(...r.failed.map(f => ({ ...f, index: part[f.index - 1]?.index ?? f.index })));
+        for (const d of part) this.saved.add(d.index);
+        this.savedCount.set(this.saved.size);
+        this.progress.set({ done: this.saved.size, total });
+      }
+      this.acc = null;
+      this.saved.clear();
+      this.savedCount.set(0);
+      this.imported.emit(acc);
     } catch {
-      this.error.set('Importieren hat nicht geklappt.');
+      this.error.set(this.saved.size
+        ? `${this.saved.size} Partien sind gespeichert, dann ist die Verbindung abgerissen — „Weiter importieren" macht beim Rest weiter.`
+        : 'Importieren hat nicht geklappt.');
     } finally {
       this.importing.set(false);
+      this.progress.set(null);
+    }
+  }
+
+  /** Eine Portion, bei Netz-/Serverfehlern bis zu zweimal wiederholt (429: länger warten). Eine Absage (400) nicht. */
+  private async withRetry(send: () => Promise<ClubImportResult>): Promise<ClubImportResult> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await send();
+      } catch (e) {
+        const status = e instanceof HttpErrorResponse ? e.status : 0;
+        const retryable = status === 0 || status === 429 || status >= 500;
+        if (!retryable || attempt >= this.retryDelays.length) throw e;
+        await new Promise(r => setTimeout(r, status === 429 ? this.throttleDelay : this.retryDelays[attempt]));
+      }
     }
   }
 }

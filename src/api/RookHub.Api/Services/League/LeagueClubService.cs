@@ -109,8 +109,13 @@ public sealed class LeagueClubService
 
     /// <summary>Eine Partie des PGN-Textes: die Kopfzeilen und die geprüfte Hauptvariante — oder warum sie sich gar nicht
     /// übernehmen lässt (<c>illegal</c>, <c>noMoves</c>, <c>tooLong</c>, <c>fromPosition</c>).</summary>
-    private sealed record Parsed(int Index, Dictionary<string, string> Headers, List<string>? Sans, string? Error)
+    private sealed record Parsed(int Index, Dictionary<string, string> Headers, List<string>? Sans, string? Error, string MoveText = "")
     {
+        /// <summary>Die Partie als eigener PGN-Text (0.590.0): Kopfzeilen ROH (der Leser entschlüsselt nichts, also wird
+        /// auch nichts verschlüsselt) und der Zugtext unverändert — zurückgeschickt ergibt er genau diese Partie. Damit
+        /// importiert die Seite portionsweise, ohne die ganze Datei je Portion noch einmal zu schicken.</summary>
+        public string Pgn => string.Concat(Headers.Select(kv => $"[{kv.Key} \"{kv.Value}\"]\n")) + "\n" + MoveText.Trim() + "\n";
+
         public string? H(string key) => Headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
         public int? Elo(string key) => int.TryParse(H(key), out var e) ? e : null;
     }
@@ -154,7 +159,7 @@ public sealed class LeagueClubService
                 }
                 catch (Exception) { err = "illegal"; sans = null; }
             }
-            result.Add(new Parsed(index, h, sans, err));
+            result.Add(new Parsed(index, h, sans, err, moveText));
         }
         return result;
     }
@@ -344,6 +349,7 @@ public sealed class LeagueClubService
                 Index = p.Index, Year = YearOf(p.H("Date"), now), Result = p.H("Result") is { } r && Results.Contains(r) ? r : "*",
                 Event = p.H("Event"), Plies = p.Sans?.Count ?? 0, Opening = p.Sans is null ? "" : OpeningOfSans(p.Sans),
                 Error = p.Error, White = SideDto(w, ownerSide == "white"), Black = SideDto(b, ownerSide == "black"),
+                Pgn = p.Error == null ? p.Pgn : null,
             };
             if (p.Sans != null && Build(w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
             {

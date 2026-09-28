@@ -1378,6 +1378,14 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   · nicht erkannt; die Liste zeigt das Turnier (`[Event]`) zum Zuordnen — gespeichert wird es weiter nur ohne „Schwaz". `games/import` bekommt DENSELBEN PGN-Text + je übernommener Partie die Entscheidung
   (`LeagueClubSideDecision`: FIDE-ID eines gewählten Ligaspielers schlägt den Namen; ohne Angabe die Kopfzeile) und
   prüft alles noch einmal. Nummerierung 1-basiert, gleich in beiden Schritten.
+  **Importiert wird PORTIONSWEISE** (0.590.0, Wunsch „damit Progress nicht verloren geht“): die Übersicht liefert je
+  Partie ihren eigenen PGN-Text (`games[].pgn`, Kopfzeilen roh wie gelesen, Zugtext unverändert; fehlt bei harten
+  Fehlern), die Seite (`club-import-review.component.ts`) schickt je 10 Partien genau deren Text mit Nummern 1…n —
+  jede Portion wird sofort gespeichert. 10 statt 1, weil der globale Deckel 100 Anfragen/min je IP ist (Teilen-Link 60):
+  500 Partien sind so 50 Anfragen. Eine abgerissene Portion wird zweimal wiederholt (429 wartet 20 s), eine Absage (400)
+  nicht; war sie schon gespeichert und nur die Antwort verloren, zählt der Server sie als doppelt. Scheitert es endgültig,
+  bleibt das Gespeicherte, und „Weiter importieren (n übrig)“ schickt nur den Rest. Ohne `pgn` (älterer Server) geht
+  alles in einer Anfrage wie vorher.
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
 * **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.590.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub PGN import in portions: the page now sends the games ten at a time, each portion is saved at once and the progress is shown (“Importing … 20 / 57”). If the connection breaks, what is saved stays saved and “Continue importing” sends only the rest.", de: "LeagueHub-PGN-Import in Portionen: Die Seite schickt die Partien jetzt zu je zehn, jede Portion wird sofort gespeichert, und der Fortschritt steht am Knopf („Importiere … 20 / 57“). Reißt die Verbindung ab, bleibt das Gespeicherte gespeichert, und „Weiter importieren“ schickt nur den Rest." },
+  ] },
   { version: "0.589.0", date: "2026-09-28", changes: [
     { en: "Roles for groups: a role can be given to a whole group (Administration → Roles) — every member has its rights, whoever joins has them at once, whoever leaves loses them.", de: "Rollen für Gruppen: Eine Rolle lässt sich einer ganzen Gruppe geben (Verwaltung → Rollen) — jedes Mitglied hat ihre Rechte, wer dazukommt, hat sie sofort, wer geht, verliert sie." },
     { en: "Rights now apply immediately: a newly given or withdrawn role takes effect without logging in again — the server checks the current state, and the pages fetch it at start, when you return to the tab and every two minutes.", de: "Rechte gelten jetzt sofort: Eine neu vergebene oder entzogene Rolle wirkt ohne erneutes Anmelden — der Server prüft den aktuellen Stand, und die Seiten holen ihn beim Start, beim Zurückkehren in den Tab und alle zwei Minuten." },

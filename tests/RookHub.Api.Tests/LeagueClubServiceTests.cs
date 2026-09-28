@@ -221,6 +221,38 @@ public class LeagueClubServiceTests : IDisposable
         Assert.True(p.Games[4].Duplicate);
     }
 
+    /// <summary>0.590.0: die Übersicht gibt je Partie ihren eigenen PGN-Text zurück — die Seite importiert damit
+    /// portionsweise, und Portion für Portion ergibt dasselbe wie die ganze Datei auf einmal.</summary>
+    [Fact]
+    public async Task Preview_GivesEachGameItsOwnPgn_ImportingThemInPortionsEqualsTheWholeFile()
+    {
+        var me = await SeedAsync();
+        var pgn = string.Join("\n",
+            Pgn("Oberschmid, Patrik", "Hengl, Philip", extra: "[WhiteElo \"1850\"]"),
+            Pgn("Hengl Philip", "Schnabl, Andreas", "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0"),
+            Pgn("Hengl, Philip", "Schnabl, Andreas", "1. e4 e5 2. Ke3 1-0"),      // illegal → kein eigener Text
+            Pgn("Oberschmid, Patrik", "Hengl, Philip"));                         // wie 1 → doppelt
+        var p = await Club().PreviewAsync(me, pgn);
+        Assert.Null(p.Games[2].Pgn);
+        var one = await Club().PreviewAsync(me, p.Games[0].Pgn!);                  // der Text allein liest sich gleich
+        Assert.Equal((p.Games[0].Opening, p.Games[0].Year, p.Games[0].Black.Match.Fide),
+            (one.Games[0].Opening, one.Games[0].Year, one.Games[0].Black.Match.Fide));
+
+        // Portion 1: Partie 1 + 2, Portion 2: Partie 4 — Nummern je Portion ab 1, die Entscheidungen wie die Seite sie
+        // schickt (Vorgaben der Übersicht, „ersetzen" eingeschlossen).
+        LeagueClubImportGameDecision As(int i, int n) => new()
+        {
+            Index = n, White = new() { Replace = p.Games[i].White.Replace }, Black = new() { Replace = p.Games[i].Black.Replace },
+        };
+        var first = await Club().ImportPgnAsync(me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);
+        Assert.Equal((2, 1), (first.Added, first.Anonymized));
+        var second = await Club().ImportPgnAsync(me, p.Games[3].Pgn!, [As(3, 1)]);
+        Assert.Equal((0, 1), (second.Added, second.Duplicates));                  // in Portion 1 schon gespeichert
+        var again = await Club().ImportPgnAsync(me, p.Games[0].Pgn + "\n" + p.Games[1].Pgn, [As(0, 1), As(1, 2)]);  // Antwort verloren → nochmal
+        Assert.Equal((0, 2), (again.Added, again.Duplicates));
+        Assert.Equal(2, await _db.LeagueClubGames.CountAsync());
+    }
+
     // ── Import ──────────────────────────────────────────────────────
 
     [Fact]
