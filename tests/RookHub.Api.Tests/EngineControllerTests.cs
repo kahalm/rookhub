@@ -37,7 +37,10 @@ public class EngineControllerTests : IDisposable
     private readonly ServiceProvider _sp;
     private readonly EngineHub _hub;
     private readonly EngineSelectorDirectory _directory;
-    private readonly LocalBrokerOptions _brokerOptions = new() { ProviderTimeout = TimeSpan.FromMilliseconds(300) };
+    // Reichlich Luft (siehe LocalEngineBrokerTests): mit 300 ms kam der Test-"Provider" auf der CI unter Last zu
+    // spät. Die kurze Frist braucht nur der Timeout-Test, der baut sich seinen Controller selbst.
+    private readonly LocalBrokerOptions _brokerOptions = new() { ProviderTimeout = TimeSpan.FromSeconds(10) };
+    private readonly LichessEngineService _lichess;
 
     public EngineControllerTests()
     {
@@ -58,19 +61,24 @@ public class EngineControllerTests : IDisposable
             .Build();
         _encryption = new EncryptionService(config);
 
-        var lichess = new LichessEngineService(
+        _lichess = new LichessEngineService(
             new HttpClient(_handler),
             new MemoryCache(new MemoryCacheOptions()),
             config,
             NullLogger<LichessEngineService>.Instance);
         _directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
         _hub = new EngineHub(_brokerOptions, () => DateTime.UtcNow, startSweeper: false);
-        var registry = new EngineRegistry(_db, _encryption, lichess, _directory, _brokerOptions);
-        var broker = new EngineBrokerRouter(
-            new LocalEngineBroker(_hub, _brokerOptions, NullLogger<LocalEngineBroker>.Instance),
-            new LichessEngineBroker(lichess));
-        _controller = new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
+        _controller = CreateController(_brokerOptions, _hub);
         SetUser(42);
+    }
+
+    private EngineController CreateController(LocalBrokerOptions brokerOptions, EngineHub hub)
+    {
+        var registry = new EngineRegistry(_db, _encryption, _lichess, _directory, brokerOptions);
+        var broker = new EngineBrokerRouter(
+            new LocalEngineBroker(hub, brokerOptions, NullLogger<LocalEngineBroker>.Instance),
+            new LichessEngineBroker(_lichess));
+        return new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
     }
 
     public void Dispose()
@@ -541,7 +549,10 @@ public class EngineControllerTests : IDisposable
     {
         await CreateUserAsync();
         var reg = await LocalEngineAsync();
-        var r = Assert.IsType<ObjectResult>(await _controller.Analyse(reg.Id, ValidRequest(), CancellationToken.None));
+        var options = new LocalBrokerOptions { ProviderTimeout = TimeSpan.FromMilliseconds(300) };
+        var controller = CreateController(options, new EngineHub(options, () => DateTime.UtcNow, startSweeper: false));
+        controller.ControllerContext = _controller.ControllerContext;
+        var r = Assert.IsType<ObjectResult>(await controller.Analyse(reg.Id, ValidRequest(), CancellationToken.None));
         Assert.Equal(502, r.StatusCode);
     }
 

@@ -14,7 +14,10 @@ namespace RookHub.Api.Tests;
 public class LocalEngineBrokerTests
 {
     private const string Start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    private readonly LocalBrokerOptions _options = new() { ProviderTimeout = TimeSpan.FromMilliseconds(300) };
+    // Reichlich Luft: 300 ms reichten auf der CI unter Last nicht, bis der "Provider" den Auftrag abholte — der
+    // Broker antwortete dann korrekt 503, und der Test las einen leeren Strom (Tag-Lauf v0.584.0). Die kurze Frist
+    // braucht nur der Timeout-Test, der baut sich seinen Broker selbst.
+    private readonly LocalBrokerOptions _options = new() { ProviderTimeout = TimeSpan.FromSeconds(10) };
     private readonly EngineHub _hub;
     private readonly LocalEngineBroker _broker;
 
@@ -95,12 +98,15 @@ public class LocalEngineBrokerTests
     [Fact]
     public async Task NoProvider_Is503_AfterTheProviderTimeout_AndTheJobIsDropped()
     {
+        var options = new LocalBrokerOptions { ProviderTimeout = TimeSpan.FromMilliseconds(300) };
+        var hub = new EngineHub(options, () => DateTime.UtcNow, startSweeper: false);
+        var broker = new LocalEngineBroker(hub, options, NullLogger<LocalEngineBroker>.Instance);
         var started = DateTime.UtcNow;
-        await using var session = await _broker.AnalyseAsync(Engine(), Work(), CancellationToken.None);
+        await using var session = await broker.AnalyseAsync(Engine(), Work(), CancellationToken.None);
         Assert.Equal(503, session.StatusCode);
         Assert.True(DateTime.UtcNow - started >= TimeSpan.FromMilliseconds(250));
-        Assert.Equal(0, _hub.QueuedCount("sel"));          // ein später Provider bekommt ihn nicht mehr
-        Assert.Equal(1, _hub.Stats.For("rhe_aaaaaaaaaaaa")!.ProviderTimeouts);
+        Assert.Equal(0, hub.QueuedCount("sel"));           // ein später Provider bekommt ihn nicht mehr
+        Assert.Equal(1, hub.Stats.For("rhe_aaaaaaaaaaaa")!.ProviderTimeouts);
     }
 
     [Fact]

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.584.1", date: "2026-09-28", changes: [
+    { en: "Tests: the engine broker tests no longer give the simulated provider only 300 ms to pick up a job — under CI load that was too short and the v0.584.0 tag build failed on it; only the timeout test itself keeps the short limit.", de: "Tests: Die Engine-Broker-Tests geben dem nachgestellten Provider nicht mehr nur 300 ms, um einen Auftrag abzuholen — unter Last auf der CI war das zu knapp, und der Tag-Lauf von v0.584.0 scheiterte daran; die kurze Frist behält nur der Timeout-Test selbst." },
+  ] },
   { version: "0.584.0", date: "2026-09-28", changes: [
     { en: "Scoresheet reading: the model is now told explicitly never to leave out moves or a whole column — after a correction on the form it had dropped the entire right column (moves 21–40) “because the numbering looked inconsistent”; order and legality are checked afterwards anyway.", de: "Formular-Lesen: Das Modell bekommt jetzt ausdrücklich gesagt, nie Züge oder eine ganze Spalte wegzulassen — nach einer Verbesserung auf dem Formular hatte es die komplette rechte Spalte (Züge 21–40) „wegen unstimmiger Nummerierung“ ausgelassen; Reihenfolge und Legalität prüft ohnehin der Auflöser." },
     { en: "LeagueHub scoresheet check: the large photo now marks the entry of the selected move, so it can be seen in context (the zoomed photo scrolls to it); after the last uncertain spot a notice says so and offers “save to the club database” or “keep editing”.", de: "LeagueHub-Formularprüfung: Das große Foto markiert jetzt den Eintrag des gewählten Zugs, damit man ihn im Zusammenhang sieht (vergrößert rollt das Foto dorthin); nach der letzten unsicheren Stelle weist ein Hinweis darauf hin und bietet „In die Vereins-Datenbank übernehmen“ oder „Weiter bearbeiten“ an." },
