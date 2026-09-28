@@ -39,6 +39,26 @@ public enum GameAnalysisOrigin
     /// In keiner persoenlichen Liste und nicht in der Reihenfolge der eigenen Partien des Besitzers.
     /// </summary>
     Library = 3,
+    /// <summary>
+    /// Partie aus der Vereins-Datenbank von LeagueHub (<see cref="LeagueClubGame"/>), vom selben Stapel analysiert wie
+    /// <see cref="Library"/> (Wunsch 2026-09-28: „wirf die Partien aus dem Vereinsverzeichnis auch immer in die
+    /// Analyse") — dieselben Zeiten, dieselben Engines, dieselbe Hintergrundarbeit, aber VOR den Meisterpartien: es
+    /// sind wenige, und jede neu hochgeladene kommt beim nächsten Takt dran. Anders als eine Meisterpartie NICHT für
+    /// alle lesbar — die Vereins-Datenbank sieht nur, wer in LeagueHub die Vereinspartien sehen darf. Verknüpft über
+    /// <see cref="GameAnalysis.LeagueClubGameId"/>; wird die Partie gelöscht, geht die Analyse mit, wird sie korrigiert
+    /// (Namen, „Schwaz"), zieht der Kopf der Analyse nach.
+    /// </summary>
+    Club = 4,
+}
+
+/// <summary>Die Etiketten des Stapels (<c>MasterAnalysisScheduler</c>).</summary>
+public static class GameAnalysisOrigins
+{
+    /// <summary>Vom Stapel angelegt: reine Hintergrundarbeit, nur außerhalb der Sperrzeiten, in keiner Liste des
+    /// Besitzers und nicht in der Reihenfolge seiner eigenen Partien. In Abfragen steht dieselbe Bedingung
+    /// ausgeschrieben (<c>Origin != Library &amp;&amp; Origin != Club</c>) — ein Methodenaufruf ließe sich nicht übersetzen.</summary>
+    public static bool IsBatch(GameAnalysisOrigin origin) =>
+        origin is GameAnalysisOrigin.Library or GameAnalysisOrigin.Club;
 }
 
 /// <summary>
@@ -123,6 +143,13 @@ public class GameAnalysis
     /// eingelesen werden kann. Eine gerechnete Analyse darf daran nicht haengen.</para>
     /// </summary>
     public int? LibraryGameId { get; set; }
+
+    /// <summary>
+    /// Die Vereinspartie (<see cref="LeagueClubGame"/>), zu der diese Analyse gehört (<see cref="GameAnalysisOrigin.Club"/>);
+    /// sonst <c>null</c>. Kein Fremdschlüssel wie bei <see cref="LibraryGameId"/>, aber anders als dort räumt das
+    /// Löschen der Partie die Analyse mit ab (<c>LeagueClubService.DeleteAsync</c>): sie trägt die Namen der Partie.
+    /// </summary>
+    public int? LeagueClubGameId { get; set; }
 
     /// <summary>
     /// Ab welchem Halbzug das Raten sinnvoll beginnt — einmal ermittelt und gemerkt, weil die

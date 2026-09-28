@@ -27,6 +27,11 @@ namespace RookHub.Api.Services;
 /// Partie fast alle Engines still). Reihenfolge: zuerst die kommentierten Partien — an ihnen hängen die Erklärungen und
 /// „Frag die Kommentare" —, danach die übrigen, jeweils nach Id.</para>
 ///
+/// <para><b>Vereinspartien zuerst</b> (Wunsch 2026-09-28: „wirf die Partien aus dem Vereinsverzeichnis auch immer in die
+/// Analyse"): jede Partie der LeagueHub-Vereins-Datenbank (<see cref="LeagueClubGame"/>) ohne Analyse kommt VOR der
+/// nächsten Meisterpartie dran (<see cref="GameAnalysisOrigin.Club"/>) — derselbe Weg, dieselben Zeiten, derselbe Vorrang
+/// jedes anderen Auftrags. Es sind wenige, und eine neu hochgeladene ist so beim nächsten Takt im Fenster eingereiht.</para>
+///
 /// <para>Abschalten: <c>MasterAnalysis:Enabled=false</c>. Takt <c>MasterAnalysis:TickSeconds</c> (Vorgabe 30).</para>
 /// </summary>
 public class MasterAnalysisScheduler : BackgroundService
@@ -45,6 +50,7 @@ public class MasterAnalysisScheduler : BackgroundService
     private bool _uncommentedPhase;
     private int _cursor;
     private readonly HashSet<int> _unplayable = [];
+    private readonly HashSet<int> _unplayableClub = [];
 
     public MasterAnalysisScheduler(IServiceScopeFactory scopes, QuietHours quiet, IConfiguration config,
         ILogger<MasterAnalysisScheduler> logger)
@@ -85,7 +91,8 @@ public class MasterAnalysisScheduler : BackgroundService
         }
     }
 
-    /// <summary>Ein Takt: legt höchstens EINE Meisterpartie an und liefert ihre Analyse-Id (sonst <c>null</c>).</summary>
+    /// <summary>Ein Takt: legt höchstens EINE Partie an — eine Vereinspartie, sonst eine Meisterpartie — und liefert ihre
+    /// Analyse-Id (sonst <c>null</c>).</summary>
     internal async Task<int?> TickOnceAsync(AppDbContext db, GameAnalysisService analyses, CancellationToken ct)
     {
         if (_quiet.IsQuietNow()) return null;
@@ -95,10 +102,28 @@ public class MasterAnalysisScheduler : BackgroundService
         var slots = Math.Max(1, owner.BackgroundEngines.Count);
 
         var open = await db.GameAnalyses
-            .Where(g => g.Origin == GameAnalysisOrigin.Library
+            .Where(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
         if (open >= slots) return null;
+
+        var club = await NextClubGameAsync(db, ct);
+        if (club is not null)
+        {
+            try
+            {
+                var dto = await analyses.CreateClubBatchAsync(owner.UserId, club.Id, club.Pgn, ct);
+                _logger.LogInformation("Vereinspartie {LeagueClubGameId} eingereiht (Analyse {AnalysisId}, {Plies} Halbzüge)",
+                    club.Id, dto.Id, dto.PlyCount);
+                return dto.Id;
+            }
+            catch (ArgumentException ex)
+            {
+                _unplayableClub.Add(club.Id);
+                _logger.LogWarning("Vereinspartie {LeagueClubGameId} übersprungen: {Reason}", club.Id, ex.Message);
+                return null;
+            }
+        }
 
         var game = await NextGameAsync(db, ct);
         if (game is null) return null;
@@ -129,6 +154,15 @@ public class MasterAnalysisScheduler : BackgroundService
             ? q.Where(c => c.UserId == id)
             : q.Where(c => c.ShareAsHouseEngine && c.User!.IsAdmin);
         return q.OrderBy(c => c.UserId).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Die nächste Vereinspartie ohne Analyse, nach Id. Ohne Zeiger: es sind wenige, und eine gelöschte oder neu
+    /// hochgeladene ändert den Bestand jederzeit — der Index auf <see cref="GameAnalysis.LeagueClubGameId"/> trägt das.</summary>
+    private Task<LeagueClubGame?> NextClubGameAsync(AppDbContext db, CancellationToken ct)
+    {
+        var q = db.LeagueClubGames.AsNoTracking().Where(c => !db.GameAnalyses.Any(a => a.LeagueClubGameId == c.Id));
+        if (_unplayableClub.Count > 0) q = q.Where(c => !_unplayableClub.Contains(c.Id));
+        return q.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
     }
 
     /// <summary>Die nächste Meisterpartie ohne Analyse: erst die kommentierten, dann die übrigen, jeweils nach Id.</summary>

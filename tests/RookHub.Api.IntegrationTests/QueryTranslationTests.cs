@@ -503,4 +503,37 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Empty(await Get<AnalysisJobService>().ListAsync(owner));   // Auftraege der Meisterpartie ausgeblendet
         Assert.NotEmpty(await Db.AnalysisJobs.Where(j => j.UserId == owner).ToListAsync());
     }
+
+    /// <summary>
+    /// Vereinspartien (2026-09-28): der Takt nimmt sie VOR den Meisterpartien — NOT EXISTS ueber
+    /// <c>GameAnalysis.LeagueClubGameId</c> (neue Spalte), die Zaehlung der offenen Stellungen ueber beide Etiketten —,
+    /// und das Loeschen der Vereinspartie raeumt ihre Analyse mit ab.
+    /// </summary>
+    [MySqlFact]
+    public async Task Vereinspartien_TaktUndLoeschen_uebersetzenSichNachMariaDb()
+    {
+        var owner = await SeedUserAsync("haus");
+        (await Db.AppUsers.FindAsync(owner))!.IsAdmin = true;
+        var cred = new LichessEngineCredential { UserId = owner, EncryptedToken = "", ShareAsHouseEngine = true };
+        cred.SetBackgroundEngines(["rhe_a", "rhe_b"]);
+        Db.LichessEngineCredentials.Add(cred);
+        Db.LibraryGames.Add(new LibraryGame { SourceFile = "t.pgn", MovesHash = "mh1", CommentedPlies = 2,
+            Pgn = "[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *" });
+        var club = new LeagueClubGame { White = "Schwaz", Black = "Hengl, Philip", Year = 2025, Plies = 6, MovesHash = "c1",
+            Pgn = "[White \"Schwaz\"]\n[Black \"Hengl, Philip\"]\n[Result \"1-0\"]\n\n1. d4 d5 2. c4 e6 3. Nc3 Nf6 1-0" };
+        Db.LeagueClubGames.Add(club);
+        await Db.SaveChangesAsync();
+
+        var scheduler = new MasterAnalysisScheduler(null!, new QuietHours(""), new ConfigurationBuilder().Build(),
+            NullLogger<MasterAnalysisScheduler>.Instance);
+        var id = await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default);
+        var analysis = await Db.GameAnalyses.AsNoTracking().SingleAsync(g => g.Id == id);
+        Assert.Equal((GameAnalysisOrigin.Club, (int?)club.Id), (analysis.Origin, analysis.LeagueClubGameId));
+        Assert.Null(await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default));   // 6 offen ≥ 2 Engines
+
+        Assert.Equal(RookHub.Api.Services.League.LeagueClubService.DeleteResult.Deleted,
+            await Get<RookHub.Api.Services.League.LeagueClubService>().DeleteAsync(owner, true, club.Id));
+        Assert.False(await Db.GameAnalyses.AnyAsync(g => g.Id == id));
+        Assert.False(await Db.GameAnalysisPositions.AnyAsync(p => p.GameAnalysisId == id));
+    }
 }

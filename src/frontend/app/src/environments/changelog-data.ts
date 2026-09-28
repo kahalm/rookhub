@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.588.0", date: "2026-09-28", changes: [
+    { en: "The games in the LeagueHub club database are now analysed in the background as well — every game, including each newly uploaded one, and ahead of the master games, at the same times and on the same engines, and every other job still goes first. The analysis carries the names of the game: if a game is deleted, its analysis goes with it, and if a player is corrected (for example to “Schwaz”), the analysis follows. Unlike the master games, these analyses are not readable by everyone.", de: "Die Partien der Vereins-Datenbank von LeagueHub werden jetzt ebenfalls im Hintergrund analysiert — jede, auch jede neu hochgeladene, und vor den Meisterpartien, zu denselben Zeiten und auf denselben Engines, und jeder andere Auftrag geht weiter vor. Die Analyse trägt die Namen der Partie: wird eine Partie gelöscht, geht ihre Analyse mit, wird ein Spieler korrigiert (etwa zu „Schwaz“), zieht die Analyse nach. Anders als bei den Meisterpartien sind diese Analysen nicht für alle lesbar." },
+  ] },
   { version: "0.587.0", date: "2026-09-28", changes: [
     { en: "LeagueHub: when replaying one of a player's recent games, “Add to my games” puts it into your games on RookHub and opens it there; “Share game” copies RookHub's public link to it (on a phone via the share sheet).", de: "LeagueHub: Beim Nachspielen einer der letzten Partien eines Spielers legt „Zu meinen Partien“ sie in deinen Partien in RookHub ab und öffnet sie dort; „Partie teilen“ kopiert RookHubs öffentlichen Link dazu (am Handy über das Teilen-Blatt)." },
   ] },

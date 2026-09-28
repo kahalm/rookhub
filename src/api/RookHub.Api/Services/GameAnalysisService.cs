@@ -52,7 +52,7 @@ public class GameAnalysisService
 
     public async Task<GameAnalysisDto> CreateAsync(int userId, CreateGameAnalysisRequest req, CancellationToken ct = default,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Manual, int? engineOwnerUserId = null,
-        int? libraryGameId = null)
+        int? libraryGameId = null, int? leagueClubGameId = null)
     {
         var depth = req.TargetDepth ?? GameAnalysisDefaults.TargetDepth;
         if (depth is < 1 or > AnalysisJobService.MaxDepth)
@@ -85,6 +85,7 @@ public class GameAnalysisService
             EngineOwnerUserId = engineOwnerUserId == userId ? null : engineOwnerUserId,
             Origin = origin,
             LibraryGameId = libraryGameId,
+            LeagueClubGameId = leagueClubGameId,
             // Nur aus der Grundstellung — sonst stuende der erste Zug der Partie als Fortsetzung
             // an der Wurzel des Eroeffnungsbaums, wo es ihn gar nicht gibt (siehe LibraryGameReader).
             OpeningLine = LibraryGameReader.StartsFromInitialPosition(header.StartFen)
@@ -175,6 +176,58 @@ public class GameAnalysisService
             TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
             MultiPv = GameAnalysisDefaults.MultiPv,
         }, ct, GameAnalysisOrigin.Library, engineOwnerUserId: ownerUserId, libraryGameId: libraryGameId);
+
+    /// <summary>
+    /// Eine Vereinspartie fuer den Stapel anlegen (<see cref="GameAnalysisOrigin.Club"/>) — genau wie
+    /// <see cref="CreateLibraryBatchAsync"/>, nur mit dem Verweis auf die Partie der Vereins-Datenbank. Der Titel kommt
+    /// aus dem Kopf des PGN (Weiss – Schwarz). Wirft <see cref="ArgumentException"/> bei einem unspielbaren PGN.
+    /// </summary>
+    public Task<GameAnalysisDto> CreateClubBatchAsync(int ownerUserId, int leagueClubGameId, string pgn,
+        CancellationToken ct = default)
+        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
+        {
+            Pgn = pgn,
+            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
+            MultiPv = GameAnalysisDefaults.MultiPv,
+        }, ct, GameAnalysisOrigin.Club, engineOwnerUserId: ownerUserId, leagueClubGameId: leagueClubGameId);
+
+    /// <summary>
+    /// Den Kopf der Analysen einer Vereinspartie nachziehen, nachdem sie korrigiert wurde (<c>LeagueClubService.UpdateAsync</c>):
+    /// Namen, Ergebnis, Veranstaltung, Titel und das PGN selbst. Die Zuege aendert eine Korrektur nie, die Stellungen
+    /// bleiben also gueltig — aber ein Name, der zu „Schwaz" wurde, darf in der Analyse nicht stehen bleiben.
+    /// </summary>
+    public async Task SyncClubGameAsync(LeagueClubGame game, CancellationToken ct = default)
+    {
+        var analyses = await _db.GameAnalyses.Where(g => g.LeagueClubGameId == game.Id).ToListAsync(ct);
+        if (analyses.Count == 0) return;
+        var header = GamePlies.Parse(game.Pgn, GameAnalysisDefaults.MaxPlies)?.Header;
+        foreach (var a in analyses)
+        {
+            a.Pgn = game.Pgn;
+            a.White = header?.White ?? game.White;
+            a.Black = header?.Black ?? game.Black;
+            a.Result = header?.Result ?? game.Result;
+            a.Event = header?.Event;
+            var title = header is { } h ? BuildTitle(h) : $"{game.White} – {game.Black}";
+            a.Title = title.Length > 200 ? title[..200] : title;
+            a.UpdatedAt = DateTime.UtcNow;
+        }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Die Analysen einer geloeschten Vereinspartie mitloeschen, samt ihrer offenen Auftraege
+    /// (<see cref="DeleteAsync"/>) — sie tragen die Namen der Partie.</summary>
+    public async Task<int> DeleteForClubGameAsync(int leagueClubGameId, CancellationToken ct = default)
+    {
+        var ids = await _db.GameAnalyses.AsNoTracking()
+            .Where(g => g.LeagueClubGameId == leagueClubGameId)
+            .Select(g => new { g.Id, g.UserId })
+            .ToListAsync(ct);
+        var deleted = 0;
+        foreach (var a in ids)
+            if (await DeleteAsync(a.UserId, a.Id, ct)) deleted++;
+        return deleted;
+    }
 
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
         CancellationToken ct = default, int? libraryGameId = null,
@@ -281,7 +334,7 @@ public class GameAnalysisService
     /// </summary>
     public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false) =>
         ProjectAsync(_db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
                 && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
 
     /// <summary>
@@ -698,7 +751,7 @@ public class GameAnalysisService
         // Meisterpartien reihen sich nicht in die Partien des Besitzers ein: ihre Auftraege sind durchweg
         // Hintergrundarbeit und weichen ohnehin — auf den Besitzer zu warten hiesse, dass eine einzige haengende
         // eigene Partie den ganzen Stapel anhaelt.
-        if (analysis.Origin == GameAnalysisOrigin.Library) return true;
+        if (GameAnalysisOrigins.IsBatch(analysis.Origin)) return true;
         var olderOpen = await OpenPliesOfOlderGamesAsync(analysis, ct);
         if (olderOpen == 0) return true;
         // Der SCHWANZ (0.543.0): haben alle aelteren Partien zusammen weniger offene Stellungen, als
@@ -714,7 +767,8 @@ public class GameAnalysisService
     /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id).</summary>
     private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
         => _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id && g.Origin != GameAnalysisOrigin.Library
+            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
+                && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
                 && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
@@ -722,7 +776,7 @@ public class GameAnalysisService
     /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
     private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
         => _db.GameAnalyses
-            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library && g.Origin != GameAnalysisOrigin.Club
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
 
@@ -981,14 +1035,14 @@ public class GameAnalysisService
         return changed;
     }
 
-    /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meisterpartien
-    /// (<see cref="GameAnalysisOrigin.Library"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
+    /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meister- und Vereinspartien des Stapels
+    /// (<see cref="GameAnalysisOrigins.IsBatch"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
     private async Task<bool> EnqueueNextAsync(GameAnalysis analysis, CancellationToken ct)
     {
-        var library = analysis.Origin == GameAnalysisOrigin.Library;
-        // In der Sperrzeit steht die Meisterpartie still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
+        var batch = GameAnalysisOrigins.IsBatch(analysis.Origin);
+        // In der Sperrzeit steht der Stapel still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
         // ein Block), neue kommen erst, wenn das Fenster wieder offen ist.
-        if (library && _quiet?.IsQuietNow() == true) return false;
+        if (batch && _quiet?.IsQuietNow() == true) return false;
         var open = analysis.Positions.Count(p => p.CandidatesJson == null && p.AnalysisJobId != null);
         var room = GameAnalysisDefaults.MaxOpenJobsPerGame - open;
         if (room <= 0) return false;
@@ -1015,7 +1069,7 @@ public class GameAnalysisService
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
                     // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: library);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: batch);
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

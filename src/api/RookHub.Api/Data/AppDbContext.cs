@@ -1700,6 +1700,8 @@ public class AppDbContext : DbContext
             // „Habe ich diese Bibliothekspartie schon angefordert?" — die Frage stellt die
             // Bestandssuche fuer JEDE angezeigte Zeile.
             e.HasIndex(g => new { g.UserId, g.LibraryGameId });
+            // „Hat diese Vereinspartie schon eine Analyse?" — der Takt des Stapels fragt es fuer jede Partie.
+            e.HasIndex(g => g.LeagueClubGameId);
             // Der Stellungsfilter sucht ueber ein PRAEFIX („e4 e5 Nf3%") — und das nutzt den
             // Index, solange der Platzhalter hinten steht.
             e.Property(g => g.OpeningLine).HasMaxLength(200);

@@ -46,10 +46,14 @@ public sealed class LeagueClubService
     private readonly AppDbContext _db;
     private readonly ILogger<LeagueClubService> _log;
     private readonly Func<DateTime> _now;
+    private readonly GameAnalysisService? _analyses;
 
-    public LeagueClubService(AppDbContext db, ILogger<LeagueClubService> log, Func<DateTime>? now = null)
+    /// <param name="analyses">Die Analysen des Stapels (<see cref="GameAnalysisOrigin.Club"/>) ziehen beim Korrigieren
+    /// und Löschen einer Partie nach; ohne (Tests) bleibt es bei der Partie.</param>
+    public LeagueClubService(AppDbContext db, ILogger<LeagueClubService> log, Func<DateTime>? now = null,
+        GameAnalysisService? analyses = null)
     {
-        _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow);
+        _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow); _analyses = analyses;
     }
 
     public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct)
@@ -585,6 +589,8 @@ public sealed class LeagueClubService
             g.CreatedAt = null;
         }
         await _db.SaveChangesAsync(ct);
+        // Die Analyse der Partie trägt deren Namen — ein „Schwaz" muss auch dort ankommen.
+        if (_analyses != null) await _analyses.SyncClubGameAsync(g, ct);
         await RefreshCardsAsync(before.Concat(new[] { g.WhiteFide, g.BlackFide }), ct);
         await RememberAsync(remember, ct);
         _log.LogInformation("Vereins-Datenbank: Partie {Id} korrigiert", g.Id);
@@ -662,6 +668,8 @@ public sealed class LeagueClubService
         var g = await _db.LeagueClubGames.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (g == null) return DeleteResult.NotFound;
         if (!CanDelete(g, userId, canManage)) return DeleteResult.Forbidden;
+        // Erst die Analyse (sie trägt die Namen der Partie und hat vielleicht noch Aufträge offen), dann die Partie.
+        if (_analyses != null) await _analyses.DeleteForClubGameAsync(g.Id, ct);
         _db.LeagueClubGames.Remove(g);
         await _db.SaveChangesAsync(ct);
         await RefreshCardsAsync(new[] { g.WhiteFide, g.BlackFide }, ct);

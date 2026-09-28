@@ -52,10 +52,10 @@ public class AnalysisJobService
 
     public async Task<List<AnalysisJobDto>> ListAsync(int userId, CancellationToken ct = default)
     {
-        // Die Auftraege der Meisterpartien-Analyse (GameAnalysisOrigin.Library) gehoeren niemandem zum Anschauen —
-        // sie laufen auf dem Konto des Haus-Engine-Besitzers und stuenden dort sonst zu Dutzenden in der Liste.
+        // Die Auftraege des Stapels (Meister- und Vereinspartien, GameAnalysisOrigins.IsBatch) gehoeren niemandem zum
+        // Anschauen — sie laufen auf dem Konto des Haus-Engine-Besitzers und stuenden dort sonst zu Dutzenden in der Liste.
         var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
-                && !_db.GameAnalyses.Any(g => g.Origin == GameAnalysisOrigin.Library
+                && !_db.GameAnalyses.Any(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id)))
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
         return jobs.Select(ToDto).ToList();

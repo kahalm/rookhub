@@ -2185,6 +2185,19 @@ wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
   Partien-Reihenfolge (`IsOwnersTurnAsync`, `OpenFirstPassPliesAsync`) — sonst hielte eine Meisterpartie seine eigene auf.
 - **Speicher**: ~500 B je Stellung + ~15 KB je Analyse (PGN-Kopie) → bei einigen tausend Partien je Woche grob
   +0,4 GB/Woche, beim ganzen Bestand (130 544 Partien, 94 881 kommentiert) ~10 GB. Plattenstand im Blick behalten.
+- **Vereinspartien zuerst** (0.588.0, Wunsch „wirf die Partien aus dem Vereinsverzeichnis auch immer in die Analyse"):
+  jede Partie der LeagueHub-Vereins-Datenbank (`LeagueClubGame`) ohne Analyse kommt VOR der nächsten Meisterpartie dran —
+  `GameAnalysisOrigin.Club = 4`, verknüpft über `GameAnalysis.LeagueClubGameId` (Index, kein FK), angelegt mit
+  `CreateClubBatchAsync` (Titel aus dem PGN-Kopf). Dieselben Zeiten, Engines und derselbe Vorrang; beide Etiketten
+  zählen gemeinsam in „offene Stellungen < Engines" und stehen in jeder Ausschluss-Abfrage ausgeschrieben
+  (`Origin != Library && Origin != Club`; für C#-Seiten `GameAnalysisOrigins.IsBatch`). Kein Zeiger wie bei den
+  Meisterpartien: je Takt die kleinste Id ohne Analyse (es sind wenige, neue kommen jederzeit dazu). **Anders als eine
+  Meisterpartie NICHT für alle lesbar** (`GetPlayableHeadAsync`/Guess-Start lassen `Club` weg) — die Vereins-Datenbank
+  sieht nur, wer in LeagueHub `league.view` hat. **Die Analyse trägt die Namen der Partie**: `LeagueClubService`
+  bekommt `GameAnalysisService` (optional, Tests ohne) — `DeleteAsync` löscht vorher die Analyse samt offenen Aufträgen
+  (`DeleteForClubGameAsync`), `UpdateAsync` zieht Namen/Ergebnis/Veranstaltung/Titel/PGN nach (`SyncClubGameAsync`,
+  die Züge ändert eine Korrektur nie) — sonst bliebe ein zu „Schwaz" korrigierter Name in der Analyse stehen.
+  Angezeigt wird die Analyse (noch) nirgends.
 
 ### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
 
