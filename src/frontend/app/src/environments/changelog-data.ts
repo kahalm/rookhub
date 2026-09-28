@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.592.0", date: "2026-09-28", changes: [
+    { en: "Jump to the analysis board with the whole PGN: from your game page (⋮ → “Open in analysis”) and from LeagueHub's club games (“Analyse”) — names, year and event come along and the PGN stays in the board's PGN field, ready to copy.", de: "Sprung ins Analysebrett mit dem ganzen PGN: von der eigenen Partieseite (⋮ → „Im Analysebrett öffnen“) und von den Vereinspartien in LeagueHub („Analyse“) — Namen, Jahr und Turnier kommen mit, und das PGN steht danach im PGN-Feld zum Kopieren." },
+    { en: "LeagueHub player card: when White or Black is selected at the top, “Recent games” shows the last eight games with that colour.", de: "LeagueHub-Spielerkarte: Ist oben Weiß oder Schwarz gewählt, zeigt „Letzte Partien“ die letzten acht Partien mit dieser Farbe." },
+  ] },
   { version: "0.591.0", date: "2026-09-28", changes: [
     { en: "Administration → Groups: members are now added via a search field with a list instead of a drop-down — without a search the newest accounts come first, typing searches all users, and each row has its own “Add” button.", de: "Verwaltung → Gruppen: Mitglieder kommen jetzt über ein Suchfeld mit Liste dazu statt über ein Dropdown — ohne Suche stehen die neuesten Konten oben, Tippen durchsucht alle Nutzer, und jede Zeile hat ihren eigenen „Hinzufügen“-Knopf." },
   ] },

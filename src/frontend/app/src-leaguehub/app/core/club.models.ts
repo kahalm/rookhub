@@ -20,6 +20,8 @@ export interface ClubGame {
   canDelete: boolean;
   /** Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett `?moves=`). */
   uci?: string;
+  /** Die Partie als PGN (0.592.0) — „Analyse" gibt sie mit (`?pgn=`). */
+  pgn?: string;
 }
 
 export interface ClubList { total: number; page: number; pageSize: number; items: ClubGame[] }

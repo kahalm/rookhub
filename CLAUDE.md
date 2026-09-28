@@ -450,7 +450,7 @@ piratechess (erstes Kapitel). Der Anhaenge-Weg setzt ausserdem `Book.DisplayName
 Dateinamen stammt (`chessable-u5-55720`, `IsFileNameDerived`).
 
 ### Gespeicherte Partien (auth + öffentlicher Teilen-Link)
-Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien (dazu eingelesene Formulare und hochgeladene PGNs). Das ⋮-Menü der Partieseite bietet seit 0.553.0 „PGN kopieren" und „PGN herunterladen" — für JEDEN Betrachter, auch auf dem Teilen-Link (das PGN liegt dort ohnehin im Browser). Nachspielen als eigene SEITE `/games/{id}` (seit 0.513.0 dieselbe Komponente wie der Teilen-Link `/g/{token}`, `data.mode = 'own'`; vorher ein PGN-Viewer-Dialog — der Nutzer wollte eine Seite), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
+Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess.com/lichess gespeicherten Partien (dazu eingelesene Formulare und hochgeladene PGNs). Das ⋮-Menü der Partieseite bietet seit 0.553.0 „PGN kopieren" und „PGN herunterladen" — für JEDEN Betrachter, auch auf dem Teilen-Link (das PGN liegt dort ohnehin im Browser). Seit 0.592.0 dazu „Im Analysebrett öffnen" (ganzes PGN per Router-State, „Zurück" führt auf die Partie); das Analysebrett nimmt eine Partie außerdem über `?pgn=` an (für Sprünge von LeagueHub, der Router-State kommt über Seitengrenzen nicht an) und lässt das PGN nach einem Sprung im PGN-Feld stehen. Nachspielen als eigene SEITE `/games/{id}` (seit 0.513.0 dieselbe Komponente wie der Teilen-Link `/g/{token}`, `data.mode = 'own'`; vorher ein PGN-Viewer-Dialog — der Nutzer wollte eine Seite), „In Analyse öffnen" (PGN via Router-State an `/analysis`), Löschen, und Teilen über einen eindeutigen öffentlichen Link `/g/{shareToken}` (kein Login). Logik in `SavedGameService`; Menü-Key `games` (Default `Registered`).
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -1417,7 +1417,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
-| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` (Züge für „Analyse" → RookHubs `/analysis?moves=`, 0.583.0) |
+| GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete`, `uci` und `pgn` — „Analyse" öffnet RookHubs Analysebrett mit dem GANZEN PGN (`/analysis?pgn=`, 0.592.0; über 6 000 Zeichen Adresse nur die Züge `?moves=`) |
 | GET | `/api/league/club/games/pgn?fide=&q=` | view | Alle (gefilterten) als PGN |
 | POST | `/api/league/club/games/preview` | contribute | `{ pgn }` → `{ games[{ index, year, result, event, plies, opening, error, duplicate, white/black{ raw, elo, match{ league, ambiguous, name, fide, club, candidates }, owner, replace } }], truncated }`; 400 `empty`/`tooLarge` (5 Mio. Zeichen), höchstens 500 Partien |
 | POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
@@ -1484,7 +1484,9 @@ für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, scor
 (`LeagueProfileBuilder.Recent`, `RecentCount` = 8), aus dem aktuellen Bestand gerechnet (fremde + Vereinspartien). Die Karte holt
 sie erst beim ersten Klick und findet die Zeile über Datum + Gegner + Farbe wieder (die gespeicherte Karte kann älter sein);
 nachgespielt wird in der Karte selbst (`shared/game-replay.component.ts`: Brett aus Sicht des Spielers, Züge deutsch, Knöpfe,
-Pfeiltasten, Pos1/Ende). Angemeldet stehen darüber „Zu meinen Partien“ und „Partie teilen“ (0.587.0,
+Pfeiltasten, Pos1/Ende). **Nach Farbe** (0.592.0): ist oben Weiß oder Schwarz gewählt (aus einer Brett-Zeile geöffnet von
+selbst), holt die Karte `…/recent?color=w|s` — die letzten acht Partien DIESER Farbe samt PGN und denselben Angaben wie die
+Karte (`LeagueProfileBuilder.RecentEntry`); acht gemischte zu filtern ließe oft nur drei übrig. „Beide" zeigt die Liste der Karte. Angemeldet stehen darüber „Zu meinen Partien“ und „Partie teilen“ (0.587.0,
 `core/my-games.service.ts`): beide legen die Partie über `POST /api/games/import` in RookHubs „Meine Partien“ (eine schon
 vorhandene wird nicht doppelt angelegt, die Id kommt trotzdem zurück); „Zu meinen Partien“ springt dann per Einmal-Code
 nach RookHub auf `/games/{id}` (`HandoffService.jumpToRookHub`), „Partie teilen“ holt den Teilen-Token (`GET /api/games/{id}`)

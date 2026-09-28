@@ -80,7 +80,11 @@ export interface PlayerCard {
 }
 
 /** `GET …/player/{fide}/recent` — die letzten Partien der Karte samt PGN (zum Nachspielen). */
-export interface RecentGame { date: string; vs: string; color: 'w' | 's'; pgn: string }
+/** Eine der letzten Partien samt PGN; die übrigen Angaben wie auf der Karte (seit 0.592.0 mitgeliefert). */
+export interface RecentGame {
+  date: string; vs: string; color: 'w' | 's'; pgn: string;
+  event?: string; vs_elo?: string; score?: number | null; opening?: string;
+}
 export interface RecentGames { fide: string; games: RecentGame[] }
 
 export interface SharedFixture {

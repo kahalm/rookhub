@@ -494,6 +494,28 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Null(await new LeagueProfileStore(_db).RecentAsync("999999", default));
     }
 
+    /// <summary>0.592.0: oben nach Farbe gefiltert → die letzten Partien NUR mit dieser Farbe (nicht die acht gemischten
+    /// gefiltert), mit denselben Angaben wie die Karte.</summary>
+    [Fact]
+    public async Task Recent_ByColor_OnlyThatColor_WithTheCardsFields()
+    {
+        var me = await SeedAsync();
+        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "222", Name = "Hengl, Philip", Pgn = ExternalSameGame, GameCount = 1 });
+        await _db.SaveChangesAsync();
+        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Binder, Moriz",
+            "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0", "2025.03.01"), null);
+        var store = new LeagueProfileStore(_db);
+        var all = (await store.RecentAsync("222", default))!["games"]!.AsArray();
+        var white = (await store.RecentAsync("222", default, "w"))!["games"]!.AsArray();
+        var black = (await store.RecentAsync("222", default, "s"))!["games"]!.AsArray();
+        Assert.All(white, g => Assert.Equal("w", g!["color"]!.GetValue<string>()));
+        Assert.All(black, g => Assert.Equal("s", g!["color"]!.GetValue<string>()));
+        Assert.Equal(all.Count, white.Count + black.Count);
+        Assert.Equal("1.d4 d5 2.c4 e6", white[0]!["opening"]!.GetValue<string>());          // Angaben der Karte dabei
+        Assert.Equal(1.0, white[0]!["score"]!.GetValue<double>());
+        Assert.Equal(all.Count, (await store.RecentAsync("222", default, "x"))!["games"]!.AsArray().Count);   // unbekannt = beide
+    }
+
     [Fact]
     public async Task Refresh_MergingChessResults_KeepsTheClubGamesInTheCard()
     {

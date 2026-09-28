@@ -559,9 +559,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Eine ganze Partie kann per Router-State übergeben werden (z.B. „In Analyse öffnen"
     // im Bereich „Partien") — zu lang/unhandlich für einen Query-Param.
     const statePgn = (window.history.state && window.history.state.pgn) as string | undefined;
-    if (typeof statePgn === 'string' && statePgn.trim()) {
-      this.pgnInput = statePgn;
-      this.loadPgn();
+    // … oder über die Adresse (`?pgn=`, 0.592.0): der Router-State kommt über Seitengrenzen nicht an — LeagueHub springt
+    // so mit einer Vereinspartie her, samt Kopfdaten im PGN-Feld.
+    const paramPgn = params.get('pgn');
+    const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : paramPgn?.trim() ? paramPgn : null;
+    if (pgn) {
+      this.pgnInput = pgn;
+      this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
     } else if (uci.length) {
       this.loadFromUci(this.startFen, uci);
     } else {
@@ -1052,7 +1056,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     );
   }
 
-  loadPgn(): void {
+  /** @param keepText Das PGN im Feld stehen lassen (Sprung aus einer Partie) — beim Einfügen von Hand wird es geleert. */
+  loadPgn(keepText = false): void {
     const pgn = this.pgnInput.trim();
     if (!pgn) return;
     const c = new Chess();
@@ -1066,7 +1071,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       const mv = replay.move({ from: h.from, to: h.to, promotion: h.promotion });
       return { san: mv.san, fen: replay.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') };
     });
-    this.pgnInput = '';
+    if (!keepText) this.pgnInput = '';
     this.ply = this.line.length;
     this.refresh();
   }

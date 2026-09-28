@@ -133,6 +133,34 @@ describe('PlayerCardComponent', () => {
     expect(el().querySelector('.game-note.err')?.textContent).toContain('lässt sich nicht übernehmen');
   });
 
+  it('oben nach Farbe gefiltert: die letzten Partien NUR dieser Farbe (vom Server), direkt nachspielbar (0.592.0)', async () => {
+    const W = (vs: string) => ({ date: '2025.??.??', vs, color: 'w' as const, event: 'TMM', vs_elo: '', score: 1, opening: '1.d4 d5',
+      pgn: `[White "Oberschmid, Patrik"]\n[Black "${vs}"]\n[Result "1-0"]\n\n1. d4 d5 1-0\n` });
+    api.recent.and.resolveTo({ fide: '1606921', games: [W('Schwaz'), W('Binder, Moriz')] });
+    await fixture.componentInstance.open('1606921', 'w', 3, null);
+    fixture.detectChanges();                                                     // Effekt: Farbe gewählt → holen
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.recent).toHaveBeenCalledWith('1606921', null, 'w');
+    const rows = () => Array.from(el().querySelectorAll('table.recent tr')).map(r => r.textContent ?? '');
+    expect(rows().length).toBe(2);
+    expect(rows()[1]).toContain('Binder, Moriz');
+    expect(headings().some(h => h.startsWith('Letzte Partien mit Weiß'))).toBeTrue();
+
+    (el().querySelectorAll('table.recent tr')[1] as HTMLElement).click();       // PGN ist schon da — kein zweiter Abruf
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.recent).toHaveBeenCalledTimes(1);
+    expect(el().querySelector('.replay-head')?.textContent).toContain('Oberschmid, Patrik – Binder, Moriz');
+
+    (Array.from(el().querySelectorAll('button')).find(b => b.textContent?.includes('Zurück zur Karte')) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.seg button')).find(b => b.textContent === 'Beide')!).click();
+    fixture.detectChanges();
+    expect(rows().length).toBe(1);                                               // die gemischte Liste der Karte
+    expect(rows()[0]).toContain('Kleissl, Helmut');
+  });
+
   it('eine Partie, die es nicht mehr gibt, sagt es', async () => {
     api.recent.and.resolveTo({ fide: '1606921', games: [] });
     await fixture.componentInstance.open('1606921', null, null, null);

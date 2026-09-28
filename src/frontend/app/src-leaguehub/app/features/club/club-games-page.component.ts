@@ -235,10 +235,16 @@ export class ClubGamesPageComponent implements OnInit {
     this.editing.set({ ...e, [k]: { ...cur, replace: on } });
   }
 
-  /** RookHubs Analysebrett mit der Partie (öffentlich, neuer Tab). */
+  /** RookHubs Analysebrett mit der Partie (öffentlich, neuer Tab) — mit dem GANZEN PGN (`?pgn=`, 0.592.0: Namen, Jahr,
+   *  Turnier stehen dort im PGN-Feld). Wird die Adresse zu lang für Proxys (8 KB Kopfzeilen sind üblich), nur die Züge. */
   analysisUrl(g: ClubGame): string {
+    if (g.pgn) {
+      const url = `${this.rookHub}/analysis?pgn=${encodeURIComponent(g.pgn)}`;
+      if (url.length <= ClubGamesPageComponent.MaxUrl) return url;
+    }
     return `${this.rookHub}/analysis?moves=${encodeURIComponent(g.uci ?? '')}`;
   }
+  static readonly MaxUrl = 6000;
 
   setResult(r: string): void {
     const e = this.editing();

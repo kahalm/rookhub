@@ -34,8 +34,10 @@ export class LeagueApiService {
     return firstValueFrom(this.http.get(`${this.base(token)}/player/${encodeURIComponent(fide)}/pgn`, { responseType: 'blob' }));
   }
 
-  recent(fide: string, token: string | null): Promise<RecentGames> {
-    return firstValueFrom(this.http.get<RecentGames>(`${this.base(token)}/player/${encodeURIComponent(fide)}/recent`));
+  /** Die letzten Partien samt PGN; `color` = nur mit dieser Farbe (die letzten 8 davon, nicht 8 gemischte gefiltert). */
+  recent(fide: string, token: string | null, color?: 'w' | 's'): Promise<RecentGames> {
+    const q = color ? `?color=${color}` : '';
+    return firstValueFrom(this.http.get<RecentGames>(`${this.base(token)}/player/${encodeURIComponent(fide)}/recent${q}`));
   }
 
   tree(fide: string, color: 'w' | 's', line: string[], token: string | null): Promise<OpeningTree> {

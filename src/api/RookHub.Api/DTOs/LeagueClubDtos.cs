@@ -140,6 +140,9 @@ public class LeagueClubGameDto
     public bool CanDelete { get; set; }
     /// <summary>Die Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett, <c>?moves=</c>).</summary>
     public string Uci { get; set; } = string.Empty;
+    /// <summary>Die Partie als PGN, wie gespeichert (Hauptvariante, Kopfdaten; „Schwaz" statt des Namens) — „Analyse"
+    /// gibt sie ans Analysebrett mit (<c>?pgn=</c>, 0.592.0), dort steht sie dann im PGN-Feld.</summary>
+    public string Pgn { get; set; } = string.Empty;
 }
 
 public class LeagueClubListDto

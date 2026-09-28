@@ -134,6 +134,9 @@ const RECAP_RETRY_MS = 15_000;
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
+                  <button mat-menu-item class="to-analysis" (click)="openInAnalysis()">
+                    <mat-icon>biotech</mat-icon><span>{{ 'games.openInAnalysis' | translate }}</span>
+                  </button>
                   <button mat-menu-item (click)="copyPgn()">
                     <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
                   </button>
@@ -685,6 +688,14 @@ export class SharedGameComponent implements OnInit, DoCheck {
       next: blob => openPhotoBlob(blob, photoFileName(this.gameId!, blob)),
       error: () => this.snackbar.warn(this.translate.instant('games.photo.loadError')),
     });
+  }
+
+  /** Im Analysebrett öffnen — mit dem GANZEN PGN (Kopfdaten, Kommentare), nicht nur den Zügen (0.592.0); „Zurück" führt
+   *  hierher. Übergabe per Router-State wie aus der Partienliste. */
+  openInAnalysis(): void {
+    const pgn = this.game?.pgn;
+    if (!pgn) return;
+    void this.router.navigate(['/analysis'], { state: { pgn }, queryParams: { from: this.router.url } });
   }
 
   /** Das PGN der Partie in die Zwischenablage (so, wie es gespeichert ist — samt Kopfdaten und Kommentaren). */

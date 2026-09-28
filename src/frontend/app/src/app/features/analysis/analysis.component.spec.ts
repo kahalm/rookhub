@@ -92,6 +92,25 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnDestroy();
   });
 
+  it('?pgn= (Sprung aus LeagueHub, 0.592.0): lädt die Partie und lässt das PGN im Feld stehen', () => {
+    const pgn = '[White "Schwaz"]\n[Black "Hengl, Philip"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 Nc6 1-0\n';
+    const c = makeComponent({ pgn });
+    c.ngOnInit();
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(c.pgnInput).toBe(pgn);                // zum Kopieren/Weiterbearbeiten
+    c.ngOnDestroy();
+  });
+
+  it('von Hand geladen leert sich das PGN-Feld wie bisher', () => {
+    const c = makeComponent({});
+    c.ngOnInit();
+    c.pgnInput = '1. d4 d5 *';
+    c.loadPgn();
+    expect(c.line.length).toBe(2);
+    expect(c.pgnInput).toBe('');
+    c.ngOnDestroy();
+  });
+
   it('accepts space-separated moves too', () => {
     const c = makeComponent({ fen: START, moves: 'e2e4 e7e5' });
     c.ngOnInit();

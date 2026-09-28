@@ -162,9 +162,19 @@ public static class LeagueProfileBuilder
 
     /// <summary>Die letzten Partien des Spielers in der Reihenfolge der Karte (<c>recent</c>) — dieselbe Auswahl liefert
     /// <see cref="LeagueProfileStore.RecentAsync"/> samt PGN zum Nachspielen.</summary>
-    public static List<(Game G, string Color)> Recent(string fide, string name, List<Game> games) =>
-        games.Select(g => (G: g, C: ColorOf(g, fide, name))).Where(x => x.C is not null)
+    /// <param name="color"><c>w</c>/<c>s</c> = nur die letzten Partien mit dieser Farbe (0.592.0 — die Karte filtert oben nach
+    /// Farbe, und acht gemischte gefiltert ließen oft nur drei übrig); <c>null</c> = beide, wie auf der Karte.</param>
+    public static List<(Game G, string Color)> Recent(string fide, string name, List<Game> games, string? color = null) =>
+        games.Select(g => (G: g, C: ColorOf(g, fide, name))).Where(x => x.C is not null && (color is null || x.C == color))
             .Select(x => (x.G, x.C!)).Take(RecentCount).ToList();
+
+    /// <summary>Eine Zeile der „letzten Partien" in der Form der Karte (<c>recent</c>).</summary>
+    public static JsonObject RecentEntry(Game g, string color) => new()
+    {
+        ["date"] = H(g, "Date"), ["event"] = H(g, "Event"),
+        ["vs"] = H(g, color == "w" ? "Black" : "White"), ["vs_elo"] = H(g, color == "w" ? "BlackElo" : "WhiteElo"),
+        ["color"] = color, ["score"] = Pts(H(g, "Result"), color), ["opening"] = Line(Sans(g, 8).Take(4).ToList()),
+    };
 
     /// <summary>Profil-JSON (gleiche Form wie die Python-Fassung) + zusammengeführtes PGN.</summary>
     public static (JsonObject Profile, string Pgn, int Count) Build(string fide, string name, List<Game> games)

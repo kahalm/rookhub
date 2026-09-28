@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { LeagueApiService } from '../core/league-api.service';
 import { MyGamesService } from '../core/my-games.service';
@@ -85,10 +85,14 @@ type Show = 'w' | 's' | 'b';
             }
           }
           @if (c.recent?.length) {
-            <h3>Letzte Partien <span class="muted small">— anklicken zum Nachspielen</span></h3>
+            <h3>Letzte Partien@if (show() !== 'b') { mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }} }
+              <span class="muted small">— anklicken zum Nachspielen</span></h3>
             @if (replayError()) { <p class="err small">{{ replayError() }}</p> }
+            @if (recentShown(); as list) {
+              @if (!list.length) { <p class="muted small">Keine Partien mit {{ show() === 'w' ? 'Weiß' : 'Schwarz' }}.</p> }
+            } @else { <p class="muted small">Lade Partien …</p> }
             <table class="recent">
-              @for (g of c.recent; track $index) {
+              @for (g of recentShown() ?? []; track $index) {
                 <tr tabindex="0" role="button" [class.busy]="replayLoading()"
                     [attr.aria-label]="'Partie gegen ' + (g.vs || '?') + ' nachspielen'"
                     (click)="openGame(c, $index)" (keydown.enter)="openGame(c, $index)">
@@ -97,8 +101,8 @@ type Show = 'w' | 's' | 'b';
                             [attr.aria-label]="g.color === 'w' ? 'Weiß' : 'Schwarz'"></span>{{ g.vs || '?' }}
                     @if (g.vs_elo) { <span class="muted">{{ g.vs_elo }}</span> }
                     <br><span class="muted">{{ g.event }}</span>
-                    @if (speed(g.event)) { <span class="tag">Blitz/Schnell</span> }</td>
-                  <td class="muted">{{ de(g.opening) }}</td>
+                    @if (speed(g.event ?? "")) { <span class="tag">Blitz/Schnell</span> }</td>
+                  <td class="muted">{{ de(g.opening ?? '') }}</td>
                   <td class="num"><b>{{ g.score === null ? '–' : g.score === 0.5 ? '½' : g.score }}</b></td>
                 </tr>
               }
@@ -165,6 +169,40 @@ export class PlayerCardComponent {
   private readonly savedIds = new Map<string, number>();
   /** Die letzten Partien samt PGN — einmal je geöffneter Karte geholt. */
   private recentGames: RecentGame[] | null = null;
+  /** Die letzten Partien JE FARBE (0.592.0): oben Weiß/Schwarz gewählt → die letzten acht dieser Farbe, samt PGN. */
+  private readonly byColor = signal<Partial<Record<'w' | 's', RecentGame[]>>>({});
+  /** Was die Liste zeigt: bei „Beide" die Liste der Karte, sonst die der Farbe (`null` = wird geholt). */
+  readonly recentShown = computed<(RecentGame | NonNullable<PlayerCard['recent']>[number])[] | null>(() => {
+    const c = this.card(), s = this.show();
+    if (!c) return [];
+    if (s === 'b') return c.recent ?? [];
+    return this.byColor()[s] ?? null;
+  });
+
+  constructor() {
+    // Farbe gewählt (oder die Karte aus einer Brett-Zeile mit Farbe geöffnet): deren letzte Partien holen, einmal je Karte.
+    effect(() => {
+      const c = this.card(), s = this.show();
+      if (c && s !== 'b' && !this.byColor()[s]) void this.loadColor(c.fide, s);
+    });
+  }
+
+  private readonly loadingColor = new Set<string>();
+
+  private async loadColor(fide: string, color: 'w' | 's'): Promise<void> {
+    const key = `${this.seq}:${color}`;
+    if (this.loadingColor.has(key)) return;
+    this.loadingColor.add(key);
+    const my = this.seq;
+    try {
+      const r = await this.api.recent(fide, this.token, color);
+      if (my === this.seq) this.byColor.update(m => ({ ...m, [color]: r.games }));
+    } catch {
+      if (my === this.seq) this.byColor.update(m => ({ ...m, [color]: [] }));
+    } finally {
+      this.loadingColor.delete(key);
+    }
+  }
   token: string | null = null;
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;
@@ -190,6 +228,7 @@ export class PlayerCardComponent {
     this.gameNote.set(null);
     this.savedIds.clear();
     this.recentGames = null;
+    this.byColor.set({});
     this.error.set(null);
     this.loading.set(true);
     const my = ++this.seq;
@@ -219,6 +258,13 @@ export class PlayerCardComponent {
   /** Eine der letzten Partien nachspielen. Gefunden wird sie über Datum, Gegner und Farbe — die Liste zum Nachspielen
    * ist frisch gerechnet, die Karte kann älter sein. */
   async openGame(c: PlayerCard, i: number): Promise<void> {
+    // Nach Farbe gefiltert: die Zeile bringt ihr PGN schon mit.
+    const shown = this.recentShown()?.[i];
+    if (shown && 'pgn' in shown && shown.pgn) {
+      this.gameNote.set(null);
+      this.replay.set({ pgn: shown.pgn, flipped: shown.color === 's' });
+      return;
+    }
     const want = c.recent?.[i];
     if (!want || this.replayLoading()) return;
     const my = this.seq;

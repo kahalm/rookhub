@@ -38,6 +38,17 @@ describe('ClubGamesPageComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
+  it('„Analyse" gibt das ganze PGN mit (?pgn=), eine überlange Partie nur die Züge (0.592.0)', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    const c = fixture.componentInstance as any;
+    c.rookHub = 'https://rookhub.example';
+    const g = G(1, { uci: 'e2e4 e7e5', pgn: '[White "Schwaz"]\n[Black "Hengl, Philip"]\n\n1. e4 e5 *\n' });
+    expect(c.analysisUrl(g)).toBe('https://rookhub.example/analysis?pgn=' + encodeURIComponent(g.pgn!));
+    expect(c.analysisUrl(G(2, { uci: 'e2e4', pgn: 'x'.repeat(7000) }))).toBe('https://rookhub.example/analysis?moves=e2e4');
+    expect(c.analysisUrl(G(3, { uci: 'd2d4' }))).toBe('https://rookhub.example/analysis?moves=d2d4');   // ältere API ohne PGN
+  }));
+
   it('zeigt die Partien: Jahr, Namen (Ligaspieler anklickbar), Eröffnung deutsch, Löschen nur wo erlaubt', fakeAsync(() => {
     const el = create();
     flushMicrotasks();

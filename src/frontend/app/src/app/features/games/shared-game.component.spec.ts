@@ -266,6 +266,17 @@ describe('SharedGameComponent', () => {
     expect(fixture.componentInstance.game).toBeNull();
   });
 
+  it('⋮ „Im Analysebrett öffnen" gibt das ganze PGN mit und merkt die Herkunft (0.592.0)', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame(null));
+    const router = TestBed.inject(Router);
+    const nav = spyOn(router, 'navigate').and.resolveTo(true);
+    fixture.componentInstance.openInAnalysis();
+    const pgn = fixture.componentInstance.game!.pgn;
+    expect(nav).toHaveBeenCalledWith(['/analysis'], { state: { pgn }, queryParams: { from: router.url } });
+  });
+
   it('starts unflipped for ownerSide=white or unknown', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
