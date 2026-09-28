@@ -1,3 +1,4 @@
+import { scrollIntoContainer } from '../../shared/pgn-viewer/move-list.component';
 import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
@@ -432,11 +433,14 @@ export class GameEditComponent implements OnInit, OnDestroy {
     this.session.go(i);
   }
 
-  /** Am PC scrollt die Zugliste für sich — der gewählte Halbzug soll dort sichtbar bleiben (Pfeiltasten,
-   *  „nächste unsichere Stelle"). */
+  /** Der gewählte Halbzug soll in der Zugliste sichtbar bleiben (Pfeiltasten, „nächste unsichere Stelle") — NUR in deren
+   *  eigenem Rollbereich. `scrollIntoView` rollte am Handy die ganze Seite, und das Brett wanderte bei jedem Zug nach oben
+   *  (gemeldet 2026-09-28, dieselbe Falle wie 0.514.1 auf der Partieseite). */
   private revealCursor(): void {
-    setTimeout(() => (this.host.nativeElement as HTMLElement).querySelector('.moves .ply.cursor')
-      ?.scrollIntoView?.({ block: 'nearest' }));
+    setTimeout(() => {
+      const el = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('.moves .ply.cursor');
+      if (el) scrollIntoContainer(el);
+    });
   }
 
   nextUncertain(): void {

@@ -301,10 +301,12 @@ button.pl:hover { text-decoration-color: var(--ink); }
   grid-template-areas: "board check" "board moves"; }
 .scan-layout.with-photo { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .85fr);
   grid-template-areas: "photo board check" "photo board moves"; }
-.scan-layout > .panel { margin-bottom: 0; }
-/* overflow-anchor: sonst hält der Browser beim Schrumpfen des Prüfteils (Lesarten weg) das Brett darunter fest, und die Seite
-   springt nach „Stimmt so" nach oben. */
-.scan-wrap { container-type: inline-size; overflow-anchor: none; }
+.scan-layout > .panel { margin-bottom: 0; min-width: 0; }
+/* Am Handy steht der Prüfteil ÜBER dem Brett und ändert je Zug seine Höhe (Lesarten ja/nein, Ausschnitt). Er darf deshalb
+   kein Scroll-Anker sein — dann hält der Browser das BRETT an seiner Stelle, statt es mit jedem Zug zu verschieben
+   (gemeldet 2026-09-28: „das Brett wandert weiter nach oben"). */
+.scan-wrap { container-type: inline-size; }
+.scan-check { overflow-anchor: none; }
 .scan-photo { grid-area: photo; }
 .scan-board { grid-area: board; }
 .scan-check { grid-area: check; }
@@ -326,7 +328,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .crop-frame.uncertain { outline-color: var(--warn); }
 .crop-frame img { position: absolute; max-width: none; max-height: none; }
 .crop-mark { position: absolute; border: 2px solid var(--red); border-radius: 3px; pointer-events: none; box-shadow: 0 0 0 9999px rgb(0 0 0 / .12); }
-.scan-board { display: grid; gap: 10px; justify-items: center; }
+/* Die Spalte des Bretts darf NICHT mit dem Brett wachsen: ein auto-Track nimmt die Pixelbreite, die Chessground einmal
+   gesetzt hat (z. B. solange das Foto noch fehlt und das Layout zweispaltig ist), und behält sie — am PC ragte das Brett
+   dann über die Prüf-Spalte (gemeldet 2026-09-28). */
+.scan-board { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; justify-items: center; }
 .scan-board app-chess-board { width: min(100%, 62vh); }
 .board-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .board-nav .btn-sec { min-width: 44px; }

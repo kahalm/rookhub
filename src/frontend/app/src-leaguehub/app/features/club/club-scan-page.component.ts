@@ -7,6 +7,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
+import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -322,6 +323,15 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     void this.load();
   }
 
+  /** Zurück auf der Seite (Handy): ein wartendes Nachfragen gleich ausführen. */
+  @HostListener('document:visibilitychange')
+  onVisible(): void {
+    if (document.visibilityState !== 'visible' || !this.pollTimer || this.state()?.scan.status === 'done') return;
+    clearTimeout(this.pollTimer);
+    this.pollTimer = null;
+    void this.load();
+  }
+
   ngOnDestroy(): void {
     this.ticker.stop();
     this.destroyed = true;
@@ -445,11 +455,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private revealCursor(): void {
     setTimeout(() => {
       const el = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('.moves .ply.cursor');
-      const box = el?.closest<HTMLElement>('.moves');
-      if (!el || !box || box.scrollHeight <= box.clientHeight) return;
-      const top = el.offsetTop, bottom = top + el.offsetHeight;             // .moves ist position: relative
-      if (top < box.scrollTop) box.scrollTop = top;
-      else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
+      if (el) scrollIntoContainer(el);
     });
   }
 

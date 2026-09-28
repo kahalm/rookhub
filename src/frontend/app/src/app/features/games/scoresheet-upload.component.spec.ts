@@ -119,6 +119,21 @@ describe('ScoresheetUploadComponent', () => {
     expect(c.uploading()).toBeFalse();
   });
 
+  // Gemeldet 2026-09-28: ein Abruf, der nicht durchkam, beendete das Nachfragen — die Seite zeigte weiter „wird gelesen".
+  it('a failed status request is skipped, the next one still finds the finished game', fakeAsync(async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([scan('running')]);
+    tick(SCAN_POLL_MS);
+    http.expectOne('/api/scoresheets/7').error(new ProgressEvent('error'));      // Funkloch
+    tick(SCAN_POLL_MS);
+    http.expectOne('/api/scoresheets/7').flush(scan('done', { savedGameId: 42, moveCount: 40 }));
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    expect(fixture.componentInstance.current()?.status).toBe('done');
+    discardPeriodicTasks();
+  }));
+
   it('coming back while a scoresheet is still being read follows it again', fakeAsync(async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

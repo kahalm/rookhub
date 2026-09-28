@@ -206,6 +206,25 @@ describe('ClubAddPageComponent', () => {
     expect(el.textContent).not.toContain('Fremd – Hengl');
   }));
 
+  // Gemeldet 2026-09-28: nach einem Abruf, der nicht durchkam, fragte die Seite nie wieder nach — „wird gelesen" blieb stehen.
+  it('ein Abruf, der nicht durchkommt, beendet das Nachfragen nicht', fakeAsync(() => {
+    query = { art: 'formular' };
+    const scan = { id: 3, status: 'running', notationLanguage: 'de', createdAt: new Date().toISOString(), rounds: 0,
+      moveCount: 0, uncertainCount: 0, unresolvedCount: 0, white: 'Oberschmid', black: 'Hengl' };
+    api.scans.and.resolveTo([{ ref: '3', scan }] as never);
+    const el = create();
+    flushMicrotasks();
+    api.scans.and.rejectWith(new Error('offline'));
+    tick(3000);
+    flushMicrotasks();
+    api.scans.and.resolveTo([{ ref: '3', scan: { ...scan, status: 'done', moveCount: 40 } }] as never);
+    tick(3000);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('gelesen: 20 Züge');
+    expect(el.querySelector('.scan-clock')).toBeNull();
+  }));
+
   it('ohne Verwalter-Recht fragt die Seite die fremden Formulare gar nicht ab', fakeAsync(() => {
     query = { art: 'formular' };
     create(['league.contribute']);

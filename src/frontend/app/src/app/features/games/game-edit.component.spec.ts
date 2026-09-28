@@ -57,6 +57,18 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
   });
 
+  // Gemeldet 2026-09-28: am Handy wanderte das Brett beim Durchklicken nach oben — scrollIntoView rollte die ganze Seite.
+  it('stepping through the moves never scrolls the page, only the move list itself', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const spy = spyOn(Element.prototype, 'scrollIntoView');
+    for (const i of [1, 2, 3, 4, 0]) { c.go(i); fixture.detectChanges(); }
+    await new Promise(r => setTimeout(r, 20));                                 // revealCursor läuft im nächsten Takt
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('an ordinary game: an insert that breaks the rest marks it illegal, saving drops it after asking', async () => {
     const { fixture, c, http } = await setup();
     fixture.detectChanges();

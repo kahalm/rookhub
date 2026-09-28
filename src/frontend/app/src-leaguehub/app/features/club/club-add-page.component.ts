@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -349,7 +349,20 @@ export class ClubAddPageComponent implements OnInit {
       const open = list.some(s => this.isOpen(s.scan)) || this.othersOpen().some(o => this.isOpen(o.scan));
       this.ticker.run(open);
       if (open) this.schedulePoll();
-    } catch { /* die Liste ist Beiwerk */ }
+    } catch {
+      // Ein Abruf, der nicht durchkommt (Funkloch am Handy), darf das Nachfragen nicht beenden — sonst bleibt „wird gelesen"
+      // stehen, obwohl das Formular längst fertig ist (gemeldet 2026-09-28: Uhr lief, Partie seit Minuten gelesen).
+      if (this.scans().some(s => this.isOpen(s.scan))) this.schedulePoll();
+    }
+  }
+
+  /** Zurück auf der Seite (Handy: App gewechselt, Bildschirm aus): gleich nachsehen statt auf den nächsten Takt zu warten. */
+  @HostListener('document:visibilitychange')
+  onVisible(): void {
+    if (document.visibilityState !== 'visible' || !this.pollTimer) return;
+    clearTimeout(this.pollTimer);
+    this.pollTimer = null;
+    void this.loadScans();
   }
 
   private schedulePoll(): void {

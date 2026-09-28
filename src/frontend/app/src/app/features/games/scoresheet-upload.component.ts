@@ -12,8 +12,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subscription, timer } from 'rxjs';
-import { switchMap, takeWhile } from 'rxjs/operators';
+import { EMPTY, Subscription, timer } from 'rxjs';
+import { catchError, switchMap, takeWhile } from 'rxjs/operators';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { ScoresheetScan, ScoresheetService, ScoresheetStatus } from './scoresheet.service';
 import { SECONDS_PER_MOVE, formatClock, serverTime } from './scoresheet-timing';
@@ -318,8 +318,10 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     this.elapsed.set(Math.max(0, Math.round((Date.now() - started) / 1000)));
     this.tick = timer(1000, 1000).pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.elapsed.set(Math.round((Date.now() - started) / 1000)));
+    // Ein Abruf, der nicht durchkommt (Funkloch am Handy), wird ÜBERSPRUNGEN — er beendete vorher das ganze Nachfragen,
+    // und die Seite zeigte „wird gelesen", obwohl die Partie längst fertig war (gemeldet 2026-09-28).
     this.poll = timer(SCAN_POLL_MS, SCAN_POLL_MS).pipe(
-      switchMap(() => this.service.scan(scan.id)),
+      switchMap(() => this.service.scan(scan.id).pipe(catchError(() => EMPTY))),
       takeWhile(s => s.status === 'pending' || s.status === 'running', true),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
