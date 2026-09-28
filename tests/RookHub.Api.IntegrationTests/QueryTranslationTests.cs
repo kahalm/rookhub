@@ -486,15 +486,19 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.NotNull(id);
         Assert.Null(await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default));   // 6 offen ≥ 2 Engines
 
-        // Einen Auftrag von Hand an die Meisterpartie haengen: ob der Takt selbst einreiht, haengt an der Uhrzeit
-        // (Sperrzeit der Spark gilt auch hier) — die Unterabfrage der Auftragsliste soll auf jeden Fall etwas filtern.
-        var position = await Db.GameAnalysisPositions.OrderBy(p => p.Ply).FirstAsync(p => p.GameAnalysisId == id);
-        var job = new AnalysisJob { UserId = owner, Fen = position.Fen, EngineId = "rhe_a", TargetDepth = 20, MultiPv = 5,
-            Background = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
-        Db.AnalysisJobs.Add(job);
-        await Db.SaveChangesAsync();
-        position.AnalysisJobId = job.Id;
-        await Db.SaveChangesAsync();
+        // Ob der Takt selbst einreiht, haengt an der Uhrzeit (Sperrzeit der Spark gilt auch hier). Hat er nichts
+        // eingereiht, einen Auftrag von Hand an eine Stellung haengen — die Unterabfrage der Auftragsliste soll auf
+        // jeden Fall etwas filtern. Nie an eine schon verknuepfte Stellung: deren Auftrag verloere sonst den Bezug.
+        if (!await Db.GameAnalysisPositions.AnyAsync(p => p.GameAnalysisId == id && p.AnalysisJobId != null))
+        {
+            var position = await Db.GameAnalysisPositions.OrderBy(p => p.Ply).FirstAsync(p => p.GameAnalysisId == id);
+            var job = new AnalysisJob { UserId = owner, Fen = position.Fen, EngineId = "rhe_a", TargetDepth = 20, MultiPv = 5,
+                Background = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+            Db.AnalysisJobs.Add(job);
+            await Db.SaveChangesAsync();
+            position.AnalysisJobId = job.Id;
+            await Db.SaveChangesAsync();
+        }
 
         Assert.Empty(await Get<AnalysisJobService>().ListAsync(owner));   // Auftraege der Meisterpartie ausgeblendet
         Assert.NotEmpty(await Db.AnalysisJobs.Where(j => j.UserId == owner).ToListAsync());
