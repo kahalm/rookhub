@@ -47,8 +47,8 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
       <section class="club-intro">
         @if (share) { <p><a [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
         <h2>Partien hinzufügen</h2>
-        <p class="muted">Angenommen wird jede Partie, in der mindestens ein Ligaspieler sitzt — geprüft an den Meldelisten
-          aller Saisonen. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>
+        <p class="muted">Angenommen wird jede Partie mit einem bekannten Gegner — geprüft an den Meldelisten aller Saisonen,
+          sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>
       </section>
 
       <div class="seg club-kind" role="tablist" aria-label="Art">

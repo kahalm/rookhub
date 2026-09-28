@@ -21,7 +21,7 @@ interface Editing { index: number; side: SideKey; text: string }
   template: `
     <div class="review-head">
       <p><b>{{ review.counts().total }} Partien gelesen</b> — {{ review.counts().take }} werden importiert,
-        {{ review.counts().skip }} nicht@if (review.counts().unknown) {, bei {{ review.counts().unknown }} ist ein Spieler nicht (eindeutig) erkannt }.</p>
+        {{ review.counts().skip }} nicht@if (review.counts().unknown) {, bei {{ review.counts().unknown }} ist ein Spieler nicht (eindeutig) erkannt}.</p>
       @if (review.counts().optional) {
         <p class="small muted">{{ review.counts().optional }} ohne Gegner aus der Liga (nur in der Megabase) — nicht vorgewählt, anhaken nimmt sie trotzdem auf.</p>
       }
@@ -34,20 +34,20 @@ interface Editing { index: number; side: SideKey; text: string }
       </div>
     </div>
 
-    <div class="roster-scroll">
+    <div class="roster-scroll review-scroll">
       <table class="rtable review-table">
         <thead><tr><th><span class="sr">Importieren</span></th><th class="num">Nr.</th><th class="num">Jahr</th>
           <th>Turnier</th><th>Weiß</th><th>Schwarz</th><th class="num">Erg.</th><th>Status</th></tr></thead>
         <tbody>
           @for (r of review.visible(); track r.game.index) {
             <tr [class.off]="!isIn(r)">
-              <td><input type="checkbox" [checked]="isIn(r)" [disabled]="!status(r).importable"
+              <td class="chk"><input type="checkbox" [checked]="isIn(r)" [disabled]="!status(r).importable"
                          [attr.aria-label]="'Partie ' + r.game.index + ' importieren'" (change)="review.toggleInclude(r.game.index)" /></td>
-              <td class="num">{{ r.game.index }}</td>
-              <td class="num">{{ r.game.year ?? '–' }}</td>
+              <td class="num nr">{{ r.game.index }}</td>
+              <td class="num yr">{{ r.game.year ?? '–' }}</td>
               <td class="small event" [attr.title]="r.game.event">{{ r.game.event ?? '' }}</td>
               @for (k of sides; track k) {
-                <td>
+                <td class="side" [class.white]="k === 'white'" [class.black]="k === 'black'" [attr.data-label]="k === 'white' ? 'Weiß' : 'Schwarz'">
                   <button type="button" class="side-btn" [disabled]="!!r.game.error" (click)="edit(r, k)"
                           [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ' korrigieren'">
                     <span [class.anon]="r[k].replace">{{ shown(r[k]) }}</span>
@@ -58,8 +58,8 @@ interface Editing { index: number; side: SideKey; text: string }
                   }
                 </td>
               }
-              <td class="num">{{ resultText(r.game.result) }}</td>
-              <td class="small">@if (isIn(r)) { <span class="ok-text">wird importiert</span> }
+              <td class="num res">{{ resultText(r.game.result) }}</td>
+              <td class="small st">@if (isIn(r)) { <span class="ok-text">wird importiert</span> }
                 @else if (status(r).importable) { <span class="muted">{{ optional(r) ? 'nicht in Liga — anhaken zum Hinzufügen' : 'abgewählt' }}</span> }
                 @else { <span class="muted">{{ reason(status(r).reason!) }}</span> }</td>
             </tr>

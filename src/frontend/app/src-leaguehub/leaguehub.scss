@@ -430,3 +430,33 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .replay-moves .mv:hover { background: var(--paper); }
 .replay-moves .mv.on { background: var(--ink); color: var(--surface); }
 .replay-comment { margin-top: 8px; padding: 6px 8px; background: var(--paper); border-radius: 6px; }
+
+/* Importübersicht am Handy (0.578.1, gemeldet 2026-09-28: „mobil blöd, links-rechts scrollen"): jede Partie als Karte —
+   oben Häkchen, Nr., Jahr, Turnier, Ergebnis; darunter Weiß, Schwarz und der Status, jede Zeile über die ganze Breite.
+   Container- statt Media-Query: es zählt die Breite, die die Übersicht wirklich hat (und der Test kann sie setzen). */
+.review-scroll { container-type: inline-size; }
+@container (max-width: 640px) {
+  .review-table, .review-table tbody { display: block; }
+  .review-table thead { display: none; }
+  .review-table tr:not(.edit-row) {
+    display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px;
+    grid-template-areas: "chk nr yr ev res" "w w w w w" "b b b b b" "st st st st st";
+    align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--line);
+  }
+  .review-table tr:not(.edit-row) > td { display: block; padding: 0; border-bottom: 0; min-width: 0; max-width: none; }
+  .review-table td.chk { grid-area: chk; }
+  .review-table td.nr { grid-area: nr; font-weight: 600; }
+  .review-table td.nr::before { content: "#"; color: var(--muted); font-weight: 400; }
+  .review-table td.yr { grid-area: yr; color: var(--muted); }
+  .review-table td.event { grid-area: ev; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .review-table td.res { grid-area: res; font-weight: 600; }
+  .review-table td.side.white { grid-area: w; }
+  .review-table td.side.black { grid-area: b; }
+  .review-table tr:not(.edit-row) > td.side { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); align-items: baseline; }
+  .review-table td.side::before { content: attr(data-label); color: var(--muted); font-size: 13px; }
+  .review-table td.side > .raw { grid-column: 2; }
+  .review-table td.st { grid-area: st; }
+  .review-table .side-btn { text-align: left; }
+  .review-table input[type=checkbox] { width: 22px; height: 22px; }
+  .review-table tr.edit-row, .review-table tr.edit-row > td { display: block; }
+}

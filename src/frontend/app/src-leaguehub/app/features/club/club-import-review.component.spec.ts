@@ -59,6 +59,20 @@ describe('ClubImportReviewComponent', () => {
     expect(el.querySelectorAll('tbody tr').length).toBe(1);
   });
 
+  it('am Handy (390 px) je Partie untereinander statt links-rechts scrollen', () => {
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '390px';
+    const box = el.querySelector('.review-scroll') as HTMLElement;
+    expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+    const row = el.querySelector('tbody tr') as HTMLElement;
+    const white = row.querySelector('td.side.white') as HTMLElement, black = row.querySelector('td.side.black') as HTMLElement;
+    expect(black.getBoundingClientRect().top).toBeGreaterThan(white.getBoundingClientRect().top);   // untereinander
+    expect(getComputedStyle(el.querySelector('thead') as HTMLElement).display).toBe('none');
+    el.style.width = '1000px';
+    expect(getComputedStyle(el.querySelector('thead') as HTMLElement).display).not.toBe('none');     // breit: Tabelle
+  });
+
   it('das Namensfeld sucht beim Öffnen gleich (Megabase mit), ein Treffer von dort wählt die Partie zum Import', fakeAsync(() => {
     const el = create();
     client.players.and.resolveTo([{ name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' }]);

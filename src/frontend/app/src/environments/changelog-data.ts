@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.578.1", date: "2026-09-28", changes: [
+    { en: "LeagueHub import overview on the phone: each game is shown as a small card — number, year, tournament and result on top, White, Black and the status below, each across the full width — instead of a table that had to be scrolled sideways. The intro text now says that a known opponent from the Megabase is enough too.", de: "LeagueHub-Importübersicht am Handy: Jede Partie steht als kleine Karte da — oben Nummer, Jahr, Turnier und Ergebnis, darunter Weiß, Schwarz und der Status über die ganze Breite — statt einer Tabelle, die man seitlich schieben musste. Der Einleitungstext sagt jetzt, dass auch ein bekannter Gegner aus der Megabase genügt." },
+  ] },
   { version: "0.578.0", date: "2026-09-28", changes: [
     { en: "LeagueHub player card: the recent games can now be clicked — the game opens right in the card with board and moves (German notation), from the player’s side; step through with the buttons, the arrow keys or a click on a move, “Back to card” returns. Works on share links too.", de: "LeagueHub-Spielerkarte: Die letzten Partien lassen sich jetzt anklicken — die Partie öffnet sich direkt in der Karte mit Brett und Zügen (deutsche Notation), aus Sicht des Spielers; blättern mit den Knöpfen, den Pfeiltasten oder einem Klick auf einen Zug, „Zurück zur Karte“ führt zurück. Geht auch über Teilen-Links." },
   ] },
