@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.587.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub: when replaying one of a player's recent games, “Add to my games” puts it into your games on RookHub and opens it there; “Share game” copies RookHub's public link to it (on a phone via the share sheet).", de: "LeagueHub: Beim Nachspielen einer der letzten Partien eines Spielers legt „Zu meinen Partien“ sie in deinen Partien in RookHub ab und öffnet sie dort; „Partie teilen“ kopiert RookHubs öffentlichen Link dazu (am Handy über das Teilen-Blatt)." },
+  ] },
   { version: "0.586.1", date: "2026-09-28", changes: [
     { en: "Tests: the database test for the master game analysis only failed outside the reserved hours — the background run had already queued the first position, and the test then attached a second job to the same position, which cut the first one loose; now it only adds its own job if the run has not queued anything. The v0.586.0 tag build failed on this.", de: "Tests: Der Datenbank-Test zur Meisterpartien-Analyse scheiterte nur außerhalb der reservierten Zeiten — der Hintergrundlauf hatte die erste Stellung schon eingereiht, und der Test hängte einen zweiten Auftrag an dieselbe Stellung, wodurch der erste seinen Bezug verlor; jetzt legt er nur dann selbst einen an, wenn der Lauf nichts eingereiht hat. Der Tag-Lauf von v0.586.0 scheiterte daran." },
   ] },

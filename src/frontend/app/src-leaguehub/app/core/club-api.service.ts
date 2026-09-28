@@ -126,6 +126,9 @@ export class ClubClient {
 }
 
 /** Liefert den passenden Client: `share` = Token eines Teilen-Links (ohne Anmeldung), sonst angemeldet. */
+/** Das Nötige einer Partie aus RookHubs „Meine Partien" (`GET /api/games/{id}`); `shareToken` = öffentlicher Link `/g/…`. */
+export interface SavedGameRef { pgn: string; white: string | null; black: string | null; shareToken: string }
+
 @Injectable({ providedIn: 'root' })
 export class ClubApiService {
   private readonly http = inject(HttpClient);
@@ -145,7 +148,7 @@ export class ClubApiService {
   }
 
   /** Eine eigene Partie aus RookHub (⋮ → „In die Vereins-Datenbank" auf der Partieseite) — dieselbe API, dasselbe Konto. */
-  savedGame(id: number): Promise<{ pgn: string; white: string | null; black: string | null }> {
-    return firstValueFrom(this.http.get<{ pgn: string; white: string | null; black: string | null }>(`/api/games/${id}`));
+  savedGame(id: number): Promise<SavedGameRef> {
+    return firstValueFrom(this.http.get<SavedGameRef>(`/api/games/${id}`));
   }
 }

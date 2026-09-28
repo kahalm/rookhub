@@ -1476,7 +1476,12 @@ für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, scor
 (`LeagueProfileBuilder.Recent`, `RecentCount` = 8), aus dem aktuellen Bestand gerechnet (fremde + Vereinspartien). Die Karte holt
 sie erst beim ersten Klick und findet die Zeile über Datum + Gegner + Farbe wieder (die gespeicherte Karte kann älter sein);
 nachgespielt wird in der Karte selbst (`shared/game-replay.component.ts`: Brett aus Sicht des Spielers, Züge deutsch, Knöpfe,
-Pfeiltasten, Pos1/Ende).
+Pfeiltasten, Pos1/Ende). Angemeldet stehen darüber „Zu meinen Partien“ und „Partie teilen“ (0.587.0,
+`core/my-games.service.ts`): beide legen die Partie über `POST /api/games/import` in RookHubs „Meine Partien“ (eine schon
+vorhandene wird nicht doppelt angelegt, die Id kommt trotzdem zurück); „Zu meinen Partien“ springt dann per Einmal-Code
+nach RookHub auf `/games/{id}` (`HandoffService.jumpToRookHub`), „Partie teilen“ holt den Teilen-Token (`GET /api/games/{id}`)
+und teilt RookHubs öffentlichen Link `/g/{token}` — am Handy über das Teilen-Blatt, sonst in die Zwischenablage. Ohne
+Anmeldung (Teilen-Link) und ohne RookHub zur Adresse (localhost/IP) fehlen beide Knöpfe.
 
 **Aus RookHub** (0.580.0): das ⋮-Menü der eigenen Partie (`/games/:id`) bietet mit `league.contribute` „In die
 Vereins-Datenbank (LeagueHub)" — Sprung per Einmal-Code (`HandoffService.jumpToLeagueHub`, Adresse aus `leagueHubUrl` in

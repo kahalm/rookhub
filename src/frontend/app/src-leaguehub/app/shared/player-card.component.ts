@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { LeagueApiService } from '../core/league-api.service';
+import { MyGamesService } from '../core/my-games.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
 import { OpeningStats, PlayerCard, RecentGame } from '../core/league.models';
 import { GameReplayComponent } from './game-replay.component';
@@ -39,7 +40,16 @@ type Show = 'w' | 's' | 'b';
         @if (error()) { <p>{{ error() }}</p> }
         @if (card(); as c) {
           @if (replay(); as r) {
-            <div class="actions"><button type="button" class="btn-sec" (click)="replay.set(null)">← Zurück zur Karte</button></div>
+            <div class="actions">
+              <button type="button" class="btn-sec" (click)="replay.set(null)">← Zurück zur Karte</button>
+              @if (myGames.available) {
+                <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="toMyGames(r.pgn)"
+                        title="Legt die Partie in deinen Partien in RookHub ab und öffnet sie dort">Zu meinen Partien</button>
+                <button type="button" class="btn-sec" [disabled]="gameBusy()" (click)="shareGame(r.pgn)"
+                        title="Öffentlicher Link zur Partie in RookHub (sie liegt dafür in deinen Partien)">Partie teilen</button>
+              }
+            </div>
+            @if (gameNote(); as n) { <p class="small game-note" [class.err]="n.err" role="status">{{ n.text }}</p> }
             <lh-game-replay [pgn]="r.pgn" [flipped]="r.flipped" />
           } @else {
           @if (color()) {
@@ -134,6 +144,7 @@ type Show = 'w' | 's' | 'b';
 })
 export class PlayerCardComponent {
   private readonly api = inject(LeagueApiService);
+  readonly myGames = inject(MyGamesService);
   private readonly dlg = viewChild.required<ElementRef<HTMLDialogElement>>('dlg');
 
   readonly card = signal<PlayerCard | null>(null);
@@ -147,6 +158,11 @@ export class PlayerCardComponent {
   readonly replay = signal<{ pgn: string; flipped: boolean } | null>(null);
   readonly replayLoading = signal(false);
   readonly replayError = signal<string | null>(null);
+  /** „Zu meinen Partien" / „Partie teilen" läuft gerade bzw. was dabei herauskam. */
+  readonly gameBusy = signal(false);
+  readonly gameNote = signal<{ text: string; err: boolean } | null>(null);
+  /** Schon abgelegte Partien dieser Karte (PGN → Id in RookHub) — Teilen nach dem Ablegen fragt nicht noch einmal. */
+  private readonly savedIds = new Map<string, number>();
   /** Die letzten Partien samt PGN — einmal je geöffneter Karte geholt. */
   private recentGames: RecentGame[] | null = null;
   token: string | null = null;
@@ -171,6 +187,8 @@ export class PlayerCardComponent {
     this.treeOpen.set(false);
     this.replay.set(null);
     this.replayError.set(null);
+    this.gameNote.set(null);
+    this.savedIds.clear();
     this.recentGames = null;
     this.error.set(null);
     this.loading.set(true);
@@ -222,7 +240,73 @@ export class PlayerCardComponent {
     const list = this.recentGames;
     const hit = list[i] && same(list[i]) ? list[i] : list.find(same);
     if (!hit) { this.replayError.set('Diese Partie ist nicht mehr da — bitte die Karte neu öffnen.'); return; }
+    this.gameNote.set(null);
     this.replay.set({ pgn: hit.pgn, flipped: hit.color === 's' });
+  }
+
+  /** In RookHubs „Meine Partien" legen und gleich dorthin springen (Wunsch 2026-09-28). */
+  async toMyGames(pgn: string): Promise<void> {
+    const id = await this.saveGame(pgn);
+    if (id === null) return;
+    this.gameBusy.set(true);
+    this.gameNote.set({ text: 'Liegt in deinen Partien — RookHub wird geöffnet …', err: false });
+    try {
+      await this.myGames.open(id);
+    } finally {
+      this.gameBusy.set(false);
+    }
+  }
+
+  /** RookHubs öffentlichen Link zur Partie teilen: am Handy das Teilen-Blatt, sonst in die Zwischenablage. */
+  async shareGame(pgn: string): Promise<void> {
+    const id = await this.saveGame(pgn);
+    if (id === null) return;
+    this.gameBusy.set(true);
+    try {
+      const url = await this.myGames.shareUrl(id);
+      const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+      if (typeof nav.share === 'function' && matchMedia('(pointer: coarse)').matches) {
+        try {
+          await nav.share({ url, title: 'Partie auf RookHub' });
+          this.gameNote.set({ text: 'Geteilt.', err: false });
+          return;
+        } catch (e) {
+          if ((e as { name?: string })?.name === 'AbortError') return;     // im Teilen-Blatt abgebrochen
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        this.gameNote.set({ text: `Link kopiert: ${url}`, err: false });
+      } catch {
+        // Ohne Zwischenablage (verweigert, unsicherer Kontext) steht der Link da — man kann ihn abschreiben.
+        this.gameNote.set({ text: `Link zur Partie: ${url}`, err: false });
+      }
+    } catch {
+      this.gameNote.set({ text: 'Der Link konnte nicht geholt werden.', err: true });
+    } finally {
+      this.gameBusy.set(false);
+    }
+  }
+
+  private async saveGame(pgn: string): Promise<number | null> {
+    const known = this.savedIds.get(pgn);
+    if (known !== undefined) return known;
+    this.gameBusy.set(true);
+    this.gameNote.set(null);
+    try {
+      const id = await this.myGames.save(pgn);
+      if (id === null) {
+        this.gameNote.set({ text: 'Diese Partie lässt sich nicht übernehmen.', err: true });
+        return null;
+      }
+      this.savedIds.set(pgn, id);
+      return id;
+    } catch {
+      this.gameNote.set({ text: 'Übernehmen hat nicht geklappt.', err: true });
+      return null;
+    } finally {
+      this.gameBusy.set(false);
+    }
   }
 
   backdrop(ev: MouseEvent): void {

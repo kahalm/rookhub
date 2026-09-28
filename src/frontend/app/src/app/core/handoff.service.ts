@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
-import { leagueHubUrl, partnerSiteUrl } from './partner-site';
+import { leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-site';
 
 /**
  * Der Sprung zwischen RookHub und der Turnierseite.
@@ -46,6 +46,15 @@ export class HandoffService {
   /** Springt nach LeagueHub (derselbe Weg wie zur Schwesterseite: Einmal-Code, drüben eingelöst). */
   async jumpToLeagueHub(path = ''): Promise<void> {
     const base = this.leagueHubUrl;
+    if (base) await this.jumpTo(base, path);
+  }
+
+  /** Der Rückweg: RookHub zu diesem LeagueHub, oder `null`. */
+  get rookHubUrl(): string | null { return rookHubUrlForLeagueHub(); }
+
+  /** Springt von LeagueHub nach RookHub (Einmal-Code, drüben eingelöst — z. B. auf eine eben abgelegte Partie). */
+  async jumpToRookHub(path = ''): Promise<void> {
+    const base = this.rookHubUrl;
     if (base) await this.jumpTo(base, path);
   }
 
