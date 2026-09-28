@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -458,5 +460,43 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Lat = 48.21, Lon = 16.37, RadiusKm = 30,
         });
         Assert.Empty(nearVienna.Items);
+    }
+
+    /// <summary>
+    /// Meisterpartien-Analyse (2026-09-28): der Takt sucht die naechste Bibliothekspartie OHNE Analyse (NOT EXISTS ueber
+    /// GameAnalyses, IN-Liste der unspielbaren), zaehlt die offenen Stellungen der laufenden Stapel-Analysen (Summe
+    /// korrelierter Zaehlungen), und die Auftragsliste blendet deren Auftraege ueber eine korrelierte Unterabfrage aus.
+    /// InMemory wertet das alles im Speicher aus — ob MariaDB es uebersetzt, zeigt nur dieser Test.
+    /// </summary>
+    [MySqlFact]
+    public async Task Meisterpartien_TaktUndAuftragsliste_uebersetzenSichNachMariaDb()
+    {
+        var owner = await SeedUserAsync("haus");
+        (await Db.AppUsers.FindAsync(owner))!.IsAdmin = true;
+        var cred = new LichessEngineCredential { UserId = owner, EncryptedToken = "", ShareAsHouseEngine = true };
+        cred.SetBackgroundEngines(["rhe_a", "rhe_b"]);
+        Db.LichessEngineCredentials.Add(cred);
+        Db.LibraryGames.Add(new LibraryGame { SourceFile = "t.pgn", MovesHash = "mh1", CommentedPlies = 2,
+            Pgn = "[White \"A\"]\n[Black \"B\"]\n[Result \"*\"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *" });
+        await Db.SaveChangesAsync();
+
+        var config = new ConfigurationBuilder().Build();
+        var scheduler = new MasterAnalysisScheduler(null!, new QuietHours(""), config, NullLogger<MasterAnalysisScheduler>.Instance);
+        var id = await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default);
+        Assert.NotNull(id);
+        Assert.Null(await scheduler.TickOnceAsync(Db, Get<GameAnalysisService>(), default));   // 6 offen ≥ 2 Engines
+
+        // Einen Auftrag von Hand an die Meisterpartie haengen: ob der Takt selbst einreiht, haengt an der Uhrzeit
+        // (Sperrzeit der Spark gilt auch hier) — die Unterabfrage der Auftragsliste soll auf jeden Fall etwas filtern.
+        var position = await Db.GameAnalysisPositions.OrderBy(p => p.Ply).FirstAsync(p => p.GameAnalysisId == id);
+        var job = new AnalysisJob { UserId = owner, Fen = position.Fen, EngineId = "rhe_a", TargetDepth = 20, MultiPv = 5,
+            Background = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        Db.AnalysisJobs.Add(job);
+        await Db.SaveChangesAsync();
+        position.AnalysisJobId = job.Id;
+        await Db.SaveChangesAsync();
+
+        Assert.Empty(await Get<AnalysisJobService>().ListAsync(owner));   // Auftraege der Meisterpartie ausgeblendet
+        Assert.NotEmpty(await Db.AnalysisJobs.Where(j => j.UserId == owner).ToListAsync());
     }
 }

@@ -13,6 +13,11 @@ namespace RookHub.Api.Services;
 public interface IAnalysisJobControl
 {
     void Interrupt(int jobId);
+
+    /// <summary>Rechnet auf dieser Engine gerade ein HINTERGRUND-Auftrag, wird er unterbrochen (Paused, kein
+    /// Fehlversuch) — ein normaler Auftrag wurde fuer sie eingereiht und hat Vorrang. Normale Auftraege bleiben
+    /// unberuehrt.</summary>
+    void PreemptBackground(string engineId);
 }
 
 /// <summary>
@@ -47,7 +52,11 @@ public class AnalysisJobService
 
     public async Task<List<AnalysisJobDto>> ListAsync(int userId, CancellationToken ct = default)
     {
-        var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId)
+        // Die Auftraege der Meisterpartien-Analyse (GameAnalysisOrigin.Library) gehoeren niemandem zum Anschauen —
+        // sie laufen auf dem Konto des Haus-Engine-Besitzers und stuenden dort sonst zu Dutzenden in der Liste.
+        var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
+                && !_db.GameAnalyses.Any(g => g.Origin == GameAnalysisOrigin.Library
+                    && g.Positions.Any(p => p.AnalysisJobId == j.Id)))
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
         return jobs.Select(ToDto).ToList();
     }
@@ -140,6 +149,10 @@ public class AnalysisJobService
         // gemerkt (Chessable-Remember oder früherer Auftrag), bleibt der vorhandene Eintrag.
         if (remember) await EnsureRememberedAsync(userId, fen, title, ct);
         await _db.SaveChangesAsync(ct);
+        // Vorrang: ein normaler Auftrag verdraengt einen Hintergrund-Auftrag, der auf SEINER Engine gerade rechnet
+        // (Vertiefung, Meisterpartien). Ohne das wartete er, bis der fertig ist — bei Tiefe 30 mit fuenf Linien
+        // Minuten. Der verdraengte Auftrag geht auf Paused und laeuft danach weiter.
+        if (!background && !string.IsNullOrEmpty(job.EngineId)) _control?.PreemptBackground(job.EngineId);
         return ToDto(job);
     }
 

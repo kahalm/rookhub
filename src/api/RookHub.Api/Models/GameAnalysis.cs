@@ -29,6 +29,16 @@ public enum GameAnalysisOrigin
     /// Partie-Analysen) erscheint sie deshalb NICHT; wer sie sucht, findet sie an der Partie.
     /// </summary>
     SavedGame = 2,
+    /// <summary>
+    /// Meisterpartie aus dem Bibliotheksbestand, vom Stapel analysiert (<c>MasterAnalysisScheduler</c>, 2026-09-28):
+    /// zu denselben Zeiten wie die Spark-Uebersetzung (<c>QuietHours</c>), auf den Hintergrund-Engines der Haus-Engine,
+    /// AUSSCHLIESSLICH als Hintergrundarbeit — jeder andere Auftrag hat Vorrang und verdraengt sie sogar, wenn sie
+    /// schon rechnet. Fuer ALLE lesbar (wer die Meisterpartie oeffnet, bekommt die fertige Analyse, statt sie neu
+    /// rechnen zu lassen), aber bewusst NICHT <see cref="GameAnalysis.IsPublic"/>: der Punktepartie-Bestand
+    /// (<c>ListPublicAsync</c>, ungeblaettert) bliebe sonst unter ueber hunderttausend Partien begraben.
+    /// In keiner persoenlichen Liste und nicht in der Reihenfolge der eigenen Partien des Besitzers.
+    /// </summary>
+    Library = 3,
 }
 
 /// <summary>

@@ -70,15 +70,46 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
     {
         public readonly Dictionary<string, (int Status, string Lines)> Answers = new();
         public readonly List<(string EngineId, EngineWork Work)> Calls = [];
+        /// <summary>Engines, deren Stream nach der ersten Zeile HAENGT (rechnet „ewig") — fuer Vorrang-Tests.</summary>
+        public readonly HashSet<string> Hanging = [];
 
         public Task<EngineAnalysisSession> AnalyseAsync(EngineRef engine, EngineWork work, CancellationToken ct)
         {
             lock (Calls) Calls.Add((engine.Id, work));
+            if (Hanging.Contains(engine.Id))
+                return Task.FromResult(new EngineAnalysisSession(200, new HangingStream(
+                    "{\"time\":5,\"depth\":8,\"nodes\":10,\"pvs\":[{\"moves\":[\"e7e5\"],\"cp\":-20,\"depth\":8}]}\n", ct)));
             var (status, lines) = Answers[engine.Id];
             return Task.FromResult(status == 200
                 ? new EngineAnalysisSession(200, new MemoryStream(Encoding.UTF8.GetBytes(lines)))
                 : EngineAnalysisSession.Rejected(status, "invalid work: illegal initial position: opposite check"));
         }
+    }
+
+    /// <summary>Liefert einmal <paramref name="first"/>, danach blockiert jedes Lesen, bis es abgebrochen wird — wie
+    /// ein echter Broker-Stream auch ueber den Token der Sitzung (<paramref name="session"/>), nicht nur den des Lesens.</summary>
+    private sealed class HangingStream(string first, CancellationToken session) : Stream
+    {
+        private byte[]? _first = Encoding.UTF8.GetBytes(first);
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            if (_first is { } f) { _first = null; f.CopyTo(buffer); return f.Length; }
+            using var both = CancellationTokenSource.CreateLinkedTokenSource(ct, session);
+            await Task.Delay(Timeout.Infinite, both.Token);
+            return 0;
+        }
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) =>
+            ReadAsync(buffer.AsMemory(offset, count), ct).AsTask();
+        public override int Read(byte[] buffer, int offset, int count) => ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => 0; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private async Task<(int UserId, string[] EngineIds)> SetupAsync(int engines = 1)
@@ -106,12 +137,51 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         return (user.Id, [.. ids]);
     }
 
-    private async Task<int> JobAsync(int userId, int depth = 12)
+    private async Task<int> JobAsync(int userId, int depth = 12, bool background = false)
     {
         using var scope = _sp.CreateScope();
         var dto = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>()
-            .CreateAsync(userId, new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = depth, MultiPv = 2 }, remember: false);
+            .CreateAsync(userId, new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = depth, MultiPv = 2 }, remember: false,
+                background: background);
         return dto.Id;
+    }
+
+    // ── Vorrang (2026-09-28): ein normaler Auftrag verdraengt einen LAUFENDEN Hintergrundauftrag ───────────────
+
+    [Fact]
+    public async Task PreemptBackground_derNormaleAuftragBekommtDieEngine_derHintergrundWartetOhneFehlversuch()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Hanging.Add(engines[0]);                          // jede Suche rechnet „ewig"
+        var background = await JobAsync(userId, depth: 30, background: true);
+        await _worker.StartAsync(CancellationToken.None);
+        await WaitForAsync(background, j => j.Status == AnalysisJobStatus.Running);
+
+        // Ein normaler Auftrag kommt fuer DIESELBE Engine dazu — AnalysisJobService ruft dann genau das auf.
+        var normal = await JobAsync(userId, depth: 20);
+        _worker.PreemptBackground(engines[0]);
+
+        await WaitForAsync(normal, j => j.Status == AnalysisJobStatus.Running);
+        var paused = await WaitForAsync(background, j => j.Status == AnalysisJobStatus.Paused);
+        Assert.Equal(0, paused.FruitlessAttempts);                // Verdraengung ist kein Fehlversuch
+        Assert.Equal(20, _broker.Calls[^1].Work.Depth);            // die Engine rechnet jetzt den normalen Auftrag
+    }
+
+    [Fact]
+    public async Task PreemptBackground_laesstEinenNormalenAuftragWeiterrechnen()
+    {
+        var (userId, engines) = await SetupAsync();
+        _broker.Hanging.Add(engines[0]);
+        var jobId = await JobAsync(userId, depth: 30, background: false);
+
+        await _worker.StartAsync(CancellationToken.None);
+        await WaitForAsync(jobId, j => j.Status == AnalysisJobStatus.Running);
+        _worker.PreemptBackground(engines[0]);
+        await Task.Delay(500);
+
+        using var scope = _sp.CreateScope();
+        var job = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AnalysisJobs.AsNoTracking().SingleAsync(j => j.Id == jobId);
+        Assert.Equal(AnalysisJobStatus.Running, job.Status);
     }
 
     private async Task<AnalysisJob> WaitForAsync(int jobId, Func<AnalysisJob, bool> done)

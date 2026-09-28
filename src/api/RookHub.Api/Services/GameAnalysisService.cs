@@ -31,17 +31,21 @@ public class GameAnalysisService
     private readonly CommentSetService _comments;
     private readonly ILogger<GameAnalysisService> _logger;
     private readonly IGameReviewTextScheduler? _reviewTexts;
+    private readonly QuietHours? _quiet;
 
     /// <param name="reviewTexts">Schreibt nach dem Ende einer Analyse die Texte zur Partie (0.540.0); ohne (Tests,
     /// Werkzeuge) passiert nichts.</param>
+    /// <param name="quiet">Sperrzeiten — die Meisterpartien-Analyse (<see cref="GameAnalysisOrigin.Library"/>) reiht
+    /// darin keine Stellungen ein. Ohne (Tests, Werkzeuge): nie gesperrt.</param>
     public GameAnalysisService(AppDbContext db, AnalysisJobService jobs, CommentSetService comments,
-        ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null)
+        ILogger<GameAnalysisService> logger, IGameReviewTextScheduler? reviewTexts = null, QuietHours? quiet = null)
     {
         _db = db;
         _jobs = jobs;
         _comments = comments;
         _logger = logger;
         _reviewTexts = reviewTexts;
+        _quiet = quiet;
     }
 
     // ===== Anlegen ==========================================================
@@ -154,6 +158,24 @@ public class GameAnalysisService
     /// einer gespeicherten Partie: dort ist die Bewertung das Ergebnis, deshalb rechnet sie mit
     /// <see cref="GameAnalysisDefaults.SavedGameTargetDepth"/> (30, fuenf Linien) in der Vertiefung statt 20. Gedeckelt wird gemeinsam;
     /// das Etikett entscheidet ausserdem, in welcher Liste die Analyse erscheint.</param>
+    /// <summary>
+    /// Eine Meisterpartie fuer den Stapel anlegen (<see cref="GameAnalysisOrigin.Library"/>, angestossen vom
+    /// <see cref="MasterAnalysisScheduler"/>): dieselbe Tiefe und dieselben Linien wie eine vom Nutzer angeforderte
+    /// Bibliothekspartie (<see cref="GameAnalysisDefaults.GuessTargetDepth"/>, fuenf Linien) — wer dieselbe Partie
+    /// spaeter oeffnet, bekommt genau das, was er angefordert haette. Gerechnet wird auf den Hintergrund-Engines des
+    /// Besitzers, ausschliesslich als Hintergrundarbeit. Kein Deckel je Nutzer: der Stapel haelt selbst nur so viel
+    /// offen, wie Engines da sind. Wirft <see cref="ArgumentException"/> bei einem unspielbaren PGN.
+    /// </summary>
+    public Task<GameAnalysisDto> CreateLibraryBatchAsync(int ownerUserId, int libraryGameId, string pgn, string title,
+        CancellationToken ct = default)
+        => CreateAsync(ownerUserId, new CreateGameAnalysisRequest
+        {
+            Pgn = pgn,
+            Title = title,
+            TargetDepth = GameAnalysisDefaults.GuessTargetDepth,
+            MultiPv = GameAnalysisDefaults.MultiPv,
+        }, ct, GameAnalysisOrigin.Library, engineOwnerUserId: ownerUserId, libraryGameId: libraryGameId);
+
     public async Task<GuessUploadResult> CreateForGuessAsync(int userId, CreateGuessGameRequest req,
         CancellationToken ct = default, int? libraryGameId = null,
         GameAnalysisOrigin origin = GameAnalysisOrigin.Guess)
@@ -259,7 +281,8 @@ public class GameAnalysisService
     /// </summary>
     public Task<List<GameAnalysisDto>> ListAsync(int userId, CancellationToken ct = default, bool includeSavedGames = false) =>
         ProjectAsync(_db.GameAnalyses.AsNoTracking()
-            .Where(g => g.UserId == userId && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library
+                && (includeSavedGames || g.Origin != GameAnalysisOrigin.SavedGame)), ct);
 
     /// <summary>
     /// Kopfdaten EINER Analyse ohne Stellungen — und OHNE Besitzer-Pruefung. Nur fuer Aufrufer, die
@@ -440,7 +463,8 @@ public class GameAnalysisService
     public async Task<GameAnalysisDto?> GetPlayableHeadAsync(int userId, int id, CancellationToken ct = default)
     {
         var rows = await ProjectAsync(
-            _db.GameAnalyses.AsNoTracking().Where(g => g.Id == id && (g.UserId == userId || g.IsPublic)), ct);
+            _db.GameAnalyses.AsNoTracking().Where(g => g.Id == id
+                && (g.UserId == userId || g.IsPublic || g.Origin == GameAnalysisOrigin.Library)), ct);
         return rows.FirstOrDefault();
     }
 
@@ -671,6 +695,10 @@ public class GameAnalysisService
     /// </summary>
     private async Task<bool> IsOwnersTurnAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        // Meisterpartien reihen sich nicht in die Partien des Besitzers ein: ihre Auftraege sind durchweg
+        // Hintergrundarbeit und weichen ohnehin — auf den Besitzer zu warten hiesse, dass eine einzige haengende
+        // eigene Partie den ganzen Stapel anhaelt.
+        if (analysis.Origin == GameAnalysisOrigin.Library) return true;
         var olderOpen = await OpenPliesOfOlderGamesAsync(analysis, ct);
         if (olderOpen == 0) return true;
         // Der SCHWANZ (0.543.0): haben alle aelteren Partien zusammen weniger offene Stellungen, als
@@ -686,7 +714,7 @@ public class GameAnalysisService
     /// <paramref name="analysis"/> an der Reihe sind (aelter nach CreatedAt, dann Id).</summary>
     private Task<int> OpenPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
         => _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
+            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id && g.Origin != GameAnalysisOrigin.Library
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running)
                 && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
@@ -694,7 +722,7 @@ public class GameAnalysisService
     /// <summary>Offene Stellungen des ERSTEN Durchgangs ueber alle unfertigen Partien des Nutzers.</summary>
     private Task<int> OpenFirstPassPliesAsync(int userId, CancellationToken ct)
         => _db.GameAnalyses
-            .Where(g => g.UserId == userId
+            .Where(g => g.UserId == userId && g.Origin != GameAnalysisOrigin.Library
                 && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running))
             .SumAsync(g => g.Positions.Count(p => p.CandidatesJson == null), ct);
 
@@ -953,9 +981,14 @@ public class GameAnalysisService
         return changed;
     }
 
-    /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge).</summary>
+    /// <summary>Bis zum Block-Limit neue Aufträge einreihen (in Zugreihenfolge). Meisterpartien
+    /// (<see cref="GameAnalysisOrigin.Library"/>) nur ausserhalb der Sperrzeiten und nur als Hintergrundarbeit.</summary>
     private async Task<bool> EnqueueNextAsync(GameAnalysis analysis, CancellationToken ct)
     {
+        var library = analysis.Origin == GameAnalysisOrigin.Library;
+        // In der Sperrzeit steht die Meisterpartie still: schon eingereihte Stellungen laufen noch zu Ende (hoechstens
+        // ein Block), neue kommen erst, wenn das Fenster wieder offen ist.
+        if (library && _quiet?.IsQuietNow() == true) return false;
         var open = analysis.Positions.Count(p => p.CandidatesJson == null && p.AnalysisJobId != null);
         var room = GameAnalysisDefaults.MaxOpenJobsPerGame - open;
         if (room <= 0) return false;
@@ -982,7 +1015,7 @@ public class GameAnalysisService
                     EngineId = analysis.EngineId,
                     // Nicht in „Gemerkte Stellungen" spiegeln: eine Partie erzeugt je Halbzug einen
                     // Auftrag — 80 Zeilen je Partie wuerden die Merkliste des Nutzers zuschuetten.
-                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId);
+                }, ct, remember: false, engineOwnerUserId: analysis.EngineOwnerUserId, background: library);
                 pos.AnalysisJobId = job.Id;
                 changed = true;
             }

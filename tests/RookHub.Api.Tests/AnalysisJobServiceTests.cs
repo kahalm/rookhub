@@ -18,7 +18,9 @@ public class AnalysisJobServiceTests : IDisposable
     private sealed class FakeControl : IAnalysisJobControl
     {
         public List<int> Interrupted { get; } = new();
+        public List<string> Preempted { get; } = new();
         public void Interrupt(int jobId) => Interrupted.Add(jobId);
+        public void PreemptBackground(string engineId) => Preempted.Add(engineId);
     }
 
     public AnalysisJobServiceTests()
@@ -45,6 +47,41 @@ public class AnalysisJobServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
         return id;
+    }
+
+    // ── Vorrang (2026-09-28): ein normaler Auftrag verdraengt Hintergrundarbeit auf seiner Engine ─────────────
+
+    [Fact]
+    public async Task Create_normalerAuftrag_verdraengtDenHintergrundAufSeinerEngine()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 });
+        Assert.Equal(new[] { "eei_bg" }, _control.Preempted);
+    }
+
+    [Fact]
+    public async Task Create_HintergrundAuftrag_verdraengtNichts()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 30, MultiPv = 5 },
+            remember: false, background: true);
+        Assert.Empty(_control.Preempted);
+    }
+
+    [Fact]
+    public async Task List_zeigtKeineAuftraegeDerMeisterpartienAnalyse()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var own = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 });
+        var master = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 5 },
+            remember: false, background: true);
+        var analysis = new GameAnalysis { UserId = u, Title = "Meister", Pgn = "1. e4 *", Origin = GameAnalysisOrigin.Library };
+        analysis.Positions.Add(new GameAnalysisPosition { Ply = 0, Fen = START, GameMoveUci = "e2e4", AnalysisJobId = master.Id });
+        _db.GameAnalyses.Add(analysis);
+        await _db.SaveChangesAsync();
+
+        var list = await _svc.ListAsync(u);
+        Assert.Equal(new[] { own.Id }, list.Select(j => j.Id));
     }
 
     [Fact]

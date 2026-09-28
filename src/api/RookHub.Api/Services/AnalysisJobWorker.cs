@@ -126,7 +126,7 @@ public sealed class StreamTally
 /// </summary>
 public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
 {
-    private sealed record Running(int JobId, string EngineId, CancellationTokenSource Cts);
+    private sealed record Running(int JobId, string EngineId, CancellationTokenSource Cts, bool Background = false);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EngineActivityTracker _tracker;
@@ -196,6 +196,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             if (r.JobId == jobId) TryCancel(r.Cts);
     }
 
+    /// <summary>Hintergrund-Auftrag AUF DIESER ENGINE unterbrechen: ein normaler Auftrag wurde fuer sie eingereiht
+    /// (<see cref="AnalysisJobService.CreateAsync"/>). Der Lauf endet wie bei Live-Vorrang auf Paused, ohne Fehlversuch,
+    /// und das Ende weckt die Schleife — die Engine nimmt sofort den normalen Auftrag (normal vor Hintergrund in
+    /// <see cref="AnalysisJobService.PickNextForEngineAsync"/>). Ein normaler Lauf wird NIE unterbrochen.</summary>
+    public void PreemptBackground(string engineId)
+    {
+        if (_running.TryGetValue(engineId, out var r) && r.Background) TryCancel(r.Cts);
+    }
+
     /// <summary>Abbrechen, ohne an einem gerade beendeten Lauf zu scheitern: zwischen dem Griff ins Dictionary
     /// und dem Cancel kann <see cref="RunJobAsync"/> seinen Eintrag entfernt UND die CTS disposed haben —
     /// <c>Cancel()</c> würde dann werfen. Der Wurf liefe bei <see cref="PauseEngine"/> im LiveStarted-Handler
@@ -251,7 +260,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             if (job is null) continue;
 
             var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var run = new Running(job.Id, engineId, cts);
+            var run = new Running(job.Id, engineId, cts, job.Background);
             if (!_running.TryAdd(engineId, run)) { cts.Dispose(); continue; }
             _ = Task.Run(() => RunJobAsync(run, job.Id, ct), CancellationToken.None);
         }

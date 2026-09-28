@@ -2158,6 +2158,29 @@ lichess.org, und 13 Registrierungen im selben Augenblick hielt der DDoS-Schutz v
 Angriff (2026-09-11 auf der zweiten Maschine: 429, dann IP-Sperre, null Engines — jeder Neustart
 wiederholte es). `test/supervisor.test.sh` misst den Abstand der echten Starts.
 
+### Meisterpartien im Hintergrund analysieren (2026-09-28) — `MasterAnalysisScheduler`
+Wunsch: „zu den gleichen Zeiten wie die Übersetzung auch Analyse der Meisterpartien — auf allen 16 Direktengines, aber
+wenn ein anderer Auftrag reinkommt, hat der Vorrang". Drei Bausteine:
+- **Takt** (`Services/MasterAnalysisScheduler.cs`, Hosted Service): außerhalb der Sperrzeiten der Spark (`QuietHours`,
+  dieselbe Angabe `TextLlm:QuietHours` wie Übersetzung und Texte — Vorgabe Mo–Do 08–17, Fr 08–14 gesperrt) legt er
+  Bibliothekspartien ohne Analyse als `GameAnalysisOrigin.Library` an — erst die kommentierten, dann der Rest, je nach
+  Id; eine neue erst, wenn die laufenden zusammen weniger offene Stellungen haben als der Besitzer Hintergrund-Engines
+  (derselbe „Schwanz" wie 0.543.0). Besitzer = Haus-Engine-Besitzer (Admin mit „als Haus-Engine teilen"), abweichend
+  `MasterAnalysis:OwnerUserId`; abschalten mit `MasterAnalysis:Enabled=false`. Tiefe/Linien wie eine angeforderte
+  Bibliothekspartie (`GuessTargetDepth`, 5 Linien, `CreateLibraryBatchAsync`). In der Sperrzeit reiht die laufende
+  Partie keine Stellungen ein (`EnqueueNextAsync`); was schon eingereiht ist, läuft zu Ende.
+- **Vorrang**: jeder Auftrag einer `Library`-Analyse ist `Background`. Neu seit diesem Stand: ein normaler Auftrag
+  VERDRÄNGT einen laufenden Hintergrund-Auftrag auf seiner Engine (`IAnalysisJobControl.PreemptBackground`, aufgerufen in
+  `AnalysisJobService.CreateAsync`) — wie der Live-Vorrang auf `Paused`, ohne Fehlversuch; vorher wartete er, bis die
+  Vertiefung/Meisterpartie auf dieser Engine fertig war. Gilt auch für die Vertiefung eigener Partien.
+- **Sichtbarkeit**: `Library`-Analysen gehören dem Besitzer, sind aber für ALLE lesbar (`GetPlayableHeadAsync`,
+  Punktepartie starten, Bibliothek: `InPool`/`RequestAsync` nimmt sie statt neu zu rechnen) — und bewusst NICHT
+  `IsPublic`: `ListPublicAsync` (Punktepartie-Bestand) ist ungeblättert und läge sonst unter >100 000 Partien begraben.
+  Nicht in `ListAsync` des Besitzers, nicht in seiner Auftragsliste (`/api/analysis-jobs`), nicht in seiner
+  Partien-Reihenfolge (`IsOwnersTurnAsync`, `OpenFirstPassPliesAsync`) — sonst hielte eine Meisterpartie seine eigene auf.
+- **Speicher**: ~500 B je Stellung + ~15 KB je Analyse (PGN-Kopie) → bei einigen tausend Partien je Woche grob
+  +0,4 GB/Woche, beim ganzen Bestand (130 544 Partien, 94 881 kommentiert) ~10 GB. Plattenstand im Blick behalten.
+
 ### Punktepartie (`/guess`) — eine Meisterpartie Zug fuer Zug erraten
 
 Der Nutzer uebernimmt EINE Seite einer analysierten Partie und raet ab einem bestimmten Halbzug

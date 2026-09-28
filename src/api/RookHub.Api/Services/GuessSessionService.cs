@@ -61,14 +61,16 @@ public class GuessSessionService
     public async Task<GuessSessionDto> StartAsync(GuessOwner owner, CreateGuessSessionRequest req,
         CancellationToken ct = default, string? language = null)
     {
-        // Spielbar ist eine EIGENE Analyse oder eine aus dem kuratierten Bestand
-        // (<c>GameAnalysis.IsPublic</c>) — letztere auch ohne Anmeldung. Zwei Abfragen statt einer
-        // mit `||`: die anonyme darf gar nicht erst nach einem Besitzer fragen.
+        // Spielbar ist eine EIGENE Analyse, eine aus dem kuratierten Bestand (<c>GameAnalysis.IsPublic</c>) oder eine
+        // vom Stapel analysierte Meisterpartie (<c>GameAnalysisOrigin.Library</c>) — die beiden letzten auch ohne
+        // Anmeldung. Zwei Abfragen statt einer mit `||`: die anonyme darf gar nicht erst nach einem Besitzer fragen.
         var analysis = await (owner.UserId is { } auid
                 ? _db.GameAnalyses.AsNoTracking()
-                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId && (g.UserId == auid || g.IsPublic), ct)
+                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId
+                        && (g.UserId == auid || g.IsPublic || g.Origin == GameAnalysisOrigin.Library), ct)
                 : _db.GameAnalyses.AsNoTracking()
-                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId && g.IsPublic, ct))
+                    .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId
+                        && (g.IsPublic || g.Origin == GameAnalysisOrigin.Library), ct))
             ?? throw new KeyNotFoundException("Analysis not found.");
 
         var analyzed = await _db.GameAnalysisPositions

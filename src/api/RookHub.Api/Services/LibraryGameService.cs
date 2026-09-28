@@ -217,13 +217,17 @@ public class LibraryGameService
         var ids = items.Select(i => i.Id).ToList();
         var known = await _db.GameAnalyses.AsNoTracking()
             .Where(a => a.LibraryGameId != null && ids.Contains(a.LibraryGameId.Value)
-                        && (a.IsPublic || a.UserId == userId))
-            .Select(a => new { LibraryGameId = a.LibraryGameId!.Value, a.Id, a.IsPublic, a.UserId })
+                        && (a.IsPublic || a.UserId == userId || a.Origin == GameAnalysisOrigin.Library))
+            // Eine vom Stapel analysierte Meisterpartie zaehlt wie eine aus dem Bestand: jeder darf sie oeffnen.
+            .Select(a => new { LibraryGameId = a.LibraryGameId!.Value, a.Id,
+                IsPublic = a.IsPublic || a.Origin == GameAnalysisOrigin.Library, a.UserId,
+                Batch = a.Origin == GameAnalysisOrigin.Library })
             .ToListAsync(ct);
 
         foreach (var item in items)
         {
-            var mine = known.FirstOrDefault(k => k.LibraryGameId == item.Id && k.UserId == userId);
+            // Die Stapel-Analyse gehoert dem Haus-Engine-Besitzer, ist aber keine Anforderung von IHM.
+            var mine = known.FirstOrDefault(k => k.LibraryGameId == item.Id && k.UserId == userId && !k.Batch);
             var pool = known.FirstOrDefault(k => k.LibraryGameId == item.Id && k.IsPublic);
             item.Requested = mine is not null;
             item.InPool = pool is not null;
@@ -252,7 +256,9 @@ public class LibraryGameService
             return new LibraryRequestResult(null, LibraryRequestReason.NotFound, false);
 
         var existing = await _db.GameAnalyses.AsNoTracking()
-            .Where(a => a.LibraryGameId == libraryGameId && (a.IsPublic || a.UserId == userId))
+            // Schon analysiert — vom Nutzer selbst, im Bestand oder vom Meisterpartien-Stapel: nicht noch einmal rechnen.
+            .Where(a => a.LibraryGameId == libraryGameId
+                && (a.IsPublic || a.UserId == userId || a.Origin == GameAnalysisOrigin.Library))
             .OrderByDescending(a => a.UserId == userId)
             .Select(a => a.Id)
             .FirstOrDefaultAsync(ct);

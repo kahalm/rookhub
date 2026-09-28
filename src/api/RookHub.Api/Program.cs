@@ -318,6 +318,9 @@ try
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();
+    // Meisterpartien im Hintergrund analysieren — zu den Zeiten der Uebersetzung (QuietHours), auf den Engines der
+    // Haus-Engine, jeder andere Auftrag hat Vorrang (MasterAnalysis:Enabled=false schaltet ab).
+    builder.Services.AddHostedService<MasterAnalysisScheduler>();
     builder.Services.AddScoped<CourseAuthoringService>();
     builder.Services.AddScoped<CatalogService>();
     builder.Services.AddScoped<ICourseReimporter>(sp => sp.GetRequiredService<ChessableImportService>());
