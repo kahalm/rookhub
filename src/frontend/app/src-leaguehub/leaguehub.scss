@@ -398,3 +398,14 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .tree-moves table th.num { text-align: right; }
 .tbar { display: block; height: 4px; background: var(--track); border-radius: 2px; margin-top: 3px; overflow: hidden; }
 .tbar i { display: block; height: 100%; background: var(--bar); }
+
+/* Spielersuche (Liga, per Häkchen die ganze Megabase) */
+.psearch { display: grid; gap: 4px; position: relative; }
+.psearch-all { display: inline-flex; gap: 6px; align-items: center; font: 400 13px/1.3 var(--body); color: var(--muted); }
+.psearch-all input { width: 15px; height: 15px; accent-color: var(--ink); }
+.psearch-results { list-style: none; margin: 0; padding: 4px; max-height: 260px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.psearch-results button { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; width: 100%; text-align: left;
+  font: inherit; color: var(--ink); background: none; border: 0; border-radius: 4px; padding: 6px 8px; cursor: pointer; }
+.psearch-results button:hover, .psearch-results button:focus-visible { background: var(--track); }
+.psearch-name { font-weight: 600; }

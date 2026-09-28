@@ -12,6 +12,7 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
 import { ANON_NAME, normalizeResult, reasonText, yearOf } from '../../core/club-format';
 import { rememberAnonKey } from './club-add-page.component';
+import { PlayerSearchComponent } from './player-search.component';
 import { de } from '../../core/league-format';
 
 type Side = 'white' | 'black';
@@ -30,7 +31,7 @@ const MATCH_DEBOUNCE_MS = 400;
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgClass, ChessBoardComponent],
+  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h2>Nicht freigeschaltet</h2>
@@ -149,12 +150,13 @@ const MATCH_DEBOUNCE_MS = 400;
           <h3 class="club-h3">Partie</h3>
           <div class="save-grid">
             @for (k of sides; track k) {
-              <label class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
-                <input list="lh-roster" [value]="name(k)()" (input)="setName(k, $any($event.target).value)" maxlength="120" />
+              <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
+                <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
+                                  (textChange)="setName(k, $event)" (picked)="pickPerson(k, $event)" />
                 <span class="match" [class.ok]="match(k)()?.league && !replace(k)()">{{ matchText(k) }}</span>
-                <span class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
-                  durch „{{ anon }}“ ersetzen</span>
-              </label>
+                <label class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
+                  durch „{{ anon }}“ ersetzen</label>
+              </div>
               <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="elo(k)() ?? ''"
                                                (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
             }
@@ -169,7 +171,6 @@ const MATCH_DEBOUNCE_MS = 400;
               <input [value]="event()" (input)="event.set($any($event.target).value)" maxlength="200" [disabled]="anyReplaced()" />
             </label>
           </div>
-          <datalist id="lh-roster">@for (p of suggestions(); track p.name + (p.fide ?? '')) { <option [value]="p.name">{{ p.teams.join(', ') }}</option> }</datalist>
 
           <div class="field-row">
             <span class="muted small">Ich spiele</span>
@@ -206,7 +207,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   /** Token des Teilen-Links (ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
-  private readonly api: ClubClient = inject(ClubApiService).client(this.share);
+  readonly client: ClubClient = inject(ClubApiService).client(this.share);
+  private readonly api = this.client;
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
@@ -238,7 +240,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly result = signal('*');
   readonly event = signal('');
   readonly ownerSide = signal<Side | null>(null);
-  readonly suggestions = signal<RosterPerson[]>([]);
   readonly anyReplaced = computed(() => this.replace('white')() || this.replace('black')());
 
   readonly s = new SheetEditSession({
@@ -267,7 +268,6 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private matchTimer: ReturnType<typeof setTimeout> | null = null;
-  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
   private matchSeq = 0;
   private destroyed = false;
 
@@ -279,7 +279,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyed = true;
-    for (const t of [this.pollTimer, this.matchTimer, this.suggestTimer]) if (t) clearTimeout(t);
+    for (const t of [this.pollTimer, this.matchTimer]) if (t) clearTimeout(t);
     const url = this.photoUrl();
     if (url) URL.revokeObjectURL(url);
   }
@@ -334,23 +334,19 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   setName(k: Side, value: string): void {
     const st = this.sideState[k];
     st.name.set(value);
-    // Ein Vorschlag aus der Meldeliste bringt seine FIDE-ID mit — so ist der Spieler eindeutig.
-    const hit = this.suggestions().filter(p => p.name === value.trim());
-    if (hit.length === 1) {
-      st.fide.set(hit[0].fide);
-      st.match.set({ league: true, ambiguous: false, name: hit[0].name, fide: hit[0].fide, club: hit[0].club, candidates: [] });
-      this.applyDefault(k);
-      return;
-    }
     st.fide.set(null);
     if (this.matchTimer) clearTimeout(this.matchTimer);
     this.matchTimer = setTimeout(() => void this.runMatch(), MATCH_DEBOUNCE_MS);
-    if (this.suggestTimer) clearTimeout(this.suggestTimer);
-    const q = value.trim();
-    this.suggestTimer = setTimeout(async () => {
-      if (q.length < 2) { this.suggestions.set([]); return; }
-      try { this.suggestions.set(await this.api.players(q)); } catch { /* Vorschläge sind Beiwerk */ }
-    }, MATCH_DEBOUNCE_MS);
+  }
+
+  /** Ein Treffer der Suche (Liga oder Megabase) bringt Namen und FIDE-ID mit — so ist der Spieler eindeutig. */
+  pickPerson(k: Side, p: RosterPerson): void {
+    const st = this.sideState[k];
+    if (this.matchTimer) clearTimeout(this.matchTimer);
+    st.name.set(p.name);
+    st.fide.set(p.fide);
+    st.match.set({ league: p.league ?? true, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [] });
+    this.applyDefault(k);
   }
 
   private async runMatch(): Promise<void> {

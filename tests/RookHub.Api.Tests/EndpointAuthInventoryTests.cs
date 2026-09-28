@@ -60,6 +60,7 @@ public class EndpointAuthInventoryTests
         "POST /api/league/s/{token}/club/games/preview",
         "POST /api/league/s/{token}/club/games/import",
         "POST /api/league/s/{token}/club/games",
+        "POST /api/league/s/{token}/club/games/lichess",     // öffentliche Lichess-Studie (nur die feste Lichess-API)
         "GET /api/league/s/{token}/club/players",
         "POST /api/league/s/{token}/club/match",
         "GET /api/league/s/{token}/club/scoresheet/status",

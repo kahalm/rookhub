@@ -88,8 +88,20 @@ public class LeagueClubController : BaseApiController
     /// <summary>Ligaspieler zum Eintippen der Namen (ab zwei Buchstaben).</summary>
     [HttpGet("players")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players([FromQuery] string? q, CancellationToken ct) =>
-        Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, ct));
+    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players([FromQuery] string? q, [FromQuery] bool all = false,
+        CancellationToken ct = default) =>
+        Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, all, ct));
+
+    /// <summary>PGN einer öffentlichen Lichess-Studie holen → <c>{ pgn }</c> (danach wie ein Upload: Übersicht, Import).
+    /// 400 <c>invalidUrl</c>/<c>lichessNotFound</c>/<c>lichessFailed</c>/<c>tooLarge</c>.</summary>
+    [HttpPost("games/lichess")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<IActionResult> Lichess([FromBody] LeagueClubLichessRequest req, [FromServices] LichessStudySource lichess,
+        CancellationToken ct)
+    {
+        var (pgn, reason) = await lichess.FetchAsync(req?.Url, ct);
+        return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
+    }
 
     /// <summary>Stehen diese Namen in einer Meldeliste? Spieler von Schwaz?</summary>
     [HttpPost("match")]
@@ -200,10 +212,20 @@ public class LeagueShareClubController : ControllerBase
     }
 
     [HttpGet("players")]
-    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players(string token, [FromQuery] string? q, CancellationToken ct)
+    public async Task<ActionResult<List<LeagueRosterPersonDto>>> Players(string token, [FromQuery] string? q, [FromQuery] bool all,
+        CancellationToken ct)
     {
         if (!await ValidAsync(token, ct)) return NotFound();
-        return Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, ct));
+        return Ok(string.IsNullOrWhiteSpace(q) ? new List<LeagueRosterPersonDto>() : await _club.SuggestAsync(q, all, ct));
+    }
+
+    [HttpPost("games/lichess")]
+    public async Task<IActionResult> Lichess(string token, [FromBody] LeagueClubLichessRequest req, [FromServices] LichessStudySource lichess,
+        CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        var (pgn, reason) = await lichess.FetchAsync(req?.Url, ct);
+        return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
     }
 
     [HttpPost("match")]

@@ -4,6 +4,7 @@ import { ClubImportResult, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
 import { ImportReview, ReviewGame, ReviewSide, SideKey, included, needsLook, reviewStatus } from './import-review';
+import { PlayerSearchComponent } from './player-search.component';
 
 interface Editing { index: number; side: SideKey; text: string }
 
@@ -16,6 +17,7 @@ interface Editing { index: number; side: SideKey; text: string }
   selector: 'lh-club-import-review',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [PlayerSearchComponent],
   template: `
     <div class="review-head">
       <p><b>{{ review.counts().total }} Partien gelesen</b> — {{ review.counts().take }} werden importiert,
@@ -70,18 +72,17 @@ interface Editing { index: number; side: SideKey; text: string }
                       </div>
                     }
                     <div class="field-row">
-                      <label class="field">Spieler
-                        <input list="lh-review-roster" [value]="e.text" (input)="typed($any($event.target).value)"
-                               (keydown.enter)="$event.preventDefault(); apply()" placeholder="Nachname, Vorname" />
-                      </label>
+                      <div class="field">Spieler
+                        <lh-player-search [client]="client" [text]="e.text" [label]="(e.side === 'white' ? 'Weiß' : 'Schwarz') + ' in Partie ' + r.game.index"
+                                          (textChange)="typed($event)" (picked)="pick($event)" (enter)="apply()" />
+                      </div>
                       <label class="anon-inline">
                         <input type="checkbox" [checked]="r[e.side].replace" (change)="review.setReplace(r.game.index, e.side, $any($event.target).checked)" />
                         durch „{{ anon }}" ersetzen
                       </label>
                     </div>
-                    <datalist id="lh-review-roster">@for (p of suggestions(); track p.name + (p.fide ?? '')) { <option [value]="p.name">{{ p.teams.join(', ') }}</option> }</datalist>
                     <div class="actions">
-                      <button type="button" class="btn-sec" [disabled]="matching()" (click)="apply()">Übernehmen</button>
+                      <button type="button" class="btn-sec" [disabled]="matching()" (click)="apply()">Getippten Namen übernehmen</button>
                       <button type="button" class="btn-link" (click)="editing.set(null)">Schließen</button>
                       @if (editError()) { <span class="err small">{{ editError() }}</span> }
                     </div>
@@ -117,12 +118,10 @@ export class ClubImportReviewComponent {
   readonly isIn = included;
 
   readonly editing = signal<Editing | null>(null);
-  readonly suggestions = signal<RosterPerson[]>([]);
   readonly matching = signal(false);
   readonly editError = signal<string | null>(null);
   readonly importing = signal(false);
   readonly error = signal<string | null>(null);
-  private suggestTimer: ReturnType<typeof setTimeout> | null = null;
 
   shown(s: ReviewSide): string {
     return s.replace ? ANON_NAME : s.name || s.raw || '?';
@@ -144,19 +143,11 @@ export class ClubImportReviewComponent {
     if (cur && cur.index === r.game.index && cur.side === side) { this.editing.set(null); return; }
     this.editing.set({ index: r.game.index, side, text: r[side].name ?? r[side].raw ?? '' });
     this.editError.set(null);
-    this.suggestions.set(r[side].candidates);
   }
 
   typed(text: string): void {
     const e = this.editing();
-    if (!e) return;
-    this.editing.set({ ...e, text });
-    if (this.suggestTimer) clearTimeout(this.suggestTimer);
-    const q = text.trim();
-    this.suggestTimer = setTimeout(async () => {
-      if (q.length < 2) return;
-      try { this.suggestions.set(await this.client.players(q)); } catch { /* Vorschläge sind Beiwerk */ }
-    }, 300);
+    if (e) this.editing.set({ ...e, text });
   }
 
   pick(p: RosterPerson): void {
@@ -166,14 +157,12 @@ export class ClubImportReviewComponent {
     this.editing.set(null);
   }
 
-  /** Den getippten Namen übernehmen: ein Vorschlag aus der Meldeliste direkt, sonst neu abgleichen lassen. */
+  /** Den getippten Namen übernehmen und neu abgleichen lassen (ein Treffer der Suche geht direkt über `pick`). */
   async apply(): Promise<void> {
     const e = this.editing();
     if (!e) return;
     const text = e.text.trim();
     if (!text) { this.editError.set('Bitte einen Namen eingeben.'); return; }
-    const hit = this.suggestions().filter(p => p.name === text);
-    if (hit.length === 1) { this.pick(hit[0]); return; }
     this.matching.set(true);
     try {
       const m = await this.client.match(text, '');

@@ -61,8 +61,16 @@ export class ClubClient {
     return firstValueFrom(this.http.delete(`${this.base}/games/${id}`));
   }
 
-  players(q: string): Promise<RosterPerson[]> {
-    return firstValueFrom(this.http.get<RosterPerson[]>(`${this.base}/players`, { params: new HttpParams().set('q', q) }));
+  /** Spieler zum Korrigieren: Ligaspieler, mit `all` dazu das Spielerverzeichnis der ganzen Megabase. */
+  players(q: string, all = false): Promise<RosterPerson[]> {
+    let params = new HttpParams().set('q', q);
+    if (all) params = params.set('all', 'true');
+    return firstValueFrom(this.http.get<RosterPerson[]>(`${this.base}/players`, { params }));
+  }
+
+  /** PGN einer öffentlichen Lichess-Studie (Adresse der Studie oder eines Kapitels). */
+  async lichess(url: string): Promise<string> {
+    return (await firstValueFrom(this.http.post<{ pgn: string }>(`${this.base}/games/lichess`, { url }))).pgn;
   }
 
   match(white: string, black: string): Promise<ClubMatch> {

@@ -139,7 +139,8 @@ public sealed class LeagueClubService
     }
 
     /// <summary>Eine Seite, wie sie gespeichert würde.</summary>
-    private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace);
+    /// <summary><see cref="Fide"/> = gewählte FIDE-ID eines Spielers, der KEIN Ligaspieler ist (Megabase-Verzeichnis).</summary>
+    private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace, string? Fide = null);
 
     /// <summary>Die Vorgabe der Übersicht: Abgleich über Kopfzeile, ersetzt wird ein Spieler von Schwaz und der
     /// Hochladende selbst (Wunsch 2026-09-28: „alle Spieler vom Verein Schwaz").</summary>
@@ -160,7 +161,10 @@ public sealed class LeagueClubService
         if (roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);
         var typed = !string.IsNullOrWhiteSpace(d.Name);
         var name = typed ? d.Name!.Trim() : raw;
-        return new Side(name, roster.Match(name, typed ? null : rawFide), elo, d.Replace);
+        // Eine FIDE-ID, die kein Ligaspieler trägt (aus dem Megabase-Verzeichnis gewählt): bleibt an der Partie stehen.
+        var chosen = string.IsNullOrWhiteSpace(d.Fide) ? null : d.Fide.Trim();
+        return new Side(name, roster.Match(name, chosen ?? (typed ? null : rawFide)), elo, d.Replace,
+            chosen is { Length: <= 16 } ? chosen : null);
     }
 
     /// <summary>Aus einer geprüften Zugfolge + den Seiten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
@@ -170,7 +174,7 @@ public sealed class LeagueClubService
         if (!w.Hit.League && !b.Hit.League) return (null, "noLeaguePlayer");
         if (!(w.Hit.League && !w.Replace) && !(b.Hit.League && !b.Replace)) return (null, "onlyOwnClub");
         (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (AnonymousName, null, null)
-            : (Clip(s.Hit.Person?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?", s.Hit.Person?.Fide, Elo(s.Elo));
+            : (Clip(s.Hit.Person?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?", s.Hit.Person?.Fide ?? s.Fide, Elo(s.Elo));
         var (wn, wf, we) = Out(w);
         var (bn, bf, be) = Out(b);
         var anonymized = w.Replace || b.Replace;
@@ -444,8 +448,27 @@ public sealed class LeagueClubService
         return string.Join("\n", pgns.Select(p => p.TrimEnd() + "\n"));
     }
 
-    public async Task<List<LeagueRosterPersonDto>> SuggestAsync(string q, CancellationToken ct) =>
-        (await RosterAsync(ct)).Suggest(q, 15).Select(PersonDto).ToList();
+    /// <summary>Spieler zum Korrigieren eines Namens: die Ligaspieler, mit <paramref name="all"/> dazu das
+    /// Spielerverzeichnis der ganzen Megabase (Treffer mit der FIDE-ID eines Ligaspielers gelten als dieser).</summary>
+    public async Task<List<LeagueRosterPersonDto>> SuggestAsync(string q, bool all, CancellationToken ct)
+    {
+        var roster = await RosterAsync(ct);
+        var list = roster.Suggest(q, 15).Select(PersonDto).ToList();
+        if (!all) return list;
+        var seen = list.Where(p => p.Fide != null).Select(p => p.Fide!).ToHashSet(StringComparer.Ordinal);
+        foreach (var m in await new LeagueMegaPlayers(_db).SearchAsync(q, 25, ct))
+        {
+            if (m.FideId != null && !seen.Add(m.FideId)) continue;
+            var league = roster.ByFide(m.FideId);
+            list.Add(new LeagueRosterPersonDto
+            {
+                Name = league?.Name ?? m.Name, Fide = m.FideId, Teams = league?.Teams.Take(3).ToList() ?? new(),
+                Club = league?.OwnClub ?? false, League = league != null, Source = "mega",
+                Games = m.Games, LastYear = m.LastYear, MaxElo = m.MaxElo,
+            });
+        }
+        return list;
+    }
 
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
     {

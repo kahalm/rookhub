@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubPreview, ScoresheetScan } from '../../core/club.models';
@@ -27,7 +28,7 @@ describe('ClubAddPageComponent', () => {
     localStorage.removeItem('lh-anon-scans');
     query = {};
     params = {};
-    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match']);
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess']);
     api.scans.and.resolveTo([]);
     api.scoresheetStatus.and.resolveTo({ available: true, dailyLimit: 10, usedToday: 0, languages: [{ code: 'de', name: 'Deutsch', pieces: 'KDTLS' }] });
     service = { client: jasmine.createSpy('client').and.returnValue(api) };
@@ -111,6 +112,27 @@ describe('ClubAddPageComponent', () => {
     expect(anonKeys('TOK')).toEqual(['geheim']);
     expect((el.querySelector('.scan-list a') as HTMLAnchorElement).getAttribute('href')).toBe('/s/TOK/formular/geheim');
     tick(3000);
+  }));
+
+  it('eine öffentliche Lichess-Studie laden führt direkt in die Übersicht; Absagen stehen als Satz da', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    api.lichess.and.resolveTo('[Event "Studie: Kapitel 1"]\n1. e4 *');
+    api.preview.and.resolveTo(PREVIEW);
+    fixture.componentInstance.studyUrl.set('https://lichess.org/study/AbCdEf12');
+    void fixture.componentInstance.loadStudy();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.lichess).toHaveBeenCalledWith('https://lichess.org/study/AbCdEf12');
+    expect(api.preview).toHaveBeenCalledWith('[Event "Studie: Kapitel 1"]\n1. e4 *');
+    expect(el.querySelector('.review-table')).not.toBeNull();
+
+    fixture.componentInstance.review.set(null);
+    api.lichess.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'lichessNotFound' } }));
+    void fixture.componentInstance.loadStudy();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('nicht öffentlich');
   }));
 
   it('angemeldet ohne Recht: nicht freigeschaltet', () => {

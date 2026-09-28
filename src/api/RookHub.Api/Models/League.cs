@@ -187,3 +187,20 @@ public class LeagueClubGame
     public int? UploadedByUserId { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
+
+/// <summary>
+/// Ein Spieler aus der ChessBase-Megabase (ganzes Verzeichnis, nicht nur Ligaspieler) — für die Namenssuche beim
+/// Korrigieren in der Vereins-Datenbank („mit Häkchen über alle Spieler der Megabase", Wunsch 2026-09-28). Eingespielt
+/// über <c>POST /api/league/admin/mega-players</c> (Skript <c>scan_mega_players.py</c>), ersetzt jedes Mal alles.
+/// </summary>
+public class LeagueMegaPlayer
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    /// <summary>Name klein, ohne Akzente („hengl, philip") — Präfix-Suche über den Index.</summary>
+    public string NameKey { get; set; } = string.Empty;
+    public string? FideId { get; set; }
+    public int Games { get; set; }
+    public int? LastYear { get; set; }
+    public int? MaxElo { get; set; }
+}

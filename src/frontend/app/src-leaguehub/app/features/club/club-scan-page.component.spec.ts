@@ -102,6 +102,22 @@ describe('ClubScanPageComponent', () => {
     expect(c.replace('black')()).toBeTrue();
   }));
 
+  it('ein Treffer der Spielersuche (auch aus der Megabase) setzt Namen und FIDE-ID', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    const c = fixture.componentInstance;
+    c.pickPerson('black', { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' });
+    expect(c.name('black')()).toBe('Hengl, Peter');
+    expect(c.matchText('black')).toBe('kein Ligaspieler');
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    api.addGame.and.resolveTo({ id: 13, anonymized: true });
+    void c.save();
+    flushMicrotasks();
+    expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({ black: 'Hengl, Peter', blackFide: '777' }), '7');
+    tick(1000);
+  }));
+
   it('Übernehmen schickt Züge, Seiten und Einlesung und geht zur Liste', fakeAsync(() => {
     create();
     flushMicrotasks();

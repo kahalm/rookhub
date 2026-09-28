@@ -253,6 +253,15 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();
+    // Öffentliche Lichess-Studien für den Import in die Vereins-Datenbank (nur die feste API, siehe LichessStudySource).
+    builder.Services.AddHttpClient(RookHub.Api.Services.League.LichessStudySource.ClientName, client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["Lichess:SiteUrl"] ?? "https://lichess.org");
+        client.Timeout = TimeSpan.FromSeconds(60);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
+    });
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueUpdateService>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();

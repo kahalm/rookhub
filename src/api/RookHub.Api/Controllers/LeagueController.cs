@@ -145,6 +145,19 @@ public class LeagueController : BaseApiController
         return Ok(new { games, players });
     }
 
+    /// <summary>Spielerverzeichnis der ganzen Megabase ersetzen (TSV, gern gzip) — Skript <c>scan_mega_players.py</c>.</summary>
+    [HttpPost("admin/mega-players")]
+    [HasPermission(Permissions.LeagueManage)]
+    [RequestSizeLimit(400 * 1024 * 1024)]
+    public async Task<IActionResult> ImportMegaPlayers([FromServices] LeagueMegaPlayers mega, CancellationToken ct)
+    {
+        Stream body = Request.Body;
+        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
+            body = new GZipStream(Request.Body, CompressionMode.Decompress);
+        using var reader = new StreamReader(body, Encoding.UTF8);
+        return Ok(new { players = await mega.ReplaceAsync(reader, ct) });
+    }
+
     [HttpPost("admin/rebuild")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Rebuild(CancellationToken ct) => Ok(new { views = await _league.RebuildViewsAsync(ct) });

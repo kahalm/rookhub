@@ -150,6 +150,19 @@ public class LeagueRosterPersonDto
     public List<string> Teams { get; set; } = new();
     /// <summary>Spielt (jüngste Saison) für Schwaz.</summary>
     public bool Club { get; set; }
+    /// <summary>Steht in einer Meldeliste der Liga (bei Treffern aus der Megabase nur, wenn die FIDE-ID passt).</summary>
+    public bool League { get; set; } = true;
+    /// <summary><c>liga</c> oder <c>mega</c> (Spielerverzeichnis der Megabase).</summary>
+    public string Source { get; set; } = "liga";
+    public int? Games { get; set; }
+    public int? LastYear { get; set; }
+    public int? MaxElo { get; set; }
+}
+
+/// <summary><c>POST …/games/lichess</c> — eine öffentliche Lichess-Studie (Adresse der Studie oder eines Kapitels).</summary>
+public class LeagueClubLichessRequest
+{
+    public string Url { get; set; } = string.Empty;
 }
 
 public class LeagueClubMatchRequest

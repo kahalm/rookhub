@@ -73,6 +73,14 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
             <label class="field">PGN-Datei
               <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" (change)="pickFile($event)" />
             </label>
+            <div class="field">… oder eine öffentliche Lichess-Studie
+              <div class="linkrow">
+                <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="studyUrl()"
+                       (input)="studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
+                <button type="button" class="btn-sec" [disabled]="loadingStudy() || !studyUrl().trim()" (click)="loadStudy()">
+                  {{ loadingStudy() ? 'Lade …' : 'Laden' }}</button>
+              </div>
+            </div>
             <label class="field">… oder hier einfügen
               <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="pgn()"
                         (input)="pgn.set($any($event.target).value)"></textarea>
@@ -173,6 +181,8 @@ export class ClubAddPageComponent implements OnInit {
   readonly replaceClub = signal(true);
   readonly pgn = signal('');
   readonly previewing = signal(false);
+  readonly studyUrl = signal('');
+  readonly loadingStudy = signal(false);
   readonly importError = signal<string | null>(null);
   readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
@@ -220,6 +230,22 @@ export class ClubAddPageComponent implements OnInit {
     if (!f) return;
     this.pgn.set(await f.text());
     this.result.set(null);
+  }
+
+  /** Eine öffentliche Lichess-Studie holen (der Server ruft Lichess) — danach geht es weiter wie mit einer Datei. */
+  async loadStudy(): Promise<void> {
+    this.loadingStudy.set(true);
+    this.importError.set(null);
+    try {
+      this.pgn.set(await this.client.lichess(this.studyUrl().trim()));
+      this.result.set(null);
+      await this.startPreview();
+    } catch (err) {
+      const e = err instanceof HttpErrorResponse ? err : null;
+      this.importError.set(e?.error?.reason ? reasonText(e.error.reason) : 'Die Studie ließ sich nicht laden.');
+    } finally {
+      this.loadingStudy.set(false);
+    }
   }
 
   async startPreview(): Promise<void> {

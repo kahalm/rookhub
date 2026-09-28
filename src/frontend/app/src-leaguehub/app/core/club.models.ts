@@ -33,7 +33,19 @@ export interface ClubImportResult {
   failed: ClubFailure[];
 }
 
-export interface RosterPerson { name: string; fide: string | null; teams: string[]; club: boolean }
+/** Ein Spieler zum Auswählen: aus den Meldelisten (`source: 'liga'`) oder dem Spielerverzeichnis der Megabase. */
+export interface RosterPerson {
+  name: string;
+  fide: string | null;
+  teams: string[];
+  club: boolean;
+  /** Ligaspieler (bei Megabase-Treffern nur mit passender FIDE-ID); fehlt = ja. */
+  league?: boolean;
+  source?: 'liga' | 'mega';
+  games?: number | null;
+  lastYear?: number | null;
+  maxElo?: number | null;
+}
 
 /** Abgleich eines Namens mit den Meldelisten. `club` = spielt (jüngste Saison) für Schwaz. */
 export interface SideMatch {

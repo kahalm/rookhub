@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -442,5 +443,106 @@ public class LeagueClubServiceTests : IDisposable
         await Club().ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip") + Pgn("Oberschmid, Patrik", "Schnabl, Andreas", "1. d4 d5 1-0"), null);
         var pgn = await Club().ExportAsync(null, null, default);
         Assert.Equal(2, RookHub.Api.Services.PgnParser.SplitGames(pgn).Count());
+    }
+}
+
+/// <summary>Megabase-Spielerverzeichnis, Suche mit Häkchen, Lichess-Studien-Adressen.</summary>
+public class LeagueMegaPlayersAndLichessTests : IDisposable
+{
+    private readonly AppDbContext _db = new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+    public void Dispose() => _db.Dispose();
+
+    private async Task SeedAsync()
+    {
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Absam", Name = "Hengl, Philip", NameKey = "hengl, philip", FideId = "222" });
+        await _db.SaveChangesAsync();
+        const string tsv = "Hengl, Philip\t222\t120\t2025\t2214\nHengl, Peter\t777\t12\t2019\t1850\nMüller, Hans\t\t5\t2001\t\nOhneZeile\n";
+        Assert.Equal(3, await new LeagueMegaPlayers(_db).ReplaceAsync(new StringReader(tsv), default));
+    }
+
+    [Fact]
+    public async Task Search_WordPrefixes_WithoutAccents_MostGamesFirst()
+    {
+        await SeedAsync();
+        var mega = new LeagueMegaPlayers(_db);
+        Assert.Equal(new[] { "Hengl, Philip", "Hengl, Peter" }, (await mega.SearchAsync("heng", 10, default)).Select(p => p.Name));
+        Assert.Equal(new[] { "Hengl, Peter" }, (await mega.SearchAsync("peter hengl", 10, default)).Select(p => p.Name));
+        Assert.Equal("Müller, Hans", (await mega.SearchAsync("muller", 10, default)).Single().Name);
+        Assert.Empty(await mega.SearchAsync("x", 10, default));                      // unter zwei Buchstaben keine Suche
+        await mega.ReplaceAsync(new StringReader("Neu, Name\t1\t1\t2020\t\n"), default);
+        Assert.Single(_db.LeagueMegaPlayers);                                        // ersetzt, nicht ergänzt
+    }
+
+    [Fact]
+    public async Task Suggest_All_AddsMegabasePlayers_LeaguePlayersStayLeague()
+    {
+        await SeedAsync();
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
+        Assert.Single(await club.SuggestAsync("hengl", false, default));
+        var all = await club.SuggestAsync("hengl", true, default);
+        Assert.Equal(new[] { ("Hengl, Philip", "liga", true), ("Hengl, Peter", "mega", false) },
+            all.Select(p => (p.Name, p.Source, p.League)));                           // Philip nur einmal: als Ligaspieler
+    }
+
+    [Fact]
+    public async Task Import_ChosenMegabasePlayer_KeepsItsFideId()
+    {
+        await SeedAsync();
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
+        var (game, reason, _) = await club.AddGameAsync(null, new LeagueClubGameRequest
+        {
+            Moves = new() { "e4", "e5" }, White = "Hengl, Philip", Black = "Hengl, Peter", BlackFide = "777",
+        });
+        Assert.Null(reason);
+        Assert.Equal(("222", "777"), (game!.WhiteFide, game.BlackFide));
+        Assert.Equal("Hengl, Peter", game.Black);
+    }
+
+    [Theory]
+    [InlineData("https://lichess.org/study/AbCdEf12", "AbCdEf12", null, "/api/study/AbCdEf12.pgn")]
+    [InlineData("lichess.org/study/AbCdEf12/ZyXwVu98#last", "AbCdEf12", "ZyXwVu98", "/api/study/AbCdEf12/ZyXwVu98.pgn")]
+    [InlineData("http://www.lichess.org/study/AbCdEf12?x=1", "AbCdEf12", null, "/api/study/AbCdEf12.pgn")]
+    public void LichessStudy_AcceptsStudyAndChapterLinks(string url, string study, string? chapter, string path)
+    {
+        var s = LichessStudySource.Parse(url);
+        Assert.Equal((study, chapter), (s!.Value.Study, s.Value.Chapter));
+        Assert.Equal(path, LichessStudySource.ApiPath(s.Value));
+    }
+
+    [Theory]
+    [InlineData("https://evil.example/study/AbCdEf12")]
+    [InlineData("https://lichess.org/AbCdEf12")]
+    [InlineData("https://lichess.org/study/short")]
+    [InlineData("https://lichess.org.evil.example/study/AbCdEf12")]
+    [InlineData("")]
+    public void LichessStudy_RejectsEverythingElse(string url) => Assert.Null(LichessStudySource.Parse(url));
+
+    private sealed class StubFactory(HttpStatusCode code, string body) : IHttpClientFactory
+    {
+        public List<string> Paths { get; } = new();
+        public HttpClient CreateClient(string name) => new(new Handler(this, code, body)) { BaseAddress = new Uri("https://lichess.org") };
+        private sealed class Handler(StubFactory f, HttpStatusCode code, string body) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct)
+            {
+                f.Paths.Add(r.RequestUri!.PathAndQuery);
+                return Task.FromResult(new HttpResponseMessage(code) { Content = new StringContent(body) });
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LichessStudy_FetchesOnlyTheFixedApi_AndNamesFailures()
+    {
+        var ok = new StubFactory(HttpStatusCode.OK, "[Event \"S: 1\"]\n\n1. e4 *\n");
+        var (pgn, reason) = await new LichessStudySource(ok).FetchAsync("https://lichess.org/study/AbCdEf12", default);
+        Assert.Null(reason);
+        Assert.StartsWith("[Event", pgn);
+        Assert.Equal(new[] { "/api/study/AbCdEf12.pgn" }, ok.Paths);
+        Assert.Equal("lichessNotFound", (await new LichessStudySource(new StubFactory(HttpStatusCode.NotFound, ""))
+            .FetchAsync("https://lichess.org/study/AbCdEf12", default)).Reason);
+        var never = new StubFactory(HttpStatusCode.OK, "x");
+        Assert.Equal("invalidUrl", (await new LichessStudySource(never).FetchAsync("https://evil.example/x", default)).Reason);
+        Assert.Empty(never.Paths);
     }
 }

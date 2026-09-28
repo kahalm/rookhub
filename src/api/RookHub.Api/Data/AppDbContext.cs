@@ -100,6 +100,7 @@ public class AppDbContext : DbContext
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
+    public DbSet<LeagueMegaPlayer> LeagueMegaPlayers => Set<LeagueMegaPlayer>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
@@ -662,6 +663,15 @@ public class AppDbContext : DbContext
             e.HasKey(v => v.Tnr);
             e.Property(v => v.Tnr).ValueGeneratedNever();
         });
+        modelBuilder.Entity<LeagueMegaPlayer>(e =>
+        {
+            e.Property(p => p.Name).HasMaxLength(120);
+            e.Property(p => p.NameKey).HasMaxLength(120);
+            e.Property(p => p.FideId).HasMaxLength(16);
+            e.HasIndex(p => p.NameKey);
+            e.HasIndex(p => p.FideId);
+        });
+
         modelBuilder.Entity<LeagueClubGame>(e =>
         {
             e.Property(g => g.White).HasMaxLength(120);

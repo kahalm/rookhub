@@ -104,7 +104,7 @@ export class ImportReview {
   /** Einen Ligaspieler aus der Meldeliste (Vorschlag oder Kandidat) an diese Seite setzen. */
   choosePerson(index: number, side: SideKey, p: RosterPerson): void {
     this.withSide(index, side, s => ({
-      ...s, name: p.name, fide: p.fide, league: true, ambiguous: false, club: p.club, candidates: [],
+      ...s, name: p.name, fide: p.fide, league: p.league ?? true, ambiguous: false, club: p.club, candidates: [],
       replace: this.defaultReplace(p.club, s.owner), changed: true,
     }));
   }
@@ -127,7 +127,8 @@ export class ImportReview {
 
   /** Was an den Server geht: nur übernommene Partien, je Seite der festgelegte Spieler und „ersetzen". */
   decisions(): ImportGameDecision[] {
-    const side = (s: ReviewSide) => ({ name: s.changed ? s.name : null, fide: s.league && !s.ambiguous ? s.fide : null, replace: s.replace });
+    // Die FIDE-ID geht mit, sobald der Spieler eindeutig ist — auch ohne Liga (aus dem Megabase-Verzeichnis gewählt).
+    const side = (s: ReviewSide) => ({ name: s.changed ? s.name : null, fide: !s.ambiguous ? s.fide : null, replace: s.replace });
     return this.games().filter(included).map(r => ({ index: r.game.index, white: side(r.white), black: side(r.black) }));
   }
 }
