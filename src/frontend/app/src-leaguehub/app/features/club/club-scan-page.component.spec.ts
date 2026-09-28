@@ -154,6 +154,25 @@ describe('ClubScanPageComponent', () => {
     expect(c.replace('black')()).toBeTrue();
   }));
 
+  it('„Meintest du …": ein ähnlicher Ligaspieler unter einem unerkannten Namen, ein Klick setzt ihn (0.596.0)', fakeAsync(() => {
+    const philip = { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false };
+    const m = MATCH(false);
+    m.black = { ...m.black, similar: [philip] };
+    api.match.and.resolveTo(m);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const chip = el.querySelector('.quick-pick button') as HTMLButtonElement;
+    expect(chip.textContent!.trim()).toBe('Hengl, Philip');
+    chip.click();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.name('black')()).toBe('Hengl, Philip');
+    expect(c.matchText('black')).toBe('Ligaspieler: Hengl, Philip');
+    expect(el.querySelector('.quick-pick')).toBeNull();
+    tick(1000);
+  }));
+
   it('ein Treffer der Spielersuche (auch aus der Megabase) setzt Namen und FIDE-ID', fakeAsync(() => {
     create();
     flushMicrotasks();

@@ -25,6 +25,8 @@ export interface ReviewSide {
   mega: boolean;
   /** Über eine gemerkte Zuordnung zugeordnet (Server). */
   alias: boolean;
+  /** Nicht erkannt: ähnlich geschriebene Ligaspieler zum Anklicken, ohne die Seite zu öffnen (0.596.0). */
+  similar: RosterPerson[];
 }
 
 export interface ReviewGame {
@@ -67,9 +69,13 @@ function sideOf(p: PreviewSide, replaceClub: boolean): ReviewSide {
     raw: p.raw, name: p.match.name ?? p.raw, fide: p.match.ambiguous ? null : p.match.fide, league: p.match.league,
     ambiguous: p.match.ambiguous, club: p.match.club, candidates: p.match.candidates ?? [], owner: p.owner,
     replace: replaceClub && p.replace, changed: false, lastNameOnly: !!p.match.lastNameOnly, mega: !!p.match.mega,
-    alias: !!p.match.alias,
+    alias: !!p.match.alias, similar: p.match.similar ?? [],
   };
 }
+
+/** Die Schnellauswahl einer Seite: nur solange sie unerkannt und unangefasst ist (und nicht durch „Schwaz" ersetzt). */
+export const quickPicks = (s: ReviewSide): RosterPerson[] =>
+  !s.changed && !s.replace && !known(s) && !s.ambiguous ? s.similar ?? [] : [];
 
 /**
  * Die Übersicht vor dem PGN-Import (Wunsch 2026-09-28: „nach Import Übersicht wer gegen wen, unerkannte/falsche Spieler
@@ -144,6 +150,7 @@ export class ImportReview {
     const make = (s: ReviewSide): ReviewSide => ({
       ...s, name: p.name, fide: p.fide, league, ambiguous: false, club: p.club, candidates: [],
       replace: this.defaultReplace(p.club, s.owner), changed: true, lastNameOnly: false, mega: !league, alias: false,
+      similar: [],
     });
     this.withSide(index, side, make, true);
     return this.propagate(index, side, make);
@@ -154,7 +161,7 @@ export class ImportReview {
     const make = (s: ReviewSide): ReviewSide => ({
       ...s, name: m.name ?? name, fide: m.ambiguous ? null : m.fide, league: m.league, ambiguous: m.ambiguous, club: m.club,
       candidates: m.candidates ?? [], replace: this.defaultReplace(m.club, s.owner), changed: true,
-      lastNameOnly: !!m.lastNameOnly, mega: !!m.mega, alias: !!m.alias,
+      lastNameOnly: !!m.lastNameOnly, mega: !!m.mega, alias: !!m.alias, similar: m.similar ?? [],
     });
     this.withSide(index, side, make, true);
     return this.propagate(index, side, make);
@@ -215,7 +222,9 @@ export class ImportReview {
     review.games.update(list => list.map(r => {
       const s = byIndex.get(r.game.index);
       if (!s || s.raw[0] !== r.white.raw || s.raw[1] !== r.black.raw) return r;
-      return { ...r, white: s.white, black: s.black, excluded: s.excluded, touched: s.touched };
+      // Ein Stand von vor 0.596.0 kennt die Schnellauswahl nicht — dann gilt die der frischen Übersicht.
+      return { ...r, white: { ...s.white, similar: s.white.similar ?? r.white.similar },
+        black: { ...s.black, similar: s.black.similar ?? r.black.similar }, excluded: s.excluded, touched: s.touched };
     }));
     return review;
   }

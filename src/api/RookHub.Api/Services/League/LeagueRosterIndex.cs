@@ -136,6 +136,73 @@ public sealed class LeagueRosterIndex
             .OrderBy(x => x.Rank).ThenBy(x => x.p.Name, StringComparer.CurrentCultureIgnoreCase).Take(take).Select(x => x.p);
     }
 
+    /// <summary>
+    /// Ähnlich geschriebene Ligaspieler für einen Namen, den <see cref="Match"/> nicht fand (0.596.0, Wunsch 2026-09-28:
+    /// „wenn du Namen nicht direkt findest, schau, ob ein ähnlicher Name bei den Ligaspielern existiert — zur
+    /// Schnellauswahl"). Je Namensteil der Abstand in Tippfehlern (Einfügen, Weglassen, Ersetzen, zwei vertauschte
+    /// Buchstaben), in beiden Umlaut-Schreibweisen, Reihenfolge egal; eine Initiale passt zu jedem Vornamen mit diesem
+    /// Buchstaben. Ein Kandidat braucht für JEDEN Namensteil der Partie einen passenden Teil mit höchstens
+    /// <see cref="Tolerance"/> Fehlern, und der längste Teil (meist der Nachname) muss in der Länge passen — sonst würde
+    /// aus „Maier" jeder „Mayr". Die besten zuerst, höchstens <paramref name="take"/>.
+    /// </summary>
+    public IReadOnlyList<Person> Similar(string? name, int take = 3)
+    {
+        var words = new[] { false, true }.Select(tr => Tokens(Fold(LeagueNames.NameKey(LeagueNames.StripTitles(name ?? "")), tr)
+            .Replace(",", " "))).Where(w => w.Count > 0).Distinct(new SeqEq()).ToList();
+        if (words.Count == 0 || words[0].All(t => t.Length < 3)) return [];
+        _similarTokens ??= People.Select(p => (p, Tokens: new[] { false, true }
+            .SelectMany(tr => Tokens(Fold(LeagueNames.NameKey(p.Name), tr).Replace(",", " "))).Distinct().ToArray())).ToList();
+        var scored = new List<(Person P, int Score)>();
+        foreach (var (p, own) in _similarTokens)
+        {
+            var best = int.MaxValue;
+            foreach (var q in words)
+            {
+                var longest = q.OrderByDescending(t => t.Length).First();
+                if (!own.Any(o => Math.Abs(o.Length - longest.Length) <= Tolerance(longest.Length))) continue;
+                var total = 0;
+                foreach (var t in q)
+                {
+                    var d = t.Length == 1 ? (own.Any(o => o[0] == t[0]) ? 0 : 99)
+                        : own.Min(o => Math.Abs(o.Length - t.Length) > Tolerance(t.Length) ? 99 : Distance(t, o));
+                    if (d > Tolerance(t.Length)) { total = int.MaxValue; break; }
+                    total += d;
+                }
+                best = Math.Min(best, total);
+            }
+            if (best is > 0 and < int.MaxValue) scored.Add((p, best));
+        }
+        return scored.OrderBy(x => x.Score).ThenBy(x => x.P.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(take).Select(x => x.P).ToList();
+    }
+
+    /// <summary>Wie viele Tippfehler ein Namensteil haben darf: kurze keinen („Wolf" ≠ „Golf"), bis 7 Buchstaben einen, länger zwei.</summary>
+    internal static int Tolerance(int length) => length < 5 ? 0 : length < 8 ? 1 : 2;
+
+    private List<(Person P, string[] Tokens)>? _similarTokens;
+
+    /// <summary>Tippfehler-Abstand (Damerau-Levenshtein, benachbarte Vertauschung = ein Fehler).</summary>
+    internal static int Distance(string a, string b)
+    {
+        var d = new int[a.Length + 1, b.Length + 1];
+        for (var i = 0; i <= a.Length; i++) d[i, 0] = i;
+        for (var j = 0; j <= b.Length; j++) d[0, j] = j;
+        for (var i = 1; i <= a.Length; i++)
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
+            }
+        return d[a.Length, b.Length];
+    }
+
+    private sealed class SeqEq : IEqualityComparer<List<string>>
+    {
+        public bool Equals(List<string>? x, List<string>? y) => x != null && y != null && x.SequenceEqual(y);
+        public int GetHashCode(List<string> o) => string.Join(' ', o).GetHashCode();
+    }
+
     /// <summary>Eine reine Zahl (4–12 Ziffern) sucht die FIDE-ID statt eines Namens.</summary>
     public static bool IsFideQuery(string? query) =>
         query?.Trim() is { Length: >= 4 and <= 12 } t && t.All(char.IsAsciiDigit);

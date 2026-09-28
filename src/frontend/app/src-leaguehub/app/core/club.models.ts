@@ -85,6 +85,8 @@ export interface SideMatch {
   mega?: boolean;
   /** Über eine gemerkte Zuordnung — jemand hat diesen Namen schon einmal so korrigiert. */
   alias?: boolean;
+  /** Nicht erkannt, aber ähnlich geschriebene Ligaspieler („Spindlberger" → „Spindelberger") zur Schnellauswahl (0.596.0). */
+  similar?: RosterPerson[];
 }
 
 /** Eine Seite in der Übersicht vor dem Import (`POST …/games/preview`). */

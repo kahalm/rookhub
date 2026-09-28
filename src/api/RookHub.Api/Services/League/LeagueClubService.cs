@@ -323,6 +323,18 @@ public sealed class LeagueClubService
         Candidates = h.Ambiguous ? h.Candidates.Take(8).Select(PersonDto).ToList() : new(),
     };
 
+    /// <summary>Nicht erkannt (weder Liga noch Megabase noch gemerkt): ähnlich geschriebene Ligaspieler zur Schnellauswahl
+    /// (0.596.0). Je PGN-Name einmal gerechnet — in einer Datei steht derselbe Name oft dutzendfach.</summary>
+    private static void AddSimilar(LeagueClubSideMatchDto m, string? raw, LeagueRosterIndex roster,
+        Dictionary<string, List<LeagueRosterPersonDto>> cache)
+    {
+        if (m.League || m.Mega || m.Alias || string.IsNullOrWhiteSpace(raw)) return;
+        var key = raw.Trim().ToLowerInvariant();
+        if (!cache.TryGetValue(key, out var list))
+            cache[key] = list = roster.Similar(raw).Select(PersonDto).ToList();
+        m.Similar = list;
+    }
+
     internal static LeagueRosterPersonDto PersonDto(LeagueRosterIndex.Person p) =>
         new() { Name = p.Name, Fide = p.Fide, Teams = p.Teams.Take(3).ToList(), Club = p.OwnClub };
 
@@ -341,6 +353,7 @@ public sealed class LeagueClubService
         var now = _now();
         var pending = new List<LeagueClubGame>();
         var dto = new LeagueClubPreviewDto { Truncated = truncated };
+        var similar = new Dictionary<string, List<LeagueRosterPersonDto>>();
         foreach (var p in parsed)
         {
             var (w, b, ownerSide) = Defaults(p, owner, lk);
@@ -351,6 +364,8 @@ public sealed class LeagueClubService
                 Error = p.Error, White = SideDto(w, ownerSide == "white"), Black = SideDto(b, ownerSide == "black"),
                 Pgn = p.Error == null ? p.Pgn : null,
             };
+            AddSimilar(g.White.Match, g.White.Raw, lk.Roster, similar);
+            AddSimilar(g.Black.Match, g.Black.Raw, lk.Roster, similar);
             if (p.Sans != null && Build(w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
             {
                 g.Duplicate = await IsDuplicateAsync(built, pending, ct);
@@ -717,10 +732,13 @@ public sealed class LeagueClubService
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
     {
         var lk = await LookupsAsync(await RosterAsync(ct), new[] { white, black }, Array.Empty<string?>(), ct);
+        var similar = new Dictionary<string, List<LeagueRosterPersonDto>>();
         LeagueClubSideMatchDto One(string? name)
         {
             var (hit, mega, alias) = Resolve(name, null, lk);
-            return MatchDto(hit, mega, alias);
+            var m = MatchDto(hit, mega, alias);
+            AddSimilar(m, name, lk.Roster, similar);
+            return m;
         }
         return new LeagueClubMatchDto { White = One(white), Black = One(black) };
     }

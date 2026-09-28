@@ -212,6 +212,8 @@ public class LeagueClubSideMatchDto
     public bool Mega { get; set; }
     /// <summary>Über eine gemerkte Zuordnung (jemand hat diesen Namen schon einmal so korrigiert).</summary>
     public bool Alias { get; set; }
+    /// <summary>Nicht erkannt: ähnlich geschriebene Ligaspieler zur Schnellauswahl (Tippfehler, Umlaute; höchstens drei, 0.596.0).</summary>
+    public List<LeagueRosterPersonDto> Similar { get; set; } = new();
 }
 
 public class LeagueClubMatchDto

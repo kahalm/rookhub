@@ -173,6 +173,14 @@ const MATCH_DEBOUNCE_MS = 400;
                 <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
                                   (textChange)="setName(k, $event)" (picked)="pickPerson(k, $event)" />
                 <span class="match" [class.ok]="(match(k)()?.league || match(k)()?.mega) && !replace(k)()">{{ matchText(k) }}</span>
+                @if (similarOf(k).length) {
+                  <span class="quick-pick small"><span class="muted">Meintest du</span>
+                    @for (c of similarOf(k); track c.name + (c.fide ?? '')) {
+                      <button type="button" class="btn-chip" (click)="pickPerson(k, c)" [attr.title]="c.teams.join(', ')"
+                              [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ': ' + c.name + ' übernehmen'">{{ c.name }}</button>
+                    }
+                  </span>
+                }
                 <label class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
@@ -460,6 +468,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
         this.applyDefault(k);
       }
     } catch { /* die Prüfung macht der Server beim Übernehmen ohnehin */ }
+  }
+
+  /** Nicht erkannt: ähnlich geschriebene Ligaspieler zum Anklicken (0.596.0, derselbe Abgleich wie in der PGN-Übersicht). */
+  similarOf(k: Side): RosterPerson[] {
+    const m = this.match(k)();
+    return m && !this.replace(k)() && !m.league && !m.mega && !m.ambiguous ? m.similar ?? [] : [];
   }
 
   matchText(k: Side): string {

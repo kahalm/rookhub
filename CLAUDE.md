@@ -1355,6 +1355,15 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Seite bekannt → `noLeaguePlayer`; bleibt nach dem Ersetzen keine bekannte übrig → `onlyOwnClub`. Eine Partie, deren
   Gegner nur die Megabase kennt, ist übernehmbar, die Übersicht wählt sie aber NICHT vor (`optionalGame` in
   `import-review.ts`); wer an einer Partie einen Spieler wählt oder einen Namen übernimmt, wählt sie damit zum Import aus.
+* **Ähnliche Namen zur Schnellauswahl** (0.596.0, Wunsch „wenn du Namen nicht direkt findest, schau, ob ein ähnlicher Name
+  bei den Ligaspielern existiert, und stell ihn zur Schnellauswahl — ohne dass man bearbeiten muss"; `LeagueRosterIndex.Similar`):
+  bleibt eine Seite unerkannt (weder Liga noch Megabase noch gemerkte Zuordnung, nicht mehrdeutig), trägt ihr Abgleich
+  `similar` = höchstens drei Ligaspieler. Verglichen wird je Namensteil (Reihenfolge egal, Titel weg, Umlaute in beiden
+  Schreibweisen) mit Tippfehler-Abstand (Damerau, benachbarte Vertauschung = ein Fehler), erlaubt je Teil nach Länge: unter 5
+  Buchstaben KEINER („Wolf" ≠ „Golf"), bis 7 einer, sonst zwei; ein Anfangsbuchstabe muss passen; ein exakter Treffer ist
+  keiner (den findet schon der Abgleich). In der Übersicht (`quickPicks` in `import-review.ts`) und der Formular-Prüfung stehen
+  sie als „Meintest du …"-Knöpfe unter dem Namen — ein Klick ist `choosePerson`, also samt Weitergabe an gleichnamige Seiten und
+  Merken beim Import. Je PGN-Name wird einmal gerechnet (Übersicht mit 500 Partien).
 * **Gemerkte Zuordnungen** (0.579.0, Wunsch „wenn ich einen Spieler umbenenne, merk dir das zum Original und matche das
   zukünftig bei allen selbst"; `LeagueNameAliases`, Tabelle `LeagueNameAliases`): landet beim Import eine Korrektur (Spieler
   gewählt oder Name getippt) bei jemand ANDEREM als die Vorgabe, merkt `ImportPgnAsync` den PGN-Namen (`KeyOf`: klein, ohne

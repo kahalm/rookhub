@@ -1,5 +1,5 @@
 import { ClubPreview, PreviewSide, SideMatch } from '../../core/club.models';
-import { ImportReview, included, needsLook, optionalGame, reviewStatus } from './import-review';
+import { ImportReview, included, needsLook, optionalGame, quickPicks, reviewStatus } from './import-review';
 
 const M = (x: Partial<SideMatch> = {}): SideMatch =>
   ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
@@ -147,5 +147,24 @@ describe('ImportReview', () => {
     expect(back.games().find(g => g.game.index === 5)!.white.name).toBe('Huber, Franz');
     // Unlesbarer oder fremder Stand: einfach die Vorgaben.
     expect(ImportReview.restore(PREVIEW, '{kaputt', true).decisions()).toEqual(new ImportReview(PREVIEW, true).decisions());
+  });
+
+  it('Schnellauswahl ähnlicher Namen: nur an unerkannten, unangefassten Seiten; ein alter Entwurf behält sie (0.596.0)', () => {
+    const philip = { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false };
+    const preview: ClubPreview = { truncated: false, games: [
+      { ...PREVIEW.games[1], white: S('Hengl, Phillip', M({ similar: [philip] })),
+        black: S('Hengl, Philip', M({ league: true, name: 'Hengl, Philip', fide: '222', similar: [philip] })) },
+    ] };
+    const r = new ImportReview(preview, true);
+    expect(quickPicks(r.games()[0].white)).toEqual([philip]);
+    expect(quickPicks(r.games()[0].black)).toEqual([]);                               // erkannt: nichts vorzuschlagen
+    r.setReplace(2, 'white', true);
+    expect(quickPicks(r.games()[0].white)).toEqual([]);                               // „Schwaz" ersetzt: auch nicht
+    r.setReplace(2, 'white', false);
+    const old = JSON.parse(r.snapshot());
+    delete old.games[0].white.similar;                                                // so sah ein Entwurf von 0.595.0 aus
+    expect(quickPicks(ImportReview.restore(preview, JSON.stringify(old), true).games()[0].white)).toEqual([philip]);
+    r.choosePerson(2, 'white', philip);
+    expect(quickPicks(r.games()[0].white)).toEqual([]);
   });
 });

@@ -24,17 +24,39 @@ describe('ClubImportReviewComponent', () => {
   let fixture: ComponentFixture<ClubImportReviewComponent>;
   let client: jasmine.SpyObj<ClubClient>;
 
-  function create(): HTMLElement {
+  function create(preview: ClubPreview = PREVIEW): HTMLElement {
     client = jasmine.createSpyObj<ClubClient>('ClubClient', ['importPgn', 'players', 'match']);
     client.players.and.resolveTo([]);
     TestBed.configureTestingModule({ imports: [ClubImportReviewComponent] });
     fixture = TestBed.createComponent(ClubImportReviewComponent);
-    fixture.componentRef.setInput('review', new ImportReview(PREVIEW, true));
+    fixture.componentRef.setInput('review', new ImportReview(preview, true));
     fixture.componentRef.setInput('client', client);
     fixture.componentRef.setInput('pgn', 'PGN');
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('„Meintest du …": ein ähnlicher Ligaspieler mit einem Klick in der Zeile, ohne das Feld zu öffnen (0.596.0)', () => {
+    const philip = { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false };
+    const typo = { raw: 'Hengl, Phillip', elo: null, match: M({ similar: [philip] }), owner: false, replace: false };
+    const g = PREVIEW.games[0];
+    const el = create({ truncated: false, games: [
+      { ...g, index: 1, black: typo },
+      { ...g, index: 2, black: { ...typo } },
+    ] });
+    const chips = () => Array.from(el.querySelectorAll('.quick-pick button')) as HTMLButtonElement[];
+    expect(chips().map(b => b.textContent!.trim())).toEqual(['Hengl, Philip', 'Hengl, Philip']);
+    expect(chips()[0].getAttribute('title')).toBe('Absam');
+    chips()[0].click();
+    fixture.detectChanges();
+    expect(el.querySelector('.side-edit')).toBeNull();                                // nichts aufgeklappt
+    const rows = el.querySelectorAll('tbody tr');
+    expect(rows[0].textContent).toContain('Hengl, Philip');
+    expect(rows[0].textContent).toContain('im PGN: Hengl, Phillip');
+    expect(rows[1].textContent).toContain('Hengl, Philip');                          // gleicher PGN-Name: mitgezogen
+    expect(chips().length).toBe(0);
+    expect(el.textContent).toContain('1 weitere Seite mit „Hengl, Phillip“ ebenso zugeordnet.');
+  });
 
   it('zeigt wer gegen wen, Schwaz ersetzt, was importiert wird', () => {
     const el = create();

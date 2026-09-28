@@ -406,6 +406,28 @@ public class LeagueClubServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Preview_UnknownName_OffersSimilarLeaguePlayers_KnownNameDoesNot()
+    {
+        var me = await SeedAsync();
+        var p = await Club().PreviewAsync(me, Pgn("Hengl, Phillip", "Schnabl, Andreas") + Pgn("Hengl, Phillip", "Niemand, Kennt"));
+        var typo = p.Games[0].White.Match;
+        Assert.False(typo.League);                                               // nicht erkannt …
+        Assert.Equal("222", Assert.Single(typo.Similar).Fide);                   // … aber „Hengl, Philip" zur Schnellauswahl
+        Assert.Empty(p.Games[0].Black.Match.Similar);                            // erkannt: nichts vorzuschlagen
+        Assert.Same(typo.Similar, p.Games[1].White.Match.Similar);               // derselbe Name wird einmal gerechnet
+        Assert.Empty(p.Games[1].Black.Match.Similar);
+    }
+
+    [Fact]
+    public async Task Match_UnknownName_OffersSimilarLeaguePlayers()
+    {
+        await SeedAsync();
+        var m = await Club().MatchAsync("Schnabel, Andreas", "Hengl, Philip", default);
+        Assert.Equal("333", Assert.Single(m.White.Similar).Fide);
+        Assert.Empty(m.Black.Similar);
+    }
+
+    [Fact]
     public async Task Import_ProfileFideId_FindsMySide()
     {
         var me = await SeedAsync();

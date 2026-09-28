@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.596.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub: when a name from a game is not found, similarly spelled league players are offered right under it (“Did you mean …”, e.g. “Spindlberger” → “Spindelberger”, swapped letters, spelled-out umlauts, name order) — one click assigns the player without opening the editor, and every other game with the same name follows. Also on the scoresheet check. Short names are never guessed, so “Wolf” does not become “Golf”.", de: "LeagueHub: wird ein Name aus einer Partie nicht gefunden, stehen ähnlich geschriebene Ligaspieler gleich darunter („Meintest du …“, z. B. „Spindlberger“ → „Spindelberger“, vertauschte Buchstaben, ausgeschriebene Umlaute, andere Reihenfolge) — ein Klick ordnet den Spieler zu, ohne das Feld zu öffnen, und jede andere Partie mit demselben Namen zieht mit. Ebenso bei der Formular-Prüfung. Kurze Namen werden nie geraten, aus „Wolf“ wird also kein „Golf“." },
+  ] },
   { version: "0.595.0", date: "2026-09-28", changes: [
     { en: "LeagueHub: every submitted list of games is now stored online right away (file, pasted, Lichess study or from RookHub) — together with your corrections and what has already been imported. Under “Your open lists” you can continue later; managers see all open lists (share links included) and can finish the import for the submitter. Imported or discarded, the list is deleted.", de: "LeagueHub: Jede eingereichte Partieliste liegt jetzt sofort online (Datei, eingefügt, Lichess-Studie oder aus RookHub) — samt deinen Korrekturen und dem, was schon importiert ist. Unter „Deine offenen Listen“ machst du später weiter; Verwalter sehen alle offenen Listen (auch über Teilen-Links) und können den Import für den Einreicher fertigstellen. Importiert oder verworfen wird die Liste gelöscht." },
   ] },

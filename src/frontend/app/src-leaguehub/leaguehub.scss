@@ -407,6 +407,13 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .side-edit { display: grid; gap: 8px; padding: 6px 2px; }
 .side-edit p { margin: 0; }
 .cands-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* „Meintest du …" direkt in der Zeile (0.596.0): klein genug, dass die Tabelle nicht aufbläht, groß genug für den Daumen. */
+.quick-pick { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 3px; }
+.btn-chip {
+  font: 500 13px/1.2 var(--body); color: var(--ink); background: transparent; cursor: pointer;
+  border: 1px dashed var(--ink); border-radius: 999px; padding: 3px 10px; min-height: 28px;
+}
+.btn-chip:hover, .btn-chip:focus-visible { background: var(--ink); color: var(--paper); border-style: solid; }
 .anon-inline, .replace-row { display: inline-flex; gap: 6px; align-items: center; font: 400 14px/1.3 var(--body); color: var(--ink); }
 .anon-inline input, .replace-row input { width: 16px; height: 16px; accent-color: var(--ink); }
 .replace-row { margin-top: 2px; }
@@ -477,7 +484,7 @@ button.pl:hover { text-decoration-color: var(--ink); }
   .review-table td.side.black { grid-area: b; }
   .review-table tr:not(.edit-row) > td.side { display: grid; grid-template-columns: 4.2em minmax(0, 1fr); align-items: baseline; }
   .review-table td.side::before { content: attr(data-label); color: var(--muted); font-size: 13px; }
-  .review-table td.side > .raw { grid-column: 2; }
+  .review-table td.side > .raw, .review-table td.side > .quick-pick { grid-column: 2; }
   .review-table td.st { grid-area: st; }
   .review-table .side-btn { text-align: left; }
   .review-table input[type=checkbox] { width: 22px; height: 22px; }

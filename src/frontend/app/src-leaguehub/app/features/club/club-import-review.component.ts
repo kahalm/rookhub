@@ -4,7 +4,7 @@ import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, ImportGameDecision, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
-import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, reviewStatus } from './import-review';
+import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, quickPicks, reviewStatus } from './import-review';
 import { PlayerSearchComponent } from './player-search.component';
 
 interface Editing { index: number; side: SideKey; text: string }
@@ -57,6 +57,15 @@ interface Editing { index: number; side: SideKey; text: string }
                   </button>
                   @if (r[k].changed || (r[k].raw && r[k].name !== r[k].raw && !r[k].replace)) {
                     <span class="small muted raw">im PGN: {{ r[k].raw || '?' }}</span>
+                  }
+                  @if (!r.game.error && quickPicks(r[k]).length) {
+                    <span class="quick-pick small"><span class="muted">Meintest du</span>
+                      @for (c of quickPicks(r[k]); track c.name + (c.fide ?? '')) {
+                        <button type="button" class="btn-chip" (click)="quick(r, k, c)"
+                                [attr.aria-label]="(k === 'white' ? 'Weiß' : 'Schwarz') + ' in Partie ' + r.game.index + ': ' + c.name + ' übernehmen'"
+                                [attr.title]="c.teams.join(', ')">{{ c.name }}</button>
+                      }
+                    </span>
                   }
                 </td>
               }
@@ -194,6 +203,15 @@ export class ClubImportReviewComponent {
   typed(text: string): void {
     const e = this.editing();
     if (e) this.editing.set({ ...e, text });
+  }
+
+  readonly quickPicks = quickPicks;
+
+  /** „Meintest du …" in der Zeile: denselben Weg wie ein gewählter Ligaspieler, ohne das Feld zu öffnen (0.596.0). */
+  quick(r: ReviewGame, side: SideKey, p: RosterPerson): void {
+    const raw = r[side].raw ?? '';
+    this.said(this.review.choosePerson(r.game.index, side, p), raw);
+    if (this.editing()?.index === r.game.index && this.editing()?.side === side) this.editing.set(null);
   }
 
   pick(p: RosterPerson): void {
