@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnDestroy, OnInit, computed, inject, signal, effect, untracked, viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
@@ -63,7 +63,13 @@ const MATCH_DEBOUNCE_MS = 400;
           @if (photoUrl(); as src) {
             <section class="panel scan-photo">
               <div class="photo-scroll" [class.zoom]="zoom()">
-                <img [src]="src" alt="Foto des Partieformulars" (load)="s.onPhotoLoad($event)" />
+                <div class="photo-frame">
+                  <img [src]="src" alt="Foto des Partieformulars" (load)="s.onPhotoLoad($event)" />
+                  @if (s.mark(); as m) {
+                    <div class="photo-mark" [class.uncertain]="m.uncertain" [style.left.%]="m.left" [style.top.%]="m.top"
+                         [style.width.%]="m.width" [style.height.%]="m.height" aria-hidden="true"></div>
+                  }
+                </div>
               </div>
               <p><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
             </section>
@@ -159,7 +165,7 @@ const MATCH_DEBOUNCE_MS = 400;
           </section>
         </div></div>
 
-        <section class="panel save-panel">
+        <section class="panel save-panel" #savePanel>
           <h3 class="club-h3">Partie</h3>
           <div class="save-grid">
             @for (k of sides; track k) {
@@ -223,6 +229,26 @@ const MATCH_DEBOUNCE_MS = 400;
             <span class="update-msg" [class.err]="pgnMsg()?.err" role="status">{{ pgnMsg()?.text ?? '' }}</span>
           </div>
         </section>
+
+        <!-- Wunsch 2026-09-28: nach der letzten unsicheren Stelle darauf hinweisen und gleich Speichern anbieten. -->
+        <dialog #doneDlg class="card done-dlg" aria-labelledby="done-title">
+          <div class="card-body">
+            <h3 id="done-title">Alle unsicheren Stellen geprüft</h3>
+            @if (problem(); as pr) {
+              <p class="err small">{{ pr }}</p>
+              <div class="actions">
+                <button type="button" class="btn-pri" (click)="closeDone(); toSave()">Zu den Namen</button>
+                <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
+              </div>
+            } @else {
+              <p>Gespeichert wird: <b>{{ preview() }}</b></p>
+              <div class="actions">
+                <button type="button" class="btn-pri" [disabled]="saving()" (click)="closeDone(); save()">In die Vereins-Datenbank übernehmen</button>
+                <button type="button" class="btn-link" (click)="closeDone()">Weiter bearbeiten</button>
+              </div>
+            }
+          </div>
+        </dialog>
       }
     } @else {
       <p class="muted">Lade …</p>
@@ -261,6 +287,21 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly zoom = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
+  private readonly doneDlg = viewChild<ElementRef<HTMLDialogElement>>('doneDlg');
+  private readonly savePanel = viewChild<ElementRef<HTMLElement>>('savePanel');
+  /** Wie viele unsichere Stellen es vorher gab — geht die Zahl von >0 auf 0, kommt der Hinweis. */
+  private lastUncertain = -1;
+  private readonly doneWatch = effect(() => {
+    const n = this.s.uncertainLeft();
+    if (this.state()?.scan.status !== 'done' || this.s.busy()) return;
+    untracked(() => {
+      if (this.lastUncertain > 0 && n === 0 && !this.saved()) {
+        const d = this.doneDlg()?.nativeElement;
+        if (d && !d.open) d.showModal();
+      }
+      this.lastUncertain = n;
+    });
+  });
   /** Übernommen — die Seite bleibt stehen, damit PGN und „Meine Partien" noch gehen. */
   readonly saved = signal(false);
   readonly adding = signal(false);
@@ -454,8 +495,11 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
    * und am Handy verschwand damit nach jedem „Stimmt so" der Prüfteil oben (Ausschnitt, Lesarten, Knopf). */
   private revealCursor(): void {
     setTimeout(() => {
-      const el = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('.moves .ply.cursor');
+      const host = this.host.nativeElement as HTMLElement;
+      const el = host.querySelector<HTMLElement>('.moves .ply.cursor');
       if (el) scrollIntoContainer(el);
+      const mark = host.querySelector<HTMLElement>('.photo-mark');       // vergrößertes Foto: die Zeile ins Bild
+      if (mark) scrollIntoContainer(mark);
     });
   }
 
@@ -490,6 +534,14 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     } finally {
       this.saving.set(false);
     }
+  }
+
+  closeDone(): void {
+    this.doneDlg()?.nativeElement.close();
+  }
+
+  toSave(): void {
+    this.savePanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** Die geprüfte Partie: legale Züge, Namen wie im Formular. */

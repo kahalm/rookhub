@@ -377,6 +377,16 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Contains("PIXELS of the photo", ScoresheetPrompt.TranscribeSystem);
     }
 
+    /// <summary>Prod-Scan 8 (2026-09-28): „right column (21-35) … not included due to inconsistency" — das Modell ließ nach
+    /// einer Korrektur die ganze zweite Spalte weg. Beide Aufträge verbieten das ausdrücklich.</summary>
+    [Fact]
+    public void BothPrompts_ForbidLeavingOutColumnsOrEntries()
+    {
+        Assert.Contains("Transcribe EVERY written move", ScoresheetPrompt.TranscribeSystem);
+        Assert.Contains("ALWAYS all blocks that contain moves", ScoresheetPrompt.TranscribeSystem);
+        Assert.Contains("Never leave out written moves", ScoresheetPrompt.System);
+    }
+
     [Fact]
     public async Task EditState_AndResolveRest_WorkOnTheOwnGameOnly()
     {

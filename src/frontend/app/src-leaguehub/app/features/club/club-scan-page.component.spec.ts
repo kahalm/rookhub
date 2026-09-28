@@ -107,6 +107,27 @@ describe('ClubScanPageComponent', () => {
     expect(check.getBoundingClientRect().left).toBeGreaterThan(board.getBoundingClientRect().left);
   });
 
+  it('nach der letzten unsicheren Stelle kommt der Hinweis mit „Übernehmen" und „Weiter bearbeiten"', fakeAsync(() => {
+    const st = structuredClone(STATE);
+    st.boxes = [null, null, [100, 300, 400, 340], null];
+    api.scan.and.resolveTo(st);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const dlg = el.querySelector('dialog.done-dlg') as HTMLDialogElement;
+    expect(dlg.open).toBeFalse();
+    expect(fixture.componentInstance.s.mark()).toEqual({ left: 10, top: 30, width: 30, height: 4, uncertain: true });
+    (Array.from(el.querySelectorAll('.scan-check button')).find(b => b.textContent?.trim() === 'Stimmt so') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(dlg.open).toBeTrue();
+    expect(dlg.textContent).toContain('Alle unsicheren Stellen geprüft');
+    (Array.from(dlg.querySelectorAll('button')).find(b => b.textContent?.includes('Weiter bearbeiten')) as HTMLButtonElement).click();
+    expect(dlg.open).toBeFalse();
+    tick(1000);
+  }));
+
   it('eine andere Lesart wählen lässt den Rest neu lesen', fakeAsync(() => {
     create();
     flushMicrotasks();
@@ -165,7 +186,7 @@ describe('ClubScanPageComponent', () => {
     }), '7');
     expect(router.navigate).not.toHaveBeenCalled();
     expect(el.textContent).toContain('In die Vereins-Datenbank übernommen.');
-    expect(el.textContent).not.toContain('In die Vereins-Datenbank übernehmen');          // kein zweites Mal
+    expect(el.querySelector('.save-panel .btn-pri')).toBeNull();                          // kein zweites Mal
 
     // PGN mit den Namen wie im Formular (nicht „Schwaz"), als Text kopieren
     const written: string[] = [];

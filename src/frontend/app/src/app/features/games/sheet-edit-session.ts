@@ -80,6 +80,22 @@ export class SheetEditSession {
     if (!view) return null;
     return { view, written: this.sheetEntries()[w] ?? '', uncertain: p ? p.uncertain && !p.confirmed : true };
   });
+  /**
+   * Wo der Eintrag des gewählten Halbzugs auf dem GANZEN Foto steht (Prozent von links/oben, Breite, Höhe) — zum
+   * Markieren im großen Bild, damit man die Zeile im Zusammenhang sieht (Wunsch 2026-09-28). Dieselbe Wahl des
+   * Eintrags wie beim Ausschnitt.
+   */
+  readonly mark = computed(() => {
+    const p = this.current();
+    const w = p ? p.w : this.unresolved().length ? this.unresolvedFrom() : null;
+    if (w === null || w === undefined) return null;
+    const b = this.boxes()[w];
+    if (!b || b.length !== 4) return null;
+    const c = (v: number) => Math.max(0, Math.min(1000, v)) / 10;
+    const [x0, y0, x1, y1] = [c(b[0]), c(b[1]), c(b[2]), c(b[3])];
+    if (x1 <= x0 || y1 <= y0) return null;
+    return { left: x0, top: y0, width: x1 - x0, height: y1 - y0, uncertain: p ? p.uncertain && !p.confirmed : true };
+  });
   readonly uncertainLeft = computed(() => this.plies().filter(p => p.uncertain && !p.confirmed && !p.illegal).length);
   readonly rows = computed<MoveRow[]>(() => {
     const out: MoveRow[] = [];

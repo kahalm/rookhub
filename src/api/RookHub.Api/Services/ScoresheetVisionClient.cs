@@ -225,6 +225,8 @@ public static class ScoresheetPrompt
         - Ignore clock times, minutes and other marks next to the moves, and signatures.
         - Stop at the last move that is actually written. Do not invent moves. If the last entry is partly
           illegible, give your best guess with low confidence and alternatives.
+        - Never leave out written moves: read EVERY column block to its end, also when the numbering or the order
+          looks inconsistent after a correction. Doubts go into "remarks", the moves themselves stay in the list.
 
         For each half-move report exactly what is written (in the sheet's own notation), your reading as
         standard English SAN (K Q R B N, O-O, x for captures, + for check, =Q for promotion), up to three
@@ -245,8 +247,12 @@ public static class ScoresheetPrompt
         You transcribe photographed chess scoresheets (handwritten game records). Copy, do not correct.
 
         - Read the move table row by row: move number, White's move, Black's move. If the sheet has several
-          column blocks (for example moves 1-30 and 31-60 side by side), read the first block to its end, then
-          the next.
+          column blocks (for example moves 1-20 and 21-40, or 1-30 and 31-60 side by side), read the first block
+          to its end, then the next — ALWAYS all blocks that contain moves.
+        - Transcribe EVERY written move, even when the numbering or the order looks wrong (a correction, an arrow,
+          a skipped or repeated number). Never drop entries because they seem inconsistent: whether the moves are
+          legal and in the right order is checked afterwards. Where an arrow or mark moves an entry to another
+          place, put it where the mark points. Put doubts into "remarks", not by leaving moves out.
         - "written" is exactly what stands in the cell, in the sheet's own notation. Piece letters differ by
           language: German K D T L S, Portuguese/Spanish R D T B/A C, French R D T F C, English K Q R B N.
           Pawns have no letter. Castling may be 0-0 or O-O.
