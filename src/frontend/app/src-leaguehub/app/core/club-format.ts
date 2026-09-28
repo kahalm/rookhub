@@ -33,6 +33,7 @@ export function importSummary(r: ClubImportResult): string {
   if (r.duplicates) parts.push(`${r.duplicates} schon da`);
   if (r.failed.length) parts.push(`${r.failed.length} nicht übernommen`);
   let s = parts.join(', ') + '.';
+  if (r.remembered) s += ` ${n(r.remembered, 'Namens-Zuordnung', 'Namens-Zuordnungen')} gemerkt — das nächste Mal erkennt LeagueHub sie von selbst.`;
   if (r.truncated) s += ' Es wurden nur die ersten 500 Partien gelesen — den Rest bitte in einem zweiten Upload.';
   return s;
 }

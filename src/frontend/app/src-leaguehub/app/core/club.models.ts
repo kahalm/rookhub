@@ -28,6 +28,8 @@ export interface ClubImportResult {
   added: number;
   duplicates: number;
   anonymized: number;
+  /** Aus den Korrekturen neu gemerkte Namens-Zuordnungen (nur mit Konto). */
+  remembered?: number;
   truncated: boolean;
   ids: number[];
   failed: ClubFailure[];
@@ -59,6 +61,8 @@ export interface SideMatch {
   lastNameOnly?: boolean;
   /** Kein Ligaspieler, aber eindeutig im Megabase-Verzeichnis (Name und FIDE-ID von dort) — „nicht in Liga". */
   mega?: boolean;
+  /** Über eine gemerkte Zuordnung — jemand hat diesen Namen schon einmal so korrigiert. */
+  alias?: boolean;
 }
 
 /** Eine Seite in der Übersicht vor dem Import (`POST …/games/preview`). */

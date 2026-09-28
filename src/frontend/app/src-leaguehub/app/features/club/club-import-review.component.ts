@@ -25,6 +25,7 @@ interface Editing { index: number; side: SideKey; text: string }
       @if (review.counts().optional) {
         <p class="small muted">{{ review.counts().optional }} ohne Gegner aus der Liga (nur in der Megabase) — nicht vorgewählt, anhaken nimmt sie trotzdem auf.</p>
       }
+      @if (note()) { <p class="small ok-text" role="status">{{ note() }}</p> }
       @if (review.truncated) { <p class="err small">Es wurden nur die ersten 500 Partien gelesen — den Rest bitte in einem zweiten Upload.</p> }
       <div class="seg" role="group" aria-label="Anzeigen">
         @for (f of filters; track f.key) {
@@ -86,6 +87,12 @@ interface Editing { index: number; side: SideKey; text: string }
                         durch „{{ anon }}" ersetzen
                       </label>
                     </div>
+                    @if (remembers) {
+                      <p class="small muted">Gilt auch für alle anderen Partien mit „{{ r[e.side].raw || '?' }}" — und wird beim Import
+                        gemerkt: das nächste Mal ordnet LeagueHub den Namen von selbst so zu.</p>
+                    } @else {
+                      <p class="small muted">Gilt auch für alle anderen Partien mit „{{ r[e.side].raw || '?' }}".</p>
+                    }
                     <div class="actions">
                       <button type="button" class="btn-sec" [disabled]="matching()" (click)="apply()">Getippten Namen übernehmen</button>
                       <button type="button" class="btn-link" (click)="editing.set(null)">Schließen</button>
@@ -112,6 +119,8 @@ export class ClubImportReviewComponent {
   @Input({ required: true }) review!: ImportReview;
   @Input({ required: true }) client!: ClubClient;
   @Input({ required: true }) pgn!: string;
+  /** Mit Konto werden Korrekturen als Namens-Zuordnung gemerkt (über einen Teilen-Link nicht). */
+  @Input() remembers = true;
   @Output() imported = new EventEmitter<ClubImportResult>();
   @Output() cancel = new EventEmitter<void>();
 
@@ -132,6 +141,8 @@ export class ClubImportReviewComponent {
   readonly editing = signal<Editing | null>(null);
   readonly matching = signal(false);
   readonly editError = signal<string | null>(null);
+  /** „3 weitere Partien mit „Kostic" ebenso zugeordnet." nach einer Korrektur. */
+  readonly note = signal<string | null>(null);
   readonly importing = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -142,9 +153,10 @@ export class ClubImportReviewComponent {
   badge(s: ReviewSide): { text: string; ok: boolean; warn: boolean } {
     if (s.replace) return { text: s.club ? 'Schwaz-Spieler' : s.owner ? 'du' : 'ersetzt', ok: false, warn: false };
     if (s.ambiguous) return { text: 'mehrdeutig', ok: false, warn: true };
+    const kept = s.alias && !s.changed ? ' · gemerkt' : '';
     if (s.league && s.lastNameOnly) return { text: 'nur Nachname — prüfen', ok: false, warn: true };
-    if (s.league) return { text: s.club ? 'Schwaz, nicht ersetzt' : 'Ligaspieler', ok: !s.club, warn: s.club };
-    if (s.mega) return { text: 'nicht in Liga', ok: false, warn: false };
+    if (s.league) return { text: (s.club ? 'Schwaz, nicht ersetzt' : 'Ligaspieler') + kept, ok: !s.club, warn: s.club };
+    if (s.mega) return { text: 'nicht in Liga' + kept, ok: false, warn: false };
     return { text: needsLook(s) ? 'nicht erkannt' : '', ok: false, warn: true };
   }
 
@@ -167,8 +179,17 @@ export class ClubImportReviewComponent {
   pick(p: RosterPerson): void {
     const e = this.editing();
     if (!e) return;
-    this.review.choosePerson(e.index, e.side, p);
+    const raw = this.rawOf(e);
+    this.said(this.review.choosePerson(e.index, e.side, p), raw);
     this.editing.set(null);
+  }
+
+  private rawOf(e: Editing): string {
+    return this.review.games().find(g => g.game.index === e.index)?.[e.side].raw ?? '';
+  }
+
+  private said(n: number, raw: string): void {
+    this.note.set(n ? `${n === 1 ? '1 weitere Seite' : n + ' weitere Seiten'} mit „${raw}“ ebenso zugeordnet.` : null);
   }
 
   /** Den getippten Namen übernehmen und neu abgleichen lassen (ein Treffer der Suche geht direkt über `pick`). */
@@ -180,7 +201,7 @@ export class ClubImportReviewComponent {
     this.matching.set(true);
     try {
       const m = await this.client.match(text, '');
-      this.review.setTyped(e.index, e.side, text, m.white);
+      this.said(this.review.setTyped(e.index, e.side, text, m.white), this.rawOf(e));
       this.editing.set(null);
     } catch {
       this.editError.set('Abgleich hat nicht geklappt.');

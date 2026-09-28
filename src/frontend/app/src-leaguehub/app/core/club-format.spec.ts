@@ -15,6 +15,8 @@ describe('club-format', () => {
       expect(reasonText(r)).not.toBe('Nicht übernommen.');
     }
     expect(reasonText('onlyOwnClub')).toContain('Schwaz');
+    expect(importSummary({ added: 2, duplicates: 0, anonymized: 2, truncated: false, ids: [], failed: [], remembered: 1 }))
+      .toContain('1 Namens-Zuordnung gemerkt');
   });
 
   it('Einlesen gesperrt: nennt, ab wann es wieder geht', () => {

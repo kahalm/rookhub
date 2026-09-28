@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.579.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub club database: correcting a player now remembers the assignment for the name as it stood in the PGN — the next overview (for everyone) assigns that name by itself, marked “remembered”; a FIDE ID in the PGN that belongs to a league player still wins, and a new correction replaces the old one. Within the same import, the correction is also applied to every other game with the same name that nobody has set yet. Only corrections made with an account are remembered, not those via a share link.", de: "LeagueHub-Vereins-Datenbank: Wer einen Spieler korrigiert, dessen Zuordnung merkt sich LeagueHub zum Namen, wie er im PGN stand — die nächste Übersicht (bei allen) ordnet diesen Namen von selbst so zu, markiert mit „gemerkt“; eine FIDE-ID im PGN, die zu einem Ligaspieler gehört, gewinnt weiterhin, und eine neue Korrektur ersetzt die alte. Im selben Import gilt die Korrektur außerdem für jede andere Partie mit demselben Namen, die noch niemand gesetzt hat. Gemerkt wird nur mit Konto, nicht über einen Teilen-Link." },
+  ] },
   { version: "0.578.1", date: "2026-09-28", changes: [
     { en: "LeagueHub import overview on the phone: each game is shown as a small card — number, year, tournament and result on top, White, Black and the status below, each across the full width — instead of a table that had to be scrolled sideways. The intro text now says that a known opponent from the Megabase is enough too.", de: "LeagueHub-Importübersicht am Handy: Jede Partie steht als kleine Karte da — oben Nummer, Jahr, Turnier und Ergebnis, darunter Weiß, Schwarz und der Status über die ganze Breite — statt einer Tabelle, die man seitlich schieben musste. Der Einleitungstext sagt jetzt, dass auch ein bekannter Gegner aus der Megabase genügt." },
   ] },

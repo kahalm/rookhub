@@ -61,9 +61,17 @@ public sealed class LeagueClubService
             seasons.GetValueOrDefault(r.Tnr) ?? "")));
     }
 
-    /// <summary>Das Megabase-Verzeichnis für diese Namen und FIDE-IDs (ein Abgleich = eine Abfrage je 500).</summary>
-    private Task<LeagueMegaPlayers.Lookup> MegaAsync(IEnumerable<string?> names, IEnumerable<string?> fides, CancellationToken ct) =>
-        new LeagueMegaPlayers(_db).LookupAsync(names, fides, ct);
+    /// <summary>Gemerkte Zuordnungen und das Megabase-Verzeichnis für diese Namen und FIDE-IDs — die Zuordnungen zuerst,
+    /// ihre Spieler schlägt das Verzeichnis gleich mit nach.</summary>
+    private async Task<Lookups> LookupsAsync(LeagueRosterIndex roster, IEnumerable<string?> names, IEnumerable<string?> fides,
+        CancellationToken ct)
+    {
+        var nameList = names.ToList();
+        var aliases = await new LeagueNameAliases(_db).LoadAsync(nameList, ct);
+        var mega = await new LeagueMegaPlayers(_db).LookupAsync(nameList.Concat(aliases.Values.Select(a => (string?)a.Name)),
+            fides.Concat(aliases.Values.Select(a => a.Fide)), ct);
+        return new Lookups(roster, mega, aliases);
+    }
 
     // ── Hochladen ───────────────────────────────────────────────────
 
@@ -151,9 +159,37 @@ public sealed class LeagueClubService
     /// Ligaspieler ist; <see cref="Mega"/> = so ein Spieler, im Megabase-Verzeichnis gefunden — dann ist die Seite
     /// „bekannt", auch ohne Liga.</summary>
     private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace, string? Fide = null,
-        LeagueMegaPlayers.Hit? Mega = null)
+        LeagueMegaPlayers.Hit? Mega = null, bool Alias = false)
     {
         public bool Known => Hit.League || Mega != null;
+
+        /// <summary>Wer es ist (für die gemerkten Zuordnungen): der Ligaspieler bzw. der Megabase-Eintrag.</summary>
+        public LeagueNameAliases.Entry? Identity => Hit.Person is { } p ? new(p.Fide, p.Name)
+            : Mega is { } m ? new(m.Fide, m.Name) : null;
+    }
+
+    /// <summary>Alles, was ein Abgleich nachschlägt: Meldelisten, Megabase-Verzeichnis, gemerkte Zuordnungen.</summary>
+    private sealed record Lookups(LeagueRosterIndex Roster, LeagueMegaPlayers.Lookup Mega,
+        IReadOnlyDictionary<string, LeagueNameAliases.Entry> Aliases);
+
+    /// <summary>
+    /// Wer ist das? (1) Eine FIDE-ID aus der Partie, die ein Ligaspieler trägt; (2) eine gemerkte Zuordnung dieses
+    /// Namens (<see cref="LeagueNameAliases"/> — sie schlägt den Namensabgleich, dafür wurde sie ja korrigiert); (3) die
+    /// Meldelisten; (4) die Megabase. Zeigt eine Zuordnung auf jemanden, den Liste und Verzeichnis nicht (mehr) kennen,
+    /// gilt ihr gemerkter Name samt FIDE-ID.
+    /// </summary>
+    private static (LeagueRosterIndex.Hit Hit, LeagueMegaPlayers.Hit? Mega, bool Alias) Resolve(string? name, string? fide, Lookups lk)
+    {
+        var hit = lk.Roster.Match(name, fide);
+        if (lk.Roster.ByFide(fide) is null && lk.Aliases.TryGetValue(LeagueNameAliases.KeyOf(name), out var a))
+        {
+            if (a.Fide != null && lk.Roster.ByFide(a.Fide) is { } p) return (new LeagueRosterIndex.Hit(true, p, new[] { p }), null, true);
+            if (a.Fide != null) return (LeagueRosterIndex.None, lk.Mega.ByFide(a.Fide) ?? new LeagueMegaPlayers.Hit(a.Name, a.Fide), true);
+            var byName = lk.Roster.Match(a.Name, null);
+            if (byName.League && !byName.Ambiguous) return (byName with { LastNameOnly = false }, null, true);
+            return (LeagueRosterIndex.None, lk.Mega.ByName(a.Name) ?? new LeagueMegaPlayers.Hit(a.Name, null), true);
+        }
+        return (hit, MegaOf(hit, name, fide, lk.Mega), false);
     }
 
     /// <summary>Wer kein Ligaspieler ist, wird im Megabase-Verzeichnis gesucht: über die FIDE-ID, sonst den Namen. Eine
@@ -168,32 +204,33 @@ public sealed class LeagueClubService
 
     /// <summary>Die Vorgabe der Übersicht: Abgleich über Kopfzeile, ersetzt wird ein Spieler von Schwaz und der
     /// Hochladende selbst (Wunsch 2026-09-28: „alle Spieler vom Verein Schwaz").</summary>
-    private static (Side White, Side Black, string? OwnerSide) Defaults(Parsed p, LeagueRosterIndex roster, Owner owner,
-        LeagueMegaPlayers.Lookup mega)
+    private static (Side White, Side Black, string? OwnerSide) Defaults(Parsed p, Owner owner, Lookups lk)
     {
-        var hw = roster.Match(p.H("White"), p.H("WhiteFideId"));
-        var hb = roster.Match(p.H("Black"), p.H("BlackFideId"));
-        var mw = MegaOf(hw, p.H("White"), p.H("WhiteFideId"), mega);
-        var mb = MegaOf(hb, p.H("Black"), p.H("BlackFideId"), mega);
+        var (hw, mw, aw) = Resolve(p.H("White"), p.H("WhiteFideId"), lk);
+        var (hb, mb, ab) = Resolve(p.H("Black"), p.H("BlackFideId"), lk);
         var ownerSide = OwnerSideOf(owner, p.H("White"), p.H("Black"), p.H("WhiteFideId"), p.H("BlackFideId"), hw, hb, mw, mb);
-        return (new Side(p.H("White"), hw, p.Elo("WhiteElo"), hw.OwnClub || ownerSide == "white", null, mw),
-            new Side(p.H("Black"), hb, p.Elo("BlackElo"), hb.OwnClub || ownerSide == "black", null, mb), ownerSide);
+        return (new Side(p.H("White"), hw, p.Elo("WhiteElo"), hw.OwnClub || ownerSide == "white", null, mw, aw),
+            new Side(p.H("Black"), hb, p.Elo("BlackElo"), hb.OwnClub || ownerSide == "black", null, mb, ab), ownerSide);
     }
 
     /// <summary>Was der Nutzer für eine Seite festgelegt hat: ein gewählter Ligaspieler (FIDE-ID) schlägt den Namen, ein
     /// getippter Name wird neu abgeglichen, ohne Angabe gilt die Kopfzeile.</summary>
-    private static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, LeagueRosterIndex roster,
-        LeagueMegaPlayers.Lookup mega)
+    private static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, Lookups lk)
     {
         d ??= new LeagueClubSideDecision();
-        if (roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);
+        if (lk.Roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);
         var typed = !string.IsNullOrWhiteSpace(d.Name);
         var name = typed ? d.Name!.Trim() : raw;
-        // Eine FIDE-ID, die kein Ligaspieler trägt (aus dem Megabase-Verzeichnis gewählt): bleibt an der Partie stehen.
+        // Eine FIDE-ID, die kein Ligaspieler trägt (aus dem Megabase-Verzeichnis gewählt): bleibt an der Partie stehen —
+        // und schlägt eine gemerkte Zuordnung (der Nutzer hat gerade selbst gewählt).
         var chosen = string.IsNullOrWhiteSpace(d.Fide) ? null : d.Fide.Trim();
-        var fide = chosen ?? (typed ? null : rawFide);
-        var hit = roster.Match(name, fide);
-        return new Side(name, hit, elo, d.Replace, chosen is { Length: <= 16 } ? chosen : null, MegaOf(hit, name, fide, mega));
+        if (chosen != null)
+        {
+            var hit = lk.Roster.Match(name, chosen);
+            return new Side(name, hit, elo, d.Replace, chosen.Length <= 16 ? chosen : null, MegaOf(hit, name, chosen, lk.Mega));
+        }
+        var (h, m, alias) = Resolve(name, typed ? null : rawFide, lk);
+        return new Side(name, h, elo, d.Replace, null, m, alias);
     }
 
     /// <summary>Aus einer geprüften Zugfolge + den Seiten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
@@ -266,12 +303,12 @@ public sealed class LeagueClubService
 
     private static LeagueClubPreviewSideDto SideDto(Side s, bool owner) => new()
     {
-        Raw = s.Name, Elo = s.Elo, Match = MatchDto(s.Hit, s.Mega), Owner = owner, Replace = s.Replace,
+        Raw = s.Name, Elo = s.Elo, Match = MatchDto(s.Hit, s.Mega, s.Alias), Owner = owner, Replace = s.Replace,
     };
 
-    internal static LeagueClubSideMatchDto MatchDto(LeagueRosterIndex.Hit h, LeagueMegaPlayers.Hit? mega = null) => new()
+    internal static LeagueClubSideMatchDto MatchDto(LeagueRosterIndex.Hit h, LeagueMegaPlayers.Hit? mega = null, bool alias = false) => new()
     {
-        League = h.League, Ambiguous = h.Ambiguous, Mega = !h.League && mega != null,
+        League = h.League, Ambiguous = h.Ambiguous, Mega = !h.League && mega != null, Alias = alias,
         Name = h.Person?.Name ?? (h.League ? null : mega?.Name), Fide = h.Person?.Fide ?? (h.League ? null : mega?.Fide),
         Club = h.OwnClub, LastNameOnly = h.LastNameOnly,
         Candidates = h.Ambiguous ? h.Candidates.Take(8).Select(PersonDto).ToList() : new(),
@@ -289,8 +326,7 @@ public sealed class LeagueClubService
     public async Task<LeagueClubPreviewDto> PreviewAsync(int? userId, string pgn, CancellationToken ct = default)
     {
         var parsed = ParseAll(pgn, out var truncated);
-        var roster = await RosterAsync(ct);
-        var mega = await MegaAsync(parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }),
+        var lk = await LookupsAsync(await RosterAsync(ct), parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }),
             parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }), ct);
         var owner = await OwnerAsync(userId, ct);
         var now = _now();
@@ -298,7 +334,7 @@ public sealed class LeagueClubService
         var dto = new LeagueClubPreviewDto { Truncated = truncated };
         foreach (var p in parsed)
         {
-            var (w, b, ownerSide) = Defaults(p, roster, owner, mega);
+            var (w, b, ownerSide) = Defaults(p, owner, lk);
             var g = new LeagueClubPreviewGameDto
             {
                 Index = p.Index, Year = YearOf(p.H("Date"), now), Result = p.H("Result") is { } r && Results.Contains(r) ? r : "*",
@@ -325,13 +361,13 @@ public sealed class LeagueClubService
         var parsed = ParseAll(pgn, out var truncated);
         result.Truncated = truncated;
         var byIndex = parsed.ToDictionary(p => p.Index);
-        var roster = await RosterAsync(ct);
         var chosen = (decisions ?? Array.Empty<LeagueClubImportGameDecision>()).Where(d => d != null)
             .SelectMany(d => new[] { d.White, d.Black }).Where(s => s != null).ToList();
-        var mega = await MegaAsync(
+        var lk = await LookupsAsync(await RosterAsync(ct),
             parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }).Concat(chosen.Select(s => s.Name)),
             parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }).Concat(chosen.Select(s => s.Fide)), ct);
         var owner = await OwnerAsync(userId, ct);
+        var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
         var now = _now();
         var pending = new List<LeagueClubGame>();
         var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
@@ -350,11 +386,17 @@ public sealed class LeagueClubService
             });
             if (p.Error != null || p.Sans == null) { Fail(p.Error ?? "illegal"); continue; }
             Side w, b;
-            if (decision == null) (w, b, _) = Defaults(p, roster, owner, mega);
+            if (decision == null) (w, b, _) = Defaults(p, owner, lk);
             else
             {
-                w = Decided(decision.White, p.H("White"), p.H("WhiteFideId"), p.Elo("WhiteElo"), roster, mega);
-                b = Decided(decision.Black, p.H("Black"), p.H("BlackFideId"), p.Elo("BlackElo"), roster, mega);
+                w = Decided(decision.White, p.H("White"), p.H("WhiteFideId"), p.Elo("WhiteElo"), lk);
+                b = Decided(decision.Black, p.H("Black"), p.H("BlackFideId"), p.Elo("BlackElo"), lk);
+                if (userId != null)
+                {
+                    var (dw, db, _) = Defaults(p, owner, lk);
+                    Remember(p.H("White"), decision.White, w, dw);
+                    Remember(p.H("Black"), decision.Black, b, db);
+                }
             }
             var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             if (game == null) { Fail(reason!); continue; }
@@ -363,12 +405,34 @@ public sealed class LeagueClubService
             pending.Add(game);
         }
         await SaveAsync(pending, ct);
+        result.Remembered = await RememberAsync(remember, ct);
         result.Added = pending.Count;
         result.Anonymized = pending.Count(g => g.Anonymized);
         result.Ids = pending.Select(g => g.Id).ToList();
-        _log.LogInformation("Vereins-Datenbank: {Added} Partien hochgeladen ({Anon} mit „Schwaz“), {Dup} doppelt, {Failed} abgelehnt{Via}",
-            result.Added, result.Anonymized, result.Duplicates, result.Failed.Count, userId == null ? " (Teilen-Link)" : "");
+        _log.LogInformation("Vereins-Datenbank: {Added} Partien hochgeladen ({Anon} mit „Schwaz“), {Dup} doppelt, {Failed} abgelehnt, {Remembered} Zuordnungen gemerkt{Via}",
+            result.Added, result.Anonymized, result.Duplicates, result.Failed.Count, result.Remembered, userId == null ? " (Teilen-Link)" : "");
         return result;
+
+        // Eine Korrektur (Spieler gewählt oder Name getippt), die bei jemand ANDEREM landet als die Vorgabe: merken.
+        void Remember(string? raw, LeagueClubSideDecision? d, Side decided, Side byDefault)
+        {
+            if (string.IsNullOrWhiteSpace(raw) || d is null || (string.IsNullOrWhiteSpace(d.Name) && string.IsNullOrWhiteSpace(d.Fide))) return;
+            if (decided.Identity is { } id && id != byDefault.Identity) remember.Add((raw, id));
+        }
+    }
+
+    /// <summary>Gemerkte Zuordnungen speichern — NUR mit Konto (ein Teilen-Link soll nicht festlegen, wer ein Name für
+    /// alle ist). Ein Fehler dabei (zwei gleichzeitige Uploads legen denselben Namen an) lässt den Import nicht scheitern.</summary>
+    private async Task<int> RememberAsync(List<(string Raw, LeagueNameAliases.Entry Target)> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return 0;
+        try { return await new LeagueNameAliases(_db).SaveAsync(items, _now(), ct); }
+        catch (DbUpdateException ex)
+        {
+            _log.LogWarning(ex, "Vereins-Datenbank: gemerkte Zuordnungen nicht gespeichert");
+            _db.ChangeTracker.Clear();
+            return 0;
+        }
     }
 
     /// <summary>Eine Partie aus der Korrektur eines Partieformulars. <c>Reason</c> ≠ null = abgelehnt
@@ -384,10 +448,9 @@ public sealed class LeagueClubService
         catch (ArgumentException ex) { return (null, "illegal", ex.Message); }
         var now = _now();
         var year = req.Year is { } y && y >= 1900 && y <= now.Year + 1 ? y : (int?)null;
-        var roster = await RosterAsync(ct);
-        var mega = await MegaAsync(new[] { req.White, req.Black }, new[] { req.WhiteFide, req.BlackFide }, ct);
-        var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, roster, mega);
-        var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, roster, mega);
+        var lk = await LookupsAsync(await RosterAsync(ct), new[] { req.White, req.Black }, new[] { req.WhiteFide, req.BlackFide }, ct);
+        var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, lk);
+        var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, lk);
         var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
         if (await IsDuplicateAsync(game, new(), ct)) return (null, "duplicate", null);
@@ -512,12 +575,11 @@ public sealed class LeagueClubService
 
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
     {
-        var roster = await RosterAsync(ct);
-        var mega = await MegaAsync(new[] { white, black }, Array.Empty<string?>(), ct);
+        var lk = await LookupsAsync(await RosterAsync(ct), new[] { white, black }, Array.Empty<string?>(), ct);
         LeagueClubSideMatchDto One(string? name)
         {
-            var hit = roster.Match(name, null);
-            return MatchDto(hit, MegaOf(hit, name, null, mega));
+            var (hit, mega, alias) = Resolve(name, null, lk);
+            return MatchDto(hit, mega, alias);
         }
         return new LeagueClubMatchDto { White = One(white), Black = One(black) };
     }

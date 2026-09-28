@@ -39,6 +39,29 @@ public class LeagueMegaPlayersSqlTests(LeagueMegaPlayersSqlFixture fixture)
             Assert.Null(l.ByName("Niemand"));
         }
     }
+
+    /// <summary>Gemerkte Namens-Zuordnungen (0.579.0): anlegen, überschreiben, nachschlagen — eindeutiger Index auf NameKey.</summary>
+    [MySqlFact]
+    public async Task NameAliases_SaveOverwriteAndLoad()
+    {
+        var now = new DateTime(2026, 9, 28, 12, 0, 0, DateTimeKind.Utc);
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var aliases = new LeagueNameAliases(db);
+            Assert.Equal(2, await aliases.SaveAsync(new[] { ("FM Andi S.", new LeagueNameAliases.Entry("333", "Schnabl, Andreas")),
+                ("Kostic", new LeagueNameAliases.Entry(null, "Kostic, Milan")) }, now, default));
+        }
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var aliases = new LeagueNameAliases(db);
+            Assert.Equal(1, await aliases.SaveAsync(new[] { ("andi s.", new LeagueNameAliases.Entry("222", "Hengl, Philip")),
+                ("Kostic", new LeagueNameAliases.Entry(null, "Kostic, Milan")) }, now, default));     // nur eine ändert sich
+            var loaded = await aliases.LoadAsync(new[] { "Andi S.", "KOSTIC", "Niemand" }, default);
+            Assert.Equal(new LeagueNameAliases.Entry("222", "Hengl, Philip"), loaded["andi s."]);
+            Assert.Equal(2, loaded.Count);
+            Assert.Equal(2, await db.LeagueNameAliases.CountAsync());
+        }
+    }
 }
 
 public sealed class LeagueMegaPlayersSqlFixture() : MariaDbClassFixture("megapl", withApp: false);

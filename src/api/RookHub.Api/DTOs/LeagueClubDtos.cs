@@ -110,6 +110,8 @@ public class LeagueClubImportResultDto
     public int Duplicates { get; set; }
     /// <summary>Davon mit „Schwaz" statt eines Namens.</summary>
     public int Anonymized { get; set; }
+    /// <summary>Neu gemerkte (oder geänderte) Namens-Zuordnungen aus den Korrekturen — nur mit Konto.</summary>
+    public int Remembered { get; set; }
     public bool Truncated { get; set; }
     public List<int> Ids { get; set; } = new();
     public List<LeagueClubFailureDto> Failed { get; set; } = new();
@@ -189,6 +191,8 @@ public class LeagueClubSideMatchDto
     /// <summary>Kein Ligaspieler, aber eindeutig im Spielerverzeichnis der Megabase — dann <see cref="Name"/> und
     /// <see cref="Fide"/> von dort. Die Partie ist übernehmbar, die Übersicht wählt sie nicht vor („nicht in Liga").</summary>
     public bool Mega { get; set; }
+    /// <summary>Über eine gemerkte Zuordnung (jemand hat diesen Namen schon einmal so korrigiert).</summary>
+    public bool Alias { get; set; }
 }
 
 public class LeagueClubMatchDto

@@ -23,6 +23,8 @@ export interface ReviewSide {
   lastNameOnly: boolean;
   /** Kein Ligaspieler, aber im Megabase-Verzeichnis gefunden oder dort ausgewählt — „nicht in Liga". */
   mega: boolean;
+  /** Über eine gemerkte Zuordnung zugeordnet (Server). */
+  alias: boolean;
 }
 
 export interface ReviewGame {
@@ -31,6 +33,8 @@ export interface ReviewGame {
   black: ReviewSide;
   /** Vom Nutzer abgewählt, obwohl übernehmbar. */
   excluded: boolean;
+  /** Das Häkchen hat der Nutzer selbst angefasst — dann ändert eine übernommene Korrektur es nicht mehr. */
+  touched?: boolean;
 }
 
 export type SideKey = 'white' | 'black';
@@ -63,6 +67,7 @@ function sideOf(p: PreviewSide, replaceClub: boolean): ReviewSide {
     raw: p.raw, name: p.match.name ?? p.raw, fide: p.match.ambiguous ? null : p.match.fide, league: p.match.league,
     ambiguous: p.match.ambiguous, club: p.match.club, candidates: p.match.candidates ?? [], owner: p.owner,
     replace: replaceClub && p.replace, changed: false, lastNameOnly: !!p.match.lastNameOnly, mega: !!p.match.mega,
+    alias: !!p.match.alias,
   };
 }
 
@@ -132,22 +137,53 @@ export class ImportReview {
     return this.replaceClub && (club || owner);
   }
 
-  /** Einen Spieler (Meldeliste, Kandidat oder Megabase) an diese Seite setzen — die Partie wird damit importiert. */
-  choosePerson(index: number, side: SideKey, p: RosterPerson): void {
+  /** Einen Spieler (Meldeliste, Kandidat oder Megabase) an diese Seite setzen — die Partie wird damit importiert. Gilt
+   * auch für jede andere, noch nicht angefasste Seite mit demselben Namen im PGN; liefert, wie viele das waren. */
+  choosePerson(index: number, side: SideKey, p: RosterPerson): number {
     const league = p.league ?? true;
-    this.withSide(index, side, s => ({
+    const make = (s: ReviewSide): ReviewSide => ({
       ...s, name: p.name, fide: p.fide, league, ambiguous: false, club: p.club, candidates: [],
-      replace: this.defaultReplace(p.club, s.owner), changed: true, lastNameOnly: false, mega: !league,
-    }), true);
+      replace: this.defaultReplace(p.club, s.owner), changed: true, lastNameOnly: false, mega: !league, alias: false,
+    });
+    this.withSide(index, side, make, true);
+    return this.propagate(index, side, make);
   }
 
-  /** Einen getippten Namen samt Abgleich des Servers setzen. */
-  setTyped(index: number, side: SideKey, name: string, m: SideMatch): void {
-    this.withSide(index, side, s => ({
+  /** Einen getippten Namen samt Abgleich des Servers setzen (und wie bei {@link choosePerson} weitergeben). */
+  setTyped(index: number, side: SideKey, name: string, m: SideMatch): number {
+    const make = (s: ReviewSide): ReviewSide => ({
       ...s, name: m.name ?? name, fide: m.ambiguous ? null : m.fide, league: m.league, ambiguous: m.ambiguous, club: m.club,
       candidates: m.candidates ?? [], replace: this.defaultReplace(m.club, s.owner), changed: true,
-      lastNameOnly: !!m.lastNameOnly, mega: !!m.mega,
-    }), true);
+      lastNameOnly: !!m.lastNameOnly, mega: !!m.mega, alias: !!m.alias,
+    });
+    this.withSide(index, side, make, true);
+    return this.propagate(index, side, make);
+  }
+
+  /** Derselbe Name im PGN (ohne Groß/klein, Leerzeichen) — Wunsch 2026-09-28: „merk dir das zum Original und matche das
+   * bei allen selbst". */
+  static rawKey(raw: string | null): string {
+    return (raw ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  /** Dieselbe Korrektur an jeder anderen Seite mit demselben PGN-Namen, die der Nutzer noch nicht selbst gesetzt hat.
+   * Ob die Partie übernommen wird, folgt dann der Vorgabe (außer der Nutzer hat das Häkchen selbst angefasst). */
+  private propagate(index: number, side: SideKey, make: (s: ReviewSide) => ReviewSide): number {
+    const src = this.games().find(r => r.game.index === index)?.[side];
+    const key = ImportReview.rawKey(src?.raw ?? null);
+    if (!key) return 0;
+    let n = 0;
+    this.games.update(list => list.map(r => {
+      let next = r;
+      for (const k of ['white', 'black'] as SideKey[]) {
+        const s = r[k];
+        if ((r.game.index === index && k === side) || s.changed || ImportReview.rawKey(s.raw) !== key) continue;
+        next = { ...next, [k]: make(s) };
+        n++;
+      }
+      return next === r ? r : { ...next, excluded: r.touched ? r.excluded : optionalGame(next) };
+    }));
+    return n;
   }
 
   setReplace(index: number, side: SideKey, replace: boolean): void {
@@ -155,7 +191,7 @@ export class ImportReview {
   }
 
   toggleInclude(index: number): void {
-    this.update(index, r => ({ ...r, excluded: !r.excluded }));
+    this.update(index, r => ({ ...r, excluded: !r.excluded, touched: true }));
   }
 
   /** Was an den Server geht: nur übernommene Partien, je Seite der festgelegte Spieler und „ersetzen". */

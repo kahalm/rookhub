@@ -61,7 +61,7 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
       @if (kind() === 'pgn') {
         <section class="panel">
           @if (review(); as rv) {
-            <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" (imported)="done($event)" (cancel)="review.set(null)" />
+            <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" (imported)="done($event)" (cancel)="review.set(null)" />
           } @else {
             <label class="anon-toggle">
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />

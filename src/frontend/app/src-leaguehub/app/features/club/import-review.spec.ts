@@ -86,6 +86,36 @@ describe('ImportReview', () => {
     expect(r.decisions().find(d => d.index === 2)?.black).toEqual({ name: 'Hengl, Peter', fide: '777', replace: false });
   });
 
+  it('eine Korrektur gilt für jede andere Seite mit demselben PGN-Namen, die noch niemand angefasst hat', () => {
+    const g = (index: number, white: PreviewSide, black: PreviewSide) =>
+      ({ index, year: 2025, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false, white, black });
+    const me = () => S('Oberschmid, Patrik', M({ league: true, name: 'Oberschmid, Patrik', fide: '900', club: true }), { owner: true });
+    const r = new ImportReview({ truncated: false, games: [
+      g(1, me(), S('Kostic', M())), g(2, S('KOSTIC ', M()), me()), g(3, me(), S('Kostic', M())), g(4, me(), S('Huber', M())),
+    ] }, true);
+    r.toggleInclude(3);                                                                // Häkchen selbst angefasst
+    const n = r.choosePerson(1, 'black', { name: 'Kostic, Vladimir', fide: '901482', teams: [], club: false, league: false, source: 'mega' });
+    expect(n).toBe(2);
+    expect(r.games()[1].white).toEqual(jasmine.objectContaining({ name: 'Kostic, Vladimir', fide: '901482', mega: true, changed: true }));
+    expect(r.games()[2].black.fide).toBe('901482');
+    expect(r.games()[3].black.changed).toBeFalse();                                    // anderer Name: bleibt
+    expect(included(r.games()[0])).toBeTrue();                                         // gewählt = importieren
+    expect(included(r.games()[1])).toBeFalse();                                        // übernommen: Vorgabe „nicht in Liga"
+    expect(r.games()[2].excluded).toBeTrue();                                          // selbst angefasst (abgewählt): bleibt
+    // schon selbst gesetzte Seiten überschreibt eine spätere Korrektur nicht
+    expect(r.choosePerson(2, 'white', { name: 'Kostic, Milan', fide: '42', teams: ['Absam'], club: false })).toBe(0);
+  });
+
+  it('eine gemerkte Zuordnung vom Server steht als alias an der Seite', () => {
+    const r = new ImportReview({ truncated: false, games: [
+      { index: 1, year: 2025, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,
+        white: S('Andi S.', M({ league: true, alias: true, name: 'Schnabl, Andreas Dr.', fide: '333' })),
+        black: S('Hengl, Philip', M({ league: true, name: 'Hengl, Philip', fide: '222' })) },
+    ] }, true);
+    expect(r.games()[0].white).toEqual(jasmine.objectContaining({ alias: true, league: true, fide: '333' }));
+    expect(needsLook(r.games()[0].white)).toBeFalse();
+  });
+
   it('nur über den Nachnamen zugeordnet braucht einen Blick', () => {
     const r = new ImportReview({ truncated: false, games: [
       { index: 1, year: 2025, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,

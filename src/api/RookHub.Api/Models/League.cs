@@ -189,6 +189,24 @@ public class LeagueClubGame
 }
 
 /// <summary>
+/// Eine gemerkte Namens-Zuordnung der Vereins-Datenbank (Wunsch 2026-09-28: „wenn ich einen Spieler umbenenne, merk dir
+/// das zum Original und matche das zukünftig bei allen selbst"): so, wie ein Name in einem PGN stand
+/// (<see cref="NameKey"/>, klein, ohne Akzente und Titel), gehört er zu diesem Spieler — Ligaspieler oder aus der
+/// Megabase. Gilt für ALLE künftigen Abgleiche. Bewusst OHNE Verweis auf eine Partie oder den, der korrigiert hat: sonst
+/// ließe sich über die Zuordnung doch nachvollziehen, wer hinter einem „Schwaz" steht.
+/// </summary>
+public class LeagueNameAlias
+{
+    public int Id { get; set; }
+    public string NameKey { get; set; } = string.Empty;
+    /// <summary>FIDE-ID des Spielers; fehlt bei Ligaspielern ohne ID oder Megabase-Einträgen ohne ID.</summary>
+    public string? Fide { get; set; }
+    /// <summary>Der Name, wie er gespeichert wird (Meldeliste bzw. Megabase).</summary>
+    public string Name { get; set; } = string.Empty;
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
 /// Ein Spieler aus der ChessBase-Megabase (ganzes Verzeichnis, nicht nur Ligaspieler) — für die Namenssuche beim
 /// Korrigieren in der Vereins-Datenbank („mit Häkchen über alle Spieler der Megabase", Wunsch 2026-09-28). Eingespielt
 /// über <c>POST /api/league/admin/mega-players</c> (Skript <c>scan_mega_players.py</c>), ersetzt jedes Mal alles.

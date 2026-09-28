@@ -287,6 +287,53 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(("Hengl, Philip", "Someone, Other"), (games[2].White, games[2].Black));
     }
 
+    /// <summary>Wunsch 2026-09-28: „wenn ich einen Spieler umbenenne, merk dir das zum Original und matche das zukünftig
+    /// bei allen selbst".</summary>
+    [Fact]
+    public async Task Import_Correction_IsRemembered_AndMatchesNextTimeForEveryone()
+    {
+        var me = await SeedAsync();
+        var club = Club();
+        var pgn = Pgn("Oberschmid, Patrik", "Hengl P.");                     // „Hengl P." erkennt der Abgleich (Anfangsbuchstabe)
+        var pgn2 = Pgn("Oberschmid, Patrik", "Dr. Andi S.",
+            "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0");
+        Assert.False((await club.PreviewAsync(me, pgn2)).Games[0].Black.Match.League);   // „Andi S." kennt niemand
+
+        var result = await club.ImportPgnAsync(me, pgn2, new[]
+        {
+            new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "333" } },
+        });
+        Assert.Equal((1, 1), (result.Added, result.Remembered));
+        var alias = Assert.Single(_db.LeagueNameAliases);
+        Assert.Equal(("andi s.", "333", "Schnabl, Andreas Dr."), (alias.NameKey, alias.Fide, alias.Name));   // Titel weg, ohne Partie/Person
+
+        // Nächstes Mal (auch über einen Teilen-Link, ohne Konto): von selbst Schnabl, als „gemerkt" markiert.
+        var next = await club.PreviewAsync(null, Pgn("Hengl, Philip", "Andi S.", "1. c4 e5 2. Nc3 Nf6 3. g3 d5 4. cxd5 Nxd5 5. Bg2 Nb6 6. Nf3 Nc6 7. O-O Be7 8. d3 O-O 9. a3 Be6 10. b4 f6 1-0"));
+        var b = next.Games[0].Black.Match;
+        Assert.Equal((true, true, "333"), (b.League, b.Alias, b.Fide));
+        Assert.True((await club.MatchAsync("andi s.", null, default)).White.Alias);
+
+        // Eine FIDE-ID aus der Partie, die ein Ligaspieler trägt, schlägt die Zuordnung.
+        var withId = await club.PreviewAsync(null, Pgn("Hengl, Philip", "Andi S.", extra: "[BlackFideId \"111\"]"));
+        Assert.Equal(("111", false), (withId.Games[0].Black.Match.Fide, withId.Games[0].Black.Match.Alias));
+
+        // Unveränderte Seiten (der Client schickt die FIDE-ID der Vorgabe mit) und Teilen-Links merken nichts.
+        var same = await club.ImportPgnAsync(me, pgn, new[]
+        {
+            new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } },
+        });
+        Assert.Equal(0, same.Remembered);
+        var anon = await club.ImportPgnAsync(null, Pgn("Oberschmid, Patrik", "Irgendwer", "1. e4 e6 2. d4 d5 3. Nc3 Bb4 4. e5 c5 5. a3 Bxc3+ 6. bxc3 Ne7 7. Qg4 Qc7 8. Qxg7 Rg8 9. Qxh7 cxd4 10. Ne2 Nbc6 1-0"),
+            new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } } });
+        Assert.Equal((1, 0), (anon.Added, anon.Remembered));
+        Assert.Single(_db.LeagueNameAliases);
+
+        // Eine neue Korrektur desselben Namens überschreibt die alte.
+        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Andi S.", "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 1-0"),
+            new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Fide = "900", Replace = true }, Black = new() { Fide = "222" } } });
+        Assert.Equal("222", _db.LeagueNameAliases.AsNoTracking().Single().Fide);
+    }
+
     [Fact]
     public async Task Import_ViaShareLink_StoresNoUploader_EvenWithNames()
     {
