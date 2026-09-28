@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.589.0", date: "2026-09-28", changes: [
+    { en: "Roles for groups: a role can be given to a whole group (Administration → Roles) — every member has its rights, whoever joins has them at once, whoever leaves loses them.", de: "Rollen für Gruppen: Eine Rolle lässt sich einer ganzen Gruppe geben (Verwaltung → Rollen) — jedes Mitglied hat ihre Rechte, wer dazukommt, hat sie sofort, wer geht, verliert sie." },
+    { en: "Rights now apply immediately: a newly given or withdrawn role takes effect without logging in again — the server checks the current state, and the pages fetch it at start, when you return to the tab and every two minutes.", de: "Rechte gelten jetzt sofort: Eine neu vergebene oder entzogene Rolle wirkt ohne erneutes Anmelden — der Server prüft den aktuellen Stand, und die Seiten holen ihn beim Start, beim Zurückkehren in den Tab und alle zwei Minuten." },
+  ] },
   { version: "0.588.0", date: "2026-09-28", changes: [
     { en: "The games in the LeagueHub club database are now analysed in the background as well — every game, including each newly uploaded one, and ahead of the master games, at the same times and on the same engines, and every other job still goes first. The analysis carries the names of the game: if a game is deleted, its analysis goes with it, and if a player is corrected (for example to “Schwaz”), the analysis follows. Unlike the master games, these analyses are not readable by everyone.", de: "Die Partien der Vereins-Datenbank von LeagueHub werden jetzt ebenfalls im Hintergrund analysiert — jede, auch jede neu hochgeladene, und vor den Meisterpartien, zu denselben Zeiten und auf denselben Engines, und jeder andere Auftrag geht weiter vor. Die Analyse trägt die Namen der Partie: wird eine Partie gelöscht, geht ihre Analyse mit, wird ein Spieler korrigiert (etwa zu „Schwaz“), zieht die Analyse nach. Anders als bei den Meisterpartien sind diese Analysen nicht für alle lesbar." },
   ] },

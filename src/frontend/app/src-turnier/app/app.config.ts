@@ -1,4 +1,5 @@
-import { ApplicationConfig, isDevMode, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, isDevMode, LOCALE_ID, provideZoneChangeDetection } from '@angular/core';
+import { PermissionRefresher } from '@rh/core/permission-refresher.service';
 import { RouteReuseStrategy, provideRouter } from '@angular/router';
 import { ReloadOnParamChangeStrategy } from './core/reload-on-param-change.strategy';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -32,6 +33,8 @@ registerLocaleData(localeHu);
 export const turnierConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
+    // Rechte live vom Server (eigene Rollen + Gruppenrollen), vor dem ersten Seitenaufbau und danach laufend (0.589.0).
+    provideAppInitializer(() => inject(PermissionRefresher).start()),
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
     // Gleiche Route, andere Id (Gruppen-Umschaltung): Seite neu aufbauen — siehe die Klasse.

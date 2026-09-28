@@ -21,6 +21,8 @@ export interface Role {
   isSystem: boolean;
   permissions: string[];
   memberCount: number;
+  /** Gruppen, deren Mitglieder diese Rolle haben (0.589.0). */
+  groups?: string[];
 }
 
 export interface CreateRole {
@@ -204,6 +206,15 @@ export class AdminService {
 
   getUserRoles(userId: number): Observable<UserRoles> {
     return this.http.get<UserRoles>(`/api/admin/users/${userId}/roles`);
+  }
+
+  /** Rollen einer Gruppe — alle Mitglieder haben sie, live (0.589.0). */
+  getGroupRoles(groupId: number): Observable<{ groupId: number; roleIds: number[] }> {
+    return this.http.get<{ groupId: number; roleIds: number[] }>(`/api/admin/groups/${groupId}/roles`);
+  }
+
+  setGroupRoles(groupId: number, roleIds: number[]): Observable<void> {
+    return this.http.put<void>(`/api/admin/groups/${groupId}/roles`, { roleIds });
   }
 
   setUserRoles(userId: number, roleIds: number[]): Observable<void> {

@@ -2405,7 +2405,12 @@
         "league_view": "LeagueHub: view forecasts and club games",
         "league_manage": "LeagueHub: update data, share links, import",
         "league_contribute": "LeagueHub: add club games (PGN, scoresheet)"
-      }
+      },
+      "groupTitle": "Assign roles to a group",
+      "groupHint": "Every member of the group has these roles — whoever joins has the rights at once, whoever leaves loses them. The admin role and “Everyone” are not available here.",
+      "rolesForGroup": "Roles of the group {{name}}",
+      "groups": "Groups: {{names}}",
+      "groupRolesSaved": "Group roles saved — they apply immediately."
     }
   },
   "favorites": {

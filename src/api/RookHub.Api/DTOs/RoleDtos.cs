@@ -11,6 +11,22 @@ public class RoleDto
     public bool IsSystem { get; set; }
     public List<string> Permissions { get; set; } = new();
     public int MemberCount { get; set; }
+    /// <summary>Gruppen, deren Mitglieder diese Rolle haben (0.589.0).</summary>
+    public List<string> Groups { get; set; } = new();
+}
+
+/// <summary>Rollen einer Gruppe — alle Mitglieder haben sie (0.589.0).</summary>
+public class GroupRolesDto
+{
+    public int GroupId { get; set; }
+    public List<int> RoleIds { get; set; } = new();
+}
+
+/// <summary><c>GET /api/auth/permissions</c> — was JETZT gilt (live, nicht der Stand beim Anmelden).</summary>
+public class AuthPermissionsDto
+{
+    public bool IsAdmin { get; set; }
+    public List<string> Permissions { get; set; } = new();
 }
 
 /// <summary>Anlegen einer neuen Rolle.</summary>

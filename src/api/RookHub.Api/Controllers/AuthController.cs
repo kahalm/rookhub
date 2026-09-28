@@ -186,6 +186,17 @@ public class AuthController : BaseApiController
         }
     }
 
+    /// <summary>Die Rechte, die JETZT gelten (0.589.0): eigene Rollen + Rollen der Gruppen, live aufgelöst. Die Oberflächen
+    /// holen sie beim Start, beim Zurückkehren in den Tab und alle paar Minuten — die Claims im Token sind nur noch ein
+    /// Startwert. <c>isAdmin</c> ist die Admin-Rolle des Tokens, dieselbe, die der Server bei jeder Prüfung zuerst ansieht.</summary>
+    [Authorize]
+    [HttpGet("permissions")]
+    public async Task<ActionResult<AuthPermissionsDto>> GetPermissions([FromServices] PermissionResolver resolver, CancellationToken ct)
+    {
+        var live = await resolver.GetAsync(GetUserId(), ct);
+        return Ok(new AuthPermissionsDto { IsAdmin = User.IsInRole("Admin"), Permissions = live.Permissions.OrderBy(p => p).ToList() });
+    }
+
     [HttpPut("change-password")]
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)

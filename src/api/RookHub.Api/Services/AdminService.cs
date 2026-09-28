@@ -82,6 +82,7 @@ public class AdminService
 
         user.IsAdmin = !user.IsAdmin;
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
 
         var groups = await _db.UserGroups
             .Where(ug => ug.UserId == user.Id)

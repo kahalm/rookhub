@@ -17,6 +17,9 @@
                 <span class="badge system">{{ 'admin.roles.systemBadge' | translate }}</span>
               }
               <span class="member-count">{{ 'admin.roles.members' | translate: { count: role.memberCount } }}</span>
+              @if (role.groups?.length) {
+                <span class="member-count role-groups">{{ 'admin.roles.groups' | translate: { names: role.groups!.join(', ') } }}</span>
+              }
             </div>
             <div class="role-actions">
               @if (editingId !== role.id && !isAdminRole(role)) {
@@ -95,6 +98,34 @@
       <button mat-raised-button color="primary" [disabled]="!canCreate || creating" (click)="createRole()">
         <mat-icon>add</mat-icon> {{ 'admin.roles.createBtn' | translate }}
       </button>
+    </div>
+
+    <!-- Rollen einer Gruppe zuweisen (0.589.0): alle Mitglieder haben sie, live -->
+    <div class="assign-roles group-roles">
+      <h3>{{ 'admin.roles.groupTitle' | translate }}</h3>
+      <p class="hint">{{ 'admin.roles.groupHint' | translate }}</p>
+      <div class="user-results">
+        @for (g of assignableGroups; track g.id) {
+          <button type="button" class="user-chip" [class.active]="selectedGroup?.id === g.id" (click)="selectGroup(g)">
+            {{ g.name }} <span class="muted">({{ g.memberCount }})</span>
+          </button>
+        }
+      </div>
+      @if (selectedGroup) {
+        <div class="user-roles">
+          <h4>{{ 'admin.roles.rolesForGroup' | translate: { name: selectedGroup.name } }}</h4>
+          <div class="perm-grid">
+            @for (role of assignableRoles; track role.id) {
+              <mat-checkbox [checked]="groupRoleIds.has(role.id)" (change)="toggleGroupRole(role.id)">
+                {{ role.name }}
+              </mat-checkbox>
+            }
+          </div>
+          <button mat-raised-button color="primary" [disabled]="savingGroupRoles" (click)="saveGroupRoles()">
+            <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
+          </button>
+        </div>
+      }
     </div>
 
     <!-- Rollen einem Nutzer zuweisen -->

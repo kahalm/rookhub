@@ -26,23 +26,29 @@ public class LeagueClubController : BaseApiController
     private readonly LeagueClubService _club;
     private readonly ScoresheetScanService _scans;
     private readonly ScoresheetScanSignal _signal;
+    private readonly PermissionResolver? _permissions;
 
-    public LeagueClubController(LeagueClubService club, ScoresheetScanService scans, ScoresheetScanSignal signal)
+    public LeagueClubController(LeagueClubService club, ScoresheetScanService scans, ScoresheetScanSignal signal,
+        PermissionResolver? permissions = null)
     {
-        _club = club; _scans = scans; _signal = signal;
+        _club = club; _scans = scans; _signal = signal; _permissions = permissions;
     }
 
-    private bool CanManage => User.IsInRole("Admin")
-        || User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueManage);
+    /// <summary>Verwalter (<c>league.manage</c>) — LIVE, wie <c>[HasPermission]</c> (0.589.0): eine eben vergebene oder
+    /// entzogene Rolle gilt sofort, nicht erst nach dem nächsten Anmelden.</summary>
+    private async Task<bool> CanManageAsync() =>
+        User.IsInRole("Admin") || (_permissions != null
+            ? (await _permissions.GetAsync(GetUserId())).Has(Permissions.LeagueManage)
+            : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.LeagueManage));
 
     /// <summary>Verwalter dürfen JEDE Liga-Einlesung öffnen, übernehmen und verwerfen — sonst nur die eigenen.</summary>
-    private Actor Me => CanManage ? Actor.ManagerOf(GetUserId()) : Actor.User(GetUserId());
+    private async Task<Actor> MeAsync() => await CanManageAsync() ? Actor.ManagerOf(GetUserId()) : Actor.User(GetUserId());
 
     [HttpGet("games")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<ActionResult<LeagueClubListDto>> List([FromQuery] string? fide, [FromQuery] string? q,
         [FromQuery] int page = 1, CancellationToken ct = default) =>
-        Ok(await _club.ListAsync(GetUserId(), CanManage, fide, q, page, ct));
+        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct));
 
     [HttpGet("games/pgn")]
     [HasPermission(Permissions.LeagueView)]
@@ -72,14 +78,14 @@ public class LeagueClubController : BaseApiController
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         var (game, reason, message) = await _club.AddGameAsync(GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(Me, scanId);
+        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId);
         return Ok(new { id = game.Id, anonymized = game.Anonymized });
     }
 
     [HttpDelete("games/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) =>
-        await _club.DeleteAsync(GetUserId(), CanManage, id, ct) switch
+        await _club.DeleteAsync(GetUserId(), await CanManageAsync(), id, ct) switch
         {
             LeagueClubService.DeleteResult.Deleted => NoContent(),
             LeagueClubService.DeleteResult.Forbidden => Forbid(),
@@ -124,10 +130,11 @@ public class LeagueClubController : BaseApiController
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<ActionResult<LeagueClubGameDto>> Update(int id, [FromBody] LeagueClubGameUpdateRequest req, CancellationToken ct)
     {
-        var (game, reason) = await _club.UpdateAsync(GetUserId(), CanManage, id, req ?? new(), ct);
+        var manage = await CanManageAsync();
+        var (game, reason) = await _club.UpdateAsync(GetUserId(), manage, id, req ?? new(), ct);
         return reason switch
         {
-            null => Ok(LeagueClubService.ToDto(game!, GetUserId(), CanManage)),
+            null => Ok(LeagueClubService.ToDto(game!, GetUserId(), manage)),
             "notFound" => NotFound(),
             "forbidden" => Forbid(),
             _ => BadRequest(new { reason }),
@@ -162,21 +169,24 @@ public class LeagueClubController : BaseApiController
     [HttpGet("scans/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
     public async Task<ActionResult<LeagueScanStateDto>> Scan(int id, CancellationToken ct) =>
-        await _scans.LeagueScanStateAsync(Me, id, ct) is { } s ? Ok(s) : NotFound();
+        await _scans.LeagueScanStateAsync(await MeAsync(), id, ct) is { } s ? Ok(s) : NotFound();
 
     [HttpGet("scans/{id:int}/photo")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Photo(int id) => ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(Me, id));
+    public async Task<IActionResult> Photo(int id) => ClubUpload.PhotoResult(this, await _scans.LeagueScanPhotoAsync(await MeAsync(), id));
 
     [HttpPost("scans/{id:int}/resolve")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<ActionResult<ScoresheetResolveResultDto>> Resolve(int id, [FromBody] ScoresheetResolveRequestDto dto) =>
-        await ClubUpload.ResolveAsync(this, () => _scans.ResolveLeagueRestAsync(Me, id, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0));
+    public async Task<ActionResult<ScoresheetResolveResultDto>> Resolve(int id, [FromBody] ScoresheetResolveRequestDto dto)
+    {
+        var me = await MeAsync();
+        return await ClubUpload.ResolveAsync(this, () => _scans.ResolveLeagueRestAsync(me, id, dto?.Prefix ?? new(), dto?.WrittenFrom ?? 0));
+    }
 
     /// <summary>Einlesung verwerfen: Foto und Lesung weg, die Zeile bleibt fürs Tageskontingent.</summary>
     [HttpDelete("scans/{id:int}")]
     [HasPermission(Permissions.LeagueContribute)]
-    public async Task<IActionResult> Discard(int id) => await _scans.CloseLeagueScanAsync(Me, id) ? NoContent() : NotFound();
+    public async Task<IActionResult> Discard(int id) => await _scans.CloseLeagueScanAsync(await MeAsync(), id) ? NoContent() : NotFound();
 }
 
 /// <summary>

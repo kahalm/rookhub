@@ -280,3 +280,37 @@ describe('AuthService: voller Browser-Speicher', () => {
     expect(localStorage.getItem('rookhub_user')).not.toBeNull();
   });
 });
+
+describe('AuthService Live-Rechte (0.589.0)', () => {
+  let svc: AuthService;
+  let http: HttpTestingController;
+  const tokenWith = (perms: string[]) =>
+    `h.${btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600, perm: perms }))}.s`;
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('rookhub_user', JSON.stringify({ token: tokenWith(['league.view']), username: 'fm', userId: 136, isAdmin: false }));
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+    svc = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => { http.verify(); localStorage.clear(); });
+
+  it('ohne Live-Stand gelten die Claims des Tokens, danach der Server — eine entzogene wie eine neue Rolle sofort', async () => {
+    expect(svc.has('league.view')).toBeTrue();                 // Token von gestern
+    expect(svc.has('league.contribute')).toBeFalse();
+    const done = svc.refreshPermissions();
+    http.expectOne('/api/auth/permissions').flush({ isAdmin: false, permissions: ['league.contribute'] });
+    await done;
+    expect(svc.has('league.contribute')).toBeTrue();           // neue Gruppenrolle, ohne neu anzumelden
+    expect(svc.has('league.view')).toBeFalse();                // entzogen — der Claim zählt nicht mehr
+  });
+
+  it('ein Fehler beim Holen lässt den bisherigen Stand stehen', async () => {
+    const done = svc.refreshPermissions();
+    http.expectOne('/api/auth/permissions').flush(null, { status: 503, statusText: 'x' });
+    await done;
+    expect(svc.has('league.view')).toBeTrue();
+  });
+});

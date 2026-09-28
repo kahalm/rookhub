@@ -119,6 +119,7 @@ public class AppDbContext : DbContext
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<GroupRole> GroupRoles => Set<GroupRole>();
     public DbSet<EndlessProgress> EndlessProgresses => Set<EndlessProgress>();
     public DbSet<EndlessSession> EndlessSessions => Set<EndlessSession>();
     public DbSet<CourseProgress> CourseProgresses => Set<CourseProgress>();
@@ -841,6 +842,14 @@ public class AppDbContext : DbContext
              .WithMany(r => r.Users)
              .HasForeignKey(ur => ur.RoleId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GroupRole>(e =>
+        {
+            e.HasKey(gr => new { gr.GroupId, gr.RoleId });
+            e.HasOne(gr => gr.Group).WithMany().HasForeignKey(gr => gr.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(gr => gr.Role).WithMany().HasForeignKey(gr => gr.RoleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(gr => gr.RoleId);
         });
 
         modelBuilder.Entity<RolePermission>(e =>

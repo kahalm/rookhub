@@ -13,7 +13,7 @@ import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
-import { AdminService, AdminUser, Role } from '../../../core/admin.service';
+import { AdminService, AdminUser, Group, Role } from '../../../core/admin.service';
 
 /**
  * Admin-Tab „Rollen & Berechtigungen" (RBAC Phase 4): Rollen anlegen/bearbeiten/löschen inkl.
@@ -64,6 +64,12 @@ export class AdminRolesComponent implements OnInit {
   userRoleIds = new Set<number>();
   savingUserRoles = false;
 
+  // Gruppen-Rollen (0.589.0)
+  groups: Group[] = [];
+  selectedGroup: Group | null = null;
+  groupRoleIds = new Set<number>();
+  savingGroupRoles = false;
+
   constructor(
     private admin: AdminService,
     private snackbar: SnackbarService,
@@ -73,6 +79,7 @@ export class AdminRolesComponent implements OnInit {
   ngOnInit(): void {
     this.loadRoles();
     this.admin.getPermissions().subscribe({ next: p => this.allPermissions = p, error: () => {} });
+    this.admin.getGroups().subscribe({ next: g => this.groups = g, error: () => {} });
     this.searchInput.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -167,6 +174,39 @@ export class AdminRolesComponent implements OnInit {
     this.admin.deleteRole(role.id).subscribe({
       next: () => { this.snackbar.info(this.translate.instant('admin.roles.deleted')); this.loadRoles(); },
       error: err => this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError')),
+    });
+  }
+
+  // --- Gruppen-Zuweisung (0.589.0) ------------------------------------
+  /** „Everyone" hat keine Mitgliedszeilen — eine Rolle dort wirkte nirgends (der Server lehnt sie ab). */
+  get assignableGroups(): Group[] { return this.groups.filter(g => !g.isEveryone); }
+
+  selectGroup(group: Group): void {
+    this.selectedGroup = group;
+    this.groupRoleIds = new Set();
+    this.admin.getGroupRoles(group.id).subscribe({
+      next: gr => this.groupRoleIds = new Set(gr.roleIds),
+      error: () => this.snackbar.info(this.translate.instant('admin.roles.loadError')),
+    });
+  }
+
+  toggleGroupRole(roleId: number): void {
+    if (this.groupRoleIds.has(roleId)) this.groupRoleIds.delete(roleId); else this.groupRoleIds.add(roleId);
+  }
+
+  saveGroupRoles(): void {
+    if (!this.selectedGroup || this.savingGroupRoles) return;
+    this.savingGroupRoles = true;
+    this.admin.setGroupRoles(this.selectedGroup.id, [...this.groupRoleIds]).subscribe({
+      next: () => {
+        this.savingGroupRoles = false;
+        this.snackbar.info(this.translate.instant('admin.roles.groupRolesSaved'));
+        this.loadRoles();   // die Rollenkarten nennen ihre Gruppen
+      },
+      error: err => {
+        this.savingGroupRoles = false;
+        this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError'));
+      },
     });
   }
 

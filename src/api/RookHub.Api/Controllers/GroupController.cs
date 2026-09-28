@@ -105,8 +105,10 @@ public class GroupController : BaseApiController
         _db.UserGroups.RemoveRange(_db.UserGroups.Where(ug => ug.GroupId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.GroupId == id));
         _db.GroupTrainingGoals.RemoveRange(_db.GroupTrainingGoals.Where(g => g.GroupId == id));
+        _db.GroupRoles.RemoveRange(_db.GroupRoles.Where(gr => gr.GroupId == id));
         _db.Groups.Remove(group);
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
         return NoContent();
     }
 
@@ -147,6 +149,7 @@ public class GroupController : BaseApiController
         {
             _db.UserGroups.Add(new UserGroup { GroupId = id, UserId = userId });
             await _db.SaveChangesAsync();
+            PermissionResolver.InvalidateAll();   // Rollen der Gruppe gelten sofort
         }
         return NoContent();
     }
@@ -161,6 +164,7 @@ public class GroupController : BaseApiController
             return NotFound(new { message = "Membership not found." });
         _db.UserGroups.Remove(membership);
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();       // … und fallen sofort weg
         return NoContent();
     }
 

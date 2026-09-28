@@ -1,6 +1,6 @@
-import { DestroyRef, Injectable, Injector, inject } from '@angular/core';
+import { DestroyRef, Injectable, Injector, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { OfflineService } from './offline.service';
@@ -92,9 +92,31 @@ export class AuthService {
     }
   }
 
+  /**
+   * Die Rechte, die JETZT gelten — vom Server (`GET /api/auth/permissions`, eigene Rollen + Rollen der Gruppen), nicht
+   * der Stand beim Anmelden (0.589.0; eine neue Rolle wirkte vorher erst nach dem nächsten Anmelden). `null`, solange
+   * noch nicht geholt — dann gelten die Claims des Tokens. Ein Signal: Menüs und Seiten, die `has` in einem `computed`
+   * oder im Template lesen, ziehen von selbst nach. Aufgefrischt vom {@link PermissionRefresher}.
+   */
+  private readonly live = signal<{ userId: number; isAdmin: boolean; permissions: ReadonlySet<string> } | null>(null);
+
   /** Darf der aktuelle Nutzer die Aktion? Admin erfüllt jede Permission (Superuser). */
   has(permission: string): boolean {
+    const live = this.live();
+    const user = this.getValidUser();
+    if (live && user && live.userId === user.userId) return live.isAdmin || live.permissions.has(permission);
     return this.isAdmin || this.permissions.has(permission);
+  }
+
+  /** Den Live-Stand der Rechte holen. Still bei Fehlern (offline, Server weg) — dann bleibt der bisherige Stand. */
+  async refreshPermissions(): Promise<void> {
+    const user = this.getValidUser();
+    if (!user) { this.live.set(null); return; }
+    try {
+      const r = await firstValueFrom(this.http.get<{ isAdmin: boolean; permissions: string[] }>(`${this.apiUrl}/permissions`));
+      if (this.getValidUser()?.userId === user.userId)
+        this.live.set({ userId: user.userId, isAdmin: !!r.isAdmin, permissions: new Set(r.permissions ?? []) });
+    } catch { /* bisheriger Stand (bzw. die Claims des Tokens) gilt weiter */ }
   }
 
   private readonly adminBackupKey = 'rookhub_admin_user';

@@ -348,6 +348,8 @@ try
     builder.Services.AddScoped<ApiTokenService>();
     builder.Services.AddScoped<AdminService>();
     builder.Services.AddScoped<RoleAdminService>();
+    // Rechte live (eigene Rollen + Gruppenrollen, 60 s gespeichert) — [HasPermission] und GET /api/auth/permissions (0.589.0).
+    builder.Services.AddScoped<PermissionResolver>();
     builder.Services.AddScoped<BookAdminService>();
     // Tipp-Generierung für Buch-Puzzles (LLM + Stockfish, nur Import-/Reprocess-Pfad).
     builder.Services.AddSingleton<StockfishAnalyzer>();

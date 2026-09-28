@@ -1,4 +1,5 @@
-import { ApplicationConfig, isDevMode, provideZoneChangeDetection, LOCALE_ID } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, isDevMode, provideZoneChangeDetection, LOCALE_ID } from '@angular/core';
+import { PermissionRefresher } from './core/permission-refresher.service';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -29,6 +30,8 @@ registerLocaleData(localeHu);
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
+    // Rechte live vom Server (eigene Rollen + Gruppenrollen), vor dem ersten Seitenaufbau und danach laufend (0.589.0).
+    provideAppInitializer(() => inject(PermissionRefresher).start()),
     // Aktive Locale (en/de/hr) für Angular-Pipes; aus gespeicherter Sprache beim Start.
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),

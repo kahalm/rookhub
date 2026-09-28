@@ -204,17 +204,12 @@ public class AuthService
             IsAdmin = user.IsAdmin,
         };
 
-    /// <summary>Löst die effektiven Permissions eines Users (über seine Rollen) als <c>perm</c>-Claims
-    /// auf — landen im JWT und werden vom <see cref="Authorization.PermissionAuthorizationHandler"/>
-    /// geprüft. Trade-off: das Token ist bis zum nächsten Login stale; eine Rollenänderung wirkt erst
-    /// dann (bzw. sofort für Admins über die separate Admin-Rolle + SecurityStamp bei PW-Änderung).</summary>
+    /// <summary>Die effektiven Permissions eines Users (eigene Rollen + Rollen seiner Gruppen) als <c>perm</c>-Claims —
+    /// nur noch ein Startwert für ältere Oberflächen: geprüft wird live (<see cref="PermissionResolver"/>, 0.589.0), und
+    /// die Oberflächen holen den Stand über <c>GET /api/auth/permissions</c>.</summary>
     private async Task<List<Claim>> ResolvePermissionClaimsAsync(int userId)
     {
-        var perms = await _db.RolePermissions
-            .Where(rp => _db.UserRoles.Any(ur => ur.UserId == userId && ur.RoleId == rp.RoleId))
-            .Select(rp => rp.Permission)
-            .Distinct()
-            .ToListAsync();
+        var perms = (await PermissionResolver.LoadAsync(_db, userId)).Permissions.OrderBy(p => p);
         return perms
             .Select(p => new Claim(Authorization.PermissionAuthorizationHandler.PermissionClaimType, p))
             .ToList();

@@ -55,6 +55,23 @@ public class RolesAdminController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Rollen einer Gruppe — alle Mitglieder haben sie (0.589.0).</summary>
+    [HttpGet("/api/admin/groups/{groupId:int}/roles")]
+    public async Task<ActionResult<GroupRolesDto>> GetGroupRoles(int groupId)
+    {
+        try { return Ok(await _roles.GetGroupRolesAsync(groupId)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    /// <summary>Setzt die (Nicht-Admin-)Rollen einer Gruppe; 400 für „Everyone".</summary>
+    [HttpPut("/api/admin/groups/{groupId:int}/roles")]
+    public async Task<IActionResult> SetGroupRoles(int groupId, [FromBody] SetUserRolesDto dto)
+    {
+        try { await _roles.SetGroupRolesAsync(groupId, dto); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     /// <summary>Setzt die (Nicht-Admin-)Rollen eines Users auf genau diese Menge.</summary>
     [HttpPut("/api/admin/users/{userId:int}/roles")]
     public async Task<IActionResult> SetUserRoles(int userId, [FromBody] SetUserRolesDto dto)

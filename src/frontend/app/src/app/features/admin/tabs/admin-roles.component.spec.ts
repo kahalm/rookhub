@@ -12,6 +12,10 @@ function make(overrides: any = {}) {
     deleteRole: jasmine.createSpy('deleteRole').and.returnValue(of(void 0)),
     getUserRoles: jasmine.createSpy('getUserRoles').and.returnValue(of({ userId: 1, roleIds: [2] })),
     setUserRoles: jasmine.createSpy('setUserRoles').and.returnValue(of(void 0)),
+    getGroups: jasmine.createSpy('getGroups').and.returnValue(of([
+      { id: 4, name: 'Everyone', isEveryone: true, memberCount: 99 }, { id: 1, name: 'Schwaz', memberCount: 10 }])),
+    getGroupRoles: jasmine.createSpy('getGroupRoles').and.returnValue(of({ groupId: 1, roleIds: [3] })),
+    setGroupRoles: jasmine.createSpy('setGroupRoles').and.returnValue(of(void 0)),
     ...overrides,
   } as any;
   const snackbar = { info: () => {} } as any;
@@ -58,6 +62,21 @@ describe('AdminRolesComponent', () => {
     c.selectUser({ id: 1, username: 'x' } as any);
     expect(admin.getUserRoles).toHaveBeenCalledWith(1);
     expect([...c.userRoleIds]).toEqual([2]);
+  });
+
+  it('Gruppenrollen (0.589.0): ohne „Everyone", laden, umschalten, speichern, danach Rollen neu laden', () => {
+    const { c, admin } = make();
+    c.ngOnInit();
+    expect(c.assignableGroups.map(g => g.name)).toEqual(['Schwaz']);
+    c.selectGroup(c.assignableGroups[0]);
+    expect(admin.getGroupRoles).toHaveBeenCalledWith(1);
+    expect([...c.groupRoleIds]).toEqual([3]);
+    c.toggleGroupRole(5);
+    c.toggleGroupRole(3);
+    admin.getRoles.calls.reset();
+    c.saveGroupRoles();
+    expect(admin.setGroupRoles).toHaveBeenCalledWith(1, [5]);
+    expect(admin.getRoles).toHaveBeenCalled();
   });
 
   it('saveUserRoles sends the toggled role ids', () => {

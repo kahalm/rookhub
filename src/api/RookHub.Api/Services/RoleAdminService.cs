@@ -31,6 +31,8 @@ public class RoleAdminService
             .Select(g => new { RoleId = g.Key, Count = g.Count() })
             .ToListAsync())
             .ToDictionary(x => x.RoleId, x => x.Count);
+        var groups = (await _db.GroupRoles.Select(gr => new { gr.RoleId, gr.Group!.Name }).ToListAsync())
+            .GroupBy(x => x.RoleId).ToDictionary(g => g.Key, g => g.Select(x => x.Name).OrderBy(n => n).ToList());
         return roles.Select(r => new RoleDto
         {
             Id = r.Id,
@@ -39,6 +41,7 @@ public class RoleAdminService
             IsSystem = r.IsSystem,
             Permissions = r.Permissions.Select(p => p.Permission).OrderBy(p => p).ToList(),
             MemberCount = counts.GetValueOrDefault(r.Id),
+            Groups = groups.GetValueOrDefault(r.Id) ?? new(),
         }).ToList();
     }
 
@@ -74,6 +77,7 @@ public class RoleAdminService
             role.Permissions = perms.Select(p => new RolePermission { RoleId = role.Id, Permission = p }).ToList();
         }
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
         return (await ListAsync()).First(r => r.Id == role.Id);
     }
 
@@ -83,8 +87,10 @@ public class RoleAdminService
             ?? throw new KeyNotFoundException("Rolle nicht gefunden.");
         if (role.IsSystem)
             throw new InvalidOperationException("System-Rollen können nicht gelöscht werden.");
+        _db.GroupRoles.RemoveRange(_db.GroupRoles.Where(gr => gr.RoleId == id));   // InMemory kaskadiert nicht
         _db.Roles.Remove(role);   // UserRoles + RolePermissions cascaden
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
     }
 
     public async Task<UserRolesDto> GetUserRolesAsync(int userId)
@@ -121,6 +127,37 @@ public class RoleAdminService
         foreach (var rid in validSet.Where(rid => !haveIds.Contains(rid)))
             _db.UserRoles.Add(new UserRole { UserId = userId, RoleId = rid });
         await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
+    }
+
+    /// <summary>Rollen einer Gruppe (alle Mitglieder haben sie, 0.589.0).</summary>
+    public async Task<GroupRolesDto> GetGroupRolesAsync(int groupId)
+    {
+        if (!await _db.Groups.AnyAsync(g => g.Id == groupId))
+            throw new KeyNotFoundException("Gruppe nicht gefunden.");
+        var roleIds = await _db.GroupRoles.Where(gr => gr.GroupId == groupId).Select(gr => gr.RoleId).ToListAsync();
+        return new GroupRolesDto { GroupId = groupId, RoleIds = roleIds };
+    }
+
+    /// <summary>Setzt die Rollen einer Gruppe auf genau diese Menge. Die admin-Rolle geht NIE an eine Gruppe (sie folgt dem
+    /// IsAdmin-Flag einzelner Konten), und „Everyone" nimmt keine Rolle an: sie hat keine Mitgliedszeilen, die Rolle wirkte
+    /// nirgends — oder, wenn man sie mitdächte, für jedes Konto, auch jedes neu registrierte.</summary>
+    public async Task SetGroupRolesAsync(int groupId, SetUserRolesDto dto)
+    {
+        var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId)
+            ?? throw new KeyNotFoundException("Gruppe nicht gefunden.");
+        if (group.IsEveryone)
+            throw new InvalidOperationException("Die Gruppe „Everyone“ kann keine Rollen bekommen.");
+        var target = dto.RoleIds.ToHashSet();
+        var valid = (await _db.Roles.Where(r => target.Contains(r.Id) && r.Key != RoleSeeder.AdminKey)
+            .Select(r => r.Id).ToListAsync()).ToHashSet();
+        var current = await _db.GroupRoles.Where(gr => gr.GroupId == groupId).ToListAsync();
+        _db.GroupRoles.RemoveRange(current.Where(gr => !valid.Contains(gr.RoleId)));
+        var have = current.Select(gr => gr.RoleId).ToHashSet();
+        foreach (var rid in valid.Where(rid => !have.Contains(rid)))
+            _db.GroupRoles.Add(new GroupRole { GroupId = groupId, RoleId = rid });
+        await _db.SaveChangesAsync();
+        PermissionResolver.InvalidateAll();
     }
 
     private static List<string> ValidatePermissions(IEnumerable<string> requested)
