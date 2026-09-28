@@ -7,7 +7,7 @@ import { ImportReview } from './import-review';
 const M = (x: Partial<SideMatch> = {}): SideMatch =>
   ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
 const PREVIEW: ClubPreview = { truncated: false, games: [
-  { index: 1, year: 2024, result: '1-0', event: null, plies: 40, opening: '1.e4 c5', error: null, duplicate: false,
+  { index: 1, year: 2024, result: '1-0', event: 'Landesliga Tirol', plies: 40, opening: '1.e4 c5', error: null, duplicate: false,
     white: { raw: 'Binder M', elo: null, match: M({ league: true, name: 'Binder, Moriz', fide: '111', club: true }), owner: false, replace: true },
     black: { raw: 'Hengl P', elo: null, match: M({ league: true, name: 'Hengl, Philip', fide: '222' }), owner: false, replace: false } },
   { index: 2, year: 2023, result: '0-1', event: null, plies: 30, opening: '1.d4', error: null, duplicate: false,
@@ -43,6 +43,8 @@ describe('ClubImportReviewComponent', () => {
     expect(rows[0].textContent).toContain('Hengl, Philip');
     expect(rows[0].textContent).toContain('im PGN: Hengl P');
     expect(rows[0].textContent).toContain('wird importiert');
+    expect(rows[0].querySelector('td.event')?.textContent?.trim()).toBe('Landesliga Tirol');
+    expect(rows[1].querySelector('td.event')?.textContent?.trim()).toBe('');
     expect(rows[1].textContent).toContain('mehrdeutig');
     expect(rows[1].textContent).toContain('nicht erkannt');
     expect(el.querySelector('.review-head')?.textContent).toContain('3 Partien gelesen — 2 werden importiert');
@@ -50,6 +52,11 @@ describe('ClubImportReviewComponent', () => {
     expect(rows[2].textContent).toContain('nicht in Liga — anhaken zum Hinzufügen');
     expect((rows[2].querySelector('input[type=checkbox]') as HTMLInputElement).disabled).toBeFalse();
     expect(el.querySelector('.review-head')?.textContent).toContain('1 ohne Gegner aus der Liga');
+    const filters = Array.from(el.querySelectorAll('.seg button')).map(b => b.textContent!.trim());
+    expect(filters).toEqual(['Alle (3)', 'Nicht importiert (1)', 'Noch nicht vorhanden (3)', 'Nicht erkannt (1)']);
+    (el.querySelectorAll('.seg button')[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('tbody tr').length).toBe(1);
   });
 
   it('das Namensfeld sucht beim Öffnen gleich (Megabase mit), ein Treffer von dort wählt die Partie zum Import', fakeAsync(() => {

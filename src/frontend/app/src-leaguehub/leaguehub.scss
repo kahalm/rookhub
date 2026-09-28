@@ -366,6 +366,7 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .review-table td { vertical-align: top; }
 .review-table tr.off td { color: var(--muted); }
 .review-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ink); }
+.review-table td.event { min-width: 8rem; max-width: 15rem; overflow-wrap: anywhere; color: var(--muted); }
 .side-btn {
   display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; text-align: left; font: inherit; color: inherit;
   background: none; border: 0; padding: 0; cursor: pointer;

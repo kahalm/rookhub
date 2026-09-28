@@ -3,7 +3,7 @@ import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
-import { ImportReview, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, reviewStatus } from './import-review';
+import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, reviewStatus } from './import-review';
 import { PlayerSearchComponent } from './player-search.component';
 
 interface Editing { index: number; side: SideKey; text: string }
@@ -27,16 +27,17 @@ interface Editing { index: number; side: SideKey; text: string }
       }
       @if (review.truncated) { <p class="err small">Es wurden nur die ersten 500 Partien gelesen — den Rest bitte in einem zweiten Upload.</p> }
       <div class="seg" role="group" aria-label="Anzeigen">
-        <button type="button" [attr.aria-pressed]="review.filter() === 'all'" (click)="review.filter.set('all')">Alle</button>
-        <button type="button" [attr.aria-pressed]="review.filter() === 'skipped'" (click)="review.filter.set('skipped')">Nicht importiert</button>
-        <button type="button" [attr.aria-pressed]="review.filter() === 'unknown'" (click)="review.filter.set('unknown')">Nicht erkannt</button>
+        @for (f of filters; track f.key) {
+          <button type="button" [attr.aria-pressed]="review.filter() === f.key" (click)="review.filter.set(f.key)">
+            {{ f.label }} ({{ review.filterCounts()[f.key] }})</button>
+        }
       </div>
     </div>
 
     <div class="roster-scroll">
       <table class="rtable review-table">
         <thead><tr><th><span class="sr">Importieren</span></th><th class="num">Nr.</th><th class="num">Jahr</th>
-          <th>Weiß</th><th>Schwarz</th><th class="num">Erg.</th><th>Status</th></tr></thead>
+          <th>Turnier</th><th>Weiß</th><th>Schwarz</th><th class="num">Erg.</th><th>Status</th></tr></thead>
         <tbody>
           @for (r of review.visible(); track r.game.index) {
             <tr [class.off]="!isIn(r)">
@@ -44,6 +45,7 @@ interface Editing { index: number; side: SideKey; text: string }
                          [attr.aria-label]="'Partie ' + r.game.index + ' importieren'" (change)="review.toggleInclude(r.game.index)" /></td>
               <td class="num">{{ r.game.index }}</td>
               <td class="num">{{ r.game.year ?? '–' }}</td>
+              <td class="small event" [attr.title]="r.game.event">{{ r.game.event ?? '' }}</td>
               @for (k of sides; track k) {
                 <td>
                   <button type="button" class="side-btn" [disabled]="!!r.game.error" (click)="edit(r, k)"
@@ -63,10 +65,10 @@ interface Editing { index: number; side: SideKey; text: string }
             </tr>
             @if (editing(); as e) {
               @if (e.index === r.game.index) {
-                <tr class="edit-row"><td colspan="7">
+                <tr class="edit-row"><td colspan="8">
                   <div class="side-edit">
                     <p class="small"><b>{{ e.side === 'white' ? 'Weiß' : 'Schwarz' }} in Partie {{ r.game.index }}</b>
-                      — im PGN: „{{ r[e.side].raw || '?' }}"@if (r.game.opening) { · {{ de(r.game.opening) }} }</p>
+                      — im PGN: „{{ r[e.side].raw || '?' }}"@if (r.game.event) { · {{ r.game.event }} }@if (r.game.opening) { · {{ de(r.game.opening) }} }</p>
                     @if (r[e.side].candidates.length) {
                       <div class="cands-pick"><span class="small muted">Mehrere Ligaspieler heißen so:</span>
                         @for (c of r[e.side].candidates; track c.name + (c.fide ?? '')) {
@@ -114,6 +116,12 @@ export class ClubImportReviewComponent {
   @Output() cancel = new EventEmitter<void>();
 
   readonly sides: SideKey[] = ['white', 'black'];
+  readonly filters: { key: ReviewFilter; label: string }[] = [
+    { key: 'all', label: 'Alle' },
+    { key: 'skipped', label: 'Nicht importiert' },
+    { key: 'new', label: 'Noch nicht vorhanden' },
+    { key: 'unknown', label: 'Nicht erkannt' },
+  ];
   readonly anon = ANON_NAME;
   readonly de = de;
   readonly reason = reasonText;

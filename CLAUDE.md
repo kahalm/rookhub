@@ -1359,7 +1359,8 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Vorgabe „ersetzen", `duplicate`, harter Fehler (`illegal`/`noMoves`/`tooLong`/`fromPosition`). Die Seite
   (`features/club/import-review.ts`, dieselbe Regel wie `Build`) zeigt je Partie, ob sie übernommen wird; der Nutzer
   korrigiert unerkannte/falsche Spieler (Kandidat, Vorschlag aus der Meldeliste, getippter Name), schaltet „ersetzen"
-  um, wählt Partien ab. `games/import` bekommt DENSELBEN PGN-Text + je übernommener Partie die Entscheidung
+  um, wählt Partien ab. Filter (0.577.0, je mit Anzahl): alle · nicht importiert · noch nicht vorhanden (keine Dublette)
+  · nicht erkannt; die Liste zeigt das Turnier (`[Event]`) zum Zuordnen — gespeichert wird es weiter nur ohne „Schwaz". `games/import` bekommt DENSELBEN PGN-Text + je übernommener Partie die Entscheidung
   (`LeagueClubSideDecision`: FIDE-ID eines gewählten Ligaspielers schlägt den Namen; ohne Angabe die Kopfzeile) und
   prüft alles noch einmal. Nummerierung 1-basiert, gleich in beiden Schritten.
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung

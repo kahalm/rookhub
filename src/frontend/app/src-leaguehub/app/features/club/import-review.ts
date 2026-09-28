@@ -34,7 +34,7 @@ export interface ReviewGame {
 }
 
 export type SideKey = 'white' | 'black';
-export type ReviewFilter = 'all' | 'skipped' | 'unknown';
+export type ReviewFilter = 'all' | 'skipped' | 'new' | 'unknown';
 
 /** Bekannt = Ligaspieler oder im Megabase-Verzeichnis (Wunsch 2026-09-28: „wenn in Tirol kein Treffer"). */
 export const known = (s: ReviewSide): boolean => s.league || s.mega;
@@ -76,6 +76,24 @@ export class ImportReview {
   readonly filter = signal<ReviewFilter>('all');
   readonly truncated: boolean;
 
+  /** Welche Partien ein Filter zeigt: „nicht importiert", „noch nicht vorhanden" (nicht schon in der Vereins-Datenbank
+   * oder weiter oben in der Datei), „nicht erkannt" (ein Spieler braucht einen Blick). */
+  static matches(f: ReviewFilter, r: ReviewGame): boolean {
+    switch (f) {
+      case 'skipped': return !included(r);
+      case 'new': return !r.game.duplicate;
+      case 'unknown': return !r.game.error && !r.game.duplicate && (needsLook(r.white) || needsLook(r.black));
+      default: return true;
+    }
+  }
+
+  /** Wie viele Partien jeder Filter zeigt — steht an den Knöpfen. */
+  readonly filterCounts = computed(() => {
+    const list = this.games();
+    const n = (f: ReviewFilter) => list.filter(r => ImportReview.matches(f, r)).length;
+    return { all: list.length, skipped: n('skipped'), new: n('new'), unknown: n('unknown') } as Record<ReviewFilter, number>;
+  });
+
   readonly counts = computed(() => {
     const list = this.games();
     const take = list.filter(included).length;
@@ -88,9 +106,7 @@ export class ImportReview {
 
   readonly visible = computed(() => {
     const f = this.filter();
-    return this.games().filter(r => f === 'all' ? true
-      : f === 'skipped' ? !included(r)
-      : !r.game.error && !r.game.duplicate && (needsLook(r.white) || needsLook(r.black)));
+    return this.games().filter(r => ImportReview.matches(f, r));
   });
 
   constructor(preview: ClubPreview, readonly replaceClub: boolean) {

@@ -100,7 +100,10 @@ describe('ImportReview', () => {
     const r = new ImportReview(PREVIEW, true);
     r.filter.set('skipped');
     expect(r.visible().map(g => g.game.index)).toEqual([2, 3, 4]);
+    r.filter.set('new');
+    expect(r.visible().map(g => g.game.index)).toEqual([1, 2, 3, 5]);   // Partie 4 ist schon da
     r.filter.set('unknown');
     expect(r.visible().map(g => g.game.index)).toEqual([2, 5]);
+    expect(r.filterCounts()).toEqual({ all: 5, skipped: 3, new: 4, unknown: 2 });
   });
 });
