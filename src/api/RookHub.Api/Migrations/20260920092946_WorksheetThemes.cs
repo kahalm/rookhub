@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,7 +10,11 @@ namespace RookHub.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            // LEER, und das ist ein Fehler — hier hätte Themes/SourceThemes entstehen müssen.
+            // Die Migration wurde nach einem Rebase neu erzeugt, während der Modell-Schnappschuss
+            // die Änderung schon enthielt: EF fand keinen Unterschied und schrieb nichts hinein.
+            // Der Rumpf bleibt leer, weil diese Migration auf Dev und Prod als angewendet verbucht
+            // ist; nachgeholt wird sie von „WorksheetColumnsRepair" (2026-09-28).
         }
 
         /// <inheritdoc />
