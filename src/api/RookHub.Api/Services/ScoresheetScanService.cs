@@ -156,7 +156,7 @@ public class ScoresheetScanService
     /// <summary>Nimmt ein Foto an und reiht es ein. Absage als Grund-Code (<c>notConfigured</c>,
     /// <c>unsupportedImage</c>, <c>tooLarge</c>, <c>dailyLimit</c>, <c>tooManyOpen</c>, <c>invalidLanguage</c>).</summary>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, byte[] data, string? contentType,
-        string? fileName, string? language, string? ownerSide = null)
+        string? fileName, string? language, string? ownerSide = null, string? purpose = null)
     {
         if (!_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
@@ -191,6 +191,7 @@ public class ScoresheetScanService
             FileName = CleanFileName(fileName),
             NotationLanguage = lang,
             OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
+            Purpose = purpose == ScoresheetScan.PurposeLeague ? purpose : null,
             Status = ScoresheetScanStatus.Pending,
             CreatedAt = DateTime.UtcNow,
         };
@@ -211,7 +212,7 @@ public class ScoresheetScanService
     public async Task<List<ScoresheetScanDto>> ListAsync(int userId, int take = 20)
     {
         // Einlesungen einer gelöschten Partie bleiben nur fürs Kontingent liegen (ohne Foto) — in der Liste nicht.
-        var scans = await ScanHeads().Where(s => s.UserId == userId
+        var scans = await ScanHeads().Where(s => s.UserId == userId && s.Purpose == null
                 && !(s.Status == ScoresheetScanStatus.Done && s.SavedGameId == null))
             .OrderByDescending(s => s.CreatedAt).Take(Math.Clamp(take, 1, 50)).ToListAsync();
         var gameIds = scans.Where(s => s.SavedGameId != null).Select(s => s.SavedGameId!.Value).ToList();
@@ -229,7 +230,7 @@ public class ScoresheetScanService
     private IQueryable<ScoresheetScan> ScanHeads() => _db.ScoresheetScans.AsNoTracking().Select(s => new ScoresheetScan
     {
         Id = s.Id, UserId = s.UserId, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
-        NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
+        NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Purpose = s.Purpose, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
         Model = s.Model, Attempts = s.Attempts, Rounds = s.Rounds, CreatedAt = s.CreatedAt, StartedAt = s.StartedAt,
         FinishedAt = s.FinishedAt,
     });
@@ -337,6 +338,24 @@ public class ScoresheetScanService
         var r = outcome.Resolution!;
         if (r.Plies.Count == 0) { await FailAsync(scan, "noMoves", ct, outcome.Json); return; }
 
+        if (scan.Purpose == ScoresheetScan.PurposeLeague)
+        {
+            // Vereins-Datenbank: keine Partie in „Meine Partien" — LeagueHub korrigiert und übernimmt selbst. Keine
+            // Glocke: die Seite fragt nach, und ein Link aus RookHub nach LeagueHub wäre eine fremde Adresse.
+            scan.TranscriptionJson = outcome.Json;
+            scan.ResolutionJson = JsonSerializer.Serialize(new StoredResolution
+            {
+                Language = outcome.Language, Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt,
+            }, Json);
+            scan.Status = ScoresheetScanStatus.Done;
+            scan.Error = null;
+            scan.FinishedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("Formular-Einlesung {ScanId} (Vereins-Datenbank) fertig: {Plies} Halbzüge, {Uncertain} unsicher",
+                scan.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain));
+            return;
+        }
+
         var comments = CommentsFor(r);
         var side = scan.OwnerSide is "white" or "black" ? scan.OwnerSide : await GuessOwnerSideAsync(scan.UserId, t, ct);
         var game = await _games.CreateGeneratedAsync(scan.UserId, SavedGameService.ScoresheetSource,
@@ -413,6 +432,7 @@ public class ScoresheetScanService
         scan.FinishedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         _logger.LogWarning("Formular-Einlesung {ScanId} gescheitert: {Reason}", scan.Id, reason);
+        if (scan.Purpose == ScoresheetScan.PurposeLeague) return;   // LeagueHub fragt selbst nach
         await NotifyAsync(scan.UserId, NotificationType.ScoresheetFailed,
             new Dictionary<string, string> { ["reason"] = reason }, "/games/scoresheet");
     }
@@ -506,6 +526,94 @@ public class ScoresheetScanService
         var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
             legalPrefix, from);
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
+    }
+
+    // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
+
+    /// <summary>Die eigenen, noch nicht übernommenen Liga-Einlesungen (neueste zuerst) — wer die Seite verlassen hat,
+    /// findet sie so wieder. Verworfene/übernommene tragen kein Foto mehr und fehlen.</summary>
+    public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId)
+    {
+        var scans = await ScanHeads().Where(s => s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague
+                && s.FileName != DiscardedMark)
+            .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync();
+        return scans.Select(ToDto).ToList();
+    }
+
+    /// <summary>Vermerk im Dateinamen einer übernommenen/verworfenen Liga-Einlesung (das Foto ist dann leer).</summary>
+    internal const string DiscardedMark = "\u2205";
+
+    /// <summary>Stand einer eigenen Liga-Einlesung für die Korrektur in LeagueHub: Formular-Einträge, Züge, Kopfdaten
+    /// wie gelesen und welche Seite der Nutzer vermutlich spielte. <c>null</c> = fremd, unbekannt oder verworfen.</summary>
+    public async Task<LeagueScanStateDto?> LeagueScanStateAsync(int userId, int scanId, CancellationToken ct = default)
+    {
+        var scan = await ScanHeads().FirstOrDefaultAsync(s => s.Id == scanId && s.UserId == userId
+            && s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark, ct);
+        if (scan == null) return null;
+        var dto = new LeagueScanStateDto { Scan = ToDto(scan) };
+        if (scan.Status != ScoresheetScanStatus.Done) return dto;
+        var json = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId)
+            .Select(s => s.TranscriptionJson).FirstOrDefaultAsync(ct);
+        var stored = Deserialize(scan.ResolutionJson);
+        var t = ScoresheetTranscription.Parse(json);
+        dto.NotationLanguage = stored?.Language ?? scan.NotationLanguage;
+        dto.Written = t?.Moves.Select(m => m.Written).ToList() ?? new();
+        dto.Boxes = t?.NormalizedBoxes() ?? new();
+        dto.Plies = stored?.Plies ?? new();
+        dto.Unresolved = stored?.Unresolved ?? new();
+        dto.UnresolvedFrom = stored?.UnresolvedFrom;
+        dto.White = Blank(t?.White);
+        dto.Black = Blank(t?.Black);
+        dto.Event = Blank(t?.Event);
+        dto.Date = Blank(t?.DateIso) ?? Blank(t?.Date);
+        dto.Result = t?.Result;
+        // Beim Hochladen gewählt schlägt geraten (wie beim Einlesen in „Meine Partien").
+        dto.OwnerSide = scan.OwnerSide is "white" or "black" ? scan.OwnerSide
+            : t == null ? null : await GuessOwnerSideAsync(userId, t, ct);
+        return dto;
+    }
+
+    /// <summary>Das Foto einer eigenen Liga-Einlesung.</summary>
+    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(int userId, int scanId)
+    {
+        var p = await _db.ScoresheetScans.AsNoTracking()
+            .Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
+            .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync();
+        return p == null || p.Photo.Length == 0 ? null : (p.Photo, p.ContentType);
+    }
+
+    /// <summary>Wie <see cref="ResolveRestAsync"/>, für eine Liga-Einlesung (ohne gespeicherte Partie).</summary>
+    public async Task<ScoresheetResolveResultDto?> ResolveLeagueRestAsync(int userId, int scanId, IReadOnlyList<string> prefix,
+        int writtenFrom)
+    {
+        var scan = await _db.ScoresheetScans.AsNoTracking()
+            .Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
+            .Select(s => new { s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson })
+            .FirstOrDefaultAsync();
+        var t = ScoresheetTranscription.Parse(scan?.TranscriptionJson);
+        if (scan == null || t == null) return null;
+        var scanned = t.Scanned();
+        var language = Deserialize(scan.ResolutionJson)?.Language ?? scan.NotationLanguage;
+        var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
+            SavedGameService.LegalSans(prefix), Math.Clamp(writtenFrom, 0, scanned.Count));
+        return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
+    }
+
+    /// <summary>
+    /// Liga-Einlesung abschließen (übernommen ODER verworfen): Foto, Antwort des Modells und Stand gehen, die Zeile bleibt
+    /// mit Zeitpunkt und Kosten fürs Tageskontingent und die Kostenbremse stehen — wie beim Löschen einer Partie.
+    /// Danach verbindet nichts mehr die Einlesung mit der Partie, die daraus wurde. <c>false</c> = fremd/unbekannt.
+    /// </summary>
+    public async Task<bool> CloseLeagueScanAsync(int userId, int scanId)
+    {
+        var key = await _db.ScoresheetScans.Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
+            .Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
+        if (key == null) return false;
+        DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
+        var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
+        scan.FileName = DiscardedMark;
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     /// <summary>Nach dem Speichern der Korrekturseite: deren Stand je Halbzug ablegen (Anzeige-Zustand).</summary>

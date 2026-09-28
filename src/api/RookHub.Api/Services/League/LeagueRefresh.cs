@@ -204,29 +204,12 @@ public sealed class LeagueRefresh
             .Take(MaxPlayersPerRun).ToList();
     }
 
-    /// <summary>Neu geholte chess-results-Partien in die Spielerkarte einarbeiten.</summary>
+    /// <summary>Neu geholte chess-results-Partien in die Spielerkarte einarbeiten (Vereinspartien bleiben dabei —
+    /// <see cref="LeagueProfileStore"/>).</summary>
     public async Task MergeGamesAsync(string fide, string crPgn, CancellationToken ct)
     {
-        var row = await _db.LeaguePlayerProfiles.FindAsync(new object[] { fide }, ct);
-        var name = row?.Name;
-        if (string.IsNullOrEmpty(name))
-            name = await _db.LeaguePlayers.Where(x => x.FideId == fide).OrderByDescending(x => x.Tnr).Select(x => x.Name).FirstOrDefaultAsync(ct) ?? "";
-        var stored = row is null ? new List<LeagueProfileBuilder.Game>()
-            : PgnParser.SplitGameBlocks(row.Pgn).Select(b => new LeagueProfileBuilder.Game(b.Headers, b.Raw.Trim(),
-                LeagueProfileBuilder.StoredSource(b.Headers))).ToList();
-        var merged = LeagueProfileBuilder.Merge(stored, LeagueProfileBuilder.Parse(crPgn, "chess-results"));
-        var (profile, pgn, count) = LeagueProfileBuilder.Build(fide, name, merged);
-        if (row is null)
-        {
-            row = new LeaguePlayerProfile { FideId = fide };
-            _db.LeaguePlayerProfiles.Add(row);
-        }
-        row.Name = name;
-        row.GameCount = count;
-        row.ProfileJson = profile.ToJsonString();
-        row.Pgn = pgn;
-        row.CrFetchedAt = _now();
-        row.UpdatedAt = _now();
+        var now = _now();
+        await new LeagueProfileStore(_db).RebuildAsync(fide, ct, LeagueProfileBuilder.Parse(crPgn, "chess-results"), now, now);
         await _db.SaveChangesAsync(ct);
     }
 }

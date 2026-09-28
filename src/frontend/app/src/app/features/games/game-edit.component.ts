@@ -1,4 +1,4 @@
-import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,9 +16,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { Chess } from 'chess.js';
 import { catchError } from 'rxjs/operators';
-import { ChessBoardComponent, BoardArrow, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
+import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
@@ -26,14 +25,9 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GamesService, SavedGameDetail } from './games.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ScoresheetOption, ScoresheetService, openPhotoBlob } from './scoresheet.service';
-import {
-  EditPly, commentsForSave, cropView, fensOf, fromServer, nextUncertainFrom, headersOf, isoDateOf, pliesOfPgn, resolveRequest, revalidate,
-  stripSheetNotes, toServer, userPly, writtenIndexAt,
-} from './game-edit.util';
-
-/** Eine Zeile der Zugliste: Zugnummer + Index des weißen und des schwarzen Halbzugs. */
-interface MoveRow { no: number; white: number; black: number | null; }
+import { ScoresheetService, openPhotoBlob } from './scoresheet.service';
+import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, stripSheetNotes, toServer } from './game-edit.util';
+import { SheetEditSession } from './sheet-edit-session';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -337,67 +331,40 @@ export class GameEditComponent implements OnInit, OnDestroy {
   gameId = 0;
   readonly loading = signal(true);
   readonly notFound = signal(false);
-  readonly busy = signal(false);
   readonly saving = signal(false);
   readonly dirty = signal(false);
-  readonly plies = signal<EditPly[]>([]);
-  readonly cursor = signal(0);
-  readonly mode = signal<'replace' | 'insert'>('replace');
   readonly flipped = signal(false);
-  readonly unresolved = signal<string[]>([]);
-  readonly isScoresheet = signal(false);
   readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
-  /** Je Formular-Eintrag der Kasten auf dem Foto (vom Modell; ältere Einlesungen haben keine). */
-  readonly boxes = signal<(number[] | null)[]>([]);
-  readonly sheetEntries = signal<string[]>([]);
-  readonly unresolvedFrom = signal<number | null>(null);
-  /** Pixelmaße des Fotos (aufrecht, wie der Browser es zeigt) — für das Seitenverhältnis des Ausschnitts. */
-  readonly photoSize = signal<{ w: number; h: number } | null>(null);
   private photoBlob: Blob | null = null;
   private photoName = 'scoresheet.jpg';
 
-  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '' };
+  /** Der Arbeitsstand (geteilt mit der Formular-Korrektur in LeagueHub). */
+  readonly session = new SheetEditSession({
+    resolve: (prefix, writtenFrom) => this.sheets.resolve(this.gameId, prefix, writtenFrom),
+    changed: () => this.dirty.set(true),
+    moved: () => this.revealCursor(),
+    resolveFailed: () => this.snackbar.info(this.translate.instant('games.edit.resolveFailed')),
+    bind: o => o.pipe(takeUntilDestroyed(this.destroyRef)),
+  });
+  readonly plies = this.session.plies;
+  readonly cursor = this.session.cursor;
+  readonly mode = this.session.mode;
+  readonly unresolved = this.session.unresolved;
+  readonly isScoresheet = this.session.isScoresheet;
+  readonly photoSize = this.session.photoSize;
+  readonly busy = this.session.busy;
+  readonly legalCount = this.session.legalCount;
+  readonly illegalCount = this.session.illegalCount;
+  readonly cursorFen = this.session.cursorFen;
+  readonly current = this.session.current;
+  readonly lastMove = this.session.lastMove;
+  readonly arrows = this.session.arrows;
+  readonly crop = this.session.crop;
+  readonly uncertainLeft = this.session.uncertainLeft;
+  readonly rows = this.session.rows;
 
-  readonly legalCount = computed(() => {
-    const idx = this.plies().findIndex(p => p.illegal);
-    return idx < 0 ? this.plies().length : idx;
-  });
-  readonly illegalCount = computed(() => this.plies().length - this.legalCount());
-  readonly fens = computed(() => fensOf(this.plies()));
-  readonly cursorFen = computed(() => this.fens()[Math.min(this.cursor(), this.fens().length - 1)]);
-  readonly current = computed<EditPly | null>(() => this.plies()[this.cursor()] ?? null);
-  readonly lastMove = computed<[string, string] | undefined>(() => {
-    const prev = this.plies()[this.cursor() - 1];
-    return prev && !prev.illegal ? [prev.uci.slice(0, 2), prev.uci.slice(2, 4)] : undefined;
-  });
-  /** Der bisherige Zug an dieser Stelle als gelber Pfeil — was man ersetzen würde. */
-  readonly arrows = computed<BoardArrow[]>(() => {
-    const p = this.current();
-    return p && !p.illegal && p.uci ? [{ from: p.uci.slice(0, 2), to: p.uci.slice(2, 4), brush: 'yellow' }] : [];
-  });
-  /**
-   * Der Ausschnitt des Formulars zum gewählten Halbzug, unter dem ganzen Foto: der Eintrag, aus dem der Zug stammt,
-   * mit Umfeld. Am Ende der Zugliste der erste Eintrag, der sich nicht auflösen ließ. Ohne Kasten (vom Nutzer
-   * eingefügter Zug, ältere Einlesung) kein Ausschnitt.
-   */
-  readonly crop = computed(() => {
-    const size = this.photoSize();
-    if (!size) return null;
-    const p = this.current();
-    const w = p ? p.w : this.unresolved().length ? this.unresolvedFrom() : null;
-    if (w === null || w === undefined) return null;
-    const view = cropView(this.boxes()[w], size.w, size.h);
-    if (!view) return null;
-    return { view, written: this.sheetEntries()[w] ?? '', uncertain: p ? p.uncertain && !p.confirmed : true };
-  });
-  readonly uncertainLeft = computed(() => this.plies().filter(p => p.uncertain && !p.confirmed && !p.illegal).length);
-  readonly rows = computed<MoveRow[]>(() => {
-    const out: MoveRow[] = [];
-    const n = this.plies().length;
-    for (let i = 0; i < n; i += 2) out.push({ no: i / 2 + 1, white: i, black: i + 1 < n ? i + 1 : null });
-    return out;
-  });
+  header = { white: '', black: '', result: '*', event: '', site: '', round: '', date: '', ownerSide: '' };
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
@@ -440,20 +407,20 @@ export class GameEditComponent implements OnInit, OnDestroy {
       const comments = fromPgn.map(p => stripSheetNotes(p.comment));
       // Der gespeicherte Stand gilt nur, wenn er zu den Zügen der Partie passt (sie kann anderswo geändert worden sein).
       const matches = state && state.plies.length === fromPgn.length && state.plies.every((p, i) => p.san === fromPgn[i].san);
-      this.plies.set(matches ? fromServer(state!.plies, comments) : fromPgn.map((p, i) => ({ ...p, comment: comments[i] })));
-      this.unresolved.set(matches ? state!.unresolved : []);
-      this.unresolvedFrom.set(matches ? state!.unresolvedFrom ?? null : null);
-      this.boxes.set(state?.boxes ?? []);
-      this.sheetEntries.set(state?.written ?? []);
+      if (matches) {
+        this.session.loadSheet(state!, comments);
+      } else {
+        this.plies.set(fromPgn.map((p, i) => ({ ...p, comment: comments[i] })));
+        this.session.boxes.set(state?.boxes ?? []);
+        this.session.sheetEntries.set(state?.written ?? []);
+        this.session.goToFirstUncertain();
+      }
       this.loading.set(false);
-      const first = this.plies().findIndex(p => p.uncertain && !p.confirmed);
-      if (first >= 0) { this.cursor.set(first); this.revealCursor(); }
     });
   }
 
   onPhotoLoad(e: Event): void {
-    const img = e.target as HTMLImageElement;
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) this.photoSize.set({ w: img.naturalWidth, h: img.naturalHeight });
+    this.session.onPhotoLoad(e);
   }
 
   onSide(side: string): void {
@@ -462,8 +429,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   go(i: number): void {
-    this.cursor.set(Math.max(0, Math.min(i, this.legalCount())));
-    this.revealCursor();
+    this.session.go(i);
   }
 
   /** Am PC scrollt die Zugliste für sich — der gewählte Halbzug soll dort sichtbar bleiben (Pfeiltasten,
@@ -474,8 +440,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   nextUncertain(): void {
-    const idx = nextUncertainFrom(this.plies(), this.cursor() + 1);
-    if (idx !== null) this.go(idx);
+    this.session.nextUncertain();
   }
 
   @HostListener('document:keydown', ['$event'])
@@ -487,118 +452,32 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   plyLabel(i: number): string {
-    const no = Math.floor(i / 2) + 1;
-    return i % 2 === 0 ? `${no}.` : `${no}…`;
+    return this.session.plyLabel(i);
   }
 
   plyClass(i: number): Record<string, boolean> {
-    const p = this.plies()[i];
-    return {
-      uncertain: p.uncertain && !p.confirmed && !p.illegal,
-      confirmed: p.confirmed && this.isScoresheet(),
-      user: p.match === 'user' && this.isScoresheet(),
-      illegal: p.illegal,
-      cursor: this.cursor() === i,
-    };
+    return this.session.plyClass(i);
   }
 
   /** Ein Zug am Brett: ersetzt den Halbzug am Cursor (oder fügt davor ein). */
   onBoardMove(m: UserBoardMove): void {
-    this.apply(m.san, this.mode());
+    this.session.play(m.san);
   }
 
-  /** Eine der angebotenen Lesarten wählen — wie „diesen Zug am Brett spielen". */
-  /** Eine Lesart wählen. Die schon gewählte anzuklicken heißt „passt so" — wie Bestätigen. Danach geht es wie
-   *  beim Bestätigen zur nächsten unsicheren Stelle, nicht bloß zum nächsten Halbzug (gewünscht 2026-09-27). */
-  choose(o: ScoresheetOption): void {
-    const p = this.current();
-    if (p && !p.illegal && o.uci === p.uci) { this.confirm(); return; }
-    this.apply(o.san, 'replace', true);
+  choose(o: Parameters<SheetEditSession['choose']>[0]): void {
+    this.session.choose(o);
   }
 
-  private apply(san: string, mode: 'replace' | 'insert', thenNextUncertain = false): void {
-    const i = this.cursor();
-    const list = this.plies();
-    const old = list[i];
-    const written = mode === 'insert' ? '' : old?.written ?? '';
-    // Ein Halbzug ohne Eintrag (eingefügt) bleibt ohne; nur Anhängen am Ende verbraucht den nächsten offenen.
-    const w = mode === 'insert' ? null : i < list.length ? list[i].w : writtenIndexAt(list, i);
-    const comment = mode === 'replace' ? stripSheetNotes(old?.comment) : null;
-    const uci = this.uciOf(san, this.cursorFen());
-    if (!uci) return;
-    const mine = userPly(san, uci, w, written, comment);
-    this.dirty.set(true);
-
-    if (!this.isScoresheet()) {
-      const tail = mode === 'insert' ? list.slice(i) : list.slice(i + 1);
-      this.plies.set(revalidate([...list.slice(0, i), mine, ...tail]));
-      this.cursor.set(i + 1);
-      return;
-    }
-    const req = resolveRequest(list, i, mode, san);
-    this.reResolve(req, [...list.slice(0, i), mine], mode === 'insert' ? list.slice(i) : list.slice(i + 1), i + 1,
-      thenNextUncertain);
-  }
-
-  /** Den Halbzug am Cursor streichen (ein doppelt notierter oder erfundener Eintrag). */
   remove(): void {
-    const i = this.cursor();
-    const list = this.plies();
-    if (i >= list.length) return;
-    this.dirty.set(true);
-    if (!this.isScoresheet()) {
-      this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)]));
-      return;
-    }
-    this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i);
+    this.session.remove();
   }
 
-  /** Ja, dieser Zug stimmt — die Stelle ist nicht mehr unsicher. */
   confirm(): void {
-    const i = this.cursor();
-    this.plies.update(list => list.map((p, k) => k === i ? { ...p, confirmed: true, uncertain: false } : p));
-    this.dirty.set(true);
-    if (this.uncertainLeft() > 0) this.nextUncertain();
-    else this.go(i + 1);
+    this.session.confirm();
   }
 
   setComment(text: string): void {
-    const i = this.cursor();
-    this.plies.update(list => list.map((p, k) => k === i ? { ...p, comment: text.trim() ? text : null } : p));
-    this.dirty.set(true);
-  }
-
-  /**
-   * Den Rest ab einer Stelle vom Server neu aufbereiten lassen (Formular-Einträge ab `writtenFrom`). Scheitert
-   * das, bleibt der bisherige Rest stehen, soweit er noch legal ist — `fallbackTail`.
-   */
-  private reResolve(req: { prefix: string[]; writtenFrom: number }, head: EditPly[], fallbackTail: EditPly[],
-    nextCursor: number, thenNextUncertain = false): void {
-    this.busy.set(true);
-    this.sheets.resolve(this.gameId, req.prefix, req.writtenFrom).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: res => {
-        this.plies.set(revalidate([...head, ...fromServer(res.plies)]));
-        this.unresolved.set(res.unresolved);
-        this.unresolvedFrom.set(res.unresolvedFrom ?? null);
-        this.busy.set(false);
-        this.go(thenNextUncertain ? nextUncertainFrom(this.plies(), nextCursor) ?? nextCursor : nextCursor);
-      },
-      error: () => {
-        this.busy.set(false);
-        this.plies.set(revalidate([...head, ...fallbackTail]));
-        this.go(nextCursor);
-        this.snackbar.info(this.translate.instant('games.edit.resolveFailed'));
-      },
-    });
-  }
-
-  private uciOf(san: string, fen: string): string | null {
-    try {
-      const m = new Chess(fen).move(san);
-      return m.from + m.to + (m.promotion ?? '');
-    } catch {
-      return null;
-    }
+    this.session.setComment(text);
   }
 
   openPhoto(download: boolean): void {

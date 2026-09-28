@@ -9,6 +9,12 @@ describe('LeagueHub-Routen', () => {
     expect(share.canActivate).toBeUndefined();
   });
 
+  it('die Vereins-Datenbank braucht eine Anmeldung', () => {
+    for (const path of ['verein', 'verein/neu', 'verein/formular/:id']) {
+      expect(routes.find(r => r.path === path)?.canActivate).withContext(path).toContain(authGuard);
+    }
+  });
+
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {
     for (const r of routes) {
       expect(/^(g|t|puzzles)(\/|$)/.test(r.path ?? '')).withContext(r.path ?? '').toBeFalse();

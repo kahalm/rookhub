@@ -55,12 +55,15 @@ public static class Permissions
     public const string LeagueView = "league.view";
     /// <summary>LeagueHub: Daten aktualisieren, Teilen-Links anlegen/widerrufen, Bestand importieren.</summary>
     public const string LeagueManage = "league.manage";
+    /// <summary>LeagueHub: Partien in die Vereins-Datenbank hochladen (PGN oder Partieformular) — für die Rolle der
+    /// Vereinsmitglieder, zusammen mit <see cref="LeagueView"/> (Wunsch 2026-09-28).</summary>
+    public const string LeagueContribute = "league.contribute";
 
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
     {
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
         GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
-        TournamentsManage, RolesManage, LeagueView, LeagueManage,
+        TournamentsManage, RolesManage, LeagueView, LeagueManage, LeagueContribute,
     };
 }

@@ -252,6 +252,7 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueUpdateService>();
     // Land der Besucher-IP fuer die Startsprache von KidHub — lokale DB-IP-Liste, laedt bei Bedarf.
     builder.Services.AddSingleton<IpCountryService>();

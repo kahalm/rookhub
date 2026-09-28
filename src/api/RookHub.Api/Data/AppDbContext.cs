@@ -99,6 +99,7 @@ public class AppDbContext : DbContext
     public DbSet<LeagueOnlineAccount> LeagueOnlineAccounts => Set<LeagueOnlineAccount>();
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
+    public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
@@ -660,6 +661,20 @@ public class AppDbContext : DbContext
         {
             e.HasKey(v => v.Tnr);
             e.Property(v => v.Tnr).ValueGeneratedNever();
+        });
+        modelBuilder.Entity<LeagueClubGame>(e =>
+        {
+            e.Property(g => g.White).HasMaxLength(120);
+            e.Property(g => g.Black).HasMaxLength(120);
+            e.Property(g => g.WhiteFide).HasMaxLength(16);
+            e.Property(g => g.BlackFide).HasMaxLength(16);
+            e.Property(g => g.Result).HasMaxLength(12);
+            e.Property(g => g.Event).HasMaxLength(200);
+            e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
+            e.Property(g => g.MovesHash).HasMaxLength(64);
+            e.HasIndex(g => g.MovesHash);
+            e.HasIndex(g => g.WhiteFide);
+            e.HasIndex(g => g.BlackFide);
         });
 
         modelBuilder.Entity<KidsPuzzle>(e =>
@@ -1356,6 +1371,7 @@ public class AppDbContext : DbContext
             // Das Foto gehoert zur Partie: wird sie geloescht, geht es mit.
             e.HasOne(s => s.Game).WithMany().HasForeignKey(s => s.SavedGameId).OnDelete(DeleteBehavior.Cascade);
             e.Property(s => s.Photo).HasColumnType("LONGBLOB");
+            e.Property(s => s.Purpose).HasMaxLength(16);
             e.Property(s => s.ContentType).HasMaxLength(40);
             e.Property(s => s.FileName).HasMaxLength(200);
             e.Property(s => s.NotationLanguage).HasMaxLength(8);

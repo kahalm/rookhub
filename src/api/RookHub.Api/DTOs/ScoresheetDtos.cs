@@ -128,3 +128,24 @@ public class ScoresheetResolveResultDto
     public List<string> Unresolved { get; set; } = new();
     public int? UnresolvedFrom { get; set; }
 }
+
+/// <summary><c>GET /api/league/club/scans/{id}</c> — Stand einer Liga-Einlesung (Vereins-Datenbank) für die Korrektur
+/// in LeagueHub. Solange nicht <c>done</c>, sind nur <see cref="Scan"/> und der Status gefüllt.</summary>
+public class LeagueScanStateDto
+{
+    public ScoresheetScanDto Scan { get; set; } = new();
+    public string NotationLanguage { get; set; } = "auto";
+    public List<string> Written { get; set; } = new();
+    public List<int[]?> Boxes { get; set; } = new();
+    public List<ScoresheetPly> Plies { get; set; } = new();
+    public List<string> Unresolved { get; set; } = new();
+    public int? UnresolvedFrom { get; set; }
+    /// <summary>Kopfdaten, wie sie auf dem Formular standen.</summary>
+    public string? White { get; set; }
+    public string? Black { get; set; }
+    public string? Event { get; set; }
+    public string? Date { get; set; }
+    public string? Result { get; set; }
+    /// <summary>Vermutlich gespielte Seite des Nutzers (Profilname im gelesenen Namen), sonst <c>null</c>.</summary>
+    public string? OwnerSide { get; set; }
+}

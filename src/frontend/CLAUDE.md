@@ -24,7 +24,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `app` | `src/` | `dist/app/browser` | `rookhub-frontend` | rookhub(-dev).oberschmid.homes |
 | `turnier` | `src-turnier/` | `dist/turnier/browser` | `rookhub-turnier` | turnier(-dev).oberschmid.homes |
 | `kidhub` | `src-kidhub/` | `dist/kidhub/browser` | `rookhub-kidhub` | kidhub(-dev).oberschmid.homes (Kinderseite, spielbar ohne Konto) |
-| `leaguehub` | `src-leaguehub/` | `dist/leaguehub/browser` | `rookhub-leaguehub` | leaguehub(-dev).oberschmid.homes (Aufstellungs-Prognosen Tiroler Ligen, vorerst nur Admins; Teilen-Links `/s/:token` ohne Konto) |
+| `leaguehub` | `src-leaguehub/` | `dist/leaguehub/browser` | `rookhub-leaguehub` | leaguehub(-dev).oberschmid.homes (Aufstellungs-Prognosen Tiroler Ligen + Vereins-Datenbank, Admins und die Vereinsgruppe; Teilen-Links `/s/:token` ohne Konto) |
 
 - `src-turnier/` enthaelt nur, was die Turnierseite EIGEN hat: Einstiegspunkt, Routen, Navbar und
   die Turnier-Features. Alles Geteilte (Auth, Interceptors, i18n, shared/) kommt per Pfad-Alias
@@ -111,6 +111,16 @@ Auftragsseite (`analysis-jobs.component.ts`) benutzen diese drei — keine eigen
 - **API-Tokens** (`features/profile/api-tokens.component.ts`): der Anlege-Dialog fragt den BEREICH (`extension` =
   Browser-Erweiterung, Vorgabe; `engine` = Engine-Provider), die Liste zeigt ihn als Spalte. Ein Engine-Token erreicht
   serverseitig NUR `/api/external-engine/*`.
+
+## Formular-Korrektur als geteilte Sitzung (0.573.0)
+
+`features/games/sheet-edit-session.ts` (`SheetEditSession`) hält den Arbeitsstand einer Partie-Korrektur in Signalen:
+Halbzüge mit Formular-Einträgen und Lesarten, Cursor, Ersetzen/Einfügen/Löschen/Bestätigen, Ausschnitt des Fotos und
+das Neu-Aufbereiten des Rests nach jeder Änderung (die Regeln selbst stehen rein in `game-edit.util.ts`). Benutzt von
+RookHubs `GameEditComponent` (`/games/:id/edit`, die Felder dort sind Aliase auf die Sitzung) UND der
+Formular-Korrektur der Vereins-Datenbank in LeagueHub (`src-leaguehub/app/features/club/club-scan-page.component.ts`).
+Die Seite gibt nur mit, woher der Rest kommt (`resolve`), und hängt das Abonnement an ihre Lebensdauer (`bind`). Wer an
+der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten auseinander.
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

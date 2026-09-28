@@ -64,7 +64,7 @@ describe('LeaguePageComponent', () => {
     perms = new Set();
     const el = create();
     await settle();
-    expect(el.textContent).toContain('Nur für Admins');
+    expect(el.textContent).toContain('Nicht freigeschaltet');
     expect(el.textContent).toContain('patrik');
     expect(api.index).not.toHaveBeenCalled();
   });

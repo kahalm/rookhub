@@ -7,7 +7,7 @@ import { OpeningStats, PlayerCard } from '../core/league.models';
 type Show = 'w' | 's' | 'b';
 
 /**
- * Spielerkarte als Dialog: Turnierpartien (Lumbra + chess-results), Eröffnungsprofil, letzte Partien,
+ * Spielerkarte als Dialog: Partien (Lumbra + chess-results + Vereins-Datenbank), Eröffnungsprofil, letzte Partien,
  * Online-Konten, PGN-Download. Aus einer Brett-Zeile geöffnet steht standardmäßig NUR die Farbe, die der
  * Spieler an diesem Brett hat (Wunsch des Nutzers), umschaltbar Weiß / Schwarz / Beide.
  */
@@ -22,8 +22,8 @@ type Show = 'w' | 's' | 'b';
           <h2 id="card-name">{{ card()?.name || (loading() ? '…' : '') }}</h2>
           @if (card(); as c) {
             <p class="card-meta">
-              @if (c.n) { {{ c.n }} Turnierpartien @if (c.years) { ({{ c.years[0] }}–{{ c.years[1] }}) } }
-              @else { Keine Turnierpartien gefunden }
+              @if (c.n) { {{ c.n }} Partien @if (c.years) { ({{ c.years[0] }}–{{ c.years[1] }}) } }
+              @else { Keine Partien gefunden }
               <span class="muted">{{ srcText(c) }}</span> –
               <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a>
             </p>
@@ -89,7 +89,7 @@ type Show = 'w' | 's' | 'b';
             </p>
             <p class="muted small-note">Nur Konten, die der Spieler selbst mit seinem Namen verbunden hat. „wahrscheinlich": Klarname und Land passen, der Name ist unter FIDE-Spielern eindeutig.</p>
           }
-          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026) und die Partiedatenbank von chess-results.com. Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
+          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
         }
       </div>
     </dialog>

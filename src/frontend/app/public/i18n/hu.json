@@ -2013,7 +2013,11 @@
         "ci_view": "CI / Actions megtekintése",
         "menu_manage": "Menü láthatóságának kezelése",
         "catalog_manage": "Katalógus-engedélyek kezelése",
-        "roles_manage": "Szerepkörök és jogosultságok kezelése"
+        "roles_manage": "Szerepkörök és jogosultságok kezelése",
+        "tournaments_manage": "Versenynaptár kezelése",
+        "league_view": "LeagueHub: előrejelzések és klubjátszmák megtekintése",
+        "league_manage": "LeagueHub: adatok frissítése, linkek megosztása, importálás",
+        "league_contribute": "LeagueHub: klubjátszmák hozzáadása (PGN, játszmalap)"
       }
     }
   },

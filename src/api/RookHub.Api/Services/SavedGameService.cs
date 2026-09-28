@@ -708,13 +708,13 @@ public class SavedGameService
     /// <summary>Quelle der hochgeladenen Partien.</summary>
     public const string ImportSource = "pgn";
 
-    private static bool IsLoadableFen(string fen)
+    internal static bool IsLoadableFen(string fen)
     {
         try { Chess.ChessBoard.LoadFromFen(fen); return true; } catch { return false; }
     }
 
     /// <summary>Die UCI-Hauptvariante als SAN in der Schreibweise des Bretts; bricht am ersten nicht spielbaren Zug ab.</summary>
-    private static List<string> SansOf(string fen, IReadOnlyList<string> uci)
+    internal static List<string> SansOf(string fen, IReadOnlyList<string> uci)
     {
         var board = Chess.ChessBoard.LoadFromFen(fen);
         var sans = new List<string>(uci.Count);

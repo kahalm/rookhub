@@ -109,12 +109,9 @@ public sealed class LeagueService
         return card;
     }
 
-    public async Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct)
-    {
-        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
-            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
-        return p is null || string.IsNullOrEmpty(p.Pgn) ? null : (p.Name, p.Pgn);
-    }
+    /// <summary>Alle Partien des Spielers — die fremden UND die der Vereins-Datenbank (auch auf Teilen-Links: „pgn sind
+    /// nicht geschützt", Wunsch des Nutzers).</summary>
+    public Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct) => new LeagueProfileStore(_db).PgnAsync(fide, ct);
 
     // ---- Teilen-Links -------------------------------------------------------------------------------
 

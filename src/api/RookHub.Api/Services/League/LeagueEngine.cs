@@ -19,7 +19,7 @@ public static class LeagueNames
         "bed", "med", "fh", "mas", "llm", "mmsc", "prof", "univ", "dkfm", "mmmag",
     };
 
-    private static bool IsSuffix(string tok)
+    internal static bool IsSuffix(string tok)
     {
         var t = tok.ToLowerInvariant().Trim('(', ')', '.', ',');
         if (tok.Contains('.') || tok.StartsWith('(') || Suffix.Contains(t)) return true;

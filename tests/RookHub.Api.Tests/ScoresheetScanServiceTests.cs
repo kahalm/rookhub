@@ -846,4 +846,41 @@ public class ScoresheetScanServiceTests : IDisposable
         await c.Update(saved.Id, new GameUpdateDto { Moves = moves, OwnerSide = "" });
         Assert.Null((await _db.SavedGames.SingleAsync()).OwnerSide);
     }
+
+    // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
+
+    [Fact]
+    public async Task LeagueScan_IsNoSavedGame_AndClosingDropsThePhotoButKeepsTheCount()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, reason) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "IMG_2.jpg", "de", "black",
+            ScoresheetScan.PurposeLeague);
+        Assert.Null(reason);
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        Assert.Empty(_db.SavedGames);                                    // nicht in „Meine Partien"
+        Assert.Empty(_db.Notifications);                                 // keine Glocke — LeagueHub fragt selbst nach
+        Assert.Empty(await _service.ListAsync(u.Id));                    // nicht in RookHubs Liste
+        Assert.Equal(scan.Id, (await _service.LeagueScansAsync(u.Id)).Single().Id);
+
+        var state = await _service.LeagueScanStateAsync(u.Id, scan.Id);
+        Assert.Equal("done", state!.Scan.Status);
+        Assert.Equal(Written.Length, state.Plies.Count);
+        Assert.Equal(("Didi", "Patrick", "0-1", "black"), (state.White, state.Black, state.Result, state.OwnerSide));
+        Assert.Null(await _service.LeagueScanStateAsync(u.Id + 1, scan.Id));   // fremd
+
+        var rest = await _service.ResolveLeagueRestAsync(u.Id, scan.Id, new[] { "Nf3", "d5" }, 2);
+        Assert.Equal(Written.Length, rest!.Plies.Count + 2);
+
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(u.Id, scan.Id));
+        Assert.True(await _service.CloseLeagueScanAsync(u.Id, scan.Id));
+        Assert.Null(await _service.LeagueScanPhotoAsync(u.Id, scan.Id));
+        Assert.Null(await _service.LeagueScanStateAsync(u.Id, scan.Id));
+        Assert.Empty(await _service.LeagueScansAsync(u.Id));
+        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync();
+        Assert.Null(row.TranscriptionJson);
+        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);   // zählt weiter fürs Tageskontingent
+    }
 }

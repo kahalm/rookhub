@@ -26,8 +26,8 @@ interface Pick { liga?: number; verein?: string }
   template: `
     @if (!allowed) {
       <section class="gate">
-        <h2>Nur für Admins</h2>
-        <p>Angemeldet als {{ username }}. LeagueHub ist vorerst nur für Admins freigeschaltet.</p>
+        <h2>Nicht freigeschaltet</h2>
+        <p>Angemeldet als {{ username }}. LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz.</p>
       </section>
     } @else if (loadError()) {
       <section class="gate">
@@ -242,7 +242,7 @@ export class LeaguePageComponent implements OnInit {
 
   private errorText(err: unknown): string {
     if (err instanceof HttpErrorResponse) {
-      if (err.status === 403) return 'LeagueHub ist vorerst nur für Admins freigeschaltet.';
+      if (err.status === 403) return 'LeagueHub ist für dein Konto nicht freigeschaltet (Admins und die Vereinsgruppe von SK Schwaz).';
       if (err.status === 0) return 'Der Server ist gerade nicht erreichbar. Bitte später neu laden.';
       return `Fehler ${err.status}.`;
     }

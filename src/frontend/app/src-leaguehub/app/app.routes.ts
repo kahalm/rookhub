@@ -3,13 +3,20 @@ import { authGuard } from '@rh/core/auth.guard';
 import { guestGuard } from '@rh/core/guest.guard';
 
 /**
- * `/` ist die Prognose-Seite (nur angemeldet, vorerst nur Admins — `league.view`), `/s/:token` die
- * geteilte Ansicht einer Begegnung OHNE Anmeldung. Keine Route mit `/g`, `/t` oder `/puzzles`: diese
+ * `/` ist die Prognose-Seite (nur angemeldet, `league.view`: Admins und die Vereinsgruppe), `/verein*` die
+ * Vereins-Datenbank (lesen `league.view`, hinzufügen `league.contribute`), `/s/:token` die geteilte Ansicht einer
+ * Begegnung OHNE Anmeldung. Keine Route mit `/g`, `/t` oder `/puzzles`: diese
  * Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [authGuard],
     loadComponent: () => import('./features/league/league-page.component').then(m => m.LeaguePageComponent) },
+  { path: 'verein', pathMatch: 'full', canActivate: [authGuard],
+    loadComponent: () => import('./features/club/club-games-page.component').then(m => m.ClubGamesPageComponent) },
+  { path: 'verein/neu', canActivate: [authGuard],
+    loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },
+  { path: 'verein/formular/:id', canActivate: [authGuard],
+    loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 's/:token', loadComponent: () => import('./features/share/share-page.component').then(m => m.SharePageComponent) },
   { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },

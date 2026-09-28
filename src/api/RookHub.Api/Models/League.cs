@@ -155,3 +155,35 @@ public class LeagueView
     public string Json { get; set; } = "{}";
     public DateTime GeneratedAt { get; set; }
 }
+
+/// <summary>
+/// Eine Partie aus der VEREINS-Datenbank (von Mitgliedern hochgeladen: PGN oder Partieformular). Mindestens eine Seite
+/// ist ein Ligaspieler, sonst wird sie gar nicht angenommen. Datum nur als JAHR.
+///
+/// <para><b>Anonymisiert</b> (<see cref="Anonymized"/>, Häkchen „Meinen Namen durch Schwaz ersetzen"): die Seite des
+/// Hochladenden heißt „Schwaz", ohne Elo und FIDE-ID, und es wird WEDER gespeichert, wer dahinter steht, NOCH wer
+/// hochgeladen hat (<see cref="UploadedByUserId"/> und <see cref="CreatedAt"/> bleiben leer, Veranstaltung fällt weg) —
+/// Wunsch des Nutzers, damit man nicht gegen die eigenen Spieler vorbereiten kann.</para>
+/// </summary>
+public class LeagueClubGame
+{
+    public int Id { get; set; }
+    public int? Year { get; set; }
+    public string White { get; set; } = string.Empty;
+    public string Black { get; set; } = string.Empty;
+    public string? WhiteFide { get; set; }
+    public string? BlackFide { get; set; }
+    public int? WhiteElo { get; set; }
+    public int? BlackElo { get; set; }
+    public string Result { get; set; } = "*";
+    public string? Event { get; set; }
+    public int Plies { get; set; }
+    /// <summary>Die Partie als PGN (nur Hauptvariante, Kopf auf das Nötige beschränkt).</summary>
+    public string Pgn { get; set; } = string.Empty;
+    /// <summary>SHA-256 (hex) über die Hauptvariante — erkennt dieselbe Partie ein zweites Mal.</summary>
+    public string MovesHash { get; set; } = string.Empty;
+    public bool Anonymized { get; set; }
+    /// <summary>Wer hochgeladen hat — nur bei NICHT anonymisierten Partien (dann darf er sie selbst löschen).</summary>
+    public int? UploadedByUserId { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}

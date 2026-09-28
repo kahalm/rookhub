@@ -161,9 +161,12 @@ public class ProfileServiceTests : IDisposable
         _db.RepertoireSrSettings.Add(new Models.RepertoireSrSettings { UserId = id, IntervalsJson = "[]" });
         // Manuelle Aktivität bleibt als Statistik, aber die Notiz (PII) wird geleert:
         _db.ManualActivities.Add(new Models.ManualActivity { UserId = id, Date = new DateOnly(2026, 7, 1), Kind = Models.ManualActivityKind.OtbGame, Amount = 1, Note = "gegen Max am Vereinsabend" });
+        // Vereins-Datenbank: die Partie bleibt (Ligadaten), nur der Vermerk, wer sie hochlud, geht.
+        _db.LeagueClubGames.Add(new Models.LeagueClubGame { White = "A", Black = "B", Pgn = "1. e4", MovesHash = "h", UploadedByUserId = id });
         await _db.SaveChangesAsync();
 
         await _profileService.DeleteAccountAsync(id, "secret123");
+        Assert.Null((await _db.LeagueClubGames.AsNoTracking().SingleAsync()).UploadedByUserId);
 
         var user = await _db.AppUsers.Include(u => u.Profile).FirstAsync(u => u.Id == id);
         // Identität anonymisiert + Login gesperrt

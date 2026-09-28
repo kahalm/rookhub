@@ -122,6 +122,14 @@ public sealed class LeagueImportService
                 row.UpdatedAt = DateTime.UtcNow;
             }
             await _db.SaveChangesAsync(ct);
+            // Das Bündel kennt nur die fremden Partien — Karten mit Vereinspartien neu rechnen, sonst fehlten sie bis
+            // zur nächsten Vereinspartie des Spielers.
+            var clubFides = await _db.LeagueClubGames.Where(g => g.WhiteFide != null && ids.Contains(g.WhiteFide)).Select(g => g.WhiteFide!)
+                .Concat(_db.LeagueClubGames.Where(g => g.BlackFide != null && ids.Contains(g.BlackFide)).Select(g => g.BlackFide!))
+                .Distinct().ToListAsync(ct);
+            var store = new LeagueProfileStore(_db);
+            foreach (var f in clubFides) await store.RebuildAsync(f, ct);
+            await _db.SaveChangesAsync(ct);
             res["profiles"] = b.Profiles.Count;
         }
         return res;

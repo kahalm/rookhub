@@ -2400,7 +2400,11 @@
         "ci_view": "View CI / Actions",
         "menu_manage": "Manage menu visibility",
         "catalog_manage": "Manage catalog grants",
-        "roles_manage": "Manage roles & permissions"
+        "roles_manage": "Manage roles & permissions",
+        "tournaments_manage": "Manage tournament directory",
+        "league_view": "LeagueHub: view forecasts and club games",
+        "league_manage": "LeagueHub: update data, share links, import",
+        "league_contribute": "LeagueHub: add club games (PGN, scoresheet)"
       }
     }
   },

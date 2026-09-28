@@ -2400,7 +2400,11 @@
         "ci_view": "CI / Actions ansehen",
         "menu_manage": "Menü-Sichtbarkeit verwalten",
         "catalog_manage": "Katalog-Freigaben verwalten",
-        "roles_manage": "Rollen & Berechtigungen verwalten"
+        "roles_manage": "Rollen & Berechtigungen verwalten",
+        "tournaments_manage": "Turnierverzeichnis verwalten",
+        "league_view": "LeagueHub: Prognosen und Vereinspartien ansehen",
+        "league_manage": "LeagueHub: Daten aktualisieren, Links teilen, Import",
+        "league_contribute": "LeagueHub: Vereinspartien hinzufügen (PGN, Partieformular)"
       }
     }
   },

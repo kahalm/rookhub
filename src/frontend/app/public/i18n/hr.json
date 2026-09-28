@@ -2400,7 +2400,11 @@
         "ci_view": "Prikaz CI / Actions",
         "menu_manage": "Upravljanje vidljivošću izbornika",
         "catalog_manage": "Upravljanje odobrenjima kataloga",
-        "roles_manage": "Upravljanje ulogama i dozvolama"
+        "roles_manage": "Upravljanje ulogama i dozvolama",
+        "tournaments_manage": "Upravljanje imenikom turnira",
+        "league_view": "LeagueHub: pregled prognoza i klupskih partija",
+        "league_manage": "LeagueHub: ažuriranje podataka, dijeljenje poveznica, uvoz",
+        "league_contribute": "LeagueHub: dodavanje klupskih partija (PGN, zapisnik)"
       }
     }
   },

@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { LocaleService } from '@rh/core/locale.service';
@@ -16,7 +17,7 @@ import { environment } from '../../src/environments/environment';
   selector: 'lh-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
     <header class="top">
       <div class="wrap top-row">
@@ -31,8 +32,16 @@ import { environment } from '../../src/environments/environment';
         </nav>
       </div>
       <p class="wrap lede">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für die Tiroler Mannschaftsmeisterschaft.</p>
+      @if (nav().view) {
+        <nav class="wrap tabs" aria-label="Bereiche">
+          <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
+          <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
+          @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
+        </nav>
+      }
     </header>
-    <main class="wrap"><router-outlet /></main>
+    <!-- Die Formular-Korrektur braucht Foto, Brett und Zugliste nebeneinander — dort ist die Seite breiter. -->
+    <main class="wrap" [class.wide]="wide()"><router-outlet /></main>
     <footer class="wrap foot">
       <span>v{{ version }}</span>
       <a routerLink="/impressum">Impressum</a>
@@ -49,6 +58,14 @@ export class LeagueHubAppComponent implements OnInit {
   private readonly theme = inject(ThemeService);
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   readonly version = environment.version;
+  /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
+  readonly nav = computed(() => {
+    this.user();
+    return { view: this.auth.has('league.view'), contribute: this.auth.has('league.contribute') };
+  });
+  private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
+    { initialValue: this.router.url });
+  readonly wide = computed(() => this.url().startsWith('/verein/formular/'));
 
   ngOnInit(): void {
     // Die Seite ist deutsch (Tiroler Ligen); die geteilten Masken (Anmelden, Datenschutz) zeigen es ebenso —

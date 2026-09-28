@@ -55,6 +55,12 @@ public class ScoresheetScan
 
     public ScoresheetScanStatus Status { get; set; } = ScoresheetScanStatus.Pending;
 
+    /// <summary>Wofür gelesen wird: <c>null</c> = „Meine Partien" (RookHub, es entsteht eine <see cref="SavedGame"/>),
+    /// <see cref="PurposeLeague"/> = Vereins-Datenbank in LeagueHub (KEINE gespeicherte Partie — die Korrektur passiert
+    /// dort, danach werden Foto und Lesung verworfen).</summary>
+    public string? Purpose { get; set; }
+    public const string PurposeLeague = "league";
+
     /// <summary>Grund des Scheiterns als Code (<c>notConfigured</c>, <c>unreadable</c>, <c>noMoves</c>,
     /// <c>refused</c>, <c>failed</c>) — die Seite formuliert ihn in der Sprache des Nutzers.</summary>
     public string? Error { get; set; }
