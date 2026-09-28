@@ -1,3 +1,4 @@
+using Chess;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -101,7 +102,8 @@ public sealed class GameMoveExplanationService
         if (analysis == null) return dto;
         // Aus einer anderen Sicht geschrieben (Seite inzwischen festgelegt/geändert) = nicht mehr gültig.
         var rows = await _db.GameMoveExplanations.AsNoTracking()
-            .Where(e => e.GameAnalysisId == id && e.Language == lang && e.Viewpoint == game.Viewpoint).OrderBy(e => e.Ply)
+            .Where(e => e.GameAnalysisId == id && e.Language == lang && e.Viewpoint == game.Viewpoint
+                        && e.Revision == CurrentRevision).OrderBy(e => e.Ply)
             .Select(e => new { e.Ply, e.Class, e.Text, e.MasterLibraryGameId, e.MasterText }).ToListAsync(ct);
         var masterIds = rows.Where(r => r.MasterLibraryGameId != null).Select(r => r.MasterLibraryGameId!.Value).Distinct().ToList();
         var masters = masterIds.Count == 0 ? new() : await _db.LibraryGames.AsNoTracking().Where(g => masterIds.Contains(g.Id))
@@ -162,14 +164,15 @@ public sealed class GameMoveExplanationService
         var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == analysisId).ToListAsync(ct);
         var existing = await _db.GameMoveExplanations.Where(e => e.GameAnalysisId == analysisId && e.Language == lang).ToListAsync(ct);
         // Aus einer anderen Sicht geschrieben: weg damit, sonst stünde der neue Text dem eindeutigen Index im Weg.
-        var stale = existing.Where(e => e.Viewpoint != viewpoint).ToList();
+        var stale = existing.Where(e => e.Viewpoint != viewpoint || e.Revision != CurrentRevision).ToList();
         if (stale.Count > 0)
         {
             _db.GameMoveExplanations.RemoveRange(stale);
             await _db.SaveChangesAsync(ct);
         }
-        var done = existing.Where(e => e.Viewpoint == viewpoint).Select(e => e.Ply).ToHashSet();
-        var todo = GameMistakes.Worst(GameMistakes.Find(positions, analysis.PlyCount), MaxPerGame)
+        var done = existing.Where(e => e.Viewpoint == viewpoint && e.Revision == CurrentRevision).Select(e => e.Ply).ToHashSet();
+        // Wer schon vorher auf Verlust stand und es weiter tut, bekommt keine Erklärung (−4 → −6 ändert nichts, 0.572.0).
+        var todo = GameMistakes.Worst(GameMistakes.Find(positions, analysis.PlyCount).Where(f => !ExplanationFacts.AlreadyLost(f)), MaxPerGame)
             .Where(f => !done.Contains(f.Ply)).ToList();
         if (todo.Count == 0) return 0;
 
@@ -190,6 +193,7 @@ public sealed class GameMoveExplanationService
             _db.GameMoveExplanations.Add(new GameMoveExplanation
             {
                 GameAnalysisId = analysisId, Ply = flaw.Ply, Language = lang, Class = flaw.Class, Viewpoint = viewpoint,
+                Revision = CurrentRevision,
                 Text = answer.Text!, Model = _llm.TranslationModel,
                 MasterLibraryGameId = answer.Master?.LibraryGameId, MasterText = answer.Master?.Text,
             });
@@ -226,16 +230,34 @@ public sealed class GameMoveExplanationService
     private static readonly JsonNode Schema = JsonNode.Parse(
         """{"type":"object","properties":{"explanation":{"type":"string"}},"required":["explanation"],"additionalProperties":false}""")!;
 
+    /// <summary>Fassung des Auftrags samt Fakten. Ältere Erklärungen gelten als veraltet: die Seite zeigt sie nicht mehr,
+    /// der Besitzer bekommt den Knopf wieder, und beim Erzeugen fallen sie weg. 0 = bis 0.571.x, 1 = seit 0.572.0 (konkreter
+    /// Grund aus <see cref="ExplanationFacts"/> statt „senkt die Gewinnchancen", Lage in Worten).</summary>
+    public const int CurrentRevision = 1;
+
     internal static string SystemPrompt(string lang) =>
         $"""
         You are a friendly, precise chess coach going through a game with the reader. A move in it was a mistake.
-        Explain in {LanguageName(lang)}, in one or two short sentences (at most 45 words), WHY the played move was bad and
-        WHAT the better move would have achieved. The last line of the facts says which side the reader played: write from the
-        reader's point of view exactly as it says — "you" is always the reader, NOT automatically the side that moved.
+        Write in {LanguageName(lang)}, two or three short sentences, at most 60 words:
+        1. The CONCRETE reason: what the move allowed or missed. Take it from the "Concretely" facts — what the best answer
+           attacks or wins, or what the better move would have achieved. Name the moves.
+        2. What it means for the reader, from the "Situation" fact, in plain words — e.g. still winning but part of the
+           advantage is gone; from a worse position to a lost one; from slightly better to slightly worse; the opponent made
+           the win even easier. You may add the evaluation in pawns with a decimal POINT and one decimal, in every
+           language (e.g. +5.8 → +4.4). "Winning" describes the position, not the result: the reader stands winning
+           (German "du stehst auf Gewinn") — never write that the game is won.
+        Never give the evaluation or the winning chances themselves as the reason: "it lowers the winning chances", "it
+        worsens the position" or "it gives the opponent an advantage" only restate THAT it was a mistake, not WHY. Avoid
+        empty phrases like "build pressure", "strengthen the position" or "consolidate the advantage" unless you say what
+        exactly (which piece, which square, which threat). Claim an attack, a threat, a capture or a material gain ONLY if a
+        "Concretely" fact says so — if none does, describe what the moves of the lines do, without inventing tactics.
+        Do not mention which colour the reader played.
+        The last line of the facts says which side the reader played: write from the reader's point of view exactly as it
+        says — "you" is always the reader, NOT automatically the side that moved.
         Address the reader informally where the language distinguishes (German "du", French "tu", …).
         Use ONLY the facts and lines given — never calculate your own variations and never mention a move that is not in
-        the given lines. Write moves exactly as given, in English algebraic notation
-        (e.g. Nf3, Bxh7+, O-O). No numbers of centipawns or percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
+        the given lines. Write moves exactly as given, in English algebraic notation (e.g. Nf3, Bxh7+, O-O). No centipawns,
+        no percentages. Return the JSON object {"{"}"explanation": "..."{"}"}.
         """;
 
     /// <param name="viewpoint">Seite des Lesers (<c>white</c>/<c>black</c>, leer = unbekannt) — NICHT die Seite,
@@ -258,13 +280,32 @@ public sealed class GameMoveExplanationService
         {
             $"Position before the move (FEN): {f.FenBefore}",
             $"{mover} played {number} {f.PlayedSan} — {kind}.",
-            $"Winning chance for {mover}: {Math.Round(f.WinBefore)} % before, {Math.Round(f.WinAfter)} % after the move.",
             $"Engine evaluation from {mover}'s view: {f.EvalBefore} before, {f.EvalAfter} after the played move.",
         };
+        if (ExplanationFacts.Situation(f, viewpoint) is { } situation)
+            lines.Add($"Situation: {situation}");
         if (f.BestSan != null)
             lines.Add($"Better for {mover} was {f.BestSan}. Engine line from the position before the move: {string.Join(' ', f.BestLine)}");
         if (f.Refutation.Count > 0)
             lines.Add($"{other}'s best answer to {f.PlayedSan}, with the engine line: {string.Join(' ', f.Refutation)}");
+        var answer = new List<string>();
+        if (f.Refutation.Count > 0 && AfterMove(f.FenBefore, f.PlayedSan) is { } fenAfter)
+        {
+            answer.AddRange(ExplanationFacts.FirstMoveAttacks(fenAfter, f.Refutation));
+            answer.AddRange(ExplanationFacts.LineEvents(fenAfter, f.Refutation, gainerWhite: !f.White));
+        }
+        var better = new List<string>();
+        if (f.BestLine.Count > 0)
+        {
+            better.AddRange(ExplanationFacts.FirstMoveAttacks(f.FenBefore, f.BestLine));
+            better.AddRange(ExplanationFacts.LineEvents(f.FenBefore, f.BestLine, gainerWhite: f.White));
+        }
+        if (answer.Count > 0) lines.Add($"Concretely, after {f.PlayedSan} and {other}'s best answer line: " + string.Join("; ", answer) + ".");
+        if (better.Count > 0) lines.Add($"Concretely, in {mover}'s better line: " + string.Join("; ", better) + ".");
+        if (answer.Count + better.Count == 0)
+            lines.Add("Concretely: no material changes hands and no piece is attacked — the difference is positional. Name the "
+                + "best answer and the better move and say what they do in the lines (which piece goes where, which pawn advances); "
+                + "do not invent reasons such as control of the centre or of squares.");
         if (master != null)
         {
             lines.Add($"A master game reached exactly this position: {master.Source}. Its annotator wrote here: \"{master.Text}\"");
@@ -287,6 +328,20 @@ public sealed class GameMoveExplanationService
             : $"Reader: played {other} — this move was made by the reader's OPPONENT ({mover}), not by the reader. Address the "
               + $"reader as \"you\" and call {mover} \"your opponent\"; explain why the move was bad for your opponent and how "
               + "you can make use of it. Never call it \"your move\".";
+    }
+
+    /// <summary>Stellung nach dem gespielten Zug (für die Fakten der Antwort-Linie); <c>null</c>, wenn er nicht geht.</summary>
+    private static string? AfterMove(string fen, string san)
+    {
+        try
+        {
+            var board = ChessBoard.LoadFromFen(fen);
+            var move = Array.Find(board.Moves(generateSan: true), m => m.San == san);
+            if (move is null) return null;
+            board.Move(move);
+            return board.ToFen();
+        }
+        catch { return null; }
     }
 
     private static string MoveNumber(string fen)

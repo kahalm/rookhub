@@ -481,7 +481,19 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
 * **Fakten statt Rechnen:** `GameMistakes.Find` (Server-SPIEGEL von `classify`/`CLASS_LIMITS`/Miss-Regel in
   `game-review.util.ts`, literale Grenzwerte in `GameMoveExplanationTests` ↔ `game-review.util.spec.ts`) liefert je Fehler
   Stellung, gespielten Zug, Bestzug + Engine-Linie (SAN, Rochade König-schlägt-Turm aufgelöst), Widerlegung (Linie der
-  NÄCHSTEN Stellung) und Gewinnchance vorher/nachher. Das Modell soll erklären, nicht rechnen.
+  NÄCHSTEN Stellung) und Bewertung vorher/nachher. Das Modell soll erklären, nicht rechnen.
+* **Der GRUND, nicht die Bewertung** (0.572.0, `Services/ExplanationFacts.cs`, gemeldet 2026-09-28 an Prod-Partie 34): mit
+  Gewinnchance und SAN-Linien begründete das Modell jeden Fehler mit genau dem („ein Fehler, weil er seine Gewinnchancen
+  senkt") und erfand Material („starker Bauernvorteil", wo eine Figur fiel). Jetzt bekommt es GEPRÜFTE Fakten: `Situation`
+  (die Lage in Worten aus Sicht des LESERS, Stufen ab 2,5 / 1 / 0,4 Bauern: „from clearly worse to lost", „still winning,
+  but gave away part of the advantage", „the opponent's move made the win even easier"), `FirstMoveAttacks` (was der erste
+  Zug der Antwort bzw. der besseren Linie angreift, ohne Bauern/König) und `LineEvents` (Schach im ersten Zug, Matt,
+  Umwandlung, Materialbilanz am Ende — nur, wenn die RICHTIGE Seite vorne liegt: in der Antwort-Linie der Gegner, in der
+  besseren der Ziehende; einzelne Schlagfälle bewusst nicht, das Modell verwechselte damit die Seiten). Ohne solche Fakten
+  sagt der Auftrag „positional, name the moves, do not invent reasons". Der Auftrag verbietet die Bewertung als Grund, Zahlen
+  nur als „+5.8 → +4.4". **Schon verloren = keine Erklärung** (`AlreadyLost`: vorher UND nachher Stufe −3, Wunsch „von −4
+  auf −6 muss das nicht kommentiert werden"). **Fassung** `GameMoveExplanation.Revision` (`CurrentRevision` = 1): ältere
+  Texte zeigt `GetAsync` nicht, `GenerateAsync` räumt sie weg — wer den Auftrag spürbar ändert, erhöht die Zahl.
 * **Meisterkommentar zur SELBEN Stellung** (0.542.0, `Services/MasterComments.cs`): vor dem Schreiben sucht der Dienst
   im Rohbestand kommentierte Partien mit GENAU derselben Zugfolge bis zur Stellung vor dem Fehler (`LibraryGame.OpeningLine`,
   Präfix-Suche, 40 beste nach Note) und gibt den treffendsten Kommentar dem Modell mit: (1) Meister spielte denselben Zug

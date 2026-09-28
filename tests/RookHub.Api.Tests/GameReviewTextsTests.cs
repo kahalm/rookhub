@@ -116,7 +116,7 @@ public class GameReviewTextsTests : IDisposable
         Assert.Equal((gameId, "de", "Nacherzählung 1"), (recap.SavedGameId, recap.Language, recap.Text));
         // Der Fehler ist der des GEGNERS: der Besitzer (Weiß) liest „dein Gegner", nicht „dein Zug".
         Assert.Contains("reader's OPPONENT (Black)", _llm.Calls[1].User);
-        Assert.Contains("Explain in German", _llm.Calls[1].System);
+        Assert.Contains("Write in German", _llm.Calls[1].System);
         var explanation = await _db.GameMoveExplanations.SingleAsync();
         Assert.Equal(("de", "white", 5), (explanation.Language, explanation.Viewpoint, explanation.Ply));
 
@@ -160,14 +160,14 @@ public class GameReviewTextsTests : IDisposable
     {
         var (userId, _, first) = await SeedAsync(reviewLanguage: null);
         await Service().WriteAsync(first, refined: false, CancellationToken.None);
-        Assert.Contains("Explain in English", _llm.Calls[1].System);
+        Assert.Contains("Write in English", _llm.Calls[1].System);
 
         await SeedAsync(reviewLanguage: "hr", link: false, userId: userId);   // von der Seite analysiert, in Kroatisch
         var (_, _, third) = await SeedAsync(reviewLanguage: null, userId: userId);   // über die Erweiterung
         _llm.Calls.Clear();
         await Service().WriteAsync(third, refined: false, CancellationToken.None);
         Assert.Contains("Write in Croatian", _llm.Calls[0].System);
-        Assert.Contains("Explain in Croatian", _llm.Calls[1].System);
+        Assert.Contains("Write in Croatian", _llm.Calls[1].System);
         Assert.All(await _db.GameRoasts.Where(r => r.SavedGame!.GameAnalysisId == third).ToListAsync(), r => Assert.Equal("hr", r.Language));
     }
 

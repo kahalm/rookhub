@@ -31,6 +31,10 @@ public class GameMoveExplanation
 
     [Required, MaxLength(1200)] public string Text { get; set; } = string.Empty;
 
+    /// <summary>Fassung von Auftrag und Fakten beim Erzeugen (<c>GameMoveExplanationService.CurrentRevision</c>, 0.572.0) —
+    /// eine ältere wird nicht mehr gezeigt und beim nächsten Erzeugen ersetzt. 0 = vor 0.572.0.</summary>
+    public int Revision { get; set; }
+
     /// <summary>Die Meisterpartie, deren Kommentar zu DIESER Stellung dem Modell mitgegeben wurde (0.542.0,
     /// <c>MasterComments</c>) — <c>null</c>, wenn es keine gab oder der Text ohne sie entstand. Kein Fremdschlüssel: der
     /// Rohbestand ist ein Arbeitsvorrat und kann neu eingelesen werden; fehlt die Partie, fällt die Quellenangabe weg.</summary>

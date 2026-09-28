@@ -134,8 +134,13 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Contains("Black played 3... Nf6 — a serious blunder.", prompt);
         Assert.Contains("Better for Black was g6. Engine line from the position before the move: g6 Qf3 Nf6", prompt);
         Assert.Contains("White's best answer to Nf6, with the engine line: Qxf7#", prompt);
+        // Die Lage in Worten und was die Antwort konkret tut (0.572.0) — der Grund, nicht „senkt die Gewinnchancen".
+        Assert.Contains("Situation: for the reader the position went from about equal to lost (getting mated)", prompt);
+        Assert.Contains("Concretely, after Nf6 and White's best answer line: the line ends in checkmate (Qxf7#)", prompt);
+        Assert.DoesNotContain("Winning chance", prompt);
         var system = GameMoveExplanationService.SystemPrompt("de");
-        Assert.Contains("Explain in German", system);
+        Assert.Contains("Write in German", system);
+        Assert.Contains("Never give the evaluation or the winning chances themselves as the reason", system);
         Assert.Contains("\"you\" is always the reader", system);
         Assert.Contains("{\"explanation\": \"...\"}", system);
     }
@@ -338,6 +343,50 @@ public class GameMoveExplanationTests : IDisposable
         Assert.Empty(_db.GameMoveExplanations);
     }
 
+    /// <summary>„Von −4 auf −6 muss das nicht kommentiert werden" (2026-09-28): wer vorher schon auf Verlust stand, bekommt
+    /// keine Erklärung — das Modell wird gar nicht gefragt.</summary>
+    [Fact]
+    public async Task Generate_AlreadyLostBeforeAndAfter_IsNotExplained()
+    {
+        var (userId, gameId, analysisId) = await SeedAsync(ownerSide: "black");
+        var before = await _db.GameAnalysisPositions.SingleAsync(p => p.GameAnalysisId == analysisId && p.Ply == 5);
+        before.CandidatesJson = """[{"uci":"g7g6","cp":-500},{"uci":"g8f6","mate":-1}]""";   // Schwarz steht schon −5
+        await _db.SaveChangesAsync();
+        var flaw = Assert.Single(GameMistakes.Find(await _db.GameAnalysisPositions.Where(p => p.GameAnalysisId == analysisId).ToListAsync(), Moves.Length));
+        Assert.Equal(5, flaw.Ply);   // ein Fehler bleibt es …
+        var service = Service();
+
+        Assert.Equal(0, await service.GenerateAsync((await service.OwnGameAsync(userId, gameId))!, "de", CancellationToken.None));
+        Assert.Empty(_llm.Prompts);   // … erklärt wird er nicht
+        Assert.Empty(_db.GameMoveExplanations);
+    }
+
+    /// <summary>Texte einer älteren Fassung des Auftrags (vor 0.572.0: „senkt die Gewinnchancen") zeigt die Seite nicht mehr,
+    /// der Besitzer bekommt den Knopf wieder, und das Erzeugen ersetzt sie.</summary>
+    [Fact]
+    public async Task OlderRevision_IsHidden_AndReplaced()
+    {
+        var (userId, gameId, analysisId) = await SeedAsync(ownerSide: "black");
+        _db.GameMoveExplanations.Add(new GameMoveExplanation
+        {
+            GameAnalysisId = analysisId, Ply = 5, Language = "de", Class = "blunder", Viewpoint = "black", Revision = 0,
+            Text = "Nf6 war ein Fehler, weil es deine Gewinnchancen senkt.",
+        });
+        await _db.SaveChangesAsync();
+        var service = Service();
+        var game = (await service.OwnGameAsync(userId, gameId))!;
+
+        var state = await service.GetAsync(game, "de", owner: true);
+        Assert.Empty(state.Items);
+        Assert.True(state.CanGenerate);
+
+        _llm.Answers.Enqueue("{\"explanation\":\"Nach Nf6 setzt Weiß mit Qxf7# matt; g6 hätte das verhindert.\"}");
+        Assert.Equal(1, await service.GenerateAsync(game, "de", CancellationToken.None));
+        var row = await _db.GameMoveExplanations.AsNoTracking().SingleAsync();
+        Assert.Equal(GameMoveExplanationService.CurrentRevision, row.Revision);
+        Assert.StartsWith("Nach Nf6", row.Text);
+    }
+
     [Fact]
     public async Task OnlyOnOwnHardware_ClaudeWouldCostMoney()
     {
@@ -353,7 +402,11 @@ public class GameMoveExplanationTests : IDisposable
     public async Task Get_OwnerMayGenerate_SharedViewerOnlyReads_UnfinishedAnalysisNot()
     {
         var (userId, gameId, analysisId) = await SeedAsync();
-        _db.GameMoveExplanations.Add(new GameMoveExplanation { GameAnalysisId = analysisId, Ply = 5, Language = "de", Class = "blunder", Text = "t" });
+        _db.GameMoveExplanations.Add(new GameMoveExplanation
+        {
+            GameAnalysisId = analysisId, Ply = 5, Language = "de", Class = "blunder", Text = "t",
+            Revision = GameMoveExplanationService.CurrentRevision,
+        });
         await _db.SaveChangesAsync();
         var service = Service();
 
