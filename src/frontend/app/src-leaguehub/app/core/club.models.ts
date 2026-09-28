@@ -55,6 +55,10 @@ export interface SideMatch {
   fide: string | null;
   club: boolean;
   candidates: RosterPerson[];
+  /** Nur über den Nachnamen gefunden (die Partie nennt keinen Vornamen) — prüfen. */
+  lastNameOnly?: boolean;
+  /** Kein Ligaspieler, aber eindeutig im Megabase-Verzeichnis (Name und FIDE-ID von dort) — „nicht in Liga". */
+  mega?: boolean;
 }
 
 /** Eine Seite in der Übersicht vor dem Import (`POST …/games/preview`). */

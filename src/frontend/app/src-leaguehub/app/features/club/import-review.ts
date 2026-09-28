@@ -19,6 +19,10 @@ export interface ReviewSide {
   replace: boolean;
   /** Vom Nutzer umgesetzt — dann geht der Name mit, sonst gilt die Kopfzeile. */
   changed: boolean;
+  /** Nur über den Nachnamen zugeordnet („Kostic") — braucht einen Blick. */
+  lastNameOnly: boolean;
+  /** Kein Ligaspieler, aber im Megabase-Verzeichnis gefunden oder dort ausgewählt — „nicht in Liga". */
+  mega: boolean;
 }
 
 export interface ReviewGame {
@@ -32,26 +36,33 @@ export interface ReviewGame {
 export type SideKey = 'white' | 'black';
 export type ReviewFilter = 'all' | 'skipped' | 'unknown';
 
+/** Bekannt = Ligaspieler oder im Megabase-Verzeichnis (Wunsch 2026-09-28: „wenn in Tirol kein Treffer"). */
+export const known = (s: ReviewSide): boolean => s.league || s.mega;
+
 /** Wird die Partie übernommen — und wenn nicht, warum? DIESELBE Regel wie am Server (`LeagueClubService.Build`). */
 export function reviewStatus(r: ReviewGame): { importable: boolean; reason: string | null } {
   if (r.game.error) return { importable: false, reason: r.game.error };
   if (r.game.duplicate) return { importable: false, reason: 'duplicate' };
   const w = r.white, b = r.black;
-  if (!w.league && !b.league) return { importable: false, reason: 'noLeaguePlayer' };
-  if (!(w.league && !w.replace) && !(b.league && !b.replace)) return { importable: false, reason: 'onlyOwnClub' };
+  if (!known(w) && !known(b)) return { importable: false, reason: 'noLeaguePlayer' };
+  if (!(known(w) && !w.replace) && !(known(b) && !b.replace)) return { importable: false, reason: 'onlyOwnClub' };
   return { importable: true, reason: null };
 }
 
+/** Übernehmbar, aber ohne Gegner aus der Liga (nur die Megabase kennt ihn): nicht vorgewählt, lässt sich anhaken. */
+export const optionalGame = (r: ReviewGame): boolean =>
+  reviewStatus(r).importable && !(r.white.league && !r.white.replace) && !(r.black.league && !r.black.replace);
+
 export const included = (r: ReviewGame): boolean => reviewStatus(r).importable && !r.excluded;
 
-/** Braucht ein Blick: nicht erkannt oder mehrdeutig (ersetzte Seiten zählen nicht). */
-export const needsLook = (s: ReviewSide): boolean => !s.replace && (!s.league || s.ambiguous);
+/** Braucht ein Blick: nicht erkannt oder mehrdeutig (ersetzte Seiten zählen nicht; „nicht in Liga" ist erkannt). */
+export const needsLook = (s: ReviewSide): boolean => !s.replace && (!known(s) || s.ambiguous || s.lastNameOnly);
 
 function sideOf(p: PreviewSide, replaceClub: boolean): ReviewSide {
   return {
     raw: p.raw, name: p.match.name ?? p.raw, fide: p.match.ambiguous ? null : p.match.fide, league: p.match.league,
     ambiguous: p.match.ambiguous, club: p.match.club, candidates: p.match.candidates ?? [], owner: p.owner,
-    replace: replaceClub && p.replace, changed: false,
+    replace: replaceClub && p.replace, changed: false, lastNameOnly: !!p.match.lastNameOnly, mega: !!p.match.mega,
   };
 }
 
@@ -71,6 +82,7 @@ export class ImportReview {
     return {
       total: list.length, take, skip: list.length - take,
       unknown: list.filter(r => !r.game.error && !r.game.duplicate && (needsLook(r.white) || needsLook(r.black))).length,
+      optional: list.filter(r => optionalGame(r) && r.excluded).length,
     };
   });
 
@@ -83,17 +95,20 @@ export class ImportReview {
 
   constructor(preview: ClubPreview, readonly replaceClub: boolean) {
     this.truncated = preview.truncated;
-    this.games.set(preview.games.map(g => ({
-      game: g, white: sideOf(g.white, replaceClub), black: sideOf(g.black, replaceClub), excluded: false,
-    })));
+    this.games.set(preview.games.map(g => {
+      const r: ReviewGame = { game: g, white: sideOf(g.white, replaceClub), black: sideOf(g.black, replaceClub), excluded: false };
+      return { ...r, excluded: optionalGame(r) };
+    }));
   }
 
   private update(index: number, fn: (r: ReviewGame) => ReviewGame): void {
     this.games.update(list => list.map(r => r.game.index === index ? fn(r) : r));
   }
 
-  private withSide(index: number, side: SideKey, fn: (s: ReviewSide) => ReviewSide): void {
-    this.update(index, r => ({ ...r, [side]: fn(r[side]) }));
+  /** Eine Seite umsetzen. `pick` = der Nutzer hat an dieser Partie einen Spieler festgelegt — dann wird sie auch
+   * importiert (Wunsch 2026-09-28: „wenn ich einen Spieler aus der Megabase auswähle, soll er auch importieren wählen"). */
+  private withSide(index: number, side: SideKey, fn: (s: ReviewSide) => ReviewSide, pick = false): void {
+    this.update(index, r => ({ ...r, [side]: fn(r[side]), excluded: pick ? false : r.excluded }));
   }
 
   /** Vorgabe „ersetzen" für einen neu gesetzten Spieler: Schwaz-Spieler und der Hochladende selbst. */
@@ -101,12 +116,13 @@ export class ImportReview {
     return this.replaceClub && (club || owner);
   }
 
-  /** Einen Ligaspieler aus der Meldeliste (Vorschlag oder Kandidat) an diese Seite setzen. */
+  /** Einen Spieler (Meldeliste, Kandidat oder Megabase) an diese Seite setzen — die Partie wird damit importiert. */
   choosePerson(index: number, side: SideKey, p: RosterPerson): void {
+    const league = p.league ?? true;
     this.withSide(index, side, s => ({
-      ...s, name: p.name, fide: p.fide, league: p.league ?? true, ambiguous: false, club: p.club, candidates: [],
-      replace: this.defaultReplace(p.club, s.owner), changed: true,
-    }));
+      ...s, name: p.name, fide: p.fide, league, ambiguous: false, club: p.club, candidates: [],
+      replace: this.defaultReplace(p.club, s.owner), changed: true, lastNameOnly: false, mega: !league,
+    }), true);
   }
 
   /** Einen getippten Namen samt Abgleich des Servers setzen. */
@@ -114,7 +130,8 @@ export class ImportReview {
     this.withSide(index, side, s => ({
       ...s, name: m.name ?? name, fide: m.ambiguous ? null : m.fide, league: m.league, ambiguous: m.ambiguous, club: m.club,
       candidates: m.candidates ?? [], replace: this.defaultReplace(m.club, s.owner), changed: true,
-    }));
+      lastNameOnly: !!m.lastNameOnly, mega: !!m.mega,
+    }), true);
   }
 
   setReplace(index: number, side: SideKey, replace: boolean): void {

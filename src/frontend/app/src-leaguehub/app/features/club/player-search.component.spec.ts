@@ -18,11 +18,12 @@ describe('PlayerSearchComponent', () => {
   const LIGA: RosterPerson = { name: 'Hengl, Philip', fide: '222', teams: ['Absam'], club: false, league: true, source: 'liga' };
   const MEGA: RosterPerson = { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega', games: 12, lastYear: 2019, maxElo: 1850 };
 
-  it('sucht zuerst in der Liga, mit Häkchen in der ganzen Megabase; ein Treffer bringt die FIDE-ID mit', fakeAsync(() => {
+  it('sucht standardmäßig auch in der Megabase, ohne Häkchen nur in der Liga; ein Treffer bringt die FIDE-ID mit', fakeAsync(() => {
     const el = fixture.nativeElement as HTMLElement;
     client.players.and.resolveTo([LIGA]);
     const typed: string[] = [];
     fixture.componentInstance.textChange.subscribe(t => typed.push(t));
+    fixture.componentInstance.setAll(false);
     fixture.componentInstance.onInput('heng');
     tick(300);
     flushMicrotasks();
@@ -49,8 +50,25 @@ describe('PlayerSearchComponent', () => {
     expect(el.querySelector('.psearch-results')).toBeNull();
   }));
 
+  it('Megabase-Häkchen ist vorgegeben', () => {
+    expect((fixture.nativeElement.querySelector('.psearch-all input') as HTMLInputElement).checked).toBeTrue();
+  });
+
+  it('Hineinklicken sucht gleich mit dem Namen, der schon dasteht', fakeAsync(() => {
+    client.players.and.resolveTo([LIGA]);
+    fixture.componentInstance.text = 'Hengl';
+    (fixture.nativeElement.querySelector('.psearch input') as HTMLInputElement).dispatchEvent(new Event('focus'));
+    tick(0);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(client.players).toHaveBeenCalledWith('Hengl', true);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.psearch-results li').length).toBe(1);
+  }));
+
   it('ohne Treffer in der Liga der Hinweis aufs Häkchen', fakeAsync(() => {
     client.players.and.resolveTo([]);
+    fixture.componentInstance.setAll(false);
+    tick(0);
     fixture.componentInstance.onInput('zzz');
     tick(300);
     flushMicrotasks();

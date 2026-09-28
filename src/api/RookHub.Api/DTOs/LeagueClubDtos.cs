@@ -29,7 +29,8 @@ public class LeagueClubImportGameDecision
 }
 
 /// <summary><c>POST /api/league/club/games/import</c> — derselbe PGN-Text wie bei der Übersicht und je Partie, die
-/// übernommen werden soll, die Entscheidung. <see cref="Games"/> fehlt = alle mit den Vorgaben der Übersicht.</summary>
+/// übernommen werden soll, die Entscheidung. <see cref="Games"/> fehlt = alle übernehmbaren mit den Vorgaben der
+/// Übersicht — auch die, die sie nicht vorwählt (Gegner nur in der Megabase).</summary>
 public class LeagueClubImportRequest
 {
     public string Pgn { get; set; } = string.Empty;
@@ -98,7 +99,7 @@ public class LeagueClubFailureDto
     public int Index { get; set; }
     public string? White { get; set; }
     public string? Black { get; set; }
-    /// <summary><c>noLeaguePlayer</c>, <c>onlyOwnClub</c>, <c>fromPosition</c>, <c>illegal</c>, <c>noMoves</c>,
+    /// <summary><c>noLeaguePlayer</c> (keine Seite in der Liga oder der Megabase), <c>onlyOwnClub</c>, <c>fromPosition</c>, <c>illegal</c>, <c>noMoves</c>,
     /// <c>tooLong</c>, <c>notFound</c> (Nummer nicht im PGN).</summary>
     public string Reason { get; set; } = string.Empty;
 }
@@ -183,6 +184,11 @@ public class LeagueClubSideMatchDto
     public bool Club { get; set; }
     /// <summary>Bei Mehrdeutigkeit die Kandidaten zur Auswahl.</summary>
     public List<LeagueRosterPersonDto> Candidates { get; set; } = new();
+    /// <summary>Nur über den Nachnamen gefunden (die Partie nennt keinen Vornamen) — prüfen.</summary>
+    public bool LastNameOnly { get; set; }
+    /// <summary>Kein Ligaspieler, aber eindeutig im Spielerverzeichnis der Megabase — dann <see cref="Name"/> und
+    /// <see cref="Fide"/> von dort. Die Partie ist übernehmbar, die Übersicht wählt sie nicht vor („nicht in Liga").</summary>
+    public bool Mega { get; set; }
 }
 
 public class LeagueClubMatchDto

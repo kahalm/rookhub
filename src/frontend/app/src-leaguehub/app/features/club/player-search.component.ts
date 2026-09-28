@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, Output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, signal, viewChild } from '@angular/core';
 import { ClubClient } from '../../core/club-api.service';
 import { RosterPerson } from '../../core/club.models';
 
 /**
- * Spieler suchen beim Korrigieren eines Namens (Wunsch 2026-09-28): standardmäßig unter den Personen der Liga
- * (Meldelisten aller Saisonen), per Häkchen über alle Spieler der Megabase. Ein Treffer bringt Namen und FIDE-ID mit
+ * Spieler suchen beim Korrigieren eines Namens (Wunsch 2026-09-28): unter den Personen der Liga (Meldelisten aller
+ * Saisonen) und — Häkchen, standardmäßig an („Megabase-Suche an") — über alle Spieler der Megabase. Ein Treffer bringt Namen und FIDE-ID mit
  * (`picked`); der getippte Text geht laufend nach außen (`textChange`), damit die Seite ihn selbst abgleichen kann.
  */
 @Component({
@@ -13,7 +13,8 @@ import { RosterPerson } from '../../core/club.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="psearch">
-      <input [value]="text" (input)="onInput($any($event.target).value)" (keydown.enter)="$event.preventDefault(); enter.emit()"
+      <input #box [value]="text" (input)="onInput($any($event.target).value)" (focus)="onFocus()"
+             (keydown.enter)="$event.preventDefault(); enter.emit()"
              [attr.aria-label]="label" [placeholder]="placeholder" maxlength="120" autocomplete="off" />
       <label class="psearch-all"><input type="checkbox" [checked]="all()" (change)="setAll($any($event.target).checked)" />
         Alle Spieler der Megabase durchsuchen</label>
@@ -33,22 +34,39 @@ import { RosterPerson } from '../../core/club.models';
     </div>
   `,
 })
-export class PlayerSearchComponent implements OnDestroy {
+export class PlayerSearchComponent implements OnInit, OnDestroy {
   @Input({ required: true }) client!: ClubClient;
   @Input() text = '';
   @Input() label = 'Spieler';
   @Input() placeholder = 'Nachname, Vorname';
+  /** Gleich beim Öffnen suchen (und ins Feld springen) — in der Übersicht öffnet das Feld erst ein Klick auf den Namen. */
+  @Input() autoSearch = false;
   @Output() textChange = new EventEmitter<string>();
   @Output() picked = new EventEmitter<RosterPerson>();
   @Output() enter = new EventEmitter<void>();
 
-  readonly all = signal(false);
+  readonly all = signal(true);
   readonly results = signal<RosterPerson[]>([]);
   readonly loading = signal(false);
   readonly searched = signal(false);
   readonly open = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
   private seq = 0;
+  private readonly box = viewChild<ElementRef<HTMLInputElement>>('box');
+
+  ngOnInit(): void {
+    if (!this.autoSearch) return;
+    this.open.set(true);
+    this.schedule(0);
+    setTimeout(() => this.box()?.nativeElement.focus());
+  }
+
+  /** Hineinklicken sucht sofort mit dem, was schon dasteht (vorher erst nach dem ersten getippten Zeichen). */
+  onFocus(): void {
+    if (this.open() && this.searched()) return;
+    this.open.set(true);
+    this.schedule(0);
+  }
 
   ngOnDestroy(): void {
     if (this.timer) clearTimeout(this.timer);

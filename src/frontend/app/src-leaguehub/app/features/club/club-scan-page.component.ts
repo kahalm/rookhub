@@ -153,7 +153,7 @@ const MATCH_DEBOUNCE_MS = 400;
               <div class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
                 <lh-player-search [client]="client" [text]="name(k)()" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
                                   (textChange)="setName(k, $event)" (picked)="pickPerson(k, $event)" />
-                <span class="match" [class.ok]="match(k)()?.league && !replace(k)()">{{ matchText(k) }}</span>
+                <span class="match" [class.ok]="(match(k)()?.league || match(k)()?.mega) && !replace(k)()">{{ matchText(k) }}</span>
                 <label class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
@@ -256,13 +256,16 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
       .join(' · ');
   });
 
-  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`LeagueClubService.Build`). */
+  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`LeagueClubService.Build`): bekannt ist, wer in
+   * der Liga ODER im Megabase-Verzeichnis steht. */
   readonly problem = computed(() => {
     const w = this.match('white')(), b = this.match('black')();
     if (!w || !b) return null;
-    if (!w.league && !b.league) return 'Kein Ligaspieler erkannt — so wird die Partie nicht angenommen. Namen prüfen (Vorschläge beim Tippen).';
-    if (!(w.league && !this.replace('white')()) && !(b.league && !this.replace('black')()))
-      return 'Nach dem Ersetzen bleibt kein Gegner aus der Liga übrig — so wird die Partie nicht angenommen.';
+    const known = (m: SideMatch) => m.league || !!m.mega;
+    if (!known(w) && !known(b))
+      return 'Kein Spieler erkannt (weder in der Liga noch in der Megabase) — so wird die Partie nicht angenommen. Namen prüfen (Vorschläge beim Tippen).';
+    if (!(known(w) && !this.replace('white')()) && !(known(b) && !this.replace('black')()))
+      return 'Nach dem Ersetzen bleibt kein bekannter Gegner übrig — so wird die Partie nicht angenommen.';
     return null;
   });
 
@@ -345,7 +348,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (this.matchTimer) clearTimeout(this.matchTimer);
     st.name.set(p.name);
     st.fide.set(p.fide);
-    st.match.set({ league: p.league ?? true, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [] });
+    const league = p.league ?? true;
+    st.match.set({ league, ambiguous: false, name: p.name, fide: p.fide, club: p.club, candidates: [], mega: !league });
     this.applyDefault(k);
   }
 
@@ -367,8 +371,10 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (this.replace(k)()) return m?.club ? `Spieler von Schwaz — wird „${ANON_NAME}“` : `wird „${ANON_NAME}“`;
     if (!m) return '';
     if (m.ambiguous) return 'Ligaspieler (mehrere dieses Namens — bitte aus den Vorschlägen wählen)';
+    if (m.league && m.lastNameOnly) return `nur über den Nachnamen: ${m.name} — bitte prüfen`;
     if (m.league) return `Ligaspieler: ${m.name}${m.fide ? '' : ' (ohne FIDE-ID)'}${m.club ? ' — Schwaz, nicht ersetzt' : ''}`;
-    return 'kein Ligaspieler';
+    if (m.mega) return `nicht in Liga — aus der Megabase: ${m.name}${m.fide ? ` (FIDE ${m.fide})` : ''}`;
+    return 'nicht erkannt';
   }
 
   num(v: string): number | null {

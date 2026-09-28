@@ -12,7 +12,8 @@ namespace RookHub.Api.Services.League;
 /// vorige nichts fand: (1) alle Namensteile gleich, in beliebiger Reihenfolge („Schnabl, Andreas" = „Andreas Schnabl");
 /// (2) Nachname + erster Vorname („Schnabl, Andreas Johann"); (3) Nachname + Anfangsbuchstabe („Schnabl, A.").
 /// Verglichen wird ohne Groß/klein, Akzente und akademische Titel, Umlaute in beiden Schreibweisen („Müller" =
-/// „Mueller" = „Muller").</para>
+/// „Mueller" = „Muller"). Nennt die Partie NUR einen Nachnamen („Kostic"), gilt als vierte Stufe der Nachname allein —
+/// eindeutig nur bei genau einem Ligaspieler dieses Namens (<see cref="Hit.LastNameOnly"/>).</para>
 ///
 /// <para><b>Mehrdeutig heißt: Ligaspieler, aber OHNE FIDE-ID</b> — zwei gleichnamige Ligaspieler zu verwechseln wäre
 /// schlimmer, als die Partie keinem Profil zuzuordnen. Nennt die Partie eine FIDE-ID, die zu keinem Ligaspieler gehört,
@@ -30,7 +31,9 @@ public sealed class LeagueRosterIndex
 
     /// <summary>Ergebnis des Abgleichs. <see cref="Candidates"/> = alle gleich gut passenden Ligaspieler (bei einem
     /// eindeutigen Treffer genau einer).</summary>
-    public sealed record Hit(bool League, Person? Person, IReadOnlyList<Person> Candidates)
+    /// <para><see cref="LastNameOnly"/>: die Partie nannte NUR den Nachnamen („Kostic") — Treffer über den Nachnamen allein,
+    /// die Oberfläche zeigt ihn als „nur Nachname" zum Prüfen.</para>
+    public sealed record Hit(bool League, Person? Person, IReadOnlyList<Person> Candidates, bool LastNameOnly = false)
     {
         public bool Ambiguous => League && Person is null;
         /// <summary>Ein Spieler des eigenen Vereins — bei Mehrdeutigkeit nur, wenn ALLE Kandidaten es sind.</summary>
@@ -100,29 +103,35 @@ public sealed class LeagueRosterIndex
     {
         fide = string.IsNullOrWhiteSpace(fide) ? null : fide.Trim();
         if (fide != null && _byFide.TryGetValue(fide, out var byId)) return new Hit(true, byId, new[] { byId });
+        var stageNo = 0;
         foreach (var stage in QueryKeys(name ?? string.Empty))
         {
+            stageNo++;
             var found = stage.SelectMany(k => _byName.TryGetValue(k, out var s) ? s : Enumerable.Empty<Person>())
                 .Distinct().ToList();
             // Eine fremde FIDE-ID in der Partie: nur Ligaspieler ohne eigene ID kommen als dieselbe Person in Frage.
             if (fide != null) found = found.Where(p => p.Fide is null).ToList();
             if (found.Count == 0) continue;
-            return new Hit(true, found.Count == 1 ? found[0] : null, found);
+            return new Hit(true, found.Count == 1 ? found[0] : null, found, stageNo == 4);
         }
         return None;
     }
 
-    /// <summary>Vorschläge beim Eintippen: Namensteile, die mit dem Getippten BEGINNEN (alle Wörter).</summary>
+    /// <summary>Vorschläge beim Eintippen („like", Wunsch 2026-09-28): jedes getippte Wort muss IRGENDWO im Namen stehen
+    /// („bert rud" findet „Bertl, Rudolf", „ertl" auch „Bertl"); wer alle Wörter als Wortanfang trägt, steht vorn.</summary>
     public IEnumerable<Person> Suggest(string query, int take)
     {
         var words = Tokens(Fold(query, false));
         if (words.Count == 0 || words.All(w => w.Length < 2)) return Enumerable.Empty<Person>();
-        return People.Where(p =>
+        return People.Select(p =>
             {
-                var own = Tokens(Fold(p.Name, false)).Concat(Tokens(Fold(p.Name, true))).ToList();
-                return words.All(w => own.Any(o => o.StartsWith(w, StringComparison.Ordinal)));
+                var folded = Fold(p.Name, false) + " " + Fold(p.Name, true);
+                if (!words.All(w => folded.Contains(w, StringComparison.Ordinal))) return (p, Rank: -1);
+                var own = Tokens(folded);
+                return (p, Rank: words.All(w => own.Any(o => o.StartsWith(w, StringComparison.Ordinal))) ? 0 : 1);
             })
-            .OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase).Take(take);
+            .Where(x => x.Rank >= 0)
+            .OrderBy(x => x.Rank).ThenBy(x => x.p.Name, StringComparer.CurrentCultureIgnoreCase).Take(take).Select(x => x.p);
     }
 
     // ── Namensschlüssel ─────────────────────────────────────────────
@@ -162,6 +171,7 @@ public sealed class LeagueRosterIndex
             var (last, first, _) = Parts(name, tr);
             if (last.Count + first.Count == 0) continue;
             keys.Add("f:" + Sorted(last.Concat(first)));
+            if (last.Count > 0) keys.Add("l:" + Sorted(last));
             if (last.Count > 0 && first.Count > 0)
             {
                 keys.Add("g:" + Sorted(last) + "|" + first[0]);
@@ -171,18 +181,21 @@ public sealed class LeagueRosterIndex
         return keys;
     }
 
-    /// <summary>Die drei Stufen (je eine Schlüsselmenge), in dieser Reihenfolge versucht.</summary>
+    /// <summary>Die vier Stufen (je eine Schlüsselmenge), in dieser Reihenfolge versucht.</summary>
     private static IEnumerable<List<string>> QueryKeys(string name)
     {
         var full = new List<string>();
         var given = new List<string>();
         var initial = new List<string>();
+        var lastOnly = new List<string>();
         foreach (var tr in new[] { false, true })
         {
             var (last, first, comma) = Parts(name, tr);
             var all = last.Concat(first).ToList();
             if (all.Count == 0) continue;
             full.Add("f:" + Sorted(all));
+            // Nur ein Nachname („Kostic", „Kostic, ?"): vierte Stufe, eindeutig nur, wenn ihn genau ein Ligaspieler trägt.
+            if (comma ? first.Count == 0 && last.Count > 0 : all.Count == 1) lastOnly.Add("l:" + Sorted(comma ? last : all));
             // Ohne Komma: der Vorname steht vorn („Andreas Schnabl", „A. Schnabl") ODER hinten („Schnabl Andreas").
             var splits = comma ? new[] { (last, first) }
                 : all.Count >= 2 ? new[] { (all.Skip(1).ToList(), all.Take(1).ToList()), (all.Take(all.Count - 1).ToList(), all.Skip(all.Count - 1).ToList()) }
@@ -197,5 +210,6 @@ public sealed class LeagueRosterIndex
         yield return full;
         yield return given;
         yield return initial;
+        yield return lastOnly;
     }
 }

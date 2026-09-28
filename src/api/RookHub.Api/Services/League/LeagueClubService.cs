@@ -14,8 +14,11 @@ namespace RookHub.Api.Services.League;
 ///
 /// <para>Regeln, alle vom Nutzer vorgegeben:</para>
 /// <list type="bullet">
-/// <item><b>Beide Namen gegen die Meldelisten</b> (<see cref="LeagueRosterIndex"/>). Ist keine Seite ein Ligaspieler, wird
-/// die Partie abgelehnt (<c>noLeaguePlayer</c>); bleibt nach dem Ersetzen keiner übrig, ebenso (<c>onlyOwnClub</c>).</item>
+/// <item><b>Beide Namen gegen die Meldelisten</b> (<see cref="LeagueRosterIndex"/>), und wer dort fehlt, gegen das
+/// Spielerverzeichnis der Megabase (<see cref="LeagueMegaPlayers"/>, eindeutig über Name oder FIDE-ID — Wunsch
+/// 2026-09-28: „standardmäßig auf Megabase matchen, wenn in Tirol kein Treffer"). Ist keine Seite bekannt, wird die
+/// Partie abgelehnt (<c>noLeaguePlayer</c>); bleibt nach dem Ersetzen keine bekannte übrig, ebenso (<c>onlyOwnClub</c>).
+/// Eine Partie, deren Gegner nur die Megabase kennt, ist übernehmbar, die Übersicht wählt sie aber nicht vor.</item>
 /// <item><b>Spieler von Schwaz werden durch „Schwaz" ersetzt</b> (Vorgabe: jeder, der in seiner jüngsten Saison für
 /// Schwaz gemeldet ist, dazu der Hochladende laut Profil) — ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es
 /// wird WEDER gespeichert, wer dahinter steht, NOCH wer hochgeladen hat oder wann (auch nicht versteckt). Beim PGN-Import
@@ -58,6 +61,10 @@ public sealed class LeagueClubService
             seasons.GetValueOrDefault(r.Tnr) ?? "")));
     }
 
+    /// <summary>Das Megabase-Verzeichnis für diese Namen und FIDE-IDs (ein Abgleich = eine Abfrage je 500).</summary>
+    private Task<LeagueMegaPlayers.Lookup> MegaAsync(IEnumerable<string?> names, IEnumerable<string?> fides, CancellationToken ct) =>
+        new LeagueMegaPlayers(_db).LookupAsync(names, fides, ct);
+
     // ── Hochladen ───────────────────────────────────────────────────
 
     private sealed record Owner(string? Fide, string?[] Names)
@@ -77,12 +84,12 @@ public sealed class LeagueClubService
 
     /// <summary>Welche Seite spielt der Hochladende? FIDE-ID vor Name; bei Gleichstand keine.</summary>
     private static string? OwnerSideOf(Owner o, string? white, string? black, string? whiteFide, string? blackFide,
-        LeagueRosterIndex.Hit hw, LeagueRosterIndex.Hit hb)
+        LeagueRosterIndex.Hit hw, LeagueRosterIndex.Hit hb, LeagueMegaPlayers.Hit? mw, LeagueMegaPlayers.Hit? mb)
     {
         if (o.Fide != null)
         {
-            var w = o.Fide == whiteFide || o.Fide == hw.Person?.Fide;
-            var b = o.Fide == blackFide || o.Fide == hb.Person?.Fide;
+            var w = o.Fide == whiteFide || o.Fide == hw.Person?.Fide || o.Fide == mw?.Fide;
+            var b = o.Fide == blackFide || o.Fide == hb.Person?.Fide || o.Fide == mb?.Fide;
             if (w != b) return w ? "white" : "black";
         }
         return o.Names.Length == 0 ? null : ScoresheetScanService.GuessOwnerSide(white, black, o.Names);
@@ -140,24 +147,43 @@ public sealed class LeagueClubService
         return result;
     }
 
-    /// <summary>Eine Seite, wie sie gespeichert würde.</summary>
-    /// <summary><see cref="Fide"/> = gewählte FIDE-ID eines Spielers, der KEIN Ligaspieler ist (Megabase-Verzeichnis).</summary>
-    private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace, string? Fide = null);
+    /// <summary>Eine Seite, wie sie gespeichert würde. <see cref="Fide"/> = gewählte FIDE-ID eines Spielers, der KEIN
+    /// Ligaspieler ist; <see cref="Mega"/> = so ein Spieler, im Megabase-Verzeichnis gefunden — dann ist die Seite
+    /// „bekannt", auch ohne Liga.</summary>
+    private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace, string? Fide = null,
+        LeagueMegaPlayers.Hit? Mega = null)
+    {
+        public bool Known => Hit.League || Mega != null;
+    }
+
+    /// <summary>Wer kein Ligaspieler ist, wird im Megabase-Verzeichnis gesucht: über die FIDE-ID, sonst den Namen. Eine
+    /// FIDE-ID, die das Verzeichnis nicht kennt, lässt den Namen nur gelten, wenn er ihr nicht widerspricht.</summary>
+    private static LeagueMegaPlayers.Hit? MegaOf(LeagueRosterIndex.Hit hit, string? name, string? fide, LeagueMegaPlayers.Lookup mega)
+    {
+        if (hit.League) return null;
+        if (string.IsNullOrWhiteSpace(fide)) return mega.ByName(name);
+        return mega.ByFide(fide) ?? (mega.ByName(name) is { } n && (n.Fide is null || n.Fide == fide.Trim())
+            ? n with { Fide = fide.Trim() is { Length: <= 16 } f ? f : n.Fide } : null);
+    }
 
     /// <summary>Die Vorgabe der Übersicht: Abgleich über Kopfzeile, ersetzt wird ein Spieler von Schwaz und der
     /// Hochladende selbst (Wunsch 2026-09-28: „alle Spieler vom Verein Schwaz").</summary>
-    private static (Side White, Side Black, string? OwnerSide) Defaults(Parsed p, LeagueRosterIndex roster, Owner owner)
+    private static (Side White, Side Black, string? OwnerSide) Defaults(Parsed p, LeagueRosterIndex roster, Owner owner,
+        LeagueMegaPlayers.Lookup mega)
     {
         var hw = roster.Match(p.H("White"), p.H("WhiteFideId"));
         var hb = roster.Match(p.H("Black"), p.H("BlackFideId"));
-        var ownerSide = OwnerSideOf(owner, p.H("White"), p.H("Black"), p.H("WhiteFideId"), p.H("BlackFideId"), hw, hb);
-        return (new Side(p.H("White"), hw, p.Elo("WhiteElo"), hw.OwnClub || ownerSide == "white"),
-            new Side(p.H("Black"), hb, p.Elo("BlackElo"), hb.OwnClub || ownerSide == "black"), ownerSide);
+        var mw = MegaOf(hw, p.H("White"), p.H("WhiteFideId"), mega);
+        var mb = MegaOf(hb, p.H("Black"), p.H("BlackFideId"), mega);
+        var ownerSide = OwnerSideOf(owner, p.H("White"), p.H("Black"), p.H("WhiteFideId"), p.H("BlackFideId"), hw, hb, mw, mb);
+        return (new Side(p.H("White"), hw, p.Elo("WhiteElo"), hw.OwnClub || ownerSide == "white", null, mw),
+            new Side(p.H("Black"), hb, p.Elo("BlackElo"), hb.OwnClub || ownerSide == "black", null, mb), ownerSide);
     }
 
     /// <summary>Was der Nutzer für eine Seite festgelegt hat: ein gewählter Ligaspieler (FIDE-ID) schlägt den Namen, ein
     /// getippter Name wird neu abgeglichen, ohne Angabe gilt die Kopfzeile.</summary>
-    private static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, LeagueRosterIndex roster)
+    private static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, LeagueRosterIndex roster,
+        LeagueMegaPlayers.Lookup mega)
     {
         d ??= new LeagueClubSideDecision();
         if (roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);
@@ -165,18 +191,20 @@ public sealed class LeagueClubService
         var name = typed ? d.Name!.Trim() : raw;
         // Eine FIDE-ID, die kein Ligaspieler trägt (aus dem Megabase-Verzeichnis gewählt): bleibt an der Partie stehen.
         var chosen = string.IsNullOrWhiteSpace(d.Fide) ? null : d.Fide.Trim();
-        return new Side(name, roster.Match(name, chosen ?? (typed ? null : rawFide)), elo, d.Replace,
-            chosen is { Length: <= 16 } ? chosen : null);
+        var fide = chosen ?? (typed ? null : rawFide);
+        var hit = roster.Match(name, fide);
+        return new Side(name, hit, elo, d.Replace, chosen is { Length: <= 16 } ? chosen : null, MegaOf(hit, name, fide, mega));
     }
 
     /// <summary>Aus einer geprüften Zugfolge + den Seiten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
     private static (LeagueClubGame? Game, string? Reason) Build(Side w, Side b, IReadOnlyList<string> sans, int? year,
         string? result, string? evt)
     {
-        if (!w.Hit.League && !b.Hit.League) return (null, "noLeaguePlayer");
-        if (!(w.Hit.League && !w.Replace) && !(b.Hit.League && !b.Replace)) return (null, "onlyOwnClub");
+        if (!w.Known && !b.Known) return (null, "noLeaguePlayer");
+        if (!(w.Known && !w.Replace) && !(b.Known && !b.Replace)) return (null, "onlyOwnClub");
         (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (AnonymousName, null, null)
-            : (Clip(s.Hit.Person?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?", s.Hit.Person?.Fide ?? s.Fide, Elo(s.Elo));
+            : (Clip(s.Hit.Person?.Name ?? s.Mega?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?",
+                s.Hit.Person?.Fide ?? s.Fide ?? s.Mega?.Fide, Elo(s.Elo));
         var (wn, wf, we) = Out(w);
         var (bn, bf, be) = Out(b);
         var anonymized = w.Replace || b.Replace;
@@ -238,12 +266,14 @@ public sealed class LeagueClubService
 
     private static LeagueClubPreviewSideDto SideDto(Side s, bool owner) => new()
     {
-        Raw = s.Name, Elo = s.Elo, Match = MatchDto(s.Hit), Owner = owner, Replace = s.Replace,
+        Raw = s.Name, Elo = s.Elo, Match = MatchDto(s.Hit, s.Mega), Owner = owner, Replace = s.Replace,
     };
 
-    internal static LeagueClubSideMatchDto MatchDto(LeagueRosterIndex.Hit h) => new()
+    internal static LeagueClubSideMatchDto MatchDto(LeagueRosterIndex.Hit h, LeagueMegaPlayers.Hit? mega = null) => new()
     {
-        League = h.League, Ambiguous = h.Ambiguous, Name = h.Person?.Name, Fide = h.Person?.Fide, Club = h.OwnClub,
+        League = h.League, Ambiguous = h.Ambiguous, Mega = !h.League && mega != null,
+        Name = h.Person?.Name ?? (h.League ? null : mega?.Name), Fide = h.Person?.Fide ?? (h.League ? null : mega?.Fide),
+        Club = h.OwnClub, LastNameOnly = h.LastNameOnly,
         Candidates = h.Ambiguous ? h.Candidates.Take(8).Select(PersonDto).ToList() : new(),
     };
 
@@ -260,13 +290,15 @@ public sealed class LeagueClubService
     {
         var parsed = ParseAll(pgn, out var truncated);
         var roster = await RosterAsync(ct);
+        var mega = await MegaAsync(parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }),
+            parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }), ct);
         var owner = await OwnerAsync(userId, ct);
         var now = _now();
         var pending = new List<LeagueClubGame>();
         var dto = new LeagueClubPreviewDto { Truncated = truncated };
         foreach (var p in parsed)
         {
-            var (w, b, ownerSide) = Defaults(p, roster, owner);
+            var (w, b, ownerSide) = Defaults(p, roster, owner, mega);
             var g = new LeagueClubPreviewGameDto
             {
                 Index = p.Index, Year = YearOf(p.H("Date"), now), Result = p.H("Result") is { } r && Results.Contains(r) ? r : "*",
@@ -294,6 +326,11 @@ public sealed class LeagueClubService
         result.Truncated = truncated;
         var byIndex = parsed.ToDictionary(p => p.Index);
         var roster = await RosterAsync(ct);
+        var chosen = (decisions ?? Array.Empty<LeagueClubImportGameDecision>()).Where(d => d != null)
+            .SelectMany(d => new[] { d.White, d.Black }).Where(s => s != null).ToList();
+        var mega = await MegaAsync(
+            parsed.SelectMany(p => new[] { p.H("White"), p.H("Black") }).Concat(chosen.Select(s => s.Name)),
+            parsed.SelectMany(p => new[] { p.H("WhiteFideId"), p.H("BlackFideId") }).Concat(chosen.Select(s => s.Fide)), ct);
         var owner = await OwnerAsync(userId, ct);
         var now = _now();
         var pending = new List<LeagueClubGame>();
@@ -313,11 +350,11 @@ public sealed class LeagueClubService
             });
             if (p.Error != null || p.Sans == null) { Fail(p.Error ?? "illegal"); continue; }
             Side w, b;
-            if (decision == null) (w, b, _) = Defaults(p, roster, owner);
+            if (decision == null) (w, b, _) = Defaults(p, roster, owner, mega);
             else
             {
-                w = Decided(decision.White, p.H("White"), p.H("WhiteFideId"), p.Elo("WhiteElo"), roster);
-                b = Decided(decision.Black, p.H("Black"), p.H("BlackFideId"), p.Elo("BlackElo"), roster);
+                w = Decided(decision.White, p.H("White"), p.H("WhiteFideId"), p.Elo("WhiteElo"), roster, mega);
+                b = Decided(decision.Black, p.H("Black"), p.H("BlackFideId"), p.Elo("BlackElo"), roster, mega);
             }
             var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             if (game == null) { Fail(reason!); continue; }
@@ -348,8 +385,9 @@ public sealed class LeagueClubService
         var now = _now();
         var year = req.Year is { } y && y >= 1900 && y <= now.Year + 1 ? y : (int?)null;
         var roster = await RosterAsync(ct);
-        var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, roster);
-        var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, roster);
+        var mega = await MegaAsync(new[] { req.White, req.Black }, new[] { req.WhiteFide, req.BlackFide }, ct);
+        var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, roster, mega);
+        var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, roster, mega);
         var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
         if (await IsDuplicateAsync(game, new(), ct)) return (null, "duplicate", null);
@@ -475,7 +513,13 @@ public sealed class LeagueClubService
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
     {
         var roster = await RosterAsync(ct);
-        return new LeagueClubMatchDto { White = MatchDto(roster.Match(white, null)), Black = MatchDto(roster.Match(black, null)) };
+        var mega = await MegaAsync(new[] { white, black }, Array.Empty<string?>(), ct);
+        LeagueClubSideMatchDto One(string? name)
+        {
+            var hit = roster.Match(name, null);
+            return MatchDto(hit, MegaOf(hit, name, null, mega));
+        }
+        return new LeagueClubMatchDto { White = One(white), Black = One(black) };
     }
 
     // ── Löschen ─────────────────────────────────────────────────────

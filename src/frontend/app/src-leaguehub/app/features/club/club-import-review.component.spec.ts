@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { ClubClient } from '../../core/club-api.service';
 import { ClubPreview, SideMatch } from '../../core/club.models';
 import { ClubImportReviewComponent } from './club-import-review.component';
@@ -14,6 +14,9 @@ const PREVIEW: ClubPreview = { truncated: false, games: [
     white: { raw: 'Huber, F.', elo: null, match: M({ league: true, ambiguous: true, candidates: [
       { name: 'Huber, Franz', fide: '1', teams: ['Absam'], club: false }, { name: 'Huber, Florian', fide: '2', teams: ['Hall'], club: false }] }), owner: false, replace: false },
     black: { raw: 'Unbekannt', elo: null, match: M(), owner: false, replace: false } },
+  { index: 3, year: 2025, result: '1-0', event: null, plies: 40, opening: '1.e4', error: null, duplicate: false,
+    white: { raw: 'Oberschmid, Patrik', elo: null, match: M({ league: true, name: 'Oberschmid, Patrik', fide: '900', club: true }), owner: true, replace: true },
+    black: { raw: 'Bodrov, Timofey', elo: null, match: M({ mega: true, name: 'Bodrov, Timofey', fide: '14131781' }), owner: false, replace: false } },
 ] };
 
 describe('ClubImportReviewComponent', () => {
@@ -22,6 +25,7 @@ describe('ClubImportReviewComponent', () => {
 
   function create(): HTMLElement {
     client = jasmine.createSpyObj<ClubClient>('ClubClient', ['importPgn', 'players', 'match']);
+    client.players.and.resolveTo([]);
     TestBed.configureTestingModule({ imports: [ClubImportReviewComponent] });
     fixture = TestBed.createComponent(ClubImportReviewComponent);
     fixture.componentRef.setInput('review', new ImportReview(PREVIEW, true));
@@ -41,8 +45,29 @@ describe('ClubImportReviewComponent', () => {
     expect(rows[0].textContent).toContain('wird importiert');
     expect(rows[1].textContent).toContain('mehrdeutig');
     expect(rows[1].textContent).toContain('nicht erkannt');
-    expect(el.querySelector('.review-head')?.textContent).toContain('2 Partien gelesen — 2 werden importiert');
+    expect(el.querySelector('.review-head')?.textContent).toContain('3 Partien gelesen — 2 werden importiert');
+    expect(rows[2].textContent).toContain('nicht in Liga');
+    expect(rows[2].textContent).toContain('nicht in Liga — anhaken zum Hinzufügen');
+    expect((rows[2].querySelector('input[type=checkbox]') as HTMLInputElement).disabled).toBeFalse();
+    expect(el.querySelector('.review-head')?.textContent).toContain('1 ohne Gegner aus der Liga');
   });
+
+  it('das Namensfeld sucht beim Öffnen gleich (Megabase mit), ein Treffer von dort wählt die Partie zum Import', fakeAsync(() => {
+    const el = create();
+    client.players.and.resolveTo([{ name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' }]);
+    ((el.querySelectorAll('tbody tr')[1].querySelectorAll('button.side-btn'))[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+    flush();
+    fixture.detectChanges();
+    expect(client.players).toHaveBeenCalledWith('Unbekannt', true);
+    (el.querySelector('.psearch-results button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const row = el.querySelectorAll('tbody tr')[1];
+    expect(row.textContent).toContain('Hengl, Peter');
+    expect(row.textContent).toContain('nicht in Liga');
+    expect(row.textContent).toContain('wird importiert');
+    flush();
+  }));
 
   it('einen mehrdeutigen Spieler aus den Kandidaten wählen, dann importieren', fakeAsync(() => {
     const el = create();
@@ -63,6 +88,7 @@ describe('ClubImportReviewComponent', () => {
       { index: 2, white: { name: 'Huber, Franz', fide: '1', replace: false }, black: { name: null, fide: null, replace: false } },
     ]);
     expect(done).toBeTrue();
+    flush();
   }));
 
   it('getippter Name wird abgeglichen', fakeAsync(() => {
@@ -75,5 +101,6 @@ describe('ClubImportReviewComponent', () => {
     fixture.detectChanges();
     expect(client.match).toHaveBeenCalledWith('Hengl Philip', '');
     expect(el.querySelectorAll('tbody tr')[1].textContent).toContain('Ligaspieler');
+    flush();
   }));
 });

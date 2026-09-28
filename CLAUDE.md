@@ -1335,12 +1335,21 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 
 * **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen): FIDE-ID aus der Partie zuerst, dann der
   Name in drei Stufen (alle Namensteile in beliebiger Reihenfolge → Nachname + erster Vorname → Nachname +
-  Anfangsbuchstabe), ohne Groß/klein, Akzente, akad. Titel, Umlaute in beiden Schreibweisen. Mehrdeutig = Ligaspieler
+  Anfangsbuchstabe), ohne Groß/klein, Akzente, akad. Titel, Umlaute in beiden Schreibweisen. Nennt die Partie NUR einen
+  Nachnamen („Kostic", 0.576.0), gilt als vierte Stufe der Nachname allein — eindeutig nur bei genau einem Ligaspieler
+  (`Hit.LastNameOnly`, die Übersicht zeigt „nur Nachname — prüfen"), sonst mehrdeutig mit Kandidaten. Mehrdeutig = Ligaspieler
   OHNE FIDE-ID, die Kandidaten gehen zur Auswahl mit. Eine Meldelisten-Zeile OHNE FIDE-ID gehört zu der Person MIT
   FIDE-ID, deren Name genau so lautet, wenn es genau eine gibt (0.575.1 — 2022/23 steht „Hengl Philip" ohne Komma und ID
   neben „Hengl, Philip" mit ID; als zwei Personen war jeder Abgleich „mehrdeutig"). Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
-  eigene ID als Namenstreffer zu. Ist keine Seite ein Ligaspieler → `noLeaguePlayer`; bleibt nach dem Ersetzen keiner
-  übrig → `onlyOwnClub`.
+  eigene ID als Namenstreffer zu. **Wer in keiner Meldeliste steht, wird im Megabase-Verzeichnis gesucht** (0.576.0,
+  Wunsch „standardmäßig auf Megabase matchen, wenn in Tirol kein Treffer"; `LeagueMegaPlayers.Lookup`, EINE Abfrage je
+  500 Namen für die ganze Übersicht): über die FIDE-ID, sonst den Namen — „Nachname, Vorname" wie im Verzeichnis, ohne
+  Komma beide Reihenfolgen. Eindeutig heißt: die Treffer tragen höchstens EINE FIDE-ID (dann gilt der mit ihr), ganz ohne
+  ID nur bei einem einzigen Namen; zwei Namensvettern mit verschiedenen IDs sind „nicht erkannt". So eine Seite heißt
+  „nicht in Liga" (`match.mega`), Name und FIDE-ID kommen von dort. **Bekannt = Ligaspieler ODER Megabase**: ist keine
+  Seite bekannt → `noLeaguePlayer`; bleibt nach dem Ersetzen keine bekannte übrig → `onlyOwnClub`. Eine Partie, deren
+  Gegner nur die Megabase kennt, ist übernehmbar, die Übersicht wählt sie aber NICHT vor (`optionalGame` in
+  `import-review.ts`); wer an einer Partie einen Spieler wählt oder einen Namen übernimmt, wählt sie damit zum Import aus.
 * **Spieler von Schwaz werden durch „Schwaz" ersetzt** (Vorgabe: jeder, der in seiner JÜNGSTEN Saison für Schwaz gemeldet
   ist — `Person.OwnClub`; wer weggegangen ist, ist jetzt ein Gegner —, dazu der Hochladende laut Profil; je Seite
   umschaltbar): ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es wird **weder gespeichert, wer dahinter steht,
@@ -1380,9 +1389,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
 | POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteFide, blackFide, whiteElo, blackElo, whiteReplace, blackReplace, result, event, year, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate`, `illegal` (mit Meldung); schließt die Einlesung |
 | DELETE | `/api/league/club/games/{id}` | contribute | 204 / 403 / 404 |
-| GET | `/api/league/club/players?q=&all=` | contribute | Ligaspieler-Vorschläge (Wortanfänge) samt `club`; `all=true` dazu das Megabase-Verzeichnis |
+| GET | `/api/league/club/players?q=&all=` | contribute | Ligaspieler-Vorschläge (jedes Wort irgendwo im Namen, Wortanfänge zuerst) samt `club`; `all=true` dazu das Megabase-Verzeichnis |
 | POST | `/api/league/club/games/lichess` | contribute | `{ url }` einer öffentlichen Lichess-Studie → `{ pgn }` |
-| POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates }` |
+| POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates, lastNameOnly, mega }` |
 | GET | `/api/league/club/scoresheet/status` | contribute | Tageszahl dieses Wegs (10) |
 | GET/POST | `/api/league/club/scans` | contribute | offene Liga-Einlesungen / Foto hochladen (multipart wie `POST /api/scoresheets`) |
 | GET | `/api/league/club/scans/{id}` (+`/photo`, `POST /resolve`, `DELETE`) | contribute | Stand / Foto / Rest neu aufbereiten / verwerfen |
@@ -1407,11 +1416,14 @@ modernen FIDE-IDs gelegentlich Partien von Namensvettern an —, 293 ohne Züge,
 Spielers). Die ganze Megabase liegt NICHT in RookHub.
 
 **Spieler korrigieren über die Megabase** (0.575.0): beim Korrigieren eines Namens (Übersicht und Formular-Korrektur,
-`features/club/player-search.component.ts`) sucht LeagueHub standardmäßig unter den Personen der Liga, per Häkchen im
-Spielerverzeichnis der GANZEN Megabase (`LeagueMegaPlayers`, Tabelle `LeagueMegaPlayers`: Name, `NameKey` klein ohne
+`features/club/player-search.component.ts`) sucht LeagueHub unter den Personen der Liga und — Häkchen, seit 0.576.0
+standardmäßig an — im Spielerverzeichnis der GANZEN Megabase (`LeagueMegaPlayers`, Tabelle `LeagueMegaPlayers`: Name, `NameKey` klein ohne
 Akzente mit Index, FIDE-ID, Partien, jüngstes Jahr, höchste Elo). `GET …/club/players?q=&all=true` hängt die Treffer
 (`source: "mega"`) an die Ligaspieler an; trägt ein Treffer die FIDE-ID eines Ligaspielers, gilt er als dieser. Gesucht
-wird über den Präfix eines getippten Wortes (Index), gefiltert „jedes Wort ist Wortanfang", meistgespielte zuerst. Eine
+wird seit 0.576.0 wie mit `LIKE` („bert rud" findet „Bertl, Rudolf"): jedes getippte Wort (ab zwei Zeichen, höchstens
+vier) muss IRGENDWO im Namen stehen — in der Megabase `NameKey LIKE '%wort%'` je Wort (bei 432 000 Zeilen Zehntelsekunden,
+höchstens 300 nach Partienzahl), Wortanfänge zuerst, dann meistgespielte; die Liga ebenso. Die Suche startet gleich beim
+Öffnen bzw. Hineinklicken ins Namensfeld (`autoSearch`, `onFocus`). Eine
 gewählte FIDE-ID ohne Ligaspieler bleibt an der Partie stehen (`Side.Fide`). Eingespielt über
 `POST /api/league/admin/mega-players` (TSV, gern gzip; ersetzt alles) aus `scan_mega_players.py` im league-analyzer.
 

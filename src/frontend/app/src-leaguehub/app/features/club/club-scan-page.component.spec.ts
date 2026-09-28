@@ -93,7 +93,7 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const c = fixture.componentInstance;
     expect(c.replace('white')()).toBeTrue();                             // Oberschmid: Schwaz UND ich
-    expect(el.textContent).toContain('bleibt kein Gegner aus der Liga übrig');
+    expect(el.textContent).toContain('bleibt kein bekannter Gegner übrig');
     c.setReplace('white', false);                                         // dann bleibe ich als Ligaspieler stehen
     fixture.detectChanges();
     expect(el.textContent).not.toContain('bleibt kein Gegner');
@@ -108,7 +108,8 @@ describe('ClubScanPageComponent', () => {
     const c = fixture.componentInstance;
     c.pickPerson('black', { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' });
     expect(c.name('black')()).toBe('Hengl, Peter');
-    expect(c.matchText('black')).toBe('kein Ligaspieler');
+    expect(c.matchText('black')).toBe('nicht in Liga — aus der Megabase: Hengl, Peter (FIDE 777)');
+    expect(c.problem()).toBeNull();
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate').and.resolveTo(true);
     api.addGame.and.resolveTo({ id: 13, anonymized: true });

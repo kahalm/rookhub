@@ -3,7 +3,7 @@ import { ClubClient } from '../../core/club-api.service';
 import { ClubImportResult, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
-import { ImportReview, ReviewGame, ReviewSide, SideKey, included, needsLook, reviewStatus } from './import-review';
+import { ImportReview, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, reviewStatus } from './import-review';
 import { PlayerSearchComponent } from './player-search.component';
 
 interface Editing { index: number; side: SideKey; text: string }
@@ -22,6 +22,9 @@ interface Editing { index: number; side: SideKey; text: string }
     <div class="review-head">
       <p><b>{{ review.counts().total }} Partien gelesen</b> — {{ review.counts().take }} werden importiert,
         {{ review.counts().skip }} nicht@if (review.counts().unknown) {, bei {{ review.counts().unknown }} ist ein Spieler nicht (eindeutig) erkannt }.</p>
+      @if (review.counts().optional) {
+        <p class="small muted">{{ review.counts().optional }} ohne Gegner aus der Liga (nur in der Megabase) — nicht vorgewählt, anhaken nimmt sie trotzdem auf.</p>
+      }
       @if (review.truncated) { <p class="err small">Es wurden nur die ersten 500 Partien gelesen — den Rest bitte in einem zweiten Upload.</p> }
       <div class="seg" role="group" aria-label="Anzeigen">
         <button type="button" [attr.aria-pressed]="review.filter() === 'all'" (click)="review.filter.set('all')">Alle</button>
@@ -55,7 +58,7 @@ interface Editing { index: number; side: SideKey; text: string }
               }
               <td class="num">{{ resultText(r.game.result) }}</td>
               <td class="small">@if (isIn(r)) { <span class="ok-text">wird importiert</span> }
-                @else if (status(r).importable) { <span class="muted">abgewählt</span> }
+                @else if (status(r).importable) { <span class="muted">{{ optional(r) ? 'nicht in Liga — anhaken zum Hinzufügen' : 'abgewählt' }}</span> }
                 @else { <span class="muted">{{ reason(status(r).reason!) }}</span> }</td>
             </tr>
             @if (editing(); as e) {
@@ -73,7 +76,7 @@ interface Editing { index: number; side: SideKey; text: string }
                     }
                     <div class="field-row">
                       <div class="field">Spieler
-                        <lh-player-search [client]="client" [text]="e.text" [label]="(e.side === 'white' ? 'Weiß' : 'Schwarz') + ' in Partie ' + r.game.index"
+                        <lh-player-search [client]="client" [text]="e.text" [autoSearch]="true" [label]="(e.side === 'white' ? 'Weiß' : 'Schwarz') + ' in Partie ' + r.game.index"
                                           (textChange)="typed($event)" (picked)="pick($event)" (enter)="apply()" />
                       </div>
                       <label class="anon-inline">
@@ -116,6 +119,7 @@ export class ClubImportReviewComponent {
   readonly reason = reasonText;
   readonly status = reviewStatus;
   readonly isIn = included;
+  readonly optional = optionalGame;
 
   readonly editing = signal<Editing | null>(null);
   readonly matching = signal(false);
@@ -130,7 +134,9 @@ export class ClubImportReviewComponent {
   badge(s: ReviewSide): { text: string; ok: boolean; warn: boolean } {
     if (s.replace) return { text: s.club ? 'Schwaz-Spieler' : s.owner ? 'du' : 'ersetzt', ok: false, warn: false };
     if (s.ambiguous) return { text: 'mehrdeutig', ok: false, warn: true };
+    if (s.league && s.lastNameOnly) return { text: 'nur Nachname — prüfen', ok: false, warn: true };
     if (s.league) return { text: s.club ? 'Schwaz, nicht ersetzt' : 'Ligaspieler', ok: !s.club, warn: s.club };
+    if (s.mega) return { text: 'nicht in Liga', ok: false, warn: false };
     return { text: needsLook(s) ? 'nicht erkannt' : '', ok: false, warn: true };
   }
 

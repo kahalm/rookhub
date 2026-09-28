@@ -1,5 +1,5 @@
 import { ClubPreview, PreviewSide, SideMatch } from '../../core/club.models';
-import { ImportReview, included, reviewStatus } from './import-review';
+import { ImportReview, included, needsLook, optionalGame, reviewStatus } from './import-review';
 
 const M = (x: Partial<SideMatch> = {}): SideMatch =>
   ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
@@ -30,7 +30,7 @@ describe('ImportReview', () => {
     const r = new ImportReview(PREVIEW, true);
     const status = r.games().map(g => reviewStatus(g).reason);
     expect(status).toEqual([null, 'noLeaguePlayer', 'illegal', 'duplicate', null]);
-    expect(r.counts()).toEqual({ total: 5, take: 2, skip: 3, unknown: 2 });
+    expect(r.counts()).toEqual({ total: 5, take: 2, skip: 3, unknown: 2, optional: 0 });
   });
 
   it('ohne Häkchen wird nichts ersetzt; mit Häkchen Schwaz-Spieler und ich', () => {
@@ -57,6 +57,43 @@ describe('ImportReview', () => {
     expect(r.decisions()).toEqual([]);
     r.setReplace(1, 'black', false);
     expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }]);
+  });
+
+  it('Gegner nur in der Megabase: „nicht in Liga", übernehmbar, aber nicht vorgewählt; anhaken nimmt sie auf', () => {
+    const r = new ImportReview({ truncated: false, games: [
+      { index: 1, year: 2025, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,
+        white: S('Oberschmid, Patrik', M({ league: true, name: 'Oberschmid, Patrik', fide: '900', club: true }), { owner: true }),
+        black: S('Bodrov, Timofey', M({ mega: true, name: 'Bodrov, Timofey', fide: '14131781' })) },
+    ] }, true);
+    const g = r.games()[0];
+    expect(g.black).toEqual(jasmine.objectContaining({ mega: true, league: false, fide: '14131781' }));
+    expect(reviewStatus(g)).toEqual({ importable: true, reason: null });
+    expect(optionalGame(g)).toBeTrue();
+    expect(included(g)).toBeFalse();
+    expect(needsLook(g.black)).toBeFalse();                              // erkannt, nur eben nicht in der Liga
+    expect(r.counts()).toEqual(jasmine.objectContaining({ take: 0, unknown: 0, optional: 1 }));
+    r.toggleInclude(1);
+    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '14131781', replace: false } }]);
+  });
+
+  it('einen Spieler aus der Megabase wählen macht die Partie übernehmbar UND wählt sie aus', () => {
+    const r = new ImportReview(PREVIEW, true);
+    expect(reviewStatus(r.games()[1]).reason).toBe('noLeaguePlayer');
+    r.choosePerson(2, 'black', { name: 'Hengl, Peter', fide: '777', teams: [], club: false, league: false, source: 'mega' });
+    const g = r.games()[1];
+    expect(g.black).toEqual(jasmine.objectContaining({ mega: true, league: false, fide: '777', changed: true }));
+    expect(included(g)).toBeTrue();
+    expect(r.decisions().find(d => d.index === 2)?.black).toEqual({ name: 'Hengl, Peter', fide: '777', replace: false });
+  });
+
+  it('nur über den Nachnamen zugeordnet braucht einen Blick', () => {
+    const r = new ImportReview({ truncated: false, games: [
+      { index: 1, year: 2025, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,
+        white: S('Kostic', M({ league: true, name: 'Kostic, Milan', fide: '42', lastNameOnly: true })),
+        black: S('Hengl, Philip', M({ league: true, name: 'Hengl, Philip', fide: '222' })) },
+    ] }, true);
+    expect(needsLook(r.games()[0].white)).toBeTrue();
+    expect(included(r.games()[0])).toBeTrue();
   });
 
   it('Filter „nicht importiert" und „nicht erkannt"', () => {

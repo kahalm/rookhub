@@ -130,6 +130,39 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(new[] { "Schnabl, Andreas Dr." },
             Roster(("Schnabl, Andreas Dr.", "333"), ("Hengl, Philip", "222")).Suggest("schn and", 5).Select(p => p.Name));
 
+    [Fact]
+    public void Suggest_EveryWordAnywhere_PrefixesFirst()
+    {
+        // Wunsch 2026-09-28: „bert rud soll Bertl Rudolf finden" — jedes Wort IRGENDWO im Namen, Wortanfänge zuerst.
+        var roster = Roster(("Bertl, Rudolf", "1"), ("Albertl, Rudi", "2"), ("Hengl, Philip", "3"));
+        Assert.Equal(new[] { "Bertl, Rudolf", "Albertl, Rudi" }, roster.Suggest("bert rud", 5).Select(p => p.Name));
+        Assert.Equal(new[] { "Albertl, Rudi", "Bertl, Rudolf" }, roster.Suggest("ertl", 5).Select(p => p.Name));
+        Assert.Empty(roster.Suggest("bert xyz", 5));
+    }
+
+    [Theory]
+    [InlineData("Kostic")]
+    [InlineData("Kostic, ?")]
+    [InlineData("KOSTIC,")]
+    public void Match_OnlyALastName_FindsTheOneLeaguePlayer_AndSaysSo(string name)
+    {
+        var hit = Roster(("Kostic, Milan", "42"), ("Hengl, Philip", "222")).Match(name, null);
+        Assert.Equal("42", hit.Person?.Fide);
+        Assert.True(hit.LastNameOnly);
+        Assert.True(LeagueClubService.MatchDto(hit).LastNameOnly);
+    }
+
+    [Fact]
+    public void Match_OnlyALastName_TwoPlayers_IsAmbiguous_AndAFullNameIsNoLastNameMatch()
+    {
+        var roster = Roster(("Kostic, Milan", "42"), ("Kostic, Vera", "43"));
+        var hit = roster.Match("Kostic", null);
+        Assert.True(hit.Ambiguous);
+        Assert.Equal(2, hit.Candidates.Count);
+        Assert.False(roster.Match("Kostic, Zoran", null).League);          // anderer Vorname: kein Nachnamen-Treffer
+        Assert.False(roster.Match("Kostic, Milan", null).LastNameOnly);
+    }
+
     // ── Übersicht ───────────────────────────────────────────────────
 
     [Fact]
@@ -512,6 +545,100 @@ public class LeagueMegaPlayersAndLichessTests : IDisposable
         var all = await club.SuggestAsync("hengl", true, default);
         Assert.Equal(new[] { ("Hengl, Philip", "liga", true), ("Hengl, Peter", "mega", false) },
             all.Select(p => (p.Name, p.Source, p.League)));                           // Philip nur einmal: als Ligaspieler
+    }
+
+    [Fact]
+    public async Task Search_WordsAnywhereInTheName()
+    {
+        await SeedAsync();
+        var mega = new LeagueMegaPlayers(_db);
+        Assert.Equal(new[] { "Hengl, Philip", "Hengl, Peter" }, (await mega.SearchAsync("ngl", 10, default)).Select(p => p.Name));
+        Assert.Equal(new[] { "Hengl, Peter" }, (await mega.SearchAsync("eng ete", 10, default)).Select(p => p.Name));
+    }
+
+    [Theory]
+    [InlineData("Angerer, Helmut", new[] { "angerer, helmut" })]
+    [InlineData("Angerer,Helmut", new[] { "angerer,helmut", "angerer, helmut" })]
+    [InlineData("Helmut Angerer", new[] { "helmut angerer", "angerer, helmut", "helmut, angerer" })]
+    [InlineData("Kostic", new[] { "kostic" })]
+    [InlineData("", new string[0])]
+    public void LookupKeys_CommaFormAndBothOrdersWithoutComma(string name, string[] keys) =>
+        Assert.Equal(keys, LeagueMegaPlayers.LookupKeys(name).Distinct().ToArray());
+
+    private async Task<LeagueMegaPlayers.Lookup> LookupAsync(string tsv, params string[] names)
+    {
+        await new LeagueMegaPlayers(_db).ReplaceAsync(new StringReader(tsv), default);
+        return await new LeagueMegaPlayers(_db).LookupAsync(names, Array.Empty<string?>(), default);
+    }
+
+    [Fact]
+    public async Task Lookup_OnlyUnique_NamesakesWithTwoFideIdsAreNobody()
+    {
+        var l = await LookupAsync(
+            "Angerer, Helmut\t1607162\t98\t2023\t2195\nAngerer, Helmut\t\t3\t1980\t\n" +   // Dublette ohne ID
+            "Huber, Franz\t1\t10\t2020\t\nHuber, Franz\t2\t20\t2021\t\n" +                 // zwei mit ID
+            "Campbell\t\t3\t1995\t1605\n",
+            "Helmut Angerer", "Huber, Franz", "Campbell", "Niemand, Hier");
+        Assert.Equal(new LeagueMegaPlayers.Hit("Angerer, Helmut", "1607162"), l.ByName("Helmut Angerer"));
+        Assert.Null(l.ByName("Huber, Franz"));
+        Assert.Equal(new LeagueMegaPlayers.Hit("Campbell", null), l.ByName("Campbell"));
+        Assert.Null(l.ByName("Niemand, Hier"));
+        Assert.Equal("Angerer, Helmut", l.ByFide("1607162")?.Name);         // mitgeladen über den Namen
+        Assert.Null(l.ByFide("999"));
+    }
+
+    private const string Moves = "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be3 e5 7. Nb3 Be6 8. f3 Be7 9. Qd2 O-O 10. O-O-O Nbd7 11. g4 b5 1-0";
+
+    private static string Game(string white, string black, string extra = "", string date = "2025.04.15") =>
+        $"[Event \"Open\"]\n[Date \"{date}\"]\n[White \"{white}\"]\n[Black \"{black}\"]\n[Result \"1-0\"]\n{extra}\n{Moves}\n";
+
+    /// <summary>Wunsch 2026-09-28: „standardmäßig auf Megabase matchen (wenn in Tirol kein Treffer) … nicht in Liga, und
+    /// man kann die Partie trotzdem hinzufügen".</summary>
+    [Fact]
+    public async Task NotInTheLeague_ButInTheMegabase_IsKnown_AndCanBeImported()
+    {
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Schwaz", Name = "Oberschmid, Patrik", NameKey = "oberschmid, patrik", FideId = "900" });
+        await _db.SaveChangesAsync();
+        await new LeagueMegaPlayers(_db).ReplaceAsync(new StringReader(
+            "Bodrov, Timofey\t14131781\t27\t2025\t2128\nSchett, Franz\t1611135\t189\t2019\t2029\n"), default);
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
+        var pgn = Game("Oberschmid, Patrik", "Bodrov, Timofey") + "\n" + Game("Oberschmid, Patrik", "Unbekannt, Wer") + "\n"
+            + Game("Oberschmid, Patrik", "Irgendwer", "[BlackFideId \"1611135\"]", "2019.03.01");   // anderes Jahr: keine Dublette
+
+        var preview = await club.PreviewAsync(null, pgn);
+        var b1 = preview.Games[0].Black.Match;
+        Assert.Equal((false, true, "Bodrov, Timofey", "14131781"), (b1.League, b1.Mega, b1.Name, b1.Fide));
+        Assert.False(preview.Games[1].Black.Match.Mega);
+        Assert.Equal(("Schett, Franz", "1611135"), (preview.Games[2].Black.Match.Name, preview.Games[2].Black.Match.Fide));
+
+        var decisions = new[] { 1, 2, 3 }.Select(i => new LeagueClubImportGameDecision
+        {
+            Index = i, White = new() { Fide = "900", Replace = true },
+            Black = new() { Fide = preview.Games[i - 1].Black.Match.Fide },
+        }).ToList();
+        var result = await club.ImportPgnAsync(null, pgn, decisions);
+        Assert.Equal(2, result.Added);
+        Assert.Equal(("onlyOwnClub", 2), (result.Failed.Single().Reason, result.Failed.Single().Index));   // nur Schwaz bleibt
+        var stored = _db.LeagueClubGames.OrderBy(g => g.Id).ToList();
+        Assert.Equal(new (string, string, string?)[] { ("Schwaz", "Bodrov, Timofey", "14131781"), ("Schwaz", "Schett, Franz", "1611135") },
+            stored.Select(g => (g.White, g.Black, g.BlackFide)));
+
+        // Ein getippter Name, den nur die Megabase kennt, geht auch — und der Abgleich sagt „nicht in Liga".
+        var typed = await club.ImportPgnAsync(null, Game("Oberschmid, Patrik", "X", date: "2021.01.01"),
+            new[] { new LeagueClubImportGameDecision { Index = 1, White = new() { Replace = true }, Black = new() { Name = "Timofey Bodrov" } } });
+        Assert.Equal(1, typed.Added);
+        Assert.True((await club.MatchAsync("Timofey Bodrov", "Unbekannt", default)).White.Mega);
+    }
+
+    [Fact]
+    public async Task NeitherLeagueNorMegabase_StaysUnknown()
+    {
+        var club = new LeagueClubService(_db, NullLogger<LeagueClubService>.Instance);
+        var (_, reason, _) = await club.AddGameAsync(null, new LeagueClubGameRequest
+        {
+            Moves = new() { "e4", "e5" }, White = "Nobody, Else", Black = "Someone, Other",
+        });
+        Assert.Equal("noLeaguePlayer", reason);
     }
 
     [Fact]

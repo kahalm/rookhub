@@ -8,7 +8,7 @@ export const ANON_NAME = 'Schwaz';
 /** Warum eine Partie nicht übernommen wurde (Gründe aus LeagueClubService). */
 export function reasonText(reason: string): string {
   switch (reason) {
-    case 'noLeaguePlayer': return 'Kein Ligaspieler erkannt — Namen korrigieren, sonst hilft die Partie keiner Vorbereitung.';
+    case 'noLeaguePlayer': return 'Kein Spieler erkannt (weder in der Liga noch in der Megabase) — Namen korrigieren.';
     case 'onlyOwnClub': return 'Nur Spieler von Schwaz — nach dem Ersetzen bleibt kein Gegner übrig.';
     case 'notFound': return 'Diese Partie steht nicht (mehr) in der Datei.';
     case 'invalidUrl': return 'Das ist keine Adresse einer Lichess-Studie (lichess.org/study/…).';
