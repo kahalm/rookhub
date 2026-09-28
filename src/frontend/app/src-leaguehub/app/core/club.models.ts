@@ -18,6 +18,8 @@ export interface ClubGame {
   opening: string;
   anonymized: boolean;
   canDelete: boolean;
+  /** Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett `?moves=`). */
+  uci?: string;
 }
 
 export interface ClubList { total: number; page: number; pageSize: number; items: ClubGame[] }

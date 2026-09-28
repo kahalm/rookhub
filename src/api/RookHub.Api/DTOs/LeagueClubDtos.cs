@@ -135,6 +135,8 @@ public class LeagueClubGameDto
     public bool Anonymized { get; set; }
     /// <summary>Darf der Aufrufer sie löschen (Verwalter, oder eigene NICHT anonymisierte).</summary>
     public bool CanDelete { get; set; }
+    /// <summary>Die Züge als UCI mit Leerzeichen — für „Analyse" (RookHubs Analysebrett, <c>?moves=</c>).</summary>
+    public string Uci { get; set; } = string.Empty;
 }
 
 public class LeagueClubListDto

@@ -6,6 +6,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { ClubGame, RosterPerson, SideDecision } from '../../core/club.models';
 import { reasonText } from '../../core/club-format';
+import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
 
@@ -68,14 +69,20 @@ type Side = 'white' | 'black';
                     <td>@if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
                         @else if (isAnon(g, k)) { <span class="anon">{{ nameOf(g, k) }}</span> }
                         @else if (g.canDelete) { <button type="button" class="pl unknown" (click)="edit(g)"
-                                  [attr.title]="'Kein Spieler zugeordnet — zum Zuordnen klicken'">{{ nameOf(g, k) }}</button> }
+                                  [attr.title]="'Kein Spieler zugeordnet (keine FIDE-ID, also keine Spielerkarte) — zum Zuordnen klicken'">{{ nameOf(g, k) }}
+                                  <span class="small muted" aria-hidden="true">✎</span></button> }
                         @else { <span>{{ nameOf(g, k) }}</span> }
                         @if (k === 'white' ? g.whiteElo : g.blackElo) { <span class="small"> {{ k === 'white' ? g.whiteElo : g.blackElo }}</span> }</td>
                   }
                   <td class="num">{{ resultText(g.result) }}</td>
                   <td class="hide-s small">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
-                  <td class="num">@if (g.canDelete) {
+                  <td class="num">
+                    @if (rookHub && g.uci) {
+                      <a class="btn-link" [href]="analysisUrl(g)" target="_blank" rel="noopener"
+                         [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' im Analysebrett von RookHub öffnen'">Analyse</a>
+                    }
+                    @if (g.canDelete) {
                     <button type="button" class="btn-link" (click)="edit(g)"
                             [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
                     <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
@@ -93,6 +100,8 @@ type Side = 'white' | 'black';
                                 <lh-player-search [client]="api" [text]="nameOf(g, k)" [label]="k === 'white' ? 'Weiß' : 'Schwarz'"
                                                   (textChange)="typed(k, $event)" (picked)="picked(k, $event)" />
                                 @if (e[k]; as d) { <span class="small ok-text">{{ d.fide ? d.name + ' (FIDE ' + d.fide + ')' : 'getippt: ' + d.name }}</span> }
+                                <label class="anon-inline small"><input type="checkbox" [checked]="!!e[k]?.replace" (change)="setReplace(g, k, $any($event.target).checked)" />
+                                  durch „{{ anon }}" ersetzen</label>
                               }
                             </div>
                           }
@@ -142,6 +151,7 @@ export class ClubGamesPageComponent implements OnInit {
   readonly deleting = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   readonly sides: Side[] = ['white', 'black'];
+  readonly rookHub = rookHubUrlForLeagueHub();
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   /** Die Partie, die gerade korrigiert wird — je Seite die Festlegung (fehlt = unverändert) und das Ergebnis. */
   readonly editing = signal<{ id: number; white: SideDecision | null; black: SideDecision | null; result: string } | null>(null);
@@ -212,9 +222,22 @@ export class ClubGamesPageComponent implements OnInit {
     if (e) this.editing.set({ ...e, [k]: text.trim() ? { name: text.trim(), fide: null, replace: false } : null });
   }
 
+  /** Ein Spieler von Schwaz wird zu „Schwaz" — Vorgabe wie beim Hochladen (der Server erzwingt es ohnehin). */
   picked(k: Side, p: RosterPerson): void {
     const e = this.editing();
-    if (e) this.editing.set({ ...e, [k]: { name: p.name, fide: p.fide, replace: false } });
+    if (e) this.editing.set({ ...e, [k]: { name: p.name, fide: p.fide, replace: p.club } });
+  }
+
+  setReplace(g: ClubGame, k: Side, on: boolean): void {
+    const e = this.editing();
+    if (!e) return;
+    const cur = e[k] ?? { name: this.nameOf(g, k), fide: this.fideOf(g, k), replace: false };
+    this.editing.set({ ...e, [k]: { ...cur, replace: on } });
+  }
+
+  /** RookHubs Analysebrett mit der Partie (öffentlich, neuer Tab). */
+  analysisUrl(g: ClubGame): string {
+    return `${this.rookHub}/analysis?moves=${encodeURIComponent(g.uci ?? '')}`;
   }
 
   setResult(r: string): void {

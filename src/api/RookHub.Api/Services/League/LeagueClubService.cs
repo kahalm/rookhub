@@ -521,8 +521,17 @@ public sealed class LeagueClubService
     {
         Id = g.Id, Year = g.Year, White = g.White, Black = g.Black, WhiteFide = g.WhiteFide, BlackFide = g.BlackFide,
         WhiteElo = g.WhiteElo, BlackElo = g.BlackElo, Result = g.Result, Event = g.Event, Plies = g.Plies,
-        Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage),
+        Opening = OpeningOf(g.Pgn), Anonymized = g.Anonymized, CanDelete = CanDelete(g, userId, canManage), Uci = UciOf(g.Pgn),
     };
+
+    /// <summary>Die Hauptvariante als UCI („e2e4 e7e5 …") — für den Knopf „Analyse", der RookHubs Analysebrett mit
+    /// <c>?moves=</c> öffnet (Wunsch 2026-09-28). Gespeichert wird nur ab der Grundstellung.</summary>
+    internal static string UciOf(string pgn)
+    {
+        var moveText = PgnParser.SplitGames(pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
+        try { return string.Join(' ', PgnParser.TryExtractUciMainline(new Chess.ChessBoard().ToFen(), moveText) ?? new List<string>()); }
+        catch (Exception) { return string.Empty; }
+    }
 
     // ── Korrigieren ─────────────────────────────────────────────────
 
@@ -532,6 +541,9 @@ public sealed class LeagueClubService
     /// Eine geänderte Seite wird abgeglichen wie beim Import (Ligaspieler, Megabase, gemerkte Zuordnung); die unveränderte
     /// gilt weiter als bekannt. Es gelten dieselben Regeln wie beim Hochladen (<c>noLeaguePlayer</c>, <c>onlyOwnClub</c>).
     /// War ein Name vorher niemandem zugeordnet (ohne FIDE-ID), wird die Zuordnung gemerkt — die nächste Übersicht erkennt ihn.
+    /// Ist der neue Spieler einer von Schwaz (oder setzt der Nutzer „ersetzen"), wird die Seite zu „Schwaz" — wie beim
+    /// Hochladen, und dann fällt auch der Hochladende weg (gemeldet 2026-09-28: korrigiert auf „Oberschmid, Patrik", der
+    /// Name blieb stehen). Eine Korrektur kann nur anonymisieren, nie einen Namen zurückholen.
     /// </summary>
     public async Task<(LeagueClubGame? Game, string? Reason)> UpdateAsync(int userId, bool canManage, int id,
         LeagueClubGameUpdateRequest req, CancellationToken ct = default)
@@ -548,8 +560,13 @@ public sealed class LeagueClubService
         Side Current(string name, string? fide, int? elo) => Anon(name, fide)
             ? new Side(name, LeagueRosterIndex.None, null, true)
             : new Side(name, LeagueRosterIndex.None, elo, false, fide, new LeagueMegaPlayers.Hit(name, fide));   // war schon angenommen
-        var w = req.White is { } dw ? Decided(dw with { Replace = false }, g.White, g.WhiteFide, g.WhiteElo, lk) : Current(g.White, g.WhiteFide, g.WhiteElo);
-        var b = req.Black is { } db ? Decided(db with { Replace = false }, g.Black, g.BlackFide, g.BlackElo, lk) : Current(g.Black, g.BlackFide, g.BlackElo);
+        Side Changed(LeagueClubSideDecision d, string name, string? fide, int? elo)
+        {
+            var s = Decided(d, name, fide, elo, lk);
+            return s with { Replace = d.Replace || s.Hit.OwnClub };
+        }
+        var w = req.White is { } dw ? Changed(dw, g.White, g.WhiteFide, g.WhiteElo) : Current(g.White, g.WhiteFide, g.WhiteElo);
+        var b = req.Black is { } db ? Changed(db, g.Black, g.BlackFide, g.BlackElo) : Current(g.Black, g.BlackFide, g.BlackElo);
         var moveText = PgnParser.SplitGames(g.Pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
         var sans = PgnParser.ExtractMainlineSans(moveText);
         var (built, reason) = Build(w, b, sans, g.Year, req.Result ?? g.Result, g.Event);
@@ -558,8 +575,15 @@ public sealed class LeagueClubService
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
         if (req.White != null && g.WhiteFide == null && w.Identity is { } iw) remember.Add((g.White, iw));
         if (req.Black != null && g.BlackFide == null && b.Identity is { } ib) remember.Add((g.Black, ib));
-        (g.White, g.Black, g.WhiteFide, g.BlackFide, g.WhiteElo, g.BlackElo, g.Result, g.Pgn) =
-            (built.White, built.Black, built.WhiteFide, built.BlackFide, built.WhiteElo, built.BlackElo, built.Result, built.Pgn);
+        (g.White, g.Black, g.WhiteFide, g.BlackFide, g.WhiteElo, g.BlackElo, g.Result, g.Event, g.Pgn) =
+            (built.White, built.Black, built.WhiteFide, built.BlackFide, built.WhiteElo, built.BlackElo, built.Result, built.Event, built.Pgn);
+        if (built.Anonymized && !g.Anonymized)
+        {
+            // Jetzt mit „Schwaz": weder wer hochgeladen hat noch wann (Klassenkommentar).
+            g.Anonymized = true;
+            g.UploadedByUserId = null;
+            g.CreatedAt = null;
+        }
         await _db.SaveChangesAsync(ct);
         await RefreshCardsAsync(before.Concat(new[] { g.WhiteFide, g.BlackFide }), ct);
         await RememberAsync(remember, ct);

@@ -76,6 +76,11 @@ describe('ClubGamesPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.updateGame).toHaveBeenCalledWith(53, { white: null, black: { name: 'Kinsiz, Onur', fide: '6301517', replace: false }, result: '0-1' });
+    // ein Spieler von Schwaz: „ersetzen" ist vorgewählt
+    c.edit(G(53, { black: 'Kinsiz, Atlas', blackFide: null, canDelete: true }));
+    c.picked('black', { name: 'Oberschmid, Patrik', fide: '1693034', teams: ['Schwaz'], club: true });
+    expect(c.editing()?.black?.replace).toBeTrue();
+    c.editing.set(null);
     const row = el.querySelector('tbody tr') as HTMLElement;
     expect(row.querySelector('button.pl:not(.unknown)')?.textContent).toContain('Kinsiz, Onur');   // jetzt mit Karte
     expect(row.textContent).toContain('0–1');

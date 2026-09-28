@@ -605,6 +605,31 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal("notFound", (await club.UpdateAsync(me, true, 99999, new LeagueClubGameUpdateRequest())).Reason);
     }
 
+    /// <summary>Gemeldet 2026-09-28: auf „Oberschmid, Patrik" korrigiert — „der soll dann natürlich auch durch Schwaz ersetzt
+    /// werden". Und die Liste bringt die Züge als UCI für „Analyse" mit.</summary>
+    [Fact]
+    public async Task Update_ToASchwazMember_AnonymizesAndDropsTheUploader_ListCarriesUci()
+    {
+        var me = await SeedAsync();
+        var club = Club();
+        await club.ImportPgnAsync(me, Pgn("Unbekannt, Wer", "Hengl, Philip"), null);          // mit Namen: Hochladender gespeichert
+        var g0 = _db.LeagueClubGames.AsNoTracking().Single();
+        Assert.Equal((false, (int?)me, "Vereinsmeisterschaft"), (g0.Anonymized, g0.UploadedByUserId, g0.Event));
+
+        var (game, reason) = await club.UpdateAsync(me, false, g0.Id, new LeagueClubGameUpdateRequest { White = new() { Fide = "900" } });
+        Assert.Null(reason);
+        Assert.Equal(("Schwaz", (string?)null, (int?)null), (game!.White, game.WhiteFide, game.WhiteElo));
+        Assert.True(game.Anonymized);
+        Assert.Null(game.UploadedByUserId);
+        Assert.Null(game.CreatedAt);
+        Assert.Null(game.Event);
+        Assert.DoesNotContain("Oberschmid", game.Pgn);
+        Assert.DoesNotContain("Vereinsmeisterschaft", game.Pgn);
+
+        var item = (await club.ListAsync(me, true, null, null, 1, default)).Items.Single();
+        Assert.StartsWith("e2e4 c7c5 g1f3 d7d6 d2d4 c5d4", item.Uci);
+    }
+
     [Fact]
     public async Task ListAndDelete_OwnNamedGames_AnonymousOnlyByManagers()
     {
