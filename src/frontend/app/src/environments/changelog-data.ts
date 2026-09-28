@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.579.1", date: "2026-09-28", changes: [
+    { en: "LeagueHub scoresheet check on the phone: the cut-out of the form row, the move, the possible readings and “Looks right” now sit together at the top of the screen; board, move list and the full photo follow below. After “Looks right” the page no longer jumps, and the move list scrolls only within itself.", de: "LeagueHub-Formularprüfung am Handy: Der Ausschnitt der Formularzeile, der Zug, die möglichen Lesarten und „Stimmt so“ stehen jetzt zusammen oben auf dem Bildschirm; Brett, Zugliste und das ganze Foto folgen darunter. Nach „Stimmt so“ springt die Seite nicht mehr, und die Zugliste rollt nur noch in sich selbst." },
+  ] },
   { version: "0.579.0", date: "2026-09-28", changes: [
     { en: "LeagueHub club database: correcting a player now remembers the assignment for the name as it stood in the PGN — the next overview (for everyone) assigns that name by itself, marked “remembered”; a FIDE ID in the PGN that belongs to a league player still wins, and a new correction replaces the old one. Within the same import, the correction is also applied to every other game with the same name that nobody has set yet. Only corrections made with an account are remembered, not those via a share link.", de: "LeagueHub-Vereins-Datenbank: Wer einen Spieler korrigiert, dessen Zuordnung merkt sich LeagueHub zum Namen, wie er im PGN stand — die nächste Übersicht (bei allen) ordnet diesen Namen von selbst so zu, markiert mit „gemerkt“; eine FIDE-ID im PGN, die zu einem Ligaspieler gehört, gewinnt weiterhin, und eine neue Korrektur ersetzt die alte. Im selben Import gilt die Korrektur außerdem für jede andere Partie mit demselben Namen, die noch niemand gesetzt hat. Gemerkt wird nur mit Konto, nicht über einen Teilen-Link." },
   ] },

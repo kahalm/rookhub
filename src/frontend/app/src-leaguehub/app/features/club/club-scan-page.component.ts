@@ -52,24 +52,13 @@ const MATCH_DEBOUNCE_MS = 400;
       </section>
 
       @if (st.scan.status === 'done') {
-        <div class="scan-layout" [class.with-photo]="!!photoUrl()">
+        <div class="scan-wrap"><div class="scan-layout" [class.with-photo]="!!photoUrl()">
           @if (photoUrl(); as src) {
             <section class="panel scan-photo">
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <img [src]="src" alt="Foto des Partieformulars" (load)="s.onPhotoLoad($event)" />
               </div>
               <p><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
-              @if (s.crop(); as c) {
-                <div class="crop">
-                  <p class="small">Auf dem Formular@if (c.written) { : <b>{{ c.written }}</b> }</p>
-                  <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
-                    <img [src]="src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
-                         [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
-                    <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
-                         [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
-                  </div>
-                </div>
-              }
             </section>
           }
 
@@ -93,8 +82,22 @@ const MATCH_DEBOUNCE_MS = 400;
             </div>
           </section>
 
-          <section class="panel scan-side">
+          <!-- Am Handy steht dieser Teil OBEN (Wunsch 2026-09-28): die Zeile des Formulars, die Lesarten und „Stimmt so"
+               auf einem Bildschirm. -->
+          <section class="panel scan-check">
             <div class="cursor-panel" aria-live="polite">
+              @if (photoUrl(); as src) {
+                @if (s.crop(); as c) {
+                  <div class="crop">
+                    <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect">
+                      <img [src]="src" alt="Ausschnitt des Formulars" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                           [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
+                      <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
+                           [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
+                    </div>
+                  </div>
+                }
+              }
               @if (s.busy()) { <p class="muted small">Lese den Rest neu …</p> }
               @if (s.current(); as p) {
                 <p class="where">
@@ -126,6 +129,9 @@ const MATCH_DEBOUNCE_MS = 400;
                 @if (s.unresolved().length) { <p class="small">Als Nächstes auf dem Formular: <b>{{ s.unresolved()[0] }}</b></p> }
               }
             </div>
+          </section>
+
+          <section class="panel scan-moves">
             <div class="moves">
               @for (row of s.rows(); track row.no) {
                 <span class="no">{{ row.no }}.</span>
@@ -144,7 +150,7 @@ const MATCH_DEBOUNCE_MS = 400;
               <p class="err small">{{ s.illegalCount() }} Züge am Ende sind nicht legal — sie fallen beim Übernehmen weg.</p>
             }
           </section>
-        </div>
+        </div></div>
 
         <section class="panel save-panel">
           <h3 class="club-h3">Partie</h3>
@@ -395,9 +401,17 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (e.key === 'ArrowRight') { this.s.go(this.s.cursor() + 1); e.preventDefault(); }
   }
 
+  /** Den Zug in der Zugliste sichtbar machen — NUR in deren eigenem Rollbereich. `scrollIntoView` rollte auch die Seite,
+   * und am Handy verschwand damit nach jedem „Stimmt so" der Prüfteil oben (Ausschnitt, Lesarten, Knopf). */
   private revealCursor(): void {
-    setTimeout(() => (this.host.nativeElement as HTMLElement).querySelector('.moves .ply.cursor')
-      ?.scrollIntoView?.({ block: 'nearest' }));
+    setTimeout(() => {
+      const el = (this.host.nativeElement as HTMLElement).querySelector<HTMLElement>('.moves .ply.cursor');
+      const box = el?.closest<HTMLElement>('.moves');
+      if (!el || !box || box.scrollHeight <= box.clientHeight) return;
+      const top = el.offsetTop, bottom = top + el.offsetHeight;             // .moves ist position: relative
+      if (top < box.scrollTop) box.scrollTop = top;
+      else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight;
+    });
   }
 
   async save(): Promise<void> {

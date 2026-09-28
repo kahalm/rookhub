@@ -76,6 +76,33 @@ describe('ClubScanPageComponent', () => {
     expect(el.textContent).not.toContain('Kein Ligaspieler erkannt');
   }));
 
+  it('am Handy (390 px): oben der Ausschnitt der Zeile, die Lesarten und „Stimmt so", darunter das Brett', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const blob: Blob = await new Promise(r => canvas.toBlob(b => r(b!), 'image/png'));
+    const st = structuredClone(STATE);
+    st.boxes = [null, null, [100, 300, 400, 340], null];
+    api.scan.and.resolveTo(st);
+    api.photo.and.resolveTo(blob);
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '390px';
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const img = el.querySelector('.scan-photo img') as HTMLImageElement;
+    if (!img.complete || !img.naturalWidth) await new Promise(r => img.addEventListener('load', r, { once: true }));
+    img.dispatchEvent(new Event('load'));
+    fixture.detectChanges();
+    const check = el.querySelector('.scan-check') as HTMLElement, board = el.querySelector('.scan-board') as HTMLElement;
+    expect(check.querySelector('.crop-frame')).not.toBeNull();                        // die Zeile des Formulars
+    expect(check.textContent).toContain('Mögliche Lesarten');
+    expect(check.textContent).toContain('Stimmt so');
+    expect(check.getBoundingClientRect().bottom).toBeLessThanOrEqual(board.getBoundingClientRect().top);
+    el.style.width = '1300px';                                                       // breit: Foto | Brett | Prüfen
+    expect(check.getBoundingClientRect().left).toBeGreaterThan(board.getBoundingClientRect().left);
+  });
+
   it('eine andere Lesart wählen lässt den Rest neu lesen', fakeAsync(() => {
     create();
     flushMicrotasks();
