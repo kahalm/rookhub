@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -63,6 +64,7 @@ export class WorksheetDetailComponent implements OnInit {
   readonly perPageChoices = [6, 4, 2];
 
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private worksheets = inject(WorksheetService);
   private snackbar = inject(SnackbarService);
@@ -70,8 +72,26 @@ export class WorksheetDetailComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
-    this.id = Number(this.route.snapshot.paramMap.get('id'));
-    this.load();
+    // Die Adresse wechselt auch INNERHALB dieser Komponente: „Als Aufgabenblatt speichern" führt von
+    // der Zwischenablage auf das frisch angelegte Blatt. Angular baut dieselbe Komponente dabei NICHT
+    // neu auf — mit `snapshot` stand danach weiter die (jetzt leere) Ablage da, während die Adresse
+    // schon das neue Blatt nannte (gemeldet 2026-09-28).
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.id = Number(params.get('id'));
+      this.resetDrafts();
+      this.load();
+    });
+  }
+
+  /** Beim Blattwechsel darf nichts vom vorigen stehen bleiben — Name, Thema, FEN, Umbenennen. */
+  private resetDrafts(): void {
+    this.sheet = null;
+    this.saveName = '';
+    this.newTheme = '';
+    this.newFen = '';
+    this.renaming = false;
+    this.renameDraft = '';
+    this.busy = false;
   }
 
   private load(): void {

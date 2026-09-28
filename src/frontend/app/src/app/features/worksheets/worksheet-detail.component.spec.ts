@@ -2,7 +2,7 @@ import { ChangeDetectorRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
 import { WorksheetDetailComponent } from './worksheet-detail.component';
 import { Worksheet, WorksheetService } from './worksheet.service';
@@ -20,6 +20,10 @@ const sheet = (over: Partial<Worksheet> = {}): Worksheet => ({
 describe('WorksheetDetailComponent', () => {
   let worksheets: any;
   let router: { navigate: jasmine.Spy };
+  /** Die Route ist ein STROM: „Als Blatt speichern" wechselt die Id, ohne die Komponente neu zu bauen. */
+  let params: BehaviorSubject<any>;
+
+  const paramMap = (id: string) => ({ get: (k: string) => (k === 'id' ? id : null) });
 
   function make(loaded: Worksheet = sheet()): WorksheetDetailComponent {
     worksheets = {
@@ -39,12 +43,13 @@ describe('WorksheetDetailComponent', () => {
       shareUrl: (token: string) => `https://rookhub.test/w/${token}`,
     };
     router = { navigate: jasmine.createSpy('navigate') };
+    params = new BehaviorSubject<any>(paramMap('4'));
     TestBed.resetTestingModule();   // mehrere Blätter je Test (Zwischenablage vs. benanntes Blatt)
     TestBed.configureTestingModule({
       providers: [
         { provide: WorksheetService, useValue: worksheets },
         { provide: Router, useValue: router },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '4' } } } },
+        { provide: ActivatedRoute, useValue: { paramMap: params, snapshot: { paramMap: paramMap('4') } } },
         { provide: SnackbarService, useValue: { warn: () => {}, info: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
         { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
@@ -59,6 +64,29 @@ describe('WorksheetDetailComponent', () => {
     const c = make();
     expect(worksheets.get).toHaveBeenCalledWith(4);
     expect(c.sheet!.items.length).toBe(3);
+  });
+
+  it('ein Wechsel der Adresse lädt das neue Blatt — die Komponente bleibt dieselbe', () => {
+    const c = make();
+    expect(worksheets.get).toHaveBeenCalledWith(4);
+
+    params.next(paramMap('9'));
+
+    expect(worksheets.get).toHaveBeenCalledWith(9);
+    expect(c.id).toBe(9);
+  });
+
+  it('beim Blattwechsel bleiben keine Entwürfe des vorigen stehen', () => {
+    const c = make(sheet({ isClipboard: true, name: '' }));
+    c.saveName = 'Mittwoch';
+    c.newFen = '8/8/8/8/8/8/8/8 w - - 0 1';
+    c.newTheme = 'fork';
+
+    params.next(paramMap('9'));
+
+    expect(c.saveName).toBe('');
+    expect(c.newFen).toBe('');
+    expect(c.newTheme).toBe('');
   });
 
   it('Ziehen sortiert um und schreibt die neue Reihenfolge weg', () => {

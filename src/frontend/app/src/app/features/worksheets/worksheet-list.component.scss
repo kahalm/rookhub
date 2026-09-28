@@ -16,7 +16,8 @@
 
 .wl-section-title { margin: 1.5rem 0 0.5rem; font-weight: 600; }
 .wl-list { display: flex; flex-direction: column; gap: 8px; }
-.wl-sheet { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+/* `flex-direction: row`: mat-card ist selbst Flex mit `column` (siehe worksheet-detail.scss). */
+.wl-sheet { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
 .wl-meta { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .wl-name { font-weight: 600; overflow-wrap: anywhere; display: flex; align-items: center; gap: 6px; }
 /* Geteilte Blätter tragen den QR-Hinweis — man sieht auf einen Blick, was draußen ist. */

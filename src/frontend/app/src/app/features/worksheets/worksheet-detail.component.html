@@ -183,11 +183,11 @@
               <span class="wd-turn">
                 {{ (whiteToMove(item) ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
               </span>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wd-field wd-field--heading">
                 <mat-label>{{ 'worksheets.detail.heading' | translate }}</mat-label>
                 <input matInput [(ngModel)]="item.heading" maxlength="200" (blur)="saveItem(item)" />
               </mat-form-field>
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wd-field wd-field--text">
                 <mat-label>{{ 'worksheets.detail.text' | translate }}</mat-label>
                 <textarea matInput rows="3" maxlength="2000" [(ngModel)]="item.text" (blur)="saveItem(item)"></textarea>
               </mat-form-field>

@@ -8,11 +8,18 @@
 .ws-hint { color: var(--mat-sys-on-surface-variant, #777); font-size: 0.9rem; margin: 0.5rem 0 1rem; }
 .ws-empty { color: var(--mat-sys-on-surface-variant, #888); }
 
-/* Ein Blatt = A4-Breite minus Druckränder (210mm − 2 × 12mm). Weiß + schwarze Schrift, damit die
-   Vorschau im dunklen Design nicht anders aussieht als der Ausdruck. */
+/* Ein Blatt = A4 minus Druckränder (210 × 297mm − 2 × 12mm). Die HÖHE steht hier, weil die Seite
+   sonst überläuft: Kopf, Diagramm-Raster und Fußzeile müssen zusammen hineinpassen, und die
+   Fußzeile ist seit dem QR-Code 15mm hoch. Mit festen Zeilenhöhen (3 × 82mm) ergab das 280mm auf
+   273mm Platz — die Fußzeile landete allein auf einer zweiten Seite (gemeldet 2026-09-28).
+   1mm Reserve gegen Rundungsfehler der Druckvorschau. Weiß + schwarze Schrift, damit die Vorschau
+   im dunklen Design nicht anders aussieht als der Ausdruck. */
 .ws-sheet {
+  --ws-sheet-height: 272mm;
+  box-sizing: border-box;
   width: 186mm;
   max-width: 100%;
+  min-height: var(--ws-sheet-height);
   margin: 0 auto 1.5rem;
   padding: 6mm;
   background: #fff;
@@ -39,7 +46,9 @@
 .ws-foot-meta { white-space: nowrap; }
 .ws-share-hint { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 
-.ws-grid { display: grid; gap: 4mm; }
+/* `flex: 1` + `1fr`-Zeilen: Das Raster nimmt, was Kopf und Fußzeile übrig lassen — dadurch passt
+   die Seite auch, wenn die Fußzeile wächst (QR-Code), und die Aufgaben bleiben gleich hoch. */
+.ws-grid { display: grid; gap: 4mm; flex: 1 1 auto; min-height: 0; }
 /* Zwei Spalten bekommen die durchgehende Trennlinie klassischer Diagramm-Ausdrucke (ein Rahmen je
    Aufgabe ergäbe drei kurze Striche mit Lücken). */
 .ws-grid--6, .ws-grid--4 {
@@ -47,14 +56,13 @@
   background: linear-gradient(to right,
     transparent calc(50% - 0.3pt), #bbb calc(50% - 0.3pt), #bbb calc(50% + 0.3pt), transparent calc(50% + 0.3pt));
 }
-/* A4 (297mm) − Ränder − Kopf/Fuß ⇒ 3 × 82mm bzw. 2 × 124mm. */
-.ws-grid--6 { grid-template-rows: repeat(3, 82mm); }
-.ws-grid--4 { grid-template-rows: repeat(2, 124mm); }
+.ws-grid--6 { grid-template-rows: repeat(3, 1fr); }
+.ws-grid--4 { grid-template-rows: repeat(2, 1fr); }
 /* Zwei je Seite: eine Spalte, großes Brett, breiter Begleittext — dafür eine Trennlinie quer. */
-.ws-grid--2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 124mm); }
+.ws-grid--2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
 .ws-grid--2 .ws-task + .ws-task { border-top: 0.6pt solid #bbb; padding-top: 3mm; }
 
-.ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.ws-task { display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 0; overflow: hidden; }
 .ws-task-head { display: flex; justify-content: space-between; align-items: baseline; gap: 2mm; width: 100%; font-size: 9pt; margin-bottom: 1mm; }
 .ws-no { font-weight: 700; }
 /* Überschrift zwischen Nummer und Zugangabe: darf umbrechen, aber die Zeile nicht sprengen. */
@@ -78,8 +86,9 @@
 .ws-lines span { display: block; height: 0; border-bottom: 1px solid #bbb; }
 
 @media (max-width: 700px) {
-  /* Am Handy nur Vorschau: ein Blatt passt nicht in die Breite, also skaliert der Inhalt mit. */
-  .ws-sheet { width: 100%; padding: 4mm; }
+  /* Am Handy nur Vorschau: ein Blatt passt nicht in die Breite, also skaliert der Inhalt mit —
+     und die Seitenhöhe gilt dort nicht, sonst stünde unter zwei Aufgaben ein halber Meter Weiß. */
+  .ws-sheet { width: 100%; padding: 4mm; min-height: 0; }
   .ws-grid--6, .ws-grid--4, .ws-grid--2 { grid-template-rows: auto; }
   .ws-board, .ws-grid--4 .ws-board, .ws-grid--2 .ws-board { width: 100%; max-width: 58mm; }
 }
@@ -90,6 +99,9 @@
   .ws-page { max-width: none; padding: 0; }
   .ws-sheet {
     width: auto;
+    /* Genau eine Seite hoch — die Zeilen des Rasters teilen sich, was Kopf und Fuß übrig lassen. */
+    height: var(--ws-sheet-height);
+    min-height: 0;
     margin: 0;
     padding: 0;
     border: none;
@@ -97,9 +109,6 @@
     page-break-after: always;
   }
   .ws-sheet:last-child { break-after: auto; page-break-after: auto; }
-  .ws-grid--6 { grid-template-rows: repeat(3, 82mm); }
-  .ws-grid--4 { grid-template-rows: repeat(2, 124mm); }
-  .ws-grid--2 { grid-template-rows: repeat(2, 124mm); }
   .ws-board { width: 58mm; }
   .ws-grid--4 .ws-board { width: 66mm; }
   .ws-grid--2 .ws-board { width: 76mm; }

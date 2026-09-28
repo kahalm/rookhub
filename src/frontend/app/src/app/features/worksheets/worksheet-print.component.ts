@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -89,6 +90,7 @@ export class WorksheetPrintComponent implements OnInit {
   isClipboard = false;
 
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   private worksheets = inject(WorksheetService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
@@ -96,12 +98,17 @@ export class WorksheetPrintComponent implements OnInit {
   get lines(): number[] { return solutionLines(this.perPage); }
 
   ngOnInit(): void {
-    this.id = Number(this.route.snapshot.paramMap.get('id'));
-    const autoPrint = this.route.snapshot.queryParamMap.get('print') === '1';
-
-    this.worksheets.get(this.id).subscribe({
-      next: sheet => this.finish(sheet, autoPrint),
-      error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
+    // Wie im Blatt-Editor: derselbe Bauplan bleibt bei einem Wechsel von Blatt zu Blatt stehen,
+    // die Adresse allein lädt nichts nach.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.id = Number(params.get('id'));
+      const autoPrint = this.route.snapshot.queryParamMap.get('print') === '1';
+      this.loading = true;
+      this.error = false;
+      this.worksheets.get(this.id).subscribe({
+        next: sheet => this.finish(sheet, autoPrint),
+        error: () => { this.loading = false; this.error = true; this.cdr.markForCheck(); },
+      });
     });
   }
 

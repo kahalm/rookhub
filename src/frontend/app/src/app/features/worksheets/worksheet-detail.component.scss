@@ -1,4 +1,7 @@
-.wd-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+/* Wie die übrigen Inhaltsseiten (CLAUDE.md, UI-Dichte): breiter Schirm = breite Seite. Mit den
+   900px von vorher standen Überschrift und Begleittext auch am PC untereinander, während rechts
+   ein Drittel der Karte leer blieb. */
+.wd-page { max-width: min(var(--page-max-width, 1240px), 96vw); margin: 0 auto; padding: 16px; }
 
 .wd-toolbar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .wd-title { margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
@@ -22,13 +25,28 @@
 .wd-empty mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: 0.5; }
 
 .wd-list { display: flex; flex-direction: column; gap: 8px; }
-.wd-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; }
+/* `flex-direction: row` MUSS hier stehen: eine mat-card ist selbst ein Flex-Container mit
+   `column` — ohne die Angabe stapelt die Aufgabe am PC untereinander, mit meterweise leerem
+   Platz rechts daneben (gemeldet 2026-09-28). Gilt genauso für `.wl-sheet` in der Übersicht. */
+.wd-item { display: flex; flex-direction: row; align-items: flex-start; flex-wrap: wrap; gap: 12px; padding: 10px 12px; }
 .wd-grip { display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: grab; color: color-mix(in srgb, currentColor 55%, transparent); }
 .wd-no { font-weight: 700; font-size: 0.9rem; }
-.wd-board { width: 112px; flex: 0 0 auto; }
-.wd-fields { display: flex; flex-direction: column; gap: 8px; flex: 1 1 260px; min-width: 0; }
+.wd-board { width: 132px; flex: 0 0 auto; }
+.wd-fields { display: flex; flex-direction: column; gap: 8px; flex: 1 1 320px; min-width: 0; }
 .wd-turn { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-.wd-item-actions { display: flex; flex-direction: column; flex: 0 0 auto; }
+.wd-field { width: 100%; }
+/* Die Knöpfe liegen rechts außen und laufen in EINER Zeile — eine Spalte aus fünf Icon-Knöpfen
+   wäre höher als Brett und Felder zusammen. */
+.wd-item-actions { display: flex; flex-direction: row; align-items: center; flex: 0 0 auto; margin-left: auto; }
+
+/* Breiter Schirm: Überschrift und Begleittext nebeneinander — gestapelt bliebe die halbe
+   Kartenbreite leer. */
+@media (min-width: 1000px) {
+  .wd-fields { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+  .wd-turn { flex: 0 0 100%; }
+  .wd-field--heading { flex: 0 1 260px; width: auto; }
+  .wd-field--text { flex: 1 1 340px; width: auto; }
+}
 
 /* Während des Ziehens: die Karte hebt ab, die Lücke bleibt sichtbar. */
 .cdk-drag-preview { box-shadow: 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14); }
@@ -36,9 +54,8 @@
 .cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
 
 @media (max-width: 700px) {
-  .wd-item { flex-wrap: wrap; }
   .wd-board { width: 88px; }
-  .wd-item-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
+  .wd-item-actions { width: 100%; justify-content: flex-end; margin-left: 0; }
 }
 
 /* Teilen-Karte: QR links, Link + Hinweise rechts; am Handy untereinander. */
