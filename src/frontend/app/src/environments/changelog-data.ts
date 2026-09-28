@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.580.0", date: "2026-09-28", changes: [
+    { en: "Game page: the ⋮ menu of your own game now offers “Add to the club database (LeagueHub)” — for members with the right to contribute. LeagueHub opens (signed in) with the game already in the import overview: players checked against the leagues, Schwaz players replaced, remembered name assignments applied.", de: "Partieseite: Das ⋮-Menü der eigenen Partie bietet jetzt „In die Vereins-Datenbank (LeagueHub)“ — für Mitglieder mit dem Recht zum Beitragen. LeagueHub öffnet sich (angemeldet) mit der Partie schon in der Importübersicht: Spieler gegen die Ligen geprüft, Spieler von Schwaz ersetzt, gemerkte Namens-Zuordnungen angewandt." },
+  ] },
   { version: "0.579.1", date: "2026-09-28", changes: [
     { en: "LeagueHub scoresheet check on the phone: the cut-out of the form row, the move, the possible readings and “Looks right” now sit together at the top of the screen; board, move list and the full photo follow below. After “Looks right” the page no longer jumps, and the move list scrolls only within itself.", de: "LeagueHub-Formularprüfung am Handy: Der Ausschnitt der Formularzeile, der Zug, die möglichen Lesarten und „Stimmt so“ stehen jetzt zusammen oben auf dem Bildschirm; Brett, Zugliste und das ganze Foto folgen darunter. Nach „Stimmt so“ springt die Seite nicht mehr, und die Zugliste rollt nur noch in sich selbst." },
   ] },

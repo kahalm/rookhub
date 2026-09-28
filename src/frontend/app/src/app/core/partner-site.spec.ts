@@ -1,4 +1,4 @@
-import { partnerSiteUrl, sharedCookieDomain, siteKindOf } from './partner-site';
+import { leagueHubUrl, partnerSiteUrl, sharedCookieDomain, siteKindOf } from './partner-site';
 
 /**
  * Die Turnierseite heisst auf Prod `tournament`, auf Dev weiter `turnier-dev` — und ein alter
@@ -25,6 +25,13 @@ describe('partner-site', () => {
       .toBe('https://turnier-dev.oberschmid.homes');
     expect(partnerSiteUrl('turnier-dev.oberschmid.homes', 'https:'))
       .toBe('https://rookhub-dev.oberschmid.homes');
+  });
+
+  it('LeagueHub gehört zu RookHub derselben Umgebung — sonst gibt es keins', () => {
+    expect(leagueHubUrl('rookhub.oberschmid.homes', 'https:')).toBe('https://leaguehub.oberschmid.homes');
+    expect(leagueHubUrl('rookhub-dev.oberschmid.homes', 'https:')).toBe('https://leaguehub-dev.oberschmid.homes');
+    expect(leagueHubUrl('tournament.oberschmid.homes', 'https:')).toBeNull();
+    expect(leagueHubUrl('localhost', 'http:')).toBeNull();
   });
 
   it('bietet ohne gemeinsame Elterndomaene keinen Sprung und kein Cookie', () => {

@@ -11,12 +11,13 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { HandoffService } from '../../core/handoff.service';
 import { By } from '@angular/platform-browser';
 import { GameReviewComponent } from './game-review.component';
 import { SharedGameComponent } from './shared-game.component';
 
 describe('SharedGameComponent', () => {
-  async function setup(loggedIn = false, own = false) {
+  async function setup(loggedIn = false, own = false, extra: unknown[] = [], perms: string[] = []) {
     const snapshot = own
       ? { paramMap: convertToParamMap({ id: '4' }), data: { mode: 'own' } }
       : { paramMap: convertToParamMap({ token: 'tok' }), data: {} };
@@ -28,8 +29,9 @@ describe('SharedGameComponent', () => {
         provideRouter([]),
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
-        { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn, has: (p: string) => perms.includes(p) } },
         { provide: ActivatedRoute, useValue: { snapshot } },
+        ...extra as never[],
       ],
     }).compileComponents();
     return { fixture: TestBed.createComponent(SharedGameComponent), http: TestBed.inject(HttpTestingController) };
@@ -38,6 +40,19 @@ describe('SharedGameComponent', () => {
   const sharedGame = (ownerSide: 'white' | 'black' | null) => ({
     source: 'lichess', white: 'a', black: 'b', result: '0-1',
     pgn: '[White "a"]\n[Black "b"]\n\n1. e4 c5 0-1', createdAt: '2026-07-16T00:00:00Z', ownerSide,
+  });
+
+  // Wunsch 2026-09-28: ⋮ → „In die Vereins-Datenbank" springt nach LeagueHub, die Partie läuft dort durch die Übersicht.
+  it('offers the club database only with league.contribute and an LeagueHub, and jumps there with the game', async () => {
+    const handoff = { leagueHubUrl: 'https://leaguehub.oberschmid.homes', jumpToLeagueHub: jasmine.createSpy('jump').and.resolveTo() };
+    const { fixture } = await setup(true, true, [{ provide: HandoffService, useValue: handoff }], ['league.contribute']);
+    expect(fixture.componentInstance.clubImport).toBeTrue();
+    fixture.componentInstance.gameId = 4;
+    fixture.componentInstance.toClub();
+    expect(handoff.jumpToLeagueHub).toHaveBeenCalledWith('verein/neu?partie=4');
+    TestBed.resetTestingModule();
+    const again = await setup(true, true, [{ provide: HandoffService, useValue: handoff }], []);
+    expect(again.fixture.componentInstance.clubImport).toBeFalse();
   });
 
   it('creates (template AOT-compiles + DI resolves)', async () => {

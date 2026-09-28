@@ -131,4 +131,9 @@ export class ClubApiService {
   client(share: string | null = null): ClubClient {
     return new ClubClient(this.http, share);
   }
+
+  /** Eine eigene Partie aus RookHub (⋮ → „In die Vereins-Datenbank" auf der Partieseite) — dieselbe API, dasselbe Konto. */
+  savedGame(id: number): Promise<{ pgn: string; white: string | null; black: string | null }> {
+    return firstValueFrom(this.http.get<{ pgn: string; white: string | null; black: string | null }>(`/api/games/${id}`));
+  }
 }

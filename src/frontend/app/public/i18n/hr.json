@@ -2767,7 +2767,8 @@
         "tooLarge": "PGN je prevelik (najviše 5 milijuna znakova).",
         "failed": "Učitavanje nije uspjelo — pokušaj ponovno."
       }
-    }
+    },
+    "clubImport": "Dodaj u klupsku bazu (LeagueHub)"
   },
   "analysis": {
     "title": "Analiza",

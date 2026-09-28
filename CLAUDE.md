@@ -1461,6 +1461,11 @@ sie erst beim ersten Klick und findet die Zeile über Datum + Gegner + Farbe wie
 nachgespielt wird in der Karte selbst (`shared/game-replay.component.ts`: Brett aus Sicht des Spielers, Züge deutsch, Knöpfe,
 Pfeiltasten, Pos1/Ende).
 
+**Aus RookHub** (0.580.0): das ⋮-Menü der eigenen Partie (`/games/:id`) bietet mit `league.contribute` „In die
+Vereins-Datenbank (LeagueHub)" — Sprung per Einmal-Code (`HandoffService.jumpToLeagueHub`, Adresse aus `leagueHubUrl` in
+`core/partner-site.ts`: rookhub ↔ leaguehub, rookhub-dev ↔ leaguehub-dev, sonst kein Menüpunkt) auf
+`/verein/neu?partie={id}`; LeagueHub holt das PGN über `GET /api/games/{id}` (dasselbe Konto) und öffnet gleich die Übersicht.
+
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite

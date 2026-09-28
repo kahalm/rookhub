@@ -172,7 +172,8 @@ export class ClubAddPageComponent implements OnInit {
 
   /** Token des Teilen-Links (Weg ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
-  readonly client: ClubClient = inject(ClubApiService).client(this.share);
+  private readonly clubApi = inject(ClubApiService);
+  readonly client: ClubClient = this.clubApi.client(this.share);
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   readonly username = this.auth.currentUser?.username ?? '';
   readonly anon = ANON_NAME;
@@ -212,7 +213,22 @@ export class ClubAddPageComponent implements OnInit {
   ngOnInit(): void {
     if (!this.allowed) return;
     if (this.route.snapshot.queryParamMap.get('art') === 'formular') this.kind.set('formular');
+    const game = Number(this.route.snapshot.queryParamMap.get('partie'));
+    if (!this.share && Number.isInteger(game) && game > 0) void this.loadSavedGame(game);
     void this.loadScans();
+  }
+
+  /** Eine Partie aus RookHub (⋮ → „In die Vereins-Datenbank", Wunsch 2026-09-28) — gleich in die Übersicht, wie ein Upload. */
+  async loadSavedGame(id: number): Promise<void> {
+    this.kind.set('pgn');
+    this.importError.set(null);
+    try {
+      this.pgn.set((await this.clubApi.savedGame(id)).pgn);
+    } catch {
+      this.importError.set('Die Partie aus RookHub ließ sich nicht laden — bist du hier mit demselben Konto angemeldet?');
+      return;
+    }
+    await this.startPreview();
   }
 
   setKind(k: Kind): void {

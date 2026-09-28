@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
-import { partnerSiteUrl } from './partner-site';
+import { leagueHubUrl, partnerSiteUrl } from './partner-site';
 
 /**
  * Der Sprung zwischen RookHub und der Turnierseite.
@@ -37,7 +37,19 @@ export class HandoffService {
   /** Springt zur Schwesterseite — angemeldet, wenn es geht. `path` ohne fuehrenden Schraegstrich. */
   async jump(path = ''): Promise<void> {
     const base = this.partnerUrl;
-    if (!base) return;
+    if (base) await this.jumpTo(base, path);
+  }
+
+  /** Adresse von LeagueHub zu diesem RookHub, oder `null`. */
+  get leagueHubUrl(): string | null { return leagueHubUrl(); }
+
+  /** Springt nach LeagueHub (derselbe Weg wie zur Schwesterseite: Einmal-Code, drüben eingelöst). */
+  async jumpToLeagueHub(path = ''): Promise<void> {
+    const base = this.leagueHubUrl;
+    if (base) await this.jumpTo(base, path);
+  }
+
+  private async jumpTo(base: string, path: string): Promise<void> {
     const target = `${base}/${path}`.replace(/([^:]\/)\/+/g, '$1');
 
     if (!this.auth.isLoggedIn) { location.href = target; return; }

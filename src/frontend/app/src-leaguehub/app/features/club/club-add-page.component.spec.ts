@@ -20,7 +20,7 @@ const PREVIEW: ClubPreview = { truncated: false, games: [
 describe('ClubAddPageComponent', () => {
   let fixture: ComponentFixture<ClubAddPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
-  let service: { client: jasmine.Spy };
+  let service: { client: jasmine.Spy; savedGame: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
 
@@ -31,7 +31,7 @@ describe('ClubAddPageComponent', () => {
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess']);
     api.scans.and.resolveTo([]);
     api.scoresheetStatus.and.resolveTo({ available: true, dailyLimit: 10, usedToday: 0, languages: [{ code: 'de', name: 'Deutsch', pieces: 'KDTLS' }] });
-    service = { client: jasmine.createSpy('client').and.returnValue(api) };
+    service = { client: jasmine.createSpy('client').and.returnValue(api), savedGame: jasmine.createSpy('savedGame') };
   });
 
   function create(perms = true): HTMLElement {
@@ -133,6 +133,28 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(el.textContent).toContain('nicht öffentlich');
+  }));
+
+  it('eine Partie aus RookHub (?partie=33) geht gleich in die Übersicht', fakeAsync(() => {
+    query = { partie: '33' };
+    service.savedGame.and.resolveTo({ pgn: '[White "Oberschmid"]\n1. e4 *', white: 'Oberschmid', black: 'Hengl' });
+    api.preview.and.resolveTo(PREVIEW);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(service.savedGame).toHaveBeenCalledWith(33);
+    expect(api.preview).toHaveBeenCalledWith('[White "Oberschmid"]\n1. e4 *');
+    expect(el.querySelector('.review-table')).not.toBeNull();
+  }));
+
+  it('eine Partie aus RookHub, die sich nicht laden lässt, sagt es', fakeAsync(() => {
+    query = { partie: '33' };
+    service.savedGame.and.rejectWith(new Error('404'));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.preview).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Die Partie aus RookHub ließ sich nicht laden');
   }));
 
   it('angemeldet ohne Recht: nicht freigeschaltet', () => {

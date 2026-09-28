@@ -2767,7 +2767,8 @@
         "tooLarge": "The PGN is too large (max. 5 million characters).",
         "failed": "Upload failed — please try again."
       }
-    }
+    },
+    "clubImport": "Add to the club database (LeagueHub)"
   },
   "analysis": {
     "title": "Analysis",

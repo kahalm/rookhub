@@ -2767,7 +2767,8 @@
         "tooLarge": "Das PGN ist zu groß (höchstens 5 Millionen Zeichen).",
         "failed": "Hochladen fehlgeschlagen — bitte noch einmal versuchen."
       }
-    }
+    },
+    "clubImport": "In die Vereins-Datenbank (LeagueHub)"
   },
   "analysis": {
     "title": "Analyse",

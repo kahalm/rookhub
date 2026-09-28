@@ -59,6 +59,21 @@ export function partnerSiteUrl(host: string = location.hostname, protocol: strin
   return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
 }
 
+/** Welches LeagueHub zu welchem RookHub gehört (Prod ↔ Prod, Dev ↔ Dev). */
+const LEAGUEHUB_FOR: Record<string, string> = { 'rookhub': 'leaguehub', 'rookhub-dev': 'leaguehub-dev' };
+
+/**
+ * Basis-URL von LeagueHub zu diesem RookHub (ohne abschließenden Schrägstrich) — für den Sprung „In die
+ * Vereins-Datenbank" auf der Partieseite. `null` außerhalb von RookHub (localhost, IP, andere Seiten): dann gibt es den
+ * Menüpunkt nicht, statt auf eine geratene Adresse zu zeigen.
+ */
+export function leagueHubUrl(host: string = location.hostname, protocol: string = location.protocol): string | null {
+  const parts = host.split('.');
+  const other = LEAGUEHUB_FOR[parts[0]];
+  if (!other || parts.length < 2) return null;
+  return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
+}
+
 /**
  * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub und LeagueHub eingeschlossen):
  * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden

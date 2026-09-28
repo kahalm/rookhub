@@ -14,6 +14,7 @@ import { BoardArrow, ChessBoardComponent, UserBoardMove } from '../../shared/pgn
 import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
+import { HandoffService } from '../../core/handoff.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { downloadBlob } from '../../shared/download.util';
@@ -146,6 +147,11 @@ const RECAP_RETRY_MS = 15_000;
                     <button mat-menu-item (click)="roast()">
                       <mat-icon>local_fire_department</mat-icon><span>{{ 'games.roast.menu' | translate }}</span>
                     </button>
+                    @if (clubImport) {
+                      <button mat-menu-item (click)="toClub()">
+                        <mat-icon>groups</mat-icon><span>{{ 'games.clubImport' | translate }}</span>
+                      </button>
+                    }
                     @if (scanId) {
                       <button mat-menu-item (click)="photo(false)">
                         <mat-icon>image</mat-icon><span>{{ 'games.photo.show' | translate }}</span>
@@ -336,6 +342,10 @@ const RECAP_RETRY_MS = 15_000;
 })
 export class SharedGameComponent implements OnInit, DoCheck {
   private auth = inject(AuthService);
+  private handoff = inject(HandoffService);
+  /** „In die Vereins-Datenbank" (LeagueHub, Wunsch 2026-09-28): nur mit dem Recht dazu und wenn es ein LeagueHub zu diesem
+   * RookHub gibt. Die Partie wird drüben geladen und läuft durch dieselbe Übersicht wie ein PGN-Upload. */
+  readonly clubImport = this.auth.has('league.contribute') && !!this.handoff.leagueHubUrl;
   private router = inject(Router);
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
@@ -388,6 +398,10 @@ export class SharedGameComponent implements OnInit, DoCheck {
   readonly training = signal<MistakesSession | null>(null);
   /** Id der eigenen Partie (`/games/:id`) — ohne sie wird nichts gemeldet (geteilte Ansicht). */
   gameId: number | null = null;
+
+  toClub(): void {
+    if (this.gameId) void this.handoff.jumpToLeagueHub(`verein/neu?partie=${this.gameId}`);
+  }
   /** Formular-Einlesung der eigenen Partie (0.529.0) — `null` = kein Foto. */
   scanId: number | null = null;
   /** Schon gemeldete Halbzüge und Aufgabenzahl: verhindert, dass jeder Zug dieselbe Meldung wiederholt. */

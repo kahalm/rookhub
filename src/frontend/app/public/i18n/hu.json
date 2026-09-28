@@ -3031,7 +3031,8 @@
         "tooLarge": "A PGN túl nagy (legfeljebb 5 millió karakter).",
         "failed": "A feltöltés nem sikerült — próbáld újra."
       }
-    }
+    },
+    "clubImport": "Hozzáadás a klub adatbázisához (LeagueHub)"
   },
   "analysisJobs": {
     "loadFailed": "A megbízásokat nem sikerült betölteni.",
