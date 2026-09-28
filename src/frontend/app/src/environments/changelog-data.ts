@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.585.0", date: "2026-09-28", changes: [
+    { en: "Game texts from our own AI hardware: “Explain the mistakes”, “Roast my game” and the short recap when opening a game now also work during the day — the reserved hours only hold back the background runs (texts written automatically after an analysis, course and library translation).", de: "Texte zur Partie von unserer eigenen KI-Hardware: „Fehler erklären lassen“, „Roast my game“ und die Kurz-Nacherzählung beim Öffnen einer Partie gehen jetzt auch tagsüber — die reservierten Zeiten halten nur noch die Hintergrundläufe zurück (automatisch nach einer Analyse geschriebene Texte, Kurs- und Bibliotheksübersetzung)." },
+  ] },
   { version: "0.584.2", date: "2026-09-28", changes: [
     { en: "LeagueHub scoresheet check: the mark on the large photo is now a thin line with a small gap around the entry — the thick frame with its light edge covered the handwriting in the small photo.", de: "LeagueHub-Formularprüfung: Die Markierung im großen Foto ist jetzt eine dünne Linie mit etwas Abstand um den Eintrag — der dicke Rahmen mit hellem Saum deckte im kleinen Foto die Handschrift zu." },
   ] },

@@ -127,7 +127,7 @@ public class QuietHoursTests
     }
 
     [Fact]
-    public void Scheduler_DefersDuringTheWindow_MergesRefined_AndWritesAfterwards()
+    public void Scheduler_DefersTheAutomaticRunDuringTheWindow_MergesRefined_ButTheRecapOnOpeningRunsAtOnce()
     {
         var time = new ManualTime { Now = At(2026, 9, 24, 10, 0) };
         var scheduler = new RecordingScheduler(Default(time));
@@ -135,10 +135,10 @@ public class QuietHoursTests
         scheduler.Schedule(7, refined: false);
         scheduler.Schedule(7, refined: true);    // Vertiefung während der Sperre: nach dem Fenster wird mehr neu geschrieben
         scheduler.Schedule(8, refined: false);
-        scheduler.ScheduleRecap(3);               // beim Öffnen: kein Warten, das nächste Öffnen holt nach
+        scheduler.ScheduleRecap(3);               // beim Öffnen: auf Zuruf, läuft sofort (0.585.0)
 
         Assert.Empty(scheduler.Runs);
-        Assert.Empty(scheduler.Recaps);
+        Assert.Equal([3], scheduler.Recaps);
         Assert.Equal(2, scheduler.DeferredCount);
 
         time.Now = At(2026, 9, 24, 17, 0);
@@ -146,8 +146,6 @@ public class QuietHoursTests
 
         Assert.Equal([(7, true), (8, false)], scheduler.Runs.OrderBy(r => r.Item1));
         Assert.Equal(0, scheduler.DeferredCount);
-        scheduler.ScheduleRecap(3);
-        Assert.Equal([3], scheduler.Recaps);
     }
 
     private sealed class FakeLlm : IClaudeJsonClient
@@ -166,7 +164,7 @@ public class QuietHoursTests
     }
 
     [Fact]
-    public async Task Buttons_SayNoDuringTheWindow_WithTheTime_TheAutomaticWayStillWrites()
+    public async Task Buttons_WorkDuringTheWindow_OnlyTheBackgroundRunsWait()
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         var user = new AppUser { Username = "u", PasswordHash = "x" };
@@ -188,24 +186,20 @@ public class QuietHoursTests
         db.SavedGames.Add(game);
         await db.SaveChangesAsync();
 
-        var time = new ManualTime { Now = At(2026, 9, 24, 10, 0) };
-        var quiet = Default(time);
+        // Donnerstag 10:00 in Wien — mitten in der Sperrzeit. Die gilt nur für die Hintergrundläufe (Scheduler, Kurs-
+        // Übersetzung, Bibliothekslauf); „Fehler erklären lassen" und „Roast my game" sind Aufträge auf Zuruf (0.585.0).
+        Assert.True(Default(new ManualTime { Now = At(2026, 9, 24, 10, 0) }).IsQuietNow());
         var llm = new FakeLlm();
         var explanations = new GameMoveExplanationService(db, llm, new GameExplanationJobs(),
             new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<GameMoveExplanationService>.Instance, quiet);
-        var roasts = new GameRoastService(db, llm, TestServices.SavedGames(db), NullLogger<GameRoastService>.Instance, quiet);
+            NullLogger<GameMoveExplanationService>.Instance);
+        var roasts = new GameRoastService(db, llm, TestServices.SavedGames(db), NullLogger<GameRoastService>.Instance);
 
         var state = await explanations.GetAsync(await explanations.OwnGameAsync(user.Id, game.Id), "de", owner: true);
-        Assert.Equal(At(2026, 9, 24, 17, 0), state.QuietUntil);
-        Assert.False(state.CanGenerate);
-        Assert.False(explanations.Start((await explanations.OwnGameAsync(user.Id, game.Id))!, "de"));
+        Assert.True(state.CanGenerate);
 
-        Assert.Equal("quietHours", (await roasts.RoastAsync(user.Id, game.Id, "friendly", "de")).Reason);
-        Assert.Equal(0, llm.Calls);
-        Assert.Equal(At(2026, 9, 24, 17, 0), (await roasts.GetAsync(user.Id, game.Id, "de"))!.QuietUntil);
-        // Der automatische Weg ist schon vom Scheduler gesteuert — hier sagt nichts ab.
-        Assert.Null((await roasts.RoastAsync(user.Id, game.Id, "friendly", "de", automatic: true)).Reason);
+        Assert.Null((await roasts.RoastAsync(user.Id, game.Id, "friendly", "de")).Reason);
+        Assert.Equal(1, llm.Calls);
 
         var controller = new GameRoastController(roasts)
         {
@@ -217,17 +211,12 @@ public class QuietHoursTests
                 },
             },
         };
-        var refused = Assert.IsType<ObjectResult>((await controller.Roast(game.Id, "cheeky", "de", default)).Result);
-        Assert.Equal(503, refused.StatusCode);
-
-        // Nach dem Fenster geht alles wieder.
-        time.Now = At(2026, 9, 24, 17, 0);
-        Assert.Null((await explanations.GetAsync(await explanations.OwnGameAsync(user.Id, game.Id), "de", owner: true)).QuietUntil);
-        Assert.Null((await roasts.RoastAsync(user.Id, game.Id, "cheeky", "de")).Reason);
+        Assert.IsType<OkObjectResult>((await controller.Roast(game.Id, "cheeky", "de", default)).Result);
+        Assert.Equal(2, llm.Calls);
     }
 
     [Fact]
-    public async Task RecapOnOpening_IsNotStartedDuringTheWindow_ButSaysUntilWhen()
+    public async Task RecapOnOpening_IsStartedDuringTheWindow_TooOnDemand()
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         var user = new AppUser { Username = "u", PasswordHash = "x" };
@@ -244,7 +233,7 @@ public class QuietHoursTests
         var quiet = Default(time);
         var scheduler = new RecordingScheduler(quiet);
         var recaps = new GameRecapService(db, new FakeLlm(), TestServices.SavedGames(db), NullLogger<GameRecapService>.Instance);
-        var controller = new GameRecapController(recaps, scheduler, quiet)
+        var controller = new GameRecapController(recaps, scheduler)
         {
             ControllerContext = new ControllerContext
             {
@@ -256,8 +245,8 @@ public class QuietHoursTests
         };
 
         var dto = Assert.IsType<GameRecapDto>(Assert.IsType<OkObjectResult>((await controller.Get(game.Id, default)).Result).Value);
-        Assert.False(dto.Pending);
-        Assert.Equal(At(2026, 9, 25, 14, 0), dto.QuietUntil);
-        Assert.Empty(scheduler.Recaps);
+        Assert.True(quiet.IsQuietNow());
+        Assert.True(dto.Pending);
+        Assert.Equal([game.Id], scheduler.Recaps);
     }
 }

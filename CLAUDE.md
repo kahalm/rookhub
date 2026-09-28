@@ -534,16 +534,18 @@ EIGENER Hardware ein, zwei Sätze — NUR mit `IClaudeJsonClient.IsLocal` (Spark
 * **Sperrzeiten der Spark** (0.546.0, `Services/QuietHours.cs`, Wunsch des Nutzers: „gleiches zeitfenster" wie die
   Übersetzungen): `TextLlm:QuietHours` (Vorgabe `Mon-Thu 08:00-17:00; Fri 08:00-14:00`, Ende ausschließlich, LEER = nie
   gesperrt) in `TextLlm:TimeZone` (Vorgabe `Europe/Vienna` — der Server läuft in UTC, die Sommerzeit verschöbe sonst die
-  Fenster). Gilt für Nacherzählung, Erklärungen und Roasts: der `GameReviewTextScheduler` stellt, was die Pumpe in der
-  Sperrzeit anstößt, ZURÜCK (je Analyse einmal, „vertieft" gewinnt beim Zusammenführen) und lässt es nach dem Ende los —
-  ein Wartender je Prozess, schläft höchstens 10 min am Stück; ein Neustart verliert die Liste, dann holt das nächste
-  Öffnen der Partie die Nacherzählung nach (`GET …/recap` stößt in der Sperrzeit NICHT an, meldet `quietUntil`). Die
-  Knöpfe sagen ab: Erklärungen `canGenerate=false` + `quietUntil` (nur für den Besitzer gesetzt), POST 503
-  `{ reason: "quietHours", until }`; Roast 503 `quietHours` — der AUTOMATISCHE Roast aus dem Scheduler läuft (der ist ja
-  schon zurückgestellt worden). Eine unlesbare Angabe wirft beim Start (`FormatException`) statt still „nie gesperrt" zu
-  bedeuten. Die Seite zeigt „wieder ab Fr., 14:00" (`quiet-hours.util.ts`). Dieselbe Klasse nutzt die Kurs-Übersetzung
-  (0.548.0, `CourseTranslationWorker`: Aufträge warten, ein Lauf bricht beim Beginn ab und kommt zurück in die Schlange);
-  der Bibliothekslauf hält die Fenster außerhalb der App über die Schaltuhr `.jobs/spark-uebersetzung.sh` ein.
+  Fenster). **Sie gilt NUR für die Hintergrund- und Massenläufe, nicht für Aufträge auf Zuruf** (0.585.0, Wunsch des
+  Nutzers: „Spark steht unter Tag durchaus für On-demand-Aufträge zur Verfügung — nur nicht für die Patchläufe"). Gesperrt:
+  die automatischen Texte nach einer Analyse — der `GameReviewTextScheduler` stellt, was die Pumpe in der Sperrzeit
+  anstößt, ZURÜCK (je Analyse einmal, „vertieft" gewinnt beim Zusammenführen) und lässt es nach dem Ende los; ein
+  Wartender je Prozess, schläft höchstens 10 min am Stück, ein Neustart verliert die Liste —, der Kurs-Übersetzungsdienst
+  (0.548.0, `CourseTranslationWorker`: Aufträge warten, ein Lauf bricht beim Beginn ab und kommt zurück in die Schlange;
+  auch ANGEFORDERTE Kurs-Übersetzungen — ein Kurs ist Stunden Arbeit) und der Bibliothekslauf (hält die Fenster außerhalb
+  der App über die Schaltuhr `.jobs/spark-uebersetzung.sh` ein). FREI: „Fehler erklären lassen" (`POST …/explanations`),
+  „Roast my game" (`POST …/roasts`) und die Nacherzählung beim Öffnen einer Partie (`GET …/recap` → `ScheduleRecap`, läuft
+  sofort) — die DTOs tragen dafür kein `quietUntil` mehr, `quietHours` gibt es als Absage nicht mehr. Puzzle-Tipps hingen
+  nie an der Sperrzeit. Eine unlesbare Angabe wirft beim Start (`FormatException`) statt still „nie gesperrt" zu bedeuten.
+  Die Seite zeigt „wieder ab Fr., 14:00" nur noch bei der Kurs-Übersetzung (`quiet-hours.util.ts`).
 * Frontend: `GameReviewComponent` lädt die Erklärungen, sobald die Analyse `done` ist (und bei Sprachwechsel), zeigt den
   Text unter dem Abzeichen des aktuellen Zugs, den Knopf „Fehler erklären lassen" nur mit `canGenerate`, keine Erklärung
   vorhanden und Fehlern in der Partie; fragt alle 5 s nach, solange es läuft; im Fehler-Training aus (nennt den besseren Zug).

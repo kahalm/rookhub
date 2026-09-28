@@ -159,8 +159,12 @@ public interface IGameReviewTextScheduler
 /// sie ZURÜCKGESTELLT und nach dem Fenster geschrieben (ein Wartender je Prozess, in Schritten von höchstens zehn
 /// Minuten). Zurückgestellt wird nur im Arbeitsspeicher: ein Neustart dazwischen verliert die Liste — dann holen die
 /// Knöpfe bzw. der Abruf der Nacherzählung beim Öffnen der Partie nach. Der nächtliche Neustart (Watchtower ~02:00)
-/// liegt außerhalb jedes Fensters. Die Nacherzählung beim Öffnen (<see cref="ScheduleRecap"/>) wartet NICHT: sie wird beim
-/// nächsten Öffnen außerhalb der Sperrzeit ohnehin angestoßen.</para></summary>
+/// liegt außerhalb jedes Fensters.</para>
+///
+/// <para><b>Nur die Hintergrundläufe warten</b> (0.585.0, Wunsch des Nutzers: „Spark steht unter Tag durchaus für
+/// On-demand-Aufträge zur Verfügung, nur nicht für die Patchläufe"): die Nacherzählung beim Öffnen einer Partie
+/// (<see cref="ScheduleRecap"/>) läuft sofort — ebenso die Knöpfe „Fehler erklären lassen" und „Roast my game", die
+/// gar nicht über den Scheduler gehen.</para></summary>
 public class GameReviewTextScheduler : IGameReviewTextScheduler
 {
     private readonly IServiceScopeFactory _scopes;
@@ -192,11 +196,7 @@ public class GameReviewTextScheduler : IGameReviewTextScheduler
         Execute(analysisId, refined);
     }
 
-    public void ScheduleRecap(int savedGameId)
-    {
-        if (_quiet?.IsQuietNow() == true) return;
-        ExecuteRecap(savedGameId);
-    }
+    public void ScheduleRecap(int savedGameId) => ExecuteRecap(savedGameId);
 
     /// <summary>Alles Zurückgestellte jetzt anstoßen — der Wartende ruft es nach dem Fenster (Tests direkt).</summary>
     internal void ReleaseDeferred()

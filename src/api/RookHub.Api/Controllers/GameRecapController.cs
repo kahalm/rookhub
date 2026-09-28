@@ -14,17 +14,16 @@ public class GameRecapController : BaseApiController
 {
     private readonly GameRecapService _service;
     private readonly IGameReviewTextScheduler _scheduler;
-    private readonly QuietHours? _quiet;
 
-    public GameRecapController(GameRecapService service, IGameReviewTextScheduler scheduler, QuietHours? quiet = null)
+    public GameRecapController(GameRecapService service, IGameReviewTextScheduler scheduler)
     {
         _service = service;
         _scheduler = scheduler;
-        _quiet = quiet;
     }
 
     /// <summary>Die Nacherzählung. Fehlt sie bei fertiger Analyse — eine Analyse von vor 0.541.0, oder der Lauf danach ist
-    /// gescheitert —, wird sie im Hintergrund geschrieben und <c>pending</c> gesetzt; die Seite fragt später nach.</summary>
+    /// gescheitert —, wird sie im Hintergrund geschrieben und <c>pending</c> gesetzt; die Seite fragt später nach. Auch in der
+    /// Sperrzeit der Spark: wer die Partie öffnet, wartet auf genau diesen einen Text (0.585.0).</summary>
     [HttpGet("{id:int}/recap")]
     public async Task<ActionResult<GameRecapDto>> Get(int id, CancellationToken ct)
     {
@@ -32,13 +31,8 @@ public class GameRecapController : BaseApiController
         if (dto == null) return NotFound();
         if (dto.Text == null && dto.Available && dto.HasAnalysis)
         {
-            // In der Sperrzeit der Spark nicht anstoßen — beim nächsten Öffnen danach entsteht sie.
-            dto.QuietUntil = _quiet?.QuietUntil();
-            if (dto.QuietUntil == null)
-            {
-                _scheduler.ScheduleRecap(id);
-                dto.Pending = true;
-            }
+            _scheduler.ScheduleRecap(id);
+            dto.Pending = true;
         }
         return Ok(dto);
     }

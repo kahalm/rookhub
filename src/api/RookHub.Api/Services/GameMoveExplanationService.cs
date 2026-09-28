@@ -43,22 +43,17 @@ public sealed class GameMoveExplanationService
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<GameMoveExplanationService> _logger;
 
-    private readonly QuietHours? _quiet;
-
+    // Keine Sperrzeit (0.585.0): der Knopf „Fehler erklären lassen" ist ein Auftrag auf Zuruf, dafür steht die Spark auch
+    // tagsüber bereit. Die automatischen Erklärungen nach der Analyse stellt der Scheduler (GameReviewTexts) zurück.
     public GameMoveExplanationService(AppDbContext db, IClaudeJsonClient llm, GameExplanationJobs jobs,
-        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger, QuietHours? quiet = null)
+        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger)
     {
         _db = db;
         _llm = llm;
         _jobs = jobs;
         _scopes = scopes;
         _logger = logger;
-        _quiet = quiet;
     }
-
-    /// <summary>Bis wann die Spark gerade anderen gehört (<see cref="QuietHours"/>) — <c>null</c> = frei. Der Knopf
-    /// „Fehler erklären lassen" ist dann gesperrt; die automatischen Texte stellt der Scheduler zurück.</summary>
-    public DateTimeOffset? QuietUntil() => _quiet?.QuietUntil();
 
     /// <summary>Nur mit einem Modell auf eigener Hardware.</summary>
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
@@ -122,8 +117,7 @@ public sealed class GameMoveExplanationService
         }).ToList();
         dto.Running = _jobs.IsRunning(id, lang);
         // Nur für den Besitzer — ein Besucher des Teilen-Links kann ohnehin nichts erzeugen.
-        dto.QuietUntil = owner && Available ? QuietUntil() : null;
-        dto.CanGenerate = owner && Available && !dto.Running && dto.QuietUntil == null && analysis.Status == GameAnalysisStatus.Done;
+        dto.CanGenerate = owner && Available && !dto.Running && analysis.Status == GameAnalysisStatus.Done;
         return dto;
     }
 
@@ -132,7 +126,7 @@ public sealed class GameMoveExplanationService
     {
         lang = NormalizeLanguage(lang);
         var analysisId = game.AnalysisId;
-        if (!Available || QuietUntil() != null || !_jobs.TryStart(analysisId, lang)) return false;
+        if (!Available || !_jobs.TryStart(analysisId, lang)) return false;
         _ = Task.Run(async () =>
         {
             try
