@@ -489,8 +489,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .photo-frame { position: relative; display: inline-block; line-height: 0; max-width: 100%; }
 .photo-scroll.zoom .photo-frame { width: 200%; max-width: none; }
 .photo-scroll.zoom .photo-frame img { width: 100%; }
-.photo-mark { position: absolute; border: 2px solid var(--red); border-radius: 3px; pointer-events: none;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / .55); }
-.photo-mark.uncertain { border-color: var(--warn); }
+/* Der Kasten des Modells sitzt eng um die Tinte: gezeichnet wird deshalb eine dünne Linie mit Abstand AUSSEN
+   herum (outline-offset) — ein Rand im Kasten plus heller Saum deckte den Eintrag im kleinen Foto zu (0.584.2). */
+.photo-mark { position: absolute; border-radius: 4px; pointer-events: none;
+  outline: 1.5px solid var(--red); outline-offset: 2px; }
+.photo-mark.uncertain { outline-color: var(--warn); }
 .done-dlg { max-width: min(520px, 94vw); }
 .done-dlg h3 { margin: 4px 0 8px; }

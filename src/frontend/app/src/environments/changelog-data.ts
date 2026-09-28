@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.584.2", date: "2026-09-28", changes: [
+    { en: "LeagueHub scoresheet check: the mark on the large photo is now a thin line with a small gap around the entry — the thick frame with its light edge covered the handwriting in the small photo.", de: "LeagueHub-Formularprüfung: Die Markierung im großen Foto ist jetzt eine dünne Linie mit etwas Abstand um den Eintrag — der dicke Rahmen mit hellem Saum deckte im kleinen Foto die Handschrift zu." },
+  ] },
   { version: "0.584.1", date: "2026-09-28", changes: [
     { en: "Tests: the engine broker tests no longer give the simulated provider only 300 ms to pick up a job — under CI load that was too short and the v0.584.0 tag build failed on it; only the timeout test itself keeps the short limit.", de: "Tests: Die Engine-Broker-Tests geben dem nachgestellten Provider nicht mehr nur 300 ms, um einen Auftrag abzuholen — unter Last auf der CI war das zu knapp, und der Tag-Lauf von v0.584.0 scheiterte daran; die kurze Frist behält nur der Timeout-Test selbst." },
   ] },
