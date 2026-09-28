@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
-import { ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
+import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
 import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubImportReviewComponent } from './club-import-review.component';
@@ -20,12 +20,21 @@ export function anonKeys(share: string): string[] {
   return (readJson<Record<string, string[]>>(localStore(), ANON_KEYS) ?? {})[share] ?? [];
 }
 
-export function rememberAnonKey(share: string, key: string, keep = true): void {
-  const all = readJson<Record<string, string[]>>(localStore(), ANON_KEYS) ?? {};
+export function rememberAnonKey(share: string, key: string, keep = true, store = ANON_KEYS): void {
+  const all = readJson<Record<string, string[]>>(localStore(), store) ?? {};
   const list = (all[share] ?? []).filter(k => k !== key);
   all[share] = keep ? [key, ...list].slice(0, 20) : list;
-  writeJson(localStore(), ANON_KEYS, all);
+  writeJson(localStore(), store, all);
 }
+
+/** Ohne Konto: die Schlüssel der eigenen Entwürfe (0.595.0) — wie bei den Formularen. */
+const ANON_DRAFT_KEYS = 'lh-anon-drafts';
+export const draftKeys = (share: string): string[] =>
+  (readJson<Record<string, string[]>>(localStore(), ANON_DRAFT_KEYS) ?? {})[share] ?? [];
+export const rememberDraftKey = (share: string, key: string, keep = true): void => rememberAnonKey(share, key, keep, ANON_DRAFT_KEYS);
+
+/** Wie lange nach der letzten Änderung der Übersicht gespeichert wird (ms) — Tippen und Klicken sollen nicht je Zug senden. */
+const SAVE_DEBOUNCE_MS = 1500;
 
 /**
  * Partien hinzufügen — angemeldet (`/verein/neu`, Vereinsgruppe) ODER ohne Konto über einen Teilen-Link
@@ -62,7 +71,12 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
       @if (kind() === 'pgn') {
         <section class="panel">
           @if (review(); as rv) {
-            <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" (imported)="done($event)" (cancel)="review.set(null)" />
+            @if (draft(); as d) {
+              <p class="small muted draft-note">Die Liste liegt online als Entwurf — brichst du ab, machst du später unter „Deine offenen Listen" weiter@if (!share) {, und ein Verwalter kann den Import fertigstellen}.
+                @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
+            }
+            <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" [draftId]="share ? null : (draft()?.id ?? null)"
+                                   (imported)="done($event)" (cancel)="discardCurrent()" (savedChange)="onSaved($event)" />
           } @else {
             <label class="anon-toggle">
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
@@ -92,6 +106,35 @@ export function rememberAnonKey(share: string, key: string, keep = true): void {
               <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“.</span>
               <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
             </div>
+          }
+          @if (!review() && drafts().length) {
+            <h3 class="club-h3">Deine offenen Listen</h3>
+            <p class="small muted">Eingelesen, aber noch nicht (ganz) importiert — mit deinen Korrekturen gespeichert.</p>
+            <ul class="scan-list">
+              @for (d of drafts(); track d.ref) {
+                <li>
+                  <span>{{ draftTitle(d) }}</span>
+                  <span class="muted">{{ draftState(d) }} · {{ when(d.updatedAt) }}</span>
+                  <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Weiter</button>
+                  <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+                </li>
+              }
+            </ul>
+          }
+          @if (!review() && isManager && othersDrafts().length) {
+            <h3 class="club-h3">Offene Listen anderer <span class="muted small">(nur Verwalter)</span></h3>
+            <p class="small muted">Eingereicht, aber nicht fertig importiert — auch über Teilen-Links. Du kannst den Import
+              fertigstellen (mit den Korrekturen und Vorgaben des Einreichers) oder die Liste verwerfen.</p>
+            <ul class="scan-list">
+              @for (d of othersDrafts(); track d.ref) {
+                <li>
+                  <span>{{ draftTitle(d) }}</span>
+                  <span class="muted">{{ draftState(d) }} · {{ d.viaShareLink ? 'über Teilen-Link' : (d.owner ?? 'mit Konto') }} · {{ when(d.updatedAt) }}</span>
+                  <button type="button" class="btn-sec" [disabled]="resuming()" (click)="resume(d)">Fertigstellen</button>
+                  <button type="button" class="btn-link" (click)="discardDraft(d)">Verwerfen</button>
+                </li>
+              }
+            </ul>
           }
           @if (result(); as r) {
             <p class="result" role="status"><b>{{ summary(r) }}</b>
@@ -207,6 +250,21 @@ export class ClubAddPageComponent implements OnInit {
   readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
 
+  // ── Entwürfe (0.595.0, Wunsch: „soll gleich online abgelegt werden — damit ein Admin den Import fertigstellen kann") ──
+  /** Der Entwurf der Liste in der Übersicht; `pgn` = der Text, zu dem er gehört (eine neu eingefügte Liste ist ein neuer). */
+  readonly draft = signal<(ClubDraft & { pgn: string }) | null>(null);
+  readonly drafts = signal<ClubDraft[]>([]);
+  readonly othersDrafts = signal<ClubDraft[]>([]);
+  readonly resuming = signal(false);
+  /** Stellt ein Verwalter die Liste eines anderen fertig: dessen Name (oder „einem Teilen-Link"). */
+  readonly resumedFrom = signal<string | null>(null);
+  /** Woher der Text kam — steht in der Liste der offenen Entwürfe. */
+  private source = 'text';
+  private label: string | null = null;
+  /** Schon importierte Partien des Entwurfs (aus früheren Läufen) — die neuen kommen dazu. */
+  private importedBefore: number[] = [];
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+
   readonly status = signal<ScoresheetStatus | null>(null);
   readonly availability = computed(() => { const s = this.status(); return s ? scanAvailability(s) : null; });
   readonly language = signal('auto');
@@ -238,8 +296,24 @@ export class ClubAddPageComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
       if (this.pollTimer) clearTimeout(this.pollTimer);
+      if (this.saveTimer) { clearTimeout(this.saveTimer); void this.flushSave(); }
       this.ticker.stop();
     });
+    // Jede Korrektur in der Übersicht landet (gedrosselt) im Entwurf — auch die, die dann niemand mehr importiert.
+    effect(() => {
+      const rv = this.review();
+      if (!rv || !this.draft()) return;
+      rv.games();
+      if (this.saveTimer) clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => void this.flushSave(), SAVE_DEBOUNCE_MS);
+    });
+  }
+
+  private async flushSave(): Promise<void> {
+    this.saveTimer = null;
+    const d = this.draft(), rv = this.review();
+    if (!d || !rv) return;
+    try { await this.client.saveDraft(d.ref, { state: rv.snapshot() }); } catch { /* nächste Änderung versucht es wieder */ }
   }
 
   ngOnInit(): void {
@@ -248,6 +322,84 @@ export class ClubAddPageComponent implements OnInit {
     const game = Number(this.route.snapshot.queryParamMap.get('partie'));
     if (!this.share && Number.isInteger(game) && game > 0) void this.loadSavedGame(game);
     void this.loadScans();
+    void this.loadDrafts();
+  }
+
+  /** Die offenen Entwürfe — die eigenen, und für Verwalter die aller anderen. */
+  async loadDrafts(): Promise<void> {
+    try {
+      const keys = this.share ? draftKeys(this.share) : [];
+      const list = await this.client.drafts(keys);
+      if (this.share) for (const k of keys) if (!list.some(d => d.ref === k)) rememberDraftKey(this.share, k, false);
+      this.drafts.set(list);
+      if (this.isManager) this.othersDrafts.set((await this.clubApi.allDrafts()).filter(d => !d.mine));
+    } catch { /* Beiwerk — die Seite geht auch ohne */ }
+  }
+
+  draftTitle(d: ClubDraft): string {
+    const src = d.source === 'lichess' ? 'Lichess-Studie' : d.source === 'rookhub' ? 'aus RookHub' : d.source === 'datei' ? 'Datei' : 'eingefügt';
+    return `${d.label ?? src} (${d.gameCount} ${d.gameCount === 1 ? 'Partie' : 'Partien'})`;
+  }
+
+  draftState(d: ClubDraft): string {
+    return d.importedCount ? `${d.importedCount} von ${d.gameCount} importiert` : 'noch nichts importiert';
+  }
+
+  /** Einen Entwurf wieder aufnehmen: Text laden, Übersicht neu lesen (für den Einreicher), Korrekturen wiederherstellen. */
+  async resume(d: ClubDraft): Promise<void> {
+    this.resuming.set(true);
+    this.importError.set(null);
+    this.result.set(null);
+    try {
+      const full = await this.client.draft(d.ref);
+      this.pgn.set(full.pgn);
+      this.importedBefore = full.imported;
+      this.draft.set({ ...d, pgn: full.pgn });
+      this.resumedFrom.set(d.mine || !this.othersDrafts().some(o => o.ref === d.ref) ? null : d.viaShareLink ? 'einem Teilen-Link' : d.owner ?? 'jemand anderem');
+      const preview = await this.client.preview(full.pgn, this.share ? null : full.id);
+      this.review.set(ImportReview.restore(preview, full.state, this.replaceClub()));
+    } catch {
+      this.importError.set('Die Liste ließ sich nicht öffnen — vielleicht hat sie inzwischen jemand anderes fertiggestellt.');
+      void this.loadDrafts();
+    } finally {
+      this.resuming.set(false);
+    }
+  }
+
+  async discardDraft(d: ClubDraft): Promise<void> {
+    if (!confirm(`Liste „${this.draftTitle(d)}" verwerfen? Schon importierte Partien bleiben, der Rest wird gelöscht.`)) return;
+    try {
+      await this.client.deleteDraft(d.ref);
+      if (this.share) rememberDraftKey(this.share, d.ref, false);
+    } catch { /* schon weg */ }
+    void this.loadDrafts();
+  }
+
+  /** „Verwerfen" in der Übersicht: der Entwurf dieser Liste geht mit. */
+  async discardCurrent(): Promise<void> {
+    const d = this.draft();
+    this.review.set(null);
+    this.resetDraft();
+    if (d) {
+      try { await this.client.deleteDraft(d.ref); } catch { /* schon weg */ }
+      if (this.share) rememberDraftKey(this.share, d.ref, false);
+    }
+    void this.loadDrafts();
+  }
+
+  /** Nach jeder gespeicherten Portion — damit ein Abbruch nicht vergisst, was schon drin ist. */
+  onSaved(indices: number[]): void {
+    const d = this.draft();
+    if (!d) return;
+    const all = [...new Set([...this.importedBefore, ...indices])];
+    void this.client.saveDraft(d.ref, { imported: all }).catch(() => undefined);
+  }
+
+  private resetDraft(): void {
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    this.draft.set(null);
+    this.resumedFrom.set(null);
+    this.importedBefore = [];
   }
 
   /** Eine Partie aus RookHub (⋮ → „In die Vereins-Datenbank", Wunsch 2026-09-28) — gleich in die Übersicht, wie ein Upload. */
@@ -256,6 +408,7 @@ export class ClubAddPageComponent implements OnInit {
     this.importError.set(null);
     try {
       this.pgn.set((await this.clubApi.savedGame(id)).pgn);
+      this.loaded(this.pgn(), 'rookhub', `Partie ${id} aus RookHub`);
     } catch {
       this.importError.set('Die Partie aus RookHub ließ sich nicht laden — bist du hier mit demselben Konto angemeldet?');
       return;
@@ -287,6 +440,7 @@ export class ClubAddPageComponent implements OnInit {
     const f = (ev.target as HTMLInputElement).files?.[0];
     if (!f) return;
     this.pgn.set(await f.text());
+    this.loaded(this.pgn(), 'datei', f.name);
     this.result.set(null);
   }
 
@@ -296,6 +450,7 @@ export class ClubAddPageComponent implements OnInit {
     this.importError.set(null);
     try {
       this.pgn.set(await this.client.lichess(this.studyUrl().trim()));
+      this.loaded(this.pgn(), 'lichess', this.studyUrl().trim());
       this.result.set(null);
       await this.startPreview();
     } catch (err) {
@@ -311,7 +466,20 @@ export class ClubAddPageComponent implements OnInit {
     this.importError.set(null);
     this.result.set(null);
     try {
-      this.review.set(new ImportReview(await this.client.preview(this.pgn()), this.replaceClub()));
+      // Sofort online ablegen (egal, woher der Text kam) — geht das nicht (Deckel, Netz), läuft es ohne Entwurf weiter.
+      const pgn = this.pgn();
+      let d = this.draft();
+      if (!d || d.pgn !== pgn) {
+        if (d) { try { await this.client.deleteDraft(d.ref); } catch { /* egal */ } }
+        this.resetDraft();
+        try {
+          const created = await this.client.createDraft(pgn, this.pgnSource(pgn), this.pgnLabel(pgn));
+          if (this.share && created.key) rememberDraftKey(this.share, created.key);
+          d = { ...created, pgn };
+          this.draft.set(d);
+        } catch { d = null; }
+      }
+      this.review.set(new ImportReview(await this.client.preview(pgn, this.share ? null : d?.id ?? null), this.replaceClub()));
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.importError.set(e?.error?.reason ? reasonText(e.error.reason)
@@ -326,7 +494,24 @@ export class ClubAddPageComponent implements OnInit {
     this.result.set(r);
     this.review.set(null);
     if (r.added) this.pgn.set('');
+    // Fertig importiert: der Entwurf (samt Rohtext mit den Namen) geht.
+    const d = this.draft();
+    this.resetDraft();
+    if (d) {
+      void this.client.deleteDraft(d.ref).catch(() => undefined).then(() => this.loadDrafts());
+      if (this.share) rememberDraftKey(this.share, d.ref, false);
+    }
   }
+
+  /** Woher der Text kam (Datei, Studie, RookHub) gilt nur, solange er unverändert ist — wer danach tippt, hat eingefügt. */
+  private loaded(text: string, source: string, label: string | null): void {
+    this.loadedText = text;
+    this.source = source;
+    this.label = label;
+  }
+  private loadedText: string | null = null;
+  private pgnSource(pgn: string): string { return pgn === this.loadedText ? this.source : 'text'; }
+  private pgnLabel(pgn: string): string | null { return pgn === this.loadedText ? this.label : null; }
 
   private async loadStatus(): Promise<void> {
     try { this.status.set(await this.client.scoresheetStatus()); }

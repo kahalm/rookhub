@@ -194,10 +194,43 @@ export class ImportReview {
     this.update(index, r => ({ ...r, excluded: !r.excluded, touched: true }));
   }
 
+  /** Der Stand zum Speichern im Entwurf (0.595.0): je Partie die festgelegten Seiten und das Häkchen, dazu die Vorgabe
+   *  „ersetzen" — mit {@link ImportReview.restore} auf einer frischen Übersicht derselben Liste wiederhergestellt. */
+  snapshot(): string {
+    const snap: ReviewSnapshot = {
+      v: 1, replaceClub: this.replaceClub,
+      games: this.games().map(r => ({ i: r.game.index, raw: [r.white.raw, r.black.raw], white: r.white, black: r.black,
+        excluded: r.excluded, touched: r.touched })),
+    };
+    return JSON.stringify(snap);
+  }
+
+  /** Eine Übersicht mit dem gespeicherten Stand — Partien, deren PGN-Namen nicht mehr passen, behalten ihre Vorgabe. */
+  static restore(preview: ClubPreview, state: string | null, replaceClub: boolean): ImportReview {
+    let snap: ReviewSnapshot | null = null;
+    try { snap = state ? JSON.parse(state) as ReviewSnapshot : null; } catch { snap = null; }
+    const review = new ImportReview(preview, snap?.v === 1 ? snap.replaceClub : replaceClub);
+    if (snap?.v !== 1) return review;
+    const byIndex = new Map(snap.games.map(g => [g.i, g]));
+    review.games.update(list => list.map(r => {
+      const s = byIndex.get(r.game.index);
+      if (!s || s.raw[0] !== r.white.raw || s.raw[1] !== r.black.raw) return r;
+      return { ...r, white: s.white, black: s.black, excluded: s.excluded, touched: s.touched };
+    }));
+    return review;
+  }
+
   /** Was an den Server geht: nur übernommene Partien, je Seite der festgelegte Spieler und „ersetzen". */
   decisions(): ImportGameDecision[] {
     // Die FIDE-ID geht mit, sobald der Spieler eindeutig ist — auch ohne Liga (aus dem Megabase-Verzeichnis gewählt).
     const side = (s: ReviewSide) => ({ name: s.changed ? s.name : null, fide: !s.ambiguous ? s.fide : null, replace: s.replace });
     return this.games().filter(included).map(r => ({ index: r.game.index, white: side(r.white), black: side(r.black) }));
   }
+}
+
+/** Gespeicherter Stand einer Übersicht (JSON im Entwurf). */
+interface ReviewSnapshot {
+  v: 1;
+  replaceClub: boolean;
+  games: { i: number; raw: [string | null, string | null]; white: ReviewSide; black: ReviewSide; excluded: boolean; touched?: boolean }[];
 }

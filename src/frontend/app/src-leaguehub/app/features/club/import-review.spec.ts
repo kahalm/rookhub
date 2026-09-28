@@ -136,4 +136,16 @@ describe('ImportReview', () => {
     expect(r.visible().map(g => g.game.index)).toEqual([2, 5]);
     expect(r.filterCounts()).toEqual({ all: 5, skipped: 3, new: 4, unknown: 2 });
   });
+
+  it('Entwurf (0.595.0): der gespeicherte Stand stellt Korrekturen, Häkchen und die Vorgabe „ersetzen" wieder her', () => {
+    const r = new ImportReview(PREVIEW, false);
+    r.choosePerson(5, 'white', { name: 'Huber, Franz', fide: '1', teams: ['Absam'], club: false });
+    r.toggleInclude(1);
+    const back = ImportReview.restore(PREVIEW, r.snapshot(), true);         // die Vorgabe der Seite gilt nicht, der Stand schon
+    expect(back.replaceClub).toBeFalse();
+    expect(back.decisions()).toEqual(r.decisions());
+    expect(back.games().find(g => g.game.index === 5)!.white.name).toBe('Huber, Franz');
+    // Unlesbarer oder fremder Stand: einfach die Vorgaben.
+    expect(ImportReview.restore(PREVIEW, '{kaputt', true).decisions()).toEqual(new ImportReview(PREVIEW, true).decisions());
+  });
 });

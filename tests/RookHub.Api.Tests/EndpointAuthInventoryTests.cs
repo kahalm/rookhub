@@ -67,6 +67,12 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}/club/scoresheet/status",
         "POST /api/league/s/{token}/club/scans",
         "POST /api/league/s/{token}/club/scans/lookup",
+        // Entwürfe der PGN-Importe ohne Konto (0.595.0): der Teilen-Link ist der Nachweis, der Schlüssel der Zugriff.
+        "POST /api/league/s/{token}/club/drafts",
+        "POST /api/league/s/{token}/club/drafts/lookup",
+        "GET /api/league/s/{token}/club/drafts/{key}",
+        "PUT /api/league/s/{token}/club/drafts/{key}",
+        "DELETE /api/league/s/{token}/club/drafts/{key}",
         "GET /api/league/s/{token}/club/scans/{key}",
         "GET /api/league/s/{token}/club/scans/{key}/photo",
         "POST /api/league/s/{token}/club/scans/{key}/resolve",

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
@@ -46,12 +46,50 @@ export class ClubClient {
     return firstValueFrom(this.http.get(`${this.base}/games/pgn`, { params: this.params(fide, q), responseType: 'blob' }));
   }
 
-  preview(pgn: string): Promise<ClubPreview> {
-    return firstValueFrom(this.http.post<ClubPreview>(`${this.base}/games/preview`, { pgn }));
+  /** `draftId` (angemeldet): gehört zu diesem Entwurf — ein Verwalter, der ihn fertigstellt, bekommt die Vorgaben des Einreichers. */
+  preview(pgn: string, draftId?: number | null): Promise<ClubPreview> {
+    return firstValueFrom(this.http.post<ClubPreview>(`${this.base}/games/preview`, this.withDraft({ pgn }, draftId)));
   }
 
-  importPgn(pgn: string, games: ImportGameDecision[]): Promise<ClubImportResult> {
-    return firstValueFrom(this.http.post<ClubImportResult>(`${this.base}/games/import`, { pgn, games }));
+  /** `draftId` (angemeldet): die Partien tragen dann den Einreicher als Hochladenden, nicht den Verwalter. */
+  importPgn(pgn: string, games: ImportGameDecision[], draftId?: number | null): Promise<ClubImportResult> {
+    return firstValueFrom(this.http.post<ClubImportResult>(`${this.base}/games/import`, this.withDraft({ pgn, games }, draftId)));
+  }
+
+  private withDraft<T extends object>(body: T, draftId?: number | null): T & { draftId?: number } {
+    return draftId != null && !this.anonymous ? { ...body, draftId } : body;
+  }
+
+  // ── Entwürfe (0.595.0): jede eingereichte Partieliste liegt sofort online ──────────────────
+
+  private withRef<T extends { id: number; key?: string | null }>(d: T): T & { ref: string } {
+    return { ...d, ref: this.anonymous ? d.key ?? '' : String(d.id) };
+  }
+
+  async createDraft(pgn: string, source: string | null, label: string | null): Promise<ClubDraft> {
+    return this.withRef(await firstValueFrom(this.http.post<ClubDraft>(`${this.base}/drafts`, { pgn, source, label })));
+  }
+
+  /** Die eigenen offenen Entwürfe — ohne Konto die zu den Schlüsseln, die sich der Browser gemerkt hat. */
+  async drafts(keys: string[] = []): Promise<ClubDraft[]> {
+    if (this.anonymous) {
+      if (!keys.length) return [];
+      const r = await firstValueFrom(this.http.post<ClubDraft[]>(`${this.base}/drafts/lookup`, { keys }));
+      return r.map(d => this.withRef(d));
+    }
+    return (await firstValueFrom(this.http.get<ClubDraft[]>(`${this.base}/drafts`))).map(d => this.withRef(d));
+  }
+
+  async draft(ref: string): Promise<ClubDraftDetail> {
+    return this.withRef(await firstValueFrom(this.http.get<ClubDraftDetail>(`${this.base}/drafts/${encodeURIComponent(ref)}`)));
+  }
+
+  saveDraft(ref: string, body: { state?: string; imported?: number[] }): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`${this.base}/drafts/${encodeURIComponent(ref)}`, body));
+  }
+
+  deleteDraft(ref: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/drafts/${encodeURIComponent(ref)}`));
   }
 
   /** Eine Partie aus einem Partieformular; `scanRef` wird danach geschlossen. */
@@ -145,6 +183,12 @@ export class ClubApiService {
 
   client(share: string | null = null): ClubClient {
     return new ClubClient(this.http, share);
+  }
+
+  /** Alle offenen Entwürfe von PGN-Importen (Verwalter, 0.595.0) — zum Fertigstellen, wenn jemand abgebrochen hat. */
+  async allDrafts(): Promise<ClubDraft[]> {
+    const list = await firstValueFrom(this.http.get<ClubDraft[]>('/api/league/club/admin/drafts'));
+    return list.map(d => ({ ...d, ref: String(d.id) }));
   }
 
   /** Alle offenen Liga-Einlesungen (Verwalter) — was hochgeladen, aber nie geprüft wurde, hängt sonst im Limbo. */

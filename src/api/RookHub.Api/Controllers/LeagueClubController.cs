@@ -71,15 +71,72 @@ public class LeagueClubController : BaseApiController
     [HttpPost("games/preview")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubPreviewDto>> Preview([FromBody] LeagueClubPreviewRequest req, CancellationToken ct) =>
-        ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.PreviewAsync(GetUserId(), req!.Pgn, ct));
+    public async Task<ActionResult<LeagueClubPreviewDto>> Preview([FromBody] LeagueClubPreviewRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
+            : Ok(await _club.PreviewAsync(await ActingUserAsync(req!.DraftId, drafts, ct), req.Pgn, ct));
+
+    /// <summary>Für wen gerechnet wird: ohne Entwurf der Aufrufer; mit Entwurf (auf den er Zugriff hat) der Einreicher — ein
+    /// Verwalter, der fertigstellt, handelt für ihn (ohne Konto eingereicht: für niemanden).</summary>
+    private async Task<int?> ActingUserAsync(int? draftId, LeagueClubDraftService drafts, CancellationToken ct)
+    {
+        if (draftId is not int id) return GetUserId();
+        var (found, owner) = await drafts.ActingUserAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct);
+        return found ? owner : GetUserId();
+    }
+
+    // ── Entwürfe (0.595.0): jede eingereichte Partieliste liegt sofort online ────────────────────
+
+    [HttpPost("drafts")]
+    [HasPermission(Permissions.LeagueContribute)]
+    [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
+    public async Task<IActionResult> CreateDraft([FromBody] LeagueClubDraftCreateRequest req, [FromServices] LeagueClubDraftService drafts,
+        CancellationToken ct)
+    {
+        if (ClubUpload.CheckPgn(req?.Pgn) is { } bad) return BadRequest(bad);
+        var (draft, reason) = await drafts.CreateAsync(GetUserId(), null, req!.Pgn, req.Source, req.Label, ct);
+        return draft == null ? BadRequest(new { reason, message = "Too many open lists." }) : Ok(draft);
+    }
+
+    [HttpGet("drafts")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<ActionResult<List<LeagueClubDraftDto>>> Drafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        Ok(await drafts.ListAsync(DraftActor.User(GetUserId(), false), null, ct));
+
+    [HttpGet("drafts/{id:int}")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<ActionResult<LeagueClubDraftDetailDto>> Draft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        await drafts.GetAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct) is { } d ? Ok(d) : NotFound();
+
+    [HttpPut("drafts/{id:int}")]
+    [HasPermission(Permissions.LeagueContribute)]
+    [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
+    public async Task<IActionResult> SaveDraft(int id, [FromBody] LeagueClubDraftSaveRequest req, [FromServices] LeagueClubDraftService drafts,
+        CancellationToken ct)
+    {
+        var (found, reason) = await drafts.SaveAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, req ?? new(), ct);
+        return !found ? NotFound() : reason != null ? BadRequest(new { reason }) : NoContent();
+    }
+
+    [HttpDelete("drafts/{id:int}")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<IActionResult> DeleteDraft(int id, [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        await drafts.DeleteAsync(DraftActor.User(GetUserId(), await CanManageAsync()), id, ct) ? NoContent() : NotFound();
+
+    /// <summary>Alle offenen Entwürfe (Verwalter) — auch über Teilen-Links, damit nichts liegen bleibt.</summary>
+    [HttpGet("admin/drafts")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<ActionResult<List<LeagueClubDraftDto>>> AllDrafts([FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        Ok(await drafts.ListAllAsync(GetUserId(), ct));
 
     /// <summary>PGN übernehmen, je Partie mit den Entscheidungen aus der Übersicht → <see cref="LeagueClubImportResultDto"/>.</summary>
     [HttpPost("games/import")]
     [HasPermission(Permissions.LeagueContribute)]
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
-    public async Task<ActionResult<LeagueClubImportResultDto>> Import([FromBody] LeagueClubImportRequest req, CancellationToken ct) =>
-        ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportPgnAsync(GetUserId(), req!.Pgn, req.Games, ct));
+    public async Task<ActionResult<LeagueClubImportResultDto>> Import([FromBody] LeagueClubImportRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct) =>
+        ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad)
+            : Ok(await _club.ImportPgnAsync(await ActingUserAsync(req!.DraftId, drafts, ct), req.Pgn, req.Games, ct));
 
     /// <summary>Eine Partie (aus einem Partieformular). 400 mit <c>reason</c> wie beim Import, dazu <c>duplicate</c>;
     /// die Einlesung (<c>scanId</c>) wird danach geschlossen — ihr Foto verschwindet.</summary>
@@ -288,6 +345,51 @@ public class LeagueShareClubController : ControllerBase
     }
 
     public sealed record KeysRequest(List<string>? Keys);
+
+    // ── Entwürfe ohne Konto (0.595.0): gehören dem Browser mit dem Schlüssel ─────────────────────
+
+    [HttpPost("drafts")]
+    [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
+    public async Task<IActionResult> CreateDraft(string token, [FromBody] LeagueClubDraftCreateRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        if (ClubUpload.CheckPgn(req?.Pgn) is { } bad) return BadRequest(bad);
+        var (draft, reason) = await drafts.CreateAsync(null, IpHash, req!.Pgn, req.Source, req.Label, ct);
+        return draft == null ? BadRequest(new { reason, message = "Too many open lists." }) : Ok(draft);
+    }
+
+    [HttpPost("drafts/lookup")]
+    public async Task<IActionResult> DraftLookup(string token, [FromBody] KeysRequest req, [FromServices] LeagueClubDraftService drafts,
+        CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return Ok(await drafts.ListAsync(DraftActor.Anonymous(null), req?.Keys ?? new(), ct));
+    }
+
+    [HttpGet("drafts/{key}")]
+    public async Task<IActionResult> Draft(string token, string key, [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return await drafts.GetAsync(DraftActor.Anonymous(key), null, ct) is { } d ? Ok(d) : NotFound();
+    }
+
+    [HttpPut("drafts/{key}")]
+    [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
+    public async Task<IActionResult> SaveDraft(string token, string key, [FromBody] LeagueClubDraftSaveRequest req,
+        [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        var (found, reason) = await drafts.SaveAsync(DraftActor.Anonymous(key), null, req ?? new(), ct);
+        return !found ? NotFound() : reason != null ? BadRequest(new { reason }) : NoContent();
+    }
+
+    [HttpDelete("drafts/{key}")]
+    public async Task<IActionResult> DeleteDraft(string token, string key, [FromServices] LeagueClubDraftService drafts, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return await drafts.DeleteAsync(DraftActor.Anonymous(key), null, ct) ? NoContent() : NotFound();
+    }
 
     /// <summary>Die offenen Einlesungen zu den Schlüsseln, die der Browser sich gemerkt hat.</summary>
     [HttpPost("scans/lookup")]

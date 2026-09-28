@@ -1386,6 +1386,18 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   nicht; war sie schon gespeichert und nur die Antwort verloren, zählt der Server sie als doppelt. Scheitert es endgültig,
   bleibt das Gespeicherte, und „Weiter importieren (n übrig)“ schickt nur den Rest. Ohne `pgn` (älterer Server) geht
   alles in einer Anfrage wie vorher.
+* **Entwürfe** (0.595.0, Wunsch „wenn jemand eine neue Ligapartie einträgt — egal wie — soll sie gleich online abgelegt
+  werden, damit ein Admin den Import fertigstellen kann“; `Services/League/LeagueClubDraftService.cs`, Tabelle
+  `LeagueClubDrafts`): beim Lesen der Übersicht legt die Seite die Liste sofort als Entwurf ab (Datei, eingefügt,
+  Lichess-Studie, Sprung aus RookHub), speichert den Stand der Übersicht gedrosselt (`ImportReview.snapshot`, für den
+  Server opak) und nach jeder Portion die importierten Nummern. „Deine offenen Listen“ nimmt sie wieder auf
+  (`ImportReview.restore` auf einer frischen Übersicht; schon importierte Partien sind dann Dubletten), Verwalter sehen
+  unter „Offene Listen anderer“ ALLE (auch über Teilen-Links) und stellen fertig. **Mit `draftId` rechnen Übersicht und
+  Import für den EINREICHER** (`ActingUserAsync`): seine Seite „du selbst“ wird ersetzt, die Partien tragen ihn als
+  Hochladenden, ohne Konto eingereicht niemanden — nicht den Verwalter. Fertig importiert oder verworfen wird die
+  Zeile GELÖSCHT (der Rohtext nennt die Spieler von Schwaz mit Namen), ebenso nach 30 Tagen ohne Bewegung und beim
+  Kontolöschen. Deckel: 20 offene je Konto, 5 je IP ohne Konto (HMAC wie bei den Formularen); ohne Konto gehört der
+  Entwurf dem Browser mit dem Schlüssel (`lh-anon-drafts`).
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
 * **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien
@@ -1431,6 +1443,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates, lastNameOnly, mega }` |
 | GET | `/api/league/club/scoresheet/status` | contribute | Tageszahl dieses Wegs (10) |
 | GET | `/api/league/club/admin/scans` | manage | Alle offenen Liga-Einlesungen `[{ scan, viaShareLink, mine }]` (jüngste 50) |
+| POST/GET | `/api/league/club/drafts` | contribute | Entwurf ablegen `{ pgn, source, label }` (400 `tooManyDrafts`) / die eigenen offenen (0.595.0) |
+| GET/PUT/DELETE | `/api/league/club/drafts/{id}` | contribute | Entwurf öffnen (Rohtext, Stand, importierte) / Stand speichern `{ state?, imported? }` / löschen — Einreicher oder Verwalter |
+| GET | `/api/league/club/admin/drafts` | manage | Alle offenen Entwürfe (jüngste 100) mit `owner`, `viaShareLink`, `mine` |
 | GET/POST | `/api/league/club/scans` | contribute | offene Liga-Einlesungen / Foto hochladen (multipart wie `POST /api/scoresheets`) |
 | GET | `/api/league/club/scans/{id}` (+`/photo`, `POST /resolve`, `DELETE`) | contribute | Stand / Foto / Rest neu aufbereiten / verwerfen |
 | POST | `/api/league/s/{token}/club/games/preview`, `/games/import` | Teilen-Link | wie oben, ohne Konto |
@@ -1439,6 +1454,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
 | POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
 | POST | `/api/league/s/{token}/club/scans/lookup` | Teilen-Link | `{ keys[] }` → die offenen Einlesungen dazu |
+| POST | `/api/league/s/{token}/club/drafts` (+`/lookup`), GET/PUT/DELETE `…/drafts/{key}` | Teilen-Link | Entwürfe ohne Konto, über den Schlüssel (0.595.0) |
 | GET | `/api/league/s/{token}/club/scans/{key}` (+`/photo`, `POST /resolve`, `DELETE`) | Teilen-Link | wie angemeldet, über den Schlüssel |
 
 Der Teilen-Link muss gültig sein (`LeagueService.ShareValidAsync`, sonst 404); Rate-Limit `anonymous-tournament`. Lesen
@@ -3379,6 +3395,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, **UserId ist NULLBAR (ohne Konto über einen LeagueHub-Teilen-Link), dann AccessKey? (≤32, UNIQUE, geheimer Schlüssel) + AnonIpHash? (≤64, HMAC der IP, nach 2 Tagen geleert)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer) |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
+| LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | LeagueMegaPlayers | Spielerverzeichnis der ganzen ChessBase-Megabase (0.575.0) für die Namenssuche in LeagueHub; wird beim Einspielen komplett ersetzt | Name (≤120), NameKey (≤120, klein ohne Akzente, Index), FideId? (≤16, Index), Games, LastYear?, MaxElo? |
 | GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), **ShareToken? (≤32, UNIQUE — öffentlicher Link `/r/{token}`, NULL = nicht geteilt) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
 | GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. **`BlackToMove`** gilt nur für eine Zugfolge OHNE Anschluss (sonst sagt es die Stellung davor bzw. die FEN); beim ersten Teil heißt es „das ist nicht die Eröffnung". `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), **Certain (Vorgabe true — „hier bin ich mir nicht sicher" ist die Auskunft; ein per Lückensuche eingesetztes Teil steht auf false)**, FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |

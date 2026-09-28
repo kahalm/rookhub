@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, flush, flushMicrotasks, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -20,7 +20,7 @@ const PREVIEW: ClubPreview = { truncated: false, games: [
 describe('ClubAddPageComponent', () => {
   let fixture: ComponentFixture<ClubAddPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
-  let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy };
+  let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy; allDrafts: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
 
@@ -28,11 +28,17 @@ describe('ClubAddPageComponent', () => {
     localStorage.removeItem('lh-anon-scans');
     query = {};
     params = {};
-    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess']);
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess',
+      'createDraft', 'drafts', 'draft', 'saveDraft', 'deleteDraft']);
     api.scans.and.resolveTo([]);
+    api.drafts.and.resolveTo([]);
+    api.createDraft.and.callFake(async () => ({ ref: '7', id: 7, source: 'text', label: null, gameCount: 1, importedCount: 0,
+      createdAt: '2026-09-28T18:00:00', updatedAt: '2026-09-28T18:00:00', viaShareLink: false, mine: true }));
+    api.saveDraft.and.resolveTo();
+    api.deleteDraft.and.resolveTo();
     api.scoresheetStatus.and.resolveTo({ available: true, dailyLimit: 10, usedToday: 0, languages: [{ code: 'de', name: 'Deutsch', pieces: 'KDTLS' }] });
     service = { client: jasmine.createSpy('client').and.returnValue(api), savedGame: jasmine.createSpy('savedGame'),
-      openScans: jasmine.createSpy('openScans').and.resolveTo([]) };
+      openScans: jasmine.createSpy('openScans').and.resolveTo([]), allDrafts: jasmine.createSpy('allDrafts').and.resolveTo([]) };
   });
 
   function create(perms: boolean | string[] = true): HTMLElement {
@@ -62,7 +68,8 @@ describe('ClubAddPageComponent', () => {
     (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(api.preview).toHaveBeenCalledWith('[White "x"]\n1. e4 *');
+    expect(api.createDraft).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 'text', null);   // gleich online abgelegt (0.595.0)
+    expect(api.preview).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 7);
     expect(api.importPgn).not.toHaveBeenCalled();
     expect(el.querySelector('.review-table')?.textContent).toContain('Hengl, Philip');
 
@@ -72,8 +79,39 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.importPgn).toHaveBeenCalledWith('[White "x"]\n1. e4 *',
-      [{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }]);
+      [{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }], 7);
     expect(el.querySelector('.result')?.textContent).toContain('1 Partie übernommen (1 mit „Schwaz“).');
+    expect(api.deleteDraft).toHaveBeenCalledWith('7');                  // fertig importiert → Entwurf samt Rohtext weg
+  }));
+
+  it('Entwürfe (0.595.0): Korrekturen landen gedrosselt im Entwurf; offene Listen stehen da und lassen sich fortsetzen', fakeAsync(() => {
+    const D = { ref: '9', id: 9, source: 'datei', label: 'liga.pgn', gameCount: 2, importedCount: 1,
+      createdAt: '2026-09-28T17:00:00', updatedAt: '2026-09-28T17:30:00', viaShareLink: false, mine: true };
+    api.drafts.and.resolveTo([D]);
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const item = el.querySelector('.scan-list li')!;
+    expect(item.textContent).toContain('liga.pgn (2 Partien)');
+    expect(item.textContent).toContain('1 von 2 importiert');
+
+    api.draft.and.resolveTo({ ...D, pgn: '[White "x"]\n1. e4 *', imported: [1],
+      state: JSON.stringify({ v: 1, replaceClub: true, games: [] }) });
+    api.preview.and.resolveTo(PREVIEW);
+    (Array.from(item.querySelectorAll('button')).find(b => b.textContent?.includes('Weiter')) as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.preview).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 9);     // für den Einreicher gelesen
+    expect(api.createDraft).not.toHaveBeenCalled();                         // derselbe Entwurf, kein neuer
+    expect(el.querySelector('.draft-note')).not.toBeNull();
+
+    fixture.componentInstance.review()!.toggleInclude(1);                   // eine Korrektur …
+    fixture.detectChanges();
+    tick(1600);                                                              // … gedrosselt gespeichert
+    expect(api.saveDraft).toHaveBeenCalledWith('9', { state: jasmine.any(String) });
+    fixture.componentInstance.onSaved([2]);
+    expect(api.saveDraft).toHaveBeenCalledWith('9', { imported: [1, 2] }); // frühere + neue Portion
+    flush();
   }));
 
   it('Formular angemeldet: 10 je Tag, Foto hochladen, nachfragen bis gelesen', fakeAsync(() => {
@@ -126,7 +164,8 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.lichess).toHaveBeenCalledWith('https://lichess.org/study/AbCdEf12');
-    expect(api.preview).toHaveBeenCalledWith('[Event "Studie: Kapitel 1"]\n1. e4 *');
+    expect(api.preview).toHaveBeenCalledWith('[Event "Studie: Kapitel 1"]\n1. e4 *', 7);
+    expect(api.createDraft).toHaveBeenCalledWith('[Event "Studie: Kapitel 1"]\n1. e4 *', 'lichess', jasmine.stringContaining('lichess.org'));
     expect(el.querySelector('.review-table')).not.toBeNull();
 
     fixture.componentInstance.review.set(null);
@@ -145,7 +184,7 @@ describe('ClubAddPageComponent', () => {
     flushMicrotasks();
     fixture.detectChanges();
     expect(service.savedGame).toHaveBeenCalledWith(33);
-    expect(api.preview).toHaveBeenCalledWith('[White "Oberschmid"]\n1. e4 *');
+    expect(api.preview).toHaveBeenCalledWith('[White "Oberschmid"]\n1. e4 *', 7);
     expect(el.querySelector('.review-table')).not.toBeNull();
   }));
 

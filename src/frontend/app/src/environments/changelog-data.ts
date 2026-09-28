@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.595.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub: every submitted list of games is now stored online right away (file, pasted, Lichess study or from RookHub) — together with your corrections and what has already been imported. Under “Your open lists” you can continue later; managers see all open lists (share links included) and can finish the import for the submitter. Imported or discarded, the list is deleted.", de: "LeagueHub: Jede eingereichte Partieliste liegt jetzt sofort online (Datei, eingefügt, Lichess-Studie oder aus RookHub) — samt deinen Korrekturen und dem, was schon importiert ist. Unter „Deine offenen Listen“ machst du später weiter; Verwalter sehen alle offenen Listen (auch über Teilen-Links) und können den Import für den Einreicher fertigstellen. Importiert oder verworfen wird die Liste gelöscht." },
+  ] },
   { version: "0.594.0", date: "2026-09-28", changes: [
     { en: "LeagueHub club games: a league player without a FIDE ID (e.g. a youth player on a roster) now shows “(no FIDE ID)” instead of the pencil — there is nothing to assign; the pencil stays for names nobody knows.", de: "LeagueHub-Vereinspartien: Ein Ligaspieler ohne FIDE-ID (etwa ein Jugendspieler in einer Meldeliste) zeigt jetzt „(ohne FIDE-ID)“ statt des Bleistifts — da gibt es nichts zuzuordnen; den Bleistift behalten Namen, die niemand kennt." },
   ] },

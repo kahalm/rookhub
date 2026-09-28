@@ -7,6 +7,8 @@ namespace RookHub.Api.DTOs;
 public class LeagueClubPreviewRequest
 {
     public string Pgn { get; set; } = string.Empty;
+    /// <summary>Gehört zu diesem Entwurf (0.595.0) — ein Verwalter, der ihn fertigstellt, bekommt die Vorgaben des Einreichers.</summary>
+    public int? DraftId { get; set; }
 }
 
 /// <summary>Wer an einer Seite sitzt — so, wie der Nutzer es in der Übersicht festgelegt hat.</summary>
@@ -35,6 +37,9 @@ public class LeagueClubImportRequest
 {
     public string Pgn { get; set; } = string.Empty;
     public List<LeagueClubImportGameDecision>? Games { get; set; }
+    /// <summary>Gehört zu diesem Entwurf (0.595.0) — die Partien tragen dann den Einreicher als Hochladenden, nicht den Verwalter,
+    /// der fertigstellt.</summary>
+    public int? DraftId { get; set; }
 }
 
 /// <summary><c>POST /api/league/club/games</c> — EINE Partie (aus der Korrektur eines Partieformulars).</summary>
@@ -233,4 +238,49 @@ public class LeagueClubGameUpdateRequest
     public LeagueClubSideDecision? Black { get; set; }
     /// <summary><c>1-0</c>, <c>0-1</c>, <c>1/2-1/2</c>, <c>*</c>; fehlt = unverändert.</summary>
     public string? Result { get; set; }
+}
+
+/// <summary><c>POST …/club/drafts</c> — eine Partieliste als Entwurf ablegen (0.595.0).</summary>
+public class LeagueClubDraftCreateRequest
+{
+    public string Pgn { get; set; } = string.Empty;
+    /// <summary><c>datei</c>, <c>text</c>, <c>lichess</c>, <c>rookhub</c>.</summary>
+    public string? Source { get; set; }
+    /// <summary>Dateiname bzw. Adresse der Studie.</summary>
+    public string? Label { get; set; }
+}
+
+/// <summary><c>PUT …/club/drafts/{id}</c> — fehlende Felder bleiben, wie sie sind.</summary>
+public class LeagueClubDraftSaveRequest
+{
+    /// <summary>Der Stand der Übersicht (JSON der Seite, für den Server opak).</summary>
+    public string? State { get; set; }
+    /// <summary>Nummern der schon importierten Partien (ersetzt die gespeicherten).</summary>
+    public List<int>? Imported { get; set; }
+}
+
+/// <summary>Ein offener Entwurf in einer Liste (ohne Rohtext).</summary>
+public class LeagueClubDraftDto
+{
+    public int Id { get; set; }
+    /// <summary>Ohne Konto: der geheime Schlüssel (nur für den Browser, der ihn hat).</summary>
+    public string? Key { get; set; }
+    public string? Source { get; set; }
+    public string? Label { get; set; }
+    public int GameCount { get; set; }
+    public int ImportedCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    /// <summary>Wer eingereicht hat (nur in der Liste der Verwalter).</summary>
+    public string? Owner { get; set; }
+    public bool ViaShareLink { get; set; }
+    /// <summary>Der eigene (Liste der Verwalter).</summary>
+    public bool Mine { get; set; }
+}
+
+public class LeagueClubDraftDetailDto : LeagueClubDraftDto
+{
+    public string Pgn { get; set; } = string.Empty;
+    public string? State { get; set; }
+    public List<int> Imported { get; set; } = new();
 }

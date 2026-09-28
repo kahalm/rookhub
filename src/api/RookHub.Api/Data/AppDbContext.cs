@@ -102,6 +102,7 @@ public class AppDbContext : DbContext
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
     public DbSet<LeagueMegaPlayer> LeagueMegaPlayers => Set<LeagueMegaPlayer>();
     public DbSet<LeagueNameAlias> LeagueNameAliases => Set<LeagueNameAlias>();
+    public DbSet<LeagueClubDraft> LeagueClubDrafts => Set<LeagueClubDraft>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
@@ -673,6 +674,19 @@ public class AppDbContext : DbContext
             e.HasIndex(p => p.NameKey);
             e.HasIndex(p => p.FideId);
         });
+        modelBuilder.Entity<LeagueClubDraft>(e =>
+        {
+            e.Property(d => d.AccessKey).HasMaxLength(32);
+            e.Property(d => d.AnonIpHash).HasMaxLength(64);
+            e.Property(d => d.Source).HasMaxLength(16);
+            e.Property(d => d.Label).HasMaxLength(300);
+            e.Property(d => d.Pgn).HasColumnType("longtext");
+            e.Property(d => d.StateJson).HasColumnType("longtext");
+            e.Property(d => d.Imported).HasColumnType("text");
+            e.HasIndex(d => d.AccessKey).IsUnique();
+            e.HasIndex(d => new { d.UserId, d.UpdatedAt });
+        });
+
         modelBuilder.Entity<LeagueNameAlias>(e =>
         {
             e.Property(a => a.NameKey).HasMaxLength(120);

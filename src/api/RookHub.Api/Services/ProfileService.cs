@@ -271,6 +271,8 @@ public class ProfileService
         // wer sie hochgeladen hat, geht — bei anonymisierten gibt es ihn ohnehin nicht.
         foreach (var g in await _db.LeagueClubGames.Where(g => g.UploadedByUserId == userId).ToListAsync())
             g.UploadedByUserId = null;
+        // Offene Entwürfe von PGN-Importen (0.595.0) gehen ganz — sie tragen den Rohtext samt Klarnamen.
+        _db.LeagueClubDrafts.RemoveRange(await _db.LeagueClubDrafts.Where(d => d.UserId == userId).ToListAsync());
         // KidHub-Fortschritt: Spielstand des Kindes, keine Statistik fuer andere — geht mit dem Konto.
         _db.KidsLevelProgresses.RemoveRange(await _db.KidsLevelProgresses.Where(p => p.UserId == userId).ToListAsync());
         _db.KidsCourseProgresses.RemoveRange(await _db.KidsCourseProgresses.Where(p => p.UserId == userId).ToListAsync());

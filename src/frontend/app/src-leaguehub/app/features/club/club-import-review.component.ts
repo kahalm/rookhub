@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ClubClient } from '../../core/club-api.service';
-import { ClubImportResult, RosterPerson } from '../../core/club.models';
+import { ClubImportResult, ImportGameDecision, RosterPerson } from '../../core/club.models';
 import { ANON_NAME, reasonText } from '../../core/club-format';
 import { de } from '../../core/league-format';
 import { ImportReview, ReviewFilter, ReviewGame, ReviewSide, SideKey, included, needsLook, optionalGame, reviewStatus } from './import-review';
@@ -124,7 +124,12 @@ export class ClubImportReviewComponent {
   @Input({ required: true }) pgn!: string;
   /** Mit Konto werden Korrekturen als Namens-Zuordnung gemerkt (über einen Teilen-Link nicht). */
   @Input() remembers = true;
+  /** Der Entwurf, zu dem die Liste gehört (0.595.0, angemeldet) — geht mit jeder Portion an den Server. */
+  @Input() draftId: number | null = null;
   @Output() imported = new EventEmitter<ClubImportResult>();
+  /** Nach jeder gespeicherten Portion: die Nummern ALLER in diesem Lauf gespeicherten Partien — die Seite legt sie im
+   *  Entwurf ab, damit ein Abbruch nichts doppelt anfängt. */
+  @Output() savedChange = new EventEmitter<number[]>();
   @Output() cancel = new EventEmitter<void>();
 
   readonly sides: SideKey[] = ['white', 'black'];
@@ -239,7 +244,7 @@ export class ClubImportReviewComponent {
     this.error.set(null);
     try {
       if (decisions.some(d => !texts.get(d.index))) {
-        this.imported.emit(await this.client.importPgn(this.pgn, decisions));
+        this.imported.emit(await this.send(this.pgn, decisions));
         return;
       }
       const acc = this.acc ??= { added: 0, duplicates: 0, anonymized: 0, remembered: 0, truncated: false, ids: [], failed: [] };
@@ -247,7 +252,7 @@ export class ClubImportReviewComponent {
       this.progress.set({ done: this.saved.size, total });
       for (let i = 0; i < decisions.length; i += ClubImportReviewComponent.Portion) {
         const part = decisions.slice(i, i + ClubImportReviewComponent.Portion);
-        const r = await this.withRetry(() => this.client.importPgn(
+        const r = await this.withRetry(() => this.send(
           part.map(d => texts.get(d.index)!).join('\n'), part.map((d, k) => ({ ...d, index: k + 1 }))));
         acc.added += r.added;
         acc.duplicates += r.duplicates;
@@ -257,6 +262,7 @@ export class ClubImportReviewComponent {
         acc.failed.push(...r.failed.map(f => ({ ...f, index: part[f.index - 1]?.index ?? f.index })));
         for (const d of part) this.saved.add(d.index);
         this.savedCount.set(this.saved.size);
+        this.savedChange.emit([...this.saved]);
         this.progress.set({ done: this.saved.size, total });
       }
       this.acc = null;
@@ -271,6 +277,11 @@ export class ClubImportReviewComponent {
       this.importing.set(false);
       this.progress.set(null);
     }
+  }
+
+  /** Mit Entwurf geht seine Nummer mit (ein Verwalter, der fertigstellt, handelt für den Einreicher). */
+  private send(pgn: string, games: ImportGameDecision[]): Promise<ClubImportResult> {
+    return this.draftId != null ? this.client.importPgn(pgn, games, this.draftId) : this.client.importPgn(pgn, games);
   }
 
   /** Eine Portion, bei Netz-/Serverfehlern bis zu zweimal wiederholt (429: länger warten). Eine Absage (400) nicht. */

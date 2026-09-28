@@ -163,3 +163,28 @@ export interface OpenScan { scan: ScoresheetScan; viaShareLink: boolean; mine: b
 
 /** `PUT …/games/{id}` — eine Seite ohne Angabe bleibt, wie sie ist; „Schwaz" lässt sich nicht ändern. */
 export interface ClubGameUpdate { white?: SideDecision | null; black?: SideDecision | null; result?: string | null }
+
+/** Ein Entwurf eines PGN-Imports (0.595.0): liegt online, bis alles importiert oder verworfen ist. `ref` = Nummer
+ *  (angemeldet) bzw. geheimer Schlüssel (ohne Konto). */
+export interface ClubDraft {
+  ref: string;
+  id: number;
+  key?: string | null;
+  source: string | null;
+  label: string | null;
+  gameCount: number;
+  importedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  /** Wer eingereicht hat (Liste der Verwalter). */
+  owner?: string | null;
+  viaShareLink: boolean;
+  mine: boolean;
+}
+
+export interface ClubDraftDetail extends ClubDraft {
+  pgn: string;
+  /** Stand der Übersicht (JSON dieser Seite). */
+  state: string | null;
+  imported: number[];
+}

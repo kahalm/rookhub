@@ -222,3 +222,34 @@ public class LeagueMegaPlayer
     public int? LastYear { get; set; }
     public int? MaxElo { get; set; }
 }
+
+/// <summary>
+/// Eine eingereichte Partieliste, die noch nicht (ganz) importiert ist (0.595.0, Wunsch 2026-09-28: „wenn jemand eine neue
+/// Ligapartie einträgt — egal wie — soll sie gleich online abgelegt werden, damit ein Admin den Import fertigstellen kann,
+/// wenn er keine Lust mehr hat"; analog zu den Partieformularen). Angelegt, sobald die Übersicht gelesen wird; trägt den
+/// Rohtext, den Stand der Übersicht (Korrekturen, für den Server opak) und welche Partien schon importiert sind.
+/// <para>Mit dem Abschluss (alles importiert) oder Verwerfen wird die Zeile GELÖSCHT — der Rohtext nennt die Spieler von
+/// Schwaz noch mit Namen, und das soll nicht liegen bleiben. Ohne Bewegung nach <c>LeagueClubDraftService.Retention</c> ebenso.</para>
+/// </summary>
+public class LeagueClubDraft
+{
+    public int Id { get; set; }
+    /// <summary>Wer eingereicht hat; <c>null</c> = über einen Teilen-Link ohne Konto (dann gehört er dem <see cref="AccessKey"/>).</summary>
+    public int? UserId { get; set; }
+    /// <summary>Geheimer Schlüssel des Browsers (32 Hex) — nur ohne Konto.</summary>
+    public string? AccessKey { get; set; }
+    /// <summary>HMAC der IP (ohne Konto) — für den Deckel offener Entwürfe je Adresse; die Adresse selbst steht nirgends.</summary>
+    public string? AnonIpHash { get; set; }
+    /// <summary>Woher: <c>datei</c>, <c>text</c>, <c>lichess</c>, <c>rookhub</c>.</summary>
+    public string? Source { get; set; }
+    /// <summary>Dateiname bzw. Adresse der Studie — zum Wiedererkennen in der Liste.</summary>
+    public string? Label { get; set; }
+    public string Pgn { get; set; } = string.Empty;
+    /// <summary>Der Stand der Übersicht (JSON der Seite, opak).</summary>
+    public string? StateJson { get; set; }
+    /// <summary>Nummern der schon importierten Partien (CSV).</summary>
+    public string? Imported { get; set; }
+    public int GameCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
