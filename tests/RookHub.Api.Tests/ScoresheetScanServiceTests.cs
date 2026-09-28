@@ -849,6 +849,8 @@ public class ScoresheetScanServiceTests : IDisposable
 
     // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
 
+    private static ScoresheetScanService.ScanActor As(int userId) => ScoresheetScanService.ScanActor.User(userId);
+
     [Fact]
     public async Task LeagueScan_IsNoSavedGame_AndClosingDropsThePhotoButKeepsTheCount()
     {
@@ -865,22 +867,80 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Empty(await _service.ListAsync(u.Id));                    // nicht in RookHubs Liste
         Assert.Equal(scan.Id, (await _service.LeagueScansAsync(u.Id)).Single().Id);
 
-        var state = await _service.LeagueScanStateAsync(u.Id, scan.Id);
+        var state = await _service.LeagueScanStateAsync(As(u.Id), scan.Id);
         Assert.Equal("done", state!.Scan.Status);
         Assert.Equal(Written.Length, state.Plies.Count);
         Assert.Equal(("Didi", "Patrick", "0-1", "black"), (state.White, state.Black, state.Result, state.OwnerSide));
-        Assert.Null(await _service.LeagueScanStateAsync(u.Id + 1, scan.Id));   // fremd
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id + 1), scan.Id));   // fremd
 
-        var rest = await _service.ResolveLeagueRestAsync(u.Id, scan.Id, new[] { "Nf3", "d5" }, 2);
+        var rest = await _service.ResolveLeagueRestAsync(As(u.Id), scan.Id, new[] { "Nf3", "d5" }, 2);
         Assert.Equal(Written.Length, rest!.Plies.Count + 2);
 
-        Assert.NotNull(await _service.LeagueScanPhotoAsync(u.Id, scan.Id));
-        Assert.True(await _service.CloseLeagueScanAsync(u.Id, scan.Id));
-        Assert.Null(await _service.LeagueScanPhotoAsync(u.Id, scan.Id));
-        Assert.Null(await _service.LeagueScanStateAsync(u.Id, scan.Id));
+        Assert.NotNull(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id));
+        Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
+        Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), scan.Id));
         Assert.Empty(await _service.LeagueScansAsync(u.Id));
         var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync();
         Assert.Null(row.TranscriptionJson);
-        Assert.Equal(1, (await _service.StatusAsync(u.Id)).UsedToday);   // zählt weiter fürs Tageskontingent
+        Assert.Equal(1, (await _service.StatusAsync(u.Id, ScoresheetScan.PurposeLeague)).UsedToday);   // zählt weiter
+    }
+
+    [Fact]
+    public async Task LeagueScans_HaveTheirOwnDailyLimitOfTen()
+    {
+        var u = await UserAsync();
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);   // RookHub: 1/Tag
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto")).Reason);
+        for (var i = 0; i < ScoresheetScanService.DefaultLeagueDailyLimit; i++)
+        {
+            // Offene Einlesungen sind je Nutzer auf drei gedeckelt — fertig markieren, dann zählt nur die Tageszahl.
+            var (sc, why) = await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", null, ScoresheetScan.PurposeLeague);
+            Assert.Null(why);
+            var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == sc!.Id);
+            row.Status = ScoresheetScanStatus.Done;
+            await _db.SaveChangesAsync();
+        }
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "auto", null, ScoresheetScan.PurposeLeague)).Reason);
+        var status = await _service.StatusAsync(u.Id, ScoresheetScan.PurposeLeague);
+        Assert.Equal((10, 10), (status.DailyLimit, status.UsedToday));
+        Assert.Equal((1, 1), ((await _service.StatusAsync(u.Id)).DailyLimit, (await _service.StatusAsync(u.Id)).UsedToday));
+    }
+
+    [Fact]
+    public async Task AnonymousScan_ReachableOnlyWithItsKey_LimitedPerIpAndPerDay()
+    {
+        var ip = _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.7"));
+        Assert.NotEqual(ip, _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.8")));
+        Assert.DoesNotContain("203", ip);                                        // die Adresse selbst steht nirgends
+
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, key, reason) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", "white", ip);
+        Assert.Null(reason);
+        Assert.NotNull(key);
+        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync();
+        Assert.Null(row.UserId);
+        Assert.Equal((ScoresheetScan.PurposeLeague, ip), (row.Purpose, row.AnonIpHash));
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(scan!.Id, default);
+
+        var anon = ScoresheetScanService.ScanActor.Anonymous(key!);
+        Assert.Equal("done", (await _service.LeagueScanStateAsync(anon, null))!.Scan.Status);
+        Assert.Null(await _service.LeagueScanStateAsync(ScoresheetScanService.ScanActor.Anonymous("falsch"), null));
+        Assert.Equal(key, (await _service.LeagueScansByKeysAsync(new[] { key!, "gibtsnicht" })).Single().Key);
+        Assert.True(await _service.CloseLeagueScanAsync(anon, null));
+        Assert.Null(await _service.LeagueScanStateAsync(anon, null));           // Schlüssel ist weg
+
+        // Je IP zehn in 24 h, alle zusammen hundert — nachgestellt mit fertigen Zeilen.
+        for (var i = 0; i < ScoresheetScanService.AnonPerIpDailyLimit - 1; i++)
+            _db.ScoresheetScans.Add(new ScoresheetScan { Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = ip, Status = ScoresheetScanStatus.Done, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal("dailyLimit", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, ip)).Reason);
+        var other = _service.AnonIpHash(System.Net.IPAddress.Parse("198.51.100.1"));
+        for (var i = 0; i < ScoresheetScanService.AnonDailyLimit - ScoresheetScanService.AnonPerIpDailyLimit; i++)
+            _db.ScoresheetScans.Add(new ScoresheetScan { Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x" + i, Status = ScoresheetScanStatus.Done, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal("anonDailyLimit", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, other)).Reason);
+        Assert.Equal("anonDailyLimit", (await _service.AnonStatusAsync(other)).Blocked);
     }
 }

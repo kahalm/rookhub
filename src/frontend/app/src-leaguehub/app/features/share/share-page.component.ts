@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
@@ -14,7 +14,7 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
   selector: 'lh-share-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent],
+  imports: [FixtureViewComponent, RouterLink],
   template: `
     @if (invalid()) {
       <section class="gate">
@@ -22,10 +22,20 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
         <p>Dieser Link ist abgelaufen oder wurde widerrufen.</p>
       </section>
     } @else if (data(); as d) {
+      <!-- Ganz oben und auffällig (Wunsch des Nutzers): wer den Link bekommt, soll seine Partien beisteuern. -->
+      <section class="cta" aria-labelledby="cta-title">
+        <h2 id="cta-title">Hast du gegen Spieler aus der Liga gespielt? Lade deine Partien hoch.</h2>
+        <p>Ein Foto vom Partieformular oder eine PGN-Datei genügt — ohne Anmeldung. Jede Partie hilft der Vorbereitung;
+          Spieler von Schwaz werden durch „Schwaz“ ersetzt, und es wird nicht gespeichert, wer hochgeladen hat.</p>
+        <div class="cta-actions">
+          <a class="btn-pri" [routerLink]="['/s', token, 'hochladen']" [queryParams]="{ art: 'formular' }">Partieformular fotografieren</a>
+          <a class="btn-sec" [routerLink]="['/s', token, 'hochladen']">PGN hochladen</a>
+        </div>
+      </section>
       <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" />
       <div class="foot-note">
-        <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase und der Partiedatenbank von chess-results.com.</p>
+        <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien von SK Schwaz.</p>
         <p>Die Prozente kommen aus einem Modell, das an früheren Saisonen gelernt hat, wer aufgestellt wird. Die Bretter folgen der Meldeliste.</p>
       </div>
     } @else {

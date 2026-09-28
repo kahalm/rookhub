@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
-import { ClubApiService } from '../../core/club-api.service';
+import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { ClubGame } from '../../core/club.models';
 import { ClubGamesPageComponent } from './club-games-page.component';
@@ -13,12 +13,12 @@ const G = (id: number, extra: Partial<ClubGame> = {}): ClubGame => ({
 
 describe('ClubGamesPageComponent', () => {
   let fixture: ComponentFixture<ClubGamesPageComponent>;
-  let api: jasmine.SpyObj<ClubApiService>;
+  let api: jasmine.SpyObj<ClubClient>;
   let perms: Set<string>;
 
   beforeEach(() => {
     perms = new Set(['league.view', 'league.contribute']);
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['list', 'deleteGame', 'pgn']);
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn']);
     api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(1), G(2, { white: 'Oberschmid, Patrik', whiteFide: '900', anonymized: false, canDelete: true })] });
   });
 
@@ -27,7 +27,7 @@ describe('ClubGamesPageComponent', () => {
       imports: [ClubGamesPageComponent],
       providers: [
         provideRouter([]),
-        { provide: ClubApiService, useValue: api },
+        { provide: ClubApiService, useValue: { client: () => api } },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
       ],

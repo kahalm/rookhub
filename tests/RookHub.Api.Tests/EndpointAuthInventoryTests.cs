@@ -54,6 +54,21 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}",                                 // LeagueShareController.Get (Teilen-Link: EINE Begegnung, Token 144 Bit)
         "GET /api/league/s/{token}/player/{fide}",                   // LeagueShareController.Player (nur Spieler der geteilten Meldeliste)
         "GET /api/league/s/{token}/player/{fide}/pgn",               // LeagueShareController.Pgn (dito)
+        "GET /api/league/s/{token}/player/{fide}/tree",              // LeagueShareController.Tree (Eröffnungsbaum, dito)
+        // Vereins-Datenbank über einen gültigen Teilen-Link, ohne Konto (Wunsch 2026-09-28) — der Link ist der Nachweis,
+        // eine Einlesung gehört dem Browser mit ihrem geheimen Schlüssel; Formulare 10/IP + 100/Tag (LeagueShareClubController)
+        "POST /api/league/s/{token}/club/games/preview",
+        "POST /api/league/s/{token}/club/games/import",
+        "POST /api/league/s/{token}/club/games",
+        "GET /api/league/s/{token}/club/players",
+        "POST /api/league/s/{token}/club/match",
+        "GET /api/league/s/{token}/club/scoresheet/status",
+        "POST /api/league/s/{token}/club/scans",
+        "POST /api/league/s/{token}/club/scans/lookup",
+        "GET /api/league/s/{token}/club/scans/{key}",
+        "GET /api/league/s/{token}/club/scans/{key}/photo",
+        "POST /api/league/s/{token}/club/scans/{key}/resolve",
+        "DELETE /api/league/s/{token}/club/scans/{key}",
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am

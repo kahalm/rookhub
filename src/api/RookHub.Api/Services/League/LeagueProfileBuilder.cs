@@ -26,6 +26,9 @@ public static class LeagueProfileBuilder
 
     private static string H(Game g, string k) => g.Headers.TryGetValue(k, out var v) ? v : "";
 
+    /// <summary>Punkte aus Sicht der Farbe („w"/„s"); unbekanntes Ergebnis = <c>null</c>.</summary>
+    public static double? Points(Game g, string color) => Pts(H(g, "Result"), color);
+
     private static (string, string, string, string) Key(Game g) =>
         (H(g, "Date").Length >= 10 ? H(g, "Date")[..10] : H(g, "Date"), LastName(H(g, "White")), LastName(H(g, "Black")), H(g, "Result"));
 
@@ -55,7 +58,8 @@ public static class LeagueProfileBuilder
             var k = Key(g);
             if (byKey.TryGetValue(k, out var old))
             {
-                if (old.Source == "Lumbra") byKey[k] = old with { Source = "beide" };
+                // „beide" = Lumbra UND chess-results; eine dritte Quelle ändert daran nichts.
+                if (old.Source == "Lumbra" && g.Source == "chess-results") byKey[k] = old with { Source = "beide" };
             }
             else byKey[k] = g;
         }
@@ -63,8 +67,13 @@ public static class LeagueProfileBuilder
     }
 
     /// <summary>Quelle einer gespeicherten Partie: Lumbra trägt FIDE-IDs im Kopf, chess-results nicht.</summary>
+    /// <summary>Kopfzeile mit der Quelle einer nachträglich eingespielten Sammlung (z. B. „Mega" = ChessBase-Megabase,
+    /// <c>POST /api/league/admin/games</c>) — sie trägt selbst FIDE-IDs und sähe sonst wie Lumbra aus.</summary>
+    public const string SourceHeader = "LeagueSource";
+
     public static string StoredSource(Dictionary<string, string> headers) =>
-        headers.ContainsKey("WhiteFideId") || headers.ContainsKey("BlackFideId") ? "Lumbra" : "chess-results";
+        headers.TryGetValue(SourceHeader, out var s) && !string.IsNullOrWhiteSpace(s) ? s.Trim()
+        : headers.ContainsKey("WhiteFideId") || headers.ContainsKey("BlackFideId") ? "Lumbra" : "chess-results";
 
     /// <summary>Die ersten <paramref name="n"/> Halbzüge als SAN (Schreibweise von Gera.Chess wie in
     /// <see cref="GamePlies"/>). Bewusst NICHT über <c>GamePlies.Parse</c>: das spielt die GANZE Partie nach und

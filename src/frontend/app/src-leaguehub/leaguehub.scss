@@ -350,3 +350,51 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .match { font: 400 13px/1.3 var(--body); color: var(--muted); min-height: 1.3em; }
 .match.ok { color: var(--ok); }
 .preview { margin: 4px 0 6px; font-size: 16px; }
+
+/* Aufforderung auf dem Teilen-Link: ganz oben, die einzige kräftige Fläche der Seite */
+.cta { background: var(--ink); color: var(--paper); border-radius: 10px; padding: 18px 18px 16px; margin: 0 0 18px; }
+.cta h2 { margin: 0 0 6px; font: 600 24px/1.2 var(--cond); }
+.cta p { margin: 0 0 12px; max-width: 70ch; color: color-mix(in srgb, var(--paper) 82%, transparent); }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.cta .btn-pri { background: var(--red); border-color: var(--red); color: #fff; }
+.cta .btn-sec { color: var(--paper); border-color: var(--paper); }
+.cta .btn-sec:hover { background: var(--paper); color: var(--ink); }
+
+/* Übersicht vor dem PGN-Import */
+.review-head { display: grid; gap: 8px; margin-bottom: 10px; }
+.review-head p { margin: 0; }
+.review-table td { vertical-align: top; }
+.review-table tr.off td { color: var(--muted); }
+.review-table input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ink); }
+.side-btn {
+  display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; padding: 0; cursor: pointer;
+}
+.side-btn:hover span:first-child { text-decoration: underline; text-underline-offset: 3px; }
+.side-btn:disabled { cursor: default; }
+.side-btn .anon { font-style: italic; }
+.badge { font-size: 12px; line-height: 1.4; padding: 0 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.badge:empty { display: none; }
+.badge.ok { color: var(--ok); border-color: currentColor; }
+.badge.warn { color: var(--warn); border-color: currentColor; }
+.raw { display: block; }
+.ok-text { color: var(--ok); }
+.edit-row td { background: var(--paper); }
+.side-edit { display: grid; gap: 8px; padding: 6px 2px; }
+.side-edit p { margin: 0; }
+.cands-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.anon-inline, .replace-row { display: inline-flex; gap: 6px; align-items: center; font: 400 14px/1.3 var(--body); color: var(--ink); }
+.anon-inline input, .replace-row input { width: 16px; height: 16px; accent-color: var(--ink); }
+.replace-row { margin-top: 2px; }
+
+/* Eröffnungsbaum auf der Spielerkarte */
+.tree { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.tree-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; margin: 8px 0; font-size: 15px; }
+.crumbs .btn-link:disabled { color: var(--ink); text-decoration: none; font-weight: 600; cursor: default; }
+.tree-body { display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 560px) { .tree-body { grid-template-columns: minmax(0, 1fr); } .tree-board { max-width: 280px; } }
+.tree-moves table th { text-align: left; font: 600 13px/1.2 var(--cond); color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.tree-moves table th.num { text-align: right; }
+.tbar { display: block; height: 4px; background: var(--track); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.tbar i { display: block; height: 100%; background: var(--bar); }

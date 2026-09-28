@@ -85,7 +85,7 @@ import { PlayerCardComponent } from '../../shared/player-card.component';
   `,
 })
 export class ClubGamesPageComponent implements OnInit {
-  private readonly api = inject(ClubApiService);
+  private readonly api = inject(ClubApiService).client();
   private readonly auth = inject(AuthService);
   private readonly card = viewChild(PlayerCardComponent);
 

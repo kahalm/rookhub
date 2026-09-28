@@ -122,6 +122,11 @@ Formular-Korrektur der Vereins-Datenbank in LeagueHub (`src-leaguehub/app/featur
 Die Seite gibt nur mit, woher der Rest kommt (`resolve`), und hängt das Abonnement an ihre Lebensdauer (`bind`). Wer an
 der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten auseinander.
 
+LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
+(`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
+`ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet
+`features/club/import-review.ts` (rein, Spiegel der Server-Regel `LeagueClubService.Build`).
+
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 
 Oberfläche zur Kurs-Übersetzung (Server: Haupt-CLAUDE.md „Anmerkungen in mehreren Sprachen" → KURSE). Drei Bausteine

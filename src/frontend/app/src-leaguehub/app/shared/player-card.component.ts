@@ -3,6 +3,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { LeagueApiService } from '../core/league-api.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
 import { OpeningStats, PlayerCard } from '../core/league.models';
+import { OpeningTreeComponent } from './opening-tree.component';
 
 type Show = 'w' | 's' | 'b';
 
@@ -46,7 +47,12 @@ type Show = 'w' | 's' | 'b';
                 }
               </div>
               <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
+              <button type="button" class="btn-sec" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
+                {{ treeOpen() ? 'Eröffnungsbaum schließen' : 'Eröffnungsbaum anzeigen' }}</button>
             </div>
+            @if (treeOpen()) {
+              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" />
+            }
             @if (show() !== 's') {
               <h3>Mit Weiß <span class="muted">({{ c.white?.n || 0 }} Partien)</span></h3>
               <ng-container *ngTemplateOutlet="first; context: { s: c.white, names: nameWhite }" />
@@ -89,7 +95,7 @@ type Show = 'w' | 's' | 'b';
             </p>
             <p class="muted small-note">Nur Konten, die der Spieler selbst mit seinem Namen verbunden hat. „wahrscheinlich": Klarname und Land passen, der Name ist unter FIDE-Spielern eindeutig.</p>
           }
-          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
+          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
         }
       </div>
     </dialog>
@@ -114,7 +120,7 @@ type Show = 'w' | 's' | 'b';
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, OpeningTreeComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(LeagueApiService);
@@ -126,7 +132,8 @@ export class PlayerCardComponent {
   readonly color = signal<'w' | 's' | null>(null);
   readonly board = signal<number | null>(null);
   readonly show = signal<Show>('b');
-  private token: string | null = null;
+  readonly treeOpen = signal(false);
+  token: string | null = null;
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;
 
@@ -145,6 +152,7 @@ export class PlayerCardComponent {
     this.board.set(board);
     this.show.set(color ?? 'b');
     this.card.set(null);
+    this.treeOpen.set(false);
     this.error.set(null);
     this.loading.set(true);
     const my = ++this.seq;

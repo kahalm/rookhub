@@ -1,0 +1,69 @@
+import { ClubPreview, PreviewSide, SideMatch } from '../../core/club.models';
+import { ImportReview, included, reviewStatus } from './import-review';
+
+const M = (x: Partial<SideMatch> = {}): SideMatch =>
+  ({ league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [], ...x });
+const S = (raw: string, m: SideMatch, x: Partial<PreviewSide> = {}): PreviewSide =>
+  ({ raw, elo: null, match: m, owner: false, replace: m.club, ...x });
+
+const PREVIEW: ClubPreview = {
+  truncated: false,
+  games: [
+    { index: 1, year: 2024, result: '1-0', event: null, plies: 40, opening: '1.e4 c5', error: null, duplicate: false,
+      white: S('Oberschmid, Patrik', M({ league: true, name: 'Oberschmid, Patrik', fide: '900', club: true }), { owner: true }),
+      black: S('Hengl, Philip', M({ league: true, name: 'Hengl, Philip', fide: '222' })) },
+    { index: 2, year: 2024, result: '0-1', event: null, plies: 30, opening: '', error: null, duplicate: false,
+      white: S('Nobody', M()), black: S('Somebody', M()) },
+    { index: 3, year: null, result: '*', event: null, plies: 0, opening: '', error: 'illegal', duplicate: false,
+      white: S('A', M()), black: S('B', M()) },
+    { index: 4, year: 2024, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: true,
+      white: S('Hengl, Philip', M({ league: true, name: 'Hengl, Philip', fide: '222' })), black: S('X', M()) },
+    { index: 5, year: 2024, result: '1-0', event: null, plies: 40, opening: '', error: null, duplicate: false,
+      white: S('Huber, F.', M({ league: true, ambiguous: true, candidates: [
+        { name: 'Huber, Franz', fide: '1', teams: ['Absam'], club: false }, { name: 'Huber, Florian', fide: '2', teams: ['Hall'], club: false }] })),
+      black: S('Binder', M({ league: true, name: 'Binder, Moriz', fide: '111', club: true })) },
+  ],
+};
+
+describe('ImportReview', () => {
+  it('Status je Partie: dieselbe Regel wie am Server', () => {
+    const r = new ImportReview(PREVIEW, true);
+    const status = r.games().map(g => reviewStatus(g).reason);
+    expect(status).toEqual([null, 'noLeaguePlayer', 'illegal', 'duplicate', null]);
+    expect(r.counts()).toEqual({ total: 5, take: 2, skip: 3, unknown: 2 });
+  });
+
+  it('ohne Häkchen wird nichts ersetzt; mit Häkchen Schwaz-Spieler und ich', () => {
+    expect(new ImportReview(PREVIEW, false).games()[0].white.replace).toBeFalse();
+    const r = new ImportReview(PREVIEW, true);
+    expect(r.games()[0].white.replace).toBeTrue();
+    expect(r.games()[4].black.replace).toBeTrue();
+  });
+
+  it('Spieler korrigieren: ein Kandidat macht die Partie eindeutig, ein getippter Name wird übernommen', () => {
+    const r = new ImportReview(PREVIEW, true);
+    r.choosePerson(5, 'white', { name: 'Huber, Franz', fide: '1', teams: ['Absam'], club: false });
+    expect(r.games()[4].white).toEqual(jasmine.objectContaining({ name: 'Huber, Franz', fide: '1', ambiguous: false, changed: true }));
+    r.setTyped(2, 'white', 'Hengl Philip', M({ league: true, name: 'Hengl, Philip', fide: '222' }));
+    expect(included(r.games()[1])).toBeTrue();
+    expect(r.counts().take).toBe(3);
+  });
+
+  it('abwählen und beide Seiten ersetzt → nicht importiert; die Entscheidungen gehen nur für übernommene raus', () => {
+    const r = new ImportReview(PREVIEW, true);
+    r.toggleInclude(5);
+    r.setReplace(1, 'black', true);
+    expect(reviewStatus(r.games()[0]).reason).toBe('onlyOwnClub');
+    expect(r.decisions()).toEqual([]);
+    r.setReplace(1, 'black', false);
+    expect(r.decisions()).toEqual([{ index: 1, white: { name: null, fide: '900', replace: true }, black: { name: null, fide: '222', replace: false } }]);
+  });
+
+  it('Filter „nicht importiert" und „nicht erkannt"', () => {
+    const r = new ImportReview(PREVIEW, true);
+    r.filter.set('skipped');
+    expect(r.visible().map(g => g.game.index)).toEqual([2, 3, 4]);
+    r.filter.set('unknown');
+    expect(r.visible().map(g => g.game.index)).toEqual([2, 5]);
+  });
+});

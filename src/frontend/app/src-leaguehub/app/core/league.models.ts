@@ -84,3 +84,18 @@ export interface SharedFixture {
 }
 
 export interface UpdateStatus { running: boolean; started: string | null; finished: string | null; ok: boolean | null; message: string | null }
+
+/** `GET …/player/{fide}/tree` — Eröffnungsbaum eines Spielers mit einer Farbe ab einer Zugfolge. */
+export interface OpeningTree {
+  fide: string;
+  name: string;
+  color: 'w' | 's';
+  /** Die Zugfolge bis hierher (englische SAN, mit Leerzeichen). */
+  line: string;
+  /** Partien mit dieser Farbe, die so begonnen haben. */
+  total: number;
+  /** Davon hier zu Ende (oder am Tiefen-Deckel). */
+  ended: number;
+  /** Nächste Züge: Anzahl, Score aus SEINER Sicht (%, null = kein Ergebnis), jüngstes Jahr. */
+  moves: { san: string; n: number; score: number | null; last: string | null }[];
+}

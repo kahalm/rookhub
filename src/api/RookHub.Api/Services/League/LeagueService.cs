@@ -113,6 +113,14 @@ public sealed class LeagueService
     /// nicht geschützt", Wunsch des Nutzers).</summary>
     public Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct) => new LeagueProfileStore(_db).PgnAsync(fide, ct);
 
+    /// <summary>Fremde Partiesammlung einspielen (<see cref="LeagueProfileStore.ImportGamesAsync"/>).</summary>
+    public Task<(int Games, int Players)> ImportGamesAsync(string pgn, string source, CancellationToken ct) =>
+        new LeagueProfileStore(_db).ImportGamesAsync(pgn, source, ct);
+
+    /// <summary>Eröffnungsbaum des Spielers mit einer Farbe ab einer Zugfolge (<see cref="LeagueProfileStore.TreeAsync"/>).</summary>
+    public Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct) =>
+        new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct);
+
     // ---- Teilen-Links -------------------------------------------------------------------------------
 
     private async Task<(JsonObject League, JsonObject Fixture)?> FixtureAsync(int tnr, int round, string team, CancellationToken ct)
@@ -178,6 +186,9 @@ public sealed class LeagueService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>Gilt dieser Teilen-Link noch? (Die Upload-Wege ohne Anmeldung hängen daran.)</summary>
+    public async Task<bool> ShareValidAsync(string token, CancellationToken ct) => await ValidShareAsync(token, ct) != null;
 
     private async Task<LeagueShare?> ValidShareAsync(string token, CancellationToken ct)
     {

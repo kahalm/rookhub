@@ -8,11 +8,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
-import { ClubApiService } from '../../core/club-api.service';
+import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
 import { ANON_NAME, normalizeResult, reasonText, yearOf } from '../../core/club-format';
+import { rememberAnonKey } from './club-add-page.component';
 import { de } from '../../core/league-format';
 
+type Side = 'white' | 'black';
 const POLL_MS = 3000;
 const MATCH_DEBOUNCE_MS = 400;
 
@@ -20,8 +22,9 @@ const MATCH_DEBOUNCE_MS = 400;
  * Ein eingelesenes Partieformular prüfen und in die Vereins-Datenbank übernehmen (`/verein/formular/:id`).
  * Die Korrektur selbst ist DIESELBE wie in RookHub (`SheetEditSession`: Cursor-Brett, Lesarten, Ersetzen/Einfügen/
  * Löschen, nach jeder Änderung wird der Rest aus den Formular-Einträgen neu aufbereitet); dazu die Namen mit
- * Ligaspieler-Prüfung und „Meinen Namen durch Schwaz ersetzen" (Vorgabe an). Übernehmen oder Verwerfen schließt die
- * Einlesung — das Foto verschwindet.
+ * Ligaspieler-Prüfung und „durch Schwaz ersetzen" je Seite (Vorgabe: Spieler von Schwaz und die eigene Seite). Angemeldet
+ * unter `/verein/formular/:id`, ohne Konto über einen Teilen-Link unter `/s/:token/formular/:key`. Übernehmen oder
+ * Verwerfen schließt die Einlesung — das Foto verschwindet.
  */
 @Component({
   selector: 'lh-club-scan-page',
@@ -34,10 +37,10 @@ const MATCH_DEBOUNCE_MS = 400;
         <p>Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz.</p></section>
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
-        <p>Es wurde schon übernommen oder verworfen. <a routerLink="/verein/neu" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
+        <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
     } @else if (state(); as st) {
       <section class="club-intro">
-        <p><a routerLink="/verein/neu" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
+        <p><a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
         <h2>Partieformular prüfen</h2>
         @if (st.scan.status !== 'done') {
           <p class="muted" role="status">{{ st.scan.status === 'failed' ? 'Das Formular ließ sich nicht lesen.' : 'Das Formular wird noch gelesen …' }}</p>
@@ -145,18 +148,16 @@ const MATCH_DEBOUNCE_MS = 400;
         <section class="panel save-panel">
           <h3 class="club-h3">Partie</h3>
           <div class="save-grid">
-            <label class="field">Weiß
-              <input list="lh-roster" [value]="white()" (input)="setName('white', $any($event.target).value)" maxlength="120" />
-              <span class="match" [class.ok]="whiteMatch()?.league">{{ matchText(whiteMatch(), 'white') }}</span>
-            </label>
-            <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="whiteElo() ?? ''"
-                                             (input)="whiteElo.set(num($any($event.target).value))" /></label>
-            <label class="field">Schwarz
-              <input list="lh-roster" [value]="black()" (input)="setName('black', $any($event.target).value)" maxlength="120" />
-              <span class="match" [class.ok]="blackMatch()?.league">{{ matchText(blackMatch(), 'black') }}</span>
-            </label>
-            <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="blackElo() ?? ''"
-                                             (input)="blackElo.set(num($any($event.target).value))" /></label>
+            @for (k of sides; track k) {
+              <label class="field">{{ k === 'white' ? 'Weiß' : 'Schwarz' }}
+                <input list="lh-roster" [value]="name(k)()" (input)="setName(k, $any($event.target).value)" maxlength="120" />
+                <span class="match" [class.ok]="match(k)()?.league && !replace(k)()">{{ matchText(k) }}</span>
+                <span class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
+                  durch „{{ anon }}“ ersetzen</span>
+              </label>
+              <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="elo(k)() ?? ''"
+                                               (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
+            }
             <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="year() ?? ''"
                                               (input)="year.set(num($any($event.target).value))" /></label>
             <label class="field narrow">Ergebnis
@@ -164,8 +165,8 @@ const MATCH_DEBOUNCE_MS = 400;
                 @for (r of results; track r) { <option [value]="r" [selected]="result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
               </select>
             </label>
-            <label class="field wide">Veranstaltung <span class="muted small">(fällt bei „Schwaz" weg)</span>
-              <input [value]="event()" (input)="event.set($any($event.target).value)" maxlength="200" [disabled]="anonymize()" />
+            <label class="field wide">Veranstaltung <span class="muted small">(fällt weg, sobald jemand „{{ anon }}“ heißt)</span>
+              <input [value]="event()" (input)="event.set($any($event.target).value)" maxlength="200" [disabled]="anyReplaced()" />
             </label>
           </div>
           <datalist id="lh-roster">@for (p of suggestions(); track p.name + (p.fide ?? '')) { <option [value]="p.name">{{ p.teams.join(', ') }}</option> }</datalist>
@@ -173,22 +174,18 @@ const MATCH_DEBOUNCE_MS = 400;
           <div class="field-row">
             <span class="muted small">Ich spiele</span>
             <div class="seg" role="group" aria-label="Ich spiele">
-              <button type="button" [attr.aria-pressed]="ownerSide() === 'white'" (click)="ownerSide.set('white')">Weiß</button>
-              <button type="button" [attr.aria-pressed]="ownerSide() === 'black'" (click)="ownerSide.set('black')">Schwarz</button>
+              <button type="button" [attr.aria-pressed]="ownerSide() === 'white'" (click)="setOwner('white')">Weiß</button>
+              <button type="button" [attr.aria-pressed]="ownerSide() === 'black'" (click)="setOwner('black')">Schwarz</button>
             </div>
+            <span class="muted small">Spieler von Schwaz und deine Seite werden standardmäßig durch „{{ anon }}“ ersetzt — dann wird weder
+              gespeichert, wer dahinter steht, noch wer hochgeladen hat.</span>
           </div>
-          <label class="anon-toggle">
-            <input type="checkbox" [checked]="anonymize()" (change)="anonymize.set($any($event.target).checked)" />
-            <span><b>Meinen Namen durch „Schwaz" ersetzen</b>
-              <span class="muted">Dann wird weder gespeichert, wer hinter „Schwaz" steht, noch wer hochgeladen hat.</span></span>
-          </label>
 
           <p class="preview"><span class="muted">Gespeichert wird:</span> <b>{{ preview() }}</b></p>
-          @if (anonymize() && !ownerSide()) { <p class="err small">Wähle, welche Seite du gespielt hast.</p> }
-          @else if (noLeaguePlayer()) { <p class="err small">Kein Ligaspieler erkannt — so wird die Partie nicht angenommen. Namen prüfen (Vorschläge beim Tippen).</p> }
+          @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
           <div class="actions">
-            <button type="button" class="btn-pri" [disabled]="saving() || s.busy() || (anonymize() && !ownerSide())" (click)="save()">
+            <button type="button" class="btn-pri" [disabled]="saving() || s.busy()" (click)="save()">
               {{ saving() ? 'Übernehme …' : 'In die Vereins-Datenbank übernehmen' }}</button>
             <button type="button" class="btn-link" [disabled]="saving()" (click)="discard()">Formular verwerfen</button>
             <span class="update-msg" [class.err]="!!saveError()" role="status">{{ saveError() ?? '' }}</span>
@@ -201,19 +198,25 @@ const MATCH_DEBOUNCE_MS = 400;
   `,
 })
 export class ClubScanPageComponent implements OnInit, OnDestroy {
-  private readonly api = inject(ClubApiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject(ElementRef);
 
-  readonly allowed = this.auth.has('league.contribute');
+  /** Token des Teilen-Links (ohne Anmeldung) — sonst `null`. */
+  readonly share = this.route.snapshot.paramMap.get('token');
+  private readonly api: ClubClient = inject(ClubApiService).client(this.share);
+  readonly allowed = !!this.share || this.auth.has('league.contribute');
+  readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
+  readonly sides: Side[] = ['white', 'black'];
   readonly maxYear = new Date().getFullYear() + 1;
+  readonly anon = ANON_NAME;
   readonly de = de;
 
-  scanId = 0;
+  /** Nummer (angemeldet) bzw. geheimer Schlüssel (ohne Konto) der Einlesung. */
+  scanRef = '';
   readonly state = signal<LeagueScanState | null>(null);
   readonly notFound = signal(false);
   readonly photoUrl = signal<string | null>(null);
@@ -221,21 +224,25 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
 
-  readonly white = signal('');
-  readonly black = signal('');
-  readonly whiteElo = signal<number | null>(null);
-  readonly blackElo = signal<number | null>(null);
+  private readonly sideState = {
+    white: { name: signal(''), fide: signal<string | null>(null), elo: signal<number | null>(null),
+      match: signal<SideMatch | null>(null), replace: signal(false), touched: false },
+    black: { name: signal(''), fide: signal<string | null>(null), elo: signal<number | null>(null),
+      match: signal<SideMatch | null>(null), replace: signal(false), touched: false },
+  };
+  readonly name = (k: Side) => this.sideState[k].name;
+  readonly elo = (k: Side) => this.sideState[k].elo;
+  readonly match = (k: Side) => this.sideState[k].match;
+  readonly replace = (k: Side) => this.sideState[k].replace;
   readonly year = signal<number | null>(null);
   readonly result = signal('*');
   readonly event = signal('');
-  readonly ownerSide = signal<'white' | 'black' | null>(null);
-  readonly anonymize = signal(true);
-  readonly whiteMatch = signal<SideMatch | null>(null);
-  readonly blackMatch = signal<SideMatch | null>(null);
+  readonly ownerSide = signal<Side | null>(null);
   readonly suggestions = signal<RosterPerson[]>([]);
+  readonly anyReplaced = computed(() => this.replace('white')() || this.replace('black')());
 
   readonly s = new SheetEditSession({
-    resolve: (prefix, writtenFrom) => this.api.resolve(this.scanId, prefix, writtenFrom),
+    resolve: (prefix, writtenFrom) => this.api.resolve(this.scanRef, prefix, writtenFrom),
     moved: () => this.revealCursor(),
     resolveFailed: () => this.saveError.set('Den Rest neu zu lesen hat nicht geklappt — der bisherige Stand bleibt.'),
     bind: o => o.pipe(takeUntilDestroyed(this.destroyRef)),
@@ -243,20 +250,19 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   /** Wie die Partie in der Datenbank steht (Jahr · Weiß – Schwarz · Ergebnis). */
   readonly preview = computed(() => {
-    const name = (side: 'white' | 'black') => {
-      if (this.anonymize() && this.ownerSide() === side) return ANON_NAME;
-      const m = side === 'white' ? this.whiteMatch() : this.blackMatch();
-      return m?.name || (side === 'white' ? this.white() : this.black()).trim() || '?';
-    };
-    return [this.year() ?? 'ohne Jahr', `${name('white')} – ${name('black')}`, this.result() === '*' ? 'Ergebnis offen' : this.result()]
+    const shown = (k: Side) => this.replace(k)() ? ANON_NAME : this.match(k)()?.name || this.name(k)().trim() || '?';
+    return [this.year() ?? 'ohne Jahr', `${shown('white')} – ${shown('black')}`, this.result() === '*' ? 'Ergebnis offen' : this.result()]
       .join(' · ');
   });
-  /** Bleibt nach dem Ersetzen durch „Schwaz" noch ein Ligaspieler übrig? */
-  readonly noLeaguePlayer = computed(() => {
-    const w = this.whiteMatch(), b = this.blackMatch();
-    if (!w || !b) return false;
-    const skip = this.anonymize() ? this.ownerSide() : null;
-    return !((skip !== 'white' && w.league) || (skip !== 'black' && b.league));
+
+  /** Was die Partie unübernehmbar macht — dieselbe Regel wie am Server (`LeagueClubService.Build`). */
+  readonly problem = computed(() => {
+    const w = this.match('white')(), b = this.match('black')();
+    if (!w || !b) return null;
+    if (!w.league && !b.league) return 'Kein Ligaspieler erkannt — so wird die Partie nicht angenommen. Namen prüfen (Vorschläge beim Tippen).';
+    if (!(w.league && !this.replace('white')()) && !(b.league && !this.replace('black')()))
+      return 'Nach dem Ersetzen bleibt kein Gegner aus der Liga übrig — so wird die Partie nicht angenommen.';
+    return null;
   });
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -267,7 +273,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!this.allowed) return;
-    this.scanId = Number(this.route.snapshot.paramMap.get('id'));
+    this.scanRef = this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.paramMap.get('key') ?? '';
     void this.load();
   }
 
@@ -281,7 +287,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private async load(): Promise<void> {
     let st: LeagueScanState;
     try {
-      st = await this.api.scan(this.scanId);
+      st = await this.api.scan(this.scanRef);
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 404) this.notFound.set(true);
       else this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
@@ -295,23 +301,50 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     }
     if (st.scan.status !== 'done') return;
     this.s.loadSheet({ plies: st.plies, unresolved: st.unresolved, unresolvedFrom: st.unresolvedFrom, boxes: st.boxes, written: st.written });
-    this.white.set(st.white ?? '');
-    this.black.set(st.black ?? '');
+    this.name('white').set(st.white ?? '');
+    this.name('black').set(st.black ?? '');
     this.year.set(yearOf(st.date));
     this.result.set(normalizeResult(st.result));
     this.event.set(st.event ?? '');
     this.ownerSide.set(st.ownerSide);
-    void this.match();
+    void this.runMatch();
     try {
-      const blob = await this.api.photo(this.scanId);
+      const blob = await this.api.photo(this.scanRef);
       if (!this.destroyed) this.photoUrl.set(URL.createObjectURL(blob));
     } catch { /* ohne Foto geht die Korrektur trotzdem */ }
   }
 
-  setName(side: 'white' | 'black', value: string): void {
-    (side === 'white' ? this.white : this.black).set(value);
+  /** Vorgabe „ersetzen": Spieler von Schwaz und die eigene Seite — bis der Nutzer das Häkchen selbst anfasst. */
+  private applyDefault(k: Side): void {
+    const st = this.sideState[k];
+    if (st.touched) return;
+    st.replace.set(!!st.match()?.club || this.ownerSide() === k);
+  }
+
+  setOwner(k: Side): void {
+    this.ownerSide.set(k);
+    for (const x of this.sides) this.applyDefault(x);
+  }
+
+  setReplace(k: Side, on: boolean): void {
+    this.sideState[k].touched = true;
+    this.sideState[k].replace.set(on);
+  }
+
+  setName(k: Side, value: string): void {
+    const st = this.sideState[k];
+    st.name.set(value);
+    // Ein Vorschlag aus der Meldeliste bringt seine FIDE-ID mit — so ist der Spieler eindeutig.
+    const hit = this.suggestions().filter(p => p.name === value.trim());
+    if (hit.length === 1) {
+      st.fide.set(hit[0].fide);
+      st.match.set({ league: true, ambiguous: false, name: hit[0].name, fide: hit[0].fide, club: hit[0].club, candidates: [] });
+      this.applyDefault(k);
+      return;
+    }
+    st.fide.set(null);
     if (this.matchTimer) clearTimeout(this.matchTimer);
-    this.matchTimer = setTimeout(() => void this.match(), MATCH_DEBOUNCE_MS);
+    this.matchTimer = setTimeout(() => void this.runMatch(), MATCH_DEBOUNCE_MS);
     if (this.suggestTimer) clearTimeout(this.suggestTimer);
     const q = value.trim();
     this.suggestTimer = setTimeout(async () => {
@@ -320,21 +353,25 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     }, MATCH_DEBOUNCE_MS);
   }
 
-  private async match(): Promise<void> {
+  private async runMatch(): Promise<void> {
     const my = ++this.matchSeq;
     try {
-      const m = await this.api.match(this.white(), this.black());
+      const m = await this.api.match(this.name('white')(), this.name('black')());
       if (my !== this.matchSeq) return;
-      this.whiteMatch.set(m.white);
-      this.blackMatch.set(m.black);
+      for (const k of this.sides) {
+        if (this.sideState[k].fide()) continue;             // aus der Meldeliste gewählt: bleibt
+        this.sideState[k].match.set(m[k]);
+        this.applyDefault(k);
+      }
     } catch { /* die Prüfung macht der Server beim Übernehmen ohnehin */ }
   }
 
-  matchText(m: SideMatch | null, side: 'white' | 'black'): string {
-    if (this.anonymize() && this.ownerSide() === side) return `wird „${ANON_NAME}"`;
+  matchText(k: Side): string {
+    const m = this.match(k)();
+    if (this.replace(k)()) return m?.club ? `Spieler von Schwaz — wird „${ANON_NAME}“` : `wird „${ANON_NAME}“`;
     if (!m) return '';
-    if (m.ambiguous) return 'Ligaspieler (mehrere dieses Namens)';
-    if (m.league) return m.fide ? `Ligaspieler: ${m.name}` : `Ligaspieler: ${m.name} (ohne FIDE-ID)`;
+    if (m.ambiguous) return 'Ligaspieler (mehrere dieses Namens — bitte aus den Vorschlägen wählen)';
+    if (m.league) return `Ligaspieler: ${m.name}${m.fide ? '' : ' (ohne FIDE-ID)'}${m.club ? ' — Schwaz, nicht ersetzt' : ''}`;
     return 'kein Ligaspieler';
   }
 
@@ -369,18 +406,22 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     try {
       await this.api.addGame({
         moves: legal.map(p => p.san),
-        white: this.white().trim() || null,
-        black: this.black().trim() || null,
-        whiteElo: this.whiteElo(),
-        blackElo: this.blackElo(),
+        white: this.name('white')().trim() || null,
+        black: this.name('black')().trim() || null,
+        whiteFide: this.sideState.white.fide(),
+        blackFide: this.sideState.black.fide(),
+        whiteElo: this.elo('white')(),
+        blackElo: this.elo('black')(),
+        whiteReplace: this.replace('white')(),
+        blackReplace: this.replace('black')(),
         result: this.result(),
         event: this.event().trim() || null,
         year: this.year(),
-        ownerSide: this.ownerSide(),
-        anonymize: this.anonymize(),
-        scanId: this.scanId,
-      });
-      void this.router.navigate(['/verein'], { state: { msg: 'Partie in die Vereins-Datenbank übernommen.' } });
+        scanId: null,
+      }, this.scanRef);
+      if (this.share) rememberAnonKey(this.share, this.scanRef, false);
+      void this.router.navigate(this.share ? ['/s', this.share, 'hochladen'] : ['/verein'],
+        { queryParams: this.share ? { art: 'formular' } : {}, state: { msg: 'Partie in die Vereins-Datenbank übernommen.' } });
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.saveError.set(e?.error?.reason === 'illegal' ? `Ein Zug ist nicht legal: ${e.error.message}`
@@ -393,8 +434,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   async discard(): Promise<void> {
     if (!confirm('Formular verwerfen? Foto und Lesung werden gelöscht.')) return;
     try {
-      await this.api.discard(this.scanId);
-      void this.router.navigate(['/verein/neu'], { queryParams: { art: 'formular' } });
+      await this.api.discard(this.scanRef);
+      if (this.share) rememberAnonKey(this.share, this.scanRef, false);
+      void this.router.navigate(this.backLink, { queryParams: { art: 'formular' } });
     } catch {
       this.saveError.set('Verwerfen hat nicht geklappt.');
     }

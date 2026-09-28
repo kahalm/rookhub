@@ -8,8 +8,9 @@ export const ANON_NAME = 'Schwaz';
 /** Warum eine Partie nicht übernommen wurde (Gründe aus LeagueClubService). */
 export function reasonText(reason: string): string {
   switch (reason) {
-    case 'noLeaguePlayer': return 'Kein Ligaspieler dabei — die Partie hilft keiner Vorbereitung.';
-    case 'ownerNotFound': return 'Dein Name steht nicht in der Partie. Häkchen „durch Schwaz ersetzen" abwählen oder Namen im Profil prüfen.';
+    case 'noLeaguePlayer': return 'Kein Ligaspieler erkannt — Namen korrigieren, sonst hilft die Partie keiner Vorbereitung.';
+    case 'onlyOwnClub': return 'Nur Spieler von Schwaz — nach dem Ersetzen bleibt kein Gegner übrig.';
+    case 'notFound': return 'Diese Partie steht nicht (mehr) in der Datei.';
     case 'fromPosition': return 'Beginnt nicht in der Grundstellung.';
     case 'illegal': return 'Ein Zug ist nicht legal.';
     case 'noMoves': return 'Keine Züge.';
@@ -21,11 +22,11 @@ export function reasonText(reason: string): string {
   }
 }
 
-/** „3 Partien übernommen (2 als Schwaz), 1 schon da, 2 nicht übernommen." */
+/** „3 Partien übernommen (2 mit „Schwaz"), 1 schon da, 2 nicht übernommen." */
 export function importSummary(r: ClubImportResult): string {
   const parts: string[] = [];
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-  parts.push(n(r.added, 'Partie übernommen', 'Partien übernommen') + (r.anonymized ? ` (${r.anonymized} als ${ANON_NAME})` : ''));
+  parts.push(n(r.added, 'Partie übernommen', 'Partien übernommen') + (r.anonymized ? ` (${r.anonymized} mit „${ANON_NAME}“)` : ''));
   if (r.duplicates) parts.push(`${r.duplicates} schon da`);
   if (r.failed.length) parts.push(`${r.failed.length} nicht übernommen`);
   let s = parts.join(', ') + '.';
@@ -40,7 +41,8 @@ export function uploadErrorText(err: unknown): string {
     case 'notConfigured': return 'Das Einlesen ist gerade nicht eingerichtet.';
     case 'unsupportedImage': return 'Das Bild lässt sich nicht lesen (JPG, PNG oder WebP).';
     case 'tooLarge': return 'Das Foto ist zu groß.';
-    case 'dailyLimit': return 'Heute wurde schon ein Formular eingelesen — eines je 24 Stunden.';
+    case 'dailyLimit': return 'Das Tageslimit für Formulare ist erreicht (siehe oben, ab wann es wieder geht).';
+    case 'anonDailyLimit': return 'Über Links wurden heute schon so viele Formulare eingelesen, wie am Tag gehen — bitte morgen wieder.';
     case 'tooManyOpen': return 'Es werden gerade noch andere Formulare gelesen.';
     case 'userDailyBudget':
     case 'userMonthlyBudget':
@@ -65,15 +67,17 @@ export function scanStateText(s: ScoresheetScan): string {
 /** Kann gerade eingelesen werden — und wenn nicht, warum? */
 export function scanAvailability(s: ScoresheetStatus, now = new Date()): { ok: boolean; text: string } {
   if (!s.available) return { ok: false, text: 'Das Einlesen ist gerade nicht eingerichtet.' };
+  if (s.blocked === 'anonDailyLimit') return { ok: false, text: 'Über Links wurden heute schon alle Formulare des Tages eingelesen — bitte morgen wieder.' };
   if (s.blocked) return { ok: false, text: 'Das Budget fürs Einlesen ist gerade aufgebraucht.' };
+  const per = `${s.dailyLimit === 1 ? 'Eines' : s.dailyLimit} je 24 Stunden`;
   if (!s.unlimited && s.usedToday >= s.dailyLimit) {
     const next = s.nextAllowedAt ? new Date(s.nextAllowedAt) : null;
     const when = next && next > now
       ? next.toLocaleString('de-AT', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       : null;
-    return { ok: false, text: `Eines je 24 Stunden${when ? ` — das nächste ab ${when}` : ''}.` };
+    return { ok: false, text: `${per} — erreicht${when ? `, das nächste ab ${when}` : ''}.` };
   }
-  return { ok: true, text: s.unlimited ? 'Ohne Tageslimit (Admin).' : `Eines je 24 Stunden (heute: ${s.usedToday} von ${s.dailyLimit}).` };
+  return { ok: true, text: s.unlimited ? 'Ohne Tageslimit (Admin).' : `${per} (heute: ${s.usedToday} von ${s.dailyLimit}).` };
 }
 
 /** Jahr aus dem gelesenen Datum („2026-06-05", „5.6.26", „2024") — sonst `null`. */

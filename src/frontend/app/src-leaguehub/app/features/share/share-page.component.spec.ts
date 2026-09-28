@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { SharePageComponent } from './share-page.component';
@@ -11,6 +11,7 @@ describe('SharePageComponent', () => {
     TestBed.configureTestingModule({
       imports: [SharePageComponent],
       providers: [
+        provideRouter([]),
         { provide: LeagueApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ token: 'TOKEN123' }) } } },
       ],
@@ -38,6 +39,12 @@ describe('SharePageComponent', () => {
     expect(el.querySelector('.match')?.textContent).toContain('Wörgl');
     expect(el.textContent).toContain('Auf WhatsApp teilen');
     expect(el.textContent).not.toContain('Link teilen');
+    // Ganz oben die Aufforderung, Partien hochzuladen — ohne Anmeldung, beide Wege.
+    const cta = el.querySelector('section.cta')!;
+    expect(el.firstElementChild).toBe(cta);
+    expect(cta.textContent).toContain('Lade deine Partien hoch');
+    const links = Array.from(cta.querySelectorAll('a')).map(a => a.getAttribute('href'));
+    expect(links).toEqual(['/s/TOKEN123/hochladen?art=formular', '/s/TOKEN123/hochladen']);
     expect(TestBed.inject(Title).getTitle()).toBe('Schwaz – Runde 2 | LeagueHub');
   });
 

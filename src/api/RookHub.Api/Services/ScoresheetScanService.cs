@@ -27,6 +27,8 @@ public class ScoresheetScanService
     private readonly NotificationService _notifications;
     private readonly ILogger<ScoresheetScanService> _logger;
     private readonly int _dailyLimit;
+    private readonly int _leagueDailyLimit;
+    private readonly string _ipSecret;
     private readonly ScoresheetBudget _budget;
     private readonly ScoresheetReader _reader;
     private readonly ScoresheetReadMode _startMode;
@@ -57,6 +59,16 @@ public class ScoresheetScanService
     /// <see cref="CountingSince"/>.</summary>
     public const int DefaultDailyLimit = 1;
 
+    /// <summary>Vorgabe für <c>Scoresheet:LeagueDailyLimit</c>: Einlesungen für die Vereins-Datenbank (LeagueHub) zählen
+    /// EIGENS — zehn je Nutzer und 24 h (Wunsch 2026-09-28: „Formularlimit in dem Modus auf 10/User erhöhen"); die
+    /// Kostenbremse (<see cref="ScoresheetBudget"/>) gilt für beide Wege gemeinsam.</summary>
+    public const int DefaultLeagueDailyLimit = 10;
+
+    /// <summary>Einlesungen OHNE Konto (LeagueHub-Teilen-Link): höchstens so viele je IP und 24 h …</summary>
+    public const int AnonPerIpDailyLimit = 10;
+    /// <summary>… und so viele von allen zusammen in 24 h (Wunsch 2026-09-28: „10/IP und 100/Tag").</summary>
+    public const int AnonDailyLimit = 100;
+
     public ScoresheetScanService(AppDbContext db, IScoresheetVisionClient vision, SavedGameService games,
         NotificationService notifications, ILogger<ScoresheetScanService> logger, IConfiguration? config = null)
     {
@@ -66,6 +78,8 @@ public class ScoresheetScanService
         _notifications = notifications;
         _logger = logger;
         _dailyLimit = int.TryParse(config?["Scoresheet:DailyLimit"], out var l) && l > 0 ? l : DefaultDailyLimit;
+        _leagueDailyLimit = int.TryParse(config?["Scoresheet:LeagueDailyLimit"], out var ll) && ll > 0 ? ll : DefaultLeagueDailyLimit;
+        _ipSecret = config?["Jwt:Key"] is { Length: > 0 } k ? k : "rookhub-scoresheet";
         // Scoresheet:Thinking — Vorgabe seit 0.533.2: NUR ABSCHREIBEN (Opus 5.5 mit effort low, die Schachlogik macht der
         // Auflöser): am Testsatz 93,1 % für 0,08 $ und 25 s je Formular, und als einzige Variante schlüssig am langen,
         // verbesserten Kufstein-Formular (10 Reparaturen statt 42–60). true = mit Nachdenken und dem vollen Auftrag,
@@ -80,12 +94,19 @@ public class ScoresheetScanService
     public ScoresheetBudget Budget => _budget;
 
     /// <summary>Was ein Nutzer heute und in 30 Tagen verbraucht hat, was alle zusammen heute — und ob er Admin ist.</summary>
-    private async Task<(long UserToday, long UserMonth, long GlobalToday, bool IsAdmin)> SpentAsync(int userId,
+    /// <para>Ohne Konto (<paramref name="userId"/> <c>null</c>, Teilen-Link) gibt es keine Nutzerbudgets — dort begrenzen
+    /// die Zahlen je IP und je Tag (<see cref="AnonPerIpDailyLimit"/>, <see cref="AnonDailyLimit"/>), das Gesamtbudget gilt.</para>
+    private async Task<(long UserToday, long UserMonth, long GlobalToday, bool IsAdmin)> SpentAsync(int? userId,
         CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
         var day = now.AddDays(-1);
         var month = now.AddDays(-30);
+        if (userId == null)
+        {
+            var global0 = await _db.ScoresheetScans.Where(s => s.CreatedAt >= day).SumAsync(s => (long?)s.CostMicroUsd, ct) ?? 0;
+            return (0, 0, global0, false);
+        }
         var userToday = await _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= day)
             .SumAsync(s => (long?)s.CostMicroUsd, ct) ?? 0;
         var userMonth = await _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= month)
@@ -102,12 +123,18 @@ public class ScoresheetScanService
     /// bei einer Einlesung am Tag sperrte ein Ausfall auf unserer Seite sonst für 24 h. Eine Einlesung, deren Partie
     /// gelöscht wurde, zählt weiter (<see cref="DetachWithoutLoading"/>), sonst hieße „Partie löschen“ „noch einmal lesen“.
     /// </summary>
-    private IQueryable<ScoresheetScan> CountingSince(int userId, DateTime since)
-        => _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= since
+    /// <para>Je Weg getrennt (<paramref name="purpose"/>): RookHubs „Meine Partien" und die Vereins-Datenbank haben
+    /// eigene Tageszahlen (<see cref="LimitFor"/>).</para>
+    private IQueryable<ScoresheetScan> CountingSince(int userId, DateTime since, string? purpose)
+        => _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= since && s.Purpose == purpose
             && !(s.Status == ScoresheetScanStatus.Failed && s.CostMicroUsd == 0));
 
+    private int LimitFor(string? purpose) => purpose == ScoresheetScan.PurposeLeague ? _leagueDailyLimit : _dailyLimit;
+
+    private static string? CleanPurpose(string? purpose) => purpose == ScoresheetScan.PurposeLeague ? purpose : null;
+
     /// <summary>Darf für diesen Nutzer jetzt noch ein Modell-Aufruf starten, und wie lang darf die Antwort werden?</summary>
-    internal async Task<CallAllowance> AllowanceAsync(int userId, CancellationToken ct = default)
+    internal async Task<CallAllowance> AllowanceAsync(int? userId, CancellationToken ct = default)
     {
         var (today, month, global, admin) = await SpentAsync(userId, ct);
         return _budget.Allowance(today, month, global, admin);
@@ -120,25 +147,27 @@ public class ScoresheetScanService
 
     // ── Hochladen + Stand ─────────────────────────────────────────────
 
-    public async Task<ScoresheetStatusDto> StatusAsync(int userId)
+    public async Task<ScoresheetStatusDto> StatusAsync(int userId, string? purpose = null)
     {
+        purpose = CleanPurpose(purpose);
+        var limit = LimitFor(purpose);
         var since = DateTime.UtcNow.AddDays(-1);
         var (today, month, global, admin) = await SpentAsync(userId);
         var dayShare = _budget.UserDailyMicroUsd > 0 ? (double)today / _budget.UserDailyMicroUsd : 1;
         var monthShare = _budget.UserMonthlyMicroUsd > 0 ? (double)month / _budget.UserMonthlyMicroUsd : 1;
-        var used = await CountingSince(userId, since).CountAsync();
+        var used = await CountingSince(userId, since, purpose).CountAsync();
         // Das Fenster rollt über 24 h: frei wird es, wenn die älteste mitzählende Einlesung herausfällt.
         DateTime? next = null;
-        if (!admin && used >= _dailyLimit)
+        if (!admin && used >= limit)
         {
-            var oldest = await CountingSince(userId, since).OrderBy(s => s.CreatedAt).Skip(used - _dailyLimit)
+            var oldest = await CountingSince(userId, since, purpose).OrderBy(s => s.CreatedAt).Skip(used - limit)
                 .Select(s => s.CreatedAt).FirstOrDefaultAsync();
             next = DateTime.SpecifyKind(oldest.AddDays(1), DateTimeKind.Utc);
         }
         return new ScoresheetStatusDto
         {
             Available = _vision.IsConfigured,
-            DailyLimit = _dailyLimit,
+            DailyLimit = limit,
             UsedToday = used,
             NextAllowedAt = next,
             BudgetUsedPercent = admin ? 0 : (int)Math.Clamp(Math.Round(Math.Max(dayShare, monthShare) * 100), 0, 100),
@@ -156,7 +185,11 @@ public class ScoresheetScanService
     /// <summary>Nimmt ein Foto an und reiht es ein. Absage als Grund-Code (<c>notConfigured</c>,
     /// <c>unsupportedImage</c>, <c>tooLarge</c>, <c>dailyLimit</c>, <c>tooManyOpen</c>, <c>invalidLanguage</c>).</summary>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, byte[] data, string? contentType,
-        string? fileName, string? language, string? ownerSide = null, string? purpose = null)
+        string? fileName, string? language, string? ownerSide = null, string? purpose = null) =>
+        await CreateCoreAsync(userId, data, contentType, fileName, language, ownerSide, purpose, null, null);
+
+    private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, byte[] data, string? contentType,
+        string? fileName, string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash)
     {
         if (!_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
@@ -165,14 +198,18 @@ public class ScoresheetScanService
         if (contentType != null && !ScoresheetImage.AcceptedTypes.Contains(contentType)) return (null, "unsupportedImage");
         if (!ScoresheetImage.CanDecode(data)) return (null, "unsupportedImage");
 
+        purpose = CleanPurpose(purpose);
         var (today, month, global, admin) = await SpentAsync(userId);
         var since = DateTime.UtcNow.AddDays(-1);
-        if (!admin && await CountingSince(userId, since).CountAsync() >= _dailyLimit)
-            return (null, "dailyLimit");
+        if (userId is int uid)
+        {
+            if (!admin && await CountingSince(uid, since, purpose).CountAsync() >= LimitFor(purpose))
+                return (null, "dailyLimit");
+            if (await _db.ScoresheetScans.CountAsync(s => s.UserId == uid
+                    && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
+                return (null, "tooManyOpen");
+        }
         if (_budget.Check(today, month, global, admin) is { } blocked) return (null, blocked);
-        if (await _db.ScoresheetScans.CountAsync(s => s.UserId == userId
-                && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
-            return (null, "tooManyOpen");
 
         var photo = data;
         var type = contentType ?? "image/jpeg";
@@ -186,19 +223,21 @@ public class ScoresheetScanService
         var scan = new ScoresheetScan
         {
             UserId = userId,
+            AccessKey = accessKey,
+            AnonIpHash = ipHash,
             Photo = photo,
             ContentType = type,
             FileName = CleanFileName(fileName),
             NotationLanguage = lang,
             OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
-            Purpose = purpose == ScoresheetScan.PurposeLeague ? purpose : null,
+            Purpose = purpose,
             Status = ScoresheetScanStatus.Pending,
             CreatedAt = DateTime.UtcNow,
         };
         _db.ScoresheetScans.Add(scan);
         await _db.SaveChangesAsync();
         _logger.LogInformation("Formular-Einlesung {ScanId} von User {UserId} angenommen ({Bytes} Bytes, Sprache {Language})",
-            scan.Id, userId, photo.Length, lang);
+            scan.Id, userId?.ToString() ?? "ohne Konto", photo.Length, lang);
         return (ToDto(scan), null);
     }
 
@@ -229,7 +268,7 @@ public class ScoresheetScanService
     /// <summary>Alles außer dem Foto (das ist das Schwergewicht der Zeile).</summary>
     private IQueryable<ScoresheetScan> ScanHeads() => _db.ScoresheetScans.AsNoTracking().Select(s => new ScoresheetScan
     {
-        Id = s.Id, UserId = s.UserId, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
+        Id = s.Id, UserId = s.UserId, AccessKey = s.AccessKey, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
         NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Purpose = s.Purpose, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
         Model = s.Model, Attempts = s.Attempts, Rounds = s.Rounds, CreatedAt = s.CreatedAt, StartedAt = s.StartedAt,
         FinishedAt = s.FinishedAt,
@@ -357,8 +396,9 @@ public class ScoresheetScanService
         }
 
         var comments = CommentsFor(r);
-        var side = scan.OwnerSide is "white" or "black" ? scan.OwnerSide : await GuessOwnerSideAsync(scan.UserId, t, ct);
-        var game = await _games.CreateGeneratedAsync(scan.UserId, SavedGameService.ScoresheetSource,
+        if (scan.UserId is not int owner) { await FailAsync(scan, "failed", ct, outcome.Json); return; }   // ohne Konto nur Liga
+        var side = scan.OwnerSide is "white" or "black" ? scan.OwnerSide : await GuessOwnerSideAsync(owner, t, ct);
+        var game = await _games.CreateGeneratedAsync(owner, SavedGameService.ScoresheetSource,
             r.Plies.Select(p => p.San).ToList(), comments,
             new GameHeaderInput(Blank(t.Event), Blank(t.Site), Blank(t.DateIso) ?? Blank(t.Date), Blank(t.Round),
                 Blank(t.White), Blank(t.Black), t.Result), side);
@@ -381,7 +421,7 @@ public class ScoresheetScanService
             scan.Id, game.Id, r.Plies.Count, r.Plies.Count(p => p.Uncertain), r.Unresolved.Count, outcome.Rounds);
         // Glocke (und Web-Push, wo eingerichtet): das Lesen dauert Minuten, und wer die Seite verlassen hat,
         // erfährt sonst nicht, dass die Partie da ist. Direkt auf die Korrekturseite — dort ist die Arbeit.
-        await NotifyAsync(scan.UserId, NotificationType.ScoresheetRead, new Dictionary<string, string>
+        await NotifyAsync(owner, NotificationType.ScoresheetRead, new Dictionary<string, string>
         {
             ["white"] = game.White ?? "?",
             ["black"] = game.Black ?? "?",
@@ -432,8 +472,8 @@ public class ScoresheetScanService
         scan.FinishedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         _logger.LogWarning("Formular-Einlesung {ScanId} gescheitert: {Reason}", scan.Id, reason);
-        if (scan.Purpose == ScoresheetScan.PurposeLeague) return;   // LeagueHub fragt selbst nach
-        await NotifyAsync(scan.UserId, NotificationType.ScoresheetFailed,
+        if (scan.Purpose == ScoresheetScan.PurposeLeague || scan.UserId is not int owner) return;   // LeagueHub fragt selbst nach
+        await NotifyAsync(owner, NotificationType.ScoresheetFailed,
             new Dictionary<string, string> { ["reason"] = reason }, "/games/scoresheet");
     }
 
@@ -530,29 +570,139 @@ public class ScoresheetScanService
 
     // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
 
-    /// <summary>Die eigenen, noch nicht übernommenen Liga-Einlesungen (neueste zuerst) — wer die Seite verlassen hat,
-    /// findet sie so wieder. Verworfene/übernommene tragen kein Foto mehr und fehlen.</summary>
-    public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId)
+    /// <summary>Wem eine Liga-Einlesung gehört: einem Konto ODER (ohne Anmeldung, Teilen-Link) dem Browser, der den
+    /// geheimen Schlüssel hat.</summary>
+    public readonly record struct ScanActor(int? UserId, string? Key)
     {
-        var scans = await ScanHeads().Where(s => s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague
-                && s.FileName != DiscardedMark)
-            .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync();
-        return scans.Select(ToDto).ToList();
+        public static ScanActor User(int userId) => new(userId, null);
+        public static ScanActor Anonymous(string key) => new(null, key);
+    }
+
+    private IQueryable<ScoresheetScan> LeagueOwned(IQueryable<ScoresheetScan> q, ScanActor a)
+    {
+        q = q.Where(s => s.Purpose == ScoresheetScan.PurposeLeague);
+        if (a.UserId is int uid) return q.Where(s => s.UserId == uid);
+        var key = a.Key ?? "";
+        return q.Where(s => s.UserId == null && s.AccessKey == key && key != "");
+    }
+
+    /// <summary>HMAC der IP-Adresse — die Adresse selbst wird nie gespeichert.</summary>
+    public string AnonIpHash(System.Net.IPAddress? ip)
+    {
+        var bytes = System.Security.Cryptography.HMACSHA256.HashData(System.Text.Encoding.UTF8.GetBytes(_ipSecret),
+            System.Text.Encoding.UTF8.GetBytes("scoresheet-ip:" + (ip?.MapToIPv4().ToString() ?? "?")));
+        return Convert.ToHexString(bytes, 0, 16).ToLowerInvariant();
+    }
+
+    private IQueryable<ScoresheetScan> AnonCountingSince(DateTime since) =>
+        _db.ScoresheetScans.Where(s => s.UserId == null && s.CreatedAt >= since
+            && !(s.Status == ScoresheetScanStatus.Failed && s.CostMicroUsd == 0));
+
+    /// <summary>Stand für eine Einlesung OHNE Konto (Teilen-Link): Tageszahl je IP, gesperrt wenn alle zusammen die
+    /// Tagesgrenze erreicht haben (<c>anonDailyLimit</c>) oder das Gesamtbudget leer ist.</summary>
+    public async Task<ScoresheetStatusDto> AnonStatusAsync(string ipHash)
+    {
+        var since = DateTime.UtcNow.AddDays(-1);
+        var (_, _, global, _) = await SpentAsync(null);
+        var used = await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash);
+        DateTime? next = null;
+        if (used >= AnonPerIpDailyLimit)
+        {
+            var oldest = await AnonCountingSince(since).Where(s => s.AnonIpHash == ipHash).OrderBy(s => s.CreatedAt)
+                .Skip(used - AnonPerIpDailyLimit).Select(s => s.CreatedAt).FirstOrDefaultAsync();
+            next = DateTime.SpecifyKind(oldest.AddDays(1), DateTimeKind.Utc);
+        }
+        var all = await AnonCountingSince(since).CountAsync();
+        return new ScoresheetStatusDto
+        {
+            Available = _vision.IsConfigured,
+            DailyLimit = AnonPerIpDailyLimit,
+            UsedToday = used,
+            NextAllowedAt = next,
+            Blocked = all >= AnonDailyLimit ? "anonDailyLimit" : _budget.Check(0, 0, global, false),
+            Languages = ScoresheetNotation.Languages.Select(l => new ScoresheetLanguageDto
+            {
+                Code = l.Code, Name = l.Name, Pieces = $"{l.King} {l.Queen} {l.Rook} {l.Bishop} {l.Knight}",
+            }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Foto OHNE Konto hochladen (LeagueHub-Teilen-Link, immer für die Vereins-Datenbank). Grenzen:
+    /// <see cref="AnonPerIpDailyLimit"/> je IP (<c>dailyLimit</c>), <see cref="AnonDailyLimit"/> für alle zusammen
+    /// (<c>anonDailyLimit</c>), drei gleichzeitig je IP, dazu das Gesamtbudget. Liefert den geheimen Schlüssel, unter dem
+    /// der Browser die Einlesung wiederfindet — sonst niemand.
+    /// </summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Key, string? Reason)> CreateAnonymousAsync(byte[] data, string? contentType,
+        string? fileName, string? language, string? ownerSide, string ipHash)
+    {
+        var since = DateTime.UtcNow.AddDays(-1);
+        if (_vision.IsConfigured)
+        {
+            if (await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash) >= AnonPerIpDailyLimit)
+                return (null, null, "dailyLimit");
+            if (await AnonCountingSince(since).CountAsync() >= AnonDailyLimit) return (null, null, "anonDailyLimit");
+            if (await _db.ScoresheetScans.CountAsync(s => s.UserId == null && s.AnonIpHash == ipHash
+                    && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
+                return (null, null, "tooManyOpen");
+        }
+        var key = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+        var (scan, reason) = await CreateCoreAsync(null, data, contentType, fileName, language, ownerSide,
+            ScoresheetScan.PurposeLeague, key, ipHash);
+        if (scan != null) await ForgetOldIpHashesAsync();
+        return (scan, scan == null ? null : key, reason);
+    }
+
+    /// <summary>Der IP-Vermerk wird nur fürs 24-h-Fenster gebraucht — nach zwei Tagen geleert.</summary>
+    private async Task ForgetOldIpHashesAsync()
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-2);
+        var old = await _db.ScoresheetScans.Where(s => s.AnonIpHash != null && s.CreatedAt < cutoff)
+            .Select(s => new { s.Id, s.UserId, s.SavedGameId }).Take(500).ToListAsync();
+        if (old.Count == 0) return;
+        foreach (var o in old)
+        {
+            var stub = _db.ScoresheetScans.Local.FirstOrDefault(s => s.Id == o.Id);
+            if (stub == null)
+            {
+                stub = new ScoresheetScan { Id = o.Id, UserId = o.UserId, SavedGameId = o.SavedGameId, AnonIpHash = "x" };
+                _db.ScoresheetScans.Attach(stub);
+            }
+            stub.AnonIpHash = null;
+            _db.Entry(stub).Property(nameof(ScoresheetScan.AnonIpHash)).IsModified = true;
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Die offenen Liga-Einlesungen (neueste zuerst) — eines Kontos bzw. OHNE Konto die, deren Schlüssel der
+    /// Browser mitbringt. Verworfene/übernommene tragen kein Foto mehr und fehlen.</summary>
+    public async Task<List<ScoresheetScanDto>> LeagueScansAsync(int userId) =>
+        (await LeagueOwned(ScanHeads(), ScanActor.User(userId)).Where(s => s.FileName != DiscardedMark)
+            .OrderByDescending(s => s.CreatedAt).Take(10).ToListAsync()).Select(ToDto).ToList();
+
+    public async Task<List<(string Key, ScoresheetScanDto Scan)>> LeagueScansByKeysAsync(IEnumerable<string> keys)
+    {
+        var list = keys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().Take(20).ToList();
+        var scans = await ScanHeads().Where(s => s.UserId == null && s.Purpose == ScoresheetScan.PurposeLeague
+                && s.AccessKey != null && list.Contains(s.AccessKey) && s.FileName != DiscardedMark)
+            .OrderByDescending(s => s.CreatedAt).ToListAsync();
+        return scans.Select(s => (s.AccessKey!, ToDto(s))).ToList();
     }
 
     /// <summary>Vermerk im Dateinamen einer übernommenen/verworfenen Liga-Einlesung (das Foto ist dann leer).</summary>
     internal const string DiscardedMark = "\u2205";
 
-    /// <summary>Stand einer eigenen Liga-Einlesung für die Korrektur in LeagueHub: Formular-Einträge, Züge, Kopfdaten
-    /// wie gelesen und welche Seite der Nutzer vermutlich spielte. <c>null</c> = fremd, unbekannt oder verworfen.</summary>
-    public async Task<LeagueScanStateDto?> LeagueScanStateAsync(int userId, int scanId, CancellationToken ct = default)
+    /// <summary>Stand einer Liga-Einlesung für die Korrektur in LeagueHub: Formular-Einträge, Züge, Kopfdaten wie gelesen
+    /// und welche Seite der Nutzer vermutlich spielte. <c>null</c> = fremd, unbekannt oder verworfen.</summary>
+    public async Task<LeagueScanStateDto?> LeagueScanStateAsync(ScanActor actor, int? scanId, CancellationToken ct = default)
     {
-        var scan = await ScanHeads().FirstOrDefaultAsync(s => s.Id == scanId && s.UserId == userId
-            && s.Purpose == ScoresheetScan.PurposeLeague && s.FileName != DiscardedMark, ct);
+        var q = LeagueOwned(ScanHeads(), actor).Where(s => s.FileName != DiscardedMark);
+        if (scanId is int id) q = q.Where(s => s.Id == id);
+        var scan = await q.FirstOrDefaultAsync(ct);
         if (scan == null) return null;
         var dto = new LeagueScanStateDto { Scan = ToDto(scan) };
         if (scan.Status != ScoresheetScanStatus.Done) return dto;
-        var json = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scanId)
+        var json = await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == scan.Id)
             .Select(s => s.TranscriptionJson).FirstOrDefaultAsync(ct);
         var stored = Deserialize(scan.ResolutionJson);
         var t = ScoresheetTranscription.Parse(json);
@@ -569,27 +719,26 @@ public class ScoresheetScanService
         dto.Result = t?.Result;
         // Beim Hochladen gewählt schlägt geraten (wie beim Einlesen in „Meine Partien").
         dto.OwnerSide = scan.OwnerSide is "white" or "black" ? scan.OwnerSide
-            : t == null ? null : await GuessOwnerSideAsync(userId, t, ct);
+            : t == null || scan.UserId is not int uid ? null : await GuessOwnerSideAsync(uid, t, ct);
         return dto;
     }
 
-    /// <summary>Das Foto einer eigenen Liga-Einlesung.</summary>
-    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(int userId, int scanId)
+    /// <summary>Das Foto einer Liga-Einlesung.</summary>
+    public async Task<(byte[] Data, string ContentType)?> LeagueScanPhotoAsync(ScanActor actor, int? scanId)
     {
-        var p = await _db.ScoresheetScans.AsNoTracking()
-            .Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
-            .Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync();
+        var q = LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor);
+        if (scanId is int id) q = q.Where(s => s.Id == id);
+        var p = await q.Select(s => new { s.Photo, s.ContentType }).FirstOrDefaultAsync();
         return p == null || p.Photo.Length == 0 ? null : (p.Photo, p.ContentType);
     }
 
     /// <summary>Wie <see cref="ResolveRestAsync"/>, für eine Liga-Einlesung (ohne gespeicherte Partie).</summary>
-    public async Task<ScoresheetResolveResultDto?> ResolveLeagueRestAsync(int userId, int scanId, IReadOnlyList<string> prefix,
+    public async Task<ScoresheetResolveResultDto?> ResolveLeagueRestAsync(ScanActor actor, int? scanId, IReadOnlyList<string> prefix,
         int writtenFrom)
     {
-        var scan = await _db.ScoresheetScans.AsNoTracking()
-            .Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
-            .Select(s => new { s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson })
-            .FirstOrDefaultAsync();
+        var q = LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor);
+        if (scanId is int id) q = q.Where(s => s.Id == id);
+        var scan = await q.Select(s => new { s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson }).FirstOrDefaultAsync();
         var t = ScoresheetTranscription.Parse(scan?.TranscriptionJson);
         if (scan == null || t == null) return null;
         var scanned = t.Scanned();
@@ -602,16 +751,20 @@ public class ScoresheetScanService
     /// <summary>
     /// Liga-Einlesung abschließen (übernommen ODER verworfen): Foto, Antwort des Modells und Stand gehen, die Zeile bleibt
     /// mit Zeitpunkt und Kosten fürs Tageskontingent und die Kostenbremse stehen — wie beim Löschen einer Partie.
-    /// Danach verbindet nichts mehr die Einlesung mit der Partie, die daraus wurde. <c>false</c> = fremd/unbekannt.
+    /// Danach verbindet nichts mehr die Einlesung mit der Partie, die daraus wurde (auch der Schlüssel geht).
+    /// <c>false</c> = fremd/unbekannt.
     /// </summary>
-    public async Task<bool> CloseLeagueScanAsync(int userId, int scanId)
+    public async Task<bool> CloseLeagueScanAsync(ScanActor actor, int? scanId)
     {
-        var key = await _db.ScoresheetScans.Where(s => s.Id == scanId && s.UserId == userId && s.Purpose == ScoresheetScan.PurposeLeague)
-            .Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
+        var q = LeagueOwned(_db.ScoresheetScans, actor);
+        if (scanId is int id) q = q.Where(s => s.Id == id);
+        var key = await q.Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
         if (key == null) return false;
         DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
         var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
         scan.FileName = DiscardedMark;
+        scan.AccessKey = null;
+        _db.Entry(scan).Property(nameof(ScoresheetScan.AccessKey)).IsModified = true;
         await _db.SaveChangesAsync();
         return true;
     }
@@ -652,7 +805,7 @@ public class ScoresheetScanService
     /// trägt seine Fremdschlüssel: ohne sie kennt EF die Abhängigkeit nicht und löscht womöglich zuerst die Partie —
     /// MariaDB räumt die Einlesung dann per Cascade selbst weg, und das DELETE danach trifft keine Zeile mehr
     /// (gefunden vom Integrationstest).</summary>
-    public static void RemoveWithoutLoading(AppDbContext db, IEnumerable<(int Id, int UserId, int? SavedGameId)> scans)
+    public static void RemoveWithoutLoading(AppDbContext db, IEnumerable<(int Id, int? UserId, int? SavedGameId)> scans)
     {
         foreach (var (id, userId, gameId) in scans)
         {
@@ -669,7 +822,7 @@ public class ScoresheetScanService
     /// Tokens, Kosten) — Foto, Antwort des Modells und Stand je Halbzug gehen mit der Partie. Ohne das Foto zu laden. Vorher
     /// ging die ganze Zeile, und mit ihr der Verbrauch: löschen und neu hochladen umging Tageszahl UND Budget.
     /// </summary>
-    public static void DetachWithoutLoading(AppDbContext db, IEnumerable<(int Id, int UserId, int? SavedGameId)> scans)
+    public static void DetachWithoutLoading(AppDbContext db, IEnumerable<(int Id, int? UserId, int? SavedGameId)> scans)
     {
         foreach (var (id, userId, gameId) in scans)
         {
@@ -694,7 +847,7 @@ public class ScoresheetScanService
     }
 
     /// <summary>Die Schlüssel der Einlesungen, die <see cref="RemoveWithoutLoading"/> braucht.</summary>
-    public static async Task<List<(int Id, int UserId, int? SavedGameId)>> KeysAsync(IQueryable<ScoresheetScan> query)
+    public static async Task<List<(int Id, int? UserId, int? SavedGameId)>> KeysAsync(IQueryable<ScoresheetScan> query)
     {
         var rows = await query.Select(s => new { s.Id, s.UserId, s.SavedGameId }).ToListAsync();
         return rows.Select(x => (x.Id, x.UserId, x.SavedGameId)).ToList();

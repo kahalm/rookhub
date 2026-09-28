@@ -28,8 +28,18 @@ public class ScoresheetScan
 {
     public int Id { get; set; }
 
-    public int UserId { get; set; }
+    /// <summary>Wer hochgeladen hat; <c>null</c> = ohne Anmeldung über einen LeagueHub-Teilen-Link (dann gilt
+    /// <see cref="AccessKey"/>).</summary>
+    public int? UserId { get; set; }
     public AppUser? User { get; set; }
+
+    /// <summary>Geheimer Schlüssel einer Einlesung OHNE Konto — nur wer ihn hat (der Browser, der hochgeladen hat), sieht
+    /// und korrigiert sie. Wird beim Hochladen einmal ausgegeben.</summary>
+    public string? AccessKey { get; set; }
+
+    /// <summary>HMAC der IP-Adresse (nicht die Adresse selbst) — für die Grenze je IP bei Einlesungen ohne Konto. Wird
+    /// nach zwei Tagen geleert.</summary>
+    public string? AnonIpHash { get; set; }
 
     /// <summary>Die daraus entstandene Partie; <c>null</c>, solange gelesen wird oder wenn es scheiterte.
     /// Wird die Partie gelöscht, geht das Foto mit (Cascade).</summary>

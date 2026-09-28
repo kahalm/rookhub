@@ -1326,54 +1326,90 @@ Rollenverwaltung an).
   `shared/player-card.component.ts` (Dialog, Vorgabe = Farbe an diesem Brett), reine Regeln in
   `core/league-format.ts`. „Daten aktualisieren" fragt alle 4 s `/api/league/update/status` nach und lädt danach frisch.
 
-### LeagueHub — Vereins-Datenbank (0.573.0)
+### LeagueHub — Vereins-Datenbank (0.573.0, Übersicht/Teilen-Link/Megabase 0.574.0)
 
 Mitglieder von SK Schwaz laden Partien hoch — viele auf einmal als PGN oder EIN Partieformular (Foto, gelesen vom
-Formular-Leser, geprüft in LeagueHub) —, und die Spielerkarten der Gegner zeigen sie mit (Quelle „Verein"). Regeln
-(`Services/League/LeagueClubService.cs`, alle vom Nutzer vorgegeben, 2026-09-28):
+Formular-Leser, geprüft in LeagueHub) —, angemeldet ODER ohne Konto über einen Teilen-Link, und die Spielerkarten der
+Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubService.cs`, alle vom Nutzer vorgegeben,
+2026-09-28):
 
 * **Beide Namen gegen die Meldelisten** (`LeagueRosterIndex`, alle Saisonen): FIDE-ID aus der Partie zuerst, dann der
   Name in drei Stufen (alle Namensteile in beliebiger Reihenfolge → Nachname + erster Vorname → Nachname +
   Anfangsbuchstabe), ohne Groß/klein, Akzente, akad. Titel, Umlaute in beiden Schreibweisen. Mehrdeutig = Ligaspieler
-  OHNE FIDE-ID. Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne eigene ID als Namenstreffer zu. Ist keine
-  (verbleibende) Seite ein Ligaspieler → `noLeaguePlayer`.
-* **„Meinen Namen durch Schwaz ersetzen"** (Vorgabe AN): die eigene Seite heißt „Schwaz", ohne Elo und FIDE-ID, die
-  Veranstaltung fällt weg, und es wird **weder gespeichert, wer dahinter steht, noch wer hochgeladen hat oder wann**
-  (`UploadedByUserId`/`CreatedAt` leer, auch nicht versteckt). Beim PGN-Import wird die eigene Seite über das Profil
-  gefunden (FIDE-ID, sonst `ScoresheetScanService.GuessOwnerSide` mit Nach-/Anzeige-/Vorname); nicht gefunden →
-  `ownerNotFound`, statt mit echtem Namen zu speichern. Beim Formular wählt man die Seite ausdrücklich.
+  OHNE FIDE-ID, die Kandidaten gehen zur Auswahl mit. Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
+  eigene ID als Namenstreffer zu. Ist keine Seite ein Ligaspieler → `noLeaguePlayer`; bleibt nach dem Ersetzen keiner
+  übrig → `onlyOwnClub`.
+* **Spieler von Schwaz werden durch „Schwaz" ersetzt** (Vorgabe: jeder, der in seiner JÜNGSTEN Saison für Schwaz gemeldet
+  ist — `Person.OwnClub`; wer weggegangen ist, ist jetzt ein Gegner —, dazu der Hochladende laut Profil; je Seite
+  umschaltbar): ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es wird **weder gespeichert, wer dahinter steht,
+  noch wer hochgeladen hat oder wann** (`UploadedByUserId`/`CreatedAt` leer, auch nicht versteckt). Ohne Konto
+  (Teilen-Link) wird der Hochladende nie gespeichert.
+* **PGN = zwei Schritte**: `games/preview` liest und gleicht ab, speichert NICHTS — je Partie wer gegen wen, Abgleich,
+  Vorgabe „ersetzen", `duplicate`, harter Fehler (`illegal`/`noMoves`/`tooLong`/`fromPosition`). Die Seite
+  (`features/club/import-review.ts`, dieselbe Regel wie `Build`) zeigt je Partie, ob sie übernommen wird; der Nutzer
+  korrigiert unerkannte/falsche Spieler (Kandidat, Vorschlag aus der Meldeliste, getippter Name), schaltet „ersetzen"
+  um, wählt Partien ab. `games/import` bekommt DENSELBEN PGN-Text + je übernommener Partie die Entscheidung
+  (`LeagueClubSideDecision`: FIDE-ID eines gewählten Ligaspielers schlägt den Namen; ohne Angabe die Kopfzeile) und
+  prüft alles noch einmal. Nummerierung 1-basiert, gleich in beiden Schritten.
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
-* **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält weiter NUR die
-  fremden Partien (Lumbra, chess-results); Karte, Partienzahl und PGN-Download nehmen die Vereinspartien dazu
+* **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien
+  (Lumbra, chess-results, Megabase); Karte, Partienzahl, PGN-Download und Eröffnungsbaum nehmen die Vereinspartien dazu
   (`WithClub`, Doppelte über Jahr + Hauptvariante — die fremde Fassung gewinnt). Nach jedem Upload/Löschen werden die
-  betroffenen Karten neu gerechnet und die Partienzahl `g` in den fertigen Ansichten nachgezogen (`PatchViewCountsAsync`,
-  ohne die Ligen neu zu rechnen). `LeagueRefresh.MergeGamesAsync` und der Bündel-Import gehen über denselben Store.
+  betroffenen Karten neu gerechnet und die Partienzahl `g` in den fertigen Ansichten nachgezogen (`PatchViewCountsAsync`).
   Teilen-Links liefern die Vereinspartien im PGN mit („pgn sind nicht geschützt").
-* **Partieformular**: dieselbe Einlesung wie in RookHub (`ScoresheetScan.Purpose = "league"`), also dieselbe Tageszahl
-  und Kostenbremse — aber KEINE Partie in „Meine Partien" und keine Glocke; die Einlesung steht nicht in
-  `GET /api/scoresheets`. Übernehmen oder Verwerfen schließt sie (`CloseLeagueScanAsync` = `DetachWithoutLoading` +
-  Dateiname „∅"): Foto und Lesung gehen, die Zeile bleibt fürs Kontingent — und nichts verbindet sie mit der Partie.
-* **Löschen**: `league.manage` alles, sonst nur eigene NICHT anonymisierte. Konto löschen setzt `UploadedByUserId` null.
+* **Partieformular**: dieselbe Einlesung wie in RookHub (`ScoresheetScan.Purpose = "league"`) und dieselbe Kostenbremse,
+  aber eine EIGENE Tageszahl: **10 je Nutzer und 24 h** (`Scoresheet:LeagueDailyLimit`, RookHub bleibt bei 1); KEINE
+  Partie in „Meine Partien", keine Glocke, nicht in `GET /api/scoresheets`. **Ohne Konto** (Teilen-Link):
+  `ScoresheetScan.UserId` ist `null`, die Einlesung gehört dem Browser mit dem geheimen `AccessKey` (32 Hex, einmal beim
+  Hochladen ausgegeben, LeagueHub merkt ihn im localStorage `lh-anon-scans`); **höchstens 10 je IP und 100 je Tag für
+  alle zusammen** (`AnonPerIpDailyLimit`, `AnonDailyLimit`, Absage `dailyLimit` bzw. `anonDailyLimit`), drei offene je
+  IP, nur das Gesamtbudget. Gezählt wird über `AnonIpHash` = HMAC der IP (Schlüssel `Jwt:Key`) — die Adresse selbst
+  steht nirgends, der Vermerk wird nach zwei Tagen geleert. Übernehmen oder Verwerfen schließt die Einlesung
+  (`CloseLeagueScanAsync` = `DetachWithoutLoading` + Dateiname „∅" + Schlüssel weg): Foto und Lesung gehen, die Zeile
+  bleibt fürs Kontingent — und nichts verbindet sie mit der Partie.
+* **Löschen**: `league.manage` alles, sonst nur eigene Partien ohne „Schwaz". Konto löschen setzt `UploadedByUserId` null.
 
 | Methode | Endpoint | Recht | Zweck |
 |---------|----------|-------|-------|
 | GET | `/api/league/club/games?fide=&q=&page=` | view | Liste (50 je Seite, Jahr absteigend) mit `opening`, `canDelete` |
 | GET | `/api/league/club/games/pgn?fide=&q=` | view | Alle (gefilterten) als PGN |
-| POST | `/api/league/club/games/import` | contribute | `{ pgn, anonymize }` → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }`; 400 `empty`/`tooLarge` (5 Mio. Zeichen), höchstens 500 Partien |
-| POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteElo, blackElo, result, event, year, ownerSide, anonymize, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate`, `illegal` (mit Meldung); schließt die Einlesung |
+| POST | `/api/league/club/games/preview` | contribute | `{ pgn }` → `{ games[{ index, year, result, event, plies, opening, error, duplicate, white/black{ raw, elo, match{ league, ambiguous, name, fide, club, candidates }, owner, replace } }], truncated }`; 400 `empty`/`tooLarge` (5 Mio. Zeichen), höchstens 500 Partien |
+| POST | `/api/league/club/games/import` | contribute | `{ pgn, games?[{ index, white{ name, fide, replace }, black{…} }] }` (fehlt `games` = alle mit Vorgaben) → `{ added, duplicates, anonymized, truncated, ids, failed[{ index, white, black, reason }] }` |
+| POST | `/api/league/club/games` | contribute | EINE Partie `{ moves[] (SAN), white, black, whiteFide, blackFide, whiteElo, blackElo, whiteReplace, blackReplace, result, event, year, scanId }` → `{ id, anonymized }`; 400 `reason` wie oben + `duplicate`, `illegal` (mit Meldung); schließt die Einlesung |
 | DELETE | `/api/league/club/games/{id}` | contribute | 204 / 403 / 404 |
-| GET | `/api/league/club/players?q=` | contribute | Ligaspieler-Vorschläge (Wortanfänge) |
-| POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide }` |
-| GET | `/api/league/club/scoresheet/status` | contribute | wie `GET /api/scoresheets/status` |
+| GET | `/api/league/club/players?q=` | contribute | Ligaspieler-Vorschläge (Wortanfänge) samt `club` |
+| POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates }` |
+| GET | `/api/league/club/scoresheet/status` | contribute | Tageszahl dieses Wegs (10) |
 | GET/POST | `/api/league/club/scans` | contribute | offene Liga-Einlesungen / Foto hochladen (multipart wie `POST /api/scoresheets`) |
-| GET | `/api/league/club/scans/{id}` | contribute | `LeagueScanStateDto` (Einträge, Kästen, Züge, Kopfdaten, vermutete Seite) |
-| GET | `/api/league/club/scans/{id}/photo` | contribute | Foto |
-| POST | `/api/league/club/scans/{id}/resolve` | contribute | Rest neu aufbereiten `{ prefix, writtenFrom }` |
-| DELETE | `/api/league/club/scans/{id}` | contribute | verwerfen |
+| GET | `/api/league/club/scans/{id}` (+`/photo`, `POST /resolve`, `DELETE`) | contribute | Stand / Foto / Rest neu aufbereiten / verwerfen |
+| POST | `/api/league/s/{token}/club/games/preview`, `/games/import` | Teilen-Link | wie oben, ohne Konto |
+| POST | `/api/league/s/{token}/club/games?scanKey=` | Teilen-Link | eine Partie, schließt die Einlesung mit diesem Schlüssel |
+| GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
+| POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
+| POST | `/api/league/s/{token}/club/scans/lookup` | Teilen-Link | `{ keys[] }` → die offenen Einlesungen dazu |
+| GET | `/api/league/s/{token}/club/scans/{key}` (+`/photo`, `POST /resolve`, `DELETE`) | Teilen-Link | wie angemeldet, über den Schlüssel |
+
+Der Teilen-Link muss gültig sein (`LeagueService.ShareValidAsync`, sonst 404); Rate-Limit `anonymous-tournament`. Lesen
+der Vereinspartien gibt es über den Link NICHT.
+
+**Megabase + andere Sammlungen** (0.574.0): `POST /api/league/admin/games?source=Mega` (`league.manage`, PGN, gern
+gzip) spielt eine fremde Partiesammlung in die Karten ein — zugeordnet NUR über `WhiteFideId`/`BlackFideId` im Kopf,
+zusammengeführt wie ein chess-results-Abruf, die Quelle steht als Kopfzeile `[LeagueSource "Mega"]` im gespeicherten PGN
+(`LeagueProfileBuilder.StoredSource` liest sie VOR der FIDE-Regel, sonst sähe die Megabase wie Lumbra aus). Den Filter
+auf die TMM-Spieler macht `mega_decide.py` im league-analyzer (Stand 28.09.: 11,5 Mio. Partien, 46 642 übernommen für
+328 Spieler; ausgelassen 235 nur über den Namen, 262 mit Namen, der nicht zur Meldeliste passt — ChessBase hängt
+modernen FIDE-IDs gelegentlich Partien von Namensvettern an —, 293 ohne Züge, 46 über 30 Jahre vor dem Median-Jahr des
+Spielers). Die ganze Megabase liegt NICHT in RookHub.
+
+**Eröffnungsbaum** (0.574.0): `GET /api/league/player/{fide}/tree?color=w|s&line=e4 e5` (und `/api/league/s/{token}/player/{fide}/tree`
+für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, score (Punkte aus SEINER Sicht, %), last (Jahr) }] }`
+über alle seine Partien (fremde + Verein), höchstens 30 Halbzüge, Züge aus dem Partietext (ohne Brett, schnell genug für
+2000 Partien je Klick). Oberfläche: Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte (`shared/opening-tree.component.ts`).
 
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
-`/verein/formular/:id`). Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite
+`/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
+Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite
 (`features/games/sheet-edit-session.ts`, siehe `src/frontend/CLAUDE.md`).
 
 ### Gruppen (Admin + auth)
@@ -3185,8 +3221,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | CommentEmbeddings | „Frag die Kommentare" (0.536.0): Kommentar-Stück einer Bibliothekspartie + Vektor | LibraryGameId (Cascade, Index), FromPly/ToPly, Text (≤1600, zugleich der Auszug), **Vector (`VECTOR(512)`, Kosinus-Index per SQL)**, Model? (≤80), CreatedAt |
 | GameMoveExplanations | „Warum war das ein Fehler?" (0.534.0): ein Text je Analyse, Halbzug und Sprache, geschrieben vom Sprachmodell auf eigener Hardware (`GameMoveExplanationService`) | GameAnalysisId (Cascade), Ply, Language (≤8), Class (≤12: inaccuracy/mistake/blunder/miss), **Viewpoint (≤5: white/black = Seite des Besitzers, leer = neutral; 0.540.0)**, Text (≤1200), Model? (≤80), **MasterLibraryGameId? (kein FK) + MasterText? (≤600) — der mitgegebene Meisterkommentar zur selben Stellung (0.542.0)**, CreatedAt; **UNIQUE (GameAnalysisId, Ply, Language)** |
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), **WhiteElo?/BlackElo? + TimeControl? (≤32, „180+2“) + HeadersScanned (0.526.0 — die Partienliste zeigt Wertung und Bedenkzeit wie chess.coms Übersicht; das PGN dafür zu laden wäre derselbe Fehler, den `MoveCount` schon behoben hat. Der Altbestand bekommt seine Wertungen portionsweise aus dem PGN (`HeaderBackfillPerCall` = 50 je Listenaufruf), und die Marke `HeadersScanned` unterscheidet „noch nicht nachgesehen“ von „nennt keine Wertung“; die Bedenkzeit steht in keinem alten PGN und bleibt dort leer)**, ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, **OwnerSide? (≤5, white/black — selbst festgelegte Seite, schlägt die Namenszuordnung; 0.531.0)**, **ReviewLanguage? (≤8 — Sprache der Seite beim „Partie analysieren“, darin entstehen Erklärungen und Roasts; 0.540.0)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
-| ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
-| LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer) |
+| ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, **UserId ist NULLBAR (ohne Konto über einen LeagueHub-Teilen-Link), dann AccessKey? (≤32, UNIQUE, geheimer Schlüssel) + AnonIpHash? (≤64, HMAC der IP, nach 2 Tagen geleert)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
+| LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer) |
 | GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), **ShareToken? (≤32, UNIQUE — öffentlicher Link `/r/{token}`, NULL = nicht geteilt) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
 | GameReconstructionParts | EIN Bruchstück: Zugfolge ODER Stellung. **`BlackToMove`** gilt nur für eine Zugfolge OHNE Anschluss (sonst sagt es die Stellung davor bzw. die FEN); beim ersten Teil heißt es „das ist nicht die Eröffnung". `Ordinal` ist die Reihenfolge in der Partie; **`ContinuesPrevious` (Vorgabe false) sagt, ob es NAHTLOS an das vorige anschließt** — ohne das liegt dazwischen eine Lücke, und genau das ist der Normalfall | GameReconstructionId (Cascade), Ordinal, Kind (Moves/Position), Moves? (≤4000, SAN ohne Zugnummern), Fen? (≤120), **Certain (Vorgabe true — „hier bin ich mir nicht sicher" ist die Auskunft; ein per Lückensuche eingesetztes Teil steht auf false)**, FromPly? (Erinnerungs-Hinweis, keine Verankerung), Note? (≤500), CreatedAt, UpdatedAt; Index (GameReconstructionId, Ordinal). Deckel 200 je Rekonstruktion |
 | PlayTimeDailies | Gespielte Rapid-/Classical-Partien je UTC-Tag/Plattform | UserId + Date + Platform (unique, Cascade), Games (Anzahl Partien), UpdatedAt; befüllt vom `PlayTimeSyncService` |

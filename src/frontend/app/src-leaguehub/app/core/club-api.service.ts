@@ -3,15 +3,25 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
 import {
-  ClubGameRequest, ClubImportResult, ClubList, ClubMatch, LeagueScanState, RosterPerson, ScoresheetScan, ScoresheetStatus,
+  ClubGameRequest, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, RosterPerson,
+  ScanRef, ScoresheetScan, ScoresheetStatus,
 } from './club.models';
 
-const BASE = '/api/league/club';
+/**
+ * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
+ * über einen Teilen-Link (`/api/league/s/{token}/club`). Einlesungen heißen angemeldet nach ihrer Nummer, ohne Konto nach
+ * dem geheimen Schlüssel, den der Server beim Hochladen ausgibt — beides steckt in `ref`.
+ */
+export class ClubClient {
+  private readonly base: string;
 
-/** Vereins-Datenbank: Partien lesen (`league.view`), hochladen und Formulare einlesen (`league.contribute`). */
-@Injectable({ providedIn: 'root' })
-export class ClubApiService {
-  private readonly http = inject(HttpClient);
+  constructor(private readonly http: HttpClient, readonly share: string | null) {
+    this.base = share ? `/api/league/s/${encodeURIComponent(share)}/club` : '/api/league/club';
+  }
+
+  get anonymous(): boolean {
+    return !!this.share;
+  }
 
   private params(fide: string | null, q: string | null, page?: number): HttpParams {
     let p = new HttpParams();
@@ -22,63 +32,95 @@ export class ClubApiService {
   }
 
   list(fide: string | null, q: string | null, page: number): Promise<ClubList> {
-    return firstValueFrom(this.http.get<ClubList>(`${BASE}/games`, { params: this.params(fide, q, page) }));
+    return firstValueFrom(this.http.get<ClubList>(`${this.base}/games`, { params: this.params(fide, q, page) }));
   }
 
   pgn(fide: string | null, q: string | null): Promise<Blob> {
-    return firstValueFrom(this.http.get(`${BASE}/games/pgn`, { params: this.params(fide, q), responseType: 'blob' }));
+    return firstValueFrom(this.http.get(`${this.base}/games/pgn`, { params: this.params(fide, q), responseType: 'blob' }));
   }
 
-  importPgn(pgn: string, anonymize: boolean): Promise<ClubImportResult> {
-    return firstValueFrom(this.http.post<ClubImportResult>(`${BASE}/games/import`, { pgn, anonymize }));
+  preview(pgn: string): Promise<ClubPreview> {
+    return firstValueFrom(this.http.post<ClubPreview>(`${this.base}/games/preview`, { pgn }));
   }
 
-  addGame(body: ClubGameRequest): Promise<{ id: number; anonymized: boolean }> {
-    return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${BASE}/games`, body));
+  importPgn(pgn: string, games: ImportGameDecision[]): Promise<ClubImportResult> {
+    return firstValueFrom(this.http.post<ClubImportResult>(`${this.base}/games/import`, { pgn, games }));
+  }
+
+  /** Eine Partie aus einem Partieformular; `scanRef` wird danach geschlossen. */
+  addGame(body: ClubGameRequest, scanRef: string | null): Promise<{ id: number; anonymized: boolean }> {
+    if (this.anonymous) {
+      const params = scanRef ? new HttpParams().set('scanKey', scanRef) : undefined;
+      return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${this.base}/games`, { ...body, scanId: null }, { params }));
+    }
+    return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${this.base}/games`,
+      { ...body, scanId: scanRef ? Number(scanRef) : null }));
   }
 
   deleteGame(id: number): Promise<unknown> {
-    return firstValueFrom(this.http.delete(`${BASE}/games/${id}`));
+    return firstValueFrom(this.http.delete(`${this.base}/games/${id}`));
   }
 
   players(q: string): Promise<RosterPerson[]> {
-    return firstValueFrom(this.http.get<RosterPerson[]>(`${BASE}/players`, { params: new HttpParams().set('q', q) }));
+    return firstValueFrom(this.http.get<RosterPerson[]>(`${this.base}/players`, { params: new HttpParams().set('q', q) }));
   }
 
   match(white: string, black: string): Promise<ClubMatch> {
-    return firstValueFrom(this.http.post<ClubMatch>(`${BASE}/match`, { white, black }));
+    return firstValueFrom(this.http.post<ClubMatch>(`${this.base}/match`, { white, black }));
   }
 
   scoresheetStatus(): Promise<ScoresheetStatus> {
-    return firstValueFrom(this.http.get<ScoresheetStatus>(`${BASE}/scoresheet/status`));
+    return firstValueFrom(this.http.get<ScoresheetStatus>(`${this.base}/scoresheet/status`));
   }
 
-  scans(): Promise<ScoresheetScan[]> {
-    return firstValueFrom(this.http.get<ScoresheetScan[]>(`${BASE}/scans`));
+  /** Die eigenen offenen Einlesungen — ohne Konto die zu den Schlüsseln, die sich der Browser gemerkt hat. */
+  async scans(keys: string[] = []): Promise<ScanRef[]> {
+    if (this.anonymous) {
+      if (!keys.length) return [];
+      const r = await firstValueFrom(this.http.post<{ key: string; scan: ScoresheetScan }[]>(`${this.base}/scans/lookup`, { keys }));
+      return r.map(x => ({ ref: x.key, scan: x.scan }));
+    }
+    const list = await firstValueFrom(this.http.get<ScoresheetScan[]>(`${this.base}/scans`));
+    return list.map(scan => ({ ref: String(scan.id), scan }));
   }
 
-  upload(file: File, language: string, side: 'white' | 'black' | 'auto'): Promise<ScoresheetScan> {
+  async upload(file: File, language: string, side: 'white' | 'black' | 'auto'): Promise<ScanRef> {
     const form = new FormData();
     form.append('file', file, file.name);
     form.append('language', language);
     form.append('side', side);
-    return firstValueFrom(this.http.post<ScoresheetScan>(`${BASE}/scans`, form));
+    if (this.anonymous) {
+      const r = await firstValueFrom(this.http.post<{ key: string; scan: ScoresheetScan }>(`${this.base}/scans`, form));
+      return { ref: r.key, scan: r.scan };
+    }
+    const scan = await firstValueFrom(this.http.post<ScoresheetScan>(`${this.base}/scans`, form));
+    return { ref: String(scan.id), scan };
   }
 
-  scan(id: number): Promise<LeagueScanState> {
-    return firstValueFrom(this.http.get<LeagueScanState>(`${BASE}/scans/${id}`));
+  scan(ref: string): Promise<LeagueScanState> {
+    return firstValueFrom(this.http.get<LeagueScanState>(`${this.base}/scans/${encodeURIComponent(ref)}`));
   }
 
-  photo(id: number): Promise<Blob> {
-    return firstValueFrom(this.http.get(`${BASE}/scans/${id}/photo`, { responseType: 'blob' }));
+  photo(ref: string): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.base}/scans/${encodeURIComponent(ref)}/photo`, { responseType: 'blob' }));
   }
 
   /** Als Observable: die geteilte Korrektur-Sitzung hängt es an die Lebensdauer der Seite. */
-  resolve(id: number, prefix: string[], writtenFrom: number): Observable<ScoresheetResolveResult> {
-    return this.http.post<ScoresheetResolveResult>(`${BASE}/scans/${id}/resolve`, { prefix, writtenFrom });
+  resolve(ref: string, prefix: string[], writtenFrom: number): Observable<ScoresheetResolveResult> {
+    return this.http.post<ScoresheetResolveResult>(`${this.base}/scans/${encodeURIComponent(ref)}/resolve`, { prefix, writtenFrom });
   }
 
-  discard(id: number): Promise<unknown> {
-    return firstValueFrom(this.http.delete(`${BASE}/scans/${id}`));
+  discard(ref: string): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`${this.base}/scans/${encodeURIComponent(ref)}`));
+  }
+}
+
+/** Liefert den passenden Client: `share` = Token eines Teilen-Links (ohne Anmeldung), sonst angemeldet. */
+@Injectable({ providedIn: 'root' })
+export class ClubApiService {
+  private readonly http = inject(HttpClient);
+
+  client(share: string | null = null): ClubClient {
+    return new ClubClient(this.http, share);
   }
 }

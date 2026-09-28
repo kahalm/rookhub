@@ -9,17 +9,18 @@ namespace RookHub.Api.Services.League;
 
 /// <summary>
 /// Vereins-Datenbank in LeagueHub (Wunsch 2026-09-28): Mitglieder von SK Schwaz laden Partien hoch — viele auf einmal als
-/// PGN oder einzeln aus einem eingelesenen Partieformular — und die Spielerkarten der Gegner zeigen sie mit.
+/// PGN oder einzeln aus einem eingelesenen Partieformular, angemeldet ODER ohne Konto über einen Teilen-Link — und die
+/// Spielerkarten der Gegner zeigen sie mit.
 ///
 /// <para>Regeln, alle vom Nutzer vorgegeben:</para>
 /// <list type="bullet">
-/// <item><b>Beide Namen gegen die Meldelisten</b> (<see cref="LeagueRosterIndex"/>). Ist keine der verbleibenden Seiten
-/// ein Ligaspieler, wird die Partie abgelehnt (<c>noLeaguePlayer</c>) — sie nützte keiner Vorbereitung.</item>
-/// <item><b>„Meinen Namen durch Schwaz ersetzen"</b> (Vorgabe an): die Seite des Hochladenden heißt „Schwaz", ohne Elo
-/// und FIDE-ID, die Veranstaltung fällt weg, und es wird WEDER gespeichert, wer dahinter steht, NOCH wer hochgeladen hat
-/// oder wann (auch nicht versteckt) — damit man nicht gegen die eigenen Spieler vorbereiten kann. Beim PGN-Import wird die
-/// eigene Seite über das Profil gefunden (FIDE-ID, sonst der Name); wer darin nicht vorkommt, bekommt die Partie mit
-/// <c>ownerNotFound</c> zurück, statt dass sie mit echtem Namen landet.</item>
+/// <item><b>Beide Namen gegen die Meldelisten</b> (<see cref="LeagueRosterIndex"/>). Ist keine Seite ein Ligaspieler, wird
+/// die Partie abgelehnt (<c>noLeaguePlayer</c>); bleibt nach dem Ersetzen keiner übrig, ebenso (<c>onlyOwnClub</c>).</item>
+/// <item><b>Spieler von Schwaz werden durch „Schwaz" ersetzt</b> (Vorgabe: jeder, der in seiner jüngsten Saison für
+/// Schwaz gemeldet ist, dazu der Hochladende laut Profil) — ohne Elo und FIDE-ID, die Veranstaltung fällt weg, und es
+/// wird WEDER gespeichert, wer dahinter steht, NOCH wer hochgeladen hat oder wann (auch nicht versteckt). Beim PGN-Import
+/// zeigt eine Übersicht (<see cref="PreviewAsync"/>) je Partie wer gegen wen, die Vorgaben und ob sie übernommen würde;
+/// der Nutzer korrigiert Spieler und Ersetzen, übernommen wird mit seinen Entscheidungen (<see cref="ImportPgnAsync"/>).</item>
 /// <item><b>Nur das JAHR</b> des Datums.</item>
 /// <item>Gespeichert wird nur die Hauptvariante ohne Kommentare (Kommentare tragen oft Namen und Uhrzeiten), und nur ab
 /// der Grundstellung (<c>fromPosition</c>) — die Karten zählen Eröffnungen.</item>
@@ -48,17 +49,27 @@ public sealed class LeagueClubService
         _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow);
     }
 
-    public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct) =>
-        new(await _db.LeaguePlayers.AsNoTracking()
-            .Select(p => new LeagueRosterIndex.Row(p.Tnr, p.Team, p.Name, p.NameKey, p.FideId)).ToListAsync(ct));
+    public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct)
+    {
+        var seasons = await _db.LeagueTournaments.AsNoTracking().Select(t => new { t.Tnr, t.Season })
+            .ToDictionaryAsync(t => t.Tnr, t => t.Season, ct);
+        var rows = await _db.LeaguePlayers.AsNoTracking().Select(p => new { p.Tnr, p.Team, p.Name, p.NameKey, p.FideId }).ToListAsync(ct);
+        return new(rows.Select(r => new LeagueRosterIndex.Row(r.Tnr, r.Team, r.Name, r.NameKey, r.FideId,
+            seasons.GetValueOrDefault(r.Tnr) ?? "")));
+    }
 
     // ── Hochladen ───────────────────────────────────────────────────
 
-    private sealed record Owner(string? Fide, string?[] Names);
-
-    private async Task<Owner> OwnerAsync(int userId, CancellationToken ct)
+    private sealed record Owner(string? Fide, string?[] Names)
     {
-        var p = await _db.UserProfiles.AsNoTracking().Where(x => x.UserId == userId)
+        public static readonly Owner Nobody = new(null, Array.Empty<string?>());
+    }
+
+    /// <summary>Wer hochlädt (Profil) — ohne Konto (Teilen-Link) niemand.</summary>
+    private async Task<Owner> OwnerAsync(int? userId, CancellationToken ct)
+    {
+        if (userId is not int uid) return Owner.Nobody;
+        var p = await _db.UserProfiles.AsNoTracking().Where(x => x.UserId == uid)
             .Select(x => new { x.FideId, x.LastName, x.DisplayName, x.FirstName }).FirstOrDefaultAsync(ct);
         return new Owner(string.IsNullOrWhiteSpace(p?.FideId) ? null : p!.FideId!.Trim(),
             new[] { p?.LastName, p?.DisplayName, p?.FirstName });
@@ -74,43 +85,106 @@ public sealed class LeagueClubService
             var b = o.Fide == blackFide || o.Fide == hb.Person?.Fide;
             if (w != b) return w ? "white" : "black";
         }
-        return ScoresheetScanService.GuessOwnerSide(white, black, o.Names);
+        return o.Names.Length == 0 ? null : ScoresheetScanService.GuessOwnerSide(white, black, o.Names);
     }
 
-    private sealed record Input(string? White, string? Black, string? WhiteFide, string? BlackFide, int? WhiteElo, int? BlackElo,
-        string? Result, string? Event, int? Year, List<string> Sans, bool Anonymize, string? OwnerSide);
-
-    /// <summary>Aus einer geprüften Zugfolge + Kopfdaten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
-    private static (LeagueClubGame? Game, string? Reason) Build(Input i, LeagueRosterIndex roster, Owner owner)
+    /// <summary>Eine Partie des PGN-Textes: die Kopfzeilen und die geprüfte Hauptvariante — oder warum sie sich gar nicht
+    /// übernehmen lässt (<c>illegal</c>, <c>noMoves</c>, <c>tooLong</c>, <c>fromPosition</c>).</summary>
+    private sealed record Parsed(int Index, Dictionary<string, string> Headers, List<string>? Sans, string? Error)
     {
-        var hw = roster.Match(i.White, i.WhiteFide);
-        var hb = roster.Match(i.Black, i.BlackFide);
-        if (!hw.League && !hb.League) return (null, "noLeaguePlayer");
-        string? anonSide = null;
-        if (i.Anonymize)
-        {
-            anonSide = i.OwnerSide is "white" or "black" ? i.OwnerSide
-                : OwnerSideOf(owner, i.White, i.Black, i.WhiteFide, i.BlackFide, hw, hb);
-            if (anonSide == null) return (null, "ownerNotFound");
-        }
-        (string Name, string? Fide, int? Elo, bool League) Side(string? raw, LeagueRosterIndex.Hit hit, int? elo, bool anon) =>
-            anon ? (AnonymousName, null, null, false)
-                : (Clip(hit.Person?.Name ?? LeagueNames.Clean(raw), 120) is { Length: > 0 } n ? n : "?", hit.Person?.Fide, Elo(elo), hit.League);
-        var w = Side(i.White, hw, i.WhiteElo, anonSide == "white");
-        var b = Side(i.Black, hb, i.BlackElo, anonSide == "black");
-        if (!w.League && !b.League) return (null, "noLeaguePlayer");
+        public string? H(string key) => Headers.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
+        public int? Elo(string key) => int.TryParse(H(key), out var e) ? e : null;
+    }
 
+    /// <summary>Die Partien in Reihenfolge, 1-basiert nummeriert — Übersicht und Übernahme zählen gleich.</summary>
+    private static List<Parsed> ParseAll(string pgn, out bool truncated)
+    {
+        var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
+        truncated = games.Count > MaxImportGames;
+        var start = new Chess.ChessBoard().ToFen();
+        var result = new List<Parsed>();
+        var index = 0;
+        foreach (var (rawHeaders, moveText) in games.Take(MaxImportGames))
+        {
+            index++;
+            var h = rawHeaders ?? new Dictionary<string, string>();
+            string? Error()
+            {
+                if (h.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)
+                    && string.Join(' ', fen.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(4)) != StartPosition)
+                    return "fromPosition";
+                return null;
+            }
+            var err = Error();
+            List<string>? sans = null;
+            if (err == null)
+            {
+                try
+                {
+                    var uci = PgnParser.TryExtractUciMainline(start, moveText);
+                    if (uci == null) err = "illegal";
+                    else if (uci.Count == 0) err = "noMoves";
+                    else if (uci.Count > MaxPlies) err = "tooLong";
+                    else
+                    {
+                        sans = SavedGameService.SansOf(start, uci);
+                        if (sans.Count != uci.Count) { err = "illegal"; sans = null; }
+                    }
+                }
+                catch (Exception) { err = "illegal"; sans = null; }
+            }
+            result.Add(new Parsed(index, h, sans, err));
+        }
+        return result;
+    }
+
+    /// <summary>Eine Seite, wie sie gespeichert würde.</summary>
+    private sealed record Side(string? Name, LeagueRosterIndex.Hit Hit, int? Elo, bool Replace);
+
+    /// <summary>Die Vorgabe der Übersicht: Abgleich über Kopfzeile, ersetzt wird ein Spieler von Schwaz und der
+    /// Hochladende selbst (Wunsch 2026-09-28: „alle Spieler vom Verein Schwaz").</summary>
+    private static (Side White, Side Black, string? OwnerSide) Defaults(Parsed p, LeagueRosterIndex roster, Owner owner)
+    {
+        var hw = roster.Match(p.H("White"), p.H("WhiteFideId"));
+        var hb = roster.Match(p.H("Black"), p.H("BlackFideId"));
+        var ownerSide = OwnerSideOf(owner, p.H("White"), p.H("Black"), p.H("WhiteFideId"), p.H("BlackFideId"), hw, hb);
+        return (new Side(p.H("White"), hw, p.Elo("WhiteElo"), hw.OwnClub || ownerSide == "white"),
+            new Side(p.H("Black"), hb, p.Elo("BlackElo"), hb.OwnClub || ownerSide == "black"), ownerSide);
+    }
+
+    /// <summary>Was der Nutzer für eine Seite festgelegt hat: ein gewählter Ligaspieler (FIDE-ID) schlägt den Namen, ein
+    /// getippter Name wird neu abgeglichen, ohne Angabe gilt die Kopfzeile.</summary>
+    private static Side Decided(LeagueClubSideDecision? d, string? raw, string? rawFide, int? elo, LeagueRosterIndex roster)
+    {
+        d ??= new LeagueClubSideDecision();
+        if (roster.ByFide(d.Fide) is { } p) return new Side(p.Name, new LeagueRosterIndex.Hit(true, p, new[] { p }), elo, d.Replace);
+        var typed = !string.IsNullOrWhiteSpace(d.Name);
+        var name = typed ? d.Name!.Trim() : raw;
+        return new Side(name, roster.Match(name, typed ? null : rawFide), elo, d.Replace);
+    }
+
+    /// <summary>Aus einer geprüften Zugfolge + den Seiten die zu speichernde Zeile (oder den Ablehnungsgrund).</summary>
+    private static (LeagueClubGame? Game, string? Reason) Build(Side w, Side b, IReadOnlyList<string> sans, int? year,
+        string? result, string? evt)
+    {
+        if (!w.Hit.League && !b.Hit.League) return (null, "noLeaguePlayer");
+        if (!(w.Hit.League && !w.Replace) && !(b.Hit.League && !b.Replace)) return (null, "onlyOwnClub");
+        (string Name, string? Fide, int? Elo) Out(Side s) => s.Replace ? (AnonymousName, null, null)
+            : (Clip(s.Hit.Person?.Name ?? LeagueNames.Clean(s.Name), 120) is { Length: > 0 } n ? n : "?", s.Hit.Person?.Fide, Elo(s.Elo));
+        var (wn, wf, we) = Out(w);
+        var (bn, bf, be) = Out(b);
+        var anonymized = w.Replace || b.Replace;
         var game = new LeagueClubGame
         {
-            Year = i.Year,
-            White = w.Name, Black = b.Name, WhiteFide = w.Fide, BlackFide = b.Fide, WhiteElo = w.Elo, BlackElo = b.Elo,
-            Result = i.Result is { } r && Results.Contains(r) ? r : "*",
-            Event = anonSide != null ? null : Clip(LeagueNames.Clean(i.Event), 200) is { Length: > 0 } e && e != "?" ? e : null,
-            Plies = i.Sans.Count,
-            MovesHash = HashOf(i.Sans),
-            Anonymized = anonSide != null,
+            Year = year,
+            White = wn, Black = bn, WhiteFide = wf, BlackFide = bf, WhiteElo = we, BlackElo = be,
+            Result = result is { } r && Results.Contains(r) ? r : "*",
+            Event = anonymized ? null : Clip(LeagueNames.Clean(evt), 200) is { Length: > 0 } e && e != "?" ? e : null,
+            Plies = sans.Count,
+            MovesHash = HashOf(sans),
+            Anonymized = anonymized,
         };
-        game.Pgn = PgnOf(game, i.Sans);
+        game.Pgn = PgnOf(game, sans);
         return (game, null);
     }
 
@@ -156,47 +230,90 @@ public sealed class LeagueClubService
         return candidates.Any(Same);
     }
 
-    /// <summary>PGN-Massenimport. Wirft nicht bei einzelnen Partien — die stehen mit Grund in <c>Failed</c>.</summary>
-    public async Task<LeagueClubImportResultDto> ImportPgnAsync(int userId, string pgn, bool anonymize, CancellationToken ct = default)
+    private static LeagueClubPreviewSideDto SideDto(Side s, bool owner) => new()
     {
-        var result = new LeagueClubImportResultDto();
-        var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
-        if (games.Count > MaxImportGames) { result.Truncated = true; games = games.Take(MaxImportGames).ToList(); }
+        Raw = s.Name, Elo = s.Elo, Match = MatchDto(s.Hit), Owner = owner, Replace = s.Replace,
+    };
+
+    internal static LeagueClubSideMatchDto MatchDto(LeagueRosterIndex.Hit h) => new()
+    {
+        League = h.League, Ambiguous = h.Ambiguous, Name = h.Person?.Name, Fide = h.Person?.Fide, Club = h.OwnClub,
+        Candidates = h.Ambiguous ? h.Candidates.Take(8).Select(PersonDto).ToList() : new(),
+    };
+
+    internal static LeagueRosterPersonDto PersonDto(LeagueRosterIndex.Person p) =>
+        new() { Name = p.Name, Fide = p.Fide, Teams = p.Teams.Take(3).ToList(), Club = p.OwnClub };
+
+    /// <summary>
+    /// Übersicht vor dem Import (Wunsch 2026-09-28: „nach Import Übersicht wer gegen wen, unerkannte/falsche Spieler
+    /// korrigieren, je Partie markieren, ob sie importiert wird"): liest und gleicht ab, speichert NICHTS. Je Partie die
+    /// Seiten mit Abgleich und der Vorgabe „ersetzen", ob sie schon da ist, und was sie unübernehmbar macht. Ob eine
+    /// Partie übernommen wird, entscheidet die Seite danach aus den Seiten (dieselbe Regel wie <see cref="Build"/>).
+    /// </summary>
+    public async Task<LeagueClubPreviewDto> PreviewAsync(int? userId, string pgn, CancellationToken ct = default)
+    {
+        var parsed = ParseAll(pgn, out var truncated);
         var roster = await RosterAsync(ct);
         var owner = await OwnerAsync(userId, ct);
         var now = _now();
         var pending = new List<LeagueClubGame>();
-        var index = 0;
-        foreach (var (rawHeaders, moveText) in games)
+        var dto = new LeagueClubPreviewDto { Truncated = truncated };
+        foreach (var p in parsed)
         {
-            index++;
-            var h = rawHeaders ?? new Dictionary<string, string>();
-            string? H(string key) => h.TryGetValue(key, out var v) && !string.IsNullOrWhiteSpace(v) && v.Trim() != "?" ? v.Trim() : null;
+            var (w, b, ownerSide) = Defaults(p, roster, owner);
+            var g = new LeagueClubPreviewGameDto
+            {
+                Index = p.Index, Year = YearOf(p.H("Date"), now), Result = p.H("Result") is { } r && Results.Contains(r) ? r : "*",
+                Event = p.H("Event"), Plies = p.Sans?.Count ?? 0, Opening = p.Sans is null ? "" : OpeningOfSans(p.Sans),
+                Error = p.Error, White = SideDto(w, ownerSide == "white"), Black = SideDto(b, ownerSide == "black"),
+            };
+            if (p.Sans != null && Build(w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
+            {
+                g.Duplicate = await IsDuplicateAsync(built, pending, ct);
+                pending.Add(built);
+            }
+            dto.Games.Add(g);
+        }
+        return dto;
+    }
+
+    /// <summary>PGN-Import nach der Übersicht: je Partie in <paramref name="decisions"/> die festgelegten Seiten
+    /// (<c>null</c> = alle Partien mit den Vorgaben der Übersicht). Wirft nicht bei einzelnen Partien — die stehen mit
+    /// Grund in <c>Failed</c>.</summary>
+    public async Task<LeagueClubImportResultDto> ImportPgnAsync(int? userId, string pgn,
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default)
+    {
+        var result = new LeagueClubImportResultDto();
+        var parsed = ParseAll(pgn, out var truncated);
+        result.Truncated = truncated;
+        var byIndex = parsed.ToDictionary(p => p.Index);
+        var roster = await RosterAsync(ct);
+        var owner = await OwnerAsync(userId, ct);
+        var now = _now();
+        var pending = new List<LeagueClubGame>();
+        var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
+            ?? parsed.Select(p => (p.Index, (LeagueClubImportGameDecision?)null)).ToList();
+        foreach (var (index, decision) in work)
+        {
+            if (!byIndex.TryGetValue(index, out var p))
+            {
+                result.Failed.Add(new LeagueClubFailureDto { Index = index, Reason = "notFound" });
+                continue;
+            }
             void Fail(string reason) => result.Failed.Add(new LeagueClubFailureDto
             {
-                Index = index, White = H("White") is { } w ? Clip(w, 120) : null, Black = H("Black") is { } b ? Clip(b, 120) : null,
+                Index = index, White = p.H("White") is { } w0 ? Clip(w0, 120) : null, Black = p.H("Black") is { } b0 ? Clip(b0, 120) : null,
                 Reason = reason,
             });
-
-            if (H("FEN") is { } fen && string.Join(' ', fen.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(4)) != StartPosition)
-            { Fail("fromPosition"); continue; }
-            List<string> sans;
-            try
+            if (p.Error != null || p.Sans == null) { Fail(p.Error ?? "illegal"); continue; }
+            Side w, b;
+            if (decision == null) (w, b, _) = Defaults(p, roster, owner);
+            else
             {
-                var start = new Chess.ChessBoard().ToFen();
-                var uci = PgnParser.TryExtractUciMainline(start, moveText);
-                if (uci == null) { Fail("illegal"); continue; }
-                if (uci.Count == 0) { Fail("noMoves"); continue; }
-                if (uci.Count > MaxPlies) { Fail("tooLong"); continue; }
-                sans = SavedGameService.SansOf(start, uci);
-                if (sans.Count != uci.Count) { Fail("illegal"); continue; }
+                w = Decided(decision.White, p.H("White"), p.H("WhiteFideId"), p.Elo("WhiteElo"), roster);
+                b = Decided(decision.Black, p.H("Black"), p.H("BlackFideId"), p.Elo("BlackElo"), roster);
             }
-            catch (Exception) { Fail("illegal"); continue; }
-
-            var input = new Input(H("White"), H("Black"), H("WhiteFideId"), H("BlackFideId"),
-                int.TryParse(H("WhiteElo"), out var we) ? we : null, int.TryParse(H("BlackElo"), out var be) ? be : null,
-                H("Result"), H("Event"), YearOf(H("Date"), now), sans, anonymize, null);
-            var (game, reason) = Build(input, roster, owner);
+            var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             if (game == null) { Fail(reason!); continue; }
             if (await IsDuplicateAsync(game, pending, ct)) { result.Duplicates++; continue; }
             Stamp(game, userId, now);
@@ -206,14 +323,14 @@ public sealed class LeagueClubService
         result.Added = pending.Count;
         result.Anonymized = pending.Count(g => g.Anonymized);
         result.Ids = pending.Select(g => g.Id).ToList();
-        _log.LogInformation("Vereins-Datenbank: {Added} Partien hochgeladen ({Anon} anonym), {Dup} doppelt, {Failed} abgelehnt",
-            result.Added, result.Anonymized, result.Duplicates, result.Failed.Count);
+        _log.LogInformation("Vereins-Datenbank: {Added} Partien hochgeladen ({Anon} mit „Schwaz“), {Dup} doppelt, {Failed} abgelehnt{Via}",
+            result.Added, result.Anonymized, result.Duplicates, result.Failed.Count, userId == null ? " (Teilen-Link)" : "");
         return result;
     }
 
     /// <summary>Eine Partie aus der Korrektur eines Partieformulars. <c>Reason</c> ≠ null = abgelehnt
     /// (<c>illegal</c> samt Meldung, sonst wie beim Import, dazu <c>duplicate</c>).</summary>
-    public async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int userId, LeagueClubGameRequest req,
+    public async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int? userId, LeagueClubGameRequest req,
         CancellationToken ct = default)
     {
         var moves = (req.Moves ?? new()).Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
@@ -224,21 +341,23 @@ public sealed class LeagueClubService
         catch (ArgumentException ex) { return (null, "illegal", ex.Message); }
         var now = _now();
         var year = req.Year is { } y && y >= 1900 && y <= now.Year + 1 ? y : (int?)null;
-        var input = new Input(req.White, req.Black, null, null, req.WhiteElo, req.BlackElo, req.Result, req.Event, year, sans,
-            req.Anonymize, req.OwnerSide);
-        var (game, reason) = Build(input, await RosterAsync(ct), await OwnerAsync(userId, ct));
+        var roster = await RosterAsync(ct);
+        var w = Decided(new LeagueClubSideDecision { Name = req.White, Fide = req.WhiteFide, Replace = req.WhiteReplace }, req.White, null, req.WhiteElo, roster);
+        var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, roster);
+        var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
         if (await IsDuplicateAsync(game, new(), ct)) return (null, "duplicate", null);
         Stamp(game, userId, now);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
-        _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon})", game.Anonymized ? "anonym" : "mit Namen");
+        _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
+            game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
         return (game, null, null);
     }
 
-    /// <summary>Hochladender und Zeitpunkt — NUR bei nicht anonymisierten Partien (siehe Klassenkommentar).</summary>
-    private static void Stamp(LeagueClubGame g, int userId, DateTime now)
+    /// <summary>Hochladender und Zeitpunkt — NUR bei Partien ohne „Schwaz" und mit Konto (siehe Klassenkommentar).</summary>
+    private static void Stamp(LeagueClubGame g, int? userId, DateTime now)
     {
-        if (g.Anonymized) return;
+        if (g.Anonymized || userId is null) return;
         g.UploadedByUserId = userId;
         g.CreatedAt = now;
     }
@@ -302,7 +421,12 @@ public sealed class LeagueClubService
     internal static string OpeningOf(string pgn)
     {
         var moveText = PgnParser.SplitGames(pgn).Select(x => x.MoveText).FirstOrDefault() ?? string.Empty;
-        var sans = PgnParser.ExtractMainlineSans(moveText).Take(6).ToList();
+        return OpeningOfSans(PgnParser.ExtractMainlineSans(moveText));
+    }
+
+    internal static string OpeningOfSans(IEnumerable<string> all)
+    {
+        var sans = all.Take(6).ToList();
         var sb = new StringBuilder();
         for (var i = 0; i < sans.Count; i++)
         {
@@ -321,17 +445,12 @@ public sealed class LeagueClubService
     }
 
     public async Task<List<LeagueRosterPersonDto>> SuggestAsync(string q, CancellationToken ct) =>
-        (await RosterAsync(ct)).Suggest(q, 15)
-            .Select(p => new LeagueRosterPersonDto { Name = p.Name, Fide = p.Fide, Teams = p.Teams.Take(3).ToList() }).ToList();
+        (await RosterAsync(ct)).Suggest(q, 15).Select(PersonDto).ToList();
 
     public async Task<LeagueClubMatchDto> MatchAsync(string? white, string? black, CancellationToken ct)
     {
         var roster = await RosterAsync(ct);
-        static LeagueClubSideMatchDto Dto(LeagueRosterIndex.Hit h) => new()
-        {
-            League = h.League, Ambiguous = h.Ambiguous, Name = h.Person?.Name, Fide = h.Person?.Fide,
-        };
-        return new LeagueClubMatchDto { White = Dto(roster.Match(white, null)), Black = Dto(roster.Match(black, null)) };
+        return new LeagueClubMatchDto { White = MatchDto(roster.Match(white, null)), Black = MatchDto(roster.Match(black, null)) };
     }
 
     // ── Löschen ─────────────────────────────────────────────────────

@@ -15,6 +15,14 @@ describe('LeagueHub-Routen', () => {
     }
   });
 
+  it('Hochladen über einen Teilen-Link geht ohne Anmeldung', () => {
+    for (const path of ['s/:token/hochladen', 's/:token/formular/:key']) {
+      const r = routes.find(x => x.path === path);
+      expect(r).withContext(path).toBeDefined();
+      expect(r!.canActivate).withContext(path).toBeUndefined();
+    }
+  });
+
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {
     for (const r of routes) {
       expect(/^(g|t|puzzles)(\/|$)/.test(r.path ?? '')).withContext(r.path ?? '').toBeFalse();

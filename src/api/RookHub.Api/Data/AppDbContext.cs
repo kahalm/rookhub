@@ -1372,6 +1372,10 @@ public class AppDbContext : DbContext
             e.HasOne(s => s.Game).WithMany().HasForeignKey(s => s.SavedGameId).OnDelete(DeleteBehavior.Cascade);
             e.Property(s => s.Photo).HasColumnType("LONGBLOB");
             e.Property(s => s.Purpose).HasMaxLength(16);
+            e.Property(s => s.AccessKey).HasMaxLength(32);
+            e.Property(s => s.AnonIpHash).HasMaxLength(64);
+            e.HasIndex(s => s.AccessKey).IsUnique();
+            e.HasIndex(s => new { s.AnonIpHash, s.CreatedAt });
             e.Property(s => s.ContentType).HasMaxLength(40);
             e.Property(s => s.FileName).HasMaxLength(200);
             e.Property(s => s.NotationLanguage).HasMaxLength(8);

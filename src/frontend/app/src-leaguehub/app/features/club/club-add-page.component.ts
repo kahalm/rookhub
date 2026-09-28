@@ -2,23 +2,41 @@ import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, injec
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
-import { ClubApiService } from '../../core/club-api.service';
-import { ClubImportResult, ScoresheetScan, ScoresheetStatus } from '../../core/club.models';
-import { importSummary, reasonText, scanAvailability, scanStateText, uploadErrorText } from '../../core/club-format';
+import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
+import { ClubApiService, ClubClient } from '../../core/club-api.service';
+import { ClubImportResult, ScanRef, ScoresheetStatus } from '../../core/club.models';
+import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, uploadErrorText } from '../../core/club-format';
+import { ClubImportReviewComponent } from './club-import-review.component';
+import { ImportReview } from './import-review';
 
 const POLL_MS = 3000;
+/** Ohne Konto merkt sich der Browser die Schlüssel seiner Einlesungen — sonst fände er sie nach dem Neuladen nicht. */
+const ANON_KEYS = 'lh-anon-scans';
 type Kind = 'pgn' | 'formular';
 
+/** Die gemerkten Schlüssel je Teilen-Link. */
+export function anonKeys(share: string): string[] {
+  return (readJson<Record<string, string[]>>(localStore(), ANON_KEYS) ?? {})[share] ?? [];
+}
+
+export function rememberAnonKey(share: string, key: string, keep = true): void {
+  const all = readJson<Record<string, string[]>>(localStore(), ANON_KEYS) ?? {};
+  const list = (all[share] ?? []).filter(k => k !== key);
+  all[share] = keep ? [key, ...list].slice(0, 20) : list;
+  writeJson(localStore(), ANON_KEYS, all);
+}
+
 /**
- * Partien hinzufügen (`/verein/neu`): viele auf einmal als PGN — oder EIN Partieformular fotografieren, von RookHubs
- * Leser einlesen lassen und danach auf `/verein/formular/:id` prüfen. Beides mit „Meinen Namen durch Schwaz ersetzen",
- * standardmäßig an (Wunsch des Nutzers). Nur für die Vereinsgruppe (`league.contribute`).
+ * Partien hinzufügen — angemeldet (`/verein/neu`, Vereinsgruppe) ODER ohne Konto über einen Teilen-Link
+ * (`/s/:token/hochladen`). Viele auf einmal als PGN (erst die Übersicht „wer gegen wen", Spieler korrigieren, dann
+ * importieren) — oder EIN Partieformular fotografieren, lesen lassen und auf der Korrekturseite prüfen.
+ * Spieler von Schwaz werden standardmäßig durch „Schwaz" ersetzt (Wunsch des Nutzers).
  */
 @Component({
   selector: 'lh-club-add-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, ClubImportReviewComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
@@ -27,9 +45,10 @@ type Kind = 'pgn' | 'formular';
       </section>
     } @else {
       <section class="club-intro">
+        @if (share) { <p><a [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
         <h2>Partien hinzufügen</h2>
         <p class="muted">Angenommen wird jede Partie, in der mindestens ein Ligaspieler sitzt — geprüft an den Meldelisten
-          aller Saisonen. Vom Datum bleibt nur das Jahr.</p>
+          aller Saisonen. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>
       </section>
 
       <div class="seg club-kind" role="tablist" aria-label="Art">
@@ -39,30 +58,35 @@ type Kind = 'pgn' | 'formular';
                 (click)="setKind('formular')">Partieformular</button>
       </div>
 
-
       @if (kind() === 'pgn') {
         <section class="panel">
-          <label class="anon-toggle">
-            <input type="checkbox" [checked]="anonymize()" (change)="anonymize.set($any($event.target).checked)" />
-            <span><b>Meinen Namen durch „Schwaz" ersetzen</b>
-              <span class="muted">Dann wird weder gespeichert, wer hinter „Schwaz" steht, noch wer hochgeladen hat — so kann niemand
-                gezielt gegen dich vorbereiten. Deine Seite wird über dein Profil gefunden (Nachname oder FIDE-ID).</span></span>
-          </label>
-          <label class="field">PGN-Datei
-            <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" (change)="pickFile($event)" />
-          </label>
-          <label class="field">… oder hier einfügen
-            <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="pgn()"
-                      (input)="pgn.set($any($event.target).value)"></textarea>
-          </label>
-          <div class="actions">
-            <button type="button" class="btn-pri" [disabled]="importing() || !pgn().trim()" (click)="importPgn()">
-              {{ importing() ? 'Lade hoch …' : 'Partien hochladen' }}</button>
-            <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
-          </div>
+          @if (review(); as rv) {
+            <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" (imported)="done($event)" (cancel)="review.set(null)" />
+          } @else {
+            <label class="anon-toggle">
+              <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
+              <span><b>Spieler von Schwaz durch „{{ anon }}“ ersetzen</b>
+                <span class="muted">Jeder, der in seiner jüngsten Saison für Schwaz gemeldet ist@if (!share) {, und du selbst}. Dann wird
+                  weder gespeichert, wer dahinter steht, noch wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten.
+                  In der Übersicht lässt sich das je Partie ändern.</span></span>
+            </label>
+            <label class="field">PGN-Datei
+              <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" (change)="pickFile($event)" />
+            </label>
+            <label class="field">… oder hier einfügen
+              <textarea rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;]&#10;1. e4 c5 2. Nf3 …" [value]="pgn()"
+                        (input)="pgn.set($any($event.target).value)"></textarea>
+            </label>
+            <div class="actions">
+              <button type="button" class="btn-pri" [disabled]="previewing() || !pgn().trim()" (click)="startPreview()">
+                {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
+              <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“.</span>
+              <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
+            </div>
+          }
           @if (result(); as r) {
             <p class="result" role="status"><b>{{ summary(r) }}</b>
-              @if (r.added) { <a routerLink="/verein">Zu den Vereinspartien</a> }</p>
+              @if (r.added && !share) { <a routerLink="/verein">Zu den Vereinspartien</a> }</p>
             @if (r.failed.length) {
               <div class="roster-scroll">
                 <table class="rtable">
@@ -82,7 +106,7 @@ type Kind = 'pgn' | 'formular';
         <section class="panel">
           @if (status(); as s) {
             <p class="muted">{{ availability()!.text }} Das Foto wird von einem Sprachmodell gelesen; danach prüfst du die Züge
-              selbst, bevor etwas gespeichert wird.</p>
+              und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars
                 <input type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
@@ -98,7 +122,7 @@ type Kind = 'pgn' | 'formular';
                 </label>
                 <label class="field">Ich spiele
                   <select (change)="side.set($any($event.target).value)">
-                    <option value="auto" [selected]="side() === 'auto'">automatisch (Name im Profil)</option>
+                    <option value="auto" [selected]="side() === 'auto'">{{ share ? 'wähle ich danach' : 'automatisch (Name im Profil)' }}</option>
                     <option value="white" [selected]="side() === 'white'">Weiß</option>
                     <option value="black" [selected]="side() === 'black'">Schwarz</option>
                   </select>
@@ -117,12 +141,12 @@ type Kind = 'pgn' | 'formular';
           @if (scans().length) {
             <h3 class="club-h3">Deine Formulare</h3>
             <ul class="scan-list">
-              @for (sc of scans(); track sc.id) {
+              @for (sc of scans(); track sc.ref) {
                 <li>
-                  <span>{{ sc.white || '?' }} – {{ sc.black || '?' }}</span>
-                  <span class="muted">{{ stateText(sc) }}</span>
-                  @if (sc.status === 'done') { <a class="btn-sec" [routerLink]="['/verein/formular', sc.id]">Prüfen und übernehmen</a> }
-                  @if (sc.status === 'failed') { <button type="button" class="btn-link" (click)="discard(sc)">Verwerfen</button> }
+                  <span>{{ sc.scan.white || '?' }} – {{ sc.scan.black || '?' }}</span>
+                  <span class="muted">{{ stateText(sc.scan) }}</span>
+                  @if (sc.scan.status === 'done') { <a class="btn-sec" [routerLink]="scanLink(sc)">Prüfen und übernehmen</a> }
+                  @if (sc.scan.status === 'failed') { <button type="button" class="btn-link" (click)="discard(sc)">Verwerfen</button> }
                 </li>
               }
             </ul>
@@ -133,20 +157,24 @@ type Kind = 'pgn' | 'formular';
   `,
 })
 export class ClubAddPageComponent implements OnInit {
-  private readonly api = inject(ClubApiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly allowed = this.auth.has('league.contribute');
+  /** Token des Teilen-Links (Weg ohne Anmeldung) — sonst `null`. */
+  readonly share = this.route.snapshot.paramMap.get('token');
+  readonly client: ClubClient = inject(ClubApiService).client(this.share);
+  readonly allowed = !!this.share || this.auth.has('league.contribute');
   readonly username = this.auth.currentUser?.username ?? '';
+  readonly anon = ANON_NAME;
 
   readonly kind = signal<Kind>('pgn');
-  readonly anonymize = signal(true);
+  readonly replaceClub = signal(true);
   readonly pgn = signal('');
-  readonly importing = signal(false);
+  readonly previewing = signal(false);
   readonly importError = signal<string | null>(null);
+  readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
 
   readonly status = signal<ScoresheetStatus | null>(null);
@@ -156,7 +184,7 @@ export class ClubAddPageComponent implements OnInit {
   readonly photo = signal<File | null>(null);
   readonly uploading = signal(false);
   readonly scanError = signal<string | null>(null);
-  readonly scans = signal<ScoresheetScan[]>([]);
+  readonly scans = signal<ScanRef[]>([]);
 
   readonly reason = reasonText;
   readonly summary = importSummary;
@@ -183,6 +211,10 @@ export class ClubAddPageComponent implements OnInit {
     if (k === 'formular' && !this.status()) void this.loadStatus();
   }
 
+  scanLink(sc: ScanRef): unknown[] {
+    return this.share ? ['/s', this.share, 'formular', sc.ref] : ['/verein/formular', sc.ref];
+  }
+
   async pickFile(ev: Event): Promise<void> {
     const f = (ev.target as HTMLInputElement).files?.[0];
     if (!f) return;
@@ -190,35 +222,43 @@ export class ClubAddPageComponent implements OnInit {
     this.result.set(null);
   }
 
-  async importPgn(): Promise<void> {
-    this.importing.set(true);
+  async startPreview(): Promise<void> {
+    this.previewing.set(true);
     this.importError.set(null);
     this.result.set(null);
     try {
-      const r = await this.api.importPgn(this.pgn(), this.anonymize());
-      this.result.set(r);
-      if (r.added) this.pgn.set('');
+      this.review.set(new ImportReview(await this.client.preview(this.pgn()), this.replaceClub()));
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.importError.set(e?.error?.reason ? reasonText(e.error.reason)
-        : e?.status === 403 ? 'Dafür fehlt dir die Berechtigung (Vereinsmitglieder).' : 'Hochladen hat nicht geklappt.');
+        : e?.status === 404 && this.share ? 'Dieser Link ist abgelaufen.'
+        : e?.status === 403 ? 'Dafür fehlt dir die Berechtigung (Vereinsmitglieder).' : 'Lesen hat nicht geklappt.');
     } finally {
-      this.importing.set(false);
+      this.previewing.set(false);
     }
   }
 
+  done(r: ClubImportResult): void {
+    this.result.set(r);
+    this.review.set(null);
+    if (r.added) this.pgn.set('');
+  }
+
   private async loadStatus(): Promise<void> {
-    try { this.status.set(await this.api.scoresheetStatus()); }
+    try { this.status.set(await this.client.scoresheetStatus()); }
     catch (err) { this.scanError.set(uploadErrorText(err)); }
   }
 
   private async loadScans(): Promise<void> {
     if (this.kind() === 'formular' && !this.status()) await this.loadStatus();
     try {
-      const list = await this.api.scans();
+      const keys = this.share ? anonKeys(this.share) : [];
+      const list = await this.client.scans(keys);
       if (this.destroyed) return;
+      // Ohne Konto: Schlüssel übernommener/verworfener Einlesungen vergessen.
+      if (this.share) for (const k of keys) if (!list.some(s => s.ref === k)) rememberAnonKey(this.share, k, false);
       this.scans.set(list);
-      if (list.some(s => s.status === 'pending' || s.status === 'running')) this.schedulePoll();
+      if (list.some(s => s.scan.status === 'pending' || s.scan.status === 'running')) this.schedulePoll();
     } catch { /* die Liste ist Beiwerk */ }
   }
 
@@ -237,8 +277,9 @@ export class ClubAddPageComponent implements OnInit {
     this.uploading.set(true);
     this.scanError.set(null);
     try {
-      const scan = await this.api.upload(file, this.language(), this.side());
-      this.scans.set([scan, ...this.scans().filter(s => s.id !== scan.id)]);
+      const sc = await this.client.upload(file, this.language(), this.side());
+      if (this.share) rememberAnonKey(this.share, sc.ref);
+      this.scans.set([sc, ...this.scans().filter(s => s.ref !== sc.ref)]);
       this.photo.set(null);
       await this.loadStatus();
       this.schedulePoll();
@@ -249,10 +290,11 @@ export class ClubAddPageComponent implements OnInit {
     }
   }
 
-  async discard(sc: ScoresheetScan): Promise<void> {
+  async discard(sc: ScanRef): Promise<void> {
     try {
-      await this.api.discard(sc.id);
-      this.scans.set(this.scans().filter(s => s.id !== sc.id));
+      await this.client.discard(sc.ref);
+      if (this.share) rememberAnonKey(this.share, sc.ref, false);
+      this.scans.set(this.scans().filter(s => s.ref !== sc.ref));
     } catch {
       this.scanError.set('Verwerfen hat nicht geklappt.');
     }

@@ -17,6 +17,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },
   { path: 'verein/formular/:id', canActivate: [authGuard],
     loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
+  // Ohne Anmeldung über einen Teilen-Link: Partien hochladen (Wunsch 2026-09-28).
+  { path: 's/:token/hochladen',
+    loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },
+  { path: 's/:token/formular/:key',
+    loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 's/:token', loadComponent: () => import('./features/share/share-page.component').then(m => m.SharePageComponent) },
   { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },

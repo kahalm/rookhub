@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angul
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
-import { ClubApiService } from '../../core/club-api.service';
+import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubMatch, LeagueScanState } from '../../core/club.models';
 import { ClubScanPageComponent } from './club-scan-page.component';
 
@@ -27,16 +27,19 @@ const STATE: LeagueScanState = {
   white: 'Oberschmid', black: 'Hengl', event: 'Simultan', date: '5.6.26', result: '0-1', ownerSide: 'white',
 };
 const MATCH = (blackLeague: boolean): ClubMatch => ({
-  white: { league: true, ambiguous: false, name: 'Oberschmid, Patrik', fide: '900' },
-  black: blackLeague ? { league: true, ambiguous: false, name: 'Hengl, Philip', fide: '222' } : { league: false, ambiguous: false, name: null, fide: null },
+  white: { league: true, ambiguous: false, name: 'Oberschmid, Patrik', fide: '900', club: true, candidates: [] },
+  black: blackLeague ? { league: true, ambiguous: false, name: 'Hengl, Philip', fide: '222', club: false, candidates: [] }
+    : { league: false, ambiguous: false, name: null, fide: null, club: false, candidates: [] },
 });
 
 describe('ClubScanPageComponent', () => {
   let fixture: ComponentFixture<ClubScanPageComponent>;
-  let api: jasmine.SpyObj<ClubApiService>;
+  let api: jasmine.SpyObj<ClubClient>;
+  let params: Record<string, string>;
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard']);
+    params = { id: '7' };
+    api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard']);
     api.scan.and.resolveTo(structuredClone(STATE));
     api.photo.and.rejectWith(new Error('kein Foto'));
     api.match.and.resolveTo(MATCH(true));
@@ -49,8 +52,8 @@ describe('ClubScanPageComponent', () => {
       providers: [
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }),
-        { provide: ClubApiService, useValue: api },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }) } } },
+        { provide: ClubApiService, useValue: { client: () => api } },
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params) } } },
         { provide: AuthService, useValue: { has: () => true, currentUser: { username: 'patrik' } } },
       ],
     });
@@ -79,22 +82,27 @@ describe('ClubScanPageComponent', () => {
     const c = fixture.componentInstance;
     api.resolve.and.returnValue(of({ plies: [PLY(3, 'Sc6', 'Nc6', 'b8c6')], unresolved: [] }));
     c.s.choose(STATE.plies[2].options![1]);
-    expect(api.resolve).toHaveBeenCalledWith(7, ['e4', 'e5', 'Nh3'], 3);
+    expect(api.resolve).toHaveBeenCalledWith('7', ['e4', 'e5', 'Nh3'], 3);
     expect(c.s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nh3', 'Nc6']);
   }));
 
-  it('ohne Ligaspieler nach dem Ersetzen: Warnung', fakeAsync(() => {
+  it('ersetzt standardmäßig Schwaz-Spieler und die eigene Seite; eingreifen geht', fakeAsync(() => {
     api.match.and.resolveTo(MATCH(false));
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    expect(el.textContent).toContain('Kein Ligaspieler erkannt');
-    fixture.componentInstance.anonymize.set(false);                  // dann bleibt ich selbst als Ligaspieler
+    const c = fixture.componentInstance;
+    expect(c.replace('white')()).toBeTrue();                             // Oberschmid: Schwaz UND ich
+    expect(el.textContent).toContain('bleibt kein Gegner aus der Liga übrig');
+    c.setReplace('white', false);                                         // dann bleibe ich als Ligaspieler stehen
     fixture.detectChanges();
-    expect(el.textContent).not.toContain('Kein Ligaspieler erkannt');
+    expect(el.textContent).not.toContain('bleibt kein Gegner');
+    c.setOwner('black');                                                  // „angefasst" — die Wahl bleibt
+    expect(c.replace('white')()).toBeFalse();
+    expect(c.replace('black')()).toBeTrue();
   }));
 
-  it('Übernehmen schickt Züge, Seite und Einlesung und geht zur Liste', fakeAsync(() => {
+  it('Übernehmen schickt Züge, Seiten und Einlesung und geht zur Liste', fakeAsync(() => {
     create();
     flushMicrotasks();
     const router = TestBed.inject(Router);
@@ -104,9 +112,24 @@ describe('ClubScanPageComponent', () => {
     flushMicrotasks();
     expect(api.addGame).toHaveBeenCalledWith(jasmine.objectContaining({
       moves: ['e4', 'e5', 'Nf3', 'Nc6'], white: 'Oberschmid', black: 'Hengl', year: 2026, result: '0-1',
-      ownerSide: 'white', anonymize: true, scanId: 7,
-    }));
+      whiteReplace: true, blackReplace: false,
+    }), '7');
     expect(router.navigate).toHaveBeenCalledWith(['/verein'], jasmine.anything());
+    tick(1000);
+  }));
+
+  it('über einen Teilen-Link: Schlüssel statt Nummer, zurück auf die Hochladeseite des Links', fakeAsync(() => {
+    params = { token: 'TOK', key: 'geheim' };
+    create();
+    flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledWith('geheim');
+    const router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    api.addGame.and.resolveTo({ id: 12, anonymized: true });
+    void fixture.componentInstance.save();
+    flushMicrotasks();
+    expect(api.addGame).toHaveBeenCalledWith(jasmine.any(Object), 'geheim');
+    expect(router.navigate).toHaveBeenCalledWith(['/s', 'TOK', 'hochladen'], jasmine.objectContaining({ queryParams: { art: 'formular' } }));
     tick(1000);
   }));
 });

@@ -49,6 +49,12 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> Pgn(string fide, CancellationToken ct) =>
         await _league.PgnAsync(fide, ct) is { } p ? PgnFile(fide, p.Name, p.Pgn) : NotFound();
 
+    /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen (englische SAN).</summary>
+    [HttpGet("player/{fide}/tree")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Tree(string fide, [FromQuery] string? color, [FromQuery] string? line, CancellationToken ct) =>
+        await _league.TreeAsync(fide, color ?? "w", line, ct) is { } t ? Ok(t) : NotFound();
+
     internal static FileContentResult PgnFile(string fide, string name, string pgn) =>
         new(Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn")
         {
@@ -118,6 +124,27 @@ public class LeagueController : BaseApiController
         return Ok(res);
     }
 
+    /// <summary>
+    /// Eine fremde Partiesammlung einspielen (PGN, gern gzip mit <c>Content-Encoding: gzip</c>), z. B. die aus der
+    /// ChessBase-Megabase gefilterten Partien der TMM-Spieler (<c>source=Mega</c>, Skript <c>mega_decide.py</c> im
+    /// league-analyzer). Zugeordnet wird NUR über die FIDE-ID im Kopf.
+    /// </summary>
+    [HttpPost("admin/games")]
+    [HasPermission(Permissions.LeagueManage)]
+    [RequestSizeLimit(400 * 1024 * 1024)]
+    public async Task<IActionResult> ImportGames([FromQuery] string? source, CancellationToken ct)
+    {
+        var src = (source ?? "").Trim();
+        if (src.Length is 0 or > 20 || !src.All(char.IsLetterOrDigit)) return BadRequest(new { error = "source fehlt/ungültig" });
+        Stream body = Request.Body;
+        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
+            body = new GZipStream(Request.Body, CompressionMode.Decompress);
+        string pgn;
+        using (var reader = new StreamReader(body, Encoding.UTF8)) pgn = await reader.ReadToEndAsync(ct);
+        var (games, players) = await _league.ImportGamesAsync(pgn, src, ct);
+        return Ok(new { games, players });
+    }
+
     [HttpPost("admin/rebuild")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Rebuild(CancellationToken ct) => Ok(new { views = await _league.RebuildViewsAsync(ct) });
@@ -142,6 +169,13 @@ public class LeagueShareController : ControllerBase
     {
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
         return await _league.CardAsync(fide, onlySure: true, ct) is { } c ? Ok(c) : NotFound();
+    }
+
+    [HttpGet("{token}/player/{fide}/tree")]
+    public async Task<IActionResult> Tree(string token, string fide, [FromQuery] string? color, [FromQuery] string? line, CancellationToken ct)
+    {
+        if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
+        return await _league.TreeAsync(fide, color ?? "w", line, ct) is { } t ? Ok(t) : NotFound();
     }
 
     [HttpGet("{token}/player/{fide}/pgn")]

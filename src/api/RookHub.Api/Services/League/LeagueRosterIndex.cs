@@ -20,17 +20,24 @@ namespace RookHub.Api.Services.League;
 /// </summary>
 public sealed class LeagueRosterIndex
 {
-    public sealed record Row(int Tnr, string Team, string Name, string NameKey, string? Fide);
+    /// <summary>Eine Zeile der Meldelisten; <see cref="Season"/> = „2026/27" (leer, wenn das Turnier fehlt).</summary>
+    public sealed record Row(int Tnr, string Team, string Name, string NameKey, string? Fide, string Season = "");
 
-    /// <summary>Ein Ligaspieler; <see cref="Name"/> in der jüngsten Schreibweise der Meldelisten.</summary>
-    public sealed record Person(string Key, string? Fide, string Name, IReadOnlyList<string> Teams);
+    /// <summary>Ein Ligaspieler; <see cref="Name"/> in der jüngsten Schreibweise der Meldelisten. <see cref="OwnClub"/>:
+    /// in seiner jüngsten Saison für den eigenen Verein gemeldet (<see cref="LeagueRefresh.OwnTeam"/>) — wer von Schwaz
+    /// weggegangen ist, ist jetzt ein Gegner, wer dazugekommen ist, einer von uns.</summary>
+    public sealed record Person(string Key, string? Fide, string Name, IReadOnlyList<string> Teams, bool OwnClub = false);
 
-    public sealed record Hit(bool League, Person? Person)
+    /// <summary>Ergebnis des Abgleichs. <see cref="Candidates"/> = alle gleich gut passenden Ligaspieler (bei einem
+    /// eindeutigen Treffer genau einer).</summary>
+    public sealed record Hit(bool League, Person? Person, IReadOnlyList<Person> Candidates)
     {
         public bool Ambiguous => League && Person is null;
+        /// <summary>Ein Spieler des eigenen Vereins — bei Mehrdeutigkeit nur, wenn ALLE Kandidaten es sind.</summary>
+        public bool OwnClub => Candidates.Count > 0 && Candidates.All(c => c.OwnClub);
     }
 
-    public static readonly Hit None = new(false, null);
+    public static readonly Hit None = new(false, null, Array.Empty<Person>());
 
     private readonly Dictionary<string, Person> _byFide = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<Person>> _byName = new(StringComparer.Ordinal);
@@ -42,10 +49,13 @@ public sealed class LeagueRosterIndex
         var people = new List<Person>();
         foreach (var g in rows.GroupBy(r => LeagueNames.Pid(string.IsNullOrWhiteSpace(r.Fide) ? null : r.Fide, r.NameKey)))
         {
-            var ordered = g.OrderByDescending(r => r.Tnr).ToList();
+            var ordered = g.OrderByDescending(r => r.Season, StringComparer.Ordinal).ThenByDescending(r => r.Tnr).ToList();
             var fide = string.IsNullOrWhiteSpace(ordered[0].Fide) ? null : ordered[0].Fide!.Trim();
+            var latest = ordered[0].Season;
+            var own = ordered.Where(r => r.Season == latest)
+                .Any(r => string.Equals(LeagueNames.Clean(r.Team).TrimEnd('/', '-', ' '), LeagueRefresh.OwnTeam, StringComparison.OrdinalIgnoreCase));
             var p = new Person(g.Key, fide, LeagueNames.Clean(ordered[0].Name),
-                ordered.Select(r => r.Team).Distinct(StringComparer.Ordinal).ToList());
+                ordered.Select(r => r.Team).Distinct(StringComparer.Ordinal).ToList(), own);
             people.Add(p);
             if (fide != null) _byFide[fide] = p;
             foreach (var name in ordered.Select(r => r.Name).Distinct(StringComparer.Ordinal))
@@ -58,11 +68,15 @@ public sealed class LeagueRosterIndex
         People = people;
     }
 
+    /// <summary>Der Ligaspieler mit dieser FIDE-ID, sonst <c>null</c>.</summary>
+    public Person? ByFide(string? fide) =>
+        !string.IsNullOrWhiteSpace(fide) && _byFide.TryGetValue(fide.Trim(), out var p) ? p : null;
+
     /// <summary>Wer ist das? <paramref name="fide"/> = FIDE-ID aus der Partie (darf fehlen).</summary>
     public Hit Match(string? name, string? fide)
     {
         fide = string.IsNullOrWhiteSpace(fide) ? null : fide.Trim();
-        if (fide != null && _byFide.TryGetValue(fide, out var byId)) return new Hit(true, byId);
+        if (fide != null && _byFide.TryGetValue(fide, out var byId)) return new Hit(true, byId, new[] { byId });
         foreach (var stage in QueryKeys(name ?? string.Empty))
         {
             var found = stage.SelectMany(k => _byName.TryGetValue(k, out var s) ? s : Enumerable.Empty<Person>())
@@ -70,7 +84,7 @@ public sealed class LeagueRosterIndex
             // Eine fremde FIDE-ID in der Partie: nur Ligaspieler ohne eigene ID kommen als dieselbe Person in Frage.
             if (fide != null) found = found.Where(p => p.Fide is null).ToList();
             if (found.Count == 0) continue;
-            return found.Count == 1 ? new Hit(true, found[0]) : new Hit(true, null);
+            return new Hit(true, found.Count == 1 ? found[0] : null, found);
         }
         return None;
     }

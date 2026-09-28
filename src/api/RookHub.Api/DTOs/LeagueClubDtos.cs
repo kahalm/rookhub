@@ -3,12 +3,37 @@ namespace RookHub.Api.DTOs;
 // LeagueHub — Vereins-Datenbank (/api/league/club): Partien von Vereinsmitgliedern, PGN-Massenimport oder ein
 // eingelesenes Partieformular. Regeln in Services/League/LeagueClubService.cs.
 
-/// <summary><c>POST /api/league/club/games/import</c> — PGN-Text (eine oder viele Partien).</summary>
+/// <summary><c>POST /api/league/club/games/preview</c> — PGN-Text lesen und zuordnen, NICHTS speichern.</summary>
+public class LeagueClubPreviewRequest
+{
+    public string Pgn { get; set; } = string.Empty;
+}
+
+/// <summary>Wer an einer Seite sitzt — so, wie der Nutzer es in der Übersicht festgelegt hat.</summary>
+public class LeagueClubSideDecision
+{
+    /// <summary>Name (frei getippt oder aus der Meldeliste); leer = der Name aus dem PGN.</summary>
+    public string? Name { get; set; }
+    /// <summary>FIDE-ID eines ausgewählten Ligaspielers — schlägt den Namen.</summary>
+    public string? Fide { get; set; }
+    /// <summary>Durch „Schwaz" ersetzen (Spieler des eigenen Vereins, Vorgabe laut Übersicht).</summary>
+    public bool Replace { get; set; }
+}
+
+public class LeagueClubImportGameDecision
+{
+    /// <summary>Nummer der Partie im PGN (1-basiert, wie in der Übersicht).</summary>
+    public int Index { get; set; }
+    public LeagueClubSideDecision White { get; set; } = new();
+    public LeagueClubSideDecision Black { get; set; } = new();
+}
+
+/// <summary><c>POST /api/league/club/games/import</c> — derselbe PGN-Text wie bei der Übersicht und je Partie, die
+/// übernommen werden soll, die Entscheidung. <see cref="Games"/> fehlt = alle mit den Vorgaben der Übersicht.</summary>
 public class LeagueClubImportRequest
 {
     public string Pgn { get; set; } = string.Empty;
-    /// <summary>„Meinen Namen durch Schwaz ersetzen" — Vorgabe AN (Wunsch des Nutzers).</summary>
-    public bool Anonymize { get; set; } = true;
+    public List<LeagueClubImportGameDecision>? Games { get; set; }
 }
 
 /// <summary><c>POST /api/league/club/games</c> — EINE Partie (aus der Korrektur eines Partieformulars).</summary>
@@ -18,17 +43,54 @@ public class LeagueClubGameRequest
     public List<string> Moves { get; set; } = new();
     public string? White { get; set; }
     public string? Black { get; set; }
+    public string? WhiteFide { get; set; }
+    public string? BlackFide { get; set; }
     public int? WhiteElo { get; set; }
     public int? BlackElo { get; set; }
+    /// <summary>Durch „Schwaz" ersetzen.</summary>
+    public bool WhiteReplace { get; set; }
+    public bool BlackReplace { get; set; }
     public string? Result { get; set; }
     public string? Event { get; set; }
     /// <summary>Nur das Jahr wird gespeichert.</summary>
     public int? Year { get; set; }
-    /// <summary>„white"/„black" — die Seite des Hochladenden; Pflicht, wenn anonymisiert wird.</summary>
-    public string? OwnerSide { get; set; }
-    public bool Anonymize { get; set; } = true;
     /// <summary>Die Liga-Einlesung, aus der die Partie stammt — wird nach dem Übernehmen geschlossen (Foto weg).</summary>
     public int? ScanId { get; set; }
+}
+
+public class LeagueClubPreviewSideDto
+{
+    /// <summary>Der Name, wie er im PGN steht.</summary>
+    public string? Raw { get; set; }
+    public int? Elo { get; set; }
+    public LeagueClubSideMatchDto Match { get; set; } = new();
+    /// <summary>Laut Profil die Seite des Hochladenden.</summary>
+    public bool Owner { get; set; }
+    /// <summary>Vorgabe „durch Schwaz ersetzen" (Spieler von Schwaz oder der Hochladende).</summary>
+    public bool Replace { get; set; }
+}
+
+public class LeagueClubPreviewGameDto
+{
+    public int Index { get; set; }
+    public int? Year { get; set; }
+    public string Result { get; set; } = "*";
+    public string? Event { get; set; }
+    public int Plies { get; set; }
+    public string Opening { get; set; } = string.Empty;
+    /// <summary>Nicht übernehmbar, egal wie man die Namen setzt: <c>illegal</c>, <c>noMoves</c>, <c>tooLong</c>,
+    /// <c>fromPosition</c>.</summary>
+    public string? Error { get; set; }
+    /// <summary>Schon in der Vereins-Datenbank (oder weiter oben in derselben Datei).</summary>
+    public bool Duplicate { get; set; }
+    public LeagueClubPreviewSideDto White { get; set; } = new();
+    public LeagueClubPreviewSideDto Black { get; set; } = new();
+}
+
+public class LeagueClubPreviewDto
+{
+    public List<LeagueClubPreviewGameDto> Games { get; set; } = new();
+    public bool Truncated { get; set; }
 }
 
 public class LeagueClubFailureDto
@@ -36,8 +98,8 @@ public class LeagueClubFailureDto
     public int Index { get; set; }
     public string? White { get; set; }
     public string? Black { get; set; }
-    /// <summary><c>noLeaguePlayer</c>, <c>ownerNotFound</c>, <c>fromPosition</c>, <c>illegal</c>, <c>noMoves</c>,
-    /// <c>tooLong</c>.</summary>
+    /// <summary><c>noLeaguePlayer</c>, <c>onlyOwnClub</c>, <c>fromPosition</c>, <c>illegal</c>, <c>noMoves</c>,
+    /// <c>tooLong</c>, <c>notFound</c> (Nummer nicht im PGN).</summary>
     public string Reason { get; set; } = string.Empty;
 }
 
@@ -45,7 +107,7 @@ public class LeagueClubImportResultDto
 {
     public int Added { get; set; }
     public int Duplicates { get; set; }
-    /// <summary>Davon mit „Schwaz" statt des eigenen Namens.</summary>
+    /// <summary>Davon mit „Schwaz" statt eines Namens.</summary>
     public int Anonymized { get; set; }
     public bool Truncated { get; set; }
     public List<int> Ids { get; set; } = new();
@@ -86,6 +148,8 @@ public class LeagueRosterPersonDto
     public string Name { get; set; } = string.Empty;
     public string? Fide { get; set; }
     public List<string> Teams { get; set; } = new();
+    /// <summary>Spielt (jüngste Saison) für Schwaz.</summary>
+    public bool Club { get; set; }
 }
 
 public class LeagueClubMatchRequest
@@ -102,6 +166,10 @@ public class LeagueClubSideMatchDto
     public bool Ambiguous { get; set; }
     public string? Name { get; set; }
     public string? Fide { get; set; }
+    /// <summary>Spieler von Schwaz (bei Mehrdeutigkeit: alle Kandidaten).</summary>
+    public bool Club { get; set; }
+    /// <summary>Bei Mehrdeutigkeit die Kandidaten zur Auswahl.</summary>
+    public List<LeagueRosterPersonDto> Candidates { get; set; } = new();
 }
 
 public class LeagueClubMatchDto
