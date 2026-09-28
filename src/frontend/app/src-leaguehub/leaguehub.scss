@@ -410,3 +410,23 @@ button.pl:hover { text-decoration-color: var(--ink); }
   font: inherit; color: var(--ink); background: none; border: 0; border-radius: 4px; padding: 6px 8px; cursor: pointer; }
 .psearch-results button:hover, .psearch-results button:focus-visible { background: var(--track); }
 .psearch-name { font-weight: 600; }
+
+/* Spielerkarte: letzte Partien anklicken → nachspielen (0.578.0) */
+.card table.recent tr { cursor: pointer; }
+.card table.recent tr:hover td, .card table.recent tr:focus-visible td { background: var(--paper); }
+.card table.recent tr:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.card table.recent tr.busy { cursor: progress; }
+.replay { outline: none; margin-top: 10px; }
+.replay-head { margin: 0 0 10px; }
+.replay-head .muted { margin-left: 6px; }
+.replay-body { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 600px) { .replay-body { grid-template-columns: minmax(0, 1fr); } .replay-board { max-width: 340px; } }
+.replay-nav { display: flex; gap: 6px; margin-top: 8px; }
+.replay-nav button { flex: 1; min-height: 40px; font-size: 16px; }
+.replay-moves { max-height: 360px; overflow-y: auto; }
+.replay-moves ol { list-style: none; margin: 0; padding: 0; columns: 2 12rem; column-gap: 12px; }
+.replay-moves li { break-inside: avoid; padding: 1px 0; font-variant-numeric: tabular-nums; }
+.replay-moves .mv { border: 0; background: none; padding: 1px 5px; border-radius: 4px; font: inherit; color: var(--ink); cursor: pointer; }
+.replay-moves .mv:hover { background: var(--paper); }
+.replay-moves .mv.on { background: var(--ink); color: var(--surface); }
+.replay-comment { margin-top: 8px; padding: 6px 8px; background: var(--paper); border-radius: 6px; }

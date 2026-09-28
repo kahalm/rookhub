@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { PlayerCard } from '../core/league.models';
 import { PlayerCardComponent } from './player-card.component';
@@ -20,9 +21,10 @@ describe('PlayerCardComponent', () => {
   const headings = () => Array.from(el().querySelectorAll('h3')).map(h => h.textContent ?? '');
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent']);
     api.card.and.resolveTo(CARD);
-    TestBed.configureTestingModule({ imports: [PlayerCardComponent], providers: [{ provide: LeagueApiService, useValue: api }] });
+    TestBed.configureTestingModule({ imports: [PlayerCardComponent],
+      providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api }] });
     fixture = TestBed.createComponent(PlayerCardComponent);
     fixture.detectChanges();
   });
@@ -46,6 +48,36 @@ describe('PlayerCardComponent', () => {
     expect(headings().some(h => h.startsWith('Mit Weiß'))).toBeTrue();
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.e4'))).toBeTrue();
     expect(el().textContent).toContain('Sizilianisch');
+  });
+
+  it('eine der letzten Partien anklicken spielt sie nach; zurück zur Karte', async () => {
+    api.recent.and.resolveTo({ fide: '1606921', games: [{ date: '2026.04.12', vs: 'Kleissl, Helmut', color: 'w',
+      pgn: '[White "Oberschmid, Patrik"]\n[Black "Kleissl, Helmut"]\n[Result "1/2-1/2"]\n\n1. e4 c5 2. Nf3 d6 1/2-1/2\n' }] });
+    await fixture.componentInstance.open('1606921', null, null, 'TOKEN');
+    fixture.detectChanges();
+    (el().querySelector('table.recent tr') as HTMLElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.recent).toHaveBeenCalledWith('1606921', 'TOKEN');
+    expect(el().querySelector('.replay-head')?.textContent).toContain('Oberschmid, Patrik – Kleissl, Helmut');
+    expect(el().querySelector('.replay-moves')?.textContent).toContain('Sf3');
+    expect(el().querySelector('table.recent')).toBeNull();                        // statt der Karte
+    (Array.from(el().querySelectorAll('button')).find(b => b.textContent?.includes('Zurück zur Karte')) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('table.recent')).not.toBeNull();
+    (el().querySelector('table.recent tr') as HTMLElement).click();              // zweites Mal: ohne neuen Abruf
+    await fixture.whenStable();
+    expect(api.recent).toHaveBeenCalledTimes(1);
+  });
+
+  it('eine Partie, die es nicht mehr gibt, sagt es', async () => {
+    api.recent.and.resolveTo({ fide: '1606921', games: [] });
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    (el().querySelector('table.recent tr') as HTMLElement).click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelector('.err')?.textContent).toContain('nicht mehr da');
   });
 
   it('aus der Meldeliste (ohne Brett) zeigt beide Farben, Online-Konto mit Vermerk', async () => {

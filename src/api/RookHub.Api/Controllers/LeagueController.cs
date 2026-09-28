@@ -49,6 +49,12 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> Pgn(string fide, CancellationToken ct) =>
         await _league.PgnAsync(fide, ct) is { } p ? PgnFile(fide, p.Name, p.Pgn) : NotFound();
 
+    /// <summary>Die letzten Partien der Karte samt PGN (zum Nachspielen).</summary>
+    [HttpGet("player/{fide}/recent")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Recent(string fide, CancellationToken ct) =>
+        await _league.RecentAsync(fide, ct) is { } r ? Ok(r) : NotFound();
+
     /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen (englische SAN).</summary>
     [HttpGet("player/{fide}/tree")]
     [HasPermission(Permissions.LeagueView)]
@@ -189,6 +195,13 @@ public class LeagueShareController : ControllerBase
     {
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
         return await _league.TreeAsync(fide, color ?? "w", line, ct) is { } t ? Ok(t) : NotFound();
+    }
+
+    [HttpGet("{token}/player/{fide}/recent")]
+    public async Task<IActionResult> Recent(string token, string fide, CancellationToken ct)
+    {
+        if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
+        return await _league.RecentAsync(fide, ct) is { } r ? Ok(r) : NotFound();
     }
 
     [HttpGet("{token}/player/{fide}/pgn")]

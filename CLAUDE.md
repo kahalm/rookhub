@@ -1444,6 +1444,13 @@ für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, scor
 über alle seine Partien (fremde + Verein), höchstens 30 Halbzüge, Züge aus dem Partietext (ohne Brett, schnell genug für
 2000 Partien je Klick). Oberfläche: Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte (`shared/opening-tree.component.ts`).
 
+**Letzte Partien nachspielen** (0.578.0): `GET /api/league/player/{fide}/recent` (und `/api/league/s/{token}/player/{fide}/recent`)
+→ `{ fide, games[{ date, vs, color, pgn }] }` — dieselbe Auswahl und Reihenfolge wie `recent` der Karte
+(`LeagueProfileBuilder.Recent`, `RecentCount` = 8), aus dem aktuellen Bestand gerechnet (fremde + Vereinspartien). Die Karte holt
+sie erst beim ersten Klick und findet die Zeile über Datum + Gegner + Farbe wieder (die gespeicherte Karte kann älter sein);
+nachgespielt wird in der Karte selbst (`shared/game-replay.component.ts`: Brett aus Sicht des Spielers, Züge deutsch, Knöpfe,
+Pfeiltasten, Pos1/Ende).
+
 Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzufügen" (`/`, `/verein`, `/verein/neu`,
 `/verein/formular/:id`); ohne Konto `/s/:token/hochladen` und `/s/:token/formular/:key` — der Teilen-Link zeigt die
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite

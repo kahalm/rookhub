@@ -79,6 +79,10 @@ export interface PlayerCard {
   accounts: Account[];
 }
 
+/** `GET …/player/{fide}/recent` — die letzten Partien der Karte samt PGN (zum Nachspielen). */
+export interface RecentGame { date: string; vs: string; color: 'w' | 's'; pgn: string }
+export interface RecentGames { fide: string; games: RecentGame[] }
+
 export interface SharedFixture {
   league: string; season: string; round: number; team: string; fixture: Fixture; generated: string; expires: string;
 }

@@ -157,6 +157,15 @@ public static class LeagueProfileBuilder
         };
     }
 
+    /// <summary>Wie viele „letzte Partien" die Karte zeigt.</summary>
+    public const int RecentCount = 8;
+
+    /// <summary>Die letzten Partien des Spielers in der Reihenfolge der Karte (<c>recent</c>) — dieselbe Auswahl liefert
+    /// <see cref="LeagueProfileStore.RecentAsync"/> samt PGN zum Nachspielen.</summary>
+    public static List<(Game G, string Color)> Recent(string fide, string name, List<Game> games) =>
+        games.Select(g => (G: g, C: ColorOf(g, fide, name))).Where(x => x.C is not null)
+            .Select(x => (x.G, x.C!)).Take(RecentCount).ToList();
+
     /// <summary>Profil-JSON (gleiche Form wie die Python-Fassung) + zusammengeführtes PGN.</summary>
     public static (JsonObject Profile, string Pgn, int Count) Build(string fide, string name, List<Game> games)
     {
@@ -179,7 +188,7 @@ public static class LeagueProfileBuilder
             ["black_e4"] = Stats(bE4, m => m.Count > 1 ? m[1] : null),
             ["black_d4"] = Stats(bD4, m => m.Count > 1 ? m[1] : null),
             ["black_other"] = Stats(bOth, m => m.Count > 1 ? Line(m.Take(2).ToList()) : null),
-            ["recent"] = new JsonArray(mv.Take(8).Select(x => (JsonNode)new JsonObject
+            ["recent"] = new JsonArray(mv.Take(RecentCount).Select(x => (JsonNode)new JsonObject
             {
                 ["date"] = H(x.G, "Date"), ["event"] = H(x.G, "Event"),
                 ["vs"] = H(x.G, x.C == "w" ? "Black" : "White"), ["vs_elo"] = H(x.G, x.C == "w" ? "BlackElo" : "WhiteElo"),

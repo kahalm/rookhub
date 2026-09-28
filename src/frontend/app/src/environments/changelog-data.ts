@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.578.0", date: "2026-09-28", changes: [
+    { en: "LeagueHub player card: the recent games can now be clicked — the game opens right in the card with board and moves (German notation), from the player’s side; step through with the buttons, the arrow keys or a click on a move, “Back to card” returns. Works on share links too.", de: "LeagueHub-Spielerkarte: Die letzten Partien lassen sich jetzt anklicken — die Partie öffnet sich direkt in der Karte mit Brett und Zügen (deutsche Notation), aus Sicht des Spielers; blättern mit den Knöpfen, den Pfeiltasten oder einem Klick auf einen Zug, „Zurück zur Karte“ führt zurück. Geht auch über Teilen-Links." },
+  ] },
   { version: "0.577.1", date: "2026-09-28", changes: [
     { en: "LeagueHub club database: names with umlauts are now found in both spellings — “Höcher” finds the Megabase entry “Hoecher, Michael” (ChessBase always writes umlauts out), “Mueller” finds “Müller”. A chess or academic title in front of or behind the name (“FM Humer, Wolfgang”, “Dr. Huber, Franz”) no longer stops a match or a search. Typing a FIDE ID in the player search finds that player.", de: "LeagueHub-Vereins-Datenbank: Namen mit Umlaut werden jetzt in beiden Schreibweisen gefunden — „Höcher“ findet den Megabase-Eintrag „Hoecher, Michael“ (ChessBase schreibt Umlaute immer aus), „Mueller“ findet „Müller“. Ein Schach- oder akademischer Titel vor oder hinter dem Namen („FM Humer, Wolfgang“, „Dr. Huber, Franz“) verhindert keinen Abgleich und keine Suche mehr. Eine FIDE-ID in der Spielersuche findet diesen Spieler." },
   ] },

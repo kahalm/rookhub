@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { League, LeagueIndex, OpeningTree, PlayerCard, SharedFixture, UpdateStatus } from './league.models';
+import { League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -32,6 +32,10 @@ export class LeagueApiService {
 
   pgn(fide: string, token: string | null): Promise<Blob> {
     return firstValueFrom(this.http.get(`${this.base(token)}/player/${encodeURIComponent(fide)}/pgn`, { responseType: 'blob' }));
+  }
+
+  recent(fide: string, token: string | null): Promise<RecentGames> {
+    return firstValueFrom(this.http.get<RecentGames>(`${this.base(token)}/player/${encodeURIComponent(fide)}/recent`));
   }
 
   tree(fide: string, color: 'w' | 's', line: string[], token: string | null): Promise<OpeningTree> {

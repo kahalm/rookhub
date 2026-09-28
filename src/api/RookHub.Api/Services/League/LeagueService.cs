@@ -117,6 +117,9 @@ public sealed class LeagueService
     public Task<(int Games, int Players)> ImportGamesAsync(string pgn, string source, CancellationToken ct) =>
         new LeagueProfileStore(_db).ImportGamesAsync(pgn, source, ct);
 
+    /// <summary>Die letzten Partien der Karte samt PGN (<see cref="LeagueProfileStore.RecentAsync"/>).</summary>
+    public Task<JsonObject?> RecentAsync(string fide, CancellationToken ct) => new LeagueProfileStore(_db).RecentAsync(fide, ct);
+
     /// <summary>Eröffnungsbaum des Spielers mit einer Farbe ab einer Zugfolge (<see cref="LeagueProfileStore.TreeAsync"/>).</summary>
     public Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct) =>
         new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct);

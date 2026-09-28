@@ -215,6 +215,32 @@ public sealed class LeagueProfileStore
         };
     }
 
+    /// <summary>
+    /// Die letzten Partien der Karte MIT PGN (Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar sein") — dieselbe
+    /// Auswahl und Reihenfolge wie <c>recent</c> im Profil (<see cref="LeagueProfileBuilder.Recent"/>), aus dem aktuellen
+    /// Bestand gerechnet. Datum, Gegner und Farbe gehen mit, damit die Seite eine Zeile auch dann wiederfindet, wenn die
+    /// Karte älter ist. <c>null</c> = keine Karte.
+    /// </summary>
+    public async Task<JsonObject?> RecentAsync(string fide, CancellationToken ct)
+    {
+        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
+            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var club = await ClubGamesAsync(fide, ct);
+        if (p is null && club.Count == 0) return null;
+        var name = await NameAsync(fide, p?.Name, ct);
+        string Hd(LeagueProfileBuilder.Game g, string k) => g.Headers.TryGetValue(k, out var v) ? v : "";
+        return new JsonObject
+        {
+            ["fide"] = fide,
+            ["games"] = new JsonArray(LeagueProfileBuilder.Recent(fide, name, WithClub(Stored(p?.Pgn), club))
+                .Select(x => (JsonNode)new JsonObject
+                {
+                    ["date"] = Hd(x.G, "Date"), ["vs"] = Hd(x.G, x.Color == "w" ? "Black" : "White"), ["color"] = x.Color,
+                    ["pgn"] = x.G.Raw.Trim() + "\n",
+                }).ToArray()),
+        };
+    }
+
     /// <summary>Alle Partien eines Spielers als PGN (fremde + Vereinspartien) — für den Download.</summary>
     public async Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct)
     {

@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChi
 import { NgTemplateOutlet } from '@angular/common';
 import { LeagueApiService } from '../core/league-api.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
-import { OpeningStats, PlayerCard } from '../core/league.models';
+import { OpeningStats, PlayerCard, RecentGame } from '../core/league.models';
+import { GameReplayComponent } from './game-replay.component';
 import { OpeningTreeComponent } from './opening-tree.component';
 
 type Show = 'w' | 's' | 'b';
@@ -10,7 +11,8 @@ type Show = 'w' | 's' | 'b';
 /**
  * Spielerkarte als Dialog: Partien (Lumbra + chess-results + Vereins-Datenbank), Eröffnungsprofil, letzte Partien,
  * Online-Konten, PGN-Download. Aus einer Brett-Zeile geöffnet steht standardmäßig NUR die Farbe, die der
- * Spieler an diesem Brett hat (Wunsch des Nutzers), umschaltbar Weiß / Schwarz / Beide.
+ * Spieler an diesem Brett hat (Wunsch des Nutzers), umschaltbar Weiß / Schwarz / Beide. Ein Klick auf eine der letzten
+ * Partien spielt sie nach (Wunsch 2026-09-28) — die PGNs kommen erst beim ersten Klick (`…/recent`).
  */
 @Component({
   selector: 'lh-player-card',
@@ -36,6 +38,10 @@ type Show = 'w' | 's' | 'b';
         @if (loading()) { <p class="muted">Lade Partien …</p> }
         @if (error()) { <p>{{ error() }}</p> }
         @if (card(); as c) {
+          @if (replay(); as r) {
+            <div class="actions"><button type="button" class="btn-sec" (click)="replay.set(null)">← Zurück zur Karte</button></div>
+            <lh-game-replay [pgn]="r.pgn" [flipped]="r.flipped" />
+          } @else {
           @if (color()) {
             <p class="hint">An Brett {{ board() }} spielt {{ lastName(c) }} mit <b>{{ color() === 'w' ? 'Weiß' : 'Schwarz' }}</b>.</p>
           }
@@ -69,10 +75,13 @@ type Show = 'w' | 's' | 'b';
             }
           }
           @if (c.recent?.length) {
-            <h3>Letzte Partien</h3>
-            <table>
+            <h3>Letzte Partien <span class="muted small">— anklicken zum Nachspielen</span></h3>
+            @if (replayError()) { <p class="err small">{{ replayError() }}</p> }
+            <table class="recent">
               @for (g of c.recent; track $index) {
-                <tr>
+                <tr tabindex="0" role="button" [class.busy]="replayLoading()"
+                    [attr.aria-label]="'Partie gegen ' + (g.vs || '?') + ' nachspielen'"
+                    (click)="openGame(c, $index)" (keydown.enter)="openGame(c, $index)">
                   <td class="num muted">{{ date(g.date) }}</td>
                   <td><span class="sq mini" [class.w]="g.color === 'w'" [class.s]="g.color === 's'"
                             [attr.aria-label]="g.color === 'w' ? 'Weiß' : 'Schwarz'"></span>{{ g.vs || '?' }}
@@ -94,6 +103,7 @@ type Show = 'w' | 's' | 'b';
               }
             </p>
             <p class="muted small-note">Nur Konten, die der Spieler selbst mit seinem Namen verbunden hat. „wahrscheinlich": Klarname und Land passen, der Name ist unter FIDE-Spielern eindeutig.</p>
+          }
           }
           <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
         }
@@ -120,7 +130,7 @@ type Show = 'w' | 's' | 'b';
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, OpeningTreeComponent],
+  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(LeagueApiService);
@@ -133,6 +143,12 @@ export class PlayerCardComponent {
   readonly board = signal<number | null>(null);
   readonly show = signal<Show>('b');
   readonly treeOpen = signal(false);
+  /** Die gerade nachgespielte Partie (statt der Karte). */
+  readonly replay = signal<{ pgn: string; flipped: boolean } | null>(null);
+  readonly replayLoading = signal(false);
+  readonly replayError = signal<string | null>(null);
+  /** Die letzten Partien samt PGN — einmal je geöffneter Karte geholt. */
+  private recentGames: RecentGame[] | null = null;
   token: string | null = null;
   /** Zählt die Öffnungen: eine späte Antwort für einen inzwischen anderen (oder geschlossenen) Spieler wird verworfen. */
   private seq = 0;
@@ -153,6 +169,9 @@ export class PlayerCardComponent {
     this.show.set(color ?? 'b');
     this.card.set(null);
     this.treeOpen.set(false);
+    this.replay.set(null);
+    this.replayError.set(null);
+    this.recentGames = null;
     this.error.set(null);
     this.loading.set(true);
     const my = ++this.seq;
@@ -175,7 +194,35 @@ export class PlayerCardComponent {
   onClosed(): void {
     this.seq++;
     this.card.set(null);
+    this.replay.set(null);
     this.loading.set(false);
+  }
+
+  /** Eine der letzten Partien nachspielen. Gefunden wird sie über Datum, Gegner und Farbe — die Liste zum Nachspielen
+   * ist frisch gerechnet, die Karte kann älter sein. */
+  async openGame(c: PlayerCard, i: number): Promise<void> {
+    const want = c.recent?.[i];
+    if (!want || this.replayLoading()) return;
+    const my = this.seq;
+    this.replayError.set(null);
+    if (!this.recentGames) {
+      this.replayLoading.set(true);
+      try {
+        const r = await this.api.recent(c.fide, this.token);
+        if (my !== this.seq) return;
+        this.recentGames = r.games;
+      } catch {
+        if (my === this.seq) this.replayError.set('Die Partie konnte nicht geladen werden.');
+        return;
+      } finally {
+        if (my === this.seq) this.replayLoading.set(false);
+      }
+    }
+    const same = (g: RecentGame) => g.date === want.date && g.vs === want.vs && g.color === want.color;
+    const list = this.recentGames;
+    const hit = list[i] && same(list[i]) ? list[i] : list.find(same);
+    if (!hit) { this.replayError.set('Diese Partie ist nicht mehr da — bitte die Karte neu öffnen.'); return; }
+    this.replay.set({ pgn: hit.pgn, flipped: hit.color === 's' });
   }
 
   backdrop(ev: MouseEvent): void {

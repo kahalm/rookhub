@@ -393,6 +393,28 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Contains("Schwaz", pgn!.Value.Pgn);                         // Download = fremde + Vereinspartien
     }
 
+    /// <summary>Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar sein" — dieselbe Auswahl wie auf der Karte,
+    /// samt PGN, fremde und Vereinspartien.</summary>
+    [Fact]
+    public async Task Recent_SameGamesAsTheCard_WithPgn()
+    {
+        var me = await SeedAsync();
+        _db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "222", Name = "Hengl, Philip", Pgn = ExternalSameGame, GameCount = 1 });
+        await _db.SaveChangesAsync();
+        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Binder, Moriz",
+            "1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 h6 7. Bh4 b6 8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 1-0", "2025.03.01"), null);
+
+        var card = JsonNode.Parse((await _db.LeaguePlayerProfiles.AsNoTracking().SingleAsync(p => p.FideId == "222")).ProfileJson)!["recent"]!.AsArray();
+        var recent = (await new LeagueProfileStore(_db).RecentAsync("222", default))!["games"]!.AsArray();
+        Assert.Equal(card.Select(g => (g!["date"]!.GetValue<string>(), g["vs"]!.GetValue<string>(), g["color"]!.GetValue<string>())),
+            recent.Select(g => (g!["date"]!.GetValue<string>(), g["vs"]!.GetValue<string>(), g["color"]!.GetValue<string>())));
+        Assert.Equal(("2025.??.??", "Schwaz", "w"), (recent[0]!["date"]!.GetValue<string>(), recent[0]!["vs"]!.GetValue<string>(),
+            recent[0]!["color"]!.GetValue<string>()));                                     // die Vereinspartie, neueste zuerst
+        Assert.Contains("10. Nxd5 exd5", recent[0]!["pgn"]!.GetValue<string>());
+        Assert.Contains("[Event \"TMM Landesliga\"]", recent[1]!["pgn"]!.GetValue<string>());
+        Assert.Null(await new LeagueProfileStore(_db).RecentAsync("999999", default));
+    }
+
     [Fact]
     public async Task Refresh_MergingChessResults_KeepsTheClubGamesInTheCard()
     {
