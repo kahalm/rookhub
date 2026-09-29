@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -207,6 +208,47 @@ public class AuthControllerTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var response = okResult.Value as AuthResponseDto;
         Assert.False(response!.IsAdmin);
+    }
+
+    // ---- Anmelde-Uebergabe ----
+
+    /// <summary>Meldet den Controller als <paramref name="userId"/> an — mit <paramref name="impersonatedBy"/>
+    /// traegt das Token den <c>imp</c>-Claim wie ein Einstieg ueber <c>POST /api/admin/users/{id}/impersonate</c>.</summary>
+    private void SignIn(int userId, int? impersonatedBy = null)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (impersonatedBy is int adminId) claims.Add(new Claim("imp", adminId.ToString()));
+        _http.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"));
+    }
+
+    [Fact]
+    public async Task Handoff_ReturnsACode_ForAnOwnLogin()
+    {
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        SignIn(user.Id);
+
+        var result = await _controller.Handoff(CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(1, await _db.AuthHandoffTokens.CountAsync(t => t.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Handoff_WhileImpersonating_Returns403_AndIssuesNoCode()
+    {
+        // Eingeloest wird der Code zu einer GEWOEHNLICHEN Anmeldung des Zielkontos (30 Tage, ohne imp-Claim,
+        // samt rh_session) — damit fielen alle Impersonations-Sperren (E-Mail aendern → Passwort vergessen →
+        // Konto dauerhaft uebernommen), und der Admin-Bezug im Log waere weg.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var target = await _db.AppUsers.FirstAsync();
+        SignIn(target.Id, impersonatedBy: 990001);
+
+        var result = await _controller.Handoff(CancellationToken.None);
+
+        var status = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(403, status.StatusCode);
+        Assert.False(await _db.AuthHandoffTokens.AnyAsync());
     }
 
     // ---- Geteilte Anmeldung ueber beide Oberflaechen ----

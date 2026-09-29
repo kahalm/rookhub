@@ -65,10 +65,15 @@ public class AuthController : BaseApiController
 
     /// <summary>Einmal-Code fuer den Sprung zur anderen Oberflaeche. Der Rohwert kommt NUR hier
     /// heraus und lebt Sekunden (<see cref="AuthHandoffService.Lifetime"/>).</summary>
+    /// <remarks>Nicht waehrend einer Impersonation: eingeloest wird der Code zu einer GEWOEHNLICHEN
+    /// Anmeldung des Zielkontos (30 Tage, ohne <c>imp</c>-Claim, samt geteiltem Cookie) — damit fielen
+    /// alle Impersonations-Sperren (E-Mail aendern, API-Token anlegen) und der Admin-Bezug im Log weg.</remarks>
     [Authorize]
     [HttpPost("handoff")]
     public async Task<IActionResult> Handoff(CancellationToken ct)
     {
+        if (IsImpersonating())
+            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         var code = await _handoff.IssueAsync(GetUserId(), ct);
         return Ok(new { code, expiresInSeconds = (int)AuthHandoffService.Lifetime.TotalSeconds });
     }
