@@ -47,7 +47,7 @@ public static class ExplanationFacts
         return double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var p) ? new Eval(p, null) : null;
     }
 
-    private static string LevelName(Eval e) => e.Mate is int m
+    internal static string LevelName(Eval e) => e.Mate is int m
         ? (m >= 0 ? "winning (forced mate)" : "lost (getting mated)")
         : e.Level switch
         {

@@ -49,6 +49,7 @@ export const routes: Routes = [
   { path: 'analysis/games/:id', loadComponent: () => import('./features/analysis/game-analysis-detail.component').then(m => m.GameAnalysisDetailComponent), canActivate: [authGuard] },
   { path: 'analysis/games', loadComponent: () => import('./features/analysis/game-analyses.component').then(m => m.GameAnalysesComponent), canActivate: [authGuard] },
   { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
+  { path: 'analysis/compare/:id', loadComponent: () => import('./features/analysis/move-comparison.component').then(m => m.MoveComparisonComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
   // Partieformular einlesen (0.529.0) — Literal VOR games/:id, sonst wäre „scoresheet" eine Partie-Id.

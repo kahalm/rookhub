@@ -146,6 +146,8 @@ public class AppDbContext : DbContext
     public DbSet<ExternalEngineRegistration> ExternalEngineRegistrations => Set<ExternalEngineRegistration>();
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<MoveComparison> MoveComparisons => Set<MoveComparison>();
+    public DbSet<MoveComparisonLine> MoveComparisonLines => Set<MoveComparisonLine>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
     public DbSet<CommentSet> CommentSets => Set<CommentSet>();
     public DbSet<CommentText> CommentTexts => Set<CommentText>();
@@ -1842,6 +1844,28 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(j => j.ResultJson).HasColumnType("LONGTEXT");
             e.Property(j => j.EvalText).HasMaxLength(16);
+        });
+
+        // Züge vergleichen (0.602.0): Kopf je Vergleich, eine Zeile je gerechneter Stellung.
+        modelBuilder.Entity<MoveComparison>(e =>
+        {
+            e.HasIndex(c => new { c.UserId, c.CreatedAt });
+            e.HasIndex(c => c.Status);
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<MoveComparisonLine>(e =>
+        {
+            e.HasIndex(l => l.MoveComparisonId);
+            // Die Auftragsliste blendet Aufträge eines Vergleichs aus (Unterabfrage je Auftrag).
+            e.HasIndex(l => l.AnalysisJobId);
+            e.HasOne(l => l.Comparison)
+             .WithMany(c => c.Lines)
+             .HasForeignKey(l => l.MoveComparisonId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(l => l.ResultJson).HasColumnType("LONGTEXT");
         });
 
         modelBuilder.Entity<ChessableImport>(e =>

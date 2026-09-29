@@ -54,9 +54,11 @@ public class AnalysisJobService
     {
         // Die Auftraege des Stapels (Meister- und Vereinspartien, GameAnalysisOrigins.IsBatch) gehoeren niemandem zum
         // Anschauen — sie laufen auf dem Konto des Haus-Engine-Besitzers und stuenden dort sonst zu Dutzenden in der Liste.
+        // Ebenso die Teilrechnungen eines Zugvergleichs (0.602.0): sie gehören zum Vergleich, nicht in die Liste.
         var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
                 && !_db.GameAnalyses.Any(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
-                    && g.Positions.Any(p => p.AnalysisJobId == j.Id)))
+                    && g.Positions.Any(p => p.AnalysisJobId == j.Id))
+                && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id))
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
         return jobs.Select(ToDto).ToList();
     }

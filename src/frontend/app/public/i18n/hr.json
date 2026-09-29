@@ -4155,5 +4155,63 @@
     "page": "Stranica {{n}}",
     "removePage": "Ukloni fotografiju",
     "morePages": "Nastavlja li se partija na drugom listu? Dodaj sljedeću stranicu — do {{max}} stranice, pravilnim redoslijedom."
+  },
+  "moveCompare": {
+    "menu": "Usporedi poteze",
+    "dialog": {
+      "title": "Usporedi poteze",
+      "hint": "Odaberi od 2 do {{max}} poteza. Engine izračuna svaki, provjeri najbolje protivnikove odgovore na slabije poteze protiv najboljeg i objasni zašto je bolji.",
+      "engineMoves": "Prijedlozi enginea",
+      "allMoves": "Svi potezi",
+      "selected": "Odabrano {{count}} od {{max}}",
+      "depth": "Dubina",
+      "submit": "Usporedi",
+      "noEngine": "Trenutno nema dostupnog enginea — postavi pozadinski engine u profilu.",
+      "houseEngine": "Računa se na kućnom engineu (najviše dubina {{depth}}).",
+      "noExplanations": "Bez jezičnog modela dobivaš samo izračunate linije, bez objašnjenja."
+    },
+    "error": {
+      "generic": "Usporedba se nije mogla pokrenuti.",
+      "too-many-open": "Još traje previše usporedbi — pričekaj da jedna završi.",
+      "no-engine": "Trenutno nema dostupnog enginea.",
+      "too-many-jobs": "Trenutno je otvoreno previše zadataka analize — pokušaj kasnije.",
+      "invalid-move": "Jedan od poteza nije moguć u ovoj poziciji.",
+      "too-few-moves": "Odaberi barem dva poteza.",
+      "too-many-moves": "Odabrano je previše poteza.",
+      "game-over": "U ovoj poziciji nema više poteza.",
+      "invalid-fen": "Ova se pozicija ne može pročitati."
+    },
+    "page": {
+      "title": "Usporedi poteze",
+      "back": "Na ploču za analizu",
+      "openInBoard": "Otvori na ploči za analizu",
+      "status": {
+        "candidates": "Računaju se kandidatski potezi …",
+        "replies": "Najbolji odgovori provjeravaju se protiv najboljeg poteza …",
+        "explaining": "Piše se objašnjenje …",
+        "done": "Gotovo.",
+        "failed": "Neuspjelo: {{error}}"
+      },
+      "progress": "Još otvoreno {{pending}} od {{total}} pozicija",
+      "startPosition": "Početna pozicija",
+      "showStart": "Natrag na početnu poziciju",
+      "clickHint": "Klik na potez, odgovor ili tvoj uzvrat prikazuje poziciju na ploči.",
+      "best": "najbolji potez",
+      "calculating": "računa · dubina {{depth}}",
+      "failed": "nije se moglo izračunati",
+      "pending": "još se računa",
+      "whyBetter": "Zašto je {{best}} bolji od {{weak}}",
+      "repliesTo": "Najbolji odgovori na {{move}}",
+      "against": "… i protiv {{move}}",
+      "notPossible": "nije moguće",
+      "yourReply": "tvoj odgovor",
+      "explaining": "Piše se objašnjenje …",
+      "noExplanation": "Nema objašnjenja — jezični model nije dao ništa upotrebljivo.",
+      "history": "Ranije usporedbe",
+      "delete": "Obriši usporedbu",
+      "deleteConfirm": "Obrisati ovu usporedbu?",
+      "deleteFailed": "Usporedba se nije mogla obrisati.",
+      "notFound": "Ova usporedba ne postoji (više)."
+    }
   }
 }

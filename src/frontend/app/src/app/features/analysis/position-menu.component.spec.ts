@@ -8,6 +8,7 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ExternalEngineService } from './external-engine.service';
 import { PositionMenuComponent } from './position-menu.component';
+import { MoveCompareDialogComponent } from './move-compare-dialog.component';
 
 describe('PositionMenuComponent', () => {
   const FEN = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
@@ -96,6 +97,22 @@ describe('PositionMenuComponent', () => {
     open();
     expect(engines.listEngines).not.toHaveBeenCalled();
     expect(item('pm-background')).toBeNull();
+  });
+
+  it('„Züge vergleichen" steht angemeldet auch ohne eigene Engine da (Haus-Engine) und reicht die Engine-Züge weiter', () => {
+    setup({ engines: { hasEngines: false, hasBackground: false }, candidates: [{ uci: 'f1c4', evalText: '+0.40' }] });
+    open();
+    item('pm-compare')!.click();
+    const [component, config] = dialog.open.calls.mostRecent().args;
+    expect(component).toBe(MoveCompareDialogComponent);
+    expect(config!.data).toEqual({ fen: FEN, candidates: [{ uci: 'f1c4', evalText: '+0.40' }] });
+  });
+
+  it('ohne Anmeldung kein „Züge vergleichen"', () => {
+    loggedIn = false;
+    setup();
+    open();
+    expect(item('pm-compare')).toBeNull();
   });
 
   it('„Im Hintergrund analysieren" öffnet den Auftrags-Dialog mit Stellung, Tiefe und Linien', () => {

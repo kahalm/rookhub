@@ -232,6 +232,7 @@ const EVAL_SETTLE_DEPTH = 10;
                 <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
                      die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
                 <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
+                                   [candidates]="engineCandidates"
                                    [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
               </div>
               @if (line.length === 0) {
@@ -377,6 +378,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   readonly depthOptions = DEPTH_OPTIONS;
   returnTo: string | null = null;
   displayLines: EngineDisplayLine[] = [];
+  /** Erste Züge der aktuellen Engine-Linien samt Bewertung — „Züge vergleichen" wählt sie vor. */
+  engineCandidates: { uci: string; evalText: string }[] = [];
   evalText = '0.00';
   whiteHeight = 50;
   engineCrashed = false;
@@ -675,6 +678,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.lastMove = lm ? [lm.substring(0, 2) as Key, lm.substring(2, 4) as Key] : undefined;
     this.shapes = [];
     this.displayLines = [];
+    this.engineCandidates = [];
     this.depth = 0;
     this.nodes = 0;
     this.nps = 0;
@@ -745,6 +749,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.depth = depth;
     this.displayLines = this.toDisplayLines(fen, lines);
+    this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
     this.shapes = lines.map((l, i) => {
       const u = l.pvUci[0];
       return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: ARROW_BRUSHES[i] || 'blue' } as DrawShape : null;

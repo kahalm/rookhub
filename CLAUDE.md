@@ -2160,6 +2160,43 @@ Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s
 | POST | `/api/analysis-jobs/{id}/restart` | Wieder einreihen (Fehlversuchs-Zähler + Backoff gelöscht, laufender Lauf abgebrochen); das ERGEBNIS bleibt — die Suche setzt bei `ReachedDepth` an. Ein Auftrag mit erreichtem Ziel bleibt `Done` |
 | DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
 
+### Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"
+Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
+sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/MoveComparisonService.cs`,
+Tabellen `MoveComparisons` + `MoveComparisonLines`, Pumpe `MoveComparisonPumpService` (5 s, `MoveComparison:PumpIntervalSeconds`).
+* **Zwei Durchgänge über die Hintergrund-Aufträge** (NICHT die Live-Engine — rechnet auch, wenn die Seite zu ist):
+  (1) je Kandidat (2–4) die Stellung DANACH mit `CandidateLines` (3) Linien = die besten Antworten des Gegners; daraus
+  der beste Kandidat (`BestUci`, Sicht der Seite am Zug, Matt ± 100 000). (2) Je SCHWÄCHEREM Kandidaten dessen
+  `RepliesTested` (3) beste Antworten, gespielt nach dem BESTEN: geht die Antwort dort nicht → `Illegal` (ohne Auftrag,
+  selbst eine Auskunft), sonst ein Auftrag mit 1 Linie = die eigene Erwiderung und die Bewertung. Matt/Patt auf dem Brett
+  braucht keinen Auftrag (`Terminal`).
+* **Engine wie die Punktepartie** (`Services/EngineOwnerResolver.cs`, von `GameAnalysisService` mitbenutzt): eigene
+  Hintergrund-Engine, sonst die Haus-Engine; auf der Haus-Engine höchstens `HouseMaxDepth` 24 (eigene bis 30, Vorgabe 22).
+  Die Aufträge sind normale (nicht `Background`) — sie verdrängen Vertiefung/Meisterpartien. `remember: false`, und
+  `AnalysisJobService.ListAsync` blendet Aufträge eines Vergleichs aus. **Fertige Aufträge werden eingesammelt**: Ergebnis
+  in die Zeile (`ResultJson`, `ReachedDepth`), Auftrag GELÖSCHT — sonst stünden sie in der Liste und fielen irgendwann dem
+  Trimmer (`MaxJobsPerUser`) zum Opfer. Ein verschwundener Auftrag macht die Zeile `Failed`, nicht den Vergleich.
+* **Begründung** je schwächerem Kandidaten nur mit Modell auf eigener Hardware (`IsLocal`), im Hintergrund
+  (`MoveComparisonExplainJobs` gegen Doppelstarts, ein Neustart lässt die Pumpe neu anstoßen). Fakten wie bei „Warum war das
+  ein Fehler?" (`ExplanationFacts`: `FirstMoveAttacks`, `LineEvents` — die Bilanz der Antwort-Linie ab der Stellung VOR dem
+  schwächeren Zug samt diesem, die der eigenen Erwiderung ab der Stellung nach dem besten Zug samt der Antwort), Stufen in
+  Worten (`LevelName`), „fast gleich" unter 0,3 Bauern; Leser = die Seite am Zug. Genannte Züge nur aus den Linien
+  (`MentionsOnly`, eine Nachfrage), gespeichert in englischer SAN, `PieceLetters` beim Lesen. Ohne Modell endet der
+  Vergleich ohne Text; ein unbrauchbarer Text lässt ihn trotzdem `Done` werden (sonst hinge er auf „wird erklärt").
+* Deckel: `MaxOpenPerUser` 3 laufende, `MaxKeptPerUser` 50 gespeicherte (älteste fertige gehen beim Anlegen).
+* Frontend: ⋮-Menü der Stellung (`position-menu.component.ts`, angemeldet immer — ob eine Engine bereitsteht, sagt der
+  Dialog) → `move-compare-dialog.component.ts` (Engine-Vorschläge des Analysebretts vorausgewählt, `[candidates]`, dazu
+  jeder legale Zug) → Seite `/analysis/compare/:id` (`move-comparison.component.ts`, fragt alle 3 s nach, solange es
+  läuft; Brett aus Sicht der Seite am Zug, Klick auf Zug/Antwort/Erwiderung stellt die Stellung auf).
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/move-comparisons/status` | `{ engineAvailable, ownEngine, explanations, maxCandidates, defaultDepth, maxDepth, openComparisons, maxOpen }` (Literal vor `{id}`) |
+| GET | `/api/move-comparisons` | Die letzten 20 eigenen (`moves` als SAN, `bestSan`) |
+| GET | `/api/move-comparisons/{id}` | Stand: `status` (`candidates`/`replies`/`explaining`/`done`/`failed`), je Kandidat `evalText` (WEISS-Sicht), `replies` (beste Antworten, Linie als SAN), `tests` (dieselben nach dem besten Zug: `state` `pending`/`done`/`failed`/`illegal`, `line` = eigene Erwiderung), `explanation`; beste zuerst, solange gerechnet wird Reihenfolge der Auswahl. Laufende Zeilen zeigen den Zwischenstand ihres Auftrags |
+| POST | `/api/move-comparisons` | `{ fen, moves[] (UCI, Rochade auch König-schlägt-Turm), depth?, lang?, title? }`; 400 `reason` ∈ invalid-fen/game-over/invalid-move/too-few-moves/too-many-moves/too-many-open/no-engine/too-many-jobs |
+| DELETE | `/api/move-comparisons/{id}` | Löschen samt offener Aufträge |
+
 **Vergleichsmodus (0.375.0)**: Der Waagen-Knopf startet eine ZWEITE Engine auf derselben
 Stellung (`compareEngine`), beide Linienlisten stehen untereinander. Möglich ohne Umbau, weil
 `AnalysisEngineService` weder Konstruktor noch `inject()` hat — er lässt sich schlicht per `new`
@@ -3509,6 +3546,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) — trägt seit 0.537.0 auch die Hintergrund-Liste für direkt angemeldete Engines, dann OHNE Token | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`; LEER = kein Lichess-Token hinterlegt), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
 | ExternalEngineRegistrations | Direkt bei RookHub angemeldete External Engines (eigener Broker, 0.537.0) — der Provider registriert sie mit einem API-Token Scope `engine` | Id (PK, ≤20, `rhe_` + 12 Zeichen), UserId (Cascade), Name (≤200, **UNIQUE (UserId, Name)** — die Identität der Registrierung), ClientSecret (≤64, für den Anfragenden; nie im Browser), ProviderSelector (≤64, sha256(`providerSecret:`+Geheimnis) hex, Index — das Geheimnis selbst wird nie gespeichert), MaxThreads, MaxHash, Variants (CSV ≤200), ProviderData? (≤500), CreatedAt, UpdatedAt, LastSeenAt? (letzter Poll, minütlich geschrieben); höchstens 32 je Konto, Konto löschen räumt ab |
 | AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess `eei_…` oder direkt angemeldet `rhe_…`), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
+| MoveComparisons | „Züge vergleichen" (0.602.0): eine Stellung, 2–4 Kandidaten | UserId (Cascade), Fen (≤120), Title?, Depth, Language (≤8), Status (Candidates/Replies/Explaining/Done/Failed), EngineOwnerUserId?, BestUci? (≤10), Model?, Error? (≤200), CreatedAt/UpdatedAt/FinishedAt?; Index (UserId, CreatedAt), Status |
+| MoveComparisonLines | Je gerechnete Stellung eines Vergleichs: Kandidat (Stellung nach dem Zug, 3 Linien) oder Antwort (beste Antwort auf einen SCHWÄCHEREN Kandidaten, gespielt nach dem BESTEN) | MoveComparisonId (Cascade), Kind, CandidateUci (≤10), ReplyUci? (≤10), Ordinal, Fen (≤120, leer bei Illegal), State (Pending/Done/Failed/Illegal), AnalysisJobId? (kein FK, nach dem Einsammeln null — der Auftrag wird gelöscht), ResultJson? (LONGTEXT), ReachedDepth, Explanation? (≤1500, englische SAN); Index MoveComparisonId, AnalysisJobId |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |
 | MessageThreads | Metadaten/Zuweisung einer Konversation (1 Zeile je User) | UserId (PK + FK AppUser Cascade), ClaimedByAdminId? (welcher Admin übernommen hat, **ohne FK** → vermeidet doppelte Cascade-Pfade; Name wird beim Abruf aufgelöst), ClaimedAt?; entsteht mit der ersten Nachricht |
 | CiBuildReports | Per-Push gemeldete laufende Build-SHA/Ref eines Stacks, den rookhub nicht per HTTP erreichen kann (z. B. log-watcher; `POST /api/ci/build-report`). PERSISTENT statt nur In-Memory → Admin-CI kennt die laufende Version auch nach rookhub-api-Neustart sofort | Repo (PK, ≤100), Sha? (≤64), Ref? (≤200), ReportedAt; Upsert je Repo via `GithubActionsService.ReportBuildAsync`, gelesen in `ResolveRunningBuildsAsync` |

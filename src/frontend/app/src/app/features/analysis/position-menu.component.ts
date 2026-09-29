@@ -10,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisJobDialogComponent, AnalysisJobDialogData } from './analysis-job-dialog.component';
+import { MoveCompareCandidate, MoveCompareDialogComponent, MoveCompareDialogData } from './move-compare-dialog.component';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY } from './analysis-settings';
 import { ExternalEngineService } from './external-engine.service';
 import { chessableFenSearchUrl, positionShareUrl } from './position-links.util';
@@ -51,8 +52,13 @@ export interface PositionMenuEngines {
       <button mat-menu-item type="button" class="pm-copy" (click)="copyFen()">
         <mat-icon>content_copy</mat-icon> {{ 'analysis.copyFen' | translate }}
       </button>
-      @if (auth.isLoggedIn && effectiveEngines()?.hasEngines) {
+      @if (auth.isLoggedIn) {
         <mat-divider />
+        <button mat-menu-item type="button" class="pm-compare" (click)="compareMoves()">
+          <mat-icon>compare_arrows</mat-icon> {{ 'moveCompare.menu' | translate }}
+        </button>
+      }
+      @if (auth.isLoggedIn && effectiveEngines()?.hasEngines) {
         <button mat-menu-item type="button" class="pm-background" (click)="queueBackground()">
           <mat-icon>schedule</mat-icon> {{ 'analysis.queueBackground' | translate }}
         </button>
@@ -79,6 +85,8 @@ export class PositionMenuComponent {
   /** Vorbelegung des Auftrags; ohne Angabe die am Analysebrett gemerkten Werte. */
   readonly depth = input<number | undefined>(undefined);
   readonly lines = input<number | undefined>(undefined);
+  /** Die ersten Züge der Engine-Linien (vom Analysebrett) — „Züge vergleichen" wählt sie vor. */
+  readonly candidates = input<MoveCompareCandidate[]>([]);
 
   private readonly loaded = signal<PositionMenuEngines | null>(null);
   private loading = false;
@@ -131,6 +139,13 @@ export class PositionMenuComponent {
     this.dialog.open(AnalysisJobDialogComponent, { width: '440px', data }).afterClosed().subscribe(job => {
       if (job) this.snackbar.success(this.translate.instant('analysisJobs.created'));
     });
+  }
+
+  /** „Züge vergleichen" (0.602.0): Kandidaten wählen, rechnen lassen, Ergebnis auf /analysis/compare/:id. Rechnen
+   *  kann auch die Haus-Engine — deshalb angemeldet immer im Menü; ob eine bereitsteht, sagt der Dialog. */
+  compareMoves(): void {
+    const data: MoveCompareDialogData = { fen: this.fen(), candidates: this.candidates() };
+    this.dialog.open(MoveCompareDialogComponent, { width: '560px', maxWidth: '96vw', data });
   }
 
   private copyLink(url: string): void {

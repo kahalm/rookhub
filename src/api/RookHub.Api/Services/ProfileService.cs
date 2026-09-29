@@ -408,6 +408,11 @@ public class ProfileService
         // Hintergrund-Analyseaufträge tragen Stellungen samt selbst gewählten Titeln (PII-nah) und
         // würden nach der Löschung weiter Rechenzeit auf der Engine des Kontos verbrauchen.
         _db.AnalysisJobs.RemoveRange(await _db.AnalysisJobs.Where(x => x.UserId == userId).ToListAsync());
+        // Zugvergleiche (0.602.0): die Zeilen cascaden am Kopf; ihre Aufträge stehen in AnalysisJobs und gehen oben mit.
+        // Unter InMemory cascadet nichts — die Zeilen deshalb ausdrücklich.
+        var comparisons = await _db.MoveComparisons.Include(c => c.Lines).Where(c => c.UserId == userId).ToListAsync();
+        _db.MoveComparisonLines.RemoveRange(comparisons.SelectMany(c => c.Lines));
+        _db.MoveComparisons.RemoveRange(comparisons);
         // Chessable-Rohdaten des Nutzers: getReview-Linien, Sitzungszüge und „schwierige Züge" sind
         // fremder Kursinhalt, an die Person gebunden — keine Statistik, die anonym weiterleben könnte.
         _db.ChessableReviewLines.RemoveRange(await _db.ChessableReviewLines.Where(x => x.UserId == userId).ToListAsync());

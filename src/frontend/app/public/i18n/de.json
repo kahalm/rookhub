@@ -4155,5 +4155,63 @@
     "page": "Seite {{n}}",
     "removePage": "Foto entfernen",
     "morePages": "Geht die Partie über ein weiteres Blatt? Dann die nächste Seite dazunehmen — bis zu {{max}} Seiten, in der richtigen Reihenfolge."
+  },
+  "moveCompare": {
+    "menu": "Züge vergleichen",
+    "dialog": {
+      "title": "Züge vergleichen",
+      "hint": "Wähle 2 bis {{max}} Züge. Die Engine rechnet jeden durch, prüft die besten Antworten des Gegners auf die schwächeren Züge gegen den besten und erklärt, warum er besser ist.",
+      "engineMoves": "Vorschläge der Engine",
+      "allMoves": "Alle Züge",
+      "selected": "{{count}} von {{max}} gewählt",
+      "depth": "Tiefe",
+      "submit": "Vergleichen",
+      "noEngine": "Dafür steht gerade keine Engine bereit — richte im Profil eine Hintergrund-Engine ein.",
+      "houseEngine": "Gerechnet wird auf der Haus-Engine (höchstens Tiefe {{depth}}).",
+      "noExplanations": "Ohne Sprachmodell gibt es nur die gerechneten Linien, keine Begründung."
+    },
+    "error": {
+      "generic": "Der Vergleich konnte nicht gestartet werden.",
+      "too-many-open": "Es laufen noch zu viele Vergleiche — warte, bis einer fertig ist.",
+      "no-engine": "Dafür steht gerade keine Engine bereit.",
+      "too-many-jobs": "Gerade sind zu viele Analyse-Aufträge offen — versuch es später noch einmal.",
+      "invalid-move": "Einer der Züge geht in dieser Stellung nicht.",
+      "too-few-moves": "Wähle mindestens zwei Züge.",
+      "too-many-moves": "Zu viele Züge gewählt.",
+      "game-over": "In dieser Stellung gibt es keinen Zug mehr.",
+      "invalid-fen": "Diese Stellung lässt sich nicht lesen."
+    },
+    "page": {
+      "title": "Züge vergleichen",
+      "back": "Zum Analysebrett",
+      "openInBoard": "Im Analysebrett öffnen",
+      "status": {
+        "candidates": "Die Kandidatenzüge werden gerechnet …",
+        "replies": "Die besten Antworten werden gegen den besten Zug geprüft …",
+        "explaining": "Die Begründung wird geschrieben …",
+        "done": "Fertig.",
+        "failed": "Gescheitert: {{error}}"
+      },
+      "progress": "{{pending}} von {{total}} Stellungen noch offen",
+      "startPosition": "Ausgangsstellung",
+      "showStart": "Zur Ausgangsstellung",
+      "clickHint": "Klick auf einen Zug, eine Antwort oder deine Erwiderung zeigt die Stellung auf dem Brett.",
+      "best": "bester Zug",
+      "calculating": "rechnet · Tiefe {{depth}}",
+      "failed": "konnte nicht gerechnet werden",
+      "pending": "wird noch gerechnet",
+      "whyBetter": "Warum {{best}} besser ist als {{weak}}",
+      "repliesTo": "Beste Antworten auf {{move}}",
+      "against": "… und gegen {{move}}",
+      "notPossible": "geht nicht",
+      "yourReply": "deine Antwort",
+      "explaining": "Die Begründung wird geschrieben …",
+      "noExplanation": "Keine Begründung — das Sprachmodell hat nichts Brauchbares geliefert.",
+      "history": "Frühere Vergleiche",
+      "delete": "Vergleich löschen",
+      "deleteConfirm": "Diesen Vergleich löschen?",
+      "deleteFailed": "Der Vergleich konnte nicht gelöscht werden.",
+      "notFound": "Diesen Vergleich gibt es nicht (mehr)."
+    }
   }
 }

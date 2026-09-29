@@ -280,26 +280,10 @@ public class GameAnalysisService
             && (g.Origin == GameAnalysisOrigin.Guess || g.Origin == GameAnalysisOrigin.SavedGame)
             && (g.Status == GameAnalysisStatus.Pending || g.Status == GameAnalysisStatus.Running), ct);
 
-    /// <summary>
-    /// Wer rechnet: erst die EIGENE Hintergrund-Engine, sonst die Haus-Engine, sonst niemand
-    /// (<c>null</c>). Die eigene hat Vorrang, weil sie dem Nutzer gehoert — wer eine Maschine
-    /// stehen hat, soll sie benutzen und nicht in der Schlange des Hauses stehen.
-    /// </summary>
-    private async Task<int?> ResolveGuessEngineOwnerAsync(int userId, CancellationToken ct)
-    {
-        var own = await _db.LichessEngineCredentials.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        if (own is not null && own.BackgroundEngines.Count > 0) return userId;
-
-        // Haus-Engine: die Freigabe steht an den Zugangsdaten, gelten lassen wir sie aber nur bei
-        // einem Admin — verliert jemand die Rechte, soll seine Maschine nicht weiter fuer fremde
-        // Partien laufen, ohne dass jemand das Haekchen wegnimmt.
-        var house = await _db.LichessEngineCredentials.AsNoTracking()
-            .Where(c => c.ShareAsHouseEngine && c.BackgroundEngineIds != null && c.User!.IsAdmin)
-            .OrderBy(c => c.UserId)
-            .ToListAsync(ct);
-        return house.FirstOrDefault(c => c.BackgroundEngines.Count > 0)?.UserId;
-    }
+    /// <summary>Wer rechnet: erst die EIGENE Hintergrund-Engine, sonst die Haus-Engine, sonst niemand
+    /// (<c>null</c>) — siehe <see cref="EngineOwnerResolver"/>.</summary>
+    private Task<int?> ResolveGuessEngineOwnerAsync(int userId, CancellationToken ct)
+        => EngineOwnerResolver.ResolveAsync(_db, userId, ct);
 
     /// <summary>Was die Punktepartie-Seite ueber das Einwerfen wissen muss, BEVOR jemand ein PGN
     /// hineinkopiert: gibt es ueberhaupt eine Engine, und wie viele Partien sind noch frei.</summary>

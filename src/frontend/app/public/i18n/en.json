@@ -4155,5 +4155,63 @@
     "page": "Page {{n}}",
     "removePage": "Remove photo",
     "morePages": "Does the game continue on another sheet? Then add the next page — up to {{max}} pages, in the right order."
+  },
+  "moveCompare": {
+    "menu": "Compare moves",
+    "dialog": {
+      "title": "Compare moves",
+      "hint": "Pick 2 to {{max}} moves. The engine calculates each one, tests the opponent’s best replies to the weaker moves against the best one and explains why it is better.",
+      "engineMoves": "Engine suggestions",
+      "allMoves": "All moves",
+      "selected": "{{count}} of {{max}} selected",
+      "depth": "Depth",
+      "submit": "Compare",
+      "noEngine": "No engine is available for this right now — set up a background engine in your profile.",
+      "houseEngine": "Calculated on the house engine (up to depth {{depth}}).",
+      "noExplanations": "Without a language model you get the calculated lines only, no explanation."
+    },
+    "error": {
+      "generic": "The comparison could not be started.",
+      "too-many-open": "Too many comparisons are still running — wait until one is finished.",
+      "no-engine": "No engine is available for this right now.",
+      "too-many-jobs": "Too many analysis jobs are open right now — try again later.",
+      "invalid-move": "One of the moves is not possible in this position.",
+      "too-few-moves": "Pick at least two moves.",
+      "too-many-moves": "Too many moves selected.",
+      "game-over": "There are no moves in this position.",
+      "invalid-fen": "This position cannot be read."
+    },
+    "page": {
+      "title": "Compare moves",
+      "back": "Analysis board",
+      "openInBoard": "Open in analysis board",
+      "status": {
+        "candidates": "Calculating the candidate moves …",
+        "replies": "Testing the best replies against the best move …",
+        "explaining": "Writing the explanation …",
+        "done": "Done.",
+        "failed": "Failed: {{error}}"
+      },
+      "progress": "{{pending}} of {{total}} positions still open",
+      "startPosition": "Starting position",
+      "showStart": "Back to start",
+      "clickHint": "Click a move, a reply or your answer to see the position on the board.",
+      "best": "best move",
+      "calculating": "calculating · depth {{depth}}",
+      "failed": "could not be calculated",
+      "pending": "still being calculated",
+      "whyBetter": "Why {{best}} is better than {{weak}}",
+      "repliesTo": "Best replies to {{move}}",
+      "against": "… and against {{move}}",
+      "notPossible": "not possible",
+      "yourReply": "your answer",
+      "explaining": "The explanation is being written …",
+      "noExplanation": "No explanation — the language model gave nothing usable.",
+      "history": "Earlier comparisons",
+      "delete": "Delete comparison",
+      "deleteConfirm": "Delete this comparison?",
+      "deleteFailed": "The comparison could not be deleted.",
+      "notFound": "This comparison does not exist (any more)."
+    }
   }
 }

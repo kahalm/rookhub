@@ -4155,5 +4155,63 @@
     "page": "{{n}}. oldal",
     "removePage": "Fénykép eltávolítása",
     "morePages": "Folytatódik a játszma egy másik lapon? Add hozzá a következő oldalt — legfeljebb {{max}} oldal, helyes sorrendben."
+  },
+  "moveCompare": {
+    "menu": "Lépések összehasonlítása",
+    "dialog": {
+      "title": "Lépések összehasonlítása",
+      "hint": "Válassz 2–{{max}} lépést. A motor mindegyiket kiszámolja, a gyengébb lépésekre adott legjobb ellenfél-válaszokat kipróbálja a legjobb ellen, és elmagyarázza, miért jobb.",
+      "engineMoves": "A motor javaslatai",
+      "allMoves": "Minden lépés",
+      "selected": "{{count}} / {{max}} kiválasztva",
+      "depth": "Mélység",
+      "submit": "Összehasonlítás",
+      "noEngine": "Ehhez most nem áll rendelkezésre motor — állíts be háttérmotort a profilodban.",
+      "houseEngine": "A számolás a házi motoron fut (legfeljebb {{depth}} mélységig).",
+      "noExplanations": "Nyelvi modell nélkül csak a kiszámolt változatokat kapod, magyarázatot nem."
+    },
+    "error": {
+      "generic": "Az összehasonlítást nem sikerült elindítani.",
+      "too-many-open": "Még túl sok összehasonlítás fut — várd meg, amíg az egyik elkészül.",
+      "no-engine": "Ehhez most nem áll rendelkezésre motor.",
+      "too-many-jobs": "Most túl sok elemzési feladat van nyitva — próbáld később.",
+      "invalid-move": "Az egyik lépés ebben az állásban nem lehetséges.",
+      "too-few-moves": "Válassz legalább két lépést.",
+      "too-many-moves": "Túl sok lépést választottál.",
+      "game-over": "Ebben az állásban nincs több lépés.",
+      "invalid-fen": "Ezt az állást nem lehet beolvasni."
+    },
+    "page": {
+      "title": "Lépések összehasonlítása",
+      "back": "Az elemzőtáblához",
+      "openInBoard": "Megnyitás az elemzőtáblán",
+      "status": {
+        "candidates": "A jelölt lépések számolása folyik …",
+        "replies": "A legjobb válaszok ellenőrzése a legjobb lépés ellen …",
+        "explaining": "A magyarázat készül …",
+        "done": "Kész.",
+        "failed": "Sikertelen: {{error}}"
+      },
+      "progress": "{{total}} állásból még {{pending}} nyitott",
+      "startPosition": "Kiinduló állás",
+      "showStart": "Vissza a kiinduló álláshoz",
+      "clickHint": "Egy lépésre, válaszra vagy a te válaszlépésedre kattintva az állás megjelenik a táblán.",
+      "best": "legjobb lépés",
+      "calculating": "számol · mélység {{depth}}",
+      "failed": "nem sikerült kiszámolni",
+      "pending": "számolás alatt",
+      "whyBetter": "Miért jobb a(z) {{best}}, mint a(z) {{weak}}",
+      "repliesTo": "A legjobb válaszok erre: {{move}}",
+      "against": "… és a(z) {{move}} ellen",
+      "notPossible": "nem lehetséges",
+      "yourReply": "a te válaszod",
+      "explaining": "A magyarázat készül …",
+      "noExplanation": "Nincs magyarázat — a nyelvi modell nem adott használható választ.",
+      "history": "Korábbi összehasonlítások",
+      "delete": "Összehasonlítás törlése",
+      "deleteConfirm": "Törlöd ezt az összehasonlítást?",
+      "deleteFailed": "Az összehasonlítást nem sikerült törölni.",
+      "notFound": "Ez az összehasonlítás nem létezik (már)."
+    }
   }
 }

@@ -322,6 +322,10 @@ try
     builder.Services.AddScoped<GuessSessionService>();
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();
+    // Züge vergleichen (0.602.0): Kandidatenzüge über Hintergrund-Aufträge durchrechnen, Begründung vom Modell.
+    builder.Services.AddSingleton<MoveComparisonExplainJobs>();
+    builder.Services.AddScoped<MoveComparisonService>();
+    builder.Services.AddHostedService<MoveComparisonPumpService>();
     // Meisterpartien im Hintergrund analysieren — zu den Zeiten der Uebersetzung (QuietHours), auf den Engines der
     // Haus-Engine, jeder andere Auftrag hat Vorrang (MasterAnalysis:Enabled=false schaltet ab).
     builder.Services.AddHostedService<MasterAnalysisScheduler>();
