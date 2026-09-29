@@ -1189,11 +1189,11 @@ Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 | POST | `/api/book-puzzles/{id}/attempt` | Auth | Lösungsversuch erfassen `{ solved, timeSeconds }` (Tagespuzzle) |
 | POST | `/api/book-puzzles/{id}/flag-hints` | Auth | Tipps als „dumm/schlecht" markieren/aufheben `{ flagged }` — jeder eingeloggte User (Review-Flag `BookPuzzle.HintsFlagged`; 404 wenn Puzzle fehlt) |
 | POST | `/api/book-puzzles/{id}/attempt/anonymous` | Anon | Anonymer Versuch (Session-ID, je Session/Puzzle dedupliziert) |
-| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User, inkl. Discord) + Versuchs-/Lösungszähler + `anonymousSolvedCount`. Löser-Status: nur wer im **ersten** Versuch löste, gilt als Löser |
+| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User; Discord-ID/-Name NUR für den signierten Bot und Eingeloggte, siehe „Discord-Verknüpfung in den Ergebnis-Endpunkten“) + Versuchs-/Lösungszähler + `anonymousSolvedCount`. Löser-Status: nur wer im **ersten** Versuch löste, gilt als Löser |
 | POST | `/api/book-puzzles/{id}/track` | AllowAnonymous | „Track solves" eines per Link geteilten Puzzles: erfasst den **Erstversuch** des Besuchers (eingeloggt via Token, sonst `{ solved, sessionId }`) in `SharedPuzzleAttempts` (Unique `(BookPuzzleId, IdentityKey)` → nur 1. Versuch zählt; `solved=false` = Fehlzug/Aufgeben/Reset) und liefert `{ solved, failed }` |
 | GET | `/api/book-puzzles/{id}/track-counts` | AllowAnonymous | Aktuelle „Track solves"-Zähler `{ solved, failed }` |
-| GET | `/api/book-puzzles/daily/leaderboard?month=yyyy-MM` | AllowAnonymous | Monats-Wertung des Tagespuzzles (für den Bot): je User Punkte (10 je Erstversuch-Lösung + Tages-Rang-Bonus 5/3/1), `solved`, `golds`; absteigend nach Punkten. Default = laufender UTC-Monat. Literal-Route **vor** `daily/{date}` |
-| GET | `/api/book-puzzles/daily/hall-of-fame?top=5` | AllowAnonymous | All-time-Bestenlisten: meiste gelöste Dailies, meiste 🥇 (Tage als schnellster Erstversuch-Löser), schnellste je gelöste Lösung. `top` 1–25 |
+| GET | `/api/book-puzzles/daily/leaderboard?month=yyyy-MM` | AllowAnonymous (Discord-Felder nur Bot-signiert/eingeloggt) | Monats-Wertung des Tagespuzzles (für den Bot): je User Punkte (10 je Erstversuch-Lösung + Tages-Rang-Bonus 5/3/1), `solved`, `golds`; absteigend nach Punkten. Default = laufender UTC-Monat. Literal-Route **vor** `daily/{date}` |
+| GET | `/api/book-puzzles/daily/hall-of-fame?top=5` | AllowAnonymous (Discord-Felder nur Bot-signiert/eingeloggt) | All-time-Bestenlisten: meiste gelöste Dailies, meiste 🥇 (Tage als schnellster Erstversuch-Löser), schnellste je gelöste Lösung. `top` 1–25 |
 | GET | `/api/book-puzzles/daily/{date}` | AllowAnonymous | Tagespuzzle für UTC-Datum (`yyyyMMdd` oder `today`); legt on-demand eine persistierte Zuordnung in `DailyPuzzles` an — aber NUR für heute/gestern (ältere Daten: gespeicherte Zuordnung oder 404; verhindert anonyme Write-Amplification per Datums-Enumeration) |
 | GET | `/api/book-puzzles/by-line-id?lineId=xxx` | AllowAnonymous | Lookup für schach-bot |
 | GET | `/api/book-puzzles/books` | AllowAnonymous | Buch-Liste mit Counts — nur **lesbare** Bücher (`BookAccess`) |
@@ -1201,6 +1201,19 @@ Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 | POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums neu generieren: Datum/Link bleibt, bisheriges Puzzle wird `Retired=true` gesetzt (nie wieder in Daily/Random/Blind), neues aus dem forDaily-Pool zugeordnet |
 | POST | `/api/admin/book-puzzles/{id}/regenerate-hints` | Admin | Tipps eines einzelnen Buch-Puzzles synchron (neu) generieren (force). 400 ohne `Anthropic:TextApiKey`, 404 wenn Puzzle/keine Tipps; sonst die generierten Tipps |
 | POST | `/api/admin/books/{bookId}/generate-hints?force=` | Admin | Tipps für ein ganzes Buch im Hintergrund erzeugen (Queue); `force` regeneriert auch vorhandene, sonst nur fehlende/veraltete. Antwort `{ queued }` |
+
+**Discord-Verknüpfung in den Ergebnis-Endpunkten (S4-001, `Authorization/BotRequestSignature.cs`)**: die vier
+anonym erreichbaren Ergebnis-Endpunkte (`/api/book-puzzles/{id}/results`, `daily/leaderboard`, `daily/hall-of-fame`,
+`/api/weekly-posts/{id}/results`) liefern `discordId`/`discordUsername` nur noch an den **signierten Bot** und an
+**eingeloggte** Nutzer (die Wochenpost-Bestenliste der App zeigt `discordUsername || name`); anonym stehen sie auf
+`null` — sonst war die Zuordnung RookHub-Konto ↔ Discord-Konto samt Lösezeiten für jeden Unangemeldeten per
+Aufzählung abrufbar (vgl. `PublicProfileDto`). Bot-Vertrag (== schach-bot `puzzle/rookhub.py` `_bot_auth_headers`):
+`X-Bot-Timestamp` = Unix-Sekunden, `X-Bot-Signature: sha256=<hex(HMAC_SHA256(SchachBot:StatsSecret, "<ts>.<path>"))>`,
+`path` = `Request.Path` OHNE Query (eine Signatur taugt nicht für eine andere Puzzle-ID), ±300 s — dieselbe
+Prüfung wie `player-progress` (dort ist die Discord-ID das signierte Objekt). Header mitgeschickt, aber falsch
+(oder Secret serverseitig leer) → **401**; der Bot holt dann einmal unsigniert nach und warnt. Kein Header →
+gewöhnlicher Aufruf. Die DTOs sind je Abruf frisch gebaut (`RemoveDiscordLinks()` mutiert sie) — wer hier einmal
+eine Antwort cacht, muss vorher kopieren.
 
 **Zugriff auf die offenen Buch-Endpoints (`Services/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
 `{id}/next`, `{id}/random`, `/random?bookId=` und `/books`. Anonym sichtbar ist ein Buch nur, wenn ein Admin
@@ -1866,7 +1879,7 @@ Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Dat
 | GET | `/api/weekly-posts/{id}/puzzles` | AllowAnonymous | Puzzle-Sequenz zum Durchspielen |
 | POST | `/api/weekly-posts/{id}/attempt` | Authorize | Versuch erfassen `{ puzzleIndex, solved, timeSeconds }` (idempotent je Index) |
 | GET | `/api/weekly-posts/{id}/progress` | Authorize | Eigener Fortschritt `{ total, playedCount, solvedCount, totalSeconds, playedIndices[], completed }` |
-| GET | `/api/weekly-posts/{id}/results` | AllowAnonymous | Bestenliste (alle Spieler mit ≥1 Versuch): `playedCount`, `solvedCount`, `totalSeconds`, `completed`; Sortierung erledigt→gelöst→Name |
+| GET | `/api/weekly-posts/{id}/results` | AllowAnonymous (Discord-Felder nur Bot-signiert/eingeloggt) | Bestenliste (alle Spieler mit ≥1 Versuch): `playedCount`, `solvedCount`, `totalSeconds`, `completed`; Sortierung erledigt→gelöst→Name |
 | POST | `/api/admin/weekly-posts` | Admin | Upload (multipart: file + scheduledAt + optional title) |
 | PUT | `/api/admin/weekly-posts/{id}` | Admin | Termin/Titel ändern |
 | DELETE | `/api/admin/weekly-posts/{id}` | Admin | Löschen |
@@ -4188,4 +4201,4 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - Friendship-Status ist eine State Machine: Pending → Accepted/Declined; nur der Addressee kann Accept/Decline ausführen
 - **Scanner-Pfade bekommen 404, nicht die Startseite** (seit 0.481.2) – Der SPA-Fallback (`try_files … /index.html`) beantwortet JEDEN unbekannten Pfad mit 200. Ein .env-Scan am 2026-09-17 bekam so für 291 von 313 Pfaden „200“ — preisgegeben wurde nichts, aber für einen Scanner ist das ein Treffer. Die Regex-Locations in `src/frontend/nginx.conf` (Punkt-Pfade, `env.*`, Konfig-/Backup-/Skript-/Archiv-Endungen, `wp-`/`phpmyadmin`/`cgi-bin`/`vendor/`) antworten deshalb mit 404. Zwei Dinge dürfen dabei nicht kippen: (1) **alle `/api/`-Locations tragen `^~`** — sonst fängt die Punkt-Regel `/api/.env` ab, bevor die API es loggt, und der log-watcher (`suspicious_requests`) wird für API-Scans blind; (2) die Regeln stehen VOR der OG-Weiche (bei Regex-Locations gewinnt der erste Treffer), und `/.well-known/assetlinks.json` bleibt eine EXAKTE Location. `.json`/`.js` stehen bewusst nicht in der Liste — das sind echte Bundle-Dateien. `DeploymentConfigTests.ScannerPaths_Get404_WhileAppFilesAndApiStayUntouched` prüft die Muster gegen Scanner-Pfade UND gegen Dateien/Routen der App — wer eine Endung ergänzt, ergänzt dort beide Listen. Die IP-Sperre bekannter Scanner-Netze liegt NICHT hier, sondern im Nginx Proxy Manager (`/data/nginx/custom/http_top.conf`).
 - Stockfish-WASM **NICHT** über Service-Worker cachen außer in eigener assetGroup `engine` (installMode prefetch) — der Glue muss bei `instantiateStreaming`-Fehler auf `instantiate(arrayBuffer)` zurückfallen, sonst hängt die Analyse
-- HMAC-Webhooks zum Bot: gleiches Secret-Pattern (`SchachBot:WebhookSecret` für Tagespuzzle/Wochenpost, `SchachBot:StatsSecret` für Bot-Stats-Pull) — `ComputeHmacHex` aus `SchachBotWebhookService` wiederverwenden
+- HMAC-Webhooks zum Bot: gleiches Secret-Pattern (`SchachBot:WebhookSecret` für Tagespuzzle/Wochenpost, `SchachBot:StatsSecret` für Bot-Stats-Pull) — `ComputeHmacHex` aus `SchachBotWebhookService` wiederverwenden; eingehende Bot-Signaturen prüft `BotRequestSignature.Verify`/`CheckPath` (eine Implementierung für `player-progress` und die Ergebnis-GETs)

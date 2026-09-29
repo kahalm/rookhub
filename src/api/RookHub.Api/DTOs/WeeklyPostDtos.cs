@@ -106,6 +106,13 @@ public class WeeklyPostResultsDto
     /// <summary>Anzahl User, die alle Puzzles gespielt haben (= erledigt).</summary>
     public int CompletedCount { get; set; }
     public List<WeeklyPlayerResultDto> Players { get; set; } = new();
+
+    /// <summary>Discord-Verknüpfung der Spieler entfernen — für anonyme Aufrufer (S4-001,
+    /// <c>BotRequestSignature.ResolveDiscordAccess</c>). Das DTO wird je Abruf frisch gebaut.</summary>
+    public void RemoveDiscordLinks()
+    {
+        foreach (var p in Players) { p.DiscordId = null; p.DiscordUsername = null; }
+    }
 }
 
 /// <summary>Stand eines Users bei einem Wochenpost (für die Discord-Anzeige).</summary>

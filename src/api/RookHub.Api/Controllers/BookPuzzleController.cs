@@ -26,13 +26,17 @@ public class BookPuzzleController : BaseApiController
     private readonly ILogger<BookPuzzleController> _logger;
     /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c> an Einzel-/Nächste-/Zufalls-Linie im Buch).</summary>
     private readonly CourseCommentLocalizer? _localizer;
+    /// <summary>Für <c>SchachBot:StatsSecret</c> (Bot-Signatur der Ergebnis-GETs, <see cref="BotRequestSignature"/>).</summary>
+    private readonly IConfiguration? _config;
 
-    // logger/localizer optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    // logger/localizer/config optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
     public BookPuzzleController(BookPuzzleService service, DailyLeaderboardService leaderboard,
         HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db,
-        ILogger<BookPuzzleController>? logger = null, CourseCommentLocalizer? localizer = null)
+        ILogger<BookPuzzleController>? logger = null, CourseCommentLocalizer? localizer = null,
+        IConfiguration? config = null)
     {
         _localizer = localizer;
+        _config = config;
         _service = service;
         _leaderboard = leaderboard;
         _hints = hints;
@@ -98,10 +102,21 @@ public class BookPuzzleController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Löser eines Buch-Puzzles (für den Bot). Discord-Verknüpfung nur für den signierten Bot bzw.
+    /// Eingeloggte (<see cref="BotRequestSignature.ResolveDiscordAccess"/>); ungültige Bot-Signatur → 401.</summary>
     [AllowAnonymous]
     [HttpGet("{id:int}/results")]
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
-        => Ok(await _service.GetResultsAsync(id, since));
+    {
+        var access = DiscordAccess();
+        if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
+        var dto = await _service.GetResultsAsync(id, since);
+        if (access == DiscordFieldAccess.Redact) dto.RemoveDiscordLinks();
+        return Ok(dto);
+    }
+
+    private DiscordFieldAccess DiscordAccess()
+        => BotRequestSignature.ResolveDiscordAccess(HttpContext, _config?[BotRequestSignature.SecretConfigKey], _logger);
 
     /// <summary>„Track solves" eines per Link geteilten Puzzles: erfasst den Erstversuch des Besuchers
     /// (eingeloggt via Token, sonst via anonymer SessionId) und liefert die aktuellen Zähler.
@@ -141,6 +156,8 @@ public class BookPuzzleController : BaseApiController
     [HttpGet("daily/leaderboard")]
     public async Task<IActionResult> GetDailyLeaderboard([FromQuery] string? month = null)
     {
+        var access = DiscordAccess();
+        if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
         int year, mon;
         if (string.IsNullOrWhiteSpace(month))
         {
@@ -153,7 +170,12 @@ public class BookPuzzleController : BaseApiController
             return BadRequest(new { message = "month must be yyyy-MM." });
         }
 
-        try { return Ok(await _leaderboard.GetDailyLadderAsync(year, mon)); }
+        try
+        {
+            var ladder = await _leaderboard.GetDailyLadderAsync(year, mon);
+            if (access == DiscordFieldAccess.Redact) ladder.RemoveDiscordLinks();
+            return Ok(ladder);
+        }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
@@ -164,7 +186,13 @@ public class BookPuzzleController : BaseApiController
     [AllowAnonymous]
     [HttpGet("daily/hall-of-fame")]
     public async Task<IActionResult> GetDailyHallOfFame([FromQuery] int top = 5)
-        => Ok(await _leaderboard.GetDailyHallOfFameAsync(Math.Clamp(top, 1, 25)));
+    {
+        var access = DiscordAccess();
+        if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
+        var hof = await _leaderboard.GetDailyHallOfFameAsync(Math.Clamp(top, 1, 25));
+        if (access == DiscordFieldAccess.Redact) hof.RemoveDiscordLinks();
+        return Ok(hof);
+    }
 
     /// <summary>Parst <c>yyyy-MM</c> (Jahr 2000–9999, Monat 1–12).</summary>
     private static bool TryParseMonth(string s, out int year, out int month)

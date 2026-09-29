@@ -26,10 +26,18 @@ public class WeeklyPostController : BaseApiController
 {
     private readonly AppDbContext _db;
     private readonly WeeklyPostService _progress;
-    public WeeklyPostController(AppDbContext db, WeeklyPostService progress)
+    /// <summary>Für <c>SchachBot:StatsSecret</c> (Bot-Signatur von <c>{id}/results</c>, <see cref="BotRequestSignature"/>).</summary>
+    private readonly IConfiguration? _config;
+    private readonly ILogger<WeeklyPostController>? _logger;
+
+    // config/logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
+    public WeeklyPostController(AppDbContext db, WeeklyPostService progress,
+        IConfiguration? config = null, ILogger<WeeklyPostController>? logger = null)
     {
         _db = db;
         _progress = progress;
+        _config = config;
+        _logger = logger;
     }
 
     private bool IsAdmin() => User?.IsInRole("Admin") ?? false;
@@ -127,17 +135,24 @@ public class WeeklyPostController : BaseApiController
         }
     }
 
-    /// <summary>Aggregierte Ergebnisse eines Wochenposts (wer wie weit + Gesamtzeit) — für die Discord-Anzeige.</summary>
+    /// <summary>Aggregierte Ergebnisse eines Wochenposts (wer wie weit + Gesamtzeit) — für die Discord-Anzeige.
+    /// Discord-Verknüpfung nur für den signierten Bot bzw. Eingeloggte
+    /// (<see cref="BotRequestSignature.ResolveDiscordAccess"/>); ungültige Bot-Signatur → 401.</summary>
     [AllowAnonymous]
     [HttpGet("{id}/results")]
     public async Task<ActionResult<WeeklyPostResultsDto>> GetResults(int id)
     {
+        var access = BotRequestSignature.ResolveDiscordAccess(
+            HttpContext, _config?[BotRequestSignature.SecretConfigKey], _logger);
+        if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
         var w = await _db.WeeklyPosts.FindAsync(id);
         if (w == null || (!IsAdmin() && !IsPublished(w)))
             return NotFound(new { message = "Weekly post not found." });
         try
         {
-            return Ok(await _progress.GetResultsAsync(id));
+            var results = await _progress.GetResultsAsync(id);
+            if (access == DiscordFieldAccess.Redact) results.RemoveDiscordLinks();
+            return Ok(results);
         }
         catch (KeyNotFoundException ex)
         {

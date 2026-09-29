@@ -73,6 +73,13 @@ public class BookPuzzleResultsDto
     /// <summary>Eingeloggte Löser, die im Modus „easy" gelöst haben.</summary>
     public int EasyCount { get; set; }
     public List<BookSolverDto> Solvers { get; set; } = new();
+
+    /// <summary>Discord-Verknüpfung der Löser entfernen — für anonyme Aufrufer (S4-001,
+    /// <c>BotRequestSignature.ResolveDiscordAccess</c>). Das DTO wird je Abruf frisch gebaut.</summary>
+    public void RemoveDiscordLinks()
+    {
+        foreach (var s in Solvers) { s.DiscordId = null; s.DiscordUsername = null; }
+    }
 }
 
 // --- Tagespuzzle-Leaderboards (Monats-Ladder + Hall of Fame) ------------------------
@@ -100,6 +107,12 @@ public class DailyLadderDto
     /// <summary>Abgefragter Zeitraum als <c>yyyy-MM</c>.</summary>
     public string Period { get; set; } = string.Empty;
     public List<DailyLadderEntryDto> Entries { get; set; } = new();
+
+    /// <summary>Discord-Verknüpfung entfernen — für anonyme Aufrufer (siehe <see cref="BookPuzzleResultsDto.RemoveDiscordLinks"/>).</summary>
+    public void RemoveDiscordLinks()
+    {
+        foreach (var e in Entries) { e.DiscordId = null; e.DiscordUsername = null; }
+    }
 }
 
 /// <summary>Ein Eintrag in einer all-time Hall-of-Fame-Kategorie.</summary>
@@ -129,6 +142,13 @@ public class DailyHallOfFameDto
     public List<HallOfFameEntryDto> MostSolved { get; set; } = new();
     public List<HallOfFameEntryDto> MostGolds { get; set; } = new();
     public FastestSolveDto? Fastest { get; set; }
+
+    /// <summary>Discord-Verknüpfung entfernen — für anonyme Aufrufer (siehe <see cref="BookPuzzleResultsDto.RemoveDiscordLinks"/>).</summary>
+    public void RemoveDiscordLinks()
+    {
+        foreach (var e in MostSolved.Concat(MostGolds)) { e.DiscordId = null; e.DiscordUsername = null; }
+        if (Fastest != null) { Fastest.DiscordId = null; Fastest.DiscordUsername = null; }
+    }
 }
 
 public class BookPuzzleDto

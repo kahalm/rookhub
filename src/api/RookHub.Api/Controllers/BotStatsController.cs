@@ -1,8 +1,7 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -58,38 +57,13 @@ public class BotStatsController : ControllerBase
         return Ok(progress);
     }
 
-    /// <summary>±300 s Toleranz für den Replay-Schutz (analog zum Solver-Webhook).</summary>
-    private const int TimestampToleranceSeconds = 300;
-
     /// <summary>
-    /// Prüft <c>X-Bot-Signature: sha256=&lt;hmac_hex&gt;</c> konstant-zeitig. Replay-Schutz ist PFLICHT:
-    /// <paramref name="timestamp"/> (Wert des <c>X-Bot-Timestamp</c>-Headers, Unix-Sekunden) MUSS gesetzt
-    /// sein, innerhalb ±<see cref="TimestampToleranceSeconds"/> liegen und geht in die HMAC über
-    /// <c>"&lt;ts&gt;.&lt;discordId&gt;"</c> ein. Der frühere rückwärtskompatible Zweig (HMAC nur über
-    /// die Discord-ID, unbegrenzt replaybar) ist entfernt — der Bot sendet den Timestamp seit v2.70
-    /// durchgängig. Nutzt dieselbe HMAC-Hex-Berechnung wie der ausgehende Solver-Webhook.
+    /// Prüft <c>X-Bot-Signature: sha256=&lt;hmac_hex&gt;</c> über <c>"&lt;ts&gt;.&lt;discordId&gt;"</c>;
+    /// Timestamp (<c>X-Bot-Timestamp</c>) ist PFLICHT und ±300 s. Der frühere rückwärtskompatible Zweig
+    /// (HMAC nur über die Discord-ID, unbegrenzt replaybar) ist entfernt — der Bot sendet den Timestamp
+    /// seit v2.70 durchgängig. Eine Implementierung mit den signierten Ergebnis-GETs:
+    /// <see cref="BotRequestSignature.Verify"/>.
     /// </summary>
     private static bool VerifySignature(string secret, string discordId, string? provided, string? timestamp)
-    {
-        if (string.IsNullOrEmpty(provided))
-            return false;
-        // Ohne Timestamp keine Prüfung mehr — eine alte body-only-Signatur wäre für immer replaybar.
-        if (string.IsNullOrWhiteSpace(timestamp))
-            return false;
-        var sig = provided.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase)
-            ? provided["sha256=".Length..]
-            : provided;
-
-        if (!long.TryParse(timestamp, System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out var ts))
-            return false;
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        if (Math.Abs(now - ts) > TimestampToleranceSeconds)
-            return false;
-        var signedMessage = ts.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + discordId;
-
-        var expected = SchachBotWebhookService.ComputeHmacHex(secret, signedMessage);
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(sig), Encoding.UTF8.GetBytes(expected));
-    }
+        => BotRequestSignature.Verify(secret, discordId, provided, timestamp);
 }
