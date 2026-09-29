@@ -39,7 +39,7 @@ public class AuthControllerTests : IDisposable
             })
             .Build();
 
-        _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance);
+        _authService = new AuthService(_db, config, NullLogger<AuthService>.Instance, null, TestServices.Cache());
         var resetService = new PasswordResetService(
             _db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance);
         var handoff = new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance);
@@ -171,6 +171,25 @@ public class AuthControllerTests : IDisposable
         });
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Login_Returns429_WhileAThrottledCheckForTheSameAccountRuns()
+    {
+        // Konto-Bremse (W1 A1-004): läuft für ein gebremstes Konto schon eine Prüfung, wird ein
+        // weiterer Versuch sofort abgewiesen — als 429 mit Retry-After, nicht als „falsches Passwort".
+        await _controller.Register(new RegisterDto { Username = "busy", Password = "Password1!" });
+        for (var i = 0; i < 6; i++)
+            Assert.IsType<UnauthorizedObjectResult>(
+                (await _controller.Login(new LoginDto { Username = "busy", Password = "falsch" })).Result);
+
+        var running = _authService.LoginAsync(new LoginDto { Username = "busy", Password = "falsch" });  // hält das Tor
+        var result = await _controller.Login(new LoginDto { Username = "busy", Password = "Password1!" });
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, status.StatusCode);
+        Assert.Equal("5", _http.Response.Headers.RetryAfter.ToString());
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => running);
     }
 
     // ---- Forgot / Reset Password ----

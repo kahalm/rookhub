@@ -55,9 +55,67 @@ public class AuthService
 
     private static string LoginFailureKey(string loginName) => "login-fail:" + loginName.Trim().ToLowerInvariant();
 
-    private void RegisterLoginFailure(string key) =>
-        _loginFailures?.Set(key, (_loginFailures.Get<int?>(key) ?? 0) + 1,
-            new MemoryCacheEntryOptions { SlidingExpiration = LoginFailureWindow });
+    /// <summary>Fehlversuchs-Stand EINES Kontos im Cache. Ein veränderliches Objekt statt eines int:
+    /// nur so lässt sich atomar zählen (Get+Set verlor unter Parallelität Zählungen) und je Konto ein
+    /// Tor halten.</summary>
+    private sealed class LoginFailureState
+    {
+        public int Count;   // Versuche seit dem letzten Erfolg (gleitendes Fenster), nur per Interlocked
+        public int Busy;    // 1 = für dieses Konto läuft gerade eine GEBREMSTE Prüfung
+    }
+
+    private static readonly object LoginFailureCreateLock = new();
+
+    private static LoginFailureState GetLoginFailureState(IMemoryCache cache, string key)
+    {
+        if (cache.TryGetValue(key, out LoginFailureState? state) && state is not null) return state;
+        // Anlegen unter Sperre: zwei gleichzeitige Erstversuche legten sonst je ein eigenes Objekt an,
+        // und das spätere überschriebe das frühere — samt Zählung und Tor.
+        lock (LoginFailureCreateLock)
+        {
+            if (cache.TryGetValue(key, out state) && state is not null) return state;
+            state = new LoginFailureState();
+            cache.Set(key, state, new MemoryCacheEntryOptions { SlidingExpiration = LoginFailureWindow });
+            return state;
+        }
+    }
+
+    /// <summary>Gezählte Versuche seit dem letzten Erfolg für diesen Anmeldenamen (0 = keine).</summary>
+    internal static int RecentLoginFailures(IMemoryCache cache, string loginName) =>
+        cache.TryGetValue(LoginFailureKey(loginName), out LoginFailureState? state) && state is not null
+            ? Volatile.Read(ref state.Count)
+            : 0;
+
+    /// <summary>Ein laufender Anmeldeversuch: seine Wartezeit und — nur bei gebremstem Konto — das
+    /// gehaltene Tor, das <see cref="Dispose"/> wieder freigibt.</summary>
+    private readonly struct LoginAttempt(LoginFailureState? gate, TimeSpan delay) : IDisposable
+    {
+        public TimeSpan Delay { get; } = delay;
+        public void Dispose()
+        {
+            if (gate is not null) Volatile.Write(ref gate.Busy, 0);
+        }
+    }
+
+    /// <summary>
+    /// Zählt DIESEN Versuch VORAB (atomar) als Fehlversuch; erst ein Erfolg setzt die Zählung zurück.
+    /// So sehen gleichzeitige Versuche nicht alle denselben alten Stand, sondern steigende Zahlen.
+    /// Ist das Konto gebremst, läuft je Konto höchstens EINE Prüfung gleichzeitig: weitere werden sofort
+    /// abgewiesen (<see cref="LoginThrottledException"/> → 429) statt mitzuwarten — eine Wartezeit je
+    /// Anfrage begrenzt bei parallelen Anfragen keine Rate. Bewusster Zielkonflikt: während eines
+    /// laufenden Angriffs kann auch der echte Besitzer ein 429 sehen (kein Sperren über das Fenster hinaus).
+    /// </summary>
+    private LoginAttempt BeginLoginAttempt(string key)
+    {
+        if (_loginFailures is null) return new LoginAttempt(null, TimeSpan.Zero);
+        var state = GetLoginFailureState(_loginFailures, key);
+        var priorAttempts = Interlocked.Increment(ref state.Count) - 1;
+        var delay = LoginThrottleDelay(priorAttempts);
+        if (delay == TimeSpan.Zero) return new LoginAttempt(null, delay);
+        if (Interlocked.CompareExchange(ref state.Busy, 1, 0) != 0)
+            throw new LoginThrottledException();
+        return new LoginAttempt(state, delay);
+    }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto)
     {
@@ -133,8 +191,8 @@ public class AuthService
         // Konto-bezogene Bremse VOR jeder Prüfung anwenden (nicht erst im Fehlerfall) — sonst
         // verrät die Antwortzeit, ob das Passwort stimmte bzw. ob es das Konto überhaupt gibt.
         var failureKey = LoginFailureKey(loginName);
-        var delay = LoginThrottleDelay(_loginFailures?.Get<int?>(failureKey) ?? 0);
-        if (delay > TimeSpan.Zero) await Task.Delay(delay);
+        using var attempt = BeginLoginAttempt(failureKey);
+        if (attempt.Delay > TimeSpan.Zero) await Task.Delay(attempt.Delay);
 
         var user = await _db.AppUsers
             .FirstOrDefaultAsync(u => u.Username.ToLower() == loginName.ToLower());
@@ -158,7 +216,7 @@ public class AuthService
         // ein falsches Passwort, damit der Zustand nicht ableitbar ist).
         if (user == null || !passwordOk || user.DeletedAt != null)
         {
-            RegisterLoginFailure(failureKey);
+            // Gezählt ist der Versuch schon (BeginLoginAttempt) — ein Fehlschlag lässt ihn stehen.
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
@@ -343,3 +401,8 @@ public class AuthService
         };
     }
 }
+
+/// <summary>Die Konto-Bremse weist einen Anmeldeversuch ab, weil für dieses Konto schon eine gebremste
+/// Prüfung läuft (siehe <see cref="AuthService"/>). Controller → 429.</summary>
+public sealed class LoginThrottledException()
+    : Exception("Too many login attempts for this account. Please wait a few seconds and try again.");

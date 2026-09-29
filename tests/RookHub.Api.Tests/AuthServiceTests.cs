@@ -452,10 +452,57 @@ public class AuthServiceTests : IDisposable
                 () => sut.LoginAsync(new LoginDto { Username = "BOB", Password = "wrong" }));
 
         // Zählung ist konto-, nicht schreibweisen-bezogen (sonst umgeht „BoB" die Bremse).
-        Assert.Equal(6, cache.Get<int?>("login-fail:bob"));
+        Assert.Equal(6, AuthService.RecentLoginFailures(cache, "bob"));
 
         await sut.LoginAsync(new LoginDto { Username = "bob", Password = "correct-horse" });
-        Assert.Null(cache.Get<int?>("login-fail:bob"));
+        Assert.Equal(0, AuthService.RecentLoginFailures(cache, "bob"));
+    }
+
+    [Fact]
+    public async Task Login_ParallelFailures_AreAllCounted_AndOnlyOneThrottledCheckRuns()
+    {
+        // W1 A1-004: Zähler wurde VOR der Prüfung gelesen und danach per Get+Set erhöht. Ein Schwall
+        // gleichzeitiger Versuche (IP-Rotation, der IP-Limiter greift nicht) las überall 0, wartete nie
+        // und verlor beim Hochzählen Treffer. Jetzt: jeder Versuch wird vorab atomar gezählt, und ein
+        // gebremstes Konto prüft höchstens EIN Passwort zugleich — der Rest bekommt sofort 429.
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "alice", Password = "correct-horse" });
+
+        const int burst = 20;
+        var attempts = Enumerable.Range(0, burst)
+            .Select(_ => sut.LoginAsync(new LoginDto { Username = "alice", Password = "wrong" }))
+            .ToList();
+        var outcomes = await Task.WhenAll(attempts.Select(async t =>
+        {
+            try { await t; return "ok"; }
+            catch (LoginThrottledException) { return "throttled"; }
+            catch (UnauthorizedAccessException) { return "checked"; }
+        }));
+
+        Assert.DoesNotContain("ok", outcomes);
+        // 5 freie Vertipper + der 6. (noch ungebremst) + genau EINE gebremste Prüfung.
+        Assert.Equal(7, outcomes.Count(o => o == "checked"));
+        Assert.Equal(burst - 7, outcomes.Count(o => o == "throttled"));
+        Assert.Equal(burst, AuthService.RecentLoginFailures(cache, "alice"));   // nichts verloren
+    }
+
+    [Fact]
+    public async Task Login_ThrottledCheck_ReleasesTheGate_SoTheOwnerCanStillLogIn()
+    {
+        // Das Tor je Konto muss nach JEDER gebremsten Prüfung wieder aufgehen (auch nach einem
+        // Fehlschlag) — sonst würde aus der Bremse eine dauerhafte Sperre des Kontos.
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var sut = new AuthService(_db, _config, _logger, null, cache);
+        await sut.RegisterAsync(new RegisterDto { Username = "carol", Password = "correct-horse" });
+
+        for (var i = 0; i < 7; i++)   // der 7. läuft schon gebremst durchs Tor
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(
+                () => sut.LoginAsync(new LoginDto { Username = "carol", Password = "wrong" }));
+
+        var result = await sut.LoginAsync(new LoginDto { Username = "carol", Password = "correct-horse" });
+        Assert.NotEmpty(result.Token);
+        Assert.Equal(0, AuthService.RecentLoginFailures(cache, "carol"));
     }
 
     [Theory]

@@ -50,6 +50,12 @@ public class AuthController : BaseApiController
             await WriteSharedSessionAsync(result);
             return Ok(result);
         }
+        catch (LoginThrottledException ex)
+        {
+            // Konto-Bremse (nicht der IP-Limiter): für dieses Konto läuft schon eine gebremste Prüfung.
+            Response.Headers.RetryAfter = "5";
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { message = ex.Message });
+        }
         catch (UnauthorizedAccessException)
         {
             return Unauthorized(new { message = "Invalid username or password." });
