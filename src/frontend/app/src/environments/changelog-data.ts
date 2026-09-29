@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.597.1", date: "2026-09-29", changes: [
+    { en: "LeagueHub: reopening an open list keeps only what you changed yourself — every other player is matched afresh, so names the server now recognises (new rules, remembered corrections) no longer come back as “ambiguous”.", de: "LeagueHub: Beim Wiederaufnehmen einer offenen Liste bleibt nur, was du selbst geändert hast — alle anderen Spieler werden frisch abgeglichen, Namen, die der Server inzwischen erkennt (neue Regeln, gemerkte Zuordnungen), kommen also nicht mehr als „mehrdeutig“ zurück." },
+  ] },
   { version: "0.597.0", date: "2026-09-29", changes: [
     { en: "LeagueHub: a league player who appears twice in the rosters is now recognised as one person — without a FIDE ID once with and once without a comma (“Lenk Markus” / “Lenk, Markus”, 123 such players), or under two FIDE IDs in the same club (“Forster, Stephan”: the old ID from 2017–2020 does not exist at FIDE; the ID from the latest season counts). Such names used to be “ambiguous” on every import.", de: "LeagueHub: Ein Ligaspieler, der in den Meldelisten doppelt steht, gilt jetzt als eine Person — ohne FIDE-ID einmal mit, einmal ohne Komma („Lenk Markus“ / „Lenk, Markus“, 123 solche Spieler) oder unter zwei FIDE-IDs im selben Verein („Forster, Stephan“: die alte ID von 2017–2020 kennt FIDE nicht; es gilt die ID der jüngsten Saison). Solche Namen waren bisher bei jedem Import „mehrdeutig“." },
   ] },

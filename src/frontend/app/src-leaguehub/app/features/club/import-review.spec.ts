@@ -167,4 +167,18 @@ describe('ImportReview', () => {
     r.choosePerson(2, 'white', philip);
     expect(quickPicks(r.games()[0].white)).toEqual([]);
   });
+
+  it('Entwurf wieder öffnen: nicht angefasste Seiten nehmen den frischen Abgleich, eigene Korrekturen bleiben (0.597.0)', () => {
+    const forster = (m: SideMatch) => ({ ...PREVIEW.games[1], index: 1, white: S('Forster, Stephan', m), black: S('Lenk, Markus', m) });
+    const cands = [{ name: 'Forster, Stephan', fide: '24649651', teams: ['SOG'], club: false },
+                   { name: 'Forster, Stephan', fide: '24652091', teams: ['SOG'], club: false }];
+    const old = new ImportReview({ truncated: false, games: [forster(M({ league: true, ambiguous: true, candidates: cands }))] }, true);
+    old.setReplace(1, 'white', true);                                                 // auch „ersetzen" angefasst
+    old.choosePerson(1, 'black', { name: 'Lenk, Markus', fide: null, teams: ['SOG'], club: false });
+    const state = old.snapshot();
+    const now: ClubPreview = { truncated: false, games: [forster(M({ league: true, name: 'Forster, Stephan', fide: '24652091' }))] };
+    const r = ImportReview.restore(now, state, true).games()[0];
+    expect(r.white).toEqual(jasmine.objectContaining({ ambiguous: false, fide: '24652091', replace: true }));  // frisch erkannt, Wahl bleibt
+    expect(r.black).toEqual(jasmine.objectContaining({ name: 'Lenk, Markus', changed: true }));                // eigene Korrektur bleibt
+  });
 });

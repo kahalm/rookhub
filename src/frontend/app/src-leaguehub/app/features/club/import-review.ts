@@ -222,9 +222,8 @@ export class ImportReview {
     review.games.update(list => list.map(r => {
       const s = byIndex.get(r.game.index);
       if (!s || s.raw[0] !== r.white.raw || s.raw[1] !== r.black.raw) return r;
-      // Ein Stand von vor 0.596.0 kennt die Schnellauswahl nicht — dann gilt die der frischen Übersicht.
-      return { ...r, white: { ...s.white, similar: s.white.similar ?? r.white.similar },
-        black: { ...s.black, similar: s.black.similar ?? r.black.similar }, excluded: s.excluded, touched: s.touched };
+      const next = { ...r, white: restoreSide(r.white, s.white), black: restoreSide(r.black, s.black), touched: s.touched };
+      return { ...next, excluded: s.touched ? s.excluded : optionalGame(next) };
     }));
     return review;
   }
@@ -238,6 +237,17 @@ export class ImportReview {
 }
 
 /** Gespeicherter Stand einer Übersicht (JSON im Entwurf). */
+/** Eine Seite aus dem Entwurf (0.597.0): was der Nutzer selbst gesetzt hat, bleibt; eine NICHT angefasste Seite nimmt den
+ * frischen Abgleich — sonst käme eine Seite, die der Server inzwischen erkennt (neue Regel, gemerkte Zuordnung), als
+ * „mehrdeutig" zurück (gemeldet 2026-09-29 an „Forster, Stephan"). „Ersetzen" bleibt, solange die Seite gleich erkannt
+ * wird (Schwaz ja/nein, ich ja/nein) — dann war es die Wahl des Nutzers; sonst gilt die frische Vorgabe. */
+function restoreSide(fresh: ReviewSide, saved: ReviewSide): ReviewSide {
+  // Ein Stand von vor 0.596.0 kennt die Schnellauswahl nicht — dann gilt die der frischen Übersicht.
+  if (saved.changed) return { ...saved, similar: saved.similar ?? fresh.similar };
+  const same = saved.club === fresh.club && saved.owner === fresh.owner;
+  return { ...fresh, replace: same ? saved.replace : fresh.replace };
+}
+
 interface ReviewSnapshot {
   v: 1;
   replaceClub: boolean;

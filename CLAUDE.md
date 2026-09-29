@@ -1405,7 +1405,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   `LeagueClubDrafts`): beim Lesen der Übersicht legt die Seite die Liste sofort als Entwurf ab (Datei, eingefügt,
   Lichess-Studie, Sprung aus RookHub), speichert den Stand der Übersicht gedrosselt (`ImportReview.snapshot`, für den
   Server opak) und nach jeder Portion die importierten Nummern. „Deine offenen Listen“ nimmt sie wieder auf
-  (`ImportReview.restore` auf einer frischen Übersicht; schon importierte Partien sind dann Dubletten), Verwalter sehen
+  (`ImportReview.restore` auf einer frischen Übersicht; schon importierte Partien sind dann Dubletten; seit 0.597.1 kommt aus
+  dem Stand nur, was der Nutzer SELBST gesetzt hat — jede andere Seite nimmt den frischen Abgleich, „ersetzen" bleibt, solange
+  die Seite gleich erkannt wird), Verwalter sehen
   unter „Offene Listen anderer“ ALLE (auch über Teilen-Links) und stellen fertig. **Mit `draftId` rechnen Übersicht und
   Import für den EINREICHER** (`ActingUserAsync`): seine Seite „du selbst“ wird ersetzt, die Partien tragen ihn als
   Hochladenden, ohne Konto eingereicht niemanden — nicht den Verwalter. Fertig importiert oder verworfen wird die
