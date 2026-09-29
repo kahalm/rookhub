@@ -138,6 +138,34 @@ public class EndlessControllerGuardTests
         Assert.Equal("{}", ((SaveEndlessProgressDto)dto).ActiveGameState);
     }
 
+    // --- Puzzles je Lauf (A2-010): Liste und LichessId gedeckelt ---
+
+    private static RecordAnonymousSessionDto AnonymousRun(int puzzles, string lichessId = "a1B2c") => new()
+    {
+        SessionId = Sid,
+        Puzzles = Enumerable.Range(0, puzzles).Select(i => new EndlessSessionPuzzleDto
+        { PuzzleId = i, LichessId = lichessId, Rating = 1500, Solved = true, StartedAt = 1, EndedAt = 2 }).ToList()
+    };
+
+    [Fact]
+    public void SessionDto_CapsPuzzlesPerRun()
+    {
+        Assert.True(DataAnnotationsValid(AnonymousRun(RecordEndlessSessionDto.MaxPuzzles)));
+        Assert.True(MvcValid(AnonymousRun(RecordEndlessSessionDto.MaxPuzzles)));
+        Assert.False(DataAnnotationsValid(AnonymousRun(RecordEndlessSessionDto.MaxPuzzles + 1)));
+        Assert.False(MvcValid(AnonymousRun(RecordEndlessSessionDto.MaxPuzzles + 1)));
+        // Gilt auch im Konto-DTO und in den Bulk-Paketen (dieselbe Klasse).
+        Assert.False(MvcValid(new BulkImportSessionDto { Sessions = { AnonymousRun(RecordEndlessSessionDto.MaxPuzzles + 1) } }));
+    }
+
+    [Fact]
+    public void SessionDto_CapsLichessIdAtColumnLength()
+    {
+        // Verschachtelt: nur der MVC-Validator steigt in die Liste ab — das ist der Weg von [ApiController].
+        Assert.True(MvcValid(AnonymousRun(1, new string('a', 20))));
+        Assert.False(MvcValid(AnonymousRun(1, new string('a', 21))));
+    }
+
     [Fact]
     public async Task AnonymousWrites_WhenSinkFull_Return400WithReason()
     {

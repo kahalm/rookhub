@@ -89,17 +89,22 @@ public class EndlessProgressServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RecordAnonymousSessionAsync_WithPuzzles_LogsAsAnonymous()
+    public async Task RecordAnonymousSessionAsync_WithPuzzles_LogsOnlyTheSummaryEvent()
     {
+        // A2-010: ein anonymer Aufruf schrieb je mitgeschicktem Puzzle ein EndlessPuzzleAttempt-Event
+        // (bis 2000) — mit 30 Aufrufen/min/IP ~30 000 frei erfundene ES-Dokumente je Minute. Anonym bleibt
+        // nur das Summen-Event; die Puzzles werden trotzdem gespeichert.
         var logger = new TestLogger<EndlessProgressService>();
         var service = new EndlessProgressService(_db, logger);
+        var dto = SessionWithPuzzles();
+        dto.Puzzles.AddRange(Enumerable.Range(0, 1100).Select(i => new EndlessSessionPuzzleDto
+        { PuzzleId = 100 + i, LichessId = "x", Rating = 1500, Solved = true, StartedAt = 1_700_000_100_000 + i, EndedAt = 1_700_000_200_000 + i }));
 
-        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-000000000001", SessionWithPuzzles());
+        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-000000000001", dto);
 
-        var logs = logger.Messages.Where(m => m.Contains("EndlessPuzzleAttempt")).ToList();
-        Assert.Equal(2, logs.Count);
-        Assert.All(logs, m => Assert.Contains("Anonymous", m));
-        Assert.Contains(logs, m => m.Contains("endless-puzzle 10") && m.Contains("StartedAt=") && m.Contains("SolvedAt="));
+        Assert.DoesNotContain(logger.Messages, m => m.Contains("EndlessPuzzleAttempt"));
+        Assert.Single(logger.Messages, m => m.StartsWith("EndlessSessionCompleted: Anonymous"));
+        Assert.NotNull((await _db.EndlessSessions.SingleAsync()).PuzzleAttemptsJson);
     }
 
     [Fact]

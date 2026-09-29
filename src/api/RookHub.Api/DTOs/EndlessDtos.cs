@@ -123,8 +123,15 @@ public class RecordEndlessSessionDto
     /// den ganzen Lauf mit 400 abweisen (die Spaltenlänge sichert das Modell).
     public string? Mode { get; set; }
 
+    /// <summary>Obergrenze der Puzzles je Lauf. Die Kette steigt ab Puzzle 25 um 15 Punkte je Puzzle und
+    /// liegt nach ~150 Puzzles über dem Puzzle-Bestand — 500 ist ein Vielfaches jedes echten Laufs.
+    /// Vorher war die Liste offen: der anonyme Endpoint nahm ~1100 Einträge je Aufruf an (so viele passen
+    /// in die TEXT-Spalte PuzzleAttemptsJson).</summary>
+    public const int MaxPuzzles = 500;
+
     /// <summary>Optional: einzelne Puzzles der Session — persistiert als PuzzleAttemptsJson (Detail-Ansicht);
-    /// geloggt (Start-/Lösungszeit) nur Einträge mit <c>StartedAt</c> &gt; 0.</summary>
+    /// geloggt (Start-/Lösungszeit) nur bei Konten und nur Einträge mit <c>StartedAt</c> &gt; 0.</summary>
+    [MaxLength(MaxPuzzles)]
     public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();
 }
 
@@ -133,6 +140,8 @@ public class RecordEndlessSessionDto
 public class EndlessSessionPuzzleDto
 {
     public int PuzzleId { get; set; }
+    /// <summary>Spaltenlänge von <see cref="Models.Puzzle.LichessId"/>; vorher unbegrenzt.</summary>
+    [MaxLength(20)]
     public string? LichessId { get; set; }
     public int Rating { get; set; }
     public bool Solved { get; set; }

@@ -174,7 +174,11 @@ public class EndlessProgressService
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        LogSessionPuzzles(owner.UserId, dto.Puzzles);
+        // Einzel-Events nur fuer Konten: ein anonymer Aufruf schrieb sonst ~1000 frei erfundene
+        // EndlessPuzzleAttempt-Dokumente (30 Aufrufe/min/IP) und verfaelschte die Kibana-Kennzahlen.
+        // Fuer anonyme Laeufe bleibt das Summen-Event darunter.
+        if (!owner.IsAnonymous)
+            LogSessionPuzzles(owner.UserId!.Value, dto.Puzzles);
         // Strukturierter Event fuer Kibana: Runs/Tag, Ø/Max geloeste Puzzles, Max-Rating,
         // Leaderboard (Cardinality/Terms auf fields.UserId). Analog zum PuzzleAttempt-Log.
         if (owner.IsAnonymous)
@@ -254,13 +258,14 @@ public class EndlessProgressService
         => RecordSessionAsync(EndlessOwner.ForUser(userId), dto);
 
     /// <summary>
-    /// Loggt jedes Puzzle einer Endless-Session mit Start- und Lösungszeit (für ES/Kibana).
-    /// userId == null = anonyme Session. Reines strukturiertes Logging (persistiert wird die Liste
-    /// separat als PuzzleAttemptsJson, siehe <see cref="BuildSession"/>). Einträge ohne Startzeit
+    /// Loggt jedes Puzzle einer Endless-Session eines KONTOS mit Start- und Lösungszeit (für ES/Kibana);
+    /// anonyme Läufe loggen nur das Summen-Event (siehe <see cref="RecordSessionAsync(EndlessOwner, RecordEndlessSessionDto)"/>).
+    /// Reines strukturiertes Logging (persistiert wird die Liste separat als PuzzleAttemptsJson, siehe
+    /// <see cref="BuildSession"/>). Einträge ohne Startzeit
     /// (<c>StartedAt</c> ≤ 0 — nach einem Fortsetzen rekonstruiert, die Zeiten gingen verloren) werden
     /// gespeichert, aber NICHT geloggt: sonst stünden sie mit 1970er-Zeitstempeln in Kibana.
     /// </summary>
-    private void LogSessionPuzzles(int? userId, List<EndlessSessionPuzzleDto> puzzles)
+    private void LogSessionPuzzles(int userId, List<EndlessSessionPuzzleDto> puzzles)
     {
         if (puzzles == null || puzzles.Count == 0) return;
         foreach (var p in puzzles.Where(p => p.StartedAt > 0).Take(MaxLoggedSessionPuzzles))
@@ -273,14 +278,9 @@ public class EndlessProgressService
             var seconds = Math.Clamp((rawSolvedAt - startedAt).TotalSeconds, 0, 86400);
             var solvedAt = startedAt.AddSeconds(seconds);
             var result = p.Solved ? "solved" : "failed";
-            if (userId.HasValue)
-                _logger.LogInformation(
-                    "EndlessPuzzleAttempt: User {UserId} {Result} endless-puzzle {PuzzleId} (LichessId={LichessId}, Rating={Rating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {DurationSeconds:F0}s",
-                    userId.Value, result, p.PuzzleId, p.LichessId, p.Rating, startedAt, solvedAt, seconds);
-            else
-                _logger.LogInformation(
-                    "EndlessPuzzleAttempt: Anonymous {Result} endless-puzzle {PuzzleId} (LichessId={LichessId}, Rating={Rating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {DurationSeconds:F0}s",
-                    result, p.PuzzleId, p.LichessId, p.Rating, startedAt, solvedAt, seconds);
+            _logger.LogInformation(
+                "EndlessPuzzleAttempt: User {UserId} {Result} endless-puzzle {PuzzleId} (LichessId={LichessId}, Rating={Rating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {DurationSeconds:F0}s",
+                userId, result, p.PuzzleId, p.LichessId, p.Rating, startedAt, solvedAt, seconds);
         }
     }
 
