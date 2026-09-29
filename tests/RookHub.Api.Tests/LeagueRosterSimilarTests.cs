@@ -43,3 +43,65 @@ public class LeagueRosterSimilarTests
         Assert.Equal(2, LeagueRosterIndex.Distance("mueller", "muller") + 1);
     }
 }
+
+/// <summary>Derselbe Mensch zweimal in den Meldelisten (0.597.0, gemeldet 2026-09-29 an einem PGN-Import auf Dev): ohne
+/// FIDE-ID mit und ohne Komma („Lenk Markus" / „Lenk, Markus"), bzw. unter zwei FIDE-IDs im selben Verein („Forster,
+/// Stephan" 24649651 bis 2019/20, seither 24652091).</summary>
+public class LeagueRosterSamePersonTests
+{
+    private static LeagueRosterIndex.Row R(string team, string name, string? fide, string season, int tnr = 1) =>
+        new(tnr, team, name, LeagueNames.NameKey(name), fide, season);
+
+    [Fact]
+    public void WithoutFide_SpellingsOfOneName_AreOnePerson()
+    {
+        var roster = new LeagueRosterIndex(new[]
+        {
+            R("Schach Ohne Grenzen", "Lenk Markus", null, "2017/18"),
+            R("Schach Ohne Grenzen 2", "Lenk Markus", null, "2018/19"),
+            R("Schach Ohne Grenzen", "Lenk, Markus", null, "2025/26"),
+        });
+        var hit = roster.Match("Lenk, Markus", null);
+        Assert.False(hit.Ambiguous);
+        Assert.Equal("Lenk, Markus", hit.Person?.Name);                                  // jüngste Schreibweise mit Komma
+        Assert.Single(roster.People);
+    }
+
+    [Fact]
+    public void TwoFideIds_SameNameSameClub_AreOnePerson_TheLatestIdCounts()
+    {
+        var roster = new LeagueRosterIndex(new[]
+        {
+            R("Schach Ohne Grenzen", "Forster Stephan", "24649651", "2017/18", 296718),
+            R("Schach Ohne Grenzen 1", "Forster Stephan", "24649651", "2019/20", 463191),
+            R("Schach Ohne Grenzen", "Forster Stephan", "24652091", "2021/22", 577467),
+            R("Schach Ohne Grenzen", "Forster, Stephan", "24652091", "2026/27", 1479342),
+            R("Schach Ohne Grenzen", "Forster Stephan", null, "2022/23", 700000),       // ohne ID: gehört auch dazu
+        });
+        var hit = roster.Match("Forster, Stephan", null);
+        Assert.False(hit.Ambiguous);
+        Assert.Equal("24652091", hit.Person?.Fide);
+        Assert.Same(hit.Person, roster.ByFide("24649651"));                              // die alte ID führt zu ihm
+        Assert.Same(hit.Person, roster.Match("Irgendwie", "24649651").Person);
+        Assert.Single(roster.People);
+    }
+
+    [Fact]
+    public void TwoFideIds_SameName_DifferentClubs_StayTwoPeople()
+    {
+        var roster = new LeagueRosterIndex(new[]
+        {
+            R("Absam", "Huber, Franz", "1", "2025/26"),
+            R("Hall", "Huber, Franz", "2", "2025/26"),
+        });
+        var hit = roster.Match("Huber, Franz", null);
+        Assert.True(hit.Ambiguous);                                                       // Namensvettern: bleibt eine Frage
+        Assert.Equal(2, hit.Candidates.Count);
+    }
+
+    [Theory]
+    [InlineData("Schach Ohne Grenzen 2", "schach ohne grenzen")]
+    [InlineData("Sk Telfs", "sk telfs")]
+    [InlineData("Spg Fügen-Mayrhofen/Zillertal/", "spg fügen-mayrhofen/zillertal")]
+    public void ClubBase_DropsTheTeamNumber(string team, string expected) => Assert.Equal(expected, LeagueRosterIndex.ClubBase(team));
+}

@@ -1345,7 +1345,12 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   (`Hit.LastNameOnly`, die Übersicht zeigt „nur Nachname — prüfen"), sonst mehrdeutig mit Kandidaten. Mehrdeutig = Ligaspieler
   OHNE FIDE-ID, die Kandidaten gehen zur Auswahl mit. Eine Meldelisten-Zeile OHNE FIDE-ID gehört zu der Person MIT
   FIDE-ID, deren Name genau so lautet, wenn es genau eine gibt (0.575.1 — 2022/23 steht „Hengl Philip" ohne Komma und ID
-  neben „Hengl, Philip" mit ID; als zwei Personen war jeder Abgleich „mehrdeutig"). Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
+  neben „Hengl, Philip" mit ID; als zwei Personen war jeder Abgleich „mehrdeutig"). **Dieselbe Person zweimal** (0.597.0,
+  gemeldet 2026-09-29): ohne FIDE-ID zählt der NAME (alle Namensteile, Reihenfolge und Komma egal), nicht seine Schreibweise —
+  „Lenk Markus" und „Lenk, Markus" waren zwei Personen, auf Dev 123 solcher Paare, jedes „mehrdeutig"; und gleicher Name +
+  gleicher Verein (ohne Mannschaftsnummer, `ClubBase`) unter verschiedenen FIDE-IDs ist EIN Mensch, es gilt die ID der
+  jüngsten Saison, die übrigen führen über `ByFide` zu ihm (`CanonicalFides`; „Forster, Stephan" 24649651 → 24652091 — die
+  alte kennt FIDE nicht —, „Perez Rodriguez" 168265 → 1682865). Namensvettern in verschiedenen Vereinen bleiben mehrdeutig. Eine fremde FIDE-ID in der Partie lässt nur Ligaspieler ohne
   eigene ID als Namenstreffer zu. **Wer in keiner Meldeliste steht, wird im Megabase-Verzeichnis gesucht** (0.576.0,
   Wunsch „standardmäßig auf Megabase matchen, wenn in Tirol kein Treffer"; `LeagueMegaPlayers.Lookup`, EINE Abfrage je
   500 Namen für die ganze Übersicht): über die FIDE-ID, sonst den Namen — „Nachname, Vorname" wie im Verzeichnis, ohne

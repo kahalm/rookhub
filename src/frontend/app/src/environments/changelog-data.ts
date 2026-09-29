@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.597.0", date: "2026-09-29", changes: [
+    { en: "LeagueHub: a league player who appears twice in the rosters is now recognised as one person — without a FIDE ID once with and once without a comma (“Lenk Markus” / “Lenk, Markus”, 123 such players), or under two FIDE IDs in the same club (“Forster, Stephan”: the old ID from 2017–2020 does not exist at FIDE; the ID from the latest season counts). Such names used to be “ambiguous” on every import.", de: "LeagueHub: Ein Ligaspieler, der in den Meldelisten doppelt steht, gilt jetzt als eine Person — ohne FIDE-ID einmal mit, einmal ohne Komma („Lenk Markus“ / „Lenk, Markus“, 123 solche Spieler) oder unter zwei FIDE-IDs im selben Verein („Forster, Stephan“: die alte ID von 2017–2020 kennt FIDE nicht; es gilt die ID der jüngsten Saison). Solche Namen waren bisher bei jedem Import „mehrdeutig“." },
+  ] },
   { version: "0.596.3", date: "2026-09-29", changes: [
     { en: "Tournament notifications: a tournament that has already taken place and then disappears from chess-results no longer triggers “probably cancelled” — organisers sometimes remove an empty group or merge groups afterwards. It still leaves the calendar; the notice is only sent for tournaments that are still to come or running.", de: "Turnier-Benachrichtigungen: Ein Turnier, das schon stattgefunden hat und danach von chess-results verschwindet, meldet kein „vermutlich abgesagt“ mehr — Veranstalter räumen hinterher manchmal eine leere Gruppe weg oder legen Gruppen zusammen. Aus dem Kalender verschwindet es trotzdem; die Meldung kommt nur noch für Turniere, die noch bevorstehen oder laufen." },
   ] },

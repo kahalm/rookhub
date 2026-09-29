@@ -51,12 +51,23 @@ public sealed class LeagueRosterIndex
     {
         static string? Norm(string? f) => string.IsNullOrWhiteSpace(f) ? null : f.Trim();
         var list = rows.ToList();
+
+        // Derselbe Mensch unter ZWEI FIDE-IDs (0.597.0, gemeldet 2026-09-29): gleicher Name, gleicher Verein, verschiedene
+        // IDs — in den Tiroler Listen genau zwei Fälle, beide Fehler der Meldeliste: „Forster, Stephan" (Schach Ohne
+        // Grenzen) 2017–2020 unter 24649651, das FIDE gar nicht kennt, seither 24652091; „Perez Rodriguez, Leonardo David"
+        // unter 168265 neben 1682865 (eine Ziffer fehlt). Als zwei Personen war jeder Abgleich des Namens „mehrdeutig".
+        // Es gilt die ID aus der jüngsten Saison; die übrigen führen über ByFide zur selben Person. Zwei gleichnamige
+        // Menschen im SELBEN Verein mit je eigener ID (Vater und Sohn) würden damit eins — kommt derzeit nicht vor.
+        var canonical = CanonicalFides(list.Where(r => Norm(r.Fide) != null)
+            .Select(r => (Fide: Norm(r.Fide)!, r.Name, Club: ClubBase(r.Team), r.Season, r.Tnr)).ToList());
+        string? Fide(Row r) => Norm(r.Fide) is { } f ? canonical.GetValueOrDefault(f, f) : null;
+
         // Eine Zeile OHNE FIDE-ID gehört zu der Person MIT FIDE-ID, deren Name genau so lautet (alle Namensteile gleich) —
         // wenn es genau eine solche gibt. Die Meldelisten 2022/23 schreiben „Hengl Philip" ohne Komma und oft ohne ID; als
         // eigene Person stünde sie neben „Hengl, Philip" (FIDE-ID), und jeder Abgleich des Namens wäre „mehrdeutig".
         var byFull = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         foreach (var r in list)
-            if (Norm(r.Fide) is { } f)
+            if (Fide(r) is { } f)
                 foreach (var k in PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal)))
                 {
                     if (!byFull.TryGetValue(k, out var set)) byFull[k] = set = new HashSet<string>(StringComparer.Ordinal);
@@ -64,17 +75,20 @@ public sealed class LeagueRosterIndex
                 }
         string KeyOf(Row r)
         {
-            if (Norm(r.Fide) is { } f) return f;
-            var fides = PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal))
-                .SelectMany(k => byFull.TryGetValue(k, out var set) ? set : Enumerable.Empty<string>()).Distinct().ToList();
-            return fides.Count == 1 ? fides[0] : LeagueNames.Pid(null, r.NameKey);
+            if (Fide(r) is { } f) return f;
+            var full = PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal)).ToList();
+            var fides = full.SelectMany(k => byFull.TryGetValue(k, out var set) ? set : Enumerable.Empty<string>()).Distinct().ToList();
+            if (fides.Count == 1) return fides[0];
+            // Ohne FIDE-ID zählt der NAME, nicht seine Schreibweise (0.597.0): „Lenk Markus" (2017–2019) und „Lenk, Markus"
+            // (ab 2023/24) sind ein Mensch — über den rohen NameKey waren es zwei, und die Übersicht bot beide an.
+            return full.Count > 0 ? "n:" + full.Min(StringComparer.Ordinal) : LeagueNames.Pid(null, r.NameKey);
         }
 
         var people = new List<Person>();
         foreach (var g in list.GroupBy(KeyOf))
         {
             var ordered = g.OrderByDescending(r => r.Season, StringComparer.Ordinal).ThenByDescending(r => r.Tnr).ToList();
-            var fide = ordered.Select(r => Norm(r.Fide)).FirstOrDefault(f => f != null);
+            var fide = ordered.Select(Fide).FirstOrDefault(f => f != null);
             var latest = ordered[0].Season;
             var own = ordered.Where(r => r.Season == latest)
                 .Any(r => string.Equals(LeagueNames.Clean(r.Team).TrimEnd('/', '-', ' '), LeagueRefresh.OwnTeam, StringComparison.OrdinalIgnoreCase));
@@ -84,6 +98,8 @@ public sealed class LeagueRosterIndex
                 ordered.Select(r => r.Team).Distinct(StringComparer.Ordinal).ToList(), own);
             people.Add(p);
             if (fide != null) _byFide[fide] = p;
+            foreach (var other in ordered.Select(r => Norm(r.Fide)).OfType<string>().Distinct(StringComparer.Ordinal))
+                _byFide.TryAdd(other, p);                                           // die verworfene ID führt zur selben Person
             foreach (var name in ordered.Select(r => r.Name).Distinct(StringComparer.Ordinal))
                 foreach (var k in PersonKeys(name))
                 {
@@ -92,6 +108,38 @@ public sealed class LeagueRosterIndex
                 }
         }
         People = people;
+    }
+
+    /// <summary>Verein ohne Mannschaftsnummer, klein („Schach Ohne Grenzen 2" → „schach ohne grenzen").</summary>
+    internal static string ClubBase(string team) =>
+        Regex.Replace(LeagueNames.Clean(team), @"\s+\d+$", "").Trim(' ', '/', '-').ToLowerInvariant();
+
+    /// <summary>FIDE-ID → die ID, unter der dieser Mensch gilt: je gleichem Namen (alle Namensteile) die IDs, die sich einen
+    /// Verein teilen, zusammengelegt; es gilt die aus der jüngsten Saison (Gleichstand: das jüngere Turnier).</summary>
+    private static Dictionary<string, string> CanonicalFides(List<(string Fide, string Name, string Club, string Season, int Tnr)> rows)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        var latest = rows.GroupBy(r => r.Fide, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Max(r => (r.Season, r.Tnr)), StringComparer.Ordinal);
+        var byName = new Dictionary<string, List<(string Fide, string Club)>>(StringComparer.Ordinal);
+        foreach (var r in rows)
+            foreach (var k in PersonKeys(r.Name).Where(k => k.StartsWith("f:", StringComparison.Ordinal)))
+                (byName.TryGetValue(k, out var l) ? l : byName[k] = new()).Add((r.Fide, r.Club));
+        var parent = new Dictionary<string, string>(StringComparer.Ordinal);
+        string Find(string f) { while (parent.TryGetValue(f, out var p) && p != f) f = p; return f; }
+        foreach (var group in byName.Values)
+            foreach (var club in group.GroupBy(x => x.Club).Select(c => c.Select(x => x.Fide).Distinct(StringComparer.Ordinal).ToList()))
+                for (var i = 1; i < club.Count; i++)
+                {
+                    var (a, b) = (Find(club[0]), Find(club[i]));
+                    if (a != b) parent[a] = b;
+                }
+        foreach (var comp in latest.Keys.GroupBy(Find, StringComparer.Ordinal).Where(c => c.Count() > 1))
+        {
+            var best = comp.OrderByDescending(f => latest[f].Season, StringComparer.Ordinal).ThenByDescending(f => latest[f].Tnr).First();
+            foreach (var f in comp) result[f] = best;
+        }
+        return result;
     }
 
     /// <summary>Der Ligaspieler mit dieser FIDE-ID, sonst <c>null</c>.</summary>
