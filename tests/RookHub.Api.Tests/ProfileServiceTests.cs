@@ -439,8 +439,9 @@ public class ProfileServiceTests : IDisposable
     [Fact]
     public async Task UpdateProfile_SetsEmail_NormalizedLowercaseTrimmed()
     {
-        var userId = await CreateUserAsync();
-        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "  New.Mail@Example.COM  " });
+        var userId = await CreateUserWithPasswordAsync("testuser", "Secret123!");
+        var result = await _profileService.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "  New.Mail@Example.COM  ", CurrentPassword = "Secret123!" });
         Assert.Equal("new.mail@example.com", result.Email);
         Assert.Equal("new.mail@example.com", (await _db.AppUsers.FindAsync(userId))!.Email);
     }
@@ -448,10 +449,112 @@ public class ProfileServiceTests : IDisposable
     [Fact]
     public async Task UpdateProfile_EmptyEmail_ClearsEmail()
     {
-        var userId = await CreateUserAsync(); // startet mit testuser@example.com
-        var result = await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "" });
+        var userId = await CreateUserWithPasswordAsync("testuser", "Secret123!"); // startet mit testuser@example.com
+        var result = await _profileService.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "", CurrentPassword = "Secret123!" });
         Assert.Null(result.Email);
         Assert.Null((await _db.AppUsers.FindAsync(userId))!.Email);
+    }
+
+    // ---- E-Mail = Reset-Anker: Wechsel nur gegen das aktuelle Passwort (W1 A1-003) ----
+
+    [Theory]
+    [InlineData(null)]              // alte UI / erbeutete Sitzung: kein Passwort
+    [InlineData("")]
+    [InlineData("falsch")]
+    public async Task UpdateProfile_EmailChange_WithoutCorrectPassword_IsRejected_AndKeepsEmail(string? password)
+    {
+        // Eine kurz erbeutete Sitzung trug sonst ihre eigene Adresse ein → „Passwort vergessen" →
+        // Opfer dauerhaft ausgesperrt. Passwort ändern und Konto löschen fragen längst nach.
+        var mail = new RecordingEmailSender();
+        var service = TestServices.Profile(_db, new NoOpTaskQueue(), email: mail);
+        var userId = await CreateUserWithPasswordAsync("victim", "Secret123!");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "angreifer@example.com", CurrentPassword = password }));
+
+        Assert.Equal("victim@example.com", (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == userId)).Email);
+        Assert.Empty(mail.Sent);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_RemovingEmail_WithoutPassword_IsRejected()
+    {
+        var userId = await CreateUserWithPasswordAsync("victim", "Secret123!");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_SettingFirstEmail_WithoutPassword_IsRejected()
+    {
+        // Auch ein Konto OHNE Adresse: wer sie als Erster einträgt, hält den Reset-Anker.
+        var userId = await CreateUserWithPasswordAsync("nomail", "Secret123!");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.Email = null;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { Email = "angreifer@example.com" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_EmailChange_WithoutPassword_DoesNotRevealTakenAddresses()
+    {
+        // Passwort VOR der Dublettenprüfung: sonst verriete schon die Sitzung allein per 409,
+        // welche Adressen bei RookHub registriert sind.
+        await CreateUserAsync("alice");                                  // alice@example.com
+        var bobId = await CreateUserWithPasswordAsync("bob", "Secret123!");
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _profileService.UpdateProfileAsync(bobId, new UpdateProfileDto { Email = "alice@example.com" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_EmailChange_NotifiesThePreviousAddress()
+    {
+        var mail = new RecordingEmailSender();
+        var service = TestServices.Profile(_db, new NoOpTaskQueue(), email: mail);
+        var userId = await CreateUserWithPasswordAsync("owner", "Secret123!");
+
+        await service.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "neu@example.com", CurrentPassword = "Secret123!" });
+
+        var sent = Assert.Single(mail.Sent);
+        Assert.Equal("owner@example.com", sent.To);          // die ALTE Adresse — die neue weiß es ja
+        Assert.Contains("owner", sent.Text);
+        Assert.DoesNotContain("neu@example.com", sent.Text);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_EmailChange_MailFailure_StillSavesTheChange()
+    {
+        var service = TestServices.Profile(_db, new NoOpTaskQueue(), email: new RecordingEmailSender { Fail = true });
+        var userId = await CreateUserWithPasswordAsync("owner", "Secret123!");
+
+        var result = await service.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "neu@example.com", CurrentPassword = "Secret123!" });
+
+        Assert.Equal("neu@example.com", result.Email);
+    }
+
+    [Fact]
+    public async Task UpdateProfile_UnchangedEmail_NeedsNoPassword_AndSendsNoMail()
+    {
+        // Die UI schickt die E-Mail bei JEDEM Speichern mit — auch eine Alt-Adresse in anderer
+        // Schreibweise ist kein Wechsel, sonst scheiterte jedes Profil-Speichern ohne Passwortfeld.
+        var mail = new RecordingEmailSender();
+        var service = TestServices.Profile(_db, new NoOpTaskQueue(), email: mail);
+        var userId = await CreateUserAsync("legacy");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.Email = "Legacy@Example.com";
+        await _db.SaveChangesAsync();
+
+        var result = await service.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "Legacy@Example.com", DisplayName = "Neu" });
+
+        Assert.Equal("Neu", result.DisplayName);
+        Assert.Empty(mail.Sent);
     }
 
     [Fact]
@@ -474,9 +577,10 @@ public class ProfileServiceTests : IDisposable
     public async Task UpdateProfile_DuplicateEmail_Throws()
     {
         await CreateUserAsync("alice");          // alice@example.com
-        var bobId = await CreateUserAsync("bob"); // bob@example.com
+        var bobId = await CreateUserWithPasswordAsync("bob", "Secret123!"); // bob@example.com
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _profileService.UpdateProfileAsync(bobId, new UpdateProfileDto { Email = "ALICE@example.com" }));
+            () => _profileService.UpdateProfileAsync(bobId,
+                new UpdateProfileDto { Email = "ALICE@example.com", CurrentPassword = "Secret123!" }));
     }
 
     [Fact]

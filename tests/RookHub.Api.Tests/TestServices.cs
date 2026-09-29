@@ -81,9 +81,12 @@ internal static class TestServices
             db, courses ?? Course(db, bookAdmin: admin), repertoire ?? Repertoire(db), admin);
     }
 
+    /// <summary><paramref name="email"/> nur setzen, wenn der Test die verschickten Mails selbst prüft.</summary>
     public static ProfileService Profile(
-        AppDbContext db, IBackgroundTaskQueue queue, ILogger<ProfileService>? logger = null)
-        => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db));
+        AppDbContext db, IBackgroundTaskQueue queue, ILogger<ProfileService>? logger = null,
+        IEmailSender? email = null)
+        => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db),
+            email ?? new RecordingEmailSender());
 
     /// <summary>Partie-Analysen mit der ECHTEN Auftrags-Schicht auf derselben Test-Datenbank — der
     /// Einwurf soll im Test genau den Deckel, die Engine-Wahl und das Einreihen durchlaufen, die er in

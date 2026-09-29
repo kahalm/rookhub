@@ -123,6 +123,22 @@ public class ProfileControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_EmailChangeWithoutCurrentPassword_Returns403()
+    {
+        // Eigene Sitzung, keine Impersonation — und trotzdem kein Wechsel des Reset-Ankers ohne
+        // Passwort (403 wie bei der Impersonations-Sperre; 401 hieße für die UI „abgemeldet").
+        var u = await CreateUserAsync("own-mail");
+        var before = u.Email;
+        SetUser(u.Id);
+
+        var result = await _controller.UpdateProfile(new UpdateProfileDto { Email = "angreifer@example.com" });
+
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+        Assert.Equal(before, (await _db.AppUsers.FindAsync(u.Id))!.Email);
+    }
+
+    [Fact]
     public async Task UpdateProfile_WhileImpersonating_StillAllowsNonIdentityFields()
     {
         var u = await CreateUserAsync("imp-name");

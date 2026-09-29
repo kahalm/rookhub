@@ -12,14 +12,18 @@ public class ProfileService
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly ILogger<ProfileService> _logger;
     private readonly BookAdminService _bookAdmin;
+    private readonly IEmailSender _email;
 
     // bookAdmin verpflichtend (siehe CourseService): sonst baut der Dienst an der DI vorbei.
-    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService bookAdmin)
+    // email: Hinweis an die BISHERIGE Adresse, wenn der Reset-Anker wechselt.
+    public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService bookAdmin,
+        IEmailSender email)
     {
         _db = db;
         _taskQueue = taskQueue;
         _logger = logger;
         _bookAdmin = bookAdmin;
+        _email = email;
     }
 
     public async Task<ProfileDto> GetProfileAsync(int userId)
@@ -79,6 +83,8 @@ public class ProfileService
 
         // E-Mail: null = unverändert lassen; "" = entfernen; sonst validieren + auf Dublette prüfen.
         // Normalisierung (trim + lowercase) wie bei der Registrierung, damit der Unique-Index greift.
+        string? previousEmail = null;
+        var emailAnchorChanged = false;
         if (dto.Email != null)
         {
             var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email)
@@ -91,10 +97,26 @@ public class ProfileService
             if (!allowEmailChange && !string.Equals(normalizedEmail, user.Email, StringComparison.Ordinal))
                 throw new UnauthorizedAccessException("Email cannot be changed while impersonating another user.");
 
+            // Der Reset-Anker wechselt nur gegen das aktuelle Passwort — wie Passwort ändern und
+            // Konto löschen. Sonst genügte eine kurz erbeutete Sitzung (XSS, fremdes Gerät): eigene
+            // Adresse eintragen, „Passwort vergessen", und das Opfer ist dauerhaft ausgesperrt.
+            // VOR der Dublettenprüfung, damit die Sitzung allein keine fremden Adressen abfragen kann.
+            // Verglichen wird normalisiert: eine Alt-Adresse in anderer Schreibweise, die die UI
+            // unverändert zurückschickt, ist KEIN Wechsel (sonst scheiterte jedes Profil-Speichern).
+            emailAnchorChanged = !string.Equals(normalizedEmail, user.Email?.Trim().ToLowerInvariant(), StringComparison.Ordinal);
+            if (emailAnchorChanged)
+            {
+                if (string.IsNullOrEmpty(dto.CurrentPassword))
+                    throw new UnauthorizedAccessException("Current password is required to change the email address.");
+                if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+                    throw new UnauthorizedAccessException("Current password is incorrect.");
+            }
+
             if (normalizedEmail != null && await _db.AppUsers
                     .AnyAsync(u => u.Id != userId && u.Email == normalizedEmail))
                 throw new InvalidOperationException("This email address is already in use.");
 
+            previousEmail = user.Email;
             user.Email = normalizedEmail;
         }
 
@@ -124,6 +146,9 @@ public class ProfileService
             throw new InvalidOperationException("This email address is already in use.");
         }
 
+        if (emailAnchorChanged)
+            await NotifyPreviousEmailAsync(user, previousEmail);
+
         // Trigger auto-subscription nur, wenn sich die Schach-Identität tatsächlich geändert hat
         // (ChessResultsId/LastName/FirstName/FideId) UND ChessResultsId + LastName gesetzt sind.
         // Verhindert, dass reine Einstellungs-Updates (Theme/Tiefe/Schwierigkeit) den Crawler
@@ -148,6 +173,49 @@ public class ProfileService
         }
 
         return MapToDto(user);
+    }
+
+    /// <summary>
+    /// Hinweis an die BISHERIGE Adresse, dass der Reset-Anker gewechselt hat — sonst erführe das
+    /// Opfer einer Übernahme nichts davon, alle weiteren Mails gehen ja an die neue Adresse.
+    /// Best-effort: die Änderung ist gespeichert, ein Mail-Fehler wird nur geloggt.
+    /// </summary>
+    private async Task NotifyPreviousEmailAsync(AppUser user, string? previousEmail)
+    {
+        _logger.LogInformation("Profile: email address changed for user {UserId}", user.Id);
+        if (string.IsNullOrWhiteSpace(previousEmail)) return;
+
+        var (subject, html, text) = BuildEmailChangedNotice(user.Username, removed: user.Email == null);
+        try
+        {
+            await _email.SendAsync(previousEmail, subject, html, text);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Profile: notice about the email change could not be sent for user {UserId}", user.Id);
+        }
+    }
+
+    private static (string subject, string html, string text) BuildEmailChangedNotice(string username, bool removed)
+    {
+        const string subject = "RookHub — E-Mail-Adresse geändert";
+        var what = removed
+            ? "die E-Mail-Adresse deines RookHub-Kontos wurde soeben entfernt."
+            : "die E-Mail-Adresse deines RookHub-Kontos wurde soeben geändert. Links zum Zurücksetzen des Passworts gehen ab jetzt an die neue Adresse.";
+        const string notYou =
+            "Warst du das nicht, ändere sofort dein Passwort und wende dich an einen RookHub-Admin.";
+        var text =
+            $"Hallo {username},\n\n" +
+            $"{what}\n" +
+            "Diese Nachricht geht an die bisherige Adresse, damit du davon erfährst.\n\n" +
+            $"{notYou}\n\n" +
+            "— RookHub";
+        var html =
+            $"<p>Hallo {System.Net.WebUtility.HtmlEncode(username)},</p>" +
+            $"<p>{what} Diese Nachricht geht an die bisherige Adresse, damit du davon erfährst.</p>" +
+            $"<p><strong>{notYou}</strong></p>" +
+            "<p>— RookHub</p>";
+        return (subject, html, text);
     }
 
     /// <summary>

@@ -115,7 +115,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/profile` | Eigenes Profil |
-| PUT | `/api/profile` | Profil bearbeiten |
+| PUT | `/api/profile` | Profil bearbeiten. E-Mail (= Reset-Anker) wechselt nur mit `currentPassword` (auch Erst-Setzen/Entfernen; sonst 403), danach Hinweis-Mail an die bisherige Adresse |
 | DELETE | `/api/profile/account` | Konto löschen (DSGVO: anonymisiert Identität+PII, behält Statistik) |
 | GET | `/api/profile/{username}` | Öffentliches Profil (reduziertes `PublicProfileDto` ohne Klarnamen/ChessResultsId/Discord) |
 | GET | `/api/profile/player-search?lastName=&firstName=` | Spielersuche (ChessResults + FIDE) |

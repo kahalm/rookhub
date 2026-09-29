@@ -51,6 +51,14 @@ public class UpdateProfileDto
     [MaxLength(255)]
     public string? Email { get; set; }
 
+    /// <summary>
+    /// Aktuelles Passwort — Pflicht, sobald sich die E-Mail TATSÄCHLICH ändert (auch Erst-Setzen
+    /// und Entfernen): sie ist der Reset-Anker, ohne Nachfrage wurde jede kurz erbeutete Sitzung
+    /// per „Passwort vergessen" zur dauerhaften Kontoübernahme. Bei unveränderter E-Mail ignoriert.
+    /// </summary>
+    [MaxLength(1024)]   // wie die Passwort-Obergrenze der Registrierung
+    public string? CurrentPassword { get; set; }
+
     [MaxLength(50)]
     public string? FirstName { get; set; }
 
