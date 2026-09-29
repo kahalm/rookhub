@@ -1,4 +1,4 @@
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
 import { AnalysisEngineService } from './analysis-engine.service';
 
@@ -41,7 +41,17 @@ function makeComponent(params: Record<string, string | null>, opts: {
     instant: (k: string, p?: any) => p ? `${k}:${JSON.stringify(p)}` : k,
     currentLang: () => 'de',   // ngx-translate 18: Signal — engineChoices memoisiert darauf
   };
-  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de');
+  // Analyse-Verlauf (0.603.0): save antwortet mit einer Kennung, die Specs zählen die Aufrufe.
+  let nextId = 40;
+  const history: any = {
+    save: jasmine.createSpy('save').and.callFake((req: any) => of({ ...req, id: req.id ?? ++nextId, preview: '', moveCount: req.moves.length })),
+    get: jasmine.createSpy('get'),
+    list: jasmine.createSpy('list').and.returnValue(of([])),
+  };
+  const dialog: any = { open: jasmine.createSpy('open') };
+  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog);
+  c.__history = history;
+  c.__dialog = dialog;
   // Vergleichs-Engine ueber den Seam: sonst baut startCompare() den echten Service und
   // damit im Karma-Browser einen echten WASM-Worker bzw. laeuft in einen TypeError.
   c.__compareEngines = [] as any[];
@@ -873,5 +883,97 @@ describe('AnalysisComponent eval bar holds its value between searches', () => {
     (c as any).onEngineUpdate(c.currentFen, minDepth, [line(minDepth, 120)]);
     expect(c.evalText).toBe(`ev120@${minDepth}`);
     c.ngOnDestroy();
+  });
+});
+
+describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
+  beforeEach(() => jasmine.clock().install());
+  afterEach(() => jasmine.clock().uninstall());
+
+  it('speichert gedrosselt unter EINER Kennung — nur angemeldet, nicht die leere Grundstellung', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    jasmine.clock().tick(2000);
+    expect(c.__history.save).not.toHaveBeenCalled();          // Grundstellung ohne Züge ist keine Analyse
+
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.onMove({ orig: 'e7', dest: 'e5' });
+    jasmine.clock().tick(1499);
+    expect(c.__history.save).not.toHaveBeenCalled();
+    jasmine.clock().tick(1);
+    expect(c.__history.save).toHaveBeenCalledOnceWith({ id: null, startFen: START, moves: ['e2e4', 'e7e5'], ply: 2, title: null, starred: [] });
+    expect(c.historyId).toBe(41);
+
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    jasmine.clock().tick(1500);
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ id: 41, moves: ['e2e4', 'e7e5', 'g1f3'] }));
+    c.ngOnDestroy();
+  });
+
+  it('abgemeldet wird nichts gespeichert, Sterne gehen trotzdem', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.toggleStar();
+    jasmine.clock().tick(5000);
+    expect(c.__history.save).not.toHaveBeenCalled();
+    expect(c.starredPlies).toEqual([1]);
+    c.ngOnDestroy();
+  });
+
+  it('Sterne: umschalten, beschriften, springen — und eine ersetzte Fortsetzung nimmt ihre Sterne mit', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' }, { loggedIn: true });
+    c.ngOnInit();
+    c.goTo(1); c.toggleStar();
+    c.goTo(2); c.toggleStar();
+    c.goTo(3); c.toggleStar(); c.toggleStar();                 // zweimal = wieder weg
+    expect(c.starredPlies).toEqual([1, 2]);
+    expect(c.starLabel(1)).toBe('1.e4');
+    expect(c.starLabel(2)).toBe('1...e5');
+    expect(c.starLabel(0)).toBe('analysis.star.start');
+
+    c.goTo(1);
+    c.onMove({ orig: 'c7', dest: 'c5' });                      // ab 1…e5 neu → der Stern auf 1…e5 gehört nicht mehr dazu
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'c5']);
+    expect(c.starredPlies).toEqual([1]);
+    jasmine.clock().tick(1500);
+    expect(c.__history.save.calls.mostRecent().args[0].starred).toEqual([1]);
+    c.ngOnDestroy();
+  });
+
+  it('ein Eintrag aus dem Verlauf kommt mit Stand und Sternen aufs Brett und wird unter seiner Kennung weitergeführt', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    c.openHistoryEntry({ id: 7, startFen: START, moves: ['d2d4', 'd7d5', 'c2c4'], ply: 2, title: 'Carlsen – Nakamura',
+      starred: [0, 3], preview: '', moveCount: 3, createdAt: '', updatedAt: '' });
+    expect(c.line.map((n: any) => n.san)).toEqual(['d4', 'd5', 'c4']);
+    expect(c.ply).toBe(2);
+    expect(c.starredPlies).toEqual([0, 3]);
+    c.next();
+    jasmine.clock().tick(1500);
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ id: 7, ply: 3, title: 'Carlsen – Nakamura' }));
+
+    // Zurücksetzen = neue Analyse: ohne Kennung, ohne Sterne
+    c.reset();
+    expect(c.historyId).toBeNull();
+    expect(c.starredPlies).toEqual([]);
+    c.ngOnDestroy();
+  });
+
+  it('ein geladenes PGN nimmt die Namen als Titel mit', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    c.pgnInput = '[White "Carlsen"]\n[Black "Nakamura"]\n\n1. e4 e5 *';
+    c.loadPgn();
+    jasmine.clock().tick(1500);
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ title: 'Carlsen – Nakamura', moves: ['e2e4', 'e7e5'] }));
+    c.ngOnDestroy();
+  });
+
+  it('Verlassen der Seite schickt den letzten Stand sofort', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.ngOnDestroy();
+    expect(c.__history.save).toHaveBeenCalledTimes(1);
   });
 });

@@ -2102,7 +2102,24 @@
       "fenCopied": "FEN kimásolva"
     },
     "engineViaLichess": "Lichessen keresztül",
-    "engineOffline": "offline"
+    "engineOffline": "offline",
+    "history": {
+      "open": "Előzmények",
+      "title": "Legutóbbi elemzések",
+      "empty": "Még nincs elemzés — amint bejelentkezve lépsz a táblán, az elemzés itt megjelenik.",
+      "fromStart": "A kiinduló állásból",
+      "fromPosition": "Felállított állásból",
+      "noMoves": "még nincs lépés",
+      "moves": "{{count}} féllépés",
+      "loadFailed": "Az előzményeket nem sikerült betölteni.",
+      "deleteFailed": "A bejegyzést nem sikerült törölni."
+    },
+    "star": {
+      "add": "Állás megjelölése csillaggal (S)",
+      "remove": "Csillag eltávolítása (S)",
+      "start": "Kezdet",
+      "jumps": "Megjelölt állások"
+    }
   },
   "stats": {
     "title": "Statisztikák",

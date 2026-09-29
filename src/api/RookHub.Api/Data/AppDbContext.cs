@@ -146,6 +146,7 @@ public class AppDbContext : DbContext
     public DbSet<ExternalEngineRegistration> ExternalEngineRegistrations => Set<ExternalEngineRegistration>();
     public DbSet<LichessExplorerCacheEntry> LichessExplorerCacheEntries => Set<LichessExplorerCacheEntry>();
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+    public DbSet<AnalysisHistoryEntry> AnalysisHistoryEntries => Set<AnalysisHistoryEntry>();
     public DbSet<MoveComparison> MoveComparisons => Set<MoveComparison>();
     public DbSet<MoveComparisonLine> MoveComparisonLines => Set<MoveComparisonLine>();
     public DbSet<LibraryGame> LibraryGames => Set<LibraryGame>();
@@ -1844,6 +1845,17 @@ public class AppDbContext : DbContext
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(j => j.ResultJson).HasColumnType("LONGTEXT");
             e.Property(j => j.EvalText).HasMaxLength(16);
+        });
+
+        // Analyse-Verlauf (0.603.0): die letzten Analysen des Analysebretts je Nutzer.
+        modelBuilder.Entity<AnalysisHistoryEntry>(e =>
+        {
+            e.HasIndex(h => new { h.UserId, h.UpdatedAt });
+            e.HasOne(h => h.User)
+             .WithMany()
+             .HasForeignKey(h => h.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(h => h.Moves).HasColumnType("TEXT");
         });
 
         // Züge vergleichen (0.602.0): Kopf je Vergleich, eine Zeile je gerechneter Stellung.

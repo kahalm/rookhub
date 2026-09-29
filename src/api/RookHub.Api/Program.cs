@@ -323,6 +323,8 @@ try
     // Hält die Partie-Analysen in Bewegung (fertige Aufträge einsammeln, neue nachfüttern).
     builder.Services.AddHostedService<GameAnalysisPumpService>();
     // Züge vergleichen (0.602.0): Kandidatenzüge über Hintergrund-Aufträge durchrechnen, Begründung vom Modell.
+    // Analyse-Verlauf (0.603.0): die letzten 20 Analysen des Analysebretts je Nutzer.
+    builder.Services.AddScoped<AnalysisHistoryService>();
     builder.Services.AddSingleton<MoveComparisonExplainJobs>();
     builder.Services.AddScoped<MoveComparisonService>();
     builder.Services.AddHostedService<MoveComparisonPumpService>();

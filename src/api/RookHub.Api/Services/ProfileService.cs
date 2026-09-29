@@ -408,6 +408,8 @@ public class ProfileService
         // Hintergrund-Analyseaufträge tragen Stellungen samt selbst gewählten Titeln (PII-nah) und
         // würden nach der Löschung weiter Rechenzeit auf der Engine des Kontos verbrauchen.
         _db.AnalysisJobs.RemoveRange(await _db.AnalysisJobs.Where(x => x.UserId == userId).ToListAsync());
+        // Analyse-Verlauf (0.603.0): Stellungen und Zugfolgen des Nutzers.
+        _db.AnalysisHistoryEntries.RemoveRange(await _db.AnalysisHistoryEntries.Where(h => h.UserId == userId).ToListAsync());
         // Zugvergleiche (0.602.0): die Zeilen cascaden am Kopf; ihre Aufträge stehen in AnalysisJobs und gehen oben mit.
         // Unter InMemory cascadet nichts — die Zeilen deshalb ausdrücklich.
         var comparisons = await _db.MoveComparisons.Include(c => c.Lines).Where(c => c.UserId == userId).ToListAsync();

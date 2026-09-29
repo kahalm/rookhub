@@ -2848,7 +2848,24 @@
       "fenCopied": "FEN kopiran"
     },
     "engineViaLichess": "preko Lichessa",
-    "engineOffline": "izvan mreže"
+    "engineOffline": "izvan mreže",
+    "history": {
+      "open": "Povijest",
+      "title": "Nedavne analize",
+      "empty": "Još nema analiza — čim prijavljen povučeš potez na ploči, analiza se pojavljuje ovdje.",
+      "fromStart": "Iz početne pozicije",
+      "fromPosition": "Iz postavljene pozicije",
+      "noMoves": "još nema poteza",
+      "moves": "{{count}} polupoteza",
+      "loadFailed": "Povijest se nije mogla učitati.",
+      "deleteFailed": "Unos se nije mogao obrisati."
+    },
+    "star": {
+      "add": "Označi poziciju zvjezdicom (S)",
+      "remove": "Ukloni zvjezdicu (S)",
+      "start": "Početak",
+      "jumps": "Označene pozicije"
+    }
   },
   "stats": {
     "title": "Statistika",

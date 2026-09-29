@@ -708,7 +708,7 @@ public sealed class MoveComparisonService
     private static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
 
     /// <summary>Ein legaler Zug zu einer UCI-Angabe — auch als König-schlägt-Turm (so schreibt der Broker Rochaden).</summary>
-    private static Move? FindMove(Move[] legal, string? raw)
+    internal static Move? FindMove(Move[] legal, string? raw)
     {
         var uci = (raw ?? "").Trim().ToLowerInvariant();
         if (uci.Length is < 4 or > 5) return null;

@@ -2848,7 +2848,24 @@
       "fenCopied": "FEN copied"
     },
     "engineViaLichess": "via Lichess",
-    "engineOffline": "offline"
+    "engineOffline": "offline",
+    "history": {
+      "open": "History",
+      "title": "Recent analyses",
+      "empty": "No analyses yet — as soon as you move on the board while logged in, the analysis appears here.",
+      "fromStart": "From the starting position",
+      "fromPosition": "From a set-up position",
+      "noMoves": "no moves yet",
+      "moves": "{{count}} half-moves",
+      "loadFailed": "The history could not be loaded.",
+      "deleteFailed": "The entry could not be deleted."
+    },
+    "star": {
+      "add": "Star this position (S)",
+      "remove": "Remove the star (S)",
+      "start": "Start",
+      "jumps": "Starred positions"
+    }
   },
   "stats": {
     "title": "Statistics",

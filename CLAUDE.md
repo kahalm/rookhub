@@ -2160,6 +2160,31 @@ Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s
 | POST | `/api/analysis-jobs/{id}/restart` | Wieder einreihen (Fehlversuchs-Zähler + Backoff gelöscht, laufender Lauf abgebrochen); das ERGEBNIS bleibt — die Suche setzt bei `ReachedDepth` an. Ein Auftrag mit erreichtem Ziel bleibt `Done` |
 | DELETE | `/api/analysis-jobs/{id}` | Löschen (laufende Suche wird abgebrochen) |
 
+### Analyse-Verlauf + Sterne (0.603.0, auth)
+Wunsch 2026-09-29: „merk dir eine History der letzten 20 Analysen von jedem User — diese sollen auch irgendwo ausgewählt
+werden können" und „innerhalb einer Analyse will ich Stellungen mit einem Stern markieren, damit ich schnell zu diesen
+springen kann". `Services/AnalysisHistoryService.cs`, Tabelle `AnalysisHistoryEntries`.
+* Eine Analyse = Ausgangsstellung + Zugfolge (UCI, serverseitig nachgespielt — eine, die nicht geht, ist ein 400) + der
+  Halbzug, an dem man stand + Sterne (Halbzüge, 0 = Ausgangsstellung) + Titel aus den PGN-Kopfdaten. Höchstens
+  `MaxPerUser` 20 je Nutzer, die zuletzt angefassten bleiben; Konto löschen räumt ab.
+* **Die Oberfläche führt die Kennung ihrer Analyse** (`AnalysisComponent.historyId`) und schickt sie bei jedem Speichern mit
+  — sonst entstünde je Zug ein Eintrag. Ohne Kennung nimmt der Server einen Eintrag mit GLEICHER Stellung und GLEICHEN Zügen
+  wieder (dieselbe Partie zweimal aus „Meine Partien" geöffnet). Eine neue Analyse beginnt bei Zurücksetzen, FEN laden,
+  Stellung aufbauen, PGN laden und beim Öffnen eines Verlauf-Eintrags (dann mit dessen Kennung); der bisherige Stand geht
+  dabei noch raus (`flushHistory`), eine verspätete Antwort gehört über `historySession` nicht mehr zur neuen.
+* Gespeichert wird gedrosselt (`HISTORY_SAVE_MS` 1,5 s nach der letzten Änderung, beim Verlassen sofort), nur angemeldet und
+  nicht die leere Grundstellung; nie zwei Anfragen gleichzeitig (die zweite hätte noch keine Kennung).
+* Sterne: Knopf neben den Zugpfeilen bzw. Taste S, Sprungliste über der Zugliste („12...Nf6"), ★ in der Zugliste. Wird eine
+  Fortsetzung ersetzt (`truncateAtPly`), fallen die Sterne dahinter weg. Abgemeldet gehen Sterne nur für die Sitzung.
+* „Verlauf" neben der Überschrift → `analysis-history-dialog.component.ts`; `/analysis?history=<id>` öffnet einen Eintrag direkt.
+
+| Methode | Endpoint | Zweck |
+|---------|----------|-------|
+| GET | `/api/analysis-history` | Die letzten 20 (zuletzt angefasste zuerst) `{ id, startFen, moves[], ply, title, starred[], preview, moveCount, createdAt, updatedAt }` |
+| GET | `/api/analysis-history/{id}` | Ein eigener Eintrag (404 fremd/unbekannt) |
+| POST | `/api/analysis-history` | Speichern `{ id?, startFen, moves[], ply, title?, starred[] }` → der Eintrag samt Kennung; 400 bei unlesbarer Stellung/Zugfolge (höchstens 600 Halbzüge, 60 Sterne) |
+| DELETE | `/api/analysis-history/{id}` | Eintrag löschen |
+
 ### Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
 sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/MoveComparisonService.cs`,
@@ -3546,6 +3571,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) — trägt seit 0.537.0 auch die Hintergrund-Liste für direkt angemeldete Engines, dann OHNE Token | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`; LEER = kein Lichess-Token hinterlegt), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
 | ExternalEngineRegistrations | Direkt bei RookHub angemeldete External Engines (eigener Broker, 0.537.0) — der Provider registriert sie mit einem API-Token Scope `engine` | Id (PK, ≤20, `rhe_` + 12 Zeichen), UserId (Cascade), Name (≤200, **UNIQUE (UserId, Name)** — die Identität der Registrierung), ClientSecret (≤64, für den Anfragenden; nie im Browser), ProviderSelector (≤64, sha256(`providerSecret:`+Geheimnis) hex, Index — das Geheimnis selbst wird nie gespeichert), MaxThreads, MaxHash, Variants (CSV ≤200), ProviderData? (≤500), CreatedAt, UpdatedAt, LastSeenAt? (letzter Poll, minütlich geschrieben); höchstens 32 je Konto, Konto löschen räumt ab |
 | AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess `eei_…` oder direkt angemeldet `rhe_…`), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
+| AnalysisHistoryEntries | Analyse-Verlauf des Analysebretts (0.603.0), höchstens 20 je Nutzer | UserId (Cascade), StartFen (≤120), Moves (TEXT, UCI mit Leerzeichen), MoveCount, Ply, Title? (≤200), Starred? (≤400, Halbzüge mit Komma), CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | MoveComparisons | „Züge vergleichen" (0.602.0): eine Stellung, 2–4 Kandidaten | UserId (Cascade), Fen (≤120), Title?, Depth, Language (≤8), Status (Candidates/Replies/Explaining/Done/Failed), EngineOwnerUserId?, BestUci? (≤10), Model?, Error? (≤200), CreatedAt/UpdatedAt/FinishedAt?; Index (UserId, CreatedAt), Status |
 | MoveComparisonLines | Je gerechnete Stellung eines Vergleichs: Kandidat (Stellung nach dem Zug, 3 Linien) oder Antwort (beste Antwort auf einen SCHWÄCHEREN Kandidaten, gespielt nach dem BESTEN) | MoveComparisonId (Cascade), Kind, CandidateUci (≤10), ReplyUci? (≤10), Ordinal, Fen (≤120, leer bei Illegal), State (Pending/Done/Failed/Illegal), AnalysisJobId? (kein FK, nach dem Einsammeln null — der Auftrag wird gelöscht), ResultJson? (LONGTEXT), ReachedDepth, Explanation? (≤1500, englische SAN); Index MoveComparisonId, AnalysisJobId |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |

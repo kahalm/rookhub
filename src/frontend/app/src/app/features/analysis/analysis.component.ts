@@ -27,6 +27,9 @@ import { OpeningExplorerComponent } from './opening-explorer.component';
 import { AuthService } from '../../core/auth.service';
 import { ANALYSIS_DEPTH_KEY, ANALYSIS_LINES_KEY, ANALYSIS_PROVIDER_KEY } from './analysis-settings';
 import { PositionMenuComponent } from './position-menu.component';
+import { MatDialog } from '@angular/material/dialog';
+import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
+import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
 
 interface LineNode { san: string; fen: string; uci: string; }
 
@@ -34,6 +37,8 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
 const ENGINE_KEY = 'rookhub_analysis_engine';
 const DEPTH_KEY = ANALYSIS_DEPTH_KEY;
+/** Analyse-Verlauf (0.603.0): so lange nach der letzten Änderung, bis der Stand zum Server geht. */
+const HISTORY_SAVE_MS = 1500;
 /** 'wasm' oder die Lichess-Engine-ID der zuletzt gewählten External Engine. */
 const PROVIDER_KEY = ANALYSIS_PROVIDER_KEY;
 /** Vergleichsmodus: an/aus und die Wahl der zweiten Engine. */
@@ -64,7 +69,14 @@ const EVAL_SETTLE_DEPTH = 10;
   ],
   template: `
     <div class="analysis-page">
-      <h1>{{ 'analysis.title' | translate }}</h1>
+      <div class="page-head">
+        <h1>{{ 'analysis.title' | translate }}</h1>
+        @if (auth.isLoggedIn) {
+          <button mat-stroked-button type="button" class="history-btn" (click)="openHistory()">
+            <mat-icon>history</mat-icon> {{ 'analysis.history.open' | translate }}
+          </button>
+        }
+      </div>
       <div class="analysis-layout">
         <div class="board-col" [class.editing]="editing">
           @if (editing) {
@@ -226,6 +238,10 @@ const EVAL_SETTLE_DEPTH = 10;
                 <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [matTooltip]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
                 <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
                 <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
+                <button mat-icon-button class="star-btn" [class.on]="starred.has(ply)" (click)="toggleStar()"
+                        [matTooltip]="(starred.has(ply) ? 'analysis.star.remove' : 'analysis.star.add') | translate">
+                  <mat-icon>{{ starred.has(ply) ? 'star' : 'star_border' }}</mat-icon>
+                </button>
                 <span class="spacer"></span>
                 <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
                 <button mat-icon-button (click)="reset()" [matTooltip]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
@@ -235,13 +251,21 @@ const EVAL_SETTLE_DEPTH = 10;
                                    [candidates]="engineCandidates"
                                    [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
               </div>
+              @if (starredPlies.length > 0) {
+                <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
+                  <mat-icon class="star-icon">star</mat-icon>
+                  @for (p of starredPlies; track p) {
+                    <button type="button" class="jump" [class.active]="p === ply" (click)="goTo(p)">{{ starLabel(p) }}</button>
+                  }
+                </div>
+              }
               @if (line.length === 0) {
                 <p class="muted">{{ 'analysis.noMoves' | translate }}</p>
               } @else {
                 <div class="movelist">
                   @for (m of line; track $index) {
                     @if ($index % 2 === 0) { <span class="moveno">{{ $index / 2 + 1 }}.</span> }
-                    <span class="move" [class.active]="ply === $index + 1" (click)="goTo($index + 1)">{{ m.san }}</span>
+                    <span class="move" [class.active]="ply === $index + 1" [class.starred]="starred.has($index + 1)" (click)="goTo($index + 1)">{{ m.san }}@if (starred.has($index + 1)) {<span class="star-mark">★</span>}</span>
                   }
                 </div>
               }
@@ -335,6 +359,15 @@ const EVAL_SETTLE_DEPTH = 10;
     .line-eval.neg { color: #b71c1c; }
     .line-san { font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .controls { display: flex; align-items: center; gap: 2px; }
+    .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .page-head h1 { margin: 0 0 8px; }
+    .star-btn.on mat-icon { color: #f9a825; }
+    .star-jumps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 8px; }
+    .star-jumps .star-icon { color: #f9a825; font-size: 18px; width: 18px; height: 18px; }
+    .star-jumps .jump { font: inherit; font-family: 'Courier New', monospace; font-size: .85rem; padding: 1px 8px; border-radius: 999px;
+      border: 1px solid rgba(249, 168, 37, .6); background: transparent; color: inherit; cursor: pointer; }
+    .star-jumps .jump.active { background: rgba(249, 168, 37, .25); }
+    .move.starred .star-mark { color: #f9a825; font-size: .75rem; margin-left: 1px; }
     .controls .spacer { flex: 1; }
     .movelist { margin-top: 8px; line-height: 1.9; }
     .moveno { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 2px 0 8px; font-size: .85rem; }
@@ -387,6 +420,20 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   fenInput = '';
   pgnInput = '';
   editing = false;
+
+  // ---- Analyse-Verlauf + Sterne (0.603.0) ----
+  /** Mit Stern markierte Halbzüge (0 = Ausgangsstellung) — Sprungliste über der Zugliste. */
+  starred = new Set<number>();
+  /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
+  historyId: number | null = null;
+  /** Titel aus den PGN-Kopfdaten („Weiß – Schwarz"), sonst leer. */
+  private historyTitle: string | null = null;
+  private historyTimer: ReturnType<typeof setTimeout> | null = null;
+  private historySaving = false;
+  private historyAgain = false;
+  private lastHistorySig = '';
+  /** Zählt die Analysen dieser Seite — eine Antwort, die nach einem Wechsel eintrifft, gehört nicht mehr dazu. */
+  private historySession = 0;
 
   /** External Engines des Lichess-Kontos (leer = kein Picker); Auswahl 'wasm' = Browser. */
   externalEnginesList: ExternalEngineInfo[] = [];
@@ -451,7 +498,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
-              @Inject(LOCALE_ID) private locale: string) {
+              @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -566,6 +613,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // so mit einer Vereinspartie her, samt Kopfdaten im PGN-Feld.
     const paramPgn = params.get('pgn');
     const pgn = typeof statePgn === 'string' && statePgn.trim() ? statePgn : paramPgn?.trim() ? paramPgn : null;
+    // Ein Eintrag des Verlaufs per Adresse (`?history=<id>`): erst die Grundstellung, dann der Eintrag, sobald er da ist.
+    const historyParam = parseInt(params.get('history') || '', 10);
+    if (historyParam > 0 && this.auth.isLoggedIn) {
+      this.resetToStart();
+      this.history.get(historyParam).subscribe({ next: e => this.openHistoryEntry(e), error: () => {} });
+      return;
+    }
     if (pgn) {
       this.pgnInput = pgn;
       this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
@@ -594,6 +648,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Wer die Seite verlässt, bevor die Drossel abläuft, soll den letzten Stand trotzdem im Verlauf haben.
+    if (this.historyTimer) { clearTimeout(this.historyTimer); this.historyTimer = null; this.saveHistoryNow(); }
     this.sub?.unsubscribe();
     this.errorSub?.unsubscribe();
     this.fallbackSub?.unsubscribe();
@@ -622,6 +678,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     else if (e.key === 'ArrowRight') { e.preventDefault(); this.next(); }
     else if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }
     else if (e.key === 'End') { e.preventDefault(); this.goTo(this.line.length); }
+    else if ((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); this.toggleStar(); }
   }
 
   // ---- User move ----
@@ -638,7 +695,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
     if (!mv) { this.refresh(); return; }
 
-    if (this.ply < this.line.length) this.line = this.line.slice(0, this.ply);   // ab hier neu
+    if (this.ply < this.line.length) this.truncateAtPly();   // ab hier neu
     this.line.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
     this.ply = this.line.length;
     this.refresh();
@@ -659,7 +716,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       added.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
     }
     if (!added.length) return;
-    if (this.ply < this.line.length) this.line = this.line.slice(0, this.ply);   // ab hier neu
+    if (this.ply < this.line.length) this.truncateAtPly();   // ab hier neu
     this.line = this.line.concat(added);
     this.ply = this.line.length;
     this.refresh();
@@ -667,6 +724,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Refresh board + engine for current ply ----
   private refresh(): void {
+    this.scheduleHistorySave();
     const fen = this.currentFen;
     let c: Chess;
     try { c = new Chess(fen); } catch { return; }
@@ -1033,13 +1091,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   reloadPage(): void { window.location.reload(); }
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 
-  reset(): void { this.startFen = START_FEN; this.resetToStart(); }
+  reset(): void { this.newSession(); this.startFen = START_FEN; this.resetToStart(); }
   private resetToStart(): void { this.line = []; this.ply = 0; this.refresh(); }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
   startEditing(): void { this.editing = true; }
   onSetupApply(fen: string): void {
     this.editing = false;
+    this.newSession();
     this.startFen = fen;
     this.fenInput = '';
     this.resetToStart();
@@ -1049,6 +1108,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const fen = this.fenInput.trim();
     if (!fen) return;
     if (!this.isValidFen(fen)) { this.snackbar.show('Invalid FEN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
+    this.newSession();
     this.startFen = fen;
     this.fenInput = '';
     this.resetToStart();
@@ -1069,6 +1129,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     try { c.loadPgn(pgn); } catch { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
     const history = c.history({ verbose: true }) as any[];
     if (history.length === 0) { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
+    this.newSession(pgnTitle(c));
     // Hauptlinie ab Standard-Grundstellung nachspielen.
     const replay = new Chess();
     this.startFen = START_FEN;
@@ -1081,7 +1142,110 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.refresh();
   }
 
+  // ---- Sterne ----
+
+  get starredPlies(): number[] { return [...this.starred].sort((a, b) => a - b); }
+
+  /** Stern auf der Stellung, die gerade auf dem Brett steht (Taste S). */
+  toggleStar(): void {
+    const next = new Set(this.starred);
+    if (next.has(this.ply)) next.delete(this.ply); else next.add(this.ply);
+    this.starred = next;
+    this.scheduleHistorySave();
+  }
+
+  /** „12...Nf6" — der Zug, der zur markierten Stellung führte; 0 = Ausgangsstellung. */
+  starLabel(ply: number): string {
+    if (ply <= 0 || ply > this.line.length) return this.translate.instant('analysis.star.start');
+    const before = ply === 1 ? this.startFen : this.line[ply - 2].fen;
+    const parts = before.split(' ');
+    const n = parseInt(parts[5] ?? '1', 10) || 1;
+    return (parts[1] === 'b' ? `${n}...` : `${n}.`) + this.line[ply - 1].san;
+  }
+
+  /** Ab dem aktuellen Halbzug neu: die Fortsetzung fällt weg — und mit ihr ihre Sterne. */
+  private truncateAtPly(): void {
+    this.line = this.line.slice(0, this.ply);
+    if ([...this.starred].some(p => p > this.ply)) this.starred = new Set([...this.starred].filter(p => p <= this.ply));
+  }
+
+  // ---- Analyse-Verlauf ----
+
+  openHistory(): void {
+    this.dialog.open(AnalysisHistoryDialogComponent, { width: '560px', maxWidth: '96vw' }).afterClosed()
+      .subscribe((e: AnalysisHistoryEntry | undefined) => { if (e) this.openHistoryEntry(e); });
+  }
+
+  /** Einen Eintrag aufs Brett: Ausgangsstellung, Züge, der Halbzug von damals, die Sterne — und weiter speichern
+   *  unter DERSELBEN Kennung. */
+  openHistoryEntry(e: AnalysisHistoryEntry): void {
+    if (!this.isValidFen(e.startFen)) return;
+    this.flushHistory();
+    this.historySession++;
+    this.historyId = e.id;
+    this.historyTitle = e.title;
+    this.starred = new Set(e.starred);
+    this.startFen = e.startFen;
+    this.loadFromUci(e.startFen, e.moves);
+    this.goTo(Math.min(e.ply, this.line.length));
+    this.cdr.markForCheck();
+  }
+
+  /** Eine neue Analyse beginnt (Zurücksetzen, FEN/PGN/Stellung geladen): der bisherige Stand geht noch raus, dann
+   *  ohne Kennung und ohne Sterne weiter. */
+  private newSession(title: string | null = null): void {
+    this.flushHistory();
+    this.historySession++;
+    this.historyId = null;
+    this.historyTitle = title;
+    this.starred = new Set();
+    this.lastHistorySig = '';
+  }
+
+  private flushHistory(): void {
+    if (this.historyTimer) { clearTimeout(this.historyTimer); this.historyTimer = null; this.saveHistoryNow(); }
+  }
+
+  /** Gedrosselt speichern — nur angemeldet, und nur, was eine Analyse IST (Züge, eigene Stellung oder Sterne). */
+  private scheduleHistorySave(): void {
+    if (!this.auth.isLoggedIn) return;
+    if (this.historyTimer) clearTimeout(this.historyTimer);
+    this.historyTimer = setTimeout(() => { this.historyTimer = null; this.saveHistoryNow(); }, HISTORY_SAVE_MS);
+  }
+
+  private saveHistoryNow(): void {
+    if (!this.auth.isLoggedIn) return;
+    if (this.line.length === 0 && this.startFen === START_FEN && this.starred.size === 0) return;
+    const moves = this.line.map(m => m.uci);
+    const starred = this.starredPlies;
+    const sig = [this.startFen, moves.join(' '), this.ply, starred.join(','), this.historyTitle ?? ''].join('|');
+    if (sig === this.lastHistorySig) return;
+    // Läuft noch ein Speichern (ohne Kennung), würde ein zweites einen zweiten Eintrag anlegen — danach nachholen.
+    if (this.historySaving) { this.historyAgain = true; return; }
+    this.historySaving = true;
+    const session = this.historySession;
+    this.history.save({ id: this.historyId, startFen: this.startFen, moves, ply: this.ply, title: this.historyTitle, starred }).subscribe({
+      next: e => {
+        this.historySaving = false;
+        // Nur übernehmen, wenn inzwischen keine NEUE Analyse begonnen hat.
+        if (this.historySession === session) { this.historyId = e.id; this.lastHistorySig = sig; }
+        if (this.historyAgain) { this.historyAgain = false; this.saveHistoryNow(); }
+      },
+      error: () => { this.historySaving = false; this.historyAgain = false; },   // Hintergrund: der nächste Zug versucht es wieder
+    });
+  }
+
   private isValidFen(fen: string): boolean {
     try { new Chess(fen); return true; } catch { return false; }
   }
+}
+
+/** „Weiß – Schwarz" aus den PGN-Kopfdaten (ohne „?"), sonst null. */
+function pgnTitle(c: Chess): string | null {
+  let h: Record<string, string> = {};
+  try { h = c.getHeaders(); } catch { return null; }
+  const white = h['White'] && h['White'] !== '?' ? h['White'] : null;
+  const black = h['Black'] && h['Black'] !== '?' ? h['Black'] : null;
+  if (white && black) return `${white} – ${black}`;
+  return white ?? black ?? (h['Event'] && h['Event'] !== '?' ? h['Event'] : null);
 }

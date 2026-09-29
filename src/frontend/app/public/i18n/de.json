@@ -2848,7 +2848,24 @@
       "fenCopied": "FEN kopiert"
     },
     "engineViaLichess": "über Lichess",
-    "engineOffline": "offline"
+    "engineOffline": "offline",
+    "history": {
+      "open": "Verlauf",
+      "title": "Letzte Analysen",
+      "empty": "Noch keine Analysen — sobald du angemeldet auf dem Brett ziehst, steht die Analyse hier.",
+      "fromStart": "Aus der Grundstellung",
+      "fromPosition": "Aus einer aufgebauten Stellung",
+      "noMoves": "noch keine Züge",
+      "moves": "{{count}} Halbzüge",
+      "loadFailed": "Der Verlauf konnte nicht geladen werden.",
+      "deleteFailed": "Der Eintrag konnte nicht gelöscht werden."
+    },
+    "star": {
+      "add": "Stellung mit Stern markieren (S)",
+      "remove": "Stern entfernen (S)",
+      "start": "Start",
+      "jumps": "Markierte Stellungen"
+    }
   },
   "stats": {
     "title": "Statistik",
