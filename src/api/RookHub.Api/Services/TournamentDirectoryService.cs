@@ -357,7 +357,7 @@ public class TournamentDirectoryService
         await _db.SaveChangesAsync(ct);
 
         await NotifyChangedAsync(changed, ct);
-        await NotifyCancelledAsync(removed, ct);
+        await NotifyCancelledAsync(removed, today, ct);
 
         _log.LogInformation(
             "Verzeichnis-Sweep {Federation}: {Rows} Zeilen, {Added} neu, {Changed} geaendert, {Removed} abgesagt",
@@ -470,8 +470,16 @@ public class TournamentDirectoryService
         }
     }
 
-    private async Task NotifyCancelledAsync(List<TournamentDirectoryEntry> removed, CancellationToken ct)
+    /// <summary>
+    /// „Vermutlich abgesagt" an die Abonnenten — aber nur für Turniere, die noch nicht VORBEI sind. Ein Turnier, das
+    /// schon stattgefunden hat und danach von chess-results verschwindet (Veranstalter räumt eine leere Gruppe weg,
+    /// legt Gruppen zusammen), ist keine Absage; die Meldung darüber war nur Lärm (gemeldet am 29.09.2026: die
+    /// Schachrallye Pradl vom 27.09. kam zwei Tage später als „vermutlich abgesagt"). Aus dem Verzeichnis
+    /// verschwindet es trotzdem. Ohne jedes Datum bleibt es bei der Meldung — ob es vorbei ist, weiß niemand.
+    /// </summary>
+    private async Task NotifyCancelledAsync(List<TournamentDirectoryEntry> removed, DateOnly today, CancellationToken ct)
     {
+        removed = removed.Where(e => (e.EndDate ?? e.StartDate) is not { } last || last >= today).ToList();
         if (removed.Count == 0) return;
 
         var subscribers = await SubscribersByTournamentAsync(

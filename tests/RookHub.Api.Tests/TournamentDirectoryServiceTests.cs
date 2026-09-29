@@ -271,6 +271,28 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.NotNull((await _db.TournamentDirectoryEntries.SingleAsync()).RemovedAt);
     }
 
+    /// <summary>
+    /// Ein Turnier, das schon VORBEI ist, verschwindet still: aus dem Verzeichnis ja, aber ohne „vermutlich
+    /// abgesagt" an die Abonnenten. Gemeldet am 29.09.2026 — die Schachrallye Pradl vom 27.09. kam zwei Tage
+    /// später als Absage.
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_MissingTwice_AfterItTookPlace_IsRemovedWithoutAnnouncement()
+    {
+        await CreateSubscriptionAsync("222");
+        var ended = Today.AddDays(-5).ToString("yyyy-MM-dd");
+        await CreateService($"[{Row("222", "Schachrallye", ended, ended, "Innsbruck")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        await CreateService("[]").SweepFederationAsync("AUT", Today);
+        await NextNightAsync();
+        var (result, _) = await CreateService("[]").SweepFederationAsync("AUT", Today);
+
+        Assert.Equal(1, result.Removed);
+        Assert.NotNull((await _db.TournamentDirectoryEntries.SingleAsync()).RemovedAt);
+        Assert.Empty(_db.Notifications);
+    }
+
     [Fact]
     public async Task SweepFederationAsync_ReappearsAfterAMiss_CounterResets()
     {
