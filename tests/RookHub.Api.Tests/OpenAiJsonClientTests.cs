@@ -63,6 +63,20 @@ public class OpenAiJsonClientTests
     }
 
     [Fact]
+    public async Task Reply_LosesTheInvisibleTypographyOfGptOss_ButKeepsDashes()
+    {
+        // gpt-oss setzt geschützte Bindestriche, weiche Trennstriche und schmale geschützte Leerzeichen — keine Quelle
+        // enthält die; sie brechen Suche und Kopieren. Gedankenstriche stehen auch in den Quellen und bleiben.
+        _handler.Reply("{\"items\":[{\"ply\":1,\"text\":\"h\u2011Bauer, Bewer\u00ADtung \u22120,5 nach 12\u202Fs \u2014 g\u2010Linie\"}]}");
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "openai/gpt-oss-120b")));
+
+        var json = await client.TranslateCommentsJsonAsync("sys", "{}");
+
+        Assert.Equal("{\"items\":[{\"ply\":1,\"text\":\"h-Bauer, Bewertung -0,5 nach 12 s \u2014 g-Linie\"}]}", json);
+        Assert.Same("plain", OpenAiJsonClient.PlainTypography("plain")); // ohne Fund keine Kopie
+    }
+
+    [Fact]
     public async Task ServerError_OrCutOff_IsNull()
     {
         _handler.Fail(System.Net.HttpStatusCode.InternalServerError).Reply("{\"hint1\":\"a\"", finish: "length");

@@ -114,8 +114,36 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         }
         var json = OpenAiChat.ExtractJsonObject(reply.Content);
         if (json == null) _logger.LogWarning("{Purpose} via {Model}: keine JSON-Antwort.", purpose, model);
-        return json;
+        return json == null ? null : PlainTypography(json);
     }
+
+    /// <summary>
+    /// Nimmt dem Modelltext die unsichtbare Typografie, die gpt-oss setzt und die keine Quelle je enthält: geschützte
+    /// Bindestriche (U+2011, „h‑Bauer" — in 4 481 Prod-Texten gefunden), weiche Trennstriche (U+00AD, unsichtbar, brechen
+    /// Suche und Kopieren), schmale und normale geschützte Leerzeichen (U+202F/U+00A0/U+2009 vor Einheiten) sowie
+    /// Ziffernstrich und Minuszeichen (U+2012/U+2212 in Bewertungen). Gedankenstriche bleiben — die stehen auch in den
+    /// Quellen. Läuft über die JSON-Antwort, bevor sie zerlegt wird: die Zeichen kommen nur in Textwerten vor.
+    /// Denselben Tausch macht die Migration <c>NormalizeLlmTypography</c> einmal für den Bestand (0.597.3).
+    /// </summary>
+    public static string PlainTypography(string text)
+    {
+        if (text.AsSpan().IndexOfAny(TypographyChars) < 0) return text;
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var c in text)
+        {
+            switch (c)
+            {
+                case '\u2010': case '\u2011': case '\u2012': case '\u2212': sb.Append('-'); break;
+                case '\u00AD': break;
+                case '\u00A0': case '\u2009': case '\u202F': sb.Append(' '); break;
+                default: sb.Append(c); break;
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static readonly System.Buffers.SearchValues<char> TypographyChars =
+        System.Buffers.SearchValues.Create("\u2010\u2011\u2012\u2212\u00AD\u00A0\u2009\u202F");
 
     /// <summary>Eingestelltes Modell, sonst das erste unter <c>/models</c> (einmal gefragt, dann gemerkt).</summary>
     private async Task<string?> ModelAsync(CancellationToken ct)

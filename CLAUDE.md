@@ -3925,7 +3925,11 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   12,7 s/116 Tokens bei gleicher Übersetzung; der jeweils fremde Schalter wird vom Server ignoriert) —, gestreamt wegen
   des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
   JSON-Schema wie der Claude-Weg (vLLM erzwingt es per Grammatik; lehnt ein Server es ab, einmal ohne und dann dabei
-  bleiben).
+  bleiben). Jede Antwort verliert vor dem Zerlegen die unsichtbare Typografie von gpt-oss
+  (`OpenAiJsonClient.PlainTypography`, 0.597.3: U+2010/2011/2012/2212 → „-", U+00AD weg, U+00A0/2009/202F → Leerzeichen;
+  Gedankenstriche bleiben) — keine Quelle enthält sie, Suche und Kopieren stolpern darüber. Den Bestand (alle
+  Maschinentexte in CommentTexts, GameRecaps, GameRoasts, GameMoveExplanations) hat die SQL-Migration
+  `NormalizeLlmTypography` einmal bereinigt (von Hand geschrieben, Designer = Kopie des vorigen, Modell unverändert).
 - **Kurs-Übersetzung: zwei Einstellungen, Automatik nur auf Prod** (0.548.0) – `CourseTranslation:Parallel` (Vorgabe 4,
   Linien je Lauf gleichzeitig) und `CourseTranslation:AutoLanguages` (Compose `COURSE_TRANSLATION_AUTO_LANGUAGES`,
   Komma-Liste, nur die 25 Oberflächensprachen, Vorgabe LEER = aus). Prod bekommt `de,en` erst auf Zuruf in der `.env`;
