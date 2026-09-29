@@ -415,6 +415,8 @@ try
     var chessableEnabled = builder.Configuration.GetValue("Chessable:Enabled", true);
     builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
     builder.Services.AddHostedService<WebhookTaskWorker>();
+    // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
+    builder.Services.AddSingleton<AnonymousSolveNotifyThrottle>();
     // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst
     // sich abschalten: `Chessable:Enabled=false`. Dann laufen weder die Import-Lanes noch der
     // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404. Der Weg ueber die

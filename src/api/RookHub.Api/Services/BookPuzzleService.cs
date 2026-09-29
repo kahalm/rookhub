@@ -18,12 +18,16 @@ public class BookPuzzleService
     private readonly AppDbContext _db;
     private readonly ILogger<BookPuzzleService> _logger;
     private readonly IWebhookTaskQueue _bgQueue;
+    /// <summary>Entprellt den Webhook anonymer Solves (A2-003); <c>null</c> (Tests) = jeder Solve meldet sofort.</summary>
+    private readonly AnonymousSolveNotifyThrottle? _anonNotifyThrottle;
 
-    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IWebhookTaskQueue bgQueue)
+    public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IWebhookTaskQueue bgQueue,
+        AnonymousSolveNotifyThrottle? anonNotifyThrottle = null)
     {
         _db = db;
         _logger = logger;
         _bgQueue = bgQueue;
+        _anonNotifyThrottle = anonNotifyThrottle;
     }
 
     private static readonly Regex SessionIdPattern =
@@ -165,12 +169,14 @@ public class BookPuzzleService
 
     /// <summary>Anonymer (nicht eingeloggter) Lösungsversuch — zählt fürs Tagespuzzle mit,
     /// erscheint aber namenlos. Nur Solves werden erfasst, je (Puzzle, Session) genau einmal
-    /// (gegen Spam + saubere Zählung).</summary>
+    /// (gegen Spam + saubere Zählung). Nur für anonym lesbare Bücher bzw. Tagespuzzles (sonst 404,
+    /// A2-003); der Webhook dazu ist entprellt (<see cref="AnonymousSolveNotifyThrottle"/>).</summary>
     public async Task RecordAnonymousAttemptAsync(int id, RecordAnonymousBookAttemptDto dto)
     {
         if (!SessionIdPattern.IsMatch(dto.SessionId ?? ""))
             throw new InvalidOperationException("Invalid sessionId.");
-        if (!await _db.BookPuzzles.AnyAsync(bp => bp.Id == id))
+        var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id);
+        if (puzzle == null || !await IsReadableOrDailyAsync(puzzle, null, false))
             throw new KeyNotFoundException("Book puzzle not found.");
 
         if (dto.Solved)
@@ -203,7 +209,7 @@ public class BookPuzzleService
                 _logger.LogInformation(
                     "BookPuzzleAttempt: Anonymous solved book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
                     id, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
-                await NotifySchachBotAsync(id);
+                await NotifyAnonymousSolveAsync(id);
             }
         }
     }
@@ -320,9 +326,23 @@ public class BookPuzzleService
     /// Stoesst den schach-bot-Webhook fuer das Puzzle an (fire-and-forget via BG-Queue).
     /// Holt im Worker frische Solver-Daten + ruft <see cref="SchachBotWebhookService.NotifyAttemptAsync"/> auf.
     /// </summary>
-    private async ValueTask NotifySchachBotAsync(int puzzleId)
+    private ValueTask NotifySchachBotAsync(int puzzleId) => EnqueueNotifyAsync(_bgQueue, puzzleId);
+
+    /// <summary>Webhook eines ANONYMEN Solves: höchstens einer je Puzzle und Fenster, der Rest als EINE
+    /// Nachmeldung am Fensterende (<see cref="AnonymousSolveNotifyThrottle"/>). Die Nachmeldung hält nur die
+    /// (Singleton-)Queue fest, nicht diesen scoped Dienst.</summary>
+    private ValueTask NotifyAnonymousSolveAsync(int puzzleId)
     {
-        await _bgQueue.EnqueueAsync(async (sp, ct) =>
+        var queue = _bgQueue;
+        if (_anonNotifyThrottle is null) return EnqueueNotifyAsync(queue, puzzleId);
+        return _anonNotifyThrottle.TryNotifyNow(puzzleId, () => EnqueueNotifyAsync(queue, puzzleId))
+            ? EnqueueNotifyAsync(queue, puzzleId)
+            : ValueTask.CompletedTask;
+    }
+
+    private static async ValueTask EnqueueNotifyAsync(IWebhookTaskQueue queue, int puzzleId)
+    {
+        await queue.EnqueueAsync(async (sp, ct) =>
         {
             var hookLogger = sp.GetService<ILoggerFactory>()?.CreateLogger("RookHub.SchachBotNotify");
             var hook = sp.GetService<SchachBotWebhookService>();

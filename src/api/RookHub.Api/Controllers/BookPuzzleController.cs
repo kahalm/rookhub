@@ -93,7 +93,10 @@ public class BookPuzzleController : BaseApiController
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    /// <summary>Anonymer Solve (Tagespuzzle-Zähler). Gedrosselt wie die übrigen anonymen Puzzle-Senken — sonst
+    /// blähte ein Skript mit frischen Session-Ids den Zähler im Discord-Post auf (A2-003).</summary>
     [AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("anonymous-puzzle")]
     [HttpPost("{id:int}/attempt/anonymous")]
     public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] RecordAnonymousBookAttemptDto dto)
     {
@@ -131,6 +134,7 @@ public class BookPuzzleController : BaseApiController
     /// (eingeloggt via Token, sonst via anonymer SessionId) und liefert die aktuellen Zähler.
     /// <c>solved=false</c> deckt Fehlzug/Aufgeben/Reset ab. Pro Besucher zählt nur der erste Versuch.</summary>
     [AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("anonymous-puzzle")]
     [HttpPost("{id:int}/track")]
     public async Task<ActionResult<SharedPuzzleCountsDto>> Track(int id, [FromBody] RecordSharedAttemptDto dto)
     {
