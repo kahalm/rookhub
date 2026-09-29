@@ -14,7 +14,10 @@ namespace RookHub.Api.Services;
 /// wechselt das Modell (gpt-oss-120b, Qwen3.5-122B), und eine fest eingetragene Id wäre nach jedem Wechsel ein 404.</para>
 /// <para>Nachdenken ist AUS (<c>TextLlm:Thinking=true</c> schaltet es ein): Qwen3/Qwen3.5 denken sonst über die
 /// Chat-Vorlage, und auf dem Spark kostet das Minuten je Tipp — bei tausenden Puzzles zu viel. gpt-oss ignoriert den
-/// Schalter und denkt mit seiner Vorgabe.</para>
+/// Vorlagen-Schalter und hört stattdessen auf <c>reasoning_effort</c>: mit seiner Vorgabe (medium) brauchte ein
+/// Drei-Satz-Absatz 73 s und 696 Tokens, mit <c>low</c> 12,7 s und 116 Tokens bei gleicher Übersetzung (gemessen
+/// 29.09.2026). Darum gehen beide Schalter mit — welcher greift, entscheidet das Modell; der jeweils andere wird
+/// ignoriert.</para>
 /// <para>Gestreamt (<see cref="OpenAiChat.SendAsync"/>): vor dem Spark kappt ein Proxy jede Anfrage nach 90 s ohne
 /// Antwort.</para>
 /// </remarks>
@@ -76,7 +79,11 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
                     new JsonObject { ["role"] = "user", ["content"] = userPrompt },
                 },
             };
-            if (!_thinking) body["chat_template_kwargs"] = new JsonObject { ["enable_thinking"] = false };
+            if (!_thinking)
+            {
+                body["chat_template_kwargs"] = new JsonObject { ["enable_thinking"] = false };
+                body["reasoning_effort"] = "low";
+            }
             if (withSchema)
                 body["response_format"] = new JsonObject
                 {

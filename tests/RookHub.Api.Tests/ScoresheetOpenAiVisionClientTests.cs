@@ -56,8 +56,10 @@ public class ScoresheetOpenAiVisionClientTests
         await client.ReadAsync(new byte[] { 1 }, "b", 4000, mode: ScoresheetReadMode.Full);
 
         Assert.False((bool?)_handler.Requests[0].Body["chat_template_kwargs"]!["enable_thinking"]);
+        Assert.Equal("low", (string?)_handler.Requests[0].Body["reasoning_effort"]);
         Assert.Equal(ScoresheetPrompt.TranscribeSystem, (string?)_handler.Requests[0].Body["messages"]![0]!["content"]);
         Assert.Null(_handler.Requests[1].Body["chat_template_kwargs"]);
+        Assert.Null(_handler.Requests[1].Body["reasoning_effort"]);
     }
 
     [Fact]

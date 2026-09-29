@@ -31,6 +31,8 @@ public class OpenAiJsonClientTests
         Assert.Equal("sys", (string?)body["messages"]![0]!["content"]);
         Assert.Equal("puzzle", (string?)body["messages"]![1]!["content"]);
         Assert.False((bool?)body["chat_template_kwargs"]!["enable_thinking"]);
+        // gpt-oss ignoriert den Vorlagen-Schalter und hört auf reasoning_effort — beide gehen mit (0.597.2).
+        Assert.Equal("low", (string?)body["reasoning_effort"]);
         Assert.True((bool?)body["stream"]);
         var required = body["response_format"]!["json_schema"]!["schema"]!["required"]!.AsArray().Select(n => (string?)n);
         Assert.Equal(["hint1", "hint2", "hint3"], required);
@@ -55,6 +57,7 @@ public class OpenAiJsonClientTests
         var request = Assert.Single(_handler.Requests); // kein /models — das Modell ist eingestellt
         Assert.Equal("gpt-oss-120b", (string?)request.Body["model"]);
         Assert.Null(request.Body["chat_template_kwargs"]);
+        Assert.Null(request.Body["reasoning_effort"]);
         Assert.Contains("items", request.Body["response_format"]!["json_schema"]!["schema"]!["required"]!.AsArray().Select(n => (string?)n));
         Assert.Equal("gpt-oss-120b", client.TranslationModel);
     }

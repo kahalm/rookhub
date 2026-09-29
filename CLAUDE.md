@@ -3030,7 +3030,8 @@ ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); 
   abschreiben" schaltet das Nachdenken ab — außer bei Modellen, die das nicht erlauben (`claude-opus-5-5`, Fable/Mythos:
   Nachdenken immer an), dort `effort: low`; Opus 5 verbietet Abschalten zusammen mit `xhigh`/`max`, der effort fällt dann
   weg. Ohne diese Regel liefe der Rückfall unter Opus 5.5 in einen 400. Der OpenAI-kompatible Leser schickt beim
-  Abschreiben `chat_template_kwargs: {enable_thinking: false}` mit (Qwen3/Qwen3.5 denken sonst über die Chat-Vorlage).
+  Abschreiben `chat_template_kwargs: {enable_thinking: false}` und `reasoning_effort: low` mit (Qwen3/Qwen3.5 denken
+  sonst über die Chat-Vorlage; gpt-oss hört nur auf den zweiten Schalter, 0.597.2).
   Er STREAMT (`stream: true`, `include_usage`): vor dem Spark kappt ein Reverse-Proxy (openresty) jede Anfrage nach
   90 s ohne Antwort mit 504, eine Formular-Lesung dauert dort Minuten.
 * **Vorgabe = Opus 5.5 „nur abschreiben"** (0.533.2, Wunsch des Nutzers nach dem Modellvergleich vom 25.09.2026):
@@ -3918,8 +3919,11 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   (`TEXT_LLM_API_KEY`) + `TextLlm:Model` (`TEXT_LLM_MODEL`, leer = erstes Modell unter `/models` — auf dem Spark
   wechselt das Modell) → `OpenAiJsonClient`, kostenlos je Aufruf. Die EINE Auswahlregel ist `TextJsonClients.Create`
   (API und `tools/LibraryImport`): eigene Hardware VOR `Anthropic:TextApiKey`, ohne beides aus. Nachdenken ist dort aus
-  (`chat_template_kwargs.enable_thinking=false`, `TextLlm:Thinking=true` schaltet es ein) — Qwen3.5 braucht auf dem
-  Spark sonst Minuten je Tipp —, gestreamt wegen des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
+  (`chat_template_kwargs.enable_thinking=false` UND `reasoning_effort: low`, `TextLlm:Thinking=true` schaltet beides
+  ab) — Qwen3.5 hört auf den Vorlagen-Schalter und braucht auf dem Spark sonst Minuten je Tipp; gpt-oss ignoriert ihn
+  und hört auf `reasoning_effort` (0.597.2: mit seiner Vorgabe 73 s/696 Tokens je Drei-Satz-Absatz, mit `low`
+  12,7 s/116 Tokens bei gleicher Übersetzung; der jeweils fremde Schalter wird vom Server ignoriert) —, gestreamt wegen
+  des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
   JSON-Schema wie der Claude-Weg (vLLM erzwingt es per Grammatik; lehnt ein Server es ab, einmal ohne und dann dabei
   bleiben).
 - **Kurs-Übersetzung: zwei Einstellungen, Automatik nur auf Prod** (0.548.0) – `CourseTranslation:Parallel` (Vorgabe 4,

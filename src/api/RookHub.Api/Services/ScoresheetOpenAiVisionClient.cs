@@ -103,9 +103,13 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
             },
         };
         // Qwen3/Qwen3.5 denken über die Chat-Vorlage nach, solange man es nicht abschaltet — beim Abschreiben (Rückfall
-        // bzw. Scoresheet:Thinking=false) aus. Vorlagen ohne den Schalter ignorieren ihn.
+        // bzw. Scoresheet:Thinking=false) aus. Vorlagen ohne den Schalter ignorieren ihn; Modelle, die stattdessen auf
+        // reasoning_effort hören (gpt-oss), bekommen denselben Wunsch als „low" — siehe OpenAiJsonClient.
         if (noThinking)
+        {
             body["chat_template_kwargs"] = new JsonObject { ["enable_thinking"] = false };
+            body["reasoning_effort"] = "low";
+        }
         if (useSchema)
             body["response_format"] = new JsonObject
             {
