@@ -4138,13 +4138,19 @@
       "noFile": "Előbb válassz egy fényképet.",
       "userDailyBudget": "A mai olvasási kereted elfogyott — próbáld holnap.",
       "userMonthlyBudget": "Az elmúlt 30 napra szóló olvasási kereted elfogyott.",
-      "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott."
+      "globalBudget": "A beolvasás mára szünetel — az összes felhasználó kerete elfogyott.",
+      "tooManyPages": "Legfeljebb három fénykép lapuként."
     },
     "budget": "az olvasási kereted {{percent}} %-a elfogyott",
     "side": "Ezzel játszottam",
     "sideWhite": "Világos",
     "sideBlack": "Sötét",
     "sideAuto": "automatikus",
-    "nextAt": "Ma már beolvastál egyet — a következő lap ekkortól lehetséges: {{time}}."
+    "nextAt": "Ma már beolvastál egyet — a következő lap ekkortól lehetséges: {{time}}.",
+    "takePage": "{{n}}. oldal fényképezése",
+    "choosePage": "{{n}}. oldal kiválasztása",
+    "page": "{{n}}. oldal",
+    "removePage": "Fénykép eltávolítása",
+    "morePages": "Folytatódik a játszma egy másik lapon? Add hozzá a következő oldalt — legfeljebb {{max}} oldal, helyes sorrendben."
   }
 }

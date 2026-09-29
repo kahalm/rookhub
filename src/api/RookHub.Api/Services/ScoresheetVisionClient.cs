@@ -42,6 +42,17 @@ public interface IScoresheetVisionClient
     /// <param name="mode">Mit Nachdenken (Vorgabe) oder nur abschreiben — siehe <see cref="ScoresheetReadMode"/>.</param>
     Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens, CancellationToken ct = default,
         ScoresheetReadMode mode = ScoresheetReadMode.Full);
+
+    /// <summary>
+    /// Mehrseitiges Formular (0.600.0, bis <see cref="ScoresheetScanService.MaxPages"/> Fotos in Seitenreihenfolge) in
+    /// EINEM Aufruf — das Modell sieht, wo Seite 2 weitermacht. Mit mehr als einer Seite verlangt das Schema je Zug die
+    /// Seite (<see cref="ScoresheetPrompt.Schema"/>). Vorgabe: eine Seite geht an <see cref="ReadAsync"/>, mehr kann
+    /// dieser Leser nicht (<c>multiPage</c>) — dots.ocr und die Test-Attrappen.
+    /// </summary>
+    Task<ScoresheetVisionResult> ReadPagesAsync(IReadOnlyList<byte[]> pages, string instructions, int maxTokens,
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        => pages.Count == 1 ? ReadAsync(pages[0], instructions, maxTokens, ct, mode)
+            : Task.FromResult(new ScoresheetVisionResult(null, "multiPage"));
 }
 
 /// <summary>Echte Implementierung über die offizielle Anthropic-C#-SDK (Bild + structured output).</summary>
@@ -102,7 +113,11 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
         _ => null,
     };
 
-    public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+    public Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        => ReadPagesAsync(new[] { jpeg }, instructions, maxTokens, ct, mode);
+
+    public async Task<ScoresheetVisionResult> ReadPagesAsync(IReadOnlyList<byte[]> pages, string instructions, int maxTokens,
         CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
         if (_client == null) return new(null, "notConfigured");
@@ -110,7 +125,7 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
         {
             var transcribe = mode == ScoresheetReadMode.Transcribe;
             var plan = PlanThinking(Model, mode, Effort);
-            var format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema() };
+            var format = new JsonOutputFormat { Schema = ScoresheetPrompt.Schema(multiPage: pages.Count > 1) };
             var outputConfig = EffortOf(plan.Effort) is { } effort
                 ? new OutputConfig { Format = format, Effort = effort }
                 : new OutputConfig { Format = format };
@@ -126,18 +141,7 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
                     new()
                     {
                         Role = Role.User,
-                        Content = new List<ContentBlockParam>
-                        {
-                            new ImageBlockParam
-                            {
-                                Source = new Base64ImageSource
-                                {
-                                    Data = Convert.ToBase64String(jpeg),
-                                    MediaType = MediaType.ImageJpeg,
-                                },
-                            },
-                            new TextBlockParam { Text = instructions },
-                        },
+                        Content = Content(pages, instructions),
                     },
                 ],
             };
@@ -196,6 +200,23 @@ public class ClaudeScoresheetVisionClient : IScoresheetVisionClient
             _logger.LogWarning(ex, "Formular-Lesung via Claude fehlgeschlagen.");
             return new(null, "failed");
         }
+    }
+
+    /// <summary>Die Fotos in Seitenreihenfolge, dann der Auftrag. Bei mehreren Seiten steht vor jedem Foto „Page n:"
+    /// — daran hängt die Seitennummer, die das Schema je Zug verlangt. Eine Seite bleibt wie bisher: Foto, Auftrag.</summary>
+    internal static List<ContentBlockParam> Content(IReadOnlyList<byte[]> pages, string instructions)
+    {
+        var content = new List<ContentBlockParam>();
+        for (var i = 0; i < pages.Count; i++)
+        {
+            if (pages.Count > 1) content.Add(new TextBlockParam { Text = $"Page {i + 1}:" });
+            content.Add(new ImageBlockParam
+            {
+                Source = new Base64ImageSource { Data = Convert.ToBase64String(pages[i]), MediaType = MediaType.ImageJpeg },
+            });
+        }
+        content.Add(new TextBlockParam { Text = instructions });
+        return content;
     }
 }
 
@@ -273,28 +294,53 @@ public static class ScoresheetPrompt
     /// genannter Größe und Pixeln ist die Einheit eindeutig, umgerechnet wird am Server
     /// (<see cref="ScoresheetTranscription.NormalizedBoxes"/>).</param>
     public static string FirstRead(string languageHint, (int Width, int Height)? photoSize = null)
+        => FirstRead(languageHint, photoSize is { } s ? new[] { s } : Array.Empty<(int, int)>(), pageCount: 1);
+
+    /// <summary>Wie oben, für ein Formular über mehrere Fotos (<paramref name="pageCount"/> &gt; 1): eine Partie, Seite 2
+    /// macht weiter, wo Seite 1 aufhört, und jeder Zug nennt seine Seite. Mit einer Seite wörtlich der bisherige Auftrag.</summary>
+    public static string FirstRead(string languageHint, IReadOnlyList<(int Width, int Height)> pageSizes, int pageCount)
     {
         var lang = ScoresheetNotation.Find(languageHint);
         var hint = lang == null
             ? "The notation language is unknown; determine it from the sheet."
             : $"The user says the sheet is written in {lang.Name} notation (pieces: K={lang.King} Q={lang.Queen} R={lang.Rook} B={lang.Bishop} N={lang.Knight}).";
-        var size = photoSize is { } s
-            ? $" The photo is {s.Width} × {s.Height} pixels (width × height); give every \"box\" in pixels of this photo."
+        if (pageCount <= 1)
+        {
+            var size = pageSizes.Count > 0
+                ? $" The photo is {pageSizes[0].Width} × {pageSizes[0].Height} pixels (width × height); give every \"box\" in pixels of this photo."
+                : "";
+            return hint + " Transcribe the scoresheet in the photo." + size;
+        }
+        var sizes = pageSizes.Count == pageCount
+            ? " " + string.Join(", ", pageSizes.Select((s, i) => $"page {i + 1} is {s.Width} × {s.Height} pixels"))
+              + " (width × height)."
             : "";
-        return hint + " Transcribe the scoresheet in the photo." + size;
+        return hint + $" The scoresheet of ONE game continues over {pageCount} photos, given in page order (\"Page 1:\" to"
+            + $" \"Page {pageCount}:\"). Transcribe them as one move list: each page continues where the previous one ends —"
+            + " also when its printed numbering starts again; a move pair may be split across two pages. Read the players,"
+            + " event and result from whichever page has them."
+            + sizes + " Give every move its \"page\" (the number of the photo it is written on) and its \"box\" in pixels"
+            + " of that photo.";
     }
 
     /// <summary>Nachfrage, wenn die Züge ab einer Stelle nicht mehr legal aufgehen.</summary>
     public static string Repair(string languageHint, string previousJson, IReadOnlyList<string> acceptedSans,
         int stuckIndex, ScannedPly stuckPly, string fen, IReadOnlyList<string> legalMoves,
         (int Width, int Height)? photoSize = null)
+        => Repair(languageHint, previousJson, acceptedSans, stuckIndex, stuckPly, fen, legalMoves,
+            photoSize is { } s ? new[] { s } : Array.Empty<(int, int)>(), pageCount: 1);
+
+    /// <summary>Nachfrage für ein Formular über <paramref name="pageCount"/> Fotos (siehe <see cref="FirstRead(string, IReadOnlyList{ValueTuple{int, int}}, int)"/>).</summary>
+    public static string Repair(string languageHint, string previousJson, IReadOnlyList<string> acceptedSans,
+        int stuckIndex, ScannedPly stuckPly, string fen, IReadOnlyList<string> legalMoves,
+        IReadOnlyList<(int Width, int Height)> pageSizes, int pageCount)
     {
         var moveNo = stuckIndex / 2 + 1;
         var side = stuckIndex % 2 == 0 ? "White" : "Black";
         var accepted = acceptedSans.Count == 0
             ? "(none)"
             : Services.PgnWriter.MoveText(acceptedSans, result: null);
-        return FirstRead(languageHint, photoSize) + $"""
+        return FirstRead(languageHint, pageSizes, pageCount) + $"""
 
 
             This is a second look. Your previous transcription was:
@@ -314,9 +360,37 @@ public static class ScoresheetPrompt
 
     /// <summary>Das Antwortschema (structured output). Alle Felder Pflicht — „nicht vorhanden" ist ein leerer
     /// String, weil strukturierte Ausgaben keine optionalen Felder kennen.</summary>
-    public static Dictionary<string, JsonElement> Schema()
+    /// <param name="multiPage">Formular über mehrere Fotos: jeder Zug trägt zusätzlich <c>page</c> (1 = erstes Foto).
+    /// Eine Seite bleibt ohne das Feld — die Referenz-Lesungen sollen nicht an einem Schema-Wechsel hängen.</param>
+    public static Dictionary<string, JsonElement> Schema(bool multiPage = false)
     {
         var str = new { type = "string" };
+        var moveProperties = JsonSerializer.SerializeToNode(new
+        {
+            moveNumber = new { type = "integer" },
+            color = new { type = "string", @enum = new[] { "w", "b" } },
+            written = str,
+            san = str,
+            alternatives = new { type = "array", items = str },
+            confidence = new { type = "string", @enum = new[] { "high", "medium", "low" } },
+            note = str,
+            box = new
+            {
+                type = "array",
+                items = new { type = "integer" },
+                description = "[x0, y0, x1, y1] around the handwriting of this entry, in pixels of the photo, origin top-left",
+            },
+        })!.AsObject();
+        var moveRequired = new List<string> { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box" };
+        if (multiPage)
+        {
+            moveProperties["page"] = JsonSerializer.SerializeToNode(new
+            {
+                type = "integer",
+                description = "number of the photo (page) this entry is written on, 1 = first photo",
+            });
+            moveRequired.Add("page");
+        }
         return new Dictionary<string, JsonElement>
         {
             ["type"] = JsonSerializer.SerializeToElement("object"),
@@ -341,23 +415,8 @@ public static class ScoresheetPrompt
                     items = new
                     {
                         type = "object",
-                        properties = new
-                        {
-                            moveNumber = new { type = "integer" },
-                            color = new { type = "string", @enum = new[] { "w", "b" } },
-                            written = str,
-                            san = str,
-                            alternatives = new { type = "array", items = str },
-                            confidence = new { type = "string", @enum = new[] { "high", "medium", "low" } },
-                            note = str,
-                            box = new
-                            {
-                                type = "array",
-                                items = new { type = "integer" },
-                                description = "[x0, y0, x1, y1] around the handwriting of this entry, in pixels of the photo, origin top-left",
-                            },
-                        },
-                        required = new[] { "moveNumber", "color", "written", "san", "alternatives", "confidence", "note", "box" },
+                        properties = moveProperties,
+                        required = moveRequired,
                         additionalProperties = false,
                     },
                 },

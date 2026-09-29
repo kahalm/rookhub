@@ -116,7 +116,7 @@ describe('ClubScanPageComponent', () => {
     fixture.detectChanges();
     const dlg = el.querySelector('dialog.done-dlg') as HTMLDialogElement;
     expect(dlg.open).toBeFalse();
-    expect(fixture.componentInstance.s.mark()).toEqual({ left: 10, top: 30, width: 30, height: 4, uncertain: true });
+    expect(fixture.componentInstance.s.mark()).toEqual({ left: 10, top: 30, width: 30, height: 4, page: 1, uncertain: true });
     (Array.from(el.querySelectorAll('.scan-check button')).find(b => b.textContent?.trim() === 'Stimmt so') as HTMLButtonElement).click();
     fixture.detectChanges();
     flushMicrotasks();

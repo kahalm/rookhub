@@ -54,7 +54,14 @@ public sealed class ScoresheetReader
     /// Nachdenken (<see cref="ScoresheetReadMode.Transcribe"/>), und dabei bleibt es auch für die Nachfragen — ein
     /// weiterer Aufruf mit Nachdenken würde sich an derselben Partie wieder festdenken.
     /// </remarks>
-    public async Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
+    public Task<ReadOutcome> ReadAsync(byte[] jpeg, string language, CancellationToken ct,
+        Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null,
+        int maxRounds = MaxRounds, ScoresheetReadMode startMode = ScoresheetReadMode.Full)
+        => ReadPagesAsync(new[] { jpeg }, language, ct, beforeCall, afterCall, maxRounds, startMode);
+
+    /// <summary>Wie <see cref="ReadAsync"/>, für ein Formular über mehrere Fotos (in Seitenreihenfolge, 0.600.0): EIN
+    /// Aufruf mit allen Seiten, die Züge kommen als eine Liste, jeder mit seiner Seite.</summary>
+    public async Task<ReadOutcome> ReadPagesAsync(IReadOnlyList<byte[]> pages, string language, CancellationToken ct,
         Func<CancellationToken, Task<CallAllowance>>? beforeCall = null, Func<int, int, CancellationToken, Task>? afterCall = null,
         int maxRounds = MaxRounds, ScoresheetReadMode startMode = ScoresheetReadMode.Full)
     {
@@ -62,16 +69,18 @@ public sealed class ScoresheetReader
         var mode = startMode;
         var rounds = Math.Clamp(maxRounds, 1, MaxRounds);
         string? previousJson = null;
-        var photoSize = ScoresheetImage.Size(jpeg);
+        // Maße je Seite — fehlt eines, nennt der Auftrag keine (die Kästen wären dann nicht umzurechnen).
+        var measured = pages.Select(ScoresheetImage.Size).ToList();
+        var pageSizes = measured.All(s => s != null) ? measured.Select(s => s!.Value).ToList() : new List<(int Width, int Height)>();
         ScoresheetTranscription? previous = null;
         ScoresheetResolution? previousResolution = null;
         for (var round = 1; round <= rounds; round++)
         {
             var instructions = round == 1 || previous == null || previousResolution?.StuckAt is not int stuck
-                ? ScoresheetPrompt.FirstRead(language, photoSize)
+                ? ScoresheetPrompt.FirstRead(language, pageSizes, pages.Count)
                 : ScoresheetPrompt.Repair(language, previousJson!, previousResolution.Plies.Select(p => p.San).ToList(),
                     stuck, previous.Moves[stuck].ToScanned(), previousResolution.StuckFen!,
-                    LegalMoves(previousResolution.StuckFen!), photoSize);
+                    LegalMoves(previousResolution.StuckFen!), pageSizes, pages.Count);
 
             var allowance = beforeCall != null
                 ? await beforeCall(ct)
@@ -84,7 +93,7 @@ public sealed class ScoresheetReader
             var maxTokens = Math.Min(allowance.MaxTokens,
                 mode == ScoresheetReadMode.Full ? FullCallMaxTokens : TranscribeCallMaxTokens);
             InFlightMaxTokens = maxTokens;
-            var answer = await _vision.ReadAsync(jpeg, instructions, maxTokens, ct, mode);
+            var answer = await _vision.ReadPagesAsync(pages, instructions, maxTokens, ct, mode);
             InFlightMaxTokens = null;
             if (afterCall != null && (answer.InputTokens > 0 || answer.OutputTokens > 0))
                 await afterCall(answer.InputTokens, answer.OutputTokens, ct);
@@ -103,7 +112,7 @@ public sealed class ScoresheetReader
 
             // Gespeichert wird die Antwort samt den Maßen des Bildes, in dessen Pixeln die Kästen stehen — ohne sie
             // ließe sich später nicht auf das Foto umrechnen. Die Nachfrage bekommt die unveränderte Antwort.
-            var storedJson = ScoresheetTranscription.WithImageSize(answer.Json, photoSize);
+            var storedJson = ScoresheetTranscription.WithImageSize(answer.Json, pageSizes);
             var transcription = ScoresheetTranscription.Parse(storedJson);
             if (transcription == null)
             {

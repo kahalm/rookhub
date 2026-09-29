@@ -4138,13 +4138,19 @@
       "noFile": "Najprije odaberi fotografiju.",
       "userDailyBudget": "Tvoj budžet za čitanje za danas je potrošen — pokušaj sutra.",
       "userMonthlyBudget": "Tvoj budžet za čitanje za zadnjih 30 dana je potrošen.",
-      "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen."
+      "globalBudget": "Čitanje je za danas pauzirano — budžet za sve korisnike je potrošen.",
+      "tooManyPages": "Najviše tri fotografije po obrascu."
     },
     "budget": "iskorišteno {{percent}} % tvog budžeta za čitanje",
     "side": "Igrao sam",
     "sideWhite": "Bijeli",
     "sideBlack": "Crni",
     "sideAuto": "automatski",
-    "nextAt": "Danas si već učitao jedan — sljedeći obrazac moguć je od {{time}}."
+    "nextAt": "Danas si već učitao jedan — sljedeći obrazac moguć je od {{time}}.",
+    "takePage": "Snimi stranicu {{n}}",
+    "choosePage": "Odaberi stranicu {{n}}",
+    "page": "Stranica {{n}}",
+    "removePage": "Ukloni fotografiju",
+    "morePages": "Nastavlja li se partija na drugom listu? Dodaj sljedeću stranicu — do {{max}} stranice, pravilnim redoslijedom."
   }
 }

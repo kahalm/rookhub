@@ -85,6 +85,16 @@ public class ScoresheetScanServiceTests : IDisposable
         /// <summary>Hängen, bis abgebrochen wird — ein Aufruf, der den Laufzeit-Deckel reißt.</summary>
         public bool Hang { get; set; }
 
+        /// <summary>Je Aufruf: wie viele Fotos kamen (mehrseitiges Formular).</summary>
+        public List<int> PageCounts { get; } = new();
+
+        public Task<ScoresheetVisionResult> ReadPagesAsync(IReadOnlyList<byte[]> pages, string instructions, int maxTokens,
+            CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        {
+            PageCounts.Add(pages.Count);
+            return ReadAsync(pages[0], instructions, maxTokens, ct, mode);
+        }
+
         public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
             CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
         {
@@ -96,9 +106,9 @@ public class ScoresheetScanServiceTests : IDisposable
         }
     }
 
-    private static byte[] Jpeg()
+    private static byte[] Jpeg(int width = 40, int height = 30)
     {
-        using var bmp = new SKBitmap(40, 30);
+        using var bmp = new SKBitmap(width, height);
         using var canvas = new SKCanvas(bmp);
         canvas.Clear(SKColors.White);
         using var img = SKImage.FromBitmap(bmp);
@@ -342,6 +352,107 @@ public class ScoresheetScanServiceTests : IDisposable
         var stored = JsonNode.Parse((await _db.ScoresheetScans.SingleAsync()).TranscriptionJson!)!;
         Assert.Equal(40, (int)stored["imageWidth"]!);
         Assert.Equal(30, (int)stored["imageHeight"]!);
+    }
+
+    // ── Mehrere Seiten (0.600.0, Wunsch 2026-09-29: „2. Bild für 2. Seite von Partieformular (+ 3. Seite)") ──────────
+
+    /// <summary>Beide Fotos gehen in EINEN Aufruf, jeder Eintrag kennt seine Seite, und jeder Kasten wird in den Pixeln
+    /// SEINER Seite umgerechnet (Seite 1: 40×30, Seite 2: 80×50).</summary>
+    [Fact]
+    public async Task MultiPage_ReadsAllPhotosInOneCall_AndBoxesFollowTheirPage()
+    {
+        var u = await UserAsync();
+        var json = JsonNode.Parse(Answer(Written))!;
+        var moves = json["moves"]!.AsArray();
+        for (var i = 0; i < moves.Count; i++) moves[i]!["page"] = i < 40 ? 1 : 2;
+        moves[0]!["box"] = new JsonArray(4, 3, 8, 6);            // Seite 1 (40×30) → 100,100,200,200
+        moves[40]!["box"] = new JsonArray(8, 5, 16, 10);          // Seite 2 (80×50) → 100,100,200,200
+        moves[41]!["page"] = 7;                                   // Unsinn → auf die letzte Seite geklemmt
+        _vision.Answers.Enqueue(new(json.ToJsonString(), null));
+
+        var (created, reason) = await _service.CreateAsync(u.Id, new[]
+        {
+            new ScoresheetUpload(Jpeg(), "image/jpeg", "blatt1.jpg"),
+            new ScoresheetUpload(Jpeg(80, 50), "image/jpeg", "blatt2.jpg"),
+        }, "de");
+        Assert.Null(reason);
+        Assert.Equal(2, created!.PageCount);
+        Assert.Equal(created.Id, await _service.ClaimNextAsync(default));
+        await _service.ProcessAsync(created.Id, default);
+
+        Assert.Equal(new[] { 2 }, _vision.PageCounts);
+        Assert.Contains("continues over 2 photos", _vision.Instructions[0]);
+        Assert.Contains("page 2 is 80 × 50 pixels", _vision.Instructions[0]);
+        var scan = (await _service.GetAsync(u.Id, created.Id))!;
+        Assert.Equal("done", scan.Status);
+        var state = (await _service.EditStateAsync(u.Id, scan.SavedGameId!.Value))!;
+        Assert.Equal(2, state.PageCount);
+        Assert.Equal(state.Written.Count, state.Pages.Count);
+        Assert.Equal(1, state.Pages[39]);
+        Assert.Equal(2, state.Pages[40]);
+        Assert.Equal(2, state.Pages[41]);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[0]);
+        Assert.Equal(new[] { 100, 100, 200, 200 }, state.Boxes[40]);
+
+        // Das Foto je Seite; eine Seite, die es nicht gibt, ist keine.
+        var page2 = (await _service.PhotoForGameAsync(u.Id, scan.SavedGameId.Value, 2))!.Value;
+        Assert.Equal("blatt2.jpg", page2.FileName);
+        Assert.Equal(2, page2.PageCount);
+        Assert.Null(await _service.PhotoForGameAsync(u.Id, scan.SavedGameId.Value, 3));
+        // Der Foto-Dialog blättert über den Header — ohne die Einlesung abzufragen.
+        var ctrl = Controller(u.Id);
+        Assert.IsType<FileContentResult>(await ctrl.Photo(scan.SavedGameId.Value, page: 2));
+        Assert.Equal("2", ctrl.Response.Headers["X-Page-Count"].ToString());
+
+        // Partie löschen: alle Fotos gehen, die Einlesung bleibt fürs Kontingent.
+        Assert.True(await _games.DeleteAsync(u.Id, scan.SavedGameId.Value));
+        _db.ChangeTracker.Clear();
+        Assert.Empty(_db.ScoresheetScanPages);
+        Assert.Empty((await _db.ScoresheetScans.SingleAsync()).Photo);
+    }
+
+    [Fact]
+    public async Task MultiPage_AtMostThreePhotos_AndOneReadingForTheDay()
+    {
+        var u = await UserAsync();
+        var four = Enumerable.Range(1, 4).Select(i => new ScoresheetUpload(Jpeg(), "image/jpeg", $"{i}.jpg")).ToList();
+        Assert.Equal("tooManyPages", (await _service.CreateAsync(u.Id, four, "de")).Reason);
+        Assert.Null((await _service.CreateAsync(u.Id, four.Take(3).ToList(), "de")).Reason);
+        Assert.Equal(2, await _db.ScoresheetScanPages.CountAsync());
+        // Drei Seiten sind EINE Einlesung — die des Tages ist damit verbraucht.
+        Assert.Equal("dailyLimit", (await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    [Fact]
+    public void MultiPage_PromptAndSchema_OnlyChangeWithMoreThanOnePage()
+    {
+        // Eine Seite: wörtlich der bisherige Auftrag und das bisherige Schema (die Referenz-Lesungen hängen daran).
+        Assert.Equal(ScoresheetPrompt.FirstRead("de", (1500, 2000)), ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000) }, 1));
+        Assert.DoesNotContain("page", ScoresheetPrompt.FirstRead("de", (1500, 2000)));
+        var single = ScoresheetPrompt.Schema()["properties"].GetProperty("moves").GetProperty("items");
+        Assert.False(single.GetProperty("properties").TryGetProperty("page", out _));
+
+        var multi = ScoresheetPrompt.Schema(multiPage: true)["properties"].GetProperty("moves").GetProperty("items");
+        Assert.Equal("integer", multi.GetProperty("properties").GetProperty("page").GetProperty("type").GetString());
+        Assert.Contains("page", multi.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+        var prompt = ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000), (1500, 1900) }, 2);
+        Assert.Contains("ONE game continues over 2 photos", prompt);
+        Assert.Contains("page 1 is 1500 × 2000 pixels, page 2 is 1500 × 1900 pixels", prompt);
+        Assert.Contains("\"page\"", prompt);
+        var repair = ScoresheetPrompt.Repair("de", "{}", new[] { "e4" }, 1, new ScannedPly("e5", "e5"),
+            "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", new[] { "e5" }, new[] { (1500, 2000), (1500, 1900) }, 2);
+        Assert.Contains("ONE game continues over 2 photos", repair);
+    }
+
+    [Fact]
+    public void ClaudeContent_LabelsEachPage_OnlyWithMoreThanOnePhoto()
+    {
+        var one = ClaudeScoresheetVisionClient.Content(new[] { new byte[] { 1 } }, "read");
+        Assert.Equal(2, one.Count);                              // Foto, Auftrag — wie bisher
+        var two = ClaudeScoresheetVisionClient.Content(new[] { new byte[] { 1 }, new byte[] { 2 } }, "read");
+        Assert.Equal(5, two.Count);                              // „Page 1:", Foto, „Page 2:", Foto, Auftrag
+        Assert.True(two[0].TryPickText(out var label) && label.Text == "Page 1:");
+        Assert.True(two[2].TryPickText(out var label2) && label2.Text == "Page 2:");
     }
 
     /// <summary>Einlesungen von 0.550.0 haben keine Bildmaße: 0..1000 wird übernommen — greift aber ein Kasten über

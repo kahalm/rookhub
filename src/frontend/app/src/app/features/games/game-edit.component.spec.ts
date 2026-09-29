@@ -182,6 +182,42 @@ describe('GameEditComponent', () => {
     expect(c.crop()?.uncertain).toBeFalse();
   });
 
+  // Wunsch 2026-09-29: Formular über mehrere Blätter. Jeder Eintrag kennt seine Seite; der Ausschnitt kommt aus DIESER
+  // Seite, und die Seite oben blättert mit dem gewählten Zug.
+  it('a scanned game over two sheets: loads both photos, the crop and the shown page follow the move', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail({ source: 'scoresheet', scanId: 9 }));
+    http.expectOne('/api/games/5/photo').flush(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }));
+    http.expectOne('/api/games/5/scoresheet').flush({
+      scanId: 9, notationLanguage: 'de', written: ['e4', 'e5', 'Sf3', 'Sc6', 'Lb5'], unresolved: [],
+      pageCount: 2, pages: [1, 1, 1, 2, 2],
+      boxes: [[100, 50, 180, 80], [400, 50, 470, 80], [100, 90, 180, 120], [100, 50, 180, 80], [400, 50, 470, 80]],
+      plies: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'].map((san, i) => ({
+        w: i, written: san, san, uci: '', match: i === 3 ? 'fuzzy' : 'written', uncertain: i === 3,
+      })),
+    });
+    http.expectOne('/api/games/5/photo?page=2').flush(new Blob([new Uint8Array([2])], { type: 'image/jpeg' }));
+    // Keine echten Pixel im Test — die Maße melden sonst die geladenen Bilder.
+    c.session.setPageSize(1, 1500, 2000);
+    c.session.setPageSize(2, 1500, 1800);
+    fixture.detectChanges();
+
+    expect(c.pageCount()).toBe(2);
+    expect(c.cursor()).toBe(3);                 // die unsichere Stelle steht auf Seite 2 …
+    expect(c.crop()?.page).toBe(2);
+    expect(c.shownPage()).toBe(2);              // … also blättert die Seite oben dorthin
+    expect(c.photoUrl()).toBe(c.pageUrl(2));
+    const cropImg = fixture.nativeElement.querySelector('.crop-frame img') as HTMLImageElement;
+    expect(cropImg.getAttribute('src')).toBe(c.pageUrl(2));
+    expect(fixture.nativeElement.querySelector('.pager')).not.toBeNull();
+
+    c.go(0);                                    // zurück auf Seite 1
+    fixture.detectChanges();
+    expect(c.crop()?.page).toBe(1);
+    expect(c.shownPage()).toBe(1);
+  });
+
   // Gewünscht 2026-09-27: nach dem Bestätigen/Wählen einer Lesart gleich zur nächsten unsicheren Stelle.
   it('a scanned game: choosing a reading jumps to the next uncertain move, clicking the chosen one just confirms', async () => {
     const { fixture, c, http } = await setup();

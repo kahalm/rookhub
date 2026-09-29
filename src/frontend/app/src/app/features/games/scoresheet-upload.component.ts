@@ -28,6 +28,9 @@ export const SCORESHEET_LANG_KEY = 'rookhub_scoresheet_lang';
 /** Gemerkte eigene Seite beim Einlesen. */
 export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
 
+/** So viele Fotos darf ein Formular haben — Spiegel von `ScoresheetScanService.MaxPages`. */
+export const MAX_PAGES = 3;
+
 /**
  * „Partieformular einlesen" (0.529.0): Foto aufnehmen oder auswählen, Notationssprache wählen, einlesen.
  * Claude liest im Hintergrund; die Seite fragt nach, bis die Partie da ist, und führt dann zur Korrektur
@@ -62,16 +65,36 @@ export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
                    deshalb daneben die gewöhnliche Dateiauswahl. -->
               <input #camera type="file" accept="image/*" capture="environment" hidden (change)="onFile($event)" />
               <input #picker type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onFile($event)" />
-              <button mat-stroked-button type="button" (click)="camera.click()" [disabled]="uploading()">
-                <mat-icon>photo_camera</mat-icon> {{ 'scoresheet.takePhoto' | translate }}
-              </button>
-              <button mat-stroked-button type="button" (click)="picker.click()" [disabled]="uploading()">
-                <mat-icon>image</mat-icon> {{ 'scoresheet.choosePhoto' | translate }}
-              </button>
+              <!-- Ein Formular über mehrere Blätter (0.600.0): nach der ersten Seite nehmen dieselben Knöpfe die nächste
+                   dazu, bis MAX_PAGES. -->
+              @if (pages().length < maxPages) {
+                <button mat-stroked-button type="button" (click)="camera.click()" [disabled]="uploading()">
+                  <mat-icon>photo_camera</mat-icon>
+                  {{ pages().length ? ('scoresheet.takePage' | translate: { n: pages().length + 1 }) : ('scoresheet.takePhoto' | translate) }}
+                </button>
+                <button mat-stroked-button type="button" (click)="picker.click()" [disabled]="uploading()">
+                  <mat-icon>image</mat-icon>
+                  {{ pages().length ? ('scoresheet.choosePage' | translate: { n: pages().length + 1 }) : ('scoresheet.choosePhoto' | translate) }}
+                </button>
+              }
             </div>
 
-            @if (preview(); as src) {
-              <img class="preview" [src]="src" [alt]="'scoresheet.previewAlt' | translate" />
+            @if (pages().length) {
+              <div class="pages" [class.multi]="pages().length > 1">
+                @for (p of pages(); track p.url; let i = $index) {
+                  <figure class="page">
+                    <img class="preview" [src]="p.url" [alt]="'scoresheet.previewAlt' | translate" />
+                    <figcaption>
+                      @if (pages().length > 1) { <span>{{ 'scoresheet.page' | translate: { n: i + 1 } }}</span> }
+                      <button mat-icon-button type="button" class="remove" (click)="removePage(i)" [disabled]="uploading()"
+                              [attr.aria-label]="'scoresheet.removePage' | translate" [title]="'scoresheet.removePage' | translate">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </figcaption>
+                  </figure>
+                }
+              </div>
+              @if (pages().length < maxPages) { <p class="more">{{ 'scoresheet.morePages' | translate: { max: maxPages } }}</p> }
             }
 
             <mat-form-field appearance="outline" class="lang">
@@ -96,7 +119,7 @@ export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
             </div>
 
             <div class="actions">
-              <button mat-flat-button color="primary" (click)="upload()" [disabled]="!file() || uploading() || !canRead()">
+              <button mat-flat-button color="primary" (click)="upload()" [disabled]="!pages().length || uploading() || !canRead()">
                 <mat-icon>{{ uploading() ? 'hourglass_top' : 'document_scanner' }}</mat-icon> {{ 'scoresheet.read' | translate }}
               </button>
               @if (!st.unlimited) {
@@ -195,6 +218,12 @@ export const SCORESHEET_SIDE_KEY = 'rookhub_scoresheet_side';
     .pick { display: flex; flex-wrap: wrap; gap: 8px; }
     .preview { max-width: 100%; max-height: 360px; object-fit: contain; align-self: center; border-radius: 4px;
       border: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+    .pages { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .page { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+    .pages.multi .page { flex: 1 1 0; max-width: 240px; }
+    .pages.multi .preview { max-height: 220px; }
+    .page figcaption { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
+    .more { margin: 0; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lang { width: 100%; max-width: 360px; }
     .pieces { opacity: 0.6; font-size: 0.85em; }
     .side { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
@@ -224,8 +253,9 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);
 
   readonly status = signal<ScoresheetStatus | null>(null);
-  readonly file = signal<File | null>(null);
-  readonly preview = signal<string | null>(null);
+  /** Die gewählten Fotos in Seitenreihenfolge, je mit Vorschau-Adresse (0.600.0: bis zu MAX_PAGES). */
+  readonly pages = signal<{ file: File; url: string }[]>([]);
+  readonly maxPages = MAX_PAGES;
   readonly uploading = signal(false);
   readonly error = signal<string | null>(null);
   readonly current = signal<ScoresheetScan | null>(null);
@@ -263,7 +293,7 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.revokePreview();
+    this.clearPages();
   }
 
   setSide(side: 'white' | 'black' | 'auto'): void {
@@ -279,23 +309,28 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     const input = event.target as HTMLInputElement;
     const f = input.files?.[0] ?? null;
     input.value = '';
-    if (!f) return;
+    if (!f || this.pages().length >= MAX_PAGES) return;
     this.error.set(null);
-    this.revokePreview();
-    this.file.set(f);
-    this.preview.set(URL.createObjectURL(f));
+    // Jedes weitere Foto ist die NÄCHSTE Seite — ein vertauschtes nimmt man heraus und fügt es neu an.
+    this.pages.update(list => [...list, { file: f, url: URL.createObjectURL(f) }]);
+  }
+
+  removePage(i: number): void {
+    const list = this.pages();
+    if (i < 0 || i >= list.length) return;
+    URL.revokeObjectURL(list[i].url);
+    this.pages.set(list.filter((_, k) => k !== i));
   }
 
   upload(): void {
-    const f = this.file();
-    if (!f || this.uploading()) return;
+    const files = this.pages().map(p => p.file);
+    if (!files.length || this.uploading()) return;
     this.uploading.set(true);
     this.error.set(null);
-    this.service.upload(f, this.language, this.side).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.service.upload(files, this.language, this.side).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: scan => {
         this.uploading.set(false);
-        this.file.set(null);
-        this.revokePreview();
+        this.clearPages();
         this.follow(scan);
         this.loadStatus();
       },
@@ -359,9 +394,8 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
     });
   }
 
-  private revokePreview(): void {
-    const p = this.preview();
-    if (p) URL.revokeObjectURL(p);
-    this.preview.set(null);
+  private clearPages(): void {
+    for (const p of this.pages()) URL.revokeObjectURL(p.url);
+    this.pages.set([]);
   }
 }

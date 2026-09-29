@@ -49,7 +49,11 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
     /// <summary>Die letzte Rohantwort (Text des Modells) — fürs Testwerkzeug, das sie zum Nachsehen ablegt.</summary>
     public string? LastRaw { get; private set; }
 
-    public async Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+    public Task<ScoresheetVisionResult> ReadAsync(byte[] jpeg, string instructions, int maxTokens,
+        CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
+        => ReadPagesAsync(new[] { jpeg }, instructions, maxTokens, ct, mode);
+
+    public async Task<ScoresheetVisionResult> ReadPagesAsync(IReadOnlyList<byte[]> jpeg, string instructions, int maxTokens,
         CancellationToken ct = default, ScoresheetReadMode mode = ScoresheetReadMode.Full)
     {
         if (!IsConfigured) return new(null, "notConfigured");
@@ -81,8 +85,16 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
             : new(json, null, reply.InputTokens, reply.OutputTokens);
     }
 
-    private JsonObject Body(byte[] jpeg, string instructions, int maxTokens, bool useSchema, string system, bool noThinking)
+    private JsonObject Body(IReadOnlyList<byte[]> jpeg, string instructions, int maxTokens, bool useSchema, string system, bool noThinking)
     {
+        // Mehrere Seiten: „Page n:" vor jedem Bild, wie beim Claude-Leser (ScoresheetVisionClient.Content).
+        var content = new JsonArray();
+        for (var i = 0; i < jpeg.Count; i++)
+        {
+            if (jpeg.Count > 1) content.Add(new JsonObject { ["type"] = "text", ["text"] = $"Page {i + 1}:" });
+            content.Add(OpenAiChat.ImagePart(jpeg[i]));
+        }
+        content.Add(new JsonObject { ["type"] = "text", ["text"] = instructions });
         var body = new JsonObject
         {
             ["model"] = _settings.Model,
@@ -94,11 +106,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
                 new JsonObject
                 {
                     ["role"] = "user",
-                    ["content"] = new JsonArray
-                    {
-                        OpenAiChat.ImagePart(jpeg),
-                        new JsonObject { ["type"] = "text", ["text"] = instructions },
-                    },
+                    ["content"] = content,
                 },
             },
         };
@@ -118,7 +126,7 @@ public sealed class OpenAiScoresheetVisionClient : IScoresheetVisionClient
                 {
                     ["name"] = "scoresheet",
                     ["strict"] = true,
-                    ["schema"] = JsonSerializer.SerializeToNode(ScoresheetPrompt.Schema()),
+                    ["schema"] = JsonSerializer.SerializeToNode(ScoresheetPrompt.Schema(multiPage: jpeg.Count > 1)),
                 },
             };
         return body;

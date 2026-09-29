@@ -410,6 +410,27 @@ public class DeploymentConfigTests
         Assert.True(nginxBytes >= limits.Max(), $"nginx erlaubt {nginxBytes} Bytes, die API bis {limits.Max()}");
     }
 
+    /// <summary>Mehrseitige Formulare (0.600.0): bis zu drei Fotos in einer Anfrage. Die generische /api/-Location
+    /// deckelt auf 15 MB — die Formular-Location muss mindestens so viel durchlassen, wie der Upload annimmt.</summary>
+    [Fact]
+    public void ScoresheetLocation_AllowsTheUploadRequestLimit()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location \^~ /api/scoresheets \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location ^~ /api/scoresheets fehlt in nginx.conf");
+        var size = Regex.Match(loc.Groups["body"].Value, @"client_max_body_size (?<n>\d+)M;");
+        Assert.True(size.Success, "client_max_body_size (in M) fehlt in der Formular-Location");
+        Assert.Contains("proxy_pass http://$rookhub_sheet_api$request_uri;", loc.Groups["body"].Value);
+        var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024 * 1024;
+
+        var upload = typeof(RookHub.Api.Controllers.ScoresheetsController).GetMethod("Upload")!;
+        var limit = upload.GetCustomAttributesData()
+            .Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute));
+        var apiBytes = Convert.ToInt64(limit.ConstructorArguments[0].Value);
+        Assert.True(nginxBytes >= apiBytes, $"nginx erlaubt {nginxBytes} Bytes, die API bis {apiBytes}");
+        Assert.True(apiBytes >= 3L * 15 * 1024 * 1024, "drei Fotos zu je 15 MB sollen durchgehen");
+    }
+
     [Fact]
     public void RateLimitScale_IsRaisedOnlyInTheE2eStack()
     {

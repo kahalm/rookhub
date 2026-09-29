@@ -44,6 +44,8 @@ public class GameUpdateDto
 public class ScoresheetScanDto
 {
     public int Id { get; set; }
+    /// <summary>Über wie viele Fotos das Formular geht.</summary>
+    public int PageCount { get; set; } = 1;
     /// <summary><c>pending</c>/<c>running</c>/<c>done</c>/<c>failed</c>.</summary>
     public string Status { get; set; } = string.Empty;
     /// <summary>Grund bei <c>failed</c>: <c>unreadable</c>, <c>noMoves</c>, <c>refused</c>, <c>notConfigured</c>, <c>failed</c>.</summary>
@@ -103,6 +105,11 @@ public class ScoresheetEditStateDto
     /// [x0, y0, x1, y1] in 0..1000 des aufrechten Bildes; <c>null</c> = unbekannt (ältere Einlesung, kaputter Kasten).
     /// Die Korrekturseite zeigt daraus den Ausschnitt des Eintrags unter dem Foto.</summary>
     public List<int[]?> Boxes { get; set; } = new();
+    /// <summary>Über wie viele Fotos das Formular geht (0.600.0); <c>GET …/photo?page=n</c> liefert Seite n.</summary>
+    public int PageCount { get; set; } = 1;
+    /// <summary>Je Formular-Eintrag (Index wie <see cref="Written"/>) seine Seite, ab 1 — die Kästen stehen in 0..1000
+    /// DIESER Seite.</summary>
+    public List<int> Pages { get; set; } = new();
     /// <summary>Stand je Halbzug der gespeicherten Partie.</summary>
     public List<ScoresheetPly> Plies { get; set; } = new();
     /// <summary>Einträge am Ende ohne legalen Zug.</summary>
@@ -137,6 +144,9 @@ public class LeagueScanStateDto
     public string NotationLanguage { get; set; } = "auto";
     public List<string> Written { get; set; } = new();
     public List<int[]?> Boxes { get; set; } = new();
+    /// <summary>Wie <see cref="ScoresheetEditStateDto.PageCount"/>/<see cref="ScoresheetEditStateDto.Pages"/>.</summary>
+    public int PageCount { get; set; } = 1;
+    public List<int> Pages { get; set; } = new();
     public List<ScoresheetPly> Plies { get; set; } = new();
     public List<string> Unresolved { get; set; } = new();
     public int? UnresolvedFrom { get; set; }

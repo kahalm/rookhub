@@ -303,8 +303,10 @@ public class ProfileService
         // geteilte Linien (/l/{token}) — die Share-Links müssen mit dem Konto verschwinden.
         // Formular-Fotos zuerst (sie hängen an den Partien, tragen aber auch Namen und Handschrift — und eine
         // gescheiterte Einlesung hat gar keine Partie). Ohne das Foto zu laden: es ist das Schwergewicht der Zeile.
-        ScoresheetScanService.RemoveWithoutLoading(_db,
-            await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.UserId == userId)));
+        var scanKeys = await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.UserId == userId));
+        ScoresheetScanService.RemovePagesWithoutLoading(_db,
+            await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
+        ScoresheetScanService.RemoveWithoutLoading(_db, scanKeys);
         _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());
         // „Partie rekonstruieren": erst die Teile, dann die Kopfzeilen — die Löschung anonymisiert
         // nur die Nutzerzeile, es feuert also kein Cascade-FK (und InMemory cascadet ohnehin nicht).

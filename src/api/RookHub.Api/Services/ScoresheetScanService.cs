@@ -33,8 +33,16 @@ public class ScoresheetScanService
     private readonly ScoresheetReader _reader;
     private readonly ScoresheetReadMode _startMode;
 
-    /// <summary>Größter angenommener Upload.</summary>
+    /// <summary>Größter angenommener Upload (je Foto).</summary>
     public const int MaxUploadBytes = 30 * 1024 * 1024;
+
+    /// <summary>So viele Fotos darf ein Formular haben (0.600.0, Wunsch 2026-09-29: „2. Bild für die 2. Seite, + 3. Seite") —
+    /// eine lange Partie geht über mehrere Blätter. Gelesen wird in EINEM Aufruf, es bleibt EINE Einlesung (Tageszahl).</summary>
+    public const int MaxPages = 3;
+
+    /// <summary>Größte Anfrage beim Hochladen (alle Fotos zusammen) — so viel lässt auch der Frontend-nginx für
+    /// <c>/api/scoresheets</c> durch (<c>DeploymentConfigTests</c>).</summary>
+    public const int MaxUploadRequestBytes = 64 * 1024 * 1024;
 
     /// <summary>Größer wird ein Foto nicht abgelegt — darüber wird es verkleinert gespeichert (3000 px).</summary>
     public const int MaxStoredBytes = 12 * 1024 * 1024;
@@ -186,17 +194,29 @@ public class ScoresheetScanService
     /// <c>unsupportedImage</c>, <c>tooLarge</c>, <c>dailyLimit</c>, <c>tooManyOpen</c>, <c>invalidLanguage</c>).</summary>
     public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, byte[] data, string? contentType,
         string? fileName, string? language, string? ownerSide = null, string? purpose = null) =>
-        await CreateCoreAsync(userId, data, contentType, fileName, language, ownerSide, purpose, null, null);
+        await CreateCoreAsync(userId, new[] { new ScoresheetUpload(data, contentType, fileName) }, language, ownerSide,
+            purpose, null, null);
 
-    private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, byte[] data, string? contentType,
-        string? fileName, string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash)
+    /// <summary>Ein Formular über mehrere Fotos (in Seitenreihenfolge, höchstens <see cref="MaxPages"/>) — EINE Einlesung.
+    /// Zusätzlicher Absagegrund <c>tooManyPages</c>.</summary>
+    public async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateAsync(int userId, IReadOnlyList<ScoresheetUpload> pages,
+        string? language, string? ownerSide = null, string? purpose = null) =>
+        await CreateCoreAsync(userId, pages, language, ownerSide, purpose, null, null);
+
+    private async Task<(ScoresheetScanDto? Scan, string? Reason)> CreateCoreAsync(int? userId, IReadOnlyList<ScoresheetUpload> pages,
+        string? language, string? ownerSide, string? purpose, string? accessKey, string? ipHash)
     {
         if (!_vision.IsConfigured) return (null, "notConfigured");
         var lang = string.IsNullOrWhiteSpace(language) ? "auto" : language.Trim().ToLowerInvariant();
         if (!ScoresheetNotation.IsKnown(lang)) return (null, "invalidLanguage");
-        if (data.Length == 0 || data.Length > MaxUploadBytes) return (null, "tooLarge");
-        if (contentType != null && !ScoresheetImage.AcceptedTypes.Contains(contentType)) return (null, "unsupportedImage");
-        if (!ScoresheetImage.CanDecode(data)) return (null, "unsupportedImage");
+        if (pages.Count == 0) return (null, "noFile");
+        if (pages.Count > MaxPages) return (null, "tooManyPages");
+        foreach (var page in pages)
+        {
+            if (page.Data.Length == 0 || page.Data.Length > MaxUploadBytes) return (null, "tooLarge");
+            if (page.ContentType != null && !ScoresheetImage.AcceptedTypes.Contains(page.ContentType)) return (null, "unsupportedImage");
+            if (!ScoresheetImage.CanDecode(page.Data)) return (null, "unsupportedImage");
+        }
 
         purpose = CleanPurpose(purpose);
         var (today, month, global, admin) = await SpentAsync(userId);
@@ -211,13 +231,18 @@ public class ScoresheetScanService
         }
         if (_budget.Check(today, month, global, admin) is { } blocked) return (null, blocked);
 
-        var photo = data;
-        var type = contentType ?? "image/jpeg";
-        if (photo.Length > MaxStoredBytes)
+        var stored = new List<(byte[] Photo, string Type)>();
+        foreach (var page in pages)
         {
-            photo = ScoresheetImage.Prepare(data, StoredEdge, 90) ?? data;
-            type = "image/jpeg";
-            if (photo.Length > MaxStoredBytes) return (null, "tooLarge");
+            var photo = page.Data;
+            var type = page.ContentType ?? "image/jpeg";
+            if (photo.Length > MaxStoredBytes)
+            {
+                photo = ScoresheetImage.Prepare(page.Data, StoredEdge, 90) ?? page.Data;
+                type = "image/jpeg";
+                if (photo.Length > MaxStoredBytes) return (null, "tooLarge");
+            }
+            stored.Add((photo, type));
         }
 
         var scan = new ScoresheetScan
@@ -225,9 +250,14 @@ public class ScoresheetScanService
             UserId = userId,
             AccessKey = accessKey,
             AnonIpHash = ipHash,
-            Photo = photo,
-            ContentType = type,
-            FileName = CleanFileName(fileName),
+            Photo = stored[0].Photo,
+            ContentType = stored[0].Type,
+            FileName = CleanFileName(pages[0].FileName),
+            PageCount = pages.Count,
+            Pages = stored.Skip(1).Select((p, i) => new ScoresheetScanPage
+            {
+                Page = i + 2, Photo = p.Photo, ContentType = p.Type, FileName = CleanFileName(pages[i + 1].FileName),
+            }).ToList(),
             NotationLanguage = lang,
             OwnerSide = ownerSide is "white" or "black" ? ownerSide : "auto",
             Purpose = purpose,
@@ -236,8 +266,8 @@ public class ScoresheetScanService
         };
         _db.ScoresheetScans.Add(scan);
         await _db.SaveChangesAsync();
-        _logger.LogInformation("Formular-Einlesung {ScanId} von User {UserId} angenommen ({Bytes} Bytes, Sprache {Language})",
-            scan.Id, userId?.ToString() ?? "ohne Konto", photo.Length, lang);
+        _logger.LogInformation("Formular-Einlesung {ScanId} von User {UserId} angenommen ({Pages} Seite(n), {Bytes} Bytes, Sprache {Language})",
+            scan.Id, userId?.ToString() ?? "ohne Konto", pages.Count, stored.Sum(p => p.Photo.Length), lang);
         return (ToDto(scan), null);
     }
 
@@ -271,19 +301,27 @@ public class ScoresheetScanService
         Id = s.Id, UserId = s.UserId, AccessKey = s.AccessKey, SavedGameId = s.SavedGameId, ContentType = s.ContentType, FileName = s.FileName,
         NotationLanguage = s.NotationLanguage, OwnerSide = s.OwnerSide, Purpose = s.Purpose, Status = s.Status, Error = s.Error, ResolutionJson = s.ResolutionJson,
         Model = s.Model, Attempts = s.Attempts, Rounds = s.Rounds, CreatedAt = s.CreatedAt, StartedAt = s.StartedAt,
-        FinishedAt = s.FinishedAt,
+        FinishedAt = s.FinishedAt, PageCount = s.PageCount,
     });
 
-    /// <summary>Das Foto einer eigenen Partie; <c>null</c>, wenn es keins gibt oder die Partie fremd ist.</summary>
-    public async Task<(byte[] Data, string ContentType, string FileName)?> PhotoForGameAsync(int userId, int gameId)
+    /// <summary>Das Foto einer eigenen Partie (Seite <paramref name="page"/>, ab 1); <c>null</c>, wenn es keins gibt, die
+    /// Seite fehlt oder die Partie fremd ist.</summary>
+    public async Task<(byte[] Data, string ContentType, string FileName, int PageCount)?> PhotoForGameAsync(int userId, int gameId,
+        int page = 1)
     {
-        var p = await _db.ScoresheetScans.AsNoTracking()
-            .Where(s => s.SavedGameId == gameId && s.UserId == userId)
-            .Select(s => new { s.Photo, s.ContentType, s.FileName, s.Id })
-            .FirstOrDefaultAsync();
-        if (p == null) return null;
+        var head = await _db.ScoresheetScans.AsNoTracking()
+            .Where(s => s.SavedGameId == gameId && s.UserId == userId).Select(s => new { s.Id, s.PageCount }).FirstOrDefaultAsync();
+        if (head == null) return null;
+        var id = head.Id;
+        var p = page <= 1
+            ? await _db.ScoresheetScans.AsNoTracking().Where(s => s.Id == id)
+                .Select(s => new { s.Photo, s.ContentType, s.FileName }).FirstOrDefaultAsync()
+            : await _db.ScoresheetScanPages.AsNoTracking().Where(x => x.ScoresheetScanId == id && x.Page == page)
+                .Select(x => new { x.Photo, x.ContentType, x.FileName }).FirstOrDefaultAsync();
+        if (p == null || p.Photo.Length == 0) return null;
         var ext = p.ContentType switch { "image/png" => ".png", "image/webp" => ".webp", _ => ".jpg" };
-        return (p.Photo, p.ContentType, p.FileName ?? $"partieformular-{p.Id}{ext}");
+        var suffix = page <= 1 ? "" : $"-{page}";
+        return (p.Photo, p.ContentType, p.FileName ?? $"partieformular-{id}{suffix}{ext}", Math.Max(1, head.PageCount));
     }
 
     // ── Lesen (Worker) ────────────────────────────────────────────────
@@ -337,13 +375,18 @@ public class ScoresheetScanService
         var scan = await _db.ScoresheetScans.FirstOrDefaultAsync(s => s.Id == scanId, ct);
         if (scan == null || scan.Status != ScoresheetScanStatus.Running) return;
 
-        var jpeg = ScoresheetImage.Prepare(scan.Photo, ModelEdge);
-        if (jpeg == null) { await FailAsync(scan, "unreadable", ct); return; }
+        // Alle Seiten in Reihenfolge, jede aufrecht und auf die Kante des Modells verkleinert.
+        var photos = new List<byte[]> { scan.Photo };
+        if (scan.PageCount > 1)
+            photos.AddRange(await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scan.Id)
+                .OrderBy(p => p.Page).Select(p => p.Photo).ToListAsync(ct));
+        var jpegs = photos.Select(p => ScoresheetImage.Prepare(p, ModelEdge)).ToList();
+        if (jpegs.Any(j => j == null)) { await FailAsync(scan, "unreadable", ct); return; }
 
         ScoresheetReader.ReadOutcome outcome;
         try
         {
-            outcome = await _reader.ReadAsync(jpeg, scan.NotationLanguage, ct,
+            outcome = await _reader.ReadPagesAsync(jpegs!, scan.NotationLanguage, ct,
                 beforeCall: token => AllowanceAsync(scan.UserId, token),
                 afterCall: async (input, output, token) =>
                 {
@@ -524,7 +567,7 @@ public class ScoresheetScanService
     {
         var scan = await _db.ScoresheetScans.AsNoTracking()
             .Where(s => s.SavedGameId == gameId && s.UserId == userId)
-            .Select(s => new { s.Id, s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson })
+            .Select(s => new { s.Id, s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson, s.PageCount })
             .FirstOrDefaultAsync();
         if (scan == null) return null;
         var stored = Deserialize(scan.ResolutionJson);
@@ -535,6 +578,8 @@ public class ScoresheetScanService
             NotationLanguage = stored?.Language ?? scan.NotationLanguage,
             Written = t?.Moves.Select(m => m.Written).ToList() ?? new(),
             Boxes = t?.NormalizedBoxes() ?? new(),
+            PageCount = Math.Max(1, scan.PageCount),
+            Pages = t?.EntryPages() ?? new(),
             Plies = stored?.Plies ?? new(),
             Unresolved = stored?.Unresolved ?? new(),
             UnresolvedFrom = stored?.UnresolvedFrom,
@@ -650,8 +695,8 @@ public class ScoresheetScanService
                 return (null, null, "tooManyOpen");
         }
         var key = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-        var (scan, reason) = await CreateCoreAsync(null, data, contentType, fileName, language, ownerSide,
-            ScoresheetScan.PurposeLeague, key, ipHash);
+        var (scan, reason) = await CreateCoreAsync(null, new[] { new ScoresheetUpload(data, contentType, fileName) },
+            language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
         if (scan != null) await ForgetOldIpHashesAsync();
         return (scan, scan == null ? null : key, reason);
     }
@@ -718,6 +763,8 @@ public class ScoresheetScanService
         dto.NotationLanguage = stored?.Language ?? scan.NotationLanguage;
         dto.Written = t?.Moves.Select(m => m.Written).ToList() ?? new();
         dto.Boxes = t?.NormalizedBoxes() ?? new();
+        dto.Pages = t?.EntryPages() ?? new();
+        dto.PageCount = Math.Max(1, scan.PageCount);
         dto.Plies = stored?.Plies ?? new();
         dto.Unresolved = stored?.Unresolved ?? new();
         dto.UnresolvedFrom = stored?.UnresolvedFrom;
@@ -770,6 +817,7 @@ public class ScoresheetScanService
         var key = await q.Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
         if (key == null) return false;
         DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
+        RemovePagesWithoutLoading(_db, await PageKeysAsync(_db, new[] { key.Id }));
         var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
         scan.FileName = DiscardedMark;
         scan.AccessKey = null;
@@ -855,6 +903,31 @@ public class ScoresheetScanService
         }
     }
 
+    /// <summary>Die Seiten 2+ dieser Einlesungen (Id, Einlesung) — für <see cref="RemovePagesWithoutLoading"/>.</summary>
+    public static async Task<List<(int Id, int ScanId)>> PageKeysAsync(AppDbContext db, IReadOnlyCollection<int> scanIds)
+    {
+        if (scanIds.Count == 0) return new();
+        var rows = await db.ScoresheetScanPages.Where(p => scanIds.Contains(p.ScoresheetScanId))
+            .Select(p => new { p.Id, p.ScoresheetScanId }).ToListAsync();
+        return rows.Select(x => (x.Id, x.ScoresheetScanId)).ToList();
+    }
+
+    /// <summary>Seiten 2+ löschen, ohne ihr Foto zu laden — mit der Partie (<see cref="DetachWithoutLoading"/> behält die
+    /// Einlesung, die Fotos gehen) und mit dem Konto. In MariaDB nähme sie beim Löschen der EINLESUNG auch der
+    /// Fremdschlüssel mit; die Partie zu löschen löscht die Einlesung aber nicht mehr. Der Platzhalter trägt seine
+    /// Einlesung, damit EF die Reihenfolge kennt.</summary>
+    public static void RemovePagesWithoutLoading(AppDbContext db, IEnumerable<(int Id, int ScanId)> pages)
+    {
+        foreach (var (id, scanId) in pages)
+        {
+            var tracked = db.ScoresheetScanPages.Local.FirstOrDefault(p => p.Id == id);
+            if (tracked != null) { db.ScoresheetScanPages.Remove(tracked); continue; }
+            var stub = new ScoresheetScanPage { Id = id, ScoresheetScanId = scanId };
+            db.ScoresheetScanPages.Attach(stub);
+            db.ScoresheetScanPages.Remove(stub);
+        }
+    }
+
     /// <summary>Die Schlüssel der Einlesungen, die <see cref="RemoveWithoutLoading"/> braucht.</summary>
     public static async Task<List<(int Id, int? UserId, int? SavedGameId)>> KeysAsync(IQueryable<ScoresheetScan> query)
     {
@@ -877,6 +950,7 @@ public class ScoresheetScanService
             CreatedAt = s.CreatedAt,
             FinishedAt = s.FinishedAt,
             Rounds = s.Rounds,
+            PageCount = Math.Max(1, s.PageCount),
             MoveCount = stored?.Plies.Count ?? 0,
             UncertainCount = stored?.Plies.Count(p => p.Uncertain && !p.Confirmed) ?? 0,
             UnresolvedCount = stored?.Unresolved.Count ?? 0,
@@ -892,6 +966,9 @@ public class ScoresheetScanService
         return n.Length == 0 ? null : n.Length > 200 ? n[..200] : n;
     }
 }
+
+/// <summary>Ein hochgeladenes Foto (eine Seite des Formulars).</summary>
+public sealed record ScoresheetUpload(byte[] Data, string? ContentType, string? FileName);
 
 /// <summary>Die Antwort des Modells, gelesen (Schema aus <see cref="ScoresheetPrompt.Schema"/>).</summary>
 public sealed class ScoresheetTranscription
@@ -911,21 +988,40 @@ public sealed class ScoresheetTranscription
     /// die Kästen stehen in dessen Pixeln. Fehlt bei Einlesungen vor 0.551.3.</summary>
     public int? ImageWidth { get; set; }
     public int? ImageHeight { get; set; }
+    /// <summary>Maße JEDER Seite als [Breite, Höhe] — nur bei einem Formular über mehrere Fotos (0.600.0); die erste
+    /// steht zusätzlich in <see cref="ImageWidth"/>/<see cref="ImageHeight"/>.</summary>
+    public List<int[]>? PageSizes { get; set; }
+
+    /// <summary>Über wie viele Fotos das Formular geht (1, solange <see cref="PageSizes"/> fehlt).</summary>
+    public int PageCount => PageSizes is { Count: > 1 } p ? p.Count : 1;
 
     /// <summary>Die Antwort des Modells mit den Bildmaßen daneben (<see cref="ImageWidth"/>/<see cref="ImageHeight"/>);
     /// unverändert, wenn es keine Maße oder kein JSON-Objekt ist.</summary>
     public static string? WithImageSize(string? json, (int Width, int Height)? size)
+        => WithImageSize(json, size is { } s ? new[] { s } : Array.Empty<(int, int)>());
+
+    /// <summary>Dasselbe je Seite: die erste als <c>imageWidth</c>/<c>imageHeight</c>, bei mehreren Seiten alle als
+    /// <c>pageSizes</c>.</summary>
+    public static string? WithImageSize(string? json, IReadOnlyList<(int Width, int Height)> sizes)
     {
-        if (json == null || size is not { } s) return json;
+        if (json == null || sizes.Count == 0) return json;
         try
         {
             if (System.Text.Json.Nodes.JsonNode.Parse(json) is not System.Text.Json.Nodes.JsonObject o) return json;
-            o["imageWidth"] = s.Width;
-            o["imageHeight"] = s.Height;
+            o["imageWidth"] = sizes[0].Width;
+            o["imageHeight"] = sizes[0].Height;
+            if (sizes.Count > 1)
+                o["pageSizes"] = new System.Text.Json.Nodes.JsonArray(sizes
+                    .Select(s => (System.Text.Json.Nodes.JsonNode?)new System.Text.Json.Nodes.JsonArray(s.Width, s.Height)).ToArray());
             return o.ToJsonString();
         }
         catch (JsonException) { return json; }
     }
+
+    /// <summary>Je Eintrag seine Seite (1-basiert), in 1..<see cref="PageCount"/> geklemmt — bei einer Seite immer 1.</summary>
+    public List<int> EntryPages() => Moves.Select(m => PageOf(m)).ToList();
+
+    private int PageOf(Entry m) => PageCount > 1 ? Math.Clamp(m.Page ?? 1, 1, PageCount) : 1;
 
     /// <summary>
     /// Je Eintrag der Kasten in 0..1000 des aufrechten Fotos (so rechnet die Korrekturseite), <c>null</c> = unbrauchbar.
@@ -935,6 +1031,9 @@ public sealed class ScoresheetTranscription
     /// </summary>
     public List<int[]?> NormalizedBoxes()
     {
+        // Mehrere Seiten: jeder Kasten in den Pixeln SEINER Seite.
+        if (PageCount > 1)
+            return Moves.Select(m => PageSizes![PageOf(m) - 1] is { Length: 2 } s ? m.NormalizedBox(s[0], s[1]) : null).ToList();
         if (ImageWidth is int w && w > 0 && ImageHeight is int h && h > 0)
             return Moves.Select(m => m.NormalizedBox(w, h)).ToList();
         var outOfRange = Moves.Any(m => m.Box is { Count: 4 } b && b.Any(v => v > 1000));
@@ -954,6 +1053,8 @@ public sealed class ScoresheetTranscription
         /// (<see cref="ImageWidth"/> × <see cref="ImageHeight"/>, aufrecht wie im Browser); bei Einlesungen von 0.550.0
         /// als 0..1000 angefordert. Fehlt davor und bei dots.ocr.</summary>
         public List<int>? Box { get; set; }
+        /// <summary>Auf welchem Foto der Eintrag steht (1 = erstes) — nur bei einem Formular über mehrere Fotos.</summary>
+        public int? Page { get; set; }
 
         /// <summary>Pixel eines <paramref name="width"/>×<paramref name="height"/>-Bildes → 0..1000; ein Kasten, der
         /// deutlich (über 3 %) aus dem Bild ragt, stammt nicht aus diesem Bild → <c>null</c>.</summary>

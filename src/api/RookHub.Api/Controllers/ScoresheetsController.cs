@@ -40,23 +40,29 @@ public class ScoresheetsController : BaseApiController
     /// <c>tooLarge</c>, <c>dailyLimit</c>, <c>tooManyOpen</c>, <c>invalidLanguage</c>) bzw. 503
     /// <c>notConfigured</c>, wenn kein API-Key hinterlegt ist.
     /// </summary>
+    /// <summary>Foto hochladen — bei einem Formular über mehrere Blätter mehrere Teile <c>file</c> in Seitenreihenfolge
+    /// (höchstens <see cref="ScoresheetScanService.MaxPages"/>, 0.600.0).</summary>
     [HttpPost]
-    [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
-    public async Task<ActionResult<ScoresheetScanDto>> Upload(IFormFile? file, [FromForm] string? language,
+    [RequestSizeLimit(ScoresheetScanService.MaxUploadRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadRequestBytes)]
+    public async Task<ActionResult<ScoresheetScanDto>> Upload([FromForm] List<IFormFile>? file, [FromForm] string? language,
         [FromForm] string? side)
     {
-        if (file == null || file.Length == 0) return BadRequest(new { reason = "noFile", message = "No file." });
-        if (file.Length > ScoresheetScanService.MaxUploadBytes)
+        var files = (file ?? new()).Where(f => f.Length > 0).ToList();
+        if (files.Count == 0) return BadRequest(new { reason = "noFile", message = "No file." });
+        if (files.Count > ScoresheetScanService.MaxPages)
+            return BadRequest(new { reason = "tooManyPages", message = $"At most {ScoresheetScanService.MaxPages} photos." });
+        if (files.Any(f => f.Length > ScoresheetScanService.MaxUploadBytes))
             return BadRequest(new { reason = "tooLarge", message = "File too large." });
 
-        byte[] data;
-        using (var ms = new MemoryStream())
+        var pages = new List<ScoresheetUpload>();
+        foreach (var f in files)
         {
-            await file.CopyToAsync(ms);
-            data = ms.ToArray();
+            using var ms = new MemoryStream();
+            await f.CopyToAsync(ms);
+            pages.Add(new ScoresheetUpload(ms.ToArray(), f.ContentType, f.FileName));
         }
-        var (scan, reason) = await _service.CreateAsync(GetUserId(), data, file.ContentType, file.FileName, language, side);
+        var (scan, reason) = await _service.CreateAsync(GetUserId(), pages, language, side);
         if (reason == "notConfigured")
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason, message = "Reading is not configured." });
         if (reason != null) return BadRequest(new { reason, message = "Photo not accepted." });
@@ -110,12 +116,15 @@ public class GameCorrectionController : BaseApiController
     }
 
     /// <summary>Das Formular-Foto der Partie (<c>?download=true</c> als Anhang). 404 ohne Foto.</summary>
+    /// <summary>Das Formular-Foto; <c>page</c> = Seite eines mehrseitigen Formulars (ab 1).</summary>
     [HttpGet("{id:int}/photo")]
-    public async Task<IActionResult> Photo(int id, [FromQuery] bool download = false)
+    public async Task<IActionResult> Photo(int id, [FromQuery] bool download = false, [FromQuery] int page = 1)
     {
-        var photo = await _scans.PhotoForGameAsync(GetUserId(), id);
+        var photo = await _scans.PhotoForGameAsync(GetUserId(), id, page);
         if (photo is not { } p) return NotFound();
         Response.Headers.CacheControl = "private, max-age=3600";
+        // Wie viele Seiten es gibt — der Foto-Dialog blättert damit, ohne die Einlesung abzufragen.
+        Response.Headers["X-Page-Count"] = p.PageCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
         return download ? File(p.Data, p.ContentType, p.FileName) : File(p.Data, p.ContentType);
     }
 

@@ -56,6 +56,12 @@ public class ScoresheetScan
     /// <summary>Originaler Dateiname (für den Download), ohne Pfad.</summary>
     public string? FileName { get; set; }
 
+    /// <summary>Über wie viele Fotos das Formular geht (0.600.0, höchstens
+    /// <see cref="Services.ScoresheetScanService.MaxPages"/>). <see cref="Photo"/> ist Seite 1, die weiteren liegen in
+    /// <see cref="Pages"/> — so blieb jede bestehende Einlesung, wie sie war.</summary>
+    public int PageCount { get; set; } = 1;
+    public List<ScoresheetScanPage> Pages { get; set; } = new();
+
     /// <summary>Gewählte Notationssprache (<c>de</c>, <c>en</c>, …) oder <c>auto</c>.</summary>
     public string NotationLanguage { get; set; } = "auto";
 
@@ -104,4 +110,23 @@ public class ScoresheetScan
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+}
+
+/// <summary>
+/// Seite 2 und folgende eines Partieformulars über mehrere Fotos (0.600.0) — eine lange Partie passt oft nicht auf
+/// ein Blatt. Seite 1 bleibt <see cref="ScoresheetScan.Photo"/>. Geht mit der Einlesung (Cascade) und mit dem Foto
+/// (<see cref="Services.ScoresheetScanService.DetachWithoutLoading"/> räumt die Seiten ab).
+/// </summary>
+public class ScoresheetScanPage
+{
+    public int Id { get; set; }
+    public int ScoresheetScanId { get; set; }
+    public ScoresheetScan? Scan { get; set; }
+
+    /// <summary>Seitennummer, ab 2.</summary>
+    public int Page { get; set; }
+
+    public byte[] Photo { get; set; } = Array.Empty<byte>();
+    public string ContentType { get; set; } = "image/jpeg";
+    public string? FileName { get; set; }
 }

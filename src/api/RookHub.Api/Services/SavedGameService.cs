@@ -287,9 +287,12 @@ public class SavedGameService
     {
         var g = await _db.SavedGames.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
         if (g == null) return false;
-        // Das Formular-Foto geht mit; die Einlesung selbst bleibt ohne Foto fürs Kontingent stehen (ohne es zu laden).
-        ScoresheetScanService.DetachWithoutLoading(_db,
-            await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.SavedGameId == id)));
+        // Das Formular-Foto geht mit (alle Seiten); die Einlesung selbst bleibt ohne Foto fürs Kontingent stehen (ohne es
+        // zu laden).
+        var scanKeys = await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.SavedGameId == id));
+        ScoresheetScanService.DetachWithoutLoading(_db, scanKeys);
+        ScoresheetScanService.RemovePagesWithoutLoading(_db,
+            await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
         _db.SavedGames.Remove(g);
         await _db.SaveChangesAsync();
         return true;

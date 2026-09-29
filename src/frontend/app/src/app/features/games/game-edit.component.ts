@@ -1,5 +1,5 @@
 import { scrollIntoContainer } from '../../shared/pgn-viewer/move-list.component';
-import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ElementRef, ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +26,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { GamesService, SavedGameDetail } from './games.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ScoresheetService, openPhotoBlob } from './scoresheet.service';
+import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 
@@ -98,6 +98,14 @@ import { SheetEditSession } from './sheet-edit-session';
             <mat-card class="photo">
               <div class="photo-bar">
                 <strong>{{ 'games.edit.photo' | translate }}</strong>
+                <!-- Formular über mehrere Blätter (0.600.0): blättern; der gewählte Zug blättert von selbst mit. -->
+                @if (pageCount() > 1) {
+                  <mat-button-toggle-group class="pager" [value]="shownPage()" (change)="shownPage.set($event.value)" hideSingleSelectionIndicator>
+                    @for (n of pageNumbers(); track n) {
+                      <mat-button-toggle [value]="n">{{ n }}</mat-button-toggle>
+                    }
+                  </mat-button-toggle-group>
+                }
                 <span class="spacer"></span>
                 <button mat-icon-button (click)="zoom.set(!zoom())" [matTooltip]="(zoom() ? 'games.edit.zoomOut' : 'games.edit.zoomIn') | translate">
                   <mat-icon>{{ zoom() ? 'zoom_out' : 'zoom_in' }}</mat-icon>
@@ -112,10 +120,11 @@ import { SheetEditSession } from './sheet-edit-session';
                 <div class="crop">
                   <div class="crop-label">
                     {{ 'games.edit.cropTitle' | translate }}
+                    @if (pageCount() > 1) { <span class="written">{{ 'scoresheet.page' | translate: { n: c.page } }}</span> }
                     @if (c.written) { <span class="written">{{ 'games.edit.written' | translate: { text: c.written } }}</span> }
                   </div>
                   <div class="crop-frame" [class.uncertain]="c.uncertain" [style.aspect-ratio]="c.view.aspect" [style.--crop-aspect]="c.view.aspect">
-                    <img [src]="src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
+                    <img [src]="pageUrl(c.page) ?? src" alt="" [style.width.%]="c.view.imgW" [style.height.%]="c.view.imgH"
                          [style.left.%]="c.view.left" [style.top.%]="c.view.top" />
                     <div class="crop-mark" [style.left.%]="c.view.markLeft" [style.top.%]="c.view.markTop"
                          [style.width.%]="c.view.markW" [style.height.%]="c.view.markH"></div>
@@ -243,6 +252,8 @@ import { SheetEditSession } from './sheet-edit-session';
     @media (max-width: 720px) { .layout, .layout.with-photo { grid-template-columns: minmax(0, 1fr); } }
     .photo { padding: 8px; }
     .photo-bar { display: flex; align-items: center; gap: 4px; padding: 0 4px 4px; }
+    .pager { margin-left: 8px; }
+    .pager .mat-button-toggle { font-size: 0.85rem; }
     .photo-scroll { max-height: 72vh; overflow: auto; text-align: center; }
     .photo-scroll img { max-width: 100%; max-height: 70vh; object-fit: contain; }
     .photo-scroll.zoom img { max-width: none; max-height: none; width: 200%; }
@@ -335,10 +346,15 @@ export class GameEditComponent implements OnInit, OnDestroy {
   readonly saving = signal(false);
   readonly dirty = signal(false);
   readonly flipped = signal(false);
-  readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
-  private photoBlob: Blob | null = null;
-  private photoName = 'scoresheet.jpg';
+  /** Formular-Fotos je Seite (Index = Seite − 1), sobald geladen. */
+  readonly photoUrls = signal<(string | null)[]>([]);
+  readonly pageCount = signal(1);
+  readonly pageNumbers = computed(() => Array.from({ length: this.pageCount() }, (_, i) => i + 1));
+  /** Welche Seite oben gezeigt wird. */
+  readonly shownPage = signal(1);
+  readonly photoUrl = computed(() => this.photoUrls()[this.shownPage() - 1] ?? this.photoUrls()[0] ?? null);
+  private photoBlobs: (Blob | null)[] = [];
 
   /** Der Arbeitsstand (geteilt mit der Formular-Korrektur in LeagueHub). */
   readonly session = new SheetEditSession({
@@ -375,9 +391,34 @@ export class GameEditComponent implements OnInit, OnDestroy {
     });
   }
 
+  constructor() {
+    // Der gewählte Zug steht auf einer anderen Seite: dorthin blättern (von Hand blättern bleibt, bis der Zug wechselt).
+    effect(() => {
+      const page = this.session.currentPage();
+      if (page) untracked(() => this.shownPage.set(Math.min(page, this.pageCount())));
+    });
+  }
+
   ngOnDestroy(): void {
-    const url = this.photoUrl();
-    if (url) URL.revokeObjectURL(url);
+    for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
+  }
+
+  /** Das Foto einer Seite, sobald es geladen ist. */
+  pageUrl(page: number): string | null {
+    return this.photoUrls()[page - 1] ?? null;
+  }
+
+  private loadPage(page: number): void {
+    this.sheets.photo(this.gameId, page).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(blob => {
+      if (!blob) return;
+      this.photoBlobs[page - 1] = blob;
+      const url = URL.createObjectURL(blob);
+      this.photoUrls.update(list => { const next = [...list]; next[page - 1] = url; return next; });
+      // Maße gleich messen — der Ausschnitt einer Seite braucht sie, auch wenn oben gerade eine andere steht.
+      const img = new Image();
+      img.onload = () => this.session.setPageSize(page, img.naturalWidth, img.naturalHeight);
+      img.src = url;
+    });
   }
 
   private load(game: SavedGameDetail): void {
@@ -398,13 +439,11 @@ export class GameEditComponent implements OnInit, OnDestroy {
       return;
     }
     this.isScoresheet.set(true);
-    this.sheets.photo(this.gameId).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(blob => {
-      if (!blob) return;
-      this.photoBlob = blob;
-      this.photoName = `scoresheet-${this.gameId}.${blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg'}`;
-      this.photoUrl.set(URL.createObjectURL(blob));
-    });
+    this.loadPage(1);
     this.sheets.editState(this.gameId).pipe(catchError(() => of(null)), takeUntilDestroyed(this.destroyRef)).subscribe(state => {
+      const pages = Math.max(1, state?.pageCount ?? 1);
+      this.pageCount.set(pages);
+      for (let p = 2; p <= pages; p++) this.loadPage(p);
       const comments = fromPgn.map(p => stripSheetNotes(p.comment));
       // Der gespeicherte Stand gilt nur, wenn er zu den Zügen der Partie passt (sie kann anderswo geändert worden sein).
       const matches = state && state.plies.length === fromPgn.length && state.plies.every((p, i) => p.san === fromPgn[i].san);
@@ -414,6 +453,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
         this.plies.set(fromPgn.map((p, i) => ({ ...p, comment: comments[i] })));
         this.session.boxes.set(state?.boxes ?? []);
         this.session.sheetEntries.set(state?.written ?? []);
+        this.session.entryPages.set(state?.pages ?? []);
         this.session.goToFirstUncertain();
       }
       this.loading.set(false);
@@ -421,7 +461,9 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   onPhotoLoad(e: Event): void {
-    this.session.onPhotoLoad(e);
+    const img = e.target as HTMLImageElement;
+    if (this.shownPage() === 1) this.session.onPhotoLoad(e);
+    else this.session.setPageSize(this.shownPage(), img.naturalWidth, img.naturalHeight);
   }
 
   onSide(side: string): void {
@@ -485,9 +527,11 @@ export class GameEditComponent implements OnInit, OnDestroy {
   }
 
   openPhoto(download: boolean): void {
-    if (!this.photoBlob) return;
-    if (download) openPhotoBlob(this.photoBlob, this.photoName);
-    else ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId);
+    const page = this.shownPage();
+    const blob = this.photoBlobs[page - 1];
+    if (!blob) return;
+    if (download) openPhotoBlob(blob, photoFileName(this.gameId, blob, page));
+    else ScoresheetPhotoDialogComponent.open(this.dialog, this.gameId, page);
   }
 
   save(): void {

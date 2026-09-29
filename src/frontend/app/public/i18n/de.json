@@ -4138,13 +4138,19 @@
       "noFile": "Bitte zuerst ein Foto wählen.",
       "userDailyBudget": "Dein Lese-Budget für heute ist aufgebraucht — bitte morgen wieder.",
       "userMonthlyBudget": "Dein Lese-Budget für die letzten 30 Tage ist aufgebraucht.",
-      "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht."
+      "globalBudget": "Das Einlesen pausiert für heute — das Budget für alle Nutzer ist aufgebraucht.",
+      "tooManyPages": "Höchstens drei Fotos je Formular."
     },
     "budget": "{{percent}} % deines Lese-Budgets verbraucht",
     "side": "Ich spielte",
     "sideWhite": "Weiß",
     "sideBlack": "Schwarz",
     "sideAuto": "automatisch",
-    "nextAt": "Heute schon eingelesen — das nächste Formular geht ab {{time}}."
+    "nextAt": "Heute schon eingelesen — das nächste Formular geht ab {{time}}.",
+    "takePage": "Seite {{n}} aufnehmen",
+    "choosePage": "Seite {{n}} wählen",
+    "page": "Seite {{n}}",
+    "removePage": "Foto entfernen",
+    "morePages": "Geht die Partie über ein weiteres Blatt? Dann die nächste Seite dazunehmen — bis zu {{max}} Seiten, in der richtigen Reihenfolge."
   }
 }

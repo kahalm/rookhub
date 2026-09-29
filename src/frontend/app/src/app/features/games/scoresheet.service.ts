@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { SavedGameDetail } from './games.service';
 
 /** Wie weit ist eine Formular-Einlesung? (`GET /api/scoresheets/{id}`) */
@@ -10,6 +10,8 @@ export interface ScoresheetScan {
   /** Grund bei `failed`: `unreadable`, `noMoves`, `refused`, `notConfigured`, `failed`. */
   error?: string | null;
   savedGameId?: number | null;
+  /** Über wie viele Fotos das Formular geht (0.600.0). */
+  pageCount?: number;
   notationLanguage: string;
   /** „Ich spielte": white/black/auto. */
   ownerSide?: string;
@@ -76,6 +78,10 @@ export interface ScoresheetEditState {
   written: string[];
   /** Je Formular-Eintrag (Index wie `written`) der Kasten auf dem Foto, [x0, y0, x1, y1] in 0..1000; `null` = unbekannt. */
   boxes?: (number[] | null)[];
+  /** Über wie viele Fotos das Formular geht (0.600.0); fehlt = 1. */
+  pageCount?: number;
+  /** Je Formular-Eintrag seine Seite (ab 1) — die Kästen stehen in 0..1000 DIESER Seite. */
+  pages?: number[];
   plies: ScoresheetPly[];
   unresolved: string[];
   unresolvedFrom?: number | null;
@@ -116,9 +122,10 @@ export class ScoresheetService {
     return this.http.get<ScoresheetScan[]>(`/api/scoresheets?take=${take}`);
   }
 
-  upload(file: File, language: string, side: 'white' | 'black' | 'auto' = 'auto'): Observable<ScoresheetScan> {
+  /** Ein Foto oder mehrere (Seiten in Reihenfolge, 0.600.0) — je Seite ein Teil `file`. */
+  upload(files: File | File[], language: string, side: 'white' | 'black' | 'auto' = 'auto'): Observable<ScoresheetScan> {
     const form = new FormData();
-    form.append('file', file, file.name);
+    for (const file of Array.isArray(files) ? files : [files]) form.append('file', file, file.name);
     form.append('language', language);
     form.append('side', side);
     return this.http.post<ScoresheetScan>('/api/scoresheets', form);
@@ -129,8 +136,15 @@ export class ScoresheetService {
   }
 
   /** Das Foto als Blob — über den HttpClient, weil ein `<img src>` das Anmelde-Token nicht mitschickt. */
-  photo(gameId: number): Observable<Blob> {
-    return this.http.get(`/api/games/${gameId}/photo`, { responseType: 'blob' });
+  photo(gameId: number, page = 1): Observable<Blob> {
+    return this.http.get(photoUrl(gameId, page), { responseType: 'blob' });
+  }
+
+  /** Eine Seite samt der Zahl aller Seiten (Header `X-Page-Count`) — damit blättert der Foto-Dialog. */
+  photoPage(gameId: number, page = 1): Observable<{ blob: Blob; pageCount: number }> {
+    return this.http.get(photoUrl(gameId, page), { responseType: 'blob', observe: 'response' }).pipe(
+      map(r => ({ blob: r.body as Blob, pageCount: Math.max(1, Number(r.headers.get('X-Page-Count')) || 1) })),
+    );
   }
 
   editState(gameId: number): Observable<ScoresheetEditState> {
@@ -146,10 +160,14 @@ export class ScoresheetService {
   }
 }
 
-/** Dateiname für den Download des Formular-Fotos einer Partie (Endung nach dem Bildtyp). */
-export function photoFileName(gameId: number, blob: Blob): string {
+function photoUrl(gameId: number, page: number): string {
+  return page > 1 ? `/api/games/${gameId}/photo?page=${page}` : `/api/games/${gameId}/photo`;
+}
+
+/** Dateiname für den Download des Formular-Fotos einer Partie (Endung nach dem Bildtyp; ab Seite 2 mit Nummer). */
+export function photoFileName(gameId: number, blob: Blob, page = 1): string {
   const ext = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
-  return `scoresheet-${gameId}.${ext}`;
+  return page > 1 ? `scoresheet-${gameId}-${page}.${ext}` : `scoresheet-${gameId}.${ext}`;
 }
 
 /** Foto anzeigen (neuer Tab) bzw. herunterladen — geteilt von Partienliste und Partieseite. */

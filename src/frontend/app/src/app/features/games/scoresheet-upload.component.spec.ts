@@ -105,6 +105,43 @@ describe('ScoresheetUploadComponent', () => {
     expect(el.querySelector('.upload .error')?.textContent).toContain('scoresheet.nextAt');
   });
 
+  // Wunsch 2026-09-29: ein Formular über mehrere Blätter — bis zu drei Fotos, in Seitenreihenfolge, als EIN Upload.
+  it('takes up to three photos as pages of one scoresheet and sends them in order', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const pick = (name: string) => c.onFile({
+      target: { files: [new File([new Uint8Array([1])], name, { type: 'image/jpeg' })], value: '' },
+    } as unknown as Event);
+
+    pick('seite1.jpg');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('scoresheet.takePage');   // nächster Knopf nimmt Seite 2
+    expect(el.textContent).toContain('scoresheet.morePages');
+    pick('seite2.jpg');
+    pick('falsch.jpg');
+    c.removePage(2);                                            // vertauscht → raus
+    pick('seite3.jpg');
+    pick('zuviel.jpg');                                         // mehr als drei: ignoriert
+    fixture.detectChanges();
+    expect(c.pages().map(p => p.file.name)).toEqual(['seite1.jpg', 'seite2.jpg', 'seite3.jpg']);
+    expect(el.querySelectorAll('.page').length).toBe(3);
+    expect(el.textContent).not.toContain('scoresheet.takePage'); // voll: keine weiteren Knöpfe
+
+    c.upload();
+    const post = http.expectOne({ method: 'POST', url: '/api/scoresheets' });
+    const files = (post.request.body as FormData).getAll('file') as File[];
+    expect(files.map(f => f.name)).toEqual(['seite1.jpg', 'seite2.jpg', 'seite3.jpg']);
+    post.flush({ id: 8, status: 'pending', notationLanguage: 'de', createdAt: '2026-09-29T10:00:00Z', rounds: 0,
+      moveCount: 0, uncertainCount: 0, unresolvedCount: 0, pageCount: 3 });
+    http.expectOne('/api/scoresheets/status').flush(status());
+    expect(c.pages().length).toBe(0);
+  });
+
   it('a refused upload shows the reason', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();

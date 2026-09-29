@@ -179,6 +179,7 @@ public class AppDbContext : DbContext
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<ScoresheetScan> ScoresheetScans => Set<ScoresheetScan>();
+    public DbSet<ScoresheetScanPage> ScoresheetScanPages => Set<ScoresheetScanPage>();
     public DbSet<GameMistakeProgress> GameMistakeProgresses => Set<GameMistakeProgress>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();
     public DbSet<GameReconstruction> GameReconstructions => Set<GameReconstruction>();
@@ -1429,6 +1430,15 @@ public class AppDbContext : DbContext
             e.HasIndex(s => new { s.Status, s.CreatedAt });
             e.HasIndex(s => new { s.UserId, s.CreatedAt });
             e.HasIndex(s => s.SavedGameId);
+        });
+
+        modelBuilder.Entity<ScoresheetScanPage>(e =>
+        {
+            e.HasOne(p => p.Scan).WithMany(s => s.Pages).HasForeignKey(p => p.ScoresheetScanId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(p => p.Photo).HasColumnType("LONGBLOB");
+            e.Property(p => p.ContentType).HasMaxLength(40);
+            e.Property(p => p.FileName).HasMaxLength(200);
+            e.HasIndex(p => new { p.ScoresheetScanId, p.Page }).IsUnique();
         });
 
         modelBuilder.Entity<GameReconstruction>(e =>

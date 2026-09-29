@@ -35,6 +35,9 @@ public class ScoresheetScanSqlTests(ScoresheetScanSqlFixture fixture)
                 UserId = u.Id, SavedGameId = g.Id, Photo = new byte[] { 1, 2, 3 }, ContentType = "image/jpeg",
                 FileName = "a.jpg", NotationLanguage = "de", Status = ScoresheetScanStatus.Done,
                 TranscriptionJson = "{}", ResolutionJson = "{}", CostMicroUsd = 80_000,
+                // Formular über zwei Blätter (0.600.0): Seite 2 muss mit der Partie gehen, die Einlesung bleibt.
+                PageCount = 2,
+                Pages = { new ScoresheetScanPage { Page = 2, Photo = new byte[] { 4, 5 }, ContentType = "image/jpeg" } },
             };
             db.ScoresheetScans.Add(s);
             await db.SaveChangesAsync();
@@ -45,8 +48,10 @@ public class ScoresheetScanSqlTests(ScoresheetScanSqlFixture fixture)
         await using (var db = fixture.Schema.NewContext())
         {
             var g = await db.SavedGames.SingleAsync(x => x.Id == gameId);
-            ScoresheetScanService.DetachWithoutLoading(db,
-                await ScoresheetScanService.KeysAsync(db.ScoresheetScans.Where(x => x.SavedGameId == gameId)));
+            var keys = await ScoresheetScanService.KeysAsync(db.ScoresheetScans.Where(x => x.SavedGameId == gameId));
+            ScoresheetScanService.DetachWithoutLoading(db, keys);
+            ScoresheetScanService.RemovePagesWithoutLoading(db,
+                await ScoresheetScanService.PageKeysAsync(db, keys.Select(k => k.Id).ToList()));
             db.SavedGames.Remove(g);
             await db.SaveChangesAsync();
         }
@@ -63,6 +68,7 @@ public class ScoresheetScanSqlTests(ScoresheetScanSqlFixture fixture)
             Assert.Equal(userId, row.UserId);
             Assert.Equal(80_000, row.CostMicroUsd);
             Assert.Equal(ScoresheetScanStatus.Done, row.Status);
+            Assert.False(await db.ScoresheetScanPages.AnyAsync(p => p.ScoresheetScanId == scanId));
         }
     }
 }
