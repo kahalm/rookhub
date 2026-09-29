@@ -13,7 +13,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
-import { ProfileIdentityFormComponent } from '../../shared/profile-identity-form/profile-identity-form.component';
+import {
+  ProfileIdentityFormComponent, emailAnchorChanged,
+} from '../../shared/profile-identity-form/profile-identity-form.component';
+import { AuthService } from '../../core/auth.service';
 import { DiscordLinkService } from '../../core/discord-link.service';
 import { ApiTokensComponent } from './api-tokens.component';
 import { EngineCardComponent } from './engine-card.component';
@@ -65,7 +68,8 @@ interface Profile {
               <!-- Name, Anzeigename, E-Mail und die Spielerkennungen samt Spielersuche stehen in
                    EINER Komponente, die auch die Turnierseite benutzt: sie gehen ohnehin ueber
                    denselben PUT /api/profile, waren aber zweimal getippt. -->
-              <app-profile-identity-form [profile]="profile" />
+              <app-profile-identity-form [profile]="profile" [savedEmail]="savedEmail"
+                                         [(currentPassword)]="currentPassword" />
 
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'profile.chessComUsername' | translate }}</mat-label>
@@ -164,17 +168,22 @@ export class ProfileComponent implements OnInit {
   loading = true;
   saving = false;
   unlinking = false;
+  /** Zuletzt gespeicherte E-Mail — Vergleichsstand fuer „Adresse geaendert, Passwort noetig". */
+  savedEmail: string | null = null;
+  /** Aktuelles Passwort, nur fuer einen E-Mail-Wechsel (Feld im Identitaets-Formular). */
+  currentPassword = '';
 
   constructor(
     private profileService: ProfileService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
+    private auth: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.profileService.getProfile<Profile>().subscribe({
-      next: (p) => { this.profile = p; this.loading = false; },
+      next: (p) => { this.profile = p; this.savedEmail = p?.email ?? null; this.loading = false; },
       error: () => { this.loading = false; }
     });
   }
@@ -182,9 +191,19 @@ export class ProfileComponent implements OnInit {
 
   save(): void {
     if (!this.profile) return;
+    // Ein E-Mail-WECHSEL (auch Erst-Setzen/Entfernen) braucht das aktuelle Passwort, sonst 403.
+    // Unter Impersonation sperrt der Server die Adresse ohnehin — dort gibt es kein Feld.
+    const askPassword = !this.auth.isImpersonating
+      && emailAnchorChanged(this.savedEmail, this.profile.email);
+    if (askPassword && !this.currentPassword) {
+      this.snackbar.info(this.translate.instant('profile.emailPasswordRequired'));
+      return;
+    }
     this.saving = true;
     this.profileService.updateProfile<Profile>({
       email: this.profile.email ?? '',
+      // Nur bei einem Wechsel: bei unveraenderter Adresse hat das Passwort im Body nichts zu suchen.
+      ...(askPassword ? { currentPassword: this.currentPassword } : {}),
       firstName: this.profile.firstName,
       lastName: this.profile.lastName,
       displayName: this.profile.displayName,
@@ -195,12 +214,19 @@ export class ProfileComponent implements OnInit {
     }).subscribe({
       next: (p) => {
         this.profile = p;
+        this.savedEmail = p?.email ?? null;
+        this.currentPassword = '';
         this.saving = false;
         this.snackbar.success(this.translate.instant('profile.saved'));
       },
       error: (err) => {
         this.saving = false;
-        const key = err?.status === 409 ? 'profile.emailTaken'
+        // 403 bei einem Wechsel = Passwort falsch (leer faengt die Pruefung oben ab); die
+        // Impersonations-403 faellt nicht hierher (askPassword ist dort false).
+        const passwordRejected = err?.status === 403 && askPassword;
+        if (passwordRejected) this.currentPassword = '';
+        const key = passwordRejected ? 'profile.emailPasswordWrong'
+          : err?.status === 409 ? 'profile.emailTaken'
           : err?.status === 400 ? 'profile.emailInvalid'
           : 'profile.saveFailed';
         this.snackbar.info(this.translate.instant(key));

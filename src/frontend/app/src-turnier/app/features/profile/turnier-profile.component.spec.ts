@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { AuthService } from '@rh/core/auth.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { TurnierProfileComponent } from './turnier-profile.component';
 
 /**
@@ -31,6 +33,8 @@ describe('TurnierProfileComponent', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        // Kein Rest aus anderen Specs im localStorage soll hier eine Impersonation vortaeuschen.
+        { provide: AuthService, useValue: { isImpersonating: false } },
       ],
     });
     fixture = TestBed.createComponent(TurnierProfileComponent);
@@ -98,10 +102,94 @@ describe('TurnierProfileComponent', () => {
   it('schickt eine geleerte E-Mail als leeren String', () => {
     setup();
     component.profile()!.email = null;
+    component.currentPassword.set('Secret123!');   // Entfernen ist ein Wechsel des Reset-Ankers
 
     component.save();
 
-    expect(http.expectOne('/api/profile').request.body.email).toBe('');
+    const body = http.expectOne('/api/profile').request.body;
+    expect(body.email).toBe('');
+    expect(body.currentPassword).toBe('Secret123!');
+  });
+
+  /**
+   * Die E-Mail ist der Reset-Anker: der Server verlangt fuer einen WECHSEL das aktuelle Passwort
+   * (sonst 403). Ohne Feld und eigene Meldung liess sie sich auf dieser Seite gar nicht mehr
+   * aendern — das Speichern scheiterte stumm mit „Konnte nicht gespeichert werden".
+   */
+  describe('E-Mail-Wechsel', () => {
+    const passwordInput = (): HTMLInputElement | null =>
+      fixture.nativeElement.querySelector('input[name="currentPassword"]');
+
+    /**
+     * Ueber das DOM tippen, nicht das Modell direkt aendern: die Seite ist OnPush (Angular-22-
+     * Vorgabe), erst das Eingabe-Ereignis markiert die Ansicht — genau wie beim Nutzer.
+     */
+    async function typeInto(name: string, value: string): Promise<void> {
+      await fixture.whenStable();   // ngModel schreibt den geladenen Wert asynchron ins Feld
+      const input = fixture.nativeElement.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+    }
+
+    it('zeigt das Passwortfeld erst bei geaenderter Adresse (Schreibweise zaehlt nicht)', async () => {
+      setup();
+      // type="email" streift Leerzeichen schon im Browser ab; die Schreibweise bleibt.
+      await typeInto('email', 'P@Example.AT');
+      expect(component.profile()!.email).toBe('P@Example.AT');
+      expect(passwordInput()).toBeNull();
+
+      await typeInto('email', 'neu@example.at');
+      expect(passwordInput()).withContext('Passwortfeld').toBeTruthy();
+      expect(fixture.nativeElement.querySelectorAll('input').length).toBe(7);
+    });
+
+    it('schickt das eingetippte Passwort mit und merkt sich danach die neue Adresse', async () => {
+      setup();
+      await typeInto('email', 'neu@example.at');
+      await typeInto('currentPassword', 'Secret123!');
+      expect(component.currentPassword()).withContext('Zwei-Wege-Bindung ueber das Formular').toBe('Secret123!');
+
+      component.save();
+
+      const req = http.expectOne('/api/profile');
+      expect(req.request.body.email).toBe('neu@example.at');
+      expect(req.request.body.currentPassword).toBe('Secret123!');
+      req.flush({ ...loaded(), email: 'neu@example.at' });
+      fixture.detectChanges();
+
+      expect(component.savedEmail()).toBe('neu@example.at');
+      expect(component.currentPassword()).toBe('');
+      expect(passwordInput()).withContext('gespeichert = kein Wechsel mehr').toBeNull();
+    });
+
+    it('schickt einen Wechsel ohne Passwort gar nicht erst ab', () => {
+      setup();
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      component.profile()!.email = 'neu@example.at';
+
+      component.save();
+
+      http.expectNone('/api/profile');
+      expect(warn).toHaveBeenCalledWith('profile.emailPasswordRequired');
+      expect(component.saving()).toBeFalse();
+    });
+
+    it('meldet eine 403 beim Wechsel als falsches Passwort und leert das Feld', () => {
+      setup();
+      const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+      component.profile()!.email = 'neu@example.at';
+      component.currentPassword.set('falsch');
+
+      component.save();
+      http.expectOne('/api/profile').flush(
+        { message: 'Current password is incorrect.' }, { status: 403, statusText: 'Forbidden' });
+
+      expect(warn).toHaveBeenCalledWith('profile.emailPasswordWrong');
+      expect(component.currentPassword()).toBe('');
+      expect(component.savedEmail()).toBe('p@example.at');
+      expect(component.saving()).toBeFalse();
+    });
   });
 
   it('bleibt bedienbar, wenn das Speichern scheitert', () => {
@@ -120,6 +208,8 @@ describe('TurnierProfileComponent', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        // Kein Rest aus anderen Specs im localStorage soll hier eine Impersonation vortaeuschen.
+        { provide: AuthService, useValue: { isImpersonating: false } },
       ],
     });
     fixture = TestBed.createComponent(TurnierProfileComponent);

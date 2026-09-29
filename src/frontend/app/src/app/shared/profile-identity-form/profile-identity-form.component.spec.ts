@@ -3,8 +3,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { AuthService } from '@rh/core/auth.service';
 import {
-  ProfileIdentity, ProfileIdentityFormComponent,
+  ProfileIdentity, ProfileIdentityFormComponent, emailAnchorChanged, normalizeEmail,
 } from './profile-identity-form.component';
 
 /**
@@ -18,8 +19,10 @@ describe('ProfileIdentityFormComponent', () => {
   let component: ProfileIdentityFormComponent;
   let http: HttpTestingController;
   let profile: ProfileIdentity;
+  let auth: { isImpersonating: boolean };
 
   beforeEach(() => {
+    auth = { isImpersonating: false };
     profile = {
       username: 'kahalm', email: 'a@b.local', firstName: 'Peter', lastName: 'Oberschmid',
       displayName: null, fideId: null, chessResultsId: null,
@@ -29,12 +32,14 @@ describe('ProfileIdentityFormComponent', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: auth },
       ],
     });
     fixture = TestBed.createComponent(ProfileIdentityFormComponent);
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
     fixture.componentRef.setInput('profile', profile);
+    fixture.componentRef.setInput('savedEmail', 'a@b.local');
     fixture.detectChanges();
   });
 
@@ -45,6 +50,67 @@ describe('ProfileIdentityFormComponent', () => {
       .map((i: HTMLInputElement) => i.getAttribute('name'));
     expect(names).toEqual(
       ['firstName', 'lastName', 'displayName', 'email', 'fideId', 'chessResultsId']);
+  });
+
+  /**
+   * Die E-Mail ist der Reset-Anker: der Server verlangt fuer einen WECHSEL das aktuelle Passwort
+   * (sonst 403). Das Feld darf aber nur dann erscheinen — sonst muesste man fuer jede
+   * Namenskorrektur sein Passwort tippen. Verglichen wird wie auf dem Server normalisiert.
+   */
+  it('erkennt einen E-Mail-Wechsel wie der Server (trim + klein, leer = entfernt)', () => {
+    expect(normalizeEmail('  A@B.Local ')).toBe('a@b.local');
+    expect(normalizeEmail('   ')).toBeNull();
+    expect(emailAnchorChanged('A@B.local', ' a@b.LOCAL ')).toBeFalse();
+    expect(emailAnchorChanged(null, '')).toBeFalse();
+    expect(emailAnchorChanged('a@b.local', 'c@d.local')).toBeTrue();
+    expect(emailAnchorChanged('a@b.local', '')).withContext('Entfernen').toBeTrue();
+    expect(emailAnchorChanged(null, 'a@b.local')).withContext('Erst-Setzen').toBeTrue();
+  });
+
+  it('fragt bei unveraenderter E-Mail nicht nach dem Passwort, auch in anderer Schreibweise', () => {
+    fixture.componentRef.setInput('savedEmail', ' A@B.LOCAL');
+    fixture.detectChanges();
+
+    expect(component.needsPassword).toBeFalse();
+    expect(fixture.nativeElement.querySelector('input[name="currentPassword"]')).toBeNull();
+  });
+
+  it('zeigt das Passwortfeld bei geaenderter E-Mail und reicht die Eingabe nach oben', () => {
+    profile.email = 'neu@b.local';
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('input[name="currentPassword"]') as HTMLInputElement;
+    expect(input).withContext('Passwortfeld').toBeTruthy();
+    expect(input.type).toBe('password');
+    expect(input.getAttribute('autocomplete')).toBe('current-password');
+
+    input.value = 'Secret123!';
+    input.dispatchEvent(new Event('input'));
+    expect(component.currentPassword()).toBe('Secret123!');
+
+    // Zurueck auf die alte Adresse: kein Wechsel mehr, das Feld verschwindet wieder.
+    profile.email = 'a@b.local';
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('input[name="currentPassword"]')).toBeNull();
+  });
+
+  it('fragt auch beim Entfernen der E-Mail nach dem Passwort', () => {
+    profile.email = '';
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('input[name="currentPassword"]')).toBeTruthy();
+  });
+
+  /**
+   * Unter Impersonation sperrt der Server die E-Mail ohnehin (eigene 403), und das Passwort des
+   * Nutzers kennt der Admin nicht — ein Passwortfeld fuehrte ihn nur in die Irre.
+   */
+  it('zeigt unter Impersonation kein Passwortfeld', () => {
+    auth.isImpersonating = true;
+    profile.email = 'neu@b.local';
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('input[name="currentPassword"]')).toBeNull();
   });
 
   /** Die Suche laeuft ueber den NACHNAMEN — unter zwei Zeichen ist sie sinnlos. */

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, inject, model } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { AuthService } from '@rh/core/auth.service';
 import { ProfileService } from '@rh/core/profile.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 
@@ -18,6 +19,25 @@ export interface ProfileIdentity {
   displayName: string | null;
   fideId: string | null;
   chessResultsId: string | null;
+}
+
+/**
+ * Normalisiert eine E-Mail wie der Server (`ProfileService.UpdateProfileAsync`): trim + klein,
+ * leer = keine Adresse. Nur so erkennt die Seite denselben „Wechsel" wie der Server — eine
+ * Alt-Adresse in Grossschreibung, die unveraendert zurueckgeht, ist KEINER.
+ */
+export function normalizeEmail(email: string | null | undefined): string | null {
+  const trimmed = email?.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
+/**
+ * Weicht die eingegebene E-Mail vom GESPEICHERTEN Stand ab (auch Erst-Setzen und Entfernen)?
+ * Dann verlangt der Server das aktuelle Passwort — die E-Mail ist der Reset-Anker — und antwortet
+ * ohne (oder mit falschem) Passwort mit 403.
+ */
+export function emailAnchorChanged(saved: string | null | undefined, current: string | null | undefined): boolean {
+  return normalizeEmail(saved) !== normalizeEmail(current);
 }
 
 export interface PlayerSearchItem {
@@ -147,6 +167,20 @@ export interface PlayerSearchResult {
       <mat-hint>{{ 'profile.emailHint' | translate }}</mat-hint>
     </mat-form-field>
 
+    <!-- Nur bei einem WECHSEL der E-Mail: der Server verlangt dafuer das aktuelle Passwort (die
+         Adresse ist der Reset-Anker). Bei unveraenderter Adresse bleibt das Feld weg, sonst
+         muesste man fuer jede Namenskorrektur sein Passwort tippen. -->
+    @if (needsPassword) {
+      <mat-form-field appearance="outline" class="pif-full" subscriptSizing="dynamic">
+        <mat-label>{{ 'profile.changePwd.current' | translate }}</mat-label>
+        <input matInput type="password" required
+               [ngModel]="currentPassword()" (ngModelChange)="currentPassword.set($event)"
+               [ngModelOptions]="{ standalone: true }"
+               name="currentPassword" autocomplete="current-password">
+        <mat-hint>{{ 'profile.emailPasswordHint' | translate }}</mat-hint>
+      </mat-form-field>
+    }
+
     <div class="pif-ids">
       <mat-form-field appearance="outline">
         <mat-label>{{ 'profile.fideId' | translate }}</mat-label>
@@ -212,12 +246,31 @@ export interface PlayerSearchResult {
 export class ProfileIdentityFormComponent {
   @Input({ required: true }) profile!: ProfileIdentity;
 
+  /**
+   * Die zuletzt GESPEICHERTE E-Mail (vom Server geladen bzw. zurueckgegeben). `profile.email`
+   * aendert das Formular direkt, der Vergleichsstand muss deshalb getrennt kommen.
+   */
+  @Input() savedEmail: string | null = null;
+
+  /** Das aktuelle Passwort fuer einen E-Mail-Wechsel — die Seite schickt es mit. */
+  readonly currentPassword = model('');
+
+  private readonly auth = inject(AuthService);
   private readonly profiles = inject(ProfileService);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
 
   searching = false;
   results: PlayerSearchResult | null = null;
+
+  /**
+   * Passwortfeld zeigen? Nur bei geaenderter (normalisierter) E-Mail — und nicht waehrend einer
+   * Admin-Impersonation: dort sperrt der Server die E-Mail ohnehin, und das Passwort des Nutzers
+   * kennt der Admin nicht.
+   */
+  get needsPassword(): boolean {
+    return !this.auth.isImpersonating && emailAnchorChanged(this.savedEmail, this.profile?.email);
+  }
 
   /** Die Suche laeuft ueber den NACHNAMEN — unter zwei Zeichen ist sie sinnlos. */
   get searchable(): boolean {

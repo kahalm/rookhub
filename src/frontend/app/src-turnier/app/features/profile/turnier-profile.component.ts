@@ -8,7 +8,10 @@ import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
-import { ProfileIdentityFormComponent } from '@rh/shared/profile-identity-form/profile-identity-form.component';
+import {
+  ProfileIdentityFormComponent, emailAnchorChanged,
+} from '@rh/shared/profile-identity-form/profile-identity-form.component';
+import { AuthService } from '@rh/core/auth.service';
 import { ProfileService } from '@rh/core/profile.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 
@@ -68,7 +71,8 @@ interface TurnierProfile {
             <app-help-hint [text]="('turnier.profile.nameHelp' | translate) + '\n\n' + ('turnier.profile.identityHelp' | translate)" />
           </h2>
 
-          <app-profile-identity-form [profile]="p" />
+          <app-profile-identity-form [profile]="p" [savedEmail]="savedEmail()"
+                                     [(currentPassword)]="currentPassword" />
         </mat-card>
 
         <div class="actions">
@@ -116,16 +120,22 @@ export class TurnierProfileComponent implements OnInit {
   private readonly profiles = inject(ProfileService);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
+  private readonly auth = inject(AuthService);
 
   /** Signale, weil die Antwort ausserhalb der Angular-Zone eintrifft (siehe Turnierkalender). */
   readonly profile = signal<TurnierProfile | null>(null);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  /** Zuletzt gespeicherte E-Mail — Vergleichsstand fuer „Adresse geaendert, Passwort noetig". */
+  readonly savedEmail = signal<string | null>(null);
+  /** Aktuelles Passwort, nur fuer einen E-Mail-Wechsel (Feld im Identitaets-Formular). */
+  readonly currentPassword = signal('');
 
   ngOnInit(): void {
     this.profiles.getProfile<TurnierProfile>().subscribe({
       next: profile => {
         this.profile.set(profile);
+        this.savedEmail.set(profile?.email ?? null);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -135,6 +145,15 @@ export class TurnierProfileComponent implements OnInit {
   save(): void {
     const profile = this.profile();
     if (!profile || this.saving()) return;
+
+    // Ein E-Mail-WECHSEL (auch Erst-Setzen/Entfernen) braucht das aktuelle Passwort, sonst 403.
+    // Unter Impersonation sperrt der Server die Adresse ohnehin — dort gibt es kein Feld.
+    const askPassword = !this.auth.isImpersonating
+      && emailAnchorChanged(this.savedEmail(), profile.email);
+    if (askPassword && !this.currentPassword()) {
+      this.snackbar.warn(this.translate.instant('profile.emailPasswordRequired'));
+      return;
+    }
     this.saving.set(true);
 
     // Nur die Felder DIESER Seite. Ein vollstaendiges Profil-Objekt zurueckzuschicken hiesse,
@@ -142,6 +161,8 @@ export class TurnierProfileComponent implements OnInit {
     // ueberschreiben — und die kennt diese Seite nicht.
     this.profiles.updateProfile<TurnierProfile>({
       email: profile.email ?? '',
+      // Nur bei einem Wechsel: bei unveraenderter Adresse hat das Passwort im Body nichts zu suchen.
+      ...(askPassword ? { currentPassword: this.currentPassword() } : {}),
       firstName: profile.firstName,
       lastName: profile.lastName,
       displayName: profile.displayName,
@@ -150,12 +171,19 @@ export class TurnierProfileComponent implements OnInit {
     }).subscribe({
       next: saved => {
         this.profile.set(saved);
+        this.savedEmail.set(saved?.email ?? null);
+        this.currentPassword.set('');
         this.saving.set(false);
         this.snackbar.success(this.translate.instant('profile.saved'));
       },
       error: err => {
         this.saving.set(false);
-        const key = err?.status === 409 ? 'profile.emailTaken'
+        // 403 bei einem Wechsel = Passwort falsch (leer faengt die Pruefung oben ab); die
+        // Impersonations-403 faellt nicht hierher (askPassword ist dort false).
+        const passwordRejected = err?.status === 403 && askPassword;
+        if (passwordRejected) this.currentPassword.set('');
+        const key = passwordRejected ? 'profile.emailPasswordWrong'
+          : err?.status === 409 ? 'profile.emailTaken'
           : err?.status === 400 ? 'profile.emailInvalid'
           : 'turnier.profile.saveError';
         this.snackbar.warn(this.translate.instant(key));

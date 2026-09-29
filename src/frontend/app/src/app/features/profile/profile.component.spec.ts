@@ -4,7 +4,7 @@ import { ProfileComponent } from './profile.component';
 /** Direkt instanziiert (ohne TestBed/Template) — testet die Komponenten-Logik.
  *  Offline/Theme/Passwort/Konto-Löschen sind in eigene Kind-Komponenten ausgelagert
  *  (siehe *-card.component.spec.ts). */
-function make(overrides: { profileService?: any; discord?: any } = {}) {
+function make(overrides: { profileService?: any; discord?: any; impersonating?: boolean } = {}) {
   const profileService = overrides.profileService ?? {
     getProfile: jasmine.createSpy('getProfile').and.returnValue(of({ email: 'a@b.c' })),
     updateProfile: jasmine.createSpy('updateProfile').and.returnValue(of({ email: 'a@b.c' })),
@@ -16,18 +16,20 @@ function make(overrides: { profileService?: any; discord?: any } = {}) {
   };
   const translate = { instant: (k: string) => k };
   const discord = overrides.discord ?? { unlink: jasmine.createSpy('unlink').and.returnValue(of({})) };
+  const auth = { isImpersonating: overrides.impersonating ?? false };
   const c = new ProfileComponent(
-    profileService as any, snackbar as any, translate as any, discord as any,
+    profileService as any, snackbar as any, translate as any, discord as any, auth as any,
   );
   return { c, profileService, snackbar, discord };
 }
 
 describe('ProfileComponent', () => {
-  it('ngOnInit loads the profile and clears loading', () => {
+  it('ngOnInit loads the profile, remembers the saved email and clears loading', () => {
     const { c, profileService } = make();
     c.ngOnInit();
     expect(profileService.getProfile).toHaveBeenCalled();
     expect(c.profile).toEqual({ email: 'a@b.c' } as any);
+    expect(c.savedEmail).toBe('a@b.c');
     expect(c.loading).toBeFalse();
   });
 
@@ -52,6 +54,7 @@ describe('ProfileComponent', () => {
 
   it('save updates the profile and shows success', () => {
     const { c, profileService, snackbar } = make();
+    c.savedEmail = 'a@b.c';
     c.profile = { email: 'a@b.c' } as any;
     c.save();
     expect(profileService.updateProfile).toHaveBeenCalled();
@@ -66,9 +69,94 @@ describe('ProfileComponent', () => {
       searchPlayer: jasmine.createSpy('searchPlayer'),
     };
     const { c, snackbar } = make({ profileService });
+    c.savedEmail = 'a@b.c';
     c.profile = { email: 'a@b.c' } as any;
     c.save();
     expect(snackbar.info).toHaveBeenCalledWith('profile.emailTaken');
     expect(c.saving).toBeFalse();
+  });
+
+  // Die E-Mail ist der Reset-Anker: der Server verlangt fuer einen WECHSEL (auch Erst-Setzen und
+  // Entfernen) das aktuelle Passwort und antwortet sonst mit 403. Ohne Feld und ohne eigene
+  // Meldung liess sich die Adresse in der Oberflaeche gar nicht mehr aendern.
+  describe('E-Mail-Wechsel', () => {
+    const failing = (status: number) => ({
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(of({})),
+      updateProfile: jasmine.createSpy('updateProfile').and.returnValue(throwError(() => ({ status }))),
+      searchPlayer: jasmine.createSpy('searchPlayer'),
+    });
+
+    it('schickt bei unveraenderter Adresse (andere Schreibweise) kein Passwort mit', () => {
+      const { c, profileService } = make();
+      c.savedEmail = 'A@B.c';
+      c.profile = { email: ' a@b.c ' } as any;
+      c.currentPassword = 'stale';
+      c.save();
+      const body = profileService.updateProfile.calls.mostRecent().args[0];
+      expect('currentPassword' in body).toBeFalse();
+    });
+
+    it('schickt einen Wechsel ohne Passwort gar nicht erst ab und fragt danach', () => {
+      const { c, profileService, snackbar } = make();
+      c.savedEmail = 'a@b.c';
+      c.profile = { email: 'neu@b.c' } as any;
+      c.save();
+      expect(profileService.updateProfile).not.toHaveBeenCalled();
+      expect(snackbar.info).toHaveBeenCalledWith('profile.emailPasswordRequired');
+      expect(c.saving).toBeFalse();
+    });
+
+    it('schickt das Passwort mit, merkt sich danach die neue Adresse und leert das Feld', () => {
+      const profileService = {
+        getProfile: jasmine.createSpy('getProfile').and.returnValue(of({})),
+        updateProfile: jasmine.createSpy('updateProfile').and.returnValue(of({ email: 'neu@b.c' })),
+        searchPlayer: jasmine.createSpy('searchPlayer'),
+      };
+      const { c, snackbar } = make({ profileService });
+      c.savedEmail = 'a@b.c';
+      c.profile = { email: 'neu@b.c' } as any;
+      c.currentPassword = 'Secret123!';
+      c.save();
+      const body = profileService.updateProfile.calls.mostRecent().args[0];
+      expect(body.email).toBe('neu@b.c');
+      expect(body.currentPassword).toBe('Secret123!');
+      expect(c.savedEmail).toBe('neu@b.c');
+      expect(c.currentPassword).toBe('');
+      expect(snackbar.success).toHaveBeenCalledWith('profile.saved');
+    });
+
+    it('verlangt das Passwort auch beim Entfernen der Adresse', () => {
+      const { c, profileService } = make();
+      c.savedEmail = 'a@b.c';
+      c.profile = { email: null } as any;
+      c.currentPassword = 'Secret123!';
+      c.save();
+      const body = profileService.updateProfile.calls.mostRecent().args[0];
+      expect(body.email).toBe('');
+      expect(body.currentPassword).toBe('Secret123!');
+    });
+
+    it('meldet eine 403 beim Wechsel als falsches Passwort und leert das Feld', () => {
+      const { c, snackbar } = make({ profileService: failing(403) });
+      c.savedEmail = 'a@b.c';
+      c.profile = { email: 'neu@b.c' } as any;
+      c.currentPassword = 'falsch';
+      c.save();
+      expect(snackbar.info).toHaveBeenCalledWith('profile.emailPasswordWrong');
+      expect(c.currentPassword).toBe('');
+      expect(c.savedEmail).withContext('Adresse gilt weiter als nicht gespeichert').toBe('a@b.c');
+      expect(c.saving).toBeFalse();
+    });
+
+    it('fragt unter Impersonation nicht nach dem Passwort; deren 403 bleibt die allgemeine Meldung', () => {
+      const profileService = failing(403);
+      const { c, snackbar } = make({ profileService, impersonating: true });
+      c.savedEmail = 'a@b.c';
+      c.profile = { email: 'neu@b.c' } as any;
+      c.save();
+      const body = profileService.updateProfile.calls.mostRecent().args[0];
+      expect('currentPassword' in body).toBeFalse();
+      expect(snackbar.info).toHaveBeenCalledWith('profile.saveFailed');
+    });
   });
 });
