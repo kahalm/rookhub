@@ -525,6 +525,74 @@ describe('EndlessPuzzleComponent Session-Aufzeichnung (Verlust-Schutz)', () => {
   });
 });
 
+/**
+ * F2-001: Der Server speichert die Puzzle-Liste als Detail des Laufs (History, „Level" = ihre Länge).
+ * Vorher schickte recordSession nur Puzzles mit startedAt > 0 — nach jedem Fortsetzen (Neuladen,
+ * Analyse-Rückkehr mit ?resume=1, anderes Gerät) fielen alle vorher gespielten dauerhaft weg.
+ */
+describe('EndlessPuzzleComponent gespeicherter Lauf nach dem Fortsetzen', () => {
+  const OLD_ATTEMPTS = [
+    { puzzleNumber: 1, puzzleId: 100, lichessId: 'a', rating: 700, solved: true, startedAt: 1000, endedAt: 2000 },
+    { puzzleNumber: 2, puzzleId: 101, lichessId: 'b', rating: 900, solved: true },   // Spielstand aus älterem Build: ohne Zeiten
+  ];
+
+  function trackRecords(c: any): { session: any; puzzles: any[] }[] {
+    const calls: { session: any; puzzles: any[] }[] = [];
+    c['storage'].recordSessionToServer = (session: any, puzzles: any[] = []) => { calls.push({ session, puzzles }); return sub(null); };
+    return calls;
+  }
+
+  it('schickt beim Lauf-Ende ALLE Puzzles mit, auch die vor dem Fortsetzen gespielten', () => {
+    const c = makeComponent();
+    const calls = trackRecords(c);
+    c['storage'].loadChainSeed = () => 'seed-xyz';
+    c['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    c.activeGameState = { lives: 1, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
+      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) };
+
+    c.resumeGame();
+    expect(c.puzzle.id).toBe(102);
+    c['loseLife']();                 // Puzzle 3 verloren → 0 Leben
+    c.continueAfterWrong();          // endGame → Lauf wird aufgezeichnet
+
+    expect(calls.length).toBe(1);
+    const puzzles = calls[0].puzzles;
+    expect(puzzles.map((p: any) => p.puzzleId)).toEqual([100, 101, 102]);
+    expect(puzzles[0].startedAt).toBe(1000);            // Zeit aus dem Spielstand bleibt erhalten
+    expect(puzzles[1].startedAt).toBe(0);               // unbekannt → Server speichert, loggt aber nicht
+    expect(puzzles[2].startedAt).toBeGreaterThan(0);
+    c.ngOnDestroy();
+  });
+
+  it('der Spielstand trägt Start-/Endzeit je Puzzle mit', () => {
+    const c = makeComponent();
+    const states: any[] = [];
+    c['storage'].saveActiveGameLocal = (g: any) => states.push(g);
+    c.startGame();
+
+    c['loseLife']();                 // Fehler bei 3 Leben → Spielstand wird gesichert
+
+    const last = states.filter(Boolean).pop();
+    expect(last.puzzleAttempts.length).toBe(1);
+    expect(last.puzzleAttempts[0].startedAt).toBeGreaterThan(0);
+    expect(last.puzzleAttempts[0].endedAt).toBeGreaterThan(0);
+    c.ngOnDestroy();
+  });
+
+  it('Archivieren eines offenen Laufs nimmt dessen Puzzles in den gespeicherten Lauf mit', () => {
+    const c = makeComponent();
+    const calls = trackRecords(c);
+    c.activeGameState = { lives: 2, solved: 2, chainIndex: 2, seed: 'seed-xyz', maxRatingReached: 1100,
+      puzzleAttempts: OLD_ATTEMPTS.map(p => ({ ...p })) };
+
+    c.archiveAndStartNew();
+
+    expect(calls.length).toBe(1);
+    expect(calls[0].puzzles.map((p: any) => p.puzzleId)).toEqual([100, 101]);
+    c.ngOnDestroy();
+  });
+});
+
 describe('EndlessPuzzleComponent prefetch race (runGeneration)', () => {
   /** Steuerbares Observable: merkt sich den Handler, damit der Test next() später feuert. */
   function controllable() {

@@ -62,9 +62,26 @@ interface EndlessPuzzleAttempt {
   rating: number;
   solved: boolean;
   themes?: string;
-  /** Start-/Endzeit dieses Puzzles als Unix-Millis (fürs serverseitige Logging). */
+  /** Start-/Endzeit dieses Puzzles als Unix-Millis (fürs serverseitige Logging; reist im Spielstand
+   *  mit, damit ein fortgesetzter Lauf sie behält). 0 = unbekannt (Spielstand aus älterem Build) —
+   *  dann speichert der Server das Puzzle mit dem Lauf, loggt es aber nicht. */
   startedAt: number;
   endedAt: number;
+}
+
+/** Puzzle-Liste aus einem gespeicherten Spielstand (`puzzleAttempts`) wieder aufbauen — für das
+ *  Fortsetzen UND das Archivieren eines offenen Laufs. Fehlende Zeiten (älterer Build) → 0. */
+function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAttempt[] {
+  return (raw ?? []).map((p: any) => ({
+    puzzleNumber: p.puzzleNumber,
+    puzzleId: p.puzzleId,
+    lichessId: p.lichessId ?? '',
+    rating: p.rating,
+    solved: p.solved,
+    themes: undefined,
+    startedAt: Number(p.startedAt) || 0,
+    endedAt: Number(p.endedAt) || 0,
+  }));
 }
 
 @Component({
@@ -949,16 +966,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.resumePuzzleSeconds = Math.floor(live.puzzle);
     }
     this.currentSessionMistakes = g.mistakes ?? [];
-    this.currentSessionPuzzles = (g.puzzleAttempts ?? []).map((p: any) => ({
-      puzzleNumber: p.puzzleNumber,
-      puzzleId: p.puzzleId,
-      lichessId: p.lichessId ?? '',
-      rating: p.rating,
-      solved: p.solved,
-      themes: undefined,
-      startedAt: 0,
-      endedAt: 0,
-    }));
+    this.currentSessionPuzzles = restoreSessionPuzzles(g.puzzleAttempts);
     this.isNewHighscore = false;
     this.lastSessionId = null;
     this.lastSessionArchived = false;
@@ -1006,7 +1014,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       chainPuzzleIds: this.offlinePool.length && this.storage.loadChainSeed() === (g.seed ?? this.seed)
         ? this.offlinePool.map(p => p.id).join(',') : undefined
     };
-    this.storage.recordSessionToServer(session).subscribe(id => {
+    // Die bisher gespielten Puzzles gehören mit in den gespeicherten Lauf (Detail-Ansicht der History).
+    this.storage.recordSessionToServer(session, restoreSessionPuzzles(g.puzzleAttempts)).subscribe(id => {
       if (id && this.authService.isLoggedIn) {
         this.storage.archiveSession(id).subscribe();
       }
@@ -1581,6 +1590,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         lichessId: p.lichessId,
         rating: p.rating,
         solved: p.solved,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt,
       })),
     };
     this.storage.saveActiveGameLocal(gameState);
@@ -1610,12 +1621,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       chainPuzzleIds: this.chain.map(p => p.id).join(',')
     };
     this.sessionHistory = this.storage.recordSession(this.sessionHistory, session);
-    // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server für das Logging mitgeben,
-    // nicht in die lokale History (würde localStorage aufblähen).
-    // Nur auf diesem Tab gespielte Puzzles (startedAt > 0) ans Server-Logging übergeben;
-    // wiederhergestellte Puzzles (Tab-Wechsel-Resume) wurden bereits von Tab A geloggt.
-    const newPuzzles = this.currentSessionPuzzles.filter(p => p.startedAt > 0);
-    this.storage.recordSessionToServer(session, newPuzzles).subscribe(id => {
+    // Per-Puzzle-Daten (mit Start-/Lösungszeit) nur an den Server mitgeben, nicht in die lokale
+    // History (würde localStorage aufblähen). Der Server speichert die Liste als Detail des Laufs —
+    // deshalb ALLE Puzzles, auch die vor einem Fortsetzen gespielten (vorher fielen sie hier weg, und
+    // die History zeigte nach jedem Neuladen/Analyse-Absprung nur noch den Rest). Einträge ohne
+    // Startzeit (Spielstand aus älterem Build) speichert der Server, loggt sie aber nicht.
+    this.storage.recordSessionToServer(session, this.currentSessionPuzzles).subscribe(id => {
       if (id) {
         this.lastSessionId = id;
         // Für Rückkehr aus der Analyse nach 0-Leben-Situation (gameover=1): ID sichern,

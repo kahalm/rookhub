@@ -29,7 +29,8 @@ export interface EndlessSession {
   chainPuzzleIds?: string;
 }
 
-/** Ein einzelnes Puzzle einer Session (mit Start-/Endzeit als Unix-Millis) — nur fürs serverseitige Logging. */
+/** Ein einzelnes Puzzle einer Session (mit Start-/Endzeit als Unix-Millis; 0 = unbekannt) — der Server speichert
+ *  es mit dem Lauf (Detail-Ansicht der History) und loggt es, sofern die Startzeit bekannt ist. */
 export interface SessionPuzzleLog {
   puzzleId: number;
   lichessId: string;
@@ -329,7 +330,7 @@ export class EndlessStorageService {
       mistakeAtRatings: session.mistakeAtRatings.join(','),
       seed: session.seed ?? null,
       chainPuzzleIds: session.chainPuzzleIds ?? null,
-      // Nur fürs serverseitige Logging (Start-/Lösungszeit je Puzzle), nicht persistiert.
+      // Persistiert als Detail des Laufs; geloggt (Start-/Lösungszeit) nur Einträge mit startedAt > 0.
       puzzles: (puzzles ?? []).map(p => ({
         puzzleId: p.puzzleId,
         lichessId: p.lichessId,
