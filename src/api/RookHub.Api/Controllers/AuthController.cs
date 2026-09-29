@@ -107,7 +107,7 @@ public class AuthController : BaseApiController
     /// durch 25 frische Browser-Sitzungen eines Tests; auf Prod kamen 56 von 57 Auth-401 von hier).
     /// </remarks>
     [AllowAnonymous]
-    [EnableRateLimiting("auth")]
+    [EnableRateLimiting("auth-session")]
     [HttpPost("session")]
     public async Task<ActionResult<AuthResponseDto>> SharedSession(CancellationToken ct)
     {
@@ -130,6 +130,7 @@ public class AuthController : BaseApiController
     /// die verkehrte Antwort.
     /// </summary>
     [AllowAnonymous]
+    [EnableRateLimiting("auth-session")]
     [HttpPost("session/end")]
     public IActionResult EndSharedSession()
     {
@@ -195,6 +196,7 @@ public class AuthController : BaseApiController
     /// holen sie beim Start, beim Zurückkehren in den Tab und alle paar Minuten — die Claims im Token sind nur noch ein
     /// Startwert. <c>isAdmin</c> ist die Admin-Rolle des Tokens, dieselbe, die der Server bei jeder Prüfung zuerst ansieht.</summary>
     [Authorize]
+    [EnableRateLimiting("auth-permissions")]
     [HttpGet("permissions")]
     public async Task<ActionResult<AuthPermissionsDto>> GetPermissions([FromServices] PermissionResolver resolver, CancellationToken ct)
     {

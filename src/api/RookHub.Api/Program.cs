@@ -706,6 +706,23 @@ try
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
+        // Rechte-Abfrage (GET /api/auth/permissions): eigene Partition PRO USER. Sie lief über das Klassen-Attribut
+        // auf „auth" — jede sichtbare Oberfläche (RookHub, Turnierseite, LeagueHub) fragt beim Start, bei der Rückkehr
+        // in den Tab und alle 2 min, und hinter einem NAT erschöpfte das das 10/min-Login-Fenster der ganzen IP.
+        options.AddPolicy("auth-permissions", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 30 * permitScale,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
+        // Geteilte Anmeldung (POST /api/auth/session, session/end): JEDER App-Start ohne Anmeldung fragt hier (auf allen
+        // vier Oberflächen) — eigene IP-Partition mit höherem Deckel statt „auth": eine Schulklasse, die KidHub öffnet,
+        // sind 25 Starts in einer Minute und sperrte sonst Anmeldung, Registrierung und „Passwort vergessen".
+        options.AddPolicy("auth-session", ctx => PerIpFixedWindow(ctx, 60 * permitScale));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
