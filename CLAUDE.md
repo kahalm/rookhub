@@ -1392,6 +1392,15 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   · nicht erkannt; die Liste zeigt das Turnier (`[Event]`) zum Zuordnen — gespeichert wird es weiter nur ohne „Schwaz". `games/import` bekommt DENSELBEN PGN-Text + je übernommener Partie die Entscheidung
   (`LeagueClubSideDecision`: FIDE-ID eines gewählten Ligaspielers schlägt den Namen; ohne Angabe die Kopfzeile) und
   prüft alles noch einmal. Nummerierung 1-basiert, gleich in beiden Schritten.
+  **Große Listen in Paketen** (0.598.1, Wunsch „auch beim PGN-Upload alle einlesen und dann in Paketen anbieten"): passt
+  eine Liste nicht in EINE Übersicht (`MaxImportGames` 500, `MaxImportChars` 5 Mio.), teilt die Seite sie VORHER
+  (`src-leaguehub/app/core/pgn-portions.ts`, `pgnPortions`: 500 Partien bzw. 4,5 Mio. Zeichen je Paket) — für JEDE Quelle
+  (Datei, eingefügt, Lichess-Studie, ChessBase), in `startPreview`. Das erste Paket geht in die Übersicht, die übrigen
+  werden danach als offene Listen abgelegt („Datei.pgn (Teil 2 von 3)", Quelle wie das Original); am Deckel der Entwürfe
+  (20 je Konto, 5 je IP) sagt die Seite, wie viele fehlen. Getrennt wird mit der Regel des Servers
+  (`splitGameBlocks` = SPIEGEL von `PgnParser.SplitGamesCore`: Kopfzeile nach Zugtext, wiederholte Kopfzeile, nichts in
+  einem offenen `{…}`), Partien ohne Zugtext zählen nicht — sonst hätte ein Paket beim Server mehr als 500 und würde
+  gekappt. Eine Liste, die passt, geht UNVERÄNDERT raus. `truncated` der Übersicht bleibt als Rückfall stehen.
   **Importiert wird PORTIONSWEISE** (0.590.0, Wunsch „damit Progress nicht verloren geht“): die Übersicht liefert je
   Partie ihren eigenen PGN-Text (`games[].pgn`, Kopfzeilen roh wie gelesen, Zugtext unverändert; fehlt bei harten
   Fehlern), die Seite (`club-import-review.component.ts`) schickt je 10 Partien genau deren Text mit Nummern 1…n —
@@ -1439,9 +1448,8 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   - **Grenzen**: Rumpf 15 MB (`ChessBaseImportService.MaxBodyBytes` = die allgemeine `/api/`-Regel des Frontend-nginx —
     die Seite packt deshalb jede Datei per `CompressionStream('gzip')`, eine kommentierte `.cbg` auf ein Siebtel),
     ausgepackt 64 MB (`ChessBaseFiles.MaxTotalBytes`, beim LESEN gezählt — ZIP- und gzip-Bomben), 5000 Partien
-    (`MaxGames`, `truncated`), höchstens 2 Umwandlungen gleichzeitig (sonst 429 `busy`). Über 500 Partien teilt die Seite das
-    PGN (`splitPgn`): die erste Portion geht in die Übersicht, die übrigen werden offene Listen (Quelle `chessbase`,
-    „Teil k von n") — am Deckel der Entwürfe (20 je Konto, 5 je IP) sagt sie, wie viele nicht abgelegt wurden.
+    (`MaxGames`, `truncated`), höchstens 2 Umwandlungen gleichzeitig (sonst 429 `busy`). Das Aufteilen in Pakete ist
+    derselbe Weg wie bei jeder Liste (siehe „Große Listen in Paketen").
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
 * **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien

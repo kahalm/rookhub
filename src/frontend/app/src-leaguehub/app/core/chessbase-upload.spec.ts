@@ -1,9 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { CHESSBASE_UPLOAD_EXTENSIONS, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload, splitPgn } from './chessbase-upload';
+import { CHESSBASE_UPLOAD_EXTENSIONS, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from './chessbase-upload';
 import { ChessBaseResult } from './club.models';
 
 const file = (name: string, text = 'x') => new File([text], name);
-const game = (i: number) => `[Event "Liga"]\n[White "W${i}"]\n[Black "B${i}"]\n[Result "1-0"]\n\n1. e4 e5 1-0`;
 const RESULT: ChessBaseResult = { format: '2cbh', name: 'MeineSpiele', pgn: '', games: 80, converted: 78, deleted: 1, truncated: false,
   skippedCount: 2, skipped: [{ id: 12, white: 'A', black: 'B', reason: 'Chess960 wird nicht gelesen.' }, { id: 40, white: 'C', black: 'D', reason: 'x' }] };
 
@@ -32,23 +31,9 @@ describe('chessbase-upload', () => {
     expect((await packForUpload(zip)).blob).toBe(zip);
   });
 
-  it('teilt das PGN an den Partien in Portionen', () => {
-    const pgn = Array.from({ length: 1100 }, (_, i) => game(i + 1)).join('\n\n') + '\n\n';
-    const parts = splitPgn(pgn);
-    expect(parts.length).toBe(3);
-    expect(parts.map(p => p.match(/\[Event /g)!.length)).toEqual([500, 500, 100]);
-    expect(parts[1].startsWith('[Event "Liga"]\n[White "W501"]')).toBeTrue();
-    expect(splitPgn(game(1) + '\n\n')).toEqual([game(1) + '\n']);
-    expect(splitPgn('')).toEqual([]);
-  });
-
-  it('der Hinweis nennt Gelesenes, Übersprungenes (mit Nummer) und die Aufteilung', () => {
+  it('der Hinweis nennt Gelesenes und Übersprungenes (mit Nummer)', () => {
     expect(chessBaseNote(RESULT)).toBe('MeineSpiele: 78 Partien gelesen, 2 übersprungen (#12 A – B: Chess960 wird nicht gelesen.; #40 C – D: x).');
-    const split = chessBaseNote({ ...RESULT, skippedCount: 0, skipped: [], converted: 1100 }, 3);
-    expect(split).toContain('1.100 Partien gelesen.');
-    expect(split).toContain('Aufgeteilt in 3 Listen zu höchstens 500 Partien');
-    expect(split).toContain('unter „Deine offenen Listen“');
-    expect(chessBaseNote({ ...RESULT, skippedCount: 0, skipped: [] }, 4, 1)).toContain('2 weitere konnten nicht abgelegt werden');
+    expect(chessBaseNote({ ...RESULT, skippedCount: 0, skipped: [], converted: 1100 })).toBe('MeineSpiele: 1.100 Partien gelesen.');
     expect(chessBaseNote({ ...RESULT, truncated: true, games: 5000 })).toContain('gelesen wurden die ersten 5.000 Partien');
   });
 

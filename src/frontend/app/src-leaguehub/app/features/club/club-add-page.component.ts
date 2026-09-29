@@ -7,7 +7,8 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
 import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
-import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload, splitPgn } from '../../core/chessbase-upload';
+import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from '../../core/chessbase-upload';
+import { partLabel, pgnPortions, portionNote } from '../../core/pgn-portions';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ImportReview } from './import-review';
 
@@ -73,6 +74,7 @@ const SAVE_DEBOUNCE_MS = 1500;
         <section class="panel">
           @if (review(); as rv) {
             @if (dbNote(); as note) { <p class="small db-note" role="status">{{ note }}</p> }
+            @if (portionNote(); as note) { <p class="small portion-note" role="status">{{ note }}</p> }
             @if (draft(); as d) {
               <p class="small muted draft-note">Die Liste liegt online als Entwurf — brichst du ab, machst du später unter „Deine offenen Listen" weiter@if (!share) {, und ein Verwalter kann den Import fertigstellen}.
                 @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
@@ -111,7 +113,7 @@ const SAVE_DEBOUNCE_MS = 1500;
             <div class="actions">
               <button type="button" class="btn-pri" [disabled]="previewing() || !pgn().trim()" (click)="startPreview()">
                 {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
-              <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“.</span>
+              <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
               <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
             </div>
           }
@@ -255,8 +257,10 @@ export class ClubAddPageComponent implements OnInit {
   readonly studyUrl = signal('');
   readonly loadingStudy = signal(false);
   readonly importError = signal<string | null>(null);
-  /** ChessBase: was aus der Datenbank wurde (gelesen, übersprungen, aufgeteilt) — steht über der Übersicht. */
+  /** ChessBase: was aus der Datenbank wurde (gelesen, übersprungen) — steht über der Übersicht. */
   readonly dbNote = signal<string | null>(null);
+  /** In Pakete geteilt: wie viele, und ob die übrigen als offene Listen liegen. */
+  readonly portionNote = signal<string | null>(null);
   readonly readingDb = signal(false);
   readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
@@ -362,6 +366,7 @@ export class ClubAddPageComponent implements OnInit {
     this.resuming.set(true);
     this.importError.set(null);
     this.dbNote.set(null);
+    this.portionNote.set(null);
     this.result.set(null);
     try {
       const full = await this.client.draft(d.ref);
@@ -393,6 +398,7 @@ export class ClubAddPageComponent implements OnInit {
     const d = this.draft();
     this.review.set(null);
     this.dbNote.set(null);
+    this.portionNote.set(null);
     this.resetDraft();
     if (d) {
       try { await this.client.deleteDraft(d.ref); } catch { /* schon weg */ }
@@ -454,15 +460,15 @@ export class ClubAddPageComponent implements OnInit {
     const f = (ev.target as HTMLInputElement).files?.[0];
     if (!f) return;
     this.dbNote.set(null);
+    this.portionNote.set(null);
     this.pgn.set(await f.text());
     this.loaded(this.pgn(), 'datei', f.name);
     this.result.set(null);
   }
 
   /**
-   * Eine ChessBase-Datenbank (0.598.0): die nötigen Dateien gepackt hochladen, der Server liefert das PGN. Mehr als eine
-   * Übersicht fasst (500 Partien), wird aufgeteilt: die erste Portion geht gleich in die Übersicht, die übrigen liegen als
-   * offene Listen bereit — dieselben Entwürfe wie bei jeder anderen Liste.
+   * Eine ChessBase-Datenbank (0.598.0): die nötigen Dateien gepackt hochladen, der Server liefert das PGN — ab dort wie
+   * jede andere Liste, auch das Aufteilen in Pakete (`startPreview`).
    */
   async pickChessBase(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
@@ -471,6 +477,7 @@ export class ClubAddPageComponent implements OnInit {
     if (!picked.length) return;
     this.importError.set(null);
     this.dbNote.set(null);
+    this.portionNote.set(null);
     this.result.set(null);
     const { send, hasDatabase } = chessBaseSelection(picked);
     if (!hasDatabase) {
@@ -489,25 +496,10 @@ export class ClubAddPageComponent implements OnInit {
         this.importError.set(r.games ? chessBaseNote(r) + ' Nichts zu importieren.' : `${r.name}: keine Partien in der Datenbank.`);
         return;
       }
-      const parts = splitPgn(r.pgn);
-      const label = `${r.name}.${r.format}`;
-      const partLabel = (i: number) => parts.length > 1 ? `${label} (Teil ${i + 1} von ${parts.length})` : label;
-      this.dbNote.set(chessBaseNote(r, parts.length));
-      this.pgn.set(parts[0]);
-      this.loaded(parts[0], 'chessbase', partLabel(0));
-      await this.startPreview();
-      if (parts.length < 2) return;
-      // Die übrigen Portionen ablegen — erst nach der Übersicht, damit die erste auch bei vollem Deckel ihren Entwurf hat.
-      let parked = 0;
-      for (let i = 1; i < parts.length; i++) {
-        try {
-          const created = await this.client.createDraft(parts[i], 'chessbase', partLabel(i));
-          if (this.share && created.key) rememberDraftKey(this.share, created.key);
-          parked++;
-        } catch { break; }
-      }
-      this.dbNote.set(chessBaseNote(r, parts.length, parked));
-      void this.loadDrafts();
+      this.dbNote.set(chessBaseNote(r));
+      this.pgn.set(r.pgn);
+      this.loaded(r.pgn, 'chessbase', `${r.name}.${r.format}`);
+      await this.startPreview();                                       // teilt in Pakete wie jede andere Liste
     } catch (err) {
       this.importError.set(chessBaseErrorText(err));
     } finally {
@@ -520,6 +512,7 @@ export class ClubAddPageComponent implements OnInit {
     this.loadingStudy.set(true);
     this.importError.set(null);
     this.dbNote.set(null);
+    this.portionNote.set(null);
     try {
       this.pgn.set(await this.client.lichess(this.studyUrl().trim()));
       this.loaded(this.pgn(), 'lichess', this.studyUrl().trim());
@@ -533,10 +526,27 @@ export class ClubAddPageComponent implements OnInit {
     }
   }
 
+  /**
+   * Die Übersicht öffnen. Eine Liste über dem, was die Übersicht auf einmal nimmt (500 Partien, 5 Mio. Zeichen), wird
+   * VORHER in Pakete geteilt (0.598.1, Wunsch „auch beim PGN-Upload alle einlesen und dann in Paketen anbieten"): das erste
+   * geht in die Übersicht, die übrigen werden danach als offene Listen abgelegt — egal, woher die Liste kam.
+   */
   async startPreview(): Promise<void> {
     this.previewing.set(true);
     this.importError.set(null);
     this.result.set(null);
+    this.portionNote.set(null);
+    let rest: { pgn: string; label: string | null }[] = [];
+    let source = 'text';
+    const parts = pgnPortions(this.pgn());
+    if (parts.length > 1) {
+      source = this.pgnSource(this.pgn());
+      const label = this.pgnLabel(this.pgn());
+      rest = parts.slice(1).map((pgn, i) => ({ pgn, label: partLabel(label, i + 1, parts.length) }));
+      this.pgn.set(parts[0]);
+      this.loaded(parts[0], source, partLabel(label, 0, parts.length));
+      this.portionNote.set(portionNote(parts.length, null));
+    }
     try {
       // Sofort online ablegen (egal, woher der Text kam) — geht das nicht (Deckel, Netz), läuft es ohne Entwurf weiter.
       const pgn = this.pgn();
@@ -552,6 +562,7 @@ export class ClubAddPageComponent implements OnInit {
         } catch { d = null; }
       }
       this.review.set(new ImportReview(await this.client.preview(pgn, this.share ? null : d?.id ?? null), this.replaceClub()));
+      if (rest.length) void this.parkPortions(rest, source, parts.length);
     } catch (err) {
       const e = err instanceof HttpErrorResponse ? err : null;
       this.importError.set(e?.error?.reason ? reasonText(e.error.reason)
@@ -562,10 +573,27 @@ export class ClubAddPageComponent implements OnInit {
     }
   }
 
+  /** Die übrigen Pakete als offene Listen ablegen — erst NACH der Übersicht, damit das erste auch bei vollem Deckel seinen
+   * Entwurf hat. Am Deckel (20 je Konto, 5 ohne) hört es auf und sagt, wie viele fehlen. */
+  private async parkPortions(rest: { pgn: string; label: string | null }[], source: string, parts: number): Promise<void> {
+    let parked = 0;
+    for (const p of rest) {
+      try {
+        const created = await this.client.createDraft(p.pgn, source, p.label);
+        if (this.share && created.key) rememberDraftKey(this.share, created.key);
+        parked++;
+      } catch { break; }
+    }
+    if (this.destroyed) return;
+    if (this.portionNote()) this.portionNote.set(portionNote(parts, parked));
+    void this.loadDrafts();
+  }
+
   done(r: ClubImportResult): void {
     this.result.set(r);
     this.review.set(null);
     this.dbNote.set(null);
+    this.portionNote.set(null);
     if (r.added) this.pgn.set('');
     // Fertig importiert: der Entwurf (samt Rohtext mit den Namen) geht.
     const d = this.draft();

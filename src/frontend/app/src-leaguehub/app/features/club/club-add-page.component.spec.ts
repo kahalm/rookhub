@@ -185,6 +185,7 @@ describe('ClubAddPageComponent', () => {
     const files = ['Verein.2cbh', 'Verein.2cbg', 'Verein.2lid', 'Verein.2cba', 'Verein.ini'].map(n => new File(['abc'], n));
     const input = { files, value: 'C:\\fakepath\\Verein.2cbh' };
     await fixture.componentInstance.pickChessBase({ target: input } as unknown as Event);
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
 
     expect(input.value).toBe('');
@@ -194,9 +195,48 @@ describe('ClubAddPageComponent', () => {
     expect(api.createDraft.calls.allArgs().map(a => [a[1], a[2]])).toEqual([
       ['chessbase', 'Verein.2cbh (Teil 1 von 3)'], ['chessbase', 'Verein.2cbh (Teil 2 von 3)'], ['chessbase', 'Verein.2cbh (Teil 3 von 3)']]);
     expect(api.createDraft.calls.argsFor(2)[0].match(/\[Event /g)!.length).toBe(100);
-    const note = (fixture.nativeElement as HTMLElement).querySelector('.db-note')?.textContent ?? '';
-    expect(note).toContain('Verein: 1.100 Partien gelesen.');
-    expect(note).toContain('Aufgeteilt in 3 Listen');
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.db-note')?.textContent).toContain('Verein: 1.100 Partien gelesen.');
+    expect(el.querySelector('.portion-note')?.textContent).toContain('in 3 Pakete');
+    expect(el.querySelector('.portion-note')?.textContent).toContain('unter „Deine offenen Listen“');
+  });
+
+  it('eine PGN-Datei mit mehr als 500 Partien wird ganz gelesen und in Paketen angeboten (0.598.1)', async () => {
+    const el = create();
+    const game = (i: number) => `[White "W${i}"]\n[Black "B${i}"]\n[Result "1-0"]\n\n1. e4 {Kommentar\n[%clk 0:01:00]} e5 1-0`;
+    const pgn = Array.from({ length: 1001 }, (_, i) => game(i + 1)).join('\n\n');
+    api.preview.and.resolveTo(PREVIEW);
+    await fixture.componentInstance.pickFile({ target: { files: [new File([pgn], 'Verein.pgn')] } } as unknown as Event);
+    fixture.detectChanges();
+    (el.querySelector('.btn-pri') as HTMLButtonElement).click();
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
+    fixture.detectChanges();
+
+    expect(api.preview.calls.mostRecent().args[0].match(/\[White /g)!.length).toBe(500);
+    expect(api.createDraft.calls.allArgs().map(a => [a[1], a[2]])).toEqual([
+      ['datei', 'Verein.pgn (Teil 1 von 3)'], ['datei', 'Verein.pgn (Teil 2 von 3)'], ['datei', 'Verein.pgn (Teil 3 von 3)']]);
+    expect(api.createDraft.calls.argsFor(2)[0].match(/\[White /g)!.length).toBe(1);
+    expect(el.querySelector('.portion-note')?.textContent).toContain('in 3 Pakete');
+    expect(api.drafts).toHaveBeenCalled();
+  });
+
+  it('am Deckel der offenen Listen sagt die Seite, wie viele Pakete fehlen', async () => {
+    const el = create();
+    const pgn = Array.from({ length: 1600 }, (_, i) => `[White "W${i}"]\n\n1. d4 *`).join('\n\n');
+    api.preview.and.resolveTo(PREVIEW);
+    let n = 0;
+    api.createDraft.and.callFake(async () => {
+      if (++n > 2) throw new HttpErrorResponse({ status: 400, error: { reason: 'tooManyDrafts' } });
+      return { ref: String(n), id: n, source: 'text', label: null, gameCount: 500, importedCount: 0,
+        createdAt: '2026-09-29T10:00:00', updatedAt: '2026-09-29T10:00:00', viaShareLink: false, mine: true };
+    });
+    fixture.componentInstance.pgn.set(pgn);
+    fixture.detectChanges();
+    await fixture.componentInstance.startPreview();
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
+    fixture.detectChanges();
+    expect(api.createDraft.calls.argsFor(0)[2]).toBe('Teil 1 von 4');
+    expect(el.querySelector('.portion-note')?.textContent).toContain('2 weitere konnten nicht abgelegt werden');
   });
 
   it('ChessBase: ohne Kopfdatei wird gar nicht erst hochgeladen, Absagen des Servers stehen als Satz da', async () => {
