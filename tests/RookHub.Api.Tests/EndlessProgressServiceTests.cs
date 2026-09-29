@@ -102,6 +102,28 @@ public class EndlessProgressServiceTests : IDisposable
         Assert.Contains(logs, m => m.Contains("endless-puzzle 10") && m.Contains("StartedAt=") && m.Contains("SolvedAt="));
     }
 
+    [Fact]
+    public async Task RecordSessionAsync_ResumedPuzzlesWithoutStartTime_ArePersistedButNotLogged()
+    {
+        // F2-001: nach dem Fortsetzen rekonstruiert das Frontend die bisherigen Puzzles mit StartedAt = 0.
+        // Sie gehören in den gespeicherten Lauf (Detail-Ansicht), aber nicht mit 1970er-Zeitstempel ins Log.
+        var userId = await CreateUserAsync();
+        var logger = new TestLogger<EndlessProgressService>();
+        var service = new EndlessProgressService(_db, logger);
+        var dto = SessionWithPuzzles();
+        dto.Puzzles.Insert(0, new EndlessSessionPuzzleDto { PuzzleId = 9, LichessId = "old", Rating = 1400, Solved = true, StartedAt = 0, EndedAt = 0 });
+
+        var session = await service.RecordSessionAsync(userId, dto);
+
+        var logs = logger.Messages.Where(m => m.Contains("EndlessPuzzleAttempt")).ToList();
+        Assert.Equal(2, logs.Count);
+        Assert.DoesNotContain(logs, m => m.Contains("endless-puzzle 9"));
+        Assert.DoesNotContain(logs, m => m.Contains("1970"));
+        var detail = await service.GetSessionDetailAsync(userId, session.Id);
+        Assert.NotNull(detail);
+        Assert.Equal(new[] { 9, 10, 11 }, detail!.Puzzles.Select(p => p.PuzzleId));
+    }
+
     // --- Session-Detail (History-Klick) ---
 
     [Fact]

@@ -202,12 +202,15 @@ public class EndlessProgressService
 
     /// <summary>
     /// Loggt jedes Puzzle einer Endless-Session mit Start- und Lösungszeit (für ES/Kibana).
-    /// userId == null = anonyme Session. Nicht persistiert — reines strukturiertes Logging.
+    /// userId == null = anonyme Session. Reines strukturiertes Logging (persistiert wird die Liste
+    /// separat als PuzzleAttemptsJson, siehe <see cref="BuildSession"/>). Einträge ohne Startzeit
+    /// (<c>StartedAt</c> ≤ 0 — nach einem Fortsetzen rekonstruiert, die Zeiten gingen verloren) werden
+    /// gespeichert, aber NICHT geloggt: sonst stünden sie mit 1970er-Zeitstempeln in Kibana.
     /// </summary>
     private void LogSessionPuzzles(int? userId, List<EndlessSessionPuzzleDto> puzzles)
     {
         if (puzzles == null || puzzles.Count == 0) return;
-        foreach (var p in puzzles.Take(MaxLoggedSessionPuzzles))
+        foreach (var p in puzzles.Where(p => p.StartedAt > 0).Take(MaxLoggedSessionPuzzles))
         {
             // Client-Timestamps plausibilisieren: Dauer auf [0, 86400]s clampen und SolvedAt aus
             // StartedAt + Dauer ableiten (konsistent zu den anderen Modi; verhindert absurde Werte

@@ -106,11 +106,13 @@ public class RecordEndlessSessionDto
     /// den ganzen Lauf mit 400 abweisen (die Spaltenlänge sichert das Modell).
     public string? Mode { get; set; }
 
-    /// <summary>Optional: einzelne Puzzles der Session (nur fürs Logging der Start-/Lösungszeit, nicht persistiert).</summary>
+    /// <summary>Optional: einzelne Puzzles der Session — persistiert als PuzzleAttemptsJson (Detail-Ansicht);
+    /// geloggt (Start-/Lösungszeit) nur Einträge mit <c>StartedAt</c> &gt; 0.</summary>
     public List<EndlessSessionPuzzleDto> Puzzles { get; set; } = new();
 }
 
-/// <summary>Ein einzelnes Puzzle einer Endless-Session (Start-/Lösungszeit als Unix-Millis) — nur fürs Logging, nicht persistiert.</summary>
+/// <summary>Ein einzelnes Puzzle einer Endless-Session (Start-/Lösungszeit als Unix-Millis; 0 = unbekannt,
+/// z. B. nach einem Fortsetzen rekonstruiert — dann gespeichert, aber nicht geloggt).</summary>
 public class EndlessSessionPuzzleDto
 {
     public int PuzzleId { get; set; }
