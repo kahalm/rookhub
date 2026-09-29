@@ -2857,6 +2857,7 @@
       "fromPosition": "Iz postavljene pozicije",
       "noMoves": "još nema poteza",
       "moves": "{{count}} polupoteza",
+      "variationMoves": "+{{count}} u varijantama",
       "loadFailed": "Povijest se nije mogla učitati.",
       "deleteFailed": "Unos se nije mogao obrisati."
     },
@@ -2865,6 +2866,12 @@
       "remove": "Ukloni zvjezdicu (S)",
       "start": "Početak",
       "jumps": "Označene pozicije"
+    },
+    "tree": {
+      "promote": "Unaprijedi varijantu",
+      "makeMainline": "Postavi kao glavnu varijantu",
+      "deleteFrom": "Obriši odavde",
+      "hint": "Desni klik na potez (na mobitelu dugi pritisak): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande."
     }
   },
   "stats": {

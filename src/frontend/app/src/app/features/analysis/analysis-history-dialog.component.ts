@@ -13,7 +13,7 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
 
 /**
  * Analyse-Verlauf (0.603.0): die letzten 20 Analysen des Analysebretts zur Auswahl. Schließt mit dem gewählten Eintrag;
- * das Brett lädt ihn samt Stand und Sternen.
+ * das Brett holt ihn samt Zugbaum (die Liste trägt ihn nicht mit) und lädt Stand, Varianten und Sterne.
  */
 @Component({
   selector: 'app-analysis-history-dialog',
@@ -34,11 +34,11 @@ const START_BOARD = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR';
               <button type="button" class="pick" (click)="choose(e)">
                 <span class="head">
                   <span class="name">{{ e.title || (fromStart(e) ? ('analysis.history.fromStart' | translate) : ('analysis.history.fromPosition' | translate)) }}</span>
-                  @if (e.starred.length > 0) { <span class="stars">★ {{ e.starred.length }}</span> }
+                  @if (e.starCount > 0) { <span class="stars">★ {{ e.starCount }}</span> }
                   <span class="muted small">{{ e.updatedAt | date:'short' }}</span>
                 </span>
                 <span class="preview">{{ e.preview || ('analysis.history.noMoves' | translate) }}</span>
-                <span class="muted small">{{ 'analysis.history.moves' | translate:{ count: e.moveCount } }}</span>
+                <span class="muted small">{{ 'analysis.history.moves' | translate:{ count: e.moveCount } }}@if (e.nodeCount > e.moveCount) { · {{ 'analysis.history.variationMoves' | translate:{ count: e.nodeCount - e.moveCount } }}}</span>
               </button>
               <button mat-icon-button type="button" (click)="remove(e)" [matTooltip]="'common.delete' | translate">
                 <mat-icon>delete</mat-icon>

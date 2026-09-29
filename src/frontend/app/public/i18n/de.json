@@ -2857,6 +2857,7 @@
       "fromPosition": "Aus einer aufgebauten Stellung",
       "noMoves": "noch keine Züge",
       "moves": "{{count}} Halbzüge",
+      "variationMoves": "+{{count}} in Varianten",
       "loadFailed": "Der Verlauf konnte nicht geladen werden.",
       "deleteFailed": "Der Eintrag konnte nicht gelöscht werden."
     },
@@ -2865,6 +2866,12 @@
       "remove": "Stern entfernen (S)",
       "start": "Start",
       "jumps": "Markierte Stellungen"
+    },
+    "tree": {
+      "promote": "Variante hochstufen",
+      "makeMainline": "Zur Hauptvariante machen",
+      "deleteFrom": "Ab hier löschen",
+      "hint": "Rechtsklick auf einen Zug (am Handy lange drücken): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen."
     }
   },
   "stats": {

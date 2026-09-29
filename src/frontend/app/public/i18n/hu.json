@@ -2111,6 +2111,7 @@
       "fromPosition": "Felállított állásból",
       "noMoves": "még nincs lépés",
       "moves": "{{count}} féllépés",
+      "variationMoves": "+{{count}} változatokban",
       "loadFailed": "Az előzményeket nem sikerült betölteni.",
       "deleteFailed": "A bejegyzést nem sikerült törölni."
     },
@@ -2119,6 +2120,12 @@
       "remove": "Csillag eltávolítása (S)",
       "start": "Kezdet",
       "jumps": "Megjelölt állások"
+    },
+    "tree": {
+      "promote": "Változat előléptetése",
+      "makeMainline": "Legyen főváltozat",
+      "deleteFrom": "Törlés innentől",
+      "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól."
     }
   },
   "stats": {

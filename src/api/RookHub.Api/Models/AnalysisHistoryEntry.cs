@@ -4,9 +4,9 @@ namespace RookHub.Api.Models;
 
 /// <summary>
 /// Eine Analyse des Analysebretts im Verlauf (0.603.0, Wunsch 2026-09-29: „merk dir eine History der letzten 20 Analysen
-/// von jedem User — diese sollen auch irgendwo ausgewählt werden können"): Ausgangsstellung, die Zugfolge auf dem Brett,
-/// wo man stand, und die mit einem Stern markierten Stellungen. Je Nutzer höchstens
-/// <see cref="Services.AnalysisHistoryService.MaxPerUser"/>, die älteste geht zuerst.
+/// von jedem User — diese sollen auch irgendwo ausgewählt werden können"): Ausgangsstellung, der Zugbaum samt Varianten
+/// und Sternen (0.604.0), wo man stand. Je Nutzer höchstens <see cref="Services.AnalysisHistoryService.MaxPerUser"/>,
+/// die älteste geht zuerst.
 /// </summary>
 public class AnalysisHistoryEntry
 {
@@ -18,21 +18,32 @@ public class AnalysisHistoryEntry
     [Required, MaxLength(120)]
     public string StartFen { get; set; } = string.Empty;
 
-    /// <summary>Die Zugfolge ab <see cref="StartFen"/> als UCI, durch Leerzeichen getrennt (nachgespielt geprüft).</summary>
+    /// <summary>Die HAUPTLINIE ab <see cref="StartFen"/> als UCI, durch Leerzeichen getrennt — für Vorschau und das
+    /// Wiederfinden derselben Partie. Der ganze Baum steht in <see cref="TreeJson"/>.</summary>
     public string Moves { get; set; } = string.Empty;
 
+    /// <summary>Länge der Hauptlinie.</summary>
     public int MoveCount { get; set; }
 
-    /// <summary>Halbzug, an dem man zuletzt stand (0 = Ausgangsstellung).</summary>
+    /// <summary>Zugbaum in der flachen Form von <see cref="DTOs.AnalysisTreeDto"/> (geprüft, JSON); <c>null</c> bei
+    /// Einträgen von 0.603.0 — dort ist <see cref="Moves"/> die ganze Analyse.</summary>
+    public string? TreeJson { get; set; }
+
+    /// <summary>Index des Knotens, an dem man zuletzt stand (-1 = Ausgangsstellung).</summary>
+    public int Current { get; set; } = -1;
+
+    /// <summary>Tiefe dieses Knotens (0 = Ausgangsstellung).</summary>
     public int Ply { get; set; }
+
+    /// <summary>Alle Züge des Baums, Varianten eingeschlossen.</summary>
+    public int NodeCount { get; set; }
+
+    /// <summary>Mit Stern markierte Stellungen (die Ausgangsstellung eingeschlossen).</summary>
+    public int StarCount { get; set; }
 
     /// <summary>Aus den Kopfdaten eines geladenen PGN („Weiß – Schwarz"), sonst leer.</summary>
     [MaxLength(200)]
     public string? Title { get; set; }
-
-    /// <summary>Mit Stern markierte Halbzüge (0 = Ausgangsstellung), aufsteigend, durch Komma getrennt.</summary>
-    [MaxLength(400)]
-    public string? Starred { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

@@ -2174,15 +2174,38 @@ springen kann". `Services/AnalysisHistoryService.cs`, Tabelle `AnalysisHistoryEn
   dabei noch raus (`flushHistory`), eine verspätete Antwort gehört über `historySession` nicht mehr zur neuen.
 * Gespeichert wird gedrosselt (`HISTORY_SAVE_MS` 1,5 s nach der letzten Änderung, beim Verlassen sofort), nur angemeldet und
   nicht die leere Grundstellung; nie zwei Anfragen gleichzeitig (die zweite hätte noch keine Kennung).
-* Sterne: Knopf neben den Zugpfeilen bzw. Taste S, Sprungliste über der Zugliste („12...Nf6"), ★ in der Zugliste. Wird eine
-  Fortsetzung ersetzt (`truncateAtPly`), fallen die Sterne dahinter weg. Abgemeldet gehen Sterne nur für die Sitzung.
+* Sterne: Knopf neben den Zugpfeilen bzw. Taste S, Sprungliste über der Zugliste („12...Nf6"), ★ in der Zugliste. Seit 0.604.0
+  hängt ein Stern am KNOTEN des Zugbaums (auch in Varianten) und geht nur mit „ab hier löschen" weg. Abgemeldet gehen Sterne
+  nur für die Sitzung.
 * „Verlauf" neben der Überschrift → `analysis-history-dialog.component.ts`; `/analysis?history=<id>` öffnet einen Eintrag direkt.
+* **Zugbaum** (0.604.0, Wunsch 2026-09-29 mit Screenshot des Lichess-Analysebretts: „so hätt ichs bei uns auch gern in der
+  Analyse, inkl. der Variationen + Hauptlinie + Rechtsklick Variante hochstufen/löschen"). Reine Regeln in
+  `features/analysis/analysis-tree.ts` (ohne Angular): `children[0]` ist IMMER die Fortsetzung, weitere Kinder sind Varianten;
+  ein anderer Zug als die Fortsetzung wird eine Variante, derselbe Zug geht in die vorhandene (`addMove`). Das Brett hält
+  `root` + `line` (= `lineThrough(aktueller Knoten)`: Weg dorthin und Fortsetzung) + `ply` — Pfeiltasten und die bisherigen
+  Specs laufen unverändert auf `line`. Anzeige `analysis-move-tree.component.ts`: Hauptlinie als Tabelle Nr | Weiß | Schwarz mit
+  der zuletzt gesehenen Bewertung je Zug (`node.evalText`, gesetzt, sobald die Leiste sie übernimmt — ab
+  `EVAL_SETTLE_DEPTH`, Matt, Suchende), Varianten als Block, der die Tabelle unterbricht („1 | e4 | …", Block, „1 | … | c5"),
+  Untervarianten in Klammern. Rechtsklick bzw. langer Druck (500 ms, eigene Uhr — iOS schickt kein `contextmenu`; Android
+  schickt eins, die 800-ms-Sperre verhindert das doppelte Öffnen) öffnet ein `mat-menu` an einem fest positionierten Anker:
+  Stern, Variante hochstufen (`promote`: EINE Stufe, an der tiefsten Verzweigung, an der der Weg nicht die Fortsetzung ist), zur
+  Hauptvariante machen (`makeMainline`), ab hier löschen (`removeNode`; stand man darin, geht es beim Elternknoten weiter).
+  `treeVersion` zählt jede Änderung am Baum, die Tabelle baut nur dann neu auf (nicht, wenn nur der aktuelle Zug wandert).
+  PGN laden liest seit 0.604.0 Varianten mit (`parsePgnTree`: RAV, nur die erste Partie, `[FEN]`, Wörter ohne Zug wie „e.p."
+  fallen weg, ein ungültiger Zug beendet nur seine Variante).
+* **Gespeichert wird der Baum FLACH** (`AnalysisTreeDto`: `n[]` mit `p` = Index des Elternknotens davor, -1 = Wurzel, `u` UCI,
+  `s` Stern, `e` Bewertung; `s` an der Wurzel = Ausgangsstellung markiert; `current` = Index des Knotens, an dem man stand).
+  Verschachtelt bräuchte jeder Halbzug zwei JSON-Ebenen — System.Text.Json liest höchstens 64. `AnalysisHistoryService.CheckTree`
+  spielt jeden Zug in der Stellung seines Elternknotens nach (Rochade → e1g1) und weist ab: Elternverweis nach vorn, derselbe
+  Zug zweimal unter einem Knoten, mehr als `MaxNodes` 1500 Züge, 600 Halbzüge Tiefe, 60 Sterne. Unbrauchbare Bewertungen fallen
+  still weg. `Moves` bleibt die HAUPTLINIE (Vorschau, Wiederfinden derselben Partie). Die Liste trägt den Baum nicht mit — das
+  Brett holt einen gewählten Eintrag über `GET {id}`. Einträge von 0.603.0 (ohne `TreeJson`) kommen als Zugfolge zurück.
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| GET | `/api/analysis-history` | Die letzten 20 (zuletzt angefasste zuerst) `{ id, startFen, moves[], ply, title, starred[], preview, moveCount, createdAt, updatedAt }` |
-| GET | `/api/analysis-history/{id}` | Ein eigener Eintrag (404 fremd/unbekannt) |
-| POST | `/api/analysis-history` | Speichern `{ id?, startFen, moves[], ply, title?, starred[] }` → der Eintrag samt Kennung; 400 bei unlesbarer Stellung/Zugfolge (höchstens 600 Halbzüge, 60 Sterne) |
+| GET | `/api/analysis-history` | Die letzten 20 (zuletzt angefasste zuerst) `{ id, startFen, moves[] (Hauptlinie), ply, title, preview, moveCount, nodeCount, starCount, tree: null, current, createdAt, updatedAt }` |
+| GET | `/api/analysis-history/{id}` | Ein eigener Eintrag MIT `tree` (404 fremd/unbekannt) |
+| POST | `/api/analysis-history` | Speichern `{ id?, startFen, title?, tree: { s?, n: [{ p, u, s?, e? }] }, current }` → der Eintrag samt Kennung und Baum; 400 bei unlesbarer Stellung oder einem Baum, der nicht aufgeht |
 | DELETE | `/api/analysis-history/{id}` | Eintrag löschen |
 
 ### Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"
@@ -3571,7 +3594,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LichessEngineCredentials | Per-User Lichess-API-Token (Scope `engine:read`) für die External-Engine-Anbindung (1:1) — trägt seit 0.537.0 auch die Hintergrund-Liste für direkt angemeldete Engines, dann OHNE Token | UserId (unique, Cascade), EncryptedToken (TEXT, AES via `EncryptionService`; LEER = kein Lichess-Token hinterlegt), **BackgroundEngineId? (≤64; Hintergrund-Engine für Analyseaufträge)**, CreatedAt, UpdatedAt; Plaintext nie persistiert. Der Token listet die External Engines des Lichess-Kontos; das je Engine gelieferte `clientSecret` wird NICHT persistiert (nur MemoryCache, 10 min) und verlässt den Server nie |
 | ExternalEngineRegistrations | Direkt bei RookHub angemeldete External Engines (eigener Broker, 0.537.0) — der Provider registriert sie mit einem API-Token Scope `engine` | Id (PK, ≤20, `rhe_` + 12 Zeichen), UserId (Cascade), Name (≤200, **UNIQUE (UserId, Name)** — die Identität der Registrierung), ClientSecret (≤64, für den Anfragenden; nie im Browser), ProviderSelector (≤64, sha256(`providerSecret:`+Geheimnis) hex, Index — das Geheimnis selbst wird nie gespeichert), MaxThreads, MaxHash, Variants (CSV ≤200), ProviderData? (≤500), CreatedAt, UpdatedAt, LastSeenAt? (letzter Poll, minütlich geschrieben); höchstens 32 je Konto, Konto löschen räumt ab |
 | AnalysisJobs | Hintergrund-Analyseaufträge (siehe „Hintergrund-Analyseaufträge") | UserId (Cascade), Fen (≤120), Title? (≤200), EngineId (≤64, Lichess `eei_…` oder direkt angemeldet `rhe_…`), TargetDepth, MultiPv (1–5), Status (Enum Queued/Running/Paused/Done/Failed), ReachedDepth, ResultJson? (LONGTEXT, letzte Broker-Zeile), **EvalText? (≤16, Bewertung der Hauptvariante — Listen laden dafür nicht die Roh-Zeile)**, **FruitlessAttempts (Läufe ohne Tiefenfortschritt → ab 3 Failed)**, SecondsSpent, LastError? (≤500), NextAttemptAt? (Backoff), CreatedAt, UpdatedAt, LastRunAt? (sticky hash), FinishedAt?; Index (UserId, Status) + (UserId, CreatedAt) |
-| AnalysisHistoryEntries | Analyse-Verlauf des Analysebretts (0.603.0), höchstens 20 je Nutzer | UserId (Cascade), StartFen (≤120), Moves (TEXT, UCI mit Leerzeichen), MoveCount, Ply, Title? (≤200), Starred? (≤400, Halbzüge mit Komma), CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
+| AnalysisHistoryEntries | Analyse-Verlauf des Analysebretts (0.603.0, Zugbaum seit 0.604.0), höchstens 20 je Nutzer | UserId (Cascade), StartFen (≤120), Moves (TEXT, HAUPTLINIE als UCI mit Leerzeichen), MoveCount (Hauptlinie), **TreeJson? (LONGTEXT, flacher Zugbaum samt Sternen/Bewertungen; null = Eintrag von 0.603.0)**, Current (Knoten-Index, -1 = Ausgangsstellung), Ply (dessen Tiefe), NodeCount, StarCount, Title? (≤200), CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | MoveComparisons | „Züge vergleichen" (0.602.0): eine Stellung, 2–4 Kandidaten | UserId (Cascade), Fen (≤120), Title?, Depth, Language (≤8), Status (Candidates/Replies/Explaining/Done/Failed), EngineOwnerUserId?, BestUci? (≤10), Model?, Error? (≤200), CreatedAt/UpdatedAt/FinishedAt?; Index (UserId, CreatedAt), Status |
 | MoveComparisonLines | Je gerechnete Stellung eines Vergleichs: Kandidat (Stellung nach dem Zug, 3 Linien) oder Antwort (beste Antwort auf einen SCHWÄCHEREN Kandidaten, gespielt nach dem BESTEN) | MoveComparisonId (Cascade), Kind, CandidateUci (≤10), ReplyUci? (≤10), Ordinal, Fen (≤120, leer bei Illegal), State (Pending/Done/Failed/Illegal), AnalysisJobId? (kein FK, nach dem Einsammeln null — der Auftrag wird gelöscht), ResultJson? (LONGTEXT), ReachedDepth, Explanation? (≤1500, englische SAN); Index MoveComparisonId, AnalysisJobId |
 | AdminMessages | Admin↔User-Direktnachrichten (Thread je User) | UserId (Cascade, = Thread-Schlüssel/Nicht-Admin-Teilnehmer), SenderId (Audit), FromAdmin (bool, Richtung), Body (max 4000), CreatedAt, SeenByUserAt?, SeenByAdminAt?; Index (UserId, CreatedAt) + (FromAdmin, SeenByAdminAt) |

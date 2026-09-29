@@ -44,7 +44,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
   // Analyse-Verlauf (0.603.0): save antwortet mit einer Kennung, die Specs zählen die Aufrufe.
   let nextId = 40;
   const history: any = {
-    save: jasmine.createSpy('save').and.callFake((req: any) => of({ ...req, id: req.id ?? ++nextId, preview: '', moveCount: req.moves.length })),
+    save: jasmine.createSpy('save').and.callFake((req: any) => of({ ...req, id: req.id ?? ++nextId, preview: '', moveCount: 0 })),
     get: jasmine.createSpy('get'),
     list: jasmine.createSpy('list').and.returnValue(of([])),
   };
@@ -890,6 +890,8 @@ describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
   beforeEach(() => jasmine.clock().install());
   afterEach(() => jasmine.clock().uninstall());
 
+  const labels = (c: any) => c.starredList.map((n: any) => c.starLabel(n));
+
   it('speichert gedrosselt unter EINER Kennung — nur angemeldet, nicht die leere Grundstellung', () => {
     const c = makeComponent({}, { loggedIn: true });
     c.ngOnInit();
@@ -901,12 +903,16 @@ describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
     jasmine.clock().tick(1499);
     expect(c.__history.save).not.toHaveBeenCalled();
     jasmine.clock().tick(1);
-    expect(c.__history.save).toHaveBeenCalledOnceWith({ id: null, startFen: START, moves: ['e2e4', 'e7e5'], ply: 2, title: null, starred: [] });
+    expect(c.__history.save).toHaveBeenCalledOnceWith({
+      id: null, startFen: START, title: null, tree: { n: [{ p: -1, u: 'e2e4' }, { p: 0, u: 'e7e5' }] }, current: 1,
+    });
     expect(c.historyId).toBe(41);
 
     c.onMove({ orig: 'g1', dest: 'f3' });
     jasmine.clock().tick(1500);
-    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ id: 41, moves: ['e2e4', 'e7e5', 'g1f3'] }));
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({
+      id: 41, current: 2, tree: { n: [{ p: -1, u: 'e2e4' }, { p: 0, u: 'e7e5' }, { p: 1, u: 'g1f3' }] },
+    }));
     c.ngOnDestroy();
   });
 
@@ -916,56 +922,83 @@ describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
     c.toggleStar();
     jasmine.clock().tick(5000);
     expect(c.__history.save).not.toHaveBeenCalled();
-    expect(c.starredPlies).toEqual([1]);
+    expect(labels(c)).toEqual(['1.e4']);
     c.ngOnDestroy();
   });
 
-  it('Sterne: umschalten, beschriften, springen — und eine ersetzte Fortsetzung nimmt ihre Sterne mit', () => {
+  it('Sterne: umschalten, beschriften, springen — und ein anderer Zug wird eine Variante, die Sterne bleiben', () => {
     const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' }, { loggedIn: true });
     c.ngOnInit();
     c.goTo(1); c.toggleStar();
     c.goTo(2); c.toggleStar();
     c.goTo(3); c.toggleStar(); c.toggleStar();                 // zweimal = wieder weg
-    expect(c.starredPlies).toEqual([1, 2]);
-    expect(c.starLabel(1)).toBe('1.e4');
-    expect(c.starLabel(2)).toBe('1...e5');
-    expect(c.starLabel(0)).toBe('analysis.star.start');
+    expect(labels(c)).toEqual(['1.e4', '1...e5']);
+    expect(c.starLabel(c.root)).toBe('analysis.star.start');
 
     c.goTo(1);
-    c.onMove({ orig: 'c7', dest: 'c5' });                      // ab 1…e5 neu → der Stern auf 1…e5 gehört nicht mehr dazu
+    c.onMove({ orig: 'c7', dest: 'c5' });                      // ab 1.e4 ein anderer Zug → Variante, die Hauptlinie bleibt
     expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'c5']);
-    expect(c.starredPlies).toEqual([1]);
+    expect(c.root.children[0].children.map((n: any) => n.san)).toEqual(['e5', 'c5']);
+    expect(labels(c)).toEqual(['1.e4', '1...e5']);
+    c.goToNode(c.starredList[1]);                              // Sprung zurück in die Hauptlinie
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.ply).toBe(2);
     jasmine.clock().tick(1500);
-    expect(c.__history.save.calls.mostRecent().args[0].starred).toEqual([1]);
+    expect(c.__history.save.calls.mostRecent().args[0].tree).toEqual({ n: [
+      { p: -1, u: 'e2e4', s: true }, { p: 0, u: 'e7e5', s: true }, { p: 1, u: 'g1f3' }, { p: 0, u: 'c7c5' },
+    ] });
     c.ngOnDestroy();
   });
 
-  it('ein Eintrag aus dem Verlauf kommt mit Stand und Sternen aufs Brett und wird unter seiner Kennung weitergeführt', () => {
+  it('ein Eintrag aus dem Verlauf kommt mit Baum, Stand und Sternen aufs Brett und wird unter seiner Kennung weitergeführt', () => {
     const c = makeComponent({}, { loggedIn: true });
     c.ngOnInit();
+    // 1.d4 d5 2.c4 (1...Nf6) — gestanden bei 1...Nf6, Sterne auf der Ausgangsstellung und 2.c4
     c.openHistoryEntry({ id: 7, startFen: START, moves: ['d2d4', 'd7d5', 'c2c4'], ply: 2, title: 'Carlsen – Nakamura',
-      starred: [0, 3], preview: '', moveCount: 3, createdAt: '', updatedAt: '' });
-    expect(c.line.map((n: any) => n.san)).toEqual(['d4', 'd5', 'c4']);
+      preview: '', moveCount: 3, nodeCount: 4, starCount: 2, current: 3, createdAt: '', updatedAt: '',
+      tree: { s: true, n: [{ p: -1, u: 'd2d4' }, { p: 0, u: 'd7d5' }, { p: 1, u: 'c2c4', s: true }, { p: 0, u: 'g8f6', e: '+0.20' }] } });
+    expect(c.line.map((n: any) => n.san)).toEqual(['d4', 'Nf6']);
     expect(c.ply).toBe(2);
-    expect(c.starredPlies).toEqual([0, 3]);
-    c.next();
+    expect(c.currentNode.evalText).toBe('+0.20');
+    expect(labels(c)).toEqual(['analysis.star.start', '2.c4']);
     jasmine.clock().tick(1500);
-    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ id: 7, ply: 3, title: 'Carlsen – Nakamura' }));
+    expect(c.__history.save).not.toHaveBeenCalled();            // eben geladen = nichts Neues
+    c.prev();
+    jasmine.clock().tick(1500);
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ id: 7, current: 0, title: 'Carlsen – Nakamura' }));
 
     // Zurücksetzen = neue Analyse: ohne Kennung, ohne Sterne
     c.reset();
     expect(c.historyId).toBeNull();
-    expect(c.starredPlies).toEqual([]);
+    expect(c.starredList).toEqual([]);
     c.ngOnDestroy();
   });
 
-  it('ein geladenes PGN nimmt die Namen als Titel mit', () => {
+  it('ein Eintrag aus der Liste (ohne Baum) wird erst geholt', () => {
     const c = makeComponent({}, { loggedIn: true });
     c.ngOnInit();
-    c.pgnInput = '[White "Carlsen"]\n[Black "Nakamura"]\n\n1. e4 e5 *';
+    const full = { id: 9, startFen: START, moves: ['e2e4'], ply: 1, title: null, preview: '', moveCount: 1, nodeCount: 1,
+      starCount: 0, current: 0, createdAt: '', updatedAt: '', tree: { n: [{ p: -1, u: 'e2e4' }] } };
+    c.__history.get.and.returnValue(of(full));
+    c.openHistoryEntry({ ...full, tree: null });
+    expect(c.__history.get).toHaveBeenCalledWith(9);
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4']);
+    expect(c.historyId).toBe(9);
+    c.ngOnDestroy();
+  });
+
+  it('ein geladenes PGN nimmt die Namen als Titel und die Varianten mit', () => {
+    const c = makeComponent({}, { loggedIn: true });
+    c.ngOnInit();
+    c.pgnInput = '[White "Carlsen"]\n[Black "Nakamura"]\n\n1. e4 e5 (1... c5 2. Nf3) 2. Nf3 *';
     c.loadPgn();
+    expect(c.line.map((n: any) => n.san)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.ply).toBe(3);
     jasmine.clock().tick(1500);
-    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({ title: 'Carlsen – Nakamura', moves: ['e2e4', 'e7e5'] }));
+    expect(c.__history.save.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({
+      title: 'Carlsen – Nakamura', current: 2,
+      tree: { n: [{ p: -1, u: 'e2e4' }, { p: 0, u: 'e7e5' }, { p: 1, u: 'g1f3' }, { p: 0, u: 'c7c5' }, { p: 3, u: 'g1f3' }] },
+    }));
     c.ngOnDestroy();
   });
 
@@ -975,5 +1008,92 @@ describe('AnalysisComponent Verlauf + Sterne (0.603.0)', () => {
     c.onMove({ orig: 'e2', dest: 'e4' });
     c.ngOnDestroy();
     expect(c.__history.save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AnalysisComponent Zugbaum (0.604.0)', () => {
+  const sans = (nodes: any[]) => nodes.map((n: any) => n.san);
+
+  function withVariation() {
+    // 1.e4 e5 2.Nf3, dazu die Variante 1...c5 2.Nf3 — man steht am Ende der Variante
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.onMove({ orig: 'c7', dest: 'c5' });
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    return c;
+  }
+
+  it('derselbe Zug geht in die vorhandene Fortsetzung, statt eine zweite anzulegen', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.onMove({ orig: 'e7', dest: 'e5' });
+    expect(c.root.children[0].children.length).toBe(1);
+    expect(sans(c.line)).toEqual(['e4', 'e5', 'Nf3']);   // die Fortsetzung bleibt erreichbar
+    expect(c.ply).toBe(2);
+    c.ngOnDestroy();
+  });
+
+  it('Variante hochstufen und zur Hauptvariante machen lassen Brett und Stand stehen', () => {
+    const c = withVariation();
+    const here = c.currentNode;
+    const v0 = c.treeVersion;
+    c.onTreeAction({ kind: 'promote', node: here });
+    expect(sans(c.root.children[0].children)).toEqual(['c5', 'e5']);
+    expect(c.currentNode).toBe(here);
+    expect(c.treeVersion).toBeGreaterThan(v0);
+    c.onTreeAction({ kind: 'mainline', node: c.root.children[0].children[1] });   // 1...e5 wieder nach vorn
+    expect(sans(c.root.children[0].children)).toEqual(['e5', 'c5']);
+    expect(sans(c.line)).toEqual(['e4', 'c5', 'Nf3']);
+    c.ngOnDestroy();
+  });
+
+  it('ab hier löschen: steht man darin, geht es beim Zug davor weiter', () => {
+    const c = withVariation();
+    const c5 = c.root.children[0].children[1];
+    c.onTreeAction({ kind: 'delete', node: c5 });
+    expect(sans(c.root.children[0].children)).toEqual(['e5']);
+    expect(sans(c.line)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.ply).toBe(1);
+    expect(c.currentFen).toBe(c.root.children[0].fen);
+
+    // Steht man woanders, bleibt man dort
+    c.goTo(3);
+    c.onTreeAction({ kind: 'delete', node: c.root.children[0].children[0].children[0] });   // 2.Nf3 der Hauptlinie
+    expect(sans(c.line)).toEqual(['e4', 'e5']);
+    expect(c.ply).toBe(2);
+    c.ngOnDestroy();
+  });
+
+  it('Stern über das Menü', () => {
+    const c = withVariation();
+    c.onTreeAction({ kind: 'star', node: c.root.children[0] });
+    expect(c.starredList.map((n: any) => c.starLabel(n))).toEqual(['1.e4']);
+    c.ngOnDestroy();
+  });
+
+  it('die Bewertung kommt an den Zug, sobald sie belastbar ist', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.running = true;
+    const line = (depth: number, score: number) => ({ multipv: 1, depth, scoreType: 'cp', score, evalText: (score > 0 ? '+' : '') + (score / 100).toFixed(2), pvUci: ['e7e5'] });
+    (c as any).onEngineUpdate(c.currentFen, 4, [line(4, 90)]);
+    expect(c.currentNode.evalText).toBeUndefined();          // flach: noch nicht
+    const v0 = c.treeVersion;
+    (c as any).onEngineUpdate(c.currentFen, 18, [line(18, 30)]);
+    expect(c.currentNode.evalText).toBe('+0.30');
+    expect(c.treeVersion).toBeGreaterThan(v0);
+    c.ngOnDestroy();
+  });
+
+  it('Explorer/Repertoire-Züge aus der Mitte heraus werden eine Variante', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5' });
+    c.ngOnInit();
+    c.goTo(1);
+    c.playRepertoireMoves(['c5', 'Nf3', 'Zz9']);
+    expect(sans(c.line)).toEqual(['e4', 'c5', 'Nf3']);
+    expect(sans(c.root.children[0].children)).toEqual(['e5', 'c5']);
+    c.ngOnDestroy();
   });
 });

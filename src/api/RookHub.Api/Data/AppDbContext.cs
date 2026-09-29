@@ -1856,6 +1856,7 @@ public class AppDbContext : DbContext
              .HasForeignKey(h => h.UserId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(h => h.Moves).HasColumnType("TEXT");
+            e.Property(h => h.TreeJson).HasColumnType("LONGTEXT");   // Zugbaum samt Varianten (0.604.0)
         });
 
         // Züge vergleichen (0.602.0): Kopf je Vergleich, eine Zeile je gerechneter Stellung.

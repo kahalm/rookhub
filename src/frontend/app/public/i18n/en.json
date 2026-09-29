@@ -2857,6 +2857,7 @@
       "fromPosition": "From a set-up position",
       "noMoves": "no moves yet",
       "moves": "{{count}} half-moves",
+      "variationMoves": "+{{count}} in variations",
       "loadFailed": "The history could not be loaded.",
       "deleteFailed": "The entry could not be deleted."
     },
@@ -2865,6 +2866,12 @@
       "remove": "Remove the star (S)",
       "start": "Start",
       "jumps": "Starred positions"
+    },
+    "tree": {
+      "promote": "Promote variation",
+      "makeMainline": "Make main line",
+      "deleteFrom": "Delete from here",
+      "hint": "Right-click a move (long press on a phone): star, promote a variation, make it the main line or delete from there."
     }
   },
   "stats": {

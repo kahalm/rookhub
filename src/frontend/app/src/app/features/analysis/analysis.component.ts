@@ -30,8 +30,11 @@ import { PositionMenuComponent } from './position-menu.component';
 import { MatDialog } from '@angular/material/dialog';
 import { AnalysisHistoryEntry, AnalysisHistoryService } from './analysis-history.service';
 import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.component';
-
-interface LineNode { san: string; fen: string; uci: string; }
+import {
+  AnalysisNode, addMove, createRoot, fromDto, isWithin, lineThrough, mainline, makeMainline, numberedSan, parsePgnTree, pathTo,
+  playSan, playUci, promote, removeNode, starredNodes, toDto,
+} from './analysis-tree';
+import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -65,7 +68,7 @@ const EVAL_SETTLE_DEPTH = 10;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent
+    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent
   ],
   template: `
     <div class="analysis-page">
@@ -238,9 +241,9 @@ const EVAL_SETTLE_DEPTH = 10;
                 <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [matTooltip]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
                 <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
                 <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
-                <button mat-icon-button class="star-btn" [class.on]="starred.has(ply)" (click)="toggleStar()"
-                        [matTooltip]="(starred.has(ply) ? 'analysis.star.remove' : 'analysis.star.add') | translate">
-                  <mat-icon>{{ starred.has(ply) ? 'star' : 'star_border' }}</mat-icon>
+                <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
+                        [matTooltip]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
+                  <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
                 </button>
                 <span class="spacer"></span>
                 <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
@@ -251,23 +254,22 @@ const EVAL_SETTLE_DEPTH = 10;
                                    [candidates]="engineCandidates"
                                    [engines]="{ hasEngines: hasExternalEngines, hasBackground: backgroundEngineIds.length > 0 }" />
               </div>
-              @if (starredPlies.length > 0) {
+              @if (starredList.length > 0) {
                 <div class="star-jumps" [attr.aria-label]="'analysis.star.jumps' | translate">
                   <mat-icon class="star-icon">star</mat-icon>
-                  @for (p of starredPlies; track p) {
-                    <button type="button" class="jump" [class.active]="p === ply" (click)="goTo(p)">{{ starLabel(p) }}</button>
+                  @for (n of starredList; track n) {
+                    <button type="button" class="jump" [class.active]="n === currentNode" (click)="goToNode(n)">{{ starLabel(n) }}</button>
                   }
                 </div>
               }
-              @if (line.length === 0) {
+              @if (root.children.length === 0) {
                 <p class="muted">{{ 'analysis.noMoves' | translate }}</p>
               } @else {
-                <div class="movelist">
-                  @for (m of line; track $index) {
-                    @if ($index % 2 === 0) { <span class="moveno">{{ $index / 2 + 1 }}.</span> }
-                    <span class="move" [class.active]="ply === $index + 1" [class.starred]="starred.has($index + 1)" (click)="goTo($index + 1)">{{ m.san }}@if (starred.has($index + 1)) {<span class="star-mark">★</span>}</span>
-                  }
-                </div>
+                <!-- Zugbaum wie auf Lichess (0.604.0): Hauptlinie als Tabelle mit Bewertung, Varianten als Block,
+                     Rechtsklick bzw. langer Druck: Stern, hochstufen, zur Hauptvariante, ab hier löschen. -->
+                <app-analysis-move-tree class="movetree" [root]="root" [current]="currentNode" [version]="treeVersion"
+                                        (select)="goToNode($event)" (action)="onTreeAction($event)" />
+                <p class="tree-hint">{{ 'analysis.tree.hint' | translate }}</p>
               }
             </mat-card-content>
           </mat-card>
@@ -367,13 +369,9 @@ const EVAL_SETTLE_DEPTH = 10;
     .star-jumps .jump { font: inherit; font-family: 'Courier New', monospace; font-size: .85rem; padding: 1px 8px; border-radius: 999px;
       border: 1px solid rgba(249, 168, 37, .6); background: transparent; color: inherit; cursor: pointer; }
     .star-jumps .jump.active { background: rgba(249, 168, 37, .25); }
-    .move.starred .star-mark { color: #f9a825; font-size: .75rem; margin-left: 1px; }
     .controls .spacer { flex: 1; }
-    .movelist { margin-top: 8px; line-height: 1.9; }
-    .moveno { color: color-mix(in srgb, currentColor 40%, transparent); margin: 0 2px 0 8px; font-size: .85rem; }
-    .move { cursor: pointer; padding: 1px 5px; border-radius: 4px; font-family: 'Courier New', monospace; }
-    .move:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
-    .move.active { background: #1976d2; color: #fff; }
+    .movetree { margin-top: 8px; }
+    .tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .io-card .full { width: 100%; }
     .io-actions { display: flex; gap: 8px; margin-bottom: 8px; }
     .board-tap { display: none; }
@@ -391,10 +389,14 @@ const EVAL_SETTLE_DEPTH = 10;
   `]
 })
 export class AnalysisComponent implements OnInit, OnDestroy {
-  private chess = new Chess();
-  startFen = START_FEN;
-  line: LineNode[] = [];
+  /** Zugbaum der Analyse (0.604.0): die Wurzel ist die Ausgangsstellung, `children[0]` jeweils die Fortsetzung. */
+  root: AnalysisNode = createRoot(START_FEN);
+  /** Die Linie durch den aktuellen Knoten: der Weg dorthin und seine Fortsetzung — Pfeiltasten laufen auf ihr. */
+  line: AnalysisNode[] = [];
+  /** Wie weit man auf `line` steht (0 = Ausgangsstellung). */
   ply = 0;
+  /** Zählt Änderungen am Baum (Zug, Variante, Stern, Bewertung) — die Zugliste baut danach neu auf. */
+  treeVersion = 0;
 
   orientation: Color = 'white';
   boardFen = START_FEN;
@@ -421,9 +423,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   pgnInput = '';
   editing = false;
 
-  // ---- Analyse-Verlauf + Sterne (0.603.0) ----
-  /** Mit Stern markierte Halbzüge (0 = Ausgangsstellung) — Sprungliste über der Zugliste. */
-  starred = new Set<number>();
+  // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
   historyId: number | null = null;
   /** Titel aus den PGN-Kopfdaten („Weiß – Schwarz"), sonst leer. */
@@ -513,9 +513,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
     const fenParam = params.get('fen');
-    if (fenParam && this.isValidFen(fenParam)) {
-      this.startFen = fenParam;
-    }
+    const startFen = fenParam && this.isValidFen(fenParam) ? fenParam : START_FEN;
+    this.root = createRoot(startFen);
     const orientationParam = params.get('orientation');
     if (orientationParam === 'white' || orientationParam === 'black') {
       this.orientation = orientationParam;
@@ -624,27 +623,24 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.pgnInput = pgn;
       this.loadPgn(true);      // aus einer Partie hergesprungen: das PGN bleibt im Feld stehen (kopierbar, Wunsch 2026-09-28)
     } else if (uci.length) {
-      this.loadFromUci(this.startFen, uci);
+      this.loadFromUci(startFen, uci);
     } else {
-      this.resetToStart();
+      this.resetToStart(startFen);
     }
   }
 
-  /** Baut die Hauptlinie aus UCI-Zügen ab `fromFen` und springt ans Ende (aktuelle Stellung). */
+  /** Baut die Hauptlinie aus UCI-Zügen ab `fromFen` und springt ans Ende (aktuelle Stellung); am ersten Zug, der nicht
+   *  geht, ist Schluss. */
   private loadFromUci(fromFen: string, uciMoves: string[]): void {
-    let replay: Chess;
-    try { replay = new Chess(fromFen); } catch { this.resetToStart(); return; }
-    const built: LineNode[] = [];
+    if (!this.isValidFen(fromFen)) { this.resetToStart(START_FEN); return; }
+    const root = createRoot(fromFen);
+    let node = root;
     for (const u of uciMoves) {
-      let mv;
-      try { mv = replay.move({ from: u.substring(0, 2), to: u.substring(2, 4), promotion: u.length > 4 ? u[4] : undefined }); }
-      catch { break; }
-      if (!mv) break;
-      built.push({ san: mv.san, fen: replay.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
+      const next = playUci(node, u);
+      if (!next) break;
+      node = next;
     }
-    this.line = built;
-    this.ply = built.length;
-    this.refresh();
+    this.setTree(root, node);
   }
 
   ngOnDestroy(): void {
@@ -661,11 +657,28 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   }
 
   // ---- Navigation ----
-  get currentFen(): string { return this.ply === 0 ? this.startFen : this.line[this.ply - 1].fen; }
+  get startFen(): string { return this.root.fen; }
+  /** Der Knoten, dessen Stellung auf dem Brett steht (die Wurzel = Ausgangsstellung). */
+  get currentNode(): AnalysisNode { return this.ply === 0 ? this.root : this.line[this.ply - 1]; }
+  get currentFen(): string { return this.currentNode.fen; }
 
   goTo(ply: number): void {
     this.ply = Math.max(0, Math.min(ply, this.line.length));
     this.refresh();
+  }
+
+  /** Auf einen beliebigen Knoten springen (Klick in Zugliste, Variante, Sternliste) — die Linie läuft dann durch ihn. */
+  goToNode(node: AnalysisNode): void {
+    this.line = lineThrough(node);
+    this.ply = pathTo(node).length;
+    this.refresh();
+  }
+
+  /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
+  private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
+    this.root = root;
+    this.treeVersion++;
+    this.goToNode(current);
   }
   prev(): void { this.goTo(this.ply - 1); }
   next(): void { this.goTo(this.ply + 1); }
@@ -695,31 +708,26 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
     if (!mv) { this.refresh(); return; }
 
-    if (this.ply < this.line.length) this.truncateAtPly();   // ab hier neu
-    this.line.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
-    this.ply = this.line.length;
-    this.refresh();
+    // Zugbaum (0.604.0): ein anderer Zug als die Fortsetzung wird eine VARIANTE, derselbe Zug geht in die vorhandene.
+    const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
+    this.treeVersion++;
+    this.goToNode(node);
   }
 
-  /** Baummodus des Repertoire-Panels: die geklickte Zugfolge ab der aktuellen Stellung aufs Brett
-   * spielen (wie selbst gezogen — ab hier wird die bisherige Fortsetzung ersetzt). Illegale/unbekannte
+  /** Baummodus des Repertoire-Panels bzw. Explorer: die geklickte Zugfolge ab der aktuellen Stellung aufs Brett
+   * spielen (wie selbst gezogen — weicht sie von der Fortsetzung ab, wird sie eine Variante). Illegale/unbekannte
    * SAN brechen still ab, statt die Linie halb zu zerschießen. */
   playRepertoireMoves(sans: string[]): void {
     if (!sans?.length) return;
-    let c: Chess;
-    try { c = new Chess(this.currentFen); } catch { return; }
-    const added: LineNode[] = [];
+    let node = this.currentNode;
     for (const san of sans) {
-      let mv;
-      try { mv = c.move(san); } catch { break; }
-      if (!mv) break;
-      added.push({ san: mv.san, fen: c.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') });
+      const next = playSan(node, san);
+      if (!next) break;
+      node = next;
     }
-    if (!added.length) return;
-    if (this.ply < this.line.length) this.truncateAtPly();   // ab hier neu
-    this.line = this.line.concat(added);
-    this.ply = this.line.length;
-    this.refresh();
+    if (node === this.currentNode) return;
+    this.treeVersion++;
+    this.goToNode(node);
   }
 
   // ---- Refresh board + engine for current ply ----
@@ -732,7 +740,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.turnColor = c.turn() === 'w' ? 'white' : 'black';
     this.isCheck = c.isCheck();
     this.dests = this.computeDests(c);
-    const lm = this.ply > 0 ? this.line[this.ply - 1].uci : undefined;
+    const lm = this.ply > 0 ? this.currentNode.uci : undefined;
     this.lastMove = lm ? [lm.substring(0, 2) as Key, lm.substring(2, 4) as Key] : undefined;
     this.shapes = [];
     this.displayLines = [];
@@ -822,6 +830,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const best = lines[0];
     if (best && (best.depth >= EVAL_SETTLE_DEPTH || best.scoreType === 'mate' || !this.running)) {
       this.updateEval(best);
+      // Die Bewertung wandert an den Zug in der Zugliste (wie auf Lichess) und mit dem Baum in den Verlauf.
+      const node = this.currentNode;
+      if (node !== this.root && node.evalText !== best.evalText) {
+        node.evalText = best.evalText;
+        this.treeVersion++;
+        this.scheduleHistorySave();
+      }
     }
   }
 
@@ -1091,17 +1106,16 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   reloadPage(): void { window.location.reload(); }
   flip(): void { this.orientation = this.orientation === 'white' ? 'black' : 'white'; }
 
-  reset(): void { this.newSession(); this.startFen = START_FEN; this.resetToStart(); }
-  private resetToStart(): void { this.line = []; this.ply = 0; this.refresh(); }
+  reset(): void { this.newSession(); this.resetToStart(START_FEN); }
+  private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
   startEditing(): void { this.editing = true; }
   onSetupApply(fen: string): void {
     this.editing = false;
     this.newSession();
-    this.startFen = fen;
     this.fenInput = '';
-    this.resetToStart();
+    this.resetToStart(fen);
   }
 
   loadFen(): void {
@@ -1109,9 +1123,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (!fen) return;
     if (!this.isValidFen(fen)) { this.snackbar.show('Invalid FEN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
     this.newSession();
-    this.startFen = fen;
     this.fenInput = '';
-    this.resetToStart();
+    this.resetToStart(fen);
   }
 
   copyFen(): void {
@@ -1121,52 +1134,66 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** @param keepText Das PGN im Feld stehen lassen (Sprung aus einer Partie) — beim Einfügen von Hand wird es geleert. */
+  /** PGN samt Varianten laden (0.604.0 — vorher nur die Hauptlinie) und ans Ende der Hauptlinie springen.
+   *  @param keepText Das PGN im Feld stehen lassen (Sprung aus einer Partie) — beim Einfügen von Hand wird es geleert. */
   loadPgn(keepText = false): void {
     const pgn = this.pgnInput.trim();
     if (!pgn) return;
-    const c = new Chess();
-    try { c.loadPgn(pgn); } catch { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
-    const history = c.history({ verbose: true }) as any[];
-    if (history.length === 0) { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
-    this.newSession(pgnTitle(c));
-    // Hauptlinie ab Standard-Grundstellung nachspielen.
-    const replay = new Chess();
-    this.startFen = START_FEN;
-    this.line = history.map(h => {
-      const mv = replay.move({ from: h.from, to: h.to, promotion: h.promotion });
-      return { san: mv.san, fen: replay.fen(), uci: mv.from + mv.to + (mv.promotion ?? '') };
-    });
+    const parsed = parsePgnTree(pgn);
+    if (!parsed) { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
+    this.newSession(pgnTitle(parsed.headers));
     if (!keepText) this.pgnInput = '';
-    this.ply = this.line.length;
-    this.refresh();
+    const main = mainline(parsed.root);
+    this.setTree(parsed.root, main[main.length - 1] ?? parsed.root);
   }
 
-  // ---- Sterne ----
+  // ---- Sterne + Zugbaum ----
 
-  get starredPlies(): number[] { return [...this.starred].sort((a, b) => a - b); }
+  private starCache: { version: number; root: AnalysisNode | null; list: AnalysisNode[] } = { version: -1, root: null, list: [] };
+  /** Markierte Stellungen, Hauptlinie zuerst (template-gebunden, deshalb je Baumstand nur einmal gesucht). */
+  get starredList(): AnalysisNode[] {
+    const c = this.starCache;
+    if (c.version !== this.treeVersion || c.root !== this.root) {
+      this.starCache = { version: this.treeVersion, root: this.root, list: starredNodes(this.root) };
+    }
+    return this.starCache.list;
+  }
 
   /** Stern auf der Stellung, die gerade auf dem Brett steht (Taste S). */
-  toggleStar(): void {
-    const next = new Set(this.starred);
-    if (next.has(this.ply)) next.delete(this.ply); else next.add(this.ply);
-    this.starred = next;
+  toggleStar(): void { this.toggleStarOn(this.currentNode); }
+
+  private toggleStarOn(node: AnalysisNode): void {
+    if (node.starred) delete node.starred; else node.starred = true;
+    this.treeVersion++;
     this.scheduleHistorySave();
   }
 
-  /** „12...Nf6" — der Zug, der zur markierten Stellung führte; 0 = Ausgangsstellung. */
-  starLabel(ply: number): string {
-    if (ply <= 0 || ply > this.line.length) return this.translate.instant('analysis.star.start');
-    const before = ply === 1 ? this.startFen : this.line[ply - 2].fen;
-    const parts = before.split(' ');
-    const n = parseInt(parts[5] ?? '1', 10) || 1;
-    return (parts[1] === 'b' ? `${n}...` : `${n}.`) + this.line[ply - 1].san;
+  /** „12...Nf6" — der Zug, der zur markierten Stellung führte; die Wurzel = Ausgangsstellung. */
+  starLabel(node: AnalysisNode): string {
+    return node === this.root || !node.parent ? this.translate.instant('analysis.star.start') : numberedSan(node);
   }
 
-  /** Ab dem aktuellen Halbzug neu: die Fortsetzung fällt weg — und mit ihr ihre Sterne. */
-  private truncateAtPly(): void {
-    this.line = this.line.slice(0, this.ply);
-    if ([...this.starred].some(p => p > this.ply)) this.starred = new Set([...this.starred].filter(p => p <= this.ply));
+  /** Menü der Zugliste (Rechtsklick bzw. langer Druck): Stern, Variante hochstufen, zur Hauptvariante, ab hier löschen. */
+  onTreeAction(e: { kind: MoveTreeAction; node: AnalysisNode }): void {
+    const current = this.currentNode;
+    switch (e.kind) {
+      case 'star': this.toggleStarOn(e.node); return;
+      case 'promote': promote(e.node); break;
+      case 'mainline': makeMainline(e.node); break;
+      case 'delete': {
+        const within = isWithin(current, e.node);
+        const parent = removeNode(e.node);
+        if (!parent) return;
+        this.treeVersion++;
+        // Stand man in dem, was wegfällt, geht es beim Zug davor weiter.
+        if (within) { this.goToNode(parent); return; }
+        break;
+      }
+    }
+    // Brett und Engine bleiben, nur die Reihenfolge änderte sich: die Linie durch den aktuellen Zug neu ziehen.
+    this.treeVersion++;
+    this.line = lineThrough(current);
+    this.scheduleHistorySave();
   }
 
   // ---- Analyse-Verlauf ----
@@ -1176,29 +1203,34 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       .subscribe((e: AnalysisHistoryEntry | undefined) => { if (e) this.openHistoryEntry(e); });
   }
 
-  /** Einen Eintrag aufs Brett: Ausgangsstellung, Züge, der Halbzug von damals, die Sterne — und weiter speichern
-   *  unter DERSELBEN Kennung. */
+  /** Einen Eintrag aufs Brett: Ausgangsstellung, Zugbaum samt Varianten und Sternen, der Zug von damals — und weiter
+   *  speichern unter DERSELBEN Kennung. Die Liste trägt den Baum nicht mit; dann wird der Eintrag erst geholt. */
   openHistoryEntry(e: AnalysisHistoryEntry): void {
     if (!this.isValidFen(e.startFen)) return;
+    if (!e.tree) {
+      this.history.get(e.id).subscribe({
+        next: full => { if (full.tree) this.openHistoryEntry(full); },
+        error: () => this.snackbar.warn(this.translate.instant('analysis.history.loadFailed')),
+      });
+      return;
+    }
     this.flushHistory();
     this.historySession++;
     this.historyId = e.id;
     this.historyTitle = e.title;
-    this.starred = new Set(e.starred);
-    this.startFen = e.startFen;
-    this.loadFromUci(e.startFen, e.moves);
-    this.goTo(Math.min(e.ply, this.line.length));
+    const { root, nodes } = fromDto(e.startFen, e.tree);
+    this.setTree(root, (e.current >= 0 ? nodes[e.current] : null) ?? root);
+    this.lastHistorySig = this.historySignature();   // eben geladen = schon gespeichert
     this.cdr.markForCheck();
   }
 
   /** Eine neue Analyse beginnt (Zurücksetzen, FEN/PGN/Stellung geladen): der bisherige Stand geht noch raus, dann
-   *  ohne Kennung und ohne Sterne weiter. */
+   *  ohne Kennung weiter (der neue Baum bringt keine Sterne mit). */
   private newSession(title: string | null = null): void {
     this.flushHistory();
     this.historySession++;
     this.historyId = null;
     this.historyTitle = title;
-    this.starred = new Set();
     this.lastHistorySig = '';
   }
 
@@ -1213,18 +1245,23 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.historyTimer = setTimeout(() => { this.historyTimer = null; this.saveHistoryNow(); }, HISTORY_SAVE_MS);
   }
 
+  /** Was gespeichert würde, als Vergleichswert — gleich = nichts zu tun. */
+  private historySignature(): string {
+    const { tree, current } = toDto(this.root, this.currentNode);
+    return JSON.stringify([this.startFen, tree, current, this.historyTitle ?? '']);
+  }
+
   private saveHistoryNow(): void {
     if (!this.auth.isLoggedIn) return;
-    if (this.line.length === 0 && this.startFen === START_FEN && this.starred.size === 0) return;
-    const moves = this.line.map(m => m.uci);
-    const starred = this.starredPlies;
-    const sig = [this.startFen, moves.join(' '), this.ply, starred.join(','), this.historyTitle ?? ''].join('|');
+    if (this.root.children.length === 0 && this.startFen === START_FEN && !this.root.starred) return;
+    const { tree, current } = toDto(this.root, this.currentNode);
+    const sig = JSON.stringify([this.startFen, tree, current, this.historyTitle ?? '']);
     if (sig === this.lastHistorySig) return;
     // Läuft noch ein Speichern (ohne Kennung), würde ein zweites einen zweiten Eintrag anlegen — danach nachholen.
     if (this.historySaving) { this.historyAgain = true; return; }
     this.historySaving = true;
     const session = this.historySession;
-    this.history.save({ id: this.historyId, startFen: this.startFen, moves, ply: this.ply, title: this.historyTitle, starred }).subscribe({
+    this.history.save({ id: this.historyId, startFen: this.startFen, title: this.historyTitle, tree, current }).subscribe({
       next: e => {
         this.historySaving = false;
         // Nur übernehmen, wenn inzwischen keine NEUE Analyse begonnen hat.
@@ -1241,9 +1278,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 }
 
 /** „Weiß – Schwarz" aus den PGN-Kopfdaten (ohne „?"), sonst null. */
-function pgnTitle(c: Chess): string | null {
-  let h: Record<string, string> = {};
-  try { h = c.getHeaders(); } catch { return null; }
+function pgnTitle(h: Record<string, string>): string | null {
   const white = h['White'] && h['White'] !== '?' ? h['White'] : null;
   const black = h['Black'] && h['Black'] !== '?' ? h['Black'] : null;
   if (white && black) return `${white} – ${black}`;

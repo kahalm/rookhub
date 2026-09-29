@@ -8,8 +8,8 @@ import { AnalysisHistoryDialogComponent } from './analysis-history-dialog.compon
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const entry = (id: number, extra: object = {}) => ({
-  id, startFen: START, moves: ['e2e4', 'e7e5'], ply: 2, title: null, starred: [], preview: '1.e4 e5', moveCount: 2,
-  createdAt: '2026-09-29T18:00:00Z', updatedAt: '2026-09-29T18:05:00Z', ...extra,
+  id, startFen: START, moves: ['e2e4', 'e7e5'], ply: 2, title: null, preview: '1.e4 e5', moveCount: 2, nodeCount: 2,
+  starCount: 0, tree: null, current: 1, createdAt: '2026-09-29T18:00:00Z', updatedAt: '2026-09-29T18:05:00Z', ...extra,
 });
 
 describe('AnalysisHistoryDialogComponent', () => {
@@ -25,10 +25,10 @@ describe('AnalysisHistoryDialogComponent', () => {
     return { fixture, c: fixture.componentInstance, http: TestBed.inject(HttpTestingController), ref };
   }
 
-  it('lists the entries with title or origin, preview and star count; a click chooses one', () => {
+  it('lists the entries with title or origin, preview, star count and moves in variations; a click chooses one', () => {
     const { fixture, c, http, ref } = make();
     http.expectOne('/api/analysis-history').flush([
-      entry(1, { title: 'Carlsen – Nakamura', starred: [1, 2] }),
+      entry(1, { title: 'Carlsen – Nakamura', starCount: 2, nodeCount: 5 }),
       entry(2, { startFen: '8/8/8/8/8/8/k7/K7 w - - 0 1', moves: [], preview: '', moveCount: 0 }),
     ]);
     fixture.detectChanges();
@@ -37,6 +37,7 @@ describe('AnalysisHistoryDialogComponent', () => {
     expect(text).toContain('★ 2');
     expect(text).toContain('1.e4 e5');
     expect(text).toContain('analysis.history.fromPosition');
+    expect(text).toContain('analysis.history.variationMoves');
     (fixture.nativeElement.querySelector('.pick') as HTMLButtonElement).click();
     expect(ref.close).toHaveBeenCalledWith(jasmine.objectContaining({ id: 1 }));
     expect(c.fromStart(entry(1) as any)).toBeTrue();
