@@ -16,6 +16,13 @@ export interface AuthResponse {
   impersonating?: boolean;
   /** Benutzername des Admins, der eingestiegen ist (nur bei impersonating). */
   impersonatorUsername?: string;
+  /**
+   * Nur im Client gesetzt: diese Anmeldung wurde aus der GETEILTEN Anmeldung einer anderen Oberflaeche
+   * uebernommen (Cookie auf der Elterndomaene) und endet mit ihr — `HandoffService.verifyAdoptedSession`
+   * gleicht sie beim Start und beim Zurueckkehren in den Tab ab. Eine eigene Anmeldung (Maske,
+   * Registrierung) und ein frisches Token nach „Passwort aendern" tragen das Feld nicht.
+   */
+  adopted?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -135,7 +142,8 @@ export class AuthService {
    * Uebernimmt eine anderswo entstandene Anmeldung als die eigene — heute der Sprung zwischen
    * RookHub und der Turnierseite (siehe `HandoffService`). Bewusst getrennt von `impersonate`:
    * hier wird nichts gesichert und nichts markiert, es ist eine ganz normale Anmeldung, die nur
-   * nicht ueber die Anmeldemaske kam.
+   * nicht ueber die Anmeldemaske kam. Ob sie an der geteilten Anmeldung haengt (`adopted`),
+   * entscheidet der Aufrufer.
    */
   adoptSession(user: AuthResponse): void {
     this.persistSession(user);

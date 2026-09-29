@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { HandoffService } from './handoff.service';
 
@@ -41,6 +41,10 @@ describe('HandoffService', () => {
   function drainPreferences(): void {
     http.match('/api/profile').forEach(r => r.flush({}));
   }
+
+  /** Laesst die Antwort einer Anfrage bis zur naechsten durchlaufen (sie folgt erst nach einem await). */
+  const settle = () => new Promise<void>(r => setTimeout(r));
+  const noContent = { status: 204, statusText: 'No Content' };
 
   it('holt sich beim Start die Anmeldung der Schwesterseite', async () => {
     // Der Nachweis ist ein HttpOnly-Cookie auf der Elterndomaene — hier nicht lesbar, nur der
@@ -90,6 +94,9 @@ describe('HandoffService', () => {
     const req = http.expectOne('/api/auth/handoff/exchange');
     expect(req.request.body).toEqual({ code: 'EINMAL' });
     req.flush(session);
+    // Danach die Frage, ob der Tausch auch das geteilte Cookie angelegt hat (hier: nein).
+    await settle();
+    http.expectOne('/api/auth/session').flush(null, noContent);
 
     expect(await done).toBeTrue();
     // Verbraucht — er hat im Verlauf nichts verloren.
@@ -116,5 +123,145 @@ describe('HandoffService', () => {
 
     expect(await svc.adoptSharedSession()).toBeFalse();
     http.verify();
+  });
+
+  describe('Abmelden über die Oberflächen hinweg', () => {
+    // Gemeldet im Codereview 2026-09-29 (A1-005): Abmelden in RookHub löschte nur das Cookie. KidHub,
+    // Turnierseite und LeagueHub, die es beim Start gegen ein eigenes 30-Tage-Token getauscht hatten,
+    // fragten nie wieder nach — die nächsten Kinder am Vereins-PC spielten im Konto der Lehrerin.
+    const visible = () => spyOnProperty(document, 'visibilityState', 'get').and.returnValue('visible');
+
+    /** Eine aus der geteilten Anmeldung übernommene Sitzung (so, wie sie beim Start entsteht). */
+    function adopted(): void {
+      auth.adoptSession({ ...session, adopted: true });
+    }
+
+    /** Am Ende: das Profil-Nachladen von adoptSession abräumen, dann darf nichts mehr offen sein. */
+    async function finish(): Promise<void> {
+      await settle();
+      drainPreferences();
+      http.verify();
+    }
+
+    beforeEach(() => spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true));
+
+    it('merkt sich, dass die Anmeldung aus der geteilten stammt', async () => {
+      const done = svc.consumeIncoming();
+      http.expectOne('/api/auth/session').flush(session);
+
+      expect(await done).toBeTrue();
+      expect(auth.currentUser?.adopted).toBeTrue();
+      expect(JSON.parse(localStorage.getItem('rookhub_user')!).adopted).toBeTrue();
+      await finish();
+    });
+
+    it('meldet eine übernommene Anmeldung beim Start ab, wenn die geteilte weg ist', async () => {
+      adopted();
+
+      expect(await svc.consumeIncoming()).toBeFalse();
+      http.expectOne({ method: 'POST', url: '/api/auth/session' }).flush(null, noContent);
+      await settle();
+
+      expect(auth.currentUser).toBeNull();
+      expect(localStorage.getItem('rookhub_user')).toBeNull();
+      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      await finish();
+    });
+
+    it('gleicht beim Zurückkehren in den Tab ab', async () => {
+      adopted();
+      await svc.consumeIncoming();
+      http.expectOne('/api/auth/session').flush(session);           // beim Start: steht noch
+      await settle();
+      expect(auth.currentUser?.userId).toBe(7);
+
+      (svc as unknown as { lastCheck: number }).lastCheck = 0;       // Mindestabstand abgelaufen
+      visible();
+      document.dispatchEvent(new Event('visibilitychange'));
+      http.expectOne('/api/auth/session').flush(null, noContent);    // inzwischen abgemeldet
+      await settle();
+
+      expect(auth.currentUser).toBeNull();
+      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      await finish();
+    });
+
+    it('fragt beim schnellen Hin- und Herschalten nicht jedes Mal', async () => {
+      adopted();
+      await svc.consumeIncoming();
+      http.expectOne('/api/auth/session').flush(session);
+      await settle();
+
+      visible();
+      document.dispatchEvent(new Event('visibilitychange'));
+      http.expectNone('/api/auth/session');
+      await finish();
+    });
+
+    it('lässt eine selbst angemeldete Sitzung in Ruhe', async () => {
+      auth.adoptSession(session);                                    // ohne adopted: Maske/Registrierung
+      await svc.consumeIncoming();
+      visible();
+      document.dispatchEvent(new Event('visibilitychange'));
+
+      http.expectNone('/api/auth/session');
+      expect(auth.currentUser?.userId).toBe(7);
+      await finish();
+    });
+
+    it('bleibt angemeldet, wenn der Abgleich keine Antwort bekommt (offline, 429)', async () => {
+      adopted();
+
+      const done = svc.verifyAdoptedSession();
+      http.expectOne('/api/auth/session').flush('zu viele', { status: 429, statusText: 'Too Many Requests' });
+
+      expect(await done).toBeFalse();
+      expect(auth.currentUser?.userId).toBe(7);
+      await finish();
+    });
+
+    it('übernimmt das andere Konto, wenn sich dort inzwischen jemand anderes angemeldet hat', async () => {
+      // Abmelden wäre hier falsch: das schickte session/end und löschte das Cookie des anderen mit.
+      adopted();
+
+      const done = svc.verifyAdoptedSession();
+      http.expectOne('/api/auth/session').flush({ ...session, userId: 8, username: 'andere' });
+
+      expect(await done).toBeTrue();
+      expect(auth.currentUser?.userId).toBe(8);
+      expect(auth.currentUser?.adopted).toBeTrue();
+      http.expectNone('/api/auth/session/end');
+      await finish();
+    });
+
+    it('ein eingelöster Code hängt an der geteilten Anmeldung, wenn der Tausch das Cookie anlegte', async () => {
+      history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
+
+      const done = svc.consumeIncoming();
+      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      await settle();
+      http.expectOne('/api/auth/session').flush(session);
+
+      expect(await done).toBeTrue();
+      expect(auth.currentUser?.adopted).toBeTrue();
+      await finish();
+    });
+
+    it('ohne Elterndomäne bleibt ein eingelöster Code eine gewöhnliche Anmeldung', async () => {
+      // localhost, Dev über HTTP: dort gibt es nie ein Cookie, der Abgleich antwortete immer 204 —
+      // und meldete sonst jeden ab, der per Sprung gekommen ist.
+      history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
+
+      const done = svc.consumeIncoming();
+      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      await settle();
+      http.expectOne('/api/auth/session').flush(null, noContent);
+
+      expect(await done).toBeTrue();
+      expect(auth.currentUser?.adopted).toBeFalsy();
+      expect(await svc.verifyAdoptedSession()).toBeFalse();
+      http.expectNone('/api/auth/session');
+      await finish();
+    });
   });
 });
