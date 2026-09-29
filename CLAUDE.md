@@ -2120,6 +2120,12 @@ gemerkten Stellung den jüngsten passenden Auftrag als `Analysis` an (Status, Ti
 Hauptvariante via `AnalysisJobService.EvalTextOf`). Die Remembered-Seite rendert interne `sourceUrl`s (führender
 `/`) als `routerLink`, zeigt die Analyse-Info als Chip-Zeile und bietet ohne Auftrag das Uhr-Symbol (gleicher Dialog);
 sie frischt sich alle 10 s auf, SOLANGE ein Auftrag offen ist (`hasOpenJob`) — sonst ruht der Poll ganz.
+**„Brett + aktueller Stand" (0.599.0, Wunsch 2026-09-29: „zeige Brett und aktuellen Stand der Analyse, und lass Job
+weiterlaufen")**: auf der Remembered-Seite öffnen der Name „Analyse-Auftrag" und die Analyse-Zeile
+`AnalysisJobViewDialogComponent` (statt auf `/analysis/jobs` zu springen) — Brett mit Pfeil je Linie (bester Zug grün),
+Linien, erreichte/laufende Tiefe, Tempo, Zeit; fertig die endgültigen Linien. Er fragt `GET /api/analysis-jobs/{id}`
+alle 5 s und, solange der Auftrag rechnet, `/live` im Sekundentakt; fertig/gescheitert ruht beides. **Bewusst ohne
+Engine**: „Im Analysebrett öffnen" mit der Auftrags-Engine würde den Auftrag über den Live-Vorrang pausieren.
 **„Im Analysebrett öffnen" (0.384.0)** hängt `engine`/`depth`/`lines` des Auftrags an die URL: das Brett wählt genau
 diese Engine (auch die sonst ausgeblendete Hintergrund-Engine, einmalig und NICHT als Dauerwahl gespeichert) und
 setzt die Suche fort, statt bei Tiefe 0 zu beginnen — der Provider hat die Stellung noch im Hash. Zahlen im
@@ -2129,6 +2135,7 @@ Nachkommastellen) — vorher sprang die Einheit je nach Tempo zwischen N/s, kN/s
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/analysis-jobs/live` | NUR der laufende Stand der gerade rechnenden Aufträge (`{ id, depth, nps, seconds }`) — aus dem Arbeitsspeicher, ohne DB; die Auftragsliste holt ihn im Sekundentakt (Literal-Route vor `{id:int}`) |
+| GET | `/api/analysis-jobs/{id}` | EIN eigener Auftrag (gleiche Form wie in der Liste; 404 fremd/unbekannt) — für „Brett + aktueller Stand" auf den gemerkten Stellungen (0.599.0) |
 | GET | `/api/analysis-jobs` | Eigene Aufträge (neueste zuerst) inkl. Status (`queued/running/paused/done/failed`), `reachedDepth`, `resultJson`, `secondsSpent`, `lastError` |
 | POST | `/api/analysis-jobs` | Anlegen `{ fen, targetDepth (1–60), multiPv (1–10), engineId?, title? }` — `engineId` fehlend = Hintergrund-Engine aus dem Profil (keine → 400); FEN muss legal sein; max. 50 offene je User |
 | POST | `/api/analysis-jobs/batch` | Mehrfachauswahl `{ fens[] (1–200), targetDepth, multiPv, engineId? }` → `{ created[], skipped[{fen, reason}] }` mit `invalid` (keine legale FEN) / `duplicate` (nicht gescheiterter Auftrag zur Stellung existiert — auch innerhalb des Batches) / `limit` (Deckel offener Aufträge); nie 4xx wegen einzelner Stellungen |

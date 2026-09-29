@@ -78,6 +78,11 @@ export class AnalysisJobsService {
     return this.http.get<AnalysisJob[]>('/api/analysis-jobs');
   }
 
+  /** EIN eigener Auftrag (Ansicht „Brett + aktueller Stand"); 404, wenn es ihn nicht mehr gibt. */
+  get(id: number): Observable<AnalysisJob> {
+    return this.http.get<AnalysisJob>(`/api/analysis-jobs/${id}`);
+  }
+
   /** Nur Tiefe/Tempo/Zeit der gerade rechnenden Aufträge (winzige Antwort, für den Sekundentakt). */
   live(): Observable<AnalysisJobLive[]> {
     return this.http.get<AnalysisJobLive[]>('/api/analysis-jobs/live');

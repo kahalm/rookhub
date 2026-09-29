@@ -3291,7 +3291,7 @@
       "delete": "Löschen fehlgeschlagen"
     },
     "analysisOrigin": "Analyse-Auftrag",
-    "analysisTooltip": "Hintergrund-Analyse dieser Stellung — zur Auftragsseite",
+    "analysisTooltip": "Hintergrund-Analyse dieser Stellung — Brett und aktuellen Stand zeigen",
     "selectAll": "Alle ohne Auftrag auswählen ({{count}})",
     "selectedCount": "{{count}} ausgewählt",
     "analyzeSelected": "Analysieren",
@@ -3365,7 +3365,18 @@
     "restarted": "Auftrag wieder eingereiht.",
     "nodes": "Durchsuchte Stellungen: {{nodes}}",
     "runningAt": "rechnet bei {{depth}}",
-    "toGames": "Partie-Analysen"
+    "toGames": "Partie-Analysen",
+    "view": {
+      "keepsRunning": "Der Auftrag läuft im Hintergrund weiter — dieses Fenster startet keine Engine und frischt sich selbst auf.",
+      "queued": "Wartet auf eine freie Hintergrund-Engine.",
+      "paused": "Pausiert — geht weiter, sobald die Engine wieder frei ist.",
+      "done": "Fertig gerechnet — das sind die endgültigen Linien.",
+      "notFound": "Diesen Auftrag gibt es nicht mehr.",
+      "toJobs": "Auftragsseite",
+      "elapsed": "Zeit",
+      "speed": "Tempo",
+      "depth": "Tiefe"
+    }
   },
   "gameAnalysis": {
     "title": "Partie-Analysen",

@@ -3291,7 +3291,7 @@
       "delete": "Brisanje nije uspjelo"
     },
     "analysisOrigin": "Zadatak analize",
-    "analysisTooltip": "Pozadinska analiza ove pozicije — na stranicu zadataka",
+    "analysisTooltip": "Pozadinska analiza ove pozicije — prikaži ploču i trenutno stanje",
     "selectAll": "Odaberi sve bez zadatka ({{count}})",
     "selectedCount": "Odabrano: {{count}}",
     "analyzeSelected": "Analiziraj",
@@ -3365,7 +3365,18 @@
     "restarted": "Zadatak je ponovno u redu.",
     "nodes": "Pretražene pozicije: {{nodes}}",
     "runningAt": "računa na {{depth}}",
-    "toGames": "Analize partija"
+    "toGames": "Analize partija",
+    "view": {
+      "keepsRunning": "Zadatak se nastavlja u pozadini — ovaj prozor ne pokreće engine i sam se osvježava.",
+      "queued": "Čeka slobodan pozadinski engine.",
+      "paused": "Pauzirano — nastavlja čim engine ponovno bude slobodan.",
+      "done": "Gotovo — ovo su konačne linije.",
+      "notFound": "Ovaj zadatak više ne postoji.",
+      "toJobs": "Stranica zadataka",
+      "elapsed": "Vrijeme",
+      "speed": "Brzina",
+      "depth": "Dubina"
+    }
   },
   "gameAnalysis": {
     "title": "Analize partija",

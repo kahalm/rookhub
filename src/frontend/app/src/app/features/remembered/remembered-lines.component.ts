@@ -21,12 +21,14 @@ import { RememberedService, RememberedPosition } from '../../core/remembered.ser
 const POLL_MS = 10_000;
 import { ExternalEngineService } from '../analysis/external-engine.service';
 import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.component';
+import { AnalysisJobViewData, AnalysisJobViewDialogComponent } from '../analysis/analysis-job-view-dialog.component';
 
 /**
  * Zeigt die über die RepCheck-Extension („Remember line" auf chessable.com) gemerkten Stellungen
  * des Users — und die Stellungen der Hintergrund-Analyseaufträge (der Server merkt sie beim Anlegen
- * eines Auftrags mit): je Eintrag Brett-Vorschau (FEN), Kursname/-Link bzw. interner Link zur
- * Auftragsseite, Datum, die Analyse-Info des Auftrags (Status, Tiefe, Bewertung) + Aktionen
+ * eines Auftrags mit): je Eintrag Brett-Vorschau (FEN), Kursname/-Link — bei Auftrags-Stellungen öffnen Name und
+ * Analyse-Zeile „Brett + aktueller Stand" (`AnalysisJobViewDialogComponent`) —, Datum, die Analyse-Info des
+ * Auftrags (Status, Tiefe, Bewertung) + Aktionen
  * (In Analyse öffnen · Im Hintergrund analysieren · FEN kopieren · Löschen).
  */
 @Component({
@@ -81,7 +83,9 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
               </div>
               <div class="meta">
                 <div class="course">
-                  @if (p.sourceUrl && p.sourceUrl.startsWith('/')) {
+                  @if (p.analysis) {
+                    <button type="button" class="link" (click)="openJob(p)" [matTooltip]="'remembered.analysisTooltip' | translate">{{ labelOf(p) }}</button>
+                  } @else if (p.sourceUrl && p.sourceUrl.startsWith('/')) {
                     <a [routerLink]="p.sourceUrl">{{ labelOf(p) }}</a>
                   } @else if (p.sourceUrl) {
                     <a [href]="p.sourceUrl" target="_blank" rel="noopener">{{ labelOf(p) }}<mat-icon class="ext">open_in_new</mat-icon></a>
@@ -91,11 +95,11 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
                 </div>
                 <div class="date">{{ p.createdAt | date:'medium' }}</div>
                 @if (p.analysis; as a) {
-                  <a class="analysis" routerLink="/analysis/jobs" [matTooltip]="'remembered.analysisTooltip' | translate">
+                  <button type="button" class="analysis" (click)="openJob(p)" [matTooltip]="'remembered.analysisTooltip' | translate">
                     <span class="status" [ngClass]="a.status">{{ ('analysisJobs.status.' + a.status) | translate }}</span>
                     <span>{{ 'analysisJobs.depthOf' | translate:{ reached: a.reachedDepth, target: a.targetDepth } }} · {{ 'analysisJobs.lines' | translate:{ count: a.multiPv } }}</span>
                     @if (a.evalText) { <span class="eval" [class.neg]="a.evalText.startsWith('-') || a.evalText.startsWith('#-')">{{ a.evalText }}</span> }
-                  </a>
+                  </button>
                 }
                 <div class="fen" [matTooltip]="p.fen">{{ p.fen }}</div>
               </div>
@@ -142,13 +146,15 @@ import { AnalysisJobDialogComponent } from '../analysis/analysis-job-dialog.comp
     .meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
     .course { font-weight: 500; }
     .course a { display: inline-flex; align-items: center; gap: 3px; color: #1976d2; text-decoration: none; }
-    .course a:hover { text-decoration: underline; }
+    .course a:hover, .course .link:hover { text-decoration: underline; }
+    .course .link { font: inherit; font-weight: 500; color: #1976d2; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
     .course .ext { font-size: 14px; width: 14px; height: 14px; }
     .date { font-size: 0.8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .fen { font-family: monospace; font-size: 0.72rem; color: color-mix(in srgb, currentColor 55%, transparent);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .analysis { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.8rem; margin-top: 2px;
-      color: inherit; text-decoration: none; }
+      color: inherit; text-decoration: none; font-family: inherit; background: none; border: 0; padding: 0;
+      cursor: pointer; text-align: left; }
     .analysis:hover { text-decoration: underline; }
     .status { font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; text-transform: uppercase;
       background: color-mix(in srgb, currentColor 12%, transparent); }
@@ -225,6 +231,15 @@ export class RememberedLinesComponent implements OnInit {
     if (p.courseName) return p.courseName;
     if (p.courseId) return p.courseId;
     return this.translate.instant(p.analysis || p.sourceUrl?.startsWith('/') ? 'remembered.analysisOrigin' : 'remembered.unknownCourse');
+  }
+
+  /** Klick auf „Analyse-Auftrag" bzw. die Analyse-Zeile: Brett + aktueller Stand des Auftrags, ohne Engine —
+   *  der Auftrag rechnet weiter (das Analysebrett mit der Auftrags-Engine würde ihn pausieren). */
+  openJob(p: RememberedPosition): void {
+    if (!p.analysis) return;
+    const data: AnalysisJobViewData = { jobId: p.analysis.jobId, fen: p.fen, title: p.courseName };
+    this.dialog.open(AnalysisJobViewDialogComponent, { width: '760px', maxWidth: '96vw', data })
+      .afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.load(true));   // Karte auf den neuen Stand
   }
 
   /** „Im Hintergrund analysieren" für eine gemerkte Stellung — derselbe Dialog wie im Analysebrett. */

@@ -46,7 +46,7 @@ describe('RememberedLinesComponent Analyse-Info', () => {
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('analysisJobs.status.paused');
     expect(text).toContain('-0.45');
-    expect(fixture.nativeElement.querySelectorAll('a.analysis').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('button.analysis').length).toBe(1);
     // Nur die Karte OHNE Auftrag bekommt den Uhr-Knopf
     const clocks = Array.from(fixture.nativeElement.querySelectorAll('mat-icon')).filter((m: any) => m.textContent.trim() === 'schedule');
     expect(clocks.length).toBe(1);

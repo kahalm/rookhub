@@ -394,6 +394,22 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Get_LiefertNurDenEigenenAuftrag_mitErgebnis()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await DoneJobAsync(u);
+
+        var dto = await _svc.GetAsync(u, job.Id);
+        Assert.NotNull(dto);
+        Assert.Equal(job.Id, dto!.Id);
+        Assert.Equal("done", dto.Status);
+        Assert.NotNull(dto.ResultJson);
+
+        Assert.Null(await _svc.GetAsync(999, job.Id));
+        Assert.Null(await _svc.GetAsync(u, job.Id + 1000));
+    }
+
+    [Fact]
     public async Task Delete_InterruptsAndRemoves_OnlyOwnJobs()
     {
         var u = await UserWithBackgroundEngineAsync();

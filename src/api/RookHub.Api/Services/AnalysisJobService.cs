@@ -61,6 +61,14 @@ public class AnalysisJobService
         return jobs.Select(ToDto).ToList();
     }
 
+    /// <summary>EIN eigener Auftrag — für die Ansicht „Brett + aktueller Stand" (gemerkte Stellungen), die nur
+    /// diesen einen nachfragt statt jedes Mal die ganze Liste samt Roh-Zeilen zu laden. Fremde/unbekannte → null.</summary>
+    public async Task<AnalysisJobDto?> GetAsync(int userId, int id, CancellationToken ct = default)
+    {
+        var job = await _db.AnalysisJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId, ct);
+        return job is null ? null : ToDto(job);
+    }
+
     /// <summary>Anlegen. Wirft <see cref="ArgumentException"/> bei ungültiger Eingabe und
     /// <see cref="InvalidOperationException"/>, wenn keine Hintergrund-Engine bestimmt ist.</summary>
     /// <param name="remember">Stellung zusätzlich unter „Gemerkte Stellungen" ablegen. Vorgabe <c>true</c>

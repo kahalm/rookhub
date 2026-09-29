@@ -30,6 +30,14 @@ public class AnalysisJobsController : BaseApiController
     public ActionResult<List<AnalysisJobLiveDto>> Live()
         => Ok(_live.ForUser(GetUserId(), DateTime.UtcNow));
 
+    /// <summary>Ein einzelner eigener Auftrag (Ansicht „Brett + Stand" auf den gemerkten Stellungen); 404 fremd/unbekannt.</summary>
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<AnalysisJobDto>> Get(int id, CancellationToken ct)
+    {
+        var dto = await _jobs.GetAsync(GetUserId(), id, ct);
+        return dto is null ? NotFound() : Ok(dto);
+    }
+
     [HttpPost]
     public async Task<ActionResult<AnalysisJobDto>> Create([FromBody] CreateAnalysisJobRequest request, CancellationToken ct)
     {

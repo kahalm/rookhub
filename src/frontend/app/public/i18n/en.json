@@ -3291,7 +3291,7 @@
       "delete": "Delete failed"
     },
     "analysisOrigin": "Analysis job",
-    "analysisTooltip": "Background analysis of this position — go to the jobs page",
+    "analysisTooltip": "Background analysis of this position — show board and current state",
     "selectAll": "Select all without a job ({{count}})",
     "selectedCount": "{{count}} selected",
     "analyzeSelected": "Analyse",
@@ -3365,7 +3365,18 @@
     "restarted": "Job queued again.",
     "nodes": "Positions searched: {{nodes}}",
     "runningAt": "at depth {{depth}}",
-    "toGames": "Game analyses"
+    "toGames": "Game analyses",
+    "view": {
+      "keepsRunning": "The job keeps running in the background — this window doesn’t start an engine and updates by itself.",
+      "queued": "Waiting for a free background engine.",
+      "paused": "Paused — it continues as soon as the engine is free again.",
+      "done": "Finished — these are the final lines.",
+      "notFound": "This job no longer exists.",
+      "toJobs": "Jobs page",
+      "elapsed": "Time",
+      "speed": "Speed",
+      "depth": "Depth"
+    }
   },
   "gameAnalysis": {
     "title": "Game analyses",

@@ -21,6 +21,8 @@ describe('AnalysisJobsService', () => {
     const post = http.expectOne('/api/analysis-jobs');
     expect(post.request.method).toBe('POST');
     expect(post.request.body).toEqual({ fen: 'x', targetDepth: 30, multiPv: 3 });
+    svc.get(7).subscribe();
+    expect(http.expectOne('/api/analysis-jobs/7').request.method).toBe('GET');
     svc.update(7, { targetDepth: 50 }).subscribe();
     expect(http.expectOne('/api/analysis-jobs/7').request.method).toBe('PUT');
     svc.delete(7).subscribe();

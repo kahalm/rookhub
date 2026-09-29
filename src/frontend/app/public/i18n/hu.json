@@ -3086,7 +3086,18 @@
     "updated": "Feladat módosítva.",
     "updateFailed": "A feladatot nem sikerült módosítani.",
     "deleteConfirm": "Törlöd ezt az elemzési feladatot?",
-    "deleteFailed": "A feladatot nem sikerült törölni."
+    "deleteFailed": "A feladatot nem sikerült törölni.",
+    "view": {
+      "keepsRunning": "A feladat a háttérben tovább fut — ez az ablak nem indít motort, és magától frissül.",
+      "queued": "Szabad háttérmotorra vár.",
+      "paused": "Szüneteltetve — folytatódik, amint a motor ismét szabad.",
+      "done": "Kész — ezek a végleges változatok.",
+      "notFound": "Ez a feladat már nem létezik.",
+      "toJobs": "Feladatok oldala",
+      "elapsed": "Idő",
+      "speed": "Sebesség",
+      "depth": "Mélység"
+    }
   },
   "gameAnalysis": {
     "title": "Játszmaelemzések",
@@ -3913,7 +3924,7 @@
       "delete": "A törlés sikertelen"
     },
     "analysisOrigin": "Elemzési feladat",
-    "analysisTooltip": "Ennek az állásnak a háttérelemzése — ugrás a feladatok oldalára",
+    "analysisTooltip": "Ennek az állásnak a háttérelemzése — tábla és aktuális állapot megjelenítése",
     "selectAll": "Összes kijelölése, amelyhez nincs feladat ({{count}})",
     "selectedCount": "{{count}} kijelölve",
     "analyzeSelected": "Elemzés",
