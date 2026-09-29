@@ -288,8 +288,11 @@ public class ChessableImportService : ICourseReimporter
     /// der gewählten Lane. Erwartet, dass der Aufrufer ggf. die Lane-Begrenzung (Download-Gate) hält.</summary>
     private async Task DrainNextAsync(CancellationToken ct, bool fastLane)
     {
+        // Browser-Importe nie: ihre Daten kommen aus dem Browser, ein Server-Abruf holte den Kurs mit dem Bearer
+        // bzw. aus dem Kurs-Cache — an der Eigentumsprüfung vorbei (siehe ChessableImport.FromBrowser).
         var queued = await _db.ChessableImports
             .Where(i => i.Status == ChessableImportStatus.Running && i.Phase == ChessableImportPhase.Queued
+                && !i.FromBrowser
                 && (fastLane ? i.FullyCached == true : i.FullyCached != true))
             .ToListAsync(ct);
 
@@ -374,6 +377,12 @@ public class ChessableImportService : ICourseReimporter
         }
         if (import.Status != ChessableImportStatus.Running)
             return; // bereits abgeschlossen oder fehlgeschlagen — nichts zu tun
+        if (import.FromBrowser)
+        {
+            // Zweite Schranke hinter dem Drain-Filter: ein Browser-Import wird nie serverseitig geholt.
+            _logger.LogWarning("Chessable-Import {Id} (bid {Bid}) ist ein Browser-Import — kein Server-Abruf", import.Id, import.Bid);
+            return;
+        }
 
         // Hol-Beginn festhalten (erste Bearbeitung aus der Queue) — trennt Wartezeit von Holzeit.
         import.StartedAt ??= DateTime.UtcNow;
@@ -661,6 +670,7 @@ public class ChessableImportService : ICourseReimporter
             Phase = ChessableImportPhase.Importing,
             LineCount = lineCount,
             FullyCached = true,   // Browser lieferte die Daten → kein Download nötig
+            FromBrowser = true,   // nie von den Server-Lanes abrufen
             CreatedAt = DateTime.UtcNow,
             StartedAt = DateTime.UtcNow,
         };
@@ -1210,6 +1220,7 @@ public class ChessableImportService : ICourseReimporter
             Status = ChessableImportStatus.Running,
             Phase = ChessableImportPhase.Importing,
             FullyCached = true,   // Browser liefert die Daten → kein Chessable-Abruf
+            FromBrowser = true,   // nie von den Server-Lanes abrufen
             CreatedAt = DateTime.UtcNow,
             StartedAt = DateTime.UtcNow,
         };

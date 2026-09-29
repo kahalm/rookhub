@@ -149,6 +149,26 @@ public class ChessableIngestSessionStoreTests
         Assert.Empty(store.TakeExpired());   // idempotent
     }
 
+    /// <summary>Beim Anlegen einer Sitzung räumt der Store abgelaufene ab. Bisher verwarf er sie dabei — den
+    /// Import-Datensatz schloss dann niemand, er stand ohne Inflight-Marke auf „läuft", und der Watchdog stellte ihn
+    /// später als verwaist zurück in die Warteschlange (Server-Abruf). Jetzt bekommt der Watchdog sie übergeben.</summary>
+    [Fact]
+    public void GetOrCreate_HandsExpiredSessionsToTheWatchdog_InsteadOfDroppingThem()
+    {
+        var store = new ChessableIngestSessionStore();
+        var (old, _) = store.GetOrCreate(7, "old", "424242", "book", "C");
+        store.AttachImport(old!, 990505, ChessableImportService.TrackInflight(990505));
+        old!.UpdatedAt = DateTime.UtcNow - store.Ttl - TimeSpan.FromMinutes(1);
+
+        store.GetOrCreate(8, "new", "111111", "book", "D");   // räumt beim Anlegen auf
+
+        Assert.Equal(1, store.Count);                          // die alte Sitzung ist weg …
+        var handedOver = Assert.Single(store.TakeExpired());   // … aber nicht verloren
+        Assert.Equal(990505, handedOver.ImportId);
+        Assert.False(ChessableImportService.IsDrivenLocally(990505));
+        Assert.Empty(store.TakeExpired());
+    }
+
     [Fact]
     public void TakeExpired_LeavesFreshSessionsAlone()
     {

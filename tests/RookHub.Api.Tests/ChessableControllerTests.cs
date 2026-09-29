@@ -110,6 +110,32 @@ public class ChessableControllerTests : IDisposable
         await _db.SaveChangesAsync();
     }
 
+    /// <summary>Pausieren + Fortsetzen stellte auch einen Browser-Import auf „queued" — die Lanes holten den Kurs dann
+    /// mit dem Bearer des Nutzers bzw. aus dem Kurs-Cache, an der Eigentumsprüfung vorbei (auch für einen per
+    /// Ingest-Chunk angelegten, nie geprüften Kurs). Beides bleibt für Browser-Importe ohne Wirkung.</summary>
+    [Fact]
+    public async Task PauseAndResume_LeaveABrowserImportAlone()
+    {
+        await SeedUserAsync(42);
+        var running = new ChessableImport { UserId = 42, Bid = "91808", CourseName = "c", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing, FullyCached = true, FromBrowser = true,
+            CreatedAt = DateTime.UtcNow };
+        var paused = new ChessableImport { UserId = 42, Bid = "91809", CourseName = "c", Target = "book",
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.Importing, FullyCached = true, FromBrowser = true,
+            CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.AddRange(running, paused);
+        await _db.SaveChangesAsync();
+
+        Assert.IsType<OkObjectResult>(await _controller.PauseImport(running.Id));
+        Assert.IsType<OkObjectResult>(await _controller.ResumeImport(paused.Id));
+
+        var r = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == running.Id);
+        var p = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == paused.Id);
+        Assert.Equal(ChessableImportStatus.Running, r.Status);
+        Assert.Equal(ChessableImportStatus.Paused, p.Status);
+        Assert.Equal(ChessableImportPhase.Importing, p.Phase);   // nicht „queued"
+    }
+
     [Fact]
     public async Task GetCredentials_None_ReturnsHasCredentialsFalse()
     {

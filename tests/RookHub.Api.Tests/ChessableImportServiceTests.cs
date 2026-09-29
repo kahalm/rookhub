@@ -787,6 +787,52 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Null(reloaded.FetchJobId);            // KEIN Chessable-Fetch gestartet
     }
 
+    /// <summary>Ein Browser-Import, der (Neustart, verwaiste Sitzung, Pausieren/Fortsetzen) auf „queued" geriet, sah
+    /// für die Lanes aus wie ein voll gecachter Server-Import: die Fast-Lane stufte ihn herab, die Download-Lane holte
+    /// den Kurs mit dem Bearer des Nutzers bzw. aus dem Kurs-Cache — an der Eigentumsprüfung vorbei.</summary>
+    [Fact]
+    public async Task RunNextAsync_NeverPicksABrowserImport_InEitherLane()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var t0 = DateTime.UtcNow;
+        var cached = new ChessableImport { UserId = 1, Bid = "91808", CourseName = "B1", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true, FromBrowser = true, CreatedAt = t0, StartedAt = t0 };
+        var download = new ChessableImport { UserId = 1, Bid = "91809", CourseName = "B2", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = false, FromBrowser = true, CreatedAt = t0.AddSeconds(1), StartedAt = t0 };
+        _db.ChessableImports.AddRange(cached, download);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunNextAsync(fastLane: true);
+        await _svc.RunNextAsync();
+
+        foreach (var (id, fullyCached) in new[] { (cached.Id, true), (download.Id, false) })
+        {
+            var job = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == id);
+            Assert.Equal(ChessableImportStatus.Running, job.Status);
+            Assert.Equal(ChessableImportPhase.Queued, job.Phase);
+            Assert.Equal(fullyCached, job.FullyCached);   // nicht herabgestuft
+            Assert.Equal(0, job.Attempts);                // RunAsync nie betreten
+            Assert.Null(job.FetchJobId);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_BrowserImport_IsNeverFetched()
+    {
+        if (!await _db.AppUsers.AnyAsync(u => u.Id == 1))
+            _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        var job = new ChessableImport { UserId = 1, Bid = "91808", CourseName = "B", Target = "book", Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing, FullyCached = true, FromBrowser = true, CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(job);
+        await _db.SaveChangesAsync();
+
+        await _svc.RunAsync(job.Id);   // der Proxy-Stub wirft bei jedem Aufruf
+
+        var reloaded = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == job.Id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded.Status);
+        Assert.Equal(ChessableImportPhase.Importing, reloaded.Phase);
+        Assert.Equal(0, reloaded.Attempts);
+        Assert.Null(reloaded.FetchJobId);
+    }
+
     [Fact]
     public async Task RunNextAsync_DownloadLane_ClaimsNonCachedIncludingUnclassified()
     {

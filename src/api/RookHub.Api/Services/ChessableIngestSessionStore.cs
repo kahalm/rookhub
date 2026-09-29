@@ -70,6 +70,10 @@ public class ChessableIngestSessionStore : IDisposable
 
     private readonly ConcurrentDictionary<string, Session> _sessions = new();
 
+    /// <summary>Abgelaufene Sitzungen, die <see cref="GetOrCreate"/> beim Aufräumen entnommen hat und deren
+    /// Import-Datensätze der Watchdog noch schließen muss (<see cref="TakeExpired"/> liefert sie mit).</summary>
+    private readonly ConcurrentQueue<Session> _expiredPending = new();
+
     private static string Key(int userId, string sessionId) => userId + ":" + sessionId;
 
     /// <summary>Offene Sitzungen (Diagnose/Tests).</summary>
@@ -154,16 +158,25 @@ public class ChessableIngestSessionStore : IDisposable
     public Session? Discard(int userId, string sessionId) => Remove(Key(userId, sessionId));
 
     /// <summary>
-    /// Entfernt alle Sitzungen ohne Chunk seit <see cref="Ttl"/> und liefert sie zurück. Der Aufrufer (Watchdog)
+    /// Entfernt alle Sitzungen ohne Chunk seit <see cref="Ttl"/> und liefert sie zurück — dazu die, die
+    /// <see cref="GetOrCreate"/> beim Aufräumen schon entnommen hat. Der Aufrufer (Watchdog)
     /// schließt ihre Import-Datensätze ab — sonst stünde ein Import, dessen Browser mitten im Abruf zugemacht
     /// wurde, für immer auf „läuft": die Inflight-Marke fällt hier weg, und ohne sie hielte der Watchdog ihn
     /// für verwaist und reihte ihn neu ein (auf Prod hängt er dann nur, auf Dev startet ein echter Abruf).
     /// </summary>
     public IReadOnlyList<Session> TakeExpired()
     {
-        if (_sessions.IsEmpty) return Array.Empty<Session>();
-        var cutoff = DateTime.UtcNow - Ttl;
         var expired = new List<Session>();
+        while (_expiredPending.TryDequeue(out var pending)) expired.Add(pending);
+        expired.AddRange(RemoveExpired());
+        return expired;
+    }
+
+    private List<Session> RemoveExpired()
+    {
+        var expired = new List<Session>();
+        if (_sessions.IsEmpty) return expired;
+        var cutoff = DateTime.UtcNow - Ttl;
         foreach (var kv in _sessions)
             if (kv.Value.UpdatedAt < cutoff && Remove(kv.Key) is { } s)
                 expired.Add(s);
@@ -178,14 +191,19 @@ public class ChessableIngestSessionStore : IDisposable
         return s;
     }
 
-    // Beim Anlegen nur aufräumen — die Import-Datensätze der Abgelaufenen schließt der Watchdog
-    // (er hat den DB-Scope; hier gibt es keinen).
-    private void PurgeExpired() => TakeExpired();
+    // Beim Anlegen nur aufräumen — die Import-Datensätze der Abgelaufenen schließt der Watchdog (er hat den
+    // DB-Scope; hier gibt es keinen). Deshalb an ihn ÜBERGEBEN statt verwerfen: verworfen stand der Datensatz ohne
+    // Sitzung und ohne Inflight-Marke auf „läuft", und der Watchdog hielt ihn später für verwaist.
+    private void PurgeExpired()
+    {
+        foreach (var s in RemoveExpired()) _expiredPending.Enqueue(s);
+    }
 
     /// <summary>Gibt die Inflight-Marken aller offenen Sitzungen frei (Shutdown).</summary>
     public void Dispose()
     {
         foreach (var kv in _sessions) Remove(kv.Key);
+        _expiredPending.Clear();
         GC.SuppressFinalize(this);
     }
 }

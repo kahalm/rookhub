@@ -599,6 +599,39 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ChessableIngestChunk_SessionPurgedByANewSession_IsStillClosedByTheWatchdog()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-old", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+        var old = await _db.ChessableImports.SingleAsync();
+        Assert.True(old.FromBrowser);   // Browser-Import: nie von den Server-Lanes abrufen
+        var (session, _) = _ingestSessions.GetOrCreate(7, "sess-old", "424242", "book", "Course");
+        session!.UpdatedAt = DateTime.UtcNow - _ingestSessions.Ttl - TimeSpan.FromMinutes(1);
+
+        // Ein neuer Abruf räumt beim Anlegen seiner Sitzung die abgelaufene ab …
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-new", "111111", "book", "Other", Chapter("{\"game\":{}}"), false), default);
+        // … und der Watchdog schließt trotzdem ihren Datensatz, statt dass er ohne Sitzung auf „läuft" steht.
+        var closed = await ChessableImportWatchdogService.CloseExpiredBrowserSessionsAsync(_ingestSessions, _chessableImport);
+
+        Assert.Equal(1, closed);
+        await _db.Entry(old).ReloadAsync();
+        Assert.Equal(ChessableImportStatus.Failed, old.Status);
+        Assert.Contains("ohne Abschluss", old.Error);
+    }
+
+    [Fact]
+    public async Task ChessableIngest_MarksTheImportAsBrowserImport()
+    {
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableIngest(
+            new ChessableIngestRequest("424242", "book", "Course", new List<ChessableIngestChapter> { Chapter("{\"game\":{}}") }), default);
+        Assert.IsType<OkObjectResult>(res);
+        Assert.True((await _db.ChessableImports.SingleAsync()).FromBrowser);
+    }
+
+    [Fact]
     public async Task ChessableIngestChunk_FinalWithoutAnyChapter_IsBadRequest()
     {
         SetUser(7, scope: "extension");

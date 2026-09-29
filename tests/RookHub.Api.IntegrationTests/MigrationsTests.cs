@@ -90,6 +90,51 @@ public class MigrationsTests
     }
 
     /// <summary>
+    /// <c>ChessableImportFromBrowser</c> markiert nur die LAUFENDEN bzw. pausierten Browser-Importe: Phase
+    /// „importing" mit <c>Attempts = 0</c>. Ein Server-Import in derselben Phase hat schon gezaehlt, ein
+    /// fortgesetzter wartet auf „queued", ein abgeschlossener spielt keine Rolle. Ohne den Nachtrag reihte der
+    /// Resume-Dienst beim Start mit der Migration genau solche Saetze als Server-Import ein.
+    /// </summary>
+    [MySqlFact]
+    public async Task ChessableImportFromBrowser_MarkiertNurLaufendeBrowserImporte()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("frombrowser");
+        await using var db = schema.NewContext();
+
+        var alle = db.Database.GetMigrations().ToList();
+        var index = alle.FindIndex(m => m.EndsWith("ChessableImportFromBrowser", StringComparison.Ordinal));
+        Assert.True(index > 0, "Migration ChessableImportFromBrowser nicht gefunden");
+        await db.GetService<IMigrator>().MigrateAsync(alle[index - 1]);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO AppUsers (Username, PasswordHash, CreatedAt, IsAdmin)
+            VALUES ('browser', 'x', NOW(), 0)
+            """);
+        var zeilen = new (string Bid, string Status, string Phase, int Attempts, bool Erwartet)[]
+        {
+            ("1", "running", "importing", 0, true),     // Browser-Import mitten im Streamen
+            ("2", "paused", "importing", 0, true),      // vom Nutzer pausierter Browser-Import
+            ("3", "running", "importing", 1, false),    // Server-Import beim Einspielen
+            ("4", "running", "queued", 0, false),       // fortgesetzter Server-Import
+            ("5", "completed", "done", 0, false),       // abgeschlossener Browser-Import: egal
+        };
+        foreach (var z in zeilen)
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO ChessableImports
+                    (UserId, Bid, CourseName, Target, Status, Phase, Attempts, ChaptersDone, ChaptersTotal,
+                     LinesDone, LinesTotal, LineCount, Imported, Skipped, Invalid, QueueRound, CreatedAt)
+                SELECT Id, {0}, 'C', 'book', {1}, {2}, {3}, 0, 0, 0, 0, 0, 0, 0, 0, 0, NOW()
+                FROM AppUsers WHERE Username = 'browser'
+                """, z.Bid, z.Status, z.Phase, z.Attempts);
+
+        await db.Database.MigrateAsync();
+
+        var markiert = await db.ChessableImports.AsNoTracking()
+            .ToDictionaryAsync(i => i.Bid, i => i.FromBrowser);
+        Assert.All(zeilen, z => Assert.Equal(z.Erwartet, markiert[z.Bid]));
+    }
+
+    /// <summary>
     /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
     /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
     /// Schema, das nicht zum Code passt.

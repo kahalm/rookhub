@@ -370,6 +370,16 @@ Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter an
 Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt zurueckgestellt
 (zurueckgestellt nimmt ihn dort nie jemand auf).
 
+**Browser-Importe geraten nie in die Server-Lanes (`ChessableImport.FromBrowser`, Codereview 2026-09-29).**
+`StartBrowserImportAsync`/`ImportPgnDirectAsync` setzen die Spalte (Migration `ChessableImportFromBrowser`, traegt
+laufende/pausierte Browser-Saetze nach: Phase `importing` mit `Attempts = 0`). Sie sahen fuer die Lanes aus wie ein
+voll gecachter Server-Import (`FullyCached=true`, kein `FetchedPgn`); drei Wege stellten sie auf `queued` —
+Neustart (`ChessableImportResumeService`), verwaiste Sitzung (Watchdog mit Lanes an) und Pausieren/Fortsetzen —,
+und die Download-Lane holte den Kurs dann mit dem Bearer des Nutzers bzw. piratechess ihn ganz aus dem Kurs-Cache,
+an der Eigentumspruefung vorbei. Jetzt: `DrainNextAsync` und `RunAsync` nehmen sie nie, der Resume-Dienst laesst sie
+liegen, der Watchdog SCHLIESST einen verwaisten Browser-Import auch mit Lanes, Pausieren/Fortsetzen bleiben ohne
+Wirkung, und `GetOrCreate` uebergibt beim Aufraeumen abgelaufene Sitzungen an den Watchdog, statt sie zu verwerfen.
+
 **Ein Showstopper steht AM EINTRAG, nicht als Zahl im Banner (0.484.4).** `StaleContentRule` ist die
 EINE Regel (`Refetch` / `Cache` / `Local` / `Manual`, seit 0.509.0 vier Faelle) fuer den Reprocess-Status, den
 Reprocess-Lauf UND die Listen. `Manual` heisst: weder aus der gespeicherten Quelle aufbereitbar noch holbar — solche Eintraege

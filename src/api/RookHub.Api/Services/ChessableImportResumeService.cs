@@ -33,8 +33,10 @@ public class ChessableImportResumeService : IHostedService
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+            // Browser-Importe NICHT: ihre Sitzung ist mit dem Neustart weg, zurückgestellt holte die Download-Lane den
+            // Kurs serverseitig (Bearer bzw. Kurs-Cache). Sie schließt der Watchdog als verwaist.
             var running = await db.ChessableImports
-                .Where(i => i.Status == ChessableImportStatus.Running)
+                .Where(i => i.Status == ChessableImportStatus.Running && !i.FromBrowser)
                 .ToListAsync(cancellationToken);
 
             if (running.Count == 0) return;

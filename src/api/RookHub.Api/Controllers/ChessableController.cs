@@ -405,14 +405,15 @@ public class ChessableController : BaseApiController, IActionFilter
         return Ok(ChessableImportQueueService.ToDto(import, 0));
     }
 
-    /// <summary>Pausiert einen eigenen, laufenden/wartenden Import.</summary>
+    /// <summary>Pausiert einen eigenen, laufenden/wartenden Import. Ein Browser-Import lässt sich nicht pausieren
+    /// (die Daten schickt der Browser) — und fortgesetzt würde er sonst von der Server-Lane abgerufen.</summary>
     [HttpPost("imports/{id:int}/pause")]
     [DisableRateLimiting]
     public async Task<IActionResult> PauseImport(int id)
     {
         var import = await OwnImportAsync(id);
         if (import is null) return NotFound();
-        if (import.Status == ChessableImportStatus.Running)
+        if (import.Status == ChessableImportStatus.Running && !import.FromBrowser)
         {
             import.Status = ChessableImportStatus.Paused;
             await _db.SaveChangesAsync();
@@ -420,14 +421,15 @@ public class ChessableController : BaseApiController, IActionFilter
         return Ok(ChessableImportQueueService.ToDto(import, 0));
     }
 
-    /// <summary>Setzt einen pausierten Import fort (wird wieder eingereiht).</summary>
+    /// <summary>Setzt einen pausierten Import fort (wird wieder eingereiht). Nie einen Browser-Import: eingereiht holte
+    /// ihn die Server-Lane mit dem gespeicherten Bearer bzw. aus dem Kurs-Cache — an der Eigentumsprüfung vorbei.</summary>
     [HttpPost("imports/{id:int}/resume")]
     [DisableRateLimiting]
     public async Task<IActionResult> ResumeImport(int id)
     {
         var import = await OwnImportAsync(id);
         if (import is null) return NotFound();
-        if (import.Status == ChessableImportStatus.Paused)
+        if (import.Status == ChessableImportStatus.Paused && !import.FromBrowser)
         {
             import.Status = ChessableImportStatus.Running;
             import.Phase = ChessableImportPhase.Queued;

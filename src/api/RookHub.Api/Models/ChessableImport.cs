@@ -39,6 +39,18 @@ public class ChessableImport
     /// Anlegen via <c>IsCourseCachedAsync</c> gesetzt; Altbestand klassifiziert die Fast-Lane lazy nach.</summary>
     public bool? FullyCached { get; set; }
 
+    /// <summary>
+    /// Browser-Import (RepCheck: <c>ingest</c>, <c>ingest/chunk</c>): die Daten schickt der Browser, der Datensatz
+    /// zeigt nur Fortschritt und Ergebnis. Er wird NIE von den Server-Lanes abgerufen — weder nach einem
+    /// Neustart (<see cref="Services.ChessableImportResumeService"/>) noch als verwaister Inflight-Satz
+    /// (<see cref="Services.ChessableImportWatchdogService"/>) noch über Pausieren/Fortsetzen; er wird nur
+    /// abgeschlossen oder geschlossen (<c>FailBrowserImportAsync</c>). Vorher sah er für die Lanes aus wie ein
+    /// voll gecachter Server-Import (<see cref="FullyCached"/>=true, kein <see cref="FetchedPgn"/>): auf Queued
+    /// gesetzt, holte die Download-Lane den Kurs mit dem gespeicherten Bearer von Chessable bzw. piratechess ihn
+    /// ganz aus dem Kurs-Cache — an der Eigentumsprüfung vorbei.
+    /// </summary>
+    public bool FromBrowser { get; set; }
+
     /// <summary>Gesetzt, wenn dieser Import wegen Überschreitung des Tages-Zeilenlimits
     /// (<see cref="Services.ChessableRateLimiter"/>, <c>Phase="rate-limited"</c>) pausiert wurde —
     /// der <see cref="Services.ChessableImportWatchdogService"/> nimmt ihn 24h danach automatisch

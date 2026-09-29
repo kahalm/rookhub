@@ -213,6 +213,28 @@ public class ChessableImportWatchdogService : BackgroundService
             }
             if (now - since < OrphanGrace) continue;
 
+            if (import.FromBrowser)
+            {
+                // Browser-Import ohne Sitzung (Neustart, Sitzung abgelaufen): nie zurückstellen — die Lanes holten den
+                // Kurs sonst serverseitig. Die Linien sind längst importiert; nur der Datensatz wird geschlossen.
+                _logger.LogWarning(
+                    "Chessable-Import-Watchdog: Browser-Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase} "
+                    + "ohne Sitzung — Datensatz wird geschlossen",
+                    import.Id, import.Bid, (now - since).TotalMinutes, import.Phase);
+                const string orphanMessage = "Browser-Abruf ohne Abschluss — die Sitzung ist nicht mehr bekannt (Neustart oder geschlossener Tab).";
+                if (imports is not null)
+                    await imports.FailBrowserImportAsync(import.Id, orphanMessage, ct);
+                else
+                {
+                    import.Status = ChessableImportStatus.Failed;
+                    import.Error = orphanMessage;
+                    import.CompletedAt = now;
+                }
+                _orphanSince.Remove(import.Id);
+                reclaimed++;
+                continue;
+            }
+
             if (!LanesEnabled)
             {
                 // Eigener Chessable-Weg aus: ein zurückgestellter Import würde NIE wieder aufgegriffen.

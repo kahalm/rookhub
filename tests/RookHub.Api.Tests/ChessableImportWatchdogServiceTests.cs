@@ -257,6 +257,34 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         Assert.NotNull(closed.CompletedAt);
     }
 
+    /// <summary>DEV-Fall (eigener Chessable-Weg an): ein Browser-Import, dessen Sitzung weg ist, ging bisher zurück in
+    /// die Warteschlange — und die Lanes holten den Kurs dann mit dem Bearer des Nutzers von Chessable bzw. aus dem
+    /// Kurs-Cache. Er wird wie auf PROD geschlossen.</summary>
+    [Fact]
+    public async Task OrphanedBrowserImport_WithOwnChessablePathOn_IsClosed_NotQueued()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            Id = 990501, UserId = 5, Bid = "91808", CourseName = "Lifetime Repertoires", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
+            FullyCached = true, FromBrowser = true, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var watchdog = Watchdog(lanesEnabled: true);
+        watchdog.OrphanGrace = TimeSpan.Zero;
+        var imports = Imports();
+
+        Assert.Equal(0, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));   // nur Sichtung
+        Assert.Equal(1, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));
+
+        var closed = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Failed, closed.Status);
+        Assert.NotEqual(ChessableImportPhase.Queued, closed.Phase);
+        Assert.Contains("ohne Abschluss", closed.Error);
+    }
+
     [Fact]
     public async Task OrphanedInflight_WithOwnChessablePathOn_GoesBackToTheQueue()
     {
