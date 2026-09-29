@@ -509,7 +509,7 @@
                nach dem Lösen, Teilen immer; Letztes ansehen/lieben + Einstellungen im ⋮-Menü. -->
           @if (puzzle) {
             <app-puzzle-action-bar
-              [hasLast]="!!lastSolvedPuzzleId"
+              [hasLast]="hasLastSolved"
               [canLoveLast]="isLoggedIn && !inWeekly"
               [lastLoved]="favoriteTracker.lastIsFavorite"
               shareLabelKey="book.actions.sharePuzzle"

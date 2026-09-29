@@ -5,6 +5,7 @@ import { saveDailyElapsed, loadDailyElapsed } from './daily-elapsed.util';
 import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
 import { CommentSegment } from './comment-variation.util';
 import { CourseLanguageService } from '../courses/course-language.service';
+import { saveLastSolved, loadLastSolved, clearLastSolved } from './last-solved-store';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -212,6 +213,85 @@ describe('BookPuzzleComponent letztes Puzzle (analysieren/teilen)', () => {
     const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
     expect(data.previousUrl).toBeUndefined();
     expect(data.previousPuzzleId).toBeUndefined();
+  });
+});
+
+describe('BookPuzzleComponent Wochenpost: Sequenz-Index ist keine BookPuzzle-Id', () => {
+  // Wochenpost-Puzzles tragen als id den 0-basierten Index der Sequenz. Als BookPuzzle-Id gelesen,
+  // zeigten Teilen, „♥ Letztes Puzzle" und „Letztes aufs Blatt" auf eine fremde Buchlinie.
+  const COURSE_LAST = { id: 1234, fen: FEN, moves: 'd2d4 d7d5', orientation: 'white' as const };
+  beforeEach(() => clearLastSolved('book'));
+  afterEach(() => clearLastSolved('book'));
+
+  function makeWeekly(): any {
+    const c = makeComponent();
+    c.inWeekly = true;
+    c.weeklyId = 12;
+    return c;
+  }
+
+  it('handleSolved im Wochenpost merkt keine Id und lässt das Buch-/Kurs-„Letzte" unangetastet', () => {
+    saveLastSolved('book', COURSE_LAST);   // zuletzt im Kurs gelöst
+    const c = makeWeekly();
+    spyOn(c as any, 'enterSolutionReview');
+    spyOn(c as any, 'updateBoard');
+    spyOn(c as any, 'stopTimer');
+    spyOn(c as any, 'finalizeSolve');
+    c.puzzle = { id: 2, fen: FEN, moves: 'e2e4 e7e5', bookFileName: '' };   // id = Index 2
+
+    (c as any).handleSolved(false);
+
+    expect(c.lastSolvedPuzzleId).toBeNull();
+    expect(loadLastSolved('book')?.id).toBe(1234);
+    // Ansehen/aufs Blatt bleiben im Post möglich — nur ohne (falsche) Quell-Id.
+    expect(c.hasLastSolved).toBeTrue();
+    c.sendLastToWorksheet(null);
+    const items = c.worksheets.sendAndNotify.calls.mostRecent().args[1];
+    expect(items.length).toBe(1);
+    expect(items[0].sourceId).toBeNull();
+  });
+
+  it('sharePuzzle im Wochenpost teilt den Post statt /puzzles/book/<index>', () => {
+    const c = makeWeekly();
+    (c as any).auth.isLoggedIn = true;
+    (c as any).dialog = { open: jasmine.createSpy('open') };
+    c.puzzle = { id: 3, fen: FEN, moves: 'e2e4', bookFileName: '' };
+    c.lastSolvedPuzzleId = 2;   // Altlast aus einer früheren Fassung
+
+    c.sharePuzzle();
+
+    const data = (c as any).dialog.open.calls.mostRecent().args[1].data;
+    expect(data.url.endsWith('/weekly/12')).toBeTrue();
+    expect(data.url).not.toContain('/puzzles/book/');
+    expect(data.previousUrl).toBeUndefined();
+    expect(data.puzzleId).toBeUndefined();
+    expect(data.previousPuzzleId).toBeUndefined();
+    expect(data.canChallenge).toBeFalse();
+  });
+
+  it('ngOnInit im Wochenpost übernimmt kein Buch-/Kurs-„Letztes" aus der Sitzung', () => {
+    saveLastSolved('book', COURSE_LAST);
+    const c = makeComponent();
+    c.route.snapshot.paramMap = { get: (k: string) => (k === 'weeklyId' ? '12' : null), has: () => false };
+    spyOn(c as any, 'loadWeekly');
+
+    c.ngOnInit();
+
+    expect(c.inWeekly).toBeTrue();
+    expect(c.lastSolvedPuzzleId).toBeNull();
+    expect(c.hasLastSolved).toBeFalse();
+  });
+
+  it('ngOnInit außerhalb des Wochenposts stellt das „Letzte" weiterhin wieder her', () => {
+    saveLastSolved('book', COURSE_LAST);
+    const c = makeComponent();
+    c.route.snapshot.paramMap = { get: (k: string) => (k === 'id' ? '77' : null), has: () => false };
+    spyOn(c as any, 'loadPuzzle');
+
+    c.ngOnInit();
+
+    expect(c.lastSolvedPuzzleId).toBe(1234);
+    expect(c.hasLastSolved).toBeTrue();
   });
 });
 

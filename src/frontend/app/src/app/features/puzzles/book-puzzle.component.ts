@@ -279,6 +279,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   private lastSolvedStartPly = 0;
   /** Themen der letzten Linie — Vorschlagsquelle für die Themen eines Aufgabenblatts. */
   private lastSolvedThemes = '';
+  /** Gibt es ein „letztes Puzzle" (⋮-Menü: ansehen/♥/Blatt)? Hängt an der Stellung, nicht an der Id:
+   *  im Wochenpost bleibt `lastSolvedPuzzleId` leer (Index statt BookPuzzle-Id), ansehen geht trotzdem. */
+  get hasLastSolved(): boolean { return !!this.lastSolvedFen; }
   /** „Geliebtes Puzzle"-Zustand (Herz). In Wochenpost-Modus deaktiviert (keine echte Id). */
   readonly favoriteTracker: FavoriteTracker;
 
@@ -431,18 +434,23 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
   sharePuzzle(): void {
     if (!this.puzzle) return;
+    // Wochenpost: puzzle.id ist nur der Sequenz-Index, keine BookPuzzle-Id — /puzzles/book/<index>
+    // zeigte ein fremdes Puzzle. Geteilt wird deshalb der Post selbst, ohne „vorheriges Puzzle".
+    const weekly = this.inWeekly;
     // „single=1" markiert den Link als direkt geteiltes Einzel-Puzzle → Empfänger bleibt nach
     // dem Lösen auf dem Puzzle stehen (kein Auto-Advance, keine Buch-Navigation).
-    const url = `${window.location.origin}/puzzles/book/${this.puzzle.id}?single=1`;
+    const url = weekly
+      ? `${window.location.origin}/weekly/${this.weeklyId}`
+      : `${window.location.origin}/puzzles/book/${this.puzzle.id}?single=1`;
     // Nach dem Auto-Advance kann zusätzlich das zuletzt gelöste Puzzle geteilt werden.
-    const hasPrevious = this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
+    const hasPrevious = !weekly && this.lastSolvedPuzzleId != null && this.lastSolvedPuzzleId !== this.puzzle.id;
     const previousUrl = hasPrevious
       ? `${window.location.origin}/puzzles/book/${this.lastSolvedPuzzleId}?single=1`
       : undefined;
     this.dialog.open(SharePuzzleDialogComponent, {
       data: {
         url, previousUrl,
-        puzzleId: this.puzzle.id,
+        puzzleId: weekly ? undefined : this.puzzle.id,
         previousPuzzleId: hasPrevious ? (this.lastSolvedPuzzleId ?? undefined) : undefined,
         source: 'book',
         // Wochenpost-Puzzles haben keine dauerhafte ID → dort keine Challenge.
@@ -630,18 +638,22 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     // Für „Letztes Puzzle analysieren"/„Letztes teilen" merken (überlebt den Auto-Advance).
     // Zusätzlich in sessionStorage persistieren, damit die Info eine Navigation zu /analysis
     // und zurück übersteht (sonst wird der Component-Destroy den Zustand wegwerfen).
+    // Wochenpost: puzzle.id ist der Sequenz-Index, keine BookPuzzle-Id → keine Id merken und nichts
+    // persistieren; sonst favorisierte, teilte oder legte ein späterer Kurs das fremde BookPuzzle <index> aufs Blatt.
     if (this.puzzle) {
-      this.lastSolvedPuzzleId = this.puzzle.id;
+      this.lastSolvedPuzzleId = this.inWeekly ? null : this.puzzle.id;
       this.lastSolvedFen = this.puzzle.fen;
       this.lastSolvedMoves = this.puzzle.moves ?? '';
       this.lastSolvedOrientation = this.orientation;
       this.lastSolvedStartPly = this.startPly;
       this.lastSolvedThemes = this.puzzle.tags ?? '';
-      saveLastSolved('book', {
-        id: this.puzzle.id, fen: this.puzzle.fen,
-        moves: this.puzzle.moves ?? '', orientation: this.orientation, startPly: this.startPly,
-        themes: this.puzzle.tags ?? '',
-      });
+      if (!this.inWeekly) {
+        saveLastSolved('book', {
+          id: this.puzzle.id, fen: this.puzzle.fen,
+          moves: this.puzzle.moves ?? '', orientation: this.orientation, startPly: this.startPly,
+          themes: this.puzzle.tags ?? '',
+        });
+      }
     }
     this.favoriteTracker.refresh();
     this.enterSolutionReview();
@@ -792,7 +804,9 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
 
     // „Letztes Puzzle" (analysieren / ♥ / teilen) über Navigation zu /analysis hinweg wiederherstellen —
     // ohne Persistenz wird `lastSolvedPuzzleId` beim Component-Destroy null und die Knöpfe verschwinden.
-    const restored = loadLastSolved('book');
+    // Nicht im Wochenpost: der Eintrag gehört zu Buch/Kurs, dort wäre er nicht das „letzte Puzzle".
+    const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
+    const restored = weeklyIdParam ? null : loadLastSolved('book');
     if (restored) {
       this.lastSolvedPuzzleId = restored.id;
       this.lastSolvedFen = restored.fen;
@@ -803,7 +817,6 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       this.favoriteTracker.refresh();
     }
 
-    const weeklyIdParam = this.route.snapshot.paramMap.get('weeklyId');
     if (weeklyIdParam) {
       this.inWeekly = true;
       this.weeklyId = Number(weeklyIdParam);
