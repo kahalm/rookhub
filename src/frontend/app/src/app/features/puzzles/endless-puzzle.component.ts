@@ -978,8 +978,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Kette wiederherstellen: lokal nur, wenn der Token zu DIESEM Run passt (Refresh auf demselben
     // Gerät → exakt dasselbe Puzzle). Sonst (anderes Gerät / Cache überschrieben) die Kette von vorne
     // bis über die aktuelle Position neu generieren, damit chainIndex weiterhin korrekt zeigt.
+    // Steht der Zeiger direkt HINTER der lokalen Kette (Ergebnis am letzten Puzzle eines Blocks),
+    // passt sie trotzdem: loadCurrent verlängert sie (offline: Sieg) wie ohne Neuladen.
     const localOk = !!this.seed && this.storage.loadChainSeed() === this.seed
-      && this.offlinePool.length > this.chainIndex;
+      && (this.offlinePool.length > this.chainIndex
+        || (this.chainIndex > 0 && this.offlinePool.length === this.chainIndex));
     if (localOk) {
       this.chain = this.offlinePool;
       this.loadCurrent();
@@ -1210,7 +1213,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       });
     }
     this.favoriteTracker.refresh();
-    this.syncActiveGameToServer();
+    this.syncActiveGameToServer(this.chainIndex + 1);   // Ergebnis steht → Fortsetzen beim NÄCHSTEN Puzzle
     this.updateBoard();
     this.enterSolutionReview();
 
@@ -1286,14 +1289,11 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       return;
     }
 
-    // Wurde das Puzzle bereits gescheitert (Aufgeben oder Falschzug) aber chainIndex noch nicht
-    // vorgerückt, würde resume=1 dasselbe Puzzle nochmals laden → zweiter Leben-Verlust.
-    // Deshalb jetzt vorwärts schieben und persistieren, bevor wir wegnavigieren.
-    if ((this.state === 'FAILED' || this.reviewingWrongPuzzle) && this.lives > 0) {
-      this.chainIndex++;
-      this.level = this.chainIndex;
-      this.syncActiveGameToServer();
-    }
+    // Kein Vorrücken hier: hat das Puzzle ein Ergebnis (gelöst ODER gescheitert), steht der
+    // gespeicherte Zeiger schon auf dem nächsten (puzzleSolved/loseLife/resetPuzzle), und resume=1
+    // lädt nicht dasselbe Puzzle erneut. Früher rückte nur dieser Weg vor — und nur für FAILED; ein
+    // gelöstes Puzzle kam nach der Analyse ein zweites Mal (doppelt gezählt), und der hier im
+    // Speicher vorgerückte Index nahm die Lösezeit des alten Puzzles ins nächste mit.
     this.router.navigate(['/analysis'], {
       queryParams: {
         fen: this.puzzle.fen,
@@ -1374,7 +1374,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       // Server schreiben. endGame() raeumt nach Klick auf Continue endgueltig auf; falls der
       // User vorher die Seite verlaesst, ist dann kein 0-Lives-Run als "unfinished" gemerkt.
       if (this.lives > 0) {
-        this.syncActiveGameToServer();
+        this.syncActiveGameToServer(this.chainIndex + 1);   // Fortsetzen beim NÄCHSTEN Puzzle
       } else {
         this.storage.saveActiveGameLocal(null);
         this.storage.saveProgressImmediate(this.config, this.highscore, null);
@@ -1446,7 +1446,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         this.enterSolutionReview();
         return;
       }
-      this.syncActiveGameToServer();
+      this.syncActiveGameToServer(this.chainIndex + 1);   // Fortsetzen beim NÄCHSTEN Puzzle
     }
     this.setupPuzzle(this.puzzle);
   }
@@ -1573,12 +1573,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     if (result.isNew) this.isNewHighscore = true;
   }
 
-  private syncActiveGameToServer(): void {
+  /** Sichert den Spielstand (lokal + Server). `resumeAt` = Kettenposition, an der ein Fortsetzen
+   *  beginnt: sobald das aktuelle Puzzle ein Ergebnis hat (gelöst, Fehler, Zurücksetzen), rufen die
+   *  Aufrufer mit `chainIndex + 1` — sonst spielte ein Neuladen/Analyse-Rückkehr dasselbe Puzzle
+   *  erneut (doppelt gezählt bzw. ein zweites Leben am selben Puzzle). */
+  private syncActiveGameToServer(resumeAt = this.chainIndex): void {
     const gameState = {
       lives: this.lives,
       solved: this.solved,
-      level: this.level,
-      chainIndex: this.chainIndex,
+      level: this.level + (resumeAt - this.chainIndex),
+      chainIndex: resumeAt,
       seed: this.seed,
       currentMinRating: this._currentMinRating,
       maxRatingReached: this.maxRatingReached,

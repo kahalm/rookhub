@@ -593,6 +593,115 @@ describe('EndlessPuzzleComponent gespeicherter Lauf nach dem Fortsetzen', () => 
   });
 });
 
+/**
+ * F2-002: Das Ergebnis (gelöst, Fehler, Zurücksetzen) wurde gespeichert, BEVOR die Kette weiterrückte —
+ * ein Neuladen, „Letztes Puzzle ansehen" oder „Analysieren" im SOLVED-Zustand (Rückkehr mit ?resume=1)
+ * spielte dasselbe Puzzle erneut: doppelt gezählt bzw. ein zweites Leben am selben Puzzle.
+ */
+describe('EndlessPuzzleComponent Fortsetzen nach einem Ergebnis', () => {
+  /** Spielt mit einer frischen Instanz einen Lauf an und liefert die gesicherten Spielstände. */
+  function started(): { c: any; states: any[] } {
+    const c = makeComponent();
+    const states: any[] = [];
+    c['storage'].saveActiveGameLocal = (g: any) => states.push(g);
+    c.startGame();                   // Kette 100/101/102, Puzzle 100
+    return { c, states };
+  }
+
+  /** Neue Instanz wie nach Neuladen bzw. ?resume=1, mit dem zuletzt gesicherten Spielstand. */
+  function resumed(state: any, live: any = null): any {
+    const d = makeComponent();
+    d['storage'].loadChainSeed = () => state.seed;
+    d['storage'].loadLiveElapsed = () => live;
+    d['offlinePool'] = CHAIN.map(p => ({ ...p }));
+    d.activeGameState = state;
+    d.resumeGame();
+    return d;
+  }
+
+  afterEach(() => sessionStorage.removeItem('rookhub_last_solved_endless'));
+
+  it('gelöst → Fortsetzen lädt das NÄCHSTE Puzzle, gelöst zählt nicht doppelt', () => {
+    const { c, states } = started();
+    c['puzzleSolved'](false);
+    const state = states.filter(Boolean).pop();
+    c.ngOnDestroy();
+
+    expect(state.chainIndex).toBe(1);
+    expect(state.solved).toBe(1);
+    const d = resumed(state);
+    expect(d.chainIndex).toBe(1);
+    expect(d.puzzle.id).toBe(101);
+    expect(d.solved).toBe(1);
+    d.ngOnDestroy();
+  });
+
+  it('Fehler → Fortsetzen lädt das nächste Puzzle (kein zweites Leben am selben Puzzle)', () => {
+    const { c, states } = started();
+    c['loseLife']();
+    const state = states.filter(Boolean).pop();
+    c.ngOnDestroy();
+
+    const d = resumed(state);
+    expect(d.chainIndex).toBe(1);
+    expect(d.puzzle.id).toBe(101);
+    expect(d.lives).toBe(2);
+    d.ngOnDestroy();
+  });
+
+  it('Zurücksetzen (kostet ein Leben) → Fortsetzen lädt das nächste Puzzle', () => {
+    const { c, states } = started();
+    c.resetPuzzle();
+    const state = states.filter(Boolean).pop();
+    c.ngOnDestroy();
+
+    expect(state.lives).toBe(2);
+    expect(state.chainIndex).toBe(1);
+  });
+
+  it('ohne Ergebnis bleibt Fortsetzen beim aktuellen Puzzle', () => {
+    const { c, states } = started();
+    const state = states.filter(Boolean).pop();
+    c.ngOnDestroy();
+
+    expect(state.chainIndex).toBe(0);
+    const d = resumed(state);
+    expect(d.puzzle.id).toBe(100);
+    d.ngOnDestroy();
+  });
+
+  it('Analyse nach einem Fehler: Rückkehr beim nächsten Puzzle, dessen Zeit bei 0 beginnt', () => {
+    const { c, states } = started();
+    const lives: any[] = [];
+    c['storage'].saveLiveElapsed = (e: any) => lives.push(e);
+    c['loseLife']();
+    c['puzzleStopwatch'].start(40);  // 40 s am gescheiterten Puzzle
+    c['puzzleStartTime'] = Date.now();
+    c.analyzeCurrentPuzzle();
+    c.ngOnDestroy();                 // sichert den Live-Zeitstand
+    const state = states.filter(Boolean).pop();
+
+    expect(state.chainIndex).toBe(1);                   // nicht 2: Zeiger rückte schon beim Fehler vor
+    const d = resumed(state, lives[lives.length - 1]);
+    expect(d.puzzle.id).toBe(101);
+    expect(d['resumePuzzleSeconds']).toBe(0);           // die 40 s gehören zum alten Puzzle
+    d.ngOnDestroy();
+  });
+
+  it('Ergebnis am letzten Puzzle der lokalen Kette: Fortsetzen verlängert sie statt neu zu würfeln', () => {
+    const d = makeComponent();
+    const pool = CHAIN.map(p => ({ ...p }));
+    d['storage'].loadChainSeed = () => 'seed-xyz';
+    d['offlinePool'] = pool;
+    d.activeGameState = { lives: 2, solved: 3, chainIndex: 3, seed: 'seed-xyz', maxRatingReached: 1100 };
+    d.resumeGame();
+    expect(d['chain'][0]).toBe(pool[0]);                // gespielte Kette bleibt (kein Neuaufbau ab 0)
+    expect(d['chain'].length).toBe(6);                  // um einen Block verlängert
+    expect(d.chainIndex).toBe(3);
+    d.ngOnDestroy();
+  });
+});
+
 describe('EndlessPuzzleComponent prefetch race (runGeneration)', () => {
   /** Steuerbares Observable: merkt sich den Handler, damit der Test next() später feuert. */
   function controllable() {
