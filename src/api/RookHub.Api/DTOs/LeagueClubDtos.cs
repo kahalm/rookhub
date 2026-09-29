@@ -182,6 +182,35 @@ public class LeagueRosterPersonDto
 }
 
 /// <summary><c>POST …/games/lichess</c> — eine öffentliche Lichess-Studie (Adresse der Studie oder eines Kapitels).</summary>
+/// <summary>Eine ChessBase-Datenbank als PGN (0.598.0, <c>POST …/club/games/chessbase</c>) — danach wie ein PGN-Upload.</summary>
+public class LeagueClubChessBaseResultDto
+{
+    /// <summary><c>cbh</c> (klassisch) oder <c>2cbh</c>.</summary>
+    public string Format { get; set; } = string.Empty;
+    /// <summary>Name der Datenbank (Dateiname ohne Endung).</summary>
+    public string Name { get; set; } = string.Empty;
+    /// <summary>Die gelesenen Partien: Hauptvariante ohne Kommentare, Kopfzeilen wie im ChessBase-Export.</summary>
+    public string Pgn { get; set; } = string.Empty;
+    /// <summary>Partien in der Datenbank (ohne gelöschte, höchstens <c>ChessBaseImportService.MaxGames</c>).</summary>
+    public int Games { get; set; }
+    public int Converted { get; set; }
+    public int Deleted { get; set; }
+    /// <summary>Mehr Partien, als gelesen werden.</summary>
+    public bool Truncated { get; set; }
+    public int SkippedCount { get; set; }
+    /// <summary>Die ersten übersprungenen Partien mit Grund (Chess960, unlesbarer Zug …).</summary>
+    public List<LeagueClubChessBaseSkipDto> Skipped { get; set; } = new();
+}
+
+public class LeagueClubChessBaseSkipDto
+{
+    /// <summary>Nummer in der Datenbank, wie ChessBase sie zeigt.</summary>
+    public int Id { get; set; }
+    public string White { get; set; } = string.Empty;
+    public string Black { get; set; } = string.Empty;
+    public string Reason { get; set; } = string.Empty;
+}
+
 public class LeagueClubLichessRequest
 {
     public string Url { get; set; } = string.Empty;

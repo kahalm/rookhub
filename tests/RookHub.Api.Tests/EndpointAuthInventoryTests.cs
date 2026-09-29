@@ -62,6 +62,7 @@ public class EndpointAuthInventoryTests
         "POST /api/league/s/{token}/club/games/import",
         "POST /api/league/s/{token}/club/games",
         "POST /api/league/s/{token}/club/games/lichess",     // öffentliche Lichess-Studie (nur die feste Lichess-API)
+        "POST /api/league/s/{token}/club/games/chessbase",   // ChessBase-Datenbank → PGN (nur Umwandlung, speichert nichts)
         "GET /api/league/s/{token}/club/players",
         "POST /api/league/s/{token}/club/match",
         "GET /api/league/s/{token}/club/scoresheet/status",

@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
-import { ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
+import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
@@ -121,6 +121,13 @@ export class ClubClient {
   /** PGN einer öffentlichen Lichess-Studie (Adresse der Studie oder eines Kapitels). */
   async lichess(url: string): Promise<string> {
     return (await firstValueFrom(this.http.post<{ pgn: string }>(`${this.base}/games/lichess`, { url }))).pgn;
+  }
+
+  /** Eine ChessBase-Datenbank (die Dateien, einzeln gepackt, oder ein ZIP) → PGN; gespeichert wird dabei nichts. */
+  chessBase(files: { name: string; blob: Blob }[]): Promise<ChessBaseResult> {
+    const form = new FormData();
+    for (const f of files) form.append('files', f.blob, f.name);
+    return firstValueFrom(this.http.post<ChessBaseResult>(`${this.base}/games/chessbase`, form));
   }
 
   match(white: string, black: string): Promise<ClubMatch> {

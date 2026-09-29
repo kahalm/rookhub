@@ -168,6 +168,19 @@ export interface ClubGameUpdate { white?: SideDecision | null; black?: SideDecis
 
 /** Ein Entwurf eines PGN-Imports (0.595.0): liegt online, bis alles importiert oder verworfen ist. `ref` = Nummer
  *  (angemeldet) bzw. geheimer Schlüssel (ohne Konto). */
+/** Eine ChessBase-Datenbank als PGN (0.598.0, `POST …/club/games/chessbase`). */
+export interface ChessBaseResult {
+  format: 'cbh' | '2cbh';
+  name: string;
+  pgn: string;
+  games: number;
+  converted: number;
+  deleted: number;
+  truncated: boolean;
+  skippedCount: number;
+  skipped: { id: number; white: string; black: string; reason: string }[];
+}
+
 export interface ClubDraft {
   ref: string;
   id: number;

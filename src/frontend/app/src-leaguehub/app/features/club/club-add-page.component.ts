@@ -7,6 +7,7 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
 import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload, splitPgn } from '../../core/chessbase-upload';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ImportReview } from './import-review';
 
@@ -71,6 +72,7 @@ const SAVE_DEBOUNCE_MS = 1500;
       @if (kind() === 'pgn') {
         <section class="panel">
           @if (review(); as rv) {
+            @if (dbNote(); as note) { <p class="small db-note" role="status">{{ note }}</p> }
             @if (draft(); as d) {
               <p class="small muted draft-note">Die Liste liegt online als Entwurf — brichst du ab, machst du später unter „Deine offenen Listen" weiter@if (!share) {, und ein Verwalter kann den Import fertigstellen}.
                 @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
@@ -87,6 +89,12 @@ const SAVE_DEBOUNCE_MS = 1500;
             </label>
             <label class="field">PGN-Datei
               <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" (change)="pickFile($event)" />
+            </label>
+            <label class="field">… oder eine ChessBase-Datenbank
+              <input type="file" multiple [disabled]="readingDb()" (change)="pickChessBase($event)" />
+              <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
+                .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
+                @if (readingDb()) { <b>Lese die Datenbank …</b> }</span>
             </label>
             <div class="field">… oder eine öffentliche Lichess-Studie
               <div class="linkrow">
@@ -247,6 +255,9 @@ export class ClubAddPageComponent implements OnInit {
   readonly studyUrl = signal('');
   readonly loadingStudy = signal(false);
   readonly importError = signal<string | null>(null);
+  /** ChessBase: was aus der Datenbank wurde (gelesen, übersprungen, aufgeteilt) — steht über der Übersicht. */
+  readonly dbNote = signal<string | null>(null);
+  readonly readingDb = signal(false);
   readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
 
@@ -337,7 +348,8 @@ export class ClubAddPageComponent implements OnInit {
   }
 
   draftTitle(d: ClubDraft): string {
-    const src = d.source === 'lichess' ? 'Lichess-Studie' : d.source === 'rookhub' ? 'aus RookHub' : d.source === 'datei' ? 'Datei' : 'eingefügt';
+    const src = d.source === 'lichess' ? 'Lichess-Studie' : d.source === 'rookhub' ? 'aus RookHub' : d.source === 'datei' ? 'Datei'
+      : d.source === 'chessbase' ? 'ChessBase' : 'eingefügt';
     return `${d.label ?? src} (${d.gameCount} ${d.gameCount === 1 ? 'Partie' : 'Partien'})`;
   }
 
@@ -349,6 +361,7 @@ export class ClubAddPageComponent implements OnInit {
   async resume(d: ClubDraft): Promise<void> {
     this.resuming.set(true);
     this.importError.set(null);
+    this.dbNote.set(null);
     this.result.set(null);
     try {
       const full = await this.client.draft(d.ref);
@@ -379,6 +392,7 @@ export class ClubAddPageComponent implements OnInit {
   async discardCurrent(): Promise<void> {
     const d = this.draft();
     this.review.set(null);
+    this.dbNote.set(null);
     this.resetDraft();
     if (d) {
       try { await this.client.deleteDraft(d.ref); } catch { /* schon weg */ }
@@ -439,15 +453,73 @@ export class ClubAddPageComponent implements OnInit {
   async pickFile(ev: Event): Promise<void> {
     const f = (ev.target as HTMLInputElement).files?.[0];
     if (!f) return;
+    this.dbNote.set(null);
     this.pgn.set(await f.text());
     this.loaded(this.pgn(), 'datei', f.name);
     this.result.set(null);
+  }
+
+  /**
+   * Eine ChessBase-Datenbank (0.598.0): die nötigen Dateien gepackt hochladen, der Server liefert das PGN. Mehr als eine
+   * Übersicht fasst (500 Partien), wird aufgeteilt: die erste Portion geht gleich in die Übersicht, die übrigen liegen als
+   * offene Listen bereit — dieselben Entwürfe wie bei jeder anderen Liste.
+   */
+  async pickChessBase(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
+    if (!picked.length) return;
+    this.importError.set(null);
+    this.dbNote.set(null);
+    this.result.set(null);
+    const { send, hasDatabase } = chessBaseSelection(picked);
+    if (!hasDatabase) {
+      this.importError.set('Keine ChessBase-Datenbank dabei — die Datei mit der Endung .cbh oder .2cbh muss mit (oder ein ZIP).');
+      return;
+    }
+    this.readingDb.set(true);
+    try {
+      const packed = await Promise.all(send.map(packForUpload));
+      if (packed.reduce((sum, p) => sum + p.blob.size, 0) > CHESSBASE_MAX_UPLOAD_BYTES) {
+        this.importError.set('Die Datenbank ist zu groß für einen Upload (gepackt höchstens 15 MB).');
+        return;
+      }
+      const r = await this.client.chessBase(packed);
+      if (!r.converted) {
+        this.importError.set(r.games ? chessBaseNote(r) + ' Nichts zu importieren.' : `${r.name}: keine Partien in der Datenbank.`);
+        return;
+      }
+      const parts = splitPgn(r.pgn);
+      const label = `${r.name}.${r.format}`;
+      const partLabel = (i: number) => parts.length > 1 ? `${label} (Teil ${i + 1} von ${parts.length})` : label;
+      this.dbNote.set(chessBaseNote(r, parts.length));
+      this.pgn.set(parts[0]);
+      this.loaded(parts[0], 'chessbase', partLabel(0));
+      await this.startPreview();
+      if (parts.length < 2) return;
+      // Die übrigen Portionen ablegen — erst nach der Übersicht, damit die erste auch bei vollem Deckel ihren Entwurf hat.
+      let parked = 0;
+      for (let i = 1; i < parts.length; i++) {
+        try {
+          const created = await this.client.createDraft(parts[i], 'chessbase', partLabel(i));
+          if (this.share && created.key) rememberDraftKey(this.share, created.key);
+          parked++;
+        } catch { break; }
+      }
+      this.dbNote.set(chessBaseNote(r, parts.length, parked));
+      void this.loadDrafts();
+    } catch (err) {
+      this.importError.set(chessBaseErrorText(err));
+    } finally {
+      this.readingDb.set(false);
+    }
   }
 
   /** Eine öffentliche Lichess-Studie holen (der Server ruft Lichess) — danach geht es weiter wie mit einer Datei. */
   async loadStudy(): Promise<void> {
     this.loadingStudy.set(true);
     this.importError.set(null);
+    this.dbNote.set(null);
     try {
       this.pgn.set(await this.client.lichess(this.studyUrl().trim()));
       this.loaded(this.pgn(), 'lichess', this.studyUrl().trim());
@@ -493,6 +565,7 @@ export class ClubAddPageComponent implements OnInit {
   done(r: ClubImportResult): void {
     this.result.set(r);
     this.review.set(null);
+    this.dbNote.set(null);
     if (r.added) this.pgn.set('');
     // Fertig importiert: der Entwurf (samt Rohtext mit den Namen) geht.
     const d = this.draft();

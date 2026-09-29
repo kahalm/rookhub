@@ -1414,6 +1414,34 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Zeile GELÖSCHT (der Rohtext nennt die Spieler von Schwaz mit Namen), ebenso nach 30 Tagen ohne Bewegung und beim
   Kontolöschen. Deckel: 20 offene je Konto, 5 je IP ohne Konto (HMAC wie bei den Formularen); ohne Konto gehört der
   Entwurf dem Browser mit dem Schlüssel (`lh-anon-drafts`).
+* **ChessBase-Datenbanken** (0.598.0, Wunsch „ein Import für 2cbh und cbh zusätzlich zu PGN — bau es selbst in C#
+  nach"; `Services/ChessBase/`): `POST …/club/games/chessbase` (angemeldet und über den Teilen-Link) nimmt die Dateien EINER
+  Datenbank (einzeln, einzeln gepackt als `name.2cbg.gz` oder als ZIP) und antwortet mit einem PGN — gespeichert wird dabei
+  nichts, danach ist es derselbe Weg wie eine PGN-Datei. Regeln, die dabei nicht kippen dürfen:
+  - **Eigener Code nach Morphys reverse-engineerter Formatbeschreibung** (`format/v1`, `format/v2`; ChessBase dokumentiert
+    keins der beiden). Morphy hat KEINE Lizenz — übernommen sind nur die Fakten (Offsets, Tabellen, Kodierung), kein Code,
+    und seine Testdatenbanken gehören NICHT ins Repo. oschess (C) war bis v1.0.3 MIT (ab v1.0.4 AGPL) und diente nur zum
+    Gegenlesen. Die Datenbanken des Nutzers auch nicht: sie tragen echte Namen — `ChessBaseFixtureTests` läuft nur lokal
+    mit `CHESSBASE_FIXTURES=<Ordner>` (je Datenbank ihre Dateien + ein PGN-Export aus ChessBase) und vergleicht Kopfdaten
+    und Hauptvariante als UCI. Stand 29.09.: `.2cbh` 78/78 gleich; `.cbh` gleich bis auf den auf 40 Zeichen gekürzten
+    Turniernamen (steht so in der `.cbt`); Morphys WM-Sammlung in beiden Formaten (2 × 1025) mit denselben Zügen.
+  - **Hauptvariante = alles vor dem ersten Linienende** — klassisch das erste `255` (Kodierung 0/4/5 über `CbhTables`,
+    Chess960-Kodierungen 10/11 werden übersprungen), `.2cbg` die Wörter bis zum ersten `ffff`. Varianten und Anmerkungen
+    (`.cba`/`.2cba`) liest niemand; dafür schickt die Seite nur `ChessBaseFiles.Upload` (SPIEGEL von
+    `CHESSBASE_UPLOAD_EXTENSIONS` in `src-leaguehub/app/core/chessbase-upload.ts`, beide mit literalem Test).
+  - **Das 2CBH-Zugwort wird aus Regeln aufgezählt** (`Cb2MoveTable.Build`, 0xb129 Einträge — König, Dame, Springer, Läufer,
+    Turm je Farbe, dann Bauern, dann Rochaden); die Blockgrenzen stehen literal in `ChessBaseReaderTests`. Wer daran dreht,
+    lässt den Fixture-Test laufen.
+  - **Gespielt wird auf Gera.Chess direkt** (`MainlineBoard.Play`: `Move(new Move(von, nach))`, SAN aus `ExecutedMoves[^1]`)
+    — die Kandidaten der Figur aufzuzählen und für jeden die SAN zu rechnen war sechsmal so langsam (3,5 ms statt ~1 ms je
+    Partie). Nur Umwandlungen gehen über die Liste (direkt wählt Gera immer die Dame). Ein Zug, der nicht geht, macht die
+    PARTIE zur übersprungenen (`ChessBaseGame.Error`, in der Antwort `skipped` mit Nummer), nie den ganzen Upload.
+  - **Grenzen**: Rumpf 15 MB (`ChessBaseImportService.MaxBodyBytes` = die allgemeine `/api/`-Regel des Frontend-nginx —
+    die Seite packt deshalb jede Datei per `CompressionStream('gzip')`, eine kommentierte `.cbg` auf ein Siebtel),
+    ausgepackt 64 MB (`ChessBaseFiles.MaxTotalBytes`, beim LESEN gezählt — ZIP- und gzip-Bomben), 5000 Partien
+    (`MaxGames`, `truncated`), höchstens 2 Umwandlungen gleichzeitig (sonst 429 `busy`). Über 500 Partien teilt die Seite das
+    PGN (`splitPgn`): die erste Portion geht in die Übersicht, die übrigen werden offene Listen (Quelle `chessbase`,
+    „Teil k von n") — am Deckel der Entwürfe (20 je Konto, 5 je IP) sagt sie, wie viele nicht abgelegt wurden.
 * **Nur das JAHR** (`Date "2024.??.??"`), nur die Hauptvariante OHNE Kommentare, nur ab der Grundstellung
   (`fromPosition`). Dubletten: gleiche Züge (`MovesHash`) im gleichen Jahr; unter 20 Halbzügen zusätzlich gleiche Namen.
 * **Spielerkarten** (`Services/League/LeagueProfileStore.cs`): `LeaguePlayerProfile.Pgn` hält NUR die fremden Partien
@@ -1456,6 +1484,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | PUT | `/api/league/club/games/{id}` | contribute | Namen/Ergebnis korrigieren `{ white?{ name, fide }, black?, result? }` (0.582.0; wer löschen darf; fehlende Seite = unverändert) → Partie; 400 `anonymous` („Schwaz" bleibt), `noLeaguePlayer`, `onlyOwnClub`, `invalidResult`; ein vorher unzugeordneter Name (ohne FIDE-ID) wird als Zuordnung gemerkt; ein Spieler von Schwaz (oder `replace`) wird zu „Schwaz" samt Wegfall von Veranstaltung und Hochladendem (0.583.0) — eine Korrektur anonymisiert nur, nie zurück |
 | GET | `/api/league/club/players?q=&all=` | contribute | Ligaspieler-Vorschläge (jedes Wort irgendwo im Namen, Wortanfänge zuerst) samt `club`; `all=true` dazu das Megabase-Verzeichnis |
 | POST | `/api/league/club/games/lichess` | contribute | `{ url }` einer öffentlichen Lichess-Studie → `{ pgn }` |
+| POST | `/api/league/club/games/chessbase` | contribute | Multipart `files` (Dateien einer ChessBase-Datenbank, einzeln `.gz` oder ZIP) → `{ format, name, pgn, games, converted, deleted, truncated, skippedCount, skipped[{ id, white, black, reason }] }`; 400 `reason` ∈ `noFile`/`noDatabase`/`multipleDatabases`/`missingFile`/`tooLarge`/`invalidZip`/`invalidFile`/`unreadable`, 429 `busy` (0.598.0) |
 | POST | `/api/league/club/match` | contribute | `{ white, black }` → je Seite `{ league, ambiguous, name, fide, club, candidates, lastNameOnly, mega }` |
 | GET | `/api/league/club/scoresheet/status` | contribute | Tageszahl dieses Wegs (10) |
 | GET | `/api/league/club/admin/scans` | manage | Alle offenen Liga-Einlesungen `[{ scan, viaShareLink, mine }]` (jüngste 50) |
@@ -1467,6 +1496,7 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
 | POST | `/api/league/s/{token}/club/games/preview`, `/games/import` | Teilen-Link | wie oben, ohne Konto |
 | POST | `/api/league/s/{token}/club/games?scanKey=` | Teilen-Link | eine Partie, schließt die Einlesung mit diesem Schlüssel |
 | POST | `/api/league/s/{token}/club/games/lichess` | Teilen-Link | Lichess-Studie laden, wie oben |
+| POST | `/api/league/s/{token}/club/games/chessbase` | Teilen-Link | ChessBase-Datenbank → PGN, wie oben |
 | GET | `/api/league/s/{token}/club/players`, `POST …/match`, `GET …/scoresheet/status` | Teilen-Link | wie oben (Status: je IP) |
 | POST | `/api/league/s/{token}/club/scans` | Teilen-Link | Foto hochladen → `{ key, scan }` |
 | POST | `/api/league/s/{token}/club/scans/lookup` | Teilen-Link | `{ keys[] }` → die offenen Einlesungen dazu |

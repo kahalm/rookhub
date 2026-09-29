@@ -6,6 +6,7 @@ using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.ChessBase;
 using RookHub.Api.Services.League;
 using Actor = RookHub.Api.Services.ScoresheetScanService.ScanActor;
 
@@ -179,6 +180,16 @@ public class LeagueClubController : BaseApiController
         return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
     }
 
+    /// <summary>Eine ChessBase-Datenbank (multipart <c>files</c>: die Dateien, einzeln gepackt als <c>.gz</c>, oder ein ZIP)
+    /// → PGN der Hauptvarianten samt Kopfdaten (0.598.0); danach wie ein Upload. 400 mit Grund-Code (siehe
+    /// <see cref="ChessBaseImportService.ConvertAsync"/>), 429 <c>busy</c>.</summary>
+    [HttpPost("games/chessbase")]
+    [HasPermission(Permissions.LeagueContribute)]
+    [RequestSizeLimit(ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
+    public async Task<IActionResult> ChessBaseUpload([FromServices] ChessBaseImportService chessBase, CancellationToken ct) =>
+        ClubUpload.ChessBaseResult(this, await chessBase.ConvertAsync(await ClubUpload.FormFilesAsync(Request, ct), ct));
+
     /// <summary>Stehen diese Namen in einer Meldeliste? Spieler von Schwaz?</summary>
     [HttpPost("match")]
     [HasPermission(Permissions.LeagueContribute)]
@@ -330,6 +341,15 @@ public class LeagueShareClubController : ControllerBase
         return pgn == null ? BadRequest(new { reason, message = "Study not loaded." }) : Ok(new { pgn });
     }
 
+    [HttpPost("games/chessbase")]
+    [RequestSizeLimit(ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ChessBaseImportService.MaxBodyBytes + 1024 * 1024)]
+    public async Task<IActionResult> ChessBaseUpload(string token, [FromServices] ChessBaseImportService chessBase, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return ClubUpload.ChessBaseResult(this, await chessBase.ConvertAsync(await ClubUpload.FormFilesAsync(Request, ct), ct));
+    }
+
     [HttpPost("match")]
     public async Task<ActionResult<LeagueClubMatchDto>> Match(string token, [FromBody] LeagueClubMatchRequest req, CancellationToken ct)
     {
@@ -462,6 +482,15 @@ internal static class ClubUpload
         await file.CopyToAsync(ms);
         return ms.ToArray();
     }
+
+    public static async Task<IReadOnlyCollection<IFormFile>?> FormFilesAsync(HttpRequest request, CancellationToken ct) =>
+        request.HasFormContentType ? (await request.ReadFormAsync(ct)).Files : null;
+
+    public static IActionResult ChessBaseResult(ControllerBase c,
+        (LeagueClubChessBaseResultDto? Result, string? Reason, string? Message) r) =>
+        r.Result != null ? c.Ok(r.Result)
+        : r.Reason == "busy" ? new ObjectResult(new { reason = r.Reason, message = r.Message }) { StatusCode = StatusCodes.Status429TooManyRequests }
+        : c.BadRequest(new { reason = r.Reason, message = r.Message });
 
     public static object FileError(IFormFile? file) => file == null || file.Length == 0
         ? new { reason = "noFile", message = "No file." } : new { reason = "tooLarge", message = "File too large." };

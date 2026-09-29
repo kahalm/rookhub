@@ -257,6 +257,8 @@ try
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();
+    // ChessBase-Datenbanken (.cbh/.2cbh) → PGN für die Vereins-Datenbank (0.598.0).
+    builder.Services.AddSingleton<RookHub.Api.Services.ChessBase.ChessBaseImportService>();
     // Öffentliche Lichess-Studien für den Import in die Vereins-Datenbank (nur die feste API, siehe LichessStudySource).
     builder.Services.AddHttpClient(RookHub.Api.Services.League.LichessStudySource.ClientName, client =>
     {

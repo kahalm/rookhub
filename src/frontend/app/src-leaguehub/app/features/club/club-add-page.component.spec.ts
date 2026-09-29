@@ -29,7 +29,7 @@ describe('ClubAddPageComponent', () => {
     query = {};
     params = {};
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['preview', 'importPgn', 'scans', 'scoresheetStatus', 'upload', 'discard', 'players', 'match', 'lichess',
-      'createDraft', 'drafts', 'draft', 'saveDraft', 'deleteDraft']);
+      'createDraft', 'drafts', 'draft', 'saveDraft', 'deleteDraft', 'chessBase']);
     api.scans.and.resolveTo([]);
     api.drafts.and.resolveTo([]);
     api.createDraft.and.callFake(async () => ({ ref: '7', id: 7, source: 'text', label: null, gameCount: 1, importedCount: 0,
@@ -175,6 +175,43 @@ describe('ClubAddPageComponent', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('nicht öffentlich');
   }));
+
+  it('ChessBase-Datenbank: nur die nötigen Dateien gepackt hoch, mehr als 500 Partien werden zu offenen Listen', async () => {
+    create();
+    const game = (i: number) => `[Event "Liga"]\n[White "W${i}"]\n[Black "B${i}"]\n[Result "1-0"]\n\n1. e4 e5 1-0`;
+    const pgn = Array.from({ length: 1100 }, (_, i) => game(i + 1)).join('\n\n') + '\n\n';
+    api.chessBase.and.resolveTo({ format: '2cbh', name: 'Verein', pgn, games: 1100, converted: 1100, deleted: 0, truncated: false, skippedCount: 0, skipped: [] });
+    api.preview.and.resolveTo(PREVIEW);
+    const files = ['Verein.2cbh', 'Verein.2cbg', 'Verein.2lid', 'Verein.2cba', 'Verein.ini'].map(n => new File(['abc'], n));
+    const input = { files, value: 'C:\\fakepath\\Verein.2cbh' };
+    await fixture.componentInstance.pickChessBase({ target: input } as unknown as Event);
+    fixture.detectChanges();
+
+    expect(input.value).toBe('');
+    expect(api.chessBase.calls.mostRecent().args[0].map(f => f.name)).toEqual(['Verein.2cbh.gz', 'Verein.2cbg.gz', 'Verein.2lid.gz']);
+    const part1 = api.preview.calls.mostRecent().args[0];
+    expect(part1.match(/\[Event /g)!.length).toBe(500);
+    expect(api.createDraft.calls.allArgs().map(a => [a[1], a[2]])).toEqual([
+      ['chessbase', 'Verein.2cbh (Teil 1 von 3)'], ['chessbase', 'Verein.2cbh (Teil 2 von 3)'], ['chessbase', 'Verein.2cbh (Teil 3 von 3)']]);
+    expect(api.createDraft.calls.argsFor(2)[0].match(/\[Event /g)!.length).toBe(100);
+    const note = (fixture.nativeElement as HTMLElement).querySelector('.db-note')?.textContent ?? '';
+    expect(note).toContain('Verein: 1.100 Partien gelesen.');
+    expect(note).toContain('Aufgeteilt in 3 Listen');
+  });
+
+  it('ChessBase: ohne Kopfdatei wird gar nicht erst hochgeladen, Absagen des Servers stehen als Satz da', async () => {
+    const el = create();
+    await fixture.componentInstance.pickChessBase({ target: { files: [new File(['x'], 'a.2cbg')], value: '' } } as unknown as Event);
+    fixture.detectChanges();
+    expect(api.chessBase).not.toHaveBeenCalled();
+    expect(el.querySelector('.update-msg')?.textContent).toContain('.cbh oder .2cbh');
+
+    api.chessBase.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'missingFile', message: 'Es fehlt: a.2lid.' } }));
+    await fixture.componentInstance.pickChessBase({ target: { files: [new File(['x'], 'a.2cbh')], value: '' } } as unknown as Event);
+    fixture.detectChanges();
+    expect(el.querySelector('.update-msg')?.textContent).toContain('Es fehlt: a.2lid.');
+    expect(api.preview).not.toHaveBeenCalled();
+  });
 
   it('eine Partie aus RookHub (?partie=33) geht gleich in die Übersicht', fakeAsync(() => {
     query = { partie: '33' };
