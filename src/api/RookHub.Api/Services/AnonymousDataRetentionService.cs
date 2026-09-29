@@ -6,11 +6,14 @@ namespace RookHub.Api.Services;
 /// <summary>
 /// Räumt ANONYME Spielstände auf, die niemand mehr abholen kann. Der anonyme Endless-Pfad ist
 /// bewusst offen (ohne Konto spielen), und die Session-Id ist ein frei wählbares Feld des Requests:
-/// jede neue Kennung legt eine eigene Zeile an — <c>ActiveGameState</c> ist LONGTEXT. Es gab dafür
-/// weder einen Deckel noch ein Verfallsdatum, während die Anon-Senke der Chessable-Linien längst
-/// eine Retention hat. Die Zeilen sind nach dem Spielen wertlos: ein Rückkehrer bringt seine
-/// Session-Id im Browser-Speicher mit, und wer sich anmeldet, übernimmt sie sofort
-/// (<c>POST /api/endless/claim-session</c>).
+/// jede neue Kennung legt eine eigene Zeile an — <c>ActiveGameState</c> ist LONGTEXT. Diese Retention
+/// ist der RÜCKBAU; die Schranke gegen das Vollschreiben sind die Gesamtdeckel
+/// (<see cref="EndlessProgressService.MaxAnonymousProgressRowsTotal"/>,
+/// <see cref="EndlessProgressService.MaxAnonymousSessionRowsTotal"/>) und der engere Deckel des anonymen
+/// Spielstands (<see cref="DTOs.SaveAnonymousProgressDto.MaxActiveGameStateLength"/>) — ein Verfall
+/// nach 60 Tagen allein hätte ein Skript mit frischen Session-Ids nicht gebremst. Die Zeilen sind nach
+/// dem Spielen wertlos: ein Rückkehrer bringt seine Session-Id im Browser-Speicher mit, und wer sich
+/// anmeldet, übernimmt sie sofort (<c>POST /api/endless/claim-session</c>).
 ///
 /// Läuft täglich; ein Fehler beendet den Dienst nicht (nur Logzeile).
 /// </summary>

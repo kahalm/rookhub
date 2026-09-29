@@ -64,11 +64,28 @@ public class SaveEndlessProgressDto
     public int Highscore { get; set; }
 
     [MaxLength(1_000_000)]
-    public string? ActiveGameState { get; set; }
+    public virtual string? ActiveGameState { get; set; }
 }
 
+/// <summary>Anonymer Zwilling von <see cref="SaveEndlessProgressDto"/> mit EIGENEM, engerem Deckel für
+/// den Spielstand. Der anonyme Endpoint ist offen und die Session-Id frei wählbar: jede neue Kennung
+/// legt eine eigene Zeile an, und <c>ActiveGameState</c> ist LONGTEXT — mit dem Konto-Deckel von 1 Mio.
+/// Zeichen füllte ein Skript ohne Konto die gemeinsame Datenbank mit bis zu ~3 MB je Aufruf.</summary>
 public class SaveAnonymousProgressDto : SaveEndlessProgressDto
 {
+    /// <summary>Obergrenze des anonymen Spielstands (Zeichen). Ein echter Stand
+    /// (<c>syncActiveGameToServer</c> im Endless-Modus) hat ~300 Zeichen fest plus ~140 je Puzzle des
+    /// Laufs (<c>puzzleAttempts</c>) — 64 K reichen für über 400 Puzzles. Die Kette steigt ab Puzzle 25
+    /// um 15 Punkte je Puzzle und liegt lange vorher über dem Puzzle-Bestand.</summary>
+    public const int MaxActiveGameStateLength = 64 * 1024;
+
+    [MaxLength(MaxActiveGameStateLength)]
+    public override string? ActiveGameState
+    {
+        get => base.ActiveGameState;
+        set => base.ActiveGameState = value;
+    }
+
     [Required, MaxLength(36), RegularExpression(ValidationConstants.SessionIdPattern)]
     public string SessionId { get; set; } = string.Empty;
 }

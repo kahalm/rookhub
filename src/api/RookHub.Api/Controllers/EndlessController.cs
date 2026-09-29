@@ -111,8 +111,12 @@ public class EndlessController : BaseApiController
     [EnableRateLimiting("anonymous-puzzle")]
     public async Task<ActionResult<EndlessProgressDto>> SaveAnonymousProgress([FromBody] SaveAnonymousProgressDto dto)
     {
-        var result = await _service.SaveAnonymousProgressAsync(dto.SessionId, dto);
-        return Ok(result);
+        try
+        {
+            var result = await _service.SaveAnonymousProgressAsync(dto.SessionId, dto);
+            return Ok(result);
+        }
+        catch (AnonymousEndlessStorageFullException ex) { return AnonymousStorageFull(ex); }
     }
 
     [HttpPost("sessions/anonymous")]
@@ -120,8 +124,12 @@ public class EndlessController : BaseApiController
     [EnableRateLimiting("anonymous-puzzle")]
     public async Task<ActionResult<EndlessSessionDto>> RecordAnonymousSession([FromBody] RecordAnonymousSessionDto dto)
     {
-        var result = await _service.RecordAnonymousSessionAsync(dto.SessionId, dto);
-        return Ok(result);
+        try
+        {
+            var result = await _service.RecordAnonymousSessionAsync(dto.SessionId, dto);
+            return Ok(result);
+        }
+        catch (AnonymousEndlessStorageFullException ex) { return AnonymousStorageFull(ex); }
     }
 
     [HttpPost("sessions/bulk/anonymous")]
@@ -133,7 +141,17 @@ public class EndlessController : BaseApiController
         if (dto.Sessions.Count > 50)
             return BadRequest(new { message = "Maximum 50 sessions per import." });
 
-        var count = await _service.BulkImportAnonymousSessionsAsync(dto.SessionId, dto.Sessions);
-        return Ok(new { imported = count });
+        try
+        {
+            var count = await _service.BulkImportAnonymousSessionsAsync(dto.SessionId, dto.Sessions);
+            return Ok(new { imported = count });
+        }
+        catch (AnonymousEndlessStorageFullException ex) { return AnonymousStorageFull(ex); }
     }
+
+    /// <summary>Anonyme Senke voll: dauerhafter 4xx (die Offline-Queue verwirft ihn, ein 5xx würde sie
+    /// blockieren und endlos wiederholen). <c>reason</c> trennt den Fall für Clients von Eingabefehlern;
+    /// in Kibana steht die Warnung <c>EndlessAnonymousStorageFull</c> des Dienstes.</summary>
+    private BadRequestObjectResult AnonymousStorageFull(AnonymousEndlessStorageFullException ex)
+        => BadRequest(new { reason = "anonymousStorageFull", message = ex.Message });
 }

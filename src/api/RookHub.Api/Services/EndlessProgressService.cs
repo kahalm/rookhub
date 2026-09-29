@@ -7,6 +7,13 @@ using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
+/// <summary>Die anonyme Endless-Senke ist voll (<see cref="EndlessProgressService.MaxAnonymousProgressRowsTotal"/>
+/// bzw. <see cref="EndlessProgressService.MaxAnonymousSessionRowsTotal"/>): keine NEUE anonyme Zeile.
+/// Der Controller antwortet 400 — ein dauerhafter 4xx, den die Offline-Queue des Frontends verwirft,
+/// statt ihn wie einen 5xx endlos zu wiederholen; der Browser behält seinen Stand lokal.</summary>
+public sealed class AnonymousEndlessStorageFullException()
+    : Exception("Anonymous endless storage is full. Sign in to keep your progress on the server.");
+
 /// <summary>
 /// Wem gehört ein Endless-Fortschritt: einem KONTO oder einer anonymen Browser-Sitzung. Beide Fälle
 /// beantworten dieselben vier Fragen (Stand lesen, Stand speichern, Lauf aufzeichnen, Läufe am Stück
@@ -35,6 +42,24 @@ public class EndlessProgressService
     private const int MaxSessions = 50;
     /// <summary>Obergrenze fürs Per-Puzzle-Logging einer Session (Schutz gegen überlange Payloads).</summary>
     private const int MaxLoggedSessionPuzzles = 2000;
+
+    /// <summary>GESAMT-Deckel der anonymen Fortschritts-Zeilen (<c>UserId == null</c>). Der Deckel je
+    /// Session-Id (eine Zeile, <see cref="MaxSessions"/> Läufe) bindet nichts, solange die Id ein frei
+    /// wählbares Feld des offenen Endpoints ist: ein Skript nimmt je Aufruf eine neue UUID. Jenseits des
+    /// Deckels werden keine NEUEN anonymen Zeilen mehr angelegt, bestehende dürfen weiter speichern —
+    /// dasselbe Muster wie <see cref="ChessableReviewLineService.MaxAnonRowsTotal"/>. Worst Case
+    /// 10 000 × <see cref="SaveAnonymousProgressDto.MaxActiveGameStateLength"/> statt unbegrenzt, bis die
+    /// Retention (<see cref="AnonymousDataRetentionService"/>) nach 60 Tagen Platz schafft.</summary>
+    public const int MaxAnonymousProgressRowsTotal = 10_000;
+
+    /// <summary>GESAMT-Deckel der anonymen Läufe (<c>UserId == null</c>), Begründung wie
+    /// <see cref="MaxAnonymousProgressRowsTotal"/>: der Trim auf <see cref="MaxSessions"/> gilt nur je
+    /// Session-Id.</summary>
+    public const int MaxAnonymousSessionRowsTotal = 50_000;
+
+    /// <summary>Wirksame Deckel; nur Tests setzen sie klein (zehntausende Zeilen anzulegen wäre zu langsam).</summary>
+    internal int AnonymousProgressRowsCap { get; init; } = MaxAnonymousProgressRowsTotal;
+    internal int AnonymousSessionRowsCap { get; init; } = MaxAnonymousSessionRowsTotal;
 
     public EndlessProgressService(AppDbContext db, ILogger<EndlessProgressService> logger)
     {
@@ -92,6 +117,10 @@ public class EndlessProgressService
         var isNew = progress == null;
         if (isNew)
         {
+            // Neue anonyme Zeile nur, solange die Senke Platz hat; Updates bestehender laufen weiter.
+            if (owner.IsAnonymous)
+                ThrowIfAnonymousStorageFull("EndlessProgresses",
+                    await _db.EndlessProgresses.CountAsync(p => p.UserId == null), 1, AnonymousProgressRowsCap);
             progress = owner.IsAnonymous
                 ? new EndlessProgress { AnonymousSessionId = owner.AnonymousSessionId }
                 : new EndlessProgress { UserId = owner.UserId };
@@ -140,6 +169,7 @@ public class EndlessProgressService
 
     public async Task<EndlessSessionDto> RecordSessionAsync(EndlessOwner owner, RecordEndlessSessionDto dto)
     {
+        await EnsureAnonymousSessionCapacityAsync(owner, 1);
         var session = BuildSession(dto, owner.UserId, owner.AnonymousSessionId);
         _db.EndlessSessions.Add(session);
         await _db.SaveChangesAsync();
@@ -162,6 +192,7 @@ public class EndlessProgressService
 
     public async Task<int> BulkImportSessionsAsync(EndlessOwner owner, List<RecordEndlessSessionDto> dtos)
     {
+        await EnsureAnonymousSessionCapacityAsync(owner, dtos.Count);
         var count = 0;
         foreach (var dto in dtos)
         {
@@ -176,6 +207,28 @@ public class EndlessProgressService
     /// <summary>Nur anonyme Laeufe werden gedeckelt — die eines Kontos bleiben unbegrenzt.</summary>
     private Task TrimIfAnonymousAsync(EndlessOwner owner)
         => owner.IsAnonymous ? TrimAnonymousSessionsAsync(owner.AnonymousSessionId!) : Task.CompletedTask;
+
+    /// <summary>Gesamtdeckel der anonymen Läufe vor dem Einfügen von <paramref name="newRows"/> Zeilen;
+    /// Konten bleiben unbegrenzt.</summary>
+    private async Task EnsureAnonymousSessionCapacityAsync(EndlessOwner owner, int newRows)
+    {
+        if (!owner.IsAnonymous || newRows <= 0) return;
+        ThrowIfAnonymousStorageFull("EndlessSessions",
+            await _db.EndlessSessions.CountAsync(s => s.UserId == null), newRows, AnonymousSessionRowsCap);
+    }
+
+    /// <summary>Wirft <see cref="AnonymousEndlessStorageFullException"/>, wenn <paramref name="newRows"/>
+    /// weitere anonyme Zeilen den Deckel <paramref name="cap"/> überschritten. Die Warnung macht den
+    /// Zustand sichtbar: voll wird die Senke nur durch einen Flutversuch oder echtes Wachstum — beides
+    /// will man wissen (Deckel anheben bzw. Quelle sperren).</summary>
+    private void ThrowIfAnonymousStorageFull(string table, int count, int newRows, int cap)
+    {
+        if (count + newRows <= cap) return;
+        _logger.LogWarning(
+            "EndlessAnonymousStorageFull: {Table} holds {Count} anonymous rows (cap {Cap}), {NewRows} new row(s) rejected",
+            table, count, cap, newRows);
+        throw new AnonymousEndlessStorageFullException();
+    }
 
     // --- Adapter auf die beiden Besitzer-Arten (ein Ausdruck, kein zweiter Weg) ---
 

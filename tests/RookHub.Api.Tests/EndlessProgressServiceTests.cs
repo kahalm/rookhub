@@ -502,6 +502,84 @@ public class EndlessProgressServiceTests : IDisposable
         Assert.Equal(50, count);
     }
 
+    // --- Gesamtdeckel der anonymen Senke (A2-001) ---
+    //
+    // Die Session-Id ist ein frei waehlbares Feld des offenen Endpoints: ein Skript nahm je Aufruf eine
+    // neue UUID, jede legte eine eigene Zeile an (Spielstand LONGTEXT) — ohne Gesamtdeckel lief die
+    // gemeinsame Datenbank voll. Die echten Deckel (zehntausende Zeilen) sind hier klein gestellt.
+
+    private EndlessProgressService CappedService(int progressCap = int.MaxValue, int sessionCap = int.MaxValue)
+        => new(_db, _logger) { AnonymousProgressRowsCap = progressCap, AnonymousSessionRowsCap = sessionCap };
+
+    [Fact]
+    public async Task SaveAnonymousProgress_AtTotalCap_RejectsNewSessionId_ButUpdatesExisting()
+    {
+        var service = CappedService(progressCap: 2);
+        await service.SaveAnonymousProgressAsync("00000000-0000-0000-0000-00000000000a", MakeProgressDto(highscore: 1));
+        await service.SaveAnonymousProgressAsync("00000000-0000-0000-0000-00000000000b", MakeProgressDto(highscore: 2));
+
+        // NEUE Session-Id jenseits des Deckels → abgewiesen, keine Zeile.
+        await Assert.ThrowsAsync<AnonymousEndlessStorageFullException>(() =>
+            service.SaveAnonymousProgressAsync("00000000-0000-0000-0000-00000000000c", MakeProgressDto(highscore: 3)));
+        Assert.Equal(2, await _db.EndlessProgresses.CountAsync(p => p.UserId == null));
+        Assert.Contains(_logger.Events, e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning
+            && e.Message.StartsWith("EndlessAnonymousStorageFull: EndlessProgresses"));
+
+        // BESTEHENDE Session-Id → Update bleibt erlaubt.
+        var updated = await service.SaveAnonymousProgressAsync("00000000-0000-0000-0000-00000000000a", MakeProgressDto(highscore: 9));
+        Assert.Equal(9, updated.Highscore);
+    }
+
+    [Fact]
+    public async Task SaveProgress_ForAccount_IgnoresAnonymousCap()
+    {
+        var userId = await CreateUserAsync();
+        var service = CappedService(progressCap: 0);
+
+        var result = await service.SaveProgressAsync(userId, MakeProgressDto(highscore: 5));
+
+        Assert.Equal(5, result.Highscore);
+    }
+
+    [Fact]
+    public async Task RecordAnonymousSession_AtTotalCap_Rejected_AccountStillRecords()
+    {
+        var userId = await CreateUserAsync();
+        var service = CappedService(sessionCap: 2);
+        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-00000000000d", MakeSessionDto(timestamp: 1));
+        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-00000000000e", MakeSessionDto(timestamp: 2));
+
+        await Assert.ThrowsAsync<AnonymousEndlessStorageFullException>(() =>
+            service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-00000000000f", MakeSessionDto(timestamp: 3)));
+        Assert.Equal(2, await _db.EndlessSessions.CountAsync(s => s.UserId == null));
+
+        // Konten bleiben unbegrenzt.
+        await service.RecordSessionAsync(userId, MakeSessionDto(timestamp: 4));
+        Assert.Equal(1, await _db.EndlessSessions.CountAsync(s => s.UserId == userId));
+    }
+
+    [Fact]
+    public async Task BulkImportAnonymous_ExceedingTotalCap_RejectsWholeBatch()
+    {
+        var service = CappedService(sessionCap: 3);
+        await service.RecordAnonymousSessionAsync("00000000-0000-0000-0000-000000000010", MakeSessionDto(timestamp: 1));
+        var batch = Enumerable.Range(0, 3).Select(i => MakeSessionDto(timestamp: 10 + i)).ToList();
+
+        await Assert.ThrowsAsync<AnonymousEndlessStorageFullException>(() =>
+            service.BulkImportAnonymousSessionsAsync("00000000-0000-0000-0000-000000000011", batch));
+        Assert.Equal(1, await _db.EndlessSessions.CountAsync(s => s.UserId == null));
+
+        // Was noch passt, geht durch.
+        Assert.Equal(2, await service.BulkImportAnonymousSessionsAsync("00000000-0000-0000-0000-000000000011", batch.Take(2).ToList()));
+    }
+
+    [Fact]
+    public void AnonymousCaps_DefaultToTheDocumentedTotals()
+    {
+        Assert.Equal(EndlessProgressService.MaxAnonymousProgressRowsTotal, _service.AnonymousProgressRowsCap);
+        Assert.Equal(EndlessProgressService.MaxAnonymousSessionRowsTotal, _service.AnonymousSessionRowsCap);
+    }
+
     // --- History Tests ---
 
     [Fact]
