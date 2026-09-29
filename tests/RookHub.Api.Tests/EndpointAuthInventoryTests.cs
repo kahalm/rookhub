@@ -105,7 +105,6 @@ public class EndpointAuthInventoryTests
         "GET /api/menu",                                             // MenuController.Get
         "GET /api/og/img/{kind}/{id}.png",                           // OgController.Image
         "GET /api/og/render",                                        // OgController.Render
-        "GET /api/profile/{username}",                               // ProfileController.GetPublicProfile
         "GET /api/puzzles/random",                                   // PuzzleController.GetRandom
         "GET /api/puzzles/rating-range",                             // PuzzleController.GetRatingRange
         "GET /api/puzzles/stats/anonymous",                          // PuzzleController.GetAnonymousStats

@@ -15,8 +15,8 @@ namespace RookHub.Api.Controllers;
 /// <para><b>Sichtbarkeit.</b> Der eigene Verlauf immer; ein fremder nur zwischen ANGENOMMENEN
 /// Freunden (sonst 403) — dieselbe Regel wie bei <c>/api/friends/{userId}/stats</c>. Die Daten
 /// selbst sind auf chess-results oeffentlich, die VERKNUEPFUNG von Konto und Spielerkennung ist es
-/// nicht: <c>PublicProfileDto</c> gibt die ChessResultsId bewusst nicht heraus, und dabei bleibt
-/// es.</para>
+/// nicht: eine anonyme Profil-Sicht mit den Spielerkennungen gibt es bewusst nicht
+/// (<c>GET /api/profile/{username}</c> seit A2-008 entfernt), und dabei bleibt es.</para>
 /// </summary>
 [ApiController]
 [Route("api/tournament-history")]

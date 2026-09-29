@@ -95,7 +95,7 @@ public static class BotRequestSignature
     /// Hall of Fame, Wochenpost-Ergebnisse) die Discord-Verknüpfung (DiscordId/-Username) der Spieler?
     /// Der per Pfad-Signatur ausgewiesene Bot (setzt daraus die Erwähnungen) und eingeloggte Nutzer
     /// (Wochenpost-Bestenliste der App) — anonyme Aufrufer NICHT: sonst wäre die Zuordnung
-    /// RookHub-Konto ↔ Discord-Konto für jeden Unangemeldeten abrufbar (vgl. <c>PublicProfileDto</c>).
+    /// RookHub-Konto ↔ Discord-Konto für jeden Unangemeldeten abrufbar (eine anonyme Profil-Sicht gibt es aus demselben Grund nicht).
     /// </summary>
     public static DiscordFieldAccess ResolveDiscordAccess(HttpContext? context, string? secret, ILogger? logger = null)
     {

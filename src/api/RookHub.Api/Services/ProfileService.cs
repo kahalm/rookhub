@@ -36,25 +36,6 @@ public class ProfileService
         return MapToDto(user);
     }
 
-    /// <summary>Öffentliche (reduzierte) Profil-Sicht — ohne PII/Discord/Einstellungen.</summary>
-    public async Task<PublicProfileDto> GetPublicProfileByUsernameAsync(string username)
-    {
-        var user = await _db.AppUsers
-            .Include(u => u.Profile)
-            .FirstOrDefaultAsync(u => u.Username == username)
-            ?? throw new KeyNotFoundException("User not found.");
-
-        return new PublicProfileDto
-        {
-            UserId = user.Id,
-            Username = user.Username,
-            DisplayName = user.Profile?.DisplayName,
-            FideId = user.Profile?.FideId,
-            ChessComUsername = user.Profile?.ChessComUsername,
-            LichessUsername = user.Profile?.LichessUsername,
-        };
-    }
-
     /// <param name="allowEmailChange">false im Impersonations-Kontext: die E-Mail ist der
     /// Reset-Anker, ihre Änderung wäre eine dauerhafte Kontoübernahme. Ein UNVERÄNDERTER Wert
     /// darf trotzdem durch — die UI schickt das Feld bei JEDEM Speichern mit, ein pauschales

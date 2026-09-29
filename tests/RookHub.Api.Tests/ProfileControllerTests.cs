@@ -288,27 +288,24 @@ public class ProfileControllerTests : IDisposable
         Assert.IsType<NotFoundObjectResult>(result.Result);
     }
 
-    // ---- GetPublicProfile ----
+    // ---- keine anonyme Profil-Sicht (A2-008) ----
 
     [Fact]
-    public async Task GetPublicProfile_ReturnsOk()
+    public void ProfileController_HasNoAnonymousAction_AndNoLookupByUsername()
     {
-        await CreateUserAsync("publicuser");
-
-        var result = await _controller.GetPublicProfile("publicuser");
-
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        var profile = okResult.Value as PublicProfileDto;
-        Assert.NotNull(profile);
-        Assert.Equal("publicuser", profile.Username);
-    }
-
-    [Fact]
-    public async Task GetPublicProfile_ReturnsNotFound_WhenUserMissing()
-    {
-        var result = await _controller.GetPublicProfile("nonexistent");
-
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        // GET /api/profile/{username} beantwortete jeden Benutzernamen anonym mit UserId, FIDE-Id und
+        // chess.com-/Lichess-Namen (oder 404) — ein Konto-Orakel ohne einen einzigen Aufrufer.
+        var actions = typeof(ProfileController).GetMethods(
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(m => m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute), true).Length > 0)
+            .ToList();
+        Assert.NotEmpty(actions);
+        Assert.DoesNotContain(actions, m =>
+            m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), true).Length > 0);
+        Assert.DoesNotContain(actions.SelectMany(m =>
+                m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute), true)
+                    .Cast<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>()),
+            a => a.Template == "{username}");
     }
 
     // ---- Discord link/unlink ----

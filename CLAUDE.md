@@ -117,7 +117,6 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | GET | `/api/profile` | Eigenes Profil |
 | PUT | `/api/profile` | Profil bearbeiten. E-Mail (= Reset-Anker) wechselt nur mit `currentPassword` (auch Erst-Setzen/Entfernen; sonst 403), danach Hinweis-Mail an die bisherige Adresse |
 | DELETE | `/api/profile/account` | Konto löschen (DSGVO: anonymisiert Identität+PII, behält Statistik) |
-| GET | `/api/profile/{username}` | Öffentliches Profil (reduziertes `PublicProfileDto` ohne Klarnamen/ChessResultsId/Discord) |
 | GET | `/api/profile/player-search?lastName=&firstName=` | Spielersuche (ChessResults + FIDE) |
 | POST | `/api/profile/discord/link` | Discord verknüpfen via bot-signiertem Token `{ token }` (400 ungültig/abgelaufen, 409 Discord-ID schon vergeben) |
 | DELETE | `/api/profile/discord` | Discord-Verknüpfung trennen |
@@ -751,8 +750,8 @@ Namensgleiche mit; die Auswahl markiert das (`exact: false`).
 | GET | `/api/tournament-history/tracked/{id}` | Der Verlauf eines verfolgten Spielers (`PlayerHistoryDto` mit `userId: 0`). Eigener Endpunkt statt eines Parameters an `/api/tournament-history`: dort ist die Zahl ein KONTO, hier ein Eintrag der eigenen Liste |
 
 Sichtbarkeit wie bei `/api/friends/{userId}/stats`: die Daten sind auf chess-results oeffentlich,
-die VERKNUEPFUNG von Konto und Spielerkennung ist es nicht (`PublicProfileDto` gibt die
-ChessResultsId bewusst nicht heraus, und dabei bleibt es).
+die VERKNUEPFUNG von Konto und Spielerkennung ist es nicht (eine anonyme Profil-Sicht mit den
+Kennungen gibt es bewusst nicht — `GET /api/profile/{username}` ist seit A2-008 entfernt —, und dabei bleibt es).
 
 **Verfolgte Spieler: der Verlauf haengt nicht mehr an KONTEN** (`TrackedPlayers`, seit 0.463.0).
 Bis hierher gab es genau zwei Quellen fuer einen Reiter — das eigene Konto und angenommene
@@ -1207,7 +1206,7 @@ anonym erreichbaren Ergebnis-Endpunkte (`/api/book-puzzles/{id}/results`, `daily
 `/api/weekly-posts/{id}/results`) liefern `discordId`/`discordUsername` nur noch an den **signierten Bot** und an
 **eingeloggte** Nutzer (die Wochenpost-Bestenliste der App zeigt `discordUsername || name`); anonym stehen sie auf
 `null` — sonst war die Zuordnung RookHub-Konto ↔ Discord-Konto samt Lösezeiten für jeden Unangemeldeten per
-Aufzählung abrufbar (vgl. `PublicProfileDto`). Bot-Vertrag (== schach-bot `puzzle/rookhub.py` `_bot_auth_headers`):
+Aufzählung abrufbar (aus demselben Grund gibt es keine anonyme Profil-Sicht mehr, A2-008). Bot-Vertrag (== schach-bot `puzzle/rookhub.py` `_bot_auth_headers`):
 `X-Bot-Timestamp` = Unix-Sekunden, `X-Bot-Signature: sha256=<hex(HMAC_SHA256(SchachBot:StatsSecret, "<ts>.<path>"))>`,
 `path` = `Request.Path` OHNE Query (eine Signatur taugt nicht für eine andere Puzzle-ID), ±300 s — dieselbe
 Prüfung wie `player-progress` (dort ist die Discord-ID das signierte Objekt). Header mitgeschickt, aber falsch

@@ -178,18 +178,4 @@ public class ProfileController : BaseApiController
             return Unauthorized(new { message = "Password is incorrect." });
         }
     }
-
-    [HttpGet("{username}")]
-    [AllowAnonymous]
-    public async Task<ActionResult<PublicProfileDto>> GetPublicProfile(string username)
-    {
-        try
-        {
-            return Ok(await _profileService.GetPublicProfileByUsernameAsync(username));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-    }
 }

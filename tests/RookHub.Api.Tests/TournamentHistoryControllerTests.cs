@@ -16,8 +16,8 @@ namespace RookHub.Api.Tests;
 /// Wer darf welchen Turnierverlauf sehen.
 ///
 /// <para>Die Daten selbst sind auf chess-results oeffentlich — die VERKNUEPFUNG von Konto und
-/// Spielerkennung ist es nicht. `PublicProfileDto` gibt die ChessResultsId bewusst nicht heraus,
-/// und dabei bleibt es: ein fremder Verlauf nur zwischen ANGENOMMENEN Freunden, dieselbe Regel
+/// Spielerkennung ist es nicht. Eine anonyme Profil-Sicht mit den Kennungen gibt es bewusst nicht
+/// (A2-008), und dabei bleibt es: ein fremder Verlauf nur zwischen ANGENOMMENEN Freunden, dieselbe Regel
 /// wie bei /api/friends/{userId}/stats.</para>
 /// </summary>
 public class TournamentHistoryControllerTests : IDisposable

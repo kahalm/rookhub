@@ -191,7 +191,6 @@ sed 's#http://kibana:5601#http://localhost:5601#g' init-kibana.sh | sh
 |---------|----------|-------|
 | POST | `/api/auth/register` | Registrierung |
 | POST | `/api/auth/login` | Login (gibt JWT zurueck) |
-| GET | `/api/profile/{username}` | Oeffentliches Profil |
 
 ### Authentifiziert (JWT Bearer)
 | Bereich | Endpoints |
