@@ -152,6 +152,24 @@ export class AuthService {
   }
 
   /**
+   * Wechselt auf die GETEILTE Anmeldung eines ANDEREN Kontos — der Abgleich einer uebernommenen
+   * Anmeldung hat festgestellt, dass sich dort inzwischen jemand anderes angemeldet hat (siehe
+   * `HandoffService.verifyAdoptedSession`).
+   *
+   * <p>Das ist ein Nutzerwechsel am selben Geraet und raeumt deshalb lokal auf wie {@link logout}
+   * (Offline-Inhalte, Nutzer-Spuren, Admin-Sicherung). Ohne das erbte das neue Konto Kursliste,
+   * heruntergeladene Kurse und Repertoires, Kalkulations-Notizen und den Menue-Snapshot des vorigen —
+   * und der Endless-Modus uebertrug dessen lokale Laeufe samt Highscore ins neue Konto.</p>
+   *
+   * <p>Bewusst OHNE `session/end`: das Cookie gehoert jetzt dem neuen Konto, das Abmelden loeschte
+   * es gleich mit. Und ohne Navigation — wohin es danach geht, entscheidet der Aufrufer.</p>
+   */
+  switchToSharedSession(user: AuthResponse): void {
+    this.clearLocalTraces();
+    this.adoptSession({ ...user, adopted: true });
+  }
+
+  /**
    * „Als Nutzer einsteigen": sichert die aktuelle (Admin-)Session und übernimmt das
    * vom Server gelieferte Impersonation-Token. Rücksprung via {@link stopImpersonation}.
    */
@@ -316,6 +334,19 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('rookhub_user');
+    this.clearLocalTraces();
+    // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
+    // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
+    // holte sich die Seite beim naechsten Aufruf genau die Anmeldung zurueck, die man gerade
+    // beendet hat. Ohne Rueckmeldung abschicken — ein Abmelden darf an nichts haengen.
+    this.http.post('/api/auth/session/end', {}).subscribe({ error: () => { /* egal */ } });
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
+  }
+
+  /** Was beim Nutzerwechsel am Geraet lokal verschwinden muss — beim Abmelden ({@link logout}) wie
+   *  beim Wechsel auf die geteilte Anmeldung eines anderen Kontos ({@link switchToSharedSession}). */
+  private clearLocalTraces(): void {
     localStorage.removeItem('rookhub_admin_user');
     // Geräte-lokale Offline-Inhalte (heruntergeladene Repertoires/Kurse, Kursliste, Tagespuzzle,
     // Pools) beim Abmelden löschen — sonst blieben sie für den NÄCHSTEN Nutzer desselben Geräts
@@ -326,13 +357,6 @@ export class AuthService {
     // erbte der nächste Nutzer sonst Laufhistorie und Highscore des vorigen, sichtbar bis in die
     // Bestenliste; ebenso Kalkulations-Notizen, lokalen Kursfortschritt und den Menü-Snapshot.
     try { this.injector.get(OfflineService).clearOnLogout(); } catch { /* Storage/DI nicht verfügbar */ }
-    // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
-    // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
-    // holte sich die Seite beim naechsten Aufruf genau die Anmeldung zurueck, die man gerade
-    // beendet hat. Ohne Rueckmeldung abschicken — ein Abmelden darf an nichts haengen.
-    this.http.post('/api/auth/session/end', {}).subscribe({ error: () => { /* egal */ } });
-    this.currentUserSubject.next(null);
-    this.router.navigate(['/login']);
   }
 
   /**

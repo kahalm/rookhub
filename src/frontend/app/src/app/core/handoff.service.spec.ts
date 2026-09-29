@@ -234,6 +234,65 @@ describe('HandoffService', () => {
       await finish();
     });
 
+    it('räumt beim Kontowechsel die lokalen Spuren des vorigen Kontos ab — ohne session/end', async () => {
+      // Nachgereicht im Review zu A1-005: der Wechsel übernahm B, ließ aber Offline-Inhalte und
+      // Endless-Läufe von A liegen — der Endless-Modus überträgt lokale Läufe ins Konto, B erbte
+      // damit Laufhistorie und Highscore von A. Aufgeräumt wird wie beim Abmelden.
+      adopted();
+      localStorage.setItem('rookhub_courses_cache', '[]');
+      localStorage.setItem('rookhub_repertoire_offline_5', '{}');
+      localStorage.setItem('rookhub_endless_history', '[]');
+      localStorage.setItem('rookhub_calc_local_1', '{}');
+      localStorage.setItem('rookhub_admin_user', '{}');
+      localStorage.setItem('rookhub_lang', 'de');                    // Geräte-Einstellung, bleibt
+      const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+      const done = svc.verifyAdoptedSession();
+      http.expectOne('/api/auth/session').flush({ ...session, userId: 8, username: 'andere' });
+
+      expect(await done).toBeTrue();
+      for (const k of ['rookhub_courses_cache', 'rookhub_repertoire_offline_5', 'rookhub_endless_history',
+        'rookhub_calc_local_1', 'rookhub_admin_user'])
+        expect(localStorage.getItem(k)).withContext(k).toBeNull();
+      expect(localStorage.getItem('rookhub_lang')).toBe('de');
+      expect(JSON.parse(localStorage.getItem('rookhub_user')!).userId).toBe(8);
+      expect(nav).toHaveBeenCalledWith('/');
+      http.expectNone('/api/auth/session/end');
+      await finish();
+    });
+
+    it('gleicht auch beim Wechsel zwischen zwei sichtbaren Fenstern ab (focus)', async () => {
+      // Nebeneinander offene Fenster bleiben beide sichtbar — dort feuert kein visibilitychange.
+      adopted();
+      await svc.consumeIncoming();
+      http.expectOne('/api/auth/session').flush(session);
+      await settle();
+
+      (svc as unknown as { lastCheck: number }).lastCheck = 0;
+      visible();
+      window.dispatchEvent(new Event('focus'));
+      http.expectOne('/api/auth/session').flush(null, noContent);
+      await settle();
+
+      expect(auth.currentUser).toBeNull();
+      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      await finish();
+    });
+
+    it('fragt beim Anklicken des Tabs (visibilitychange UND focus) nur einmal', async () => {
+      adopted();
+      await svc.consumeIncoming();
+      http.expectOne('/api/auth/session').flush(session);
+      await settle();
+
+      (svc as unknown as { lastCheck: number }).lastCheck = 0;
+      visible();
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('focus'));
+      http.expectOne('/api/auth/session').flush(session);
+      await finish();
+    });
+
     it('ein eingelöster Code hängt an der geteilten Anmeldung, wenn der Tausch das Cookie anlegte', async () => {
       history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
 

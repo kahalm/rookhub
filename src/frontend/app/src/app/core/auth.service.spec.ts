@@ -199,6 +199,27 @@ describe('AuthService logout clears offline content', () => {
     http.verify();
   });
 
+  it('räumt beim Wechsel auf die geteilte Anmeldung eines anderen Kontos auf wie logout — ohne session/end', () => {
+    // Nutzerwechsel am Gerät (HandoffService.verifyAdoptedSession): das Cookie gehört jetzt dem neuen
+    // Konto — session/end löschte es gleich mit. Die lokalen Spuren des vorigen müssen trotzdem weg.
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    localStorage.setItem('rookhub_courses_cache', '[]');
+    localStorage.setItem('rookhub_endless_highscore', '42');
+    localStorage.setItem('rookhub_admin_user', '{}');
+    localStorage.setItem('rookhub_lang', 'de');
+
+    svc.switchToSharedSession({ token: jwt(3600), username: 'b', userId: 8, isAdmin: false });
+
+    expect(localStorage.getItem('rookhub_courses_cache')).toBeNull();
+    expect(localStorage.getItem('rookhub_endless_highscore')).toBeNull();
+    expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
+    expect(localStorage.getItem('rookhub_lang')).toBe('de');
+    expect(svc.currentUser?.userId).toBe(8);
+    expect(svc.currentUser?.adopted).toBeTrue();
+    http.expectNone('/api/auth/session/end');
+  });
+
   it('meldet trotzdem ab, wenn der Server dabei nicht mitspielt', () => {
     const svc = TestBed.inject(AuthService);
     const http = TestBed.inject(HttpTestingController);

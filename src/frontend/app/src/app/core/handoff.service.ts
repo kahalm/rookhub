@@ -157,8 +157,10 @@ export class HandoffService {
    * <ul>
    *   <li>204 (Cookie weg oder entwertet): lokal abmelden.</li>
    *   <li>Cookie eines ANDEREN Kontos (inzwischen hat sich dort jemand anderes angemeldet): dessen
-   *       Anmeldung uebernehmen, wie es ein frischer Start auch taete. Nicht abmelden — das
-   *       loeschte das Cookie des anderen gleich mit.</li>
+   *       Anmeldung uebernehmen, wie es ein frischer Start auch taete — vorher aber lokal aufraeumen
+   *       wie beim Abmelden (`AuthService.switchToSharedSession`), sonst erbte das neue Konto
+   *       Offline-Inhalte und Endless-Laeufe des vorigen. Nicht abmelden — das loeschte das Cookie
+   *       des anderen gleich mit.</li>
    *   <li>Keine Antwort (offline, 429, Server weg): nichts tun, die Anmeldung gilt weiter.</li>
    * </ul>
    * <p>Eine selbst angemeldete Sitzung (ohne `adopted`) fragt gar nicht erst.</p>
@@ -174,7 +176,7 @@ export class HandoffService {
       return true;
     }
     if (res.userId === user.userId) return false;
-    this.auth.adoptSession({ ...res, adopted: true });
+    this.auth.switchToSharedSession(res);
     void this.router.navigateByUrl('/');
     return true;
   }
@@ -189,7 +191,10 @@ export class HandoffService {
     }
   }
 
-  /** Abgleich beim Zurueckkehren in den Tab — einmal je App eingerichtet, beim Abbau wieder entfernt. */
+  /** Abgleich beim Zurueckkehren in den Tab oder ins Fenster — einmal je App eingerichtet, beim Abbau
+   *  wieder entfernt. `focus` zusaetzlich zu `visibilitychange`: zwei nebeneinander offene Fenster
+   *  bleiben beide sichtbar, der Wechsel zwischen ihnen loest nur `focus` aus. Beide zusammen (Tab
+   *  anklicken) fragen dank Mindestabstand nur einmal. */
   private watchAdoptedSession(): void {
     if (this.watching || typeof document === 'undefined') return;
     this.watching = true;
@@ -199,7 +204,11 @@ export class HandoffService {
       void this.verifyAdoptedSession();
     };
     document.addEventListener('visibilitychange', onVisible);
-    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisible));
+    window.addEventListener('focus', onVisible);
+    this.destroyRef.onDestroy(() => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    });
   }
 
   /**
