@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
@@ -14,7 +16,15 @@ public class AdminService
 {
     private readonly AppDbContext _db;
 
-    public AdminService(AppDbContext db) => _db = db;
+    /// <summary>Derselbe Cache, aus dem <see cref="AuthUserValidation"/> den Auth-Zustand liest — nach dem
+    /// Admin-Entzug verworfen, sonst gilt das alte Token bis zu <see cref="AuthUserValidation.CacheTtl"/> weiter.</summary>
+    private readonly IMemoryCache? _authCache;
+
+    public AdminService(AppDbContext db, IMemoryCache? authCache = null)
+    {
+        _db = db;
+        _authCache = authCache;
+    }
 
     public async Task<(List<AdminUserDto> items, int totalCount, int page, int pageSize)> GetUsersAsync(string? search, int page, int pageSize)
     {
@@ -70,6 +80,11 @@ public class AdminService
     /// <summary>Schaltet das Admin-Flag eines anderen Users um. <paramref name="actorIsAdmin"/> muss true
     /// sein: sonst könnte eine delegierte Rolle mit der Permission <c>users.manage</c> (selbst kein Admin)
     /// sich über ein zweites Konto Admin-Rechte verschaffen bzw. echte Admins degradieren.</summary>
+    /// <remarks>Ein ENTZUG muss sofort wirken: die Admin-Rolle steht im Token (30, mit „eingeloggt bleiben" 90 Tage)
+    /// und erfüllt jedes <c>[HasPermission]</c> und jedes <c>IsAdmin</c> — deshalb wird der Security-Stamp rotiert
+    /// (alle Sitzungen des Kontos enden). Dazu folgt die System-Rolle „admin" dem Flag in beide Richtungen: der
+    /// <see cref="RoleSeeder"/> legt sie beim Start nur AN, und bliebe sie nach dem Entzug stehen, gäbe der
+    /// Live-Resolver dem Konto auch nach neuem Anmelden weiter alle Rechte.</remarks>
     public async Task<AdminUserDto> ToggleAdminAsync(int id, int currentUserId, bool actorIsAdmin = true)
     {
         if (id == currentUserId)
@@ -81,8 +96,11 @@ public class AdminService
             ?? throw new KeyNotFoundException();
 
         user.IsAdmin = !user.IsAdmin;
+        await MirrorAdminRoleAsync(user);
+        if (!user.IsAdmin) user.SecurityStamp = AuthService.NewSecurityStamp();
         await _db.SaveChangesAsync();
         PermissionResolver.InvalidateAll();
+        if (!user.IsAdmin && _authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
 
         var groups = await _db.UserGroups
             .Where(ug => ug.UserId == user.Id)
@@ -99,6 +117,17 @@ public class AdminService
             CreatedAt = user.CreatedAt,
             Groups = groups
         };
+    }
+
+    /// <summary>Hängt die System-Rolle „admin" an bzw. nimmt sie weg, passend zu <see cref="AppUser.IsAdmin"/>
+    /// (andere Rollen des Kontos bleiben unberührt). Ohne geseedete Rolle nichts zu tun.</summary>
+    private async Task MirrorAdminRoleAsync(AppUser user)
+    {
+        var adminRoleId = await _db.Roles.Where(r => r.Key == RoleSeeder.AdminKey).Select(r => (int?)r.Id).FirstOrDefaultAsync();
+        if (adminRoleId is not int roleId) return;
+        var links = await _db.UserRoles.Where(ur => ur.UserId == user.Id && ur.RoleId == roleId).ToListAsync();
+        if (user.IsAdmin && links.Count == 0) _db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId });
+        else if (!user.IsAdmin && links.Count > 0) _db.UserRoles.RemoveRange(links);
     }
 
     public Task<int> GetPuzzleCountAsync() => _db.Puzzles.CountAsync();

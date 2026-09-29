@@ -1600,7 +1600,10 @@ Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weit
   `UserGroups`) auf, 60 s gespeichert. `PermissionAuthorizationHandler` (`[HasPermission]`) und `LeagueClubController`
   (Verwalter) fragen ihn statt des Claims; die Admin-Rolle des Tokens erfüllt weiter alles. **Jede Änderung** an Rollen,
   Rollen-Rechten, Gruppenrollen, Mitgliedschaften und dem Admin-Flag ruft `PermissionResolver.InvalidateAll()` — wer eine
-  neue Schreibstelle dafür baut, ruft es mit, sonst gilt die Änderung bis zu einer Minute später.
+  neue Schreibstelle dafür baut, ruft es mit, sonst gilt die Änderung bis zu einer Minute später. **Der Admin-ENTZUG**
+  (`AdminService.ToggleAdminAsync`) rotiert deshalb zusätzlich den Security-Stamp (die Token-Rolle gälte sonst bis zu
+  90 Tage weiter; alle Sitzungen des Kontos enden sofort) und nimmt die System-Rolle „admin" weg, die der `RoleSeeder`
+  beim Start nur ANLEGT; das Hochstufen hängt sie an.
 * **Oberfläche**: `GET /api/auth/permissions` → `{ isAdmin, permissions }` (live). `AuthService.has` liest diesen Stand
   (Signal, sonst die Claims des Tokens als Rückfall); `core/permission-refresher.service.ts` holt ihn vor dem ersten
   Seitenaufbau (`provideAppInitializer` in RookHub, Turnierseite, LeagueHub, höchstens 3 s gewartet), bei jeder
