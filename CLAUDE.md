@@ -1189,7 +1189,7 @@ Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 | POST | `/api/book-puzzles/{id}/attempt` | Auth | Lösungsversuch erfassen `{ solved, timeSeconds }` (Tagespuzzle) |
 | POST | `/api/book-puzzles/{id}/flag-hints` | Auth | Tipps als „dumm/schlecht" markieren/aufheben `{ flagged }` — jeder eingeloggte User (Review-Flag `BookPuzzle.HintsFlagged`; 404 wenn Puzzle fehlt) |
 | POST | `/api/book-puzzles/{id}/attempt/anonymous` | Anon | Anonymer Versuch (Session-ID, je Session/Puzzle dedupliziert) |
-| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User; Discord-ID/-Name NUR für den signierten Bot und Eingeloggte, siehe „Discord-Verknüpfung in den Ergebnis-Endpunkten“) + Versuchs-/Lösungszähler + `anonymousSolvedCount`. Löser-Status: nur wer im **ersten** Versuch löste, gilt als Löser |
+| GET | `/api/book-puzzles/{id}/results?since=` | AllowAnonymous | Solver-Liste (je User; Discord-ID/-Name NUR für den signierten Bot und Eingeloggte, siehe „Discord-Verknüpfung in den Ergebnis-Endpunkten“) + Versuchs-/Lösungszähler + `anonymousSolvedCount`. Löser-Status: nur wer im **ersten** Versuch löste, gilt als Löser. Ohne Bot-Signatur nur für Puzzles aus lesbaren Büchern (`BookAccess`) oder je zugeordnete Tagespuzzles, sonst **404** (auch unbekannte Id) — sonst waren die Löser privater Buchlinien per Id-Aufzählung abrufbar (A2-002) |
 | POST | `/api/book-puzzles/{id}/track` | AllowAnonymous | „Track solves" eines per Link geteilten Puzzles: erfasst den **Erstversuch** des Besuchers (eingeloggt via Token, sonst `{ solved, sessionId }`) in `SharedPuzzleAttempts` (Unique `(BookPuzzleId, IdentityKey)` → nur 1. Versuch zählt; `solved=false` = Fehlzug/Aufgeben/Reset) und liefert `{ solved, failed }` |
 | GET | `/api/book-puzzles/{id}/track-counts` | AllowAnonymous | Aktuelle „Track solves"-Zähler `{ solved, failed }` |
 | GET | `/api/book-puzzles/daily/leaderboard?month=yyyy-MM` | AllowAnonymous (Discord-Felder nur Bot-signiert/eingeloggt) | Monats-Wertung des Tagespuzzles (für den Bot): je User Punkte (10 je Erstversuch-Lösung + Tages-Rang-Bonus 5/3/1), `solved`, `golds`; absteigend nach Punkten. Default = laufender UTC-Monat. Literal-Route **vor** `daily/{date}` |
@@ -1216,7 +1216,7 @@ gewöhnlicher Aufruf. Die DTOs sind je Abruf frisch gebaut (`RemoveDiscordLinks(
 eine Antwort cacht, muss vorher kopieren.
 
 **Zugriff auf die offenen Buch-Endpoints (`Services/BookAccess.cs`, seit 0.317.1)**: EINE Regel für
-`{id}/next`, `{id}/random`, `/random?bookId=` und `/books`. Anonym sichtbar ist ein Buch nur, wenn ein Admin
+`{id}/next`, `{id}/random`, `/random?bookId=`, `/books` und (ohne Bot-Signatur, Tagespuzzles ausgenommen) `{id}/results`. Anonym sichtbar ist ein Buch nur, wenn ein Admin
 es bewusst geöffnet hat — `Book.IsPublic` (öffentlicher Kurs) oder Mitgliedschaft in einem offenen Pool
 (`ForDaily`/`ForRandom`/`ForBlind`); eingeloggte sehen zusätzlich eigene (`OwnerUserId`), per `CourseShare`
 geteilte und über `BookGroupAccess` (inkl. „Everyone") freigegebene Bücher; Admins alles. Altbestand ohne

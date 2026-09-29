@@ -28,7 +28,9 @@ namespace RookHub.Api.Services;
 /// <para><b>Absichtlich weiterhin offen</b>: <c>GET /api/book-puzzles/{id}</c> (Einzel-Puzzle per ID).
 /// Darauf beruhen die Teilen-Links, das Tagespuzzle, die OG-Vorschaubilder und der schach-bot-Lookup
 /// per LineId — ein Gate dort würde diese Features brechen, und wer die konkrete Id kennt, hat sie
-/// bereits aus einem geteilten Link.</para>
+/// bereits aus einem geteilten Link. Die LÖSER dazu (<c>GET {id}/results</c>: Namen, Zeiten, Zeitpunkte)
+/// hängen dagegen an dieser Regel (Ausnahmen: signierter Bot, je zugeordnete Tagespuzzles; siehe
+/// <see cref="BookPuzzleService.CanReadResultsAsync"/>).</para>
 /// </summary>
 public static class BookAccess
 {

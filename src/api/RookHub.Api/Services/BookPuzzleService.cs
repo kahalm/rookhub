@@ -347,9 +347,31 @@ public class BookPuzzleService
     }
 
     /// <summary>
+    /// Darf ein NICHT signierter Aufrufer (anonym oder eingeloggt) die Löser eines Puzzles sehen
+    /// (<c>GET {id}/results</c>)? Nur, wenn er das Buch lesen darf (<see cref="BookAccess"/>) oder das
+    /// Puzzle je als Tagespuzzle zugeordnet war (steht ohnehin öffentlich im Discord — auch nachdem ein
+    /// Admin das Buch aus dem forDaily-Pool genommen hat). Sonst lieferte der anonyme Endpunkt per
+    /// Id-Aufzählung Namen, Zeiten und Zeitpunkte der Löser auf Linien PRIVATER Bücher (persönliche
+    /// Importe, gruppen-gegatete Kurse; Review-Fund A2-002). Unbekannte Id → <c>false</c> (kein
+    /// Existenz-Orakel). Der signierte Bot und der Webhook-Worker fragen hier nicht.
+    /// </summary>
+    public async Task<bool> CanReadResultsAsync(int id, int? userId, bool isAdmin)
+    {
+        var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == id);
+        return puzzle != null && await IsReadableOrDailyAsync(puzzle, userId, isAdmin);
+    }
+
+    /// <summary>Lesbares Buch (<see cref="BookAccess.CanReadPuzzleAsync"/>) oder je zugeordnetes Tagespuzzle.</summary>
+    private async Task<bool> IsReadableOrDailyAsync(BookPuzzle puzzle, int? userId, bool isAdmin) =>
+        await _db.DailyPuzzles.AnyAsync(d => d.BookPuzzleId == puzzle.Id)
+        || await BookAccess.CanReadPuzzleAsync(_db, puzzle, userId, isAdmin);
+
+    /// <summary>
     /// Aggregierte Ergebnisse zu einem Buch-Puzzle (für die Tagespuzzle-Anzeige): wer hat gelöst
     /// (je User dedupliziert, mit Discord-Verknüpfung sofern vorhanden) + Versuchs-/Lösungszähler.
     /// <paramref name="since"/> (ISO-UTC) grenzt optional auf einen Zeitraum ein.
+    /// <para>OHNE Zugriffsprüfung (der Webhook-Worker braucht jedes Puzzle) — der HTTP-Weg prüft vorher
+    /// <see cref="CanReadResultsAsync"/>.</para>
     /// </summary>
     public async Task<BookPuzzleResultsDto> GetResultsAsync(int id, string? since)
     {

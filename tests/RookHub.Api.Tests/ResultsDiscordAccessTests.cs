@@ -214,6 +214,76 @@ public class ResultsDiscordAccessTests : IDisposable
         Assert.IsType<UnauthorizedResult>((await BookController(Signed(path), secret: null).GetResults(p.Id)).Result);
     }
 
+    // --- Buchzugriff der Löser-Liste (A2-002) ----------------------------------------------
+
+    /// <summary>Puzzle in einem Buch mit Flags wie angegeben + ein gelöster Versuch von <paramref name="solver"/>.</summary>
+    private async Task<BookPuzzle> SolvedInBookAsync(AppUser solver, int? ownerUserId, bool isPublic = false, bool forRandom = false)
+    {
+        var book = new Book
+        {
+            FileName = $"book-{Guid.NewGuid():N}.pgn", DisplayName = "Buch", OwnerUserId = ownerUserId,
+            IsPublic = isPublic, ForRandom = forRandom, Source = new BookSource(),
+        };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var p = new BookPuzzle
+        {
+            LineId = book.FileName + ":1", BookFileName = book.FileName, BookId = book.Id, Round = "1",
+            Fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", Moves = "e7e5 d2d4",
+        };
+        _db.BookPuzzles.Add(p);
+        await _db.SaveChangesAsync();
+        _db.BookPuzzleAttempts.Add(new BookPuzzleAttempt
+        {
+            BookPuzzleId = p.Id, UserId = solver.Id, Solved = true, TimeSeconds = 9, AttemptedAt = DateTime.UtcNow.AddMinutes(-5),
+        });
+        await _db.SaveChangesAsync();
+        return p;
+    }
+
+    [Fact]
+    public async Task BookResults_PrivateBook_HiddenFromAnonymousAndStrangers_VisibleToOwnerAndSignedBot()
+    {
+        // Linie aus einem persönlichen Import: ohne Tor lieferte der anonyme Endpunkt per Id-Aufzählung
+        // Name, Zeit und (über ?since=) Zeitpunkt der Löser.
+        var owner = await LinkedUserAsync("olga", "222");
+        var p = await SolvedInBookAsync(owner, ownerUserId: owner.Id);
+        var path = $"/api/book-puzzles/{p.Id}/results";
+
+        Assert.IsType<NotFoundObjectResult>((await BookController(Context(path)).GetResults(p.Id)).Result);
+        Assert.IsType<NotFoundObjectResult>((await BookController(Context(path, userId: owner.Id + 100)).GetResults(p.Id)).Result);
+
+        Assert.Equal("olga", Assert.Single(Ok(await BookController(Context(path, userId: owner.Id)).GetResults(p.Id)).Solvers).Name);
+        var bot = Assert.Single(Ok(await BookController(Signed(path)).GetResults(p.Id)).Solvers);
+        Assert.Equal("222", bot.DiscordId);
+    }
+
+    [Fact]
+    public async Task BookResults_UnknownId_IsNotFoundForUnsignedCallers()
+    {
+        // Gleiche Antwort wie ein privates Buch — kein Existenz-Orakel.
+        const string path = "/api/book-puzzles/424242/results";
+        Assert.IsType<NotFoundObjectResult>((await BookController(Context(path)).GetResults(424242)).Result);
+    }
+
+    [Fact]
+    public async Task BookResults_PublicBookAndPastDaily_StayOpenAnonymously()
+    {
+        var anna = await LinkedUserAsync();
+        var pub = await SolvedInBookAsync(anna, ownerUserId: null, forRandom: true);
+        Assert.Single(Ok(await BookController(Context($"/api/book-puzzles/{pub.Id}/results")).GetResults(pub.Id)).Solvers);
+
+        // War das Puzzle je Tagespuzzle, steht es ohnehin öffentlich im Discord — auch wenn das Buch
+        // inzwischen aus allen offenen Pools genommen wurde.
+        var formerDaily = await SolvedInBookAsync(anna, ownerUserId: null);
+        _db.DailyPuzzles.Add(new DailyPuzzle
+        {
+            Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-3)), BookPuzzleId = formerDaily.Id, CreatedAt = DateTime.UtcNow.AddDays(-3),
+        });
+        await _db.SaveChangesAsync();
+        Assert.Single(Ok(await BookController(Context($"/api/book-puzzles/{formerDaily.Id}/results")).GetResults(formerDaily.Id)).Solvers);
+    }
+
     // --- Tages-Ladder + Hall of Fame -------------------------------------------------------
 
     [Fact]

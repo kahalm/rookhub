@@ -103,13 +103,17 @@ public class BookPuzzleController : BaseApiController
     }
 
     /// <summary>Löser eines Buch-Puzzles (für den Bot). Discord-Verknüpfung nur für den signierten Bot bzw.
-    /// Eingeloggte (<see cref="BotRequestSignature.ResolveDiscordAccess"/>); ungültige Bot-Signatur → 401.</summary>
+    /// Eingeloggte (<see cref="BotRequestSignature.ResolveDiscordAccess"/>); ungültige Bot-Signatur → 401.
+    /// Ohne Bot-Signatur nur für lesbare Bücher bzw. Tagespuzzles (<see cref="BookPuzzleService.CanReadResultsAsync"/>),
+    /// sonst 404 wie bei <c>{id}/next</c>.</summary>
     [AllowAnonymous]
     [HttpGet("{id:int}/results")]
     public async Task<ActionResult<BookPuzzleResultsDto>> GetResults(int id, [FromQuery] string? since = null)
     {
         var access = DiscordAccess();
         if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
+        if (!IsSignedBot() && !await _service.CanReadResultsAsync(id, GetUserIdOrNull(), IsAdmin))
+            return NotFound(new { message = "Book puzzle not found." });
         var dto = await _service.GetResultsAsync(id, since);
         if (access == DiscordFieldAccess.Redact) dto.RemoveDiscordLinks();
         return Ok(dto);
@@ -117,6 +121,11 @@ public class BookPuzzleController : BaseApiController
 
     private DiscordFieldAccess DiscordAccess()
         => BotRequestSignature.ResolveDiscordAccess(HttpContext, _config?[BotRequestSignature.SecretConfigKey], _logger);
+
+    /// <summary>Gültige Bot-Pfad-Signatur (der Bot sieht jedes Puzzle, er postet die Tagespuzzle-Löser).</summary>
+    private bool IsSignedBot()
+        => BotRequestSignature.CheckPath(HttpContext?.Request, _config?[BotRequestSignature.SecretConfigKey])
+           == BotSignatureCheck.Valid;
 
     /// <summary>„Track solves" eines per Link geteilten Puzzles: erfasst den Erstversuch des Besuchers
     /// (eingeloggt via Token, sonst via anonymer SessionId) und liefert die aktuellen Zähler.
