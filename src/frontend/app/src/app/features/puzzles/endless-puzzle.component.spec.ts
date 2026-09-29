@@ -49,7 +49,7 @@ function makeSolveMode(antwort: 'training' | 'easy' = 'training', prefsViz = 3):
   return stub;
 }
 
-function makeComponent(params: Record<string, string> = {}, solveMode: any = makeSolveMode()): any {
+function makeComponent(params: Record<string, string> = {}, solveMode: any = makeSolveMode(), storageOverrides: any = {}): any {
   const prefs: any = {
     boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0,
     offPathWarnMoves: 3, enPassantForced: true,
@@ -84,6 +84,7 @@ function makeComponent(params: Record<string, string> = {}, solveMode: any = mak
     loadFromServer: () => ({ subscribe: () => {} }),   // async Merge: im Test no-op
     loadLiveElapsed: () => null,
     saveLiveElapsed: () => {},
+    ...storageOverrides,
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
@@ -202,6 +203,60 @@ describe('EndlessPuzzleComponent deep-link params', () => {
     const spy = spyOn(c, 'startGame');
     c.maybeAutoStart();
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+/** Server-Abgleich, dessen Antwort der Test selbst auslöst — wie im Browser trifft sie erst NACH ngOnInit ein. */
+function delayedServerSync(): { overrides: any; respond: () => void } {
+  let cb: ((d: any) => void) | null = null;
+  const data = { progress: { startElo: 900, themes: 'endgame', stockfishDepth: 12, highscore: 1800, updatedAt: '' }, sessions: [] };
+  const overrides: any = {
+    loadFromServer: () => ({ subscribe: (h: any) => { cb = h; return { unsubscribe() {} }; } }),
+    // „Server wins" für die Server-Felder, lokale Felder bleiben (wie EndlessStorageService.mergeServerData).
+    mergeServerData: jasmine.createSpy('mergeServerData').and.callFake((local: any, hs: number, hist: any[], d: any) => ({
+      config: { ...local, startElo: d.progress.startElo, themes: d.progress.themes, stockfishDepth: d.progress.stockfishDepth },
+      highscore: Math.max(hs, d.progress.highscore),
+      history: hist,
+    })),
+  };
+  return { overrides, respond: () => cb!(data) };
+}
+
+describe('EndlessPuzzleComponent Server-Abgleich nach dem Start', () => {
+  it('Deep-Link ?themes/?elo überlebt die später eintreffende Server-Antwort', () => {
+    const sync = delayedServerSync();
+    const c = makeComponent({ themes: 'fork', elo: '1500' }, makeSolveMode(), sync.overrides);
+    c.ngOnInit();
+    sync.respond();
+    expect(c.config.themes).toBe('fork');
+    expect(c.config.startElo).toBe(1500);
+    expect(c.config.worstTags).toBeFalse();
+    expect(c.config.stockfishDepth).toBe(12);   // nicht per Link gesetzt → Server-Stand
+    expect(c.highscore).toBe(1800);
+  });
+
+  it('Abgleich-Basis ist der gespeicherte Stand, nicht die Link-Werte („schwächste Themen" bleibt gespeichert)', () => {
+    const sync = delayedServerSync();
+    const stored = { worstTags: true, themes: 'hangingPiece pin' };
+    const c = makeComponent({ themes: 'fork' }, makeSolveMode(),
+      { ...sync.overrides, loadConfig: (d: any) => ({ ...d, ...stored }) });
+    c.ngOnInit();
+    sync.respond();
+    expect(c.storage.mergeServerData.calls.mostRecent().args[0].worstTags).toBeTrue();
+    expect(c.config.worstTags).toBeFalse();     // in diesem Aufruf gilt weiter der Link
+    expect(c.config.themes).toBe('fork');
+  });
+
+  it('ein schon laufender Lauf behält seine Konfiguration, Highscore wird übernommen', () => {
+    const sync = delayedServerSync();
+    const c = makeComponent({}, makeSolveMode(), sync.overrides);
+    c.ngOnInit();
+    c.config = { startElo: 1500, themes: 'fork', stockfishDepth: 20 };
+    c.state = 'PLAYING';                        // z. B. ?start=1 mit schnellerer Rating-Range-Antwort
+    sync.respond();
+    expect(c.config.themes).toBe('fork');
+    expect(c.config.stockfishDepth).toBe(20);
+    expect(c.highscore).toBe(1800);
   });
 });
 

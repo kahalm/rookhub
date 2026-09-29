@@ -420,8 +420,10 @@ export class EndlessStorageService {
 
     if (serverData.progress) {
       const sp = serverData.progress;
-      // Server wins if it has data
+      // Server wins if it has data — aber nur für die Felder, die er kennt. Rein lokale Felder
+      // (worstTags) bleiben erhalten, sonst wäre „schwächste Themen" nach jedem Besuch aus.
       config = {
+        ...localConfig,
         startElo: sp.startElo,
         themes: sp.themes,
         fasttrackThreshold1: sp.fasttrackThreshold1 ?? undefined,

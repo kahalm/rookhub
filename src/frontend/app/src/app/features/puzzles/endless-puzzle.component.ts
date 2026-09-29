@@ -251,6 +251,9 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   /** `?start=1`/`?autostart=1`: Endless-Lauf direkt starten (sobald die Rating-Range geladen ist),
    *  ohne den Config-Screen. Wird in ngOnInit aus der URL gesetzt, ausgelöst in maybeAutoStart(). */
   private autoStartRequested = false;
+  /** Konfigurationswerte aus dem Deep-Link (?themes/?elo). Gelten für diesen Aufruf und werden nach dem
+   *  asynchronen Server-Abgleich erneut angewendet, statt vom gespeicherten Server-Stand überschrieben zu werden. */
+  private urlConfigOverrides: Partial<EndlessConfig> = {};
 
   // Help
   showHelp = false;
@@ -410,10 +413,16 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.storage.loadFromServer().subscribe(serverData => {
       if (serverData) {
         if (serverData.progress || serverData.sessions.length > 0) {
+          // Basis ist der gespeicherte Stand: Deep-Link-Werte gehören nicht in den Speicher (sonst wäre
+          // z. B. „schwächste Themen" nach einem geteilten Themen-Link dauerhaft aus).
           const merged = this.storage.mergeServerData(
-            this.config, this.highscore, this.sessionHistory, serverData
+            this.storage.loadConfig(this.config), this.highscore, this.sessionHistory, serverData
           );
-          this.config = this.storage.loadConfig(merged.config);
+          // Ein schon laufender Lauf (?start=1/?resume=1 vor der Antwort) behält seine Konfiguration —
+          // Kettenblöcke und Stockfish-Tiefe lesen this.config. Im Config-Screen gelten die Link-Werte weiter.
+          if (this.state === 'CONFIG') {
+            this.config = { ...this.storage.loadConfig(merged.config), ...this.urlConfigOverrides };
+          }
           this.highscore = merged.highscore;
           this.sessionHistory = merged.history;
           this.computeFasttrackSteps();
@@ -512,10 +521,14 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     const themesParam = qp.get('themes') ?? qp.get('tags');
     if (themesParam) {
       const themes = themesParam.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
-      if (themes.length) { this.config.worstTags = false; this.config.themes = [...new Set(themes)].join(' '); }
+      if (themes.length) {
+        this.urlConfigOverrides.worstTags = false;
+        this.urlConfigOverrides.themes = [...new Set(themes)].join(' ');
+      }
     }
     const eloParam = parseInt(qp.get('elo') ?? '', 10);
-    if (Number.isFinite(eloParam) && eloParam > 0) this.config.startElo = eloParam;
+    if (Number.isFinite(eloParam) && eloParam > 0) this.urlConfigOverrides.startElo = eloParam;
+    Object.assign(this.config, this.urlConfigOverrides);
 
     const ov = parseShareViewParams(qp);
     if (ov.themeMode) this.themeMode = ov.themeMode;

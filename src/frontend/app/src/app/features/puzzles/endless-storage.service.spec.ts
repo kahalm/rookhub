@@ -147,3 +147,34 @@ describe('EndlessStorageService Live-Zeitstand', () => {
     expect(svc.loadLiveElapsed()).toBeNull();
   });
 });
+
+describe('EndlessStorageService mergeServerData', () => {
+  let svc: EndlessStorageService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: true } },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  it('Server-Felder gewinnen, das rein lokale worstTags bleibt erhalten (auch im Speicher)', () => {
+    const local: EndlessConfig = { startElo: 1200, themes: 'fork pin', stockfishDepth: 16, worstTags: true };
+    const res = svc.mergeServerData(local, 0, [], {
+      progress: { startElo: 1500, themes: 'hangingPiece', stockfishDepth: 12, highscore: 1800, updatedAt: '' },
+      sessions: [],
+    });
+    expect(res.config.startElo).toBe(1500);
+    expect(res.config.themes).toBe('hangingPiece');
+    expect(res.config.stockfishDepth).toBe(12);
+    expect(res.config.worstTags).toBeTrue();
+    expect(svc.loadConfig({ startElo: 700, themes: '', stockfishDepth: 16 }).worstTags).toBeTrue();
+  });
+});
