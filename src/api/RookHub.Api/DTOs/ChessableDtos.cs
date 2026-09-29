@@ -84,8 +84,10 @@ public record ChessableIngestChunkRequest(
     bool Partial = false);
 
 /// <summary>Welche Linien (Chessable-oids) liegen schon im geteilten piratechess-Rohdaten-Cache? Die Extension
-/// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.</summary>
-public record ChessableCachedLinesRequest(List<string>? Oids);
+/// überspringt dafür den Chessable-Abruf. Antwort: die gecachte Teilmenge — nur die Existenz, nie der Inhalt.
+/// <c>Bid</c> = der Kurs, für den gefragt wird; Treffer gibt es nur für einen Kurs aus der bestätigten Kursliste des
+/// Nutzers (ohne <c>Bid</c> keine).</summary>
+public record ChessableCachedLinesRequest(List<string>? Oids, string? Bid = null);
 public record ChessableCachedLinesDto(List<string> Oids);
 
 /// <summary>Antwort auf einen NICHT-finalen Chunk: bisher gepufferte Kapitel/Linien.</summary>

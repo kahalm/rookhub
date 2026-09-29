@@ -65,10 +65,10 @@ internal sealed class SameLineCache : ICachedLineSource
         + "[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n[ChessableOid \"10\"]\n\n"
         + "2. Nf3 {[%alt g1e2] Develops.} Nc6 3. Bb5 {The pin.} a6 *";
 
-    public Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+    public Task<HashSet<string>> GetCachedLineOidsAsync(string bid, IReadOnlyCollection<string> oids, CancellationToken ct = default)
         => Task.FromResult(oids.Where(o => o == "10").ToHashSet());
 
-    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
+    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(string bid, IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
         => Task.FromResult(oids.Where(o => o == "10").ToDictionary(o => o, _ => Line));
 }
 

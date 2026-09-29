@@ -180,6 +180,35 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
     }
 
+    /// <summary>piratechess füllt nur Linien, die unter dem gefragten Kurs liegen (oder Altbestand ohne Kurs) — mit
+    /// dem früheren Platzhalter „1" kam nach dem piratechess-Update nur noch der Altbestand zurück.</summary>
+    [Fact]
+    public async Task ReprocessCourses_AsksTheLineCacheForTheCourseOfTheBook()
+    {
+        await SeedBookAsync("chessable-u7-91808.pgn", 0, ModernPgn, "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(new[] { "91808", "91808" }, lines.Bids);   // Existenz-Abfrage und PGN-Abfrage
+    }
+
+    [Fact]
+    public async Task ReprocessCourses_ChessableBookWithoutCourseInTheFileName_AsksNothing_StaysStale()
+    {
+        var book = await SeedBookAsync("mein-kurs.pgn", 0, ModernPgn, "chessable");
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessCoursesAsync(UserId, isAdmin: false);
+
+        Assert.Equal(1, result.Skipped);
+        Assert.Empty(lines.Bids);
+        Assert.Equal(0, (await _db.Books.AsNoTracking().SingleAsync(b => b.Id == book.Id)).ImportVersion);
+    }
+
     [Fact]
     public async Task ReprocessCourses_CacheKnowsNoLine_BookStaysStale_Skipped_SourceUnchanged()
     {
@@ -711,6 +740,20 @@ public class ImportReprocessServiceTests : IDisposable
         Assert.DoesNotContain("[Event \"x\"]", file.PgnContent);
         Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(file.PgnContent), file.FileSize);
         Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Repertoires.AsNoTracking().SingleAsync(r => r.Id == rep.Id)).ImportVersion);
+    }
+
+    [Fact]
+    public async Task ReprocessRepertoires_AsksTheLineCacheForTheCourseOfTheRepertoire()
+    {
+        var user = await UserAsync();
+        await SeedRepertoireAsync(user.Id, 0, "chessable-128648.pgn", pgn: ModernPgn);
+        var lines = new StubCachedLineSource();
+        lines.Lines["10"] = CacheLine("10", "2. Nf3 {[%alt g1e2] Develops from the cache.} Nc6 3. Bb5 {The pin.} a6 *");
+
+        var result = await ReprocessTestHelper.Build(_db, cachedLines: lines).ReprocessRepertoiresAsync(user.Id);
+
+        Assert.Equal(1, result.RebuiltFromCache);
+        Assert.Equal(new[] { "128648", "128648" }, lines.Bids);
     }
 
     [Fact]

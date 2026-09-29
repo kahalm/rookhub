@@ -132,7 +132,7 @@ public class ChessableTrainingStartTests
         using var db = NewDb();
         var handler = new ParseHandler(CachedBlockWithMarker());
         var course = await CourseServiceWith(db, handler)
-            .UploadPersonalCourseAsync(1, "kurs.pgn", RepertoireBlock(), "Kurs");
+            .UploadPersonalCourseAsync(1, "kurs.pgn", RepertoireBlock(), "Kurs", chessableBid: "55720");
 
         var puzzle = await db.BookPuzzles.SingleAsync(bp => bp.BookId == course.BookId);
         // 10…Nd4 wird vorgespielt, gelöst wird ab 11.Bg5.
@@ -141,6 +141,38 @@ public class ChessableTrainingStartTests
         Assert.Equal("73000253", puzzle.ChessableOid);
         // Gefragt wurde im Marker-Modus — nur der liefert den Trainingsstart.
         Assert.Contains("FirstKeyMove", handler.Body ?? "");
+        // … und für den Kurs des Repertoires: piratechess füllt nur Linien, die unter genau diesem Kurs liegen.
+        Assert.Contains("\"bid\":\"55720\"", handler.Body ?? "");
+    }
+
+    [Fact]
+    public async Task ConvertChessableRepertoire_AsksTheLineCacheForItsCourse()
+    {
+        using var db = NewDb();
+        var handler = new ParseHandler(CachedBlockWithMarker());
+        var repertoires = TestServices.Repertoire(db);
+        var conversion = new CourseRepertoireConversionService(db, CourseServiceWith(db, handler), repertoires, new BookAdminService(db));
+        // Kurs-Id aus dem Dateinamen des Chessable-Imports (Altbestand ohne gesetzte ChessableCourseId).
+        var rep = await repertoires.CreateFromPgnAsync(userId: 1, name: "Olympiade", fileName: "chessable-55720.pgn", pgn: RepertoireBlock());
+
+        var course = await conversion.ConvertRepertoireToCourseAsync(userId: 1, repertoireId: rep.Id);
+
+        Assert.Contains("\"bid\":\"55720\"", handler.Body ?? "");
+        Assert.Equal(0, (await db.BookPuzzles.SingleAsync(bp => bp.BookId == course.BookId)).StartPly);
+    }
+
+    [Fact]
+    public async Task UploadPersonalCourse_WithoutCourse_AsksNoCache_KeepsPreviousBehaviour()
+    {
+        using var db = NewDb();
+        var handler = new ParseHandler(CachedBlockWithMarker());
+        var course = await CourseServiceWith(db, handler)
+            .UploadPersonalCourseAsync(1, "kurs.pgn", RepertoireBlock(), "Kurs");
+
+        var puzzle = await db.BookPuzzles.SingleAsync(bp => bp.BookId == course.BookId);
+        Assert.Null(handler.Body);              // ohne Kurs keine Linien aus dem geteilten Cache
+        Assert.Equal(-1, puzzle.StartPly);
+        Assert.Equal("73000253", puzzle.ChessableOid);
     }
 
     [Fact]
@@ -148,7 +180,7 @@ public class ChessableTrainingStartTests
     {
         using var db = NewDb();
         var course = await CourseServiceWith(db, new ThrowingHandler())
-            .UploadPersonalCourseAsync(1, "kurs.pgn", RepertoireBlock(), "Kurs");
+            .UploadPersonalCourseAsync(1, "kurs.pgn", RepertoireBlock(), "Kurs", chessableBid: "55720");
 
         var puzzle = await db.BookPuzzles.SingleAsync(bp => bp.BookId == course.BookId);
         Assert.Equal(-1, puzzle.StartPly);      // wie bisher: ab der FEN lösen

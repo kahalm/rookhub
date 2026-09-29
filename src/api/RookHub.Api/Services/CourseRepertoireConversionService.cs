@@ -76,7 +76,9 @@ public class CourseRepertoireConversionService
         if (string.IsNullOrWhiteSpace(pgn))
             throw new CourseConversionException("Repertoire is empty - import a PGN first.", "repertoire_empty");
 
-        var course = await _courses.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name);
+        // Die Kurs-Id des Chessable-Repertoires: nur mit ihr gibt der Linien-Cache den fehlenden Trainingsstart heraus.
+        var bid = ImportReprocessService.ResolveRepertoireBid(detail.ChessableCourseId, detail.Files.Select(f => f.FileName));
+        var course = await _courses.UploadPersonalCourseAsync(userId, detail.Name + ".pgn", pgn, detail.Name, chessableBid: bid);
         // Verschieben statt Kopieren: das Original-Repertoire nach erfolgreicher Umwandlung entfernen.
         await _repertoires.DeleteAsync(repertoireId, userId);
         return course;

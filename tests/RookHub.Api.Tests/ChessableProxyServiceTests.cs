@@ -102,9 +102,11 @@ public class ChessableProxyServiceTests
         { bid = "1", name = "x", mode = "None", chapterCount = 1, lineCount = 2, pgn }));
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
 
-        var truth = await proxy.GetCachedLinePgnsAsync(new[] { "11", "12", "kaputt" });
+        var truth = await proxy.GetCachedLinePgnsAsync("424242", new[] { "11", "12", "kaputt" });
 
         Assert.Equal("/api/chessable/direct/course/parse", handler.Path);
+        // Der echte Kurs, kein Platzhalter: piratechess füllt nur Linien, die unter genau diesem Kurs liegen.
+        Assert.Contains("\"bid\":\"424242\"", handler.Body);
         Assert.Contains("\"lines\":[null,null]", handler.Body);      // keine Inhalte → piratechess schreibt nichts in den Cache
         Assert.Contains("\"lineOids\":[\"11\",\"12\"]", handler.Body);
         Assert.Contains("1. e4", truth["11"]);
@@ -117,10 +119,11 @@ public class ChessableProxyServiceTests
         var handler = new CapturingHandler("{\"oids\":[\"11\"]}");
         var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
 
-        var cached = await proxy.GetCachedLineOidsAsync(new[] { "11", "12" });
+        var cached = await proxy.GetCachedLineOidsAsync("424242", new[] { "11", "12" });
 
         Assert.Equal("/api/chessable/direct/lines/cached", handler.Path);
         Assert.Contains("\"oids\":[\"11\",\"12\"]", handler.Body);
+        Assert.Contains("\"bid\":\"424242\"", handler.Body);   // nur Linien, mit denen piratechess DIESEN Kurs füllt
         Assert.Equal(new[] { "11" }, cached);
     }
 
@@ -131,7 +134,23 @@ public class ChessableProxyServiceTests
         var proxy = new ChessableProxyService(
             new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("http://pc:8080") }, log);
 
-        Assert.Empty(await proxy.GetCachedLineOidsAsync(new[] { "11" }));
+        Assert.Empty(await proxy.GetCachedLineOidsAsync("424242", new[] { "11" }));
         Assert.Contains(log.Events, e => e.Message.Contains("Linien-Cache"));
+    }
+
+    /// <summary>Eine frei eingetragene Kurs-Id (Repertoire-Feld) ist keine Chessable-bid: dafür kennt der Cache keine
+    /// Linie, also gar nicht erst fragen — sonst liefe z. B. die Repertoire-Bereinigung bei jedem Start in einen 400.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("abc")]
+    [InlineData("1234567890123")]
+    public async Task CachedLineCalls_WithoutAValidCourseBid_AskNothing(string bid)
+    {
+        var handler = new CapturingHandler("{\"oids\":[\"11\"],\"pgn\":\"\"}");
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
+
+        Assert.Empty(await proxy.GetCachedLineOidsAsync(bid, new[] { "11" }));
+        Assert.Empty(await proxy.GetCachedLinePgnsAsync(bid, new[] { "11" }));
+        Assert.Null(handler.Path);
     }
 }

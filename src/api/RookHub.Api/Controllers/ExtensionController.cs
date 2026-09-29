@@ -88,6 +88,23 @@ public class ExtensionController : BaseApiController
         return null;
     }
 
+    /// <summary>Soll piratechess Linien aus dem geteilten Cache einsetzen? Das sind genau die Linien ohne Inhalt
+    /// (nach <see cref="ValidateLineOids"/> tragen sie immer eine oid) — dieselbe Regel wie <c>OidsToFill</c> dort.</summary>
+    private static bool WantsCacheFill(IEnumerable<ChessableIngestChapter> chapters)
+        => chapters.Any(ch => (ch.Lines ?? new List<string>()).Any(string.IsNullOrEmpty));
+
+    /// <summary>Meldung, wenn Linien aus dem geteilten Cache für einen Kurs verlangt werden, der nicht in der
+    /// bestätigten Kursliste des Nutzers steht (siehe <see cref="ChessableImportService.HasVerifiedCourseAsync"/>).</summary>
+    private const string CacheFillNotVerifiedMessage =
+        "Lines from the shared cache are only filled for courses in your verified Chessable course list. Send the line content instead.";
+
+    private ObjectResult CacheFillForbidden(int userId, string bid)
+    {
+        _logger.LogWarning("Browser-Import: Linien aus dem geteilten Cache für einen nicht bestätigten Kurs verlangt — abgelehnt (User {UserId}, bid {Bid})",
+            userId, bid);
+        return StatusCode(StatusCodes.Status403Forbidden, new { message = CacheFillNotVerifiedMessage });
+    }
+
     private async Task<IActionResult> ParseAndImportAsync(
         int userId, string bid, string target, string? courseName, List<ChessableIngestChapter> chapters, CancellationToken ct,
         string? courseJson = null, bool complete = false)
@@ -267,11 +284,14 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "No captured lines." });
         if (ValidateLineOids(chapters) is { } shapeError)
             return BadRequest(new { message = shapeError });
+        var userId = GetUserId();
+        if (WantsCacheFill(chapters) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            return CacheFillForbidden(userId, dto.Bid);
 
         var target = dto.Target == "book" ? "book" : "repertoire";
         // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
         var courseName = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()));
-        return await ParseAndImportAsync(GetUserId(), dto.Bid, target, courseName, chapters, ct);
+        return await ParseAndImportAsync(userId, dto.Bid, target, courseName, chapters, ct);
     }
 
     /// <summary>
@@ -390,6 +410,10 @@ public class ExtensionController : BaseApiController
     /// überspringt beim „Kurs holen" für diese Linien den Chessable-Abruf und schickt beim Import nur die oid —
     /// den Inhalt setzt piratechess ein. Nur die Existenz, nie der Inhalt. piratechess nicht erreichbar →
     /// leere Liste (die Extension holt dann eben alle Linien selbst).
+    /// <para>Treffer gibt es nur für einen Kurs (<c>Bid</c>) aus der bestätigten Kursliste des Nutzers, und nur
+    /// Linien, mit denen piratechess diesen Kurs auch füllt — dieselbe Schranke wie beim Ingest. Ohne <c>Bid</c> oder
+    /// für einen anderen Kurs: leere Liste, die Extension schickt dann alle Linien selbst (statt Linien ohne Inhalt,
+    /// die der Ingest ablehnen würde).</para>
     /// </summary>
     [HttpPost("chessable/cached-lines")]
     public async Task<IActionResult> ChessableCachedLines([FromBody] ChessableCachedLinesRequest dto, CancellationToken ct)
@@ -399,8 +423,13 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = $"At most {MaxCachedLineLookup} oids per request." });
         if (!oids.All(IsValidOid))
             return BadRequest(new { message = "Invalid oid." });
+        var bid = dto?.Bid;
+        if (bid is not null && !IsValidBid(bid))
+            return BadRequest(new { message = "Invalid bid." });
         var distinct = oids.Distinct().ToList();
-        var cached = await _chessableProxy.GetCachedLineOidsAsync(distinct, ct);
+        if (bid is null || distinct.Count == 0 || !await _chessableImport.HasVerifiedCourseAsync(GetUserId(), bid, ct))
+            return Ok(new ChessableCachedLinesDto(new List<string>()));
+        var cached = await _chessableProxy.GetCachedLineOidsAsync(bid, distinct, ct);
         return Ok(new ChessableCachedLinesDto(distinct.Where(cached.Contains).ToList()));
     }
 
@@ -508,6 +537,14 @@ public class ExtensionController : BaseApiController
                         $"Ungültiger Chunk ({shapeError}) — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
                 return BadRequest(new { message = shapeError });
             }
+            if (WantsCacheFill(new[] { chapter }) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            {
+                var dropped = _ingestSessions.Discard(userId, dto.SessionId);
+                if (dropped?.ImportId is int refusedId)
+                    await _chessableImport.FailBrowserImportAsync(refusedId,
+                        $"Linien aus dem geteilten Cache für einen nicht bestätigten Kurs verlangt — {dropped.ChaptersDone} Kapitel, {dropped.Imported} Linien übernommen.", ct);
+                return CacheFillForbidden(userId, dto.Bid);
+            }
 
             ChessableCourseDataDto parsed;
             try
@@ -587,6 +624,9 @@ public class ExtensionController : BaseApiController
             return BadRequest(new { message = "No lines." });
         if (ValidateLineOids(chapters) is { } shapeError)
             return BadRequest(new { message = shapeError });
+        var userId = GetUserId();
+        if (WantsCacheFill(chapters) && !await _chessableImport.HasVerifiedCourseAsync(userId, dto.Bid, ct))
+            return CacheFillForbidden(userId, dto.Bid);
 
         var target = dto.Target == "book" ? "book" : "repertoire";
         var mode = target == "book" ? "FirstKeyMove" : "None";
@@ -608,7 +648,7 @@ public class ExtensionController : BaseApiController
 
         // Kursname aus den Linien selbst (game.name) vor dem der Extension — siehe ChessableLineJson.
         var name = ChessableLineJson.ResolveCourseName(dto.CourseName, chapters.SelectMany(c => c.Lines ?? new List<string>()), parsed.Name) ?? parsed.Name;
-        var live = await _chessableImport.AppendLiveAsync(GetUserId(), dto.Bid, parsed.Pgn, name, target, ct);
+        var live = await _chessableImport.AppendLiveAsync(userId, dto.Bid, parsed.Pgn, name, target, ct);
         return Ok(new ChessableLiveIngestResultDto(live.Imported, live.ResultId, live.Target, parsed.LineCount, live.Linked));
     }
 }

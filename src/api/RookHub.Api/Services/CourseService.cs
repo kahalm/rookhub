@@ -816,7 +816,11 @@ public class CourseService
     /// pro-User eindeutig und kollisionsfrei, der Anzeigename kommt vom User (oder dem Dateinamen).
     /// Kind = Study → die Kurszeit zählt in die Trainingsziel-Kategorie „Buch/Kurs".
     /// </summary>
-    public async Task<CourseListItemDto> UploadPersonalCourseAsync(int userId, string originalFileName, string pgn, string? displayName, CancellationToken ct = default)
+    /// <param name="chessableBid">Chessable-Kurs, aus dem das PGN stammt (beim Umwandeln eines Chessable-Repertoires);
+    /// nur damit lässt sich ein fehlender Trainingsstart aus dem Linien-Cache nachschlagen (siehe
+    /// <see cref="WithChessableTrainingStartsAsync"/>).</param>
+    public async Task<CourseListItemDto> UploadPersonalCourseAsync(int userId, string originalFileName, string pgn, string? displayName,
+        CancellationToken ct = default, string? chessableBid = null)
     {
         if (string.IsNullOrWhiteSpace(pgn) || !RepertoireService.LooksLikePgn(pgn))
             throw new InvalidOperationException("The file does not look like a valid PGN.");
@@ -826,7 +830,7 @@ public class CourseService
         var fileName = $"user-u{userId}-{Guid.NewGuid():N}.pgn";
         // Chessable-Linien ohne Trainingsmarker: fehlenden Trainingsstart nachtragen, BEVOR importiert
         // wird (ein Repertoire-PGN trägt keinen — sonst stünde im Kurs die falsche Seite am Zug).
-        pgn = await WithChessableTrainingStartsAsync(pgn, ct);
+        pgn = await WithChessableTrainingStartsAsync(pgn, chessableBid, ct);
 
         // Eigener Kurs des Nutzers: ein Eroeffnungsrepertoire aus der Grundstellung IST hier
         // spielbarer Inhalt (siehe PgnImportService.StartPlyForRepertoire).
@@ -930,16 +934,25 @@ public class CourseService
     /// <para>Ein gewöhnliches Nutzer-PGN hat keine oids und löst deshalb keinen Abruf aus. Ist
     /// piratechess nicht erreichbar oder kennt es die Linien nicht, bleibt das PGN unverändert und der
     /// Kurs entsteht wie bisher — die Umwandlung darf daran nicht scheitern.</para>
+    /// <para>Nachgeschlagen wird nur mit bekanntem Kurs (<paramref name="chessableBid"/>): der Linien-Cache gibt Linien
+    /// nur für den Kurs heraus, unter dem sie liegen. Ein hochgeladenes PGN ohne Kurs behält den bisherigen Start.</para>
     /// </summary>
-    private async Task<string> WithChessableTrainingStartsAsync(string pgn, CancellationToken ct)
+    private async Task<string> WithChessableTrainingStartsAsync(string pgn, string? chessableBid, CancellationToken ct)
     {
         if (_chessableProxy is null) return pgn;
         var oids = ChessableTrainingStart.OidsWithoutStart(pgn);
         if (oids.Count == 0) return pgn;
+        if (string.IsNullOrWhiteSpace(chessableBid))
+        {
+            _logger.LogInformation(
+                "Kurs aus PGN: {Count} Chessable-Linien ohne Trainingsstart, aber ohne Kurs-Id — Linien behalten den bisherigen Start.",
+                oids.Count);
+            return pgn;
+        }
 
         try
         {
-            var cached = await _chessableProxy.GetCachedLinePgnsAsync(oids, ChessableTrainingStart.MarkerMode, ct);
+            var cached = await _chessableProxy.GetCachedLinePgnsAsync(chessableBid, oids, ChessableTrainingStart.MarkerMode, ct);
             var colors = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var (oid, block) in cached)
             {

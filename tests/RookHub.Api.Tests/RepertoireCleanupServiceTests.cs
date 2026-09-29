@@ -64,6 +64,36 @@ public class RepertoireCleanupServiceTests : IDisposable
         Assert.Equal(0, second.Files);   // Regelstand gemerkt → nicht erneut gelesen
     }
 
+    /// <summary>Antwortet auf den Parse-Endpoint mit leerem PGN und merkt sich den Body.</summary>
+    private sealed class CapturingHandler : HttpMessageHandler
+    {
+        public string? Body;
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Body = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"pgn\":\"\"}", System.Text.Encoding.UTF8, "application/json")
+            };
+        }
+    }
+
+    [Fact]
+    public async Task AmbiguousOid_AsksTheLineCacheForTheCourseOfTheRepertoire()
+    {
+        // piratechess füllt nur Linien, die unter dem gefragten Kurs liegen — mit dem früheren Platzhalter „1"
+        // bekam die Bereinigung nach dem piratechess-Update nur noch den Altbestand.
+        await SeedAsync(G("A", "1. e4 e5 *", "5") + G("B", "1. d4 d5 *", "5"));
+        var handler = new CapturingHandler();
+        var svc = new RepertoireCleanupService(_db,
+            new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") }),
+            NullLogger<RepertoireCleanupService>.Instance);
+
+        await svc.CleanupAllAsync(apply: false);
+
+        Assert.Contains("\"bid\":\"123\"", handler.Body);
+    }
+
     [Fact]
     public async Task PiratechessUnreachable_ForAnAmbiguousOid_LeavesTheFileForTheNextStart()
     {

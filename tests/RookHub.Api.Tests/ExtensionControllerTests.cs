@@ -31,22 +31,36 @@ public class ExtensionControllerTests : IDisposable
     private sealed class ParseStub : HttpMessageHandler
     {
         public int Calls;
+        /// <summary>Body des letzten Parse-Aufrufs.</summary>
+        public string? LastBody;
+        /// <summary>Antwort auf lines/cached; null = unerreichbar wie jeder andere Aufruf.</summary>
+        public string? LinesCachedAnswer;
+        public string? LinesCachedBody;
         /// <summary>Chessable-Stil-PGN: FEN + [%tqu]. piratechess zaehlt die Kapitel je Aufruf von vorn,
         /// liefert also IMMER "002.001" — der Versatz im Server muss daraus verschiedene Runden machen.</summary>
         private const string Pgn = "[Event \"Test Book\"]\n[Round \"002.001\"]\n[White \"Line\"]\n[Result \"*\"]\n"
             + "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n"
             + "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *\n";
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
+            if (request.RequestUri?.AbsolutePath == "/api/chessable/direct/lines/cached" && LinesCachedAnswer is not null)
+            {
+                LinesCachedBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                {
+                    Content = new StringContent(LinesCachedAnswer, System.Text.Encoding.UTF8, "application/json"),
+                };
+            }
             if (request.RequestUri?.AbsolutePath != "/api/chessable/direct/course/parse")
                 throw new HttpRequestException("Connection refused");
             Calls++;
+            LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
             var json = System.Text.Json.JsonSerializer.Serialize(new { pgn = Pgn, name = "Course", lineCount = 1 });
-            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
-            });
+            };
         }
     }
 
@@ -638,9 +652,163 @@ public class ExtensionControllerTests : IDisposable
     {
         // Weich: ohne Cache-Auskunft holt die Extension eben alle Linien selbst — kein Fehler für den Nutzer.
         SetUser(7, scope: "extension");
-        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }), default);
+        await VerifyCoursesAsync(7, "424242");
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }, "424242"), default);
         var dto = Assert.IsType<ChessableCachedLinesDto>(Assert.IsType<OkObjectResult>(res).Value);
         Assert.Empty(dto.Oids);
+    }
+
+    // ---- Geteilter Linien-Cache nur für bestätigte Kurse ------------------------------------------------------------
+    // Eine Linie ohne Inhalt (nur oid) lässt piratechess aus dem geteilten Cache ALLER Nutzer füllen. Ohne Schranke
+    // holte sich jedes Konto so die Linien fremder, bezahlter Kurse: oids per cached-lines finden, als Linien ohne
+    // Inhalt an ingest/live schicken, Repertoire als PGN herunterladen.
+
+    /// <summary>Hinterlegt die von Chessable bestätigte Kursliste des Nutzers (wie „Testen“/Kursliste sie schreiben).</summary>
+    private async Task VerifyCoursesAsync(int userId, params string[] bids)
+    {
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = userId,
+            EncryptedBearer = "x",
+            CachedCoursesJson = System.Text.Json.JsonSerializer.Serialize(
+                bids.Select(b => new ChessableCourseDto(b, "Kurs " + b)).ToList(), ChessableImportQueueService.JsonOpts),
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Ein Kapitel, dessen einzige Linie aus dem geteilten Cache kommen soll (null + oid) — genau die Form,
+    /// die RookHub selbst in GetCachedLinePgnsAsync baut.</summary>
+    private static ChessableIngestChapter CacheOnlyChapter(string oid = "36114125")
+        => new("{\"list\":{\"name\":\"x\",\"title\":\"x\",\"data\":[{\"id\":" + oid + ",\"name\":\"x\"}]}}",
+            new List<string> { null! }, new List<string> { oid });
+
+    private static void AssertForbidden(IActionResult res)
+    {
+        var forbidden = Assert.IsType<ObjectResult>(res);
+        Assert.Equal(StatusCodes.Status403Forbidden, forbidden.StatusCode);
+        Assert.Contains("verified", System.Text.Json.JsonSerializer.Serialize(forbidden.Value));
+    }
+
+    [Fact]
+    public async Task ChessableIngestLive_LineFromTheSharedCache_ForACourseNotVerified_Is403_AndNotParsed()
+    {
+        SetUser(7, scope: "extension");
+        await VerifyCoursesAsync(7, "111111");   // bestätigt ist ein ANDERER Kurs
+
+        var res = await _controller.ChessableIngestLive(
+            new ChessableLiveIngestRequest("424242", "repertoire", "x", new List<ChessableIngestChapter> { CacheOnlyChapter() }), default);
+
+        AssertForbidden(res);
+        Assert.Equal(0, _parse.Calls);            // piratechess bekommt die oid gar nicht erst zu sehen
+        Assert.Empty(_db.Repertoires);
+    }
+
+    [Fact]
+    public async Task ChessableIngest_LineFromTheSharedCache_WithoutAnyVerifiedCourse_Is403_AndNotParsed()
+    {
+        SetUser(7, scope: "extension");
+
+        var res = await _controller.ChessableIngest(
+            new ChessableIngestRequest("424242", "book", "x", new List<ChessableIngestChapter> { CacheOnlyChapter() }), default);
+
+        AssertForbidden(res);
+        Assert.Equal(0, _parse.Calls);
+        Assert.Empty(_db.ChessableImports);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_LineFromTheSharedCache_ForACourseNotVerified_Is403_AndClosesTheImport()
+    {
+        SetUser(7, scope: "extension");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-cache", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        var res = await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-cache", "424242", "book", "Course", CacheOnlyChapter(), false), default);
+
+        AssertForbidden(res);
+        Assert.Equal(1, _parse.Calls);            // nur der erste Chunk (mit Inhalt) ging an den Parser
+        var import = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Failed, import.Status);
+        Assert.Contains("nicht bestätigten Kurs", import.Error);
+        Assert.Equal(0, _ingestSessions.Count);
+        Assert.Equal(1, await _db.BookPuzzles.CountAsync());   // das mit Inhalt Geschickte bleibt
+    }
+
+    [Fact]
+    public async Task ChessableIngestLive_LineFromTheSharedCache_ForAVerifiedCourse_GoesToTheParser()
+    {
+        SetUser(7, scope: "extension");
+        await VerifyCoursesAsync(7, "424242");
+
+        var res = await _controller.ChessableIngestLive(
+            new ChessableLiveIngestRequest("424242", "repertoire", "x", new List<ChessableIngestChapter> { CacheOnlyChapter() }), default);
+
+        Assert.IsType<OkObjectResult>(res);
+        Assert.Equal(1, _parse.Calls);
+        Assert.Contains("\"lines\":[null]", _parse.LastBody);
+        Assert.Contains("\"bid\":\"424242\"", _parse.LastBody);
+    }
+
+    [Fact]
+    public async Task ChessableIngestLive_LinesWithContent_NeedNoVerifiedCourse()
+    {
+        // Wer den Inhalt selbst schickt, bekommt nichts aus dem geteilten Cache — dafür braucht es keine Kursliste.
+        SetUser(7, scope: "extension");
+        var chapter = new ChessableIngestChapter("{\"list\":{\"data\":[]}}", new List<string> { "{\"game\":{}}" }, new List<string> { "11" });
+
+        var res = await _controller.ChessableIngestLive(
+            new ChessableLiveIngestRequest("424242", "repertoire", "x", new List<ChessableIngestChapter> { chapter }), default);
+
+        Assert.IsType<OkObjectResult>(res);
+        Assert.Equal(1, _parse.Calls);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_WithoutBid_ReturnsNothing_AndAsksNoOne()
+    {
+        SetUser(7, scope: "extension");
+        await VerifyCoursesAsync(7, "424242");
+        _parse.LinesCachedAnswer = "{\"oids\":[\"11\"]}";
+
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }), default);
+
+        Assert.Empty(Assert.IsType<ChessableCachedLinesDto>(Assert.IsType<OkObjectResult>(res).Value).Oids);
+        Assert.Null(_parse.LinesCachedBody);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_ForACourseNotVerified_ReturnsNothing_AndAsksNoOne()
+    {
+        SetUser(7, scope: "extension");
+        await VerifyCoursesAsync(7, "111111");
+        _parse.LinesCachedAnswer = "{\"oids\":[\"11\"]}";
+
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }, "424242"), default);
+
+        Assert.Empty(Assert.IsType<ChessableCachedLinesDto>(Assert.IsType<OkObjectResult>(res).Value).Oids);
+        Assert.Null(_parse.LinesCachedBody);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_ForAVerifiedCourse_AsksPiratechessForThatCourse()
+    {
+        SetUser(7, scope: "extension");
+        await VerifyCoursesAsync(7, "424242");
+        _parse.LinesCachedAnswer = "{\"oids\":[\"11\"]}";
+
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11", "12" }, "424242"), default);
+
+        Assert.Equal(new[] { "11" }, Assert.IsType<ChessableCachedLinesDto>(Assert.IsType<OkObjectResult>(res).Value).Oids);
+        Assert.Contains("\"bid\":\"424242\"", _parse.LinesCachedBody);
+    }
+
+    [Fact]
+    public async Task ChessableCachedLines_InvalidBid_ReturnsBadRequest()
+    {
+        SetUser(7, scope: "extension");
+        var res = await _controller.ChessableCachedLines(new ChessableCachedLinesRequest(new List<string> { "11" }, "12a"), default);
+        Assert.IsType<BadRequestObjectResult>(res);
     }
 
     [Fact]

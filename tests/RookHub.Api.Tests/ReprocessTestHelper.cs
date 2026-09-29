@@ -40,19 +40,23 @@ public class StubCachedLineSource : ICachedLineSource
     public Dictionary<string, string> Lines { get; } = new(StringComparer.Ordinal);
     public List<(IReadOnlyList<string> Oids, string Mode)> PgnCalls { get; } = new();
     public int OidCalls { get; private set; }
+    /// <summary>Die Kurs-Ids aller Abfragen (Existenz wie PGN), in Aufrufreihenfolge.</summary>
+    public List<string> Bids { get; } = new();
     /// <summary>1-basierte Nummer der PGN-Abfrage, die wirft (null = keine).</summary>
     public int? ThrowOnPgnCall { get; set; }
     /// <summary>Läuft während jeder PGN-Abfrage — steht für einen anderen Weg, der in der Zwischenzeit schreibt.</summary>
     public Action? OnPgnCall { get; set; }
 
-    public Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+    public Task<HashSet<string>> GetCachedLineOidsAsync(string bid, IReadOnlyCollection<string> oids, CancellationToken ct = default)
     {
         OidCalls++;
+        Bids.Add(bid);
         return Task.FromResult(oids.Where(Lines.ContainsKey).ToHashSet(StringComparer.Ordinal));
     }
 
-    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
+    public Task<Dictionary<string, string>> GetCachedLinePgnsAsync(string bid, IEnumerable<string> oids, string mode = "None", CancellationToken ct = default)
     {
+        Bids.Add(bid);
         var list = oids.ToList();
         PgnCalls.Add((list, mode));
         OnPgnCall?.Invoke();

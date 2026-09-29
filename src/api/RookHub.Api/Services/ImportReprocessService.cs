@@ -34,12 +34,13 @@ public interface ICourseReimporter
 /// </summary>
 public interface ICachedLineSource
 {
-    /// <summary>Welche der oids liegen im Cache (nur Existenz, billig). Weich: Fehler → leere Menge.</summary>
-    Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default);
+    /// <summary>Welche der oids liegen im Cache (nur Existenz, billig) — so, dass piratechess einen Import des Kurses
+    /// <paramref name="bid"/> damit füllt. Weich: Fehler → leere Menge.</summary>
+    Task<HashSet<string>> GetCachedLineOidsAsync(string bid, IReadOnlyCollection<string> oids, CancellationToken ct = default);
 
-    /// <summary>PGN je gecachter oid, mit der AKTUELLEN piratechess-Logik erzeugt. Nicht gecachte oids fehlen;
-    /// ein Verbindungsfehler WIRFT.</summary>
-    Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids, string mode = "None", CancellationToken ct = default);
+    /// <summary>PGN je gecachter oid des Kurses <paramref name="bid"/>, mit der AKTUELLEN piratechess-Logik erzeugt.
+    /// Nicht gecachte oids fehlen; ein Verbindungsfehler WIRFT.</summary>
+    Task<Dictionary<string, string>> GetCachedLinePgnsAsync(string bid, IEnumerable<string> oids, string mode = "None", CancellationToken ct = default);
 }
 
 /// <summary>
@@ -307,9 +308,19 @@ public partial class ImportReprocessService
         var oids = CachedSourceRebuild.OidsOf(source);
         if (oids.Count == 0) return null;
 
+        // Der Linien-Cache füllt nur Linien DIESES Kurses (piratechess ordnet jede Linie ihrem Kurs zu) — ohne bid aus dem Dateinamen
+        // (chessable-u{uid}-{bid}.pgn) gibt es nichts zu fragen.
+        if (!TryParseBid(book.FileName, out var bid))
+        {
+            _logger.LogInformation(
+                "Course-Reprocess: Buch {FileName} (Id {BookId}) — Kurs-Id nicht aus dem Dateinamen lösbar, bleibt veraltet",
+                book.FileName, bookId);
+            return null;
+        }
+
         // Ein billiger Existenz-Aufruf vorab: ein Server ohne (diesen) Cache soll nicht Dutzende teure
         // PGN-Abfragen absetzen, um am Ende nichts zu haben. Weich — piratechess weg liefert hier „nichts".
-        var cached = await _cachedLines.GetCachedLineOidsAsync(oids, CancellationToken.None);
+        var cached = await _cachedLines.GetCachedLineOidsAsync(bid, oids, CancellationToken.None);
         var wanted = oids.Where(cached.Contains).ToList();
         if (wanted.Count == 0)
         {
@@ -322,7 +333,7 @@ public partial class ImportReprocessService
         var mode = CachedSourceRebuild.ModeFor(source);
         var fresh = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var portion in wanted.Chunk(CacheRebuildBatchSize))
-            foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(portion, mode, CancellationToken.None))
+            foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(bid, portion, mode, CancellationToken.None))
                 fresh[oid] = pgn;
 
         var rebuilt = CachedSourceRebuild.Rebuild(source, fresh);
@@ -520,7 +531,7 @@ public partial class ImportReprocessService
                 // Je Repertoire isoliert wie bei den Kursen: EIN kaputtes darf den Lauf nicht mitreißen.
                 try
                 {
-                    if (await RebuildRepertoireFromCacheAsync(r.Id, r.Name) is { } replaced)
+                    if (await RebuildRepertoireFromCacheAsync(r.Id, r.Name, r.Bid) is { } replaced)
                     {
                         result.Reprocessed++;
                         result.RebuiltFromCache++;
@@ -612,9 +623,18 @@ public partial class ImportReprocessService
     /// entfernte oids stehen danach genauso da wie vorher.</para>
     /// </summary>
     /// <returns>Zahl der übernommenen Linien; null = nichts übernommen, das Repertoire bleibt veraltet.</returns>
-    private async Task<int?> RebuildRepertoireFromCacheAsync(int repertoireId, string name)
+    /// <param name="bid">Kurs-Id des Repertoires (<see cref="ResolveRepertoireBid"/>); der Linien-Cache füllt nur Linien
+    /// dieses Kurses. null → nichts zu fragen, bleibt veraltet.</param>
+    private async Task<int?> RebuildRepertoireFromCacheAsync(int repertoireId, string name, string? bid)
     {
         if (_cachedLines is null) return null;
+        if (bid is null)
+        {
+            _logger.LogInformation(
+                "Repertoire-Reprocess: Repertoire „{Name}“ (Id {RepertoireId}) — keine Kurs-Id, bleibt veraltet",
+                name, repertoireId);
+            return null;
+        }
 
         // Den Stand VOR dem Lesen der Texte merken: wer danach schreibt (Live-Append der Extension, Upload, Löschen
         // einer Datei, die Bereinigung), setzt Repertoire.UpdatedAt — und das fällt unten auf. Alle Aufrufe mit
@@ -644,7 +664,7 @@ public partial class ImportReprocessService
 
         // EIN billiger Existenz-Aufruf fürs ganze Repertoire: ein Server ohne (diesen) Cache soll nicht Dutzende teure
         // PGN-Abfragen absetzen, um am Ende nichts zu haben. Weich — piratechess weg liefert hier „nichts".
-        var cached = await _cachedLines.GetCachedLineOidsAsync(oids, CancellationToken.None);
+        var cached = await _cachedLines.GetCachedLineOidsAsync(bid, oids, CancellationToken.None);
         if (!oids.Any(cached.Contains))
         {
             _logger.LogInformation(
@@ -660,7 +680,7 @@ public partial class ImportReprocessService
             var fresh = new Dictionary<string, string>(StringComparer.Ordinal);
             var wanted = group.SelectMany(f => f.Oids).Where(cached.Contains).Distinct(StringComparer.Ordinal).ToList();
             foreach (var portion in wanted.Chunk(CacheRebuildBatchSize))
-                foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(portion, group.Key, CancellationToken.None))
+                foreach (var (oid, pgn) in await _cachedLines.GetCachedLinePgnsAsync(bid, portion, group.Key, CancellationToken.None))
                     fresh[oid] = pgn;
             freshByMode[group.Key] = fresh;
         }
@@ -731,7 +751,7 @@ public partial class ImportReprocessService
     /// <summary>Chessable-bid eines Repertoires: bevorzugt <see cref="Repertoire.ChessableCourseId"/>,
     /// sonst aus einem Repertoire-Dateinamen <c>chessable-{bid}.pgn</c> (Altbestand ohne gesetzte CourseId,
     /// z. B. vor dem [Site]-Auto-Extract importiert) — aus den NAMEN, nie aus dem Inhalt. null ⇒ nicht auflösbar.</summary>
-    private static string? ResolveRepertoireBid(string? chessableCourseId, IEnumerable<string> fileNames)
+    internal static string? ResolveRepertoireBid(string? chessableCourseId, IEnumerable<string> fileNames)
     {
         if (!string.IsNullOrWhiteSpace(chessableCourseId)) return chessableCourseId;
         foreach (var name in fileNames)

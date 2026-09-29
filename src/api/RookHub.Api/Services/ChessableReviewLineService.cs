@@ -49,8 +49,9 @@ public class ChessableReviewLineService
     }
 
     /// <summary>Die bids der gecachten Chessable-Kursliste des Nutzers (leer, wenn nie eine geholt wurde).
-    /// Grundlage der Besitz-Schranke in <see cref="ClaimAnonForUidAsync"/>.</summary>
-    private static HashSet<string> OwnedBids(string? cachedCoursesJson)
+    /// Grundlage der Besitz-Schranke in <see cref="ClaimAnonForUidAsync"/> und
+    /// <see cref="ChessableImportService.HasVerifiedCourseAsync"/>.</summary>
+    internal static HashSet<string> OwnedBids(string? cachedCoursesJson)
     {
         if (string.IsNullOrEmpty(cachedCoursesJson)) return new HashSet<string>();
         try

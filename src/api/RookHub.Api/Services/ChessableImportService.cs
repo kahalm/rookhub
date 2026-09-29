@@ -133,6 +133,24 @@ public class ChessableImportService : ICourseReimporter
     public Task<HashSet<string>> GetCachedBidsAsync(CancellationToken ct = default)
         => _proxy.GetCachedBidsAsync(ct);
 
+    /// <summary>
+    /// Steht <paramref name="bid"/> in der von Chessable bestätigten Kursliste des Nutzers
+    /// (<see cref="ChessableCredential.CachedCoursesJson"/> — geschrieben von „Testen“, der Kursliste und dem
+    /// Nacht-Refresh, immer mit seinem eigenen Bearer)? Schranke für alles, was Inhalte aus dem GETEILTEN
+    /// Linien-Cache herausgibt: den Extension-Ingest mit Linien ohne Inhalt und die cached-lines-Auskunft. Ohne sie
+    /// holte sich jedes Konto die Linien fremder, bezahlter Kurse über ihre oid. Bewusst ohne Live-Abruf: die
+    /// Extension-Wege laufen auch mit <c>Chessable:Enabled=false</c>, und ein Chessable-Abruf je Chunk wäre genau das,
+    /// was der Browser-Import vermeiden soll.
+    /// </summary>
+    public async Task<bool> HasVerifiedCourseAsync(int userId, string bid, CancellationToken ct = default)
+    {
+        var json = await _db.ChessableCredentials.AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .Select(c => c.CachedCoursesJson)
+            .FirstOrDefaultAsync(ct);
+        return ChessableReviewLineService.OwnedBids(json).Contains(bid);
+    }
+
     public async Task<int?> EnqueueReimportAsync(int ownerUserId, string bid, string target, string courseName, int? targetRepertoireId = null, bool? knownCached = null, bool trustOwnership = false, CancellationToken ct = default)
     {
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == ownerUserId, ct);
@@ -908,7 +926,7 @@ public class ChessableImportService : ICourseReimporter
         // Kopie erst erkennbar machen, und Dateien mit veraltetem Regelstand kommen so ohne Neustart dran.
         if (added > 0 || backfill.Count > 0 || file.CleanupVersion < RepertoirePgnCleanup.CurrentVersion)
         {
-            var cleanup = await RepertoireCleanupService.CleanupFileAsync(file, _proxy, _logger, apply: true, ct);
+            var cleanup = await RepertoireCleanupService.CleanupFileAsync(file, bid, _proxy, _logger, apply: true, ct);
             if (cleanup != null)
             {
                 if (cleanup.Count > 0)

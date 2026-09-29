@@ -30,18 +30,20 @@ public class RepertoireCleanupService
     /// <summary>
     /// Prüft/repariert EINE Datei (Änderungen nur im EF-Kontext; speichern muss der Aufrufer). <c>null</c> = für eine
     /// mehrdeutige oid wäre die Wahrheit nötig, piratechess ist aber nicht erreichbar → Datei unverändert, später erneut.
+    /// <paramref name="bid"/> ist der Kurs der Datei: der Linien-Cache liefert nur Linien dieses Kurses. Ohne Kurs-Id
+    /// gilt die Wahrheit als unbekannt (wie bei nicht gecachten Linien, die Ausschlussregeln entscheiden).
     /// </summary>
     internal static async Task<IReadOnlyList<RepertoirePgnCleanup.CleanupAction>?> CleanupFileAsync(
-        RepertoireFile file, ChessableProxyService proxy, ILogger logger, bool apply, CancellationToken ct)
+        RepertoireFile file, string? bid, ChessableProxyService proxy, ILogger logger, bool apply, CancellationToken ct)
     {
         var pgn = file.PgnContent ?? string.Empty;
         var ambiguous = RepertoirePgnCleanup.AmbiguousOids(pgn);
         IReadOnlyDictionary<string, string> truth = new Dictionary<string, string>();
-        if (ambiguous.Count > 0)
+        if (ambiguous.Count > 0 && bid is not null)
         {
             try
             {
-                truth = await proxy.GetCachedLinePgnsAsync(ambiguous, ct: ct);
+                truth = await proxy.GetCachedLinePgnsAsync(bid, ambiguous, ct: ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested
                                        && ex is ChessableProxyException or HttpRequestException or TaskCanceledException)
@@ -85,7 +87,8 @@ public class RepertoireCleanupService
             ct.ThrowIfCancellationRequested();
             var file = await _db.RepertoireFiles.Include(f => f.Repertoire).FirstOrDefaultAsync(f => f.Id == id, ct);
             if (file == null) continue;
-            var actions = await CleanupFileAsync(file, _proxy, _logger, apply, ct);
+            var bid = ImportReprocessService.ResolveRepertoireBid(file.Repertoire.ChessableCourseId, new[] { file.FileName });
+            var actions = await CleanupFileAsync(file, bid, _proxy, _logger, apply, ct);
             if (actions == null)
             {
                 waiting++;

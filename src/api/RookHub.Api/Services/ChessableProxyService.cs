@@ -90,16 +90,24 @@ public class ChessableProxyService : ICachedLineSource
         return (await response.Content.ReadFromJsonAsync<ChessableCourseDataDto>(JsonOpts, ct))!;
     }
 
+    /// <summary>Taugt <paramref name="bid"/> als Kurs-Id für den Linien-Cache (dieselbe Form, die piratechess
+    /// verlangt)? Eine frei eingetragene Kurs-Id eines Repertoires (<c>ChessableCourseId</c>) kann alles sein — dafür
+    /// kennt der Cache ohnehin keine Linie, also gar nicht erst fragen.</summary>
+    private static bool IsCourseBid(string? bid) => bid is { Length: > 0 and <= 12 } && bid.All(char.IsAsciiDigit);
+
     /// <summary>
     /// „Wahrheit" je oid für die Repertoire-Bereinigung: das PGN, das piratechess aus dem geteilten Linien-Cache für
     /// genau diese Linie erzeugt (Vorgabe: Repertoire-Modus "None", siehe <paramref name="mode"/>). Geht über den fetch-freien Parse — ohne mitgeschickte Inhalte
     /// schreibt der nichts in den Cache. Nicht gecachte oids fehlen im Ergebnis. Verbindungsfehler WERFEN, damit der
     /// Aufrufer es später erneut versucht, statt „nicht gecacht" anzunehmen.
     /// </summary>
+    /// <param name="bid">Der Kurs, zu dem die Linien gehören. piratechess füllt nur Linien, die unter genau diesem
+    /// Kurs (oder als Altbestand ohne Kurs) im Cache liegen — früher stand hier ein fester Platzhalter „1", der
+    /// danach nur noch den Altbestand bekam. Keine gültige Kurs-Id → leeres Ergebnis ohne Anfrage.</param>
     /// <param name="mode">Trainings-Modus des erzeugten PGN: <c>"None"</c> (Repertoire-Stil, ohne
     /// Marker) ist die Vorgabe; <c>"FirstKeyMove"</c> setzt ein <c>[%tqu]</c> am ersten Schlüsselzug der
     /// Solverfarbe — daran liest <see cref="ChessableTrainingStart"/> die Farbe einer Linie ab.</param>
-    public async Task<Dictionary<string, string>> GetCachedLinePgnsAsync(IEnumerable<string> oids,
+    public async Task<Dictionary<string, string>> GetCachedLinePgnsAsync(string bid, IEnumerable<string> oids,
         string mode = "None", CancellationToken ct = default)
     {
         var list = oids
@@ -107,11 +115,11 @@ public class ChessableProxyService : ICachedLineSource
             .Distinct(StringComparer.Ordinal)
             .ToList();
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (list.Count == 0) return result;
+        if (list.Count == 0 || !IsCourseBid(bid)) return result;
         var entries = string.Join(",", list.Select(o => "{\"id\":" + o + ",\"name\":\"x\"}"));
         var chapter = new ChessableIngestChapter("{\"list\":{\"name\":\"x\",\"title\":\"x\",\"data\":[" + entries + "]}}",
             list.Select(_ => (string)null!).ToList(), list);
-        var parsed = await ParseCourseAsync("1", mode, new[] { chapter }, ct: ct);
+        var parsed = await ParseCourseAsync(bid, mode, new[] { chapter }, ct: ct);
         foreach (var block in System.Text.RegularExpressions.Regex.Split(parsed.Pgn ?? string.Empty, @"(?=\[Event )"))
         {
             var m = System.Text.RegularExpressions.Regex.Match(block, "\\[ChessableOid \"([^\"]+)\"\\]");
@@ -171,15 +179,16 @@ public class ChessableProxyService : ICachedLineSource
         }
     }
 
-    /// <summary>Welche der oids liegen im geteilten Linien-Cache von piratechess (nur Existenz). Weich wie der
-    /// Kurs-Cache-Check: Fehler/unerreichbar → leere Menge (dann holt die Extension alle Linien selbst), aber
-    /// SICHTBAR geloggt.</summary>
-    public async Task<HashSet<string>> GetCachedLineOidsAsync(IReadOnlyCollection<string> oids, CancellationToken ct = default)
+    /// <summary>Welche der oids liegen im geteilten Linien-Cache von piratechess (nur Existenz), und zwar so, dass
+    /// piratechess einen Import von <paramref name="bid"/> damit füllt (Linien dieses Kurses oder Altbestand ohne
+    /// Kurs). Weich wie der Kurs-Cache-Check: Fehler/unerreichbar → leere Menge (dann holt die Extension alle Linien
+    /// selbst), aber SICHTBAR geloggt. Keine gültige Kurs-Id → leere Menge ohne Anfrage.</summary>
+    public async Task<HashSet<string>> GetCachedLineOidsAsync(string bid, IReadOnlyCollection<string> oids, CancellationToken ct = default)
     {
-        if (oids.Count == 0) return new HashSet<string>();
+        if (oids.Count == 0 || !IsCourseBid(bid)) return new HashSet<string>();
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/lines/cached", new { Oids = oids }, ct);
+            var response = await _httpClient.PostAsJsonAsync("/api/chessable/direct/lines/cached", new { Oids = oids, Bid = bid }, ct);
             response.EnsureSuccessStatusCode();
             var dto = await response.Content.ReadFromJsonAsync<CachedLinesDto>(JsonOpts, ct);
             return new HashSet<string>(dto?.Oids ?? new List<string>());
