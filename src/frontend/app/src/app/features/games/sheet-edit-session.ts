@@ -4,7 +4,8 @@ import { Chess } from 'chess.js';
 import { BoardArrow } from '../../shared/pgn-viewer/chess-board.component';
 import { ScoresheetOption, ScoresheetPly, ScoresheetResolveResult } from './scoresheet.service';
 import {
-  EditPly, cropView, fensOf, fromServer, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly, writtenIndexAt,
+  EditPly, START_FEN, cropView, fensOf, fromServer, nextUncertainFrom, resolveRequest, revalidate, stripSheetNotes, userPly,
+  writtenIndexAt,
 } from './game-edit.util';
 
 /** Eine Zeile der Zugliste: Zugnummer + Index des weißen und des schwarzen Halbzugs. */
@@ -52,13 +53,17 @@ export class SheetEditSession {
   /** … und die Pixelmaße jeder Seite (Seite 1 fällt auf `photoSize` zurück). */
   readonly pageSizes = signal<Record<number, { w: number; h: number }>>({});
   readonly busy = signal(false);
+  /** Ausgangsstellung: der FEN-Kopf einer Stellungspartie, sonst die Grundstellung (eingelesene Formulare immer). Brett
+   *  und Legalität rechnen ab hier — vorher immer ab der Grundstellung, und bei einer Partie mit FEN-Kopf zeigte das Brett
+   *  für jeden Halbzug die Grundstellung, ein Zug daran machte den Rest illegal. */
+  readonly startFen = signal(START_FEN);
 
   readonly legalCount = computed(() => {
     const idx = this.plies().findIndex(p => p.illegal);
     return idx < 0 ? this.plies().length : idx;
   });
   readonly illegalCount = computed(() => this.plies().length - this.legalCount());
-  readonly fens = computed(() => fensOf(this.plies()));
+  readonly fens = computed(() => fensOf(this.plies(), this.startFen()));
   readonly cursorFen = computed(() => this.fens()[Math.min(this.cursor(), this.fens().length - 1)]);
   readonly current = computed<EditPly | null>(() => this.plies()[this.cursor()] ?? null);
   readonly lastMove = computed<[string, string] | undefined>(() => {
@@ -217,7 +222,7 @@ export class SheetEditSession {
 
     if (!this.isScoresheet()) {
       const tail = mode === 'insert' ? list.slice(i) : list.slice(i + 1);
-      this.plies.set(revalidate([...list.slice(0, i), mine, ...tail]));
+      this.plies.set(revalidate([...list.slice(0, i), mine, ...tail], this.startFen()));
       this.cursor.set(i + 1);
       return;
     }
@@ -233,7 +238,7 @@ export class SheetEditSession {
     if (i >= list.length) return;
     this.host.changed?.();
     if (!this.isScoresheet()) {
-      this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)]));
+      this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)], this.startFen()));
       return;
     }
     this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i);
@@ -264,7 +269,7 @@ export class SheetEditSession {
     const call = this.host.resolve(req.prefix, req.writtenFrom);
     (this.host.bind ? this.host.bind(call) : call).subscribe({
       next: res => {
-        this.plies.set(revalidate([...head, ...fromServer(res.plies)]));
+        this.plies.set(revalidate([...head, ...fromServer(res.plies)], this.startFen()));
         this.unresolved.set(res.unresolved);
         this.unresolvedFrom.set(res.unresolvedFrom ?? null);
         this.busy.set(false);
@@ -272,7 +277,7 @@ export class SheetEditSession {
       },
       error: () => {
         this.busy.set(false);
-        this.plies.set(revalidate([...head, ...fallbackTail]));
+        this.plies.set(revalidate([...head, ...fallbackTail], this.startFen()));
         this.go(nextCursor);
         this.host.resolveFailed?.();
       },

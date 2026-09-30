@@ -57,6 +57,27 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
   });
 
+  // W3 F4-002: vorher rechnete die Korrekturseite immer ab der Grundstellung — das Brett zeigte bei einer Partie mit
+  // FEN-Kopf für jeden Halbzug die Grundstellung, und ein Zug daran machte den Rest illegal.
+  it('a game with a FEN header: the board starts from that position, a move there keeps the rest legal', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    http.expectOne('/api/games/5').flush(detail({ source: 'pgn', moveCount: 4,
+      pgn: `[Event "Studie"]\n[White "A"]\n[Black "B"]\n[Result "*"]\n[SetUp "1"]\n[FEN "${fen}"]\n\n1. Kd2 Kd7 2. e4 Ke6 *` }));
+    fixture.detectChanges();
+
+    expect(c.plies().map(p => p.san)).toEqual(['Kd2', 'Kd7', 'e4', 'Ke6']);
+    expect(c.cursorFen()).toBe(fen);
+    c.go(2);
+    expect(c.cursorFen()).toBe('8/3k4/8/8/8/8/3KP3/8 w - - 2 2');
+    // 1. Kd2 → 1. Kf2: der Rest bleibt legal.
+    c.go(0);
+    c.onBoardMove({ from: 'e1', to: 'f2', san: 'Kf2', fen: '' });
+    expect(c.plies().map(p => p.san)).toEqual(['Kf2', 'Kd7', 'e4', 'Ke6']);
+    expect(c.illegalCount()).toBe(0);
+  });
+
   // Gemeldet 2026-09-28: am Handy wanderte das Brett beim Durchklicken nach oben — scrollIntoView rollte die ganze Seite.
   it('stepping through the moves never scrolls the page, only the move list itself', async () => {
     const { fixture, c, http } = await setup();

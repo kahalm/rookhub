@@ -132,14 +132,23 @@ export function commentsOf(pgn: string, count: number): (string | null)[] {
     const chess = new Chess();
     chess.loadPgn(pgn);
     const byFen = new Map(chess.getComments().map(c => [c.fen, c.comment] as const));
-    const replay = new Chess();
-    const history = chess.history();
+    // Die Stellung nach dem Zug aus der Zugliste selbst — ein Nachspielen ab der Grundstellung scheiterte bei einer
+    // Partie mit FEN-Kopf schon am ersten Zug, und alle Kommentare fehlten.
+    const history = chess.history({ verbose: true });
     for (let i = 0; i < Math.min(count, history.length); i++) {
-      replay.move(history[i]);
-      out[i] = byFen.get(replay.fen()) ?? null;
+      out[i] = byFen.get(history[i].after) ?? null;
     }
   } catch { /* keine Kommentare lesbar — dann eben keine */ }
   return out;
+}
+
+/** Ausgangsstellung einer PGN: der FEN-Kopf einer Stellungspartie (so, wie chess.js ihn beim Einlesen nimmt), sonst die
+ *  Grundstellung. Die Halbzüge aus `pliesOfPgn` sind relativ zu ihr — Stellungen und Legalität müssen ab hier rechnen. */
+export function startFenOf(pgn: string): string {
+  const chess = new Chess();
+  try { chess.loadPgn(pgn); } catch { return START_FEN; }
+  const first = chess.history({ verbose: true })[0];
+  return first ? first.before : chess.fen();
 }
 
 /** Halbzüge einer PGN (gewöhnliche Partie ohne Einlesung). */

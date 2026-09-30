@@ -1,6 +1,6 @@
 import {
-  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
-  resolveRequest, revalidate, stripSheetNotes, toServer, userPly, writtenIndexAt,
+  EditPly, SHEET_EXTRA, SHEET_MISSING, SHEET_NOTE, SHEET_OPEN, START_FEN, commentsForSave, commentsOf, cropView, fensOf, nextUncertainFrom, fromServer, headersOf, isoDateOf, pliesOfPgn,
+  resolveRequest, revalidate, startFenOf, stripSheetNotes, toServer, userPly, writtenIndexAt,
 } from './game-edit.util';
 
 function ply(san: string, w: number | null = null, extra: Partial<EditPly> = {}): EditPly {
@@ -73,6 +73,23 @@ describe('game-edit.util', () => {
     expect(plies[0].comment).toBe('gut');
     expect(plies[2].comment).toBe('sheet: Sf3');
     expect(commentsOf(pgn, 3)).toEqual(['gut', null, 'sheet: Sf3']);
+  });
+
+  // W3 F4-002: Stellungspartie (PGN-Upload mit FEN-Kopf) — die Züge gelten ab der FEN, nicht ab der Grundstellung.
+  it('startFenOf + commentsOf + fensOf/revalidate: a game with a FEN header starts from that position', () => {
+    const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    const pgn = `[SetUp "1"]\n[FEN "${fen}"]\n\n1. Kd2 {gut} Kd7 2. e4 {auch} Ke6 *`;
+    expect(startFenOf(pgn)).toBe(fen);
+    expect(startFenOf(`[FEN "${fen}"]\n\n*`)).toBe(fen);                 // ohne Züge: die Stellung selbst
+    expect(startFenOf('1. e4 e5 *')).toBe(START_FEN);
+    expect(startFenOf('[FEN "kaputt"]\n\n1. e4 *')).toBe(START_FEN);
+    const plies = pliesOfPgn(pgn);
+    expect(plies.map(p => p.san)).toEqual(['Kd2', 'Kd7', 'e4', 'Ke6']);
+    expect(commentsOf(pgn, 4)).toEqual(['gut', null, 'auch', null]);      // vorher: alle null
+    const fens = fensOf(plies, fen);
+    expect(fens.length).toBe(5);
+    expect(fens[0]).toBe(fen);
+    expect(revalidate(plies, fen).map(p => p.illegal)).toEqual([false, false, false, false]);
   });
 
   it('stripSheetNotes: keeps what the user wrote, drops what the server generated', () => {

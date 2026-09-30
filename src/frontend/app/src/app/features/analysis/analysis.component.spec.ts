@@ -111,6 +111,18 @@ describe('AnalysisComponent query-param preload', () => {
     c.ngOnDestroy();
   });
 
+  // W3 F4-002: eine Stellungspartie (FEN-Kopf) aus „Partien" — früher wurde ab der Grundstellung nachgespielt, das warf
+  // mitten in ngOnInit, und das Brett blieb ohne legale Züge. Seit dem Zugbaum (0.604.0) liest parsePgnTree den Kopf.
+  it('?pgn= mit FEN-Kopf: die Züge laufen ab der FEN, das Brett ist spielbar', () => {
+    const fen = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    const c = makeComponent({ pgn: `[SetUp "1"]\n[FEN "${fen}"]\n\n1. Kd2 Kd7 2. e4 *` });
+    c.ngOnInit();
+    expect(c.startFen).toBe(fen);
+    expect(c.line.map((n: any) => n.san)).toEqual(['Kd2', 'Kd7', 'e4']);
+    expect(c.dests.size).toBeGreaterThan(0);
+    c.ngOnDestroy();
+  });
+
   it('von Hand geladen leert sich das PGN-Feld wie bisher', () => {
     const c = makeComponent({});
     c.ngOnInit();

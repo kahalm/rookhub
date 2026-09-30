@@ -27,7 +27,7 @@ import { GamesService, SavedGameDetail } from './games.service';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
-import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, stripSheetNotes, toServer } from './game-edit.util';
+import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 
 /**
@@ -431,6 +431,7 @@ export class GameEditComponent implements OnInit, OnDestroy {
     // RepCheck-Partien tragen „RepCheck saved game" als Veranstaltung — das ist keine Angabe des Nutzers.
     if (this.header.event === 'RepCheck saved game') this.header.event = '';
     const fromPgn = pliesOfPgn(game.pgn);
+    this.session.startFen.set(startFenOf(game.pgn));   // Stellungspartie (FEN-Kopf): Brett und Legalität ab dort
     this.flipped.set(game.ownerSide === 'black');
 
     if (!game.scanId) {
