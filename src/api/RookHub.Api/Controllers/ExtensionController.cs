@@ -578,9 +578,16 @@ public class ExtensionController : BaseApiController
                 var continues = dto.ChapterKey is { Length: > 0 }
                     && string.Equals(dto.ChapterKey, session.LastChapterKey, StringComparison.Ordinal)
                     && session.CurrentChapter > 0;
+                // Erster Chunk einer Sitzung, die der Server nicht kennt — nach einem API-Neustart mitten im Import
+                // ist der Versatz im Arbeitsspeicher weg. Träfe der Chunk mit Versatz 0 auf schon importierte
+                // Kapitel, setzt er hinter dem Buch fort (ChessableImportService.ResumeChapterOffsetAsync). Nicht bei
+                // einem Teil-Import: dort bekommt eine kollidierende neue Linie ohnehin einen freien Platz.
+                var previousMaxChapter = session.ChapterOffset;
+                if (!continues && session.ChaptersDone == 0 && previousMaxChapter == 0 && target == "book" && !dto.Partial)
+                    previousMaxChapter = await _chessableImport.ResumeChapterOffsetAsync(userId, dto.Bid, parsed.Pgn!, ct);
                 var chapterShift = continues
                     ? ChessableRoundOffset.SameChapterOffset(session.CurrentChapter, parsed.Pgn)
-                    : ChessableRoundOffset.NextOffset(session.ChapterOffset, parsed.Pgn);
+                    : ChessableRoundOffset.NextOffset(previousMaxChapter, parsed.Pgn);
                 var shifted = ChessableRoundOffset.Shift(parsed.Pgn!, chapterShift,
                     continues ? ChessableRoundOffset.NextLineOffset(session.MaxLineInChapter, parsed.Pgn) : 0);
                 var res = await _chessableImport.AppendBrowserChunkAsync(

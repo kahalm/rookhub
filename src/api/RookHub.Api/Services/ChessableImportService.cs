@@ -1232,6 +1232,41 @@ public class ChessableImportService : ICourseReimporter
     }
 
     /// <summary>
+    /// Kapitel-Versatz für den ERSTEN Chunk einer Sitzung, die der Server nicht kennt (Codereview 2026-09-29, A3-006).
+    /// Der Versatz lebt nur im Arbeitsspeicher (<see cref="ChessableIngestSessionStore"/>). Startet die API mitten im
+    /// kapitelweisen Import neu (Watchtower nachts, Deploy), legt der nächste Chunk derselben Sitzung eine NEUE mit
+    /// Versatz 0 an: er trägt wieder „002.xxx" und trifft auf die LineIds der schon importierten Kapitel — unbekannte oid,
+    /// kein Teil-Import, also fiel jede dieser Linien auf „übersprungen", und die restlichen Kapitel fehlten still.
+    /// <para>Liefert die höchste Kapitelnummer des Buchs, wenn der Chunk mit Versatz 0 auf belegte LineIds träfe UND
+    /// keine seiner oids im Buch vorkommt: dann ist er keine Wiederholung schon importierter Linien, sondern neuer
+    /// Inhalt, und mit Versatz 0 ginge er verloren. Sonst 0 (bisheriges Verhalten) — ein erneutes Holen desselben Kurses
+    /// trägt bekannte oids und behält seine Nummern. Ohne oids lässt sich das nicht unterscheiden: dann auch 0.</para>
+    /// </summary>
+    public async Task<int> ResumeChapterOffsetAsync(int userId, string bid, string chunkPgn, CancellationToken ct = default)
+    {
+        var fileName = $"chessable-u{userId}-{bid}.pgn";
+        var parsed = PgnImportService.ParsePgn(fileName, chunkPgn, keepCommentOnlyAsInfo: true).Puzzles;
+        var oids = parsed.Where(p => !string.IsNullOrEmpty(p.ChessableOid)).Select(p => p.ChessableOid!)
+            .Distinct(StringComparer.Ordinal).ToList();
+        if (oids.Count == 0) return 0;
+        if (await _db.BookPuzzles.AnyAsync(bp => bp.BookFileName == fileName && bp.ChessableOid != null
+                && oids.Contains(bp.ChessableOid), ct))
+            return 0;
+        var lineIds = parsed.Select(p => p.LineId).Distinct(StringComparer.Ordinal).ToList();
+        if (!await _db.BookPuzzles.AnyAsync(bp => bp.BookFileName == fileName && lineIds.Contains(bp.LineId), ct))
+            return 0;
+
+        var rounds = await _db.BookPuzzles.Where(bp => bp.BookFileName == fileName).Select(bp => bp.Round).ToListAsync(ct);
+        var maxChapter = rounds.Count == 0 ? 0 : rounds.Max(ChessableRoundOffset.ChapterOf);
+        if (maxChapter > 0)
+            using (LogContext.PushProperty("LogTags", "import,chessable,browser"))
+                _logger.LogInformation(
+                    "Browser-Import: unbekannte Sitzung trifft auf belegte Kapitelnummern — setzt hinter Kapitel {MaxChapter} fort (User {UserId}, bid {Bid})",
+                    maxChapter, userId, bid);
+        return maxChapter;
+    }
+
+    /// <summary>
     /// Schritt 2: einen Kapitel-Chunk anhängen. Geht denselben Weg wie der Live-Append (dedupliziert,
     /// je (User, bid) serialisiert) und schreibt die Zähler des Import-Datensatzes fort, damit die
     /// Warteschlangen-Anzeige mitwächst.

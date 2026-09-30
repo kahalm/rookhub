@@ -390,6 +390,14 @@ veraltet, laeuft die ZUSAMMENGEFUEHRTE Quelle durch den Import — die Version w
 Linien der Quelle die aktuelle Aufbereitung haben. Bestehende Buecher mit abgeschnittener Quelle heilt erst ein
 vollstaendiges „Kurs holen" (Daten-Nacharbeit).
 
+**Nach einem API-Neustart mitten im Import geht der Kapitel-Versatz nicht verloren (Codereview 2026-09-29, A3-006).**
+Der Versatz lebt nur im `ChessableIngestSessionStore` (Arbeitsspeicher). Der erste Chunk einer Sitzung, die der Server
+nicht kennt, fragt deshalb `ChessableImportService.ResumeChapterOffsetAsync`: traeft er mit Versatz 0 auf belegte
+LineIds UND keine seiner oids steht im Buch, setzt er hinter der hoechsten Kapitelnummer des Buchs fort — vorher fiel
+jede seiner Linien auf „uebersprungen" (unbekannte oid, kein Teil-Import), und alle folgenden Kapitel fehlten still.
+Bekannte oids (erneutes Holen) behalten ihre Nummern, ein Teil-Import (`partial`) ist ausgenommen (dort bekommt eine
+kollidierende neue Linie ohnehin einen freien Platz). Der alte Import-Datensatz schliesst weiter der Watchdog.
+
 **Ein Showstopper steht AM EINTRAG, nicht als Zahl im Banner (0.484.4).** `StaleContentRule` ist die
 EINE Regel (`Refetch` / `Cache` / `Local` / `Manual`, seit 0.509.0 vier Faelle) fuer den Reprocess-Status, den
 Reprocess-Lauf UND die Listen. `Manual` heisst: weder aus der gespeicherten Quelle aufbereitbar noch holbar — solche Eintraege

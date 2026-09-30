@@ -156,4 +156,16 @@ public class ChessableRoundOffsetTests
         Assert.Equal(12, ChessableRoundOffset.MaxLine(Pgn));
         Assert.Equal(0, ChessableRoundOffset.MaxLine(""));
     }
+
+    [Theory]
+    [InlineData("002.001", 2)]
+    [InlineData("041.017", 41)]
+    [InlineData("1", 0)]                    // Altbestand ohne Kapitel
+    [InlineData("chessable-u5-1.pgn:12345", 0)]
+    [InlineData("", 0)]
+    [InlineData(null, 0)]
+    public void ChapterOf_ReadsTheChapterOfAStoredRound(string? round, int chapter)
+    {
+        Assert.Equal(chapter, ChessableRoundOffset.ChapterOf(round));
+    }
 }

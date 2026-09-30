@@ -41,6 +41,10 @@ public class ExtensionControllerTests : IDisposable
         private const string Pgn = "[Event \"Test Book\"]\n[Round \"002.001\"]\n[White \"Line\"]\n[Result \"*\"]\n"
             + "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n"
             + "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *\n";
+        /// <summary>Optional: PGN je Parse-Aufruf (1-basiert) statt der festen Linie.</summary>
+        public Func<int, string>? PgnFor;
+        /// <summary>Dieselbe Linie mit Chessable-oid — so, wie piratechess seit v1.29.0 jede Linie liefert.</summary>
+        public static string WithOid(string oid) => Pgn.Replace("[SetUp", $"[ChessableOid \"{oid}\"]\n[SetUp");
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -56,7 +60,7 @@ public class ExtensionControllerTests : IDisposable
                 throw new HttpRequestException("Connection refused");
             Calls++;
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
-            var json = System.Text.Json.JsonSerializer.Serialize(new { pgn = Pgn, name = "Course", lineCount = 1 });
+            var json = System.Text.Json.JsonSerializer.Serialize(new { pgn = PgnFor?.Invoke(Calls) ?? Pgn, name = "Course", lineCount = 1 });
             return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
             {
                 Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
@@ -537,6 +541,60 @@ public class ExtensionControllerTests : IDisposable
         var source = (await _db.Books.Include(b => b.Source).SingleAsync()).Source.SourcePgn;
         var rounds = PgnParser.SplitGames(source!).Select(g => g.Headers["Round"]).ToList();
         Assert.Equal(new[] { "002.001", "003.001", "004.001" }, rounds);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_AfterAnApiRestart_TheNextChapterContinuesInsteadOfBeingSkipped()
+    {
+        // Codereview W2 A3-006: der Kapitel-Versatz lebt nur im Arbeitsspeicher. Nach einem Neustart mitten im Import
+        // begann der nächste Chunk wieder bei 002 — seine Linie traf auf die LineId von Kapitel 1, die oid war im Buch
+        // unbekannt, kein Teil-Import: „übersprungen", und alle folgenden Kapitel fehlten still.
+        SetUser(7, scope: "extension");
+        _parse.PgnFor = call => ParseStub.WithOid($"90{call:00}");
+        for (var i = 0; i < 2; i++)
+            await _controller.ChessableIngestChunk(
+                new ChessableIngestChunkRequest("sess-restart", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        _ingestSessions.Discard(7, "sess-restart");   // Neustart: die Sitzung im Arbeitsspeicher ist weg
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-restart", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        var rows = await _db.BookPuzzles.OrderBy(p => p.Round).ToListAsync();
+        Assert.Equal(new[] { "002.001", "003.001", "004.001" }, rows.Select(p => p.Round));
+        Assert.Equal(new[] { "9001", "9002", "9003" }, rows.Select(p => p.ChessableOid));
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_NewSessionWithKnownLines_KeepsTheirChapterNumbers()
+    {
+        // Gegenprobe: wer denselben Kurs erneut holt, schickt bekannte oids — dann bleibt der Versatz bei 0, sonst
+        // wanderte jeder erneute Abruf den ganzen Kurs hinter das Buch.
+        SetUser(7, scope: "extension");
+        _parse.PgnFor = _ => ParseStub.WithOid("9101");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-first", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-again", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+
+        var row = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("002.001", row.Round);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_PartialImport_KeepsFindingAFreeSlotInTheChapter()
+    {
+        // Ein Teil-Import („nur neue Linien") nummeriert nur die gesendeten Linien; eine kollidierende neue Linie
+        // bekam schon immer einen freien Platz im Kapitel — daran ändert die Neustart-Regel nichts.
+        SetUser(7, scope: "extension");
+        _parse.PgnFor = call => ParseStub.WithOid($"92{call:00}");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-p1", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-p2", "424242", "book", "Course", Chapter("{\"game\":{}}"), true,
+                Partial: true), default);
+
+        var rounds = await _db.BookPuzzles.OrderBy(p => p.Round).Select(p => p.Round).ToListAsync();
+        Assert.Equal(new[] { "002.001", "002.002" }, rounds);
     }
 
     [Fact]

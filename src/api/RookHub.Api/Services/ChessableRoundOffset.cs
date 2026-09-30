@@ -120,6 +120,18 @@ public static class ChessableRoundOffset
         return min;
     }
 
+    private static readonly Regex StoredRoundRegex = new(@"^(\d+)\.(\d+)$", RegexOptions.Compiled);
+
+    /// <summary>Kapitelnummer einer GESPEICHERTEN Runde (<c>BookPuzzle.Round</c> = „CCC.SSS"), <c>0</c> für jede andere
+    /// Form (Altbestand „1", getReview-Füller mit der oid).</summary>
+    public static int ChapterOf(string? round)
+    {
+        var m = StoredRoundRegex.Match(round ?? string.Empty);
+        return m.Success && int.TryParse(m.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var chapter)
+            ? chapter
+            : 0;
+    }
+
     /// <summary>
     /// Höchste Kapitelnummer im PGN, <c>0</c> ohne Treffer. Der nächste Chunk setzt darauf auf — bewusst
     /// aus dem ERGEBNIS gelesen und nicht mitgezählt: welche Nummer piratechess vergibt (der Bestand
