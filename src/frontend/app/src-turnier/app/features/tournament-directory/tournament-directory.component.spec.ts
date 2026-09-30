@@ -7,6 +7,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
+import { AuthService } from '@rh/core/auth.service';
 import { GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
 import { DirectoryEntry, SearchProfile } from './tournament-directory.model';
@@ -56,12 +57,20 @@ describe('TournamentDirectoryComponent', () => {
   let http: HttpTestingController;
   let navigate: jasmine.Spy;
 
+  /** Die angemeldete Kennung der Tests — die gemerkte Ansicht liegt je Nutzer. */
+  const ME = 1;
+  const LOCAL_KEY = TournamentDirectoryComponent.viewKeyFor(ME)!;
+
   // Die Ansicht ueberlebt einen Seitenwechsel im localStorage — ohne Aufraeumen faerbte der
   // Zustand eines Tests auf den naechsten ab.
-  beforeEach(() => localStorage.removeItem(TournamentDirectoryComponent.ViewKey));
-  afterEach(() => localStorage.removeItem(TournamentDirectoryComponent.ViewKey));
+  const clearViewKeys = () => {
+    for (const k of Object.keys(localStorage))
+      if (k.startsWith(TournamentDirectoryComponent.ViewKey)) localStorage.removeItem(k);
+  };
+  beforeEach(clearViewKeys);
+  afterEach(clearViewKeys);
 
-  async function setup(queryParams: Record<string, string> = {}) {
+  async function setup(queryParams: Record<string, string> = {}, user: { id: number; impersonating?: boolean } = { id: ME }) {
     await TestBed.configureTestingModule({
       imports: [TournamentDirectoryComponent],
       providers: [
@@ -73,6 +82,12 @@ describe('TournamentDirectoryComponent', () => {
         },
       ],
     }).compileComponents();
+
+    const auth = TestBed.inject(AuthService);
+    spyOnProperty(auth, 'currentUser', 'get').and.returnValue({
+      token: 't', username: `u${user.id}`, userId: user.id, isAdmin: false, impersonating: !!user.impersonating,
+    });
+    spyOnProperty(auth, 'isImpersonating', 'get').and.returnValue(!!user.impersonating);
 
     fixture = TestBed.createComponent(TournamentDirectoryComponent);
     component = fixture.componentInstance;
@@ -194,7 +209,7 @@ describe('TournamentDirectoryComponent', () => {
 
   it('vergisst ein gelöschtes Suchprofil und nimmt das erste, das es noch gibt', async () => {
     // Sonst suchte die Seite weiter um Koordinaten, zu denen es kein Profil mehr gibt.
-    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({ profileId: 99 }));
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({ profileId: 99 }));
     await setup();
     flushProfiles([profile(3, 'Zuhause')]);
     flushList([]);
@@ -206,7 +221,7 @@ describe('TournamentDirectoryComponent', () => {
   it('behält „kein Umkreis" als getroffene Wahl bei', async () => {
     // Null ist hier etwas anderes als „noch nichts gewählt" — sonst schnappt die Vorauswahl
     // bei jeder Rückkehr wieder zu.
-    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({ profileId: null }));
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({ profileId: null }));
     await setup();
     flushProfiles([profile(3, 'Zuhause')]);
     const req = flushList([]);
@@ -629,7 +644,7 @@ describe('TournamentDirectoryComponent', () => {
    * Liste unerklaerlich leer halten — und der Server wiese ihn mit 400 ab.
    */
   it('verwirft unbekannte Filterwerte aus der gemerkten Ansicht', async () => {
-    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({
       tab: 'list', ageGroups: ['U12', 'U13'], kinds: ['Team', 'Doubles'], genders: ['Mixed'],
     }));
 
@@ -739,6 +754,86 @@ describe('TournamentDirectoryComponent', () => {
     // Kein zweiter Ladevorgang: nichts weicht ab, also nichts nachzuziehen.
     const list = flushList([]);
     expect(list.request.params.has('from')).toBeTrue();
+    http.verify();
+  });
+
+  // ----- Gemerkte Ansicht gehoert dem NUTZER (W3 F6-002) ----------------------
+
+  /**
+   * Geteiltes Geraet: A stellt einen Ort ein und meldet sich ab, B meldet sich an. B bekam vorher
+   * A's Umkreis samt Koordinaten angezeigt — und schob ihn in SEIN Konto.
+   */
+  it('zeigt dem naechsten Nutzer desselben Geraets nicht den Ort des vorigen', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    component.choosePlace({ label: '6130 Schwaz (AT)', country: 'AT', postalCode: '6130', lat: 47.35, lon: 11.71 });
+    flushList([]);
+    expect(component.placeLabel).toBe('6130 Schwaz (AT)');
+
+    TestBed.resetTestingModule();
+    await setup({}, { id: 2 });
+    flushProfiles([]);
+    const req = flushList([]);
+
+    expect(component.placeLabel).toBe('');
+    expect(component.filter.lat).toBeNull();
+    expect(req.request.params.has('lat')).toBeFalse();
+    http.verify();
+  });
+
+  /** Ein alter, nutzerloser Eintrag gehoert irgendwem — er wird weder gelesen noch liegen gelassen. */
+  it('liest den alten nutzerlosen Schluessel nicht mehr und entfernt ihn', async () => {
+    localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify({ placeLabel: 'Fremd', lat: 47.35, lon: 11.71, radiusKm: 25 }));
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    expect(component.placeLabel).toBe('');
+    expect(req.request.params.has('lat')).toBeFalse();
+    expect(localStorage.getItem(TournamentDirectoryComponent.ViewKey)).toBeNull();
+    http.verify();
+  });
+
+  /** Gegenprobe: ohne Einstieg-als-Nutzer geht der Zustand gedrosselt zum Server. */
+  it('schreibt den Zustand gedrosselt zum Server', async () => {
+    // Die Uhr VOR dem Aufbau: schon der Start (204 → hinaufschieben) stellt den Drossel-Timer. Und
+    // mit Datum: debounceTime misst die Ruhezeit ueber scheduler.now(), nicht ueber den Timer allein.
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    try {
+      await setup();
+      flushProfiles([]);
+      flushList([]);
+      jasmine.clock().tick(1300);
+      const put = http.expectOne(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+      expect(put.request.body).toEqual(jasmine.objectContaining({ tab: component.tab, rangePreset: 'quarter' }));
+      put.flush(null, { status: 204, statusText: 'No Content' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
+  /**
+   * Einstieg als Nutzer: der Admin sieht sich nur um — nichts davon (auch nicht die Vorgabe des
+   * ersten Aufbaus) darf im Konto des Nutzers landen, der dort noch nichts gespeichert hat.
+   */
+  it('schreibt beim Einstieg als Nutzer nichts in das fremde Konto', async () => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    try {
+      await setup({}, { id: 7, impersonating: true });
+      flushProfiles([]);
+      flushList([]);
+      component.choosePlace({ label: 'Wien (AT)', country: 'AT', postalCode: null, lat: 48.21, lon: 16.37 });
+      flushList([]);
+      jasmine.clock().tick(1300);
+      expect(component.placeLabel).toBe('Wien (AT)');
+      http.expectNone(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+    } finally {
+      jasmine.clock().uninstall();
+    }
     http.verify();
   });
 });

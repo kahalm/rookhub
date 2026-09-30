@@ -86,6 +86,7 @@ export class OfflineService {
     'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)
     'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
     'rookhub_puzzle_session',      // anonyme Puzzle-Sitzung
+    'rh.turnier.',                 // Turnierseite: Kalender-Filter samt Ort/Koordinaten, Verlaufs-Reiter
   ];
 
   /** Keys, die beim Abmelden gelöscht werden: Offline-Caches UND die lokalen Nutzer-Spuren. */

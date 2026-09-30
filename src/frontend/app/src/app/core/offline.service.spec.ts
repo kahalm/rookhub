@@ -99,6 +99,22 @@ describe('OfflineService', () => {
     expect(localStorage.getItem('irgendwas_anderes')).toBe('x');
   });
 
+  it('clearOnLogout räumt die gemerkten Ansichten der Turnierseite ab (Ort/Koordinaten)', () => {
+    // Die Filterleiste des Turnierkalenders trägt Ort und Standort-Koordinaten; bliebe sie liegen,
+    // sähe der nächste Nutzer desselben Geräts den Umkreis des vorigen (W3 F6-002).
+    localStorage.setItem('rh.turnier.directoryView.1', '{"lat":47.35,"lon":11.71}');
+    localStorage.setItem('rh.turnier.directoryView', '{"lat":47.35}');
+    localStorage.setItem('rh.turnier.historyView', '{"tab":"u:7"}');
+    localStorage.setItem('rh.andere.seite', 'x');
+
+    new OfflineService().clearOnLogout();
+
+    expect(localStorage.getItem('rh.turnier.directoryView.1')).toBeNull();
+    expect(localStorage.getItem('rh.turnier.directoryView')).toBeNull();
+    expect(localStorage.getItem('rh.turnier.historyView')).toBeNull();
+    expect(localStorage.getItem('rh.andere.seite')).toBe('x');
+  });
+
   it('clearAll (Profil-Knopf „Cache leeren") lässt den laufenden Endless-Lauf stehen', () => {
     // Bewusster Unterschied: „Cache leeren" soll Platz freigeben, nicht die Arbeit des ANGEMELDETEN
     // Nutzers wegwerfen.

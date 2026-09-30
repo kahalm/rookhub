@@ -23,6 +23,7 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { ViewStateService } from '@rh/core/view-state.service';
+import { AuthService } from '@rh/core/auth.service';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
@@ -90,6 +91,7 @@ export class TournamentDirectoryComponent implements OnInit {
   // keinen (NG0203) — deshalb die DestroyRef als Feld holen und explizit durchreichen.
   private readonly destroyRef = inject(DestroyRef);
   private readonly viewStates = inject(ViewStateService);
+  private readonly auth = inject(AuthService);
 
   readonly speeds: TournamentSpeed[] = ['Standard', 'Rapid', 'Blitz'];
   readonly rangePresets = DIRECTORY_RANGE_PRESETS;
@@ -133,8 +135,18 @@ export class TournamentDirectoryComponent implements OnInit {
   /**
    * Schluessel der gemerkten Ansicht. Ohne sie faellt der Weg „Turnier oeffnen → zurueck" auf die
    * Vorgabefilter zurueck — man muesste Zeitraum, Reiter, Ort und Monat jedes Mal neu einstellen.
+   *
+   * <p>Das ist nur der Stamm: gespeichert wird je NUTZER (`viewKeyFor`). Der nackte Schluessel war
+   * nutzerlos — auf einem geteilten Geraet erbte der naechste Nutzer Umkreis und Standort-Koordinaten
+   * des vorigen und schob sie beim ersten Aufruf in SEIN Konto. Ein noch liegender alter Eintrag wird
+   * beim Lesen entfernt.</p>
    */
   static readonly ViewKey = 'rh.turnier.directoryView';
+
+  /** Der geraetelokale Schluessel dieses Nutzers; ohne Anmeldung `null` (dann nichts lokal). */
+  static viewKeyFor(userId: number | null | undefined): string | null {
+    return userId == null ? null : `${TournamentDirectoryComponent.ViewKey}.${userId}`;
+  }
 
   /** Dieselbe Ansicht beim NUTZER (Server) — die Kennung muss in `ViewStateService.AllowedKeys` stehen. */
   static readonly StateKey = 'turnier.directory';
@@ -754,19 +766,33 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   private storeView(): void {
     const state = this.viewState();
+    const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
     try {
-      localStorage.setItem(TournamentDirectoryComponent.ViewKey, JSON.stringify(state));
+      if (key) localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
       // lassen — dann faengt man eben wieder bei der Vorgabe an.
     }
+    this.queuePersist(state);
+  }
+
+  /**
+   * Zum Server — ausser beim Einstieg als Nutzer: dann sieht sich ein Admin nur um, und was er an
+   * der Leiste dreht (oder die Vorgabe, die der erste Aufbau speichert), gehoert nicht in das fremde
+   * Konto. Der Nutzer saehe sonst beim naechsten Besuch einen Umkreis, den er nie eingestellt hat.
+   */
+  private queuePersist(state: Record<string, unknown>): void {
+    if (this.auth.isImpersonating) return;
     this.persist.next(state);
   }
 
   private restoreView(): void {
     let stored: Record<string, unknown> | null = null;
     try {
-      const raw = localStorage.getItem(TournamentDirectoryComponent.ViewKey);
+      // Der alte, nutzerlose Eintrag gehoert irgendwem, der hier einmal angemeldet war — weg damit.
+      localStorage.removeItem(TournamentDirectoryComponent.ViewKey);
+      const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
+      const raw = key ? localStorage.getItem(key) : null;
       stored = raw ? JSON.parse(raw) : null;
     } catch {
       stored = null;                       // unlesbar/kaputt: Vorgabe bleibt stehen
@@ -784,14 +810,15 @@ export class TournamentDirectoryComponent implements OnInit {
    *
    * <p>Hat der Server nichts, wird der lokale Zustand hinaufgeschoben: beim ersten Aufruf nach
    * dieser Aenderung steht dort noch nichts, und die bestehende Einstellung soll nicht verloren
-   * gehen.</p>
+   * gehen. Der lokale Zustand ist der DIESES Nutzers (`viewKeyFor`), und beim Einstieg als Nutzer
+   * geht nichts hinauf (`queuePersist`).</p>
    */
   private syncStoredView(): void {
     this.viewStates.get<Record<string, unknown>>(TournamentDirectoryComponent.StateKey)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(remote => {
         if (!remote) {
-          this.persist.next(this.viewState());
+          this.queuePersist(this.viewState());
           return;
         }
         if (JSON.stringify(remote) === JSON.stringify(this.viewState())) return;
