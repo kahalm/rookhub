@@ -93,7 +93,7 @@
     "reset": {
       "title": "Setel kata sandi baru",
       "passwordLabel": "Kata sandi baru",
-      "passwordHint": "Minimal 4 karakter",
+      "passwordHint": "Minimal {{min}} karakter",
       "confirmLabel": "Konfirmasi kata sandi",
       "submit": "Simpan kata sandi",
       "submitting": "Menyimpan…",

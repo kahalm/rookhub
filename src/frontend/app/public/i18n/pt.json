@@ -93,7 +93,7 @@
     "reset": {
       "title": "Definir nova senha",
       "passwordLabel": "Nova senha",
-      "passwordHint": "Pelo menos 4 caracteres",
+      "passwordHint": "Pelo menos {{min}} caracteres",
       "confirmLabel": "Confirmar senha",
       "submit": "Salvar senha",
       "submitting": "Salvando…",

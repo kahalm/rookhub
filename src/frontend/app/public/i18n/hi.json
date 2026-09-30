@@ -93,7 +93,7 @@
     "reset": {
       "title": "नया पासवर्ड सेट करें",
       "passwordLabel": "नया पासवर्ड",
-      "passwordHint": "कम से कम 4 अक्षर",
+      "passwordHint": "कम से कम {{min}} अक्षर",
       "confirmLabel": "पासवर्ड की पुष्टि करें",
       "submit": "पासवर्ड सहेजें",
       "submitting": "सहेजा जा रहा है…",

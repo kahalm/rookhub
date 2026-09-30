@@ -93,7 +93,7 @@
     "reset": {
       "title": "Nastavit nové heslo",
       "passwordLabel": "Nové heslo",
-      "passwordHint": "Alespoň 4 znaky",
+      "passwordHint": "Alespoň {{min}} znaků",
       "confirmLabel": "Potvrďte heslo",
       "submit": "Uložit heslo",
       "submitting": "Ukládání…",

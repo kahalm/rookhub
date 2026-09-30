@@ -93,7 +93,7 @@
     "reset": {
       "title": "新しいパスワードを設定",
       "passwordLabel": "新しいパスワード",
-      "passwordHint": "4文字以上",
+      "passwordHint": "{{min}}文字以上",
       "confirmLabel": "パスワードの確認",
       "submit": "パスワードを保存",
       "submitting": "保存中…",

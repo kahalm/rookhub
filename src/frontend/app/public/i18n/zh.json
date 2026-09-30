@@ -93,7 +93,7 @@
     "reset": {
       "title": "设置新密码",
       "passwordLabel": "新密码",
-      "passwordHint": "至少 4 个字符",
+      "passwordHint": "至少 {{min}} 个字符",
       "confirmLabel": "确认密码",
       "submit": "保存密码",
       "submitting": "保存中…",

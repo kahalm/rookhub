@@ -93,7 +93,7 @@
     "reset": {
       "title": "تعيين كلمة مرور جديدة",
       "passwordLabel": "كلمة المرور الجديدة",
-      "passwordHint": "4 أحرف على الأقل",
+      "passwordHint": "{{min}} أحرف على الأقل",
       "confirmLabel": "تأكيد كلمة المرور",
       "submit": "حفظ كلمة المرور",
       "submitting": "جارٍ الحفظ…",

@@ -161,12 +161,13 @@
     "reset": {
       "title": "Új jelszó beállítása",
       "passwordLabel": "Új jelszó",
-      "passwordHint": "Legalább 4 karakter",
+      "passwordHint": "Legalább {{min}} karakter",
       "confirmLabel": "Jelszó megerősítése",
       "submit": "Jelszó mentése",
       "submitting": "Mentés…",
       "success": "A jelszava megváltozott. Most már bejelentkezhet.",
       "failed": "A jelszó visszaállítása nem sikerült.",
+      "expired": "Ez a hivatkozás lejárt, vagy már felhasználták. Kérjen újat – egy óráig érvényes.",
       "mismatch": "A jelszavak nem egyeznek.",
       "missingToken": "Ez a hivatkozás érvénytelen vagy hiányos. Kérjen új hivatkozást.",
       "requestNew": "Új hivatkozás kérése"

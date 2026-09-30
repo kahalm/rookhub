@@ -320,12 +320,13 @@
     "reset": {
       "title": "Postavi novu lozinku",
       "passwordLabel": "Nova lozinka",
-      "passwordHint": "Najmanje 4 znaka",
+      "passwordHint": "Najmanje {{min}} znakova",
       "confirmLabel": "Potvrdi lozinku",
       "submit": "Spremi lozinku",
       "submitting": "Spremanje…",
       "success": "Tvoja lozinka je promijenjena. Sada se možeš prijaviti.",
       "failed": "Lozinku nije moguće ponovno postaviti.",
+      "expired": "Ova je poveznica istekla ili je već iskorištena. Zatraži novu – vrijedi jedan sat.",
       "mismatch": "Lozinke se ne podudaraju.",
       "missingToken": "Ova poveznica je nevažeća ili nepotpuna. Zatraži novu poveznicu.",
       "requestNew": "Zatraži novu poveznicu"

@@ -93,7 +93,7 @@
     "reset": {
       "title": "Встановити новий пароль",
       "passwordLabel": "Новий пароль",
-      "passwordHint": "Щонайменше 4 символи",
+      "passwordHint": "Мінімум {{min}} символів",
       "confirmLabel": "Підтвердьте пароль",
       "submit": "Зберегти пароль",
       "submitting": "Збереження…",

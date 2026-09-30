@@ -93,7 +93,7 @@
     "reset": {
       "title": "Ustaw nowe hasło",
       "passwordLabel": "Nowe hasło",
-      "passwordHint": "Co najmniej 4 znaki",
+      "passwordHint": "Co najmniej {{min}} znaków",
       "confirmLabel": "Potwierdź hasło",
       "submit": "Zapisz hasło",
       "submitting": "Zapisywanie…",

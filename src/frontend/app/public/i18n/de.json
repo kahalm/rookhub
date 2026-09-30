@@ -320,12 +320,13 @@
     "reset": {
       "title": "Neues Passwort setzen",
       "passwordLabel": "Neues Passwort",
-      "passwordHint": "Mindestens 4 Zeichen",
+      "passwordHint": "Mindestens {{min}} Zeichen",
       "confirmLabel": "Passwort bestätigen",
       "submit": "Passwort speichern",
       "submitting": "Speichern…",
       "success": "Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.",
       "failed": "Passwort konnte nicht zurückgesetzt werden.",
+      "expired": "Dieser Link ist abgelaufen oder wurde schon benutzt. Fordere einen neuen an – er gilt eine Stunde.",
       "mismatch": "Die Passwörter stimmen nicht überein.",
       "missingToken": "Dieser Link ist ungültig oder unvollständig. Bitte fordere einen neuen Link an.",
       "requestNew": "Neuen Link anfordern"

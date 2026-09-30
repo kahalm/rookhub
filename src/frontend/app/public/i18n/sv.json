@@ -93,7 +93,7 @@
     "reset": {
       "title": "Ange nytt lösenord",
       "passwordLabel": "Nytt lösenord",
-      "passwordHint": "Minst 4 tecken",
+      "passwordHint": "Minst {{min}} tecken",
       "confirmLabel": "Bekräfta lösenord",
       "submit": "Spara lösenord",
       "submitting": "Sparar…",

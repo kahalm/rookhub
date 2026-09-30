@@ -93,7 +93,7 @@
     "reset": {
       "title": "새 비밀번호 설정",
       "passwordLabel": "새 비밀번호",
-      "passwordHint": "최소 4자",
+      "passwordHint": "{{min}}자 이상",
       "confirmLabel": "비밀번호 확인",
       "submit": "비밀번호 저장",
       "submitting": "저장 중…",

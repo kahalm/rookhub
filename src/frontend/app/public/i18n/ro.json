@@ -93,7 +93,7 @@
     "reset": {
       "title": "Setează o parolă nouă",
       "passwordLabel": "Parolă nouă",
-      "passwordHint": "Cel puțin 4 caractere",
+      "passwordHint": "Cel puțin {{min}} caractere",
       "confirmLabel": "Confirmă parola",
       "submit": "Salvează parola",
       "submitting": "Se salvează…",

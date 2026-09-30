@@ -93,7 +93,7 @@
     "reset": {
       "title": "Nieuw wachtwoord instellen",
       "passwordLabel": "Nieuw wachtwoord",
-      "passwordHint": "Minstens 4 tekens",
+      "passwordHint": "Minimaal {{min}} tekens",
       "confirmLabel": "Wachtwoord bevestigen",
       "submit": "Wachtwoord opslaan",
       "submitting": "Opslaan…",

@@ -93,7 +93,7 @@
     "reset": {
       "title": "تعیین رمز عبور جدید",
       "passwordLabel": "رمز عبور جدید",
-      "passwordHint": "حداقل ۴ نویسه",
+      "passwordHint": "حداقل {{min}} کاراکتر",
       "confirmLabel": "تأیید رمز عبور",
       "submit": "ذخیره رمز عبور",
       "submitting": "در حال ذخیره…",

@@ -93,7 +93,7 @@
     "reset": {
       "title": "Установить новый пароль",
       "passwordLabel": "Новый пароль",
-      "passwordHint": "Не менее 4 символов",
+      "passwordHint": "Не менее {{min}} символов",
       "confirmLabel": "Подтвердите пароль",
       "submit": "Сохранить пароль",
       "submitting": "Сохранение…",

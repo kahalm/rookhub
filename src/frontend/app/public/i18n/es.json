@@ -93,7 +93,7 @@
     "reset": {
       "title": "Establecer nueva contraseña",
       "passwordLabel": "Nueva contraseña",
-      "passwordHint": "Al menos 4 caracteres",
+      "passwordHint": "Al menos {{min}} caracteres",
       "confirmLabel": "Confirmar contraseña",
       "submit": "Guardar contraseña",
       "submitting": "Guardando…",

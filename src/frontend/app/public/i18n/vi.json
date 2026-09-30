@@ -93,7 +93,7 @@
     "reset": {
       "title": "Đặt mật khẩu mới",
       "passwordLabel": "Mật khẩu mới",
-      "passwordHint": "Ít nhất 4 ký tự",
+      "passwordHint": "Ít nhất {{min}} ký tự",
       "confirmLabel": "Xác nhận mật khẩu",
       "submit": "Lưu mật khẩu",
       "submitting": "Đang lưu…",

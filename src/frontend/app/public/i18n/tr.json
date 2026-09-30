@@ -93,7 +93,7 @@
     "reset": {
       "title": "Yeni şifre belirle",
       "passwordLabel": "Yeni şifre",
-      "passwordHint": "En az 4 karakter",
+      "passwordHint": "En az {{min}} karakter",
       "confirmLabel": "Şifreyi onayla",
       "submit": "Şifreyi kaydet",
       "submitting": "Kaydediliyor…",

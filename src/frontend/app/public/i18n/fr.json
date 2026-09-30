@@ -93,7 +93,7 @@
     "reset": {
       "title": "Définir un nouveau mot de passe",
       "passwordLabel": "Nouveau mot de passe",
-      "passwordHint": "Au moins 4 caractères",
+      "passwordHint": "Au moins {{min}} caractères",
       "confirmLabel": "Confirmer le mot de passe",
       "submit": "Enregistrer le mot de passe",
       "submitting": "Enregistrement…",

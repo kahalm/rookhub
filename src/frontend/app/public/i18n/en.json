@@ -320,12 +320,13 @@
     "reset": {
       "title": "Set new password",
       "passwordLabel": "New password",
-      "passwordHint": "At least 4 characters",
+      "passwordHint": "At least {{min}} characters",
       "confirmLabel": "Confirm password",
       "submit": "Save password",
       "submitting": "Saving…",
       "success": "Your password has been changed. You can now log in.",
       "failed": "Could not reset password.",
+      "expired": "This link has expired or has already been used. Request a new one – it is valid for one hour.",
       "mismatch": "The passwords do not match.",
       "missingToken": "This link is invalid or incomplete. Please request a new reset link.",
       "requestNew": "Request new link"
