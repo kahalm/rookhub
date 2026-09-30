@@ -9,8 +9,8 @@ import { OPERATOR } from '../../../environments/operator';
 export interface LegalSite {
   /** Kontakt fuer Datenschutzfragen (Datenschutzerklaerung). */
   contactEmail: string;
-  /** Impressum verlinken? Ohne nennt die Datenschutzerklaerung den Verantwortlichen mit Name und Anschrift
-   *  (aus `OPERATOR`) und der Kontaktadresse — Pflichtangabe nach Art. 13 Abs. 1 lit. a DSGVO. */
+  /** Impressum verlinken? Ohne nennt die Datenschutzerklaerung beim Verantwortlichen direkt die Kontaktadresse
+   *  dieser Oberflaeche (kein Name/keine Anschrift — Entscheidung des Betreibers, 2026-09-30). */
   imprint: boolean;
   /** Welche Oberflaeche: waehlt in der Datenschutzerklaerung Einleitung und Zusatzabschnitte. Fehlt = RookHub
    *  (auch die Turnierseite). KidHub bekommt eine Fassung in einfacher Sprache mit Elternhinweis (Codereview F7-003),

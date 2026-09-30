@@ -280,10 +280,8 @@
     },
     "impressum": {
       "title": "Impressum",
-      "operatorTitle": "Dienstverlener",
       "contactTitle": "Contact",
       "contact": "E-mail",
-      "disclaimer": "Let op: de gegevens van de dienstverlener zijn plaatsaanduidingen en moeten vóór publicatie worden vervangen door de werkelijke gegevens. Deze pagina is een concept en vormt geen juridisch advies.",
       "back": "Terug naar inloggen"
     }
   },

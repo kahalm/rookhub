@@ -6,10 +6,10 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { OPERATOR } from '../../../environments/operator';
 
 /**
- * Impressum (AT: §5 ECG / §25 MedienG). Route: /impressum
- * Betreiber-Identität (Name/Anschrift/UID/E-Mail) kommt aus der sprachneutralen
- * Config `environments/operator.ts` — PLATZHALTER, vor dem Go-live ausfüllen.
- * Die i18n-Dateien liefern nur noch die Beschriftungen.
+ * Impressum. Route: /impressum
+ * Zeigt nur den Kontakt (E-Mail aus der sprachneutralen Config `environments/operator.ts`) —
+ * kein Abschnitt „Diensteanbieter" mit Name/Anschrift (Entscheidung des Betreibers, 2026-09-30).
+ * Die i18n-Dateien liefern die Beschriftungen.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -21,20 +21,11 @@ import { OPERATOR } from '../../../environments/operator';
       <mat-card>
         <mat-card-header><mat-card-title>{{ 'legal.impressum.title' | translate }}</mat-card-title></mat-card-header>
         <mat-card-content>
-          <h4>{{ 'legal.impressum.operatorTitle' | translate }}</h4>
-          <p>
-            {{ operator.name }}<br>
-            {{ operator.address }}
-            @if (operator.vatId) { <br>{{ operator.vatId }} }
-          </p>
-
           <h4>{{ 'legal.impressum.contactTitle' | translate }}</h4>
           <p>
             {{ 'legal.impressum.contact' | translate }}:
             <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
           </p>
-
-          <p class="muted">{{ 'legal.impressum.disclaimer' | translate }}</p>
 
           <p class="back"><a routerLink="/login">{{ 'legal.impressum.back' | translate }}</a></p>
         </mat-card-content>

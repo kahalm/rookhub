@@ -35,16 +35,19 @@ describe('PrivacyComponent', () => {
     expect(hrefs(el)).toContain('/login');
   });
 
-  it('KidHub: einfache Sprache mit Elternhinweis, Verantwortlicher mit Name und Anschrift, Ruecklink zur Startseite (F7-003)', () => {
+  it('KidHub: einfache Sprache mit Elternhinweis, Verantwortlicher nur mit Kontaktadresse, Ruecklink zur Startseite (F7-003)', () => {
     const el = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
     const text = el.textContent ?? '';
     expect(text).toContain('legal.privacy.kidIntro');
     expect(text).toContain('legal.privacy.kidParents');
     expect(text).toContain('legal.privacy.kidDevice');
     expect(text).not.toContain('legal.privacy.intro');
-    // Ohne Impressum MUSS die Erklaerung selbst Name und Anschrift nennen (Art. 13 Abs. 1 lit. a DSGVO).
-    expect(text).toContain(OPERATOR.name);
-    expect(text).toContain(OPERATOR.address);
+    // Ohne Impressum nennt die Erklaerung beim Verantwortlichen die Kontaktadresse der Oberflaeche — bewusst
+    // OHNE Name/Anschrift und ohne Platzhalter (Entscheidung des Betreibers, 2026-09-30).
+    expect(text).toContain('legal.privacy.controllerNamed');
+    expect(text).toContain('kidhub@oberschm.id');
+    expect(text).not.toContain('[');
+    expect(text).not.toContain('bitte eintragen');
     expect(hrefs(el)).toContain('/');
     expect(hrefs(el)).not.toContain('/login');
     expect(hrefs(el)).not.toContain('/impressum');

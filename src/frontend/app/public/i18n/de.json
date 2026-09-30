@@ -757,10 +757,8 @@
     },
     "impressum": {
       "title": "Impressum",
-      "operatorTitle": "Diensteanbieter",
       "contactTitle": "Kontakt",
       "contact": "E-Mail",
-      "disclaimer": "Hinweis: Die Angaben zum Diensteanbieter sind Platzhalter und vor Veröffentlichung durch die tatsächlichen Daten zu ersetzen. Diese Seite ist ein Entwurf und ersetzt keine Rechtsberatung.",
       "back": "Zurück zur Anmeldung"
     },
     "backHome": "Zurück zur Startseite"

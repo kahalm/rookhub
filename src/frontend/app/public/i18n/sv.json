@@ -280,10 +280,8 @@
     },
     "impressum": {
       "title": "Impressum",
-      "operatorTitle": "Tjänsteleverantör",
       "contactTitle": "Kontakt",
       "contact": "E-post",
-      "disclaimer": "Obs: tjänsteleverantörens uppgifter är platshållare och måste ersättas med faktiska uppgifter innan publicering. Den här sidan är ett utkast och utgör inte juridisk rådgivning.",
       "back": "Tillbaka till inloggning"
     }
   },

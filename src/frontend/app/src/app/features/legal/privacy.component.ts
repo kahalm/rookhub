@@ -4,7 +4,6 @@ import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LEGAL_SITE, legalBack } from './legal-site';
-import { OPERATOR } from '../../../environments/operator';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -42,10 +41,9 @@ import { OPERATOR } from '../../../environments/operator';
           @if (site.imprint) {
             <p>{{ 'legal.privacy.controller' | translate }} (<a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>).</p>
           } @else {
-            <!-- Ohne Impressum gehoeren Name und Anschrift hierher (Art. 13 Abs. 1 lit. a DSGVO); Quelle ist OPERATOR. -->
+            <!-- Ohne Impressum steht der Kontakt des Verantwortlichen hier; Name/Anschrift nennt der Betreiber
+                 bewusst nicht (Entscheidung 2026-09-30), nur die Kontaktadresse der Oberflaeche. -->
             <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
-              {{ operator.name }}<br>
-              {{ operator.address }}<br>
               <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
           }
 
@@ -130,6 +128,4 @@ export class PrivacyComponent {
   readonly site = inject(LEGAL_SITE);
   readonly kind = this.site.kind ?? 'rookhub';
   readonly back = legalBack(this.site, 'legal.privacy.back');
-  /** Verantwortlicher fuer die Fassung ohne Impressum (KidHub). */
-  readonly operator = OPERATOR;
 }

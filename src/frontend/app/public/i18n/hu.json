@@ -524,10 +524,8 @@
     },
     "impressum": {
       "title": "Impresszum",
-      "operatorTitle": "Szolgáltató",
       "contactTitle": "Kapcsolat",
       "contact": "E-mail",
-      "disclaimer": "Megjegyzés: a szolgáltatói adatok helyőrzők, amelyeket a közzététel előtt a tényleges adatokkal kell felváltani. Ez az oldal tervezet és nem minősül jogi tanácsadásnak.",
       "back": "Vissza a bejelentkezéshez"
     },
     "backHome": "Vissza a kezdőlapra"

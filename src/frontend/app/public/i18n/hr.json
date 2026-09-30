@@ -757,10 +757,8 @@
     },
     "impressum": {
       "title": "Impresum",
-      "operatorTitle": "Pružatelj usluge",
       "contactTitle": "Kontakt",
       "contact": "E-pošta",
-      "disclaimer": "Napomena: podaci o pružatelju usluge su rezervirana mjesta i moraju biti zamijenjeni stvarnim podacima prije objave. Ova stranica je nacrt i ne predstavlja pravni savjet.",
       "back": "Natrag na prijavu"
     },
     "backHome": "Natrag na početnu stranicu"

@@ -280,10 +280,8 @@
     },
     "impressum": {
       "title": "版权声明",
-      "operatorTitle": "服务提供者",
       "contactTitle": "联系方式",
       "contact": "邮箱",
-      "disclaimer": "注意：服务提供者信息为占位符，在发布前必须替换为实际数据。本页为草稿，不构成法律建议。",
       "back": "返回登录"
     }
   },

@@ -280,10 +280,8 @@
     },
     "impressum": {
       "title": "Stopka redakcyjna",
-      "operatorTitle": "Usługodawca",
       "contactTitle": "Kontakt",
       "contact": "E-mail",
-      "disclaimer": "Uwaga: dane usługodawcy są placeholderami i muszą zostać zastąpione rzeczywistymi danymi przed publikacją. Ta strona jest szkicem i nie stanowi porady prawnej.",
       "back": "Wróć do logowania"
     }
   },
