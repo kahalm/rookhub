@@ -100,8 +100,7 @@ public class SecretConfigCheckTests
 
         var log = new CapturingLogger<SecretConfigCheckTests>();
         SecretConfigCheck.LogStartupFindings(config, log);
-        var entry = Assert.Single(log.Events);
-        Assert.Equal(LogLevel.Error, entry.Level);
+        var entry = Assert.Single(log.Events, e => e.Level == LogLevel.Error);
         Assert.Equal("Jwt:Key", entry.State["ConfigKey"]);
     }
 
@@ -143,6 +142,7 @@ public class SecretConfigCheckTests
         {
             ["Jwt:Key"] = "q2Vb9xkLr0P+7s/0mZ1cT4uYw3eN8aHjKd5fGiBoQvE=",
             ["Discord:LinkSecret"] = "",
+            ["SchachBot:StatsSecret"] = "echtes-stats-secret-1234567890",
             ["Crawler:ApiKey"] = "echter-crawler-schluessel",
         });
         var log = new CapturingLogger<SecretConfigCheckTests>();
@@ -150,6 +150,23 @@ public class SecretConfigCheckTests
         SecretConfigCheck.LogStartupFindings(config, log);
 
         Assert.Empty(log.Events);
+    }
+
+    /// <summary>I2-002: ein leeres Bot-Stats-Geheimnis schaltet /api/bot/player-progress auf 503 — der Endpoint
+    /// loggt je Aufruf nichts, also muss der Start es EINMAL sagen.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void LogStartupFindings_warntEinmalBeiLeeremStatsSecret(string? secret)
+    {
+        var log = new CapturingLogger<SecretConfigCheckTests>();
+
+        SecretConfigCheck.LogStartupFindings(Config(new() { ["SchachBot:StatsSecret"] = secret }), log);
+
+        var entry = Assert.Single(log.Events);
+        Assert.Equal(LogLevel.Warning, entry.Level);
+        Assert.Equal("SchachBot:StatsSecret", entry.State["ConfigKey"]);
+        Assert.Contains("503", entry.Message);
     }
 
     [Fact]

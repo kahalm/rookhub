@@ -298,15 +298,19 @@ public class BotStatsControllerTests : IDisposable
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
+    private static string? Reason(object? body) => body?.GetType().GetProperty("reason")?.GetValue(body) as string;
+
     [Fact]
     public async Task GetPlayerProgress_UnlinkedDiscordId_ReturnsNotFound()
     {
-        // Signatur korrekt, aber kein verknüpftes Konto.
+        // Signatur korrekt, aber kein verknüpftes Konto → 404 mit Grund „not-linked" (nur DAS heißt für den
+        // Bot „nicht verknüpft").
         var controller = ValidController("99999");
 
         var result = await controller.GetPlayerProgress("99999");
 
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        var notFound = Assert.IsType<NotFoundObjectResult>(result.Result);
+        Assert.Equal(BotStatsController.NotLinkedReason, Reason(notFound.Value));
     }
 
     [Fact]
@@ -319,19 +323,26 @@ public class BotStatsControllerTests : IDisposable
 
         var result = await controller.GetPlayerProgress("12345");
 
-        Assert.IsType<NotFoundResult>(result.Result);
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, status.StatusCode);
+        Assert.Equal(BotStatsController.NotConfiguredReason, Reason(status.Value));
     }
 
-    [Fact]
-    public async Task GetPlayerProgress_NoSecretConfigured_ReturnsNotFound()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task GetPlayerProgress_NoSecretConfigured_Returns503NotConfigured(string? secret)
     {
         await CreateLinkedUserAsync("12345");
-        // Feature deaktiviert (kein Secret) → Endpoint verhält sich wie nicht vorhanden,
-        // ohne die Signatur überhaupt zu prüfen.
-        var controller = BuildController(secret: "", LegacyHeader("12345"));
+        // Feature deaktiviert (kein Secret) → 503 „not-configured", ohne die Signatur überhaupt zu prüfen.
+        // Vorher 404 wie „nicht verknüpft": der Bot schickte dann JEDEM verknüpften Abonnenten die
+        // Registrier-DM statt der Motivation und meldete ihn am Ende ab.
+        var controller = BuildController(secret, LegacyHeader("12345"));
 
         var result = await controller.GetPlayerProgress("12345");
 
-        Assert.IsType<NotFoundResult>(result.Result);
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, status.StatusCode);
+        Assert.Equal(BotStatsController.NotConfiguredReason, Reason(status.Value));
     }
 }

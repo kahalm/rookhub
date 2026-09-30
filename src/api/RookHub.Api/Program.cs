@@ -830,7 +830,8 @@ try
     app.UseForwardedHeaders();
 
     // Platzhalter-Geheimnisse einmal beim Start auf Error melden (Folgen je Art in SecretConfigCheck:
-    // eingehend geprüfte Geheimnisse schalten ihr Feature ab, mitgeschickte Schlüssel nur gemeldet).
+    // eingehend geprüfte Geheimnisse schalten ihr Feature ab, mitgeschickte Schlüssel nur gemeldet),
+    // dazu eine Warnung bei leerem SchachBot:StatsSecret (Bot-Stats antworten dann 503).
     SecretConfigCheck.LogStartupFindings(app.Configuration,
         app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
 

@@ -85,7 +85,8 @@ public static class SecretConfigCheck
         }
     }
 
-    /// <summary>Jeden Platzhalter-Fund einmal beim Start auf Error melden, samt Folge.</summary>
+    /// <summary>Jeden Platzhalter-Fund einmal beim Start auf Error melden, samt Folge; dazu eine Warnung bei
+    /// leerem <c>SchachBot:StatsSecret</c>.</summary>
     public static void LogStartupFindings(IConfiguration config, ILogger logger)
     {
         foreach (var (key, envName) in CryptoKeys)
@@ -105,5 +106,15 @@ public static class SecretConfigCheck
                 logger.LogError(
                     "Startprüfung: {ConfigKey} ist ein Platzhalter aus den Beispiel-Dateien — {Effect}",
                     key, $"{peer} nimmt ihn als gültigen Schlüssel an; in beiden Stacks einen echten Wert setzen");
+
+        // Leeres Bot-Stats-Geheimnis: /api/bot/player-progress antwortet 503 not-configured, und der Bot
+        // pausiert die Motivations-DMs. Das ist legitim (Installation ohne Bot), aber im Betrieb meist ein
+        // Konfigurationsfehler beim Neuaufsetzen (compose-Default ${SCHACH_BOT_STATS_SECRET:-}) — der
+        // Endpoint selbst loggt je Aufruf nichts, also EINMAL hier.
+        if (string.IsNullOrWhiteSpace(config["SchachBot:StatsSecret"]))
+            logger.LogWarning(
+                "Startprüfung: {ConfigKey} ist leer — {Effect}",
+                "SchachBot:StatsSecret",
+                "/api/bot/player-progress antwortet 503 not-configured, die Motivations-DMs des Schach-Bots pausieren");
     }
 }

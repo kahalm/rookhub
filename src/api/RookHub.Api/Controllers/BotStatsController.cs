@@ -12,13 +12,18 @@ namespace RookHub.Api.Controllers;
 /// Schach-Bots. Kein User-Login — authentifiziert über ein geteiltes Secret
 /// (<c>SchachBot:StatsSecret</c>, identisch zum Bot-<c>ROOKHUB_STATS_SECRET</c>) per HMAC-Signatur
 /// über die Discord-ID. Gleiches Vertrauensmuster wie der Solver-Webhook
-/// (<see cref="SchachBotWebhookService"/>), nur in der eingehenden Richtung. Secret leer → deaktiviert.
+/// (<see cref="SchachBotWebhookService"/>), nur in der eingehenden Richtung. Secret leer → deaktiviert (503).
 /// </summary>
 [ApiController]
 [Route("api/bot")]
 [AllowAnonymous]
 public class BotStatsController : ControllerBase
 {
+    /// <summary>Maschinenlesbarer Grund im 503-Body: Feature serverseitig nicht konfiguriert.</summary>
+    public const string NotConfiguredReason = "not-configured";
+    /// <summary>Maschinenlesbarer Grund im 404-Body: kein RookHub-Konto mit dieser Discord-ID verknüpft.</summary>
+    public const string NotLinkedReason = "not-linked";
+
     private readonly BotStatsService _service;
     private readonly IConfiguration _config;
     private readonly ILogger<BotStatsController> _logger;
@@ -32,7 +37,12 @@ public class BotStatsController : ControllerBase
 
     /// <summary>
     /// Fortschritt eines über die Discord-ID verknüpften Spielers.
-    /// 401 bei fehlender/falscher Signatur, 404 bei nicht-verknüpfter Discord-ID oder deaktiviertem Feature.
+    /// 401 bei fehlender/falscher Signatur, 404 <c>{ reason: "not-linked" }</c> bei nicht-verknüpfter Discord-ID,
+    /// 503 <c>{ reason: "not-configured" }</c> bei deaktiviertem Feature (Secret leer oder Platzhalter).
+    /// Zwei Statuscodes, weil es zwei verschiedene Aussagen sind: „dieser Nutzer ist nicht verknüpft" gegen
+    /// „der Server kann gerade niemanden beurteilen". Vorher war beides 404 — ein leeres Secret ließ den Bot
+    /// JEDEN verknüpften Abonnenten als unverknüpft behandeln (Registrier-DM statt Motivation, am Ende Abmeldung).
+    /// Der Bot wertet 503 schon heute als „Fortschritt nicht verfügbar" (nichts senden, später erneut).
     /// </summary>
     [HttpGet("player-progress/{discordId}")]
     [EnableRateLimiting("anonymous-puzzle")]
@@ -42,7 +52,7 @@ public class BotStatsController : ControllerBase
         // der das öffentliche Repo kennt, den Trainingsstand verknüpfter Spieler.
         var secret = SecretConfigCheck.Usable(_config["SchachBot:StatsSecret"]);
         if (secret is null)
-            return NotFound();  // Feature nicht konfiguriert → wie nicht vorhanden behandeln
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason = NotConfiguredReason });
 
         var provided = Request.Headers["X-Bot-Signature"].FirstOrDefault();
         var timestamp = Request.Headers["X-Bot-Timestamp"].FirstOrDefault();
@@ -54,7 +64,7 @@ public class BotStatsController : ControllerBase
 
         var progress = await _service.GetProgressByDiscordIdAsync(discordId);
         if (progress == null)
-            return NotFound(new { message = "No RookHub account linked to this Discord ID." });
+            return NotFound(new { reason = NotLinkedReason, message = "No RookHub account linked to this Discord ID." });
 
         return Ok(progress);
     }
