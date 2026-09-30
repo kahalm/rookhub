@@ -3,6 +3,18 @@ name: Build Android TWA (AAB)
 # Manuell ausgelöst: baut aus twa/twa-manifest{,.dev}.json einen signierten Android
 # App Bundle (AAB) + APK und lädt ihn als Artefakt hoch.
 #
+# DREI Jobs, damit der Signaturschlüssel nie neben fremdem Code liegt (Codereview W2, I1-005):
+#   build   — Toolchain + Bubblewrap (npm-Baum), baut UNSIGNIERT; keine Secrets, contents: read.
+#   sign    — nur die Build-Tools des Runner-SDKs (apksigner) und jarsigner aus dessen JDK, kein npm,
+#             keine Fremd-Action; die Secrets gibt es nur hier, contents: read.
+#   release — nur prod: hängt die signierten Dateien ans Release; contents: write, aber KEINE Secrets.
+# Der Schlüssel für direkt verteilte APKs ist nicht rotierbar — wer ihn abgreift, kann Updates
+# der installierten App signieren. Vorher lagen Keystore und Passwörter im selben Job wie
+# `npm install -g` (Transitive ohne Lockfile, Install-Skripte aktiv), zwei per beweglichem Tag
+# eingebundene Fremd-Actions und ein GITHUB_TOKEN mit contents: write.
+# Alle Actions sind per Commit-SHA festgenagelt (Kommentar = Version); beim Anheben SHA + Kommentar
+# gemeinsam ändern. Bubblewrap kommt aus twa/bubblewrap/package-lock.json (`npm ci --ignore-scripts`).
+#
 # Für die 'prod'-Variante wird die frische APK/AAB ZUSÄTZLICH an ein GitHub-Release
 # `v<APP_VERSION>` gehängt und als "latest" markiert — damit der /install-Download-Link
 # (releases/latest/download/app-release-signed.apk) immer die aktuelle App liefert.
@@ -31,11 +43,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Release-Publish (prod) braucht Schreibrechte auf Contents/Releases.
+    # Nur lesen — hier laeuft der ganze npm-Baum von Bubblewrap, also weder Secrets noch Schreibrecht.
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      key_alias: ${{ steps.manifest.outputs.key_alias }}
     steps:
-      - uses: actions/checkout@v6
+      # Kein Token in .git/config (bzw. der von checkout eingebundenen Datei) fuer die folgenden
+      # Schritte. `git ls-remote` im Tag-Guard geht anonym — das Repo ist oeffentlich.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       # ACHTUNG Reihenfolge: „Read app version" + der Guard darunter stehen BEWUSST ganz
       # vorn — vor setup-java/Android-SDK/Bubblewrap. Ein Abbruch wegen fehlendem/falschem
@@ -83,6 +102,7 @@ jobs:
           echo "Tag v$v vorhanden und zeigt auf $tag_sha (= dieser Build)."
 
       - name: Select manifest variant
+        id: manifest
         working-directory: twa
         run: |
           if [ "${{ inputs.variant }}" = "dev" ]; then
@@ -92,19 +112,21 @@ jobs:
             echo "Using prod manifest (rookhub.oberschmid.homes)"
           fi
           cat twa-manifest.json | head -20
+          # Der sign-Job hat keinen Checkout; er bekommt den Schluessel-Alias von hier.
+          echo "key_alias=$(jq -r '.signingKey.alias' twa-manifest.json)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '20'
 
       # Android SDK bereitstellen + Lizenzen akzeptieren.
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           accept-android-sdk-licenses: true
 
@@ -115,9 +137,15 @@ jobs:
         run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.1.0"
 
       # Festgenagelt: eine neue Bubblewrap-Version zieht neue Build-Tools/Plattformen nach sich (s. oben).
-      # Beim Anheben beide Zeilen gemeinsam ändern.
+      # Beim Anheben die Version in twa/bubblewrap/package.json, das Lockfile (`npm install
+      # --package-lock-only --ignore-scripts`) und die Build-Tools-Zeilen hier und im sign-Job
+      # gemeinsam ändern. `npm ci` installiert exakt den eingecheckten Baum (Integrity-Hashes),
+      # `--ignore-scripts` laesst keine Install-Skripte laufen (heute hat keins der Pakete eins).
       - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli@1.25.0
+        working-directory: twa/bubblewrap
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
 
       # Pflicht: Bubblewrap erkennt JDK/SDK NICHT automatisch (auch nicht ueber
       # JAVA_HOME/ANDROID_HOME) und fragt sonst interaktiv "Do you want Bubblewrap
@@ -145,23 +173,77 @@ jobs:
           fi
           ls "$ANDROID_SDK_ROOT/tools/bin/sdkmanager"
 
-      - name: Restore signing keystore
-        working-directory: twa
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
-
       - name: Generate Android project from manifest
         working-directory: twa
         run: bubblewrap update --skipVersionUpgrade
 
-      - name: Build signed AAB
+      # `--skipSigning`: Bubblewrap fragt keine Passwoerter ab und legt die Dateien UNSIGNIERT ab —
+      # die APK als app-release-unsigned-aligned.apk (zipalign-geprueft), das AAB unter app/build/….
+      - name: Build unsigned AAB + APK
+        working-directory: twa
+        run: |
+          bubblewrap build --skipPwaValidation --skipSigning
+          mkdir -p unsigned
+          cp app-release-unsigned-aligned.apk unsigned/app-release-unsigned-aligned.apk
+          cp app/build/outputs/bundle/release/app-release.aab unsigned/app-release-unsigned.aab
+
+      - name: Upload unsigned AAB + APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rookhub-android-${{ inputs.variant }}-unsigned
+          path: twa/unsigned/
+          if-no-files-found: error
+          retention-days: 1
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    # Nur lesen: hier liegt der Schluessel, also kein Schreibrecht und kein Checkout.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: rookhub-android-${{ inputs.variant }}-unsigned
+          path: twa
+
+      # apksigner aus dem vorinstallierten Android-SDK des Runners, dieselbe Build-Tools-Version,
+      # mit der Bubblewrap 1.25.0 signiert hat (BUILD_TOOLS_VERSION) — gleiche Signaturschemata.
+      - name: Provide apksigner (build-tools 36.1.0)
+        run: |
+          bt="$ANDROID_HOME/build-tools/36.1.0"
+          if [ ! -x "$bt/apksigner" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;36.1.0" >/dev/null
+          fi
+          test -x "$bt/apksigner"
+          echo "$bt" >> "$GITHUB_PATH"
+
+      # Dieselben Aufrufe wie bisher in Bubblewrap (apksigner sign / jarsigner mit SHA256withRSA,
+      # SHA-256), nur die Passwoerter aus der Umgebung (env:/:env) statt als Argument durch eine
+      # Shell. Der Keystore liegt ausserhalb des Arbeitsbaums und ist nach dem Schritt weg.
+      - name: Sign APK + AAB
         working-directory: twa
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: bubblewrap build --skipPwaValidation
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ needs.build.outputs.key_alias }}
+        run: |
+          ks="$RUNNER_TEMP/android.keystore"
+          trap 'rm -f "$ks"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$ks"
+          apksigner sign --ks "$ks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD \
+            --out app-release-signed.apk app-release-unsigned-aligned.apk
+          js="${JAVA_HOME:-}/bin/jarsigner"; [ -x "$js" ] || js=jarsigner
+          "$js" -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$ks" \
+            -storepass:env KEYSTORE_PASSWORD -keypass:env KEY_PASSWORD \
+            -signedjar app-release-bundle.aab app-release-unsigned.aab "$KEY_ALIAS"
+          # Zertifikat ins Log: muss dem der installierten App entsprechen (sonst kein Update).
+          apksigner verify --print-certs app-release-signed.apk
 
       - name: Upload AAB + APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rookhub-android-${{ inputs.variant }}
           path: |
@@ -174,18 +256,30 @@ jobs:
           # wenn jemand die APK installieren will.
           if-no-files-found: error
 
-      # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
-      # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.
-      - name: Publish GitHub Release with fresh APK
-        if: inputs.variant == 'prod'
-        uses: softprops/action-gh-release@v2
+  # Nur prod: frische APK/AAB an ein GitHub-Release hängen + als "latest" markieren,
+  # damit releases/latest/download/app-release-signed.apk immer die aktuelle App liefert.
+  # Einziger Job mit Schreibrecht — und ohne Secrets, ohne Checkout, ohne npm.
+  release:
+    needs: [build, sign]
+    if: inputs.variant == 'prod'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          tag_name: v${{ steps.ver.outputs.version }}
-          name: RookHub ${{ steps.ver.outputs.version }}
+          name: rookhub-android-${{ inputs.variant }}
+          path: twa
+
+      - name: Publish GitHub Release with fresh APK
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: RookHub ${{ needs.build.outputs.version }}
           make_latest: true
           fail_on_unmatched_files: true
           body: |
-            RookHub Android-App v${{ steps.ver.outputs.version }}.
+            RookHub Android-App v${{ needs.build.outputs.version }}.
 
             - `app-release-signed.apk` — Direkt-Download für /install
             - `app-release-bundle.aab` — Play-Store-Bundle

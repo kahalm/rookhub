@@ -64,6 +64,14 @@ fragt eine **Variant**-Auswahl ab:
 Artefakt im Job: `rookhub-android-prod` bzw. `rookhub-android-dev`
 (enthält `app-release-bundle.aab` + `app-release-signed.apk`).
 
+Drei Jobs, damit der Schlüssel nie neben fremdem Code liegt: `build` (Bubblewrap aus
+`twa/bubblewrap/package-lock.json` per `npm ci --ignore-scripts`, baut mit `--skipSigning`,
+keine Secrets, nur Leserecht) → `sign` (nur `apksigner`/`jarsigner` aus SDK und JDK des Runners,
+die Secrets gibt es nur hier, nur Leserecht) → `release` (nur prod, Schreibrecht, keine Secrets).
+Alle Actions sind per Commit-SHA festgenagelt. Bubblewrap anheben: Version in
+`twa/bubblewrap/package.json`, dort `npm install --package-lock-only --ignore-scripts`, und die
+Build-Tools-Version im Workflow (build- UND sign-Job) mitziehen.
+
 Benötigte **Repository-Secrets** (für beide Varianten gleich, da derselbe Keystore):
 - `ANDROID_KEYSTORE_BASE64` — `base64 -w0 android.keystore`
 - `ANDROID_KEYSTORE_PASSWORD`

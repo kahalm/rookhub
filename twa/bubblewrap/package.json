@@ -1,0 +1,8 @@
+{
+  "name": "rookhub-twa-bubblewrap",
+  "private": true,
+  "description": "Festgenagelte Bubblewrap-CLI für .github/workflows/android-twa.yml — dort per `npm ci --ignore-scripts` installiert, der ganze Baum steht in package-lock.json.",
+  "dependencies": {
+    "@bubblewrap/cli": "1.25.0"
+  }
+}

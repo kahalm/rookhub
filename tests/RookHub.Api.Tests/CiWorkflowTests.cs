@@ -28,6 +28,7 @@ public class CiWorkflowTests
     private const string Filters = ".github/filters.yml";
     private const string Docker = ".github/workflows/docker.yml";
     private const string Tests = ".github/workflows/test.yml";
+    private const string Android = ".github/workflows/android-twa.yml";
 
     /// <summary>Die Filternamen der Datei (Zeilenanfang, ohne Einrueckung, ggf. mit YAML-Anker).</summary>
     private static HashSet<string> FilterNames() =>
@@ -396,6 +397,116 @@ public class CiWorkflowTests
 
         Assert.Equal("type=raw,value=latest,enable=${{ needs.changes.outputs.release == 'true' }}", Assert.Single(latest));
         Assert.Matches(@"needs: \[changes,", block);
+    }
+
+    /// <summary>
+    /// Die Jobs von android-twa.yml, jeweils OHNE Kommentarzeilen — geprueft wird, was laeuft,
+    /// nicht was erklaert wird.
+    /// </summary>
+    private static Dictionary<string, string> AndroidJobs()
+    {
+        var text = ReadRepoFile(Android);
+        var jobs = text[text.IndexOf("\njobs:", StringComparison.Ordinal)..];
+        return Regex.Matches(jobs, @"(?ms)^  (?<name>[a-z][a-z0-9-]*):\s*$(?<body>.*?)(?=^  [a-z]|\z)")
+            .ToDictionary(
+                m => m.Groups["name"].Value,
+                m => string.Join('\n', m.Groups["body"].Value.Split('\n').Where(l => !l.TrimStart().StartsWith('#'))));
+    }
+
+    /// <summary>
+    /// Der Android-Signaturschluessel ist fuer direkt verteilte APKs nicht rotierbar: wer ihn
+    /// abgreift, signiert Updates der installierten App. Deshalb gibt es die Secrets NUR im
+    /// <c>sign</c>-Job — ohne npm, ohne Bubblewrap, ohne Checkout, ohne Fremd-Action und ohne
+    /// Schreibrecht. Vorher lagen Keystore und Passwoerter im selben Job wie
+    /// <c>npm install -g @bubblewrap/cli</c>, zwei Fremd-Actions auf beweglichen Tags und ein
+    /// GITHUB_TOKEN mit <c>contents: write</c>.
+    /// </summary>
+    [Fact]
+    public void AndroidWorkflow_OnlyTheSignJobSeesTheSigningSecrets()
+    {
+        var jobs = AndroidJobs();
+
+        Assert.Equal(["build", "release", "sign"], jobs.Keys.Order(StringComparer.Ordinal));
+        foreach (var (name, body) in jobs)
+            Assert.True(name == "sign" || !body.Contains("secrets.", StringComparison.Ordinal),
+                $"android-twa.yml: Job '{name}' greift auf Secrets zu — die gehoeren nur in den sign-Job");
+
+        var sign = jobs["sign"];
+        Assert.Contains("secrets.ANDROID_KEYSTORE_BASE64", sign);
+        Assert.Contains("secrets.ANDROID_KEYSTORE_PASSWORD", sign);
+        Assert.Contains("secrets.ANDROID_KEY_PASSWORD", sign);
+        Assert.Contains("contents: read", sign);
+        Assert.DoesNotContain("contents: write", sign);
+        Assert.DoesNotContain("npm ", sign);
+        Assert.DoesNotContain("bubblewrap", sign, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("actions/checkout", sign);
+        foreach (Match use in Regex.Matches(sign, @"uses:\s*(\S+)@"))
+            Assert.Contains(use.Groups[1].Value, new[] { "actions/download-artifact", "actions/upload-artifact" });
+        Assert.Contains("apksigner sign", sign);
+        Assert.Contains("--ks-pass env:", sign);
+        Assert.Contains("-storepass:env", sign);
+    }
+
+    /// <summary>
+    /// Schreibrecht nur dort, wo das Release entsteht — und genau dort keine Secrets. Der
+    /// Bau-Job, in dem der ganze npm-Baum laeuft, darf nur lesen.
+    /// </summary>
+    [Fact]
+    public void AndroidWorkflow_WriteAccessOnlyInTheReleaseJob()
+    {
+        var jobs = AndroidJobs();
+
+        foreach (var (name, body) in jobs)
+        {
+            Assert.Matches(@"(?m)^    permissions:\s*$", body);
+            if (body.Contains("contents: write", StringComparison.Ordinal))
+                Assert.Equal("release", name);
+        }
+        Assert.Contains("contents: read", jobs["build"]);
+        Assert.Contains("contents: write", jobs["release"]);
+        Assert.Contains("if: inputs.variant == 'prod'", jobs["release"]);
+        Assert.Matches(@"needs: \[build, sign\]", jobs["release"]);
+    }
+
+    /// <summary>
+    /// Bubblewrap baut UNSIGNIERT und kommt aus dem eingecheckten Lockfile: <c>npm ci</c> nimmt
+    /// exakt diesen Baum (Integrity-Hashes), <c>--ignore-scripts</c> laesst keine Install-Skripte
+    /// laufen. Bekommt ein Paket im Baum spaeter doch eins, faellt das hier auf, statt dass
+    /// <c>--ignore-scripts</c> es still auslaesst.
+    /// </summary>
+    [Fact]
+    public void AndroidWorkflow_BuildsUnsignedWithBubblewrapFromTheLockfile()
+    {
+        var build = AndroidJobs()["build"];
+        var lockfile = ReadRepoFile("twa/bubblewrap/package-lock.json");
+
+        Assert.Contains("npm ci --ignore-scripts", build);
+        Assert.DoesNotContain("npm install", build);
+        Assert.Contains("working-directory: twa/bubblewrap", build);
+        Assert.Contains("bubblewrap build --skipPwaValidation --skipSigning", build);
+        Assert.Contains("\"@bubblewrap/cli\": \"1.25.0\"", ReadRepoFile("twa/bubblewrap/package.json"));
+        Assert.Matches(@"""node_modules/@bubblewrap/cli"":\s*\{\s*""version"":\s*""1\.25\.0""", lockfile);
+        Assert.DoesNotContain("\"hasInstallScript\"", lockfile);
+    }
+
+    /// <summary>
+    /// Jede Action per Commit-SHA (ein Tag wie <c>@v2</c> kann umgehaengt werden, Muster
+    /// tj-actions 2025), und kein Checkout hinterlaesst das GITHUB_TOKEN fuer spaetere Schritte.
+    /// </summary>
+    [Fact]
+    public void AndroidWorkflow_PinsActionsBySha_AndDropsCheckoutCredentials()
+    {
+        var text = ReadRepoFile(Android);
+        var uses = Regex.Matches(text, @"(?m)^\s*(?:- )?uses:\s*(\S+)").Select(m => m.Groups[1].Value).ToList();
+
+        Assert.NotEmpty(uses);
+        foreach (var use in uses)
+            Assert.Matches(@"^[\w.-]+/[\w.-]+@[0-9a-f]{40}$", use);
+
+        var checkouts = Regex.Matches(text, @"(?ms)uses:\s*actions/checkout@\S+[^\n]*\n(?<with>(?:[ ]{8,}\S[^\n]*\n)*)");
+        Assert.NotEmpty(checkouts);
+        foreach (Match checkout in checkouts)
+            Assert.Contains("persist-credentials: false", checkout.Groups["with"].Value);
     }
 
     /// <summary>Ein Job-Block aus docker.yml, von seiner Zeile bis zum naechsten Job.</summary>

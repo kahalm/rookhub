@@ -6,3 +6,7 @@
 !twa-manifest.json
 !twa-manifest.dev.json
 !README.md
+# Festgenagelte Bubblewrap-CLI fuer die CI (android-twa.yml: npm ci --ignore-scripts); node_modules bleibt draussen.
+!bubblewrap/
+!bubblewrap/package.json
+!bubblewrap/package-lock.json
