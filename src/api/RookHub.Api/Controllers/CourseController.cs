@@ -399,7 +399,9 @@ public class CourseController : BaseApiController
     // Die {bookId:int}-Zwänge halten diese Routen von den literalen (access/stats/history) fern.
 
     /// <summary>Vollbild der Kurs-Detailseite: Metadaten, eigener Fortschritt, Kapitel-Verwaltungssicht
-    /// (inkl. reiner Stellungs-Kapitel). 404 wenn nicht zugänglich.</summary>
+    /// (inkl. reiner Stellungs-Kapitel). 404 wenn nicht zugänglich. Terminierte, für den Betrachter noch
+    /// gesperrte Wochen einer Kalkulations-Serie fehlen in Kapitelliste UND Zählern
+    /// (<see cref="CalcVisibility.HiddenChaptersAsync"/>; Besitzer/Admin sehen alles).</summary>
     [HttpGet("{bookId:int}")]
     public async Task<ActionResult<CourseDetailDto>> GetDetail(int bookId, CancellationToken ct,
         [FromQuery] string? lang = null)
@@ -452,7 +454,9 @@ public class CourseController : BaseApiController
         return res is null ? NotFound() : Ok(new { marked = false });
     }
 
-    /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge.</summary>
+    /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge. Eine für den
+    /// Betrachter noch gesperrte Woche einer Kalkulations-Serie liefert eine leere Liste wie ein
+    /// unbekanntes Kapitel (<see cref="CalcVisibility.HiddenChaptersAsync"/>, kein Orakel).</summary>
     [HttpGet("{bookId:int}/lines")]
     public async Task<ActionResult<List<CourseLineDto>>> GetChapterLines(int bookId, [FromQuery] string? chapter,
         CancellationToken ct)

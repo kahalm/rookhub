@@ -13,7 +13,13 @@ namespace RookHub.Api.Controllers;
 /// Verwaltung (Anlegen/Ändern/Löschen) nur durch Buch-Besitzer oder Admin (ein Mitglied darf sich
 /// selbst aus dem Verteiler austragen); die Betrachter-Liste
 /// (<c>GET {bookId}</c>) liefert nur bereits freigegebene Ausgaben. Das Sichtbarkeits-Gating der
-/// Stellungen selbst passiert in den Kalkulations-Endpoints (<see cref="CalculationController"/>).
+/// Stellungen selbst (Woche mit Ausgabe versteckt bis <c>PublishAt</c>, für Tester ab
+/// <c>TesterPreviewAt</c>; Besitzer/Admin sehen alles) liegt zentral in
+/// <see cref="CalcVisibility.HiddenChaptersAsync"/> und greift in den Kalkulations-Endpoints
+/// (<see cref="CalculationController"/>) UND auf der Kurs-Detailseite (<see cref="CourseController"/>:
+/// <c>GET api/courses/{bookId}</c> ohne gesperrte Wochen in Kapitelliste und Zählern,
+/// <c>GET api/courses/{bookId}/lines?chapter=</c> liefert für eine gesperrte Woche eine leere Liste wie
+/// für ein unbekanntes Kapitel).
 /// </summary>
 [ApiController]
 [Route("api/calc-editions")]

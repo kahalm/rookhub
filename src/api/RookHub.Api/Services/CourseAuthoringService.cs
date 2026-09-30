@@ -95,7 +95,9 @@ public class CourseAuthoringService
             .ToListAsync(ct)).ToHashSet();
 
         // Beim Kalkulationsbuch gibt es kein „gelöst": Fortschritt = Stellungen mit eigenem Baum,
-        // Gesamtzahl = ALLE Linien (identisch zur Zählung in der Kursübersicht).
+        // Gesamtzahl = alle für DIESEN Betrachter sichtbaren Linien (gesperrte Wochen sind oben schon
+        // herausgefiltert). Die Kursübersicht (CourseService.GetCourses) zählt dagegen weiter ALLE Linien
+        // des Buchs — bei einem Betrachter mit gesperrten Wochen liegt ihre Zahl deshalb höher.
         var isCalc = book.IsCalculation;
         var doneIds = isCalc ? treeIds : solvedIds;
 
