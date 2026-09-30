@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Chess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -19,22 +21,58 @@ namespace RookHub.Api.Services;
 /// Cache: per User + RepertoireKind, 15 min absolute / 5 min sliding TTL. Invalidiert von
 /// <see cref="RepertoireService"/> bei Upload/Delete/Update-Operationen.
 ///
+/// <para><b>Deckel</b> (Codereview 2026-09-29, N8-005): Der Neuaufbau liest alle markierten PGNs des Kontos und spielt
+/// jeden Halbzug nach — vorher verwarf JEDE Anfrage mit <c>refresh</c> den Cache, parallele Anfragen bauten dasselbe Set
+/// mehrfach gleichzeitig, und der Cache hatte keine Größengrenze. Jetzt: <c>refresh</c> baut höchstens einmal je Konto
+/// und <see cref="RefreshCooldown"/> neu (sonst gilt der Cache); je Konto läuft höchstens EIN Neuaufbau, weitere Anfragen
+/// warten darauf und lesen dann den Cache; ein Set liest höchstens <see cref="MaxPgnCharsPerSet"/> Zeichen PGN und hält
+/// höchstens <see cref="MaxPositionsPerSet"/> Stellungen (darüber: Teil-Set, <c>RepertoireTruncated</c> in der Antwort);
+/// der Cache ist ein eigener (<see cref="CacheServiceKey"/>) mit <see cref="CacheSizeLimit"/> Stellungen.</para>
+///
 /// Der PGN-Parser liegt seit 0.499.6 in <see cref="PgnMoveTree"/> — er stand hier und in
 /// <see cref="RepertoireLineSource"/> als wörtliche Kopie.
 /// </summary>
 public class RepertoireAnalyzeService
 {
+    /// <summary>DI-Schlüssel des eigenen Caches mit Größengrenze (Program.cs). Der allgemeine <see cref="IMemoryCache"/>
+    /// hat keine: dort eine Grenze zu setzen hieße, jedem anderen Eintrag im Prozess eine Größe zu geben.</summary>
+    public const string CacheServiceKey = "repertoire-position-sets";
+    /// <summary>Größengrenze des eigenen Caches in Stellungen (Size eines Eintrags = Stellungen seines Sets). Gemessen
+    /// rund 190 Byte je Stellung — 2 Mio. sind knapp 400 MB, vier volle Sets.</summary>
+    public const long CacheSizeLimit = 2_000_000;
+    /// <summary>Höchstens so viele Stellungen je Set (rund 95 MB und 10 s Aufbau bei dichtem PGN); darüber bleibt es ein
+    /// Teil-Set. Ein großes echtes Repertoire hat einige zehntausend.</summary>
+    public const int MaxPositionsPerSet = 500_000;
+    /// <summary>Höchstens so viele Zeichen PGN je Set (Summe der Dateien, in Id-Reihenfolge; eine Datei, die nicht mehr
+    /// passt, bleibt draußen). Ohne Deckel lud ein Neuaufbau bis 500 × 1000 × 10 MB aus der Datenbank.</summary>
+    public const long MaxPgnCharsPerSet = 16L * 1024 * 1024;
+    /// <summary><c>refresh</c> baut je Konto höchstens einmal in diesem Zeitraum neu; der Knopf „Aktualisieren" der
+    /// Erweiterung braucht nicht mehr — Upload, Löschen und Ändern verwerfen den Cache ohnehin.</summary>
+    public static readonly TimeSpan RefreshCooldown = TimeSpan.FromMinutes(1);
+
     private readonly AppDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<RepertoireAnalyzeService>? _logger;
 
-    public RepertoireAnalyzeService(AppDbContext db, IMemoryCache cache)
+    /// <summary>Sperren je Konto — am Cache-Objekt aufgehängt, damit sie genau so weit geteilt sind wie der Cache
+    /// selbst (in der API ein Singleton, in Tests je Test ein eigener).</summary>
+    private static readonly ConditionalWeakTable<IMemoryCache, ConcurrentDictionary<int, SemaphoreSlim>> BuildGates = new();
+
+    public RepertoireAnalyzeService(AppDbContext db, [FromKeyedServices(CacheServiceKey)] IMemoryCache cache,
+        ILogger<RepertoireAnalyzeService>? logger = null)
     {
         _db = db;
         _cache = cache;
+        _logger = logger;
     }
+
+    /// <summary>Wie viele Sets DIESE Instanz (= eine Anfrage) gebaut hat — für Tests.</summary>
+    internal int SetsBuilt { get; private set; }
 
     private static string CacheKey(int userId, RepertoireKind kind) =>
         $"ext:posset:{userId}:{(int)kind}";
+
+    private static string RefreshKey(int userId) => $"ext:posset:refresh:{userId}";
 
     /// <summary>Cache-Eintrag eines Users invalidieren (z. B. nach PGN-Upload/-Delete).</summary>
     public void Invalidate(int userId)
@@ -45,13 +83,13 @@ public class RepertoireAnalyzeService
 
     public async Task<AnalyzeGameResponseDto> AnalyzeAsync(int userId, AnalyzeGameRequestDto dto)
     {
-        if (dto.Refresh) _cache.Remove(CacheKey(userId, dto.Kind));
-
-        var (positions, fileCount) = await GetPositionSetAsync(userId, dto.Kind);
+        var set = await GetPositionSetAsync(userId, dto.Kind, dto.Refresh);
+        var positions = set.Positions;
 
         var response = new AnalyzeGameResponseDto
         {
-            RepertoireFileCount = fileCount,
+            RepertoireFileCount = set.FileCount,
+            RepertoireTruncated = set.Truncated,
         };
 
         if (dto.Moves.Count == 0) return response;
@@ -106,8 +144,8 @@ public class RepertoireAnalyzeService
         var sets = new List<HashSet<string>>();
         foreach (var kind in Enum.GetValues<RepertoireKind>())
         {
-            var (positions, fileCount) = await GetPositionSetAsync(userId, kind);
-            if (fileCount > 0) sets.Add(positions);
+            var set = await GetPositionSetAsync(userId, kind);
+            if (set.FileCount > 0) sets.Add(set.Positions);
         }
         if (sets.Count == 0) return result;
 
@@ -118,35 +156,88 @@ public class RepertoireAnalyzeService
         return result;
     }
 
-    private async Task<(HashSet<string> Positions, int FileCount)> GetPositionSetAsync(int userId, RepertoireKind kind)
+    /// <param name="refresh">Cache verwerfen und neu bauen — höchstens einmal je Konto und <see cref="RefreshCooldown"/>,
+    /// sonst gilt der Cache.</param>
+    private async Task<CachedPositionSet> GetPositionSetAsync(int userId, RepertoireKind kind, bool refresh = false)
     {
         var key = CacheKey(userId, kind);
-        if (_cache.TryGetValue<CachedPositionSet>(key, out var cached) && cached != null)
-            return (cached.Positions, cached.FileCount);
+        if (!refresh && _cache.TryGetValue<CachedPositionSet>(key, out var cached) && cached != null)
+            return cached;
 
-        var pgnTexts = await _db.RepertoireFiles
-            .Where(f => f.Repertoire.UserId == userId && f.Repertoire.Kind == kind && f.Repertoire.UseForExtension)
-            .Select(f => f.PgnContent)
-            .ToListAsync();
-
-        var positions = BuildPositionSet(pgnTexts.Select(RepertoirePgnCleanup.WithoutHidden).ToList());   // ohne ausgeblendete Altlasten
-        var entry = new CachedPositionSet(positions, pgnTexts.Count);
-
-        _cache.Set(key, entry, new MemoryCacheEntryOptions
+        // Je Konto EIN Neuaufbau zur Zeit: wer wartet, findet danach den Cache gefüllt.
+        var gate = BuildGates.GetValue(_cache, _ => new ConcurrentDictionary<int, SemaphoreSlim>())
+            .GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15),
-            SlidingExpiration = TimeSpan.FromMinutes(5),
-        });
-        return (positions, pgnTexts.Count);
+            if (refresh && !_cache.TryGetValue(RefreshKey(userId), out _))
+            {
+                _cache.Set(RefreshKey(userId), true, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = RefreshCooldown,
+                    Priority = CacheItemPriority.High,
+                    Size = 1,
+                });
+                _cache.Remove(key);
+            }
+            if (_cache.TryGetValue(key, out cached) && cached != null)
+                return cached;
+
+            var entry = await BuildAsync(userId, kind);
+            _cache.Set(key, entry, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15),
+                SlidingExpiration = TimeSpan.FromMinutes(5),
+                Size = Math.Max(1, entry.Positions.Count),
+            });
+            return entry;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
-    private sealed record CachedPositionSet(HashSet<string> Positions, int FileCount);
+    private async Task<CachedPositionSet> BuildAsync(int userId, RepertoireKind kind)
+    {
+        SetsBuilt++;
+        var files = _db.RepertoireFiles
+            .Where(f => f.Repertoire.UserId == userId && f.Repertoire.Kind == kind && f.Repertoire.UseForExtension);
+
+        // Erst die Längen (die Texte bleiben in der Datenbank), dann nur die Dateien, die in den Deckel passen.
+        var sizes = await files.OrderBy(f => f.Id).Select(f => new { f.Id, f.PgnContent.Length }).ToListAsync();
+        var ids = new List<int>(sizes.Count);
+        long chars = 0;
+        foreach (var s in sizes)
+        {
+            if (chars + s.Length > MaxPgnCharsPerSet) continue;
+            chars += s.Length;
+            ids.Add(s.Id);
+        }
+        var pgnTexts = new List<string>(ids.Count);
+        foreach (var chunk in ids.Chunk(500))
+            pgnTexts.AddRange(await files.Where(f => chunk.Contains(f.Id)).OrderBy(f => f.Id)
+                .Select(f => f.PgnContent).ToListAsync());
+
+        var positions = BuildPositionSet(pgnTexts.Select(RepertoirePgnCleanup.WithoutHidden).ToList(),   // ohne ausgeblendete Altlasten
+            out var positionsCapped);
+        var truncated = positionsCapped || ids.Count < sizes.Count;
+        if (truncated)
+            _logger?.LogWarning(
+                "Positions-Set gekappt: Konto {UserId}, Art {Kind}, {Used}/{Files} Dateien, {Positions} Stellungen",
+                userId, kind, ids.Count, sizes.Count, positions.Count);
+        return new CachedPositionSet(positions, pgnTexts.Count, truncated);
+    }
+
+    private sealed record CachedPositionSet(HashSet<string> Positions, int FileCount, bool Truncated);
 
     // ─── PGN → Position Set ────────────────────────────────────────────────
     // Port der JS-Implementierung in repcheck.user.js: tokenize → parse mit
     // Varianten → walk mit Cancel() statt Reparse.
 
-    private static HashSet<string> BuildPositionSet(List<string> pgnTexts)
+    /// <param name="capped"><c>true</c> = bei <paramref name="maxPositions"/> Stellungen abgebrochen (Teil-Set).</param>
+    internal static HashSet<string> BuildPositionSet(List<string> pgnTexts, out bool capped,
+        int maxPositions = MaxPositionsPerSet)
     {
         var positions = new HashSet<string>(StringComparer.Ordinal);
         // Ausgangsstellung gehoert dazu — sonst landet Zug 1 (Weiss) sofort als Abweichung.
@@ -157,32 +248,36 @@ public class RepertoireAnalyzeService
             {
                 foreach (var game in ParsePgn(text))
                 {
+                    if (positions.Count >= maxPositions) break;
                     // Unbrauchbare [FEN] → Linie überspringen statt aus der Grundstellung zu spielen
                     // (das würde falsche Stellungen als „im Repertoire" markieren).
                     ChessBoard board;
                     if (game.StartFen == null) board = new ChessBoard();
                     else { try { board = ChessBoard.LoadFromFen(game.StartFen); } catch { continue; } }
                     positions.Add(NormalizeFen(board.ToFen()));   // Startstellung der Linie zählt mit
-                    WalkMoves(board, game.Moves, positions);
+                    WalkMoves(board, game.Moves, positions, maxPositions);
                 }
             }
             catch
             {
                 // Einzelne kaputte PGN nicht den ganzen Build kippen lassen.
             }
+            if (positions.Count >= maxPositions) break;
         }
+        capped = positions.Count >= maxPositions;
         return positions;
     }
 
-    private static void WalkMoves(ChessBoard board, List<PgnMove> moves, HashSet<string> positions)
+    private static void WalkMoves(ChessBoard board, List<PgnMove> moves, HashSet<string> positions, int maxPositions)
     {
         int movesMade = 0;
         foreach (var move in moves)
         {
             // Varianten zweigen VOR diesem Zug ab.
             foreach (var variation in move.Variations)
-                WalkMoves(board, variation, positions);
+                WalkMoves(board, variation, positions, maxPositions);
 
+            if (positions.Count >= maxPositions) break;
             bool ok;
             try { ok = board.Move(move.San); }
             catch { ok = false; }

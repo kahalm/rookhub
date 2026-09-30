@@ -61,6 +61,13 @@ public static class RateLimitPartitions
     /// die Gleichzeitigkeit über alle Konten deckelt zusätzlich <see cref="GapSearchGate"/>.</summary>
     public const int ReconstructionGapPermitPerMinute = 6;
 
+    /// <summary>Policy-Name der Repertoire-Analyse der Erweiterung (<c>POST /api/extension/analyze-game</c>).</summary>
+    public const string ExtensionAnalyzePolicy = "extension-analyze";
+    /// <summary>Analysen je Konto und Minute. RepCheck fragt einmal je angesehener Partie (und beim Knopf
+    /// „Aktualisieren"); vorher galt nur der globale Deckel von 100/min je Adresse, und jede Anfrage durfte das
+    /// Positions-Set des Kontos neu bauen lassen (Codereview 2026-09-29, N8-005).</summary>
+    public const int ExtensionAnalyzePermitPerMinute = 30;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -100,6 +107,9 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> ReconstructionGap(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), ReconstructionGapPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> ExtensionAnalyze(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), ExtensionAnalyzePermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

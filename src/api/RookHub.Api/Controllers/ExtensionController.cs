@@ -167,9 +167,10 @@ public class ExtensionController : BaseApiController
     /// Server-seitige Partie-Analyse: Client schickt die SAN-Zugliste der aktuellen Partie,
     /// Server vergleicht ply-weise gegen das (gecachte) Positions-Set des Users und liefert
     /// Abweichungs-Index, Zugumstellungen und FEN-vor-Abweichung zurueck. Vermeidet, dass das
-    /// ganze Repertoire-PGN zur Extension wandern muss.
+    /// ganze Repertoire-PGN zur Extension wandern muss. Je Konto gedrosselt (ein Neuaufbau des Sets ist teuer).
     /// </summary>
     [HttpPost("analyze-game")]
+    [EnableRateLimiting(RateLimitPartitions.ExtensionAnalyzePolicy)]
     public async Task<ActionResult<AnalyzeGameResponseDto>> AnalyzeGame([FromBody] AnalyzeGameRequestDto dto)
     {
         if (dto == null) return BadRequest(new { message = "Body required." });

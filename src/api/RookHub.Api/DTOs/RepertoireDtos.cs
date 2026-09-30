@@ -155,6 +155,9 @@ public class AnalyzeGameResponseDto
     public int RepertoireFileCount { get; set; }
     /// <summary>Ply, bei dem ein Zug nicht parsbar war (illegale SAN). Null = alle Zuege OK.</summary>
     public int? IllegalMoveAt { get; set; }
+    /// <summary>Das Positions-Set ist nur ein Teil des Repertoires — zu viel PGN oder zu viele Stellungen
+    /// (Deckel in <see cref="Services.RepertoireAnalyzeService"/>). Eine Abweichung kann dann auch eine Lücke sein.</summary>
+    public bool RepertoireTruncated { get; set; }
 }
 
 /// <summary>Eingabe fuer „Remember line": eine auf chessable.com gemerkte Stellung

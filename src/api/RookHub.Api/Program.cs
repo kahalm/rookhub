@@ -204,6 +204,13 @@ try
     builder.Services.AddScoped<RepertoireService>();
     builder.Services.AddScoped<RepertoireTrainingService>();
     builder.Services.AddScoped<RepertoireAnalyzeService>();
+    // Eigener Cache der Positions-Sets MIT Größengrenze (Size = Stellungen; Codereview N8-005) — der allgemeine
+    // IMemoryCache hat keine, und eine dort verlangte Size müsste jeder andere Eintrag im Prozess mitbringen.
+    builder.Services.AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RepertoireAnalyzeService.CacheServiceKey,
+        (_, _) => new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+        {
+            SizeLimit = RepertoireAnalyzeService.CacheSizeLimit,
+        }));
     builder.Services.AddScoped<RepertoireLineSource>();
     builder.Services.AddScoped<RepertoirePositionLookupService>();
     builder.Services.AddScoped<RepertoireSimilarityService>();
@@ -836,6 +843,9 @@ try
         // Lückensuche einer Rekonstruktion (gap, gap/propose): reine CPU im Request-Thread — je KONTO gedrosselt, die
         // Gleichzeitigkeit über alle Konten deckelt GapSearchGate (RateLimitPartitions, Codereview N5-001).
         options.AddPolicy("reconstruction-gap", ctx => RookHub.Api.Services.RateLimitPartitions.ReconstructionGap(ctx, permitScale));
+        // Repertoire-Analyse der Erweiterung (analyze-game): je KONTO — ein Neuaufbau des Positions-Sets liest alle
+        // markierten PGNs und spielt jeden Halbzug nach (RateLimitPartitions, Codereview N8-005).
+        options.AddPolicy("extension-analyze", ctx => RookHub.Api.Services.RateLimitPartitions.ExtensionAnalyze(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
