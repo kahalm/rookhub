@@ -103,7 +103,9 @@ public class ScoresheetScanService
 
     /// <summary>Was ein Nutzer heute und in 30 Tagen verbraucht hat, was alle zusammen heute — und ob er Admin ist.</summary>
     /// <para>Ohne Konto (<paramref name="userId"/> <c>null</c>, Teilen-Link) gibt es keine Nutzerbudgets — dort begrenzen
-    /// die Zahlen je IP und je Tag (<see cref="AnonPerIpDailyLimit"/>, <see cref="AnonDailyLimit"/>), das Gesamtbudget gilt.</para>
+    /// die Zahlen je IP und je Tag (<see cref="AnonPerIpDailyLimit"/>, <see cref="AnonDailyLimit"/>), und an der Stelle des
+    /// Nutzerverbrauchs steht, was ALLE Einlesungen ohne Konto heute verbraucht haben (ihr gemeinsames Tagesbudget,
+    /// <see cref="ScoresheetBudget.AnonAllowance"/>); das Gesamtbudget gilt dazu.</para>
     private async Task<(long UserToday, long UserMonth, long GlobalToday, bool IsAdmin)> SpentAsync(int? userId,
         CancellationToken ct = default)
     {
@@ -112,8 +114,10 @@ public class ScoresheetScanService
         var month = now.AddDays(-30);
         if (userId == null)
         {
+            var anonToday = await _db.ScoresheetScans.Where(s => s.UserId == null && s.CreatedAt >= day)
+                .SumAsync(s => (long?)s.CostMicroUsd, ct) ?? 0;
             var global0 = await _db.ScoresheetScans.Where(s => s.CreatedAt >= day).SumAsync(s => (long?)s.CostMicroUsd, ct) ?? 0;
-            return (0, 0, global0, false);
+            return (anonToday, 0, global0, false);
         }
         var userToday = await _db.ScoresheetScans.Where(s => s.UserId == userId && s.CreatedAt >= day)
             .SumAsync(s => (long?)s.CostMicroUsd, ct) ?? 0;
@@ -143,10 +147,14 @@ public class ScoresheetScanService
 
     /// <summary>Darf für diesen Nutzer jetzt noch ein Modell-Aufruf starten, und wie lang darf die Antwort werden?</summary>
     internal async Task<CallAllowance> AllowanceAsync(int? userId, CancellationToken ct = default)
-    {
-        var (today, month, global, admin) = await SpentAsync(userId, ct);
-        return _budget.Allowance(today, month, global, admin);
-    }
+        => AllowanceFor(userId, await SpentAsync(userId, ct));
+
+    /// <summary>Mit Konto die Nutzerbudgets samt Gesamtbudget, ohne Konto das gemeinsame Tagesbudget der Einlesungen ohne
+    /// Konto samt Gesamtbudget (<see cref="SpentAsync"/>).</summary>
+    private CallAllowance AllowanceFor(int? userId, (long UserToday, long UserMonth, long GlobalToday, bool IsAdmin) spent)
+        => userId == null
+            ? _budget.AnonAllowance(spent.UserToday, spent.GlobalToday)
+            : _budget.Allowance(spent.UserToday, spent.UserMonth, spent.GlobalToday, spent.IsAdmin);
 
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -219,7 +227,8 @@ public class ScoresheetScanService
         }
 
         purpose = CleanPurpose(purpose);
-        var (today, month, global, admin) = await SpentAsync(userId);
+        var spent = await SpentAsync(userId);
+        var admin = spent.IsAdmin;
         var since = DateTime.UtcNow.AddDays(-1);
         if (userId is int uid)
         {
@@ -229,7 +238,7 @@ public class ScoresheetScanService
                     && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
                 return (null, "tooManyOpen");
         }
-        if (_budget.Check(today, month, global, admin) is { } blocked) return (null, blocked);
+        if (AllowanceFor(userId, spent).Blocked is { } blocked) return (null, blocked);
 
         var stored = new List<(byte[] Photo, string Type)>();
         foreach (var page in pages)
@@ -634,12 +643,29 @@ public class ScoresheetScanService
         return q.Where(s => s.UserId == null && s.AccessKey == key && key != "");
     }
 
-    /// <summary>HMAC der IP-Adresse — die Adresse selbst wird nie gespeichert.</summary>
+    /// <summary>HMAC der IP-Adresse — die Adresse selbst wird nie gespeichert. Gezählt wird je Anschluss
+    /// (<see cref="IpKey"/>).</summary>
     public string AnonIpHash(System.Net.IPAddress? ip)
     {
         var bytes = System.Security.Cryptography.HMACSHA256.HashData(System.Text.Encoding.UTF8.GetBytes(_ipSecret),
-            System.Text.Encoding.UTF8.GetBytes("scoresheet-ip:" + (ip?.MapToIPv4().ToString() ?? "?")));
+            System.Text.Encoding.UTF8.GetBytes("scoresheet-ip:" + IpKey(ip)));
         return Convert.ToHexString(bytes, 0, 16).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Wofür die Grenzen je IP gelten: IPv4 (auch als IPv6 verpackt) die Adresse, echtes IPv6 das /64-Netz — ein Anschluss
+    /// bekommt ein ganzes /64 und wählt darin beliebig viele Adressen. Vorher nahm <c>MapToIPv4</c> bei echtem IPv6 nur die
+    /// letzten 32 Bit: aus einem /64 wurden beliebig viele „IPs“, und fremde Anschlüsse mit gleichem Ende teilten sich
+    /// eine (Codereview 2026-09-29, A6-003).
+    /// </summary>
+    internal static string IpKey(System.Net.IPAddress? ip)
+    {
+        if (ip == null) return "?";
+        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+        if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6) return ip.ToString();
+        var bytes = ip.GetAddressBytes();
+        Array.Clear(bytes, 8, 8);
+        return new System.Net.IPAddress(bytes) + "/64";
     }
 
     private IQueryable<ScoresheetScan> AnonCountingSince(DateTime since) =>
@@ -651,7 +677,7 @@ public class ScoresheetScanService
     public async Task<ScoresheetStatusDto> AnonStatusAsync(string ipHash)
     {
         var since = DateTime.UtcNow.AddDays(-1);
-        var (_, _, global, _) = await SpentAsync(null);
+        var spent = await SpentAsync(null);
         var used = await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash);
         DateTime? next = null;
         if (used >= AnonPerIpDailyLimit)
@@ -667,7 +693,7 @@ public class ScoresheetScanService
             DailyLimit = AnonPerIpDailyLimit,
             UsedToday = used,
             NextAllowedAt = next,
-            Blocked = all >= AnonDailyLimit ? "anonDailyLimit" : _budget.Check(0, 0, global, false),
+            Blocked = all >= AnonDailyLimit ? "anonDailyLimit" : AllowanceFor(null, spent).Blocked,
             Languages = ScoresheetNotation.Languages.Select(l => new ScoresheetLanguageDto
             {
                 Code = l.Code, Name = l.Name, Pieces = $"{l.King} {l.Queen} {l.Rook} {l.Bishop} {l.Knight}",
@@ -675,28 +701,44 @@ public class ScoresheetScanService
         };
     }
 
+    /// <summary>Annahme OHNE Konto nacheinander: Zählen und Anlegen sind zwei Schritte, und parallel abgeschickte Uploads
+    /// zählten sonst alle denselben Stand und kamen gemeinsam durch (10/IP, 100/Tag, 3 offen; Codereview 2026-09-29,
+    /// A6-003). Die API läuft als EINE Instanz — ein Semaphor im Prozess genügt.</summary>
+    private static readonly SemaphoreSlim AnonAdmission = new(1, 1);
+
     /// <summary>
     /// Foto OHNE Konto hochladen (LeagueHub-Teilen-Link, immer für die Vereins-Datenbank). Grenzen:
     /// <see cref="AnonPerIpDailyLimit"/> je IP (<c>dailyLimit</c>), <see cref="AnonDailyLimit"/> für alle zusammen
-    /// (<c>anonDailyLimit</c>), drei gleichzeitig je IP, dazu das Gesamtbudget. Liefert den geheimen Schlüssel, unter dem
-    /// der Browser die Einlesung wiederfindet — sonst niemand.
+    /// (<c>anonDailyLimit</c>), drei gleichzeitig je IP, dazu das Tagesbudget der Einlesungen ohne Konto und das
+    /// Gesamtbudget (<c>globalBudget</c>). Liefert den geheimen Schlüssel, unter dem der Browser die Einlesung
+    /// wiederfindet — sonst niemand.
     /// </summary>
     public async Task<(ScoresheetScanDto? Scan, string? Key, string? Reason)> CreateAnonymousAsync(byte[] data, string? contentType,
         string? fileName, string? language, string? ownerSide, string ipHash)
     {
-        var since = DateTime.UtcNow.AddDays(-1);
-        if (_vision.IsConfigured)
-        {
-            if (await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash) >= AnonPerIpDailyLimit)
-                return (null, null, "dailyLimit");
-            if (await AnonCountingSince(since).CountAsync() >= AnonDailyLimit) return (null, null, "anonDailyLimit");
-            if (await _db.ScoresheetScans.CountAsync(s => s.UserId == null && s.AnonIpHash == ipHash
-                    && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
-                return (null, null, "tooManyOpen");
-        }
+        ScoresheetScanDto? scan;
+        string? reason;
         var key = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
-        var (scan, reason) = await CreateCoreAsync(null, new[] { new ScoresheetUpload(data, contentType, fileName) },
-            language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
+        await AnonAdmission.WaitAsync();
+        try
+        {
+            var since = DateTime.UtcNow.AddDays(-1);
+            if (_vision.IsConfigured)
+            {
+                if (await AnonCountingSince(since).CountAsync(s => s.AnonIpHash == ipHash) >= AnonPerIpDailyLimit)
+                    return (null, null, "dailyLimit");
+                if (await AnonCountingSince(since).CountAsync() >= AnonDailyLimit) return (null, null, "anonDailyLimit");
+                if (await _db.ScoresheetScans.CountAsync(s => s.UserId == null && s.AnonIpHash == ipHash
+                        && (s.Status == ScoresheetScanStatus.Pending || s.Status == ScoresheetScanStatus.Running)) >= MaxOpenPerUser)
+                    return (null, null, "tooManyOpen");
+            }
+            (scan, reason) = await CreateCoreAsync(null, new[] { new ScoresheetUpload(data, contentType, fileName) },
+                language, ownerSide, ScoresheetScan.PurposeLeague, key, ipHash);
+        }
+        finally
+        {
+            AnonAdmission.Release();
+        }
         if (scan != null) await ForgetOldIpHashesAsync();
         return (scan, scan == null ? null : key, reason);
     }

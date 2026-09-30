@@ -10,6 +10,12 @@ namespace RookHub.Api.Services;
 /// das letzte schützt das Konto auch dann, wenn sich viele Nutzer zugleich bedienen. Admins sind von den
 /// Nutzerbudgets ausgenommen, vom Gesamtbudget nicht.</para>
 ///
+/// <para>Einlesungen OHNE Konto (LeagueHub-Teilen-Link) haben kein Nutzerbudget — sie teilen sich ein eigenes
+/// Tagesbudget (<c>Scoresheet:AnonDailyUsd</c>, <see cref="AnonAllowance"/>), das zusätzlich vom Gesamtbudget zehrt.
+/// Solange es kleiner ist als das Gesamtbudget, bleibt der Rest den Konten: vorher konnte, wer einen Teilen-Link hatte,
+/// mit Einlesungen ohne Konto das Gesamtbudget leeren und damit alle Konten samt Admins bis zu 24 h sperren
+/// (Codereview 2026-09-29, A6-003).</para>
+///
 /// <para>Der ANTWORT-DECKEL eines Aufrufs (max_tokens) kommt aus dem verbleibenden Budget
 /// (<see cref="Allowance"/>): so viel Ausgabe, wie nach großzügig geschätzter Eingabe noch bezahlbar ist, höchstens
 /// <see cref="MaxOutputTokens"/>. Reicht es nicht einmal für <see cref="MinOutputTokens"/>, startet der Aufruf gar
@@ -24,6 +30,9 @@ public sealed class ScoresheetBudget
     public const decimal DefaultUserDailyUsd = 2m;
     public const decimal DefaultUserMonthlyUsd = 10m;
     public const decimal DefaultGlobalDailyUsd = 15m;
+    /// <summary>Vorgabe für ALLE Einlesungen ohne Konto zusammen pro Tag — ein Fünftel des Gesamtbudgets, bei rund
+    /// 0,08 $ je Formular Platz für gut 35 Einlesungen.</summary>
+    public const decimal DefaultAnonDailyUsd = 3m;
     /// <summary>Preise des Vorgabe-Modells Claude Opus 5.5 (<c>claude-opus-5-5</c>, seit 0.533.2; Opus 5 war 5 / 25).
     /// Wer das Modell wechselt, stellt sie mit um.</summary>
     public const decimal DefaultInputUsdPerMTok = 4m;
@@ -43,6 +52,7 @@ public sealed class ScoresheetBudget
     public long UserDailyMicroUsd { get; }
     public long UserMonthlyMicroUsd { get; }
     public long GlobalDailyMicroUsd { get; }
+    public long AnonDailyMicroUsd { get; }
     public decimal InputUsdPerMTok { get; }
     public decimal OutputUsdPerMTok { get; }
     /// <summary>Kosten des kleinsten sinnvollen Aufrufs (Reserve-Eingabe + <see cref="MinOutputTokens"/>).</summary>
@@ -53,6 +63,7 @@ public sealed class ScoresheetBudget
         UserDailyMicroUsd = Micro(Read(config, "Scoresheet:UserDailyUsd", DefaultUserDailyUsd));
         UserMonthlyMicroUsd = Micro(Read(config, "Scoresheet:UserMonthlyUsd", DefaultUserMonthlyUsd));
         GlobalDailyMicroUsd = Micro(Read(config, "Scoresheet:GlobalDailyUsd", DefaultGlobalDailyUsd));
+        AnonDailyMicroUsd = Micro(Read(config, "Scoresheet:AnonDailyUsd", DefaultAnonDailyUsd));
         InputUsdPerMTok = Read(config, "Scoresheet:InputUsdPerMTok", DefaultInputUsdPerMTok);
         OutputUsdPerMTok = Read(config, "Scoresheet:OutputUsdPerMTok", DefaultOutputUsdPerMTok);
         ReserveMicroUsd = CostMicroUsd(ReserveInputTokens, MinOutputTokens);
@@ -81,6 +92,19 @@ public sealed class ScoresheetBudget
             if (UserDailyMicroUsd - userToday < left) (left, reason) = (UserDailyMicroUsd - userToday, "userDailyBudget");
             if (UserMonthlyMicroUsd - userMonth < left) (left, reason) = (UserMonthlyMicroUsd - userMonth, "userMonthlyBudget");
         }
+        return ForLeft(left, reason);
+    }
+
+    /// <summary>
+    /// Dasselbe für eine Einlesung OHNE Konto: das knappere von Gesamtbudget und dem Tagesbudget aller Einlesungen ohne
+    /// Konto (<paramref name="anonToday"/> = was die zusammen heute verbraucht haben). Gesperrt heißt für den Aufrufer
+    /// in beiden Fällen <c>globalBudget</c> — „das Budget fürs Einlesen ist aufgebraucht“, wie LeagueHub es anzeigt.
+    /// </summary>
+    public CallAllowance AnonAllowance(long anonToday, long globalToday)
+        => ForLeft(Math.Min(GlobalDailyMicroUsd - globalToday, AnonDailyMicroUsd - anonToday), "globalBudget");
+
+    private CallAllowance ForLeft(long left, string reason)
+    {
         var forOutput = left - (long)Math.Ceiling(ReserveInputTokens * InputUsdPerMTok);
         var tokens = OutputUsdPerMTok <= 0 ? MaxOutputTokens
             : (int)Math.Min(MaxOutputTokens, Math.Max(0, Math.Floor(forOutput / OutputUsdPerMTok)));

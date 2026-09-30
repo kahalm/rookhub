@@ -1094,4 +1094,91 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal("anonDailyLimit", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, other)).Reason);
         Assert.Equal("anonDailyLimit", (await _service.AnonStatusAsync(other)).Blocked);
     }
+
+    // ── Einlesungen ohne Konto: eigenes Tagesbudget, IPv6 je /64, Annahme nacheinander (Codereview 2026-09-29, A6-003) ──
+
+    [Fact]
+    public void Budget_AnonymousScans_ShareTheirOwnDailyBudget_OnTopOfTheGlobalOne()
+    {
+        var b = new ScoresheetBudget(null);
+        Assert.Equal(3_000_000, b.AnonDailyMicroUsd);
+        // Frisch: (3 − 0,048) $ reichen für mehr als den obersten Deckel.
+        Assert.Equal(new CallAllowance(ScoresheetBudget.MaxOutputTokens, null), b.AnonAllowance(0, 0));
+        // 2,5 $ ohne Konto verbraucht: (0,5 − 0,048) / 20e-6 = 22 600 Tokens — egal, wie viel vom Gesamtbudget noch da ist.
+        Assert.Equal(new CallAllowance(22_600, null), b.AnonAllowance(2_500_000, 2_500_000));
+        Assert.Equal("globalBudget", b.AnonAllowance(2_700_000, 2_700_000).Blocked);
+        // Das Gesamtbudget gilt weiter, auch wenn ohne Konto noch nichts verbraucht ist.
+        Assert.Equal("globalBudget", b.AnonAllowance(0, 14_700_000).Blocked);
+        // Konten sind vom Tagesbudget ohne Konto nicht betroffen.
+        Assert.Null(b.Allowance(0, 0, 2_900_000, false).Blocked);
+    }
+
+    [Fact]
+    public async Task AnonymousScans_CannotEmptyTheGlobalBudget_AccountsKeepTheRest()
+    {
+        WithBudgets(userDaily: 2m, globalDaily: 15m);
+        // Ohne Konto heute schon 2,9 $ — deren Tagesbudget (3 $) reicht für keinen Aufruf mehr; vom Gesamtbudget sind 12,1 $ übrig.
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x", Status = ScoresheetScanStatus.Done, CostMicroUsd = 2_900_000,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        var ip = _service.AnonIpHash(System.Net.IPAddress.Parse("203.0.113.9"));
+        Assert.Equal("globalBudget", (await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, ip)).Reason);
+        Assert.Equal("globalBudget", (await _service.AnonStatusAsync(ip)).Blocked);
+
+        var u = await UserAsync();
+        Assert.Null((await _service.StatusAsync(u.Id)).Blocked);
+        Assert.Null((await _service.CreateAsync(u.Id, Jpeg(), "image/jpeg", "a.jpg", "de")).Reason);
+    }
+
+    [Fact]
+    public async Task AnonymousScan_AnswerCap_ComesFromTheAnonymousBudget()
+    {
+        // 2,5 $ ohne Konto verbraucht → 22 600 Tokens; ohne eigenes Budget bekam jede Einlesung den vollen Deckel (32 000).
+        _db.ScoresheetScans.Add(new ScoresheetScan
+        {
+            Purpose = ScoresheetScan.PurposeLeague, AnonIpHash = "x", Status = ScoresheetScanStatus.Done, CostMicroUsd = 2_500_000,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (scan, _, reason) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip");
+        Assert.Null(reason);
+        Assert.Equal(scan!.Id, await _service.ClaimNextAsync(default));
+        await _service.ProcessAsync(scan.Id, default);
+        Assert.Equal(22_600, _vision.MaxTokens.First());
+    }
+
+    [Fact]
+    public void AnonIpHash_CountsIPv6PerSlash64_AndMappedIPv4AsIPv4()
+    {
+        string H(string ip) => _service.AnonIpHash(System.Net.IPAddress.Parse(ip));
+        Assert.Equal(H("2001:db8:1:2::1"), H("2001:db8:1:2:ffff:ee:dd:5"));   // ein Anschluss, beliebige Adresse im /64
+        Assert.NotEqual(H("2001:db8:1:2::1"), H("2001:db8:1:3::1"));          // fremdes /64 mit demselben Ende
+        Assert.NotEqual(H("2001:db8:1:2::1"), H("0.0.0.1"));
+        Assert.Equal(H("203.0.113.7"), H("::ffff:203.0.113.7"));
+        Assert.NotEqual(H("203.0.113.7"), H("203.0.113.8"));
+    }
+
+    [Fact]
+    public async Task AnonymousUploads_SentInParallel_StillStopAtTheOpenLimit()
+    {
+        // Jeder Upload mit eigenem Kontext auf DERSELBEN Datenbank, alle gleichzeitig losgelassen — wie parallele Anfragen.
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        var jpeg = Jpeg();
+        const int uploads = 8;
+        using var start = new Barrier(uploads);
+        var reasons = await Task.WhenAll(Enumerable.Range(0, uploads).Select(_ => Task.Run(async () =>
+        {
+            await using var db = new AppDbContext(options);
+            var service = new ScoresheetScanService(db, _vision, TestServices.SavedGames(db), new NotificationService(db),
+                NullLogger<ScoresheetScanService>.Instance);
+            start.SignalAndWait();
+            return (await service.CreateAnonymousAsync(jpeg, "image/jpeg", "b.jpg", "de", null, "ip-parallel")).Reason;
+        })));
+        Assert.Equal(ScoresheetScanService.MaxOpenPerUser, reasons.Count(r => r == null));
+        Assert.All(reasons.Where(r => r != null), r => Assert.Equal("tooManyOpen", r));
+    }
 }
