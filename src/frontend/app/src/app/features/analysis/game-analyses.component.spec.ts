@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysesComponent } from './game-analyses.component';
 import { GameAnalysis } from './game-analysis.service';
 
@@ -130,6 +132,45 @@ describe('GameAnalysesComponent', () => {
 
     expect(fixture.componentInstance.analyses[0].status).toBe('pending');
     expect(fixture.componentInstance.restarting).toBeNull();
+  });
+
+  /** Der Muelleimer steht direkt neben „Neu anstossen"; der Server nimmt alle gerechneten Stellungen
+   *  und alle Punktepartie-Durchlaeufe darauf mit (Codereview W3 F4-001). Ohne Ja kein DELETE. */
+  it('loescht erst nach Rueckfrage — abgelehnt geht kein DELETE raus', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 5, title: 'A – B' })]);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+
+    fixture.componentInstance.remove(fixture.componentInstance.analyses[0]);
+
+    expect(ask).toHaveBeenCalledWith('gameAnalysis.deleteConfirm', { title: 'A – B' });
+    http.expectNone(r => r.method === 'DELETE');
+    expect(fixture.componentInstance.analyses.length).toBe(1);
+  });
+
+  it('loescht nach Zustimmung und nimmt die Partie aus der Liste', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 5 }), analysis({ id: 6 })]);
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
+
+    fixture.componentInstance.remove(fixture.componentInstance.analyses[0]);
+    http.expectOne({ method: 'DELETE', url: '/api/game-analyses/5' }).flush(null);
+
+    expect(fixture.componentInstance.analyses.map(a => a.id)).toEqual([6]);
+  });
+
+  it('warnt bei einer oeffentlichen Partie, dass fremde Durchlaeufe mitgehen', () => {
+    const fixture = TestBed.createComponent(GameAnalysesComponent);
+    fixture.detectChanges();
+    http.expectOne('/api/game-analyses?includeSavedGames=true').flush([analysis({ id: 5, title: null, isPublic: true })]);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+
+    fixture.componentInstance.remove(fixture.componentInstance.analyses[0]);
+
+    expect(ask).toHaveBeenCalledWith('gameAnalysis.deleteConfirmPublic', { title: 'gameAnalysis.untitled' });
+    http.expectNone(r => r.method === 'DELETE');
   });
 
   it('gibt den Knopf nach einem Fehlschlag wieder frei', () => {

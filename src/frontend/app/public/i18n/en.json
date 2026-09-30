@@ -3453,6 +3453,8 @@
     "startFailed": "Could not start the analysis",
     "loadFailed": "Could not load the game analyses",
     "deleteFailed": "Delete failed",
+    "deleteConfirm": "Delete “{{title}}”? The analysed positions and your points-game runs on it are deleted as well.",
+    "deleteConfirmPublic": "Delete “{{title}}”? Everyone can play this game as a points game: all runs on it — including other players’ runs — and the analysed positions are deleted as well.",
     "empty": "No game analysed yet.",
     "untitled": "Untitled",
     "toJobs": "Single positions",

@@ -3453,6 +3453,8 @@
     "startFailed": "Analyse ließ sich nicht starten",
     "loadFailed": "Partie-Analysen konnten nicht geladen werden",
     "deleteFailed": "Löschen fehlgeschlagen",
+    "deleteConfirm": "„{{title}}“ löschen? Die gerechneten Stellungen und deine Punktepartie-Durchläufe darauf gehen mit verloren.",
+    "deleteConfirmPublic": "„{{title}}“ löschen? Die Partie ist für alle als Punktepartie spielbar: alle Durchläufe darauf – auch die anderer Spieler – und die gerechneten Stellungen gehen mit verloren.",
     "empty": "Noch keine Partie analysiert.",
     "untitled": "Ohne Titel",
     "toJobs": "Einzel-Aufträge",

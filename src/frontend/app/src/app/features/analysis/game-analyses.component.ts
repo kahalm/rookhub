@@ -15,6 +15,7 @@ import { Subscription, interval } from 'rxjs';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { formatEta } from '../../shared/eta.util';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AnalysisThroughput, GameAnalysis, GameAnalysisService } from './game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 import { JOB_DEPTH_OPTIONS } from './analysis-job-dialog.component';
@@ -177,6 +178,7 @@ import { formatKiloNps } from './engine-lines.util';
 export class GameAnalysesComponent implements OnInit, OnDestroy {
   private service = inject(GameAnalysisService);
   private snackbar = inject(SnackbarService);
+  private confirm = inject(ConfirmService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
   private locale = inject(LOCALE_ID);
@@ -374,13 +376,23 @@ export class GameAnalysesComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Loeschen fragt vorher nach: der Muelleimer steht direkt neben „Neu anstossen", und der Server
+   * nimmt alle gerechneten Stellungen und alle Punktepartie-Laeufe darauf mit — bei einer
+   * kuratierten (oeffentlichen) Partie auch die fremder Spieler. Nichts davon ist rueckholbar.
+   */
   remove(a: GameAnalysis): void {
-    this.service.delete(a.id).subscribe({
-      next: () => {
-        this.analyses = this.analyses.filter(x => x.id !== a.id);
-        this.cdr.markForCheck();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('gameAnalysis.deleteFailed')),
+    const key = a.isPublic ? 'gameAnalysis.deleteConfirmPublic' : 'gameAnalysis.deleteConfirm';
+    const title = a.title || this.translate.instant('gameAnalysis.untitled');
+    this.confirm.ask(key, { title }).subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(a.id).subscribe({
+        next: () => {
+          this.analyses = this.analyses.filter(x => x.id !== a.id);
+          this.cdr.markForCheck();
+        },
+        error: () => this.snackbar.warn(this.translate.instant('gameAnalysis.deleteFailed')),
+      });
     });
   }
 }

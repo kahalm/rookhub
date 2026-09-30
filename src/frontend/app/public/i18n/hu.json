@@ -3174,6 +3174,8 @@
     "startFailed": "Az elemzést nem sikerült elindítani",
     "loadFailed": "A játszmaelemzéseket nem sikerült betölteni",
     "deleteFailed": "A törlés nem sikerült",
+    "deleteConfirm": "Törlöd ezt: „{{title}}”? A kiszámolt állások és a rajta játszott pontozós meneteid is elvesznek.",
+    "deleteConfirmPublic": "Törlöd ezt: „{{title}}”? Ezt a játszmát bárki játszhatja pontozós játszmaként: az összes rajta játszott menet – mások menetei is – és a kiszámolt állások is elvesznek.",
     "empty": "Még nincs elemzett játszma.",
     "untitled": "Cím nélkül",
     "toJobs": "Egyedi megbízások",

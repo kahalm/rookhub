@@ -3453,6 +3453,8 @@
     "startFailed": "Analizu nije bilo moguće pokrenuti",
     "loadFailed": "Analize partija nije bilo moguće učitati",
     "deleteFailed": "Brisanje nije uspjelo",
+    "deleteConfirm": "Izbrisati „{{title}}“? Izračunate pozicije i tvoji prolazi bodovne partije na njoj brišu se zajedno s njom.",
+    "deleteConfirmPublic": "Izbrisati „{{title}}“? Ovu partiju svi mogu igrati kao bodovnu partiju: svi prolazi na njoj – i oni drugih igrača – te izračunate pozicije brišu se zajedno s njom.",
     "empty": "Još nijedna partija nije analizirana.",
     "untitled": "Bez naslova",
     "toJobs": "Pojedinačni nalozi",
