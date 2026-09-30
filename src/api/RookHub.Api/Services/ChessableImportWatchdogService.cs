@@ -242,7 +242,8 @@ public class ChessableImportWatchdogService : BackgroundService
             if (!LanesEnabled && import.FullyCached != true)
             {
                 // Eigener Chessable-Weg aus: ein zurückgestellter Download-Import würde NIE wieder aufgegriffen
-                // (keine Download-Lane, kein Drain). Ein Import aus der Zeit vor der FromBrowser-Spalte bzw. ein
+                // (kein Drain, kein Resume-Dienst; Tickets für die Download-Lane reiht nur ein NEUER Admin-Download
+                // ein, keiner für diesen Datensatz). Ein Import aus der Zeit vor der FromBrowser-Spalte bzw. ein
                 // Admin-Download, dessen Treiber weg ist (API-Neustart) — nur der Datensatz sagte weiter „läuft"
                 // und blockierte jeden neuen Import desselben Kurses.
                 _logger.LogWarning(

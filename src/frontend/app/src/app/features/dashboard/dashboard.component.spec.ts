@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardService } from '../../core/dashboard.service';
 import { ChessableService } from '../chessable/chessable.service';
@@ -11,6 +11,8 @@ import { AuthService } from '../../core/auth.service';
 import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { FavoritesService } from '../../core/favorites.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { SnackbarService } from '../../core/snackbar.service';
 
 const MENU = new Set<string>([
   'puzzles', 'friends', 'tournaments', 'repertoires', 'training-goals',
@@ -287,5 +289,66 @@ describe('DashboardComponent pinned courses', () => {
     expect(link).not.toBeNull();
     expect(link!.textContent!.trim()).toBe('TestNoel');
     expect(link!.getAttribute('href')).toBe('/courses/58');
+  });
+});
+
+describe('DashboardComponent admin cancel of a stuck Chessable import', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  const stuck = { id: 5, bid: '123', courseName: 'Stuck course', username: 'bob', status: 'running', phase: 'queued' };
+  const other = { id: 6, bid: '456', courseName: 'Other course', username: 'amy', status: 'running', phase: 'fetching' };
+
+  function setupCancel(opts: { confirmed: boolean; fails?: boolean }) {
+    const chessable = {
+      getActiveImportsAdmin: () => of([]),
+      cancelImportAdmin: jasmine.createSpy('cancelImportAdmin').and.returnValue(
+        opts.fails ? throwError(() => new Error('500')) : of({ ...stuck, status: 'cancelled' })),
+    };
+    const confirm = { ask: jasmine.createSpy('ask').and.returnValue(of(opts.confirmed)) };
+    const snackbar = { warn: jasmine.createSpy('warn') };
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        // isAdmin=false: kein 10-s-Poll im Test, die Liste wird direkt gesetzt.
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me' } } },
+        { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
+        { provide: ChessableService, useValue: chessable },
+        { provide: ConfirmService, useValue: confirm },
+        { provide: SnackbarService, useValue: snackbar },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+      ],
+    });
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.chessableActive = [stuck, other].map(i => ({ ...i, statusLabel: '' })) as typeof component.chessableActive;
+    return { component, chessable, confirm, snackbar };
+  }
+
+  it('cancels via the admin endpoint after confirmation and drops the row', () => {
+    const { component, chessable, confirm } = setupCancel({ confirmed: true });
+    component.cancelChessableImport(component.chessableActive[0]);
+    expect(confirm.ask).toHaveBeenCalledWith('dashboard.chessableQueue.cancelConfirm', { name: 'Stuck course', user: 'bob' });
+    expect(chessable.cancelImportAdmin).toHaveBeenCalledWith(5);
+    expect(component.chessableActive.map(i => i.id)).toEqual([6]);
+  });
+
+  it('does nothing when the admin declines', () => {
+    const { component, chessable } = setupCancel({ confirmed: false });
+    component.cancelChessableImport(component.chessableActive[0]);
+    expect(chessable.cancelImportAdmin).not.toHaveBeenCalled();
+    expect(component.chessableActive.length).toBe(2);
+  });
+
+  it('keeps the row and warns when the cancel fails', () => {
+    const { component, snackbar } = setupCancel({ confirmed: true, fails: true });
+    component.cancelChessableImport(component.chessableActive[0]);
+    expect(snackbar.warn).toHaveBeenCalled();
+    expect(component.chessableActive.length).toBe(2);
   });
 });

@@ -10,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, timer } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
+import { catchError, filter, switchMap } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { Subscription } from '../../core/models';
@@ -21,6 +21,8 @@ import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ActivityTimerTileComponent } from '../training-goals/activity-timer-tile.component';
 
 /** Ein Schnellzugriff-Button auf einer Kachel. */
@@ -187,6 +189,11 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
               <mat-icon matListItemIcon>cloud_download</mat-icon>
               <span matListItemTitle>{{ imp.courseName || imp.bid }} — {{ imp.username }}</span>
               <span matListItemLine>{{ imp.statusLabel }}</span>
+              <button mat-icon-button color="warn" matListItemMeta (click)="cancelChessableImport(imp)"
+                      [attr.aria-label]="'dashboard.chessableQueue.cancel' | translate"
+                      [matTooltip]="'dashboard.chessableQueue.cancel' | translate">
+                <mat-icon>cancel</mat-icon>
+              </button>
             </mat-list-item>
           }
         </mat-list>
@@ -266,6 +273,8 @@ const DEFAULT_HIDDEN = DEFAULT_ORDER.filter(id => !DEFAULT_VISIBLE.includes(id))
 })
 export class DashboardComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
+  private snackbar = inject(SnackbarService);
 
   repertoireCount = 0;
   courseCount = 0;
@@ -567,6 +576,21 @@ export class DashboardComponent implements OnInit {
         puzzleElo: this.puzzleElo,
       });
     });
+  }
+
+  /** Admin: bricht einen aktiven Import (beliebiger User) nach Rückfrage ab. Geht über den Admin-Endpunkt, der
+   *  auch mit abgeschaltetem Chessable-Import antwortet — ein hängender Import ließ sich sonst nirgends abräumen. */
+  cancelChessableImport(imp: ChessableAdminImport): void {
+    this.confirm.ask('dashboard.chessableQueue.cancelConfirm', { name: imp.courseName || imp.bid, user: imp.username })
+      .pipe(
+        filter(ok => ok),
+        switchMap(() => this.chessable.cancelImportAdmin(imp.id)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => this.chessableActive = this.chessableActive.filter(x => x.id !== imp.id),
+        error: () => this.snackbar.warn(this.translate.instant('dashboard.chessableQueue.cancelFailed')),
+      });
   }
 
   /** Kurz-Status eines aktiven Imports: pausiert / Warteschlangen-Position / Hol-Fortschritt. */

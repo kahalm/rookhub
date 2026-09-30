@@ -366,9 +366,10 @@ Schalter — auf PROD (Flag seit 2026-09-09 aus) lief also weder das Schliessen 
 Browser-Sitzungen noch das Aufraeumen verwaister Browser-Importe, und ein abgebrochener Import blieb
 fuer immer auf `Running`. Das ist nicht nur Kosmetik: die Dedup-Regel in `EnqueueReimportAsync`
 verweigert jeden weiteren Import desselben (User, bid), solange einer laeuft. `LanesEnabled` (aus dem
-Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter angetrieben, die
-Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt zurueckgestellt
-(zurueckgestellt nimmt ihn dort nie jemand auf). Ausnahme seit dem Codereview 2026-09-29: ein voll
+Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter angetrieben (Drain,
+Tageslimit-Freigabe), die Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt
+zurueckgestellt (zurueckgestellt nimmt ihn dort niemand verlaesslich auf: kein Drain, kein Resume-Dienst, ein
+Ticket reiht nur ein NEUER Admin-Download ein). Ausnahme seit dem Codereview 2026-09-29: ein voll
 gecachter SERVER-Import (Admin „Kurse von Usern holen") geht zurueck in die Warteschlange — die netzfreie
 Fast-Lane laeuft immer und nimmt ihn auf.
 
@@ -704,8 +705,12 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 ### Chessable-Integration (auth, leitet an piratechess-API weiter)
 
 > **Abschaltbar: `Chessable:Enabled=false`** (`CHESSABLE_ENABLED=false`, Vorgabe an). Dann antwortet
-> `/api/chessable/*` mit **404** (ausser `/api/chessable/admin/*`), und die Download-Lane, der Resume-Dienst
-> sowie der naechtliche Kurslisten-Refresh laufen gar nicht erst an. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
+> `/api/chessable/*` mit **404** (ausser `/api/chessable/admin/*`), und es fallen weg: der Drain des Watchdogs,
+> der Resume-Dienst und der naechtliche Kurslisten-Refresh. **Die Download-Lane selbst laeuft weiter**, bewusst:
+> ein NICHT gecachter Admin-Import („Kurse von Usern holen") reiht ueber `ChessableImportQueueService.EnqueueNextAsync`
+> ein Ticket ein, der `BackgroundTaskWorker` ruft `RunNextAsync` ohne Schalterpruefung, und der Kurs wird dabei
+> ECHT von Chessable geholt (ueber piratechess/VPN, mit dem Bearer des Ziel-Users). Der Schalter sperrt also die
+> Nutzer-Wege, nicht den Admin-Download. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
 > UNBERUEHRT — genau darum geht es: **auf PROD seit 2026-09-09 abgeschaltet**, alle sollen vorerst
 > die Extension benutzen. Der Schalter schliesst die Endpunkte und den Nachtlauf. **Die Seite
 > `/chessable` selbst zeigt seit 0.478.0 nur noch den Hinweis auf die Extension** (Links in beide

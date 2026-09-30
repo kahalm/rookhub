@@ -206,7 +206,10 @@
       "title": "Chessable-várólista",
       "count": "{{count}} aktív importálás",
       "view": "Összes megtekintése",
-      "heading": "Aktív Chessable-importálások"
+      "heading": "Aktív Chessable-importálások",
+      "cancel": "Importálás megszakítása",
+      "cancelConfirm": "Megszakítod a(z) „{{name}}” ({{user}}) importálását?",
+      "cancelFailed": "Az importálást nem sikerült megszakítani."
     },
     "trainingGoals": {
       "title": "Edzéscélok",

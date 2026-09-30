@@ -365,7 +365,10 @@
       "title": "Chessable red",
       "count": "{{count}} aktivnih uvoza",
       "view": "Prikaži sve",
-      "heading": "Aktivni Chessable uvozi"
+      "heading": "Aktivni Chessable uvozi",
+      "cancel": "Prekini uvoz",
+      "cancelConfirm": "Prekinuti uvoz „{{name}}“ ({{user}})?",
+      "cancelFailed": "Uvoz nije moguće prekinuti."
     },
     "trainingGoals": {
       "title": "Ciljevi treninga",

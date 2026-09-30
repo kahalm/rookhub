@@ -76,6 +76,13 @@ describe('ChessableService', () => {
     httpMock.expectOne('/api/chessable/admin/active').flush([]);
   });
 
+  it('cancelImportAdmin POSTs to the admin cancel route (works with the Chessable switch off)', () => {
+    service.cancelImportAdmin(7).subscribe();
+    const req = httpMock.expectOne('/api/chessable/admin/imports/7/cancel');
+    expect(req.request.method).toBe('POST');
+    req.flush({ id: 7, status: 'cancelled' });
+  });
+
   it('testUser POSTs to the admin per-user test route', () => {
     service.testUser(42).subscribe();
     const req = httpMock.expectOne('/api/chessable/admin/users/42/test');

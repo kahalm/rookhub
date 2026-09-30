@@ -365,7 +365,10 @@
       "title": "Chessable Queue",
       "count": "{{count}} active import(s)",
       "view": "View all",
-      "heading": "Active Chessable Imports"
+      "heading": "Active Chessable Imports",
+      "cancel": "Cancel import",
+      "cancelConfirm": "Cancel the import of “{{name}}” ({{user}})?",
+      "cancelFailed": "Could not cancel the import."
     },
     "trainingGoals": {
       "title": "Training Goals",

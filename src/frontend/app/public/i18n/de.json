@@ -365,7 +365,10 @@
       "title": "Chessable-Warteschlange",
       "count": "{{count}} aktive(r) Import(e)",
       "view": "Alle anzeigen",
-      "heading": "Aktive Chessable-Importe"
+      "heading": "Aktive Chessable-Importe",
+      "cancel": "Import abbrechen",
+      "cancelConfirm": "Import von „{{name}}“ ({{user}}) abbrechen?",
+      "cancelFailed": "Import konnte nicht abgebrochen werden."
     },
     "trainingGoals": {
       "title": "Trainingsziele",

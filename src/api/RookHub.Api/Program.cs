@@ -438,9 +438,11 @@ try
     // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
     builder.Services.AddSingleton<AnonymousSolveNotifyThrottle>();
     // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst
-    // sich abschalten: `Chessable:Enabled=false`. Dann laufen weder die Download-Lane noch der
-    // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404 (ausser `/api/chessable/admin/*`,
-    // siehe Fast-Lane unten). Der Weg ueber die
+    // sich abschalten: `Chessable:Enabled=false`. Dann fallen der Drain des Watchdogs, der Resume-Dienst und
+    // der naechtliche Kurslisten-Refresh weg, und `/api/chessable/*` antwortet 404 (ausser `/api/chessable/admin/*`,
+    // siehe Fast-Lane unten). Die Download-Lane laeuft BEWUSST weiter: ein nicht gecachter Admin-Import („Kurse
+    // von Usern holen") reiht per `EnqueueNextAsync` ein Ticket ein, der BackgroundTaskWorker ruft `RunNextAsync`
+    // ohne Schalterpruefung, und der Kurs wird dabei echt von Chessable geholt. Der Weg ueber die
     // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
     // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
     // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (bounded-DropOldest-Ticketverlust /

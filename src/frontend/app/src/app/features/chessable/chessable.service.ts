@@ -149,6 +149,12 @@ export class ChessableService {
     return this.http.get<ChessableAdminImport[]>(`${this.apiUrl}/admin/active`);
   }
 
+  /** ADMIN: Bricht einen wartenden/laufenden/pausierten Import eines beliebigen Users ab — auch mit
+   *  `Chessable:Enabled=false` (der Nutzer-Weg `imports/{id}/cancel` antwortet dann 404). */
+  cancelImportAdmin(id: number): Observable<ChessableAdminImport> {
+    return this.http.post<ChessableAdminImport>(`${this.apiUrl}/admin/imports/${id}/cancel`, {});
+  }
+
   /** ADMIN: User mit hinterlegtem Chessable-Bearer (für „Kurse von Usern holen"). */
   getCredentialedUsersAdmin(): Observable<ChessableCredentialedUser[]> {
     return this.http.get<ChessableCredentialedUser[]>(`${this.apiUrl}/admin/credentialed-users`);
