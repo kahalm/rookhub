@@ -55,7 +55,8 @@ public class LeagueAccountFinderTests : IDisposable
             "FIDE-Wertung im Profil 1950 (Liste 1900)", "Tiroler Ort im Profil" }, v.Evidence);
         Assert.Equal(2, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", flag: "AT"), derived: true)!.Score);
         Assert.Equal(2, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "M. Muster"), derived: true)!.Score);   // nur Nachname
-        Assert.Contains("Nachname im Profil", LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "M. Muster"), derived: true)!.Evidence[1]);
+        Assert.Contains("Nachname und Initiale im Profil", LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "M. Muster"), derived: true)!.Evidence[1]);
+        Assert.Contains("Nachname im Profil („IM Muster“)", LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "IM Muster"), derived: true)!.Evidence[1]);
     }
 
     [Fact]
@@ -74,6 +75,22 @@ public class LeagueAccountFinderTests : IDisposable
         // Land der FIDE-Föderation ist kein Widerspruch.
         Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "DE"), derived: true));
         Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "DE"), derived: true, fideFed: "GER"));
+    }
+
+    [Fact]
+    public void Judge_AnotherFirstNameInTheProfile_IsAnotherPerson()
+    {
+        // Gesehen in der ersten vollen Suche (2026-09-30).
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Andreas Muster", "AT"), derived: true));
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MMuster", "F. Muster", "AT"), derived: true));        // fremde Initiale
+        Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MMuster", "M Muster", "AT"), derived: true));
+        // Zweiter Vorname zählt auch.
+        var two = new LeagueAccountFinder.Player("5", "Muster, Max Peter", "AUT", 1900, "x");
+        Assert.Equal(1 + 3 + 1, LeagueAccountFinder.Judge(two, Prof("MaxMuster", "Peter Muster", "AT"), derived: true)!.Score);
+        Assert.Equal(LeagueAccountFinder.NameFit.LastOnly,
+            LeagueAccountFinder.FirstNameMatch(new[] { "fm", "muster" }, new[] { "muster" }, new[] { "max" }));
+        Assert.Equal(LeagueAccountFinder.NameFit.Other,
+            LeagueAccountFinder.FirstNameMatch(new[] { "galin", "georgiev" }, new[] { "georgiev" }, new[] { "georgi" }));
     }
 
     [Fact]

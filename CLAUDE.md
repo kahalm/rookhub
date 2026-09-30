@@ -1684,13 +1684,16 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   einem Land, das weder AT noch die Föderation des Spielers (Meldeliste oder FIDE) ist. Hinweise: Klarname 3, nur Nachname 1,
   FIDE-Wertung im Profil ±250 zur Liste 2, Tiroler Ort in Ort/Bio 2 (Wortgrenzen — „Hallo" ist nicht Hall), Land 1. Ein Name
   aus dem Namen braucht ≥ 1 (plus 1 Punkt), einer aus der Suche ≥ 3.
+* **Anderer Vorname = anderer Mensch** (0.611.0, `FirstNameMatch`, gesehen in der ersten vollen Suche: „Andreas Berchtold" für Axel,
+  „Galin Georgiev" für Georgi): steht im Profil neben dem Nachnamen ein Vorname, muss es einer des Spielers sein (irgendeiner, auch
+  der zweite); nur Initialen → eine muss passen; nur Nachname oder Titel („IM Muster") → schwacher Hinweis. Sonst fällt das Konto weg.
 * **Online-Wertung gegen Elo** (0.609.0, Wunsch „ein Konto mit 500 auf einem 2000er ergibt keinen Sinn — nur niedriger ist ein
   Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab 10 Partien, nicht vorläufig —
   unbespielte Lichess-Kategorien stehen auf 1500 „prov"; Bullet zählt mit) darf höchstens `RatingBelow` 400 unter der Elo der
   Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 250 darunter bis 450 darüber, ist das ein Hinweis
   (+1). Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
   mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
-* **Fassung** `LeagueAccountFinder.CurrentVersion` (3 seit 0.610.0) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (4 seit 0.611.0) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
   fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
   Urteil ändert, erhöht die Zahl.
 * **Minderjährige: gesucht, aber VERBORGEN** (0.610.0, Wunsch „du linkst sie, aber zeigst niemandem den Namen/Account"; bis

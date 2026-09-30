@@ -30,9 +30,9 @@ public sealed partial class LeagueAccountFinder
     /// <summary>
     /// Fassung der Regeln. Wer an Kandidaten oder Urteil dreht, erhöht sie — dann sucht der Hintergrund jeden Spieler einmal neu,
     /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0),
-    /// 3 = auch Minderjährige, verborgen (0.610.0).
+    /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0).
     /// </summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -159,8 +159,13 @@ public sealed partial class LeagueAccountFinder
         if (toks.Count > 0)
         {
             if (!lt.All(toks.Contains)) return null;                 // das Profil nennt jemand anderen
-            if (ft.Count > 0 && ft.All(toks.Contains)) { score += ScoreName; ev.Add($"Klarname im Profil („{Short(prof.RealName)}“)"); }
-            else { score += ScoreLastName; ev.Add($"Nachname im Profil („{Short(prof.RealName)}“)"); }
+            switch (FirstNameMatch(toks, lt, Tokens(first)))
+            {
+                case NameFit.Full: score += ScoreName; ev.Add($"Klarname im Profil („{Short(prof.RealName)}“)"); break;
+                case NameFit.Initial: score += ScoreLastName; ev.Add($"Nachname und Initiale im Profil („{Short(prof.RealName)}“)"); break;
+                case NameFit.LastOnly: score += ScoreLastName; ev.Add($"Nachname im Profil („{Short(prof.RealName)}“)"); break;
+                default: return null;                                  // anderer Vorname — ein anderer Mensch (0.611.0)
+            }
         }
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AT" };
         if (p.Fed is { } f1 && Fed2.TryGetValue(f1, out var c1)) allowed.Add(c1);
@@ -198,6 +203,30 @@ public sealed partial class LeagueAccountFinder
     /// <summary>Liegt die Online-Wertung nicht zu weit UNTER der Elo? Ohne Wertung oder ohne Elo: kein Einwand.</summary>
     public static bool RatingPlausible(Profile prof, int? elo) =>
         prof.Rating is not { } r || elo is not { } e || e <= 0 || r >= e - RatingBelow;
+
+    public enum NameFit { Full, Initial, LastOnly, Other }
+
+    /// <summary>Wörter in Profilnamen, die kein Vorname sind (Titel, „Schach").</summary>
+    private static readonly HashSet<string> NameFiller = new(StringComparer.Ordinal)
+    {
+        "gm", "im", "fm", "cm", "nm", "wgm", "wim", "wfm", "wcm", "dr", "mag", "ing", "dipl", "prof", "msc", "bsc", "chess", "schach",
+    };
+
+    /// <summary>
+    /// Passt der Vorname im Profil? (0.611.0 — gesehen in der ersten vollen Suche: „Andreas Berchtold" für Axel Berchtold,
+    /// „Galin Georgiev" für Georgi.) Irgendein Vorname des Spielers steht da → <c>Full</c>; nur Initialen, eine davon passt →
+    /// <c>Initial</c>; außer dem Nachnamen nichts (oder nur Titel) → <c>LastOnly</c>; ein ANDERER Vorname oder eine fremde
+    /// Initiale → <c>Other</c> = ein anderer Mensch.
+    /// </summary>
+    public static NameFit FirstNameMatch(IReadOnlyList<string> profile, IReadOnlyList<string> last, IReadOnlyList<string> firsts)
+    {
+        var others = profile.Where(t => !last.Contains(t) && !NameFiller.Contains(t)).ToList();
+        if (firsts.Count > 0 && others.Any(firsts.Contains)) return NameFit.Full;
+        if (others.Count == 0 || firsts.Count == 0) return NameFit.LastOnly;
+        if (others.All(o => o.Length == 1))
+            return others.Any(o => firsts.Any(f => f[0] == o[0])) ? NameFit.Initial : NameFit.Other;
+        return NameFit.Other;
+    }
 
     private static string Short(string? s) => (s ?? "").Length > 60 ? s![..60] + "…" : s ?? "";
 
