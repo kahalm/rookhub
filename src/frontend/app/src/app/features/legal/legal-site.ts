@@ -13,14 +13,15 @@ export interface LegalSite {
    *  (aus `OPERATOR`) und der Kontaktadresse — Pflichtangabe nach Art. 13 Abs. 1 lit. a DSGVO. */
   imprint: boolean;
   /** Welche Oberflaeche: waehlt in der Datenschutzerklaerung Einleitung und Zusatzabschnitte. Fehlt = RookHub
-   *  (auch die Turnierseite). KidHub bekommt eine Fassung in einfacher Sprache mit Elternhinweis (Codereview F7-003). */
+   *  (auch die Turnierseite). KidHub bekommt eine Fassung in einfacher Sprache mit Elternhinweis (Codereview F7-003),
+   *  LeagueHub den Abschnitt ueber die Daten der Ligaspieler ohne Konto (Art. 14 DSGVO, Codereview F7-006). */
   kind?: LegalSiteKind;
   /** Ziel des Ruecklinks am Ende der Rechtsseiten; fehlt = `/login`. KidHub: `/` — ein Kind soll zurueck zum
    *  Spiel, nicht auf die Anmeldemaske. */
   back?: string;
 }
 
-export type LegalSiteKind = 'rookhub' | 'kidhub';
+export type LegalSiteKind = 'rookhub' | 'kidhub' | 'leaguehub';
 
 /** Vorgabe fuer RookHub und die Turnierseite. */
 export function defaultLegalSite(): LegalSite {

@@ -1,4 +1,7 @@
 import { authGuard } from '@rh/core/auth.guard';
+import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
+import { OPERATOR } from '../../src/environments/operator';
+import { leaguehubConfig } from './app.config';
 import { routes } from './app.routes';
 
 describe('LeagueHub-Routen', () => {
@@ -21,6 +24,13 @@ describe('LeagueHub-Routen', () => {
       expect(r).withContext(path).toBeDefined();
       expect(r!.canActivate).withContext(path).toBeUndefined();
     }
+  });
+
+  it('Datenschutz mit LeagueHub-Abschnitt, Impressum und Kontakt wie RookHub (F7-006)', () => {
+    expect(routes.map(r => r.path)).toContain('privacy');
+    const legal = leaguehubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
+      { useFactory: () => LegalSite } | undefined;
+    expect(legal?.useFactory()).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
   });
 
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {

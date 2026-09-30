@@ -49,6 +49,21 @@ import { OPERATOR } from '../../../environments/operator';
               <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
           }
 
+          @if (kind === 'leaguehub') {
+            <!-- LeagueHub verarbeitet Daten von Ligaspielern ohne Konto und gibt sie ueber Teilen-Links weiter:
+                 Informationspflicht nach Art. 14 DSGVO (Codereview F7-006). -->
+            <h4>{{ 'legal.privacy.leagueTitle' | translate }}</h4>
+            <p>{{ 'legal.privacy.leagueIntro' | translate }}</p>
+            <ul>
+              <li>{{ 'legal.privacy.leagueSources' | translate }}</li>
+              <li>{{ 'legal.privacy.leagueData' | translate }}</li>
+              <li>{{ 'legal.privacy.leagueBasis' | translate }}</li>
+              <li>{{ 'legal.privacy.leagueRecipients' | translate }}</li>
+              <li>{{ 'legal.privacy.leagueRetention' | translate }}</li>
+              <li>{{ 'legal.privacy.leagueObjection' | translate }}</li>
+            </ul>
+          }
+
           <h4>{{ 'legal.privacy.dataTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.dataIntro' | translate }}</p>
           <ul>

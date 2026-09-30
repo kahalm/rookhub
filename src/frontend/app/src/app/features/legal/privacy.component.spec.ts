@@ -57,6 +57,20 @@ describe('PrivacyComponent', () => {
     expect(el.textContent).not.toContain(OPERATOR.email);
   });
 
+  it('LeagueHub: Abschnitt ueber Ligaspieler ohne Konto, nur dort (F7-006)', () => {
+    const keys = ['leagueTitle', 'leagueSources', 'leagueData', 'leagueBasis', 'leagueRecipients', 'leagueRetention',
+      'leagueObjection'].map(k => 'legal.privacy.' + k);
+    const league = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
+    for (const k of keys) expect(league.textContent).withContext(k).toContain(k);
+    expect(hrefs(league)).toContain('/impressum');
+    TestBed.resetTestingModule();
+    const rookhub = render();
+    expect(rookhub.textContent).not.toContain('legal.privacy.leagueTitle');
+    TestBed.resetTestingModule();
+    const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+    expect(kid.textContent).not.toContain('legal.privacy.leagueTitle');
+  });
+
   it('nennt die KI-Dienste: Formular-Fotos gehen an Anthropic (Codereview A6-008)', () => {
     const el = render();
     // Ohne Sprachdateien stehen die Keys selbst da — sie muessen gerendert werden.
@@ -87,6 +101,14 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(t['scoresheet']['help']).toContain('Anthropic');
       // „eigene Hardware" haengt an der Konfiguration (TextLlm), der Hilfetext der Kurs-Uebersetzung bleibt neutral.
       expect(t['courses']['translations']['help']).not.toMatch(/eigenen Hardware|own hardware|vlastitom hardveru|saját hardverünkön/);
+    });
+
+    it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      expect(p['leagueBasis']).toMatch(/6/);
+      expect(p['leagueObjection']).toMatch(/21/);
+      expect(p['leagueIntro']).toMatch(/14/);
+      expect(p['leagueData']).toMatch(/Lichess/);
     });
   }
 });
