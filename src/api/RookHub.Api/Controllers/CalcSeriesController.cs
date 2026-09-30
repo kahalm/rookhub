@@ -10,7 +10,8 @@ namespace RookHub.Api.Controllers;
 /// <summary>
 /// Kalkulations-Serien (eigener Bereich): terminierte Ausgaben eines Kalkulationsbuchs mit Video (Phase 1)
 /// und der private Verteiler mit Tester-Häkchen (Phase 2).
-/// Verwaltung (Anlegen/Ändern/Löschen) nur durch Buch-Besitzer oder Admin; die Betrachter-Liste
+/// Verwaltung (Anlegen/Ändern/Löschen) nur durch Buch-Besitzer oder Admin (ein Mitglied darf sich
+/// selbst aus dem Verteiler austragen); die Betrachter-Liste
 /// (<c>GET {bookId}</c>) liefert nur bereits freigegebene Ausgaben. Das Sichtbarkeits-Gating der
 /// Stellungen selbst passiert in den Kalkulations-Endpoints (<see cref="CalculationController"/>).
 /// </summary>
@@ -54,13 +55,15 @@ public class CalcSeriesController : BaseApiController
         return Ok(await _service.ListAsync(bookId, ct));
     }
 
-    /// <summary>Ausgabe anlegen/ändern (Upsert je Kapitel). Nur Besitzer/Admin.</summary>
+    /// <summary>Ausgabe anlegen/ändern (Upsert je Kapitel). Nur Besitzer/Admin.
+    /// 400, wenn eine neue Ausgabe den Deckel je Buch überschreiten würde.</summary>
     [HttpPut("{bookId:int}")]
     public async Task<ActionResult<CalcEditionDto>> Upsert(int bookId, [FromBody] CalcEditionInputDto dto, CancellationToken ct)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Chapter)) return BadRequest(new { message = "Chapter required." });
         if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        return Ok(await _service.UpsertAsync(bookId, dto, ct));
+        try { return Ok(await _service.UpsertAsync(bookId, dto, ct)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Ausgabe löschen. Nur Besitzer/Admin.</summary>
@@ -71,7 +74,7 @@ public class CalcSeriesController : BaseApiController
         return await _service.DeleteAsync(bookId, editionId, ct) ? NoContent() : NotFound();
     }
 
-    // ===== Privater Verteiler (Phase 2) — nur Besitzer/Admin =================
+    // ===== Privater Verteiler (Phase 2) — Besitzer/Admin; Austragen auch selbst =====
 
     /// <summary>Mitglieder des Verteilers (inkl. Tester-Häkchen). Nur Besitzer/Admin.</summary>
     [HttpGet("{bookId:int}/members")]
@@ -81,22 +84,29 @@ public class CalcSeriesController : BaseApiController
         return Ok(await _service.ListMembersAsync(bookId, ct));
     }
 
-    /// <summary>Mitglied hinzufügen/ändern (per Benutzername). Nur Besitzer/Admin.
-    /// 404, wenn es keinen Nutzer mit diesem Namen gibt.</summary>
+    /// <summary>Mitglied hinzufügen/ändern (per Benutzername). Nur Besitzer/Admin; neu eintragen lassen sich
+    /// nur Freunde des Besitzers (Admins: jeder), siehe <see cref="CalcEditionService.UpsertMemberAsync"/>.
+    /// 404 — gleiche Antwort für „gibt es nicht" und „kein Freund" (kein Benutzernamen-Orakel);
+    /// 400 bei einem Nicht-Kalkulationsbuch oder vollem Verteiler.</summary>
     [HttpPut("{bookId:int}/members")]
     public async Task<ActionResult<CalcSeriesMemberDto>> UpsertMember(int bookId, [FromBody] CalcSeriesMemberInputDto dto, CancellationToken ct)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Username)) return BadRequest(new { message = "Username required." });
         if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        var member = await _service.UpsertMemberAsync(bookId, dto.Username, dto.IsTester, ct);
-        return member is null ? NotFound(new { message = "User not found." }) : Ok(member);
+        try
+        {
+            var member = await _service.UpsertMemberAsync(bookId, dto.Username, dto.IsTester, IsAdmin, ct);
+            return member is null ? NotFound(new { message = "User not found or not a friend." }) : Ok(member);
+        }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    /// <summary>Mitglied entfernen. Nur Besitzer/Admin.</summary>
+    /// <summary>Mitglied entfernen. Besitzer/Admin — oder das Mitglied sich selbst (Austragen: wer in einen
+    /// Verteiler eingetragen wurde, muss wieder herauskommen, ohne den Besitzer zu fragen).</summary>
     [HttpDelete("{bookId:int}/members/{userId:int}")]
     public async Task<IActionResult> RemoveMember(int bookId, int userId, CancellationToken ct)
     {
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        if (userId != GetUserId() && !await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
         return await _service.RemoveMemberAsync(bookId, userId, ct) ? NoContent() : NotFound();
     }
 

@@ -13,8 +13,24 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class CalcEditionService
 {
+    /// <summary>Höchstzahl der Ausgaben je Buch. Eine Ausgabe = eine Woche: 120 reichen für mehr als zwei
+    /// Jahre Wochenserie (Noels Serie: eine Woche je Kapitel). Der Deckel begrenzt, wie viele Ankündigungen
+    /// ein Buch je Mitglied überhaupt auslösen kann (jede fällige Ausgabe = eine Benachrichtigung an alle).
+    /// Gilt nur für NEUE Ausgaben — eine bestehende lässt sich immer ändern.</summary>
+    public const int MaxEditionsPerBook = 120;
+
+    /// <summary>Höchstzahl der Verteiler-Mitglieder je Buch. Ein privater Trainingskreis ist kleiner; wer
+    /// mehr Leute erreichen will, gibt den Kurs über eine Gruppe frei. Zusammen mit
+    /// <see cref="MaxEditionsPerBook"/> ist die Zahl der Ankündigungen je Buch nach oben begrenzt.</summary>
+    public const int MaxMembersPerBook = 200;
+
     private readonly AppDbContext _db;
-    public CalcEditionService(AppDbContext db) => _db = db;
+    private readonly FriendService _friends;
+    public CalcEditionService(AppDbContext db, FriendService friends)
+    {
+        _db = db;
+        _friends = friends;
+    }
 
     /// <summary>Darf der User die Ausgaben dieses Buchs verwalten? (Besitzer oder Admin.)</summary>
     public async Task<bool> CanManageAsync(int userId, int bookId, bool isAdmin, CancellationToken ct = default)
@@ -43,7 +59,8 @@ public class CalcEditionService
         return eds.Select(e => Map(e, now)).ToList();
     }
 
-    /// <summary>Upsert je (Buch, Kapitel).</summary>
+    /// <summary>Upsert je (Buch, Kapitel). Wirft <see cref="InvalidOperationException"/>, wenn eine NEUE
+    /// Ausgabe den Deckel <see cref="MaxEditionsPerBook"/> überschreiten würde.</summary>
     public async Task<CalcEditionDto> UpsertAsync(int bookId, CalcEditionInputDto input, CancellationToken ct = default)
     {
         var chapter = input.Chapter.Trim();
@@ -51,6 +68,8 @@ public class CalcEditionService
         var e = await _db.CalcEditions.FirstOrDefaultAsync(x => x.BookId == bookId && x.Chapter == chapter, ct);
         if (e is null)
         {
+            if (await _db.CalcEditions.CountAsync(x => x.BookId == bookId, ct) >= MaxEditionsPerBook)
+                throw new InvalidOperationException($"At most {MaxEditionsPerBook} editions per book.");
             e = new CalcEdition { BookId = bookId, Chapter = chapter, CreatedAt = now };
             _db.CalcEditions.Add(e);
         }
@@ -92,8 +111,19 @@ public class CalcEditionService
     }
 
     /// <summary>Mitglied hinzufügen oder Tester-Häkchen ändern (per Benutzername, case-insensitiv).
-    /// Gibt das Mitglied zurück; <c>null</c>, wenn es keinen Nutzer mit diesem Namen gibt.</summary>
-    public async Task<CalcSeriesMemberDto?> UpsertMemberAsync(int bookId, string username, bool isTester, CancellationToken ct = default)
+    /// Gibt das Mitglied zurück; <c>null</c>, wenn es keinen Nutzer mit diesem Namen gibt ODER er (neu
+    /// eingetragen) kein bestätigter Freund des Buch-Besitzers ist — bewusst dieselbe Antwort, damit die
+    /// Eingabe kein Orakel für fremde Benutzernamen ist.
+    ///
+    /// <para>Regeln für NEUE Mitglieder (wie beim Kurs-Teilen, <see cref="ShareServiceBatch"/>): nur Freunde
+    /// des Besitzers (der Besitzer selbst geht auch; Admins dürfen jeden eintragen), nur bei einem
+    /// Kalkulationsbuch, höchstens <see cref="MaxMembersPerBook"/>. Ohne diese Regeln konnte jedes Konto
+    /// (leerer persönlicher Kurs = Buchbesitz) beliebige Nutzer eintragen und je Ausgabe benachrichtigen;
+    /// der Kurs erschien zudem in deren Kursliste. Wer schon im Verteiler steht, bleibt änderbar (Tester-Häkchen)
+    /// und kann sich selbst austragen (<see cref="RemoveMemberAsync"/>).</para>
+    ///
+    /// <para>Wirft <see cref="InvalidOperationException"/> bei einem Nicht-Kalkulationsbuch oder vollem Verteiler.</para></summary>
+    public async Task<CalcSeriesMemberDto?> UpsertMemberAsync(int bookId, string username, bool isTester, bool isAdmin = false, CancellationToken ct = default)
     {
         var name = (username ?? string.Empty).Trim();
         if (name.Length == 0) return null;
@@ -103,6 +133,16 @@ public class CalcEditionService
         var existing = await _db.CalcSeriesMembers.FirstOrDefaultAsync(m => m.BookId == bookId && m.UserId == user.Id, ct);
         if (existing is null)
         {
+            var book = await _db.Books.Where(b => b.Id == bookId)
+                .Select(b => new { b.OwnerUserId, b.IsCalculation }).FirstOrDefaultAsync(ct);
+            if (book is null) return null;
+            if (!isAdmin && user.Id != book.OwnerUserId
+                && (book.OwnerUserId is not int ownerId || !await _friends.AreFriendsAsync(ownerId, user.Id)))
+                return null;
+            if (!book.IsCalculation)
+                throw new InvalidOperationException("Only calculation books have a distribution list.");
+            if (await _db.CalcSeriesMembers.CountAsync(m => m.BookId == bookId, ct) >= MaxMembersPerBook)
+                throw new InvalidOperationException($"At most {MaxMembersPerBook} members per distribution list.");
             existing = new CalcSeriesMember { BookId = bookId, UserId = user.Id, IsTester = isTester, CreatedAt = DateTime.UtcNow };
             _db.CalcSeriesMembers.Add(existing);
         }
@@ -114,7 +154,8 @@ public class CalcEditionService
         return new CalcSeriesMemberDto { UserId = user.Id, Username = user.Username, IsTester = existing.IsTester, CreatedAt = existing.CreatedAt };
     }
 
-    /// <summary>Mitglied entfernen. <c>false</c>, wenn es nicht (mehr) im Verteiler stand.</summary>
+    /// <summary>Mitglied entfernen (Verwalter, oder das Mitglied sich selbst — der Controller prüft).
+    /// <c>false</c>, wenn es nicht (mehr) im Verteiler stand.</summary>
     public async Task<bool> RemoveMemberAsync(int bookId, int userId, CancellationToken ct = default)
     {
         var m = await _db.CalcSeriesMembers.FirstOrDefaultAsync(x => x.BookId == bookId && x.UserId == userId, ct);

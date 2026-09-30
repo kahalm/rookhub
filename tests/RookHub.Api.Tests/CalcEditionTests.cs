@@ -22,7 +22,7 @@ public class CalcEditionTests : IDisposable
     {
         var opts = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(opts);
-        _editions = new CalcEditionService(_db);
+        _editions = new CalcEditionService(_db, TestServices.Friends(_db));
         _calc = new CalculationService(_db);
         _authoring = new CourseAuthoringService(_db);
     }
@@ -33,6 +33,9 @@ public class CalcEditionTests : IDisposable
         _db.AppUsers.Add(new AppUser { Id = OwnerId, Username = "owner", PasswordHash = "x" });
         _db.AppUsers.Add(new AppUser { Id = ViewerId, Username = "viewer", PasswordHash = "x" });
         _db.AppUsers.Add(new AppUser { Id = TesterId, Username = "tester", PasswordHash = "x" });
+        // Verteiler nur für Freunde des Besitzers (A7-004): Betrachter und Tester sind mit ihm befreundet.
+        _db.Friendships.Add(new Friendship { RequesterId = OwnerId, AddresseeId = ViewerId, Status = FriendshipStatus.Accepted });
+        _db.Friendships.Add(new Friendship { RequesterId = TesterId, AddresseeId = OwnerId, Status = FriendshipStatus.Accepted });
         var book = new Book { FileName = "noel.pgn", DisplayName = "Noel", IsCalculation = true, IsPublic = true, OwnerUserId = OwnerId, Source = new BookSource() };
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
@@ -605,5 +608,130 @@ public class CalcEditionTests : IDisposable
 
         Assert.Equal(1, await Announcer().RunOnceAsync());                     // jetzt gibt es die Woche
         Assert.Equal(ViewerId, (await _db.Notifications.SingleAsync()).UserId);
+    }
+
+    // ===== Verteiler nur für Freunde, Deckel, Selbst-Austragen (Codereview 2026-09-29, A7-004) =====
+
+    private const int StrangerId = 8;
+
+    private async Task<int> SeedBookWithStrangerAsync()
+    {
+        var bookId = await SeedBookAsync();
+        _db.AppUsers.Add(new AppUser { Id = StrangerId, Username = "stranger", PasswordHash = "x" });
+        // Offene (nicht bestätigte) Anfrage zählt NICHT als Freundschaft.
+        _db.Friendships.Add(new Friendship { RequesterId = OwnerId, AddresseeId = StrangerId, Status = FriendshipStatus.Pending });
+        await _db.SaveChangesAsync();
+        return bookId;
+    }
+
+    [Fact]
+    public async Task Members_NonFriend_IsRejected_LikeUnknownUser()
+    {
+        var bookId = await SeedBookWithStrangerAsync();
+
+        Assert.Null(await _editions.UpsertMemberAsync(bookId, "stranger", isTester: false));
+        Assert.False(await _db.CalcSeriesMembers.AnyAsync());   // kein Eintrag → keine Ankündigung, kein Kurs in seiner Liste
+    }
+
+    [Fact]
+    public async Task Members_Controller_NonFriendAndUnknown_SameNotFound()
+    {
+        var bookId = await SeedBookWithStrangerAsync();
+        var owner = Controller(OwnerId);
+
+        var stranger = Assert.IsType<NotFoundObjectResult>((await owner.UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "stranger" }, default)).Result);
+        var unknown = Assert.IsType<NotFoundObjectResult>((await owner.UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "gibt-es-nicht" }, default)).Result);
+        // Kein Benutzernamen-Orakel: identischer Körper für „kein Freund" und „gibt es nicht".
+        Assert.Equal(System.Text.Json.JsonSerializer.Serialize(unknown.Value), System.Text.Json.JsonSerializer.Serialize(stranger.Value));
+        Assert.False(await _db.CalcSeriesMembers.AnyAsync());
+
+        Assert.IsType<OkObjectResult>((await owner.UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "viewer" }, default)).Result);   // Freund → ok
+    }
+
+    [Fact]
+    public async Task Members_Admin_MayAddNonFriend()
+    {
+        var bookId = await SeedBookWithStrangerAsync();
+
+        var ok = Assert.IsType<OkObjectResult>((await Controller(ViewerId, isAdmin: true).UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "stranger" }, default)).Result);
+        Assert.Equal(StrangerId, Assert.IsType<CalcSeriesMemberDto>(ok.Value).UserId);
+    }
+
+    [Fact]
+    public async Task Members_ExistingMember_StaysEditable_AfterFriendshipEnded()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        _db.Friendships.RemoveRange(_db.Friendships.Where(f => f.AddresseeId == ViewerId || f.RequesterId == ViewerId));
+        await _db.SaveChangesAsync();
+
+        var updated = await _editions.UpsertMemberAsync(bookId, "viewer", isTester: true);   // Tester-Häkchen bleibt schaltbar
+        Assert.True(updated!.IsTester);
+    }
+
+    [Fact]
+    public async Task Members_NonCalculationBook_IsRejected()
+    {
+        var bookId = await SeedBookAsync();
+        var book = await _db.Books.SingleAsync();
+        book.IsCalculation = false;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertMemberAsync(bookId, "viewer", isTester: false));
+        Assert.IsType<BadRequestObjectResult>((await Controller(OwnerId).UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "viewer" }, default)).Result);
+        Assert.False(await _db.CalcSeriesMembers.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Members_CapReached_NewMemberRejected_ExistingStillEditable()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        for (var i = 0; i < CalcEditionService.MaxMembersPerBook - 1; i++)
+            _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = bookId, UserId = 1000 + i });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertMemberAsync(bookId, "tester", isTester: false));
+        Assert.Equal(CalcEditionService.MaxMembersPerBook, await _db.CalcSeriesMembers.CountAsync(m => m.BookId == bookId));
+        Assert.True((await _editions.UpsertMemberAsync(bookId, "viewer", isTester: true))!.IsTester);
+    }
+
+    [Fact]
+    public async Task Editions_CapReached_NewEditionRejected_ExistingStillEditable()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", PublishAt = DateTime.UtcNow.AddDays(1) });
+        for (var i = 1; i < CalcEditionService.MaxEditionsPerBook; i++)
+            _db.CalcEditions.Add(new CalcEdition { BookId = bookId, Chapter = $"x{i}", PublishAt = DateTime.UtcNow.AddDays(-1) });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertAsync(bookId,
+            new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(-1) }));
+        Assert.IsType<BadRequestObjectResult>((await Controller(OwnerId).Upsert(bookId,
+            new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(-1) }, default)).Result);
+        Assert.Equal(CalcEditionService.MaxEditionsPerBook, await _db.CalcEditions.CountAsync(e => e.BookId == bookId));
+
+        var edited = await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", Title = "neu", PublishAt = DateTime.UtcNow.AddDays(2) });
+        Assert.Equal("neu", edited.Title);
+    }
+
+    [Fact]
+    public async Task RemoveMember_Self_WithoutManageRights()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+
+        // Fremdes Mitglied austragen: weiterhin nur Besitzer/Admin.
+        Assert.IsType<ForbidResult>(await Controller(ViewerId).RemoveMember(bookId, TesterId, default));
+        // Sich selbst austragen: ohne Verwaltungsrecht erlaubt, idempotent (danach 404).
+        Assert.IsType<NoContentResult>(await Controller(ViewerId).RemoveMember(bookId, ViewerId, default));
+        Assert.IsType<NotFoundResult>(await Controller(ViewerId).RemoveMember(bookId, ViewerId, default));
+        Assert.Equal(new[] { TesterId }, await _db.CalcSeriesMembers.Select(m => m.UserId).ToArrayAsync());
     }
 }
