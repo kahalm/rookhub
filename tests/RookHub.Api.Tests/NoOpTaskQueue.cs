@@ -4,12 +4,16 @@ namespace RookHub.Api.Tests;
 
 /// <summary>
 /// No-op implementation of IBackgroundTaskQueue for unit tests.
-/// Enqueued tasks are silently discarded.
+/// Enqueued tasks are silently discarded. Steht auch für die Tipp-Queue (BookPuzzleController).
 /// </summary>
-public class NoOpTaskQueue : IWebhookTaskQueue
+public class NoOpTaskQueue : IWebhookTaskQueue, IHintTaskQueue
 {
     public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
         => ValueTask.CompletedTask;
+
+    public bool TryEnqueueBook(int bookId, int? ownerUserId) => true;
+
+    public int TakeDailyBudget(int userId, int wanted) => wanted;
 
     public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
         => throw new NotImplementedException("NoOpTaskQueue does not support dequeue");

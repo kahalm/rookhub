@@ -20,17 +20,17 @@ namespace RookHub.Api.Services;
 public class PgnImportService
 {
     private readonly AppDbContext _db;
-    private readonly IBackgroundTaskQueue? _bgQueue;
+    private readonly IHintTaskQueue? _hintQueue;
     private readonly CourseTranslationJobService? _translationJobs;
 
-    // bgQueue ist optional: per DI injiziert (reiht nach Import die Tipp-Generierung ein); bei direkter
-    // Instanziierung (Tests) null → kein Enqueue. Ebenso translationJobs: hat sich an einem Kurs mit Uebersetzungen
-    // etwas geaendert, zieht ein Automatik-Auftrag sie nach (Kurs-Kommentare mehrsprachig, 0.548.0).
-    public PgnImportService(AppDbContext db, IBackgroundTaskQueue? bgQueue = null,
+    // hintQueue ist optional: per DI injiziert (reiht nach Import die Tipp-Generierung auf der EIGENEN Tipp-Queue ein);
+    // bei direkter Instanziierung (Tests) null → kein Enqueue. Ebenso translationJobs: hat sich an einem Kurs mit
+    // Uebersetzungen etwas geaendert, zieht ein Automatik-Auftrag sie nach (Kurs-Kommentare mehrsprachig, 0.548.0).
+    public PgnImportService(AppDbContext db, IHintTaskQueue? hintQueue = null,
         CourseTranslationJobService? translationJobs = null)
     {
         _db = db;
-        _bgQueue = bgQueue;
+        _hintQueue = hintQueue;
         _translationJobs = translationJobs;
     }
 
@@ -332,9 +332,11 @@ public class PgnImportService
     /// nie ersetzt — sonst stünde nach einem kapitelweisen Import nur das letzte Kapitel darin, und „Aktualisieren"
     /// erneuerte nur dessen Linien. Ist das Buch veraltet, läuft die ZUSAMMENGEFÜHRTE Quelle durch den Import:
     /// die Version wird am Ende gehoben, also müssen alle Linien der Quelle die aktuelle Aufbereitung bekommen.</param>
+    /// <param name="ownerUserId">Besitzer eines persönlichen Kurses. Ein NEUES Buch bekommt ihn vom Aufrufer erst nach
+    /// dem Import — die Tipp-Deckelung je Nutzer (<see cref="HintTaskQueue"/>) braucht ihn aber schon beim Einreihen.</param>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct,
         bool preserveExistingSourcePgn = false, bool playFromStartPosition = false, bool partial = false,
-        bool mergeSourcePgn = false)
+        bool mergeSourcePgn = false, int? ownerUserId = null)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
         var parse = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
@@ -372,7 +374,7 @@ public class PgnImportService
         else
             source = (!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn) ? pgnText : null;
 
-        return await ImportIntoBookAsync(book, fileName, source, parse, now, partial, ct);
+        return await ImportIntoBookAsync(book, fileName, source, parse, now, partial, ct, ownerUserId);
     }
 
     /// <summary>
@@ -403,8 +405,9 @@ public class PgnImportService
     /// (anlegen / in-place aktualisieren / überspringen), merkt das Roh-PGN und setzt die Pipeline-Version.</summary>
     /// <param name="book">Getrackt und MIT geladener <see cref="Book.Source"/>.</param>
     /// <param name="sourcePgn">Neues Roh-PGN des Buchs; <c>null</c> = das vorhandene bleibt.</param>
+    /// <param name="ownerUserId">Besitzer laut Aufrufer (für die Tipp-Deckelung, falls das Buch noch keinen trägt).</param>
     private async Task<BookImportItemDto> ImportIntoBookAsync(Book book, string fileName, string? sourcePgn,
-        ParseResult parse, DateTime now, bool partial, CancellationToken ct)
+        ParseResult parse, DateTime now, bool partial, CancellationToken ct, int? ownerUserId = null)
     {
         var (parsed, invalid) = parse;
 
@@ -632,15 +635,11 @@ public class PgnImportService
         if (_translationJobs is not null && linesChanged)
             await _translationJobs.NotifyCourseChangedAsync(book.Id, ct);
 
-        // Tipp-Generierung (LLM + Stockfish) asynchron anstoßen — blockiert den Import nicht.
-        // HintGenerationService ist idempotent (überspringt aktuelle Tipps) und no-op ohne API-Key.
-        if (_bgQueue != null && (toAdd.Count > 0 || updated > 0))
-        {
-            var puzzleIds = await _db.BookPuzzles.Where(bp => bp.BookId == book.Id)
-                .Select(bp => bp.Id).ToListAsync(ct);
-            await _bgQueue.EnqueueAsync(async (sp, token) =>
-                await sp.GetRequiredService<HintGenerationService>().GenerateForPuzzlesAsync(puzzleIds, false, token));
-        }
+        // Tipp-Generierung (LLM + Stockfish) auf der EIGENEN Tipp-Queue anstoßen — blockiert weder den Import noch die
+        // allgemeine Hintergrund-Queue. Der Lauf holt die Linien ohne aktuelle Tipps selbst und deckelt persönliche
+        // Kurse (HintTaskQueue); no-op ohne Text-Modell.
+        if (_hintQueue != null && (toAdd.Count > 0 || updated > 0))
+            _hintQueue.TryEnqueueBook(book.Id, book.OwnerUserId ?? ownerUserId);
 
         return new BookImportItemDto
         {

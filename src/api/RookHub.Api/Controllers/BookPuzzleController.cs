@@ -21,7 +21,7 @@ public class BookPuzzleController : BaseApiController
     private readonly BookPuzzleService _service;
     private readonly DailyLeaderboardService _leaderboard;
     private readonly HintGenerationService _hints;
-    private readonly IBackgroundTaskQueue _bgQueue;
+    private readonly IHintTaskQueue _hintQueue;
     private readonly AppDbContext _db;
     private readonly ILogger<BookPuzzleController> _logger;
     /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c> an Einzel-/Nächste-/Zufalls-Linie im Buch).</summary>
@@ -31,7 +31,7 @@ public class BookPuzzleController : BaseApiController
 
     // logger/localizer/config optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
     public BookPuzzleController(BookPuzzleService service, DailyLeaderboardService leaderboard,
-        HintGenerationService hints, IBackgroundTaskQueue bgQueue, AppDbContext db,
+        HintGenerationService hints, IHintTaskQueue hintQueue, AppDbContext db,
         ILogger<BookPuzzleController>? logger = null, CourseCommentLocalizer? localizer = null,
         IConfiguration? config = null)
     {
@@ -40,7 +40,7 @@ public class BookPuzzleController : BaseApiController
         _service = service;
         _leaderboard = leaderboard;
         _hints = hints;
-        _bgQueue = bgQueue;
+        _hintQueue = hintQueue;
         _db = db;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<BookPuzzleController>.Instance;
     }
@@ -353,7 +353,8 @@ public class BookPuzzleController : BaseApiController
         if (!_hints.IsAvailable) return BadRequest(new { message = "Anthropic:TextApiKey not configured (the account key serves the scoresheet reader only)." });
         var ids = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).Select(bp => bp.Id).ToListAsync();
         if (ids.Count == 0) return NotFound(new { message = "No puzzles for this book." });
-        await _bgQueue.EnqueueAsync(async (sp, ct) =>
+        // Auf der Tipp-Queue, nicht der allgemeinen: ein ganzes Buch hält den Consumer sonst stundenlang fest (A4-002).
+        await _hintQueue.EnqueueAsync(async (sp, ct) =>
             await sp.GetRequiredService<HintGenerationService>().GenerateForPuzzlesAsync(ids, force, ct));
         return Ok(new { queued = ids.Count });
     }

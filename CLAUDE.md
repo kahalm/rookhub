@@ -1219,7 +1219,7 @@ Fehler sind still: der Zustand ist eine Bequemlichkeit, kein Inhalt.
 | POST | `/api/admin/book-puzzles/import` | Admin | Bulk-Import aus JSON |
 | POST | `/api/admin/book-puzzles/daily/{date}/regenerate` | Admin | Tagespuzzle eines UTC-Datums neu generieren: Datum/Link bleibt, bisheriges Puzzle wird `Retired=true` gesetzt (nie wieder in Daily/Random/Blind), neues aus dem forDaily-Pool zugeordnet |
 | POST | `/api/admin/book-puzzles/{id}/regenerate-hints` | Admin | Tipps eines einzelnen Buch-Puzzles synchron (neu) generieren (force). 400 ohne `Anthropic:TextApiKey`, 404 wenn Puzzle/keine Tipps; sonst die generierten Tipps |
-| POST | `/api/admin/books/{bookId}/generate-hints?force=` | Admin | Tipps für ein ganzes Buch im Hintergrund erzeugen (Queue); `force` regeneriert auch vorhandene, sonst nur fehlende/veraltete. Antwort `{ queued }` |
+| POST | `/api/admin/books/{bookId}/generate-hints?force=` | Admin | Tipps für ein ganzes Buch im Hintergrund erzeugen (eigene Tipp-Queue `HintTaskQueue`, ungedeckelt); `force` regeneriert auch vorhandene, sonst nur fehlende/veraltete. Antwort `{ queued }` |
 
 **Discord-Verknüpfung in den Ergebnis-Endpunkten (S4-001, `Authorization/BotRequestSignature.cs`)**: die vier
 anonym erreichbaren Ergebnis-Endpunkte (`/api/book-puzzles/{id}/results`, `daily/leaderboard`, `daily/hall-of-fame`,
@@ -4167,6 +4167,14 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   Dev bleibt aus — beide teilen sich die Spark, und denselben Bestand zweimal zu übersetzen kostete Wochen Nachtarbeit.
   Die Sperrzeiten (`TextLlm:QuietHours`) gelten für JEDEN Auftrag, auch angeforderte; das Werkzeug
   (`tools/LibraryImport translate --course`) kennt sie nicht, dort hält die Schaltuhr sie ein.
+- **Puzzle-Tipps laufen auf der EIGENEN Tipp-Queue** (`HintTaskQueue` + `HintTaskWorker`, Codereview 2026-09-29, A4-002) –
+  nie auf der allgemeinen `IBackgroundTaskQueue`: dort hielt ein grosser persoenlicher Kurs (je Linie Stockfish bis 30 s +
+  drei LLM-Aufrufe) den einzigen Consumer stundenlang fest. Der Import reiht je Buch EINEN Lauf ein
+  (`TryEnqueueBook(bookId, owner)`, hoechstens einer wartend, volle Queue verwirft statt zu warten), der Lauf
+  (`HintGenerationService.GenerateForBookAsync`) holt die Linien ohne aktuelle Tipps selbst (ohne Info-Linien).
+  Persoenliche Kurse: 100 Puzzles je Lauf, 300 je Besitzer und UTC-Tag (Arbeitsspeicher); Admin-/Pool-Buecher ungedeckelt.
+  Ein NEUES Buch traegt seinen Besitzer erst nach dem Import — Aufrufer eines persoenlichen Imports reichen deshalb
+  `ownerUserId` an `ImportFileAsync`, sonst gaelte der Kurs als Admin-Buch.
 - **`SourcePgn` liegt in `BookSource` (Tabellensplitting auf `Books`), nie an `Book`** (seit 0.508.3) – Das Roh-PGN
   eines Buchs (Ø ~480 KB, bis 6 MB) hing als Property an `Book` und kam mit JEDEM `.Include(bp => bp.Book)` mit:
   `GET /api/courses/{id}/puzzles` zog 6 MB × 1.881 Linien = 11 GB aus der DB für einen Request, die Prod-API stand

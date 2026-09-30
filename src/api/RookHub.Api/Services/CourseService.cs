@@ -834,7 +834,7 @@ public class CourseService
 
         // Eigener Kurs des Nutzers: ein Eroeffnungsrepertoire aus der Grundstellung IST hier
         // spielbarer Inhalt (siehe PgnImportService.StartPlyForRepertoire).
-        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, playFromStartPosition: true);
+        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, playFromStartPosition: true, ownerUserId: userId);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct)
             ?? throw new InvalidOperationException("Import failed.");

@@ -67,6 +67,11 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
 
     public bool TryDequeue(out Func<IServiceProvider, CancellationToken, Task>? workItem)
         => _queue.Reader.TryRead(out workItem);
+
+    /// <summary>Einreihen OHNE zu warten: <c>false</c>, wenn die Queue voll ist (für Arbeit, die lieber verworfen
+    /// wird, als den Aufrufer aufzuhalten — siehe <see cref="HintTaskQueue"/>).</summary>
+    protected bool TryWrite(Func<IServiceProvider, CancellationToken, Task> workItem)
+        => _queue.Writer.TryWrite(workItem);
 }
 
 /// <summary>

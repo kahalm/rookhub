@@ -340,7 +340,8 @@ public class ChessableReviewLineService
         // preserveExistingSourcePgn: der Merge liefert NUR die Lücken-Linien; ein bereits von getGame
         // gesetztes (vollständiges) Book.Source.SourcePgn darf davon NICHT überschrieben werden (sonst wäre die
         // Reprocessing-Quelle nur noch das Teil-PGN). Nur ein leeres SourcePgn wird erstmalig gesetzt.
-        var res = await _pgnImport.ImportFileAsync(fileName, combined, ct, preserveExistingSourcePgn: true);
+        var res = await _pgnImport.ImportFileAsync(fileName, combined, ct, preserveExistingSourcePgn: true,
+            ownerUserId: userId);
 
         // Buch als persönliches Chessable-Buch kennzeichnen (analog getGame-Buch-Import). Bei einem
         // frisch angelegten reinen Review-Kurs auch einen brauchbaren Anzeigenamen setzen (statt des

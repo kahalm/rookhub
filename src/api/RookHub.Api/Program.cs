@@ -415,6 +415,10 @@ try
     var chessableEnabled = builder.Configuration.GetValue("Chessable:Enabled", true);
     builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
     builder.Services.AddHostedService<WebhookTaskWorker>();
+    // Eigene Queue + Consumer fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den
+    // einzigen allgemeinen Consumer sonst stundenlang fest; persoenliche Kurse sind dort gedeckelt (A4-002).
+    builder.Services.AddSingleton<IHintTaskQueue, HintTaskQueue>();
+    builder.Services.AddHostedService<HintTaskWorker>();
     // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
     builder.Services.AddSingleton<AnonymousSolveNotifyThrottle>();
     // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst

@@ -64,6 +64,41 @@ public class HintGenerationService
         return done;
     }
 
+    /// <summary>
+    /// Automatischer Lauf nach einem Import (<see cref="IHintTaskQueue.TryEnqueueBook"/>): Tipps für die Linien des
+    /// Buchs, die noch keine aktuellen haben, in Lesereihenfolge; Info-Linien werden nie abgefragt und bekommen keine.
+    /// Ein persönlicher Kurs ist gedeckelt — je Lauf <see cref="HintTaskQueue.MaxPersonalPuzzlesPerRun"/>, je Besitzer
+    /// und Tag das Budget der Queue; der Rest kommt mit dem nächsten Import dran. Ein gelöschtes Buch kostet nichts.
+    /// </summary>
+    /// <param name="ownerUserId">Besitzer laut Aufrufer (bei einem gerade angelegten Kurs setzt er ihn erst NACH dem
+    /// Import); <c>null</c> = aus dem Buch lesen. Ohne Besitzer (Admin-/Pool-Buch) ungedeckelt.</param>
+    public async Task<int> GenerateForBookAsync(int bookId, int? ownerUserId, IHintTaskQueue budget, CancellationToken ct = default)
+    {
+        if (!_claude.IsConfigured) return 0;
+        var book = await _db.Books.Where(b => b.Id == bookId).Select(b => new { b.OwnerUserId }).FirstOrDefaultAsync(ct);
+        if (book is null) return 0;
+        var owner = ownerUserId ?? book.OwnerUserId;
+
+        var pending = _db.BookPuzzles
+            .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly
+                && (bp.HintsVersion < CurrentHintsVersion || bp.HintsJson == null || bp.HintsJson == ""))
+            .OrderBy(bp => bp.Id)
+            .Select(bp => bp.Id);
+        var ids = owner is null
+            ? await pending.ToListAsync(ct)
+            : await pending.Take(HintTaskQueue.MaxPersonalPuzzlesPerRun).ToListAsync(ct);
+        if (owner is int userId && ids.Count > 0)
+        {
+            var granted = budget.TakeDailyBudget(userId, ids.Count);
+            if (granted < ids.Count)
+                _logger.LogInformation(
+                    "Tipp-Generierung: Tagesdeckel für User {UserId} erreicht — Buch {BookId} bekommt {Granted} von {Wanted} Puzzles",
+                    userId, bookId, granted, ids.Count);
+            ids = ids.Take(granted).ToList();
+        }
+        return ids.Count == 0 ? 0 : await GenerateForPuzzlesAsync(ids, false, ct);
+    }
+
     /// <summary>Generiert Tipps für ein Puzzle. Idempotent: überspringt aktuelle Tipps, außer
     /// <paramref name="force"/>. Liefert true, wenn neue Tipps gespeichert wurden.</summary>
     public async Task<bool> GenerateForPuzzleAsync(int bookPuzzleId, bool force = false, CancellationToken ct = default)
