@@ -52,6 +52,12 @@ public sealed class ChessableSinkBytes
     /// <summary>Selbst geschriebene Bytes auf die gezählte Summe eines Kontos aufschlagen.</summary>
     public void AddUser(int userId, long delta) => Add(UserKey(userId), delta);
 
+    /// <summary>Gemerkte Summe der Anon-Senke verwerfen — nach einem Löschlauf zählt der nächste Deckel-Check neu.</summary>
+    public void ForgetAnon() => _cache?.Remove(AnonKey);
+
+    /// <summary>Gemerkte Summe eines Kontos verwerfen (nach einer Übernahme aus der Anon-Senke).</summary>
+    public void ForgetUser(int userId) => _cache?.Remove(UserKey(userId));
+
     /// <summary>Buchführung EINES Batches gegen den Byte-Deckel der Anon-Senke.</summary>
     public Budget ForAnon(AppDbContext db, long cap, CancellationToken ct = default) =>
         new(() => AnonTotalAsync(db, ct), AddAnon, cap);

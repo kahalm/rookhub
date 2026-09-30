@@ -434,6 +434,43 @@ public class ChessableReviewLineServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PruneAnon_InSeveralPortions_RemovesEveryOldRow()
+    {
+        // Die Retention löscht portionsweise über die Ids (vorher alles auf einmal geladen) — jede Portion muss
+        // drankommen, und die junge Zeile bleibt.
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { DeleteChunkSize = 2 };
+        for (var i = 1; i <= 5; i++)
+            _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+            { ChessableUid = "1", Bid = "1", Oid = i.ToString(), Json = "{}", UpdatedAt = DateTime.UtcNow.AddDays(-120) });
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = "1", Bid = "1", Oid = "9", Json = "{}", UpdatedAt = DateTime.UtcNow.AddDays(-10) });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(5, await svc.PruneAnonOlderThanAsync(TimeSpan.FromDays(90)));
+        Assert.Equal("9", (await _db.AnonymousChessableReviewLines.SingleAsync()).Oid);
+    }
+
+    [Fact]
+    public async Task ClaimAnon_InSeveralPortions_TakesEveryOwnedLine_AndUpdatesExisting()
+    {
+        // Die Übernahme lädt erst nur die Schlüssel und das JSON portionsweise (vorher bis 5 000 × 256 K Zeichen auf
+        // einmal) — jede Portion muss drankommen, eine vorhandene Linie wird aktualisiert statt verdoppelt.
+        var user = await CreateUserAsync();
+        await GiveUserCoursesAsync(user, "100");
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { JsonChunkSize = 2 };
+        _db.ChessableReviewLines.Add(new ChessableReviewLine { UserId = user.Id, Bid = "100", Oid = "3", Json = "{\"alt\":1}" });
+        await _db.SaveChangesAsync();
+        for (var i = 1; i <= 5; i++)
+            await svc.UpsertAnonBatchAsync("790927", "100", new() { Entry(i.ToString(), $"{{\"v\":{i}}}") });
+
+        Assert.Equal(5, await svc.ClaimAnonForUidAsync(user.Id, "790927"));
+        Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync());
+        var lines = await _db.ChessableReviewLines.AsNoTracking().OrderBy(r => r.Oid).ToListAsync();
+        Assert.Equal(new[] { "1", "2", "3", "4", "5" }, lines.Select(r => r.Oid));
+        Assert.Equal("{\"v\":3}", lines.Single(r => r.Oid == "3").Json);
+    }
+
+    [Fact]
     public async Task ClaimAnon_SkipsCoursesTheUserDoesNotOwn_AndBuildsNoBook()
     {
         // Angriffsfall: die ABLAGE-Seite der Anon-Senke ist unauthentifiziert und kann die uid nicht

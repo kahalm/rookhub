@@ -54,6 +54,14 @@ public class ChessableReviewLineService
     /// <summary>Wirksames Byte-Kontingent je Konto (<see cref="ChessableSinkBytes.MaxUserBytes"/>); nur Tests setzen es klein.</summary>
     internal long UserBytesCap { get; init; } = ChessableSinkBytes.MaxUserBytes;
 
+    /// <summary>Portionsgröße der Retention: gelöscht wird über die Ids, das JSON wird dabei nie geladen. Nur Tests
+    /// setzen sie klein.</summary>
+    internal int DeleteChunkSize { get; init; } = 1000;
+
+    /// <summary>Portionsgröße, in der Übernahme und Kurs-Merge das JSON laden (je Zeile bis 256 K Zeichen) — nie den
+    /// ganzen Bestand auf einmal. Nur Tests setzen sie klein.</summary>
+    internal int JsonChunkSize { get; init; } = 100;
+
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
     private readonly ILogger<ChessableReviewLineService>? _log;
@@ -230,8 +238,11 @@ public class ChessableReviewLineService
     {
         if (string.IsNullOrWhiteSpace(uid)) return 0;
 
+        // Erst nur die Schlüssel: bis zu MaxAnonRowsPerUid Zeilen LONGTEXT auf einmal hieße bis zu 5 000 × 128 KB in
+        // der API. Das JSON kommt unten portionsweise.
         var anon = await _db.AnonymousChessableReviewLines
             .Where(r => r.ChessableUid == uid)
+            .Select(r => new { r.Id, r.Bid })
             .ToListAsync(ct);
         if (anon.Count == 0) return 0;
 
@@ -245,34 +256,50 @@ public class ChessableReviewLineService
             .Where(c => c.UserId == userId).Select(c => c.CachedCoursesJson).FirstOrDefaultAsync(ct));
         if (owned.Count == 0) return 0;   // Kursliste (noch) unbekannt → nichts übernehmen, Zeilen bleiben liegen
         var foreignBids = anon.Where(r => !owned.Contains(r.Bid)).Select(r => r.Bid).Distinct().ToList();
-        anon = anon.Where(r => owned.Contains(r.Bid)).ToList();
-        if (anon.Count == 0) return 0;    // nur fremde bids: liegen lassen, die Retention entsorgt sie
+        var claimIds = anon.Where(r => owned.Contains(r.Bid)).Select(r => r.Id).ToList();
+        if (claimIds.Count == 0) return 0;    // nur fremde bids: liegen lassen, die Retention entsorgt sie
 
-        var bids = anon.Select(r => r.Bid).Distinct().ToList();
-        var existing = (await _db.ChessableReviewLines
-                .Where(r => r.UserId == userId && bids.Contains(r.Bid))
-                .ToListAsync(ct))
-            .ToDictionary(r => (r.Bid, r.Oid));
-
+        // Portionsweise übernehmen, jede Portion für sich gespeichert (idempotent: eine abgebrochene Übernahme holt der
+        // nächste Aufruf mit dem Rest nach) und danach aus dem Tracker genommen — sonst hielte er am Ende doch alles.
         var now = DateTime.UtcNow;
         var claimed = 0;
-        foreach (var a in anon)
+        var bids = new List<string>();
+        foreach (var chunk in claimIds.Chunk(JsonChunkSize))
         {
-            if (!existing.TryGetValue((a.Bid, a.Oid), out var row))
-            {
-                row = new ChessableReviewLine { UserId = userId, Bid = a.Bid, Oid = a.Oid };
-                _db.ChessableReviewLines.Add(row);
-                existing[(a.Bid, a.Oid)] = row;
-            }
-            row.Json = a.Json;
-            row.ChapterTitle = a.ChapterTitle;
-            row.UpdatedAt = now;
-            claimed++;
-        }
-        _db.AnonymousChessableReviewLines.RemoveRange(anon);
+            var rows = await _db.AnonymousChessableReviewLines.Where(r => chunk.Contains(r.Id)).ToListAsync(ct);
+            if (rows.Count == 0) continue;
+            var chunkBids = rows.Select(r => r.Bid).Distinct().ToList();
+            var chunkOids = rows.Select(r => r.Oid).Distinct().ToList();
+            var existing = (await _db.ChessableReviewLines
+                    .Where(r => r.UserId == userId && chunkBids.Contains(r.Bid) && chunkOids.Contains(r.Oid))
+                    .ToListAsync(ct))
+                .ToDictionary(r => (r.Bid, r.Oid));
 
-        try { await _db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { _db.ChangeTracker.Clear(); return 0; }
+            foreach (var a in rows)
+            {
+                if (!existing.TryGetValue((a.Bid, a.Oid), out var row))
+                {
+                    row = new ChessableReviewLine { UserId = userId, Bid = a.Bid, Oid = a.Oid };
+                    _db.ChessableReviewLines.Add(row);
+                    existing[(a.Bid, a.Oid)] = row;
+                }
+                row.Json = a.Json;
+                row.ChapterTitle = a.ChapterTitle;
+                row.UpdatedAt = now;
+            }
+            _db.AnonymousChessableReviewLines.RemoveRange(rows);
+
+            try { await _db.SaveChangesAsync(ct); }
+            catch (DbUpdateException) { _db.ChangeTracker.Clear(); break; }
+
+            foreach (var row in existing.Values) _db.Entry(row).State = EntityState.Detached;
+            claimed += rows.Count;
+            foreach (var b in chunkBids)
+                if (!bids.Contains(b)) bids.Add(b);
+        }
+        if (claimed == 0) return 0;
+        _sinkBytes.ForgetAnon();
+        _sinkBytes.ForgetUser(userId);
 
         if (foreignBids.Count > 0)
             _log?.LogInformation("Claim uid {Uid}: {Count} bid(s) nicht in der Kursliste des Nutzers — übersprungen ({Bids})",
@@ -294,11 +321,7 @@ public class ChessableReviewLineService
     public async Task<int> PruneAnonOlderThanAsync(TimeSpan maxAge, CancellationToken ct = default)
     {
         var cutoff = DateTime.UtcNow - maxAge;
-        var old = await _db.AnonymousChessableReviewLines.Where(r => r.UpdatedAt < cutoff).ToListAsync(ct);
-        if (old.Count == 0) return 0;
-        _db.AnonymousChessableReviewLines.RemoveRange(old);
-        await _db.SaveChangesAsync(ct);
-        return old.Count;
+        return await DeleteAnonAsync(_db.AnonymousChessableReviewLines.Where(r => r.UpdatedAt < cutoff), ct);
     }
 
     /// <summary>Kürzere Retention für uids, zu denen es GAR KEIN verknüpftes Konto gibt. Sie sind bis auf
@@ -313,13 +336,33 @@ public class ChessableReviewLineService
             .Where(c => c.ChessableUid != null)
             .Select(c => c.ChessableUid!)
             .ToListAsync(ct);
-        var old = await _db.AnonymousChessableReviewLines
-            .Where(r => r.UpdatedAt < cutoff && !linked.Contains(r.ChessableUid))
-            .ToListAsync(ct);
-        if (old.Count == 0) return 0;
-        _db.AnonymousChessableReviewLines.RemoveRange(old);
-        await _db.SaveChangesAsync(ct);
-        return old.Count;
+        return await DeleteAnonAsync(_db.AnonymousChessableReviewLines
+            .Where(r => r.UpdatedAt < cutoff && !linked.Contains(r.ChessableUid)), ct);
+    }
+
+    /// <summary>Löscht die Zeilen der Anon-Senke, die <paramref name="query"/> trifft — portionsweise über die Ids, ohne das
+    /// JSON zu laden (bis zu 200 000 Zeilen LONGTEXT: auf einmal geladen legte die Retention die API selbst um).
+    /// Relational ein DELETE je Portion; InMemory (Tests) kennt kein ExecuteDelete.</summary>
+    private async Task<int> DeleteAnonAsync(IQueryable<AnonymousChessableReviewLine> query, CancellationToken ct)
+    {
+        var deleted = 0;
+        while (true)
+        {
+            var ids = await query.OrderBy(r => r.Id).Select(r => r.Id).Take(DeleteChunkSize).ToListAsync(ct);
+            if (ids.Count == 0) break;
+            if (_db.Database.IsRelational())
+                await _db.AnonymousChessableReviewLines.Where(r => ids.Contains(r.Id)).ExecuteDeleteAsync(ct);
+            else
+            {
+                _db.AnonymousChessableReviewLines.RemoveRange(
+                    await _db.AnonymousChessableReviewLines.Where(r => ids.Contains(r.Id)).ToListAsync(ct));
+                await _db.SaveChangesAsync(ct);
+            }
+            deleted += ids.Count;
+            if (ids.Count < DeleteChunkSize) break;
+        }
+        if (deleted > 0) _sinkBytes.ForgetAnon();
+        return deleted;
     }
 
     /// <summary>
@@ -343,10 +386,13 @@ public class ChessableReviewLineService
     {
         if (string.IsNullOrWhiteSpace(bid)) return 0;
 
-        var reviewRows = await _db.ChessableReviewLines
+        // Erst nur die oids: der Merge läuft bei JEDEM review-lines-Aufruf, das JSON (bis 256 K Zeichen je Linie) braucht
+        // er aber nur für die Lücken — und die sind nach dem ersten Merge wenige.
+        var reviewOids = await _db.ChessableReviewLines
             .Where(r => r.UserId == userId && r.Bid == bid)
+            .Select(r => r.Oid)
             .ToListAsync(ct);
-        if (reviewRows.Count == 0) return 0;
+        if (reviewOids.Count == 0) return 0;
 
         var fileName = $"chessable-u{userId}-{bid}.pgn";
 
@@ -357,18 +403,26 @@ public class ChessableReviewLineService
                 .ToListAsync(ct))
             .ToHashSet();
 
-        // Nur die Lücken (oid noch kein BookPuzzle) zu PGN konvertieren; unbrauchbare Antworten überspringen.
+        // Nur die Lücken (oid noch kein BookPuzzle) zu PGN konvertieren; unbrauchbare Antworten überspringen. Ihr JSON
+        // kommt portionsweise.
+        var gapOids = reviewOids.Where(o => !existingOids.Contains(o)).Distinct().ToList();
         var pgns = new List<string>();
-        var seen = new HashSet<string>();
         string? bookName = null;
-        foreach (var row in reviewRows)
+        foreach (var chunk in gapOids.Chunk(JsonChunkSize))
         {
-            if (existingOids.Contains(row.Oid)) continue;
-            if (!seen.Add(row.Oid)) continue;
-            var converted = ChessableReviewParser.TryConvert(row.Json);
-            if (converted is null) continue;
-            pgns.Add(converted.Pgn);
-            bookName ??= ExtractBookName(row.Json);
+            var jsonByOid = (await _db.ChessableReviewLines
+                    .Where(r => r.UserId == userId && r.Bid == bid && chunk.Contains(r.Oid))
+                    .Select(r => new { r.Oid, r.Json })
+                    .ToListAsync(ct))
+                .ToDictionary(r => r.Oid, r => r.Json);
+            foreach (var oid in chunk)
+            {
+                if (!jsonByOid.TryGetValue(oid, out var json)) continue;
+                var converted = ChessableReviewParser.TryConvert(json);
+                if (converted is null) continue;
+                pgns.Add(converted.Pgn);
+                bookName ??= ExtractBookName(json);
+            }
         }
         if (pgns.Count == 0) return 0;
 

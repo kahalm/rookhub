@@ -398,9 +398,22 @@ public class ProfileService
         _db.MoveComparisons.RemoveRange(comparisons);
         // Chessable-Rohdaten des Nutzers: getReview-Linien, Sitzungszüge und „schwierige Züge" sind
         // fremder Kursinhalt, an die Person gebunden — keine Statistik, die anonym weiterleben könnte.
-        _db.ChessableReviewLines.RemoveRange(await _db.ChessableReviewLines.Where(x => x.UserId == userId).ToListAsync());
-        _db.ChessableSessionMoves.RemoveRange(await _db.ChessableSessionMoves.Where(x => x.UserId == userId).ToListAsync());
-        _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
+        // Ohne sie zu laden: LONGTEXT-JSON bis zum Kontingent je Konto (Altbestand auch weit mehr), das
+        // RemoveRange(ToListAsync()) holte alles in die API, nur um es zu löschen. Relational ein DELETE je
+        // Tabelle — läuft sofort wie DeleteBookAsync oben, ein Wiederholungslauf findet danach nichts mehr;
+        // InMemory (Tests) kennt kein ExecuteDelete.
+        if (_db.Database.IsRelational())
+        {
+            await _db.ChessableReviewLines.Where(x => x.UserId == userId).ExecuteDeleteAsync();
+            await _db.ChessableSessionMoves.Where(x => x.UserId == userId).ExecuteDeleteAsync();
+            await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ExecuteDeleteAsync();
+        }
+        else
+        {
+            _db.ChessableReviewLines.RemoveRange(await _db.ChessableReviewLines.Where(x => x.UserId == userId).ToListAsync());
+            _db.ChessableSessionMoves.RemoveRange(await _db.ChessableSessionMoves.Where(x => x.UserId == userId).ToListAsync());
+            _db.ChessableProblemMoves.RemoveRange(await _db.ChessableProblemMoves.Where(x => x.UserId == userId).ToListAsync());
+        }
         // Eigene Analysebäume des Kalkulations-Modus: Nutzerarbeit mit Freitext, kein Aggregat.
         _db.CalculationTrees.RemoveRange(await _db.CalculationTrees.Where(x => x.UserId == userId).ToListAsync());
         // Punktepartie-Durchläufe samt geratenen Zügen: reine Nutzerarbeit an konkreten Partien.
