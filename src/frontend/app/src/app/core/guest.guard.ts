@@ -19,6 +19,9 @@ import { sanitizeReturnUrl } from './return-url.util';
  * <p><b>Ausnahme `?switch=1`:</b> Wer WILLENTLICH das Konto wechseln will (Test- und Support-Konten,
  * geteiltes Gerät), kommt damit an die Maske, ohne sich vorher abzumelden. Ohne diese Tür wäre der
  * einzige Weg „abmelden, dann anmelden" — und Abmelden räumt die geräte-lokalen Offline-Inhalte.
+ * Meldet man sich hier mit einem ANDEREN Konto an, räumt `AuthService.storeUser` sie trotzdem ab wie
+ * beim Abmelden (sonst erbte das neue Konto Downloads und Endless-Läufe des vorigen); erhalten bleiben
+ * sie nur beim erneuten Anmelden mit demselben Konto.
  * Sicherheitlich belanglos: die Zugangsdaten braucht man ohnehin.</p>
  */
 export const guestGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {

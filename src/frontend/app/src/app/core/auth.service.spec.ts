@@ -232,6 +232,133 @@ describe('AuthService logout clears offline content', () => {
   });
 });
 
+describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () => {
+  // Gemeldet im Codereview 2026-09-29 (F1-006): Aufgeräumt wurde nur im ausdrücklichen logout().
+  // Lief das Token ab (der Normalfall jeder nicht beendeten Sitzung) oder meldete sich jemand über
+  // /login?switch=1 mit einem anderen Konto an, blieben Offline-Inhalte, Endless-Läufe samt Highscore,
+  // die anonyme Sitzungs-Id und das Admin-Backup liegen — der Endless-Modus schob die Läufe von A beim
+  // ersten Öffnen ins Konto von B, bis in die Bestenliste.
+  const traces = ['rookhub_courses_cache', 'rookhub_book_offline_x', 'rookhub_endless_history',
+    'rookhub_endless_highscore', 'rookhub_calc_local_1', 'rookhub_puzzle_session', 'rookhub_admin_user'];
+  const userA = (token: string) => ({ token, username: 'a', userId: 1, isAdmin: false });
+
+  function seedTraces(): void {
+    for (const k of traces) localStorage.setItem(k, '1');
+    localStorage.setItem('rookhub_lang', 'de');                      // Geräte-Einstellung, bleibt
+  }
+  function expectTraces(present: boolean): void {
+    for (const k of traces)
+      expect(localStorage.getItem(k) !== null).withContext(k).toBe(present);
+    expect(localStorage.getItem('rookhub_lang')).toBe('de');
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+  });
+  afterEach(() => localStorage.clear());
+
+  it('räumt beim Start mit abgelaufenem Token auf wie beim Abmelden — ohne session/end', () => {
+    // session/end bewusst nicht: das Cookie kann längst einer anderen, aktiven Anmeldung gehören.
+    localStorage.setItem('rookhub_user', JSON.stringify(userA(jwt(-60))));
+    seedTraces();
+
+    const svc = TestBed.inject(AuthService);
+
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
+    expectTraces(false);
+    TestBed.inject(HttpTestingController).expectNone('/api/auth/session/end');
+  });
+
+  it('räumt auf, wenn das Token mitten in der Sitzung abläuft', () => {
+    jasmine.clock().install();
+    try {
+      jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+      localStorage.setItem('rookhub_user', JSON.stringify(userA(jwt(60))));
+      const svc = TestBed.inject(AuthService);
+      expect(svc.isLoggedIn).toBeTrue();
+      seedTraces();
+
+      jasmine.clock().tick(120_000);                                // Token jetzt abgelaufen
+
+      expect(svc.isLoggedIn).toBeFalse();
+      expect(localStorage.getItem('rookhub_user')).toBeNull();
+      expectTraces(false);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('lässt beim Ablauf die Anmeldung stehen, die ein anderer Tab inzwischen gespeichert hat', () => {
+    // Dieser Tab hält A noch im Speicher, ein anderer hat B angemeldet: dessen Sitzung und
+    // Offline-Inhalte gehören nicht diesem Tab.
+    jasmine.clock().install();
+    try {
+      jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+      localStorage.setItem('rookhub_user', JSON.stringify(userA(jwt(60))));
+      const svc = TestBed.inject(AuthService);
+      expect(svc.isLoggedIn).toBeTrue();
+      const b = JSON.stringify({ token: jwt(3600), username: 'b', userId: 8, isAdmin: false });
+      localStorage.setItem('rookhub_user', b);
+      seedTraces();
+
+      jasmine.clock().tick(120_000);
+
+      expect(svc.isLoggedIn).toBeFalse();
+      expect(localStorage.getItem('rookhub_user')).toBe(b);
+      expectTraces(true);
+    } finally {
+      jasmine.clock().uninstall();
+    }
+  });
+
+  it('räumt beim Kontowechsel über die Anmeldemaske (?switch=1) die Spuren des vorigen Kontos ab', () => {
+    localStorage.setItem('rookhub_user', JSON.stringify(userA(jwt(3600))));
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    seedTraces();
+
+    svc.login('b', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'b', userId: 8, isAdmin: false });
+
+    expectTraces(false);
+    expect(JSON.parse(localStorage.getItem('rookhub_user')!).userId).toBe(8);
+    expect(svc.currentUser?.userId).toBe(8);
+    // Das Cookie hat der Login eben für B geschrieben — session/end löschte es gleich wieder.
+    http.expectNone('/api/auth/session/end');
+  });
+
+  it('behält beim erneuten Anmelden mit demselben Konto die Offline-Inhalte', () => {
+    // Genau dafür gibt es ?switch=1: Konto bestätigen, ohne die Downloads zu verlieren.
+    localStorage.setItem('rookhub_user', JSON.stringify(userA(jwt(3600))));
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    seedTraces();
+
+    svc.login('a', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush(userA(jwt(7200)));
+
+    expectTraces(true);
+    expect(svc.currentUser?.userId).toBe(1);
+  });
+
+  it('räumt bei einer Anmeldung ohne vorige Sitzung nichts ab (anonyme Läufe wandern ins neue Konto)', () => {
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    localStorage.setItem('rookhub_endless_history', '[]');
+    localStorage.setItem('rookhub_puzzle_session', 'anon-1');
+
+    svc.register('neu', null, 'pw').subscribe();
+    http.expectOne('/api/auth/register').flush({ token: jwt(3600), username: 'neu', userId: 9, isAdmin: false });
+
+    expect(localStorage.getItem('rookhub_endless_history')).toBe('[]');
+    expect(localStorage.getItem('rookhub_puzzle_session')).toBe('anon-1');
+  });
+});
+
 describe('AuthService: voller Browser-Speicher', () => {
   let svc: AuthService;
   let http: HttpTestingController;

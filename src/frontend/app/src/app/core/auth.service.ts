@@ -40,6 +40,9 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router, private injector: Injector) {
     inject(DestroyRef).onDestroy(() => this.destroyed = true);
+    // Beim Start schon abgelaufen: hier (nicht in getStoredUser) beenden — das Aufraeumen braucht den
+    // Injektor, und der ist erst im Konstruktor gesetzt, nicht schon beim Initialisieren der Felder.
+    this.getValidUser();
   }
 
   /**
@@ -229,11 +232,37 @@ export class AuthService {
   private getValidUser(): AuthResponse | null {
     const user = this.currentUserSubject.value;
     if (user && this.isTokenExpired(user.token)) {
-      localStorage.removeItem('rookhub_user');
+      this.endExpiredSession(user.token);
       this.currentUserSubject.next(null);
       return null;
     }
     return user;
+  }
+
+  /**
+   * Eine abgelaufene Sitzung endet lokal wie ein {@link logout}: Sitzung, Offline-Inhalte,
+   * Nutzer-Spuren und Admin-Backup weg. Der Ablauf ist der NORMALFALL jeder Sitzung, die niemand
+   * aktiv beendet (der Interceptor schickt ein abgelaufenes Token gar nicht erst, es kommt also auch
+   * kein 401 → logout). Raeumte nur logout() auf, erbte der naechste Nutzer am Geraet Kursliste und
+   * Downloads, die anonyme Sitzungs-Id — und der Endless-Modus schob Laufhistorie und Highscore des
+   * vorigen beim ersten Oeffnen ins neue Konto, bis in die Bestenliste. Nach einer abgelaufenen
+   * Impersonation (2 h) laege das Admin-Token (30/90 Tage) unbegrenzt im Speicher.
+   *
+   * <p>Bewusst OHNE `session/end` und ohne Navigation: das geteilte Cookie kann laengst einer anderen,
+   * aktiven Anmeldung gehoeren (eine andere Oberflaeche haelt es frisch, womoeglich fuer ein anderes
+   * Konto) — und beim Start laeuft das hier im Konstruktor, wo ein HTTP-Aufruf ueber den
+   * Auth-Interceptor auf diesen noch unfertigen Dienst zurueckliefe.</p>
+   *
+   * <p>Hat ein ANDERER Tab inzwischen eine andere Anmeldung gespeichert, gehoeren Speicher und
+   * Offline-Inhalte ihr — dann endet nur die Sitzung dieses Tabs.</p>
+   */
+  private endExpiredSession(token: string): void {
+    try {
+      const stored = localStorage.getItem('rookhub_user');
+      if (stored && (JSON.parse(stored) as Partial<AuthResponse> | null)?.token !== token) return;
+    } catch { /* unlesbar → wie die eigene behandeln */ }
+    try { localStorage.removeItem('rookhub_user'); } catch { /* Storage gesperrt */ }
+    this.clearLocalTraces();
   }
 
   private isTokenExpired(token: string): boolean {
@@ -344,8 +373,9 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  /** Was beim Nutzerwechsel am Geraet lokal verschwinden muss — beim Abmelden ({@link logout}) wie
-   *  beim Wechsel auf die geteilte Anmeldung eines anderen Kontos ({@link switchToSharedSession}). */
+  /** Was beim Nutzerwechsel am Geraet lokal verschwinden muss — beim Abmelden ({@link logout}), beim
+   *  Wechsel auf die geteilte Anmeldung eines anderen Kontos ({@link switchToSharedSession}), beim
+   *  Ablauf ({@link endExpiredSession}) und beim Kontowechsel ueber die Anmeldemaske ({@link storeUser}). */
   private clearLocalTraces(): void {
     localStorage.removeItem('rookhub_admin_user');
     // Geräte-lokale Offline-Inhalte (heruntergeladene Repertoires/Kurse, Kursliste, Tagespuzzle,
@@ -376,6 +406,13 @@ export class AuthService {
     // nicht gesetzt. Der Nutzer kam nicht mehr herein und erfuhr den echten Grund nie. Die Sitzung
     // gilt jetzt in jedem Fall (in-memory); persistSession räumt bei vollem Speicher die Caches und
     // sagt es, wenn auch das nicht reicht.
+    // Kontowechsel ohne Abmelden (Anmeldemaske mit ?switch=1): vorher aufraeumen wie beim Abmelden,
+    // sonst erbte das neue Konto Offline-Inhalte, Admin-Backup und Endless-Laeufe des vorigen (die der
+    // Endless-Modus beim ersten Oeffnen ins Konto uebertraegt). Dasselbe Konto erneut: nichts raeumen —
+    // und ohne vorige Sitzung auch nicht, denn dann gehoeren die lokalen Laeufe dem, der sich gerade
+    // anmeldet (anonym gespielt, jetzt registriert). Kein session/end: das Cookie gehoert schon dem neuen.
+    const previous = this.getValidUser();
+    if (previous && previous.userId !== user.userId) this.clearLocalTraces();
     this.persistSession(user);
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();
@@ -414,12 +451,9 @@ export class AuthService {
     try {
       const stored = localStorage.getItem('rookhub_user');
       if (!stored) return null;
-      const user: AuthResponse = JSON.parse(stored);
-      if (this.isTokenExpired(user.token)) {
-        localStorage.removeItem('rookhub_user');
-        return null;
-      }
-      return user;
+      // Auch ein abgelaufenes Token zurueckgeben: der Konstruktor beendet es per getValidUser() wie
+      // einen Ablauf mitten in der Sitzung (endExpiredSession).
+      return JSON.parse(stored);
     } catch {
       try { localStorage.removeItem('rookhub_user'); } catch { }
       return null;
