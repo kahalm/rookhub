@@ -25,7 +25,8 @@ describe('OnlineAccountsComponent', () => {
 
   beforeEach(() => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService',
-      ['addAccount', 'updateAccount', 'deleteAccount', 'syncAccount', 'playerSuggestions', 'scanSuggestions', 'acceptSuggestion', 'rejectSuggestion']);
+      ['addAccount', 'updateAccount', 'deleteAccount', 'syncAccount', 'playerSuggestions', 'scanSuggestions', 'acceptSuggestion', 'rejectSuggestion',
+        'accountChecks']);
     api.playerSuggestions.and.resolveTo({ items: [] });
     TestBed.configureTestingModule({ imports: [OnlineAccountsComponent], providers: [{ provide: LeagueApiService, useValue: api }] });
     fixture = TestBed.createComponent(OnlineAccountsComponent);
@@ -60,6 +61,25 @@ describe('OnlineAccountsComponent', () => {
     expect(el().querySelector('.acc-add')).toBeNull();
   });
 
+  it('(i) klappt die Prüfung des Kontos auf — auch ohne Verwalter-Recht, nicht bei verborgenen und geteilten Konten', async () => {
+    api.accountChecks.and.resolveTo({ site: 'lichess', user: 'patrik', url: 'u', player: 'Muster, Max', elo: 1900, checkedAt: '2026-09-30T18:00:00Z',
+      profileLoaded: true, items: [{ key: 'self', label: 'Selbstmeldung', status: 'ok', text: 'selbst gemeldet (Liste)' }] });
+    render([SURE, { ...UNSURE, hidden: true, site: null, user: null, url: null }, { ...SURE, id: undefined }], false);
+    const infos = el().querySelectorAll<HTMLButtonElement>('.chk-btn');
+    expect(infos.length).toBe(1);                                                        // nur das erste
+    expect(infos[0].getAttribute('aria-expanded')).toBe('false');
+    infos[0].click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.accountChecks).toHaveBeenCalledWith('account', 7);
+    expect(infos[0].getAttribute('aria-expanded')).toBe('true');
+    expect(el().querySelector('.chk-list')?.textContent).toContain('selbst gemeldet (Liste)');
+    infos[0].click();
+    fixture.detectChanges();
+    expect(el().querySelector('.chk')).toBeNull();
+  });
+
   it('Konto hinzufügen: Seite, Name, gesichert, Kommentar — danach „changed"', async () => {
     api.addAccount.and.resolveTo(SURE);
     render([], true);
@@ -81,7 +101,8 @@ describe('OnlineAccountsComponent', () => {
   it('Bearbeiten füllt das Formular vor und schickt die Änderung an dieses Konto', async () => {
     api.updateAccount.and.resolveTo({ ...UNSURE, conf: 'sicher' });
     render([SURE, UNSURE], true);
-    const edit = Array.from(el().querySelectorAll<HTMLButtonElement>('.acc-list li'))[1].querySelector('button') as HTMLButtonElement;
+    const edit = Array.from(el().querySelectorAll('.acc-list li')[1].querySelectorAll<HTMLButtonElement>('button'))
+      .find(x => x.textContent?.trim() === 'Bearbeiten') as HTMLButtonElement;
     edit.click();
     fixture.detectChanges();
     const c = fixture.componentInstance;

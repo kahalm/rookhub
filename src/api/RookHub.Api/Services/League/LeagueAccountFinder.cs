@@ -30,9 +30,10 @@ public sealed partial class LeagueAccountFinder
     /// <summary>
     /// Fassung der Regeln. Wer an Kandidaten oder Urteil dreht, erhöht sie — dann sucht der Hintergrund jeden Spieler einmal neu,
     /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0),
-    /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0).
+    /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0),
+    /// 5 = Online-Wertung passt nur noch 100–300 über der Elo (0.619.0).
     /// </summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -49,17 +50,31 @@ public sealed partial class LeagueAccountFinder
     /// nur niedriger ist ein Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab
     /// <see cref="MinRatedGames"/> Partien, nicht vorläufig; Bullet zählt mit) darf höchstens <see cref="RatingBelow"/> UNTER der
     /// Elo liegen, sonst ist es nicht er. Nach oben gibt es keine Grenze (Online-Wertungen liegen meist darüber, Lichess
-    /// deutlich). Liegt sie in <see cref="FitBelow"/>..<see cref="FitAbove"/> um die Elo, ist das ein Hinweis mehr.
+    /// deutlich). Liegt sie <see cref="FitMin"/> bis <see cref="FitMax"/> ÜBER der Elo, ist das ein Hinweis mehr (0.619.0, Wunsch:
+    /// „normal ist Elo online ca. 200 höher, 100–300 wäre passend"; vorher −250 bis +450).
     /// </summary>
-    public const int RatingBelow = 400, FitBelow = 250, FitAbove = 450, ScoreRating = 1, MinRatedGames = 10;
+    public const int RatingBelow = 400, FitMin = 100, FitMax = 300, ScoreRating = 1, MinRatedGames = 10;
+
+    /// <summary>Liegt die Online-Wertung im üblichen Abstand über der Elo (<see cref="FitMin"/>..<see cref="FitMax"/>)?</summary>
+    public static bool RatingFits(int rating, int? elo) => elo is { } e && e > 0 && rating - e is >= FitMin and <= FitMax;
+
+    /// <summary>„Lichess Blitz 2100 liegt 200 über der Elo 1900 (üblich: 100–300)".</summary>
+    public static string RatingFitText(string? label, int rating, int elo) =>
+        $"{label ?? "Online-Wertung"} {rating} liegt {rating - elo} über der Elo {elo} (üblich: {FitMin}–{FitMax})";
 
     public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team);
 
     /// <summary>Ein Profil auf einer Seite, so weit es für die Entscheidung zählt.</summary>
     /// <param name="Rating">Beste belastbare Online-Wertung (<see cref="MinRatedGames"/>, nicht vorläufig) — <c>null</c> = keine.</param>
     /// <param name="RatingLabel">Wo sie herkommt („Lichess Blitz", „chess.com Schnell").</param>
+    /// <param name="Ratings">ALLE Wertungen je Kategorie (auch vorläufige) — für die Konto-Prüfung (i), 0.619.0.</param>
     public sealed record Profile(string Site, string User, string Url, string? RealName, string? Flag, string? Location,
-        string? Bio, int? FideRating, DateTime? LastActive, bool Closed, int? Rating = null, string? RatingLabel = null);
+        string? Bio, int? FideRating, DateTime? LastActive, bool Closed, int? Rating = null, string? RatingLabel = null,
+        IReadOnlyList<Rating>? Ratings = null);
+
+    /// <summary>Eine Wertung einer Kategorie: <paramref name="Reliable"/> = mindestens <see cref="MinRatedGames"/> Partien und nicht
+    /// vorläufig — nur solche zählen fürs Urteil.</summary>
+    public sealed record Rating(string Label, int Value, int Games, bool Reliable);
 
     public sealed record Verdict(int Score, List<string> Evidence);
 
@@ -133,6 +148,18 @@ public sealed partial class LeagueAccountFinder
         @"f(ü|ue)gen|rattenberg|v(ö|oe)ls|wattens|mils|kundl|steinach|pradl|hall in tirol)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    /// <summary>Der Tiroler Ort im Text (Wortgrenzen — „Hallo" ist nicht Hall), sonst <c>null</c>.</summary>
+    public static string? TirolPlace(string? text) => TirolRe.Match(text ?? "") is { Success: true } m ? m.Value : null;
+
+    /// <summary>Die Länder, die ein Profil nennen darf: Österreich, dazu die Föderation laut Meldeliste und laut FIDE.</summary>
+    public static HashSet<string> AllowedCountries(string? fed, string? fideFed)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AT" };
+        if (fed is { } f1 && Fed2.TryGetValue(f1, out var c1)) allowed.Add(c1);
+        if (fideFed is { } f2 && Fed2.TryGetValue(f2, out var c2)) allowed.Add(c2);
+        return allowed;
+    }
+
     /// <summary>FIDE-Föderation → Landeskürzel der Profile.</summary>
     private static readonly Dictionary<string, string> Fed2 = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -170,9 +197,7 @@ public sealed partial class LeagueAccountFinder
                 default: return null;                                  // anderer Vorname — ein anderer Mensch (0.611.0)
             }
         }
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AT" };
-        if (p.Fed is { } f1 && Fed2.TryGetValue(f1, out var c1)) allowed.Add(c1);
-        if (fideFed is { } f2 && Fed2.TryGetValue(f2, out var c2)) allowed.Add(c2);
+        var allowed = AllowedCountries(p.Fed, fideFed);
         var flag = (prof.Flag ?? "").Trim();
         if (flag.Length >= 2)
         {
@@ -182,17 +207,17 @@ public sealed partial class LeagueAccountFinder
             ev.Add(code == "AT" ? "Land Österreich" : $"Land {code}");
         }
         if (!RatingPlausible(prof, p.Elo)) return null;                   // 500 online bei 2000 Elo — ein anderer (höher ist ok)
-        if (prof.Rating is { } rt && p.Elo is { } e0 && e0 > 0 && rt >= e0 - FitBelow && rt <= e0 + FitAbove)
+        if (prof.Rating is { } rt && p.Elo is { } e0 && RatingFits(rt, e0))
         {
             score += ScoreRating;
-            ev.Add($"{prof.RatingLabel ?? "Online-Wertung"} {rt} passt zu Elo {e0}");
+            ev.Add(RatingFitText(prof.RatingLabel, rt, e0));
         }
         if (prof.FideRating is { } fr && p.Elo is { } elo && elo > 0 && Math.Abs(fr - elo) <= FideTolerance)
         {
             score += ScoreFide;
             ev.Add($"FIDE-Wertung im Profil {fr} (Liste {elo})");
         }
-        if (TirolRe.IsMatch($"{prof.Location} {prof.Bio}"))
+        if (TirolPlace($"{prof.Location} {prof.Bio}") is not null)
         {
             score += ScoreTirol;
             ev.Add("Tiroler Ort im Profil");
@@ -261,9 +286,10 @@ public sealed partial class LeagueAccountFinder
             }
             DateTime? seen = u.TryGetProperty("seenAt", out var sa) && sa.TryGetInt64(out var ms)
                 ? DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime : null;
-            var (rating, label) = BestLichess(u);
+            var ratings = LichessRatings(u);
+            var (rating, label) = Best(ratings);
             list.Add(new Profile(LeagueOnlineSites.Lichess, user, LeagueOnlineSites.ProfileUrl(LeagueOnlineSites.Lichess, user),
-                string.IsNullOrWhiteSpace(real) ? null : real, flag, loc, bio, fide, seen, closed, rating, label));
+                string.IsNullOrWhiteSpace(real) ? null : real, flag, loc, bio, fide, seen, closed, rating, label, ratings));
         }
         return list;
     }
@@ -271,36 +297,63 @@ public sealed partial class LeagueAccountFinder
     private static readonly (string Key, string Label)[] LichessPerfs =
         { ("bullet", "Bullet"), ("blitz", "Blitz"), ("rapid", "Schnell"), ("classical", "Klassisch"), ("correspondence", "Fernschach") };
 
-    /// <summary>Beste Lichess-Wertung mit genug Partien und nicht vorläufig (unbespielte stehen auf 1500 und „prov").</summary>
-    private static (int? Rating, string? Label) BestLichess(JsonElement u)
+    /// <summary>Die Lichess-Wertungen je Kategorie; belastbar = genug Partien und nicht vorläufig (unbespielte stehen auf 1500
+    /// und „prov").</summary>
+    private static List<Rating> LichessRatings(JsonElement u)
     {
-        if (!u.TryGetProperty("perfs", out var perfs) || perfs.ValueKind != JsonValueKind.Object) return (null, null);
-        (int? Rating, string? Label) best = (null, null);
+        var list = new List<Rating>();
+        if (!u.TryGetProperty("perfs", out var perfs) || perfs.ValueKind != JsonValueKind.Object) return list;
         foreach (var (key, label) in LichessPerfs)
         {
-            if (!perfs.TryGetProperty(key, out var pf) || pf.ValueKind != JsonValueKind.Object) continue;
-            if (True(pf, "prov") || (Int(pf, "games") ?? 0) < MinRatedGames || Int(pf, "rating") is not { } r) continue;
-            if (best.Rating is null || r > best.Rating) best = (r, $"Lichess {label}");
+            if (!perfs.TryGetProperty(key, out var pf) || pf.ValueKind != JsonValueKind.Object || Int(pf, "rating") is not { } r) continue;
+            var games = Int(pf, "games") ?? 0;
+            if (games == 0) continue;                                             // nie gespielt — die 1500 sagen nichts
+            list.Add(new Rating($"Lichess {label}", r, games, !True(pf, "prov") && games >= MinRatedGames));
         }
-        return best;
+        return list;
     }
+
+    /// <summary>Die beste belastbare Wertung.</summary>
+    private static (int? Rating, string? Label) Best(IEnumerable<Rating> ratings) =>
+        ratings.Where(r => r.Reliable).MaxBy(r => r.Value) is { } b ? (b.Value, b.Label) : (null, null);
 
     /// <summary><c>GET /pub/player/{name}/stats</c> (chess.com): beste Wertung mit genug Partien, dazu die FIDE-Wertung, die
     /// der Nutzer selbst angegeben hat.</summary>
     public static (int? Rating, string? Label, int? Fide) ParseChessComStats(string json)
     {
+        var (best, fide) = (Best(ChessComRatings(json)), ChessComFide(json));
+        return (best.Rating, best.Label, fide);
+    }
+
+    /// <summary><c>GET /pub/player/{name}/stats</c> (chess.com) → die Wertungen je Kategorie.</summary>
+    public static List<Rating> ChessComRatings(string json)
+    {
         using var doc = JsonDocument.Parse(json);
         var d = doc.RootElement;
-        (int? Rating, string? Label) best = (null, null);
+        var list = new List<Rating>();
         foreach (var (key, label) in new[] { ("chess_bullet", "Bullet"), ("chess_blitz", "Blitz"), ("chess_rapid", "Schnell"), ("chess_daily", "Täglich") })
         {
             if (!d.TryGetProperty(key, out var s) || s.ValueKind != JsonValueKind.Object) continue;
             var games = s.TryGetProperty("record", out var rec) && rec.ValueKind == JsonValueKind.Object
                 ? (Int(rec, "win") ?? 0) + (Int(rec, "loss") ?? 0) + (Int(rec, "draw") ?? 0) : 0;
-            if (games < MinRatedGames || !s.TryGetProperty("last", out var last) || Int(last, "rating") is not { } r) continue;
-            if (best.Rating is null || r > best.Rating) best = (r, $"chess.com {label}");
+            if (games == 0 || !s.TryGetProperty("last", out var last) || Int(last, "rating") is not { } r) continue;
+            list.Add(new Rating($"chess.com {label}", r, games, games >= MinRatedGames));
         }
-        return (best.Rating, best.Label, Int(d, "fide"));
+        return list;
+    }
+
+    private static int? ChessComFide(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return Int(doc.RootElement, "fide");
+    }
+
+    /// <summary>Das chess.com-Profil um die Wertungen aus <c>/stats</c> ergänzt (dort steht auch die selbst angegebene FIDE-Wertung).</summary>
+    public static Profile WithChessComStats(Profile prof, string statsJson)
+    {
+        var ratings = ChessComRatings(statsJson);
+        var (rating, label) = Best(ratings);
+        return prof with { Rating = rating, RatingLabel = label, FideRating = ChessComFide(statsJson) ?? prof.FideRating, Ratings = ratings };
     }
 
     /// <summary><c>GET /pub/player/{name}</c> (chess.com).</summary>
@@ -352,15 +405,18 @@ public sealed partial class LeagueAccountFinder
     // ── Suchen ──────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>Den Spieler zu einer FIDE-ID aus der jüngsten Meldeliste (Name, Föderation, Elo, Mannschaft).</summary>
-    public async Task<Player?> PlayerAsync(string fide, CancellationToken ct)
+    public Task<Player?> PlayerAsync(string fide, CancellationToken ct) => PlayerAsync(_db, fide, ct);
+
+    /// <inheritdoc cref="PlayerAsync(string, CancellationToken)"/>
+    public static async Task<Player?> PlayerAsync(AppDbContext db, string fide, CancellationToken ct)
     {
-        var row = await (from p in _db.LeaguePlayers.AsNoTracking()
-                         join t in _db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
+        var row = await (from p in db.LeaguePlayers.AsNoTracking()
+                         join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
                          where p.FideId == fide
                          orderby t.Season descending, p.Id descending
                          select new { p.Name, p.Fed, p.EloI, p.EloN, p.Team }).FirstOrDefaultAsync(ct);
         if (row is not null) return new Player(fide, row.Name, row.Fed, row.EloI is > 0 ? row.EloI : row.EloN, row.Team);
-        var name = await _db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Name).FirstOrDefaultAsync(ct);
+        var name = await db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Name).FirstOrDefaultAsync(ct);
         return name is null ? null : new Player(fide, name, null, null, null);
     }
 
@@ -446,8 +502,7 @@ public sealed partial class LeagueAccountFinder
             if (st.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("chess.com");
             if (st.IsSuccessStatusCode)
             {
-                var (rating, label, fide) = ParseChessComStats(await st.Content.ReadAsStringAsync(ct));
-                prof = prof with { Rating = rating, RatingLabel = label, FideRating = fide ?? prof.FideRating };
+                prof = WithChessComStats(prof, await st.Content.ReadAsStringAsync(ct));
             }
             profiles.Add((prof, true));
         }

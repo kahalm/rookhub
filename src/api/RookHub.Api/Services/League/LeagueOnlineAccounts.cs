@@ -41,6 +41,9 @@ public static partial class LeagueOnlineSites
         return ok ? (s, text) : null;
     }
 
+    /// <summary>Anzeigename der Seite („Lichess", „chess.com").</summary>
+    public static string Label(string site) => site == Lichess ? "Lichess" : site;
+
     public static string ProfileUrl(string site, string user) => site == Lichess
         ? $"https://lichess.org/@/{Uri.EscapeDataString(user)}"
         : $"https://www.chess.com/member/{Uri.EscapeDataString(user)}";

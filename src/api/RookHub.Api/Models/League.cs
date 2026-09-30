@@ -269,10 +269,30 @@ public class LeagueScoutAccount
     public string? Teams { get; set; }
     /// <summary>Für welches Team es in einem Team-Battle gespielt hat — der Verein, gegen dessen Spieler die Stellungen zählen.</summary>
     public string? PlayedFor { get; set; }
+    /// <summary>In welchen Team-Battles (Serie ohne Runde, „Online TMM 2021", „Lichess Quarantäne-Liga 7C"; durch „; " getrennt,
+    /// 0.619.0) — für die Konto-Prüfung (i).</summary>
+    public string? Events { get; set; }
     public DateTime FoundAt { get; set; }
     public DateTime? CheckedAt { get; set; }
     /// <summary>Was die Prüfung ergab („Vorschlag für …", „kein Klarname, zu wenige Partien" …).</summary>
     public string? Result { get; set; }
+}
+
+/// <summary>
+/// Ein Online-Konto, das ein Spieler SELBST gemeldet hat (0.619.0) — z. B. auf der Meldeliste der Online-TMM 2021 des Tiroler
+/// Landesverbands (Klarname + Lichess-Name, mit Zustimmung veröffentlicht). Die Konto-Prüfung (i) zeigt es als stärksten Beleg.
+/// </summary>
+public class LeagueSelfReport
+{
+    public int Id { get; set; }
+    public string FideId { get; set; } = string.Empty;
+    public string Site { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    /// <summary>Woher („Meldeliste Online-TMM 2021").</summary>
+    public string Source { get; set; } = string.Empty;
+    /// <summary>Für welches Team gemeldet.</summary>
+    public string? Team { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>Öffentlicher Teilen-Link auf genau eine Begegnung (Token = Geheimnis, 144 Bit).</summary>

@@ -77,6 +77,29 @@ public static class LeagueFingerprint
         return sum / games.Count;
     }
 
+    /// <summary>
+    /// Wie viele Online-Partien folgen den Brettpartien mindestens <paramref name="ownMoves"/> EIGENE Züge weit (Weiß bis Halbzug
+    /// 2n−1, Schwarz bis 2n)? → (Partien, davon so weit, mittlere tiefste gemeinsame Stellung). Für die Konto-Prüfung (i), 0.619.0:
+    /// „% Übereinstimmung Repertoire". Nach einem eigenen Zug ist fast jede Partie im Repertoire (1.e4), nach dreien nicht mehr.
+    /// </summary>
+    public static (int Games, int Reached, double Depth) Coverage(IReadOnlyList<(IReadOnlyList<string> Sans, bool White)> games,
+        Repertoire r, int ownMoves = 3)
+    {
+        if (games.Count == 0) return (0, 0, 0);
+        var reached = 0;
+        double sum = 0;
+        foreach (var (sans, white) in games)
+        {
+            var set = white ? r.White : r.Black;
+            var deepest = 0;
+            foreach (var (ply, key) in OwnPositions(sans, white))
+                if (ply > deepest && set.Contains(key)) deepest = ply;
+            sum += deepest;
+            if (deepest >= (white ? 2 * ownMoves - 1 : 2 * ownMoves)) reached++;
+        }
+        return (games.Count, reached, sum / games.Count);
+    }
+
     /// <summary>Ohne Bullet, wenn genug andere da sind.</summary>
     public static List<T> Usable<T>(IReadOnlyList<T> games, Func<T, string?> speed)
     {

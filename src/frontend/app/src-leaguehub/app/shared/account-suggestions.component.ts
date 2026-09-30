@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { AccountSuggestion } from '../core/league.models';
 import { HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
+import { AccountChecksComponent } from './account-checks.component';
 
 /** „zuletzt aktiv 09/2026" — genauer braucht es niemand, um ein verwaistes Konto zu erkennen. */
 export function lastActiveText(iso: string | null): string | null {
@@ -24,6 +25,7 @@ export function suggestionFacts(s: AccountSuggestion): string {
 @Component({
   selector: 'lh-account-suggestions',
   standalone: true,
+  imports: [AccountChecksComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ul class="sugg-list">
@@ -34,6 +36,8 @@ export function suggestionFacts(s: AccountSuggestion): string {
               <span class="acc-hidden" title="Konten Minderjähriger zeigt LeagueHub niemandem — entscheide nach den Hinweisen">{{ hiddenLabel }}</span>
             } @else {
               <a [href]="s.url" target="_blank" rel="noopener">{{ label(s.site) }}: {{ s.user }}</a>
+              <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(s.id)" aria-label="Was geprüft wurde"
+                      title="Was geprüft wurde" (click)="toggleChecks(s.id)">i</button>
             }
             @if (showPlayer() && s.name) {
               <button type="button" class="btn-link sugg-player" (click)="openPlayer.emit(s.fide)">{{ s.name }}</button>
@@ -41,6 +45,7 @@ export function suggestionFacts(s: AccountSuggestion): string {
             }
           </div>
           <p class="small sugg-evidence">{{ s.evidence }}</p>
+          @if (checksOpen().has(s.id)) { <lh-account-checks kind="suggestion" [id]="s.id" /> }
           @if (facts(s); as f) { <p class="small muted sugg-facts">{{ f }}</p> }
           @if (gone().get(s.id); as note) {
             <p class="small muted">{{ note }}</p>
@@ -72,6 +77,12 @@ export class AccountSuggestionsComponent {
   readonly error = signal<string | null>(null);
   /** Erledigte bleiben mit einem Satz stehen, bis die Liste neu kommt — sonst springt die Liste unter dem Finger weg. */
   readonly gone = signal(new Map<number, string>());
+  /** Vorschläge, deren Prüfung (i) aufgeklappt ist (0.619.0). */
+  readonly checksOpen = signal(new Set<number>());
+
+  toggleChecks(id: number): void {
+    this.checksOpen.update(s => { const n = new Set(s); if (!n.delete(id)) n.add(id); return n; });
+  }
 
   async accept(s: AccountSuggestion, sure: boolean): Promise<void> {
     await this.run(s, async () => {

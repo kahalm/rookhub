@@ -4,6 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { Account, AccountInput, AccountSuggestion, SuggestionList } from '../core/league.models';
 import { AccountSuggestionsComponent } from './account-suggestions.component';
+import { AccountChecksComponent } from './account-checks.component';
 import { ACCOUNT_SITES, HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
 
 export { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
@@ -51,11 +52,16 @@ export function accountStatus(a: Account): string | null {
                   <a [href]="a.url" target="_blank" rel="noopener">{{ label(a.site) }}: {{ a.user }}</a>
                 }
                 <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? 'gesichert' : 'unsicher' }}</span>
+                @if (a.id !== undefined && !a.hidden) {
+                  <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" aria-label="Was geprüft wurde"
+                          title="Was geprüft wurde" (click)="toggleChecks(a.id)">i</button>
+                }
                 @if (canEdit() && a.id !== undefined) {
                   @if (!a.hidden) { <button type="button" class="btn-link" [disabled]="busy()" (click)="startEdit(a)">Bearbeiten</button> }
                   <button type="button" class="btn-link" [disabled]="busy()" (click)="remove(a)">Entfernen</button>
                 }
               </div>
+              @if (a.id !== undefined && checksOpen().has(a.id)) { <lh-account-checks kind="account" [id]="a.id" /> }
               @if (a.comment) { <p class="acc-comment small">{{ a.comment }}</p> }
               @if (status(a); as st) {
                 <p class="small muted acc-status">{{ st }}
@@ -116,7 +122,7 @@ export function accountStatus(a: Account): string | null {
       </form>
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, AccountSuggestionsComponent],
+  imports: [NgTemplateOutlet, AccountSuggestionsComponent, AccountChecksComponent],
 })
 export class OnlineAccountsComponent {
   readonly fide = input.required<string>();
@@ -143,6 +149,8 @@ export class OnlineAccountsComponent {
   readonly suggestions = signal<AccountSuggestion[]>([]);
   readonly scanning = signal(false);
   readonly scanNote = signal<string | null>(null);
+  /** Konten, deren Prüfung (i) aufgeklappt ist (0.619.0). */
+  readonly checksOpen = signal(new Set<number>());
 
   constructor() {
     effect(() => {
@@ -177,6 +185,10 @@ export class OnlineAccountsComponent {
     } finally {
       this.scanning.set(false);
     }
+  }
+
+  toggleChecks(id: number): void {
+    this.checksOpen.update(s => { const n = new Set(s); if (!n.delete(id)) n.add(id); return n; });
   }
 
   onDecided(accepted: boolean): void {

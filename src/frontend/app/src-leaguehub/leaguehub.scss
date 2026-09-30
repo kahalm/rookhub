@@ -473,6 +473,30 @@ lh-online-accounts { display: block; }
 .sugg-actions .btn-sec { padding: 6px 10px; font-size: 14px; }
 .sugg-page h2 { margin: 18px 0 6px; }
 .sugg-group { margin-top: 16px; }
+
+/* Konto-Prüfung (i) (0.619.0) — ein Knopf in der Konto-Zeile, die Liste darunter */
+.chk-btn { width: 22px; height: 22px; padding: 0; border: 1.5px solid var(--muted); border-radius: 50%; background: none;
+  color: var(--muted); font: italic 700 13px/1 Georgia, "Times New Roman", serif; cursor: pointer; align-self: center; }
+.chk-btn:hover, .chk-btn[aria-expanded="true"] { color: var(--surface); background: var(--ink); border-color: var(--ink); }
+.chk-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.chk { margin-top: 8px; padding: 8px 10px; background: var(--paper); border-radius: 6px; }
+.chk > p { margin: 0 0 6px; }
+.chk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.chk .chk-list li { display: grid; grid-template-columns: 18px minmax(96px, 11em) 1fr; gap: 2px 8px; align-items: baseline;
+  padding: 0; border: 0; border-radius: 0; font-size: 14px; line-height: 1.35; }
+.chk-sym { font-weight: 700; text-align: center; }
+.chk-label { font-weight: 600; }
+.chk-text { overflow-wrap: anywhere; }
+.chk-ok .chk-sym { color: var(--ok); }
+.chk-warn .chk-sym { color: var(--warn); }
+.chk-fail .chk-sym { color: var(--red); }
+.chk-fail .chk-text { color: var(--red); }
+.chk-none .chk-sym, .chk-none .chk-label, .chk-none .chk-text, .chk-info .chk-sym { color: var(--muted); }
+.chk .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 520px) {
+  .chk .chk-list li { grid-template-columns: 18px 1fr; }
+  .chk-text { grid-column: 2; }
+}
 .sugg-group h3 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0 0 4px; font: 600 18px/1.2 var(--cond); }
 .sugg-name { font: inherit; font-size: inherit; color: var(--ink); }
 

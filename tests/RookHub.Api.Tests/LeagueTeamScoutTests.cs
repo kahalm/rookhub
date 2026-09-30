@@ -127,7 +127,7 @@ public class LeagueTeamScoutTests : IDisposable
         + "\"black\":{\"user\":{\"name\":\"Opp" + i + "\",\"id\":\"opp" + i + "\"},\"rating\":1900}},\"moves\":\"" + line + "\"}"));
 
     /// <summary>Lichess mit einem Tiroler Team (SK Kufstein) samt einem Team-Battle und einem fremden Team.</summary>
-    private static FakeHttp World(int year = 1987, int trigRating = 1950, string battleUser = "Trigonias", string onlineLine = Ruy) => new(req =>
+    private static FakeHttp World(int year = 1987, int trigRating = 2100, string battleUser = "Trigonias", string onlineLine = Ruy) => new(req =>
     {
         var u = req.RequestUri!.ToString();
         var bu = battleUser.ToLowerInvariant();
@@ -138,7 +138,7 @@ public class LeagueTeamScoutTests : IDisposable
         if (u.Contains("/api/team/sk-kufstein/arena"))
             return Ok("{\"id\":\"tb1\",\"teamBattle\":{\"teams\":[\"sk-kufstein\",\"x\"]}}\n{\"id\":\"ar2\"}\n");
         if (u.EndsWith("/api/tournament/tb1"))
-            return Ok("""{"id":"tb1","teamBattle":{"teams":{"sk-kufstein":["SK Kufstein",null],"x":["X Team",null]}}}""");
+            return Ok("""{"id":"tb1","fullName":"Online TMM 2021 Runde 3 Team Battle","teamBattle":{"teams":{"sk-kufstein":["SK Kufstein",null],"x":["X Team",null]}}}""");
         if (u.Contains("/api/tournament/tb1/results"))
             return Ok("{\"username\":\"" + battleUser + "\",\"team\":\"sk-kufstein\"}\n{\"username\":\"Fremder\",\"team\":\"x\"}\n");
         if (u.EndsWith("/api/users"))
@@ -182,6 +182,7 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.Equal(new[] { "katzenpapa", "trigonias" }, pool.Select(a => a.UserName));
         Assert.Equal(("SK Kufstein", (string?)null), (pool[0].Teams, pool[0].PlayedFor));
         Assert.Equal(("Trigonias", "SK Kufstein", (string?)"SK Kufstein"), (pool[1].DisplayName, pool[1].Teams, pool[1].PlayedFor));
+        Assert.Equal(((string?)null, (string?)"Online TMM 2021"), (pool[0].Events, pool[1].Events));   // Serie ohne Runde (0.619.0)
         Assert.DoesNotContain(http.Urls, x => x.Contains("/api/team/ccb/"));                 // nicht Tirol
         Assert.DoesNotContain(http.Urls, x => x.Contains("/api/tournament/ar2"));            // kein Team-Battle
         Assert.Equal(0, await Scout(World()).RefreshPoolAsync(default));                      // derselbe Stand: nichts Neues
@@ -202,9 +203,9 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.Equal(1 + 3 + 1, list[0].Score);                                                 // Team + Klarname + Land
         Assert.StartsWith("Mitglied im Lichess-Team „SK Kufstein“; Klarname im Profil", list[0].Evidence);
         Assert.Equal(4, list[1].Score);                                                         // Abstand ≥ 2
-        Assert.StartsWith("spielte für „SK Kufstein“ (Lichess-Team-Battle); unter 2 Spielern des Vereins passen seine Stellungen am besten zu ihm",
-            list[1].Evidence);
-        Assert.Contains("Lichess Schnell 1950 passt zu Elo 1900", list[1].Evidence);
+        Assert.StartsWith("spielte für „SK Kufstein“ (Lichess-Team-Battle); seine Online-Eröffnungen erreichen Stellungen aus dem "
+            + "Brett-Repertoire dieses Spielers, aber nicht aus dem des anderen verglichenen Vereinsspielers", list[1].Evidence);
+        Assert.Contains("Lichess Schnell 2100 liegt 200 über der Elo 1900 (üblich: 100–300)", list[1].Evidence);
         // Maier (Innsbruck) spielt dasselbe, zählt aber nicht: verglichen wird nur mit dem Verein, für den das Konto spielte.
         Assert.DoesNotContain(list, s => s.FideId == "444");
 

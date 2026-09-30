@@ -17,11 +17,27 @@ describe('AccountSuggestionsComponent', () => {
   const buttons = (li: Element) => Array.from(li.querySelectorAll<HTMLButtonElement>('button'));
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['acceptSuggestion', 'rejectSuggestion']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['acceptSuggestion', 'rejectSuggestion', 'accountChecks']);
     TestBed.configureTestingModule({ imports: [AccountSuggestionsComponent], providers: [{ provide: LeagueApiService, useValue: api }] });
     fixture = TestBed.createComponent(AccountSuggestionsComponent);
     decided = [];
     fixture.componentInstance.decided.subscribe(d => decided.push({ id: d.suggestion.id, accepted: d.accepted }));
+  });
+
+  it('(i) je Vorschlag lädt die Prüfung des Vorschlags; ein verborgener hat keins', async () => {
+    api.accountChecks.and.resolveTo({ site: 'chess.com', user: 'Max_Muster', url: 'u', player: 'Muster, Max', elo: null, checkedAt: 'x',
+      profileLoaded: false, items: [{ key: 'name', label: 'Name im Profil', status: 'none', text: 'nicht geprüft — chess.com nicht erreichbar' }] });
+    fixture.componentRef.setInput('items', [S(1), S(2, { hidden: true, site: null, user: null, url: null })]);
+    fixture.detectChanges();
+    const infos = el().querySelectorAll<HTMLButtonElement>('.chk-btn');
+    expect(infos.length).toBe(1);
+    infos[0].click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.accountChecks).toHaveBeenCalledWith('suggestion', 1);
+    expect(el().textContent).toContain('nicht geprüft — chess.com nicht erreichbar');
+    expect(el().textContent).toContain('Das Profil war gerade nicht abrufbar');
   });
 
   it('Hilfen: zuletzt aktiv, Profilangaben', () => {

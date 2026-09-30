@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -73,6 +73,11 @@ export class LeagueApiService {
   // ── Konto-Vorschläge (0.607.0, league.manage) ──
 
   /** Alle offenen Vorschläge (stärkste zuerst) samt Stand der Suche. */
+  /** Konto-Prüfung (i) eines eingetragenen Kontos bzw. eines Vorschlags (0.619.0) — holt das Profil frisch, dauert ein paar Sekunden. */
+  accountChecks(kind: 'account' | 'suggestion', id: number): Promise<AccountChecks> {
+    return firstValueFrom(this.http.get<AccountChecks>(`/api/league/${kind === 'account' ? 'accounts' : 'suggestions'}/${id}/checks`));
+  }
+
   suggestions(): Promise<SuggestionList> {
     return firstValueFrom(this.http.get<SuggestionList>('/api/league/suggestions'));
   }

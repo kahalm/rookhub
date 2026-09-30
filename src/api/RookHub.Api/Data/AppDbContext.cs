@@ -102,6 +102,7 @@ public class AppDbContext : DbContext
     public DbSet<LeagueAccountScan> LeagueAccountScans => Set<LeagueAccountScan>();
     public DbSet<LeagueBroadcast> LeagueBroadcasts => Set<LeagueBroadcast>();
     public DbSet<LeagueScoutAccount> LeagueScoutAccounts => Set<LeagueScoutAccount>();
+    public DbSet<LeagueSelfReport> LeagueSelfReports => Set<LeagueSelfReport>();
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
@@ -713,8 +714,19 @@ public class AppDbContext : DbContext
             e.Property(a => a.DisplayName).HasMaxLength(30);
             e.Property(a => a.Teams).HasMaxLength(500);
             e.Property(a => a.PlayedFor).HasMaxLength(200);
+            e.Property(a => a.Events).HasMaxLength(500);
             e.Property(a => a.Result).HasMaxLength(300);
             e.HasIndex(a => a.CheckedAt);
+        });
+        modelBuilder.Entity<LeagueSelfReport>(e =>
+        {
+            e.Property(a => a.FideId).HasMaxLength(16);
+            e.Property(a => a.Site).HasMaxLength(20);
+            e.Property(a => a.UserName).HasMaxLength(60);
+            e.Property(a => a.Source).HasMaxLength(120);
+            e.Property(a => a.Team).HasMaxLength(200);
+            e.HasIndex(a => new { a.Site, a.UserName, a.Source }).IsUnique();
+            e.HasIndex(a => a.FideId);
         });
         modelBuilder.Entity<LeagueBroadcast>(e =>
         {

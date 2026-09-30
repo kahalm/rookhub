@@ -97,6 +97,13 @@ public class LeagueController : BaseApiController
         await accounts.DeleteAsync(id, ct) ? NoContent() : NotFound();
 
     /// <summary>Partien dieses Kontos gleich (neu) abrufen lassen.</summary>
+    /// <summary>Konto-Prüfung (i) eines eingetragenen Kontos (0.619.0) → <c>{ site, user, url, player, elo, checkedAt, profileLoaded,
+    /// items[{ key, label, status (ok/warn/fail/none/info), text }] }</c>; 404 unbekannt oder verborgen (minderjährig).</summary>
+    [HttpGet("accounts/{id:int}/checks")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> AccountChecks(int id, [FromServices] LeagueAccountChecks checks, CancellationToken ct) =>
+        await checks.ForAccountAsync(id, ct) is { } r ? Ok(r) : NotFound();
+
     [HttpPost("accounts/{id:int}/sync")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> SyncAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
@@ -150,6 +157,23 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> AcceptSuggestion(int id, [FromBody] AcceptRequest? req, [FromServices] LeagueOnlineAccountService accounts,
         CancellationToken ct) =>
         await AccountResultAsync(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct), accounts, ct);
+
+    /// <summary>Konto-Prüfung (i) eines Vorschlags — wie bei einem Konto, die Partien für den Repertoire-Vergleich werden geholt.</summary>
+    [HttpGet("suggestions/{id:int}/checks")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> SuggestionChecks(int id, [FromServices] LeagueAccountChecks checks, CancellationToken ct) =>
+        await checks.ForSuggestionAsync(id, ct) is { } r ? Ok(r) : NotFound();
+
+    /// <summary>Selbstmeldungen einer Quelle einspielen (ersetzt die Einträge dieser Quelle) <c>{ source, items[{ fide, site, user, team }] }</c>
+    /// → <c>{ added, updated, unchanged, removed, skipped[{ index, reason }], dryRun }</c>; 400 <c>noSource</c>/<c>tooMany</c>.</summary>
+    [HttpPost("admin/self-reports")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> ImportSelfReports([FromBody] LeagueSelfReportImport.Request? req, [FromQuery] bool dryRun,
+        [FromServices] Data.AppDbContext db, CancellationToken ct)
+    {
+        var (outcome, reason) = await LeagueSelfReportImport.ImportAsync(db, req ?? new(null, null), dryRun, ct);
+        return outcome is not null ? Ok(outcome) : BadRequest(new { reason });
+    }
 
     [HttpPost("suggestions/{id:int}/reject")]
     [HasPermission(Permissions.LeagueManage)]

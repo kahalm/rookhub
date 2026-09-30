@@ -148,6 +148,22 @@ public sealed partial class LeagueTeamScout
         return res;
     }
 
+    /// <summary><c>GET /api/tournament/{id}</c> → der Name des Turniers (<c>fullName</c>, sonst <c>name</c>).</summary>
+    public static string? ParseTournamentName(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        return Str(doc.RootElement, "fullName") ?? Str(doc.RootElement, "name");
+    }
+
+    /// <summary>Die Serie eines Team-Battles ohne Runde: „Online TMM 2021 Runde 3 Team Battle" → „Online TMM 2021".</summary>
+    public static string? EventSeries(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var s = Regex.Replace(name, @"\s+Team[- ]Battle\s*$", "", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"\s+(Runde|Round|Rd\.?)\s*\d+\b", "", RegexOptions.IgnoreCase).Trim();
+        return s.Length > 0 ? s : null;
+    }
+
     /// <summary><c>GET /api/tournament/{id}/results</c> → (Nutzername, Team-Kennung).</summary>
     public static List<(string User, string? Team)> ParseResults(string ndjson) =>
         Lines(ndjson).Select(e => (Str(e, "username"), Str(e, "team"))).Where(x => x.Item1 is not null).Select(x => (x.Item1!, x.Item2)).ToList();
@@ -226,12 +242,14 @@ public sealed partial class LeagueTeamScout
             if (await GetAsync($"{_lichess}/api/tournament/{b}", ct) is not { } info) continue;
             var names = ParseBattleTeams(info);
             if (!names.Keys.Any(teams.ContainsKey)) continue;
+            var series = EventSeries(ParseTournamentName(info));
             if (await GetAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson") is not { } results) continue;
             foreach (var (user, team) in ParseResults(results))
             {
                 if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
                 var a = Upsert(user);
                 a.PlayedFor = Join(a.PlayedFor, teamName, 200);
+                if (series is not null) a.Events = Join(a.Events, series, 500);
             }
         }
         await _db.SaveChangesAsync(ct);
@@ -324,18 +342,24 @@ public sealed partial class LeagueTeamScout
             var season = rows.Count > 0 ? rows[0].Season : null;
             var byFide = rows.GroupBy(r => r.FideId!).ToDictionary(g => g.Key,
                 g => new LeagueAccountFinder.Player(g.Key, g.First().Name, g.First().Fed, g.First().EloI is > 0 ? g.First().EloI : g.First().EloN, g.First().Team));
-            var firsts = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var n in await db.LeaguePlayers.AsNoTracking().Select(p => p.Name).Distinct().ToListAsync(ct))
-                foreach (var t in LeagueAccountFinder.Tokens(LeagueAccountFinder.SplitName(n).First))
-                    if (t.Length >= 3) firsts.Add(t);
             return new Context
             {
-                FirstNames = firsts,
+                FirstNames = await FirstNamesAsync(db, ct),
                 Season = rows.Where(r => r.Season == season).GroupBy(r => r.FideId!).Select(g => byFide[g.Key]).ToList(),
                 ByFide = byFide,
                 AllTeams = rows.Select(r => (r.FideId!, r.Team)).Distinct().ToList(),
             };
         }
+    }
+
+    /// <summary>Alle Vornamen der Meldelisten (klein, ab drei Buchstaben) — für <see cref="OtherFirstName"/>.</summary>
+    public static async Task<HashSet<string>> FirstNamesAsync(AppDbContext db, CancellationToken ct)
+    {
+        var firsts = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var n in await db.LeaguePlayers.AsNoTracking().Select(p => p.Name).Distinct().ToListAsync(ct))
+            foreach (var t in LeagueAccountFinder.Tokens(LeagueAccountFinder.SplitName(n).First))
+                if (t.Length >= 3) firsts.Add(t);
+        return firsts;
     }
 
     /// <summary>Ein Konto prüfen: Klarname, sonst Stellungen unter den Spielern des Vereins. → Ergebnis in Worten.</summary>
@@ -386,28 +410,46 @@ public sealed partial class LeagueTeamScout
         if (OtherFirstName(a.DisplayName, player.Name, ctx.FirstNames) is { } other)
             return $"Stellungen → {player.Name}, aber der Nutzername nennt einen anderen Vornamen („{other}“)";
         if (!LeagueAccountFinder.RatingPlausible(prof, player.Elo)) return $"Stellungen → {player.Name}, aber Wertung zu niedrig";
-        var ev = new List<string>
-        {
-            origin,
-            $"unter {depths.Count} Spielern des Vereins passen seine Stellungen am besten zu ihm ({best.Ratio:0.0}× vor dem Zweiten)",
-        };
-        if (prof.Rating is { } rt && player.Elo is { } elo && elo > 0 && rt >= elo - LeagueAccountFinder.FitBelow && rt <= elo + LeagueAccountFinder.FitAbove)
-            ev.Add($"{prof.RatingLabel} {rt} passt zu Elo {elo}");
+        var ev = new List<string> { origin, PositionsText(best, depths.Count, ctx) };
+        if (prof.Rating is { } rt && player.Elo is { } elo && LeagueAccountFinder.RatingFits(rt, elo))
+            ev.Add(LeagueAccountFinder.RatingFitText(prof.RatingLabel, rt, elo));
         return await AddAsync(best.Fide, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt oder bei einem anderen Spieler";
+    }
+
+    /// <summary>
+    /// Der Stellungs-Hinweis in Worten (0.619.0, Wunsch „erklär das besser, 1,9× vor dem Zweiten sagt nichts"): wie weit die
+    /// Online-Eröffnungen dem Brett-Repertoire dieses Spielers folgen — verglichen mit dem nächstbesten Vereinskollegen.
+    /// </summary>
+    private static string PositionsText((string Fide, double Depth, double Ratio, string? Second) best, int compared, Context ctx)
+    {
+        var de = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+        if (best.Second is { } s && ctx.ByFide.TryGetValue(s, out var second))
+            return $"seine Online-Eröffnungen folgen dem Brett-Repertoire dieses Spielers im Schnitt {best.Ratio.ToString("0.0", de)}-mal so weit "
+                   + $"wie dem des nächstbesten Vereinskollegen ({second.Name}); verglichen mit {compared} Spielern des Vereins";
+        var others = compared - 1;
+        return "seine Online-Eröffnungen erreichen Stellungen aus dem Brett-Repertoire dieses Spielers, "
+               + (others == 1 ? "aber nicht aus dem des anderen verglichenen Vereinsspielers"
+                   : $"aber aus keinem der {others} übrigen verglichenen Vereinsspieler");
     }
 
     private async Task<LeagueFingerprint.Repertoire> RepertoireAsync(string fide, Context ctx, CancellationToken ct)
     {
         if (ctx.Repertoires.TryGetValue(fide, out var r)) return r;
-        r = new LeagueFingerprint.Repertoire();
-        var (name, games) = await new LeagueProfileStore(_db).GamesAsync(fide, ct);
+        return ctx.Repertoires[fide] = await BoardRepertoireAsync(_db, fide, ct);
+    }
+
+    /// <summary>Die Stellungen aus allen Brettpartien eines Spielers (fremde + Vereinspartien, ohne eigene Ausgangsstellung).</summary>
+    public static async Task<LeagueFingerprint.Repertoire> BoardRepertoireAsync(AppDbContext db, string fide, CancellationToken ct)
+    {
+        var r = new LeagueFingerprint.Repertoire();
+        var (name, games) = await new LeagueProfileStore(db).GamesAsync(fide, ct);
         foreach (var g in games)
         {
             if (g.Headers.ContainsKey("FEN") || LeagueProfileBuilder.ColorOf(g, fide, name) is not { } color) continue;
             var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
             r.Add(PgnParser.ExtractMainlineSans(moveText), color == "w");
         }
-        return ctx.Repertoires[fide] = r;
+        return r;
     }
 
     /// <summary>Vorschlag anlegen, wenn es das Konto für den Spieler weder als Konto noch als Vorschlag (auch verworfen) gibt — und

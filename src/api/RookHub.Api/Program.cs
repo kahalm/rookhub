@@ -292,6 +292,10 @@ try
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
         sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueBroadcastImport>>(), sp.GetRequiredService<IConfiguration>()));
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueAccountChecks(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
+        sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<IConfiguration>()));
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueTeamScout(
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),

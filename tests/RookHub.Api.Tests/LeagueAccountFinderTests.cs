@@ -104,7 +104,14 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Equal(1 + 3 + 1, high.Score);                                          // … aber kein Hinweis
         var fits = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 2100), derived: true)!;
         Assert.Equal(1 + 3 + 1 + 1, fits.Score);
-        Assert.Contains("Lichess Blitz 2100 passt zu Elo 1900", fits.Evidence);
+        Assert.Contains("Lichess Blitz 2100 liegt 200 über der Elo 1900 (üblich: 100–300)", fits.Evidence);
+        // Band 100–300 darüber (0.619.0, Wunsch „normal ist online ca. 200 höher"): knapp darüber oder darunter ist kein Hinweis.
+        Assert.Equal(1 + 3 + 1, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1950), derived: true)!.Score);
+        Assert.True(LeagueAccountFinder.RatingFits(2000, 1900));
+        Assert.True(LeagueAccountFinder.RatingFits(2200, 1900));
+        Assert.False(LeagueAccountFinder.RatingFits(1999, 1900));
+        Assert.False(LeagueAccountFinder.RatingFits(2201, 1900));
+        Assert.False(LeagueAccountFinder.RatingFits(2000, null));
         // Ohne Elo oder ohne Wertung kein Einwand.
         Assert.NotNull(LeagueAccountFinder.Judge(Max with { Elo = null }, Prof("MaxMuster", "Max Muster", "AT", rating: 500), derived: true));
         Assert.True(LeagueAccountFinder.RatingPlausible(Prof("x"), 2000));
@@ -188,7 +195,7 @@ public class LeagueAccountFinderTests : IDisposable
                  {"id":"musterfan","username":"MusterFan","profile":{"flag":"AT"}}]
                 """);
         if (u.EndsWith("/pub/player/max_muster/stats"))
-            return Ok("""{"chess_rapid":{"last":{"rating":1850},"record":{"win":30,"loss":20,"draw":5}}}""");
+            return Ok("""{"chess_rapid":{"last":{"rating":2050},"record":{"win":30,"loss":20,"draw":5}}}""");
         if (u.EndsWith("/pub/player/max_muster"))
             return Ok("""{"url":"https://www.chess.com/member/Max_Muster","username":"max_muster","country":"https://api.chess.com/pub/country/AT"}""");
         if (u.Contains("api.chess.com/pub/player/")) return Status(HttpStatusCode.NotFound);
@@ -223,7 +230,7 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Equal((1987, "AUT", 3), (scan.BirthYear, scan.Federation, scan.Found));
         // Nur die abgeleiteten Namen gehen an chess.com, alle Kandidaten gesammelt an Lichess.
         Assert.Equal(7 + 1, http.Urls.Count(x => x.Contains("api.chess.com")));     // 7 Namen + Wertungen des einen Treffers
-        Assert.StartsWith("Nutzername aus dem Namen; Land Österreich; chess.com Schnell 1850 passt zu Elo 1900", list[2].Evidence);
+        Assert.StartsWith("Nutzername aus dem Namen; Land Österreich; chess.com Schnell 2050 liegt 150 über der Elo 1900", list[2].Evidence);
         Assert.Single(http.Urls, x => x.StartsWith("POST") && x.EndsWith("/api/users"));
 
         http.Urls.Clear();
