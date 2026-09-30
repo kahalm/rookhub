@@ -146,7 +146,7 @@ describe('KidHubAppComponent', () => {
   it('schon angemeldet (geteiltes Cookie): Name statt der Knoepfe', async () => {
     const f = TestBed.createComponent(KidHubAppComponent);
     f.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/auth/session').flush(USER);
+    TestBed.inject(HttpTestingController).expectOne('/api/auth/rh-session').flush(USER);
     await f.whenStable();
     f.detectChanges();
     expect(account(f)!.textContent).toContain('lena');

@@ -368,7 +368,9 @@ export class AuthService {
     // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
     // holte sich die Seite beim naechsten Aufruf genau die Anmeldung zurueck, die man gerade
     // beendet hat. Ohne Rueckmeldung abschicken — ein Abmelden darf an nichts haengen.
-    this.http.post('/api/auth/session/end', {}).subscribe({ error: () => { /* egal */ } });
+    // `rh-session/end`: das Cookie liegt seit N6-001 unter genau diesem Pfad (der Server raeumt dabei
+    // auch das alte unter `/api/auth` ab).
+    this.http.post('/api/auth/rh-session/end', {}).subscribe({ error: () => { /* egal */ } });
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }

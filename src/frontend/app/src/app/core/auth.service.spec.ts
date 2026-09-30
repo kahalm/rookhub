@@ -195,7 +195,7 @@ describe('AuthService logout clears offline content', () => {
 
     svc.logout();
 
-    http.expectOne({ method: 'POST', url: '/api/auth/session/end' }).flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session/end' }).flush(null, { status: 204, statusText: 'No Content' });
     http.verify();
   });
 
@@ -217,7 +217,7 @@ describe('AuthService logout clears offline content', () => {
     expect(localStorage.getItem('rookhub_lang')).toBe('de');
     expect(svc.currentUser?.userId).toBe(8);
     expect(svc.currentUser?.adopted).toBeTrue();
-    http.expectNone('/api/auth/session/end');
+    http.expectNone('/api/auth/rh-session/end');
   });
 
   it('meldet trotzdem ab, wenn der Server dabei nicht mitspielt', () => {
@@ -225,7 +225,7 @@ describe('AuthService logout clears offline content', () => {
     const http = TestBed.inject(HttpTestingController);
 
     svc.logout();
-    http.expectOne('/api/auth/session/end').flush('weg', { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/auth/rh-session/end').flush('weg', { status: 500, statusText: 'Server Error' });
 
     expect(localStorage.getItem('rookhub_user')).toBeNull();
     http.verify();
@@ -270,7 +270,7 @@ describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () =>
     expect(svc.isLoggedIn).toBeFalse();
     expect(localStorage.getItem('rookhub_user')).toBeNull();
     expectTraces(false);
-    TestBed.inject(HttpTestingController).expectNone('/api/auth/session/end');
+    TestBed.inject(HttpTestingController).expectNone('/api/auth/rh-session/end');
   });
 
   it('räumt auf, wenn das Token mitten in der Sitzung abläuft', () => {
@@ -328,7 +328,7 @@ describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () =>
     expect(JSON.parse(localStorage.getItem('rookhub_user')!).userId).toBe(8);
     expect(svc.currentUser?.userId).toBe(8);
     // Das Cookie hat der Login eben für B geschrieben — session/end löschte es gleich wieder.
-    http.expectNone('/api/auth/session/end');
+    http.expectNone('/api/auth/rh-session/end');
   });
 
   it('behält beim erneuten Anmelden mit demselben Konto die Offline-Inhalte', () => {

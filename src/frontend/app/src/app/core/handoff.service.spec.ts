@@ -50,7 +50,7 @@ describe('HandoffService', () => {
     // Der Nachweis ist ein HttpOnly-Cookie auf der Elterndomaene — hier nicht lesbar, nur der
     // Server kann sagen, ob es taugt.
     const done = svc.consumeIncoming();
-    http.expectOne({ method: 'POST', url: '/api/auth/session' }).flush(session);
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session' }).flush(session);
 
     expect(await done).toBeTrue();
     expect(auth.currentUser?.userId).toBe(7);
@@ -60,7 +60,7 @@ describe('HandoffService', () => {
 
   it('bleibt still, wenn es keine geteilte Anmeldung gibt (204 ohne Rumpf)', async () => {
     const done = svc.consumeIncoming();
-    http.expectOne('/api/auth/session')
+    http.expectOne('/api/auth/rh-session')
       .flush(null, { status: 204, statusText: 'No Content' });
 
     expect(await done).toBeFalse();
@@ -72,7 +72,7 @@ describe('HandoffService', () => {
 
   it('bleibt auch beim 401 einer aelteren API still', async () => {
     const done = svc.consumeIncoming();
-    http.expectOne('/api/auth/session')
+    http.expectOne('/api/auth/rh-session')
       .flush('keine', { status: 401, statusText: 'Unauthorized' });
 
     expect(await done).toBeFalse();
@@ -96,7 +96,7 @@ describe('HandoffService', () => {
     req.flush(session);
     // Danach die Frage, ob der Tausch auch das geteilte Cookie angelegt hat (hier: nein).
     await settle();
-    http.expectOne('/api/auth/session').flush(null, noContent);
+    http.expectOne('/api/auth/rh-session').flush(null, noContent);
 
     expect(await done).toBeTrue();
     // Verbraucht — er hat im Verlauf nichts verloren.
@@ -204,7 +204,7 @@ describe('HandoffService', () => {
 
     it('merkt sich, dass die Anmeldung aus der geteilten stammt', async () => {
       const done = svc.consumeIncoming();
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
 
       expect(await done).toBeTrue();
       expect(auth.currentUser?.adopted).toBeTrue();
@@ -216,42 +216,42 @@ describe('HandoffService', () => {
       adopted();
 
       expect(await svc.consumeIncoming()).toBeFalse();
-      http.expectOne({ method: 'POST', url: '/api/auth/session' }).flush(null, noContent);
+      http.expectOne({ method: 'POST', url: '/api/auth/rh-session' }).flush(null, noContent);
       await settle();
 
       expect(auth.currentUser).toBeNull();
       expect(localStorage.getItem('rookhub_user')).toBeNull();
-      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session/end').flush(null, noContent);
       await finish();
     });
 
     it('gleicht beim Zurückkehren in den Tab ab', async () => {
       adopted();
       await svc.consumeIncoming();
-      http.expectOne('/api/auth/session').flush(session);           // beim Start: steht noch
+      http.expectOne('/api/auth/rh-session').flush(session);           // beim Start: steht noch
       await settle();
       expect(auth.currentUser?.userId).toBe(7);
 
       (svc as unknown as { lastCheck: number }).lastCheck = 0;       // Mindestabstand abgelaufen
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
-      http.expectOne('/api/auth/session').flush(null, noContent);    // inzwischen abgemeldet
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);    // inzwischen abgemeldet
       await settle();
 
       expect(auth.currentUser).toBeNull();
-      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session/end').flush(null, noContent);
       await finish();
     });
 
     it('fragt beim schnellen Hin- und Herschalten nicht jedes Mal', async () => {
       adopted();
       await svc.consumeIncoming();
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
       await settle();
 
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
-      http.expectNone('/api/auth/session');
+      http.expectNone('/api/auth/rh-session');
       await finish();
     });
 
@@ -261,7 +261,7 @@ describe('HandoffService', () => {
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
 
-      http.expectNone('/api/auth/session');
+      http.expectNone('/api/auth/rh-session');
       expect(auth.currentUser?.userId).toBe(7);
       await finish();
     });
@@ -270,7 +270,7 @@ describe('HandoffService', () => {
       adopted();
 
       const done = svc.verifyAdoptedSession();
-      http.expectOne('/api/auth/session').flush('zu viele', { status: 429, statusText: 'Too Many Requests' });
+      http.expectOne('/api/auth/rh-session').flush('zu viele', { status: 429, statusText: 'Too Many Requests' });
 
       expect(await done).toBeFalse();
       expect(auth.currentUser?.userId).toBe(7);
@@ -282,12 +282,12 @@ describe('HandoffService', () => {
       adopted();
 
       const done = svc.verifyAdoptedSession();
-      http.expectOne('/api/auth/session').flush({ ...session, userId: 8, username: 'andere' });
+      http.expectOne('/api/auth/rh-session').flush({ ...session, userId: 8, username: 'andere' });
 
       expect(await done).toBeTrue();
       expect(auth.currentUser?.userId).toBe(8);
       expect(auth.currentUser?.adopted).toBeTrue();
-      http.expectNone('/api/auth/session/end');
+      http.expectNone('/api/auth/rh-session/end');
       await finish();
     });
 
@@ -305,7 +305,7 @@ describe('HandoffService', () => {
       const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
 
       const done = svc.verifyAdoptedSession();
-      http.expectOne('/api/auth/session').flush({ ...session, userId: 8, username: 'andere' });
+      http.expectOne('/api/auth/rh-session').flush({ ...session, userId: 8, username: 'andere' });
 
       expect(await done).toBeTrue();
       for (const k of ['rookhub_courses_cache', 'rookhub_repertoire_offline_5', 'rookhub_endless_history',
@@ -314,7 +314,7 @@ describe('HandoffService', () => {
       expect(localStorage.getItem('rookhub_lang')).toBe('de');
       expect(JSON.parse(localStorage.getItem('rookhub_user')!).userId).toBe(8);
       expect(nav).toHaveBeenCalledWith('/');
-      http.expectNone('/api/auth/session/end');
+      http.expectNone('/api/auth/rh-session/end');
       await finish();
     });
 
@@ -322,31 +322,31 @@ describe('HandoffService', () => {
       // Nebeneinander offene Fenster bleiben beide sichtbar — dort feuert kein visibilitychange.
       adopted();
       await svc.consumeIncoming();
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
       await settle();
 
       (svc as unknown as { lastCheck: number }).lastCheck = 0;
       visible();
       window.dispatchEvent(new Event('focus'));
-      http.expectOne('/api/auth/session').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);
       await settle();
 
       expect(auth.currentUser).toBeNull();
-      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session/end').flush(null, noContent);
       await finish();
     });
 
     it('fragt beim Anklicken des Tabs (visibilitychange UND focus) nur einmal', async () => {
       adopted();
       await svc.consumeIncoming();
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
       await settle();
 
       (svc as unknown as { lastCheck: number }).lastCheck = 0;
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
       window.dispatchEvent(new Event('focus'));
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
       await finish();
     });
 
@@ -356,7 +356,7 @@ describe('HandoffService', () => {
       const done = svc.consumeIncoming();
       http.expectOne('/api/auth/handoff/exchange').flush(session);
       await settle();
-      http.expectOne('/api/auth/session').flush(session);
+      http.expectOne('/api/auth/rh-session').flush(session);
 
       expect(await done).toBeTrue();
       expect(auth.currentUser?.adopted).toBeTrue();
@@ -374,17 +374,17 @@ describe('HandoffService', () => {
       const done = svc.consumeIncoming();
       http.expectOne('/api/auth/handoff/exchange').flush(session);
       await settle();
-      http.expectOne('/api/auth/session').flush(session);               // der Tausch legte das Cookie an
+      http.expectOne('/api/auth/rh-session').flush(session);               // der Tausch legte das Cookie an
       expect(await done).toBeTrue();
       expect(auth.currentUser?.adopted).toBeTrue();
 
       (svc as unknown as { lastCheck: number }).lastCheck = 0;           // Tab wieder offen
       visible();
       document.dispatchEvent(new Event('visibilitychange'));
-      http.expectOne('/api/auth/session').flush(null, noContent);        // RookHub hat das Cookie gelöscht
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);        // RookHub hat das Cookie gelöscht
       await settle();
       expect(auth.currentUser).toBeNull();
-      http.expectOne('/api/auth/session/end').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session/end').flush(null, noContent);
 
       await svc.jump('dashboard');
       http.expectNone('/api/auth/handoff');
@@ -400,12 +400,12 @@ describe('HandoffService', () => {
       const done = svc.consumeIncoming();
       http.expectOne('/api/auth/handoff/exchange').flush(session);
       await settle();
-      http.expectOne('/api/auth/session').flush(null, noContent);
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);
 
       expect(await done).toBeTrue();
       expect(auth.currentUser?.adopted).toBeFalsy();
       expect(await svc.verifyAdoptedSession()).toBeFalse();
-      http.expectNone('/api/auth/session');
+      http.expectNone('/api/auth/rh-session');
       await finish();
     });
   });

@@ -37,6 +37,9 @@ export class HandoffService {
   /** Parametername in der Ziel-URL. */
   static readonly Param = 'h';
 
+  /** Tausch des geteilten Cookies — derselbe Pfad, den das Cookie traegt (`Path=/api/auth/rh-session`, N6-001). */
+  static readonly SharedSessionUrl = '/api/auth/rh-session';
+
   /** Mindestabstand zwischen zwei Abgleichen beim Zurueckkehren in den Tab — hin- und herschalten
    *  fragt nicht jedes Mal (der Endpunkt teilt sich sein IP-Fenster mit dem Abmelden). */
   static readonly RecheckGapMs = 15_000;
@@ -140,11 +143,16 @@ export class HandoffService {
    * kann sagen, ob es taugt. „Keine" ist der Normalfall (nicht angemeldet, oder es gibt gar keine
    * gemeinsame Domaene) und bleibt deshalb still: der Server antwortet dann 204 ohne Rumpf, eine
    * aeltere API noch mit 401 — beides endet hier in `false`.
+   *
+   * <p>Pfad `rh-session` statt `session` (Codereview N6-001): das Cookie traegt seitdem genau diesen
+   * Pfad und geht nicht mehr an JEDEN `/api/auth/*`-Aufruf der uebrigen Hosts unter der Elterndomaene
+   * (Cal.com, RCT, Lernkompass …). Eine API ohne den neuen Pfad antwortet 404 — endet hier ebenfalls
+   * in `false`.</p>
    */
   async adoptSharedSession(): Promise<boolean> {
     if (this.auth.isLoggedIn) return false;
     try {
-      const res = await firstValueFrom(this.http.post<AuthResponse | null>('/api/auth/session', {}));
+      const res = await firstValueFrom(this.http.post<AuthResponse | null>(HandoffService.SharedSessionUrl, {}));
       if (!res) return false;
       this.auth.adoptSession({ ...res, adopted: true });
       this.leaveLoginMask();
@@ -194,7 +202,7 @@ export class HandoffService {
    *  `undefined`, wenn keine brauchbare Antwort kam (offline, 429, Server weg, aeltere API mit 401). */
   private async fetchSharedSession(): Promise<AuthResponse | null | undefined> {
     try {
-      return await firstValueFrom(this.http.post<AuthResponse | null>('/api/auth/session', {}));
+      return await firstValueFrom(this.http.post<AuthResponse | null>(HandoffService.SharedSessionUrl, {}));
     } catch {
       return undefined;
     }
