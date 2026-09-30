@@ -34,8 +34,18 @@ public class TournamentDirectoryController : BaseApiController
     /// </summary>
     private static readonly Regex PublicIdPattern = new(@"^[a-z]?\d{1,10}$", RegexOptions.Compiled);
 
-    /// <summary>Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.</summary>
-    private const int CalendarMaxTournaments = 1500;
+    /// <summary>
+    /// Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.
+    ///
+    /// <para>5000 wie <see cref="TournamentDirectoryQueryService.MaxMaterialized"/> im Umkreis-Weg.
+    /// Prod hatte fuer Oktober 2026 ohne Filter 3708 Turniere, die fruehere Grenze von 1500 reichte
+    /// also nicht. Gemessen mit synthetischen Eintraegen (rund 940 Byte JSON je Turnier, eher mehr
+    /// als echte; gzip/Brotli auf „Fastest" wie die Antwort-Kompression der API): 1500 Turniere
+    /// 1,4 MB JSON / 221 KB gzip / 150 KB Brotli, 3708 Turniere 3,3 MB / 542 KB / 368 KB, der volle
+    /// Deckel von 5000 4,5 MB / 731 KB / 497 KB — alles unter der Schwelle von etwa 1 MB, die sich
+    /// der Kalender als Startseite leisten darf.</para>
+    /// </summary>
+    internal const int CalendarMaxTournaments = 5000;
 
     private readonly TournamentDirectoryQueryService _query;
     private readonly AppDbContext _db;
@@ -152,8 +162,12 @@ public class TournamentDirectoryController : BaseApiController
         // dreistellig viele Turniere, und der Kalender ist die Startseite der Turnierseite, wird
         // also regelmaessig ungefiltert aufgerufen. Der frueher hier stehende Deckel von 200 war
         // deshalb keine grosszuegige Reserve, sondern der Grund, warum genau 200 gezaehlt wurden.
-        // Was jenseits der Grenze liegt, wird gemeldet statt verschwiegen (`Truncated`).
-        var result = await _query.SearchAsync(parsed.Query! with { Page = 1, PageSize = CalendarMaxTournaments }, ct);
+        // Was jenseits der Grenze liegt, wird gemeldet statt verschwiegen (`Truncated`). Der Deckel
+        // geht als EIGENER Parameter mit — der Dienst klemmte die Seitengroesse sonst auf die 200 der
+        // Liste. Eintraege ohne jeden Termin bleiben draussen: `Covers` zeigt sie an keinem Tag.
+        var result = await _query.SearchAsync(
+            parsed.Query! with { Page = 1, PageSize = CalendarMaxTournaments, DatedOnly = true },
+            CalendarMaxTournaments, ct);
         var subscribed = await SubscribedIdsAsync(
             result.Items.SelectMany(i => i.Members).Select(m => m.ChessResultsId), ct);
 

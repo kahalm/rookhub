@@ -62,6 +62,13 @@ public sealed record DirectorySearchQuery
     /// <summary>Saisonwettbewerbe ausblenden (siehe TournamentClassifier.LooksLikeLeague).</summary>
     public bool HideLeagues { get; init; }
 
+    /// <summary>
+    /// Nur Eintraege mit mindestens einem Termin. Der Kalender setzt das: einen Eintrag ohne
+    /// Start- und Enddatum kann er an keinem Tag zeigen, im Deckel belegte er trotzdem einen Platz
+    /// (beide Datumsfilter lassen ihn durch, und MariaDB sortiert NULL nach vorn).
+    /// </summary>
+    public bool DatedOnly { get; init; }
+
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 50;
 }
@@ -96,6 +103,9 @@ public class TournamentDirectoryQueryService
     /// </summary>
     internal int MaxMaterialized { get; set; } = 5000;
 
+    /// <summary>Obergrenze einer Seite der LISTE — was der Client als <c>pageSize</c> schickt, wird darauf geklemmt.</summary>
+    public const int MaxListPageSize = 200;
+
     private readonly AppDbContext _db;
 
     public TournamentDirectoryQueryService(AppDbContext db)
@@ -103,10 +113,21 @@ public class TournamentDirectoryQueryService
         _db = db;
     }
 
-    public async Task<DirectorySearchResult> SearchAsync(DirectorySearchQuery query, CancellationToken ct = default)
+    /// <summary>Eine Seite der Liste, hoechstens <see cref="MaxListPageSize"/> Turniere.</summary>
+    public Task<DirectorySearchResult> SearchAsync(DirectorySearchQuery query, CancellationToken ct = default)
+        => SearchAsync(query, MaxListPageSize, ct);
+
+    /// <summary>
+    /// Eine Seite mit eigenem Deckel. Der Kalender braucht einen anderen als die Liste: bis
+    /// 0.606.0 klemmte diese Methode JEDE Seitengroesse auf 200, auch die 1500, die der Kalender
+    /// anforderte — ein Monat ohne Umkreis zeigte dann die 200 frueh beginnenden Turniere, die
+    /// letzten Tage standen leer.
+    /// </summary>
+    public async Task<DirectorySearchResult> SearchAsync(
+        DirectorySearchQuery query, int maxPageSize, CancellationToken ct = default)
     {
         var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, 200);
+        var pageSize = Math.Clamp(query.PageSize, 1, Math.Max(1, maxPageSize));
         var filtered = ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query);
 
         var radius = query.RadiusKm;
@@ -373,6 +394,8 @@ public class TournamentDirectoryQueryService
             source = source.Where(e => (e.EndDate ?? e.StartDate) == null || (e.EndDate ?? e.StartDate) >= from);
         if (query.To is { } to)
             source = source.Where(e => (e.StartDate ?? e.EndDate) == null || (e.StartDate ?? e.EndDate) <= to);
+        if (query.DatedOnly)
+            source = source.Where(e => e.StartDate != null || e.EndDate != null);
 
         if (!string.IsNullOrWhiteSpace(query.Federation))
         {

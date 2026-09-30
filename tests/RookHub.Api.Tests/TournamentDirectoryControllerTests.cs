@@ -505,6 +505,101 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.False(cal.Truncated);
     }
 
+    /// <summary>
+    /// Viele Turniere in einem Monat, beginnend an einem Tag im Oktober — Nummern ab 700000,
+    /// damit sie keinen der Einzeleintraege der Tests trifft.
+    /// </summary>
+    private async Task AddManyAsync(int count, double? lat = null, double? lon = null)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            var id = (700000 + i).ToString();
+            var day = new DateOnly(2026, 10, 1 + i % 31);
+            _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+            {
+                PublicId = id, ChessResultsId = id, Name = $"Turnier {i}", Federation = "AUT",
+                StartDate = day, EndDate = day, Lat = lat, Lon = lon,
+                Speed = TournamentSpeed.Standard, PlayerCount = 20,
+                GeoSource = lat is null ? GeoSource.None : GeoSource.City,
+            });
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A5-002: der Kalender forderte 1500 Turniere an, der Abfragedienst klemmte jede
+    /// Seitengroesse aber auf die 200 der Liste. Ein Monat ohne Umkreis (die Startseite der
+    /// Turnierseite) zeigte die 200 frueh beginnenden Turniere, die spaeteren Tage standen leer.
+    /// </summary>
+    [Fact]
+    public async Task Calendar_MoreThan200TournamentsInAMonth_AllArrive()
+    {
+        await AddManyAsync(201);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(201, cal.Tournaments.Count);
+        Assert.False(cal.Truncated);
+        // Auch das spaeteste Turnier steht an seinem Tag.
+        Assert.Contains("700200", cal.Days.Single(d => d.Date.Day == 15).Ids);
+    }
+
+    [Fact]
+    public async Task Calendar_WithRadius_MoreThan200TournamentsInAMonth_AllArrive()
+    {
+        // Der Umkreis-Weg klemmte mit derselben Zeile.
+        await AddManyAsync(201, 47.80, 13.04);
+
+        var result = await CreateController(1).Calendar(2026, 10, lat: 47.80, lon: 13.04, radiusKm: 50);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(201, cal.Tournaments.Count);
+        Assert.False(cal.Truncated);
+    }
+
+    [Fact]
+    public async Task Calendar_BeyondItsCap_SaysSo()
+    {
+        await AddManyAsync(TournamentDirectoryController.CalendarMaxTournaments + 1);
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(TournamentDirectoryController.CalendarMaxTournaments, cal.Tournaments.Count);
+        Assert.True(cal.Truncated);
+    }
+
+    [Fact]
+    public async Task Calendar_EntryWithoutAnyDate_TakesNoPlace()
+    {
+        // Ohne Termin steht ein Eintrag an keinem Tag — im Deckel belegte er trotzdem einen Platz.
+        await AddEntryAsync("1", "Mit Termin", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "2", ChessResultsId = "2", Name = "Ohne Termin", Federation = "AUT",
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(1).Calendar(2026, 10);
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(["1"], cal.Tournaments.Select(t => t.Id));
+    }
+
+    [Fact]
+    public async Task Search_ListPage_StaysCappedAt200()
+    {
+        // Der eigene Deckel des Kalenders darf die LISTE nicht mitziehen.
+        await AddManyAsync(201);
+
+        var result = await CreateController(1).Search(pageSize: 1000);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(TournamentDirectoryQueryService.MaxListPageSize, page.Items.Count);
+        Assert.Equal(201, page.Total);
+    }
+
     [Fact]
     public async Task Calendar_DescribesEachTournamentOnlyOnce()
     {
