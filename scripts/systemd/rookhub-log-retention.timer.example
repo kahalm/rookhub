@@ -1,0 +1,15 @@
+# Timer zur rookhub-log-retention.service (Installation siehe .service.example).
+
+[Unit]
+Description=Monatliche RookHub-Log-Retention (ILM-Verknuepfung pruefen und reparieren)
+
+[Timer]
+# Am 1. jedes Monats, nach dem naechtlichen Update-Fenster (Watchtower 02:00): ein Template, das ein
+# neues Image beim Start angelegt hat, wird noch am selben Morgen verknuepft.
+OnCalendar=*-*-01 05:40:00
+# Faengt einen verpassten Lauf nach, wenn der Host zur geplanten Zeit aus war.
+Persistent=true
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

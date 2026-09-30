@@ -7,6 +7,8 @@ Prueft die Kernzusagen des Skripts:
   * ein PUT ohne Wirkung (Readback zeigt die Policy nicht) => Exit-Code != 0
   * ein Fehlstatus beim Listen der Templates => Exit-Code != 0 (frueher: leise Erfolg)
   * --dry-run schreibt garantiert nichts (kein einziger PUT)
+  * „nichts gefunden“ ist kein Erfolg: kein Sink-Template, kein Log-Data-Stream oder ein
+    Stream auf einem Template ohne Policy => Exit-Code != 0 (fuer den monatlichen Timer)
 
     python3 scripts/tests/test_es_log_retention.py
     ES_LOG_RETENTION_SCRIPT=/pfad/zu/alt.py python3 scripts/tests/test_es_log_retention.py
@@ -81,7 +83,8 @@ def _happy_routes(stream_linked=True):
             {"name": TPL, "index_template": {"template": {"settings":
                 {"index": {"lifecycle": {"name": POLICY}}}}}},
         ]}),
-        ("GET", "/_data_stream"): (200, {"data_streams": [{"name": STREAM}]}),
+        # Wie ES 8: jeder Stream nennt das Template, aus dem sein naechster Backing-Index entsteht.
+        ("GET", "/_data_stream"): (200, {"data_streams": [{"name": STREAM, "template": TPL}]}),
         ("PUT", f"/{STREAM}/_settings"): (200, {"acknowledged": True}),
         ("GET", f"/{STREAM}/_settings"): (200, {".ds-x-000001": {"settings":
             {"index": {"lifecycle": {"name": stream_policy}}}}}),
@@ -140,6 +143,41 @@ class EsLogRetentionTests(unittest.TestCase):
         rc, out = _run_main(_happy_routes(), calls, argv=["--dry-run"])
         self.assertEqual(rc, 0, out)
         self.assertFalse([c for c in calls if c[0] != "GET"], f"Schreibzugriffe im dry-run: {calls}")
+
+    def test_no_sink_template_exits_nonzero(self):
+        """Kein Template nach dem Sink-Schema (z. B. umbenannt) -> Exit != 0 statt stiller Erfolg."""
+        routes = _happy_routes()
+        routes[("GET", "/_index_template")] = (200, {"index_templates": [
+            {"name": "fremdes-template", "index_template": {"template": {"settings": {}}}},
+        ]})
+        routes[("GET", "/_data_stream")] = (200, {"data_streams": [{"name": STREAM}]})
+        calls = []
+        rc, out = _run_main(routes, calls)
+        self.assertNotEqual(rc, 0, out)
+        self.assertFalse([c for c in calls if c[1].startswith("/_index_template/")],
+                         f"fremdes Template angefasst: {calls}")
+
+    def test_no_log_stream_exits_nonzero(self):
+        """Kein Log-Data-Stream -> Exit != 0: ohne Stream laesst sich keine Loeschfrist zusichern."""
+        routes = _happy_routes()
+        routes[("GET", "/_data_stream")] = (200, {"data_streams": [{"name": "fremd-default"}]})
+        calls = []
+        rc, out = _run_main(routes, calls)
+        self.assertNotEqual(rc, 0, out)
+        rc, out = _run_main(routes, [], argv=["--dry-run"])
+        self.assertNotEqual(rc, 0, out)
+
+    def test_stream_on_template_without_policy_exits_nonzero(self):
+        """Stream benutzt ein Template ausserhalb des Sink-Schemas (Sink-Update) -> Exit != 0,
+        die aktuellen Backing-Indices werden trotzdem verknuepft."""
+        routes = _happy_routes()
+        routes[("GET", "/_data_stream")] = (200, {"data_streams": [
+            {"name": STREAM, "template": "rookhub-logs-generic-neu"}]})
+        calls = []
+        rc, out = _run_main(routes, calls)
+        self.assertNotEqual(rc, 0, out)
+        self.assertIn("rookhub-logs-generic-neu", out)
+        self.assertIn(("PUT", f"/{STREAM}/_settings"), calls)
 
 
 if __name__ == "__main__":

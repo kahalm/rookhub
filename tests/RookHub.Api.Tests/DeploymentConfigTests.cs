@@ -577,6 +577,28 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// Die DSGVO-Löschfrist der Logs hängt am Index-Template des Sinks und geht bei jeder
+    /// Template-Neuschreibung verloren — das Retention-Skript muss also REGELMÄSSIG laufen
+    /// (Codereview 2026-09-29, I1-010). Es verlangte das selbst, verwies dafür aber auf eine Vorlage
+    /// in docs/backup.md, die es nie gab; weder Repo noch Host planten einen Lauf ein.
+    /// </summary>
+    [Fact]
+    public void LogRetention_ShipsAMonthlyTimerTemplate()
+    {
+        var service = ReadRepoFile("scripts/systemd/rookhub-log-retention.service.example");
+        var timer = ReadRepoFile("scripts/systemd/rookhub-log-retention.timer.example");
+
+        Assert.Matches(@"(?m)^ExecStart=\S*python3\s+\S*scripts/es_log_retention\.py", service);
+        Assert.Matches(@"(?m)^Type=oneshot\s*$", service);
+        // Monatlich: am Ersten (oder das systemd-Kürzel) — und ein verpasster Lauf wird nachgeholt.
+        Assert.Matches(@"(?m)^OnCalendar=(monthly|\*-\*-01( .*)?)\s*$", timer);
+        Assert.Matches(@"(?m)^Persistent=true\s*$", timer);
+        // Skript und Doku zeigen auf die Vorlage, statt ins Leere.
+        Assert.Contains("rookhub-log-retention", ReadRepoFile("scripts/es_log_retention.py"));
+        Assert.Contains("rookhub-log-retention.timer.example", ReadRepoFile("docs/log-retention.md"));
+    }
+
+    /// <summary>
     /// Der Rundenplan-Schritt des Nachtrags MUSS `retryEmpty` durchreichen — und zwar als
     /// Variable, nicht als festen Wert.
     ///

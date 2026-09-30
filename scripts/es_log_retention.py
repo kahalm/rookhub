@@ -24,7 +24,14 @@ FALLE (warum Template UND Data-Stream angefasst werden):
 FALLE 2: Der Sink bootstrappt sein Template beim App-Start nur, wenn es noch
   nicht existiert — der Patch ueberlebt also normale Deploys. Wird das Template
   jemals geloescht/ueberschrieben, muss dieses Skript erneut laufen (idempotent).
-  Darum am besten per cron/systemd-Timer regelmaessig ausfuehren, siehe docs/backup.md.
+  Darum regelmaessig ausfuehren: Vorlage fuer einen monatlichen Lauf in
+  scripts/systemd/rookhub-log-retention.{service,timer}.example, siehe docs/log-retention.md.
+
+FALLE 3 (Exit-Code): „nichts gefunden“ ist KEIN Erfolg. Findet der Lauf kein Sink-Template
+  oder keinen Log-Data-Stream (Namensschema geaendert, Sink schreibt woanders hin), oder
+  benutzt ein Data-Stream ein Template ohne die Policy, endet er mit Exit != 0 — sonst
+  meldete ein Timer Monat fuer Monat Erfolg, waehrend neue Backing-Indices ohne Loeschfrist
+  liegen bleiben.
 
 Restore/Rueckbau: Policy von einem Stream loesen ->
     curl -XPUT "$ES_URL/<stream>/_settings" -H 'Content-Type: application/json' \\
@@ -189,26 +196,38 @@ def main():
     except EsError as e:
         print(f"Index-Templates nicht lesbar: {e}", file=sys.stderr)
         return 1
+    # Templates, die die Policy tragen (bzw. im dry-run tragen wuerden) — dagegen prueft
+    # Schritt 3, ob jeder Data-Stream seine kuenftigen Backing-Indices mit Loeschfrist bekommt.
+    linked_templates = set()
+    matched_templates = 0
     for entry in resp.get("index_templates", []):
         name = entry.get("name", "")
         if not TEMPLATE_PATTERN.match(name):
             continue
+        matched_templates += 1
         tpl = entry["index_template"]
         settings = tpl.setdefault("template", {}).setdefault("settings", {})
         if _linked_policy(settings) == args.policy_name:
             print(f"Template '{name}': bereits verknuepft.")
+            linked_templates.add(name)
             continue
         settings.setdefault("index", {}).setdefault("lifecycle", {})["name"] = args.policy_name
         if args.dry_run:
             print(f"[dry-run] PUT _index_template/{name} (+ index.lifecycle.name)")
+            linked_templates.add(name)
             continue
         try:
             request("PUT", f"{es}/_index_template/{name}", tpl)
             verify_template(es, name, args.policy_name)
             print(f"Template '{name}': verknuepft (zurueckgelesen).")
+            linked_templates.add(name)
         except EsError as e:
             print(f"Template '{name}' FEHLER: {e}", file=sys.stderr)
             failures += 1
+    if not matched_templates:
+        print("Kein Sink-Template '<dienst>-logs-generic-<ecs-version>' gefunden — Namensschema "
+              "geaendert? Kuenftige Backing-Indices bekaemen keine Loeschfrist.", file=sys.stderr)
+        failures += 1
 
     # 3) Bestehende Data-Streams (= ihre aktuellen Backing-Indices) nachziehen
     try:
@@ -216,11 +235,20 @@ def main():
     except EsError as e:
         print(f"Data-Streams nicht lesbar: {e}", file=sys.stderr)
         return 1
-    streams = [s["name"] for s in resp.get("data_streams", [])]
-    matched = [s for s in streams if STREAM_PATTERN.match(s)]
+    matched = [s for s in resp.get("data_streams", []) if STREAM_PATTERN.match(s.get("name", ""))]
     if not matched:
-        print("Keine passenden Log-Data-Streams gefunden (noch keine Logs geschrieben?).")
-    for stream in matched:
+        print("Keine passenden Log-Data-Streams gefunden (noch keine Logs geschrieben? Namensschema "
+              "geaendert?) — ohne Stream laesst sich keine Loeschfrist zusichern.", file=sys.stderr)
+        failures += 1
+    for ds in matched:
+        stream = ds["name"]
+        # Das Template, aus dem der NAECHSTE Backing-Index entsteht (ES nennt es je Stream). Traegt
+        # es die Policy nicht, reisst die Kette beim Rollover ab — auch wenn der Stream heute passt.
+        template = ds.get("template")
+        if template and template not in linked_templates:
+            print(f"Data-Stream '{stream}' nutzt Template '{template}' ohne Policy — ab dem naechsten "
+                  f"Rollover ohne Loeschfrist.", file=sys.stderr)
+            failures += 1
         if args.dry_run:
             print(f"[dry-run] PUT {stream}/_settings (index.lifecycle.name={args.policy_name})")
             continue

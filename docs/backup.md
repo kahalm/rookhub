@@ -115,4 +115,6 @@ auf ein anderes System spiegeln (rsync/restic/Cloud-Bucket).
 ## Siehe auch
 
 - [Log-Retention in Elasticsearch](log-retention.md) — Löschfrist für die Logs
-  (enthalten IP/UserId/User-Agent, DSGVO-relevant).
+  (enthalten IP/UserId/User-Agent, DSGVO-relevant). Braucht wie das Backup einen
+  regelmäßigen Lauf: Vorlage `scripts/systemd/rookhub-log-retention.{service,timer}.example`
+  (monatlich, Einrichtung dort und in `log-retention.md`).

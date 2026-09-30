@@ -29,6 +29,30 @@ alle Backing-Indices tragen `index.lifecycle.name`). Erst dann erscheint
 cron-/Timer-Betrieb also prüfbar. Tests (gegen ein Fake-`urlopen`, kein ES
 nötig): `python3 scripts/tests/test_es_log_retention.py`.
 
+## Regelmäßig ausführen
+
+Einmal anwenden reicht nicht (siehe „Fallen“): die Löschfrist hängt am Template
+des Sinks und geht verloren, sobald es neu geschrieben wird. Vorlagen für einen
+**monatlichen** Lauf liegen unter
+`scripts/systemd/rookhub-log-retention.service.example` +
+`scripts/systemd/rookhub-log-retention.timer.example` (am 1. des Monats nach dem
+nächtlichen Update-Fenster, `Persistent=true`; Installationsbefehle im Kopf der
+Datei). Alternativ als cron-Zeile in `/etc/cron.d/rookhub-log-retention`:
+
+```
+40 5 1 * * nobody ES_URL=http://localhost:9200 /usr/bin/python3 /opt/rookhub/scripts/es_log_retention.py >> /var/log/rookhub-log-retention.log 2>&1
+```
+
+Der Exit-Code ist das Signal. **!= 0** heißt: ein Schritt ist gescheitert, ODER
+es wurde kein Sink-Template `<dienst>-logs-generic-<ecs-version>` bzw. kein
+Log-Data-Stream gefunden (Namensschema geändert? noch keine Logs?), ODER ein
+Data-Stream benutzt ein Template, das die Policy nicht trägt — seine nächsten
+Backing-Indices bekämen keine Löschfrist. „Nichts gefunden“ ist bewusst kein
+Erfolg: sonst meldete der Timer Monat für Monat grün, während die Logs
+unbegrenzt liegen bleiben. Eine fehlgeschlagene Unit steht in
+`systemctl --failed`; wer benachrichtigt werden will, hängt eine
+`OnFailure=`-Unit an (in der Vorlage vorbereitet).
+
 Erfasst werden alle Data-Streams `<dienst>-logs-generic-default` (rookhub,
 crawler, piratechess — je prod und dev) samt der zugehörigen Sink-Templates
 `<dienst>-logs-generic-<ecs-version>`.
@@ -59,7 +83,7 @@ ECS-Mappings des Serilog-Sinks verloren und die Kibana-Felder wären kaputt.
 - Der Sink bootstrappt sein Index-Template nur, wenn es noch **nicht existiert** —
   der Patch überlebt also normale Deploys. Wird ein Template gelöscht oder mit
   `OverwriteTemplate` neu geschrieben, ist das `lifecycle`-Setting weg: Skript
-  erneut laufen lassen (idempotent, am einfachsten monatlich per cron).
+  erneut laufen lassen (idempotent) — dafür der monatliche Timer oben.
 - Die ältere, handangelegte Policy `rookhub-dev-logs` (nur Rollover, **ohne**
   Delete-Phase) wird von diesem Skript auf den Dev-Streams ersetzt. Sie kann
   danach entfallen.

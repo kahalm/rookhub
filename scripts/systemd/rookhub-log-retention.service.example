@@ -1,0 +1,36 @@
+# RookHub Log-Retention (Elasticsearch/ILM) — Unit-Vorlage (NICHT installiert, bewusst nur Beispiel).
+#
+# Warum regelmaessig: die Loeschfrist haengt am Index-Template des Serilog-Sinks. Wird das Template
+# neu geschrieben (Sink-Update mit neuer ECS-Version, OverwriteTemplate), bekommen die Backing-Indices
+# ab dem naechsten Rollover keine Loeschfrist mehr — und niemand merkt es (docs/log-retention.md).
+# Der Lauf ist idempotent und endet mit Exit != 0, wenn etwas nicht verknuepft werden konnte oder
+# gar kein Template/Stream gefunden wurde; die Unit steht dann in `systemctl --failed`.
+#
+# Installation auf dem Deploy-Host:
+#   ES_URL=http://localhost:9200 python3 /opt/rookhub/scripts/es_log_retention.py --dry-run   # vorher ansehen
+#   sudo cp scripts/systemd/rookhub-log-retention.service.example /etc/systemd/system/rookhub-log-retention.service
+#   sudo cp scripts/systemd/rookhub-log-retention.timer.example   /etc/systemd/system/rookhub-log-retention.timer
+#   sudo systemctl daemon-reload
+#   sudo systemctl start rookhub-log-retention.service     # erster Lauf sofort (SCHREIBT in ES)
+#   journalctl -u rookhub-log-retention.service -n 50      # Ergebnis
+#   sudo systemctl enable --now rookhub-log-retention.timer
+#   systemctl list-timers rookhub-log-retention.timer      # naechster Lauf
+#
+# Pfade und ES-Adresse unten an die eigene Installation anpassen.
+
+[Unit]
+Description=RookHub Log-Retention (ILM-Policy an Log-Data-Streams und Sink-Templates)
+# Elasticsearch laeuft im Docker-Stack auf demselben Host.
+After=docker.service network-online.target
+Wants=network-online.target
+# Fehlschlag melden: eigene Unit anhaengen (Mail, Discord-Webhook …), %n = Name dieser Unit.
+#OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/rookhub/scripts/es_log_retention.py
+Environment=ES_URL=http://localhost:9200
+# Braucht nur Netz zu ES — kein root, kein Docker-Socket, keine .env. Das Skript muss dafuer fuer
+# einen unprivilegierten Nutzer lesbar sein (unter /home meist nicht: dann User= setzen).
+DynamicUser=yes
+Nice=10
