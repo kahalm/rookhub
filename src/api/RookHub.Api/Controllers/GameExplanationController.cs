@@ -24,7 +24,9 @@ public class GameExplanationController : BaseApiController
         => Ok(await _service.GetAsync(await _service.OwnGameAsync(GetUserId(), id), lang ?? "en", owner: true));
 
     /// <summary>Erzeugen anstoßen (Hintergrund). 404 ohne eigene Partie, 409 ohne verknüpfte fertige Analyse,
-    /// 503 ohne Modell auf eigener Hardware (<c>notConfigured</c>). Keine Sperrzeit — ein Auftrag auf Zuruf (0.585.0).</summary>
+    /// 503 ohne Modell auf eigener Hardware (<c>notConfigured</c>), 429 (<c>tooManyRunning</c>), solange schon
+    /// <see cref="GameExplanationJobs.MaxRunningPerUser"/> eigene Aufträge laufen (A6-005). Keine Sperrzeit — ein Auftrag
+    /// auf Zuruf (0.585.0).</summary>
     [HttpPost("{id:int}/explanations")]
     public async Task<ActionResult<GameExplanationsDto>> Generate(int id, [FromQuery] string? lang)
     {
@@ -34,7 +36,9 @@ public class GameExplanationController : BaseApiController
         var state = await _service.GetAsync(game, lang ?? "en", owner: true);
         if (game == null) return NotFound();
         if (!state.CanGenerate && !state.Running) return Conflict(new { reason = "noAnalysis" });
-        _service.Start(game, lang ?? "en");
+        if (_service.Start(GetUserId(), game, lang ?? "en") == GameExplanationJobs.StartResult.UserLimit)
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { reason = "tooManyRunning", maxRunning = GameExplanationJobs.MaxRunningPerUser });
         return Ok(await _service.GetAsync(game, lang ?? "en", owner: true));
     }
 

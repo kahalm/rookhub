@@ -102,4 +102,51 @@ public class OpenAiJsonClientTests
         var none = TextJsonClients.Create(Config(("Anthropic:ApiKey", "sk")), NullLoggerFactory.Instance);
         Assert.False(none.IsConfigured);
     }
+
+    // ── Gleichzeitige Anfragen (A6-005) ────────────────────────────────────────────────────────────
+
+    /// <summary>Hält jede Anfrage fest, bis <see cref="Release"/> fällt, und merkt sich, wie viele zugleich drin waren.</summary>
+    private sealed class BlockingHandler : HttpMessageHandler
+    {
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _inFlight;
+        private int _maxInFlight;
+        public int InFlight => Volatile.Read(ref _inFlight);
+        public int MaxInFlight => Volatile.Read(ref _maxInFlight);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var now = Interlocked.Increment(ref _inFlight);
+            int seen;
+            while ((seen = Volatile.Read(ref _maxInFlight)) < now && Interlocked.CompareExchange(ref _maxInFlight, now, seen) != seen) { }
+            try { await Release.Task.WaitAsync(ct); }
+            finally { Interlocked.Decrement(ref _inFlight); }
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(ChatCompletionHandler.Stream("{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}", "stop", 1, 1),
+                    System.Text.Encoding.UTF8, "text/event-stream"),
+            };
+        }
+    }
+
+    [Theory]
+    [InlineData("2", 2)]
+    [InlineData(null, OpenAiJsonClient.DefaultMaxConcurrent)]
+    public async Task HoechstensMaxConcurrentAnfragenZugleich_DieUebrigenWarten(string? configured, int cap)
+    {
+        var handler = new BlockingHandler();
+        var values = new List<(string, string)> { ("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m") };
+        if (configured != null) values.Add(("TextLlm:MaxConcurrent", configured));
+        var client = new OpenAiJsonClient(new HttpClient(handler), Config(values.ToArray()), NullLogger.Instance);
+
+        var calls = Enumerable.Range(0, cap + 3).Select(i => client.GenerateHintsJsonAsync("s", "u" + i)).ToList();
+        for (var i = 0; i < 200 && handler.InFlight < cap; i++) await Task.Delay(10);
+        await Task.Delay(100);   // Zeit für eine Anfrage zu viel, falls die Grenze fehlt
+        Assert.Equal(cap, handler.InFlight);
+
+        handler.Release.SetResult();
+        var answers = await Task.WhenAll(calls);
+        Assert.All(answers, a => Assert.Equal("{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}", a));
+        Assert.Equal(cap, handler.MaxInFlight);
+    }
 }

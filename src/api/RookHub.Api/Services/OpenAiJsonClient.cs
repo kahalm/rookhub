@@ -20,15 +20,26 @@ namespace RookHub.Api.Services;
 /// ignoriert.</para>
 /// <para>Gestreamt (<see cref="OpenAiChat.SendAsync"/>): vor dem Spark kappt ein Proxy jede Anfrage nach 90 s ohne
 /// Antwort.</para>
+/// <para>Höchstens <c>TextLlm:MaxConcurrent</c> (Vorgabe <see cref="DefaultMaxConcurrent"/>) Anfragen gleichzeitig — für
+/// ALLE Zwecke zusammen (Erklärungen, Nacherzählung, Roast, Tipps, Übersetzungen, Zugvergleich). Der Client ist in der API
+/// ein Singleton, die Grenze gilt also für den ganzen Prozess: vorher konnte ein Konto über „Fehler erklären lassen"
+/// Tausende Anfragen gleichzeitig an die geteilte Spark schicken (A6-005), und alle anderen Aufträge standen dahinter.
+/// Wer darüber liegt, wartet auf einen freien Platz (auch das Werkzeug <c>tools/LibraryImport</c> mit <c>--parallel</c>;
+/// dort hebt <c>TextLlm__MaxConcurrent</c> die Grenze).</para>
 /// </remarks>
 public sealed class OpenAiJsonClient : IClaudeJsonClient
 {
+    /// <summary>So viele Anfragen gleichzeitig, wenn <c>TextLlm:MaxConcurrent</c> nichts sagt (vLLM rechnet bis rund 64
+    /// Folgen gebündelt, der Durchsatz wächst über 5 parallel kaum noch — die Spark ist der Engpass).</summary>
+    public const int DefaultMaxConcurrent = 8;
+
     private readonly HttpClient _http;
     private readonly ILogger _logger;
     private readonly string _baseUrl;
     private readonly string? _apiKey;
     private readonly string? _configuredModel;
     private readonly bool _thinking;
+    private readonly SemaphoreSlim _gate;
     private string? _resolvedModel;
     private bool _schemaRejected;
 
@@ -40,6 +51,7 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         _apiKey = string.IsNullOrWhiteSpace(config["TextLlm:ApiKey"]) ? null : config["TextLlm:ApiKey"]!.Trim();
         _configuredModel = string.IsNullOrWhiteSpace(config["TextLlm:Model"]) ? null : config["TextLlm:Model"]!.Trim();
         _thinking = bool.TryParse(config["TextLlm:Thinking"], out var t) && t;
+        _gate = new SemaphoreSlim(Math.Clamp(config.GetValue("TextLlm:MaxConcurrent", DefaultMaxConcurrent), 1, 64));
     }
 
     public bool IsConfigured => _baseUrl.Length > 0;
@@ -63,6 +75,14 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         CancellationToken ct)
     {
         if (!IsConfigured) return null;
+        await _gate.WaitAsync(ct);
+        try { return await AskGatedAsync(purpose, system, userPrompt, schema, maxTokens, ct); }
+        finally { _gate.Release(); }
+    }
+
+    private async Task<string?> AskGatedAsync(string purpose, string system, string userPrompt, JsonNode schema, int maxTokens,
+        CancellationToken ct)
+    {
         var model = await ModelAsync(ct);
         if (model == null) return null;
 

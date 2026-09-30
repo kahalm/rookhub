@@ -42,17 +42,21 @@ public sealed class GameMoveExplanationService
     private readonly GameExplanationJobs _jobs;
     private readonly IServiceScopeFactory _scopes;
     private readonly ILogger<GameMoveExplanationService> _logger;
+    private readonly CancellationToken _stopping;
 
     // Keine Sperrzeit (0.585.0): der Knopf „Fehler erklären lassen" ist ein Auftrag auf Zuruf, dafür steht die Spark auch
     // tagsüber bereit. Die automatischen Erklärungen nach der Analyse stellt der Scheduler (GameReviewTexts) zurück.
+    // Gedeckelt ist er trotzdem (A6-005): je Konto höchstens GameExplanationJobs.MaxRunningPerUser Aufträge zugleich, und
+    // der Text-Client lässt nur eine feste Zahl Anfragen gleichzeitig an die Spark (OpenAiJsonClient.DefaultMaxConcurrent).
     public GameMoveExplanationService(AppDbContext db, IClaudeJsonClient llm, GameExplanationJobs jobs,
-        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger)
+        IServiceScopeFactory scopes, ILogger<GameMoveExplanationService> logger, IHostApplicationLifetime? lifetime = null)
     {
         _db = db;
         _llm = llm;
         _jobs = jobs;
         _scopes = scopes;
         _logger = logger;
+        _stopping = lifetime?.ApplicationStopping ?? CancellationToken.None;
     }
 
     /// <summary>Nur mit einem Modell auf eigener Hardware.</summary>
@@ -121,19 +125,28 @@ public sealed class GameMoveExplanationService
         return dto;
     }
 
-    /// <summary>Erzeugen im Hintergrund anstoßen (idempotent: läuft schon eins, passiert nichts).</summary>
-    public bool Start(ExplainedGame game, string lang)
+    /// <summary>Erzeugen im Hintergrund anstoßen (idempotent: läuft schon eins, passiert nichts). Je Konto laufen höchstens
+    /// <see cref="GameExplanationJobs.MaxRunningPerUser"/> Aufträge zugleich (<see cref="GameExplanationJobs.StartResult.UserLimit"/>);
+    /// ein Herunterfahren der API bricht die laufenden ab.</summary>
+    public GameExplanationJobs.StartResult Start(int userId, ExplainedGame game, string lang)
     {
         lang = NormalizeLanguage(lang);
         var analysisId = game.AnalysisId;
-        if (!Available || !_jobs.TryStart(analysisId, lang)) return false;
+        if (!Available) return GameExplanationJobs.StartResult.Unavailable;
+        var started = _jobs.TryStartFor(userId, analysisId, lang);
+        if (started != GameExplanationJobs.StartResult.Started) return started;
+        var stopping = _stopping;
         _ = Task.Run(async () =>
         {
             try
             {
                 using var scope = _scopes.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<GameMoveExplanationService>();
-                await service.GenerateAsync(game, lang, CancellationToken.None);
+                await service.GenerateAsync(game, lang, stopping);
+            }
+            catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+            {
+                // API fährt herunter — der nächste Klick erzeugt nur, was noch fehlt.
             }
             catch (Exception ex)
             {
@@ -141,10 +154,10 @@ public sealed class GameMoveExplanationService
             }
             finally
             {
-                _jobs.Finish(analysisId, lang);
+                _jobs.FinishFor(userId, analysisId, lang);
             }
         });
-        return true;
+        return started;
     }
 
     /// <summary>Die fehlenden Erklärungen einer Analyse erzeugen; Rückgabe = neu gespeicherte.</summary>
@@ -405,11 +418,50 @@ public sealed class GameMoveExplanationService
 
 /// <summary>Welche Erklärungen gerade entstehen (Analyse + Sprache) — damit ein zweiter Klick nichts doppelt rechnet
 /// und die Seite „läuft" zeigen kann. Nur Arbeitsspeicher: ein Neustart verwirft das Laufende, der nächste Klick
-/// erzeugt nur, was noch fehlt.</summary>
+/// erzeugt nur, was noch fehlt.
+/// <para>Der Knopf (<see cref="TryStartFor"/>) zählt zusätzlich je Konto (A6-005): ohne Deckel startete ein Skript über
+/// alle eigenen Partien und zwanzig Sprachen Hunderte Aufträge zugleich, jeder mit
+/// <see cref="GameMoveExplanationService.Parallel"/> Anfragen. Der Lauf nach der Analyse (<see cref="TryStart"/>,
+/// <see cref="GameReviewTexts"/>) zählt nicht mit — er schreibt je Analyse eine Sprache nach der anderen.</para></summary>
 public sealed class GameExplanationJobs
 {
+    /// <summary>So viele Erklär-Aufträge auf Zuruf darf ein Konto gleichzeitig laufen haben.</summary>
+    public const int MaxRunningPerUser = 2;
+
+    public enum StartResult { Started, AlreadyRunning, UserLimit, Unavailable }
+
     private readonly ConcurrentDictionary<(int, string), byte> _running = new();
+    private readonly Dictionary<int, int> _perUser = new();
+    private readonly object _perUserLock = new();
+
     public bool TryStart(int analysisId, string lang) => _running.TryAdd((analysisId, lang), 0);
     public void Finish(int analysisId, string lang) => _running.TryRemove((analysisId, lang), out _);
     public bool IsRunning(int analysisId, string lang) => _running.ContainsKey((analysisId, lang));
+
+    /// <summary>Wie <see cref="TryStart"/>, dazu höchstens <see cref="MaxRunningPerUser"/> je Konto. Läuft dasselbe Paar
+    /// schon, ist das kein neuer Auftrag (<see cref="StartResult.AlreadyRunning"/>, auch am Deckel).</summary>
+    public StartResult TryStartFor(int userId, int analysisId, string lang)
+    {
+        lock (_perUserLock)
+        {
+            if (_running.ContainsKey((analysisId, lang))) return StartResult.AlreadyRunning;
+            var count = _perUser.GetValueOrDefault(userId);
+            if (count >= MaxRunningPerUser) return StartResult.UserLimit;
+            if (!_running.TryAdd((analysisId, lang), 0)) return StartResult.AlreadyRunning;
+            _perUser[userId] = count + 1;
+            return StartResult.Started;
+        }
+    }
+
+    /// <summary>Gegenstück zu <see cref="TryStartFor"/>.</summary>
+    public void FinishFor(int userId, int analysisId, string lang)
+    {
+        lock (_perUserLock)
+        {
+            _running.TryRemove((analysisId, lang), out _);
+            var count = _perUser.GetValueOrDefault(userId);
+            if (count <= 1) _perUser.Remove(userId);
+            else _perUser[userId] = count - 1;
+        }
+    }
 }

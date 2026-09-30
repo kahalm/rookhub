@@ -43,7 +43,7 @@ public class GameMoveExplanationTests : IDisposable
         }
     }
 
-    private GameMoveExplanationService Service() => new(_db, _llm, new GameExplanationJobs(),
+    private GameMoveExplanationService Service(GameExplanationJobs? jobs = null) => new(_db, _llm, jobs ?? new GameExplanationJobs(),
         new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
         NullLogger<GameMoveExplanationService>.Instance);
 
@@ -458,5 +458,61 @@ public class GameMoveExplanationTests : IDisposable
         _llm.Local = false;
         var r = Assert.IsType<ObjectResult>((await Controller(userId).Generate(gameId, "de")).Result);
         Assert.Equal(503, r.StatusCode);
+    }
+
+    // ── Deckel je Konto (A6-005) ───────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Jobs_HoechstensZweiAuftraegeJeKonto_GleichesPaarIstKeinNeuer_AndereKontenUnberuehrt()
+    {
+        var jobs = new GameExplanationJobs();
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(1, 10, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(1, 11, "fr"));
+        Assert.Equal(GameExplanationJobs.StartResult.UserLimit, jobs.TryStartFor(1, 12, "de"));
+        Assert.False(jobs.IsRunning(12, "de"));
+        // Derselbe Auftrag noch einmal: läuft schon, auch am Deckel — kein 429 für einen Doppelklick.
+        Assert.Equal(GameExplanationJobs.StartResult.AlreadyRunning, jobs.TryStartFor(1, 10, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(2, 20, "de"));
+
+        jobs.FinishFor(1, 10, "de");
+        Assert.False(jobs.IsRunning(10, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(1, 12, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.UserLimit, jobs.TryStartFor(1, 13, "de"));
+        // Ein Lauf nach der Analyse (Scheduler) auf demselben Paar blockiert den Knopf, zählt aber nicht zum Deckel.
+        Assert.True(jobs.TryStart(30, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.AlreadyRunning, jobs.TryStartFor(2, 30, "de"));
+    }
+
+    [Fact]
+    public async Task Controller_DritterParallelerAuftragDesselbenKontos_429()
+    {
+        var (userId, gameId, analysisId) = await SeedAsync();
+        var (otherId, otherGameId, _) = await SeedAsync();
+        var jobs = new GameExplanationJobs();
+        GameExplanationController Controller(int uid) => new(Service(jobs))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, uid.ToString())], "t")),
+                },
+            },
+        };
+        // Zwei Aufträge desselben Kontos laufen schon (andere Partien bzw. Sprachen).
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(userId, 990001, "de"));
+        Assert.Equal(GameExplanationJobs.StartResult.Started, jobs.TryStartFor(userId, analysisId, "fr"));
+
+        var r = Assert.IsType<ObjectResult>((await Controller(userId).Generate(gameId, "de")).Result);
+        Assert.Equal(429, r.StatusCode);
+        Assert.False(jobs.IsRunning(analysisId, "de"));
+        Assert.Empty(_llm.Prompts);
+
+        // Ein anderes Konto ist davon nicht betroffen.
+        Assert.IsType<OkObjectResult>((await Controller(otherId).Generate(otherGameId, "de")).Result);
+
+        // Ist einer fertig, geht der nächste.
+        jobs.FinishFor(userId, 990001, "de");
+        Assert.IsType<OkObjectResult>((await Controller(userId).Generate(gameId, "de")).Result);
     }
 }
