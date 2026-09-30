@@ -5,6 +5,7 @@ import { adminGuard } from './core/admin.guard';
 import { courseAccessGuard } from './core/course-access.guard';
 import { coursePlayGuard } from './core/course-play.guard';
 import { menuGuard } from './core/menu.guard';
+import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -55,7 +56,7 @@ export const routes: Routes = [
   // Partieformular einlesen (0.529.0) — Literal VOR games/:id, sonst wäre „scoresheet" eine Partie-Id.
   { path: 'games/scoresheet', loadComponent: () => import('./features/games/scoresheet-upload.component').then(m => m.ScoresheetUploadComponent), canActivate: [authGuard, menuGuard('scoresheet')] },
   // Partie korrigieren (Züge, Kopfdaten; bei eingelesenen Partien mit Foto und Lesarten).
-  { path: 'games/:id/edit', loadComponent: () => import('./features/games/game-edit.component').then(m => m.GameEditComponent), canActivate: [authGuard, menuGuard('games')] },
+  { path: 'games/:id/edit', loadComponent: () => import('./features/games/game-edit.component').then(m => m.GameEditComponent), canActivate: [authGuard, menuGuard('games')], canDeactivate: [unsavedChangesGuard] },
   // Eigene Partie als SEITE (statt Dialog, gemeldet 2026-09-23): dieselbe Komponente wie der Teilen-Link, im Modus „own".
   { path: 'games/:id', loadComponent: () => import('./features/games/shared-game.component').then(m => m.SharedGameComponent), canActivate: [authGuard, menuGuard('games')], data: { mode: 'own' } },
   { path: 'reconstruct', loadComponent: () => import('./features/reconstruct/reconstruct-list.component').then(m => m.ReconstructListComponent), canActivate: [authGuard, menuGuard('reconstruct')] },

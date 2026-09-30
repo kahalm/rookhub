@@ -2776,6 +2776,7 @@
       "illegalHint": "{{count}} Züge sind nach deiner Änderung nicht mehr legal und fallen beim Speichern weg.",
       "resolveFailed": "Der Rest konnte nicht neu aufbereitet werden — er bleibt, soweit er noch legal ist.",
       "dropIllegal": "{{count}} Züge sind nicht legal und fallen weg. Trotzdem speichern?",
+      "discardChanges": "Du hast ungespeicherte Korrekturen. Seite verlassen und sie verwerfen?",
       "saved": "Partie gespeichert.",
       "saveFailed": "Speichern fehlgeschlagen.",
       "notOnSheet": "steht nicht auf dem Formular",

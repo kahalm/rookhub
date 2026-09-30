@@ -4,6 +4,8 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameEditComponent } from './game-edit.component';
 
 describe('GameEditComponent', () => {
@@ -76,6 +78,34 @@ describe('GameEditComponent', () => {
     c.onBoardMove({ from: 'e1', to: 'f2', san: 'Kf2', fen: '' });
     expect(c.plies().map(p => p.san)).toEqual(['Kf2', 'Kd7', 'e4', 'Ke6']);
     expect(c.illegalCount()).toBe(0);
+  });
+
+  // W3 F4-003: `dirty` wurde geführt, aber nie gelesen — Zurück-Pfeil oder Browser-Zurück verwarfen alle Korrekturen.
+  it('asks before leaving with unsaved corrections, and not after saving', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+    // Direkt statt per window.dispatchEvent — ein echtes beforeunload hält Karma für ein Neuladen der Testseite.
+    const unload = () => { const e = new Event('beforeunload', { cancelable: true }) as BeforeUnloadEvent; c.onBeforeUnload(e); return e; };
+
+    expect(c.canLeave()).toBeTrue();                       // nur angesehen: ohne Rückfrage
+    expect(unload().defaultPrevented).toBeFalse();
+    expect(ask).not.toHaveBeenCalled();
+
+    c.go(2);
+    c.onBoardMove({ from: 'f1', to: 'c4', san: 'Bc4', fen: '' });
+    let answer: boolean | undefined;
+    (c.canLeave() as any).subscribe((ok: boolean) => answer = ok);
+    expect(ask).toHaveBeenCalledOnceWith('games.edit.discardChanges');
+    expect(answer).toBeFalse();                            // „Abbrechen" = bleiben
+    expect(unload().defaultPrevented).toBeTrue();          // Neu laden/Tab schließen: der Browser fragt
+
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    c.save();
+    http.expectOne({ method: 'PUT', url: '/api/games/5' }).flush({});
+    expect(c.canLeave()).toBeTrue();                       // gespeichert: das Weiterleiten fragt nicht mehr
   });
 
   // Gemeldet 2026-09-28: am Handy wanderte das Brett beim Durchklicken nach oben — scrollIntoView rollte die ganze Seite.

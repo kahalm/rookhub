@@ -16,7 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ChessBoardComponent, UserBoardMove } from '../../shared/pgn-viewer/chess-board.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -29,6 +29,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
+import { LeaveConfirm } from '../../core/unsaved-changes.guard';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -325,7 +326,7 @@ import { SheetEditSession } from './sheet-edit-session';
     }
   `],
 })
-export class GameEditComponent implements OnInit, OnDestroy {
+export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private games = inject(GamesService);
@@ -401,6 +402,20 @@ export class GameEditComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     for (const url of this.photoUrls()) if (url) URL.revokeObjectURL(url);
+  }
+
+  /** Vor dem Verlassen fragen, solange es ungespeicherte Korrekturen gibt (`unsavedChangesGuard`). Speichern setzt
+   *  `dirty` vor dem Weiterleiten zurück — dann ohne Rückfrage. */
+  canLeave(): boolean | Observable<boolean> {
+    return !this.dirty() || this.confirmDialog.ask('games.edit.discardChanges');
+  }
+
+  /** Neu laden oder Tab schließen: der Browser fragt mit seinem eigenen Text. */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(e: BeforeUnloadEvent): void {
+    if (!this.dirty()) return;
+    e.preventDefault();
+    e.returnValue = true;   // ältere Browser fragen nur so
   }
 
   /** Das Foto einer Seite, sobald es geladen ist. */

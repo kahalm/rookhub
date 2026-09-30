@@ -2776,6 +2776,7 @@
       "illegalHint": "{{count}} moves are no longer legal after your change and will be dropped when saving.",
       "resolveFailed": "The rest could not be rebuilt — it stays as it was, as far as it is still legal.",
       "dropIllegal": "{{count}} moves are not legal and will be dropped. Save anyway?",
+      "discardChanges": "You have unsaved corrections. Leave the page and discard them?",
       "saved": "Game saved.",
       "saveFailed": "Saving failed.",
       "notOnSheet": "not on the sheet",
