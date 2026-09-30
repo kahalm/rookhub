@@ -1,13 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
 /// <summary>
 /// Verwaltung von Rollen + deren Permissions und der Rollen-Zuweisung an Nutzer (Admin-UI).
-/// Wirft <see cref="KeyNotFoundException"/> (→404) / <see cref="InvalidOperationException"/> (→400).
+/// Wirft <see cref="NotFoundException"/> (→404) / <see cref="DomainValidationException"/> (→400), übersetzt vom
+/// DomainExceptionFilter — jede andere Ausnahme ist ein echter Fehler und wird 500.
 ///
 /// Leitplanken: Permissions müssen aus <see cref="Permissions.All"/> stammen (Code = Quelle der
 /// Wahrheit). Die System-Rolle <c>admin</c> ist der Superuser — ihre Permission-Menge ist NICHT
@@ -52,7 +54,7 @@ public class RoleAdminService
     {
         var key = dto.Key.Trim().ToLowerInvariant();
         if (await _db.Roles.AnyAsync(r => r.Key == key))
-            throw new InvalidOperationException("Eine Rolle mit diesem Key existiert bereits.");
+            throw new DomainValidationException("Eine Rolle mit diesem Key existiert bereits.");
 
         var perms = ValidatePermissions(dto.Permissions);
         var role = new Role { Key = key, Name = dto.Name.Trim(), IsSystem = false };
@@ -65,7 +67,7 @@ public class RoleAdminService
     public async Task<RoleDto> UpdateAsync(int id, UpdateRoleDto dto)
     {
         var role = await _db.Roles.Include(r => r.Permissions).FirstOrDefaultAsync(r => r.Id == id)
-            ?? throw new KeyNotFoundException("Rolle nicht gefunden.");
+            ?? throw new NotFoundException("Rolle nicht gefunden.");
 
         role.Name = dto.Name.Trim();
 
@@ -84,9 +86,9 @@ public class RoleAdminService
     public async Task DeleteAsync(int id)
     {
         var role = await _db.Roles.FirstOrDefaultAsync(r => r.Id == id)
-            ?? throw new KeyNotFoundException("Rolle nicht gefunden.");
+            ?? throw new NotFoundException("Rolle nicht gefunden.");
         if (role.IsSystem)
-            throw new InvalidOperationException("System-Rollen können nicht gelöscht werden.");
+            throw new DomainValidationException("System-Rollen können nicht gelöscht werden.");
         _db.GroupRoles.RemoveRange(_db.GroupRoles.Where(gr => gr.RoleId == id));   // InMemory kaskadiert nicht
         _db.Roles.Remove(role);   // UserRoles + RolePermissions cascaden
         await _db.SaveChangesAsync();
@@ -96,7 +98,7 @@ public class RoleAdminService
     public async Task<UserRolesDto> GetUserRolesAsync(int userId)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
-            throw new KeyNotFoundException("User nicht gefunden.");
+            throw new NotFoundException("User nicht gefunden.");
         var roleIds = await _db.UserRoles.Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync();
         return new UserRolesDto { UserId = userId, RoleIds = roleIds };
     }
@@ -106,7 +108,7 @@ public class RoleAdminService
     public async Task SetUserRolesAsync(int userId, SetUserRolesDto dto)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
-            throw new KeyNotFoundException("User nicht gefunden.");
+            throw new NotFoundException("User nicht gefunden.");
 
         var adminRoleId = await _db.Roles.Where(r => r.Key == RoleSeeder.AdminKey).Select(r => r.Id).FirstOrDefaultAsync();
         var target = new HashSet<int>(dto.RoleIds);
@@ -134,7 +136,7 @@ public class RoleAdminService
     public async Task<GroupRolesDto> GetGroupRolesAsync(int groupId)
     {
         if (!await _db.Groups.AnyAsync(g => g.Id == groupId))
-            throw new KeyNotFoundException("Gruppe nicht gefunden.");
+            throw new NotFoundException("Gruppe nicht gefunden.");
         var roleIds = await _db.GroupRoles.Where(gr => gr.GroupId == groupId).Select(gr => gr.RoleId).ToListAsync();
         return new GroupRolesDto { GroupId = groupId, RoleIds = roleIds };
     }
@@ -145,9 +147,9 @@ public class RoleAdminService
     public async Task SetGroupRolesAsync(int groupId, SetUserRolesDto dto)
     {
         var group = await _db.Groups.FirstOrDefaultAsync(g => g.Id == groupId)
-            ?? throw new KeyNotFoundException("Gruppe nicht gefunden.");
+            ?? throw new NotFoundException("Gruppe nicht gefunden.");
         if (group.IsEveryone)
-            throw new InvalidOperationException("Die Gruppe „Everyone“ kann keine Rollen bekommen.");
+            throw new DomainValidationException("Die Gruppe „Everyone“ kann keine Rollen bekommen.");
         var target = dto.RoleIds.ToHashSet();
         var valid = (await _db.Roles.Where(r => target.Contains(r.Id) && r.Key != RoleSeeder.AdminKey)
             .Select(r => r.Id).ToListAsync()).ToHashSet();
@@ -167,7 +169,7 @@ public class RoleAdminService
         foreach (var p in requested.Select(x => x?.Trim() ?? "").Where(x => x.Length > 0).Distinct())
         {
             if (!known.Contains(p))
-                throw new InvalidOperationException($"Unbekannte Permission: {p}");
+                throw new DomainValidationException($"Unbekannte Permission: {p}");
             result.Add(p);
         }
         return result;

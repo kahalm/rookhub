@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Authorization;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -117,9 +118,9 @@ public class PermissionResolverTests : IDisposable
         var everyone = new Group { Name = "Everyone", IsEveryone = true };
         _db.Groups.Add(everyone);
         await _db.SaveChangesAsync();
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
             admin.SetGroupRolesAsync(everyone.Id, new SetUserRolesDto { RoleIds = [club.Id] }));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.GetGroupRolesAsync(9999));
+        await Assert.ThrowsAsync<NotFoundException>(() => admin.GetGroupRolesAsync(9999));
 
         Assert.Equal(["Schwaz"], (await admin.ListAsync()).Single(r => r.Id == club.Id).Groups);
         await admin.DeleteAsync(club.Id);                                                // räumt die Gruppenrolle mit ab

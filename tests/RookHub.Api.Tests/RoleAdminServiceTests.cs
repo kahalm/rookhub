@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -34,11 +35,11 @@ public class RoleAdminServiceTests : IDisposable
         Assert.Equal(new[] { Permissions.GroupsManage, Permissions.WeeklyPostsManage }.OrderBy(x => x),
                      role.Permissions.OrderBy(x => x));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreateAsync(new CreateRoleDto
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.CreateAsync(new CreateRoleDto
         {
             Key = "bad", Name = "Bad", Permissions = new() { "nonsense.permission" },
         }));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreateAsync(new CreateRoleDto
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.CreateAsync(new CreateRoleDto
         {
             Key = "trainer", Name = "Dup", Permissions = new(),   // Key existiert schon
         }));
@@ -61,7 +62,7 @@ public class RoleAdminServiceTests : IDisposable
     {
         await SeedAsync();
         var member = (await _svc.ListAsync()).First(r => r.Key == "member");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.DeleteAsync(member.Id));
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.DeleteAsync(member.Id));
 
         var role = await _svc.CreateAsync(new CreateRoleDto { Key = "temp", Name = "Temp", Permissions = new() });
         await _svc.DeleteAsync(role.Id);

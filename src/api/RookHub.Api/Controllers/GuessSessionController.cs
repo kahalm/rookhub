@@ -30,11 +30,7 @@ public class GuessSessionController : BaseApiController
     [HttpPost]
     public async Task<ActionResult<GuessSessionDto>> Start([FromBody] CreateGuessSessionRequest req,
         CancellationToken ct, [FromQuery] string? lang = null)
-    {
-        try { return Ok(await _service.StartAsync(Owner, req, ct, lang)); }
-        catch (KeyNotFoundException) { return NotFound(new { message = "Analysis not found." }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
-    }
+        => Ok(await _service.StartAsync(Owner, req, ct, lang));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<GuessSessionDto>> Get(int id, CancellationToken ct,
@@ -48,12 +44,7 @@ public class GuessSessionController : BaseApiController
     [HttpPost("{id:int}/guess")]
     public async Task<ActionResult<GuessResultDto>> Guess(int id, [FromBody] GuessMoveRequest req,
         CancellationToken ct, [FromQuery] string? lang = null)
-    {
-        try { return Ok(await _service.GuessAsync(Owner, id, req, ct, lang)); }
-        catch (KeyNotFoundException) { return NotFound(new { message = "Session not found." }); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
-    }
+        => Ok(await _service.GuessAsync(Owner, id, req, ct, lang));
 
     [HttpGet("{id:int}/review")]
     public async Task<ActionResult<List<GuessReviewMoveDto>>> Review(int id, CancellationToken ct)

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
@@ -162,7 +163,7 @@ public class GuessSessionServiceTests : IDisposable
             GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0,
         });
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
             _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "e2e5" }));
         // Kein Zug protokolliert, die Sitzung steht unverändert.
         Assert.Empty(_db.GuessMoves);
@@ -229,7 +230,7 @@ public class GuessSessionServiceTests : IDisposable
     public async Task NochNichtAnalysiertePartie_laesstSichNichtStarten()
     {
         var (user, analysis) = await SeedAsync(analyzeAll: false);
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
             _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
     }
 
@@ -252,7 +253,7 @@ public class GuessSessionServiceTests : IDisposable
 
         var state = await _svc.GetAsync(GuessOwner.ForUser(user.Id), session.Id);
         Assert.Equal(2, state!.Position!.Ply);
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
             _svc.GuessAsync(GuessOwner.ForUser(user.Id), session.Id, new GuessMoveRequest { Uci = "g1f3" }));
         Assert.Single(_db.GuessMoves);   // der Halbzug ist NICHT verbraucht
 
@@ -311,10 +312,10 @@ public class GuessSessionServiceTests : IDisposable
         Assert.Null(await _svc.GetAsync(GuessOwner.ForUser(other.Id), session.Id));
         Assert.Null(await _svc.ReviewAsync(GuessOwner.ForUser(other.Id), session.Id));
         Assert.False(await _svc.DeleteAsync(GuessOwner.ForUser(other.Id), session.Id));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _svc.GuessAsync(GuessOwner.ForUser(other.Id), session.Id, new GuessMoveRequest { Uci = "e2e4" }));
         // Auch eine fremde ANALYSE lässt sich nicht bespielen.
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _svc.StartAsync(GuessOwner.ForUser(other.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
     }
 
@@ -438,7 +439,7 @@ public class GuessSessionServiceTests : IDisposable
     {
         var (_, analysis) = await SeedAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
                 new CreateGuessSessionRequest { GameAnalysisId = analysis.Id }));
     }

@@ -797,7 +797,9 @@ try
 
     builder.Services.AddMemoryCache();
     builder.Services.AddResponseCompression();
-    builder.Services.AddControllers()
+    // Domänen-Ausnahmen (NotFound/DomainValidation/Conflict/Forbidden) → { message } mit 404/400/409/403,
+    // noch im Endpoint, damit das Request-Log den echten Status sieht (Begründung in DomainExceptionFilter).
+    builder.Services.AddControllers(o => o.Filters.Add<RookHub.Api.Filters.DomainExceptionFilter>())
         .AddJsonOptions(opts =>
             opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
@@ -844,7 +846,8 @@ try
         await RoleSeeder.SeedAsync(db);   // RBAC-Grundgerüst (System-Rollen + IsAdmin→admin-Rolle spiegeln)
     }
 
-    // H-5: Global exception handler
+    // H-5: Global exception handler. Domänen-Ausnahmen kommen hier nicht an (DomainExceptionFilter);
+    // was hier landet, ist ein echter Fehler → 500, die Middleware loggt ihn auf Error mit Stacktrace.
     app.UseExceptionHandler(error =>
     {
         error.Run(async context =>

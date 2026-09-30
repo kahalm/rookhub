@@ -18,6 +18,11 @@ namespace RookHub.Api.Controllers;
 /// duerfen die angemeldeten Aufrufe nicht mitbremsen. Dasselbe Muster wie bei den anonymen
 /// Endless-/Puzzle-Endpunkten.</para>
 ///
+/// <para>Fehlerfälle (404 „Analysis/Session not found.", 400 mit Grund) wirft der Dienst als
+/// Domänen-Ausnahmen, der globale DomainExceptionFilter übersetzt sie. Früher wurde hier jede
+/// KeyNotFound-/InvalidOperation-Ausnahme gefangen — auch echte Fehler kamen dann anonym als 4xx
+/// mit Framework-Text an, ohne Log.</para>
+///
 /// <para><b>Die eiserne Regel gilt unveraendert:</b> der Fortschritt liegt in der Sitzung am
 /// SERVER, nicht im Browser. Ein Client, der selbst mitzaehlt, muesste sagen koennen, bei welchem
 /// Halbzug er steht — und koennte damit jeden Zug der Partie einzeln abfragen. Der Partiezug kommt
@@ -59,9 +64,7 @@ public class GuessSessionAnonymousController : ControllerBase
         CancellationToken ct, [FromQuery] string? lang = null)
     {
         if (!TryOwner(req.SessionId, out var owner)) return BadSessionId();
-        try { return Ok(await _service.StartAsync(owner, req, ct, lang)); }
-        catch (KeyNotFoundException) { return NotFound(new { message = "Analysis not found." }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _service.StartAsync(owner, req, ct, lang));
     }
 
     [HttpGet("{id:int}")]
@@ -79,10 +82,7 @@ public class GuessSessionAnonymousController : ControllerBase
         CancellationToken ct, [FromQuery] string? lang = null)
     {
         if (!TryOwner(req.SessionId, out var owner)) return BadSessionId();
-        try { return Ok(await _service.GuessAsync(owner, id, req, ct, lang)); }
-        catch (KeyNotFoundException) { return NotFound(new { message = "Session not found." }); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _service.GuessAsync(owner, id, req, ct, lang));
     }
 
     [HttpGet("{id:int}/review")]

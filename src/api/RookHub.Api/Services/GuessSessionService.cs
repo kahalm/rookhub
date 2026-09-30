@@ -2,6 +2,7 @@ using Chess;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -71,12 +72,12 @@ public class GuessSessionService
                 : _db.GameAnalyses.AsNoTracking()
                     .FirstOrDefaultAsync(g => g.Id == req.GameAnalysisId
                         && (g.IsPublic || g.Origin == GameAnalysisOrigin.Library), ct))
-            ?? throw new KeyNotFoundException("Analysis not found.");
+            ?? throw new NotFoundException("Analysis not found.");
 
         var analyzed = await _db.GameAnalysisPositions
             .CountAsync(p => p.GameAnalysisId == analysis.Id && p.CandidatesJson != null, ct);
         if (analyzed == 0)
-            throw new InvalidOperationException("Diese Partie ist noch nicht analysiert.");
+            throw new DomainValidationException("Diese Partie ist noch nicht analysiert.");
 
         var guessWhite = req.GuessWhite ?? await WinnerSideAsync(analysis, ct);
         // Auf die Partie eingrenzen, BEVOR ausgerichtet wird: ohne Deckel liefe `start++` bei
@@ -154,20 +155,20 @@ public class GuessSessionService
         CancellationToken ct = default, string? language = null)
     {
         var session = await LoadAsync(owner, sessionId, ct)
-            ?? throw new KeyNotFoundException("Session not found.");
+            ?? throw new NotFoundException("Session not found.");
         if (session.Status == GuessSessionStatus.Done)
-            throw new InvalidOperationException("Diese Punktepartie ist bereits beendet.");
+            throw new DomainValidationException("Diese Punktepartie ist bereits beendet.");
 
         var position = await _db.GameAnalysisPositions.AsNoTracking()
             .FirstOrDefaultAsync(p => p.GameAnalysisId == session.GameAnalysisId && p.Ply == session.CurrentPly, ct)
-            ?? throw new InvalidOperationException("Zu dieser Sitzung gibt es keine Stellung mehr.");
+            ?? throw new DomainValidationException("Zu dieser Sitzung gibt es keine Stellung mehr.");
 
         // Die Sitzung darf einer Partie davonlaufen, die noch gerechnet wird (spielbar ist sie ab der
         // ERSTEN fertigen Stellung). Eine Stellung ohne Kandidatenliste hat keinen Bezugspunkt: sie
         // hier zu werten hiesse, sie ohne Punkte zu verbrennen und nie wieder zu zeigen — der Nutzer
         // arbeitete sich mit 0 durch die halbe Partie. Also stehenbleiben und darauf hinweisen.
         if (position.CandidatesJson is null)
-            throw new InvalidOperationException("Diese Stellung wird noch gerechnet — gleich nochmal versuchen.");
+            throw new DomainValidationException("Diese Stellung wird noch gerechnet — gleich nochmal versuchen.");
 
         var playedUci = string.IsNullOrWhiteSpace(req.Uci) ? null : req.Uci.Trim().ToLowerInvariant();
         GuessGrade? grade = null;
@@ -178,7 +179,7 @@ public class GuessSessionService
         {
             playedSan = SanOf(position.Fen, playedUci);
             if (playedSan is null)
-                throw new ArgumentException("Dieser Zug ist in der Stellung nicht möglich.");
+                throw new DomainValidationException("Dieser Zug ist in der Stellung nicht möglich.");
 
             var candidates = BrokerCandidates.FromJson(position.CandidatesJson);
             var scored = GuessScoring.Evaluate(candidates, playedUci, position.GameMoveUci,
