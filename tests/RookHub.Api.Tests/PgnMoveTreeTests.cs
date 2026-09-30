@@ -174,6 +174,70 @@ public class PgnMoveTreeTests
     [InlineData("   \n \n")]
     public void ParseSections_EmptyText_IsEmpty(string text) => Assert.Empty(PgnMoveTree.ParseSections(text));
 
+    // ── Tiefendeckel (Codereview 2026-09-29, A6-001) ────────────────────────
+
+    /// <summary>Tiefste Varianten-Schachtelung eines Zugbaums (0 = nur Hauptlinie).</summary>
+    private static int Depth(List<PgnMove> moves)
+        => moves.Count == 0 ? 0 : moves.Max(m => m.Variations.Count == 0 ? 0 : 1 + m.Variations.Max(Depth));
+
+    /// <summary><paramref name="levels"/> ineinander geschachtelte Varianten zu 1... e5, danach läuft
+    /// die Hauptlinie weiter.</summary>
+    private static string Nested(int levels)
+        => "[Event \"x\"]\n\n1. e4 e5 " + string.Concat(Enumerable.Repeat("(1... c5 ", levels))
+           + string.Concat(Enumerable.Repeat(") ", levels)) + "2. Nf3 *";
+
+    /// <summary>Der Parser rief sich je „(" selbst auf, die Walker über den Baum je Variante noch einmal —
+    /// ohne Deckel. Varianten bis <see cref="PgnMoveTree.MaxVariationDepth"/> bleiben, tiefere fallen weg,
+    /// und die Hauptlinie hinter der Klammer läuft weiter.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(PgnMoveTree.MaxVariationDepth)]
+    [InlineData(PgnMoveTree.MaxVariationDepth + 1)]
+    [InlineData(1000)]
+    public void ParseSections_NestedVariations_AreCutAtMaxDepth_MainlineContinues(int levels)
+    {
+        var section = Assert.Single(PgnMoveTree.ParseSections(Nested(levels)));
+
+        Assert.Equal(new[] { "e4", "e5", "Nf3" }, Sans(section.Moves));
+        Assert.Equal(Math.Min(levels, PgnMoveTree.MaxVariationDepth), Depth(section.Moves));
+    }
+
+    /// <summary>Der Fall aus dem Review: 100 000 offene Klammern (100 KB, als Repertoire-Datei hochladbar)
+    /// sprengten den Stack — ein StackOverflow ist nicht fangbar und beendete die ganze API. Hier reicht es,
+    /// dass der Aufruf überhaupt zurückkommt.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ParseSections_HundredThousandParentheses_DoNotOverflowTheStack(bool closed)
+    {
+        const int n = 100_000;
+        var text = "[Event \"x\"]\n\n1. e4 " + new string('(', n) + " e5"
+                   + (closed ? new string(')', n) + " 1... c5 *" : "");
+
+        var section = Assert.Single(PgnMoveTree.ParseSections(text));
+
+        Assert.Equal(closed ? new[] { "e4", "c5" } : new[] { "e4" }, Sans(section.Moves));
+        Assert.True(Depth(section.Moves) <= PgnMoveTree.MaxVariationDepth);
+    }
+
+    /// <summary>Auch der Weg ohne Abschnitte (RepertoireAnalyzeService liest den ganzen Text als Movetext)
+    /// geht durch <c>ParseMoveTokens</c> — mit demselben Deckel.</summary>
+    [Fact]
+    public void ParseMoveTokens_WithoutSections_IsCappedToo()
+    {
+        var (moves, _) = PgnMoveTree.ParseMoveTokens(PgnMoveTree.Tokenize("1. e4 " + new string('(', 100_000) + " e5"), 0);
+
+        Assert.Equal(new[] { "e4" }, Sans(moves));
+    }
+
+    [Theory]
+    [InlineData("1. e4 e5 *", 0)]
+    [InlineData("1. e4 (1. d4) e5 (1... c5 2. Nf3 (2. c3)) *", 2)]
+    [InlineData("1. e4 {Kommentar ((((( } e5 ; auch hier (((\n 2. Nf3 (2. Nc3) *", 1)]
+    [InlineData("1. e4 ) ) (1. d4 (1. c4)) *", 2)]
+    public void VariationDepthOf_CountsNestingOutsideComments(string text, int expected)
+        => Assert.Equal(expected, PgnMoveTree.VariationDepthOf(text));
+
     // ── Suffixe ───────────────────────────────────────────────────────────
 
     /// <summary>Bewertungs- und Schachzeichen fallen am SAN weg, damit die Schach-Lib ihn parsen kann.</summary>

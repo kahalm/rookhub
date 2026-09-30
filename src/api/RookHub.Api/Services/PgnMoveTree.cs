@@ -46,6 +46,16 @@ public static class PgnMoveTree
     private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
     /// <summary>
+    /// Tiefste Varianten-Schachtelung, die der Parser aufbaut (echte Repertoires: unter 20). Tiefere
+    /// Klammern überspringt er wie einen Kommentar. Ohne Deckel rief sich <see cref="ParseMoveTokens"/>
+    /// je „(" selbst auf, und jeder Walker über den Baum (Positions-Set, Stellungssuche, Linienquelle,
+    /// Explorer) rekursiert je Variante noch einmal: eine hochgeladene Datei „1. e4 (((…" mit
+    /// 100 000 Klammern sprengte den Stack — ein StackOverflow ist in .NET nicht fangbar und beendet
+    /// die ganze API, bei jedem weiteren Aufbau des Positions-Sets erneut (Codereview 2026-09-29, A6-001).
+    /// </summary>
+    public const int MaxVariationDepth = 64;
+
+    /// <summary>
     /// Zerlegt ein PGN in seine Abschnitte (Trenner: der nächste <c>[Event </c>-Header) und parst
     /// jeden davon.
     /// <para>ZUG-LOSE Abschnitte bleiben in der Liste (könnten Kapitel-Intros sein): an der
@@ -129,8 +139,10 @@ public static class PgnMoveTree
     }
 
     /// <summary>Tokens → Zugbaum ab <paramref name="pos"/>; eine Klammer hängt ihre Züge als
-    /// Variante an den zuletzt gelesenen Zug.</summary>
-    internal static (List<PgnMove> Moves, int EndPos) ParseMoveTokens(List<string> tokens, int pos)
+    /// Variante an den zuletzt gelesenen Zug. <paramref name="depth"/> = Schachtelungstiefe der
+    /// gerade gelesenen Zugfolge (0 = Hauptlinie); Varianten tiefer als <see cref="MaxVariationDepth"/>
+    /// fallen weg.</summary>
+    internal static (List<PgnMove> Moves, int EndPos) ParseMoveTokens(List<string> tokens, int pos, int depth = 0)
     {
         var moves = new List<PgnMove>();
         while (pos < tokens.Count)
@@ -140,7 +152,12 @@ public static class PgnMoveTree
             if (token == "(")
             {
                 pos++; // skip '('
-                var (varMoves, endPos) = ParseMoveTokens(tokens, pos);
+                if (depth >= MaxVariationDepth)
+                {
+                    pos = SkipVariation(tokens, pos) + 1; // samt allem darin, OHNE Rekursion
+                    continue;
+                }
+                var (varMoves, endPos) = ParseMoveTokens(tokens, pos, depth + 1);
                 pos = endPos + 1; // skip ')'
                 if (moves.Count > 0) moves[^1].Variations.Add(varMoves);
                 continue;
@@ -155,6 +172,35 @@ public static class PgnMoveTree
             pos++;
         }
         return (moves, pos);
+    }
+
+    /// <summary>Überspringt eine Variante (ab dem Token NACH ihrer „(") samt allen darin geschachtelten,
+    /// iterativ. Liefert die Position ihrer schließenden „)" bzw. <c>tokens.Count</c>, wenn sie fehlt —
+    /// dieselbe EndPos, die <see cref="ParseMoveTokens"/> für diese Variante geliefert hätte.</summary>
+    private static int SkipVariation(List<string> tokens, int pos)
+    {
+        int open = 0;
+        for (; pos < tokens.Count; pos++)
+        {
+            if (tokens[pos] == "(") open++;
+            else if (tokens[pos] == ")") { if (open == 0) return pos; open--; }
+        }
+        return pos;
+    }
+
+    /// <summary>Tiefste Varianten-Schachtelung im ganzen Text; Klammern in Kommentaren zählen nicht
+    /// (dieselbe Zerlegung wie <see cref="Tokenize"/>). Für die Upload-Prüfung gegen
+    /// <see cref="MaxVariationDepth"/>.</summary>
+    public static int VariationDepthOf(string text)
+    {
+        if (string.IsNullOrEmpty(text) || text.IndexOf('(') < 0) return 0;
+        int depth = 0, max = 0;
+        foreach (var token in Tokenize(text))
+        {
+            if (token == "(") { if (++depth > max) max = depth; }
+            else if (token == ")" && depth > 0) depth--;
+        }
+        return max;
     }
 
     /// <summary>Ist das Token ein Zug? Klammern, alleinstehende Zugnummern und Ergebnis-Tokens sind

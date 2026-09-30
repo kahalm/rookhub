@@ -78,6 +78,31 @@ public class RepertoireServiceTests : IDisposable
             () => _repertoireService.UploadFileAsync(rep.Id, userId, "notes.pgn", stream));
     }
 
+    /// <summary>A6-001: tiefer geschachtelte Varianten schneidet der Server-Parser ab (Stack-Schutz) —
+    /// der Upload sagt das gleich, statt Teile der Datei still zu ignorieren. Bis zum Deckel geht alles durch.</summary>
+    [Theory]
+    [InlineData(PgnMoveTree.MaxVariationDepth, true)]
+    [InlineData(PgnMoveTree.MaxVariationDepth + 1, false)]
+    [InlineData(100_000, false)]
+    public async Task UploadFile_RejectsVariationsNestedDeeperThanTheParserCap(int levels, bool accepted)
+    {
+        var userId = await CreateUserAsync();
+        var rep = await _repertoireService.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
+
+        var pgn = "[Event \"x\"]\n\n1. e4 e5 " + string.Concat(Enumerable.Repeat("(1... c5 ", levels))
+                  + string.Concat(Enumerable.Repeat(") ", levels)) + "2. Nf3 *";
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(pgn));
+        var upload = () => _repertoireService.UploadFileAsync(rep.Id, userId, "deep.pgn", stream);
+
+        if (accepted) Assert.Equal("deep.pgn", (await upload()).FileName);
+        else
+        {
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(upload);
+            Assert.Contains("nested too deeply", ex.Message);
+            Assert.Empty(_db.RepertoireFiles);
+        }
+    }
+
     [Fact]
     public async Task UploadFile_AcceptsHeaderOnlyPgn()
     {

@@ -41,6 +41,30 @@ public class RepertoireAnalyzeServiceTests : IDisposable
         return user.Id;
     }
 
+    /// <summary>A6-001: eine Datei mit 100 000 geschachtelten Varianten (der Upload lehnt sie inzwischen ab,
+    /// ein Altbestand oder ein anderer Schreibweg kann sie aber noch liefern) sprengte beim Aufbau des
+    /// Positions-Sets den Stack — Parser UND WalkMoves rekursierten je Variante. Jetzt kommt die Analyse
+    /// zurück, die Hauptlinie und die flachen Varianten zählen weiter.</summary>
+    [Fact]
+    public async Task DeeplyNestedStoredFile_DoesNotOverflowTheStack()
+    {
+        var userId = await SeedUserWithOpeningAsync("[Event \"x\"]\n\n1. d4 d5 *");
+        const int n = 100_000;
+        var repId = _db.Repertoires.Single(r => r.UserId == userId).Id;
+        var deep = "[Event \"y\"]\n\n1. e4 e5 " + string.Concat(Enumerable.Repeat("(1... c5 ", n))
+                   + string.Concat(Enumerable.Repeat(") ", n)) + "2. Nf3 Nc6 *";
+        _db.RepertoireFiles.Add(new RepertoireFile { RepertoireId = repId, FileName = "deep.pgn", PgnContent = deep, FileSize = deep.Length });
+        await _db.SaveChangesAsync();
+        _analyze.Invalidate(userId);
+
+        var main = await _analyze.AnalyzeAsync(userId, new AnalyzeGameRequestDto { Moves = new() { "e4", "e5", "Nf3", "Nc6" } });
+        var sicilian = await _analyze.AnalyzeAsync(userId, new AnalyzeGameRequestDto { Moves = new() { "e4", "c5", "Nf3" } });
+
+        Assert.Equal(2, main.RepertoireFileCount);
+        Assert.Equal(-1, main.Deviation);
+        Assert.Equal(2, sicilian.Deviation);   // 1... c5 steht (als Variante) im Repertoire, 2. Nf3 danach nicht
+    }
+
     [Fact]
     public async Task EmptyMoves_ReturnsFileCountOnly()
     {

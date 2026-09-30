@@ -406,6 +406,11 @@ public class RepertoireService
         if (!LooksLikePgn(content))
             throw new InvalidOperationException("File does not appear to be valid PGN content.");
 
+        // A6-001: tiefer geschachtelte Varianten würde der Server-Parser ohnehin abschneiden (Stack-Schutz,
+        // siehe PgnMoveTree.MaxVariationDepth) — lieber gleich sagen als still Teile der Datei ignorieren.
+        if (PgnMoveTree.VariationDepthOf(content) > PgnMoveTree.MaxVariationDepth)
+            throw new InvalidOperationException($"PGN variations are nested too deeply (maximum {PgnMoveTree.MaxVariationDepth} levels).");
+
         // Chessable-Kurs-ID aus [Site]-Tag (piratechess-Export) automatisch übernehmen,
         // wenn noch keine ID am Repertoire gesetzt ist.
         if (rep.ChessableCourseId == null)
