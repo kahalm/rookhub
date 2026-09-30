@@ -121,28 +121,30 @@ public class LeagueTeamScoutTests : IDisposable
     private static HttpResponseMessage Status(HttpStatusCode c) => new(c) { Content = new StringContent("") };
 
     /// <summary>25 Schnellpartien von Trigonias mit Weiß, alle Spanisch.</summary>
-    private static string OnlineGames(string line, int n = 25) => string.Join("\n", Enumerable.Range(0, n).Select(i =>
+    private static string OnlineGames(string line, string user = "Trigonias", int n = 25) => string.Join("\n", Enumerable.Range(0, n).Select(i =>
         "{\"id\":\"g" + i + "\",\"rated\":true,\"variant\":\"standard\",\"speed\":\"rapid\",\"createdAt\":" + (1_700_000_000_000L + i * 60_000)
-        + ",\"status\":\"mate\",\"winner\":\"white\",\"players\":{\"white\":{\"user\":{\"name\":\"Trigonias\",\"id\":\"trigonias\"},\"rating\":1950},"
+        + ",\"status\":\"mate\",\"winner\":\"white\",\"players\":{\"white\":{\"user\":{\"name\":\"" + user + "\",\"id\":\"" + user.ToLowerInvariant() + "\"},\"rating\":1950},"
         + "\"black\":{\"user\":{\"name\":\"Opp" + i + "\",\"id\":\"opp" + i + "\"},\"rating\":1900}},\"moves\":\"" + line + "\"}"));
 
     /// <summary>Lichess mit einem Tiroler Team (SK Kufstein) samt einem Team-Battle und einem fremden Team.</summary>
-    private static FakeHttp World(int year = 1987, int trigRating = 1950) => new(req =>
+    private static FakeHttp World(int year = 1987, int trigRating = 1950, string battleUser = "Trigonias", string onlineLine = Ruy) => new(req =>
     {
         var u = req.RequestUri!.ToString();
+        var bu = battleUser.ToLowerInvariant();
         if (u.Contains("/api/team/search"))
             return Ok("""{"currentPage":1,"currentPageResults":[{"id":"sk-kufstein","name":"SK Kufstein"},{"id":"ccb","name":"Chess Club Berlin"}]}""");
-        if (u.Contains("/api/team/sk-kufstein/users")) return Ok("{\"id\":\"katzenpapa\",\"username\":\"Katzenpapa\"}\n{\"id\":\"trigonias\",\"username\":\"Trigonias\"}\n");
+        if (u.Contains("/api/team/sk-kufstein/users"))
+            return Ok("{\"id\":\"katzenpapa\",\"username\":\"Katzenpapa\"}\n{\"id\":\"" + bu + "\",\"username\":\"" + battleUser + "\"}\n");
         if (u.Contains("/api/team/sk-kufstein/arena"))
             return Ok("{\"id\":\"tb1\",\"teamBattle\":{\"teams\":[\"sk-kufstein\",\"x\"]}}\n{\"id\":\"ar2\"}\n");
         if (u.EndsWith("/api/tournament/tb1"))
             return Ok("""{"id":"tb1","teamBattle":{"teams":{"sk-kufstein":["SK Kufstein",null],"x":["X Team",null]}}}""");
         if (u.Contains("/api/tournament/tb1/results"))
-            return Ok("{\"username\":\"Trigonias\",\"team\":\"sk-kufstein\"}\n{\"username\":\"Fremder\",\"team\":\"x\"}\n");
+            return Ok("{\"username\":\"" + battleUser + "\",\"team\":\"sk-kufstein\"}\n{\"username\":\"Fremder\",\"team\":\"x\"}\n");
         if (u.EndsWith("/api/users"))
             return Ok("""[{"id":"katzenpapa","username":"Katzenpapa","profile":{"flag":"AT","realName":"Max Muster"}},"""
-                + """{"id":"trigonias","username":"Trigonias","perfs":{"rapid":{"games":200,"rating":""" + trigRating + "}}}]");
-        if (u.Contains("/api/games/user/trigonias")) return Ok(OnlineGames(Ruy));
+                + "{\"id\":\"" + bu + "\",\"username\":\"" + battleUser + "\",\"perfs\":{\"rapid\":{\"games\":200,\"rating\":" + trigRating + "}}}]");
+        if (u.Contains("/api/games/user/" + bu)) return Ok(OnlineGames(onlineLine, battleUser));
         if (u.Contains("/api/fide/player/")) return Ok("{\"id\":1,\"federation\":\"AUT\",\"year\":" + year + "}");
         return Status(HttpStatusCode.NotFound);
     });
@@ -249,6 +251,50 @@ public class LeagueTeamScoutTests : IDisposable
         await low.RunOnceAsync(TimeSpan.FromMinutes(5), refreshPool: false, default);
         Assert.Equal("Stellungen → Muster, Max, aber Wertung zu niedrig",
             (await _db.LeagueScoutAccounts.SingleAsync(a => a.UserName == "trigonias")).Result);
+    }
+
+    [Fact]
+    public void OtherFirstName_FromRosterFirstNames_NotTheOwnOne()
+    {
+        var firsts = new HashSet<string> { "markus", "peter", "herbert", "max", "giorgio" };
+        Assert.Equal("markus", LeagueTeamScout.OtherFirstName("Markus_Ragger", "Wohlfahrt, Herbert", firsts));
+        Assert.Equal("peter", LeagueTeamScout.OtherFirstName("Peter-Dorfen", "Gugler, Giorgio", firsts));
+        Assert.Equal("peter", LeagueTeamScout.OtherFirstName("PeterDorfen", "Gugler, Giorgio", firsts));      // Binnen-Großbuchstabe
+        Assert.Null(LeagueTeamScout.OtherFirstName("MaxMuster", "Muster, Max", firsts));                     // der eigene
+        Assert.Null(LeagueTeamScout.OtherFirstName("Joker_Smile", "Neuschmied, Siegfried", firsts));
+        Assert.Null(LeagueTeamScout.OtherFirstName("randspringer", "Bertagnolli, Alexander", firsts));       // „max" steckt nur im Wort
+    }
+
+    /// <summary>0.614.0: offene Team-Battles — ein Stellungs-Treffer braucht Tiefe, keinen fremden Vornamen im Nutzernamen und ein
+    /// Konto, das nicht schon ein anderer Spieler hat.</summary>
+    [Fact]
+    public async Task Run_PositionHit_NeedsDepth_NoOtherFirstName_AndAFreeAccount()
+    {
+        await SeedAsync();
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Innsbruck 1", Name = "Kofler, Markus", NameKey = "kofler, markus", FideId = "555", Fed = "AUT", EloI = 1600 });
+        await _db.SaveChangesAsync();
+        async Task<string?> RunAsync(FakeHttp world, string user)
+        {
+            _db.ChangeTracker.Clear();
+            _db.LeagueScoutAccounts.RemoveRange(_db.LeagueScoutAccounts);
+            _db.LeagueAccountSuggestions.RemoveRange(_db.LeagueAccountSuggestions);
+            await _db.SaveChangesAsync();
+            var scout = Scout(world);
+            await scout.RefreshPoolAsync(default);
+            await scout.RunOnceAsync(TimeSpan.FromMinutes(5), refreshPool: false, default);
+            Assert.DoesNotContain(await _db.LeagueAccountSuggestions.ToListAsync(), x => x.UserName == user);
+            return (await _db.LeagueScoutAccounts.SingleAsync(a => a.UserName == user.ToLowerInvariant())).Result;
+        }
+
+        // Nur 1.e4 und 2.Nf3 gemeinsam: Abstand riesig (Huber hat nichts), aber nur bis Halbzug 3.
+        Assert.Matches("^Stellungen → Muster, Max, aber gemeinsam nur bis Halbzug 3[.,]0$",
+            await RunAsync(World(onlineLine: "e4 e5 Nf3 Nf6 d4 Nxe4 Bd3 d5"), "Trigonias"));
+        Assert.Equal("Stellungen → Muster, Max, aber der Nutzername nennt einen anderen Vornamen („markus“)",
+            await RunAsync(World(battleUser: "Markus_Ragger"), "Markus_Ragger"));
+
+        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "444", Site = "lichess", UserName = "Trigonias", Url = "u", Confidence = "sicher" });
+        await _db.SaveChangesAsync();
+        Assert.Equal("schon bekannt oder bei einem anderen Spieler", await RunAsync(World(), "Trigonias"));
     }
 
     [Fact]

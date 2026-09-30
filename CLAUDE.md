@@ -1800,7 +1800,13 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   ohne Bullet, `LeagueFingerprint.Usable`) gegen die Brettpartien JEDES Spielers dieses Vereins (alle Saisonen, Mannschaftsname enthält
   den Ort) — `LeagueFingerprint`: Stellungen nach den eigenen Zügen bis Halbzug 20, je Online-Partie die tiefste gemeinsame, gemittelt.
   Vorgeschlagen nur mit mindestens `ClubMargin` 1,3-fachem Abstand zum Zweiten (an der Meldeliste der Online-TMM 2021 geprüft: 11 von
-  13 richtig, ab 2 alle 4) und plausibler Wertung (`RatingPlausible`); Punkte 4 ab Abstand 2, sonst 3. Das Ergebnis je Konto steht in
+  13 richtig, ab 2 alle 4) und plausibler Wertung (`RatingPlausible`); Punkte 4 ab Abstand 2, sonst 3. **Seit 0.614.0 zusätzlich**
+  (die Kalibrierung stammt aus der Online-TMM 2021, wo JEDER Teilnehmer Ligaspieler war — in offenen Battles wie der Quarantäne-Liga
+  sind es viele nicht, und „passt am besten unter den Vereinsspielern" traf schon mit dem ersten Zug allein): gemeinsame Stellungen im
+  Schnitt mindestens bis Halbzug `MinDepth` 4 (falsche Treffer 1,6/2,4, bestätigte meist 4–11); kein Vorschlag, wenn der Nutzername
+  einen anderen Vornamen aus den Meldelisten nennt (`OtherFirstName`, „Markus_Ragger" für Herbert — vermutlich der GM selbst); kein
+  Vorschlag (auch über den Klarnamen) für ein Konto, das schon bei IRGENDEINEM Spieler eingetragen ist (ein selbst gemeldetes Konto
+  kam sonst über die Stellungen beim Vereinskollegen noch einmal). Das Ergebnis je Konto steht in
   `LeagueScoutAccount.Result`. Ein Konto, dessen Partien nicht zu holen sind, kommt am nächsten Tag wieder; ein 429 beendet den Durchgang.
 * **Eigene Vorschläge** (`LeagueAccountSuggestion.Source = "team"`): die Namenssuche räumt beim erneuten Suchen nur Vorschläge OHNE
   Source weg — sonst verschwänden die der Team-Suche bei jedem Rescan, weil sie sie nie bestätigen kann.

@@ -32,6 +32,10 @@ public sealed partial class LeagueTeamScout
         "Rattenberg", "Zillertal", "Wattens", "Kitzbühel", "Reutte", "Hall", "Mils", "Fügen", "Kundl",
     };
     public const double ClubMargin = 1.3;
+    /// <summary>Die gemeinsamen Stellungen müssen im Schnitt mindestens bis zu diesem Halbzug reichen (0.614.0). In offenen
+    /// Team-Battles (Quarantäne-Liga) sind viele Teilnehmer keine Ligaspieler — „passt am besten unter den Vereinsspielern" traf dort
+    /// schon mit dem ersten Zug allein (gemessen: 1,6 und 2,4 bei zwei falschen Treffern; die bestätigten der Online-TMM 2021 meist 4–11).</summary>
+    public const double MinDepth = 4.0;
     /// <summary><see cref="LeagueAccountSuggestion.Source"/> der Vorschläge dieser Suche.</summary>
     public const string Source = "team";
     public const int MinGames = 20, MaxGames = 100, RecheckDays = 90;
@@ -80,6 +84,17 @@ public sealed partial class LeagueTeamScout
     }
 
     public static bool IsLocalTeam(string? name, IEnumerable<string> places) => ClubKeys(name, places).Count > 0;
+
+    /// <summary>
+    /// Nennt der Nutzername einen Vornamen aus den Meldelisten, der NICHT der des Spielers ist („Markus_Ragger" für Herbert,
+    /// „Peter-Dorfen" für Giorgio)? → dieser Vorname, sonst <c>null</c>. Getrennt wird an Nicht-Buchstaben und an Binnen-Großbuchstaben.
+    /// </summary>
+    public static string? OtherFirstName(string user, string playerName, IReadOnlySet<string> firstNames)
+    {
+        var own = LeagueAccountFinder.Tokens(LeagueAccountFinder.SplitName(playerName).First).ToHashSet();
+        var spaced = Regex.Replace(Regex.Replace(user, "([a-zäöüß])([A-ZÄÖÜ])", "$1 $2"), "[^A-Za-zÄÖÜäöüß]+", " ");
+        return LeagueAccountFinder.Tokens(spaced).FirstOrDefault(t => t.Length >= 3 && firstNames.Contains(t) && !own.Contains(t));
+    }
 
     /// <summary><c>GET /api/team/search</c> → (Kennung, Name).</summary>
     public static List<(string Id, string Name)> ParseTeamSearch(string json)
@@ -295,6 +310,8 @@ public sealed partial class LeagueTeamScout
         public required List<LeagueAccountFinder.Player> Season { get; init; }
         public required Dictionary<string, LeagueAccountFinder.Player> ByFide { get; init; }
         public required List<(string Fide, string Team)> AllTeams { get; init; }
+        /// <summary>Alle Vornamen der Meldelisten (klein, ab drei Buchstaben) — für <see cref="OtherFirstName"/>.</summary>
+        public required HashSet<string> FirstNames { get; init; }
         public Dictionary<string, LeagueFingerprint.Repertoire> Repertoires { get; } = new(StringComparer.Ordinal);
 
         public static async Task<Context> LoadAsync(AppDbContext db, CancellationToken ct)
@@ -307,8 +324,13 @@ public sealed partial class LeagueTeamScout
             var season = rows.Count > 0 ? rows[0].Season : null;
             var byFide = rows.GroupBy(r => r.FideId!).ToDictionary(g => g.Key,
                 g => new LeagueAccountFinder.Player(g.Key, g.First().Name, g.First().Fed, g.First().EloI is > 0 ? g.First().EloI : g.First().EloN, g.First().Team));
+            var firsts = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var n in await db.LeaguePlayers.AsNoTracking().Select(p => p.Name).Distinct().ToListAsync(ct))
+                foreach (var t in LeagueAccountFinder.Tokens(LeagueAccountFinder.SplitName(n).First))
+                    if (t.Length >= 3) firsts.Add(t);
             return new Context
             {
+                FirstNames = firsts,
                 Season = rows.Where(r => r.Season == season).GroupBy(r => r.FideId!).Select(g => byFide[g.Key]).ToList(),
                 ByFide = byFide,
                 AllTeams = rows.Select(r => (r.FideId!, r.Team)).Distinct().ToList(),
@@ -360,6 +382,9 @@ public sealed partial class LeagueTeamScout
         if (LeagueFingerprint.Best(depths) is not { } best) return "keine gemeinsame Stellung mit dem Verein";
         if (best.Ratio < ClubMargin) return $"Stellungen nicht eindeutig (Abstand {best.Ratio:0.0})";
         var player = ctx.ByFide[best.Fide];
+        if (best.Depth < MinDepth) return $"Stellungen → {player.Name}, aber gemeinsam nur bis Halbzug {best.Depth:0.0}";
+        if (OtherFirstName(a.DisplayName, player.Name, ctx.FirstNames) is { } other)
+            return $"Stellungen → {player.Name}, aber der Nutzername nennt einen anderen Vornamen („{other}“)";
         if (!LeagueAccountFinder.RatingPlausible(prof, player.Elo)) return $"Stellungen → {player.Name}, aber Wertung zu niedrig";
         var ev = new List<string>
         {
@@ -368,7 +393,7 @@ public sealed partial class LeagueTeamScout
         };
         if (prof.Rating is { } rt && player.Elo is { } elo && elo > 0 && rt >= elo - LeagueAccountFinder.FitBelow && rt <= elo + LeagueAccountFinder.FitAbove)
             ev.Add($"{prof.RatingLabel} {rt} passt zu Elo {elo}");
-        return await AddAsync(best.Fide, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt";
+        return await AddAsync(best.Fide, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt oder bei einem anderen Spieler";
     }
 
     private async Task<LeagueFingerprint.Repertoire> RepertoireAsync(string fide, Context ctx, CancellationToken ct)
@@ -385,13 +410,15 @@ public sealed partial class LeagueTeamScout
         return ctx.Repertoires[fide] = r;
     }
 
-    /// <summary>Vorschlag anlegen, wenn es das Konto für den Spieler weder als Konto noch als Vorschlag (auch verworfen) gibt.</summary>
+    /// <summary>Vorschlag anlegen, wenn es das Konto für den Spieler weder als Konto noch als Vorschlag (auch verworfen) gibt — und
+    /// bei KEINEM anderen Spieler als Konto eingetragen ist (0.614.0: ein selbst gemeldetes Konto eines Vereinskollegen kam sonst
+    /// über die Stellungen noch einmal als Vorschlag).</summary>
     /// <remarks>Vorher den Such-Eintrag samt Jahrgang holen — sonst bliebe das Konto eines Minderjährigen, den die Namenssuche
     /// noch nicht erfasst hat (andere Saison, Suche läuft noch), sichtbar.</remarks>
     private async Task<bool> AddAsync(string fide, LeagueAccountFinder.Profile prof, int score, List<string> evidence, CancellationToken ct)
     {
         var user = prof.User.ToLower();
-        if (await _db.LeagueOnlineAccounts.AnyAsync(x => x.FideId == fide && x.Site == prof.Site && x.UserName.ToLower() == user, ct)
+        if (await _db.LeagueOnlineAccounts.AnyAsync(x => x.Site == prof.Site && x.UserName.ToLower() == user, ct)
             || await _db.LeagueAccountSuggestions.AnyAsync(x => x.FideId == fide && x.Site == prof.Site && x.UserName.ToLower() == user, ct))
             return false;
         await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, fide, ct);
