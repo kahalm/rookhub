@@ -1,0 +1,408 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+
+namespace RookHub.Api.Services.League;
+
+/// <summary>
+/// Konto-Vorschläge aus dem Umfeld der Tiroler Vereine auf Lichess (0.612.0, Wunsch 2026-09-30: „auf Lichess gibt es Teams",
+/// „schau, was Schach Tirol sonst noch organisiert hat"). Die Namenssuche (<see cref="LeagueAccountFinder"/>) findet nur Konten,
+/// deren Nutzername aus dem Namen kommt — „Katzenpapa" oder „Trigonias" nie. Hier kommen die Konten aus zwei Quellen:
+/// <list type="bullet">
+/// <item><b>Mitglieder</b> der Tiroler Lichess-Teams (gefunden über die Team-Suche nach Tiroler Orten, <see cref="DefaultPlaces"/>,
+///   nur Teams mit dem Ort im Namen);</item>
+/// <item><b>Team-Battles</b> dieser Teams (Online-TMM 2021, Quarantäne-Liga …): wer für ein Tiroler Team gespielt hat, gehört zu
+///   diesem Verein.</item>
+/// </list>
+/// Jedes Konto wird einmal geprüft (<see cref="RecheckDays"/>): steht ein Klarname im Profil, der zu einem Spieler der Saison
+/// passt, gilt das Urteil der Namenssuche (Land, Wertung, Vorname …) mit der Team-Herkunft als Hinweis. Ohne Klarname, aber mit
+/// Verein aus einem Team-Battle, entscheiden die Stellungen (<see cref="LeagueFingerprint"/>) unter den Spielern DES Vereins —
+/// nur mit mindestens <see cref="ClubMargin"/>-fachem Abstand zum Zweiten (an der Meldeliste der Online-TMM 2021 geprüft: 11 von
+/// 13 richtig). Vorschläge für Minderjährige bleiben verborgen wie überall (<see cref="LeagueHiddenAccounts"/>).
+/// </summary>
+public sealed partial class LeagueTeamScout
+{
+    public static readonly string[] DefaultPlaces =
+    {
+        "Tirol", "Innsbruck", "Schwaz", "Kufstein", "Wörgl", "Telfs", "Jenbach", "Absam", "Zirl", "Landeck", "Imst", "Lienz",
+        "Rattenberg", "Zillertal", "Wattens", "Kitzbühel", "Reutte", "Hall", "Mils", "Fügen", "Kundl",
+    };
+    public const double ClubMargin = 1.3;
+    /// <summary><see cref="LeagueAccountSuggestion.Source"/> der Vorschläge dieser Suche.</summary>
+    public const string Source = "team";
+    public const int MinGames = 20, MaxGames = 100, RecheckDays = 90;
+    /// <summary>Teams, Mitglieder und Team-Battles werden so oft neu gelesen.</summary>
+    public static readonly TimeSpan PoolEvery = TimeSpan.FromDays(30);
+    /// <summary>So viele Profile fragt ein <c>POST /api/users</c> auf einmal.</summary>
+    public const int ProfileChunk = 100;
+
+    private readonly AppDbContext _db;
+    private readonly HttpClient _http;
+    private readonly ILogger<LeagueTeamScout> _logger;
+    private readonly string _lichess;
+    private readonly string[] _places;
+
+    public LeagueTeamScout(AppDbContext db, HttpClient http, ILogger<LeagueTeamScout> logger, IConfiguration? config = null)
+    {
+        _db = db;
+        _http = http;
+        _logger = logger;
+        _lichess = (config?["Lichess:SiteUrl"] ?? "https://lichess.org").TrimEnd('/');
+        var p = config?["LeagueOnline:TeamPlaces"];
+        _places = string.IsNullOrWhiteSpace(p) ? DefaultPlaces : p.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    public TimeSpan Pause { get; init; } = TimeSpan.FromSeconds(1);
+
+    // ── Lesen (rein, getestet) ──────────────────────────────────────────────────────────────────
+
+    /// <summary>Beide Schreibweisen eines Orts, klein: „Wörgl" → „woergl" und „worgl".</summary>
+    private static IEnumerable<string> Forms(string place)
+    {
+        var a = LeagueAccountFinder.Plain(place).ToLowerInvariant();
+        var b = new string(place.Normalize(NormalizationForm.FormD).Where(c => c < 128).ToArray()).ToLowerInvariant();
+        return new[] { a, b }.Distinct();
+    }
+
+    private static string Norm(string? s) => Regex.Replace(LeagueAccountFinder.Plain(s).ToLowerInvariant(), "[^a-z0-9 ]", " ");
+
+    /// <summary>Die Orte, die als Wort im Namen stehen („Spielgemeinschaft Kufstein / Wörgl" → kufstein, woergl).</summary>
+    public static List<string> ClubKeys(string? name, IEnumerable<string> places)
+    {
+        var n = " " + Norm(name) + " ";
+        var alt = " " + Regex.Replace(new string((name ?? "").Normalize(NormalizationForm.FormD).Where(c => c < 128).ToArray()).ToLowerInvariant(), "[^a-z0-9 ]", " ") + " ";
+        return places.Where(p => Forms(p).Any(f => Regex.IsMatch(n, $@"\b{Regex.Escape(f)}\b") || Regex.IsMatch(alt, $@"\b{Regex.Escape(f)}\b")))
+            .Select(p => Forms(p).First()).Distinct().ToList();
+    }
+
+    public static bool IsLocalTeam(string? name, IEnumerable<string> places) => ClubKeys(name, places).Count > 0;
+
+    /// <summary><c>GET /api/team/search</c> → (Kennung, Name).</summary>
+    public static List<(string Id, string Name)> ParseTeamSearch(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("currentPageResults", out var arr) || arr.ValueKind != JsonValueKind.Array) return new();
+        return arr.EnumerateArray().Select(t => (Str(t, "id"), Str(t, "name"))).Where(t => t.Item1 is not null && t.Item2 is not null)
+            .Select(t => (t.Item1!, t.Item2!)).ToList();
+    }
+
+    /// <summary>ndjson-Zeilen (Mitglieder, Turnierliste, Ergebnisse) als Elemente — kaputte Zeilen fallen weg.</summary>
+    private static IEnumerable<JsonElement> Lines(string ndjson)
+    {
+        foreach (var raw in ndjson.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            JsonElement e;
+            try { e = JsonDocument.Parse(line).RootElement.Clone(); }
+            catch (JsonException) { continue; }
+            yield return e;
+        }
+    }
+
+    /// <summary><c>GET /api/team/{id}/users</c> → Nutzernamen.</summary>
+    public static List<string> ParseTeamMembers(string ndjson) =>
+        Lines(ndjson).Select(e => Str(e, "username") ?? Str(e, "id")).Where(u => !string.IsNullOrEmpty(u)).Select(u => u!).ToList();
+
+    /// <summary><c>GET /api/team/{id}/arena</c> → Kennungen der Team-Battles (Arenen mit <c>teamBattle</c>).</summary>
+    public static List<string> ParseTeamBattles(string ndjson) =>
+        Lines(ndjson).Where(e => e.TryGetProperty("teamBattle", out var tb) && tb.ValueKind == JsonValueKind.Object)
+            .Select(e => Str(e, "id")).Where(id => id is not null).Select(id => id!).ToList();
+
+    /// <summary><c>GET /api/tournament/{id}</c> → die Teams des Battles (Kennung → Name; Lichess liefert [Name, Flair]).</summary>
+    public static Dictionary<string, string> ParseBattleTeams(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var res = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!doc.RootElement.TryGetProperty("teamBattle", out var tb) || !tb.TryGetProperty("teams", out var teams)
+            || teams.ValueKind != JsonValueKind.Object) return res;
+        foreach (var t in teams.EnumerateObject())
+        {
+            var name = t.Value.ValueKind switch
+            {
+                JsonValueKind.String => t.Value.GetString(),
+                JsonValueKind.Array when t.Value.GetArrayLength() > 0 && t.Value[0].ValueKind == JsonValueKind.String => t.Value[0].GetString(),
+                _ => null,
+            };
+            if (!string.IsNullOrEmpty(name)) res[t.Name] = name;
+        }
+        return res;
+    }
+
+    /// <summary><c>GET /api/tournament/{id}/results</c> → (Nutzername, Team-Kennung).</summary>
+    public static List<(string User, string? Team)> ParseResults(string ndjson) =>
+        Lines(ndjson).Select(e => (Str(e, "username"), Str(e, "team"))).Where(x => x.Item1 is not null).Select(x => (x.Item1!, x.Item2)).ToList();
+
+    private static string? Str(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    // ── Abrufen ─────────────────────────────────────────────────────────────────────────────────
+
+    private async Task<string?> GetAsync(string url, CancellationToken ct, string? accept = null)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        if (accept is not null) req.Headers.Accept.ParseAdd(accept);
+        using var r = await _http.SendAsync(req, ct);
+        if (r.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("Lichess");
+        if (r.StatusCode == HttpStatusCode.NotFound) return null;
+        r.EnsureSuccessStatusCode();
+        var body = await r.Content.ReadAsStringAsync(ct);
+        if (Pause > TimeSpan.Zero) await Task.Delay(Pause, ct);
+        return body;
+    }
+
+    private static string Cut(string s, int max) => s.Length <= max ? s : s[..max];
+
+    private static string Join(string? existing, string add, int max)
+    {
+        var parts = (existing ?? "").Split("; ", StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (!parts.Contains(add)) parts.Add(add);
+        var s = string.Join("; ", parts);
+        if (s.Length <= max) return s;
+        var cut = s.LastIndexOf("; ", max, StringComparison.Ordinal);
+        return cut > 0 ? s[..cut] : s[..max];
+    }
+
+    /// <summary>
+    /// Tiroler Teams finden, ihre Mitglieder und die Spieler ihrer Team-Battles in den Bestand nehmen. → neu aufgenommene Konten.
+    /// </summary>
+    public async Task<int> RefreshPoolAsync(CancellationToken ct)
+    {
+        var teams = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var place in _places)
+        {
+            var json = await GetAsync($"{_lichess}/api/team/search?text={Uri.EscapeDataString(place)}", ct);
+            if (json is null) continue;
+            foreach (var (id, name) in ParseTeamSearch(json))
+                if (IsLocalTeam(name, _places)) teams[id] = name;
+        }
+        var pool = await _db.LeagueScoutAccounts.ToDictionaryAsync(a => a.UserName, ct);
+        var added = 0;
+        LeagueScoutAccount Upsert(string user)
+        {
+            var key = user.ToLowerInvariant();
+            if (!pool.TryGetValue(key, out var a))
+            {
+                a = new LeagueScoutAccount { UserName = Cut(key, 30), DisplayName = Cut(user, 30), FoundAt = DateTime.UtcNow };
+                pool[key] = a;
+                _db.LeagueScoutAccounts.Add(a);
+                added++;
+            }
+            return a;
+        }
+        var battles = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (id, name) in teams)
+        {
+            if (await GetAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/users", ct, "application/x-ndjson") is { } members)
+                foreach (var u in ParseTeamMembers(members))
+                {
+                    var a = Upsert(u);
+                    a.Teams = Join(a.Teams, name, 500);
+                }
+            if (await GetAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/arena?max=500", ct, "application/x-ndjson") is { } arenas)
+                foreach (var b in ParseTeamBattles(arenas)) battles.Add(b);
+        }
+        foreach (var b in battles)
+        {
+            if (await GetAsync($"{_lichess}/api/tournament/{b}", ct) is not { } info) continue;
+            var names = ParseBattleTeams(info);
+            if (!names.Keys.Any(teams.ContainsKey)) continue;
+            if (await GetAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson") is not { } results) continue;
+            foreach (var (user, team) in ParseResults(results))
+            {
+                if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
+                var a = Upsert(user);
+                a.PlayedFor = Join(a.PlayedFor, teamName, 200);
+            }
+        }
+        await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("LeagueHub: Team-Suche — {Teams} Tiroler Teams, {Battles} Team-Battles, {Added} neue Konten",
+            teams.Count, battles.Count, added);
+        return added;
+    }
+
+    /// <summary>
+    /// Ein Durchgang: mit <paramref name="refreshPool"/> erst den Bestand erneuern (der Takt ruft das höchstens alle
+    /// <see cref="PoolEvery"/>), dann fällige Konten prüfen, bis <paramref name="budget"/> um ist. → noch Konten offen?
+    /// </summary>
+    public async Task<bool> RunOnceAsync(TimeSpan budget, bool refreshPool, CancellationToken ct)
+    {
+        var started = DateTime.UtcNow;
+        try
+        {
+            if (refreshPool) await RefreshPoolAsync(ct);
+            var due = DateTime.UtcNow.AddDays(-RecheckDays);
+            var queue = await _db.LeagueScoutAccounts.Where(a => a.CheckedAt == null || a.CheckedAt < due)
+                .OrderBy(a => a.CheckedAt.HasValue).ThenBy(a => a.CheckedAt).ThenBy(a => a.UserName).Select(a => a.UserName).ToListAsync(ct);
+            if (queue.Count == 0) return false;
+            var ctx = await Context.LoadAsync(_db, ct);
+            var done = 0;
+            for (var i = 0; i < queue.Count && DateTime.UtcNow - started < budget; i += ProfileChunk)
+            {
+                var chunk = queue.Skip(i).Take(ProfileChunk).ToList();
+                var profiles = await ProfilesAsync(chunk, ct);
+                foreach (var user in chunk)
+                {
+                    if (DateTime.UtcNow - started >= budget) break;
+                    var a = await _db.LeagueScoutAccounts.FirstAsync(x => x.UserName == user, ct);
+                    try
+                    {
+                        a.Result = Cut(await CheckAsync(a, profiles.GetValueOrDefault(user), ctx, ct), 300);
+                        a.CheckedAt = DateTime.UtcNow;
+                    }
+                    catch (HttpRequestException e)
+                    {
+                        // Ein Konto, dessen Partien gerade nicht zu holen sind, hält die übrigen nicht auf — morgen wieder.
+                        _logger.LogWarning("LeagueHub: Team-Suche, Konto {User}: {Message}", user, e.Message);
+                        a.Result = Cut("Abruf gescheitert: " + e.Message, 300);
+                        a.CheckedAt = DateTime.UtcNow.AddDays(1 - RecheckDays);
+                    }
+                    await _db.SaveChangesAsync(ct);
+                    done++;
+                }
+            }
+            return done < queue.Count;
+        }
+        catch (LeagueOnlineSync.RateLimitedException e)
+        {
+            _logger.LogWarning("LeagueHub: {Message} — Team-Suche pausiert", e.Message);
+            return true;
+        }
+    }
+
+    private async Task<Dictionary<string, LeagueAccountFinder.Profile>> ProfilesAsync(List<string> users, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{_lichess}/api/users")
+        {
+            Content = new StringContent(string.Join(',', users), Encoding.UTF8, "text/plain"),
+        };
+        using var r = await _http.SendAsync(req, ct);
+        if (r.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("Lichess");
+        r.EnsureSuccessStatusCode();
+        var list = LeagueAccountFinder.ParseLichessUsers(await r.Content.ReadAsStringAsync(ct));
+        if (Pause > TimeSpan.Zero) await Task.Delay(Pause, ct);
+        return list.GroupBy(p => p.User.ToLowerInvariant()).ToDictionary(g => g.Key, g => g.First());
+    }
+
+    /// <summary>Spieler der Saison (für Klarnamen) und aller Saisonen je Verein (für Stellungen), dazu zwischengespeicherte
+    /// Repertoires — einmal je Durchgang geladen.</summary>
+    private sealed class Context
+    {
+        public required List<LeagueAccountFinder.Player> Season { get; init; }
+        public required Dictionary<string, LeagueAccountFinder.Player> ByFide { get; init; }
+        public required List<(string Fide, string Team)> AllTeams { get; init; }
+        public Dictionary<string, LeagueFingerprint.Repertoire> Repertoires { get; } = new(StringComparer.Ordinal);
+
+        public static async Task<Context> LoadAsync(AppDbContext db, CancellationToken ct)
+        {
+            var rows = await (from p in db.LeaguePlayers.AsNoTracking()
+                              join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
+                              where p.FideId != null && p.FideId != ""
+                              orderby t.Season descending
+                              select new { p.FideId, p.Name, p.Fed, p.EloI, p.EloN, p.Team, t.Season }).ToListAsync(ct);
+            var season = rows.Count > 0 ? rows[0].Season : null;
+            var byFide = rows.GroupBy(r => r.FideId!).ToDictionary(g => g.Key,
+                g => new LeagueAccountFinder.Player(g.Key, g.First().Name, g.First().Fed, g.First().EloI is > 0 ? g.First().EloI : g.First().EloN, g.First().Team));
+            return new Context
+            {
+                Season = rows.Where(r => r.Season == season).GroupBy(r => r.FideId!).Select(g => byFide[g.Key]).ToList(),
+                ByFide = byFide,
+                AllTeams = rows.Select(r => (r.FideId!, r.Team)).Distinct().ToList(),
+            };
+        }
+    }
+
+    /// <summary>Ein Konto prüfen: Klarname, sonst Stellungen unter den Spielern des Vereins. → Ergebnis in Worten.</summary>
+    private async Task<string> CheckAsync(LeagueScoutAccount a, LeagueAccountFinder.Profile? prof, Context ctx, CancellationToken ct)
+    {
+        if (prof is null) return "Konto nicht mehr da";
+        if (prof.Closed) return "Konto gesperrt/geschlossen";
+        var origin = a.PlayedFor is { Length: > 0 } pf
+            ? $"spielte für „{pf.Split("; ")[0]}“ (Lichess-Team-Battle)"
+            : $"Mitglied im Lichess-Team „{(a.Teams ?? "").Split("; ")[0]}“";
+
+        // 1) Klarname im Profil
+        var toks = LeagueAccountFinder.Tokens(prof.RealName);
+        if (toks.Count > 0)
+        {
+            var found = 0;
+            foreach (var p in ctx.Season)
+            {
+                var (last, first) = LeagueAccountFinder.SplitName(p.Name);
+                var lt = LeagueAccountFinder.Tokens(last);
+                if (lt.Count == 0 || !lt.All(toks.Contains)
+                    || LeagueAccountFinder.FirstNameMatch(toks, lt, LeagueAccountFinder.Tokens(first)) != LeagueAccountFinder.NameFit.Full) continue;
+                var scan = await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, p.Fide, ct);
+                if (LeagueAccountFinder.Judge(p, prof, derived: false, scan.Federation, lead: origin) is not { } v) continue;
+                if (await AddAsync(p.Fide, prof, v.Score + 1, v.Evidence, ct)) found++;
+            }
+            if (found > 0) return $"Klarname: {found} Vorschlag/Vorschläge";
+        }
+
+        // 2) Verein + Stellungen
+        if (a.PlayedFor is not { Length: > 0 }) return toks.Count > 0 ? "Klarname passt zu keinem Spieler der Saison" : "kein Klarname, kein Verein";
+        var keys = ClubKeys(a.PlayedFor, _places);
+        var club = ctx.AllTeams.Where(t => keys.Any(k => Regex.IsMatch(" " + Norm(t.Team) + " ", $@"\b{Regex.Escape(k)}\b")))
+            .Select(t => t.Fide).Distinct().ToList();
+        if (club.Count < 2) return "zu wenige Vereinsspieler zum Vergleich";
+        var ndjson = await GetAsync($"{_lichess}/api/games/user/{Uri.EscapeDataString(a.UserName)}?max={MaxGames}&moves=true&clocks=false"
+                                   + "&evals=false&opening=false&pgnInJson=false", ct, "application/x-ndjson");
+        var games = ndjson is null ? new List<LeagueOnlineSync.Game>() : LeagueOnlineSync.ParseLichess(ndjson, a.UserName).Games;
+        var usable = LeagueFingerprint.Usable(games, g => g.Speed);
+        if (usable.Count < MinGames) return $"kein Klarname, nur {usable.Count} Partien";
+        var online = usable.Select(g => ((IReadOnlyList<string>)g.Moves, g.White)).ToList();
+        var depths = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (var fide in club) depths[fide] = LeagueFingerprint.Depth(online, await RepertoireAsync(fide, ctx, ct));
+        if (LeagueFingerprint.Best(depths) is not { } best) return "keine gemeinsame Stellung mit dem Verein";
+        if (best.Ratio < ClubMargin) return $"Stellungen nicht eindeutig (Abstand {best.Ratio:0.0})";
+        var player = ctx.ByFide[best.Fide];
+        if (!LeagueAccountFinder.RatingPlausible(prof, player.Elo)) return $"Stellungen → {player.Name}, aber Wertung zu niedrig";
+        var ev = new List<string>
+        {
+            origin,
+            $"unter {depths.Count} Spielern des Vereins passen seine Stellungen am besten zu ihm ({best.Ratio:0.0}× vor dem Zweiten)",
+        };
+        if (prof.Rating is { } rt && player.Elo is { } elo && elo > 0 && rt >= elo - LeagueAccountFinder.FitBelow && rt <= elo + LeagueAccountFinder.FitAbove)
+            ev.Add($"{prof.RatingLabel} {rt} passt zu Elo {elo}");
+        return await AddAsync(best.Fide, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt";
+    }
+
+    private async Task<LeagueFingerprint.Repertoire> RepertoireAsync(string fide, Context ctx, CancellationToken ct)
+    {
+        if (ctx.Repertoires.TryGetValue(fide, out var r)) return r;
+        r = new LeagueFingerprint.Repertoire();
+        var (name, games) = await new LeagueProfileStore(_db).GamesAsync(fide, ct);
+        foreach (var g in games)
+        {
+            if (g.Headers.ContainsKey("FEN") || LeagueProfileBuilder.ColorOf(g, fide, name) is not { } color) continue;
+            var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
+            r.Add(PgnParser.ExtractMainlineSans(moveText), color == "w");
+        }
+        return ctx.Repertoires[fide] = r;
+    }
+
+    /// <summary>Vorschlag anlegen, wenn es das Konto für den Spieler weder als Konto noch als Vorschlag (auch verworfen) gibt.</summary>
+    /// <remarks>Vorher den Such-Eintrag samt Jahrgang holen — sonst bliebe das Konto eines Minderjährigen, den die Namenssuche
+    /// noch nicht erfasst hat (andere Saison, Suche läuft noch), sichtbar.</remarks>
+    private async Task<bool> AddAsync(string fide, LeagueAccountFinder.Profile prof, int score, List<string> evidence, CancellationToken ct)
+    {
+        var user = prof.User.ToLower();
+        if (await _db.LeagueOnlineAccounts.AnyAsync(x => x.FideId == fide && x.Site == prof.Site && x.UserName.ToLower() == user, ct)
+            || await _db.LeagueAccountSuggestions.AnyAsync(x => x.FideId == fide && x.Site == prof.Site && x.UserName.ToLower() == user, ct))
+            return false;
+        await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, fide, ct);
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+        {
+            FideId = fide, Site = prof.Site, UserName = prof.User, Url = prof.Url, Score = score,
+            Evidence = Cut(string.Join("; ", evidence), 500), ProfileName = prof.RealName is { } rn ? Cut(rn, 120) : null,
+            Location = prof.Location is { } loc ? Cut(loc, 120) : null, LastActive = prof.LastActive,
+            Status = LeagueSuggestionStatus.Open, CreatedAt = DateTime.UtcNow, Source = Source,
+        });
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+}

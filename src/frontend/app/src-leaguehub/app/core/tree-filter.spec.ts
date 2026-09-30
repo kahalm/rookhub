@@ -8,10 +8,12 @@ describe('tree-filter', () => {
   it('normalisiert Gespeichertes und Unsinn', () => {
     expect(normalizeTreeFilter(null)).toEqual(DEFAULT_TREE_FILTER);
     expect(normalizeTreeFilter('x')).toEqual(DEFAULT_TREE_FILTER);
-    expect(normalizeTreeFilter({ source: 'both', speeds: ['rapid', 'blitz', 'hyper'], years: 5, onlySure: true }))
-      .toEqual({ source: 'both', speeds: ['blitz', 'rapid'], years: 5, onlySure: true });
-    expect(normalizeTreeFilter({ source: 'alles', speeds: 'blitz', years: 4, onlySure: 'ja' }))
-      .toEqual({ source: 'board', speeds: [], years: null, onlySure: false });
+    expect(normalizeTreeFilter({ source: 'both', speeds: ['rapid', 'blitz', 'hyper'], years: 5, withUnsure: true }))
+      .toEqual({ source: 'both', speeds: ['blitz', 'rapid'], years: 5, withUnsure: true });
+    expect(normalizeTreeFilter({ source: 'alles', speeds: 'blitz', years: 4, withUnsure: 'ja' }))
+      .toEqual({ source: 'board', speeds: [], years: null, withUnsure: false });
+    // Gespeichert vor 0.612.0 (onlySure): unsichere bleiben draussen, die neue Vorgabe.
+    expect(normalizeTreeFilter({ source: 'both', onlySure: false }).withUnsure).toBeFalse();
   });
 
   it('wirksame Quelle hängt an den Partienzahlen', () => {

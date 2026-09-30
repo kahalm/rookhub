@@ -60,8 +60,8 @@ export function fenAfter(line: readonly string[]): { fen: string; last?: [string
               }
             </div>
             @if (!token) {
-              <label class="check small"><input type="checkbox" [checked]="active().onlySure" (change)="setOnlySure($any($event.target).checked)" />
-                nur gesicherte Konten</label>
+              <label class="check small" title="Konten, bei denen nicht sicher ist, dass sie ihm gehören — standardmäßig nicht im Baum"><input type="checkbox" [checked]="active().withUnsure" (change)="setWithUnsure($any($event.target).checked)" />
+                auch unsichere Konten@if (unsureGames > 0) { ({{ unsureGames }} Partien) }</label>
             }
           }
         }
@@ -108,7 +108,7 @@ export function fenAfter(line: readonly string[]): { fen: string; last?: [string
             }
             @if (d.ended) { <p class="muted small">{{ d.ended }} Partien enden hier (kürzer oder ohne weitere Züge).</p> }
             <p class="muted small">Score aus Sicht von {{ d.name.split(',')[0] }}. {{ color() === 'w' ? 'Weiß' : 'Schwarz' }}-Partien.
-              @if (active().source !== 'board') { Online-Partien der eingetragenen Konten, höchstens der letzten fünf Jahre. }</p>
+              @if (active().source !== 'board') { Online-Partien der gesicherten Konten (unsichere per Schalter), höchstens der letzten fünf Jahre. }</p>
           }
         </div>
       </div>
@@ -122,6 +122,8 @@ export class OpeningTreeComponent implements OnChanges {
   /** Brett- bzw. geholte Online-Partien des Spielers (Karte) — entscheiden, welche Filter es gibt. */
   @Input() boardGames = 0;
   @Input() onlineGames = 0;
+  /** Davon aus unsicheren Konten — zählen nur mit dem Schalter (0.612.0). */
+  @Input() unsureGames = 0;
 
   readonly sources: { k: TreeSource; label: string }[] = [
     { k: 'board', label: 'Brett' }, { k: 'both', label: 'Brett + online' }, { k: 'online', label: 'Online' },
@@ -171,8 +173,8 @@ export class OpeningTreeComponent implements OnChanges {
     this.update({ ...this.filter(), years: TREE_YEARS.includes(years) ? years : null });
   }
 
-  setOnlySure(onlySure: boolean): void {
-    this.update({ ...this.filter(), onlySure });
+  setWithUnsure(withUnsure: boolean): void {
+    this.update({ ...this.filter(), withUnsure });
   }
 
   private update(f: TreeFilter): void {

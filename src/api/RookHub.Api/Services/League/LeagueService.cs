@@ -111,8 +111,10 @@ public sealed class LeagueService
         var hidden = (await LeagueHiddenAccounts.FidesAsync(_db, new[] { fide }, ct)).Contains(fide);
         card["accounts"] = new JsonArray((hidden && onlySure ? new List<LeagueOnlineAccount>() : shown)
             .Select(a => (JsonNode)LeagueOnlineAccountService.ToJson(a, full: !onlySure, hidden: hidden)).ToArray());
-        // Online-Partien der gezeigten Konten — der Baum kann sie einbeziehen, auch ohne eine einzige Brettpartie.
+        // Online-Partien der gezeigten Konten — der Baum kann sie einbeziehen, auch ohne eine einzige Brettpartie. Die der
+        // UNSICHEREN zählt der Baum seit 0.612.0 nur auf Wunsch mit (Schalter „auch unsichere Konten").
         card["online"] = shown.Sum(a => a.GameCount);
+        card["onlineUnsure"] = shown.Where(a => a.Confidence != LeagueOnlineAccountService.Sure).Sum(a => a.GameCount);
         return card;
     }
 

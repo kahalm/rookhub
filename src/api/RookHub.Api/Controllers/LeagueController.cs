@@ -57,12 +57,12 @@ public class LeagueController : BaseApiController
 
     /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen (englische SAN); Filter (0.605.0)
     /// <c>source</c> board/both/online, <c>speeds</c> = Komma-Liste für Online-Partien, <c>years</c> = nur die letzten x Jahre,
-    /// <c>sure=true</c> = nur Online-Partien gesicherter Konten (über einen Teilen-Link immer).</summary>
+    /// Online-Partien nur gesicherter Konten — <c>unsure=true</c> nimmt die unsicheren dazu (0.612.0; über einen Teilen-Link nie).</summary>
     [HttpGet("player/{fide}/tree")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Tree(string fide, [FromQuery] string? color, [FromQuery] string? line, [FromQuery] string? source,
-        [FromQuery] string? speeds, [FromQuery] int? years, [FromQuery] bool? sure, CancellationToken ct) =>
-        await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: sure == true))
+        [FromQuery] string? speeds, [FromQuery] int? years, [FromQuery] bool? unsure, CancellationToken ct) =>
+        await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true))
             is { } t ? Ok(t) : NotFound();
 
     // ---- Online-Konten (0.605.0) ----------------------------------------------------------------

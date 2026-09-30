@@ -208,6 +208,9 @@ public class LeagueAccountSuggestion
     public LeagueSuggestionStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? DecidedAt { get; set; }
+    /// <summary>Wer vorgeschlagen hat: <c>null</c> = die Namenssuche (<c>LeagueAccountFinder</c>), <c>team</c> = die Team-Suche
+    /// (<c>LeagueTeamScout</c>, 0.612.0). Die Namenssuche räumt beim erneuten Suchen nur IHRE offenen Vorschläge weg.</summary>
+    public string? Source { get; set; }
 }
 
 public enum LeagueSuggestionStatus { Open = 0, Rejected = 1 }
@@ -250,6 +253,26 @@ public class LeagueBroadcast
     /// <summary>Partien mit Ligaspielern beim letzten Einspielen.</summary>
     public int Games { get; set; }
     public string? Error { get; set; }
+}
+
+/// <summary>
+/// Ein Lichess-Konto aus dem Umfeld der Tiroler Vereine (0.612.0): Mitglied eines Tiroler Lichess-Teams oder Spieler für ein
+/// solches in einem Team-Battle (Online-TMM 2021, Quarantäne-Liga …). Die Team-Suche (<c>LeagueTeamScout</c>) prüft jedes Konto
+/// einmal — Klarname im Profil, sonst Stellungen gegen die Spieler des Vereins — und legt Treffer als Vorschläge ab.
+/// </summary>
+public class LeagueScoutAccount
+{
+    /// <summary>Lichess-Kennung (klein).</summary>
+    public string UserName { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    /// <summary>Die Tiroler Teams, in denen es Mitglied ist (durch „; " getrennt).</summary>
+    public string? Teams { get; set; }
+    /// <summary>Für welches Team es in einem Team-Battle gespielt hat — der Verein, gegen dessen Spieler die Stellungen zählen.</summary>
+    public string? PlayedFor { get; set; }
+    public DateTime FoundAt { get; set; }
+    public DateTime? CheckedAt { get; set; }
+    /// <summary>Was die Prüfung ergab („Vorschlag für …", „kein Klarname, zu wenige Partien" …).</summary>
+    public string? Result { get; set; }
 }
 
 /// <summary>Öffentlicher Teilen-Link auf genau eine Begegnung (Token = Geheimnis, 144 Bit).</summary>

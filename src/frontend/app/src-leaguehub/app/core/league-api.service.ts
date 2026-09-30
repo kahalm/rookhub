@@ -45,7 +45,7 @@ export class LeagueApiService {
     if (filter && filter.source !== 'board') {
       params = params.set('source', filter.source);
       if (filter.speeds.length) params = params.set('speeds', filter.speeds.join(','));
-      if (filter.onlySure) params = params.set('sure', 'true');
+      if (filter.withUnsure) params = params.set('unsure', 'true');
     }
     if (filter?.years) params = params.set('years', filter.years);
     return firstValueFrom(this.http.get<OpeningTree>(`${this.base(token)}/player/${encodeURIComponent(fide)}/tree`, { params }));

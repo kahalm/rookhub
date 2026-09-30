@@ -64,6 +64,15 @@ public sealed class LeagueProfileStore
         return all.OrderByDescending(g => g.Headers.TryGetValue("Date", out var d) ? d : "", StringComparer.Ordinal).ToList();
     }
 
+    /// <summary>Alle Brettpartien eines Spielers (fremde + Vereinspartien) samt seinem Namen — für den Stellungs-Abgleich der
+    /// Team-Suche (<see cref="LeagueTeamScout"/>). Leer, wenn es keine Karte gibt.</summary>
+    public async Task<(string Name, List<LeagueProfileBuilder.Game> Games)> GamesAsync(string fide, CancellationToken ct)
+    {
+        var row = await _db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => new { p.Name, p.Pgn }).FirstOrDefaultAsync(ct);
+        var name = await NameAsync(fide, row?.Name, ct);
+        return (name, WithClub(Stored(row?.Pgn), await ClubGamesAsync(fide, ct)));
+    }
+
     private Task<List<LeagueClubGame>> ClubGamesAsync(string fide, CancellationToken ct) =>
         _db.LeagueClubGames.AsNoTracking().Where(g => g.WhiteFide == fide || g.BlackFide == fide).ToListAsync(ct);
 

@@ -368,7 +368,8 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
         if (!config.GetValue("LeagueOnline:Enabled", true)) return;
         var suggestions = config.GetValue("LeagueOnline:Suggestions", true);
         var broadcasts = config.GetValue("LeagueBroadcasts:Enabled", true);
-        DateTime? lastDiscovery = null;
+        var teamScout = config.GetValue("LeagueOnline:TeamScout", true);
+        DateTime? lastDiscovery = null, lastPool = null;
         var interval = TimeSpan.FromHours(Math.Clamp(config.GetValue("LeagueOnline:IntervalHours", 12), 1, 168));
         try { await Task.Delay(StartDelay, ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)
@@ -412,6 +413,30 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
                 catch (Exception e)
                 {
                     logger.LogError(e, "LeagueHub: Konto-Suche gescheitert");
+                }
+            }
+            // Tiroler Lichess-Teams und ihre Team-Battles (0.612.0): Bestand höchstens alle PoolEvery neu, dann Konten prüfen.
+            if (teamScout)
+            {
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    var scout = scope.ServiceProvider.GetRequiredService<LeagueTeamScout>();
+                    if (lastPool is null || DateTime.UtcNow - lastPool > LeagueTeamScout.PoolEvery)
+                    {
+                        await scout.RefreshPoolAsync(ct);
+                        lastPool = DateTime.UtcNow;
+                    }
+                    more |= await scout.RunOnceAsync(SearchBudget, refreshPool: false, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch (LeagueOnlineSync.RateLimitedException e)
+                {
+                    logger.LogWarning("LeagueHub: {Message} — Team-Suche pausiert", e.Message);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "LeagueHub: Team-Suche gescheitert");
                 }
             }
             try { await signal.WaitAsync(more ? BacklogPause : IdlePoll, ct); }

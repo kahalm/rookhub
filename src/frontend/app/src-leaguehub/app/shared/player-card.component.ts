@@ -72,7 +72,7 @@ type Show = 'w' | 's' | 'b';
             </div>
             @if (treeOpen()) {
               <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'"
-                               [boardGames]="c.n" [onlineGames]="c.online ?? 0" />
+                               [boardGames]="c.n" [onlineGames]="c.online ?? 0" [unsureGames]="c.onlineUnsure ?? 0" />
             }
           }
           @if (c.n) {

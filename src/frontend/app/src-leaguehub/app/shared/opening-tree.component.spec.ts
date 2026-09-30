@@ -5,7 +5,7 @@ import { OpeningTree, TreeFilter } from '../core/league.models';
 import { OpeningTreeComponent, fenAfter, moveLabel } from './opening-tree.component';
 import { TREE_FILTER_KEY } from '../core/tree-filter';
 
-const BOARD: TreeFilter = { source: 'board', speeds: [], years: null, onlySure: false };
+const BOARD: TreeFilter = { source: 'board', speeds: [], years: null, withUnsure: false };
 
 const TREE = (line: string, moves: OpeningTree['moves'], total = 10): OpeningTree =>
   ({ fide: '222', name: 'Hengl, Philip', color: 'w', line, total, ended: 0, moves });
@@ -114,7 +114,7 @@ describe('OpeningTreeComponent', () => {
     expect(api.tree).toHaveBeenCalledWith('222', 'w', [], null, { ...BOARD, source: 'online' });
     const board = el.querySelector<HTMLButtonElement>('.tree-filter .seg button')!;
     expect(board.disabled).toBeTrue();
-    expect(el.querySelector('.check')).not.toBeNull();                                // angemeldet: „nur gesicherte Konten"
+    expect(el.querySelector('.check')?.textContent).toContain('auch unsichere Konten');
   }));
 
   it('über einen Teilen-Link keine Wahl „nur gesicherte" (der Server liefert ohnehin nur diese)', fakeAsync(() => {

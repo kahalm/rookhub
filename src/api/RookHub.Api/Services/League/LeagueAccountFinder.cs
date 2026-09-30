@@ -124,7 +124,8 @@ public sealed partial class LeagueAccountFinder
     private static string Capital(string s) =>
         string.Join("", Regex.Split(s, "(?<=[-])").Select(p => p.Length == 0 ? p : char.ToUpperInvariant(p[0]) + p[1..]));
 
-    private static List<string> Tokens(string? s) =>
+    /// <summary>Namensteile, klein, Umlaute als ae/oe/ue, ohne Satzzeichen.</summary>
+    public static List<string> Tokens(string? s) =>
         Regex.Replace(Plain(s).ToLowerInvariant(), "[^a-z ]", " ").Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
 
     private static readonly Regex TirolRe = new(
@@ -146,7 +147,9 @@ public sealed partial class LeagueAccountFinder
     /// <paramref name="derived"/> = der Nutzername kam aus dem Namen (braucht einen Hinweis), sonst aus der Suche (braucht
     /// einen starken). <paramref name="fideFed"/> = Föderation laut FIDE (kann von der Meldeliste abweichen).
     /// </summary>
-    public static Verdict? Judge(Player p, Profile prof, bool derived, string? fideFed = null)
+    /// <param name="lead">Statt „Nutzername aus dem Namen / beginnt mit dem Nachnamen": woher das Konto kommt (Team-Suche, 0.612.0).
+    /// Dann gilt die Schwelle der Suche (ein starker Hinweis nötig) und es gibt keinen Punkt für den Nutzernamen.</param>
+    public static Verdict? Judge(Player p, Profile prof, bool derived, string? fideFed = null, string? lead = null)
     {
         if (prof.Closed) return null;
         var (last, first) = SplitName(p.Name);
@@ -195,7 +198,8 @@ public sealed partial class LeagueAccountFinder
             ev.Add("Tiroler Ort im Profil");
         }
         if (score < (derived ? NeedDerived : NeedSearched)) return null;
-        if (derived) { score += 1; ev.Insert(0, "Nutzername aus dem Namen"); }
+        if (lead is not null) ev.Insert(0, lead);
+        else if (derived) { score += 1; ev.Insert(0, "Nutzername aus dem Namen"); }
         else ev.Insert(0, "Nutzername beginnt mit dem Nachnamen");
         return new Verdict(score, ev);
     }
@@ -361,20 +365,24 @@ public sealed partial class LeagueAccountFinder
     }
 
     /// <summary>
-    /// Sucht für einen Spieler und legt neue Vorschläge an. Schon übernommene (Konto da) und verworfene kommen nicht wieder.
-    /// Drosselt eine Seite (429), wirft <see cref="LeagueOnlineSync.RateLimitedException"/> — der Stand bleibt unverändert.
+    /// Der Such-Eintrag eines Spielers samt Jahrgang und Föderation laut FIDE (über Lichess <c>/api/fide/player</c>) — angelegt
+    /// (Fassung 0, also für die Namenssuche weiter fällig), wenn es noch keinen gibt; ohne Jahrgang wird erneut gefragt. Speichert
+    /// NICHT. Jeder, der einen Vorschlag anlegt, holt ihn vorher: ohne Eintrag gälte ein Konto als sichtbar
+    /// (<see cref="LeagueHiddenAccounts"/>), auch das eines Minderjährigen. Drosselt Lichess, wirft
+    /// <see cref="LeagueOnlineSync.RateLimitedException"/>.
     /// </summary>
-    public async Task<ScanResult> ScanAsync(Player p, CancellationToken ct)
+    public static async Task<LeagueAccountScan> ScanRowAsync(AppDbContext db, HttpClient http, string lichess, string fide, CancellationToken ct)
     {
-        var scan = await _db.LeagueAccountScans.FirstOrDefaultAsync(s => s.FideId == p.Fide, ct);
+        var scan = db.LeagueAccountScans.Local.FirstOrDefault(s => s.FideId == fide)
+                   ?? await db.LeagueAccountScans.FirstOrDefaultAsync(s => s.FideId == fide, ct);
         if (scan is null)
         {
-            scan = new LeagueAccountScan { FideId = p.Fide };
-            _db.LeagueAccountScans.Add(scan);
+            scan = new LeagueAccountScan { FideId = fide };
+            db.LeagueAccountScans.Add(scan);
         }
         if (scan.BirthYear is null)
         {
-            using var r = await _http.GetAsync($"{_lichess}/api/fide/player/{Uri.EscapeDataString(p.Fide)}", ct);
+            using var r = await http.GetAsync($"{lichess}/api/fide/player/{Uri.EscapeDataString(fide)}", ct);
             if (r.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("Lichess");
             if (r.IsSuccessStatusCode)
             {
@@ -383,6 +391,16 @@ public sealed partial class LeagueAccountFinder
                 scan.Federation = Cut(fed, 8);
             }
         }
+        return scan;
+    }
+
+    /// <summary>
+    /// Sucht für einen Spieler und legt neue Vorschläge an. Schon übernommene (Konto da) und verworfene kommen nicht wieder.
+    /// Drosselt eine Seite (429), wirft <see cref="LeagueOnlineSync.RateLimitedException"/> — der Stand bleibt unverändert.
+    /// </summary>
+    public async Task<ScanResult> ScanAsync(Player p, CancellationToken ct)
+    {
+        var scan = await ScanRowAsync(_db, _http, _lichess, p.Fide, ct);
         var fideFed = scan.Federation;
         scan.ScannedAt = DateTime.UtcNow;
         // Minderjährige (oder Jahrgang unbekannt) werden seit 0.610.0 AUCH gesucht — ihre Konten bleiben aber verborgen
@@ -455,7 +473,9 @@ public sealed partial class LeagueAccountFinder
             found++;
         }
         // Offene Vorschläge, die diese Suche nicht mehr trägt (geänderte Regel, geändertes Profil), fallen weg; verworfene bleiben.
-        _db.LeagueAccountSuggestions.RemoveRange(known.Where(k => k.Status == LeagueSuggestionStatus.Open && !confirmed.Contains(Key(k.Site, k.UserName))));
+        // Vorschläge der Team-Suche (Source „team") gehören ihr — die Namenssuche kann sie gar nicht bestätigen.
+        _db.LeagueAccountSuggestions.RemoveRange(known.Where(k => k.Status == LeagueSuggestionStatus.Open && k.Source == null
+                                                                && !confirmed.Contains(Key(k.Site, k.UserName))));
         scan.Note = hiddenNote;
         scan.Found = found;
         scan.Version = CurrentVersion;

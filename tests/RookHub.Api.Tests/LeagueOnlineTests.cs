@@ -1,8 +1,10 @@
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services.League;
@@ -362,6 +364,26 @@ public class LeagueOnlineTests : IDisposable
         var e4 = (await Tree("e4", "online"))!;
         Assert.Equal((3, 0, 3, "c5:2 e5:1"), Summary(e4));
         Assert.Equal(75, e4["moves"]!.AsArray()[0]!["score"]!.GetValue<int>());      // c5: 1 + ½ aus 2 Partien
+    }
+
+    /// <summary>0.612.0 (Wunsch „unsichere standardmäßig nicht in den Baum, über einen Schalter dazu"): angemeldet zählt der Baum
+    /// ohne Angabe nur gesicherte Konten, <c>unsure=true</c> nimmt die unsicheren dazu; die Karte nennt, wie viele das wären.</summary>
+    [Fact]
+    public async Task TreeEndpoint_UnsureAccountsOnlyOnRequest_AndCardCountsThem()
+    {
+        await TreeSeedAsync();
+        foreach (var a in _db.LeagueOnlineAccounts) a.GameCount = a.Confidence == "sicher" ? 4 : 1;
+        await _db.SaveChangesAsync();
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var ctl = new LeagueController(league, null!, null!);
+        static JsonObject Body(IActionResult r) => (JsonObject)((OkObjectResult)r).Value!;
+
+        Assert.Equal((3, 0, 3, "e4:3"), Summary(Body(await ctl.Tree("222", "w", null, "online", null, null, null, default))));
+        Assert.Equal((3, 0, 3, "e4:3"), Summary(Body(await ctl.Tree("222", "w", null, "online", null, null, false, default))));
+        Assert.Equal((4, 0, 4, "e4:3 c4:1"), Summary(Body(await ctl.Tree("222", "w", null, "online", null, null, true, default))));
+
+        var card = (await league.CardAsync("222", onlySure: false, default))!;
+        Assert.Equal((5, 1), (card["online"]!.GetValue<int>(), card["onlineUnsure"]!.GetValue<int>()));
     }
 
     [Fact]

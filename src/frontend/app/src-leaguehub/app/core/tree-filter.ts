@@ -16,7 +16,8 @@ export const TREE_SPEEDS: { key: string; label: string }[] = [
 export const TREE_YEARS = [1, 2, 3, 5, 10];
 
 /** Vorgabe: wie vor 0.605.0 nur die Brettpartien — Online-Partien erst, wenn man sie dazunimmt. */
-export const DEFAULT_TREE_FILTER: TreeFilter = { source: 'board', speeds: [], years: null, onlySure: false };
+/** Vorgabe: nur Brettpartien; mit online nur gesicherte Konten (0.612.0 — unsichere per Schalter). */
+export const DEFAULT_TREE_FILTER: TreeFilter = { source: 'board', speeds: [], years: null, withUnsure: false };
 
 const SOURCES: TreeSource[] = ['board', 'both', 'online'];
 
@@ -28,7 +29,7 @@ export function normalizeTreeFilter(raw: unknown): TreeFilter {
     ? TREE_SPEEDS.map(s => s.key).filter(k => (o.speeds as unknown[]).includes(k))
     : [];
   const years = typeof o.years === 'number' && TREE_YEARS.includes(o.years) ? o.years : null;
-  return { source, speeds, years, onlySure: o.onlySure === true };
+  return { source, speeds, years, withUnsure: o.withUnsure === true };
 }
 
 /**

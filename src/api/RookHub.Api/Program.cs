@@ -289,6 +289,10 @@ try
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
         sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueBroadcastImport>>(), sp.GetRequiredService<IConfiguration>()));
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueTeamScout(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
+        sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueTeamScout>>(), sp.GetRequiredService<IConfiguration>()));
     builder.Services.AddHostedService<RookHub.Api.Services.League.LeagueOnlineSyncScheduler>();
     // ChessBase-Datenbanken (.cbh/.2cbh) → PGN für die Vereins-Datenbank (0.598.0).
     builder.Services.AddSingleton<RookHub.Api.Services.ChessBase.ChessBaseImportService>();

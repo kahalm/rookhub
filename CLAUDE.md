@@ -1635,8 +1635,10 @@ für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, scor
 **Filter** (0.605.0, Wunsch 2026-09-30: „online ja/nein, wenn online: Zeitformat; nur Partien der letzten x Jahre"):
 `source` = `board` (Vorgabe, wie vorher) / `both` / `online`, `speeds` = Komma-Liste aus `bullet,blitz,rapid,classical,correspondence`
 (leer = alle, gilt nur für Online-Partien), `years` = 1–50 (Online-Partien ab heute − x Jahre; Brettpartien tragen oft nur das Jahr,
-dort zählt jedes Jahr ab dem Jahr von heute − x), angemeldet `sure=true` = nur Online-Partien gesicherter Konten (über
-den Teilen-Link immer). Unbekannte Werte fallen still auf die Vorgabe (`LeagueProfileStore.TreeFilter.Parse`). Antwort zusätzlich
+dort zählt jedes Jahr ab dem Jahr von heute − x). Online-Partien zählen nur von GESICHERTEN Konten — angemeldet nimmt `unsure=true`
+die unsicheren dazu (0.612.0, Wunsch „unsichere standardmäßig nicht in den Entwicklungsbaum, über einen Schalter dazu"; bis 0.611.0
+war es umgekehrt, `sure=true` schränkte ein), über den Teilen-Link nie. Die Karte trägt dafür `onlineUnsure` (Partien der unsicheren
+Konten), der Baum zeigt den Schalter „auch unsichere Konten (n Partien)" nur, wenn es welche gibt (`TreeFilter.withUnsure`, gemerkt). Unbekannte Werte fallen still auf die Vorgabe (`LeagueProfileStore.TreeFilter.Parse`). Antwort zusätzlich
 `board`/`online` = wie viele der Partien in der Stellung von wo kommen. Online-Partien fragt der Baum in SQL ab (`Line` =
 Präfix-Treffer `Line == pre || Line.StartsWith(pre + " ")`, Tempo, `PlayedAt`, Konto-Zuordnung) — `QueryTranslationTests`
 prüft die Übersetzung gegen MariaDB. Oberfläche: Filterleiste über dem Baum (`core/tree-filter.ts` = die reinen Regeln, gemerkt
@@ -1720,6 +1722,31 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
 | POST | `/api/league/player/{fide}/suggestions/scan` | manage | Jetzt suchen → `{ items, found, skipped }` (`skipped` seit 0.610.0 immer leer); 503 `rateLimited`/`unreachable` |
 | POST | `/api/league/suggestions/{id}/accept` | manage | `{ sure }` → das Konto (wie Anlegen); 404 erledigt/unbekannt |
 | POST | `/api/league/suggestions/{id}/reject` | manage | Verwerfen → 204 |
+
+**Team-Suche** (0.612.0, Wunsch 2026-09-30 „auf Lichess gibt es Teams", „vor 5 Jahren gab es eine Online-TMM 2021", „schau, was
+Schach Tirol sonst noch organisiert hat"; `Services/League/LeagueTeamScout.cs`, Tabelle `LeagueScoutAccounts`): die Namenssuche
+findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt die Konten aus dem Umfeld der Tiroler Vereine:
+* **Bestand** (`RefreshPoolAsync`, höchstens alle `PoolEvery` 30 Tage — der Takt merkt es sich im Arbeitsspeicher): Lichess-Team-Suche
+  nach Tiroler Orten (`DefaultPlaces`, abweichend `LeagueOnline:TeamPlaces`), nur Teams mit dem Ort als ganzem Wort im Namen
+  (`ClubKeys`, beide Umlaut-Schreibweisen); deren Mitglieder (`Teams`) und alle, die in einem Team-Battle dieser Teams FÜR sie
+  gespielt haben (`/api/team/{id}/arena` → Battles → `/api/tournament/{id}/results`, `PlayedFor`). Gemessen am 2026-09-30: die
+  Online-TMM 2021 und die Quarantäne-Liga sind solche Battles.
+* **Prüfen** (`RunOnceAsync`, je Konto einmal, dann alle `RecheckDays` 90): Profile gesammelt über `POST /api/users`. (1) Steht ein
+  Klarname im Profil, der zu einem Spieler der laufenden Saison passt (alle Nachnamen-Teile + Vorname voll, `FirstNameMatch`), gilt das
+  Urteil der Namenssuche (`Judge` mit `lead` = die Team-Herkunft als erster Hinweis statt „Nutzername aus dem Namen"), +1 Punkt.
+  (2) Sonst, wenn das Konto für einen Verein gespielt hat: seine letzten `MaxGames` 100 Lichess-Partien (mindestens `MinGames` 20
+  ohne Bullet, `LeagueFingerprint.Usable`) gegen die Brettpartien JEDES Spielers dieses Vereins (alle Saisonen, Mannschaftsname enthält
+  den Ort) — `LeagueFingerprint`: Stellungen nach den eigenen Zügen bis Halbzug 20, je Online-Partie die tiefste gemeinsame, gemittelt.
+  Vorgeschlagen nur mit mindestens `ClubMargin` 1,3-fachem Abstand zum Zweiten (an der Meldeliste der Online-TMM 2021 geprüft: 11 von
+  13 richtig, ab 2 alle 4) und plausibler Wertung (`RatingPlausible`); Punkte 4 ab Abstand 2, sonst 3. Das Ergebnis je Konto steht in
+  `LeagueScoutAccount.Result`. Ein Konto, dessen Partien nicht zu holen sind, kommt am nächsten Tag wieder; ein 429 beendet den Durchgang.
+* **Eigene Vorschläge** (`LeagueAccountSuggestion.Source = "team"`): die Namenssuche räumt beim erneuten Suchen nur Vorschläge OHNE
+  Source weg — sonst verschwänden die der Team-Suche bei jedem Rescan, weil sie sie nie bestätigen kann.
+* **Minderjährige**: vor jedem Vorschlag holt die Team-Suche den Such-Eintrag samt Jahrgang (`LeagueAccountFinder.ScanRowAsync`, legt
+  ihn mit Fassung 0 an, die Namenssuche bleibt damit fällig) — ohne Eintrag gälte das Konto als sichtbar, und die Team-Suche erreicht
+  auch Spieler, die die Namenssuche noch nicht (oder als Spieler früherer Saisonen nie) abgesucht hat.
+* **Takt**: im `LeagueOnlineSyncScheduler` nach der Namenssuche, je Runde höchstens `SearchBudget`; `LeagueOnline:TeamScout=false`
+  schaltet sie ab.
 
 **Lichess-Übertragungen** (0.608.0, Wunsch 2026-09-30; `Services/League/LeagueBroadcastImport.cs`, Tabelle `LeagueBroadcasts`):
 Partien aus Lichess-Broadcasts von Turnieren am Brett kommen in die Spielerkarten (Quelle `Lichess-Übertragung`), zugeordnet über
@@ -3770,7 +3797,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
-| LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?; Index (Status, Score) |
+| LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?, **Source? (≤16; `null` = Namenssuche, `team` = Team-Suche, 0.612.0)**; Index (Status, Score) |
+| LeagueScoutAccounts | Konten aus den Tiroler Lichess-Teams und ihren Team-Battles (0.612.0, `LeagueTeamScout`) | UserName (PK, ≤30, klein), DisplayName (≤30), Teams? (≤500, „; "-Liste), PlayedFor? (≤200, Teams, für die es in einem Battle spielte), FoundAt, CheckedAt? (Index; null = noch nicht geprüft), Result? (≤300, Ergebnis in Worten) |
 | LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess — unter 18 oder unbekannt = Konten verborgen, `LeagueHiddenAccounts`), ScannedAt, Note? („verborgen …", Fehler), Found, Version (Fassung der Regeln, 0.609.0) |
 | LeagueBroadcasts | Lichess-Übertragungen, deren Partien in die Karten kommen (0.608.0) | TourId (PK, ≤12), Name, Location?, StartsAt?/EndsAt?, Manual (per Link), FoundAt, ImportedAt?, Finished (Index), Games (mit Ligaspielern), Error? |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |

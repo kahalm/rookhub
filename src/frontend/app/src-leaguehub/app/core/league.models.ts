@@ -72,8 +72,8 @@ export interface AccountInput { site?: string | null; user?: string | null; sure
 /** Welche Partien der Eröffnungsbaum zählt (0.605.0): Brett, Brett + online, nur online. */
 export type TreeSource = 'board' | 'both' | 'online';
 /** Filter des Eröffnungsbaums (0.605.0): Quelle, Tempo der Online-Partien (leer = alle), nur die letzten x Jahre,
- * nur Online-Partien gesicherter Konten. */
-export interface TreeFilter { source: TreeSource; speeds: string[]; years: number | null; onlySure: boolean }
+ * Online-Partien unsicherer Konten nur auf Wunsch (`withUnsure`, 0.612.0). */
+export interface TreeFilter { source: TreeSource; speeds: string[]; years: number | null; withUnsure: boolean }
 
 export interface RosterEntry {
   rb: number | null; n: string; elo: number | null; p: number; prev: string; cur: string;
@@ -129,6 +129,8 @@ export interface PlayerCard {
   accounts: Account[];
   /** Geholte Online-Partien der gezeigten Konten — der Eröffnungsbaum kann sie einbeziehen. */
   online?: number;
+  /** Davon aus unsicheren Konten — im Baum nur mit dem Schalter „auch unsichere Konten" (0.612.0). */
+  onlineUnsure?: number;
 }
 
 /** `GET …/player/{fide}/recent` — die letzten Partien der Karte samt PGN (zum Nachspielen). */
