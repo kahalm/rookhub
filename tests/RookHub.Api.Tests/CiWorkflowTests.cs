@@ -42,6 +42,15 @@ public class CiWorkflowTests
             .Distinct();
 
     /// <summary>
+    /// Outputs des <c>changes</c>-Jobs, die aus einem ANDEREN Schritt als dem Filter stammen
+    /// (heute nur <c>release</c> in docker.yml) — sie sind ausdruecklich deklariert, kein Filtername.
+    /// </summary>
+    private static HashSet<string> NonFilterOutputs(string workflow) =>
+        Regex.Matches(ReadRepoFile(workflow), @"(?m)^      ([a-z][a-z0-9-]*): \$\{\{ steps\.(?!filter\.)[a-z0-9_-]+\.outputs\.")
+            .Select(m => m.Groups[1].Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
     /// Ein Tippfehler im Filternamen ist der teuerste Fehler hier: ein nicht existierender Output
     /// ist leer, die Bedingung also `false` — der Job laeuft ab da NIE mehr, ohne jede Meldung.
     /// </summary>
@@ -51,7 +60,7 @@ public class CiWorkflowTests
     public void EveryReferencedFilter_IsDefined(string workflow)
     {
         var defined = FilterNames();
-        var referenced = ReferencedFilters(workflow).ToList();
+        var referenced = ReferencedFilters(workflow).Except(NonFilterOutputs(workflow)).ToList();
 
         Assert.NotEmpty(referenced);
         foreach (var name in referenced)
@@ -331,6 +340,62 @@ public class CiWorkflowTests
         Assert.Contains($"rookhub-{image}:ci-${{{{ github.run_id }}}}", block);
         Assert.Contains($"prebuild-{image}", block);        // ohne das Warten waere der Tag noch nicht da
         Assert.DoesNotContain("build-push-action", block);
+    }
+
+    /// <summary>
+    /// Nur ein Release-Tag <c>vX.Y.Z</c> startet einen Tag-Lauf. Vorher stand im Ausloeser
+    /// <c>v*</c> — ein Sicherungs-Tag wie <c>vorher-umbau</c> auf einem Feature-Branch haette
+    /// alle Images gebaut und <c>:latest</c> an den Branch-Stand gehaengt; Watchtower rollt das
+    /// nachts auf Prod aus, und <c>Database.Migrate()</c> wendet die Branch-Migrationen dort an.
+    /// </summary>
+    [Fact]
+    public void DockerWorkflow_OnlyStartsOnSemverTags()
+    {
+        var push = Regex.Match(ReadRepoFile(Docker), @"(?ms)^  push:\s*$(.*?)(?=^  \S|\z)").Groups[1].Value;
+        var tags = Regex.Matches(push, @"(?m)^    tags:\s*(\S.*)$").Select(m => m.Groups[1].Value.Trim()).ToList();
+
+        Assert.Equal("['v[0-9]+.[0-9]+.[0-9]+']", Assert.Single(tags));
+    }
+
+    /// <summary>
+    /// Der Ausloeser allein reicht nicht: ein Handstart auf einem beliebigen Tag und ein
+    /// Release-Tag auf einem ungemergten Commit kaemen sonst durch. Der <c>changes</c>-Job prueft
+    /// deshalb bei JEDEM Tag-Lauf die Form und ob der Commit auf master liegt, und bricht sonst ab
+    /// — daran haengen Vorbau und Umhaengen per <c>needs</c>.
+    /// </summary>
+    [Fact]
+    public void ChangesJob_RejectsTagsThatAreNotAReleaseOnMaster()
+    {
+        var block = Job("changes");
+        var step = Regex.Match(block, @"(?ms)^      - name: Release-Tag pruefen[^\n]*$(.*?)(?=^      - |\z)").Groups[1].Value;
+
+        Assert.Contains("release: ${{ steps.release.outputs.release }}", block);
+        Assert.Contains("id: release", step);
+        Assert.Contains("if: startsWith(github.ref, 'refs/tags/')", step);
+        Assert.Contains(@"^v[0-9]+\.[0-9]+\.[0-9]+$", step);
+        Assert.Contains("git fetch --no-tags --quiet origin +refs/heads/master:refs/remotes/origin/master", step);
+        Assert.Contains("git merge-base --is-ancestor \"$GITHUB_SHA\" origin/master", step);
+        Assert.Equal(2, Regex.Matches(step, @"exit 1").Count);
+        Assert.Contains("echo \"release=true\" >> \"$GITHUB_OUTPUT\"", step);
+    }
+
+    /// <summary>
+    /// <c>:latest</c> haengt NUR an der Freigabe des <c>changes</c>-Jobs, nicht am Praefix
+    /// <c>refs/tags/v</c> — das liess jeden Tag durch, der mit v beginnt.
+    /// </summary>
+    [Theory]
+    [InlineData("api")]
+    [InlineData("frontend")]
+    [InlineData("turnier")]
+    [InlineData("kidhub")]
+    [InlineData("leaguehub")]
+    public void EveryImageJob_SetsLatestOnlyForAReleaseOnMaster(string image)
+    {
+        var block = Job($"build-{image}");
+        var latest = Regex.Matches(block, @"(?m)^\s*type=raw,value=latest,.*$").Select(m => m.Value.Trim()).ToList();
+
+        Assert.Equal("type=raw,value=latest,enable=${{ needs.changes.outputs.release == 'true' }}", Assert.Single(latest));
+        Assert.Matches(@"needs: \[changes,", block);
     }
 
     /// <summary>Ein Job-Block aus docker.yml, von seiner Zeile bis zum naechsten Job.</summary>

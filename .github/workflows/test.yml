@@ -9,8 +9,9 @@ jobs:
   # Welche Bereiche hat dieser Push angefasst? Die Muster stehen in `.github/filters.yml` —
   # dieselbe Datei benutzt `docker.yml` fuer die Image-Builds.
   #
-  # Bei einem TAG-Lauf (`v*`) gibt es keinen sinnvollen Vorgaenger-Stand zum Vergleichen, und ein
-  # Release muss ohnehin vollstaendig gebaut und geprueft werden: dort laeuft alles, ungefiltert.
+  # Bei einem TAG-Lauf (nur `vX.Y.Z` auf master, siehe docker.yml) gibt es keinen sinnvollen
+  # Vorgaenger-Stand zum Vergleichen, und ein Release muss ohnehin vollstaendig gebaut und
+  # geprueft werden: dort laeuft alles, ungefiltert.
   changes:
     runs-on: ubuntu-latest
     outputs:

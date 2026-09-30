@@ -4129,6 +4129,11 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   `turnier`-, `kidhub`- und `leaguehub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
   Ein neuer Job braucht also einen Filter — ein Tippfehler im Namen ist ein leerer Output und damit ein
   Job, der ab da nie mehr läuft.
+  **Nur Release-Tags** (Codereview W2, I1-004): `docker.yml` startet nur bei `vX.Y.Z` (vorher `v*`), und der
+  `changes`-Job bricht jeden Tag-Lauf ab, dessen Commit nicht auf `origin/master` liegt (`git merge-base
+  --is-ancestor`). `:latest` hängt allein an dessen Output `release` — ein Sicherungs-Tag wie `vorher-umbau`
+  auf einem Branch baut also nichts mehr und landet nie per Watchtower auf Prod. Also: erst master pushen,
+  dann taggen.
   **Handstart** (seit 0.453.3): `gh workflow run docker.yml` baut ALLE Images und lässt vorher ALLE
   Tests laufen — bei `workflow_dispatch` bleibt der Filter-Schritt aus (dorny hielte master gegen master
   und setzte jeden Filter auf `false`), die Job-Bedingungen fangen den Fall über `github.event_name` ab.
