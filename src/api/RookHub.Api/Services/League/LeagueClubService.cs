@@ -400,6 +400,9 @@ public sealed class LeagueClubService
     /// (<see cref="ShareHashOf"/>), und gespeichert werden höchstens <see cref="LeagueShareUploadQuota.PerCall"/> je
     /// Aufruf und <see cref="LeagueShareUploadQuota.PerLinkPerDay"/> je Link und Tag — der Rest steht mit Grund
     /// <c>shareLimit</c> in <c>Failed</c>.</summary>
+    /// <param name="shareToken">Das Token der Link-ZEILE (<see cref="LeagueService.ValidShareTokenAsync"/>), nicht der Wert
+    /// aus der Route: MariaDB findet den Link auch in anderer Groß/Kleinschreibung, und jede Schreibweise bekäme sonst
+    /// ihren eigenen Hash und Deckel.</param>
     public Task<LeagueClubImportResultDto> ImportViaShareAsync(string shareToken, string pgn,
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
         ImportAsync(null, ShareHashOf(shareToken), pgn, decisions, ct);
@@ -422,8 +425,11 @@ public sealed class LeagueClubService
         var pending = new List<LeagueClubGame>();
         var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
             ?? parsed.Select(p => (p.Index, (LeagueClubImportGameDecision?)null)).ToList();
-        // Über einen Teilen-Link: vorher reservieren, was dieser Aufruf höchstens speichern darf; der Rest geht am Ende zurück.
-        using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, LeagueShareUploadQuota.PerCall);
+        // Über einen Teilen-Link: vorher reservieren, was dieser Aufruf höchstens speichern darf (nie mehr, als er Partien
+        // hat — sonst hielte eine 10er-Portion 50 Plätze, und ein gleichzeitiger Upload über denselben Link bekäme kurz vor
+        // dem Deckel unnötig shareLimit); der Rest geht am Ende zurück.
+        using var lease = shareHash is null ? null
+            : _shareQuota.Reserve(shareHash, Math.Min(LeagueShareUploadQuota.PerCall, work.Count));
         var budget = lease?.Granted ?? int.MaxValue;
         foreach (var (index, decision) in work)
         {
@@ -498,8 +504,9 @@ public sealed class LeagueClubService
     public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int? userId, LeagueClubGameRequest req,
         CancellationToken ct = default) => AddAsync(userId, null, req, ct);
 
-    /// <summary>Dasselbe ohne Konto über den Teilen-Link <paramref name="shareToken"/> — zählt gegen denselben Deckel wie der
-    /// PGN-Import (dieser Weg braucht kein Foto), darüber <c>shareLimit</c>.</summary>
+    /// <summary>Dasselbe ohne Konto über den Teilen-Link <paramref name="shareToken"/> (das Token der Link-Zeile, wie bei
+    /// <see cref="ImportViaShareAsync"/>) — zählt gegen denselben Deckel wie der PGN-Import (dieser Weg braucht kein Foto),
+    /// darüber <c>shareLimit</c>.</summary>
     public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameViaShareAsync(string shareToken,
         LeagueClubGameRequest req, CancellationToken ct = default) => AddAsync(null, ShareHashOf(shareToken), req, ct);
 
@@ -818,10 +825,16 @@ public sealed class LeagueClubService
     /// „Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29, A2-009): jede Partie, die über den
     /// Teilen-Link <paramref name="shareToken"/> hochgeladen wurde — auch anonymisierte und auch nach Ablauf des Links —,
     /// samt Analyse; die Spielerkarten werden neu gerechnet. <paramref name="dryRun"/> zählt nur. → Anzahl.
+    /// <para>Der Hash kommt aus dem Token der Link-ZEILE, so wie beim Hochladen (<see cref="ImportViaShareAsync"/>): die
+    /// Spalte vergleicht groß/klein- und akzent-blind, jede Schreibweise des Links trifft also dieselben Partien. Ohne
+    /// Ablauf-Filter; ist die Zeile schon aufgeräumt, zählt der Wert, wie er kommt.</para>
     /// </summary>
     public async Task<int> DeleteByShareAsync(string shareToken, bool dryRun, CancellationToken ct = default)
     {
-        var hash = ShareHashOf(shareToken);
+        var given = shareToken.Trim();
+        var link = await _db.LeagueShares.AsNoTracking().Where(s => s.Token == given).Select(s => s.Token)
+            .FirstOrDefaultAsync(ct) ?? given;
+        var hash = ShareHashOf(link);
         if (dryRun) return await _db.LeagueClubGames.CountAsync(g => g.UploadShareHash == hash, ct);
         var games = await _db.LeagueClubGames.Where(g => g.UploadShareHash == hash).ToListAsync(ct);
         if (games.Count == 0) return 0;

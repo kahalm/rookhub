@@ -1459,6 +1459,10 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Link und UTC-Tag, auch das Formular-Add ohne Foto; der Rest steht mit Grund `shareLimit` in `failed` (bzw. 400). Die
   Plätze werden vorher reserviert und, was nicht gespeichert wird, zurückgegeben (ein abgerissener Aufruf verbraucht
   nichts). „Alle Partien dieses Links entfernen": `DELETE /api/league/club/admin/shares/{token}/games` (Verwalter).
+  Hash und Deckel hängen am Token der Link-ZEILE (`LeagueService.ValidShareTokenAsync`), nie am Wert aus der Route:
+  `LeagueShares.Token` vergleicht in MariaDB groß/klein- und akzent-blind, „abc…"/„Ábc…" sind derselbe gültige Link wie
+  „AbC…" — sonst hätte jede Schreibweise ihren eigenen Topf, und der Rückbau per Original fände ihre Partien nicht. Der
+  Rückbau löst das Token ebenso über `LeagueShares` auf (ohne Ablauf-Filter; ist die Zeile weg, zählt der Wert, wie er kommt).
 * **PGN = zwei Schritte**: `games/preview` liest und gleicht ab, speichert NICHTS — je Partie wer gegen wen, Abgleich,
   Vorgabe „ersetzen", `duplicate`, harter Fehler (`illegal`/`noMoves`/`tooLong`/`fromPosition`). Die Seite
   (`features/club/import-review.ts`, dieselbe Regel wie `Build`) zeigt je Partie, ob sie übernommen wird; der Nutzer

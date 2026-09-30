@@ -618,4 +618,61 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Same(Get<RookHub.Api.Services.League.LeagueShareUploadQuota>(),
             fixture.Factory.Services.GetRequiredService<RookHub.Api.Services.League.LeagueShareUploadQuota>());
     }
+
+    /// <summary>
+    /// Nacharbeit A2-009: <c>LeagueShares.Token</c> vergleicht in MariaDB groß/klein- und akzent-blind (Collation der
+    /// Datenbank) — „abc…" und „Ábc…" sind derselbe gültige Link wie „AbC…". Vermerk an den Partien, Deckel je Link und
+    /// Rückbau hängen deshalb am Token der Link-ZEILE: sonst bekäme jede Schreibweise ihren eigenen Topf mit 200 am Tag,
+    /// und „alle Partien dieses Links entfernen" per Original fände ihre Partien nicht. InMemory vergleicht
+    /// case-sensitiv und kann das nicht zeigen.
+    /// </summary>
+    [MySqlFact]
+    public async Task VereinspartienUeberTeilenLink_AndereSchreibweise_selberVermerkDeckelUndRueckbau()
+    {
+        foreach (var (name, fide) in new[] { ("Hengl, Philip", "222"), ("Schnabl, Andreas", "333") })
+            Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = name,
+                NameKey = RookHub.Api.Services.League.LeagueNames.NameKey(name), FideId = fide });
+        const string link = "AbCdEfGhIjKlMnOpQrStUvWx";                 // wie LeagueService.NewToken: base64url, gemischt
+        Db.LeagueShares.Add(new LeagueShare { Token = link, Tnr = 7, Round = 1, Team = "Absam",
+            Expires = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(7), CreatedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        var league = Get<RookHub.Api.Services.League.LeagueService>();
+        var club = Get<RookHub.Api.Services.League.LeagueClubService>();
+        var quota = Get<RookHub.Api.Services.League.LeagueShareUploadQuota>();
+        var lower = link.ToLowerInvariant();
+        var accented = "Á" + link[1..];
+
+        // Die Voraussetzung: beide Schreibweisen sind in MariaDB gültig — und liefern das Token der Zeile.
+        Assert.Equal(link, await league.ValidShareTokenAsync(lower, default));
+        Assert.Equal(link, await league.ValidShareTokenAsync(accented, default));
+
+        var controller = new RookHub.Api.Controllers.LeagueShareClubController(league, club, Get<ScoresheetScanService>(),
+            Get<ScoresheetScanSignal>());
+        var imported = await controller.Import(lower, new RookHub.Api.DTOs.LeagueClubImportRequest
+        {
+            Pgn = "[White \"Hengl, Philip\"]\n[Black \"Schnabl, Andreas\"]\n[Date \"2024.05.12\"]\n[Result \"1-0\"]\n\n"
+                + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n",
+        }, default);
+        var result = Assert.IsType<RookHub.Api.DTOs.LeagueClubImportResultDto>(
+            Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(imported.Result).Value);
+        Assert.Equal(1, result.Added);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Add(accented, new RookHub.Api.DTOs.LeagueClubGameRequest
+        {
+            Moves = new() { "e4", "e5" }, White = "Hengl, Philip", Black = "Schnabl, Andreas", Year = 2024,
+        }, null, default));
+
+        // Derselbe Vermerk wie beim Original …
+        var hash = RookHub.Api.Services.League.LeagueClubService.ShareHashOf(link);
+        Assert.Equal(new[] { hash, hash }, await Db.LeagueClubGames.AsNoTracking().Select(g => g.UploadShareHash).ToListAsync());
+        // … derselbe Deckel-Topf (die Schreibweisen haben keinen eigenen) …
+        using (var rest = quota.Reserve(hash, 500))
+            Assert.Equal(RookHub.Api.Services.League.LeagueShareUploadQuota.PerLinkPerDay - 2, rest.Granted);
+        foreach (var variant in new[] { lower, accented })
+            using (var own = quota.Reserve(RookHub.Api.Services.League.LeagueClubService.ShareHashOf(variant), 500))
+                Assert.Equal(RookHub.Api.Services.League.LeagueShareUploadQuota.PerLinkPerDay, own.Granted);
+        // … und der Rückbau trifft beide Partien, per Original wie per Schreibweise.
+        Assert.Equal(2, await club.DeleteByShareAsync(link.ToUpperInvariant(), dryRun: true));
+        Assert.Equal(2, await club.DeleteByShareAsync(link, dryRun: false));
+        Assert.False(await Db.LeagueClubGames.AnyAsync());
+    }
 }

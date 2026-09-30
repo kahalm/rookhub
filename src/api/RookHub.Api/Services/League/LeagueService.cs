@@ -196,6 +196,13 @@ public sealed class LeagueService
     /// <summary>Gilt dieser Teilen-Link noch? (Die Upload-Wege ohne Anmeldung hängen daran.)</summary>
     public async Task<bool> ShareValidAsync(string token, CancellationToken ct) => await ValidShareAsync(token, ct) != null;
 
+    /// <summary>Das Token des gültigen Links in der Schreibweise SEINER Zeile — <c>null</c> = kein gültiger Link. Die
+    /// Spalte vergleicht in MariaDB groß/klein- und akzent-blind (Collation der Datenbank): „abc…" und „Ábc…" finden auch
+    /// den Link „AbC…". Was am Link hängt (Vermerk an den Partien, Deckel je Link), hängt deshalb an diesem Token und
+    /// nie am Wert aus der Route — sonst bekäme jede Schreibweise ihren eigenen Deckel, und der Rückbau per Original
+    /// fände ihre Partien nicht (Codereview 2026-09-29, A2-009).</summary>
+    public async Task<string?> ValidShareTokenAsync(string token, CancellationToken ct) => (await ValidShareAsync(token, ct))?.Token;
+
     private async Task<LeagueShare?> ValidShareAsync(string token, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);

@@ -163,7 +163,8 @@ public class LeagueClubController : BaseApiController
         };
 
     /// <summary>„Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29): alles, was über den Teilen-Link
-    /// hochgeladen wurde — auch nach seinem Ablauf. <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>
+    /// hochgeladen wurde — auch nach seinem Ablauf, in jeder Schreibweise, solange die Link-Zeile noch steht (sonst zählt
+    /// der Wert, wie er kommt). <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>
     [HttpDelete("admin/shares/{token}/games")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> DeleteShareGames(string token, [FromQuery] bool dryRun = false, CancellationToken ct = default) =>
@@ -317,18 +318,21 @@ public class LeagueShareClubController : ControllerBase
     [RequestSizeLimit(ClubUpload.MaxBodyBytes)]
     public async Task<ActionResult<LeagueClubImportResultDto>> Import(string token, [FromBody] LeagueClubImportRequest req, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportViaShareAsync(token, req!.Pgn, req.Games, ct));
+        // Das Token der Link-Zeile, nicht der Routen-Wert: dieselbe Datenbank-Zeile findet sich auch mit anderer
+        // Groß/Kleinschreibung (siehe LeagueService.ValidShareTokenAsync) — Vermerk und Deckel hängen am Link, nicht an
+        // seiner Schreibweise.
+        if (await _league.ValidShareTokenAsync(token, ct) is not { } link) return NotFound();
+        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportViaShareAsync(link, req!.Pgn, req.Games, ct));
     }
 
     /// <summary>Eine Partie aus einem Partieformular; <c>scanKey</c> = der Schlüssel der Einlesung (wird geschlossen).</summary>
     [HttpPost("games")]
     public async Task<IActionResult> Add(string token, [FromBody] LeagueClubGameRequest req, [FromQuery] string? scanKey, CancellationToken ct)
     {
-        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await _league.ValidShareTokenAsync(token, ct) is not { } link) return NotFound();   // wie beim Import
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         req.ScanId = null;
-        var (game, reason, message) = await _club.AddGameViaShareAsync(token, req, ct);
+        var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null);
         return Ok(new { id = game.Id, anonymized = game.Anonymized });
