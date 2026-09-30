@@ -14,15 +14,21 @@ namespace RookHub.Api.Services;
 public static partial class PgnParser
 {
     // ---- regex helpers (vorkompiliert) -----------------------------------
+    // NonBacktracking bei den Mustern, die fremden Text bis zu einer schließenden Klammer absuchen: im
+    // Rückverfolgungs-Modus rechnen sie bei feindlicher Eingabe QUADRATISCH — jede nicht geschlossene „{"
+    // bzw. „[%" sucht erneut bis zum Textende, und bei „\w+[^\]]*" / „\s+([^\]]*)" überlappen die Quantoren
+    // schon für eine einzige Startstelle. 640 000 „{" kosteten so 4,5 s, 5 Mio. (LeagueHub-Deckel, anonym über
+    // den Teilen-Link erreichbar) Minuten CPU je Aufruf. Der NonBacktracking-Automat ist linear (5 Mio. in
+    // ~20 ms) und liefert für diese Muster dieselben Treffer und Gruppen (Codereview 2026-09-29, N3-009).
     [GeneratedRegex(@"^\s*\[\s*([A-Za-z][A-Za-z0-9_]*)\s+""(.*)""\s*\]\s*$")]
     private static partial Regex HeaderLineRegex();
-    [GeneratedRegex(@"\[%\w+[^\]]*\]")]            // [%tqu ...], [%cal ...], [%csl ...]
+    [GeneratedRegex(@"\[%\w+[^\]]*\]", RegexOptions.NonBacktracking)]            // [%tqu ...], [%cal ...], [%csl ...]
     private static partial Regex AnnotationRegex();
-    [GeneratedRegex(@"\[%(cal|csl)\s+([^\]]*)\]")] // farbige Pfeile / Feld-Markierungen (Chessable)
+    [GeneratedRegex(@"\[%(cal|csl)\s+([^\]]*)\]", RegexOptions.NonBacktracking)] // farbige Pfeile / Feld-Markierungen (Chessable)
     private static partial Regex CalCslRegex();
-    [GeneratedRegex(@"\[%alt\s+([^\]]*)\]")]       // von Chessable geduldete Alternativzüge (softFail)
+    [GeneratedRegex(@"\[%alt\s+([^\]]*)\]", RegexOptions.NonBacktracking)]       // von Chessable geduldete Alternativzüge (softFail)
     private static partial Regex AltRegex();
-    [GeneratedRegex(@"\{[^}]*\}")]                 // Kommentare
+    [GeneratedRegex(@"\{[^}]*\}", RegexOptions.NonBacktracking)]                 // Kommentare
     private static partial Regex CommentRegex();
     [GeneratedRegex(@"\$\d+")]                     // NAGs
     private static partial Regex NagRegex();
@@ -32,7 +38,7 @@ public static partial class PgnParser
     private static partial Regex PromotionRegex();
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
-    [GeneratedRegex(@"\[%(?:alt|info)\b[^\]]*\]", RegexOptions.IgnoreCase)]   // RookHub-interne Marker
+    [GeneratedRegex(@"\[%(?:alt|info)\b[^\]]*\]", RegexOptions.IgnoreCase | RegexOptions.NonBacktracking)]   // RookHub-interne Marker (dieselbe Klasse wie oben)
     private static partial Regex InternalMarkerRegex();
     [GeneratedRegex(@"\{\s*\}")]
     private static partial Regex EmptyCommentRegex();
