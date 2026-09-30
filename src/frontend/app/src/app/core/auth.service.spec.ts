@@ -462,3 +462,41 @@ describe('AuthService Live-Rechte (0.589.0)', () => {
     expect(svc.has('league.view')).toBeTrue();
   });
 });
+
+/**
+ * UX-031: „Passwort vergessen“ schickt die Seite (feste Liste) und die Sprache mit — die Mail verlinkt dann die Seite,
+ * von der die Anfrage kam, und kommt in deren Sprache. Ohne beide bleibt der Rumpf wie bisher (nur die E-Mail).
+ */
+describe('AuthService forgotPassword (UX-031)', () => {
+  let svc: AuthService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    svc = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => { http.verify(); localStorage.clear(); });
+
+  it('schickt Seite und Sprache mit', () => {
+    svc.forgotPassword('a@b.co', 'kidhub', 'hu').subscribe();
+    const req = http.expectOne({ method: 'POST', url: '/api/auth/forgot-password' });
+    expect(JSON.parse(JSON.stringify(req.request.body))).toEqual({ email: 'a@b.co', site: 'kidhub', lang: 'hu' });
+    req.flush({});
+  });
+
+  it('ohne Seite und Sprache bleibt der Rumpf wie bisher — nur die E-Mail', () => {
+    svc.forgotPassword('a@b.co', null, null).subscribe();
+    const req = http.expectOne('/api/auth/forgot-password');
+    expect(JSON.stringify(req.request.body)).toBe('{"email":"a@b.co"}');
+    req.flush({});
+    svc.forgotPassword('a@b.co').subscribe();
+    const again = http.expectOne('/api/auth/forgot-password');
+    expect(JSON.stringify(again.request.body)).toBe('{"email":"a@b.co"}');
+    again.flush({});
+  });
+});

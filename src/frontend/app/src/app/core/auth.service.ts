@@ -288,9 +288,14 @@ export class AuthService {
   /**
    * „Passwort vergessen", Schritt 1: fordert einen Reset-Link per E-Mail an. Der Server
    * antwortet aus Datenschutzgründen immer mit Erfolg — egal ob die Adresse existiert.
+   *
+   * <p>`site` (nur `kidhub`/`leaguehub`/`turnier`, nie eine URL) und `lang` bestimmen Link-Ziel, Betreff, Absender
+   * und Sprache der Mail (UX-031); ohne beide bleibt die Mail wie bisher (RookHub, Deutsch). Fehlende Werte gehen
+   * gar nicht erst mit (undefined faellt beim Serialisieren weg).</p>
    */
-  forgotPassword(email: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/forgot-password`, { email });
+  forgotPassword(email: string, site?: string | null, lang?: string | null): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`,
+      { email, site: site || undefined, lang: lang || undefined });
   }
 
   /** „Passwort vergessen", Schritt 2: setzt das neue Passwort mit dem Token aus der E-Mail. */

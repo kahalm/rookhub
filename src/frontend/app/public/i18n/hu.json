@@ -168,6 +168,7 @@
       "submitting": "Küldés…",
       "sent": "Ha a cím egy fiókhoz tartozik, e-mailt küldtünk a jelszó visszaállításához szükséges hivatkozással. Ellenőrizze a levélszemét mappát is.",
       "noEmail": "Nincs e-mail a fiókodban? Akkor nem érkezhet levél. Írj nekünk a felhasználóneveddel:",
+      "kidsSameAccount": "A fiókod a KidHubon és a RookHubon is érvényes, ezért a levél feladójaként „RookHub” is megjelenhet.",
       "backToLogin": "Vissza a bejelentkezéshez",
       "failed": "A kérés sikertelen. Próbálja újra."
     },

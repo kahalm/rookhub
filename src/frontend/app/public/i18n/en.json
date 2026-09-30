@@ -327,6 +327,7 @@
       "submitting": "Sending…",
       "sent": "If the address belongs to an account, we've sent an email with a link to reset your password. Please also check your spam folder.",
       "noEmail": "No email in your account? Then no reset email can reach you. Write to us with your username:",
+      "kidsSameAccount": "Your account works on KidHub and RookHub, so the email may show “RookHub” as the sender.",
       "backToLogin": "Back to login",
       "failed": "Request failed. Please try again."
     },

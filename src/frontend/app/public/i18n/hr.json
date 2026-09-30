@@ -327,6 +327,7 @@
       "submitting": "Slanje…",
       "sent": "Ako adresa pripada računu, poslali smo e-mail s poveznicom za ponovno postavljanje lozinke. Provjeri i mapu neželjene pošte.",
       "noEmail": "Nemaš e-poštu u računu? Onda ti ne može stići nikakav e-mail. Piši nam sa svojim korisničkim imenom:",
+      "kidsSameAccount": "Tvoj račun vrijedi za KidHub i RookHub, pa e-mail kao pošiljatelja može prikazati „RookHub“.",
       "backToLogin": "Natrag na prijavu",
       "failed": "Zahtjev nije uspio. Pokušaj ponovno."
     },

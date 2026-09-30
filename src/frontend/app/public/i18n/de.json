@@ -327,6 +327,7 @@
       "submitting": "Senden…",
       "sent": "Falls die Adresse zu einem Konto gehört, haben wir eine E-Mail mit einem Link zum Zurücksetzen verschickt. Bitte auch den Spam-Ordner prüfen.",
       "noEmail": "Keine E-Mail im Konto hinterlegt? Dann kann dich keine Mail erreichen. Schreib uns mit deinem Benutzernamen:",
+      "kidsSameAccount": "Dein Konto gilt für KidHub und RookHub – die Mail kann deshalb auch „RookHub“ als Absender zeigen.",
       "backToLogin": "Zurück zur Anmeldung",
       "failed": "Anfrage fehlgeschlagen. Bitte erneut versuchen."
     },

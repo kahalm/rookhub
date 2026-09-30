@@ -10,6 +10,22 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { siteKindOf } from '../../core/partner-site';
+
+/** Seiten-Schluessel der Reset-Mail — genau die feste Liste der API (`ForgotPasswordDto.Site`). */
+export type ResetMailSite = 'kidhub' | 'leaguehub' | 'turnier';
+
+/**
+ * Von welcher Seite kommt „Passwort vergessen“ (UX-031)? KidHub und LeagueHub sagen es selbst (LEGAL_SITE.kind, auch
+ * lokal richtig), die Turnierseite nimmt die Vorgabe von LEGAL_SITE und wird am Host erkannt. Sonst `null` = RookHub
+ * (auch ClubHub): dann schickt das Formular gar nichts mit und die Mail bleibt wie bisher. Bisher kam die Mail immer
+ * als „RookHub — Passwort zurücksetzen“, nur auf Deutsch, mit Link auf rookhub.* — die eigenen /reset-password-Seiten
+ * erreichte niemand.
+ */
+export function resetMailSite(legal: LegalSite, host: string = location.hostname): ResetMailSite | null {
+  if (legal.kind === 'kidhub' || legal.kind === 'leaguehub') return legal.kind;
+  return siteKindOf(host) === 'turnier' ? 'turnier' : null;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -37,6 +53,12 @@ import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
               </button>
             </form>
           }
+          <!-- KidHub (UX-031): Eltern kennen nur „KidHub“ — dass es dasselbe Konto wie bei RookHub ist und die Mail deshalb
+               auch „RookHub“ zeigen kann (Absenderadresse; Link auf rookhub.*, solange KidHubs Basis-URL fehlt), sagt sonst
+               niemand. Vor und nach dem Absenden: gerade beim Suchen im Postfach hilft es. -->
+          @if (site === 'kidhub') {
+            <p class="auth-hint kids-mail">{{ 'auth.forgot.kidsSameAccount' | translate }}</p>
+          }
           <!-- Konten ohne E-Mail (UX-002): hier kommt nie eine Mail an, und die Bestaetigung bleibt bewusst neutral
                (keine Konto-Ausforschung). Diese Zeile nennt den anderen Weg — in beiden Zustaenden, denn wer eine
                erfundene Adresse eingibt, liest sonst nur „Falls die Adresse zu einem Konto gehoert …“. -->
@@ -56,6 +78,7 @@ import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
     mat-card { width: 400px; max-width: 90vw; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     .auth-hint { font-size: 0.9rem; margin: 0.5rem 0 0; }
+    .kids-mail { margin-top: 0.75rem; }
     .no-email { margin-top: 1rem; opacity: 0.85; }
     .no-email a { color: var(--mat-sys-primary); overflow-wrap: anywhere; }
     .auth-info { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
@@ -68,16 +91,20 @@ export class ForgotPasswordComponent {
   sent = false;
   /** Kontakt fuer Konten ohne E-Mail — je Oberflaeche (KidHub hat eine eigene Adresse, siehe LEGAL_SITE). */
   readonly legal: LegalSite;
+  /** Seite fuer Link, Betreff und Absender der Mail (UX-031), `null` = RookHub. */
+  readonly site: ResetMailSite | null;
 
   constructor(private auth: AuthService, private snackbar: SnackbarService, private translate: TranslateService,
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
               @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
     this.legal = legal ?? defaultLegalSite();
+    this.site = resetMailSite(this.legal);
   }
 
   onSubmit(): void {
     this.loading = true;
-    this.auth.forgotPassword(this.email.trim()).subscribe({
+    // Sprache der Oberflaeche fuer die Mail (die API kennt de und en, alles andere bekommt Englisch).
+    this.auth.forgotPassword(this.email.trim(), this.site, this.translate.currentLang()).subscribe({
       // Server antwortet aus Datenschutzgründen immer mit Erfolg — wir zeigen daher
       // dieselbe neutrale Bestätigung, egal ob die Adresse existiert.
       next: () => {
