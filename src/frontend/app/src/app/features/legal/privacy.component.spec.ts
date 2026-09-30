@@ -58,8 +58,8 @@ describe('PrivacyComponent', () => {
   });
 
   it('LeagueHub: Abschnitt ueber Ligaspieler ohne Konto, nur dort (F7-006)', () => {
-    const keys = ['leagueTitle', 'leagueSources', 'leagueData', 'leagueBasis', 'leagueRecipients', 'leagueRetention',
-      'leagueObjection'].map(k => 'legal.privacy.' + k);
+    const keys = ['leagueTitle', 'leagueIntro', 'leagueSources', 'leagueData', 'leagueBasis', 'leagueRecipients',
+      'leagueRetention', 'leagueObjection'].map(k => 'legal.privacy.' + k);
     const league = render({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
     for (const k of keys) expect(league.textContent).withContext(k).toContain(k);
     expect(hrefs(league)).toContain('/impressum');
@@ -115,10 +115,27 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
 
     it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {
       const p = (await load(lang))['legal']['privacy'];
-      expect(p['leagueBasis']).toMatch(/6/);
+      expect(p['leagueBasis']).toMatch(/6(\s*Abs\. 1|\(1\)|\. cikk \(1\))/);
       expect(p['leagueObjection']).toMatch(/21/);
       expect(p['leagueIntro']).toMatch(/14/);
       expect(p['leagueData']).toMatch(/Lichess/);
+    });
+
+    it(`${lang}: LeagueHub-Speicherdauer und Quellen wie im Code (Nacharbeit F7-006)`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      // IP-Pruefwert der Formular-Fotos bleibt nach Uebernehmen/Verwerfen stehen (Tagesgrenze) und wird erst nach zwei
+      // Tagen geleert (ForgetOldIpHashesAsync) — keine Zusage „hoechstens bis zur Uebernahme“.
+      expect(p['leagueRetention']).not.toMatch(/höchstens, bis die Einreichung|only until the submission|najdulje dok se predaja|legfeljebb addig, amíg a beküldést/);
+      expect(p['leagueRetention']).toMatch(/zwei Tage|two days|dva dana|két nap/);
+      expect(p['leagueRetention']).toMatch(/30/);
+      // Foto geht erst beim Uebernehmen/Verwerfen, nicht „nach der Korrektur“ (wie aiScoresheet, A6-008).
+      expect(p['leagueRetention']).not.toMatch(/nach der Korrektur gelöscht|deleted after the correction|brišu se nakon ispravka|javítás után töröljük/);
+      // „Schwaz“ ist nur die Vorgabe je Seite, abwaehlbar (LeagueClubService: anonymized = w.Replace || b.Replace).
+      expect(p['leagueSources']).toMatch(/standardmäßig|by default|prema zadanim postavkama|alapértelmezés szerint/);
+      // Abruf der Online-Partien schickt Benutzernamen an chess.com (USA).
+      expect(p['leagueSources']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
+      // Teilen-Link: gespielte Runde 7 Tage ab Teilen, ohne Datum 30 Tage (LeagueService.ExpiresFor).
+      expect(p['leagueRecipients']).toMatch(/30/);
     });
   }
 });
