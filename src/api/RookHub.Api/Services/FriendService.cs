@@ -167,6 +167,8 @@ public class FriendService
         // steht und man sie erst suchen musste. Die Id steht zusaetzlich in den Daten, damit die
         // Oberflaeche sie hervorheben kann.
         var requesterName = await UsernameAsync(requesterId);
+        if (await HasRecentRequestBellAsync(addresseeId, requesterName))
+            return friendship;   // Anfrage steht im Anfragen-Tab, nur ohne neue Glocke (N9-003)
         await _notifications.CreateAsync(addresseeId, NotificationType.FriendRequestReceived,
             new Dictionary<string, string>
             {
@@ -176,6 +178,27 @@ public class FriendService
             $"/friends?tab=requests&request={friendship.Id}");
 
         return friendship;
+    }
+
+    /// <summary>Ruhefrist der Anfrage-Glocke je (Absender, Empfänger), siehe <see cref="HasRecentRequestBellAsync"/>.</summary>
+    public static readonly TimeSpan RequestBellQuietPeriod = TimeSpan.FromHours(24);
+
+    /// <summary>Hat <paramref name="addresseeId"/> von <paramref name="requesterName"/> schon eine Anfrage-Glocke, die noch
+    /// ungelesen ist oder jünger als <see cref="RequestBellQuietPeriod"/>? Dann klingelt eine neue Anfrage nicht erneut
+    /// (Codereview N9-003): Senden–Zurückziehen–Senden bzw. Neusenden nach einer Ablehnung legte jedes Mal Glocke und
+    /// Web-Push an — rund 50 je Minute gegen ein beliebiges Konto, Ablehnen half nicht. Die Anfrage selbst bleibt erlaubt
+    /// (PD-080). Die Frist zählt ab der letzten Glocke, nicht ab Zurückziehen/Ablehnen — deren Zeitpunkt wird nicht
+    /// gespeichert (keine Migration); jede zurückgezogene/abgelehnte Anfrage der letzten 24 h hat aber eine Glocke der
+    /// letzten 24 h. Absender = <c>data.username</c> (Usernamen ändern sich nur bei der Kontolöschung, siehe
+    /// <see cref="NotificationService.MentioningUsernameAsync"/>).</summary>
+    private async Task<bool> HasRecentRequestBellAsync(int addresseeId, string requesterName)
+    {
+        var since = DateTime.UtcNow - RequestBellQuietPeriod;
+        var needle = NotificationService.UsernameNeedle(requesterName);
+        return await _db.Notifications.AnyAsync(n =>
+            n.UserId == addresseeId && n.Type == NotificationType.FriendRequestReceived &&
+            (n.SeenAt == null || n.CreatedAt >= since) &&
+            n.DataJson != null && n.DataJson.Contains(needle));
     }
 
     public async Task AcceptRequestAsync(int friendshipId, int userId)

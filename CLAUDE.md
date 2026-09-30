@@ -140,7 +140,7 @@ Guards: nicht sich selbst (400), Ende in der Zukunft (400), Admin-Konten nur dur
 | GET | `/api/friends` | Freundesliste |
 | GET | `/api/friends/requests` | Offene (eingehende) Anfragen |
 | GET | `/api/friends/requests/sent` | Von mir gesendete, noch nicht angenommene (Pending) Anfragen — für „wartet auf Bestätigung" in der Freundesliste. Literal-Route vor `{...}` |
-| POST | `/api/friends/request/{userId}` | Anfrage senden |
+| POST | `/api/friends/request/{userId}` | Anfrage senden. Rate-Limit `user-social` (10/min je Konto, gemeinsam mit `POST /api/challenges`, Codereview N9-003). Die Glocke `friend_request_received` klingelt je (Absender, Empfänger) nicht erneut, solange die letzte ungelesen oder jünger als 24 h ist (`FriendService.RequestBellQuietPeriod`, Absender = `data.username`) — Senden–Zurückziehen–Senden legte sonst jedes Mal Glocke + Web-Push an; die Anfrage selbst bleibt erlaubt (PD-080) |
 | POST | `/api/friends/accept/{friendshipId}` | Annehmen |
 | POST | `/api/friends/decline/{friendshipId}` | Ablehnen |
 | DELETE | `/api/friends/{friendshipId}` | Entfernen |
@@ -155,7 +155,7 @@ Nach dem Lösen kann ein User ein konkretes Puzzle an **einen oder mehrere** Fre
 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
-| POST | `/api/challenges` | Batch-Challenge anlegen `{ toUserIds[], puzzleId, source }` — antwortet `{ sent, skipped[] }` (übersprungene Empfänger mit Grund `self`/`not_friends`/`duplicate`); 404 nur wenn das Puzzle in der zur `source` passenden Tabelle fehlt |
+| POST | `/api/challenges` | Batch-Challenge anlegen `{ toUserIds[], puzzleId, source }` — antwortet `{ sent, skipped[] }` (übersprungene Empfänger mit Grund `self`/`not_friends`/`duplicate`); 404 nur wenn das Puzzle in der zur `source` passenden Tabelle fehlt. Rate-Limit `user-social` (10/min je Konto, gemeinsam mit der Freundschaftsanfrage, sonst 429) |
 | GET | `/api/challenges/incoming` | Offene eingehende Challenges (Posteingang) inkl. Absender + Puzzle-Rating |
 | GET | `/api/challenges/outgoing` | Gesendete Challenges inkl. Ergebnis-Status + Lösezeit |
 | GET | `/api/challenges/incoming/count` | Anzahl offener eingehender Challenges (Navbar-Badge) |

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -16,8 +17,10 @@ public class ChallengeController : BaseApiController
 
     /// <summary>Schickt ein Puzzle als Challenge an einen oder mehrere Freunde. Ungültige Empfänger
     /// (man selbst / kein Freund / bereits offene gleiche Challenge) werden übersprungen und im Ergebnis
-    /// gemeldet; 404 nur, wenn das Puzzle selbst fehlt.</summary>
+    /// gemeldet; 404 nur, wenn das Puzzle selbst fehlt. Je Konto gedrosselt (<c>user-social</c>, gemeinsam mit der
+    /// Freundschaftsanfrage, Codereview N9-003) — jede Challenge klingelt bei jedem Empfänger.</summary>
     [HttpPost]
+    [EnableRateLimiting(RateLimitPartitions.UserSocialPolicy)]
     public async Task<ActionResult<ChallengeBatchResultDto>> Create([FromBody] CreateChallengeBatchDto dto)
     {
         try

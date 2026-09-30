@@ -77,6 +77,15 @@ public static class RateLimitPartitions
     /// gecachten Index und bleibt draußen — sie lädt bei jedem Schritt durch eine Partie neu.</summary>
     public const int RepertoireScanPermitPerMinute = 30;
 
+    /// <summary>Policy-Name der sozialen Glocken-Auslöser: Freundschaftsanfrage und Challenge
+    /// (<c>POST /api/friends/request/{userId}</c>, <c>POST /api/challenges</c>).</summary>
+    public const string UserSocialPolicy = "user-social";
+    /// <summary>Anfragen je Konto und Minute (beide Endpunkte teilen EIN Fenster). Jede legte beim Empfänger eine Glocke
+    /// samt Web-Push-Auftrag an; vorher galt nur der globale Deckel von 100/min je Adresse — Senden, Zurückziehen, Senden
+    /// ergab rund 50 Glocken je Minute gegen ein beliebiges Konto (Codereview 2026-09-29, N9-003). Ein Mensch schickt
+    /// nach dem Lösen ein Puzzle weiter oder stellt eine Anfrage — 10 je Minute bleibt weit darüber.</summary>
+    public const int UserSocialPermitPerMinute = 10;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -122,6 +131,9 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> RepertoireScan(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), RepertoireScanPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> UserSocial(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), UserSocialPermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

@@ -131,13 +131,18 @@ public class NotificationService
     public static async Task<List<Notification>> MentioningUsernameAsync(AppDbContext db, string username, int exceptUserId,
         CancellationToken ct = default)
     {
-        // Dieselben Optionen wie beim Anlegen → dieselbe Maskierung (Umlaute, Anführungszeichen) im Suchtext.
-        var needle = $"\"{UsernameKey}\":" + JsonSerializer.Serialize(username, JsonOpts);
+        var needle = UsernameNeedle(username);
         var candidates = await db.Notifications
             .Where(n => n.UserId != exceptUserId && n.DataJson != null && n.DataJson.Contains(needle))
             .ToListAsync(ct);
         return candidates.Where(n => ReadUsername(n.DataJson) == username).ToList();
     }
+
+    /// <summary>Suchtext für <c>data.username</c> = <paramref name="username"/> in <c>DataJson</c> (Teilstring-Filter in
+    /// SQL; das schließende Anführungszeichen gehört dazu, „alice" trifft also nicht „alice2"). Dieselben Optionen wie
+    /// beim Anlegen → dieselbe Maskierung (Umlaute, Anführungszeichen) im Suchtext.</summary>
+    internal static string UsernameNeedle(string username)
+        => $"\"{UsernameKey}\":" + JsonSerializer.Serialize(username, JsonOpts);
 
     /// <summary>Setzt <c>data.username</c> einer Benachrichtigung (übrige Parameter bleiben).</summary>
     public static void SetUsername(Notification n, string username)

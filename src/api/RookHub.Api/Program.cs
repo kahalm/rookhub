@@ -849,6 +849,10 @@ try
         // Baummodus und Ähnlichkeitssuche im Repertoire (position-tree, similar-positions): je KONTO — jede Anfrage
         // spielt alle lesbaren Linien nach, bis zum Zeitbudget der Dienste (RateLimitPartitions, Codereview N7-001).
         options.AddPolicy("repertoire-scan", ctx => RookHub.Api.Services.RateLimitPartitions.RepertoireScan(ctx, permitScale));
+        // Freundschaftsanfrage und Challenge (friends/request, challenges): je KONTO, ein gemeinsames Fenster — jede legte
+        // beim Empfänger Glocke + Web-Push an, Senden–Zurückziehen–Senden flutete beliebige Konten (RateLimitPartitions,
+        // Codereview N9-003). Die Glocke der Freundschaftsanfrage entprellt zusätzlich FriendService.
+        options.AddPolicy("user-social", ctx => RookHub.Api.Services.RateLimitPartitions.UserSocial(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 

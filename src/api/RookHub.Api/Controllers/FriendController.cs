@@ -95,7 +95,10 @@ public class FriendController : BaseApiController
         return Ok(await _friendService.GetSentPendingRequestsAsync(GetUserId()));
     }
 
+    /// <summary>Freundschaftsanfrage senden. Je Konto gedrosselt (<c>user-social</c>, gemeinsam mit Challenges, Codereview
+    /// N9-003); die Glocke beim Empfänger entprellt <see cref="FriendService.SendRequestAsync"/>.</summary>
     [HttpPost("request/{userId}")]
+    [EnableRateLimiting(RateLimitPartitions.UserSocialPolicy)]
     public async Task<IActionResult> SendRequest(int userId)
     {
         try
