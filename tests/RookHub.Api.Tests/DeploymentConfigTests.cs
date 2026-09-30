@@ -155,6 +155,24 @@ public class DeploymentConfigTests
         Assert.DoesNotMatch(@"\$\{(ES|KIBANA)_BIND:-0\.0\.0\.0\}", text);
     }
 
+    /// <summary>
+    /// MariaDB läuft auf einer EXAKTEN Minor-Version, nicht auf dem gleitenden Major-Tag
+    /// (Codereview 2026-09-29, Begleitteil zu I1-002). Watchtower zieht nachts um 02:00 jedes neue
+    /// Image; mit <c>mariadb:11</c> wäre ein Sprung auf 11.9 ein ungeplantes Upgrade des
+    /// Datenverzeichnisses ohne Weg zurück — und der einzige Dump läuft erst danach.
+    /// </summary>
+    [Theory]
+    [InlineData("compose.vpn.yml")]
+    [InlineData("compose.dev.yml")]
+    [InlineData("compose.dev.vpn.yml")]
+    [InlineData("compose.yml.example")]
+    [InlineData("compose.vpn.example")]
+    public void MariaDbImage_IsPinnedToAMinorVersion(string file)
+    {
+        var mariadb = ServiceBlock(ReadRepoFile(file), "mariadb");
+        Assert.Matches(@"(?m)^    image: mariadb:\d+\.\d+(\.\d+)?\s*$", mariadb);
+    }
+
     /// <summary>Die Einträge unter jedem <c>ports:</c>-Schlüssel (Kurzform), ohne Anführungszeichen
     /// und angehängten Kommentar. Kommentarzeilen im Block werden übersprungen; ein Eintrag in
     /// Langform (<c>- target: …</c>) kommt als „target: …" zurück und fällt damit im Test auf.</summary>

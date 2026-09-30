@@ -72,7 +72,10 @@ services:
 
   # ── Shared MariaDB ─────────────────────────────────────────────────────────
   mariadb:
-    image: mariadb:11
+    # Exakte Minor-Version (11.8 = LTS, Patches kommen ueber den Tag mit): Watchtower zieht nachts
+    # jedes neue Image, ein Sprung auf 11.9/12 hebt das Datenverzeichnis ohne Weg zurueck an —
+    # Upgrades bewusst fahren, vorher ein frischer Dump.
+    image: mariadb:11.8
     container_name: rookhub-mariadb
     restart: unless-stopped
     environment:
