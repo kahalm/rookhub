@@ -14,7 +14,7 @@ import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
 
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
-import { applyUci, calcDests, tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { applyUci, tryFreeMove, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { StockfishService } from '../puzzles/stockfish.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireTrainingService, LineStateDto, LineReviewRequest, SrLevel } from './repertoire-training.service';
@@ -32,6 +32,7 @@ import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { normalizeFen } from './position-filter.util';
+import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -236,7 +237,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     else this.buildQueue();
   }
 
-  ngOnDestroy(): void { this.clearAdvance(); this.clearOppTimer(); this.clearLearn(); this.freqSub?.unsubscribe(); }
+  ngOnDestroy(): void { this.clearLineTimers(); this.freqSub?.unsubscribe(); }
 
   /** „Häufigste zuerst" an/aus. Baut die Sitzung neu auf (wie ein Moduswechsel). */
   toggleFreqOrder(): void {
@@ -250,7 +251,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Häufigkeiten holen — Runde um Runde, bis alles ausgewertet ist; dann die Sitzung aufbauen. */
   private loadFrequencies(): void {
     this.freqSub?.unsubscribe();
-    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
+    this.clearLineTimers();
     this.phase = 'LOADING';
     this.freqRunning = true;
     this.freqLoading = null;
@@ -320,7 +321,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   setMode(m: Mode): void {
     if (m === this.mode) return;
-    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
+    this.clearLineTimers();
     this.mode = m;
     this.singleLineKey = null;   // Moduswechsel hebt die Einzellinien-Beschränkung auf
     this.buildQueue();
@@ -345,11 +346,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   /** Baut die Session-Warteschlange: quiz = fällige Pool-Linien (gemischt), learn = ungelernte
    * Linien der Reihe nach. Chapter-/Einzellinien-Filter greifen in beiden Modi. */
   private buildQueue(): void {
-    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
+    this.clearLineTimers();
     const now = Date.now();
-    let filtered = this.chapterFilter
-      ? this.allLines.filter(l => (l.headers['Black'] || '').trim() === this.chapterFilter!.trim())
-      : this.allLines;
+    let filtered = linesInChapter(this.allLines, this.chapterFilter);
     if (this.singleLineKey) filtered = filtered.filter(l => this.lineKeyOf(l) === this.singleLineKey);
     const usable = filtered.filter(l => this.hasUserMove(l));
     this.queue = this.mode === 'learn'
@@ -380,10 +379,8 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Alle (Chapter-gefilterten) übbaren Linien mit ≥1 eigenen Zug — deren stabile Schlüssel. */
   private usableLineKeys(): string[] {
-    const filtered = this.chapterFilter
-      ? this.allLines.filter(l => (l.headers['Black'] || '').trim() === this.chapterFilter!.trim())
-      : this.allLines;
-    return filtered.filter(l => this.hasUserMove(l)).map(l => this.lineKeyOf(l));
+    return linesInChapter(this.allLines, this.chapterFilter)
+      .filter(l => this.hasUserMove(l)).map(l => this.lineKeyOf(l));
   }
 
   private reloadStatesAndRebuild(): void {
@@ -437,29 +434,13 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Hat die Linie mindestens einen Zug der Kapitelfarbe? Sonst gibt es an ihr nichts zu üben. */
   private hasUserMove(line: ParsedGame): boolean {
-    // FEN[0] enthält die Startseite; wir suchen den ersten Ply, an dem der User (= Kapitelfarbe) zieht.
-    if (line.moves.length === 0) return false;
-    const color = this.colorOf(line);
-    const start = new Chess(line.fens[0]);
-    let side: 'w' | 'b' = start.turn();
-    for (let i = 0; i < line.moves.length; i++) {
-      if (side === color) return true;
-      side = side === 'w' ? 'b' : 'w';
-    }
-    return false;
+    return userMoveCount(line, this.colorOf(line)) > 0;
   }
 
   private countUserMoves(line: ParsedGame): number {
-    const color = this.colorOf(line);
-    const start = new Chess(line.fens[0]);
-    let side: 'w' | 'b' = start.turn();
-    let n = 0;
-    for (let i = 0; i < line.moves.length; i++) {
-      if (side === color) n++;
-      side = side === 'w' ? 'b' : 'w';
-    }
-    return n;
+    return userMoveCount(line, this.colorOf(line));
   }
 
   private startCurrentLine(): void {
@@ -503,7 +484,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         else { this.enterLearnPlay(); }
         return;
       }
-      try { this.dests = calcDests(new Chess(this.fen)); } catch { this.dests = new Map(); }
+      this.dests = destsAt(this.fen);
       this.phase = 'PLAYING';
       this.cdr.markForCheck();
       return;
@@ -848,7 +829,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
     if (this.outcome === 'wrong') {
       this.kickOffEvalCompare(fenAfterPlayer, expectedMove.san);
-      try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+      this.dests = destsAt(this.startFen);
     } else {
       this.scheduleAdvance(ADVANCE_MS[this.outcome]);
     }
@@ -917,7 +898,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.wrongRevealed = false;
     this.fen = this.startFen;
     this.lastMove = undefined;
-    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.dests = destsAt(this.startFen);
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
   }
@@ -979,7 +960,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.clearLearn();
     this.fen = this.startFen;
     this.lastMove = undefined;
-    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.dests = destsAt(this.startFen);
     this.learnComment = '';
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
@@ -1016,7 +997,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.clearLearn();
     this.fen = this.startFen;
     this.lastMove = undefined;
-    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.dests = destsAt(this.startFen);
     this.learnComment = '';
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
@@ -1052,9 +1033,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     // this.chess steht noch auf startFen (der geduldete Zug wurde nur auf einer Kopie geprüft).
     this.fen = this.startFen;
     this.lastMove = undefined;
-    try { this.dests = calcDests(new Chess(this.startFen)); } catch { this.dests = new Map(); }
+    this.dests = destsAt(this.startFen);
     this.phase = 'PLAYING';
     this.cdr.markForCheck();
+  }
+
+  /** Alle Timer der laufenden Linie wegräumen (Weiter, Gegnerzug, Lern-Anzeige). */
+  private clearLineTimers(): void {
+    this.clearAdvance(); this.clearOppTimer(); this.clearLearn();
   }
 
   private clearAdvance(): void {
