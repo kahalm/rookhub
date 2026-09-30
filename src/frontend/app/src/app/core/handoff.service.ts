@@ -13,8 +13,8 @@ import { leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-
  * deshalb einen Einmal-Code (60 s, einmal einloesbar) und haengt ihn an die Ziel-URL; die
  * Gegenseite tauscht ihn beim Start gegen ihre eigene Anmeldung.</p>
  *
- * <p>Ohne Anmeldung wird schlicht ohne Code gesprungen — dann landet man drueben auf der
- * oeffentlichen Seite bzw. der Anmeldemaske.</p>
+ * <p>Ohne Anmeldung — und waehrend einer Impersonation — wird schlicht ohne Code gesprungen: dann
+ * landet man drueben auf der oeffentlichen Seite bzw. der Anmeldemaske.</p>
  *
  * <p>Der Code deckt aber nur den KLICK im Menue ab. Wer die Turnierseite direkt aufruft, nachdem
  * er sich vorhin in RookHub angemeldet hat, bringt keinen mit — dafuer gibt es die GETEILTE
@@ -74,17 +74,26 @@ export class HandoffService {
   private async jumpTo(base: string, path: string): Promise<void> {
     const target = `${base}/${path}`.replace(/([^:]\/)\/+/g, '$1');
 
-    if (!this.auth.isLoggedIn) { location.href = target; return; }
+    if (!this.auth.isLoggedIn) { this.go(target); return; }
+    // Waehrend einer Impersonation gar nicht erst fragen: eingeloest wird der Code drueben zu einer
+    // GEWOEHNLICHEN Anmeldung des Zielkontos (30 Tage, ohne imp-Claim, samt geteiltem Cookie) — alle
+    // Impersonations-Sperren waeren weg. Der Server lehnt ohnehin mit 403 ab (A1-001); drueben steht
+    // dann die Anmeldemaske. Geprueft wird das Token-Merkmal, nicht `isImpersonating`: das verlangt
+    // zusaetzlich das Admin-Backup, der Server schaut nur aufs Token.
+    if (this.auth.currentUser?.impersonating) { this.go(target); return; }
     try {
       const res = await firstValueFrom(this.http.post<{ code: string }>('/api/auth/handoff', {}));
       const sep = target.includes('?') ? '&' : '?';
-      location.href = `${target}${sep}${HandoffService.Param}=${encodeURIComponent(res.code)}`;
+      this.go(`${target}${sep}${HandoffService.Param}=${encodeURIComponent(res.code)}`);
     } catch {
       // Kein Code zu bekommen ist kein Grund, den Sprung zu verweigern — drueben steht dann
       // die Anmeldemaske, und das ist immer noch besser als ein toter Knopf.
-      location.href = target;
+      this.go(target);
     }
   }
+
+  /** Die eigentliche Navigation — eine eigene Methode, damit die Specs den Seitenwechsel abfangen koennen. */
+  private go(url: string): void { location.href = url; }
 
   /**
    * Loest einen mitgebrachten Code ein (beim App-Start aufzurufen) und raeumt ihn aus der URL —

@@ -125,6 +125,63 @@ describe('HandoffService', () => {
     http.verify();
   });
 
+  describe('Sprung zur Schwesterseite', () => {
+    let go: jasmine.Spy;
+
+    beforeEach(() => {
+      spyOnProperty(svc, 'partnerUrl', 'get').and.returnValue('https://turnier.example');
+      go = spyOn(svc as unknown as { go: (url: string) => void }, 'go');
+    });
+
+    it('holt angemeldet einen Übergabe-Code und hängt ihn an', async () => {
+      auth.adoptSession(session);
+
+      const done = svc.jump('dashboard');
+      http.expectOne({ method: 'POST', url: '/api/auth/handoff' }).flush({ code: 'C1' });
+      await done;
+
+      expect(go).toHaveBeenCalledWith('https://turnier.example/dashboard?h=C1');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('fragt während einer Impersonation gar nicht erst nach einem Code', async () => {
+      // Gemeldet im Codereview 2026-09-29 (F1-001): eingelöst wird der Code drüben zu einer
+      // GEWÖHNLICHEN 30-Tage-Anmeldung des Zielkontos samt geteiltem Cookie — ohne imp-Claim, also
+      // ohne die Impersonations-Sperren. Der Server lehnt seit W1 (A1-001) mit 403 ab; hier wird
+      // gar nicht erst gefragt, drüben steht dann die Anmeldemaske.
+      auth.adoptSession({ token: jwt(), username: 'admin', userId: 1, isAdmin: true });
+      auth.impersonate({ token: jwt(), username: 'x', userId: 9, isAdmin: false });
+      expect(auth.isImpersonating).toBeTrue();
+
+      await svc.jump('dashboard');
+
+      http.expectNone('/api/auth/handoff');
+      expect(go).toHaveBeenCalledWith('https://turnier.example/dashboard');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('springt auch ohne Admin-Sicherung ohne Code, solange das Token eine Impersonation ist', async () => {
+      // isImpersonating verlangt zusätzlich das Admin-Backup; der Server prüft nur das Token.
+      auth.adoptSession({ ...session, impersonating: true });
+
+      await svc.jump();
+
+      http.expectNone('/api/auth/handoff');
+      expect(go).toHaveBeenCalledWith('https://turnier.example/');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('springt ohne Anmeldung ohne Code', async () => {
+      await svc.jump('tournaments/calendar');
+
+      http.expectNone('/api/auth/handoff');
+      expect(go).toHaveBeenCalledWith('https://turnier.example/tournaments/calendar');
+    });
+  });
+
   describe('Abmelden über die Oberflächen hinweg', () => {
     // Gemeldet im Codereview 2026-09-29 (A1-005): Abmelden in RookHub löschte nur das Cookie. KidHub,
     // Turnierseite und LeagueHub, die es beim Start gegen ein eigenes 30-Tage-Token getauscht hatten,
