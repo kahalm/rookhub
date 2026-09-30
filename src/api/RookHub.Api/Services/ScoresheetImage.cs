@@ -17,15 +17,51 @@ public static class ScoresheetImage
     public static readonly IReadOnlySet<string> AcceptedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         { "image/jpeg", "image/png", "image/webp" };
 
-    /// <summary>Lässt sich das als Bild lesen? (Die Endung/der MIME-Typ allein beweist nichts.)</summary>
-    public static bool CanDecode(byte[] data)
+    /// <summary>Größtes Bild (Breite × Höhe laut Kopf), das überhaupt angenommen wird. Ohne Deckel dekodierte
+    /// <see cref="Prepare"/> jedes Bild in voller Größe: ein PNG mit 1-Bit-Palette und 60 000 × 60 000 Pixeln ist unter
+    /// 1 MB groß, entpackt aber 14 GB — der API-Prozess (samt Einlese-Worker) fiel dem OOM-Killer zum Opfer, und nach dem
+    /// Neustart kam dieselbe Einlesung bis zu dreimal wieder. 120 MP lassen noch jedes Handyfoto bis 108 MP durch.</summary>
+    public const long MaxPixels = 120_000_000;
+
+    /// <summary>Bis hierhin wird in voller Auflösung dekodiert, wie immer (48/50-MP-Handyfotos: bis 200 MB, das
+    /// Ergebnis bleibt byte-gleich). Größere Bilder dekodiert der Codec gleich verkleinert (JPEG in Achteln, WebP
+    /// beliebig); ein Format, das das nicht kann (PNG), wird oberhalb dieser Grenze abgelehnt.</summary>
+    public const long MaxDecodePixels = 50_000_000;
+
+    /// <summary>Lässt sich das als Bild lesen — und ohne übergroße Bitmap? (Die Endung/der MIME-Typ allein beweist
+    /// nichts.)</summary>
+    public static bool CanDecode(byte[] data) => CanDecode(data, MaxPixels, MaxDecodePixels);
+
+    internal static bool CanDecode(byte[] data, long maxPixels, long maxDecodePixels)
     {
         try
         {
             using var codec = SKCodec.Create(new SKMemoryStream(data));
-            return codec != null && codec.Info.Width > 0 && codec.Info.Height > 0;
+            return codec != null && DecodeInfo(codec, maxPixels, maxDecodePixels) != null;
         }
         catch { return false; }
+    }
+
+    /// <summary>In welcher Größe dekodiert wird: das Bild selbst bis <paramref name="maxDecodePixels"/>, darüber die
+    /// größte Stufe, die der Codec verkleinert liefern kann und die unter der Grenze bleibt. <c>null</c> = ablehnen
+    /// (unlesbar, über <paramref name="maxPixels"/>, oder zu groß und nicht verkleinerbar). Liest nur den Kopf.</summary>
+    private static SKImageInfo? DecodeInfo(SKCodec codec, long maxPixels, long maxDecodePixels)
+    {
+        var info = codec.Info;
+        if (info.Width <= 0 || info.Height <= 0) return null;
+        var pixels = (long)info.Width * info.Height;
+        if (pixels > maxPixels) return null;
+        if (pixels <= maxDecodePixels) return info;
+        // JPEG rundet auf die nächste Achtel-Stufe AUF — bleibt die über der Grenze, eine Stufe kleiner versuchen.
+        // PNG kann nicht verkleinert dekodieren und liefert immer die volle Größe: nach den Versuchen abgelehnt.
+        var scale = Math.Sqrt((double)maxDecodePixels / pixels);
+        for (var i = 0; i < 16; i++, scale *= 0.9)
+        {
+            var d = codec.GetScaledDimensions((float)scale);
+            if (d.Width > 0 && d.Height > 0 && (long)d.Width * d.Height <= maxDecodePixels)
+                return info.WithSize(d.Width, d.Height);
+        }
+        return null;
     }
 
     /// <summary>Breite × Höhe laut Bildkopf (ohne zu dekodieren); <c>null</c>, wenn sich das Bild nicht lesen lässt.
@@ -42,14 +78,20 @@ public static class ScoresheetImage
     }
 
     /// <summary>Aufrecht, längste Seite höchstens <paramref name="maxEdge"/> Pixel, JPEG. <c>null</c>, wenn
-    /// sich das Bild nicht lesen lässt.</summary>
-    public static byte[]? Prepare(byte[] data, int maxEdge, int quality = 88)
+    /// sich das Bild nicht lesen lässt oder zu groß ist (<see cref="MaxPixels"/>, <see cref="MaxDecodePixels"/>).</summary>
+    public static byte[]? Prepare(byte[] data, int maxEdge, int quality = 88) =>
+        Prepare(data, maxEdge, quality, MaxPixels, MaxDecodePixels);
+
+    internal static byte[]? Prepare(byte[] data, int maxEdge, int quality, long maxPixels, long maxDecodePixels)
     {
         try
         {
             using var codec = SKCodec.Create(new SKMemoryStream(data));
             if (codec == null) return null;
-            using var decoded = SKBitmap.Decode(codec);
+            if (DecodeInfo(codec, maxPixels, maxDecodePixels) is not { } target) return null;
+            using var decoded = target.Width == codec.Info.Width && target.Height == codec.Info.Height
+                ? SKBitmap.Decode(codec)
+                : DecodeScaled(codec, target);
             if (decoded == null) return null;
 
             using var upright = Orient(decoded, codec.EncodedOrigin);
@@ -68,6 +110,15 @@ public static class ScoresheetImage
         {
             return null;
         }
+    }
+
+    /// <summary>Wie <see cref="SKBitmap.Decode(SKCodec)"/> (premultipliziert, ohne Farbraum), nur in der verkleinerten
+    /// Größe, die <see cref="DecodeInfo"/> gewählt hat.</summary>
+    private static SKBitmap? DecodeScaled(SKCodec codec, SKImageInfo target)
+    {
+        if (target.AlphaType == SKAlphaType.Unpremul) target.AlphaType = SKAlphaType.Premul;
+        target.ColorSpace = null;
+        return SKBitmap.Decode(codec, target);
     }
 
     /// <summary>Wendet die EXIF-Drehung an; <c>null</c> = schon aufrecht.</summary>
