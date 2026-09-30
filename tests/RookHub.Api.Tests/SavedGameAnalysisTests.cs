@@ -301,6 +301,86 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(GuessUploadReason.TooManyOpen, refused!.Reason);
     }
 
+    // ===== Längerer Re-Save aus der Erweiterung (N8-002) =====================
+
+    private Task<SavedGameDetailDto> ResaveAsync(int userId, List<string> moves, int? whiteElo = null)
+        => _svc.SaveAsync(userId, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = moves, White = "Anna", Black = "Bert", Result = "1-0", ExternalId = "g-1",
+            WhiteElo = whiteElo,
+        });
+
+    private async Task AddRecapAndTrainingAsync(int userId, int gameId)
+    {
+        _db.GameRecaps.Add(new GameRecap { SavedGameId = gameId, Language = "en", Text = "Anna won in four moves." });
+        _db.GameMistakeProgresses.Add(new GameMistakeProgress { UserId = userId, SavedGameId = gameId, Total = 2, SolvedPlies = "3", SolvedCount = 1 });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Partie mitten im Spiel gespeichert und analysiert, später vollständig neu gespeichert (gleiche ExternalId,
+    /// heilt in place): vorher gab „Analysieren" die alte Analyse als „Reused" zurück — die Kurve endete bei der alten
+    /// Fassung, Fehler-Training und Nacherzählung (auch in der Vorschau von /g/{token}) galten für die alten Züge.</summary>
+    [Fact]
+    public async Task Resave_mitMehrZuegen_loestAnalyse_Training_undNacherzaehlung_undAnalysierenRechnetNeu()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var old = await _svc.AnalyzeAsync(owner.Id, game.Id);
+        await AddRecapAndTrainingAsync(owner.Id, game.Id);
+
+        var healed = await ResaveAsync(owner.Id, new() { "e4", "c5", "Nf3", "d6", "d4", "cxd4" });
+
+        Assert.Equal(game.Id, healed.Id);
+        Assert.Equal(game.ShareToken, healed.ShareToken);
+        Assert.Null((await RowAsync(game.Id)).GameAnalysisId);
+        Assert.Empty(_db.GameRecaps.Where(r => r.SavedGameId == game.Id));
+        Assert.Empty(_db.GameMistakeProgresses.Where(p => p.SavedGameId == game.Id));
+        Assert.Null((await _svc.GetSharedAsync(game.ShareToken))!.Recap);
+
+        var again = await _svc.AnalyzeAsync(owner.Id, game.Id);
+
+        Assert.False(again!.Reused);
+        Assert.NotEqual(old!.Analysis!.Id, again.Analysis!.Id);
+        Assert.Equal(again.Analysis.Id, (await RowAsync(game.Id)).GameAnalysisId);
+    }
+
+    /// <summary>Ein Re-Save, der nur die Wertung nachträgt (gleiche Züge), ändert an Analyse, Training und
+    /// Nacherzählung nichts.</summary>
+    [Fact]
+    public async Task Resave_nurMitElo_behaeltAnalyse_Training_undNacherzaehlung()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        var old = await _svc.AnalyzeAsync(owner.Id, game.Id);
+        await AddRecapAndTrainingAsync(owner.Id, game.Id);
+
+        var healed = await ResaveAsync(owner.Id, new() { "e4", "c5", "Nf3", "d6" }, whiteElo: 1832);
+
+        Assert.Equal(1832, healed.WhiteElo);
+        Assert.Equal(old!.Analysis!.Id, (await RowAsync(game.Id)).GameAnalysisId);
+        Assert.Single(_db.GameRecaps.Where(r => r.SavedGameId == game.Id));
+        Assert.Single(_db.GameMistakeProgresses.Where(p => p.SavedGameId == game.Id));
+    }
+
+    /// <summary>Korrigieren (UpdateAsync) nimmt denselben Weg — und löscht jetzt auch die Nacherzählung.</summary>
+    [Fact]
+    public async Task Korrigieren_mitAnderenZuegen_loeschtAuchDieNacherzaehlung()
+    {
+        var owner = await UserAsync("owner");
+        var game = await SaveAsync(owner.Id);
+        await _svc.AnalyzeAsync(owner.Id, game.Id);
+        await AddRecapAndTrainingAsync(owner.Id, game.Id);
+
+        await _svc.UpdateAsync(owner.Id, game.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "e5" } }, White = "Anna", Black = "Bert", Result = "1-0",
+        });
+
+        Assert.Null((await RowAsync(game.Id)).GameAnalysisId);
+        Assert.Empty(_db.GameRecaps.Where(r => r.SavedGameId == game.Id));
+        Assert.Empty(_db.GameMistakeProgresses.Where(p => p.SavedGameId == game.Id));
+    }
+
     // ===== Nicht bei den Punktepartien ======================================
 
     /// <summary>Die Liste „Eigene Analysen" (Punktepartie-Seite und Partie-Analysen) zeigt die ueber

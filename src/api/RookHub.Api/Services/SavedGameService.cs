@@ -124,7 +124,13 @@ public class SavedGameService
                 var incoming = SanKeys(moves);
                 if (IsPrefixOf(stored, incoming))
                 {
-                    if (TryHeal(existing, moves, dto, result)) await _db.SaveChangesAsync();
+                    if (TryHeal(existing, moves, dto, result))
+                    {
+                        // Neue Züge (nicht nur Elo): wie beim Korrigieren gehört, was an der alten Zugfolge hing, nicht
+                        // mehr zur Partie — sonst gab „Analysieren" die alte Kurve als „Reused" zurück (N8-002).
+                        if (incoming.Count > stored.Count) await OnMovesChangedAsync(existing);
+                        await _db.SaveChangesAsync();
+                    }
                     return MapDetail(existing);
                 }
                 // Kürzere Fassung derselben Partie (Doppelklick, Zugliste noch nicht ganz geladen):
@@ -732,7 +738,8 @@ public class SavedGameService
     /// und nichts wird geschrieben. Header, die hier nicht bearbeitet werden (Elo, Bedenkzeit, FEN), bleiben.
     ///
     /// <para>Ändern sich die ZÜGE, gehört die verknüpfte Analyse nicht mehr zur Partie (Kurve, Fehler und
-    /// Genauigkeit rechneten eine andere) — der Verweis fällt, ebenso der Stand des Fehler-Trainings.</para>
+    /// Genauigkeit rechneten eine andere) — der Verweis fällt, ebenso der Stand des Fehler-Trainings und die
+    /// Nacherzählung (<see cref="OnMovesChangedAsync"/>).</para>
     /// </summary>
     /// <returns><c>null</c>, wenn die Partie nicht existiert oder fremd ist.</returns>
     public async Task<SavedGameDetailDto?> UpdateAsync(int userId, int id, GameUpdateDto dto)
@@ -771,17 +778,26 @@ public class SavedGameService
         g.MoveCount = sans.Count;
         // null = unverändert; "" oder etwas anderes = Festlegung zurücknehmen.
         if (dto.OwnerSide != null) g.OwnerSide = dto.OwnerSide is "white" or "black" ? dto.OwnerSide : null;
-        if (movesChanged)
-        {
-            g.GameAnalysisId = null;
-            var progress = await _db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync();
-            _db.GameMistakeProgresses.RemoveRange(progress);
-        }
+        if (movesChanged) await OnMovesChangedAsync(g);
         await _db.SaveChangesAsync();
         var dtoOut = MapDetail(g);
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
         dtoOut.OwnerSide = DetermineOwnerSide(g, profile);
         return dtoOut;
+    }
+
+    /// <summary>
+    /// Die Züge einer Partie haben sich geändert (Korrigieren in <see cref="UpdateAsync"/> oder ein längerer Re-Save in
+    /// <see cref="SaveAsync"/>): die verknüpfte Analyse (Kurve, Fehler, Genauigkeit), der Stand des Fehler-Trainings und
+    /// die Nacherzählung (auch in der Link-Vorschau von <c>/g/{token}</c>) gehören zur alten Zugfolge. Der Verweis fällt,
+    /// Training und Nacherzählung werden gelöscht — „Analysieren" rechnet danach die neue Fassung, und nach der Analyse
+    /// entsteht die Nacherzählung neu. Speichert nicht selbst.
+    /// </summary>
+    private async Task OnMovesChangedAsync(SavedGame g)
+    {
+        g.GameAnalysisId = null;
+        _db.GameMistakeProgresses.RemoveRange(await _db.GameMistakeProgresses.Where(p => p.SavedGameId == g.Id).ToListAsync());
+        _db.GameRecaps.RemoveRange(await _db.GameRecaps.Where(r => r.SavedGameId == g.Id).ToListAsync());
     }
 
     /// <summary>Spielt die Züge nach und gibt sie in der Schreibweise des Bretts zurück; wirft beim ersten
