@@ -77,8 +77,7 @@
       "submit": "Kayıt Ol",
       "submitting": "Kayıt yapılıyor...",
       "loginLink": "Zaten hesabınız var mı? Giriş yapın",
-      "failed": "Kayıt başarısız",
-      "emailHint": "Optional"
+      "failed": "Kayıt başarısız"
     },
     "forgot": {
       "title": "Şifreyi sıfırla",

@@ -77,8 +77,7 @@
       "submit": "登録",
       "submitting": "登録中...",
       "loginLink": "すでにアカウントをお持ちの方はログイン",
-      "failed": "登録に失敗しました",
-      "emailHint": "Optional"
+      "failed": "登録に失敗しました"
     },
     "forgot": {
       "title": "パスワードの再設定",

@@ -77,8 +77,7 @@
       "submit": "Registar",
       "submitting": "A registar...",
       "loginLink": "Já tem conta? Iniciar sessão",
-      "failed": "Falha no registo",
-      "emailHint": "Optional"
+      "failed": "Falha no registo"
     },
     "forgot": {
       "title": "Redefinir senha",

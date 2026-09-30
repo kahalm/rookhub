@@ -77,8 +77,7 @@
       "submit": "Registrera",
       "submitting": "Registrerar...",
       "loginLink": "Har du redan ett konto? Logga in",
-      "failed": "Registreringen misslyckades",
-      "emailHint": "Optional"
+      "failed": "Registreringen misslyckades"
     },
     "forgot": {
       "title": "Återställ lösenord",

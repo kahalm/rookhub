@@ -77,8 +77,7 @@
       "submit": "Registrovat",
       "submitting": "Registruji...",
       "loginLink": "Máte již účet? Přihlaste se",
-      "failed": "Registrace se nezdařila",
-      "emailHint": "Optional"
+      "failed": "Registrace se nezdařila"
     },
     "forgot": {
       "title": "Obnovení hesla",

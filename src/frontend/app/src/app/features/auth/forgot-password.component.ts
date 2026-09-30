@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -36,6 +37,13 @@ import { SnackbarService } from '../../core/snackbar.service';
               </button>
             </form>
           }
+          <!-- Konten ohne E-Mail (UX-002): hier kommt nie eine Mail an, und die Bestaetigung bleibt bewusst neutral
+               (keine Konto-Ausforschung). Diese Zeile nennt den anderen Weg — in beiden Zustaenden, denn wer eine
+               erfundene Adresse eingibt, liest sonst nur „Falls die Adresse zu einem Konto gehoert …“. -->
+          <p class="auth-hint no-email">
+            {{ 'auth.forgot.noEmail' | translate }}
+            <a [href]="'mailto:' + legal.contactEmail">{{ legal.contactEmail }}</a>
+          </p>
         </mat-card-content>
         <mat-card-actions>
           <a mat-button routerLink="/login">{{ 'auth.forgot.backToLogin' | translate }}</a>
@@ -48,6 +56,8 @@ import { SnackbarService } from '../../core/snackbar.service';
     mat-card { width: 400px; max-width: 90vw; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     .auth-hint { font-size: 0.9rem; margin: 0.5rem 0 0; }
+    .no-email { margin-top: 1rem; opacity: 0.85; }
+    .no-email a { color: var(--mat-sys-primary); overflow-wrap: anywhere; }
     .auth-info { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
     mat-form-field { width: 100%; }
   `]
@@ -56,8 +66,14 @@ export class ForgotPasswordComponent {
   email = '';
   loading = false;
   sent = false;
+  /** Kontakt fuer Konten ohne E-Mail — je Oberflaeche (KidHub hat eine eigene Adresse, siehe LEGAL_SITE). */
+  readonly legal: LegalSite;
 
-  constructor(private auth: AuthService, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private auth: AuthService, private snackbar: SnackbarService, private translate: TranslateService,
+              // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
+              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
+    this.legal = legal ?? defaultLegalSite();
+  }
 
   onSubmit(): void {
     this.loading = true;

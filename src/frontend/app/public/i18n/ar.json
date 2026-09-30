@@ -77,8 +77,7 @@
       "submit": "إنشاء حساب",
       "submitting": "جارٍ التسجيل...",
       "loginLink": "لديك حساب بالفعل؟ سجّل دخولك",
-      "failed": "فشل التسجيل",
-      "emailHint": "Optional"
+      "failed": "فشل التسجيل"
     },
     "forgot": {
       "title": "إعادة تعيين كلمة المرور",

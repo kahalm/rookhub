@@ -6,6 +6,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LEGAL_SITE } from '../legal/legal-site';
+import { OPERATOR } from '../../../environments/operator';
 
 describe('ForgotPasswordComponent', () => {
   function make(forgotReturn = of(void 0)) {
@@ -59,5 +61,50 @@ describe('ForgotPasswordComponent Template (Mobil-Attribute)', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('input[name="email"]')!.getAttribute('autocomplete')).toBe('email');
+  });
+});
+
+/**
+ * UX-002: ein Konto ohne E-Mail bekommt hier nie eine Mail, und die Bestaetigung ist bewusst neutral. Die Seite
+ * nennt deshalb den anderen Weg — den Kontakt der jeweiligen Oberflaeche, vor UND nach dem Absenden.
+ */
+describe('ForgotPasswordComponent — Konten ohne E-Mail (UX-002)', () => {
+  async function render(legal?: object) {
+    await TestBed.configureTestingModule({
+      imports: [ForgotPasswordComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+        ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : []),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ForgotPasswordComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('nennt im Formular den Kontakt für Konten ohne E-Mail', async () => {
+    const el: HTMLElement = (await render()).nativeElement;
+    const line = el.querySelector('.no-email')!;
+    expect(line).not.toBeNull();
+    expect(line.textContent).toContain('auth.forgot.noEmail');
+    expect(line.querySelector(`a[href="mailto:${OPERATOR.email}"]`)).not.toBeNull();
+  });
+
+  it('bleibt nach dem Absenden stehen (neutrale Bestätigung, es kommt womöglich nie eine Mail)', async () => {
+    const fixture = await render();
+    fixture.componentInstance.sent = true;
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('input[name="email"]')).toBeNull();
+    expect(el.querySelector('.no-email a[href^="mailto:"]')).not.toBeNull();
+  });
+
+  it('nimmt den Kontakt der Oberfläche (KidHub: eigene Adresse)', async () => {
+    const el: HTMLElement = (await render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub' })).nativeElement;
+    expect(el.querySelector('.no-email a[href="mailto:kidhub@oberschm.id"]')).not.toBeNull();
   });
 });

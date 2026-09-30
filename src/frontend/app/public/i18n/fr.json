@@ -77,8 +77,7 @@
       "submit": "S'inscrire",
       "submitting": "Inscription en cours...",
       "loginLink": "Vous avez déjà un compte ? Se connecter",
-      "failed": "Échec de l'inscription",
-      "emailHint": "Optional"
+      "failed": "Échec de l'inscription"
     },
     "forgot": {
       "title": "Réinitialiser le mot de passe",

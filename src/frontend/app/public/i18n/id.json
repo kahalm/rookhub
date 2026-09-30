@@ -77,8 +77,7 @@
       "submit": "Daftar",
       "submitting": "Sedang mendaftar...",
       "loginLink": "Sudah punya akun? Masuk",
-      "failed": "Pendaftaran gagal",
-      "emailHint": "Optional"
+      "failed": "Pendaftaran gagal"
     },
     "forgot": {
       "title": "Atur ulang kata sandi",

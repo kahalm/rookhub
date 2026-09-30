@@ -77,8 +77,7 @@
       "submit": "Registreren",
       "submitting": "Bezig met registreren...",
       "loginLink": "Al een account? Inloggen",
-      "failed": "Registratie mislukt",
-      "emailHint": "Optional"
+      "failed": "Registratie mislukt"
     },
     "forgot": {
       "title": "Wachtwoord opnieuw instellen",

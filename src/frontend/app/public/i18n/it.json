@@ -77,8 +77,7 @@
       "submit": "Registrati",
       "submitting": "Registrazione in corso...",
       "loginLink": "Hai già un account? Accedi",
-      "failed": "Registrazione non riuscita",
-      "emailHint": "Optional"
+      "failed": "Registrazione non riuscita"
     },
     "forgot": {
       "title": "Reimposta password",

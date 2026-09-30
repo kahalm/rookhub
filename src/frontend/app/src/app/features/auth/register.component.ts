@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
@@ -51,7 +52,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -68,14 +69,23 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
               <mat-error>{{ 'auth.register.usernameTooShort' | translate:{ min: usernameMin } }}</mat-error>
             </mat-form-field>
-            <mat-form-field appearance="outline">
+            <!-- Der Hinweis nennt die Folge (UX-002): ohne E-Mail laesst sich ein vergessenes Passwort nie zuruecksetzen —
+                 „Passwort vergessen“ nimmt nur eine E-Mail an. dynamic: der laengere Hinweis darf umbrechen. -->
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ 'auth.register.emailLabel' | translate }}</mat-label>
               <input matInput type="email" [(ngModel)]="email" name="email" email autocomplete="email">
               <mat-hint>{{ 'auth.register.emailHint' | translate }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
-              <input matInput type="password" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autocomplete="new-password">
+              <!-- Anzeigen-Schalter (UX-002): es gibt keine Wiederholung, ein unbemerkter Tippfehler sperrte das neue Konto
+                   aus — ohne E-Mail endgueltig. -->
+              <input matInput [type]="showPassword() ? 'text' : 'password'" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autocomplete="new-password">
+              <button mat-icon-button matSuffix type="button" class="pw-toggle" (click)="showPassword.set(!showPassword())"
+                      [attr.aria-pressed]="showPassword()"
+                      [attr.aria-label]="(showPassword() ? 'auth.register.hidePassword' : 'auth.register.showPassword') | translate">
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
               <mat-hint>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-hint>
               <mat-error>{{ 'auth.register.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
             </mat-form-field>
@@ -126,6 +136,8 @@ export class RegisterComponent {
   // ein im error-Callback gesetztes Feld bliebe unsichtbar (der Knopf hinge auf „Wird registriert …").
   readonly loading = signal(false);
   readonly error = signal<RegisterError | null>(null);
+  /** Passwort im Klartext zeigen (Schalter am Feld). */
+  readonly showPassword = signal(false);
   readonly usernameMin = USERNAME_MIN_LENGTH;
   readonly passwordMin = PASSWORD_MIN_LENGTH;
 

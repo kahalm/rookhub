@@ -77,8 +77,7 @@
       "submit": "Registrarse",
       "submitting": "Registrando...",
       "loginLink": "¿Ya tienes cuenta? Inicia sesión",
-      "failed": "Error en el registro",
-      "emailHint": "Optional"
+      "failed": "Error en el registro"
     },
     "forgot": {
       "title": "Restablecer contraseña",

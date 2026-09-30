@@ -77,8 +77,7 @@
       "submit": "Đăng ký",
       "submitting": "Đang đăng ký...",
       "loginLink": "Đã có tài khoản? Đăng nhập",
-      "failed": "Đăng ký thất bại",
-      "emailHint": "Optional"
+      "failed": "Đăng ký thất bại"
     },
     "forgot": {
       "title": "Đặt lại mật khẩu",

@@ -170,3 +170,64 @@ describe('RegisterComponent Template (Längen + Fehlerblock)', () => {
     expect(box.querySelector('a[href^="/login"]')).toBeNull();
   });
 });
+
+/**
+ * UX-002: wer ohne E-Mail registriert, kann ein vergessenes Passwort nie zuruecksetzen („Passwort vergessen“ nimmt
+ * nur eine E-Mail an). Der Hinweis hiess nur „Optional“, und ein Tippfehler im einzigen Passwortfeld fiel erst beim
+ * naechsten Anmelden auf.
+ */
+describe('RegisterComponent — ohne E-Mail kein Zurücksetzen (UX-002)', () => {
+  async function render() {
+    await TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  async function loadLang(lang: string): Promise<any> {
+    // Karma serviert public/ als Assets — je nach Version unter / oder /base/ (wie i18n-parity.spec.ts).
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+    }
+    throw new Error(`${lang}.json nicht ladbar`);
+  }
+
+  it('der E-Mail-Hinweis nennt die Folge, nicht nur „Optional“', async () => {
+    for (const [lang, word] of [['en', 'reset'], ['de', 'zurücksetzen']]) {
+      const hint: string = (await loadLang(lang)).auth.register.emailHint;
+      expect(hint).withContext(lang).not.toBe('Optional');
+      expect(hint.toLowerCase()).withContext(lang).toContain(word);
+    }
+  });
+
+  it('das Passwort lässt sich einblenden und wieder verbergen', async () => {
+    const fixture = await render();
+    const el: HTMLElement = fixture.nativeElement;
+    const input = el.querySelector('input[name="password"]') as HTMLInputElement;
+    const toggle = el.querySelector('button.pw-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.type).toBe('button');                 // kein Absenden des Formulars
+    expect(input.type).toBe('password');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.register.showPassword');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('text');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('auth.register.hidePassword');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('password');
+  });
+});
