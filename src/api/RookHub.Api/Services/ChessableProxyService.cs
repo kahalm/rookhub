@@ -146,6 +146,47 @@ public class ChessableProxyService : ICachedLineSource
         return await response.Content.ReadFromJsonAsync<ChessableCourseProgressDto>(JsonOpts, ct);
     }
 
+    /// <summary>Höchstwartezeit eines Abbruch-Aufrufs. Der Client hat für den tiefen Abruf 15 min Timeout; ein
+    /// hängender piratechess soll aber weder den Abbruch-Klick noch die Poll-Schleife so lange aufhalten.</summary>
+    internal TimeSpan CancelTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Bricht einen Kurs-Abruf-Job bei piratechess ab (<c>DELETE /api/chessable/direct/course/{jobId}</c>, Codereview
+    /// S2-008). Ohne diese Nachricht holte piratechess einen in rookhub abgebrochenen, pausierten oder stillstehenden
+    /// Kurs trotzdem ganz weiter über die VPN-IP. Best effort, wirft nur bei Abbruch durch den Aufrufer: 404 = Job
+    /// unbekannt (schon abgeholt, abgelaufen, piratechess neu gestartet), 405 = älterer piratechess ohne den
+    /// Endpunkt — beides still; andere Fehler werden nur geloggt. <c>true</c> = piratechess hat den Job abgebrochen
+    /// und freigegeben, ein späteres Pollen der JobId liefert 404 (dann startet der Import einen neuen Job).
+    /// </summary>
+    public async Task<bool> CancelCourseJobAsync(string jobId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(jobId)) return false;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(CancelTimeout);
+        try
+        {
+            using var response = await _httpClient.DeleteAsync(
+                $"/api/chessable/direct/course/{Uri.EscapeDataString(jobId)}", timeout.Token);
+            if (response.IsSuccessStatusCode) return true;
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                _logger.LogDebug("Chessable-Proxy: Kurs-Job {JobId} beim Abbruch unbekannt (schon abgeholt oder abgelaufen)", jobId);
+            else if (response.StatusCode == HttpStatusCode.MethodNotAllowed)
+                _logger.LogInformation("Chessable-Proxy: piratechess kennt den Abbruch von Kurs-Jobs noch nicht (älterer Stand) — Job {JobId} läuft weiter", jobId);
+            else
+                _logger.LogWarning("Chessable-Proxy: Abbruch von Kurs-Job {JobId} fehlgeschlagen: HTTP {Status}", jobId, (int)response.StatusCode);
+            return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Chessable-Proxy: Abbruch von Kurs-Job {JobId} fehlgeschlagen", jobId);
+            return false;
+        }
+    }
+
     /// <summary>Leichte Vorab-Schätzung: Gesamt-Linienzahl eines Kurses (für die „~N Linien · ~M min"-
     /// Anzeige in der Admin-Kursliste). Gecacht → ohne Chessable-Abruf; sonst EIN getCourse-Call.</summary>
     public async Task<ChessableCourseInfoDto?> GetCourseInfoAsync(string bearer, string bid, CancellationToken ct = default)

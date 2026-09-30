@@ -253,6 +253,7 @@ public class ChessableAdminController : BaseApiController
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Chessable-Import {Id} (bid {Bid}, User {UserId}) von Admin {AdminId} abgebrochen",
                 import.Id, import.Bid, import.UserId, GetUserId());
+            await _queue.CancelIdleFetchJobAsync(import, ct);
         }
         return Ok(ChessableImportQueueService.ToAdminDto(import, 0));
     }

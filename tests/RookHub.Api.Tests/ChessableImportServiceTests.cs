@@ -1377,6 +1377,161 @@ public class ChessableImportServiceTests : IDisposable
         Assert.Equal(0, _queue.Count);            // kein weiterer Resume
     }
 
+    // --- S2-008: den piratechess-Job bei Abbruch, Pause und Stillstand mit anhalten. Vorher hörte rookhub nur auf zu
+    //     pollen, piratechess holte den ganzen Kurs trotzdem weiter über die VPN-IP. ---
+
+    /// <summary>Schreibt jeden Abbruch-Aufruf (DELETE course/{jobId}) mit und beantwortet ihn mit
+    /// <paramref name="cancelReply"/> (Vorgabe: piratechess hat abgebrochen); alles andere geht an <paramref name="inner"/>.</summary>
+    private static Func<HttpRequestMessage, HttpResponseMessage> CountingCancels(
+        Func<HttpRequestMessage, HttpResponseMessage> inner, List<string> deletes, Func<HttpResponseMessage>? cancelReply = null)
+        => req =>
+        {
+            if (req.Method != HttpMethod.Delete) return inner(req);
+            deletes.Add(req.RequestUri!.AbsolutePath);
+            return cancelReply?.Invoke() ?? JsonOk(new { cancelled = true });
+        };
+
+    /// <summary>Nutzer (bzw. Admin) bricht während der Hol-Phase ab oder pausiert — die Poll-Schleife sieht den
+    /// Status und hält den piratechess-Job genau einmal an.</summary>
+    [Theory]
+    [InlineData(ChessableImportStatus.Cancelled)]
+    [InlineData(ChessableImportStatus.Paused)]
+    public async Task RunAsync_CancelledOrPausedDuringFetch_CancelsThePiratechessJobOnce(ChessableImportStatus external)
+    {
+        const int importId = 990831;   // fest: RunAsync meldet den Import prozessweit als lokal getrieben
+        var opts = new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        using var db = new AppDbContext(opts);
+        db.AppUsers.Add(new AppUser { Id = 7, Username = "u7", PasswordHash = "x" });
+        db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("bearer"), CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        db.ChessableImports.Add(new ChessableImport
+        {
+            Id = importId, UserId = 7, Bid = "b1", CourseName = "", Target = "repertoire",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, CreatedAt = DateTime.UtcNow
+        });
+        db.SaveChanges();
+
+        var deletes = new List<string>();
+        var polls = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            if (++polls == 1)
+            {
+                // Beim ersten Poll kommt der Abbruch/die Pause über einen anderen Request (eigener DbContext).
+                using var other = new AppDbContext(opts);
+                other.ChessableImports.Single(i => i.Id == importId).Status = external;
+                other.SaveChanges();
+            }
+            return FetchingStatic();
+        }, deletes)), db: db);
+        svc.PollDelayMs = 0;
+
+        await svc.RunAsync(importId);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(1, polls);                                   // danach kein weiterer Poll
+        var row = await db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == importId);
+        Assert.Equal(external, row.Status);
+        Assert.Null(row.Error);
+    }
+
+    /// <summary>Echter Stillstand: piratechess-Job abbrechen, egal was piratechess antwortet (404 = Job weg, 405 = älterer
+    /// Stand ohne Abbruch, Netzfehler) — der Import wird trotzdem wie bisher neu eingereiht.</summary>
+    [Theory]
+    [InlineData("ok")]
+    [InlineData("404")]
+    [InlineData("405")]
+    [InlineData("down")]
+    public async Task RunAsync_FetchStalls_CancelsThePiratechessJob_AndReEnqueuesWhateverItAnswers(string answer)
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic(),
+            deletes, () => answer switch
+            {
+                "404" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                "405" => new HttpResponseMessage(HttpStatusCode.MethodNotAllowed),
+                "down" => throw new HttpRequestException("Connection refused"),
+                _ => JsonOk(new { cancelled = true }),
+            })));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Running, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.Queued, reloaded.Phase);
+        Assert.Equal(1, _queue.Count);
+    }
+
+    [Fact]
+    public async Task RunAsync_FetchStallsAtMaxAttempts_CancelsThePiratechessJob_AndFails()
+    {
+        SeedFetchUserAndImport(attempts: ChessableImportService.MaxAttempts - 1, out var id);
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+            req.RequestUri!.AbsolutePath.EndsWith("/course/start") ? JsonOk(new { jobId = "job-1" }) : FetchingStatic(), deletes)));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(ChessableImportStatus.Failed, (await _db.ChessableImports.FindAsync(id))!.Status);
+    }
+
+    /// <summary>Die Absolut-Grenze greift, obwohl der Job noch Fortschritt macht: der Job läuft weiter, der nächste
+    /// Versuch pollt ihn wieder (kein Abbruch, sonst finge ein großer Kurs jedes Mal von vorn an).</summary>
+    [Fact]
+    public async Task RunAsync_AbsoluteBackstopWhileProgressing_LeavesThePiratechessJobRunning()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var n = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            n++;
+            return JsonOk(new { status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0,
+                lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null });
+        }, deletes)));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 1000; svc.FetchMaxPolls = 3;
+
+        await svc.RunAsync(id);
+
+        Assert.Empty(deletes);
+        Assert.Equal(1, _queue.Count);
+        Assert.Equal("job-1", (await _db.ChessableImports.FindAsync(id))!.FetchJobId);
+    }
+
+    /// <summary>Tageslimit erreicht, aber vom vorigen Versuch läuft noch ein piratechess-Job: der wird mit
+    /// angehalten, sonst holte er den Kurs am Limit vorbei zu Ende.</summary>
+    [Fact]
+    public async Task RunAsync_RateLimitPause_CancelsTheJobOfThePreviousAttempt()
+    {
+        await SeedCredentialAsync(7, blocked: false);
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 7);
+        cred.RateLimitWindowStartedAt = DateTime.UtcNow;
+        cred.RateLimitLinesUsed = 5;
+        var imp = await SeedImportAsync("repertoire", fetchedPgn: null, attempts: 1);
+        imp.FetchJobId = "job-7";
+        await _db.SaveChangesAsync();
+        var deletes = new List<string>();
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(
+            _ => throw new InvalidOperationException("Proxy unerwartet aufgerufen"), deletes)), dailyLineLimit: 5);
+
+        await svc.RunAsync(imp.Id);
+
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-7" }, deletes);
+        var reloaded = await _db.ChessableImports.FindAsync(imp.Id);
+        Assert.Equal(ChessableImportStatus.Paused, reloaded!.Status);
+        Assert.Equal(ChessableImportPhase.RateLimited, reloaded.Phase);
+    }
+
     [Fact]
     public async Task EnqueueReimport_CourseInOwnerLibrary_Enqueues()
     {

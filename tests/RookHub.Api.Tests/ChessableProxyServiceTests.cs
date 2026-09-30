@@ -138,6 +138,87 @@ public class ChessableProxyServiceTests
         Assert.Contains(log.Events, e => e.Message.Contains("Linien-Cache"));
     }
 
+    // --- S2-008: Kurs-Abruf-Job bei piratechess abbrechen (best effort, blockiert nie) ---
+
+    private sealed class ReplyHandler : HttpMessageHandler
+    {
+        public readonly List<HttpRequestMessage> Requests = new();
+        private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _reply;
+        public ReplyHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> reply) => _reply = reply;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Requests.Add(request);
+            return _reply(request, ct);
+        }
+    }
+
+    [Fact]
+    public async Task CancelCourseJob_SendsDeleteWithServiceKey_ToTheJobRoute()
+    {
+        var handler = new ReplyHandler((_, _) => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"cancelled\":true}", System.Text.Encoding.UTF8, "application/json")
+        }));
+        // Wie in Program.cs: der Dienst-Schlüssel hängt am typisierten Client, nicht am einzelnen Aufruf.
+        var client = new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") };
+        client.DefaultRequestHeaders.Add("X-Service-Key", "svc-key");
+        var proxy = new ChessableProxyService(client);
+
+        Assert.True(await proxy.CancelCourseJobAsync("0f3a9c"));
+
+        var req = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Delete, req.Method);
+        Assert.Equal("/api/chessable/direct/course/0f3a9c", req.RequestUri!.AbsolutePath);
+        Assert.Equal("svc-key", Assert.Single(req.Headers.GetValues("X-Service-Key")));
+    }
+
+    /// <summary>404 = Job schon weg, 405 = älterer piratechess ohne den Endpunkt: kein Fehler, keine Warnung.</summary>
+    [Theory]
+    [InlineData(System.Net.HttpStatusCode.NotFound)]
+    [InlineData(System.Net.HttpStatusCode.MethodNotAllowed)]
+    public async Task CancelCourseJob_UnknownJobOrOlderPiratechess_IsIgnored(System.Net.HttpStatusCode status)
+    {
+        var log = new CapturingLogger<ChessableProxyService>();
+        var proxy = new ChessableProxyService(new HttpClient(new ReplyHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(status)))) { BaseAddress = new Uri("http://pc:8080") }, log);
+
+        Assert.False(await proxy.CancelCourseJobAsync("job-1"));
+        Assert.DoesNotContain(log.Events, e => e.Level >= Microsoft.Extensions.Logging.LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task CancelCourseJob_ServerErrorOrProxyDown_ReturnsFalse_ButLogsWarning()
+    {
+        var log = new CapturingLogger<ChessableProxyService>();
+        var down = new ChessableProxyService(
+            new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("http://pc:8080") }, log);
+        var broken = new ChessableProxyService(new HttpClient(new ReplyHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError))))
+            { BaseAddress = new Uri("http://pc:8080") }, log);
+
+        Assert.False(await down.CancelCourseJobAsync("job-1"));
+        Assert.False(await broken.CancelCourseJobAsync("job-2"));
+        Assert.Equal(2, log.Events.Count(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning
+            && e.Message.Contains("Abbruch von Kurs-Job")));
+    }
+
+    /// <summary>Ein hängender piratechess hält weder den Abbruch-Klick noch die Poll-Schleife auf (der Client selbst
+    /// hat 15 min Timeout).</summary>
+    [Fact]
+    public async Task CancelCourseJob_HangingPiratechess_GivesUpAfterTheShortTimeout()
+    {
+        var proxy = new ChessableProxyService(new HttpClient(new ReplyHandler(async (_, ct) =>
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+        })) { BaseAddress = new Uri("http://pc:8080") })
+        { CancelTimeout = TimeSpan.FromMilliseconds(50) };
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        Assert.False(await proxy.CancelCourseJobAsync("job-1"));
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10));
+    }
+
     /// <summary>Eine frei eingetragene Kurs-Id (Repertoire-Feld) ist keine Chessable-bid: dafür kennt der Cache keine
     /// Linie, also gar nicht erst fragen — sonst liefe z. B. die Repertoire-Bereinigung bei jedem Start in einen 400.</summary>
     [Theory]

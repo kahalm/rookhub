@@ -861,6 +861,99 @@ public class ChessableControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(await _admin.CancelImportAdmin(987654));
     }
 
+    // ---- S2-008: Abbrechen/Pausieren hält den piratechess-Kurs-Job mit an (vorher holte piratechess den Kurs trotzdem
+    //      ganz weiter über die VPN-IP). Feste Ids: IsDrivenLocally ist prozessweiter Zustand, parallele Tests mit
+    //      laufenden Importen vergeben sonst dieselben kleinen Ids. ----
+
+    /// <summary>Schreibt jeden Abbruch-Aufruf (DELETE) mit; <paramref name="answer"/> null = piratechess nicht erreichbar.</summary>
+    private List<string> RecordCancels(HttpStatusCode? answer = HttpStatusCode.OK)
+    {
+        var deletes = new List<string>();
+        _handler.Reply = (req, _) =>
+        {
+            if (req.Method != HttpMethod.Delete) return new HttpResponseMessage(HttpStatusCode.OK);
+            deletes.Add(req.RequestUri!.AbsolutePath);
+            return answer is { } a ? new HttpResponseMessage(a) : throw new HttpRequestException("Connection refused");
+        };
+        return deletes;
+    }
+
+    private async Task<ChessableImport> SeedImportWithFetchJobAsync(int id, string? fetchJobId = "job")
+    {
+        var imp = new ChessableImport { Id = id, UserId = 42, Bid = "91808", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued,
+            FetchJobId = fetchJobId is null ? null : $"{fetchJobId}-{id}", CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(imp);
+        await _db.SaveChangesAsync();
+        return imp;
+    }
+
+    [Fact]
+    public async Task CancelPauseAndAdminCancel_CancelThePiratechessJobOnce()
+    {
+        await SeedUserAsync(42);
+        var deletes = RecordCancels();
+        var cancelled = await SeedImportWithFetchJobAsync(990841);
+        var paused = await SeedImportWithFetchJobAsync(990842);
+        var byAdmin = await SeedImportWithFetchJobAsync(990843);
+        var withoutJob = await SeedImportWithFetchJobAsync(990844, fetchJobId: null);
+
+        Assert.IsType<OkObjectResult>(await _controller.CancelImport(cancelled.Id));
+        Assert.IsType<OkObjectResult>(await _controller.PauseImport(paused.Id));
+        Assert.IsType<OkObjectResult>(await _admin.CancelImportAdmin(byAdmin.Id));
+        Assert.IsType<OkObjectResult>(await _controller.CancelImport(withoutJob.Id));   // noch kein Job → nichts zu senden
+
+        Assert.Equal(new[]
+        {
+            "/api/chessable/direct/course/job-990841",
+            "/api/chessable/direct/course/job-990842",
+            "/api/chessable/direct/course/job-990843",
+        }, deletes);
+        var rows = await _db.ChessableImports.AsNoTracking().ToDictionaryAsync(i => i.Id);
+        Assert.Equal(ChessableImportStatus.Cancelled, rows[990841].Status);
+        Assert.Equal(ChessableImportStatus.Paused, rows[990842].Status);
+        Assert.Equal(ChessableImportStatus.Cancelled, rows[990843].Status);
+        Assert.Equal(ChessableImportStatus.Cancelled, rows[990844].Status);
+    }
+
+    /// <summary>Der Abbruch in rookhub hängt nie an piratechess: Job unbekannt (404), älterer Stand ohne Abbruch (405),
+    /// Serverfehler oder nicht erreichbar — der Import ist trotzdem abgebrochen.</summary>
+    [Theory]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.MethodNotAllowed)]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(null)]
+    public async Task CancelImport_PiratechessRefusesOrIsDown_StillCancels(HttpStatusCode? answer)
+    {
+        await SeedUserAsync(42);
+        var deletes = RecordCancels(answer);
+        var imp = await SeedImportWithFetchJobAsync(990845);
+
+        Assert.IsType<OkObjectResult>(await _controller.CancelImport(imp.Id));
+
+        Assert.Single(deletes);
+        var row = await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == imp.Id);
+        Assert.Equal(ChessableImportStatus.Cancelled, row.Status);
+        Assert.Equal("Vom Nutzer abgebrochen", row.Error);
+    }
+
+    /// <summary>Treibt die Poll-Schleife den Import gerade, hält SIE den Job an, sobald sie den Status sieht. Ein
+    /// DELETE von hier kreuzte sich mit ihrem nächsten Poll (Job weg → sie startete einen neuen).</summary>
+    [Fact]
+    public async Task CancelImport_WhileThePollLoopDrivesTheImport_LeavesTheJobToTheLoop()
+    {
+        await SeedUserAsync(42);
+        var deletes = RecordCancels();
+        var imp = await SeedImportWithFetchJobAsync(990846);
+
+        using (ChessableImportService.TrackInflight(imp.Id))
+            Assert.IsType<OkObjectResult>(await _controller.CancelImport(imp.Id));
+
+        Assert.Empty(deletes);
+        Assert.Equal(ChessableImportStatus.Cancelled,
+            (await _db.ChessableImports.AsNoTracking().SingleAsync(i => i.Id == imp.Id)).Status);
+    }
+
     [Fact]
     public async Task GetAllImportsAdmin_ReturnsImportsOfAllUsersWithUsername()
     {

@@ -126,6 +126,18 @@ public class ChessableImportQueueService
         });
     }
 
+    /// <summary>Codereview S2-008: nach Abbruch oder Pause eines Imports dessen piratechess-Kurs-Job best effort mit
+    /// anhalten — sonst holte piratechess den Kurs trotzdem ganz über die VPN-IP. Erst NACH dem Speichern des Status
+    /// aufrufen: ein danach startender Treiber sieht den Status und pollt gar nicht erst. Treibt DIESER Prozess den
+    /// Import gerade (<see cref="ChessableImportService.IsDrivenLocally"/>), hält die Poll-Schleife den Job selbst
+    /// an, sobald sie den Status sieht; ein Abbruch von hier kreuzte sich mit ihrem nächsten Poll (Job weg → sie
+    /// startete einen neuen). Blockiert den Abbruch nie (kurzer Timeout, Fehler nur geloggt).</summary>
+    public async Task CancelIdleFetchJobAsync(ChessableImport import, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(import.FetchJobId) || ChessableImportService.IsDrivenLocally(import.Id)) return;
+        await _chessable.CancelCourseJobAsync(import.FetchJobId, ct);
+    }
+
     /// <summary>Faire globale Warteschlangen-Position (aller User) je Import-Id: die gerade laufenden
     /// (Phase ≠ "queued") belegen die vorderen Plätze, danach die wartenden Importe in fairer
     /// Reihenfolge (Round-Robin über die User, siehe <see cref="ChessableImportService.FairOrder"/>).

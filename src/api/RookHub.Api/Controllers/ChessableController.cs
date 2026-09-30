@@ -401,6 +401,7 @@ public class ChessableController : BaseApiController, IActionFilter
             import.Error = "Vom Nutzer abgebrochen";
             import.CompletedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
+            await _queue.CancelIdleFetchJobAsync(import);
         }
         return Ok(ChessableImportQueueService.ToDto(import, 0));
     }
@@ -417,6 +418,7 @@ public class ChessableController : BaseApiController, IActionFilter
         {
             import.Status = ChessableImportStatus.Paused;
             await _db.SaveChangesAsync();
+            await _queue.CancelIdleFetchJobAsync(import);
         }
         return Ok(ChessableImportQueueService.ToDto(import, 0));
     }

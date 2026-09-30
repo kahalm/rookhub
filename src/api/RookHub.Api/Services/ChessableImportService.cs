@@ -436,6 +436,7 @@ public class ChessableImportService : ICourseReimporter
                         import.Phase = ChessableImportPhase.BearerBlocked;
                         import.Attempts = 0;
                         await _db.SaveChangesAsync(ct);
+                        await CancelFetchJobAsync(import, ct);
                         _logger.LogInformation(
                             "Chessable-Import {Id} pausiert: Bearer von User {UserId} gesperrt (Circuit-Breaker) — wartet auf „Testen“",
                             import.Id, bearerUserId);
@@ -458,6 +459,7 @@ public class ChessableImportService : ICourseReimporter
                             import.Attempts = 0;
                             import.RateLimitedAt = now;
                             await _db.SaveChangesAsync(ct);
+                            await CancelFetchJobAsync(import, ct);
                             _logger.LogInformation(
                                 "Chessable-Import {Id} pausiert: Tageslimit ({Limit} Zeilen/24h) für User {UserId} erreicht — Re-Check in 24h",
                                 import.Id, _rateLimiter.DailyLimit, bearerUserId);
@@ -503,6 +505,10 @@ public class ChessableImportService : ICourseReimporter
                     if (import.Status != ChessableImportStatus.Running)
                     {
                         _logger.LogInformation("Chessable-Import {Id} während Hol-Phase {Status}", import.Id, import.Status);
+                        // Abgebrochen/pausiert: piratechess mit anhalten (S2-008). Das macht die Schleife selbst und
+                        // nicht der Controller — dessen Abbruch kreuzte sich sonst mit dem nächsten Poll (Job weg →
+                        // null → hier startete ein neuer Job).
+                        await CancelFetchJobAsync(import, ct);
                         return;
                     }
 
@@ -566,7 +572,12 @@ public class ChessableImportService : ICourseReimporter
                 {
                     // Abruf kam nicht durch (Stillstand/Absolut-Grenze). Resume-fähig → bis MaxAttempts
                     // AUTOMATISCH neu einreihen statt hart zu scheitern: FetchJobId/FetchedPgn-Checkpoint
-                    // bleibt erhalten, der piratechess-Job läuft weiter bzw. die Rohdaten sind dann gecacht.
+                    // bleibt erhalten. Nach der Absolut-Grenze (Job macht noch Fortschritt) läuft der
+                    // piratechess-Job weiter und der nächste Versuch pollt ihn wieder; bei echtem Stillstand
+                    // wird er abgebrochen (S2-008), der nächste Versuch bekommt 404 und startet einen neuen.
+                    // Ein älterer piratechess ohne Abbruch lässt ihn laufen — dann wie bisher weiterpollen.
+                    if (noProgressPolls >= FetchStallPolls)
+                        await CancelFetchJobAsync(import, ct);
                     if (import.Attempts < MaxAttempts)
                     {
                         import.Phase = ChessableImportPhase.Queued;
@@ -1398,6 +1409,16 @@ public class ChessableImportService : ICourseReimporter
     // erst danach propagiert der Fehler und der Import scheitert. Echte Antwort-Fehler von piratechess
     // (ChessableProxyException, kein Transportfehler) werden NICHT erneut versucht.
     private static readonly int[] ConnRetryBackoffMs = { 3000, 5000, 10000, 15000, 20000, 30000, 30000, 30000 };
+
+    /// <summary>Codereview S2-008: den piratechess-Kurs-Job des Imports best effort abbrechen (Abbruch, Pause,
+    /// erkannter Stillstand), damit piratechess den Kurs nicht trotzdem ganz über die VPN-IP holt. Blockiert nie:
+    /// kurzer Timeout, 404/405 (älterer piratechess) still, andere Fehler nur geloggt. Die JobId bleibt stehen — ein
+    /// späteres Pollen eines abgebrochenen Jobs liefert 404, dann startet der Import einen neuen.</summary>
+    private async Task CancelFetchJobAsync(ChessableImport import, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(import.FetchJobId))
+            await _proxy.CancelCourseJobAsync(import.FetchJobId, ct);
+    }
 
     private async Task<T> WithConnectionRetryAsync<T>(Func<Task<T>> op, int importId, CancellationToken ct)
     {
