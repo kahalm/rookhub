@@ -97,21 +97,51 @@ public class AnonymousDataRetentionService : BackgroundService
         return removed;
     }
 
+    /// <summary>Portionsgröße der Löschung (Zeilen je DELETE).</summary>
+    internal const int DeleteChunkSize = 1000;
+
     /// <summary>Anonyme Endless-Zeilen älter als <paramref name="cutoff"/> löschen. Zeilen MIT
     /// <c>UserId</c> bleiben immer — das ist die Statistik angemeldeter Nutzer.</summary>
-    public static async Task<int> PruneAsync(AppDbContext db, DateTime cutoff, CancellationToken ct = default)
-    {
-        var progresses = await db.EndlessProgresses
-            .Where(p => p.UserId == null && p.UpdatedAt < cutoff)
-            .ToListAsync(ct);
-        var sessions = await db.EndlessSessions
-            .Where(s => s.UserId == null && s.CreatedAt < cutoff)
-            .ToListAsync(ct);
-        if (progresses.Count == 0 && sessions.Count == 0) return 0;
+    public static Task<int> PruneAsync(AppDbContext db, DateTime cutoff, CancellationToken ct = default)
+        => PruneAsync(db, cutoff, DeleteChunkSize, ct);
 
-        db.EndlessProgresses.RemoveRange(progresses);
-        db.EndlessSessions.RemoveRange(sessions);
-        await db.SaveChangesAsync(ct);
-        return progresses.Count + sessions.Count;
+    /// <summary>Wie <see cref="PruneAsync(AppDbContext, DateTime, CancellationToken)"/>, mit wählbarer Portion (Tests).
+    /// Portionsweise über die Ids, ohne die Zeilen zu laden: bis zu 1 MB <c>ActiveGameState</c> je Zeile — ein fälliger
+    /// Rückstand von ein paar tausend Zeilen, auf einmal per ToList geladen, sprengte das Speicherlimit der API, und weil
+    /// der erste Lauf beim Start kommt, scheiterte er danach jeden Tag von Neuem.</summary>
+    internal static async Task<int> PruneAsync(AppDbContext db, DateTime cutoff, int chunkSize, CancellationToken ct = default)
+    {
+        var removed = await DeleteInChunksAsync(db,
+            db.EndlessProgresses.Where(p => p.UserId == null && p.UpdatedAt < cutoff), chunkSize, ct);
+        removed += await DeleteInChunksAsync(db,
+            db.EndlessSessions.Where(s => s.UserId == null && s.CreatedAt < cutoff), chunkSize, ct);
+        return removed;
+    }
+
+    /// <summary>Löscht, was <paramref name="query"/> trifft, in Portionen zu <paramref name="chunkSize"/>: erst nur die
+    /// Ids, dann ein DELETE über dieselbe Bedingung plus die Ids (eine inzwischen wieder berührte Zeile bleibt).
+    /// InMemory (Tests) kennt kein ExecuteDelete — dort über den Tracker.</summary>
+    private static async Task<int> DeleteInChunksAsync<T>(AppDbContext db, IQueryable<T> query, int chunkSize,
+        CancellationToken ct) where T : class
+    {
+        var deleted = 0;
+        while (true)
+        {
+            var ids = await query.OrderBy(e => EF.Property<int>(e, "Id")).Select(e => EF.Property<int>(e, "Id"))
+                .Take(chunkSize).ToListAsync(ct);
+            if (ids.Count == 0) break;
+            var chunk = query.Where(e => ids.Contains(EF.Property<int>(e, "Id")));
+            if (db.Database.IsRelational())
+                deleted += await chunk.ExecuteDeleteAsync(ct);
+            else
+            {
+                var rows = await chunk.ToListAsync(ct);
+                db.Set<T>().RemoveRange(rows);
+                await db.SaveChangesAsync(ct);
+                deleted += rows.Count;
+            }
+            if (ids.Count < chunkSize) break;
+        }
+        return deleted;
     }
 }

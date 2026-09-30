@@ -57,6 +57,33 @@ public class AnonymousDataRetentionServiceTests : IDisposable
     public async Task Prune_EmptyDatabase_IsNoOp()
         => Assert.Equal(0, await AnonymousDataRetentionService.PruneAsync(_db, DateTime.UtcNow));
 
+    [Fact]
+    public async Task Prune_DeletesOverSeveralPortions_AndLeavesTheRest()
+    {
+        // A8-002: portionsweise über die Ids statt alles auf einmal zu laden — auch über die Portionsgrenze hinweg
+        // (5 bzw. 3 fällige Zeilen bei Portion 2) muss alles Fällige weg und alles andere bleiben.
+        var old = DateTime.UtcNow.AddDays(-90);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "u", PasswordHash = "x" });
+        for (var i = 0; i < 5; i++)
+            _db.EndlessProgresses.Add(new EndlessProgress { AnonymousSessionId = $"alt{i}", UpdatedAt = old, ActiveGameState = "{}" });
+        for (var i = 0; i < 3; i++)
+            _db.EndlessSessions.Add(new EndlessSession { AnonymousSessionId = $"alt{i}", CreatedAt = old, Timestamp = i });
+        _db.EndlessProgresses.AddRange(
+            new EndlessProgress { AnonymousSessionId = "neu", UpdatedAt = DateTime.UtcNow },
+            new EndlessProgress { UserId = 7, UpdatedAt = old });
+        _db.EndlessSessions.Add(new EndlessSession { UserId = 7, CreatedAt = old, Timestamp = 9 });
+        await _db.SaveChangesAsync();
+
+        var removed = await AnonymousDataRetentionService.PruneAsync(
+            _db, DateTime.UtcNow - AnonymousDataRetentionService.AnonymousEndlessMaxAge, chunkSize: 2);
+
+        Assert.Equal(8, removed);
+        Assert.Equal(new[] { "neu" }, await _db.EndlessProgresses
+            .Where(p => p.UserId == null).Select(p => p.AnonymousSessionId).ToArrayAsync());
+        Assert.Equal(1, await _db.EndlessProgresses.CountAsync(p => p.UserId == 7));
+        Assert.Equal(1, await _db.EndlessSessions.CountAsync());
+    }
+
     // ---- Anonyme getReview-Senke der Extension (A3-003) ----
 
     private AnonymousDataRetentionService Service(Func<IServiceProvider, ChessableReviewLineService>? reviewLines = null)
