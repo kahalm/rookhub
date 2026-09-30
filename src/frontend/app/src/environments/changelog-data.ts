@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.623.1", date: "2026-09-30", changes: [
+    { en: "LeagueHub account scouting: a Lichess team that hides its member list no longer aborts the whole run — it is skipped and every team after it is read again. The pool of team accounts stayed empty since the feature shipped because of a single such team.", de: "LeagueHub-Konto-Suche: ein Lichess-Team, das seine Mitgliederliste verbirgt, beendet nicht mehr den ganzen Durchgang — es wird übersprungen, und jedes Team danach wird wieder gelesen. Der Bestand der Team-Konten blieb wegen eines einzigen solchen Teams seit der Einführung leer." },
+  ] },
   { version: "0.623.0", date: "2026-09-30", changes: [
     { en: "Calculation courses keep their secrets: no PGN download, repertoire conversion or solver next/random, favorites hide the solution, and scheduled weeks stay hidden on the course page, even after renaming or deleting a chapter.", de: "Kalkulationskurse bleiben geheim: kein PGN-Download, kein Umwandeln, kein Solver-Weiter/Zufall, Favoriten verraten keine Lösung, und terminierte Wochen bleiben auch auf der Kursseite verborgen, selbst nach Umbenennen oder Löschen eines Kapitels." },
     { en: "The distribution list of a calculation series only takes friends of the owner, is capped at 200 members and 120 editions, and members can leave it themselves.", de: "Der Verteiler einer Kalkulations-Serie nimmt nur Freunde des Besitzers auf, ist auf 200 Mitglieder und 120 Ausgaben begrenzt, und Mitglieder können sich selbst austragen." },

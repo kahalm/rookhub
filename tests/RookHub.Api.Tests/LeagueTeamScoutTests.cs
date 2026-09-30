@@ -190,6 +190,53 @@ public class LeagueTeamScoutTests : IDisposable
     }
 
     [Fact]
+    public async Task Pool_SkipsATeamThatGivesNothing_AndReadsTheOnesAfterIt()
+    {
+        // 2026-09-30: „schachsport-union-innsbruck-team-2-mm-2021-osb-lv-tirol" hat seine Mitgliederliste verborgen
+        // (401). Die Ausnahme flog durch RefreshPoolAsync, SaveChangesAsync am Ende wurde nie erreicht — kein Team
+        // NACH ihm wurde je gelesen, LeagueScoutAccounts blieb seit der Einfuehrung leer. Das verborgene Team steht
+        // hier bewusst VORN.
+        var world = World();
+        var http = new FakeHttp(req =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.Contains("/api/team/search"))
+                return Ok("""{"currentPage":1,"currentPageResults":[{"id":"sk-kufstein-2","name":"SK Kufstein 2"},{"id":"sk-kufstein","name":"SK Kufstein"},{"id":"ccb","name":"Chess Club Berlin"}]}""");
+            if (u.Contains("/api/team/sk-kufstein-2/")) return Status(HttpStatusCode.Unauthorized);
+            return world.Answer(req);
+        });
+        Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToListAsync();
+        Assert.Equal(new[] { "katzenpapa", "trigonias" }, pool.Select(a => a.UserName));
+        Assert.Equal((string?)"SK Kufstein", pool[1].PlayedFor);                              // das Battle lief trotzdem
+    }
+
+    [Fact]
+    public async Task Pool_SkipsABattleThatGivesNothing_AndStillKeepsTheMembers()
+    {
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().EndsWith("/api/tournament/tb1")
+            ? Status(HttpStatusCode.Forbidden) : world.Answer(req));
+        Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToListAsync();
+        Assert.Equal(new[] { "katzenpapa", "trigonias" }, pool.Select(a => a.UserName));      // die Mitglieder bleiben
+        Assert.All(pool, a => Assert.Null(a.PlayedFor));                                      // das Battle war nicht zu lesen
+    }
+
+    [Fact]
+    public async Task Pool_ATooManyRequests_StillEndsTheRun()
+    {
+        // Die Duldung gilt NUR fuer 401/403. Ein 429 ist eine RateLimitedException (erbt von Exception, nicht von
+        // HttpRequestException) und muss durch den catch der Team-Schleife hindurchfliegen — sonst klopfte der
+        // Durchgang nach der Drossel weiter an.
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/team/sk-kufstein/users")
+            ? Status(HttpStatusCode.TooManyRequests) : world.Answer(req));
+        await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => Scout(http).RefreshPoolAsync(default));
+        Assert.Empty(await _db.LeagueScoutAccounts.ToListAsync());
+    }
+
+    [Fact]
     public async Task Run_AlsoSuggestsTheSameUserNameOnChessCom_WhenItFits()
     {
         // Wunsch 2026-09-30: „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf chess.com bzw. Lichess existiert und eventuell auch passt".

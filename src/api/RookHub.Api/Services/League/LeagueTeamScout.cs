@@ -186,6 +186,28 @@ public sealed partial class LeagueTeamScout
         return body;
     }
 
+    /// <summary>
+    /// Wie <see cref="GetAsync"/>, aber ein 401/403 heisst „dieses Team gibt nichts her" statt „Durchgang zu Ende".
+    /// Lichess antwortet 401, wenn ein Team seine Mitgliederliste verborgen hat (gesehen am 2026-09-30 an
+    /// schachsport-union-innsbruck-team-2-mm-2021-osb-lv-tirol) — ohne diese Duldung flog die Ausnahme durch
+    /// <see cref="RefreshPoolAsync"/> bis in den Takt, der GANZE Bestands-Aufbau brach an diesem einen Team ab,
+    /// und kein Team danach wurde je gelesen (LeagueScoutAccounts blieb seit der Einfuehrung leer).
+    /// Ein 429 (<see cref="LeagueOnlineSync.RateLimitedException"/>) fliegt weiter: dann endet der Durchgang wirklich.
+    /// </summary>
+    private async Task<string?> GetOpenAsync(string url, CancellationToken ct, string? accept = null)
+    {
+        try
+        {
+            return await GetAsync(url, ct, accept);
+        }
+        catch (HttpRequestException e) when (e.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            _logger.LogInformation("LeagueHub: Team-Suche — {Url} nicht zugaenglich ({Status}), uebersprungen",
+                url, (int?)e.StatusCode);
+            return null;
+        }
+    }
+
     private static string Cut(string s, int max) => s.Length <= max ? s : s[..max];
 
     private static string Join(string? existing, string add, int max)
@@ -226,35 +248,57 @@ public sealed partial class LeagueTeamScout
             return a;
         }
         var battles = new HashSet<string>(StringComparer.Ordinal);
+        var skipped = 0;
         foreach (var (id, name) in teams)
         {
-            if (await GetAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/users", ct, "application/x-ndjson") is { } members)
-                foreach (var u in ParseTeamMembers(members))
-                {
-                    var a = Upsert(u);
-                    a.Teams = Join(a.Teams, name, 500);
-                }
-            if (await GetAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/arena?max=500", ct, "application/x-ndjson") is { } arenas)
-                foreach (var b in ParseTeamBattles(arenas)) battles.Add(b);
+            // Ein Team, das gerade nichts hergibt, darf den Durchgang NICHT beenden: SaveChangesAsync steht erst am
+            // Ende der Methode, eine Ausnahme hier verwarf also den ganzen Bestand (2026-09-30: LeagueScoutAccounts
+            // blieb seit der Einfuehrung leer, weil ein Team seine Mitgliederliste verborgen hat → 401).
+            // Ein 429 fliegt weiter (RateLimitedException erbt von Exception, nicht von HttpRequestException).
+            try
+            {
+                if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/users", ct, "application/x-ndjson") is { } members)
+                    foreach (var u in ParseTeamMembers(members))
+                    {
+                        var a = Upsert(u);
+                        a.Teams = Join(a.Teams, name, 500);
+                    }
+                if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/arena?max=500", ct, "application/x-ndjson") is { } arenas)
+                    foreach (var b in ParseTeamBattles(arenas)) battles.Add(b);
+            }
+            catch (HttpRequestException e)
+            {
+                skipped++;
+                _logger.LogWarning(e, "LeagueHub: Team-Suche — Team {Team} uebersprungen ({Status})", id, (int?)e.StatusCode);
+            }
         }
         foreach (var b in battles)
         {
-            if (await GetAsync($"{_lichess}/api/tournament/{b}", ct) is not { } info) continue;
-            var names = ParseBattleTeams(info);
-            if (!names.Keys.Any(teams.ContainsKey)) continue;
-            var series = EventSeries(ParseTournamentName(info));
-            if (await GetAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson") is not { } results) continue;
-            foreach (var (user, team) in ParseResults(results))
+            // Dieselbe Regel wie bei den Teams: ein Battle, das nicht zu lesen ist, kostet nur sich selbst.
+            try
             {
-                if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
-                var a = Upsert(user);
-                a.PlayedFor = Join(a.PlayedFor, teamName, 200);
-                if (series is not null) a.Events = Join(a.Events, series, 500);
+                if (await GetOpenAsync($"{_lichess}/api/tournament/{b}", ct) is not { } info) continue;
+                var names = ParseBattleTeams(info);
+                if (!names.Keys.Any(teams.ContainsKey)) continue;
+                var series = EventSeries(ParseTournamentName(info));
+                if (await GetOpenAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson") is not { } results) continue;
+                foreach (var (user, team) in ParseResults(results))
+                {
+                    if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
+                    var a = Upsert(user);
+                    a.PlayedFor = Join(a.PlayedFor, teamName, 200);
+                    if (series is not null) a.Events = Join(a.Events, series, 500);
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                skipped++;
+                _logger.LogWarning(e, "LeagueHub: Team-Suche — Team-Battle {Battle} uebersprungen ({Status})", b, (int?)e.StatusCode);
             }
         }
         await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("LeagueHub: Team-Suche — {Teams} Tiroler Teams, {Battles} Team-Battles, {Added} neue Konten",
-            teams.Count, battles.Count, added);
+        _logger.LogInformation("LeagueHub: Team-Suche — {Teams} Tiroler Teams, {Battles} Team-Battles, {Added} neue Konten, {Skipped} uebersprungen",
+            teams.Count, battles.Count, added, skipped);
         return added;
     }
 

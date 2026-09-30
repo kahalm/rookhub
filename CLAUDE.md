@@ -1878,6 +1878,18 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   (`ClubKeys`, beide Umlaut-Schreibweisen); deren Mitglieder (`Teams`) und alle, die in einem Team-Battle dieser Teams FÜR sie
   gespielt haben (`/api/team/{id}/arena` → Battles → `/api/tournament/{id}/results`, `PlayedFor`). Gemessen am 2026-09-30: die
   Online-TMM 2021 und die Quarantäne-Liga sind solche Battles.
+* **Ein Team, das nichts hergibt, kostet nur sich selbst** (0.623.1, gemeldet 2026-09-30 als wiederholte
+  „Team-Suche gescheitert"-Ausfälle im Log): Lichess antwortet **401**, wenn ein Team seine Mitgliederliste verborgen hat
+  (`schachsport-union-innsbruck-team-2-mm-2021-osb-lv-tirol`). `SaveChangesAsync` steht erst am ENDE von
+  `RefreshPoolAsync` — die Ausnahme flog also durch, kein Team NACH diesem einen wurde je gelesen, und
+  `LeagueScoutAccounts` blieb seit der Einführung LEER (0 Zeilen auf Prod). Jetzt gehen die Abrufe je Team
+  (`/users`, `/arena`) und je Battle (`/api/tournament/{id}`, `/results`) über `GetOpenAsync` (401/403 → `null` wie ein
+  404) und stehen zusätzlich in einem `try/catch (HttpRequestException)` je Schleifendurchlauf, der nur diesen einen
+  Eintrag verwirft und ihn als Warnung loggt; die Zahl steht als `{Skipped}` in der Abschlusszeile. **Ein 429 fliegt
+  weiter** und beendet den Durchgang wie bisher — `LeagueOnlineSync.RateLimitedException` erbt von `Exception`, nicht
+  von `HttpRequestException`, und genau das nagelt `Pool_ATooManyRequests_StillEndsTheRun` fest. Die Team-SUCHE selbst
+  (`/api/team/search`) bleibt ungeduldet: antwortet die nicht, ist nichts zu holen, und ein Abbruch ist die richtige
+  Meldung.
 * **Prüfen** (`RunOnceAsync`, je Konto einmal, dann alle `RecheckDays` 90): Profile gesammelt über `POST /api/users`. (1) Steht ein
   Klarname im Profil, der zu einem Spieler der laufenden Saison passt (alle Nachnamen-Teile + Vorname voll, `FirstNameMatch`), gilt das
   Urteil der Namenssuche (`Judge` mit `lead` = die Team-Herkunft als erster Hinweis statt „Nutzername aus dem Namen"), +1 Punkt.
