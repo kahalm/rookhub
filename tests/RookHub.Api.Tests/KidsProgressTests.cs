@@ -27,6 +27,21 @@ public class KidsProgressTests : IDisposable
     {
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
         _service = new KidsProgressService(_db, () => Now);
+        // Die Kinderkurse der Fälle unten mit ihren Linien — der Abgleich nimmt nur Linien an, die es im Kinderkurs gibt.
+        SeedBook(5, forKids: true, 10, 11, 12);
+        SeedBook(6, forKids: true, 20);
+        SeedBook(7, forKids: true);
+        _db.SaveChanges();
+    }
+
+    private void SeedBook(int id, bool forKids, params int[] lineIds)
+    {
+        _db.Books.Add(new Book { Id = id, FileName = $"b{id}.pgn", Source = new BookSource(), ForKids = forKids });
+        foreach (var lineId in lineIds)
+            _db.BookPuzzles.Add(new BookPuzzle
+            {
+                Id = lineId, BookId = id, LineId = $"line-{lineId}", BookFileName = $"b{id}.pgn", Round = "1", Fen = "fen", Moves = "e4",
+            });
     }
 
     public void Dispose() => _db.Dispose();
@@ -189,13 +204,73 @@ public class KidsProgressTests : IDisposable
     [Fact]
     public async Task BuchLoeschen_RaeumtDenKinderFortschrittMitAb()
     {
-        _db.Books.Add(new Book { Id = 5, FileName = "kids.pgn", Source = new BookSource() });
-        await _db.SaveChangesAsync();
         await _service.SyncAsync(1, new KidsProgressDto { Courses = { C(5, 50, (10, 100)) } });
 
         await new BookAdminService(_db).DeleteBookAsync(5);
 
         Assert.Empty(_db.KidsCourseLines);
         Assert.Empty(_db.KidsCourseProgresses);
+    }
+
+    // ---- Deckel je Konto (Codereview 2026-09-29, F7-001) ----
+
+    /// <summary>Vorher nahm der Abgleich jede BookId > 0 und jede Linien-Id > 0 an und vereinigte sie mit dem Konto —
+    /// mit erfundenen Linien-Ids wuchs ein Konto um bis zu 10 000 Zeilen je Aufruf, ohne Ende.</summary>
+    [Fact]
+    public async Task FremdeKurseUndUnbekannteLinien_WerdenVerworfen()
+    {
+        SeedBook(8, forKids: false, 30);                 // kein Kinderkurs
+        _db.Books.Add(new Book { Id = 9, FileName = "calc.pgn", Source = new BookSource(), ForKids = true, IsCalculation = true });
+        await _db.SaveChangesAsync();
+
+        var merged = await _service.SyncAsync(1, new KidsProgressDto
+        {
+            Courses =
+            {
+                C(5, 0, (10, 100), (20, 100), (999, 100)),  // 20 gehört zu Kurs 6, 999 gibt es nicht
+                C(8, 0, (30, 100)),
+                C(9, 50),
+                C(4711, 0, (40, 100)),                      // Buch gibt es nicht (FK → vorher 500)
+            },
+        });
+
+        Assert.Equal(" | C5@0[10@100]", Show(merged));
+        Assert.Equal(new[] { 10 }, await _db.KidsCourseLines.Select(l => l.BookPuzzleId).ToListAsync());
+        Assert.Equal(new[] { 5 }, await _db.KidsCourseProgresses.Select(c => c.BookId).ToListAsync());
+    }
+
+    [Fact]
+    public async Task WiederholteAbgleicheMitNeuenIds_WachsenNichtUeberDenKinderkurs()
+    {
+        for (var round = 0; round < 5; round++)
+        {
+            var ids = Enumerable.Range(1000 + round * KidsProgressService.MaxLinesPerCourse, KidsProgressService.MaxLinesPerCourse - 1)
+                .Select(i => (i, 100L)).Append((11, 100L)).ToArray();
+            await _service.SyncAsync(1, new KidsProgressDto { Courses = { C(5, 0, ids) } });
+        }
+
+        Assert.Equal(1, await _db.KidsCourseLines.CountAsync());
+        Assert.Equal(" | C5@0[11@100]", Show(await _service.GetAsync(1)));
+    }
+
+    [Fact]
+    public async Task StufenNummer_UeberDemDeckel_WirdVerworfen()
+    {
+        var merged = await _service.SyncAsync(1, new KidsProgressDto
+        {
+            Levels = { L(KidsProgressService.MaxLevels, 1, 0, 0, 1), L(KidsProgressService.MaxLevels + 1, 1, 0, 0, 1), L(100_000, 1, 0, 0, 1) },
+        });
+
+        Assert.Equal($"L{KidsProgressService.MaxLevels}:1/0/0@1 | ", Show(merged));
+        Assert.Equal(1, await _db.KidsLevelProgresses.CountAsync());
+    }
+
+    /// <summary>Ohne eigenen Deckel las die API bis zu nginx' 15 MB je Abgleich ein.</summary>
+    [Fact]
+    public void Endpunkt_HatEinenRumpfDeckel()
+    {
+        var limit = typeof(KidsController).GetMethod(nameof(KidsController.PutProgress))!.GetCustomAttributesData()
+            .Single(a => a.AttributeType == typeof(RequestSizeLimitAttribute));
+        Assert.Equal((long)KidsProgressService.MaxRequestBytes, Convert.ToInt64(limit.ConstructorArguments[0].Value));
     }
 }

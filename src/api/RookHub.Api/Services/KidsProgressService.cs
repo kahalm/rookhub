@@ -13,10 +13,15 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class KidsProgressService
 {
-    /// <summary>Deckel je Anfrage — ein echter Stand liegt weit darunter (40 Stufen, eine Handvoll Kurse).</summary>
+    /// <summary>Deckel je Anfrage — ein echter Stand liegt weit darunter (40 Stufen, eine Handvoll Kurse).
+    /// <see cref="MaxLevels"/> ist zugleich die höchste erlaubte Stufen-Nummer: so trägt ein Konto höchstens so viele
+    /// Stufen-Zeilen. Kurse und Linien deckelt je Konto der Abgleich mit dem Bestand (<see cref="KeepKnownCoursesAsync"/>).</summary>
     public const int MaxLevels = 1000;
     public const int MaxCourses = 500;
     public const int MaxLinesPerCourse = 10_000;
+    /// <summary>Rumpf-Deckel für PUT /api/kids/progress (eine gelöste Linie sind rund 35 Byte) — ein echter Stand liegt
+    /// weit darunter. Ohne ihn las die API bis zu nginx' 15 MB je Aufruf ein.</summary>
+    public const int MaxRequestBytes = 1024 * 1024;
     /// <summary>Zeiten aus dem Browser: höchstens so weit in der Zukunft (falsch gestellte Uhr), sonst
     /// gewönne ein Durchgang mit Jahr 2099 jeden Abgleich für immer.</summary>
     public static readonly TimeSpan MaxClockAhead = TimeSpan.FromDays(1);
@@ -39,7 +44,7 @@ public class KidsProgressService
     /// <see cref="ArgumentException"/> bei einer Anfrage über den Deckeln.</summary>
     public async Task<KidsProgressDto> SyncAsync(int userId, KidsProgressDto incoming, CancellationToken ct = default)
     {
-        var clean = Normalize(incoming);
+        var clean = await KeepKnownCoursesAsync(Normalize(incoming), ct);
         try
         {
             return await SyncOnceAsync(userId, clean, ct);
@@ -147,6 +152,41 @@ public class KidsProgressService
         return new Stored(dto, levels, courses, lines);
     }
 
+    /// <summary>
+    /// Nur Kinderkurse (<see cref="Book.ForKids"/>, kein Kalkulationsbuch) und nur Linien, die zu DIESEM Buch gehören.
+    /// Die Deckel oben gelten je Anfrage, der Stand wird aber mit dem gespeicherten vereinigt — ohne diesen Abgleich
+    /// wuchs ein Konto mit erfundenen Linien-Ids um bis zu 10 000 Zeilen je Aufruf, ohne Ende, und jeder spätere
+    /// Abgleich lud alles. So trägt ein Konto höchstens die Linien der Kinderkurse. Verworfen wird nur der
+    /// EINGEHENDE Stand: was schon gespeichert ist, bleibt (ein Admin, der die Freigabe kurz zurücknimmt, löscht
+    /// keinen Fortschritt); eine Linie eines gelöschten oder neu eingespielten Buchs fällt aus dem Stand — gewollt,
+    /// vorher scheiterte sie am Fremdschlüssel, und der Abgleich des Kontos antwortete bei jedem Aufruf 500.
+    /// </summary>
+    private async Task<KidsProgressDto> KeepKnownCoursesAsync(KidsProgressDto clean, CancellationToken ct)
+    {
+        if (clean.Courses.Count == 0) return clean;
+        var bookIds = clean.Courses.Select(c => c.BookId).ToList();
+        var kidsBooks = await _db.Books.AsNoTracking()
+            .Where(b => bookIds.Contains(b.Id) && b.ForKids && !b.IsCalculation)
+            .Select(b => b.Id).ToListAsync(ct);
+        var lines = (await _db.BookPuzzles.AsNoTracking()
+                .Where(p => p.BookId != null && kidsBooks.Contains(p.BookId.Value))
+                .Select(p => new { p.Id, BookId = p.BookId!.Value }).ToListAsync(ct))
+            .ToLookup(p => p.BookId, p => p.Id);
+
+        var result = new KidsProgressDto { Levels = clean.Levels };
+        foreach (var c in clean.Courses.Where(c => kidsBooks.Contains(c.BookId)))
+        {
+            var known = lines[c.BookId].ToHashSet();
+            result.Courses.Add(new KidsCourseProgressDto
+            {
+                BookId = c.BookId,
+                ResetAt = c.ResetAt,
+                Solved = c.Solved.Where(s => known.Contains(s.Id)).ToList(),
+            });
+        }
+        return result;
+    }
+
     /// <summary>Werte aus dem Browser in erlaubte Grenzen bringen — über den Deckeln: Fehler statt still kürzen.</summary>
     internal KidsProgressDto Normalize(KidsProgressDto incoming)
     {
@@ -157,7 +197,7 @@ public class KidsProgressService
 
         var result = new KidsProgressDto
         {
-            Levels = incoming.Levels.Where(l => l.Level is >= 1 and <= 100_000).Select(l => new KidsLevelProgressDto
+            Levels = incoming.Levels.Where(l => l.Level is >= 1 and <= MaxLevels).Select(l => new KidsLevelProgressDto
             {
                 Level = l.Level,
                 Stars = Math.Clamp(l.Stars, 0, 3),

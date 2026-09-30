@@ -61,6 +61,7 @@ public class KidsController : BaseApiController
     /// Antwort ist der gemeinsame Stand, den KidHub danach anzeigt.</summary>
     [HttpPut("progress")]
     [Authorize]
+    [RequestSizeLimit(KidsProgressService.MaxRequestBytes)]
     public async Task<ActionResult<KidsProgressDto>> PutProgress([FromBody] KidsProgressDto body, CancellationToken ct)
     {
         try
