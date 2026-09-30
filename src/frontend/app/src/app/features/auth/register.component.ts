@@ -105,6 +105,12 @@ const ERROR_KEYS: Record<RegisterError, string> = {
               }
             </div>
           }
+          <!-- Datenschutz direkt an der Maske, die die Angaben abfragt (UX-017): bisher verlinkte nur /login die
+               Datenschutzerklaerung. Ganzer Satz als Link: kein Satzbau-Problem in anderen Sprachen, und der Linktext
+               sagt fuer sich, wohin er fuehrt. Die Route /privacy haben alle Oberflaechen. -->
+          <p class="privacy-note">
+            <a routerLink="/privacy">{{ 'auth.register.privacyNote' | translate }}</a>
+          </p>
         </mat-card-content>
         <mat-card-actions>
           <a mat-button routerLink="/login" [queryParams]="{ returnUrl: returnUrl }">{{ 'auth.register.loginLink' | translate }}</a>
@@ -121,6 +127,9 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                   background: rgba(211, 47, 47, 0.08); border: 1px solid rgba(211, 47, 47, 0.35); }
     .form-error p { margin: 0 0 8px; }
     .form-error p:last-child { margin-bottom: 0; }
+    .privacy-note { margin: 16px 0 0; font-size: 0.8rem; text-align: center; }
+    /* Wie die Rechtslinks unter der Anmeldekarte: Theme-Farbe, grosszuegige Beruehrflaeche ohne Layoutsprung. */
+    .privacy-note a { color: var(--mat-sys-primary); display: inline-block; padding: 12px 4px; margin: -12px 0; }
   `]
 })
 export class RegisterComponent {

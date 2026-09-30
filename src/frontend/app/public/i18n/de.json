@@ -307,7 +307,8 @@
       "taken": "Diesen Benutzernamen oder diese E-Mail gibt es schon. Ist das dein Konto? Dann melde dich an. Sonst such dir einen anderen Namen aus.",
       "toLogin": "Zur Anmeldung",
       "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
-      "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht."
+      "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht.",
+      "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",

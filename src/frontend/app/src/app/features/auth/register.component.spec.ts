@@ -231,3 +231,27 @@ describe('RegisterComponent — ohne E-Mail kein Zurücksetzen (UX-002)', () => 
     expect(input.type).toBe('password');
   });
 });
+
+/**
+ * UX-017: die Registrierung fragt Name, E-Mail und Passwort ab, verlinkte die Datenschutzerklaerung aber nicht —
+ * nur /login hatte den Link (axe fand a[routerlink="/privacy"] auf /register auf keiner Oberflaeche).
+ */
+describe('RegisterComponent — Datenschutz-Link an der Maske (UX-017)', () => {
+  it('verlinkt die Datenschutzerklärung unter dem Formular', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('.privacy-note a');
+    expect(link).not.toBeNull();
+    expect(link.getAttribute('href')).toBe('/privacy');
+    expect(link.textContent!.trim()).toBe('auth.register.privacyNote');
+  });
+});

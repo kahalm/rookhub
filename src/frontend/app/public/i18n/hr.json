@@ -307,7 +307,8 @@
       "taken": "To korisničko ime ili e-mail već postoji. Je li to tvoj račun? Onda se prijavi. Inače odaberi drugo korisničko ime.",
       "toLogin": "Na prijavu",
       "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
-      "invalid": "Provjeri svoje podatke – nešto još nije u redu."
+      "invalid": "Provjeri svoje podatke – nešto još nije u redu.",
+      "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti."
     },
     "forgot": {
       "title": "Ponovno postavljanje lozinke",

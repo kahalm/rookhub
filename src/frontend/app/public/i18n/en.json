@@ -307,7 +307,8 @@
       "taken": "That username or e-mail is already taken. Is it your account? Then log in. Otherwise pick a different username.",
       "toLogin": "Go to login",
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
-      "invalid": "Please check your details – something isn’t right yet."
+      "invalid": "Please check your details – something isn’t right yet.",
+      "privacyNote": "Your account is covered by our privacy policy."
     },
     "forgot": {
       "title": "Reset password",
