@@ -824,8 +824,9 @@ public class ChessableImportService : ICourseReimporter
         if (target == "book")
         {
             var fileName = $"chessable-u{userId}-{bid}.pgn";
-            // `partial` schützt das SourcePgn selbst (s. ImportFileAsync) — hier nur durchreichen.
-            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, partial: partial);
+            // Der Browser liefert nie den ganzen Kurs auf einmal (Kapitel-Chunk, Live-Append) — der Text wird je oid
+            // ins SourcePgn zusammengeführt statt es zu ersetzen (s. ImportFileAsync, mergeSourcePgn).
+            var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, partial: partial, mergeSourcePgn: true);
             var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
             if (book is not null)
             {
@@ -1328,7 +1329,9 @@ public class ChessableImportService : ICourseReimporter
         // Pro-User-eindeutiger Dateiname; PgnImportService dedupliziert per LineId → von Natur aus
         // idempotent, ein Resume legt dieselben Puzzles nicht doppelt an.
         var fileName = $"chessable-u{import.UserId}-{import.Bid}.pgn";
-        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct);
+        // Ein Browser-Import („Mitschnitt importieren") trägt oft nur einzelne Kapitel: zusammenführen statt ersetzen.
+        // Der Server-Abruf liefert dagegen immer den ganzen Kurs und ersetzt die Quelle wie bisher.
+        var res = await _pgnImport.ImportFileAsync(fileName, pgn, ct, mergeSourcePgn: import.FromBrowser);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == res.BookId, ct);
         if (book is not null)

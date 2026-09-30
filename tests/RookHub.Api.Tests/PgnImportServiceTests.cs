@@ -538,6 +538,75 @@ public class PgnImportServiceTests : IDisposable
         Assert.Equal(vorher, (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "src.pgn")).Source.SourcePgn);
     }
 
+    // ===== Browser-Teile ins SourcePgn zusammenführen (Codereview W2 A3-005) ==================
+    // Der kapitelweise Browser-Import schickt je Chunk EIN Kapitel. Ersetzte jeder Chunk das SourcePgn,
+    // stünde danach nur das letzte Kapitel darin — „Aktualisieren" erneuerte nur dessen Linien und
+    // setzte das Buch trotzdem auf die aktuelle Version.
+
+    [Fact]
+    public async Task ImportFileAsync_MergeSourcePgn_ChunksAccumulate_AndReprocessRenewsAllChapters()
+    {
+        var chunks = new[]
+        {
+            BookLine("002.001", "8001", "{Eins.} 2. Nf3 Nc6 3. Bb5 a6"),
+            BookLine("003.001", "8002", "{Zwei.} 2. d4 exd4 3. Qxd4 Nc6"),
+            BookLine("004.001", "8003", "{Drei.} 2. Nc3 Nf6 3. f4 d5"),
+        };
+        foreach (var chunk in chunks)
+            await _service.ImportFileAsync("merge.pgn", chunk, CancellationToken.None, mergeSourcePgn: true);
+
+        var book = await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "merge.pgn");
+        Assert.Equal(new[] { "8001", "8002", "8003" }, CachedSourceRebuild.OidsOf(book.Source.SourcePgn));
+
+        // Pipeline-Bump: alle drei Kapitel kommen aus der Quelle wieder, nicht nur das letzte.
+        book.ImportVersion = 0;
+        foreach (var bp in _db.BookPuzzles.Where(b => b.BookFileName == "merge.pgn")) bp.Comment = "veraltet";
+        await _db.SaveChangesAsync();
+
+        var res = await _service.ReprocessFromStoredSourceAsync(book.Id, playFromStartPosition: false, CancellationToken.None);
+
+        Assert.Equal(3, res.Updated);
+        var comments = await _db.BookPuzzles.Where(b => b.BookFileName == "merge.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Comment).ToListAsync();
+        Assert.Equal(new[] { "Eins.", "Zwei.", "Drei." }, comments);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_MergeSourcePgn_StaleBook_BringsEveryLineOfTheSourceUpToDate()
+    {
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("002.001", "8101", "{Eins.} 2. Nf3 Nc6 3. Bb5 a6"),
+            CancellationToken.None, mergeSourcePgn: true);
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("003.001", "8102", "{Zwei.} 2. d4 exd4 3. Qxd4 Nc6"),
+            CancellationToken.None, mergeSourcePgn: true);
+        var book = await _db.Books.SingleAsync(b => b.FileName == "stale-merge.pgn");
+        book.ImportVersion = 0;                                    // Pipeline-Bump, noch nicht „Aktualisieren" geklickt
+        foreach (var bp in _db.BookPuzzles.Where(b => b.BookFileName == "stale-merge.pgn")) bp.Comment = "veraltet";
+        await _db.SaveChangesAsync();
+
+        // „Kurs holen" liefert nur eine neue Linie — danach steht das Buch auf der aktuellen Version, also müssen
+        // auch die beiden alten Linien die aktuelle Aufbereitung haben (sonst kämen sie nie wieder dran).
+        await _service.ImportFileAsync("stale-merge.pgn", BookLine("004.001", "8103", "{Drei.} 2. Nc3 Nf6 3. f4 d5"),
+            CancellationToken.None, mergeSourcePgn: true);
+
+        Assert.Equal(ImportPipeline.CurrentVersion, (await _db.Books.SingleAsync(b => b.FileName == "stale-merge.pgn")).ImportVersion);
+        var comments = await _db.BookPuzzles.Where(b => b.BookFileName == "stale-merge.pgn")
+            .OrderBy(b => b.Round).Select(b => b.Comment).ToListAsync();
+        Assert.Equal(new[] { "Eins.", "Zwei.", "Drei." }, comments);
+    }
+
+    [Fact]
+    public async Task ImportFileAsync_WithoutMerge_AFullImportStillReplacesTheSource()
+    {
+        // Gegenprobe: der Server-Abruf liefert immer den ganzen Kurs und ersetzt die Quelle wie bisher.
+        await _service.ImportFileAsync("full-src.pgn", BookLine("002.001", "8201", "2. Nf3 Nc6 3. Bb5 a6"), CancellationToken.None);
+        await _service.ImportFileAsync("full-src.pgn", BookLine("002.001", "8201", "2. Nf3 Nc6 3. Bb5 a6")
+            + BookLine("002.002", "8202", "2. d4 exd4 3. Qxd4 Nc6"), CancellationToken.None);
+
+        var src = (await _db.Books.Include(b => b.Source).SingleAsync(b => b.FileName == "full-src.pgn")).Source.SourcePgn;
+        Assert.Equal(new[] { "8201", "8202" }, CachedSourceRebuild.OidsOf(src));
+        Assert.Equal(2, PgnParser.SplitGames(src!).Count());
+    }
+
     [Fact]
     public void ParsePgn_NoComments_LeavesMoveCommentsNull()
     {

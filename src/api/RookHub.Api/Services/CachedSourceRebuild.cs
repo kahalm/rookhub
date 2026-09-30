@@ -143,6 +143,71 @@ public static class CachedSourceRebuild
         return new Result(replaced > 0 ? sb.ToString() : sourcePgn, total, replaced, missing, modeMismatch, conflicts, hidden);
     }
 
+    /// <summary>
+    /// Führt einen TEIL eines Chessable-Kurses in das gespeicherte Roh-PGN zusammen, statt es zu ersetzen — für die
+    /// Browser-Wege, die nie den ganzen Kurs auf einmal liefern: ein Kapitel-Chunk des laufenden Imports, ein
+    /// Live-Append, ein Mitschnitt. Vorher ersetzte jeder Chunk <c>SourcePgn</c> durch sein eigenes Kapitel; nach
+    /// 40 Kapiteln stand nur noch das letzte darin, und „Aktualisieren" erneuerte genau diese Linien und hielt das Buch
+    /// danach für aktuell.
+    /// <para>Eine Partie, deren oid schon im Bestand steht, ersetzt die (erste sichtbare) Bestandspartie mit dieser oid
+    /// an deren Stelle — neuer Text, neue Position. Alle übrigen eingehenden Partien kommen hinten dazu; eine ohne oid
+    /// nur, wenn derselbe Text nicht schon im Bestand steht (sonst wüchse die Quelle mit jedem erneuten Senden).
+    /// Der übrige Bestand bleibt Zeichen für Zeichen stehen. Ohne Bestand kommt <paramref name="incomingPgn"/>
+    /// selbst zurück.</para>
+    /// </summary>
+    public static string MergeByOid(string? sourcePgn, string incomingPgn)
+    {
+        if (string.IsNullOrWhiteSpace(sourcePgn)) return incomingPgn;
+        if (string.IsNullOrWhiteSpace(incomingPgn)) return sourcePgn;
+
+        var incoming = Blocks(incomingPgn);
+        if (incoming.Count == 0)
+            return sourcePgn.TrimEnd() + "\n\n" + incomingPgn.Trim() + "\n";   // kein [Event — nur anhängen
+
+        // Erste gewinnt — wie beim Import selbst, der eine zweite Partie mit derselben oid im Stapel überspringt.
+        var freshByOid = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var b in incoming)
+            if (b.Oid != null) freshByOid.TryAdd(b.Oid, Text(incomingPgn, b));
+
+        var existing = Blocks(sourcePgn);
+        var usedOids = new HashSet<string>(StringComparer.Ordinal);
+        var knownTexts = new HashSet<string>(StringComparer.Ordinal);
+        var sb = new StringBuilder(sourcePgn.Length + incomingPgn.Length + 16);
+        sb.Append(sourcePgn, 0, existing.Count > 0 ? existing[0].Start : sourcePgn.Length);
+        foreach (var old in existing)
+        {
+            var slice = sourcePgn.Substring(old.Start, old.End - old.Start);
+            if (old.Oid != null && !old.Hidden && freshByOid.TryGetValue(old.Oid, out var fresh) && usedOids.Add(old.Oid))
+            {
+                // Leerraum hinter der alten Partie behalten — er trennt sie vom nächsten [Event.
+                var trimmed = slice.TrimEnd();
+                sb.Append(fresh).Append(slice, trimmed.Length, slice.Length - trimmed.Length);
+            }
+            else
+            {
+                if (old.Oid == null) knownTexts.Add(slice.Trim());
+                sb.Append(slice);
+            }
+        }
+
+        foreach (var b in incoming)
+        {
+            var text = b.Oid != null ? freshByOid[b.Oid] : Text(incomingPgn, b);
+            if (b.Oid != null ? !usedOids.Add(b.Oid) : !knownTexts.Add(text)) continue;
+            // Genau eine Leerzeile vor der neuen Partie — ohne Zeilenumbruch klebte sie an den letzten Zug.
+            if (sb.Length > 0)
+            {
+                while (sb.Length > 0 && sb[^1] is ' ' or '\t' or '\r') sb.Length--;
+                if (sb.Length > 0 && sb[^1] != '\n') sb.Append('\n');
+                if (sb.Length > 1 && sb[^2] != '\n') sb.Append('\n');
+            }
+            sb.Append(text).Append('\n');
+        }
+        return sb.ToString();
+
+        static string Text(string pgn, Block b) => pgn.Substring(b.Start, b.End - b.Start).Trim();
+    }
+
     /// <summary>Neuer Text eines Blocks: seine Header unverändert (+ fehlende aus dem Cache), sein Leerraum
     /// zwischen Headern und Zügen und hinter den Zügen unverändert, dazwischen der Zugtext aus dem Cache.</summary>
     private static string Replace(string pgn, Block old, string freshText, Block fresh, bool isLast)

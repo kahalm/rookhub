@@ -524,6 +524,22 @@ public class ExtensionControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ChessableIngestChunk_SourcePgnKeepsEveryChapter_NotJustTheLastOne()
+    {
+        // Codereview W2 A3-005: jeder Chunk ersetzte Book.SourcePgn durch sein eigenes Kapitel. Nach dem Import
+        // stand nur das letzte darin — „Aktualisieren" erneuerte danach nur dessen Linien, und der Kurs-Download
+        // lieferte die übrigen Kapitel rekonstruiert ohne Varianten.
+        SetUser(7, scope: "extension");
+        for (var i = 0; i < 3; i++)
+            await _controller.ChessableIngestChunk(
+                new ChessableIngestChunkRequest("sess-src", "424242", "book", "Course", Chapter("{\"game\":{}}"), false), default);
+
+        var source = (await _db.Books.Include(b => b.Source).SingleAsync()).Source.SourcePgn;
+        var rounds = PgnParser.SplitGames(source!).Select(g => g.Headers["Round"]).ToList();
+        Assert.Equal(new[] { "002.001", "003.001", "004.001" }, rounds);
+    }
+
+    [Fact]
     public async Task ChessableIngestChunk_SameChapterKey_StaysOneChapter_WithoutOverwriting()
     {
         // Ein Kapitel, das zu gross fuer EINEN Request ist, kommt in mehreren Teilen mit demselben

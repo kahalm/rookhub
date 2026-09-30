@@ -380,6 +380,16 @@ an der Eigentumspruefung vorbei. Jetzt: `DrainNextAsync` und `RunAsync` nehmen s
 liegen, der Watchdog SCHLIESST einen verwaisten Browser-Import auch mit Lanes, Pausieren/Fortsetzen bleiben ohne
 Wirkung, und `GetOrCreate` uebergibt beim Aufraeumen abgelaufene Sitzungen an den Watchdog, statt sie zu verwerfen.
 
+**Das SourcePgn eines Browser-Buchs wird ZUSAMMENGEFUEHRT, nicht ersetzt (Codereview 2026-09-29, A3-005).** Jeder
+Chunk ersetzte `Book.Source.SourcePgn` durch sein eigenes Kapitel — nach einem 40-Kapitel-Import stand nur das letzte
+darin, „Aktualisieren" erneuerte nur dessen Linien und setzte das Buch trotzdem auf die aktuelle Version (Prod: vier
+Buecher betroffen). Jetzt reichen alle Browser-Wege (`ingest/chunk`, `ingest/live`, `ingest` = `FromBrowser`)
+`mergeSourcePgn` an `PgnImportService.ImportFileAsync`: `CachedSourceRebuild.MergeByOid` ersetzt eine Partie mit
+bekannter oid an ihrer Stelle und haengt den Rest an; der Server-Abruf (ganzer Kurs) ersetzt weiter. Ist das Buch
+veraltet, laeuft die ZUSAMMENGEFUEHRTE Quelle durch den Import — die Version wird danach gehoben, also muessen alle
+Linien der Quelle die aktuelle Aufbereitung haben. Bestehende Buecher mit abgeschnittener Quelle heilt erst ein
+vollstaendiges „Kurs holen" (Daten-Nacharbeit).
+
 **Ein Showstopper steht AM EINTRAG, nicht als Zahl im Banner (0.484.4).** `StaleContentRule` ist die
 EINE Regel (`Refetch` / `Cache` / `Local` / `Manual`, seit 0.509.0 vier Faelle) fuer den Reprocess-Status, den
 Reprocess-Lauf UND die Listen. `Manual` heisst: weder aus der gespeicherten Quelle aufbereitbar noch holbar — solche Eintraege

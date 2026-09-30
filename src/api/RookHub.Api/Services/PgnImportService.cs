@@ -327,8 +327,14 @@ public class PgnImportService
     /// unbekannter oid auf eine schon vergebene Positionsnummer, ist sie eine ANDERE Linie und bekommt
     /// einen freien Platz — bei einem vollständigen Re-Import wäre dieselbe Nummer dagegen dieselbe
     /// Linie mit geändertem Inhalt, und dann darf nichts angelegt werden.</param>
+    /// <param name="mergeSourcePgn">Der Text ist ein TEIL des Kurses aus dem Browser (Kapitel-Chunk, Live-Append,
+    /// Mitschnitt): er wird je oid in <c>SourcePgn</c> zusammengeführt (<see cref="CachedSourceRebuild.MergeByOid"/>),
+    /// nie ersetzt — sonst stünde nach einem kapitelweisen Import nur das letzte Kapitel darin, und „Aktualisieren"
+    /// erneuerte nur dessen Linien. Ist das Buch veraltet, läuft die ZUSAMMENGEFÜHRTE Quelle durch den Import:
+    /// die Version wird am Ende gehoben, also müssen alle Linien der Quelle die aktuelle Aufbereitung bekommen.</param>
     public async Task<BookImportItemDto> ImportFileAsync(string fileName, string pgnText, CancellationToken ct,
-        bool preserveExistingSourcePgn = false, bool playFromStartPosition = false, bool partial = false)
+        bool preserveExistingSourcePgn = false, bool playFromStartPosition = false, bool partial = false,
+        bool mergeSourcePgn = false)
     {
         // Buch-/Kurs-Import: zug-lose Erklär-/Intro-Seiten als Info-Linien behalten (sequenziell durchklickbar).
         var parse = ParsePgn(fileName, pgnText, keepCommentOnlyAsInfo: true,
@@ -351,7 +357,22 @@ public class PgnImportService
             await _db.SaveChangesAsync(ct); // Id materialisieren
         }
 
-        return await ImportIntoBookAsync(book, fileName, pgnText, parse, now, preserveExistingSourcePgn, partial, ct);
+        // Roh-PGN als Reprocessing-Quelle. Beim getReview-Merge (preserveExistingSourcePgn) NICHT das vorhandene (ggf.
+        // vollständige getGame-)SourcePgn mit dem Teil-PGN der Lücken überschreiben — nur ein noch leeres erstmalig
+        // setzen. Ein TEIL-Import trägt per Definition nicht den ganzen Kurs — er darf ein vollständiges SourcePgn also
+        // nie ersetzen. Das hängt an `partial` selbst und nicht am Aufrufer: sonst müsste jede Aufrufstelle daran
+        // denken, und genau das läuft irgendwann auseinander. Browser-Teile werden zusammengeführt (mergeSourcePgn).
+        string? source;
+        if (mergeSourcePgn)
+        {
+            source = CachedSourceRebuild.MergeByOid(book.Source.SourcePgn, pgnText);
+            if (book.ImportVersion < ImportPipeline.CurrentVersion && !string.Equals(source, pgnText, StringComparison.Ordinal))
+                parse = ParsePgn(fileName, source, keepCommentOnlyAsInfo: true, playFromStartPosition: playFromStartPosition);
+        }
+        else
+            source = (!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn) ? pgnText : null;
+
+        return await ImportIntoBookAsync(book, fileName, source, parse, now, partial, ct);
     }
 
     /// <summary>
@@ -374,16 +395,16 @@ public class PgnImportService
 
         var parse = ParsePgn(book.FileName, pgnText, keepCommentOnlyAsInfo: true,
             playFromStartPosition: playFromStartPosition);
-        return await ImportIntoBookAsync(book, book.FileName, pgnText, parse, DateTime.UtcNow,
-            preserveExistingSourcePgn: false, partial: false, ct);
+        return await ImportIntoBookAsync(book, book.FileName, pgnText, parse, DateTime.UtcNow, partial: false, ct);
     }
 
     /// <summary>Gemeinsamer Import-Kern von <see cref="ImportFileAsync"/> und
     /// <see cref="ReprocessFromStoredSourceAsync"/>: gleicht die geparsten Linien mit dem Bestand des Buchs ab
     /// (anlegen / in-place aktualisieren / überspringen), merkt das Roh-PGN und setzt die Pipeline-Version.</summary>
     /// <param name="book">Getrackt und MIT geladener <see cref="Book.Source"/>.</param>
-    private async Task<BookImportItemDto> ImportIntoBookAsync(Book book, string fileName, string pgnText,
-        ParseResult parse, DateTime now, bool preserveExistingSourcePgn, bool partial, CancellationToken ct)
+    /// <param name="sourcePgn">Neues Roh-PGN des Buchs; <c>null</c> = das vorhandene bleibt.</param>
+    private async Task<BookImportItemDto> ImportIntoBookAsync(Book book, string fileName, string? sourcePgn,
+        ParseResult parse, DateTime now, bool partial, CancellationToken ct)
     {
         var (parsed, invalid) = parse;
 
@@ -594,17 +615,11 @@ public class PgnImportService
 
         if (toAdd.Count > 0) _db.BookPuzzles.AddRange(toAdd);
 
-        // Roh-PGN als Reprocessing-Quelle merken + Pipeline-Version hochsetzen. Beim getReview-Merge
-        // (preserveExistingSourcePgn) NICHT das vorhandene (ggf. vollständige getGame-)SourcePgn mit dem
-        // Teil-PGN der Lücken überschreiben — nur ein noch leeres SourcePgn erstmalig setzen.
-        // Ein TEIL-Import trägt per Definition nicht den ganzen Kurs — er darf ein vollständiges
-        // SourcePgn also nie ersetzen. Das hängt an `partial` selbst und nicht am Aufrufer: sonst
-        // müsste jede Aufrufstelle daran denken, und genau das läuft irgendwann auseinander.
+        // Roh-PGN als Reprocessing-Quelle merken (welches, entscheidet der Aufrufer) + Pipeline-Version hochsetzen.
         // Nur zuweisen, wenn sich der Text UNTERSCHEIDET: beim Reprocess ist es derselbe (kein UPDATE der
         // LONGTEXT-Spalte, keine zweite Instanz neben dem Snapshot).
-        if (((!preserveExistingSourcePgn && !partial) || string.IsNullOrEmpty(book.Source.SourcePgn))
-            && !string.Equals(book.Source.SourcePgn, pgnText, StringComparison.Ordinal))
-            book.Source.SourcePgn = pgnText;
+        if (sourcePgn is not null && !string.Equals(book.Source.SourcePgn, sourcePgn, StringComparison.Ordinal))
+            book.Source.SourcePgn = sourcePgn;
         book.ImportVersion = ImportPipeline.CurrentVersion;
         book.UpdatedAt = now;
         // Auch ein bloss umbenannter Titel/Kapitelname zaehlt (Etiketten werden bei jedem Import nachgezogen).

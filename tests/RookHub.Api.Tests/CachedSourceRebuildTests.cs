@@ -344,4 +344,76 @@ public class CachedSourceRebuildTests
     {
         Assert.Equal(mode, CachedSourceRebuild.ModeFor(StoredBlock("002.002", "Line A", "101", moves)));
     }
+
+    // ===== MergeByOid: Browser-Teile in die gespeicherte Quelle zusammenführen (Codereview W2 A3-005) =====
+    // Der kapitelweise Browser-Import schickt je Chunk EIN Kapitel; ersetzte jeder Chunk das SourcePgn, stünde nach
+    // 40 Kapiteln nur noch das letzte darin, und „Aktualisieren" erneuerte genau diese Linien.
+
+    [Fact]
+    public void MergeByOid_OhneBestand_KommtDerEingangstextSelbstZurueck()
+    {
+        var chunk = StoredBlock("002.001", "Line A", "101", "1. e4 e5 *");
+
+        Assert.Same(chunk, CachedSourceRebuild.MergeByOid(null, chunk));
+        Assert.Same(chunk, CachedSourceRebuild.MergeByOid("  \n", chunk));
+    }
+
+    [Fact]
+    public void MergeByOid_NeueOids_KommenHintenDazu_DerBestandBleibtZeichengenau()
+    {
+        var kapitel1 = StoredBlock("002.001", "Line A", "101", "1. e4 e5 *");
+        var kapitel2 = StoredBlock("003.001", "Line B", "201", "1. d4 d5 *");
+
+        var merged = CachedSourceRebuild.MergeByOid(kapitel1, kapitel2);
+
+        Assert.StartsWith(kapitel1, merged);                       // Bestand unverändert vorn
+        Assert.Equal(new[] { "101", "201" }, CachedSourceRebuild.OidsOf(merged));
+        var games = PgnParser.SplitGames(merged).ToList();
+        Assert.Equal(new[] { "002.001", "003.001" }, games.Select(g => g.Headers["Round"]));
+    }
+
+    [Fact]
+    public void MergeByOid_BekannteOid_ErsetztDieBestandspartieAnIhrerStelle()
+    {
+        var stored = StoredBlock("002.001", "Line A", "101", "1. e4 {Alt.} e5 *")
+                   + StoredBlock("002.002", "Line B", "102", "1. d4 d5 *");
+        // Re-Import: dieselbe Linie 101 mit neuem Kommentar und neuer Position, dazu eine neue Linie 103.
+        var chunk = StoredBlock("004.001", "Line A", "101", "1. e4 {Neu.} e5 *")
+                  + StoredBlock("004.002", "Line C", "103", "1. c4 *");
+
+        var merged = CachedSourceRebuild.MergeByOid(stored, chunk);
+
+        Assert.Equal(new[] { "101", "102", "103" }, CachedSourceRebuild.OidsOf(merged));   // keine zweite 101
+        Assert.DoesNotContain("{Alt.}", merged);
+        var games = PgnParser.SplitGames(merged).ToList();
+        Assert.Equal(3, games.Count);
+        Assert.Equal("004.001", games[0].Headers["Round"]);        // an der alten Stelle, mit neuem Etikett
+        Assert.Contains("{Neu.}", games[0].MoveText);
+        Assert.Equal("002.002", games[1].Headers["Round"]);        // unberührt
+        Assert.Equal("004.002", games[2].Headers["Round"]);
+    }
+
+    [Fact]
+    public void MergeByOid_OhneOid_GleicherTextWirdNichtVerdoppelt()
+    {
+        var ohneOid = StoredBlock("002.001", "Intro", null, "{Text.} *");
+
+        var einmal = CachedSourceRebuild.MergeByOid(ohneOid, ohneOid);
+        var anders = CachedSourceRebuild.MergeByOid(ohneOid, StoredBlock("003.001", "Intro 2", null, "{Mehr.} *"));
+
+        Assert.Single(PgnParser.SplitGames(einmal));
+        Assert.Equal(2, PgnParser.SplitGames(anders).Count());
+    }
+
+    [Fact]
+    public void MergeByOid_DreiChunksNacheinander_QuelleTraegtAlleKapitel()
+    {
+        string? source = null;
+        for (var i = 0; i < 3; i++)
+            source = CachedSourceRebuild.MergeByOid(source,
+                StoredBlock($"{i + 2:000}.001", $"Line {i}", $"{300 + i}", "1. e4 e5 *"));
+
+        Assert.Equal(new[] { "300", "301", "302" }, CachedSourceRebuild.OidsOf(source));
+        Assert.Equal(3, PgnParser.SplitGames(source!).Count());
+    }
 }
