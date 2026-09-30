@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.616.0", date: "2026-09-30", changes: [
+    { en: "LeagueHub online accounts: only players whose birth year is known and under 18 have their accounts hidden; an unknown birth year no longer hides anything.", de: "LeagueHub-Online-Konten: Verborgen werden nur noch die Konten von Spielern, deren Jahrgang bekannt ist und unter 18 liegt; ein unbekannter Jahrgang verbirgt nichts mehr." },
+  ] },
   { version: "0.615.0", date: "2026-09-30", changes: [
     { en: "ClubHub: only the first name is required — the surname is optional (“I often don’t know it”); a child without one is listed under the letter of its first name. Attendance is now simply there or not there: “excused” is gone. And every training session can record what was done: next to the topic there is a text field “What was done?” on the attendance list, and the group page shows both as a training diary, newest session first.", de: "ClubHub: Nur der Vorname ist Pflicht — der Nachname ist optional („ich weiß den oft nicht“); ein Kind ohne Nachnamen steht unter dem Buchstaben seines Vornamens. Die Anwesenheit kennt nur noch da oder nicht da: „entschuldigt“ ist weg. Und zu jeder Trainingseinheit lässt sich festhalten, was gemacht wurde: neben dem Thema gibt es auf der Abhak-Liste das Textfeld „Was wurde gemacht?“, und die Gruppenseite zeigt beides als Trainingstagebuch, die jüngste Einheit zuerst." },
   ] },

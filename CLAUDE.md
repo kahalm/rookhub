@@ -1770,7 +1770,8 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   Urteil ändert, erhöht die Zahl.
 * **Minderjährige: gesucht, aber VERBORGEN** (0.610.0, Wunsch „du linkst sie, aber zeigst niemandem den Namen/Account"; bis
   0.609.0 gar nicht gesucht): Jahrgang und Föderation über Lichess `/api/fide/player/{id}`, gemerkt in `LeagueAccountScans`. Unter
-  18 ODER ohne Jahrgang (im Zweifel verborgen) gilt `LeagueHiddenAccounts`: Seite, Nutzername, Adresse, Profilangaben und
+  18 (seit 0.616.0 NUR bei bekanntem Jahrgang — Wunsch „alle mit gesichertem Geburtsdatum unter 18 ausblenden, alle anderen
+  anzeigen"; bis dahin galt auch „Jahrgang unbekannt" als verborgen) gilt `LeagueHiddenAccounts`: Seite, Nutzername, Adresse, Profilangaben und
   Kommentar verlassen den Server nie — Vorschläge (`hidden: true`, nur Hinweise + Spieler), Konto-JSON (`JsonAsync`/`ToJson(…,
   hidden)`), Karte (angemeldet nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts), Meldeliste der Ansichten
   (`RebuildViewsAsync`, `PatchViewsAsync`: leer). Die Partien zählen nur im Eröffnungsbaum (Züge, keine Gegner/Links). Mit 18 wird

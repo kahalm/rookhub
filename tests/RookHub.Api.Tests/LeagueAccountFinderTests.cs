@@ -233,10 +233,10 @@ public class LeagueAccountFinderTests : IDisposable
     }
 
     [Fact]
-    public void Hides_MinorsAndUnknownBirthYears()
+    public void Hides_OnlyKnownMinors()
     {
         var now = new DateTime(2026, 9, 30);
-        Assert.True(LeagueHiddenAccounts.Hides(null, now));
+        Assert.False(LeagueHiddenAccounts.Hides(null, now));                                   // unbekannt = sichtbar (0.616.0)
         Assert.True(LeagueHiddenAccounts.Hides(2009, now));                                    // 17
         Assert.False(LeagueHiddenAccounts.Hides(2008, now));                                   // 18
     }
@@ -280,14 +280,15 @@ public class LeagueAccountFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Scan_WithoutBirthYear_SearchesButHides_AndRateLimitThrows()
+    public async Task Scan_WithoutBirthYear_SearchesAndShows_AndRateLimitThrows()
     {
         await SeedAsync();
         var world = World();
         var noYear = Finder(new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/fide/player/") ? Status(HttpStatusCode.NotFound)
             : world.Answer(req)));
         Assert.Equal(3, (await noYear.ScanAsync(Max, default)).Found);
-        Assert.Contains("222", await LeagueHiddenAccounts.FidesAsync(_db, null, default));
+        Assert.DoesNotContain("222", await LeagueHiddenAccounts.FidesAsync(_db, null, default));   // Jahrgang unbekannt = sichtbar
+        Assert.Null((await _db.LeagueAccountScans.SingleAsync()).Note);
 
         var limited = Finder(new FakeHttp(_ => Status(HttpStatusCode.TooManyRequests)));
         await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => limited.ScanAsync(Max with { Fide = "333" }, default));

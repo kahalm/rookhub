@@ -403,9 +403,9 @@ public sealed partial class LeagueAccountFinder
         var scan = await ScanRowAsync(_db, _http, _lichess, p.Fide, ct);
         var fideFed = scan.Federation;
         scan.ScannedAt = DateTime.UtcNow;
-        // Minderjährige (oder Jahrgang unbekannt) werden seit 0.610.0 AUCH gesucht — ihre Konten bleiben aber verborgen
+        // Minderjährige werden seit 0.610.0 AUCH gesucht — ihre Konten bleiben aber verborgen (unbekannter Jahrgang seit 0.616.0 nicht)
         // (LeagueHiddenAccounts): niemand sieht Seite, Name oder Adresse, die Partien zählen nur im Eröffnungsbaum.
-        var hiddenNote = LeagueHiddenAccounts.Hides(scan.BirthYear) ? "verborgen (minderjährig oder Jahrgang unbekannt)" : null;
+        var hiddenNote = LeagueHiddenAccounts.Hides(scan.BirthYear) ? "verborgen (minderjährig)" : null;
 
         var derived = Variants(p.Name);
         var searched = new List<string>();

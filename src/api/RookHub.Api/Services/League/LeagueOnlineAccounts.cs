@@ -328,20 +328,20 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 /// Konten Minderjähriger (0.610.0, Wunsch 2026-09-30: „du linkst sie, aber zeigst niemandem den Namen/Account"): die
 /// Konto-Suche sucht auch sie, und ihre Partien kommen in den Eröffnungsbaum — aber Seite, Nutzername, Adresse, Profilangaben
 /// und Kommentar verlassen den Server nie (Karte, Meldeliste, Teilen-Links, Vorschläge). Verborgen ist, wessen Jahrgang laut
-/// Konto-Suche unter <see cref="LeagueAccountFinder.AdultAge"/> liegt — oder unbekannt ist (im Zweifel verborgen). Ohne Such-
-/// Eintrag (nie abgesucht) gilt ein Konto als sichtbar; die Suche erfasst jeden Spieler der laufenden Saison. Mit 18 wird es
-/// von selbst sichtbar.
+/// Konto-Suche unter <see cref="LeagueAccountFinder.AdultAge"/> liegt. Ein UNBEKANNTER Jahrgang verbirgt seit 0.616.0 nicht mehr
+/// (Wunsch des Nutzers: „alle mit gesichertem Geburtsdatum unter 18 ausblenden, alle anderen anzeigen"); ebenso gilt ein Konto
+/// ohne Such-Eintrag (nie abgesucht) als sichtbar. Mit 18 wird es von selbst sichtbar.
 /// </summary>
 public static class LeagueHiddenAccounts
 {
     public static bool Hides(int? birthYear, DateTime? now = null) =>
-        birthYear is not { } y || (now ?? DateTime.UtcNow).Year - y < LeagueAccountFinder.AdultAge;
+        birthYear is { } y && (now ?? DateTime.UtcNow).Year - y < LeagueAccountFinder.AdultAge;
 
     /// <summary>Die FIDE-IDs aus <paramref name="fides"/> (<c>null</c> = alle), deren Konten verborgen bleiben.</summary>
     public static async Task<HashSet<string>> FidesAsync(AppDbContext db, IEnumerable<string>? fides, CancellationToken ct)
     {
         var limit = DateTime.UtcNow.Year - LeagueAccountFinder.AdultAge;
-        var q = db.LeagueAccountScans.AsNoTracking().Where(s => s.BirthYear == null || s.BirthYear > limit);
+        var q = db.LeagueAccountScans.AsNoTracking().Where(s => s.BirthYear != null && s.BirthYear > limit);
         if (fides is not null)
         {
             var list = fides.Distinct().ToList();
