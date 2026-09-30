@@ -11,7 +11,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
-import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart, weeklyScheduledAtUtc, weeklyDisplayTime } from './weekly.service';
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
 import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -100,7 +100,7 @@ interface WeeklyPostRow extends WeeklyPost {
                     @if (r.title) { <span class="wp-title">{{ r.title }}</span> }
                     @if (r.description) { <span class="wp-desc">{{ r.description }}</span> }
                     <span class="wp-sched">
-                      {{ r.scheduledAt | date:'EEEE, dd.MM.yyyy' }} · {{ r.scheduledAt | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
+                      {{ displayTime(r) | date:'EEEE, dd.MM.yyyy' }} · {{ displayTime(r) | date:'HH:mm' }} {{ 'weekly.oClock' | translate }}
                     </span>
                   }
                   @if (prog[r.id]; as p) {
@@ -325,6 +325,9 @@ export class WeeklyListComponent implements OnInit {
     });
   }
 
+  /** Termin für die Anzeige in Ortszeit (Server liefert UTC). */
+  displayTime(r: WeeklyPost): number | string { return weeklyDisplayTime(r.scheduledAt); }
+
   /** Prozent gespielt (von allen Puzzles des Posts). */
   pct(p: WeeklyProgress): number {
     return p.total > 0 ? Math.round(100 * p.playedCount / p.total) : 0;
@@ -388,7 +391,7 @@ export class WeeklyListComponent implements OnInit {
   upload(): void {
     if (!this.uploadFile || !this.uploadDate || !this.uploadTime) return;
     this.uploading = true;
-    const scheduledAt = `${this.uploadDate}T${this.uploadTime}:00`;
+    const scheduledAt = weeklyScheduledAtUtc(this.uploadDate, this.uploadTime);
     this.weekly.create(this.uploadFile, scheduledAt, this.uploadTitle.trim() || undefined, this.uploadDescription.trim() || undefined).subscribe({
       next: () => {
         this.snackbar.info(this.translate.instant('weekly.created'), { action: 'common.ok', duration: 3000 });
@@ -408,7 +411,7 @@ export class WeeklyListComponent implements OnInit {
 
   savePost(row: WeeklyPostRow): void {
     if (!row.editDate || !row.editTime) return;
-    const scheduledAt = `${row.editDate}T${row.editTime}:00`;
+    const scheduledAt = weeklyScheduledAtUtc(row.editDate, row.editTime);
     this.weekly.update(row.id, { title: row.title, description: row.description ?? '', scheduledAt }).subscribe({
       next: p => { row.scheduledAt = p.scheduledAt; row.description = p.description ?? null; },
       error: err => {

@@ -9,7 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from '../courses/course.service';
-import { WeeklyService } from './weekly.service';
+import { WeeklyService, weeklyScheduledAtUtc } from './weekly.service';
 import { SnackbarService } from '../../core/snackbar.service';
 
 /** Prefill für den Dialog: vorgeschlagener Termin (wie beim PGN-Upload). */
@@ -204,7 +204,7 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
   create(): void {
     if (!this.canCreate()) return;
     this.saving = true;
-    const scheduledAt = `${this.date}T${this.time}:00`;
+    const scheduledAt = weeklyScheduledAtUtc(this.date, this.time);
     this.weekly.createFromChapter(this.bookId!, this.chapterIndex!, scheduledAt, this.title.trim() || undefined, this.description.trim() || undefined)
       .subscribe({
         next: post => { this.saving = false; this.ref.close(post); },

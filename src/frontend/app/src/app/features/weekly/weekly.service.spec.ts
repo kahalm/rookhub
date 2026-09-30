@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { WeeklyService, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart } from './weekly.service';
+import { WeeklyService, WeeklyProgress, WeeklyPlayerResult, sortLeaderboard, nextWeeklySlot, weeklyDatePart, weeklyTimePart, weeklyScheduledAtUtc, weeklyDisplayTime } from './weekly.service';
 
 describe('WeeklyService', () => {
   let svc: WeeklyService;
@@ -151,17 +151,52 @@ describe('WeeklyService', () => {
 });
 
 describe('weekly slot helpers', () => {
-  it('weeklyDatePart / weeklyTimePart split ISO; time defaults to 19:00', () => {
-    expect(weeklyDatePart('2026-06-08T20:30:00')).toBe('2026-06-08');
-    expect(weeklyTimePart('2026-06-08T20:30:00')).toBe('20:30');
-    expect(weeklyTimePart('2026-06-08')).toBe('19:00');   // keine Uhrzeit -> Default
+  // Der Server hält den Termin in UTC (freigeschaltet bei ScheduledAt <= UtcNow); Eingabe und Anzeige sind
+  // Wandzeit im Browser. Erwartungen über new Date(y, m, d, h, mi) gebildet -> gilt in jeder Zeitzone
+  // (lokal Europe/Vienna, CI UTC).
+  const wall = (y: number, mo: number, d: number, h: number, mi: number) => new Date(y, mo - 1, d, h, mi);
+  /** So liefert die API den DB-Wert heute: UTC ohne Zone (DateTimeKind.Unspecified). */
+  const zoneless = (at: Date) => at.toISOString().replace(/\.\d{3}Z$/, '');
+
+  it('weeklyScheduledAtUtc: Wandzeit aus Datums-/Zeitfeld -> UTC-ISO mit Z', () => {
+    const s = weeklyScheduledAtUtc('2026-06-08', '19:00');
+    expect(s).toBe(wall(2026, 6, 8, 19, 0).toISOString());
+    expect(s.endsWith('Z')).toBeTrue();
+    // Winterzeit: anderer Versatz, gleiche Regel
+    expect(weeklyScheduledAtUtc('2026-11-04', '19:00')).toBe(wall(2026, 11, 4, 19, 0).toISOString());
   });
 
-  it('nextWeeklySlot: letzter Termin + 7 Tage, gleiche Uhrzeit', () => {
-    expect(nextWeeklySlot('2026-06-08T19:00:00')).toEqual({ date: '2026-06-15', time: '19:00' });
-    expect(nextWeeklySlot('2026-06-08T20:30:00')).toEqual({ date: '2026-06-15', time: '20:30' });
+  it('weeklyDatePart / weeklyTimePart lesen den UTC-Termin als Ortszeit zurück (mit und ohne Z)', () => {
+    const at = wall(2026, 6, 8, 20, 30);
+    for (const iso of [at.toISOString(), zoneless(at)]) {
+      expect(weeklyDatePart(iso)).toBe('2026-06-08');
+      expect(weeklyTimePart(iso)).toBe('20:30');
+    }
+    // Rundreise Eingabe -> Server -> Formular bleibt bei der eingegebenen Wandzeit
+    const sent = weeklyScheduledAtUtc('2026-12-31', '23:30');
+    expect(weeklyDatePart(sent)).toBe('2026-12-31');
+    expect(weeklyTimePart(sent)).toBe('23:30');
+  });
+
+  it('weeklyTimePart: ohne Uhrzeit Default 19:00, weeklyDatePart den Datumsteil', () => {
+    expect(weeklyTimePart('2026-06-08')).toBe('19:00');
+    expect(weeklyDatePart('2026-06-08')).toBe('2026-06-08');
+  });
+
+  it('weeklyDisplayTime: zonenloser Server-Wert gilt als UTC (Zeitpunkt für die DatePipe)', () => {
+    const at = wall(2026, 6, 8, 19, 0);
+    expect(weeklyDisplayTime(zoneless(at))).toBe(at.getTime());
+    expect(weeklyDisplayTime(at.toISOString())).toBe(at.getTime());
+    expect(weeklyDisplayTime('2026-06-08')).toBe('2026-06-08');   // ohne Uhrzeit: String wie bisher
+  });
+
+  it('nextWeeklySlot: letzter Termin + 7 Tage, gleiche Wandzeit', () => {
+    expect(nextWeeklySlot(zoneless(wall(2026, 6, 8, 19, 0)))).toEqual({ date: '2026-06-15', time: '19:00' });
+    expect(nextWeeklySlot(zoneless(wall(2026, 6, 8, 20, 30)))).toEqual({ date: '2026-06-15', time: '20:30' });
     // Monatsübergang korrekt
-    expect(nextWeeklySlot('2026-06-29T19:00:00')).toEqual({ date: '2026-07-06', time: '19:00' });
+    expect(nextWeeklySlot(zoneless(wall(2026, 6, 29, 19, 0)))).toEqual({ date: '2026-07-06', time: '19:00' });
+    // Über die Zeitumstellung hinweg bleibt die Wandzeit (nicht der UTC-Wert) gleich
+    expect(nextWeeklySlot(wall(2026, 10, 21, 19, 0).toISOString())).toEqual({ date: '2026-10-28', time: '19:00' });
   });
 
   it('nextWeeklySlot: ohne vorherigen Eintrag -> heute um 19:00', () => {

@@ -108,15 +108,40 @@ export function sortLeaderboard(players: WeeklyPlayerResult[], total: number): W
 }
 
 // --- Termin-Helfer (reine Funktionen, testbar ohne Komponente) ---
+// Der Termin ist auf dem Server UTC (freigeschaltet wird bei ScheduledAt <= UtcNow). Eingabe und Anzeige
+// sind Wandzeit im Browser: hin mit weeklyScheduledAtUtc (ISO mit Z), zurück über weeklyInstant.
 
-/** Datums-Teil "YYYY-MM-DD" aus einem ISO-String "YYYY-MM-DDTHH:mm:ss". */
-export function weeklyDatePart(iso: string): string {
-  return iso.split('T')[0] || '';
+/** Server-Termin als Zeitpunkt. Zonenlose Strings (API vor der Z-Umstellung) gelten als UTC;
+ *  ohne Uhrzeit (nur Datum) → ungültiges Date, die Aufrufer fallen dann auf den String zurück. */
+export function weeklyInstant(iso: string): Date {
+  if (!iso || !iso.includes('T')) return new Date(NaN);
+  return new Date(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : iso + 'Z');
 }
 
-/** Uhrzeit "HH:mm" aus einem ISO-String; Default 19:00, wenn nicht vorhanden. */
+/** Termin aus Datums- und Zeitfeld (Wandzeit im Browser) als UTC-ISO mit Z. Ohne Zone läse der
+ *  Server die Wandzeit als UTC — Post und Discord-Ankündigung kämen 1–2 h später als eingegeben. */
+export function weeklyScheduledAtUtc(date: string, time: string): string {
+  return new Date(`${date}T${time}:00`).toISOString();
+}
+
+/** Für die DatePipe: Zeitpunkt in ms (zeigt Ortszeit); ohne Uhrzeit der String wie bisher. */
+export function weeklyDisplayTime(iso: string): number | string {
+  const t = weeklyInstant(iso).getTime();
+  return isNaN(t) ? iso : t;
+}
+
+/** Datums-Teil "YYYY-MM-DD" des Termins in Ortszeit. */
+export function weeklyDatePart(iso: string): string {
+  const d = weeklyInstant(iso);
+  return isNaN(d.getTime()) ? (iso.split('T')[0] || '') : ymd(d);
+}
+
+/** Uhrzeit "HH:mm" des Termins in Ortszeit; Default 19:00, wenn nicht vorhanden. */
 export function weeklyTimePart(iso: string): string {
-  return (iso.split('T')[1] || '19:00').slice(0, 5);
+  const d = weeklyInstant(iso);
+  if (isNaN(d.getTime())) return (iso.split('T')[1] || '19:00').slice(0, 5);
+  const p = (n: number) => n.toString().padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function ymd(d: Date): string {
@@ -180,7 +205,7 @@ export class WeeklyService {
     return this.http.get<WeeklyPlayerBreakdown>(`/api/weekly-posts/${id}/players/${userId}/breakdown`);
   }
 
-  /** scheduledAt als lokaler Wall-Clock-String "YYYY-MM-DDTHH:mm:ss" (ohne Zeitzone). */
+  /** scheduledAt als UTC-ISO mit Z (siehe {@link weeklyScheduledAtUtc}). */
   create(file: File, scheduledAt: string, title?: string, description?: string): Observable<WeeklyPost> {
     const form = new FormData();
     form.append('file', file, file.name);
