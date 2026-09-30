@@ -1701,6 +1701,34 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
 | POST | `/api/league/suggestions/{id}/accept` | manage | `{ sure }` → das Konto (wie Anlegen); 404 erledigt/unbekannt |
 | POST | `/api/league/suggestions/{id}/reject` | manage | Verwerfen → 204 |
 
+**Lichess-Übertragungen** (0.608.0, Wunsch 2026-09-30; `Services/League/LeagueBroadcastImport.cs`, Tabelle `LeagueBroadcasts`):
+Partien aus Lichess-Broadcasts von Turnieren am Brett kommen in die Spielerkarten (Quelle `Lichess-Übertragung`), zugeordnet über
+`WhiteFideId`/`BlackFideId` wie die Megabase (`LeagueProfileStore.ImportGamesAsync`). Gemessen am 2026-09-30: in neun
+Übertragungen 406 Partien mit Ligaspielern, davon fehlten 43 (21 aus der Bundesliga) — der Rest steht über chess-results schon
+da; der Gewinn ist vor allem, dass die Partien schon WÄHREND des Turniers da sind. Regeln:
+* **Finden**: Lichess-Suche (`/api/broadcast/search`) nach `LeagueBroadcasts:Queries` (Komma-Liste, Vorgabe Austria, Österreich,
+  Tirol, Tyrol, Südtirol, Innsbruck; höchstens 10 Seiten je Wort), nur bis `LeagueBroadcasts:MaxYears` (5) zurück; am 30.09. 62
+  Übertragungen. Der Takt sucht höchstens alle 20 h (merkt es sich selbst, ein Neustart sucht sofort). Turniere im Ausland per Link
+  (`AddAsync`, Turnier- ODER Runden-Link — der Runden-Link wird über `/api/broadcast/-/-/{roundId}` aufgelöst).
+* **Einspielen** (`CleanPgn`): nur fertige Partien (kein `*`), Standard ab der Grundstellung, mit mindestens einer FIDE-ID; Datum mit
+  Punkten (ältere Übertragungen schreiben „2024-08-24" — sonst erkennt `Merge` die chess-results-Fassung nicht), fehlt es, gilt
+  `UTCDate`; nur die Hauptvariante, ohne `[%eval]`/`[%clk]`/Anmerkungen; Kopfzeilen samt `GameURL`.
+* **Dieselbe Partie mit ANDEREM Datum** (Kufsteiner Open 2026: Partien 30.05., Turnier 31.07.): `ImportGamesAsync(…, skipSameMoves:
+  true)` verwirft sie über `LeagueProfileStore.SameGameKey` (beide Nachnamen + erste 20 Halbzüge, mindestens 10) gegen das, was die
+  Karte schon hat (fremde + Vereinspartien).
+* **Stand**: laufende alle 6 h neu, noch nicht begonnene warten; fertig = alle Runden `finished` (sonst 3 Tage nach dem letzten Tag)
+  → nie wieder. **Falle**: `ImportGamesAsync` leert am Ende den ChangeTracker — den Stand der Übertragung schreibt `SaveAsync` deshalb
+  ausdrücklich (`Update`). Ein Bündel-Import mit Profilen ersetzt die fremden Partien der Karten und setzt deshalb alle Übertragungen
+  zurück (`Finished`/`ImportedAt`), sonst wären ihre Partien weg.
+* **Takt**: im `LeagueOnlineSyncScheduler` nach Abruf und Konto-Suche, je Runde höchstens 5 min; `LeagueBroadcasts:Enabled=false`
+  schaltet es ab. Oberfläche: Reiter „Übertragungen" (`/uebertragungen`, `features/broadcasts/`, nur Verwalter) mit Liste und
+  „Hinzufügen und einspielen".
+
+| Methode | Endpoint | Recht | Zweck |
+|---------|----------|-------|-------|
+| GET | `/api/league/admin/broadcasts` | manage | Alle vorgemerkten Übertragungen (jüngste zuerst) mit Stand |
+| POST | `/api/league/admin/broadcasts` | manage | `{ url }` (Turnier- oder Runden-Link, auch die nackte Kennung) → hinzufügen + einspielen; 400 `invalidUrl`, 404 `notFound`, 503 `rateLimited`/`unreachable` |
+
 **Letzte Partien nachspielen** (0.578.0): `GET /api/league/player/{fide}/recent` (und `/api/league/s/{token}/player/{fide}/recent`)
 → `{ fide, games[{ date, vs, color, pgn }] }` — dieselbe Auswahl und Reihenfolge wie `recent` der Karte
 (`LeagueProfileBuilder.Recent`, `RecentCount` = 8), aus dem aktuellen Bestand gerechnet (fremde + Vereinspartien). Die Karte holt
@@ -3724,6 +3752,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
 | LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?; Index (Status, Score) |
 | LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess), ScannedAt, Note? („minderjährig", „Jahrgang unbekannt", Fehler), Found |
+| LeagueBroadcasts | Lichess-Übertragungen, deren Partien in die Karten kommen (0.608.0) | TourId (PK, ≤12), Name, Location?, StartsAt?/EndsAt?, Manual (per Link), FoundAt, ImportedAt?, Finished (Index), Games (mit Ligaspielern), Error? |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | LeagueMegaPlayers | Spielerverzeichnis der ganzen ChessBase-Megabase (0.575.0) für die Namenssuche in LeagueHub; wird beim Einspielen komplett ersetzt | Name (≤120), NameKey (≤120, klein ohne Akzente, Index), FideId? (≤16, Index), Games, LastYear?, MaxElo? |

@@ -225,6 +225,30 @@ public class LeagueAccountScan
     public int Found { get; set; }
 }
 
+/// <summary>
+/// Eine Lichess-Übertragung (Broadcast) eines Turniers am Brett, deren Partien in die Spielerkarten eingespielt werden
+/// (0.608.0). Die Partien tragen die FIDE-ID beider Spieler — zugeordnet wird darüber, nicht über Namen.
+/// </summary>
+public class LeagueBroadcast
+{
+    /// <summary>Kennung des Turniers auf Lichess (8 Zeichen).</summary>
+    public string TourId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Location { get; set; }
+    public DateTime? StartsAt { get; set; }
+    public DateTime? EndsAt { get; set; }
+    /// <summary>Von Hand hinzugefügt (sonst über die Suche gefunden).</summary>
+    public bool Manual { get; set; }
+    public DateTime FoundAt { get; set; }
+    /// <summary>Zuletzt eingespielt; <c>null</c> = noch nie.</summary>
+    public DateTime? ImportedAt { get; set; }
+    /// <summary>Alle Runden vorbei und eingespielt — wird nicht mehr geholt.</summary>
+    public bool Finished { get; set; }
+    /// <summary>Partien mit Ligaspielern beim letzten Einspielen.</summary>
+    public int Games { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Öffentlicher Teilen-Link auf genau eine Begegnung (Token = Geheimnis, 144 Bit).</summary>
 public class LeagueShare
 {

@@ -350,7 +350,8 @@ public sealed class LeagueOnlineSync
 /// Takt des Abrufs: zwei Minuten nach dem Start, dann alle <c>LeagueOnline:IntervalHours</c> (Vorgabe 12) je Konto, sofort
 /// nach einem Weckruf (neues/geändertes Konto) und in kurzen Abständen, solange ein Konto noch Rückstand hat. Abschaltbar mit
 /// <c>LeagueOnline:Enabled=false</c>. Seit 0.607.0 läuft danach je Runde die Konto-Suche (<see cref="LeagueAccountFinder"/>,
-/// abschaltbar mit <c>LeagueOnline:Suggestions=false</c>).
+/// abschaltbar mit <c>LeagueOnline:Suggestions=false</c>), seit 0.608.0 die Lichess-Übertragungen (<see cref="LeagueBroadcastImport"/>,
+/// <c>LeagueBroadcasts:Enabled=false</c>).
 /// </summary>
 public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, LeagueOnlineSyncSignal signal, IConfiguration config,
     ILogger<LeagueOnlineSyncScheduler> logger) : BackgroundService
@@ -366,6 +367,8 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
     {
         if (!config.GetValue("LeagueOnline:Enabled", true)) return;
         var suggestions = config.GetValue("LeagueOnline:Suggestions", true);
+        var broadcasts = config.GetValue("LeagueBroadcasts:Enabled", true);
+        DateTime? lastDiscovery = null;
         var interval = TimeSpan.FromHours(Math.Clamp(config.GetValue("LeagueOnline:IntervalHours", 12), 1, 168));
         try { await Task.Delay(StartDelay, ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)
@@ -380,6 +383,22 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
             catch (Exception e)
             {
                 logger.LogError(e, "LeagueHub: Abruf der Online-Partien gescheitert");
+            }
+            // Lichess-Übertragungen (0.608.0): suchen höchstens alle DiscoverEvery, einspielen je Runde höchstens SearchBudget.
+            if (broadcasts)
+            {
+                try
+                {
+                    var discover = lastDiscovery is null || DateTime.UtcNow - lastDiscovery > LeagueBroadcastImport.DiscoverEvery;
+                    using var scope = scopes.CreateScope();
+                    more |= await scope.ServiceProvider.GetRequiredService<LeagueBroadcastImport>().RunOnceAsync(SearchBudget, discover, ct);
+                    if (discover) lastDiscovery = DateTime.UtcNow;
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "LeagueHub: Lichess-Übertragungen gescheitert");
+                }
             }
             // Danach die Konto-Suche (0.607.0): abwechselnd mit dem Abruf, je Runde höchstens SearchBudget.
             if (suggestions)

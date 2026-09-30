@@ -32,6 +32,24 @@ public sealed class LeagueProfileStore
         return year + "|" + string.Join(' ', PgnParser.ExtractMainlineSans(moveText));
     }
 
+    /// <summary>So viele Halbzüge vom Anfang genügen, um dieselbe Partie über zwei Quellen zu erkennen.</summary>
+    public const int SameGamePlies = 20;
+
+    /// <summary>
+    /// „Dieselbe Partie" ohne Datum: beide Nachnamen + die ersten <see cref="SameGamePlies"/> Halbzüge (kürzer: alle, aber
+    /// mindestens 10). Nicht die ganze Partie — Abschriften (chess-results) verlieren gern die letzten Züge.
+    /// <c>null</c> = zu kurz, um sicher zu sein.
+    /// </summary>
+    public static string? SameGameKey(LeagueProfileBuilder.Game g)
+    {
+        var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
+        var sans = PgnParser.ExtractMainlineSans(moveText);
+        if (sans.Count < 10) return null;
+        g.Headers.TryGetValue("White", out var w);
+        g.Headers.TryGetValue("Black", out var b);
+        return $"{LeagueProfileBuilder.LastName(w)}|{LeagueProfileBuilder.LastName(b)}|{string.Join(' ', sans.Take(SameGamePlies))}";
+    }
+
     /// <summary>Vereinspartien dazunehmen, die nicht schon unter den fremden stehen.</summary>
     public static List<LeagueProfileBuilder.Game> WithClub(List<LeagueProfileBuilder.Game> external, IEnumerable<LeagueClubGame> club)
     {
@@ -126,7 +144,8 @@ public sealed class LeagueProfileStore
     /// gespeicherte Fassung bleibt), die Quelle steht als <see cref="LeagueProfileBuilder.SourceHeader"/> im Kopf. Danach
     /// Karten neu und die Partienzahl in den Ansichten nachgezogen. Speichert selbst.
     /// </summary>
-    public async Task<(int Games, int Players)> ImportGamesAsync(string pgn, string source, CancellationToken ct)
+    public async Task<(int Games, int Players)> ImportGamesAsync(string pgn, string source, CancellationToken ct,
+        bool skipSameMoves = false)
     {
         var known = (await _db.LeaguePlayers.AsNoTracking().Where(p => p.FideId != null && p.FideId != "")
             .Select(p => p.FideId!).Distinct().ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
@@ -154,8 +173,19 @@ public sealed class LeagueProfileStore
             games++;
         }
         var i = 0;
-        foreach (var (fide, list) in byFide)
+        foreach (var (fide, all) in byFide)
         {
+            var list = all;
+            if (skipSameMoves)
+            {
+                // Dieselbe Partie aus einer anderen Quelle MIT anderem Datum (Lichess-Übertragungen tragen es gelegentlich
+                // falsch — Kufstein 2026: 30.05. statt 31.07.) fiele durch die Datums-Regel von Merge und stünde doppelt da.
+                var row = await _db.LeaguePlayerProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.FideId == fide, ct);
+                var have = WithClub(Stored(row?.Pgn), await ClubGamesAsync(fide, ct))
+                    .Select(SameGameKey).Where(k => k is not null).ToHashSet(StringComparer.Ordinal);
+                list = all.Where(g => SameGameKey(g) is not { } k || !have.Contains(k)).ToList();
+                if (list.Count == 0) continue;
+            }
             await RebuildAsync(fide, ct, list);
             if (++i % 20 == 0) { await _db.SaveChangesAsync(ct); _db.ChangeTracker.Clear(); }
         }

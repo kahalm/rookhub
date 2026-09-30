@@ -37,7 +37,10 @@ import { environment } from '../../src/environments/environment';
           <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
           <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
           @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
-          @if (nav().manage) { <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a> }
+          @if (nav().manage) {
+            <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a>
+            <a routerLink="/uebertragungen" routerLinkActive="on">Übertragungen</a>
+          }
         </nav>
       }
     </header>

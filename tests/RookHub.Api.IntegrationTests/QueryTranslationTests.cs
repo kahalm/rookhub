@@ -633,6 +633,28 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     }
 
     /// <summary>
+    /// Lichess-Übertragungen (0.608.0): die Auswahl der fälligen Übertragungen (nullbare Zeiten, Sortierung nach „schon
+    /// eingespielt") und die Liste für die Verwaltung. Fällig ist hier nichts — fertig bzw. noch nicht begonnen —, also auch
+    /// kein Abruf bei Lichess.
+    /// </summary>
+    [MySqlFact]
+    public async Task LigaUebertragungen_FaelligeAuswahl_UndListe()
+    {
+        Db.LeagueBroadcasts.AddRange(
+            new LeagueBroadcast { TourId = "done0001", Name = "Tirol Open", FoundAt = DateTime.UtcNow, StartsAt = DateTime.UtcNow.AddDays(-30),
+                ImportedAt = DateTime.UtcNow.AddDays(-20), Finished = true, Games = 88 },
+            new LeagueBroadcast { TourId = "later001", Name = "Kufstein Open", FoundAt = DateTime.UtcNow, StartsAt = DateTime.UtcNow.AddDays(5) },
+            new LeagueBroadcast { TourId = "fresh001", Name = "Bundesliga", FoundAt = DateTime.UtcNow, StartsAt = DateTime.UtcNow.AddDays(-1),
+                ImportedAt = DateTime.UtcNow.AddHours(-1) });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+        var imp = new RookHub.Api.Services.League.LeagueBroadcastImport(Db, new HttpClient(),
+            NullLogger<RookHub.Api.Services.League.LeagueBroadcastImport>.Instance) { Pause = TimeSpan.Zero };
+        Assert.False(await imp.RunOnceAsync(TimeSpan.FromMinutes(1), discover: false, default));
+        Assert.Equal(3, (await imp.ListAsync(default)).Count);
+    }
+
+    /// <summary>
     /// Vereinspartien über einen Teilen-Link (Codereview 2026-09-29, A2-009): die neue Spalte <c>UploadShareHash</c> wird
     /// geschrieben, „alle Partien dieses Links entfernen" zählt und löscht über sie — und der Deckel kommt als EIN Singleton
     /// aus der DI (sonst hätte jeder Request seinen eigenen Zähler).

@@ -244,6 +244,37 @@ public class LeagueController : BaseApiController
         return Ok(new { games, players });
     }
 
+    /// <summary>Lichess-Übertragungen, die eingespielt werden (0.608.0) — jüngste zuerst, mit Stand.</summary>
+    [HttpGet("admin/broadcasts")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> Broadcasts([FromServices] LeagueBroadcastImport broadcasts, CancellationToken ct) =>
+        Ok(await broadcasts.ListAsync(ct));
+
+    public sealed record BroadcastRequest(string? Url);
+
+    /// <summary>Eine Übertragung per Link (Turnier oder Runde) hinzufügen und gleich einspielen → ihr Stand; 400
+    /// <c>invalidUrl</c>, 404 <c>notFound</c>, 503 <c>rateLimited</c>/<c>unreachable</c>.</summary>
+    [HttpPost("admin/broadcasts")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> AddBroadcast([FromBody] BroadcastRequest? req, [FromServices] LeagueBroadcastImport broadcasts,
+        CancellationToken ct)
+    {
+        try
+        {
+            var (b, reason) = await broadcasts.AddAsync(req?.Url, ct);
+            if (b is null) return reason == "notFound" ? NotFound(new { reason }) : BadRequest(new { reason });
+            return Ok(new { tourId = b.TourId, name = b.Name, games = b.Games, finished = b.Finished, error = b.Error });
+        }
+        catch (LeagueOnlineSync.RateLimitedException)
+        {
+            return StatusCode(503, new { reason = "rateLimited" });
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+    }
+
     /// <summary>Spielerverzeichnis der ganzen Megabase ersetzen (TSV, gern gzip) — Skript <c>scan_mega_players.py</c>.</summary>
     [HttpPost("admin/mega-players")]
     [HasPermission(Permissions.LeagueManage)]

@@ -49,6 +49,20 @@ export interface SuggestionList {
   found?: number; skipped?: string | null;
 }
 
+/** Eine Lichess-Übertragung, deren Partien in die Spielerkarten kommen (0.608.0). */
+export interface Broadcast {
+  tourId: string; name: string; location: string | null; url: string;
+  startsAt: string | null; endsAt: string | null;
+  /** Per Link hinzugefügt (sonst über die Suche gefunden). */
+  manual: boolean;
+  importedAt: string | null;
+  /** Alle Runden vorbei und eingespielt — wird nicht mehr geholt. */
+  finished: boolean;
+  /** Partien mit Ligaspielern beim letzten Einspielen. */
+  games: number;
+  error: string | null;
+}
+
 /** Eingabe für ein Konto: Name oder kopierte Profiladresse. Fehlende Felder bleiben beim Ändern, wie sie sind. */
 export interface AccountInput { site?: string | null; user?: string | null; sure?: boolean | null; comment?: string | null }
 

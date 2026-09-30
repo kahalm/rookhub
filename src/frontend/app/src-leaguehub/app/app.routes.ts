@@ -4,7 +4,7 @@ import { guestGuard } from '@rh/core/guest.guard';
 
 /**
  * `/` ist die Prognose-Seite (nur angemeldet, `league.view`: Admins und die Vereinsgruppe), `/verein*` die
- * Vereins-Datenbank (lesen `league.view`, hinzufügen `league.contribute`), `/konten` die Konto-Vorschläge (`league.manage`),
+ * Vereins-Datenbank (lesen `league.view`, hinzufügen `league.contribute`), `/konten` die Konto-Vorschläge und `/uebertragungen` die Lichess-Übertragungen (`league.manage`),
  * `/s/:token` die geteilte Ansicht einer
  * Begegnung OHNE Anmeldung. Keine Route mit `/g`, `/t` oder `/puzzles`: diese
  * Präfixe schickt der gemeinsame nginx an die Link-Vorschau der API.
@@ -20,6 +20,8 @@ export const routes: Routes = [
     loadComponent: () => import('./features/club/club-scan-page.component').then(m => m.ClubScanPageComponent) },
   { path: 'konten', canActivate: [authGuard],
     loadComponent: () => import('./features/accounts/account-suggestions-page.component').then(m => m.AccountSuggestionsPageComponent) },
+  { path: 'uebertragungen', canActivate: [authGuard],
+    loadComponent: () => import('./features/broadcasts/broadcasts-page.component').then(m => m.BroadcastsPageComponent) },
   // Ohne Anmeldung über einen Teilen-Link: Partien hochladen (Wunsch 2026-09-28).
   { path: 's/:token/hochladen',
     loadComponent: () => import('./features/club/club-add-page.component').then(m => m.ClubAddPageComponent) },

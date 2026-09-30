@@ -157,6 +157,13 @@ public sealed class LeagueImportService
                 .Distinct().ToListAsync(ct);
             var store = new LeagueProfileStore(_db);
             foreach (var f in clubFides) await store.RebuildAsync(f, ct);
+            // Das Bündel ersetzt die fremden Partien der Karten — die eingespielten Lichess-Übertragungen (0.608.0) wären damit
+            // weg und kämen als „fertig" nie wieder: alle neu einspielen lassen.
+            foreach (var bc in await _db.LeagueBroadcasts.ToListAsync(ct))
+            {
+                bc.Finished = false;
+                bc.ImportedAt = null;
+            }
             await _db.SaveChangesAsync(ct);
             res["profiles"] = b.Profiles.Count;
         }

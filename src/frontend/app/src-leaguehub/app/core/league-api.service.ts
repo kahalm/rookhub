@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountInput, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -92,6 +92,18 @@ export class LeagueApiService {
 
   rejectSuggestion(id: number): Promise<unknown> {
     return firstValueFrom(this.http.post(`/api/league/suggestions/${id}/reject`, {}));
+  }
+
+  // ── Lichess-Übertragungen (0.608.0, league.manage) ──
+
+  broadcasts(): Promise<Broadcast[]> {
+    return firstValueFrom(this.http.get<Broadcast[]>('/api/league/admin/broadcasts'));
+  }
+
+  /** Per Link (Turnier oder Runde) hinzufügen und gleich einspielen. */
+  addBroadcast(url: string): Promise<{ tourId: string; name: string; games: number; finished: boolean; error: string | null }> {
+    return firstValueFrom(this.http.post<{ tourId: string; name: string; games: number; finished: boolean; error: string | null }>(
+      '/api/league/admin/broadcasts', { url }));
   }
 
   shared(token: string): Promise<SharedFixture> {

@@ -100,6 +100,7 @@ public class AppDbContext : DbContext
     public DbSet<LeagueOnlineGame> LeagueOnlineGames => Set<LeagueOnlineGame>();
     public DbSet<LeagueAccountSuggestion> LeagueAccountSuggestions => Set<LeagueAccountSuggestion>();
     public DbSet<LeagueAccountScan> LeagueAccountScans => Set<LeagueAccountScan>();
+    public DbSet<LeagueBroadcast> LeagueBroadcasts => Set<LeagueBroadcast>();
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
@@ -693,6 +694,15 @@ public class AppDbContext : DbContext
             e.Property(a => a.FideId).HasMaxLength(16);
             e.Property(a => a.Note).HasMaxLength(200);
             e.Property(a => a.Federation).HasMaxLength(8);
+        });
+        modelBuilder.Entity<LeagueBroadcast>(e =>
+        {
+            e.HasKey(b => b.TourId);
+            e.Property(b => b.TourId).HasMaxLength(12);
+            e.Property(b => b.Name).HasMaxLength(200);
+            e.Property(b => b.Location).HasMaxLength(200);
+            e.Property(b => b.Error).HasMaxLength(300);
+            e.HasIndex(b => b.Finished);
         });
         modelBuilder.Entity<LeagueShare>(e =>
         {
