@@ -56,6 +56,10 @@ public class ScoresheetScanService
     /// <summary>Lese-Durchgänge insgesamt (1 + Nachfragen).</summary>
     public const int MaxRounds = 3;
 
+    /// <summary>So viele festgelegte Halbzüge nimmt das Neu-Aufbereiten an (<see cref="ResolveRestAsync"/>) — wie das
+    /// Speichern der Partie (<see cref="SavedGameService.UpdateAsync"/>).</summary>
+    public const int MaxPrefixPlies = 600;
+
     /// <summary>So oft setzt der Worker an einer Einlesung an (ein Absturz mittendrin zählt mit).</summary>
     public const int MaxAttempts = 3;
 
@@ -605,6 +609,7 @@ public class ScoresheetScanService
     public async Task<ScoresheetResolveResultDto?> ResolveRestAsync(int userId, int gameId, IReadOnlyList<string> prefix,
         int writtenFrom)
     {
+        CheckPrefix(prefix);
         var scan = await _db.ScoresheetScans.AsNoTracking()
             .Where(s => s.SavedGameId == gameId && s.UserId == userId)
             .Select(s => new { s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson })
@@ -620,6 +625,14 @@ public class ScoresheetScanService
         var r = ScoresheetResolver.Resolve(scanned, new ScoresheetResolver.Options(ScoresheetNotation.Find(language)),
             legalPrefix, from);
         return new ScoresheetResolveResultDto { Plies = r.Plies, Unresolved = r.Unresolved, UnresolvedFrom = r.StuckAt };
+    }
+
+    /// <summary>Das Präfix wird Halbzug für Halbzug mit allen legalen Zügen samt SAN nachgespielt, und Pendelzüge enden
+    /// nie von selbst — ohne Deckel kostete eine Anfrage (auch ohne Konto, mit Teilen-Link und Schlüssel) so viel CPU,
+    /// wie der Rumpf Züge fasst (Codereview 2026-09-29, A6-014). <see cref="ArgumentException"/> wie beim illegalen Zug.</summary>
+    private static void CheckPrefix(IReadOnlyList<string> prefix)
+    {
+        if (prefix.Count > MaxPrefixPlies) throw new ArgumentException($"Too many moves (max {MaxPrefixPlies} plies).");
     }
 
     // ── Einlesungen für die Vereins-Datenbank (LeagueHub) ────────────
@@ -834,6 +847,7 @@ public class ScoresheetScanService
     public async Task<ScoresheetResolveResultDto?> ResolveLeagueRestAsync(ScanActor actor, int? scanId, IReadOnlyList<string> prefix,
         int writtenFrom)
     {
+        CheckPrefix(prefix);
         var q = LeagueOwned(_db.ScoresheetScans.AsNoTracking(), actor);
         if (scanId is int id) q = q.Where(s => s.Id == id);
         var scan = await q.Select(s => new { s.NotationLanguage, s.TranscriptionJson, s.ResolutionJson }).FirstOrDefaultAsync();

@@ -121,7 +121,8 @@ public class ScoresheetEditStateDto
 /// <summary><c>POST /api/games/{id}/scoresheet/resolve</c> — den Rest ab einer festgelegten Stelle neu aufbereiten.</summary>
 public class ScoresheetResolveRequestDto
 {
-    /// <summary>Die festgelegten Halbzüge (SAN) ab Partiebeginn.</summary>
+    /// <summary>Die festgelegten Halbzüge (SAN) ab Partiebeginn — höchstens
+    /// <see cref="Services.ScoresheetScanService.MaxPrefixPlies"/>, sonst 400 wie bei einem illegalen Zug.</summary>
     public List<string> Prefix { get; set; } = new();
 
     /// <summary>Welcher Formular-Eintrag gehört zum nächsten Halbzug? Nach einem Ersetzen der nächste,

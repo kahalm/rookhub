@@ -523,6 +523,31 @@ public class ScoresheetScanServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ResolveRest_RefusesPrefixesLongerThanAGame_LikeSaving()
+    {
+        var u = await UserAsync();
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var gameId = (await UploadAndProcessAsync(u.Id)).SavedGameId!.Value;
+        _vision.Answers.Enqueue(new(Answer(Written), null));
+        var (anon, key, _) = await _service.CreateAnonymousAsync(Jpeg(), "image/jpeg", "b.jpg", "de", null, "ip");
+        await _service.ClaimNextAsync(default);
+        await _service.ProcessAsync(anon!.Id, default);
+
+        // Pendelzüge sind legal und enden nie von selbst — ohne Deckel spielte der Server jede Länge nach (Codereview
+        // 2026-09-29, A6-014; Speichern der Partie deckelt bei 600).
+        var shuffle = new[] { "Nf3", "Nf6", "Ng1", "Ng8" };
+        var tooLong = Enumerable.Range(0, 601).Select(i => shuffle[i % 4]).ToList();
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.ResolveRestAsync(u.Id, gameId, tooLong, 0));
+        Assert.Contains("max 600", ex.Message);
+        ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.ResolveLeagueRestAsync(ScoresheetScanService.ScanActor.Anonymous(key!), null, tooLong, 0));
+        Assert.Contains("max 600", ex.Message);
+        Assert.Equal(600, ScoresheetScanService.MaxPrefixPlies);
+        // Eine ganze Partie bis 600 Halbzüge geht weiter (ab dem Ende des Formulars: nur das Präfix wird nachgespielt).
+        Assert.NotNull(await _service.ResolveRestAsync(u.Id, gameId, tooLong.Take(600).ToList(), Written.Length));
+    }
+
+    [Fact]
     public async Task DeleteGame_TakesThePhotoAlong_ButTheScanStillCountsForTheDay()
     {
         var u = await UserAsync();
