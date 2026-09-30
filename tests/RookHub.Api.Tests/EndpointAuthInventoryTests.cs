@@ -127,8 +127,10 @@ public class EndpointAuthInventoryTests
         "GET /api/weekly-posts",                                     // WeeklyPostController.GetAll
         "POST /api/auth/forgot-password",                            // AuthController.ForgotPassword
         "POST /api/auth/handoff/exchange",                           // AuthController.HandoffExchange (Einmal-Code IST der Nachweis; der Aufrufer ist hier noch nicht angemeldet)
-        "POST /api/auth/session",                                    // AuthController.SharedSession (das Cookie der Elterndomaene IST der Nachweis; der Aufrufer ist hier noch nicht angemeldet)
-        "POST /api/auth/session/end",                                // AuthController.EndSharedSession (Abmelden loescht nur ein Cookie — dafuer angemeldet sein zu muessen waere die verkehrte Antwort)
+        "POST /api/auth/rh-session",                                 // AuthController.SharedSession (das Cookie der Elterndomaene IST der Nachweis; der Aufrufer ist hier noch nicht angemeldet)
+        "POST /api/auth/rh-session/end",                             // AuthController.EndSharedSession (Abmelden loescht nur ein Cookie — dafuer angemeldet sein zu muessen waere die verkehrte Antwort)
+        "POST /api/auth/session",                                    // AuthController.LegacySharedSession (Uebergang N6-001, eine Version: alter Pfad, danach entfernen)
+        "POST /api/auth/session/end",                                // AuthController.LegacyEndSharedSession (dito)
         "POST /api/auth/login",                                      // AuthController.Login
         "POST /api/auth/register",                                   // AuthController.Register
         "POST /api/auth/reset-password",                             // AuthController.ResetPassword

@@ -56,6 +56,14 @@ public class AuthControllerTests : IDisposable
     private string? SetCookieHeader(string name) =>
         _http.Response.Headers.SetCookie.FirstOrDefault(h => h?.StartsWith(name + "=") == true);
 
+    /// <summary>Die Set-Cookie-Zeile fuer genau diesen Pfad (Cookies sind je Name+Domaene+PFAD eigene Eintraege).</summary>
+    private string? SetCookieHeader(string name, string path) =>
+        _http.Response.Headers.SetCookie.FirstOrDefault(h => h?.StartsWith(name + "=") == true
+            && h.Split(';').Any(part => string.Equals(part.Trim(), "path=" + path, StringComparison.OrdinalIgnoreCase)));
+
+    private static bool IsDeletion(string? setCookie) =>
+        setCookie != null && setCookie.Contains("expires=Thu, 01 Jan 1970", StringComparison.OrdinalIgnoreCase);
+
     public void Dispose() => _db.Dispose();
 
     private sealed class FakeEmailSender : IEmailSender
@@ -303,13 +311,67 @@ public class AuthControllerTests : IDisposable
 
         await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
 
-        var cookie = SetCookieHeader("rh_session");
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
         Assert.NotNull(cookie);
+        Assert.False(IsDeletion(cookie));
         Assert.Contains("domain=.example.test", cookie, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("path=/api/auth", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Login_ScopesTheSharedCookieToItsOwnPath_AndClearsTheOldOne()
+    {
+        // N6-001: mit Path=/api/auth schickte der Browser das 30-Tage-Cookie an JEDEN Host der Elterndomaene,
+        // der unter /api/auth eine eigene Anmeldung hat (Dev-Stacks, RCT, Lernkompass, Cal.com). Gueltig
+        // ausgegeben wird es nur noch fuer /api/auth/rh-session; ein altes Cookie mit /api/auth wird geloescht.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        await _controller.Login(new LoginDto { Username = "u", Password = "Password1!" });
+
+        var live = _http.Response.Headers.SetCookie
+            .Where(h => h?.StartsWith("rh_session=") == true && !IsDeletion(h)).ToList();
+        var only = Assert.Single(live);
+        Assert.Equal(only, SetCookieHeader("rh_session", "/api/auth/rh-session"));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")),
+            "Das alte Cookie (Path=/api/auth) muss mit abgelaufenem Datum geloescht werden.");
+        Assert.Contains("domain=.example.test", SetCookieHeader("rh_session", "/api/auth"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SharedSession_RedeemsAnOldPathCookie_AndMovesItToTheNewPath()
+    {
+        // Uebergang: wer sich vor N6-001 angemeldet hat, hat nur das alte Cookie. Der Browser schickt es an
+        // /api/auth/rh-session mit (Pfad-Praefix) — der Tausch klappt, und danach liegt es am neuen Pfad.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}";
+        _http.Response.Headers.Remove("Set-Cookie");
+
+        var result = await _controller.LegacySharedSession(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+        Assert.False(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+        Assert.NotNull(SetCookieHeader("rh_session", "/api/auth/rh-session"));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+    }
+
+    [Fact]
+    public async Task SharedSession_WithBothCookies_TakesTheNewPathOne()
+    {
+        // Browser listen Cookies mit laengerem Pfad zuerst (RFC 6265 5.4) — liegt noch ein altes, untaugliches
+        // daneben, darf das die gueltige neue Anmeldung nicht kippen.
+        await _controller.Register(new RegisterDto { Username = "u", Email = "u@t.com", Password = "Password1!" });
+        var user = await _db.AppUsers.FirstAsync();
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(user.Id)}; rh_session=alt.und.kaputt";
+
+        var result = await _controller.SharedSession(CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
     }
 
     [Fact]
@@ -361,9 +423,22 @@ public class AuthControllerTests : IDisposable
         var result = _controller.EndSharedSession();
 
         Assert.IsType<NoContentResult>(result);
-        var cookie = SetCookieHeader("rh_session");
-        Assert.NotNull(cookie);
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.True(IsDeletion(cookie));
         Assert.Contains("domain=.example.test", cookie, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("path=/api/auth", cookie, StringComparison.OrdinalIgnoreCase);
+        // ... und das alte Cookie (Pfad /api/auth, vor N6-001) gleich mit.
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
+    }
+
+    [Fact]
+    public void LegacyEndSharedSession_DeletesBothCookies()
+    {
+        // Eine Oberflaeche aus dem Browser-Cache meldet sich ueber den alten Pfad ab — auch das neue Cookie muss
+        // dann weg, sonst meldete die naechste Seite den Nutzer gleich wieder an.
+        var result = _controller.LegacyEndSharedSession();
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+        Assert.True(IsDeletion(SetCookieHeader("rh_session", "/api/auth")));
     }
 }

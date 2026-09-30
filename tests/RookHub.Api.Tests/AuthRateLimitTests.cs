@@ -44,6 +44,8 @@ public class AuthRateLimitTests
         Assert.Equal("auth-permissions", policies[nameof(AuthController.GetPermissions)]);
         Assert.Equal("auth-session", policies[nameof(AuthController.SharedSession)]);
         Assert.Equal("auth-session", policies[nameof(AuthController.EndSharedSession)]);
+        Assert.Equal("auth-session", policies[nameof(AuthController.LegacySharedSession)]);
+        Assert.Equal("auth-session", policies[nameof(AuthController.LegacyEndSharedSession)]);
 
         // Alles, was ein Passwort oder einen Code prüft, bleibt im strengen Fenster.
         foreach (var strict in new[]

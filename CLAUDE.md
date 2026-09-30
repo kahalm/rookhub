@@ -108,8 +108,9 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | POST | `/api/auth/login` | Login, gibt JWT zurück (gültig 30 Tage, mit `rememberMe` 90). Konto-Bremse: jeder Versuch wird vorab atomar gezählt (5 frei, dann 250 ms … 4 s Wartezeit); bei gebremstem Konto höchstens EINE Prüfung gleichzeitig, weitere sofort 429 (`Retry-After: 5`). Gesperrtes Konto (`AppUser.LockedUntil`) → 403 `{ message, lockedUntil }` (`null` = unbefristet) — erst NACH der Passwortprüfung, ein falsches Passwort bleibt 401 (kein Konto-Orakel) |
 | POST | `/api/auth/forgot-password` | „Passwort vergessen" `{ email }` — schickt (falls die Adresse zu einem aktiven Konto gehört) einen einmaligen Reset-Link (TTL 1 h) per Mail. Antwortet IMMER 200 (keine User-Enumeration). Versand via `PasswordResetService` + `IEmailSender` (SMTP/MailKit); ohne `Email:SmtpHost` wird die Mail nur geloggt. Link-Basis = `App:BaseUrl` |
 | POST | `/api/auth/reset-password` | Neues Passwort setzen `{ token, newPassword }` — 204 bei Erfolg, 400 bei ungültigem/abgelaufenem/verbrauchtem Token. Token ist einmalig (`UsedAt`) |
-| POST | `/api/auth/session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
-| POST | `/api/auth/session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
+| POST | `/api/auth/rh-session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`, `Path=/api/auth/rh-session`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
+| POST | `/api/auth/rh-session/end` | Geteilte Anmeldung beenden (Abmelden) — löscht das Cookie, immer 204 |
+| POST | `/api/auth/session`, `/api/auth/session/end` | **Übergang (Codereview N6-001), eine Version, danach entfernen**: alte Pfade für Oberflächen aus dem Browser-Cache, sonst wie oben. Jedes Schreiben/Löschen des Cookies löscht zusätzlich das alte mit `Path=/api/auth` — das ging an JEDEN Host der Elterndomäne mit eigener `/api/auth`-Anmeldung (Dev-Stacks, RCT, Lernkompass, Cal.com) |
 
 ### Profil (auth)
 | Methode | Endpoint | Zweck |
@@ -4148,10 +4149,12 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
      der gemeinsamen Elterndomäne ab (`Auth:SharedSessionDomain`, z. B. `.oberschmid.homes`;
      Name `Auth:SharedSessionCookie`, auf Dev ein ANDERER als in Prod — sonst überschreiben sich
      die beiden Umgebungen gegenseitig auf derselben Domäne). Beide Oberflächen tauschen es beim
-     Start über `POST /api/auth/session` gegen ihre eigene Anmeldung; `logout()` beendet es über
-     `POST /api/auth/session/end`. Das Cookie trägt ein Token mit EIGENEM Adressaten
+     Start über `POST /api/auth/rh-session` gegen ihre eigene Anmeldung; `logout()` beendet es über
+     `POST /api/auth/rh-session/end`. Das Cookie trägt ein Token mit EIGENEM Adressaten
      (`rookhub-shared-session`) — der JWT-Handler der API weist es ab, es öffnet also nur diesen
-     einen Endpunkt; dazu `HttpOnly`, `SameSite=Lax`, `Path=/api/auth`. **Leere Domäne = aus**
+     einen Endpunkt; dazu `HttpOnly`, `SameSite=Lax`, `Path=/api/auth/rh-session` (bis N6-001
+     `/api/auth` — das bedienen auch RCT, Lernkompass, Cal.com und die Dev-Stacks unter derselben
+     Elterndomäne; die alten Routen `session`/`session/end` bleiben eine Version als Übergang). **Leere Domäne = aus**
      (localhost/IP haben keine gemeinsame Domäne). Eine schon offene Seite der Gegenrichtung
      merkt eine Abmeldung erst beim nächsten Laden — sie hält ihr eigenes JWT.
 - **Link-Vorschau**: `/t/{id}` lebt jetzt auf der Turnierseite. Der nginx sagt der API über

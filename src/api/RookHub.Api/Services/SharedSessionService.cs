@@ -23,7 +23,7 @@ namespace RookHub.Api.Services;
 /// JWT-Handler der API weist es ab, es oeffnet also ausschliesslich diesen einen Endpunkt. Dazu
 /// <c>HttpOnly</c> (kein Zugriff aus JavaScript, anders als beim localStorage), <c>SameSite=Lax</c>
 /// (wird bei fremd ausgeloesten Anfragen gar nicht erst mitgeschickt) und ein Pfad, der es auf
-/// <c>/api/auth</c> beschraenkt.</para>
+/// <c>/api/auth/rh-session</c> beschraenkt.</para>
 ///
 /// <para><b>Aus, solange keine Elterndomaene konfiguriert ist</b> (<c>Auth:SharedSessionDomain</c>):
 /// auf <c>localhost</c> oder einer IP gibt es keine gemeinsame Domaene, ein Cookie dorthin waere ein
@@ -38,8 +38,20 @@ public class SharedSessionService
     /// <summary>Adressat des Cookie-Tokens — bewusst NICHT <c>Jwt:Audience</c>.</summary>
     public const string Audience = "rookhub-shared-session";
 
-    /// <summary>Nur <c>/api/auth/...</c> braucht das Cookie; sonst haengt es an jedem API-Aufruf.</summary>
-    public const string CookiePath = "/api/auth";
+    /// <summary>
+    /// Nur der Tausch und das Abmelden brauchen das Cookie — ein EIGENER Pfad, den sonst keine Anwendung
+    /// unter der Elterndomaene bedient. Mit <c>/api/auth</c> schickte der Browser das 30-Tage-Cookie an
+    /// jeden Host der Domaene, der dort eine Anmeldung hat (Dev-Stacks, RCT, Lernkompass, Cal.com;
+    /// Codereview N6-001). Gegen Hosts unter derselben Elterndomaene hilft der Pfad allein nicht ganz
+    /// (die Dev-Stacks bedienen denselben Pfad) — das loest erst eine eigene Elterndomaene.
+    /// </summary>
+    public const string CookiePath = "/api/auth/rh-session";
+
+    /// <summary>
+    /// Pfad der Cookies, die vor N6-001 ausgegeben wurden. Wird nur noch GELOESCHT, bei jedem Schreiben
+    /// und Loeschen des Cookies — Uebergang fuer eine Version, danach samt den Alt-Routen entfernen.
+    /// </summary>
+    public const string LegacyCookiePath = "/api/auth";
 
     /// <summary>So lange wie eine gewoehnliche Anmeldung ohne „eingeloggt bleiben".</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);

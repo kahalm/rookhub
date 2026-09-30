@@ -815,7 +815,7 @@ try
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0
                 }));
-        // Geteilte Anmeldung (POST /api/auth/session, session/end): JEDER App-Start ohne Anmeldung fragt hier (auf allen
+        // Geteilte Anmeldung (POST /api/auth/rh-session, rh-session/end; bis N6-001 session, session/end): JEDER App-Start ohne Anmeldung fragt hier (auf allen
         // vier Oberflächen) — eigene IP-Partition mit höherem Deckel statt „auth": eine Schulklasse, die KidHub öffnet,
         // sind 25 Starts in einer Minute und sperrte sonst Anmeldung, Registrierung und „Passwort vergessen".
         options.AddPolicy("auth-session", ctx => PerIpFixedWindow(ctx, 60 * permitScale));

@@ -116,23 +116,52 @@ public class AuthController : BaseApiController
     /// Normalfall und keine abgelehnte Anmeldung. Als 401 zaehlte die Ueberwachung jeden anonymen
     /// Besucher als fehlgeschlagenen Auth-Versuch (log-watcher `auth_bruteforce`, HIGH am 2026-09-15
     /// durch 25 frische Browser-Sitzungen eines Tests; auf Prod kamen 56 von 57 Auth-401 von hier).
+    /// <para>Eigener Pfad <c>rh-session</c> (Codereview N6-001): das Cookie traegt genau diesen Pfad und geht damit
+    /// nicht mehr an die anderen Anwendungen der Elterndomaene, die unter <c>/api/auth</c> ihre Anmeldung haben.
+    /// Ein altes Cookie (Pfad <c>/api/auth</c>) schickt der Browser hierher ebenfalls mit — es wird eingetauscht
+    /// und dabei durch das neue ersetzt.</para>
     /// </remarks>
     [AllowAnonymous]
     [EnableRateLimiting("auth-session")]
-    [HttpPost("session")]
+    [HttpPost("rh-session")]
     public async Task<ActionResult<AuthResponseDto>> SharedSession(CancellationToken ct)
     {
-        var cookie = Request.Cookies[_sharedSession.CookieName];
-        var res = await _sharedSession.RedeemAsync(cookie, ct);
+        var cookies = SharedSessionCookieValues();
+        AuthResponseDto? res = null;
+        foreach (var cookie in cookies)
+            if ((res = await _sharedSession.RedeemAsync(cookie, ct)) != null) break;
         if (res is null)
         {
             // Ein Cookie, das nicht (mehr) taugt, gehoert weg — sonst fragt jede Seite bei jedem
             // Start erneut danach und bekommt bis in 30 Tagen dieselbe Absage.
-            if (cookie != null) DeleteSharedSessionCookie();
+            if (cookies.Count > 0) DeleteSharedSessionCookie();
             return NoContent();
         }
         await WriteSharedSessionAsync(res, ct);
         return Ok(res);
+    }
+
+    /// <summary>
+    /// ALLE Werte des geteilten Cookies in der Reihenfolge des Browsers (laengerer Pfad zuerst, RFC 6265 5.4).
+    /// <c>Request.Cookies</c> behaelt bei gleichem Namen nur den LETZTEN — liegen das neue und das alte Cookie
+    /// (Pfad <c>/api/auth</c>, vor N6-001) nebeneinander oder hat ein anderer Host der Elterndomaene eins mit
+    /// kuerzerem Pfad gesetzt, waere das ausgerechnet dieses und kippte die gueltige Anmeldung.
+    /// </summary>
+    private List<string> SharedSessionCookieValues()
+    {
+        var values = new List<string>();
+        foreach (var header in Request.Headers.Cookie)
+        {
+            if (header is null) continue;
+            foreach (var pair in header.Split(';'))
+            {
+                var eq = pair.IndexOf('=');
+                if (eq < 0 || !pair.AsSpan(0, eq).Trim().SequenceEqual(_sharedSession.CookieName)) continue;
+                var value = pair[(eq + 1)..].Trim().Trim('"');
+                if (!values.Contains(value)) values.Add(value);
+            }
+        }
+        return values;
     }
 
     /// <summary>
@@ -142,12 +171,26 @@ public class AuthController : BaseApiController
     /// </summary>
     [AllowAnonymous]
     [EnableRateLimiting("auth-session")]
-    [HttpPost("session/end")]
+    [HttpPost("rh-session/end")]
     public IActionResult EndSharedSession()
     {
         DeleteSharedSessionCookie();
         return NoContent();
     }
+
+    /// <summary>Uebergang (eine Version, danach entfernen): alter Pfad von <see cref="SharedSession"/> fuer
+    /// Oberflaechen, die noch aus dem Browser-Cache laufen. Hierher kommt nur noch das ALTE Cookie
+    /// (Pfad <c>/api/auth</c>); es wird eingetauscht und durch das neue ersetzt.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("auth-session")]
+    [HttpPost("session")]
+    public Task<ActionResult<AuthResponseDto>> LegacySharedSession(CancellationToken ct) => SharedSession(ct);
+
+    /// <summary>Uebergang (eine Version, danach entfernen): alter Pfad von <see cref="EndSharedSession"/>.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("auth-session")]
+    [HttpPost("session/end")]
+    public IActionResult LegacyEndSharedSession() => EndSharedSession();
 
     /// <summary>Legt das Cookie neu an. Tut nichts, solange keine Elterndomaene eingerichtet ist.</summary>
     private async Task WriteSharedSessionAsync(AuthResponseDto res, CancellationToken ct = default)
@@ -156,6 +199,7 @@ public class AuthController : BaseApiController
         if (value is null) return;
         Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(
             DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime)));
+        DeleteLegacySharedSessionCookie();
     }
 
     private void DeleteSharedSessionCookie()
@@ -165,12 +209,23 @@ public class AuthController : BaseApiController
         // uebereinstimmen, sonst legt der Browser ein zweites an und das alte bleibt liegen.
         Response.Cookies.Append(_sharedSession.CookieName, "",
             SharedSessionCookieOptions(DateTimeOffset.UnixEpoch));
+        DeleteLegacySharedSessionCookie();
     }
 
-    private CookieOptions SharedSessionCookieOptions(DateTimeOffset expires) => new()
+    /// <summary>Uebergang (N6-001): das Cookie mit dem alten Pfad <c>/api/auth</c> ging an jeden Host der
+    /// Elterndomaene mit einer eigenen Anmeldung — bei jedem Schreiben und Loeschen mit wegraeumen, statt es bis
+    /// zu 30 Tage liegen zu lassen. Mit den Alt-Routen entfernen.</summary>
+    private void DeleteLegacySharedSessionCookie()
+    {
+        if (_sharedSession.CookieDomain is null) return;
+        Response.Cookies.Append(_sharedSession.CookieName, "",
+            SharedSessionCookieOptions(DateTimeOffset.UnixEpoch, SharedSessionService.LegacyCookiePath));
+    }
+
+    private CookieOptions SharedSessionCookieOptions(DateTimeOffset expires, string path = SharedSessionService.CookiePath) => new()
     {
         Domain = _sharedSession.CookieDomain,
-        Path = SharedSessionService.CookiePath,
+        Path = path,
         HttpOnly = true,
         Secure = true,
         // Lax statt None: das Cookie soll bei einer fremd ausgeloesten Anfrage gar nicht erst
