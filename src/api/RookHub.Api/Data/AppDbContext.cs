@@ -214,6 +214,14 @@ public class AppDbContext : DbContext
     public DbSet<CalcSeriesMember> CalcSeriesMembers => Set<CalcSeriesMember>();
     public DbSet<CalcEditionView> CalcEditionViews => Set<CalcEditionView>();
 
+    /// <summary>Jede Zeitspalte liest sich als UTC zurück (siehe <see cref="UtcDateTimeConverter"/>) — sonst ginge
+    /// jeder gelesene Wert ohne „Z" über die Leitung und der Browser nähme ihn als Ortszeit.</summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<UtcDateTimeConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AppUser>(e =>
