@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -549,7 +551,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
 
         // Und NICHT mit retryEmpty: ein Ereignis ohne gepflegte Angaben ist der haeufige Fall und
         // darf nicht jede Nacht erneut abgefragt werden.
-        Assert.Contains("details.RunAsync(_fideDetailBatchSize, retryEmpty: false", scheduler);
+        Assert.Contains("RunAsync(_fideDetailBatchSize, retryEmpty: false", scheduler);
     }
 
     /// <summary>Alle Sweep-Dienste der API — die Namenskonvention IST die Liste.</summary>
@@ -670,6 +672,106 @@ public class TournamentDirectorySchedulerTests : IDisposable
         // „alles ist ueberfaellig" bedeutet und deshalb NICHT als Karenz taugt.
         var now = DateTime.UtcNow;
         Assert.True(TournamentDirectoryScheduler.IsStale(now, now, 0));
+    }
+
+
+    // ----- Schrittliste des Nachtlaufs --------------------------------------
+
+    private static TournamentDirectoryScheduler Scheduler(
+        TestLogger<TournamentDirectoryScheduler>? logger = null, Dictionary<string, string?>? config = null) =>
+        new(new ServiceCollection().BuildServiceProvider()
+                .GetRequiredService<IServiceScopeFactory>(),
+            logger ?? new TestLogger<TournamentDirectoryScheduler>(),
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(config ?? []).Build());
+
+    /// <summary>
+    /// Reihenfolge und Log-Namen der Schritte sind festgeschrieben. Die Reihenfolge traegt
+    /// Bedeutung (Ankuendigungskalender nach dem Sweep, FIDE-Details nach dem FIDE-Kalender,
+    /// Zusatzquellen billig zuerst), und die Namen stehen so in den Warnungen, nach denen im Log
+    /// gesucht wird — sie sind dieselben Texte wie vor der Schrittliste.
+    /// </summary>
+    [Fact]
+    public void Steps_RunInTheDocumentedOrder_WithTheirLogNames() =>
+        Assert.Equal(
+        [
+            "Spielort-Aufloesung", "Rundenplan-Durchgang", "FIDE-Durchgang", "Ankuendigungskalender",
+            "FSI-Kalender", "SZS-Kalender", "chess.sk-Kalender", "chess.hu-Kalender", "chess.cz-Kalender",
+            "chessarbiter-Kalender", "schachbund-Turnierdatenbank", "ECF-Kalender",
+            "Rumaenien (FRSah)", "Wales (WCU)", "Kanada (CFC)", "Niederlande (KNSB)",
+            "Schottland (Chess Scotland)", "Irland (ICU)", "Norwegen (sjakk.no)", "Frankreich (FFE)",
+            "FIDE-Detail-Durchgang",
+        ], Scheduler().Steps().Select(s => s.Name));
+
+    [Fact]
+    public void Steps_ByDefault_AreAllEnabled() =>
+        Assert.All(Scheduler().Steps(), s => Assert.True(s.Enabled, s.Name));
+
+    /// <summary>Die Deckel sind zugleich die Abschalter: 0 = der Schritt laeuft nicht.</summary>
+    [Fact]
+    public void Steps_ABatchSizeOfZero_SwitchesThatStepOff()
+    {
+        var steps = Scheduler(config: new()
+        {
+            ["TournamentDirectory:DisambiguationBatchSize"] = "0",
+            ["TournamentDirectory:RoundPlanBatchSize"] = "0",
+            ["TournamentDirectory:FideYears"] = "0",
+            ["TournamentDirectory:FideDetailBatchSize"] = "0",
+        }).Steps();
+
+        Assert.Equal(
+            ["Spielort-Aufloesung", "Rundenplan-Durchgang", "FIDE-Durchgang", "FIDE-Detail-Durchgang"],
+            steps.Where(s => !s.Enabled).Select(s => s.Name));
+    }
+
+    /// <summary>
+    /// EINE Fangregel fuer alle Schritte: ein Fehler (auch ein HttpClient-TIMEOUT, der als
+    /// TaskCanceledException kommt, ohne dass jemand abgebrochen haette) wird mit dem Namen des
+    /// Schritts gewarnt, und der naechste Schritt laeuft. Abgeschaltete Schritte laufen nicht.
+    /// </summary>
+    [Fact]
+    public async Task RunStepsAsync_AFailingStep_DoesNotStopTheOthers()
+    {
+        var logger = new TestLogger<TournamentDirectoryScheduler>();
+        var ran = new List<string>();
+        using var scope = new ServiceCollection()
+            .BuildServiceProvider().CreateScope();
+
+        await Scheduler(logger).RunStepsAsync(scope,
+        [
+            new("A", true, (_, _) => { ran.Add("A"); return Task.CompletedTask; }),
+            new("B", true, (_, _) => throw new HttpRequestException("Netz weg")),
+            new("C", false, (_, _) => { ran.Add("C"); return Task.CompletedTask; }),
+            new("D", true, (_, _) =>
+            {
+                ran.Add("D");
+                return Task.FromException(new TaskCanceledException("HttpClient.Timeout of 600 seconds elapsing"));
+            }),
+            new("E", true, (_, _) => { ran.Add("E"); return Task.CompletedTask; }),
+        ], default);
+
+        Assert.Equal(["A", "D", "E"], ran);
+        Assert.Equal(["Turnierverzeichnis: B fehlgeschlagen", "Turnierverzeichnis: D fehlgeschlagen"],
+            logger.Messages);
+    }
+
+    /// <summary>Ein ABBRUCH des Dienstes ist kein Quellenfehler: er schlaegt durch, der Rest laeuft nicht.</summary>
+    [Fact]
+    public async Task RunStepsAsync_CallerCancels_Propagates()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        using var scope = new ServiceCollection()
+            .BuildServiceProvider().CreateScope();
+        var ranAfter = false;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Scheduler().RunStepsAsync(scope,
+        [
+            new("A", true, (_, c) => Task.FromCanceled(c)),
+            new("B", true, (_, _) => { ranAfter = true; return Task.CompletedTask; }),
+        ], cts.Token));
+
+        Assert.False(ranAfter);
     }
 
 }

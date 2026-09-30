@@ -191,231 +191,10 @@ public class TournamentDirectoryScheduler : BackgroundService
                 _logger.LogWarning("Turnierverzeichnis: {Count} Foederationen fehlgeschlagen ({List})",
                     failed.Count, string.Join(", ", failed));
 
-            // Danach eine GEDECKELTE Runde Spielort-Aufloesung ueber die Vereinsnamen: sie kostet
-            // einen Seitenabruf je Turnier, arbeitet sich also Nacht fuer Nacht durch den Rueckstand
-            // statt ihn in einem Lauf abzuarbeiten. Ein Fehlschlag hier darf den Sweep, der schon
-            // durch ist, nicht als gescheitert erscheinen lassen — deshalb der eigene Fang.
-            try
-            {
-                if (_disambiguationBatchSize > 0)
-                {
-                    var disambiguation = scope.ServiceProvider.GetRequiredService<VenueDisambiguationService>();
-                    await disambiguation.RunAsync(_disambiguationBatchSize, ct);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: Spielort-Aufloesung fehlgeschlagen");
-            }
-
-            // Und die Spieltermine der langlaufenden Turniere — eigener Fang aus demselben
-            // Grund: was schon durch ist, soll nicht wegen eines Nachtrags als gescheitert
-            // gelten.
-            try
-            {
-                if (_roundPlanBatchSize > 0)
-                {
-                    var roundPlans = scope.ServiceProvider.GetRequiredService<TournamentRoundPlanService>();
-                    await roundPlans.RunAsync(_roundPlanBatchSize, retryEmpty: false, ct);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: Rundenplan-Durchgang fehlgeschlagen");
-            }
-
-            // Und der FIDE-Kalender als zweite Quelle. Eigener Fang wie die uebrigen Nachtraege:
-            // ein Ausfall dort darf den erledigten chess-results-Sweep nicht als gescheitert
-            // erscheinen lassen.
-            try
-            {
-                if (_fideYears > 0)
-                {
-                    var fide = scope.ServiceProvider.GetRequiredService<FideDirectorySweepService>();
-                    var year = DateTime.UtcNow.Year;
-                    // AUFSTEIGEND — die Jahres-Zuordnung eines Ereignisses ueber den
-                    // Jahreswechsel haengt daran (siehe FideDirectorySweepService).
-                    await fide.RunAsync([.. Enumerable.Range(year, _fideYears)], ct);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Durchgang fehlgeschlagen");
-            }
-
-            // Der ANKUENDIGUNGS-Kalender von chess-results. Laeuft NACH dem Sweep: der legt die
-            // Eintraege an, die der Kalender dann nur noch zuordnen muss, statt sie ein zweites
-            // Mal anzulegen. Ein Abruf fuer alle 16 Foederationen, die ihn benutzen.
-            //
-            // Kein eigener Deckel: es ist EIN Abruf, unabhaengig von der Bestandsgroesse.
-            try
-            {
-                var calendar = scope.ServiceProvider.GetRequiredService<TournamentCalendarSweepService>();
-                await calendar.RunAsync("-", ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: Ankuendigungskalender fehlgeschlagen");
-            }
-
-            // Der italienische Verbandskalender. Eigener Fang wie die uebrigen Zusatzquellen: ein
-            // Ausfall dort darf den erledigten chess-results-Sweep nicht als gescheitert
-            // erscheinen lassen. Ein Abruf, unabhaengig von der Bestandsgroesse.
-            try
-            {
-                var fsi = scope.ServiceProvider.GetRequiredService<FsiDirectorySweepService>();
-                await fsi.RunAsync(18, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: FSI-Kalender fehlgeschlagen");
-            }
-
-            // Der slowenische Verbandskalender. Eigener Fang wie die uebrigen Zusatzquellen.
-            try
-            {
-                var szs = scope.ServiceProvider.GetRequiredService<SzsDirectorySweepService>();
-                await szs.RunAsync(ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: SZS-Kalender fehlgeschlagen");
-            }
-
-            // Der slowakische Verbandskalender. Er kostet mehr als die uebrigen — ein Abruf der
-            // Schnittstelle plus einer je Turnier fuer die Detailseite (mit Pause, rund eine
-            // Minute fuer 79 Turniere) — und liefert dafuer als einzige Quelle Anschrift,
-            // Bedenkzeit, Rundenzahl und System auf einmal.
-            try
-            {
-                var chessSk = scope.ServiceProvider.GetRequiredService<ChessSkDirectorySweepService>();
-                await chessSk.RunAsync(details: true, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: chess.sk-Kalender fehlgeschlagen");
-            }
-
-            // Der ungarische Verbandskalender. Ein Abruf — aber ein langsamer (rund 75 Sekunden
-            // fuer 31 kB), deshalb steht er hinter den uebrigen.
-            try
-            {
-                var chessHu = scope.ServiceProvider.GetRequiredService<ChessHuDirectorySweepService>();
-                await chessHu.RunAsync(ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: chess.hu-Kalender fehlgeschlagen");
-            }
-
-            // Der tschechische Verbandskalender. Er bringt SPIELTERMINE mit (die Ligarunden), und
-            // er laeuft NACH dem Rundenplan-Nachtrag — das kostet nichts: dessen Auswahl haengt an
-            // `RoundPlanCheckedAt`, nicht daran, ob schon Termine dastehen. Ein heute Nacht
-            // angelegter Liga-Eintrag kommt also morgen dort an die Reihe, und findet
-            // chess-results keinen Plan (leere Antwort), bleiben die hier eingetragenen stehen.
-            try
-            {
-                var chessCz = scope.ServiceProvider.GetRequiredService<ChessCzDirectorySweepService>();
-                await chessCz.RunAsync(ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: chess.cz-Kalender fehlgeschlagen");
-            }
-
-            // Der polnische Verbandskalender — die ergiebigste Einzelquelle (611 kuenftige
-            // Turniere in einem Abruf). Die Detailseiten holt er nur fuer noch unbekannte
-            // Turniere und gedeckelt; der Bestand ist damit nach wenigen Naechten vollstaendig.
-            try
-            {
-                var chessArbiter = scope.ServiceProvider
-                    .GetRequiredService<ChessArbiterDirectorySweepService>();
-                await chessArbiter.RunAsync(null, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: chessarbiter-Kalender fehlgeschlagen");
-            }
-
-            // Die Turnierdatenbank des Deutschen Schachbunds. Sie dauert am laengsten (zwei
-            // Abrufe je Region mit der Wartezeit aus ihrer robots.txt) und steht deshalb zuletzt.
-            try
-            {
-                var schachbund = scope.ServiceProvider
-                    .GetRequiredService<SchachbundDirectorySweepService>();
-                await schachbund.RunAsync(ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: schachbund-Turnierdatenbank fehlgeschlagen");
-            }
-
-            // Der englische Verbandskalender. Zwei geblaetterte Endpunkte mit der Wartezeit aus
-            // der robots.txt der Quelle — rund drei Minuten, und die einzige Quelle, die die
-            // Koordinaten gleich mitbringt.
-            try
-            {
-                var ecf = scope.ServiceProvider.GetRequiredService<EcfDirectorySweepService>();
-                await ecf.RunAsync(ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: ECF-Kalender fehlgeschlagen");
-            }
-
-            // Die sechs Quellen der dritten Runde (Europa ausserhalb der Nachbarschaft). Jede in
-            // ihrem eigenen Fang: sie sind voneinander unabhaengig, und ein Ausfall bei einer darf
-            // die uebrigen nicht mitnehmen.
-            //
-            // Reihenfolge nach KOSTEN, billig zuerst — dasselbe Prinzip wie oben: faellt etwas
-            // grundsaetzlich aus (Netz, Crawler tot), sieht man es nach Sekunden statt nach einer
-            // Viertelstunde.
-            await RunSourceAsync(scope, "Rumaenien (FRSah)",
-                s => s.GetRequiredService<FrsahDirectorySweepService>().RunAsync(ct), ct);
-
-            await RunSourceAsync(scope, "Wales (WCU)",
-                s => s.GetRequiredService<WcuDirectorySweepService>().RunAsync(ct), ct);
-
-            await RunSourceAsync(scope, "Kanada (CFC)",
-                s => s.GetRequiredService<CfcDirectorySweepService>().RunAsync(ct), ct);
-
-            await RunSourceAsync(scope, "Niederlande (KNSB)",
-                s => s.GetRequiredService<KnsbDirectorySweepService>().RunAsync(ct), ct);
-
-            await RunSourceAsync(scope, "Schottland (Chess Scotland)",
-                s => s.GetRequiredService<ChessScotlandDirectorySweepService>().RunAsync(null, ct), ct);
-
-            await RunSourceAsync(scope, "Irland (ICU)",
-                s => s.GetRequiredService<IcuDirectorySweepService>().RunAsync(null, ct), ct);
-
-            await RunSourceAsync(scope, "Norwegen (sjakk.no)",
-                s => s.GetRequiredService<SjakkDirectorySweepService>().RunAsync(null, ct), ct);
-
-            // Frankreich zuletzt: zwoelf Monatsseiten plus bis zu 150 Turnierseiten sind der
-            // laengste Durchgang der Reihe.
-            await RunSourceAsync(scope, "Frankreich (FFE)",
-                s => s.GetRequiredService<FfeDirectorySweepService>().RunAsync(12, null, ct), ct);
-
-            // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der
-            // legt die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine
-            // Bedenkzeit, kein System und keine Anschrift.
-            //
-            // Ohne diesen Block bliebe der Nachtrag eine Handarbeit — jedes neue FIDE-Ereignis
-            // kaeme mit Name, Termin und Ort herein und wuerde nie wieder angefasst. `retryEmpty`
-            // steht bewusst auf false: ein Ereignis ohne gepflegte Angaben ist der haeufige Fall
-            // und darf nicht jede Nacht erneut abgefragt werden.
-            try
-            {
-                if (_fideDetailBatchSize > 0)
-                {
-                    var details = scope.ServiceProvider.GetRequiredService<FideEventDetailService>();
-                    await details.RunAsync(_fideDetailBatchSize, retryEmpty: false, ct);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                _logger.LogWarning(ex, "Turnierverzeichnis: FIDE-Detail-Durchgang fehlgeschlagen");
-            }
+            // Danach die Nachtraege und Zusatzquellen, jede in ihrem eigenen Fang (RunStepsAsync):
+            // ein Fehlschlag dort darf den Sweep, der schon durch ist, nicht als gescheitert
+            // erscheinen lassen, und eine Quelle darf die uebrigen nicht mitnehmen.
+            await RunStepsAsync(scope, Steps(), ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -456,25 +235,144 @@ public class TournamentDirectoryScheduler : BackgroundService
         return run;
     }
 
+    /// <summary>Ein Schritt des Nachtlaufs: Name fuers Log, Abschalter, und was er tut.</summary>
+    internal sealed record SweepStep(string Name, bool Enabled, Func<IServiceProvider, CancellationToken, Task> Run);
+
     /// <summary>
-    /// Eine Zusatzquelle laufen lassen und ihren Ausfall eindaemmen.
+    /// Die Schritte NACH dem chess-results-Sweep, als Daten und in der Reihenfolge, in der sie
+    /// laufen. Die Reihenfolge traegt Bedeutung:
     ///
-    /// <para>Der Fang war zehnmal ausgeschrieben, bevor die dritte Runde ihn auf ein Dutzend
-    /// gebracht haette. Die Regel dahinter ist bei allen dieselbe und wichtiger als die
+    /// <list type="bullet">
+    /// <item>Der Ankuendigungskalender laeuft nach dem Sweep (er ordnet nur zu, was der angelegt hat).</item>
+    /// <item>Die FIDE-Details laufen nach dem FIDE-Jahreskalender (der legt die neuen Ereignisse erst an).</item>
+    /// <item>Die Zusatzquellen nach KOSTEN, billig zuerst: faellt etwas grundsaetzlich aus (Netz,
+    /// Crawler tot), sieht man es nach Sekunden statt nach einer Viertelstunde.</item>
+    /// </list>
+    ///
+    /// Die Deckel (<c>*BatchSize</c>, <c>FideYears</c>) sind zugleich die Abschalter: 0 = Schritt aus.
+    /// </summary>
+    internal IReadOnlyList<SweepStep> Steps() =>
+    [
+        // Eine GEDECKELTE Runde Spielort-Aufloesung ueber die Vereinsnamen: sie kostet einen
+        // Seitenabruf je Turnier, arbeitet sich also Nacht fuer Nacht durch den Rueckstand statt
+        // ihn in einem Lauf abzuarbeiten.
+        new("Spielort-Aufloesung", _disambiguationBatchSize > 0,
+            (s, ct) => s.GetRequiredService<VenueDisambiguationService>().RunAsync(_disambiguationBatchSize, ct)),
+
+        // Die Spieltermine der langlaufenden Turniere.
+        new("Rundenplan-Durchgang", _roundPlanBatchSize > 0,
+            (s, ct) => s.GetRequiredService<TournamentRoundPlanService>()
+                .RunAsync(_roundPlanBatchSize, retryEmpty: false, ct)),
+
+        // Der FIDE-Kalender als zweite Quelle. Die Jahre AUFSTEIGEND — die Jahres-Zuordnung eines
+        // Ereignisses ueber den Jahreswechsel haengt daran (siehe FideDirectorySweepService).
+        new("FIDE-Durchgang", _fideYears > 0,
+            (s, ct) => s.GetRequiredService<FideDirectorySweepService>()
+                .RunAsync([.. Enumerable.Range(DateTime.UtcNow.Year, _fideYears)], ct)),
+
+        // Der ANKUENDIGUNGS-Kalender von chess-results. Laeuft NACH dem Sweep: der legt die
+        // Eintraege an, die der Kalender dann nur noch zuordnen muss, statt sie ein zweites Mal
+        // anzulegen. Ein Abruf fuer alle 16 Foederationen, die ihn benutzen — kein eigener Deckel.
+        new("Ankuendigungskalender", true,
+            (s, ct) => s.GetRequiredService<TournamentCalendarSweepService>().RunAsync("-", ct)),
+
+        // Der italienische Verbandskalender. Ein Abruf, unabhaengig von der Bestandsgroesse.
+        new("FSI-Kalender", true,
+            (s, ct) => s.GetRequiredService<FsiDirectorySweepService>().RunAsync(18, ct)),
+
+        // Der slowenische Verbandskalender.
+        new("SZS-Kalender", true,
+            (s, ct) => s.GetRequiredService<SzsDirectorySweepService>().RunAsync(ct)),
+
+        // Der slowakische Verbandskalender. Er kostet mehr als die uebrigen — ein Abruf der
+        // Schnittstelle plus einer je Turnier fuer die Detailseite (mit Pause, rund eine Minute
+        // fuer 79 Turniere) — und liefert dafuer als einzige Quelle Anschrift, Bedenkzeit,
+        // Rundenzahl und System auf einmal.
+        new("chess.sk-Kalender", true,
+            (s, ct) => s.GetRequiredService<ChessSkDirectorySweepService>().RunAsync(details: true, ct)),
+
+        // Der ungarische Verbandskalender. Ein Abruf — aber ein langsamer (rund 75 Sekunden fuer
+        // 31 kB), deshalb steht er hinter den uebrigen.
+        new("chess.hu-Kalender", true,
+            (s, ct) => s.GetRequiredService<ChessHuDirectorySweepService>().RunAsync(ct)),
+
+        // Der tschechische Verbandskalender. Er bringt SPIELTERMINE mit (die Ligarunden), und er
+        // laeuft NACH dem Rundenplan-Nachtrag — das kostet nichts: dessen Auswahl haengt an
+        // `RoundPlanCheckedAt`, nicht daran, ob schon Termine dastehen. Ein heute Nacht angelegter
+        // Liga-Eintrag kommt also morgen dort an die Reihe, und findet chess-results keinen Plan
+        // (leere Antwort), bleiben die hier eingetragenen stehen.
+        new("chess.cz-Kalender", true,
+            (s, ct) => s.GetRequiredService<ChessCzDirectorySweepService>().RunAsync(ct)),
+
+        // Der polnische Verbandskalender — die ergiebigste Einzelquelle (611 kuenftige Turniere
+        // in einem Abruf). Die Detailseiten holt er nur fuer noch unbekannte Turniere und
+        // gedeckelt; der Bestand ist damit nach wenigen Naechten vollstaendig.
+        new("chessarbiter-Kalender", true,
+            (s, ct) => s.GetRequiredService<ChessArbiterDirectorySweepService>().RunAsync(null, ct)),
+
+        // Die Turnierdatenbank des Deutschen Schachbunds (zwei Abrufe je Region mit der
+        // Wartezeit aus ihrer robots.txt).
+        new("schachbund-Turnierdatenbank", true,
+            (s, ct) => s.GetRequiredService<SchachbundDirectorySweepService>().RunAsync(ct)),
+
+        // Der englische Verbandskalender. Zwei geblaetterte Endpunkte mit der Wartezeit aus der
+        // robots.txt der Quelle — rund drei Minuten, und die einzige Quelle, die die Koordinaten
+        // gleich mitbringt.
+        new("ECF-Kalender", true,
+            (s, ct) => s.GetRequiredService<EcfDirectorySweepService>().RunAsync(ct)),
+
+        // Die Quellen der dritten Runde (Europa ausserhalb der Nachbarschaft), nach Kosten.
+        new("Rumaenien (FRSah)", true,
+            (s, ct) => s.GetRequiredService<FrsahDirectorySweepService>().RunAsync(ct)),
+        new("Wales (WCU)", true,
+            (s, ct) => s.GetRequiredService<WcuDirectorySweepService>().RunAsync(ct)),
+        new("Kanada (CFC)", true,
+            (s, ct) => s.GetRequiredService<CfcDirectorySweepService>().RunAsync(ct)),
+        new("Niederlande (KNSB)", true,
+            (s, ct) => s.GetRequiredService<KnsbDirectorySweepService>().RunAsync(ct)),
+        new("Schottland (Chess Scotland)", true,
+            (s, ct) => s.GetRequiredService<ChessScotlandDirectorySweepService>().RunAsync(null, ct)),
+        new("Irland (ICU)", true,
+            (s, ct) => s.GetRequiredService<IcuDirectorySweepService>().RunAsync(null, ct)),
+        new("Norwegen (sjakk.no)", true,
+            (s, ct) => s.GetRequiredService<SjakkDirectorySweepService>().RunAsync(null, ct)),
+        // Frankreich zuletzt: zwoelf Monatsseiten plus bis zu 150 Turnierseiten sind der
+        // laengste Durchgang der Reihe.
+        new("Frankreich (FFE)", true,
+            (s, ct) => s.GetRequiredService<FfeDirectorySweepService>().RunAsync(12, null, ct)),
+
+        // Und die DETAILangaben der FIDE-Eintraege. Muss NACH dem Jahreskalender laufen: der legt
+        // die neuen Ereignisse ueberhaupt erst an, und genau die haben noch keine Bedenkzeit, kein
+        // System und keine Anschrift. Ohne diesen Schritt bliebe der Nachtrag eine Handarbeit.
+        // `retryEmpty` steht bewusst auf false: ein Ereignis ohne gepflegte Angaben ist der
+        // haeufige Fall und darf nicht jede Nacht erneut abgefragt werden.
+        new("FIDE-Detail-Durchgang", _fideDetailBatchSize > 0,
+            (s, ct) => s.GetRequiredService<FideEventDetailService>()
+                .RunAsync(_fideDetailBatchSize, retryEmpty: false, ct)),
+    ];
+
+    /// <summary>
+    /// Die Schritte nacheinander laufen lassen, jeden in seinem eigenen Fang.
+    ///
+    /// <para>Der Fang stand frueher dreizehnmal ausgeschrieben neben einem Helfer fuer die
+    /// uebrigen acht. Die Regel dahinter ist bei allen dieselbe und wichtiger als die
     /// Wiederholung: die Quellen sind voneinander unabhaengig, und ein Netzausfall bei einer darf
     /// weder die uebrigen noch den erledigten chess-results-Sweep als gescheitert erscheinen
     /// lassen. Ein ABBRUCH des Dienstes ist dagegen kein Quellenfehler und wird durchgereicht.</para>
     /// </summary>
-    private async Task RunSourceAsync(IServiceScope scope, string name,
-        Func<IServiceProvider, Task> run, CancellationToken ct)
+    internal async Task RunStepsAsync(IServiceScope scope, IEnumerable<SweepStep> steps, CancellationToken ct)
     {
-        try
+        foreach (var step in steps)
         {
-            await run(scope.ServiceProvider);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-        {
-            _logger.LogWarning(ex, "Turnierverzeichnis: {Source} fehlgeschlagen", name);
+            if (!step.Enabled) continue;
+            try
+            {
+                await step.Run(scope.ServiceProvider, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex, "Turnierverzeichnis: {Source} fehlgeschlagen", step.Name);
+            }
         }
     }
 
