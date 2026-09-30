@@ -26,8 +26,9 @@ verschluckt und das Skript meldete Erfolg ohne Wirkung), und nach jedem PUT wird
 der Zustand per GET verifiziert (Policy trägt die Delete-Phase, Template und
 alle Backing-Indices tragen `index.lifecycle.name`). Erst dann erscheint
 `… (zurückgelesen)`; jeder Fehlschlag führt zu **Exit-Code != 0** — im
-cron-/Timer-Betrieb also prüfbar. Tests (gegen ein Fake-`urlopen`, kein ES
-nötig): `python3 scripts/tests/test_es_log_retention.py`.
+Timer-Betrieb steht die Unit dann in `systemctl --failed` (siehe unten). Tests
+(gegen ein Fake-`urlopen`, kein ES nötig):
+`python3 scripts/tests/test_es_log_retention.py`.
 
 ## Regelmäßig ausführen
 
@@ -37,11 +38,7 @@ des Sinks und geht verloren, sobald es neu geschrieben wird. Vorlagen für einen
 `scripts/systemd/rookhub-log-retention.service.example` +
 `scripts/systemd/rookhub-log-retention.timer.example` (am 1. des Monats nach dem
 nächtlichen Update-Fenster, `Persistent=true`; Installationsbefehle im Kopf der
-Datei). Alternativ als cron-Zeile in `/etc/cron.d/rookhub-log-retention`:
-
-```
-40 5 1 * * nobody ES_URL=http://localhost:9200 /usr/bin/python3 /opt/rookhub/scripts/es_log_retention.py >> /var/log/rookhub-log-retention.log 2>&1
-```
+Datei).
 
 Der Exit-Code ist das Signal. **!= 0** heißt: ein Schritt ist gescheitert, ODER
 es wurde kein Sink-Template `<dienst>-logs-generic-<ecs-version>` bzw. kein
@@ -49,9 +46,30 @@ Log-Data-Stream gefunden (Namensschema geändert? noch keine Logs?), ODER ein
 Data-Stream benutzt ein Template, das die Policy nicht trägt — seine nächsten
 Backing-Indices bekämen keine Löschfrist. „Nichts gefunden“ ist bewusst kein
 Erfolg: sonst meldete der Timer Monat für Monat grün, während die Logs
-unbegrenzt liegen bleiben. Eine fehlgeschlagene Unit steht in
-`systemctl --failed`; wer benachrichtigt werden will, hängt eine
-`OnFailure=`-Unit an (in der Vorlage vorbereitet).
+unbegrenzt liegen bleiben.
+
+**Laut wird dieses Signal nur mit der systemd-Unit**: eine fehlgeschlagene Unit
+steht in `systemctl --failed`, und wer benachrichtigt werden will, hängt eine
+`OnFailure=`-Unit an (in der Vorlage vorbereitet). Darum ist der Timer der
+empfohlene Weg.
+
+Notfalls geht es auch per cron, als `/etc/cron.d/rookhub-log-retention`. Die Datei
+muss root gehören, darf nicht gruppen- oder weltbeschreibbar sein und muss mit
+einem Zeilenumbruch enden. Das Skript muss für `nobody` lesbar sein, Pfad
+anpassen:
+
+```
+40 5 1 * * nobody (ES_URL=http://localhost:9200 /usr/bin/python3 /opt/rookhub/scripts/es_log_retention.py 2>&1 || echo "FEHLGESCHLAGEN (Exit $?)") | logger -t rookhub-log-retention
+```
+
+Die Ausgabe geht über `logger` ins Journal (`journalctl -t rookhub-log-retention`).
+Eine Umleitung nach `/var/log/…` taugt hier nicht: `/var/log` gehört root, als
+`nobody` scheitert die Umleitung der Shell, bevor Python überhaupt startet, und
+die Fehlermeldung ginge an die cron-Mail, die ohne MTA verworfen wird. Aber auch
+so bleibt cron **leise**: es wertet den Exit-Code nicht aus und holt einen
+verpassten Lauf (Host am 1. um 05:40 aus) nicht nach. Ein Fehlschlag steht dann
+nur als `FEHLGESCHLAGEN (Exit …)` im Journal und fällt erst auf, wenn jemand
+nachsieht. Wer cron wählt, muss das selbst regelmäßig tun.
 
 Erfasst werden alle Data-Streams `<dienst>-logs-generic-default` (rookhub,
 crawler, piratechess — je prod und dev) samt der zugehörigen Sink-Templates
