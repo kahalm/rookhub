@@ -88,6 +88,10 @@ internal static class TestServices
         => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db),
             email ?? new RecordingEmailSender());
 
+    /// <summary>Admin-Dienst mit dem echten Löschkern (<see cref="ProfileService.EraseUserAsync"/>).</summary>
+    public static AdminService Admin(AppDbContext db, IMemoryCache? authCache = null)
+        => new(db, Profile(db, new NoOpTaskQueue()), authCache);
+
     /// <summary>Partie-Analysen mit der ECHTEN Auftrags-Schicht auf derselben Test-Datenbank — der
     /// Einwurf soll im Test genau den Deckel, die Engine-Wahl und das Einreihen durchlaufen, die er in
     /// Prod durchlaeuft. Ohne hinterlegte Engine sagt er „no-engine", mehr braucht ein Test, der ihn

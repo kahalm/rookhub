@@ -502,7 +502,7 @@ public class CourseControllerTests : IDisposable
         Assert.Equal(1, await _db.CourseProgresses.CountAsync());
 
         var admin = new AdminController(
-            new AdminService(_db),
+            TestServices.Admin(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),
@@ -541,7 +541,7 @@ public class CourseControllerTests : IDisposable
     private AdminController CreateAdminController()
     {
         var admin = new AdminController(
-            new AdminService(_db),
+            TestServices.Admin(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new MemoryCache(new MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),

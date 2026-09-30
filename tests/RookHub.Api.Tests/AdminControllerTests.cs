@@ -34,7 +34,7 @@ public class AdminControllerTests : IDisposable
             })
             .Build();
         _controller = new AdminController(
-            new AdminService(_db),
+            TestServices.Admin(_db),
             new BookAdminService(_db),
             new PuzzleService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(_db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(_db),
@@ -130,7 +130,7 @@ public class AdminControllerTests : IDisposable
         using var db = new AppDbContext(options);
         var emptyConfig = new ConfigurationBuilder().Build();
         var ctrl = new AdminController(
-            new AdminService(db),
+            TestServices.Admin(db),
             new BookAdminService(db),
             new PuzzleService(db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()), NullLogger<PuzzleService>.Instance, new PuzzleTaggingService(db, NullLogger<PuzzleTaggingService>.Instance)),
             new PgnImportService(db),
@@ -215,14 +215,17 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteUser_RemovesUser()
+    public async Task DeleteUser_AnonymizesUser_LikeTheSelfDeletion()
     {
         var user = await CreateUserAsync("target");
 
         var result = await _controller.DeleteUser(user.Id);
 
         Assert.IsType<NoContentResult>(result);
-        Assert.Null(await _db.AppUsers.FindAsync(user.Id));
+        // Seit dem Codereview 2026-09-29 (A9-004) derselbe Kern wie die Selbstlöschung: die Zeile bleibt anonymisiert.
+        var row = await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id);
+        Assert.NotNull(row.DeletedAt);
+        Assert.Equal($"deleted_{user.Id}", row.Username);
     }
 
     [Fact]

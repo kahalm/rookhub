@@ -57,7 +57,7 @@ public class CalcSeriesAnnounceService
             // IsTester-Flag oder neu hinzugekommenen Mitgliedern.
             if (e.TesterAnnouncedAt == null && e.TesterPreviewAt is DateTime tp && tp <= now && e.PublishAt > now)
             {
-                var testers = await _db.CalcSeriesMembers.Where(m => m.BookId == e.BookId && m.IsTester)
+                var testers = await LiveMembers(e.BookId).Where(m => m.IsTester)
                     .Select(m => m.UserId).ToListAsync(ct);
                 e.TesterAnnouncedAt = now;   // Marker VOR dem Versand: CreateManyAsync speichert beides im selben Kontext atomar.
                 e.TesterAnnouncedUserIds = string.Join(",", testers);
@@ -70,7 +70,7 @@ public class CalcSeriesAnnounceService
             if (e.PublishAnnouncedAt == null && e.PublishAt <= now)
             {
                 var alreadyNotified = ParseUserIds(e.TesterAnnouncedUserIds);
-                var members = await _db.CalcSeriesMembers.Where(m => m.BookId == e.BookId)
+                var members = await LiveMembers(e.BookId)
                     .Select(m => m.UserId).ToListAsync(ct);
                 var recipients = members.Where(id => !alreadyNotified.Contains(id)).ToList();
                 e.PublishAnnouncedAt = now;
@@ -83,6 +83,14 @@ public class CalcSeriesAnnounceService
         await _db.SaveChangesAsync(ct);
         return announced;
     }
+
+    /// <summary>Verteiler eines Buchs, nur Mitglieder mit existierendem, nicht gelöschtem Konto.
+    /// <see cref="CalcSeriesMember.UserId"/> hat keinen FK: eine Waise (Konto hart entfernt) ließ den
+    /// Benachrichtigungs-INSERT am FK auf AppUsers scheitern — die Runde samt Marker fiel, jeder weitere Lauf
+    /// ebenso, und KEIN Mitglied bekam mehr eine Ankündigung (auch spätere Ausgaben anderer Bücher nicht).</summary>
+    private IQueryable<CalcSeriesMember> LiveMembers(int bookId)
+        => _db.CalcSeriesMembers.Where(m => m.BookId == bookId
+            && _db.AppUsers.Any(u => u.Id == m.UserId && u.DeletedAt == null));
 
     /// <summary>CSV der in der Tester-Runde benachrichtigten UserIds → Menge. Null/leer → leere Menge.</summary>
     private static HashSet<int> ParseUserIds(string? csv)

@@ -96,7 +96,7 @@ public class ProfileServiceTests : IDisposable
             + string.Join("\n  ", missing.OrderBy(m => m, StringComparer.Ordinal)));
     }
 
-    /// <summary>Quelltext von <c>ProfileService.DeleteAccountAsync</c> (Methodenrumpf). Der Pfad kommt
+    /// <summary>Quelltext des Löschkerns <c>ProfileService.EraseAsync</c> (Methodenrumpf). Der Pfad kommt
     /// über <see cref="CallerFilePathAttribute"/>, ist also im normalen Lauf immer auflösbar — ein
     /// stilles Überspringen gäbe es hier nicht, der Test scheitert stattdessen.</summary>
     private static string ReadDeleteAccountSource([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
@@ -111,8 +111,9 @@ public class ProfileServiceTests : IDisposable
         }
         Assert.NotNull(file);
         var src = File.ReadAllText(file!);
-        var start = src.IndexOf("public async Task DeleteAccountAsync", StringComparison.Ordinal);
-        Assert.True(start >= 0, "DeleteAccountAsync nicht gefunden — Methode umbenannt?");
+        // Der Löschkern, den Selbst- UND Admin-Löschung teilen (DeleteAccountAsync prüft nur das Passwort).
+        var start = src.IndexOf("private async Task EraseAsync(AppUser user)", StringComparison.Ordinal);
+        Assert.True(start >= 0, "Löschkern EraseAsync nicht gefunden — Methode umbenannt?");
         var end = src.IndexOf("\n    }\n", start, StringComparison.Ordinal);
         return end > start ? src[start..end] : src[start..];
     }

@@ -9,20 +9,23 @@ namespace RookHub.Api.Services;
 /// <summary>
 /// Admin-Backend-Operationen für Benutzer- und Puzzle-Verwaltung (vormals inline im AdminController).
 /// Self-Delete/Self-Toggle → <see cref="InvalidOperationException"/> (400), nicht gefunden →
-/// <see cref="KeyNotFoundException"/> (404). Ein <see cref="DbUpdateException"/> aus
-/// <see cref="DeleteUserAsync"/> propagiert bewusst zum Controller (→ 409).
+/// <see cref="KeyNotFoundException"/> (404).
 /// </summary>
 public class AdminService
 {
     private readonly AppDbContext _db;
 
+    /// <summary>Träger des gemeinsamen Löschkerns (<see cref="ProfileService.EraseUserAsync"/>).</summary>
+    private readonly ProfileService _profile;
+
     /// <summary>Derselbe Cache, aus dem <see cref="AuthUserValidation"/> den Auth-Zustand liest — nach dem
     /// Admin-Entzug verworfen, sonst gilt das alte Token bis zu <see cref="AuthUserValidation.CacheTtl"/> weiter.</summary>
     private readonly IMemoryCache? _authCache;
 
-    public AdminService(AppDbContext db, IMemoryCache? authCache = null)
+    public AdminService(AppDbContext db, ProfileService profile, IMemoryCache? authCache = null)
     {
         _db = db;
+        _profile = profile;
         _authCache = authCache;
     }
 
@@ -30,7 +33,9 @@ public class AdminService
     {
         (page, pageSize) = Paging.Normalize(page, pageSize);
 
-        var query = _db.AppUsers.AsQueryable();
+        // Gelöschte Konten bleiben als anonymisierte Zeile stehen (deleted_<id>) — in der Verwaltung haben sie
+        // nichts verloren; sonst stünde ein eben gelöschter Nutzer nach dem Neuladen unter neuem Namen wieder da.
+        var query = _db.AppUsers.Where(u => u.DeletedAt == null);
 
         if (!string.IsNullOrEmpty(search))
         {
@@ -58,23 +63,18 @@ public class AdminService
         return (items, totalCount, page, pageSize);
     }
 
-    /// <summary>Löscht einen User (samt Freundschaften wg. Restrict-FK). DbUpdateException propagiert (→ 409).</summary>
+    /// <summary>Löscht einen User über DENSELBEN Kern wie die Selbstlöschung (<see cref="ProfileService.EraseUserAsync"/>):
+    /// Identität anonymisiert, persönliche Inhalte entfernt, anonyme Statistik bleibt. Vorher: hartes
+    /// <c>AppUsers.Remove</c> — Spalten ohne FK blieben als Waisen stehen (eine Verteiler-Waise der Kalk-Serie
+    /// ließ jede weitere Ankündigung am FK der Benachrichtigungen scheitern), Restrict-FKs endeten in 409.</summary>
     public async Task DeleteUserAsync(int id, int currentUserId)
     {
         if (id == currentUserId)
             throw new InvalidOperationException("Cannot delete yourself.");
 
-        var user = await _db.AppUsers.FindAsync(id)
-            ?? throw new KeyNotFoundException();
-
-        // Freundschaften zuerst entfernen (Restrict delete behavior).
-        var friendships = await _db.Friendships
-            .Where(f => f.RequesterId == id || f.AddresseeId == id)
-            .ToListAsync();
-        _db.Friendships.RemoveRange(friendships);
-
-        _db.AppUsers.Remove(user);
-        await _db.SaveChangesAsync();   // verbleibende Restrict-FKs → DbUpdateException → Controller mappt auf 409
+        await _profile.EraseUserAsync(id);   // KeyNotFoundException → 404
+        // Das Token des Gelöschten fällt sofort, nicht erst nach Ablauf des Auth-Caches.
+        if (_authCache is not null) AuthUserValidation.Invalidate(_authCache, id);
     }
 
     /// <summary>Schaltet das Admin-Flag eines anderen Users um. <paramref name="actorIsAdmin"/> muss true

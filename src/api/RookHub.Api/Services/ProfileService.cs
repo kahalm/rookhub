@@ -288,6 +288,35 @@ public class ProfileService
         if (string.IsNullOrEmpty(password) || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             throw new UnauthorizedAccessException("Password is incorrect.");
 
+        await EraseAsync(user);
+    }
+
+    /// <summary>
+    /// Derselbe Löschkern wie <see cref="DeleteAccountAsync"/>, aber OHNE Passwortprüfung — für die
+    /// Admin-Löschung (<see cref="AdminService.DeleteUserAsync"/>). Vorher löschte der Admin die Nutzerzeile
+    /// hart und verließ sich auf die FK-Kaskaden: Spalten ohne FK (Verteiler der Kalk-Serie, persönliche
+    /// Bücher, Vereins-Entwürfe, Katalog-Freigaben …) blieben als Waisen stehen, Restrict-FKs (Freigaben,
+    /// Challenges) ließen die Löschung mit 409 scheitern. Idempotent wie die Selbstlöschung.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">User existiert nicht.</exception>
+    public async Task EraseUserAsync(int userId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.Profile)
+            .FirstOrDefaultAsync(u => u.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        if (user.DeletedAt != null)
+            return; // bereits gelöscht -> idempotent
+
+        await EraseAsync(user);
+    }
+
+    /// <summary>Der eigentliche Löschkern (Aufrufer haben Existenz, Idempotenz und ggf. das Passwort geprüft).</summary>
+    private async Task EraseAsync(AppUser user)
+    {
+        var userId = user.Id;
+
         // 0) Persönliche Bücher (importierte/erstellte Kurse) samt Abhängigen über den bestehenden
         //    Admin-Löschpfad entfernen — der räumt Puzzles, Fortschritte, Freigaben, Links etc.
         //    konsistent ab (jeder DeleteBookAsync speichert für sich; ein Wiederholungslauf nach

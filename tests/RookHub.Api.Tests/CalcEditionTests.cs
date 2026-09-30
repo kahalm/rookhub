@@ -290,6 +290,39 @@ public class CalcEditionTests : IDisposable
     }
 
     [Fact]
+    public async Task Announce_SkipsOrphanedAndDeletedMembers()
+    {
+        // Codereview 2026-09-29 (A9-004): CalcSeriesMember.UserId hat keinen FK. Eine Waise (Konto hart
+        // gelöscht) ließ den Benachrichtigungs-INSERT am FK scheitern — die Runde samt Marker fiel bei jedem Lauf,
+        // niemand bekam mehr eine Ankündigung. InMemory kennt keinen FK: hier fällt der Test an der Zeile für die Waise.
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(1),
+            TesterPreviewAt = DateTime.UtcNow.AddMinutes(-1),
+        });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+        const int OrphanId = 990777, DeletedId = 990778;
+        _db.AppUsers.Add(new AppUser { Id = DeletedId, Username = $"deleted_{DeletedId}", PasswordHash = "x", DeletedAt = DateTime.UtcNow });
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = bookId, UserId = OrphanId, IsTester = true });
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = bookId, UserId = DeletedId });
+        await _db.SaveChangesAsync();
+        var announcer = Announcer();
+
+        Assert.Equal(1, await announcer.RunOnceAsync());                  // Tester-Runde: nur der lebende Tester
+        var ed = await _db.CalcEditions.FirstAsync();
+        Assert.Equal(TesterId.ToString(), ed.TesterAnnouncedUserIds);
+        ed.PublishAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+        Assert.Equal(1, await announcer.RunOnceAsync());                  // öffentliche Runde: nur der Betrachter
+
+        var recipients = await _db.Notifications.Select(n => n.UserId).OrderBy(id => id).ToListAsync();
+        Assert.Equal(new[] { ViewerId, TesterId }, recipients);
+    }
+
+    [Fact]
     public async Task Announce_TesterAddedAfterTesterRound_StillNotifiedAtPublic()
     {
         // Regression (Review 3b): ein NACH der Tester-Runde hinzugefügter Tester darf nicht verloren gehen.
