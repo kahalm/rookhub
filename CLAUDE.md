@@ -4353,6 +4353,9 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   jeden 401 unter `/api/auth` je IP als abgelehnten Anmeldeversuch; 25 frische Browser-Sitzungen reichten für einen
   Brute-Force-HIGH. Serverseitig loggt `Services/JwtTokenGate.cs` JEDE Token-Ablehnung mit Grund und Pfad
   (Logger `RookHub.Api.JwtAuth`; Kibana: `message:JwtAuth*`) — vorher war ein abgelehntes Token in den Logs unsichtbar.
+  Die Fehlschläge VOR der Signaturprüfung (abgelaufen, kaputtes Format, fremde Signatur) laufen vor dem Rate-Limiter
+  und vor dem IpAddress-Enricher: sie tragen `IpAddress` deshalb selbst und sind je IP + Ausnahmetyp auf eine Zeile
+  je Minute gedrosselt (Rest Debug, `JwtTokenGate.FailureThrottle`); kaputtes Format (`Bearer x`) ist nur Information.
   Ein Datenbankfehler WÄHREND der Prüfung lässt den Request durch (Warnung) statt 401 zu antworten: ein
   Server-Schluckauf darf keine Sitzung kosten. Die Anmeldemaske selbst schickt Angemeldete weg (`guestGuard` auf
   `/login` und `/register`, in beiden Frontends; `?switch=1` ist die bewusste Tür für einen Konto-Wechsel) — eine

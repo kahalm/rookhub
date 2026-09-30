@@ -83,19 +83,45 @@ public static class JwtTokenGate
         ctx.Fail("User account is deleted or the token has been invalidated.");
     }
 
+    /// <summary>
+    /// Drossel für <see cref="OnAuthenticationFailedAsync"/>: je aufgelöster Client-IP und Ausnahmetyp
+    /// höchstens eine Zeile je Minute auf ihrem Level, der Rest auf Debug (unter dem Mindestlevel, landet
+    /// also weder in der Konsole noch im ES). Die Authentifizierung läuft VOR dem Rate-Limiter: ein
+    /// anonymer Client mit <c>Authorization: Bearer x</c> in einer Schleife schrieb sonst je Anfrage eine
+    /// Warnung — auch für die Anfragen, die der Limiter danach mit 429 abweist (rund 86 Mio. Zeilen am Tag
+    /// bei 1 000/s, dauerhafter warn_spike im log-watcher).
+    /// </summary>
+    internal static readonly LogThrottle FailureThrottle = new(TimeSpan.FromMinutes(1), maxEntries: 2000);
+
     /// <summary>Signatur/Laufzeit/Format haben NICHT gepasst. Ein abgelaufenes Token ist Alltag
     /// (der Client prüft <c>exp</c> selbst, aber Uhren gehen auseinander) und bleibt Information;
-    /// alles andere — falsche Signatur, fremder Aussteller, kaputtes Format — ist eine Warnung.</summary>
+    /// ein kaputtes Format ebenso (Scanner, „Bearer x", „Bearer null" aus fehlerhaften Clients — nichts,
+    /// was ein gültiges Token auch nur versucht). Falsche Signatur, fremder Aussteller u. Ä. ist eine
+    /// Warnung. Alles gedrosselt über <see cref="FailureThrottle"/>, die Client-IP steht explizit im
+    /// Event: der LogContext-Enricher mit <c>IpAddress</c> läuft erst NACH der Authentifizierung.</summary>
     public static Task OnAuthenticationFailedAsync(AuthenticationFailedContext ctx)
     {
         var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(LoggerName);
-        var path = ctx.HttpContext.Request.Path.Value;
-        var kind = ctx.Exception.GetType().Name;
-        if (ctx.Exception is SecurityTokenExpiredException)
-            logger.LogInformation("JwtAuth: abgelaufenes Token auf {Path} ({ExceptionType})", path, kind);
-        else
-            logger.LogWarning("JwtAuth: Token nicht akzeptiert auf {Path} ({ExceptionType}: {Message})",
-                path, kind, ctx.Exception.Message);
+        LogAuthenticationFailure(logger, ctx.Exception, ctx.HttpContext.Request.Path.Value,
+            ctx.HttpContext.Connection.RemoteIpAddress?.ToString(), FailureThrottle, DateTimeOffset.UtcNow);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Kern von <see cref="OnAuthenticationFailedAsync"/> ohne HTTP-Kontext (testbar mit eigener Drossel).</summary>
+    internal static void LogAuthenticationFailure(
+        ILogger logger, Exception exception, string? path, string? ip, LogThrottle throttle, DateTimeOffset now)
+    {
+        var kind = exception.GetType().Name;
+        var level = exception is SecurityTokenExpiredException or SecurityTokenMalformedException
+            ? LogLevel.Information
+            : LogLevel.Warning;
+        if (!throttle.ShouldLog($"{ip}|{kind}", now))
+            level = LogLevel.Debug;
+
+        if (exception is SecurityTokenExpiredException)
+            logger.Log(level, "JwtAuth: abgelaufenes Token auf {Path} ({ExceptionType}) von {IpAddress}", path, kind, ip);
+        else
+            logger.Log(level, "JwtAuth: Token nicht akzeptiert auf {Path} ({ExceptionType}: {Message}) von {IpAddress}",
+                path, kind, exception.Message, ip);
     }
 }
