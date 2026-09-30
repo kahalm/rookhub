@@ -171,4 +171,53 @@ public class SharedLineServiceTests : IDisposable
             "[Event \"Si\\\"ci\\\\lian\"]\n[White \"?\"]\n[Black \"?\"]\n[Result \"*\"]\n\n1. e4 c5 2. Nf3 d6 *\n",
             dto!.Pgn);
     }
+
+    // ── N8-003: der Deckel gilt auch für den Erweiterungs-Weg ───────────────────────────────────
+
+    /// <summary>Vorher ging jeder Zugtext roh ins PGN: ~15 MB beliebiger Text je Aufruf wurden ein anonym abrufbarer,
+    /// nicht löschbarer /l/-Link. Die Meldung nennt den Riesenzug nicht (sie landet im 400-Rumpf).</summary>
+    [Fact]
+    public async Task Standalone_HugeMoveText_IsRejected_AndNothingIsStored()
+    {
+        var user = await AddUserAsync("blob");
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _svc.CreateStandaloneAsync(user, new List<string> { "e4", new string('x', 15_000_000) }, "x"));
+
+        Assert.True(ex.Message.Length < 100);
+        Assert.Empty(_db.SharedLines);
+    }
+
+    [Theory]
+    [InlineData("}[Evil \"x\"]{")]   // Kopfzeile ins angezeigte PGN schleusen
+    [InlineData("e4\n[Evil")]
+    [InlineData("Nf6")]                // legal geschrieben, aber nicht in dieser Stellung (Weiß am Zug)
+    [InlineData("hello")]
+    public async Task Standalone_IllegalOrForeignMove_IsRejected(string second)
+    {
+        var user = await AddUserAsync("inject");
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _svc.CreateStandaloneAsync(user, new List<string> { "e4", "e5", second }, "x"));
+
+        Assert.Empty(_db.SharedLines);
+    }
+
+    /// <summary>Geschrieben wird die Schreibweise des Bretts (Figurinen, Null-Rochade, fehlendes Schach) — und dieselbe
+    /// Linie in anderer Schreibweise ist derselbe Link.</summary>
+    [Fact]
+    public async Task Standalone_WritesBoardSan_AndDedupsAcrossNotations()
+    {
+        var user = await AddUserAsync("notation");
+
+        var res = await _svc.CreateStandaloneAsync(user,
+            new List<string> { "e4", "e5", "♘f3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Nxd5", "Nxf7", "Kxf7", "Qf3", "Ke6", "Nc3", "Nb4", "0-0" }, "Fegatello");
+        var dto = await _svc.GetByTokenAsync(res!.ShareToken);
+
+        Assert.Contains("\n1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5 5. exd5 Nxd5 6. Nxf7 Kxf7 7. Qf3+ Ke6 8. Nc3 Nb4 9. O-O *\n", dto!.Pgn);
+        var again = await _svc.CreateStandaloneAsync(user,
+            new List<string> { "e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Nxd5", "Nxf7", "Kxf7", "Qf3+", "Ke6", "Nc3", "Nb4", "O-O" }, "x");
+        Assert.Equal(res.ShareToken, again!.ShareToken);
+        Assert.Single(_db.SharedLines);
+    }
 }

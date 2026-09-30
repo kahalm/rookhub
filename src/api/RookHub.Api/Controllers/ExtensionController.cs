@@ -254,15 +254,27 @@ public class ExtensionController : BaseApiController
     /// <summary>
     /// Teilt die aktuell auf chess.com/lichess gespielte Zugfolge als öffentliche Nur-Ansehen-Line
     /// (<c>/l/{token}</c>) — für die „Sharebar" im Extension-Popup. Der Server baut aus der SAN-Liste
-    /// ein PGN; dieselbe Zugfolge desselben Users liefert denselben Link (Dedup). 400 bei leerer Liste.
+    /// ein PGN; dieselbe Zugfolge desselben Users liefert denselben Link (Dedup). 400 bei leerer Liste,
+    /// illegalem oder zu langem Zug und zu großem PGN; der Rumpf ist auf 64 KB gedeckelt (600 Züge sind ~6 KB).
     /// </summary>
     [HttpPost("share-line")]
+    [RequestSizeLimit(ShareLineRequestLimit)]
     public async Task<ActionResult<ShareLineResultDto>> ShareLine([FromBody] ShareExtensionLineInputDto dto, CancellationToken ct)
     {
         if (dto == null) return BadRequest(new { message = "Body required." });
-        var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
-        return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
+        try
+        {
+            var res = await _sharedLineService.CreateStandaloneAsync(GetUserId(), dto.Moves, dto.Title, ct);
+            return res == null ? BadRequest(new { message = "No moves." }) : Ok(res);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
+
+    /// <summary>Rumpf-Deckel von share-line (Codereview N8-003) — vorher galten Kestrels 30 MB bzw. nginx' 15 MB.</summary>
+    internal const long ShareLineRequestLimit = 64 * 1024;
 
     /// <summary>
     /// Browser-Import „Über meinen Browser holen": die RepCheck-Extension hat die rohen Chessable-

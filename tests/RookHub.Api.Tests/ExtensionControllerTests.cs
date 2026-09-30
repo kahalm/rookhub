@@ -366,6 +366,30 @@ public class ExtensionControllerTests : IDisposable
         Assert.Single(_db.SavedGames.Where(g => g.UserId == user.Id));
     }
 
+    // ----- share-line (N8-003): Rumpf-Deckel, illegale Züge → 400 statt 500 -----
+
+    [Fact]
+    public void ShareLine_HasA64KbBodyLimit()
+    {
+        var limit = typeof(ExtensionController).GetMethod(nameof(ExtensionController.ShareLine))!
+            .GetCustomAttributesData().Single(a => a.AttributeType == typeof(RequestSizeLimitAttribute));
+        Assert.Equal(64L * 1024, Convert.ToInt64(limit.ConstructorArguments[0].Value));
+    }
+
+    [Fact]
+    public async Task ShareLine_IllegalMove_Returns400_AndLegalLineReturnsALink()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+
+        var bad = await _controller.ShareLine(new ShareExtensionLineInputDto { Moves = new() { "e4", "e4" } }, default);
+        var good = await _controller.ShareLine(new ShareExtensionLineInputDto { Moves = new() { "e4", "c5" } }, default);
+
+        Assert.IsType<BadRequestObjectResult>(bad.Result);
+        Assert.False(string.IsNullOrEmpty((Assert.IsType<OkObjectResult>(good.Result).Value as ShareLineResultDto)!.ShareToken));
+        Assert.Single(_db.SharedLines);
+    }
+
     [Fact]
     public async Task SaveGame_RejectsEmptyMoves()
     {

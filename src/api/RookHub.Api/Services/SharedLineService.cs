@@ -55,19 +55,32 @@ public class SharedLineService
     /// <summary>
     /// Teilt eine „freistehende" Linie (nicht an ein RookHub-Repertoire gebunden) — genutzt von der
     /// RepCheck-Extension, die die aktuell auf chess.com/lichess gespielte Zugfolge teilt. Der Server
-    /// baut aus der SAN-Zugliste ein PGN. Dedup je Besitzer wie sonst. <c>null</c> bei leerer Zugliste.
+    /// spielt die SAN-Zugliste ab der Grundstellung nach und baut aus den Zügen in der Schreibweise des
+    /// Bretts ein PGN. Dedup je Besitzer wie sonst. <c>null</c> bei leerer Zugliste.
+    ///
+    /// <para>Vorher gingen die Zugtexte ungeprüft ins PGN (nur Trim, höchstens 600) und der Deckel
+    /// <see cref="MaxPgnChars"/> galt hier nicht: ein Konto legte je Aufruf bis ~15 MB beliebigen Text als anonym
+    /// abrufbaren /l/-Link ab, und Zugtexte mit <c>}</c>, <c>[</c> oder Zeilenumbrüchen schleusten Kopfzeilen in
+    /// das angezeigte PGN (Codereview 2026-09-29, N8-003).</para>
     /// </summary>
+    /// <exception cref="ArgumentException">Zug zu lang oder nicht legal, PGN größer als <see cref="MaxPgnChars"/> (→ 400).</exception>
     public async Task<ShareLineResultDto?> CreateStandaloneAsync(int userId, IEnumerable<string>? moves, string? title, CancellationToken ct = default)
     {
-        var sans = (moves ?? Enumerable.Empty<string>())
+        var written = (moves ?? Enumerable.Empty<string>())
             .Select(m => (m ?? string.Empty).Trim())
             .Where(m => m.Length > 0)
             .Take(600)
             .ToList();
-        if (sans.Count == 0) return null;
+        if (written.Count == 0) return null;
+        // Erst die Länge: die Meldung eines illegalen Zuges nennt den Zug selbst.
+        if (written.Any(m => m.Length > SavedGameService.MaxSanLength)) throw new ArgumentException("Invalid move.");
+        var sans = SavedGameService.LegalSans(written);
+        var pgn = BuildLinePgn(sans, title);
+        if (pgn.Length > MaxPgnChars)
+            throw new ArgumentException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
         // Identität einer freistehenden Line = ihre Zugfolge (NICHT der variable Seitentitel) →
         // Dedup über die Züge, damit derselbe Spielstand denselben Link liefert.
-        return await StoreAsync(userId, null, title, null, BuildLinePgn(sans, title), "ext|" + string.Join(' ', sans), ct);
+        return await StoreAsync(userId, null, title, null, pgn, "ext|" + string.Join(' ', sans), ct);
     }
 
     private async Task<ShareLineResultDto?> StoreAsync(int userId, int? repertoireId, string? title, string? repertoireName, string pgn, string? dedupSource, CancellationToken ct)
