@@ -3007,6 +3007,7 @@
     },
     "syncPlay": "Ažuriraj vrijeme igranja",
     "syncDone": "Vrijeme igranja ažurirano.",
+    "syncCooldown": "Vrijeme igranja je upravo ažurirano — pokušaj ponovno za {{minutes}} min.",
     "history": "Dnevna povijest",
     "dateCol": "Datum",
     "dailyGoal": "Vrijeme treninga",

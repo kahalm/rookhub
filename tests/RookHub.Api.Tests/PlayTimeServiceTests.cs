@@ -1,11 +1,19 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using System.Net;
+using System.Reflection;
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
+using System.Threading.RateLimiting;
 
 namespace RookHub.Api.Tests;
 
@@ -214,6 +222,128 @@ public class PlayTimeServiceTests : IDisposable
         Assert.Equal(2, page.Total);
         Assert.Equal(Created + 5000, page.MaxCreatedAt);
         Assert.Equal(1, page.PerDay[new DateOnly(2023, 11, 14)]);
+    }
+
+    // ---- Sperrfrist für den Knopf „Spielzeit aktualisieren" (Codereview 2026-09-29, F5-002) ----
+
+    private async Task<int> LinkedUserAsync(string? lichess = "testuser", string? chessCom = "testuser")
+    {
+        var user = new AppUser { Username = "u", Email = "u@t.com", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.UserProfiles.Add(new UserProfile { UserId = user.Id, LichessUsername = lichess, ChessComUsername = chessCom });
+        await _db.SaveChangesAsync();
+        return user.Id;
+    }
+
+    /// <summary>Zählt die Abrufe je Plattform; Lichess leer (ndjson), chess.com ein leeres Archiv.</summary>
+    private (PlayTimeService Service, List<string> Hosts) CountingService()
+    {
+        var hosts = new List<string>();
+        var http = new HttpClient(new FakeHandler(req =>
+        {
+            hosts.Add(req.RequestUri!.Host);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(req.RequestUri.Host.Contains("lichess") ? "" : "{\"games\":[]}", Encoding.UTF8),
+            };
+        }));
+        return (new PlayTimeService(http, _db, new ConfigurationBuilder().Build(), NullLogger<PlayTimeService>.Instance), hosts);
+    }
+
+    /// <summary>Vorher fragte JEDER Aufruf von sync-play bei Lichess und chess.com — 100/min je IP ließen die Server-IP
+    /// bei Lichess sperren. Jetzt fragt ein zweiter Aufruf innerhalb der Sperrfrist gar nicht erst.</summary>
+    [Fact]
+    public async Task SyncUserOnRequest_SecondCallWithinCooldown_DoesNotFetch()
+    {
+        var userId = await LinkedUserAsync();
+        var (service, hosts) = CountingService();
+
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        var afterFirst = hosts.Count;
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+
+        var wait = await service.SyncUserOnRequestAsync(userId);
+
+        Assert.Equal(afterFirst, hosts.Count);                 // kein weiterer Abruf
+        Assert.NotNull(wait);
+        Assert.InRange(wait!.Value, TimeSpan.FromMinutes(4), PlayTimeService.ManualSyncCooldown);
+    }
+
+    [Fact]
+    public async Task SyncUserOnRequest_CooldownIsPerPlatform_AndExpires()
+    {
+        var userId = await LinkedUserAsync();
+        _db.PlayTimeSyncs.Add(new PlayTimeSync { UserId = userId, Platform = PlayTimeService.Lichess, LastSyncedAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _db.SaveChangesAsync();
+        var (service, hosts) = CountingService();
+
+        // Lichess gerade erst abgefragt → nur chess.com (gerade verknüpft) wird geholt.
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        Assert.DoesNotContain(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+
+        // Nach Ablauf der Sperrfrist fragt der Knopf wieder.
+        hosts.Clear();
+        foreach (var sync in _db.PlayTimeSyncs.Where(s => s.UserId == userId))
+            sync.LastSyncedAt = DateTime.UtcNow - PlayTimeService.ManualSyncCooldown - TimeSpan.FromSeconds(5);
+        await _db.SaveChangesAsync();
+        Assert.Null(await service.SyncUserOnRequestAsync(userId));
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+        Assert.Contains(hosts, h => h.Contains("chess.com"));
+    }
+
+    /// <summary>Die Sperrfrist gilt nur für den Knopf — der Hintergrund-Sync (alle 6 h) fragt immer.</summary>
+    [Fact]
+    public async Task SyncUserAsync_BackgroundIgnoresCooldown()
+    {
+        var userId = await LinkedUserAsync(chessCom: null);
+        var (service, hosts) = CountingService();
+        await service.SyncUserOnRequestAsync(userId);
+        hosts.Clear();
+
+        await service.SyncUserAsync(userId);
+
+        Assert.Contains(hosts, h => h.Contains("lichess"));
+    }
+
+    [Fact]
+    public async Task SyncPlayEndpoint_AnswersRetryAfter_InsteadOfFetchingAgain_AndIsRateLimitedPerAccount()
+    {
+        var userId = await LinkedUserAsync();
+        var (service, hosts) = CountingService();
+        var controller = new TrainingGoalController(null!, service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "test")),
+                },
+            },
+        };
+
+        var first = JsonSerializer.SerializeToElement(Assert.IsType<OkObjectResult>(await controller.SyncPlay(CancellationToken.None)).Value);
+        Assert.True(first.GetProperty("synced").GetBoolean());
+        var calls = hosts.Count;
+
+        var second = JsonSerializer.SerializeToElement(Assert.IsType<OkObjectResult>(await controller.SyncPlay(CancellationToken.None)).Value);
+        Assert.False(second.GetProperty("synced").GetBoolean());
+        Assert.InRange(second.GetProperty("retryAfterSeconds").GetInt32(), 1, (int)PlayTimeService.ManualSyncCooldown.TotalSeconds);
+        Assert.Equal(calls, hosts.Count);
+
+        var method = typeof(TrainingGoalController).GetMethod(nameof(TrainingGoalController.SyncPlay))!;
+        Assert.Equal("sync-play", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.SyncPlay(c, 1));
+        var ctx = new DefaultHttpContext { User = controller.ControllerContext.HttpContext.User };
+        var ok = 0;
+        for (var i = 0; i < RateLimitPartitions.SyncPlayPermitPerMinute + 5; i++)
+        {
+            using var lease = limiter.AttemptAcquire(ctx);
+            if (lease.IsAcquired) ok++;
+        }
+        Assert.Equal(RateLimitPartitions.SyncPlayPermitPerMinute, ok);
     }
 
     private sealed class FakeHandler : HttpMessageHandler

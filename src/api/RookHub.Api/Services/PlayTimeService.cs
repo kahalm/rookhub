@@ -40,16 +40,50 @@ public class PlayTimeService
         _firstSyncLookbackDays = config.GetValue<int?>("PlayTime:FirstSyncLookbackDays") ?? 30;
     }
 
+    /// <summary>
+    /// Mindestabstand zweier vom Nutzer ausgelöster Abrufe je Plattform (Knopf „Spielzeit aktualisieren"). Vorher holte
+    /// jeder Klick bzw. jede Anfrage von der Server-IP bei Lichess (bis <see cref="LichessMaxPages"/> Seiten) und zwei
+    /// chess.com-Monatsarchive — mit frei gewähltem Namen; eine Serie davon brachte Lichess dazu, die Server-IP zu
+    /// sperren, und damit scheiterten auch die Abrufe aller anderen. Rapid/Classical dauert länger als das Fenster,
+    /// öfter bringt also nichts Neues. Der Hintergrund-Sync (<see cref="SyncUserAsync"/>, alle 6 h) ist ausgenommen.
+    /// </summary>
+    public static readonly TimeSpan ManualSyncCooldown = TimeSpan.FromMinutes(5);
+
     /// <summary>Synchronisiert beide Plattformen des Users, sofern der jeweilige Benutzername gesetzt ist.</summary>
-    public async Task SyncUserAsync(int userId, CancellationToken ct = default)
+    public async Task SyncUserAsync(int userId, CancellationToken ct = default) => await SyncAsync(userId, null, ct);
+
+    /// <summary>Vom Nutzer ausgelöst: wie <see cref="SyncUserAsync"/>, aber eine Plattform, die vor weniger als
+    /// <see cref="ManualSyncCooldown"/> abgefragt wurde (mit Erfolg ODER Fehler), bleibt aus. Rückgabe: <c>null</c>, wenn
+    /// mindestens eine Plattform abgefragt wurde (oder keine verknüpft ist), sonst die Wartezeit bis zum nächsten Abruf.</summary>
+    public Task<TimeSpan?> SyncUserOnRequestAsync(int userId, CancellationToken ct = default) =>
+        SyncAsync(userId, ManualSyncCooldown, ct);
+
+    private async Task<TimeSpan?> SyncAsync(int userId, TimeSpan? cooldown, CancellationToken ct)
     {
         var profile = await _db.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId, ct);
-        if (profile == null) return;
+        if (profile == null) return null;
 
-        if (!string.IsNullOrWhiteSpace(profile.LichessUsername))
-            await SyncPlatformAsync(userId, Lichess, profile.LichessUsername!.Trim(), ct);
-        if (!string.IsNullOrWhiteSpace(profile.ChessComUsername))
-            await SyncPlatformAsync(userId, ChessCom, profile.ChessComUsername!.Trim(), ct);
+        var lastSynced = cooldown is null
+            ? new Dictionary<string, DateTime?>()
+            : await _db.PlayTimeSyncs.AsNoTracking().Where(s => s.UserId == userId)
+                .ToDictionaryAsync(s => s.Platform, s => s.LastSyncedAt, ct);
+        TimeSpan? wait = null;
+        var fetched = false;
+        foreach (var (platform, username) in new[] { (Lichess, profile.LichessUsername), (ChessCom, profile.ChessComUsername) })
+        {
+            if (string.IsNullOrWhiteSpace(username)) continue;
+            var remaining = cooldown is { } c && lastSynced.GetValueOrDefault(platform) is DateTime at
+                ? at + c - DateTime.UtcNow
+                : TimeSpan.Zero;
+            if (remaining > TimeSpan.Zero)
+            {
+                if (wait is null || remaining < wait) wait = remaining;
+                continue;
+            }
+            await SyncPlatformAsync(userId, platform, username.Trim(), ct);
+            fetched = true;
+        }
+        return fetched ? null : wait;
     }
 
     private async Task SyncPlatformAsync(int userId, string platform, string username, CancellationToken ct)

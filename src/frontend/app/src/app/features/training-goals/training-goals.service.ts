@@ -190,9 +190,10 @@ export class TrainingGoalService {
     return this.http.get<DailySeriesResponse>('/api/training-goals/daily-series');
   }
 
-  /** Gespielte Rapid-/Classical-Partien (Lichess/chess.com) jetzt synchronisieren. */
-  syncPlay(): Observable<{ synced: boolean }> {
-    return this.http.post<{ synced: boolean }>('/api/training-goals/sync-play', {});
+  /** Gespielte Rapid-/Classical-Partien (Lichess/chess.com) jetzt synchronisieren. Je Plattform höchstens alle
+   *  5 min: kam der letzte Abruf gerade erst, antwortet der Server `synced: false` mit der Restzeit. */
+  syncPlay(): Observable<{ synced: boolean; retryAfterSeconds?: number }> {
+    return this.http.post<{ synced: boolean; retryAfterSeconds?: number }>('/api/training-goals/sync-play', {});
   }
 
   /** Eigene manuell eingetragene Offline-Aktivitäten (neueste zuerst). */

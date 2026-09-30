@@ -769,6 +769,9 @@ try
         // ALLEN Admins Glocke + Web-Push an — nur der globale 100/min-IP-Deckel bremste (~6000 Nachrichten/h). Je KONTO;
         // die Glocke entprellt zusätzlich AdminMessageService (eine ungesehene je Thread und Admin).
         options.AddPolicy("user-message", ctx => RookHub.Api.Services.RateLimitPartitions.UserMessage(ctx, permitScale));
+        // „Spielzeit aktualisieren" (POST /api/training-goals/sync-play): jeder Aufruf fragte von der Server-IP bei Lichess
+        // und chess.com — je KONTO gedrosselt (die Sperrfrist je Plattform setzt PlayTimeService.ManualSyncCooldown).
+        options.AddPolicy("sync-play", ctx => RookHub.Api.Services.RateLimitPartitions.SyncPlay(ctx, permitScale));
         // Nutzer-Suche (Autocomplete in der Freundesliste): eigene Partition PRO USER. Vorher lief sie
         // auf der „auth"-Policy — und Endpoint-Limiter partitionieren nach (Policy-Name, Key), also
         // teilten sich Suche und Login/Registrierung/Reset EIN 10/min-Fenster je IP: zehn

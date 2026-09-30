@@ -538,7 +538,17 @@ export class TrainingGoalsComponent implements OnInit {
   syncPlayTime(): void {
     this.syncingPlay = true;
     this.service.syncPlay().subscribe({
-      next: () => { this.syncingPlay = false; this.snackbar.success(this.translate.instant('trainingGoals.syncDone')); this.reload(); },
+      next: r => {
+        this.syncingPlay = false;
+        // Gerade erst abgefragt: der Server hat nicht noch einmal bei Lichess/chess.com gefragt — sagen, wann wieder.
+        if (r?.synced === false) {
+          const minutes = Math.max(1, Math.ceil((r.retryAfterSeconds ?? 60) / 60));
+          this.snackbar.info(this.translate.instant('trainingGoals.syncCooldown', { minutes }));
+          return;
+        }
+        this.snackbar.success(this.translate.instant('trainingGoals.syncDone'));
+        this.reload();
+      },
       error: () => { this.syncingPlay = false; this.snackbar.warn(this.translate.instant('trainingGoals.error')); },
     });
   }

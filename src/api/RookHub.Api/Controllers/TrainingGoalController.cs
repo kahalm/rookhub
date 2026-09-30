@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -54,12 +55,18 @@ public class TrainingGoalController : BaseApiController
     public async Task<ActionResult<DailySeriesDto>> DailySeries()
         => Ok(await _service.GetDailySeriesAsync(GetUserId()));
 
-    /// <summary>Externe Spielzeit (Lichess/chess.com) des eigenen Users jetzt synchronisieren.</summary>
+    /// <summary>Externe Spielzeit (Lichess/chess.com) des eigenen Users jetzt synchronisieren — je Plattform höchstens
+    /// alle <see cref="PlayTimeService.ManualSyncCooldown"/>. Kam der letzte Abruf gerade erst, antwortet der Endpunkt
+    /// <c>{ synced: false, retryAfterSeconds }</c>, statt erneut bei Lichess/chess.com zu fragen; parallele Anfragen
+    /// (vor dem ersten gespeicherten Abruf) bremst die Policy „sync-play" je Konto.</summary>
     [HttpPost("sync-play")]
+    [EnableRateLimiting("sync-play")]
     public async Task<IActionResult> SyncPlay(CancellationToken ct)
     {
-        await _playTime.SyncUserAsync(GetUserId(), ct);
-        return Ok(new { synced = true });
+        var wait = await _playTime.SyncUserOnRequestAsync(GetUserId(), ct);
+        return wait is { } w
+            ? Ok(new { synced = false, retryAfterSeconds = (int)Math.Ceiling(w.TotalSeconds) })
+            : Ok(new { synced = true });
     }
 
     // ----- Manuelle Offline-Aktivitäten ------------------------------------

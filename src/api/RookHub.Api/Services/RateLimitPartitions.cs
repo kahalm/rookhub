@@ -47,6 +47,10 @@ public static class RateLimitPartitions
 
     /// <summary>Nachricht an das Admin-Team (POST /api/messages/reply) je Konto — jede klingelte bei ALLEN Admins.</summary>
     public const int UserMessagePermitPerMinute = 10;
+    /// <summary>„Spielzeit aktualisieren" (POST /api/training-goals/sync-play) je Konto. Nacheinander bremst schon die
+    /// Sperrfrist in PlayTimeService; das hier fängt parallele Anfragen ab, die alle vor dem ersten gespeicherten Abruf
+    /// ankommen.</summary>
+    public const int SyncPlayPermitPerMinute = 3;
 
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
@@ -81,6 +85,9 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> UserMessage(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), UserMessagePermitPerMinute * scale);
+
+    public static RateLimitPartition<string> SyncPlay(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), SyncPlayPermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

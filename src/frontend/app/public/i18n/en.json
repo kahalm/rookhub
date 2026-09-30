@@ -3007,6 +3007,7 @@
     },
     "syncPlay": "Update playing time",
     "syncDone": "Playing time updated.",
+    "syncCooldown": "Playing time was just updated — try again in {{minutes}} min.",
     "history": "Daily history",
     "dateCol": "Date",
     "dailyGoal": "Training time",

@@ -4,6 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { TrainingGoalsComponent } from './training-goals.component';
 
 describe('TrainingGoalsComponent', () => {
@@ -63,5 +64,37 @@ describe('TrainingGoalsComponent Reiter', () => {
 
     comp.onTabChange(0);
     expect(router.navigate.calls.mostRecent().args[1].queryParams).toEqual({ tab: null });
+  });
+});
+
+/**
+ * „Spielzeit aktualisieren" hat serverseitig eine Sperrfrist je Plattform (Codereview 2026-09-29, F5-002): kam der
+ * letzte Abruf gerade erst, antwortet der Server `synced: false` + Restzeit — das darf nicht als „aktualisiert" erscheinen.
+ */
+describe('TrainingGoalsComponent Spielzeit-Abgleich', () => {
+  function make(response: { synced: boolean; retryAfterSeconds?: number }) {
+    const service: any = { syncPlay: () => of(response) };
+    const snackbar = jasmine.createSpyObj('SnackbarService', ['info', 'success', 'warn']);
+    const translate: any = { instant: (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k) };
+    const comp = new TrainingGoalsComponent(service, snackbar, translate, {} as any, {} as any);
+    const reload = spyOn(comp, 'reload');
+    return { comp, snackbar, reload };
+  }
+
+  it('meldet bei der Sperrfrist die Restzeit statt „aktualisiert" und lädt nicht neu', () => {
+    const { comp, snackbar, reload } = make({ synced: false, retryAfterSeconds: 130 });
+    comp.syncPlayTime();
+    expect(snackbar.info).toHaveBeenCalledWith('trainingGoals.syncCooldown:{"minutes":3}');
+    expect(snackbar.success).not.toHaveBeenCalled();
+    expect(reload).not.toHaveBeenCalled();
+    expect(comp.syncingPlay).toBeFalse();
+  });
+
+  it('abgefragt: wie bisher „aktualisiert" und neu laden', () => {
+    const { comp, snackbar, reload } = make({ synced: true });
+    comp.syncPlayTime();
+    expect(snackbar.success).toHaveBeenCalledWith('trainingGoals.syncDone');
+    expect(snackbar.info).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalled();
   });
 });

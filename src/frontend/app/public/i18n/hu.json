@@ -2209,6 +2209,7 @@
     },
     "syncPlay": "Játékidő frissítése",
     "syncDone": "Játékidő frissítve.",
+    "syncCooldown": "A játékidő épp most frissült — próbáld újra {{minutes}} perc múlva.",
     "history": "Daily history",
     "dateCol": "Date",
     "dailyGoal": "Training time",
