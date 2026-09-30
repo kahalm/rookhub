@@ -34,7 +34,8 @@
 #   CHESSABLE_SERVICE_KEY=
 #   DISCORD_LINK_SECRET=       required for linking Discord accounts
 #   APP_BASE_URL=              public frontend URL, used in e-mail links (password reset)
-#   TURNIER_BASE_URL=          public URL of the tournament site (link previews)
+#   TURNIER_BASE_URL=          public URL of the tournament site (link previews, password-reset link from there)
+#   KIDHUB_BASE_URL= / LEAGUEHUB_BASE_URL=  public URLs of KidHub/LeagueHub (password-reset link from there)
 #   EMAIL_SMTP_HOST/PORT/USER/PASSWORD/FROM_ADDRESS/FROM_NAME/USE_STARTTLS
 #   ELASTICSEARCH_URL=         Serilog sink; unset = file/console logging only
 #   SCHACH_BOT_WEBHOOK_URL/SCHACH_BOT_WEBHOOK_SECRET/SCHACH_BOT_STATS_SECRET
@@ -162,6 +163,10 @@ services:
       App__BaseUrl: ${APP_BASE_URL:-}
       # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
       App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
+      # Eigene Domains von KidHub und LeagueHub — Ziel des Passwort-Reset-Links, wenn dort „Passwort vergessen"
+      # geklickt wurde (leer = Link auf App__BaseUrl).
+      App__KidHubBaseUrl: ${KIDHUB_BASE_URL:-}
+      App__LeagueHubBaseUrl: ${LEAGUEHUB_BASE_URL:-}
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
       Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}
       Email__SmtpUser: ${EMAIL_SMTP_USER:-}

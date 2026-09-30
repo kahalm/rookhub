@@ -239,7 +239,7 @@ public class AuthController : BaseApiController
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
-        await _passwordReset.RequestResetAsync(dto.Email);
+        await _passwordReset.RequestResetAsync(dto.Email, dto.Site, dto.Lang);
         return Ok(new { message = "If the address belongs to an account, a reset link has been sent." });
     }
 

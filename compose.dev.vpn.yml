@@ -212,6 +212,10 @@ services:
       App__BaseUrl: ${APP_BASE_URL:-}
       # Eigene Domain der Turnierseite — og:url geteilter Turnier-Links (/t/{id}).
       App__TurnierBaseUrl: ${TURNIER_BASE_URL:-}
+      # Eigene Domains von KidHub und LeagueHub — Ziel des Passwort-Reset-Links, wenn dort „Passwort vergessen"
+      # geklickt wurde (leer = Link auf App__BaseUrl).
+      App__KidHubBaseUrl: ${KIDHUB_BASE_URL:-}
+      App__LeagueHubBaseUrl: ${LEAGUEHUB_BASE_URL:-}
       # E-Mail-Versand (Passwort-Reset). SmtpHost leer -> Versand aus (Mail wird nur geloggt).
       Email__SmtpHost: ${EMAIL_SMTP_HOST:-}
       Email__SmtpPort: ${EMAIL_SMTP_PORT:-587}

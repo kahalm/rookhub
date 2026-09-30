@@ -13,7 +13,7 @@ namespace RookHub.Api.Services;
 /// - <c>Email:SmtpUser</c>      Login-User (optional; leer = anonym)
 /// - <c>Email:SmtpPassword</c>  Login-Passwort
 /// - <c>Email:FromAddress</c>   Absender-Adresse (Default: SmtpUser)
-/// - <c>Email:FromName</c>      Absender-Anzeigename (Default „RookHub")
+/// - <c>Email:FromName</c>      Absender-Anzeigename (Default „RookHub"; der Aufrufer kann ihn je Mail ersetzen)
 /// - <c>Email:UseStartTls</c>   true = STARTTLS (Default), false = nur bei Port 465 implizites SSL
 ///
 /// Ohne <c>SmtpHost</c> ist <see cref="IsEnabled"/> false; <see cref="SendAsync"/> loggt die
@@ -35,7 +35,10 @@ public class SmtpEmailSender : IEmailSender
 
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_config["Email:SmtpHost"]);
 
-    public async Task SendAsync(string toEmail, string subject, string htmlBody, string textBody, CancellationToken ct = default)
+    public Task SendAsync(string toEmail, string subject, string htmlBody, string textBody, CancellationToken ct = default)
+        => SendAsync(toEmail, subject, htmlBody, textBody, null, ct);
+
+    public async Task SendAsync(string toEmail, string subject, string htmlBody, string textBody, string? fromName, CancellationToken ct = default)
     {
         if (!IsEnabled)
         {
@@ -62,7 +65,8 @@ public class SmtpEmailSender : IEmailSender
 
         var fromAddress = _config["Email:FromAddress"] ?? _config["Email:SmtpUser"]
             ?? throw new InvalidOperationException("Email:FromAddress or Email:SmtpUser must be configured.");
-        var fromName = _config["Email:FromName"] ?? "RookHub";
+        // Eigener Anzeigename je Seite (UX-031: „KidHub" statt „RookHub"), sonst der konfigurierte.
+        fromName = string.IsNullOrWhiteSpace(fromName) ? _config["Email:FromName"] ?? "RookHub" : fromName;
 
         var message = new MimeMessage();
         message.From.Add(new MailboxAddress(fromName, fromAddress));

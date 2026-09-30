@@ -49,7 +49,10 @@ public class PasswordResetService
     /// unbekannter/fehlender Adresse passiert still nichts. Mail-Fehler werden geloggt, nicht
     /// nach aussen gereicht.
     /// </summary>
-    public async Task RequestResetAsync(string email, CancellationToken ct = default)
+    /// <param name="site">Seite der Anfrage (<c>kidhub</c>/<c>turnier</c>/<c>leaguehub</c>, sonst RookHub) — Link-Basis,
+    /// Betreff und Absender; siehe <see cref="ResolveSite"/>.</param>
+    /// <param name="lang">Sprache der Oberflaeche — siehe <see cref="IsEnglish"/>.</param>
+    public async Task RequestResetAsync(string email, string? site = null, string? lang = null, CancellationToken ct = default)
     {
         var normalized = email.Trim().ToLowerInvariant();
         var user = await _db.AppUsers
@@ -65,11 +68,15 @@ public class PasswordResetService
         // NULL funktionierenden Links zurueck: der bereits zugestellte alte Link war entwertet,
         // der neue kam nie an (Send-Fehler wird bewusst geschluckt, s. u.).
         var rawToken = GenerateRawToken();
-        var link = BuildResetLink(rawToken);
-        var (subject, html, text) = BuildEmail(user.Username, link);
+        var mailSite = ResolveSite(site);
+        var english = IsEnglish(lang);
+        var link = BuildResetLink(rawToken, mailSite.BaseUrlKey);
+        var (subject, html, text) = BuildEmail(user.Username, link, mailSite, english);
+        // RookHub selbst behaelt den konfigurierten Absendernamen (Email:FromName), die anderen Seiten nennen sich selbst.
+        var fromName = mailSite == RookHubSite ? null : english ? mailSite.NameEn : mailSite.NameDe;
         try
         {
-            await _email.SendAsync(user.Email!, subject, html, text, ct);
+            await _email.SendAsync(user.Email!, subject, html, text, fromName, ct);
         }
         catch (Exception ex)
         {
@@ -139,37 +146,91 @@ public class PasswordResetService
         _logger.LogInformation("PasswordReset: password changed for user {UserId}", user.Id);
     }
 
-    private string BuildResetLink(string rawToken)
+    /// <summary>Eine Seite, von der „Passwort vergessen" kommen kann (UX-031): aus welchem Konfigurationsschluessel
+    /// der Link seine Basis nimmt und wie die Mail die Seite und das Konto nennt.</summary>
+    private sealed record ResetMailSite(string? BaseUrlKey, string NameDe, string NameEn, string AccountDe, string AccountEn);
+
+    private static readonly ResetMailSite RookHubSite =
+        new(null, "RookHub", "RookHub", "dein RookHub-Konto", "your RookHub account");
+
+    /// <summary>
+    /// FESTE Liste: der Client nennt nur einen Schluessel, die Basis-URL kommt allein aus der Konfiguration
+    /// (sonst liesse sich ein fremder Link in eine echte Mail einschleusen). Unbekannt oder leer = RookHub.
+    /// KidHub und LeagueHub sagen dazu, dass es dasselbe Konto wie bei RookHub ist — der Anmeldename in der Mail
+    /// (und bis zur eigenen Basis-URL der Link auf RookHub) wirkte sonst wie eine fremde Mail.
+    /// </summary>
+    private static ResetMailSite ResolveSite(string? site) => site?.Trim().ToLowerInvariant() switch
     {
+        "kidhub" => new("App:KidHubBaseUrl", "KidHub", "KidHub",
+            "dein KidHub-Konto (dasselbe Konto wie bei RookHub)", "your KidHub account (the same account as on RookHub)"),
+        "leaguehub" => new("App:LeagueHubBaseUrl", "LeagueHub", "LeagueHub",
+            "dein LeagueHub-Konto (dasselbe Konto wie bei RookHub)", "your LeagueHub account (the same account as on RookHub)"),
+        "turnier" => new("App:TurnierBaseUrl", "RookHub Turniere", "RookHub Tournaments",
+            "dein RookHub-Konto", "your RookHub account"),
+        _ => RookHubSite,
+    };
+
+    /// <summary>Deutsch und Englisch. Ohne Angabe Deutsch (wie bisher); eine andere ausdrueckliche Sprache
+    /// (hr, hu, …) bekommt Englisch — wie die Oberflaechen selbst, die fuer fehlende Texte auf Englisch fallen.</summary>
+    private static bool IsEnglish(string? lang)
+        => !string.IsNullOrWhiteSpace(lang) && !lang.Trim().StartsWith("de", StringComparison.OrdinalIgnoreCase);
+
+    private string BuildResetLink(string rawToken, string? siteBaseUrlKey)
+    {
+        // Basis-URL der Seite, von der die Anfrage kam — ohne eigene Konfiguration die von RookHub.
+        var baseUrl = siteBaseUrlKey is null ? null : _config[siteBaseUrlKey]?.Trim().TrimEnd('/');
         // Basis-URL des Frontends; Fallback auf relativ, falls nicht konfiguriert (Link dann
         // nur in der Mail kaputt — wird per Warnung sichtbar gemacht).
-        var baseUrl = _config["App:BaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrEmpty(baseUrl))
+            baseUrl = _config["App:BaseUrl"]?.TrimEnd('/');
         if (string.IsNullOrEmpty(baseUrl))
             _logger.LogWarning("PasswordReset: App:BaseUrl not configured — reset link will be relative.");
         return $"{baseUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}";
     }
 
-    private static (string subject, string html, string text) BuildEmail(string username, string link)
+    private static (string subject, string html, string text) BuildEmail(string username, string link, ResetMailSite site, bool english)
     {
         var minutes = (int)TokenTtl.TotalMinutes;
-        const string subject = "RookHub — Passwort zurücksetzen";
+        var name = System.Net.WebUtility.HtmlEncode(username);
+        var href = System.Net.WebUtility.HtmlEncode(link);
+        if (english)
+        {
+            return (
+                $"{site.NameEn} — Reset your password",
+                $"<p>Hello {name},</p>" +
+                $"<p>a password reset was requested for {site.AccountEn}. " +
+                $"Your username for signing in is: <strong>{name}</strong>. " +
+                $"Click the following link to set a new password (valid for {minutes} minutes):</p>" +
+                $"<p><a href=\"{href}\">Reset password now</a></p>" +
+                $"<p style=\"color:#888;font-size:0.9em\">If the link does not work, copy this address into your browser:<br>{href}</p>" +
+                "<p>If this wasn't you, you can ignore this email — your password stays unchanged.</p>" +
+                $"<p>— {site.NameEn}</p>",
+                $"Hello {username},\n\n" +
+                $"a password reset was requested for {site.AccountEn}.\n" +
+                $"Your username for signing in is: {username}\n" +
+                $"Open the following link to set a new password (valid for {minutes} minutes):\n\n" +
+                $"{link}\n\n" +
+                "If this wasn't you, you can ignore this email — your password stays unchanged.\n\n" +
+                $"— {site.NameEn}");
+        }
+        var subject = $"{site.NameDe} — Passwort zurücksetzen";
         var text =
             $"Hallo {username},\n\n" +
-            "für dein RookHub-Konto wurde ein Zurücksetzen des Passworts angefordert.\n" +
+            $"für {site.AccountDe} wurde ein Zurücksetzen des Passworts angefordert.\n" +
             $"Dein Benutzername für die Anmeldung lautet: {username}\n" +
             $"Öffne den folgenden Link, um ein neues Passwort zu setzen (gültig für {minutes} Minuten):\n\n" +
             $"{link}\n\n" +
             "Wenn du das nicht warst, kannst du diese E-Mail ignorieren — dein Passwort bleibt unverändert.\n\n" +
-            "— RookHub";
+            $"— {site.NameDe}";
         var html =
-            $"<p>Hallo {System.Net.WebUtility.HtmlEncode(username)},</p>" +
-            "<p>für dein RookHub-Konto wurde ein Zurücksetzen des Passworts angefordert. " +
-            $"Dein Benutzername für die Anmeldung lautet: <strong>{System.Net.WebUtility.HtmlEncode(username)}</strong>. " +
+            $"<p>Hallo {name},</p>" +
+            $"<p>für {site.AccountDe} wurde ein Zurücksetzen des Passworts angefordert. " +
+            $"Dein Benutzername für die Anmeldung lautet: <strong>{name}</strong>. " +
             $"Klicke auf den folgenden Link, um ein neues Passwort zu setzen (gültig für {minutes} Minuten):</p>" +
-            $"<p><a href=\"{System.Net.WebUtility.HtmlEncode(link)}\">Passwort jetzt zurücksetzen</a></p>" +
-            $"<p style=\"color:#888;font-size:0.9em\">Falls der Link nicht funktioniert, kopiere diese Adresse in den Browser:<br>{System.Net.WebUtility.HtmlEncode(link)}</p>" +
+            $"<p><a href=\"{href}\">Passwort jetzt zurücksetzen</a></p>" +
+            $"<p style=\"color:#888;font-size:0.9em\">Falls der Link nicht funktioniert, kopiere diese Adresse in den Browser:<br>{href}</p>" +
             "<p>Wenn du das nicht warst, kannst du diese E-Mail ignorieren — dein Passwort bleibt unverändert.</p>" +
-            "<p>— RookHub</p>";
+            $"<p>— {site.NameDe}</p>";
         return (subject, html, text);
     }
 

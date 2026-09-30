@@ -88,6 +88,17 @@ public class ForgotPasswordDto
 {
     [Required, EmailAddress, MaxLength(255)]
     public string Email { get; set; } = string.Empty;
+
+    /// <summary>Optional: die Seite, auf der „Passwort vergessen" geklickt wurde — <c>kidhub</c>, <c>turnier</c>
+    /// oder <c>leaguehub</c>; alles andere (auch leer) = RookHub. Bestimmt Link-Ziel, Betreff und Absender der
+    /// Mail (UX-031). Bewusst nur ein Schluessel und keine URL: ein freies Feld schleuste einen fremden Link in
+    /// eine echte RookHub-Mail.</summary>
+    [MaxLength(32)]
+    public string? Site { get; set; }
+
+    /// <summary>Optional: Sprache der Oberflaeche (z. B. <c>de</c>, <c>en</c>) — Sprache der Mail.</summary>
+    [MaxLength(16)]
+    public string? Lang { get; set; }
 }
 
 /// <summary>„Passwort vergessen" — Schritt 2: neues Passwort mit dem Token aus der E-Mail setzen.</summary>

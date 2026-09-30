@@ -232,6 +232,34 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ForgotPassword_PassesSiteAndLanguageToTheMail()
+    {
+        // UX-031: KidHub schickt site/lang mit — der Controller muss sie bis zur Mail durchreichen.
+        await _controller.Register(new RegisterDto { Username = "kid", Email = "kid@t.com", Password = "Password1!" });
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["App:BaseUrl"] = "https://rookhub.example",
+                ["App:KidHubBaseUrl"] = "https://kidhub.example",
+            })
+            .Build();
+        var mails = new RecordingEmailSender();
+        var controller = new AuthController(_authService,
+            new PasswordResetService(_db, mails, config, NullLogger<PasswordResetService>.Instance),
+            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        var result = await controller.ForgotPassword(new ForgotPasswordDto { Email = "kid@t.com", Site = "kidhub", Lang = "en" });
+
+        Assert.IsType<OkObjectResult>(result);
+        var mail = Assert.Single(mails.Sent);
+        Assert.Equal("KidHub — Reset your password", mail.Subject);
+        Assert.Contains("https://kidhub.example/reset-password?token=", mail.Text);
+    }
+
+    [Fact]
     public async Task ResetPassword_ReturnsBadRequest_WithInvalidToken()
     {
         var result = await _controller.ResetPassword(new ResetPasswordDto

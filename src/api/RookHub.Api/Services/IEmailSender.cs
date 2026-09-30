@@ -12,4 +12,9 @@ public interface IEmailSender
 
     /// <summary>Schickt eine E-Mail. Wirft bei SMTP-Fehlern (Aufrufer behandelt/loggt).</summary>
     Task SendAsync(string toEmail, string subject, string htmlBody, string textBody, CancellationToken ct = default);
+
+    /// <summary>Wie oben, mit eigenem Absender-Anzeigenamen (z. B. „KidHub" fuer die Reset-Mail der
+    /// Kinderseite, UX-031); <c>null</c> = der konfigurierte (<c>Email:FromName</c>). Die Adresse bleibt dieselbe.</summary>
+    Task SendAsync(string toEmail, string subject, string htmlBody, string textBody, string? fromName, CancellationToken ct = default)
+        => SendAsync(toEmail, subject, htmlBody, textBody, ct);
 }
