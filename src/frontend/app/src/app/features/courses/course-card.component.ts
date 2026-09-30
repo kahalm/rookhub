@@ -139,21 +139,27 @@ import { labelOr } from './course-language.util';
                     <span>{{ (offline ? 'courses.offlineRemoveTooltip' : 'courses.offlineSaveTooltip') | translate }}</span>
                   </button>
                 }
-                <button mat-menu-item
-                        [disabled]="course.puzzleCount === 0 || downloadingPgn" (click)="pgnDownload.emit()">
-                  <mat-icon>download</mat-icon>
-                  <span>{{ 'courses.downloadPgnTooltip' | translate }}</span>
-                </button>
+                <!-- PGN-Download und „In Repertoire umwandeln" liefern das Roh-PGN aller Wochen (bei
+                     Kalkulationsbüchern samt Lösung) — der Server sperrt beides dort (404). -->
+                @if (!course.isCalculation) {
+                  <button mat-menu-item
+                          [disabled]="course.puzzleCount === 0 || downloadingPgn" (click)="pgnDownload.emit()">
+                    <mat-icon>download</mat-icon>
+                    <span>{{ 'courses.downloadPgnTooltip' | translate }}</span>
+                  </button>
+                }
                 <button mat-menu-item
                         [disabled]="course.solvedCount === 0" (click)="progressReset.emit()">
                   <mat-icon>restart_alt</mat-icon>
                   <span>{{ 'courses.resetTooltip' | translate }}</span>
                 </button>
-                <button mat-menu-item
-                        [disabled]="converting" (click)="convertRepertoire.emit()">
-                  <mat-icon>library_books</mat-icon>
-                  <span>{{ 'courses.convertToRepertoireTooltip' | translate }}</span>
-                </button>
+                @if (!course.isCalculation) {
+                  <button mat-menu-item
+                          [disabled]="converting" (click)="convertRepertoire.emit()">
+                    <mat-icon>library_books</mat-icon>
+                    <span>{{ 'courses.convertToRepertoireTooltip' | translate }}</span>
+                  </button>
+                }
                 <button mat-menu-item [class.active-item]="course.linkedBookId" (click)="linkEdit.emit()">
                   <mat-icon>{{ course.linkedBookId ? 'link' : 'add_link' }}</mat-icon>
                   <span>{{ (course.linkedBookId ? 'courses.link.linkedTooltip' : 'courses.link.tooltip') | translate:{ name: course.linkedDisplayName } }}</span>

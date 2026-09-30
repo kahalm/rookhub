@@ -5,6 +5,8 @@ import { provideRouter, RouterLink } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { OverlayContainer } from '@angular/cdk/overlay';
+import { MatMenuTrigger } from '@angular/material/menu';
 import { CourseCardComponent } from './course-card.component';
 
 describe('CourseCardComponent', () => {
@@ -127,6 +129,45 @@ describe('CourseCardComponent Kalkulationsbuch', () => {
     expect(targets).toContain('/courses/42/random');
     expect(targets).not.toContain('/courses/42/calc');
     expect(html).toContain('chapters-block');
+  });
+
+  /** Text des geöffneten ⋮-Menüs der Karte (mat-menu rendert erst beim Öffnen, im CDK-Overlay). */
+  async function menuText(isCalculation: boolean): Promise<string> {
+    await TestBed.configureTestingModule({
+      imports: [CourseCardComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseCardComponent);
+    fixture.componentInstance.course = {
+      bookId: 42, displayName: 'Rechnen üben', puzzleCount: 12, solvedCount: 3,
+      progressPercent: 25, lastMode: null, isOwned: true, isPinned: false, isCalculation,
+    } as never;
+    fixture.detectChanges();
+    const trigger = fixture.debugElement.query(By.directive(MatMenuTrigger)).injector.get(MatMenuTrigger);
+    trigger.openMenu();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    return TestBed.inject(OverlayContainer).getContainerElement().textContent ?? '';
+  }
+
+  it('bietet beim Kalkulationsbuch weder PGN-Download noch „In Repertoire umwandeln" an', async () => {
+    // Beide holen das Roh-PGN aller Wochen (samt Lösung) — der Server sperrt sie dort (404).
+    const text = await menuText(true);
+    expect(text).toContain('courses.detail.open');            // Menü ist wirklich offen
+    expect(text).not.toContain('courses.downloadPgnTooltip');
+    expect(text).not.toContain('courses.convertToRepertoireTooltip');
+  });
+
+  it('normale Kurse behalten PGN-Download und Umwandeln', async () => {
+    const text = await menuText(false);
+    expect(text).toContain('courses.downloadPgnTooltip');
+    expect(text).toContain('courses.convertToRepertoireTooltip');
   });
 });
 

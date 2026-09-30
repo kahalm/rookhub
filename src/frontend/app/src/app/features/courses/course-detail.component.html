@@ -123,10 +123,13 @@
               <mat-icon>push_pin</mat-icon>
               <span>{{ (d.isPinned ? 'courses.unpinTooltip' : 'courses.pinTooltip') | translate }}</span>
             </button>
-            <button mat-menu-item (click)="downloadPgn()" [disabled]="d.totalLines === 0">
-              <mat-icon>download</mat-icon>
-              <span>{{ 'common.downloadPgn' | translate }}</span>
-            </button>
+            <!-- Kalkulationsbuch: kein PGN-Download (Server-Sperre, alle Wochen samt Lösung). -->
+            @if (!d.isCalculation) {
+              <button mat-menu-item (click)="downloadPgn()" [disabled]="d.totalLines === 0">
+                <mat-icon>download</mat-icon>
+                <span>{{ 'common.downloadPgn' | translate }}</span>
+              </button>
+            }
             <!-- Kalkulations-Serie: privater Verteiler (Mitglieder + Tester-Häkchen). Nur Verwalter. -->
             @if (d.canManage && d.isCalculation) {
               <button mat-menu-item (click)="openMembers()">
