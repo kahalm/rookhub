@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -69,6 +70,15 @@ public sealed record DirectorySearchQuery
     /// </summary>
     public bool DatedOnly { get; init; }
 
+    /// <summary>
+    /// Auch Eintraege mit UNPLAUSIBLER Laufzeit zeigen (siehe
+    /// <see cref="TournamentDirectoryQueryService.Plausible"/>). Vorgabe ist ausblenden: die
+    /// Vorgabe-Liste „naechste 3 Monate" begann auf dem Dev-Stand mit „2007-12-26 bis 2026-12-10"
+    /// und „2023-01-28 bis 2028-01-28" — solche Zeitraeume sind Tippfehler der Quelle, keine
+    /// Turniere, und liessen das ganze Verzeichnis veraltet aussehen.
+    /// </summary>
+    public bool IncludeImplausible { get; init; }
+
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 50;
 }
@@ -81,7 +91,21 @@ public sealed record DirectorySearchQuery
 public sealed record DirectoryGroupItem(
     TournamentDirectoryEntry Entry,
     double? DistanceKm,
-    IReadOnlyList<TournamentDirectoryEntry> Members);
+    IReadOnlyList<TournamentDirectoryEntry> Members)
+{
+    /// <summary>
+    /// Laeuft bereits: begann VOR dem Beginn des abgefragten Zeitraums und ragt hinein. Solche
+    /// Eintraege stehen in der Liste als eigener Block NACH denen, die im Zeitraum beginnen.
+    /// Nur gesetzt, wenn die Abfrage einen Beginn (<c>From</c>) hat.
+    /// </summary>
+    public bool Ongoing { get; init; }
+
+    /// <summary>
+    /// Unplausible Laufzeit (siehe <see cref="TournamentDirectoryQueryService.Plausible"/>). Kann
+    /// nur <c>true</c> sein, wenn die Abfrage solche Eintraege ueberhaupt mitanzeigt.
+    /// </summary>
+    public bool Implausible { get; init; }
+}
 
 public sealed record DirectorySearchResult(
     List<DirectoryGroupItem> Items, int Total, bool Truncated);
@@ -149,14 +173,24 @@ public class TournamentDirectoryQueryService
                 .Select(g => new { Key = g.Key, Start = g.Min(x => x.StartDate), PrimaryId = g.Min(x => x.Id) });
 
             var total = await groups.CountAsync(ct);
-            var keys = await groups
-                .OrderBy(g => g.Start).ThenBy(g => g.PrimaryId)
+            // Mit einem Zeitraum zuerst, was darin BEGINNT, danach als eigener Block, was schon
+            // laeuft (und ganz am Ende die Eintraege ohne Beginn). Bis 0.623.0 zaehlte nur das
+            // Startdatum: die Vorgabe „naechste 3 Monate" zeigte auf dem Dev-Stand 583 laufende
+            // Saisonligen, bevor an Stelle 584 das erste kommende Turnier kam. Der Rang ist
+            // derselbe wie in WindowRank — hier ausgeschrieben, weil er in SQL laufen muss. Die
+            // Id bleibt letzter Schluessel: bei gleichem Rang und Beginn haelt sie die Seiten
+            // ueberschneidungsfrei.
+            var ordered = query.From is { } windowStart
+                ? groups.OrderBy(g => g.Start == null ? 2 : g.Start < windowStart ? 1 : 0)
+                    .ThenBy(g => g.Start).ThenBy(g => g.PrimaryId)
+                : groups.OrderBy(g => g.Start).ThenBy(g => g.PrimaryId);
+            var keys = await ordered
                 .Skip((page - 1) * pageSize).Take(pageSize)
                 .ToListAsync(ct);
 
             var items = await LoadGroupsAsync(filtered, keys.Select(k => k.Key).ToList(),
                 keys.Select(k => k.PrimaryId).ToList(), null, ct);
-            return new DirectorySearchResult(items, total, false);
+            return new DirectorySearchResult(await MarkAsync(items, query, ct), total, false);
         }
 
         var box = GeoDistance.BoundingBox(lat, lon, radius.Value);
@@ -201,11 +235,15 @@ public class TournamentDirectoryQueryService
                 var primary = members.MinBy(m => m.Id)!;
                 return new DirectoryGroupItem(primary, Math.Round(g.Min(x => x.Distance), 1), members);
             })
-            .OrderBy(x => x.Entry.StartDate).ThenBy(x => x.DistanceKm)
+            // Dieselbe Blockbildung wie im Weg ohne Umkreis: laufende Saisonligen der Region stehen
+            // sonst vor dem Open am naechsten Wochenende. Die Id zuletzt, damit gleichrangige
+            // Eintraege nicht je nach Lesereihenfolge der Datenbank die Seite wechseln.
+            .OrderBy(x => WindowRank(x.Entry.StartDate, query.From))
+            .ThenBy(x => x.Entry.StartDate).ThenBy(x => x.DistanceKm).ThenBy(x => x.Entry.Id)
             .ToList();
 
         return new DirectorySearchResult(
-            grouped.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            await MarkAsync(grouped.Skip((page - 1) * pageSize).Take(pageSize).ToList(), query, ct),
             grouped.Count,
             truncated);
     }
@@ -292,7 +330,76 @@ public class TournamentDirectoryQueryService
             })
             .OrderBy(i => i.Entry.StartDate)
             .ToList();
-        return new DirectoryMapResult(items, truncated);
+        return new DirectoryMapResult(await MarkAsync(items, query, ct), truncated);
+    }
+
+    /// <summary>
+    /// Laenger als so viele Jahre und dabei ohne Spieltermine (oder schon ueber ein Jahr vor dem
+    /// Zeitraum begonnen) gilt ein Eintrag als unplausibel.
+    /// </summary>
+    internal const int MaxPlausibleYears = 1;
+
+    /// <summary>
+    /// Ist die Laufzeit eines Eintrags glaubhaft? Unplausibel ist, was LAENGER als
+    /// <see cref="MaxPlausibleYears"/> dauert UND entweder keine Spieltermine hat oder schon ueber
+    /// ein Jahr vor <paramref name="windowStart"/> begann („Knatte Lag DM 2016, 2016-11-12 bis
+    /// 2026-11-12"). Eine Saisonliga von September bis April bleibt glaubhaft, ebenso eine
+    /// lange Liga, deren Spieltermine bekannt sind und die nicht schon seit Jahren „laeuft".
+    ///
+    /// <para>Bezug ist der Beginn des abgefragten Zeitraums, nicht der heutige Tag: sonst waere
+    /// im Kalender fuer einen vergangenen Monat jede damals normale Liga „unplausibel". Fuer die
+    /// Vorgabe-Zeitraeume der Turnierseite (ab heute) ist beides dasselbe.</para>
+    ///
+    /// <para>Als Ausdruck, weil er in SQL laufen muss — als Filter (<see cref="ApplyFilters"/>)
+    /// und fuer das Kennzeichen an den gezeigten Eintraegen (<see cref="MarkAsync"/>), damit
+    /// beide dieselbe Regel sind.</para>
+    /// </summary>
+    internal static Expression<Func<TournamentDirectoryEntry, bool>> Plausible(DateOnly windowStart)
+    {
+        var yearBefore = windowStart.AddYears(-MaxPlausibleYears);
+        return e => e.StartDate == null || e.EndDate == null
+                    || e.EndDate <= e.StartDate.Value.AddYears(MaxPlausibleYears)
+                    || (e.RoundDates.Any() && e.StartDate >= yearBefore);
+    }
+
+    /// <summary>Der Bezugstag der Plausibilitaet: Beginn des Zeitraums, ohne ihn heute.</summary>
+    private static DateOnly WindowStartOf(DirectorySearchQuery query)
+        => query.From ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+    /// <summary>
+    /// Rang in der Liste: 0 = beginnt im Zeitraum, 1 = laeuft bereits, 2 = ohne Beginn. Ohne
+    /// Zeitraumbeginn gibt es keine Bloecke (alles 0). Der Weg ohne Umkreis schreibt dieselbe
+    /// Regel als SQL-Ausdruck aus.
+    /// </summary>
+    internal static int WindowRank(DateOnly? start, DateOnly? windowStart) =>
+        windowStart is not { } from ? 0 : start is not { } s ? 2 : s < from ? 1 : 0;
+
+    /// <summary>
+    /// Setzt „laeuft bereits" und „unplausibel" an den gezeigten Eintraegen. Das zweite braucht
+    /// eine eigene kleine Abfrage — aber nur, wenn unplausible ueberhaupt mitangezeigt werden;
+    /// sonst sind alle gezeigten per Filter glaubhaft.
+    /// </summary>
+    private async Task<List<DirectoryGroupItem>> MarkAsync(
+        List<DirectoryGroupItem> items, DirectorySearchQuery query, CancellationToken ct)
+    {
+        if (items.Count == 0) return items;
+
+        HashSet<int>? plausible = null;
+        if (query.IncludeImplausible)
+        {
+            var ids = items.Select(i => i.Entry.Id).ToList();
+            plausible = (await _db.TournamentDirectoryEntries.AsNoTracking()
+                .Where(e => ids.Contains(e.Id))
+                .Where(Plausible(WindowStartOf(query)))
+                .Select(e => e.Id)
+                .ToListAsync(ct)).ToHashSet();
+        }
+
+        return items.Select(i => i with
+        {
+            Ongoing = WindowRank(i.Entry.StartDate, query.From) == 1,
+            Implausible = plausible is not null && !plausible.Contains(i.Entry.Id),
+        }).ToList();
     }
 
     /// <summary>
@@ -412,6 +519,8 @@ public class TournamentDirectoryQueryService
             source = source.Where(e => (e.StartDate ?? e.EndDate) == null || (e.StartDate ?? e.EndDate) <= to);
         if (query.DatedOnly)
             source = source.Where(e => e.StartDate != null || e.EndDate != null);
+        if (!query.IncludeImplausible)
+            source = source.Where(Plausible(WindowStartOf(query)));
 
         if (!string.IsNullOrWhiteSpace(query.Federation))
         {

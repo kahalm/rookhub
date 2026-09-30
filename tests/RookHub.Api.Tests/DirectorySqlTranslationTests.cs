@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -60,6 +61,35 @@ public class DirectorySqlTranslationTests
 
         Assert.Contains("ORDER BY", sql);
         Assert.DoesNotContain("LIMIT 1000", sql);
+    }
+
+    /// <summary>
+    /// UX-039: Plausibilitaetsfilter (Laufzeit per <c>AddYears</c>, Spieltermine per EXISTS) und die
+    /// Blockreihenfolge ueber der Gruppierung (erst was im Zeitraum beginnt, dann was schon laeuft)
+    /// muessen beide in SQL laufen — sonst zaehlt die Seitennavigation falsch. Form wie im Weg
+    /// ohne Umkreis von TournamentDirectoryQueryService.SearchAsync.
+    /// </summary>
+    [Fact]
+    public void Verzeichnis_PlausibilitaetUndBlockreihenfolge_lassenSichUebersetzen()
+    {
+        using var db = MySqlContext();
+        var windowStart = new DateOnly(2026, 10, 1);
+
+        var sql = db.TournamentDirectoryEntries
+            .Where(e => e.RemovedAt == null)
+            .Where(TournamentDirectoryQueryService.Plausible(windowStart))
+            .GroupBy(e => e.GroupKey ?? "id:" + e.Id)
+            .Select(g => new { Key = g.Key, Start = g.Min(x => x.StartDate), PrimaryId = g.Min(x => x.Id) })
+            .OrderBy(g => g.Start == null ? 2 : g.Start < windowStart ? 1 : 0)
+            .ThenBy(g => g.Start).ThenBy(g => g.PrimaryId)
+            .Skip(50).Take(50)
+            .ToQueryString();
+
+        Assert.Contains("DATE_ADD", sql);
+        Assert.Contains("EXISTS", sql);
+        Assert.Contains("GROUP BY", sql);
+        Assert.Contains("CASE", sql);
+        Assert.Contains("LIMIT", sql);
     }
 
     [Fact]

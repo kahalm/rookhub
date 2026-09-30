@@ -290,6 +290,169 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.Equal(2, page.Total);
     }
 
+    // ----- Reihenfolge und Plausibilitaet (UX-039) ---------------------------
+
+    private async Task AddRoundAsync(string publicId, DateOnly date)
+    {
+        var entry = _db.TournamentDirectoryEntries.Single(e => e.PublicId == publicId);
+        _db.TournamentDirectoryRounds.Add(new TournamentDirectoryRound
+        {
+            TournamentDirectoryEntryId = entry.Id, Number = 1, Date = date,
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task<DirectoryPageDto> SearchPageAsync(
+        string from, string to, int page, int pageSize, DirectoryAudienceQuery? audience = null)
+    {
+        var result = await CreateController(1).Search(
+            from, to, audience: audience, page: page, pageSize: pageSize);
+        return Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+    }
+
+    /// <summary>
+    /// UX-039: Die Vorgabe „naechste 3 Monate" begann auf dem Dev-Stand mit 583 schon laufenden
+    /// Eintraegen, das erste kommende Turnier stand an Stelle 584 (Seite 12). Was im Zeitraum
+    /// BEGINNT, gehoert nach vorn; was schon laeuft, folgt als eigener, gekennzeichneter Block,
+    /// Eintraege ohne Beginn ganz am Ende.
+    /// </summary>
+    [Fact]
+    public async Task Search_Window_UpcomingTournamentsComeFirst_OngoingFollowAsMarkedBlock()
+    {
+        for (var i = 0; i < 60; i++)
+            await AddEntryAsync($"run{i}", $"Saisonliga {i}", new DateOnly(2026, 8, 1).AddDays(i),
+                new DateOnly(2026, 11, 30));
+        await AddEntryAsync("open", "Open am Wochenende", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+        await AddEntryAsync("cup", "Novembercup", new DateOnly(2026, 11, 7), new DateOnly(2026, 11, 7));
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "nostart", ChessResultsId = "nostart", Name = "Nur ein Ende", Federation = "AUT",
+            EndDate = new DateOnly(2026, 10, 15),
+        });
+        await _db.SaveChangesAsync();
+
+        var first = await SearchAsync(from: "2026-10-01", to: "2026-12-31");
+
+        Assert.Equal(63, first.Total);
+        Assert.Equal(50, first.Items.Count);
+        Assert.Equal(["open", "cup"], first.Items.Take(2).Select(i => i.Id));
+        Assert.All(first.Items.Take(2), i => Assert.False(i.Ongoing));
+        // Danach der Block „laeuft bereits", wieder nach Beginn.
+        Assert.Equal("run0", first.Items[2].Id);
+        Assert.All(first.Items.Skip(2), i => Assert.True(i.Ongoing));
+
+        var second = await SearchPageAsync("2026-10-01", "2026-12-31", page: 2, pageSize: 50);
+        Assert.Equal(13, second.Items.Count);
+        Assert.Equal("nostart", second.Items[^1].Id);
+        Assert.False(second.Items[^1].Ongoing);
+    }
+
+    /// <summary>
+    /// Die Seiten bleiben ueberschneidungsfrei, auch wenn viele Eintraege denselben Rang und
+    /// denselben Beginn haben — der letzte Schluessel ist die Id.
+    /// </summary>
+    [Fact]
+    public async Task Search_Window_PagesNeitherOverlapNorSkip_WithEqualStartDates()
+    {
+        for (var i = 0; i < 7; i++)
+            await AddEntryAsync($"up{i}", $"Kommend {i}", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10));
+        for (var i = 0; i < 4; i++)
+            await AddEntryAsync($"on{i}", $"Laufend {i}", new DateOnly(2026, 9, 1), new DateOnly(2026, 10, 31));
+
+        var seen = new List<string>();
+        for (var page = 1; page <= 4; page++)
+            seen.AddRange((await SearchPageAsync("2026-10-01", "2026-12-31", page, 3)).Items.Select(i => i.Id));
+
+        Assert.Equal(11, seen.Count);
+        Assert.Equal(11, seen.Distinct().Count());
+        Assert.All(seen.Take(7), id => Assert.StartsWith("up", id));
+    }
+
+    /// <summary>
+    /// UX-039: „2007-12-26 bis 2026-12-10", „2025-01-01 bis 2026-12-31" — Laufzeiten, die kein
+    /// Turnier hat. Unplausibel ist, was laenger als ein Jahr dauert UND keine Spieltermine hat
+    /// oder schon ueber ein Jahr vor dem Zeitraum begann. Standardmaessig ausgeblendet, auf Wunsch
+    /// gezeigt und gekennzeichnet.
+    /// </summary>
+    [Fact]
+    public async Task Search_ImplausibleRuntimes_AreHiddenByDefault_AndMarkedWhenIncluded()
+    {
+        await AddEntryAsync("namibia", "Qualifiers", new DateOnly(2007, 12, 26), new DateOnly(2026, 12, 10));
+        await AddEntryAsync("bardejov", "Bardejov", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31));
+        await AddEntryAsync("liga-ohne", "Liga ohne Termine", new DateOnly(2026, 9, 1), new DateOnly(2027, 10, 15));
+        await AddEntryAsync("liga-mit", "Liga mit Terminen", new DateOnly(2026, 9, 1), new DateOnly(2027, 10, 15));
+        await AddRoundAsync("liga-mit", new DateOnly(2026, 10, 18));
+        await AddEntryAsync("alt-mit", "Seit Jahren", new DateOnly(2024, 6, 1), new DateOnly(2026, 12, 1));
+        await AddRoundAsync("alt-mit", new DateOnly(2026, 10, 25));
+        await AddEntryAsync("saison", "Saison", new DateOnly(2026, 9, 15), new DateOnly(2027, 5, 30));
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+
+        var standard = await SearchAsync(from: "2026-10-01", to: "2026-12-31");
+        Assert.Equal(["liga-mit", "open", "saison"], standard.Items.Select(i => i.Id).Order());
+        Assert.Equal(3, standard.Total);
+        Assert.All(standard.Items, i => Assert.False(i.Implausible));
+
+        var all = await SearchAsync(from: "2026-10-01", to: "2026-12-31",
+            audience: new DirectoryAudienceQuery { IncludeImplausible = true });
+        Assert.Equal(7, all.Total);
+        Assert.Equal(["alt-mit", "bardejov", "liga-ohne", "namibia"],
+            all.Items.Where(i => i.Implausible).Select(i => i.Id).Order());
+        Assert.Equal("open", Assert.Single(all.Items, i => !i.Ongoing).Id);
+    }
+
+    [Fact]
+    public async Task Search_RadiusPath_UpcomingFirst_AndImplausibleHidden()
+    {
+        await AddEntryAsync("liga", "Landesliga", new DateOnly(2026, 9, 1), new DateOnly(2027, 4, 30), 47.80, 13.04);
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 20), new DateOnly(2026, 10, 21), 47.85, 13.10);
+        await AddEntryAsync("ewig", "Ewige Liga", new DateOnly(2016, 11, 12), new DateOnly(2026, 11, 12), 47.80, 13.04);
+
+        var page = await SearchAsync(from: "2026-10-01", to: "2026-12-31", lat: 47.80, lon: 13.04, radiusKm: 50);
+
+        Assert.Equal(["open", "liga"], page.Items.Select(i => i.Id));
+        Assert.False(page.Items[0].Ongoing);
+        Assert.True(page.Items[1].Ongoing);
+    }
+
+    [Fact]
+    public async Task MapAndCalendar_HideImplausibleByDefault_AndMarkThemWhenIncluded()
+    {
+        await AddEntryAsync("open", "Open", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18), 47.80, 13.04);
+        await AddEntryAsync("bardejov", "Bardejov", new DateOnly(2025, 1, 1), new DateOnly(2026, 12, 31), 47.81, 13.05);
+        var include = new DirectoryAudienceQuery { IncludeImplausible = true };
+
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Map("47.0,12.0,48.0,14.0", from: "2026-10-01", to: "2026-12-31")).Result).Value);
+        Assert.Equal("open", Assert.Single(map.Items).Id);
+
+        var mapAll = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Map("47.0,12.0,48.0,14.0", from: "2026-10-01", to: "2026-12-31",
+                audience: include)).Result).Value);
+        Assert.Equal("bardejov", Assert.Single(mapAll.Items, i => i.Implausible).Id);
+        Assert.Equal(2, mapAll.Items.Count);
+
+        var cal = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Calendar(2026, 10)).Result).Value);
+        Assert.Equal("open", Assert.Single(cal.Tournaments).Id);
+
+        var calAll = Assert.IsType<DirectoryCalendarDto>(Assert.IsType<OkObjectResult>(
+            (await CreateController(1).Calendar(2026, 10, audience: include)).Result).Value);
+        var bardejov = Assert.Single(calAll.Tournaments, t => t.Id == "bardejov");
+        Assert.True(bardejov.Implausible);
+        Assert.True(bardejov.Ongoing);
+    }
+
+    /// <summary>Die Detailansicht filtert nicht — ein Link auf einen solchen Eintrag bleibt gueltig.</summary>
+    [Fact]
+    public async Task Get_ImplausibleEntry_IsStillReachable()
+    {
+        await AddEntryAsync("700123", "Qualifiers", new DateOnly(2007, 12, 26), new DateOnly(2026, 12, 10));
+
+        var result = await CreateController(1).Get("700123", default);
+
+        Assert.Equal("700123", Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(result.Result).Value).Id);
+    }
+
     // ----- Eingabepruefung --------------------------------------------------
 
     [Theory]

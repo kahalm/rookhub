@@ -380,6 +380,63 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
 
 
     /// <summary>
+    /// UX-039: Die Liste stellt im Zeitraum Beginnendes vor schon Laufendes (CASE im ORDER BY ueber
+    /// der Gruppierung) und blendet unplausible Laufzeiten aus (DATE_ADD + EXISTS ueber die
+    /// Spieltermine). InMemory rechnet beides in C# — ob MariaDB es uebersetzt und die Seiten
+    /// dabei richtig zaehlt, zeigt nur dieser Test. Die Karte nutzt denselben Filter.
+    /// </summary>
+    [MySqlFact]
+    public async Task Turnierverzeichnis_KommendeVorLaufenden_UnplausibleAusgeblendet()
+    {
+        var liga = new TournamentDirectoryEntry
+        {
+            PublicId = "it-ux039-liga", ChessResultsId = "it-ux039-liga", Name = "Landesliga", Federation = "AUT",
+            StartDate = new DateOnly(2026, 9, 1), EndDate = new DateOnly(2027, 10, 15), Lat = 47.8, Lon = 13.04,
+            RoundDates = [new TournamentDirectoryRound { Number = 1, Date = new DateOnly(2026, 10, 18) }],
+        };
+        Db.TournamentDirectoryEntries.AddRange(
+            liga,
+            new TournamentDirectoryEntry
+            {
+                PublicId = "it-ux039-open", ChessResultsId = "it-ux039-open", Name = "Open", Federation = "AUT",
+                StartDate = new DateOnly(2026, 10, 17), EndDate = new DateOnly(2026, 10, 18), Lat = 47.8, Lon = 13.04,
+            },
+            new TournamentDirectoryEntry
+            {
+                PublicId = "it-ux039-ewig", ChessResultsId = "it-ux039-ewig", Name = "Ewig", Federation = "AUT",
+                StartDate = new DateOnly(2007, 12, 26), EndDate = new DateOnly(2026, 12, 10), Lat = 47.8, Lon = 13.04,
+            },
+            new TournamentDirectoryEntry
+            {
+                PublicId = "it-ux039-lang", ChessResultsId = "it-ux039-lang", Name = "Lang ohne Termine", Federation = "AUT",
+                StartDate = new DateOnly(2026, 9, 1), EndDate = new DateOnly(2027, 10, 15), Lat = 47.8, Lon = 13.04,
+            });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var svc = Get<TournamentDirectoryQueryService>();
+        var window = new DirectorySearchQuery
+        {
+            Federation = "AUT", From = new DateOnly(2026, 10, 1), To = new DateOnly(2026, 12, 31), PageSize = 1,
+        };
+
+        var first = await svc.SearchAsync(window);
+        Assert.Equal(2, first.Total);
+        Assert.Equal("it-ux039-open", Assert.Single(first.Items).Entry.PublicId);
+        var second = await svc.SearchAsync(window with { Page = 2 });
+        var ongoing = Assert.Single(second.Items);
+        Assert.Equal("it-ux039-liga", ongoing.Entry.PublicId);
+        Assert.True(ongoing.Ongoing);
+
+        var all = await svc.SearchAsync(window with { PageSize = 50, IncludeImplausible = true });
+        Assert.Equal(["it-ux039-ewig", "it-ux039-lang"],
+            all.Items.Where(i => i.Implausible).Select(i => i.Entry.PublicId).Order());
+
+        var pins = await svc.MapPinsAsync(window, 47.0, 48.0, 12.0, 14.0);
+        Assert.Equal(["it-ux039-liga", "it-ux039-open"], pins.Items.Select(i => i.Entry.PublicId).Order());
+    }
+
+    /// <summary>
     /// Mehrere Foederationen/Bedenkzeiten aus einem Suchprofil landen als `Contains` einer Liste
     /// im Where. InMemory wertet das in C# aus und winkt es durch — hier muss MySQL es wirklich
     /// uebersetzen (IN-Liste; die Bedenkzeit ist ein Enum und geht als Zahl raus).

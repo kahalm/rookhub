@@ -48,6 +48,20 @@ public class DirectoryEntryDto
     public bool Ignored { get; set; }
 
     /// <summary>
+    /// Laeuft bereits: begann vor dem Beginn des abgefragten Zeitraums (<c>from</c> bzw. Monatserster)
+    /// und ragt hinein. Die Liste fuehrt solche Eintraege als eigenen Block NACH denen, die im
+    /// Zeitraum beginnen. In der Detailansicht (ohne Zeitraum) immer <c>false</c>.
+    /// </summary>
+    public bool Ongoing { get; set; }
+
+    /// <summary>
+    /// Unplausible Laufzeit — laenger als ein Jahr und ohne Spieltermine oder schon ueber ein Jahr
+    /// vor dem Zeitraum begonnen (meist ein Tippfehler der Quelle, etwa „2007-12-26 bis 2026-12-10").
+    /// Solche Eintraege kommen nur mit <c>includeImplausible=true</c> in die Antwort.
+    /// </summary>
+    public bool Implausible { get; set; }
+
+    /// <summary>
     /// Wie viele Gruppen desselben Turniers dieser Eintrag zusammenfasst (1 = einzelnes Turnier).
     /// chess-results fuehrt „Open Braunau 2026 A/B/C" als drei Zeilen; hier ist es eine.
     /// </summary>
@@ -94,7 +108,8 @@ public class DirectoryEntryDto
 
     public static DirectoryEntryDto FromEntity(
         TournamentDirectoryEntry e, double? distanceKm = null, bool subscribed = false,
-        IReadOnlyList<TournamentDirectoryEntry>? groups = null, bool ignored = false) => new()
+        IReadOnlyList<TournamentDirectoryEntry>? groups = null, bool ignored = false,
+        bool ongoing = false, bool implausible = false) => new()
     {
         Id = e.PublicId,
         ChessResultsId = e.ChessResultsId,
@@ -119,6 +134,8 @@ public class DirectoryEntryDto
         Cancelled = e.RemovedAt != null,
         Subscribed = subscribed,
         Ignored = ignored,
+        Ongoing = ongoing,
+        Implausible = implausible,
         Kind = e.Kind.ToString(),
         Sources = e.Sources
             .OrderBy(x => x.Kind)
@@ -364,6 +381,12 @@ public class DirectoryAudienceQuery
     /// unwiederbringlich weg, und niemand wuesste, was er einmal weggeklickt hat.
     /// </summary>
     public bool IncludeIgnored { get; set; }
+
+    /// <summary>
+    /// Auch Eintraege mit unplausibler Laufzeit zeigen (siehe <c>DirectoryEntryDto.Implausible</c>).
+    /// Vorgabe ist ausblenden — wie „Ligen ausblenden", nur umgekehrt voreingestellt.
+    /// </summary>
+    public bool IncludeImplausible { get; set; }
 }
 
 /// <summary>

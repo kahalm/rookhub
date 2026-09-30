@@ -84,7 +84,7 @@ public class TournamentDirectoryController : BaseApiController
             Items = result.Items
                 .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
                     i.Members.Any(m => m.ChessResultsId is not null && subscribed.Contains(m.ChessResultsId)), i.Members,
-                    ignored.Contains(i.Entry.PublicId)))
+                    ignored.Contains(i.Entry.PublicId), i.Ongoing, i.Implausible))
                 .ToList(),
             Total = result.Total,
             Truncated = result.Truncated,
@@ -129,7 +129,7 @@ public class TournamentDirectoryController : BaseApiController
             Items = pins
                 .Select(p => DirectoryEntryDto.FromEntity(p.Entry, null,
                     p.Members.Any(m => m.ChessResultsId is not null && pinSubscribed.Contains(m.ChessResultsId)),
-                    p.Members, pinIgnored.Contains(p.Entry.PublicId)))
+                    p.Members, pinIgnored.Contains(p.Entry.PublicId), p.Ongoing, p.Implausible))
                 .ToList(),
             Truncated = map.Truncated,
         });
@@ -179,7 +179,7 @@ public class TournamentDirectoryController : BaseApiController
         var tournaments = result.Items
             .Select(i => DirectoryEntryDto.FromEntity(i.Entry, i.DistanceKm,
                 i.Members.Any(m => m.ChessResultsId is not null && subscribed.Contains(m.ChessResultsId)), i.Members,
-                calendarIgnored.Contains(i.Entry.PublicId)))
+                calendarIgnored.Contains(i.Entry.PublicId), i.Ongoing, i.Implausible))
             .ToList();
 
         var days = new List<DirectoryCalendarDayDto>();
@@ -640,6 +640,7 @@ public class TournamentDirectoryController : BaseApiController
             AgeGroups = ageGroups,
             AdultsOnly = audience?.AdultsOnly ?? false,
             HideLeagues = audience?.HideLeagues ?? false,
+            IncludeImplausible = audience?.IncludeImplausible ?? false,
             Page = page,
             PageSize = pageSize,
         }, null);
