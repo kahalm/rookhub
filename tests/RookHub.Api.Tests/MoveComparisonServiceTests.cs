@@ -141,6 +141,51 @@ public class MoveComparisonServiceTests : IDisposable
         Assert.Equal(new[] { "O-O", "d3" }, dto.Candidates.Select(c => c.San));
     }
 
+    /// <summary>D1-002: Die Auftraege eines Vergleichs auf der Haus-Engine fehlen zwar in der Auftragsliste, sind per Id
+    /// aber mit PUT /api/analysis-jobs/{id} erreichbar. Der Tiefendeckel (<see cref="MoveComparisonService.HouseMaxDepth"/>)
+    /// darf dort nicht wieder aufgehen — Tiefe, Linien und Engine aendert nur ein Admin (Riegel aus A4-001).</summary>
+    [Fact]
+    public async Task HausEngine_AuftraegeDesVergleichs_TiefeLinienEngine_ohneAdminNichtAenderbar()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "haus", PasswordHash = "x", IsAdmin = true });
+        _db.LichessEngineCredentials.Add(new LichessEngineCredential
+        {
+            UserId = 1, EncryptedToken = _encryption.Encrypt("lip_haus"), BackgroundEngineIds = "eei_haus", ShareAsHouseEngine = true,
+        });
+        _db.AppUsers.Add(new AppUser { Id = 9, Username = "ohne", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        await _svc.CreateAsync(9, new CreateMoveComparisonRequest { Fen = START, Moves = ["e2e4", "d2d4"], Depth = 60, Lang = "de" });
+        var jobs = await _db.AnalysisJobs.AsNoTracking().OrderBy(j => j.Id).ToListAsync();
+        Assert.Equal(2, jobs.Count);
+        Assert.All(jobs, j =>
+        {
+            Assert.Equal(9, j.UserId);
+            Assert.Equal(1, j.EngineOwnerUserId);
+            Assert.Equal(MoveComparisonService.HouseMaxDepth, j.TargetDepth);
+        });
+
+        var id = jobs[0].Id;
+        await Assert.ThrowsAsync<ArgumentException>(() => _jobs.UpdateAsync(9, id, new UpdateAnalysisJobRequest { TargetDepth = 60 }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _jobs.UpdateAsync(9, id, new UpdateAnalysisJobRequest { MultiPv = 5 }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _jobs.UpdateAsync(9, id, new UpdateAnalysisJobRequest { EngineId = "eei_other" }));
+        var job = await _db.AnalysisJobs.AsNoTracking().SingleAsync(j => j.Id == id);
+        Assert.Equal(MoveComparisonService.HouseMaxDepth, job.TargetDepth);
+        Assert.Equal(MoveComparisonService.CandidateLines, job.MultiPv);
+        Assert.Equal("eei_haus", job.EngineId);
+    }
+
+    [Fact]
+    public async Task EigeneEngine_AuftraegeDesVergleichs_TiefeBleibtAenderbar()
+    {
+        var u = await UserWithEngineAsync();
+        await CreateAsync(u, START, "e2e4", "d2d4");
+        var job = await _db.AnalysisJobs.AsNoTracking().OrderBy(j => j.Id).FirstAsync();
+        Assert.Null(job.EngineOwnerUserId);
+        var dto = await _jobs.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { TargetDepth = 30 });
+        Assert.Equal(30, dto!.TargetDepth);
+    }
+
     // ── Ablauf ─────────────────────────────────────────────────────────────────────────────────────
 
     [Fact]
