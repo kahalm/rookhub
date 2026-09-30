@@ -397,7 +397,11 @@ public class CourseAuthoringService
             ? "9" + next.ToString(new string('0', Math.Max(1, width - 1)))
             : next.ToString(new string('0', width));
 
-    /// <summary>Kapitel umbenennen (leerer neuer Name = „ohne Kapitel"). Ziel darf nicht schon existieren.</summary>
+    /// <summary>Kapitel umbenennen (leerer neuer Name = „ohne Kapitel"). Ziel darf nicht schon existieren.
+    /// <para>Eine terminierte Ausgabe der Kalkulations-Serie (<see cref="CalcEdition"/>) hängt allein per
+    /// Kapitel-NAMEN am Buch und wird darum in derselben Speicherung mit umbenannt — sonst hielte die
+    /// Termin-Sperre den alten Namen fest, die umbenannte Woche wäre sofort für alle sichtbar und die
+    /// Ankündigung zeigte auf ein totes Kapitel. „Ohne Kapitel" kann keine Ausgabe tragen → 400.</para></summary>
     public async Task<int> RenameChapterAsync(int userId, int bookId, RenameCourseChapterDto dto, bool isAdmin,
         CancellationToken ct = default)
     {
@@ -413,6 +417,21 @@ public class CourseAuthoringService
 
         var affected = all.Where(bp => Normalize(bp.Chapter) == from).ToList();
         if (affected.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+
+        var edition = from == null ? null
+            : await _db.CalcEditions.FirstOrDefaultAsync(e => e.BookId == bookId && e.Chapter == from, ct);
+        if (edition != null)
+        {
+            if (to == null)
+                throw new ArgumentException("This chapter has a scheduled edition and needs a name.");
+            // Eigene Ausgabe ausnehmen: in MariaDB vergleicht die Spalte ohne Groß-/Kleinschreibung,
+            // eine reine Schreibweisen-Korrektur träfe sonst sich selbst.
+            if (await _db.CalcEditions.AnyAsync(e => e.BookId == bookId && e.Chapter == to && e.Id != edition.Id, ct))
+                throw new ArgumentException("An edition for that chapter name already exists.");
+            edition.Chapter = to;
+            edition.UpdatedAt = DateTime.UtcNow;
+        }
+
         foreach (var bp in affected) bp.Chapter = to;
         book.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
@@ -421,7 +440,9 @@ public class CourseAuthoringService
         return affected.Count;
     }
 
-    /// <summary>Löscht ein ganzes Kapitel = alle seine Linien (inkl. abhängiger Nutzerdaten).</summary>
+    /// <summary>Löscht ein ganzes Kapitel = alle seine Linien (inkl. abhängiger Nutzerdaten) — und eine
+    /// terminierte Ausgabe der Kalkulations-Serie zu diesem Kapitelnamen (samt „gesehen"-Vermerken per
+    /// Cascade), statt sie als Waise stehen und später ankündigen zu lassen.</summary>
     public async Task<int> DeleteChapterAsync(int userId, int bookId, string? chapter, bool isAdmin,
         CancellationToken ct = default)
     {
@@ -430,7 +451,10 @@ public class CourseAuthoringService
         var all = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).ToListAsync(ct);
         var doomed = all.Where(bp => Normalize(bp.Chapter) == wanted).ToList();
         if (doomed.Count == 0) throw new KeyNotFoundException("Chapter not found.");
-        await RemoveLinesAsync(bookId, doomed, ct);
+        if (wanted != null)
+            _db.CalcEditions.RemoveRange(
+                await _db.CalcEditions.Where(e => e.BookId == bookId && e.Chapter == wanted).ToListAsync(ct));
+        await RemoveLinesAsync(bookId, doomed, ct);   // speichert — Ausgabe und Linien in EINER Speicherung
         return doomed.Count;
     }
 

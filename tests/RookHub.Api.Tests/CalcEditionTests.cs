@@ -480,4 +480,97 @@ public class CalcEditionTests : IDisposable
         Assert.Equal(2, (await _authoring.GetChapterLinesAsync(ViewerId, bookId, "Woche A", isAdmin: false)).Count);
         Assert.Equal(2, (await _authoring.GetChapterLinesAsync(OwnerId, bookId, "Woche B", isAdmin: false)).Count);
     }
+
+    // ===== Kapitel umbenennen/löschen nimmt die Ausgabe mit (Codereview 2026-09-29, A7-003) =====
+
+    [Fact]
+    public async Task RenameChapter_WithEdition_WeekStaysHidden_EditionFollows()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
+
+        await _authoring.RenameChapterAsync(OwnerId, bookId,
+            new RenameCourseChapterDto { Chapter = "Woche B", NewName = "Woche B – Opfer" }, isAdmin: false);
+
+        Assert.Equal("Woche B – Opfer", (await _db.CalcEditions.SingleAsync()).Chapter);
+        var viewer = await _calc.GetBookAsync(ViewerId, bookId, isAdmin: false);
+        Assert.DoesNotContain(viewer.Positions, p => p.Chapter == "Woche B – Opfer");   // bleibt bis zum Termin gesperrt
+        Assert.DoesNotContain((await _calc.GetPublicBookAsync(bookId)).Positions, p => p.Chapter == "Woche B – Opfer");
+        var owner = await _calc.GetBookAsync(OwnerId, bookId, isAdmin: false);
+        Assert.Equal(2, owner.Positions.Count(p => p.Chapter == "Woche B – Opfer"));
+    }
+
+    [Fact]
+    public async Task RenameChapter_WithEdition_ToNoChapter_IsRejected()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
+            new RenameCourseChapterDto { Chapter = "Woche B", NewName = "  " }, isAdmin: false));
+
+        Assert.Equal(2, await _db.BookPuzzles.CountAsync(p => p.Chapter == "Woche B"));   // nichts verändert
+        Assert.Equal("Woche B", (await _db.CalcEditions.SingleAsync()).Chapter);
+    }
+
+    [Fact]
+    public async Task RenameChapter_TargetNameAlreadyHasEdition_IsRejected()
+    {
+        // Ausgabe für ein (noch) leeres Kapitel „Woche C" — Unique (BookId, Chapter) darf nicht platzen.
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche C", PublishAt = DateTime.UtcNow.AddDays(14) });
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
+            new RenameCourseChapterDto { Chapter = "Woche B", NewName = "Woche C" }, isAdmin: false));
+        Assert.Equal(2, await _db.BookPuzzles.CountAsync(p => p.Chapter == "Woche B"));
+    }
+
+    [Fact]
+    public async Task RenameChapter_WithoutEdition_Unchanged()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
+
+        Assert.Equal(2, await _authoring.RenameChapterAsync(OwnerId, bookId,
+            new RenameCourseChapterDto { Chapter = "Woche A", NewName = "Woche A neu" }, isAdmin: false));
+        Assert.Equal("Woche B", (await _db.CalcEditions.SingleAsync()).Chapter);
+    }
+
+    [Fact]
+    public async Task DeleteChapter_RemovesEdition_NoAnnouncement()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", PublishAt = DateTime.UtcNow.AddDays(7) });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+
+        await _authoring.DeleteChapterAsync(OwnerId, bookId, "Woche B", isAdmin: false);
+
+        Assert.Equal("Woche A", (await _db.CalcEditions.SingleAsync()).Chapter);   // nur die Ausgabe des Kapitels
+        Assert.Equal(0, await Announcer().RunOnceAsync());
+        Assert.Equal(0, await _db.Notifications.CountAsync());
+    }
+
+    [Fact]
+    public async Task Announce_OrphanEdition_SkippedUntilChapterHasPositions()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche C", PublishAt = DateTime.UtcNow.AddMinutes(-1) });
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+
+        Assert.Equal(0, await Announcer().RunOnceAsync());                     // Kapitel ohne Stellungen → keine Ankündigung
+        Assert.Equal(0, await _db.Notifications.CountAsync());
+        Assert.Null((await _db.CalcEditions.SingleAsync()).PublishAnnouncedAt); // … und nicht als erledigt markiert
+
+        _db.BookPuzzles.Add(new BookPuzzle
+        {
+            LineId = "noel:005", BookFileName = "noel.pgn", BookId = bookId, Round = "005",
+            Fen = "8/8/8/8/8/8/8/8 w - - 0 1", Moves = "", Chapter = "Woche C", IsInfoOnly = true,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(1, await Announcer().RunOnceAsync());                     // jetzt gibt es die Woche
+        Assert.Equal(ViewerId, (await _db.Notifications.SingleAsync()).UserId);
+    }
 }
