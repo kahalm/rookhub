@@ -561,6 +561,56 @@ public class DeploymentConfigTests
         Assert.True(apiBytes >= 3L * 15 * 1024 * 1024, "drei Fotos zu je 15 MB sollen durchgehen");
     }
 
+    /// <summary>
+    /// F8-002: die Kachel-Weiterleitung an OSM war anonym, ungedrosselt und auf allen vier Seiten offen, und sie nahm
+    /// jedes z (zwei Stellen) und x/y (sieben Stellen) an. Jeder Cache-Fehlgriff geht unter unserem User-Agent zu OSM —
+    /// ein Massenabruf liesse OSM uns sperren, und die Turnierkarte bliebe fuer alle schwarz.
+    /// </summary>
+    [Fact]
+    public void TileProxy_IsThrottled_BoundedToTheMapsZoom_AndOnlyOnTheTournamentSite()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location ~ ""(?<re>\^/tiles/[^""]+)"" \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "Kachel-Location in nginx.conf nicht gefunden");
+        var body = loc.Groups["body"].Value;
+
+        // Nur, was die Karte (maxZoom 18) je anfragt; x/y < 2^18 hat hoechstens sechs Stellen.
+        var path = new Regex(loc.Groups["re"].Value);
+        foreach (var ok in new[] { "/tiles/0/0/0.png", "/tiles/5/17/11.png", "/tiles/10/555/360.png", "/tiles/18/262143/262143.png" })
+            Assert.True(path.IsMatch(ok), $"Kachel der Karte abgewiesen: {ok}");
+        foreach (var junk in new[] { "/tiles/19/1/1.png", "/tiles/20/1/1.png", "/tiles/99/1/1.png", "/tiles/1/9999999/9999999.png", "/tiles/5/17/11.jpg" })
+            Assert.False(path.IsMatch(junk), $"Unsinnige Kachel wuerde an OSM weitergereicht: {junk}");
+        Assert.Contains("proxy_pass https://$osm_host/$tile_z/$tile_x/$tile_y.png;", body);
+
+        // Gedrosselt je Betrachter (X-Real-IP vom vorgelagerten Proxy, sonst die Verbindung) und insgesamt.
+        Assert.Matches(@"limit_req zone=osm_tiles_client burst=\d+ nodelay;", body);
+        Assert.Matches(@"limit_req zone=osm_tiles_all burst=\d+ nodelay;", body);
+        Assert.Contains("limit_req_status 429;", body);
+        Assert.Matches(@"limit_req_zone \$rookhub_tile_client zone=osm_tiles_client:\d+m rate=\d+r/s;", nginx);
+        Assert.Matches(@"limit_req_zone \$server_name zone=osm_tiles_all:\d+m rate=\d+r/s;", nginx);
+        var client = Regex.Match(nginx, @"map \$http_x_real_ip \$rookhub_tile_client \{(?<body>[^}]*)\}");
+        Assert.True(client.Success, "map fuer den Drossel-Schluessel fehlt");
+        Assert.Contains("default $http_x_real_ip;", client.Groups["body"].Value);
+        Assert.Contains("\"\"      $binary_remote_addr;", client.Groups["body"].Value);
+
+        // Nur die Turnierseite braucht Kacheln: die drei anderen Seiten (am Host erkannt) antworten 404, unbekannte
+        // Hosts (Container-IP, localhost) bleiben offen.
+        Assert.Contains("if ($rookhub_tiles_off) { return 404; }", body);
+        var off = Regex.Match(nginx, @"map \$host \$rookhub_tiles_off \{(?<body>[^}]*)\}");
+        Assert.True(off.Success, "map $host $rookhub_tiles_off fehlt");
+        Assert.Contains("default 0;", off.Groups["body"].Value);
+        var switches = Regex.Matches(off.Groups["body"].Value, @"~\*(?<re>\S+)\s+1;")
+            .Select(m => new Regex(m.Groups["re"].Value, RegexOptions.IgnoreCase)).ToList();
+        Assert.NotEmpty(switches);
+        bool Off(string host) => switches.Any(r => r.IsMatch(host));
+        foreach (var other in new[] { "rookhub.oberschmid.homes", "rookhub-dev.oberschmid.homes", "kidhub.oberschmid.homes",
+                     "kidhub-dev.oberschmid.homes", "leaguehub.oberschmid.homes", "leaguehub-dev.oberschmid.homes" })
+            Assert.True(Off(other), $"Kacheln auf {other} noch offen");
+        foreach (var tournament in new[] { "tournament.oberschmid.homes", "turnier.oberschmid.homes", "turnier-dev.oberschmid.homes",
+                     "localhost", "172.18.0.5" })
+            Assert.False(Off(tournament), $"Kacheln auf {tournament} gesperrt");
+    }
+
     [Fact]
     public void RateLimitScale_IsRaisedOnlyInTheE2eStack()
     {
