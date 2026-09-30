@@ -87,9 +87,14 @@ import { OPERATOR } from '../../../environments/operator';
             <li>{{ 'legal.privacy.thirdLogging' | translate }}</li>
             <li>{{ 'legal.privacy.thirdHosting' | translate }}</li>
             <li>{{ 'legal.privacy.thirdAnthropic' | translate }}</li>
+            <li>{{ 'legal.privacy.thirdTextLlm' | translate }}</li>
           </ul>
 
-          <!-- Formular-Fotos gehen an Anthropic (USA) — auch anonym ueber LeagueHub-Teilen-Links (Codereview A6-008). -->
+          <!-- Formular-Fotos gehen an Anthropic (USA) — auch anonym ueber LeagueHub-Teilen-Links (Codereview A6-008).
+               Nacherzaehlung/Erklaerungen/Roast verlangen IClaudeJsonClient.IsLocal (nie Anthropic), laufen aber auf dem
+               DGX Spark eines anderen Betreibers, erreicht ueber das Internet (TextLlm/Embedding) — also KEIN „bleibt bei uns“.
+               ENTWURF (Betreiber): den Betreiber dieses Servers namentlich als Empfaenger nennen und die Rolle
+               (Auftragsverarbeitung) klaeren; bis dahin nennt der Text ihn nur als Empfaenger-Kategorie. -->
           <h4>{{ 'legal.privacy.aiTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.aiScoresheet' | translate }}</p>
           <p>{{ 'legal.privacy.aiLocal' | translate }}</p>

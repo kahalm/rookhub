@@ -78,6 +78,8 @@ describe('PrivacyComponent', () => {
     expect(el.textContent).toContain('legal.privacy.aiScoresheet');
     expect(el.textContent).toContain('legal.privacy.thirdAnthropic');
     expect(el.textContent).toContain('legal.privacy.dataScoresheet');
+    expect(el.textContent).toContain('legal.privacy.aiLocal');
+    expect(el.textContent).toContain('legal.privacy.thirdTextLlm');
   });
 });
 
@@ -101,6 +103,14 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(t['scoresheet']['help']).toContain('Anthropic');
       // „eigene Hardware" haengt an der Konfiguration (TextLlm), der Hilfetext der Kurs-Uebersetzung bleibt neutral.
       expect(t['courses']['translations']['help']).not.toMatch(/eigenen Hardware|own hardware|vlastitom hardveru|saját hardverünkön/);
+      // Nacherzaehlung/Erklaerungen/Roast: nie Anthropic, aber auf dem DGX Spark eines anderen Betreibers — keine Zusage
+      // „bleibt bei uns“, und der Server steht als Empfaenger in der Liste (Nacharbeit A6-008).
+      expect(p['aiLocal']).toContain('Anthropic');
+      expect(p['aiLocal']).toContain('DGX Spark');
+      expect(p['aiLocal']).not.toMatch(/verlassen keine Daten|eigenen Hardware|no data leaves|own hardware|ne napuštaju|vlastitom hardveru|nem hagyja el|saját hardverünkön/);
+      expect(p['thirdTextLlm']).toContain('DGX Spark');
+      // LeagueHub: Foto geht erst beim Uebernehmen/Verwerfen, nicht schon „nach der Korrektur“.
+      expect(p['aiScoresheet']).not.toMatch(/nach der Korrektur verworfen|discarded after the correction|odbacuje nakon ispravka|javítás után elvetjük/);
     });
 
     it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {
