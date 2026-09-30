@@ -10,6 +10,15 @@ import { adminGuard } from '@rh/core/admin.guard';
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('@rh/features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('@rh/features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
+  // Was die geteilte Anmeldemaske und die Rechtsseiten verlinken. Ohne diese Wege fiel jeder Link
+  // auf '**' → Kalender → authGuard → zurueck auf /login: der Passwort-Reset war von hier aus
+  // unmoeglich, die Datenschutzerklaerung unerreichbar. Ohne authGuard — sie gelten auch abgemeldet.
+  { path: 'forgot-password', loadComponent: () => import('@rh/features/auth/forgot-password.component').then(m => m.ForgotPasswordComponent) },
+  { path: 'reset-password', loadComponent: () => import('@rh/features/auth/reset-password.component').then(m => m.ResetPasswordComponent) },
+  // Die Turnierseite nimmt die Vorgabe von LEGAL_SITE (mit Impressum), anders als KidHub.
+  { path: 'privacy', loadComponent: () => import('@rh/features/legal/privacy.component').then(m => m.PrivacyComponent) },
+  { path: 'impressum', loadComponent: () => import('@rh/features/legal/impressum.component').then(m => m.ImpressumComponent) },
+  { path: 'account-deletion', loadComponent: () => import('@rh/features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
 
   { path: 'tournaments', loadComponent: () => import('./features/tournaments/tournament-list.component').then(m => m.TournamentListComponent), canActivate: [authGuard] },
   // Literal vor Parameter: /tournaments/calendar darf nicht als Turnier-Id gelesen werden.
