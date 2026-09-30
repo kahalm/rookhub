@@ -73,14 +73,14 @@ public class LeagueController : BaseApiController
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> AddAccount(string fide, [FromBody] LeagueOnlineAccountService.Input req,
         [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        AccountResult(await accounts.CreateAsync(fide, req ?? new(null, null, null, null), ct));
+        await AccountResultAsync(await accounts.CreateAsync(fide, req ?? new(null, null, null, null), ct), accounts, ct);
 
     /// <summary>Ändern — fehlende Felder bleiben; ein anderer Name/eine andere Seite holt die Partien neu.</summary>
     [HttpPut("accounts/{id:int}")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> UpdateAccount(int id, [FromBody] LeagueOnlineAccountService.Input req,
         [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        AccountResult(await accounts.UpdateAsync(id, req ?? new(null, null, null, null), ct));
+        await AccountResultAsync(await accounts.UpdateAsync(id, req ?? new(null, null, null, null), ct), accounts, ct);
 
     [HttpDelete("accounts/{id:int}")]
     [HasPermission(Permissions.LeagueManage)]
@@ -91,7 +91,7 @@ public class LeagueController : BaseApiController
     [HttpPost("accounts/{id:int}/sync")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> SyncAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(LeagueOnlineAccountService.ToJson(a, full: true)) : NotFound();
+        await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(await accounts.JsonAsync(a, ct)) : NotFound();
 
     // ---- Konto-Vorschläge (0.607.0) ------------------------------------------------------------
 
@@ -106,7 +106,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> PlayerSuggestions(string fide, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
         Ok(await accounts.SuggestionsAsync(fide, ct));
 
-    /// <summary>Für diesen Spieler jetzt suchen → <c>{ items, found, skipped }</c> (<c>skipped</c> = „minderjährig" /
+    /// <summary>Für diesen Spieler jetzt suchen → <c>{ items, found, skipped }</c> (<c>skipped</c> bleibt seit 0.610.0 leer; früher „minderjährig" /
     /// „Jahrgang unbekannt"); 404 unbekannter Spieler, 503 <c>rateLimited</c>/<c>unreachable</c>.</summary>
     [HttpPost("player/{fide}/suggestions/scan")]
     [HasPermission(Permissions.LeagueManage)]
@@ -140,16 +140,17 @@ public class LeagueController : BaseApiController
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> AcceptSuggestion(int id, [FromBody] AcceptRequest? req, [FromServices] LeagueOnlineAccountService accounts,
         CancellationToken ct) =>
-        AccountResult(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct));
+        await AccountResultAsync(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct), accounts, ct);
 
     [HttpPost("suggestions/{id:int}/reject")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> RejectSuggestion(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
         await accounts.RejectSuggestionAsync(id, ct) ? NoContent() : NotFound();
 
-    private IActionResult AccountResult((Models.LeagueOnlineAccount? Account, string? Reason) r) => r switch
+    private async Task<IActionResult> AccountResultAsync((Models.LeagueOnlineAccount? Account, string? Reason) r,
+        LeagueOnlineAccountService accounts, CancellationToken ct) => r switch
     {
-        ({ } a, _) => Ok(LeagueOnlineAccountService.ToJson(a, full: true)),
+        ({ } a, _) => Ok(await accounts.JsonAsync(a, ct)),
         (_, "notFound" or "unknownPlayer") => NotFound(new { reason = r.Reason }),
         _ => BadRequest(new { reason = r.Reason }),
     };

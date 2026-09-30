@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { AccountSuggestion } from '../core/league.models';
-import { accountErrorText, siteLabel } from '../core/account-format';
+import { HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
 
 /** „zuletzt aktiv 09/2026" — genauer braucht es niemand, um ein verwaistes Konto zu erkennen. */
 export function lastActiveText(iso: string | null): string | null {
@@ -30,7 +30,11 @@ export function suggestionFacts(s: AccountSuggestion): string {
       @for (s of items(); track s.id) {
         <li [class.done]="gone().has(s.id)">
           <div class="acc-row">
-            <a [href]="s.url" target="_blank" rel="noopener">{{ label(s.site) }}: {{ s.user }}</a>
+            @if (s.hidden) {
+              <span class="acc-hidden" title="Konten Minderjähriger zeigt LeagueHub niemandem — entscheide nach den Hinweisen">{{ hiddenLabel }}</span>
+            } @else {
+              <a [href]="s.url" target="_blank" rel="noopener">{{ label(s.site) }}: {{ s.user }}</a>
+            }
             @if (showPlayer() && s.name) {
               <button type="button" class="btn-link sugg-player" (click)="openPlayer.emit(s.fide)">{{ s.name }}</button>
               @if (s.team) { <span class="muted small">{{ s.team }}</span> }
@@ -63,6 +67,7 @@ export class AccountSuggestionsComponent {
   private readonly api = inject(LeagueApiService);
   readonly label = siteLabel;
   readonly facts = suggestionFacts;
+  readonly hiddenLabel = HIDDEN_ACCOUNT;
   readonly busy = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   /** Erledigte bleiben mit einem Satz stehen, bis die Liste neu kommt — sonst springt die Liste unter dem Finger weg. */

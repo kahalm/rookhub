@@ -79,4 +79,16 @@ describe('AccountSuggestionsComponent', () => {
     (el().querySelector('.sugg-player') as HTMLButtonElement).click();
     expect(opened).toEqual(['222']);
   });
+
+  it('Vorschlag für einen Minderjährigen: ohne Konto, nur die Hinweise — übernehmen geht trotzdem (0.610.0)', async () => {
+    api.acceptSuggestion.and.resolveTo({ site: null, user: null, url: null, conf: 'wahrscheinlich', hidden: true });
+    fixture.componentRef.setInput('items', [S(4, { hidden: true, site: null, user: null, url: null })]);
+    fixture.detectChanges();
+    const row = el().querySelector('.sugg-list li')!;
+    expect(row.querySelector('a')).toBeNull();
+    expect(row.textContent).toContain('Online-Konto (verborgen – minderjährig)');
+    expect(row.querySelector('.sugg-evidence')?.textContent).toContain('Land Österreich');
+    await fixture.componentInstance.accept(S(4, { hidden: true }), false);
+    expect(api.acceptSuggestion).toHaveBeenCalledWith(4, false);
+  });
 });

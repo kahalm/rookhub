@@ -74,13 +74,17 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     public sealed record Input(string? Site, string? User, bool? Sure, string? Comment);
 
     /// <summary>Ein Konto als JSON der Spielerkarte. <paramref name="full"/> = mit Kommentar und Abrufstand (angemeldet);
-    /// über einen Teilen-Link nur das, was schon vorher sichtbar war.</summary>
-    public static JsonObject ToJson(LeagueOnlineAccount a, bool full)
+    /// über einen Teilen-Link nur das, was schon vorher sichtbar war. <paramref name="hidden"/> = Konto eines Minderjährigen
+    /// (<see cref="LeagueHiddenAccounts"/>): weder Seite noch Name, Adresse oder Kommentar — nur, DASS es eins gibt, und der
+    /// Stand des Abrufs.</summary>
+    public static JsonObject ToJson(LeagueOnlineAccount a, bool full, bool hidden = false)
     {
-        var o = new JsonObject { ["site"] = a.Site, ["user"] = a.UserName, ["url"] = a.Url, ["conf"] = a.Confidence };
+        var o = hidden
+            ? new JsonObject { ["hidden"] = true, ["site"] = null, ["user"] = null, ["url"] = null, ["conf"] = a.Confidence }
+            : new JsonObject { ["site"] = a.Site, ["user"] = a.UserName, ["url"] = a.Url, ["conf"] = a.Confidence };
         if (!full) return o;
         o["id"] = a.Id;
-        o["comment"] = a.Evidence;
+        o["comment"] = hidden ? null : a.Evidence;
         o["games"] = a.GameCount;
         o["syncedAt"] = a.SyncedAt is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null;
         o["error"] = a.SyncError;
@@ -184,15 +188,23 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 
     // ── Vorschläge der Konto-Suche (0.607.0) ────────────────────────────────────────────────────
 
-    /// <summary>Ein Vorschlag als JSON; <paramref name="names"/> = Name und Mannschaft je FIDE-ID (für die Übersicht).</summary>
-    public static JsonObject SuggestionJson(LeagueAccountSuggestion x, IReadOnlyDictionary<string, (string Name, string? Team)>? names = null)
+    /// <summary>Ein Vorschlag als JSON; <paramref name="names"/> = Name und Mannschaft je FIDE-ID (für die Übersicht).
+    /// <paramref name="hidden"/> = Minderjähriger: ohne Seite, Name, Adresse und Profilangaben — entschieden wird nach den Hinweisen.</summary>
+    public static JsonObject SuggestionJson(LeagueAccountSuggestion x, IReadOnlyDictionary<string, (string Name, string? Team)>? names = null,
+        bool hidden = false)
     {
-        var o = new JsonObject
-        {
-            ["id"] = x.Id, ["fide"] = x.FideId, ["site"] = x.Site, ["user"] = x.UserName, ["url"] = x.Url, ["score"] = x.Score,
-            ["evidence"] = x.Evidence, ["profileName"] = x.ProfileName, ["location"] = x.Location,
-            ["lastActive"] = x.LastActive is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
-        };
+        var o = hidden
+            ? new JsonObject
+            {
+                ["id"] = x.Id, ["fide"] = x.FideId, ["hidden"] = true, ["site"] = null, ["user"] = null, ["url"] = null, ["score"] = x.Score,
+                ["evidence"] = x.Evidence, ["profileName"] = null, ["location"] = null, ["lastActive"] = null,
+            }
+            : new JsonObject
+            {
+                ["id"] = x.Id, ["fide"] = x.FideId, ["site"] = x.Site, ["user"] = x.UserName, ["url"] = x.Url, ["score"] = x.Score,
+                ["evidence"] = x.Evidence, ["profileName"] = x.ProfileName, ["location"] = x.Location,
+                ["lastActive"] = x.LastActive is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
+            };
         if (names is not null && names.TryGetValue(x.FideId, out var n)) { o["name"] = n.Name; o["team"] = n.Team; }
         return o;
     }
@@ -218,7 +230,8 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
                             orderby t.Season descending
                             select new { p.FideId, p.Name, p.Team }).ToListAsync(ct))
             .GroupBy(x => x.FideId!).ToDictionary(g => g.Key, g => (g.First().Name, (string?)g.First().Team));
-        var res = new JsonObject { ["items"] = new JsonArray(list.Select(x => (JsonNode)SuggestionJson(x, names)).ToArray()) };
+        var hidden = await LeagueHiddenAccounts.FidesAsync(db, fides, ct);
+        var res = new JsonObject { ["items"] = new JsonArray(list.Select(x => (JsonNode)SuggestionJson(x, names, hidden.Contains(x.FideId))).ToArray()) };
         if (string.IsNullOrEmpty(fide))
         {
             var season = await db.LeagueTournaments.AsNoTracking().MaxAsync(t => (string?)t.Season, ct);
@@ -262,8 +275,11 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     /// erst nach dem nächsten „Daten aktualisieren".</summary>
     public async Task PatchViewsAsync(string fide, CancellationToken ct)
     {
-        var acc = new JsonArray((await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).OrderBy(a => a.Id).ToListAsync(ct))
-            .Select(a => (JsonNode)ToJson(a, full: false)).ToArray());
+        // Konten Minderjähriger stehen nie in der Meldeliste (die sieht jeder mit Leserecht und jeder Teilen-Link).
+        var hidden = (await LeagueHiddenAccounts.FidesAsync(db, new[] { fide }, ct)).Contains(fide);
+        var acc = new JsonArray(hidden ? Array.Empty<JsonNode>()
+            : (await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).OrderBy(a => a.Id).ToListAsync(ct))
+                .Select(a => (JsonNode)ToJson(a, full: false)).ToArray());
         foreach (var view in await db.LeagueViews.ToListAsync(ct))
         {
             if (!view.Json.Contains($"\"{fide}\"", StringComparison.Ordinal)) continue;
@@ -281,6 +297,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         }
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Ein Konto als JSON für die Antwort an den Verwalter — verborgen, wenn es einem Minderjährigen gehört.</summary>
+    public async Task<JsonObject> JsonAsync(LeagueOnlineAccount a, CancellationToken ct) =>
+        ToJson(a, full: true, hidden: (await LeagueHiddenAccounts.FidesAsync(db, new[] { a.FideId }, ct)).Contains(a.FideId));
 
     private async Task DeleteGamesAsync(int accountId, CancellationToken ct)
     {
@@ -301,5 +321,32 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     {
         var t = (c ?? "").Trim();
         return t.Length == 0 ? null : t.Length > MaxCommentLength ? t[..MaxCommentLength] : t;
+    }
+}
+
+/// <summary>
+/// Konten Minderjähriger (0.610.0, Wunsch 2026-09-30: „du linkst sie, aber zeigst niemandem den Namen/Account"): die
+/// Konto-Suche sucht auch sie, und ihre Partien kommen in den Eröffnungsbaum — aber Seite, Nutzername, Adresse, Profilangaben
+/// und Kommentar verlassen den Server nie (Karte, Meldeliste, Teilen-Links, Vorschläge). Verborgen ist, wessen Jahrgang laut
+/// Konto-Suche unter <see cref="LeagueAccountFinder.AdultAge"/> liegt — oder unbekannt ist (im Zweifel verborgen). Ohne Such-
+/// Eintrag (nie abgesucht) gilt ein Konto als sichtbar; die Suche erfasst jeden Spieler der laufenden Saison. Mit 18 wird es
+/// von selbst sichtbar.
+/// </summary>
+public static class LeagueHiddenAccounts
+{
+    public static bool Hides(int? birthYear, DateTime? now = null) =>
+        birthYear is not { } y || (now ?? DateTime.UtcNow).Year - y < LeagueAccountFinder.AdultAge;
+
+    /// <summary>Die FIDE-IDs aus <paramref name="fides"/> (<c>null</c> = alle), deren Konten verborgen bleiben.</summary>
+    public static async Task<HashSet<string>> FidesAsync(AppDbContext db, IEnumerable<string>? fides, CancellationToken ct)
+    {
+        var limit = DateTime.UtcNow.Year - LeagueAccountFinder.AdultAge;
+        var q = db.LeagueAccountScans.AsNoTracking().Where(s => s.BirthYear == null || s.BirthYear > limit);
+        if (fides is not null)
+        {
+            var list = fides.Distinct().ToList();
+            q = q.Where(s => list.Contains(s.FideId));
+        }
+        return (await q.Select(s => s.FideId).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
     }
 }

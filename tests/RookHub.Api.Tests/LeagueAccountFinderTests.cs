@@ -144,6 +144,7 @@ public class LeagueAccountFinderTests : IDisposable
     private sealed class FakeHttp(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
     {
         public readonly List<string> Urls = new();
+        public HttpResponseMessage Answer(HttpRequestMessage r) => answer(r);
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Urls.Add(request.Method + " " + request.RequestUri);
@@ -215,25 +216,61 @@ public class LeagueAccountFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Scan_SkipsMinors_AndRemovesTheirOpenSuggestions()
+    public void Hides_MinorsAndUnknownBirthYears()
+    {
+        var now = new DateTime(2026, 9, 30);
+        Assert.True(LeagueHiddenAccounts.Hides(null, now));
+        Assert.True(LeagueHiddenAccounts.Hides(2009, now));                                    // 17
+        Assert.False(LeagueHiddenAccounts.Hides(2008, now));                                   // 18
+    }
+
+    /// <summary>0.610.0 (Wunsch: „du linkst sie, aber zeigst niemandem den Namen/Account"): Minderjährige werden gesucht,
+    /// aber weder Vorschlag noch Konto noch Karte noch Meldeliste verraten Seite, Nutzernamen, Adresse oder Profilangaben.</summary>
+    [Fact]
+    public async Task Minors_AreSearched_ButNothingIdentifyingLeavesTheServer()
     {
         await SeedAsync();
-        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion { FideId = "222", Site = "lichess", UserName = "Alt", Url = "u", Evidence = "e" });
+        _db.LeagueViews.Add(new LeagueView { Tnr = 1, GeneratedAt = DateTime.UtcNow,
+            Json = """{"fixtures":{"Kufstein 1":{"1":{"roster":[{"n":"Muster, Max","fide":"222","acc":[]}]}}}}""" });
         await _db.SaveChangesAsync();
-        var http = World(year: DateTime.UtcNow.Year - 15);
-        var finder = Finder(http);
+        var finder = Finder(World(year: DateTime.UtcNow.Year - 15));
         var r = await finder.ScanAsync((await finder.PlayerAsync("222", default))!, default);
-        Assert.Equal((0, "minderjährig"), (r.Found, r.Skipped));
-        Assert.Empty(await _db.LeagueAccountSuggestions.ToListAsync());
-        Assert.Single(http.Urls);                                             // nur der Jahrgang
+        Assert.Equal((3, (string?)null), (r.Found, r.Skipped));
+        Assert.StartsWith("verborgen", (await _db.LeagueAccountScans.SingleAsync()).Note);
+
+        var svc = new LeagueOnlineAccountService(_db);
+        var overview = await svc.SuggestionsAsync(null, default);
+        var item = overview["items"]![0]!;
+        Assert.Equal((true, "Muster, Max"), (item["hidden"]!.GetValue<bool>(), item["name"]!.GetValue<string>()));
+        Assert.Null(item["user"]); Assert.Null(item["url"]); Assert.Null(item["site"]); Assert.Null(item["profileName"]);
+        Assert.False(string.IsNullOrEmpty(item["evidence"]!.GetValue<string>()));                // entschieden wird nach den Hinweisen
+
+        var first = await _db.LeagueAccountSuggestions.FirstAsync(x => x.UserName == "MaxMuster");
+        var (acc, _) = await svc.AcceptSuggestionAsync(first.Id, sure: true, default);
+        var json = await svc.JsonAsync(acc!, default);
+        Assert.Equal((true, (string?)null, (string?)null), (json["hidden"]!.GetValue<bool>(), (string?)json["user"], (string?)json["comment"]));
+
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var card = (await league.CardAsync("222", onlySure: false, default))!;
+        var shared = (await league.CardAsync("222", onlySure: true, default))!;
+        Assert.Single(card["accounts"]!.AsArray());
+        Assert.Empty(shared["accounts"]!.AsArray());                                              // über den Link nicht einmal, DASS es eins gibt
+        var view = (await _db.LeagueViews.AsNoTracking().SingleAsync()).Json;
+        // Nirgends der Nutzername — auch nicht in der Meldeliste.
+        foreach (var text in new[] { overview.ToJsonString(), json.ToJsonString(), card.ToJsonString(), shared.ToJsonString(), view })
+            foreach (var name in new[] { "MaxMuster", "Max_Muster", "Muster1987", "max_muster", "maxmuster" })
+                Assert.DoesNotContain(name, text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task Scan_WithoutBirthYear_SearchesNothing_AndRateLimitThrows()
+    public async Task Scan_WithoutBirthYear_SearchesButHides_AndRateLimitThrows()
     {
         await SeedAsync();
-        var noYear = Finder(new FakeHttp(_ => Status(HttpStatusCode.NotFound)));
-        Assert.Equal("Jahrgang unbekannt", (await noYear.ScanAsync(Max, default)).Skipped);
+        var world = World();
+        var noYear = Finder(new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/fide/player/") ? Status(HttpStatusCode.NotFound)
+            : world.Answer(req)));
+        Assert.Equal(3, (await noYear.ScanAsync(Max, default)).Found);
+        Assert.Contains("222", await LeagueHiddenAccounts.FidesAsync(_db, null, default));
 
         var limited = Finder(new FakeHttp(_ => Status(HttpStatusCode.TooManyRequests)));
         await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => limited.ScanAsync(Max with { Fide = "333" }, default));

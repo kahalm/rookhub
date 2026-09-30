@@ -1353,7 +1353,8 @@ Rollenverwaltung an).
   `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
   Eröffnungsprofil als JSON + alle Partien als PGN), `LeagueOnlineAccounts` (Online-Konten je FIDE-ID — aus dem Import NUR
   selbst offengelegte: Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen; seit 0.605.0
-  zusätzlich von Verwaltern gepflegte, siehe „Online-Konten + Online-Partien"), `LeagueOnlineGames` (deren geholte Partien),
+  zusätzlich von Verwaltern gepflegte, seit 0.610.0 auch Minderjähriger — deren Konto bleibt verborgen, siehe „Online-Konten +
+  Online-Partien"), `LeagueOnlineGames` (deren geholte Partien),
   `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab — frühestens 7 Tage nach dem Anlegen; ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
   (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
@@ -1689,11 +1690,18 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 250 darunter bis 450 darüber, ist das ein Hinweis
   (+1). Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
   mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
-* **Fassung** `LeagueAccountFinder.CurrentVersion` (2 seit 0.609.0) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (3 seit 0.610.0) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
   fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
   Urteil ändert, erhöht die Zahl.
-* **Nie Minderjährige**: Jahrgang und Föderation über Lichess `/api/fide/player/{id}`, gemerkt in `LeagueAccountScans`; unter 18
-  oder ohne Jahrgang wird nicht gesucht (offene Vorschläge des Spielers werden entfernt).
+* **Minderjährige: gesucht, aber VERBORGEN** (0.610.0, Wunsch „du linkst sie, aber zeigst niemandem den Namen/Account"; bis
+  0.609.0 gar nicht gesucht): Jahrgang und Föderation über Lichess `/api/fide/player/{id}`, gemerkt in `LeagueAccountScans`. Unter
+  18 ODER ohne Jahrgang (im Zweifel verborgen) gilt `LeagueHiddenAccounts`: Seite, Nutzername, Adresse, Profilangaben und
+  Kommentar verlassen den Server nie — Vorschläge (`hidden: true`, nur Hinweise + Spieler), Konto-JSON (`JsonAsync`/`ToJson(…,
+  hidden)`), Karte (angemeldet nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts), Meldeliste der Ansichten
+  (`RebuildViewsAsync`, `PatchViewsAsync`: leer). Die Partien zählen nur im Eröffnungsbaum (Züge, keine Gegner/Links). Mit 18 wird
+  das Konto von selbst sichtbar. Ohne Such-Eintrag (nie abgesucht) gilt ein Konto als sichtbar — die Suche erfasst jeden Spieler
+  der laufenden Saison. In DB und Server-Log steht die Verknüpfung weiter (nur Betreiber). Testfall
+  `Minors_AreSearched_ButNothingIdentifyingLeavesTheServer` prüft ALLE Ausgaben auf den Nutzernamen.
 * **Nicht wieder vorschlagen**: verworfene Vorschläge bleiben als `Rejected` stehen; ein ENTFERNTES Konto wird als verworfener
   Vorschlag gemerkt; ein angelegtes Konto erledigt den passenden Vorschlag (Vergleich ohne Groß/klein).
 * **Takt**: im `LeagueOnlineSyncScheduler` nach jedem Abruf-Durchgang, je Runde höchstens 5 min (`SearchBudget`), 1 s Pause je
@@ -1706,7 +1714,7 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
 |---------|----------|-------|-------|
 | GET | `/api/league/suggestions` | manage | Offene Vorschläge (stärkste zuerst, mit Name/Mannschaft) `{ items, scanned, total }` |
 | GET | `/api/league/player/{fide}/suggestions` | manage | Offene Vorschläge eines Spielers `{ items }` |
-| POST | `/api/league/player/{fide}/suggestions/scan` | manage | Jetzt suchen → `{ items, found, skipped }` (`skipped` „minderjährig"/„Jahrgang unbekannt"); 503 `rateLimited`/`unreachable` |
+| POST | `/api/league/player/{fide}/suggestions/scan` | manage | Jetzt suchen → `{ items, found, skipped }` (`skipped` seit 0.610.0 immer leer); 503 `rateLimited`/`unreachable` |
 | POST | `/api/league/suggestions/{id}/accept` | manage | `{ sure }` → das Konto (wie Anlegen); 404 erledigt/unbekannt |
 | POST | `/api/league/suggestions/{id}/reject` | manage | Verwerfen → 204 |
 
@@ -3760,7 +3768,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
 | LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?; Index (Status, Score) |
-| LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess), ScannedAt, Note? („minderjährig", „Jahrgang unbekannt", Fehler), Found, Version (Fassung der Regeln, 0.609.0) |
+| LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess — unter 18 oder unbekannt = Konten verborgen, `LeagueHiddenAccounts`), ScannedAt, Note? („verborgen …", Fehler), Found, Version (Fassung der Regeln, 0.609.0) |
 | LeagueBroadcasts | Lichess-Übertragungen, deren Partien in die Karten kommen (0.608.0) | TourId (PK, ≤12), Name, Location?, StartsAt?/EndsAt?, Manual (per Link), FoundAt, ImportedAt?, Finished (Index), Games (mit Ligaspielern), Error? |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |

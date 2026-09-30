@@ -21,17 +21,19 @@ namespace RookHub.Api.Services.League;
 ///   noch die Föderation des Spielers ist.</item>
 /// <item>Hinweise (<see cref="Judge"/>): Klarname im Profil, FIDE-Wertung im Profil nahe der Liste, Tiroler Ort, Land. Ein
 ///   Nutzername aus dem Namen braucht mindestens EINEN Hinweis, einer aus der Suche einen starken.</item>
-/// <item>Minderjährige (Jahrgang laut FIDE, über Lichess nachgeschlagen) werden NIE gesucht; ohne Jahrgang auch nicht.</item>
+/// <item>Minderjährige (Jahrgang laut FIDE, über Lichess nachgeschlagen) werden seit 0.610.0 auch gesucht, ihre Konten bleiben
+///   aber verborgen (<see cref="LeagueHiddenAccounts"/>).</item>
 /// </list>
 /// </summary>
 public sealed partial class LeagueAccountFinder
 {
     /// <summary>
     /// Fassung der Regeln. Wer an Kandidaten oder Urteil dreht, erhöht sie — dann sucht der Hintergrund jeden Spieler einmal neu,
-    /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0).
+    /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0),
+    /// 3 = auch Minderjährige, verborgen (0.610.0).
     /// </summary>
-    public const int CurrentVersion = 2;
-    /// <summary>Jünger wird nicht gesucht.</summary>
+    public const int CurrentVersion = 3;
+    /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
     public const int RescanDays = 90;
@@ -354,19 +356,9 @@ public sealed partial class LeagueAccountFinder
         }
         var fideFed = scan.Federation;
         scan.ScannedAt = DateTime.UtcNow;
-        string? skipped = scan.BirthYear is not { } year ? "Jahrgang unbekannt"
-            : DateTime.UtcNow.Year - year < AdultAge ? "minderjährig" : null;
-        if (skipped is not null)
-        {
-            // Nie Vorschläge für Minderjährige — auch keine von früher (Jahrgang nachgetragen).
-            var stale = await _db.LeagueAccountSuggestions.Where(s => s.FideId == p.Fide && s.Status == LeagueSuggestionStatus.Open).ToListAsync(ct);
-            _db.LeagueAccountSuggestions.RemoveRange(stale);
-            scan.Note = skipped;
-            scan.Found = 0;
-            scan.Version = CurrentVersion;
-            await _db.SaveChangesAsync(ct);
-            return new ScanResult(0, skipped);
-        }
+        // Minderjährige (oder Jahrgang unbekannt) werden seit 0.610.0 AUCH gesucht — ihre Konten bleiben aber verborgen
+        // (LeagueHiddenAccounts): niemand sieht Seite, Name oder Adresse, die Partien zählen nur im Eröffnungsbaum.
+        var hiddenNote = LeagueHiddenAccounts.Hides(scan.BirthYear) ? "verborgen (minderjährig oder Jahrgang unbekannt)" : null;
 
         var derived = Variants(p.Name);
         var searched = new List<string>();
@@ -435,7 +427,7 @@ public sealed partial class LeagueAccountFinder
         }
         // Offene Vorschläge, die diese Suche nicht mehr trägt (geänderte Regel, geändertes Profil), fallen weg; verworfene bleiben.
         _db.LeagueAccountSuggestions.RemoveRange(known.Where(k => k.Status == LeagueSuggestionStatus.Open && !confirmed.Contains(Key(k.Site, k.UserName))));
-        scan.Note = null;
+        scan.Note = hiddenNote;
         scan.Found = found;
         scan.Version = CurrentVersion;
         await _db.SaveChangesAsync(ct);

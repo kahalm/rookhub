@@ -4,7 +4,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { Account, AccountInput, AccountSuggestion, SuggestionList } from '../core/league.models';
 import { AccountSuggestionsComponent } from './account-suggestions.component';
-import { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
+import { ACCOUNT_SITES, HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
 
 export { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
 
@@ -39,16 +39,20 @@ export function accountStatus(a: Account): string | null {
   template: `
     @if (accounts().length) {
       <ul class="acc-list">
-        @for (a of accounts(); track a.id ?? a.url) {
+        @for (a of accounts(); track a.id ?? a.url ?? $index) {
           <li>
             @if (editing() === a.id) {
               <ng-container *ngTemplateOutlet="form" />
             } @else {
               <div class="acc-row">
-                <a [href]="a.url" target="_blank" rel="noopener">{{ label(a.site) }}: {{ a.user }}</a>
+                @if (a.hidden) {
+                  <span class="acc-hidden" title="Konten Minderjähriger zeigt LeagueHub niemandem — ihre Partien zählen nur im Eröffnungsbaum">{{ hiddenLabel }}</span>
+                } @else {
+                  <a [href]="a.url" target="_blank" rel="noopener">{{ label(a.site) }}: {{ a.user }}</a>
+                }
                 <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? 'gesichert' : 'unsicher' }}</span>
                 @if (canEdit() && a.id !== undefined) {
-                  <button type="button" class="btn-link" [disabled]="busy()" (click)="startEdit(a)">Bearbeiten</button>
+                  @if (!a.hidden) { <button type="button" class="btn-link" [disabled]="busy()" (click)="startEdit(a)">Bearbeiten</button> }
                   <button type="button" class="btn-link" [disabled]="busy()" (click)="remove(a)">Entfernen</button>
                 }
               </div>
@@ -123,6 +127,7 @@ export class OnlineAccountsComponent {
   private readonly api = inject(LeagueApiService);
   readonly sites = ACCOUNT_SITES;
   readonly label = siteLabel;
+  readonly hiddenLabel = HIDDEN_ACCOUNT;
   readonly status = accountStatus;
 
   readonly adding = signal(false);
@@ -184,7 +189,7 @@ export class OnlineAccountsComponent {
   }
 
   startEdit(a: Account): void {
-    this.fill(a.site, a.user, a.conf === 'sicher', a.comment ?? '');
+    this.fill(a.site ?? 'lichess', a.user ?? '', a.conf === 'sicher', a.comment ?? '');
     this.adding.set(false);
     this.editing.set(a.id ?? null);
   }
@@ -206,7 +211,8 @@ export class OnlineAccountsComponent {
   }
 
   async remove(a: Account): Promise<void> {
-    if (a.id === undefined || !confirm(`${siteLabel(a.site)}-Konto „${a.user}" entfernen? Die geholten Partien gehen mit.`)) return;
+    const what = a.hidden ? 'Das verborgene Online-Konto' : `${siteLabel(a.site)}-Konto „${a.user}“`;
+    if (a.id === undefined || !confirm(`${what} entfernen? Die geholten Partien gehen mit.`)) return;
     await this.run(() => this.api.deleteAccount(a.id!));
   }
 

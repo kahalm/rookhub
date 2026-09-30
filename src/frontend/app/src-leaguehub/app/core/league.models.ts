@@ -25,13 +25,16 @@ export interface Board {
 
 /** Ein Online-Konto. `conf` „sicher" = gesichert, sonst unsicher. Angemeldet kommen Kommentar und Abrufstand mit (0.605.0). */
 export interface Account {
-  site: string; user: string; url: string; conf: string;
+  /** Bei einem Minderjährigen (`hidden`) leer — der Server verrät Seite, Name und Adresse nicht (0.610.0). */
+  site: string | null; user: string | null; url: string | null; conf: string;
+  hidden?: boolean;
   id?: number; comment?: string | null; games?: number; syncedAt?: string | null; error?: string | null;
 }
 
 /** Ein Konto, das die Konto-Suche gefunden hat (0.607.0) — ein Verwalter übernimmt oder verwirft es. */
 export interface AccountSuggestion {
-  id: number; fide: string; site: string; user: string; url: string;
+  /** Bei einem Minderjährigen (`hidden`) leer — entschieden wird nach den Hinweisen (0.610.0). */
+  id: number; fide: string; site: string | null; user: string | null; url: string | null; hidden?: boolean;
   /** Wie stark die Hinweise sind (sortiert die Liste). */
   score: number;
   /** Die Hinweise als Satz („Nutzername aus dem Namen; Klarname im Profil …"). */

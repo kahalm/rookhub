@@ -163,4 +163,21 @@ describe('OnlineAccountsComponent', () => {
     expect(fixture.componentInstance.scanNote()).toContain('bremst gerade');
     expect(fixture.componentInstance.scanning()).toBeFalse();
   });
+
+  it('Konto eines Minderjährigen: weder Seite noch Name noch Link, nur Entfernen (0.610.0)', async () => {
+    const hidden: Account = { id: 9, site: null, user: null, url: null, conf: 'wahrscheinlich', hidden: true, comment: null, games: 40,
+      syncedAt: '2026-09-30T08:00:00Z', error: null };
+    render([hidden], true);
+    const row = el().querySelector('.acc-list li')!;
+    expect(row.querySelector('a')).toBeNull();
+    expect(row.textContent).toContain('Online-Konto (verborgen – minderjährig)');
+    expect(row.textContent).toContain('40 Online-Partien geholt');
+    expect(button('Bearbeiten')).toBeUndefined();
+    spyOn(window, 'confirm').and.returnValue(true);
+    api.deleteAccount.and.resolveTo();
+    button('Entfernen')!.click();
+    await fixture.whenStable();
+    expect(window.confirm).toHaveBeenCalledWith('Das verborgene Online-Konto entfernen? Die geholten Partien gehen mit.');
+    expect(api.deleteAccount).toHaveBeenCalledWith(9);
+  });
 });
