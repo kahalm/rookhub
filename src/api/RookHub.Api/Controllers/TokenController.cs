@@ -70,9 +70,10 @@ public class TokenController : ControllerBase
         if (token is null || token.Scope != ApiTokenService.EngineScope) return null;
         var owner = await _db.AppUsers.AsNoTracking()
             .Where(u => u.Id == token.UserId)
-            .Select(u => new { u.Username, u.DeletedAt })
+            .Select(u => new { u.Username, u.DeletedAt, u.LockedUntil })
             .FirstOrDefaultAsync(ct);
         if (owner is null || owner.DeletedAt is not null) return null;
+        if (owner.LockedUntil is { } until && until > DateTime.UtcNow) return null;   // gesperrt (F5-011)
         long? expires = token.ExpiresAt is { } e
             ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Utc)).ToUnixTimeMilliseconds()
             : null;

@@ -6,7 +6,8 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Prüft, ob die hinter einem (stateless) JWT stehende Identität noch aktiv ist: der User muss
-/// existieren UND darf nicht gelöscht/anonymisiert sein (<see cref="Models.AppUser.DeletedAt"/>).
+/// existieren UND darf nicht gelöscht/anonymisiert (<see cref="Models.AppUser.DeletedAt"/>) oder vom Admin
+/// gesperrt sein (<see cref="Models.AppUser.LockedUntil"/>).
 /// Wird im <c>OnTokenValidated</c>-Event des JWT-Handlers aufgerufen, damit ein gelöschtes Konto
 /// sein bereits ausgegebenes (bis zu 30 Tage gültiges) Token nicht weiterverwenden kann.
 /// Ergebnis wird kurz gecacht, um den Auth-Hot-Path (Polling) nicht je Request zu belasten.
@@ -28,14 +29,19 @@ public static class AuthUserValidation
         if (cache.TryGetValue(CacheKey(userId), out UserAuthState? cached) && cached != null)
             return cached;
 
-        // FirstOrDefault liefert null, wenn die Zeile fehlt → nicht aktiv. Sonst zählt DeletedAt.
+        // FirstOrDefault liefert null, wenn die Zeile fehlt → nicht aktiv. Sonst zählen DeletedAt und eine laufende
+        // Admin-Sperre (LockedUntil, F5-011).
         var row = await db.AppUsers
             .Where(u => u.Id == userId)
-            .Select(u => new { u.DeletedAt, u.SecurityStamp })
+            .Select(u => new { u.DeletedAt, u.SecurityStamp, u.LockedUntil })
             .FirstOrDefaultAsync(ct);
-        var state = new UserAuthState(row != null && row.DeletedAt == null, row?.SecurityStamp);
+        var now = DateTime.UtcNow;
+        var locked = row?.LockedUntil is { } until && until > now;
+        var state = new UserAuthState(row != null && row.DeletedAt == null && !locked, row?.SecurityStamp);
 
-        cache.Set(CacheKey(userId), state, CacheTtl);
+        // Eine ablaufende Sperre nicht länger als nötig aus dem Cache weiterreichen.
+        var ttl = locked && row!.LockedUntil!.Value - now < CacheTtl ? row.LockedUntil.Value - now : CacheTtl;
+        cache.Set(CacheKey(userId), state, ttl);
         return state;
     }
 
@@ -77,7 +83,7 @@ public enum TokenRejection
 {
     /// <summary>Token bleibt gültig.</summary>
     None = 0,
-    /// <summary>Konto fehlt oder ist gelöscht/anonymisiert.</summary>
+    /// <summary>Konto fehlt, ist gelöscht/anonymisiert oder gesperrt.</summary>
     InactiveUser,
     /// <summary>Security-Stamp passt nicht mehr (Passwort geändert/zurückgesetzt).</summary>
     StampMismatch,

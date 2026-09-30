@@ -93,6 +93,28 @@ public class AdminController : BaseApiController
         catch (KeyNotFoundException) { return NotFound(); }
     }
 
+    /// <summary>Sperrt einen Nutzer bis <c>until</c> (UTC; <c>null</c>/leer = unbefristet) statt ihn zu löschen (F5-011):
+    /// laufende Sitzungen enden sofort, Anmelden geht erst nach Ablauf bzw. Entsperren wieder.</summary>
+    [HttpPost("users/{id}/lock")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> LockUser(int id, [FromBody] LockUserDto? dto)
+    {
+        try { return Ok(await _admin.LockUserAsync(id, GetUserId(), dto?.Until, IsAdmin)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
+
+    /// <summary>Hebt die Sperre auf (idempotent).</summary>
+    [HttpDelete("users/{id}/lock")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> UnlockUser(int id)
+    {
+        try { return Ok(await _admin.UnlockUserAsync(id, GetUserId(), IsAdmin)); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
+
     /// <summary>„Als Nutzer einsteigen": liefert ein Token, mit dem der Admin als Zielnutzer agiert.</summary>
     [HttpPost("users/{id}/impersonate")]
     [HasPermission(Permissions.UsersManage)]

@@ -316,6 +316,59 @@ public class AuthServiceTests : IDisposable
             _authService.LoginAsync(new LoginDto { Username = "gone@example.com", Password = "password123" }));
     }
 
+    // ---- Admin-Sperre (Codereview 2026-09-29, F5-011) ----
+
+    private async Task<int> LockedUserAsync(string name, DateTime until)
+    {
+        var reg = await _authService.RegisterAsync(new RegisterDto { Username = name, Email = $"{name}@example.com", Password = "password123" });
+        var user = await _db.AppUsers.FindAsync(reg.UserId);
+        user!.LockedUntil = until;
+        await _db.SaveChangesAsync();
+        return reg.UserId;
+    }
+
+    [Fact]
+    public async Task Login_LockedUser_CorrectPassword_ThrowsAccountLocked_WithTheEnd()
+    {
+        var until = DateTime.UtcNow.AddDays(3);
+        await LockedUserAsync("locked", until);
+
+        var ex = await Assert.ThrowsAsync<AccountLockedException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "locked", Password = "password123" }));
+
+        Assert.Equal(until, ex.LockedUntilForClient);
+    }
+
+    [Fact]
+    public async Task Login_LockedUser_WrongPassword_LooksLikeAnyWrongPassword()
+    {
+        // Kein Konto-Orakel: den Sperrzustand erfährt nur, wer das Passwort kennt.
+        await LockedUserAsync("locked2", Models.AppUser.LockedIndefinitely);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "locked2", Password = "wrong-password" }));
+    }
+
+    [Fact]
+    public async Task Login_IndefinitelyLocked_ReportsNoEnd_AndAnExpiredLockLetsTheUserIn()
+    {
+        await LockedUserAsync("forever", Models.AppUser.LockedIndefinitely);
+        var ex = await Assert.ThrowsAsync<AccountLockedException>(() =>
+            _authService.LoginAsync(new LoginDto { Username = "forever", Password = "password123" }));
+        Assert.Null(ex.LockedUntilForClient);
+
+        await LockedUserAsync("over", DateTime.UtcNow.AddMinutes(-1));
+        Assert.NotEmpty((await _authService.LoginAsync(new LoginDto { Username = "over", Password = "password123" })).Token);
+    }
+
+    [Fact]
+    public async Task Impersonate_LockedUser_Throws()
+    {
+        // Das Einstiegs-Token wäre sofort tot (AuthUserValidation), und der 401 würfe den Admin aus der Oberfläche.
+        var id = await LockedUserAsync("lockedvictim", DateTime.UtcNow.AddDays(1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.ImpersonateAsync(999, "rootadmin", id));
+    }
+
     [Fact]
     public async Task Register_UsernameCollisionIsCaseInsensitive_Throws()
     {

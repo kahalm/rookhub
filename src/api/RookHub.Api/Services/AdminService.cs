@@ -22,11 +22,15 @@ public class AdminService
     /// Admin-Entzug verworfen, sonst gilt das alte Token bis zu <see cref="AuthUserValidation.CacheTtl"/> weiter.</summary>
     private readonly IMemoryCache? _authCache;
 
-    public AdminService(AppDbContext db, ProfileService profile, IMemoryCache? authCache = null)
+    private readonly ILogger<AdminService>? _logger;
+
+    public AdminService(AppDbContext db, ProfileService profile, IMemoryCache? authCache = null,
+        ILogger<AdminService>? logger = null)
     {
         _db = db;
         _profile = profile;
         _authCache = authCache;
+        _logger = logger;
     }
 
     public async Task<(List<AdminUserDto> items, int totalCount, int page, int pageSize)> GetUsersAsync(string? search, int page, int pageSize)
@@ -56,9 +60,12 @@ public class AdminService
                 Email = u.Email,
                 IsAdmin = u.IsAdmin,
                 CreatedAt = u.CreatedAt,
-                Groups = u.Groups.Select(ug => ug.Group!.Name).OrderBy(n => n).ToList()
+                Groups = u.Groups.Select(ug => ug.Group!.Name).OrderBy(n => n).ToList(),
+                LockedUntil = u.LockedUntil,
             })
             .ToListAsync();
+        var now = DateTime.UtcNow;
+        foreach (var item in items) item.LockedUntil = ActiveLock(item.LockedUntil, now);
 
         return (items, totalCount, page, pageSize);
     }
@@ -102,6 +109,60 @@ public class AdminService
         PermissionResolver.InvalidateAll();
         if (!user.IsAdmin && _authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
 
+        return await UserDtoAsync(user);
+    }
+
+    /// <summary>Sperrt einen anderen Nutzer bis <paramref name="until"/> (UTC; <c>null</c> = unbefristet) — das umkehrbare
+    /// Mittel gegen Missbrauch statt der Löschung (F5-011). Login, JWT- und API-Token-Prüfung weisen das Konto ab, solange
+    /// die Sperre läuft; der Security-Stamp rotiert, damit laufende Sitzungen SOFORT enden und auch nach Ablauf der Sperre
+    /// nicht zurückkommen. Konto und Daten bleiben unberührt. Ein Admin-Konto sperrt nur ein Admin (sonst sperrte eine
+    /// delegierte Rolle mit <c>users.manage</c> die Admins aus).</summary>
+    public async Task<AdminUserDto> LockUserAsync(int id, int currentUserId, DateTime? until, bool actorIsAdmin = true)
+    {
+        if (id == currentUserId)
+            throw new InvalidOperationException("Cannot lock yourself.");
+
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id && u.DeletedAt == null)
+            ?? throw new KeyNotFoundException();
+        if (user.IsAdmin && !actorIsAdmin)
+            throw new UnauthorizedAccessException("Only an admin may lock an admin account.");
+
+        var end = until is { } t ? ToUtc(t) : AppUser.LockedIndefinitely;
+        if (end <= DateTime.UtcNow)
+            throw new InvalidOperationException("The lock must end in the future.");
+        if (end > AppUser.LockedIndefinitely) end = AppUser.LockedIndefinitely;
+
+        user.LockedUntil = end;
+        user.SecurityStamp = AuthService.NewSecurityStamp();
+        await _db.SaveChangesAsync();
+        if (_authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
+        _logger?.LogInformation("AdminLock: User {UserId} gesperrt bis {LockedUntil} von {ActorId}", user.Id, end, currentUserId);
+
+        return await UserDtoAsync(user);
+    }
+
+    /// <summary>Hebt die Sperre eines Nutzers auf (idempotent). Die bei der Sperre entwerteten Sitzungen bleiben entwertet —
+    /// der Nutzer meldet sich neu an.</summary>
+    public async Task<AdminUserDto> UnlockUserAsync(int id, int currentUserId, bool actorIsAdmin = true)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id && u.DeletedAt == null)
+            ?? throw new KeyNotFoundException();
+        if (user.IsAdmin && !actorIsAdmin)
+            throw new UnauthorizedAccessException("Only an admin may unlock an admin account.");
+
+        if (user.LockedUntil != null)
+        {
+            user.LockedUntil = null;
+            await _db.SaveChangesAsync();
+            if (_authCache is not null) AuthUserValidation.Invalidate(_authCache, user.Id);
+            _logger?.LogInformation("AdminLock: User {UserId} entsperrt von {ActorId}", user.Id, currentUserId);
+        }
+
+        return await UserDtoAsync(user);
+    }
+
+    private async Task<AdminUserDto> UserDtoAsync(AppUser user)
+    {
         var groups = await _db.UserGroups
             .Where(ug => ug.UserId == user.Id)
             .Select(ug => ug.Group!.Name)
@@ -115,9 +176,23 @@ public class AdminService
             Email = user.Email,
             IsAdmin = user.IsAdmin,
             CreatedAt = user.CreatedAt,
-            Groups = groups
+            Groups = groups,
+            LockedUntil = ActiveLock(user.LockedUntil, DateTime.UtcNow),
         };
     }
+
+    /// <summary>Sperrende für die Verwaltung: nur eine LAUFENDE Sperre, als UTC gekennzeichnet (die Spalte liest sich
+    /// ohne Kind zurück).</summary>
+    private static DateTime? ActiveLock(DateTime? lockedUntil, DateTime nowUtc)
+        => lockedUntil is { } until && until > nowUtc ? DateTime.SpecifyKind(until, DateTimeKind.Utc) : null;
+
+    /// <summary>Zeitpunkt aus dem Request als UTC: mit Offset gesendete Werte kommen als Local an, ohne Angabe gilt UTC.</summary>
+    private static DateTime ToUtc(DateTime t) => t.Kind switch
+    {
+        DateTimeKind.Utc => t,
+        DateTimeKind.Local => t.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(t, DateTimeKind.Utc),
+    };
 
     /// <summary>Hängt die System-Rolle „admin" an bzw. nimmt sie weg, passend zu <see cref="AppUser.IsAdmin"/>
     /// (andere Rollen des Kontos bleiben unberührt). Ohne geseedete Rolle nichts zu tun.</summary>

@@ -56,6 +56,11 @@ public class AuthController : BaseApiController
             Response.Headers.RetryAfter = "5";
             return StatusCode(StatusCodes.Status429TooManyRequests, new { message = ex.Message });
         }
+        catch (AccountLockedException ex)
+        {
+            // Nur mit richtigem Passwort erreichbar (siehe AuthService.LoginAsync) — kein Konto-Orakel.
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message, lockedUntil = ex.LockedUntilForClient });
+        }
         catch (UnauthorizedAccessException)
         {
             return Unauthorized(new { message = "Invalid username or password." });

@@ -220,6 +220,11 @@ public class AuthService
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
+        // Vom Admin gesperrt (F5-011): erst NACH der Passwortprüfung verraten — wer das Passwort nicht kennt,
+        // bekommt dieselbe Antwort wie oben und erfährt vom Sperrzustand nichts.
+        if (user.IsLockedAt(DateTime.UtcNow))
+            throw new AccountLockedException(user.LockedUntil!.Value);
+
         _loginFailures?.Remove(failureKey);   // erfolgreicher Login setzt die Bremse zurück
 
         // Lazy-Backfill: Alt-User ohne Security-Stamp bekommen beim ersten Login einen — damit ihre
@@ -376,6 +381,10 @@ public class AuthService
         // jedes Konto (Support-Fall).
         if (target.IsAdmin && !actorIsAdmin)
             throw new UnauthorizedAccessException("Only an admin may impersonate an admin account.");
+        // Ein gesperrtes Konto weist jedes Token ab (AuthUserValidation) — das Einstiegs-Token wäre sofort tot, und die
+        // Oberfläche flöge mit dem 401 ganz hinaus. Lieber gleich sagen, warum es nicht geht (F5-011).
+        if (target.IsLockedAt(DateTime.UtcNow))
+            throw new InvalidOperationException("Cannot impersonate a locked account.");
 
         // Impersonation trägt die Rollen/Permissions des ZIEL-Users (der Admin agiert als dieser)
         // plus den imp-Claim zur Nachvollziehbarkeit.
@@ -400,6 +409,17 @@ public class AuthService
             ImpersonatorUsername = adminUsername,
         };
     }
+}
+
+/// <summary>Das Konto ist vom Admin gesperrt (<see cref="AppUser.LockedUntil"/>, F5-011); das Passwort stimmte.
+/// Controller → 403 mit dem Sperrende (<c>null</c> = unbefristet).</summary>
+public sealed class AccountLockedException(DateTime lockedUntil) : Exception("This account has been locked by an administrator.")
+{
+    public DateTime LockedUntil { get; } = lockedUntil;
+
+    /// <summary>Sperrende für die Antwort: UTC, <c>null</c> bei einer unbefristeten Sperre.</summary>
+    public DateTime? LockedUntilForClient =>
+        LockedUntil >= AppUser.LockedIndefinitely ? null : DateTime.SpecifyKind(LockedUntil, DateTimeKind.Utc);
 }
 
 /// <summary>Die Konto-Bremse weist einen Anmeldeversuch ab, weil für dieses Konto schon eine gebremste

@@ -99,4 +99,37 @@ public class AuthUserValidationTests : IDisposable
         var id = await AddUserAsync(deletedAt: DateTime.UtcNow, securityStamp: "s");
         Assert.False(await AuthUserValidation.IsTokenValidAsync(_db, _cache, id, "s"));
     }
+
+    // ---- Admin-Sperre (F5-011) ----
+
+    [Fact]
+    public async Task CheckToken_LockedUser_IsInactive_UntilTheLockEnds()
+    {
+        var id = await AddUserAsync(securityStamp: "s1");
+        var u = await _db.AppUsers.FirstAsync(x => x.Id == id);
+        u.LockedUntil = DateTime.UtcNow.AddHours(1);
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(TokenRejection.InactiveUser, await AuthUserValidation.CheckTokenAsync(_db, _cache, id, "s1"));
+
+        u.LockedUntil = DateTime.UtcNow.AddSeconds(-1);   // abgelaufen
+        await _db.SaveChangesAsync();
+        AuthUserValidation.Invalidate(_cache, id);
+        Assert.Equal(TokenRejection.None, await AuthUserValidation.CheckTokenAsync(_db, _cache, id, "s1"));
+    }
+
+    [Fact]
+    public async Task CheckToken_LockEndingSoon_IsNotCachedBeyondItsEnd()
+    {
+        // Sonst hielte der Cache ein eben abgelaufenes Konto bis zu 60 s gesperrt: frisch angemeldet, sofort 401.
+        var id = await AddUserAsync(securityStamp: "s1");
+        var u = await _db.AppUsers.FirstAsync(x => x.Id == id);
+        u.LockedUntil = DateTime.UtcNow.AddMilliseconds(300);
+        await _db.SaveChangesAsync();
+        Assert.Equal(TokenRejection.InactiveUser, await AuthUserValidation.CheckTokenAsync(_db, _cache, id, "s1"));
+
+        await Task.Delay(600);
+
+        Assert.Equal(TokenRejection.None, await AuthUserValidation.CheckTokenAsync(_db, _cache, id, "s1"));
+    }
 }

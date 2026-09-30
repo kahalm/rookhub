@@ -278,6 +278,37 @@ public class AdminControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // ---- Sperren (F5-011) ----
+
+    [Fact]
+    public async Task LockUser_LocksAndReturnsTheUser_UnlockLiftsIt()
+    {
+        var user = await CreateUserAsync("target");
+        var until = DateTime.UtcNow.AddDays(1);
+
+        var locked = Assert.IsType<OkObjectResult>(await _controller.LockUser(user.Id, new LockUserDto { Until = until }));
+        Assert.Equal(until, Assert.IsType<AdminUserDto>(locked.Value).LockedUntil);
+        Assert.Equal(until, (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id)).LockedUntil);
+
+        var unlocked = Assert.IsType<OkObjectResult>(await _controller.UnlockUser(user.Id));
+        Assert.Null(Assert.IsType<AdminUserDto>(unlocked.Value).LockedUntil);
+    }
+
+    [Fact]
+    public async Task LockUser_Self_ReturnsBadRequest_Unknown_ReturnsNotFound_AdminByNonAdmin_ReturnsForbidden()
+    {
+        var self = await CreateUserAsync("self");
+        SetUser(self.Id);
+        Assert.IsType<BadRequestObjectResult>(await _controller.LockUser(self.Id, null));
+        Assert.IsType<NotFoundResult>(await _controller.LockUser(9999, null));
+        Assert.IsType<NotFoundResult>(await _controller.UnlockUser(9999));
+
+        var admin = await CreateUserAsync("otheradmin", isAdmin: true);
+        SetUser(99, isAdmin: false);
+        var status = Assert.IsType<ObjectResult>(await _controller.LockUser(admin.Id, null));
+        Assert.Equal(403, status.StatusCode);
+    }
+
     // ---- Rechteausweitung über `users.manage` (ohne Admin-Rolle) --------------------------------
 
     [Fact]

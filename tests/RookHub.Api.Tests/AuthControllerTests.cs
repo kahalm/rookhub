@@ -162,6 +162,27 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Login_LockedAccount_Returns403_WithTheEnd()
+    {
+        // F5-011: nur mit richtigem Passwort — sonst 401 wie jedes falsche Passwort.
+        await _controller.Register(new RegisterDto { Username = "gesperrt", Email = "g@test.com", Password = "Password1!" });
+        var user = await _db.AppUsers.SingleAsync(u => u.Username == "gesperrt");
+        var until = DateTime.UtcNow.AddDays(2);
+        user.LockedUntil = until;
+        await _db.SaveChangesAsync();
+
+        var wrong = await _controller.Login(new LoginDto { Username = "gesperrt", Password = "WrongPassword1!" });
+        Assert.IsType<UnauthorizedObjectResult>(wrong.Result);
+
+        var result = await _controller.Login(new LoginDto { Username = "gesperrt", Password = "Password1!" });
+        var status = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(403, status.StatusCode);
+        var body = System.Text.Json.JsonSerializer.Serialize(status.Value);
+        Assert.Contains("\"lockedUntil\"", body);
+        Assert.Contains(until.ToString("yyyy-MM-ddTHH:mm:ss"), body);
+    }
+
+    [Fact]
     public async Task Login_ReturnsUnauthorized_WithNonexistentUser()
     {
         var result = await _controller.Login(new LoginDto

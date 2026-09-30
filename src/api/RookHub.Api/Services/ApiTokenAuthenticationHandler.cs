@@ -55,10 +55,13 @@ public class ApiTokenAuthenticationHandler : AuthenticationHandler<ApiTokenAuthe
         // Ein gelöschtes/anonymisiertes Konto darf seine API-Tokens nicht weiterverwenden.
         var owner = await _db.AppUsers
             .Where(u => u.Id == token.UserId)
-            .Select(u => new { u.Username, u.DeletedAt })
+            .Select(u => new { u.Username, u.DeletedAt, u.LockedUntil })
             .FirstOrDefaultAsync();
         if (owner == null || owner.DeletedAt != null)
             return AuthenticateResult.Fail("API token owner is deleted.");
+        // Gesperrt (F5-011): die Tokens bleiben bestehen (die Sperre ist umkehrbar), gelten aber nicht, solange sie läuft.
+        if (owner.LockedUntil is { } until && until > DateTime.UtcNow)
+            return AuthenticateResult.Fail("API token owner is locked.");
         var username = owner.Username;
 
         var claims = new List<Claim>

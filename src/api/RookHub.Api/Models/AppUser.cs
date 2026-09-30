@@ -32,6 +32,18 @@ public class AppUser
     /// können sich nicht mehr einloggen; PII ist entfernt, Solve-Statistik bleibt anonym erhalten.</summary>
     public DateTime? DeletedAt { get; set; }
 
+    /// <summary>Vom Admin gesperrt bis zu diesem Zeitpunkt (UTC); <c>null</c> = nicht gesperrt. Solange die Sperre
+    /// läuft, schlagen Login, JWT- und API-Token-Prüfung fehl; das Konto samt Daten bleibt unberührt (umkehrbar, anders
+    /// als die Löschung). Unbefristet = <see cref="LockedIndefinitely"/>.</summary>
+    public DateTime? LockedUntil { get; set; }
+
+    /// <summary>Sperrende einer unbefristeten Sperre: ein fester Wert sicher im Bereich von DATETIME(6) (bewusst nicht
+    /// <see cref="DateTime.MaxValue"/> mit seinen sieben Nachkommastellen).</summary>
+    public static readonly DateTime LockedIndefinitely = new(9999, 12, 31, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Läuft zum Zeitpunkt <paramref name="nowUtc"/> eine Sperre?</summary>
+    public bool IsLockedAt(DateTime nowUtc) => LockedUntil is { } until && until > nowUtc;
+
     public int PuzzleElo { get; set; } = 1500;
 
     public int? PuzzleEloViz1 { get; set; }  // Level 1 (Default: 1400)

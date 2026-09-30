@@ -82,6 +82,24 @@ public class ApiTokenAuthenticationHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task LockedOwner_Fails_WhileTheLockRuns_TheTokenSurvivesIt()
+    {
+        // F5-011: die Sperre ist umkehrbar — das Token bleibt bestehen, gilt aber nicht, solange sie läuft.
+        var (userId, raw) = await MintToken();
+        var owner = await _db.AppUsers.FindAsync(userId);
+        owner!.LockedUntil = DateTime.UtcNow.AddDays(1);
+        await _db.SaveChangesAsync();
+
+        var res = await Authenticate($"Bearer {raw}");
+        Assert.False(res.Succeeded);
+        Assert.NotNull(res.Failure);
+
+        owner.LockedUntil = null;
+        await _db.SaveChangesAsync();
+        Assert.True((await Authenticate($"Bearer {raw}")).Succeeded);
+    }
+
+    [Fact]
     public async Task ValidToken_SucceedsWithUserIdAndScopeClaims()
     {
         var (userId, raw) = await MintToken();

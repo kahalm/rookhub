@@ -149,4 +149,90 @@ public class AdminServiceTests : IDisposable
         await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.DeleteUserAsync(424242, ActorId));
         await Assert.ThrowsAsync<InvalidOperationException>(() => admin.DeleteUserAsync(ActorId, ActorId));
     }
+
+    // ---- Sperren statt Löschen (Codereview 2026-09-29, F5-011) ----
+
+    [Fact]
+    public async Task LockUser_RejectsTheRunningTokenAtOnce_KeepsTheAccount_AndShowsTheLockInTheList()
+    {
+        var target = await AddUserAsync("spammer", isAdmin: false, stamp: "s1");
+        Assert.Null(await RejectionAsync(target.Id, "s1"));                 // Token gilt — Zustand liegt jetzt im Cache
+        var until = DateTime.UtcNow.AddDays(7);
+        var admin = TestServices.Admin(_db, _cache);
+
+        var dto = await admin.LockUserAsync(target.Id, ActorId, until);
+
+        Assert.Equal(until, dto.LockedUntil);
+        Assert.Equal(DateTimeKind.Utc, dto.LockedUntil!.Value.Kind);
+        var user = await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == target.Id);
+        Assert.Null(user.DeletedAt);                                         // umkehrbar: Konto bleibt, wie es war
+        Assert.Equal("spammer", user.Username);
+        Assert.NotEqual("s1", user.SecurityStamp);                           // Stempel rotiert
+        Assert.Equal("inactive-user", await RejectionAsync(target.Id, "s1")); // sofort, nicht erst nach 60 s
+        // Auch ein frisches Token (neuer Stempel) gilt nicht, solange die Sperre läuft.
+        Assert.Equal("inactive-user", await RejectionAsync(target.Id, user.SecurityStamp!));
+        var (items, _, _, _) = await admin.GetUsersAsync(null, 1, 20);
+        Assert.Equal(until, Assert.Single(items).LockedUntil);
+    }
+
+    [Fact]
+    public async Task LockUser_WithoutEnd_IsIndefinite_AndUnlockLetsNewTokensThrough()
+    {
+        var target = await AddUserAsync("dauer", isAdmin: false, stamp: "s1");
+        var admin = TestServices.Admin(_db, _cache);
+
+        Assert.Equal(AppUser.LockedIndefinitely, (await admin.LockUserAsync(target.Id, ActorId, until: null)).LockedUntil);
+        var stampAfterLock = (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == target.Id)).SecurityStamp!;
+        Assert.Equal("inactive-user", await RejectionAsync(target.Id, stampAfterLock));
+
+        var dto = await admin.UnlockUserAsync(target.Id, ActorId);
+        await admin.UnlockUserAsync(target.Id, ActorId);                     // idempotent
+
+        Assert.Null(dto.LockedUntil);
+        Assert.Null((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == target.Id)).LockedUntil);
+        Assert.Null(await RejectionAsync(target.Id, stampAfterLock));        // neu angemeldet: gilt wieder (Cache verworfen)
+        Assert.Equal("stamp-mismatch", await RejectionAsync(target.Id, "s1")); // die vor der Sperre bleibt entwertet
+    }
+
+    [Fact]
+    public async Task ExpiredLock_NoLongerCounts()
+    {
+        var target = await AddUserAsync("abgelaufen", isAdmin: false, stamp: "s1");
+        target.LockedUntil = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await RejectionAsync(target.Id, "s1"));
+        var (items, _, _, _) = await TestServices.Admin(_db, _cache).GetUsersAsync(null, 1, 20);
+        Assert.Null(Assert.Single(items).LockedUntil);
+    }
+
+    [Fact]
+    public async Task LockUser_Guards_Self_Past_Deleted_AndAdminsOnlyByAdmins()
+    {
+        var admin = TestServices.Admin(_db, _cache);
+        var victim = await AddUserAsync("adminkonto", isAdmin: true, stamp: "s1");
+        var gone = await AddUserAsync("weg", isAdmin: false, stamp: "s2");
+        gone.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => admin.LockUserAsync(ActorId, ActorId, null));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => admin.LockUserAsync(victim.Id, ActorId, DateTime.UtcNow.AddMinutes(-5)));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.LockUserAsync(gone.Id, ActorId, null));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.LockUserAsync(424242, ActorId, null));
+        // Delegierte Rolle (users.manage, selbst kein Admin) sperrt keine Admins aus.
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => admin.LockUserAsync(victim.Id, ActorId, null, actorIsAdmin: false));
+        Assert.Null((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == victim.Id)).LockedUntil);
+        Assert.Equal("s1", (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == victim.Id)).SecurityStamp);
+    }
+
+    [Fact]
+    public async Task LockUser_UntilWithOffset_IsStoredAsUtc()
+    {
+        var target = await AddUserAsync("offset", isAdmin: false, stamp: "s1");
+        var local = new DateTimeOffset(2099, 1, 1, 12, 0, 0, TimeSpan.FromHours(2));
+
+        var dto = await TestServices.Admin(_db, _cache).LockUserAsync(target.Id, ActorId, local.LocalDateTime);
+
+        Assert.Equal(new DateTime(2099, 1, 1, 10, 0, 0, DateTimeKind.Utc), dto.LockedUntil);
+    }
 }
