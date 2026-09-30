@@ -31,7 +31,7 @@ import {
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
   applyReviewPatch, emptyReview, formatScore, formatSeconds, gradePoints, isNoopPatch, maxPoints,
-  mergeReviewPatch, newSecondsToken, normalizeGrade, sumPoints, sumSeconds,
+  mergeReviewPatch, newSecondsToken, normalizeGrade, sumPoints,
 } from './calc-review.util';
 import {
   CalcBackend, CalcBook, CalcPosition, CalcPositionListItem, CalcReviewSaved, CalculationService,
@@ -48,58 +48,13 @@ import { AuthService } from '../../../core/auth.service';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { labelOr } from '../course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
+import {
+  CalcChapterSums, CalcPositionGroup, applyChapterSums, chapterGroupLabel, groupByChapter,
+  pickChapterIndex, serverChapterSums,
+} from './calc-chapters.util';
 
-/** Stellungen EINES Kapitels — die Arbeitseinheit dieses Modus, samt der Kapitel-Summen. */
-export interface CalcPositionGroup {
-  /** Kapitel-SCHLÜSSEL (Original); `null` = ohne Kapitel. */
-  chapter: string | null;
-  /** Angezeigter Name (Kurs-Übersetzung, sonst das Original); `null` = ohne Kapitel. */
-  label?: string | null;
-  /**
-   * Schlüssel des Kapitels — EXAKT der des Servers ({@link chapterKey}): ordinal über den ROHEN
-   * Namen. Gruppenbildung und das Nachschlagen der Server-Summen benutzen ihn gemeinsam, sonst
-   * zeigt die Ansicht die Zeilen des einen und die Summe eines anderen Kapitels.
-   */
-  key: string;
-  items: CalcPositionListItem[];
-  /** Erreichte Punkte des Kapitels. */
-  points: number;
-  /** Erreichbare Punkte des Kapitels — jede Summe wird MIT ihrem Maximum genannt. */
-  maxPoints: number;
-  /** Summe der Rechenzeit des Kapitels (Sekunden). */
-  seconds: number;
-}
-
-/** Eigener Schlüssel für „ohne Kapitel" — ein Name, den es als Kapitelname nicht geben kann
- *  (Spiegel von `CalculationService.SummarizeChapters`). */
-const NO_CHAPTER_KEY = '\u0000';
-
-/**
- * Schlüssel eines Kapitels — GENAU wie serverseitig: ordinal über den ROHEN Namen, nur
- * leer/whitespace zählt als „ohne Kapitel".
- *
- * Die Strenge ist Absicht. Der Server gruppiert in `CalculationService.SummarizeChapters` mit
- * `StringComparer.Ordinal` und liefert die Kapitel-SUMMEN fertig aus (`chapters[]`); die Ansicht
- * schlägt sie hier nach. Faßte der Client zwei Kapitel zusammen, die sich nur in Groß-/Klein-
- * schreibung oder Leerzeichen unterscheiden (bei `PUT /chapters/rename` erlaubt, die Duplikat-
- * Prüfung ist ebenfalls ordinal), zeigte er die Zeilen BEIDER mit der Summe EINER — die Map-
- * Kollision überschreibt still die erste. Der Server ist die Wahrheit für die Summen, der Client
- * richtet sich danach.
- *
- * Nachsichtig verglichen wird bewusst NUR beim Auflösen von `?chapter=` (siehe {@link normChapter}).
- */
-function chapterKey(chapter: string | null | undefined): string {
-  return chapter?.trim() ? chapter : NO_CHAPTER_KEY;
-}
-
-/**
- * Kapitelnamen nachsichtig vergleichen (getrimmt, ohne Groß-/Kleinschreibung) — AUSSCHLIESSLICH
- * für den Kapitel-Wunsch aus der URL (`?chapter=`, Kurz-URL `/{slug}/{kapitel}`): der Name kann
- * abgetippt sein, ein Link soll trotzdem treffen. Für Gruppen und Summen gilt {@link chapterKey}.
- */
-function normChapter(value: string | null | undefined): string {
-  return (value ?? '').trim().toLocaleLowerCase();
-}
+// Kapitelmodell (Schlüssel, Gruppen, Einstiegskapitel, Summen) als reine Funktionen: calc-chapters.util.ts.
+export type { CalcPositionGroup } from './calc-chapters.util';
 
 /**
  * Kalkulations-Modus für Kalkulationsbücher (`Book.IsCalculation`): der Nutzer sieht NUR die
@@ -295,7 +250,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
   private watchPositionId: number | null = null;
   private liveHandle?: ReturnType<typeof setInterval>;
   /** Server-Summen je Kapitel; nach der ersten eigenen Änderung rechnet die Ansicht selbst. */
-  private serverSums = new Map<string, { points: number; maxPoints: number; seconds: number }>();
+  private serverSums = new Map<string, CalcChapterSums>();
   private serverTotals: { points: number; maxPoints: number } | null = null;
 
   readonly glyphs = CALC_GLYPHS;
@@ -490,7 +445,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
           item.titleLabel = fresh.titleLabel ?? null;
           item.chapterLabel = fresh.chapterLabel ?? null;
         }
-        for (const g of this.groups) g.label = this.groupLabel(g.items, g.chapter);
+        for (const g of this.groups) g.label = chapterGroupLabel(g.items, g.chapter);
         const pos = this.position;
         if (!pos) return;
         this.subs.add(this.backend.getPosition(pos.id, lang).subscribe({
@@ -509,11 +464,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
       },
       error: () => { /* Beiwerk — die Arbeit an der Stellung geht weiter */ },
     }));
-  }
-
-  /** Beschriftung eines Kapitels: das Label der ersten Stellung, die eins trägt, sonst der Name. */
-  private groupLabel(items: CalcPositionListItem[], chapter: string | null): string | null {
-    return labelOr(items.find(i => i.chapterLabel)?.chapterLabel, chapter);
   }
 
   ngOnInit(): void {
@@ -622,7 +572,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
         this.takeServerSums(book);
         if (this.positions.length === 0) { this.loading = false; return; }
         // Erst das KAPITEL, dann die Stellung darin — der Modus arbeitet ein Kapitel durch.
-        this.enterChapter(this.pickChapter(requestedPositionId), requestedPositionId, false);
+        this.enterChapter(pickChapterIndex(this.groups, this.requestedChapter, requestedPositionId), requestedPositionId, false);
       },
       error: () => { this.loading = false; this.loadError = true; },
     }));
@@ -761,31 +711,6 @@ export class CalculationComponent implements OnInit, OnDestroy {
     return this.atLastPosition && this.arrivedAtChapterEnd;
   }
 
-  /**
-   * Welches Kapitel wird beim Öffnen bearbeitet? Reihenfolge: `?chapter=` aus der Kurz-URL
-   * (nachsichtig verglichen — der Name kommt aus einer URL, die jemand abgetippt haben kann),
-   * sonst das Kapitel der per `?pos=` verlangten Stellung, sonst das erste mit offener Arbeit.
-   *
-   * Trifft `?chapter=` nichts (Kapitel umbenannt, Tippfehler), wird der Wunsch nicht behauptet:
-   * es geht normal weiter, statt eine leere Seite mit fremdem Kapitelnamen zu zeigen.
-   */
-  private pickChapter(requestedPositionId: number | null): number {
-    const wanted = normChapter(this.requestedChapter);
-    if (wanted) {
-      // NACHSICHTIG und nur hier: verglichen wird der Anzeigename, nicht der (strenge)
-      // Gruppen-Schlüssel — ein abgetippter Link soll auch bei abweichender Schreibweise treffen.
-      // Passen mehrere (etwa „Taktik" neben „taktik"), gewinnt das erste Kapitel des Buchs.
-      const hit = this.groups.findIndex(g => normChapter(g.chapter) === wanted);
-      if (hit >= 0) return hit;
-    }
-    if (requestedPositionId != null) {
-      const hit = this.groups.findIndex(g => g.items.some(p => p.id === requestedPositionId));
-      if (hit >= 0) return hit;
-    }
-    const open = this.groups.findIndex(g => g.items.some(p => !p.hasTree));
-    return open >= 0 ? open : 0;
-  }
-
   /** Kapitel öffnen und die Einstiegsstellung laden (Deep-Link, sonst erste unbearbeitete). */
   private enterChapter(chapterIndex: number, requestedPositionId: number | null, updateUrl: boolean): void {
     this.chapterIndex = chapterIndex;
@@ -803,33 +728,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.loadPosition(id);
   }
 
-  /**
-   * Kapitel EINDEUTIG je Name gruppieren (nicht bloß aufeinanderfolgende Läufe): stünden zwei
-   * Blöcke desselben Kapitels in der Liste, gäbe es zwei Kapitel gleichen Namens — mit derselben
-   * Server-Summe an beiden. Stellungen ohne Kapitel bilden ihre eigene Gruppe.
-   */
+  /** Kapitel bilden ({@link groupByChapter}) und die Anzeige-Nummern je Stellung übernehmen. */
   private groupPositions(positions: CalcPositionListItem[]): CalcPositionGroup[] {
-    const byKey = new Map<string, CalcPositionGroup>();
-    const out: CalcPositionGroup[] = [];
-    this.chapterNumbers.clear();
-    for (const p of positions) {
-      const chapter = p.chapter?.trim() ? p.chapter : null;
-      const key = chapterKey(chapter);
-      let group = byKey.get(key);
-      if (!group) {
-        group = { chapter, label: chapter, key, items: [], points: 0, maxPoints: 0, seconds: 0 };
-        byKey.set(key, group);
-        out.push(group);
-      }
-      group.items.push(p);
-      // Nummerierung ist reine ANZEIGE: sie zählt die Stellung IM KAPITEL. `round`/`id` bleiben
-      // unangetastet — an ihnen hängen Fortschritt und gespeicherte Bäume.
-      this.chapterNumbers.set(p.id, group.items.length);
-    }
-    // Beschriftung: die Kurs-Übersetzung, wo eine Stellung des Kapitels sie trägt — gruppiert wird
-    // weiter über den Original-Schlüssel.
-    for (const g of out) g.label = this.groupLabel(g.items, g.chapter);
-    return out;
+    const { groups, numbers } = groupByChapter(positions);
+    this.chapterNumbers = numbers;
+    return groups;
   }
 
   /** Fehlende Felder eines älteren/knapperen Server-Standes auffüllen (nie `undefined` anzeigen). */
@@ -847,20 +750,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
    * zum nächsten Laden auf dem alten Stand.
    */
   private takeServerSums(book: CalcBook): void {
-    this.serverSums.clear();
-    for (const c of book.chapters ?? []) {
-      // Schlüssel wie bei den Gruppen (siehe CalcPositionGroup.key) — sonst findet das Kapitel
-      // seine eigene Summe nicht wieder und die Ansicht rechnet still selbst. Und wie beim Server:
-      // zwei Kapitel, die sich nur in Schreibweise/Leerzeichen unterscheiden, haben ZWEI Summen —
-      // ein nachsichtiger Schlüssel ließe die eine die andere überschreiben.
-      this.serverSums.set(chapterKey(c.chapter), {
-        points: c.points ?? 0,
-        maxPoints: c.maxPoints ?? 0,
-        // `secondsSum`, nicht `secondsSpent`: der Server liefert eine SUMME (siehe
-        // CalcChapterSummary). Ein Tippfehler hier fällt nicht auf — die Zeit stünde still auf 0.
-        seconds: c.secondsSum ?? 0,
-      });
-    }
+    this.serverSums = serverChapterSums(book.chapters);
     this.serverTotals = this.pickTotals(book);
     this.refreshSums();
   }
@@ -881,14 +771,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
    * Rechenweg im Client. Die Buchsumme steht daneben, aber ausdrücklich als solche beschriftet.
    */
   private refreshSums(): void {
-    for (const group of this.groups) {
-      const fromServer = this.serverSums.get(group.key);
-      group.points = fromServer ? fromServer.points : sumPoints(group.items);
-      // Das Maximum hängt nur an der Zahl der Stellungen — der Server darf es liefern, die
-      // Ansicht kann es aber jederzeit selbst ausrechnen.
-      group.maxPoints = fromServer?.maxPoints || maxPoints(group.items.length);
-      group.seconds = fromServer ? fromServer.seconds : sumSeconds(group.items);
-    }
+    applyChapterSums(this.groups, this.serverSums);
     const chapter = this.chapter;
     this.totalPoints = chapter ? chapter.points : 0;
     this.totalMaxPoints = chapter ? chapter.maxPoints : 0;
