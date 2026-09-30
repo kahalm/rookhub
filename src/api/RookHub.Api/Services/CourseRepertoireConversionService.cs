@@ -25,13 +25,16 @@ public class CourseRepertoireConversionService
 {
     private readonly AppDbContext _db;
     private readonly CourseService _courses;
+    private readonly CoursePgnExportService _pgnExport;
     private readonly RepertoireService _repertoires;
     private readonly BookAdminService _bookAdmin;
 
-    public CourseRepertoireConversionService(AppDbContext db, CourseService courses, RepertoireService repertoires, BookAdminService bookAdmin)
+    public CourseRepertoireConversionService(AppDbContext db, CourseService courses, CoursePgnExportService pgnExport,
+        RepertoireService repertoires, BookAdminService bookAdmin)
     {
         _db = db;
         _courses = courses;
+        _pgnExport = pgnExport;
         _repertoires = repertoires;
         _bookAdmin = bookAdmin;
     }
@@ -43,7 +46,7 @@ public class CourseRepertoireConversionService
     /// dem User nicht) — dann bleibt der Kurs bestehen. Zugriff wird geprüft (kein Zugriff → 404).</summary>
     public async Task<RepertoireDto> ConvertCourseToRepertoireAsync(int userId, int bookId, bool isAdmin)
     {
-        var (pgn, fileName) = await _courses.GetBookPgnAsync(userId, bookId, isAdmin); // prüft Zugriff
+        var (pgn, fileName) = await _pgnExport.GetBookPgnAsync(userId, bookId, isAdmin); // prüft Zugriff + Kalk-Sperre
         var book = await _db.Books.FirstAsync(b => b.Id == bookId);
         var repo = await _repertoires.CreateFromPgnAsync(userId, book.DisplayName ?? "Kurs", fileName, pgn);
         // Verschieben statt Kopieren: eigenen Kurs nach erfolgreicher Umwandlung entfernen.

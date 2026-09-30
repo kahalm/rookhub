@@ -159,7 +159,7 @@ public class CourseServiceOwnerTests : IDisposable
         book.Source.SourcePgn = raw;
         await _db.SaveChangesAsync();
 
-        var (pgn, fileName) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
+        var (pgn, fileName) = await new CoursePgnExportService(_db).GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
 
         Assert.Equal(raw, pgn);                       // verbatim, nicht rekonstruiert
         Assert.Contains("(1... c5 {Sizilianisch})", pgn);
@@ -182,7 +182,7 @@ public class CourseServiceOwnerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var (pgn, _) = await _svc.GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
+        var (pgn, _) = await new CoursePgnExportService(_db).GetBookPgnAsync(userId: 1, book.Id, isAdmin: false);
 
         Assert.Contains("1. e4 {Bester Zug} e5", pgn); // rekonstruiert inkl. Zug-Kommentar
     }

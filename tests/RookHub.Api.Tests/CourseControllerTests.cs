@@ -25,7 +25,7 @@ public class CourseControllerTests : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _db = new AppDbContext(options);
-        _controller = new CourseController(TestServices.Course(_db), new CourseStatsService(_db), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new CourseAuthoringService(_db), new FlashcardMarkService(_db), TestServices.Conversion(_db));
+        _controller = new CourseController(TestServices.Course(_db), new CourseStatsService(_db), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new CourseAuthoringService(_db), new FlashcardMarkService(_db), TestServices.Conversion(_db), new CoursePgnExportService(_db));
         SetUser(_controller, UserId);
     }
 
@@ -447,7 +447,7 @@ public class CourseControllerTests : IDisposable
         await CreateUserAsync();
         var (book, ids) = await SeedBookAsync("Log", 1);
         var logger = new TestLogger<CourseService>();
-        var controller = new CourseController(TestServices.Course(_db, logger), new CourseStatsService(_db), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new CourseAuthoringService(_db), new FlashcardMarkService(_db), TestServices.Conversion(_db)) { ControllerContext = _controller.ControllerContext };
+        var controller = new CourseController(TestServices.Course(_db, logger), new CourseStatsService(_db), ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new CourseAuthoringService(_db), new FlashcardMarkService(_db), TestServices.Conversion(_db), new CoursePgnExportService(_db)) { ControllerContext = _controller.ControllerContext };
 
         await controller.RecordResult(book.Id, new RecordCourseResultDto { BookPuzzleId = ids[0], Solved = true, TimeSeconds = 20 });
 
@@ -955,7 +955,7 @@ public class CourseControllerTests : IDisposable
             Assert.Contains("e6 {[%cal Gd7d5]Französisch} 2. d4 d5 *", pgn);
         }
         // „Kurs → Repertoire" liest das PGN wieder ein und braucht die geduldeten Züge weiterhin.
-        var (raw, _) = await TestServices.Course(_db).GetBookPgnAsync(UserId, book.Id, isAdmin: true);
+        var (raw, _) = await new CoursePgnExportService(_db).GetBookPgnAsync(UserId, book.Id, isAdmin: true);
         Assert.Contains("[%alt c5 e5]", raw);
     }
 }

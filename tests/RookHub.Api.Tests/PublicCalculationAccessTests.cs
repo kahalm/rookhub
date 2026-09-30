@@ -477,9 +477,9 @@ public class PublicCalculationAccessTests : IDisposable
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "a1a2");
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _course.GetBookPgnAsync(userId: 42, book.Id, isAdmin: false));
+            () => new CoursePgnExportService(_db).GetBookPgnAsync(userId: 42, book.Id, isAdmin: false));
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _course.GetBookPgnAsync(userId: 1, book.Id, isAdmin: true));
+            () => new CoursePgnExportService(_db).GetBookPgnAsync(userId: 1, book.Id, isAdmin: true));
     }
 
     [Fact]
@@ -488,7 +488,7 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isCalculation: false, slug: "mate1");
         await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6", startPly: 0);
 
-        var (pgn, fileName) = await _course.GetBookPgnAsync(userId: 42, book.Id, isAdmin: false);
+        var (pgn, fileName) = await new CoursePgnExportService(_db).GetBookPgnAsync(userId: 42, book.Id, isAdmin: false);
 
         Assert.False(string.IsNullOrWhiteSpace(pgn));
         Assert.EndsWith(".pgn", fileName);

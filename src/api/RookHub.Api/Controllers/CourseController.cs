@@ -26,15 +26,19 @@ public class CourseController : BaseApiController
     private readonly FlashcardMarkService _flashcards;
     /// <summary>Kurs ⇄ Repertoire — beide Richtungen, siehe <see cref="CourseRepertoireConversionService"/>.</summary>
     private readonly CourseRepertoireConversionService _conversion;
+    /// <summary>PGN-Export (Buch/Kapitel/Linie), siehe <see cref="CoursePgnExportService"/>.</summary>
+    private readonly CoursePgnExportService _pgnExport;
     /// <summary>Kurs-Übersetzung ausliefern (<c>?lang=</c>). Optional, damit bestehende Test-Konstruktionen
     /// unverändert kompilieren — ohne ihn bleibt <c>lang</c> wirkungslos (Original).</summary>
     private readonly CourseCommentLocalizer? _localizer;
 
     public CourseController(CourseService service, CourseStatsService stats, ImportReprocessService reprocess,
         IReprocessLauncher reprocessLauncher, CourseAuthoringService authoring, FlashcardMarkService flashcards,
-        CourseRepertoireConversionService conversion, CourseCommentLocalizer? localizer = null)
+        CourseRepertoireConversionService conversion, CoursePgnExportService pgnExport,
+        CourseCommentLocalizer? localizer = null)
     {
         _conversion = conversion;
+        _pgnExport = pgnExport;
         _localizer = localizer;
         _service = service;
         _stats = stats;
@@ -140,7 +144,7 @@ public class CourseController : BaseApiController
     {
         try
         {
-            var (pgn, fileName) = await _service.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
+            var (pgn, fileName) = await _pgnExport.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
             return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -152,7 +156,7 @@ public class CourseController : BaseApiController
     {
         try
         {
-            var (pgn, fileName) = await _service.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
+            var (pgn, fileName) = await _pgnExport.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
             return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -164,7 +168,7 @@ public class CourseController : BaseApiController
     {
         try
         {
-            var (pgn, fileName) = await _service.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
+            var (pgn, fileName) = await _pgnExport.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
             return PgnDownload(pgn, fileName);
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }

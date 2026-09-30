@@ -78,7 +78,7 @@ internal static class TestServices
     {
         var admin = bookAdmin ?? new BookAdminService(db);
         return new CourseRepertoireConversionService(
-            db, courses ?? Course(db, bookAdmin: admin), repertoire ?? Repertoire(db), admin);
+            db, courses ?? Course(db, bookAdmin: admin), new CoursePgnExportService(db), repertoire ?? Repertoire(db), admin);
     }
 
     /// <summary><paramref name="email"/> nur setzen, wenn der Test die verschickten Mails selbst prüft.</summary>

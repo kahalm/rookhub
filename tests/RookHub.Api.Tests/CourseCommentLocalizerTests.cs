@@ -284,7 +284,7 @@ public class CourseCommentLocalizerTests : IDisposable
     {
         var controller = new CourseController(TestServices.Course(_db), new CourseStatsService(_db),
             ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(), new CourseAuthoringService(_db),
-            new FlashcardMarkService(_db), TestServices.Conversion(_db), localizer);
+            new FlashcardMarkService(_db), TestServices.Conversion(_db), new CoursePgnExportService(_db), localizer);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext

@@ -151,7 +151,7 @@ public class ChessableTrainingStartTests
         using var db = NewDb();
         var handler = new ParseHandler(CachedBlockWithMarker());
         var repertoires = TestServices.Repertoire(db);
-        var conversion = new CourseRepertoireConversionService(db, CourseServiceWith(db, handler), repertoires, new BookAdminService(db));
+        var conversion = new CourseRepertoireConversionService(db, CourseServiceWith(db, handler), new CoursePgnExportService(db), repertoires, new BookAdminService(db));
         // Kurs-Id aus dem Dateinamen des Chessable-Imports (Altbestand ohne gesetzte ChessableCourseId).
         var rep = await repertoires.CreateFromPgnAsync(userId: 1, name: "Olympiade", fileName: "chessable-55720.pgn", pgn: RepertoireBlock());
 

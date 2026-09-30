@@ -21,14 +21,14 @@ public class CourseLinePgnExportTests : IDisposable
         + "1. c4 (1. Nf3 Nf6) e5 *";
 
     private readonly AppDbContext _db;
-    private readonly CourseService _svc;
+    private readonly CoursePgnExportService _svc;
 
     public CourseLinePgnExportTests()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        _svc = TestServices.Course(_db);
+        _svc = new CoursePgnExportService(_db);
     }
 
     public void Dispose() => _db.Dispose();

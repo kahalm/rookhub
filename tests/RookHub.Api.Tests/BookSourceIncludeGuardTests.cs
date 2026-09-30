@@ -20,7 +20,7 @@ public class BookSourceIncludeGuardTests
     private static readonly Dictionary<string, int> ErlaubteIncludes = new()
     {
         // GetBookPgnAsync, GetChapterPgnAsync, GetLinePgnAsync — Download/„Kurs → Repertoire" (EIN Buch).
-        ["Services/CourseService.cs"] = 3,
+        ["Services/CoursePgnExportService.cs"] = 3,
         // ImportFileAsync + ReprocessFromStoredSourceAsync — Import/Neu-Aufbereitung EINES Buchs.
         ["Services/PgnImportService.cs"] = 2,
         // RebuildFromCacheAsync („Aktualisieren", StaleAction.Cache): EIN Buch, AsNoTracking. Der Text wird

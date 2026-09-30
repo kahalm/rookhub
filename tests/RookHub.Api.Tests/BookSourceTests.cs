@@ -166,7 +166,7 @@ public class BookSourceTests : IDisposable
         var id = await SeedBookAsync(RawPgn);
         await SeedLineAsync(id, "001.001", "Kapitel A", "e2e4 e7e5");
 
-        var (pgn, _) = await TestServices.Course(Fresh()).GetBookPgnAsync(userId: 1, id, isAdmin: true);
+        var (pgn, _) = await new CoursePgnExportService(Fresh()).GetBookPgnAsync(userId: 1, id, isAdmin: true);
 
         Assert.Equal(RawPgn, pgn);
     }
@@ -177,8 +177,8 @@ public class BookSourceTests : IDisposable
         var id = await SeedBookAsync(RawPgn);
         var lineId = await SeedLineAsync(id, "001.001", "Kapitel A", "e2e4 e7e5");
 
-        var (chapter, _) = await TestServices.Course(Fresh()).GetChapterPgnAsync(1, id, "Kapitel A", isAdmin: true);
-        var (line, _) = await TestServices.Course(Fresh()).GetLinePgnAsync(1, id, lineId, isAdmin: true);
+        var (chapter, _) = await new CoursePgnExportService(Fresh()).GetChapterPgnAsync(1, id, "Kapitel A", isAdmin: true);
+        var (line, _) = await new CoursePgnExportService(Fresh()).GetLinePgnAsync(1, id, lineId, isAdmin: true);
 
         Assert.Contains("(1. d4 {Damengambit})", chapter);   // Variante nur im Roh-PGN
         Assert.Contains("(1. d4 {Damengambit})", line);
