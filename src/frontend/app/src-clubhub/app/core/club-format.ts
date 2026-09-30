@@ -160,14 +160,12 @@ export function byInitial<T extends Named>(rows: T[]): Register<T>[] {
 }
 
 export function emptyInput(): MemberInput {
-  return { firstName: '', lastName: '', birthDate: null, birthYear: null, level: null, fideId: null, nationalId: null,
-    notes: null, photoConsent: null, archived: false, contacts: [], groupIds: [] };
+  return { firstName: '', lastName: '', birthDate: null, birthYear: null, level: null, archived: false, contacts: [], groupIds: [] };
 }
 
 export function toInput(m: Member): MemberInput {
   return { firstName: m.firstName, lastName: m.lastName, birthDate: m.birthDate ?? null, birthYear: m.birthYear ?? null,
-    level: m.level ?? null, fideId: m.fideId ?? null, nationalId: m.nationalId ?? null, notes: m.notes ?? null,
-    photoConsent: m.photoConsent ?? null, archived: m.archived, contacts: m.contacts.map(c => ({ ...c })),
+    level: m.level ?? null, archived: m.archived, contacts: m.contacts.map(c => ({ ...c })),
     groupIds: m.groups.map(g => g.id) };
 }
 

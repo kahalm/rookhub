@@ -179,10 +179,6 @@ public class ClubService
         }
 
         m.Level = Clean(input.Level);
-        m.FideId = Clean(input.FideId);
-        m.NationalId = Clean(input.NationalId);
-        m.Notes = Clean(input.Notes);
-        m.PhotoConsent = input.PhotoConsent;
         m.Archived = input.Archived;
         m.UpdatedAt = now;
 
@@ -261,10 +257,6 @@ public class ClubService
         var names = await GroupNamesAsync(m.Groups.Select(g => g.GroupId), ct);
         var dto = Fill(new ClubMemberDto(), m, names);
         dto.BirthDate = m.BirthDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        dto.FideId = m.FideId;
-        dto.NationalId = m.NationalId;
-        dto.Notes = m.Notes;
-        dto.PhotoConsent = m.PhotoConsent;
         dto.CreatedAt = m.CreatedAt;
         dto.UpdatedAt = m.UpdatedAt;
         dto.CanDelete = actor.Manager;

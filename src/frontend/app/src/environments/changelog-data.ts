@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.618.0", date: "2026-09-30", changes: [
+    { en: "ClubHub: the “further details” on a child’s card are gone — FIDE ID, federation number, photo consent, note and creation date. A card is now name, date of birth or year, level, contacts, groups and the archive flag; a known date of birth appears in the header line.", de: "ClubHub: Die „weiteren Angaben“ im Karteiblatt sind weg — FIDE-ID, ÖSB-Nummer, Foto-Einwilligung, Notiz und Anlagedatum. Ein Blatt ist jetzt Name, Geburtsdatum oder Jahrgang, Stufe, Kontakte, Gruppen und das Archiv-Häkchen; ein bekanntes Geburtsdatum steht in der Kopfzeile." },
+  ] },
   { version: "0.617.1", date: "2026-09-30", changes: [
     { en: "ClubHub: on a child’s card, the save bar now stays at the bottom edge of the screen while you edit, however far down you are in the form.", de: "ClubHub: Im Karteiblatt bleibt die Speichern-Leiste beim Bearbeiten am unteren Bildschirmrand sichtbar, egal wo im Formular man gerade ist." },
   ] },

@@ -761,7 +761,6 @@ public class AppDbContext : DbContext
         // ---- ClubHub ------------------------------------------------------------------------
         modelBuilder.Entity<ClubMember>(e =>
         {
-            e.Property(m => m.Notes).HasColumnType("text");
             e.HasOne(m => m.LinkedUser).WithMany().HasForeignKey(m => m.LinkedUserId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(m => m.LinkedUserId).IsUnique();
             e.HasIndex(m => m.LinkCode).IsUnique();

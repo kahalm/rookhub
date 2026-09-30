@@ -34,18 +34,8 @@ public class ClubMember
     [MaxLength(60)]
     public string? Level { get; set; }
 
-    [MaxLength(16)]
-    public string? FideId { get; set; }
-
-    /// <summary>Nummer beim Landesverband (ÖSB).</summary>
-    [MaxLength(16)]
-    public string? NationalId { get; set; }
-
-    [MaxLength(4000)]
-    public string? Notes { get; set; }
-
-    /// <summary>Foto-Einwilligung: <c>null</c> = nicht geklärt.</summary>
-    public bool? PhotoConsent { get; set; }
+    // FIDE-ID, ÖSB-Nummer, Notiz und Foto-Einwilligung gab es in 0.613.0–0.617.1; der User wollte sie nicht
+    // („weitere Angaben entfernen", 2026-09-30) — Migration ClubMemberWithoutExtras hat die Spalten entfernt.
 
     /// <summary>Nicht mehr im Training (ausgetreten, pausiert) — bleibt in der Kartei, fällt aus den Listen.</summary>
     public bool Archived { get; set; }

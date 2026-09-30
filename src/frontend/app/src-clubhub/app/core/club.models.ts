@@ -55,10 +55,6 @@ export interface AttendanceSummary {
 
 export interface Member extends MemberRow {
   birthDate?: string | null;
-  fideId?: string | null;
-  nationalId?: string | null;
-  notes?: string | null;
-  photoConsent?: boolean | null;
   linkedUsername?: string | null;
   linkCode?: string | null;
   linkCodeExpires?: string | null;
@@ -75,10 +71,6 @@ export interface MemberInput {
   birthDate: string | null;
   birthYear: number | null;
   level: string | null;
-  fideId: string | null;
-  nationalId: string | null;
-  notes: string | null;
-  photoConsent: boolean | null;
   archived: boolean;
   contacts: Contact[];
   groupIds: number[];

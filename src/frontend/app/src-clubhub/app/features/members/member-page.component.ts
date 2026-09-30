@@ -24,7 +24,8 @@ function orNull(value: string | null | undefined): string | null {
  * Das Karteiblatt eines Kindes (Wunsch 2026-09-30): anlegen, ansehen, ändern. Kontakte sind eine LISTE — beliebig viele
  * Telefonnummern und E-Mail-Adressen, jede mit einem Hinweis, wessen sie ist („Mutter Daniela", „Vater Franz"); in der
  * Ansicht ist jede Nummer ein Anruf-Link. Darunter Lernstand (Stufe + datierte Notizen), Anwesenheit, und das verknüpfte
- * Konto: den Code dafür gibt der Trainer aus, EINLÖSEN muss ihn das Konto selbst (`/verknuepfen`).
+ * Konto: den Code dafür gibt der Trainer aus, EINLÖSEN muss ihn das Konto selbst (`/verknuepfen`). Mehr Angaben gibt es
+ * bewusst nicht (FIDE-/ÖSB-Nummer, Foto-Einwilligung, Notiz zum Kind waren drin und sind auf Wunsch wieder weg).
  */
 @Component({
   selector: 'ch-member-page',
@@ -84,23 +85,7 @@ function orNull(value: string | null | undefined): string | null {
         </section>
 
         <section>
-          <h2>Weitere Angaben</h2>
-          <div class="grid-2">
-            <label class="field"><span>FIDE-ID</span>
-              <input inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().fideId ?? ''" (input)="set('fideId', $any($event.target).value)"></label>
-            <label class="field"><span>ÖSB-Nummer</span>
-              <input inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().nationalId ?? ''" (input)="set('nationalId', $any($event.target).value)"></label>
-          </div>
-          <label class="field mt"><span>Fotos vom Kind dürfen veröffentlicht werden</span>
-            <select (change)="setConsent($any($event.target).value)">
-              <option value="" [selected]="form().photoConsent === null">nicht geklärt</option>
-              <option value="yes" [selected]="form().photoConsent === true">ja, Einwilligung liegt vor</option>
-              <option value="no" [selected]="form().photoConsent === false">nein</option>
-            </select></label>
-          <label class="field mt"><span>Notiz zum Kind</span>
-            <textarea maxlength="4000" [value]="form().notes ?? ''" (input)="set('notes', $any($event.target).value)"></textarea>
-            <span class="hint">Nur, was die Trainer wissen müssen (z. B. „wird um 18 Uhr abgeholt").</span></label>
-          <label class="check mt-s"><input type="checkbox" [checked]="form().archived" (change)="set('archived', $any($event.target).checked)">
+          <label class="check"><input type="checkbox" [checked]="form().archived" (change)="set('archived', $any($event.target).checked)">
             Im Archiv (kommt nicht mehr ins Training)</label>
           <!-- Löschen steht hier am Ende und nicht in der klebenden Leiste: selten, endgültig, kein Griff daneben. -->
           @if (member()?.canDelete) { <p class="mt-s"><button type="button" class="btn-link danger" [disabled]="busy()" (click)="remove()">Blatt löschen</button></p> }
@@ -120,7 +105,7 @@ function orNull(value: string | null | undefined): string | null {
           <h1>{{ name() }}</h1>
           <button type="button" class="btn slim edit" (click)="startEdit()">Bearbeiten</button>
           <p class="sub">
-            @if (m.birthYear) { <span>Jahrgang {{ m.birthYear }}@if (cls(); as c) {, {{ c }} }</span> }
+            @if (m.birthYear) { <span>{{ m.birthDate ? 'Geboren ' + birth() : 'Jahrgang ' + m.birthYear }}@if (cls(); as c) {, {{ c }} }</span> }
             @if (m.level) { <span>{{ m.level }}</span> }
             @for (g of m.groups; track g.id) { <a class="chip" [routerLink]="['/gruppen', g.id]">{{ g.name }}</a> }
             @if (m.archived) { <span class="chip">im Archiv</span> }
@@ -201,18 +186,6 @@ function orNull(value: string | null | undefined): string | null {
             <p>Hat das Kind ein RookHub- oder KidHub-Konto? Mit einem Code verknüpft es sich selbst — danach steht hier, wie viel es trainiert.</p>
             <button type="button" class="btn slim new-code" [disabled]="busy()" (click)="newCode()">Code erzeugen</button>
           }
-        </section>
-
-        <section>
-          <h2>Weitere Angaben</h2>
-          <dl class="facts">
-            @if (m.birthDate) { <dt>Geburtsdatum</dt><dd>{{ birth() }}</dd> }
-            @if (m.fideId) { <dt>FIDE-ID</dt><dd><a [href]="'https://ratings.fide.com/profile/' + m.fideId" target="_blank" rel="noopener">{{ m.fideId }}</a></dd> }
-            @if (m.nationalId) { <dt>ÖSB-Nummer</dt><dd>{{ m.nationalId }}</dd> }
-            <dt>Fotos</dt><dd>{{ m.photoConsent === true ? 'Einwilligung liegt vor' : m.photoConsent === false ? 'keine Fotos veröffentlichen' : 'nicht geklärt' }}</dd>
-            @if (m.notes) { <dt>Notiz</dt><dd class="pre">{{ m.notes }}</dd> }
-            <dt>Angelegt</dt><dd>{{ day(m.createdAt) }}</dd>
-          </dl>
         </section>
         <p class="err status-line" role="alert">{{ error() ?? '' }}</p>
       </article>
@@ -324,10 +297,6 @@ export class MemberPageComponent implements OnInit {
     this.form.update(f => ({ ...f, groupIds: on ? [...new Set([...f.groupIds, id])] : f.groupIds.filter(g => g !== id) }));
   }
 
-  setConsent(value: string): void {
-    this.set('photoConsent', value === 'yes' ? true : value === 'no' ? false : null);
-  }
-
   async save(): Promise<void> {
     const f = this.form();
     if (!f.firstName.trim()) {
@@ -341,7 +310,7 @@ export class MemberPageComponent implements OnInit {
     }
     const input: MemberInput = {
       ...f, ...birth, firstName: f.firstName.trim(), lastName: f.lastName.trim(),
-      level: orNull(f.level), fideId: orNull(f.fideId), nationalId: orNull(f.nationalId), notes: orNull(f.notes),
+      level: orNull(f.level),
       // Leer gelassene Zeilen fallen weg; der Server prüft, ob der Rest Nummern bzw. Adressen sind.
       contacts: f.contacts.filter(c => c.value.trim()).map(c => ({ kind: c.kind, value: c.value.trim(), label: orNull(c.label) })),
     };

@@ -11,7 +11,7 @@ const MEMBER = (extra: Partial<Member> = {}): Member => ({
   linked: false, groups: [{ id: 1, name: 'Anfänger' }],
   contacts: [{ kind: 'phone', value: '0660 111 22 33', label: 'Mutter Daniela' }, { kind: 'phone', value: '0512/58 12 34', label: 'Vater Franz' },
              { kind: 'email', value: 'daniela@example.org', label: null }],
-  fideId: null, nationalId: null, notes: null, photoConsent: null, linkedUsername: null, linkCode: null, linkCodeExpires: null,
+  linkedUsername: null, linkCode: null, linkCodeExpires: null,
   createdAt: '2026-09-30T10:00:00Z', updatedAt: '2026-09-30T10:00:00Z',
   noteEntries: [{ id: 3, text: 'kann die Gabel', createdAt: '2026-09-25T16:00:00Z', author: 'tina', canDelete: true }],
   attendance: { present: 8, absent: 2, recent: [{ sessionId: 5, groupId: 1, group: 'Anfänger', date: '2026-09-25', topic: 'Gabel', status: 'present' }] },
@@ -147,7 +147,8 @@ describe('MemberPageComponent (Karteiblatt)', () => {
   it('Ansehen: jede Nummer ist ein Anruf-Link mit dem Hinweis, wessen sie ist; die E-Mail ein mailto', async () => {
     await create('7');
     expect(el().querySelector('h1')!.textContent).toBe('Daniel Huber');
-    expect(el().querySelector('.sub')!.textContent).toContain('Jahrgang 2015');
+    expect(el().querySelector('.sub')!.textContent).toContain('Geboren 12.03.2015, U12');
+    expect(el().textContent).not.toContain('Weitere Angaben');                          // FIDE/ÖSB/Foto/Notiz gibt es nicht mehr
     const rows = Array.from(el().querySelectorAll('.contacts li')).map(li =>
       [li.querySelector('.whose')!.textContent, li.querySelector('a')!.getAttribute('href')]);
     expect(rows).toEqual([['Mutter Daniela', 'tel:06601112233'], ['Vater Franz', 'tel:0512581234'], ['E-Mail', 'mailto:daniela@example.org']]);

@@ -9,16 +9,15 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
-## [~] ClubHub: Kartei der Kinder und Jugendlichen — gebaut in 0.613.0, auf DEV, Prod offen (2026-09-30)
+## [~] ClubHub: Kartei der Kinder und Jugendlichen — gebaut in 0.613.0, Dev + Prod live (2026-09-30)
 
 Gebaut: Kartei mit Kontakten (mehrere Telefonnummern/E-Mail je Kind, jede mit Hinweis), Gruppen mit Trainingstag,
 Anwesenheit abhaken, Lernstand (Stufe + Notizen), Konto-Verknüpfung per Einmal-Code samt Lernstand aus dem Konto, Rechte
 `club.manage`/`club.trainer` (Details: CLAUDE.md „ClubHub"). Offen, bewusst nicht im ersten Wurf:
 
-- [~] **Ausrollen**: DEV läuft seit 2026-09-30 (`clubhub-dev.oberschmid.homes`, Dienst `clubhub` im Dev-Stack,
-  `CLUBHUB_PORT=8101`), NPM-Proxy-Hosts 43 (dev → 8101) und 44 (prod → 8102) stehen. **Offen für PROD** (nur auf Zuruf):
-  Tag, Dienst `clubhub` + `CLUBHUB_PORT=8102` in `/opt/stacks/rookhub-schach/` (Vorlage `compose.yml.example`), starten;
-  danach eine Rolle „Trainer" mit `club.trainer` anlegen und zuteilen.
+- [x] **Ausrollen**: DEV (`clubhub-dev.oberschmid.homes`, :8101, NPM 43) und PROD (`clubhub.oberschmid.homes`, :8102,
+  NPM 44, seit v0.616.0) laufen, beide Stacks haben den Dienst `clubhub`. Offen beim User: Rolle „Trainer" mit
+  `club.trainer` anlegen und zuteilen.
 - [ ] **Datenschutz-Text**: die geteilte Datenschutzseite beschreibt die Kartei nicht (Daten Minderjähriger, Kontakte der
   Eltern, Foto-Einwilligung). Text liefert der Verein; bis dahin zeigt ClubHub die allgemeine Seite.
 - [ ] **Elo-Verlauf je Kind** aus FIDE-/ÖSB-Nummer (steht im Blatt, wird noch nicht abgefragt) und Turniere/Termine

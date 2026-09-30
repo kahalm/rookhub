@@ -71,10 +71,6 @@ public class ClubMemberDto : ClubMemberListDto
 {
     /// <summary>yyyy-MM-dd, wenn das ganze Datum bekannt ist.</summary>
     public string? BirthDate { get; set; }
-    public string? FideId { get; set; }
-    public string? NationalId { get; set; }
-    public string? Notes { get; set; }
-    public bool? PhotoConsent { get; set; }
     public string? LinkedUsername { get; set; }
     /// <summary>Offener Einmal-Code zum Verknüpfen (nicht abgelaufen), sonst <c>null</c>.</summary>
     public string? LinkCode { get; set; }
@@ -102,13 +98,6 @@ public class ClubMemberInputDto
     public int? BirthYear { get; set; }
     [MaxLength(60)]
     public string? Level { get; set; }
-    [MaxLength(16)]
-    public string? FideId { get; set; }
-    [MaxLength(16)]
-    public string? NationalId { get; set; }
-    [MaxLength(4000)]
-    public string? Notes { get; set; }
-    public bool? PhotoConsent { get; set; }
     public bool Archived { get; set; }
     [MaxLength(20)]
     public List<ClubContactDto> Contacts { get; set; } = new();
