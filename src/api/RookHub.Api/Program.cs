@@ -775,7 +775,8 @@ try
                 }));
         // Nachricht an das Admin-Team (POST /api/messages/reply): offen für jedes Konto, und jede Nachricht legte bei
         // ALLEN Admins Glocke + Web-Push an — nur der globale 100/min-IP-Deckel bremste (~6000 Nachrichten/h). Je KONTO;
-        // die Glocke entprellt zusätzlich AdminMessageService (eine ungesehene je Thread und Admin).
+        // die Glocke entprellt zusätzlich AdminMessageService (Serie ungelesener Nachrichten = eine Glocke je Admin).
+        // Derselbe Topf gilt für Meldung und Quellen-Hinweis im Turnierverzeichnis — beide schreiben in diesen Kanal.
         options.AddPolicy("user-message", ctx => RookHub.Api.Services.RateLimitPartitions.UserMessage(ctx, permitScale));
         // „Spielzeit aktualisieren" (POST /api/training-goals/sync-play): jeder Aufruf fragte von der Server-IP bei Lichess
         // und chess.com — je KONTO gedrosselt (die Sperrfrist je Plattform setzt PlayTimeService.ManualSyncCooldown).

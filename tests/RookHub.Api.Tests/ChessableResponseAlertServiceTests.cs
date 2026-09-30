@@ -120,6 +120,20 @@ public class ChessableResponseAlertServiceTests : IDisposable
         Assert.Equal(2, _db.AdminMessages.Count());
     }
 
+    /// <summary>Hat der Admin den Thread gelesen, seine Glocke aber nicht weggeklickt, darf die alte Glocke den
+    /// Sperrhinweis nicht verschlucken (Entprellung nur innerhalb einer ungelesenen Serie, F5-001).</summary>
+    [Fact]
+    public async Task Report_AfterAdminReadTheThread_RingsDespiteOldUnseenBell()
+    {
+        var messages = new AdminMessageService(_db, new NotificationService(_db));
+        await messages.SendFromUserAsync(7, "Frage zum Import");
+        await messages.MarkSeenByAdminAsync(7);
+
+        await _service.ReportAsync(7, Report("User is banned or deleted"));
+
+        Assert.Equal(2, _db.Notifications.Count(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+    }
+
     [Fact]
     public async Task Report_BlockPageWithoutMessage_QuotesTheSnippet()
     {

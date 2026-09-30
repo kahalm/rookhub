@@ -374,6 +374,40 @@ public class AdminMessageTests : IDisposable
         Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
     }
 
+    /// <summary>Nacharbeit F5-001: Lesen im Admin-Tab (bzw. Tippen auf den Web-Push) setzt nur SeenByAdminAt, nicht die
+    /// Glocke. Die alte ungesehene Glocke durfte die nächste Rückfrage nicht verschlucken — vorher 1 Glocke statt 2.</summary>
+    [Fact]
+    public async Task SendFromUser_AfterAdminReadThread_RingsAgain_DespiteOldUnseenBell()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+
+        await _service.SendFromUserAsync(2, "Frage");
+        await _service.MarkSeenByAdminAsync(2);             // Thread gelesen — die Glocken bleiben ungesehen
+        await _service.SendFromAdminAsync(1, 2, "Antwort");
+        await _service.SendFromUserAsync(2, "Rückfrage");
+
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+
+        // Die Serie danach (ungelesen) fällt wieder auf die eine Glocke zusammen.
+        await _service.SendFromUserAsync(2, "und noch was");
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    /// <summary>Meldung und Quellen-Hinweis im Turnierverzeichnis schreiben in denselben Admin-Kanal (bis 4000 Zeichen)
+    /// und hatten keine Drossel je Konto — sie teilen jetzt den Topf von POST /api/messages/reply.</summary>
+    [Theory]
+    [InlineData(nameof(TournamentDirectoryController.Report))]
+    [InlineData(nameof(TournamentDirectoryController.SuggestSource))]
+    public void TournamentDirectoryMessages_ShareTheUserMessagePolicy(string action)
+    {
+        var method = typeof(TournamentDirectoryController).GetMethod(action)!;
+        Assert.Equal("user-message", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+    }
+
     /// <summary>POST /api/messages/reply hing nur am globalen 100/min-IP-Deckel. Jetzt eigene Partition je KONTO —
     /// ein zweites Konto hinter derselben Adresse hat sein eigenes Fenster.</summary>
     [Fact]

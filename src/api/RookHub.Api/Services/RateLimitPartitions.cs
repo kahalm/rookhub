@@ -45,7 +45,8 @@ public static class RateLimitPartitions
     /// Auftrag — 10 je Minute bleibt weit darueber.</summary>
     public const int CrawlerRequestPermitPerMinute = 10;
 
-    /// <summary>Nachricht an das Admin-Team (POST /api/messages/reply) je Konto — jede klingelte bei ALLEN Admins.</summary>
+    /// <summary>Nachricht an das Admin-Team je Konto (POST /api/messages/reply, dazu Meldung und Quellen-Hinweis im
+    /// Turnierverzeichnis — gleicher Kanal, gemeinsamer Topf) — jede klingelte bei ALLEN Admins.</summary>
     public const int UserMessagePermitPerMinute = 10;
     /// <summary>„Spielzeit aktualisieren" (POST /api/training-goals/sync-play) je Konto. Nacheinander bremst schon die
     /// Sperrfrist in PlayTimeService; das hier fängt parallele Anfragen ab, die alle vor dem ersten gespeicherten Abruf

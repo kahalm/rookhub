@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -301,8 +302,12 @@ public class TournamentDirectoryController : BaseApiController
     ///
     /// <para>Alle Felder sind freiwillig — auch der Text. Ein Knopfdruck ohne ein Wort ist eine
     /// gueltige Meldung („hier stimmt was nicht"), und die Huerde soll niedrig sein.</para>
+    ///
+    /// <para>Gedrosselt je Konto mit derselben Policy wie POST /api/messages/reply („user-message",
+    /// gemeinsamer Topf): jede Meldung ist eine Admin-Nachricht bis 4000 Zeichen.</para>
     /// </summary>
     [HttpPost("{id}/report")]
+    [EnableRateLimiting("user-message")]
     public async Task<IActionResult> Report(
         string id, [FromBody] DirectoryReportDto dto, CancellationToken ct)
     {
@@ -327,9 +332,10 @@ public class TournamentDirectoryController : BaseApiController
     /// einzelner Termine nicht. Der Link ist Pflicht, der Text nicht.</para>
     ///
     /// <para>Geht denselben Weg wie die Falschmeldung: Admin-Nachrichtenkanal, damit
-    /// Rueckfragen moeglich sind.</para>
+    /// Rueckfragen moeglich sind — und teilt deshalb auch deren Drossel je Konto („user-message").</para>
     /// </summary>
     [HttpPost("suggest-source")]
+    [EnableRateLimiting("user-message")]
     public async Task<IActionResult> SuggestSource([FromBody] DirectorySourceSuggestionDto dto)
     {
         var link = (dto.Link ?? "").Trim();

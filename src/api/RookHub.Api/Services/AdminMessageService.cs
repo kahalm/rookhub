@@ -220,14 +220,23 @@ public class AdminMessageService
         var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
         // Deep-Link: öffnet im Admin-Bereich direkt den Nachrichten-Tab + diese Konversation.
         var link = $"/admin?tab=messages&thread={userId}";
-        // Entprellt: wer zu DIESEM Thread noch eine ungesehene Glocke hat, bekommt keine weitere (und keinen weiteren
-        // Web-Push) — sonst klingelte jede Nachricht einer Serie bei allen Admins. Die einzelnen ungelesenen
-        // Nachrichten zählt weiter das Badge im Nachrichten-Tab (CountUnreadForAdminAsync).
-        var ringing = await _db.Notifications
-            .Where(n => adminIds.Contains(n.UserId) && n.SeenAt == null
-                        && n.Type == NotificationType.UserMessageReceived && n.Link == link)
-            .Select(n => n.UserId).Distinct().ToListAsync();
-        adminIds = adminIds.Except(ringing).ToList();
+        // Entprellt wird nur eine SERIE: Liegt im Thread schon eine ANDERE ungelesene User-Nachricht, bekommt ein Admin,
+        // der zu DIESEM Thread noch eine ungesehene Glocke hat, keine weitere (und keinen weiteren Web-Push) — sonst
+        // klingelte jede Nachricht einer Serie bei allen Admins. Hat ein Admin den Thread dagegen gelesen, klingelt die
+        // nächste Nachricht wieder bei allen: Lesen im Admin-Tab bzw. Tippen auf den Web-Push setzt nur SeenByAdminAt,
+        // nicht die Glocke — eine vergessene alte Glocke schluckte sonst jede weitere Rückfrage (auch den
+        // Chessable-Sperrhinweis und Meldungen aus dem Turnierverzeichnis, die ebenfalls hier landen).
+        // Die einzelnen ungelesenen Nachrichten zählt weiter das Badge im Nachrichten-Tab (CountUnreadForAdminAsync).
+        var threadAlreadyUnread = await _db.AdminMessages.AnyAsync(m =>
+            m.UserId == userId && !m.FromAdmin && m.SeenByAdminAt == null && m.Id != msg.Id);
+        if (threadAlreadyUnread)
+        {
+            var ringing = await _db.Notifications
+                .Where(n => adminIds.Contains(n.UserId) && n.SeenAt == null
+                            && n.Type == NotificationType.UserMessageReceived && n.Link == link)
+                .Select(n => n.UserId).Distinct().ToListAsync();
+            adminIds = adminIds.Except(ringing).ToList();
+        }
         // Alle Admins in EINEM SaveChanges benachrichtigen (atomar, statt N Einzel-Saves mit
         // Teil-Benachrichtigungs-Risiko, falls einer mittendrin fehlschlägt).
         await _notifications.CreateManyAsync(adminIds, NotificationType.UserMessageReceived,
