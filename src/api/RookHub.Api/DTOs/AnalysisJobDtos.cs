@@ -22,12 +22,14 @@ public class UpdateAnalysisJobRequest
 }
 
 /// <summary>Auftrag inkl. Ergebnis: <c>ResultJson</c> ist die letzte Broker-Zeile (opak — das Frontend
-/// bildet sie mit derselben Logik ab wie den Live-Stream), <c>Status</c> klein geschrieben.</summary>
+/// bildet sie mit derselben Logik ab wie den Live-Stream), <c>Status</c> klein geschrieben.
+/// <c>HouseEngine</c> = der Auftrag rechnet auf fremder Rechenzeit (Haus-Engine): Tiefe, Linien und Engine
+/// ändert dort nur ein Admin (<see cref="Services.AnalysisJobService.UpdateAsync"/>).</summary>
 public record AnalysisJobDto(
     int Id, string Fen, string? Title, string EngineId, int TargetDepth, int MultiPv, string Status,
     int ReachedDepth, string? ResultJson, int SecondsSpent, string? LastError,
     DateTime CreatedAt, DateTime UpdatedAt, DateTime? LastRunAt, DateTime? FinishedAt, string? EvalText = null,
-    int CurrentDepth = 0, int CurrentNps = 0);
+    int CurrentDepth = 0, int CurrentNps = 0, bool HouseEngine = false);
 
 /// <summary>Laufender Stand EINES rechnenden Auftrags (Arbeitsspeicher, sekündlich abfragbar) —
 /// bewusst winzig, weil die Auftragsliste ihn im Sekundentakt holt.</summary>

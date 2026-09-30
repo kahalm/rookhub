@@ -289,8 +289,13 @@ public class AnalysisJobService
     /// Queue; Tiefe ↓ auf/unter das Erreichte macht ihn fertig; Linien ↓ kürzt das gespeicherte Ergebnis
     /// ohne Neustart; Linien ↑ startet die Suche neu (der Worker übernimmt Zeilen erst ab der erreichten
     /// Tiefe — das alte Ergebnis bleibt bis dahin sichtbar). null = nicht vorhanden/nicht eigener.
+    /// <para>Rechnet der Auftrag auf FREMDER Rechenzeit (<see cref="AnalysisJob.EngineOwnerUserId"/> gesetzt:
+    /// Punktepartie, „Partie analysieren", Vertiefung auf der Haus-Engine), darf nur ein Admin Tiefe, Linien und
+    /// Engine ändern — derselbe Riegel wie <c>GameAnalysisController.Create</c>. Sonst wäre dieser Endpunkt der
+    /// Umweg: Tiefe 60 auf jeden wartenden Auftrag einer Partie. Titel, Neustart und Löschen bleiben erlaubt.</para>
     /// </summary>
-    public async Task<AnalysisJobDto?> UpdateAsync(int userId, int id, UpdateAnalysisJobRequest req, CancellationToken ct = default)
+    public async Task<AnalysisJobDto?> UpdateAsync(int userId, int id, UpdateAnalysisJobRequest req, bool isAdmin = false,
+        CancellationToken ct = default)
     {
         var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId, ct);
         if (job is null) return null;
@@ -298,6 +303,12 @@ public class AnalysisJobService
         if (req.MultiPv is int m && (m < 1 || m > MaxMultiPv)) throw new ArgumentException($"Lines must be 1..{MaxMultiPv}");
         if (req.Title is { Length: > 200 }) throw new ArgumentException("Title too long");
         if (req.EngineId is { Length: > 64 }) throw new ArgumentException("Invalid engine id");
+        // Unveränderte Werte sind keine Änderung: die Auftragsseite schickt Tiefe/Linien/Engine immer mit.
+        if (job.EngineOwnerUserId is not null && !isAdmin
+            && ((req.TargetDepth is int td && td != job.TargetDepth)
+                || (req.MultiPv is int mp && mp != job.MultiPv)
+                || (!string.IsNullOrWhiteSpace(req.EngineId) && req.EngineId.Trim() != job.EngineId)))
+            throw new ArgumentException("Depth, lines and engine of a house-engine job can only be changed by an admin");
 
         var restart = false;
         if (!string.IsNullOrWhiteSpace(req.EngineId) && req.EngineId.Trim() != job.EngineId)
@@ -473,5 +484,5 @@ public class AnalysisJobService
     public static AnalysisJobDto ToDto(AnalysisJob j) => new(
         j.Id, j.Fen, j.Title, j.EngineId, j.TargetDepth, j.MultiPv, j.Status.ToString().ToLowerInvariant(),
         j.ReachedDepth, j.ResultJson, j.SecondsSpent, j.LastError, j.CreatedAt, j.UpdatedAt, j.LastRunAt, j.FinishedAt,
-        j.EvalText, j.CurrentDepth, j.CurrentNps);
+        j.EvalText, j.CurrentDepth, j.CurrentNps, HouseEngine: j.EngineOwnerUserId is not null);
 }

@@ -64,7 +64,8 @@ public class AnalysisJobsController : BaseApiController
     {
         try
         {
-            var dto = await _jobs.UpdateAsync(GetUserId(), id, request, ct);
+            // IsAdmin: Tiefe/Linien/Engine eines Auftrags auf der Haus-Engine ändert nur ein Admin.
+            var dto = await _jobs.UpdateAsync(GetUserId(), id, request, IsAdmin, ct);
             return dto is null ? NotFound() : Ok(dto);
         }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }

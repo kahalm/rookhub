@@ -495,4 +495,79 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Equal("kaputt", AnalysisJobService.TruncatePvs("kaputt", 1));
         Assert.Null(AnalysisJobService.TruncatePvs(null, 1));
     }
+
+    // ── Haus-Engine (Codereview 2026-09-29, A4-001): Tiefe/Linien/Engine eines Auftrags auf fremder Rechenzeit
+    //    ändert nur ein Admin — sonst war PUT /api/analysis-jobs/{id} der Umweg um GameAnalysisController.Create ──
+
+    /// <summary>Ein Auftrag wie ihn die Punktepartie anlegt: gehört dem Nutzer, rechnet auf der Engine des Haus-Kontos.</summary>
+    private async Task<AnalysisJob> HouseJobAsync(int userId, int houseOwner = 77)
+    {
+        var job = new AnalysisJob
+        {
+            UserId = userId, EngineOwnerUserId = houseOwner, Fen = START, EngineId = "eei_haus",
+            TargetDepth = 20, MultiPv = 5, Status = AnalysisJobStatus.Queued,
+        };
+        _db.AnalysisJobs.Add(job);
+        await _db.SaveChangesAsync();
+        return job;
+    }
+
+    [Fact]
+    public async Task Update_HausAuftrag_NichtAdmin_kannTiefeLinienUndEngineNichtAendern()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await HouseJobAsync(u);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { TargetDepth = 60 }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { MultiPv = 1 }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { EngineId = "eei_bg" }));
+
+        var fresh = await _db.AnalysisJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id);
+        Assert.Equal(20, fresh.TargetDepth);
+        Assert.Equal(5, fresh.MultiPv);
+        Assert.Equal("eei_haus", fresh.EngineId);
+        Assert.Empty(_control.Interrupted);
+    }
+
+    [Fact]
+    public async Task Update_HausAuftrag_TitelUndUnveraenderteWerte_bleibenErlaubt()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await HouseJobAsync(u);
+
+        // Die Auftragsseite schickt Tiefe/Linien/Engine immer mit — gleiche Werte sind keine Änderung.
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest
+        {
+            TargetDepth = 20, MultiPv = 5, EngineId = " eei_haus ", Title = "Zug 12",
+        });
+
+        Assert.Equal("Zug 12", dto!.Title);
+        Assert.Equal(20, dto.TargetDepth);
+        Assert.Equal("queued", dto.Status);
+        Assert.True(dto.HouseEngine);
+    }
+
+    [Fact]
+    public async Task Update_HausAuftrag_Admin_darfDieTiefeAendern()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var job = await HouseJobAsync(u);
+
+        var dto = await _svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { TargetDepth = 30 }, isAdmin: true);
+
+        Assert.Equal(30, dto!.TargetDepth);
+    }
+
+    [Fact]
+    public async Task List_markiertAuftraegeAufDerHausEngine()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var own = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 });
+        var house = await HouseJobAsync(u);
+
+        var list = await _svc.ListAsync(u);
+
+        Assert.False(list.Single(j => j.Id == own.Id).HouseEngine);
+        Assert.True(list.Single(j => j.Id == house.Id).HouseEngine);
+    }
 }
