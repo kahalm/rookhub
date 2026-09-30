@@ -311,6 +311,10 @@ try
     // Registrierung (rhe_…), Selector-Verzeichnis, Engine-Auflösung beider Quellen.
     builder.Services.AddSingleton(RookHub.Api.Services.EngineBroker.LocalBrokerOptions.FromConfig(builder.Configuration));
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineSelectorDirectory>();
+    // Long-Polls mit UNBEKANNTEM Selector je Adresse deckeln (der Poll selbst ist vom Rate-Limiter ausgenommen).
+    builder.Services.AddSingleton(new RookHub.Api.Services.EngineBroker.UnknownSelectorThrottle(
+        RookHub.Api.Services.EngineBroker.UnknownSelectorThrottle.DefaultPermitPerMinute
+        * RookHub.Api.Services.RateLimitScale.FromConfig(builder.Configuration)));
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.ExternalEngineRegistrationService>();
     builder.Services.AddScoped<RookHub.Api.Services.EngineBroker.EngineRegistry>();
     builder.Services.AddSingleton<RookHub.Api.Services.EngineBroker.EngineHub>();

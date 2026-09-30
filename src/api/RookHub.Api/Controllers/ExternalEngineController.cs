@@ -24,7 +24,8 @@ namespace RookHub.Api.Controllers;
 /// VOM RATE-LIMITER AUSGENOMMEN: 13 Provider pollen 78-mal je Minute, dazu die Uploads; unter dem globalen
 /// Deckel (100/min je IP) bauten wir genau die Drosselung nach, deretwegen es diesen Broker gibt. Ein
 /// unbekanntes Secret bekommt nach der Wartezeit dasselbe 204 wie ein bekanntes ohne Arbeit — kein 401/404
-/// im Takt (log-watcher) und keine Auskunft nach außen.</para>
+/// im Takt (log-watcher) und keine Auskunft nach außen. Solche Polls sind je Adresse gedeckelt
+/// (<see cref="UnknownSelectorThrottle"/>), der Rumpf des Polls auf <see cref="MaxAcquireBodyBytes"/>.</para>
 /// </summary>
 [ApiController]
 [Route("api/external-engine")]
@@ -36,15 +37,23 @@ public class ExternalEngineController : BaseApiController
     private readonly ILogger<ExternalEngineController> _logger;
     private readonly EngineHub _hub;
     private readonly EngineSelectorDirectory _directory;
+    private readonly UnknownSelectorThrottle _unknownSelectors;
+
+    /// <summary>Deckel für den Rumpf des Long-Polls: <c>{"providerSecret":"…"}</c> mit höchstens
+    /// <see cref="ExternalEngineRegistrationService.MaxProviderSecretLength"/> Zeichen — echte Provider schicken unter
+    /// 200 Byte. Ohne ihn band MVC bis zu Kestrels 30 MB in einen String, bevor die Längenprüfung griff.</summary>
+    public const int MaxAcquireBodyBytes = 4096;
 
     public ExternalEngineController(ExternalEngineRegistrationService registrations, LocalBrokerOptions options,
-        ILogger<ExternalEngineController> logger, EngineHub hub, EngineSelectorDirectory directory)
+        ILogger<ExternalEngineController> logger, EngineHub hub, EngineSelectorDirectory directory,
+        UnknownSelectorThrottle unknownSelectors)
     {
         _registrations = registrations;
         _options = options;
         _logger = logger;
         _hub = hub;
         _directory = directory;
+        _unknownSelectors = unknownSelectors;
     }
 
     /// <summary>Scope des API-Tokens; <c>null</c> = Browser-Login (JWT).</summary>
@@ -104,11 +113,13 @@ public class ExternalEngineController : BaseApiController
     /// <summary>
     /// Long-Poll des Providers (lila-engine <c>acquire</c>): wartet bis zu
     /// <see cref="LocalBrokerOptions.AcquireWait"/> (10 s) auf einen Auftrag für den Selector des Secrets →
-    /// <c>200 { id, work, engine }</c>, sonst <c>204</c>. Literal-Route VOR <c>{id}</c>.
+    /// <c>200 { id, work, engine }</c>, sonst <c>204</c>. Literal-Route VOR <c>{id}</c>. Ein unbekannter Selector wird
+    /// ebenso lange gehalten, aber je Adresse gedeckelt (<see cref="UnknownSelectorThrottle"/>, darüber sofort 429).
     /// </summary>
     [HttpPost("work")]
     [AllowAnonymous]
     [DisableRateLimiting]
+    [RequestSizeLimit(MaxAcquireBodyBytes)]
     public async Task<IActionResult> Acquire([FromBody] EngineAcquireRequest? request, CancellationToken ct)
     {
         if (!_options.Enabled) return NotFound();
@@ -121,6 +132,8 @@ public class ExternalEngineController : BaseApiController
         {
             if (!await _directory.IsKnownAsync(selector, ct))
             {
+                if (!_unknownSelectors.TryEnter(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+                    return StatusCode(StatusCodes.Status429TooManyRequests);
                 await Task.Delay(_options.AcquireWait, ct);
                 return NoContent();
             }

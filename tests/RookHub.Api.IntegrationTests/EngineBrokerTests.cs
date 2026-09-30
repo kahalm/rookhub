@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.EngineBroker;
 using Xunit;
 
 namespace RookHub.Api.IntegrationTests;
@@ -240,12 +241,39 @@ public class EngineBrokerTests(EngineBrokerFixture fixture) : IAsyncLifetime, IC
     public async Task ProviderPolls_AreNotRateLimited()
     {
         // Der globale Limiter lässt 100 Anfragen je Minute und IP durch. 13 Provider pollen 78-mal je Minute,
-        // dazu kommen Uploads — hier 130 Abrufe in wenigen Sekunden, keiner darf 429 sein.
+        // dazu kommen Uploads — hier 130 Abrufe in wenigen Sekunden mit einem REGISTRIERTEN Secret, keiner darf 429
+        // sein. (Unbekannte Secrets sind je Adresse gedeckelt, siehe den Test darunter.)
+        var (_, _, engineToken) = await UserAsync();
+        using var provider = Client(engineToken);
+        (await provider.PostAsJsonAsync("/api/external-engine", new
+        {
+            name = "Last", maxThreads = 1, maxHash = 16, variants = new[] { "chess" }, providerSecret = "known-provider-secret-0123",
+        })).EnsureSuccessStatusCode();
+
         using var anon = Client();
         var polls = Enumerable.Range(0, 130).Select(_ =>
-            anon.PostAsJsonAsync("/api/external-engine/work", new { providerSecret = "never-registered-secret-01" }));
+            anon.PostAsJsonAsync("/api/external-engine/work", new { providerSecret = "known-provider-secret-0123" }));
         var results = await Task.WhenAll(polls);
         Assert.All(results, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+    }
+
+    [MySqlFact]
+    public async Task UnknownSelectorPolls_AreCappedPerAddress_AndAnOversizedPollIs413()
+    {
+        // Erfundene Secrets hielten je Poll zehn Sekunden eine Verbindung, unbegrenzt je Adresse (Codereview
+        // 2026-09-29, A4-005): jetzt hält der Broker je Adresse 30 je Minute (204 nach der Wartezeit), darüber sofort 429.
+        using var anon = Client();
+        var polls = Enumerable.Range(0, 40).Select(i =>
+            anon.PostAsJsonAsync("/api/external-engine/work", new { providerSecret = $"never-registered-secret-{i:D2}" }));
+        var results = await Task.WhenAll(polls);
+        Assert.Equal(UnknownSelectorThrottle.DefaultPermitPerMinute, results.Count(r => r.StatusCode == HttpStatusCode.NoContent));
+        Assert.Equal(40 - UnknownSelectorThrottle.DefaultPermitPerMinute,
+            results.Count(r => r.StatusCode == HttpStatusCode.TooManyRequests));
+
+        // Ein riesiger Rumpf kommt nicht mehr in die Modellbindung: Kestrel lehnt ihn am Deckel des Polls ab.
+        var big = new StringContent("{\"providerSecret\":\"" + new string('A', 100_000) + "\"}", Encoding.UTF8, "application/json");
+        using var oversized = await anon.PostAsync("/api/external-engine/work", big);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, oversized.StatusCode);
     }
 
     [MySqlFact]

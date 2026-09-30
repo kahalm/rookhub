@@ -25,6 +25,7 @@ public class ExternalEngineControllerTests : IDisposable
     private readonly EngineHub _hub;
     private readonly EngineSelectorDirectory _directory;
     private readonly LocalBrokerOptions _options = new() { AcquireWait = TimeSpan.FromMilliseconds(150) };
+    private readonly UnknownSelectorThrottle _unknown = new(permitPerMinute: 3);
     private int _userId;
 
     public ExternalEngineControllerTests()
@@ -38,13 +39,14 @@ public class ExternalEngineControllerTests : IDisposable
         var registrations = new ExternalEngineRegistrationService(_db, _directory, NullLogger<ExternalEngineRegistrationService>.Instance);
         _hub = new EngineHub(_options, () => DateTime.UtcNow, startSweeper: false);
         _controller = new ExternalEngineController(registrations, _options,
-            NullLogger<ExternalEngineController>.Instance, _hub, _directory);
+            NullLogger<ExternalEngineController>.Instance, _hub, _directory, _unknown);
     }
 
     public void Dispose()
     {
         _db.Dispose();
         _sp.Dispose();
+        _unknown.Dispose();
     }
 
     private async Task UserAsync()
@@ -145,7 +147,7 @@ public class ExternalEngineControllerTests : IDisposable
         var directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
         var off = new ExternalEngineController(
             new ExternalEngineRegistrationService(_db, directory, NullLogger<ExternalEngineRegistrationService>.Instance),
-            new LocalBrokerOptions { Enabled = false }, NullLogger<ExternalEngineController>.Instance, _hub, directory)
+            new LocalBrokerOptions { Enabled = false }, NullLogger<ExternalEngineController>.Instance, _hub, directory, _unknown)
         {
             ControllerContext = _controller.ControllerContext,
         };
@@ -169,6 +171,78 @@ public class ExternalEngineControllerTests : IDisposable
         var r = await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "never-registered-0123" }, CancellationToken.None);
         Assert.IsType<NoContentResult>(r);
         Assert.True(DateTime.UtcNow - started >= TimeSpan.FromMilliseconds(120));
+    }
+
+    private void AnonymousFrom(string ip)
+    {
+        var http = new DefaultHttpContext();
+        http.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(ip);
+        _controller.ControllerContext = new ControllerContext { HttpContext = http };
+    }
+
+    /// <summary>Erfundene Secrets hielten je zehn Sekunden eine Verbindung — unbegrenzt je Adresse (A4-005). Jetzt ist
+    /// das Fenster je Adresse gedeckelt; darüber kommt SOFORT 429, ohne Halten.</summary>
+    [Fact]
+    public async Task Acquire_UnknownSecret_BeyondTheAddressWindow_Is429_WithoutHolding()
+    {
+        var slow = new LocalBrokerOptions { AcquireWait = TimeSpan.FromSeconds(5) };
+        using var throttle = new UnknownSelectorThrottle(permitPerMinute: 2);
+        var controller = new ExternalEngineController(
+            new ExternalEngineRegistrationService(_db, _directory, NullLogger<ExternalEngineRegistrationService>.Instance),
+            slow, NullLogger<ExternalEngineController>.Instance, _hub, _directory, throttle);
+        var http = new DefaultHttpContext();
+        http.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("198.51.100.4");
+        controller.ControllerContext = new ControllerContext { HttpContext = http };
+        Assert.True(throttle.TryEnter("198.51.100.4"));
+        Assert.True(throttle.TryEnter("198.51.100.4"));
+
+        var started = DateTime.UtcNow;
+        var r = await controller.Acquire(new EngineAcquireRequest { ProviderSecret = "never-registered-0123" }, CancellationToken.None);
+
+        Assert.Equal(429, Assert.IsType<StatusCodeResult>(r).StatusCode);
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(2), "429 darf nicht erst nach der Wartezeit kommen");
+        // Eine andere Adresse hat ihr eigenes Fenster.
+        Assert.True(throttle.TryEnter("198.51.100.5"));
+    }
+
+    [Fact]
+    public async Task Acquire_UnknownSecret_WithinTheWindow_StillWaits_ThenIs204()
+    {
+        AnonymousFrom("198.51.100.6");
+        for (var i = 0; i < 3; i++)
+            Assert.IsType<NoContentResult>(await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "never-registered-0123" }, CancellationToken.None));
+        Assert.Equal(429, Assert.IsType<StatusCodeResult>(
+            await _controller.Acquire(new EngineAcquireRequest { ProviderSecret = "never-registered-0123" }, CancellationToken.None)).StatusCode);
+    }
+
+    /// <summary>Bekannte Provider bleiben ausgenommen (docs/eigener-engine-broker.md): 13 Provider einer Adresse pollen
+    /// 78-mal je Minute — auch mit erschöpftem Fenster für unbekannte Secrets kommt ihr Poll durch.</summary>
+    [Fact]
+    public async Task Acquire_KnownSecret_IsNeverThrottled()
+    {
+        await UserAsync();
+        As("engine");
+        await _controller.Create(Req(), CancellationToken.None);
+        AnonymousFrom("198.51.100.7");
+        for (var i = 0; i < 3; i++) _unknown.TryEnter("198.51.100.7");
+        Assert.False(_unknown.TryEnter("198.51.100.7"));
+
+        for (var i = 0; i < 5; i++)
+            Assert.IsType<NoContentResult>(await _controller.Acquire(
+                new EngineAcquireRequest { ProviderSecret = "provider-secret-0123456789" }, CancellationToken.None));
+    }
+
+    /// <summary>Ohne Deckel band MVC bis zu Kestrels 30 MB in einen String, bevor die Längenprüfung des Secrets griff.</summary>
+    [Fact]
+    public void Acquire_HasASmallRequestSizeLimit_AboveTheLongestSecret()
+    {
+        var limit = typeof(ExternalEngineController).GetMethod(nameof(ExternalEngineController.Acquire))!
+            .GetCustomAttributesData().Single(a => a.AttributeType == typeof(RequestSizeLimitAttribute));
+        Assert.Equal(ExternalEngineController.MaxAcquireBodyBytes, Convert.ToInt64(limit.ConstructorArguments[0].Value));
+        Assert.InRange(ExternalEngineController.MaxAcquireBodyBytes, ExternalEngineRegistrationService.MaxProviderSecretLength + 64, 8192);
+        // Der Upload behält seinen fehlenden Deckel (er hat keine Größe, er hat eine Dauer).
+        Assert.NotEmpty(typeof(ExternalEngineController).GetMethod(nameof(ExternalEngineController.Submit))!
+            .GetCustomAttributes(typeof(DisableRequestSizeLimitAttribute), false));
     }
 
     [Fact]

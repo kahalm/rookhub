@@ -377,6 +377,26 @@ public class DeploymentConfigTests
         Assert.DoesNotContain("return ", body);
     }
 
+    /// <summary>
+    /// Der Long-Poll des Providers ist anonym und vom Rate-Limiter ausgenommen; unter der Präfix-Regel oben galt für ihn
+    /// „client_max_body_size 0" (A4-005). Die exakte Location deckelt seinen Rumpf klein — aber nicht unter dem, was die
+    /// API annimmt ([RequestSizeLimit] an Acquire), sonst bekäme ein gültiger Poll schon an nginx 413.
+    /// </summary>
+    [Fact]
+    public void ExternalEnginePoll_HasAnExactLocation_WithASmallBodyLimit()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location = /api/external-engine/work \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "location = /api/external-engine/work fehlt in nginx.conf");
+        var body = loc.Groups["body"].Value;
+        Assert.Contains("proxy_pass http://$rookhub_broker_api$request_uri;", body);
+        Assert.DoesNotContain("return ", body);
+        var size = Regex.Match(body, @"client_max_body_size (?<n>\d+)k;");
+        Assert.True(size.Success, "client_max_body_size (in k) fehlt in der Poll-Location");
+        var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024;
+        Assert.InRange(nginxBytes, RookHub.Api.Controllers.ExternalEngineController.MaxAcquireBodyBytes, 64 * 1024);
+    }
+
     [Fact]
     public void ExtensionChessableLocation_AllowsTheApiRequestSizeLimits()
     {

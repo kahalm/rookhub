@@ -2034,7 +2034,7 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
 | POST | `/api/external-engine` | Token `engine` | Registrieren `{ name, maxThreads, maxHash, variants, providerSecret, providerData? }` (gleicher Name = Aktualisierung) |
 | PUT | `/api/external-engine/{id}` | Token `engine` | Registrierung ändern (neues `providerSecret` = neuer Selector) |
 | DELETE | `/api/external-engine/{id}` | JWT oder Token `engine` | Engine entfernen (auch aus der Hintergrund-Liste); ein laufender Provider meldet sie beim nächsten Start neu an |
-| POST | `/api/external-engine/work` | **anonym** (Selector ist der Nachweis) | Long-Poll `{ providerSecret }` → 200/204. Unbekannter Selector = 204 nach der Wartezeit |
+| POST | `/api/external-engine/work` | **anonym** (Selector ist der Nachweis) | Long-Poll `{ providerSecret }` → 200/204. Unbekannter Selector = 204 nach der Wartezeit, je Client-Adresse höchstens 30 je Minute (`UnknownSelectorThrottle`), darüber sofort 429 ohne Halten; Rumpf ≤ 4 KB (`[RequestSizeLimit]`, sonst 413) |
 | POST | `/api/external-engine/work/{id}` | **anonym** (Auftragskennung) | Chunked-Upload der UCI-Ausgabe bis `bestmove`; 404 = Auftrag weg/abgelaufen |
 | POST | `/api/token/test` | **anonym** + RL | Lichess-kompatible Token-Prüfung (Rumpf `text/plain`, Tokens mit Komma, max. 20) → `{ token: { userId, scopes, expires } \| null }`; Scopes `engine:read,engine:write` NUR für Scope `engine`. Der Provider fragt hier vor dem Start (`preflight.py`) |
 
@@ -2061,7 +2061,8 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
    Registrierung und `token/test` bleiben limitiert.
 3. **Puffernde Proxys**: der Frontend-nginx hat `location ^~ /api/external-engine/` mit `proxy_request_buffering off`
    (sonst sammelt nginx den Chunked-Upload bis zum ENDE der Suche und die erste Zeile käme mit der letzten),
-   `proxy_buffering off`, `client_max_body_size 0` und 3600-s-Timeouts (`DeploymentConfigTests`). **Der Nginx Proxy
+   `proxy_buffering off`, `client_max_body_size 0` und 3600-s-Timeouts (`DeploymentConfigTests`); nur der Poll
+   `= /api/external-engine/work` hat eine eigene exakte location mit `client_max_body_size 8k`. **Der Nginx Proxy
    Manager davor puffert Anfragen per Vorgabe genauso** — Dev und Prod brauchen je eine Custom Location
    `/api/external-engine/` mit denselben Direktiven, sonst läuft der direkte Weg nur in Zeitlupe. Deploy-Schritt
    außerhalb des Repos, nur auf Zuruf (TODO.md). **Und die Registrierung heißt `/api/external-engine` OHNE
@@ -2075,7 +2076,11 @@ Lichess-Konto ging gar nichts. Direkt gibt es keine fremde Drossel, keinen Liche
    Anfragende oder der Provider weg ist, entscheidet deshalb der Zustand des Auftrags, nicht der Ausnahmetyp.
 5. **Unbekannter Selector = 204 nach der Wartezeit**, nicht 401/404: ein veralteter Provider pollte sonst im
    Sekundentakt Fehler (log-watcher `api_scan`), und ein fremder Selector verrät nichts. Polls loggen auf Debug,
-   `/api/external-engine/work` zählt als Systemaufruf (`SystemCallClassifier`).
+   `/api/external-engine/work` zählt als Systemaufruf (`SystemCallClassifier`). **Das Halten ist je Client-Adresse
+   gedeckelt** (Codereview 2026-09-29, A4-005, `UnknownSelectorThrottle`, 30 je Minute × `RateLimitScale`): darüber
+   sofort 429 ohne Halten — der Provider wartet nach einer 4xx-Antwort selbst (Backoff bis 10 s), nach einem 204 dagegen
+   nicht, deshalb bleibt das Halten innerhalb des Fensters. Bekannte Selectors laufen ungedrosselt. Der Poll-Rumpf ist
+   auf 4 KB gedeckelt (`ExternalEngineController.MaxAcquireBodyBytes`), vorher band MVC bis zu 30 MB in einen String.
 6. **Scope-Zaun je Scope** (`PatScopeFenceMiddleware.AllowedPrefixesByScope`): ein Token `engine` erreicht NUR
    `/api/external-engine/*`, einer `extension` nur `/api/extension/*`. Ein neuer Scope braucht dort einen Eintrag,
    sonst erreicht er gar nichts.
