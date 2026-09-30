@@ -154,6 +154,16 @@ describe('ClubAddPageComponent', () => {
     tick(3000);
   }));
 
+  it('der Formular-Hinweis nennt Anthropic und verlinkt den Datenschutz (A6-008)', fakeAsync(() => {
+    params = { token: 'TOK' };
+    query = { art: 'formular' };
+    const el = create(false);
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Anthropic (USA)');
+    expect(el.querySelector('a[href="/privacy"]')).not.toBeNull();
+  }));
+
   it('eine öffentliche Lichess-Studie laden führt direkt in die Übersicht; Absagen stehen als Satz da', fakeAsync(() => {
     const el = create();
     flushMicrotasks();

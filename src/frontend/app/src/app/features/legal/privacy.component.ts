@@ -38,6 +38,7 @@ import { LEGAL_SITE } from './legal-site';
             <li>{{ 'legal.privacy.dataUsage' | translate }}</li>
             <li>{{ 'legal.privacy.dataTechnical' | translate }}</li>
             <li>{{ 'legal.privacy.dataIpCountry' | translate }}</li>
+            <li>{{ 'legal.privacy.dataScoresheet' | translate }}</li>
           </ul>
 
           <h4>{{ 'legal.privacy.purposesTitle' | translate }}</h4>
@@ -51,7 +52,13 @@ import { LEGAL_SITE } from './legal-site';
             <li>{{ 'legal.privacy.thirdChesssites' | translate }}</li>
             <li>{{ 'legal.privacy.thirdLogging' | translate }}</li>
             <li>{{ 'legal.privacy.thirdHosting' | translate }}</li>
+            <li>{{ 'legal.privacy.thirdAnthropic' | translate }}</li>
           </ul>
+
+          <!-- Formular-Fotos gehen an Anthropic (USA) — auch anonym ueber LeagueHub-Teilen-Links (Codereview A6-008). -->
+          <h4>{{ 'legal.privacy.aiTitle' | translate }}</h4>
+          <p>{{ 'legal.privacy.aiScoresheet' | translate }}</p>
+          <p>{{ 'legal.privacy.aiLocal' | translate }}</p>
 
           <h4>{{ 'legal.privacy.storageTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.storage' | translate }}</p>

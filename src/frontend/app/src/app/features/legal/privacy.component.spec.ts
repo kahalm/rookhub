@@ -34,4 +34,37 @@ describe('PrivacyComponent', () => {
     expect(hrefs(el).filter(h => h === 'mailto:kidhub@oberschm.id').length).toBe(2);
     expect(el.textContent).not.toContain(OPERATOR.email);
   });
+
+  it('nennt die KI-Dienste: Formular-Fotos gehen an Anthropic (Codereview A6-008)', () => {
+    const el = render();
+    // Ohne Sprachdateien stehen die Keys selbst da — sie muessen gerendert werden.
+    expect(el.textContent).toContain('legal.privacy.aiTitle');
+    expect(el.textContent).toContain('legal.privacy.aiScoresheet');
+    expect(el.textContent).toContain('legal.privacy.thirdAnthropic');
+    expect(el.textContent).toContain('legal.privacy.dataScoresheet');
+  });
+});
+
+/** Die Texte selbst: Anbieter, Drittland und der Upload-Hinweis in den gepflegten Sprachen. */
+describe('Datenschutz-Texte (en/de/hr/hu)', () => {
+  async function load(lang: string): Promise<Record<string, any>> {
+    for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+      const res = await fetch(url);
+      if (res.ok) return res.json();
+    }
+    throw new Error(`${lang}.json nicht ladbar`);
+  }
+
+  for (const lang of ['en', 'de', 'hr', 'hu']) {
+    it(`${lang}: Anthropic als Empfaenger der Formular-Fotos, auch im Upload-Hinweis`, async () => {
+      const t = await load(lang);
+      const p = t['legal']['privacy'];
+      expect(p['aiScoresheet']).toContain('Anthropic');
+      expect(p['aiScoresheet']).toMatch(/USA|SAD|egyesült államok/);
+      expect(p['thirdAnthropic']).toContain('Anthropic');
+      expect(t['scoresheet']['help']).toContain('Anthropic');
+      // „eigene Hardware" haengt an der Konfiguration (TextLlm), der Hilfetext der Kurs-Uebersetzung bleibt neutral.
+      expect(t['courses']['translations']['help']).not.toMatch(/eigenen Hardware|own hardware|vlastitom hardveru|saját hardverünkön/);
+    });
+  }
 });

@@ -167,8 +167,10 @@ const SAVE_DEBOUNCE_MS = 1500;
       } @else {
         <section class="panel">
           @if (status(); as s) {
-            <p class="muted">{{ availability()!.text }} Das Foto wird von einem Sprachmodell gelesen — das dauert etwa
-              {{ perMove }} Sekunden pro Zug —, danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
+            <!-- Anbieter und Übermittlung nennen: das Foto (Namen, Unterschriften) geht an Anthropic in den USA (A6-008). -->
+            <p class="muted">{{ availability()!.text }} Das Foto liest Claude, ein KI-Modell von Anthropic (USA) — dafür wird
+              es dorthin übertragen (<a routerLink="/privacy">Datenschutz</a>). Das dauert etwa {{ perMove }} Sekunden pro
+              Zug; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars
                 <input type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
