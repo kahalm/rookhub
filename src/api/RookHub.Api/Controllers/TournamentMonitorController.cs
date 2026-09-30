@@ -42,13 +42,22 @@ public class TournamentMonitorController : BaseApiController
             return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
+        var now = DateTime.UtcNow;
 
         var monitor = await _db.TournamentMonitors
             .FirstOrDefaultAsync(m => m.CrawlerTournamentId == tournamentId && m.UserId == userId);
 
+        // Einen AKTIVEN Monitor verlaengern geht immer. Ein NEUER Monitor nur unter dem Deckel — vor dem ersten
+        // Crawler-Aufruf. Ebenso ein ABGELAUFENER, den der RoundMonitorService erst im naechsten Durchlauf loescht:
+        // sonst M1 ablaufen lassen (9 aktiv), M11 anlegen (10), M1 wiederbeleben (11) — beliebig oft wiederholbar.
+        if ((monitor is null || monitor.ActiveUntil < now)
+            && await _db.TournamentMonitors.CountAsync(m => m.UserId == userId && m.ActiveUntil >= now)
+                >= MaxActiveMonitorsPerUser)
+            return Conflict(new { message = $"Maximum of {MaxActiveMonitorsPerUser} active round monitors per user reached." });
+
         if (monitor is not null)
         {
-            monitor.ActiveUntil = DateTime.UtcNow.AddHours(1);
+            monitor.ActiveUntil = now.AddHours(1);
             await _db.SaveChangesAsync();
             return Ok(new
             {
@@ -58,12 +67,6 @@ public class TournamentMonitorController : BaseApiController
                 lastKnownRounds = monitor.LastKnownRounds
             });
         }
-
-        // Verlaengern (oben) geht immer; ein NEUER Monitor nur unter dem Deckel — vor dem ersten Crawler-Aufruf.
-        var now = DateTime.UtcNow;
-        if (await _db.TournamentMonitors.CountAsync(m => m.UserId == userId && m.ActiveUntil >= now)
-            >= MaxActiveMonitorsPerUser)
-            return Conflict(new { message = $"Maximum of {MaxActiveMonitorsPerUser} active round monitors per user reached." });
 
         // Fetch current round count from crawler
         int knownRounds = 0;

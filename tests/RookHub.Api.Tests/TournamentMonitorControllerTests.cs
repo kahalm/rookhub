@@ -142,6 +142,32 @@ public class TournamentMonitorControllerTests : IDisposable
         Assert.IsType<OkObjectResult>(await Controller(2, resp).Activate("12345"));
     }
 
+    /// <summary>
+    /// A5-004 (Nacharbeit): eine ABGELAUFENE Zeile, die der RoundMonitorService noch nicht weggeraeumt hat, zaehlt
+    /// am Deckel wie ein neuer Monitor. Sonst: M1 ablaufen lassen, M11 anlegen, M1 per POST wiederbeleben → 11 aktiv,
+    /// beliebig oft wiederholbar. 409, die Zeile bleibt unveraendert, der Crawler wird nicht gefragt.
+    /// </summary>
+    [Fact]
+    public async Task Activate_ExpiredMonitor_AtTheCap_Returns409AndLeavesTheRowUnchanged()
+    {
+        await SeedActiveMonitorsAsync(1, TournamentMonitorController.MaxActiveMonitorsPerUser);
+        var expiredAt = DateTime.UtcNow.AddSeconds(-1);
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 1, CrawlerTournamentId = "7777", CrawlerTournamentDbId = 77, ActiveUntil = expiredAt, LastKnownRounds = 3,
+        });
+        await _db.SaveChangesAsync();
+
+        var res = await Controller(1, _ => throw new Exception("crawler should not be called")).Activate("7777");
+
+        var conflict = Assert.IsType<ConflictObjectResult>(res);
+        Assert.Contains("Maximum of 10", conflict.Value!.ToString());
+        var row = await _db.TournamentMonitors.SingleAsync(m => m.CrawlerTournamentId == "7777");
+        Assert.Equal(expiredAt, row.ActiveUntil);
+        Assert.Equal(TournamentMonitorController.MaxActiveMonitorsPerUser,
+            await _db.TournamentMonitors.CountAsync(m => m.UserId == 1 && m.ActiveUntil >= DateTime.UtcNow));
+    }
+
     [Fact]
     public async Task GetStatus_ExpiredMonitor_ReturnsOk()
     {
