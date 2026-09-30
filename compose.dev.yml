@@ -86,8 +86,15 @@ services:
       start_period: 40s
     ports:
       # API_BIND (Vorgabe 127.0.0.1): die Oberflächen erreichen die API über das Compose-Netz.
-      # Braucht etwas außerhalb den Port direkt (Schach-Bot, Reverse-Proxy), die LAN-Adresse
-      # des Hosts setzen — nicht 0.0.0.0, sonst ist die API aus LAN und VPN an NPM vorbei offen.
+      # Braucht etwas außerhalb den Port direkt (Schach-Bot, Reverse-Proxy), eine Host-Adresse
+      # setzen, nie 0.0.0.0. RESTRISIKO bei der LAN-Adresse: Sie schließt nur die übrigen
+      # Interfaces (Zweitnetz, Bridges). Alles im LAN und alles, was per VPN dorthin geroutet
+      # wird, kommt genau über diese Adresse an und erreicht die API weiter an NPM vorbei; eine
+      # Ziel-Bindung ist kein Quell-Filter (der geht nur per iptables-Kette DOCKER-USER).
+      # Enger: das docker0-Gateway 172.17.0.1 (= host.docker.internal), wenn alle Verbraucher
+      # Container sind und vorher darauf umgestellt werden. Die Kurzform bindet genau EINE
+      # Adresse: mit API_BIND=<LAN-Adresse> fällt 127.0.0.1 weg, Host-Skripte mit Loopback-
+      # Vorgabe brauchen dann die URL als Argument (Liste in den .env-Vorlagen bei API_BIND).
       - "${API_BIND:-127.0.0.1}:${API_PORT}:8080"
     depends_on:
       mariadb:

@@ -33,6 +33,9 @@ rookhub_pw=$(sql_literal "$ROOKHUB_DB_PASSWORD")
 # Gateway-Adresse des Compose-Netzes. BEIDE Bereiche, weil Docker nach dem 172er-Vorrat auf 192.168
 # ausweicht (auf dem Deploy-Host liegen neue Netze längst dort). Eigene Adress-Pools im Daemon
 # (default-address-pools) → DB_APP_HOSTS passend setzen (Leerzeichenliste, je Eintrag ein Konto).
+# GRENZE: Liegt ein echtes Host-Netz selbst in diesen Bereichen (etwa ein 192.168.x-LAN auf einer
+# Netzkarte), gelten die Konten auch für dessen Geräte — dort schützt allein, dass DB_BIND auf
+# 127.0.0.1 bleibt (oder ein engeres DB_APP_HOSTS, z. B. nur das Subnetz des Compose-Netzes).
 # Läuft das Skript auf einem BESTEHENDEN Volume (von Hand), bleibt ein früher angelegtes
 # '<user>'@'%' stehen, bis es jemand entfernt: DROP USER '<user>'@'%';
 read -r -a app_hosts <<< "${DB_APP_HOSTS:-172.16.0.0/255.240.0.0 192.168.0.0/255.255.0.0}"
