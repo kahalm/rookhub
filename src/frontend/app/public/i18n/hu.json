@@ -3108,6 +3108,7 @@
     "openInBoard": "Megnyitás az elemzőtáblán",
     "apply": "Átvétel",
     "moreLinesHint": "Több változat = a keresés újraindul; az eddigi eredmény látható marad, amíg az új keresés mélyebbre nem jut.",
+    "houseEngineHint": "Ez a feladat a közös házi motoron fut — a mélységet, a változatokat és a motort a játszma elemzése határozza meg, módosítani csak adminisztrátor tudja.",
     "created": "Feladat felvéve — amint a háttérmotor szabad, elkezd számolni.",
     "createFailed": "A feladatot nem sikerült létrehozni",
     "updated": "Feladat módosítva.",

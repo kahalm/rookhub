@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AnalysisJobsComponent } from './analysis-jobs.component';
+import { AuthService } from '../../core/auth.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -144,5 +145,51 @@ describe('AnalysisJobsComponent', () => {
     expect(put.request.body).toEqual({ targetDepth: 40, multiPv: 2, engineId: 'eei_bg' });
     put.flush(job(1, { targetDepth: 40, status: 'queued' }));
     expect(c.jobs[0].targetDepth).toBe(40);
+  });
+
+  /** Codereview 2026-09-29, A4-001: ein Auftrag auf der Haus-Engine (Punktepartie, „Partie analysieren“) rechnet auf
+   *  fremder Rechenzeit — die Seite bot trotzdem Tiefe bis 60, 5 Linien und einen Engine-Wechsel an. */
+  const engines = {
+    hasCredentials: true, tokenInvalid: false, backgroundEngineIds: ['eei_bg'],
+    engines: [{ id: 'eei_bg', name: 'Hintergrund', maxThreads: 12, maxHash: 8192 }],
+  };
+
+  it('a house-engine job hides depth, lines and engine for non-admins; restart stays', async () => {
+    const { fixture, c, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([job(1, { houseEngine: true })]);
+    http.expectOne('/api/engine/external').flush(engines);
+    fixture.detectChanges();
+
+    c.toggle(c.jobs[0]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.job-body mat-select').length).toBe(0);
+    expect(el.querySelector('.job-body .house-hint')?.textContent).toContain('analysisJobs.houseEngineHint');
+    expect(el.textContent).not.toContain('analysisJobs.apply');
+    expect(el.textContent).toContain('analysisJobs.restart');
+
+    c.editDepth = 60;
+    c.save(c.jobs[0]);
+    http.expectNone('/api/analysis-jobs/1');
+  });
+
+  it('an admin keeps the controls on a house-engine job', async () => {
+    const { fixture, c, http } = await make();
+    spyOnProperty(TestBed.inject(AuthService), 'isAdmin', 'get').and.returnValue(true);
+    http.expectOne('/api/analysis-jobs').flush([job(1, { houseEngine: true })]);
+    http.expectOne('/api/engine/external').flush(engines);
+    fixture.detectChanges();
+
+    c.toggle(c.jobs[0]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.job-body mat-select').length).toBe(3);
+    expect(el.querySelector('.job-body .house-hint')).toBeNull();
+
+    c.editDepth = 40;
+    c.save(c.jobs[0]);
+    const put = http.expectOne('/api/analysis-jobs/1');
+    expect(put.request.body).toEqual({ targetDepth: 40, multiPv: 2, engineId: 'eei_bg' });
+    put.flush(job(1, { houseEngine: true, targetDepth: 40, status: 'queued' }));
   });
 });

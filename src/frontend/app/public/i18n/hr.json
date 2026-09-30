@@ -3365,6 +3365,7 @@
     "openInBoard": "Otvori na ploči za analizu",
     "apply": "Primijeni",
     "moreLinesHint": "Više varijanti = pretraga kreće iznova; dosadašnji rezultat ostaje vidljiv dok nova pretraga ne bude dublja.",
+    "houseEngineHint": "Ovaj zadatak radi na zajedničkom kućnom engineu — dubinu, varijante i engine određuje analiza partije, a mijenjati ih može samo administrator.",
     "created": "Zadatak dodan — kreće čim pozadinski motor bude slobodan.",
     "createFailed": "Zadatak nije bilo moguće dodati",
     "updated": "Zadatak ažuriran.",

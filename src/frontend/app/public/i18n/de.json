@@ -3365,6 +3365,7 @@
     "openInBoard": "Im Analysebrett öffnen",
     "apply": "Übernehmen",
     "moreLinesHint": "Mehr Linien = die Suche startet neu; das bisherige Ergebnis bleibt sichtbar, bis die neue Suche tiefer ist.",
+    "houseEngineHint": "Dieser Auftrag rechnet auf der geteilten Haus-Engine — Tiefe, Linien und Engine legt die Partie-Analyse fest, ändern kann sie nur ein Admin.",
     "created": "Auftrag angelegt — er rechnet, sobald die Hintergrund-Engine frei ist.",
     "createFailed": "Auftrag konnte nicht angelegt werden",
     "updated": "Auftrag angepasst.",

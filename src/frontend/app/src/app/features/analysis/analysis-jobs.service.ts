@@ -23,6 +23,9 @@ export interface AnalysisJob {
   currentDepth?: number;
   /** Suchtempo des laufenden Laufs in Knoten/Sekunde (0 = kein Messwert). */
   currentNps?: number;
+  /** Rechnet auf fremder Rechenzeit (Haus-Engine: Punktepartie, „Partie analysieren", Vertiefung) —
+   *  Tiefe, Linien und Engine ändert dort nur ein Admin (Server antwortet sonst 400). */
+  houseEngine?: boolean;
   secondsSpent: number;
   lastError: string | null;
   createdAt: string;

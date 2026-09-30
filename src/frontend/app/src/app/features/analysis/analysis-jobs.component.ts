@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -13,6 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription, interval } from 'rxjs';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from './analysis-jobs.service';
@@ -26,7 +27,8 @@ import type { EngineAnalyseLine } from './external-engine.service';
  * erreichter Tiefe, Rechenzeit und der Bewertung der Hauptvariante. Aufklappen zeigt Brett + die
  * gespeicherten Linien — OHNE dass eine Engine anläuft (Ergebnis-Zeile wird wie der Live-Stream
  * abgebildet). Dort lassen sich Zieltiefe/Linien nachträglich ändern („weiter bis Tiefe 50";
- * mehr Linien = Suche startet neu, das bisherige Ergebnis bleibt sichtbar). Aktualisiert sich alle
+ * mehr Linien = Suche startet neu, das bisherige Ergebnis bleibt sichtbar) — nicht bei Aufträgen auf der
+ * Haus-Engine (`houseEngine`), die ändert nur ein Admin (`canTune`). Aktualisiert sich alle
  * 10 s, solange Aufträge offen sind.
  */
 @Component({
@@ -99,31 +101,35 @@ import type { EngineAnalyseLine } from './external-engine.service';
                     }
                   }
                   <div class="edit">
-                    <mat-form-field appearance="outline" class="num" subscriptSizing="dynamic">
-                      <mat-label>{{ 'analysisJobs.dialog.depth' | translate }}</mat-label>
-                      <mat-select [(ngModel)]="editDepth">
-                        @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
-                      </mat-select>
-                    </mat-form-field>
-                    <mat-form-field appearance="outline" class="num" subscriptSizing="dynamic">
-                      <mat-label>{{ 'analysisJobs.dialog.lines' | translate }}</mat-label>
-                      <mat-select [(ngModel)]="editLines">
-                        @for (n of lineOptions; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
-                      </mat-select>
-                    </mat-form-field>
-                    @if (engines.length > 0) {
-                      <mat-form-field appearance="outline" class="engine" subscriptSizing="dynamic">
-                        <mat-label>{{ 'analysisJobs.engine' | translate }}</mat-label>
-                        <mat-select [(ngModel)]="editEngineId">
-                          @for (e of engines; track e.id) {
-                            <mat-option [value]="e.id">{{ e.name }}@if (tagOf(e); as tag) { · {{ tag | translate }} }</mat-option>
-                          }
+                    @if (canTune(job)) {
+                      <mat-form-field appearance="outline" class="num" subscriptSizing="dynamic">
+                        <mat-label>{{ 'analysisJobs.dialog.depth' | translate }}</mat-label>
+                        <mat-select [(ngModel)]="editDepth">
+                          @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
                         </mat-select>
                       </mat-form-field>
+                      <mat-form-field appearance="outline" class="num" subscriptSizing="dynamic">
+                        <mat-label>{{ 'analysisJobs.dialog.lines' | translate }}</mat-label>
+                        <mat-select [(ngModel)]="editLines">
+                          @for (n of lineOptions; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
+                        </mat-select>
+                      </mat-form-field>
+                      @if (engines.length > 0) {
+                        <mat-form-field appearance="outline" class="engine" subscriptSizing="dynamic">
+                          <mat-label>{{ 'analysisJobs.engine' | translate }}</mat-label>
+                          <mat-select [(ngModel)]="editEngineId">
+                            @for (e of engines; track e.id) {
+                              <mat-option [value]="e.id">{{ e.name }}@if (tagOf(e); as tag) { · {{ tag | translate }} }</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                      }
+                      <button mat-stroked-button [disabled]="saving || !dirty(job)" (click)="save(job)">
+                        <mat-icon>save</mat-icon> {{ 'analysisJobs.apply' | translate }}
+                      </button>
+                    } @else {
+                      <p class="muted small house-hint"><mat-icon>lock</mat-icon> {{ 'analysisJobs.houseEngineHint' | translate }}</p>
                     }
-                    <button mat-stroked-button [disabled]="saving || !dirty(job)" (click)="save(job)">
-                      <mat-icon>save</mat-icon> {{ 'analysisJobs.apply' | translate }}
-                    </button>
                     @if (job.status !== 'done') {
                       <button mat-stroked-button [disabled]="saving" (click)="restart(job)"
                               [matTooltip]="'analysisJobs.restartTooltip' | translate">
@@ -181,6 +187,8 @@ import type { EngineAnalyseLine } from './external-engine.service';
     .edit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     .num { width: 120px; }
     .engine { width: 220px; }
+    .house-hint { display: flex; align-items: center; gap: 4px; margin: 0; flex: 1 1 240px; }
+    .house-hint mat-icon { font-size: 16px; width: 16px; height: 16px; flex: 0 0 auto; }
     @media (max-width: 700px) { .job-body { padding-left: 12px; } .board, .board app-chess-board { width: 100%; max-width: 320px; } }
   `],
 })
@@ -196,6 +204,7 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   /** Zusatz hinter dem Engine-Namen („über Lichess" / „offline", siehe `engineTagKey`). */
   tagOf(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
   saving = false;
+  private readonly auth = inject(AuthService);
   readonly depthOptions = JOB_DEPTH_OPTIONS;
   readonly lineOptions = JOB_LINE_OPTIONS;
   readonly formatElapsed = formatElapsed;
@@ -271,6 +280,13 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
     this.editEngineId = job.engineId;
   }
 
+  /** Darf der Nutzer Tiefe/Linien/Engine dieses Auftrags ändern? Nicht bei einem Auftrag auf der Haus-Engine
+   *  (fremde Rechenzeit) — das darf nur ein Admin, derselbe Riegel wie am Server (Codereview 2026-09-29, A4-001).
+   *  Titel, Neustart und Löschen bleiben. */
+  canTune(job: AnalysisJob): boolean {
+    return !job.houseEngine || this.auth.isAdmin;
+  }
+
   /** Gibt es überhaupt etwas zu übernehmen? (sonst bleibt der Knopf aus) */
   dirty(job: AnalysisJob): boolean {
     return this.editDepth !== job.targetDepth || this.editLines !== job.multiPv || this.editEngineId !== job.engineId;
@@ -335,7 +351,7 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   }
 
   save(job: AnalysisJob): void {
-    if (this.saving) return;
+    if (this.saving || !this.canTune(job)) return;
     this.saving = true;
     this.jobsApi.update(job.id, { targetDepth: this.editDepth, multiPv: this.editLines, engineId: this.editEngineId }).subscribe({
       next: updated => {

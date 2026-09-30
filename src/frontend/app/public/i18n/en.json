@@ -3365,6 +3365,7 @@
     "openInBoard": "Open in analysis board",
     "apply": "Apply",
     "moreLinesHint": "More lines = the search restarts; the current result stays visible until the new search is deeper.",
+    "houseEngineHint": "This job runs on the shared house engine — the game analysis sets depth, lines and engine, and only an admin can change them.",
     "created": "Job queued — it runs as soon as the background engine is free.",
     "createFailed": "Could not create the job",
     "updated": "Job updated.",
