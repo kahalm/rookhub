@@ -13,14 +13,22 @@ services:
     restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?MARIADB_ROOT_PASSWORD must be set}
+      # root nur im Container (docker exec, Healthcheck) — ohne die Variable legt das Image
+      # root@'%' an. Wirkt wie DB_APP_HOSTS nur beim ersten Start auf leerem Volume.
+      MARIADB_ROOT_HOST: ${MARIADB_ROOT_HOST:-localhost}
       CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
       CRAWLER_DB_USER: ${CRAWLER_DB_USER}
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
       ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME}
       ROOKHUB_DB_USER: ${ROOKHUB_DB_USER}
       ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD}
+      # Adressbereiche der App-Benutzer (init-db.sh); leer = die Docker-Bridge-Netze.
+      DB_APP_HOSTS: ${DB_APP_HOSTS:-}
     ports:
-      - "${DB_EXTERNAL_PORT}:3306"
+      # DB_BIND (Vorgabe 127.0.0.1) = nur der Host: die Dienste gehen über das Compose-Netz,
+      # Werkzeuge auf dem Host über 127.0.0.1:<DB_EXTERNAL_PORT>. NICHT 0.0.0.0 — dann erreicht
+      # jeder im LAN/VPN den Passwort-Login (MariaDB drosselt falsche Passwörter nicht).
+      - "${DB_BIND:-127.0.0.1}:${DB_EXTERNAL_PORT}:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
@@ -101,7 +109,10 @@ services:
       retries: 3
       start_period: 40s
     ports:
-      - "${API_PORT}:8080"
+      # API_BIND (Vorgabe 127.0.0.1): die Oberflächen erreichen die API über das Compose-Netz.
+      # Braucht etwas außerhalb den Port direkt (Schach-Bot, Reverse-Proxy), die LAN-Adresse
+      # des Hosts setzen — nicht 0.0.0.0, sonst ist die API aus LAN und VPN an NPM vorbei offen.
+      - "${API_BIND:-127.0.0.1}:${API_PORT}:8080"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -237,13 +248,13 @@ services:
       # Stack (`/opt/stacks/rookhub-es`, von Prod + Dev geteilt) — eine Änderung HIER wirkt dort
       # nicht. Die Bindung dieses Blocks gilt für einen Stack, der ES/Kibana selbst mitbringt.
       # Kibana läuft mit ABGESCHALTETER Security (xpack.security.enabled=false) und veröffentlicht
-      # hier standardmäßig auf ALLEN Host-Interfaces: wer den Host auf diesem Port erreicht, liest
+      # hier nur auf KIBANA_BIND (Vorgabe 127.0.0.1): wer den Host auf diesem Port erreicht, liest
       # ohne Login den kompletten Log-Index (Request-Pfade mit Ids, Nutzernamen, IP-Adressen,
       # Security-Events). Elasticsearch selbst ist bewusst NICHT publiziert.
-      # KIBANA_BIND=127.0.0.1 beschränkt den Zugriff auf den Host (Zugang dann per SSH-Tunnel:
-      # `ssh -L 5601:127.0.0.1:5601 <host>`); Vorgabe bleibt 0.0.0.0, damit ein bestehender
-      # LAN-Zugriff (siehe KIBANA_URL) nicht unangekündigt wegbricht.
-      - "${KIBANA_BIND:-0.0.0.0}:${KIBANA_PORT:-5601}:5601"
+      # Die Vorgabe beschränkt den Zugriff auf den Host (Zugang dann per SSH-Tunnel:
+      # `ssh -L 5601:127.0.0.1:5601 <host>`); für den LAN-Zugriff (siehe KIBANA_URL) die
+      # LAN-Adresse des Hosts setzen, nie 0.0.0.0.
+      - "${KIBANA_BIND:-127.0.0.1}:${KIBANA_PORT:-5601}:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -285,7 +296,9 @@ services:
       retries: 3
       start_period: 10s
     ports:
-      - "${FRONTEND_PORT}:8080"
+      # FRONTEND_BIND (Vorgabe 0.0.0.0) gilt für alle Oberflächen; kommt der Reverse-Proxy über
+      # die LAN-Adresse des Hosts, genügt diese.
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT}:8080"
     depends_on:
       - api
     networks:
@@ -310,7 +323,7 @@ services:
       retries: 3
       start_period: 10s
     ports:
-      - "${TURNIER_PORT}:8080"
+      - "${FRONTEND_BIND:-0.0.0.0}:${TURNIER_PORT}:8080"
     depends_on:
       - api
     networks:

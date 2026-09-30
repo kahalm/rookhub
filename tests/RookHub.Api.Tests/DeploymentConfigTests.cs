@@ -117,6 +117,98 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// Kein veröffentlichter Port ohne Bind-Adresse (Codereview 2026-09-29, I1-003). Ein Eintrag wie
+    /// <c>"${DB_EXTERNAL_PORT}:3306"</c> lauscht auf 0.0.0.0 UND [::]: Datenbank und API waren so aus
+    /// LAN und VPN direkt erreichbar — an NPM vorbei, mit Passwort-Login als App-Benutzer bzw. root.
+    /// Jeder Eintrag nennt deshalb seine Adresse (Variable mit Vorgabe); für Datenbank, API,
+    /// Elasticsearch und Kibana ist die Vorgabe der Host selbst. Wer mehr braucht (API für Bot und
+    /// NPM auf der LAN-Adresse), setzt die Variable in der .env bewusst.
+    /// </summary>
+    [Theory]
+    [InlineData("compose.vpn.yml")]
+    [InlineData("compose.dev.yml")]
+    [InlineData("compose.dev.vpn.yml")]
+    [InlineData("compose.yml.example")]
+    [InlineData("compose.vpn.example")]
+    public void EveryPublishedPort_NamesABindAddress(string file)
+    {
+        var text = ReadRepoFile(file);
+
+        var ports = PublishedPorts(text);
+        Assert.NotEmpty(ports);
+        foreach (var port in ports)
+        {
+            // Variablen zuerst ausblenden: die Vorgabe in ${X:-127.0.0.1} bringt eigene Doppelpunkte mit.
+            var parts = Regex.Replace(port, @"\$\{[^}]*\}", "X").Split(':');
+            Assert.True(parts.Length == 3,
+                $"{file}: '{port}' hat keine Bind-Adresse und lauscht damit auf allen Interfaces.");
+        }
+
+        var mariadb = ServiceBlock(text, "mariadb");
+        Assert.Contains("\"${DB_BIND:-127.0.0.1}:${DB_EXTERNAL_PORT}:3306\"", mariadb);
+        // Ohne die Variable legt das Image root@'%' an: root-Login von überall, wo der Port hinreicht.
+        Assert.Contains("MARIADB_ROOT_HOST: ${MARIADB_ROOT_HOST:-localhost}", mariadb);
+        // init-db.sh braucht die Adressbereiche der App-Benutzer im Container (leer = seine Vorgabe).
+        Assert.Contains("DB_APP_HOSTS: ${DB_APP_HOSTS:-}", mariadb);
+        Assert.Contains("\"${API_BIND:-127.0.0.1}:${API_PORT}:8080\"", ServiceBlock(text, "api"));
+        // Elasticsearch (ohne Security, schreibbar) und Kibana (ohne Login) nicht mehr mit Vorgabe 0.0.0.0.
+        Assert.DoesNotMatch(@"\$\{(ES|KIBANA)_BIND:-0\.0\.0\.0\}", text);
+    }
+
+    /// <summary>Die Einträge unter jedem <c>ports:</c>-Schlüssel (Kurzform), ohne Anführungszeichen
+    /// und angehängten Kommentar. Kommentarzeilen im Block werden übersprungen; ein Eintrag in
+    /// Langform (<c>- target: …</c>) kommt als „target: …" zurück und fällt damit im Test auf.</summary>
+    private static List<string> PublishedPorts(string compose)
+    {
+        var result = new List<string>();
+        int? portsIndent = null;
+        foreach (var raw in compose.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+            var content = line.Trim();
+            if (content.Length == 0 || content.StartsWith('#')) continue;
+            var indent = line.Length - line.TrimStart().Length;
+
+            if (portsIndent is int blockIndent)
+            {
+                if (indent >= blockIndent && content.StartsWith("- ", StringComparison.Ordinal))
+                {
+                    var entry = content[2..];
+                    var comment = entry.IndexOf(" #", StringComparison.Ordinal);
+                    if (comment >= 0) entry = entry[..comment];
+                    result.Add(entry.Trim().Trim('"', '\''));
+                    continue;
+                }
+                if (indent > blockIndent) continue;   // Folgezeile eines Langform-Eintrags
+                portsIndent = null;
+            }
+
+            if (content == "ports:") portsIndent = indent;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// I1-003: Die App-Benutzer hießen '…'@'%' — Anmeldung von jeder Adresse, die den Port erreicht.
+    /// Sie gelten jetzt nur für die Adressbereiche der Docker-Netze (<c>DB_APP_HOSTS</c>; das
+    /// erzeugte SQL prüft <c>scripts/tests/test_init_db.sh</c>). Die unbenutzte init-db.sql mit den
+    /// Standardpasswörtern der Anfangszeit und GRANT ALL ist weg — die Git-Historie behält sie, die
+    /// Passwörter bestehender Installationen gehören deshalb abgeglichen.
+    /// </summary>
+    [Fact]
+    public void InitDb_RestrictsAppUsersToTheDockerNetworks_AndTheOldSeedIsGone()
+    {
+        var script = ReadRepoFile("init-db.sh");
+        // Nur der Code zählt — der Kommentar darf erklären, wie man ein altes '%'-Konto loswird.
+        var code = string.Join('\n', script.Split('\n').Where(l => !l.TrimStart().StartsWith('#')));
+
+        Assert.DoesNotContain("@'%'", code);
+        Assert.Contains("DB_APP_HOSTS", code);
+        Assert.False(File.Exists(Path.Combine(RepoRoot(), "init-db.sql")),
+            "init-db.sql ist zurück — sie trug öffentliche Standardpasswörter mit GRANT ALL und wird von nichts benutzt.");
+    }
+
+    /// <summary>
     /// Ohne Test-Tor pushen die Image-Jobs ohne einen einzigen Test — und Watchtower zieht die
     /// Images in derselben Nacht.
     ///

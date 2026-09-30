@@ -58,6 +58,14 @@
 #   ${FRONTEND_PORT}    -> Frontend (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
+#
+# Bind-Adressen (optional; ein Port ohne Adresse lauscht auf ALLEN Interfaces, auch für LAN/VPN):
+#   DB_BIND=       (127.0.0.1) MariaDB nur für den Host. DB_HOST=mariadb + DB_PORT=3306 gehen über
+#                  das Compose-Netz; eine LAN-Adresse als DB_HOST braucht DB_BIND auf dieselbe
+#   API_BIND=      (127.0.0.1) die LAN-Adresse, wenn Bot/Reverse-Proxy direkt auf API_PORT gehen
+#   FRONTEND_BIND= (0.0.0.0)   alle Oberflächen; die LAN-Adresse genügt, kommt der Proxy von dort
+#   DB_APP_HOSTS=  Adressbereiche der App-Benutzer (init-db.sh, nur beim ersten Start auf leerem
+#                  Volume), leer = die Docker-Bridge-Netze
 ###############################################################################
 
 services:
@@ -69,14 +77,22 @@ services:
     restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      # root nur im Container (docker exec, Healthcheck) — ohne die Variable legt das Image
+      # root@'%' an. Wirkt wie DB_APP_HOSTS nur beim ersten Start auf leerem Volume.
+      MARIADB_ROOT_HOST: ${MARIADB_ROOT_HOST:-localhost}
       CRAWLER_DB_NAME: ${CRAWLER_DB_NAME}
       CRAWLER_DB_USER: ${CRAWLER_DB_USER}
       CRAWLER_DB_PASSWORD: ${CRAWLER_DB_PASSWORD}
       ROOKHUB_DB_NAME: ${ROOKHUB_DB_NAME}
       ROOKHUB_DB_USER: ${ROOKHUB_DB_USER}
       ROOKHUB_DB_PASSWORD: ${ROOKHUB_DB_PASSWORD}
+      # Adressbereiche der App-Benutzer (init-db.sh); leer = die Docker-Bridge-Netze.
+      DB_APP_HOSTS: ${DB_APP_HOSTS:-}
     ports:
-      - "${DB_EXTERNAL_PORT}:3306"
+      # DB_BIND (Vorgabe 127.0.0.1) = nur der Host: die Dienste gehen über das Compose-Netz,
+      # Werkzeuge auf dem Host über 127.0.0.1:<DB_EXTERNAL_PORT>. NICHT 0.0.0.0 — dann erreicht
+      # jeder im LAN/VPN den Passwort-Login (MariaDB drosselt falsche Passwörter nicht).
+      - "${DB_BIND:-127.0.0.1}:${DB_EXTERNAL_PORT}:3306"
     volumes:
       - ${DB_DATA_PATH}:/var/lib/mysql
       - ${INIT_DB_PATH}:/docker-entrypoint-initdb.d/init-db.sh:ro
@@ -137,7 +153,10 @@ services:
     container_name: rookhub-api
     restart: unless-stopped
     ports:
-      - "${API_PORT}:8080"
+      # API_BIND (Vorgabe 127.0.0.1): die Oberflächen erreichen die API über das Compose-Netz.
+      # Braucht etwas außerhalb den Port direkt (Schach-Bot, Reverse-Proxy), die LAN-Adresse
+      # des Hosts setzen — nicht 0.0.0.0, sonst ist die API aus LAN und VPN an NPM vorbei offen.
+      - "${API_BIND:-127.0.0.1}:${API_PORT}:8080"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -241,9 +260,11 @@ services:
     container_name: rookhub-frontend
     restart: unless-stopped
     ports:
+      # FRONTEND_BIND (Vorgabe 0.0.0.0) gilt für alle Oberflächen; kommt der Reverse-Proxy über
+      # die LAN-Adresse des Hosts, genügt diese.
       # FALLE: nginx laeuft im Image als non-root User und lauscht deshalb auf 8080,
       # NICHT auf 80 — ein 80er-Mapping ergibt einen tot wirkenden Stack.
-      - "${FRONTEND_PORT}:8080"
+      - "${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT}:8080"
     depends_on:
       - api
     healthcheck:

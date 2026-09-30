@@ -8,6 +8,10 @@
 # mit einfachem Anfuehrungszeichen und Backslash. Unmaskiert beendet es das
 # SQL-Literal, der Rest der Zeile wird als SQL gelesen.
 #
+# Und (Codereview 2026-09-29, I1-003): die App-Benutzer gelten nur fuer die
+# Adressbereiche der Docker-Netze, nie fuer '%' — sonst meldet sich aus LAN und
+# VPN an, wer den veroeffentlichten Port erreicht.
+#
 #   ./scripts/tests/test_init_db.sh
 ###############################################################################
 set -u
@@ -44,16 +48,50 @@ grep -qF "IDENTIFIED BY 'it's" "$out" \
   || ok "kein unmaskiertes Anfuehrungszeichen"
 
 # 3) Passwort-Rotation wirkt: ALTER USER zieht ein bestehendes Konto nach
-#    (CREATE USER IF NOT EXISTS allein tut das NICHT).
-[ "$(grep -c '^ALTER USER ' "$out")" -eq 2 ] \
-  && ok "ALTER USER fuer beide Konten (Rotation wirkt)" \
-  || fail "ALTER USER fehlt (Passwort-Rotation waere ein No-op)"
+#    (CREATE USER IF NOT EXISTS allein tut das NICHT). Zwei Benutzer x zwei
+#    Adressbereiche der Vorgabe = vier Konten.
+[ "$(grep -c '^ALTER USER ' "$out")" -eq 4 ] \
+  && ok "ALTER USER fuer alle vier Konten (Rotation wirkt)" \
+  || fail "ALTER USER fehlt (Passwort-Rotation waere ein No-op): $(grep -c '^ALTER USER ' "$out")"
+
+# 3b) Kein Konto fuer beliebige Adressen — '%' war der Weg aus LAN und VPN.
+grep -qF "@'%'" "$out" \
+  && fail "App-Benutzer mit Host '%': $(grep -F "@'%'" "$out" | head -1)" \
+  || ok "kein App-Benutzer mit Host '%'"
+
+# 3c) Vorgabe = beide Docker-Adressvorraete, fuer beide Benutzer mit Rechten.
+for user in crawler rookhub; do
+  for host in 172.16.0.0/255.240.0.0 192.168.0.0/255.255.0.0; do
+    grep -qF "TO '$user'@'$host';" "$out" \
+      && ok "GRANT fuer '$user'@'$host'" || fail "GRANT fuer '$user'@'$host' fehlt"
+  done
+done
 
 # 4) Beide Datenbanken + Rechte
 for db in chessresults rookhub; do
   grep -qF "CREATE DATABASE IF NOT EXISTS \`$db\`" "$out" \
     && ok "CREATE DATABASE fuer '$db'" || fail "CREATE DATABASE fuer '$db' fehlt"
 done
+
+# 5) DB_APP_HOSTS ersetzt die Vorgabe (eigene Adress-Pools im Docker-Daemon).
+out2="$(mktemp)"; trap 'rm -f "$out" "$out2"' EXIT
+CRAWLER_DB_NAME=chessresults CRAWLER_DB_USER=crawler CRAWLER_DB_PASSWORD=x \
+ROOKHUB_DB_NAME=rookhub ROOKHUB_DB_USER=rookhub ROOKHUB_DB_PASSWORD=y \
+DB_APP_HOSTS='10.99.0.0/255.255.0.0' \
+  bash -c "docker_process_sql() { cat >> '$out2'; }; source '$SCRIPT'"
+[ "$?" -eq 0 ] && [ "$(grep -c '^ALTER USER ' "$out2")" -eq 2 ] \
+  && grep -qF "TO 'rookhub'@'10.99.0.0/255.255.0.0';" "$out2" \
+  && ! grep -qF "172.16.0.0" "$out2" \
+  && ok "DB_APP_HOSTS ersetzt die Vorgabe" \
+  || fail "DB_APP_HOSTS wirkt nicht: $(grep '^GRANT' "$out2" | head -2)"
+
+# 6) Ein DB_APP_HOSTS ohne Eintrag bricht ab, statt Benutzer ohne Host anzulegen.
+CRAWLER_DB_NAME=chessresults CRAWLER_DB_USER=crawler CRAWLER_DB_PASSWORD=x \
+ROOKHUB_DB_NAME=rookhub ROOKHUB_DB_USER=rookhub ROOKHUB_DB_PASSWORD=y \
+DB_APP_HOSTS='   ' \
+  bash -c "docker_process_sql() { cat > /dev/null; }; source '$SCRIPT'" 2>/dev/null \
+  && fail "leeres DB_APP_HOSTS lief durch" \
+  || ok "DB_APP_HOSTS ohne Eintrag bricht ab"
 
 echo
 if [ "$fails" -eq 0 ]; then echo "PASS: alle Checks gruen."; exit 0; fi
