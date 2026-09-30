@@ -354,8 +354,9 @@ export class AppComponent implements OnInit {
 
   /** Nach einer neuen App-Version suchen (fehlertolerant; SW evtl. noch nicht registriert). */
   /**
-   * Bot-Link `?dl=<token>`: eingeloggt -> sofort verknüpfen; anonym -> Token vormerken
-   * (wird nach Login/Registrierung automatisch eingelöst). Param wird aus der URL entfernt.
+   * Bot-Link `?dl=<token>`: eingeloggt -> nach Rückfrage mit dem Discord-Namen verknüpfen (nie still:
+   * der Token bindet nicht den Empfänger, ein fremder Link verknüpfte sonst das Discord-Konto des Absenders);
+   * anonym -> Token vormerken (nach Login/Registrierung dieselbe Rückfrage). Param wird aus der URL entfernt.
    */
   private handleDiscordLinkParam(params: URLSearchParams): void {
     if (this.dlHandled) return;
@@ -369,13 +370,7 @@ export class AppComponent implements OnInit {
     window.history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
 
     if (this.auth.isLoggedIn) {
-      this.discordLink.link(token).subscribe({
-        next: () => this.snackbar.info(this.translate.instant('profile.discord.linked')),
-        error: (err) => {
-          const key = err?.status === 409 ? 'profile.discord.linkConflict' : 'profile.discord.linkFailed';
-          this.snackbar.info(this.translate.instant(key), { duration: 4000 });
-        }
-      });
+      this.discordLink.confirmAndLink(token).subscribe();
     } else {
       this.discordLink.stash(token);
       this.snackbar.warn(this.translate.instant('profile.discord.stashed'));

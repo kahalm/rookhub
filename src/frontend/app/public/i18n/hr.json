@@ -558,6 +558,7 @@
       "linked": "Discord račun povezan",
       "linkConflict": "Ovaj Discord račun već je povezan s drugim RookHub korisnikom.",
       "linkFailed": "Povezivanje Discord računa nije uspjelo",
+      "confirmLink": "Povezati Discord račun „{{discord}}” s tvojim RookHub računom? Potvrdi samo ako je to tvoj vlastiti Discord račun i ako si poveznicu sam dobio od RookHub bota — bot će tada tom računu slati tvoj pregled treninga.",
       "stashed": "Prijavi se ili registriraj da dovršiš povezivanje Discord računa."
     },
     "tokens": {

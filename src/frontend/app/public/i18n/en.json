@@ -558,6 +558,7 @@
       "linked": "Discord account linked",
       "linkConflict": "This Discord account is already linked to another RookHub user.",
       "linkFailed": "Could not link Discord account",
+      "confirmLink": "Link the Discord account “{{discord}}” to your RookHub account? Only confirm if this is your own Discord account and you got the link from the RookHub bot yourself — the bot will then send this account your training overview.",
       "stashed": "Sign in or register to finish linking your Discord account."
     },
     "tokens": {

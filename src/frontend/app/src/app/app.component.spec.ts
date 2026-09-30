@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Subject } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { SwUpdate } from '@angular/service-worker';
 import { TranslateService } from '@ngx-translate/core';
@@ -236,5 +236,73 @@ describe('AppComponent App-Vollbild', () => {
     (fixture.nativeElement.querySelector('.app-fs-exit') as HTMLButtonElement).click();
 
     expect(exit).toHaveBeenCalled();
+  });
+});
+
+// F1-002: ein ?dl=-Link verknüpft ein angemeldetes Konto nie ohne Rückfrage — der Token bindet nur die
+// Discord-ID, nicht den Empfänger; ein fremder Link verknüpfte sonst still das Discord-Konto des Absenders.
+describe('AppComponent Discord-Link (?dl=)', () => {
+  let routerEvents: Subject<unknown>;
+  let auth: { isLoggedIn: boolean; isAdmin: boolean; isImpersonating: boolean };
+  let discordLink: { confirmAndLink: jasmine.Spy; link: jasmine.Spy; stash: jasmine.Spy };
+  let snackbar: { warn: jasmine.Spy; info: jasmine.Spy };
+  let originalUrl: string;
+
+  beforeEach(() => {
+    originalUrl = window.location.pathname + window.location.search;
+    routerEvents = new Subject<unknown>();
+    auth = { isLoggedIn: true, isAdmin: false, isImpersonating: false };
+    discordLink = {
+      confirmAndLink: jasmine.createSpy('confirmAndLink').and.returnValue(of('declined')),
+      link: jasmine.createSpy('link').and.returnValue(of({})),
+      stash: jasmine.createSpy('stash'),
+    };
+    snackbar = { warn: jasmine.createSpy('warn'), info: jasmine.createSpy('info') };
+    TestBed.configureTestingModule({
+      imports: [AppComponent],
+      providers: [
+        { provide: Router, useValue: { events: routerEvents } },
+        { provide: SwUpdate, useValue: { isEnabled: false, versionUpdates: new Subject<unknown>(), unrecoverable: new Subject<unknown>(), checkForUpdate: () => Promise.resolve(false) } },
+        { provide: LocaleService, useValue: { init: () => {} } },
+        { provide: AuthService, useValue: auth },
+        { provide: MenuService, useValue: {} },
+        { provide: DiscordLinkService, useValue: discordLink },
+        { provide: SnackbarService, useValue: snackbar },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: OfflineQueueService, useValue: {} },
+        { provide: OfflinePrefetchService, useValue: { prefetchAll: () => {} } },
+        { provide: ClientLogService, useValue: { report: () => {} } },
+        { provide: StockfishService, useValue: {} },
+        { provide: AnalysisEngineService, useValue: {} },
+        { provide: ThemeService, useValue: {} },
+        { provide: PwaInstallService, useValue: { isAndroid: false, isInstalled: () => false } },
+      ],
+    });
+    TestBed.overrideComponent(AppComponent, { set: { template: '', imports: [] } });
+  });
+
+  afterEach(() => window.history.replaceState({}, '', originalUrl));
+
+  function openWith(query: string): void {
+    window.history.replaceState({}, '', window.location.pathname + query);
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();          // ngOnInit → abonniert router.events
+    routerEvents.next({});
+  }
+
+  it('angemeldet: fragt nach (confirmAndLink) statt sofort zu verknüpfen, und nimmt dl aus der URL', () => {
+    openWith('?dl=body.sig&x=1');
+    expect(discordLink.confirmAndLink).toHaveBeenCalledOnceWith('body.sig');
+    expect(discordLink.link).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?x=1');
+  });
+
+  it('anonym: merkt vor, ohne zu fragen oder zu verknüpfen', () => {
+    auth.isLoggedIn = false;
+    openWith('?dl=body.sig');
+    expect(discordLink.stash).toHaveBeenCalledOnceWith('body.sig');
+    expect(discordLink.confirmAndLink).not.toHaveBeenCalled();
+    expect(discordLink.link).not.toHaveBeenCalled();
+    expect(snackbar.warn).toHaveBeenCalledWith('profile.discord.stashed');
   });
 });

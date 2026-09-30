@@ -558,6 +558,7 @@
       "linked": "Discord-Konto verknüpft",
       "linkConflict": "Dieses Discord-Konto ist bereits mit einem anderen RookHub-Benutzer verknüpft.",
       "linkFailed": "Discord-Konto konnte nicht verknüpft werden",
+      "confirmLink": "Discord-Konto „{{discord}}“ mit deinem RookHub-Konto verknüpfen? Bestätige nur, wenn das dein eigenes Discord-Konto ist und du den Link selbst vom RookHub-Bot bekommen hast — der Bot schickt diesem Konto dann deine Trainingsübersicht.",
       "stashed": "Melde dich an oder registriere dich, um die Discord-Verknüpfung abzuschließen."
     },
     "tokens": {
