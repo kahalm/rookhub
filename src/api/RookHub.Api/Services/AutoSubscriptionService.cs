@@ -141,6 +141,9 @@ public class AutoSubscriptionService : BackgroundService
             .ToList();
 
         var refreshed = 0;
+        var crawls = new CrawlQueueClient(proxy);
+        // Zwei Abos desselben Turniers unter verschiedenen Kennungen (DB-Id / Nummer) → ein Crawl.
+        var crawled = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (tournamentId, knownDate) in tournaments)
         {
             ct.ThrowIfCancellationRequested();
@@ -157,8 +160,13 @@ public class AutoSubscriptionService : BackgroundService
 
             try
             {
+                // Die Abo-Kennung ist je nach Einstiegsweg die Crawler-DB-Id (Turnierseite) oder die
+                // chess-results-Nummer; der Crawl-Auftrag braucht die Nummer (siehe CrawlQueueClient).
+                // Unbekannt beim Crawler → die Kennung IST eine noch nicht geholte Nummer.
+                var chessResultsId = (await crawls.ResolveAsync(tournamentId, ct))?.ChessResultsId ?? tournamentId;
+                if (!crawled.Add(chessResultsId)) continue;
                 var crawlBody = JsonSerializer.Deserialize<JsonElement>(
-                    JsonSerializer.Serialize(new { chessResultsId = tournamentId, jobType = "Full" }));
+                    JsonSerializer.Serialize(new { chessResultsId, jobType = "Full" }));
                 await proxy.PostAsync("/api/crawl", crawlBody, ct);
                 refreshed++;
             }

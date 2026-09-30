@@ -6,6 +6,7 @@ using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
 
@@ -37,9 +38,12 @@ public class SubscriptionServiceTests : IDisposable
         return user.Id;
     }
 
-    private SubscriptionController CreateController(int userId)
+    /// <summary>Standard: der Crawler kennt kein Turnier (404) — das Abo bleibt unter der mitgebrachten Kennung.</summary>
+    private SubscriptionController CreateController(int userId, RoutingHttpMessageHandler? crawler = null)
     {
-        var controller = new SubscriptionController(_db);
+        crawler ??= new RoutingHttpMessageHandler().Map("/api/tournaments/", "{}", System.Net.HttpStatusCode.NotFound);
+        var proxy = new CrawlerProxyService(new HttpClient(crawler) { BaseAddress = new Uri("http://crawler") });
+        var controller = new SubscriptionController(_db, proxy);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -207,5 +211,75 @@ public class SubscriptionServiceTests : IDisposable
         var userId = await CreateUserAsync();
 
         Assert.IsType<NoContentResult>(await CreateController(userId).DeleteByTournament("999"));
+    }
+
+    // --- A5-001: eine Kennung je Turnier ---
+
+    private static RoutingHttpMessageHandler CrawlerKnows57As1234567() => new RoutingHttpMessageHandler()
+        .Map("/api/tournaments/57", """{"id":57,"chessResultsId":"1234567"}""")
+        .Map("/api/tournaments/1234567", """{"id":57,"chessResultsId":"1234567"}""");
+
+    /// <summary>
+    /// Die Turnierseite schickt ihren Routenwert — die Crawler-DB-Id. Das Abo steht trotzdem unter
+    /// der chess-results-Nummer: nur die findet Kalender, Verzeichnis-Meldungen und Refresh-Crawl.
+    /// </summary>
+    [Fact]
+    public async Task Create_WithCrawlerDbId_StoresTheChessResultsNumber()
+    {
+        var userId = await CreateUserAsync();
+
+        var result = await CreateController(userId, CrawlerKnows57As1234567())
+            .Create(new CreateSubscriptionDto { CrawlerTournamentId = "57", TournamentName = "Open" });
+
+        var dto = Assert.IsType<TournamentSubscriptionDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal("1234567", dto.CrawlerTournamentId);
+        Assert.Equal("1234567", (await _db.TournamentSubscriptions.SingleAsync()).CrawlerTournamentId);
+    }
+
+    /// <summary>
+    /// Ein Alt-Abo unter der DB-Id und ein Klick auf „Merken" im Kalender (mit der Nummer): vorher ein
+    /// ZWEITES Abo, jetzt wird das vorhandene auf die Nummer umgeschluesselt.
+    /// </summary>
+    [Fact]
+    public async Task Create_CalendarNumber_WithLegacyDbIdSubscription_RekeysInsteadOfDuplicating()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSubscriptions.Add(new TournamentSubscription { UserId = userId, CrawlerTournamentId = "57", TournamentName = "Open" });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(userId, CrawlerKnows57As1234567())
+            .Create(new CreateSubscriptionDto { CrawlerTournamentId = "1234567", TournamentName = "Open" });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(["1234567"], await _db.TournamentSubscriptions.Select(s => s.CrawlerTournamentId).ToListAsync());
+    }
+
+    /// <summary>Unter der Nummer schon gemerkt, die Seite schickt die DB-Id → 409 wie bisher, kein zweites Abo.</summary>
+    [Fact]
+    public async Task Create_DbId_WhenAlreadySubscribedUnderTheNumber_ReturnsConflict()
+    {
+        var userId = await CreateUserAsync();
+        _db.TournamentSubscriptions.Add(new TournamentSubscription { UserId = userId, CrawlerTournamentId = "1234567", TournamentName = "Open" });
+        await _db.SaveChangesAsync();
+
+        var result = await CreateController(userId, CrawlerKnows57As1234567())
+            .Create(new CreateSubscriptionDto { CrawlerTournamentId = "57", TournamentName = "Open" });
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Single(await _db.TournamentSubscriptions.ToListAsync());
+    }
+
+    /// <summary>Crawler nicht erreichbar: Merken scheitert nicht daran, das Abo steht unter der mitgebrachten Kennung.</summary>
+    [Fact]
+    public async Task Create_CrawlerDown_KeepsTheGivenId()
+    {
+        var userId = await CreateUserAsync();
+        var down = new RoutingHttpMessageHandler().Map("/api/tournaments/", "boom", System.Net.HttpStatusCode.BadGateway);
+
+        var result = await CreateController(userId, down)
+            .Create(new CreateSubscriptionDto { CrawlerTournamentId = "57", TournamentName = "Open" });
+
+        Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("57", (await _db.TournamentSubscriptions.SingleAsync()).CrawlerTournamentId);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -222,7 +223,7 @@ public class RoundMonitorServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         await RoundMonitorService.NotifyNewRoundAsync(
-            _db, new NotificationService(_db), "T1", tournamentDbId: 42, round: 5, default);
+            _db, new NotificationService(_db), ["T1"], tournamentDbId: 42, round: 5, default);
 
         var notes = await _db.Notifications.ToListAsync();
         Assert.Equal(2, notes.Count);   // nur die beiden T1-Abonnenten
@@ -237,7 +238,77 @@ public class RoundMonitorServiceTests : IDisposable
     public async Task NotifyNewRound_NoSubscribers_NoOp()
     {
         await RoundMonitorService.NotifyNewRoundAsync(
-            _db, new NotificationService(_db), "NONE", tournamentDbId: 1, round: 1, default);
+            _db, new NotificationService(_db), ["NONE"], tournamentDbId: 1, round: 1, default);
         Assert.Empty(await _db.Notifications.ToListAsync());
+    }
+
+    // --- Ein Durchlauf gegen einen Test-Crawler ---
+
+    private static CrawlerProxyService Proxy(RoutingHttpMessageHandler handler)
+        => new(new HttpClient(handler) { BaseAddress = new Uri("http://crawler") });
+
+    private static RoundMonitorService Service() => new(null!, NullLogger<RoundMonitorService>.Instance);
+
+    private static string? BodyOf(RoutingHttpMessageHandler handler, string path)
+        => handler.Requests.LastOrDefault(r => r.Method == HttpMethod.Post && r.Path == path).Body;
+
+    /// <summary>
+    /// A5-001: Die Turnierseite traegt die Crawler-DB-Id in der Route, und der Monitor speichert sie.
+    /// Der Crawl-Auftrag deutet jede Zahl als chess-results-Nummer — vorher holte der Crawler fuer den
+    /// Monitor „57" das fremde Turnier tnr57. Jetzt geht der Auftrag an die Nummer des Turniers
+    /// (ueber die DB-Id beim Crawler aufgeloest), und Abos und Favoriten unter BEIDEN Kennungen zaehlen.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_MonitorUnderDbId_CrawlsTheChessResultsNumber()
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "seite", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "kalender", PasswordHash = "h" });
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 1, CrawlerTournamentId = "57", CrawlerTournamentDbId = 57,
+            ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+        });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "57", TournamentName = "Open" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "1234567", TournamentName = "Open" });
+        _db.TournamentFavorites.Add(new TournamentFavorite { UserId = 2, CrawlerTournamentId = "1234567", PlayerSnr = 12 });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", """{"hasNewRound":true,"availableRounds":5,"newRoundNumbers":[5]}""")
+            .Map("/api/tournaments/57", """{"id":57,"chessResultsId":"1234567"}""")
+            .Map("/api/crawl/player-details", "{}")
+            .Map("/api/crawl", "{}");
+
+        await Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+        Assert.Contains("\"chessResultsId\":\"1234567\"", BodyOf(handler, "/api/crawl"));
+        var details = BodyOf(handler, "/api/crawl/player-details");
+        Assert.Contains("\"chessResultsId\":\"1234567\"", details);
+        Assert.Contains("\"playerSnrs\":[12]", details);
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+    }
+
+    /// <summary>Kennt der Crawler die DB-Id nicht mehr, geht KEIN Auftrag raus (auch keiner an „57" als Nummer).</summary>
+    [Fact]
+    public async Task CheckAllMonitors_UnresolvableDbId_SendsNoCrawl()
+    {
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 1, CrawlerTournamentId = "57", CrawlerTournamentDbId = 57,
+            ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+        });
+        await _db.SaveChangesAsync();
+
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", """{"hasNewRound":true,"availableRounds":5}""")
+            .Map("/api/tournaments/57", "{}", System.Net.HttpStatusCode.NotFound)
+            .Map("/api/crawl", "{}");
+
+        await Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+        Assert.False(handler.Hits.ContainsKey("/api/crawl"));
     }
 }

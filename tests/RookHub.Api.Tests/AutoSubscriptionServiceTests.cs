@@ -261,6 +261,35 @@ public class AutoSubscriptionServiceTests : IDisposable
         Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/crawl"));
     }
 
+    /// <summary>
+    /// A5-001: Ein Abo von der Turnierseite steht (Altbestand) unter der Crawler-DB-Id. Der Refresh
+    /// schickte sie als chess-results-Nummer und crawlte ein fremdes Turnier. Jetzt loest der Crawler
+    /// die Kennung auf; ein zweites Abo desselben Turniers unter der Nummer ergibt keinen zweiten Crawl.
+    /// </summary>
+    [Fact]
+    public async Task Refresh_SubscriptionUnderDbId_CrawlsTheChessResultsNumberOnce()
+    {
+        var u1 = await CreateUserAsync(username: "seite", chessResultsId: "1");
+        var u2 = await CreateUserAsync(username: "kalender", chessResultsId: "2");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = u1, CrawlerTournamentId = "57", TournamentName = "X", EventDate = today },
+            new TournamentSubscription { UserId = u2, CrawlerTournamentId = "1234567", TournamentName = "X", EventDate = today });
+        await _db.SaveChangesAsync();
+
+        const string detail = """{"id":57,"chessResultsId":"1234567"}""";
+        var handler = new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57", detail)
+            .Map("/api/tournaments/1234567", detail)
+            .Map("/api/crawl", "{}");
+        var service = new AutoSubscriptionService(null!, NullLogger<AutoSubscriptionService>.Instance);
+        await service.RefreshActiveSubscriptionsAsync(_db, CreateProxy(handler), CancellationToken.None);
+
+        var crawls = handler.Requests.Where(r => r.Method == HttpMethod.Post && r.Path == "/api/crawl").ToList();
+        Assert.Single(crawls);
+        Assert.Contains("\"chessResultsId\":\"1234567\"", crawls[0].Body);
+    }
+
     // --- AutoFavorite Tests ---
 
     private static string PlayersJson(params (int snr, string name, string? fideId)[] players)

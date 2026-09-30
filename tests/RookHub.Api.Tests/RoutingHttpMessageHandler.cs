@@ -16,6 +16,8 @@ public class RoutingHttpMessageHandler : HttpMessageHandler
 
     public int Total { get; private set; }
     public Dictionary<string, int> Hits { get; } = new();
+    /// <summary>Alle Anfragen in Reihenfolge: Methode, Pfad samt Query, Rumpf (oder <c>null</c>).</summary>
+    public List<(HttpMethod Method, string Path, string? Body)> Requests { get; } = new();
 
     public RoutingHttpMessageHandler(string defaultBody = "{}")
     {
@@ -28,24 +30,26 @@ public class RoutingHttpMessageHandler : HttpMessageHandler
         return this;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Total++;
         var path = request.RequestUri?.PathAndQuery ?? string.Empty;
+        var requestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+        Requests.Add((request.Method, path, requestBody));
         foreach (var (contains, body, status) in _routes)
         {
             if (path.Contains(contains))
             {
                 Hits[contains] = Hits.TryGetValue(contains, out var c) ? c + 1 : 1;
-                return Task.FromResult(new HttpResponseMessage(status)
+                return new HttpResponseMessage(status)
                 {
                     Content = new StringContent(body, Encoding.UTF8, "application/json"),
-                });
+                };
             }
         }
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(_defaultBody, Encoding.UTF8, "application/json"),
-        });
+        };
     }
 }

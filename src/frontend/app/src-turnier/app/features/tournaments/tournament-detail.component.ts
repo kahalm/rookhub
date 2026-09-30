@@ -64,6 +64,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   pairingSort: Sort = { active: '', direction: '' };
 
   subscription: Subscription | null = null;
+  /** Alle Abos des Nutzers — das dieses Turniers wird erst gewaehlt, wenn auch das Turnier da ist (siehe `matchSubscription`). */
+  private subscriptions: Subscription[] | null = null;
   toggling = false;
   refreshing = false;
   monitoring = false;
@@ -118,6 +120,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (t) => {
         this.tournament = t;
         this.loading = false;
+        this.matchSubscription();
         if (t.totalRounds) {
           this.rounds = Array.from({ length: t.totalRounds }, (_, i) => i + 1);
         }
@@ -140,10 +143,23 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   loadSubscription(): void {
     this.api.getSubscriptions().subscribe({
       next: (subs) => {
-        this.subscription = subs.find(s => s.crawlerTournamentId === this.id) ?? null;
+        this.subscriptions = subs;
+        this.matchSubscription();
       },
       error: () => this.snackbar.info(this.translate.instant('tournaments.detail.loadSubscriptionFailed'))
     });
+  }
+
+  /**
+   * Das Abo dieses Turniers. Der Server speichert es unter der chess-results-NUMMER (wie Kalender und
+   * Auto-Abo), die Route traegt aber die Crawler-DB-Id — ein Alt-Abo von hier steht noch unter ihr.
+   * Beide gelten; die Nummer kennt die Seite erst mit dem Turnier, deshalb aus beiden Antworten.
+   */
+  private matchSubscription(): void {
+    if (!this.subscriptions) return;
+    const number = this.tournament?.chessResultsId?.replace(/^tnr/i, '');
+    this.subscription = this.subscriptions.find(s =>
+      s.crawlerTournamentId === this.id || (!!number && s.crawlerTournamentId === number)) ?? null;
   }
 
   subscribe(): void {
@@ -151,6 +167,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.api.subscribe(this.id, this.tournament?.name ?? '').subscribe({
       next: (sub) => {
         this.subscription = sub;
+        this.subscriptions = [...(this.subscriptions ?? []).filter(s => s.id !== sub.id), sub];
         this.toggling = false;
         this.snackbar.success(this.translate.instant('tournaments.actions.subscribed'));
       },
@@ -164,9 +181,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   unsubscribe(): void {
     if (!this.subscription) return;
     this.toggling = true;
-    this.api.unsubscribe(this.subscription.id).subscribe({
+    const subscriptionId = this.subscription.id;
+    this.api.unsubscribe(subscriptionId).subscribe({
       next: () => {
         this.subscription = null;
+        this.subscriptions = (this.subscriptions ?? []).filter(s => s.id !== subscriptionId);
         this.toggling = false;
         this.snackbar.success(this.translate.instant('tournaments.actions.unsubscribed'));
       },

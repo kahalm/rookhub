@@ -47,6 +47,15 @@ public class RoundMonitorService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var proxy = scope.ServiceProvider.GetRequiredService<CrawlerProxyService>();
+        await CheckAllMonitorsAsync(db, proxy,
+            () => scope.ServiceProvider.GetRequiredService<NotificationService>(), ct);
+    }
+
+    /// <summary>Ein Durchlauf ueber alle Monitore; ohne Scope-Fabrik → direkt testbar.</summary>
+    internal async Task CheckAllMonitorsAsync(AppDbContext db, CrawlerProxyService proxy,
+        Func<NotificationService> notificationService, CancellationToken ct)
+    {
+        var crawls = new CrawlQueueClient(proxy);
 
         // Clean up expired monitors
         var expired = await db.TournamentMonitors
@@ -90,11 +99,25 @@ public class RoundMonitorService : BackgroundService
                         "New round detected for tournament {TournamentId} (DB {DbId}). New rounds: {NewRounds}",
                         monitor.CrawlerTournamentId, monitor.CrawlerTournamentDbId, newRounds);
 
+                    // Der Crawl-Auftrag braucht die chess-results-NUMMER. Die gespeicherte Kennung ist
+                    // je nach Einstiegsweg die Crawler-DB-Id (Turnierseite) — als Nummer gedeutet holte
+                    // der Crawler ein fremdes Turnier. Deshalb ueber die eindeutige DB-Id aufloesen.
+                    var resolved = await crawls.ResolveAsync(monitor.CrawlerTournamentDbId.ToString(), ct);
+                    if (resolved is null || resolved.DbId != monitor.CrawlerTournamentDbId)
+                        throw new InvalidOperationException(
+                            $"Crawler kennt Turnier-DB-Id {monitor.CrawlerTournamentDbId} nicht (mehr)");
+                    var chessResultsId = resolved.ChessResultsId;
+                    // Abos und Favoriten desselben Turniers stehen unter JEDER der beiden Kennungen.
+                    var tournamentKeys = new[]
+                    {
+                        monitor.CrawlerTournamentId, monitor.CrawlerTournamentDbId.ToString(), chessResultsId
+                    }.Distinct().ToList();
+
                     // Trigger PairingsOnly crawl
                     var crawlBody = JsonSerializer.Deserialize<JsonElement>(
                         JsonSerializer.Serialize(new
                         {
-                            chessResultsId = monitor.CrawlerTournamentId,
+                            chessResultsId,
                             jobType = "PairingsOnly"
                         }));
 
@@ -104,7 +127,7 @@ public class RoundMonitorService : BackgroundService
                     try
                     {
                         var favSnrs = await db.TournamentFavorites
-                            .Where(f => f.CrawlerTournamentId == monitor.CrawlerTournamentId && f.PlayerSnr != null)
+                            .Where(f => tournamentKeys.Contains(f.CrawlerTournamentId) && f.PlayerSnr != null)
                             .Select(f => f.PlayerSnr!.Value)
                             .Distinct()
                             .ToListAsync(ct);
@@ -117,7 +140,7 @@ public class RoundMonitorService : BackgroundService
 
                             await proxy.PostJsonAsync("/api/crawl/player-details", new
                             {
-                                chessResultsId = monitor.CrawlerTournamentId,
+                                chessResultsId,
                                 playerSnrs = favSnrs
                             }, ct);
                         }
@@ -136,8 +159,7 @@ public class RoundMonitorService : BackgroundService
                     // Abonnenten des Turniers per In-App-Glocke über die neue Runde informieren.
                     try
                     {
-                        var notifications = scope.ServiceProvider.GetRequiredService<NotificationService>();
-                        await NotifyNewRoundAsync(db, notifications, monitor.CrawlerTournamentId,
+                        await NotifyNewRoundAsync(db, notificationService(), tournamentKeys,
                             monitor.CrawlerTournamentDbId, monitor.LastKnownRounds, ct);
                     }
                     catch (Exception notifyEx) when (notifyEx is not OperationCanceledException)
@@ -173,14 +195,16 @@ public class RoundMonitorService : BackgroundService
     /// <summary>
     /// Legt für alle Abonnenten eines Turniers eine „neue Runde"-Benachrichtigung an (In-App-Glocke,
     /// Link zur Turnier-Detailseite). No-op, wenn es keine Abonnenten gibt. Statisch + ohne Proxy →
-    /// direkt testbar.
+    /// direkt testbar. <paramref name="tournamentKeys"/>: alle Kennungen des Turniers (DB-Id und
+    /// chess-results-Nummer) — ein Abo aus dem Kalender traegt die Nummer, eins von der Turnierseite
+    /// (Altbestand) die DB-Id; wer beide hat, bekommt trotzdem nur eine Meldung.
     /// </summary>
     internal static async Task NotifyNewRoundAsync(
         AppDbContext db, NotificationService notifications,
-        string crawlerTournamentId, int tournamentDbId, int round, CancellationToken ct)
+        IReadOnlyCollection<string> tournamentKeys, int tournamentDbId, int round, CancellationToken ct)
     {
         var subs = await db.TournamentSubscriptions
-            .Where(s => s.CrawlerTournamentId == crawlerTournamentId)
+            .Where(s => tournamentKeys.Contains(s.CrawlerTournamentId))
             .Select(s => new { s.UserId, s.TournamentName })
             .ToListAsync(ct);
         if (subs.Count == 0) return;

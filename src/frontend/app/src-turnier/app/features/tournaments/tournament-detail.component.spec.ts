@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { TournamentDetailComponent } from './tournament-detail.component';
-import { TournamentGroup } from '@rh/core/models';
+import { Subscription, TournamentGroup } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 
 describe('TournamentDetailComponent', () => {
@@ -25,7 +25,8 @@ describe('TournamentDetailComponent', () => {
   });
 
   /** Rendert die Detailseite bis zur Aktionsleiste; alle Start-Requests werden mit Leerdaten beantwortet. */
-  async function render(monitor: { active: boolean; activeUntil: string | null }, groups?: TournamentGroup[]): Promise<ComponentFixture<TournamentDetailComponent>> {
+  async function render(monitor: { active: boolean; activeUntil: string | null }, groups?: TournamentGroup[],
+                        opts: { chessResultsId?: string; subscriptions?: Subscription[] } = {}): Promise<ComponentFixture<TournamentDetailComponent>> {
     await TestBed.configureTestingModule({
       imports: [TournamentDetailComponent],
       providers: [
@@ -43,10 +44,10 @@ describe('TournamentDetailComponent', () => {
     http.expectOne('/api/tournament-favorites?tournamentId=4711').flush([]);
     http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: false });
     http.expectOne('/api/tournaments/4711').flush({
-      id: 1, name: 'Schach Tirol Open', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+      id: 1, name: 'Schach Tirol Open', chessResultsId: opts.chessResultsId ?? '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
       groups,
     });
-    http.expectOne('/api/subscriptions').flush([]);
+    http.expectOne('/api/subscriptions').flush(opts.subscriptions ?? []);
     // lastKnownRounds 0 => kein Monitor-Poll, der im Test weiterliefe.
     http.expectOne('/api/tournament-monitors/4711').flush({ ...monitor, lastKnownRounds: 0 });
     http.expectOne('/api/tournaments/4711/players').flush([]);
@@ -130,5 +131,34 @@ describe('TournamentDetailComponent', () => {
   it('zeigt ohne Gruppen keine Leiste', async () => {
     const fixture = await render({ active: false, activeUntil: null });
     expect((fixture.nativeElement as HTMLElement).querySelector('.group-switch')).toBeNull();
+  });
+
+  // ----- Abo: eine Kennung je Turnier (A5-001) ------------------------------
+
+  const sub = (id: number, crawlerTournamentId: string): Subscription => ({
+    id, crawlerTournamentId, tournamentName: 'Schach Tirol Open', subscribedAt: '', tournamentDbId: null, eventDate: null,
+  });
+
+  /**
+   * Die Route traegt die Crawler-DB-Id (4711), der Server speichert das Abo aber unter der
+   * chess-results-Nummer — vorher erkannte die Seite es dann nicht und zeigte „nicht gemerkt".
+   */
+  it('erkennt ein Abo unter der chess-results-Nummer, obwohl die Route die DB-Id traegt', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, undefined,
+      { chessResultsId: '1234567', subscriptions: [sub(9, '1234567')] });
+    expect(fixture.componentInstance.subscription?.id).toBe(9);
+  });
+
+  /** Ein Alt-Abo steht noch unter der DB-Id aus der Route — das gilt weiter. */
+  it('erkennt ein Alt-Abo unter der DB-Id der Route', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, undefined,
+      { chessResultsId: '1234567', subscriptions: [sub(3, '4711')] });
+    expect(fixture.componentInstance.subscription?.id).toBe(3);
+  });
+
+  it('nimmt kein fremdes Abo', async () => {
+    const fixture = await render({ active: false, activeUntil: null }, undefined,
+      { chessResultsId: '1234567', subscriptions: [sub(5, '7654321')] });
+    expect(fixture.componentInstance.subscription).toBeNull();
   });
 });
