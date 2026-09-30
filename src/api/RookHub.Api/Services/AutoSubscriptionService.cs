@@ -165,9 +165,8 @@ public class AutoSubscriptionService : BackgroundService
                 // Unbekannt beim Crawler → die Kennung IST eine noch nicht geholte Nummer.
                 var chessResultsId = (await crawls.ResolveAsync(tournamentId, ct))?.ChessResultsId ?? tournamentId;
                 if (!crawled.Add(chessResultsId)) continue;
-                var crawlBody = JsonSerializer.Deserialize<JsonElement>(
-                    JsonSerializer.Serialize(new { chessResultsId, jobType = "Full" }));
-                await proxy.PostAsync("/api/crawl", crawlBody, ct);
+                // 409 (laeuft schon) zaehlt als angestossen, nicht als „fehlgeschlagen".
+                await crawls.RequestAsync(chessResultsId, "Full", ct);
                 refreshed++;
             }
             catch (Exception ex)
@@ -295,16 +294,10 @@ public class AutoSubscriptionService : BackgroundService
             existingSet.Add(tournamentId);
             newSubscriptions++;
 
-            // Start crawl job for the new tournament
+            // Start crawl job for the new tournament (409 = laeuft schon → kein Fehler)
             try
             {
-                var crawlBody = JsonSerializer.Deserialize<JsonElement>(
-                    JsonSerializer.Serialize(new
-                    {
-                        chessResultsId = tournamentId,
-                        jobType = "Full"
-                    }));
-                await proxy.PostAsync("/api/crawl", crawlBody);
+                await new CrawlQueueClient(proxy).RequestAsync(tournamentId, "Full", default);
             }
             catch (Exception ex)
             {

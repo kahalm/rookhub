@@ -311,4 +311,142 @@ public class RoundMonitorServiceTests : IDisposable
 
         Assert.False(handler.Hits.ContainsKey("/api/crawl"));
     }
+    // --- A5-007: eine Meldung je Runde, 409 = laeuft schon ---
+
+    private async Task SeedMonitoredTournamentAsync(params int[] monitorUserIds)
+    {
+        _db.AppUsers.AddRange(
+            new AppUser { Id = 1, Username = "eins", PasswordHash = "h" },
+            new AppUser { Id = 2, Username = "zwei", PasswordHash = "h" });
+        foreach (var userId in monitorUserIds)
+            _db.TournamentMonitors.Add(new TournamentMonitor
+            {
+                UserId = userId, CrawlerTournamentId = "1234567", CrawlerTournamentDbId = 57,
+                ActiveUntil = DateTime.UtcNow.AddHours(1), LastKnownRounds = 4,
+            });
+        _db.TournamentSubscriptions.AddRange(
+            new TournamentSubscription { UserId = 1, CrawlerTournamentId = "1234567", TournamentName = "Open" },
+            new TournamentSubscription { UserId = 2, CrawlerTournamentId = "1234567", TournamentName = "Open" });
+        await _db.SaveChangesAsync();
+    }
+
+    private static RoutingHttpMessageHandler Crawler(string check,
+        System.Net.HttpStatusCode crawlStatus = System.Net.HttpStatusCode.Accepted)
+        => new RoutingHttpMessageHandler()
+            .Map("/api/tournaments/57/rounds/check", check)
+            .Map("/api/tournaments/57", """{"id":57,"chessResultsId":"1234567"}""")
+            .Map("/api/crawl", "{}", crawlStatus);
+
+    private Task RunPassAsync(RoutingHttpMessageHandler handler)
+        => Service().CheckAllMonitorsAsync(_db, Proxy(handler), () => new NotificationService(_db), default);
+
+    private int CrawlPosts(RoutingHttpMessageHandler handler)
+        => handler.Requests.Count(r => r.Method == HttpMethod.Post && r.Path == "/api/crawl");
+
+    /// <summary>
+    /// Der Crawler cached das Pruefergebnis 60 s, der Monitor fragt alle 30 s: der zweite Durchlauf sieht
+    /// noch einmal hasNewRound=true fuer dieselbe Runde 5. Vorher ging die Meldung dann zweimal an jeden
+    /// Abonnenten — jetzt nur, wenn mehr Runden da sind als zuletzt gemeldet.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_CachedNewRoundSeenTwice_NotifiesOnce()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5,"newRoundNumbers":[5]}""");
+
+        await RunPassAsync(handler);
+        await RunPassAsync(handler);
+
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+        Assert.Contains("\"round\":\"5\"", (await _db.Notifications.FirstAsync()).DataJson);
+        Assert.Equal(5, (await _db.TournamentMonitors.AsNoTracking().SingleAsync()).LastKnownRounds);
+    }
+
+    /// <summary>
+    /// Laeuft fuer das Turnier schon ein Crawl (Aktualisieren-Knopf, Abo-Abgleich), antwortet der Crawler 409.
+    /// Vorher warf der Monitor, verwarf den Stand und meldete nichts — und war der fremde Crawl fertig, sah der
+    /// naechste Durchlauf keine neue Runde mehr: die Meldung ging nie raus. 409 heisst „laeuft schon".
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_CrawlAlreadyRunning409_StillNotifiesOnce()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""", System.Net.HttpStatusCode.Conflict);
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        var monitor = await _db.TournamentMonitors.AsNoTracking().SingleAsync();
+        Assert.Equal(5, monitor.LastKnownRounds);
+        Assert.NotNull(monitor.LastCheckedAt);
+    }
+
+    /// <summary>
+    /// Volle Crawler-Warteschlange (429): die Meldung geht trotzdem genau einmal raus, der Crawl wird im
+    /// naechsten Durchlauf erneut angefragt (hasNewRound bleibt wahr, bis die Runde geholt ist).
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_QueueFull429_NotifiesOnceAndRetriesCrawl()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""", System.Net.HttpStatusCode.TooManyRequests);
+
+        await RunPassAsync(handler);
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        Assert.Equal(2, CrawlPosts(handler));
+    }
+
+    /// <summary>
+    /// Hat ein fremder Crawl die Runde schon geholt, meldet der Crawler hasNewRound=false — die Abonnenten
+    /// wissen aber noch nichts von Runde 5. Gemeldet wird ueber LastKnownRounds, ohne neuen Crawl.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_RoundAlreadyFetchedByOtherCrawl_NotifiesWithoutCrawl()
+    {
+        await SeedMonitoredTournamentAsync(1);
+        var handler = Crawler("""{"hasNewRound":false,"availableRounds":5}""");
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(2, await _db.Notifications.CountAsync());
+        Assert.Equal(0, CrawlPosts(handler));
+    }
+
+    /// <summary>
+    /// Zwei Nutzer mit Monitor auf demselben Turnier: vorher pruefte, crawlte und meldete jeder Monitor fuer
+    /// sich, jede Runde ging doppelt an alle Abonnenten. Jetzt ein Durchgang je Turnier.
+    /// </summary>
+    [Fact]
+    public async Task CheckAllMonitors_TwoMonitorsOnSameTournament_OneCheckOneCrawlOneNotification()
+    {
+        await SeedMonitoredTournamentAsync(1, 2);
+        var handler = Crawler("""{"hasNewRound":true,"availableRounds":5}""");
+
+        await RunPassAsync(handler);
+
+        Assert.Equal(1, handler.Hits.GetValueOrDefault("/api/tournaments/57/rounds/check"));
+        Assert.Equal(1, CrawlPosts(handler));
+        var notified = await _db.Notifications.Select(n => n.UserId).OrderBy(u => u).ToListAsync();
+        Assert.Equal([1, 2], notified);
+        Assert.All(await _db.TournamentMonitors.AsNoTracking().ToListAsync(), m => Assert.Equal(5, m.LastKnownRounds));
+    }
+
+    /// <summary>CrawlQueueClient.RequestAsync: 409 ist „laeuft schon", 429 bleibt ein Fehler.</summary>
+    [Fact]
+    public async Task CrawlQueueClient_RequestAsync_409IsAlreadyRunning_429Throws()
+    {
+        var running = new CrawlQueueClient(Proxy(new RoutingHttpMessageHandler()
+            .Map("/api/crawl", "{}", System.Net.HttpStatusCode.Conflict)));
+        Assert.Equal(CrawlQueueClient.CrawlRequestOutcome.AlreadyRunning,
+            await running.RequestAsync("1234567", "Full", default));
+
+        var full = new CrawlQueueClient(Proxy(new RoutingHttpMessageHandler()
+            .Map("/api/crawl", "{}", System.Net.HttpStatusCode.TooManyRequests)));
+        var ex = await Assert.ThrowsAsync<RookHub.Api.Exceptions.CrawlerRequestException>(
+            () => full.RequestAsync("1234567", "Full", default));
+        Assert.Equal(System.Net.HttpStatusCode.TooManyRequests, ex.StatusCode);
+    }
 }

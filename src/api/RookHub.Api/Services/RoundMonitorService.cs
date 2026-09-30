@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 
@@ -80,8 +79,13 @@ public class RoundMonitorService : BackgroundService
 
         _logger.LogDebug("Checking {Count} active monitors", monitors.Count);
 
-        foreach (var monitor in monitors)
+        // Je Turnier EIN Durchgang: haben mehrere Nutzer einen Monitor auf dasselbe Turnier, pruefte,
+        // crawlte und meldete sonst jeder Monitor fuer sich — jede neue Runde ging so oft an ALLE
+        // Abonnenten, wie es Monitore gab (Codereview A5-007).
+        foreach (var group in monitors.GroupBy(m => m.CrawlerTournamentDbId))
         {
+            var members = group.ToList();
+            var monitor = members[0];   // Kennung fuer Logs
             try
             {
                 var checkResult = await proxy.GetAsync(
@@ -89,15 +93,28 @@ public class RoundMonitorService : BackgroundService
 
                 var hasNewRound = checkResult.TryGetProperty("hasNewRound", out var hnr) && hnr.GetBoolean();
 
-                if (hasNewRound)
-                {
-                    var newRounds = checkResult.TryGetProperty("newRoundNumbers", out var nrn)
-                        ? nrn.ToString()
-                        : "?";
+                // Entdopplung ueber LastKnownRounds: gemeldet wird nur, wenn chess-results MEHR Runden zeigt
+                // als zuletzt gemeldet. hasNewRound allein reicht nicht — der Crawler cached das Ergebnis 60 s,
+                // der Monitor fragt alle 30 s, also kam dieselbe Runde zweimal. Umgekehrt geht die Meldung
+                // auch raus, wenn ein fremder Crawl die Runde schon geholt hat (hasNewRound dann false).
+                var lastKnownRounds = members.Max(m => m.LastKnownRounds);
+                var availableRounds = checkResult.TryGetProperty("availableRounds", out var ar) && ar.TryGetInt32(out var arv)
+                    ? arv
+                    : lastKnownRounds;
+                var announce = availableRounds > lastKnownRounds;
 
-                    _logger.LogInformation(
-                        "New round detected for tournament {TournamentId} (DB {DbId}). New rounds: {NewRounds}",
-                        monitor.CrawlerTournamentId, monitor.CrawlerTournamentDbId, newRounds);
+                if (hasNewRound || announce)
+                {
+                    if (hasNewRound)
+                    {
+                        var newRounds = checkResult.TryGetProperty("newRoundNumbers", out var nrn)
+                            ? nrn.ToString()
+                            : "?";
+
+                        _logger.LogInformation(
+                            "New round detected for tournament {TournamentId} (DB {DbId}). New rounds: {NewRounds}",
+                            monitor.CrawlerTournamentId, monitor.CrawlerTournamentDbId, newRounds);
+                    }
 
                     // Der Crawl-Auftrag braucht die chess-results-NUMMER. Die gespeicherte Kennung ist
                     // je nach Einstiegsweg die Crawler-DB-Id (Turnierseite) — als Nummer gedeutet holte
@@ -108,69 +125,82 @@ public class RoundMonitorService : BackgroundService
                             $"Crawler kennt Turnier-DB-Id {monitor.CrawlerTournamentDbId} nicht (mehr)");
                     var chessResultsId = resolved.ChessResultsId;
                     // Abos und Favoriten desselben Turniers stehen unter JEDER der beiden Kennungen.
-                    var tournamentKeys = new[]
+                    var tournamentKeys = members.Select(m => m.CrawlerTournamentId)
+                        .Append(monitor.CrawlerTournamentDbId.ToString())
+                        .Append(chessResultsId)
+                        .Distinct().ToList();
+
+                    if (hasNewRound)
                     {
-                        monitor.CrawlerTournamentId, monitor.CrawlerTournamentDbId.ToString(), chessResultsId
-                    }.Distinct().ToList();
-
-                    // Trigger PairingsOnly crawl
-                    var crawlBody = JsonSerializer.Deserialize<JsonElement>(
-                        JsonSerializer.Serialize(new
+                        // Trigger PairingsOnly crawl. 409 = fuer das Turnier laeuft schon ein Crawl, der die
+                        // Runde mitholt — kein Fehler. Eine andere Ablehnung (429: Warteschlange voll) haelt
+                        // die Meldung nicht mehr auf: hasNewRound bleibt wahr, bis die Runde geholt ist, der
+                        // naechste Durchlauf fragt wieder an.
+                        try
                         {
-                            chessResultsId,
-                            jobType = "PairingsOnly"
-                        }));
-
-                    await proxy.PostAsync("/api/crawl", crawlBody, ct);
-
-                    // Trigger player detail crawl for favorited players
-                    try
-                    {
-                        var favSnrs = await db.TournamentFavorites
-                            .Where(f => tournamentKeys.Contains(f.CrawlerTournamentId) && f.PlayerSnr != null)
-                            .Select(f => f.PlayerSnr!.Value)
-                            .Distinct()
-                            .ToListAsync(ct);
-
-                        if (favSnrs.Count > 0)
+                            await crawls.RequestAsync(chessResultsId, "PairingsOnly", ct);
+                        }
+                        catch (Exceptions.CrawlerRequestException crawlEx)
                         {
-                            _logger.LogInformation(
-                                "Triggering player detail crawl for {Count} favorited player(s) in tournament {TournamentId}",
-                                favSnrs.Count, monitor.CrawlerTournamentId);
+                            _logger.LogWarning(crawlEx,
+                                "Pairings crawl for tournament {TournamentId} not accepted ({StatusCode}), retrying next pass",
+                                monitor.CrawlerTournamentId, (int)crawlEx.StatusCode);
+                        }
 
-                            await proxy.PostJsonAsync("/api/crawl/player-details", new
+                        // Trigger player detail crawl for favorited players
+                        try
+                        {
+                            var favSnrs = await db.TournamentFavorites
+                                .Where(f => tournamentKeys.Contains(f.CrawlerTournamentId) && f.PlayerSnr != null)
+                                .Select(f => f.PlayerSnr!.Value)
+                                .Distinct()
+                                .ToListAsync(ct);
+
+                            if (favSnrs.Count > 0)
                             {
-                                chessResultsId,
-                                playerSnrs = favSnrs
-                            }, ct);
+                                _logger.LogInformation(
+                                    "Triggering player detail crawl for {Count} favorited player(s) in tournament {TournamentId}",
+                                    favSnrs.Count, monitor.CrawlerTournamentId);
+
+                                await proxy.PostJsonAsync("/api/crawl/player-details", new
+                                {
+                                    chessResultsId,
+                                    playerSnrs = favSnrs
+                                }, ct);
+                            }
+                        }
+                        catch (Exception favEx) when (favEx is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(favEx,
+                                "Error triggering player detail crawl for tournament {TournamentId}",
+                                monitor.CrawlerTournamentId);
                         }
                     }
-                    catch (Exception favEx) when (favEx is not OperationCanceledException)
-                    {
-                        _logger.LogWarning(favEx,
-                            "Error triggering player detail crawl for tournament {TournamentId}",
-                            monitor.CrawlerTournamentId);
-                    }
 
-                    // Update known rounds
-                    if (checkResult.TryGetProperty("availableRounds", out var ar))
-                        monitor.LastKnownRounds = ar.GetInt32();
+                    if (announce)
+                    {
+                        // Update known rounds — an ALLEN Monitoren des Turniers, vor der Meldung: die legt
+                        // ihre Zeilen im selben Kontext an und speichert den neuen Stand mit.
+                        foreach (var m in members)
+                            m.LastKnownRounds = availableRounds;
 
-                    // Abonnenten des Turniers per In-App-Glocke über die neue Runde informieren.
-                    try
-                    {
-                        await NotifyNewRoundAsync(db, notificationService(), tournamentKeys,
-                            monitor.CrawlerTournamentDbId, monitor.LastKnownRounds, ct);
-                    }
-                    catch (Exception notifyEx) when (notifyEx is not OperationCanceledException)
-                    {
-                        _logger.LogWarning(notifyEx,
-                            "Error notifying subscribers of new round for tournament {TournamentId}",
-                            monitor.CrawlerTournamentId);
+                        // Abonnenten des Turniers per In-App-Glocke über die neue Runde informieren.
+                        try
+                        {
+                            await NotifyNewRoundAsync(db, notificationService(), tournamentKeys,
+                                monitor.CrawlerTournamentDbId, availableRounds, ct);
+                        }
+                        catch (Exception notifyEx) when (notifyEx is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(notifyEx,
+                                "Error notifying subscribers of new round for tournament {TournamentId}",
+                                monitor.CrawlerTournamentId);
+                        }
                     }
                 }
 
-                monitor.LastCheckedAt = DateTime.UtcNow;
+                foreach (var m in members)
+                    m.LastCheckedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(ct);
             }
             // Auch hier: ein Crawler-Timeout ist eine OperationCanceledException ohne Shutdown — die darf
@@ -181,13 +211,14 @@ public class RoundMonitorService : BackgroundService
                 _logger.LogWarning(ex,
                     "Error checking monitor for tournament {TournamentId}",
                     monitor.CrawlerTournamentId);
-                // Die (teil-)geänderte Entität dieses Monitors aus dem GETEILTEN ChangeTracker der
+                // Die (teil-)geänderten Entitäten dieses Turniers aus dem GETEILTEN ChangeTracker der
                 // Schleife nehmen: ein liegen gebliebener dirty Eintrag (z. B. DbUpdateConcurrency-
                 // Exception, weil ein User den Monitor parallel abbestellt/gelöscht hat) ließe sonst
                 // JEDEN folgenden SaveChangesAsync erneut scheitern — kein Monitor dahinter würde
                 // mehr persistiert (LastCheckedAt/LastKnownRounds) und dessen „neue Runde"-
                 // Benachrichtigungen feuerten beim nächsten 30-s-Durchlauf doppelt.
-                db.Entry(monitor).State = EntityState.Detached;
+                foreach (var m in members)
+                    db.Entry(m).State = EntityState.Detached;
             }
         }
     }

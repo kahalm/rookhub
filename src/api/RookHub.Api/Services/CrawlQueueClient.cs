@@ -49,6 +49,36 @@ public sealed partial class CrawlQueueClient(CrawlerProxyService proxy)
         return new ResolvedTournament(dbId, number);
     }
 
+    /// <summary>Ausgang eines angenommenen Crawl-Auftrags.</summary>
+    public enum CrawlRequestOutcome
+    {
+        /// <summary>202: neu eingereiht.</summary>
+        Queued,
+        /// <summary>409: fuer dieses Turnier ist schon ein Auftrag eingereiht oder laeuft — der holt
+        /// dieselben Seiten, das Ziel ist also erreicht.</summary>
+        AlreadyRunning,
+    }
+
+    /// <summary>
+    /// Reiht einen Crawl-Auftrag (<c>POST /api/crawl</c>) fuer eine chess-results-Nummer ein — mit EINER
+    /// 409-Semantik fuer die Hintergrunddienste: „laeuft schon" ist kein Fehler (wie
+    /// <c>TournamentHistoryService.RequestCrawlAsync</c>). Vorher warf der Monitor bei 409 und verschluckte
+    /// damit die „neue Runde"-Meldung, der Abo-Abgleich meldete „fehlgeschlagen" (Codereview A5-007).
+    /// Jede andere Ablehnung (429 volle Warteschlange, 400) wirft weiter <see cref="CrawlerRequestException"/>.
+    /// </summary>
+    public async Task<CrawlRequestOutcome> RequestAsync(string chessResultsId, string jobType, CancellationToken ct)
+    {
+        try
+        {
+            await proxy.PostJsonAsync("/api/crawl", new { chessResultsId, jobType }, ct);
+            return CrawlRequestOutcome.Queued;
+        }
+        catch (CrawlerRequestException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+        {
+            return CrawlRequestOutcome.AlreadyRunning;
+        }
+    }
+
     /// <summary>
     /// chess-results-Nummer wie der Crawler sie normalisiert (<c>CrawlController</c>): „tnr"-Praefix,
     /// URL-Teile und „.aspx" weg, danach nur 1–10 Ziffern — sonst <c>null</c>.

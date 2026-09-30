@@ -56,8 +56,11 @@ public class TournamentMonitorController : BaseApiController
         var result = await _proxy.GetAsync($"/api/tournaments/{tournamentId}");
         // TryGetInt32 statt GetInt32: liefert der Crawler das Feld als String/Null/anderen Typ, würde
         // GetInt32 werfen → unbehandelter 500 statt sauberem Fallback (knownRounds bleibt 0, dbId-Check greift).
-        if (result.TryGetProperty("totalRounds", out var totalRoundsProp) && totalRoundsProp.TryGetInt32(out var tr))
-            knownRounds = tr;
+        // Ausgangsstand der Entdopplung im RoundMonitorService (gemeldet wird nur ueber LastKnownRounds
+        // hinaus): die schon geholten Runden ("knownRounds"), NICHT die geplante Rundenzahl "totalRounds" —
+        // mit 9 als Stand haette der Monitor keine einzige Runde gemeldet.
+        if (result.TryGetProperty("knownRounds", out var knownRoundsProp) && knownRoundsProp.TryGetInt32(out var kr0))
+            knownRounds = kr0;
         if (result.TryGetProperty("id", out var idProp) && idProp.TryGetInt32(out var did))
             dbId = did;
 
@@ -80,7 +83,7 @@ public class TournamentMonitorController : BaseApiController
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to check rounds for {TournamentId}, falling back to totalRounds", tournamentId);
+            _logger.LogWarning(ex, "Failed to check rounds for {TournamentId}, falling back to crawled rounds", tournamentId);
         }
 
         monitor = new TournamentMonitor

@@ -81,6 +81,22 @@ public class TournamentMonitorControllerTests : IDisposable
         Assert.Equal(3, m.LastKnownRounds);   // aus rounds/check, überschreibt totalRounds
     }
 
+    /// <summary>
+    /// A5-007: der Monitor meldet nur ueber LastKnownRounds hinaus. Scheitert rounds/check beim Anlegen,
+    /// ist der Stand die Zahl der schon geholten Runden — nicht die geplante Rundenzahl (sonst meldete ein
+    /// 9-Runden-Turnier nie eine Runde).
+    /// </summary>
+    [Fact]
+    public async Task Activate_New_RoundsCheckFails_FallsBackToCrawledRoundsNotTotalRounds()
+    {
+        Func<string, string> resp = path => path.EndsWith("/rounds/check")
+            ? throw new HttpRequestException("chess-results down")
+            : "{\"id\":42,\"totalRounds\":9,\"knownRounds\":4}";
+        var res = await Controller(1, resp).Activate("12345");
+        Assert.IsType<OkObjectResult>(res);
+        Assert.Equal(4, (await _db.TournamentMonitors.SingleAsync()).LastKnownRounds);
+    }
+
     [Fact]
     public async Task GetStatus_ExpiredMonitor_ReturnsOk()
     {
