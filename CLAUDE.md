@@ -394,11 +394,14 @@ vollstaendiges „Kurs holen" (Daten-Nacharbeit).
 
 **Nach einem API-Neustart mitten im Import geht der Kapitel-Versatz nicht verloren (Codereview 2026-09-29, A3-006).**
 Der Versatz lebt nur im `ChessableIngestSessionStore` (Arbeitsspeicher). Der erste Chunk einer Sitzung, die der Server
-nicht kennt, fragt deshalb `ChessableImportService.ResumeChapterOffsetAsync`: traeft er mit Versatz 0 auf belegte
+nicht kennt, fragt deshalb `ChessableImportService.ResumeChapterOffsetAsync`: trifft er mit Versatz 0 auf belegte
 LineIds UND keine seiner oids steht im Buch, setzt er hinter der hoechsten Kapitelnummer des Buchs fort — vorher fiel
 jede seiner Linien auf „uebersprungen" (unbekannte oid, kein Teil-Import), und alle folgenden Kapitel fehlten still.
 Bekannte oids (erneutes Holen) behalten ihre Nummern, ein Teil-Import (`partial`) ist ausgenommen (dort bekommt eine
 kollidierende neue Linie ohnehin einen freien Platz). Der alte Import-Datensatz schliesst weiter der Watchdog.
+„Belegt" zaehlt nur eine LineId, die eine oid TRAEGT: ein Alt-Buch ohne oids (vor piratechess v1.29.0) schickt beim
+erneuten Holen `partial=false`, und sein erster Chunk trifft nur auf oid-lose Linien — dort muss der Versatz 0 bleiben,
+sonst greift der oid-Nachtrag (gleiche LineId + Zuege + StartPly) nicht und der ganze Kurs stuende doppelt im Buch.
 
 **Ein Showstopper steht AM EINTRAG, nicht als Zahl im Banner (0.484.4).** `StaleContentRule` ist die
 EINE Regel (`Refetch` / `Cache` / `Local` / `Manual`, seit 0.509.0 vier Faelle) fuer den Reprocess-Status, den

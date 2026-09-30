@@ -41,8 +41,9 @@ public class ExtensionControllerTests : IDisposable
         private const string Pgn = "[Event \"Test Book\"]\n[Round \"002.001\"]\n[White \"Line\"]\n[Result \"*\"]\n"
             + "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2\"]\n\n"
             + "{ [%tqu \"En\",\"Finde den Zug\"] Pointe. } 2.Nf3 Nc6 3. Bb5 $1 a6 *\n";
-        /// <summary>Optional: PGN je Parse-Aufruf (1-basiert) statt der festen Linie.</summary>
-        public Func<int, string>? PgnFor;
+        /// <summary>Optional: PGN je Parse-Aufruf (1-basiert) statt der festen Linie; <c>null</c> = die feste Linie
+        /// (ohne oid, wie vor piratechess v1.29.0).</summary>
+        public Func<int, string?>? PgnFor;
         /// <summary>Dieselbe Linie mit Chessable-oid — so, wie piratechess seit v1.29.0 jede Linie liefert.</summary>
         public static string WithOid(string oid) => Pgn.Replace("[SetUp", $"[ChessableOid \"{oid}\"]\n[SetUp");
 
@@ -578,6 +579,27 @@ public class ExtensionControllerTests : IDisposable
 
         var row = await _db.BookPuzzles.SingleAsync();
         Assert.Equal("002.001", row.Round);
+    }
+
+    [Fact]
+    public async Task ChessableIngestChunk_OldBookWithoutOids_NewSession_BackfillsTheOidInsteadOfMovingBehindTheBook()
+    {
+        // Nacharbeit W2 A3-006: ein Alt-Buch ohne oids (Import vor piratechess v1.29.0) — RepCheck kennt keine oid und
+        // schickt beim erneuten „Kurs holen" partial=false. Der erste Chunk trifft nur auf oid-lose Linien: das ist der
+        // oid-Nachtrag (gleiche LineId + Züge + StartPly), kein Neustart mitten im Import. Hinter dem Buch stünde der
+        // ganze Kurs doppelt da, und die Altlinien blieben ohne oid.
+        SetUser(7, scope: "extension");
+        _parse.PgnFor = call => call == 1 ? null : ParseStub.WithOid("9301");
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-old", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+        Assert.Null((await _db.BookPuzzles.SingleAsync()).ChessableOid);
+
+        await _controller.ChessableIngestChunk(
+            new ChessableIngestChunkRequest("sess-refetch", "424242", "book", "Course", Chapter("{\"game\":{}}"), true), default);
+
+        var row = await _db.BookPuzzles.SingleAsync();
+        Assert.Equal("002.001", row.Round);
+        Assert.Equal("9301", row.ChessableOid);
     }
 
     [Fact]

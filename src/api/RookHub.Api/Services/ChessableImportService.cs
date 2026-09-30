@@ -1240,7 +1240,8 @@ public class ChessableImportService : ICourseReimporter
     /// <para>Liefert die höchste Kapitelnummer des Buchs, wenn der Chunk mit Versatz 0 auf belegte LineIds träfe UND
     /// keine seiner oids im Buch vorkommt: dann ist er keine Wiederholung schon importierter Linien, sondern neuer
     /// Inhalt, und mit Versatz 0 ginge er verloren. Sonst 0 (bisheriges Verhalten) — ein erneutes Holen desselben Kurses
-    /// trägt bekannte oids und behält seine Nummern. Ohne oids lässt sich das nicht unterscheiden: dann auch 0.</para>
+    /// trägt bekannte oids und behält seine Nummern. Ohne oids lässt sich das nicht unterscheiden: dann auch 0. Belegt
+    /// zählt nur eine LineId mit oid — ein Alt-Buch ohne oids behält Versatz 0, damit der oid-Nachtrag greift.</para>
     /// </summary>
     public async Task<int> ResumeChapterOffsetAsync(int userId, string bid, string chunkPgn, CancellationToken ct = default)
     {
@@ -1252,8 +1253,13 @@ public class ChessableImportService : ICourseReimporter
         if (await _db.BookPuzzles.AnyAsync(bp => bp.BookFileName == fileName && bp.ChessableOid != null
                 && oids.Contains(bp.ChessableOid), ct))
             return 0;
+        // Nur eine Kollision mit Linien, die eine oid TRAGEN, zeigt einen Neustart mitten im Import an (die Kapitel dieser
+        // Sitzung sind mit oid gespeichert). Trifft der Chunk nur auf oid-lose Altlinien (Import vor piratechess v1.29.0),
+        // ist das erneute Holen eines Alt-Buchs: der oid-Nachtrag (gleiche LineId + Züge + StartPly, v0.476.1) braucht
+        // Versatz 0 — hinter dem Buch stünde der ganze Kurs doppelt da.
         var lineIds = parsed.Select(p => p.LineId).Distinct(StringComparer.Ordinal).ToList();
-        if (!await _db.BookPuzzles.AnyAsync(bp => bp.BookFileName == fileName && lineIds.Contains(bp.LineId), ct))
+        if (!await _db.BookPuzzles.AnyAsync(bp => bp.BookFileName == fileName && bp.ChessableOid != null
+                && lineIds.Contains(bp.LineId), ct))
             return 0;
 
         var rounds = await _db.BookPuzzles.Where(bp => bp.BookFileName == fileName).Select(bp => bp.Round).ToListAsync(ct);
