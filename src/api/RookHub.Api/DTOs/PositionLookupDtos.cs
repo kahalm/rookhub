@@ -51,6 +51,9 @@ public class PositionTreeRequestDto
 public class PositionTreeResultDto
 {
     public List<RepertoirePositionTreeDto> Repertoires { get; set; } = new();
+    /// <summary><c>true</c>, wenn das Zeitbudget der Anfrage vor dem letzten Repertoire aufgebraucht
+    /// war — das angebrochene Repertoire trägt dann selbst <c>truncated</c>, die übrigen fehlen.</summary>
+    public bool Truncated { get; set; }
 }
 
 public class RepertoirePositionTreeDto

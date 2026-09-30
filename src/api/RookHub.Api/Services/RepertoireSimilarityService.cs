@@ -39,6 +39,13 @@ public class RepertoireSimilarityService
     public const int DefaultLimit = 25;
     public const int MaxLimit = 100;
 
+    /// <summary>Zeitbudget je Anfrage für den Durchlauf über alle Linien (ohne das gecachte Parsen);
+    /// danach kommt der bisherige Stand mit <c>truncated</c> zurück. Gemessen ~25 µs je Stellung —
+    /// 8 s reichen für rund 300 000 Stellungen, ein übliches Repertoire braucht keine Sekunde.
+    /// Ohne Deckel rechnete ein großer Bestand zweistellige Sekunden je Anfrage (Codereview
+    /// 2026-09-29, N7-001). Setzbar für Tests, wie <see cref="RepertoireExplorerService.Budget"/>.</summary>
+    public TimeSpan Budget { get; set; } = TimeSpan.FromSeconds(8);
+
     /// <summary>
     /// Voreingestellter Mindest-Score der Voreinstellung „struktur".
     /// <para>Siehe <see cref="DefaultMinScoreFor"/> für die Messtabelle und die Herleitung.</para>
@@ -170,11 +177,13 @@ public class RepertoireSimilarityService
 
         var best = new List<Candidate>();
         int compared = 0;
+        var budget = new ScanBudget(Budget);
 
         foreach (var game in games)
         {
             ct.ThrowIfCancellationRequested();
             if (wanted != null && !wanted.Contains(game.RepertoireId)) continue;
+            if (budget.Spent()) break;                          // Rest ungeprüft → truncated
 
             var board = BoardFor(game.StartFen);
             if (board == null) continue;                        // unbrauchbare [FEN] → Linie überspringen
@@ -220,15 +229,19 @@ public class RepertoireSimilarityService
             {
                 WalkPositions(board, game.Moves, startPly: 0, visit =>
                 {
+                    if (budget.Spent()) return false;           // auch mitten in einer riesigen Linie
                     Consider(visit.Fen, visit.Ply, visit.Continuations);
                     return ++seen < MaxPositionsPerLine;
                 }, withContinuations: moveQuery != null);
             }
             catch { /* defensiv: eine kaputte Linie darf die Suche nicht kippen */ }
 
+            // Auch der Treffer einer angebrochenen Linie ist echt — er zählt, danach ist Schluss.
             if (lineBest != null && lineBest.Value.Score >= minScore) best.Add(lineBest.Value);
+            if (budget.Exhausted) break;
         }
 
+        result.Truncated = budget.Exhausted;
         result.Compared = compared;
         result.Matches = best
             .OrderByDescending(c => c.Score)

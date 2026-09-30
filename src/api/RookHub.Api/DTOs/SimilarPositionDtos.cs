@@ -89,6 +89,9 @@ public class SimilarPositionsResultDto
     public SimilarMoveEchoDto? Move { get; set; }
     /// <summary>Ob nur Treffer mit passendem Zug geliefert wurden (wirkt nur mit <see cref="Move"/>).</summary>
     public bool OnlyWithMove { get; set; }
+    /// <summary><c>true</c>, wenn das Zeitbudget der Anfrage vor der letzten Linie aufgebraucht war —
+    /// die Treffer stammen dann nur aus dem schon verglichenen Teil der Repertoires.</summary>
+    public bool Truncated { get; set; }
 }
 
 /// <summary>Ein Treffer: die ähnlichste Stellung EINER Repertoire-Linie.</summary>

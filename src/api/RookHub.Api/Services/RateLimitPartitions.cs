@@ -68,6 +68,15 @@ public static class RateLimitPartitions
     /// Positions-Set des Kontos neu bauen lassen (Codereview 2026-09-29, N8-005).</summary>
     public const int ExtensionAnalyzePermitPerMinute = 30;
 
+    /// <summary>Policy-Name des Baummodus und der Ähnlichkeitssuche im Repertoire (<c>position-tree</c>,
+    /// <c>similar-positions</c>).</summary>
+    public const string RepertoireScanPolicy = "repertoire-scan";
+    /// <summary>Anfragen je Konto und Minute (beide Endpunkte teilen EIN Fenster). Jede spielt alle lesbaren
+    /// Repertoire-Linien nach (bis zum Zeitbudget der Dienste); vorher galt nur der globale Deckel von 100/min je
+    /// Adresse (Codereview 2026-09-29, N7-001). Die Stellungssuche (<c>position-lookup</c>) liest dagegen aus dem
+    /// gecachten Index und bleibt draußen — sie lädt bei jedem Schritt durch eine Partie neu.</summary>
+    public const int RepertoireScanPermitPerMinute = 30;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -110,6 +119,9 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> ExtensionAnalyze(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), ExtensionAnalyzePermitPerMinute * scale);
+
+    public static RateLimitPartition<string> RepertoireScan(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), RepertoireScanPermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

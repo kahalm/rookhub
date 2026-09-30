@@ -846,6 +846,9 @@ try
         // Repertoire-Analyse der Erweiterung (analyze-game): je KONTO — ein Neuaufbau des Positions-Sets liest alle
         // markierten PGNs und spielt jeden Halbzug nach (RateLimitPartitions, Codereview N8-005).
         options.AddPolicy("extension-analyze", ctx => RookHub.Api.Services.RateLimitPartitions.ExtensionAnalyze(ctx, permitScale));
+        // Baummodus und Ähnlichkeitssuche im Repertoire (position-tree, similar-positions): je KONTO — jede Anfrage
+        // spielt alle lesbaren Linien nach, bis zum Zeitbudget der Dienste (RateLimitPartitions, Codereview N7-001).
+        options.AddPolicy("repertoire-scan", ctx => RookHub.Api.Services.RateLimitPartitions.RepertoireScan(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 

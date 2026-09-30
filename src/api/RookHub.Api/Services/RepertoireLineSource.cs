@@ -34,7 +34,7 @@ public class RepertoireLineSource
     // Sicherheits-Deckel: verhindert, dass ein pathologisch großes Repertoire den Index-Aufbau/-Speicher
     // sprengt. Bei realen Repertoire-Größen nie erreicht.
     private const int MaxGamesPerUser = 20000;
-    /// <summary>Obergrenze der je Linie gemeldeten Stellungen (der Walk läuft weiter, meldet aber nichts mehr).</summary>
+    /// <summary>Obergrenze der je Linie gemeldeten Stellungen (danach hört der Walk auf).</summary>
     public const int MaxPositionsPerLine = 400;
 
     private static string GamesCacheKey(int userId) => $"rep:posgames:{userId}";
@@ -59,6 +59,26 @@ public class RepertoireLineSource
     public readonly record struct PositionVisit(string Fen, int Ply, IReadOnlyList<LineContinuation> Continuations);
 
     private static readonly IReadOnlyList<LineContinuation> NoContinuations = Array.Empty<LineContinuation>();
+
+    /// <summary>
+    /// Zeitbudget EINER Anfrage über alle Linien (Baummodus, Ähnlichkeitssuche). Beide spielen je
+    /// Anfrage alle lesbaren Linien nach — gecacht ist nur das Parsen; ohne Budget rechnete ein großer
+    /// Bestand zweistellige Sekunden je Anfrage (Codereview 2026-09-29, N7-001). Ist es aufgebraucht,
+    /// antwortet der Dienst mit dem bisherigen Stand und <c>truncated</c>.
+    /// </summary>
+    public sealed class ScanBudget
+    {
+        private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+        private readonly TimeSpan _limit;
+
+        public ScanBudget(TimeSpan limit) => _limit = limit;
+
+        /// <summary>Wurde die Arbeit am Budget abgebrochen?</summary>
+        public bool Exhausted { get; private set; }
+
+        /// <summary><c>true</c>, sobald das Budget aufgebraucht ist (und bleibt es dann).</summary>
+        public bool Spent() => Exhausted || (Exhausted = _clock.Elapsed >= _limit);
+    }
 
     /// <summary>Eine geparste Repertoire-Linie samt Herkunft — gemeinsame Basis von Stellungs-Index,
     /// Baummodus und Ähnlichkeitssuche, damit alle dieselben Linien/gameIndex-Zuordnungen sehen.</summary>
@@ -136,8 +156,8 @@ public class RepertoireLineSource
     /// an <paramref name="visit"/>: <c>(fen, ply)</c>, wobei <c>ply</c> auf der Hauptlinie die Anzahl
     /// Halbzüge ist und <c>-1</c>, wenn die Stellung nur in einer Variante vorkommt.
     /// Gibt <paramref name="visit"/> <c>false</c> zurück, werden keine weiteren Stellungen mehr
-    /// gemeldet — der Walk läuft aber zu Ende, damit die <c>Cancel()</c>-Bilanz des Bretts stimmt.
-    /// Das Brett steht danach wieder auf der Ausgangsstellung.
+    /// gemeldet und auch keine Züge mehr gespielt — die schon gespielten nimmt jede Ebene zurück
+    /// (<c>Cancel()</c>-Bilanz). Das Brett steht danach wieder auf der Ausgangsstellung.
     /// </summary>
     public static void WalkPositions(ChessBoard board, List<PgnMove> moves, int startPly, Func<string, int, bool> visit)
         => WalkPositions(board, moves, startPly, v => visit(v.Fen, v.Ply), withContinuations: false);
@@ -219,10 +239,18 @@ public class RepertoireLineSource
             int ply = startPly;
             for (int i = 0; i < moves.Count; i++)
             {
+                // Nichts mehr zu melden → auch nichts mehr spielen. Früher lief der Walk bis zum Ende
+                // jeder Variante weiter und spielte eine riesige Linie nach dem Deckel komplett nach
+                // (Codereview 2026-09-29, N7-001); zurückgenommen wird unten trotzdem alles.
+                if (!_collecting) break;
                 var move = moves[i];
                 // Varianten zweigen VOR diesem Zug ab (ply -1 = nur in Variante).
                 foreach (var variation in move.Variations)
+                {
+                    if (!_collecting) break;
                     Walk(board, variation, ply, isMainline: false);
+                }
+                if (!_collecting) break;
 
                 bool ok;
                 try { ok = board.Move(move.San); }
@@ -230,7 +258,6 @@ public class RepertoireLineSource
                 if (!ok) break;
                 movesMade++;
                 ply++;
-                if (!_collecting) continue;   // weiterlaufen (Cancel!), aber nichts mehr melden
                 var continuations = _withContinuations ? ContinuationsAt(board, moves, i + 1) : NoContinuations;
                 _collecting = _visit(new PositionVisit(board.ToFen(), isMainline ? ply : -1, continuations));
             }

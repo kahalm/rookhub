@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -47,8 +48,10 @@ public class RepertoireController : BaseApiController
 
     /// <summary>Baummodus derselben Suche: wie geht das Repertoire ab dieser Stellung weiter?
     /// Liefert je Repertoire einen über alle Linien UND Varianten zusammengeführten Zugbaum.
+    /// Rechnet je Anfrage über alle Linien (Zeitbudget im Dienst) — daher Rate-Limit je Konto.
     /// Literale Route MUSS vor `{id}` stehen.</summary>
     [HttpPost("position-tree")]
+    [EnableRateLimiting(RateLimitPartitions.RepertoireScanPolicy)]
     public async Task<ActionResult<PositionTreeResultDto>> PositionTree([FromBody] PositionTreeRequestDto dto, CancellationToken ct)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
@@ -60,8 +63,10 @@ public class RepertoireController : BaseApiController
     /// statt auf exakte Gleichheit zu prüfen. Optional darf die Anfrage einen erwogenen ZUG mitbringen
     /// (<c>move</c>): Treffer, an denen dieser Zug auch der Repertoirezug ist, rücken nach vorn
     /// (<c>moveMatch</c> + Bonus, siehe <see cref="RepertoireSimilarityService"/>); <c>onlyWithMove</c>
-    /// blendet die übrigen aus. Literale Route MUSS vor `{id}` stehen.</summary>
+    /// blendet die übrigen aus. Rechnet je Anfrage über alle Linien (Zeitbudget im Dienst) — daher
+    /// Rate-Limit je Konto. Literale Route MUSS vor `{id}` stehen.</summary>
     [HttpPost("similar-positions")]
+    [EnableRateLimiting(RateLimitPartitions.RepertoireScanPolicy)]
     public async Task<ActionResult<SimilarPositionsResultDto>> SimilarPositions([FromBody] SimilarPositionsRequestDto dto, CancellationToken ct)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();

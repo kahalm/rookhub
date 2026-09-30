@@ -38,6 +38,13 @@ public class RepertoirePositionLookupService
     public const int DefaultTreeDepth = 12;
     public const int MaxTreeDepth = 30;
 
+    /// <summary>Zeitbudget je Baum-Anfrage für den Durchlauf über alle Linien (ohne das gecachte
+    /// Parsen); danach kommt der bisherige Stand mit <c>truncated</c> zurück. Der Baummodus spielt je
+    /// Anfrage JEDE Linie samt Varianten nach — ohne Deckel zweistellige Sekunden bei großem Bestand,
+    /// und nach einem Abbruch der Anfrage rechnete er weiter (Codereview 2026-09-29, N7-001).
+    /// Setzbar für Tests, wie <see cref="RepertoireExplorerService.Budget"/>.</summary>
+    public TimeSpan TreeBudget { get; set; } = TimeSpan.FromSeconds(8);
+
     private static string CacheKey(int userId) => $"rep:poslookup:{userId}";
 
     /// <summary>Cache-Einträge eines Users invalidieren (nach PGN-Upload/-Delete/-Update).</summary>
@@ -172,6 +179,7 @@ public class RepertoirePositionLookupService
         var games = await _lines.GetGamesAsync(userId, ct);
         var target = NormalizeKey(fen);
         var result = new PositionTreeResultDto();
+        var budget = new ScanBudget(TreeBudget);
 
         foreach (var repGroup in games
                      .GroupBy(g => g.RepertoireId)
@@ -181,6 +189,8 @@ public class RepertoirePositionLookupService
             int occurrences = 0;
             foreach (var game in repGroup)
             {
+                ct.ThrowIfCancellationRequested();
+                if (budget.Spent()) break;
                 var board = BoardFor(game.StartFen);
                 if (board == null) continue;   // unbrauchbare [FEN] → Linie überspringen
                 // Die Startstellung DIESER Linie kann der Treffer sein (Repertoire-/Varianten-Anfang).
@@ -189,10 +199,15 @@ public class RepertoirePositionLookupService
                     occurrences++;
                     builder.Collect(game.Moves, 0, builder.Root, maxDepth, game);
                 }
-                try { occurrences += WalkForTree(board, game.Moves, target, builder, game, maxDepth); }
+                try { occurrences += WalkForTree(board, game.Moves, target, builder, game, maxDepth, budget); }
                 catch { /* eine kaputte Linie darf den Baum nicht kippen */ }
+                if (budget.Exhausted) break;
             }
-            if (occurrences == 0) continue;
+            if (occurrences == 0)
+            {
+                if (budget.Exhausted) break;   // die übrigen Repertoires bleiben ungeprüft
+                continue;
+            }
 
             var first = repGroup.First();
             result.Repertoires.Add(new RepertoirePositionTreeDto
@@ -202,26 +217,32 @@ public class RepertoirePositionLookupService
                 Kind = first.Kind,
                 Shared = first.Shared,
                 Occurrences = occurrences,
-                Truncated = builder.Truncated,
+                // Am Budget abgebrochen = dieses Repertoire ist nur zum Teil durchsucht.
+                Truncated = builder.Truncated || budget.Exhausted,
                 Moves = builder.Root.Children.Select(ToDto).ToList(),
             });
+            if (budget.Exhausted) break;       // die übrigen Repertoires bleiben ungeprüft
         }
+        result.Truncated = budget.Exhausted;
         return result;
     }
 
     /// <summary>Sucht in einer Zugliste (rekursiv über Varianten) alle Vorkommen der Zielstellung und
-    /// hängt die jeweilige Fortsetzung an den Baum. Rückgabe: Anzahl gefundener Vorkommen.</summary>
+    /// hängt die jeweilige Fortsetzung an den Baum. Rückgabe: Anzahl gefundener Vorkommen. Ist das
+    /// <paramref name="budget"/> aufgebraucht, hört er auf (auch mitten in einer riesigen Linie).</summary>
     private static int WalkForTree(ChessBoard board, List<PgnMove> moves, string target,
-        TreeBuilder builder, RepGame game, int maxDepth)
+        TreeBuilder builder, RepGame game, int maxDepth, ScanBudget budget)
     {
         int hits = 0;
         int movesMade = 0;
         for (int i = 0; i < moves.Count; i++)
         {
+            if (budget.Spent()) break;
             var move = moves[i];
             // Varianten zweigen VOR diesem Zug ab — dort kann die Stellung ebenfalls vorkommen.
             foreach (var variation in move.Variations)
-                hits += WalkForTree(board, variation, target, builder, game, maxDepth);
+                hits += WalkForTree(board, variation, target, builder, game, maxDepth, budget);
+            if (budget.Exhausted) break;
 
             bool ok;
             try { ok = board.Move(move.San); }
