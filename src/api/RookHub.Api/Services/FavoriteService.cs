@@ -17,10 +17,13 @@ public class FavoriteService
     public FavoriteService(AppDbContext db) => _db = db;
 
     /// <summary>Favorisiert ein Puzzle (idempotent). Wirft <see cref="KeyNotFoundException"/>, wenn das
-    /// Puzzle in der zur Quelle passenden Tabelle fehlt.</summary>
+    /// Puzzle in der zur Quelle passenden Tabelle fehlt — oder eine Linie eines KALKULATIONSBUCHS ist
+    /// (siehe <see cref="CalculationLines(AppDbContext)"/>; gleiche Meldung, kein Existenz-Orakel).</summary>
     public async Task<bool> AddAsync(int userId, PuzzleSource source, int puzzleId)
     {
         if (!await PuzzleExistsAsync(source, puzzleId))
+            throw new KeyNotFoundException("Puzzle not found.");
+        if (source == PuzzleSource.Book && await CalculationLines(_db).AnyAsync(p => p.Id == puzzleId))
             throw new KeyNotFoundException("Puzzle not found.");
 
         var exists = await _db.FavoritePuzzles
@@ -89,6 +92,12 @@ public class FavoriteService
             : await _db.BookPuzzles.Where(p => bookIds.Contains(p.Id))
                 .Select(p => new { p.Id, p.BookRating, p.Tags, p.Title, p.Fen, p.Moves })
                 .ToDictionaryAsync(p => p.Id, p => (p.BookRating ?? 0, (string?)p.Tags, (string?)p.Title, p.Fen, p.Moves));
+        // Linien aus Kalkulationsbüchern: Zugfolge = Lösung → zurückhalten (auch für Favoriten von
+        // früher bzw. aus einem erst später umgeschalteten Kurs). FEN/Titel bleiben wie bei
+        // BookPuzzleService.GetByIdAsync.
+        var calcIds = bookIds.Count == 0
+            ? new HashSet<int>()
+            : (await CalculationLines(_db).Where(p => bookIds.Contains(p.Id)).Select(p => p.Id).ToListAsync()).ToHashSet();
 
         var enriched = new List<FavoritePuzzleDto>(rows.Count);
         foreach (var r in rows)
@@ -97,7 +106,8 @@ public class FavoriteService
             {
                 if (book.TryGetValue(r.PuzzleId, out var b))
                 {
-                    r.Rating = b.Item1; r.Themes = b.Item2; r.Title = b.Item3; r.Fen = b.Item4; r.Moves = b.Item5;
+                    r.Rating = b.Item1; r.Themes = b.Item2; r.Title = b.Item3; r.Fen = b.Item4;
+                    r.Moves = calcIds.Contains(r.PuzzleId) ? string.Empty : b.Item5;
                     enriched.Add(r);
                 }
             }
@@ -118,4 +128,17 @@ public class FavoriteService
         PuzzleSource.Book => _db.BookPuzzles.AnyAsync(p => p.Id == puzzleId),
         _ => _db.Puzzles.AnyAsync(p => p.Id == puzzleId)
     };
+
+    /// <summary>
+    /// Buch-Linien, die zu einem KALKULATIONSBUCH gehören (<see cref="Book.IsCalculation"/>; Altbestand
+    /// ohne <see cref="BookPuzzle.BookId"/> über den Dateinamen, wie
+    /// <c>BookPuzzleService.EnsureNotCalculationBookAsync</c>). Ihre <see cref="BookPuzzle.Moves"/> sind
+    /// die Lösung, die den Server nicht verlässt (<see cref="CourseAccess.IsCalculationBookAsync"/>) —
+    /// die Favoriten waren sonst ein Weg daran vorbei: <c>PuzzleId</c> ist polymorph und wurde nur auf
+    /// Existenz geprüft, die Liste gab <c>Moves</c> ungefiltert zurück (Codereview 2026-09-29).
+    /// <c>internal</c>, damit <c>FavoriteControllerTests</c> die SQL-Übersetzung prüft.
+    /// </summary>
+    internal static IQueryable<BookPuzzle> CalculationLines(AppDbContext db) =>
+        db.BookPuzzles.Where(p => db.Books.Any(b => b.IsCalculation &&
+            ((p.BookId != null && b.Id == p.BookId) || (p.BookId == null && b.FileName == p.BookFileName))));
 }

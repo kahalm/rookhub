@@ -191,4 +191,103 @@ public class FavoriteControllerTests : IDisposable
         Assert.True(await _service.ContainsAsync(user.Id, PuzzleSource.Book, book.Id));
         Assert.Equal(2, await _service.CountAsync(user.Id));
     }
+
+    // ===== Kalkulationsbücher: die Zugfolge ist die Lösung (Codereview 2026-09-29, A9-001) =====
+
+    /// <summary>Buch + Linie; <paramref name="linkById"/> = false legt Altbestand OHNE BookId an
+    /// (Zuordnung nur über den Dateinamen).</summary>
+    private async Task<BookPuzzle> CreateBookLineAsync(bool isCalculation, bool linkById = true, string file = "calc.pgn")
+    {
+        var book = new Book { FileName = file, DisplayName = file, IsCalculation = isCalculation, IsPublic = true, Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var p = new BookPuzzle
+        {
+            LineId = $"{file}:1", BookFileName = file, BookId = linkById ? book.Id : null,
+            Fen = "fen-calc", Moves = "e2e4 e7e5 g1f3", Title = "Woche 1",
+        };
+        _db.BookPuzzles.Add(p);
+        await _db.SaveChangesAsync();
+        return p;
+    }
+
+    [Fact]
+    public async Task Add_CalculationBookLine_ReturnsNotFound()
+    {
+        var user = await CreateUserAsync("alice");
+        var line = await CreateBookLineAsync(isCalculation: true);
+        SetUser(user.Id);
+
+        var res = await _controller.Add(new ToggleFavoriteDto { PuzzleId = line.Id, Source = PuzzleSource.Book });
+
+        Assert.IsType<NotFoundObjectResult>(res);
+        Assert.False(await _db.FavoritePuzzles.AnyAsync());
+    }
+
+    [Fact]
+    public async Task Add_LegacyCalculationLineWithoutBookId_ReturnsNotFound()
+    {
+        var user = await CreateUserAsync("alice");
+        var line = await CreateBookLineAsync(isCalculation: true, linkById: false);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.AddAsync(user.Id, PuzzleSource.Book, line.Id));
+    }
+
+    [Fact]
+    public async Task List_CalculationBookLine_WithholdsMoves_KeepsFen()
+    {
+        // Favorit von FRÜHER (vor dem Umschalten bzw. vor diesem Fix direkt angelegt): die Liste darf
+        // die Lösung trotzdem nicht ausliefern.
+        var user = await CreateUserAsync("alice");
+        var line = await CreateBookLineAsync(isCalculation: true);
+        _db.FavoritePuzzles.Add(new FavoritePuzzle { UserId = user.Id, Source = PuzzleSource.Book, PuzzleId = line.Id });
+        await _db.SaveChangesAsync();
+
+        var fav = Assert.Single(await _service.ListAsync(user.Id));
+
+        Assert.Equal(string.Empty, fav.Moves);
+        Assert.Equal("fen-calc", fav.Fen);
+        Assert.Equal("Woche 1", fav.Title);
+    }
+
+    [Fact]
+    public async Task List_BookSwitchedToCalculationLater_WithholdsMoves()
+    {
+        var user = await CreateUserAsync("alice");
+        var line = await CreateBookLineAsync(isCalculation: false);
+        await _service.AddAsync(user.Id, PuzzleSource.Book, line.Id);
+        Assert.Equal("e2e4 e7e5 g1f3", Assert.Single(await _service.ListAsync(user.Id)).Moves);   // normaler Kurs: Züge da
+
+        var book = await _db.Books.SingleAsync();
+        book.IsCalculation = true;
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(string.Empty, Assert.Single(await _service.ListAsync(user.Id)).Moves);
+    }
+
+    [Fact]
+    public async Task Add_NormalBookLine_StillWorks_WithMoves()
+    {
+        var user = await CreateUserAsync("alice");
+        var line = await CreateBookLineAsync(isCalculation: false, file: "normal.pgn");
+        SetUser(user.Id);
+
+        Assert.True(Favorited(await _controller.Add(new ToggleFavoriteDto { PuzzleId = line.Id, Source = PuzzleSource.Book })));
+        Assert.Equal("e2e4 e7e5 g1f3", Assert.Single(await _service.ListAsync(user.Id)).Moves);
+    }
+
+    [Fact]
+    public void CalculationLines_TranslatesToSqlOnMySql()
+    {
+        // Korrelierte Unterabfrage (BookId ODER Altbestand über den Dateinamen) muss als SQL laufen,
+        // nicht clientseitig — sonst wirft EF auf MariaDB, was InMemory nie zeigt.
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseMySql("server=localhost;database=x;user=x;password=x", new MySqlServerVersion(new Version(11, 0, 0)))
+            .Options);
+
+        var sql = FavoriteService.CalculationLines(db).Where(p => p.Id == 1).Select(p => p.Id).ToQueryString();
+
+        Assert.Contains("EXISTS", sql);
+        Assert.Contains("`IsCalculation`", sql);
+    }
 }
