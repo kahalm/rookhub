@@ -151,6 +151,71 @@ public class LeagueRefreshTests : IDisposable
         Assert.Equal(1, _db.LeagueGames.Count(g => g.Tnr == 7));
     }
 
+    [Theory]
+    [InlineData("matches")]
+    [InlineData("games")]
+    [InlineData("roster")]
+    [InlineData("stats")]
+    public async Task Replace_OneEmptyPageWithExistingRows_KeepsTheLeague(string emptyPage)
+    {
+        // Bestand aus einem früheren Lauf: alle vier Seiten hatten Zeilen
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2025/26", Level = 1, League = "Landesliga" });
+        await _db.SaveChangesAsync();
+        await Refresh().ReplaceAsync(SamplePages(), default);
+        _db.ChangeTracker.Clear();
+
+        // Nur EINE Seite kommt als Drosselseite (200 ohne Tabelle) leer zurück
+        var s = SamplePages();
+        var pages = emptyPage switch
+        {
+            "matches" => s with { Matches = new() },
+            "games" => s with { Games = new(), RoundDates = new() },
+            "roster" => s with { Roster = new() },
+            _ => s with { Stats = new() },
+        };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Refresh().ReplaceAsync(pages, default));
+        Assert.Equal(1, _db.LeagueMatches.Count(m => m.Tnr == 7));
+        Assert.Equal(2, _db.LeagueGames.Count(g => g.Tnr == 7));
+        Assert.Equal(3, _db.LeaguePlayers.Count(p => p.Tnr == 7));
+        Assert.Equal(2100, _db.LeaguePlayers.Single(p => p.FideId == "333").EloPerf);
+    }
+
+    [Fact]
+    public async Task Replace_EmptyPageWithoutExistingRows_ReplacesAsBefore()
+    {
+        // Saisonbeginn: noch keine Brettpaarungen und keine Statistik — weder neu noch im Bestand
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "alt", NameKey = "alt" });   // ohne Statistik
+        await _db.SaveChangesAsync();
+        var pages = SamplePages() with { Games = new(), RoundDates = new(), Stats = new() };
+        await Refresh().ReplaceAsync(pages, default);
+        Assert.Equal(3, _db.LeaguePlayers.Count(p => p.Tnr == 7));
+        Assert.DoesNotContain(_db.LeaguePlayers, p => p.Name == "alt");
+        Assert.Equal(0, _db.LeagueGames.Count(g => g.Tnr == 7));
+    }
+
+    [Fact]
+    public async Task Run_EmptyRosterPage_ReportsTheLeagueAsNotUpdated()
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 6, Season = "2026/27", Level = 2, League = "1. Klasse", Stage = "Liga" });
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 7, Season = "2026/27", Level = 1, League = "Landesliga", Stage = "Liga" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 6, Team = "Schwaz", Name = "Binder, Moriz", NameKey = "binder, moriz", FideId = "111" });
+        await _db.SaveChangesAsync();
+        var web = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web);
+        var six = System.Text.Json.JsonSerializer.Serialize(SamplePages() with { Tnr = 6, Roster = new() }, web);
+        var seven = System.Text.Json.JsonSerializer.Serialize(SamplePages(), web);
+        var handler = new StubHandler(req => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(req.RequestUri!.AbsolutePath switch { "/api/league/6" => six, "/api/league/7" => seven, _ => "" },
+                Encoding.UTF8, "application/json"),
+        });
+        var msg = await Refresh(handler).RunAsync(default);
+        Assert.Contains("1 Ligen neu geholt", msg);
+        Assert.Contains("nicht aktualisiert: Liga 6", msg);
+        Assert.Equal("111", _db.LeaguePlayers.Single(p => p.Tnr == 6).FideId);   // Meldeliste der Liga 6 bleibt
+        Assert.Equal(0, _db.LeagueGames.Count(g => g.Tnr == 6));
+    }
+
     [Fact]
     public async Task Run_OneLeagueFails_TheOthersAndTheViewsStillUpdate()
     {

@@ -116,6 +116,17 @@ public sealed class LeagueRefresh
         // Tabellen) — ersetzt würde damit der ganze Bestand der Liga durch nichts.
         if (p.Matches.Count == 0 && p.Games.Count == 0 && p.Roster.Count == 0)
             throw new InvalidOperationException($"Crawler lieferte für Liga {tnr} leere Seiten — der Bestand bleibt.");
+        // Dasselbe gilt je Seite: der Crawler holt die vier nacheinander, eine Drosselseite mitten im Lauf kommt als
+        // leere Liste an — ersetzt würde z. B. die ganze Meldeliste durch nichts (keine Prognosen, Teilen-Links 404).
+        // Leer bleiben darf eine Seite nur, wenn der Bestand der Liga dafür ebenfalls leer ist (Saisonbeginn).
+        var lost = new List<string>();
+        if (p.Matches.Count == 0 && await _db.LeagueMatches.AnyAsync(x => x.Tnr == tnr, ct)) lost.Add("art=2");
+        if (p.Games.Count == 0 && await _db.LeagueGames.AnyAsync(x => x.Tnr == tnr, ct)) lost.Add("art=3");
+        if (p.Roster.Count == 0 && await _db.LeaguePlayers.AnyAsync(x => x.Tnr == tnr, ct)) lost.Add("art=16");
+        if (p.Stats.Count == 0 && await _db.LeaguePlayers.AnyAsync(x => x.Tnr == tnr && (x.Points != null || x.Games != null || x.EloPerf != null), ct))
+            lost.Add("art=20");
+        if (lost.Count > 0)
+            throw new InvalidOperationException($"Crawler lieferte für Liga {tnr} leere Seite(n) {string.Join(", ", lost)} bei vorhandenem Bestand — der Bestand bleibt.");
         _db.LeagueRounds.RemoveRange(await _db.LeagueRounds.Where(x => x.Tnr == tnr).ToListAsync(ct));
         _db.LeagueMatches.RemoveRange(await _db.LeagueMatches.Where(x => x.Tnr == tnr).ToListAsync(ct));
         _db.LeagueGames.RemoveRange(await _db.LeagueGames.Where(x => x.Tnr == tnr).ToListAsync(ct));

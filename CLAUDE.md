@@ -1509,7 +1509,11 @@ Rollenverwaltung an).
   Datum + Nachnamen + Ergebnis; Farbe per FIDE-ID-Tag, sonst Nachname — 2022/23 ohne Komma) und baut die
   Spielerkarte neu; zuletzt Ansichten erneut. HttpClient `LeagueCrawler` (5 min Timeout). Eine Liga bzw. ein Spieler,
   der gerade nicht zu holen ist, hält den Rest NICHT auf (Warnung im Log, Meldung „nicht aktualisiert: Liga …“); erst
-  wenn KEINE Liga kommt, gilt der Lauf als gescheitert. Vier leere Seiten (Fehl-/Drosselseite) ersetzen nichts. Der
+  wenn KEINE Liga kommt, gilt der Lauf als gescheitert. Vier leere Seiten (Fehl-/Drosselseite) ersetzen nichts —
+  und auch EINE leere Seite nicht, solange die Liga dafür Bestand hat (Paarungen art=2, Brettpaarungen art=3,
+  Meldeliste art=16, Statistik art=20 = Punkte/Partien/Performance an der Meldeliste; Codereview N4-002): der Crawler
+  holt die vier nacheinander und meldet eine Drosselseite als leere Liste, dann bleibt die Liga und steht unter „nicht
+  aktualisiert“. Leer bleiben darf eine Seite nur, wenn auch der Bestand dafür leer ist (Saisonbeginn). Der
   Import (`admin/import`) ersetzt in EINER Transaktion (Execution-Strategy-Muster).
 - **Oberfläche** (0.571.0): viertes Angular-Projekt `leaguehub` (`src-leaguehub/`, `public-leaguehub/`, Image
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
