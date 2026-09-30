@@ -53,6 +53,14 @@ public static class RateLimitPartitions
     /// ankommen.</summary>
     public const int SyncPlayPermitPerMinute = 3;
 
+    /// <summary>Policy-Name der Lückensuche einer Rekonstruktion (<c>…/gap</c>, <c>…/gap/propose</c>).</summary>
+    public const string ReconstructionGapPolicy = "reconstruction-gap";
+    /// <summary>Lückensuchen je Konto und Minute. Jede rechnet bis zum Budget des <see cref="GapSolver"/> im Request-Thread;
+    /// vorher galt nur der globale Deckel von 100/min je Adresse — ein frei registriertes Konto hielt so rund hundert
+    /// Suchen gleichzeitig am Laufen (Codereview 2026-09-29, N5-001). Ein Mensch klickt „Lücke schließen" einmal je Lücke;
+    /// die Gleichzeitigkeit über alle Konten deckelt zusätzlich <see cref="GapSearchGate"/>.</summary>
+    public const int ReconstructionGapPermitPerMinute = 6;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -89,6 +97,9 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> SyncPlay(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), SyncPlayPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> ReconstructionGap(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), ReconstructionGapPermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

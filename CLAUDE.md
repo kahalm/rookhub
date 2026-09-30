@@ -3794,10 +3794,10 @@ Deckel: `MaxPerUser` 50, `MaxParts` 200, Zugtext 4000 Zeichen.
 | PUT | `/api/reconstructions/{id}/parts/{partId}` | Teil ändern (gleicher Rumpf) |
 | DELETE | `/api/reconstructions/{id}/parts/{partId}` | Teil löschen (Reihenfolge wird geschlossen) |
 | PUT | `/api/reconstructions/{id}/parts/order` | Reihenfolge setzen `{ partIds: [] }` — fehlende Ids bleiben hinten, damit eine unvollständige Liste nichts verschwinden lässt (Literal-Route VOR `{partId}`) |
-| POST | `/api/reconstructions/{id}/parts/{partId}/gap/propose` | **Lücke schließen**: sucht die Wege und setzt sie als VORSCHLÄGE (`Generated`) vor das Teil `{ maxPlies? }` → `{ reason, nodes, budgetExhausted, inserted, detail }`. Ersetzt die Vorschläge derselben Lücke |
+| POST | `/api/reconstructions/{id}/parts/{partId}/gap/propose` | **Lücke schließen**: sucht die Wege und setzt sie als VORSCHLÄGE (`Generated`) vor das Teil `{ maxPlies? }` → `{ reason, nodes, budgetExhausted, inserted, detail }`. Ersetzt die Vorschläge derselben Lücke. Rate-Limit `reconstruction-gap` (6/min je Konto, gemeinsam mit `gap`); 429 `reason: busy`, wenn gerade alle Suchplätze belegt sind — die alten Vorschläge bleiben dann |
 | POST | `/api/reconstructions/{id}/parts/{partId}/gap/discard` | Vorschläge dieser Lücke verwerfen (idempotent) |
 | POST | `/api/reconstructions/{id}/parts/{partId}/gap/waypoint` | Eine Stellung aus einem Vorschlag übernehmen `{ fen, certain? }` — sie kommt als eigenes Teil davor, die Vorschläge fallen weg, die Lücke zerfällt in zwei |
-| POST | `/api/reconstructions/{id}/parts/{partId}/gap` | **Lücke schließen**: sucht die Züge von der Stellung am Ende des vorigen Teils bis zu diesem Teil `{ maxPlies? }` → `{ fromFen, toFen, maxPlies, nodes, budgetExhausted, reason, solutions[] }`. IMMER 200 — „es gibt keinen Weg" ist eine Auskunft, kein Fehler des Aufrufers |
+| POST | `/api/reconstructions/{id}/parts/{partId}/gap` | **Lücke schließen**: sucht die Züge von der Stellung am Ende des vorigen Teils bis zu diesem Teil `{ maxPlies? }` → `{ fromFen, toFen, maxPlies, nodes, budgetExhausted, reason, solutions[] }`. 200 auch ohne Weg — „es gibt keinen Weg" ist eine Auskunft, kein Fehler des Aufrufers; nur 429 bei Rate-Limit (`reconstruction-gap`) oder `reason: busy` (alle Suchplätze belegt) |
 | POST | `/api/reconstructions/{id}/parts/{partId}/gap/apply` | Einen gefundenen Weg übernehmen `{ moves }` — die Züge kommen als eigenes Teil VOR `partId`, beide schließen danach nahtlos an. 400 `reason` ∈ `does-not-fit`/`no-gap`/`no-previous`/`no-anchor`/`no-moves`/`target-not-a-position` |
 | POST | `/api/reconstructions/{id}/share` | **Ganze Partie teilen**: öffentlichen Link einschalten (idempotent) → `{ shareToken }` |
 | DELETE | `/api/reconstructions/{id}/share` | Link abschalten — ein späteres Teilen erzeugt ein ANDERES Token |
@@ -3824,9 +3824,18 @@ zu der erinnerten Stellung? Der Baum wächst mit ~30 Zügen je Halbzug, deshalb 
 iterative Vertiefung (die KÜRZESTE Erklärung zuerst — ist eine Tiefe fündig, hört die Suche auf),
 eine zulässige untere Schranke (`MinPlies`), Zugsortierung (`Ordered`: zuerst die Züge, die eine
 Figur auf ihr Zielfeld stellen) und ein Gedächtnis für ausgeschöpfte Sackgassen.
-`MaxSearchPlies` = 12, Vorgabe 4, Knoten-Budget 3 Mio., Zeitbudget 12 s (beide meldet die Antwort
+`MaxSearchPlies` = 12, Vorgabe 4, Knoten-Budget 500 000, Zeitbudget 4 s (beide meldet die Antwort
 als `budgetExhausted` samt `deepestSearched` — „so weit kam ich" ist eine andere Aussage als
 „es gibt keinen Weg").
+
+**Die Suche ist reine CPU im Request-Thread — deshalb gedeckelt** (Codereview 2026-09-29, N5-001; vorher
+3 Mio. Knoten/12 s und nur der globale 100/min-Deckel je Adresse, ein frei registriertes Konto hielt so rund
+hundert Suchen gleichzeitig am Laufen): Rate-Limit `reconstruction-gap` (6/min je Konto) auf `gap` und
+`gap/propose`; höchstens `GapSearchGate.DefaultSlots` = 3 Suchen gleichzeitig im ganzen Prozess, sonst SOFORT
+429 `reason: busy` (kein Warten, keine Schlange im Thread-Pool); Abbruch der Anfrage oder Herunterfahren
+beendet die Suche wie ein erschöpftes Budget; das Sackgassen-Gedächtnis hört bei `MaxDeadEntries` = 200 000
+auf zu wachsen. Gemessen (~20 000 Knoten/s): sechs Halbzüge ~1 s, Spanisch über acht 2,2 s; eine
+Sizilianisch-Stellung nach acht Halbzügen lief selbst mit 30 s ins Budget — die Antwort sagt dann `budget`.
 
 **Die Schranke ist die halbe Miete** (`MinPlies`): je Seite das MAXIMUM aus Schlagfällen
 (verschwundene Figuren der Gegenseite), Umwandlungen und **Verschiebung** — für jede Figur der

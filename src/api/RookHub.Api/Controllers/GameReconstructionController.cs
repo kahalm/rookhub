@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -116,26 +117,42 @@ public class GameReconstructionController : BaseApiController
     /// <summary>
     /// „Lücke schließen": sucht die Züge, die von der Stellung am Ende des vorigen Teils zu diesem
     /// Teil führen. Immer 200 — dass es keinen Weg gibt (bzw. das Budget nicht reichte), ist eine
-    /// AUSKUNFT im <c>reason</c> und kein Fehler des Aufrufers.
+    /// AUSKUNFT im <c>reason</c> und kein Fehler des Aufrufers. Nur wenn gerade zu viele Suchen
+    /// rechnen, 429 mit <c>reason: busy</c> (siehe <see cref="GapSearchGate"/>).
     /// </summary>
     [HttpPost("{id:int}/parts/{partId:int}/gap")]
+    [EnableRateLimiting(RateLimitPartitions.ReconstructionGapPolicy)]
     public async Task<ActionResult<ReconstructionGapResultDto>> SolveGap(int id, int partId, [FromBody] ReconstructionGapRequest? req, CancellationToken ct)
     {
-        var dto = await _service.SolveGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
-        return dto == null ? NotFound() : Ok(dto);
+        try
+        {
+            var dto = await _service.SolveGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
+            return dto == null ? NotFound() : Ok(dto);
+        }
+        catch (GapSearchBusyException) { return Busy(); }
     }
 
     /// <summary>
     /// „Lücke schließen": sucht die Wege und SETZT sie als Vorschläge in die Liste (vor
     /// <paramref name="partId"/>). Vorschläge zählen nicht zur Partie — sie sind zum Durchsehen da.
     /// Antwort enthält die ganze Rekonstruktion samt Vorschlägen und den Grund, falls nichts kam.
+    /// 429 mit <c>reason: busy</c>, wenn gerade zu viele Suchen rechnen — die alten Vorschläge bleiben dann.
     /// </summary>
     [HttpPost("{id:int}/parts/{partId:int}/gap/propose")]
+    [EnableRateLimiting(RateLimitPartitions.ReconstructionGapPolicy)]
     public async Task<ActionResult<ReconstructionGapProposalDto>> ProposeGap(int id, int partId, [FromBody] ReconstructionGapRequest? req, CancellationToken ct)
     {
-        var dto = await _service.ProposeGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
-        return dto == null ? NotFound() : Ok(dto);
+        try
+        {
+            var dto = await _service.ProposeGapAsync(GetUserId(), id, partId, req?.MaxPlies, ct);
+            return dto == null ? NotFound() : Ok(dto);
+        }
+        catch (GapSearchBusyException) { return Busy(); }
     }
+
+    /// <summary>Alle Plätze der Lückensuche belegt: sofort 429 statt zu warten (kein Stau im Thread-Pool).</summary>
+    private ObjectResult Busy() => StatusCode(StatusCodes.Status429TooManyRequests,
+        new { reason = "busy", message = "Too many gap searches are running right now. Try again in a few seconds." });
 
     /// <summary>Die Vorschläge vor diesem Teil verwerfen (idempotent).</summary>
     [HttpPost("{id:int}/parts/{partId:int}/gap/discard")]

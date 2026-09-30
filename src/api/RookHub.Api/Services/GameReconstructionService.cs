@@ -23,7 +23,15 @@ public class GameReconstructionService
     public const int MaxParts = 200;
 
     private readonly AppDbContext _db;
-    public GameReconstructionService(AppDbContext db) => _db = db;
+    private readonly GapSearchGate _gate;
+    private readonly CancellationToken _stopping;
+
+    public GameReconstructionService(AppDbContext db, GapSearchGate? gate = null, IHostApplicationLifetime? lifetime = null)
+    {
+        _db = db;
+        _gate = gate ?? GapSearchGate.Shared;
+        _stopping = lifetime?.ApplicationStopping ?? CancellationToken.None;
+    }
 
     public async Task<List<ReconstructionListItemDto>> ListAsync(int userId, CancellationToken ct = default)
     {
@@ -151,6 +159,10 @@ public class GameReconstructionService
     /// <para>Gesucht wird von der Stellung am Ende des vorigen Teils zur Stellung dieses Teils —
     /// beides muss also bekannt sein. Das Ziel ist deshalb immer ein STELLUNGS-Teil: eine Zugfolge
     /// nach einer Lücke hat selbst keine bekannte Ausgangsstellung, und genau die wäre das Ziel.</para>
+    ///
+    /// <para>Gerechnet wird nur mit einem freien Platz der <see cref="GapSearchGate"/>, sonst
+    /// <see cref="GapSearchBusyException"/> (→ 429). Abbruch der Anfrage oder Herunterfahren beendet die
+    /// Suche wie ein erschöpftes Budget.</para>
     /// </summary>
     public async Task<ReconstructionGapResultDto?> SolveGapAsync(int userId, int id, int partId, int? maxPlies, CancellationToken ct = default)
     {
@@ -176,7 +188,14 @@ public class GameReconstructionService
         dto.ToFen = part.Fen;
         if (dto.FromFen == null) { dto.Reason = "no-anchor"; return dto; }
 
-        var result = GapSolver.Solve(dto.FromFen, dto.ToFen, plies);
+        if (!_gate.TryEnter()) throw new GapSearchBusyException();
+        GapSolver.Result result;
+        try
+        {
+            using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct, _stopping);
+            result = GapSolver.Solve(dto.FromFen, dto.ToFen, plies, ct: stop.Token);
+        }
+        finally { _gate.Exit(); }
         dto.Nodes = result.Nodes;
         dto.BudgetExhausted = result.BudgetExhausted;
         dto.DeepestSearched = result.DeepestSearched;

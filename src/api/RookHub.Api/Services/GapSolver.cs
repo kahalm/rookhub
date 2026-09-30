@@ -32,11 +32,19 @@ public static class GapSolver
     /// <summary>Vorgabe, wenn der Aufrufer nichts sagt.</summary>
     public const int DefaultMaxPlies = 4;
 
-    /// <summary>So viele Knoten höchstens — danach bricht die Suche ehrlich ab.</summary>
-    public const int DefaultNodeBudget = 3_000_000;
+    /// <summary>So viele Knoten höchstens — danach bricht die Suche ehrlich ab. Bei ~20 000 Knoten/s greift
+    /// meist das Zeitbudget zuerst; die Knoten sind der Deckel für schnellere Rechner.</summary>
+    public const int DefaultNodeBudget = 500_000;
 
-    /// <summary>Und so lange höchstens: eine Anfrage darf keinen Request-Thread festhalten.</summary>
-    public static readonly TimeSpan DefaultTimeBudget = TimeSpan.FromSeconds(12);
+    /// <summary>Und so lange höchstens: eine Anfrage darf keinen Request-Thread festhalten. Vorher 12 s und
+    /// 3 Mio. Knoten — mit ~100 gleichzeitigen Aufrufen je Adresse band das die ganze API (Codereview
+    /// 2026-09-29, N5-001). 4 s reichen gemessen für sechs Halbzüge (~1 s) und eine übliche Eröffnung
+    /// über acht (Spanisch, 2,2 s); was länger braucht, meldet ehrlich <c>budget</c>.</summary>
+    public static readonly TimeSpan DefaultTimeBudget = TimeSpan.FromSeconds(4);
+
+    /// <summary>So viele ausgeschöpfte Sackgassen merkt sich eine Suche höchstens — danach nichts mehr. Hält den
+    /// Speicher je Suche fest (Schlüssel ~100 Zeichen), unabhängig vom Knotenbudget eines Aufrufers.</summary>
+    public const int MaxDeadEntries = 200_000;
 
     /// <summary>Ein gefundener Weg.</summary>
     public record Solution(string San, int Plies);
@@ -261,9 +269,11 @@ public static class GapSolver
         return pawnsGone >= gained ? gained : -1;
     }
 
-    /// <summary>Sucht die Züge zwischen zwei Stellungen.</summary>
+    /// <summary>Sucht die Züge zwischen zwei Stellungen. <paramref name="ct"/> wirkt wie ein erschöpftes
+    /// Budget (Anfrage abgebrochen, Dienst fährt herunter): die Suche hört auf und meldet <c>budget</c>.</summary>
     public static Result Solve(string? fromFen, string? toFen, int maxPlies = DefaultMaxPlies,
-        int maxSolutions = 5, int nodeBudget = DefaultNodeBudget, TimeSpan? timeBudget = null)
+        int maxSolutions = 5, int nodeBudget = DefaultNodeBudget, TimeSpan? timeBudget = null,
+        CancellationToken ct = default)
     {
         maxPlies = Math.Clamp(maxPlies, 1, MaxSearchPlies);
         if (!ReconstructionChain.IsLoadableFen(fromFen)) return Empty("invalid-from");
@@ -292,7 +302,7 @@ public static class GapSolver
         {
             // Die Uhr nur alle paar tausend Knoten lesen — `Elapsed` ist nicht umsonst.
             if (nodes >= nodeBudget) return true;
-            return (nodes & 0x3FF) == 0 && clock.Elapsed > deadline;
+            return (nodes & 0x3FF) == 0 && (clock.Elapsed > deadline || ct.IsCancellationRequested);
         }
 
         bool Dfs(int remaining)
@@ -330,7 +340,8 @@ public static class GapSolver
             }
 
             // Nur AUSGESCHÖPFTE Sackgassen merken: ein Abbruch am Budget sagt nichts über den Ast.
-            if (!found && !exhausted) dead.Add(key);
+            // Voll ist voll: danach wird nichts mehr gemerkt (die Suche bleibt richtig, nur langsamer).
+            if (!found && !exhausted && dead.Count < MaxDeadEntries) dead.Add(key);
             return found;
         }
 
