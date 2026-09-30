@@ -1051,7 +1051,9 @@
       "removed": "{{name}} removed from favorites",
       "addedShort": "{{name}} favorited",
       "removedShort": "{{name}} removed",
-      "toggleAria": "Toggle favorite"
+      "toggleAria": "Toggle favorite",
+      "saveFailed": "Could not save the favorite {{name}} — please try again.",
+      "filterSaveFailed": "Could not save the favorites filter; it will reset on the next reload."
     },
     "players": {
       "snr": "No.",

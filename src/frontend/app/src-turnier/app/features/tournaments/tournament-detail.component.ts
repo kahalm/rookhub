@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Sort } from '@angular/material/sort';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { Observable } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { NotificationService } from '@rh/core/notification.service';
 import { ShareTournamentDialogComponent } from './share-tournament-dialog.component';
@@ -77,10 +79,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   private static readonly TAB_NAMES = ['players', 'teams', 'pairings'];
   private id!: string;
-
-  // Map playerSnr -> server favorite ID for deletion
-  private favoriteIdMap: Map<number, number> = new Map();
-  private teamFavoriteIdMap: Map<number, number> = new Map();
 
   constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
 
@@ -459,8 +457,6 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (favs) => {
         this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr!));
         this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
-        this.favoriteIdMap = new Map(favs.filter(f => f.playerSnr).map(f => [f.playerSnr!, f.id]));
-        this.teamFavoriteIdMap = new Map(favs.filter(f => f.teamSnr).map(f => [f.teamSnr!, f.id]));
         this.refreshAllDisplayed();
       },
       error: () => {}
@@ -471,11 +467,15 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Der Filter wirkt sofort und bleibt auch bei einem Speicherfehler an (der Nutzer will die Favoriten
+   * JETZT sehen) — aber er erfaehrt, dass die Einstellung beim naechsten Laden zurueckspringt.
+   */
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
     this.refreshAllDisplayed();
     this.api.saveFavoriteSettings(this.id, checked).subscribe({
-      error: () => {}
+      error: () => this.snackbar.warn(this.translate.instant('tournaments.favorites.filterSaveFailed'))
     });
   }
 
@@ -541,25 +541,13 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   toggleFavorite(player: TournamentPlayer): void {
-    if (this.favoriteSnrs.has(player.snr)) {
-      this.favoriteSnrs.delete(player.snr);
-      this.favoriteSnrs = new Set(this.favoriteSnrs);
-      this.refreshAllDisplayed();
-      this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: player.name }));
-      this.api.removePlayerFavorite(this.id, player.snr).subscribe({
-        next: () => { this.favoriteIdMap.delete(player.snr); },
-        error: () => {}
-      });
-    } else {
-      this.favoriteSnrs.add(player.snr);
-      this.favoriteSnrs = new Set(this.favoriteSnrs);
-      this.refreshAllDisplayed();
-      this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: player.name }));
-      this.api.addPlayerFavorite(this.id, player.snr).subscribe({
-        next: (fav) => { this.favoriteIdMap.set(player.snr, fav.id); },
-        error: () => {}
-      });
-    }
+    const add = !this.favoriteSnrs.has(player.snr);
+    this.favoriteSnrs = withSnr(this.favoriteSnrs, player.snr, add);
+    this.refreshAllDisplayed();
+    this.saveFavorite(
+      add ? this.api.addPlayerFavorite(this.id, player.snr) : this.api.removePlayerFavorite(this.id, player.snr),
+      add, player.name,
+      () => { this.favoriteSnrs = withSnr(this.favoriteSnrs, player.snr, !add); });
   }
 
   isTeamFavorite(team: TournamentTeam): boolean {
@@ -567,25 +555,32 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   toggleTeamFavorite(team: TournamentTeam): void {
-    if (this.favoriteTeamSnrs.has(team.snr)) {
-      this.favoriteTeamSnrs.delete(team.snr);
-      this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
-      this.refreshAllDisplayed();
-      this.snackbar.quick(this.translate.instant('tournaments.favorites.removed', { name: team.name }));
-      this.api.removeTeamFavorite(this.id, team.snr).subscribe({
-        next: () => { this.teamFavoriteIdMap.delete(team.snr); },
-        error: () => {}
-      });
-    } else {
-      this.favoriteTeamSnrs.add(team.snr);
-      this.favoriteTeamSnrs = new Set(this.favoriteTeamSnrs);
-      this.refreshAllDisplayed();
-      this.snackbar.quick(this.translate.instant('tournaments.favorites.added', { name: team.name }));
-      this.api.addTeamFavorite(this.id, team.snr).subscribe({
-        next: (fav) => { this.teamFavoriteIdMap.set(team.snr, fav.id); },
-        error: () => {}
-      });
-    }
+    const add = !this.favoriteTeamSnrs.has(team.snr);
+    this.favoriteTeamSnrs = withSnr(this.favoriteTeamSnrs, team.snr, add);
+    this.refreshAllDisplayed();
+    this.saveFavorite(
+      add ? this.api.addTeamFavorite(this.id, team.snr) : this.api.removeTeamFavorite(this.id, team.snr),
+      add, team.name,
+      () => { this.favoriteTeamSnrs = withSnr(this.favoriteTeamSnrs, team.snr, !add); });
+  }
+
+  /**
+   * Der Stern springt sofort um (optimistisch), die Bestaetigung kommt erst mit der Serverantwort.
+   * Scheitert der Request (schlechter Empfang im Turniersaal, 500), springt der Stern zurueck und eine
+   * Warnung sagt es — sonst waere der Favorit beim naechsten Laden still weg (vorgetaeuschtes Speichern).
+   * 409 beim Hinzufuegen bzw. 404 beim Entfernen heissen: der Server hat den gewuenschten Stand schon.
+   */
+  private saveFavorite(request: Observable<unknown>, add: boolean, name: string, revert: () => void): void {
+    const confirm = () => this.snackbar.quick(this.translate.instant(add ? 'tournaments.favorites.added' : 'tournaments.favorites.removed', { name }));
+    request.subscribe({
+      next: confirm,
+      error: (err: HttpErrorResponse) => {
+        if (err?.status === (add ? 409 : 404)) { confirm(); return; }
+        revert();
+        this.refreshAllDisplayed();
+        this.snackbar.warn(this.translate.instant('tournaments.favorites.saveFailed', { name }));
+      }
+    });
   }
 
   // --- Team detail dialog ---
@@ -615,4 +610,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       }
     });
   }
+}
+
+/** Kopie von `set` mit bzw. ohne `snr` (neue Referenz, damit die Tabellen neu filtern). */
+function withSnr(set: Set<number>, snr: number, present: boolean): Set<number> {
+  const next = new Set(set);
+  if (present) next.add(snr); else next.delete(snr);
+  return next;
 }

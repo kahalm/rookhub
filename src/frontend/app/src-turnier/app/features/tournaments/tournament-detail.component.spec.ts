@@ -5,7 +5,8 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { TournamentDetailComponent } from './tournament-detail.component';
-import { Subscription, TournamentGroup } from '@rh/core/models';
+import { Subscription, TournamentGroup, TournamentPlayer, TournamentTeam } from '@rh/core/models';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 
 describe('TournamentDetailComponent', () => {
@@ -160,5 +161,93 @@ describe('TournamentDetailComponent', () => {
     const fixture = await render({ active: false, activeUntil: null }, undefined,
       { chessResultsId: '1234567', subscriptions: [sub(5, '7654321')] });
     expect(fixture.componentInstance.subscription).toBeNull();
+  });
+
+  // ----- Favoriten: kein vorgetaeuschtes Speichern (W3 F6-004) ---------------
+
+  const kollege = { snr: 7, name: 'Kollege' } as TournamentPlayer;
+  const verein = { snr: 3, name: 'SK Schwaz' } as TournamentTeam;
+
+  /** Erfolg: Stern an, die Bestaetigung erst mit der Serverantwort. */
+  it('bestaetigt einen Spieler-Favoriten erst nach der Serverantwort', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const snackbar = TestBed.inject(SnackbarService);
+    const quick = spyOn(snackbar, 'quick');
+    const c = fixture.componentInstance;
+
+    c.toggleFavorite(kollege);
+    expect(c.isFavorite(kollege)).toBeTrue();
+    expect(quick).not.toHaveBeenCalled();
+
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/tournament-favorites').flush({ id: 1, playerSnr: 7 });
+    expect(c.isFavorite(kollege)).toBeTrue();
+    expect(quick).toHaveBeenCalledWith('tournaments.favorites.added');
+  });
+
+  /** Netzfehler beim Hinzufuegen: Stern springt zurueck, Warnung statt „hinzugefuegt". */
+  it('nimmt den Spieler-Stern zurueck und warnt, wenn das Hinzufuegen scheitert', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const snackbar = TestBed.inject(SnackbarService);
+    const quick = spyOn(snackbar, 'quick');
+    const warn = spyOn(snackbar, 'warn');
+    const c = fixture.componentInstance;
+
+    c.toggleFavorite(kollege);
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/tournament-favorites')
+      .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+    expect(c.isFavorite(kollege)).toBeFalse();
+    expect(c.hasFavorites).toBeFalse();
+    expect(warn).toHaveBeenCalledWith('tournaments.favorites.saveFailed');
+    expect(quick).not.toHaveBeenCalled();
+  });
+
+  /** 409 = war schon Favorit: der Server hat den gewuenschten Stand, der Stern bleibt. */
+  it('behandelt 409 beim Hinzufuegen als Erfolg', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const c = fixture.componentInstance;
+
+    c.toggleFavorite(kollege);
+    http.expectOne(r => r.method === 'POST' && r.url === '/api/tournament-favorites')
+      .flush({ message: 'Already favorited.' }, { status: 409, statusText: 'Conflict' });
+
+    expect(c.isFavorite(kollege)).toBeTrue();
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  /** 500 beim Entfernen eines Team-Favoriten: der Stern kommt wieder. */
+  it('stellt den Team-Stern wieder her, wenn das Entfernen scheitert', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const c = fixture.componentInstance;
+    c.favoriteTeamSnrs = new Set([3]);
+
+    c.toggleTeamFavorite(verein);
+    expect(c.isTeamFavorite(verein)).toBeFalse();
+    http.expectOne(r => r.method === 'DELETE' && r.url === '/api/tournament-favorites/by-team/4711/3')
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+    expect(c.isTeamFavorite(verein)).toBeTrue();
+    expect(warn).toHaveBeenCalledWith('tournaments.favorites.saveFailed');
+  });
+
+  /** Filter „nur Favoriten": bleibt an, aber der Nutzer erfaehrt, dass er nicht gespeichert ist. */
+  it('warnt, wenn der Favoriten-Filter nicht gespeichert werden kann', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+    const c = fixture.componentInstance;
+
+    c.onFavoritesToggle(true);
+    http.expectOne(r => r.method === 'PUT' && r.url === '/api/tournament-favorites/settings/4711')
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+    expect(c.showFavoritesOnly).toBeTrue();
+    expect(warn).toHaveBeenCalledWith('tournaments.favorites.filterSaveFailed');
   });
 });

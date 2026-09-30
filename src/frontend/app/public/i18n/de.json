@@ -1051,7 +1051,9 @@
       "removed": "{{name}} aus Favoriten entfernt",
       "addedShort": "{{name}} favorisiert",
       "removedShort": "{{name}} entfernt",
-      "toggleAria": "Favorit umschalten"
+      "toggleAria": "Favorit umschalten",
+      "saveFailed": "Favorit {{name}} konnte nicht gespeichert werden – bitte erneut versuchen.",
+      "filterSaveFailed": "Der Favoriten-Filter konnte nicht gespeichert werden und springt beim nächsten Laden zurück."
     },
     "players": {
       "snr": "Nr.",

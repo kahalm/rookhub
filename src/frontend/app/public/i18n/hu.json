@@ -818,7 +818,9 @@
       "removed": "{{name}} eltávolítva a kedvencekből",
       "addedShort": "{{name}} kedvencnek jelölve",
       "removedShort": "{{name}} eltávolítva",
-      "toggleAria": "Kedvenc ki-/bekapcsolása"
+      "toggleAria": "Kedvenc ki-/bekapcsolása",
+      "saveFailed": "A(z) {{name}} kedvenc mentése nem sikerült – próbáld újra.",
+      "filterSaveFailed": "A kedvencszűrőt nem sikerült menteni; a következő betöltéskor visszaáll."
     },
     "players": {
       "snr": "Ssz.",

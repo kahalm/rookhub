@@ -1051,7 +1051,9 @@
       "removed": "{{name}} uklonjen iz favorita",
       "addedShort": "{{name}} označen kao favorit",
       "removedShort": "{{name}} uklonjen",
-      "toggleAria": "Uključi/isključi favorit"
+      "toggleAria": "Uključi/isključi favorit",
+      "saveFailed": "Favorit {{name}} nije moguće spremiti – pokušaj ponovno.",
+      "filterSaveFailed": "Filtar favorita nije moguće spremiti; vratit će se pri sljedećem učitavanju."
     },
     "players": {
       "snr": "Br.",
