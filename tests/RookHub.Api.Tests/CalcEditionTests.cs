@@ -15,6 +15,7 @@ public class CalcEditionTests : IDisposable
     private readonly AppDbContext _db;
     private readonly CalcEditionService _editions;
     private readonly CalculationService _calc;
+    private readonly CourseAuthoringService _authoring;
     private const int OwnerId = 5, ViewerId = 6, TesterId = 7;
 
     public CalcEditionTests()
@@ -23,6 +24,7 @@ public class CalcEditionTests : IDisposable
         _db = new AppDbContext(opts);
         _editions = new CalcEditionService(_db);
         _calc = new CalculationService(_db);
+        _authoring = new CourseAuthoringService(_db);
     }
     public void Dispose() => _db.Dispose();
 
@@ -416,5 +418,66 @@ public class CalcEditionTests : IDisposable
         var bookId = await SeedSeriesBookAsync(isPublic: false);
 
         Assert.IsType<NotFoundResult>((await Controller(77).ListVisible(bookId, default)).Result);
+    }
+
+    // ===== Kurs-Detailseite: dieselbe Termin-Sperre wie der Kalkulations-Modus (Codereview 2026-09-29, A7-002) =====
+
+    [Fact]
+    public async Task Detail_HidesFutureWeek_ForViewer_ButNotOwnerOrAdmin()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(2) });
+
+        var viewer = await _authoring.GetDetailAsync(ViewerId, bookId, isAdmin: false);
+        Assert.Equal(new[] { "Woche A" }, viewer.Chapters.Select(c => c.Name));   // gesperrte Woche fehlt
+        Assert.Equal(2, viewer.TotalLines);                                      // … auch in den Zählern
+        Assert.Equal(2, viewer.PuzzleCount);
+
+        var owner = await _authoring.GetDetailAsync(OwnerId, bookId, isAdmin: false);
+        Assert.Equal(new[] { "Woche A", "Woche B" }, owner.Chapters.Select(c => c.Name));
+        Assert.Equal(4, owner.TotalLines);
+
+        var admin = await _authoring.GetDetailAsync(ViewerId, bookId, isAdmin: true);
+        Assert.Equal(2, admin.Chapters.Count);
+    }
+
+    [Fact]
+    public async Task Detail_ReleasedWeek_VisibleForViewer()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddMinutes(-1) });
+
+        var viewer = await _authoring.GetDetailAsync(ViewerId, bookId, isAdmin: false);
+        Assert.Equal(new[] { "Woche A", "Woche B" }, viewer.Chapters.Select(c => c.Name));
+    }
+
+    [Fact]
+    public async Task Detail_Tester_SeesTesterPreviewWeek_PlainViewerDoesNot()
+    {
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto
+        {
+            Chapter = "Woche B",
+            PublishAt = DateTime.UtcNow.AddDays(5),
+            TesterPreviewAt = DateTime.UtcNow.AddDays(-1),
+        });
+        await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
+        await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
+
+        Assert.Contains((await _authoring.GetDetailAsync(TesterId, bookId, isAdmin: false)).Chapters, c => c.Name == "Woche B");
+        Assert.DoesNotContain((await _authoring.GetDetailAsync(ViewerId, bookId, isAdmin: false)).Chapters, c => c.Name == "Woche B");
+    }
+
+    [Fact]
+    public async Task ChapterLines_HiddenWeek_EmptyForViewer_FullForOwner()
+    {
+        // Die Linien-Tabelle der Detailseite zeigt FEN + Kommentar jeder Stellung — für eine gesperrte
+        // Woche darf sie beim Betrachter leer bleiben (wie ein unbekanntes Kapitel).
+        var bookId = await SeedBookAsync();
+        await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(2) });
+
+        Assert.Empty(await _authoring.GetChapterLinesAsync(ViewerId, bookId, "Woche B", isAdmin: false));
+        Assert.Equal(2, (await _authoring.GetChapterLinesAsync(ViewerId, bookId, "Woche A", isAdmin: false)).Count);
+        Assert.Equal(2, (await _authoring.GetChapterLinesAsync(OwnerId, bookId, "Woche B", isAdmin: false)).Count);
     }
 }

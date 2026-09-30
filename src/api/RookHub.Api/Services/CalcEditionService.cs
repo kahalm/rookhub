@@ -7,9 +7,9 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Verwaltung + Zeitsteuerung der Kalkulations-Ausgaben (Phase 1). Verwaltung nur durch Buch-Besitzer
-/// oder Admin. Das eigentliche Sichtbarkeits-Gating der Kapitel liegt in <see cref="CalculationService"/>
-/// (dort werden die Stellungen ausgeliefert) — hier nur CRUD und die Betrachter-Liste (freigegebene
-/// Ausgaben inkl. Video).
+/// oder Admin. Das eigentliche Sichtbarkeits-Gating der Kapitel liegt in <see cref="CalcVisibility"/>
+/// (angewandt vom <see cref="CalculationService"/> und von der Kurs-Detailseite) — hier nur CRUD und
+/// die Betrachter-Liste (freigegebene Ausgaben inkl. Video).
 /// </summary>
 public class CalcEditionService
 {

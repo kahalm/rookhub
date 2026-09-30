@@ -37,6 +37,12 @@ public class CourseAuthoringService
 
     private static string? Normalize(string? chapter) => ChapterOrder.NormalizeChapter(chapter?.Trim());
 
+    /// <summary>Liegt die Linie/das Kapitel in einer für den Betrachter gesperrten Woche
+    /// (<see cref="CalcVisibility.HiddenChaptersAsync"/>)? Verglichen wird der NORMALISIERTE Name — so
+    /// gruppiert die Detailseite, und so speichert <c>CalcEditionService.UpsertAsync</c> (getrimmt).</summary>
+    private static bool IsHidden(HashSet<string> hidden, string? chapter)
+        => hidden.Count > 0 && Normalize(chapter) is string name && hidden.Contains(name);
+
     private static int Percent(int done, int total) =>
         total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(done, total) / total);
 
@@ -69,6 +75,13 @@ public class CourseAuthoringService
             .InReadingOrder()
             .Select(bp => new { bp.Id, bp.Chapter, bp.IsInfoOnly })
             .ToListAsync(ct);
+
+        // Kalkulations-Serie: eine terminierte, für diesen Betrachter noch nicht freigegebene Woche gibt
+        // es auf der Detailseite nicht — weder in der Kapitelliste noch in den Zählern (dieselbe Regel wie
+        // im Kalkulations-Modus; Besitzer/Admin sehen alles).
+        var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct);
+        if (hidden.Count > 0)
+            lines = lines.Where(l => !IsHidden(hidden, l.Chapter)).ToList();
 
         var solvedIds = (await _db.CoursePuzzleResults
             .Where(cr => cr.UserId == userId && cr.BookId == bookId)
@@ -204,6 +217,9 @@ public class CourseAuthoringService
     {
         await LoadReadableAsync(userId, bookId, isAdmin, ct);
         var wanted = Normalize(chapter);
+        // Terminierte, noch gesperrte Woche: wie ein unbekanntes Kapitel (leere Liste, kein Orakel).
+        if (IsHidden(await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct), wanted))
+            return new List<CourseLineDto>();
         var lines = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
             .InReadingOrder()

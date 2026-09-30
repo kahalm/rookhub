@@ -53,30 +53,6 @@ public class CalculationService
             throw new KeyNotFoundException("Book not found.");
     }
 
-    /// <summary>Kalkulations-Serie: Kapitel, die für DIESEN Betrachter (noch) VERSTECKT sind — es gibt
-    /// eine terminierte Ausgabe und der maßgebliche Termin liegt in der Zukunft. Besitzer/Admin: nichts
-    /// versteckt. <paramref name="isTester"/> nutzt (Phase 2) den früheren <c>TesterPreviewAt</c>, sofern
-    /// gesetzt und vor <c>PublishAt</c>. Kapitel OHNE Ausgabe erscheinen hier nicht → bleiben sichtbar.</summary>
-    private async Task<HashSet<string>> HiddenChaptersAsync(int bookId, bool isOwnerOrAdmin, bool isTester, CancellationToken ct)
-    {
-        if (isOwnerOrAdmin) return new HashSet<string>(StringComparer.Ordinal);
-        var now = DateTime.UtcNow;
-        var eds = await _db.CalcEditions.Where(e => e.BookId == bookId)
-            .Select(e => new { e.Chapter, e.PublishAt, e.TesterPreviewAt }).ToListAsync(ct);
-        var hidden = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var e in eds)
-        {
-            var releaseAt = (isTester && e.TesterPreviewAt is DateTime tp && tp < e.PublishAt) ? tp : e.PublishAt;
-            if (now < releaseAt) hidden.Add(e.Chapter);
-        }
-        return hidden;
-    }
-
-    /// <summary>Ist dieser Nutzer für dieses Buch als TESTER eingetragen (privater Verteiler,
-    /// Phase 2)? Tester sehen terminierte Wochen schon ab dem früheren <c>TesterPreviewAt</c>.</summary>
-    private Task<bool> IsTesterAsync(int bookId, int userId, CancellationToken ct)
-        => _db.CalcSeriesMembers.AnyAsync(m => m.BookId == bookId && m.UserId == userId && m.IsTester, ct);
-
     /// <summary>Kalkulations-Serie „gesehen" (Phase 3): öffnet ein VERTEILER-MITGLIED eine Stellung
     /// einer Woche mit terminierter Ausgabe, wird das einmalig je Ausgabe+Mitglied vermerkt. Nur
     /// Mitglieder zählen — Besitzer/Admin und öffentliche Betrachter nicht. Best-effort: eine parallele
@@ -104,7 +80,7 @@ public class CalculationService
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
 
         var book = await _db.Books.Where(b => b.Id == bookId)
-            .Select(b => new { b.Id, b.DisplayName, b.IsCalculation, b.OwnerUserId })
+            .Select(b => new { b.Id, b.DisplayName, b.IsCalculation })
             .FirstAsync(ct);
 
         var positions = await _db.BookPuzzles
@@ -121,9 +97,7 @@ public class CalculationService
 
         // Terminierte Ausgaben (Kalkulations-Serie): Wochen, deren Ausgabe noch nicht freigegeben ist,
         // ausblenden — außer für Besitzer/Admin. Kapitel ohne Ausgabe bleiben ungegatet.
-        var isOwnerOrAdmin = isAdmin || book.OwnerUserId == userId;
-        var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
-        var hidden = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
+        var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct);
         if (hidden.Count > 0)
             positions = positions.Where(p => p.Chapter == null || !hidden.Contains(p.Chapter)).ToList();
 
@@ -243,7 +217,7 @@ public class CalculationService
             .ToListAsync(ct);
 
         // Anonyme öffentliche Sicht: kein Besitzer/Tester → terminierte, noch nicht freigegebene Wochen aus.
-        var hidden = await HiddenChaptersAsync(bookId, isOwnerOrAdmin: false, isTester: false, ct);
+        var hidden = await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId: null, isAdmin: false, ct);
         if (hidden.Count > 0)
             rows = rows.Where(r => r.Chapter == null || !hidden.Contains(r.Chapter)).ToList();
 
@@ -277,14 +251,9 @@ public class CalculationService
 
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
-        if (puzzle.Chapter is string gateCh)
-        {
-            var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
-            var isOwnerOrAdmin = isAdmin || ownerId == userId;
-            var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
-            var hiddenCh = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
-            if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
-        }
+        if (puzzle.Chapter is string gateCh
+            && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
+            throw new KeyNotFoundException("Position not found.");
 
         // „Gesehen": ein Verteiler-Mitglied hat diese Woche geöffnet (einmalig vermerkt; siehe Helper).
         if (puzzle.Chapter is string seenCh)
@@ -422,14 +391,9 @@ public class CalculationService
 
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
-        if (puzzle.Chapter is string gateCh)
-        {
-            var ownerId = await _db.Books.Where(b => b.Id == bookId).Select(b => b.OwnerUserId).FirstOrDefaultAsync(ct);
-            var isOwnerOrAdmin = isAdmin || ownerId == userId;
-            var isTester = !isOwnerOrAdmin && await IsTesterAsync(bookId, userId, ct);
-            var hiddenCh = await HiddenChaptersAsync(bookId, isOwnerOrAdmin, isTester, ct);
-            if (hiddenCh.Contains(gateCh)) throw new KeyNotFoundException("Position not found.");
-        }
+        if (puzzle.Chapter is string gateCh
+            && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
+            throw new KeyNotFoundException("Position not found.");
 
         var tree = await _db.CalculationTrees
             .FirstOrDefaultAsync(t => t.UserId == userId && t.BookPuzzleId == bookPuzzleId, ct);
