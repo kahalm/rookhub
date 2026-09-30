@@ -527,13 +527,31 @@ public static partial class PgnParser
         if (altSanByPly.Count == 0) return null;
 
         // 2) SAN→UCI: Hauptlinie bis VOR den Zielhalbzug nachspielen, dann die Alt-SAN aus dieser Stellung.
+        //    EIN Brett, das mit den (aufsteigenden) Keys INKREMENTELL weiterspielt; eine Alternative wird
+        //    gespielt und sofort mit Cancel() zurückgenommen. Vorher wurde je Key und je Alt-SAN die
+        //    Hauptlinie ab der FEN neu gespielt — bei einem [%alt] an jedem Halbzug quadratisch viele Züge
+        //    je Linie, vor jeder Längenprüfung des Kurs-Uploads (Codereview 2026-09-29, N3-003).
         var mainSans = ExtractMainlineSans(moveText);
         if (mainSans.Count == 0) return null;
 
+        ChessBoard board;
+        try { board = ChessBoard.LoadFromFen(fen); }
+        catch { return null; }                                  // ungültige FEN ⇒ keine Alternative auflösbar
+
         var result = new Dictionary<int, List<string>>();
-        foreach (var (key, sans) in altSanByPly)
+        int played = 0;                                         // Hauptlinien-Halbzüge auf dem Brett
+        foreach (var (key, sans) in altSanByPly.OrderBy(kv => kv.Key))
         {
             if (key >= mainSans.Count) continue;
+            bool ok = true;
+            while (played < key)
+            {
+                try { ok = board.Move(mainSans[played]); }
+                catch { ok = false; }
+                if (!ok) break;
+                played++;
+            }
+            if (!ok) break;                                     // Hauptlinie nicht spielbar → dieser und alle späteren Keys entfallen
             var ucis = new List<string>();
             foreach (var rawSan in sans)
             {
@@ -541,17 +559,13 @@ public static partial class PgnParser
                 if (altSan.Length == 0) continue;
                 try
                 {
-                    var board = ChessBoard.LoadFromFen(fen);
-                    bool ok = true;
-                    for (int p = 0; p < key; p++) { if (!board.Move(mainSans[p])) { ok = false; break; } }
-                    if (!ok) break;                              // Hauptlinie nicht spielbar → Key überspringen
-                    if (board.Move(altSan))
-                    {
-                        var u = ToUci(board.ExecutedMoves[^1]);
-                        if (!ucis.Contains(u)) ucis.Add(u);
-                    }
+                    if (!board.Move(altSan)) continue;          // ein abgelehnter Zug lässt das Brett unverändert
+                    var mv = board.ExecutedMoves[^1];
+                    board.Cancel();                             // Stellung VOR dem Hauptzug wiederherstellen
+                    var u = ToUci(mv);
+                    if (!ucis.Contains(u)) ucis.Add(u);
                 }
-                catch { /* ungültige FEN / nicht spielbarer Alt-SAN ⇒ diesen Zug überspringen */ }
+                catch { /* nicht spielbarer Alt-SAN ⇒ diesen Zug überspringen */ }
             }
             if (ucis.Count > 0) result[key] = ucis;
         }
