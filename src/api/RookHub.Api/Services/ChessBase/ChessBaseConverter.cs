@@ -14,9 +14,11 @@ public static class ChessBaseConverter
         public int Converted => Games.Count(g => g.Error == null);
     }
 
-    public static Result Convert(ChessBaseFiles files, int maxGames)
+    /// <param name="ct">Bricht das Lesen ab — auch mitten im Zugstrom einer Partie (<see cref="ChessBaseImportService"/>
+    /// hängt sein Zeitbudget daran).</param>
+    public static Result Convert(ChessBaseFiles files, int maxGames, CancellationToken ct = default)
     {
-        var read = files.Format == ChessBaseFormat.Cb2 ? Cb2Reader.Read(files, maxGames) : CbhReader.Read(files, maxGames);
+        var read = files.Format == ChessBaseFormat.Cb2 ? Cb2Reader.Read(files, maxGames, ct) : CbhReader.Read(files, maxGames, ct);
         return new Result(read.Format, ChessBaseFields.ToPgn(read.Games), read.Games, read.Deleted, read.Texts, read.Truncated);
     }
 }

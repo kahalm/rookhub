@@ -16,7 +16,7 @@ internal static class Cb2Reader
     private const int RecordSize = 192;
     private const ushort NullMove = 0xfffa, StartPosition = 0xfffb, MovesMarker = 0xfffc, Alternative = 0xfffd, EndOfLine = 0xffff;
 
-    public static ChessBaseReadResult Read(ChessBaseFiles files, int maxGames)
+    public static ChessBaseReadResult Read(ChessBaseFiles files, int maxGames, CancellationToken ct = default)
     {
         var cbh = files.Require(".2cbh");
         var cbg = files.Require(".2cbg");
@@ -27,6 +27,7 @@ internal static class Cb2Reader
         var records = cbh.Length < RecordSize ? 0 : cbh.Length / RecordSize - 1;
         for (var id = 1; id <= records; id++)
         {
+            ct.ThrowIfCancellationRequested();
             var r = RecordSize * id;
             var type = cbh[r];
             if ((type & 1) == 0) continue;
@@ -57,7 +58,7 @@ internal static class Cb2Reader
             };
             try
             {
-                var (fen, sans) = Moves(cbg, I64(cbh, r + 0x08));
+                var (fen, sans) = Moves(cbg, I64(cbh, r + 0x08), ct);
                 games.Add(g with { StartFen = fen, Moves = sans });
             }
             catch (ChessBaseMoveException e) { games.Add(g with { Error = e.Message }); }
@@ -67,7 +68,7 @@ internal static class Cb2Reader
 
     /// <summary>Die Hauptvariante des Satzes an <paramref name="offset"/> in <c>.2cbg</c>: 8 Byte Kennung, Länge A des
     /// Inhalts, Reserve B, Prüfsumme, 2 Byte Art (<c>01 00</c> Schach, <c>02 00</c> Chess960), dann A Byte Wörter.</summary>
-    internal static (string? StartFen, List<string> Sans) Moves(byte[] cbg, long offset)
+    internal static (string? StartFen, List<string> Sans) Moves(byte[] cbg, long offset, CancellationToken ct = default)
     {
         if (offset < 0 || offset + 26 > cbg.Length) throw new ChessBaseMoveException("Zugsatz außerhalb der Datei.");
         var o = (int)offset;
@@ -99,6 +100,7 @@ internal static class Cb2Reader
         var board = MainlineBoard.FromFen(fen ?? MainlineBoard.StandardFen);
         for (; at < words.Length; at++)
         {
+            ct.ThrowIfCancellationRequested();                              // je Wort: fffd spielt keinen Zug
             var w = words[at];
             if (w == EndOfLine) return (fen, board.Sans);
             if (w == Alternative) continue;

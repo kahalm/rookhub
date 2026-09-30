@@ -21,7 +21,7 @@ internal static class CbhReader
 {
     private const int HeadSize = 46;
 
-    public static ChessBaseReadResult Read(ChessBaseFiles files, int maxGames)
+    public static ChessBaseReadResult Read(ChessBaseFiles files, int maxGames, CancellationToken ct = default)
     {
         var cbh = files.Require(".cbh");
         var cbg = files.Require(".cbg");
@@ -34,6 +34,7 @@ internal static class CbhReader
         var records = cbh.Length < HeadSize ? 0 : (cbh.Length - HeadSize) / HeadSize;
         for (var id = 1; id <= records; id++)
         {
+            ct.ThrowIfCancellationRequested();
             var r = HeadSize * id;
             var type = cbh[r];
             if ((type & 1) == 0) continue;                                  // leerer Satz hinter der letzten Partie
@@ -59,7 +60,7 @@ internal static class CbhReader
             };
             try
             {
-                var (fen, sans) = Moves(cbg, U32(cbh, r + 0x01));
+                var (fen, sans) = Moves(cbg, U32(cbh, r + 0x01), ct);
                 games.Add(g with { StartFen = fen, Moves = sans });
             }
             catch (ChessBaseMoveException e) { games.Add(g with { Error = e.Message }); }
@@ -71,7 +72,7 @@ internal static class CbhReader
         ChessBaseFields.Player(players.Text(id, 0, 30), players.Text(id, 30, 20));
 
     /// <summary>Die Hauptvariante des Satzes an <paramref name="offset"/> in <c>.cbg</c>.</summary>
-    internal static (string? StartFen, List<string> Sans) Moves(byte[] cbg, long offset)
+    internal static (string? StartFen, List<string> Sans) Moves(byte[] cbg, long offset, CancellationToken ct = default)
     {
         if (offset < 0 || offset + 4 > cbg.Length) throw new ChessBaseMoveException("Zugsatz außerhalb der Datei.");
         var o = (int)offset;
@@ -102,17 +103,20 @@ internal static class CbhReader
             var n = (byte)board.Sans.Count;                                 // Züge bisher; Varianten kommen erst danach
             return pre ? table[(byte)(b - n)] : (byte)(table[b] - n);
         }
-        if (simple) Simple(stream, board, T);
-        else Compact(stream, board, T);
+        if (simple) Simple(stream, board, T, ct);
+        else Compact(stream, board, T, ct);
         return (fen, board.Sans);
     }
 
-    private static void Compact(ReadOnlySpan<byte> s, MainlineBoard board, Func<byte, byte> t)
+    private static void Compact(ReadOnlySpan<byte> s, MainlineBoard board, Func<byte, byte> t, CancellationToken ct)
     {
         var pieces = Pieces.Scan(board);
         var i = 0;
         while (i < s.Length)
         {
+            // Je Byte, nicht je Partie: ein Satz darf bis 16 MB lang sein, und die Codes 236/254 spielen keinen Zug —
+            // ohne diese Prüfung liefe ein Strom aus lauter Überspring-Codes am Zeitbudget vorbei.
+            ct.ThrowIfCancellationRequested();
             var v = t(s[i++]);
             switch (v)
             {
@@ -135,10 +139,11 @@ internal static class CbhReader
         if (s.Length > 0) throw new ChessBaseMoveException("Zugstrom ohne Ende.");
     }
 
-    private static void Simple(ReadOnlySpan<byte> s, MainlineBoard board, Func<byte, byte> t)
+    private static void Simple(ReadOnlySpan<byte> s, MainlineBoard board, Func<byte, byte> t, CancellationToken ct)
     {
         for (var i = 0; i + 1 < s.Length; i += 2)
         {
+            ct.ThrowIfCancellationRequested();
             var word = t(s[i]) << 8 | t(s[i + 1]);
             BySquares(board, word & 0x3fff);
             if ((word & 0x4000) != 0) return;                               // hier endet die Hauptvariante

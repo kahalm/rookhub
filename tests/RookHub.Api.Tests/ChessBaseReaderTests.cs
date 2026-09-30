@@ -173,6 +173,71 @@ public class ChessBaseReaderTests
         Assert.DoesNotContain("[Event", result.Pgn);
     }
 
+    /// <summary>Nf3 Nf6 Ng1 Ng8 — vier legale Pendelzüge, beliebig oft wiederholbar (der zweite Springer jeder Seite).</summary>
+    private static int[] Shuffle(int cycles) =>
+        Enumerable.Repeat(new[] { 105, 108, 109, 104 }, cycles).SelectMany(c => c).Append(255).ToArray();
+
+    [Fact]
+    public void Classic_AnOverlongMainline_IsSkippedWithAReason()
+    {
+        // D1-001: ein Zugsatz darf bis 16 MB lang sein — ohne Deckel spielte der Leser Millionen legaler Pendelzüge nach.
+        var atCap = Assert.Single(ChessBaseConverter.Convert(ChessBaseFiles.FromFiles(ClassicDatabase(Shuffle(MainlineBoard.MaxPlies / 4))), 100).Games);
+        Assert.Null(atCap.Error);
+        Assert.Equal(MainlineBoard.MaxPlies, atCap.Moves.Count);
+        Assert.Equal(new[] { "Nf3", "Nf6", "Ng1", "Ng8" }, atCap.Moves.Take(4));
+
+        var result = ChessBaseConverter.Convert(ChessBaseFiles.FromFiles(ClassicDatabase(Shuffle(MainlineBoard.MaxPlies / 4 + 1))), 100);
+        var game = Assert.Single(result.Games);
+        Assert.Contains("Halbzüge", game.Error);
+        Assert.Empty(game.Moves);
+        Assert.Equal(0, result.Converted);
+    }
+
+    [Fact]
+    public void Convert_ACancelledToken_StopsTheRead()
+    {
+        Assert.Throws<OperationCanceledException>(() =>
+            ChessBaseConverter.Convert(ChessBaseFiles.FromFiles(ClassicDatabase(V1Codes)), 100, new CancellationToken(true)));
+    }
+
+    /// <summary>Eine gebaute Datenbank: <see cref="ChessBaseImportService.MaxGames"/> Kopfsätze, die ALLE auf denselben Zugsatz
+    /// zeigen, und der besteht aus einer Million Überspring-Codes (254) — kein einziger Zug, aber je Partie eine Million
+    /// Schritte. Ungebremst rechnete das weit über zehn Sekunden.</summary>
+    private static List<IFormFile> SharedSkipStreamDatabase()
+    {
+        var files = ClassicDatabase(Enumerable.Repeat(254, 1_000_000).Append(255).ToArray()).ToList();
+        var record = files[0].Item2[46..92];
+        var cbh = files[0].Item2.Concat(Enumerable.Repeat(record, ChessBaseImportService.MaxGames - 1).SelectMany(r => r)).ToArray();
+        files[0] = ("Test.cbh", cbh);
+        return files.Select(f => Form(f.Item1, f.Item2)).ToList();
+    }
+
+    [Fact]
+    public async Task Upload_ABuiltDatabase_StopsAtTheBudget()
+    {
+        var service = new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance) { Budget = TimeSpan.FromMilliseconds(100) };
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var (r, reason, _) = await service.ConvertAsync(SharedSkipStreamDatabase(), default);
+        watch.Stop();
+        Assert.Null(r);
+        Assert.Equal("tooLarge", reason);
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"{watch.ElapsedMilliseconds} ms");
+    }
+
+    [Fact]
+    public async Task Upload_ClientGone_StopsTheConversion()
+    {
+        // Bricht der Client ab, endet auch die Rechnung — vorher lief Convert ohne Token bis zum Schluss weiter. Die Dateien
+        // entstehen VOR dem Token: ein schon abgelaufener Token scheiterte bereits beim Einlesen und bewiese nichts.
+        var files = SharedSkipStreamDatabase();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance).ConvertAsync(files, cts.Token));
+        watch.Stop();
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"{watch.ElapsedMilliseconds} ms");
+    }
+
     // ── ChessBase 2: Zugwörter ──────────────────────────────────────────────────────────────────
 
     private static ushort Word(int from, int to, bool white)

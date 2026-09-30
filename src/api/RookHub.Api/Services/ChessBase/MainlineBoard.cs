@@ -14,6 +14,11 @@ internal sealed class MainlineBoard
 {
     public const int King = 1, Queen = 2, Rook = 3, Bishop = 4, Knight = 5, Pawn = 6;
 
+    /// <summary>Höchstens so viele Halbzüge je Hauptvariante; die längste bekannte Turnierpartie hat 538. Ohne Deckel
+    /// dürfte ein einziger Zugsatz bis 16 MB legaler Pendelzüge enthalten — Millionen Züge samt SAN-Liste für EINE
+    /// Partie. Längere Partien werden mit Grund übersprungen.</summary>
+    public const int MaxPlies = 1000;
+
     private readonly ChessBoard _board;
     /// <summary>Figur je Feld: 0 leer, sonst die Art, positiv Weiß, negativ Schwarz.</summary>
     private readonly int[] _squares = new int[64];
@@ -71,6 +76,8 @@ internal sealed class MainlineBoard
     /// ist der Königszug um zwei Linien. Ein Zug, den die Stellung nicht hergibt, wirft.</summary>
     public Effect Play(int from, int to, int promotion)
     {
+        if (Sans.Count >= MaxPlies)
+            throw new ChessBaseMoveException($"Hauptvariante länger als {MaxPlies} Halbzüge.");
         var piece = _squares[from];
         if (piece == 0 || piece > 0 != WhiteToMove)
             throw new ChessBaseMoveException($"Auf {Name(from)} steht keine Figur der Seite am Zug.");

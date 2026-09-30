@@ -5,8 +5,11 @@ namespace RookHub.Api.Services.ChessBase;
 /// <summary>
 /// Der Upload-Weg der Vereins-Datenbank (0.598.0): hochgeladene Dateien → <see cref="ChessBaseFiles"/> → PGN. Ein PGN
 /// entsteht dabei, keine Partie — die Seite legt es wie eine PGN-Datei als Entwurf ab und prüft es in der Übersicht.
-/// Die Umwandlung rechnet (rund 1 ms je Partie, <see cref="MaxGames"/> Partien höchstens 5 s); gleichzeitig laufen
-/// höchstens <see cref="MaxParallel"/>, damit ein Teilen-Link ohne Anmeldung den Server nicht auslasten kann.
+/// Die Umwandlung rechnet (rund 1 ms je Partie, <see cref="MaxGames"/> gewöhnliche Partien höchstens 5 s); gleichzeitig
+/// laufen höchstens <see cref="MaxParallel"/>, damit ein Teilen-Link ohne Anmeldung den Server nicht auslasten kann.
+/// Die 5 s gelten nur für echte Datenbanken: eine gebaute (Kopfsätze, die alle auf denselben 16-MB-Zugsatz zeigen,
+/// Ströme aus Pendelzügen) rechnete Minuten und hielte dabei einen der beiden Plätze — deshalb das
+/// <see cref="Budget"/>, das auch mitten in einer Partie abbricht, und der Deckel <see cref="MainlineBoard.MaxPlies"/>.
 /// </summary>
 public sealed class ChessBaseImportService(ILogger<ChessBaseImportService> logger)
 {
@@ -23,6 +26,13 @@ public sealed class ChessBaseImportService(ILogger<ChessBaseImportService> logge
 
     /// <summary>So viele übersprungene Partien werden einzeln genannt; die Zahl steht trotzdem ganz da.</summary>
     public const int MaxListedSkips = 100;
+
+    /// <summary>So lange darf eine Datenbank rechnen (ab dem freien Platz), danach <c>tooLarge</c>. Das Dreifache der
+    /// 5 s, die 5000 echte Partien brauchen — Luft für einen Server, der nebenbei Analysen rechnet.</summary>
+    public static readonly TimeSpan DefaultBudget = TimeSpan.FromSeconds(15);
+
+    /// <summary><see cref="DefaultBudget"/>; die Tests setzen es kürzer.</summary>
+    internal TimeSpan Budget { get; init; } = DefaultBudget;
 
     private static readonly SemaphoreSlim Gate = new(MaxParallel, MaxParallel);
 
@@ -45,10 +55,12 @@ public sealed class ChessBaseImportService(ILogger<ChessBaseImportService> logge
 
         if (!await Gate.WaitAsync(TimeSpan.FromSeconds(30), ct))
             return (null, "busy", "Gerade werden andere Datenbanken gelesen — bitte gleich noch einmal.");
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        budget.CancelAfter(Budget);
         try
         {
             var db = ChessBaseFiles.FromUploads(uploads);
-            var r = ChessBaseConverter.Convert(db, MaxGames);
+            var r = ChessBaseConverter.Convert(db, MaxGames, budget.Token);
             var skipped = r.Games.Where(g => g.Error != null).ToList();
             logger.LogInformation(
                 "ChessBase-Import {Format} {Name}: {Games} Partien, {Converted} gelesen, {Skipped} übersprungen, {Deleted} gelöscht, gekappt {Truncated}",
@@ -72,6 +84,13 @@ public sealed class ChessBaseImportService(ILogger<ChessBaseImportService> logge
         catch (ChessBaseFormatException e)
         {
             return (null, e.Reason, e.Message);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Das Budget, nicht der Client: so viel Arbeit steckt in keiner echten Vereins-Datenbank.
+            logger.LogWarning("ChessBase-Import: Zeitbudget {Budget} überschritten ({Files})", Budget,
+                string.Join(", ", uploads.Select(u => u.Item1)));
+            return (null, "tooLarge", "Die Datenbank ist zu umfangreich, um sie in einem Schritt zu lesen.");
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
