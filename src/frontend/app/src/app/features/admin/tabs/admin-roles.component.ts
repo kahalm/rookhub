@@ -62,12 +62,17 @@ export class AdminRolesComponent implements OnInit {
   searchingUsers = false;
   selectedUser: AdminUser | null = null;
   userRoleIds = new Set<number>();
+  /** Erst nach erfolgreichem Laden true — der Server ERSETZT den Satz, ein Speichern auf leerem/fremdem
+   *  Stand (Ladefehler, Antwort eines vorher gewählten Nutzers) entzöge sonst alle übrigen Rollen. */
+  userRolesLoaded = false;
   savingUserRoles = false;
 
   // Gruppen-Rollen (0.589.0)
   groups: Group[] = [];
   selectedGroup: Group | null = null;
   groupRoleIds = new Set<number>();
+  /** Wie {@link userRolesLoaded}: Speichern erst, wenn der Ist-Stand der gewählten Gruppe geladen ist. */
+  groupRolesLoaded = false;
   savingGroupRoles = false;
 
   constructor(
@@ -184,9 +189,17 @@ export class AdminRolesComponent implements OnInit {
   selectGroup(group: Group): void {
     this.selectedGroup = group;
     this.groupRoleIds = new Set();
+    this.groupRolesLoaded = false;
     this.admin.getGroupRoles(group.id).subscribe({
-      next: gr => this.groupRoleIds = new Set(gr.roleIds),
-      error: () => this.snackbar.info(this.translate.instant('admin.roles.loadError')),
+      next: gr => {
+        if (this.selectedGroup?.id !== group.id) return;   // veraltete Antwort einer vorher gewählten Gruppe
+        this.groupRoleIds = new Set(gr.roleIds);
+        this.groupRolesLoaded = true;
+      },
+      error: () => {
+        if (this.selectedGroup?.id !== group.id) return;
+        this.snackbar.info(this.translate.instant('admin.roles.loadError'));
+      },
     });
   }
 
@@ -195,7 +208,7 @@ export class AdminRolesComponent implements OnInit {
   }
 
   saveGroupRoles(): void {
-    if (!this.selectedGroup || this.savingGroupRoles) return;
+    if (!this.selectedGroup || !this.groupRolesLoaded || this.savingGroupRoles) return;
     this.savingGroupRoles = true;
     this.admin.setGroupRoles(this.selectedGroup.id, [...this.groupRoleIds]).subscribe({
       next: () => {
@@ -218,10 +231,18 @@ export class AdminRolesComponent implements OnInit {
 
   selectUser(user: AdminUser): void {
     this.selectedUser = user;
-    this.userRoleIds.clear();
+    this.userRoleIds = new Set();
+    this.userRolesLoaded = false;
     this.admin.getUserRoles(user.id).subscribe({
-      next: ur => this.userRoleIds = new Set(ur.roleIds),
-      error: () => {},
+      next: ur => {
+        if (this.selectedUser?.id !== user.id) return;     // veraltete Antwort eines vorher gewählten Nutzers
+        this.userRoleIds = new Set(ur.roleIds);
+        this.userRolesLoaded = true;
+      },
+      error: () => {
+        if (this.selectedUser?.id !== user.id) return;
+        this.snackbar.info(this.translate.instant('admin.roles.loadError'));
+      },
     });
   }
 
@@ -230,7 +251,7 @@ export class AdminRolesComponent implements OnInit {
   }
 
   saveUserRoles(): void {
-    if (!this.selectedUser || this.savingUserRoles) return;
+    if (!this.selectedUser || !this.userRolesLoaded || this.savingUserRoles) return;
     this.savingUserRoles = true;
     this.admin.setUserRoles(this.selectedUser.id, [...this.userRoleIds]).subscribe({
       next: () => {

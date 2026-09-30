@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { AdminRolesComponent } from './admin-roles.component';
 import { Role } from '../../../core/admin.service';
 
@@ -18,9 +18,9 @@ function make(overrides: any = {}) {
     setGroupRoles: jasmine.createSpy('setGroupRoles').and.returnValue(of(void 0)),
     ...overrides,
   } as any;
-  const snackbar = { info: () => {} } as any;
+  const snackbar = { info: jasmine.createSpy('info') } as any;
   const translate = { instant: (k: string) => k } as any;
-  return { c: new AdminRolesComponent(admin, snackbar, translate), admin };
+  return { c: new AdminRolesComponent(admin, snackbar, translate), admin, snackbar };
 }
 
 const role = (over: Partial<Role>): Role =>
@@ -80,10 +80,53 @@ describe('AdminRolesComponent', () => {
   });
 
   it('saveUserRoles sends the toggled role ids', () => {
-    const { c, admin } = make();
-    c.selectedUser = { id: 5, username: 'x' } as any;
-    c.userRoleIds = new Set([3, 4]);
+    const { c, admin } = make({ getUserRoles: jasmine.createSpy('getUserRoles').and.returnValue(of({ userId: 5, roleIds: [3] })) });
+    c.selectUser({ id: 5, username: 'x' } as any);
+    c.toggleUserRole(4);
     c.saveUserRoles();
     expect(admin.setUserRoles).toHaveBeenCalledWith(5, [3, 4]);
+  });
+
+  // W3 F5-003: der Server ERSETZT den Rollensatz — ohne geladenen Ist-Stand darf nichts gespeichert werden.
+  it('Nutzerrollen: Ladefehler → Hinweis, Speichern gesperrt, kein PUT (sonst entzöge es alle übrigen Rollen)', () => {
+    const { c, admin, snackbar } = make({
+      getUserRoles: jasmine.createSpy('getUserRoles').and.returnValue(throwError(() => ({ status: 502 }))),
+    });
+    c.selectUser({ id: 7, username: 'x' } as any);
+    expect(c.userRolesLoaded).toBeFalse();
+    expect(snackbar.info).toHaveBeenCalledWith('admin.roles.loadError');
+    c.toggleUserRole(2);
+    c.saveUserRoles();
+    expect(admin.setUserRoles).not.toHaveBeenCalled();
+  });
+
+  it('Nutzerrollen: späte Antwort des vorher gewählten Nutzers landet nicht beim neuen', () => {
+    const a$ = new Subject<any>();
+    const b$ = new Subject<any>();
+    const { c, admin } = make({
+      getUserRoles: jasmine.createSpy('getUserRoles').and.callFake((id: number) => id === 1 ? a$ : b$),
+    });
+    c.selectUser({ id: 1, username: 'a' } as any);
+    c.selectUser({ id: 2, username: 'b' } as any);
+    a$.next({ userId: 1, roleIds: [9] });
+    expect(c.userRolesLoaded).toBeFalse();
+    c.saveUserRoles();
+    expect(admin.setUserRoles).not.toHaveBeenCalled();
+    b$.next({ userId: 2, roleIds: [3] });
+    expect([...c.userRoleIds]).toEqual([3]);
+    c.saveUserRoles();
+    expect(admin.setUserRoles).toHaveBeenCalledWith(2, [3]);
+  });
+
+  it('Gruppenrollen: Ladefehler → Speichern gesperrt, kein PUT', () => {
+    const { c, admin, snackbar } = make({
+      getGroupRoles: jasmine.createSpy('getGroupRoles').and.returnValue(throwError(() => ({ status: 500 }))),
+    });
+    c.selectGroup({ id: 1, name: 'Schwaz', memberCount: 10 } as any);
+    expect(snackbar.info).toHaveBeenCalledWith('admin.roles.loadError');
+    expect(c.groupRolesLoaded).toBeFalse();
+    c.toggleGroupRole(3);
+    c.saveGroupRoles();
+    expect(admin.setGroupRoles).not.toHaveBeenCalled();
   });
 });

@@ -488,8 +488,8 @@
                           </mat-form-field>
                         </div>
                         <div class="goal-actions">
-                          <button mat-raised-button color="primary" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
-                          @if (goalHasTemplate) {
+                          <button mat-raised-button color="primary" [disabled]="!goalLoaded" (click)="saveGroupGoal()">{{ 'common.save' | translate }}</button>
+                          @if (goalHasTemplate && goalLoaded) {
                             <button mat-button (click)="clearGroupGoal()">{{ 'admin.groups.goal.clear' | translate }}</button>
                           }
                         </div>

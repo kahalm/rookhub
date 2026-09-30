@@ -43,7 +43,7 @@ import { SnackbarService } from '../../core/snackbar.service';
               @for (g of groups; track g.id) { <mat-option [value]="g.id">{{ g.name }}</mat-option> }
             </mat-select>
           </mat-form-field>
-          <button mat-flat-button color="primary" (click)="saveGrants()" [disabled]="savingGrants">
+          <button mat-flat-button color="primary" (click)="saveGrants()" [disabled]="savingGrants || !grantsLoaded">
             <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>
@@ -150,6 +150,9 @@ export class CatalogComponent implements OnInit {
   groups: Group[] = [];
   grantUserIds: number[] = [];
   grantGroupIds: number[] = [];
+  /** Erst nach erfolgreichem Laden true — setGrants ERSETZT alle Freigaben; ein Speichern auf dem leeren
+   *  Stand nach einem Ladefehler entzöge sonst allen Nutzern und Gruppen den Katalog. */
+  grantsLoaded = false;
   savingGrants = false;
   busyId: number | null = null;
   busyItem: string | null = null;
@@ -158,7 +161,10 @@ export class CatalogComponent implements OnInit {
     this.isAdmin = this.auth.isAdmin;
     this.loadList();
     if (this.isAdmin) {
-      this.svc.getGrants().subscribe(g => { this.grantUserIds = g.userIds; this.grantGroupIds = g.groupIds; });
+      this.svc.getGrants().subscribe({
+        next: g => { this.grantUserIds = g.userIds; this.grantGroupIds = g.groupIds; this.grantsLoaded = true; },
+        error: () => this.snackbar.info(this.translate.instant('common.error')),
+      });
       this.svc.getRequests().subscribe(r => this.requests = r);
       this.adminService.getUsers('', 1, 500).subscribe(res => this.users = res.items);
       this.adminService.getGroups().subscribe(g => this.groups = g);
@@ -183,6 +189,7 @@ export class CatalogComponent implements OnInit {
   }
 
   saveGrants(): void {
+    if (!this.grantsLoaded || this.savingGrants) return;
     this.savingGrants = true;
     this.svc.setGrants({ userIds: this.grantUserIds, groupIds: this.grantGroupIds }).subscribe({
       next: g => { this.grantUserIds = g.userIds; this.grantGroupIds = g.groupIds; this.savingGrants = false;

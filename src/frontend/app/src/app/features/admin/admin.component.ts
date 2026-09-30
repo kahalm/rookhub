@@ -90,6 +90,9 @@ export class AdminComponent implements OnInit {
   goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
   goalHasTemplate = false;
   goalLoading = false;
+  /** Erst nach erfolgreichem Laden der GEWÄHLTEN Gruppe true — sonst stünde nach einem Ladefehler noch die
+   *  Vorlage der vorher gewählten Gruppe im Formular, und Speichern schriebe sie auf die neue. */
+  goalLoaded = false;
 
   /** Kibana-URL aus dem Server-Env (leer = nicht konfiguriert → Link wird nicht angezeigt). */
   kibanaUrl = '';
@@ -477,17 +480,23 @@ export class AdminComponent implements OnInit {
 
   loadGroupGoal(groupId: number): void {
     this.goalLoading = true;
+    this.goalLoaded = false;
+    this.goalHasTemplate = false;
+    this.goalEdit = { dailyMinutes: 0, playGames: 0, weeklyDaysTarget: 0 };
     this.adminService.getGroupTrainingGoal(groupId).subscribe({
       next: g => {
+        if (this.selectedGroup && this.selectedGroup.id !== groupId) return;   // veraltete Antwort
         this.goalHasTemplate = g.source === 'group';
         this.goalEdit = {
           dailyMinutes: g.dailyMinutes,
           playGames: g.playGames,
           weeklyDaysTarget: g.weeklyDaysTarget,
         };
+        this.goalLoaded = true;
         this.goalLoading = false;
       },
       error: () => {
+        if (this.selectedGroup && this.selectedGroup.id !== groupId) return;
         this.snackbar.info(this.translate.instant('admin.groups.goal.errors.load'));
         this.goalLoading = false;
       }
@@ -495,7 +504,7 @@ export class AdminComponent implements OnInit {
   }
 
   saveGroupGoal(): void {
-    if (!this.selectedGroup) return;
+    if (!this.selectedGroup || !this.goalLoaded) return;
     const goal = {
       dailyMinutes: clampGoal(this.goalEdit.dailyMinutes, 600),
       playGames: clampGoal(this.goalEdit.playGames, 200),
@@ -508,7 +517,7 @@ export class AdminComponent implements OnInit {
   }
 
   clearGroupGoal(): void {
-    if (!this.selectedGroup) return;
+    if (!this.selectedGroup || !this.goalLoaded) return;
     const groupId = this.selectedGroup.id;
     this.adminService.deleteGroupTrainingGoal(groupId).subscribe({
       next: () => {

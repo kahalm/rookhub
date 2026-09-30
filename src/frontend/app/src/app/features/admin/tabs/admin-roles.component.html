@@ -121,7 +121,7 @@
               </mat-checkbox>
             }
           </div>
-          <button mat-raised-button color="primary" [disabled]="savingGroupRoles" (click)="saveGroupRoles()">
+          <button mat-raised-button color="primary" [disabled]="savingGroupRoles || !groupRolesLoaded" (click)="saveGroupRoles()">
             <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>
@@ -163,7 +163,7 @@
               </mat-checkbox>
             }
           </div>
-          <button mat-raised-button color="primary" [disabled]="savingUserRoles" (click)="saveUserRoles()">
+          <button mat-raised-button color="primary" [disabled]="savingUserRoles || !userRolesLoaded" (click)="saveUserRoles()">
             <mat-icon>save</mat-icon> {{ 'common.save' | translate }}
           </button>
         </div>

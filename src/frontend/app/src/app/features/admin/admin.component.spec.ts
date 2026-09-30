@@ -137,6 +137,38 @@ describe('AdminComponent', () => {
     expect(c.memberCandidates).toEqual([]);
   }));
 
+  // W3 F5-003: ohne geladenen Ist-Stand der GEWÄHLTEN Gruppe darf die Vorlage nicht gespeichert werden.
+  it('Gruppenziel: Ladefehler bei Gruppe B → Formular nicht mit A’s Vorlage speicherbar, kein PUT', () => {
+    const getGroupTrainingGoal = jasmine.createSpy('goal').and.callFake((id: number) => id === 1
+      ? of({ source: 'group', dailyMinutes: 30, playGames: 5, weeklyDaysTarget: 4 })
+      : throwError(() => ({ status: 500 })));
+    const setGroupTrainingGoal = jasmine.createSpy('setGoal').and.returnValue(of(null));
+    const deleteGroupTrainingGoal = jasmine.createSpy('delGoal').and.returnValue(of(null));
+    const { c, snackbar } = make({ getGroupTrainingGoal, setGroupTrainingGoal, deleteGroupTrainingGoal });
+    c.selectGroup({ id: 1, name: 'A', memberCount: 0 } as any);
+    expect(c.goalLoaded).toBeTrue();
+    c.selectGroup({ id: 2, name: 'B', memberCount: 0 } as any);
+    expect(snackbar.info).toHaveBeenCalledWith('admin.groups.goal.errors.load');
+    expect(c.goalLoaded).toBeFalse();
+    expect(c.goalEdit.dailyMinutes).toBe(0);
+    c.saveGroupGoal();
+    c.clearGroupGoal();
+    expect(setGroupTrainingGoal).not.toHaveBeenCalled();
+    expect(deleteGroupTrainingGoal).not.toHaveBeenCalled();
+  });
+
+  it('Gruppenziel: nach erfolgreichem Laden speichert es für die gewählte Gruppe', () => {
+    const setGroupTrainingGoal = jasmine.createSpy('setGoal').and.returnValue(of(null));
+    const { c } = make({
+      getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(
+        of({ source: 'none', dailyMinutes: 20, playGames: 2, weeklyDaysTarget: 3 })),
+      setGroupTrainingGoal,
+    });
+    c.selectGroup({ id: 2, name: 'B', memberCount: 0 } as any);
+    c.saveGroupGoal();
+    expect(setGroupTrainingGoal).toHaveBeenCalledWith(2, { dailyMinutes: 20, playGames: 2, weeklyDaysTarget: 3 });
+  });
+
   it('applyBookFilter filters by name, file name and tags (case-insensitive)', () => {
     const { c } = make();
     c.books = [
