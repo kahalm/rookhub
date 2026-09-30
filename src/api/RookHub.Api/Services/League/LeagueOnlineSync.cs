@@ -219,8 +219,10 @@ public sealed class LeagueOnlineSync
                 "black" => "0-1",
                 _ => Str(r, "status") is "draw" or "stalemate" or "outoftime" or "timeout" or "insufficientMaterialClaim" ? "1/2-1/2" : null,
             };
-            var moves = (Str(r, "moves") ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (result is null || moves.Length == 0) continue;
+            // Lichess schreibt „Bb4+"/„Qxf7#" — bereinigt wie Brett- und chess.com-Partien (CleanSan), sonst stünde derselbe
+            // Zug im Eröffnungsbaum zweimal und die Präfixsuche verlöre nach einem Schachgebot die andere Quelle.
+            var moves = PgnParser.ExtractMainlineSans(Str(r, "moves") ?? "");
+            if (result is null || moves.Count == 0) continue;
             var opp = white ? "black" : "white";
             games.Add(new Game(Str(r, "id") ?? "", DateTimeOffset.FromUnixTimeMilliseconds(created).UtcDateTime, speed,
                 r.TryGetProperty("rated", out var rated) && rated.ValueKind == JsonValueKind.True, white, result,

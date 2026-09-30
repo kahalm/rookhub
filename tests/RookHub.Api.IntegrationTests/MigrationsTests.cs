@@ -135,6 +135,47 @@ public class MigrationsTests
     }
 
     /// <summary>
+    /// <c>LeagueOnlineLinesWithoutCheckSigns</c> (Codereview N4-001): die schon gespeicherten Lichess-Partien trugen „+"/„#"
+    /// in <c>Line</c> und <c>Moves</c>, Brett- und chess.com-Partien nicht — der Eroeffnungsbaum zeigte denselben Zug zweimal.
+    /// Die Migration nimmt die Zeichen heraus und laesst saubere Zeilen und alle anderen Felder unberuehrt.
+    /// </summary>
+    [MySqlFact]
+    public async Task LeagueOnlineLinesWithoutCheckSigns_BereinigtNurSchachUndMattzeichen()
+    {
+        await using var schema = await MariaDbSchema.CreateAsync("onlinesan");
+        await using var db = schema.NewContext();
+
+        var alle = db.Database.GetMigrations().ToList();
+        var index = alle.FindIndex(m => m.EndsWith("LeagueOnlineLinesWithoutCheckSigns", StringComparison.Ordinal));
+        Assert.True(index > 0, "Migration LeagueOnlineLinesWithoutCheckSigns nicht gefunden");
+        await db.GetService<IMigrator>().MigrateAsync(alle[index - 1]);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO LeagueOnlineAccounts (FideId, Site, UserName, Url, Confidence, Manual, SyncCursor, SyncMore, GameCount)
+            VALUES ('222', 'lichess', 'Max_Muster', 'u', 'sicher', 1, 0, 0, 3)
+            """);
+        var zeilen = new (string Id, string Vorher, string Nachher)[]
+        {
+            ("bogo", "d4 Nf6 c4 e6 Nf3 Bb4+ Bd2 Bxd2+ Qxd2", "d4 Nf6 c4 e6 Nf3 Bb4 Bd2 Bxd2 Qxd2"),
+            ("matt", "e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7#", "e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7"),
+            ("sauber", "e4 c5 Nf3 d6 O-O-O e8=Q", "e4 c5 Nf3 d6 O-O-O e8=Q"),    // chess.com/schon bereinigt: bleibt
+        };
+        foreach (var z in zeilen)
+            await db.Database.ExecuteSqlRawAsync("""
+                INSERT INTO LeagueOnlineGames
+                    (AccountId, FideId, ExternalId, PlayedAt, Speed, Rated, White, Result, Opponent, Line, Moves, Plies)
+                SELECT Id, '222', {0}, NOW(), 'blitz', 1, 1, '1-0', 'O+#', {1}, {1}, 9
+                FROM LeagueOnlineAccounts WHERE UserName = 'Max_Muster'
+                """, z.Id, z.Vorher);
+
+        await db.Database.MigrateAsync();
+
+        var nachher = await db.LeagueOnlineGames.AsNoTracking()
+            .ToDictionaryAsync(g => g.ExternalId, g => (g.Line, g.Moves, g.Opponent, g.Plies));
+        Assert.All(zeilen, z => Assert.Equal((z.Nachher, z.Nachher, (string?)"O+#", 9), nachher[z.Id]));
+    }
+
+    /// <summary>
     /// Faengt den Fall ab, dass jemand eine Entitaet aendert und die Migration vergisst: das
     /// Modell traegt dann Aenderungen, die in keiner Migration stehen, und Prod liefe mit einem
     /// Schema, das nicht zum Code passt.

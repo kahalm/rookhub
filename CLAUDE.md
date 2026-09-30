@@ -1806,8 +1806,10 @@ Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele 
   `/api/games/user/{name}?since=…&sort=dateAsc&max=500` (ndjson, höchstens 4 Seiten je Lauf), chess.com über die
   Monatsarchive (höchstens 12 je Lauf). Nur Standardschach ab der Grundstellung, höchstens `LeagueOnline:MaxYears` (5) zurück;
   gespeichert je Partie Tempo (ultraBullet → bullet, daily → correspondence), Farbe, Ergebnis aus SEINER Sicht, Gegner + Wertungen,
-  alle Züge und die ersten 30 Halbzüge als `Line` (für den Baum). Der Stand steht am Konto (`SyncCursor` in ms, `SyncMore` = es gibt
-  noch Rückstand, `SyncedAt`, `GameCount`, `SyncError`); 404 = „Konto nicht gefunden", ein 429 beendet den ganzen Lauf.
+  alle Züge und die ersten 30 Halbzüge als `Line` (für den Baum) — beide in derselben SAN wie die Brettpartien, OHNE
+  Schach-/Mattzeichen (`PgnParser.ExtractMainlineSans`; Lichess liefert „Bb4+“, sonst stand derselbe Zug zweimal im Baum,
+  Codereview N4-001 — den Altbestand bereinigt die Migration `LeagueOnlineLinesWithoutCheckSigns`). Der Stand steht am Konto
+  (`SyncCursor` in ms, `SyncMore` = es gibt noch Rückstand, `SyncedAt`, `GameCount`, `SyncError`); 404 = „Konto nicht gefunden", ein 429 beendet den ganzen Lauf.
 * **Takt** (`LeagueOnlineSyncScheduler`): zwei Minuten nach dem Start, dann je Konto alle `LeagueOnline:IntervalHours` (12), sofort
   nach einem Weckruf; solange ein Konto Rückstand hat, eine Minute Pause zwischen den Läufen (je Lauf höchstens 10 min), sonst
   schaut er alle 30 min. `LeagueOnline:Enabled=false` schaltet ihn ab. Die Integrationstests nehmen alle Hosted Services heraus.

@@ -386,6 +386,37 @@ public class LeagueOnlineTests : IDisposable
         Assert.Equal((5, 1), (card["online"]!.GetValue<int>(), card["onlineUnsure"]!.GetValue<int>()));
     }
 
+    /// <summary>Codereview N4-001: Lichess schreibt Schach und Matt mit („Bb4+", „Qxf7#"), die Brettpartien laufen über CleanSan
+    /// ohne. Gespeichert wird die Lichess-Partie deshalb in derselben Schreibweise — sonst stünde nach 3.Nf3 „Bb4" UND „Bb4+" im
+    /// Baum, und der Klick auf einen der beiden verlöre die andere Quelle.</summary>
+    [Fact]
+    public async Task Tree_CheckAndMateFromLichessAndBoard_AreOneNode_AndTheSubtreeKeepsBothSources()
+    {
+        await SeedPlayerAsync();
+        static string Game(string black, string moves, string result) =>
+            $"[LeagueSource \"Mega\"]\n[Event \"Open\"]\n[Date \"{DateTime.UtcNow.Year}.01.01\"]\n[White \"Muster, Max\"]\n[Black \"{black}\"]\n[Result \"{result}\"]\n[WhiteFideId \"222\"]\n\n{moves} {result}\n";
+        var store = new LeagueProfileStore(_db);
+        await store.ImportGamesAsync(Game("A, B", "1. d4 Nf6 2. c4 e6 3. Nf3 Bb4+ 4. Bd2 Be7", "1-0") + "\n"
+            + Game("C, D", "1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7#", "1-0"), "Mega", default);
+        var acc = new LeagueOnlineAccount { FideId = "222", Site = "lichess", UserName = "Max_Muster", Url = "u", Confidence = "sicher" };
+        _db.LeagueOnlineAccounts.Add(acc);
+        await _db.SaveChangesAsync();
+        var body = string.Join("\n",
+            LichessLine("b1", Recent, "blitz", "Max_Muster", "O", "white", moves: "d4 Nf6 c4 e6 Nf3 Bb4+ Nbd2 O-O"),
+            LichessLine("b2", Recent.AddHours(1), "blitz", "Max_Muster", "O", "white", moves: "e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7#"));
+        await Sync(new FakeHttp(_ => Ok(body))).SyncAccountAsync(acc, default);
+
+        var stored = await _db.LeagueOnlineGames.AsNoTracking().OrderBy(g => g.PlayedAt).Select(g => g.Line + " | " + g.Moves).ToListAsync();
+        Assert.Equal(new[] { "d4 Nf6 c4 e6 Nf3 Bb4 Nbd2 O-O | d4 Nf6 c4 e6 Nf3 Bb4 Nbd2 O-O",
+            "e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7 | e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7" }, stored);
+
+        Task<JsonObject?> Tree(string line) =>
+            store.TreeAsync("222", "w", line, default, LeagueProfileStore.TreeFilter.Parse("both", null, null, false));
+        Assert.Equal((2, 1, 1, "Bb4:2"), Summary((await Tree("d4 Nf6 c4 e6 Nf3"))!));     // EIN Knoten mit beiden Partien
+        Assert.Equal((2, 1, 1, "Bd2:1 Nbd2:1"), Summary((await Tree("d4 Nf6 c4 e6 Nf3 Bb4"))!));   // danach fehlt keine Quelle
+        Assert.Equal((2, 1, 1, "Qxf7:2"), Summary((await Tree("e4 e5 Bc4 Nc6 Qh5 Nf6"))!));
+    }
+
     /// <summary>0.617.0 (Wunsch „auch an der Stelle will ich die vollen Filtermöglichkeiten"): das Eröffnungsprofil der Karte über
     /// dieselben Filter wie der Baum — Brett/online, Tempo, Jahre, unsichere Konten nur auf Wunsch.</summary>
     [Fact]
