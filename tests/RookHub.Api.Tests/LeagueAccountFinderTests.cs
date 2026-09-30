@@ -24,8 +24,8 @@ public class LeagueAccountFinderTests : IDisposable
     private static readonly LeagueAccountFinder.Player Max = new("222", "Muster, Max", "AUT", 1900, "Kufstein 1");
 
     private static LeagueAccountFinder.Profile Prof(string user, string? real = null, string? flag = null, string? loc = null,
-        int? fide = null, bool closed = false, string site = "lichess") =>
-        new(site, user, "u/" + user, real, flag, loc, null, fide, null, closed);
+        int? fide = null, bool closed = false, string site = "lichess", int? rating = null) =>
+        new(site, user, "u/" + user, real, flag, loc, null, fide, null, closed, rating, rating is null ? null : "Lichess Blitz");
 
     // ── Namen ──────────────────────────────────────────────────────────────────────────────────
 
@@ -76,6 +76,23 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "DE"), derived: true, fideFed: "GER"));
     }
 
+    [Fact]
+    public void Judge_OnlineRatingFarBelowTheElo_IsSomeoneElse_HigherIsFine()
+    {
+        // Max: Elo 1900. 400 darunter ist die Grenze (Wunsch: „alles droppen, was 400 niedriger ist").
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 500), derived: true));
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1499), derived: true));
+        Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1500), derived: true));
+        var high = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 2900), derived: true)!;   // höher ist ok
+        Assert.Equal(1 + 3 + 1, high.Score);                                          // … aber kein Hinweis
+        var fits = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 2100), derived: true)!;
+        Assert.Equal(1 + 3 + 1 + 1, fits.Score);
+        Assert.Contains("Lichess Blitz 2100 passt zu Elo 1900", fits.Evidence);
+        // Ohne Elo oder ohne Wertung kein Einwand.
+        Assert.NotNull(LeagueAccountFinder.Judge(Max with { Elo = null }, Prof("MaxMuster", "Max Muster", "AT", rating: 500), derived: true));
+        Assert.True(LeagueAccountFinder.RatingPlausible(Prof("x"), 2000));
+    }
+
     // ── Antworten lesen ────────────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -102,6 +119,20 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Equal(("chess.com", "MaxMuster", "Max Muster", "AT", "Tirol", false), (cc.Site, cc.User, cc.RealName, cc.Flag, cc.Location, cc.Closed));
         Assert.Equal("https://www.chess.com/member/MaxMuster", cc.Url);
         Assert.True(LeagueAccountFinder.ParseChessComPlayer("""{"username":"x1","status":"closed:fair_play_violations"}""")!.Closed);
+
+        var rated = LeagueAccountFinder.ParseLichessUsers("""
+            [{"id":"p","username":"P","perfs":{"bullet":{"games":3,"rating":2400,"prov":true},"blitz":{"games":11759,"rating":1630},
+              "rapid":{"games":0,"rating":1500,"prov":true},"classical":{"games":9,"rating":2100}}},
+             {"id":"q","username":"Q","perfs":{"rapid":{"games":0,"rating":1500,"prov":true}}}]
+            """);
+        Assert.Equal(((int?)1630, "Lichess Blitz"), (rated[0].Rating, rated[0].RatingLabel));     // vorläufig/zu wenige zählen nicht
+        Assert.Null(rated[1].Rating);
+        Assert.Equal(((int?)2693, "chess.com Blitz", (int?)2350), LeagueAccountFinder.ParseChessComStats("""
+            {"chess_bullet":{"last":{"rating":2640},"record":{"win":3,"loss":2,"draw":0}},
+             "chess_blitz":{"last":{"rating":2693},"record":{"win":377,"loss":386,"draw":76}},
+             "chess_rapid":{"last":{"rating":2500},"record":{"win":10,"loss":5,"draw":1}},"fide":2350}
+            """));
+        Assert.Equal(((int?)null, (string?)null, (int?)null), LeagueAccountFinder.ParseChessComStats("{}"));
 
         Assert.Equal(new[] { "Muster1987", "musterm" },
             LeagueAccountFinder.ParseAutocomplete("""{"result":[{"name":"Muster1987","id":"muster1987"},{"name":"musterm","id":"musterm"}]}"""));
@@ -138,6 +169,8 @@ public class LeagueAccountFinderTests : IDisposable
                  {"id":"muster1987","username":"Muster1987","profile":{"realName":"Max Muster","location":"Schwaz"}},
                  {"id":"musterfan","username":"MusterFan","profile":{"flag":"AT"}}]
                 """);
+        if (u.EndsWith("/pub/player/max_muster/stats"))
+            return Ok("""{"chess_rapid":{"last":{"rating":1850},"record":{"win":30,"loss":20,"draw":5}}}""");
         if (u.EndsWith("/pub/player/max_muster"))
             return Ok("""{"url":"https://www.chess.com/member/Max_Muster","username":"max_muster","country":"https://api.chess.com/pub/country/AT"}""");
         if (u.Contains("api.chess.com/pub/player/")) return Status(HttpStatusCode.NotFound);
@@ -171,7 +204,8 @@ public class LeagueAccountFinderTests : IDisposable
         var scan = await _db.LeagueAccountScans.SingleAsync();
         Assert.Equal((1987, "AUT", 3), (scan.BirthYear, scan.Federation, scan.Found));
         // Nur die abgeleiteten Namen gehen an chess.com, alle Kandidaten gesammelt an Lichess.
-        Assert.Equal(7, http.Urls.Count(x => x.Contains("api.chess.com")));
+        Assert.Equal(7 + 1, http.Urls.Count(x => x.Contains("api.chess.com")));     // 7 Namen + Wertungen des einen Treffers
+        Assert.StartsWith("Nutzername aus dem Namen; Land Österreich; chess.com Schnell 1850 passt zu Elo 1900", list[2].Evidence);
         Assert.Single(http.Urls, x => x.StartsWith("POST") && x.EndsWith("/api/users"));
 
         http.Urls.Clear();
@@ -218,6 +252,34 @@ public class LeagueAccountFinderTests : IDisposable
         var r = await Finder(World()).ScanAsync(Max, default);
         Assert.Equal(1, r.Found);
         Assert.Equal("Muster1987", (await _db.LeagueAccountSuggestions.SingleAsync(s => s.Status == LeagueSuggestionStatus.Open)).UserName);
+    }
+
+    [Fact]
+    public async Task Rescan_DropsOpenSuggestionsTheRulesNoLongerCarry_KeepsRejected()
+    {
+        await SeedAsync();
+        _db.LeagueAccountSuggestions.AddRange(
+            new LeagueAccountSuggestion { FideId = "222", Site = "lichess", UserName = "Muster500", Url = "u", Evidence = "alt" },
+            new LeagueAccountSuggestion { FideId = "222", Site = "lichess", UserName = "MusterAlt", Url = "u", Evidence = "alt",
+                Status = LeagueSuggestionStatus.Rejected });
+        await _db.SaveChangesAsync();
+        await Finder(World()).ScanAsync(Max, default);
+        var left = await _db.LeagueAccountSuggestions.Select(s => s.UserName).ToListAsync();
+        Assert.DoesNotContain("Muster500", left);                                     // nicht mehr gefunden → weg
+        Assert.Contains("MusterAlt", left);                                          // verworfen bleibt
+        Assert.Equal(LeagueAccountFinder.CurrentVersion, (await _db.LeagueAccountScans.SingleAsync()).Version);
+    }
+
+    [Fact]
+    public async Task RunOnce_OlderRuleVersion_IsDueAgain()
+    {
+        await SeedAsync();
+        _db.LeagueAccountScans.Add(new LeagueAccountScan { FideId = "222", BirthYear = 1987, ScannedAt = DateTime.UtcNow, Version = 1 });
+        await _db.SaveChangesAsync();
+        var http = World();
+        Assert.False(await Finder(http).RunOnceAsync(TimeSpan.FromMinutes(5), default));
+        Assert.Contains(http.Urls, u => u.EndsWith("/api/users"));
+        Assert.Equal(LeagueAccountFinder.CurrentVersion, (await _db.LeagueAccountScans.AsNoTracking().SingleAsync()).Version);
     }
 
     [Fact]

@@ -223,6 +223,9 @@ public class LeagueAccountScan
     /// <summary>Warum nicht gesucht wurde („minderjährig", „Jahrgang unbekannt") oder was schiefging.</summary>
     public string? Note { get; set; }
     public int Found { get; set; }
+    /// <summary>Mit welcher Fassung der Regeln gesucht wurde (<c>LeagueAccountFinder.CurrentVersion</c>) — ältere werden einmal
+    /// neu gesucht, sonst gälte eine geänderte Regel erst nach 90 Tagen.</summary>
+    public int Version { get; set; }
 }
 
 /// <summary>

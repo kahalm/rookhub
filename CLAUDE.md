@@ -1683,6 +1683,15 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   einem Land, das weder AT noch die Föderation des Spielers (Meldeliste oder FIDE) ist. Hinweise: Klarname 3, nur Nachname 1,
   FIDE-Wertung im Profil ±250 zur Liste 2, Tiroler Ort in Ort/Bio 2 (Wortgrenzen — „Hallo" ist nicht Hall), Land 1. Ein Name
   aus dem Namen braucht ≥ 1 (plus 1 Punkt), einer aus der Suche ≥ 3.
+* **Online-Wertung gegen Elo** (0.609.0, Wunsch „ein Konto mit 500 auf einem 2000er ergibt keinen Sinn — nur niedriger ist ein
+  Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab 10 Partien, nicht vorläufig —
+  unbespielte Lichess-Kategorien stehen auf 1500 „prov"; Bullet zählt mit) darf höchstens `RatingBelow` 400 unter der Elo der
+  Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 250 darunter bis 450 darüber, ist das ein Hinweis
+  (+1). Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
+  mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (2 seit 0.609.0) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
+  fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
+  Urteil ändert, erhöht die Zahl.
 * **Nie Minderjährige**: Jahrgang und Föderation über Lichess `/api/fide/player/{id}`, gemerkt in `LeagueAccountScans`; unter 18
   oder ohne Jahrgang wird nicht gesucht (offene Vorschläge des Spielers werden entfernt).
 * **Nicht wieder vorschlagen**: verworfene Vorschläge bleiben als `Rejected` stehen; ein ENTFERNTES Konto wird als verworfener
@@ -3751,7 +3760,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
 | LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?; Index (Status, Score) |
-| LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess), ScannedAt, Note? („minderjährig", „Jahrgang unbekannt", Fehler), Found |
+| LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess), ScannedAt, Note? („minderjährig", „Jahrgang unbekannt", Fehler), Found, Version (Fassung der Regeln, 0.609.0) |
 | LeagueBroadcasts | Lichess-Übertragungen, deren Partien in die Karten kommen (0.608.0) | TourId (PK, ≤12), Name, Location?, StartsAt?/EndsAt?, Manual (per Link), FoundAt, ImportedAt?, Finished (Index), Games (mit Ligaspielern), Error? |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
