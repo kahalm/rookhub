@@ -18,7 +18,8 @@ public class ChessableCourseRefreshScheduler : PeriodicWorker
 
     protected override WorkerSchedule Schedule { get; } = WorkerSchedule.DailyAtUtc(RunAtUtc);
     protected override WorkerStart Start => WorkerStart.OnSchedule;
-    protected override string FailureMessage => "ChessableCourseRefreshScheduler: nächtlicher Kurslisten-Refresh fehlgeschlagen";
+    protected override void LogFailure(Exception ex)
+        => Logger.LogError(ex, "ChessableCourseRefreshScheduler: nächtlicher Kurslisten-Refresh fehlgeschlagen");
 
     /// <summary>Wartezeit bis zum nächsten <see cref="RunAtUtc"/> (heute, falls noch nicht vorbei; sonst morgen).</summary>
     public static TimeSpan TimeUntilNextRun(DateTime nowUtc) => DailySchedule.TimeUntilNextRun(nowUtc, RunAtUtc);

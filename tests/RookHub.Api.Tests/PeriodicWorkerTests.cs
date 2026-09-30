@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Services;
+using Serilog.Events;
 
 namespace RookHub.Api.Tests;
 
@@ -20,7 +21,7 @@ public class PeriodicWorkerTests
         private int _calls;
         protected override WorkerSchedule Schedule => WorkerSchedule.Every(TimeSpan.Zero);
         protected override WorkerStart Start => WorkerStart.Immediately;
-        protected override string FailureMessage => "Testdienst: Durchlauf fehlgeschlagen";
+        protected override void LogFailure(Exception ex) => Logger.LogError(ex, "Testdienst: Durchlauf fehlgeschlagen");
         protected override bool Enabled => enabled;
         protected override Task StepAsync(IServiceProvider services, CancellationToken ct)
             => step(services, Interlocked.Increment(ref _calls), ct);
@@ -31,6 +32,18 @@ public class PeriodicWorkerTests
         var services = new ServiceCollection();
         services.AddScoped<Marker>();
         return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
+
+    private static IConfiguration Config(params (string Key, string? Value)[] pairs)
+        => new ConfigurationBuilder()
+            .AddInMemoryCollection(pairs.Select(p => new KeyValuePair<string, string?>(p.Key, p.Value)))
+            .Build();
+
+    private static async Task RunUntilDoneAsync(PeriodicWorker worker)
+    {
+        await worker.StartAsync(CancellationToken.None);
+        await worker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
+        await worker.StopAsync(CancellationToken.None);
     }
 
     private static List<CapturingLogger<PeriodicWorkerTests>.Entry> Errors(CapturingLogger<PeriodicWorkerTests> log)
@@ -109,17 +122,20 @@ public class PeriodicWorkerTests
     public async Task Disabled_EndsAtOnce_WithoutAStep()
     {
         var calls = 0;
-        var worker = new TestWorker(Scopes(), NullLogger.Instance, (_, _, _) =>
+        var log = new CapturingLogger<PeriodicWorkerTests>();
+        var worker = new TestWorker(Scopes(), log, (_, _, _) =>
         {
             calls++;
             return Task.CompletedTask;
         }, enabled: false);
 
-        await worker.StartAsync(CancellationToken.None);
-        await worker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
-        await worker.StopAsync(CancellationToken.None);
+        await RunUntilDoneAsync(worker);
 
         Assert.Equal(0, calls);
+        // Vorgabe-Zeile: festes Template, der Dienst steht als Property daneben (nicht im Template).
+        var line = Assert.Single(log.Events);
+        Assert.Equal("{Worker}: per Konfiguration abgeschaltet", line.State["{OriginalFormat}"]);
+        Assert.Equal("TestWorker", line.State["Worker"]);
     }
 
     [Theory]
@@ -152,26 +168,81 @@ public class PeriodicWorkerTests
     [InlineData("0", 3.5 * 3600)]   // 0 schaltet den Startlauf ab → erst 04:30 UTC
     public void PlayerHistoryScheduler_KeepsItsStartRun(string? startupMinutes, double expectedSeconds)
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["PlayerHistory:StartupDelayMinutes"] = startupMinutes,
-        }).Build();
+        var config = Config(("PlayerHistory:StartupDelayMinutes", startupMinutes));
         var worker = new PlayerHistoryScheduler(Scopes(), NullLogger<PlayerHistoryScheduler>.Instance, config);
         Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), worker.InitialDelay(At0100));
     }
 
     [Fact]
-    public async Task PlayerHistoryScheduler_Disabled_EndsAtOnce()
+    public async Task PlayerHistoryScheduler_Disabled_EndsAtOnce_WithItsOldLine()
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["PlayerHistory:Enabled"] = "false",
-        }).Build();
-        var worker = new PlayerHistoryScheduler(Scopes(), NullLogger<PlayerHistoryScheduler>.Instance, config);
+        var log = new CapturingLogger<PlayerHistoryScheduler>();
+        var worker = new PlayerHistoryScheduler(Scopes(), log, Config(("PlayerHistory:Enabled", "false")));
 
-        await worker.StartAsync(CancellationToken.None);
-        await worker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10));
-        await worker.StopAsync(CancellationToken.None);
+        await RunUntilDoneAsync(worker);
+
+        Assert.Equal("Turnierverlauf: Hintergrund-Durchgang per Konfiguration abgeschaltet",
+            Assert.Single(log.Events).State["{OriginalFormat}"]);
+    }
+
+    // ---- Log-Vertrag: je Dienst ein FESTES Template (A8-008-Nacharbeit) ----
+    // Serilog/ECS schreibt das Template nach labels.MessageTemplate; Kibana und der log-watcher gruppieren und
+    // fingerprinten danach. Das gemeinsame "{FailureMessage}" ließ alle Dienste auf EINE Signatur fallen und setzte den
+    // Text in Anführungszeichen — der MEL-gerenderte Text (Entry.Message) sah dabei unverändert aus, deshalb wird hier
+    // das Template geprüft. Der Scope kennt den Fachdienst nicht: GetRequiredService wirft im Schritt → Fehlerzeile.
+
+    [Fact]
+    public async Task MovedServices_FailureLine_KeepsItsOldLiteralTemplate()
+    {
+        var chessable = new CapturingLogger<ChessableCourseRefreshScheduler>();
+        Assert.False(await new ChessableCourseRefreshScheduler(Scopes(), chessable).RunStepAsync(CancellationToken.None));
+        var chessableLine = Assert.Single(chessable.Events);
+        Assert.Equal(LogLevel.Error, chessableLine.Level);
+        Assert.Equal("ChessableCourseRefreshScheduler: nächtlicher Kurslisten-Refresh fehlgeschlagen",
+            chessableLine.State["{OriginalFormat}"]);
+
+        var history = new CapturingLogger<PlayerHistoryScheduler>();
+        Assert.False(await new PlayerHistoryScheduler(Scopes(), history, Config()).RunStepAsync(CancellationToken.None));
+        var historyLine = Assert.Single(history.Events);
+        Assert.Equal(LogLevel.Error, historyLine.Level);
+        Assert.Equal("Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen", historyLine.State["{OriginalFormat}"]);
+    }
+
+    [Theory]
+    [InlineData(nameof(ChessableCourseRefreshScheduler), "ChessableCourseRefreshScheduler: nächtlicher Kurslisten-Refresh fehlgeschlagen")]
+    [InlineData(nameof(PlayerHistoryScheduler), "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen")]
+    [InlineData(nameof(NotificationRetentionScheduler), "Benachrichtigungs-Retention fehlgeschlagen")]
+    public async Task FailureLine_InTheSerilogPipeline_HasTheServicesOwnTemplate_AndAnUnquotedMessage(
+        string service, string template)
+    {
+        var sink = new CollectingSink();
+        var serilog = new Serilog.LoggerConfiguration().MinimumLevel.Verbose().WriteTo.Sink(sink).CreateLogger();
+        using var logs = new Serilog.Extensions.Logging.SerilogLoggerFactory(serilog, dispose: true);
+        PeriodicWorker worker = service switch
+        {
+            nameof(ChessableCourseRefreshScheduler) =>
+                new ChessableCourseRefreshScheduler(Scopes(), logs.CreateLogger<ChessableCourseRefreshScheduler>()),
+            nameof(PlayerHistoryScheduler) =>
+                new PlayerHistoryScheduler(Scopes(), logs.CreateLogger<PlayerHistoryScheduler>(), Config()),
+            nameof(NotificationRetentionScheduler) =>
+                new NotificationRetentionScheduler(Scopes(), logs.CreateLogger<NotificationRetentionScheduler>()),
+            _ => throw new ArgumentOutOfRangeException(nameof(service)),
+        };
+
+        Assert.False(await worker.RunStepAsync(CancellationToken.None));
+
+        var e = Assert.Single(sink.Events);
+        Assert.Equal(LogEventLevel.Error, e.Level);
+        Assert.Equal(template, e.MessageTemplate.Text);   // → labels.MessageTemplate (log-watcher message_field)
+        Assert.Equal(template, e.RenderMessage());         // → message, ohne Anführungszeichen
+        Assert.IsType<InvalidOperationException>(e.Exception);
+    }
+
+    private sealed class CollectingSink : Serilog.Core.ILogEventSink
+    {
+        private readonly List<LogEvent> _events = new();
+        public IReadOnlyList<LogEvent> Events { get { lock (_events) return _events.ToList(); } }
+        public void Emit(LogEvent logEvent) { lock (_events) _events.Add(logEvent); }
     }
 
     [Fact]

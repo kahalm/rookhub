@@ -27,9 +27,9 @@ public class RoundMonitorService : BackgroundService
             // FALLE: `ex is not OperationCanceledException` schloss AUSGERECHNET den häufigsten Fall aus.
             // Ein HttpClient-Timeout zum Crawler wirft eine TaskCanceledException (= OperationCanceled)
             // OHNE dass `stoppingToken` gesetzt ist — die flog aus ExecuteAsync heraus, und weil
-            // BackgroundServiceExceptionBehavior nirgends gesetzt ist, beendet der .NET-Default
-            // (StopHost) den ganzen API-Prozess. Deshalb wie in allen anderen Hosted Services hier:
-            // nur der ECHTE Shutdown darf durch.
+            // BackgroundServiceExceptionBehavior auf StopHost steht (ausdruecklich in Program.cs, = .NET-Default),
+            // beendet das den ganzen API-Prozess. Deshalb wie in allen anderen Hosted Services hier (und in
+            // PeriodicWorker): nur der ECHTE Shutdown darf durch.
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {

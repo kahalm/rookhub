@@ -50,10 +50,12 @@ public class PlayerHistoryScheduler : PeriodicWorker
     }
 
     protected override bool Enabled => _enabled;
-    protected override string DisabledMessage => "Turnierverlauf: Hintergrund-Durchgang per Konfiguration abgeschaltet";
+    protected override void LogDisabled()
+        => _logger.LogInformation("Turnierverlauf: Hintergrund-Durchgang per Konfiguration abgeschaltet");
     protected override WorkerSchedule Schedule { get; } = WorkerSchedule.DailyAtUtc(RunAtUtc);
     protected override WorkerStart Start => _startupDelay > TimeSpan.Zero ? WorkerStart.After(_startupDelay) : WorkerStart.OnSchedule;
-    protected override string FailureMessage => "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen";
+    protected override void LogFailure(Exception ex)
+        => _logger.LogError(ex, "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen");
 
     public static TimeSpan TimeUntilNextRun(DateTime nowUtc) => DailySchedule.TimeUntilNextRun(nowUtc, RunAtUtc);
 

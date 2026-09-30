@@ -6,10 +6,11 @@ namespace RookHub.Api.Services;
 ///
 /// <para><b>Fehlerpolitik.</b> Nur der ECHTE Shutdown (gesetzter <c>stoppingToken</c>) beendet die Schleife, und
 /// zwar still. Alles andere — ausdrücklich auch eine <see cref="OperationCanceledException"/> OHNE Shutdown, etwa die
-/// <see cref="TaskCanceledException"/> eines HttpClient-Timeouts — wird mit dem Dienstnamen geloggt, und der nächste
-/// Takt kommt. Die Fallenform <c>catch (Exception ex) when (ex is not OperationCanceledException)</c> ließ genau den
-/// Timeout aus <c>ExecuteAsync</c> fliegen, und <see cref="BackgroundServiceExceptionBehavior.StopHost"/> nahm dann die
-/// ganze API mit (siehe RoundMonitorService).</para>
+/// <see cref="TaskCanceledException"/> eines HttpClient-Timeouts — wird mit der Fehlerzeile des Dienstes geloggt
+/// (<see cref="LogFailure"/>), und der nächste Takt kommt. Die Fallenform
+/// <c>catch (Exception ex) when (ex is not OperationCanceledException)</c> ließ genau den Timeout aus
+/// <c>ExecuteAsync</c> fliegen, und <see cref="BackgroundServiceExceptionBehavior.StopHost"/> nahm dann die ganze API
+/// mit (siehe RoundMonitorService).</para>
 ///
 /// <para>Jeder Schritt bekommt einen FRISCHEN Scope (eigener DbContext, kein Tracker-Erbe vom Vorlauf).</para>
 /// </summary>
@@ -31,14 +32,28 @@ public abstract class PeriodicWorker : BackgroundService
     /// <summary>Ob und wann der erste Schritt nach dem Start kommt.</summary>
     protected abstract WorkerStart Start { get; }
 
-    /// <summary>Rendertext der Fehlerzeile eines gescheiterten Schritts (je Dienst, damit Kibana/log-watcher ihn
-    /// wiederfinden).</summary>
-    protected virtual string FailureMessage => $"{GetType().Name}: Durchlauf fehlgeschlagen";
+    /// <summary>
+    /// Fehlerzeile eines gescheiterten Schritts. Jeder Dienst schreibt sie mit seinem EIGENEN, festen Template, z. B.
+    /// <c>Logger.LogError(ex, "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen")</c>; ein umgezogener Dienst
+    /// behält wörtlich sein bisheriges.
+    ///
+    /// <para><b>Warum kein gemeinsames Template.</b> Serilog/ECS schreibt das Template nach
+    /// <c>labels.MessageTemplate</c>, und genau danach gruppieren Kibana und der log-watcher
+    /// (<c>message_field</c>, Fingerprint neuer Fehler-Signaturen). Ein gemeinsames <c>"{FailureMessage}"</c> mit dem
+    /// Text als Parameter ließe ALLE Dienste auf eine Signatur fallen (und setzte den Text im gerenderten
+    /// <c>message</c> in Anführungszeichen): nach dem ersten gesehenen Fehler meldete der log-watcher den Ausfall eines
+    /// anderen Dienstes nicht mehr als neu. Dasselbe gälte für eine Vorgabe <c>"{Worker}: …"</c> bei jedem Dienst,
+    /// der sie nicht überschreibt — deshalb ist die Methode abstrakt.</para>
+    /// </summary>
+    protected abstract void LogFailure(Exception ex);
 
-    /// <summary>Per Konfiguration abgeschaltet? Dann endet der Dienst sofort (mit <see cref="DisabledMessage"/>).</summary>
+    /// <summary>Per Konfiguration abgeschaltet? Dann endet der Dienst sofort (mit <see cref="LogDisabled"/>).</summary>
     protected virtual bool Enabled => true;
 
-    protected virtual string DisabledMessage => $"{GetType().Name}: per Konfiguration abgeschaltet";
+    /// <summary>Zeile beim Abschalten per Konfiguration (einmal je Start, Information). Die Vorgabe trägt den
+    /// Dienstnamen als Property; ein Dienst mit eingeführtem Text überschreibt sie mit seinem wörtlichen Template
+    /// (Begründung wie bei <see cref="LogFailure"/>).</summary>
+    protected virtual void LogDisabled() => Logger.LogInformation("{Worker}: per Konfiguration abgeschaltet", GetType().Name);
 
     /// <summary>Ein Schritt. <paramref name="services"/> ist ein frischer Scope, der nach dem Schritt verworfen wird.</summary>
     protected abstract Task StepAsync(IServiceProvider services, CancellationToken ct);
@@ -47,7 +62,7 @@ public abstract class PeriodicWorker : BackgroundService
     {
         if (!Enabled)
         {
-            Logger.LogInformation("{DisabledMessage}", DisabledMessage);
+            LogDisabled();
             return;
         }
 
@@ -82,7 +97,7 @@ public abstract class PeriodicWorker : BackgroundService
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "{FailureMessage}", FailureMessage);
+            LogFailure(ex);
             return false;
         }
     }

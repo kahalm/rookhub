@@ -21,7 +21,7 @@ public class NotificationRetentionScheduler : PeriodicWorker
 
     protected override WorkerSchedule Schedule { get; } = WorkerSchedule.DailyAtUtc(RunAtUtc);
     protected override WorkerStart Start => WorkerStart.After(TimeSpan.FromMinutes(10));
-    protected override string FailureMessage => "Benachrichtigungs-Retention fehlgeschlagen";
+    protected override void LogFailure(Exception ex) => _logger.LogError(ex, "Benachrichtigungs-Retention fehlgeschlagen");
 
     protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
