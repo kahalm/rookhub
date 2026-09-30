@@ -105,7 +105,7 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | POST | `/api/auth/register` | Registrierung `{ username, email?, password }` — E-Mail optional (`null` erlaubt, Unique-Index toleriert NULL-Duplikate) |
-| POST | `/api/auth/login` | Login, gibt JWT zurück (gültig 30 Tage, mit `rememberMe` 90). Konto-Bremse: jeder Versuch wird vorab atomar gezählt (5 frei, dann 250 ms … 4 s Wartezeit); bei gebremstem Konto höchstens EINE Prüfung gleichzeitig, weitere sofort 429 (`Retry-After: 5`) |
+| POST | `/api/auth/login` | Login, gibt JWT zurück (gültig 30 Tage, mit `rememberMe` 90). Konto-Bremse: jeder Versuch wird vorab atomar gezählt (5 frei, dann 250 ms … 4 s Wartezeit); bei gebremstem Konto höchstens EINE Prüfung gleichzeitig, weitere sofort 429 (`Retry-After: 5`). Gesperrtes Konto (`AppUser.LockedUntil`) → 403 `{ message, lockedUntil }` (`null` = unbefristet) — erst NACH der Passwortprüfung, ein falsches Passwort bleibt 401 (kein Konto-Orakel) |
 | POST | `/api/auth/forgot-password` | „Passwort vergessen" `{ email }` — schickt (falls die Adresse zu einem aktiven Konto gehört) einen einmaligen Reset-Link (TTL 1 h) per Mail. Antwortet IMMER 200 (keine User-Enumeration). Versand via `PasswordResetService` + `IEmailSender` (SMTP/MailKit); ohne `Email:SmtpHost` wird die Mail nur geloggt. Link-Basis = `App:BaseUrl` |
 | POST | `/api/auth/reset-password` | Neues Passwort setzen `{ token, newPassword }` — 204 bei Erfolg, 400 bei ungültigem/abgelaufenem/verbrauchtem Token. Token ist einmalig (`UsedAt`) |
 | POST | `/api/auth/session` | Geteilte Anmeldung der Schwesterseite übernehmen — Nachweis ist das Cookie auf der gemeinsamen Elterndomäne (`SharedSessionService`). **204 = keine**, ohne Unterscheidung — bewusst kein 401: jeder anonyme App-Start fragt hier, und ein 401 zählte für die Überwachung als abgelehnter Anmeldeversuch (log-watcher `auth_bruteforce`, Fehlalarm 2026-09-15). Ein untaugliches Cookie wird dabei gelöscht |
@@ -123,6 +123,15 @@ RookHub API (.NET :5001)  -- Crawler__BaseUrl -->  Crawler API (.NET :8080)  -- 
 | GET | `/api/profile/tokens` | Eigene API-Tokens (ohne Raw-Token) |
 | POST | `/api/profile/tokens` | Neuen Token anlegen `{ name, expiresInDays?, scope? }` — `scope` ∈ `extension` (Vorgabe, nur `/api/extension/*`) / `engine` (nur `/api/external-engine/*`, der Engine-Provider, seit 0.537.0); Raw-Token nur einmalig im Response |
 | DELETE | `/api/profile/tokens/{id}` | Token widerrufen |
+
+**Nutzerverwaltung durch Admins** (Codereview 2026-09-29): `DELETE /api/admin/users/{id}` anonymisiert jetzt wie die
+Selbstlöschung (`ProfileService.EraseUserAsync`, kein 409 durch Restrict-FKs mehr), `GET /api/admin/users` listet keine
+gelöschten Konten (A9-004). **Sperren statt löschen** (F5-011, `users.manage`): `POST /api/admin/users/{id}/lock`
+`{ until: ISO-UTC | null }` (null = unbefristet, `AppUser.LockedIndefinitely`) bzw. `DELETE …/lock` → 200 `AdminUserDto`
+(mit `lockedUntil`). Die Sperre setzt `AppUser.LockedUntil`, rotiert den Security-Stamp (laufende Sitzungen enden sofort)
+und verwirft den Auth-Cache; Konto, Daten und API-Tokens bleiben. `AuthUserValidation` zählt eine laufende Sperre als
+inaktiv, API-Token- und Engine-Token-Prüfung weisen gesperrte Besitzer ab, Impersonation eines gesperrten Kontos → 400.
+Guards: nicht sich selbst (400), Ende in der Zukunft (400), Admin-Konten nur durch Admins (403).
 
 ### Freunde (auth)
 | Methode | Endpoint | Zweck |
@@ -170,6 +179,10 @@ Eine zentrale Navbar-Glocke mit „!"-Indikator. `Notifications`-Tabelle (`UserI
 | GET | `/api/notifications/count` | Anzahl ungelesener (Glocken-Badge) |
 | POST | `/api/notifications/seen` | Alle als gelesen markieren (beim Öffnen der Glocke) |
 
+**Aufbewahrung** (Codereview 2026-09-29, A9-003): gelesene Benachrichtigungen verfallen nach 180 Tagen
+(`NotificationRetentionScheduler`, täglich 05:00 UTC). Die Kontolöschung ersetzt den eigenen Namen in FREMDEN
+Benachrichtigungen (z. B. Freundschaftsanfrage, Herausforderung) durch `deleted_<id>`.
+
 ### Direktnachrichten Admin↔User (auth)
 Beide Seiten können eine Konversation **starten**: der Admin schreibt einem User, ODER der User kontaktiert von sich aus das Admin-Team. Danach beliebig oft hin und her (durchgehende Konversation). Ein „Thread" = alle `AdminMessages` mit derselben `UserId` (Nicht-Admin-Teilnehmer); Metadaten/Zuweisung in `MessageThreads` (1 Zeile je User). Jede neue Nachricht legt eine In-App-Benachrichtigung bei der Gegenseite an: Admin→User `admin_message_received` (Link `/messages`), User→Admin `user_message_received` an **alle** Admins (Link `/admin`). **Claim/Übernahme**: ein Admin kann einen Thread übernehmen (`ClaimedByAdminId`) — alle Admins sehen, wer welchen bearbeitet; eine Admin-Antwort auf einen offenen Thread übernimmt ihn automatisch. Read-Receipts getrennt je Seite (`SeenByUserAt`/`SeenByAdminAt`). Logik in `AdminMessageService`; User-Seite `/api/messages`, Admin-Seite `/api/admin/messages`. Frontend: User-Seite `/messages` (Navbar-Mail-Icon, immer sichtbar, mit Badge), Admin-Tab „Nachrichten" (Thread-Liste mit Claim-Status + Übernehmen/Freigeben).
 
@@ -177,7 +190,7 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 |---------|----------|------|-------|
 | GET | `/api/messages` | Auth | Eigener Thread (chronologisch); leer, solange niemand schrieb |
 | GET | `/api/messages/unread-count` | Auth | Ungelesene Admin-Nachrichten (Navbar-Badge) |
-| POST | `/api/messages/reply` | Auth | User schreibt dem Admin-Team `{ body }` — startet die Konversation selbst oder antwortet (400 nur bei leerem Text) |
+| POST | `/api/messages/reply` | Auth | User schreibt dem Admin-Team `{ body }` — startet die Konversation selbst oder antwortet (400 nur bei leerem Text). Rate-Limit `user-message` (10/min je Konto) |
 | POST | `/api/messages/seen` | Auth | Eigene Admin-Nachrichten als gelesen markieren |
 | GET | `/api/admin/messages/threads` | Admin | Alle Konversationen (je User: letzte Nachricht, ungelesene User-Antworten, Claim-Status `ClaimedByAdminId`/`-Name`) |
 | GET | `/api/admin/messages/unread-count` | Admin | Ungelesene User-Antworten über alle Threads (Tab-Badge) |
@@ -186,6 +199,12 @@ Beide Seiten können eine Konversation **starten**: der Admin schreibt einem Use
 | POST | `/api/admin/messages/threads/{userId}/seen` | Admin | User-Antworten des Threads als gelesen markieren |
 | POST | `/api/admin/messages/threads/{userId}/claim` | Admin | Thread übernehmen (Zuweisung an den aufrufenden Admin) |
 | POST | `/api/admin/messages/threads/{userId}/release` | Admin | Thread wieder freigeben |
+
+**Drossel und Glocke** (Codereview 2026-09-29, F5-001): jede User-Nachricht klingelt bei ALLEN Admins, deshalb
+Rate-Limit `user-message` (10/min je Konto) — ein gemeinsamer Topf für `POST /api/messages/reply`,
+`POST /api/tournament-directory/{id}/report` und `POST /api/tournament-directory/suggest-source` (gleicher Kanal).
+Die Admin-Glocke ist je Thread entprellt, aber nur INNERHALB einer ungelesenen Serie: liegt im Thread schon eine andere
+ungelesene User-Nachricht, gibt es keine neue Glocke; nach dem Lesen klingelt die nächste wieder.
 
 ### Repertoires (auth)
 | Methode | Endpoint | Zweck |
@@ -499,7 +518,7 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | DELETE | `/api/games/{id}` | Auth | Eigene Partie löschen |
 | POST | `/api/games/import` | Auth | **PGN hochladen** (0.553.0, Knopf „PGN hochladen" auf `/games`: Datei wählen ODER einfügen) `{ pgn }` → `{ imported, duplicates, truncated, ids[], failed[{ index, white, black, reason }] }`. Jede Partie des Textes wird eine eigene Partie mit Quelle `pgn`: HAUPTVARIANTE samt Kommentaren und allen Kopfdaten (Elo, Bedenkzeit, FEN …), Varianten fallen weg (Analyse/Kurve/Fehler-Training arbeiten auf einer Zugfolge). Eine Partie, deren Hauptvariante nicht bis zum Ende legal ist, wird NICHT gekürzt angelegt (`reason` `illegal`/`noMoves`/`tooLong`/`badFen`). Zweimal hochgeladen = einmal da: `ExternalId` = Hash über Seven-Tag-Kopfdaten, FEN und Züge (`SavedGameService.ImportKey`, eindeutig je Nutzer). Deckel `MaxImportGames` 200 (`truncated`), `MaxImportChars` 5 Mio. (400 `tooLarge`; leer → 400 `empty`). Der Dialog schließt bei vollem Erfolg (genau eine neue Partie → gleich geöffnet) und bleibt sonst offen mit der Liste der nicht übernommenen |
 | GET | `/api/games/{id}/explanations?lang=` | Auth | „Warum war das ein Fehler?" (0.534.0): gespeicherte Erklärungen der verknüpften Analyse in der Sprache (`{ available, canGenerate, running, language, items[{ ply, class, text, master? }] }`; `master` = der mitgegebene Meisterkommentar, 0.542.0: `{ libraryGameId, white, black, event, year, annotator, text }`) |
-| POST | `/api/games/{id}/explanations?lang=` | Auth | Erzeugen anstoßen (Hintergrund, nur Besitzer). 503 `notConfigured` ohne Modell auf eigener Hardware, 404 fremde Partie, 409 ohne fertige verknüpfte Analyse |
+| POST | `/api/games/{id}/explanations?lang=` | Auth | Erzeugen anstoßen (Hintergrund, nur Besitzer). 503 `notConfigured` ohne Modell auf eigener Hardware, 404 fremde Partie, 409 ohne fertige verknüpfte Analyse, 429 `{ reason: "tooManyRunning", maxRunning: 2 }` bei zwei laufenden Aufträgen des Kontos (dasselbe Paar Analyse/Sprache noch einmal = „läuft schon", kein 429; Codereview A6-005) |
 | GET | `/api/games/shared/{token}/explanations?lang=` | AllowAnonymous | Dasselbe lesend für den Teilen-Link (`canGenerate` immer false) |
 | GET | `/api/games/{id}/roasts?lang=` | Auth | „Roast my game" (0.535.0): die gewürfelten Kommentare der eigenen Partie `{ available, hasAnalysis, items[{ style, language, text, createdAt }] }`; 404 fremde Partie |
 | POST | `/api/games/{id}/roasts?style=&lang=` | Auth | Würfeln (ersetzt den vorigen Text desselben Stils; `style` ∈ friendly/cheeky/russian). Absagen mit `reason`: 503 notConfigured, 404 notFound, 409 noAnalysis, 400 invalidStyle, 429 dailyLimit (`MaxPerDay` 60), 502 failed |
@@ -507,6 +526,12 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/games/shared/{token}/similar` | AllowAnonymous | Dasselbe für den Teilen-Link (Kopfdaten ohne Züge, derselbe Zuschnitt wie die anonyme Bestandssuche; anonym trägt nur `inPool`) |
 | GET | `/api/library-games/{id}/view?lang=` | Auth | „Anschauen" einer Meisterpartie (0.567.0, `LibraryGameService.ViewAsync`) → `{ id, pgn, language, languages }`: PGN aus der HAUPTVARIANTE und den Kommentar-Sätzen in `lang` (`CommentSetService.ForLibraryAsync`: dieselbe Regel wie beim Nachspielen, fehlende Halbzüge aus der Quelle, Quell-Sätze entstehen beim ersten Bedarf), nicht das rohe Quell-PGN (zwei Sprachen hintereinander, ChessBase-Figurenschrift). Nur angemeldet wie das Anfordern; 404 unbekannt/aussortiert/nicht nachspielbar |
 | GET | `/api/games/{id}/recap` | Auth | „Kurz erzählt" (0.541.0): die Nacherzählung der eigenen Partie `{ available, hasAnalysis, text?, language?, createdAt?, pending }`. Fehlt sie bei fertiger Analyse (Analyse von vor 0.541.0, gescheiterter Lauf), stößt schon dieser Abruf sie im Hintergrund an (`pending: true`, die Seite fragt alle 15 s nach, höchstens achtmal); 404 fremde Partie. Der Teilen-Link bekommt denselben Text als `recap` in `GET /api/games/shared/{token}` |
+
+**Deckel je Konto** (Codereview 2026-09-29, A6-007): höchstens `SavedGameService.MaxGamesPerUser` (5 000) Partien
+und `MaxPgnCharsPerUser` (100 Mio. Zeichen PGN, Summe) je Konto, alle Quellen zusammen. `POST /api/games/import`
+meldet jede neue Partie darüber in `failed` mit `reason: "quota"` (HTTP 200); `PUT /api/games/{id}` antwortet bei
+wachsendem PGN über dem Zeichendeckel 400 `{ reason: "quota" }` (Kürzen geht immer); `POST /api/extension/games`
+400 am Zähldeckel. Züge der Extension höchstens 16 Zeichen (`MaxSanLength`, sonst 400 „Invalid move.").
 
 **„Warum war das ein Fehler?" (0.534.0, `GameMoveExplanationService`).** Zu jedem Fehler der verknüpften Analyse
 (Ungenauigkeit/Fehler/grober Fehler/verpasste Chance, die schwersten `MaxPerGame` = 15) schreibt das Sprachmodell auf
@@ -701,6 +726,11 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 | GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` |
 | POST | `/api/tournaments/crawl` | `/api/crawl` |
 | POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` |
+
+**Crawler-Aufträge je Konto gedrosselt** (Codereview 2026-09-29, A5-004): Policy `user-crawl` (10/min je Konto,
+`RateLimitPartitions.CrawlerRequest`, ein gemeinsames Fenster) auf `POST /api/tournaments/crawl`,
+`/crawl/player-details`, `/{id}/clubs` und `POST /api/tournament-monitors/{id}` — zusätzlich zum globalen Deckel je IP;
+die Crawler-Warteschlange (500 Plätze) und der chess-results-Takt gehören auch den Hintergrunddiensten.
 
 ### Chessable-Integration (auth, leitet an piratechess-API weiter)
 
@@ -913,7 +943,14 @@ elf Runden. Gezaehlt werden die Kartenzeilen MIT Gegner — ein Freilos ist kein
 | GET/POST/DELETE | `/api/subscriptions[/{id:int}]` | Abonnierte Turniere verwalten |
 | DELETE | `/api/subscriptions/by-tournament/{crawlerTournamentId}` | Abo ueber die TURNIER-Nummer loesen statt ueber die Abo-Id — die Kurzansicht auf Karte, Liste und Kalender kennt das Turnier, nicht das Abo. **Idempotent** (204 auch ohne Abo): der Merken-Knopf ist ein Umschalter, und „war schon nicht gemerkt" ist kein Fehlerfall. Literal-Route VOR `{id:int}` |
 | GET/POST/DELETE | `/api/tournament-favorites[/{id}]` | Favoriten verwalten |
-| GET/POST | `/api/tournament-monitor[/{id}]` | Per-Turnier-User-Einstellungen + Runden-Monitor (Round-Watch, Auto-Subscribe) |
+| GET/POST/DELETE | `/api/tournament-monitors/{tournamentId}` | Per-Turnier-User-Einstellungen + Runden-Monitor (Round-Watch, Auto-Subscribe). POST: Rate-Limit `user-crawl`; höchstens 10 aktive Monitore je Konto (`MaxActiveMonitorsPerUser`, sonst 409 — auch beim Wiederbeleben eines abgelaufenen Monitors; einen aktiven verlängern geht immer, abgelaufene zählen nicht) |
+
+**Eine Kennung je Turnier** (Codereview 2026-09-29, A5-001): `POST /api/subscriptions` speichert IMMER die
+chess-results-Nummer — eine Crawler-DB-Id löst der Crawler auf, ein Alt-Abo unter der DB-Id wird umgeschlüsselt.
+Runden-Monitor und Abo-Refresh lösen die Kennung vor jedem Crawl über `CrawlQueueClient` auf.
+**Runden-Monitor** (A5-007): `RoundMonitorService` prüft je Turnier (`CrawlerTournamentDbId`) einmal je Durchlauf und
+meldet nur Runden über `LastKnownRounds` hinaus — jede Runde genau einmal. Crawl-Aufträge der Hintergrunddienste
+laufen über `CrawlQueueClient.RequestAsync`; 409 vom Crawler heißt „läuft schon", kein Fehler.
 
 ### Turnierverzeichnis / Turnierkalender (auth)
 Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirectoryScheduler`,
@@ -989,14 +1026,14 @@ gibt es 19-mal).
 | Methode | Endpoint | Zweck |
 |---------|----------|-------|
 | GET | `/api/tournament-directory?from&to&lat&lon&radiusKm&fed&speed&q&weekendOnly&minPlayers&profileId&kinds&ageGroups&genders&adultsOnly&hideLeagues&page&pageSize` | Turnierliste; Umkreis via Bounding-Box (SQL) + Haversine (C#). `q` sucht in Name, Ort UND Veranstalter. Die fuenf Publikums-/Formatfilter binden als EIN Objekt (`DirectoryAudienceQuery`) und gelten fuer Liste, Karte und Kalender gleich: `kinds` individual/team/unknown — **„individual" schliesst `unknown` MIT ein**: die Quelle sagt nur „ist MANNSCHAFTS-Turnierart", alles andere ist Einzel, und `unknown` heisst „Abfrage lief hier noch nicht / fiel aus" (kein eigener Fall fuer den Suchenden; als eigener gefuehrt lieferte „Einzel" eine halb leere Liste). In der SPALTE bleibt `Unknown` stehen, damit ein Netzausfall den Bestand nicht auf Einzel umschreibt, `ageGroups` u8…u20/youthUnspecified/senior (**Ueberschneidung**, nicht Gleichheit — „u12" findet die U8-U18-Meisterschaft), `genders` open/female/male, `adultsOnly` (kein JUGENDmerkmal; Senioren bleiben sichtbar), `hideLeagues`. Ein unbekannter Wert ist ein **400**, kein stilles Ignorieren |
-| GET | `/api/tournament-directory/map?bbox=minLat,minLon,maxLat,maxLon` | Kartenmarker im Ausschnitt (gedeckelt) |
-| GET | `/api/tournament-directory/calendar?year&month` | Ein Monat: `tournaments` (jedes Turnier EINMAL) + `days` (je Tag nur die Nummern der laufenden). Mehrtaegige Turniere stehen an JEDEM ihrer Tage — voll ausgeschrieben waren das 5962 Eintraege fuer 200 Turniere, also ~3 MB je Monat; das Frontend setzt es in `expandCalendar` wieder zusammen |
-| GET | `/api/tournament-directory/{publicId}` | Einzelnes Turnier (auch abgesagte). `publicId` ist die IDENTITAET: die chess-results-Nummer oder `f<FIDE-Nummer>` |
+| GET | `/api/tournament-directory/map?bbox=minLat,minLon,maxLat,maxLon` | Kartenmarker im Ausschnitt (gedeckelt, `limit` Vorgabe 2000, höchstens 5000 Zeilen); Antwort `{ items, truncated }` — `truncated` = es fehlen die spätesten Turniere (Codereview F6-006, VERTRAGSÄNDERUNG: vorher eine nackte Liste) |
+| GET | `/api/tournament-directory/calendar?year&month` | Ein Monat: `tournaments` (jedes Turnier EINMAL) + `days` (je Tag nur die Nummern der laufenden). Mehrtaegige Turniere stehen an JEDEM ihrer Tage — voll ausgeschrieben waren das 5962 Eintraege fuer 200 Turniere, also ~3 MB je Monat; das Frontend setzt es in `expandCalendar` wieder zusammen. Höchstens 5000 Turniere je Monat (`CalendarMaxTournaments`), darüber `truncated`; Einträge ohne jeden Termin fehlen (Codereview A5-002 — vorher still bei 200 gekappt) |
+| GET | `/api/tournament-directory/{publicId}` | Einzelnes Turnier (auch abgesagte). `publicId` ist die IDENTITAET; erlaubte Formen (chess-results-Nummer, `f<FIDE-Nummer>`, Kürzel der Verbandsquellen …) stehen an EINER Stelle in `Services/DirectoryPublicId.cs` — dieselbe Prüfung für Detailseite, Ausblenden und Melden (Codereview A5-003) |
 | GET | `/api/tournament-directory/places?q=` | Ortsvorschlaege aus dem Gazetteer (PLZ oder Name) |
 | GET | `/api/tournament-directory/places/nearest?lat&lon` | Naechstgelegener Gazetteer-Ort zu Koordinaten — fuer das Ortsfeld, wenn der BROWSER den Standort liefert (die Koordinaten des Nutzers verlassen den Server nicht). 204, wenn im Umkreis von 200 km kein Ort im Lexikon liegt |
-| POST | `/api/tournament-directory/{publicId}/report` | „Falsches Event melden" — Rueckmeldung zu einem Eintrag `{ message?, location?, kind?, ageGroups?, gender?, speed?, isLeague?, namePattern?, sourceLink? }`, ALLE Felder freiwillig. Landet im bestehenden **Admin-Nachrichtenkanal** (`AdminMessageService.SendFromUserAsync`) statt in einer eigenen Tabelle: dort gibt es Oberflaeche, Glocke und — entscheidend — einen Rueckweg zum Melder. `namePattern` ist die Lern-Frage („bei uns heissen die Jugendturniere Schachrallye") und wandert in die Wortlisten des `TournamentClassifier` |
+| POST | `/api/tournament-directory/{publicId}/report` | „Falsches Event melden" — Rueckmeldung zu einem Eintrag `{ message?, location?, kind?, ageGroups?, gender?, speed?, isLeague?, namePattern?, sourceLink? }`, ALLE Felder freiwillig. Landet im bestehenden **Admin-Nachrichtenkanal** (`AdminMessageService.SendFromUserAsync`) statt in einer eigenen Tabelle: dort gibt es Oberflaeche, Glocke und — entscheidend — einen Rueckweg zum Melder. `namePattern` ist die Lern-Frage („bei uns heissen die Jugendturniere Schachrallye") und wandert in die Wortlisten des `TournamentClassifier`. Rate-Limit `user-message` (gemeinsamer Topf mit `POST /api/messages/reply`, Codereview F5-001) |
 | POST/DELETE | `/api/tournament-directory/{publicId}/ignore` | Ein Turnier FUER MICH ausblenden bzw. wieder zeigen (idempotent). Es verschwindet aus Liste, Karte und Kalender — und aus der naechtlichen Umkreis-Meldung; nur mit `audience.includeIgnored=true` kommt es mit (und traegt dann `ignored: true`). Die DETAILseite zeigt es immer, dorthin ist man absichtlich gegangen |
-| POST | `/api/tournament-directory/suggest-source` | „Mein Turnier fehlt" `{ link, message? }` — Hinweis auf eine noch nicht gecrawlte Quelle. Der **Link ist Pflicht** (nur absolutes http/https): ein Verbandskalender laesst sich zusaetzlich auswerten, eine Aufzaehlung im Freitext nicht |
+| POST | `/api/tournament-directory/suggest-source` | „Mein Turnier fehlt" `{ link, message? }` — Hinweis auf eine noch nicht gecrawlte Quelle. Der **Link ist Pflicht** (nur absolutes http/https): ein Verbandskalender laesst sich zusaetzlich auswerten, eine Aufzaehlung im Freitext nicht. Rate-Limit `user-message` wie „Melden" |
 | GET/POST/PUT/DELETE | `/api/tournament-search-profiles[/{id}]` | Gespeicherte Umkreise; steuern Ansicht UND naechtliche Meldung |
 | GET | `/api/admin/tournament-directory/status` | Sweep-Zustand je Foederation + Geocoding-Quote |
 | POST | `/api/admin/tournament-directory/sweep` | Sweep fuer 1–20 Foederationen sofort ausfuehren |
@@ -1280,7 +1317,7 @@ Eigene Oberfläche (`kidhub(-dev).oberschmid.homes`, drittes Angular-Projekt, si
 | GET | `/api/kids/courses?lang=` | AllowAnonymous | Kinderkurse, die GERADE gezeigt werden `[{ bookId, title, description, puzzleCount }]` — freigegeben (`Book.ForKids`), ohne Kalkulationsbücher, ohne leere, und seit 0.565.0 erst, wenn sie in jeder Sprache aus `Kids:RequiredCourseLanguages` (Vorgabe `de`) vorliegen: Quelle in der Sprache ODER ein fertiger Übersetzungsauftrag (`Done`, auch „nichts zu tun"). `title` = Kindertitel in `lang` → `en` → `de` → Buchname (`KidsTitles.Pick`), sortiert nach diesem Titel; `puzzleCount` ohne Info-Linien
 | GET | `/api/kids/courses/{bookId}/puzzles?lang=` | AllowAnonymous | Aufgaben eines Kinderkurses in Lesereihenfolge (`BookPuzzleDto`, OHNE `IsInfoOnly`); `lang` wie bei den Kursen. 404 wenn nicht `ForKids`/Kalkulationsbuch/noch nicht in der geforderten Sprache; `bookTitle` = Kindertitel wie oben |
 | GET | `/api/kids/progress` | Auth | Fortschritt im Konto `{ levels[{ level, stars, runIndex, runMistakes, runAt }], courses[{ bookId, resetAt, solved[{ id, at }] }] }` — Zeiten in ms seit 1970 (0.563.0) |
-| PUT | `/api/kids/progress` | Auth | Den GANZEN Stand des Browsers schicken → zusammengeführt gespeichert, Antwort = gemeinsamer Stand (`KidsProgressMerge`, Regeln unten). 400 über den Deckeln (`MaxLevels` 1000, `MaxCourses` 500, `MaxLinesPerCourse` 10 000); Zeiten über jetzt + 1 Tag werden gekappt |
+| PUT | `/api/kids/progress` | Auth | Den GANZEN Stand des Browsers schicken → zusammengeführt gespeichert, Antwort = gemeinsamer Stand (`KidsProgressMerge`, Regeln unten). 400 über den Deckeln (`MaxLevels` 1000, `MaxCourses` 500, `MaxLinesPerCourse` 10 000); Zeiten über jetzt + 1 Tag werden gekappt. Je KONTO gedeckelt (Codereview F7-001): der eingehende Stand behält nur Kinderkurse (`Book.ForKids`, kein Kalkulationsbuch) und nur deren eigene Linien-Ids, Stufen nur 1..1000 (Gespeichertes bleibt); Rumpf höchstens 1 MB (`RequestSizeLimit`) |
 | GET | `/api/kids/language-hint` | AllowAnonymous | Land der Besucher-IP und passende Kindersprache `{ country, language }` (0.560.0) — lokal nachgeschlagen; ein bekanntes Land ohne eigene Kindersprache → `en` (0.560.1); beides `null` bei LAN-Adresse, unbekanntem Land oder ohne Länderliste |
 | POST | `/api/kids/endless/batch` | AllowAnonymous (`anonymous-read`) | Endlos-Modus (0.566.0): `{ windows[{ minRating, maxRating }] (≤ 40), exclude[] (≤ 1000) }` → je Fenster ein kindgerechtes Lichess-Puzzle `[{ id, fen, moves, rating }]` in Fensterreihenfolge, im Lauf keins doppelt; Fenster ohne Treffer fehlen. 400 über den Deckeln |
 | POST | `/api/admin/kids/rebuild` | `puzzles.manage` | Leiter sofort neu rechnen → `{ levels, puzzles }` (nach einem Neuimport der Standard-Puzzles, der sie per Cascade leert) |
@@ -1473,7 +1510,10 @@ Rollenverwaltung an).
   `ghcr.io/kahalm/rookhub-leaguehub:{dev,latest}` aus demselben Dockerfile, `APP_PROJECT=leaguehub`, Host-Port Dev
   **8099** / Prod **8100** — 8098 hält bis zum Umschalten noch der Python-Stack). Routen `/` (Liga/Runde/Verein,
   `authGuard`; ohne `league.view` „Nicht freigeschaltet"), `/verein*` (Vereins-Datenbank, siehe unten), `/s/:token` (geteilte Begegnung OHNE Anmeldung), dazu RookHubs
-  Masken über `@rh/*` (`/login`, `/register`, …, `/impressum`, `/privacy`). Die Seite ist deutsch
+  Masken über `@rh/*` (`/login`, `/register`, …, `/impressum`, `/privacy`; `/privacy` zeigt mit `LEGAL_SITE.kind`
+  `'leaguehub'` den Abschnitt über die Ligaspieler ohne Konto (Art. 14 DSGVO, Codereview F7-006) — bei neuen
+  Datenquellen/Freigaben dort nachziehen; die Frist des IP-Prüfwerts ist nach dem Ist-Stand beschrieben (geleert nur
+  nach dem nächsten anonymen Upload), nach einer Retention-Senke den Text kürzen). Die Seite ist deutsch
   (`LocaleService.applyUnsaved('de')`, die Wahl aus RookHub bleibt), hell/dunkel über den geteilten `ThemeService`,
   eigene Gestaltung in `src-leaguehub/leaguehub.scss` (Barlow, nach `src/styles.scss` geladen). Kein Service Worker —
   die Prognosen sollen frisch vom Server kommen. `partner-site.ts` kennt `leaguehub(-dev)` nur fürs geteilte
@@ -1586,7 +1626,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   Hochladenden, ohne Konto eingereicht niemanden — nicht den Verwalter. Fertig importiert oder verworfen wird die
   Zeile GELÖSCHT (der Rohtext nennt die Spieler von Schwaz mit Namen), ebenso nach 30 Tagen ohne Bewegung und beim
   Kontolöschen. Deckel: 20 offene je Konto, 5 je IP ohne Konto (HMAC wie bei den Formularen); ohne Konto gehört der
-  Entwurf dem Browser mit dem Schlüssel (`lh-anon-drafts`).
+  Entwurf dem Browser mit dem Schlüssel (`lh-anon-drafts`). „Schließen" in der Übersicht lässt den Entwurf liegen;
+  endgültig verwerfen nur aus „Deine offenen Listen“/„Offene Listen anderer“ mit Rückfrage (bei fremder Liste mit dem
+  Namen des Einreichers; Codereview F7-004).
 * **ChessBase-Datenbanken** (0.598.0, Wunsch „ein Import für 2cbh und cbh zusätzlich zu PGN — bau es selbst in C#
   nach"; `Services/ChessBase/`): `POST …/club/games/chessbase` (angemeldet und über den Teilen-Link) nimmt die Dateien EINER
   Datenbank (einzeln, einzeln gepackt als `name.2cbg.gz` oder als ZIP) und antwortet mit einem PGN — gespeichert wird dabei
@@ -1627,7 +1669,9 @@ Gegner zeigen sie mit (Quelle „Verein"). Regeln (`Services/League/LeagueClubSe
   `ScoresheetScan.UserId` ist `null`, die Einlesung gehört dem Browser mit dem geheimen `AccessKey` (32 Hex, einmal beim
   Hochladen ausgegeben, LeagueHub merkt ihn im localStorage `lh-anon-scans`); **höchstens 10 je IP und 100 je Tag für
   alle zusammen** (`AnonPerIpDailyLimit`, `AnonDailyLimit`, Absage `dailyLimit` bzw. `anonDailyLimit`), drei offene je
-  IP, nur das Gesamtbudget. Gezählt wird über `AnonIpHash` = HMAC der IP (Schlüssel `Jwt:Key`) — die Adresse selbst
+  IP, Geld: das eigene Tagesbudget ohne Konto (`Scoresheet:AnonDailyUsd`, 3 $) UND das Gesamtbudget; Zählprüfung und
+  Anlegen laufen nacheinander (Semaphor, parallele Uploads schlüpfen nicht durch). Gezählt wird über `AnonIpHash` =
+  HMAC der IP (Schlüssel `Jwt:Key`; IPv4 bzw. IPv4-in-IPv6 als Adresse, echtes IPv6 je /64) — die Adresse selbst
   steht nirgends, der Vermerk wird nach zwei Tagen geleert. Übernehmen oder Verwerfen schließt die Einlesung
   (`CloseLeagueScanAsync` = `DetachWithoutLoading` + Dateiname „∅" + Schlüssel weg): Foto und Lesung gehen, die Zeile
   bleibt fürs Kontingent — und nichts verbindet sie mit der Partie.
@@ -1977,7 +2021,8 @@ Rolle wirkte erst nach dem nächsten Anmelden, eine entzogene galt so lange weit
 * **Oberfläche**: `GET /api/auth/permissions` → `{ isAdmin, permissions }` (live). `AuthService.has` liest diesen Stand
   (Signal, sonst die Claims des Tokens als Rückfall); `core/permission-refresher.service.ts` holt ihn vor dem ersten
   Seitenaufbau (`provideAppInitializer` in RookHub, Turnierseite, LeagueHub, höchstens 3 s gewartet), bei jeder
-  An-/Abmeldung, beim Zurückkehren in den Tab (≥ 30 s Abstand) und alle 2 min, solange der Tab sichtbar ist.
+  An-/Abmeldung, beim Zurückkehren in den Tab (höchstens alle 2 min, seit Codereview F1-019 — vorher ≥ 30 s) und alle
+  2 min, solange der Tab sichtbar ist.
 * Die `perm`-Claims beim Anmelden bleiben (jetzt inkl. Gruppenrollen) — nur noch Startwert für ältere Oberflächen.
 
 ### Menü-Sichtbarkeit (Admin konfiguriert, je Nutzer aufgelöst)
@@ -2018,9 +2063,9 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 |---------|----------|------|-------|
 | GET | `/api/courses` | Auth | Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle) |
 | GET | `/api/courses/access` | Auth | `{ hasAccess }` — Basis für die Menü-Sichtbarkeit (Admin: true wenn Bücher existieren) |
-| POST | `/api/courses` (Alt-Route `/api/courses/upload`) | Auth | „Neuen Kurs erstellen“: legt einen persönlichen Kurs an (eigenes Buch, nur für den Besitzer sichtbar). Multipart mit `name` und OPTIONALEM `file` (.pgn, max. 10 MB) — **ohne Datei entsteht ein LEERER Kurs**, der danach über die Detailseite Kapitel für Kapitel gefüllt wird (`ImportVersion` steht sofort auf der aktuellen Pipeline-Version, damit ein handgepflegtes Buch nicht im „Aktualisieren“-Banner hängt); ohne Datei ist `name` Pflicht (400), weil es keinen Dateinamen zum Ableiten gibt. MIT Datei gilt die alte Regel: Puzzle-PGN im Chessable-Stil, sonst 400 und kein Buch |
+| POST | `/api/courses` (Alt-Route `/api/courses/upload`) | Auth | „Neuen Kurs erstellen“: legt einen persönlichen Kurs an (eigenes Buch, nur für den Besitzer sichtbar). Multipart mit `name` und OPTIONALEM `file` (.pgn, max. 10 MB) — **ohne Datei entsteht ein LEERER Kurs**, der danach über die Detailseite Kapitel für Kapitel gefüllt wird (`ImportVersion` steht sofort auf der aktuellen Pipeline-Version, damit ein handgepflegtes Buch nicht im „Aktualisieren“-Banner hängt); ohne Datei ist `name` Pflicht (400), weil es keinen Dateinamen zum Ableiten gibt. MIT Datei gilt die alte Regel: Puzzle-PGN im Chessable-Stil, sonst 400 und kein Buch. Linien mit mehr als 1000 Halbzügen zählen als ungültig (`PgnImportService.MaxMainlinePlies`, geprüft VOR dem Nachspielen — Codereview N3-003) |
 | GET | `/api/courses/{bookId}/chapters` | Auth | Kapitel des Buchs in Lesereihenfolge inkl. Fortschritt je Kapitel (`index`/`name`/`puzzleCount`/`solvedCount`/`progressPercent`); `name=null` = Sammel-„ohne Kapitel" |
-| GET | `/api/courses/{bookId}/next?mode=&after=&exclude=&chapterIndex=` | Auth | Nächstes ungelöstes Puzzle (siehe `mode` oben); mit `chapterIndex` auf das Kapitel beschränkt (Pool + Fortschritt) |
+| GET | `/api/courses/{bookId}/next?mode=&after=&exclude=&chapterIndex=` | Auth | Nächstes ungelöstes Puzzle (siehe `mode` oben); mit `chapterIndex` auf das Kapitel beschränkt (Pool + Fortschritt). **Kalkulationsbücher → 404** |
 | POST | `/api/courses/{bookId}/results` | Auth | Lösungsversuch aufzeichnen (idempotent); validiert Puzzle↔Buch |
 | GET | `/api/courses/{bookId}/puzzles` | Auth | Alle Puzzles eines (zugänglichen) Buchs am Stück — für Offline-Speichern. **Kalkulationsbücher → 404** (der Voll-Export enthielte `Moves`, also die Lösung; „öffentlich" heißt Kurs-Zugriff für JEDEN angemeldeten Nutzer). Frontend blendet Offline-Speichern/Durchsehen/Flashcards bei diesen Büchern aus |
 | GET | `/api/courses/by-slug/{slug}` | **AllowAnonymous** | Kurz-Alias (`Book.PublicSlug`, nur öffentliche Bücher) → `{ bookId, isCalculation }`; 404 bei unbekanntem Alias. `isCalculation` entscheidet, ob `/{slug}` in den Kalkulations-Modus oder in den Solver springt (ein Kalkulationsbuch hat nur Info-Linien → der Solver meldete sofort „abgeschlossen") |
@@ -2029,7 +2074,7 @@ Der `mode`-Parameter bei `/next` akzeptiert `sequential` (Buchreihenfolge, `afte
 | GET | `/api/courses/history?page=&pageSize=` | Auth | Paginierte Kurs-Versuchs-History (neueste zuerst) inkl. Buch-Puzzle-Infos (LineId/Title/BookRating/Difficulty). Literal-Route vor `{bookId}` |
 | GET | `/api/courses/stats/breakdown` | Auth | Aufschlüsselung der Kurs-Versuche nach Tag/Thema (aus `BookPuzzle.Tags`), Rating-Band (aus `BookPuzzle.BookRating`) und Aktivität (`PuzzleBreakdownDto`). Literal-Route vor `{bookId}` |
 | POST | `/api/courses/{bookId}/reset` | Auth | Fortschritt des Kurses zurücksetzen |
-| POST | `/api/courses/{bookId}/convert-to-repertoire` | Auth | „Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN (`CourseRepertoireConversionService.ConvertCourseToRepertoireAsync` → `RepertoireService.CreateFromPgnAsync`, `UseForExtension=false`) ein neues Repertoire an; ein EIGENER Kurs wird dabei entfernt (Verschieben), ein geteilter bleibt. Zugriff wie andere Kurs-Endpoints (kein Zugriff → 404) |
+| POST | `/api/courses/{bookId}/convert-to-repertoire` | Auth | „Kurs → Repertoire umwandeln": legt aus dem Kurs-PGN (`CourseRepertoireConversionService.ConvertCourseToRepertoireAsync` → `RepertoireService.CreateFromPgnAsync`, `UseForExtension=false`) ein neues Repertoire an; ein EIGENER Kurs wird dabei entfernt (Verschieben), ein geteilter bleibt. Zugriff wie andere Kurs-Endpoints (kein Zugriff → 404). **Kalkulationsbücher → 404** |
 | GET | `/api/courses/reprocess/status` | Auth | Aufbereitungs-Status der verwaltbaren Kurse (Admin: alle; sonst eigene): `{ currentVersion, total, stale, reprocessableLocally, fromCache, refetchable, needsReimport }` (`fromCache` ⊆ `reprocessableLocally`) — Basis fürs „Aktualisieren (N)"-Banner. Literal-Route vor `{bookId}` |
 | POST | `/api/courses/reprocess` | Auth | Bereitet alle veralteten verwaltbaren Kurse neu auf: lokal in-place aus `Book.Source.SourcePgn` (Fortschritt/IDs bleiben), Chessable-Kurse mit `[ChessableOid]` vorher mit frischen Zugtexten aus dem Linien-Cache (`StaleAction.Cache`), Chessable-Altbestand ohne Quelle wird als Re-Fetch-Job eingereiht; sonst übersprungen. `?localOnly=true` („Aus Cache") lässt nur den Re-Fetch aus. Läuft im Hintergrund (`ReprocessLauncher`), antwortet sofort 202 `{ started }`; Ergebnis im Log (`reprocessed, updatedLines, rebuiltFromCache, cacheLinesReplaced, enqueued, skipped, failed`) |
 | POST | `/api/courses/{bookId}/share` | Auth | „Kurs mit ausgewählten Personen teilen" (Batch) `{ recipientUserIds[] }` — nur der Besitzer eines persönlichen Kurses; Empfänger müssen befreundet sein (Admin an alle). Antwort `{ shared, skipped[] }` (übersprungen mit Grund `self`/`not_found`/`not_friends`/`duplicate`); legt je neuem Empfänger die Notification `course_shared` an. 403 wenn nicht Besitzer |
@@ -2063,15 +2108,15 @@ sollen nicht im „Aktualisieren"-Banner hängen).
 
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
-| GET | `/api/courses/{bookId:int}` | Auth | Detailbild: Metadaten, Fortschritt, `canManage`, Kapitel-Verwaltungssicht (`LineCount`/`QuizCount`/`SolverIndex`/`FirstLineId`) |
-| GET | `/api/courses/{bookId:int}/lines?chapter=` | Auth | Linien EINES Kapitels (leer = „ohne Kapitel") — mit `MoveCount`, aber **ohne Zugfolge** |
+| GET | `/api/courses/{bookId:int}` | Auth | Detailbild: Metadaten, Fortschritt, `canManage`, Kapitel-Verwaltungssicht (`LineCount`/`QuizCount`/`SolverIndex`/`FirstLineId`). Terminierte, für den Betrachter noch gesperrte Wochen einer Kalkulations-Serie fehlen in Kapitelliste UND Zählern (`Services/CalcVisibility.cs`; Besitzer/Admin sehen alles — Codereview A7-002) |
+| GET | `/api/courses/{bookId:int}/lines?chapter=` | Auth | Linien EINES Kapitels (leer = „ohne Kapitel") — mit `MoveCount`, aber **ohne Zugfolge**. Gesperrte Woche → leere Liste wie ein unbekanntes Kapitel (kein Orakel) |
 | GET | `/api/courses/{bookId:int}/chapter-pgn?chapter=` | Auth | EIN Kapitel als PGN (leer = „ohne Kapitel"): je Linie das Spiel mit derselben `Round` verbatim aus `Book.Source.SourcePgn` (`PgnParser.SplitGameBlocks`), sonst aus der gespeicherten Linie rekonstruiert (`CoursePgnExporter`). **Kalkulationsbücher → 404** (die Züge wären die Lösung) |
 | GET | `/api/courses/{bookId:int}/lines/{lineId:int}/pgn` | Auth | EINE Linie als PGN, gleiche Regeln wie beim Kapitel. Alle drei Kurs-Downloads (auch `/{bookId}/pgn`) entfernen die internen Marker `[%alt]`/`[%info]` (`PgnParser.StripInternalMarkers`); „Kurs → Repertoire" und der Repertoire-Endpunkt `/api/repertoires/{id}/pgn` behalten sie (Viewer/Trainer brauchen `[%alt]`), dort entfernt das Frontend sie erst beim Speichern (`shared/pgn-export.util.ts`) |
 | POST | `/api/courses/{bookId:int}/lines` | Besitzer/Admin | Stellungen als Text einfügen `{ chapter?, text }` → `{ added, chapter, issues[], totalLines }`. Parser = `Services/FenListParser.cs` (eine FEN je Zeile, führende Nummer „1:"/„2." wird ignoriert, Kommentar nach `\|` oder in `{…}`; **keine** Legalitätsprüfung, nur Struktur). Bereits im Buch vorhandene FENs → `issues` mit Grund `duplicate`; max. 500 Zeilen (`too_many`) |
 | DELETE | `/api/courses/{bookId:int}/lines/{lineId:int}` | Besitzer/Admin | Einzelne Linie löschen (räumt Restrict-Abhängige ab: CoursePuzzleResults/CourseAttempts/CourseInfoViews/BookPuzzleAttempts/DailyPuzzles/CalculationTrees) |
 | PUT | `/api/courses/{bookId:int}/calculation` | Besitzer/Admin | Kalkulations-Modus des Kurses ein-/ausschalten `{ isCalculation }` → `{ isCalculation }`. Ändert KEINE Linien (Analysebäume/Lösungen bleiben), nur Einstieg + Fortschritts-Zählung. Bewusst hier statt im Admin-Bücher-Tab: wer die Stellungen einfügt, entscheidet auch, wie sie serviert werden |
-| PUT | `/api/courses/{bookId:int}/chapters/rename` | Besitzer/Admin | Kapitel umbenennen `{ chapter, newName }` (leerer Name = „ohne Kapitel"); 400 wenn Zielname existiert |
-| POST | `/api/courses/{bookId:int}/chapters/delete` | Besitzer/Admin | Ganzes Kapitel = alle seine Linien löschen `{ chapter }` |
+| PUT | `/api/courses/{bookId:int}/chapters/rename` | Besitzer/Admin | Kapitel umbenennen `{ chapter, newName }` (leerer Name = „ohne Kapitel"); 400 wenn Zielname existiert. Eine Ausgabe der Kalkulations-Serie wird in derselben Speicherung mit umbenannt; Ziel „ohne Kapitel" bzw. ein Ziel mit schon vorhandener Ausgabe → 400, bevor etwas geändert wird (Codereview A7-003) |
+| POST | `/api/courses/{bookId:int}/chapters/delete` | Besitzer/Admin | Ganzes Kapitel = alle seine Linien löschen `{ chapter }` — löscht die Ausgabe der Kalkulations-Serie mit (A7-003) |
 | POST | `/api/courses/{bookId:int}/chapters/reset` | Auth | **Einzel-Kapitel-Reset des EIGENEN Fortschritts** `{ chapter }` — leert CoursePuzzleResults/CourseAttempts/CourseInfoViews dieses Kapitels. Buchweites `CourseProgress.ResetAt` bleibt (ist buchweit), eigene `CalculationTrees` bleiben ebenfalls (Nutzerarbeit) |
 
 ### Aufgabenblätter (auth) — Stellungen sammeln, ordnen, drucken
@@ -2158,7 +2203,11 @@ Freigabe öffentlicher Kalkulations-Kurse). Die Solver-/Kurs-Wege reichen die Li
 `BookPuzzleService.MapToDto` samt `Moves` durch — in einem Kalkulationsbuch ist das die Lösung. Sie
 antworten dort deshalb wie auf ein nicht vorhandenes Buch (404): `GET /api/courses/{bookId}/public`
 (anonym), `GET /api/courses/{bookId}/puzzles` (Offline-Export), `GET /api/book-puzzles/{id}/next` und
-`{id}/random`. **Warum das nötig ist**: ein öffentlicher Kalkulations-Kurs BRAUCHT `Book.IsPublic` für
+`{id}/random`, seit dem Codereview 2026-09-29 (A7-001) auch `GET /api/courses/{bookId}/pgn`,
+`POST /api/courses/{bookId}/convert-to-repertoire`, `GET /api/courses/{bookId}/next` und
+`GET /api/book-puzzles/random?bookId=`; die Favoriten (A9-001): `POST /api/favorites` lehnt Linien aus
+Kalkulationsbüchern mit 404 ab, `GET /api/favorites` liefert bei solchen Linien `moves` leer. Alle PGN-Exporte
+(Buch/Kapitel/Linie) liegen im `CoursePgnExportService` hinter EINER Pforte (`EnsureExportAllowedAsync`, A7-010). **Warum das nötig ist**: ein öffentlicher Kalkulations-Kurs BRAUCHT `Book.IsPublic` für
 seine Kurz-URL `/{slug}` — und genau dieses Flag ist auch das einzige Tor dieser Nachbar-Endpoints;
 ohne die Sperre erzwänge das Freischalten die Preisgabe der Lösung. Wer die Zugfolgen wieder über die
 Kurs-Pfade braucht, schaltet den Kalkulations-Modus aus (Besitzer/Admin, `PUT
@@ -2175,14 +2224,14 @@ bewusst ungegatet für Teilen-Links/Tagespuzzle/OG-Vorschau/Bot-Lookup (siehe `B
 | DELETE | `/api/calculations/positions/{bookPuzzleId}` | Auth | Eigenen Baum verwerfen (idempotent) — Zeit/Festlegung/Bewertung bleiben stehen, die Zeile wird nur bei komplett leeren Werten entfernt |
 | GET | `/api/calc-editions/{bookId}` | AllowAnonymous | Kalkulations-Serie: bereits FREIGEGEBENE Ausgaben eines Buchs inkl. Video (keine Entwürfe) — für die Betrachter-Serienseite |
 | GET | `/api/calc-editions/{bookId}/manage` | Besitzer/Admin | ALLE Ausgaben inkl. Entwürfe (Verwaltung); 403 sonst |
-| PUT | `/api/calc-editions/{bookId}` | Besitzer/Admin | Ausgabe anlegen/ändern (Upsert je Kapitel) `{ chapter, title?, videoUrl?, publishAt, testerPreviewAt? }` |
+| PUT | `/api/calc-editions/{bookId}` | Besitzer/Admin | Ausgabe anlegen/ändern (Upsert je Kapitel) `{ chapter, title?, videoUrl?, publishAt, testerPreviewAt? }`; 400 ab 120 Ausgaben je Buch (`MaxEditionsPerBook`, Codereview A7-004) |
 | DELETE | `/api/calc-editions/{bookId}/{editionId}` | Besitzer/Admin | Ausgabe löschen |
 | GET | `/api/calc-editions/{bookId}/members` | Besitzer/Admin | Kalkulations-Serie Phase 2: Verteiler-Mitglieder inkl. Tester-Häkchen (`{ userId, username, isTester, createdAt }`) |
-| PUT | `/api/calc-editions/{bookId}/members` | Besitzer/Admin | Mitglied hinzufügen/ändern per Benutzername `{ username, isTester }`; 404 wenn Nutzer unbekannt |
-| DELETE | `/api/calc-editions/{bookId}/members/{userId}` | Besitzer/Admin | Mitglied aus dem Verteiler entfernen |
+| PUT | `/api/calc-editions/{bookId}/members` | Besitzer/Admin | Mitglied hinzufügen/ändern per Benutzername `{ username, isTester }`. NEU nur Freunde des Besitzers (Admin: jeder); 404 gleich für unbekannt und „kein Freund" (kein Benutzernamen-Orakel); 400 bei Nicht-Kalkulationsbuch oder mehr als 200 Mitgliedern (`MaxMembersPerBook`). Bestehende Mitglieder bleiben änderbar (Codereview A7-004) |
+| DELETE | `/api/calc-editions/{bookId}/members/{userId}` | Besitzer/Admin ODER das Mitglied selbst | Mitglied aus dem Verteiler entfernen bzw. sich selbst austragen |
 | GET | `/api/calc-editions/{bookId}/views` | Besitzer/Admin | Kalkulations-Serie Phase 3: „Gesehen"-Übersicht — welches Verteiler-Mitglied welche Ausgabe wann geöffnet hat (`{ editionId, chapter, userId, username, viewedAt }`) |
 
-**Serien-Freigabe-Benachrichtigung (Phase 3b):** `CalcSeriesAnnounceScheduler` (HostedService, Standard alle 5 min, Config `CalcSeries:AnnounceIntervalSeconds` 60..3600) ruft `CalcSeriesAnnounceService.RunOnceAsync`: fällige Ausgaben → In-App-Benachrichtigung `calc_series_edition_released` (Daten `book`/`chapter`, Link `/courses/{bookId}`) an den Verteiler. Tester werden zum früheren `TesterPreviewAt` informiert, alle übrigen Mitglieder zur öffentlichen `PublishAt`. Idempotent über `CalcEdition.TesterAnnouncedAt`/`PublishAnnouncedAt`; die öffentliche Runde schließt die Tester-Runden-Empfänger über die GESPEICHERTE Liste `CalcEdition.TesterAnnouncedUserIds` (CSV) aus — NICHT über das veränderliche `IsTester`-Flag (sonst würde ein spät hinzugefügter Tester verloren gehen bzw. ein ent-Tester-tes Mitglied doppelt benachrichtigt). **Kein Mail-Kanal** (es gibt kein Mail-Opt-out-Modell — bewusst nur In-App).
+**Serien-Freigabe-Benachrichtigung (Phase 3b):** `CalcSeriesAnnounceScheduler` (HostedService, Standard alle 5 min, Config `CalcSeries:AnnounceIntervalSeconds` 60..3600) ruft `CalcSeriesAnnounceService.RunOnceAsync`: fällige Ausgaben (nur solche, deren Kapitel noch Stellungen hat — eine Ausgabe ohne Stellungen bleibt unmarkiert und wird erst angekündigt, wenn das Kapitel wieder Stellungen hat; Codereview A7-003; Verteiler nur lebende Konten, A9-004) → In-App-Benachrichtigung `calc_series_edition_released` (Daten `book`/`chapter`, Link `/courses/{bookId}`) an den Verteiler. Tester werden zum früheren `TesterPreviewAt` informiert, alle übrigen Mitglieder zur öffentlichen `PublishAt`. Idempotent über `CalcEdition.TesterAnnouncedAt`/`PublishAnnouncedAt`; die öffentliche Runde schließt die Tester-Runden-Empfänger über die GESPEICHERTE Liste `CalcEdition.TesterAnnouncedUserIds` (CSV) aus — NICHT über das veränderliche `IsTester`-Flag (sonst würde ein spät hinzugefügter Tester verloren gehen bzw. ein ent-Tester-tes Mitglied doppelt benachrichtigt). **Kein Mail-Kanal** (es gibt kein Mail-Opt-out-Modell — bewusst nur In-App).
 
 **Rechnen → festlegen → prüfen → bewerten**: je Stellung hält `CalculationTrees` drei eigene SPALTEN
 (nicht im opaken `TreeJson` vergraben — dort wären sie für Auswertungen für immer unerreichbar):
@@ -2224,7 +2273,7 @@ Buch↔Gruppe-Freigabe verwaltet der Admin:
 | PUT | `/api/admin/books/{id}/groups` | Admin | Vollständige Gruppen-Freigabe setzen (ersetzt; ungültige Ids ignoriert) |
 
 ### Wochenpost (öffentlich lesbar, durchspielbar mit Login, Admin verwaltet)
-Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Datum + Uhrzeit). PGN-Validierung via `RepertoireService.LooksLikePgn`. Puzzles werden on-the-fly aus dem PGN geparst (`PgnImportService.ParsePgn`) — Progress ist index-basiert.
+Bildet die wöchentlichen schach-bot-Posts auf RookHub ab: ein PGN + Termin (Datum + Uhrzeit; `WeeklyPost.ScheduledAt` ist UTC — das Frontend schickt ISO mit `Z` und zeigt Ortszeit, Termin-Helfer in `weekly.service.ts`, Codereview F5-009). PGN-Validierung via `RepertoireService.LooksLikePgn`. Puzzles werden on-the-fly aus dem PGN geparst (`PgnImportService.ParsePgn`) — Progress ist index-basiert.
 
 **Per-User-Fortschritt**: idempotenter erster Versuch je `(WeeklyPostId, UserId, PuzzleIndex)`. „Erledigt" = **alle Puzzles gespielt** (gelöst egal). Aufgeben und Reset nach mindestens einem Zug zählen als ✗. Nach jedem **neuen** Versuch fire-and-forget Webhook (`SchachBotWebhookService.NotifyWeeklyAsync`, HMAC-signiert) an den Bot → Discord-Embed mit Live-Bestenliste.
 
@@ -3456,6 +3505,11 @@ bleibt daneben liegen. Menü-Key `scoresheet` (Stufe `Registered`), Frontend `/g
 `/games/:id/edit` (Korrekturseite, für JEDE eigene Partie). Braucht `Anthropic:ApiKey` — und der gehört seit 2026-09-25
 ALLEIN diesem Feature (Tipps/Übersetzung laufen über `Anthropic:TextApiKey`); ohne Schlüssel antwortet der Upload 503 `notConfigured` und die Seite sagt es.
 
+**Datenschutzerklärung** (Codereview 2026-09-29, A6-008): der Abschnitt „KI-Dienste" nennt Anthropic als Empfänger der
+Formular-Fotos und den Sprachmodell-Server (Spark) als Empfänger der Texte (nur als Kategorie). Rechtstext bleibt
+ENTWURF: Betreiber namentlich nennen und AV-Rolle klären entscheidet der Betreiber. LeagueHub-Einlesungen haben
+keinen Aufräumlauf — das Foto geht nur beim Übernehmen oder Verwerfen.
+
 **Drei Schichten, jede für sich testbar:**
 * **Lesen** (`ClaudeScoresheetVisionClient`, Modell `Anthropic:ScoresheetModel`, Vorgabe seit 0.533.2 `claude-opus-5-5`
   im Modus „nur abschreiben" — siehe **Vorgabe** unten; mit `Scoresheet:Thinking=true` adaptives Nachdenken; gestreamt, structured output nach `ScoresheetPrompt.Schema`): je Halbzug, was DASTEHT (`written`, in der
@@ -3557,7 +3611,9 @@ GELD, nicht in Einlesungen — eine Einlesung mit zwei Nachfragen kostet das Dre
 die Tokens, die die API meldet (`InputTokens`/`OutputTokens`/`CostMicroUsd` an der Einlesung; Nachdenken zählt als
 Ausgabe, abgebrochene und abgeschnittene Aufrufe zählen mit). Drei Budgets, alle als Konfiguration mit Vorgabe:
 `Scoresheet:UserDailyUsd` (2), `Scoresheet:UserMonthlyUsd` (10, über 30 Tage), `Scoresheet:GlobalDailyUsd` (15, alle
-Nutzer zusammen — schützt das Konto auch bei vielen Nutzern); Preise `Scoresheet:InputUsdPerMTok` (4) /
+Nutzer zusammen — schützt das Konto auch bei vielen Nutzern), dazu `Scoresheet:AnonDailyUsd` (3, ALLE Einlesungen
+ohne Konto zusammen — zehrt zusätzlich vom Gesamtbudget, der Rest bleibt den Konten; Sperrgrund bleibt
+`globalBudget`, Codereview A6-003); Preise `Scoresheet:InputUsdPerMTok` (4) /
 `Scoresheet:OutputUsdPerMTok` (20) = Claude Opus 5.5 (bis 0.533.1: 5 / 25 = Opus 5) — wer das Modell wechselt, stellt sie mit um. **Der
 Antwort-Deckel (max_tokens) kommt aus dem verbleibenden Budget** (`ScoresheetBudget.Allowance`, seit 0.531.0): so viel
 Ausgabe, wie nach 12 000 Eingabe-Tokens Reserve noch bezahlbar ist, höchstens 64 000 (je Aufruf mit Nachdenken seit
@@ -3857,7 +3913,7 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | GET | `/api/training-goals/today` | Auth | Heutiger Fortschritt Puzzles/Buch (Tag) + Spielen-Partien (Woche) + Tagesstatus + Wochenstand (X/Y Tage) |
 | GET | `/api/training-goals/tracker?weeks=27` | Auth | Tagesreihe (nur Tage mit Aktivität) für die Tracker-Heatmap; je Tag auch PlayGames (informativ) |
 | GET | `/api/training-goals/daily-series` | Auth | Vollständige Tagesreihe (ganze Historie, **ungedeckelt** durch das 53-Wochen-Fenster), je Tag bySource+byTheme — Basis für die client-seitig umschaltbare Perioden-Aufschlüsselung (Tag/Woche/Monat/Jahr/Gesamt mit Durchschalten) |
-| POST | `/api/training-goals/sync-play` | Auth | Gespielte Rapid-/Classical-Partien (Lichess/chess.com) des eigenen Users sofort synchronisieren |
+| POST | `/api/training-goals/sync-play` | Auth | Gespielte Rapid-/Classical-Partien (Lichess/chess.com) des eigenen Users sofort synchronisieren. Je Plattform höchstens alle 5 min (`PlayTimeService.ManualSyncCooldown`; sonst `synced: false` + `retryAfterSeconds`), dazu Rate-Limit `sync-play` (3/min je Konto) gegen parallele Anfragen; der Hintergrund-Sync ist ausgenommen (Codereview F5-002) |
 | GET | `/api/training-goals/manual?take=200` | Auth | Eigene manuell eingetragene Offline-Aktivitäten (neueste zuerst) |
 | POST | `/api/training-goals/manual` | Auth | Manuelle Offline-Aktivität anlegen `{ date (yyyy-MM-dd, nicht Zukunft), kind, amount, note? }` — `kind` ∈ OtbGame/OfflinePuzzle/OfflineStudy/Coaching; `amount` = Partienzahl (OtbGame, 1–50) bzw. Minuten (sonst, 1–600), serverseitig geklemmt. 400 bei ungültigem/Zukunfts-Datum |
 | PUT | `/api/training-goals/manual/{id}` | Auth | Eigene manuelle Aktivität ändern (404 wenn nicht vorhanden/nicht eigene) |
@@ -3902,8 +3958,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | BookPuzzleAttempts | Buch-/Tagespuzzle-Versuche | BookPuzzleId (Restrict) + UserId (Cascade, nullable für Anon) + AnonymousSessionId, Solved, TimeSeconds, AttemptedAt, **HintsUsed (höchste angesehene Tipp-Stufe 0–3)**; Index (BookPuzzleId, AttemptedAt) + (BookPuzzleId, UserId) + **UNIQUE (BookPuzzleId, AnonymousSessionId)** (eine anonyme Lösung je Session; auth. Versuche = NULL-Session → mehrfach erlaubt) |
 | Books | Buch-Metadaten | FileName (unique), Title, Author, **Kind** (Enum Puzzle/Study, Default Puzzle; steuert das Trainingsziel-Routing der Kurszeit), **IsCalculation (bool, Default false; „Kalkulationsbuch" = Stellungen ohne Lösung → Kurs öffnet den Kalkulations-Modus statt des Solvers; geschaltet auf der Kurs-Detailseite von Besitzer/Admin, nicht im Admin-Tab)**, **SourcePgn (LONGTEXT, nullable; Roh-PGN als Reprocessing-Quelle, null bei Altbestand/JSON-Import; seit 0.508.3 per Tabellensplitting als eigene Entität `BookSource` gemappt, NICHT als Property von `Book`)**, **ImportVersion (Pipeline-Version; < CurrentVersion ⇒ veraltet → Reprocess-Knopf)**, **CommentLanguage? (≤8; Quellsprache der Kommentare fuer die Kurs-Uebersetzung, `und` = nicht bestimmbar, `null` = nie gefragt)**, **ForKids (bool, Default false; Kurs auf der Kinderseite KidHub, nur Admin, öffnet die Aufgaben dort ohne Anmeldung)**, **KidsTitles? (≤1000, JSON je KidHub-Sprache; eigene Titel dort)** |
 | CalculationTrees | Selbst eingeklickter Analysebaum EINES Users zu EINER Stellung eines Kalkulationsbuchs (Kalkulations-Modus; es gibt keine Lösung, der Nutzer legt seine Varianten für beide Seiten selbst an) | UserId (Cascade) + BookId (denormalisiert für die „bearbeitet"-Zähler, Cascade) + BookPuzzleId (**Restrict**, wie CoursePuzzleResult — vermeidet doppelte Cascade-Pfade), **TreeJson (LONGTEXT; für den Server OPAK, nur JSON-Gültigkeit + Maximalgröße geprüft; LEER erlaubt = Zeile trägt nur Trainings-Werte, „hat Baum" ist überall `TreeJson != ''`, nicht „Zeile existiert")**, **ChosenSan (20)/ChosenUci (10) = die eine Festlegung, SecondsSpent (int, Default 0, aufsummiert), SecondsToken (64, nullable) + SecondsTokenApplied (int, Default 0) = Idempotenz-Marke des zuletzt verbuchten Zeit-Deltas samt darunter angerechneter Sekunden (Retry darf die addierte Zeit nicht doppelt buchen), Grade (int?, 0–4 = benannte Stufe `CalculationGrade`, `null` = unbewertet ≠ Stufe 0 „nicht gelöst"; Punkte sind eine Ableitung via `CalculationGrades.PointsFor` und werden NICHT gespeichert)**, CreatedAt, UpdatedAt; **UNIQUE (UserId, BookPuzzleId)** + Index (UserId, BookId) |
-| CalcEditions | Kalkulations-SERIE (Phase 1, eigener Bereich à la Wochenpost): terminiert EIN Wochen-Kapitel eines Kalkulationsbuchs (Video + Freigabe). Kapitel OHNE Ausgabe = ungegatet (Übergang); Gating im `CalculationService` (Wochen mit Ausgabe versteckt bis `PublishAt`, für Tester ab `TesterPreviewAt` — Phase 2; Owner/Admin sehen Entwürfe). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), Chapter (≤300, = Wochen-Kapitelname), Title? (≤300), VideoUrl? (≤500), PublishAt (DateTime), TesterPreviewAt? (DateTime, früher), CreatedAt, UpdatedAt, PublishAnnouncedAt?/TesterAnnouncedAt? (Ankündigungs-Marker, Phase 3b), TesterAnnouncedUserIds? (CSV der Tester-Runden-Empfänger); **UNIQUE (BookId, Chapter)** |
-| CalcSeriesMembers | Kalkulations-SERIE (Phase 2): privater VERTEILER eines Serien-Buchs. Mitgliedschaft ist ein zusätzlicher Zugriffspfad in `CourseAccess.CanAccessAsync` — sobald das Buch nicht mehr `IsPublic` ist, sehen nur noch Mitglieder (+ Owner/Admin/Share/Gruppe) den Kurs. `IsTester` gibt einem Mitglied Frühzugang (Wochen ab `TesterPreviewAt`). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), UserId, IsTester (bool), CreatedAt; **UNIQUE (BookId, UserId)** |
+| CalcEditions | Kalkulations-SERIE (Phase 1, eigener Bereich à la Wochenpost): terminiert EIN Wochen-Kapitel eines Kalkulationsbuchs (Video + Freigabe). Kapitel OHNE Ausgabe = ungegatet (Übergang); Gating zentral in `CalcVisibility.HiddenChaptersAsync` (`Services/CalcVisibility.cs`), genutzt vom `CalculationService` UND von der Kurs-Detailseite (`CourseAuthoringService`) (Wochen mit Ausgabe versteckt bis `PublishAt`, für Tester ab `TesterPreviewAt` — Phase 2; Owner/Admin sehen Entwürfe). Verwaltung nur Besitzer/Admin | BookId (Cascade von Book), Chapter (≤300, = Wochen-Kapitelname), Title? (≤300), VideoUrl? (≤500), PublishAt (DateTime), TesterPreviewAt? (DateTime, früher), CreatedAt, UpdatedAt, PublishAnnouncedAt?/TesterAnnouncedAt? (Ankündigungs-Marker, Phase 3b), TesterAnnouncedUserIds? (CSV der Tester-Runden-Empfänger); **UNIQUE (BookId, Chapter)** |
+| CalcSeriesMembers | Kalkulations-SERIE (Phase 2): privater VERTEILER eines Serien-Buchs. Mitgliedschaft ist ein zusätzlicher Zugriffspfad in `CourseAccess.CanAccessAsync` — sobald das Buch nicht mehr `IsPublic` ist, sehen nur noch Mitglieder (+ Owner/Admin/Share/Gruppe) den Kurs. `IsTester` gibt einem Mitglied Frühzugang (Wochen ab `TesterPreviewAt`). Verwaltung nur Besitzer/Admin, neu eintragen nur Freunde des Besitzers, Selbst-Austragen erlaubt (A7-004) | BookId (Cascade von Book), UserId, IsTester (bool), CreatedAt; **UNIQUE (BookId, UserId)** |
 | CalcEditionViews | Kalkulations-SERIE (Phase 3): „Gesehen"-Vermerk — ein Verteiler-MITGLIED hat eine Stellung einer terminierten Woche geöffnet. Erfassung automatisch in `CalculationService.GetPositionAsync` (nur Mitglieder; Owner/Admin/öffentliche Betrachter zählen nicht), einmalig je Ausgabe+Nutzer. Übersicht nur Besitzer/Admin | CalcEditionId (Cascade von CalcEdition), UserId, ViewedAt; **UNIQUE (CalcEditionId, UserId)** |
 | DailyPuzzles | Persistierte Tagespuzzle-Zuordnung je UTC-Datum | Date (PK, DATE), BookPuzzleId (Restrict), CreatedAt; vom `DailyPuzzleScheduler` (00:00 UTC) gesetzt oder on-demand bei `/daily/{date}` (nur heute/gestern); Admin-Regenerate ändert nur `BookPuzzleId` (Datum bleibt) |
 | Groups | Benutzergruppen | Name (unique), Description, CreatedAt |
@@ -4070,6 +4126,10 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   und landete auf dem Dashboard.
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
+- **Kachel-Proxy `/tiles/`** (Codereview 2026-09-29, F8-002): nur auf der Turnierseite (rookhub*/kidhub*/leaguehub*-Hosts
+  → 404; unbekannte Hosts wie IP/localhost/E2E bleiben offen), Zoom 0–18, x/y höchstens sechsstellig; gedrosselt
+  je Betrachter (20 r/s, burst 200, Schlüssel `X-Real-IP`) und je Container (50 r/s), Überlauf 429. Verlässt sich
+  darauf, dass der NPM `X-Real-IP` setzt (Standard-`proxy.conf`); `DeploymentConfigTests` hält es fest.
 - **Eigene Symbole** (`public-turnier/`, seit 0.433.0): Vorlagen in `design/Designer{,2,3}.png`,
   alles darunter ist ABGELEITET (Rezept in `public-turnier/ASSETS.md`). Die Rollenteilung ist
   keine Geschmacksfrage: `Designer.png` fuellt seinen Rahmen (aeusserste Ecke bei 94 % des
@@ -4167,7 +4227,12 @@ Kinderseite" unter REST API.
   `kidhubConfig`; die Datenschutzerklärung nennt den Verantwortlichen dann über diese Adresse statt übers Impressum,
   die Anmeldemaske lässt den Impressum-Link weg, und auch die Seite zur Konto-Löschung (`/account-deletion`, von der
   Datenschutzerklärung verlinkt, deshalb auch in KidHub eine Route) nennt diese Adresse. RookHub und die Turnierseite
-  nehmen die Vorgabe (`OPERATOR`).
+  nehmen die Vorgabe (`OPERATOR`). `LEGAL_SITE` trägt seit dem Codereview (F7-003) auch `kind` (`kidhub`: Fassung in
+  einfacher Sprache mit Elternhinweis; `leaguehub`: Abschnitt über Ligaspieler ohne Konto) und `back` (Rücklink,
+  KidHub `/` statt `/login`). Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
+  Kontaktadresse der Oberfläche. **Rechtsseiten allgemein** (Betreiber-Entscheidung 2026-09-30, UX-001):
+  `environments/operator.ts` (`OPERATOR`) enthält nur noch die Kontaktadresse `rookhub@oberschm.id` — kein
+  Diensteanbieter-Block mit Name/Anschrift im Impressum, keine Platzhalter.
 - **Geteilt über `@rh/*`**: HTTP-Kette (connectivity, retry, renderAfterHttp), Sprachdateien (Namespace `kids.*`,
   gepflegt in en/de/hr/hu — nur diese vier bietet die Seite an), `PuzzleBoardComponent` (neues Input `autoQueen`:
   Umwandlung ohne Auswahl zur Dame), Datenschutz als eigene Route.
@@ -4282,6 +4347,10 @@ UEBER dem Anker plus zulaufender Schwanz; der geerbte Kreis um den Anker laege z
 dem Pin im Leeren) und die Ausdehnung fuers Neuzeichnen (`_updateBounds` — sonst schneidet der
 Renderer die oberen zwei Drittel weg). Popup- und Tooltip-Offsets kommen aus
 `MapPinMarker.heightAbove`.
+
+**Karte gekappt?** (Codereview 2026-09-29, F6-006): `/api/tournament-directory/map` antwortet `{ items, truncated }`;
+bei `truncated` steht unter der Karte ein Hinweis (`tournamentDirectory.mapTruncated`). Der Service liest die alte
+Listenform tolerant mit.
 
 **EINE Kurzansicht fuer alle drei Ansichten** (`tournament-card.component.ts`, Stand 0.425.0).
 Liste, Karte und Kalender zeigten dasselbe Turnier dreimal verschieden: die Liste als Karte mit
@@ -4486,7 +4555,10 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   12,7 s/116 Tokens bei gleicher Übersetzung; der jeweils fremde Schalter wird vom Server ignoriert) —, gestreamt wegen
   des 90-s-Proxys vor dem Spark (`OpenAiChat.SendAsync`), dasselbe
   JSON-Schema wie der Claude-Weg (vLLM erzwingt es per Grammatik; lehnt ein Server es ab, einmal ohne und dann dabei
-  bleiben). Jede Antwort verliert vor dem Zerlegen die unsichtbare Typografie von gpt-oss
+  bleiben). **Höchstens `TextLlm:MaxConcurrent` Anfragen gleichzeitig** (Vorgabe 8, 1..64; Codereview A6-005):
+  ein Semaphor im `OpenAiJsonClient` (Singleton) für ALLE Zwecke zusammen — Erklärungen, Nacherzählung, Roast, Tipps,
+  Übersetzung, Zugvergleich; Wartende reihen sich ein. Gilt auch für `tools/LibraryImport` (`--parallel` über 8 nur
+  mit `TextLlm__MaxConcurrent`). Jede Antwort verliert vor dem Zerlegen die unsichtbare Typografie von gpt-oss
   (`OpenAiJsonClient.PlainTypography`, 0.597.3: U+2010/2011/2012/2212 → „-", U+00AD weg, U+00A0/2009/202F → Leerzeichen;
   Gedankenstriche bleiben) — keine Quelle enthält sie, Suche und Kopieren stolpern darüber. Den Bestand (alle
   Maschinentexte in CommentTexts, GameRecaps, GameRoasts, GameMoveExplanations) hat die SQL-Migration
@@ -4663,7 +4735,9 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **Handgespiegelte Listen bekommen auf BEIDEN Seiten einen Test mit LITERALEN Werten** — nie einen, der die Gegenseite importiert (dann wandert ein Fehler mit). Festgenagelt sind heute: die neun SR-Intervalle (`RepertoireTrainingService.DefaultLevels` ↔ `repertoire-sr.util.ts`), der Linien-Hash (`ChessableTrainedLineService.LineKeyFromSans` ↔ `repertoire-line-key.util.ts`) und seit 0.499.3 die fünf Buch-Themen (`BookThemeTags.ValidKeys` ↔ `ALL_THEMES` in `features/courses/course-themes-dialog.component.ts`; dort ist die REIHENFOLGE die Anzeige-Reihenfolge und darf abweichen, die MENGE nicht — ein unbekannter Key wäre eine Checkbox, deren Haken beim Speichern still verfällt). Der Kommentar am Test nennt die Gegenseite beim Namen.
 - **Versuchs-Werte kommen aus `Services/AttemptRecording.cs`** (seit 0.499.0) — Zeit auf `MaxSeconds` (86400) und Tipp-Stufe auf `MaxHints` (3) klemmen, Spielweise über `SolveMode.Normalize`, Startzeit = Versuchszeitpunkt minus der GEKLEMMTEN Zeit: `AttemptRecording.From(…)` liefert alles vier als `AttemptCore`. Benutzt von `PuzzleService` (beide Recorder), `BookPuzzleService` (drei), `CourseService.RecordResultAsync` und `WeeklyPostService.RecordAttemptAsync` — vorher siebenmal von Hand, und genau dort auseinandergelaufen (der Standard-Puzzle-Pfad klemmte die Zeit nur fürs Log). Die Log-Meldungen bleiben dabei WÖRTLICH gleich: Kibana-Auswertungen und der log-watcher hängen an den Message-Templates, geändert hat sich nur, woher die Werte kommen. `[Range]` am DTO (Wochenpost) bleibt der Vertrag zum Client; der Helfer ist dort ein No-op. `EndlessProgressService` normalisiert nur den Modus (kein Zeit-/Tipp-Feld am Lauf) und benutzt weiter `SolveMode.Normalize` direkt.
 - **PGN wird mit `Services/PgnWriter.cs` geschrieben** (seit 0.499.7) — `Escape` (erst der Backslash, DANN das Anführungszeichen; umgekehrt verdoppelt der zweite Durchgang die gerade gesetzten Backslashes), `Tag(name, value)` → `[Name "…"]\n`, `CleanComment` und `MoveText(sans, startFen, comments, result, before)` mit Zugnummern (ab Grundstellung „1. e4 e5 2. …“, ab FEN mit Schwarz am Zug „12... Nf6 13. …“; Kommentar HINTER dem Halbzug, Schlüssel `-1` = Einleitung; `before` = roher Text VOR dem Halbzug, heute der `[%tqu]`-Marker). Benutzt von `CoursePgnExporter`, `SharedLineService.BuildLinePgn`, `SavedGameService.BuildPgn` und (nur das Escape) `ChessableReviewParser`. **Die FORMEN der vier bleiben verschieden und werden NICHT angeglichen** — sie stecken in geteilten Links und gespeicherten Partien: der Kurs-Export hängt sein `*` selbst mit einem Leerzeichen davor an (`result: null`, deshalb steht bei einer zuglosen Info-Linie `" *"`), die anderen beiden bekommen den Ergebnis-Token vom Writer (`"*"` ohne führendes Leerzeichen). `SavedGameService.Header` bleibt eigen: es ERSETZT das Anführungszeichen durch ein Apostroph, statt es zu maskieren. Golden-Tests halten alle drei Ausgaben zeichengenau fest (`CoursePgnExporterTests`, `SharedLineServiceTests`, `SavedGamePgnTests`) — wer am Writer dreht, sieht dort sofort, was er verschiebt.
-- **DER PGN-Baumparser ist `Services/PgnMoveTree.cs`** (seit 0.499.6) — `ParseSections` (Abschnitte am `[Event `-Header, je Abschnitt `[White]`/`[Black]`/`[FEN]` + Zugbaum) plus `Tokenize`/`ParseMoveTokens`/`IsMoveToken`/`ExtractMovetext`/`StartFenOf`. Benutzt von `RepertoireAnalyzeService` (filtert auf `Moves.Count > 0` und hat als einziger den Fallback „ganzer Text als Movetext“, wenn kein Abschnitt Züge trägt) und `RepertoireLineSource` (nimmt ZUG-LOSE Abschnitte MIT — an ihrer Position hängt der `gameIndex`, über den Client und Server dieselbe Linie meinen). Vorher lag der Parser zweimal wörtlich da. `PgnMove` ist jetzt ein Typ im Namensraum `RookHub.Api.Services` (vorher in `RepertoireLineSource` geschachtelt). **Was bewusst NICHT dorthin gehört, weil es eigene Semantik hat**: `PgnParser` („1/2“ als Ergebnis-Token, `CleanSan`-Kanonisierung), `ChessableTrainedLineService.MainlineSans` (überspringt Varianten ganz und weist jedes Token MIT Punkt ab — wegen „e.p.“; geteilt sind nur `IsMoveNumber`/`IsResultToken`/`StartFenOf`) und `ReconstructionChain.SplitMoves` (behält Suffix-Annotationen, entfernt nur die innersten Klammerpaare, anderer Zugnummern-Regex).
+- **DER PGN-Baumparser ist `Services/PgnMoveTree.cs`** (seit 0.499.6; Varianten nur bis `MaxVariationDepth` = 64
+  geschachtelt, der Repertoire-Upload lehnt tiefere Schachtelung mit 400 ab statt am StackOverflow zu sterben —
+  Codereview A6-001) — `ParseSections` (Abschnitte am `[Event `-Header, je Abschnitt `[White]`/`[Black]`/`[FEN]` + Zugbaum) plus `Tokenize`/`ParseMoveTokens`/`IsMoveToken`/`ExtractMovetext`/`StartFenOf`. Benutzt von `RepertoireAnalyzeService` (filtert auf `Moves.Count > 0` und hat als einziger den Fallback „ganzer Text als Movetext“, wenn kein Abschnitt Züge trägt) und `RepertoireLineSource` (nimmt ZUG-LOSE Abschnitte MIT — an ihrer Position hängt der `gameIndex`, über den Client und Server dieselbe Linie meinen). Vorher lag der Parser zweimal wörtlich da. `PgnMove` ist jetzt ein Typ im Namensraum `RookHub.Api.Services` (vorher in `RepertoireLineSource` geschachtelt). **Was bewusst NICHT dorthin gehört, weil es eigene Semantik hat**: `PgnParser` („1/2“ als Ergebnis-Token, `CleanSan`-Kanonisierung), `ChessableTrainedLineService.MainlineSans` (überspringt Varianten ganz und weist jedes Token MIT Punkt ab — wegen „e.p.“; geteilt sind nur `IsMoveNumber`/`IsResultToken`/`StartFenOf`) und `ReconstructionChain.SplitMoves` (behält Suffix-Annotationen, entfernt nur die innersten Klammerpaare, anderer Zugnummern-Regex).
 - **Statistik-Kennzahlen kommen aus `Services/AttemptStats.cs`** (seit 0.499.5) — Serien (`Streaks`, Liste NEUESTER ZUERST), Trefferquote (`Accuracy`, eine Nachkommastelle, 0 bei 0 Versuchen), 200er-Rating-Bänder (`RatingBands`), Aktivitäts-Tage (`Activity` + `ActivityWindowStart` = heute − 364) und die Themen-Top-20 (`TopThemes`, bei Gleichstand nach Namen). Benutzt von `PuzzleStatsService` UND `CourseStatsService`: deren EF-Abfragen sind verschieden (andere Tabellen, Themen aus `PuzzleTags` gegen den `BookPuzzle.Tags`-String) und bleiben je Dienst — gleich war immer nur die Rechnung danach, und die stand zweimal ausgeschrieben da. Die DTOs teilen sich entsprechend `AttemptStatsDto` (TotalAttempts/Solved/Accuracy/CurrentStreak/BestStreak/TrainingCount/EasyCount); `PuzzleStatsDto` ergänzt NUR `PuzzleElo`/`PuzzleEloPerLevel`, `CourseStatsDto` nichts. **Die JSON-Feldnamen sind der Vertrag, die Reihenfolge nicht** (sie verschiebt sich durch die Vererbung). Frontend-Gegenstück: `AttemptStatsDto` in `features/puzzles/puzzle.service.ts`; die Statistikseite liest die fünf Kacheln über EIN `current` statt fünf Modus-Weichen.
 - **Import-/Aufbereitungs-Pipeline versionieren** – Ändert sich die Transformation Roh-PGN → gespeicherte `BookPuzzles` (bzw. abgeleitete Repertoire-Daten) so, dass BEREITS importierte Datensätze unvollständig/veraltet werden (Beispiel: nachträgliche Pro-Zug-Kommentar-Extraktion), MUSS `ImportPipeline.CurrentVersion` (in `Services/ImportPipeline.cs`) um 1 erhöht und die Versionshistorie im Doc-Kommentar ergänzt werden. Bücher/Repertoires mit kleinerer `ImportVersion` gelten dann als „veraltet" und werden über den „Aktualisieren (N)"-Knopf (Sektion Kurse/Repertoires, `ReprocessBannerComponent` → `/api/courses|repertoires/reprocess`) neu aufbereitet — **in-place per LineId** (Fortschritt/Statistik-FKs bleiben erhalten), Quelle ist `Book.Source.SourcePgn` (bzw. Chessable-Re-Fetch). `ImportFileAsync` aktualisiert bestehende Linien NUR, wenn das Buch veraltet ist; sonst überspringt es sie (idempotenter Resume). **Ändert piratechess die PGN-Erzeugung** (neuer Header, andere Zugtext-Form), genügt seit 0.509.0 ebenfalls der Bump: Chessable-Kurse mit `[ChessableOid]` holen ihre Zugtexte beim „Aktualisieren" aus dem geteilten Linien-Cache neu (`StaleAction.Cache`, Abschnitt „Chessable-Kurse mit oids kommen aus dem Linien-Cache"), Chessable-Repertoires mit oids seit 0.510.0 genauso (je Datei, ausgeblendete Partien bleiben).
 - **Kalkulations-Modus ist KEIN Solver** – `features/courses/calc/` (Route `/courses/:bookId/calc`) ist bewusst nicht von `BasePuzzleSolver` abgeleitet: es gibt nichts zu lösen, keine Zeit-/Elo-Wertung und keine Lösungs-Anzeige. Er nutzt nur die `PuzzleBoardComponent` im `visualization`-Modus (Brett bleibt eingefroren, Klicks werden als Koordinaten erfasst). Zwei Eigenschaften dürfen dabei NICHT verloren gehen: (1) das Brett bleibt strikt auf der Ausgangsstellung — kein `fen`-Update beim Navigieren, `actualFen` dient nur der Legalitätsprüfung; (2) die Lösung wird nicht ausgeliefert (siehe `CalculationService`) — beim Erweitern der Kalkulations-DTOs also **niemals** `BookPuzzle.Moves` durchreichen. Ohne Konto (Kurz-URL `/{slug}`) tritt `LocalCalculationBackend` (localStorage) an die Stelle des Servers: **jeder Schreibweg dort muss einen Fehlschlag als Fehler melden** (`writeCalcLocal*` gibt `null` zurück, wenn nichts geschrieben wurde) — ein `of(...)` mit dem bloß gerechneten Stand zeigte „gespeichert", obwohl bei gesperrtem/vollem Speicher (Privatmodus, Quota) nichts liegt; die Ansicht ersetzt den Hinweis „liegt nur auf diesem Gerät" dann durch „konnte gerade gar nicht gespeichert werden" (`localSaveFailed`). Bei aktivem Kapitelfilter (`/{slug}/{kapitel}`) gehört auch die angezeigte Gesamtsumme dem KAPITEL (`chapters[]`), nicht dem Buch — Liste und Summe müssen denselben Zuschnitt haben.
@@ -4677,13 +4751,26 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   (CSS-Variable in `styles.scss`, aktuell 1240px; Ausnahme: Admin-Tabellen 1400px).
   Dashboard-Kacheln neuer Features kommen NICHT in `DEFAULT_VISIBLE` (Default = Trainings-Kern;
   Rest ist über „Anpassen" zuschaltbar). Ohne diese Regel wächst die Dichte mit jedem Feature
-  zurück (gemessen im UI-Review 2026-07-26, siehe TODO.md).
+  zurück (gemessen im UI-Review 2026-07-26, siehe TODO.md). Zustandsfarben (Fehler, Erfolg, Warnung, Info, Akzent)
+  kommen aus den semantischen Tokens in `src/_tokens.scss` (`var(--rh-…)`, hell/dunkel), nicht als Hex-Wert
+  (Codereview F8-003, Details in `src/frontend/CLAUDE.md`).
 - **Puzzle-Modi konsistent halten** – Standard (`puzzle.component`), Endless (`endless-puzzle.component`) und Book/Course/Weekly/Daily (`book-puzzle.component` – ist selbst schon Mehr-Modus-Template) sollen optisch + funktional so ähnlich wie möglich bleiben. Wenn ein Modus eine UI-/UX-Erweiterung bekommt (z. B. „Tags ausklappbar", „Eval-Button", „Viz-Pfeil"), **immer kurz nachfragen**, ob das nicht auch in den anderen zwei Modi sinnvoll wäre. Gemeinsame Bausteine in dedizierte Komponenten (`PuzzleTagsComponent`, `VizCardComponent`, `ReviewNavComponent`, `ThemePickerComponent`) auslagern statt 3-fach kopieren; die Solver-Mechanik liegt in `BasePuzzleSolver`.
 - **Buch-/Kurs-FENs sind nicht immer legal** – Chessable-Muster-/Info-Diagramme (`IsInfoOnly`) benutzen bewusst ILLEGALE Stellungen (z. B. ganz ohne König); chess.js/Gera.Chess werfen dort. Jede FEN-Ladung in einem Buch-/Kurs-Pfad muss das aushalten: im Frontend `tryLoadFen` (+ `replayIllegalFen` aus `illegal-board.util` fürs Durchklicken) statt `new Chess(fen)`, im Backend der permissive Pfad (`PermissiveSan`). Besonders heikel sind **Template-gebundene Getter** (z. B. `commentBlocks`): ein Wurf dort passiert MITTEN in der Change-Detection und lässt alles darunter unrendert (Kommentar, Info-Karte, „Weiter", Teilen) — die Seite wirkt „kaputt", obwohl das Brett stimmt (0.317.2).
 - **Variablen-Muster in den Compose-Dateien** – drei Fälle, und zwar in ALLEN fünf Dateien gleich (`compose.yml.example`, `compose.vpn.example`, `compose.vpn.yml`, `compose.dev.yml`, `compose.dev.vpn.yml`): **Pflichtwert** → `${VAR}` ohne Default (fehlt er, ist der Stack sowieso kaputt); **optionales Feature** → `${VAR:-}` (leer = Feature aus, alle betroffenen Endpoints sind fail-closed: Bot-Stats 503 `not-configured`, CI-Report 401, Webhook deaktiviert); **Wert, dessen Fehlen still Schaden anrichtet** → `${VAR:?Meldung}`, damit `docker compose` mit einer Meldung abbricht statt den Container in eine Neustartschleife zu schicken (heute: `JWT_KEY` und `ENCRYPTION_KEY` — ein leerer Encryption-Key wäre keine abgeschaltete Verschlüsselung, sondern eine Schein-Verschlüsselung mit dem öffentlich bekannten SHA256("")). Wenige echte Vorgabewerte sind bewusst gesetzt (`EMAIL_SMTP_PORT:-587`, `EMAIL_FROM_NAME:-RookHub`, `EMAIL_USE_STARTTLS:-true`, `CHESSABLE_API_URL:-…`). Die frühere Fassung dieser Regel („keine `:-`-Defaults in den Beispielen") beschrieb den Ist-Zustand nicht — es gab 16 pro Datei — und ließ den nötigen `:?`-Guard als Ausnahme unsichtbar. `DeploymentConfigTests.EveryCompose_GuardsEncryptionKey_AndPassesOptionalSecrets` nagelt das fest.
 - **Platzhalter-Geheimnisse gelten nirgends als Schlüssel** (`Services/SecretConfigCheck.cs`) – alle Repos sind öffentlich, und der alte JWT-Platzhalter `change_me_to_a_secure_key_at_least_32_chars` bestand mit 43 Byte die Längenprüfung (Admin-JWT für jeden Repo-Leser). Erkannt werden die Präfixe `change_me`/`changeme`/`your_` (Groß-/Kleinschreibung egal) und die Spitzklammer-Form `<…>` aus den Compose-Kommentaren. Folgen: `Jwt:Key`/`Encryption:Key` → in Production **Startabbruch**, sonst Error-Log; eingehend geprüfte Geheimnisse (`Discord:LinkSecret`, `SchachBot:StatsSecret` samt Ergebnis-GET-Signatur) → **Feature aus** wie bei leerem Wert + Error-Log; nur mitgeschickte Schlüssel (`Crawler:ApiKey`, `Chessable:ServiceKey`, `SchachBot:WebhookSecret`) → nur Error-Log (das Loch sitzt bei der Gegenstelle). Die `.env*.example` führen die fail-closed-Schlüssel LEER (`JWT_KEY`, `ENCRYPTION_KEY`, `DISCORD_LINK_SECRET`, `SCHACH_BOT_STATS_SECRET`; in `.env.vpn.example` auch `CHESSABLE_SERVICE_KEY`), kein Geheimnis teilt sich einen Platzhalter — `SecretConfigCheckTests.BeispielEnv_ohneBenutzbarePlatzhalter` nagelt das fest. Neues eingehendes Geheimnis → in `SecretConfigCheck.InboundSecrets` eintragen und beim Lesen `SecretConfigCheck.Usable(...)` nehmen.
 - **i18n-Validierung**: Nach jeder Änderung an `src/frontend/app/src/assets/i18n/*.json` alle 25 Sprachdateien mit `JSON.parse` validieren — Trailing-Comma-Fehler bricht ngx-translate komplett, UI zeigt dann nur noch Schlüssel statt Texte
 - **Erwartete Fehler als Domänen-Ausnahme, nicht als BCL-catch im Controller** (Codereview 2026-09-29, A10-005) – Ein Dienst wirft `NotFoundException` (404), `DomainValidationException` (400), `ConflictException` (409) oder `ForbiddenException` (403) aus `Exceptions/DomainExceptions.cs` mit einer für NUTZER geschriebenen Meldung; der global registrierte `DomainExceptionFilter` macht daraus `{ message }` mit dem Status — dieselbe Antwort wie das frühere `NotFound(new { message = ex.Message })`. Der Controller fängt nichts. Alles andere (auch die BCL-Basistypen selbst) läuft in den globalen Handler: 500 + Error-Log mit Stacktrace. Vorher fingen 28 Controller KeyNotFound/InvalidOperation/Argument/UnauthorizedAccess selbst, und jeder echte Fehler dieser Typen (Dictionary-Zugriff, LINQ-`First`, verworfener DbContext) kam als 4xx mit Framework-Text beim Client an, ohne Log. **Bewusst ein MVC-Filter, kein `IExceptionHandler`**: der globale Handler sitzt VOR `UseSerilogRequestLogging`, und eine bis dorthin durchlaufende Ausnahme schreibt das Request-Log fest als „responded 500" auf Error. Umgestellt sind bisher `RolesAdminController` und die beiden Punktepartie-Controller (samt `RoleAdminService`/`GuessSessionService`); der Rest folgt Controller für Controller. Die Typen erben vom bisher gefangenen BCL-Typ — ein alter `catch` fängt sie weiter, ein Dienst darf also vor seinen Aufrufern umgestellt werden (beim Umstellen trotzdem jeden Aufrufer prüfen: `DomainValidation` erbt von `InvalidOperation`, nicht von `Argument`; Tests mit `Assert.ThrowsAsync<…>` prüfen den EXAKTEN Typ).
+- **Periodische Hintergrunddienste erben von `PeriodicWorker`** (`Services/PeriodicWorker.cs`, Codereview 2026-09-29,
+  A8-008) – `BackgroundServiceExceptionBehavior` steht in `Program.cs` ausdrücklich auf `StopHost`. Jeder Worker
+  implementiert `LogFailure` mit einem EIGENEN wörtlichen Template (kein `{Text}`-Parameter, kein gemeinsames
+  Template), weil log-watcher/Kibana nach `labels.MessageTemplate` gruppieren; ein umgezogener Dienst behält sein
+  altes Template wortgleich.
+- **Fluent-Konfiguration neuer Entitäten gehört in `Data/Configurations/`** (Codereview 2026-09-29, A9-005) – je
+  Entität eine `IEntityTypeConfiguration<T>` (`internal sealed class <T>Configuration`) in der Domänen-Datei
+  (`AccountConfigurations.cs`, `LeagueConfigurations.cs`, `ClubConfigurations.cs`, …), eingesammelt per
+  `ApplyConfigurationsFromAssembly`; `AppDbContext.cs` hält nur DbSets und `ConfigureConventions`, der Schutz neuer
+  Bücher ohne BookSource steht in `AppDbContext.BookSource.cs`. Wächter: `DbContextConfigurationTests` (kein
+  `.Entity<` in `AppDbContext*.cs`, keine Entität doppelt konfiguriert).
 - **Literal-Routen vor Parameter-Routen**: z.B. `GET /api/weekly-posts/progress` MUSS vor `GET /api/weekly-posts/{id}` deklariert sein, sonst matcht der Router „progress" als ID
 - Crawler-Proxy-Endpoints müssen mit tatsächlichen Crawler-Routen übereinstimmen
 - Angular nutzt lazy-loaded standalone components (kein NgModule)

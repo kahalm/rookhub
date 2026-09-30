@@ -33,6 +33,11 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - Eigene Dateien der Turnierseite: `src-turnier/`, `public-turnier/` (eigenes Manifest, wird ueber
   `public/` drueberkopiert), `tsconfig.turnier.json`, `ngsw-config.turnier.json`.
 - Bauen: `npx ng build turnier --configuration=production` bzw. `npx ng serve turnier`.
+- Routen der Turnierseite (Codereview 2026-09-29, F6-001): wie KidHub/LeagueHub auch `forgot-password`,
+  `reset-password`, `privacy`, `impressum` und `account-deletion` (Masken über `@rh/*`).
+- Gemerkte Ansicht der Turnierseite (F6-002): der lokale Schlüssel der Kalender-Filterleiste ist NUTZERGEBUNDEN
+  (`rh.turnier.directoryView.<userId>`), `'rh.turnier.'` steht in den Abmelde-Spuren (wird beim Abmelden geräumt), und
+  beim Einstieg als ein Nutzer (Impersonation) geht kein View-State zum Server.
 - KidHub genauso: `src-kidhub/`, `public-kidhub/`, `tsconfig.kidhub.json`, `ngsw-config.kidhub.json`;
   `npx ng build kidhub` / `npx ng test kidhub` (Details im Haupt-CLAUDE.md „Dritte Oberfläche: KidHub").
 - LeagueHub genauso: `src-leaguehub/`, `public-leaguehub/`, `tsconfig.leaguehub.json`, `src-leaguehub/leaguehub.scss`
@@ -68,6 +73,17 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **provideHttpClient / provideRouter** – keine Module-basierte Konfiguration
 - **Angular Material** – fuer alle UI-Komponenten (Toolbar, Cards, Lists, Tables, Dialogs, Tabs, etc.)
 - **i18n via ngx-translate** – Laufzeit-Lokalisierung (siehe unten)
+- **Ungespeicherter Arbeitsstand** – Seiten, die man mit ungespeicherten Aenderungen verlassen koennte, implementieren
+  `LeaveConfirm.canLeave()` und haengen `unsavedChangesGuard` (`core/unsaved-changes.guard.ts`) als `canDeactivate`
+  an; Muster: Partie-Korrektur (`/games/:id/edit`, Codereview F4-003)
+- **Zustandsfarben aus Tokens** (Codereview F8-003) – Fehler, Erfolg, Warnung, Info und Akzent kommen aus den
+  semantischen Tokens in `src/_tokens.scss` (`var(--rh-…)`, hell/dunkel), nicht als Hex-Wert. Es sind
+  Vordergrund-Tokens (Text/Icon/Rahmen), Flaechen per `color-mix`; den Kontrast je Modus prueft
+  `app/core/design-tokens.spec.ts`
+- **Rechtsseiten** (`features/legal/`, Betreiber-Entscheidung 2026-09-30, UX-001) – `environments/operator.ts`
+  (`OPERATOR`) enthaelt NUR die Kontaktadresse (`rookhub@oberschm.id`); das Impressum zeigt nur den Kontakt, kein
+  Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`legal-site.ts`) Impressum ja/nein,
+  Kontaktadresse, `kind` und Ruecklink (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum")
 
 ## Lokalisierung (ngx-translate)
 
@@ -198,11 +214,18 @@ Regeln, die dabei nicht kippen dürfen:
    `guestGuard` ist das Gegenstueck auf `/login`/`/register`: Angemeldete landen auf `returnUrl` bzw. `/`
    (`core/return-url.util.ts` sichert das Ziel gegen offene Weiterleitungen, EINE Fassung fuer Maske,
    Registrierung und Guard). `?switch=1` ist die bewusste Tuer zur Maske fuer einen Konto-Wechsel ohne
-   vorheriges Abmelden. Gilt ebenso in der Turnierseite (`src-turnier`, Import ueber `@rh/*`)
+   vorheriges Abmelden. Gilt ebenso in der Turnierseite (`src-turnier`, Import ueber `@rh/*`). Der Wechsel auf
+   ein ANDERES Konto raeumt lokal auf wie `logout()` (ohne `session/end`); ebenso der Ablauf des Tokens
+   (`AuthService.endExpiredSession`, Codereview F1-006)
 4a. Speichern der Sitzung (`AuthService.persistSession`): ist der localStorage voll, werden die Offline-Caches
    geraeumt und erneut geschrieben; scheitert auch das, sagt eine Snackbar, dass die Anmeldung nur bis zum
    Neuladen haelt (`storageFull`, Kibana-Event `ClientLog storage_full`). Vorher blieb das stumm
 5. `AuthService.currentUser$` (BehaviorSubject) fuer reaktive UI-Updates (Navbar etc.)
+6. Discord-Link `?dl=<token>` (Codereview F1-002): verknuepft NIE still — `DiscordLinkService.confirmAndLink` fragt
+   mit dem Discord-Namen aus dem Token nach (ist das Konto schon mit genau dieser Discord-ID verknuepft: keine
+   Rueckfrage; mit einer anderen: Rueckfrage nennt die bestehende, die ersetzt wird). Ohne Anmeldung wird der Link nur
+   in `sessionStorage` (dieser Tab) vorgemerkt, nicht mehr in `localStorage`; eine alte localStorage-Vormerkung wird
+   nie eingeloest, nur entfernt.
 
 ## Routing
 
