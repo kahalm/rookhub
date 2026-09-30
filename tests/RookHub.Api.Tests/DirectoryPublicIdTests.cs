@@ -132,7 +132,7 @@ public class DirectoryPublicIdTests
     [Fact]
     public void LaengerAlsDieSpalte_istUngueltig()
     {
-        // Das Muster selbst liesse hoechstens 19 Zeichen durch; der Laengendeckel ist die zweite Wache.
+        // Das Muster selbst liesse hoechstens 17 Zeichen durch (xx{Jahr}-{Nummer}: 2+4+1+10); der Laengendeckel ist die zweite Wache.
         Assert.False(DirectoryPublicId.IsValid(new string('1', DirectoryPublicId.MaxLength + 1)));
 
         // Der Deckel IST die Spaltenlaenge — aendert sich die eine, muss die andere mit.

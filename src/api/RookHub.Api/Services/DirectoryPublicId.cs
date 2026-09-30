@@ -21,7 +21,7 @@ namespace RookHub.Api.Services;
 ///
 /// <para><b>Warum hier und nicht mehr im Controller.</b> Dort stand bis 0.606.0
 /// <c>^[a-z]?\d{1,10}$</c> — gebaut, als es nur chess-results und den FIDE-Kalender gab. Die
-/// Verbandskalender kamen danach, und 15 ihrer Formen fielen durch: Detailseite, Ausblenden und
+/// Verbandskalender kamen danach, und 16 ihrer Formen fielen durch: Detailseite, Ausblenden und
 /// Melden antworteten 400 (Prod 2026-09-29: 2 811 Eintraege). <c>DirectoryPublicIdTests</c> haelt
 /// jeden Erzeuger gegen diese Pruefung — wer eine Quelle mit einer neuen Form baut, sieht es dort.</para>
 ///
