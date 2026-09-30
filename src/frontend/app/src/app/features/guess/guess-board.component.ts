@@ -557,6 +557,9 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
         // Eine fortgesetzte Sitzung startet dagegen dort, wo man aufgehoert hat.
         if (s.history.length && s.movesPlayed === 0) this.browseIndex = -1;
         this.showOpeningNote(s);
+        // Ein beendeter Lauf (aus „Deine Durchlaeufe" wieder geoeffnet) zeigt seinen Rueckblick
+        // erneut — sonst gaebe es ihn nur direkt nach dem Schlusszug und nie wieder.
+        if (s.status === 'done') this.loadReview(s.id);
         this.loading = false;
         this.cdr.markForCheck();
       },

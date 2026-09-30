@@ -112,6 +112,26 @@ describe('GuessBoardComponent', () => {
     expect(c.canGuess).toBeFalse();   // beendet → keine Eingabe mehr
   });
 
+  // Codereview W3 F4-004: der Rueckblick kam nur im Antwortpfad des Schlusszugs. Wer den beendeten
+  // Lauf spaeter aus „Deine Durchlaeufe" oeffnete, sah nur noch die Punktekarte.
+  it('holt beim Oeffnen eines beendeten Laufs den Rueckblick', () => {
+    const fixture = load({ status: 'done', position: null, points: 5, maxPoints: 10, movesPlayed: 1 });
+    const c = fixture.componentInstance;
+    http.expectOne(r => r.url === '/api/guess-sessions/3/review').flush([
+      { ply: 8, moveNumber: 5, white: true, gameSan: 'Nf3', playedSan: 'Nc3', grade: 'similar', points: 3,
+        diffCp: -20, secondsSpent: 9, bestSan: 'Nf3', bestEval: '+0.30', gameEval: '+0.30' },
+    ]);
+    fixture.detectChanges();
+
+    expect(c.review.length).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.rev-row').length).toBe(1);
+  });
+
+  it('holt fuer einen laufenden Lauf keinen Rueckblick', () => {
+    load();
+    http.expectNone(r => r.url === '/api/guess-sessions/3/review');
+  });
+
   it('meldet einen Fehler beim Werten sichtbar', () => {
     const c = load().componentInstance;
     c.onMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'egal' });
