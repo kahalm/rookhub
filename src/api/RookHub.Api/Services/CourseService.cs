@@ -315,10 +315,16 @@ public class CourseService
     /// vollständige Originalstruktur inkl. <b>Varianten und Kommentaren</b>. Nur für Altbestand ohne
     /// Quelle (JSON-Import / vor der SourcePgn-Pipeline) wird ersatzweise aus den gespeicherten
     /// <see cref="BookPuzzle"/> rekonstruiert (Hauptlinie + Zug-Kommentare, aber ohne Varianten —
-    /// die liegen nicht in der DB).</para></summary>
+    /// die liegen nicht in der DB).</para>
+    /// <para>KALKULATIONSBÜCHER → <see cref="KeyNotFoundException"/> (404), auch für Admins — wie beim
+    /// Kapitel-/Linien-Export (<see cref="GetChapterPgnAsync"/>/<see cref="GetLinePgnAsync"/>): das Roh-PGN
+    /// enthält alle Wochen samt künftig terminierter Ausgaben und (bei PGN-Importen) die Lösungszüge.
+    /// „Kurs → Repertoire" (<see cref="CourseRepertoireConversionService"/>) erbt die Sperre.</para></summary>
     public async Task<(string Pgn, string FileName)> GetBookPgnAsync(int userId, int bookId, bool isAdmin)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
+        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
+            throw new KeyNotFoundException("Book not found.");
         // Roh-PGN wird hier gebraucht → Source explizit mitladen (Tabellensplitting, siehe BookSource).
         var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);
         var sourcePgn = book.Source.SourcePgn;
@@ -997,10 +1003,14 @@ public class CourseService
     /// Nächstes ungelöstes Puzzle des Kurses. sequential: Buchreihenfolge (Id), mit <paramref name="after"/>
     /// das nächste danach; random: zufällig, <paramref name="exclude"/> vermeidet direkte Wiederholung.
     /// Aktualisiert den zuletzt genutzten Modus.
+    /// <para>KALKULATIONSBÜCHER → <see cref="KeyNotFoundException"/> (404): Solver-Weg, liefert über
+    /// <see cref="BookPuzzleService.MapToDto"/> die Züge (siehe <see cref="CourseAccess.IsCalculationBookAsync"/>).</para>
     /// </summary>
     public async Task<CourseNextPuzzleDto> GetNextAsync(int userId, int bookId, string mode, int? after, int? exclude, bool isAdmin, int? chapterIndex = null)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
+        if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
+            throw new KeyNotFoundException("Book not found.");
 
         mode = NormalizeOrderMode(mode);
         await UpsertProgressAsync(userId, bookId, mode);

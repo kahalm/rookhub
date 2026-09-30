@@ -461,4 +461,109 @@ public class PublicCalculationAccessTests : IDisposable
         Assert.Equal(second.Id, next.Id);
         Assert.Equal("d2d4 d7d5", next.Moves);
     }
+
+    // ------------- Kurs-PGN, „Kurs → Repertoire", Kurs-/next und random?bookId= (Codereview 2026-09-29, A7-001)
+
+    [Fact]
+    public async Task GetBookPgn_Throws_ForCalculationBook_EvenForAdmin()
+    {
+        // GET /api/courses/{id}/pgn lieferte Book.SourcePgn verbatim: alle Wochen, auch die erst
+        // künftig freigegebenen, bei PGN-Importen samt Lösungszügen — an jedes Konto, das den Kurs
+        // sehen darf (IsPublic = jedes angemeldete). Die Geschwister chapter-pgn/lines/{id}/pgn
+        // sperrten schon, auch für Admins.
+        var book = await SeedBookAsync(isCalculation: true, slug: "noel");
+        book.Source.SourcePgn = "[Round \"1\"]\n[FEN \"8/8/8/8/8/8/8/K6k w - - 0 1\"]\n\n1. Ka2 *\n";
+        await _db.SaveChangesAsync();
+        await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "a1a2");
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _course.GetBookPgnAsync(userId: 42, book.Id, isAdmin: false));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _course.GetBookPgnAsync(userId: 1, book.Id, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task GetBookPgn_StillWorks_ForOrdinaryCourse()
+    {
+        var book = await SeedBookAsync(isCalculation: false, slug: "mate1");
+        await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6", startPly: 0);
+
+        var (pgn, fileName) = await _course.GetBookPgnAsync(userId: 42, book.Id, isAdmin: false);
+
+        Assert.False(string.IsNullOrWhiteSpace(pgn));
+        Assert.EndsWith(".pgn", fileName);
+    }
+
+    [Fact]
+    public async Task ConvertToRepertoire_Throws_ForCalculationBook_AndKeepsTheBook()
+    {
+        // „In Repertoire umwandeln" holt das Kurs-PGN über GetBookPgnAsync — ohne Sperre eine
+        // durchklickbare Kopie aller Wochen. Beim EIGENEN Kalkulationsbuch hätte das „Verschieben"
+        // obendrein die Serie gelöscht; die Sperre greift vor dem Anlegen und vor dem Löschen.
+        var book = await SeedBookAsync(isCalculation: true, slug: "noel");
+        book.OwnerUserId = 42;
+        await _db.SaveChangesAsync();
+        await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "e1g1 g8f6");
+        var conversion = TestServices.Conversion(_db, courses: _course);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => conversion.ConvertCourseToRepertoireAsync(userId: 42, book.Id, isAdmin: false));
+
+        Assert.True(await _db.Books.AnyAsync(b => b.Id == book.Id));
+        Assert.False(await _db.Repertoires.AnyAsync());
+    }
+
+    [Fact]
+    public async Task CourseNext_Throws_ForCalculationBook_WithQuizLines()
+    {
+        // Ein normaler Kurs, per PUT .../calculation umgeschaltet, behält seine Quiz-Linien
+        // (SetCalculationAsync verändert keine Linien) — /next reichte deren Züge über MapToDto durch.
+        var book = await SeedBookAsync(isCalculation: true, slug: "noel");
+        await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6 d2d4 e5d4", startPly: 0);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _course.GetNextAsync(userId: 42, book.Id, "sequential", null, null, isAdmin: false));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => _course.GetNextAsync(userId: 42, book.Id, "random", null, null, isAdmin: false));
+        // Kein Nebeneffekt vor der Sperre (kein CourseProgress angelegt).
+        Assert.False(await _db.CourseProgresses.AnyAsync(cp => cp.BookId == book.Id));
+    }
+
+    [Fact]
+    public async Task CourseNext_StillShipsMoves_ForOrdinaryCourse()
+    {
+        var book = await SeedBookAsync(isCalculation: false, slug: "mate1");
+        await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6", startPly: 0);
+
+        var next = await _course.GetNextAsync(userId: 42, book.Id, "sequential", null, null, isAdmin: false);
+
+        Assert.Equal("e1g1 g8f6", next.Puzzle!.Moves);
+    }
+
+    [Fact]
+    public async Task RandomWithBookId_Throws_ForCalculationBook()
+    {
+        // GET /api/book-puzzles/random?bookId= ist anonym und hängt am BookAccess-Tor (IsPublic
+        // öffnet es) — wie next/random-in-book ein Solver-Weg, der die Züge mitliefert.
+        var book = await SeedBookAsync(isCalculation: true, slug: "noel");
+        await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6", startPly: 0);
+        var puzzles = new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue());
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => puzzles.GetRandomAsync("random", null, book.Id));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => puzzles.GetRandomAsync("random", null, book.Id, userId: 1, isAdmin: true));
+    }
+
+    [Fact]
+    public async Task RandomWithBookId_StillWorks_ForOrdinaryPublicBook()
+    {
+        var book = await SeedBookAsync(isCalculation: false, slug: "mate1");
+        var line = await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6", startPly: 0);
+        var puzzles = new BookPuzzleService(_db, NullLogger<BookPuzzleService>.Instance, new NoOpTaskQueue());
+
+        var dto = await puzzles.GetRandomAsync("random", null, book.Id);
+
+        Assert.Equal(line.Id, dto.Id);
+        Assert.Equal("e1g1 g8f6", dto.Moves);
+    }
 }

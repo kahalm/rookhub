@@ -509,7 +509,10 @@ public class BookPuzzleService
             // Explizite Buchwahl überschreibt den Pool-Filter: irgendein Puzzle aus diesem Buch —
             // aber NUR aus einem lesbaren Buch (sonst wäre der Endpoint ein anonymer Voll-Export
             // beliebiger Bücher, inkl. persönlicher Importe fremder Nutzer; siehe BookAccess).
-            if (!await BookAccess.CanReadAsync(_db, bookId.Value, userId, isAdmin))
+            // Kalkulationsbuch: Solver-Weg (MapToDto samt Zügen) → wie ein unlesbares Buch behandeln,
+            // siehe EnsureNotCalculationBookAsync bzw. CourseAccess.IsCalculationBookAsync.
+            if (!await BookAccess.CanReadAsync(_db, bookId.Value, userId, isAdmin)
+                || await CourseAccess.IsCalculationBookAsync(_db, bookId.Value))
                 throw new KeyNotFoundException($"No book puzzle available for pool '{pool}'.");
             query = query.Where(bp => bp.BookId == bookId.Value);
         }
