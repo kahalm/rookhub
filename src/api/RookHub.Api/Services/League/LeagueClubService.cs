@@ -30,6 +30,10 @@ namespace RookHub.Api.Services.League;
 /// <item><b>Zweimal hochgeladen = einmal da</b>: gleiche Züge (<see cref="LeagueClubGame.MovesHash"/>) im gleichen Jahr;
 /// bei kurzen Partien (unter <see cref="ShortGamePlies"/> Halbzügen) zusätzlich gleiche Namen — dieselben zwölf
 /// Eröffnungszüge spielen viele.</item>
+/// <item><b>Über einen Teilen-Link</b> (ohne Konto, <see cref="ImportViaShareAsync"/>, <see cref="AddGameViaShareAsync"/>):
+/// gedeckelt je Aufruf und je Link und Tag (<see cref="LeagueShareUploadQuota"/>), und jede Partie trägt den Link als
+/// Hash — ein Verwalter entfernt damit alles, was über einen weitergereichten Link kam (<see cref="DeleteByShareAsync"/>,
+/// Codereview 2026-09-29, A2-009).</item>
 /// </list>
 /// </summary>
 public sealed class LeagueClubService
@@ -47,14 +51,23 @@ public sealed class LeagueClubService
     private readonly ILogger<LeagueClubService> _log;
     private readonly Func<DateTime> _now;
     private readonly GameAnalysisService? _analyses;
+    private readonly LeagueShareUploadQuota _shareQuota;
 
     /// <param name="analyses">Die Analysen des Stapels (<see cref="GameAnalysisOrigin.Club"/>) ziehen beim Korrigieren
     /// und Löschen einer Partie nach; ohne (Tests) bleibt es bei der Partie.</param>
+    /// <param name="shareQuota">Der Deckel der Teilen-Link-Uploads — in der App ein Singleton (Program.cs), ohne (Tests)
+    /// ein eigener je Dienst.</param>
     public LeagueClubService(AppDbContext db, ILogger<LeagueClubService> log, Func<DateTime>? now = null,
-        GameAnalysisService? analyses = null)
+        GameAnalysisService? analyses = null, LeagueShareUploadQuota? shareQuota = null)
     {
         _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow); _analyses = analyses;
+        _shareQuota = shareQuota ?? new LeagueShareUploadQuota();
     }
+
+    /// <summary>Der Vermerk eines Teilen-Links an seinen Partien: SHA-256 (hex) des Tokens — der Link selbst (144 Bit
+    /// Zufall) lässt sich daraus nicht zurückgewinnen, der Verwalter mit dem Link findet seine Partien aber wieder.</summary>
+    public static string ShareHashOf(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim()))).ToLowerInvariant();
 
     public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct)
     {
@@ -379,8 +392,20 @@ public sealed class LeagueClubService
     /// <summary>PGN-Import nach der Übersicht: je Partie in <paramref name="decisions"/> die festgelegten Seiten
     /// (<c>null</c> = alle Partien mit den Vorgaben der Übersicht). Wirft nicht bei einzelnen Partien — die stehen mit
     /// Grund in <c>Failed</c>.</summary>
-    public async Task<LeagueClubImportResultDto> ImportPgnAsync(int? userId, string pgn,
-        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default)
+    public Task<LeagueClubImportResultDto> ImportPgnAsync(int? userId, string pgn,
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
+        ImportAsync(userId, null, pgn, decisions, ct);
+
+    /// <summary>Derselbe Import OHNE Konto über den Teilen-Link <paramref name="shareToken"/>: jede Partie trägt den Link
+    /// (<see cref="ShareHashOf"/>), und gespeichert werden höchstens <see cref="LeagueShareUploadQuota.PerCall"/> je
+    /// Aufruf und <see cref="LeagueShareUploadQuota.PerLinkPerDay"/> je Link und Tag — der Rest steht mit Grund
+    /// <c>shareLimit</c> in <c>Failed</c>.</summary>
+    public Task<LeagueClubImportResultDto> ImportViaShareAsync(string shareToken, string pgn,
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
+        ImportAsync(null, ShareHashOf(shareToken), pgn, decisions, ct);
+
+    private async Task<LeagueClubImportResultDto> ImportAsync(int? userId, string? shareHash, string pgn,
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct)
     {
         var result = new LeagueClubImportResultDto();
         var parsed = ParseAll(pgn, out var truncated);
@@ -397,6 +422,9 @@ public sealed class LeagueClubService
         var pending = new List<LeagueClubGame>();
         var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
             ?? parsed.Select(p => (p.Index, (LeagueClubImportGameDecision?)null)).ToList();
+        // Über einen Teilen-Link: vorher reservieren, was dieser Aufruf höchstens speichern darf; der Rest geht am Ende zurück.
+        using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, LeagueShareUploadQuota.PerCall);
+        var budget = lease?.Granted ?? int.MaxValue;
         foreach (var (index, decision) in work)
         {
             if (!byIndex.TryGetValue(index, out var p))
@@ -426,10 +454,15 @@ public sealed class LeagueClubService
             var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
             if (game == null) { Fail(reason!); continue; }
             if (await IsDuplicateAsync(game, pending, ct)) { result.Duplicates++; continue; }
-            Stamp(game, userId, now);
+            if (pending.Count >= budget) { Fail(ShareLimitReason); continue; }
+            Stamp(game, userId, now, shareHash);
             pending.Add(game);
         }
+        if (lease != null) lease.Kept = pending.Count;
         await SaveAsync(pending, ct);
+        if (shareHash != null && result.Failed.Count(f => f.Reason == ShareLimitReason) is > 0 and var refused)
+            _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen",
+                shareHash[..8], refused);
         result.Remembered = await RememberAsync(remember, ct);
         result.Added = pending.Count;
         result.Anonymized = pending.Count(g => g.Anonymized);
@@ -462,8 +495,16 @@ public sealed class LeagueClubService
 
     /// <summary>Eine Partie aus der Korrektur eines Partieformulars. <c>Reason</c> ≠ null = abgelehnt
     /// (<c>illegal</c> samt Meldung, sonst wie beim Import, dazu <c>duplicate</c>).</summary>
-    public async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int? userId, LeagueClubGameRequest req,
-        CancellationToken ct = default)
+    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameAsync(int? userId, LeagueClubGameRequest req,
+        CancellationToken ct = default) => AddAsync(userId, null, req, ct);
+
+    /// <summary>Dasselbe ohne Konto über den Teilen-Link <paramref name="shareToken"/> — zählt gegen denselben Deckel wie der
+    /// PGN-Import (dieser Weg braucht kein Foto), darüber <c>shareLimit</c>.</summary>
+    public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameViaShareAsync(string shareToken,
+        LeagueClubGameRequest req, CancellationToken ct = default) => AddAsync(null, ShareHashOf(shareToken), req, ct);
+
+    private async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddAsync(int? userId, string? shareHash,
+        LeagueClubGameRequest req, CancellationToken ct)
     {
         var moves = (req.Moves ?? new()).Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
         if (moves.Count == 0) return (null, "noMoves", null);
@@ -479,17 +520,30 @@ public sealed class LeagueClubService
         var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
         if (await IsDuplicateAsync(game, new(), ct)) return (null, "duplicate", null);
-        Stamp(game, userId, now);
+        using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
+        if (lease is { Granted: 0 })
+        {
+            _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen", shareHash![..8], 1);
+            return (null, ShareLimitReason, null);
+        }
+        if (lease != null) lease.Kept = 1;
+        Stamp(game, userId, now, shareHash);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
         _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
             game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
         return (game, null, null);
     }
 
-    /// <summary>Hochladender und Zeitpunkt — NUR bei Partien ohne „Schwaz" und mit Konto (siehe Klassenkommentar).</summary>
-    private static void Stamp(LeagueClubGame g, int? userId, DateTime now)
+    /// <summary>Grund für Partien über dem Deckel der Teilen-Link-Uploads (<see cref="LeagueShareUploadQuota"/>).</summary>
+    public const string ShareLimitReason = "shareLimit";
+
+    /// <summary>Herkunft: der Teilen-Link (als Hash) IMMER, auch bei „Schwaz" — sonst entfernte der Rückbau
+    /// (<see cref="DeleteByShareAsync"/>) genau diese Partien nicht. Zeitpunkt und Hochladender NUR bei Partien ohne
+    /// „Schwaz" (siehe Klassenkommentar), der Hochladende nur mit Konto — ein Teilen-Link speichert nie, wer es war.</summary>
+    private static void Stamp(LeagueClubGame g, int? userId, DateTime now, string? shareHash)
     {
-        if (g.Anonymized || userId is null) return;
+        g.UploadShareHash = shareHash;
+        if (g.Anonymized) return;
         g.UploadedByUserId = userId;
         g.CreatedAt = now;
     }
@@ -758,5 +812,25 @@ public sealed class LeagueClubService
         await _db.SaveChangesAsync(ct);
         await RefreshCardsAsync(new[] { g.WhiteFide, g.BlackFide }, ct);
         return DeleteResult.Deleted;
+    }
+
+    /// <summary>
+    /// „Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29, A2-009): jede Partie, die über den
+    /// Teilen-Link <paramref name="shareToken"/> hochgeladen wurde — auch anonymisierte und auch nach Ablauf des Links —,
+    /// samt Analyse; die Spielerkarten werden neu gerechnet. <paramref name="dryRun"/> zählt nur. → Anzahl.
+    /// </summary>
+    public async Task<int> DeleteByShareAsync(string shareToken, bool dryRun, CancellationToken ct = default)
+    {
+        var hash = ShareHashOf(shareToken);
+        if (dryRun) return await _db.LeagueClubGames.CountAsync(g => g.UploadShareHash == hash, ct);
+        var games = await _db.LeagueClubGames.Where(g => g.UploadShareHash == hash).ToListAsync(ct);
+        if (games.Count == 0) return 0;
+        if (_analyses != null)
+            foreach (var g in games) await _analyses.DeleteForClubGameAsync(g.Id, ct);
+        _db.LeagueClubGames.RemoveRange(games);
+        await _db.SaveChangesAsync(ct);
+        await RefreshCardsAsync(games.SelectMany(g => new[] { g.WhiteFide, g.BlackFide }), ct);
+        _log.LogInformation("Vereins-Datenbank: {Count} Partien des Teilen-Links {Link} entfernt", games.Count, hash[..8]);
+        return games.Count;
     }
 }

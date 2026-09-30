@@ -256,6 +256,9 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
+    // Deckel der Uploads über Teilen-Links (je Link und Tag, im Arbeitsspeicher) — MUSS ein Singleton sein, sonst hätte
+    // jeder Request seinen eigenen Zähler (LeagueClubService fällt ohne auf einen eigenen je Dienst zurück).
+    builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueShareUploadQuota>();
     // Entwürfe der PGN-Importe (0.595.0): liegen online, bis alles importiert oder verworfen ist.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();

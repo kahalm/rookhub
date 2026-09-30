@@ -589,4 +589,33 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var sync = new RookHub.Api.Services.League.LeagueOnlineSync(Db, new HttpClient(), NullLogger<RookHub.Api.Services.League.LeagueOnlineSync>.Instance);
         Assert.False(await sync.RunOnceAsync(TimeSpan.FromHours(12), TimeSpan.FromMinutes(1), default));   // nichts fällig, kein Abruf
     }
+
+    /// <summary>
+    /// Vereinspartien über einen Teilen-Link (Codereview 2026-09-29, A2-009): die neue Spalte <c>UploadShareHash</c> wird
+    /// geschrieben, „alle Partien dieses Links entfernen" zählt und löscht über sie — und der Deckel kommt als EIN Singleton
+    /// aus der DI (sonst hätte jeder Request seinen eigenen Zähler).
+    /// </summary>
+    [MySqlFact]
+    public async Task VereinspartienUeberTeilenLink_VermerkUndRueckbau_uebersetzenSichNachMariaDb()
+    {
+        foreach (var (name, fide) in new[] { ("Hengl, Philip", "222"), ("Schnabl, Andreas", "333") })
+            Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = name,
+                NameKey = RookHub.Api.Services.League.LeagueNames.NameKey(name), FideId = fide });
+        await Db.SaveChangesAsync();
+        var club = Get<RookHub.Api.Services.League.LeagueClubService>();
+
+        var result = await club.ImportViaShareAsync("tokA",
+            "[White \"Hengl, Philip\"]\n[Black \"Schnabl, Andreas\"]\n[Date \"2024.05.12\"]\n[Result \"1-0\"]\n\n"
+            + "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Qc2 O-O 5. a3 Bxc3+ 6. Qxc3 b6 7. Bg5 Bb7 8. f3 h6 9. Bh4 d5 10. e3 Nbd7 1-0\n", null);
+
+        Assert.Equal(1, result.Added);
+        Assert.Equal(RookHub.Api.Services.League.LeagueClubService.ShareHashOf("tokA"),
+            (await Db.LeagueClubGames.AsNoTracking().SingleAsync()).UploadShareHash);
+        Assert.Equal(1, await club.DeleteByShareAsync("tokA", dryRun: true));
+        Assert.Equal(0, await club.DeleteByShareAsync("tokB", dryRun: false));
+        Assert.Equal(1, await club.DeleteByShareAsync("tokA", dryRun: false));
+        Assert.False(await Db.LeagueClubGames.AnyAsync());
+        Assert.Same(Get<RookHub.Api.Services.League.LeagueShareUploadQuota>(),
+            fixture.Factory.Services.GetRequiredService<RookHub.Api.Services.League.LeagueShareUploadQuota>());
+    }
 }

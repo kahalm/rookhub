@@ -724,9 +724,11 @@ public class AppDbContext : DbContext
             e.Property(g => g.Event).HasMaxLength(200);
             e.Property(g => g.Pgn).HasColumnType("LONGTEXT");
             e.Property(g => g.MovesHash).HasMaxLength(64);
+            e.Property(g => g.UploadShareHash).HasMaxLength(64);
             e.HasIndex(g => g.MovesHash);
             e.HasIndex(g => g.WhiteFide);
             e.HasIndex(g => g.BlackFide);
+            e.HasIndex(g => g.UploadShareHash);
         });
 
         modelBuilder.Entity<KidsPuzzle>(e =>

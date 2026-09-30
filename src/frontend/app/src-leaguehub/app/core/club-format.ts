@@ -23,6 +23,7 @@ export function reasonText(reason: string): string {
     case 'invalidResult': return 'Unbekanntes Ergebnis.';
     case 'empty': return 'Kein PGN.';
     case 'tooLarge': return 'Zu groß (höchstens 5 Millionen Zeichen je Upload).';
+    case 'shareLimit': return 'Über den Teilen-Link gehen höchstens 50 Partien je Upload und 200 je Tag — den Rest bitte angemeldet oder morgen.';
     default: return 'Nicht übernommen.';
   }
 }

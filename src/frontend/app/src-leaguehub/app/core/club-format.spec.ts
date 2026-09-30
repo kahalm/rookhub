@@ -11,7 +11,7 @@ describe('club-format', () => {
   });
 
   it('jeder Grund des Servers hat einen Satz', () => {
-    for (const r of ['noLeaguePlayer', 'onlyOwnClub', 'notFound', 'fromPosition', 'illegal', 'noMoves', 'tooLong', 'duplicate', 'empty', 'tooLarge']) {
+    for (const r of ['noLeaguePlayer', 'onlyOwnClub', 'notFound', 'fromPosition', 'illegal', 'noMoves', 'tooLong', 'duplicate', 'empty', 'tooLarge', 'shareLimit']) {
       expect(reasonText(r)).not.toBe('Nicht übernommen.');
     }
     expect(reasonText('onlyOwnClub')).toContain('Schwaz');

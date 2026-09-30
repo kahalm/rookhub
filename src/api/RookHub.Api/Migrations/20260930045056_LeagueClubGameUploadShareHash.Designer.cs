@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RookHub.Api.Data;
 
@@ -11,9 +12,11 @@ using RookHub.Api.Data;
 namespace RookHub.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930045056_LeagueClubGameUploadShareHash")]
+    partial class LeagueClubGameUploadShareHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -119,61 +122,6 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("UserId", "CreatedAt");
 
                     b.ToTable("AdminMessages");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.AnalysisHistoryEntry", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("Current")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MoveCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Moves")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("NodeCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Ply")
-                        .HasColumnType("int");
-
-                    b.Property<int>("StarCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("StartFen")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<string>("TreeJson")
-                        .HasColumnType("LONGTEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId", "UpdatedAt");
-
-                    b.ToTable("AnalysisHistoryEntries");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.AnalysisJob", b =>
@@ -3272,40 +3220,18 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("varchar(20)");
 
                     b.Property<string>("Evidence")
-                        .HasMaxLength(1000)
-                        .HasColumnType("varchar(1000)");
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
 
                     b.Property<string>("FideId")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("varchar(16)");
 
-                    b.Property<int>("GameCount")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Manual")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Site")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
-
-                    b.Property<long>("SyncCursor")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("SyncError")
-                        .HasMaxLength(300)
-                        .HasColumnType("varchar(300)");
-
-                    b.Property<bool>("SyncMore")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Url")
                         .IsRequired()
@@ -3322,78 +3248,6 @@ namespace RookHub.Api.Migrations
                     b.HasIndex("FideId");
 
                     b.ToTable("LeagueOnlineAccounts");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.LeagueOnlineGame", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ExternalId")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
-
-                    b.Property<string>("FideId")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
-
-                    b.Property<string>("Line")
-                        .IsRequired()
-                        .HasMaxLength(400)
-                        .HasColumnType("varchar(400)");
-
-                    b.Property<string>("Moves")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Opponent")
-                        .HasMaxLength(60)
-                        .HasColumnType("varchar(60)");
-
-                    b.Property<int?>("OpponentRating")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("PlayedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("PlayerRating")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Plies")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Rated")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Result")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
-
-                    b.Property<string>("Speed")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("varchar(16)");
-
-                    b.Property<bool>("White")
-                        .HasColumnType("tinyint(1)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AccountId", "ExternalId")
-                        .IsUnique();
-
-                    b.HasIndex("FideId", "White", "PlayedAt");
-
-                    b.ToTable("LeagueOnlineGames");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.LeaguePlayer", b =>
@@ -3930,126 +3784,6 @@ namespace RookHub.Api.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("MessageThreads");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.MoveComparison", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BestUci")
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("Depth")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("EngineOwnerUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Error")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<string>("Fen")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<DateTime?>("FinishedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Language")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("varchar(8)");
-
-                    b.Property<string>("Model")
-                        .HasMaxLength(80)
-                        .HasColumnType("varchar(80)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("UserId", "CreatedAt");
-
-                    b.ToTable("MoveComparisons");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.MoveComparisonLine", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AnalysisJobId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CandidateUci")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)");
-
-                    b.Property<string>("Explanation")
-                        .HasMaxLength(1500)
-                        .HasColumnType("varchar(1500)");
-
-                    b.Property<string>("Fen")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
-
-                    b.Property<int>("Kind")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MoveComparisonId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Ordinal")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ReachedDepth")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReplyUci")
-                        .HasMaxLength(10)
-                        .HasColumnType("varchar(10)");
-
-                    b.Property<string>("ResultJson")
-                        .HasColumnType("LONGTEXT");
-
-                    b.Property<int>("State")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnalysisJobId");
-
-                    b.HasIndex("MoveComparisonId");
-
-                    b.ToTable("MoveComparisonLines");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Notification", b =>
@@ -6350,17 +6084,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.AnalysisHistoryEntry", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.AnalysisJob", b =>
                 {
                     b.HasOne("RookHub.Api.Models.AppUser", "User")
@@ -7114,17 +6837,6 @@ namespace RookHub.Api.Migrations
                     b.Navigation("Puzzle");
                 });
 
-            modelBuilder.Entity("RookHub.Api.Models.LeagueOnlineGame", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.LeagueOnlineAccount", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-                });
-
             modelBuilder.Entity("RookHub.Api.Models.LibraryGame", b =>
                 {
                     b.HasOne("RookHub.Api.Models.LibraryGame", null)
@@ -7183,28 +6895,6 @@ namespace RookHub.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.MoveComparison", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.MoveComparisonLine", b =>
-                {
-                    b.HasOne("RookHub.Api.Models.MoveComparison", "Comparison")
-                        .WithMany("Lines")
-                        .HasForeignKey("MoveComparisonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Comparison");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Notification", b =>
@@ -7835,11 +7525,6 @@ namespace RookHub.Api.Migrations
             modelBuilder.Entity("RookHub.Api.Models.MenuItemSetting", b =>
                 {
                     b.Navigation("Groups");
-                });
-
-            modelBuilder.Entity("RookHub.Api.Models.MoveComparison", b =>
-                {
-                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.Repertoire", b =>

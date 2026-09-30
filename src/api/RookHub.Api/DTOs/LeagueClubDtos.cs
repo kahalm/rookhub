@@ -108,7 +108,7 @@ public class LeagueClubFailureDto
     public string? White { get; set; }
     public string? Black { get; set; }
     /// <summary><c>noLeaguePlayer</c> (keine Seite in der Liga oder der Megabase), <c>onlyOwnClub</c>, <c>fromPosition</c>, <c>illegal</c>, <c>noMoves</c>,
-    /// <c>tooLong</c>, <c>notFound</c> (Nummer nicht im PGN).</summary>
+    /// <c>tooLong</c>, <c>notFound</c> (Nummer nicht im PGN), <c>shareLimit</c> (über dem Deckel des Teilen-Links).</summary>
     public string Reason { get; set; } = string.Empty;
 }
 

@@ -212,6 +212,10 @@ public class LeagueView
 /// Hochladenden heißt „Schwaz", ohne Elo und FIDE-ID, und es wird WEDER gespeichert, wer dahinter steht, NOCH wer
 /// hochgeladen hat (<see cref="UploadedByUserId"/> und <see cref="CreatedAt"/> bleiben leer, Veranstaltung fällt weg) —
 /// Wunsch des Nutzers, damit man nicht gegen die eigenen Spieler vorbereiten kann.</para>
+///
+/// <para><b>Über einen Teilen-Link</b> (ohne Konto) trägt die Zeile den Link als SHA-256 (<see cref="UploadShareHash"/>) —
+/// auch bei anonymisierten Partien: der Link ist der Weg, nicht die Person, und nur so entfernt ein Verwalter alles, was
+/// über einen weitergereichten Link hereinkam (Codereview 2026-09-29, A2-009).</para>
 /// </summary>
 public class LeagueClubGame
 {
@@ -234,6 +238,9 @@ public class LeagueClubGame
     /// <summary>Wer hochgeladen hat — nur bei NICHT anonymisierten Partien (dann darf er sie selbst löschen).</summary>
     public int? UploadedByUserId { get; set; }
     public DateTime? CreatedAt { get; set; }
+    /// <summary>Über welchen Teilen-Link hochgeladen (SHA-256 hex des Tokens, <c>LeagueClubService.ShareHashOf</c>) —
+    /// <c>null</c> = angemeldet hochgeladen. Der Link selbst steht nirgends.</summary>
+    public string? UploadShareHash { get; set; }
 }
 
 /// <summary>

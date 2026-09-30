@@ -162,6 +162,14 @@ public class LeagueClubController : BaseApiController
             _ => NotFound(),
         };
 
+    /// <summary>„Alle Partien dieses Links entfernen" (Verwalter, Codereview 2026-09-29): alles, was über den Teilen-Link
+    /// hochgeladen wurde — auch nach seinem Ablauf. <c>dryRun=true</c> zählt nur → <c>{ count, dryRun }</c>.</summary>
+    [HttpDelete("admin/shares/{token}/games")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> DeleteShareGames(string token, [FromQuery] bool dryRun = false, CancellationToken ct = default) =>
+        string.IsNullOrWhiteSpace(token) || token.Length > 64 ? BadRequest(new { reason = "invalidToken", message = "Invalid link." })
+            : Ok(new { count = await _club.DeleteByShareAsync(token, dryRun, ct), dryRun });
+
     /// <summary>Ligaspieler zum Eintippen der Namen (ab zwei Buchstaben).</summary>
     [HttpGet("players")]
     [HasPermission(Permissions.LeagueContribute)]
@@ -272,6 +280,8 @@ public class LeagueClubController : BaseApiController
 /// <summary>
 /// Dieselben Upload-Wege OHNE Anmeldung, über einen gültigen Teilen-Link (Wunsch 2026-09-28: „auf dem Link für die
 /// nächste Aufstellung soll es auch die Option geben, Spiele hochzuladen — ohne Anmeldung"). Der Link ist der Nachweis;
+/// gespeicherte Partien tragen ihn als Hash und sind gedeckelt (<see cref="LeagueShareUploadQuota"/>, Codereview
+/// 2026-09-29, A2-009);
 /// Partieformulare zusätzlich höchstens <see cref="ScoresheetScanService.AnonPerIpDailyLimit"/> je IP und
 /// <see cref="ScoresheetScanService.AnonDailyLimit"/> je Tag für alle zusammen. Eine Einlesung gehört dem Browser, der den
 /// beim Hochladen ausgegebenen Schlüssel hat. Lesen der Vereinspartien gibt es hier NICHT.
@@ -308,7 +318,7 @@ public class LeagueShareClubController : ControllerBase
     public async Task<ActionResult<LeagueClubImportResultDto>> Import(string token, [FromBody] LeagueClubImportRequest req, CancellationToken ct)
     {
         if (!await ValidAsync(token, ct)) return NotFound();
-        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportPgnAsync(null, req!.Pgn, req.Games, ct));
+        return ClubUpload.CheckPgn(req?.Pgn) is { } bad ? BadRequest(bad) : Ok(await _club.ImportViaShareAsync(token, req!.Pgn, req.Games, ct));
     }
 
     /// <summary>Eine Partie aus einem Partieformular; <c>scanKey</c> = der Schlüssel der Einlesung (wird geschlossen).</summary>
@@ -318,7 +328,7 @@ public class LeagueShareClubController : ControllerBase
         if (!await ValidAsync(token, ct)) return NotFound();
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         req.ScanId = null;
-        var (game, reason, message) = await _club.AddGameAsync(null, req, ct);
+        var (game, reason, message) = await _club.AddGameViaShareAsync(token, req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
         if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null);
         return Ok(new { id = game.Id, anonymized = game.Anonymized });
