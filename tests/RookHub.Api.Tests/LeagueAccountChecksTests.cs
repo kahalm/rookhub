@@ -43,6 +43,7 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal(LeagueAccountChecks.Weak, Status(R(1500)));               // darunter, aber noch in der Grenze der Suche
         Assert.Equal(LeagueAccountChecks.Fail, Status(R(1499)));               // mehr als 400 darunter
         Assert.Equal(LeagueAccountChecks.None, Status(R(1200, 3, reliable: false)));   // zählt nicht
+        Assert.Equal("1200 — nur 3 Partien, zählt nicht", LeagueAccountChecks.RatingCheck(R(1200, 3, reliable: false), 1900).Text);
         Assert.Equal(LeagueAccountChecks.Info, Status(R(2100), elo: null));
         Assert.Equal("2100 (50 Partien) — 200 über der Elo 1900: optimal (100–300 darüber)", LeagueAccountChecks.RatingCheck(R(2100), 1900).Text);
         Assert.Equal("2500 (50 Partien) — 600 über der Elo 1900: Treffer, aber schwächer — optimal wären 100–300 darüber",
@@ -63,7 +64,9 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal(LeagueAccountChecks.Weak, S("M. Muster"));
         Assert.Equal(LeagueAccountChecks.Weak, S("Muster"));
         Assert.Equal(LeagueAccountChecks.Fail, S("Moritz Muster"));
-        Assert.Equal(LeagueAccountChecks.Fail, S("Max Mustermann"));
+        Assert.Equal(LeagueAccountChecks.Fail, S("Max Mustermann"));                  // sein Vorname, anderer Nachname
+        Assert.Equal(LeagueAccountChecks.Warn, S("Father Of Two"));                    // nichts von seinem Namen: Spruch oder Spitzname
+        Assert.Equal("„Father Of Two“ — nicht sein Name (Spruch, Spitzname oder ein anderer Mensch)", LeagueAccountChecks.NameCheck(Max, Prof("Father Of Two")).Text);
         Assert.Equal(LeagueAccountChecks.None, S(null));
         Assert.Equal("„Max Muster“ — Vor- und Nachname passen", LeagueAccountChecks.NameCheck(Max, Prof("Max Muster")).Text);
     }

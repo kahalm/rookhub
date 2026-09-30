@@ -254,9 +254,15 @@ public sealed class LeagueAccountChecks
         if (toks.Count == 0) return new Item(key, label, None, "kein Klarname im Profil");
         var (last, first) = LeagueAccountFinder.SplitName(player.Name);
         var lt = LeagueAccountFinder.Tokens(last);
+        var ft = LeagueAccountFinder.Tokens(first);
         var shown = $"„{prof.RealName}“";
-        if (lt.Count == 0 || !lt.All(toks.Contains)) return new Item(key, label, Fail, $"{shown} — anderer Nachname");
-        return LeagueAccountFinder.FirstNameMatch(toks, lt, LeagueAccountFinder.Tokens(first)) switch
+        if (lt.Count == 0 || !lt.All(toks.Contains))
+            // Nichts von seinem Namen („Father Of Two", „Chessfan") ist eher ein Spruch oder Spitzname als ein anderer Mensch (0.622.0);
+            // sein Vorname mit einem anderen Nachnamen dagegen ein anderer Mensch. Die Suche schließt beides aus.
+            return toks.Any(t => lt.Contains(t) || ft.Contains(t))
+                ? new Item(key, label, Fail, $"{shown} — anderer Nachname")
+                : new Item(key, label, Warn, $"{shown} — nicht sein Name (Spruch, Spitzname oder ein anderer Mensch)");
+        return LeagueAccountFinder.FirstNameMatch(toks, lt, ft) switch
         {
             LeagueAccountFinder.NameFit.Full => new Item(key, label, Ok, $"{shown} — Vor- und Nachname passen"),
             LeagueAccountFinder.NameFit.Initial => new Item(key, label, Weak, $"{shown} — Nachname und Initiale passen"),
@@ -312,7 +318,7 @@ public sealed class LeagueAccountChecks
         var key = "rating:" + x.Label;
         var label = x.Label;
         var games = $"{x.Games.ToString("#,0", De)} {(x.Games == 1 ? "Partie" : "Partien")}";
-        if (!x.Reliable) return new Item(key, label, None, $"{x.Value} — nur {games} bzw. vorläufig, zählt nicht");
+        if (!x.Reliable) return new Item(key, label, None, $"{x.Value} — nur {games}, zählt nicht");
         if (elo is not { } e || e <= 0) return new Item(key, label, Info, $"{x.Value} ({games}) — keine Elo zum Vergleich");
         var d = x.Value - e;
         var diff = d >= 0 ? $"{d} über der Elo {e}" : $"{-d} unter der Elo {e}";

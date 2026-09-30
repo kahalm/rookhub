@@ -159,14 +159,23 @@ public class LeagueAccountFinderTests : IDisposable
               "rapid":{"games":0,"rating":1500,"prov":true},"classical":{"games":9,"rating":2100}}},
              {"id":"q","username":"Q","perfs":{"rapid":{"games":0,"rating":1500,"prov":true}}}]
             """);
-        Assert.Equal(((int?)1630, "Lichess Blitz"), (rated[0].Rating, rated[0].RatingLabel));     // vorläufig/zu wenige zählen nicht
+        Assert.Equal(((int?)1630, "Lichess Blitz"), (rated[0].Rating, rated[0].RatingLabel));     // zu wenige Partien zählen nicht
         Assert.Null(rated[1].Rating);
+        // „vorläufig" mit genug Partien (lange Pause) zählt seit 0.622.0 — gesehen an einem Konto mit 767 Bullet-Partien.
+        var paused = LeagueAccountFinder.ParseLichessUsers("""
+            [{"id":"r","username":"R","perfs":{"bullet":{"games":767,"rating":1968,"prov":true},"rapid":{"games":17,"rating":2216,"prov":true}}}]
+            """)[0];
+        Assert.Equal(((int?)2216, "Lichess Schnell"), (paused.Rating, paused.RatingLabel));
+        Assert.All(paused.Ratings!, x => Assert.True(x.Reliable));
         Assert.Equal(((int?)2693, "chess.com Blitz", (int?)2350), LeagueAccountFinder.ParseChessComStats("""
             {"chess_bullet":{"last":{"rating":2640},"record":{"win":3,"loss":2,"draw":0}},
              "chess_blitz":{"last":{"rating":2693},"record":{"win":377,"loss":386,"draw":76}},
              "chess_rapid":{"last":{"rating":2500},"record":{"win":10,"loss":5,"draw":1}},"fide":2350}
             """));
         Assert.Equal(((int?)null, (string?)null, (int?)null), LeagueAccountFinder.ParseChessComStats("{}"));
+        // chess.com schreibt „fide": 0, wenn nichts angegeben ist — das ist keine Wertung.
+        Assert.Null(LeagueAccountFinder.ParseChessComStats("""{"fide":0}""").Fide);
+        Assert.Null(LeagueAccountFinder.ParseChessComPlayer("""{"username":"x1","fide":0}""")!.FideRating);
 
         Assert.Equal(new[] { "Muster1987", "musterm" },
             LeagueAccountFinder.ParseAutocomplete("""{"result":[{"name":"Muster1987","id":"muster1987"},{"name":"musterm","id":"musterm"}]}"""));

@@ -32,9 +32,10 @@ public sealed partial class LeagueAccountFinder
     /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0),
     /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0),
     /// 5 = Online-Wertungsband 100–300 über der Elo (0.619.0), 6 = das Band ist der OPTIMALE Treffer, jede andere Wertung bis 400 unter
-    /// der Elo ein schwächerer, dazu derselbe Nutzername auf der anderen Seite (0.621.0).
+    /// der Elo ein schwächerer, dazu derselbe Nutzername auf der anderen Seite (0.621.0), 7 = Lichess-„vorläufig" mit genug Partien
+    /// zählt (0.622.0).
     /// </summary>
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -89,8 +90,9 @@ public sealed partial class LeagueAccountFinder
         string? Bio, int? FideRating, DateTime? LastActive, bool Closed, int? Rating = null, string? RatingLabel = null,
         IReadOnlyList<Rating>? Ratings = null);
 
-    /// <summary>Eine Wertung einer Kategorie: <paramref name="Reliable"/> = mindestens <see cref="MinRatedGames"/> Partien und nicht
-    /// vorläufig — nur solche zählen fürs Urteil.</summary>
+    /// <summary>Eine Wertung einer Kategorie: <paramref name="Reliable"/> = mindestens <see cref="MinRatedGames"/> Partien — nur solche
+    /// zählen fürs Urteil. Lichess' „vorläufig" (prov) zählt seit 0.622.0 NICHT mehr dagegen: es kommt auch von langer Pause (hohe
+    /// Wertungs-Abweichung) — gesehen an einem Konto mit 767 Bullet-Partien; unbespielte Kategorien haben 0 Partien und fallen ohnehin weg.</summary>
     public sealed record Rating(string Label, int Value, int Games, bool Reliable);
 
     public sealed record Verdict(int Score, List<string> Evidence);
@@ -299,7 +301,7 @@ public sealed partial class LeagueAccountFinder
                 flag = Str(pr, "flag") ?? Str(pr, "country");
                 loc = Str(pr, "location");
                 bio = Str(pr, "bio");
-                fide = Int(pr, "fideRating");
+                fide = Fide(Int(pr, "fideRating"));
             }
             DateTime? seen = u.TryGetProperty("seenAt", out var sa) && sa.TryGetInt64(out var ms)
                 ? DateTimeOffset.FromUnixTimeMilliseconds(ms).UtcDateTime : null;
@@ -314,8 +316,7 @@ public sealed partial class LeagueAccountFinder
     private static readonly (string Key, string Label)[] LichessPerfs =
         { ("bullet", "Bullet"), ("blitz", "Blitz"), ("rapid", "Schnell"), ("classical", "Klassisch"), ("correspondence", "Fernschach") };
 
-    /// <summary>Die Lichess-Wertungen je Kategorie; belastbar = genug Partien und nicht vorläufig (unbespielte stehen auf 1500
-    /// und „prov").</summary>
+    /// <summary>Die Lichess-Wertungen je Kategorie; belastbar = genug Partien (unbespielte stehen auf 1500 mit 0 Partien und fallen weg).</summary>
     private static List<Rating> LichessRatings(JsonElement u)
     {
         var list = new List<Rating>();
@@ -325,7 +326,7 @@ public sealed partial class LeagueAccountFinder
             if (!perfs.TryGetProperty(key, out var pf) || pf.ValueKind != JsonValueKind.Object || Int(pf, "rating") is not { } r) continue;
             var games = Int(pf, "games") ?? 0;
             if (games == 0) continue;                                             // nie gespielt — die 1500 sagen nichts
-            list.Add(new Rating($"Lichess {label}", r, games, !True(pf, "prov") && games >= MinRatedGames));
+            list.Add(new Rating($"Lichess {label}", r, games, games >= MinRatedGames));
         }
         return list;
     }
@@ -362,7 +363,7 @@ public sealed partial class LeagueAccountFinder
     private static int? ChessComFide(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        return Int(doc.RootElement, "fide");
+        return Fide(Int(doc.RootElement, "fide"));
     }
 
     /// <summary>Das chess.com-Profil um die Wertungen aus <c>/stats</c> ergänzt (dort steht auch die selbst angegebene FIDE-Wertung).</summary>
@@ -388,7 +389,7 @@ public sealed partial class LeagueAccountFinder
         var url = Str(d, "url");
         var shown = url?.TrimEnd('/').Split('/')[^1] is { Length: > 0 } seg && seg.Equals(user, StringComparison.OrdinalIgnoreCase) ? seg : user;
         return new Profile(LeagueOnlineSites.ChessCom, shown, LeagueOnlineSites.ProfileUrl(LeagueOnlineSites.ChessCom, shown),
-            Str(d, "name"), country.Length == 2 ? country : null, Str(d, "location"), null, Int(d, "fide"), seen,
+            Str(d, "name"), country.Length == 2 ? country : null, Str(d, "location"), null, Fide(Int(d, "fide")), seen,
             status.StartsWith("closed", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -413,6 +414,9 @@ public sealed partial class LeagueAccountFinder
 
     private static int? Int(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null;
+
+    /// <summary>Eine FIDE-Wertung im Profil — chess.com schreibt „0", wenn keine angegeben ist (0.622.0; das (i) meldete „weicht um 2491 ab").</summary>
+    private static int? Fide(int? rating) => rating is > 0 ? rating : null;
 
     private static bool True(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.True;
 

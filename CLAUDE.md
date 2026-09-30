@@ -1782,7 +1782,7 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   „Galin Georgiev" für Georgi): steht im Profil neben dem Nachnamen ein Vorname, muss es einer des Spielers sein (irgendeiner, auch
   der zweite); nur Initialen → eine muss passen; nur Nachname oder Titel („IM Muster") → schwacher Hinweis. Sonst fällt das Konto weg.
 * **Online-Wertung gegen Elo** (0.609.0, Wunsch „ein Konto mit 500 auf einem 2000er ergibt keinen Sinn — nur niedriger ist ein
-  Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab 10 Partien, nicht vorläufig —
+  Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab 10 Partien; seit 0.622.0 zählt auch „vorläufig", das Lichess nach langer Pause setzt —
   unbespielte Lichess-Kategorien stehen auf 1500 „prov"; Bullet zählt mit) darf höchstens `RatingBelow` 400 unter der Elo der
   Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 100 bis 300 DARÜBER (`FitMin`/`FitMax`), ist das
   der OPTIMALE Treffer (+2, `ScoreRatingFit`), jede andere Wertung darüber oder bis 400 darunter ein schwächerer (+1,
@@ -1796,8 +1796,8 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   Lichess-Konto …", +`ScoreTwin` 1). Die Team-Suche tut dasselbe für jeden ihrer Vorschläge (Source `team`). Hakt die andere Seite,
   bleibt der Treffer selbst stehen; ein 429 beendet den Durchgang wie sonst. Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
   mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
-* **Fassung** `LeagueAccountFinder.CurrentVersion` (6 seit 0.621.0 — Wertungsband optimal/schwächer, gleicher Name auf der anderen
-  Seite) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (7 seit 0.622.0 — Lichess-„vorläufig" mit genug Partien zählt; 6 = Wertungsband
+  optimal/schwächer, gleicher Name auf der anderen Seite) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
   fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
   Urteil ändert, erhöht die Zahl.
 * **Minderjährige: gesucht, aber VERBORGEN** (0.610.0, Wunsch „du linkst sie, aber zeigst niemandem den Namen/Account"; bis
