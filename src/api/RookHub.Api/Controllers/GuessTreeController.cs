@@ -27,7 +27,7 @@ public class GuessTreeController : ControllerBase
     /// zaehlt der ganze Rohbestand — von dort laesst sich eine Partie anfordern.</param>
     [HttpGet]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-read")]
     public async Task<ActionResult<OpeningTreeDto>> Branch(CancellationToken ct,
         [FromQuery] string? line = null, [FromQuery] bool onlyPlayable = true)
         => Ok(await _tree.BranchAsync(line, onlyPlayable, ct));

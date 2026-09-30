@@ -96,7 +96,7 @@ public class EndlessController : BaseApiController
 
     [HttpGet("progress/anonymous")]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-read")]
     public async Task<ActionResult<EndlessSyncResponseDto>> GetAnonymousProgress([FromQuery] string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId) || !SessionIdPattern.IsMatch(sessionId))
@@ -108,7 +108,7 @@ public class EndlessController : BaseApiController
 
     [HttpPut("progress/anonymous")]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-write")]
     public async Task<ActionResult<EndlessProgressDto>> SaveAnonymousProgress([FromBody] SaveAnonymousProgressDto dto)
     {
         try
@@ -121,7 +121,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("sessions/anonymous")]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-write")]
     public async Task<ActionResult<EndlessSessionDto>> RecordAnonymousSession([FromBody] RecordAnonymousSessionDto dto)
     {
         try
@@ -134,7 +134,7 @@ public class EndlessController : BaseApiController
 
     [HttpPost("sessions/bulk/anonymous")]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-write")]
     [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<ActionResult<object>> BulkImportAnonymousSessions([FromBody] BulkImportAnonymousSessionDto dto)
     {

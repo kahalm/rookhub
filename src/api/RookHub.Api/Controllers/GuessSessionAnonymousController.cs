@@ -26,7 +26,7 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/guess-sessions/anonymous")]
 [AllowAnonymous]
-[EnableRateLimiting("anonymous-puzzle")]
+[EnableRateLimiting("anonymous-write")]
 public class GuessSessionAnonymousController : ControllerBase
 {
     private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);

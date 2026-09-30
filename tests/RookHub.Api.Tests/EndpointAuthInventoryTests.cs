@@ -44,7 +44,7 @@ public class EndpointAuthInventoryTests
         "GET /api/endless/progress/anonymous",                       // EndlessController.GetAnonymousProgress
         // KidHub, die Kinderseite (0.554.0): ganz ohne Konto — Stufen aus markierten Lichess-Puzzles und
         // die Aufgaben der Kurse, die ein Admin mit Book.ForKids freigegeben hat (nie Kalkulationsbuecher).
-        // Alle am "anonymous-puzzle"-Rate-Limiter. Der Neuaufbau (POST /api/admin/kids/rebuild) bleibt Admin.
+        // Lesend am "kids-read"-Rate-Limiter (Endlos-Modus: "anonymous-read"). Der Neuaufbau (POST /api/admin/kids/rebuild) bleibt Admin.
         "GET /api/kids/courses",                                     // KidsController.GetCourses
         "GET /api/kids/courses/{bookId:int}/puzzles",                // KidsController.GetCoursePuzzles
         "GET /api/kids/language-hint",                               // KidsController.GetLanguageHint (Land der IP, lokal nachgeschlagen)
@@ -81,7 +81,7 @@ public class EndpointAuthInventoryTests
         // Punktepartie ohne Anmeldung (0.459.0): spielbar ist NUR der kuratierte Bestand
         // (GameAnalysis.IsPublic), der Fortschritt haengt an einer anonymen Sitzung am SERVER —
         // die Fortsetzung verlaesst ihn damit weiterhin nicht. Alle sechs haengen am
-        // "anonymous-puzzle"-Rate-Limiter und pruefen die Sitzungskennung.
+        // "anonymous-read"- bzw. "anonymous-write"-Rate-Limiter und pruefen die Sitzungskennung.
         "GET /api/game-analyses/public",                             // GameAnalysisController.ListPublic
         "GET /api/guess-tree",                                       // GuessTreeController.Branch
         // Der Stellungsfilter braucht neben dem Baum auch die LISTE des Rohbestands (0.475.5) —

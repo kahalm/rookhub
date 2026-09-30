@@ -138,6 +138,73 @@ public class KidsPuzzleServiceTests : IDisposable
         Assert.IsType<NotFoundObjectResult>(result.Result);
     }
 
+    // ---- Zwischenspeichern (A10-003): für alle gleich, also Cache-Control + ETag ---------------
+
+    private KidsController ControllerWith(string? ifNoneMatch = null)
+    {
+        var http = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+        if (ifNoneMatch is not null) http.Request.Headers.IfNoneMatch = ifNoneMatch;
+        return new KidsController(_service) { ControllerContext = new ControllerContext { HttpContext = http } };
+    }
+
+    [Fact]
+    public async Task Levels_UndKurse_DarfDerBrowserBehalten_UndBeiGleichemInhalt304()
+    {
+        await SeedPuzzlesAsync();
+        await _service.RebuildAsync();
+        var kids = await AddBookAsync("Kinderkurs", forKids: true);
+        await AddLineAsync(kids, "k1");
+
+        foreach (var call in new Func<KidsController, Task<IActionResult?>>[]
+                 {
+                     async c => (await c.GetLevels(CancellationToken.None)).Result,
+                     async c => (await c.GetLevel(1, CancellationToken.None)).Result,
+                     async c => (await c.GetCourses("de", CancellationToken.None)).Result,
+                 })
+        {
+            var first = ControllerWith();
+            Assert.IsType<OkObjectResult>(await call(first));
+            var response = first.HttpContext.Response;
+            Assert.Equal("public, max-age=" + KidsController.SharedMaxAgeSeconds, response.Headers.CacheControl.ToString());
+            var etag = response.Headers.ETag.ToString();
+            Assert.StartsWith("\"", etag);
+
+            // Browser fragt nach Ablauf mit dem ETag nach — auch in der schwachen Form, die nginx beim Komprimieren macht.
+            foreach (var sent in new[] { etag, "W/" + etag, "\"anders\", " + etag })
+            {
+                var again = ControllerWith(sent);
+                var result = Assert.IsType<StatusCodeResult>(await call(again));
+                Assert.Equal(304, result.StatusCode);
+                Assert.Equal(etag, again.HttpContext.Response.Headers.ETag.ToString());
+            }
+            Assert.IsType<OkObjectResult>(await call(ControllerWith("\"anders\"")));
+        }
+    }
+
+    [Fact]
+    public async Task Levels_LeereLeiter_WirdNichtZwischengespeichert()
+    {
+        var controller = ControllerWith();
+        Assert.IsType<OkObjectResult>((await controller.GetLevels(CancellationToken.None)).Result);
+        Assert.Empty(controller.HttpContext.Response.Headers.CacheControl.ToString());
+        Assert.Empty(controller.HttpContext.Response.Headers.ETag.ToString());
+    }
+
+    [Fact]
+    public async Task Levels_GeaenderteLeiter_BekommtEinenAnderenETag()
+    {
+        await SeedPuzzlesAsync();
+        await _service.RebuildAsync();
+        var before = ControllerWith();
+        await before.GetLevels(CancellationToken.None);
+
+        _db.KidsPuzzles.Remove(await _db.KidsPuzzles.FirstAsync(k => k.Level == 1));
+        await _db.SaveChangesAsync();
+        var after = ControllerWith(before.HttpContext.Response.Headers.ETag.ToString());
+
+        Assert.IsType<OkObjectResult>((await after.GetLevels(CancellationToken.None)).Result);
+    }
+
     // ---- Kinderkurse ----------------------------------------------------------------------------
 
     private async Task<Book> AddBookAsync(string name, bool forKids, bool isCalculation = false)

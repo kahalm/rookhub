@@ -685,15 +685,10 @@ try
     var permitScale = RookHub.Api.Services.RateLimitScale.FromConfig(builder.Configuration);
     builder.Services.AddRateLimiter(options =>
     {
+        // 100/min je IP — außer für die Kinderseiten-Lesezugriffe („kids-read"), deren eigene Policy die Obergrenze je
+        // Adresse ist (siehe RateLimitPartitions).
         options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                factory: _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = 100 * permitScale,
-                    Window = TimeSpan.FromMinutes(1),
-                    QueueLimit = 0
-                }));
+            RookHub.Api.Services.RateLimitPartitions.Global(context, permitScale));
         // Die benannten Limiter MÜSSEN pro Client-IP partitionieren (wie der GlobalLimiter), sonst
         // wäre jeder ein EINZIGER globaler Bucket: ein Angreifer könnte mit 10 Logins/min das Fenster
         // site-weit für alle Nutzer ausschöpfen (Login/Register/Forgot-DoS) UND Brute-Force wäre nicht
@@ -708,7 +703,15 @@ try
                     QueueLimit = 0
                 });
         options.AddPolicy("auth", ctx => PerIpFixedWindow(ctx, 10 * permitScale));
-        options.AddPolicy("anonymous-puzzle", ctx => PerIpFixedWindow(ctx, 30 * permitScale));
+        // Offene Endpunkte nach ZWECK getrennt (vorher teilten sich 21 davon „anonymous-puzzle", 30/min je IP — eine
+        // Schulklasse hinter einer NAT-Adresse sah in KidHub ab dem 16. Kind 429). Schlüssel und Deckel in
+        // RateLimitPartitions: Kinderseite je IP mit hohem Deckel und ohne den globalen Topf; anonyme Stände und
+        // Lesezugriffe je Konto bzw. je IP + X-Visitor-Id; der Rest (Client-Log, Bot-Statistik, Token-Test,
+        // Bestandssuche, Extension-Senke) bleibt „anonymous-puzzle", angemeldet jetzt je Konto statt je IP.
+        options.AddPolicy("anonymous-puzzle", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousMisc(ctx, permitScale));
+        options.AddPolicy("kids-read", ctx => RookHub.Api.Services.RateLimitPartitions.KidsRead(ctx, permitScale));
+        options.AddPolicy("anonymous-read", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousRead(ctx, permitScale));
+        options.AddPolicy("anonymous-write", ctx => RookHub.Api.Services.RateLimitPartitions.AnonymousWrite(ctx, permitScale));
         // Community-Review-Flags (flag-hints): jeder eingeloggte User darf setzen/aufheben — aber
         // gedrosselt PRO USER, damit niemand per Id-Iteration den Admin-Review-Bestand des ganzen
         // Katalogs umflaggt (der globale 100/min-IP-Limiter erlaubte ~6000 Flags/h).

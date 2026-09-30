@@ -154,7 +154,7 @@ public class PuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-write")]
     [HttpPost("{id}/attempt/anonymous")]
     public async Task<IActionResult> RecordAnonymousAttempt(int id, [FromBody] AnonymousAttemptDto dto)
     {
@@ -174,7 +174,7 @@ public class PuzzleController : BaseApiController
     }
 
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-read")]
     [HttpGet("stats/anonymous")]
     public async Task<IActionResult> GetAnonymousStats([FromQuery] string sessionId)
     {

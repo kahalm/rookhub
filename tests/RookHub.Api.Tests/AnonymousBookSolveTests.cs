@@ -74,12 +74,12 @@ public class AnonymousBookSolveTests : IDisposable
     [Theory]
     [InlineData(nameof(BookPuzzleController.RecordAnonymousAttempt))]
     [InlineData(nameof(BookPuzzleController.Track))]
-    public void AnonymousWrites_UseTheAnonymousPuzzleLimiter(string action)
+    public void AnonymousWrites_UseTheAnonymousWriteLimiter(string action)
     {
         var attr = typeof(BookPuzzleController).GetMethod(action)!
             .GetCustomAttributes<EnableRateLimitingAttribute>(inherit: false).SingleOrDefault();
         Assert.NotNull(attr);
-        Assert.Equal("anonymous-puzzle", attr!.PolicyName);
+        Assert.Equal("anonymous-write", attr!.PolicyName);
     }
 
     // --- nur lesbare Bücher bzw. Tagespuzzles -----------------------------------------------

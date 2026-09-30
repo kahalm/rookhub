@@ -40,7 +40,7 @@ public class GameAnalysisController : BaseApiController
     /// </summary>
     [HttpGet("public")]
     [AllowAnonymous]
-    [EnableRateLimiting("anonymous-puzzle")]
+    [EnableRateLimiting("anonymous-read")]
     public async Task<ActionResult<List<GameAnalysisDto>>> ListPublic(CancellationToken ct,
         [FromQuery] string? line = null)
         => Ok(await _service.ListPublicAsync(ct, line));
