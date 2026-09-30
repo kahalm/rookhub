@@ -20,14 +20,17 @@ public class BookPuzzleService
     private readonly IWebhookTaskQueue _bgQueue;
     /// <summary>Entprellt den Webhook anonymer Solves (A2-003); <c>null</c> (Tests) = jeder Solve meldet sofort.</summary>
     private readonly AnonymousSolveNotifyThrottle? _anonNotifyThrottle;
+    /// <summary>Schließt offene Buch-Challenges mit dem gespeicherten Versuch (N9-001); <c>null</c> (Tests) = aus.</summary>
+    private readonly ChallengeService? _challenges;
 
     public BookPuzzleService(AppDbContext db, ILogger<BookPuzzleService> logger, IWebhookTaskQueue bgQueue,
-        AnonymousSolveNotifyThrottle? anonNotifyThrottle = null)
+        AnonymousSolveNotifyThrottle? anonNotifyThrottle = null, ChallengeService? challenges = null)
     {
         _db = db;
         _logger = logger;
         _bgQueue = bgQueue;
         _anonNotifyThrottle = anonNotifyThrottle;
+        _challenges = challenges;
     }
 
     private static readonly Regex SessionIdPattern =
@@ -164,7 +167,26 @@ public class BookPuzzleService
             "BookPuzzleAttempt: User {UserId} {Result} book-puzzle {PuzzleId} StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSeconds}s",
             userId, core.Solved ? "solved" : "failed", id, core.StartedAt, core.AttemptedAt, core.TimeSeconds);
 
+        await ResolveChallengesAsync(userId, id, core.Solved, core.TimeSeconds);
         await NotifySchachBotAsync(id);
+    }
+
+    /// <summary>Offene Buch-Challenges an den Nutzer für dieses Puzzle mit dem gespeicherten Versuch abschließen
+    /// (Codereview N9-001): der Buch-Solver meldete das Ergebnis per <c>/resolve</c> sogar VOR dem Versuch — die Prüfung
+    /// fand ihn nie, echte Lösungen wurden als „nicht gelöst" gebucht. Best effort: der Versuch ist gespeichert, ein
+    /// Fehler hier darf ihn nicht als gescheitert melden (der Client legte ihn sonst offline doppelt ab).</summary>
+    private async Task ResolveChallengesAsync(int userId, int puzzleId, bool solved, int timeSeconds)
+    {
+        if (_challenges == null) return;
+        try
+        {
+            await _challenges.ResolveFromAttemptAsync(userId, PuzzleSource.Book, puzzleId, solved, timeSeconds);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "ChallengeAfterAttempt: Challenge zu Buch-Puzzle {PuzzleId} von User {UserId} nicht verbucht",
+                puzzleId, userId);
+        }
     }
 
     /// <summary>Anonymer (nicht eingeloggter) Lösungsversuch — zählt fürs Tagespuzzle mit,

@@ -14,6 +14,9 @@ public class PuzzleService
     private readonly IMemoryCache _cache;
     private readonly ILogger<PuzzleService> _logger;
     private readonly PuzzleTaggingService _tagging;
+    /// <summary>Challenge/Revanche nach einem gespeicherten Versuch (N9-001); <c>null</c> (Tests) = aus.</summary>
+    private readonly ChallengeService? _challenges;
+    private readonly RevengeNotificationService? _revenge;
     private bool _puzzleTagsReady;   // pro Request gecacht: ist die PuzzleTags-Tabelle befüllt?
 
     // Obergrenze anonymer Versuche pro Session — verhindert unbegrenztes
@@ -22,12 +25,15 @@ public class PuzzleService
     // Obergrenze auth. Versuche pro (User, Puzzle, VizLevel) — kein unbegrenztes Tabellenwachstum.
     private const int MaxAttemptsPerUserPuzzleVizLevel = 20;
 
-    public PuzzleService(AppDbContext db, IMemoryCache cache, ILogger<PuzzleService> logger, PuzzleTaggingService tagging)
+    public PuzzleService(AppDbContext db, IMemoryCache cache, ILogger<PuzzleService> logger, PuzzleTaggingService tagging,
+        ChallengeService? challenges = null, RevengeNotificationService? revenge = null)
     {
         _db = db;
         _cache = cache;
         _logger = logger;
         _tagging = tagging;
+        _challenges = challenges;
+        _revenge = revenge;
     }
 
     /// <param name="themes">Leerzeichengetrennt; Puzzle muss ALLE enthalten (UND-Verknüpfung).</param>
@@ -460,7 +466,30 @@ public class PuzzleService
             "PuzzleAttempt: User {UserId} {Result} puzzle {PuzzleId} (LichessId={LichessId}, Rating={PuzzleRating}) StartedAt={StartedAt:o} SolvedAt={SolvedAt:o} in {TimeSpentSeconds}s Screen={ScreenWidth}x{ScreenHeight} VizLevel={VizLevel} Elo={EloAfter} ({EloChange:+#;-#;0}) EvalShown={EvalShown} VizShowCount={VizShowCount}",
             userId, core.Solved ? "solved" : "failed", puzzleId, puzzle.LichessId, puzzle.Rating, core.StartedAt, core.AttemptedAt, core.TimeSeconds, dto.ScreenWidth, dto.ScreenHeight, vizLevel, newRating, change, dto.EvalShown, dto.VizShowCount);
 
+        await AfterAttemptForFriendsAsync(userId, puzzleId, core.Solved, core.TimeSeconds, dto.RevengeUserId);
+
         return MapAttemptToDto(attempt, puzzle);
+    }
+
+    /// <summary>Folgen eines gespeicherten Versuchs für Freunde (Codereview N9-001): offene Challenges an den Nutzer für
+    /// dieses Puzzle abschließen und — schickt der Client <c>revengeUserId</c> mit — die Revanche-Glocke anlegen. Vorher
+    /// kamen beide Meldungen als eigene Anfragen gleichzeitig mit dem Versuch an und prüften, bevor er gespeichert war:
+    /// echte Lösungen wurden als „nicht gelöst" gebucht, die Revanche-Glocke fiel aus. Best effort: der Versuch ist
+    /// gespeichert, ein Fehler hier darf ihn nicht als gescheitert melden (der Client legte ihn sonst offline erneut ab).</summary>
+    private async Task AfterAttemptForFriendsAsync(int userId, int puzzleId, bool solved, int timeSeconds, int? revengeUserId)
+    {
+        try
+        {
+            if (_challenges != null)
+                await _challenges.ResolveFromAttemptAsync(userId, PuzzleSource.Standard, puzzleId, solved, timeSeconds);
+            if (_revenge != null && revengeUserId is int targetId)
+                await _revenge.RecordAsync(userId, targetId, puzzleId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "ChallengeAfterAttempt: Challenge/Revanche zu Puzzle {PuzzleId} von User {UserId} nicht verbucht",
+                puzzleId, userId);
+        }
     }
 
     private static PuzzleAttemptDto MapAttemptToDto(PuzzleAttempt attempt, Puzzle puzzle) => new()

@@ -175,10 +175,17 @@ public class ChallengeService
     /// <paramref name="clientSolved"/> wird NICHT blind geglaubt: ein gemeldetes „gelöst" wird serverseitig
     /// gegen die echten Versuche des Empfängers geprüft (analog Revenge) — sonst könnte der Empfänger jede
     /// Challenge als „gelöst" markieren, ohne sie wirklich zu lösen. Asymmetrisch: ein „nicht gelöst" ist
-    /// harmlos und wird übernommen; ein „gelöst" zählt nur, wenn es einen bestätigten gelösten Versuch
-    /// (in der zur Quelle passenden Tabelle) seit dem Erstellen der Challenge gibt.
+    /// harmlos und wird übernommen (aufgegeben); ein „gelöst" zählt nur, wenn es einen bestätigten gelösten
+    /// Versuch (in der zur Quelle passenden Tabelle) seit dem Erstellen der Challenge gibt.
+    /// </para>
+    /// <para>
+    /// Fehlt dieser Versuch noch, bleibt die Challenge OFFEN (Rückgabe <c>false</c>), statt als „nicht gelöst"
+    /// gebucht zu werden (Codereview N9-001): der Client schickt Versuch und Meldung gleichzeitig ab, der
+    /// Buch-Solver die Meldung sogar zuerst — die Prüfung lief fast immer, bevor der Versuch gespeichert war.
+    /// Den Abschluss übernimmt dann der gespeicherte Versuch selbst (<see cref="ResolveFromAttemptAsync"/>).
     /// </para></summary>
-    public async Task ResolveAsync(int challengeId, int userId, bool clientSolved, int timeSpentSeconds)
+    /// <returns><c>true</c> = abgeschlossen, <c>false</c> = „gelöst" gemeldet, Versuch noch nicht gespeichert.</returns>
+    public async Task<bool> ResolveAsync(int challengeId, int userId, bool clientSolved, int timeSpentSeconds)
     {
         var challenge = await _db.PuzzleChallenges.FindAsync(challengeId)
             ?? throw new KeyNotFoundException("Challenge not found.");
@@ -189,19 +196,75 @@ public class ChallengeService
         if (challenge.Status != ChallengeStatus.Pending)
             throw new InvalidOperationException("Challenge is already resolved.");
 
-        // „Gelöst" serverseitig bestätigen; „nicht gelöst" unverändert übernehmen.
-        var solved = clientSolved && await HasConfirmedSolveAsync(challenge, userId);
+        // „Gelöst" serverseitig bestätigen; ohne gespeicherten Versuch offen lassen (siehe oben).
+        // „Nicht gelöst" unverändert übernehmen.
+        if (clientSolved && !await HasConfirmedSolveAsync(challenge, userId))
+            return false;
 
-        challenge.Status = solved ? ChallengeStatus.Solved : ChallengeStatus.Failed;
-        challenge.ResolvedAt = DateTime.UtcNow;
-        challenge.TimeSpentSeconds = Math.Clamp(timeSpentSeconds, 0, 3600);
-        await _db.SaveChangesAsync();
+        if (!await TryCloseAsync(challenge.Id, clientSolved, timeSpentSeconds))
+            throw new InvalidOperationException("Challenge is already resolved.");
 
         // Absender benachrichtigen: Empfänger hat die Challenge gelöst/nicht gelöst.
-        var byName = await UsernameAsync(userId);
-        await _notifications.CreateAsync(challenge.FromUserId, NotificationType.ChallengeResolved,
-            new Dictionary<string, string> { ["username"] = byName, ["solved"] = solved ? "true" : "false" }, "/friends");
+        await NotifyResolvedAsync(challenge.FromUserId, await UsernameAsync(userId), clientSolved);
+        return true;
     }
+
+    /// <summary>Schließt die offenen Challenges an <paramref name="userId"/> für dieses Puzzle mit dem Ergebnis eines
+    /// gerade GESPEICHERTEN Versuchs (Codereview N9-001) — aufgerufen von den Versuchs-Recordern
+    /// (<see cref="PuzzleService"/>, <see cref="BookPuzzleService"/>). Der gespeicherte Versuch ist damit die Wahrheit;
+    /// <see cref="ResolveAsync"/> braucht es nur noch für „nicht gelöst/aufgegeben". Es zählt der erste Versuch nach dem
+    /// Erstellen (wie im Client): eine schon abgeschlossene Challenge bleibt, wie sie ist. Haben mehrere Freunde
+    /// dasselbe Puzzle geschickt, erfährt es jeder Absender.</summary>
+    public async Task ResolveFromAttemptAsync(int userId, PuzzleSource source, int puzzleId, bool solved, int timeSpentSeconds)
+    {
+        var open = await _db.PuzzleChallenges
+            .Where(c => c.ToUserId == userId && c.Source == source && c.PuzzleId == puzzleId &&
+                        c.Status == ChallengeStatus.Pending)
+            .Select(c => new { c.Id, c.FromUserId })
+            .ToListAsync();
+        if (open.Count == 0) return;
+
+        string? byName = null;
+        foreach (var c in open)
+        {
+            // Gleichzeitiges /resolve desselben Durchlaufs: nur wer die Zeile tatsächlich umstellt, benachrichtigt.
+            if (!await TryCloseAsync(c.Id, solved, timeSpentSeconds)) continue;
+            byName ??= await UsernameAsync(userId);
+            await NotifyResolvedAsync(c.FromUserId, byName, solved);
+        }
+    }
+
+    /// <summary>Stellt eine Challenge von „offen" auf gelöst/nicht gelöst — ATOMAR: relational per einzelnem
+    /// <c>UPDATE … WHERE Status = Pending</c>, damit Versuch und <c>/resolve</c>, die gleichzeitig ankommen, nicht beide
+    /// abschließen und den Absender doppelt benachrichtigen. Der InMemory-Test-Provider kann <c>ExecuteUpdate</c>
+    /// nicht übersetzen → dort getrackter Re-Check (gleiche Logik, ohne Nebenläufigkeitsgarantie).</summary>
+    /// <returns><c>true</c>, wenn DIESER Aufruf die Challenge abgeschlossen hat.</returns>
+    private async Task<bool> TryCloseAsync(int challengeId, bool solved, int timeSpentSeconds)
+    {
+        var status = solved ? ChallengeStatus.Solved : ChallengeStatus.Failed;
+        DateTime? resolvedAt = DateTime.UtcNow;
+        int? seconds = Math.Clamp(timeSpentSeconds, 0, 3600);
+
+        if (_db.Database.IsRelational())
+            return await _db.PuzzleChallenges
+                .Where(c => c.Id == challengeId && c.Status == ChallengeStatus.Pending)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(c => c.Status, status)
+                    .SetProperty(c => c.ResolvedAt, resolvedAt)
+                    .SetProperty(c => c.TimeSpentSeconds, seconds)) == 1;
+
+        var challenge = await _db.PuzzleChallenges.FirstOrDefaultAsync(c => c.Id == challengeId);
+        if (challenge is null || challenge.Status != ChallengeStatus.Pending) return false;
+        challenge.Status = status;
+        challenge.ResolvedAt = resolvedAt;
+        challenge.TimeSpentSeconds = seconds;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    private Task NotifyResolvedAsync(int fromUserId, string byName, bool solved)
+        => _notifications.CreateAsync(fromUserId, NotificationType.ChallengeResolved,
+            new Dictionary<string, string> { ["username"] = byName, ["solved"] = solved ? "true" : "false" }, "/friends");
 
     /// <summary>Hat der Empfänger das Puzzle der Challenge seit deren Erstellung nachweislich gelöst?
     /// Quelle = passende Versuchstabelle (Standard → <see cref="PuzzleAttempt"/>, Book → <see cref="BookPuzzleAttempt"/>).</summary>

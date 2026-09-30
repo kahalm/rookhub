@@ -65,6 +65,11 @@ public class RecordPuzzleAttemptDto
     [Range(0, 3)]
     public int HintsUsed { get; set; } = 0;
 
+    /// <summary>Revanche-Modus (<c>/puzzles/:id?revengeUserId=…</c>): der Freund, dessen gescheitertes Puzzle gerade
+    /// angegangen wird. Mit dem gespeicherten Versuch legt der Server die Revanche-Glocke selbst an (Codereview N9-001)
+    /// — gleiche Prüfungen wie <c>POST /api/revenge/result</c>. Optional.</summary>
+    public int? RevengeUserId { get; set; }
+
     // KEIN Modus-Feld: die Spielweise ergibt sich aus VisualizationLevel (0 = "easy", > 0 =
     // "training"). Ein zweites Feld wäre widerspruchsfähig (Stufe 0 + "training").
 }

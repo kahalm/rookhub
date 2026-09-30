@@ -49,14 +49,16 @@ public class ChallengeController : BaseApiController
     public async Task<ActionResult<Dictionary<int, int>>> OutgoingPendingCounts()
         => Ok(await _challengeService.GetPendingOutgoingCountsAsync(GetUserId()));
 
-    /// <summary>Ergebnis einer Challenge melden (nur der Empfänger).</summary>
+    /// <summary>Ergebnis einer Challenge melden (nur der Empfänger). Abgeschlossen wird eine Challenge in der Regel
+    /// schon vom gespeicherten Versuch; hier bleibt vor allem „nicht gelöst/aufgegeben". Ein „gelöst" ohne
+    /// gespeicherten Versuch lässt sie offen (200), der nachfolgende Versuch schließt sie (Codereview N9-001).</summary>
     [HttpPost("{id}/resolve")]
     public async Task<IActionResult> Resolve(int id, [FromBody] ResolveChallengeDto dto)
     {
         try
         {
-            await _challengeService.ResolveAsync(id, GetUserId(), dto.Solved, dto.TimeSpentSeconds);
-            return Ok(new { message = "Challenge resolved." });
+            var resolved = await _challengeService.ResolveAsync(id, GetUserId(), dto.Solved, dto.TimeSpentSeconds);
+            return Ok(new { message = resolved ? "Challenge resolved." : "Challenge stays open until the attempt is recorded." });
         }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }

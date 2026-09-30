@@ -371,8 +371,11 @@ public class ChallengeControllerTests : IDisposable
         Assert.NotNull(updated.ResolvedAt);
     }
 
+    /// <summary>KEIN gelöster Versuch des Empfängers → „gelöst" darf nicht geglaubt werden. Früher wurde die Challenge
+    /// dann endgültig als „nicht gelöst" gebucht — der Versuch war aber meist nur noch unterwegs (Client schickt beides
+    /// gleichzeitig, Codereview N9-001). Jetzt bleibt sie offen; der gespeicherte Versuch schließt sie.</summary>
     [Fact]
-    public async Task Resolve_DowngradesToFailed_WhenSolveClaimedButNotConfirmed()
+    public async Task Resolve_LeavesPending_WhenSolveClaimedButNotConfirmed()
     {
         var me = await CreateUserAsync("me");
         var friend = await CreateUserAsync("friend");
@@ -380,15 +383,36 @@ public class ChallengeControllerTests : IDisposable
         var challenge = new PuzzleChallenge { FromUserId = friend.Id, ToUserId = me.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending };
         _db.PuzzleChallenges.Add(challenge);
         await _db.SaveChangesAsync();
-        // KEIN gelöster Versuch des Empfängers → „gelöst" darf nicht geglaubt werden.
 
         SetUser(me.Id);
         var result = await _controller.Resolve(challenge.Id, new ResolveChallengeDto { Solved = true, TimeSpentSeconds = 14 });
 
         Assert.IsType<OkObjectResult>(result);
         var updated = await _db.PuzzleChallenges.FindAsync(challenge.Id);
+        Assert.Equal(ChallengeStatus.Pending, updated!.Status);
+        Assert.Null(updated.ResolvedAt);
+        Assert.False(await _db.Notifications.AnyAsync(n => n.UserId == friend.Id && n.Type == NotificationType.ChallengeResolved));
+    }
+
+    [Fact]
+    public async Task Resolve_BooksFailed_WhenRecipientGaveUp()
+    {
+        var me = await CreateUserAsync("me");
+        var friend = await CreateUserAsync("friend");
+        var puzzle = await CreatePuzzleAsync();
+        var challenge = new PuzzleChallenge { FromUserId = friend.Id, ToUserId = me.Id, PuzzleId = puzzle.Id, Status = ChallengeStatus.Pending };
+        _db.PuzzleChallenges.Add(challenge);
+        await _db.SaveChangesAsync();
+
+        SetUser(me.Id);
+        var result = await _controller.Resolve(challenge.Id, new ResolveChallengeDto { Solved = false, TimeSpentSeconds = 40 });
+
+        Assert.IsType<OkObjectResult>(result);
+        var updated = await _db.PuzzleChallenges.FindAsync(challenge.Id);
         Assert.Equal(ChallengeStatus.Failed, updated!.Status);
+        Assert.Equal(40, updated.TimeSpentSeconds);
         Assert.NotNull(updated.ResolvedAt);
+        Assert.True(await _db.Notifications.AnyAsync(n => n.UserId == friend.Id && n.Type == NotificationType.ChallengeResolved));
     }
 
     [Fact]
