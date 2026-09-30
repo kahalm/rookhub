@@ -47,5 +47,20 @@
         ]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "kids-catalog",
+      "urls": [
+        "/api/kids/levels",
+        "/api/kids/courses"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 100,
+        "maxAge": "7d",
+        "timeout": "5s"
+      }
+    }
   ]
 }

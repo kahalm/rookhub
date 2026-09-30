@@ -1,4 +1,6 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of } from 'rxjs';
@@ -117,4 +119,48 @@ describe('LevelPlayComponent', () => {
     space();
     expect(navigate).toHaveBeenCalledWith(['/levels', 2]);
   });
+});
+
+/** Codereview 2026-09-29, A10-003: eine Schulklasse hinter EINER NAT-Adresse lief in die Drossel, und das Kind sah
+ *  beim Stufenstart sofort das Fehlerbild. Hier mit dem ECHTEN KidsApiService — der holt ein 429 einmal nach. */
+describe('LevelPlayComponent — Drossel (429)', () => {
+  const KEY = 'rh-kids-progress-v1';
+  beforeEach(() => {
+    localStorage.removeItem(KEY);
+    TestBed.configureTestingModule({
+      imports: [LevelPlayComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({ level: '1' })) } },
+      ],
+    });
+  });
+  afterEach(() => localStorage.removeItem(KEY));
+
+  it('holt die Stufe nach einem 429 einmal nach, statt das Fehlerbild zu zeigen', fakeAsync(() => {
+    const http = TestBed.inject(HttpTestingController);
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 1 }]);
+    http.expectOne('/api/kids/levels/1').flush(null, {
+      status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '2' },
+    });
+    f.detectChanges();
+    expect(c.failed()).toBeFalse();
+    expect((f.nativeElement as HTMLElement).textContent).toContain('kids.loading');
+
+    tick(2000);
+    http.expectOne('/api/kids/levels/1').flush({
+      level: 1, theme: 'mate1', puzzles: [{ id: 1, fen: '1R6/8/8/8/6p1/8/r6k/5K2 b - - 3 73', moves: 'g4g3 b8h8' }],
+    });
+    f.detectChanges();
+    expect(c.failed()).toBeFalse();
+    expect(c.detail()?.level).toBe(1);
+    expect((f.nativeElement as HTMLElement).textContent).not.toContain('kids.loadError');
+    http.verify();
+    f.destroy();
+    flush();
+  }));
 });

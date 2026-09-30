@@ -3949,6 +3949,14 @@ Kinderseite" unter REST API.
   (mit `[value]` am `<select>` zeigte sie immer „Deutsch“, den ersten Eintrag, während die Seite Englisch sprach).
   Jede Sprache außer de/en/hr/hu wird über `LocaleService.applyUnsaved('de')` als Deutsch ANGEZEIGT, ohne die Wahl
   zu überschreiben.
+- **Drossel und Netzausfall** (Codereview 2026-09-29, A10-003 — Server-Teil unter „Rate-Limit nach Zweck"):
+  `KidsApiService` hält Stufen-Leiter und Kursliste (je Sprache) `CATALOG_TTL_MS` (5 min, = `max-age` des Servers) im
+  Speicher — Startseite, Stufenkarte und jeder Stufenstart teilen sich EINE Abfrage; eine leere Leiter und Fehler bleiben
+  nicht liegen. Ein 429 auf `levels`, `levels/{n}`, `courses` und `courses/{id}/puzzles` holt er EINMAL nach
+  (`retryOnceAfter429`: `Retry-After`, sonst ein ganzes Minutenfenster — die Limiter der API schicken keins; ein zweites
+  429 zeigt das Fehlerbild). Bewusst dort und nicht im geteilten `retryInterceptor`, der 429 absichtlich nicht wiederholt.
+  Der Service Worker (`ngsw-config.kidhub.json`, dataGroup `kids-catalog`, freshness, 5 s) liefert Stufen und Kurse,
+  die schon einmal geladen waren, auch ohne Netz; `progress`, `language-hint` und `endless/batch` bleiben draußen.
 - **Emojis** (Eule, Themenbilder, Sterne) brauchen eine Emoji-Schrift auf dem Gerät — Handys/Tablets haben sie,
   der Headless-Chromium auf dem Server nicht (Screenshots zeigen dort Kästchen).
 

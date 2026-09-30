@@ -42,7 +42,9 @@ export const kidhubConfig: ApplicationConfig = {
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),
     }),
     // Nur im Prod-Build (`ngsw-config.kidhub.json`): App-Shell und Sprachdateien offline — ein Tablet
-    // im Schachkurs hat nicht immer Netz. Die Aufgaben selbst kommen weiter vom Server.
+    // im Schachkurs hat nicht immer Netz. Die Aufgaben kommen weiter vom Server; Stufen und Kurse
+    // (dataGroup „kids-catalog", freshness: Netz zuerst, nach 5 s oder ohne Netz der zuletzt geholte
+    // Stand) lassen sich aber auch ohne Netz wieder oeffnen, wenn sie schon einmal geladen waren.
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',
