@@ -401,6 +401,24 @@ public class ChessableReviewLineServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpsertBatch_OverAccountByteQuota_BlocksNewAndGrowingLines()
+    {
+        // Vorher kein Deckel je Konto: beliebige bid/oid-Paare, je Batch 500 × 256 K Zeichen. Jetzt ein Byte-Kontingent
+        // (JSON-Bytes + Aufschlag je Zeile): darüber keine neue Linie und kein Wachstum; Verkleinern geht immer.
+        var user = await CreateUserAsync();
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { UserBytesCap = 400 };
+
+        Assert.Equal(1, await svc.UpsertBatchAsync(user.Id, "1", new() { Entry("1", JsonOfBytes(100)) }));   // 100 + 128
+        Assert.Equal(0, await svc.UpsertBatchAsync(user.Id, "1", new() { Entry("2", JsonOfBytes(100)) }));   // 228 + 228
+        Assert.Equal(0, await svc.UpsertBatchAsync(user.Id, "1", new() { Entry("1", JsonOfBytes(300)) }));   // 228 + 200
+        Assert.Equal(100, (await _db.ChessableReviewLines.SingleAsync()).Json.Length);
+
+        Assert.Equal(1, await svc.UpsertBatchAsync(user.Id, "1", new() { Entry("1", JsonOfBytes(40)) }));    // 168
+        Assert.Equal(1, await svc.UpsertBatchAsync(user.Id, "1", new() { Entry("2", JsonOfBytes(100)) }));   // 168 + 228
+        Assert.Equal(2, await _db.ChessableReviewLines.CountAsync());
+    }
+
+    [Fact]
     public async Task PruneAnon_RemovesOnlyOldUnclaimedRows()
     {
         _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine

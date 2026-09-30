@@ -110,6 +110,38 @@ public class ChessableProblemMoveServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Upsert_OverAccountByteQuota_NoNewRows_ButCountersStillUpdate()
+    {
+        // Vorher kein Mengendeckel: beliebige oids, je Batch 500 × 16 KB. Jede Zeile zählt mit einem Aufschlag (auch
+        // ohne Zug-Detail), das Zug-Detail mit seinen Bytes. Über dem Kontingent: keine neue Zeile, und bei einer
+        // bestehenden laufen Zähler/Datum weiter, das größere Zug-Detail nicht.
+        var u = await CreateUserAsync();
+        var svc = new ChessableProblemMoveService(_db) { UserBytesCap = 280 };
+
+        Assert.Equal(2, await svc.UpsertBatchAsync(u.Id, "1", new()
+        {
+            new ChessableProblemMoveEntryDto { Oid = "1", NHard = 1 },
+            new ChessableProblemMoveEntryDto { Oid = "2", NHard = 1 },
+        }));                                                                                       // 2 × 128 = 256
+        Assert.Equal(0, await svc.UpsertBatchAsync(u.Id, "1", new()
+        {
+            new ChessableProblemMoveEntryDto { Oid = "3", NHard = 1 },                              // 256 + 128 > 280
+        }));
+        Assert.Equal(1, await svc.UpsertBatchAsync(u.Id, "1", new()
+        {
+            new ChessableProblemMoveEntryDto
+            {
+                Oid = "1", NHard = 7, ProblemMoves = Json("""{"4":{"b":[{"move":"dxe4","total":1}]}}"""),
+            },                                                                                     // + 39 Byte > 280
+        }));
+
+        var row = await _db.ChessableProblemMoves.SingleAsync(p => p.Oid == "1");
+        Assert.Equal(7, row.NHard);
+        Assert.Null(row.ProblemMovesJson);
+        Assert.Equal(2, await _db.ChessableProblemMoves.CountAsync());
+    }
+
+    [Fact]
     public void NormalizeJson_RejectsOversized()
     {
         var big = "{\"a\":\"" + new string('x', ChessableProblemMoveService.MaxJsonLength) + "\"}";

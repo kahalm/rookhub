@@ -103,4 +103,37 @@ public class ChessableSessionMoveServiceTests : IDisposable
         // Die neueste Zeile hat überlebt, getrimmt wurde am ALTEN Ende.
         Assert.True(await _db.ChessableSessionMoves.AnyAsync(s => s.UserId == u.Id && s.Oid == "36729913"));
     }
+
+    private static ChessableSessionMoveEntryDto Run(string oid, string moves) => new() { Oid = oid, Moves = Json(moves) };
+
+    [Fact]
+    public async Task Append_OverAccountByteQuota_StoresNothing()
+    {
+        // Der Zeilendeckel allein ließ 200 000 × 64 KB = 12,8 GB je Gratis-Konto zu. Jetzt gilt ein Byte-Kontingent je
+        // Konto — ist es erschöpft, wird nichts mehr angehängt. Ein anderes Konto hat sein eigenes.
+        var u = await CreateUserAsync();
+        var other = new AppUser { Username = "u2", PasswordHash = "x", CreatedAt = DateTime.UtcNow };
+        _db.AppUsers.Add(other);
+        await _db.SaveChangesAsync();
+        const string moves = """[{"mid":0,"wrong":[]}]""";   // 22 Byte + 128 Zeilen-Aufschlag = 150
+        var svc = new ChessableSessionMoveService(_db) { UserBytesCap = 400 };
+
+        Assert.Equal(2, await svc.AppendBatchAsync(u.Id, "1", new() { Run("1", moves), Run("2", moves), Run("3", moves) }));
+        Assert.Equal(0, await svc.AppendBatchAsync(u.Id, "1", new() { Run("4", moves) }));
+        Assert.Equal(2, await _db.ChessableSessionMoves.CountAsync(s => s.UserId == u.Id));
+        Assert.Equal(1, await svc.AppendBatchAsync(other.Id, "1", new() { Run("1", moves) }));
+    }
+
+    [Fact]
+    public async Task Append_QuotaIsSharedWithTheOtherChessableSinks()
+    {
+        // EIN Kontingent über getReview-Linien, Sitzungszüge und schwierige Züge — sonst schriebe ein Konto dreimal so viel.
+        var u = await CreateUserAsync();
+        _db.ChessableReviewLines.Add(new ChessableReviewLine { UserId = u.Id, Bid = "1", Oid = "1", Json = new string('x', 900) });
+        await _db.SaveChangesAsync();
+        var svc = new ChessableSessionMoveService(_db) { UserBytesCap = 1100 };
+
+        Assert.Equal(0, await svc.AppendBatchAsync(u.Id, "1", new() { Run("1", """[{"mid":0}]""") }));   // 1028 + 139 > 1100
+        Assert.Equal(0, await _db.ChessableSessionMoves.CountAsync());
+    }
 }

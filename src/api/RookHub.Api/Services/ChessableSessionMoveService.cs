@@ -22,10 +22,19 @@ public class ChessableSessionMoveService
     /// <summary>Per-User-Gesamtdeckel; darüber fliegen die ältesten Zeilen raus.
     /// Kein const, damit Tests nicht 200k Zeilen anlegen müssen.</summary>
     public int MaxRowsPerUser { get; init; } = 200_000;
+    /// <summary>Wirksames Byte-Kontingent je Konto über alle drei Chessable-Roh-Senken
+    /// (<see cref="ChessableSinkBytes.MaxUserBytes"/>); nur Tests setzen es klein. Der Zeilendeckel allein ließ
+    /// 200 000 × 64 KB = 12,8 GB je Gratis-Konto zu. Ist es erschöpft, wird nichts mehr angehängt.</summary>
+    internal long UserBytesCap { get; init; } = ChessableSinkBytes.MaxUserBytes;
 
     private readonly AppDbContext _db;
+    private readonly ChessableSinkBytes _sinkBytes;
 
-    public ChessableSessionMoveService(AppDbContext db) => _db = db;
+    public ChessableSessionMoveService(AppDbContext db, ChessableSinkBytes? sinkBytes = null)
+    {
+        _db = db;
+        _sinkBytes = sinkBytes ?? new ChessableSinkBytes();
+    }
 
     public async Task<int> AppendBatchAsync(int userId, string bid,
         List<ChessableSessionMoveEntryDto> entries, CancellationToken ct = default)
@@ -40,17 +49,24 @@ public class ChessableSessionMoveService
             .ToList();
         if (clean.Count == 0) return 0;
 
+        var budget = _sinkBytes.ForUser(_db, userId, UserBytesCap, ct);
+        var stored = 0;
         foreach (var (oid, json) in clean)
         {
+            if (!await budget.TryTakeAsync(ChessableSinkBytes.Utf8(json) + ChessableSinkBytes.RowOverheadBytes))
+                continue;   // Kontingent des Kontos erschöpft
             _db.ChessableSessionMoves.Add(new ChessableSessionMove
             {
                 UserId = userId, Bid = bid, Oid = oid, MovesJson = json!, CreatedAt = now,
             });
+            stored++;
         }
+        if (stored == 0) return 0;
         await _db.SaveChangesAsync(ct);
+        budget.Commit();
 
         await TrimToCapAsync(userId, ct);
-        return clean.Count;
+        return stored;
     }
 
     /// <summary>Hält den per-User-Bestand unter <see cref="MaxRowsPerUser"/> (älteste zuerst raus).

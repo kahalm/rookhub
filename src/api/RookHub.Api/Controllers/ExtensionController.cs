@@ -315,12 +315,20 @@ public class ExtensionController : BaseApiController
         return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, dto.Oid.Trim(), ct));
     }
 
+    /// <summary>Rumpf-Deckel der drei Chessable-Roh-Senken (problem-moves, session-moves, review-lines), wie beim
+    /// anonymen Pfad. Vorher galt Kestrels Vorgabe (30 MB) bzw. 64 MB bei review-lines. RepCheck schickt je Senke und
+    /// Kurs höchstens 400 schwierige Züge, 200 Sitzungszüge bzw. 50 getReview-Linien; die größte je gemessene
+    /// getReview-Linie hat 77 KB (Prod, 29.09.2026), 50 davon sind rund 4 MB.</summary>
+    internal const long ChessableSinkRequestLimit = 16_000_000;
+
     /// <summary>
     /// „Schwierige Züge" ablegen: Batch-Upsert je (User, Kurs-bid, Linien-oid) — nHard aus den
     /// Kapitel-Listen, Zug-Details (problemMoves.thisUser) + lastReviewed aus den Linien-Antworten,
     /// die die Extension beim Training/Kurs-Holen ohnehin mitschneidet. Idempotent.
     /// </summary>
     [HttpPost("chessable/problem-moves")]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
     public async Task<IActionResult> ChessableProblemMoves([FromBody] ChessableProblemMovesInputDto dto,
         CancellationToken ct)
     {
@@ -337,6 +345,8 @@ public class ExtensionController : BaseApiController
     /// Quelle: RepCheck-Capture beim Training. Als Roh-Log gesammelt, Auswertung offen.
     /// </summary>
     [HttpPost("chessable/session-moves")]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
     public async Task<IActionResult> ChessableSessionMoves([FromBody] ChessableSessionMovesInputDto dto,
         CancellationToken ct)
     {
@@ -352,7 +362,8 @@ public class ExtensionController : BaseApiController
     /// Aufbau zum Kurs (Fallback, wenn kein getGame vorliegt) passiert erst beim Kurs-Aufbau. Idempotent.
     /// </summary>
     [HttpPost("chessable/review-lines")]
-    [RequestSizeLimit(64_000_000)]
+    [EnableRateLimiting("extension-sink")]
+    [RequestSizeLimit(ChessableSinkRequestLimit)]
     public async Task<IActionResult> ChessableReviewLines([FromBody] ChessableReviewLinesInputDto dto,
         CancellationToken ct)
     {
@@ -385,7 +396,7 @@ public class ExtensionController : BaseApiController
     [HttpPost("chessable/review-lines/anon")]
     [AllowAnonymous]
     [EnableRateLimiting("anonymous-puzzle")]
-    [RequestSizeLimit(16_000_000)]   // deutlich kleiner als der authentifizierte Pfad: der Client batcht ≤50 Linien (offener Endpoint → DoS-Schranke)
+    [RequestSizeLimit(16_000_000)]   // der Client batcht ≤50 Linien (offener Endpoint → DoS-Schranke)
     public async Task<IActionResult> ChessableReviewLinesAnon([FromBody] AnonymousChessableReviewLinesInputDto dto,
         CancellationToken ct)
     {

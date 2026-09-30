@@ -753,6 +753,20 @@ try
         // vier Oberflächen) — eigene IP-Partition mit höherem Deckel statt „auth": eine Schulklasse, die KidHub öffnet,
         // sind 25 Starts in einer Minute und sperrte sonst Anmeldung, Registrierung und „Passwort vergessen".
         options.AddPolicy("auth-session", ctx => PerIpFixedWindow(ctx, 60 * permitScale));
+        // Chessable-Roh-Senken der Extension (problem-moves, session-moves, review-lines): eigene Partition PRO
+        // USER, zusätzlich zum globalen Deckel je IP. Vorher durfte ein Konto die vollen 100 Batches/min je IP
+        // schreiben (~1,3 GB/min). RepCheck flusht je Senke und Kurs höchstens alle 15 s — 60/min für alle drei
+        // zusammen lässt auch mehreren offenen Kursen reichlich Luft. Die Menge je Konto deckelt ChessableSinkBytes.
+        options.AddPolicy("extension-sink", ctx =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60 * permitScale,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
         // Anonyme Turnier-Proxy-GETs (oeffentliche Turnierseite / Teilen-Feature):
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.

@@ -50,6 +50,31 @@ public class ChessableSinkSqlTests(ChessableSinkSqlFixture fixture)
         await using (var db = fixture.Schema.NewContext())
             Assert.Equal(2, await db.AnonymousChessableReviewLines.CountAsync());
     }
+
+    [MySqlFact]
+    public async Task UserTotal_SumsAllThreeSinksInBytes()
+    {
+        int userId;
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var user = new AppUser { Username = "sink", PasswordHash = "x" };
+            var other = new AppUser { Username = "sink2", PasswordHash = "x" };
+            db.AppUsers.AddRange(user, other);
+            await db.SaveChangesAsync();
+            userId = user.Id;
+            db.ChessableReviewLines.Add(new ChessableReviewLine { UserId = user.Id, Bid = "1", Oid = "1", Json = "{\"x\":\"€€\"}" });
+            db.ChessableSessionMoves.Add(new ChessableSessionMove { UserId = user.Id, Bid = "1", Oid = "1", MovesJson = "[1]" });
+            db.ChessableProblemMoves.Add(new ChessableProblemMove { UserId = user.Id, Bid = "1", Oid = "1" });   // ohne Zug-Detail
+            db.ChessableSessionMoves.Add(new ChessableSessionMove { UserId = other.Id, Bid = "1", Oid = "1", MovesJson = "[1,2,3]" });
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = fixture.Schema.NewContext())
+        {
+            Assert.Equal(14 + 3 + 3 * ChessableSinkBytes.RowOverheadBytes, await new ChessableSinkBytes().UserTotalAsync(db, userId));
+            Assert.Equal(0, await new ChessableSinkBytes().UserTotalAsync(db, 999_999));
+        }
+    }
 }
 
 public sealed class ChessableSinkSqlFixture() : MariaDbClassFixture("csink", withApp: false);

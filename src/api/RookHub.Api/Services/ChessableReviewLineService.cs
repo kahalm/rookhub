@@ -51,6 +51,9 @@ public class ChessableReviewLineService
     /// <summary>Wirksamer Byte-Deckel der Anon-Senke; nur Tests setzen ihn klein.</summary>
     internal long AnonBytesCap { get; init; } = MaxAnonBytesTotal;
 
+    /// <summary>Wirksames Byte-Kontingent je Konto (<see cref="ChessableSinkBytes.MaxUserBytes"/>); nur Tests setzen es klein.</summary>
+    internal long UserBytesCap { get; init; } = ChessableSinkBytes.MaxUserBytes;
+
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
     private readonly ILogger<ChessableReviewLineService>? _log;
@@ -83,8 +86,9 @@ public class ChessableReviewLineService
 
     /// <summary>
     /// Upsert je oid (letzter Stand im Batch gewinnt). Verworfen werden Einträge ohne gültige numerische
-    /// oid (≤32), mit leerem/übergroßem JSON (&gt; <see cref="MaxJsonLength"/>). Liefert die Zahl der
-    /// tatsächlich geschriebenen/aktualisierten Zeilen.
+    /// oid (≤32), mit leerem/übergroßem JSON (&gt; <see cref="MaxJsonLength"/>) und — ist das Byte-Kontingent des
+    /// Kontos (<see cref="ChessableSinkBytes.MaxUserBytes"/>) erschöpft — alles, was es wachsen ließe. Liefert die
+    /// Zahl der tatsächlich geschriebenen/aktualisierten Zeilen.
     /// </summary>
     public async Task<int> UpsertBatchAsync(int userId, string bid,
         List<ChessableReviewLineEntryDto> entries, CancellationToken ct = default)
@@ -105,13 +109,19 @@ public class ChessableReviewLineService
         var existing = await _db.ChessableReviewLines
             .Where(r => r.UserId == userId && r.Bid == bid && oids.Contains(r.Oid))
             .ToDictionaryAsync(r => r.Oid, ct);
+        var budget = _sinkBytes.ForUser(_db, userId, UserBytesCap, ct);
 
         var now = DateTime.UtcNow;
         var written = 0;
         foreach (var e in clean)
         {
             var oid = e.Oid.Trim();
-            if (!existing.TryGetValue(oid, out var row))
+            existing.TryGetValue(oid, out var row);
+            var delta = row is null
+                ? ChessableSinkBytes.Utf8(e.Json) + ChessableSinkBytes.RowOverheadBytes
+                : ChessableSinkBytes.Utf8(e.Json) - ChessableSinkBytes.Utf8(row.Json);
+            if (!await budget.TryTakeAsync(delta)) continue;   // Kontingent des Kontos erschöpft
+            if (row is null)
             {
                 row = new ChessableReviewLine { UserId = userId, Bid = bid, Oid = oid };
                 _db.ChessableReviewLines.Add(row);
@@ -123,7 +133,11 @@ public class ChessableReviewLineService
             written++;
         }
 
-        try { await _db.SaveChangesAsync(ct); }
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            budget.Commit();
+        }
         catch (DbUpdateException)
         {
             // Race auf dem Unique-Index (paralleler Flush desselben Users): Batch ist idempotent —
@@ -166,9 +180,8 @@ public class ChessableReviewLineService
         // …und der Gesamtbestand der Senke: nur NEUE Zeilen werden abgewiesen, Aktualisierungen
         // bestehender laufen weiter (ein legitimer Nutzer verliert dadurch nichts).
         var totalRowCount = await _db.AnonymousChessableReviewLines.CountAsync(ct);
-        // …und ihr Byte-Stand: erst gezählt, wenn ein Eintrag die Senke wachsen ließe (Summe über LONGTEXT).
-        long? sinkBytes = null;
-        long grown = 0;
+        // …und ihr Byte-Stand (gezählt erst, wenn ein Eintrag die Senke wachsen ließe).
+        var budget = _sinkBytes.ForAnon(_db, AnonBytesCap, ct);
 
         var now = DateTime.UtcNow;
         var written = 0;
@@ -182,12 +195,7 @@ public class ChessableReviewLineService
                 if (totalRowCount >= MaxAnonRowsTotal) continue;   // Senke insgesamt voll
             }
             var delta = ChessableSinkBytes.Utf8(e.Json) - (row is null ? 0 : ChessableSinkBytes.Utf8(row.Json));
-            if (delta > 0)
-            {
-                var total = sinkBytes ??= await _sinkBytes.AnonTotalAsync(_db, ct);
-                if (total + delta > AnonBytesCap) continue;   // Senke in Bytes voll → nichts, was sie wachsen lässt
-                sinkBytes = total + delta;
-            }
+            if (!await budget.TryTakeAsync(delta)) continue;   // Senke in Bytes voll → nichts, was sie wachsen lässt
             if (row is null)
             {
                 row = new AnonymousChessableReviewLine { ChessableUid = uid, Bid = bid, Oid = oid, CreatedAt = now };
@@ -198,14 +206,13 @@ public class ChessableReviewLineService
             row.Json = e.Json;
             row.ChapterTitle = ExtractChapterTitle(e.Json);
             row.UpdatedAt = now;
-            grown += delta;
             written++;
         }
 
         try
         {
             await _db.SaveChangesAsync(ct);
-            _sinkBytes.AddAnon(grown);
+            budget.Commit();
         }
         catch (DbUpdateException) { _db.ChangeTracker.Clear(); }   // Race auf dem Unique-Index → idempotent verwerfen
         return written;
