@@ -254,13 +254,21 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
     [Fact]
     public async Task UnknownLocalEngine_FailsWithASourceNeutralMessage()
     {
-        var (userId, _) = await SetupAsync();
+        var (userId, engines) = await SetupAsync();
         int jobId;
         using (var scope = _sp.CreateScope())
         {
-            var dto = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().CreateAsync(userId,
-                new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = 5, MultiPv = 1, EngineId = "rhe_gone00000000" }, remember: false);
+            var svc = scope.ServiceProvider.GetRequiredService<AnalysisJobService>();
+            // Eine unbekannte Kennung weist schon das Anlegen ab (A4-003) — der Container reicht die Registry durch.
+            await Assert.ThrowsAsync<ArgumentException>(() => svc.CreateAsync(userId,
+                new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = 5, MultiPv = 1, EngineId = "rhe_gone00000000" }, remember: false));
+            // Der Fall des Workers: die Registrierung verschwindet NACH dem Anlegen (Provider-Konto gelöscht).
+            var dto = await svc.CreateAsync(userId,
+                new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = 5, MultiPv = 1, EngineId = engines[0] }, remember: false);
             jobId = dto.Id;
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.ExternalEngineRegistrations.Remove(await db.ExternalEngineRegistrations.SingleAsync(r => r.Id == engines[0]));
+            await db.SaveChangesAsync();
         }
         await _worker.StartAsync(CancellationToken.None);
         var job = await WaitForAsync(jobId, j => j.Status == AnalysisJobStatus.Failed);

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Services;
 
@@ -42,12 +43,15 @@ public class AnalysisJobService
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
     private readonly IAnalysisJobControl? _control;
+    private readonly EngineRegistry? _registry;
 
-    public AnalysisJobService(AppDbContext db, EncryptionService encryption, IAnalysisJobControl? control = null)
+    public AnalysisJobService(AppDbContext db, EncryptionService encryption, IAnalysisJobControl? control = null,
+        EngineRegistry? registry = null)
     {
         _db = db;
         _encryption = encryption;
         _control = control;
+        _registry = registry;
     }
 
     public async Task<List<AnalysisJobDto>> ListAsync(int userId, CancellationToken ct = default)
@@ -112,6 +116,35 @@ public class AnalysisJobService
             .First().id;
     }
 
+    /// <summary>
+    /// Gehört eine AUSDRÜCKLICH genannte Engine dem Engine-Besitzer? Geprüft VOR dem Speichern (Codereview
+    /// 2026-09-29, A4-003): vorher kam jede Kennung durch, und <see cref="IAnalysisJobControl.PreemptBackground"/>
+    /// brach den Hintergrund-Auftrag auf JEDER Engine ab, deren Kennung jemand kannte — die der Haus-Engine stehen
+    /// in der Auftragsliste jedes Punktepartie-Einwerfers. Der eigene Auftrag scheiterte danach sofort und zählte
+    /// als Failed nicht gegen den Deckel, also beliebig oft wiederholbar.
+    /// <para><c>true</c> = geprüft: steht in der Hintergrund-Liste des Besitzers (ohne weitere Abfrage), sonst
+    /// über <see cref="EngineRegistry.ResolveAsync"/> — dieselbe Auflösung wie im Worker (<c>rhe_</c> aus der
+    /// Registrierung, <c>eei_</c> über den Lichess-Token, cache-first). Fremd/unbekannt/ohne Token →
+    /// <see cref="ArgumentException"/>. <c>false</c> = gerade nicht prüfbar (Lichess antwortet nicht, keine
+    /// Registry verdrahtet): dann wird angelegt, aber NICHTS verdrängt — der Worker löst beim Lauf ohnehin neu
+    /// auf und lässt einen fremden Auftrag scheitern; ein kurzer Lichess-Ausfall soll keinen Auftrag abweisen.</para>
+    /// </summary>
+    private async Task<bool> VerifyOwnersEngineAsync(int ownerId, string engineId, CancellationToken ct)
+    {
+        var cred = await _db.LichessEngineCredentials.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == ownerId, ct);
+        if (cred is not null && cred.BackgroundEngines.Contains(engineId)) return true;
+        if (_registry is null) return false;
+
+        EngineLookup lookup;
+        try { lookup = await _registry.ResolveAsync(ownerId, engineId, ct); }
+        catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException) && !ct.IsCancellationRequested)
+        {
+            return false;
+        }
+        if (lookup.Engine is null) throw new ArgumentException("Engine not registered");
+        return true;
+    }
+
     public async Task<AnalysisJobDto> CreateAsync(int userId, CreateAnalysisJobRequest req, CancellationToken ct = default,
         bool remember = true, int? engineOwnerUserId = null, bool background = false)
     {
@@ -131,12 +164,15 @@ public class AnalysisJobService
         // Auftraggeber — nur Token und Engine-Registrierung kommen von woanders.
         var engineOwner = engineOwnerUserId is int owner && owner != userId ? owner : (int?)null;
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
+        var explicitEngine = engineId is not null;
         if (engineId is null)
         {
             engineId = await PickBackgroundEngineAsync(engineOwner ?? userId, ct);
         }
         if (engineId.Length > 64)
             throw new ArgumentException("Invalid engine id");
+        // Eine gewählte Engine kommt aus der Hintergrund-Liste des Besitzers; eine genannte wird geprüft (A4-003).
+        var ownersEngine = !explicitEngine || await VerifyOwnersEngineAsync(engineOwner ?? userId, engineId, ct);
 
         var open = await _db.AnalysisJobs.CountAsync(j => j.UserId == userId
             && j.Status != AnalysisJobStatus.Done && j.Status != AnalysisJobStatus.Failed, ct);
@@ -162,7 +198,8 @@ public class AnalysisJobService
         // Vorrang: ein normaler Auftrag verdraengt einen Hintergrund-Auftrag, der auf SEINER Engine gerade rechnet
         // (Vertiefung, Meisterpartien). Ohne das wartete er, bis der fertig ist — bei Tiefe 30 mit fuenf Linien
         // Minuten. Der verdraengte Auftrag geht auf Paused und laeuft danach weiter.
-        if (!background && !string.IsNullOrEmpty(job.EngineId)) _control?.PreemptBackground(job.EngineId);
+        // Nur auf einer GEPRÜFTEN Engine des Besitzers — sonst bräche eine fremde Kennung fremde Arbeit ab (A4-003).
+        if (!background && ownersEngine && !string.IsNullOrEmpty(job.EngineId)) _control?.PreemptBackground(job.EngineId);
         return ToDto(job);
     }
 
@@ -178,11 +215,14 @@ public class AnalysisJobService
         if (fens.Count is 0 or > 200) throw new ArgumentException("1..200 positions");
 
         var engineId = string.IsNullOrWhiteSpace(req.EngineId) ? null : req.EngineId.Trim();
+        var explicitEngine = engineId is not null;
         if (engineId is null)
         {
             engineId = await PickBackgroundEngineAsync(userId, ct);
         }
         if (engineId.Length > 64) throw new ArgumentException("Invalid engine id");
+        // Dieselbe Prüfung wie beim Einzelauftrag (A4-003); verdrängt wird hier ohnehin nichts.
+        if (explicitEngine) await VerifyOwnersEngineAsync(userId, engineId, ct);
 
         var existing = await _db.AnalysisJobs.Where(j => j.UserId == userId && j.Status != AnalysisJobStatus.Failed)
             .Select(j => j.Fen).ToListAsync(ct);
@@ -313,6 +353,8 @@ public class AnalysisJobService
         var restart = false;
         if (!string.IsNullOrWhiteSpace(req.EngineId) && req.EngineId.Trim() != job.EngineId)
         {
+            // Nur eine Engine des Engine-Besitzers (A4-003) — eine fremde Kennung scheiterte sonst erst im Worker.
+            await VerifyOwnersEngineAsync(job.EngineOwnerUserId ?? userId, req.EngineId.Trim(), ct);
             // Andere Engine = anderer Prozess mit eigener (kalter) Hashtabelle: der laufende Stream gehört
             // der alten Engine und muss weg. Ergebnis/ReachedDepth bleiben — die neue setzt dort an.
             job.EngineId = req.EngineId.Trim();

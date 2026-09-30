@@ -1,9 +1,15 @@
+using System.Net;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.EngineBroker;
 
 namespace RookHub.Api.Tests;
 
@@ -36,7 +42,11 @@ public class AnalysisJobServiceTests : IDisposable
         _svc = new AnalysisJobService(_db, _encryption, _control);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _sp?.Dispose();
+    }
 
     private async Task<int> UserWithBackgroundEngineAsync(int id = 5, string? engine = "eei_bg")
     {
@@ -569,5 +579,162 @@ public class AnalysisJobServiceTests : IDisposable
 
         Assert.False(list.Single(j => j.Id == own.Id).HouseEngine);
         Assert.True(list.Single(j => j.Id == house.Id).HouseEngine);
+    }
+
+    // ── Genannte Engine (Codereview 2026-09-29, A4-003): nur eine Engine des Engine-Besitzers, sonst 400 und KEIN
+    //    Verdrängen — vorher brach jede bekannte Kennung (z. B. die der Haus-Engine aus der eigenen Auftragsliste)
+    //    fremde Hintergrundarbeit ab, und der eigene Auftrag scheiterte danach nur still ──
+
+    private const string OwnLichessEngines = """
+        [{"id":"eei_bg","name":"BG","clientSecret":"ees_x","maxThreads":4,"maxHash":256},
+         {"id":"eei_live","name":"Live","clientSecret":"ees_y","maxThreads":8,"maxHash":512}]
+        """;
+
+    private sealed class LichessStub : HttpMessageHandler
+    {
+        public string Json = OwnLichessEngines;
+        public bool Fail;
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            if (Fail) throw new HttpRequestException("lichess down");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(Json, Encoding.UTF8, "application/json"),
+            });
+        }
+    }
+
+    private readonly LichessStub _lichessStub = new();
+    private ServiceProvider? _sp;
+
+    /// <summary>Der Service, wie ihn die API verdrahtet: MIT <see cref="EngineRegistry"/> (<c>rhe_</c> aus der
+    /// Registrierung, <c>eei_</c> über den Lichess-Token — hier ein Stub mit den Engines des Nutzers).</summary>
+    private AnalysisJobService WithRegistry()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
+        }).Build();
+        var lichess = new LichessEngineService(new HttpClient(_lichessStub), new MemoryCache(new MemoryCacheOptions()), config,
+            NullLogger<LichessEngineService>.Instance);
+        _sp ??= new ServiceCollection().BuildServiceProvider();
+        var directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
+        return new AnalysisJobService(_db, _encryption, _control,
+            new EngineRegistry(_db, _encryption, lichess, directory, new LocalBrokerOptions()));
+    }
+
+    /// <summary>Das Haus-Konto: Hintergrund-Engines, die in den Punktepartie-Aufträgen anderer Nutzer stehen.</summary>
+    private async Task<(int Id, string LocalEngine)> HouseOwnerAsync(int id = 77)
+    {
+        await UserWithBackgroundEngineAsync(id, engine: "eei_haus");
+        var reg = new ExternalEngineRegistration
+        {
+            Id = ProviderSecrets.NewEngineId(), UserId = id, Name = "Haus 1", ClientSecret = "cs",
+            ProviderSelector = ProviderSecrets.Selector("secret-0123456789abc"), MaxThreads = 4, MaxHash = 256,
+        };
+        _db.ExternalEngineRegistrations.Add(reg);
+        await _db.SaveChangesAsync();
+        return (id, reg.Id);
+    }
+
+    [Fact]
+    public async Task Create_fremdeEngineKennung_wirdAbgewiesen_undVerdraengtNichts()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var house = await HouseOwnerAsync();
+        var svc = WithRegistry();
+
+        foreach (var foreign in new[] { "eei_haus", house.LocalEngine })
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1, EngineId = foreign }));
+
+        Assert.Empty(_control.Preempted);
+        Assert.Empty(_db.AnalysisJobs);
+    }
+
+    [Fact]
+    public async Task CreateMany_fremdeEngineKennung_wirdAbgewiesen()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await HouseOwnerAsync();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => WithRegistry().CreateManyAsync(u,
+            new CreateAnalysisJobsBatchRequest { Fens = [START], TargetDepth = 20, MultiPv = 1, EngineId = "eei_haus" }));
+
+        Assert.Empty(_db.AnalysisJobs);
+    }
+
+    [Fact]
+    public async Task Update_EngineWechsel_nurAufEineEngineDesBesitzers()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        await HouseOwnerAsync();
+        var svc = WithRegistry();
+        var job = await svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 });
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { EngineId = "eei_haus" }));
+        Assert.Equal("eei_bg", (await _db.AnalysisJobs.AsNoTracking().SingleAsync(j => j.Id == job.Id)).EngineId);
+        Assert.Empty(_control.Interrupted);
+
+        // Eine eigene Engine ausserhalb der Hintergrund-Liste bleibt wählbar.
+        var moved = await svc.UpdateAsync(u, job.Id, new UpdateAnalysisJobRequest { EngineId = "eei_live" });
+        Assert.Equal("eei_live", moved!.EngineId);
+        Assert.Equal(new[] { job.Id }, _control.Interrupted);
+    }
+
+    [Fact]
+    public async Task Create_eigeneGenannteEngine_wirdAngelegt_undVerdraengtDortDenHintergrund()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var own = new ExternalEngineRegistration
+        {
+            Id = ProviderSecrets.NewEngineId(), UserId = u, Name = "Heim-PC", ClientSecret = "cs",
+            ProviderSelector = ProviderSecrets.Selector("secret-own-0123456789"), MaxThreads = 4, MaxHash = 256,
+        };
+        _db.ExternalEngineRegistrations.Add(own);
+        await _db.SaveChangesAsync();
+        var svc = WithRegistry();
+
+        // Live-Engine des eigenen Lichess-Kontos (nicht in der Hintergrund-Liste) und eigene rhe_-Registrierung.
+        var live = await svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1, EngineId = "eei_live" });
+        var local = await svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1, EngineId = own.Id });
+
+        Assert.Equal("eei_live", live.EngineId);
+        Assert.Equal(own.Id, local.EngineId);
+        Assert.Equal(new[] { "eei_live", own.Id }, _control.Preempted);
+    }
+
+    [Fact]
+    public async Task Create_HausEngineDesEngineBesitzers_verdraengtWeiter()
+    {
+        // Der Weg der Punktepartie (GameAnalysisService): Auftrag beim Nutzer, Engine beim Haus-Konto — gewählt oder
+        // gepinnt steht sie in dessen Hintergrund-Liste, und der normale Auftrag hat dort weiter Vorrang.
+        var u = await UserWithBackgroundEngineAsync();
+        var house = await HouseOwnerAsync();
+        var svc = WithRegistry();
+
+        await svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 5 },
+            remember: false, engineOwnerUserId: house.Id);
+        await svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 5, EngineId = "eei_haus" },
+            remember: false, engineOwnerUserId: house.Id);
+
+        Assert.Equal(new[] { "eei_haus", "eei_haus" }, _control.Preempted);
+    }
+
+    [Fact]
+    public async Task Create_LichessNichtErreichbar_legtAn_verdraengtAberNichts()
+    {
+        // Nicht prüfbar ist kein Nein: ein kurzer Lichess-Ausfall soll keinen Auftrag abweisen — verdrängt wird aber
+        // nur auf einer geprüften Engine.
+        var u = await UserWithBackgroundEngineAsync();
+        _lichessStub.Fail = true;
+
+        var dto = await WithRegistry().CreateAsync(u,
+            new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1, EngineId = "eei_live" });
+
+        Assert.Equal("eei_live", dto.EngineId);
+        Assert.Empty(_control.Preempted);
     }
 }
