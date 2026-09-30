@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LEGAL_SITE } from './legal-site';
+import { LEGAL_SITE, legalBack } from './legal-site';
 
 /**
  * Öffentlich (ohne Login) erreichbare Info-Seite zur Konto-Löschung — erfüllt die
@@ -42,7 +42,7 @@ import { LEGAL_SITE } from './legal-site';
             <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a>
           </p>
 
-          <p class="back"><a routerLink="/login">{{ 'legal.accountDeletion.back' | translate }}</a></p>
+          <p class="back"><a [routerLink]="back.link">{{ back.label | translate }}</a></p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -58,4 +58,6 @@ import { LEGAL_SITE } from './legal-site';
 export class AccountDeletionComponent {
   /** Kontakt je Oberflaeche (KidHub: eigene Adresse, siehe LEGAL_SITE). */
   readonly site = inject(LEGAL_SITE);
+  /** Ruecklink je Oberflaeche (KidHub: zur Startseite statt zur Anmeldemaske). */
+  readonly back = legalBack(this.site, 'legal.accountDeletion.back');
 }

@@ -25,4 +25,22 @@ describe('AccountDeletionComponent', () => {
     f.detectChanges();
     expect((f.nativeElement as HTMLElement).querySelector('a[href="mailto:kidhub@oberschm.id"]')).not.toBeNull();
   });
+
+  it('Ruecklink je Oberflaeche: RookHub zur Anmeldung, KidHub zur Startseite (F7-003)', () => {
+    const render = (site?: object) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AccountDeletionComponent],
+        providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+          ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+      });
+      const f = TestBed.createComponent(AccountDeletionComponent);
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    };
+    expect(render().querySelector('.back a')?.getAttribute('href')).toBe('/login');
+    const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+    expect(kid.querySelector('.back a')?.getAttribute('href')).toBe('/');
+    expect(kid.textContent).toContain('legal.backHome');
+  });
 });

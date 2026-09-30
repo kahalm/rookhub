@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LEGAL_SITE } from './legal-site';
+import { LEGAL_SITE, legalBack } from './legal-site';
+import { OPERATOR } from '../../../environments/operator';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -21,13 +22,31 @@ import { LEGAL_SITE } from './legal-site';
         <mat-card-header><mat-card-title>{{ 'legal.privacy.title' | translate }}</mat-card-title></mat-card-header>
         <mat-card-content>
           <p class="muted">{{ 'legal.privacy.updated' | translate }}</p>
-          <p>{{ 'legal.privacy.intro' | translate }}</p>
+          @if (kind === 'kidhub') {
+            <!-- Kinderseite: das Wichtigste in einfacher Sprache vorneweg, die ausfuehrliche Fassung fuer Eltern
+                 darunter (Art. 12 Abs. 1 DSGVO; Codereview F7-003). -->
+            <p>{{ 'legal.privacy.kidIntro' | translate }}</p>
+            <h4>{{ 'legal.privacy.kidTitle' | translate }}</h4>
+            <ul>
+              <li>{{ 'legal.privacy.kidDevice' | translate }}</li>
+              <li>{{ 'legal.privacy.kidAccount' | translate }}</li>
+              <li>{{ 'legal.privacy.kidParents' | translate }}</li>
+              <li>{{ 'legal.privacy.kidNoTracking' | translate }}</li>
+            </ul>
+            <p>{{ 'legal.privacy.kidDetails' | translate }}</p>
+          } @else {
+            <p>{{ 'legal.privacy.intro' | translate }}</p>
+          }
 
           <h4>{{ 'legal.privacy.controllerTitle' | translate }}</h4>
           @if (site.imprint) {
             <p>{{ 'legal.privacy.controller' | translate }} (<a routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>).</p>
           } @else {
-            <p>{{ 'legal.privacy.controllerContact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
+            <!-- Ohne Impressum gehoeren Name und Anschrift hierher (Art. 13 Abs. 1 lit. a DSGVO); Quelle ist OPERATOR. -->
+            <p>{{ 'legal.privacy.controllerNamed' | translate }}<br>
+              {{ operator.name }}<br>
+              {{ operator.address }}<br>
+              <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
           }
 
           <h4>{{ 'legal.privacy.dataTitle' | translate }}</h4>
@@ -72,7 +91,7 @@ import { LEGAL_SITE } from './legal-site';
           <h4>{{ 'legal.privacy.contactTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
-          <p class="back"><a routerLink="/login">{{ 'legal.privacy.back' | translate }}</a></p>
+          <p class="back"><a [routerLink]="back.link">{{ back.label | translate }}</a></p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -89,4 +108,8 @@ import { LEGAL_SITE } from './legal-site';
 export class PrivacyComponent {
   /** Kontakt und Impressum je Oberflaeche (KidHub: eigene Adresse, kein Impressum). */
   readonly site = inject(LEGAL_SITE);
+  readonly kind = this.site.kind ?? 'rookhub';
+  readonly back = legalBack(this.site, 'legal.privacy.back');
+  /** Verantwortlicher fuer die Fassung ohne Impressum (KidHub). */
+  readonly operator = OPERATOR;
 }

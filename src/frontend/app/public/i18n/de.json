@@ -704,9 +704,16 @@
       "title": "Datenschutzerklärung",
       "updated": "Stand: 30. September 2026",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
+      "kidIntro": "KidHub ist die Schachseite für Kinder. Hier steht in einfachen Worten, welche Daten wir speichern und warum. Darunter folgt die ausführliche Fassung für Eltern.",
+      "kidTitle": "Das Wichtigste in Kürze",
+      "kidDevice": "Ohne Konto bleiben deine Sterne und dein Fortschritt nur auf diesem Gerät. Wir speichern sie nicht.",
+      "kidAccount": "Mit Konto speichern wir deinen Fortschritt in deinem Konto, damit du auf einem anderen Gerät weiterspielen kannst. Es ist dasselbe Konto wie bei RookHub. Beim Abmelden wird der Fortschritt vom Gerät gelöscht, im Konto bleibt er.",
+      "kidParents": "Ein Konto bitte nur mit Erlaubnis deiner Eltern anlegen. Eltern können das Konto jederzeit löschen lassen — eine Nachricht an die Adresse unten genügt.",
+      "kidNoTracking": "KidHub zeigt keine Werbung, verwendet keine Tracking-Cookies und hat keinen Chat. Um eine passende Sprache zu wählen, schauen wir einmal nach, aus welchem Land deine Internet-Adresse kommt — gespeichert wird sie dafür nicht.",
+      "kidDetails": "Für Eltern: Die folgenden Abschnitte beschreiben ausführlich, welche Daten wir verarbeiten. Das KidHub-Konto ist dasselbe Konto wie bei RookHub, deshalb gelten sie für beide Seiten.",
       "controllerTitle": "Verantwortlicher",
       "controller": "Verantwortlich für die Datenverarbeitung ist der im Impressum genannte Betreiber",
-      "controllerContact": "Verantwortlich für die Datenverarbeitung ist der Betreiber dieser Seite, erreichbar unter",
+      "controllerNamed": "Verantwortlich für die Datenverarbeitung ist:",
       "dataTitle": "Welche Daten wir verarbeiten",
       "dataIntro": "Je nach Nutzung verarbeiten wir:",
       "dataAccount": "Kontodaten: Benutzername, E-Mail-Adresse, Passwort (nur als Hash gespeichert).",
@@ -745,7 +752,8 @@
       "contact": "E-Mail",
       "disclaimer": "Hinweis: Die Angaben zum Diensteanbieter sind Platzhalter und vor Veröffentlichung durch die tatsächlichen Daten zu ersetzen. Diese Seite ist ein Entwurf und ersetzt keine Rechtsberatung.",
       "back": "Zurück zur Anmeldung"
-    }
+    },
+    "backHome": "Zurück zur Startseite"
   },
   "friends": {
     "title": "Freunde",

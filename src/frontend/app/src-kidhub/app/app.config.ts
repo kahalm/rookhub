@@ -35,8 +35,9 @@ export const kidhubConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
-    // Kein Impressum auf der Kinderseite, eigene Adresse fuer Datenschutzfragen (Wunsch 2026-09-27).
-    { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false } },
+    // Kein Impressum auf der Kinderseite, eigene Adresse fuer Datenschutzfragen (Wunsch 2026-09-27); die
+    // Datenschutzerklaerung in der Kinder-Fassung, der Ruecklink fuehrt zur Startseite (Codereview F7-003).
+    { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

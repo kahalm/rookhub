@@ -28,6 +28,28 @@ describe('PrivacyComponent', () => {
     expect(hrefs(el)).toContain('mailto:' + OPERATOR.email);
   });
 
+  it('RookHub: Erwachsenen-Einleitung, Ruecklink zur Anmeldung', () => {
+    const el = render();
+    expect(el.textContent).toContain('legal.privacy.intro');
+    expect(el.textContent).not.toContain('legal.privacy.kidIntro');
+    expect(hrefs(el)).toContain('/login');
+  });
+
+  it('KidHub: einfache Sprache mit Elternhinweis, Verantwortlicher mit Name und Anschrift, Ruecklink zur Startseite (F7-003)', () => {
+    const el = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+    const text = el.textContent ?? '';
+    expect(text).toContain('legal.privacy.kidIntro');
+    expect(text).toContain('legal.privacy.kidParents');
+    expect(text).toContain('legal.privacy.kidDevice');
+    expect(text).not.toContain('legal.privacy.intro');
+    // Ohne Impressum MUSS die Erklaerung selbst Name und Anschrift nennen (Art. 13 Abs. 1 lit. a DSGVO).
+    expect(text).toContain(OPERATOR.name);
+    expect(text).toContain(OPERATOR.address);
+    expect(hrefs(el)).toContain('/');
+    expect(hrefs(el)).not.toContain('/login');
+    expect(hrefs(el)).not.toContain('/impressum');
+  });
+
   it('KidHub: kein Impressum, eigene Adresse — auch fuer den Verantwortlichen', () => {
     const el = render({ contactEmail: 'kidhub@oberschm.id', imprint: false });
     expect(hrefs(el)).not.toContain('/impressum');

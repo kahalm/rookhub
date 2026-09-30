@@ -704,9 +704,16 @@
       "title": "Privacy Policy",
       "updated": "Last updated: 30 September 2026",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
+      "kidIntro": "KidHub is the chess site for children. Here we explain in simple words which data we store and why. The detailed version for parents follows below.",
+      "kidTitle": "The most important points",
+      "kidDevice": "Without an account, your stars and your progress stay only on this device. We do not store them.",
+      "kidAccount": "With an account, we store your progress in your account so you can keep playing on another device. It is the same account as on RookHub. When you log out, the progress is removed from the device but stays in the account.",
+      "kidParents": "Please only create an account with your parents’ permission. Parents can have the account deleted at any time — a message to the address below is enough.",
+      "kidNoTracking": "KidHub shows no ads, uses no tracking cookies and has no chat. To choose a suitable language, we check once which country your internet address comes from — it is not stored for this.",
+      "kidDetails": "For parents: the following sections describe in detail which data we process. The KidHub account is the same account as on RookHub, so they apply to both sites.",
       "controllerTitle": "Controller",
       "controller": "The controller for data processing is the operator named in the imprint",
-      "controllerContact": "The operator of this site is responsible for processing your data and can be reached at",
+      "controllerNamed": "The controller responsible for data processing is:",
       "dataTitle": "What data we process",
       "dataIntro": "Depending on your use, we process:",
       "dataAccount": "Account data: username, email address, password (stored only as a hash).",
@@ -745,7 +752,8 @@
       "contact": "Email",
       "disclaimer": "Note: the service provider details are placeholders and must be replaced with the actual data before publication. This page is a draft and does not constitute legal advice.",
       "back": "Back to login"
-    }
+    },
+    "backHome": "Back to the home page"
   },
   "friends": {
     "title": "Friends",

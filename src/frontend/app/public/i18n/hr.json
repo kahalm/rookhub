@@ -704,9 +704,16 @@
       "title": "Pravila o privatnosti",
       "updated": "Zadnja izmjena: 30. rujna 2026.",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
+      "kidIntro": "KidHub je šahovska stranica za djecu. Ovdje jednostavnim riječima objašnjavamo koje podatke spremamo i zašto. Ispod slijedi detaljna verzija za roditelje.",
+      "kidTitle": "Najvažnije ukratko",
+      "kidDevice": "Bez računa tvoje zvjezdice i tvoj napredak ostaju samo na ovom uređaju. Mi ih ne spremamo.",
+      "kidAccount": "S računom spremamo tvoj napredak u tvoj račun, kako bi mogao nastaviti igrati na drugom uređaju. To je isti račun kao na RookHubu. Kad se odjaviš, napredak se briše s uređaja, a u računu ostaje.",
+      "kidParents": "Račun molimo otvori samo uz dopuštenje svojih roditelja. Roditelji mogu u bilo kojem trenutku zatražiti brisanje računa — dovoljna je poruka na adresu ispod.",
+      "kidNoTracking": "KidHub ne prikazuje oglase, ne koristi kolačiće za praćenje i nema chat. Da bismo odabrali odgovarajući jezik, jednom provjerimo iz koje zemlje dolazi tvoja internetska adresa — pritom se ona ne sprema.",
+      "kidDetails": "Za roditelje: sljedeći odjeljci detaljno opisuju koje podatke obrađujemo. KidHub račun isti je račun kao na RookHubu, pa vrijede za obje stranice.",
       "controllerTitle": "Voditelj obrade",
       "controller": "Voditelj obrade podataka je operator naveden u impresumu",
-      "controllerContact": "Za obradu podataka odgovoran je operator ove stranice, dostupan na",
+      "controllerNamed": "Voditelj obrade podataka je:",
       "dataTitle": "Koje podatke obrađujemo",
       "dataIntro": "Ovisno o korištenju, obrađujemo:",
       "dataAccount": "Podaci računa: korisničko ime, adresa e-pošte, lozinka (pohranjena samo kao hash).",
@@ -745,7 +752,8 @@
       "contact": "E-pošta",
       "disclaimer": "Napomena: podaci o pružatelju usluge su rezervirana mjesta i moraju biti zamijenjeni stvarnim podacima prije objave. Ova stranica je nacrt i ne predstavlja pravni savjet.",
       "back": "Natrag na prijavu"
-    }
+    },
+    "backHome": "Natrag na početnu stranicu"
   },
   "friends": {
     "title": "Prijatelji",

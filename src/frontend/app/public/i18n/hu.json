@@ -471,9 +471,16 @@
       "title": "Adatvédelmi nyilatkozat",
       "updated": "Utoljára frissítve: 2026. szeptember 30.",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
+      "kidIntro": "A KidHub a gyerekeknek szóló sakkoldal. Itt egyszerű szavakkal elmondjuk, milyen adatokat tárolunk és miért. Alatta következik a részletes változat a szülőknek.",
+      "kidTitle": "A legfontosabbak röviden",
+      "kidDevice": "Fiók nélkül a csillagaid és a haladásod csak ezen az eszközön maradnak. Mi nem tároljuk őket.",
+      "kidAccount": "Fiókkal a haladásodat a fiókodban tároljuk, hogy egy másik eszközön is folytathasd a játékot. Ez ugyanaz a fiók, mint a RookHubon. Kijelentkezéskor a haladás törlődik az eszközről, a fiókban megmarad.",
+      "kidParents": "Fiókot csak a szüleid engedélyével hozz létre. A szülők bármikor kérhetik a fiók törlését — elég egy üzenet az alábbi címre.",
+      "kidNoTracking": "A KidHub nem mutat reklámot, nem használ nyomkövető sütiket, és nincs benne csevegés. A megfelelő nyelv kiválasztásához egyszer megnézzük, melyik országból származik az internetcímed — ehhez nem tároljuk.",
+      "kidDetails": "A szülőknek: a következő részek részletesen leírják, milyen adatokat kezelünk. A KidHub-fiók ugyanaz a fiók, mint a RookHubon, ezért mindkét oldalra vonatkoznak.",
       "controllerTitle": "Adatkezelő",
       "controller": "Az adatkezelésért felelős adatkezelő az impresszumban megnevezett üzemeltető",
-      "controllerContact": "Az adatkezelésért az oldal üzemeltetője felel, elérhetősége",
+      "controllerNamed": "Az adatkezelésért felelős:",
       "dataTitle": "Milyen adatokat kezelünk",
       "dataIntro": "Használattól függően a következő adatokat kezeljük:",
       "dataAccount": "Fiókadatok: felhasználónév, e-mail cím, jelszó (csak hash formában tárolva).",
@@ -512,7 +519,8 @@
       "contact": "E-mail",
       "disclaimer": "Megjegyzés: a szolgáltatói adatok helyőrzők, amelyeket a közzététel előtt a tényleges adatokkal kell felváltani. Ez az oldal tervezet és nem minősül jogi tanácsadásnak.",
       "back": "Vissza a bejelentkezéshez"
-    }
+    },
+    "backHome": "Vissza a kezdőlapra"
   },
   "friends": {
     "title": "Barátok",
