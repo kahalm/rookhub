@@ -248,6 +248,52 @@ describe('CourseListComponent sorting', () => {
       expect(courseService.deleteCourse).not.toHaveBeenCalled();
       expect(comp.courses.length).toBe(1);
     });
+
+    // „In Repertoire umwandeln" VERSCHIEBT einen eigenen Kurs: der Server löscht ihn danach samt
+    // Fortschritt und Freigaben ALLER Nutzer — also dieselbe Rückfrage wie beim Löschen.
+    describe('In Repertoire umwandeln', () => {
+      function setup(isOwned: boolean) {
+        const shown: string[] = [];
+        const courseService = {
+          getCourses: () => of([ item3({ bookId: 7, displayName: 'Mein Kurs', isOwned }) ]),
+          convertToRepertoire: jasmine.createSpy('convertToRepertoire').and.returnValue(of({ id: 3, name: 'Mein Kurs' })),
+          notifyAccessChanged: () => {},
+        } as any;
+        const snack = { info: (m: string) => shown.push(m) } as any;
+        const comp = new CourseListComponent(courseService, snack, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+        comp.loadCourses();
+        return { comp, courseService, shown };
+      }
+
+      it('eigener Kurs: ohne Bestätigung wird nichts umgewandelt und der Kurs bleibt', () => {
+        const ask = spyOn(window, 'confirm').and.returnValue(false);
+        const { comp, courseService } = setup(true);
+        comp.convertToRepertoire(comp.courses[0]);
+        expect(ask).toHaveBeenCalledWith('courses.convertMoveConfirm');
+        expect(courseService.convertToRepertoire).not.toHaveBeenCalled();
+        expect(comp.courses.map(c => c.bookId)).toEqual([7]);
+        expect(comp.converting).toBeNull();
+      });
+
+      it('eigener Kurs: nach Bestätigung verschoben, aus der Liste genommen und als verschoben gemeldet', () => {
+        spyOn(window, 'confirm').and.returnValue(true);
+        const { comp, courseService, shown } = setup(true);
+        comp.convertToRepertoire(comp.courses[0]);
+        expect(courseService.convertToRepertoire).toHaveBeenCalledWith(7);
+        expect(comp.courses.length).toBe(0);
+        expect(shown).toEqual(['courses.movedToRepertoire']);
+      });
+
+      it('fremder (Gruppen-/Admin-)Kurs bleibt bestehen: Kopie ohne Rückfrage', () => {
+        const ask = spyOn(window, 'confirm');
+        const { comp, courseService, shown } = setup(false);
+        comp.convertToRepertoire(comp.courses[0]);
+        expect(ask).not.toHaveBeenCalled();
+        expect(courseService.convertToRepertoire).toHaveBeenCalledWith(7);
+        expect(comp.courses.map(c => c.bookId)).toEqual([7]);
+        expect(shown).toEqual(['courses.convertedToRepertoire']);
+      });
+    });
   });
 });
 

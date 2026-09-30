@@ -552,8 +552,11 @@ export class CourseListComponent implements OnInit {
     });
   }
 
-  /** Kurs in ein neues Repertoire umwandeln (Original bleibt). */
+  /** Kurs in ein neues Repertoire umwandeln. Beim EIGENEN Kurs verschiebt der Server: er legt das
+   *  Repertoire an und löscht danach den Kurs samt Fortschritt und Freigaben ALLER Nutzer — deshalb
+   *  vorher die Rückfrage wie beim Löschen. Geteilte Gruppen-/Admin-Kurse bleiben (Kopie, ohne Rückfrage). */
   convertToRepertoire(course: CourseListItem): void {
+    if (course.isOwned && !confirm(this.translate.instant('courses.convertMoveConfirm', { name: course.displayName }))) return;
     this.converting = course.bookId;
     this.courseService.convertToRepertoire(course.bookId).subscribe({
       next: rep => {
@@ -566,7 +569,7 @@ export class CourseListComponent implements OnInit {
           delete this.chaptersByBook[course.bookId];
           this.courseService.notifyAccessChanged();
         }
-        this.snackbar.info(this.translate.instant('courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
+        this.snackbar.info(this.translate.instant(course.isOwned ? 'courses.movedToRepertoire' : 'courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
       },
       error: () => {
         this.converting = null;

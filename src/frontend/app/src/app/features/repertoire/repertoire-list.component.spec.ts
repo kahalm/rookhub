@@ -62,6 +62,7 @@ describe('RepertoireListComponent search filter', () => {
  */
 describe('RepertoireListComponent convertToCourse Fehlermeldungen', () => {
   function make(error: unknown) {
+    spyOn(window, 'confirm').and.returnValue(true);   // Rückfrage bestätigt (eigener Test unten)
     const shown: string[] = [];
     const repertoireService = { convertToCourse: () => throwError(() => error) } as any;
     const snackbar = { info: (msg: string) => shown.push(msg) } as any;
@@ -101,6 +102,43 @@ describe('RepertoireListComponent convertToCourse Fehlermeldungen', () => {
  * Offline-Verhalten der Liste: Download-Toggle (PGN + SR-Zustände + Intervalle cachen) und
  * Fallback auf heruntergeladene Repertoires, wenn der Server nicht erreichbar ist.
  */
+/**
+ * „In Kurs umwandeln" VERSCHIEBT: der Server löscht das Repertoire danach samt Trainingsstand und
+ * Freigaben aller Nutzer — deshalb dieselbe Rückfrage wie beim Löschen.
+ */
+describe('RepertoireListComponent convertToCourse Rückfrage', () => {
+  function make() {
+    const shown: string[] = [];
+    const repertoireService = {
+      convertToCourse: jasmine.createSpy('convertToCourse').and.returnValue(of({ bookId: 11, displayName: 'Nimzo' })),
+    } as any;
+    const snackbar = { info: (msg: string) => shown.push(msg) } as any;
+    const translate = { instant: (key: string) => key } as any;
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate);
+    comp.repertoires = [{ id: 7, name: 'Nimzo', kind: 1, fileCount: 1, isPublic: false }] as any;
+    return { comp, repertoireService, shown };
+  }
+
+  it('ohne Bestätigung wird nichts umgewandelt und das Repertoire bleibt', () => {
+    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const { comp, repertoireService } = make();
+    comp.convertToCourse(comp.repertoires[0]);
+    expect(ask).toHaveBeenCalledWith('repertoire.list.convertMoveConfirm');
+    expect(repertoireService.convertToCourse).not.toHaveBeenCalled();
+    expect(comp.repertoires.map(r => r.id)).toEqual([7]);
+    expect(comp.converting).toBeNull();
+  });
+
+  it('nach Bestätigung umgewandelt und aus der Liste genommen', () => {
+    spyOn(window, 'confirm').and.returnValue(true);
+    const { comp, repertoireService, shown } = make();
+    comp.convertToCourse(comp.repertoires[0]);
+    expect(repertoireService.convertToCourse).toHaveBeenCalledWith(7);
+    expect(comp.repertoires.length).toBe(0);
+    expect(shown).toEqual(['repertoire.list.convertedToCourse']);
+  });
+});
+
 describe('RepertoireListComponent offline', () => {
   const rep = (id: number, name: string): any =>
     ({ id, name, description: null, kind: 0, fileCount: 1, isPublic: false, useForExtension: false, createdAt: '', updatedAt: '', chessableCourseId: null });

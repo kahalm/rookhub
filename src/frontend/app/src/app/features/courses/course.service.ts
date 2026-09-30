@@ -381,7 +381,8 @@ export class CourseService {
     return this.http.delete<void>(`/api/courses/${bookId}/link`);
   }
 
-  /** Wandelt einen Kurs in ein neues Repertoire um (Original bleibt); liefert das neue Repertoire. */
+  /** Wandelt einen Kurs in ein neues Repertoire um; liefert das neue Repertoire. Ein EIGENER Kurs wird
+   *  dabei verschoben (serverseitig danach gelöscht), geteilte Gruppen-/Admin-Kurse bleiben bestehen. */
   convertToRepertoire(bookId: number): Observable<{ id: number; name: string }> {
     return this.http.post<{ id: number; name: string }>(`/api/courses/${bookId}/convert-to-repertoire`, {});
   }

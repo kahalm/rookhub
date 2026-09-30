@@ -375,8 +375,11 @@ export class RepertoireListComponent implements OnInit {
     }
   }
 
-  /** Repertoire in einen persönlichen Kurs umwandeln (nur bei Puzzle-PGN im Chessable-Stil). */
+  /** Repertoire in einen persönlichen Kurs umwandeln (nur bei Puzzle-PGN im Chessable-Stil). Der Server
+   *  verschiebt: das Repertoire wird danach samt Trainingsstand und Freigaben ALLER Nutzer gelöscht —
+   *  deshalb vorher die Rückfrage wie beim Löschen. */
   convertToCourse(rep: Repertoire): void {
+    if (!confirm(this.translate.instant('repertoire.list.convertMoveConfirm', { name: rep.name }))) return;
     this.converting = rep.id;
     this.repertoireService.convertToCourse(rep.id).subscribe({
       next: course => {
