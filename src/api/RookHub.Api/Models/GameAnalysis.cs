@@ -304,7 +304,7 @@ public static class GameAnalysisDefaults
 
     /// <summary>UNTERGRENZE der offenen Vertiefungs-Auftraege je Partie. Tatsaechlich gilt die Zahl der
     /// Hintergrund-Engines des Engine-Besitzers, gedeckelt bei <see cref="MaxOpenJobsPerGame"/>
-    /// (<c>GameAnalysisService.RefineJobCap</c>) — bis 0.567.2 galt fest diese 8, und bei 16 Engines lag die Haelfte brach.
+    /// (<c>GameAnalysisTurnRules.RefineJobCap</c>) — bis 0.567.2 galt fest diese 8, und bei 16 Engines lag die Haelfte brach.
     /// Die Untergrenze haelt kleinen Konten (eine Engine) den bisherigen Vorrat.</summary>
     public const int MaxOpenRefineJobsPerGame = 8;
 }

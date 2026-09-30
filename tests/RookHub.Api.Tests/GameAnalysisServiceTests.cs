@@ -1313,7 +1313,7 @@ public class GameAnalysisServiceTests : IDisposable
     [InlineData(40, 32)]    // gedeckelt beim Block des ersten Durchgangs
     public void RefineJobCap_soVieleWieHintergrundEngines_mindestens8_hoechstens32(int engines, int cap)
     {
-        Assert.Equal(cap, GameAnalysisService.RefineJobCap(engines));
+        Assert.Equal(cap, GameAnalysisTurnRules.RefineJobCap(engines));
     }
 
     [Fact]
@@ -1357,7 +1357,7 @@ public class GameAnalysisServiceTests : IDisposable
             new() { Ply = 1, Fen = F1, GameMoveUci = "e7e5", CandidatesJson = CandidatesOf(F1, -400, "e7e5") },  // Schwarz +4: 1.e4 war (hier) ein Patzer
             new() { Ply = 2, Fen = F2, GameMoveUci = "g1f3", CandidatesJson = CandidatesOf(F2, -400, "g1f3") },
         };
-        Assert.Equal(new HashSet<int> { 0, 1 }, GameAnalysisService.SuspectPlies(positions, plyCount: 3));
+        Assert.Equal(new HashSet<int> { 0, 1 }, GameAnalysisTurnRules.SuspectPlies(positions, plyCount: 3));
     }
 
     private static string CandidatesOf(string fen, int cp, string uci)
