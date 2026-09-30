@@ -152,6 +152,17 @@ export function parsePgnText(pgnText: string, opts?: ParsePgnOptions): ParsedGam
   return parsePgnTextWithSource(pgnText, opts).map(p => p.game);
 }
 
+/**
+ * Zerlegt einen PGN-Text in die Roh-Abschnitte seiner Partien, wie der Server
+ * (`PgnMoveTree.ParseSections`) trennt: BOM weg, Zeilenenden auf `\n`, dann vor JEDEM
+ * `[Event`-Header am Zeilenanfang — auch in CRLF-Dateien (Windows/ChessBase) und ohne Leerzeile
+ * davor. Der EINZIGE Partie-Trenner im Client: wer Partien einzeln parst (Flashcards), nimmt
+ * diesen statt eines eigenen `split`, sonst sehen Linienliste und Karten verschiedene Linien.
+ */
+export function splitPgnGames(pgnText: string): string[] {
+  return pgnText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split(/\n(?=\[Event\s)/);
+}
+
 /** Ein geparstes Spiel + sein unveränderter Originaltext (mit Varianten, Kommentaren und Markern). */
 export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
 
@@ -160,18 +171,15 @@ export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
  * (leere/zu große/unlesbare) Spiele fehlen in BEIDEN — Index `i` gehört also immer zusammen, auch
  * wenn ein Spiel mittendrin nicht gelesen werden konnte.
  *
- * Partie-Trennung wie der Server (`PgnMoveTree.ParseSections`): BOM weg, Zeilenenden auf `\n`,
- * dann vor JEDEM `[Event`-Header am Zeilenanfang — auch in CRLF-Dateien (Windows/ChessBase) und
- * ohne Leerzeile davor. Vorher hing die Trennung an `\n\n[Event `: eine CRLF-Datei war EIN Block,
- * dessen Header-Suche alle Header einsammelte und nur den Zugtext der LETZTEN Partie las, während
- * der Server (Stellungssuche, Baum, `gameIndex`) alle Linien sah.
+ * Partie-Trennung über {@link splitPgnGames} (wie der Server). Vorher hing sie an `\n\n[Event `:
+ * eine CRLF-Datei war EIN Block, dessen Header-Suche alle Header einsammelte und nur den Zugtext
+ * der LETZTEN Partie las, während der Server (Stellungssuche, Baum, `gameIndex`) alle Linien sah.
  */
 export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions): ParsedGameWithSource[] {
   if (pgnText.length > MAX_PGN_CHARS) {
     pgnText = pgnText.slice(0, MAX_PGN_CHARS);
   }
-  pgnText = pgnText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
-  const rawGames = pgnText.split(/\n(?=\[Event\s)/).slice(0, MAX_GAMES);
+  const rawGames = splitPgnGames(pgnText).slice(0, MAX_GAMES);
   const parsed: ParsedGameWithSource[] = [];
 
   for (const raw of rawGames) {

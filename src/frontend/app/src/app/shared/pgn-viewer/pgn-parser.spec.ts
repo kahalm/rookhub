@@ -1,4 +1,4 @@
-import { foldVariationsIntoComments, parsePgnText, parsePgnTextWithSource, ParsedGame, START_FEN } from './pgn-parser';
+import { foldVariationsIntoComments, parsePgnText, parsePgnTextWithSource, ParsedGame, splitPgnGames, START_FEN } from './pgn-parser';
 
 const SINGLE_GAME = `[Event "Test"]
 [White "Kasparov"]
@@ -227,6 +227,12 @@ describe('Partie-Trennung wie der Server (CRLF, BOM, ohne Leerzeile)', () => {
     const parsed = parsePgnTextWithSource(lines.join('\n\n').replace(/\n/g, '\r\n'));
     expect(parsed.length).toBe(3);
     expect(parsed[1].raw).toBe(lines[1]);
+  });
+
+  it('splitPgnGames (Trenner für Einzel-Parser wie die Flashcards) liefert dieselben drei Abschnitte', () => {
+    const blocks = splitPgnGames('\uFEFF' + lines.join('\n').replace(/\n/g, '\r\n'));
+    expect(blocks.length).toBe(3);
+    expect(blocks.map(b => b.trim())).toEqual(lines);
   });
 });
 

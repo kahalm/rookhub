@@ -10,7 +10,7 @@ import { CourseService } from '../course.service';
 import { PreferencesService } from '../../../core/preferences.service';
 import { RepertoireTrainingService } from '../../repertoire/repertoire-training.service';
 import { lineKeyFromSans } from '../../repertoire/repertoire-line-key.util';
-import { parsePgnText } from '../../../shared/pgn-viewer/pgn-parser';
+import { parsePgnTextWithSource, splitPgnGames } from '../../../shared/pgn-viewer/pgn-parser';
 import { forkJoin } from 'rxjs';
 import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcard.util';
 import { FlashcardBoardComponent } from './flashcard-board.component';
@@ -126,14 +126,18 @@ export class FlashcardsComponent implements OnInit {
     this.backLink = ['/repertoires', this.bookId];
     const loadRep = (markedKeys: Set<string> | null) => this.training.getPgn(this.bookId).subscribe({
       next: pgn => {
-        const raws = pgn.split(/\n\n(?=\[Event )/);
+        // Trennen mit DEMSELBEN Zerleger wie Linienliste/Trainer (splitPgnGames: CRLF, BOM, ohne
+        // Leerzeile) und Spiel + Roh-Abschnitt aus EINEM Parser-Ergebnis paaren. Ein eigener
+        // `split(/\n\n(?=\[Event )/)` ließ eine CRLF-Datei als einen Block stehen: Karte = Linie 1
+        // mit den Pfeilen der letzten, markierte Linien 2..n fehlten. Je Abschnitt einzeln geparst,
+        // damit der 500-Partien-/2-MB-Deckel des Gesamtparsers hier wie bisher nicht greift.
         const games: Parameters<typeof buildRepertoireFlashcards>[0] = [];
         const alignedRaws: string[] = [];
-        for (const raw of raws) {
-          const parsed = parsePgnText(raw)[0];
-          if (!parsed || !parsed.moves.length) continue;
-          games.push(parsed);
-          alignedRaws.push(raw);
+        for (const block of splitPgnGames(pgn)) {
+          const p = parsePgnTextWithSource(block)[0];
+          if (!p || !p.game.moves.length) continue;
+          games.push(p.game);
+          alignedRaws.push(p.raw);
         }
         let built = buildRepertoireFlashcards(games, alignedRaws, lineKeyFromSans);
         if (markedKeys) {

@@ -254,7 +254,7 @@ describe('FlashcardsComponent Repertoire-Quelle', () => {
 
 1. d4 d5 *`;
 
-  function makeRep(query: Record<string, string>) {
+  function makeRep(query: Record<string, string>, pgn = REP_PGN, markedKeys: string[] = []) {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [FlashcardsComponent],
@@ -262,7 +262,10 @@ describe('FlashcardsComponent Repertoire-Quelle', () => {
         provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         { provide: CourseService, useValue: { getBookPuzzles: () => of([]) } },
-        { provide: RepertoireTrainingService, useValue: { getPgn: () => of(REP_PGN) } },
+        { provide: RepertoireTrainingService, useValue: {
+          getPgn: () => of(pgn),
+          getFlashcardMarks: () => of({ lineKeys: markedKeys }),
+        } },
         { provide: PreferencesService, useValue: { pieceSet: 'cburnett' } },
         { provide: ActivatedRoute, useValue: { snapshot: {
           paramMap: { get: (k: string) => k === 'id' ? '7' : null, has: (k: string) => k === 'id' },
@@ -291,5 +294,36 @@ describe('FlashcardsComponent Repertoire-Quelle', () => {
     const key = lineKeyFromSans(['d4', 'd5']);
     const fixture = makeRep({ lines: key });
     expect(fixture.componentInstance.cards.map(x => x.heading)).toEqual(['Nebenlinie']);
+  });
+
+  // Drei Linien mit je EIGENEN Markern, wie ein Windows-/ChessBase-Export sie ablegt. Die Linienliste
+  // (derselbe Zerleger) zeigt alle drei zum Markieren an; die Karten müssen dieselben drei sein.
+  const THREE = [
+    '[Event "Rep"]\n[White "L1"]\n[Black "Kap"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 {[%cal Gf3e5]} *',
+    '[Event "Rep"]\n[White "L2"]\n[Black "Kap"]\n[Result "*"]\n\n1. d4 d5 {[%csl Rd5]} *',
+    '[Event "Rep"]\n[White "L3"]\n[Black "Kap"]\n[Result "*"]\n\n1. c4 {[%cal Rc4c5]} *',
+  ];
+  const shapesOf = (c: FlashcardsComponent) =>
+    c.cards.map(x => x.shapes.map(s => `${s.brush}:${s.orig}${s.dest ?? ''}`));
+
+  it('CRLF-Datei mit drei Linien ergibt drei Karten, jede mit ihren eigenen Pfeilen', () => {
+    const crlf = THREE.join('\n\n').replace(/\n/g, '\r\n') + '\r\n';
+    const c = makeRep({}, crlf).componentInstance;
+    expect(c.cards.map(x => x.heading)).toEqual(['L1', 'L2', 'L3']);
+    expect(c.cards.map(x => x.notation)).toEqual(['1.e4 e5 2.Nf3', '1.d4 d5', '1.c4']);
+    expect(shapesOf(c)).toEqual([['green:f3e5'], ['red:d5'], ['red:c4c5']]);
+  });
+
+  it('ohne Leerzeile zwischen den Partien: lines=/marked= finden auch die hinteren Linien', () => {
+    const tight = THREE.join('\n');
+    const l3 = lineKeyFromSans(['c4']);
+    const byLines = makeRep({ lines: l3 }, tight).componentInstance;
+    expect(byLines.cards.map(x => x.heading)).toEqual(['L3']);
+    expect(shapesOf(byLines)).toEqual([['red:c4c5']]);
+
+    const l2 = lineKeyFromSans(['d4', 'd5']);
+    const byMarks = makeRep({ marked: '1' }, tight.replace(/\n/g, '\r\n'), [l2]).componentInstance;
+    expect(byMarks.cards.map(x => x.heading)).toEqual(['L2']);
+    expect(shapesOf(byMarks)).toEqual([['red:d5']]);
   });
 });
