@@ -126,7 +126,27 @@ public static class LeagueProfileBuilder
         _ => null,
     };
 
-    private static JsonObject Stats(List<(Game G, List<string> M, string C)> items, Func<List<string>, string?> firstKey, int depth = 6)
+    /// <summary>Eine Partie fürs Eröffnungsprofil: die ersten Halbzüge (SAN), die Farbe des Spielers („w"/„s"), seine Punkte.</summary>
+    public sealed record ProfileGame(List<string> Moves, string Color, double? Points);
+
+    /// <summary>
+    /// Die Abschnitte des Eröffnungsprofils (<c>white</c>, <c>black_e4</c>, <c>black_d4</c>, <c>black_other</c>) in
+    /// <paramref name="o"/> — für die gespeicherte Karte (<see cref="Build"/>) und für die gefilterte Fassung
+    /// (<see cref="LeagueProfileStore.ProfileAsync"/>, 0.617.0). Partien ohne Züge zählen nicht.
+    /// </summary>
+    public static void AddSections(JsonObject o, IReadOnlyList<ProfileGame> games)
+    {
+        var white = games.Where(x => x.Color == "w" && x.Moves.Count > 0).ToList();
+        var bE4 = games.Where(x => x.Color == "s" && x.Moves.Count > 0 && x.Moves[0] == "e4").ToList();
+        var bD4 = games.Where(x => x.Color == "s" && x.Moves.Count > 0 && x.Moves[0] == "d4").ToList();
+        var bOth = games.Where(x => x.Color == "s" && x.Moves.Count > 0 && x.Moves[0] is not "e4" and not "d4").ToList();
+        o["white"] = Stats(white, m => m[0]);
+        o["black_e4"] = Stats(bE4, m => m.Count > 1 ? m[1] : null);
+        o["black_d4"] = Stats(bD4, m => m.Count > 1 ? m[1] : null);
+        o["black_other"] = Stats(bOth, m => m.Count > 1 ? Line(m.Take(2).ToList()) : null);
+    }
+
+    private static JsonObject Stats(List<ProfileGame> items, Func<List<string>, string?> firstKey, int depth = 6)
     {
         JsonArray Agg(Func<List<string>, string?> keyf)
         {
@@ -134,13 +154,12 @@ public static class LeagueProfileBuilder
             var sum = new Dictionary<string, double>();
             var k = new Dictionary<string, int>();
             var order = new List<string>();
-            foreach (var (g, m, c) in items)
+            foreach (var (m, _, p) in items)
             {
                 var key = keyf(m);
                 if (key is null) continue;
                 if (!count.ContainsKey(key)) order.Add(key);
                 count[key] = count.GetValueOrDefault(key) + 1;
-                var p = Pts(H(g, "Result"), c);
                 if (p is not null) { sum[key] = sum.GetValueOrDefault(key) + p.Value; k[key] = k.GetValueOrDefault(key) + 1; }
             }
             // wie Pythons Counter.most_common: nach Häufigkeit, bei Gleichstand in Reihenfolge des ersten Auftretens
@@ -182,10 +201,6 @@ public static class LeagueProfileBuilder
         var mine = games.Select(g => (G: g, C: ColorOf(g, fide, name))).Where(x => x.C is not null)
             .Select(x => (x.G, C: x.C!)).ToList();
         var mv = mine.Select(x => (x.G, M: Sans(x.G, 8), x.C)).ToList();
-        var white = mv.Where(x => x.C == "w" && x.M.Count > 0).ToList();
-        var bE4 = mv.Where(x => x.C == "s" && x.M.Count > 0 && x.M[0] == "e4").ToList();
-        var bD4 = mv.Where(x => x.C == "s" && x.M.Count > 0 && x.M[0] == "d4").ToList();
-        var bOth = mv.Where(x => x.C == "s" && x.M.Count > 0 && x.M[0] is not "e4" and not "d4").ToList();
         var years = mine.Select(x => H(x.G, "Date")).Where(d => d.Length >= 4 && d[..4].All(char.IsDigit)).Select(d => d[..4]).ToList();
         var src = new JsonObject();
         foreach (var grp in mine.GroupBy(x => x.G.Source)) src[grp.Key] = grp.Count();
@@ -194,17 +209,14 @@ public static class LeagueProfileBuilder
             ["fide"] = fide, ["name"] = name, ["n"] = mine.Count, ["with_moves"] = mv.Count(x => x.M.Count > 0),
             ["years"] = years.Count > 0 ? new JsonArray(years.Min(StringComparer.Ordinal), years.Max(StringComparer.Ordinal)) : null,
             ["src"] = src,
-            ["white"] = Stats(white, m => m[0]),
-            ["black_e4"] = Stats(bE4, m => m.Count > 1 ? m[1] : null),
-            ["black_d4"] = Stats(bD4, m => m.Count > 1 ? m[1] : null),
-            ["black_other"] = Stats(bOth, m => m.Count > 1 ? Line(m.Take(2).ToList()) : null),
-            ["recent"] = new JsonArray(mv.Take(RecentCount).Select(x => (JsonNode)new JsonObject
+        };
+        AddSections(profile, mv.Select(x => new ProfileGame(x.M, x.C, Pts(H(x.G, "Result"), x.C))).ToList());
+        profile["recent"] = new JsonArray(mv.Take(RecentCount).Select(x => (JsonNode)new JsonObject
             {
                 ["date"] = H(x.G, "Date"), ["event"] = H(x.G, "Event"),
                 ["vs"] = H(x.G, x.C == "w" ? "Black" : "White"), ["vs_elo"] = H(x.G, x.C == "w" ? "BlackElo" : "WhiteElo"),
                 ["color"] = x.C, ["score"] = Pts(H(x.G, "Result"), x.C), ["opening"] = Line(x.M.Take(4).ToList()),
-            }).ToArray()),
-        };
+            }).ToArray());
         var pgn = string.Join("\n\n", mine.Select(x => x.G.Raw)) + (mine.Count > 0 ? "\n" : "");
         return (profile, pgn, mine.Count);
     }

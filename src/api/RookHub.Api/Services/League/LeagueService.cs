@@ -135,6 +135,10 @@ public sealed class LeagueService
         LeagueProfileStore.TreeFilter? filter = null) =>
         new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct, filter);
 
+    /// <summary>Eröffnungsprofil der Karte über gefilterte Partien (<see cref="LeagueProfileStore.ProfileAsync"/>, 0.617.0).</summary>
+    public Task<JsonObject?> ProfileAsync(string fide, CancellationToken ct, LeagueProfileStore.TreeFilter? filter = null) =>
+        new LeagueProfileStore(_db).ProfileAsync(fide, ct, filter);
+
     // ---- Teilen-Links -------------------------------------------------------------------------------
 
     private async Task<(JsonObject League, JsonObject Fixture)?> FixtureAsync(int tnr, int round, string team, CancellationToken ct)

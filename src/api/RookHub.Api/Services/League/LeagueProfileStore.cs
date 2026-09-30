@@ -316,6 +316,72 @@ public sealed class LeagueProfileStore
     }
 
     /// <summary>
+    /// Das Eröffnungsprofil der Karte („Mit Weiß", „Mit Schwarz gegen 1.e4" … samt häufigster Zugfolgen) über GEFILTERTE Partien
+    /// (0.617.0, Wunsch 2026-09-30: „auch an der Stelle will ich die vollen Filtermöglichkeiten") — dieselben Regeln wie
+    /// <see cref="TreeAsync"/>: Brett- und/oder Online-Partien, Tempo, letzte x Jahre, nur gesicherte Konten. Die Züge wie im Baum
+    /// aus dem Partietext bzw. der gespeicherten Zeile (ohne Brett); Partien ab eigener Stellung zählen nicht. Die gespeicherte
+    /// Karte (Brettpartien, alle Jahre) bleibt die Vorgabe — diese Fassung fragt die Seite nur mit gesetztem Filter.
+    /// <c>null</c> = weder Karte noch Online-Konto.
+    /// </summary>
+    public async Task<JsonObject?> ProfileAsync(string fide, CancellationToken ct, TreeFilter? filter = null)
+    {
+        filter ??= TreeFilter.Default;
+        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
+            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var club = await ClubGamesAsync(fide, ct);
+        if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
+        var name = await NameAsync(fide, p?.Name, ct);
+        var cutoff = filter.Years is { } y ? DateTime.UtcNow.AddYears(-y) : (DateTime?)null;
+        var games = new List<LeagueProfileBuilder.ProfileGame>();
+        var years = new List<string>();
+        int board = 0, online = 0;
+
+        if (filter.Board)
+            foreach (var g in WithClub(Stored(p?.Pgn), club))
+            {
+                var color = LeagueProfileBuilder.ColorOf(g, fide, name);
+                if (color is null) continue;
+                if (g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)) continue;
+                var year = g.Headers.TryGetValue("Date", out var d) && d.Length >= 4 && d[..4].All(char.IsDigit) ? d[..4] : "";
+                if (cutoff is { } c && (year.Length == 0 || int.Parse(year) < c.Year)) continue;
+                var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
+                board++;
+                if (year.Length > 0) years.Add(year);
+                games.Add(new(PgnParser.ExtractMainlineSans(moveText).Take(8).ToList(), color, LeagueProfileBuilder.Points(g, color)));
+            }
+
+        if (filter.Online)
+        {
+            var q = _db.LeagueOnlineGames.AsNoTracking().Where(g => g.FideId == fide);
+            if (filter.Speeds.Count > 0) q = q.Where(g => filter.Speeds.Contains(g.Speed));
+            if (cutoff is { } c) q = q.Where(g => g.PlayedAt >= c);
+            if (filter.OnlySure) q = q.Where(g => g.Account.Confidence == LeagueOnlineAccountService.Sure);
+            foreach (var g in await q.Select(g => new { g.Line, g.Result, g.White, g.PlayedAt }).ToListAsync(ct))
+            {
+                online++;
+                years.Add(g.PlayedAt.Year.ToString(CultureInfo.InvariantCulture));
+                double? pts = g.Result switch
+                {
+                    "1-0" => g.White ? 1 : 0,
+                    "0-1" => g.White ? 0 : 1,
+                    "1/2-1/2" => 0.5,
+                    _ => null,
+                };
+                games.Add(new(g.Line.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(8).ToList(), g.White ? "w" : "s", pts));
+            }
+        }
+
+        var o = new JsonObject
+        {
+            ["fide"] = fide, ["name"] = name, ["n"] = board + online, ["board"] = board, ["online"] = online,
+            ["with_moves"] = games.Count(x => x.Moves.Count > 0),
+            ["years"] = years.Count > 0 ? new JsonArray(years.Min(StringComparer.Ordinal), years.Max(StringComparer.Ordinal)) : null,
+        };
+        LeagueProfileBuilder.AddSections(o, games);
+        return o;
+    }
+
+    /// <summary>
     /// Die letzten Partien der Karte MIT PGN (Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar sein") — dieselbe
     /// Auswahl und Reihenfolge wie <c>recent</c> im Profil (<see cref="LeagueProfileBuilder.Recent"/>), aus dem aktuellen
     /// Bestand gerechnet. Datum, Gegner und Farbe gehen mit, damit die Seite eine Zeile auch dann wiederfindet, wenn die

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -41,14 +41,14 @@ export class LeagueApiService {
   }
 
   tree(fide: string, color: 'w' | 's', line: string[], token: string | null, filter?: TreeFilter): Promise<OpeningTree> {
-    let params = new HttpParams().set('color', color).set('line', line.join(' '));
-    if (filter && filter.source !== 'board') {
-      params = params.set('source', filter.source);
-      if (filter.speeds.length) params = params.set('speeds', filter.speeds.join(','));
-      if (filter.withUnsure) params = params.set('unsure', 'true');
-    }
-    if (filter?.years) params = params.set('years', filter.years);
+    const params = filterParams(new HttpParams().set('color', color).set('line', line.join(' ')), filter);
     return firstValueFrom(this.http.get<OpeningTree>(`${this.base(token)}/player/${encodeURIComponent(fide)}/tree`, { params }));
+  }
+
+  /** Eröffnungsprofil der Karte über gefilterte Partien (0.617.0) — dieselben Filter wie der Baum. */
+  profile(fide: string, token: string | null, filter: TreeFilter): Promise<ProfileView> {
+    const params = filterParams(new HttpParams(), filter);
+    return firstValueFrom(this.http.get<ProfileView>(`${this.base(token)}/player/${encodeURIComponent(fide)}/profile`, { params }));
   }
 
   // ── Online-Konten eines Spielers (0.605.0, league.manage) ──
@@ -125,4 +125,15 @@ export class LeagueApiService {
   updateStatus(): Promise<UpdateStatus> {
     return firstValueFrom(this.http.get<UpdateStatus>('/api/league/update/status'));
   }
+}
+
+/** Die Filter-Parameter von Baum und Profil (Server: `LeagueProfileStore.TreeFilter.Parse`). */
+export function filterParams(params: HttpParams, filter?: TreeFilter): HttpParams {
+  if (filter && filter.source !== 'board') {
+    params = params.set('source', filter.source);
+    if (filter.speeds.length) params = params.set('speeds', filter.speeds.join(','));
+    if (filter.withUnsure) params = params.set('unsure', 'true');
+  }
+  if (filter?.years) params = params.set('years', filter.years);
+  return params;
 }

@@ -3,7 +3,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { MyGamesService } from '../core/my-games.service';
-import { PlayerCard } from '../core/league.models';
+import { PlayerCard, ProfileView } from '../core/league.models';
+import { TREE_FILTER_KEY } from '../core/tree-filter';
 import { PlayerCardComponent } from './player-card.component';
 
 const CARD: PlayerCard = {
@@ -27,7 +28,8 @@ describe('PlayerCardComponent', () => {
 
   beforeEach(() => {
     perms = new Set();
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'playerSuggestions']);
+    localStorage.removeItem(TREE_FILTER_KEY);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'profile', 'playerSuggestions']);
     api.playerSuggestions.and.resolveTo({ items: [] });
     api.card.and.resolveTo(CARD);
     myGames = Object.assign(jasmine.createSpyObj<MyGamesService>('MyGamesService', ['save', 'shareUrl', 'open']),
@@ -39,7 +41,7 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => fixture.componentInstance.close());
+  afterEach(() => { fixture.componentInstance.close(); localStorage.removeItem(TREE_FILTER_KEY); });
 
   it('aus einer Brett-Zeile geöffnet: nur die Farbe an diesem Brett, umschaltbar', async () => {
     await fixture.componentInstance.open('1606921', 'w', 3, null);
@@ -228,5 +230,29 @@ describe('PlayerCardComponent', () => {
     await fixture.componentInstance.open('9', 's', 1, null);
     fixture.detectChanges();
     expect(el().textContent).toContain('Keine Partien gefunden.');
+  });
+
+  it('Filter auf der Karte: das Eröffnungsprofil kommt gefiltert vom Server, ohne Filter die gespeicherte Karte (0.617.0)', async () => {
+    const view: ProfileView = { fide: '1606921', n: 31, board: 20, online: 11, years: ['2019', '2026'],
+      white: { n: 14, first: [['d4', 10, 55], ['e4', 4, 50]], lines: [] },
+      black_e4: { n: 9, first: [['c5', 9, 44]], lines: [] }, black_d4: { n: 8, first: [], lines: [] }, black_other: { n: 0, first: [], lines: [] } };
+    api.profile.and.resolveTo(view);
+    api.card.and.resolveTo({ ...CARD, online: 11, onlineUnsure: 3 });
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    expect(api.profile).not.toHaveBeenCalled();                                     // Vorgabe: gespeicherte Karte
+    expect(headings().find(h => h.startsWith('Mit Weiß'))).toContain('(9 Partien)');
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.tree-filter .seg button')).find(b => b.textContent?.trim() === 'Brett + online')!).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.profile).toHaveBeenCalledWith('1606921', null, { source: 'both', speeds: [], years: null, withUnsure: false });
+    expect(headings().find(h => h.startsWith('Mit Weiß'))).toContain('(14 Partien)');
+    expect(el().querySelector('.filtered')?.textContent).toContain('Gefiltert: 31 Partien (20 am Brett, 11 online)');
+    expect(JSON.parse(localStorage.getItem(TREE_FILTER_KEY)!).source).toBe('both');   // gemerkt, gilt auch für den Baum
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.tree-filter .seg button')).find(b => b.textContent?.trim() === 'Brett')!).click();
+    fixture.detectChanges();
+    expect(headings().find(h => h.startsWith('Mit Weiß'))).toContain('(9 Partien)');   // zurück: ohne neuen Abruf
+    expect(api.profile).toHaveBeenCalledTimes(1);
   });
 });

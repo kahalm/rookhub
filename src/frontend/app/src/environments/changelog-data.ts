@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.617.0", date: "2026-09-30", changes: [
+    { en: "LeagueHub player card: the filters (board / board + online / online, time control, unsure accounts, last x years) now sit on the card itself and apply to the opening overview (“With White”, “With Black against 1.e4” … and the most frequent move orders) as well as to the opening tree. Without a filter the card looks as before.", de: "LeagueHub-Spielerkarte: Die Filter (Brett / Brett + online / Online, Zeitformat, unsichere Konten, letzte x Jahre) sitzen jetzt auf der Karte selbst und gelten für die Eröffnungsübersicht („Mit Weiß“, „Mit Schwarz gegen 1.e4“ … samt häufigster Zugfolgen) wie für den Eröffnungsbaum. Ohne Filter sieht die Karte aus wie bisher." },
+  ] },
   { version: "0.616.0", date: "2026-09-30", changes: [
     { en: "LeagueHub online accounts: only players whose birth year is known and under 18 have their accounts hidden; an unknown birth year no longer hides anything.", de: "LeagueHub-Online-Konten: Verborgen werden nur noch die Konten von Spielern, deren Jahrgang bekannt ist und unter 18 liegt; ein unbekannter Jahrgang verbirgt nichts mehr." },
   ] },

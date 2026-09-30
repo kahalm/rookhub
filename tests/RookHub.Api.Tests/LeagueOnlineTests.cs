@@ -386,6 +386,37 @@ public class LeagueOnlineTests : IDisposable
         Assert.Equal((5, 1), (card["online"]!.GetValue<int>(), card["onlineUnsure"]!.GetValue<int>()));
     }
 
+    /// <summary>0.617.0 (Wunsch „auch an der Stelle will ich die vollen Filtermöglichkeiten"): das Eröffnungsprofil der Karte über
+    /// dieselben Filter wie der Baum — Brett/online, Tempo, Jahre, unsichere Konten nur auf Wunsch.</summary>
+    [Fact]
+    public async Task Profile_FilteredLikeTheTree_BoardOnlineSpeedsYearsAndUnsure()
+    {
+        await TreeSeedAsync();
+        var league = new LeagueService(_db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var ctl = new LeagueController(league, null!, null!);
+        async Task<JsonObject> P(string? source, string? speeds = null, int? years = null, bool? unsure = null) =>
+            (JsonObject)((OkObjectResult)await ctl.Profile("222", source, speeds, years, unsure, default)).Value!;
+        static string First(JsonObject o, string section) => string.Join(" ", o[section]!["first"]!.AsArray()
+            .Select(r => $"{r![0]}:{r[1]}:{r[2]?.ToString() ?? "-"}").OrderBy(x => x, StringComparer.Ordinal));
+        static (int N, int Board, int Online, int White) Head(JsonObject o) =>
+            (o["n"]!.GetValue<int>(), o["board"]!.GetValue<int>(), o["online"]!.GetValue<int>(), o["white"]!["n"]!.GetValue<int>());
+
+        var board = await P(null);                                                   // Vorgabe: nur Brett, wie die gespeicherte Karte
+        Assert.Equal((2, 2, 0, 2), Head(board));
+        Assert.Equal("d4:1:100 e4:1:0", First(board, "white"));
+
+        var both = await P("both");                                                  // ohne unsure: nur gesicherte Konten
+        Assert.Equal((6, 2, 4, 5), Head(both));
+        Assert.Equal("d4:1:100 e4:4:38", First(both, "white"));                     // e4: 0 + 1 + 0 + ½ aus 4
+        Assert.Equal(1, both["black_d4"]!["n"]!.GetValue<int>());
+
+        Assert.Equal((5, 0, 5, 4), Head(await P("online", unsure: true)));           // + die Partie des unsicheren Kontos (1.c4)
+        Assert.Equal("c4:1:100 e4:3:50", First(await P("online", unsure: true), "white"));
+        Assert.Equal((4, 1, 3, 3), Head(await P("both", years: 1)));                 // 2010 und vor vier Jahren fallen weg
+        Assert.Equal((2, 0, 2, 1), Head(await P("online", "blitz")));                // nur Blitz: 1.e4 mit Weiß, 1.d4 mit Schwarz
+        Assert.IsType<NotFoundResult>(await ctl.Profile("999", null, null, null, null, default));
+    }
+
     [Fact]
     public async Task Tree_OnlyOnlineAccounts_NoBoardGames_StillAnswers()
     {

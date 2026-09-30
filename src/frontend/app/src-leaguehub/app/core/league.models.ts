@@ -114,6 +114,21 @@ export interface League {
 
 export interface OpeningStats { n: number; first: [string, number, number | null][]; lines: [string, number, number | null][] }
 
+/** Eröffnungsprofil über gefilterte Partien (0.617.0, `GET …/player/{fide}/profile`). */
+export interface ProfileView {
+  fide: string;
+  name?: string;
+  n: number;
+  board: number;
+  online: number;
+  with_moves?: number;
+  years?: [string, string] | null;
+  white?: OpeningStats;
+  black_e4?: OpeningStats;
+  black_d4?: OpeningStats;
+  black_other?: OpeningStats;
+}
+
 export interface PlayerCard {
   fide: string;
   name?: string;

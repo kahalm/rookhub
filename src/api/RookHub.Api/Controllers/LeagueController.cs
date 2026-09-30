@@ -65,6 +65,15 @@ public class LeagueController : BaseApiController
         await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true))
             is { } t ? Ok(t) : NotFound();
 
+    /// <summary>Eröffnungsprofil der Karte über gefilterte Partien (0.617.0) — dieselben Filter wie der Baum; ohne <c>unsure=true</c>
+    /// nur Online-Partien gesicherter Konten.</summary>
+    [HttpGet("player/{fide}/profile")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Profile(string fide, [FromQuery] string? source, [FromQuery] string? speeds, [FromQuery] int? years,
+        [FromQuery] bool? unsure, CancellationToken ct) =>
+        await _league.ProfileAsync(fide, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true))
+            is { } p ? Ok(p) : NotFound();
+
     // ---- Online-Konten (0.605.0) ----------------------------------------------------------------
 
     /// <summary>Konto anlegen <c>{ site, user (Name oder Profiladresse), sure, comment }</c> → das Konto; 400 <c>reason</c> ∈
@@ -322,6 +331,15 @@ public class LeagueShareController : ControllerBase
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
         return await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: true))
             is { } t ? Ok(t) : NotFound();
+    }
+
+    [HttpGet("{token}/player/{fide}/profile")]
+    public async Task<IActionResult> Profile(string token, string fide, [FromQuery] string? source, [FromQuery] string? speeds,
+        [FromQuery] int? years, CancellationToken ct)
+    {
+        if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
+        return await _league.ProfileAsync(fide, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: true))
+            is { } p ? Ok(p) : NotFound();
     }
 
     [HttpGet("{token}/player/{fide}/recent")]

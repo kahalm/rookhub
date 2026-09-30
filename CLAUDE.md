@@ -1713,6 +1713,14 @@ Konten), der Baum zeigt den Schalter „auch unsichere Konten (n Partien)" nur, 
 Präfix-Treffer `Line == pre || Line.StartsWith(pre + " ")`, Tempo, `PlayedAt`, Konto-Zuordnung) — `QueryTranslationTests`
 prüft die Übersetzung gegen MariaDB. Oberfläche: Filterleiste über dem Baum (`core/tree-filter.ts` = die reinen Regeln, gemerkt
 im localStorage `lh-tree-filter`); Quellen-Wahl erst, wenn der Spieler Online-Partien hat, ohne Brettpartien gleich „online".
+**Filter auch fürs Eröffnungsprofil der Karte** (0.617.0, Wunsch 2026-09-30 mit Screenshot: „auch an der Stelle will ich die vollen
+Filtermöglichkeiten"): `GET /api/league/player/{fide}/profile?source=&speeds=&years=&unsure=` (und `/api/league/s/{token}/player/{fide}/profile`,
+dort nur gesicherte Konten) → dieselben Abschnitte wie die Karte (`white`, `black_e4`, `black_d4`, `black_other` samt `first`/`lines`) plus
+`n`/`board`/`online`/`years` über die GEFILTERTEN Partien (`LeagueProfileStore.ProfileAsync`, gleiche Regeln wie der Baum; die Abschnitte
+rechnet `LeagueProfileBuilder.AddSections` — dieselbe Funktion wie für die gespeicherte Karte). Züge wie im Baum aus dem Partietext bzw.
+der gespeicherten Online-Zeile (ohne Brett), Partien ab eigener Stellung zählen nicht. Die Filterleiste sitzt seither auf der KARTE
+(`shared/tree-filter-bar.component.ts`), die Karte hält den Stand (`lh-tree-filter`) und gibt dem Baum den wirksamen Filter als Eingabe;
+ohne Filter (nur Brett, alle Jahre) zeigt sie die gespeicherte Karte ohne weiteren Abruf.
 
 **Online-Konten + Online-Partien** (0.605.0, Wunsch 2026-09-30: „für einen User kann es eine Liste von Onlinekonten geben — Name +
 Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele dieser User und legst sie in der DB ab"):

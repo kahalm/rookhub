@@ -1,13 +1,16 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../core/league-api.service';
 import { MyGamesService } from '../core/my-games.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
-import { OpeningStats, PlayerCard, RecentGame } from '../core/league.models';
+import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '../core/league.models';
+import { TREE_FILTER_KEY, effectiveTreeFilter, normalizeTreeFilter } from '../core/tree-filter';
+import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { GameReplayComponent } from './game-replay.component';
 import { OnlineAccountsComponent } from './online-accounts.component';
 import { OpeningTreeComponent } from './opening-tree.component';
+import { TreeFilterBarComponent } from './tree-filter-bar.component';
 
 type Show = 'w' | 's' | 'b';
 
@@ -70,25 +73,38 @@ type Show = 'w' | 's' | 'b';
               <button type="button" class="btn-sec tree-toggle" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
                 {{ treeOpen() ? 'Eröffnungsbaum schließen' : 'Eröffnungsbaum anzeigen' }}</button>
             </div>
+            <lh-tree-filter-bar [filter]="filter()" [active]="active()" [boardGames]="c.n" [onlineGames]="c.online ?? 0"
+                                [unsureGames]="c.onlineUnsure ?? 0" [token]="token" (changed)="setFilter($event)" />
+            @if (!storedProfile()) {
+              <p class="muted small filtered" role="status">
+                @if (profile(); as p) { Gefiltert: {{ p.n }} Partien@if (p.online) { ({{ p.board }} am Brett, {{ p.online }} online)}
+                  @if (p.years) { · {{ p.years[0] }}–{{ p.years[1] }} } }
+                @if (profileLoading()) { — lade … }
+                @if (profileError()) { <span class="err">{{ profileError() }}</span> }
+              </p>
+            }
             @if (treeOpen()) {
-              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'"
-                               [boardGames]="c.n" [onlineGames]="c.online ?? 0" [unsureGames]="c.onlineUnsure ?? 0" />
+              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" [filter]="active()" />
             }
           }
-          @if (c.n) {
-            @if (show() !== 's') {
-              <h3>Mit Weiß <span class="muted">({{ c.white?.n || 0 }} Partien)</span></h3>
-              <ng-container *ngTemplateOutlet="first; context: { s: c.white, names: nameWhite }" />
-            }
-            @if (show() !== 'w') {
-              <h3>Mit Schwarz gegen 1.e4 <span class="muted">({{ c.black_e4?.n || 0 }})</span></h3>
-              <ng-container *ngTemplateOutlet="first; context: { s: c.black_e4, names: nameE4 }" />
-              <h3>Mit Schwarz gegen 1.d4 <span class="muted">({{ c.black_d4?.n || 0 }})</span></h3>
-              <ng-container *ngTemplateOutlet="first; context: { s: c.black_d4, names: nameD4 }" />
-              @if (c.black_other?.n) {
-                <h3>Mit Schwarz gegen andere <span class="muted">({{ c.black_other.n }})</span></h3>
-                <ng-container *ngTemplateOutlet="first; context: { s: c.black_other, names: null }" />
+          @if (sections(); as sec) {
+            @if (sec.n) {
+              @if (show() !== 's') {
+                <h3>Mit Weiß <span class="muted">({{ sec.white?.n || 0 }} Partien)</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.white, names: nameWhite }" />
               }
+              @if (show() !== 'w') {
+                <h3>Mit Schwarz gegen 1.e4 <span class="muted">({{ sec.black_e4?.n || 0 }})</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_e4, names: nameE4 }" />
+                <h3>Mit Schwarz gegen 1.d4 <span class="muted">({{ sec.black_d4?.n || 0 }})</span></h3>
+                <ng-container *ngTemplateOutlet="first; context: { s: sec.black_d4, names: nameD4 }" />
+                @if (sec.black_other?.n) {
+                  <h3>Mit Schwarz gegen andere <span class="muted">({{ sec.black_other?.n }})</span></h3>
+                  <ng-container *ngTemplateOutlet="first; context: { s: sec.black_other, names: null }" />
+                }
+              }
+            } @else if (!storedProfile() && !profileLoading()) {
+              <p class="muted">Keine Partien mit diesem Filter.</p>
             }
           }
           @if (c.recent?.length) {
@@ -124,7 +140,7 @@ type Show = 'w' | 's' | 'b';
           }
           }
           <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.
-            @if (c.online) { Online-Partien der eingetragenen Konten zählen nur im Eröffnungsbaum. }</p>
+            @if (c.online) { Online-Partien der eingetragenen Konten zählen im Eröffnungsprofil und im Baum, wenn oben „Brett + online" oder „Online" gewählt ist (unsichere Konten nur mit dem Schalter). }</p>
         }
       </div>
     </dialog>
@@ -149,7 +165,7 @@ type Show = 'w' | 's' | 'b';
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent],
+  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(LeagueApiService);
@@ -166,6 +182,22 @@ export class PlayerCardComponent {
   readonly board = signal<number | null>(null);
   readonly show = signal<Show>('b');
   readonly treeOpen = signal(false);
+  /** Der gemerkte Filter (je Gerät, für alle Spieler) — gilt für Eröffnungsprofil und Baum (0.617.0). */
+  readonly filter = signal<TreeFilter>(normalizeTreeFilter(readJson(localStore(), TREE_FILTER_KEY)));
+  /** Was gefragt wird — ohne Online-Partien nur das Brett, ohne Brettpartien gleich online. */
+  readonly active = computed(() => {
+    const c = this.card();
+    return effectiveTreeFilter(this.filter(), c?.n ?? 0, c?.online ?? 0);
+  });
+  /** Nur Brettpartien aller Jahre: das ist die gespeicherte Karte, ohne eigenen Abruf. */
+  readonly storedProfile = computed(() => this.active().source === 'board' && !this.active().years);
+  /** Das Profil über gefilterte Partien (nur mit Filter). */
+  readonly profile = signal<ProfileView | null>(null);
+  readonly profileLoading = signal(false);
+  readonly profileError = signal<string | null>(null);
+  /** Was die Abschnitte zeigen: die Karte selbst oder das gefilterte Profil (`null` = wird geholt). */
+  readonly sections = computed<PlayerCard | ProfileView | null>(() => this.storedProfile() ? this.card() : this.profile());
+  private profileKey = '';
   /** Die gerade nachgespielte Partie (statt der Karte). */
   readonly replay = signal<{ pgn: string; flipped: boolean } | null>(null);
   readonly replayLoading = signal(false);
@@ -188,6 +220,15 @@ export class PlayerCardComponent {
   });
 
   constructor() {
+    // Filter gesetzt: das Profil über die gefilterten Partien holen — je Karte und Filter einmal.
+    effect(() => {
+      const c = this.card(), f = this.active(), stored = this.storedProfile();
+      if (!c || stored) return;
+      const key = `${this.seq}:${JSON.stringify(f)}`;
+      if (key === this.profileKey) return;
+      this.profileKey = key;
+      untracked(() => void this.loadProfile(c.fide, f, key));
+    });
     // Farbe gewählt (oder die Karte aus einer Brett-Zeile mit Farbe geöffnet): deren letzte Partien holen, einmal je Karte.
     effect(() => {
       const c = this.card(), s = this.show();
@@ -196,6 +237,24 @@ export class PlayerCardComponent {
   }
 
   private readonly loadingColor = new Set<string>();
+
+  private async loadProfile(fide: string, f: TreeFilter, key: string): Promise<void> {
+    this.profileLoading.set(true);
+    this.profileError.set(null);
+    try {
+      const p = await this.api.profile(fide, this.token, f);
+      if (key === this.profileKey) this.profile.set(p);
+    } catch {
+      if (key === this.profileKey) this.profileError.set('Das gefilterte Profil konnte nicht geladen werden.');
+    } finally {
+      if (key === this.profileKey) this.profileLoading.set(false);
+    }
+  }
+
+  setFilter(f: TreeFilter): void {
+    this.filter.set(normalizeTreeFilter(f));
+    writeJson(localStore(), TREE_FILTER_KEY, this.filter());   // nur eine Bequemlichkeit — scheitert still
+  }
 
   private async loadColor(fide: string, color: 'w' | 's'): Promise<void> {
     const key = `${this.seq}:${color}`;
@@ -232,6 +291,9 @@ export class PlayerCardComponent {
     this.show.set(color ?? 'b');
     this.card.set(null);
     this.treeOpen.set(false);
+    this.profile.set(null);
+    this.profileError.set(null);
+    this.profileLoading.set(false);
     this.replay.set(null);
     this.replayError.set(null);
     this.gameNote.set(null);

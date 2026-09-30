@@ -55,6 +55,7 @@ public class EndpointAuthInventoryTests
         "GET /api/league/s/{token}/player/{fide}",                   // LeagueShareController.Player (nur Spieler der geteilten Meldeliste)
         "GET /api/league/s/{token}/player/{fide}/pgn",               // LeagueShareController.Pgn (dito)
         "GET /api/league/s/{token}/player/{fide}/tree",              // LeagueShareController.Tree (Eröffnungsbaum, dito)
+        "GET /api/league/s/{token}/player/{fide}/profile",           // LeagueShareController.Profile (gefiltertes Eröffnungsprofil, dito)
         "GET /api/league/s/{token}/player/{fide}/recent",            // LeagueShareController.Recent (letzte Partien samt PGN, dito)
         // Vereins-Datenbank über einen gültigen Teilen-Link, ohne Konto (Wunsch 2026-09-28) — der Link ist der Nachweis,
         // eine Einlesung gehört dem Browser mit ihrem geheimen Schlüssel; Formulare 10/IP + 100/Tag (LeagueShareClubController)
