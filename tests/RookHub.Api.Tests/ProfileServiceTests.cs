@@ -119,6 +119,35 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAccount_ReplacesTheNameInOtherUsersNotifications()
+    {
+        // A9-003: zwölf Auslöser legen den Namen des Auslösers als data.username beim EMPFÄNGER ab — die Löschung
+        // räumte nur die eigenen Benachrichtigungen ab, in Glocke und Verlauf der anderen stand der Name für immer.
+        var id = await CreateUserWithPasswordAsync("Jürgen.M", "secret123");
+        var admin = await CreateUserWithPasswordAsync("theadmin", "x");
+        var notifications = new NotificationService(_db);
+        await notifications.CreateAsync(admin, Models.NotificationType.NewUserRegistered,
+            new Dictionary<string, string> { ["username"] = "Jürgen.M" });
+        await notifications.CreateAsync(admin, Models.NotificationType.CourseShared,
+            new Dictionary<string, string> { ["username"] = "Jürgen.M", ["courseName"] = "Caro-Kann" });
+        await notifications.CreateAsync(admin, Models.NotificationType.FriendRequestReceived,
+            new Dictionary<string, string> { ["username"] = "Jürgen.Mx" });   // anderer Nutzer mit ähnlichem Namen
+        await notifications.CreateAsync(id, Models.NotificationType.FriendRequestAccepted,
+            new Dictionary<string, string> { ["username"] = "theadmin" });   // eigene: geht ganz
+
+        await _profileService.DeleteAccountAsync(id, "secret123");
+
+        var rows = await _db.Notifications.AsNoTracking().OrderBy(n => n.Id).ToListAsync();
+        Assert.All(rows, n => Assert.Equal(admin, n.UserId));
+        var data = rows.Select(n => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(n.DataJson!)!).ToList();
+        Assert.Equal($"deleted_{id}", data[0]["username"]);
+        Assert.Equal($"deleted_{id}", data[1]["username"]);
+        Assert.Equal("Caro-Kann", data[1]["courseName"]);
+        Assert.Equal("Jürgen.Mx", data[2]["username"]);
+        Assert.DoesNotContain(rows, n => n.DataJson!.Contains("J\\u00FCrgen.M\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task DeleteAccount_WrongPassword_Throws_AndKeepsData()
     {
         var id = await CreateUserWithPasswordAsync("delme1", "secret123");

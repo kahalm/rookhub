@@ -342,6 +342,8 @@ try
     // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt
     // auch mit Schalter aus an — hinter dem Schalter (im Kurslisten-Refresh) lief die Retention auf PROD nie.
     builder.Services.AddHostedService<AnonymousDataRetentionService>();
+    // Benachrichtigungen: gelesene nach 180 Tagen weg, Namen gelöschter Konten in fremden Glocken ersetzen (A9-003).
+    builder.Services.AddHostedService<NotificationRetentionScheduler>();
     // Eigener Engine-Broker (Provider auf dem Rechner des Nutzers spricht direkt mit RookHub, ohne Lichess):
     // Registrierung (rhe_…), Selector-Verzeichnis, Engine-Auflösung beider Quellen.
     builder.Services.AddSingleton(RookHub.Api.Services.EngineBroker.LocalBrokerOptions.FromConfig(builder.Configuration));

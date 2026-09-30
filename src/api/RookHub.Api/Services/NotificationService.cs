@@ -109,6 +109,100 @@ public class NotificationService
         await _db.SaveChangesAsync();
     }
 
+    // ---- Namens-Schnappschuss des Auslösers + Retention (Codereview 2026-09-29, A9-003) ----
+    //
+    // Zwölf Auslöser legen den Benutzernamen des Auslösers als data.username beim EMPFÄNGER ab (Freundschaft,
+    // Challenge, Teilen, Neuanmeldung an alle Admins …). Die Kontolöschung räumte nur die EIGENEN Benachrichtigungen
+    // ab — in Glocke und Verlauf der anderen stand der alte Name für immer. Usernamen ändern sich nur bei der
+    // Löschung (es gibt kein Umbenennen), der Name ist bis dahin also die Identität des Auslösers: die Löschung
+    // ersetzt ihn in fremden Benachrichtigungen durch den anonymisierten Namen (ProfileService.EraseAsync), der
+    // tägliche Lauf fängt den Altbestand und das Rennen mit einem gleichzeitig angelegten Eintrag.
+
+    private const string UsernameKey = "username";
+
+    /// <summary>Gelesene Benachrichtigungen verfallen nach dieser Frist (Entscheidung A9-003); ungelesene bleiben.</summary>
+    public static readonly TimeSpan SeenRetention = TimeSpan.FromDays(180);
+
+    /// <summary>Ersatzname für ein gelöschtes Konto, dessen Id nicht mehr bekannt ist (Altbestand vor dem Fix).</summary>
+    public const string DeletedActorName = "deleted";
+
+    /// <summary>Benachrichtigungen ANDERER Nutzer, deren <c>data.username</c> genau <paramref name="username"/> ist.
+    /// Vorauswahl per Teilstring in SQL (Kollation ggf. ohne Groß/klein), exakt geprüft wird danach.</summary>
+    public static async Task<List<Notification>> MentioningUsernameAsync(AppDbContext db, string username, int exceptUserId,
+        CancellationToken ct = default)
+    {
+        // Dieselben Optionen wie beim Anlegen → dieselbe Maskierung (Umlaute, Anführungszeichen) im Suchtext.
+        var needle = $"\"{UsernameKey}\":" + JsonSerializer.Serialize(username, JsonOpts);
+        var candidates = await db.Notifications
+            .Where(n => n.UserId != exceptUserId && n.DataJson != null && n.DataJson.Contains(needle))
+            .ToListAsync(ct);
+        return candidates.Where(n => ReadUsername(n.DataJson) == username).ToList();
+    }
+
+    /// <summary>Setzt <c>data.username</c> einer Benachrichtigung (übrige Parameter bleiben).</summary>
+    public static void SetUsername(Notification n, string username)
+    {
+        var data = ReadData(n.DataJson) ?? new Dictionary<string, string>();
+        data[UsernameKey] = username;
+        n.DataJson = JsonSerializer.Serialize(data, JsonOpts);
+    }
+
+    /// <summary>Täglicher Lauf (<see cref="NotificationRetentionScheduler"/>): gelesene Benachrichtigungen älter als
+    /// <see cref="SeenRetention"/> löschen und Namen, zu denen es kein Konto mehr gibt (gelöscht vor diesem Fix, oder
+    /// ein Eintrag, der während der Löschung noch entstand), durch <see cref="DeletedActorName"/> ersetzen.</summary>
+    public async Task<(int Purged, int Anonymized)> RunRetentionAsync(DateTime nowUtc, CancellationToken ct = default)
+    {
+        var cutoff = nowUtc - SeenRetention;
+        var expired = _db.Notifications.Where(n => n.SeenAt != null && n.CreatedAt < cutoff);
+        int purged;
+        if (_db.Database.IsRelational())
+            purged = await expired.ExecuteDeleteAsync(ct);
+        else
+        {
+            var rows = await expired.ToListAsync(ct);   // InMemory (Tests) kennt kein ExecuteDelete
+            _db.Notifications.RemoveRange(rows);
+            await _db.SaveChangesAsync(ct);
+            purged = rows.Count;
+        }
+
+        var keyNeedle = $"\"{UsernameKey}\":";
+        var named = (await _db.Notifications
+                .Where(n => n.DataJson != null && n.DataJson.Contains(keyNeedle))
+                .Select(n => new { n.Id, n.DataJson })
+                .ToListAsync(ct))
+            .Select(r => (r.Id, Name: ReadUsername(r.DataJson)))
+            .Where(r => !string.IsNullOrEmpty(r.Name) && r.Name != DeletedActorName)
+            .ToList();
+        if (named.Count == 0) return (purged, 0);
+
+        // Groß/klein egal: der Unique-Index auf Username vergleicht in der Kollation ebenso.
+        var existing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var chunk in named.Select(r => r.Name!).Distinct(StringComparer.OrdinalIgnoreCase).Chunk(500))
+            existing.UnionWith(await _db.AppUsers.Where(u => chunk.Contains(u.Username)).Select(u => u.Username).ToListAsync(ct));
+
+        var anonymized = 0;
+        foreach (var chunk in named.Where(r => !existing.Contains(r.Name!)).Select(r => r.Id).Chunk(500))
+        {
+            foreach (var n in await _db.Notifications.Where(n => chunk.Contains(n.Id)).ToListAsync(ct))
+            {
+                SetUsername(n, DeletedActorName);
+                anonymized++;
+            }
+            await _db.SaveChangesAsync(ct);
+        }
+        return (purged, anonymized);
+    }
+
+    private static Dictionary<string, string>? ReadData(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try { return JsonSerializer.Deserialize<Dictionary<string, string>>(json, JsonOpts); }
+        catch (JsonException) { return null; }
+    }
+
+    private static string? ReadUsername(string? json)
+        => ReadData(json) is { } data && data.TryGetValue(UsernameKey, out var name) ? name : null;
+
     private static NotificationDto ToDto(Notification n) => new(
         n.Id,
         n.Type,

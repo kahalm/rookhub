@@ -511,6 +511,10 @@ public class ProfileService
         var manualWithNote = await _db.ManualActivities.Where(a => a.UserId == userId && a.Note != null).ToListAsync();
         foreach (var a in manualWithNote) a.Note = null;
 
+        // Den Namen tragen auch Benachrichtigungen ANDERER Nutzer (data.username: Freundschaft, Challenge, Teilen,
+        // Neuanmeldung an alle Admins …) — sie bekommen unten, im selben Save, den anonymisierten Namen (A9-003).
+        var mentions = await NotificationService.MentioningUsernameAsync(_db, user.Username, userId);
+
         // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
         //    FALLE Username-Squatting: „deleted_{id}"/„deleted_{id}@deleted.invalid" sind normale,
         //    vorab registrierbare Werte — hätte sie jemand belegt, schlüge der Unique-Index zu und
@@ -530,6 +534,7 @@ public class ProfileService
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
             user.IsAdmin = false;
             user.DeletedAt = DateTime.UtcNow;
+            foreach (var n in mentions) NotificationService.SetUsername(n, username);
 
             // 3) Profil-PII entfernen (Statistik-Tabellen referenzieren weiterhin die UserId).
             if (user.Profile is { } p)

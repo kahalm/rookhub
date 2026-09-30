@@ -319,4 +319,86 @@ public class NotificationTests : IDisposable
         Assert.False(await revenge.RecordAsync(1, 2, 100)); // zweiter Aufruf → kein Spam
         Assert.Equal(1, await _db.RevengeNotifications.CountAsync(n => n.AvengerUserId == 1 && n.TargetUserId == 2 && n.PuzzleId == 100));
     }
+
+    // ---- Namens-Schnappschuss + Retention (Codereview 2026-09-29, A9-003) ----
+
+    private static string? Name(Notification n)
+        => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(n.DataJson!)!.GetValueOrDefault("username");
+
+    [Fact]
+    public async Task Retention_PurgesSeenOlderThanTheLimit_KeepsUnseenAndRecent()
+    {
+        await UserAsync(1, "u1");
+        var now = new DateTime(2026, 9, 30, 5, 0, 0, DateTimeKind.Utc);
+        var old = now - NotificationService.SeenRetention - TimeSpan.FromDays(1);
+        _db.Notifications.AddRange(
+            new Notification { UserId = 1, Type = "a", CreatedAt = old, SeenAt = old },                    // weg
+            new Notification { UserId = 1, Type = "b", CreatedAt = old },                                   // ungelesen: bleibt
+            new Notification { UserId = 1, Type = "c", CreatedAt = now.AddDays(-10), SeenAt = now.AddDays(-9) }); // jung: bleibt
+        await _db.SaveChangesAsync();
+
+        var (purged, _) = await _service.RunRetentionAsync(now);
+
+        Assert.Equal(1, purged);
+        Assert.Equal(new[] { "b", "c" }, await _db.Notifications.OrderBy(n => n.Type).Select(n => n.Type).ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task Retention_ReplacesNamesOfAccountsThatNoLongerExist_KeepsTheRest()
+    {
+        // Altbestand: vor dem Fix gelöschte (oder hart entfernte) Konten stehen mit ihrem alten Namen in fremden Glocken.
+        await UserAsync(1, "admin");
+        await UserAsync(2, "alive");
+        await _service.CreateAsync(1, NotificationType.NewUserRegistered, new Dictionary<string, string> { ["username"] = "gone" });
+        await _service.CreateAsync(1, NotificationType.CourseShared,
+            new Dictionary<string, string> { ["username"] = "gone", ["courseName"] = "Sizilianisch" });
+        await _service.CreateAsync(1, NotificationType.NewUserRegistered, new Dictionary<string, string> { ["username"] = "alive" });
+        await _service.CreateAsync(1, NotificationType.TournamentChanged, new Dictionary<string, string> { ["tournamentName"] = "gone" });
+
+        var (_, anonymized) = await _service.RunRetentionAsync(DateTime.UtcNow);
+
+        Assert.Equal(2, anonymized);
+        var rows = await _db.Notifications.AsNoTracking().OrderBy(n => n.Id).ToListAsync();
+        Assert.Equal(NotificationService.DeletedActorName, Name(rows[0]));
+        Assert.Equal(NotificationService.DeletedActorName, Name(rows[1]));
+        Assert.Contains("Sizilianisch", rows[1].DataJson);          // übrige Parameter bleiben
+        Assert.Equal("alive", Name(rows[2]));                        // lebendes Konto unberührt
+        Assert.Contains("\"tournamentName\":\"gone\"", rows[3].DataJson);  // nur der Akteur-Schlüssel zählt
+        // Idempotent: der zweite Lauf findet nichts mehr.
+        Assert.Equal(0, (await _service.RunRetentionAsync(DateTime.UtcNow)).Anonymized);
+    }
+
+    [Fact]
+    public async Task MentioningUsername_MatchesTheExactName_WithJsonEscaping_AndSkipsTheOwner()
+    {
+        await UserAsync(1, "u1");
+        await UserAsync(2, "u2");
+        const string name = "Jürgen \"J\" <3";   // Umlaut, Anführungszeichen, HTML-Zeichen: alle maskiert im JSON
+        await _service.CreateAsync(1, NotificationType.FriendRequestReceived, new Dictionary<string, string> { ["username"] = name });
+        await _service.CreateAsync(1, NotificationType.FriendRequestReceived, new Dictionary<string, string> { ["username"] = name + "x" });
+        await _service.CreateAsync(2, NotificationType.FriendRequestReceived, new Dictionary<string, string> { ["username"] = name });
+
+        var hits = await NotificationService.MentioningUsernameAsync(_db, name, exceptUserId: 2);
+
+        var hit = Assert.Single(hits);
+        Assert.Equal(1, hit.UserId);
+        NotificationService.SetUsername(hit, "deleted_7");
+        Assert.Equal("deleted_7", Name(hit));
+    }
+
+    [Fact]
+    public void ProgramCs_RegistersTheNotificationRetention() => AssertRegistered();
+
+    private static void AssertRegistered([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
+    {
+        var dir = Path.GetDirectoryName(thisFile);
+        while (dir != null && !File.Exists(Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs")))
+            dir = Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        var src = File.ReadAllText(Path.Combine(dir!, "src", "api", "RookHub.Api", "Program.cs"));
+        var registration = src.IndexOf("AddHostedService<NotificationRetentionScheduler>()", StringComparison.Ordinal);
+        Assert.True(registration > 0, "NotificationRetentionScheduler nicht registriert");
+        Assert.True(registration < src.IndexOf("var chessableEnabled", StringComparison.Ordinal),
+            "Retention hängt am Chessable-Schalter");
+    }
 }
