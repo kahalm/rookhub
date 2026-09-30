@@ -1,0 +1,36 @@
+// Semantische Farb-Tokens fuer VORDERGRUND (Text, Icons, Rahmen) — Codereview 2026-09-29, F8-003.
+//
+// Warum: die Komponenten-Styles tragen ~580 fest verdrahtete Hex-Werte (sechs Rottoene, fuenf
+// Gruentoene, Primaerblau #1976d2 neben dem Azure-Theme). Keiner davon passt sich dem
+// Dunkelmodus an — und der ist die VORGABE (ThemeService). #c62828/#1976d2/#2e7d32 als Textfarbe
+// liegen auf den dunklen Flaechen bei 3–3,6:1 statt der geforderten 4,5:1.
+//
+// Regeln:
+// * Neue Farben fuer Zustaende (Fehler, Erfolg, Warnung, Info, Akzent) kommen aus DIESEN Tokens,
+//   nicht als Hex-Wert: `color: var(--rh-error)`.
+// * Es sind VORDERGRUND-Tokens: jeder Wert erreicht 4,5:1 auf Seite, Karte und Dialog des
+//   jeweiligen Modus (hell: #fff … surface-container-high, dunkel: #121212 … surface-container-high;
+//   geprueft in `app/core/design-tokens.spec.ts`). Als FLAECHE mit weisser Schrift taugen sie im
+//   Dunkelmodus nicht (dort sind sie hell) — getoente Flaechen per
+//   `color-mix(in srgb, var(--rh-success) 18%, transparent)`.
+// * Fehler und Akzent SIND die Material-Rollen (`--mat-sys-error`, `--mat-sys-primary`): so sehen
+//   eigene Meldungen aus wie die von mat-error und mat-button, und der Dunkelmodus kommt mit dem
+//   Theme. Fuer Erfolg, Warnung und Info hat Material keine Rolle — hell/dunkel stehen hier.
+// * Beide Werte sitzen auf `html`, derselben Stelle wie `mat.theme` und die Klasse `dark-theme`
+//   (ThemeService) — ein Token, das auf eine Material-Rolle zeigt, wird dort aufgeloest und erbt
+//   den fertigen Wert nach unten (auch in CDK-Overlays).
+html {
+  --rh-error: var(--mat-sys-error, #ba1a1a);
+  --rh-accent: var(--mat-sys-primary, #005cbb);
+  --rh-success: #1b5e20;
+  --rh-warn: #bf360c;
+  --rh-info: #1565c0;
+}
+
+html.dark-theme {
+  --rh-error: var(--mat-sys-error, #ffb4ab);
+  --rh-accent: var(--mat-sys-primary, #abc7ff);
+  --rh-success: #81c784;
+  --rh-warn: #ffb74d;
+  --rh-info: #90caf9;
+}

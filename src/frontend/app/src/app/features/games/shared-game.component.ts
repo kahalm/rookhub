@@ -275,7 +275,7 @@ const RECAP_RETRY_MS = 15_000;
     .players { font-size: 1.05rem; }
     .players .elo { font-weight: 400; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .meta { display: flex; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .result { color: #1976d2; font-weight: 600; }
+    .result { color: var(--rh-accent); font-weight: 600; }
     .header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
     /* Breite 0 + Mindestbreite 100 %: der Satz trägt nichts zur Breite der Karte bei — sie umschließt Brett und Zugliste,
        ein langer Absatz dehnte sie sonst auf die ganze Seite. */

@@ -2,6 +2,8 @@
 // Custom Theming for Angular Material
 // For more information: https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
+// Semantische Farb-Tokens (--rh-error/-success/-warn/-info/-accent, hell + dunkel) — siehe _tokens.scss.
+@use 'tokens';
 
 html {
   @include mat.theme((

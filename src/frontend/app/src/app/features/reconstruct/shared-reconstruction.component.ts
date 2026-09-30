@@ -213,7 +213,7 @@ export function buildRows(parts: SharedReconstructionPart[]): SharedRow[] {
     .header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .header h1 { margin: 0; font-size: 1.3rem; }
     .meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.85rem; color: color-mix(in srgb, currentColor 60%, transparent); }
-    .result { color: #1976d2; font-weight: 600; }
+    .result { color: var(--rh-accent); font-weight: 600; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
     .chip { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, currentColor 10%, transparent); }
     .chip.ok { background: color-mix(in srgb, #2e7d32 18%, transparent); }

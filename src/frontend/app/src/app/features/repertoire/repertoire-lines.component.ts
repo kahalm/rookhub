@@ -229,7 +229,7 @@ type LineStatus = 'new' | 'due' | 'scheduled' | 'paused';
     .line-header { display: flex; justify-content: space-between; padding: 4px 16px 8px;
       font-size: 14px; border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
     .players { font-weight: 500; }
-    .result { color: #1976d2; font-weight: 600; }
+    .result { color: var(--rh-accent); font-weight: 600; }
     .move-list-wrap { flex: 1; overflow: hidden; }
     .empty { padding: 2rem; text-align: center; color: color-mix(in srgb, currentColor 47%, transparent); }
   `],

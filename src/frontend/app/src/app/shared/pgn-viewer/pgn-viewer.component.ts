@@ -175,7 +175,7 @@ export interface PgnViewerData {
       align-items: center;
       font-size: 14px;
     }
-    .result { color: #1976d2; font-weight: 500; }
+    .result { color: var(--rh-accent); font-weight: 500; }
     .event, .date { color: color-mix(in srgb, currentColor 60%, transparent); }
 
     .viewer-body {
