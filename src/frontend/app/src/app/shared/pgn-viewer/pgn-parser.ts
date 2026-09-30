@@ -159,12 +159,19 @@ export interface ParsedGameWithSource { game: ParsedGame; raw: string; }
  * Wie {@link parsePgnText}, liefert zu jedem Spiel aber auch dessen Originaltext. Übersprungene
  * (leere/zu große/unlesbare) Spiele fehlen in BEIDEN — Index `i` gehört also immer zusammen, auch
  * wenn ein Spiel mittendrin nicht gelesen werden konnte.
+ *
+ * Partie-Trennung wie der Server (`PgnMoveTree.ParseSections`): BOM weg, Zeilenenden auf `\n`,
+ * dann vor JEDEM `[Event`-Header am Zeilenanfang — auch in CRLF-Dateien (Windows/ChessBase) und
+ * ohne Leerzeile davor. Vorher hing die Trennung an `\n\n[Event `: eine CRLF-Datei war EIN Block,
+ * dessen Header-Suche alle Header einsammelte und nur den Zugtext der LETZTEN Partie las, während
+ * der Server (Stellungssuche, Baum, `gameIndex`) alle Linien sah.
  */
 export function parsePgnTextWithSource(pgnText: string, opts?: ParsePgnOptions): ParsedGameWithSource[] {
   if (pgnText.length > MAX_PGN_CHARS) {
     pgnText = pgnText.slice(0, MAX_PGN_CHARS);
   }
-  const rawGames = pgnText.split(/\n\n(?=\[Event )/).slice(0, MAX_GAMES);
+  pgnText = pgnText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const rawGames = pgnText.split(/\n(?=\[Event\s)/).slice(0, MAX_GAMES);
   const parsed: ParsedGameWithSource[] = [];
 
   for (const raw of rawGames) {

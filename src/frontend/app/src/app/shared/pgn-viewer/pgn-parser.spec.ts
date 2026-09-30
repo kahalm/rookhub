@@ -186,6 +186,50 @@ describe('parsePgnTextWithSource', () => {
   });
 });
 
+describe('Partie-Trennung wie der Server (CRLF, BOM, ohne Leerzeile)', () => {
+  // Drei Linien, wie sie ein Windows-/ChessBase-Export ablegt. Der Server (PgnMoveTree.ParseSections)
+  // sieht in allen Schreibweisen drei Abschnitte; der Client muss dieselben drei in derselben Reihenfolge
+  // liefern, sonst meint der gameIndex der Stellungssuche eine andere Linie.
+  const lines = [
+    '[Event "Rep"]\n[White "L1"]\n[Black "Kap"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 *',
+    '[Event "Rep"]\n[White "L2"]\n[Black "Kap"]\n[Result "*"]\n\n1. d4 d5 *',
+    '[Event "Rep"]\n[White "L3"]\n[Black "Kap"]\n[Result "*"]\n\n1. c4 *',
+  ];
+  const names = (pgn: string) => parsePgnText(pgn).map(g => g.headers['White']);
+  const moveCounts = (pgn: string) => parsePgnText(pgn).map(g => g.moves.length);
+
+  it('LF mit Leerzeile (bisheriger Fall) bleibt bei drei Linien', () => {
+    expect(names(lines.join('\n\n'))).toEqual(['L1', 'L2', 'L3']);
+  });
+
+  it('CRLF-Datei liefert alle drei Linien statt nur der letzten', () => {
+    const crlf = lines.join('\n\n').replace(/\n/g, '\r\n') + '\r\n';
+    expect(names(crlf)).toEqual(['L1', 'L2', 'L3']);
+    expect(moveCounts(crlf)).toEqual([3, 2, 1]);
+  });
+
+  it('BOM vor einer CRLF-Datei stört nicht', () => {
+    const bom = '\uFEFF' + lines.join('\n\n').replace(/\n/g, '\r\n');
+    expect(names(bom)).toEqual(['L1', 'L2', 'L3']);
+    expect(parsePgnText(bom)[0].headers['Event']).toBe('Rep');
+  });
+
+  it('ohne Leerzeile zwischen den Partien wird trotzdem an jedem [Event getrennt', () => {
+    expect(names(lines.join('\n'))).toEqual(['L1', 'L2', 'L3']);
+    expect(names(lines.join('\n').replace(/\n/g, '\r\n'))).toEqual(['L1', 'L2', 'L3']);
+  });
+
+  it('alte Mac-Zeilenenden (nur CR) werden ebenso gelesen', () => {
+    expect(names(lines.join('\n\n').replace(/\n/g, '\r'))).toEqual(['L1', 'L2', 'L3']);
+  });
+
+  it('der Originaltext je Partie kommt mit LF zurück', () => {
+    const parsed = parsePgnTextWithSource(lines.join('\n\n').replace(/\n/g, '\r\n'));
+    expect(parsed.length).toBe(3);
+    expect(parsed[1].raw).toBe(lines[1]);
+  });
+});
+
 const REAL_LINE = '[Event "Lifetime Repertoires: Martinovićs Französisch"]\n[Round "004.002"]\n'
   + '[White "1A | 2.Sf3 | Weiß spielt 6.Lxa3"]\n[Black "1) Weiß spielt ohne 2.d4"]\n'
   + '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n[Result "*"]\n\n'
