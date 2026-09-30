@@ -22,6 +22,8 @@ export interface MemberRow {
   birthYear?: number | null;
   level?: string | null;
   archived: boolean;
+  /** Trainer statt Kind: steht in jeder Anwesenheitsliste unter den Kindern, gehört zu keiner Gruppe. */
+  isTrainer: boolean;
   linked: boolean;
   groups: GroupRef[];
   contacts: Contact[];
@@ -72,6 +74,7 @@ export interface MemberInput {
   birthYear: number | null;
   level: string | null;
   archived: boolean;
+  isTrainer: boolean;
   contacts: Contact[];
   groupIds: number[];
 }
@@ -104,6 +107,13 @@ export interface GroupRow {
   trainers: Trainer[];
 }
 
+export interface Photo {
+  id: number;
+  width: number;
+  height: number;
+  createdAt: string;
+}
+
 export interface Session {
   id: number;
   date: string;
@@ -112,6 +122,8 @@ export interface Session {
   notes?: string | null;
   present: number;
   absent: number;
+  /** Fotos der Einheit — nur die Kennungen, die Bilder holt `ClubApiService.photoBlob`. */
+  photos: Photo[];
 }
 
 export interface GroupMemberRow {
@@ -128,7 +140,10 @@ export interface GroupMemberRow {
 
 export interface Group extends GroupRow {
   sessions: Session[];
+  /** Die Kinder der Gruppe. */
   members: GroupMemberRow[];
+  /** Alle Trainer der Kartei — in jeder Gruppe unter den Kindern (`trainers` dagegen sind die KONTEN mit Zugriff). */
+  coaches: GroupMemberRow[];
   canManage: boolean;
 }
 

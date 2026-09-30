@@ -8,7 +8,7 @@ import { AttendancePageComponent, tallyText } from './attendance-page.component'
 
 const GROUP = (extra: Partial<Group> = {}): Group => ({
   id: 1, name: 'Anfänger', weekday: 5, schedule: '17:00', archived: false, memberCount: 3, sessionCount: 0, lastSession: null, trainers: [],
-  sessions: [], canManage: false,
+  sessions: [], canManage: false, coaches: [],
   members: [
     { id: 11, firstName: 'Anna', lastName: 'Auer', statuses: [], present: 0, recorded: 0 },
     { id: 12, firstName: 'Ben', lastName: 'Berger', statuses: [], present: 0, recorded: 0 },
@@ -16,7 +16,7 @@ const GROUP = (extra: Partial<Group> = {}): Group => ({
   ], ...extra,
 });
 const SESSION = (extra: Partial<SessionDetail> = {}): SessionDetail =>
-  ({ id: 5, groupId: 1, date: '2026-09-25', topic: 'Gabel', notes: 'Arbeitsblatt 3', present: 1, absent: 2,
+  ({ id: 5, groupId: 1, date: '2026-09-25', topic: 'Gabel', notes: 'Arbeitsblatt 3', present: 1, absent: 2, photos: [],
     attendance: [{ memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' }], ...extra });
 
 describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
@@ -55,7 +55,8 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'saveSession', 'deleteSession']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto']);
+    api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.group.and.resolveTo(GROUP());
     api.sessionByDate.and.resolveTo(null);
   });
@@ -166,6 +167,72 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     await fixture.componentInstance.remove(SESSION());
     expect(api.deleteSession).toHaveBeenCalledWith(5);
     expect(router.navigate).toHaveBeenCalledWith(['/gruppen', 1]);
+  });
+
+  it('die Trainer stehen unter den Kindern und werden genauso abgehakt und gespeichert', async () => {
+    api.group.and.resolveTo(GROUP({ coaches: [{ id: 91, firstName: 'Bernhard', lastName: '', statuses: [], present: 0, recorded: 0 },
+                                             { id: 92, firstName: 'Georg', lastName: 'Auer', statuses: [], present: 0, recorded: 0 }] }));
+    api.saveSession.and.callFake(async (_g: number, input: SessionInput) => SESSION({ attendance: input.attendance,
+      present: input.attendance.filter(a => a.status === 'present').length, absent: input.attendance.filter(a => a.status === 'absent').length }));
+    await create(new Date(2026, 8, 25, 17, 5));
+    expect(el().querySelector('.roll-group')!.textContent).toBe('Trainer');
+    expect(ticks().map(t => t.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Carla', 'Bernhard', 'Auer Georg']);
+    expect(el().querySelector('.tally strong')!.textContent).toBe('0 von 5 da');
+    ticks()[0].click();
+    ticks()[4].click();                                                                  // Georg (Trainer) da
+    fixture.detectChanges();
+    expect(el().querySelector('.tally strong')!.textContent).toBe('2 von 5 da');
+    el().querySelector<HTMLButtonElement>('.save')!.click();
+    await settle();
+    expect(api.saveSession.calls.mostRecent().args[1].attendance).toEqual([
+      { memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' },
+      { memberId: 91, status: 'absent' }, { memberId: 92, status: 'present' }]);
+    expect(el().querySelector('[role=status]')!.textContent).toBe('Gespeichert: 2 von 5 da.');
+    el().querySelector<HTMLButtonElement>('.all-present')!.click();
+    fixture.detectChanges();
+    expect(el().querySelector('.tally strong')!.textContent).toBe('5 von 5 da');
+  });
+
+  it('Fotos: mehrere auf einmal, eines nach dem anderen hochgeladen — vorher wird die Einheit gespeichert, wenn es sie noch nicht gibt', async () => {
+    api.saveSession.and.resolveTo(SESSION({ photos: [] }));
+    let n = 0;
+    api.uploadPhoto.and.callFake(async (_s: number, file: File) => ({ id: ++n, width: 1600, height: 1200, createdAt: '2026-09-25T17:00:00Z' }));
+    await create(new Date(2026, 8, 25, 17, 5));
+    expect(el().textContent).toContain('Beim ersten Foto wird die Einheit gespeichert.');
+
+    const input = el().querySelector<HTMLInputElement>('input[type=file]')!;
+    expect(input.multiple).toBeTrue();
+    const dt = new DataTransfer();
+    dt.items.add(new File(['a'], 'a.jpg', { type: 'image/jpeg' }));
+    dt.items.add(new File(['b'], 'b.jpg', { type: 'image/jpeg' }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    await settle();
+
+    expect(api.saveSession).toHaveBeenCalledTimes(1);                                     // die Einheit zuerst
+    expect(api.uploadPhoto.calls.allArgs().map(a => [a[0], (a[1] as File).name])).toEqual([[5, 'a.jpg'], [5, 'b.jpg']]);
+    expect(fixture.componentInstance.session()!.photos.map(p => p.id)).toEqual([1, 2]);
+    expect(el().querySelectorAll('.photos li').length).toBe(2);
+    expect(input.value).toBe('');                                                          // dieselbe Datei geht noch einmal
+  });
+
+  it('Fotos: ein gescheitertes Hochladen steht da, die anderen kommen trotzdem an', async () => {
+    api.sessionByDate.and.resolveTo(SESSION());
+    api.uploadPhoto.and.returnValues(Promise.reject(new HttpErrorResponse({ status: 400, error: { message: 'Das ist kein Bild, das sich lesen lässt (JPEG, PNG oder WebP).' } })),
+      Promise.resolve({ id: 7, width: 100, height: 100, createdAt: '2026-09-25T17:00:00Z' }));
+    await create(new Date(2026, 8, 25, 19, 0));
+    const input = el().querySelector<HTMLInputElement>('input[type=file]')!;
+    const dt = new DataTransfer();
+    dt.items.add(new File(['x'], 'kaputt.txt', { type: 'text/plain' }));
+    dt.items.add(new File(['b'], 'b.jpg', { type: 'image/jpeg' }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    await settle();
+    expect(api.saveSession).not.toHaveBeenCalled();                                        // die Einheit gab es schon
+    expect(fixture.componentInstance.session()!.photos.map(p => p.id)).toEqual([7]);
+    expect(el().querySelector('.photos-section > [role=alert]')!.textContent).toContain('Nicht hochgeladen: Das ist kein Bild');
   });
 
   it('eine Gruppe ohne Kinder lädt zum Anlegen ein (mit der Gruppe vorausgewählt)', async () => {

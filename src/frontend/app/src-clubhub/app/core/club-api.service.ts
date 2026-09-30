@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Group, GroupInput, GroupRow, LinkCode, LinkState, Member, MemberInput, MemberRow, Progress, SessionDetail, SessionInput } from './club.models';
+import { Group, GroupInput, GroupRow, LinkCode, LinkState, Member, MemberInput, MemberRow, Photo, Progress, SessionDetail, SessionInput } from './club.models';
 
 /**
  * Der Text, den die API für einen abgelehnten Aufruf mitschickt (`{ message }` — für Nutzer geschrieben, z. B. „‚abc‘ ist
@@ -114,6 +114,22 @@ export class ClubApiService {
 
   deleteSession(sessionId: number): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.base}/sessions/${sessionId}`));
+  }
+
+  /** Ein Foto zur Einheit — ein Bild je Anfrage (der nginx lässt 15 MB je Anfrage durch). */
+  uploadPhoto(sessionId: number, file: File): Promise<Photo> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return firstValueFrom(this.http.post<Photo>(`${this.base}/sessions/${sessionId}/photos`, form));
+  }
+
+  /** Das Bild als Blob (mit Anmeldung) — `thumb` = das Vorschaubild. */
+  photoBlob(sessionId: number, photoId: number, thumb: boolean): Promise<Blob> {
+    return firstValueFrom(this.http.get(`${this.base}/sessions/${sessionId}/photos/${photoId}`, { params: thumb ? { thumb: true } : {}, responseType: 'blob' }));
+  }
+
+  deletePhoto(sessionId: number, photoId: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/sessions/${sessionId}/photos/${photoId}`));
   }
 
   linkState(): Promise<LinkState> {

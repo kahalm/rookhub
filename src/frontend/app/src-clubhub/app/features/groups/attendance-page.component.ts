@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
+import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
@@ -15,8 +16,8 @@ export function tallyText(present: number, total: number): string {
  * Die Anwesenheitsliste (Wunsch 2026-09-30: „am Freitag abhaken, wer da ist"). Sie geht für den jüngsten Trainingstag der
  * Gruppe auf — am Freitag für heute, am Montag darauf für den vergangenen Freitag —, jede Zeile ist EIN großer Tipp: da
  * oder nicht (ein „entschuldigt" gibt es bewusst nicht). Beim Speichern gilt, wer nicht abgehakt ist, als gefehlt; so
- * stimmt die Quote. Dazu das Thema der Einheit und, ausführlicher, was gemacht wurde — beides steht danach im
- * Trainingstagebuch der Gruppe.
+ * stimmt die Quote. Unter den Kindern stehen die TRAINER (alle der Kartei, in jeder Gruppe) und werden genauso abgehakt.
+ * Dazu das Thema der Einheit und, ausführlicher, was gemacht wurde — beides steht danach im Trainingstagebuch der Gruppe.
  *
  * Je Gruppe und Tag gibt es eine Einheit, ein Speichern ersetzt sie. Deshalb holt die Seite vor dem ersten Tipp, was für
  * den Tag schon erfasst ist (`sessionByDate`) — eine leer geöffnete Liste überschriebe sonst die erfasste.
@@ -25,7 +26,7 @@ export function tallyText(present: number, total: number): string {
   selector: 'ch-attendance-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, SessionPhotosComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Anwesenheit erfassen die Trainer und die Leitung des Vereins.</p></section>
@@ -43,7 +44,7 @@ export function tallyText(present: number, total: number): string {
           [value]="notes()" (input)="edit(notes, $any($event.target).value)"></textarea></label>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 
-      @if (!g.members.length) {
+      @if (!g.members.length && !g.coaches.length) {
         <div class="empty">
           <p>In dieser Gruppe ist noch kein Kind.</p>
           <a class="btn primary" routerLink="/kind/neu" [queryParams]="{ gruppe: g.id }">Kind anlegen</a>
@@ -61,8 +62,31 @@ export function tallyText(present: number, total: number): string {
                 <span><b>{{ head(m) }}</b>{{ tail(m) }}</span>
               </button>
             </li>
+          } @empty { <li class="roll-note muted">In dieser Gruppe ist noch kein Kind.</li> }
+          @if (g.coaches.length) {
+            <li class="roll-group">Trainer</li>
+            @for (m of g.coaches; track m.id) {
+              <li class="coach" [class.present]="marks()[m.id] === 'present'">
+                <button type="button" class="tick" [attr.aria-pressed]="marks()[m.id] === 'present'" [disabled]="loading()" (click)="toggle(m.id)">
+                  <span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+                  <span><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                </button>
+              </li>
+            }
           }
         </ul>
+        <section class="photos-section">
+          <h2>Fotos</h2>
+          @if (session(); as s) {
+            <ch-session-photos [sessionId]="s.id" [photos]="s.photos" [editable]="true" (deleted)="photoDeleted($event)" />
+          }
+          <label class="btn slim upload" [class.disabled]="busy() || loading()">
+            {{ uploading() ? uploading() : 'Fotos hinzufügen' }}
+            <input type="file" accept="image/*" multiple hidden [disabled]="busy() || loading()" (change)="addPhotos($any($event.target))">
+          </label>
+          @if (!session()) { <span class="muted small">Beim ersten Foto wird die Einheit gespeichert.</span> }
+          <p class="err status-line" role="alert">{{ photoError() ?? '' }}</p>
+        </section>
         <div class="save-bar">
           <button type="button" class="btn primary save" [disabled]="busy() || loading()" (click)="save()">Anwesenheit speichern</button>
           <span class="ok" role="status">{{ saved() ?? '' }}</span>
@@ -96,13 +120,18 @@ export class AttendancePageComponent implements OnInit {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly saved = signal<string | null>(null);
+  /** „Foto 2 von 5 …" während des Hochladens, sonst leer. */
+  readonly uploading = signal('');
+  readonly photoError = signal<string | null>(null);
   /** „Heute" — als Feld, damit ein Test den Wochentag festlegen kann. */
   now: () => Date = () => new Date();
   /** Zählt die Tageswechsel — eine Antwort für einen inzwischen verlassenen Tag wird verworfen. */
   private epoch = 0;
 
-  readonly present = computed(() => (this.group()?.members ?? []).filter(m => this.marks()[m.id] === 'present').length);
-  readonly tally = computed(() => tallyText(this.present(), this.group()?.members.length ?? 0));
+  /** Alle auf der Liste: die Kinder der Gruppe und darunter die Trainer. */
+  readonly listed = computed(() => { const g = this.group(); return g ? [...g.members, ...g.coaches] : []; });
+  readonly present = computed(() => this.listed().filter(m => this.marks()[m.id] === 'present').length);
+  readonly tally = computed(() => tallyText(this.present(), this.listed().length));
   readonly long = longDate;
   readonly head = nameHead;
   readonly tail = nameTail;
@@ -175,9 +204,42 @@ export class AttendancePageComponent implements OnInit {
 
   allPresent(): void {
     const marks: Record<number, Status> = {};
-    for (const m of this.group()?.members ?? []) marks[m.id] = 'present';
+    for (const m of this.listed()) marks[m.id] = 'present';
     this.marks.set(marks);
     this.saved.set(null);
+  }
+
+  /**
+   * Fotos hochladen, eines nach dem anderen (der nginx lässt 15 MB je Anfrage durch). Gibt es die Einheit noch nicht,
+   * wird sie vorher gespeichert — ein Foto hängt an einer Einheit.
+   */
+  async addPhotos(input: HTMLInputElement): Promise<void> {
+    const files = Array.from(input.files ?? []);
+    input.value = '';
+    if (!files.length || this.busy() || this.loading()) return;
+    this.photoError.set(null);
+    if (!this.session()) {
+      await this.save();
+      if (!this.session()) return;                                       // Speichern hat nicht geklappt — steht schon da
+    }
+    const s = this.session()!;
+    const failed: string[] = [];
+    let n = 0;
+    for (const file of files) {
+      this.uploading.set(`Foto ${++n} von ${files.length} …`);
+      try {
+        const photo = await this.api.uploadPhoto(s.id, file);
+        this.session.update(cur => cur ? { ...cur, photos: [...cur.photos, photo] } : cur);
+      } catch (err) {
+        failed.push(apiErrorText(err, file.name));
+      }
+    }
+    this.uploading.set('');
+    if (failed.length) this.photoError.set(`Nicht hochgeladen: ${failed.join(' · ')}`);
+  }
+
+  photoDeleted(id: number): void {
+    this.session.update(cur => cur ? { ...cur, photos: cur.photos.filter(p => p.id !== id) } : cur);
   }
 
   async save(): Promise<void> {
@@ -189,11 +251,11 @@ export class AttendancePageComponent implements OnInit {
     try {
       const s = await this.api.saveSession(g.id, {
         date: this.date(), topic: this.topic().trim() || null, notes: this.notes().trim() || null,
-        // Jedes Kind der Gruppe bekommt einen Eintrag: wer nicht abgehakt ist, hat gefehlt.
-        attendance: g.members.map(m => ({ memberId: m.id, status: this.marks()[m.id] ?? 'absent' })),
+        // Jeder auf der Liste (Kinder der Gruppe + Trainer) bekommt einen Eintrag: wer nicht abgehakt ist, hat gefehlt.
+        attendance: this.listed().map(m => ({ memberId: m.id, status: this.marks()[m.id] ?? 'absent' })),
       });
       this.apply(s);
-      this.saved.set(`Gespeichert: ${tallyText(s.present, g.members.length)}.`);
+      this.saved.set(`Gespeichert: ${tallyText(s.present, this.listed().length)}.`);
     } catch (err) {
       this.error.set(apiErrorText(err, 'Speichern hat nicht geklappt — die Liste ist noch nicht gesichert.'));
     } finally {

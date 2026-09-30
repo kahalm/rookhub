@@ -7,7 +7,7 @@ import { GroupRow, Member, MemberInput } from '../../core/club.models';
 import { MemberPageComponent, formatDay } from './member-page.component';
 
 const MEMBER = (extra: Partial<Member> = {}): Member => ({
-  id: 7, firstName: 'Daniel', lastName: 'Huber', birthYear: 2015, birthDate: '2015-03-12', level: 'Bauerndiplom', archived: false,
+  id: 7, firstName: 'Daniel', lastName: 'Huber', birthYear: 2015, birthDate: '2015-03-12', level: 'Bauerndiplom', archived: false, isTrainer: false,
   linked: false, groups: [{ id: 1, name: 'Anfänger' }],
   contacts: [{ kind: 'phone', value: '0660 111 22 33', label: 'Mutter Daniela' }, { kind: 'phone', value: '0512/58 12 34', label: 'Vater Franz' },
              { kind: 'email', value: 'daniela@example.org', label: null }],
@@ -101,6 +101,24 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(bar.querySelector('button[type=submit]')!.textContent).toBe('Kind anlegen');
     expect(getComputedStyle(bar).position).toBe('sticky');                             // aus clubhub.scss, das Karma mitlädt
     expect(getComputedStyle(bar).bottom).toBe('0px');
+  });
+
+  it('Trainer anlegen: ?trainer=1 wählt „Trainer" vor, Stufe und Gruppen fallen weg, isTrainer geht mit', async () => {
+    api.createMember.and.callFake(async (input: MemberInput) => MEMBER({ id: 21, firstName: input.firstName, lastName: '', isTrainer: input.isTrainer, level: null, groups: [], contacts: [] }));
+    await create(null, { trainer: '1' });
+    expect(el().querySelector('h1')!.textContent).toBe('Trainer anlegen');
+    expect(el().querySelector<HTMLInputElement>('input[name=isTrainer][value], input[name=isTrainer]:checked')).not.toBeNull();
+    expect(el().querySelector('input[name=level]')).toBeNull();
+    type('input[name=firstName]', 'Bernhard');
+    el().querySelector('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+    const sent = api.createMember.calls.mostRecent().args[0];
+    expect([sent.firstName, sent.isTrainer, sent.groupIds]).toEqual(['Bernhard', true, []]);
+    // Das Blatt eines Trainers: Kontakte und Anwesenheit ja, Lernstand und Konto nicht.
+    expect(el().querySelector('.sub .chip')!.textContent).toBe('Trainer');
+    expect(el().querySelector('.note-input')!.closest('section')!.hasAttribute('hidden')).toBeTrue();
+    expect(el().querySelector('.link')!.hasAttribute('hidden')).toBeTrue();
+    expect(el().querySelector('.contacts, .sheet section:not([hidden]) h2')!.textContent).toBe('Kontakte');
   });
 
   it('Anlegen: der Nachname ist optional — der Vorname genügt', async () => {

@@ -117,6 +117,7 @@ public class AppDbContext : DbContext
     public DbSet<ClubGroupTrainer> ClubGroupTrainers => Set<ClubGroupTrainer>();
     public DbSet<ClubSession> ClubSessions => Set<ClubSession>();
     public DbSet<ClubAttendance> ClubAttendances => Set<ClubAttendance>();
+    public DbSet<ClubSessionPhoto> ClubSessionPhotos => Set<ClubSessionPhoto>();
     public DbSet<ClubNote> ClubNotes => Set<ClubNote>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
@@ -802,6 +803,13 @@ public class AppDbContext : DbContext
             e.Property(s => s.Notes).HasColumnType("text");
             e.HasOne(s => s.Group).WithMany(g => g.Sessions).HasForeignKey(s => s.GroupId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(s => new { s.GroupId, s.Date }).IsUnique();
+        });
+        modelBuilder.Entity<ClubSessionPhoto>(e =>
+        {
+            e.Property(p => p.Image).HasColumnType("LONGBLOB");
+            e.Property(p => p.Thumb).HasColumnType("MEDIUMBLOB");
+            e.HasOne(p => p.Session).WithMany(s => s.Photos).HasForeignKey(p => p.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(p => p.SessionId);
         });
         modelBuilder.Entity<ClubAttendance>(e =>
         {

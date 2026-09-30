@@ -31,6 +31,8 @@ public class ClubMemberListDto
     public int? BirthYear { get; set; }
     public string? Level { get; set; }
     public bool Archived { get; set; }
+    /// <summary>Trainer statt Kind — steht in jeder Anwesenheitsliste unter den Kindern.</summary>
+    public bool IsTrainer { get; set; }
     public bool Linked { get; set; }
     public List<ClubGroupRefDto> Groups { get; set; } = new();
     public List<ClubContactDto> Contacts { get; set; } = new();
@@ -99,6 +101,7 @@ public class ClubMemberInputDto
     [MaxLength(60)]
     public string? Level { get; set; }
     public bool Archived { get; set; }
+    public bool IsTrainer { get; set; }
     [MaxLength(20)]
     public List<ClubContactDto> Contacts { get; set; } = new();
     [MaxLength(50)]
@@ -130,6 +133,7 @@ public class ClubLinkStateDto
     public string? FirstName { get; set; }
 }
 
+/// <summary>Ein KONTO mit Zugriff auf eine Gruppe (Recht `club.trainer`) — nicht der Trainer als Person in der Kartei.</summary>
 public class ClubTrainerDto
 {
     public int UserId { get; set; }
@@ -159,6 +163,16 @@ public class ClubSessionDto
     public string? Notes { get; set; }
     public int Present { get; set; }
     public int Absent { get; set; }
+    /// <summary>Fotos der Einheit (nur die Kennungen — die Bilder holt <c>GET …/photos/{id}</c>).</summary>
+    public List<ClubPhotoDto> Photos { get; set; } = new();
+}
+
+public class ClubPhotoDto
+{
+    public int Id { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class ClubGroupMemberRowDto
@@ -179,7 +193,11 @@ public class ClubGroupDto : ClubGroupListDto
 {
     /// <summary>Die jüngsten Einheiten, ÄLTESTE zuerst (so liest sich die Anwesenheitstabelle von links nach rechts).</summary>
     public List<ClubSessionDto> Sessions { get; set; } = new();
+    /// <summary>Die Kinder der Gruppe.</summary>
     public List<ClubGroupMemberRowDto> Members { get; set; } = new();
+    /// <summary>ALLE Trainer der Kartei (nicht archiviert) — sie stehen in jeder Gruppe unter den Kindern, mit derselben
+    /// Anwesenheit. Nicht zu verwechseln mit <see cref="ClubGroupListDto.Trainers"/>: das sind die KONTEN mit Zugriff.</summary>
+    public List<ClubGroupMemberRowDto> Coaches { get; set; } = new();
     /// <summary>Gruppe ändern, Trainer zuteilen, löschen: nur die Leitung.</summary>
     public bool CanManage { get; set; }
 }

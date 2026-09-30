@@ -6,7 +6,7 @@ import { GroupRow, MemberRow } from '../../core/club.models';
 import { MembersPageComponent, matchesName } from './members-page.component';
 
 const KID = (id: number, firstName: string, lastName: string, extra: Partial<MemberRow> = {}): MemberRow =>
-  ({ id, firstName, lastName, birthYear: null, level: null, archived: false, linked: false, groups: [], contacts: [], ...extra });
+  ({ id, firstName, lastName, birthYear: null, level: null, archived: false, isTrainer: false, linked: false, groups: [], contacts: [], ...extra });
 const GROUP = (id: number, name: string, weekday: number | null): GroupRow =>
   ({ id, name, weekday, schedule: null, archived: false, memberCount: 0, sessionCount: 0, lastSession: null, trainers: [] });
 
@@ -75,6 +75,21 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(names()).toEqual(['Emil']);
   });
 
+  it('Trainer stehen als eigener Block unter den Registern, mit Nummer; der Gruppenfilter lässt sie stehen', async () => {
+    api.members.and.resolveTo([KID(1, 'Anna', 'Auer', { groups: [{ id: 1, name: 'Anfänger' }] }),
+      KID(9, 'Bernhard', '', { isTrainer: true, contacts: [{ kind: 'phone', value: '0664 1', label: null }] }), KID(8, 'Georg', 'Auer', { isTrainer: true })]);
+    await create();
+    expect(Array.from(el().querySelectorAll('.register:not(.coaches) .letter')).map(l => l.textContent)).toEqual(['A']);
+    expect(Array.from(el().querySelectorAll('.coaches .kid-name')).map(n => n.textContent?.trim().replace(/\s+/g, ' '))).toEqual(['Bernhard', 'Auer Georg']);   // Reihenfolge vom Server
+    expect(el().querySelector('.coaches .kid-call a')!.getAttribute('href')).toBe('tel:06641');
+    expect(el().querySelector('.count')!.textContent).toBe('1 Kind, 2 Trainer');
+    fixture.componentInstance.groupId.set(2);
+    fixture.detectChanges();
+    expect(el().querySelectorAll('.register:not(.coaches) .kid').length).toBe(0);
+    expect(el().querySelectorAll('.coaches .kid').length).toBe(2);
+    expect(el().querySelector('a[href="/kind/neu?trainer=1"]')).not.toBeNull();
+  });
+
   it('sucht nach Namen (ohne Akzente) und filtert nach Gruppe — im Browser, ohne neuen Abruf', async () => {
     await create();
     const c = fixture.componentInstance;
@@ -88,7 +103,7 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(names()).toEqual(['Auer Anna', 'Šarić Ivo']);
     c.q.set('niemand');
     fixture.detectChanges();
-    expect(el().textContent).toContain('Kein Kind passt zu dieser Suche.');
+    expect(el().textContent).toContain('Niemand passt zu dieser Suche.');
     expect(api.members).toHaveBeenCalledTimes(1);
     expect(matchesName({ firstName: 'Anna', lastName: 'Auer' }, 'auer an')).toBeTrue();   // „Nachname Vorname" geht auch
     expect(matchesName({ firstName: 'Anna', lastName: 'Auer' }, 'anna au')).toBeTrue();

@@ -9,9 +9,10 @@ import { GroupsPageComponent, scheduleText } from './groups-page.component';
 
 const GROUP = (extra: Partial<Group> = {}): Group => ({
   id: 1, name: 'Anfänger', weekday: 5, schedule: '17:00, Vereinsheim', archived: false, memberCount: 2, sessionCount: 2, lastSession: '2026-09-25',
-  trainers: [{ userId: 4, username: 'tina' }], canManage: false,
-  sessions: [{ id: 5, date: '2026-09-18', topic: 'Matt in 1', notes: 'Arbeitsblatt 2, danach Turnier jeder gegen jeden', present: 1, absent: 1 },
-             { id: 6, date: '2026-09-25', topic: null, notes: null, present: 1, absent: 1 }],
+  trainers: [{ userId: 4, username: 'tina' }], canManage: false, coaches: [],
+  sessions: [{ id: 5, date: '2026-09-18', topic: 'Matt in 1', notes: 'Arbeitsblatt 2, danach Turnier jeder gegen jeden', present: 1, absent: 1, photos: [] },
+             { id: 6, date: '2026-09-25', topic: null, notes: null, present: 1, absent: 1,
+               photos: [{ id: 3, width: 1600, height: 1200, createdAt: '2026-09-25T17:00:00Z' }] }],
   members: [
     { id: 11, firstName: 'Anna', lastName: 'Auer', statuses: ['absent', 'present'], present: 1, recorded: 2 },
     { id: 12, firstName: 'Ben', lastName: '', statuses: [null, 'absent'], present: 0, recorded: 1 },   // Nachname nicht bekannt
@@ -47,7 +48,8 @@ describe('ClubHub-Gruppen', () => {
   beforeEach(() => {
     perms = new Set(['club.trainer']);
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService',
-      ['groups', 'group', 'createGroup', 'updateGroup', 'deleteGroup', 'addTrainer', 'removeTrainer', 'members', 'addGroupMember', 'removeGroupMember']);
+      ['groups', 'group', 'createGroup', 'updateGroup', 'deleteGroup', 'addTrainer', 'removeTrainer', 'members', 'addGroupMember', 'removeGroupMember', 'photoBlob', 'deletePhoto']);
+    api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
   });
 
   describe('Liste', () => {
@@ -60,7 +62,7 @@ describe('ClubHub-Gruppen', () => {
       const first = el.querySelectorAll('.group')[0];
       expect(first.querySelector('h2 a')!.getAttribute('href')).toBe('/gruppen/1');
       expect(Array.from(first.querySelectorAll('.kid-meta > span')).map(s => s.textContent!.trim()))
-        .toEqual(['Freitag, 17:00', '8 Kinder', 'zuletzt Fr 25.09.', 'Trainer: tina, tom']);
+        .toEqual(['Freitag, 17:00', '8 Kinder', 'zuletzt Fr 25.09.', 'Zugriff: tina, tom']);
       expect(first.querySelector('a.btn')!.getAttribute('href')).toBe('/gruppen/1/anwesenheit');
       expect(el.querySelectorAll('.group')[1].querySelector('a.btn')).toBeNull();          // archiviert: nichts abzuhaken
       expect(el.querySelectorAll('.group')[1].textContent).toContain('1 Kind');
@@ -120,12 +122,25 @@ describe('ClubHub-Gruppen', () => {
       expect([statusMark('present'), statusMark('absent'), statusMark(null)]).toEqual(['✓', '–', '·']);
     });
 
+    it('Trainer stehen als eigener Block unter den Kindern in der Tabelle, mit Haken und Quote', async () => {
+      const fixture = await open(GROUP({ coaches: [{ id: 91, firstName: 'Bernhard', lastName: '', statuses: ['present', 'present'], present: 2, recorded: 2 }] }));
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('.coach-head th')!.textContent).toBe('Trainer');
+      const row = el.querySelector('tr.coach')!;
+      expect(row.querySelector('.name')!.textContent!.trim()).toBe('Bernhard');
+      expect(Array.from(row.querySelectorAll('.cell')).map(c => c.textContent)).toEqual(['✓', '✓']);
+      expect(row.querySelector('.rate')!.textContent).toBe('2 von 2');
+    });
+
     it('Trainingstagebuch: je Einheit Thema und „was wurde gemacht", die neueste zuerst', async () => {
       const fixture = await open(GROUP());
-      const entries = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.diary li'));
+      const entries = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.diary > .notes > li'));
       expect(entries.map(li => li.querySelector('a')!.textContent)).toEqual(['Freitag, 25. September 2026', 'Freitag, 18. September 2026']);
       expect(entries[0].textContent).toContain('1 von 2 da');
       expect(entries[0].textContent).toContain('Kein Thema eingetragen.');
+      expect(entries[0].querySelector('ch-session-photos .photos li')).not.toBeNull();     // Vorschaubild dabei
+      expect(entries[0].querySelector('.photo-del')).toBeNull();                            // im Tagebuch nur ansehen
+      expect(entries[1].querySelector('ch-session-photos')).toBeNull();
       expect(entries[1].querySelector('.topic')!.textContent).toBe('Matt in 1');
       expect(entries[1].textContent).toContain('Arbeitsblatt 2, danach Turnier jeder gegen jeden');
       expect(entries[1].querySelector('a')!.getAttribute('href')).toBe('/gruppen/1/anwesenheit?datum=2026-09-18');   // zum Nachtragen
@@ -138,8 +153,8 @@ describe('ClubHub-Gruppen', () => {
 
     it('Kinder verwalten: die Kartei lädt erst beim Aufklappen; angeboten wird nur, wer noch nicht drin ist', async () => {
       api.members.and.resolveTo([
-        { id: 11, firstName: 'Anna', lastName: 'Auer', archived: false, linked: false, groups: [], contacts: [] },
-        { id: 30, firstName: 'Dora', lastName: 'Neu', archived: false, linked: false, groups: [], contacts: [] },
+        { id: 11, firstName: 'Anna', lastName: 'Auer', archived: false, isTrainer: false, linked: false, groups: [], contacts: [] },
+        { id: 30, firstName: 'Dora', lastName: 'Neu', archived: false, isTrainer: false, linked: false, groups: [], contacts: [] },
       ]);
       api.addGroupMember.and.resolveTo(GROUP({ members: [...GROUP().members, { id: 30, firstName: 'Dora', lastName: 'Neu', statuses: [null, null], present: 0, recorded: 0 }] }));
       const fixture = await open(GROUP());
@@ -188,7 +203,7 @@ describe('ClubHub-Gruppen', () => {
       await fixture.componentInstance.addTrainer();
       fixture.detectChanges();
       expect(api.addTrainer).toHaveBeenCalledWith(1, 'niemand');
-      expect(el.querySelector('[role=alert]')!.textContent).toContain('Ein Konto mit diesem Benutzernamen gibt es nicht.');
+      expect(Array.from(el.querySelectorAll('[role=alert]')).map(a => a.textContent).join('|')).toContain('Ein Konto mit diesem Benutzernamen gibt es nicht.');
     });
 
     it('Gruppe löschen fragt nach und führt zur Liste', async () => {

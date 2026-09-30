@@ -37,7 +37,11 @@ function orNull(value: string | null | undefined): string | null {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Karteiblätter sehen die Trainer und die Leitung des Vereins.</p></section>
     } @else if (editing()) {
       <form class="sheet form" (submit)="$event.preventDefault(); save()">
-        <header class="sheet-head"><h1>{{ member() ? 'Blatt ändern' : 'Kind anlegen' }}</h1></header>
+        <header class="sheet-head"><h1>{{ member() ? 'Blatt ändern' : (form().isTrainer ? 'Trainer anlegen' : 'Kind anlegen') }}</h1></header>
+        <div class="kind-pick" role="radiogroup" aria-label="Kind oder Trainer">
+          <label class="check"><input type="radio" name="isTrainer" [checked]="!form().isTrainer" (change)="set('isTrainer', false)"> Kind</label>
+          <label class="check"><input type="radio" name="isTrainer" [checked]="form().isTrainer" (change)="set('isTrainer', true)"> Trainer</label>
+        </div>
         <div class="grid-2">
           <label class="field"><span>Vorname</span>
             <input name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName" (input)="set('firstName', $any($event.target).value)"></label>
@@ -47,8 +51,10 @@ function orNull(value: string | null | undefined): string | null {
         <div class="grid-2">
           <label class="field"><span>Geburtsdatum oder Jahrgang</span>
             <input name="birth" inputmode="numeric" autocomplete="off" placeholder="12.3.2015 oder 2015" [value]="birthText()" (input)="birthText.set($any($event.target).value)"></label>
-          <label class="field"><span>Stufe oder Diplom</span>
-            <input name="level" autocomplete="off" maxlength="60" placeholder="z. B. Bauerndiplom" [value]="form().level ?? ''" (input)="set('level', $any($event.target).value)"></label>
+          @if (!form().isTrainer) {
+            <label class="field"><span>Stufe oder Diplom</span>
+              <input name="level" autocomplete="off" maxlength="60" placeholder="z. B. Bauerndiplom" [value]="form().level ?? ''" (input)="set('level', $any($event.target).value)"></label>
+          }
         </div>
 
         <section>
@@ -73,7 +79,7 @@ function orNull(value: string | null | undefined): string | null {
           </div>
         </section>
 
-        <section>
+        <section [hidden]="form().isTrainer">
           <h2>Gruppen</h2>
           @if (groups().length) {
             <div class="group-picks">
@@ -105,6 +111,7 @@ function orNull(value: string | null | undefined): string | null {
           <h1>{{ name() }}</h1>
           <button type="button" class="btn slim edit" (click)="startEdit()">Bearbeiten</button>
           <p class="sub">
+            @if (m.isTrainer) { <span class="chip">Trainer</span> }
             @if (m.birthYear) { <span>{{ m.birthDate ? 'Geboren ' + birth() : 'Jahrgang ' + m.birthYear }}@if (cls(); as c) {, {{ c }} }</span> }
             @if (m.level) { <span>{{ m.level }}</span> }
             @for (g of m.groups; track g.id) { <a class="chip" [routerLink]="['/gruppen', g.id]">{{ g.name }}</a> }
@@ -126,7 +133,7 @@ function orNull(value: string | null | undefined): string | null {
           } @else { <p class="muted">Noch kein Kontakt eingetragen. Über „Bearbeiten" kommen Telefonnummern und E-Mail-Adressen dazu.</p> }
         </section>
 
-        <section>
+        <section [hidden]="m.isTrainer">
           <h2>Lernstand</h2>
           <div class="note-form">
             <label class="field"><span>Neue Notiz</span>
@@ -159,7 +166,7 @@ function orNull(value: string | null | undefined): string | null {
           } @else { <p class="muted">Noch keine Einheit erfasst.</p> }
         </section>
 
-        <section class="link">
+        <section class="link" [hidden]="m.isTrainer">
           <h2>Konto</h2>
           @if (m.linked) {
             <p>Verknüpft mit dem Konto <b>{{ m.linkedUsername ?? '(gelöscht)' }}</b>.
@@ -214,7 +221,8 @@ export class MemberPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   readonly name = computed(() => { const m = this.member(); return m ? fullName(m) : ''; });
-  readonly cls = computed(() => ageClass(this.member()?.birthYear, new Date().getFullYear()));
+  /** Altersklasse nur für Kinder — bei einem Trainer sagt „U18" nichts. */
+  readonly cls = computed(() => this.member()?.isTrainer ? null : ageClass(this.member()?.birthYear, new Date().getFullYear()));
   readonly birth = computed(() => formatBirth(this.member() ?? {}));
   readonly recorded = computed(() => {
     const a = this.member()?.attendance;
@@ -234,7 +242,8 @@ export class MemberPageComponent implements OnInit {
       void this.load(id);
     } else {
       const group = Number(this.route.snapshot.queryParamMap.get('gruppe'));
-      this.form.set({ ...emptyInput(), groupIds: group ? [group] : [] });
+      const trainer = this.route.snapshot.queryParamMap.get('trainer') === '1';
+      this.form.set({ ...emptyInput(), groupIds: group ? [group] : [], isTrainer: trainer });
       this.editing.set(true);
       void this.loadGroups();
     }

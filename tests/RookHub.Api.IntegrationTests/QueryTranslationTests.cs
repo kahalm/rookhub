@@ -798,6 +798,30 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var sheet = await club.GetMemberAsync(trainer, daniel.Id);
         Assert.Equal((1, 1, "2015-03-12"), (sheet.Attendance.Present, sheet.Attendance.Absent, sheet.BirthDate));
 
+        // Trainer als Person: ohne Gruppe, in jeder Gruppe unter den Kindern, abhakbar.
+        var coach = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Bernhard", IsTrainer = true });
+        Assert.Equal("Bernhard", Assert.Single((await club.GetGroupAsync(trainer, mine.Id)).Coaches).FirstName);
+        Assert.Equal("Bernhard", Assert.Single((await club.GetGroupAsync(manager, other.Id)).Coaches).FirstName);
+        var withCoach = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto
+        { Date = "2026-10-02", Attendance = [new() { MemberId = coach.Id, Status = "present" }, new() { MemberId = daniel.Id, Status = "absent" }] });
+        Assert.Equal((1, 1), (withCoach.Present, withCoach.Absent));
+        await club.DeleteMemberAsync(manager, coach.Id);
+        Db.ChangeTracker.Clear();
+
+        // Fotos zur Einheit: LONGBLOB/MEDIUMBLOB schreiben und lesen, Kennungen ohne Bytes, Löschen ohne Laden.
+        using (var bmp = new SkiaSharp.SKBitmap(900, 600))
+        {
+            using var img = SkiaSharp.SKImage.FromBitmap(bmp);
+            using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 80);
+            var photo = await club.AddPhotoAsync(trainer, withCoach.Id, data.ToArray());
+            Assert.Equal((900, 600), (photo.Width, photo.Height));
+            Assert.True((await club.GetPhotoAsync(trainer, withCoach.Id, photo.Id, thumb: true)).Length > 100);
+            Assert.Equal(photo.Id, Assert.Single((await club.GetSessionAsync(trainer, withCoach.Id)).Photos).Id);
+            await club.DeleteSessionAsync(trainer, withCoach.Id);
+            Db.ChangeTracker.Clear();
+            Assert.False(await Db.ClubSessionPhotos.AnyAsync());
+        }
+
         // Verknüpfung + Notiz, dann das Konto HART löschen: SetNull und Cascade feuern, Blatt und Notiz bleiben.
         await club.RedeemAsync(kind, (await club.CreateLinkCodeAsync(trainer, daniel.Id)).Code);
         await club.AddNoteAsync(trainer, daniel.Id, "kann die Gabel");

@@ -6,6 +6,7 @@ import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, GroupInput, MemberRow, Status } from '../../core/club.models';
 import { WEEKDAYS, longDate, nameHead, nameTail, shortDate } from '../../core/club-format';
 import { scheduleText } from './groups-page.component';
+import { SessionPhotosComponent } from '../../shared/session-photos.component';
 
 /** Zeichen einer Zelle der Anwesenheitstabelle: ✓ da, – gefehlt, · nicht erfasst. */
 export function statusMark(status: Status | null): string {
@@ -22,7 +23,7 @@ export function statusMark(status: Status | null): string {
   selector: 'ch-group-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, SessionPhotosComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Gruppen sehen die Trainer und die Leitung des Vereins.</p></section>
@@ -32,7 +33,7 @@ export function statusMark(status: Status | null): string {
           <h1>{{ g.name }}</h1>
           <p class="kid-meta">
             @if (schedule(g); as s) { <span>{{ s }}</span> }
-            @if (g.trainers.length) { <span>Trainer: {{ trainerNames() }}</span> }
+            @if (g.trainers.length) { <span>Zugriff: {{ trainerNames() }}</span> }
             @if (g.archived) { <span class="chip">im Archiv</span> }
           </p>
         </div>
@@ -42,7 +43,7 @@ export function statusMark(status: Status | null): string {
         </div>
       </div>
 
-      @if (!g.members.length) {
+      @if (!g.members.length && !g.coaches.length) {
         <div class="empty"><p>Noch kein Kind in der Gruppe. Leg eines an oder nimm eines aus der Kartei dazu.</p></div>
       } @else {
         <div class="matrix-scroll">
@@ -65,6 +66,18 @@ export function statusMark(status: Status | null): string {
                   }
                   <td class="rate">{{ m.recorded ? m.present + ' von ' + m.recorded : '' }}</td>
                 </tr>
+              }
+              @if (g.coaches.length) {
+                <tr class="coach-head"><th class="name" scope="rowgroup" [attr.colspan]="g.sessions.length + 2">Trainer</th></tr>
+                @for (m of g.coaches; track m.id) {
+                  <tr class="coach">
+                    <th class="name" scope="row"><a [routerLink]="['/kind', m.id]"><b>{{ head(m) }}</b>{{ tail(m) }}</a></th>
+                    @for (st of m.statuses; track $index) {
+                      <td><span class="cell" [class]="st ?? 'none'">{{ mark(st) }}</span></td>
+                    }
+                    <td class="rate">{{ m.recorded ? m.present + ' von ' + m.recorded : '' }}</td>
+                  </tr>
+                }
               }
             </tbody>
           </table>
@@ -91,6 +104,7 @@ export function statusMark(status: Status | null): string {
                 @if (s.topic) { <p class="topic">{{ s.topic }}</p> }
                 @if (s.notes) { <p class="pre muted">{{ s.notes }}</p> }
                 @if (!s.topic && !s.notes) { <p class="muted small">Kein Thema eingetragen.</p> }
+                @if (s.photos.length) { <ch-session-photos [sessionId]="s.id" [photos]="s.photos" /> }
               </li>
             }
           </ul>
@@ -145,20 +159,21 @@ export function statusMark(status: Status | null): string {
             </div>
           </section>
           <section>
-            <h3>Trainer</h3>
+            <h3>Konten mit Zugriff auf die Gruppe</h3>
             @if (g.trainers.length) {
               <ul class="notes">
                 @for (t of g.trainers; track t.userId) {
                   <li>{{ t.username }} <button type="button" class="btn-link danger" [disabled]="busy()" (click)="removeTrainer(t.userId)">entfernen</button></li>
                 }
               </ul>
-            } @else { <p class="muted">Noch kein Trainer zugeteilt — die Gruppe sieht nur die Leitung.</p> }
+            } @else { <p class="muted">Noch kein Konto zugeteilt — die Gruppe sieht nur die Leitung.</p> }
             <div class="note-form mt">
-              <label class="field"><span>Benutzername des Trainers</span>
+              <label class="field"><span>Benutzername des Kontos</span>
                 <input class="trainer-name" autocomplete="off" maxlength="100" [value]="trainerName()" (input)="trainerName.set($any($event.target).value)" (keydown.enter)="addTrainer()"></label>
-              <button type="button" class="btn" [disabled]="busy() || !trainerName().trim()" (click)="addTrainer()">Als Trainer zuteilen</button>
+              <button type="button" class="btn" [disabled]="busy() || !trainerName().trim()" (click)="addTrainer()">Zugriff geben</button>
             </div>
-            <p class="muted small">Das Konto braucht zusätzlich eine Rolle mit dem Recht „ClubHub: Trainer" — die vergibst du in RookHub unter Rollen.</p>
+            <p class="muted small">Wer die Gruppe in ClubHub bedienen darf. Das Konto braucht zusätzlich eine Rolle mit dem Recht
+              „ClubHub: Trainer" (in RookHub unter Rollen). Die Trainer als PERSONEN stehen in der Kartei und in jeder Anwesenheitsliste.</p>
           </section>
         </details>
       }
@@ -266,7 +281,7 @@ export class GroupPageComponent implements OnInit {
     await this.run(async () => {
       this.show(await this.api.addTrainer(g.id, name));
       this.trainerName.set('');
-    }, 'Der Trainer konnte nicht zugeteilt werden.');
+    }, 'Das Konto konnte nicht zugeteilt werden.');
   }
 
   async removeTrainer(userId: number): Promise<void> {

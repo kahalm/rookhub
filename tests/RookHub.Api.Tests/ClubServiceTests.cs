@@ -11,6 +11,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Services.Club;
+using SkiaSharp;
 
 namespace RookHub.Api.Tests;
 
@@ -489,6 +490,99 @@ public class ClubServiceTests : IDisposable
 
         var row = Assert.Single(await Svc().ListGroupsAsync(Manager()));
         Assert.Equal((2, 3, "2026-09-25"), (row.MemberCount, row.SessionCount, row.LastSession));
+    }
+
+    // ---- Trainer als Personen -----------------------------------------------------------------
+
+    [Fact]
+    public async Task Trainers_ArePeopleInTheIndex_StandUnderTheChildrenOfEveryGroup_AndAreTickedLikeThem()
+    {
+        var tina = await UserAsync("tina");
+        var (g1, g2) = (await GroupAsync("Anfänger", tina), await GroupAsync("Turnier"));
+        var kid = await Svc().CreateMemberAsync(Manager(), Kid("Daniel", "Huber", g1));
+        // Ein Trainer-Konto legt einen Trainer an — ohne Gruppe (die Regel „mindestens eine eigene Gruppe" gilt nur für Kinder).
+        var bernhard = await Svc().CreateMemberAsync(Trainer(tina), new ClubMemberInputDto { FirstName = "Bernhard", IsTrainer = true, GroupIds = [g2] });
+        var georg = await Svc().CreateMemberAsync(Manager(), new ClubMemberInputDto { FirstName = "Georg", LastName = "Auer", IsTrainer = true });
+        var gone = await Svc().CreateMemberAsync(Manager(), new ClubMemberInputDto { FirstName = "Alt", IsTrainer = true, Archived = true });
+        Assert.True(bernhard.IsTrainer);
+        Assert.Empty(bernhard.Groups);                                                          // Gruppen sind für Trainer gegenstandslos
+
+        // In JEDER Gruppe unter den Kindern — auch in einer, die das Trainer-Konto nicht sieht, sind sie für die Leitung da.
+        foreach (var g in new[] { g1, g2 })
+        {
+            var dto = await Svc().GetGroupAsync(Manager(), g);
+            Assert.Equal(["Auer", "Bernhard"], dto.Coaches.Select(c => c.LastName == "" ? c.FirstName : c.LastName));   // archivierte fehlen
+            Assert.Equal(g == g1 ? 1 : 0, dto.MemberCount);                                     // Trainer zählen nicht als Kinder
+        }
+        // Das Trainer-Konto sieht alle Trainer, aber nur die Kinder seiner Gruppen.
+        Assert.Equal(["Bernhard", "Daniel", "Georg"], (await Svc().ListMembersAsync(Trainer(tina), null, false)).Select(m => m.FirstName).Order());
+        Assert.Equal("Georg", (await Svc().GetMemberAsync(Trainer(tina), georg.Id)).FirstName);
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().GetGroupAsync(Trainer(tina), g2));
+
+        // Abgehakt wie die Kinder, in jeder Gruppe.
+        var s = await Svc().SaveSessionAsync(Trainer(tina), g1, new ClubSessionInputDto
+        {
+            Date = "2026-09-25",
+            Attendance = [new() { MemberId = kid.Id, Status = "present" }, new() { MemberId = georg.Id, Status = "present" },
+                          new() { MemberId = bernhard.Id, Status = "absent" }, new() { MemberId = gone.Id, Status = "present" }],
+        });
+        Assert.Equal((2, 1), (s.Present, s.Absent));                                            // der archivierte Trainer steht nicht auf der Liste und zählt nicht
+        var after = await Svc().GetGroupAsync(Manager(), g1);
+        Assert.Equal(["present", "absent"], after.Coaches.Select(c => Assert.Single(c.Statuses)));   // Auer (Georg) da, Bernhard gefehlt
+        Assert.Equal((1, 1), (after.Coaches[0].Present, after.Coaches[0].Recorded));
+        Assert.Equal((1, 1), (Assert.Single(after.Members).Present, after.Members[0].Recorded));
+    }
+
+    // ---- Fotos zur Einheit --------------------------------------------------------------------
+
+    /// <summary>Ein echtes JPEG in Wunschgröße — der Dienst prüft, ob sich das Bild lesen lässt.</summary>
+    private static byte[] Jpeg(int width, int height)
+    {
+        using var bmp = new SKBitmap(width, height);
+        using (var c = new SKCanvas(bmp)) c.Clear(SKColors.SeaGreen);
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(SKEncodedImageFormat.Jpeg, 80);
+        return data.ToArray();
+    }
+
+    [Fact]
+    public async Task Photos_AreShrunkAndKeptWithTheSession_ListedWithoutTheBytes_AndGoWithIt()
+    {
+        var tina = await UserAsync("tina");
+        var g = await GroupAsync("Anfänger", tina);
+        var session = await Svc().SaveSessionAsync(Trainer(tina), g, new ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel" });
+
+        await Assert.ThrowsAsync<DomainValidationException>(() => Svc().AddPhotoAsync(Trainer(tina), session.Id, [1, 2, 3]));
+        var p1 = await Svc().AddPhotoAsync(Trainer(tina), session.Id, Jpeg(4000, 3000));
+        var p2 = await Svc().AddPhotoAsync(Trainer(tina), session.Id, Jpeg(300, 200));
+        Assert.Equal((1600, 1200), (p1.Width, p1.Height));                                 // längste Seite 1600
+        Assert.Equal((300, 200), (p2.Width, p2.Height));                                   // kleine bleiben, wie sie sind
+
+        var stored = await _db.ClubSessionPhotos.SingleAsync(p => p.Id == p1.Id);
+        Assert.Equal((1600, 1200), ScoresheetImage.Size(stored.Image)!.Value);
+        Assert.Equal((320, 240), ScoresheetImage.Size(stored.Thumb)!.Value);
+        Assert.Equal(stored.Thumb, await Svc().GetPhotoAsync(Trainer(tina), session.Id, p1.Id, thumb: true));
+        Assert.Equal(stored.Image, await Svc().GetPhotoAsync(Trainer(tina), session.Id, p1.Id, thumb: false));
+
+        // Nur die Kennungen in den Listen — die Einheit des Tages, die Gruppentabelle.
+        Assert.Equal([p1.Id, p2.Id], (await Svc().GetSessionByDateAsync(Trainer(tina), g, "2026-09-25"))!.Photos.Select(p => p.Id));
+        Assert.Equal([p1.Id, p2.Id], Assert.Single((await Svc().GetGroupAsync(Trainer(tina), g)).Sessions).Photos.Select(p => p.Id));
+
+        // Fremde Gruppe/Einheit: 404 — auch für die Bilder selbst.
+        var tom = await UserAsync("tom");
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().GetPhotoAsync(Trainer(tom), session.Id, p1.Id, true));
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().GetPhotoAsync(Trainer(tina), session.Id + 99, p1.Id, true));
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().DeletePhotoAsync(Trainer(tina), session.Id, 9999));
+
+        await Svc().DeletePhotoAsync(Trainer(tina), session.Id, p2.Id);
+        Assert.Equal([p1.Id], (await Svc().GetSessionAsync(Trainer(tina), session.Id)).Photos.Select(p => p.Id));
+        await Svc().DeleteSessionAsync(Trainer(tina), session.Id);
+        Assert.Empty(_db.ClubSessionPhotos);                                               // mit der Einheit weg
+
+        var again = await Svc().SaveSessionAsync(Trainer(tina), g, new ClubSessionInputDto { Date = "2026-09-25" });
+        await Svc().AddPhotoAsync(Trainer(tina), again.Id, Jpeg(100, 100));
+        await Svc().DeleteGroupAsync(Manager(), g);
+        Assert.Empty(_db.ClubSessionPhotos);                                               // und mit der Gruppe
     }
 
     // ---- Lernstand aus dem Konto --------------------------------------------------------------

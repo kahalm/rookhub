@@ -166,6 +166,35 @@ public class ClubController : BaseApiController
         return NoContent();
     }
 
+    // ---- Fotos zur Einheit --------------------------------------------------------------------
+
+    /// <summary>Ein Foto hochladen (ein Bild je Anfrage — der nginx lässt 15 MB je Anfrage durch, Handyfotos haben 3–6).</summary>
+    [HttpPost("sessions/{sessionId:int}/photos")]
+    [RequestSizeLimit(ClubService.MaxPhotoUploadBytes)]
+    public async Task<ActionResult<ClubPhotoDto>> AddPhoto(int sessionId, IFormFile? file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0) return BadRequest(new { message = "Kein Bild mitgeschickt." });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        return Ok(await _club.AddPhotoAsync(await ActorAsync(), sessionId, ms.ToArray(), ct));
+    }
+
+    /// <summary>Das Bild als JPEG; <c>?thumb=1</c> das Vorschaubild. Privat: kein Cache über den Browser des Betrachters hinaus.</summary>
+    [HttpGet("sessions/{sessionId:int}/photos/{photoId:int}")]
+    public async Task<IActionResult> Photo(int sessionId, int photoId, [FromQuery] bool thumb = false, CancellationToken ct = default)
+    {
+        var bytes = await _club.GetPhotoAsync(await ActorAsync(), sessionId, photoId, thumb, ct);
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return File(bytes, "image/jpeg");
+    }
+
+    [HttpDelete("sessions/{sessionId:int}/photos/{photoId:int}")]
+    public async Task<IActionResult> DeletePhoto(int sessionId, int photoId, CancellationToken ct)
+    {
+        await _club.DeletePhotoAsync(await ActorAsync(), sessionId, photoId, ct);
+        return NoContent();
+    }
+
     // ---- Verknüpfung, vom KONTO aus (kein Club-Recht nötig) ------------------------------------
 
     [HttpGet("link")]

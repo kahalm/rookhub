@@ -37,6 +37,11 @@ public class ClubService
     /// <summary>Einheiten in der Anwesenheitstabelle einer Gruppe.</summary>
     public const int DefaultSessionWindow = 12;
     public const int MaxSessionWindow = 60;
+    /// <summary>Fotos: längste Seite des gespeicherten Bilds bzw. des Vorschaubilds, Fotos je Einheit, Upload-Größe.</summary>
+    public const int PhotoMaxEdge = 1600;
+    public const int ThumbMaxEdge = 320;
+    public const int MaxPhotosPerSession = 30;
+    public const long MaxPhotoUploadBytes = 15 * 1024 * 1024;
 
     private static readonly Regex PhonePattern = new(@"^[+0-9(][0-9 ()/\-.]*$", RegexOptions.Compiled);
     private static readonly Regex EmailPattern = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
@@ -68,8 +73,10 @@ public class ClubService
     private Task<List<int>> OwnGroupIdsAsync(ClubActor actor, CancellationToken ct) =>
         _db.ClubGroupTrainers.Where(t => t.UserId == actor.UserId).Select(t => t.GroupId).ToListAsync(ct);
 
+    /// <summary>Die Leitung sieht alles; ein Trainer-Konto die Kinder seiner Gruppen — und alle TRAINER (Personen), denn die
+    /// stehen in jeder Anwesenheitsliste.</summary>
     private IQueryable<ClubMember> Visible(ClubActor actor, List<int> own) =>
-        actor.Manager ? _db.ClubMembers : _db.ClubMembers.Where(m => m.Groups.Any(g => own.Contains(g.GroupId)));
+        actor.Manager ? _db.ClubMembers : _db.ClubMembers.Where(m => m.IsTrainer || m.Groups.Any(g => own.Contains(g.GroupId)));
 
     private async Task<ClubMember> LoadVisibleAsync(ClubActor actor, int id, CancellationToken ct)
     {
@@ -180,6 +187,7 @@ public class ClubService
 
         m.Level = Clean(input.Level);
         m.Archived = input.Archived;
+        m.IsTrainer = input.IsTrainer;
         m.UpdatedAt = now;
 
         var contacts = NormalizeContacts(input.Contacts);
@@ -225,12 +233,13 @@ public class ClubService
     /// </summary>
     private async Task ApplyGroupsAsync(ClubActor actor, ClubMember m, List<int>? groupIds, CancellationToken ct)
     {
-        var wanted = (groupIds ?? []).Distinct().ToList();
+        // Ein Trainer gehört zu keiner Gruppe — er steht in jeder Liste; eine mitgeschickte Auswahl ist gegenstandslos.
+        var wanted = m.IsTrainer ? [] : (groupIds ?? []).Distinct().ToList();
         var known = await _db.ClubGroups.Where(g => wanted.Contains(g.Id)).Select(g => g.Id).ToListAsync(ct);
         if (known.Count != wanted.Count) throw new DomainValidationException("Eine der Gruppen gibt es nicht.");
 
         List<int> target;
-        if (actor.Manager)
+        if (actor.Manager || m.IsTrainer)
         {
             target = wanted;
         }
@@ -304,6 +313,7 @@ public class ClubService
         dto.BirthYear = m.BirthYear;
         dto.Level = m.Level;
         dto.Archived = m.Archived;
+        dto.IsTrainer = m.IsTrainer;
         dto.Linked = m.LinkedUserId != null;
         dto.Groups = m.Groups.Select(g => new ClubGroupRefDto { Id = g.GroupId, Name = groupNames.GetValueOrDefault(g.GroupId, "") })
             .OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -423,7 +433,7 @@ public class ClubService
         var query = actor.Manager ? _db.ClubGroups : _db.ClubGroups.Where(g => g.Trainers.Any(t => t.UserId == actor.UserId));
         var groups = await query.Include(g => g.Trainers).OrderBy(g => g.Archived).ThenBy(g => g.Name).AsNoTracking().ToListAsync(ct);
         var ids = groups.Select(g => g.Id).ToList();
-        var memberCounts = await _db.ClubGroupMembers.Where(gm => ids.Contains(gm.GroupId) && !gm.Member!.Archived)
+        var memberCounts = await _db.ClubGroupMembers.Where(gm => ids.Contains(gm.GroupId) && !gm.Member!.Archived && !gm.Member.IsTrainer)
             .GroupBy(gm => gm.GroupId).Select(x => new { x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count, ct);
         var sessions = await _db.ClubSessions.Where(s => ids.Contains(s.GroupId))
             .GroupBy(s => s.GroupId).Select(x => new { x.Key, Count = x.Count(), Last = x.Max(s => s.Date) })
@@ -442,8 +452,11 @@ public class ClubService
         var group = await LoadGroupAsync(actor, id, ct);
         take = Math.Clamp(take, 1, MaxSessionWindow);
 
-        var members = await _db.ClubGroupMembers.Where(gm => gm.GroupId == id && !gm.Member!.Archived)
+        var members = await _db.ClubGroupMembers.Where(gm => gm.GroupId == id && !gm.Member!.Archived && !gm.Member.IsTrainer)
             .Select(gm => gm.Member!).OrderBy(SortName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
+        // Die Trainer stehen in JEDER Gruppe unter den Kindern — alle, die nicht im Archiv sind.
+        var coaches = await _db.ClubMembers.Where(m => m.IsTrainer && !m.Archived)
+            .OrderBy(SortName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
         var sessionCount = await _db.ClubSessions.CountAsync(s => s.GroupId == id, ct);
         var sessions = (await _db.ClubSessions.Where(s => s.GroupId == id).OrderByDescending(s => s.Date).Take(take)
             .AsNoTracking().ToListAsync(ct)).OrderBy(s => s.Date).ToList();
@@ -457,8 +470,15 @@ public class ClubService
         var dto = FillGroup(new ClubGroupDto(), group, members.Count, sessionCount,
             sessions.Count == 0 ? null : Iso(sessions[^1].Date), trainers);
         dto.CanManage = actor.Manager;
-        dto.Sessions = sessions.Select(s => SessionDto(new ClubSessionDto(), s, bySession[s.Id].Select(a => a.Status))).ToList();
-        dto.Members = members.Select(m =>
+        var sessionIds = sessions.Select(s => s.Id).ToList();
+        var photos = PhotosBySession(_db.ClubSessionPhotos.Where(p => sessionIds.Contains(p.SessionId))).ToLookup(p => p.SessionId, p => p.Photo);
+        dto.Sessions = sessions.Select(s =>
+        {
+            var sd = SessionDto(new ClubSessionDto(), s, bySession[s.Id].Select(a => a.Status));
+            sd.Photos = photos[s.Id].ToList();
+            return sd;
+        }).ToList();
+        ClubGroupMemberRowDto Row(ClubMember m)
         {
             var mine = byMember[m.Id].ToDictionary(a => a.SessionId, a => a.Status);
             return new ClubGroupMemberRowDto
@@ -468,7 +488,9 @@ public class ClubService
                 Present = mine.Values.Count(s => s == ClubAttendanceStatus.Present),
                 Recorded = mine.Count,
             };
-        }).ToList();
+        }
+        dto.Members = members.Select(Row).ToList();
+        dto.Coaches = coaches.Select(Row).ToList();
         return dto;
     }
 
@@ -499,6 +521,7 @@ public class ClubService
         var sessions = await _db.ClubSessions.Where(s => s.GroupId == id).ToListAsync(ct);
         var sessionIds = sessions.Select(s => s.Id).ToList();
         _db.ClubAttendances.RemoveRange(await _db.ClubAttendances.Where(a => sessionIds.Contains(a.SessionId)).ToListAsync(ct));
+        RemovePhotosWithoutLoading(await _db.ClubSessionPhotos.Where(p => sessionIds.Contains(p.SessionId)).Select(p => p.Id).ToListAsync(ct));
         _db.ClubSessions.RemoveRange(sessions);
         _db.ClubGroupMembers.RemoveRange(await _db.ClubGroupMembers.Where(gm => gm.GroupId == id).ToListAsync(ct));
         _db.ClubGroupTrainers.RemoveRange(group.Trainers);
@@ -588,7 +611,7 @@ public class ClubService
     /// <summary>
     /// Eine Einheit speichern. Ohne <paramref name="sessionId"/>: die Einheit dieses Tages anlegen oder ersetzen (je Gruppe
     /// und Tag gibt es eine). Mit: genau diese ändern, auch ihr Datum — 409, wenn an dem Tag schon eine andere steht.
-    /// Anwesenheit zählt nur für Kinder der Gruppe; ein leerer Status nimmt den Eintrag zurück.
+    /// Anwesenheit zählt für die Kinder der Gruppe und alle Trainer; ein leerer Status nimmt den Eintrag zurück.
     /// </summary>
     public async Task<ClubSessionDetailDto> SaveSessionAsync(ClubActor actor, int groupId, ClubSessionInputDto input,
         int? sessionId = null, CancellationToken ct = default)
@@ -621,7 +644,9 @@ public class ClubService
         session.Topic = Clean(input.Topic);
         session.Notes = Clean(input.Notes);
 
+        // Erfasst wird, wer auf der Liste steht: die Kinder der Gruppe und alle Trainer (außer den archivierten).
         var inGroup = (await _db.ClubGroupMembers.Where(gm => gm.GroupId == groupId).Select(gm => gm.MemberId).ToListAsync(ct)).ToHashSet();
+        inGroup.UnionWith(await _db.ClubMembers.Where(m => m.IsTrainer && !m.Archived).Select(m => m.Id).ToListAsync(ct));
         foreach (var entry in (input.Attendance ?? []).Where(e => inGroup.Contains(e.MemberId)).GroupBy(e => e.MemberId).Select(g => g.Last()))
         {
             var status = ParseStatus(entry.Status);
@@ -675,13 +700,15 @@ public class ClubService
                       ?? throw new NotFoundException("Diese Einheit gibt es nicht.");
         await LoadGroupAsync(actor, session.GroupId, ct);
         _db.ClubAttendances.RemoveRange(session.Attendance);
+        RemovePhotosWithoutLoading(await _db.ClubSessionPhotos.Where(p => p.SessionId == sessionId).Select(p => p.Id).ToListAsync(ct));
         _db.ClubSessions.Remove(session);
         await _db.SaveChangesAsync(ct);
     }
 
-    private static ClubSessionDetailDto SessionDetail(ClubSession s)
+    private ClubSessionDetailDto SessionDetail(ClubSession s)
     {
         var dto = SessionDto(new ClubSessionDetailDto(), s, s.Attendance.Select(a => a.Status));
+        dto.Photos = PhotoList(_db.ClubSessionPhotos.Where(p => p.SessionId == s.Id));
         dto.GroupId = s.GroupId;
         dto.Attendance = s.Attendance.OrderBy(a => a.MemberId)
             .Select(a => new ClubAttendanceInputDto { MemberId = a.MemberId, Status = StatusKey(a.Status) }).ToList();
@@ -714,6 +741,78 @@ public class ClubService
         ClubAttendanceStatus.Absent => "absent",
         _ => null,
     };
+
+    // ---- Fotos zur Einheit --------------------------------------------------------------------
+
+    /// <summary>Kennungen ohne die Bilder — nie das LONGBLOB in eine Liste laden.</summary>
+    private static List<ClubPhotoDto> PhotoList(IQueryable<ClubSessionPhoto> query) =>
+        query.OrderBy(p => p.Id).Select(p => new ClubPhotoDto { Id = p.Id, Width = p.Width, Height = p.Height, CreatedAt = p.CreatedAt }).ToList();
+
+    private static List<(int SessionId, ClubPhotoDto Photo)> PhotosBySession(IQueryable<ClubSessionPhoto> query) =>
+        query.OrderBy(p => p.Id).Select(p => new { p.SessionId, Dto = new ClubPhotoDto { Id = p.Id, Width = p.Width, Height = p.Height, CreatedAt = p.CreatedAt } })
+            .AsEnumerable().Select(x => (x.SessionId, x.Dto)).ToList();
+
+    private async Task<ClubSession> LoadSessionAsync(ClubActor actor, int sessionId, CancellationToken ct)
+    {
+        Require(actor);
+        var session = await _db.ClubSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId, ct)
+                      ?? throw new NotFoundException("Diese Einheit gibt es nicht.");
+        await LoadGroupAsync(actor, session.GroupId, ct);      // fremde Gruppe → 404 wie unbekannt
+        return session;
+    }
+
+    /// <summary>
+    /// Ein Foto zur Einheit: aufrecht, auf <see cref="PhotoMaxEdge"/> verkleinert, JPEG; dazu das Vorschaubild. 400, wenn es
+    /// kein lesbares Bild ist oder die Einheit schon <see cref="MaxPhotosPerSession"/> Fotos hat.
+    /// </summary>
+    public async Task<ClubPhotoDto> AddPhotoAsync(ClubActor actor, int sessionId, byte[] upload, CancellationToken ct = default)
+    {
+        var session = await LoadSessionAsync(actor, sessionId, ct);
+        if (upload.Length == 0 || !ScoresheetImage.CanDecode(upload))
+            throw new DomainValidationException("Das ist kein Bild, das sich lesen lässt (JPEG, PNG oder WebP).");
+        if (await _db.ClubSessionPhotos.CountAsync(p => p.SessionId == session.Id, ct) >= MaxPhotosPerSession)
+            throw new DomainValidationException($"Mehr als {MaxPhotosPerSession} Fotos je Einheit gehen nicht.");
+        var image = ScoresheetImage.Prepare(upload, PhotoMaxEdge, 85) ?? throw new DomainValidationException("Das Bild ließ sich nicht verarbeiten.");
+        var thumb = ScoresheetImage.Prepare(image, ThumbMaxEdge, 80) ?? image;
+        var size = ScoresheetImage.Size(image) ?? (0, 0);
+        var photo = new ClubSessionPhoto
+        {
+            SessionId = session.Id, Image = image, Thumb = thumb, Width = size.Width, Height = size.Height,
+            CreatedByUserId = actor.UserId, CreatedAt = _utcNow(),
+        };
+        _db.ClubSessionPhotos.Add(photo);
+        await _db.SaveChangesAsync(ct);
+        return new ClubPhotoDto { Id = photo.Id, Width = photo.Width, Height = photo.Height, CreatedAt = photo.CreatedAt };
+    }
+
+    /// <summary>Das Bild (oder das Vorschaubild) — nur für die Einheit, zu der es gehört, und nur mit Zugriff auf deren Gruppe.</summary>
+    public async Task<byte[]> GetPhotoAsync(ClubActor actor, int sessionId, int photoId, bool thumb, CancellationToken ct = default)
+    {
+        await LoadSessionAsync(actor, sessionId, ct);
+        var bytes = thumb
+            ? await _db.ClubSessionPhotos.Where(p => p.Id == photoId && p.SessionId == sessionId).Select(p => p.Thumb).FirstOrDefaultAsync(ct)
+            : await _db.ClubSessionPhotos.Where(p => p.Id == photoId && p.SessionId == sessionId).Select(p => p.Image).FirstOrDefaultAsync(ct);
+        return bytes ?? throw new NotFoundException("Dieses Foto gibt es nicht.");
+    }
+
+    public async Task DeletePhotoAsync(ClubActor actor, int sessionId, int photoId, CancellationToken ct = default)
+    {
+        await LoadSessionAsync(actor, sessionId, ct);
+        var exists = await _db.ClubSessionPhotos.AnyAsync(p => p.Id == photoId && p.SessionId == sessionId, ct);
+        if (!exists) throw new NotFoundException("Dieses Foto gibt es nicht.");
+        RemovePhotosWithoutLoading([photoId]);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Löschen über Stellvertreter mit Schlüssel — die Bilder werden dafür nicht geladen.</summary>
+    private void RemovePhotosWithoutLoading(IEnumerable<int> photoIds)
+    {
+        foreach (var id in photoIds)
+        {
+            var tracked = _db.ChangeTracker.Entries<ClubSessionPhoto>().FirstOrDefault(e => e.Entity.Id == id)?.Entity;
+            _db.ClubSessionPhotos.Remove(tracked ?? new ClubSessionPhoto { Id = id });
+        }
+    }
 
     // ---- Kleinkram ----------------------------------------------------------------------------
 

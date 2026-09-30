@@ -40,7 +40,10 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
       }
       <div class="page-head">
         <h1>Kartei</h1>
-        <a class="btn primary" routerLink="/kind/neu">Kind anlegen</a>
+        <div class="actions">
+          <a class="btn primary" routerLink="/kind/neu">Kind anlegen</a>
+          <a class="btn" routerLink="/kind/neu" [queryParams]="{ trainer: 1 }">Trainer anlegen</a>
+        </div>
       </div>
       <div class="tools">
         <label class="field search"><span>Suchen</span>
@@ -90,7 +93,28 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
             </ul>
           </section>
         }
-        @if (!shown().length) { <p class="muted">Kein Kind passt zu dieser Suche.</p> }
+        @if (coaches().length) {
+          <section class="register coaches">
+            <h2 class="letter" aria-label="Trainer">T</h2>
+            <ul class="cards">
+              <li class="cards-head">Trainer</li>
+              @for (m of coaches(); track m.id) {
+                <li class="kid">
+                  <a class="kid-main" [routerLink]="['/kind', m.id]">
+                    <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                  </a>
+                  @if (phone(m); as p) {
+                    <div class="kid-call">
+                      <a [href]="tel(p.value)">{{ p.value }}</a>
+                      @if (p.label) { <span>{{ p.label }}</span> }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (!shown().length && !coaches().length) { <p class="muted">Niemand passt zu dieser Suche.</p> }
       }
     }
   `,
@@ -110,15 +134,21 @@ export class MembersPageComponent implements OnInit {
   /** „Heute" — als Feld, damit ein Test den Wochentag festlegen kann. */
   now: () => Date = () => new Date();
 
+  /** Die Kinder, die zu Suche und Gruppenfilter passen. */
   readonly shown = computed(() => {
     const gid = this.groupId();
-    return this.rows().filter(m => matchesName(m, this.q()) && (gid === null || m.groups.some(g => g.id === gid)));
+    return this.rows().filter(m => !m.isTrainer && matchesName(m, this.q()) && (gid === null || m.groups.some(g => g.id === gid)));
   });
   readonly registers = computed(() => byInitial(this.shown()));
+  /** Die Trainer — eigener Block unter den Registern; der Gruppenfilter gilt für sie nicht (sie stehen in jeder Gruppe). */
+  readonly coaches = computed(() => this.rows().filter(m => m.isTrainer && matchesName(m, this.q())));
   readonly today = computed(() => this.groups().filter(g => !g.archived && trainsToday(g.weekday, this.now())));
   readonly countText = computed(() => {
-    const [n, all] = [this.shown().length, this.rows().length];
-    return n === all ? `${all} ${all === 1 ? 'Kind' : 'Kinder'}` : `${n} von ${all} ${all === 1 ? 'Kind' : 'Kindern'}`;
+    const kids = this.rows().filter(m => !m.isTrainer).length;
+    const n = this.shown().length;
+    const head = n === kids ? `${kids} ${kids === 1 ? 'Kind' : 'Kinder'}` : `${n} von ${kids} ${kids === 1 ? 'Kind' : 'Kindern'}`;
+    const t = this.rows().length - kids;
+    return t ? `${head}, ${t} Trainer` : head;
   });
 
   readonly weekday = weekdayName;

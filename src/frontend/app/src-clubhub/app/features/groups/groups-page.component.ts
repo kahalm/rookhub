@@ -64,7 +64,7 @@ export function scheduleText(g: Pick<GroupRow, 'weekday' | 'schedule'>): string 
                 @if (schedule(g); as s) { <span>{{ s }}</span> }
                 <span>{{ g.memberCount }} {{ g.memberCount === 1 ? 'Kind' : 'Kinder' }}</span>
                 @if (g.lastSession) { <span>zuletzt {{ short(g.lastSession) }}</span> }
-                @if (g.trainers.length) { <span>Trainer: {{ trainerNames(g) }}</span> }
+                @if (g.trainers.length) { <span>Zugriff: {{ trainerNames(g) }}</span> }
                 @if (g.archived) { <span class="chip">im Archiv</span> }
               </p>
             </div>

@@ -24,6 +24,8 @@ Anwesenheit abhaken, Lernstand (Stufe + Notizen), Konto-Verknüpfung per Einmal-
   (wer ist gemeldet, Ergebnisse über die chess-results-Anbindung).
 - [ ] **Eltern-/Kinder-Sicht** (eigener Stand, Termine) — bisher sieht das verknüpfte Konto nur, DASS es verknüpft ist.
 - [ ] Sprung aus RookHub (Menüpunkt für Konten mit Club-Recht) und Export der Telefonliste (CSV/Druck).
+- [ ] Fotos: die Bilder liegen als LONGBLOB in `rookhub` (wie die Formular-Fotos) — bei vielen Fotos je Woche wächst die
+  Datenbank und damit der nächtliche Dump; dann auf Dateiablage/Volume umstellen.
 
 
 

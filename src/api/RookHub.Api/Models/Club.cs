@@ -40,6 +40,14 @@ public class ClubMember
     /// <summary>Nicht mehr im Training (ausgetreten, pausiert) — bleibt in der Kartei, fällt aus den Listen.</summary>
     public bool Archived { get; set; }
 
+    /// <summary>
+    /// Ein TRAINER statt eines Kindes (Wunsch 2026-09-30: „liste unter den Kindern auch die Trainer auf bei der
+    /// Anwesenheit"). Dieselbe Kartei (Kontakte, Archiv), aber: in JEDER Abhak-Liste unter den Kindern, ohne
+    /// Gruppenzugehörigkeit, für jeden mit Club-Recht sichtbar, ohne Lernstand. Kein Konto — wer ClubHub BEDIENEN darf,
+    /// regelt weiter <see cref="ClubGroupTrainer"/> (Konto je Gruppe).
+    /// </summary>
+    public bool IsTrainer { get; set; }
+
     /// <summary>Verknüpftes Konto (FK SetNull). Höchstens EIN Blatt je Konto.</summary>
     public int? LinkedUserId { get; set; }
     public AppUser? LinkedUser { get; set; }
@@ -147,6 +155,29 @@ public class ClubSession
     public DateTime CreatedAt { get; set; }
 
     public List<ClubAttendance> Attendance { get; set; } = new();
+    public List<ClubSessionPhoto> Photos { get; set; } = new();
+}
+
+/// <summary>
+/// Ein Foto zu einer Trainingseinheit (Wunsch 2026-09-30: „zu Trainings mehrere Fotos hochladen"). Liegt wie die
+/// Formular-Fotos in der Datenbank — aufrecht gedreht und verkleinert (<see cref="ClubService.PhotoMaxEdge"/>), dazu ein
+/// kleines Vorschaubild für die Übersichten. Fotos von Kindern: nur angemeldet und nur mit Zugriff auf die Gruppe.
+/// </summary>
+public class ClubSessionPhoto
+{
+    public int Id { get; set; }
+    public int SessionId { get; set; }
+    public ClubSession? Session { get; set; }
+
+    /// <summary>JPEG, längste Seite höchstens <see cref="ClubService.PhotoMaxEdge"/>.</summary>
+    public byte[] Image { get; set; } = [];
+    /// <summary>JPEG, längste Seite höchstens <see cref="ClubService.ThumbMaxEdge"/>.</summary>
+    public byte[] Thumb { get; set; } = [];
+    public int Width { get; set; }
+    public int Height { get; set; }
+
+    public int? CreatedByUserId { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>Da oder nicht da. Den Wert 2 („entschuldigt") gab es nur in 0.613.0 — er wird nicht mehr vergeben
