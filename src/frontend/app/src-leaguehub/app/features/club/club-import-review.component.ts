@@ -122,7 +122,7 @@ interface Editing { index: number; side: SideKey; text: string }
         @if (importing()) { Importiere … @if (progress(); as pr) { {{ pr.done }} / {{ pr.total }} } }
         @else if (savedCount()) { Weiter importieren ({{ review.counts().take - savedCount() }} übrig) }
         @else { {{ review.counts().take }} Partien importieren }</button>
-      <button type="button" class="btn-link" [disabled]="importing()" (click)="cancel.emit()">Verwerfen</button>
+      <button type="button" class="btn-link" [disabled]="importing()" (click)="cancel.emit()">Schließen</button>
       <span class="update-msg" [class.err]="!!error()" role="status">{{ error() ?? '' }}</span>
     </div>
   `,
@@ -139,6 +139,7 @@ export class ClubImportReviewComponent {
   /** Nach jeder gespeicherten Portion: die Nummern ALLER in diesem Lauf gespeicherten Partien — die Seite legt sie im
    *  Entwurf ab, damit ein Abbruch nichts doppelt anfängt. */
   @Output() savedChange = new EventEmitter<number[]>();
+  /** „Schließen": nur die Übersicht zu — ob und wie der Entwurf bleibt, entscheidet die Seite (er wird NICHT gelöscht). */
   @Output() cancel = new EventEmitter<void>();
 
   readonly sides: SideKey[] = ['white', 'black'];

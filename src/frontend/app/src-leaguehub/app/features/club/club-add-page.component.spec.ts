@@ -114,6 +114,80 @@ describe('ClubAddPageComponent', () => {
     flush();
   }));
 
+  // Codereview W3 F7-004: „Verwerfen" neben „Importieren" löschte den Entwurf samt Korrekturen ohne Rückfrage — beim
+  // Fertigstellen auch den eines anderen. Jetzt heißt der Knopf „Schließen" und der Entwurf bleibt liegen.
+  function closeButton(el: HTMLElement): HTMLButtonElement {
+    return Array.from(el.querySelectorAll('lh-club-import-review button')).filter(b => b.textContent?.trim() === 'Schließen').pop() as HTMLButtonElement;
+  }
+
+  it('„Schließen" in der Übersicht behält den Entwurf und speichert die letzte Korrektur', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    api.preview.and.resolveTo(PREVIEW);
+    fixture.componentInstance.pgn.set('[White "x"]\n1. e4 *');
+    fixture.detectChanges();
+    (el.querySelector('.btn-pri') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(Array.from(el.querySelectorAll('lh-club-import-review button')).some(b => b.textContent?.trim() === 'Verwerfen')).toBeFalse();
+
+    fixture.componentInstance.review()!.toggleInclude(1);                   // Korrektur, Drossel läuft noch …
+    fixture.detectChanges();
+    api.drafts.calls.reset();
+    const confirmSpy = spyOn(window, 'confirm');
+    closeButton(el).click();                                                // … und sofort schließen
+    flushMicrotasks();
+    fixture.detectChanges();
+
+    expect(api.deleteDraft).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(api.saveDraft).toHaveBeenCalledWith('7', { state: jasmine.any(String) });
+    expect(fixture.componentInstance.review()).toBeNull();
+    expect(fixture.componentInstance.pgn()).withContext('Text liegt im Entwurf, kein zweiter beim erneuten Prüfen').toBe('');
+    expect(api.drafts).toHaveBeenCalled();                                  // Liste neu geladen — dort steht der Entwurf
+    tick(2000);
+    expect(api.saveDraft).toHaveBeenCalledTimes(1);                        // keine zweite, verspätete Speicherung
+  }));
+
+  it('„Schließen" ohne Online-Entwurf fragt, weil die Korrekturen sonst verloren gehen', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    api.preview.and.resolveTo(PREVIEW);
+    api.createDraft.and.rejectWith(new HttpErrorResponse({ status: 400, error: { reason: 'tooManyDrafts' } }));
+    fixture.componentInstance.pgn.set('[White "x"]\n1. e4 *');
+    fixture.detectChanges();
+    (el.querySelector('.btn-pri') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    closeButton(el).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(fixture.componentInstance.review()).not.toBeNull();              // abgelehnt → Übersicht bleibt offen
+    expect(api.deleteDraft).not.toHaveBeenCalled();
+
+    confirmSpy.and.returnValue(true);
+    closeButton(el).click();
+    flushMicrotasks();
+    expect(fixture.componentInstance.review()).toBeNull();
+    expect(fixture.componentInstance.pgn()).withContext('ohne Entwurf bleibt wenigstens der Text im Feld').toBe('[White "x"]\n1. e4 *');
+  }));
+
+  it('Verwerfen einer fremden Liste nennt in der Rückfrage, von wem sie ist', fakeAsync(() => {
+    const D = { ref: '12', id: 12, source: 'datei', label: 'liga.pgn', gameCount: 200, importedCount: 0,
+      createdAt: '2026-09-28T17:00:00', updatedAt: '2026-09-28T17:30:00', owner: 'hans', viaShareLink: false, mine: false };
+    service.allDrafts.and.resolveTo([D]);
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    const el = create(['league.contribute', 'league.manage']);
+    flushMicrotasks();
+    fixture.detectChanges();
+    (Array.from(el.querySelectorAll('.scan-list button')).find(b => b.textContent?.trim() === 'Verwerfen') as HTMLButtonElement).click();
+    flushMicrotasks();
+    expect(confirmSpy.calls.mostRecent().args[0]).toContain('von hans');
+    expect(api.deleteDraft).not.toHaveBeenCalled();
+  }));
+
   it('Formular angemeldet: 10 je Tag, Foto hochladen, nachfragen bis gelesen', fakeAsync(() => {
     query = { art: 'formular' };
     const el = create();

@@ -80,7 +80,7 @@ const SAVE_DEBOUNCE_MS = 1500;
                 @if (resumedFrom(); as who) { <b>Du stellst die Liste von {{ who }} fertig.</b> }</p>
             }
             <lh-club-import-review [review]="rv" [client]="client" [pgn]="pgn()" [remembers]="!share" [draftId]="share ? null : (draft()?.id ?? null)"
-                                   (imported)="done($event)" (cancel)="discardCurrent()" (savedChange)="onSaved($event)" />
+                                   (imported)="done($event)" (cancel)="closeCurrent()" (savedChange)="onSaved($event)" />
           } @else {
             <label class="anon-toggle">
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
@@ -375,7 +375,7 @@ export class ClubAddPageComponent implements OnInit {
       this.pgn.set(full.pgn);
       this.importedBefore = full.imported;
       this.draft.set({ ...d, pgn: full.pgn });
-      this.resumedFrom.set(d.mine || !this.othersDrafts().some(o => o.ref === d.ref) ? null : d.viaShareLink ? 'einem Teilen-Link' : d.owner ?? 'jemand anderem');
+      this.resumedFrom.set(this.foreignOwner(d));
       const preview = await this.client.preview(full.pgn, this.share ? null : full.id);
       this.review.set(ImportReview.restore(preview, full.state, this.replaceClub()));
     } catch {
@@ -386,8 +386,14 @@ export class ClubAddPageComponent implements OnInit {
     }
   }
 
+  /** Die Liste eines anderen (nur Verwalter sehen die): dessen Name bzw. „einem Teilen-Link" — sonst null. */
+  private foreignOwner(d: ClubDraft): string | null {
+    return d.mine || !this.othersDrafts().some(o => o.ref === d.ref) ? null : d.viaShareLink ? 'einem Teilen-Link' : d.owner ?? 'jemand anderem';
+  }
+
   async discardDraft(d: ClubDraft): Promise<void> {
-    if (!confirm(`Liste „${this.draftTitle(d)}" verwerfen? Schon importierte Partien bleiben, der Rest wird gelöscht.`)) return;
+    const who = this.foreignOwner(d);
+    if (!confirm(`Liste „${this.draftTitle(d)}"${who ? ` von ${who}` : ''} verwerfen? Schon importierte Partien bleiben, der Rest wird gelöscht.`)) return;
     try {
       await this.client.deleteDraft(d.ref);
       if (this.share) rememberDraftKey(this.share, d.ref, false);
@@ -395,16 +401,24 @@ export class ClubAddPageComponent implements OnInit {
     void this.loadDrafts();
   }
 
-  /** „Verwerfen" in der Übersicht: der Entwurf dieser Liste geht mit. */
-  async discardCurrent(): Promise<void> {
-    const d = this.draft();
+  /**
+   * „Schließen" in der Übersicht: nur die Übersicht geht zu, der Entwurf bleibt samt Korrekturen unter „Deine offenen
+   * Listen" (bzw. „Offene Listen anderer") liegen. Früher hieß der Knopf „Verwerfen" und löschte den Entwurf ohne
+   * Rückfrage — beim Fertigstellen auch den eines anderen. Endgültig löschen geht nur noch aus der Liste, mit Rückfrage.
+   */
+  async closeCurrent(): Promise<void> {
+    const d = this.draft(), rv = this.review();
+    if (!d && rv && !confirm('Die Liste liegt nicht online — schließt du die Übersicht, gehen deine Korrekturen verloren. Trotzdem schließen?')) return;
+    const unsaved = !!this.saveTimer;
     this.review.set(null);
     this.dbNote.set(null);
     this.portionNote.set(null);
     this.resetDraft();
-    if (d) {
-      try { await this.client.deleteDraft(d.ref); } catch { /* schon weg */ }
-      if (this.share) rememberDraftKey(this.share, d.ref, false);
+    // Der Text liegt im Entwurf — stünde er noch im Feld, legte ein erneutes „Partien prüfen" einen zweiten Entwurf an.
+    if (d) this.pgn.set('');
+    // Die letzte Korrektur wartet vielleicht noch auf die Drossel — jetzt speichern, sonst fehlt sie beim Weitermachen.
+    if (d && rv && unsaved) {
+      try { await this.client.saveDraft(d.ref, { state: rv.snapshot() }); } catch { /* bleibt beim letzten Stand */ }
     }
     void this.loadDrafts();
   }
