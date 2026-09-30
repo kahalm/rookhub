@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -316,6 +317,82 @@ public class GamesControllerTests : IDisposable
         Assert.Contains("Nc6", second.Pgn);       // NICHT gekürzt
         Assert.Equal(2006, second.WhiteElo);      // Elo bleibt
         Assert.Equal("1-0", second.Result);
+    }
+
+    // ===== Gleiche ExternalId, andere Partie (N8-001: lichess-Analysebrett meldete „analysis") ====
+
+    [Fact]
+    public async Task Save_Resave_SameExternalIdOtherMoves_CreatesNewGame_OriginalUntouched()
+    {
+        var user = await CreateUserAsync();
+        var logger = new CapturingLogger<SavedGameService>();
+        var service = new SavedGameService(_db, TestServices.GameAnalyses(_db), TestServices.Analyze(_db), logger);
+        var first = await service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3", "Nc6" }, White = "a", Black = "b",
+            Result = "1-0", ExternalId = "analysis",
+        });
+
+        // Andere Partie auf demselben Analysebrett, MEHR Halbzüge: früher überschrieb TryHeal die erste.
+        var second = await service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "d4", "d5", "c4", "e6", "Nc3", "Nf6" }, White = "c", Black = "d",
+            Result = "0-1", ExternalId = "analysis",
+        });
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.NotEqual(first.ShareToken, second.ShareToken);   // Link gehört zur neuen Partie
+        Assert.Contains("c4", second.Pgn);
+        var original = _db.SavedGames.AsNoTracking().Single(g => g.Id == first.Id);
+        Assert.Equal(first.Pgn, original.Pgn);                  // hinter dem alten Link unverändert
+        Assert.Equal("analysis", original.ExternalId);
+        Assert.Null(_db.SavedGames.AsNoTracking().Single(g => g.Id == second.Id).ExternalId);
+        var warn = Assert.Single(logger.Events, e => e.Level == LogLevel.Warning);
+        Assert.Equal(first.Id, warn.State["ExistingGameId"]);
+        Assert.Equal(second.Id, warn.State["SavedGameId"]);
+    }
+
+    [Fact]
+    public async Task Save_Resave_SameExternalIdShorterOtherMoves_ReturnsLinkOfNewGame()
+    {
+        var user = await CreateUserAsync();
+        var first = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "e5", "Nf3", "Nc6" }, ExternalId = "analysis",
+        });
+
+        // WENIGER Halbzüge und eine andere Partie: früher kam der Link der ersten zurück.
+        var second = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "d4", "d5" }, ExternalId = "analysis",
+        });
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.NotEqual(first.ShareToken, second.ShareToken);
+        Assert.Equal(2, second.MoveCount);
+        Assert.Equal(2, _db.SavedGames.Count(g => g.UserId == user.Id));
+    }
+
+    [Fact]
+    public async Task Save_Resave_ContinuationWithCheckMarksAndLegacyGaps_StillHeals()
+    {
+        var user = await CreateUserAsync();
+        // Alt gespeichert über die DOM-Auslese: „…"-Platzhalter in der Zugliste, Schach ohne „+".
+        var first = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "…", "f5", "Qh5" }, ExternalId = "heal-3",
+        });
+
+        var second = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "f5", "Qh5+", "g6", "Qxg6" }, ExternalId = "heal-3",
+            WhiteElo = 1500,
+        });
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(first.ShareToken, second.ShareToken);
+        Assert.Contains("Qxg6", second.Pgn);
+        Assert.Equal(1, _db.SavedGames.Count(g => g.UserId == user.Id));
     }
 
     // ===== „Partie analysieren" + Bewertungskurve ============================

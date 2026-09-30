@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -23,12 +24,15 @@ public class SavedGameService
     private readonly AppDbContext _db;
     private readonly GameAnalysisService _analyses;
     private readonly RepertoireAnalyzeService _repertoires;
+    private readonly ILogger<SavedGameService> _logger;
 
-    public SavedGameService(AppDbContext db, GameAnalysisService analyses, RepertoireAnalyzeService repertoires)
+    public SavedGameService(AppDbContext db, GameAnalysisService analyses, RepertoireAnalyzeService repertoires,
+        ILogger<SavedGameService>? logger = null)
     {
         _db = db;
         _analyses = analyses;
         _repertoires = repertoires;
+        _logger = logger ?? NullLogger<SavedGameService>.Instance;
     }
 
     private static readonly HashSet<string> AllowedSources = new(StringComparer.OrdinalIgnoreCase)
@@ -68,14 +72,30 @@ public class SavedGameService
         // Save BESSER ist (mehr Züge ODER erstmals Elo), heilt er den Datensatz in-place
         // (gleiches ShareToken/Id) — so repariert ein Re-Save eine alt gespeicherte,
         // lückenhafte/Elo-lose Partie, ohne den Teilen-Link zu ändern.
+        // Das gilt nur, solange es DIESELBE Partie ist: die neuen Züge setzen die gespeicherten fort
+        // (oder sind deren Anfang). Sonst ist die ExternalId keine Partie-Kennung — RepCheck meldete auf
+        // dem lichess-Analysebrett jede Partie als „analysis" (N8-001) — und der Save wird eine eigene
+        // Partie ohne ExternalId, statt die alte hinter ihrem Teilen-Link zu überschreiben.
+        SavedGame? divergedFrom = null;
         if (externalId != null)
         {
             var existing = await _db.SavedGames
                 .FirstOrDefaultAsync(g => g.UserId == userId && g.Source == source && g.ExternalId == externalId);
             if (existing != null)
             {
-                if (TryHeal(existing, moves, dto, result)) await _db.SaveChangesAsync();
-                return MapDetail(existing);
+                var stored = SanKeys(StoredSans(existing.Pgn));
+                var incoming = SanKeys(moves);
+                if (IsPrefixOf(stored, incoming))
+                {
+                    if (TryHeal(existing, moves, dto, result)) await _db.SaveChangesAsync();
+                    return MapDetail(existing);
+                }
+                // Kürzere Fassung derselben Partie (Doppelklick, Zugliste noch nicht ganz geladen):
+                // die gespeicherte bleibt — kürzt nie.
+                if (IsPrefixOf(incoming, stored)) return MapDetail(existing);
+
+                divergedFrom = existing;
+                externalId = null;
             }
         }
 
@@ -113,6 +133,10 @@ public class SavedGameService
             if (existing != null) return MapDetail(existing);
             throw;
         }
+        if (divergedFrom != null)
+            _logger.LogWarning(
+                "Partie speichern: {Source}-Partie {ExternalId} von User {UserId} setzt die gespeicherte Partie {ExistingGameId} nicht fort — als neue Partie {SavedGameId} ohne ExternalId angelegt",
+                source, divergedFrom.ExternalId, userId, divergedFrom.Id, entity.Id);
         return MapDetail(entity);
     }
 
@@ -843,6 +867,39 @@ public class SavedGameService
     {
         if (string.IsNullOrWhiteSpace(value)) return "?";
         return value.Replace("\"", "'").Replace("\n", " ").Replace("\r", " ").Trim();
+    }
+
+    /// <summary>Die Halbzüge eines gespeicherten PGN, rein lexikalisch (ohne Brett — auch alt gespeicherte,
+    /// lückenhafte Partien lassen sich so lesen): Kommentare, NAGs, Zugnummern und das Ergebnis fallen weg.</summary>
+    private static List<string> StoredSans(string pgn)
+    {
+        var moveText = PgnParser.SplitGames(pgn ?? string.Empty).FirstOrDefault().MoveText ?? string.Empty;
+        moveText = Regex.Replace(moveText, @"\{[^}]*\}", " ");
+        var sans = new List<string>();
+        foreach (var token in moveText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (char.IsDigit(token[0]) && (token.Contains('.') || token.Contains('…'))) continue;   // Zugnummer
+            if (token[0] == '$' || AllowedResults.Contains(token)) continue;                        // NAG, Ergebnis
+            sans.Add(token);
+        }
+        return sans;
+    }
+
+    /// <summary>Vergleichsform einer Zugliste: ohne die „…"-Platzhalter der alten DOM-Auslese, Schach-/
+    /// Matt-Zeichen und Bewertungen am Zugende, Rochade mit O statt 0.</summary>
+    private static List<string> SanKeys(IEnumerable<string> sans)
+        => sans.Select(s => s.Trim())
+            .Where(s => s.Length > 0 && s.Any(c => c != '.' && c != '…'))
+            .Select(s => s.TrimEnd('+', '#', '!', '?').Replace('0', 'O'))
+            .ToList();
+
+    /// <summary>Ist <paramref name="head"/> der Anfang von <paramref name="line"/> (gleich lang zählt mit)?</summary>
+    private static bool IsPrefixOf(IReadOnlyList<string> head, IReadOnlyList<string> line)
+    {
+        if (head.Count > line.Count) return false;
+        for (var i = 0; i < head.Count; i++)
+            if (!string.Equals(head[i], line[i], StringComparison.Ordinal)) return false;
+        return true;
     }
 
     /// <summary>Zählt die Halbzüge eines gebauten PGN (Movetext nach der Leerzeile).</summary>
