@@ -435,10 +435,13 @@ public class DeploymentConfigTests
 
         // Bei Regex-Locations gewinnt der ERSTE Treffer: die Regeln stehen vor der OG-Weiche. Die
         // /api/-Locations tragen ^~, sonst fingen die Regeln /api/.env ab, bevor die API es loggt.
-        var firstRule = nginx.IndexOf("return 404;", StringComparison.Ordinal);
-        Assert.True(firstRule > 0 && firstRule < nginx.IndexOf("location ~ ^/(g|t|puzzles)", StringComparison.Ordinal),
+        // Verankert an den Scanner-Locations selbst, nicht am ersten "return 404;" der Datei: das
+        // steht seit F8-002 in der Kachel-Location und liegt immer vor der OG-Weiche. ALLE Regeln
+        // muessen davor stehen, deshalb zaehlt die letzte.
+        var lastRule = Regex.Matches(nginx, @"location ~\*? \S+ \{\s*return 404;\s*\}").Max(m => m.Index);
+        Assert.True(lastRule > 0 && lastRule < nginx.IndexOf("location ~ ^/(g|t|puzzles)", StringComparison.Ordinal),
             "Scanner-Regeln muessen vor der OG-Location stehen");
-        Assert.True(firstRule < nginx.IndexOf("location / {", StringComparison.Ordinal));
+        Assert.True(lastRule < nginx.IndexOf("location / {", StringComparison.Ordinal));
         foreach (var api in new[] { "/api/", "/api/engine/", "/api/extension/chessable/", "/api/external-engine/" })
         {
             Assert.Contains($"location ^~ {api} {{", nginx);
