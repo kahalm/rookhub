@@ -158,16 +158,22 @@ public sealed class LeagueClubService
             {
                 try
                 {
-                    // Nur ein Ergebnis („1-0", „*") ist KEINE Partie mit illegalem Zug — TryExtractUciMainline meldet beides null.
-                    var uci = PgnParser.ExtractMainlineSans(moveText).Count == 0 ? new List<string>()
-                        : PgnParser.TryExtractUciMainline(start, moveText);
-                    if (uci == null) err = "illegal";
-                    else if (uci.Count == 0) err = "noMoves";
-                    else if (uci.Count > MaxPlies) err = "tooLong";
+                    // Die Länge zählt VOR dem Nachspielen (wie bei AddAsync): vorher spielte Gera.Chess eine überlange
+                    // Hauptvariante erst GANZ nach, bevor „tooLong" griff — bis rund eine Million Halbzüge je 5-MB-Aufruf,
+                    // auch ohne Konto über den Teilen-Link (Codereview 2026-09-29, N3-002).
+                    var sanCount = PgnParser.ExtractMainlineSans(moveText).Count;
+                    if (sanCount > MaxPlies) err = "tooLong";
                     else
                     {
-                        sans = SavedGameService.SansOf(start, uci);
-                        if (sans.Count != uci.Count) { err = "illegal"; sans = null; }
+                        // Nur ein Ergebnis („1-0", „*") ist KEINE Partie mit illegalem Zug — TryExtractUciMainline meldet beides null.
+                        var uci = sanCount == 0 ? new List<string>() : PgnParser.TryExtractUciMainline(start, moveText);
+                        if (uci == null) err = "illegal";
+                        else if (uci.Count == 0) err = "noMoves";
+                        else
+                        {
+                            sans = SavedGameService.SansOf(start, uci);
+                            if (sans.Count != uci.Count) { err = "illegal"; sans = null; }
+                        }
                     }
                 }
                 catch (Exception) { err = "illegal"; sans = null; }

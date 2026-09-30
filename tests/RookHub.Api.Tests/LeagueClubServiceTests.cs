@@ -394,6 +394,44 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Empty(_db.LeagueClubGames);
     }
 
+    /// <summary>Springer hin und her (ohne AutoEndgameRules endet das nie), <paramref name="plies"/> Halbzüge, dann
+    /// <paramref name="tail"/> — mit Zugnummern.</summary>
+    private static string Pendulum(int plies, string? tail = null)
+    {
+        var cycle = new[] { "Nf3", "Nf6", "Ng1", "Ng8" };
+        var sb = new System.Text.StringBuilder();
+        var all = Enumerable.Range(0, plies).Select(i => cycle[i % 4]).Concat(tail is null ? Array.Empty<string>() : new[] { tail });
+        var i = 0;
+        foreach (var san in all)
+        {
+            if (i % 2 == 0) sb.Append(i / 2 + 1).Append(". ");
+            sb.Append(san).Append(' ');
+            i++;
+        }
+        return sb.Append("1-0").ToString();
+    }
+
+    /// <summary>N3-002: die Länge zählt VOR dem Nachspielen, wie beim Partieformular. Vorher spielte Gera.Chess eine
+    /// überlange Hauptvariante erst ganz nach — bis rund eine Million Halbzüge je Aufruf, auch anonym über den
+    /// Teilen-Link —, bevor „tooLong" griff. Die dritte Partie ist am Ende illegal: nachgespielt hieße sie „illegal".</summary>
+    [Fact]
+    public async Task Preview_OverlongGame_IsTooLong_BeforeItIsReplayed()
+    {
+        var me = await SeedAsync();
+        var pgn = string.Join("\n",
+            Pgn("Oberschmid, Patrik", "Hengl, Philip", Pendulum(LeagueClubService.MaxPlies)),        // genau am Deckel
+            Pgn("Oberschmid, Patrik", "Hengl, Philip", Pendulum(LeagueClubService.MaxPlies + 1)),    // einer darüber
+            Pgn("Oberschmid, Patrik", "Hengl, Philip", Pendulum(20_000, tail: "Ke3")));             // riesig, am Ende illegal
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var p = await Club().PreviewAsync(me, pgn);
+        sw.Stop();
+
+        Assert.Equal(new string?[] { null, "tooLong", "tooLong" }, p.Games.Select(g => g.Error));
+        Assert.Equal(LeagueClubService.MaxPlies, p.Games[0].Plies);
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10), $"Übersicht {sw.Elapsed.TotalMilliseconds:F0} ms");
+    }
+
     [Fact]
     public async Task Preview_ResultOnlyGame_IsNoMoves_AndABomDoesNotShiftTheNumbers()
     {
