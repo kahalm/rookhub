@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Filters;
@@ -26,7 +27,15 @@ public class TournamentMonitorController : BaseApiController
         _logger = logger;
     }
 
+    /// <summary>
+    /// Aktive Runden-Monitore je Konto. Jeder Monitor laesst den Crawler alle 30 s eine chess-results-Seite
+    /// holen (rounds/check, 60 s gecacht) — ohne Deckel gehoerte der chess-results-Takt mit ein paar Dutzend
+    /// Monitoren einem einzigen Konto (Codereview A5-004; vgl. MaxTracked im Turnierverlauf).
+    /// </summary>
+    internal const int MaxActiveMonitorsPerUser = 10;
+
     [HttpPost("{tournamentId}")]
+    [EnableRateLimiting(RateLimitPartitions.CrawlerRequestPolicy)]
     public async Task<IActionResult> Activate(string tournamentId)
     {
         if (!TournamentIdValidator.IsValid(tournamentId))
@@ -49,6 +58,12 @@ public class TournamentMonitorController : BaseApiController
                 lastKnownRounds = monitor.LastKnownRounds
             });
         }
+
+        // Verlaengern (oben) geht immer; ein NEUER Monitor nur unter dem Deckel — vor dem ersten Crawler-Aufruf.
+        var now = DateTime.UtcNow;
+        if (await _db.TournamentMonitors.CountAsync(m => m.UserId == userId && m.ActiveUntil >= now)
+            >= MaxActiveMonitorsPerUser)
+            return Conflict(new { message = $"Maximum of {MaxActiveMonitorsPerUser} active round monitors per user reached." });
 
         // Fetch current round count from crawler
         int knownRounds = 0;

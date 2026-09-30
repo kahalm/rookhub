@@ -35,6 +35,16 @@ public static class RateLimitPartitions
     /// <summary>Die übrigen offenen Endpunkte (Client-Log, Bot-Statistik, Token-Test, Bestandssuche, Extension-Senke).</summary>
     public const int AnonymousMiscPermitPerMinute = 30;
 
+    /// <summary>Policy-Name der nutzer-ausgeloesten Crawler-Auftraege (Crawl, Spieler-Details, Vereine nachtragen,
+    /// Runden-Monitor einschalten).</summary>
+    public const string CrawlerRequestPolicy = "user-crawl";
+    /// <summary>Die Crawler-Warteschlange (500 Plaetze) und der chess-results-Takt gehoeren allen — auch den
+    /// Hintergrunddiensten (Runden-Monitor, Abo-Abgleich, Turnierverlauf). Vorher galt fuer diese Endpunkte nur der
+    /// globale Deckel von 100/min je Adresse: ein einziges Konto fuellte die Warteschlange in rund fuenf Minuten
+    /// (Codereview A5-004). Ein Turnier oeffnen, aktualisieren, Vereine nachtragen, Monitor einschalten sind je ein
+    /// Auftrag — 10 je Minute bleibt weit darueber.</summary>
+    public const int CrawlerRequestPermitPerMinute = 10;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -60,6 +70,11 @@ public static class RateLimitPartitions
 
     public static RateLimitPartition<string> AnonymousMisc(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), AnonymousMiscPermitPerMinute * scale);
+
+    /// <summary>Crawler-Auftraege je Konto (alle Endpunkte mit <see cref="CrawlerRequestPolicy"/> teilen EIN Fenster);
+    /// ohne Anmeldung — die Endpunkte verlangen sie — je Adresse.</summary>
+    public static RateLimitPartition<string> CrawlerRequest(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), CrawlerRequestPermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

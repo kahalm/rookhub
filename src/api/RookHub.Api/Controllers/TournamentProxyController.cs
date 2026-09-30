@@ -133,6 +133,7 @@ public class TournamentProxyController : ControllerBase
     /// vom Crawler, durchgereicht.
     /// </summary>
     [HttpPost("{id}/clubs")]
+    [EnableRateLimiting(RateLimitPartitions.CrawlerRequestPolicy)]
     public async Task<IActionResult> FillClubs(string id)
     {
         if (ValidateId(id) is { } err) return err;
@@ -141,6 +142,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [HttpPost("crawl")]
+    [EnableRateLimiting(RateLimitPartitions.CrawlerRequestPolicy)]
     public async Task<IActionResult> Crawl([FromBody] JsonElement body)
     {
         if (body.ValueKind != JsonValueKind.Object ||
@@ -167,6 +169,7 @@ public class TournamentProxyController : ControllerBase
     }
 
     [HttpPost("crawl/player-details")]
+    [EnableRateLimiting(RateLimitPartitions.CrawlerRequestPolicy)]
     public async Task<IActionResult> CrawlPlayerDetails([FromBody] JsonElement body)
     {
         if (body.ValueKind != JsonValueKind.Object ||

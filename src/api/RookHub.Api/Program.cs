@@ -813,6 +813,9 @@ try
         // bewusst ohne Login erreichbar, aber gedrosselt, damit der dahinterliegende
         // Crawler (chess-results.com) nicht ungebremst missbraucht werden kann.
         options.AddPolicy("anonymous-tournament", ctx => PerIpFixedWindow(ctx, 60 * permitScale));
+        // Nutzer-ausgeloeste Crawler-Auftraege (crawl, crawl/player-details, {id}/clubs, Monitor einschalten): je KONTO,
+        // zusaetzlich zum globalen Deckel je IP — die Crawler-Warteschlange teilen sich alle (RateLimitPartitions).
+        options.AddPolicy("user-crawl", ctx => RookHub.Api.Services.RateLimitPartitions.CrawlerRequest(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 

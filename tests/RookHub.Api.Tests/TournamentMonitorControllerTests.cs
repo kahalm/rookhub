@@ -97,6 +97,51 @@ public class TournamentMonitorControllerTests : IDisposable
         Assert.Equal(4, (await _db.TournamentMonitors.SingleAsync()).LastKnownRounds);
     }
 
+    private async Task SeedActiveMonitorsAsync(int userId, int count)
+    {
+        for (var i = 0; i < count; i++)
+            _db.TournamentMonitors.Add(new TournamentMonitor
+            {
+                UserId = userId, CrawlerTournamentId = (1000 + i).ToString(), CrawlerTournamentDbId = 100 + i,
+                ActiveUntil = DateTime.UtcNow.AddMinutes(30),
+            });
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// A5-004: ein Konto darf nicht beliebig viele Monitore haben — jeder laesst den Crawler alle 30 s eine
+    /// chess-results-Seite holen. Der elfte neue Monitor wird mit 409 abgewiesen, bevor der Crawler gefragt wird.
+    /// </summary>
+    [Fact]
+    public async Task Activate_New_AtTheCap_Returns409WithoutHittingCrawler()
+    {
+        await SeedActiveMonitorsAsync(1, TournamentMonitorController.MaxActiveMonitorsPerUser);
+
+        var res = await Controller(1, _ => throw new Exception("crawler should not be called")).Activate("99999");
+
+        var conflict = Assert.IsType<ConflictObjectResult>(res);
+        Assert.Contains("Maximum of 10", conflict.Value!.ToString());
+        Assert.Equal(TournamentMonitorController.MaxActiveMonitorsPerUser, await _db.TournamentMonitors.CountAsync());
+    }
+
+    /// <summary>Verlaengern geht auch am Deckel, abgelaufene Monitore und die anderer Konten zaehlen nicht.</summary>
+    [Fact]
+    public async Task Activate_AtTheCap_ExtendingWorks_ExpiredAndForeignMonitorsDontCount()
+    {
+        await SeedActiveMonitorsAsync(1, TournamentMonitorController.MaxActiveMonitorsPerUser);
+        Assert.IsType<OkObjectResult>(
+            await Controller(1, _ => throw new Exception("crawler should not be called")).Activate("1000"));
+
+        await SeedActiveMonitorsAsync(2, TournamentMonitorController.MaxActiveMonitorsPerUser - 1);
+        _db.TournamentMonitors.Add(new TournamentMonitor
+        {
+            UserId = 2, CrawlerTournamentId = "5555", CrawlerTournamentDbId = 55, ActiveUntil = DateTime.UtcNow.AddMinutes(-1),
+        });
+        await _db.SaveChangesAsync();
+        Func<string, string> resp = path => path.EndsWith("/rounds/check") ? "{\"knownRounds\":1}" : "{\"id\":42}";
+        Assert.IsType<OkObjectResult>(await Controller(2, resp).Activate("12345"));
+    }
+
     [Fact]
     public async Task GetStatus_ExpiredMonitor_ReturnsOk()
     {
