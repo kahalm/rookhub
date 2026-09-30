@@ -50,7 +50,10 @@ public class ApiTokenService
         if (!AllowedScopes.Contains(effectiveScope))
             throw new InvalidOperationException($"Unsupported scope: {effectiveScope}.");
 
-        var count = await _db.UserApiTokens.CountAsync(t => t.UserId == userId);
+        // Abgelaufene Tokens zählen nicht mit: sie authentifizieren nichts mehr, und wer nach Ablauf
+        // neu verbindet (RepCheck), soll nicht erst im Profil aufräumen müssen.
+        var now = DateTime.UtcNow;
+        var count = await _db.UserApiTokens.CountAsync(t => t.UserId == userId && (t.ExpiresAt == null || t.ExpiresAt >= now));
         if (count >= MaxTokensPerUser)
             throw new InvalidOperationException($"Maximum of {MaxTokensPerUser} tokens per user reached.");
 

@@ -222,6 +222,29 @@ public class ExtensionController : BaseApiController
     }
 
     /// <summary>
+    /// „Trennen" in RepCheck: widerruft GENAU den API-Token, mit dem diese Anfrage kommt — ohne Id, ein
+    /// Extension-Token kann nur sich selbst widerrufen (die übrigen verwaltet das Profil, das der Scope-Zaun
+    /// für Tokens sperrt). 204 auch, wenn der Token inzwischen schon weg war; 400 ohne API-Token (JWT), da gibt
+    /// es nichts „selbst" zu widerrufen. Der Dienst kommt per <c>[FromServices]</c>, damit der Konstruktor nicht wächst.
+    /// </summary>
+    [HttpDelete("token/self")]
+    public async Task<IActionResult> RevokeOwnToken([FromServices] ApiTokenService tokens)
+    {
+        if (!int.TryParse(User.FindFirst(ApiTokenAuthenticationHandler.TokenIdClaim)?.Value,
+                System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var tokenId))
+            return BadRequest(new { message = "Only an API token can revoke itself." });
+        try
+        {
+            await tokens.RevokeAsync(GetUserId(), tokenId);
+        }
+        catch (KeyNotFoundException)
+        {
+            // schon widerrufen (paralleles „Trennen", Profil) — das Ziel ist erreicht
+        }
+        return NoContent();
+    }
+
+    /// <summary>
     /// Speichert die aktuell auf chess.com/lichess angeschaute Partie (Button „Partie speichern").
     /// Der Client schickt die SAN-Zugliste + Best-Effort-Metadaten; der Server baut das PGN und
     /// vergibt ein ShareToken. Dedup über (User, Source, ExternalId). Sichtbar im Bereich „Partien".

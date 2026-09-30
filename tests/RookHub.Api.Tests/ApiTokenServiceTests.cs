@@ -100,6 +100,27 @@ public class ApiTokenServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_Limit_DoesNotCountExpiredTokens()
+    {
+        // S1-007: abgelaufene Tokens authentifizieren nichts mehr — wer nach Ablauf neu verbindet (RepCheck,
+        // 365 Tage), soll nicht erst im Profil aufraeumen muessen, bevor die Ein-Klick-Verbindung wieder geht.
+        var uid = await CreateUserAsync();
+        for (int i = 0; i < ApiTokenService.MaxTokensPerUser; i++)
+            await _svc.CreateAsync(uid, "n" + i, null, 365);
+        foreach (var t in _db.UserApiTokens.Where(t => t.UserId == uid).Take(ApiTokenService.MaxTokensPerUser - 1))
+            t.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await _db.SaveChangesAsync();
+
+        var created = await _svc.CreateAsync(uid, "RepCheck (Chrome)", "extension", 365);
+
+        Assert.NotNull(created.RawToken);
+        // Die noch gueltigen zaehlen weiter: 1 alter + der neue = 2 von 20, bis 20 fehlen noch 18.
+        for (int i = 0; i < ApiTokenService.MaxTokensPerUser - 2; i++)
+            await _svc.CreateAsync(uid, "m" + i, null, null);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreateAsync(uid, "overflow", null, null));
+    }
+
+    [Fact]
     public async Task ListAsync_OnlyReturnsOwnTokens_NewestFirst()
     {
         var alice = await CreateUserAsync("alice");

@@ -80,6 +80,19 @@ public class PatScopeFenceTests
     }
 
     [Fact]
+    public async Task ExtensionToken_MayRevokeItself()
+    {
+        // S1-007: „Trennen" in RepCheck widerruft den eigenen Token — DELETE /api/profile/tokens/{id} sperrt der
+        // Zaun (s. u.), der Selbst-Widerruf liegt deshalb unter /api/extension und muss durchgehen.
+        var r = await RunAsync("/api/extension/token/self", scope: "extension", method: "DELETE");
+        Assert.True(r.Passed);
+
+        var engine = await RunAsync("/api/extension/token/self", scope: "engine", method: "DELETE");
+        Assert.False(engine.Passed);
+        Assert.Equal(StatusCodes.Status403Forbidden, engine.Status);
+    }
+
+    [Fact]
     public async Task ExtensionToken_IsRejectedOnProfile()
     {
         var r = await RunAsync("/api/profile", scope: "extension");

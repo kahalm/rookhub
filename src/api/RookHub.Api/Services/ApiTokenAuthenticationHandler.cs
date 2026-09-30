@@ -22,6 +22,10 @@ public class ApiTokenAuthenticationOptions : AuthenticationSchemeOptions { }
 public class ApiTokenAuthenticationHandler : AuthenticationHandler<ApiTokenAuthenticationOptions>
 {
     public const string SchemeName = "ApiToken";
+    /// <summary>Id des benutzten Tokens (<see cref="Models.UserApiToken.Id"/>) — damit
+    /// <c>DELETE /api/extension/token/self</c> genau DIESEN Token widerrufen kann, ohne dass der
+    /// Client eine Id mitschickt (ein Extension-Token soll nur sich selbst widerrufen können).</summary>
+    public const string TokenIdClaim = "api_token_id";
     private readonly ApiTokenService _tokens;
     private readonly Data.AppDbContext _db;
 
@@ -69,6 +73,7 @@ public class ApiTokenAuthenticationHandler : AuthenticationHandler<ApiTokenAuthe
             new(ClaimTypes.NameIdentifier, token.UserId.ToString()),
             new(ClaimTypes.Name, username),
             new("scope", token.Scope),
+            new(TokenIdClaim, token.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)),
         };
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);

@@ -109,4 +109,16 @@ public class ApiTokenAuthenticationHandlerTests : IDisposable
         Assert.Equal(userId.ToString(), p.FindFirstValue(ClaimTypes.NameIdentifier));
         Assert.Equal("extension", p.FindFirstValue("scope"));
     }
+
+    [Fact]
+    public async Task ValidToken_CarriesItsOwnTokenId()
+    {
+        // S1-007: DELETE /api/extension/token/self widerruft genau DIESEN Token — ohne Id vom Client.
+        var (userId, raw) = await MintToken();
+        var id = (await _db.UserApiTokens.SingleAsync(t => t.UserId == userId)).Id;
+
+        var res = await Authenticate($"Bearer {raw}");
+
+        Assert.Equal(id.ToString(), res.Principal!.FindFirstValue(ApiTokenAuthenticationHandler.TokenIdClaim));
+    }
 }

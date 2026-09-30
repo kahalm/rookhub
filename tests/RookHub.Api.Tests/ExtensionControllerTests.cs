@@ -131,6 +131,71 @@ public class ExtensionControllerTests : IDisposable
         return user;
     }
 
+    // ---- S1-007: „Trennen" widerruft den eigenen Token ----
+
+    /// <summary>Anmeldung wie ueber den ApiToken-Handler: scope + Id des benutzten Tokens.</summary>
+    private void SetPatUser(int userId, int tokenId)
+    {
+        SetUser(userId, scope: "extension");
+        ((ClaimsIdentity)_controller.User.Identity!).AddClaim(
+            new Claim(ApiTokenAuthenticationHandler.TokenIdClaim, tokenId.ToString()));
+    }
+
+    [Fact]
+    public async Task RevokeOwnToken_RevokesExactlyTheCallingToken()
+    {
+        var user = await CreateUserAsync();
+        var tokens = new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance);
+        var chrome = await tokens.CreateAsync(user.Id, "RepCheck (Chrome)", "extension", 365);
+        var firefox = await tokens.CreateAsync(user.Id, "RepCheck (Firefox)", "extension", 365);
+        SetPatUser(user.Id, chrome.Id);
+
+        var result = await _controller.RevokeOwnToken(tokens);
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Null(await tokens.FindValidAsync(chrome.RawToken));        // „Trennen" gilt auch serverseitig
+        Assert.NotNull(await tokens.FindValidAsync(firefox.RawToken));    // der andere Browser bleibt verbunden
+    }
+
+    [Fact]
+    public async Task RevokeOwnToken_IsNoContent_WhenTheTokenIsAlreadyGone()
+    {
+        // Paralleles „Trennen" oder Widerruf im Profil zwischen Anmeldung und Aufruf: das Ziel ist erreicht.
+        var user = await CreateUserAsync();
+        var tokens = new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance);
+        var created = await tokens.CreateAsync(user.Id, "RepCheck (Chrome)", "extension", 365);
+        await tokens.RevokeAsync(user.Id, created.Id);
+        SetPatUser(user.Id, created.Id);
+
+        Assert.IsType<NoContentResult>(await _controller.RevokeOwnToken(tokens));
+    }
+
+    [Fact]
+    public async Task RevokeOwnToken_NeverTouchesAnotherUsersToken()
+    {
+        var alice = await CreateUserAsync("alice");
+        var bob = await CreateUserAsync("bob");
+        var tokens = new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance);
+        var bobs = await tokens.CreateAsync(bob.Id, "RepCheck (Chrome)", "extension", 365);
+        SetPatUser(alice.Id, bobs.Id);
+
+        Assert.IsType<NoContentResult>(await _controller.RevokeOwnToken(tokens));
+        Assert.NotNull(await tokens.FindValidAsync(bobs.RawToken));
+    }
+
+    [Fact]
+    public async Task RevokeOwnToken_WithAJwt_IsBadRequest_AndRevokesNothing()
+    {
+        // Ohne API-Token gibt es nichts „selbst" zu widerrufen — und ein JWT darf hier nicht irgendeinen Token treffen.
+        var user = await CreateUserAsync();
+        var tokens = new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance);
+        var created = await tokens.CreateAsync(user.Id, "RepCheck (Chrome)", "extension", 365);
+        SetUser(user.Id);
+
+        Assert.IsType<BadRequestObjectResult>(await _controller.RevokeOwnToken(tokens));
+        Assert.NotNull(await tokens.FindValidAsync(created.RawToken));
+    }
+
     [Fact]
     public async Task GetRepertoires_ReturnsOk()
     {
