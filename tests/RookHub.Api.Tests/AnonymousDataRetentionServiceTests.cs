@@ -120,6 +120,97 @@ public class AnonymousDataRetentionServiceTests : IDisposable
         Assert.True(registration < chessableSwitch, "Retention hängt am Chessable-Schalter");
     }
 
+    // ---- Guard (A8-001): nichts hinter dem Chessable-Schalter trägt Pflichten des Extension-Wegs ----
+
+    /// <summary>Was der Extension-Weg (<c>/api/extension/*</c>, läuft auch mit <c>Chessable:Enabled=false</c>) an
+    /// Hintergrundpflichten hat: die Anon-getReview-Senke samt Retention und die Browser-Import-Sitzungen. Zweimal
+    /// hing so eine Pflicht an einem Dienst hinter dem Schalter und fiel auf PROD (Schalter seit 2026-09-09 aus)
+    /// still aus — der Watchdog bis v0.484.3, die Anon-Retention bis W2 A3-003.</summary>
+    private static readonly string[] ExtensionPathDuties =
+    {
+        "AnonymousChessableReviewLines",
+        "PruneAnonOlderThanAsync", "PruneUnlinkedAnonOlderThanAsync",
+        "CloseExpiredBrowserSessionsAsync", "FailBrowserImportAsync",
+    };
+
+    [Fact]
+    public void ChessableGatedHostedServices_CarryNoDutyOfTheExtensionPath()
+    {
+        var gated = ChessableGatedHostedServices(File.ReadAllText(ProgramCs()));
+        Assert.NotEmpty(gated);   // sonst fände der Parser den Schalter-Block nicht mehr und prüfte nichts
+
+        foreach (var service in gated)
+        {
+            var code = SourceOf(service);
+            foreach (var duty in ExtensionPathDuties)
+                Assert.False(code.Contains(duty, StringComparison.Ordinal),
+                    $"{service} ist nur mit Chessable:Enabled=true registriert, trägt aber {duty} (Extension-Weg, läuft auch mit Schalter aus)");
+        }
+
+        // Die Pflichten haben einen IMMER laufenden Träger.
+        foreach (var (owner, duty) in new[]
+                 {
+                     ("AnonymousDataRetentionService", "PruneAnonOlderThanAsync"),
+                     ("AnonymousDataRetentionService", "PruneUnlinkedAnonOlderThanAsync"),
+                     ("ChessableImportWatchdogService", "CloseExpiredBrowserSessionsAsync"),
+                 })
+        {
+            Assert.DoesNotContain(owner, gated);
+            Assert.Contains(duty, SourceOf(owner), StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Die Hosted Services unter <c>if (chessableEnabled)</c> — als Block oder als einzelne Anweisung.</summary>
+    private static List<string> ChessableGatedHostedServices(string programCs)
+    {
+        var src = StripLineComments(programCs);
+        var names = new List<string>();
+        const string condition = "if (chessableEnabled)";
+        for (var at = src.IndexOf(condition, StringComparison.Ordinal); at >= 0;
+             at = src.IndexOf(condition, at + condition.Length, StringComparison.Ordinal))
+        {
+            var start = at + condition.Length;
+            while (start < src.Length && char.IsWhiteSpace(src[start])) start++;
+            int end;
+            if (src[start] == '{')
+            {
+                var depth = 0;
+                for (end = start; end < src.Length; end++)
+                {
+                    if (src[end] == '{') depth++;
+                    else if (src[end] == '}' && --depth == 0) break;
+                }
+            }
+            else end = src.IndexOf(';', start);
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(
+                         src[start..end], @"AddHostedService<([\w.]+)>"))
+                names.Add(m.Groups[1].Value.Split('.')[^1]);
+        }
+        return names;
+    }
+
+    /// <summary>Quelltext der Klasse <paramref name="className"/> (alle Dateien, die sie deklarieren), ohne Kommentare.</summary>
+    private static string SourceOf(string className)
+    {
+        var apiDir = Path.GetDirectoryName(ProgramCs())!;
+        var declaration = new System.Text.RegularExpressions.Regex($@"\bclass\s+{className}\b");
+        var files = Directory.EnumerateFiles(apiDir, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                        && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+            .Select(File.ReadAllText)
+            .Where(code => declaration.IsMatch(code))
+            .ToList();
+        Assert.True(files.Count > 0, $"Quelltext von {className} nicht gefunden");
+        return StripLineComments(string.Join("\n", files));
+    }
+
+    private static string StripLineComments(string code) =>
+        string.Join("\n", code.Split('\n').Select(l =>
+        {
+            var c = l.IndexOf("//", StringComparison.Ordinal);
+            return c >= 0 ? l[..c] : l;
+        }));
+
     private static string ProgramCs([CallerFilePath] string thisFile = "")
     {
         var dir = Path.GetDirectoryName(thisFile);
