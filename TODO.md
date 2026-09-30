@@ -1177,12 +1177,16 @@ eine spaetere „laeuft gerade"-Ansicht dagegen die Hauptquelle.
   schreibt, den ein Ingest-Prozessor nicht als verschachteltes Feld sieht. Folge: Abfragen stimmen zufällig
   (ES führt beide Werte im selben Feld zusammen), aber wer in Kibana draufschaut, sieht einen 502 als
   „Information"; Level-Aggregationen zählen jedes Dokument doppelt (179 statt 103 Treffer).
-  **Fix getestet, NICHT ausgerollt** (ES-Infrastruktur, nicht im Repo — vgl. `init-kibana.sh ≠ Repo`):
-  ein Script-Prozessor VOR [19], der den gepunkteten Schlüssel einsammelt —
-  `if (ctx.containsKey("log.level")) { if (ctx.log == null) { ctx.log = [:]; } ctx.log.level = ctx.remove("log.level"); }`
-  In `_simulate` gegen 4 Fälle geprüft: gepunktet Error/Warning → verschachtelt korrekt, ohne Level → Vorgabe
-  „Information", Altformat `level` → weiterhin übernommen. Braucht deine Freigabe + einen Reindex/Neu-Ingest,
-  falls die Historie auch stimmen soll. Zu prüfen: ob der log-watcher auf dem verschachtelten Feld alarmiert.
+  **Fix im Repo, NICHT ausgerollt**: log-watcher-Commit `c471764` [W4s S5-021] — Quelle ist
+  `log-watcher/schema/logs-schema-normalize.pipeline.json` (spielt `schema/apply.sh` per PUT komplett ein; ein Fix
+  nur in ES wäre beim nächsten Lauf wieder weg). Ein Script-Prozessor direkt VOR dem Information-Default (neu [19],
+  Default jetzt [20]) sammelt den gepunkteten Schlüssel ein, auch gegen einen früher gesetzten Default (Reindex);
+  Test `log-watcher/tests/test_schema_pipeline.py` (statisch + `_simulate`: gepunktet Error/Warning → verschachtelt,
+  ohne Level → „Information", Altformat `level` → übernommen). OFFEN (Ops, braucht deine Freigabe): `apply.sh`
+  gegen Prod-/Dev-ES — rollt auch den live fehlenden LogTags-Prozessor (284faeb) und das Heartbeat-Tag (S5-008)
+  mit aus; die Historie bleibt ohne Reindex/Neu-Ingest doppelt. Wächter-Frage beantwortet: nicht betroffen —
+  `log.level` ist ein mehrwertiges keyword, rules.py/digest.py werten nur Error/Fatal/Warning aus, die Alarme
+  stimmen; aufgebläht ist nur „Information" in der levels-Tabelle (Mail/LLM).
   (vorher 2026-08-09: 0 Errors, 82 Warns; Disk-HIGH-Fehlalarme des log-watchers gefixt)
 - [ ] Frameworks + Abhängigkeiten aktualisieren — letzter: **2026-08-09** → In-Range ueberall:
   Angular 22.0→22.1, .NET-Pakete 10.0.10 (rookhub+crawler+piratechess), Anthropic 12.40,
