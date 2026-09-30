@@ -165,13 +165,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     internal static bool IsStale(DateTime? lastSweptUtc, DateTime nowUtc, int catchUpAfterHours) =>
         lastSweptUtc is not { } last || nowUtc - last >= TimeSpan.FromHours(catchUpAfterHours);
 
-    public static TimeSpan TimeUntilNextRun(DateTime nowUtc)
-    {
-        var todayRun = nowUtc.Date + RunAtUtc;
-        var next = nowUtc < todayRun ? todayRun : todayRun.AddDays(1);
-        var delay = next - nowUtc;
-        return delay < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : delay;
-    }
+    public static TimeSpan TimeUntilNextRun(DateTime nowUtc) => DailySchedule.TimeUntilNextRun(nowUtc, RunAtUtc);
 
     private async Task RunOnceAsync(CancellationToken ct)
     {

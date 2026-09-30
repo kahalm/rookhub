@@ -331,6 +331,12 @@ try
         tracker.OnNotifyFailed += ex => log.LogError(ex, "Benachrichtigung über Live-Analyse fehlgeschlagen");
         return tracker;
     });
+    // Was aus dem ExecuteAsync eines Hintergrunddienstes fliegt, beendet den GANZEN Host. Das ist der .NET-Default,
+    // hier ausdrücklich und bewusst: ein still toter Worker bliebe bis zum nächsten Deploy tot, der Container dagegen
+    // startet neu (restart: unless-stopped). Deshalb darf ein Dienst nur beim ECHTEN Shutdown werfen — genau diese
+    // eine Fehlerpolitik setzt PeriodicWorker um (Codereview 2026-09-29, A8-008).
+    builder.Services.Configure<HostOptions>(o =>
+        o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost);
     // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
     // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension
     // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt

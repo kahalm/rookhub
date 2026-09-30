@@ -16,11 +16,10 @@ namespace RookHub.Api.Services;
 /// bis zur naechsten Nacht liegen bleiben — er kostet einen Listenabruf je Konto, und die Karten
 /// sind ohnehin gedeckelt.</para>
 /// </summary>
-public class PlayerHistoryScheduler : BackgroundService
+public class PlayerHistoryScheduler : PeriodicWorker
 {
     public static readonly TimeSpan RunAtUtc = TimeSpan.FromHours(4.5);
 
-    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PlayerHistoryScheduler> _logger;
     private readonly bool _enabled;
     private readonly int _maxCards;
@@ -31,8 +30,8 @@ public class PlayerHistoryScheduler : BackgroundService
         IServiceScopeFactory scopeFactory,
         ILogger<PlayerHistoryScheduler> logger,
         IConfiguration configuration)
+        : base(scopeFactory, logger)
     {
-        _scopeFactory = scopeFactory;
         _logger = logger;
         _enabled = configuration.GetValue("PlayerHistory:Enabled", true);
 
@@ -50,82 +49,34 @@ public class PlayerHistoryScheduler : BackgroundService
             Math.Clamp(configuration.GetValue("PlayerHistory:StartupDelayMinutes", 10), 0, 720));
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override bool Enabled => _enabled;
+    protected override string DisabledMessage => "Turnierverlauf: Hintergrund-Durchgang per Konfiguration abgeschaltet";
+    protected override WorkerSchedule Schedule { get; } = WorkerSchedule.DailyAtUtc(RunAtUtc);
+    protected override WorkerStart Start => _startupDelay > TimeSpan.Zero ? WorkerStart.After(_startupDelay) : WorkerStart.OnSchedule;
+    protected override string FailureMessage => "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen";
+
+    public static TimeSpan TimeUntilNextRun(DateTime nowUtc) => DailySchedule.TimeUntilNextRun(nowUtc, RunAtUtc);
+
+    protected override async Task StepAsync(IServiceProvider services, CancellationToken ct)
     {
-        if (!_enabled)
-        {
-            _logger.LogInformation("Turnierverlauf: Hintergrund-Durchgang per Konfiguration abgeschaltet");
-            return;
-        }
+        var history = services.GetRequiredService<TournamentHistoryService>();
 
-        if (_startupDelay > TimeSpan.Zero)
-        {
-            try
-            {
-                await Task.Delay(_startupDelay, stoppingToken);
-            }
-            catch (TaskCanceledException)
-            {
-                return;
-            }
-            await RunOnceAsync(stoppingToken);
-        }
+        var sweep = await history.RefreshAllAsync(_maxCards, ct);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await Task.Delay(TimeUntilNextRun(DateTime.UtcNow), stoppingToken);
-            }
-            catch (TaskCanceledException)
-            {
-                return;
-            }
-            await RunOnceAsync(stoppingToken);
-        }
-    }
-
-    public static TimeSpan TimeUntilNextRun(DateTime nowUtc)
-    {
-        var todayRun = nowUtc.Date + RunAtUtc;
-        var next = nowUtc < todayRun ? todayRun : todayRun.AddDays(1);
-        var delay = next - nowUtc;
-        return delay < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : delay;
-    }
-
-    private async Task RunOnceAsync(CancellationToken ct)
-    {
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var history = scope.ServiceProvider.GetRequiredService<TournamentHistoryService>();
-
-            var sweep = await history.RefreshAllAsync(_maxCards, ct);
-
-            if (sweep.Unavailable > 0)
-                _logger.LogWarning(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet, {Unavailable} Trefferlisten nicht erreichbar",
-                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified, sweep.Unavailable);
-            else
-                _logger.LogInformation(
-                    "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet",
-                    sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified);
-
-            // NACH den Listen: die haben eben erst die neuen Turniere in die Verlaeufe gebracht.
-            var crawls = await history.CrawlHistoryTournamentsAsync(_maxTournamentCrawls, ct);
+        if (sweep.Unavailable > 0)
+            _logger.LogWarning(
+                "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet, {Unavailable} Trefferlisten nicht erreichbar",
+                sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified, sweep.Unavailable);
+        else
             _logger.LogInformation(
-                "Turnierverlauf: {Missing} fehlende und {Refreshed} laufende Turniere beim Crawler angefordert ({Known} schon da)",
-                crawls.Missing, crawls.Refreshed, crawls.Known);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Herunterfahren — kein Fehler.
-        }
-        catch (Exception ex)
-        {
-            // Alles fangen: BackgroundServiceExceptionBehavior ist StopHost, ein HttpClient-Timeout
-            // wuerde sonst die ganze API mitnehmen.
-            _logger.LogError(ex, "Turnierverlauf: Hintergrund-Durchgang fehlgeschlagen");
-        }
+                "Turnierverlauf: {Players} Konten aufgefrischt, {Cards} Spielerkarten und {TimeControls} Bedenkzeiten geholt, {Reclassified} neu eingeordnet",
+                sweep.Players, sweep.Cards, sweep.TimeControls, sweep.Reclassified);
+
+        // NACH den Listen: die haben eben erst die neuen Turniere in die Verlaeufe gebracht.
+        var crawls = await history.CrawlHistoryTournamentsAsync(_maxTournamentCrawls, ct);
+        _logger.LogInformation(
+            "Turnierverlauf: {Missing} fehlende und {Refreshed} laufende Turniere beim Crawler angefordert ({Known} schon da)",
+            crawls.Missing, crawls.Refreshed, crawls.Known);
+        // Fehler und Herunterfahren behandelt PeriodicWorker (alles fangen ausser dem echten Shutdown).
     }
 }
