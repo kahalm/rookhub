@@ -363,6 +363,35 @@ describe('HandoffService', () => {
       await finish();
     });
 
+    it('Fund-Weg F1-003: per Sprung übernommen, in RookHub abgemeldet — kein Rücksprung ins Konto', async () => {
+      // Vereins-PC: angemeldet in RookHub, Klick auf „Turniere" (Code-Sprung), später in RookHub
+      // abgemeldet. Der Nächste öffnet die Turnierseite aus dem Verlauf und klickt „RookHub" — vorher
+      // holte der Rücksprung mit dem noch gültigen 30-Tage-Token einen Code fürs Konto des Vorgängers.
+      spyOnProperty(svc, 'partnerUrl', 'get').and.returnValue('https://rookhub.example');
+      const go = spyOn(svc as unknown as { go: (url: string) => void }, 'go');
+      history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
+
+      const done = svc.consumeIncoming();
+      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      await settle();
+      http.expectOne('/api/auth/session').flush(session);               // der Tausch legte das Cookie an
+      expect(await done).toBeTrue();
+      expect(auth.currentUser?.adopted).toBeTrue();
+
+      (svc as unknown as { lastCheck: number }).lastCheck = 0;           // Tab wieder offen
+      visible();
+      document.dispatchEvent(new Event('visibilitychange'));
+      http.expectOne('/api/auth/session').flush(null, noContent);        // RookHub hat das Cookie gelöscht
+      await settle();
+      expect(auth.currentUser).toBeNull();
+      http.expectOne('/api/auth/session/end').flush(null, noContent);
+
+      await svc.jump('dashboard');
+      http.expectNone('/api/auth/handoff');
+      expect(go).toHaveBeenCalledWith('https://rookhub.example/dashboard');
+      await finish();
+    });
+
     it('ohne Elterndomäne bleibt ein eingelöster Code eine gewöhnliche Anmeldung', async () => {
       // localhost, Dev über HTTP: dort gibt es nie ein Cookie, der Abgleich antwortete immer 204 —
       // und meldete sonst jeden ab, der per Sprung gekommen ist.
