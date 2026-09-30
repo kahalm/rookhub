@@ -2773,7 +2773,8 @@
         "illegal": "a move of the main line is not legal",
         "noMoves": "no moves",
         "tooLong": "more than 600 half-moves",
-        "badFen": "invalid starting position (FEN)"
+        "badFen": "invalid starting position (FEN)",
+        "quota": "your saved games are at the account limit — delete older ones first"
       },
       "error": {
         "empty": "Paste a PGN or choose a file first.",

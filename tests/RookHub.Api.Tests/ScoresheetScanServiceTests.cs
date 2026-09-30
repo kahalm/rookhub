@@ -691,6 +691,34 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(before, (await _db.SavedGames.SingleAsync()).Pgn);
     }
 
+    /// <summary>Korrigieren am Zeichendeckel des Kontos (A6-007): ein WACHSENDES PGN ist 400 <c>quota</c> und ändert
+    /// nichts — sonst blähte man viele kleine Partien hier einzeln auf. Ohne Wachstum geht Korrigieren weiter.</summary>
+    [Fact]
+    public async Task Update_GrowingPastTheCharsCap_Is400Quota_AndNothingChanges_ShrinkingStillWorks()
+    {
+        var u = await UserAsync();
+        var saved = await _games.SaveAsync(u.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "e5" } });
+        var before = (await _db.SavedGames.SingleAsync()).Pgn;
+        _games.PgnCharsPerUserCap = before.Length;                    // das Konto steht genau am Deckel
+
+        var grown = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4", Comment = new string('k', 200) }, new() { San = "e5" } },
+            Event = "RepCheck saved game",
+        });
+        var bad = Assert.IsType<BadRequestObjectResult>(grown.Result);
+        Assert.Equal("quota", bad.Value!.GetType().GetProperty("reason")!.GetValue(bad.Value));
+        Assert.Equal(before, (await _db.SavedGames.SingleAsync()).Pgn);
+
+        // Kürzer („?" statt des Event-Namens) geht auch am Deckel.
+        var shrunk = await Controller(u.Id).Update(saved.Id, new GameUpdateDto
+        {
+            Moves = new() { new() { San = "e4" }, new() { San = "e5" } },
+        });
+        Assert.IsType<OkObjectResult>(shrunk.Result);
+        Assert.True((await _db.SavedGames.SingleAsync()).Pgn.Length < before.Length);
+    }
+
     [Fact]
     public async Task Update_ForeignGame_Is404()
     {

@@ -40,6 +40,42 @@ public class SavedGameService
 
     private static readonly HashSet<string> AllowedResults = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
+    // ── Deckel je Konto (A6-007) ─────
+    // Ohne Deckel füllte ein Skript über POST /api/games/import (200 Partien je Aufruf, wechselnder Round-Header =
+    // nie Dublette, Kommentare und Kopfdaten ungekürzt) die Datenbank um mehrere GB je Stunde — die Liste zeigt
+    // ohnehin nur die neuesten 500, gelöscht wird nur von Hand.
+
+    /// <summary>So viele gespeicherte Partien hat ein Konto höchstens (alle Quellen zusammen). Darüber legen der
+    /// Import (<c>quota</c>) und „Partie speichern" (<see cref="SavedGameQuotaException"/>) nichts Neues mehr an;
+    /// Vorhandenes bleibt, Dubletten und Heilen gehen weiter.</summary>
+    public const int MaxGamesPerUser = 5_000;
+
+    /// <summary>So viele Zeichen PGN hat ein Konto höchstens gespeichert (Summe über alle Partien) — der Zähldeckel
+    /// allein ließe 5 000 × 5 Mio. Zeichen zu. 100 Mio. = 5 000 Partien à 20 000 Zeichen (stark kommentiert; ohne
+    /// Kommentare hat eine Partie rund 1 000). Geprüft beim Import und beim Korrigieren, wenn das PGN wächst;
+    /// „Partie speichern" braucht die Summe nicht, dort ist jede Partie klein (höchstens 600 Züge à
+    /// <see cref="MaxSanLength"/> Zeichen, gekürzte Kopfdaten).</summary>
+    public const long MaxPgnCharsPerUser = 100_000_000;
+
+    /// <summary>Längster angenommener Zug bei „Partie speichern" — ein SAN hat höchstens rund 8 Zeichen
+    /// (<c>exd8=Q+!</c>); mehr ginge ungeprüft ins PGN.</summary>
+    public const int MaxSanLength = 16;
+
+    /// <summary>Wirksamer Zähldeckel (<see cref="MaxGamesPerUser"/>); nur Tests setzen ihn klein.</summary>
+    internal int GamesPerUserCap { get; set; } = MaxGamesPerUser;
+
+    /// <summary>Wirksamer Zeichendeckel (<see cref="MaxPgnCharsPerUser"/>); nur Tests setzen ihn klein.</summary>
+    internal long PgnCharsPerUserCap { get; set; } = MaxPgnCharsPerUser;
+
+    /// <summary>Was ein Konto belegt: Zahl der Partien und Summe der PGN-Zeichen, in EINER Abfrage
+    /// (<c>COUNT(*)</c>, <c>SUM(CHAR_LENGTH(Pgn))</c>). Ohne Partien keine Zeile.</summary>
+    internal static IQueryable<SavedGameUsage> UsageQuery(AppDbContext db, int userId)
+        => db.SavedGames.AsNoTracking().Where(g => g.UserId == userId).GroupBy(g => g.UserId)
+            .Select(grp => new SavedGameUsage(grp.Count(), grp.Sum(g => (long)g.Pgn.Length)));
+
+    private async Task<SavedGameUsage> UsageAsync(int userId, CancellationToken ct = default)
+        => await UsageQuery(_db, userId).FirstOrDefaultAsync(ct) ?? new SavedGameUsage(0, 0);
+
     /// <summary>Normalisiert die gemeldete Herkunft auf <c>chess.com</c>/<c>lichess</c> (sonst null).</summary>
     public static string? NormalizeSource(string? source)
     {
@@ -62,6 +98,7 @@ public class SavedGameService
             .ToList();
         if (moves.Count == 0) throw new ArgumentException("No moves.");
         if (moves.Count > 600) throw new ArgumentException("Too many moves (max 600 plies).");
+        if (moves.Any(m => m.Length > MaxSanLength)) throw new ArgumentException("Invalid move.");
 
         var externalId = string.IsNullOrWhiteSpace(dto.ExternalId) ? null : dto.ExternalId.Trim();
 
@@ -98,6 +135,9 @@ public class SavedGameService
                 externalId = null;
             }
         }
+
+        if (await _db.SavedGames.CountAsync(g => g.UserId == userId) >= GamesPerUserCap)
+            throw new SavedGameQuotaException($"Saved game limit reached (max {GamesPerUserCap} per account).");
 
         var entity = new SavedGame
         {
@@ -581,6 +621,10 @@ public class SavedGameService
         var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
         if (games.Count > MaxImportGames) { result.Truncated = true; games = games.Take(MaxImportGames).ToList(); }
 
+        // Deckel je Konto (A6-007): Belegung EINMAL lesen und selbst fortschreiben. Zwei parallele Uploads desselben
+        // Kontos können ihn um höchstens einen Upload überschreiten — ein weicher Deckel, der das Füllen verhindert.
+        var (ownGames, ownChars) = await UsageAsync(userId, ct);
+
         var index = 0;
         foreach (var (rawHeaders, moveText) in games)
         {
@@ -617,6 +661,12 @@ public class SavedGameService
 
             var kept = new Dictionary<string, string>(headers.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
                 .ToDictionary(kv => kv.Key, kv => kv.Value.Trim()), StringComparer.Ordinal);
+            var gamePgn = BuildHeaderedPgn(kept, header, gameResult, sans, startFen, comments);
+            if (ownGames >= GamesPerUserCap || ownChars + gamePgn.Length > PgnCharsPerUserCap)
+            {
+                result.Failed.Add(Fail("quota"));
+                continue;
+            }
             var entity = new SavedGame
             {
                 UserId = userId,
@@ -626,7 +676,7 @@ public class SavedGameService
                 Black = Clip(H("Black"), 120),
                 Result = gameResult,
                 PlayedAt = ParseDate(H("Date")),
-                Pgn = BuildHeaderedPgn(kept, header, gameResult, sans, startFen, comments),
+                Pgn = gamePgn,
                 MoveCount = sans.Count,
                 WhiteElo = PlausibleElo(int.TryParse(H("WhiteElo"), out var we) ? we : null),
                 BlackElo = PlausibleElo(int.TryParse(H("BlackElo"), out var be) ? be : null),
@@ -637,6 +687,8 @@ public class SavedGameService
             };
             _db.SavedGames.Add(entity);
             await _db.SaveChangesAsync(ct);
+            ownGames++;
+            ownChars += gamePgn.Length;
             result.Imported++;
             result.Ids.Add(entity.Id);
         }
@@ -705,7 +757,13 @@ public class SavedGameService
         var oldSans = GamePlies.Parse(g.Pgn, 600)?.Plies.Select(p => p.San).ToList() ?? new List<string>();
         var movesChanged = !oldSans.SequenceEqual(sans);
 
-        g.Pgn = BuildHeaderedPgn(headers, header, result, sans, startFen, comments);
+        var pgn = BuildHeaderedPgn(headers, header, result, sans, startFen, comments);
+        // Deckel je Konto (A6-007): sonst füllte man ihn über viele kleine Partien und blähte sie hier einzeln auf
+        // (Kommentare und Kopfdaten sind ungekürzt). Nur ein WACHSENDES PGN zählt nach — Kürzen geht immer.
+        if (pgn.Length > g.Pgn.Length
+            && (await UsageAsync(userId)).Chars - g.Pgn.Length + pgn.Length > PgnCharsPerUserCap)
+            throw new SavedGameQuotaException($"Saved game storage limit reached (max {PgnCharsPerUserCap} characters per account).");
+        g.Pgn = pgn;
         g.White = Clip(dto.White, 120);
         g.Black = Clip(dto.Black, 120);
         g.Result = result;
@@ -956,3 +1014,11 @@ public class SavedGameService
         TimeControl = g.TimeControl,
     };
 }
+
+/// <summary>Belegung eines Kontos an gespeicherten Partien (<see cref="SavedGameService.UsageQuery"/>).</summary>
+internal sealed record SavedGameUsage(int Games, long Chars);
+
+/// <summary>Das Konto ist am Deckel für gespeicherte Partien (<see cref="SavedGameService.MaxGamesPerUser"/>,
+/// <see cref="SavedGameService.MaxPgnCharsPerUser"/>, A6-007). Eine <see cref="ArgumentException"/>, damit die
+/// bestehenden 400-Zweige (<c>{ message }</c>) greifen; wer den Grund nennen will, fängt sie davor.</summary>
+public sealed class SavedGameQuotaException(string message) : ArgumentException(message);

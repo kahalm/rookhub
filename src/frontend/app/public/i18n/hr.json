@@ -2773,7 +2773,8 @@
         "illegal": "potez glavne varijante nije ispravan",
         "noMoves": "nema poteza",
         "tooLong": "više od 600 polupoteza",
-        "badFen": "neispravna početna pozicija (FEN)"
+        "badFen": "neispravna početna pozicija (FEN)",
+        "quota": "tvoje spremljene partije dosegle su ograničenje računa — najprije obriši starije"
       },
       "error": {
         "empty": "Najprije zalijepi PGN ili odaberi datoteku.",

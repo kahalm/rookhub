@@ -97,7 +97,8 @@ public class GameCorrectionController : BaseApiController
     }
 
     /// <summary>Partie korrigieren (Züge, Kommentare, Kopfdaten). 400 bei einem illegalen Zug; ändern sich die
-    /// Züge, fällt die verknüpfte Analyse weg.</summary>
+    /// Züge, fällt die verknüpfte Analyse weg. 400 <c>{ reason: "quota" }</c>, wenn das PGN wächst und das Konto
+    /// damit über <see cref="SavedGameService.MaxPgnCharsPerUser"/> käme (A6-007).</summary>
     [HttpPut("{id:int}")]
     public async Task<ActionResult<SavedGameDetailDto>> Update(int id, [FromBody] GameUpdateDto dto)
     {
@@ -108,6 +109,10 @@ public class GameCorrectionController : BaseApiController
             if (game == null) return NotFound();
             if (dto.ScoresheetPlies != null) await _scans.SaveEditStateAsync(GetUserId(), id, dto.ScoresheetPlies);
             return Ok(game);
+        }
+        catch (SavedGameQuotaException ex)
+        {
+            return BadRequest(new { reason = "quota", message = ex.Message });
         }
         catch (ArgumentException ex)
         {

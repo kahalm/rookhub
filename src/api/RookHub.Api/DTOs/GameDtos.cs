@@ -394,7 +394,8 @@ public class PgnImportFailureDto
     public int Index { get; set; }
     public string? White { get; set; }
     public string? Black { get; set; }
-    /// <summary><c>noMoves</c>, <c>illegal</c> (ein Zug der Hauptvariante geht nicht), <c>tooLong</c>, <c>badFen</c>.</summary>
+    /// <summary><c>noMoves</c>, <c>illegal</c> (ein Zug der Hauptvariante geht nicht), <c>tooLong</c>, <c>badFen</c>,
+    /// <c>quota</c> (das Konto ist am Deckel, <c>SavedGameService.MaxGamesPerUser</c>/<c>MaxPgnCharsPerUser</c>).</summary>
     public string Reason { get; set; } = "illegal";
 }
 

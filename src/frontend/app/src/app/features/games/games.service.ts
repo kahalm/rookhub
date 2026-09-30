@@ -73,7 +73,7 @@ export interface PgnImportFailure {
   index: number;
   white?: string | null;
   black?: string | null;
-  reason: 'noMoves' | 'illegal' | 'tooLong' | 'badFen' | string;
+  reason: 'noMoves' | 'illegal' | 'tooLong' | 'badFen' | 'quota' | string;
 }
 
 export interface SharedGame {

@@ -3061,7 +3061,8 @@
         "illegal": "a főváltozat egyik lépése szabálytalan",
         "noMoves": "nincsenek lépések",
         "tooLong": "több mint 600 féllépés",
-        "badFen": "érvénytelen kiinduló állás (FEN)"
+        "badFen": "érvénytelen kiinduló állás (FEN)",
+        "quota": "a mentett játszmáid elérték a fiók korlátját — előbb törölj régebbieket"
       },
       "error": {
         "empty": "Előbb illessz be egy PGN-t vagy válassz fájlt.",

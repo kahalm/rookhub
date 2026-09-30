@@ -40,7 +40,8 @@ public class GamesController : BaseApiController
     /// <summary>
     /// PGN hochladen (Datei oder eingefügt): jede Partie des Textes wird eine eigene Partie (Quelle <c>pgn</c>).
     /// 400 <c>{ reason }</c> mit <c>empty</c> (kein Text) bzw. <c>tooLarge</c> (über
-    /// <see cref="SavedGameService.MaxImportChars"/> Zeichen); einzelne kaputte Partien stehen in <c>failed</c>.
+    /// <see cref="SavedGameService.MaxImportChars"/> Zeichen); einzelne kaputte Partien stehen in <c>failed</c>,
+    /// ebenso (Grund <c>quota</c>) jede neue Partie, die das Konto über seinen Deckel brächte (A6-007).
     /// </summary>
     [HttpPost("import")]
     [RequestSizeLimit(12_000_000)]

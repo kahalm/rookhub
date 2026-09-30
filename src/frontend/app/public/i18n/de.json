@@ -2773,7 +2773,8 @@
         "illegal": "ein Zug der Hauptvariante ist nicht legal",
         "noMoves": "keine Züge",
         "tooLong": "mehr als 600 Halbzüge",
-        "badFen": "ungültige Ausgangsstellung (FEN)"
+        "badFen": "ungültige Ausgangsstellung (FEN)",
+        "quota": "deine gespeicherten Partien sind am Konto-Limit — lösche zuerst ältere"
       },
       "error": {
         "empty": "Erst ein PGN einfügen oder eine Datei wählen.",

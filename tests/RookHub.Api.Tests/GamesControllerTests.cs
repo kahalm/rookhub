@@ -566,4 +566,108 @@ public class GamesControllerTests : IDisposable
         var ok = Assert.IsType<OkObjectResult>((await _controller.Import(new PgnImportRequestDto { Pgn = TwoGames })).Result);
         Assert.Equal(2, Assert.IsType<PgnImportResultDto>(ok.Value).Imported);   // Dublette gilt nur je Nutzer
     }
+
+    // ── Deckel je Konto (A6-007) ─────
+
+    private const string ThirdGame = "[White \"Eva\"]\n[Black \"Fritz\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0\n";
+    private const string FourthGame = "[White \"Gus\"]\n[Black \"Hans\"]\n\n1. d4 Nf6 *\n";
+
+    private async Task<PgnImportResultDto> ImportAsync(string pgn)
+        => Assert.IsType<PgnImportResultDto>(Assert.IsType<OkObjectResult>(
+            (await _controller.Import(new PgnImportRequestDto { Pgn = pgn })).Result).Value);
+
+    /// <summary>Am Zähldeckel legt der Import nichts Neues mehr an (Grund <c>quota</c>), Dubletten bleiben Dubletten,
+    /// und der Deckel zählt auch INNERHALB eines Uploads mit. Ohne Deckel füllte ein Skript mit wechselndem
+    /// Round-Header die Datenbank beliebig.</summary>
+    [Fact]
+    public async Task Import_AtTheGameCap_NewGamesFailWithQuota_DuplicatesStillCount_OtherUsersUnaffected()
+    {
+        var user = await CreateUserAsync();
+        var other = await CreateUserAsync("other");
+        _service.GamesPerUserCap = 3;
+        SetUser(user.Id);
+
+        var first = await ImportAsync(TwoGames + "\n\n" + ThirdGame + "\n\n" + FourthGame);
+        Assert.Equal(3, first.Imported);                               // der Deckel zählt im selben Upload mit
+        Assert.Equal((4, "quota", "Gus"), (Assert.Single(first.Failed).Index, first.Failed[0].Reason, first.Failed[0].White));
+
+        var again = await ImportAsync(TwoGames + "\n\n" + FourthGame);
+        Assert.Equal(0, again.Imported);
+        Assert.Equal(2, again.Duplicates);                              // Vorhandenes bleibt erreichbar
+        Assert.Equal((3, "quota"), (Assert.Single(again.Failed).Index, again.Failed[0].Reason));
+        Assert.Equal(3, await _db.SavedGames.CountAsync(g => g.UserId == user.Id));
+
+        SetUser(other.Id);
+        Assert.Equal(1, (await ImportAsync(FourthGame)).Imported);     // der Deckel gilt je Konto
+    }
+
+    /// <summary>Der Zeichendeckel: die Partie, die das Konto über die Summe brächte, bleibt draußen — eine kleinere
+    /// dahinter passt noch. Kommentare und Kopfdaten gehen ungekürzt ins PGN, der Zähldeckel allein reicht nicht.</summary>
+    [Fact]
+    public async Task Import_AtTheCharsCap_TheOverflowingGameFails_ASmallerOneBehindStillFits()
+    {
+        var probe = await CreateUserAsync("probe");
+        SetUser(probe.Id);
+        var ids = (await ImportAsync(TwoGames)).Ids;
+        var big = (await _db.SavedGames.SingleAsync(g => g.Id == ids[0])).Pgn.Length;
+        var small = (await _db.SavedGames.SingleAsync(g => g.Id == ids[1])).Pgn.Length;
+        Assert.True(big > small + 10);
+
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        _service.PgnCharsPerUserCap = small + 10;
+        var res = await ImportAsync(TwoGames);
+
+        Assert.Equal(1, res.Imported);
+        Assert.Equal((1, "quota", "Anna"), (Assert.Single(res.Failed).Index, res.Failed[0].Reason, res.Failed[0].White));
+        Assert.Equal("Carla", (await _db.SavedGames.SingleAsync(g => g.UserId == user.Id)).White);
+    }
+
+    /// <summary>„Partie speichern" (Extension) am Zähldeckel: eine NEUE Partie wird abgewiesen (eine
+    /// <see cref="ArgumentException"/> — der Controller antwortet wie bisher 400), das Heilen einer schon
+    /// gespeicherten Partie geht weiter.</summary>
+    [Fact]
+    public async Task Save_AtTheGameCap_NewGameIsRefused_ButHealingAKnownGameStillWorks()
+    {
+        var user = await CreateUserAsync();
+        _service.GamesPerUserCap = 1;
+        var saved = await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "c5" }, ExternalId = "cap-1" });
+
+        var ex = await Assert.ThrowsAsync<SavedGameQuotaException>(() => _service.SaveAsync(user.Id,
+            new SaveGameInputDto { Source = "lichess", Moves = new() { "d4" }, ExternalId = "cap-2" }));
+        Assert.IsAssignableFrom<ArgumentException>(ex);
+
+        var healed = await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "c5", "Nf3" }, ExternalId = "cap-1" });
+        Assert.Equal(saved.Id, healed.Id);
+        Assert.Equal(3, (await _db.SavedGames.SingleAsync()).MoveCount);
+    }
+
+    /// <summary>Die Zugliste der Extension ging ungeprüft ins PGN — ein „Zug" mit Megabytes Text machte jede Partie
+    /// beliebig groß, der Zähldeckel allein wäre kein Größendeckel.</summary>
+    [Fact]
+    public async Task Save_OverlongMoveToken_IsRejected()
+    {
+        var user = await CreateUserAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", new string('x', SavedGameService.MaxSanLength + 1) }, ExternalId = "long-1",
+        }));
+        Assert.Equal(0, await _db.SavedGames.CountAsync());
+        await _service.SaveAsync(user.Id, new SaveGameInputDto { Source = "lichess", Moves = new() { "e4", "exd8=Q+!" }, ExternalId = "ok-1" });
+    }
+
+    /// <summary>Die Belegung (Zahl + Zeichensumme) muss der ECHTE Provider in EINE Abfrage übersetzen — InMemory
+    /// rechnet jeden Ausdruck, ein <c>string.Length</c> ohne SQL-Gegenstück fiele erst auf MariaDB auf.</summary>
+    [Fact]
+    public void UsageQuery_TranslatesToOneAggregateQuery_OnTheRealProvider()
+    {
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseMySql("server=localhost;database=x;user=x;password=x", new MariaDbServerVersion(new Version(11, 4)))
+            .Options);
+        var sql = SavedGameService.UsageQuery(db, 7).ToQueryString();
+        Assert.Contains("COUNT(*)", sql);
+        Assert.Contains("SUM(", sql);
+        Assert.Contains("CHAR_LENGTH", sql);
+        Assert.Contains("GROUP BY", sql);
+    }
 }
