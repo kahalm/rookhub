@@ -56,9 +56,20 @@ public class PgnImportService
     /// <summary>
     /// Ergebnis eines PGN-Parses: extrahierte Puzzles + Anzahl der Spiele, die wegen
     /// fehlender/ungültiger Felder verworfen wurden (kein FEN/Round, keine spielbare
-    /// Mainline, Grundstellung ohne Trainingsmarker etc.).
+    /// Mainline, mehr als <see cref="MaxMainlinePlies"/> Halbzüge, Grundstellung ohne Trainingsmarker etc.).
     /// </summary>
     public record ParseResult(List<ParsedPuzzle> Puzzles, int Invalid);
+
+    /// <summary>
+    /// Höchstzahl Halbzüge in der Hauptvariante einer Linie; eine längere Linie zählt als ungültig
+    /// (<see cref="ParseResult.Invalid"/>). Gera.Chess' <c>Move()</c> kostet selbst O(Historie), das Nachspielen
+    /// einer Linie wächst also quadratisch mit ihrer Länge: eine einzige präparierte Linie mit 50 000 Halbzügen
+    /// (rund 1 MB, der Kurs-Upload erlaubt 10 MB) belegte die CPU minutenlang (Codereview 2026-09-29, N3-003).
+    /// Großzügig gewählt und gleich dem Deckel des ChessBase-Imports (<see cref="ChessBase.MainlineBoard.MaxPlies"/>):
+    /// die längste Buch-/Kurslinie auf Dev hat 182 Halbzüge, eine echte Partie selten über 600. Am Deckel kostet eine
+    /// Linie mit einem [%alt] an jedem Halbzug rund 0,4 s, bei 2000 Halbzügen wäre es schon das Doppelte bis Dreifache.
+    /// </summary>
+    public const int MaxMainlinePlies = 1000;
 
     /// <summary>
     /// Parst einen PGN-Text in eine Liste von Puzzles. Reine Funktion (kein DB-Zugriff).
@@ -104,6 +115,9 @@ public class PgnImportService
             // Skip-Regeln wie import_books.py
             if (string.IsNullOrEmpty(fen) || fen == "?") { invalid++; continue; }
             if (string.IsNullOrEmpty(round) || round == "?") { invalid++; continue; }
+            // Halbzug-Deckel VOR jedem Nachspielen (ExtractAltMoves, TryExtractUciMainline, …Permissive):
+            // linear gezählt, ohne Brett. Siehe MaxMainlinePlies.
+            if (PgnParser.ExtractMainlineSans(moveText).Count > MaxMainlinePlies) { invalid++; continue; }
 
             var comment = PgnParser.ExtractFirstComment(moveText);
             // foldAllVariations: jede Variante landet (mit Zugnummern) im Kommentar ihres Zugs → das

@@ -135,4 +135,52 @@ public class PgnParserAltMovesTests
         Assert.True(altTime < mainline * 10 + TimeSpan.FromSeconds(1),
             $"ExtractAltMoves {altTime.TotalMilliseconds:F0} ms, einmal nachspielen {mainline.TotalMilliseconds:F0} ms");
     }
+
+    /// <summary>Eine Linie als Kurs-PGN (Grundstellung, wie ein eigener Kurs-Upload).</summary>
+    private static string CoursePgn(string moveText)
+        => "[Event \"Kurs\"]\n[Round \"1\"]\n[White \"Pendel\"]\n[FEN \"" + Start + "\"]\n\n" + moveText + "\n";
+
+    private static PgnImportService.ParseResult ParseCourse(string pgn)
+        => PgnImportService.ParsePgn("kurs.pgn", pgn, keepCommentOnlyAsInfo: true, playFromStartPosition: true);
+
+    /// <summary>
+    /// Auch inkrementell kostet das Nachspielen quadratisch in der Linienlänge, weil Gera.Chess' <c>Move()</c>
+    /// selbst O(Historie) kostet: eine Pendellinie mit 20 000 Halbzügen und [%alt] an jedem Halbzug belegte
+    /// <see cref="PgnImportService.ParsePgn"/> eine halbe Minute, auf einer ausgelasteten Maschine Minuten. Über
+    /// <see cref="PgnImportService.MaxMainlinePlies"/> zählt eine Linie deshalb als ungültig, BEVOR ein Brett
+    /// aufgebaut wird. Gemessen gegen eine Linie genau AM Deckel (die ganz nachgespielt wird), damit der Test
+    /// nicht an der Geschwindigkeit der Maschine hängt.
+    /// </summary>
+    [Fact]
+    public void ParsePgn_LineOverThePlyCap_IsInvalidBeforeAnyReplay()
+    {
+        const int cap = PgnImportService.MaxMainlinePlies;
+        var atCapPgn = CoursePgn(PendulumWithAlts(cap));
+        var hugePgn = CoursePgn(PendulumWithAlts(20_000));
+        ParseCourse(CoursePgn(PendulumWithAlts(8)));           // Aufwärmen (JIT)
+
+        var sw = Stopwatch.StartNew();
+        var atCap = ParseCourse(atCapPgn);
+        var atCapTime = sw.Elapsed;
+        sw.Restart();
+        var huge = ParseCourse(hugePgn);
+        var hugeTime = sw.Elapsed;
+
+        // Am Deckel: noch eine ganz normale Linie, samt Alternativen.
+        Assert.Equal(0, atCap.Invalid);
+        var line = Assert.Single(atCap.Puzzles);
+        Assert.Equal(cap, line.Moves.Split(' ').Length);
+        Assert.Equal(cap, line.AltMoves!.Count);
+
+        // Ein Halbzug darüber: ungültig.
+        var overByOne = ParseCourse(CoursePgn(PendulumWithAlts(cap + 1)));
+        Assert.Empty(overByOne.Puzzles);
+        Assert.Equal(1, overByOne.Invalid);
+
+        // 20 000 Halbzüge: ungültig, und schneller als die Linie am Deckel (ohne Deckel das ~60-Fache).
+        Assert.Empty(huge.Puzzles);
+        Assert.Equal(1, huge.Invalid);
+        Assert.True(hugeTime < atCapTime * 2 + TimeSpan.FromSeconds(1),
+            $"20 000 Halbzüge {hugeTime.TotalMilliseconds:F0} ms, {cap} Halbzüge {atCapTime.TotalMilliseconds:F0} ms");
+    }
 }
