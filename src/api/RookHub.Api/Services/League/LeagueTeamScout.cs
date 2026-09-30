@@ -384,7 +384,7 @@ public sealed partial class LeagueTeamScout
                     || LeagueAccountFinder.FirstNameMatch(toks, lt, LeagueAccountFinder.Tokens(first)) != LeagueAccountFinder.NameFit.Full) continue;
                 var scan = await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, p.Fide, ct);
                 if (LeagueAccountFinder.Judge(p, prof, derived: false, scan.Federation, lead: origin) is not { } v) continue;
-                if (await AddAsync(p.Fide, prof, v.Score + 1, v.Evidence, ct)) found++;
+                if (await AddAsync(p, prof, v.Score + 1, v.Evidence, ct)) found++;
             }
             if (found > 0) return $"Klarname: {found} Vorschlag/Vorschläge";
         }
@@ -411,9 +411,8 @@ public sealed partial class LeagueTeamScout
             return $"Stellungen → {player.Name}, aber der Nutzername nennt einen anderen Vornamen („{other}“)";
         if (!LeagueAccountFinder.RatingPlausible(prof, player.Elo)) return $"Stellungen → {player.Name}, aber Wertung zu niedrig";
         var ev = new List<string> { origin, PositionsText(best, depths.Count, ctx) };
-        if (prof.Rating is { } rt && player.Elo is { } elo && LeagueAccountFinder.RatingFits(rt, elo))
-            ev.Add(LeagueAccountFinder.RatingFitText(prof.RatingLabel, rt, elo));
-        return await AddAsync(best.Fide, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt oder bei einem anderen Spieler";
+        if (LeagueAccountFinder.RatingEvidence(prof.RatingLabel, prof.Rating, player.Elo) is { } re) ev.Add(re.Text);
+        return await AddAsync(player, prof, best.Ratio >= 2 ? 4 : 3, ev, ct) ? $"Stellungen → {player.Name}" : "schon bekannt oder bei einem anderen Spieler";
     }
 
     /// <summary>
@@ -457,8 +456,12 @@ public sealed partial class LeagueTeamScout
     /// über die Stellungen noch einmal als Vorschlag).</summary>
     /// <remarks>Vorher den Such-Eintrag samt Jahrgang holen — sonst bliebe das Konto eines Minderjährigen, den die Namenssuche
     /// noch nicht erfasst hat (andere Saison, Suche läuft noch), sichtbar.</remarks>
-    private async Task<bool> AddAsync(string fide, LeagueAccountFinder.Profile prof, int score, List<string> evidence, CancellationToken ct)
+    /// <summary>Einen Vorschlag anlegen (nicht, wenn das Konto schon irgendwo steht) — und dann dasselbe für den gleichen Nutzernamen auf
+    /// chess.com, wenn er dort existiert und passt (<see cref="LeagueAccountFinder.TwinAsync"/>, 0.621.0).</summary>
+    private async Task<bool> AddAsync(LeagueAccountFinder.Player player, LeagueAccountFinder.Profile prof, int score, List<string> evidence,
+        CancellationToken ct, bool twin = true)
     {
+        var fide = player.Fide;
         var user = prof.User.ToLower();
         if (await _db.LeagueOnlineAccounts.AnyAsync(x => x.Site == prof.Site && x.UserName.ToLower() == user, ct)
             || await _db.LeagueAccountSuggestions.AnyAsync(x => x.FideId == fide && x.Site == prof.Site && x.UserName.ToLower() == user, ct))
@@ -472,6 +475,12 @@ public sealed partial class LeagueTeamScout
             Status = LeagueSuggestionStatus.Open, CreatedAt = DateTime.UtcNow, Source = Source,
         });
         await _db.SaveChangesAsync(ct);
+        if (twin)
+        {
+            var fed = (await LeagueAccountFinder.ScanRowAsync(_db, _http, _lichess, fide, ct)).Federation;
+            if (await LeagueAccountFinder.TwinAsync(_http, _lichess, player, prof, fed, ct, Pause) is { } t)
+                await AddAsync(player, t.Profile, t.Verdict.Score, t.Verdict.Evidence, ct, twin: false);
+        }
         return true;
     }
 }

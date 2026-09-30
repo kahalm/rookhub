@@ -482,19 +482,20 @@ lh-online-accounts { display: block; }
 .chk { margin-top: 8px; padding: 8px 10px; background: var(--paper); border-radius: 6px; }
 .chk > p { margin: 0 0 6px; }
 .chk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
-.chk .chk-list li { display: grid; grid-template-columns: 18px minmax(96px, 11em) 1fr; gap: 2px 8px; align-items: baseline;
+.chk .chk-list li { display: grid; grid-template-columns: 26px minmax(96px, 11em) 1fr; gap: 2px 8px; align-items: baseline;
   padding: 0; border: 0; border-radius: 0; font-size: 14px; line-height: 1.35; }
 .chk-sym { font-weight: 700; text-align: center; }
 .chk-label { font-weight: 600; }
 .chk-text { overflow-wrap: anywhere; }
 .chk-ok .chk-sym { color: var(--ok); }
+.chk-weak .chk-sym { color: var(--ok); font-weight: 400; font-size: 12px; white-space: nowrap; }
 .chk-warn .chk-sym { color: var(--warn); }
 .chk-fail .chk-sym { color: var(--red); }
 .chk-fail .chk-text { color: var(--red); }
 .chk-none .chk-sym, .chk-none .chk-label, .chk-none .chk-text, .chk-info .chk-sym { color: var(--muted); }
 .chk .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 520px) {
-  .chk .chk-list li { grid-template-columns: 18px 1fr; }
+  .chk .chk-list li { grid-template-columns: 26px 1fr; }
   .chk-text { grid-column: 2; }
 }
 .sugg-group h3 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 0 0 4px; font: 600 18px/1.2 var(--cond); }

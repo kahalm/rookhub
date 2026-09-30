@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -13,7 +11,7 @@ namespace RookHub.Api.Services.League;
 /// Konto-Prüfung (i) (0.619.0, Wunsch 2026-09-30: „mach bei den Konten immer ein (i) und zeig an, was alles geprüft wurde:
 /// Matching über Selbstmeldung, über TMM 2021, Name, Land, % Übereinstimmung Repertoire, Elo passend — normal ist online ca. 200
 /// höher, 100–300 wäre passend"). Je eingetragenem Konto bzw. Vorschlag eine Liste von Prüfungen, jede mit Ergebnis
-/// (<see cref="Ok"/> spricht dafür, <see cref="Warn"/> macht stutzig, <see cref="Fail"/> spricht dagegen, <see cref="None"/> = nichts
+/// (<see cref="Ok"/> spricht dafür, <see cref="Weak"/> schwächer dafür, <see cref="Warn"/> macht stutzig, <see cref="Fail"/> spricht dagegen, <see cref="None"/> = nichts
 /// zu prüfen, <see cref="Info"/> = zur Kenntnis) und einem Satz dazu.
 /// <para>Das Profil wird dafür frisch von Lichess bzw. chess.com geholt (dieselben Abrufe wie die Konto-Suche); ein Vorschlag
 /// bekommt zum Repertoire-Vergleich auch seine letzten Partien geholt, ein eingetragenes Konto nimmt die schon gespeicherten. Das
@@ -22,7 +20,9 @@ namespace RookHub.Api.Services.League;
 /// </summary>
 public sealed class LeagueAccountChecks
 {
-    public const string Ok = "ok", Warn = "warn", Fail = "fail", None = "none", Info = "info";
+    /// <summary><see cref="Weak"/> = spricht dafür, aber schwächer (0.621.0, Wunsch: „das Band zeigt die optimalen Treffer … alles andere
+    /// ist halt Treffer, aber schwächer").</summary>
+    public const string Ok = "ok", Weak = "weak", Warn = "warn", Fail = "fail", None = "none", Info = "info";
     public static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(10);
     /// <summary>Ein Ergebnis ohne Profil (Seite gerade nicht erreichbar) nur kurz merken.</summary>
     public static readonly TimeSpan CacheForFailed = TimeSpan.FromMinutes(1);
@@ -123,6 +123,7 @@ public sealed class LeagueAccountChecks
             items.Add(ActivityCheck(prof));
             items.Add(new Item("closed", "Konto", prof.Closed ? Fail : Ok, prof.Closed ? "gesperrt oder geschlossen" : "offen, nicht gesperrt"));
         }
+        items.Add(await TwinCheckAsync(player, site, user, fideFed, ct));
         items.Add(await ElsewhereCheckAsync(fide, site, user, ct));
         if (scout?.Result is { Length: > 0 } res) items.Add(new Item("scout", "Team-Suche", Info, res));
         if (sugg is not null) items.Add(new Item("evidence", "Hinweise der Suche", Info, sugg.Evidence));
@@ -136,34 +137,44 @@ public sealed class LeagueAccountChecks
     /// <summary>Das Profil frisch von der Seite — <c>(null, Grund)</c>, wenn es nicht geht.</summary>
     private async Task<(LeagueAccountFinder.Profile? Profile, string? Error)> ProfileAsync(string site, string user, CancellationToken ct)
     {
+        var label = LeagueOnlineSites.Label(site);
         try
         {
-            if (site == LeagueOnlineSites.Lichess)
-            {
-                using var req = new HttpRequestMessage(HttpMethod.Post, $"{_lichess}/api/users")
-                {
-                    Content = new StringContent(user.ToLowerInvariant(), Encoding.UTF8, "text/plain"),
-                };
-                using var r = await _http.SendAsync(req, ct);
-                if (r.StatusCode == HttpStatusCode.TooManyRequests) return (null, "Lichess bremst gerade");
-                if (!r.IsSuccessStatusCode) return (null, "Lichess nicht erreichbar");
-                var prof = LeagueAccountFinder.ParseLichessUsers(await r.Content.ReadAsStringAsync(ct))
-                    .FirstOrDefault(p => p.User.Equals(user, StringComparison.OrdinalIgnoreCase));
-                return prof is null ? (null, "Konto auf Lichess nicht gefunden") : (prof, null);
-            }
-            var name = Uri.EscapeDataString(user.ToLowerInvariant());
-            using var pr = await _http.GetAsync($"https://api.chess.com/pub/player/{name}", ct);
-            if (pr.StatusCode == HttpStatusCode.TooManyRequests) return (null, "chess.com bremst gerade");
-            if (pr.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone) return (null, "Konto auf chess.com nicht gefunden");
-            if (!pr.IsSuccessStatusCode) return (null, "chess.com nicht erreichbar");
-            if (LeagueAccountFinder.ParseChessComPlayer(await pr.Content.ReadAsStringAsync(ct)) is not { } p) return (null, "Profil unlesbar");
-            using var st = await _http.GetAsync($"https://api.chess.com/pub/player/{name}/stats", ct);
-            return st.IsSuccessStatusCode ? (LeagueAccountFinder.WithChessComStats(p, await st.Content.ReadAsStringAsync(ct)), null) : (p, null);
+            return await LeagueAccountFinder.FetchProfileAsync(_http, _lichess, site, user, ct) is { } p
+                ? (p, null) : (null, $"Konto auf {label} nicht gefunden");
+        }
+        catch (LeagueOnlineSync.RateLimitedException)
+        {
+            return (null, $"{label} bremst gerade");
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
         {
-            return (null, site == LeagueOnlineSites.Lichess ? "Lichess nicht erreichbar" : "chess.com nicht erreichbar");
+            return (null, $"{label} nicht erreichbar");
         }
+    }
+
+    /// <summary>
+    /// Derselbe Nutzername auf der anderen Seite (0.621.0, Wunsch: „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf
+    /// chess.com bzw. Lichess existiert und eventuell auch passt"): schon eingetragen → ok; existiert und passt nach den Regeln der Suche
+    /// → ok; existiert, passt aber nicht → Info; gibt es nicht → nichts zu prüfen.
+    /// </summary>
+    private async Task<Item> TwinCheckAsync(LeagueAccountFinder.Player player, string site, string user, string? fideFed, CancellationToken ct)
+    {
+        const string key = "twin";
+        var other = LeagueAccountFinder.OtherSite(site);
+        var label = $"Gleicher Name auf {LeagueOnlineSites.Label(other)}";
+        if (LeagueOnlineSites.Parse(other, user) is null) return new Item(key, label, None, $"„{user}“ ist dort als Name nicht möglich");
+        var lower = user.ToLower();
+        if (await _db.LeagueOnlineAccounts.AsNoTracking().AnyAsync(a => a.FideId == player.Fide && a.Site == other && a.UserName.ToLower() == lower, ct))
+            return new Item(key, label, Ok, $"„{user}“ ist dort auch als sein Konto eingetragen");
+        var (twin, error) = await ProfileAsync(other, user, ct);
+        if (twin is null)
+            return new Item(key, label, None, error is { } e && e.EndsWith("nicht gefunden") ? $"kein Konto „{user}“" : $"nicht geprüft — {error}");
+        if (twin.Closed) return new Item(key, label, None, $"„{twin.User}“ gibt es, ist aber gesperrt");
+        var lead = $"gleicher Nutzername wie das {LeagueOnlineSites.Label(site)}-Konto „{user}“";
+        return LeagueAccountFinder.Judge(player, twin, derived: true, fideFed, lead) is { } v
+            ? new Item(key, label, Ok, $"„{twin.User}“ gibt es und es passt: {string.Join("; ", v.Evidence.Skip(1))}")
+            : new Item(key, label, Info, $"„{twin.User}“ gibt es, die Angaben dort passen aber nicht zu ihm (anderer Name, anderes Land oder zu niedrige Wertung)");
     }
 
     // ── Die Prüfungen (rein bis auf die Datenbank-Abfragen, getestet) ──────────────────────────
@@ -248,8 +259,8 @@ public sealed class LeagueAccountChecks
         return LeagueAccountFinder.FirstNameMatch(toks, lt, LeagueAccountFinder.Tokens(first)) switch
         {
             LeagueAccountFinder.NameFit.Full => new Item(key, label, Ok, $"{shown} — Vor- und Nachname passen"),
-            LeagueAccountFinder.NameFit.Initial => new Item(key, label, Ok, $"{shown} — Nachname und Initiale passen"),
-            LeagueAccountFinder.NameFit.LastOnly => new Item(key, label, Info, $"{shown} — nur der Nachname steht da"),
+            LeagueAccountFinder.NameFit.Initial => new Item(key, label, Weak, $"{shown} — Nachname und Initiale passen"),
+            LeagueAccountFinder.NameFit.LastOnly => new Item(key, label, Weak, $"{shown} — nur der Nachname steht da"),
             _ => new Item(key, label, Fail, $"{shown} — anderer Vorname"),
         };
     }
@@ -264,7 +275,7 @@ public sealed class LeagueAccountChecks
             return new Item(key, label, Fail, $"„{user}“ nennt einen anderen Vornamen („{other}“)");
         var plain = LeagueAccountFinder.Plain(user).ToLowerInvariant();
         var last = LeagueAccountFinder.Tokens(LeagueAccountFinder.SplitName(player.Name).Last).Where(t => t.Length >= 4).ToList();
-        if (last.Any(plain.Contains)) return new Item(key, label, Info, $"„{user}“ enthält den Nachnamen");
+        if (last.Any(plain.Contains)) return new Item(key, label, Weak, $"„{user}“ enthält den Nachnamen");
         return new Item(key, label, None, $"„{user}“ — kein Bezug zum Namen erkennbar");
     }
 
@@ -283,10 +294,11 @@ public sealed class LeagueAccountChecks
     }
 
     /// <summary>
-    /// Online-Wertungen gegen die Elo, je Kategorie (Wunsch: „normal ist online ca. 200 höher, 100–300 wäre passend"). Belastbar
-    /// heißt: genug Partien und nicht vorläufig — nur solche entscheiden. Bewertung: <see cref="LeagueAccountFinder.FitMin"/> bis
-    /// <see cref="LeagueAccountFinder.FitMax"/> darüber passt; darüber höher als üblich; knapp darüber oder darunter stutzig; mehr
-    /// als <see cref="LeagueAccountFinder.RatingBelow"/> darunter ist er es nicht (dieselbe Grenze wie die Konto-Suche).
+    /// Online-Wertungen gegen die Elo, je Kategorie (Wunsch: „normal ist online ca. 200 höher, 100–300 wäre passend … das Band zeigt die
+    /// optimalen Treffer, 400 unter FIDE schließt aus, alles andere ist halt Treffer, aber schwächer"). Belastbar heißt: genug Partien
+    /// und nicht vorläufig — nur solche entscheiden. <see cref="LeagueAccountFinder.FitMin"/> bis <see cref="LeagueAccountFinder.FitMax"/>
+    /// darüber = optimal (<see cref="Ok"/>), jede andere Wertung bis <see cref="LeagueAccountFinder.RatingBelow"/> darunter = schwächerer
+    /// Treffer (<see cref="Weak"/>), noch weiter darunter ist er es nicht (dieselben Grenzen wie die Konto-Suche).
     /// </summary>
     public static List<Item> RatingChecks(LeagueAccountFinder.Profile prof, int? elo)
     {
@@ -304,13 +316,12 @@ public sealed class LeagueAccountChecks
         if (elo is not { } e || e <= 0) return new Item(key, label, Info, $"{x.Value} ({games}) — keine Elo zum Vergleich");
         var d = x.Value - e;
         var diff = d >= 0 ? $"{d} über der Elo {e}" : $"{-d} unter der Elo {e}";
+        var band = $"{LeagueAccountFinder.FitMin}–{LeagueAccountFinder.FitMax} darüber";
         var (status, why) = d switch
         {
-            _ when d < -LeagueAccountFinder.RatingBelow => (Fail, "viel zu niedrig — vermutlich ein anderer"),
-            < 0 => (Warn, "unter der Elo — ungewöhnlich"),
-            < LeagueAccountFinder.FitMin => (Warn, $"knapp — üblich sind {LeagueAccountFinder.FitMin}–{LeagueAccountFinder.FitMax} darüber"),
-            <= LeagueAccountFinder.FitMax => (Ok, $"passt (üblich {LeagueAccountFinder.FitMin}–{LeagueAccountFinder.FitMax} darüber)"),
-            _ => (Warn, $"höher als üblich ({LeagueAccountFinder.FitMin}–{LeagueAccountFinder.FitMax} darüber)"),
+            _ when d < -LeagueAccountFinder.RatingBelow => (Fail, $"mehr als {LeagueAccountFinder.RatingBelow} darunter — schließt ihn aus"),
+            _ when LeagueAccountFinder.RatingFits(x.Value, e) => (Ok, $"optimal ({band})"),
+            _ => (Weak, $"Treffer, aber schwächer — optimal wären {band}"),
         };
         return new Item(key, label, status, $"{x.Value} ({games}) — {diff}: {why}");
     }
@@ -395,7 +406,7 @@ public sealed class LeagueAccountChecks
         var share = (double)c.Reached / c.Games;
         var text = $"{(share * 100).ToString("0", De)} % seiner letzten {c.Games} Online-Partien folgen mindestens {RepertoireOwnMoves} eigene "
                    + $"Züge weit einer Stellung aus seinen {boardGames} Brettpartien (gemeinsam im Schnitt bis Halbzug {c.Depth.ToString("0.0", De)})";
-        return new Item(key, label, share >= RepertoireGood ? Ok : share >= RepertoireLow ? Info : Warn, text);
+        return new Item(key, label, share >= RepertoireGood ? Ok : share >= RepertoireLow ? Weak : Warn, text);
     }
 
     /// <summary>Die letzten Partien eines Vorschlags (Lichess: ein Abruf; chess.com: die jüngsten Monatsarchive). <c>null</c> = nicht

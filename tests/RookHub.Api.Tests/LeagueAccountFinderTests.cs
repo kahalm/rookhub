@@ -100,13 +100,23 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 500), derived: true));
         Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1499), derived: true));
         Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1500), derived: true));
+        // Wunsch: „das Band zeigt die optimalen Treffer, 400 unter FIDE schließt aus, alles andere ist halt Treffer, aber schwächer".
         var high = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 2900), derived: true)!;   // höher ist ok
-        Assert.Equal(1 + 3 + 1, high.Score);                                          // … aber kein Hinweis
+        Assert.Equal(1 + 3 + 1 + 1, high.Score);                                      // … ein schwächerer Treffer
         var fits = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 2100), derived: true)!;
-        Assert.Equal(1 + 3 + 1 + 1, fits.Score);
-        Assert.Contains("Lichess Blitz 2100 liegt 200 über der Elo 1900 (üblich: 100–300)", fits.Evidence);
-        // Band 100–300 darüber (0.619.0, Wunsch „normal ist online ca. 200 höher"): knapp darüber oder darunter ist kein Hinweis.
-        Assert.Equal(1 + 3 + 1, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1950), derived: true)!.Score);
+        Assert.Equal(1 + 3 + 1 + 2, fits.Score);                                      // optimal
+        Assert.Contains("Lichess Blitz 2100 liegt 200 über der Elo 1900 (optimal: 100–300 darüber)", fits.Evidence);
+        Assert.Equal(1 + 3 + 1 + 1, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", rating: 1950), derived: true)!.Score);
+        Assert.Equal((1, "Lichess Blitz 1500 liegt 400 unter der Elo 1900 (Treffer, aber schwächer — optimal wären 100–300 darüber)"),
+            LeagueAccountFinder.RatingEvidence("Lichess Blitz", 1500, 1900));
+        Assert.Equal(2, LeagueAccountFinder.RatingEvidence(null, 2000, 1900)!.Value.Score);
+        Assert.Equal(2, LeagueAccountFinder.RatingEvidence(null, 2200, 1900)!.Value.Score);
+        Assert.Equal(1, LeagueAccountFinder.RatingEvidence(null, 2201, 1900)!.Value.Score);
+        Assert.Null(LeagueAccountFinder.RatingEvidence(null, 1499, 1900));             // schließt aus
+        Assert.Null(LeagueAccountFinder.RatingEvidence(null, 2100, null));
+        Assert.Null(LeagueAccountFinder.RatingEvidence(null, null, 1900));
+        // Ein Konto, das nur über die Wertung trägt, bleibt auch außerhalb des Bands ein Treffer (Name aus dem Namen, sonst nichts).
+        Assert.Equal(1 + 1, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", rating: 2500), derived: true)!.Score);
         Assert.True(LeagueAccountFinder.RatingFits(2000, 1900));
         Assert.True(LeagueAccountFinder.RatingFits(2200, 1900));
         Assert.False(LeagueAccountFinder.RatingFits(1999, 1900));
@@ -183,7 +193,7 @@ public class LeagueAccountFinderTests : IDisposable
         new(_db, new HttpClient(http), NullLogger<LeagueAccountFinder>.Instance) { ChessComPause = TimeSpan.Zero, PlayerPause = TimeSpan.Zero };
 
     /// <summary>Lichess kennt MaxMuster (Klarname, AT) und Muster1987 (Suche, Klarname); chess.com kennt Max_Muster (AT).</summary>
-    private static FakeHttp World(int year = 1987) => new(req =>
+    private static FakeHttp World(int year = 1987, bool twin = false) => new(req =>
     {
         var u = req.RequestUri!.ToString();
         if (u.Contains("/api/fide/player/")) return Ok($$"""{"id":222,"federation":"AUT","year":{{year}}}""");
@@ -198,6 +208,8 @@ public class LeagueAccountFinderTests : IDisposable
             return Ok("""{"chess_rapid":{"last":{"rating":2050},"record":{"win":30,"loss":20,"draw":5}}}""");
         if (u.EndsWith("/pub/player/max_muster"))
             return Ok("""{"url":"https://www.chess.com/member/Max_Muster","username":"max_muster","country":"https://api.chess.com/pub/country/AT"}""");
+        if (twin && u.EndsWith("/pub/player/muster1987"))
+            return Ok("""{"url":"https://www.chess.com/member/Muster1987","username":"muster1987","name":"Max Muster","country":"https://api.chess.com/pub/country/AT"}""");
         if (u.Contains("api.chess.com/pub/player/")) return Status(HttpStatusCode.NotFound);
         return Status(HttpStatusCode.InternalServerError);
     });
@@ -229,7 +241,9 @@ public class LeagueAccountFinderTests : IDisposable
         var scan = await _db.LeagueAccountScans.SingleAsync();
         Assert.Equal((1987, "AUT", 3), (scan.BirthYear, scan.Federation, scan.Found));
         // Nur die abgeleiteten Namen gehen an chess.com, alle Kandidaten gesammelt an Lichess.
-        Assert.Equal(7 + 1, http.Urls.Count(x => x.Contains("api.chess.com")));     // 7 Namen + Wertungen des einen Treffers
+        // 7 Namen + Wertungen des einen Treffers + der Lichess-Treffer „Muster1987“ auf chess.com (gleicher Name, 0.621.0).
+        Assert.Equal(7 + 1 + 1, http.Urls.Count(x => x.Contains("api.chess.com")));
+        Assert.Contains("GET https://api.chess.com/pub/player/muster1987", http.Urls);
         Assert.StartsWith("Nutzername aus dem Namen; Land Österreich; chess.com Schnell 2050 liegt 150 über der Elo 1900", list[2].Evidence);
         Assert.Single(http.Urls, x => x.StartsWith("POST") && x.EndsWith("/api/users"));
 
@@ -237,6 +251,36 @@ public class LeagueAccountFinderTests : IDisposable
         Assert.Equal(0, (await finder.ScanAsync(p, default)).Found);           // derselbe Stand: nichts Neues
         Assert.DoesNotContain(http.Urls, x => x.Contains("/api/fide/player/")); // Jahrgang ist gemerkt
         Assert.Equal(3, await _db.LeagueAccountSuggestions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Scan_SameUserNameOnTheOtherSite_IsSuggestedWhenItFits()
+    {
+        // Wunsch: „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf chess.com bzw. Lichess existiert und eventuell auch passt".
+        await SeedAsync();
+        var http = World(twin: true);
+        var r = await Finder(http).ScanAsync((await Finder(http).PlayerAsync("222", default))!, default);
+        Assert.Equal(4, r.Found);
+        var twin = await _db.LeagueAccountSuggestions.SingleAsync(s => s.Site == "chess.com" && s.UserName == "Muster1987");
+        Assert.StartsWith("gleicher Nutzername wie das Lichess-Konto „Muster1987“; Klarname im Profil („Max Muster“); Land Österreich", twin.Evidence);
+        Assert.Equal(3 + 1 + LeagueAccountFinder.ScoreTwin, twin.Score);
+        // Die abgeleiteten Namen fragt die Suche ohnehin auf beiden Seiten — für sie keine zweite Anfrage.
+        Assert.Single(http.Urls, x => x.EndsWith("/pub/player/max_muster"));
+        Assert.DoesNotContain(http.Urls, x => x.Contains("/pub/player/musterfan"));      // kein Treffer, kein Nachsehen
+    }
+
+    [Fact]
+    public async Task Twin_OtherSiteFails_KeepsTheHit_AndClosedOrUnfittingIsNoTwin()
+    {
+        var hit = Prof("Muster1987", "Max Muster");
+        var down = new FakeHttp(_ => Status(HttpStatusCode.InternalServerError));
+        Assert.Null(await LeagueAccountFinder.TwinAsync(new HttpClient(down), "https://lichess.org", Max, hit, null, default));
+        var italy = new FakeHttp(_ => Ok("""{"username":"muster1987","name":"Max Muster","country":"https://api.chess.com/pub/country/IT"}"""));
+        Assert.Null(await LeagueAccountFinder.TwinAsync(new HttpClient(italy), "https://lichess.org", Max, hit, null, default));
+        var closed = new FakeHttp(_ => Ok("""{"username":"muster1987","name":"Max Muster","status":"closed:fair_play_violations"}"""));
+        Assert.Null(await LeagueAccountFinder.TwinAsync(new HttpClient(closed), "https://lichess.org", Max, hit, null, default));
+        Assert.Equal("chess.com", LeagueAccountFinder.OtherSite("lichess"));
+        Assert.Equal("lichess", LeagueAccountFinder.OtherSite("chess.com"));
     }
 
     [Fact]

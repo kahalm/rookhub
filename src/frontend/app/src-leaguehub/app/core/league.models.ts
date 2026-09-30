@@ -45,9 +45,9 @@ export interface AccountSuggestion {
 }
 
 /** `GET …/suggestions`: offene Vorschläge; in der Übersicht dazu, wie viele Spieler schon abgesucht sind. */
-/** Eine Prüfung der Konto-Prüfung (i), 0.619.0: `ok` spricht dafür, `warn` macht stutzig, `fail` spricht dagegen,
- *  `none` = nichts zu prüfen, `info` = zur Kenntnis. */
-export interface AccountCheckItem { key: string; label: string; status: 'ok' | 'warn' | 'fail' | 'none' | 'info'; text: string }
+/** Eine Prüfung der Konto-Prüfung (i), 0.619.0: `ok` spricht dafür, `weak` schwächer dafür (0.621.0), `warn` macht stutzig,
+ *  `fail` spricht dagegen, `none` = nichts zu prüfen, `info` = zur Kenntnis. */
+export interface AccountCheckItem { key: string; label: string; status: 'ok' | 'weak' | 'warn' | 'fail' | 'none' | 'info'; text: string }
 export interface AccountChecks {
   site: string; user: string; url: string; player: string; elo: number | null; checkedAt: string;
   /** Konnte das Profil geholt werden? Ohne stehen die Profil-Prüfungen auf „nicht geprüft". */

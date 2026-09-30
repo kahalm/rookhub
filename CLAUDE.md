@@ -1784,11 +1784,20 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
 * **Online-Wertung gegen Elo** (0.609.0, Wunsch „ein Konto mit 500 auf einem 2000er ergibt keinen Sinn — nur niedriger ist ein
   Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab 10 Partien, nicht vorläufig —
   unbespielte Lichess-Kategorien stehen auf 1500 „prov"; Bullet zählt mit) darf höchstens `RatingBelow` 400 unter der Elo der
-  Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 100 bis 300 DARÜBER (`FitMin`/`FitMax`, 0.619.0,
-  Wunsch „normal ist Elo online ca. 200 höher, 100–300 wäre passend"; vorher 250 darunter bis 450 darüber), ist das ein Hinweis
-  (+1). Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
+  Meldeliste liegen, sonst fällt das Konto weg; nach oben keine Grenze. Liegt sie 100 bis 300 DARÜBER (`FitMin`/`FitMax`), ist das
+  der OPTIMALE Treffer (+2, `ScoreRatingFit`), jede andere Wertung darüber oder bis 400 darunter ein schwächerer (+1,
+  `ScoreRatingWeak`) — `RatingEvidence`, Wunsch „normal ist Elo online ca. 200 höher, 100–300 wäre passend" und „das Band zeigt die
+  optimalen Treffer, 400 unter FIDE schließt aus, alles andere ist halt Treffer, aber schwächer" (0.621.0; 0.619.0 gab außerhalb des
+  Bands nichts, davor −250 bis +450 einen Punkt).
+* **Gleicher Nutzername auf der anderen Seite** (0.621.0, Wunsch „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf
+  chess.com bzw. Lichess existiert und eventuell auch passt"; `LeagueAccountFinder.TwinAsync`): zu jedem Treffer holt die Suche das
+  Profil desselben Namens auf der anderen Seite (`FetchProfileAsync`, nur wo dieser Name dort nicht ohnehin schon gefragt wurde) und
+  urteilt nach denselben Regeln (`Judge` mit der Schwelle des abgeleiteten Namens, erster Hinweis „gleicher Nutzername wie das
+  Lichess-Konto …", +`ScoreTwin` 1). Die Team-Suche tut dasselbe für jeden ihrer Vorschläge (Source `team`). Hakt die andere Seite,
+  bleibt der Treffer selbst stehen; ein 429 beendet den Durchgang wie sonst. Lichess liefert die Wertungen in `POST /api/users` mit (`perfs`), chess.com nur über `/pub/player/{name}/stats` — ein Abruf
   mehr je gefundenem Konto (dort steht auch die selbst angegebene FIDE-Wertung).
-* **Fassung** `LeagueAccountFinder.CurrentVersion` (5 seit 0.619.0 — neues Wertungsband) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
+* **Fassung** `LeagueAccountFinder.CurrentVersion` (6 seit 0.621.0 — Wertungsband optimal/schwächer, gleicher Name auf der anderen
+  Seite) in `LeagueAccountScans.Version`: ältere Suchen sind sofort wieder
   fällig, und eine neue Suche entfernt OFFENE Vorschläge, die sie nicht mehr bestätigt (verworfene bleiben). Wer Kandidaten oder
   Urteil ändert, erhöht die Zahl.
 * **Minderjährige: gesucht, aber VERBORGEN** (0.610.0, Wunsch „du linkst sie, aber zeigst niemandem den Namen/Account"; bis
@@ -1850,8 +1859,9 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
 
 **Konto-Prüfung (i)** (0.619.0, Wunsch 2026-09-30: „mach bei den Konten immer ein (i) und zeig an, was alles geprüft wurde:
 Selbstmeldung, TMM 2021, Name, Land, % Übereinstimmung Repertoire, Elo passend"; `Services/League/LeagueAccountChecks.cs`): je
-eingetragenem Konto und je Vorschlag eine Liste von Prüfungen `{ key, label, status, text }` — `ok` spricht dafür, `warn` macht
-stutzig, `fail` spricht dagegen, `none` = nichts zu prüfen, `info` = zur Kenntnis. Reihenfolge wie im Wunsch:
+eingetragenem Konto und je Vorschlag eine Liste von Prüfungen `{ key, label, status, text }` — `ok` spricht dafür, `weak` spricht
+schwächer dafür (0.621.0), `warn` macht stutzig, `fail` spricht dagegen, `none` = nichts zu prüfen, `info` = zur Kenntnis. Reihenfolge
+wie im Wunsch:
 * **Selbstmeldung** (`LeagueSelfReports`, eingespielt je QUELLE über `POST /api/league/admin/self-reports`, z. B. die Meldeliste der
   Online-TMM 2021): dieses Konto von ihm gemeldet → ok; von einem ANDEREN Spieler → fail (Name nur, wenn dessen Konten nicht verborgen
   sind); er hat ein anderes Konto derselben Seite gemeldet → warn.
@@ -1859,15 +1869,17 @@ stutzig, `fail` spricht dagegen, `none` = nichts zu prüfen, `info` = zur Kenntn
   seit 0.619.0 je Team-Battle die Serie ohne Runde, `EventSeries`: „Online TMM 2021 Runde 3 Team Battle" → „Online TMM 2021"); für
   seinen Verein (`ClubKeys` des Teams gegen die Orte seiner Mannschaften) → ok, sonst warn. Bestand von vor 0.619.0 hat noch keine
   Serien — bis zum nächsten Pool-Durchlauf steht dort „info".
-* **Name im Profil** (`FirstNameMatch` wie die Suche), **Nutzername** (aus dem Namen gebildet / anderer Vorname aus den Meldelisten =
-  fail / enthält den Nachnamen), **Land** (Österreich oder Föderation laut Meldeliste bzw. FIDE).
+* **Name im Profil** (`FirstNameMatch` wie die Suche; nur Initiale oder Nachname = weak), **Nutzername** (aus dem Namen gebildet /
+  anderer Vorname aus den Meldelisten = fail / enthält den Nachnamen = weak), **Land** (Österreich oder Föderation laut Meldeliste bzw. FIDE).
 * **Übereinstimmung Repertoire** (`LeagueFingerprint.Coverage`): Anteil der letzten 100 Online-Partien (ohne Bullet, wenn genug
   andere), die mindestens `RepertoireOwnMoves` (3) EIGENE Züge weit einer Stellung aus seinen Brettpartien folgen (nach einem eigenen
-  Zug ist fast jede Partie „im Repertoire"); ab 35 % ok, unter 10 % warn — online spielt man oft anderes, deshalb nie fail. Ein
+  Zug ist fast jede Partie „im Repertoire"); ab 35 % ok, 10–35 % weak, unter 10 % warn — online spielt man oft anderes, deshalb nie fail. Ein
   eingetragenes Konto nimmt die gespeicherten Partien, ein Vorschlag holt sie (Lichess ein Abruf, chess.com die jüngsten drei
   Monatsarchive). Unter 5 Brettpartien bzw. 10 Online-Partien: nichts zu prüfen.
 * **Online-Wertung je Kategorie** (`Profile.Ratings`, alle Kategorien mit mindestens einer Partie): nur belastbare zählen (≥ 10
-  Partien, nicht vorläufig); 100–300 über der Elo ok, darüber, knapp darüber oder darunter warn, mehr als 400 darunter fail.
+  Partien, nicht vorläufig); 100–300 über der Elo ok (optimal), jede andere bis 400 darunter weak, mehr als 400 darunter fail.
+* **Gleicher Name auf der anderen Seite** (0.621.0): schon als sein Konto eingetragen → ok; gibt es und passt nach den Regeln der Suche
+  → ok (mit den Hinweisen); gibt es, passt aber nicht → info; gibt es nicht / gesperrt → none.
 * Dazu FIDE-Wertung und Tiroler Ort im Profil, Tiroler Lichess-Teams und andere Team-Battles, zuletzt aktiv, gesperrt, bei einem anderen
   Spieler eingetragen, das Ergebnis der Team-Suche und (Vorschlag) ihre Hinweise.
 Das Profil wird dafür FRISCH geholt (dieselben Abrufe wie die Suche); ist die Seite nicht erreichbar, stehen die Profil-Prüfungen auf

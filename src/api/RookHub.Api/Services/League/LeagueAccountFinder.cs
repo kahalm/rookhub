@@ -31,9 +31,10 @@ public sealed partial class LeagueAccountFinder
     /// Fassung der Regeln. Wer an Kandidaten oder Urteil dreht, erhöht sie — dann sucht der Hintergrund jeden Spieler einmal neu,
     /// und offene Vorschläge, die die neue Regel nicht mehr trägt, fallen weg. 1 = 0.607.0, 2 = Online-Wertung gegen Elo (0.609.0),
     /// 3 = auch Minderjährige, verborgen (0.610.0), 4 = anderer Vorname im Profil = anderer Mensch (0.611.0),
-    /// 5 = Online-Wertung passt nur noch 100–300 über der Elo (0.619.0).
+    /// 5 = Online-Wertungsband 100–300 über der Elo (0.619.0), 6 = das Band ist der OPTIMALE Treffer, jede andere Wertung bis 400 unter
+    /// der Elo ein schwächerer, dazu derselbe Nutzername auf der anderen Seite (0.621.0).
     /// </summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
     /// <summary>Jünger = Konten verborgen (<see cref="LeagueHiddenAccounts"/>).</summary>
     public const int AdultAge = 18;
     /// <summary>Nach so vielen Tagen wird ein Spieler erneut abgesucht (neue Konten, geänderte Profile).</summary>
@@ -50,17 +51,33 @@ public sealed partial class LeagueAccountFinder
     /// nur niedriger ist ein Problem, alles droppen, was 400 niedriger ist"): die BESTE belastbare Wertung des Kontos (ab
     /// <see cref="MinRatedGames"/> Partien, nicht vorläufig; Bullet zählt mit) darf höchstens <see cref="RatingBelow"/> UNTER der
     /// Elo liegen, sonst ist es nicht er. Nach oben gibt es keine Grenze (Online-Wertungen liegen meist darüber, Lichess
-    /// deutlich). Liegt sie <see cref="FitMin"/> bis <see cref="FitMax"/> ÜBER der Elo, ist das ein Hinweis mehr (0.619.0, Wunsch:
-    /// „normal ist Elo online ca. 200 höher, 100–300 wäre passend"; vorher −250 bis +450).
+    /// deutlich). Liegt sie <see cref="FitMin"/> bis <see cref="FitMax"/> ÜBER der Elo, ist das der OPTIMALE Treffer
+    /// (<see cref="ScoreRatingFit"/>), jede andere Wertung darüber oder bis 400 darunter ein SCHWÄCHERER (<see cref="ScoreRatingWeak"/>) —
+    /// Wunsch 2026-09-30: „normal ist Elo online ca. 200 höher, 100–300 wäre passend" und „das Band zeigt die optimalen Treffer, 400
+    /// unter FIDE schließt aus, alles andere ist halt Treffer, aber schwächer" (0.621.0; 0.619.0 gab außerhalb des Bands nichts, davor
+    /// −250 bis +450 einen Punkt).
     /// </summary>
-    public const int RatingBelow = 400, FitMin = 100, FitMax = 300, ScoreRating = 1, MinRatedGames = 10;
+    public const int RatingBelow = 400, FitMin = 100, FitMax = 300, ScoreRatingFit = 2, ScoreRatingWeak = 1, MinRatedGames = 10;
+    /// <summary>Derselbe Nutzername wie ein Treffer auf der anderen Seite (0.621.0) — ein Hinweis.</summary>
+    public const int ScoreTwin = 1;
 
     /// <summary>Liegt die Online-Wertung im üblichen Abstand über der Elo (<see cref="FitMin"/>..<see cref="FitMax"/>)?</summary>
     public static bool RatingFits(int rating, int? elo) => elo is { } e && e > 0 && rating - e is >= FitMin and <= FitMax;
 
-    /// <summary>„Lichess Blitz 2100 liegt 200 über der Elo 1900 (üblich: 100–300)".</summary>
-    public static string RatingFitText(string? label, int rating, int elo) =>
-        $"{label ?? "Online-Wertung"} {rating} liegt {rating - elo} über der Elo {elo} (üblich: {FitMin}–{FitMax})";
+    /// <summary>
+    /// Was die Online-Wertung für den Treffer bringt: im Band optimal, sonst (bis <see cref="RatingBelow"/> darunter) schwächer; <c>null</c>
+    /// ohne Wertung, ohne Elo oder zu weit darunter (dann schließt <see cref="RatingPlausible"/> das Konto ohnehin aus).
+    /// „Lichess Blitz 2100 liegt 200 über der Elo 1900 (optimal: 100–300 darüber)".
+    /// </summary>
+    public static (int Score, string Text)? RatingEvidence(string? label, int? rating, int? elo)
+    {
+        if (rating is not { } r || elo is not { } e || e <= 0 || r < e - RatingBelow) return null;
+        var d = r - e;
+        var text = $"{label ?? "Online-Wertung"} {r} liegt {(d >= 0 ? $"{d} über" : $"{-d} unter")} der Elo {e}";
+        return RatingFits(r, e)
+            ? (ScoreRatingFit, $"{text} (optimal: {FitMin}–{FitMax} darüber)")
+            : (ScoreRatingWeak, $"{text} (Treffer, aber schwächer — optimal wären {FitMin}–{FitMax} darüber)");
+    }
 
     public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team);
 
@@ -207,10 +224,10 @@ public sealed partial class LeagueAccountFinder
             ev.Add(code == "AT" ? "Land Österreich" : $"Land {code}");
         }
         if (!RatingPlausible(prof, p.Elo)) return null;                   // 500 online bei 2000 Elo — ein anderer (höher ist ok)
-        if (prof.Rating is { } rt && p.Elo is { } e0 && RatingFits(rt, e0))
+        if (RatingEvidence(prof.RatingLabel, prof.Rating, p.Elo) is { } re)
         {
-            score += ScoreRating;
-            ev.Add(RatingFitText(prof.RatingLabel, rt, e0));
+            score += re.Score;
+            ev.Add(re.Text);
         }
         if (prof.FideRating is { } fr && p.Elo is { } elo && elo > 0 && Math.Abs(fr - elo) <= FideTolerance)
         {
@@ -514,9 +531,19 @@ public sealed partial class LeagueAccountFinder
         var taken = accounts.Select(a => Key(a.Site, a.UserName)).Concat(known.Select(s => Key(s.Site, s.UserName))).ToHashSet();
         var found = 0;
         var confirmed = new HashSet<string>();
+        var hits = new List<(Profile Prof, Verdict V)>();
         foreach (var (prof, der) in profiles)
+            if (Judge(p, prof, der, fideFed) is { } v) hits.Add((prof, v));
+        // Derselbe Nutzername auf der anderen Seite (0.621.0, Wunsch: „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf
+        // chess.com bzw. Lichess existiert und eventuell auch passt") — nur, wo dieser Name dort nicht ohnehin schon gefragt wurde.
+        var asked = lichessNames.Select(n => Key(LeagueOnlineSites.Lichess, n)).Concat(derived.Select(n => Key(LeagueOnlineSites.ChessCom, n))).ToHashSet();
+        foreach (var (prof, _) in hits.ToList())
         {
-            if (Judge(p, prof, der, fideFed) is not { } v) continue;
+            if (!asked.Add(Key(OtherSite(prof.Site), prof.User))) continue;
+            if (await TwinAsync(_http, _lichess, p, prof, fideFed, ct, ChessComPause) is { } twin) hits.Add(twin);
+        }
+        foreach (var (prof, v) in hits)
+        {
             confirmed.Add(Key(prof.Site, prof.User));
             if (!taken.Add(Key(prof.Site, prof.User))) continue;
             _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
@@ -539,6 +566,63 @@ public sealed partial class LeagueAccountFinder
     }
 
     private static string? Cut(string? s, int max) => s is null || s.Length <= max ? s : s[..max];
+
+    public static string OtherSite(string site) => site == LeagueOnlineSites.Lichess ? LeagueOnlineSites.ChessCom : LeagueOnlineSites.Lichess;
+
+    /// <summary>
+    /// Ein Profil frisch holen (Lichess <c>POST /api/users</c>; chess.com Profil + <c>/stats</c>). <c>null</c> = das Konto gibt es nicht
+    /// (oder der Name ist auf dieser Seite gar nicht möglich). Drosselt die Seite, wirft <see cref="LeagueOnlineSync.RateLimitedException"/>,
+    /// jeder andere Fehler eine <see cref="HttpRequestException"/>.
+    /// </summary>
+    public static async Task<Profile?> FetchProfileAsync(HttpClient http, string lichess, string site, string user, CancellationToken ct,
+        TimeSpan pause = default)
+    {
+        if (LeagueOnlineSites.Parse(site, user) is null) return null;
+        if (site == LeagueOnlineSites.Lichess)
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, $"{lichess}/api/users")
+            {
+                Content = new StringContent(user.ToLowerInvariant(), Encoding.UTF8, "text/plain"),
+            };
+            using var r = await http.SendAsync(req, ct);
+            if (r.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("Lichess");
+            r.EnsureSuccessStatusCode();
+            return ParseLichessUsers(await r.Content.ReadAsStringAsync(ct)).FirstOrDefault(x => x.User.Equals(user, StringComparison.OrdinalIgnoreCase));
+        }
+        var name = Uri.EscapeDataString(user.ToLowerInvariant());
+        if (pause > TimeSpan.Zero) await Task.Delay(pause, ct);
+        using var pr = await http.GetAsync($"https://api.chess.com/pub/player/{name}", ct);
+        if (pr.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("chess.com");
+        if (pr.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone) return null;
+        pr.EnsureSuccessStatusCode();
+        if (ParseChessComPlayer(await pr.Content.ReadAsStringAsync(ct)) is not { } prof) return null;
+        if (prof.Closed) return prof;
+        if (pause > TimeSpan.Zero) await Task.Delay(pause, ct);
+        using var st = await http.GetAsync($"https://api.chess.com/pub/player/{name}/stats", ct);
+        if (st.StatusCode == HttpStatusCode.TooManyRequests) throw new LeagueOnlineSync.RateLimitedException("chess.com");
+        return st.IsSuccessStatusCode ? WithChessComStats(prof, await st.Content.ReadAsStringAsync(ct)) : prof;
+    }
+
+    /// <summary>
+    /// Derselbe Nutzername wie der Treffer <paramref name="hit"/> auf der ANDEREN Seite (0.621.0): gibt es ihn, und passt er nach denselben
+    /// Regeln zum Spieler (Name, Land, Wertung — ein Hinweis genügt, der gleiche Name ist selbst einer)? → (Profil, Urteil) oder <c>null</c>.
+    /// </summary>
+    public static async Task<(Profile Profile, Verdict Verdict)?> TwinAsync(HttpClient http, string lichess, Player p, Profile hit,
+        string? fideFed, CancellationToken ct, TimeSpan pause = default)
+    {
+        Profile? twin;
+        try
+        {
+            twin = await FetchProfileAsync(http, lichess, OtherSite(hit.Site), hit.User, ct, pause);
+        }
+        catch (Exception e) when (e is HttpRequestException or JsonException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return null;                                              // die andere Seite hakt — der Treffer selbst bleibt
+        }
+        if (twin is not { Closed: false }) return null;
+        var lead = $"gleicher Nutzername wie das {LeagueOnlineSites.Label(hit.Site)}-Konto „{hit.User}“";
+        return Judge(p, twin, derived: true, fideFed, lead) is { } v ? (twin, v with { Score = v.Score + ScoreTwin }) : null;
+    }
 
     /// <summary>
     /// Ein Durchgang im Hintergrund: die Spieler der laufenden Saison mit FIDE-ID, die noch nie oder vor mehr als

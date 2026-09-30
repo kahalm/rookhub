@@ -31,20 +31,23 @@ public class LeagueAccountChecksTests : IDisposable
     // ── Einzelne Prüfungen ─────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Rating_100To300AboveTheElo_Fits_ElseWarns_FarBelowFails()
+    public void Rating_100To300AboveTheElo_IsOptimal_ElseAWeakerHit_FarBelowExcludes()
     {
         LeagueAccountFinder.Rating R(int v, int games = 50, bool reliable = true) => new("Lichess Blitz", v, games, reliable);
         Assert.Equal(LeagueAccountChecks.Ok, Status(R(2000)));                 // +100
         Assert.Equal(LeagueAccountChecks.Ok, Status(R(2100)));                 // +200, der Normalfall
         Assert.Equal(LeagueAccountChecks.Ok, Status(R(2200)));                 // +300
-        Assert.Equal(LeagueAccountChecks.Warn, Status(R(2201)));               // höher als üblich
-        Assert.Equal(LeagueAccountChecks.Warn, Status(R(1950)));               // knapp darüber
-        Assert.Equal(LeagueAccountChecks.Warn, Status(R(1500)));               // darunter, aber noch in der Grenze der Suche
+        // Wunsch: „das Band zeigt die optimalen Treffer, 400 unter FIDE schließt aus, alles andere ist halt Treffer, aber schwächer".
+        Assert.Equal(LeagueAccountChecks.Weak, Status(R(2201)));               // höher als das Band
+        Assert.Equal(LeagueAccountChecks.Weak, Status(R(1950)));               // knapp darüber
+        Assert.Equal(LeagueAccountChecks.Weak, Status(R(1500)));               // darunter, aber noch in der Grenze der Suche
         Assert.Equal(LeagueAccountChecks.Fail, Status(R(1499)));               // mehr als 400 darunter
         Assert.Equal(LeagueAccountChecks.None, Status(R(1200, 3, reliable: false)));   // zählt nicht
         Assert.Equal(LeagueAccountChecks.Info, Status(R(2100), elo: null));
-        Assert.Equal("2100 (50 Partien) — 200 über der Elo 1900: passt (üblich 100–300 darüber)", LeagueAccountChecks.RatingCheck(R(2100), 1900).Text);
-        Assert.Equal("1400 (1.234 Partien) — 500 unter der Elo 1900: viel zu niedrig — vermutlich ein anderer",
+        Assert.Equal("2100 (50 Partien) — 200 über der Elo 1900: optimal (100–300 darüber)", LeagueAccountChecks.RatingCheck(R(2100), 1900).Text);
+        Assert.Equal("2500 (50 Partien) — 600 über der Elo 1900: Treffer, aber schwächer — optimal wären 100–300 darüber",
+            LeagueAccountChecks.RatingCheck(R(2500), 1900).Text);
+        Assert.Equal("1400 (1.234 Partien) — 500 unter der Elo 1900: mehr als 400 darunter — schließt ihn aus",
             LeagueAccountChecks.RatingCheck(R(1400, 1234), 1900).Text);
         // Je Kategorie eine Zeile; ohne Wertungen eine Zeile „keine Wertung".
         var rows = LeagueAccountChecks.RatingChecks(Prof(ratings: new[] { R(2100), new LeagueAccountFinder.Rating("Lichess Schnell", 2050, 20, true) }), 1900);
@@ -57,8 +60,8 @@ public class LeagueAccountChecksTests : IDisposable
     {
         string S(string? real) => LeagueAccountChecks.NameCheck(Max, Prof(real)).Status;
         Assert.Equal(LeagueAccountChecks.Ok, S("Max Muster"));
-        Assert.Equal(LeagueAccountChecks.Ok, S("M. Muster"));
-        Assert.Equal(LeagueAccountChecks.Info, S("Muster"));
+        Assert.Equal(LeagueAccountChecks.Weak, S("M. Muster"));
+        Assert.Equal(LeagueAccountChecks.Weak, S("Muster"));
         Assert.Equal(LeagueAccountChecks.Fail, S("Moritz Muster"));
         Assert.Equal(LeagueAccountChecks.Fail, S("Max Mustermann"));
         Assert.Equal(LeagueAccountChecks.None, S(null));
@@ -72,7 +75,7 @@ public class LeagueAccountChecksTests : IDisposable
         string S(string user) => LeagueAccountChecks.UserNameCheck(Max, user, firsts).Status;
         Assert.Equal(LeagueAccountChecks.Ok, S("max_muster"));
         Assert.Equal(LeagueAccountChecks.Fail, S("MoritzMuster"));
-        Assert.Equal(LeagueAccountChecks.Info, S("Muster1987"));
+        Assert.Equal(LeagueAccountChecks.Weak, S("Muster1987"));
         Assert.Equal(LeagueAccountChecks.None, S("Katzenpapa"));
     }
 
@@ -103,7 +106,7 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal((4, 2, (5 + 3 + 6 + 0) / 4.0), LeagueFingerprint.Coverage(games, r));
 
         Assert.Equal(LeagueAccountChecks.Ok, LeagueAccountChecks.RepertoireItem((100, 35, 6.1), 40).Status);
-        Assert.Equal(LeagueAccountChecks.Info, LeagueAccountChecks.RepertoireItem((100, 10, 3.0), 40).Status);
+        Assert.Equal(LeagueAccountChecks.Weak, LeagueAccountChecks.RepertoireItem((100, 10, 3.0), 40).Status);
         Assert.Equal(LeagueAccountChecks.Warn, LeagueAccountChecks.RepertoireItem((100, 9, 1.0), 40).Status);
         Assert.Equal(LeagueAccountChecks.None, LeagueAccountChecks.RepertoireItem((9, 9, 9.0), 40).Status);
         Assert.Equal("58 % seiner letzten 100 Online-Partien folgen mindestens 3 eigene Züge weit einer Stellung aus seinen 40 Brettpartien "
@@ -124,6 +127,7 @@ public class LeagueAccountChecksTests : IDisposable
     private sealed class FakeHttp(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
     {
         public List<string> Urls { get; } = new();
+        public HttpResponseMessage Answer(HttpRequestMessage r) => answer(r);
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -229,16 +233,42 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Contains("Lichess Quarantäne-Liga 7C", Of(r, "teams").Text);
         Assert.Equal(LeagueAccountChecks.Ok, Of(r, "closed").Status);
         Assert.Equal(LeagueAccountChecks.Ok, Of(r, "elsewhere").Status);
-        // Die Partien des Kontos liegen schon da — geholt wird nur das Profil.
-        Assert.Equal(new[] { "https://lichess.org/api/users" }, http.Urls);
+        // Gleicher Name auf chess.com: gibt es hier nicht.
+        Assert.Equal((LeagueAccountChecks.None, "kein Konto „MaxMuster“"), (Of(r, "twin").Status, Of(r, "twin").Text));
+        Assert.Equal("Gleicher Name auf chess.com", Of(r, "twin").Label);
+        // Die Partien des Kontos liegen schon da — geholt werden nur das Profil und der gleiche Name auf der anderen Seite.
+        Assert.Equal(new[] { "https://lichess.org/api/users", "https://api.chess.com/pub/player/maxmuster" }, http.Urls);
 
         // Zweimal aufklappen = einmal fragen.
         await Checks(http).ForAccountAsync(acc.Id, default);
-        Assert.Equal(2, http.Urls.Count);                                                      // neuer Dienst = neuer Speicher
+        Assert.Equal(4, http.Urls.Count);                                                      // neuer Dienst = neuer Speicher
         var checks = Checks(http);
         await checks.ForAccountAsync(acc.Id, default);
         await checks.ForAccountAsync(acc.Id, default);
-        Assert.Equal(3, http.Urls.Count);
+        Assert.Equal(6, http.Urls.Count);
+    }
+
+    [Fact]
+    public async Task Twin_ExistsAndFits_OrExistsButDoesNotFit_OrIsAlreadyEntered()
+    {
+        var acc = await SeedAsync();
+        FakeHttp With(string chessComBody) => new(req =>
+        {
+            var u = req.RequestUri!.ToString();
+            if (u.EndsWith("/pub/player/maxmuster")) return Ok(chessComBody);
+            return World().Answer(req);
+        });
+        var fits = (await Checks(With("""{"username":"maxmuster","name":"Max Muster","country":"https://api.chess.com/pub/country/AT"}"""))
+            .ForAccountAsync(acc.Id, default))!;
+        Assert.Equal((LeagueAccountChecks.Ok, "„maxmuster“ gibt es und es passt: Klarname im Profil („Max Muster“); Land Österreich"),
+            (Of(fits, "twin").Status, Of(fits, "twin").Text));
+        var other = (await Checks(With("""{"username":"maxmuster","name":"Moritz Muster","country":"https://api.chess.com/pub/country/AT"}"""))
+            .ForAccountAsync(acc.Id, default))!;
+        Assert.Equal(LeagueAccountChecks.Info, Of(other, "twin").Status);
+        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "222", Site = "chess.com", UserName = "MaxMuster", Url = "u", Confidence = "sicher" });
+        await _db.SaveChangesAsync();
+        var entered = (await Checks(With("x")).ForAccountAsync(acc.Id, default))!;
+        Assert.Equal((LeagueAccountChecks.Ok, "„MaxMuster“ ist dort auch als sein Konto eingetragen"), (Of(entered, "twin").Status, Of(entered, "twin").Text));
     }
 
     [Fact]

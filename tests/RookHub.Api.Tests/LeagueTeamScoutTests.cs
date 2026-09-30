@@ -110,6 +110,7 @@ public class LeagueTeamScoutTests : IDisposable
     private sealed class FakeHttp(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
     {
         public readonly List<string> Urls = new();
+        public HttpResponseMessage Answer(HttpRequestMessage r) => answer(r);
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Urls.Add(request.Method + " " + request.RequestUri);
@@ -189,6 +190,26 @@ public class LeagueTeamScoutTests : IDisposable
     }
 
     [Fact]
+    public async Task Run_AlsoSuggestsTheSameUserNameOnChessCom_WhenItFits()
+    {
+        // Wunsch 2026-09-30: „wenn du einen Treffer hast, prüfe, ob der gleiche Username auf chess.com bzw. Lichess existiert und eventuell auch passt".
+        await SeedAsync();
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().EndsWith("/pub/player/katzenpapa")
+            ? Ok("""{"url":"https://www.chess.com/member/Katzenpapa","username":"katzenpapa","name":"Max Muster","country":"https://api.chess.com/pub/country/AT"}""")
+            : world.Answer(req));
+        var scout = Scout(http);
+        await scout.RefreshPoolAsync(default);
+        await scout.RunOnceAsync(TimeSpan.FromMinutes(5), refreshPool: false, default);
+        var twin = await _db.LeagueAccountSuggestions.SingleAsync(s => s.Site == "chess.com");
+        Assert.Equal(("222", "Katzenpapa", LeagueTeamScout.Source), (twin.FideId, twin.UserName, twin.Source));
+        Assert.StartsWith("gleicher Nutzername wie das Lichess-Konto „Katzenpapa“; Klarname im Profil", twin.Evidence);
+        // Trigonias gibt es auf chess.com nicht — gefragt, aber kein Vorschlag.
+        Assert.Contains(http.Urls, x => x.EndsWith("/pub/player/trigonias"));
+        Assert.Equal(3, await _db.LeagueAccountSuggestions.CountAsync());
+    }
+
+    [Fact]
     public async Task Run_SuggestsByRealName_AndByPositionsWithinTheClub_AsTeamSuggestions()
     {
         await SeedAsync();
@@ -205,7 +226,7 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.Equal(4, list[1].Score);                                                         // Abstand ≥ 2
         Assert.StartsWith("spielte für „SK Kufstein“ (Lichess-Team-Battle); seine Online-Eröffnungen erreichen Stellungen aus dem "
             + "Brett-Repertoire dieses Spielers, aber nicht aus dem des anderen verglichenen Vereinsspielers", list[1].Evidence);
-        Assert.Contains("Lichess Schnell 2100 liegt 200 über der Elo 1900 (üblich: 100–300)", list[1].Evidence);
+        Assert.Contains("Lichess Schnell 2100 liegt 200 über der Elo 1900 (optimal: 100–300 darüber)", list[1].Evidence);
         // Maier (Innsbruck) spielt dasselbe, zählt aber nicht: verglichen wird nur mit dem Verein, für den das Konto spielte.
         Assert.DoesNotContain(list, s => s.FideId == "444");
 
