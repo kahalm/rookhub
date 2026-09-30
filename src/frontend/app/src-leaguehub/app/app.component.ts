@@ -37,6 +37,7 @@ import { environment } from '../../src/environments/environment';
           <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
           <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
           @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
+          @if (nav().manage) { <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a> }
         </nav>
       }
     </header>
@@ -61,7 +62,7 @@ export class LeagueHubAppComponent implements OnInit {
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
   readonly nav = computed(() => {
     this.user();
-    return { view: this.auth.has('league.view'), contribute: this.auth.has('league.contribute') };
+    return { view: this.auth.has('league.view'), contribute: this.auth.has('league.contribute'), manage: this.auth.has('league.manage') };
   });
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });

@@ -1,0 +1,287 @@
+using System.Net;
+using System.Text;
+using System.Text.Json.Nodes;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+using RookHub.Api.Services.League;
+
+namespace RookHub.Api.Tests;
+
+/// <summary>
+/// Konto-Vorschläge (0.607.0): Nutzernamen aus dem Namen, das Urteil über ein Profil, das Lesen der Antworten und die Suche
+/// samt Übernehmen/Verwerfen. Die Antworten sind nachgebaut — Felder wie in den öffentlichen Schnittstellen von Lichess
+/// (<c>/api/users</c>, <c>/api/player/autocomplete</c>, <c>/api/fide/player</c>) und chess.com (<c>/pub/player</c>),
+/// nachgesehen am 2026-09-30.
+/// </summary>
+public class LeagueAccountFinderTests : IDisposable
+{
+    private readonly AppDbContext _db = new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+
+    public void Dispose() => _db.Dispose();
+
+    private static readonly LeagueAccountFinder.Player Max = new("222", "Muster, Max", "AUT", 1900, "Kufstein 1");
+
+    private static LeagueAccountFinder.Profile Prof(string user, string? real = null, string? flag = null, string? loc = null,
+        int? fide = null, bool closed = false, string site = "lichess") =>
+        new(site, user, "u/" + user, real, flag, loc, null, fide, null, closed);
+
+    // ── Namen ──────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Variants_FromName_UmlautsTitlesAndOrder()
+    {
+        Assert.Equal(new[] { "MaxMuster", "Max_Muster", "Max-Muster", "MusterMax", "Muster_Max", "MMuster", "MusterM" },
+            LeagueAccountFinder.Variants("Muster, Max"));
+        Assert.Equal("JoergMueller", LeagueAccountFinder.Variants("Müller, Jörg Peter")[0]);        // erster Vorname
+        Assert.Equal("FranzHuber", LeagueAccountFinder.Variants("Dr. Huber, Franz")[0]);             // Titel weg
+        Assert.Equal("FranzHuber", LeagueAccountFinder.Variants("FM Huber, Franz")[0]);
+        Assert.Equal("PhilipHengl", LeagueAccountFinder.Variants("Hengl Philip")[0]);                // ohne Komma: Nachname zuerst
+        Assert.Equal("AnaPerezRodriguez", LeagueAccountFinder.Variants("Perez Rodriguez, Ana")[0]);   // Leerzeichen im Nachnamen weg
+        Assert.Contains("Hans-PeterGruber", LeagueAccountFinder.Variants("Gruber, Hans-Peter"));
+        Assert.Empty(LeagueAccountFinder.Variants("Muster"));
+        Assert.Equal("Rene", LeagueAccountFinder.Plain("René"));
+    }
+
+    // ── Urteil ─────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Judge_NameCountryRatingAndPlace_AddUp()
+    {
+        var v = LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "AT", "Kufstein", 1950), derived: true)!;
+        Assert.Equal(1 + 3 + 1 + 2 + 2, v.Score);
+        Assert.Equal(new[] { "Nutzername aus dem Namen", "Klarname im Profil („Max Muster“)", "Land Österreich",
+            "FIDE-Wertung im Profil 1950 (Liste 1900)", "Tiroler Ort im Profil" }, v.Evidence);
+        Assert.Equal(2, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", flag: "AT"), derived: true)!.Score);
+        Assert.Equal(2, LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "M. Muster"), derived: true)!.Score);   // nur Nachname
+        Assert.Contains("Nachname im Profil", LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "M. Muster"), derived: true)!.Evidence[1]);
+    }
+
+    [Fact]
+    public void Judge_RejectsStrangersAndWeakHits()
+    {
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Mustermann"), derived: true));   // anderer Name
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "BR"), derived: true));   // anderes Land
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster"), derived: true));                      // gar kein Hinweis
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", closed: true), derived: true));
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", fide: 2300), derived: true));          // Wertung zu weit weg
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("Muster1987", flag: "AT"), derived: false));        // Suche: Land reicht nicht
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("Muster1987", loc: "Forum Hallo"), derived: false)); // kein Tiroler Ort
+        var searched = LeagueAccountFinder.Judge(Max, Prof("Muster1987", "Max Muster"), derived: false)!;
+        Assert.Equal(3, searched.Score);
+        Assert.Equal("Nutzername beginnt mit dem Nachnamen", searched.Evidence[0]);
+        // Land der FIDE-Föderation ist kein Widerspruch.
+        Assert.Null(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "DE"), derived: true));
+        Assert.NotNull(LeagueAccountFinder.Judge(Max, Prof("MaxMuster", "Max Muster", "DE"), derived: true, fideFed: "GER"));
+    }
+
+    // ── Antworten lesen ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Parse_LichessUsers_ChessComPlayer_Autocomplete_Fide()
+    {
+        var users = LeagueAccountFinder.ParseLichessUsers("""
+            [{"id":"maxmuster","username":"MaxMuster","seenAt":1790764836059,
+              "profile":{"flag":"AT","location":"Schwaz","realName":"Max Muster","fideRating":1950}},
+             {"id":"max_muster","username":"Max_Muster","disabled":true},
+             {"id":"mustermax","username":"MusterMax","profile":{"firstName":"Max","lastName":"Muster","country":"AT"}}]
+            """);
+        Assert.Equal(3, users.Count);
+        Assert.Equal(("MaxMuster", "Max Muster", "AT", "Schwaz", 1950, false),
+            (users[0].User, users[0].RealName, users[0].Flag, users[0].Location, users[0].FideRating, users[0].Closed));
+        Assert.Equal("https://lichess.org/@/MaxMuster", users[0].Url);
+        Assert.Equal(new DateTime(2026, 9, 30), users[0].LastActive!.Value.Date);
+        Assert.True(users[1].Closed);
+        Assert.Equal(("Max Muster", "AT"), (users[2].RealName, users[2].Flag));
+
+        var cc = LeagueAccountFinder.ParseChessComPlayer("""
+            {"url":"https://www.chess.com/member/MaxMuster","name":"Max Muster","username":"maxmuster",
+             "country":"https://api.chess.com/pub/country/AT","last_online":1760214650,"status":"premium","location":"Tirol"}
+            """)!;
+        Assert.Equal(("chess.com", "MaxMuster", "Max Muster", "AT", "Tirol", false), (cc.Site, cc.User, cc.RealName, cc.Flag, cc.Location, cc.Closed));
+        Assert.Equal("https://www.chess.com/member/MaxMuster", cc.Url);
+        Assert.True(LeagueAccountFinder.ParseChessComPlayer("""{"username":"x1","status":"closed:fair_play_violations"}""")!.Closed);
+
+        Assert.Equal(new[] { "Muster1987", "musterm" },
+            LeagueAccountFinder.ParseAutocomplete("""{"result":[{"name":"Muster1987","id":"muster1987"},{"name":"musterm","id":"musterm"}]}"""));
+        Assert.Equal(((int?)1987, "AUT"), LeagueAccountFinder.ParseFidePlayer("""{"id":222,"name":"Muster, Max","federation":"AUT","year":1987}"""));
+    }
+
+    // ── Suchen ─────────────────────────────────────────────────────────────────────────────────
+
+    private sealed class FakeHttp(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler
+    {
+        public readonly List<string> Urls = new();
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Urls.Add(request.Method + " " + request.RequestUri);
+            return Task.FromResult(answer(request));
+        }
+    }
+
+    private static HttpResponseMessage Ok(string body) => new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8) };
+    private static HttpResponseMessage Status(HttpStatusCode c) => new(c) { Content = new StringContent("") };
+
+    private LeagueAccountFinder Finder(FakeHttp http) =>
+        new(_db, new HttpClient(http), NullLogger<LeagueAccountFinder>.Instance) { ChessComPause = TimeSpan.Zero, PlayerPause = TimeSpan.Zero };
+
+    /// <summary>Lichess kennt MaxMuster (Klarname, AT) und Muster1987 (Suche, Klarname); chess.com kennt Max_Muster (AT).</summary>
+    private static FakeHttp World(int year = 1987) => new(req =>
+    {
+        var u = req.RequestUri!.ToString();
+        if (u.Contains("/api/fide/player/")) return Ok($$"""{"id":222,"federation":"AUT","year":{{year}}}""");
+        if (u.Contains("/api/player/autocomplete")) return Ok("""{"result":[{"name":"Muster1987"},{"name":"MusterFan"}]}""");
+        if (u.EndsWith("/api/users"))
+            return Ok("""
+                [{"id":"maxmuster","username":"MaxMuster","profile":{"flag":"AT","realName":"Max Muster"}},
+                 {"id":"muster1987","username":"Muster1987","profile":{"realName":"Max Muster","location":"Schwaz"}},
+                 {"id":"musterfan","username":"MusterFan","profile":{"flag":"AT"}}]
+                """);
+        if (u.EndsWith("/pub/player/max_muster"))
+            return Ok("""{"url":"https://www.chess.com/member/Max_Muster","username":"max_muster","country":"https://api.chess.com/pub/country/AT"}""");
+        if (u.Contains("api.chess.com/pub/player/")) return Status(HttpStatusCode.NotFound);
+        return Status(HttpStatusCode.InternalServerError);
+    });
+
+    private async Task SeedAsync(string season = "2026/27")
+    {
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 1, Name = "Landesliga", Season = season, League = "LL", Stage = "x" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Muster, Max", NameKey = "muster, max", FideId = "222", Fed = "AUT", EloI = 1900 });
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Scan_CreatesSuggestions_FromBothSites_AndNotTwice()
+    {
+        await SeedAsync();
+        var http = World();
+        var finder = Finder(http);
+        var p = (await finder.PlayerAsync("222", default))!;
+        Assert.Equal(("Muster, Max", "AUT", (int?)1900, "Kufstein 1"), (p.Name, p.Fed, p.Elo, p.Team));
+
+        var r = await finder.ScanAsync(p, default);
+        Assert.Equal((3, (string?)null), (r.Found, r.Skipped));
+        var list = await _db.LeagueAccountSuggestions.OrderByDescending(s => s.Score).ThenBy(s => s.Id).ToListAsync();
+        Assert.Equal(new[] { "lichess:MaxMuster", "lichess:Muster1987", "chess.com:Max_Muster" }, list.Select(s => $"{s.Site}:{s.UserName}"));
+        Assert.Equal(1 + 3 + 1, list[0].Score);
+        Assert.StartsWith("Nutzername aus dem Namen; Klarname im Profil", list[0].Evidence);
+        Assert.Equal("https://www.chess.com/member/Max_Muster", list[2].Url);
+        Assert.DoesNotContain(list, s => s.UserName == "MusterFan");       // Suche + nur Land = zu wenig
+        var scan = await _db.LeagueAccountScans.SingleAsync();
+        Assert.Equal((1987, "AUT", 3), (scan.BirthYear, scan.Federation, scan.Found));
+        // Nur die abgeleiteten Namen gehen an chess.com, alle Kandidaten gesammelt an Lichess.
+        Assert.Equal(7, http.Urls.Count(x => x.Contains("api.chess.com")));
+        Assert.Single(http.Urls, x => x.StartsWith("POST") && x.EndsWith("/api/users"));
+
+        http.Urls.Clear();
+        Assert.Equal(0, (await finder.ScanAsync(p, default)).Found);           // derselbe Stand: nichts Neues
+        Assert.DoesNotContain(http.Urls, x => x.Contains("/api/fide/player/")); // Jahrgang ist gemerkt
+        Assert.Equal(3, await _db.LeagueAccountSuggestions.CountAsync());
+    }
+
+    [Fact]
+    public async Task Scan_SkipsMinors_AndRemovesTheirOpenSuggestions()
+    {
+        await SeedAsync();
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion { FideId = "222", Site = "lichess", UserName = "Alt", Url = "u", Evidence = "e" });
+        await _db.SaveChangesAsync();
+        var http = World(year: DateTime.UtcNow.Year - 15);
+        var finder = Finder(http);
+        var r = await finder.ScanAsync((await finder.PlayerAsync("222", default))!, default);
+        Assert.Equal((0, "minderjährig"), (r.Found, r.Skipped));
+        Assert.Empty(await _db.LeagueAccountSuggestions.ToListAsync());
+        Assert.Single(http.Urls);                                             // nur der Jahrgang
+    }
+
+    [Fact]
+    public async Task Scan_WithoutBirthYear_SearchesNothing_AndRateLimitThrows()
+    {
+        await SeedAsync();
+        var noYear = Finder(new FakeHttp(_ => Status(HttpStatusCode.NotFound)));
+        Assert.Equal("Jahrgang unbekannt", (await noYear.ScanAsync(Max, default)).Skipped);
+
+        var limited = Finder(new FakeHttp(_ => Status(HttpStatusCode.TooManyRequests)));
+        await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => limited.ScanAsync(Max with { Fide = "333" }, default));
+    }
+
+    [Fact]
+    public async Task Scan_LeavesOutExistingAccountsAndRejectedSuggestions()
+    {
+        await SeedAsync();
+        _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "222", Site = "lichess", UserName = "maxmuster", Url = "u", Confidence = "sicher" });
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion
+        {
+            FideId = "222", Site = "chess.com", UserName = "Max_Muster", Url = "u", Evidence = "e", Status = LeagueSuggestionStatus.Rejected,
+        });
+        await _db.SaveChangesAsync();
+        var r = await Finder(World()).ScanAsync(Max, default);
+        Assert.Equal(1, r.Found);
+        Assert.Equal("Muster1987", (await _db.LeagueAccountSuggestions.SingleAsync(s => s.Status == LeagueSuggestionStatus.Open)).UserName);
+    }
+
+    [Fact]
+    public async Task RunOnce_OnlyCurrentSeason_NotRecentlyScanned()
+    {
+        await SeedAsync("2026/27");
+        _db.LeagueTournaments.Add(new LeagueTournament { Tnr = 2, Name = "Alt", Season = "2024/25", League = "LL", Stage = "x" });
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 2, Team = "Alt 1", Name = "Alt, Otto", NameKey = "alt, otto", FideId = "444" });
+        await _db.SaveChangesAsync();
+        var http = World();
+        Assert.False(await Finder(http).RunOnceAsync(TimeSpan.FromMinutes(5), default));
+        Assert.Equal(new[] { "222" }, await _db.LeagueAccountScans.Select(s => s.FideId).ToListAsync());
+        http.Urls.Clear();
+        Assert.False(await Finder(http).RunOnceAsync(TimeSpan.FromMinutes(5), default));   // eben abgesucht: nichts fällig
+        Assert.Empty(http.Urls);
+    }
+
+    // ── Übernehmen / Verwerfen ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Accept_CreatesAccountWithComment_Reject_Stays_Delete_RemembersAsRejected()
+    {
+        await SeedAsync();
+        await Finder(World()).ScanAsync(Max, default);
+        var svc = new LeagueOnlineAccountService(_db);
+
+        var overview = await svc.SuggestionsAsync(null, default);
+        var items = overview["items"]!.AsArray();
+        Assert.Equal((3, 1, 1), (items.Count, (int)overview["scanned"]!, (int)overview["total"]!));
+        Assert.Equal(("Muster, Max", "Kufstein 1"), ((string)items[0]!["name"]!, (string)items[0]!["team"]!));
+
+        var first = await _db.LeagueAccountSuggestions.SingleAsync(s => s.UserName == "MaxMuster");
+        var (acc, reason) = await svc.AcceptSuggestionAsync(first.Id, sure: false, default);
+        Assert.Null(reason);
+        Assert.Equal(("lichess", "MaxMuster", "wahrscheinlich", true), (acc!.Site, acc.UserName, acc.Confidence, acc.Manual));
+        Assert.StartsWith("Vorschlag der Konto-Suche: Nutzername aus dem Namen", acc.Evidence);
+        Assert.False(await _db.LeagueAccountSuggestions.AnyAsync(s => s.Id == first.Id));
+        Assert.Equal("notFound", (await svc.AcceptSuggestionAsync(first.Id, true, default)).Reason);
+
+        var second = await _db.LeagueAccountSuggestions.SingleAsync(s => s.UserName == "Muster1987");
+        Assert.True(await svc.RejectSuggestionAsync(second.Id, default));
+        Assert.False(await svc.RejectSuggestionAsync(second.Id, default));
+        Assert.Single((await svc.SuggestionsAsync("222", default))["items"]!.AsArray());          // nur noch chess.com
+
+        // Ein von Hand eingetragenes Konto erledigt den passenden Vorschlag …
+        await svc.CreateAsync("222", new("chess.com", "max_muster", true, null), default);
+        Assert.Empty((await svc.SuggestionsAsync("222", default))["items"]!.AsArray());
+        // … und ein entferntes kommt bei der nächsten Suche nicht wieder.
+        Assert.True(await svc.DeleteAsync(acc.Id, default));
+        Assert.Equal(LeagueSuggestionStatus.Rejected,
+            (await _db.LeagueAccountSuggestions.SingleAsync(s => s.Site == "lichess" && s.UserName == "MaxMuster")).Status);
+        Assert.Equal(0, (await Finder(World()).ScanAsync(Max, default)).Found);
+    }
+
+    [Fact]
+    public void SuggestionJson_CarriesTheFieldsTheCardShows()
+    {
+        var o = LeagueOnlineAccountService.SuggestionJson(new LeagueAccountSuggestion
+        {
+            Id = 5, FideId = "222", Site = "lichess", UserName = "MaxMuster", Url = "u", Score = 4, Evidence = "e", ProfileName = "Max Muster",
+            LastActive = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+        });
+        Assert.Equal((5, "MaxMuster", 4, "Max Muster", "2026-09-01T00:00:00.0000000Z"),
+            ((int)o["id"]!, (string)o["user"]!, (int)o["score"]!, (string)o["profileName"]!, (string)o["lastActive"]!));
+        Assert.Null(o["name"]);
+    }
+}

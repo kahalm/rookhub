@@ -27,7 +27,8 @@ describe('PlayerCardComponent', () => {
 
   beforeEach(() => {
     perms = new Set();
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree', 'playerSuggestions']);
+    api.playerSuggestions.and.resolveTo({ items: [] });
     api.card.and.resolveTo(CARD);
     myGames = Object.assign(jasmine.createSpyObj<MyGamesService>('MyGamesService', ['save', 'shareUrl', 'open']),
       { available: false, rookHubUrl: null as string | null });

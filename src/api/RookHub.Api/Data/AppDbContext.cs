@@ -98,6 +98,8 @@ public class AppDbContext : DbContext
     public DbSet<LeaguePlayerProfile> LeaguePlayerProfiles => Set<LeaguePlayerProfile>();
     public DbSet<LeagueOnlineAccount> LeagueOnlineAccounts => Set<LeagueOnlineAccount>();
     public DbSet<LeagueOnlineGame> LeagueOnlineGames => Set<LeagueOnlineGame>();
+    public DbSet<LeagueAccountSuggestion> LeagueAccountSuggestions => Set<LeagueAccountSuggestion>();
+    public DbSet<LeagueAccountScan> LeagueAccountScans => Set<LeagueAccountScan>();
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
@@ -672,6 +674,25 @@ public class AppDbContext : DbContext
             e.HasOne(g => g.Account).WithMany().HasForeignKey(g => g.AccountId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(g => new { g.AccountId, g.ExternalId }).IsUnique();
             e.HasIndex(g => new { g.FideId, g.White, g.PlayedAt });
+        });
+        modelBuilder.Entity<LeagueAccountSuggestion>(e =>
+        {
+            e.Property(a => a.FideId).HasMaxLength(16);
+            e.Property(a => a.Site).HasMaxLength(20);
+            e.Property(a => a.UserName).HasMaxLength(60);
+            e.Property(a => a.Url).HasMaxLength(200);
+            e.Property(a => a.Evidence).HasMaxLength(500);
+            e.Property(a => a.ProfileName).HasMaxLength(120);
+            e.Property(a => a.Location).HasMaxLength(120);
+            e.HasIndex(a => new { a.FideId, a.Site, a.UserName }).IsUnique();
+            e.HasIndex(a => new { a.Status, a.Score });
+        });
+        modelBuilder.Entity<LeagueAccountScan>(e =>
+        {
+            e.HasKey(a => a.FideId);
+            e.Property(a => a.FideId).HasMaxLength(16);
+            e.Property(a => a.Note).HasMaxLength(200);
+            e.Property(a => a.Federation).HasMaxLength(8);
         });
         modelBuilder.Entity<LeagueShare>(e =>
         {

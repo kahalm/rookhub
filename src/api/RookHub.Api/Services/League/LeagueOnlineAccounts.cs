@@ -102,6 +102,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
             Confidence = req.Sure == true ? Sure : Unsure, Evidence = Comment(req.Comment), Manual = true, UpdatedAt = DateTime.UtcNow,
         };
         db.LeagueOnlineAccounts.Add(acc);
+        // Ein Vorschlag für genau dieses Konto ist damit erledigt (auch wenn es von Hand eingetragen wurde).
+        var user = parsed.User.ToLower();
+        db.LeagueAccountSuggestions.RemoveRange(await db.LeagueAccountSuggestions
+            .Where(x => x.FideId == fide && x.Site == parsed.Site && x.UserName.ToLower() == user).ToListAsync(ct));
         await db.SaveChangesAsync(ct);
         await PatchViewsAsync(fide, ct);
         signal?.Wake();
@@ -149,6 +153,18 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         if (acc is null) return false;
         await DeleteGamesAsync(acc.Id, ct);                                  // InMemory kaskadiert nicht
         db.LeagueOnlineAccounts.Remove(acc);
+        // Entfernt = gehört nicht zu diesem Spieler: die Konto-Suche (0.607.0) soll es nicht wieder vorschlagen.
+        var lower = acc.UserName.ToLower();
+        var sugg = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(x => x.FideId == acc.FideId && x.Site == acc.Site
+            && x.UserName.ToLower() == lower, ct);
+        if (sugg is null)
+            db.LeagueAccountSuggestions.Add(sugg = new LeagueAccountSuggestion
+            {
+                FideId = acc.FideId, Site = acc.Site, UserName = acc.UserName, Url = acc.Url, Evidence = "Konto entfernt",
+                CreatedAt = DateTime.UtcNow,
+            });
+        sugg.Status = LeagueSuggestionStatus.Rejected;
+        sugg.DecidedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         await PatchViewsAsync(acc.FideId, ct);
         return true;
@@ -164,6 +180,82 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         await db.SaveChangesAsync(ct);
         signal?.Wake();
         return acc;
+    }
+
+    // ── Vorschläge der Konto-Suche (0.607.0) ────────────────────────────────────────────────────
+
+    /// <summary>Ein Vorschlag als JSON; <paramref name="names"/> = Name und Mannschaft je FIDE-ID (für die Übersicht).</summary>
+    public static JsonObject SuggestionJson(LeagueAccountSuggestion x, IReadOnlyDictionary<string, (string Name, string? Team)>? names = null)
+    {
+        var o = new JsonObject
+        {
+            ["id"] = x.Id, ["fide"] = x.FideId, ["site"] = x.Site, ["user"] = x.UserName, ["url"] = x.Url, ["score"] = x.Score,
+            ["evidence"] = x.Evidence, ["profileName"] = x.ProfileName, ["location"] = x.Location,
+            ["lastActive"] = x.LastActive is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null,
+        };
+        if (names is not null && names.TryGetValue(x.FideId, out var n)) { o["name"] = n.Name; o["team"] = n.Team; }
+        return o;
+    }
+
+    /// <summary>
+    /// Offene Vorschläge — eines Spielers oder aller (<paramref name="fide"/> leer), stärkste zuerst; ohne die, zu denen es
+    /// das Konto inzwischen gibt. Für die Übersicht dazu der Stand der Suche: abgesucht / Spieler der laufenden Saison.
+    /// </summary>
+    public async Task<JsonObject> SuggestionsAsync(string? fide, CancellationToken ct)
+    {
+        var q = db.LeagueAccountSuggestions.AsNoTracking().Where(x => x.Status == LeagueSuggestionStatus.Open);
+        if (!string.IsNullOrEmpty(fide)) q = q.Where(x => x.FideId == fide);
+        var list = await q.OrderByDescending(x => x.Score).ThenBy(x => x.FideId).ThenBy(x => x.Id).ToListAsync(ct);
+        var fides = list.Select(x => x.FideId).Distinct().ToList();
+        var taken = (await db.LeagueOnlineAccounts.AsNoTracking().Where(a => fides.Contains(a.FideId))
+            .Select(a => new { a.FideId, a.Site, a.UserName }).ToListAsync(ct))
+            .Select(a => $"{a.FideId}|{a.Site}|{a.UserName.ToLowerInvariant()}").ToHashSet();
+        list = list.Where(x => !taken.Contains($"{x.FideId}|{x.Site}|{x.UserName.ToLowerInvariant()}")).ToList();
+
+        var names = (await (from p in db.LeaguePlayers.AsNoTracking()
+                            join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
+                            where p.FideId != null && fides.Contains(p.FideId)
+                            orderby t.Season descending
+                            select new { p.FideId, p.Name, p.Team }).ToListAsync(ct))
+            .GroupBy(x => x.FideId!).ToDictionary(g => g.Key, g => (g.First().Name, (string?)g.First().Team));
+        var res = new JsonObject { ["items"] = new JsonArray(list.Select(x => (JsonNode)SuggestionJson(x, names)).ToArray()) };
+        if (string.IsNullOrEmpty(fide))
+        {
+            var season = await db.LeagueTournaments.AsNoTracking().MaxAsync(t => (string?)t.Season, ct);
+            var current = await (from p in db.LeaguePlayers.AsNoTracking()
+                                 join t in db.LeagueTournaments.AsNoTracking() on p.Tnr equals t.Tnr
+                                 where t.Season == season && p.FideId != null && p.FideId != ""
+                                 select p.FideId!).Distinct().ToListAsync(ct);
+            var due = DateTime.UtcNow.AddDays(-LeagueAccountFinder.RescanDays);
+            res["total"] = current.Count;
+            res["scanned"] = await db.LeagueAccountScans.AsNoTracking().CountAsync(x => current.Contains(x.FideId) && x.ScannedAt >= due, ct);
+        }
+        return res;
+    }
+
+    /// <summary>Vorschlag übernehmen → ein Konto („gesichert" oder „unsicher"), die Hinweise werden der Kommentar.</summary>
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> AcceptSuggestionAsync(int id, bool sure, CancellationToken ct)
+    {
+        var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
+        if (x is null) return (null, "notFound");
+        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct);
+        if (r.Reason == "duplicate")
+        {
+            db.LeagueAccountSuggestions.Remove(x);                           // das Konto gibt es schon — Vorschlag erledigt
+            await db.SaveChangesAsync(ct);
+        }
+        return r;
+    }
+
+    /// <summary>Vorschlag verwerfen — er bleibt als verworfen stehen und kommt bei der nächsten Suche nicht wieder.</summary>
+    public async Task<bool> RejectSuggestionAsync(int id, CancellationToken ct)
+    {
+        var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
+        if (x is null) return false;
+        x.Status = LeagueSuggestionStatus.Rejected;
+        x.DecidedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 
     /// <summary>Die Konten in den fertigen Ansichten (<c>roster[].acc</c>) nachziehen — sonst stünden sie in der Meldeliste

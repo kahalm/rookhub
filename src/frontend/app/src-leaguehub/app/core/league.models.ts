@@ -29,6 +29,26 @@ export interface Account {
   id?: number; comment?: string | null; games?: number; syncedAt?: string | null; error?: string | null;
 }
 
+/** Ein Konto, das die Konto-Suche gefunden hat (0.607.0) — ein Verwalter übernimmt oder verwirft es. */
+export interface AccountSuggestion {
+  id: number; fide: string; site: string; user: string; url: string;
+  /** Wie stark die Hinweise sind (sortiert die Liste). */
+  score: number;
+  /** Die Hinweise als Satz („Nutzername aus dem Namen; Klarname im Profil …"). */
+  evidence: string;
+  profileName: string | null; location: string | null; lastActive: string | null;
+  /** Nur in der Übersicht: Name und Mannschaft des Spielers. */
+  name?: string; team?: string | null;
+}
+
+/** `GET …/suggestions`: offene Vorschläge; in der Übersicht dazu, wie viele Spieler schon abgesucht sind. */
+export interface SuggestionList {
+  items: AccountSuggestion[];
+  scanned?: number; total?: number;
+  /** Nur nach „jetzt suchen": neue Vorschläge bzw. warum nicht gesucht wurde („minderjährig", „Jahrgang unbekannt"). */
+  found?: number; skipped?: string | null;
+}
+
 /** Eingabe für ein Konto: Name oder kopierte Profiladresse. Fehlende Felder bleiben beim Ändern, wie sie sind. */
 export interface AccountInput { site?: string | null; user?: string | null; sure?: boolean | null; comment?: string | null }
 

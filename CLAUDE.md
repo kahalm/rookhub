@@ -1671,6 +1671,36 @@ Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele 
 | DELETE | `/api/league/accounts/{id}` | manage | Entfernen samt Partien → 204 |
 | POST | `/api/league/accounts/{id}/sync` | manage | Nochmal holen (Fehler weg, Abruf geweckt) |
 
+**Konto-Vorschläge** (0.607.0, Wunsch 2026-09-30 „zuerst die Konto-Vorschläge"; `Services/League/LeagueAccountFinder.cs`):
+LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccountSuggestions`); ein Verwalter übernimmt
+(unsicher/gesichert → normales Konto, Kommentar = die Hinweise) oder verwirft. Portiert aus `online_accounts.py`, aber lockerer
+— dort zählten nur Konten mit Klarnamen (29 Konten bei 27 Spielern), hier entscheidet ein Mensch. Regeln:
+* **Kandidaten**: Nutzernamen aus dem Namen (`Variants`: MaxMuster, Max_Muster, Max-Muster, MusterMax, Muster_Max, MMuster,
+  MusterM; Umlaute als ae/oe/ue, Titel weg, ohne Komma „Nachname Vorname") auf BEIDEN Seiten; auf Lichess dazu die Suchvorschläge
+  zum Nachnamen (`/api/player/autocomplete`, erst ab 5 Buchstaben, höchstens 12 Treffer). Lichess-Profile gesammelt über
+  `POST /api/users`, chess.com einzeln `/pub/player/{name}` (300 ms Pause).
+* **Urteil** (`Judge`, rein): raus bei gesperrtem/geschlossenem Konto, einem Profilnamen OHNE den Nachnamen (jemand anderes) und
+  einem Land, das weder AT noch die Föderation des Spielers (Meldeliste oder FIDE) ist. Hinweise: Klarname 3, nur Nachname 1,
+  FIDE-Wertung im Profil ±250 zur Liste 2, Tiroler Ort in Ort/Bio 2 (Wortgrenzen — „Hallo" ist nicht Hall), Land 1. Ein Name
+  aus dem Namen braucht ≥ 1 (plus 1 Punkt), einer aus der Suche ≥ 3.
+* **Nie Minderjährige**: Jahrgang und Föderation über Lichess `/api/fide/player/{id}`, gemerkt in `LeagueAccountScans`; unter 18
+  oder ohne Jahrgang wird nicht gesucht (offene Vorschläge des Spielers werden entfernt).
+* **Nicht wieder vorschlagen**: verworfene Vorschläge bleiben als `Rejected` stehen; ein ENTFERNTES Konto wird als verworfener
+  Vorschlag gemerkt; ein angelegtes Konto erledigt den passenden Vorschlag (Vergleich ohne Groß/klein).
+* **Takt**: im `LeagueOnlineSyncScheduler` nach jedem Abruf-Durchgang, je Runde höchstens 5 min (`SearchBudget`), 1 s Pause je
+  Spieler; Spieler der laufenden Saison mit FIDE-ID, nie gesuchte zuerst, dann alle 90 Tage (`RescanDays`); ein Fehler versucht es
+  am nächsten Tag. `LeagueOnline:Suggestions=false` schaltet die Suche ab. Ein 429 beendet den Durchgang.
+* Oberfläche: auf der Spielerkarte unter den Konten „Vorschläge der Konto-Suche" mit „Jetzt suchen" (nur Verwalter), und der Reiter
+  „Konto-Vorschläge" (`/konten`, `features/accounts/`) mit allen offenen Vorschlägen je Spieler und dem Stand der Suche.
+
+| Methode | Endpoint | Recht | Zweck |
+|---------|----------|-------|-------|
+| GET | `/api/league/suggestions` | manage | Offene Vorschläge (stärkste zuerst, mit Name/Mannschaft) `{ items, scanned, total }` |
+| GET | `/api/league/player/{fide}/suggestions` | manage | Offene Vorschläge eines Spielers `{ items }` |
+| POST | `/api/league/player/{fide}/suggestions/scan` | manage | Jetzt suchen → `{ items, found, skipped }` (`skipped` „minderjährig"/„Jahrgang unbekannt"); 503 `rateLimited`/`unreachable` |
+| POST | `/api/league/suggestions/{id}/accept` | manage | `{ sure }` → das Konto (wie Anlegen); 404 erledigt/unbekannt |
+| POST | `/api/league/suggestions/{id}/reject` | manage | Verwerfen → 204 |
+
 **Letzte Partien nachspielen** (0.578.0): `GET /api/league/player/{fide}/recent` (und `/api/league/s/{token}/player/{fide}/recent`)
 → `{ fide, games[{ date, vs, color, pgn }] }` — dieselbe Auswahl und Reihenfolge wie `recent` der Karte
 (`LeagueProfileBuilder.Recent`, `RecentCount` = 8), aus dem aktuellen Bestand gerechnet (fremde + Vereinspartien). Die Karte holt
@@ -3692,6 +3722,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
+| LeagueAccountSuggestions | Vorschläge der Konto-Suche (0.607.0) | FideId, Site, UserName (**UNIQUE (FideId, Site, UserName)**), Url, Score, Evidence (≤500, die Hinweise), ProfileName?, Location?, LastActive?, Status (Open/Rejected — verworfene bleiben, damit sie nicht wiederkommen), CreatedAt, DecidedAt?; Index (Status, Score) |
+| LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess), ScannedAt, Note? („minderjährig", „Jahrgang unbekannt", Fehler), Found |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | LeagueMegaPlayers | Spielerverzeichnis der ganzen ChessBase-Megabase (0.575.0) für die Namenssuche in LeagueHub; wird beim Einspielen komplett ersetzt | Name (≤120), NameKey (≤120, klein ohne Akzente, Index), FideId? (≤16, Index), Games, LastYear?, MaxElo? |

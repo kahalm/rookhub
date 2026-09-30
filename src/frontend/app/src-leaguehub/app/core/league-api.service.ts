@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountInput, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountInput, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -68,6 +68,30 @@ export class LeagueApiService {
   /** Die Partien des Kontos gleich (neu) abrufen lassen. */
   syncAccount(id: number): Promise<Account> {
     return firstValueFrom(this.http.post<Account>(`/api/league/accounts/${id}/sync`, {}));
+  }
+
+  // ── Konto-Vorschläge (0.607.0, league.manage) ──
+
+  /** Alle offenen Vorschläge (stärkste zuerst) samt Stand der Suche. */
+  suggestions(): Promise<SuggestionList> {
+    return firstValueFrom(this.http.get<SuggestionList>('/api/league/suggestions'));
+  }
+
+  playerSuggestions(fide: string): Promise<SuggestionList> {
+    return firstValueFrom(this.http.get<SuggestionList>(`/api/league/player/${encodeURIComponent(fide)}/suggestions`));
+  }
+
+  /** Für diesen Spieler jetzt auf Lichess und chess.com suchen (dauert einige Sekunden). */
+  scanSuggestions(fide: string): Promise<SuggestionList> {
+    return firstValueFrom(this.http.post<SuggestionList>(`/api/league/player/${encodeURIComponent(fide)}/suggestions/scan`, {}));
+  }
+
+  acceptSuggestion(id: number, sure: boolean): Promise<Account> {
+    return firstValueFrom(this.http.post<Account>(`/api/league/suggestions/${id}/accept`, { sure }));
+  }
+
+  rejectSuggestion(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/league/suggestions/${id}/reject`, {}));
   }
 
   shared(token: string): Promise<SharedFixture> {

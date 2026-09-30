@@ -184,6 +184,47 @@ public class LeagueOnlineGame
     public int Plies { get; set; }
 }
 
+/// <summary>
+/// Ein vorgeschlagenes Online-Konto (0.607.0, Wunsch 2026-09-30): LeagueHub sucht auf Lichess und chess.com nach Konten, deren
+/// Name zum Spieler passt, und legt sie hier ab — ein Verwalter übernimmt sie (dann ein <see cref="LeagueOnlineAccount"/>) oder
+/// verwirft sie. Verworfene bleiben stehen, damit derselbe Vorschlag nicht wiederkommt.
+/// </summary>
+public class LeagueAccountSuggestion
+{
+    public int Id { get; set; }
+    public string FideId { get; set; } = string.Empty;
+    public string Site { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    /// <summary>Wie stark die Hinweise sind — sortiert die Liste; die Gründe stehen in <see cref="Evidence"/>.</summary>
+    public int Score { get; set; }
+    /// <summary>Die Hinweise als Satz („Klarname im Profil; Land Österreich") — wird beim Übernehmen der Kommentar.</summary>
+    public string Evidence { get; set; } = string.Empty;
+    /// <summary>Der Name, der im Profil steht (falls einer).</summary>
+    public string? ProfileName { get; set; }
+    public string? Location { get; set; }
+    /// <summary>Zuletzt auf der Seite gesehen.</summary>
+    public DateTime? LastActive { get; set; }
+    public LeagueSuggestionStatus Status { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? DecidedAt { get; set; }
+}
+
+public enum LeagueSuggestionStatus { Open = 0, Rejected = 1 }
+
+/// <summary>Wann für einen Spieler zuletzt nach Konten gesucht wurde — und sein Jahrgang (Minderjährige werden nie gesucht).</summary>
+public class LeagueAccountScan
+{
+    public string FideId { get; set; } = string.Empty;
+    public int? BirthYear { get; set; }
+    /// <summary>Föderation laut FIDE — ein Profil aus diesem Land ist kein Widerspruch.</summary>
+    public string? Federation { get; set; }
+    public DateTime ScannedAt { get; set; }
+    /// <summary>Warum nicht gesucht wurde („minderjährig", „Jahrgang unbekannt") oder was schiefging.</summary>
+    public string? Note { get; set; }
+    public int Found { get; set; }
+}
+
 /// <summary>Öffentlicher Teilen-Link auf genau eine Begegnung (Token = Geheimnis, 144 Bit).</summary>
 public class LeagueShare
 {

@@ -591,6 +591,48 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     }
 
     /// <summary>
+    /// Konto-Vorschläge (0.607.0): die Übersicht (Saison per MAX über einen Text, Namen per Join, Stand der Suche), das
+    /// Erledigen eines Vorschlags beim Anlegen (Vergleich ohne Groß/klein), das Merken beim Entfernen und die Auswahl der
+    /// fälligen Spieler der Konto-Suche.
+    /// </summary>
+    [MySqlFact]
+    public async Task LigaKontoVorschlaege_Uebersicht_Uebernehmen_Verwerfen_UndFaelligeSpieler()
+    {
+        Db.LeagueTournaments.AddRange(
+            new LeagueTournament { Tnr = 1, Name = "Landesliga", Season = "2026/27", League = "LL", Stage = "x" },
+            new LeagueTournament { Tnr = 2, Name = "Landesliga", Season = "2025/26", League = "LL", Stage = "x" });
+        Db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Muster, Max", NameKey = "muster, max", FideId = "222", EloI = 1900 },
+            new LeaguePlayer { Tnr = 2, Team = "Alt 1", Name = "Alt, Otto", NameKey = "alt, otto", FideId = "444" });
+        Db.LeagueAccountSuggestions.AddRange(
+            new LeagueAccountSuggestion { FideId = "222", Site = "lichess", UserName = "MaxMuster", Url = "u", Score = 5, Evidence = "e", CreatedAt = DateTime.UtcNow },
+            new LeagueAccountSuggestion { FideId = "222", Site = "chess.com", UserName = "Max_Muster", Url = "u", Score = 2, Evidence = "e", CreatedAt = DateTime.UtcNow });
+        Db.LeagueAccountScans.Add(new LeagueAccountScan { FideId = "222", BirthYear = 1987, ScannedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var accounts = Get<RookHub.Api.Services.League.LeagueOnlineAccountService>();
+        var overview = await accounts.SuggestionsAsync(null, default);
+        Assert.Equal((2, 1, 1), (overview["items"]!.AsArray().Count, overview["scanned"]!.GetValue<int>(), overview["total"]!.GetValue<int>()));
+        Assert.Equal("Kufstein 1", overview["items"]![0]!["team"]!.GetValue<string>());
+
+        var first = await Db.LeagueAccountSuggestions.AsNoTracking().SingleAsync(x => x.UserName == "MaxMuster");
+        var (acc, reason) = await accounts.AcceptSuggestionAsync(first.Id, sure: true, default);
+        Assert.Null(reason);
+        await accounts.CreateAsync("222", new("chess.com", "MAX_MUSTER", false, null), default);   // erledigt den zweiten
+        Assert.Empty((await accounts.SuggestionsAsync("222", default))["items"]!.AsArray());
+        Assert.True(await accounts.DeleteAsync(acc!.Id, default));
+        Assert.Equal(LeagueSuggestionStatus.Rejected,
+            (await Db.LeagueAccountSuggestions.AsNoTracking().SingleAsync(x => x.UserName == "MaxMuster")).Status);
+
+        // Fällig ist niemand: 222 ist eben abgesucht, 444 spielt nicht in der laufenden Saison.
+        var finder = new RookHub.Api.Services.League.LeagueAccountFinder(Db, new HttpClient(),
+            NullLogger<RookHub.Api.Services.League.LeagueAccountFinder>.Instance) { PlayerPause = TimeSpan.Zero, ChessComPause = TimeSpan.Zero };
+        Assert.False(await finder.RunOnceAsync(TimeSpan.FromMinutes(1), default));
+        Assert.Equal(("Muster, Max", (int?)1900), ((await finder.PlayerAsync("222", default))!.Name, (await finder.PlayerAsync("222", default))!.Elo));
+    }
+
+    /// <summary>
     /// Vereinspartien über einen Teilen-Link (Codereview 2026-09-29, A2-009): die neue Spalte <c>UploadShareHash</c> wird
     /// geschrieben, „alle Partien dieses Links entfernen" zählt und löscht über sie — und der Deckel kommt als EIN Singleton
     /// aus der DI (sonst hätte jeder Request seinen eigenen Zähler).

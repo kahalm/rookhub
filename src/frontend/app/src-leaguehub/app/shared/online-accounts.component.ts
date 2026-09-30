@@ -1,27 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
-import { Account, AccountInput } from '../core/league.models';
+import { Account, AccountInput, AccountSuggestion, SuggestionList } from '../core/league.models';
+import { AccountSuggestionsComponent } from './account-suggestions.component';
+import { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
 
-/** Die Seiten, die LeagueHub kennt — SPIEGEL von `LeagueOnlineSites.All` (Kürzel + Anzeige). */
-export const ACCOUNT_SITES: { key: string; label: string }[] = [
-  { key: 'lichess', label: 'Lichess' },
-  { key: 'chess.com', label: 'chess.com' },
-];
+export { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
 
-export const siteLabel = (site: string): string => ACCOUNT_SITES.find(s => s.key === site)?.label ?? site;
-
-/** Absage des Servers beim Anlegen/Ändern als Satz. */
-export function accountErrorText(reason: string | undefined): string {
-  switch (reason) {
-    case 'invalidSite': return 'Unbekannte Seite — Lichess oder chess.com.';
-    case 'invalidUser': return 'Das ist kein gültiger Kontoname (und keine Profiladresse).';
-    case 'duplicate': return 'Dieses Konto steht schon da.';
-    case 'tooMany': return 'Mehr als 20 Konten je Spieler gehen nicht.';
-    case 'unknownPlayer': return 'Diesen Spieler kennt LeagueHub nicht.';
-    default: return 'Speichern hat nicht geklappt.';
-  }
+/** Ergebnis von „Jetzt suchen" in Worten. */
+export function scanNoteText(r: SuggestionList): string {
+  if (r.skipped) return `Nicht gesucht: ${r.skipped}.`;
+  const n = r.found ?? 0;
+  return n === 0 ? 'Nichts Neues gefunden.' : n === 1 ? '1 neuer Vorschlag.' : `${n} neue Vorschläge.`;
 }
 
 /** Stand des Abrufs in Worten — `null` ohne Abruf-Angaben (Teilen-Link). */
@@ -78,6 +69,21 @@ export function accountStatus(a: Account): string | null {
       @else { <button type="button" class="btn-sec acc-add" (click)="startAdd()">Konto hinzufügen</button> }
     }
     <span class="update-msg err" role="status">{{ error() ?? '' }}</span>
+    @if (canEdit()) {
+      <div class="sugg">
+        <div class="sugg-head">
+          <h4>Vorschläge der Konto-Suche</h4>
+          <button type="button" class="btn-link" [disabled]="scanning()" (click)="scan()">{{ scanning() ? 'Sucht …' : 'Jetzt suchen' }}</button>
+        </div>
+        @if (suggestions().length) {
+          <lh-account-suggestions [items]="suggestions()" (decided)="onDecided($event.accepted)" />
+        } @else if (!scanning() && !scanNote()) {
+          <p class="muted small">Keine offenen Vorschläge. LeagueHub sucht im Hintergrund auf Lichess und chess.com nach Konten,
+            deren Name zum Spieler passt.</p>
+        }
+        @if (scanNote(); as n) { <p class="small muted" role="status">{{ n }}</p> }
+      </div>
+    }
 
     <ng-template #form>
       <form class="acc-form" (submit)="$event.preventDefault(); save()">
@@ -106,7 +112,7 @@ export function accountStatus(a: Account): string | null {
       </form>
     </ng-template>
   `,
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, AccountSuggestionsComponent],
 })
 export class OnlineAccountsComponent {
   readonly fide = input.required<string>();
@@ -128,6 +134,49 @@ export class OnlineAccountsComponent {
   readonly formUser = signal('');
   readonly formSure = signal(false);
   readonly formComment = signal('');
+  /** Offene Vorschläge der Konto-Suche für diesen Spieler (0.607.0, nur Verwalter). */
+  readonly suggestions = signal<AccountSuggestion[]>([]);
+  readonly scanning = signal(false);
+  readonly scanNote = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const fide = this.fide();
+      if (!this.canEdit()) return;
+      untracked(() => void this.loadSuggestions(fide));
+    });
+  }
+
+  private async loadSuggestions(fide: string): Promise<void> {
+    this.scanNote.set(null);
+    try {
+      const r = await this.api.playerSuggestions(fide);
+      if (fide === this.fide()) this.suggestions.set(r.items);
+    } catch { /* Vorschläge sind eine Zugabe — ohne sie bleibt die Liste, wie sie ist */ }
+  }
+
+  /** Für diesen Spieler jetzt suchen (einige Sekunden: Lichess und chess.com werden einzeln gefragt). */
+  async scan(): Promise<void> {
+    const fide = this.fide();
+    this.scanning.set(true);
+    this.scanNote.set(null);
+    try {
+      const r = await this.api.scanSuggestions(fide);
+      if (fide !== this.fide()) return;
+      this.suggestions.set(r.items);
+      this.scanNote.set(scanNoteText(r));
+    } catch (err) {
+      const reason = err instanceof HttpErrorResponse ? err.error?.reason : undefined;
+      this.scanNote.set(reason === 'rateLimited' ? 'Lichess oder chess.com bremst gerade — bitte in ein paar Minuten nochmal.'
+        : 'Lichess oder chess.com ist gerade nicht erreichbar.');
+    } finally {
+      this.scanning.set(false);
+    }
+  }
+
+  onDecided(accepted: boolean): void {
+    if (accepted) this.changed.emit();                                     // das neue Konto steht dann in der Liste
+  }
 
   startAdd(): void {
     this.fill('lichess', '', false, '');

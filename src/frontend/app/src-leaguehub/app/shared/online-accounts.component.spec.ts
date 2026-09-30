@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { Account } from '../core/league.models';
-import { OnlineAccountsComponent, accountErrorText, accountStatus, siteLabel } from './online-accounts.component';
+import { OnlineAccountsComponent, accountErrorText, accountStatus, scanNoteText, siteLabel } from './online-accounts.component';
 
 const SURE: Account = { id: 7, site: 'lichess', user: 'patrik', url: 'https://lichess.org/@/patrik', conf: 'sicher',
   comment: 'Profil nennt den Klarnamen', games: 1234, syncedAt: '2026-09-30T08:00:00Z', error: null };
@@ -24,7 +24,9 @@ describe('OnlineAccountsComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['addAccount', 'updateAccount', 'deleteAccount', 'syncAccount']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService',
+      ['addAccount', 'updateAccount', 'deleteAccount', 'syncAccount', 'playerSuggestions', 'scanSuggestions', 'acceptSuggestion', 'rejectSuggestion']);
+    api.playerSuggestions.and.resolveTo({ items: [] });
     TestBed.configureTestingModule({ imports: [OnlineAccountsComponent], providers: [{ provide: LeagueApiService, useValue: api }] });
     fixture = TestBed.createComponent(OnlineAccountsComponent);
     changed = 0;
@@ -122,5 +124,43 @@ describe('OnlineAccountsComponent', () => {
     await c.resync({ ...UNSURE });
     expect(api.syncAccount).toHaveBeenCalledWith(8);
     expect(changed).toBe(2);
+  });
+
+  it('Vorschläge der Konto-Suche: nur mit Recht geladen, „Jetzt suchen" sagt, was herauskam (0.607.0)', async () => {
+    const sugg = { id: 3, fide: '1606921', site: 'lichess', user: 'PatrikOberschmid', url: 'https://lichess.org/@/PatrikOberschmid',
+      score: 5, evidence: 'Nutzername aus dem Namen; Klarname im Profil', profileName: 'Patrik Oberschmid', location: 'Schwaz', lastActive: null };
+    render([], false);
+    await fixture.whenStable();
+    expect(api.playerSuggestions).not.toHaveBeenCalled();
+    expect(el().querySelector('.sugg')).toBeNull();
+
+    api.playerSuggestions.and.resolveTo({ items: [sugg] });
+    render([], true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.playerSuggestions).toHaveBeenCalledWith('1606921');
+    expect(el().querySelector('.sugg-list')?.textContent).toContain('Lichess: PatrikOberschmid');
+
+    api.scanSuggestions.and.resolveTo({ items: [sugg], found: 0, skipped: null });
+    await fixture.componentInstance.scan();
+    fixture.detectChanges();
+    expect(el().querySelector('.sugg')?.textContent).toContain('Nichts Neues gefunden.');
+
+    api.acceptSuggestion.and.resolveTo(SURE);
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.sugg-actions button')).find(b => b.textContent?.includes('gesichert')))!.click();
+    await fixture.whenStable();
+    expect(api.acceptSuggestion).toHaveBeenCalledWith(3, true);
+    expect(changed).toBe(1);                                                        // Karte lädt neu, das Konto steht dann da
+  });
+
+  it('„Jetzt suchen": Absagen als Satz', async () => {
+    expect(scanNoteText({ items: [], found: 2 })).toBe('2 neue Vorschläge.');
+    expect(scanNoteText({ items: [], found: 1 })).toBe('1 neuer Vorschlag.');
+    expect(scanNoteText({ items: [], skipped: 'minderjährig' })).toBe('Nicht gesucht: minderjährig.');
+    api.scanSuggestions.and.rejectWith(new HttpErrorResponse({ status: 503, error: { reason: 'rateLimited' } }));
+    render([], true);
+    await fixture.componentInstance.scan();
+    expect(fixture.componentInstance.scanNote()).toContain('bremst gerade');
+    expect(fixture.componentInstance.scanning()).toBeFalse();
   });
 });

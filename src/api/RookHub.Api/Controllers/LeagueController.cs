@@ -93,6 +93,60 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> SyncAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
         await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(LeagueOnlineAccountService.ToJson(a, full: true)) : NotFound();
 
+    // ---- Konto-Vorschläge (0.607.0) ------------------------------------------------------------
+
+    /// <summary>Alle offenen Vorschläge (stärkste zuerst) samt Stand der Suche <c>{ items, scanned, total }</c>.</summary>
+    [HttpGet("suggestions")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> Suggestions([FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        Ok(await accounts.SuggestionsAsync(null, ct));
+
+    [HttpGet("player/{fide}/suggestions")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> PlayerSuggestions(string fide, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        Ok(await accounts.SuggestionsAsync(fide, ct));
+
+    /// <summary>Für diesen Spieler jetzt suchen → <c>{ items, found, skipped }</c> (<c>skipped</c> = „minderjährig" /
+    /// „Jahrgang unbekannt"); 404 unbekannter Spieler, 503 <c>rateLimited</c>/<c>unreachable</c>.</summary>
+    [HttpPost("player/{fide}/suggestions/scan")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> ScanSuggestions(string fide, [FromServices] LeagueAccountFinder finder,
+        [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct)
+    {
+        if (await finder.PlayerAsync(fide, ct) is not { } player) return NotFound(new { reason = "unknownPlayer" });
+        LeagueAccountFinder.ScanResult r;
+        try
+        {
+            r = await finder.ScanAsync(player, ct);
+        }
+        catch (LeagueOnlineSync.RateLimitedException)
+        {
+            return StatusCode(503, new { reason = "rateLimited" });
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException && !ct.IsCancellationRequested)
+        {
+            return StatusCode(503, new { reason = "unreachable" });
+        }
+        var res = await accounts.SuggestionsAsync(fide, ct);
+        res["found"] = r.Found;
+        res["skipped"] = r.Skipped;
+        return Ok(res);
+    }
+
+    public sealed record AcceptRequest(bool Sure);
+
+    /// <summary>Übernehmen <c>{ sure }</c> → das neue Konto; 404 unbekannt/erledigt, 400 wie beim Anlegen.</summary>
+    [HttpPost("suggestions/{id:int}/accept")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> AcceptSuggestion(int id, [FromBody] AcceptRequest? req, [FromServices] LeagueOnlineAccountService accounts,
+        CancellationToken ct) =>
+        AccountResult(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct));
+
+    [HttpPost("suggestions/{id:int}/reject")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> RejectSuggestion(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        await accounts.RejectSuggestionAsync(id, ct) ? NoContent() : NotFound();
+
     private IActionResult AccountResult((Models.LeagueOnlineAccount? Account, string? Reason) r) => r switch
     {
         ({ } a, _) => Ok(LeagueOnlineAccountService.ToJson(a, full: true)),

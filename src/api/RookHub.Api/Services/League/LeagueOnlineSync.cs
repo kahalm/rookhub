@@ -349,7 +349,8 @@ public sealed class LeagueOnlineSync
 /// <summary>
 /// Takt des Abrufs: zwei Minuten nach dem Start, dann alle <c>LeagueOnline:IntervalHours</c> (Vorgabe 12) je Konto, sofort
 /// nach einem Weckruf (neues/geändertes Konto) und in kurzen Abständen, solange ein Konto noch Rückstand hat. Abschaltbar mit
-/// <c>LeagueOnline:Enabled=false</c>.
+/// <c>LeagueOnline:Enabled=false</c>. Seit 0.607.0 läuft danach je Runde die Konto-Suche (<see cref="LeagueAccountFinder"/>,
+/// abschaltbar mit <c>LeagueOnline:Suggestions=false</c>).
 /// </summary>
 public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, LeagueOnlineSyncSignal signal, IConfiguration config,
     ILogger<LeagueOnlineSyncScheduler> logger) : BackgroundService
@@ -358,10 +359,13 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
     public static readonly TimeSpan Budget = TimeSpan.FromMinutes(10);
     public static readonly TimeSpan BacklogPause = TimeSpan.FromMinutes(1);
     public static readonly TimeSpan IdlePoll = TimeSpan.FromMinutes(30);
+    /// <summary>Die Konto-Suche je Runde (sie fragt je Spieler rund zehnmal nach, mit Pausen).</summary>
+    public static readonly TimeSpan SearchBudget = TimeSpan.FromMinutes(5);
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         if (!config.GetValue("LeagueOnline:Enabled", true)) return;
+        var suggestions = config.GetValue("LeagueOnline:Suggestions", true);
         var interval = TimeSpan.FromHours(Math.Clamp(config.GetValue("LeagueOnline:IntervalHours", 12), 1, 168));
         try { await Task.Delay(StartDelay, ct); } catch (OperationCanceledException) { return; }
         while (!ct.IsCancellationRequested)
@@ -376,6 +380,20 @@ public sealed class LeagueOnlineSyncScheduler(IServiceScopeFactory scopes, Leagu
             catch (Exception e)
             {
                 logger.LogError(e, "LeagueHub: Abruf der Online-Partien gescheitert");
+            }
+            // Danach die Konto-Suche (0.607.0): abwechselnd mit dem Abruf, je Runde höchstens SearchBudget.
+            if (suggestions)
+            {
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    more |= await scope.ServiceProvider.GetRequiredService<LeagueAccountFinder>().RunOnceAsync(SearchBudget, ct);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "LeagueHub: Konto-Suche gescheitert");
+                }
             }
             try { await signal.WaitAsync(more ? BacklogPause : IdlePoll, ct); }
             catch (OperationCanceledException) { return; }
