@@ -687,7 +687,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
 
     /// <summary>
     /// Reihenfolge und Log-Namen der Schritte sind festgeschrieben. Die Reihenfolge traegt
-    /// Bedeutung (Ankuendigungskalender nach dem Sweep, FIDE-Details nach dem FIDE-Kalender,
+    /// Bedeutung (chess-results-Sweep zuerst, Ankuendigungskalender nach dem Sweep, FIDE-Details nach dem FIDE-Kalender,
     /// Zusatzquellen billig zuerst), und die Namen stehen so in den Warnungen, nach denen im Log
     /// gesucht wird — sie sind dieselben Texte wie vor der Schrittliste.
     /// </summary>
@@ -695,6 +695,7 @@ public class TournamentDirectorySchedulerTests : IDisposable
     public void Steps_RunInTheDocumentedOrder_WithTheirLogNames() =>
         Assert.Equal(
         [
+            "chess-results-Sweep",
             "Spielort-Aufloesung", "Rundenplan-Durchgang", "FIDE-Durchgang", "Ankuendigungskalender",
             "FSI-Kalender", "SZS-Kalender", "chess.sk-Kalender", "chess.hu-Kalender", "chess.cz-Kalender",
             "chessarbiter-Kalender", "schachbund-Turnierdatenbank", "ECF-Kalender",
@@ -734,10 +735,8 @@ public class TournamentDirectorySchedulerTests : IDisposable
     {
         var logger = new TestLogger<TournamentDirectoryScheduler>();
         var ran = new List<string>();
-        using var scope = new ServiceCollection()
-            .BuildServiceProvider().CreateScope();
 
-        await Scheduler(logger).RunStepsAsync(scope,
+        await Scheduler(logger).RunStepsAsync(
         [
             new("A", true, (_, _) => { ran.Add("A"); return Task.CompletedTask; }),
             new("B", true, (_, _) => throw new HttpRequestException("Netz weg")),
@@ -761,17 +760,61 @@ public class TournamentDirectorySchedulerTests : IDisposable
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        using var scope = new ServiceCollection()
-            .BuildServiceProvider().CreateScope();
         var ranAfter = false;
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Scheduler().RunStepsAsync(scope,
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Scheduler().RunStepsAsync(
         [
             new("A", true, (_, c) => Task.FromCanceled(c)),
             new("B", true, (_, _) => { ranAfter = true; return Task.CompletedTask; }),
         ], cts.Token));
 
         Assert.False(ranAfter);
+    }
+
+    /// <summary>
+    /// Jeder Schritt bekommt seinen EIGENEN Scope und damit seinen eigenen AppDbContext.
+    ///
+    /// <para>Frueher teilte sich die ganze Nacht einen. Scheiterte ein SaveChanges (Unique-Index,
+    /// „Data too long"), blieben die Added-Eintraege im Change-Tracker; die finally-Bloecke der
+    /// Zusatzquellen loggen den Fehler nur, und JEDE folgende Quelle schickte den vergifteten
+    /// Eintrag mit ihrem eigenen SaveChanges erneut ab — der Rest der Nacht fiel aus.</para>
+    /// </summary>
+    [Fact]
+    public async Task RunStepsAsync_AFailedSaveInOneStep_DoesNotPoisonTheNext()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var services = new ServiceCollection();
+        services.AddDbContext<RookHub.Api.Data.AppDbContext>(o => o
+            .UseInMemoryDatabase(dbName)
+            .AddInterceptors(new RejectAddedInterceptor(e => e is TournamentDirectorySweep { Federation: "BAD" })));
+        await using var provider = services.BuildServiceProvider();
+        var logger = new TestLogger<TournamentDirectoryScheduler>();
+        var scheduler = new TournamentDirectoryScheduler(provider.GetRequiredService<IServiceScopeFactory>(),
+            logger, new ConfigurationBuilder().Build());
+
+        await scheduler.RunStepsAsync(
+        [
+            // Wie der finally-Block einer Zusatzquelle: das Speichern scheitert, der Fehler wird
+            // geschluckt, der Schritt endet „erfolgreich" — mit dem Eintrag noch im Tracker.
+            new("Quelle A", true, async (s, ct) =>
+            {
+                var db = s.GetRequiredService<RookHub.Api.Data.AppDbContext>();
+                db.TournamentDirectorySweeps.Add(new TournamentDirectorySweep { Federation = "BAD" });
+                try { await db.SaveChangesAsync(ct); }
+                catch (DbUpdateException) { /* nur geloggt */ }
+            }),
+            new("Quelle B", true, async (s, ct) =>
+            {
+                var db = s.GetRequiredService<RookHub.Api.Data.AppDbContext>();
+                db.TournamentDirectorySweeps.Add(new TournamentDirectorySweep { Federation = "AUT" });
+                await db.SaveChangesAsync(ct);
+            }),
+        ], default);
+
+        Assert.Empty(logger.Messages);
+        using var check = provider.CreateScope();
+        Assert.Equal(["AUT"], await check.ServiceProvider.GetRequiredService<RookHub.Api.Data.AppDbContext>()
+            .TournamentDirectorySweeps.Select(s => s.Federation).ToListAsync());
     }
 
 }

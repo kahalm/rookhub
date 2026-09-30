@@ -145,15 +145,69 @@ public class TournamentDirectoryService
             if (results.Count > 0 && DelayBetweenFederations > TimeSpan.Zero)
                 await Task.Delay(DelayBetweenFederations, ct);
 
-            var (result, added) = await SweepFederationAsync(federation, today, ct);
-            results.Add(result);
-            newEntryIds.AddRange(added);
+            // Je Foederation gefangen: SweepFederationAsync faengt nur den ABRUF, sein SaveChanges
+            // steht ausserhalb. Ein Speicherfehler (Unique-Index, „Data too long") in einer
+            // Foederation riss sonst die uebrigen, die Umkreis-Meldung und im Nachtlauf alle
+            // folgenden Schritte mit.
+            try
+            {
+                var (result, added) = await SweepFederationAsync(federation, today, ct);
+                results.Add(result);
+                newEntryIds.AddRange(added);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                results.Add(await RecordFailedSweepAsync(federation, ex, ct));
+            }
         }
 
         if (newEntryIds.Count > 0)
             await NotifyNearbyAsync(newEntryIds, today, ct);
 
         return results;
+    }
+
+    /// <summary>
+    /// Eine Foederation ist NACH dem Abruf gescheitert, meist beim Speichern.
+    ///
+    /// <para>Zuerst wird der Change-Tracker geleert: die gescheiterten Added/Modified-Eintraege
+    /// blieben sonst darin, und jedes folgende SaveChanges — die naechste Foederation, die
+    /// Umkreis-Meldung — schickte sie erneut ab und scheiterte an derselben Ausnahme. Danach
+    /// landet der Fehler wie beim Abruffehler an der Sweep-Zeile; LastSweptAt bleibt alt, die
+    /// Rotation nimmt die Foederation also wieder vor.</para>
+    /// </summary>
+    private async Task<DirectorySweepResult> RecordFailedSweepAsync(
+        string federation, Exception error, CancellationToken ct)
+    {
+        federation = federation.Trim().ToUpperInvariant();
+        // Die innerste Meldung: bei einer DbUpdateException steht der eigentliche Grund
+        // („Duplicate entry … for key …") erst in der InnerException.
+        var message = error.GetBaseException().Message;
+        _log.LogWarning(error, "Verzeichnis-Sweep {Federation} fehlgeschlagen", federation);
+        _db.ChangeTracker.Clear();
+
+        try
+        {
+            var sweep = await _db.TournamentDirectorySweeps.FirstOrDefaultAsync(s => s.Federation == federation, ct);
+            if (sweep is null)
+            {
+                sweep = new TournamentDirectorySweep { Federation = federation };
+                _db.TournamentDirectorySweeps.Add(sweep);
+            }
+            sweep.LastAttemptedAt = DateTime.UtcNow;
+            sweep.LastError = Truncate(message, 500);
+            sweep.ConsecutiveFailures++;
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            // Nicht einmal der Vermerk ging durch (Datenbank weg) — dann wenigstens nichts
+            // Halbes im Tracker fuer die naechste Foederation zuruecklassen.
+            _db.ChangeTracker.Clear();
+            _log.LogWarning(ex, "Verzeichnis-Sweep {Federation}: Fehlschlag nicht vermerkt", federation);
+        }
+
+        return new DirectorySweepResult(federation, 0, 0, 0, 0, 0, message);
     }
 
     /// <summary>

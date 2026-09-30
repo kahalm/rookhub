@@ -391,6 +391,52 @@ public class TournamentDirectoryServiceTests : IDisposable
             () => service.RunSweepAsync(["AUT"], cts.Token));
     }
 
+    /// <summary>
+    /// Ein SPEICHERfehler in einer Foederation darf die uebrigen weder abbrechen noch vergiften.
+    ///
+    /// <para>SweepFederationAsync faengt nur den Abruf; sein SaveChanges steht ausserhalb. Lief es
+    /// in einen Unique-Index, verliess die Ausnahme RunSweepAsync — die uebrigen Foederationen,
+    /// die Umkreis-Meldung und im Nachtlauf alle folgenden Schritte entfielen. Und ohne geleerten
+    /// Change-Tracker schickte die naechste Foederation den gescheiterten Eintrag mit ihrem
+    /// eigenen SaveChanges erneut ab und scheiterte an derselben Ausnahme.</para>
+    /// </summary>
+    [Fact]
+    public async Task RunSweepAsync_ASaveFailureInOneFederation_DoesNotStopOrPoisonTheOthers()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(new RejectAddedInterceptor(e => e is TournamentDirectoryEntry { ChessResultsId: "222" }))
+            .Options);
+        var handler = new RowsPerFederationHandler(new()
+        {
+            ["AUT"] = $"[{Row("111", "Open Braunau", "2026-12-18", "2026-12-20", "Ranshofen")}]",
+            ["GER"] = $"[{Row("222", "Open Berlin", "2026-12-18", "2026-12-20", "Berlin", federation: "GER")}]",
+            ["SUI"] = $"[{Row("333", "Open Bern", "2026-12-18", "2026-12-20", "Bern", federation: "SUI")}]",
+        });
+        var service = new TournamentDirectoryService(db, new StubHttpClientFactory(handler), new GeocodingService(db),
+            new NotificationService(db, new NoOpTaskQueue()), new TestLogger<TournamentDirectoryService>())
+        {
+            DelayBetweenFederations = TimeSpan.Zero,
+        };
+
+        var results = await service.RunSweepAsync(["AUT", "GER", "SUI"]);
+
+        Assert.Equal([true, false, true], results.Select(r => r.Succeeded));
+        Assert.Contains("Duplicate entry", results[1].Error);
+
+        db.ChangeTracker.Clear();
+        Assert.Equal(["111", "333"], await db.TournamentDirectoryEntries
+            .OrderBy(e => e.ChessResultsId).Select(e => e.ChessResultsId!).ToListAsync());
+
+        // Der Fehlschlag steht an der Sweep-Zeile wie ein Abruffehler: LastSweptAt bleibt leer,
+        // die Rotation nimmt die Foederation wieder vor.
+        var ger = await db.TournamentDirectorySweeps.SingleAsync(s => s.Federation == "GER");
+        Assert.Null(ger.LastSweptAt);
+        Assert.NotNull(ger.LastAttemptedAt);
+        Assert.Equal(1, ger.ConsecutiveFailures);
+        Assert.Contains("Duplicate entry", ger.LastError);
+    }
+
     [Fact]
     public async Task SweepFederationAsync_RecordsBookkeepingPerFederation()
     {
@@ -656,6 +702,24 @@ public class TournamentDirectoryServiceTests : IDisposable
 
         public HttpClient CreateClient(string name) =>
             new(_handler, disposeHandler: false) { BaseAddress = new Uri("http://crawler:8080") };
+    }
+
+    /// <summary>
+    /// Antwortet auf die Trefferliste JE FOEDERATION mit einer eigenen Liste (fehlt eine: leer)
+    /// und auf jeden Turnierart-Durchgang mit einer leeren Liste.
+    /// </summary>
+    private sealed class RowsPerFederationHandler(Dictionary<string, string> bodies) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var url = request.RequestUri!.ToString();
+            var fed = System.Text.RegularExpressions.Regex.Match(url, @"fed=([A-Z]{3})").Groups[1].Value;
+            var body = url.Contains("&art=", StringComparison.Ordinal) ? "[]" : bodies.GetValueOrDefault(fed, "[]");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
     }
 
     /// <summary>

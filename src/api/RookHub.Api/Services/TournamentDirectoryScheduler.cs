@@ -177,24 +177,7 @@ public class TournamentDirectoryScheduler : BackgroundService
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var directory = scope.ServiceProvider.GetRequiredService<TournamentDirectoryService>();
-
-            var federations = await BuildRunListAsync(db, _dailyFederations, _weeklyBatchSize, ct);
-            _logger.LogInformation("Turnierverzeichnis: Sweep ueber {Count} Foederationen", federations.Count);
-
-            var results = await directory.RunSweepAsync(federations, ct);
-
-            var failed = results.Where(r => !r.Succeeded).Select(r => r.Federation).ToList();
-            if (failed.Count > 0)
-                _logger.LogWarning("Turnierverzeichnis: {Count} Foederationen fehlgeschlagen ({List})",
-                    failed.Count, string.Join(", ", failed));
-
-            // Danach die Nachtraege und Zusatzquellen, jede in ihrem eigenen Fang (RunStepsAsync):
-            // ein Fehlschlag dort darf den Sweep, der schon durch ist, nicht als gescheitert
-            // erscheinen lassen, und eine Quelle darf die uebrigen nicht mitnehmen.
-            await RunStepsAsync(scope, Steps(), ct);
+            await RunStepsAsync(Steps(), ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -206,6 +189,27 @@ public class TournamentDirectoryScheduler : BackgroundService
             // HttpClient-Timeout wuerde sonst die ganze API mitnehmen.
             _logger.LogError(ex, "Turnierverzeichnis: naechtlicher Sweep fehlgeschlagen");
         }
+    }
+
+    /// <summary>
+    /// Der chess-results-Sweep ueber die taeglichen Foederationen plus die naechste Charge der
+    /// Rotation. Einzelne Foederationen scheitern darin fuer sich (RunSweepAsync faengt je
+    /// Foederation); was hier noch durchschlaegt, faengt RunStepsAsync wie bei jedem Schritt.
+    /// </summary>
+    private async Task RunChessResultsSweepAsync(IServiceProvider services, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<AppDbContext>();
+        var directory = services.GetRequiredService<TournamentDirectoryService>();
+
+        var federations = await BuildRunListAsync(db, _dailyFederations, _weeklyBatchSize, ct);
+        _logger.LogInformation("Turnierverzeichnis: Sweep ueber {Count} Foederationen", federations.Count);
+
+        var results = await directory.RunSweepAsync(federations, ct);
+
+        var failed = results.Where(r => !r.Succeeded).Select(r => r.Federation).ToList();
+        if (failed.Count > 0)
+            _logger.LogWarning("Turnierverzeichnis: {Count} Foederationen fehlgeschlagen ({List})",
+                failed.Count, string.Join(", ", failed));
     }
 
     /// <summary>
@@ -239,10 +243,11 @@ public class TournamentDirectoryScheduler : BackgroundService
     internal sealed record SweepStep(string Name, bool Enabled, Func<IServiceProvider, CancellationToken, Task> Run);
 
     /// <summary>
-    /// Die Schritte NACH dem chess-results-Sweep, als Daten und in der Reihenfolge, in der sie
-    /// laufen. Die Reihenfolge traegt Bedeutung:
+    /// Die Schritte des Nachtlaufs, als Daten und in der Reihenfolge, in der sie laufen. Die
+    /// Reihenfolge traegt Bedeutung:
     ///
     /// <list type="bullet">
+    /// <item>Der chess-results-Sweep zuerst: die Hauptquelle, deren Eintraege die uebrigen zuordnen.</item>
     /// <item>Der Ankuendigungskalender laeuft nach dem Sweep (er ordnet nur zu, was der angelegt hat).</item>
     /// <item>Die FIDE-Details laufen nach dem FIDE-Jahreskalender (der legt die neuen Ereignisse erst an).</item>
     /// <item>Die Zusatzquellen nach KOSTEN, billig zuerst: faellt etwas grundsaetzlich aus (Netz,
@@ -253,6 +258,8 @@ public class TournamentDirectoryScheduler : BackgroundService
     /// </summary>
     internal IReadOnlyList<SweepStep> Steps() =>
     [
+        new("chess-results-Sweep", true, RunChessResultsSweepAsync),
+
         // Eine GEDECKELTE Runde Spielort-Aufloesung ueber die Vereinsnamen: sie kostet einen
         // Seitenabruf je Turnier, arbeitet sich also Nacht fuer Nacht durch den Rueckstand statt
         // ihn in einem Lauf abzuarbeiten.
@@ -352,21 +359,31 @@ public class TournamentDirectoryScheduler : BackgroundService
     ];
 
     /// <summary>
-    /// Die Schritte nacheinander laufen lassen, jeden in seinem eigenen Fang.
+    /// Die Schritte nacheinander laufen lassen, jeden in seinem eigenen Fang und mit EIGENEM Scope.
     ///
     /// <para>Der Fang stand frueher dreizehnmal ausgeschrieben neben einem Helfer fuer die
     /// uebrigen acht. Die Regel dahinter ist bei allen dieselbe und wichtiger als die
     /// Wiederholung: die Quellen sind voneinander unabhaengig, und ein Netzausfall bei einer darf
     /// weder die uebrigen noch den erledigten chess-results-Sweep als gescheitert erscheinen
     /// lassen. Ein ABBRUCH des Dienstes ist dagegen kein Quellenfehler und wird durchgereicht.</para>
+    ///
+    /// <para><b>Warum ein Scope je Schritt.</b> Alle Dienste sind scoped und teilten sich frueher
+    /// EINEN AppDbContext fuer die ganze Nacht. Scheiterte ein SaveChanges (Unique-Index,
+    /// „Data too long" — am 2026-09-09 auf Dev an drei Quellen gleichzeitig), blieben die
+    /// Added/Modified-Eintraege im Change-Tracker; die finally-Bloecke der Zusatzquellen loggen
+    /// den Fehler nur, und jede folgende Quelle schickte die vergifteten Eintraege mit ihrem
+    /// eigenen SaveChanges erneut ab und scheiterte an derselben Ausnahme — der Rest der Nacht
+    /// fiel aus. Mit eigenem Scope verwirft ein gescheiterter Schritt nur seinen eigenen
+    /// ungespeicherten Stand.</para>
     /// </summary>
-    internal async Task RunStepsAsync(IServiceScope scope, IEnumerable<SweepStep> steps, CancellationToken ct)
+    internal async Task RunStepsAsync(IEnumerable<SweepStep> steps, CancellationToken ct)
     {
         foreach (var step in steps)
         {
             if (!step.Enabled) continue;
             try
             {
+                using var scope = _scopeFactory.CreateScope();
                 await step.Run(scope.ServiceProvider, ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
