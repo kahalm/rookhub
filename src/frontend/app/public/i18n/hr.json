@@ -308,7 +308,16 @@
       "toLogin": "Na prijavu",
       "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
       "invalid": "Provjeri svoje podatke – nešto još nije u redu.",
-      "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti."
+      "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti.",
+      "kids": {
+        "parentsTitle": "Za roditelje",
+        "parentsText": "Igrati se može i bez računa. Račun molimo otvorite zajedno s roditeljem.",
+        "parentsHelp": "S računom napredak ostaje sačuvan na svakom uređaju, bez računa samo na ovom. To je isti račun kao na RookHubu.",
+        "usernameHint": "Nadimak, a ne tvoje pravo ime – drugi ga mogu vidjeti.",
+        "emailLabel": "E-pošta roditelja (preporučeno)",
+        "emailHint": "Samo se s njom može ponovno postaviti zaboravljena lozinka.",
+        "privacyNote": "Za roditelje: što spremamo i kako možete zatražiti brisanje računa, piše u pravilima o privatnosti."
+      }
     },
     "forgot": {
       "title": "Ponovno postavljanje lozinke",

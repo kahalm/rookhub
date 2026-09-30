@@ -308,7 +308,16 @@
       "toLogin": "Zur Anmeldung",
       "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
       "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht.",
-      "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung."
+      "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung.",
+      "kids": {
+        "parentsTitle": "Für Eltern",
+        "parentsText": "Spielen geht auch ohne Konto. Ein Konto bitte gemeinsam mit einem Elternteil anlegen.",
+        "parentsHelp": "Mit Konto bleibt der Fortschritt auf jedem Gerät erhalten, ohne Konto nur auf diesem. Es ist dasselbe Konto wie bei RookHub.",
+        "usernameHint": "Ein Spitzname, nicht dein echter Name – andere können ihn sehen.",
+        "emailLabel": "E-Mail eines Elternteils (empfohlen)",
+        "emailHint": "Nur damit lässt sich ein vergessenes Passwort zurücksetzen.",
+        "privacyNote": "Für Eltern: Was wir speichern und wie ihr das Konto löschen lasst, steht in der Datenschutzerklärung."
+      }
     },
     "forgot": {
       "title": "Passwort zurücksetzen",

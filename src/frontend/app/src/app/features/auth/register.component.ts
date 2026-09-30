@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, Optional, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -11,6 +11,8 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 
 /** Mindestlänge des Benutzernamens — wie `[MinLength(3)]` am RegisterDto (API). */
 export const USERNAME_MIN_LENGTH = 3;
@@ -52,7 +54,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, RouterModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, HelpHintComponent, TranslatePipe],
   template: `
     <div class="auth-container">
       <mat-card>
@@ -60,21 +62,36 @@ const ERROR_KEYS: Record<RegisterError, string> = {
           <mat-card-title>{{ 'auth.register.title' | translate }}</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          <!-- KidHub (UX-032): hier registriert sich meist ein Kind. Ein Satz an Kind und Eltern, der Rest hinter dem
+               Hilfe-Icon; nur Hinweise, kein Pflicht-Haken (Entscheidung beim Betreiber, Art. 8 DSGVO). -->
+          @if (kids) {
+            <div class="kids-parents" role="note">
+              <strong>{{ 'auth.register.kids.parentsTitle' | translate }}</strong>
+              <app-help-hint [text]="'auth.register.kids.parentsHelp' | translate"></app-help-hint>
+              <p>{{ 'auth.register.kids.parentsText' | translate }}</p>
+            </div>
+          }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
-            <mat-form-field appearance="outline">
+            <mat-form-field appearance="outline" [subscriptSizing]="kids ? 'dynamic' : 'fixed'">
               <mat-label>{{ 'auth.register.usernameLabel' | translate }}</mat-label>
               <!-- Handy-Tastatur: ohne autocapitalize="none" wurde der Benutzername als 'Kahalm' statt 'kahalm'
                    eingegeben und so gespeichert; new-password laesst den Passwort-Manager ein starkes Passwort vorschlagen. -->
               <input matInput [(ngModel)]="username" name="username" required [minlength]="usernameMin"
                      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+              @if (kids) {
+                <!-- Der Benutzername steht fuer andere sichtbar (Bestenliste ohne Anzeigenamen, Freundessuche) — ein
+                     Kind tippt sonst naheliegend Vor- und Nachnamen. -->
+                <mat-hint>{{ 'auth.register.kids.usernameHint' | translate }}</mat-hint>
+              }
               <mat-error>{{ 'auth.register.usernameTooShort' | translate:{ min: usernameMin } }}</mat-error>
             </mat-form-field>
             <!-- Der Hinweis nennt die Folge (UX-002): ohne E-Mail laesst sich ein vergessenes Passwort nie zuruecksetzen —
                  „Passwort vergessen“ nimmt nur eine E-Mail an. dynamic: der laengere Hinweis darf umbrechen. -->
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ 'auth.register.emailLabel' | translate }}</mat-label>
+              <!-- KidHub: Kinder haben meist keine eigene Adresse — die eines Elternteils ist die richtige Wahl. -->
+              <mat-label>{{ (kids ? 'auth.register.kids.emailLabel' : 'auth.register.emailLabel') | translate }}</mat-label>
               <input matInput type="email" [(ngModel)]="email" name="email" email autocomplete="email">
-              <mat-hint>{{ 'auth.register.emailHint' | translate }}</mat-hint>
+              <mat-hint>{{ (kids ? 'auth.register.kids.emailHint' : 'auth.register.emailHint') | translate }}</mat-hint>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.register.passwordLabel' | translate }}</mat-label>
@@ -109,7 +126,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                Datenschutzerklaerung. Ganzer Satz als Link: kein Satzbau-Problem in anderen Sprachen, und der Linktext
                sagt fuer sich, wohin er fuehrt. Die Route /privacy haben alle Oberflaechen. -->
           <p class="privacy-note">
-            <a routerLink="/privacy">{{ 'auth.register.privacyNote' | translate }}</a>
+            <a routerLink="/privacy">{{ (kids ? 'auth.register.kids.privacyNote' : 'auth.register.privacyNote') | translate }}</a>
           </p>
         </mat-card-content>
         <mat-card-actions>
@@ -127,6 +144,10 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                   background: rgba(211, 47, 47, 0.08); border: 1px solid rgba(211, 47, 47, 0.35); }
     .form-error p { margin: 0 0 8px; }
     .form-error p:last-child { margin-bottom: 0; }
+    .kids-parents { margin: 0.5rem 0 0; padding: 0.6rem 0.8rem; border-radius: 4px; font-size: 0.9rem;
+                    background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+                    border-left: 3px solid var(--mat-sys-primary); }
+    .kids-parents p { margin: 0.25rem 0 0; }
     .privacy-note { margin: 16px 0 0; font-size: 0.8rem; text-align: center; }
     /* Wie die Rechtslinks unter der Anmeldekarte: Theme-Farbe, grosszuegige Beruehrflaeche ohne Layoutsprung. */
     .privacy-note a { color: var(--mat-sys-primary); display: inline-block; padding: 12px 4px; margin: -12px 0; }
@@ -149,10 +170,15 @@ export class RegisterComponent {
   readonly showPassword = signal(false);
   readonly usernameMin = USERNAME_MIN_LENGTH;
   readonly passwordMin = PASSWORD_MIN_LENGTH;
+  /** Kinderseite (LEGAL_SITE.kind): Eltern-Hinweis, Eltern-E-Mail, Spitzname statt Klarname (UX-032). */
+  readonly kids: boolean;
 
   returnUrl: string;
 
-  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute) {
+  constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute,
+              // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
+              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
+    this.kids = (legal ?? defaultLegalSite()).kind === 'kidhub';
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
   }

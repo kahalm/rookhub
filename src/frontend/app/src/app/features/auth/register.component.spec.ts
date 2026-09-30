@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
+import { LEGAL_SITE } from '../legal/legal-site';
 
 describe('RegisterComponent — optionale Email', () => {
   function make(email: string, prefill = new AuthPrefillService()) {
@@ -253,5 +254,70 @@ describe('RegisterComponent — Datenschutz-Link an der Maske (UX-017)', () => {
     expect(link).not.toBeNull();
     expect(link.getAttribute('href')).toBe('/privacy');
     expect(link.textContent!.trim()).toBe('auth.register.privacyNote');
+  });
+});
+
+/**
+ * UX-032: auf KidHub registriert sich meist ein Kind. Die Maske sagte weder Kind noch Eltern etwas: kein
+ * Elternhinweis, „E-Mail: Optional“ (Kinder haben meist keine Adresse → nie ein Passwort-Reset), kein Rat gegen den
+ * echten Namen (der Benutzername ist fuer andere sichtbar). Nur Hinweise, kein Pflicht-Haken.
+ */
+describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
+  async function render(legal?: object) {
+    await TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : []),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const KIDHUB = { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' };
+  const text = (el: Element) => el.textContent ?? '';
+
+  it('KidHub: Elternhinweis, Spitzname-Rat, Eltern-E-Mail und Datenschutz für Eltern', async () => {
+    const el = await render(KIDHUB);
+    const box = el.querySelector('.kids-parents')!;
+    expect(box).not.toBeNull();
+    expect(box.getAttribute('role')).toBe('note');
+    expect(text(box)).toContain('auth.register.kids.parentsTitle');
+    expect(text(box)).toContain('auth.register.kids.parentsText');
+    expect(box.querySelector('app-help-hint')).not.toBeNull();
+    expect(text(el)).toContain('auth.register.kids.usernameHint');
+    expect(text(el)).toContain('auth.register.kids.emailLabel');
+    expect(text(el)).toContain('auth.register.kids.emailHint');
+    expect(text(el)).not.toContain('auth.register.emailHint');
+    const privacy = el.querySelector('.privacy-note a')!;
+    expect(privacy.getAttribute('href')).toBe('/privacy');
+    expect(text(privacy).trim()).toBe('auth.register.kids.privacyNote');
+  });
+
+  function expectUsualMask(el: HTMLElement): void {
+    expect(el.querySelector('.kids-parents')).toBeNull();
+    expect(text(el)).not.toContain('auth.register.kids.');
+    expect(text(el)).toContain('auth.register.emailHint');
+    expect(text(el.querySelector('.privacy-note a')!).trim()).toBe('auth.register.privacyNote');
+  }
+
+  it('RookHub und Turnierseite (Vorgabe) bleiben bei der gewohnten Maske', async () => {
+    expectUsualMask(await render());
+  });
+
+  it('LeagueHub bleibt bei der gewohnten Maske', async () => {
+    expectUsualMask(await render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub' }));
+  });
+
+  it('ohne DI (Konstruktor mit new) gilt die Vorgabe — keine KidHub-Variante', () => {
+    const c = new RegisterComponent({} as any, new AuthPrefillService(), {} as any, { snapshot: { queryParams: {} } } as any);
+    expect(c.kids).toBeFalse();
+    const k = new RegisterComponent({} as any, new AuthPrefillService(), {} as any, { snapshot: { queryParams: {} } } as any,
+      KIDHUB as any);
+    expect(k.kids).toBeTrue();
   });
 });

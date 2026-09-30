@@ -308,7 +308,16 @@
       "toLogin": "Go to login",
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
       "invalid": "Please check your details – something isn’t right yet.",
-      "privacyNote": "Your account is covered by our privacy policy."
+      "privacyNote": "Your account is covered by our privacy policy.",
+      "kids": {
+        "parentsTitle": "For parents",
+        "parentsText": "You can play without an account. Please create an account together with a parent.",
+        "parentsHelp": "With an account, progress is kept on every device; without one, only on this device. It is the same account as on RookHub.",
+        "usernameHint": "A nickname, not your real name – others can see it.",
+        "emailLabel": "A parent’s email (recommended)",
+        "emailHint": "Only with it can a forgotten password be reset.",
+        "privacyNote": "For parents: what we store and how to have the account deleted is explained in the privacy policy."
+      }
     },
     "forgot": {
       "title": "Reset password",

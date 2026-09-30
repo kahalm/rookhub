@@ -149,7 +149,16 @@
       "toLogin": "Tovább a bejelentkezéshez",
       "passwordRejected": "Ez a jelszó nem használható. Legalább {{min}} karakter legyen, és ne túl gyakori, mint a „12345678”.",
       "invalid": "Ellenőrizd az adataidat – valami még nem stimmel.",
-      "privacyNote": "A fiókodra az adatvédelmi nyilatkozatunk vonatkozik."
+      "privacyNote": "A fiókodra az adatvédelmi nyilatkozatunk vonatkozik.",
+      "kids": {
+        "parentsTitle": "Szülőknek",
+        "parentsText": "Fiók nélkül is lehet játszani. Fiókot kérjük, egy szülővel együtt hozzatok létre.",
+        "parentsHelp": "Fiókkal a haladás minden eszközön megmarad, fiók nélkül csak ezen. Ugyanaz a fiók, mint a RookHubon.",
+        "usernameHint": "Becenév, ne a valódi neved – mások is láthatják.",
+        "emailLabel": "Egy szülő e-mail-címe (ajánlott)",
+        "emailHint": "Csak ezzel lehet visszaállítani az elfelejtett jelszót.",
+        "privacyNote": "Szülőknek: hogy mit tárolunk, és hogyan lehet töröltetni a fiókot, az adatvédelmi nyilatkozatban olvasható."
+      }
     },
     "forgot": {
       "title": "Jelszó visszaállítása",
