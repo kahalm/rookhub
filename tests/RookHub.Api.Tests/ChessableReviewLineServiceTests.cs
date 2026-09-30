@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -344,6 +345,59 @@ public class ChessableReviewLineServiceTests : IDisposable
         var stored = await _service.UpsertAnonBatchAsync("abc", FixtureBid, new() { Entry(FixtureOid, LoadFixture()) });
         Assert.Equal(0, stored);
         Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync());
+    }
+
+    /// <summary>Ein JSON-Eintrag von genau <paramref name="bytes"/> UTF-8-Bytes (nur ASCII).</summary>
+    private static string JsonOfBytes(int bytes) => "{\"x\":\"" + new string('a', bytes - 8) + "\"}";
+
+    [Fact]
+    public async Task AnonUpsert_PerEntryCap_CountsUtf8Bytes()
+    {
+        // Der Deckel je Eintrag zählte ZEICHEN (256 K): „€" sind in MariaDB drei Bytes, er ließ also das Dreifache
+        // durch — und lag ohnehin beim Mehrfachen jeder realen getReview-Antwort (Prod-Maximum anonym 34 KB).
+        var multiByte = "{\"x\":\"" + new string('€', 50_000) + "\"}";   // nur ~50 K Zeichen, aber ~150 KB
+        var tooBig = JsonOfBytes(ChessableReviewLineService.MaxAnonJsonBytes + 1);
+        var fits = JsonOfBytes(ChessableReviewLineService.MaxAnonJsonBytes);
+
+        var stored = await _service.UpsertAnonBatchAsync("42", "1", new()
+        {
+            Entry("1", multiByte), Entry("2", tooBig), Entry("3", fits),
+        });
+
+        Assert.Equal(1, stored);
+        Assert.Equal("3", (await _db.AnonymousChessableReviewLines.SingleAsync()).Oid);
+    }
+
+    [Fact]
+    public async Task AnonUpsert_TotalByteCap_BlocksGrowth_ButKeepsNonGrowingUpdates()
+    {
+        // Der Gesamtdeckel zählte nur ZEILEN: 200 000 × 256 K Zeichen ≈ 51 GB ohne Konto. Jetzt zählen Bytes —
+        // über dem Deckel keine neue Zeile (auch nicht unter einer frischen uid) und kein Wachstum bestehender.
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db)) { AnonBytesCap = 100 };
+        Assert.Equal(1, await svc.UpsertAnonBatchAsync("42", "1", new() { Entry("1", JsonOfBytes(60)) }));
+
+        Assert.Equal(0, await svc.UpsertAnonBatchAsync("43", "1", new() { Entry("2", JsonOfBytes(50)) }));   // 60 + 50 > 100
+        Assert.Equal(0, await svc.UpsertAnonBatchAsync("42", "1", new() { Entry("1", JsonOfBytes(120)) }));  // 60 → 120
+        Assert.Equal(60, (await _db.AnonymousChessableReviewLines.SingleAsync()).Json.Length);
+
+        // Verkleinern bleibt erlaubt — und macht Platz für die neue Zeile.
+        Assert.Equal(1, await svc.UpsertAnonBatchAsync("42", "1", new() { Entry("1", JsonOfBytes(30)) }));
+        Assert.Equal(1, await svc.UpsertAnonBatchAsync("43", "1", new() { Entry("2", JsonOfBytes(50)) }));   // 30 + 50
+        Assert.Equal(2, await _db.AnonymousChessableReviewLines.CountAsync());
+    }
+
+    [Fact]
+    public async Task AnonUpsert_TotalByteCap_WithCache_CountsOwnWritesBetweenRecounts()
+    {
+        // Mit Cache wird die Summe nicht je Anfrage neu gezählt — die eigenen Schreibvorgänge müssen also auf die
+        // gemerkte Summe aufgeschlagen werden, sonst liefe die Senke bis zum nächsten Nachzählen ungebremst voll.
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var svc = new ChessableReviewLineService(_db, new PgnImportService(_db), sinkBytes: new ChessableSinkBytes(cache))
+        { AnonBytesCap = 100 };
+
+        Assert.Equal(1, await svc.UpsertAnonBatchAsync("42", "1", new() { Entry("1", JsonOfBytes(60)) }));
+        Assert.Equal(0, await svc.UpsertAnonBatchAsync("43", "1", new() { Entry("2", JsonOfBytes(50)) }));
+        Assert.Equal(1, await svc.UpsertAnonBatchAsync("43", "1", new() { Entry("2", JsonOfBytes(40)) }));
     }
 
     [Fact]

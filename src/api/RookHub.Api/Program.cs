@@ -237,6 +237,9 @@ try
     builder.Services.AddScoped<ChessableProblemMoveService>();
     builder.Services.AddScoped<ChessableResponseAlertService>();
     builder.Services.AddScoped<ChessableReviewLineService>();
+    // Byte-Stand der Chessable-Roh-Senken: EINE gecachte Summe für den ganzen Prozess (die Summe über LONGTEXT
+    // liest jede Zeile — je Anfrage neu gezählt wäre der Deckel selbst die Last).
+    builder.Services.AddSingleton<ChessableSinkBytes>();
     builder.Services.AddScoped<ChessableSessionMoveService>();
     builder.Services.AddScoped<FlashcardMarkService>();
     builder.Services.AddScoped<EndlessProgressService>();

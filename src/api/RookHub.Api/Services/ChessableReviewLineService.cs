@@ -36,16 +36,33 @@ public class ChessableReviewLineService
     /// dort niemand (der Request-Deckel von 16 MB wäre sonst tatsächlich ausschöpfbar).</summary>
     public const int MaxAnonEntriesPerBatch = 50;
 
+    /// <summary>Größen-Deckel je Eintrag der ANON-Senke, in UTF-8-Bytes (so viel legt MariaDB ab — der
+    /// Zeichen-Deckel <see cref="MaxJsonLength"/> ließ mit Drei-Byte-Zeichen das Dreifache durch). Gemessen am
+    /// 29.09.2026 auf Prod: größte getReview-Antwort 77 073 Byte (angemeldet), anonym 34 115 Byte — 128 KB lassen
+    /// dem größten je gesehenen Eintrag gut 1,6-fach Luft.</summary>
+    public const int MaxAnonJsonBytes = 128 * 1024;
+
+    /// <summary>GESAMT-Byte-Deckel der Anon-Senke. Der Zeilendeckel <see cref="MaxAnonRowsTotal"/> allein ließ
+    /// 200 000 × <see cref="MaxJsonLength"/> ≈ 51 GB zu — ohne Konto, aus einer einzigen IP in gut zwei Stunden.
+    /// 1 GiB fasst die 200 000 Zeilen bei realer Größe (im Schnitt rund 5 KB). Jenseits davon: keine neue Zeile,
+    /// und Aktualisierungen nur, wenn sie die Zeile nicht vergrößern (was schon liegt, verliert niemand).</summary>
+    public const long MaxAnonBytesTotal = 1L << 30;
+
+    /// <summary>Wirksamer Byte-Deckel der Anon-Senke; nur Tests setzen ihn klein.</summary>
+    internal long AnonBytesCap { get; init; } = MaxAnonBytesTotal;
+
     private readonly AppDbContext _db;
     private readonly PgnImportService _pgnImport;
     private readonly ILogger<ChessableReviewLineService>? _log;
+    private readonly ChessableSinkBytes _sinkBytes;
 
     public ChessableReviewLineService(AppDbContext db, PgnImportService pgnImport,
-        ILogger<ChessableReviewLineService>? log = null)
+        ILogger<ChessableReviewLineService>? log = null, ChessableSinkBytes? sinkBytes = null)
     {
         _db = db;
         _pgnImport = pgnImport;
         _log = log;
+        _sinkBytes = sinkBytes ?? new ChessableSinkBytes();
     }
 
     /// <summary>Die bids der gecachten Chessable-Kursliste des Nutzers (leer, wenn nie eine geholt wurde).
@@ -119,7 +136,9 @@ public class ChessableReviewLineService
     /// <summary>
     /// Token-loser Zwilling von <see cref="UpsertBatchAsync"/>: legt getReview-Linien eines Users OHNE
     /// RookHub-Account in der Anon-Senke ab, identifiziert über die Chessable-<c>uid</c>. Gleiche
-    /// Validierung/Deckel. Liefert die Zahl geschriebener/aktualisierter Zeilen.
+    /// Validierung, aber enger gedeckelt: je Eintrag <see cref="MaxAnonJsonBytes"/>, je Batch
+    /// <see cref="MaxAnonEntriesPerBatch"/>, dazu Zeilen je uid, Zeilen gesamt und Bytes gesamt
+    /// (<see cref="MaxAnonBytesTotal"/>). Liefert die Zahl geschriebener/aktualisierter Zeilen.
     /// </summary>
     public async Task<int> UpsertAnonBatchAsync(string uid, string bid,
         List<ChessableReviewLineEntryDto> entries, CancellationToken ct = default)
@@ -131,7 +150,7 @@ public class ChessableReviewLineService
                 && !string.IsNullOrWhiteSpace(e.Oid)
                 && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit)
                 && !string.IsNullOrWhiteSpace(e.Json)
-                && e.Json.Length <= MaxJsonLength)
+                && e.Json.Length <= MaxAnonJsonBytes && ChessableSinkBytes.Utf8(e.Json) <= MaxAnonJsonBytes)
             .GroupBy(e => e.Oid.Trim())
             .Select(g => g.Last())
             .Take(MaxAnonEntriesPerBatch)
@@ -147,16 +166,30 @@ public class ChessableReviewLineService
         // …und der Gesamtbestand der Senke: nur NEUE Zeilen werden abgewiesen, Aktualisierungen
         // bestehender laufen weiter (ein legitimer Nutzer verliert dadurch nichts).
         var totalRowCount = await _db.AnonymousChessableReviewLines.CountAsync(ct);
+        // …und ihr Byte-Stand: erst gezählt, wenn ein Eintrag die Senke wachsen ließe (Summe über LONGTEXT).
+        long? sinkBytes = null;
+        long grown = 0;
 
         var now = DateTime.UtcNow;
         var written = 0;
         foreach (var e in clean)
         {
             var oid = e.Oid.Trim();
-            if (!existing.TryGetValue(oid, out var row))
+            existing.TryGetValue(oid, out var row);
+            if (row is null)
             {
                 if (uidRowCount >= MaxAnonRowsPerUid) continue;   // Deckel erreicht → keine neue Zeile
                 if (totalRowCount >= MaxAnonRowsTotal) continue;   // Senke insgesamt voll
+            }
+            var delta = ChessableSinkBytes.Utf8(e.Json) - (row is null ? 0 : ChessableSinkBytes.Utf8(row.Json));
+            if (delta > 0)
+            {
+                var total = sinkBytes ??= await _sinkBytes.AnonTotalAsync(_db, ct);
+                if (total + delta > AnonBytesCap) continue;   // Senke in Bytes voll → nichts, was sie wachsen lässt
+                sinkBytes = total + delta;
+            }
+            if (row is null)
+            {
                 row = new AnonymousChessableReviewLine { ChessableUid = uid, Bid = bid, Oid = oid, CreatedAt = now };
                 _db.AnonymousChessableReviewLines.Add(row);
                 existing[oid] = row;
@@ -165,10 +198,15 @@ public class ChessableReviewLineService
             row.Json = e.Json;
             row.ChapterTitle = ExtractChapterTitle(e.Json);
             row.UpdatedAt = now;
+            grown += delta;
             written++;
         }
 
-        try { await _db.SaveChangesAsync(ct); }
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            _sinkBytes.AddAnon(grown);
+        }
         catch (DbUpdateException) { _db.ChangeTracker.Clear(); }   // Race auf dem Unique-Index → idempotent verwerfen
         return written;
     }
