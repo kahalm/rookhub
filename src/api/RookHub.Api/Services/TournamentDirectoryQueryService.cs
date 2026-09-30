@@ -87,6 +87,12 @@ public sealed record DirectorySearchResult(
     List<DirectoryGroupItem> Items, int Total, bool Truncated);
 
 /// <summary>
+/// Die Kartenmarker eines Ausschnitts. <paramref name="Truncated"/> = der Ausschnitt hatte mehr
+/// Zeilen als der Deckel — gekappt wird nach Startdatum, es fehlen also die SPAETESTEN Turniere.
+/// </summary>
+public sealed record DirectoryMapResult(List<DirectoryGroupItem> Items, bool Truncated);
+
+/// <summary>
 /// Lesende Abfragen aufs Turnierverzeichnis.
 ///
 /// Die Umkreissuche laeuft zweistufig: die Datenbank liefert ueber den Lat/Lon-Index nur die
@@ -240,11 +246,17 @@ public class TournamentDirectoryQueryService
     /// <summary>
     /// Kartenmarker: nur die Zeilen mit Koordinaten in der sichtbaren Box, hart gedeckelt. Ohne
     /// Deckel wuerde ein herausgezoomtes Europa zehntausende Pins in eine Antwort packen.
+    ///
+    /// <para>Die Kappung wird GEMELDET (<see cref="DirectoryMapResult.Truncated"/>): gekappt wird
+    /// nach Startdatum, und bis 0.606.0 fehlten bei „Jahr" oder „Alle" ueber Mitteleuropa still die
+    /// spaeten Monate — unter der Karte stand trotzdem „N Turniere im Ausschnitt". Gezaehlt wird
+    /// dafuer eine Zeile UEBER dem Deckel; gekappt werden ZEILEN, vor dem Gruppieren.</para>
     /// </summary>
-    public async Task<List<DirectoryGroupItem>> MapPinsAsync(
+    public async Task<DirectoryMapResult> MapPinsAsync(
         DirectorySearchQuery query, double minLat, double maxLat, double minLon, double maxLon,
         int limit = 2000, CancellationToken ct = default)
     {
+        var cap = Math.Clamp(limit, 1, 5000);
         var rows = await ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query)
             .Where(e => (e.Lat != null && e.Lon != null
                          && e.Lat >= minLat && e.Lat <= maxLat
@@ -253,8 +265,11 @@ public class TournamentDirectoryQueryService
                                              && v.Lon >= minLon && v.Lon <= maxLon))
             .Include(e => e.Venues)
             .OrderBy(e => e.StartDate)
-            .Take(Math.Clamp(limit, 1, 5000))
+            .Take(cap + 1)
             .ToListAsync(ct);
+
+        var truncated = rows.Count > cap;
+        if (truncated) rows.RemoveAt(rows.Count - 1);
 
         // Gruppiert wie die LISTE, mit demselben Schluessel und derselben Wahl des
         // Hauptvertreters (kleinste Id). Ohne das widersprechen sich die beiden Ansichten
@@ -268,7 +283,7 @@ public class TournamentDirectoryQueryService
         // teilen sich seinen Spielort, liegen also ohnehin miteinander im Bild; nur ein Turnier
         // mit Gruppen an VERSCHIEDENEN Orten kann am Bildrand eine kleinere Gruppenzahl zeigen
         // als die Liste.
-        return rows
+        var items = rows
             .GroupBy(e => e.GroupKey ?? $"id:{e.Id}")
             .Select(g =>
             {
@@ -277,6 +292,7 @@ public class TournamentDirectoryQueryService
             })
             .OrderBy(i => i.Entry.StartDate)
             .ToList();
+        return new DirectoryMapResult(items, truncated);
     }
 
     /// <summary>

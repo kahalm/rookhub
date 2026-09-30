@@ -638,9 +638,42 @@ public class TournamentDirectoryControllerTests : IDisposable
         await AddEntryAsync("2", "Wien", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 48.21, 16.37);
 
         var result = await CreateController(1).Map("47.0,12.0,48.0,14.0");
-        var pins = Assert.IsType<List<DirectoryEntryDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
 
-        Assert.Equal("1", Assert.Single(pins).ChessResultsId);
+        Assert.Equal("1", Assert.Single(map.Items).ChessResultsId);
+        Assert.False(map.Truncated);
+    }
+
+    /// <summary>
+    /// F6-006: die Karte kappt nach Startdatum — und sagt es jetzt. Vorher kam eine nackte Liste,
+    /// die spaeten Monate fehlten still, und unter der Karte stand trotzdem „N Turniere im
+    /// Ausschnitt".
+    /// </summary>
+    [Fact]
+    public async Task Map_MoreRowsThanTheLimit_SaysTruncated_AndDropsTheLatest()
+    {
+        await AddEntryAsync("1", "Oktober", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddEntryAsync("2", "November", new DateOnly(2026, 11, 10), new DateOnly(2026, 11, 10), 47.81, 13.05);
+        await AddEntryAsync("3", "Dezember", new DateOnly(2026, 12, 10), new DateOnly(2026, 12, 10), 47.82, 13.06);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0", limit: 2);
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.True(map.Truncated);
+        Assert.Equal(["1", "2"], map.Items.Select(p => p.Id).Order());
+    }
+
+    [Fact]
+    public async Task Map_ExactlyAtTheLimit_IsNotTruncated()
+    {
+        await AddEntryAsync("1", "Oktober", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 10), 47.80, 13.04);
+        await AddEntryAsync("2", "November", new DateOnly(2026, 11, 10), new DateOnly(2026, 11, 10), 47.81, 13.05);
+
+        var result = await CreateController(1).Map("47.0,12.0,48.0,14.0", limit: 2);
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.False(map.Truncated);
+        Assert.Equal(2, map.Items.Count);
     }
 
     /// <summary>
@@ -663,7 +696,7 @@ public class TournamentDirectoryControllerTests : IDisposable
         await AddGroupedAsync("Blitzabend", "804", new DateOnly(2026, 10, 11), 47.80, 13.04);
 
         var result = await CreateController(1).Map("47.0,12.0,48.0,14.0");
-        var pins = Assert.IsType<List<DirectoryEntryDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        var pins = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(result.Result).Value).Items;
 
         Assert.Equal(2, pins.Count);
         var open = Assert.Single(pins, p => p.ChessResultsId == "801");

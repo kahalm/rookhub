@@ -319,7 +319,8 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(2, weekend.Total);
 
         var pins = await svc.MapPinsAsync(new DirectorySearchQuery(), 47.0, 48.0, 12.0, 14.0);
-        Assert.Equal(2, pins.Count);
+        Assert.Equal(2, pins.Items.Count);
+        Assert.False(pins.Truncated);
 
         Assert.NotNull((await svc.GetAsync("1"))?.Entry);
     }

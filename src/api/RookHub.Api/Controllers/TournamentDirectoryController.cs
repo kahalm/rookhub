@@ -92,9 +92,11 @@ public class TournamentDirectoryController : BaseApiController
 
     /// <summary>
     /// Kartenmarker fuer den sichtbaren Ausschnitt. <c>bbox</c> ist "minLat,minLon,maxLat,maxLon".
+    /// Antwort <c>{ items, truncated }</c> — <c>truncated</c>, wenn der Ausschnitt mehr als
+    /// <c>limit</c> Zeilen hat (dann fehlen die spaetesten Turniere).
     /// </summary>
     [HttpGet("map")]
-    public async Task<ActionResult<List<DirectoryEntryDto>>> Map(
+    public async Task<ActionResult<DirectoryMapDto>> Map(
         [FromQuery] string bbox,
         [FromQuery] string? from = null, [FromQuery] string? to = null,
         [FromQuery] string? fed = null, [FromQuery] string? speed = null, [FromQuery] string? q = null,
@@ -110,7 +112,8 @@ public class TournamentDirectoryController : BaseApiController
             weekendOnly, minPlayers, profileId, audience, 1, 1, ct);
         if (parsed.Error is not null) return BadRequest(new { message = parsed.Error });
 
-        var pins = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
+        var map = await _query.MapPinsAsync(parsed.Query!, box.MinLat, box.MaxLat, box.MinLon, box.MaxLon, limit, ct);
+        var pins = map.Items;
         // Ueber ALLE Gruppen eines Turniers: gemerkt ist es, wenn eine davon abonniert ist — das
         // Abo haengt an der chess-results-Nummer der einzelnen Gruppe, der Punkt am Turnier.
         var pinSubscribed = await SubscribedIdsAsync(
@@ -120,11 +123,15 @@ public class TournamentDirectoryController : BaseApiController
 
         // Die Karte braucht Haken und Ausblend-Merkmal jetzt ebenfalls: ihr Punkt-Fenster ist
         // dieselbe Karte wie in Liste und Kalender und zeigt dieselben Schaltflaechen.
-        return Ok(pins
-            .Select(p => DirectoryEntryDto.FromEntity(p.Entry, null,
-                p.Members.Any(m => m.ChessResultsId is not null && pinSubscribed.Contains(m.ChessResultsId)),
-                p.Members, pinIgnored.Contains(p.Entry.PublicId)))
-            .ToList());
+        return Ok(new DirectoryMapDto
+        {
+            Items = pins
+                .Select(p => DirectoryEntryDto.FromEntity(p.Entry, null,
+                    p.Members.Any(m => m.ChessResultsId is not null && pinSubscribed.Contains(m.ChessResultsId)),
+                    p.Members, pinIgnored.Contains(p.Entry.PublicId)))
+                .ToList(),
+            Truncated = map.Truncated,
+        });
     }
 
     /// <summary>

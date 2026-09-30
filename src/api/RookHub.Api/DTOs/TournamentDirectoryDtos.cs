@@ -217,6 +217,24 @@ public class DirectoryPageDto
 }
 
 /// <summary>
+/// Die Kartenmarker eines Ausschnitts (<c>GET /api/tournament-directory/map</c>).
+///
+/// <para>Bis 0.606.0 eine nackte Liste: gekappt wird nach Startdatum, und ueber einen grossen
+/// Ausschnitt fehlten still die spaeten Monate, waehrend die Karte „N Turniere im Ausschnitt"
+/// behauptete. Die Liste hatte fuer denselben Fall laengst ihr <c>truncated</c>.</para>
+/// </summary>
+public class DirectoryMapDto
+{
+    public List<DirectoryEntryDto> Items { get; set; } = [];
+
+    /// <summary>
+    /// true = der Ausschnitt hat mehr Turniere, als die Karte traegt; es fehlen die spaetesten.
+    /// Ausschnitt oder Zeitraum verkleinern.
+    /// </summary>
+    public bool Truncated { get; set; }
+}
+
+/// <summary>
 /// Ein Kalendermonat: die Turniere EINMAL, die Tage nur mit ihren Nummern.
 ///
 /// <para>Vorher stand an jedem Tag der VOLLE Eintrag. Ein mehrtaegiges Turnier steht an jedem
