@@ -27,6 +27,9 @@ public static class SystemCallClassifier
         // Client-Diagnose + Client-Heartbeat (ClientLogService, gedrosselt/periodisch)
         if (Eq(p, "/api/client-log")) return true;
 
+        // Signierter Heartbeat des Schach-Bots (jede Minute, BotHeartbeatController) — Nachfolger von kind=heartbeat_bot
+        if (Eq(p, "/api/bot/heartbeat")) return true;
+
         // Menü-Sichtbarkeit — beim Laden/periodisch geprüft, nicht nutzer-initiiert
         if (Eq(p, "/api/menu")) return true;
 

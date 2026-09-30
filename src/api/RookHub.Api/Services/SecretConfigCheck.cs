@@ -39,7 +39,7 @@ public static class SecretConfigCheck
     public static readonly IReadOnlyDictionary<string, string> InboundSecrets = new Dictionary<string, string>
     {
         ["Discord:LinkSecret"] = "Discord-Verknüpfung (POST /api/profile/discord/link) bleibt aus",
-        ["SchachBot:StatsSecret"] = "Bot-Statistik (/api/bot/player-progress) und die Bot-Signatur der Ergebnis-GETs bleiben aus",
+        ["SchachBot:StatsSecret"] = "Bot-Statistik (/api/bot/player-progress), der signierte Bot-Heartbeat (/api/bot/heartbeat) und die Bot-Signatur der Ergebnis-GETs bleiben aus",
     };
 
     /// <summary>Nur mitgeschickte Schlüssel: Config-Schlüssel → Gegenstelle, die den Platzhalter annimmt.</summary>
@@ -115,6 +115,6 @@ public static class SecretConfigCheck
             logger.LogWarning(
                 "Startprüfung: {ConfigKey} ist leer — {Effect}",
                 "SchachBot:StatsSecret",
-                "/api/bot/player-progress antwortet 503 not-configured, die Motivations-DMs des Schach-Bots pausieren");
+                "/api/bot/player-progress und /api/bot/heartbeat antworten 503 not-configured, die Motivations-DMs des Schach-Bots pausieren und der log-watcher vermisst seinen Heartbeat");
     }
 }

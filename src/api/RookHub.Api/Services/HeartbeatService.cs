@@ -13,6 +13,14 @@ public class HeartbeatService : BackgroundService
 {
     public const string ServiceName = "rookhub-api";
 
+    /// <summary>
+    /// Kopf jeder Heartbeat-Zeile — Vertrag mit dem log-watcher: <c>{HeartbeatService}</c> wird zu
+    /// <c>labels.HeartbeatService</c> (danach zählt er, <c>HEARTBEAT_CHECKS</c> als <c>name=index</c>), die Altform
+    /// sucht den gerenderten Satz „Heartbeat: rookhub-api". Der signierte Bot-Heartbeat
+    /// (<see cref="Controllers.BotHeartbeatController"/>) schreibt denselben Kopf mit <c>schach-bot</c>.
+    /// </summary>
+    public const string LogTemplatePrefix = "Heartbeat: {HeartbeatService} {HeartbeatStatus}";
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<HeartbeatService> _logger;
     private readonly TimeSpan _interval;
@@ -59,7 +67,7 @@ public class HeartbeatService : BackgroundService
         // (konsistent mit der HTTP-Request-Markierung), damit er in Kibana zum Grundrauschen zählt.
         using (Serilog.Context.LogContext.PushProperty("RequestKind", Logging.SystemCallClassifier.System))
             _logger.LogInformation(
-                "Heartbeat: {HeartbeatService} {HeartbeatStatus} db={HeartbeatDbOk} uptime={HeartbeatUptimeSeconds}s",
+                LogTemplatePrefix + " db={HeartbeatDbOk} uptime={HeartbeatUptimeSeconds}s",
                 ServiceName, dbOk ? "healthy" : "degraded", dbOk, uptimeSeconds);
     }
 }

@@ -12,6 +12,7 @@ public class SystemCallClassifierTests
     [InlineData("/swagger/index.html")]
     // Client-Diagnose/Heartbeat + Menü
     [InlineData("/api/client-log")]
+    [InlineData("/api/bot/heartbeat")]                     // signierter Bot-Heartbeat (Nachfolger von kind=heartbeat_bot)
     [InlineData("/api/menu")]
     // Badge-/Zähler-Polls
     [InlineData("/api/notifications/count")]

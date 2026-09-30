@@ -69,7 +69,7 @@ public class AnonymousRateLimitTests
         // Der Rest bleibt, wie er war (Client-Log, Bot-Statistik, Token-Test, Extension-Senke, Bestandssuche).
         foreach (var key in new[]
                  {
-                     "BotStats.GetPlayerProgress", "ClientLog.Post", "Token.Test", "Extension.ChessableReviewLinesAnon",
+                     "BotStats.GetPlayerProgress", "BotHeartbeat.Post", "ClientLog.Post", "Token.Test", "Extension.ChessableReviewLinesAnon",
                      "LibraryGame.Search", "LibraryGame.Semantic",
                  })
             Assert.Equal("anonymous-puzzle", p[key]);
