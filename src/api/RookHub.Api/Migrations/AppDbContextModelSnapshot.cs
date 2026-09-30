@@ -1308,6 +1308,263 @@ namespace RookHub.Api.Migrations
                     b.ToTable("CiBuildReports");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.ClubAttendance", b =>
+                {
+                    b.Property<int>("SessionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("SessionId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("ClubAttendances");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubContact", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)");
+
+                    b.Property<string>("Label")
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId", "Position");
+
+                    b.ToTable("ClubContacts");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Archived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Schedule")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int?>("Weekday")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ClubGroups");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroupMember", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.HasKey("GroupId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("ClubGroupMembers");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroupTrainer", b =>
+                {
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("GroupId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ClubGroupTrainers");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Archived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("BirthYear")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FideId")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.Property<string>("Level")
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<string>("LinkCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<DateTime?>("LinkCodeExpires")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("LinkedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NationalId")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("PhotoConsent")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkCode")
+                        .IsUnique();
+
+                    b.HasIndex("LinkedUserId")
+                        .IsUnique();
+
+                    b.HasIndex("LastName", "FirstName");
+
+                    b.ToTable("ClubMembers");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AuthorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId", "CreatedAt");
+
+                    b.ToTable("ClubNotes");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("text");
+
+                    b.Property<string>("Topic")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("ClubSessions");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.CommentEmbedding", b =>
                 {
                     b.Property<long>("Id")
@@ -6762,6 +7019,106 @@ namespace RookHub.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("RookHub.Api.Models.ClubAttendance", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubMember", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.ClubSession", "Session")
+                        .WithMany("Attendance")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubContact", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubMember", "Member")
+                        .WithMany("Contacts")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroupMember", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubGroup", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.ClubMember", "Member")
+                        .WithMany("Groups")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroupTrainer", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubGroup", "Group")
+                        .WithMany("Trainers")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("RookHub.Api.Models.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubMember", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.AppUser", "LinkedUser")
+                        .WithMany()
+                        .HasForeignKey("LinkedUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LinkedUser");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubNote", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubMember", "Member")
+                        .WithMany("NoteEntries")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubSession", b =>
+                {
+                    b.HasOne("RookHub.Api.Models.ClubGroup", "Group")
+                        .WithMany("Sessions")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("RookHub.Api.Models.CommentEmbedding", b =>
                 {
                     b.HasOne("RookHub.Api.Models.LibraryGame", "LibraryGame")
@@ -7989,6 +8346,29 @@ namespace RookHub.Api.Migrations
 
                     b.Navigation("Source")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubGroup", b =>
+                {
+                    b.Navigation("Members");
+
+                    b.Navigation("Sessions");
+
+                    b.Navigation("Trainers");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubMember", b =>
+                {
+                    b.Navigation("Contacts");
+
+                    b.Navigation("Groups");
+
+                    b.Navigation("NoteEntries");
+                });
+
+            modelBuilder.Entity("RookHub.Api.Models.ClubSession", b =>
+                {
+                    b.Navigation("Attendance");
                 });
 
             modelBuilder.Entity("RookHub.Api.Models.CommentSet", b =>

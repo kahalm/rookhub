@@ -1,0 +1,15 @@
+/* Build-Konfiguration von ClubHub (Kartei der Kinder und Jugendlichen), fünftes Projekt im selben Workspace. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/clubhub",
+    "types": []
+  },
+  "files": [
+    "src-clubhub/main.ts"
+  ],
+  "include": [
+    "src-clubhub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

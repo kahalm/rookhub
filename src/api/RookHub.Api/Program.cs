@@ -260,6 +260,9 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
+    // ClubHub (Kartei der Kinder und Jugendlichen): Regeln + Sichtbarkeit, Lernstand aus dem verknüpften Konto
+    builder.Services.AddScoped<RookHub.Api.Services.Club.ClubService>();
+    builder.Services.AddScoped<RookHub.Api.Services.Club.ClubProgressService>();
     // Deckel der Uploads über Teilen-Links (je Link und Tag, im Arbeitsspeicher) — MUSS ein Singleton sein, sonst hätte
     // jeder Request seinen eigenen Zähler (LeagueClubService fällt ohne auf einen eigenen je Dienst zurück).
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueShareUploadQuota>();

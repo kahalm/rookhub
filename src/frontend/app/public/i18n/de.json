@@ -2413,7 +2413,9 @@
         "tournaments_manage": "Turnierverzeichnis verwalten",
         "league_view": "LeagueHub: Prognosen und Vereinspartien ansehen",
         "league_manage": "LeagueHub: Daten aktualisieren, Links teilen, Import",
-        "league_contribute": "LeagueHub: Vereinspartien hinzufügen (PGN, Partieformular)"
+        "league_contribute": "LeagueHub: Vereinspartien hinzufügen (PGN, Partieformular)",
+        "club_manage": "ClubHub: ganze Kartei der Kinder und Jugendlichen (alle Kinder, Gruppen, Trainer, Löschen)",
+        "club_trainer": "ClubHub: Trainer — Kinder der eigenen Gruppen (Kontakte, Anwesenheit, Lernstand)"
       },
       "groupTitle": "Rollen einer Gruppe zuweisen",
       "groupHint": "Jedes Mitglied der Gruppe hat diese Rollen — wer dazukommt, hat die Rechte sofort, wer geht, verliert sie. Die Admin-Rolle und „Everyone“ gibt es hier nicht.",

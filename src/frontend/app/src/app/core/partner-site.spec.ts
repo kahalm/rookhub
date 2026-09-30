@@ -51,6 +51,9 @@ describe('partner-site', () => {
     // LeagueHub genauso: teilt Sprache/Design, ist aber keine Partnerseite (kein Sprung)
     expect(sharedCookieDomain('leaguehub.oberschmid.homes')).toBe('.oberschmid.homes');
     expect(sharedCookieDomain('leaguehub-dev.oberschmid.homes')).toBe('.oberschmid.homes');
+    expect(sharedCookieDomain('clubhub.oberschmid.homes')).toBe('.oberschmid.homes');
+    expect(sharedCookieDomain('clubhub-dev.oberschmid.homes')).toBe('.oberschmid.homes');
+    expect(siteKindOf('clubhub.oberschmid.homes')).toBeNull();
     expect(siteKindOf('leaguehub.oberschmid.homes')).toBeNull();
     expect(partnerSiteUrl('leaguehub.oberschmid.homes', 'https:')).toBeNull();
   });

@@ -9,6 +9,26 @@ im Archiv. Zuletzt gesichtet: **2026-08-26**._
 
 
 
+## [~] ClubHub: Kartei der Kinder und Jugendlichen — gebaut in 0.613.0, noch nicht ausgerollt (2026-09-30)
+
+Gebaut: Kartei mit Kontakten (mehrere Telefonnummern/E-Mail je Kind, jede mit Hinweis), Gruppen mit Trainingstag,
+Anwesenheit abhaken, Lernstand (Stufe + Notizen), Konto-Verknüpfung per Einmal-Code samt Lernstand aus dem Konto, Rechte
+`club.manage`/`club.trainer` (Details: CLAUDE.md „ClubHub"). Offen, bewusst nicht im ersten Wurf:
+
+- [ ] **Ausrollen** (nur auf Zuruf): Dienst `clubhub` in die Stacks `/opt/stacks/rookhub-schach{,-dev}` (Vorlage
+  `compose.dev.vpn.yml` / `compose.yml.example`, `CLUBHUB_PORT` 8101 Dev / 8102 Prod), NPM-Proxy-Hosts
+  `clubhub-dev.oberschmid.homes` / `clubhub.oberschmid.homes`, GHCR-Paket `rookhub-clubhub` nach dem ersten CI-Lauf auf
+  dieselbe Sichtbarkeit stellen wie die anderen. Danach eine Rolle „Trainer" mit `club.trainer` anlegen und zuteilen.
+- [ ] **Datenschutz-Text**: die geteilte Datenschutzseite beschreibt die Kartei nicht (Daten Minderjähriger, Kontakte der
+  Eltern, Foto-Einwilligung). Text liefert der Verein; bis dahin zeigt ClubHub die allgemeine Seite.
+- [ ] **Elo-Verlauf je Kind** aus FIDE-/ÖSB-Nummer (steht im Blatt, wird noch nicht abgefragt) und Turniere/Termine
+  (wer ist gemeldet, Ergebnisse über die chess-results-Anbindung).
+- [ ] **Eltern-/Kinder-Sicht** (eigener Stand, Termine) — bisher sieht das verknüpfte Konto nur, DASS es verknüpft ist.
+- [ ] Sprung aus RookHub (Menüpunkt für Konten mit Club-Recht) und Export der Telefonliste (CSV/Druck).
+
+
+
+
 ## [ ] LeagueHub: neue Saison findet sich nicht von selbst (2026-09-27, Code-Review des Umzugs)
 
 „Daten aktualisieren" (`LeagueRefresh.RunAsync`) holt nur die Ligen neu, die für `MAX(Season)` schon in

@@ -29,6 +29,8 @@ const ROOKHUB_LABELS = new Set(['rookhub', 'rookhub-dev']);
 const KIDHUB_LABELS = new Set(['kidhub', 'kidhub-dev']);
 /** LeagueHub (Aufstellungs-Prognosen der Tiroler Ligen): wie KidHub keine Partnerseite, teilt aber die Anzeige-Einstellungen. */
 const LEAGUEHUB_LABELS = new Set(['leaguehub', 'leaguehub-dev']);
+/** ClubHub (Kartei der Kinder und Jugendlichen): wie LeagueHub keine Partnerseite, teilt aber die Anzeige-Einstellungen. */
+const CLUBHUB_LABELS = new Set(['clubhub', 'clubhub-dev']);
 
 /** Welche Seite gehoert zu welcher — die Tabelle, nicht geraten. */
 const PARTNER: Record<string, string> = {
@@ -83,14 +85,14 @@ export function rookHubUrlForLeagueHub(host: string = location.hostname, protoco
 }
 
 /**
- * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub und LeagueHub eingeschlossen):
+ * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub, LeagueHub und ClubHub eingeschlossen):
  * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden
  * Seiten ist — auf einer IP oder localhost gibt es keine gemeinsame Elterndomaene, und ein Cookie
  * darauf zu setzen wuerde stillschweigend nichts tun.
  */
 export function sharedCookieDomain(host: string = location.hostname): string | null {
   const first = host.split('.')[0];
-  if (!siteKindOf(host) && !KIDHUB_LABELS.has(first) && !LEAGUEHUB_LABELS.has(first)) return null;
+  if (!siteKindOf(host) && !KIDHUB_LABELS.has(first) && !LEAGUEHUB_LABELS.has(first) && !CLUBHUB_LABELS.has(first)) return null;
   const parts = host.split('.');
   return parts.length >= 2 ? '.' + parts.slice(1).join('.') : null;
 }

@@ -125,6 +125,18 @@ public class CiWorkflowTests
         Assert.Contains("src-leaguehub/**", block);
     }
 
+    /// <summary>ClubHub importiert Anmeldung, HTTP-Kette und Sprachdateien per @rh/* — der Filter braucht den geteilten Block.</summary>
+    [Fact]
+    public void ClubHubFilter_CoversTheSharedFrontendCode()
+    {
+        var text = ReadRepoFile(Filters);
+        var block = Regex.Match(text, @"(?ms)^clubhub:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        Assert.Contains("*frontend", block);
+        Assert.Contains("src-clubhub/**", block);
+        Assert.Contains("public-clubhub/**", block);
+    }
+
     /// <summary>
     /// Jedes Recht, das ein Job im AUFGERUFENEN Workflow verlangt, muss der aufrufende
     /// <c>tests:</c>-Job in <c>docker.yml</c> ebenfalls gewaehren.
@@ -198,6 +210,7 @@ public class CiWorkflowTests
     [InlineData("build-turnier")]
     [InlineData("build-kidhub")]
     [InlineData("build-leaguehub")]
+    [InlineData("build-clubhub")]
     public void EveryImageJob_StillBuildsOnATag(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -218,6 +231,7 @@ public class CiWorkflowTests
     [InlineData("build-turnier")]
     [InlineData("build-kidhub")]
     [InlineData("build-leaguehub")]
+    [InlineData("build-clubhub")]
     public void EveryImageJob_StillWaitsForTheTestGate(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -252,6 +266,7 @@ public class CiWorkflowTests
     [InlineData("build-turnier")]
     [InlineData("build-kidhub")]
     [InlineData("build-leaguehub")]
+    [InlineData("build-clubhub")]
     public void EveryImageJob_AlsoBuildsOnAManualRun(string job)
     {
         var text = ReadRepoFile(Docker);
@@ -272,6 +287,7 @@ public class CiWorkflowTests
     [InlineData("turnier")]
     [InlineData("kidhub")]
     [InlineData("leaguehub")]
+    [InlineData("clubhub")]
     public void EveryPrebuildJob_OnlyPushesTheStagingTag(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -292,6 +308,7 @@ public class CiWorkflowTests
     [InlineData("turnier")]
     [InlineData("kidhub")]
     [InlineData("leaguehub")]
+    [InlineData("clubhub")]
     public void EveryPrebuildJob_DoesNotWaitForTheTestGate(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -312,6 +329,7 @@ public class CiWorkflowTests
     [InlineData("turnier")]
     [InlineData("kidhub")]
     [InlineData("leaguehub")]
+    [InlineData("clubhub")]
     public void EveryPrebuildJob_AlsoRunsOnATagAndOnAManualRun(string image)
     {
         var block = Job($"prebuild-{image}");
@@ -333,6 +351,7 @@ public class CiWorkflowTests
     [InlineData("turnier")]
     [InlineData("kidhub")]
     [InlineData("leaguehub")]
+    [InlineData("clubhub")]
     public void EveryImageJob_OnlyRetagsThePrebuiltImage(string image)
     {
         var block = Job($"build-{image}");
@@ -390,6 +409,7 @@ public class CiWorkflowTests
     [InlineData("turnier")]
     [InlineData("kidhub")]
     [InlineData("leaguehub")]
+    [InlineData("clubhub")]
     public void EveryImageJob_SetsLatestOnlyForAReleaseOnMaster(string image)
     {
         var block = Job($"build-{image}");

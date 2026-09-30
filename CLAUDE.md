@@ -1339,6 +1339,68 @@ bis dahin 404; die Regel steht EINMAL in `KidsPuzzleService.VisibleKidsBooks`.
 auf der Kinderseite bewusst OHNE `IsPublic` — wie die Pool-Flags eine absichtliche Freigabe; Kalkulationsbücher bleiben
 trotz Flag draußen (ihre Zugfolge ist die Lösung, die der Kalkulations-Modus zurückhält).
 
+### ClubHub — Kartei der Kinder und Jugendlichen des Vereins (0.613.0)
+
+Verwaltung der Kinder/Jugendlichen (Wunsch 2026-09-30: „anlegen, Telefonnummern mit Hinweis hinterlegen — mehrere, Hinweis
+klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhaken, wer da ist"). Eigene Oberfläche
+`clubhub(-dev).oberschmid.homes` (fünftes Angular-Projekt), dieselbe API/DB/Konten.
+
+- **Ein Kind ist ein KARTEIBLATT, kein Konto** (`Models/Club.cs`): `ClubMembers` (Name, Geburtsdatum ODER nur Jahrgang,
+  Stufe als freier Text, FIDE-/ÖSB-Nummer, Notiz, Foto-Einwilligung dreiwertig, `Archived`), `ClubContacts` (beliebig viele je
+  Kind: `phone`/`email` + Wert + Hinweis, Reihenfolge wie eingegeben — der erste steht in der Liste), `ClubGroups`
+  (+ `Weekday` 1 = Mo … 7 = So, `Schedule` Freitext), `ClubGroupMembers`, `ClubGroupTrainers` (Konto ↔ Gruppe),
+  `ClubSessions` (eine Einheit je Gruppe und TAG, unique), `ClubAttendances` (Present/Excused/Absent), `ClubNotes`
+  (datierte Trainer-Notizen zum Lernstand).
+- **Zwei Rechte**: `club.manage` (Leitung, Admin eingeschlossen — alles: alle Kinder, Gruppen anlegen, Trainer zuteilen,
+  Blätter löschen) und `club.trainer` (nur die Gruppen, denen das Konto als Trainer zugeteilt ist, und deren Kinder). Die
+  Zuteilung allein öffnet nichts — das Konto braucht eine Rolle mit `club.trainer`. Weil JEDE Action eines von beiden
+  annimmt, hängt am `ClubController` kein `[HasPermission]`: die Rechte kommen live aus dem `PermissionResolver`, die Regeln
+  stehen in `Services/Club/ClubService.cs` (`ClubActor`). **Sichtbarkeit ist die eine Regel**: ohne Recht 403, ein fremdes
+  Kind/eine fremde Gruppe ist 404 wie ein unbekanntes — ein Trainer erfährt nicht, dass es das Blatt gibt. Ein Trainer legt
+  Kinder nur in EIGENEN Gruppen an (sonst sähe er das Blatt selbst nicht) und lässt die Zugehörigkeit zu fremden Gruppen
+  beim Speichern unberührt; löschen darf nur die Leitung.
+- **Kontakte**: leer gelassene Zeilen fallen still weg, ein Wert, der weder Nummer noch Adresse ist, ist 400 mit
+  Nutzertext (`NormalizeContacts`). Die Kartei-Liste liefert die Kontakte mit — sie ist zugleich die Telefonliste. Gesucht
+  wird im BROWSER: eine Namenssuche am Server hätte Namen von Kindern in die Adresse und damit in jedes Zugriffsprotokoll
+  gebracht.
+- **Anwesenheit**: `POST /api/club/groups/{id}/sessions` legt die Einheit des Tages an ODER ersetzt sie; nur Kinder der
+  Gruppe zählen, leerer Status nimmt den Eintrag zurück. Die Oberfläche schickt für JEDES Kind der Gruppe einen Status —
+  wer nicht abgehakt ist, hat gefehlt (sonst wäre die Quote immer 100 %). **Vor dem ersten Tipp fragt die Liste
+  `GET …/sessions/by-date/{datum}`** (204 = keine): ein Speichern ersetzt, eine leer geöffnete Liste überschriebe sonst
+  eine erfasste Einheit. Die Gruppenseite zeigt die letzten 12 Einheiten als Tabelle (älteste links), die Quote zählt über
+  alle.
+- **Konto verknüpfen nur per Einwilligung**: der Trainer gibt einen Einmal-Code aus (10 Zeichen ohne 0/O/1/I, 14 Tage,
+  `POST …/members/{id}/link-code`), EINLÖSEN muss ihn das Konto selbst (`POST /api/club/link`, „auth"-Limiter, nicht unter
+  Impersonation). So hängt niemand fremde Konten an ein Blatt und liest deren Fortschritt. Ein Konto hängt an höchstens einem
+  Blatt; trennen können beide Seiten (`DELETE …/members/{id}/link`, `DELETE /api/club/link`). Das verknüpfte Konto sieht von
+  der Kartei nur den eigenen Vornamen. `GET …/members/{id}/progress` (204 ohne Verknüpfung) bündelt `PuzzleStatsService`,
+  `TrainingGoalService.GetTrackerAsync(4 Wochen)` und `KidsProgressService` zu Summen (`ClubProgressService`) — keine
+  eigene Zählung, keine Einzelversuche.
+- **Daten von Minderjährigen**: nie anonym erreichbar, nie im Log (nur Ids), kein Service Worker (nichts bleibt auf einem
+  geteilten Gerät liegen), `noindex`. Blatt löschen entfernt Kontakte, Notizen und Anwesenheit. Konto-Löschung
+  (`ProfileService.DeleteAccountAsync`) löst die Verknüpfung und entfernt Trainer-Zuteilungen — das Blatt gehört dem Verein
+  und bleibt; Notizen bleiben ohne Autorennamen.
+- **Endpunkte** (`Controllers/ClubController.cs`, alle `[Authorize]`): `GET/POST /api/club/members`, `GET/PUT/DELETE
+  …/members/{id}`, `POST …/members/{id}/notes`, `DELETE …/notes/{noteId}`, `POST …/link-code`, `DELETE …/link`, `GET
+  …/progress`; `GET/POST /api/club/groups`, `GET/PUT/DELETE …/groups/{id}`, `POST/DELETE …/groups/{id}/trainers[/{userId}]`
+  (Zuteilen über den Benutzernamen), `POST/DELETE …/groups/{id}/members/{memberId}`, `POST …/groups/{id}/sessions`, `PUT
+  …/sessions/{sessionId}` (auch Datum ändern; 409, wenn der Tag belegt ist), `GET …/sessions/by-date/{datum}`, `GET/DELETE
+  /api/club/sessions/{id}`; vom Konto aus `GET/POST/DELETE /api/club/link`.
+- **Oberfläche** (`src-clubhub/`, `public-clubhub/`, Image `ghcr.io/kahalm/rookhub-clubhub:{dev,latest}`, `APP_PROJECT=clubhub`,
+  Host-Port Dev **8101** / Prod **8102**): `/` Kartei (Register nach Anfangsbuchstaben, erste Telefonnummer samt Hinweis als
+  `tel:`-Link, Suche/Gruppenfilter im Browser, Archiv; am Trainingstag oben der Streifen „Heute ist Freitag: … —
+  Anwesenheit abhaken"), `/kind/neu` + `/kind/:id` (Blatt ansehen/ändern: Kontakte-Editor, Notizen, Anwesenheit, Konto +
+  Lernstand), `/gruppen`, `/gruppen/:id` (Anwesenheitstabelle, Kinder dazunehmen, Leitung: Gruppe ändern + Trainer),
+  `/gruppen/:id/anwesenheit[?datum=]` (die Abhak-Liste: geht für den jüngsten Trainingstag auf, der nicht in der Zukunft
+  liegt — `trainingDate` in `core/club-format.ts`), `/verknuepfen[?code=]` (braucht nur ein Konto). Seite deutsch, hell/dunkel
+  über den geteilten `ThemeService`, Gestaltung `src-clubhub/clubhub.scss` (Zilla Slab + Atkinson Hyperlegible, beide OFL,
+  in `public-clubhub/fonts/` — Atkinson wegen eindeutiger Ziffern in Telefonnummern). Reine Regeln mit Vektoren in
+  `core/club-format.ts` (Altersklasse nach Jahrgang, „Geburtsdatum oder Jahrgang" lesen, `tel:`-Link, Trainingstag).
+  `ClubHubAssetTests` hält Symbol und Schriften gegen die Dateien auf der Platte.
+- **Noch nicht**: Elo-Verlauf je Kind, Turniere/Termine, Eltern-Sicht, Sprung aus RookHub (kein Menüpunkt), eigener
+  Datenschutz-Text für die Kartei (die geteilte Datenschutzseite beschreibt sie nicht). Deploy: Compose-Dienst `clubhub` +
+  NPM-Proxy-Host je Umgebung anlegen (nur auf Zuruf).
+
 ### LeagueHub — Tiroler Ligen, Aufstellungs-Prognosen (Admin + öffentliche Teilen-Links, 0.569.0)
 
 Portierung der Python-Fassung (`~/claude/league-analyzer`, live bis zum Prod-Tag unter
@@ -3794,6 +3856,14 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), **WhiteElo?/BlackElo? + TimeControl? (≤32, „180+2“) + HeadersScanned (0.526.0 — die Partienliste zeigt Wertung und Bedenkzeit wie chess.coms Übersicht; das PGN dafür zu laden wäre derselbe Fehler, den `MoveCount` schon behoben hat. Der Altbestand bekommt seine Wertungen portionsweise aus dem PGN (`HeaderBackfillPerCall` = 50 je Listenaufruf), und die Marke `HeadersScanned` unterscheidet „noch nicht nachgesehen“ von „nennt keine Wertung“; die Bedenkzeit steht in keinem alten PGN und bleibt dort leer)**, ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, **OwnerSide? (≤5, white/black — selbst festgelegte Seite, schlägt die Namenszuordnung; 0.531.0)**, **ReviewLanguage? (≤8 — Sprache der Seite beim „Partie analysieren“, darin entstehen Erklärungen und Roasts; 0.540.0)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
 | ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), **PageCount (Vorgabe 1; Seite 2+ in `ScoresheetScanPages`, 0.600.0)**, NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, **UserId ist NULLBAR (ohne Konto über einen LeagueHub-Teilen-Link), dann AccessKey? (≤32, UNIQUE, geheimer Schlüssel) + AnonIpHash? (≤64, HMAC der IP, nach 2 Tagen geleert)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
 | ScoresheetScanPages | Seite 2 und folgende eines Formulars über mehrere Fotos (0.600.0); Seite 1 bleibt `ScoresheetScans.Photo` | ScoresheetScanId (Cascade), Page (ab 2), Photo (LONGBLOB), ContentType (≤40), FileName? (≤200); **UNIQUE (ScoresheetScanId, Page)**. Partie löschen und Konto löschen räumen sie ohne Laden ab (`RemovePagesWithoutLoading`) |
+| ClubMembers | ClubHub (0.613.0): Karteiblatt eines Kindes/Jugendlichen — KEIN Konto | FirstName/LastName (≤80, Index (LastName, FirstName)), BirthDate? (DateOnly), BirthYear? (bei Datum dessen Jahr), Level? (≤60, Freitext), FideId?/NationalId? (≤16), Notes? (TEXT ≤4000), PhotoConsent? (null = ungeklärt), Archived, **LinkedUserId? (FK SetNull, UNIQUE — ein Konto an höchstens einem Blatt)**, LinkCode? (≤16, UNIQUE, Einmal-Code) + LinkCodeExpires?, CreatedAt, CreatedByUserId? (kein FK), UpdatedAt |
+| ClubContacts | Kontakte eines Kindes, beliebig viele | MemberId (Cascade), Kind (`phone`/`email`, ≤8), Value (≤200), Label? (≤80, „Mutter Daniela"), Position; Index (MemberId, Position) |
+| ClubGroups | Trainingsgruppe | Name (≤80), Schedule? (≤200, Freitext), **Weekday? (1 = Mo … 7 = So — schlägt am Trainingstag die Anwesenheitsliste vor)**, Archived, CreatedAt |
+| ClubGroupMembers | Kind ↔ Gruppe | PK (GroupId, MemberId), beide Cascade |
+| ClubGroupTrainers | Konto als Trainer einer Gruppe (sieht deren Kinder, mit `club.trainer`) | PK (GroupId, UserId), beide Cascade |
+| ClubSessions | Trainingseinheit | GroupId (Cascade), Date (DateOnly), Topic? (≤200), Notes? (TEXT ≤2000), CreatedByUserId? (kein FK), CreatedAt; **UNIQUE (GroupId, Date)** |
+| ClubAttendances | Anwesenheit je Einheit und Kind | PK (SessionId, MemberId), beide Cascade; Status (1 Present, 2 Excused, 3 Absent) |
+| ClubNotes | Datierte Trainer-Notiz zum Lernstand | MemberId (Cascade), AuthorUserId? (kein FK — bleibt ohne Namen, wenn das Konto geht), CreatedAt, Text (TEXT ≤2000); Index (MemberId, CreatedAt) |
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer), **UploadShareHash? (≤64, Index; SHA-256 des Teilen-Links, über den die Partie kam — auch bei anonymisierten; `null` = angemeldet)** |
 | LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
 | LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
@@ -3848,7 +3918,7 @@ src/
     Controllers/            Auth, Profile, Friend, Repertoire, Extension, TournamentProxy,
                             TournamentFavorite, TournamentMonitor, Subscription, BookPuzzle,
                             Course, Calculation, Endless, Group, WeeklyPost, TrainingGoal, ClientLog,
-                            Puzzle, Admin, Me, BotStats, Engine, ExternalEngine, Token,
+                            Puzzle, Admin, Me, BotStats, Engine, ExternalEngine, Token, Club,
                             BaseApiController
     Services/               Auth, Profile, Friend, Repertoire, CrawlerProxy, PlayerSearch,
                             BookPuzzle, Course, CourseAccess, CourseAuthoring, Calculation,
@@ -4254,8 +4324,8 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
 - **CI/CD**: Docker-Images werden nach Push automatisch gebaut (GitHub Actions). Kein manueller Build nötig.
   Seit 0.434.2 laufen Test- und Build-Jobs **pfadgefiltert** (`.github/filters.yml`, von `test.yml` UND
   `docker.yml` gelesen): ein Push startet nur, was er berührt. Zwei Regeln hängen an Tests
-  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle fünf Images** (`:latest` entsteht nur dort), und der
-  `turnier`-, `kidhub`- und `leaguehub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
+  (`CiWorkflowTests`): ein **Tag-Lauf baut immer alle sechs Images** (`:latest` entsteht nur dort), und der
+  `turnier`-, `kidhub`-, `leaguehub`- und `clubhub`-Filter enthalten den GETEILTEN Frontend-Code (alle Angular-Projekte importieren aus `src/app`).
   Ein neuer Job braucht also einen Filter — ein Tippfehler im Namen ist ein leerer Output und damit ein
   Job, der ab da nie mehr läuft.
   **Nur Release-Tags** (Codereview W2, I1-004): `docker.yml` startet nur bei `vX.Y.Z` (vorher `v*`), und der
@@ -4270,7 +4340,7 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   geerbt), der reparierende Push berührt nur Frontend-Pfade, und damit hat `build-api` zwei Versionen
   lang nicht gebaut — master grün, Code gepusht, und auf Dev läuft trotzdem der Stand von vorgestern
   (2026-09-09, Dev hing auf 0.452.1). Der Handstart auf master schiebt `:dev`, nicht `:latest`.
-  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier`/`-kidhub`/`-leaguehub` in `docker.yml` bauen die
+  **Vorbau + Umhaengen** (seit 0.494.1): `prebuild-api`/`-frontend`/`-turnier`/`-kidhub`/`-leaguehub`/`-clubhub` in `docker.yml` bauen die
   Images schon parallel zu den Tests und pushen sie unter einem Hilfs-Tag `ci-<run_id>`. Die Jobs hinter
   dem Gate bauen GAR NICHT mehr — sie haengen per `docker buildx imagetools create` nur die echten Tags
   (`:dev`/`:latest`/Semver) an dasselbe Image, eine Registry-Operation von Sekunden. Der Zwischenschritt

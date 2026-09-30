@@ -62,8 +62,15 @@ leaguehub:
   - 'src/frontend/app/src-leaguehub/**'
   - 'src/frontend/app/public-leaguehub/**'
 
+# Was NUR ClubHub (Kartei der Kinder und Jugendlichen) hat — plus alles Geteilte von oben.
+# ClubHub importiert Anmeldung, HTTP-Kette und Sprachdateien per @rh/* aus `src/app/`.
+clubhub:
+  - *frontend
+  - 'src/frontend/app/src-clubhub/**'
+  - 'src/frontend/app/public-clubhub/**'
+
 # Es gibt bewusst KEINEN weiteren Filter „alle Specs": der Spec-Job (`ng test app` UND
-# `ng test turnier`, `ng test kidhub` und `ng test leaguehub`) fragt schlicht `frontend ODER turnier ODER kidhub ODER leaguehub` ab — ein weiterer Anker haette eine
+# `ng test turnier`, `ng test kidhub`, `ng test leaguehub` und `ng test clubhub`) fragt schlicht `frontend ODER turnier ODER kidhub ODER leaguehub ODER clubhub` ab — ein weiterer Anker haette eine
 # zweite Verschachtelungsebene gebraucht (siehe Regel 2 oben).
 
 engine-provider:

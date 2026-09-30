@@ -58,6 +58,12 @@ public static class Permissions
     /// <summary>LeagueHub: Partien in die Vereins-Datenbank hochladen (PGN oder Partieformular) — für die Rolle der
     /// Vereinsmitglieder, zusammen mit <see cref="LeagueView"/> (Wunsch 2026-09-28).</summary>
     public const string LeagueContribute = "league.contribute";
+    /// <summary>ClubHub: die ganze Kartei der Kinder und Jugendlichen — alle Kinder, Gruppen anlegen, Trainer zuteilen,
+    /// Blätter löschen (Wunsch 2026-09-30).</summary>
+    public const string ClubManage = "club.manage";
+    /// <summary>ClubHub: Trainer — sieht und pflegt die Kinder der Gruppen, denen er zugeteilt ist (Kontakte, Anwesenheit,
+    /// Lernstand), und legt dort neue Kinder an.</summary>
+    public const string ClubTrainer = "club.trainer";
 
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
@@ -65,5 +71,6 @@ public static class Permissions
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
         GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
         TournamentsManage, RolesManage, LeagueView, LeagueManage, LeagueContribute,
+        ClubManage, ClubTrainer,
     };
 }

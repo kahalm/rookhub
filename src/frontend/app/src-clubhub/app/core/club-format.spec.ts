@@ -1,0 +1,73 @@
+import { ageClass, attendanceText, byInitial, firstPhone, formatBirth, formatLinkCode, isoDate, longDate, parseBirth, shortDate, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
+
+describe('club-format', () => {
+  it('Altersklasse zählt nach Jahrgang: U10 spielt, wer heuer höchstens 10 wird', () => {
+    expect(ageClass(2016, 2026)).toBe('U10');
+    expect(ageClass(2015, 2026)).toBe('U12');
+    expect(ageClass(2019, 2026)).toBe('U8');
+    expect(ageClass(2008, 2026)).toBe('U18');
+    expect(ageClass(2007, 2026)).toBeNull();      // 19 = erwachsen
+    expect(ageClass(null, 2026)).toBeNull();
+    expect(ageClass(2030, 2026)).toBeNull();
+  });
+
+  it('liest Geburtsdatum ODER Jahrgang, wie man es hier schreibt', () => {
+    expect(parseBirth('')).toEqual({ birthDate: null, birthYear: null });
+    expect(parseBirth(' 2015 ')).toEqual({ birthDate: null, birthYear: 2015 });
+    expect(parseBirth('12.3.2015')).toEqual({ birthDate: '2015-03-12', birthYear: 2015 });
+    expect(parseBirth('12.03.2015')).toEqual({ birthDate: '2015-03-12', birthYear: 2015 });
+    expect(parseBirth('2015-03-12')).toEqual({ birthDate: '2015-03-12', birthYear: 2015 });
+    expect(parseBirth('31.2.2015')).toBeNull();   // den Tag gibt es nicht
+    expect(parseBirth('März 2015')).toBeNull();
+    expect(parseBirth('15')).toBeNull();
+  });
+
+  it('zeigt das Datum so, wie es wieder gelesen wird', () => {
+    expect(formatBirth({ birthDate: '2015-03-12', birthYear: 2015 })).toBe('12.03.2015');
+    expect(formatBirth({ birthDate: null, birthYear: 2015 })).toBe('2015');
+    expect(formatBirth({})).toBe('');
+    expect(parseBirth(formatBirth({ birthDate: '2015-03-12' }))?.birthDate).toBe('2015-03-12');
+  });
+
+  it('baut aus einer Nummer, wie sie auf dem Zettel steht, einen wählbaren Link', () => {
+    expect(telHref('0512/58 12 34')).toBe('tel:0512581234');
+    expect(telHref(' +43 (660) 123-45 67 ')).toBe('tel:+436601234567');
+    expect(firstPhone([{ kind: 'email', value: 'a@b.at' }, { kind: 'phone', value: '0660 1', label: 'Mutter' }])?.label).toBe('Mutter');
+    expect(firstPhone([{ kind: 'email', value: 'a@b.at' }])).toBeNull();
+  });
+
+  it('Trainingstag: am Freitag heute, sonst der vergangene Freitag — nie ein künftiger', () => {
+    const friday = new Date(2026, 8, 25, 18, 0);          // Fr 25.09.2026
+    const monday = new Date(2026, 8, 28, 9, 0);
+    const thursday = new Date(2026, 9, 1, 23, 30);
+    expect(trainingDate(5, friday)).toBe('2026-09-25');
+    expect(trainingDate(5, monday)).toBe('2026-09-25');
+    expect(trainingDate(5, thursday)).toBe('2026-09-25');
+    expect(trainingDate(null, monday)).toBe('2026-09-28');  // ohne festen Tag: heute
+    expect(trainsToday(5, friday)).toBeTrue();
+    expect(trainsToday(5, monday)).toBeFalse();
+    expect(trainsToday(null, friday)).toBeFalse();
+    expect(weekdayName(5)).toBe('Freitag');
+    expect(weekdayName(null)).toBe('');
+  });
+
+  it('das Datum in Ortszeit, nicht in UTC', () => {
+    expect(isoDate(new Date(2026, 8, 25, 0, 30))).toBe('2026-09-25');
+    expect(isoDate(new Date(2026, 8, 25, 23, 30))).toBe('2026-09-25');
+    expect(shortDate('2026-09-25')).toBe('Fr 25.09.');
+    expect(longDate('2026-09-25')).toBe('Freitag, 25. September 2026');
+    expect(longDate('2026-01-02')).toBe('Freitag, 2. Jänner 2026');
+  });
+
+  it('Einmal-Code in zwei Gruppen, Anwesenheit in Worten', () => {
+    expect(formatLinkCode('ABCDEFGHJK')).toBe('ABCDE-FGHJK');
+    expect(attendanceText(8, 10)).toBe('8 von 10 Einheiten da');
+    expect(attendanceText(1, 1)).toBe('1 von 1 Einheit da');
+    expect(attendanceText(0, 0)).toBe('');
+  });
+
+  it('Register wie im Karteikasten: nach Anfangsbuchstaben, Umlaut beim Grundbuchstaben', () => {
+    const rows = [{ lastName: 'Auer' }, { lastName: 'Äpfelbacher' }, { lastName: 'Berger' }, { lastName: 'Šarić' }, { lastName: '' }];
+    expect(byInitial(rows).map(r => [r.letter, r.items.length])).toEqual([['A', 2], ['B', 1], ['S', 1], ['#', 1]]);
+  });
+});

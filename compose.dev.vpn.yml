@@ -53,6 +53,7 @@
 #   ${TURNIER_PORT}      -> Turnierseite (nginx)
 #   ${KIDHUB_PORT}       -> KidHub, Kinderseite (nginx)
 #   ${LEAGUEHUB_PORT}    -> LeagueHub, Aufstellungs-Prognosen (nginx)
+#   ${CLUBHUB_PORT}      -> ClubHub, Kartei der Kinder und Jugendlichen (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 #   ${ES_PORT:-9201}     -> Elasticsearch
@@ -416,6 +417,25 @@ services:
       start_period: 10s
     ports:
       - "${FRONTEND_BIND:-0.0.0.0}:${LEAGUEHUB_PORT}:8080"
+    depends_on:
+      - api
+    networks:
+      - rookhub-dev
+
+  # ── ClubHub (Kartei der Kinder und Jugendlichen, Angular + nginx) ─────────
+  # Fünftes Angular-Projekt, eigene Domain (clubhub-dev.oberschmid.homes), nur Trainer und Leitung.
+  clubhub:
+    image: ghcr.io/kahalm/rookhub-clubhub:dev
+    container_name: rookhub-clubhub-dev
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - "${FRONTEND_BIND:-0.0.0.0}:${CLUBHUB_PORT}:8080"
     depends_on:
       - api
     networks:

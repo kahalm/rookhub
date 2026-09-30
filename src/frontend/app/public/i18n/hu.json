@@ -2026,7 +2026,9 @@
         "tournaments_manage": "Versenynaptár kezelése",
         "league_view": "LeagueHub: előrejelzések és klubjátszmák megtekintése",
         "league_manage": "LeagueHub: adatok frissítése, linkek megosztása, importálás",
-        "league_contribute": "LeagueHub: klubjátszmák hozzáadása (PGN, játszmalap)"
+        "league_contribute": "LeagueHub: klubjátszmák hozzáadása (PGN, játszmalap)",
+        "club_manage": "ClubHub: a gyerekek és fiatalok teljes kartotékja (minden gyerek, csoportok, edzők, törlés)",
+        "club_trainer": "ClubHub: edző — a saját csoportok gyerekei (elérhetőségek, jelenlét, fejlődés)"
       },
       "groupTitle": "Szerepkörök hozzárendelése egy csoporthoz",
       "groupHint": "A csoport minden tagja megkapja ezeket a szerepköröket — aki csatlakozik, azonnal megkapja a jogokat, aki kilép, elveszíti őket. Az admin szerepkör és az „Everyone” itt nem érhető el.",

@@ -108,6 +108,15 @@ public class AppDbContext : DbContext
     public DbSet<LeagueMegaPlayer> LeagueMegaPlayers => Set<LeagueMegaPlayer>();
     public DbSet<LeagueNameAlias> LeagueNameAliases => Set<LeagueNameAlias>();
     public DbSet<LeagueClubDraft> LeagueClubDrafts => Set<LeagueClubDraft>();
+    // ClubHub (Kartei der Kinder und Jugendlichen)
+    public DbSet<ClubMember> ClubMembers => Set<ClubMember>();
+    public DbSet<ClubContact> ClubContacts => Set<ClubContact>();
+    public DbSet<ClubGroup> ClubGroups => Set<ClubGroup>();
+    public DbSet<ClubGroupMember> ClubGroupMembers => Set<ClubGroupMember>();
+    public DbSet<ClubGroupTrainer> ClubGroupTrainers => Set<ClubGroupTrainer>();
+    public DbSet<ClubSession> ClubSessions => Set<ClubSession>();
+    public DbSet<ClubAttendance> ClubAttendances => Set<ClubAttendance>();
+    public DbSet<ClubNote> ClubNotes => Set<ClubNote>();
     /// <summary>KidHub-Fortschritt angemeldeter Kinder: Stufen, Kurse, geloeste Kurs-Linien.</summary>
     public DbSet<KidsLevelProgress> KidsLevelProgresses => Set<KidsLevelProgress>();
     public DbSet<KidsCourseProgress> KidsCourseProgresses => Set<KidsCourseProgress>();
@@ -747,6 +756,54 @@ public class AppDbContext : DbContext
             e.Property(d => d.Imported).HasColumnType("text");
             e.HasIndex(d => d.AccessKey).IsUnique();
             e.HasIndex(d => new { d.UserId, d.UpdatedAt });
+        });
+
+        // ---- ClubHub ------------------------------------------------------------------------
+        modelBuilder.Entity<ClubMember>(e =>
+        {
+            e.Property(m => m.Notes).HasColumnType("text");
+            e.HasOne(m => m.LinkedUser).WithMany().HasForeignKey(m => m.LinkedUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(m => m.LinkedUserId).IsUnique();
+            e.HasIndex(m => m.LinkCode).IsUnique();
+            e.HasIndex(m => new { m.LastName, m.FirstName });
+        });
+        modelBuilder.Entity<ClubContact>(e =>
+        {
+            e.HasOne(c => c.Member).WithMany(m => m.Contacts).HasForeignKey(c => c.MemberId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(c => new { c.MemberId, c.Position });
+        });
+        modelBuilder.Entity<ClubGroupMember>(e =>
+        {
+            e.HasKey(gm => new { gm.GroupId, gm.MemberId });
+            e.HasOne(gm => gm.Group).WithMany(g => g.Members).HasForeignKey(gm => gm.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(gm => gm.Member).WithMany(m => m.Groups).HasForeignKey(gm => gm.MemberId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(gm => gm.MemberId);
+        });
+        modelBuilder.Entity<ClubGroupTrainer>(e =>
+        {
+            e.HasKey(gt => new { gt.GroupId, gt.UserId });
+            e.HasOne(gt => gt.Group).WithMany(g => g.Trainers).HasForeignKey(gt => gt.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(gt => gt.User).WithMany().HasForeignKey(gt => gt.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(gt => gt.UserId);
+        });
+        modelBuilder.Entity<ClubSession>(e =>
+        {
+            e.Property(s => s.Notes).HasColumnType("text");
+            e.HasOne(s => s.Group).WithMany(g => g.Sessions).HasForeignKey(s => s.GroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(s => new { s.GroupId, s.Date }).IsUnique();
+        });
+        modelBuilder.Entity<ClubAttendance>(e =>
+        {
+            e.HasKey(a => new { a.SessionId, a.MemberId });
+            e.HasOne(a => a.Session).WithMany(s => s.Attendance).HasForeignKey(a => a.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.Member).WithMany().HasForeignKey(a => a.MemberId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(a => a.MemberId);
+        });
+        modelBuilder.Entity<ClubNote>(e =>
+        {
+            e.Property(n => n.Text).HasColumnType("text");
+            e.HasOne(n => n.Member).WithMany(m => m.NoteEntries).HasForeignKey(n => n.MemberId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(n => new { n.MemberId, n.CreatedAt });
         });
 
         modelBuilder.Entity<LeagueNameAlias>(e =>

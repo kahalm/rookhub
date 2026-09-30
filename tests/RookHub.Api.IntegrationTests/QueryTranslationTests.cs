@@ -739,4 +739,78 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal(2, await club.DeleteByShareAsync(link, dryRun: false));
         Assert.False(await Db.LeagueClubGames.AnyAsync());
     }
+
+    /// <summary>
+    /// ClubHub (0.613.0): die Kartei gegen echtes SQL — Sichtbarkeit des Trainers (<c>Any</c> über eine Id-Liste),
+    /// Gruppenliste mit <c>GroupBy</c>/<c>Max</c> über ein <c>DateOnly</c>, Anwesenheitstabelle, der eindeutige Index
+    /// (Gruppe, Tag) und die Fremdschlüssel: ein hart gelöschtes Konto löst die Verknüpfung (SetNull) und nimmt die
+    /// Trainer-Zuteilung mit (Cascade), das Blatt bleibt. InMemory prüft nichts davon.
+    /// </summary>
+    [MySqlFact]
+    public async Task ClubHub_Kartei_Anwesenheit_UndFremdschluessel_uebersetzenSichNachMariaDb()
+    {
+        var club = Get<RookHub.Api.Services.Club.ClubService>();
+        var (leitung, tina, kind) = (await SeedUserAsync("leitung"), await SeedUserAsync("tina"), await SeedUserAsync("daniel2015"));
+        var manager = new RookHub.Api.Services.Club.ClubActor(leitung, true, false);
+        var trainer = new RookHub.Api.Services.Club.ClubActor(tina, false, true);
+
+        var mine = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.ClubGroupInputDto { Name = "Anfänger", Weekday = 5 });
+        var other = await club.CreateGroupAsync(manager, new RookHub.Api.DTOs.ClubGroupInputDto { Name = "Turnier" });
+        await club.AddTrainerAsync(manager, mine.Id, "TINA");                     // Groß/klein egal — hier über die Kollation
+        var daniel = await club.CreateMemberAsync(trainer, new RookHub.Api.DTOs.ClubMemberInputDto
+        {
+            FirstName = "Daniel", LastName = "Huber", BirthDate = "2015-03-12", GroupIds = [mine.Id],
+            Contacts = [new() { Kind = "phone", Value = "0660 111 22 33", Label = "Mutter Daniela" },
+                        new() { Kind = "phone", Value = "0512/58 12 34", Label = "Vater Franz" },
+                        new() { Kind = "email", Value = "daniela@example.org" }],
+        });
+        var anna = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Anna", LastName = "Šarić", BirthYear = 2016, GroupIds = [other.Id] });
+        Db.ChangeTracker.Clear();
+
+        // Trainer: nur das Kind der eigenen Gruppe, Kontakte in der Reihenfolge der Eingabe.
+        var seen = Assert.Single(await club.ListMembersAsync(trainer, null, false));
+        Assert.Equal(["0660 111 22 33", "0512/58 12 34", "daniela@example.org"], seen.Contacts.Select(c => c.Value));
+        Assert.Equal(2, (await club.ListMembersAsync(manager, null, false)).Count);
+        await Assert.ThrowsAsync<RookHub.Api.Exceptions.NotFoundException>(() => club.GetMemberAsync(trainer, anna.Id));
+        Assert.Equal("Anfänger", Assert.Single(await club.ListGroupsAsync(trainer)).Name);
+
+        // Anwesenheit: eine Einheit je Tag (zweites Speichern ersetzt), Tabelle, Quote, Liste mit Max(Date).
+        var att = new List<RookHub.Api.DTOs.ClubAttendanceInputDto> { new() { MemberId = daniel.Id, Status = "present" } };
+        var first = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
+        await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel", Attendance = att });
+        att[0].Status = "excused";
+        var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
+        Assert.Equal(first.Id, again.Id);
+        Assert.Equal(first.Id, (await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-18"))!.Id);
+        Assert.Null(await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-19"));
+        Db.ChangeTracker.Clear();
+        var group = await club.GetGroupAsync(trainer, mine.Id);
+        Assert.Equal(["2026-09-18", "2026-09-25"], group.Sessions.Select(x => x.Date));
+        Assert.Equal(["excused", "present"], Assert.Single(group.Members).Statuses);
+        Assert.Equal((1, 2), (group.Members[0].Present, group.Members[0].Recorded));
+        var row = (await club.ListGroupsAsync(manager)).Single(g => g.Id == mine.Id);
+        Assert.Equal((1, 2, "2026-09-25", "tina"), (row.MemberCount, row.SessionCount, row.LastSession, Assert.Single(row.Trainers).Username));
+        var sheet = await club.GetMemberAsync(trainer, daniel.Id);
+        Assert.Equal((1, 1, 0, "2015-03-12"), (sheet.Attendance.Present, sheet.Attendance.Excused, sheet.Attendance.Absent, sheet.BirthDate));
+
+        // Verknüpfung + Notiz, dann das Konto HART löschen: SetNull und Cascade feuern, Blatt und Notiz bleiben.
+        await club.RedeemAsync(kind, (await club.CreateLinkCodeAsync(trainer, daniel.Id)).Code);
+        await club.AddNoteAsync(trainer, daniel.Id, "kann die Gabel");
+        Assert.Equal((kind, "daniel2015"), await club.LinkedAccountAsync(manager, daniel.Id));
+        Db.ChangeTracker.Clear();
+        await Db.AppUsers.Where(u => u.Id == kind || u.Id == tina).ExecuteDeleteAsync();
+        Assert.False(await Db.ClubGroupTrainers.AnyAsync());
+        var after = await club.GetMemberAsync(manager, daniel.Id);
+        Assert.Equal((false, null, "kann die Gabel", null), (after.Linked, after.LinkedUsername, Assert.Single(after.NoteEntries).Text, after.NoteEntries[0].Author));
+
+        // Blatt und Gruppe löschen: nichts bleibt hängen.
+        await club.DeleteMemberAsync(manager, daniel.Id);
+        await club.DeleteGroupAsync(manager, mine.Id);
+        Db.ChangeTracker.Clear();
+        Assert.False(await Db.ClubContacts.AnyAsync());
+        Assert.False(await Db.ClubAttendances.AnyAsync());
+        Assert.False(await Db.ClubSessions.AnyAsync());
+        Assert.False(await Db.ClubNotes.AnyAsync());
+        Assert.Equal("Šarić", (await Db.ClubMembers.SingleAsync()).LastName);
+    }
 }

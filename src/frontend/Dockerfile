@@ -4,7 +4,7 @@ COPY app/package*.json ./
 RUN npm ci
 COPY app/ .
 # Welches Projekt des Workspaces gebaut wird: `app` = RookHub, `turnier` = Turnierseite, `kidhub` = Kinderseite,
-# `leaguehub` = Aufstellungs-Prognosen.
+# `leaguehub` = Aufstellungs-Prognosen, `clubhub` = Kartei der Kinder und Jugendlichen.
 # Alle teilen sich node_modules und den Quellbaum (Alias `@rh/*`), deshalb EIN Dockerfile.
 ARG APP_PROJECT=app
 RUN npx ng build ${APP_PROJECT} --configuration=production

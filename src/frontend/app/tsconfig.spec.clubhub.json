@@ -1,0 +1,16 @@
+/* Test-Konfiguration von ClubHub. Eigene Datei, weil der Karma-Builder die Specs am PROJEKT entlang
+   einsammelt (dieselbe Falle wie bei Turnierseite, KidHub und LeagueHub). */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec-clubhub",
+    "types": [
+      "jasmine"
+    ]
+  },
+  "include": [
+    "src-clubhub/**/*.spec.ts",
+    "src-clubhub/**/*.d.ts",
+    "src/**/*.d.ts"
+  ]
+}

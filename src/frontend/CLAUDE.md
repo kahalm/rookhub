@@ -15,9 +15,9 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - `/api/*` wird in Docker von nginx auf die RookHub API geproxied (nginx.conf)
 - Bei `ng serve` muss ein Proxy oder die API auf einem erreichbaren Port laufen
 
-## Vier Projekte in einem Workspace
+## Fünf Projekte in einem Workspace
 
-`angular.json` enthaelt **vier** Anwendungen, die sich node_modules und den Quellbaum teilen:
+`angular.json` enthaelt **fuenf** Anwendungen, die sich node_modules und den Quellbaum teilen:
 
 | Projekt | Quelle | Bundle | Image | Domain |
 |---------|--------|--------|-------|--------|
@@ -25,6 +25,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 | `turnier` | `src-turnier/` | `dist/turnier/browser` | `rookhub-turnier` | turnier(-dev).oberschmid.homes |
 | `kidhub` | `src-kidhub/` | `dist/kidhub/browser` | `rookhub-kidhub` | kidhub(-dev).oberschmid.homes (Kinderseite, spielbar ohne Konto) |
 | `leaguehub` | `src-leaguehub/` | `dist/leaguehub/browser` | `rookhub-leaguehub` | leaguehub(-dev).oberschmid.homes (Aufstellungs-Prognosen Tiroler Ligen + Vereins-Datenbank, Admins und die Vereinsgruppe; Teilen-Links `/s/:token` ohne Konto) |
+| `clubhub` | `src-clubhub/` | `dist/clubhub/browser` | `rookhub-clubhub` | clubhub(-dev).oberschmid.homes (Kartei der Kinder und Jugendlichen: Kontakte, Gruppen, Anwesenheit, Lernstand — nur Trainer und Leitung, `club.trainer`/`club.manage`) |
 
 - `src-turnier/` enthaelt nur, was die Turnierseite EIGEN hat: Einstiegspunkt, Routen, Navbar und
   die Turnier-Features. Alles Geteilte (Auth, Interceptors, i18n, shared/) kommt per Pfad-Alias
@@ -37,7 +38,11 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - LeagueHub genauso: `src-leaguehub/`, `public-leaguehub/`, `tsconfig.leaguehub.json`, `src-leaguehub/leaguehub.scss`
   (eigene Gestaltung, nach `src/styles.scss`); `npx ng build leaguehub` / `npx ng test leaguehub` (Details im
   Haupt-CLAUDE.md, Abschnitt „LeagueHub“ → Oberfläche).
-- Testen: **alle Projekte namentlich** — `npx ng test app`, `npx ng test turnier`, `npx ng test kidhub` UND `npx ng test leaguehub`. Der
+- ClubHub genauso: `src-clubhub/`, `public-clubhub/` (Symbol + Schriften Zilla Slab/Atkinson Hyperlegible),
+  `tsconfig.clubhub.json`, `src-clubhub/clubhub.scss`; `npx ng build clubhub` / `npx ng test clubhub` (Details im
+  Haupt-CLAUDE.md, Abschnitt „ClubHub“). Kein Service Worker — die Kartei (Daten von Kindern) soll nie aus einem
+  Zwischenspeicher kommen. Formulare ohne FormsModule: native Felder, Zustand in Signalen (wie LeagueHub).
+- Testen: **alle Projekte namentlich** — `npx ng test app`, `npx ng test turnier`, `npx ng test kidhub`, `npx ng test leaguehub` UND `npx ng test clubhub`. Der
   Karma-Builder sammelt Specs je PROJEKT ein; ohne eigenes Test-Target liefen die 17
   Spec-Dateien der Turnierseite gar nicht mit. Und `ng test` OHNE Projektnamen waehlt bei zwei
   Test-Targets nicht mehr verlaesslich `app` (gemessen 81 statt 1911 Tests) — beides lautlos.

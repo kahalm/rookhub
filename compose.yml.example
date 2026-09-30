@@ -53,6 +53,7 @@
 #   ${TURNIER_PORT}      -> Tournament site (nginx)
 #   ${KIDHUB_PORT}       -> KidHub, the kids' site (nginx)
 #   ${LEAGUEHUB_PORT}    -> LeagueHub, lineup forecasts for the Tyrolean leagues (nginx)
+#   ${CLUBHUB_PORT}      -> ClubHub, the club's card index of children and juniors (nginx)
 #   ${API_PORT}          -> RookHub API
 #   ${DB_EXTERNAL_PORT}  -> MariaDB
 #
@@ -295,6 +296,23 @@ services:
     restart: unless-stopped
     ports:
       - "${FRONTEND_BIND:-0.0.0.0}:${LEAGUEHUB_PORT}:8080"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── ClubHub (Kartei der Kinder und Jugendlichen, Angular + nginx) ─────────
+  # Eigene Domain (clubhub.oberschmid.homes), eigenes Image, nur Trainer und Leitung — dieselbe API.
+  clubhub:
+    image: ghcr.io/kahalm/rookhub-clubhub:latest
+    container_name: rookhub-clubhub
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_BIND:-0.0.0.0}:${CLUBHUB_PORT}:8080"
     depends_on:
       - api
     healthcheck:
