@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../core/league-api.service';
 import { MyGamesService } from '../core/my-games.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
 import { OpeningStats, PlayerCard, RecentGame } from '../core/league.models';
 import { GameReplayComponent } from './game-replay.component';
+import { OnlineAccountsComponent } from './online-accounts.component';
 import { OpeningTreeComponent } from './opening-tree.component';
 
 type Show = 'w' | 's' | 'b';
@@ -55,20 +57,25 @@ type Show = 'w' | 's' | 'b';
           @if (color()) {
             <p class="hint">An Brett {{ board() }} spielt {{ lastName(c) }} mit <b>{{ color() === 'w' ? 'Weiß' : 'Schwarz' }}</b>.</p>
           }
-          @if (c.n) {
+          @if (c.n || c.online) {
             <div class="actions">
-              <div class="seg" role="group" aria-label="Farbe">
-                @for (o of options; track o.k) {
-                  <button type="button" [attr.aria-pressed]="show() === o.k" (click)="show.set(o.k)">{{ o.label }}</button>
-                }
-              </div>
-              <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
-              <button type="button" class="btn-sec" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
+              @if (c.n) {
+                <div class="seg" role="group" aria-label="Farbe">
+                  @for (o of options; track o.k) {
+                    <button type="button" [attr.aria-pressed]="show() === o.k" (click)="show.set(o.k)">{{ o.label }}</button>
+                  }
+                </div>
+                <button type="button" class="btn-sec" (click)="download(c)">PGN herunterladen ({{ c.n }} Partien)</button>
+              }
+              <button type="button" class="btn-sec tree-toggle" [attr.aria-expanded]="treeOpen()" (click)="treeOpen.set(!treeOpen())">
                 {{ treeOpen() ? 'Eröffnungsbaum schließen' : 'Eröffnungsbaum anzeigen' }}</button>
             </div>
             @if (treeOpen()) {
-              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" />
+              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'"
+                               [boardGames]="c.n" [onlineGames]="c.online ?? 0" />
             }
+          }
+          @if (c.n) {
             @if (show() !== 's') {
               <h3>Mit Weiß <span class="muted">({{ c.white?.n || 0 }} Partien)</span></h3>
               <ng-container *ngTemplateOutlet="first; context: { s: c.white, names: nameWhite }" />
@@ -108,18 +115,16 @@ type Show = 'w' | 's' | 'b';
               }
             </table>
           }
-          @if (c.accounts.length) {
-            <h3>Online</h3>
-            <p class="acc">
-              @for (a of c.accounts; track a.url) {
-                <a [href]="a.url" target="_blank" rel="noopener">{{ a.site }}: {{ a.user }}</a>
-                <span class="tag">{{ a.conf === 'sicher' ? 'sicher' : 'wahrscheinlich' }}</span><br>
-              }
-            </p>
-            <p class="muted small-note">Nur Konten, die der Spieler selbst mit seinem Namen verbunden hat. „wahrscheinlich": Klarname und Land passen, der Name ist unter FIDE-Spielern eindeutig.</p>
+          @if (c.accounts.length || canEdit()) {
+            <h3>Online-Konten</h3>
+            <lh-online-accounts class="acc" [fide]="c.fide" [accounts]="c.accounts" [canEdit]="canEdit()" (changed)="reloadCard()" />
+            <p class="muted small-note">„gesichert": das Konto gehört sicher diesem Spieler, „unsicher": nur vermutet.
+              Über einen Teilen-Link erscheinen nur gesicherte. Ihre Partien holt LeagueHub im Hintergrund — im Eröffnungsbaum
+              wählbar.</p>
           }
           }
-          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.</p>
+          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.
+            @if (c.online) { Online-Partien der eingetragenen Konten zählen nur im Eröffnungsbaum. }</p>
         }
       </div>
     </dialog>
@@ -144,11 +149,14 @@ type Show = 'w' | 's' | 'b';
       }
     </ng-template>
   `,
-  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent],
+  imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent],
 })
 export class PlayerCardComponent {
   private readonly api = inject(LeagueApiService);
+  private readonly auth = inject(AuthService);
   readonly myGames = inject(MyGamesService);
+  /** Online-Konten pflegen: Verwalter, nie über einen Teilen-Link. */
+  readonly canEdit = signal(false);
   private readonly dlg = viewChild.required<ElementRef<HTMLDialogElement>>('dlg');
 
   readonly card = signal<PlayerCard | null>(null);
@@ -218,6 +226,7 @@ export class PlayerCardComponent {
   /** Öffnet die Karte; <paramref name="token"/> = Teilen-Link (dann ohne Anmeldung). */
   async open(fide: string, color: 'w' | 's' | null, board: number | null, token: string | null): Promise<void> {
     this.token = token;
+    this.canEdit.set(!token && this.auth.has('league.manage'));
     this.color.set(color);
     this.board.set(board);
     this.show.set(color ?? 'b');
@@ -246,6 +255,17 @@ export class PlayerCardComponent {
 
   close(): void {
     this.dlg().nativeElement.close();
+  }
+
+  /** Nach einer Änderung an den Online-Konten: Karte frisch (Konten, Stand des Abrufs, Partienzahl). */
+  async reloadCard(): Promise<void> {
+    const c = this.card();
+    if (!c) return;
+    const my = this.seq;
+    try {
+      const fresh = await this.api.card(c.fide, this.token);
+      if (my === this.seq) this.card.set(fresh);
+    } catch { /* die alte Karte bleibt stehen */ }
   }
 
   onClosed(): void {
@@ -368,8 +388,9 @@ export class PlayerCardComponent {
   }
 
   srcText(c: PlayerCard): string {
-    const s = Object.entries(c.src || {}).map(([k, v]) => `${k} ${v}`).join(', ');
-    return s ? ` – ${s}` : '';
+    const parts = Object.entries(c.src || {}).map(([k, v]) => `${k} ${v}`);
+    if (c.online) parts.push(`online ${c.online}`);                       // nur im Eröffnungsbaum gezählt
+    return parts.length ? ` – ${parts.join(', ')}` : '';
   }
 
   async download(c: PlayerCard): Promise<void> {

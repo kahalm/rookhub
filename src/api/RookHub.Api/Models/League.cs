@@ -127,13 +127,61 @@ public class LeagueOnlineAccount
 {
     public int Id { get; set; }
     public string FideId { get; set; } = string.Empty;
-    /// <summary>„lichess" oder „chess.com".</summary>
+    /// <summary>Kürzel der Seite aus <c>LeagueOnlineSites</c> — heute „lichess" oder „chess.com".</summary>
     public string Site { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
-    /// <summary>„sicher" oder „wahrscheinlich".</summary>
+    /// <summary>„sicher" (= gesichert) oder „wahrscheinlich" (= unsicher). Teilen-Links zeigen nur „sicher".</summary>
     public string Confidence { get; set; } = string.Empty;
+    /// <summary>Kommentar — beim Import aus Python die Belege, in LeagueHub frei (0.605.0).</summary>
     public string? Evidence { get; set; }
+    /// <summary>In LeagueHub angelegt oder bearbeitet — ein erneuter Import des Bündels lässt diese Zeile stehen.</summary>
+    public bool Manual { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+
+    // ── Abruf der Partien (LeagueOnlineSync, 0.605.0) ──
+    /// <summary>Letzter Abruf (auch ein gescheiterter); <c>null</c> = noch nie.</summary>
+    public DateTime? SyncedAt { get; set; }
+    /// <summary>Bis wohin geholt ist: Lichess <c>createdAt</c>, chess.com <c>end_time</c> der jüngsten Partie (ms).</summary>
+    public long SyncCursor { get; set; }
+    public string? SyncError { get; set; }
+    /// <summary>Beim letzten Abruf blieb etwas übrig (Deckel je Lauf) — gleich wieder dran, nicht erst nach dem Intervall.</summary>
+    public bool SyncMore { get; set; }
+    /// <summary>Gespeicherte Partien dieses Kontos.</summary>
+    public int GameCount { get; set; }
+}
+
+/// <summary>
+/// Eine Online-Partie eines Ligaspielers (0.605.0, Wunsch 2026-09-30: „im Hintergrund holst du die Spiele dieser User und
+/// legst sie in der DB ab"). Nur Standardschach ab der Grundstellung; die Züge als englische SAN (Hauptvariante), dazu die
+/// ersten <c>LeagueOnlineSync.LineMaxPlies</c> Halbzüge gesondert für den Eröffnungsbaum. Getrennt vom Profil-PGN: das hält
+/// die Brettpartien, und ein Blitzspieler hätte es mit tausenden Partien aufgebläht.
+/// </summary>
+public class LeagueOnlineGame
+{
+    public long Id { get; set; }
+    public int AccountId { get; set; }
+    public LeagueOnlineAccount Account { get; set; } = null!;
+    /// <summary>Denormalisiert — der Baum fragt je Spieler, nicht je Konto.</summary>
+    public string FideId { get; set; } = string.Empty;
+    /// <summary>Kennung der Partie auf der Seite (Lichess-Id, chess.com-Nummer).</summary>
+    public string ExternalId { get; set; } = string.Empty;
+    public DateTime PlayedAt { get; set; }
+    /// <summary>bullet, blitz, rapid, classical, correspondence (<c>LeagueOnlineSync.Speeds</c>).</summary>
+    public string Speed { get; set; } = string.Empty;
+    public bool Rated { get; set; }
+    /// <summary>Der Spieler hatte Weiß.</summary>
+    public bool White { get; set; }
+    /// <summary>„1-0", „0-1" oder „1/2-1/2".</summary>
+    public string Result { get; set; } = string.Empty;
+    public string? Opponent { get; set; }
+    public int? OpponentRating { get; set; }
+    public int? PlayerRating { get; set; }
+    /// <summary>Die ersten Halbzüge mit Leerzeichen („e4 e5 Nf3") — der Baum sucht darin per Präfix.</summary>
+    public string Line { get; set; } = string.Empty;
+    /// <summary>Die ganze Hauptvariante in SAN.</summary>
+    public string Moves { get; set; } = string.Empty;
+    public int Plies { get; set; }
 }
 
 /// <summary>Öffentlicher Teilen-Link auf genau eine Begegnung (Token = Geheimnis, 144 Bit).</summary>

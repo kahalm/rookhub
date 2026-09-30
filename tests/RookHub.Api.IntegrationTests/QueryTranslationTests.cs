@@ -544,4 +544,49 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.False(await Db.GameAnalyses.AnyAsync(g => g.Id == id));
         Assert.False(await Db.GameAnalysisPositions.AnyAsync(p => p.GameAnalysisId == id));
     }
+
+    /// <summary>
+    /// Online-Konten der Ligaspieler (0.605.0): der Eröffnungsbaum sucht die Online-Partien per Präfix (`LIKE 'e4 %'`),
+    /// filtert auf eine Liste von Bedenkzeiten (Parameter-Sammlung), auf das Datum und über das Konto auf „sicher";
+    /// Anlegen/Umbenennen vergleicht den Namen ohne Groß/klein, der Abruf wählt die fälligen Konten nach Stand.
+    /// </summary>
+    [MySqlFact]
+    public async Task LigaOnlineKonten_BaumFilter_Umbenennen_UndFaelligeKonten()
+    {
+        Db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Muster, Max", NameKey = "muster max", FideId = "222" });
+        await Db.SaveChangesAsync();
+        var accounts = Get<RookHub.Api.Services.League.LeagueOnlineAccountService>();
+        var (sure, _) = await accounts.CreateAsync("222", new("lichess", "Max_Muster", true, "Profil nennt den Verein"), default);
+        var (unsure, _) = await accounts.CreateAsync("222", new("chess.com", "maxm", false, null), default);
+        Assert.Equal("duplicate", (await accounts.CreateAsync("222", new("lichess", "max_muster", true, null), default)).Reason);
+        Db.LeagueOnlineGames.AddRange(
+            new LeagueOnlineGame { AccountId = sure!.Id, FideId = "222", ExternalId = "a", PlayedAt = DateTime.UtcNow.AddDays(-3),
+                Speed = "blitz", White = true, Result = "1-0", Line = "e4 c5 Nf3", Moves = "e4 c5 Nf3", Plies = 3 },
+            new LeagueOnlineGame { AccountId = sure.Id, FideId = "222", ExternalId = "b", PlayedAt = DateTime.UtcNow.AddYears(-3),
+                Speed = "rapid", White = true, Result = "0-1", Line = "e4 e5", Moves = "e4 e5", Plies = 2 },
+            new LeagueOnlineGame { AccountId = unsure!.Id, FideId = "222", ExternalId = "c", PlayedAt = DateTime.UtcNow.AddDays(-1),
+                Speed = "blitz", White = true, Result = "1-0", Line = "e4", Moves = "e4", Plies = 1 });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var store = new RookHub.Api.Services.League.LeagueProfileStore(Db);
+        var all = (await store.TreeAsync("222", "w", "e4", default,
+            RookHub.Api.Services.League.LeagueProfileStore.TreeFilter.Parse("online", "blitz,rapid", 5, onlySure: false)))!;
+        Assert.Equal((3, 1), (all["total"]!.GetValue<int>(), all["ended"]!.GetValue<int>()));
+        var shared = (await store.TreeAsync("222", "w", "e4", default,
+            RookHub.Api.Services.League.LeagueProfileStore.TreeFilter.Parse("online", "blitz", 1, onlySure: true)))!;
+        Assert.Equal(1, shared["online"]!.GetValue<int>());
+
+        var (renamed, reason) = await accounts.UpdateAsync(unsure.Id, new(null, "MAXM", null, "Blitz"), default);
+        Assert.Null(reason);
+        Assert.Equal(1, await Db.LeagueOnlineGames.CountAsync(g => g.AccountId == renamed!.Id));   // nur die Schreibweise
+        (_, reason) = await accounts.UpdateAsync(unsure.Id, new(null, "anderer", null, null), default);
+        Assert.Null(reason);
+        Assert.Equal(0, await Db.LeagueOnlineGames.CountAsync(g => g.AccountId == unsure.Id));
+
+        await Db.LeagueOnlineAccounts.ExecuteUpdateAsync(u => u.SetProperty(a => a.SyncedAt, DateTime.UtcNow));
+        Db.ChangeTracker.Clear();
+        var sync = new RookHub.Api.Services.League.LeagueOnlineSync(Db, new HttpClient(), NullLogger<RookHub.Api.Services.League.LeagueOnlineSync>.Instance);
+        Assert.False(await sync.RunOnceAsync(TimeSpan.FromHours(12), TimeSpan.FromMinutes(1), default));   // nichts fällig, kein Abruf
+    }
 }

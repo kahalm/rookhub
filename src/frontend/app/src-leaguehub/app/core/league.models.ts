@@ -23,7 +23,20 @@ export interface Board {
   actual_p?: number;
 }
 
-export interface Account { site: string; user: string; url: string; conf: string }
+/** Ein Online-Konto. `conf` „sicher" = gesichert, sonst unsicher. Angemeldet kommen Kommentar und Abrufstand mit (0.605.0). */
+export interface Account {
+  site: string; user: string; url: string; conf: string;
+  id?: number; comment?: string | null; games?: number; syncedAt?: string | null; error?: string | null;
+}
+
+/** Eingabe für ein Konto: Name oder kopierte Profiladresse. Fehlende Felder bleiben beim Ändern, wie sie sind. */
+export interface AccountInput { site?: string | null; user?: string | null; sure?: boolean | null; comment?: string | null }
+
+/** Welche Partien der Eröffnungsbaum zählt (0.605.0): Brett, Brett + online, nur online. */
+export type TreeSource = 'board' | 'both' | 'online';
+/** Filter des Eröffnungsbaums (0.605.0): Quelle, Tempo der Online-Partien (leer = alle), nur die letzten x Jahre,
+ * nur Online-Partien gesicherter Konten. */
+export interface TreeFilter { source: TreeSource; speeds: string[]; years: number | null; onlySure: boolean }
 
 export interface RosterEntry {
   rb: number | null; n: string; elo: number | null; p: number; prev: string; cur: string;
@@ -77,6 +90,8 @@ export interface PlayerCard {
   black_other?: OpeningStats;
   recent?: { date: string; event: string; vs: string; vs_elo: string; color: 'w' | 's'; score: number | null; opening: string }[];
   accounts: Account[];
+  /** Geholte Online-Partien der gezeigten Konten — der Eröffnungsbaum kann sie einbeziehen. */
+  online?: number;
 }
 
 /** `GET …/player/{fide}/recent` — die letzten Partien der Karte samt PGN (zum Nachspielen). */
@@ -104,6 +119,9 @@ export interface OpeningTree {
   total: number;
   /** Davon hier zu Ende (oder am Tiefen-Deckel). */
   ended: number;
+  /** Davon Brett- bzw. Online-Partien (0.605.0). */
+  board?: number;
+  online?: number;
   /** Nächste Züge: Anzahl, Score aus SEINER Sicht (%, null = kein Ergebnis), jüngstes Jahr. */
   moves: { san: string; n: number; score: number | null; last: string | null }[];
 }

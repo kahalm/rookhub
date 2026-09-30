@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../core/league-api.service';
 import { Fixture } from '../core/league.models';
 import { FixtureViewComponent } from './fixture-view.component';
@@ -38,7 +39,7 @@ describe('FixtureViewComponent', () => {
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['createShare', 'deleteShare', 'card', 'pgn']);
     TestBed.configureTestingModule({
       imports: [FixtureViewComponent],
-      providers: [{ provide: LeagueApiService, useValue: api }],
+      providers: [{ provide: LeagueApiService, useValue: api }, { provide: AuthService, useValue: { has: () => false } }],
     });
     fixture = TestBed.createComponent(FixtureViewComponent);
   });

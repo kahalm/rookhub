@@ -55,11 +55,50 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> Recent(string fide, [FromQuery] string? color, CancellationToken ct) =>
         await _league.RecentAsync(fide, ct, color) is { } r ? Ok(r) : NotFound();
 
-    /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen (englische SAN).</summary>
+    /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen (englische SAN); Filter (0.605.0)
+    /// <c>source</c> board/both/online, <c>speeds</c> = Komma-Liste für Online-Partien, <c>years</c> = nur die letzten x Jahre,
+    /// <c>sure=true</c> = nur Online-Partien gesicherter Konten (über einen Teilen-Link immer).</summary>
     [HttpGet("player/{fide}/tree")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> Tree(string fide, [FromQuery] string? color, [FromQuery] string? line, CancellationToken ct) =>
-        await _league.TreeAsync(fide, color ?? "w", line, ct) is { } t ? Ok(t) : NotFound();
+    public async Task<IActionResult> Tree(string fide, [FromQuery] string? color, [FromQuery] string? line, [FromQuery] string? source,
+        [FromQuery] string? speeds, [FromQuery] int? years, [FromQuery] bool? sure, CancellationToken ct) =>
+        await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: sure == true))
+            is { } t ? Ok(t) : NotFound();
+
+    // ---- Online-Konten (0.605.0) ----------------------------------------------------------------
+
+    /// <summary>Konto anlegen <c>{ site, user (Name oder Profiladresse), sure, comment }</c> → das Konto; 400 <c>reason</c> ∈
+    /// <c>invalidSite</c>/<c>invalidUser</c>/<c>duplicate</c>/<c>tooMany</c>, 404 <c>unknownPlayer</c>.</summary>
+    [HttpPost("player/{fide}/accounts")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> AddAccount(string fide, [FromBody] LeagueOnlineAccountService.Input req,
+        [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        AccountResult(await accounts.CreateAsync(fide, req ?? new(null, null, null, null), ct));
+
+    /// <summary>Ändern — fehlende Felder bleiben; ein anderer Name/eine andere Seite holt die Partien neu.</summary>
+    [HttpPut("accounts/{id:int}")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> UpdateAccount(int id, [FromBody] LeagueOnlineAccountService.Input req,
+        [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        AccountResult(await accounts.UpdateAsync(id, req ?? new(null, null, null, null), ct));
+
+    [HttpDelete("accounts/{id:int}")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> DeleteAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        await accounts.DeleteAsync(id, ct) ? NoContent() : NotFound();
+
+    /// <summary>Partien dieses Kontos gleich (neu) abrufen lassen.</summary>
+    [HttpPost("accounts/{id:int}/sync")]
+    [HasPermission(Permissions.LeagueManage)]
+    public async Task<IActionResult> SyncAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
+        await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(LeagueOnlineAccountService.ToJson(a, full: true)) : NotFound();
+
+    private IActionResult AccountResult((Models.LeagueOnlineAccount? Account, string? Reason) r) => r switch
+    {
+        ({ } a, _) => Ok(LeagueOnlineAccountService.ToJson(a, full: true)),
+        (_, "notFound" or "unknownPlayer") => NotFound(new { reason = r.Reason }),
+        _ => BadRequest(new { reason = r.Reason }),
+    };
 
     internal static FileContentResult PgnFile(string fide, string name, string pgn) =>
         new(Encoding.UTF8.GetBytes(pgn), "application/x-chess-pgn")
@@ -191,10 +230,12 @@ public class LeagueShareController : ControllerBase
     }
 
     [HttpGet("{token}/player/{fide}/tree")]
-    public async Task<IActionResult> Tree(string token, string fide, [FromQuery] string? color, [FromQuery] string? line, CancellationToken ct)
+    public async Task<IActionResult> Tree(string token, string fide, [FromQuery] string? color, [FromQuery] string? line,
+        [FromQuery] string? source, [FromQuery] string? speeds, [FromQuery] int? years, CancellationToken ct)
     {
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
-        return await _league.TreeAsync(fide, color ?? "w", line, ct) is { } t ? Ok(t) : NotFound();
+        return await _league.TreeAsync(fide, color ?? "w", line, ct, LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: true))
+            is { } t ? Ok(t) : NotFound();
     }
 
     [HttpGet("{token}/player/{fide}/recent")]

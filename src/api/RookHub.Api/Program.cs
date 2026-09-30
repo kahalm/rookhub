@@ -257,6 +257,21 @@ try
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();
+    // Online-Konten der Ligaspieler + Abruf ihrer Partien (Lichess/chess.com, 0.605.0).
+    builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueOnlineSyncSignal>();
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueOnlineAccountService(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueOnlineSyncSignal>()));
+    // chess.com verlangt einen aussagekräftigen User-Agent (sonst 403); Lichess streamt 500 Partien in rund 25 s.
+    builder.Services.AddHttpClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName, client =>
+    {
+        client.Timeout = TimeSpan.FromMinutes(3);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RookHub-LeagueHub/1.0 (+https://rookhub.oberschmid.homes)");
+    });
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueOnlineSync(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(RookHub.Api.Services.League.LeagueOnlineSync.ClientName),
+        sp.GetRequiredService<ILogger<RookHub.Api.Services.League.LeagueOnlineSync>>(), sp.GetRequiredService<IConfiguration>()));
+    builder.Services.AddHostedService<RookHub.Api.Services.League.LeagueOnlineSyncScheduler>();
     // ChessBase-Datenbanken (.cbh/.2cbh) → PGN für die Vereins-Datenbank (0.598.0).
     builder.Services.AddSingleton<RookHub.Api.Services.ChessBase.ChessBaseImportService>();
     // Öffentliche Lichess-Studien für den Import in die Vereins-Datenbank (nur die feste API, siehe LichessStudySource).

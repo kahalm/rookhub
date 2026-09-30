@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
 import { LeagueApiService } from '../core/league-api.service';
 import { MyGamesService } from '../core/my-games.service';
@@ -22,14 +23,17 @@ describe('PlayerCardComponent', () => {
   const el = () => fixture.nativeElement as HTMLElement;
   const headings = () => Array.from(el().querySelectorAll('h3')).map(h => h.textContent ?? '');
 
+  let perms: Set<string>;
+
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent']);
+    perms = new Set();
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['card', 'pgn', 'recent', 'tree']);
     api.card.and.resolveTo(CARD);
     myGames = Object.assign(jasmine.createSpyObj<MyGamesService>('MyGamesService', ['save', 'shareUrl', 'open']),
       { available: false, rookHubUrl: null as string | null });
     TestBed.configureTestingModule({ imports: [PlayerCardComponent],
       providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: LeagueApiService, useValue: api },
-        { provide: MyGamesService, useValue: myGames }] });
+        { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }] });
     fixture = TestBed.createComponent(PlayerCardComponent);
     fixture.detectChanges();
   });
@@ -177,9 +181,45 @@ describe('PlayerCardComponent', () => {
     expect(api.card).toHaveBeenCalledWith('1606921', 'TOKEN');
     expect(el().querySelector('.hint')).toBeNull();
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.d4'))).toBeTrue();
-    expect(el().querySelector('.acc')?.textContent).toContain('lichess: patrik');
+    expect(el().querySelector('.acc')?.textContent).toContain('Lichess: patrik');
+    expect(el().querySelector('.acc .tag-sure')?.textContent).toContain('gesichert');
+    expect(el().querySelector('.acc-add')).toBeNull();                              // über den Link nichts zu pflegen
     // Schwarz gegen andere: ohne Partien kein Abschnitt
     expect(headings().some(h => h.includes('andere'))).toBeFalse();
+  });
+
+  it('Verwalter pflegen die Online-Konten — nie über einen Teilen-Link (0.605.0)', async () => {
+    perms.add('league.manage');
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canEdit()).toBeTrue();
+    expect(el().querySelector('.acc-add')).not.toBeNull();
+    await fixture.componentInstance.open('1606921', null, null, 'TOKEN');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.canEdit()).toBeFalse();
+    expect(el().querySelector('.acc-add')).toBeNull();
+  });
+
+  it('ohne Konto und ohne Recht kein Abschnitt Online-Konten', async () => {
+    api.card.and.resolveTo({ ...CARD, accounts: [] });
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    expect(headings().some(h => h.startsWith('Online-Konten'))).toBeFalse();
+  });
+
+  it('nur Online-Partien: Eröffnungsbaum ja, Brett-Statistik nein; nach einer Konto-Änderung frisch geladen', async () => {
+    perms.add('league.manage');
+    const onlineOnly: PlayerCard = { ...CARD, n: 0, online: 42, recent: [], accounts: [{ ...CARD.accounts[0], id: 7, games: 42 }] };
+    api.card.and.resolveTo(onlineOnly);
+    await fixture.componentInstance.open('1606921', null, null, null);
+    fixture.detectChanges();
+    expect(el().querySelector('.tree-toggle')).not.toBeNull();
+    expect(Array.from(el().querySelectorAll('button')).some(b => b.textContent?.includes('PGN herunterladen'))).toBeFalse();
+    expect(headings().some(h => h.startsWith('Mit Weiß'))).toBeFalse();
+    api.card.and.resolveTo({ ...onlineOnly, online: 50 });
+    await fixture.componentInstance.reloadCard();
+    expect(fixture.componentInstance.card()?.online).toBe(50);
+    expect(api.card).toHaveBeenCalledTimes(2);
   });
 
   it('ohne Karte eine klare Meldung', async () => {

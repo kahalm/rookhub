@@ -92,14 +92,42 @@ public sealed class LeagueImportService
         }
         if (b.Accounts is not null)
         {
-            var accounts = b.Accounts.Select(a => new LeagueOnlineAccount
-            {
-                FideId = a.Fide, Site = a.Site, UserName = a.User, Url = a.Url, Confidence = a.Confidence, Evidence = Trim(a.Evidence, 300),
-            }).ToList();
+            // In LeagueHub gepflegte Konten (Manual, 0.605.0) bleiben stehen, und ein Konto, das es schon gibt, wird nur
+            // aktualisiert — sonst gingen mit ihm die geholten Online-Partien. Nur Konten aus einem früheren Import, die das
+            // Bündel nicht mehr nennt, fallen weg.
+            static string Key(string fide, string site, string user) => $"{fide}|{site}|{user.ToLowerInvariant()}";
             await ReplaceAllAsync(async () =>
             {
-                await ClearAsync(_db.LeagueOnlineAccounts, ct);
-                _db.LeagueOnlineAccounts.AddRange(accounts);
+                var existing = await _db.LeagueOnlineAccounts.ToListAsync(ct);
+                var manual = existing.Where(a => a.Manual).Select(a => Key(a.FideId, a.Site, a.UserName)).ToHashSet();
+                var imported = existing.Where(a => !a.Manual).GroupBy(a => Key(a.FideId, a.Site, a.UserName))
+                    .ToDictionary(g => g.Key, g => g.ToList());
+                var seen = new HashSet<string>();
+                foreach (var a in b.Accounts)
+                {
+                    var key = Key(a.Fide, a.Site, a.User);
+                    if (manual.Contains(key) || !seen.Add(key)) continue;
+                    if (imported.TryGetValue(key, out var rows))
+                    {
+                        rows[0].Url = a.Url;
+                        rows[0].Confidence = a.Confidence;
+                        rows[0].Evidence = Trim(a.Evidence, 1000);
+                        continue;
+                    }
+                    _db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount
+                    {
+                        FideId = a.Fide, Site = a.Site, UserName = a.User, Url = a.Url, Confidence = a.Confidence, Evidence = Trim(a.Evidence, 1000),
+                    });
+                }
+                var gone = imported.Where(kv => !seen.Contains(kv.Key)).SelectMany(kv => kv.Value)
+                    .Concat(imported.Values.SelectMany(v => v.Skip(1))).ToList();
+                if (gone.Count > 0)
+                {
+                    var ids = gone.Select(a => a.Id).ToList();
+                    if (_db.Database.IsRelational()) await _db.LeagueOnlineGames.Where(g => ids.Contains(g.AccountId)).ExecuteDeleteAsync(ct);
+                    else _db.LeagueOnlineGames.RemoveRange(await _db.LeagueOnlineGames.Where(g => ids.Contains(g.AccountId)).ToListAsync(ct));
+                    _db.LeagueOnlineAccounts.RemoveRange(gone);
+                }
             }, ct);
             res["accounts"] = b.Accounts.Count;
         }

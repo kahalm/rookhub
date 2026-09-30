@@ -430,6 +430,37 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .tbar { display: block; height: 4px; background: var(--track); border-radius: 2px; margin-top: 3px; overflow: hidden; }
 .tbar i { display: block; height: 100%; background: var(--bar); }
 
+/* Filter des Eröffnungsbaums (0.605.0): Brett/online, Zeitformat, Zeitraum */
+.tree-filter { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; }
+.tree-filter .seg button { padding: 6px 10px; font-size: 14px; }
+.tree-filter .seg button:disabled { opacity: .4; cursor: not-allowed; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fchip { font: 600 13px/1 var(--cond); color: var(--ink); background: transparent; border: 1.5px solid var(--line);
+  border-radius: 14px; padding: 5px 10px; cursor: pointer; }
+.fchip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.check { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+.check input { width: 15px; height: 15px; accent-color: var(--ink); }
+.field.inline { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+
+/* Online-Konten auf der Spielerkarte (0.605.0) */
+lh-online-accounts { display: block; }
+.acc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.acc-list li { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.acc-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.acc-row a { overflow-wrap: anywhere; }
+.acc-row .tag { margin-left: 0; }
+.card .tag.tag-sure { color: var(--ok); border-color: currentColor; }
+.acc-comment { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+.acc-status { margin: 4px 0 0; }
+.acc-form { display: grid; gap: 10px; margin-top: 8px; }
+.acc-form-row { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.acc-form .field { margin: 0; }
+.acc-form-row .field { flex: 0 1 160px; }
+.acc-form-row .acc-user { flex: 1 1 220px; }
+.acc-form .field textarea { font: 400 14px/1.4 var(--body); }
+.acc-form .actions { margin-top: 0; }
+.acc-add { margin-top: 8px; }
+
 /* Spielersuche (Liga, per Häkchen die ganze Megabase) */
 .psearch { display: grid; gap: 4px; position: relative; }
 .psearch-all { display: inline-flex; gap: 6px; align-items: center; font: 400 13px/1.3 var(--body); color: var(--muted); }

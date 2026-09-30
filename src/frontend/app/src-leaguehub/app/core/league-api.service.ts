@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, UpdateStatus } from './league.models';
+import { Account, AccountInput, League, LeagueIndex, OpeningTree, PlayerCard, RecentGames, SharedFixture, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -40,9 +40,34 @@ export class LeagueApiService {
     return firstValueFrom(this.http.get<RecentGames>(`${this.base(token)}/player/${encodeURIComponent(fide)}/recent${q}`));
   }
 
-  tree(fide: string, color: 'w' | 's', line: string[], token: string | null): Promise<OpeningTree> {
-    const params = new HttpParams().set('color', color).set('line', line.join(' '));
+  tree(fide: string, color: 'w' | 's', line: string[], token: string | null, filter?: TreeFilter): Promise<OpeningTree> {
+    let params = new HttpParams().set('color', color).set('line', line.join(' '));
+    if (filter && filter.source !== 'board') {
+      params = params.set('source', filter.source);
+      if (filter.speeds.length) params = params.set('speeds', filter.speeds.join(','));
+      if (filter.onlySure) params = params.set('sure', 'true');
+    }
+    if (filter?.years) params = params.set('years', filter.years);
     return firstValueFrom(this.http.get<OpeningTree>(`${this.base(token)}/player/${encodeURIComponent(fide)}/tree`, { params }));
+  }
+
+  // ── Online-Konten eines Spielers (0.605.0, league.manage) ──
+
+  addAccount(fide: string, input: AccountInput): Promise<Account> {
+    return firstValueFrom(this.http.post<Account>(`/api/league/player/${encodeURIComponent(fide)}/accounts`, input));
+  }
+
+  updateAccount(id: number, input: AccountInput): Promise<Account> {
+    return firstValueFrom(this.http.put<Account>(`/api/league/accounts/${id}`, input));
+  }
+
+  deleteAccount(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`/api/league/accounts/${id}`));
+  }
+
+  /** Die Partien des Kontos gleich (neu) abrufen lassen. */
+  syncAccount(id: number): Promise<Account> {
+    return firstValueFrom(this.http.post<Account>(`/api/league/accounts/${id}/sync`, {}));
   }
 
   shared(token: string): Promise<SharedFixture> {

@@ -1,0 +1,213 @@
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
+using RookHub.Api.Models;
+
+namespace RookHub.Api.Services.League;
+
+/// <summary>
+/// Die Seiten, auf denen Online-Konten liegen können (0.605.0). Heute Lichess und chess.com — eine weitere Seite braucht
+/// hier einen Eintrag (Kürzel, Namensregel, Profiladresse) und in <see cref="LeagueOnlineSync"/> einen Abruf.
+/// </summary>
+public static partial class LeagueOnlineSites
+{
+    public const string Lichess = "lichess";
+    public const string ChessCom = "chess.com";
+    public static readonly string[] All = { Lichess, ChessCom };
+
+    /// <summary>„lichess.org", „Lichess", „chesscom" … → das Kürzel, sonst <c>null</c>.</summary>
+    public static string? Normalize(string? site) => (site ?? "").Trim().ToLowerInvariant() switch
+    {
+        "lichess" or "lichess.org" => Lichess,
+        "chess.com" or "chesscom" or "chess com" => ChessCom,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Seite + Name aus der Eingabe: ein Name oder die kopierte Profiladresse („https://lichess.org/@/Name",
+    /// „https://www.chess.com/member/name") — die Adresse schlägt die gewählte Seite. <c>null</c> = kein gültiger Name.
+    /// </summary>
+    public static (string Site, string User)? Parse(string? site, string? input)
+    {
+        var text = (input ?? "").Trim().TrimEnd('/');
+        var s = Normalize(site);
+        var m = LichessUrl().Match(text);
+        if (m.Success) { s = Lichess; text = m.Groups[1].Value; }
+        else if ((m = ChessComUrl().Match(text)).Success) { s = ChessCom; text = m.Groups[1].Value; }
+        text = text.TrimStart('@');
+        if (s is null) return null;
+        var ok = s == Lichess ? LichessName().IsMatch(text) : ChessComName().IsMatch(text);
+        return ok ? (s, text) : null;
+    }
+
+    public static string ProfileUrl(string site, string user) => site == Lichess
+        ? $"https://lichess.org/@/{Uri.EscapeDataString(user)}"
+        : $"https://www.chess.com/member/{Uri.EscapeDataString(user)}";
+
+    [GeneratedRegex(@"lichess\.org/@/([^/?#\s]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex LichessUrl();
+    [GeneratedRegex(@"chess\.com/(?:member|players|stats/[a-z]+/chess)/([^/?#\s]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex ChessComUrl();
+    /// <summary>Lichess: 2–30 Zeichen, Buchstaben, Ziffern, „_" und „-", beginnt mit Buchstabe oder Ziffer.</summary>
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9_-]{1,29}$")]
+    private static partial Regex LichessName();
+    /// <summary>chess.com: 3–25 Zeichen, sonst wie Lichess.</summary>
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9_-]{2,24}$")]
+    private static partial Regex ChessComName();
+}
+
+/// <summary>
+/// Online-Konten eines Ligaspielers pflegen (0.605.0, Wunsch 2026-09-30: „für einen User kann es eine Liste von
+/// Onlinekonten geben — Name + Seite, gesichert oder unsicher, dazu Kommentare"). Gilt je FIDE-ID wie die Spielerkarte.
+/// Nach jeder Änderung werden die fertigen Liga-Ansichten nachgezogen (die Meldeliste einer Begegnung zeigt die Konten) und
+/// der Abruf geweckt.
+/// </summary>
+public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSyncSignal? signal = null)
+{
+    public const string Sure = "sicher";
+    public const string Unsure = "wahrscheinlich";
+    public const int MaxCommentLength = 1000;
+    /// <summary>Mehr als eine Handvoll Konten je Spieler ist ein Irrtum, keine Recherche.</summary>
+    public const int MaxPerPlayer = 20;
+
+    public sealed record Input(string? Site, string? User, bool? Sure, string? Comment);
+
+    /// <summary>Ein Konto als JSON der Spielerkarte. <paramref name="full"/> = mit Kommentar und Abrufstand (angemeldet);
+    /// über einen Teilen-Link nur das, was schon vorher sichtbar war.</summary>
+    public static JsonObject ToJson(LeagueOnlineAccount a, bool full)
+    {
+        var o = new JsonObject { ["site"] = a.Site, ["user"] = a.UserName, ["url"] = a.Url, ["conf"] = a.Confidence };
+        if (!full) return o;
+        o["id"] = a.Id;
+        o["comment"] = a.Evidence;
+        o["games"] = a.GameCount;
+        o["syncedAt"] = a.SyncedAt is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null;
+        o["error"] = a.SyncError;
+        return o;
+    }
+
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> CreateAsync(string fide, Input req, CancellationToken ct)
+    {
+        fide = (fide ?? "").Trim();
+        if (!await KnownPlayerAsync(fide, ct)) return (null, "unknownPlayer");
+        if (LeagueOnlineSites.Parse(req.Site, req.User) is not { } parsed)
+            return (null, LeagueOnlineSites.Normalize(req.Site) is null && !LooksLikeUrl(req.User) ? "invalidSite" : "invalidUser");
+        var mine = await db.LeagueOnlineAccounts.Where(a => a.FideId == fide).ToListAsync(ct);
+        if (mine.Count >= MaxPerPlayer) return (null, "tooMany");
+        if (mine.Any(a => Same(a, parsed.Site, parsed.User))) return (null, "duplicate");
+        var acc = new LeagueOnlineAccount
+        {
+            FideId = fide, Site = parsed.Site, UserName = parsed.User, Url = LeagueOnlineSites.ProfileUrl(parsed.Site, parsed.User),
+            Confidence = req.Sure == true ? Sure : Unsure, Evidence = Comment(req.Comment), Manual = true, UpdatedAt = DateTime.UtcNow,
+        };
+        db.LeagueOnlineAccounts.Add(acc);
+        await db.SaveChangesAsync(ct);
+        await PatchViewsAsync(fide, ct);
+        signal?.Wake();
+        return (acc, null);
+    }
+
+    /// <summary>Ändern — fehlende Felder bleiben. Ein anderer Name oder eine andere Seite ist ein anderes Konto: die schon
+    /// geholten Partien gehen, der Abruf beginnt von vorn.</summary>
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> UpdateAsync(int id, Input req, CancellationToken ct)
+    {
+        var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (acc is null) return (null, "notFound");
+        if (req.Site is not null || req.User is not null)
+        {
+            if (LeagueOnlineSites.Parse(req.Site ?? acc.Site, req.User ?? acc.UserName) is not { } parsed) return (null, "invalidUser");
+            if (!Same(acc, parsed.Site, parsed.User))
+            {
+                if (await db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == acc.FideId && a.Id != acc.Id && a.Site == parsed.Site
+                        && a.UserName.ToLower() == parsed.User.ToLower(), ct))
+                    return (null, "duplicate");
+                await DeleteGamesAsync(acc.Id, ct);
+                acc.Site = parsed.Site;
+                acc.UserName = parsed.User;
+                acc.Url = LeagueOnlineSites.ProfileUrl(parsed.Site, parsed.User);
+                acc.SyncedAt = null;
+                acc.SyncCursor = 0;
+                acc.SyncError = null;
+                acc.GameCount = 0;
+            }
+            else if (acc.UserName != parsed.User) acc.UserName = parsed.User;       // nur die Schreibweise
+        }
+        if (req.Sure is { } sure) acc.Confidence = sure ? Sure : Unsure;
+        if (req.Comment is not null) acc.Evidence = Comment(req.Comment);
+        acc.Manual = true;
+        acc.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        await PatchViewsAsync(acc.FideId, ct);
+        if (acc.SyncedAt is null) signal?.Wake();
+        return (acc, null);
+    }
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
+    {
+        var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (acc is null) return false;
+        await DeleteGamesAsync(acc.Id, ct);                                  // InMemory kaskadiert nicht
+        db.LeagueOnlineAccounts.Remove(acc);
+        await db.SaveChangesAsync(ct);
+        await PatchViewsAsync(acc.FideId, ct);
+        return true;
+    }
+
+    /// <summary>Ein Konto erneut abrufen lassen (nach einem Fehler oder „jetzt holen").</summary>
+    public async Task<LeagueOnlineAccount?> RequestSyncAsync(int id, CancellationToken ct)
+    {
+        var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
+        if (acc is null) return null;
+        acc.SyncedAt = null;
+        acc.SyncError = null;
+        await db.SaveChangesAsync(ct);
+        signal?.Wake();
+        return acc;
+    }
+
+    /// <summary>Die Konten in den fertigen Ansichten (<c>roster[].acc</c>) nachziehen — sonst stünden sie in der Meldeliste
+    /// erst nach dem nächsten „Daten aktualisieren".</summary>
+    public async Task PatchViewsAsync(string fide, CancellationToken ct)
+    {
+        var acc = new JsonArray((await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).OrderBy(a => a.Id).ToListAsync(ct))
+            .Select(a => (JsonNode)ToJson(a, full: false)).ToArray());
+        foreach (var view in await db.LeagueViews.ToListAsync(ct))
+        {
+            if (!view.Json.Contains($"\"{fide}\"", StringComparison.Ordinal)) continue;
+            if (JsonNode.Parse(view.Json) is not JsonObject root || root["fixtures"] is not JsonObject teams) continue;
+            var changed = false;
+            foreach (var (_, rounds) in teams)
+                foreach (var (_, fx) in rounds?.AsObject() ?? new JsonObject())
+                    foreach (var r in fx?["roster"] as JsonArray ?? new JsonArray())
+                    {
+                        if (r?["fide"]?.GetValue<string>() != fide) continue;
+                        r["acc"] = acc.DeepClone();
+                        changed = true;
+                    }
+            if (changed) view.Json = root.ToJsonString();
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    private async Task DeleteGamesAsync(int accountId, CancellationToken ct)
+    {
+        if (db.Database.IsRelational()) await db.LeagueOnlineGames.Where(g => g.AccountId == accountId).ExecuteDeleteAsync(ct);
+        else db.LeagueOnlineGames.RemoveRange(await db.LeagueOnlineGames.Where(g => g.AccountId == accountId).ToListAsync(ct));
+    }
+
+    private async Task<bool> KnownPlayerAsync(string fide, CancellationToken ct) =>
+        fide.Length is > 0 and <= 16 && (await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct)
+                                         || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct));
+
+    private static bool Same(LeagueOnlineAccount a, string site, string user) =>
+        a.Site == site && string.Equals(a.UserName, user, StringComparison.OrdinalIgnoreCase);
+
+    private static bool LooksLikeUrl(string? s) => (s ?? "").Contains("://", StringComparison.Ordinal) || (s ?? "").Contains(".org/") || (s ?? "").Contains(".com/");
+
+    private static string? Comment(string? c)
+    {
+        var t = (c ?? "").Trim();
+        return t.Length == 0 ? null : t.Length > MaxCommentLength ? t[..MaxCommentLength] : t;
+    }
+}

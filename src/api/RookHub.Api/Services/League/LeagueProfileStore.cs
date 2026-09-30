@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -168,43 +169,103 @@ public sealed class LeagueProfileStore
     public const int TreeMaxPlies = 30;
 
     /// <summary>
-    /// Eröffnungsbaum eines Spielers (Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte, Wunsch 2026-09-28): alle
-    /// seine Partien (fremde + Vereinspartien) mit <paramref name="color"/> („w"/„s"), die mit <paramref name="line"/>
-    /// beginnen (Züge mit Leerzeichen, englische SAN); je nächstem Zug Anzahl, Punkte aus SEINER Sicht und das jüngste
-    /// Jahr. Die Züge kommen aus dem Partietext (ohne Brett — bei 2000 Partien je Klick zählt die Zeit), bereinigt wie
-    /// überall (<c>PgnParser.ExtractMainlineSans</c>). <c>null</c> = keine Karte.
+    /// Filter des Eröffnungsbaums (0.605.0, Wunsch 2026-09-30: „Filtermöglichkeiten fürs Eröffnungsrepertoire: online ja/nein,
+    /// wenn online: Zeitformat; außerdem nur Partien der letzten x Jahre"). <see cref="Source"/>: <c>board</c> (Vorgabe, die
+    /// Brettpartien wie bisher), <c>both</c> oder <c>online</c>; <see cref="Speeds"/> gilt nur für Online-Partien (leer = alle);
+    /// <see cref="Years"/> für beide (Brettpartien kennen oft nur das Jahr — gezählt wird ab dem Jahr der Grenze).
+    /// <see cref="OnlySure"/> (Teilen-Links): nur Partien gesicherter Konten.
     /// </summary>
-    public async Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct)
+    public sealed record TreeFilter(string Source, IReadOnlyList<string> Speeds, int? Years, bool OnlySure)
     {
+        public static readonly TreeFilter Default = new("board", Array.Empty<string>(), null, false);
+        public bool Board => Source is "board" or "both";
+        public bool Online => Source is "online" or "both";
+
+        /// <summary>Aus der Adresse — Unbekanntes fällt auf die Vorgabe zurück, statt die Anfrage scheitern zu lassen.</summary>
+        public static TreeFilter Parse(string? source, string? speeds, int? years, bool onlySure) => new(
+            source is "board" or "both" or "online" ? source : "board",
+            (speeds ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(x => LeagueOnlineSync.Speeds.Contains(x)).Distinct().ToList(),
+            years is >= 1 and <= 50 ? years : null, onlySure);
+    }
+
+    /// <summary>
+    /// Eröffnungsbaum eines Spielers (Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte, Wunsch 2026-09-28): alle
+    /// seine Partien (fremde + Vereinspartien, mit <paramref name="filter"/> auch die Online-Partien seiner Konten) mit
+    /// <paramref name="color"/> („w"/„s"), die mit <paramref name="line"/> beginnen (Züge mit Leerzeichen, englische SAN);
+    /// je nächstem Zug Anzahl, Punkte aus SEINER Sicht und das jüngste Jahr. Die Züge kommen aus dem Partietext (ohne Brett —
+    /// bei 2000 Partien je Klick zählt die Zeit), bereinigt wie überall (<c>PgnParser.ExtractMainlineSans</c>); Online-Partien
+    /// über ihre gespeicherte Zeile, gesucht per Präfix in SQL. <c>null</c> = weder Karte noch Online-Konto.
+    /// </summary>
+    public async Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct, TreeFilter? filter = null)
+    {
+        filter ??= TreeFilter.Default;
         var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
             .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
         var club = await ClubGamesAsync(fide, ct);
-        if (p is null && club.Count == 0) return null;
+        if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
         var name = await NameAsync(fide, p?.Name, ct);
         var prefix = (line ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(TreeMaxPlies).ToList();
+        var cutoff = filter.Years is { } y ? DateTime.UtcNow.AddYears(-y) : (DateTime?)null;
         var stats = new Dictionary<string, (int N, double Pts, int Scored, string Last)>(StringComparer.Ordinal);
         var order = new List<string>();
-        int total = 0, ended = 0;
-        foreach (var g in WithClub(Stored(p?.Pgn), club))
+        int total = 0, ended = 0, board = 0, online = 0;
+
+        void Count(IReadOnlyList<string> sans, double? pts, string year)
         {
-            if (LeagueProfileBuilder.ColorOf(g, fide, name) != color) continue;
-            if (g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)) continue;
-            var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
-            var sans = PgnParser.ExtractMainlineSans(moveText);
-            if (sans.Count < prefix.Count || !prefix.Select((m, k) => sans[k] == m).All(x => x)) continue;
             total++;
-            if (sans.Count == prefix.Count || prefix.Count >= TreeMaxPlies) { ended++; continue; }
+            if (sans.Count == prefix.Count || prefix.Count >= TreeMaxPlies) { ended++; return; }
             var next = sans[prefix.Count];
-            var year = g.Headers.TryGetValue("Date", out var d) && d.Length >= 4 && d[..4].All(char.IsDigit) ? d[..4] : "";
-            var pts = LeagueProfileBuilder.Points(g, color);
             if (!stats.TryGetValue(next, out var st)) { order.Add(next); st = (0, 0, 0, ""); }
             stats[next] = (st.N + 1, st.Pts + (pts ?? 0), st.Scored + (pts is null ? 0 : 1),
                 string.CompareOrdinal(year, st.Last) > 0 ? year : st.Last);
         }
+
+        if (filter.Board)
+            foreach (var g in WithClub(Stored(p?.Pgn), club))
+            {
+                if (LeagueProfileBuilder.ColorOf(g, fide, name) != color) continue;
+                if (g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)) continue;
+                var year = g.Headers.TryGetValue("Date", out var d) && d.Length >= 4 && d[..4].All(char.IsDigit) ? d[..4] : "";
+                if (cutoff is { } c && (year.Length == 0 || int.Parse(year) < c.Year)) continue;
+                var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
+                var sans = PgnParser.ExtractMainlineSans(moveText);
+                if (sans.Count < prefix.Count || !prefix.Select((m, k) => sans[k] == m).All(x => x)) continue;
+                board++;
+                Count(sans, LeagueProfileBuilder.Points(g, color), year);
+            }
+
+        if (filter.Online)
+        {
+            var white = color == "w";
+            var q = _db.LeagueOnlineGames.AsNoTracking().Where(g => g.FideId == fide && g.White == white);
+            if (filter.Speeds.Count > 0) q = q.Where(g => filter.Speeds.Contains(g.Speed));
+            if (cutoff is { } c) q = q.Where(g => g.PlayedAt >= c);
+            if (filter.OnlySure) q = q.Where(g => g.Account.Confidence == LeagueOnlineAccountService.Sure);
+            if (prefix.Count > 0)
+            {
+                var pre = string.Join(' ', prefix);
+                var preSpace = pre + " ";
+                q = q.Where(g => g.Line == pre || g.Line.StartsWith(preSpace));
+            }
+            foreach (var g in await q.Select(g => new { g.Line, g.Result, g.PlayedAt }).ToListAsync(ct))
+            {
+                online++;
+                double? pts = g.Result switch
+                {
+                    "1-0" => white ? 1 : 0,
+                    "0-1" => white ? 0 : 1,
+                    "1/2-1/2" => 0.5,
+                    _ => null,
+                };
+                Count(g.Line.Split(' ', StringSplitOptions.RemoveEmptyEntries), pts, g.PlayedAt.Year.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
         return new JsonObject
         {
             ["fide"] = fide, ["name"] = name, ["color"] = color, ["line"] = string.Join(' ', prefix),
-            ["total"] = total, ["ended"] = ended,
+            ["total"] = total, ["ended"] = ended, ["board"] = board, ["online"] = online,
             ["moves"] = new JsonArray(order.OrderByDescending(m => stats[m].N).ThenBy(m => order.IndexOf(m))
                 .Select(m => (JsonNode)new JsonObject
                 {

@@ -1299,8 +1299,9 @@ Rollenverwaltung an).
   `LeagueRounds` (Datum je Runde), `LeagueMatches`, `LeagueGames` (Brettpartien, Spieler null = „Brett nicht
   besetzt", Forfeit 0/1/2 — 2 = „- - -", z. B. Corona-Abbruch 2019/20), `LeaguePlayers` (Meldeliste;
   `NameKey` ohne akad. Titel = Schlüssel zu den Brettpaarungen), `LeaguePlayerProfiles` (PK FIDE-ID:
-  Eröffnungsprofil als JSON + alle Partien als PGN), `LeagueOnlineAccounts` (NUR selbst offengelegte Konten:
-  Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen),
+  Eröffnungsprofil als JSON + alle Partien als PGN), `LeagueOnlineAccounts` (Online-Konten je FIDE-ID — aus dem Import NUR
+  selbst offengelegte: Klarname im Profil, Land passt, Name unter FIDE-Spielern eindeutig; keine Minderjährigen; seit 0.605.0
+  zusätzlich von Verwaltern gepflegte, siehe „Online-Konten + Online-Partien"), `LeagueOnlineGames` (deren geholte Partien),
   `LeagueShares` (Token 144 Bit, eine Begegnung, läuft 7 Tage nach der Runde ab — frühestens 7 Tage nach dem Anlegen; ein abgelaufener, noch nicht aufgeräumter Link wird beim erneuten Teilen durch einen frischen ersetzt), `LeagueViews`
   (fertig gerechnete Liga-Ansicht als JSON — gerechnet beim Aktualisieren, nicht je Aufruf).
 - **Rechenkern** `Services/League/LeagueEngine.cs`: 1:1-Portierung von `features.py`/`model.py` —
@@ -1563,6 +1564,45 @@ freier Abruf); danach wie ein Upload (Übersicht, Import). Absagen `invalidUrl`,
 für Spieler der geteilten Meldeliste) → `{ total, ended, moves[{ san, n, score (Punkte aus SEINER Sicht, %), last (Jahr) }] }`
 über alle seine Partien (fremde + Verein), höchstens 30 Halbzüge, Züge aus dem Partietext (ohne Brett, schnell genug für
 2000 Partien je Klick). Oberfläche: Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte (`shared/opening-tree.component.ts`).
+**Filter** (0.605.0, Wunsch 2026-09-30: „online ja/nein, wenn online: Zeitformat; nur Partien der letzten x Jahre"):
+`source` = `board` (Vorgabe, wie vorher) / `both` / `online`, `speeds` = Komma-Liste aus `bullet,blitz,rapid,classical,correspondence`
+(leer = alle, gilt nur für Online-Partien), `years` = 1–50 (Online-Partien ab heute − x Jahre; Brettpartien tragen oft nur das Jahr,
+dort zählt jedes Jahr ab dem Jahr von heute − x), angemeldet `sure=true` = nur Online-Partien gesicherter Konten (über
+den Teilen-Link immer). Unbekannte Werte fallen still auf die Vorgabe (`LeagueProfileStore.TreeFilter.Parse`). Antwort zusätzlich
+`board`/`online` = wie viele der Partien in der Stellung von wo kommen. Online-Partien fragt der Baum in SQL ab (`Line` =
+Präfix-Treffer `Line == pre || Line.StartsWith(pre + " ")`, Tempo, `PlayedAt`, Konto-Zuordnung) — `QueryTranslationTests`
+prüft die Übersetzung gegen MariaDB. Oberfläche: Filterleiste über dem Baum (`core/tree-filter.ts` = die reinen Regeln, gemerkt
+im localStorage `lh-tree-filter`); Quellen-Wahl erst, wenn der Spieler Online-Partien hat, ohne Brettpartien gleich „online".
+
+**Online-Konten + Online-Partien** (0.605.0, Wunsch 2026-09-30: „für einen User kann es eine Liste von Onlinekonten geben — Name +
+Seite, gesichert oder unsicher + Kommentare; im Hintergrund holst du die Spiele dieser User und legst sie in der DB ab"):
+* **Konten** (`Services/League/LeagueOnlineAccounts.cs`): je FIDE-ID wie die Karte. `LeagueOnlineSites` kennt die Seiten (heute
+  `lichess`, `chess.com`; eine weitere braucht dort Kürzel/Namensregel/Profiladresse und in `LeagueOnlineSync` einen Abruf) und liest
+  Name ODER kopierte Profiladresse (die Adresse schlägt die gewählte Seite). `Confidence` bleibt wie im Import `sicher` /
+  `wahrscheinlich` (Oberfläche: gesichert / unsicher), `Evidence` ist der Kommentar (≤ 1000). Von Hand gepflegt = `Manual`: solche
+  Zeilen lässt der Bundle-Import stehen; ein Import-Konto, das es schon gibt, wird nur aktualisiert (sonst gingen seine Partien),
+  nur verschwundene Import-Konten fallen samt Partien weg. Höchstens 20 je Spieler. Andere Seite oder anderer Name = anderes Konto:
+  Partien weg, Abruf von vorn; nur andere Groß/Kleinschreibung behält sie. Nach jeder Änderung werden die Konten in den fertigen
+  Ansichten nachgezogen (`PatchViewsAsync`, `roster[].acc`) und der Abruf geweckt.
+* **Sichtbarkeit**: angemeldet trägt die Karte je Konto `id`, `comment`, `games`, `syncedAt`, `error` (`ToJson(full: true)`), dazu
+  `online` = Summe der Partien; über einen Teilen-Link nur gesicherte Konten und nur `site/user/url/conf`. Pflegen nur
+  `league.manage`, nie über einen Teilen-Link (`shared/online-accounts.component.ts`, in der Spielerkarte).
+* **Abruf** (`Services/League/LeagueOnlineSync.cs`, HttpClient `LeagueOnline`, eigener User-Agent): Lichess über
+  `/api/games/user/{name}?since=…&sort=dateAsc&max=500` (ndjson, höchstens 4 Seiten je Lauf), chess.com über die
+  Monatsarchive (höchstens 12 je Lauf). Nur Standardschach ab der Grundstellung, höchstens `LeagueOnline:MaxYears` (5) zurück;
+  gespeichert je Partie Tempo (ultraBullet → bullet, daily → correspondence), Farbe, Ergebnis aus SEINER Sicht, Gegner + Wertungen,
+  alle Züge und die ersten 30 Halbzüge als `Line` (für den Baum). Der Stand steht am Konto (`SyncCursor` in ms, `SyncMore` = es gibt
+  noch Rückstand, `SyncedAt`, `GameCount`, `SyncError`); 404 = „Konto nicht gefunden", ein 429 beendet den ganzen Lauf.
+* **Takt** (`LeagueOnlineSyncScheduler`): zwei Minuten nach dem Start, dann je Konto alle `LeagueOnline:IntervalHours` (12), sofort
+  nach einem Weckruf; solange ein Konto Rückstand hat, eine Minute Pause zwischen den Läufen (je Lauf höchstens 10 min), sonst
+  schaut er alle 30 min. `LeagueOnline:Enabled=false` schaltet ihn ab. Die Integrationstests nehmen alle Hosted Services heraus.
+
+| Methode | Endpoint | Recht | Zweck |
+|---------|----------|-------|-------|
+| POST | `/api/league/player/{fide}/accounts` | manage | Konto anlegen `{ site, user (Name oder Profiladresse), sure, comment }` → das Konto (volle Form); 400 `reason` ∈ `invalidSite`/`invalidUser`/`duplicate`/`tooMany`, 404 `unknownPlayer` |
+| PUT | `/api/league/accounts/{id}` | manage | Ändern (fehlende Felder bleiben); 404 `notFound` |
+| DELETE | `/api/league/accounts/{id}` | manage | Entfernen samt Partien → 204 |
+| POST | `/api/league/accounts/{id}/sync` | manage | Nochmal holen (Fehler weg, Abruf geweckt) |
 
 **Letzte Partien nachspielen** (0.578.0): `GET /api/league/player/{fide}/recent` (und `/api/league/s/{token}/player/{fide}/recent`)
 → `{ fide, games[{ date, vs, color, pgn }] }` — dieselbe Auswahl und Reihenfolge wie `recent` der Karte
@@ -3578,6 +3618,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), **PageCount (Vorgabe 1; Seite 2+ in `ScoresheetScanPages`, 0.600.0)**, NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, **UserId ist NULLBAR (ohne Konto über einen LeagueHub-Teilen-Link), dann AccessKey? (≤32, UNIQUE, geheimer Schlüssel) + AnonIpHash? (≤64, HMAC der IP, nach 2 Tagen geleert)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
 | ScoresheetScanPages | Seite 2 und folgende eines Formulars über mehrere Fotos (0.600.0); Seite 1 bleibt `ScoresheetScans.Photo` | ScoresheetScanId (Cascade), Page (ab 2), Photo (LONGBLOB), ContentType (≤40), FileName? (≤200); **UNIQUE (ScoresheetScanId, Page)**. Partie löschen und Konto löschen räumen sie ohne Laden ab (`RemovePagesWithoutLoading`) |
 | LeagueClubGames | Vereins-Datenbank von LeagueHub (0.573.0): eine hochgeladene Partie mit mindestens einem Ligaspieler (anonymisiert = mindestens eine Seite „Schwaz") | Year? (nur das Jahr), White/Black (≤120, anonymisiert „Schwaz"), WhiteFide?/BlackFide? (≤16, Index), WhiteElo?/BlackElo?, Result (≤12), Event? (≤200, anonym leer), Plies, Pgn (LONGTEXT, Hauptvariante ohne Kommentare), MovesHash (≤64, Index), Anonymized, UploadedByUserId? (**kein FK**, nur bei nicht anonymisierten; Konto löschen setzt null), CreatedAt? (anonym leer) |
+| LeagueOnlineAccounts | Online-Konten eines Ligaspielers (je FIDE-ID): aus dem Bundle-Import oder seit 0.605.0 in LeagueHub gepflegt | FideId (≤16, Index), Site (lichess/chess.com), UserName, Url, Confidence (`sicher`/`wahrscheinlich`), Evidence? (≤1000, Kommentar), **Manual (in LeagueHub gepflegt — der Import lässt sie stehen)**, UpdatedAt?, SyncedAt?, SyncCursor (ms), SyncMore, SyncError? (≤300), GameCount |
+| LeagueOnlineGames | Geholte Partien der Online-Konten (0.605.0) | AccountId (Cascade), FideId (denormalisiert), ExternalId (**UNIQUE (AccountId, ExternalId)**), PlayedAt, Speed (bullet/blitz/rapid/classical/correspondence), Rated, White (Farbe des Spielers), Result (aus seiner Sicht), Opponent?, OpponentRating?, PlayerRating?, Line (≤400, erste 30 Halbzüge), Moves (LONGTEXT), Plies; Index (FideId, White, PlayedAt) |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | LeagueMegaPlayers | Spielerverzeichnis der ganzen ChessBase-Megabase (0.575.0) für die Namenssuche in LeagueHub; wird beim Einspielen komplett ersetzt | Name (≤120), NameKey (≤120, klein ohne Akzente, Index), FideId? (≤16, Index), Games, LastYear?, MaxElo? |

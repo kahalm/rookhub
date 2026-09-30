@@ -103,9 +103,10 @@ public sealed class LeagueService
         var acc = await _db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).ToListAsync(ct);
         if (p is null && acc.Count == 0) return null;
         var card = p is null ? new JsonObject { ["fide"] = fide, ["n"] = 0 } : JsonNode.Parse(p.ProfileJson)!.AsObject();
-        card["accounts"] = new JsonArray(acc.Where(a => !onlySure || a.Confidence == "sicher")
-            .Select(a => (JsonNode)new JsonObject { ["site"] = a.Site, ["user"] = a.UserName, ["url"] = a.Url, ["conf"] = a.Confidence })
-            .ToArray());
+        var shown = acc.Where(a => !onlySure || a.Confidence == LeagueOnlineAccountService.Sure).OrderBy(a => a.Id).ToList();
+        card["accounts"] = new JsonArray(shown.Select(a => (JsonNode)LeagueOnlineAccountService.ToJson(a, full: !onlySure)).ToArray());
+        // Online-Partien der gezeigten Konten — der Baum kann sie einbeziehen, auch ohne eine einzige Brettpartie.
+        card["online"] = shown.Sum(a => a.GameCount);
         return card;
     }
 
@@ -122,8 +123,9 @@ public sealed class LeagueService
         new LeagueProfileStore(_db).RecentAsync(fide, ct, color);
 
     /// <summary>Eröffnungsbaum des Spielers mit einer Farbe ab einer Zugfolge (<see cref="LeagueProfileStore.TreeAsync"/>).</summary>
-    public Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct) =>
-        new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct);
+    public Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct,
+        LeagueProfileStore.TreeFilter? filter = null) =>
+        new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct, filter);
 
     // ---- Teilen-Links -------------------------------------------------------------------------------
 

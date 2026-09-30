@@ -97,6 +97,7 @@ public class AppDbContext : DbContext
     public DbSet<LeaguePlayer> LeaguePlayers => Set<LeaguePlayer>();
     public DbSet<LeaguePlayerProfile> LeaguePlayerProfiles => Set<LeaguePlayerProfile>();
     public DbSet<LeagueOnlineAccount> LeagueOnlineAccounts => Set<LeagueOnlineAccount>();
+    public DbSet<LeagueOnlineGame> LeagueOnlineGames => Set<LeagueOnlineGame>();
     public DbSet<LeagueShare> LeagueShares => Set<LeagueShare>();
     public DbSet<LeagueView> LeagueViews => Set<LeagueView>();
     public DbSet<LeagueClubGame> LeagueClubGames => Set<LeagueClubGame>();
@@ -655,8 +656,22 @@ public class AppDbContext : DbContext
             e.Property(a => a.UserName).HasMaxLength(60);
             e.Property(a => a.Url).HasMaxLength(200);
             e.Property(a => a.Confidence).HasMaxLength(20);
-            e.Property(a => a.Evidence).HasMaxLength(300);
+            e.Property(a => a.Evidence).HasMaxLength(1000);
+            e.Property(a => a.SyncError).HasMaxLength(300);
             e.HasIndex(a => a.FideId);
+        });
+        modelBuilder.Entity<LeagueOnlineGame>(e =>
+        {
+            e.Property(g => g.FideId).HasMaxLength(16);
+            e.Property(g => g.ExternalId).HasMaxLength(40);
+            e.Property(g => g.Speed).HasMaxLength(16);
+            e.Property(g => g.Result).HasMaxLength(8);
+            e.Property(g => g.Opponent).HasMaxLength(60);
+            e.Property(g => g.Line).HasMaxLength(400);
+            e.Property(g => g.Moves).HasColumnType("longtext");
+            e.HasOne(g => g.Account).WithMany().HasForeignKey(g => g.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(g => new { g.AccountId, g.ExternalId }).IsUnique();
+            e.HasIndex(g => new { g.FideId, g.White, g.PlayedAt });
         });
         modelBuilder.Entity<LeagueShare>(e =>
         {
