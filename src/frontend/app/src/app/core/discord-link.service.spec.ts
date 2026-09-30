@@ -21,6 +21,12 @@ describe('DiscordLinkService', () => {
   let ask: jasmine.Spy;
   let snackbar: { info: jasmine.Spy };
 
+  /** Beantwortet das GET /api/profile, das confirmAndLink vor der Rückfrage stellt (bestehende Verknüpfung). */
+  function profile(discordId: string | null = null, discordUsername: string | null = null): void {
+    const req = http.expectOne(r => r.method === 'GET' && r.url === '/api/profile');
+    req.flush({ username: 'ich', discordId, discordUsername });
+  }
+
   beforeEach(() => {
     sessionStorage.removeItem(DISCORD_LINK_STASH_KEY);
     localStorage.removeItem(DISCORD_LINK_STASH_KEY);
@@ -78,6 +84,8 @@ describe('DiscordLinkService', () => {
       ask.and.returnValue(of(false));
       let outcome: DiscordLinkOutcome | undefined;
       svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      expect(ask).not.toHaveBeenCalled();           // erst die bestehende Verknüpfung lesen
+      profile();
       expect(ask).toHaveBeenCalledWith('profile.discord.confirmLink', { discord: 'fremder_jürgen' });
       http.expectNone('/api/profile/discord/link');
       expect(outcome).toBe('declined');
@@ -86,6 +94,7 @@ describe('DiscordLinkService', () => {
     it('nach „OK": POST und Erfolgsmeldung', () => {
       let outcome: DiscordLinkOutcome | undefined;
       svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      profile();
       const req = http.expectOne('/api/profile/discord/link');
       expect(req.request.body).toEqual({ token: TOKEN });
       req.flush({});
@@ -96,6 +105,7 @@ describe('DiscordLinkService', () => {
     it('409 meldet den Konflikt und gilt als endgültig', () => {
       let outcome: DiscordLinkOutcome | undefined;
       svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      profile();
       http.expectOne('/api/profile/discord/link').flush({ message: 'conflict' }, { status: 409, statusText: 'Conflict' });
       expect(outcome).toBe('rejected');
       expect(snackbar.info).toHaveBeenCalledWith('profile.discord.linkConflict', { duration: 4000 });
@@ -103,6 +113,7 @@ describe('DiscordLinkService', () => {
 
     it('ohne Namen im Token zeigt die Rückfrage die Discord-ID', () => {
       svc.confirmAndLink(botToken({ id: '4711', exp: 9999999999 })).subscribe();
+      profile();
       expect(ask).toHaveBeenCalledWith('profile.discord.confirmLink', { discord: '4711' });
       http.expectOne('/api/profile/discord/link').flush({});
     });
@@ -111,9 +122,64 @@ describe('DiscordLinkService', () => {
       let outcome: DiscordLinkOutcome | undefined;
       svc.confirmAndLink('kein-token').subscribe(o => outcome = o);
       expect(ask).not.toHaveBeenCalled();
+      http.expectNone('/api/profile');
       http.expectNone('/api/profile/discord/link');
       expect(outcome).toBe('rejected');
       expect(snackbar.info).toHaveBeenCalledWith('profile.discord.linkFailed', { duration: 4000 });
+    });
+
+    // Der Bot hängt ?dl= an jeden hideBoard-Rätsellink: ein schon verknüpftes Konto darf nicht bei jedem
+    // Rätselklick den Warn-Dialog sehen (gewöhnt ans blinde Bestätigen).
+    it('dieselbe Discord-ID schon verknüpft → ask nicht aufgerufen, kein POST, keine Meldung', () => {
+      let outcome: DiscordLinkOutcome | undefined;
+      svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      profile('4711', 'fremder_jürgen');
+      expect(ask).not.toHaveBeenCalled();
+      http.expectNone('/api/profile/discord/link');
+      expect(outcome).toBe('linked');
+      expect(snackbar.info).not.toHaveBeenCalled();
+    });
+
+    it('dieselbe Discord-ID mit geändertem Namen → still nachziehen (POST ohne Rückfrage und ohne Meldung)', () => {
+      let outcome: DiscordLinkOutcome | undefined;
+      svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      profile('4711', 'alter_name');
+      expect(ask).not.toHaveBeenCalled();
+      const req = http.expectOne('/api/profile/discord/link');
+      expect(req.request.body).toEqual({ token: TOKEN });
+      req.flush({}, { status: 500, statusText: 'Server Error' });
+      expect(outcome).toBe('linked');
+      expect(snackbar.info).not.toHaveBeenCalled();
+    });
+
+    it('mit einem ANDEREN Discord-Konto verknüpft → die Rückfrage nennt die Verknüpfung, die ersetzt wird', () => {
+      ask.and.returnValue(of(false));
+      let outcome: DiscordLinkOutcome | undefined;
+      svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      profile('1234', 'mein_discord');
+      expect(ask).toHaveBeenCalledOnceWith('profile.discord.confirmLinkReplace',
+        { discord: 'fremder_jürgen', current: 'mein_discord' });
+      http.expectNone('/api/profile/discord/link');
+      expect(outcome).toBe('declined');
+    });
+
+    it('anderes Discord-Konto ohne gespeicherten Namen → die Rückfrage nennt dessen ID', () => {
+      svc.confirmAndLink(TOKEN).subscribe();
+      profile('1234', null);
+      expect(ask).toHaveBeenCalledOnceWith('profile.discord.confirmLinkReplace',
+        { discord: 'fremder_jürgen', current: '1234' });
+      http.expectOne('/api/profile/discord/link').flush({});
+    });
+
+    it('Profil nicht lesbar → wie bisher nachfragen (nie still verknüpfen)', () => {
+      ask.and.returnValue(of(false));
+      let outcome: DiscordLinkOutcome | undefined;
+      svc.confirmAndLink(TOKEN).subscribe(o => outcome = o);
+      http.expectOne(r => r.method === 'GET' && r.url === '/api/profile')
+        .flush({ message: 'boom' }, { status: 503, statusText: 'Unavailable' });
+      expect(ask).toHaveBeenCalledOnceWith('profile.discord.confirmLink', { discord: 'fremder_jürgen' });
+      http.expectNone('/api/profile/discord/link');
+      expect(outcome).toBe('declined');
     });
   });
 
@@ -132,6 +198,7 @@ describe('DiscordLinkService', () => {
   it('consumeStashed() fragt erst nach, dann verknüpft es und räumt den Stash', () => {
     svc.stash(TOKEN);
     svc.consumeStashed();
+    profile();
     expect(ask).toHaveBeenCalledWith('profile.discord.confirmLink', { discord: 'fremder_jürgen' });
     const req = http.expectOne('/api/profile/discord/link');
     expect(req.request.body).toEqual({ token: TOKEN });
@@ -143,6 +210,16 @@ describe('DiscordLinkService', () => {
     ask.and.returnValue(of(false));
     svc.stash(TOKEN);
     svc.consumeStashed();
+    profile();
+    http.expectNone('/api/profile/discord/link');
+    expect(sessionStorage.getItem(DISCORD_LINK_STASH_KEY)).toBeNull();
+  });
+
+  it('consumeStashed(): Konto schon mit derselben Discord-ID verknüpft → keine Rückfrage, Stash weg', () => {
+    svc.stash(TOKEN);
+    svc.consumeStashed();
+    profile('4711', 'fremder_jürgen');
+    expect(ask).not.toHaveBeenCalled();
     http.expectNone('/api/profile/discord/link');
     expect(sessionStorage.getItem(DISCORD_LINK_STASH_KEY)).toBeNull();
   });
@@ -150,6 +227,7 @@ describe('DiscordLinkService', () => {
   it('consumeStashed() clears the stash on a 409 conflict', () => {
     svc.stash(TOKEN);
     svc.consumeStashed();
+    profile();
     const req = http.expectOne('/api/profile/discord/link');
     req.flush({ message: 'conflict' }, { status: 409, statusText: 'Conflict' });
     expect(sessionStorage.getItem(DISCORD_LINK_STASH_KEY)).toBeNull();
@@ -158,6 +236,7 @@ describe('DiscordLinkService', () => {
   it('consumeStashed() keeps the stash on a transient (500) error', () => {
     svc.stash(TOKEN);
     svc.consumeStashed();
+    profile();
     const req = http.expectOne('/api/profile/discord/link');
     req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
     expect(sessionStorage.getItem(DISCORD_LINK_STASH_KEY)).toBe(TOKEN);
@@ -167,6 +246,7 @@ describe('DiscordLinkService', () => {
     localStorage.setItem(DISCORD_LINK_STASH_KEY, TOKEN);
     svc.consumeStashed();
     expect(ask).not.toHaveBeenCalled();
+    http.expectNone('/api/profile');
     http.expectNone('/api/profile/discord/link');
     expect(localStorage.getItem(DISCORD_LINK_STASH_KEY)).toBeNull();
   });

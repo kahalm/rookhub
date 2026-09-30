@@ -15,6 +15,12 @@ export const DISCORD_LINK_STASH_KEY = 'rookhub_discord_link';
 /** Ausgang von {@link DiscordLinkService.confirmAndLink}: `failed` = vorübergehend (Netz, 5xx), später noch einmal. */
 export type DiscordLinkOutcome = 'linked' | 'declined' | 'rejected' | 'failed';
 
+/** Die bestehende Discord-Verknüpfung des eigenen Kontos (Auszug aus GET /api/profile). */
+interface CurrentDiscordLink {
+  discordId: string | null;
+  discordUsername: string | null;
+}
+
 /**
  * Liest Discord-ID und -Namen aus dem Token-Payload (`body.sig`, body = base64url(JSON {id,u,exp})) — NUR
  * zur Anzeige in der Rückfrage. Ob der Token echt ist, prüft allein der Server (Signatur + Ablauf).
@@ -38,7 +44,8 @@ export function discordIdentityFromToken(token: string): { id: string; name: str
 
 /**
  * Verknüpfung des RookHub-Kontos mit Discord via bot-signiertem Token (`?dl=`-Param).
- * - Eingeloggt: erst nachfragen (mit dem Discord-Namen aus dem Token), dann an die API senden.
+ * - Eingeloggt: erst nachfragen (mit dem Discord-Namen aus dem Token), dann an die API senden — außer das
+ *   Konto ist schon mit genau dieser Discord-ID verknüpft (dann still, siehe confirmAndLink).
  * - Anonym: Token in sessionStorage vormerken; nach Login/Registrierung wird ebenfalls erst nachgefragt
  *   (siehe AuthService.storeUser → consumeStashed).
  *
@@ -66,6 +73,14 @@ export class DiscordLinkService {
    * Fragt mit dem Discord-Namen aus dem Token nach und verknüpft erst nach „OK"; das Ergebnis meldet ein
    * Snackbar. Wirft nie. Ein unlesbarer Token kommt gar nicht erst bis zur Rückfrage (der Server lehnte ihn
    * ohnehin ab, und es gäbe keinen Namen zu zeigen).
+   *
+   * Vorher wird die bestehende Verknüpfung gelesen (GET /api/profile):
+   * - schon mit GENAU dieser Discord-ID verknüpft → keine Rückfrage, `linked`. Der Bot hängt `?dl=` an jeden
+   *   hideBoard-Rätsellink; ein Warn-Dialog bei jedem Rätselklick gewöhnte ans blinde Bestätigen und entwertete
+   *   damit die einzige Schutzstufe. Nur wenn der Name im Token vom gespeicherten abweicht, geht der POST still
+   *   hinaus (gleiche ID, hält den Namen aktuell — wie früher).
+   * - mit einer ANDEREN Discord-ID verknüpft → die Rückfrage sagt, welche Verknüpfung ersetzt wird.
+   * - Profil nicht lesbar (offline, 5xx) → wie unverknüpft nachfragen (sichere Seite).
    */
   confirmAndLink(token: string): Observable<DiscordLinkOutcome> {
     const identity = discordIdentityFromToken(token);
@@ -73,20 +88,49 @@ export class DiscordLinkService {
       this.snackbar.info(this.translate.instant('profile.discord.linkFailed'), { duration: 4000 });
       return of('rejected');
     }
-    return this.confirmDialog.ask('profile.discord.confirmLink', { discord: identity.name ?? identity.id }).pipe(
-      switchMap((ok): Observable<DiscordLinkOutcome> => {
-        if (!ok) return of('declined');
-        return this.link(token).pipe(
-          map((): DiscordLinkOutcome => {
-            this.snackbar.info(this.translate.instant('profile.discord.linked'));
-            return 'linked';
-          }),
-          catchError(err => {
-            const key = err?.status === 409 ? 'profile.discord.linkConflict' : 'profile.discord.linkFailed';
-            this.snackbar.info(this.translate.instant(key), { duration: 4000 });
-            return of<DiscordLinkOutcome>(err?.status === 400 || err?.status === 409 ? 'rejected' : 'failed');
-          }),
-        );
+    return this.currentLink().pipe(
+      switchMap((current): Observable<DiscordLinkOutcome> => {
+        if (current?.discordId === identity.id) return this.refreshSameLink(token, identity.name, current);
+        const discord = identity.name ?? identity.id;
+        const ask$ = current?.discordId
+          ? this.confirmDialog.ask('profile.discord.confirmLinkReplace',
+              { discord, current: current.discordUsername ?? current.discordId })
+          : this.confirmDialog.ask('profile.discord.confirmLink', { discord });
+        return ask$.pipe(switchMap(ok => ok ? this.linkWithFeedback(token) : of<DiscordLinkOutcome>('declined')));
+      }),
+    );
+  }
+
+  /** Bestehende Verknüpfung des eigenen Kontos; `null`, wenn das Profil nicht lesbar ist. */
+  private currentLink(): Observable<CurrentDiscordLink | null> {
+    return this.http.get<Partial<CurrentDiscordLink> | null>('/api/profile').pipe(
+      map(p => ({
+        discordId: p?.discordId?.trim() || null,
+        discordUsername: p?.discordUsername?.trim() || null,
+      })),
+      catchError(() => of(null)),
+    );
+  }
+
+  /** Gleiche Discord-ID schon verknüpft: nichts fragen, nichts melden; nur einen geänderten Namen still nachziehen. */
+  private refreshSameLink(token: string, tokenName: string | null, current: CurrentDiscordLink): Observable<DiscordLinkOutcome> {
+    if (!tokenName || tokenName === current.discordUsername) return of('linked');
+    return this.link(token).pipe(
+      map((): DiscordLinkOutcome => 'linked'),
+      catchError(() => of<DiscordLinkOutcome>('linked')),
+    );
+  }
+
+  private linkWithFeedback(token: string): Observable<DiscordLinkOutcome> {
+    return this.link(token).pipe(
+      map((): DiscordLinkOutcome => {
+        this.snackbar.info(this.translate.instant('profile.discord.linked'));
+        return 'linked';
+      }),
+      catchError(err => {
+        const key = err?.status === 409 ? 'profile.discord.linkConflict' : 'profile.discord.linkFailed';
+        this.snackbar.info(this.translate.instant(key), { duration: 4000 });
+        return of<DiscordLinkOutcome>(err?.status === 400 || err?.status === 409 ? 'rejected' : 'failed');
       }),
     );
   }

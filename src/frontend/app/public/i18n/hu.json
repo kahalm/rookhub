@@ -326,6 +326,7 @@
       "linkConflict": "Ez a Discord-fiók már egy másik RookHub-felhasználóhoz van kapcsolva.",
       "linkFailed": "Nem sikerült összekapcsolni a Discord-fiókot",
       "confirmLink": "Összekapcsolod a(z) „{{discord}}” Discord-fiókot a RookHub-fiókoddal? Csak akkor erősítsd meg, ha ez a saját Discord-fiókod, és a linket te magad kaptad a RookHub bottól — a bot ezután ennek a fióknak küldi az edzésáttekintésedet.",
+      "confirmLinkReplace": "A RookHub-fiókod jelenleg a(z) „{{current}}” Discord-fiókhoz van kapcsolva. Lecseréled ezt a kapcsolatot a(z) „{{discord}}” Discord-fiókra? Csak akkor erősítsd meg, ha ez a saját Discord-fiókod, és a linket te magad kaptad a RookHub bottól — a bot ezután az új fióknak küldi az edzésáttekintésedet.",
       "stashed": "Jelentkezz be vagy regisztrálj a Discord-fiókod összekapcsolásának befejezéséhez."
     },
     "tokens": {
