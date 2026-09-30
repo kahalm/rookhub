@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.617.1", date: "2026-09-30", changes: [
+    { en: "ClubHub: on a child’s card, the save bar now stays at the bottom edge of the screen while you edit, however far down you are in the form.", de: "ClubHub: Im Karteiblatt bleibt die Speichern-Leiste beim Bearbeiten am unteren Bildschirmrand sichtbar, egal wo im Formular man gerade ist." },
+  ] },
   { version: "0.617.0", date: "2026-09-30", changes: [
     { en: "LeagueHub player card: the filters (board / board + online / online, time control, unsure accounts, last x years) now sit on the card itself and apply to the opening overview (“With White”, “With Black against 1.e4” … and the most frequent move orders) as well as to the opening tree. Without a filter the card looks as before.", de: "LeagueHub-Spielerkarte: Die Filter (Brett / Brett + online / Online, Zeitformat, unsichere Konten, letzte x Jahre) sitzen jetzt auf der Karte selbst und gelten für die Eröffnungsübersicht („Mit Weiß“, „Mit Schwarz gegen 1.e4“ … samt häufigster Zugfolgen) wie für den Eröffnungsbaum. Ohne Filter sieht die Karte aus wie bisher." },
   ] },

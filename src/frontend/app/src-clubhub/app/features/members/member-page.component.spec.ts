@@ -95,6 +95,14 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/kind', 12], { replaceUrl: true });
   });
 
+  it('die Speichern-Leiste klebt am unteren Rand — egal, wo man im Formular gerade ist', async () => {
+    await create(null);
+    const bar = el().querySelector<HTMLElement>('.form-save')!;
+    expect(bar.querySelector('button[type=submit]')!.textContent).toBe('Kind anlegen');
+    expect(getComputedStyle(bar).position).toBe('sticky');                             // aus clubhub.scss, das Karma mitlädt
+    expect(getComputedStyle(bar).bottom).toBe('0px');
+  });
+
   it('Anlegen: der Nachname ist optional — der Vorname genügt', async () => {
     api.createMember.and.callFake(async (input: MemberInput) => MEMBER({ id: 13, firstName: input.firstName, lastName: input.lastName, contacts: [] }));
     await create(null);

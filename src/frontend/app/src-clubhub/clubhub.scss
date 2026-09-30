@@ -216,8 +216,16 @@ a.chip:hover { border-color: var(--ink); }
 .stats dt { color: var(--muted); font-size: 14px; order: 2; }
 .stats dd { margin: 0; font: 700 24px/1.1 var(--slab); }
 
-/* Formular des Blatts */
+/* Formular des Blatts. Die Knopfleiste klebt am unteren Rand, solange das Formular im Bild ist — bei einem langen
+   Blatt (viele Kontakte, Notiz) wäre „Speichern" sonst erst ganz unten zu finden. */
 .form { display: grid; gap: 14px; }
+.form-save {
+  position: sticky; bottom: 0; z-index: 1;
+  margin: 0 -18px; padding: 12px 18px 14px;
+  background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 10px 10px;
+  flex-wrap: nowrap;
+}
+.form-save .btn.primary { flex: 1 1 auto; }
 .contact-edit { display: grid; grid-template-columns: 8.5rem minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .contact-edit + .contact-edit { margin-top: 8px; }
 .group-picks { display: flex; flex-wrap: wrap; gap: 4px 22px; }
@@ -317,4 +325,5 @@ h1, h2, h3, .brand, .tabs a, .today strong, .tally strong, .stats dd, .code, .re
   .group { grid-template-columns: 1fr; }
   .roll-head { grid-template-columns: 1fr; }
   .sheet { padding: 14px 14px 4px; }
+  .form-save { margin: 0 -14px; padding: 10px 14px 12px; }
 }

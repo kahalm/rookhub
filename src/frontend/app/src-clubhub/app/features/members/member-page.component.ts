@@ -102,13 +102,16 @@ function orNull(value: string | null | undefined): string | null {
             <span class="hint">Nur, was die Trainer wissen müssen (z. B. „wird um 18 Uhr abgeholt").</span></label>
           <label class="check mt-s"><input type="checkbox" [checked]="form().archived" (change)="set('archived', $any($event.target).checked)">
             Im Archiv (kommt nicht mehr ins Training)</label>
+          <!-- Löschen steht hier am Ende und nicht in der klebenden Leiste: selten, endgültig, kein Griff daneben. -->
+          @if (member()?.canDelete) { <p class="mt-s"><button type="button" class="btn-link danger" [disabled]="busy()" (click)="remove()">Blatt löschen</button></p> }
         </section>
 
         <p class="err status-line" role="alert">{{ error() ?? '' }}</p>
-        <div class="actions pb">
+        <!-- Klebt am unteren Rand, solange das Formular im Bild ist: Speichern soll immer erreichbar sein, egal wo man
+             gerade schreibt (Wunsch 2026-09-30). -->
+        <div class="actions form-save">
           <button type="submit" class="btn primary" [disabled]="busy()">{{ member() ? 'Änderungen speichern' : 'Kind anlegen' }}</button>
           <button type="button" class="btn" [disabled]="busy()" (click)="cancel()">Abbrechen</button>
-          @if (member()?.canDelete) { <button type="button" class="btn-link danger" [disabled]="busy()" (click)="remove()">Blatt löschen</button> }
         </div>
       </form>
     } @else if (member(); as m) {
