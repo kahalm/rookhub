@@ -27,6 +27,28 @@ describe('PermissionRefresher', () => {
     TestBed.resetTestingModule();                                              // räumt Timer und Abos ab
   }));
 
+  // F1-019: die Tab-Rückkehr fragt höchstens so oft wie der 2-Minuten-Takt (hinter einer NAT-IP zählen alle Tabs).
+  it('Tab-Rückkehr fragt erst nach dem Mindestabstand von 2 Minuten erneut', fakeAsync(() => {
+    let state: DocumentVisibilityState = 'visible';
+    spyOnProperty(document, 'visibilityState', 'get').and.callFake(() => state);
+    const back = (s: DocumentVisibilityState) => { state = s; document.dispatchEvent(new Event('visibilitychange')); };
+    void TestBed.inject(PermissionRefresher).start();
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(1);
+
+    back('hidden');
+    tick(60_000);
+    back('visible');                                                           // nach 1 min zurück: noch nicht
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(1);
+
+    back('hidden');
+    tick(2 * 60_000);                                                          // verdeckt: der Takt fragt nicht
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(1);
+    back('visible');                                                           // nach 3 min zurück: jetzt
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(2);
+    expect(PermissionRefresher.MinGapMs).toBeGreaterThanOrEqual(2 * 60_000);
+    TestBed.resetTestingModule();
+  }));
+
   it('abgemeldet fragt es nicht', fakeAsync(() => {
     auth.isLoggedIn = false;
     void TestBed.inject(PermissionRefresher).start();

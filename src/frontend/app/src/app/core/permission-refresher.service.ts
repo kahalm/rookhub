@@ -14,8 +14,12 @@ import { AuthService } from './auth.service';
 export class PermissionRefresher {
   static readonly IntervalMs = 2 * 60_000;
   static readonly StartTimeoutMs = 3000;
-  /** Mindestabstand beim Zurückkehren in den Tab — hin- und herschalten fragt nicht jedes Mal. */
-  static readonly MinGapMs = 30_000;
+  /**
+   * Mindestabstand beim Zurückkehren in den Tab — hin- und herschalten fragt nicht jedes Mal. So lang wie
+   * der Takt (war 30 s): hinter einer NAT-IP (Verein, Schulklasse) summieren sich die Abfragen aller Tabs,
+   * und eine Rückkehr soll nicht öfter fragen als der sichtbare Tab ohnehin alle {@link IntervalMs} tut.
+   */
+  static readonly MinGapMs = PermissionRefresher.IntervalMs;
 
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
