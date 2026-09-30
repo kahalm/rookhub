@@ -10,11 +10,11 @@ import { GroupsPageComponent, scheduleText } from './groups-page.component';
 const GROUP = (extra: Partial<Group> = {}): Group => ({
   id: 1, name: 'Anfänger', weekday: 5, schedule: '17:00, Vereinsheim', archived: false, memberCount: 2, sessionCount: 2, lastSession: '2026-09-25',
   trainers: [{ userId: 4, username: 'tina' }], canManage: false,
-  sessions: [{ id: 5, date: '2026-09-18', topic: 'Matt in 1', present: 1, excused: 1, absent: 0 },
-             { id: 6, date: '2026-09-25', topic: null, present: 1, excused: 0, absent: 1 }],
+  sessions: [{ id: 5, date: '2026-09-18', topic: 'Matt in 1', notes: 'Arbeitsblatt 2, danach Turnier jeder gegen jeden', present: 1, absent: 1 },
+             { id: 6, date: '2026-09-25', topic: null, notes: null, present: 1, absent: 1 }],
   members: [
-    { id: 11, firstName: 'Anna', lastName: 'Auer', statuses: ['excused', 'present'], present: 1, recorded: 2 },
-    { id: 12, firstName: 'Ben', lastName: 'Berger', statuses: [null, 'absent'], present: 0, recorded: 1 },
+    { id: 11, firstName: 'Anna', lastName: 'Auer', statuses: ['absent', 'present'], present: 1, recorded: 2 },
+    { id: 12, firstName: 'Ben', lastName: '', statuses: [null, 'absent'], present: 0, recorded: 1 },   // Nachname nicht bekannt
   ], ...extra,
 });
 const ROW = (extra: Partial<GroupRow> = {}): GroupRow =>
@@ -112,11 +112,28 @@ describe('ClubHub-Gruppen', () => {
       const rows = Array.from(el.querySelectorAll('.matrix tbody tr')).map(tr =>
         [tr.querySelector('.name')!.textContent!.trim().replace(/\s+/g, ' '),
          ...Array.from(tr.querySelectorAll('.cell')).map(c => c.textContent), tr.querySelector('.rate')!.textContent]);
-      expect(rows).toEqual([['Auer Anna', 'E', '✓', '1 von 2'], ['Berger Ben', '·', '–', '0 von 1']]);
-      expect(el.querySelector('.matrix tbody .cell')!.classList).toContain('excused');
+      expect(rows).toEqual([['Auer Anna', '–', '✓', '1 von 2'], ['Ben', '·', '–', '0 von 1']]);
+      expect(el.querySelector('.matrix tbody .cell')!.classList).toContain('absent');
+      expect(el.querySelector('.legend')!.textContent).not.toContain('entschuldigt');
       expect(el.querySelector('.page-head a.primary')!.getAttribute('href')).toBe('/gruppen/1/anwesenheit');
       expect(el.querySelector('.manage-group')).toBeNull();                               // Trainer ändern die Gruppe nicht
-      expect([statusMark('present'), statusMark('excused'), statusMark('absent'), statusMark(null)]).toEqual(['✓', 'E', '–', '·']);
+      expect([statusMark('present'), statusMark('absent'), statusMark(null)]).toEqual(['✓', '–', '·']);
+    });
+
+    it('Trainingstagebuch: je Einheit Thema und „was wurde gemacht", die neueste zuerst', async () => {
+      const fixture = await open(GROUP());
+      const entries = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.diary li'));
+      expect(entries.map(li => li.querySelector('a')!.textContent)).toEqual(['Freitag, 25. September 2026', 'Freitag, 18. September 2026']);
+      expect(entries[0].textContent).toContain('1 von 2 da');
+      expect(entries[0].textContent).toContain('Kein Thema eingetragen.');
+      expect(entries[1].querySelector('.topic')!.textContent).toBe('Matt in 1');
+      expect(entries[1].textContent).toContain('Arbeitsblatt 2, danach Turnier jeder gegen jeden');
+      expect(entries[1].querySelector('a')!.getAttribute('href')).toBe('/gruppen/1/anwesenheit?datum=2026-09-18');   // zum Nachtragen
+    });
+
+    it('ohne Einheit kein Tagebuch', async () => {
+      const fixture = await open(GROUP({ sessions: [], members: [] }));
+      expect((fixture.nativeElement as HTMLElement).querySelector('.diary')).toBeNull();
     });
 
     it('Kinder verwalten: die Kartei lädt erst beim Aufklappen; angeboten wird nur, wer noch nicht drin ist', async () => {

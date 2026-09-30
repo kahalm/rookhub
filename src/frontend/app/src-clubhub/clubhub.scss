@@ -38,8 +38,6 @@ html {
   --mark-ink: #2b2600;
   --ok: #1d7347;
   --ok-soft: #e2f1e8;
-  --warn: #9a6200;
-  --warn-soft: #fbf0d8;
   --bad: #b3261e;
   --bad-soft: #f9e4e2;
   --focus: #1c5fd4;
@@ -62,8 +60,6 @@ html.dark-theme {
   --mark-ink: #1c1800;
   --ok: #57c48c;
   --ok-soft: #1a3327;
-  --warn: #e2a63d;
-  --warn-soft: #35290f;
   --bad: #f07b72;
   --bad-soft: #3a1d1b;
   --focus: #7aa7ff;
@@ -256,21 +252,27 @@ h3.inline { display: inline; }
 .matrix td.rate { color: var(--muted); font-size: 15px; text-align: right; }
 .cell { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; font-weight: 700; font-size: 15px; }
 .cell.present { background: var(--ok-soft); color: var(--ok); }
-.cell.excused { background: var(--warn-soft); color: var(--warn); }
 .cell.absent { background: var(--bad-soft); color: var(--bad); }
 .cell.none { color: var(--line); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0 0; color: var(--muted); font-size: 14px; align-items: center; }
 .legend .cell { width: 20px; height: 20px; font-size: 13px; margin-right: 4px; }
 
 /* ---- Anwesenheit abhaken ------------------------------------------------------------------- */
-.roll-head { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 12px; margin: 14px 0; }
+.roll-head { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr); gap: 12px; margin: 14px 0 12px; }
+.field.done { margin: 0 0 16px; }
+.field.done textarea { min-height: 76px; }
+/* Trainingstagebuch auf der Gruppenseite */
+.diary h2 { margin-bottom: 4px; }
+.diary .notes li p:first-child { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
+.diary .notes li p:first-child a { font-weight: 700; text-decoration: none; }
+.diary .notes li p:first-child a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.diary .topic { font-size: 18px; }
 .tally { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin: 0 0 8px; }
 .tally strong { font: 700 26px/1.1 var(--slab); }
 .roll { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.roll li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; border-top: 1px solid var(--line); }
+.roll li { display: grid; border-top: 1px solid var(--line); }
 .roll li:first-child { border-top: 0; }
 .roll li.present { background: var(--ok-soft); }
-.roll li.excused { background: var(--warn-soft); }
 .tick {
   display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; align-items: center; text-align: left;
   font: inherit; font-size: 19px; color: inherit; background: none; border: 0; padding: 10px 14px; min-height: 58px; cursor: pointer;
@@ -281,9 +283,6 @@ h3.inline { display: inline; }
   stroke-dasharray: 30; stroke-dashoffset: 30; }
 .tick[aria-pressed="true"] .box svg { stroke-dashoffset: 0; transition: stroke-dashoffset .18s ease-out; }
 .tick b { font-weight: 700; }
-.excuse { font: inherit; font-size: 15px; color: var(--muted); background: none; border: 0; border-left: 1px solid var(--line); padding: 0 14px; cursor: pointer; min-width: 7.2rem; }
-.excuse[aria-pressed="true"] { color: var(--warn); font-weight: 700; }
-.excuse:hover { color: var(--ink); }
 .save-bar { position: sticky; bottom: 0; background: var(--paper); padding: 12px 0; margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; border-top: 1px solid var(--line); }
 .save-bar .btn.primary { flex: 1 1 14rem; min-height: 52px; font-size: 18px; }
 
@@ -317,6 +316,5 @@ h1, h2, h3, .brand, .tabs a, .today strong, .tally strong, .stats dd, .code, .re
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
   .group { grid-template-columns: 1fr; }
   .roll-head { grid-template-columns: 1fr; }
-  .excuse { min-width: 6.4rem; padding: 0 10px; }
   .sheet { padding: 14px 14px 4px; }
 }

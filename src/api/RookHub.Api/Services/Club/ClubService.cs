@@ -91,6 +91,11 @@ public class ClubService
 
     // ---- Kinder -------------------------------------------------------------------------------
 
+    /// <summary>Wonach die Kartei ordnet: der Nachname — und wo keiner eingetragen ist, der Vorname. So steht „Daniel" ohne
+    /// Nachnamen bei D statt vor allen anderen.</summary>
+    private static readonly System.Linq.Expressions.Expression<Func<ClubMember, string>> SortName =
+        m => m.LastName == "" ? m.FirstName : m.LastName;
+
     /// <summary>
     /// Die Kartei. Bewusst OHNE Namenssuche am Server: die Kartei eines Vereins ist klein, die Oberfläche sucht im Browser —
     /// und ein Name in der Adresse stünde in jedem Zugriffsprotokoll.
@@ -103,7 +108,7 @@ public class ClubService
         var query = Visible(actor, own).Where(m => m.Archived == archived);
         if (groupId is { } gid) query = query.Where(m => m.Groups.Any(g => g.GroupId == gid));
         var members = await query.Include(m => m.Contacts).Include(m => m.Groups)
-            .OrderBy(m => m.LastName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
+            .OrderBy(SortName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
         var names = await GroupNamesAsync(members.SelectMany(m => m.Groups).Select(g => g.GroupId), ct);
         return members.Select(m => Fill(new ClubMemberListDto(), m, names)).ToList();
     }
@@ -154,7 +159,7 @@ public class ClubService
     private void Apply(ClubMember m, ClubMemberInputDto input, DateTime now)
     {
         m.FirstName = Clean(input.FirstName) ?? throw new DomainValidationException("Der Vorname fehlt.");
-        m.LastName = Clean(input.LastName) ?? throw new DomainValidationException("Der Nachname fehlt.");
+        m.LastName = Clean(input.LastName) ?? "";                       // optional — der Trainer kennt ihn oft nicht
 
         var maxYear = now.Year;
         if (Clean(input.BirthDate) is { } raw)
@@ -288,7 +293,6 @@ public class ClubService
         dto.Attendance = new ClubAttendanceSummaryDto
         {
             Present = attendance.Count(a => a.Status == ClubAttendanceStatus.Present),
-            Excused = attendance.Count(a => a.Status == ClubAttendanceStatus.Excused),
             Absent = attendance.Count(a => a.Status == ClubAttendanceStatus.Absent),
             Recent = attendance.OrderByDescending(a => a.Date).ThenByDescending(a => a.SessionId).Take(10)
                 .Select(a => new ClubAttendanceEntryDto
@@ -447,7 +451,7 @@ public class ClubService
         take = Math.Clamp(take, 1, MaxSessionWindow);
 
         var members = await _db.ClubGroupMembers.Where(gm => gm.GroupId == id && !gm.Member!.Archived)
-            .Select(gm => gm.Member!).OrderBy(m => m.LastName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
+            .Select(gm => gm.Member!).OrderBy(SortName).ThenBy(m => m.FirstName).AsNoTracking().ToListAsync(ct);
         var sessionCount = await _db.ClubSessions.CountAsync(s => s.GroupId == id, ct);
         var sessions = (await _db.ClubSessions.Where(s => s.GroupId == id).OrderByDescending(s => s.Date).Take(take)
             .AsNoTracking().ToListAsync(ct)).OrderBy(s => s.Date).ToList();
@@ -700,7 +704,6 @@ public class ClubService
         dto.Topic = s.Topic;
         dto.Notes = s.Notes;
         dto.Present = list.Count(x => x == ClubAttendanceStatus.Present);
-        dto.Excused = list.Count(x => x == ClubAttendanceStatus.Excused);
         dto.Absent = list.Count(x => x == ClubAttendanceStatus.Absent);
         return dto;
     }
@@ -709,7 +712,6 @@ public class ClubService
     {
         "" => null,
         "present" => ClubAttendanceStatus.Present,
-        "excused" => ClubAttendanceStatus.Excused,
         "absent" => ClubAttendanceStatus.Absent,
         _ => throw new DomainValidationException("Unbekannter Anwesenheits-Status."),
     };
@@ -717,7 +719,6 @@ public class ClubService
     internal static string? StatusKey(ClubAttendanceStatus? status) => status switch
     {
         ClubAttendanceStatus.Present => "present",
-        ClubAttendanceStatus.Excused => "excused",
         ClubAttendanceStatus.Absent => "absent",
         _ => null,
     };

@@ -12,12 +12,12 @@ const GROUP = (extra: Partial<Group> = {}): Group => ({
   members: [
     { id: 11, firstName: 'Anna', lastName: 'Auer', statuses: [], present: 0, recorded: 0 },
     { id: 12, firstName: 'Ben', lastName: 'Berger', statuses: [], present: 0, recorded: 0 },
-    { id: 13, firstName: 'Carla', lastName: 'Czerny', statuses: [], present: 0, recorded: 0 },
+    { id: 13, firstName: 'Carla', lastName: '', statuses: [], present: 0, recorded: 0 },          // Nachname nicht bekannt
   ], ...extra,
 });
 const SESSION = (extra: Partial<SessionDetail> = {}): SessionDetail =>
-  ({ id: 5, groupId: 1, date: '2026-09-25', topic: 'Gabel', notes: null, present: 1, excused: 1, absent: 1,
-    attendance: [{ memberId: 11, status: 'present' }, { memberId: 12, status: 'excused' }, { memberId: 13, status: 'absent' }], ...extra });
+  ({ id: 5, groupId: 1, date: '2026-09-25', topic: 'Gabel', notes: 'Arbeitsblatt 3', present: 1, absent: 2,
+    attendance: [{ memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' }], ...extra });
 
 describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   let fixture: ComponentFixture<AttendancePageComponent>;
@@ -47,18 +47,25 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     fixture.detectChanges();
   }
 
+  function type(selector: string, value: string): void {
+    const input = el().querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
   beforeEach(() => {
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'saveSession', 'deleteSession']);
     api.group.and.resolveTo(GROUP());
     api.sessionByDate.and.resolveTo(null);
   });
 
-  it('am Freitag geht die Liste für HEUTE auf, alle noch ohne Haken', async () => {
+  it('am Freitag geht die Liste für HEUTE auf, alle noch ohne Haken; ein Kind ohne Nachnamen steht mit dem Vornamen da', async () => {
     await create(new Date(2026, 8, 25, 17, 5));
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-25');
     expect(el().querySelector<HTMLInputElement>('input[name=date]')!.value).toBe('2026-09-25');
     expect(el().textContent).toContain('Freitag, 25. September 2026');
-    expect(ticks().map(t => t.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Czerny Carla']);
+    expect(ticks().map(t => t.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Carla']);
     expect(pressed()).toEqual(['false', 'false', 'false']);
     expect(el().querySelector('.tally strong')!.textContent).toBe('0 von 3 da');
     expect(el().querySelector('.existing')).toBeNull();
@@ -73,43 +80,48 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-11');
   });
 
-  it('ein Tipp hakt ab, „entschuldigt" daneben; gespeichert wird JEDES Kind — wer keinen Haken hat, hat gefehlt', async () => {
+  it('nur „da" oder „nicht da" — ein „entschuldigt" gibt es nicht', async () => {
+    await create(new Date(2026, 8, 25, 17, 5));
+    expect(el().textContent).not.toContain('entschuldigt');
+    expect(el().querySelectorAll('.roll button').length).toBe(3);                       // je Kind genau EIN Knopf
+  });
+
+  it('ein Tipp hakt ab; gespeichert wird JEDES Kind (ohne Haken = gefehlt) samt Thema und „Was wurde gemacht?"', async () => {
     api.saveSession.and.callFake(async (_g: number, input: SessionInput) => SESSION({
-      topic: input.topic, attendance: input.attendance,
-      present: input.attendance.filter(a => a.status === 'present').length, excused: 1, absent: 1 }));
+      topic: input.topic, notes: input.notes, attendance: input.attendance,
+      present: input.attendance.filter(a => a.status === 'present').length,
+      absent: input.attendance.filter(a => a.status === 'absent').length }));
     await create(new Date(2026, 8, 25, 17, 5));
 
     ticks()[0].click();
-    el().querySelectorAll<HTMLButtonElement>('.excuse')[1].click();
+    ticks()[2].click();
     fixture.detectChanges();
-    expect(pressed()).toEqual(['true', 'false', 'false']);
-    expect(el().querySelectorAll('.excuse')[1].getAttribute('aria-pressed')).toBe('true');
-    expect(el().querySelector('.tally strong')!.textContent).toBe('1 von 3 da');
-    ticks()[0].click();                                                                  // Vertippt: Haken wieder weg
-    ticks()[0].click();
-    fixture.componentInstance.topic.set(' Gabel und Spieß ');
+    expect(pressed()).toEqual(['true', 'false', 'true']);
+    expect(el().querySelector('.tally strong')!.textContent).toBe('2 von 3 da');
+    ticks()[2].click();                                                                  // vertippt: Haken wieder weg
+    type('input[name=topic]', ' Gabel und Spieß ');
+    type('textarea[name=notes]', ' Gabel wiederholt, Arbeitsblatt 3, zum Schluss Simultan ');
     el().querySelector<HTMLButtonElement>('.save')!.click();
     await settle();
 
     expect(api.saveSession).toHaveBeenCalledWith(1, {
-      date: '2026-09-25', topic: 'Gabel und Spieß', notes: null,
-      attendance: [{ memberId: 11, status: 'present' }, { memberId: 12, status: 'excused' }, { memberId: 13, status: 'absent' }],
+      date: '2026-09-25', topic: 'Gabel und Spieß', notes: 'Gabel wiederholt, Arbeitsblatt 3, zum Schluss Simultan',
+      attendance: [{ memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' }],
     });
     expect(el().querySelector('[role=status]')!.textContent).toBe('Gespeichert: 1 von 3 da.');
     expect(el().querySelector('.existing')).not.toBeNull();                              // ab jetzt gibt es die Einheit
+
+    type('textarea[name=notes]', 'noch etwas ergänzt');                                  // geändert = nicht mehr „gespeichert"
+    expect(el().querySelector('[role=status]')!.textContent).toBe('');
   });
 
-  it('eine schon erfasste Einheit kommt mit ihrem Stand — sonst überschriebe die leere Liste sie', async () => {
+  it('eine schon erfasste Einheit kommt mit Haken, Thema und Text — sonst überschriebe die leere Liste sie', async () => {
     api.sessionByDate.and.resolveTo(SESSION());
     await create(new Date(2026, 8, 25, 19, 0));
     expect(pressed()).toEqual(['true', 'false', 'false']);
-    expect(el().querySelectorAll('.excuse')[1].getAttribute('aria-pressed')).toBe('true');
     expect(el().querySelector<HTMLInputElement>('input[name=topic]')!.value).toBe('Gabel');
+    expect(el().querySelector<HTMLTextAreaElement>('textarea[name=notes]')!.value).toBe('Arbeitsblatt 3');
     expect(el().querySelector('.existing')!.textContent).toContain('schon eine Einheit erfasst');
-    ticks()[1].click();                                                                  // entschuldigt → da
-    fixture.detectChanges();
-    expect(pressed()).toEqual(['true', 'true', 'false']);
-    expect(el().querySelectorAll('.excuse')[1].getAttribute('aria-pressed')).toBe('false');
   });
 
   it('solange der Stand des Tages lädt, ist die Liste gesperrt — und eine Antwort für einen verlassenen Tag zählt nicht', async () => {

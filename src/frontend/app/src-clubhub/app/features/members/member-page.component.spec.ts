@@ -14,7 +14,7 @@ const MEMBER = (extra: Partial<Member> = {}): Member => ({
   fideId: null, nationalId: null, notes: null, photoConsent: null, linkedUsername: null, linkCode: null, linkCodeExpires: null,
   createdAt: '2026-09-30T10:00:00Z', updatedAt: '2026-09-30T10:00:00Z',
   noteEntries: [{ id: 3, text: 'kann die Gabel', createdAt: '2026-09-25T16:00:00Z', author: 'tina', canDelete: true }],
-  attendance: { present: 8, excused: 1, absent: 1, recent: [{ sessionId: 5, groupId: 1, group: 'Anfänger', date: '2026-09-25', topic: 'Gabel', status: 'present' }] },
+  attendance: { present: 8, absent: 2, recent: [{ sessionId: 5, groupId: 1, group: 'Anfänger', date: '2026-09-25', topic: 'Gabel', status: 'present' }] },
   canDelete: false, ...extra,
 });
 const GROUPS: GroupRow[] = [
@@ -95,11 +95,24 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/kind', 12], { replaceUrl: true });
   });
 
-  it('Anlegen: ohne Namen oder mit unlesbarem Geburtsdatum geht nichts an den Server', async () => {
+  it('Anlegen: der Nachname ist optional — der Vorname genügt', async () => {
+    api.createMember.and.callFake(async (input: MemberInput) => MEMBER({ id: 13, firstName: input.firstName, lastName: input.lastName, contacts: [] }));
     await create(null);
+    expect(el().textContent).toContain('Nachname (wenn bekannt)');
+    type('input[name=firstName]', 'Emil');
     el().querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
-    expect(el().querySelector('[role=alert]')!.textContent).toContain('Vor- und Nachname fehlen noch.');
+    const sent = api.createMember.calls.mostRecent().args[0];
+    expect([sent.firstName, sent.lastName]).toEqual(['Emil', '']);
+    expect(el().querySelector('h1')!.textContent).toBe('Emil');                          // kein hängendes Leerzeichen, kein „undefined"
+  });
+
+  it('Anlegen: ohne Vornamen oder mit unlesbarem Geburtsdatum geht nichts an den Server', async () => {
+    await create(null);
+    type('input[name=lastName]', 'Huber');
+    el().querySelector('form')!.dispatchEvent(new Event('submit'));
+    await settle();
+    expect(el().querySelector('[role=alert]')!.textContent).toContain('Der Vorname fehlt noch.');
 
     type('input[name=firstName]', 'Daniel');
     type('input[name=lastName]', 'Huber');
@@ -130,7 +143,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     const rows = Array.from(el().querySelectorAll('.contacts li')).map(li =>
       [li.querySelector('.whose')!.textContent, li.querySelector('a')!.getAttribute('href')]);
     expect(rows).toEqual([['Mutter Daniela', 'tel:06601112233'], ['Vater Franz', 'tel:0512581234'], ['E-Mail', 'mailto:daniela@example.org']]);
-    expect(el().textContent).toContain('8 von 10 Einheiten da, 1-mal entschuldigt.');
+    expect(el().textContent).toContain('8 von 10 Einheiten da.');
     expect(el().textContent).toContain('kann die Gabel');
     expect(api.progress).not.toHaveBeenCalled();                                         // nicht verknüpft → kein Abruf
   });

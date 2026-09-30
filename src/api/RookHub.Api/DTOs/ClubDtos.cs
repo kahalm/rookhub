@@ -55,14 +55,13 @@ public class ClubAttendanceEntryDto
     /// <summary>yyyy-MM-dd.</summary>
     public string Date { get; set; } = string.Empty;
     public string? Topic { get; set; }
-    /// <summary><c>present</c>, <c>excused</c> oder <c>absent</c>.</summary>
+    /// <summary><c>present</c> oder <c>absent</c>.</summary>
     public string Status { get; set; } = string.Empty;
 }
 
 public class ClubAttendanceSummaryDto
 {
     public int Present { get; set; }
-    public int Excused { get; set; }
     public int Absent { get; set; }
     /// <summary>Die jüngsten Einheiten, neueste zuerst.</summary>
     public List<ClubAttendanceEntryDto> Recent { get; set; } = new();
@@ -93,8 +92,9 @@ public class ClubMemberInputDto
 {
     [Required, MaxLength(80)]
     public string FirstName { get; set; } = string.Empty;
-    [Required, MaxLength(80)]
-    public string LastName { get; set; } = string.Empty;
+    /// <summary>Leer = nicht bekannt.</summary>
+    [MaxLength(80)]
+    public string? LastName { get; set; }
     /// <summary>yyyy-MM-dd; leer = unbekannt.</summary>
     [MaxLength(10)]
     public string? BirthDate { get; set; }
@@ -169,7 +169,6 @@ public class ClubSessionDto
     public string? Topic { get; set; }
     public string? Notes { get; set; }
     public int Present { get; set; }
-    public int Excused { get; set; }
     public int Absent { get; set; }
 }
 
@@ -217,7 +216,7 @@ public class ClubTrainerInputDto
 public class ClubAttendanceInputDto
 {
     public int MemberId { get; set; }
-    /// <summary><c>present</c>, <c>excused</c>, <c>absent</c> — oder leer = nicht erfasst.</summary>
+    /// <summary><c>present</c>, <c>absent</c> — oder leer = nicht erfasst.</summary>
     [MaxLength(8)]
     public string? Status { get; set; }
 }

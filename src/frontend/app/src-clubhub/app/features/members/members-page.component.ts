@@ -4,7 +4,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService } from '../../core/club-api.service';
 import { GroupRow, MemberRow } from '../../core/club.models';
-import { ageClass, byInitial, firstPhone, telHref, trainsToday, weekdayName } from '../../core/club-format';
+import { ageClass, byInitial, firstPhone, nameHead, nameTail, telHref, trainsToday, weekdayName } from '../../core/club-format';
 
 /** Namenssuche über Vor- und Nachname, ohne Groß/klein und ohne Akzente („saric" findet „Šarić"). */
 export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: string): boolean {
@@ -72,7 +72,7 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
               @for (m of r.items; track m.id) {
                 <li class="kid">
                   <a class="kid-main" [routerLink]="['/kind', m.id]">
-                    <span class="kid-name"><b>{{ m.lastName }}</b> {{ m.firstName }}</span>
+                    <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
                     <span class="kid-meta">
                       @if (m.birthYear) { <span>Jg. {{ m.birthYear }}@if (cls(m); as c) { ({{ c }}) }</span> }
                       @if (m.level) { <span>{{ m.level }}</span> }
@@ -123,6 +123,8 @@ export class MembersPageComponent implements OnInit {
 
   readonly weekday = weekdayName;
   readonly tel = telHref;
+  readonly head = nameHead;
+  readonly tail = nameTail;
 
   ngOnInit(): void {
     if (this.allowed) void this.load();

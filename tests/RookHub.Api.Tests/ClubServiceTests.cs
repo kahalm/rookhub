@@ -133,11 +133,22 @@ public class ClubServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Names_AreRequired_AndTrimmed()
+    public async Task FirstNameIsRequired_TheLastNameIsNot_TheTrainerOftenDoesNotKnowIt()
     {
         await Assert.ThrowsAsync<DomainValidationException>(() => Svc().CreateMemberAsync(Manager(), Kid("  ", "Huber")));
         var dto = await Svc().CreateMemberAsync(Manager(), Kid(" Daniel ", " Huber "));
         Assert.Equal(("Daniel", "Huber"), (dto.FirstName, dto.LastName));
+
+        var noLast = await Svc().CreateMemberAsync(Manager(), new ClubMemberInputDto { FirstName = "Emil", LastName = null });
+        Assert.Equal(("Emil", ""), (noLast.FirstName, noLast.LastName));
+        await Svc().CreateMemberAsync(Manager(), Kid("Anna", "  "));
+        await Svc().CreateMemberAsync(Manager(), Kid("Zoe", "Auer"));
+        // Geordnet wird nach dem Nachnamen — ohne ihn nach dem Vornamen: Anna, Auer, (Emil), Huber.
+        Assert.Equal(["Anna", "Zoe", "Emil", "Daniel"], (await Svc().ListMembersAsync(Manager(), null, false)).Select(m => m.FirstName));
+        // Nachtragen und wieder leeren geht beides.
+        var later = await Svc().UpdateMemberAsync(Manager(), noLast.Id, Kid("Emil", "Moser"));
+        Assert.Equal("Moser", later.LastName);
+        Assert.Equal("", (await Svc().UpdateMemberAsync(Manager(), noLast.Id, Kid("Emil", ""))).LastName);
     }
 
     [Fact]
@@ -391,10 +402,10 @@ public class ClubServiceTests : IDisposable
         var first = await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         {
             Date = "2026-09-25", Topic = " Gabel ",
-            Attendance = [new() { MemberId = a.Id, Status = "present" }, new() { MemberId = b.Id, Status = "excused" },
+            Attendance = [new() { MemberId = a.Id, Status = "present" }, new() { MemberId = b.Id, Status = "absent" },
                           new() { MemberId = outsider.Id, Status = "present" }],                         // nicht in der Gruppe → zählt nicht
         });
-        Assert.Equal(("Gabel", 1, 1, 0), (first.Topic, first.Present, first.Excused, first.Absent));
+        Assert.Equal(("Gabel", 1, 1), (first.Topic, first.Present, first.Absent));
 
         var again = await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         {
@@ -402,12 +413,15 @@ public class ClubServiceTests : IDisposable
             Attendance = [new() { MemberId = a.Id, Status = "" }, new() { MemberId = b.Id, Status = "absent" }],
         });
         Assert.Equal(first.Id, again.Id);
-        Assert.Equal(("Gabel und Spieß", 0, 0, 1), (again.Topic, again.Present, again.Excused, again.Absent));
+        Assert.Equal(("Gabel und Spieß", 0, 1), (again.Topic, again.Present, again.Absent));
         Assert.Single(_db.ClubSessions);
         Assert.Equal((b.Id, ClubAttendanceStatus.Absent), Assert.Single(_db.ClubAttendances.Select(x => new { x.MemberId, x.Status }).ToList()
             .Select(x => (x.MemberId, x.Status))));
 
         await Assert.ThrowsAsync<DomainValidationException>(() => Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto { Date = "25.09.2026" }));
+        // „entschuldigt" gibt es nicht mehr (Wunsch 2026-09-30) — da oder nicht da.
+        await Assert.ThrowsAsync<DomainValidationException>(() => Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
+        { Date = "2026-09-26", Attendance = [new() { MemberId = a.Id, Status = "excused" }] }));
         await Assert.ThrowsAsync<DomainValidationException>(() => Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         { Date = "2026-09-26", Attendance = [new() { MemberId = a.Id, Status = "vielleicht" }] }));
     }
@@ -444,17 +458,21 @@ public class ClubServiceTests : IDisposable
         await Svc().CreateMemberAsync(Manager(), archived);
 
         await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
-        { Date = "2026-09-25", Attendance = [new() { MemberId = a.Id, Status = "present" }, new() { MemberId = b.Id, Status = "absent" }] });
+        { Date = "2026-09-25", Topic = "Gabel", Notes = " Arbeitsblatt 3, zum Schluss Simultan ",
+          Attendance = [new() { MemberId = a.Id, Status = "present" }, new() { MemberId = b.Id, Status = "absent" }] });
         await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
         { Date = "2026-09-11", Attendance = [new() { MemberId = a.Id, Status = "present" }] });
         await Svc().SaveSessionAsync(Manager(), g, new ClubSessionInputDto
-        { Date = "2026-09-18", Attendance = [new() { MemberId = a.Id, Status = "excused" }, new() { MemberId = b.Id, Status = "present" }] });
+        { Date = "2026-09-18", Attendance = [new() { MemberId = a.Id, Status = "absent" }, new() { MemberId = b.Id, Status = "present" }] });
 
         var dto = await Svc().GetGroupAsync(Manager(), g);
         Assert.Equal(["2026-09-11", "2026-09-18", "2026-09-25"], dto.Sessions.Select(s => s.Date));
+        // Thema und „was wurde gemacht" reisen mit jeder Einheit — daraus wird das Trainingstagebuch der Gruppe.
+        Assert.Equal(("Gabel", "Arbeitsblatt 3, zum Schluss Simultan", 1, 1), (dto.Sessions[2].Topic, dto.Sessions[2].Notes, dto.Sessions[2].Present, dto.Sessions[2].Absent));
+        Assert.Equal((null, null), (dto.Sessions[0].Topic, dto.Sessions[0].Notes));
         Assert.Equal((2, 3, "2026-09-25"), (dto.MemberCount, dto.SessionCount, dto.LastSession));
         Assert.Equal(["Auer", "Berger"], dto.Members.Select(m => m.LastName));                          // archivierte fehlen
-        Assert.Equal(["present", "excused", "present"], dto.Members[0].Statuses);
+        Assert.Equal(["present", "absent", "present"], dto.Members[0].Statuses);
         Assert.Equal([null, "present", "absent"], dto.Members[1].Statuses);
         Assert.Equal((2, 3), (dto.Members[0].Present, dto.Members[0].Recorded));
         Assert.Equal((1, 2), (dto.Members[1].Present, dto.Members[1].Recorded));
@@ -465,8 +483,8 @@ public class ClubServiceTests : IDisposable
         Assert.Equal((2, 3), (narrow.Members[0].Present, narrow.Members[0].Recorded));
 
         var sheet = await Svc().GetMemberAsync(Manager(), a.Id);
-        Assert.Equal((2, 1, 0), (sheet.Attendance.Present, sheet.Attendance.Excused, sheet.Attendance.Absent));
-        Assert.Equal([("2026-09-25", "present", "Anfänger"), ("2026-09-18", "excused", "Anfänger"), ("2026-09-11", "present", "Anfänger")],
+        Assert.Equal((2, 1), (sheet.Attendance.Present, sheet.Attendance.Absent));
+        Assert.Equal([("2026-09-25", "present", "Anfänger"), ("2026-09-18", "absent", "Anfänger"), ("2026-09-11", "present", "Anfänger")],
             sheet.Attendance.Recent.Select(r => (r.Date, r.Status, r.Group)));
 
         var row = Assert.Single(await Svc().ListGroupsAsync(Manager()));

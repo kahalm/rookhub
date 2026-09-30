@@ -113,7 +113,7 @@ export function formatLinkCode(code: string): string {
   return code.length > 5 ? `${code.slice(0, 5)}-${code.slice(5)}` : code;
 }
 
-export const STATUS_LABEL: Record<Status, string> = { present: 'da', excused: 'entschuldigt', absent: 'gefehlt' };
+export const STATUS_LABEL: Record<Status, string> = { present: 'da', absent: 'gefehlt' };
 
 /** „8 von 10 Einheiten da" — ohne erfasste Einheit leer. */
 export function attendanceText(present: number, recorded: number): string {
@@ -126,14 +126,31 @@ export interface Register<T> {
   items: T[];
 }
 
+type Named = { firstName: string; lastName: string };
+
+/** Wonach die Kartei ordnet: der Nachname — und wo keiner eingetragen ist (er ist optional), der Vorname. */
+export function sortName(m: Named): string {
+  return m.lastName.trim() || m.firstName.trim();
+}
+
+/** Der fett gesetzte Teil des Namens in Listen: der Nachname, ohne ihn der Vorname. */
+export function nameHead(m: Named): string {
+  return sortName(m);
+}
+
+/** Der Rest dahinter (mit führendem Leerzeichen): der Vorname — leer, wenn er schon vorne steht. */
+export function nameTail(m: Named): string {
+  return m.lastName.trim() ? ` ${m.firstName.trim()}` : '';
+}
+
 /**
- * Die Kartei nach dem Anfangsbuchstaben des Nachnamens — wie die Register eines Karteikastens. Umlaute stehen beim
- * Grundbuchstaben (Ä bei A), alles andere unter „#".
+ * Die Kartei nach dem Anfangsbuchstaben des Nachnamens (ohne Nachnamen: des Vornamens) — wie die Register eines
+ * Karteikastens. Umlaute stehen beim Grundbuchstaben (Ä bei A), alles andere unter „#".
  */
-export function byInitial<T extends { lastName: string }>(rows: T[]): Register<T>[] {
+export function byInitial<T extends Named>(rows: T[]): Register<T>[] {
   const result: Register<T>[] = [];
   for (const row of rows) {
-    const first = row.lastName.trim().charAt(0).normalize('NFD').charAt(0).toUpperCase();
+    const first = sortName(row).charAt(0).normalize('NFD').charAt(0).toUpperCase();
     const letter = /^[A-Z]$/.test(first) ? first : '#';
     const last = result[result.length - 1];
     if (last?.letter === letter) last.items.push(row);
@@ -155,7 +172,7 @@ export function toInput(m: Member): MemberInput {
 }
 
 export function fullName(m: Pick<MemberRow, 'firstName' | 'lastName'>): string {
-  return `${m.firstName} ${m.lastName}`;
+  return `${m.firstName} ${m.lastName}`.trim();
 }
 
 function pad(n: number): string {

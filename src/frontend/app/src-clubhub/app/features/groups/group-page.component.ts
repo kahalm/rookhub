@@ -4,17 +4,18 @@ import { AuthService } from '@rh/core/auth.service';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, GroupInput, MemberRow, Status } from '../../core/club.models';
-import { WEEKDAYS, shortDate } from '../../core/club-format';
+import { WEEKDAYS, longDate, nameHead, nameTail, shortDate } from '../../core/club-format';
 import { scheduleText } from './groups-page.component';
 
-/** Zeichen einer Zelle der Anwesenheitstabelle: ✓ da, E entschuldigt, – gefehlt, · nicht erfasst. */
+/** Zeichen einer Zelle der Anwesenheitstabelle: ✓ da, – gefehlt, · nicht erfasst. */
 export function statusMark(status: Status | null): string {
-  return status === 'present' ? '✓' : status === 'excused' ? 'E' : status === 'absent' ? '–' : '·';
+  return status === 'present' ? '✓' : status === 'absent' ? '–' : '·';
 }
 
 /**
- * Eine Trainingsgruppe: die Anwesenheitstabelle (Kinder × die jüngsten Einheiten, älteste links), der Weg zur
- * Anwesenheitsliste, Kinder dazunehmen oder herausnehmen. Die Leitung ändert hier außerdem die Gruppe selbst und teilt
+ * Eine Trainingsgruppe: die Anwesenheitstabelle (Kinder × die jüngsten Einheiten, älteste links), darunter das
+ * Trainingstagebuch (je Einheit Thema und „was wurde gemacht", neueste zuerst), der Weg zur Anwesenheitsliste, Kinder
+ * dazunehmen oder herausnehmen. Die Leitung ändert hier außerdem die Gruppe selbst und teilt
  * Trainer zu — über den Benutzernamen; ClubHub öffnet sich für das Konto erst mit einer Rolle, die `club.trainer` trägt.
  */
 @Component({
@@ -58,7 +59,7 @@ export function statusMark(status: Status | null): string {
             <tbody>
               @for (m of g.members; track m.id) {
                 <tr>
-                  <th class="name" scope="row"><a [routerLink]="['/kind', m.id]"><b>{{ m.lastName }}</b> {{ m.firstName }}</a></th>
+                  <th class="name" scope="row"><a [routerLink]="['/kind', m.id]"><b>{{ head(m) }}</b>{{ tail(m) }}</a></th>
                   @for (st of m.statuses; track $index) {
                     <td><span class="cell" [class]="st ?? 'none'">{{ mark(st) }}</span></td>
                   }
@@ -71,13 +72,29 @@ export function statusMark(status: Status | null): string {
         @if (g.sessions.length) {
           <p class="legend">
             <span><span class="cell present">✓</span>da</span>
-            <span><span class="cell excused">E</span>entschuldigt</span>
             <span><span class="cell absent">–</span>gefehlt</span>
             <span>Ein Datum antippen, um die Einheit zu ändern.</span>
           </p>
         } @else {
           <p class="muted small">Noch keine Einheit erfasst — mit „Anwesenheit abhaken" entsteht die erste.</p>
         }
+      }
+
+      @if (diary().length) {
+        <section class="diary mt">
+          <h2>Was wurde gemacht?</h2>
+          <ul class="notes">
+            @for (s of diary(); track s.id) {
+              <li>
+                <p><a [routerLink]="['/gruppen', g.id, 'anwesenheit']" [queryParams]="{ datum: s.date }">{{ long(s.date) }}</a>
+                  <span class="muted small">{{ s.present }} von {{ s.present + s.absent }} da</span></p>
+                @if (s.topic) { <p class="topic">{{ s.topic }}</p> }
+                @if (s.notes) { <p class="pre muted">{{ s.notes }}</p> }
+                @if (!s.topic && !s.notes) { <p class="muted small">Kein Thema eingetragen.</p> }
+              </li>
+            }
+          </ul>
+        </section>
       }
 
       <p class="err status-line" role="alert">{{ error() ?? '' }}</p>
@@ -90,7 +107,7 @@ export function statusMark(status: Status | null): string {
               <label class="field"><span>Kind aus der Kartei dazunehmen</span>
                 <select class="add-kid" (change)="pick.set(+$any($event.target).value || null)">
                   <option value="">auswählen …</option>
-                  @for (c of candidates(); track c.id) { <option [value]="c.id" [selected]="c.id === pick()">{{ c.lastName }} {{ c.firstName }}</option> }
+                  @for (c of candidates(); track c.id) { <option [value]="c.id" [selected]="c.id === pick()">{{ head(c) }}{{ tail(c) }}</option> }
                 </select></label>
               <button type="button" class="btn" [disabled]="busy() || !pick()" (click)="addKid()">Dazunehmen</button>
             </div>
@@ -98,7 +115,7 @@ export function statusMark(status: Status | null): string {
           @if (g.members.length) {
             <ul class="notes">
               @for (m of g.members; track m.id) {
-                <li>{{ m.lastName }} {{ m.firstName }}
+                <li>{{ head(m) }}{{ tail(m) }}
                   <button type="button" class="btn-link danger" [disabled]="busy()" (click)="removeKid(m.id, m.firstName)">aus der Gruppe nehmen</button></li>
               }
             </ul>
@@ -179,6 +196,11 @@ export class GroupPageComponent implements OnInit {
   readonly schedule = scheduleText;
   readonly short = shortDate;
   readonly mark = statusMark;
+  readonly head = nameHead;
+  readonly tail = nameTail;
+  readonly long = longDate;
+  /** Das Trainingstagebuch: die Einheiten der Tabelle, neueste zuerst. */
+  readonly diary = computed(() => [...(this.group()?.sessions ?? [])].reverse());
 
   ngOnInit(): void {
     if (!this.allowed) return;

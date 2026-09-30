@@ -765,6 +765,11 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
                         new() { Kind = "email", Value = "daniela@example.org" }],
         });
         var anna = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Anna", LastName = "Šarić", BirthYear = 2016, GroupIds = [other.Id] });
+        // Ohne Nachnamen (optional): geordnet wird dann nach dem Vornamen — die CASE-Sortierung muss MariaDB übersetzen.
+        var emil = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Emil", GroupIds = [other.Id] });
+        Assert.Equal(["Emil", "Huber", "Šarić"], (await club.ListMembersAsync(manager, null, false)).Select(m => m.LastName == "" ? m.FirstName : m.LastName));
+        Assert.Equal(["Emil", "Anna"], (await club.GetGroupAsync(manager, other.Id)).Members.Select(m => m.FirstName));
+        await club.DeleteMemberAsync(manager, emil.Id);
         Db.ChangeTracker.Clear();
 
         // Trainer: nur das Kind der eigenen Gruppe, Kontakte in der Reihenfolge der Eingabe.
@@ -778,7 +783,7 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         var att = new List<RookHub.Api.DTOs.ClubAttendanceInputDto> { new() { MemberId = daniel.Id, Status = "present" } };
         var first = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
         await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-25", Topic = "Gabel", Attendance = att });
-        att[0].Status = "excused";
+        att[0].Status = "absent";
         var again = await club.SaveSessionAsync(trainer, mine.Id, new RookHub.Api.DTOs.ClubSessionInputDto { Date = "2026-09-18", Attendance = att });
         Assert.Equal(first.Id, again.Id);
         Assert.Equal(first.Id, (await club.GetSessionByDateAsync(trainer, mine.Id, "2026-09-18"))!.Id);
@@ -786,12 +791,12 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Db.ChangeTracker.Clear();
         var group = await club.GetGroupAsync(trainer, mine.Id);
         Assert.Equal(["2026-09-18", "2026-09-25"], group.Sessions.Select(x => x.Date));
-        Assert.Equal(["excused", "present"], Assert.Single(group.Members).Statuses);
+        Assert.Equal(["absent", "present"], Assert.Single(group.Members).Statuses);
         Assert.Equal((1, 2), (group.Members[0].Present, group.Members[0].Recorded));
         var row = (await club.ListGroupsAsync(manager)).Single(g => g.Id == mine.Id);
         Assert.Equal((1, 2, "2026-09-25", "tina"), (row.MemberCount, row.SessionCount, row.LastSession, Assert.Single(row.Trainers).Username));
         var sheet = await club.GetMemberAsync(trainer, daniel.Id);
-        Assert.Equal((1, 1, 0, "2015-03-12"), (sheet.Attendance.Present, sheet.Attendance.Excused, sheet.Attendance.Absent, sheet.BirthDate));
+        Assert.Equal((1, 1, "2015-03-12"), (sheet.Attendance.Present, sheet.Attendance.Absent, sheet.BirthDate));
 
         // Verknüpfung + Notiz, dann das Konto HART löschen: SetNull und Cascade feuern, Blatt und Notiz bleiben.
         await club.RedeemAsync(kind, (await club.CreateLinkCodeAsync(trainer, daniel.Id)).Code);

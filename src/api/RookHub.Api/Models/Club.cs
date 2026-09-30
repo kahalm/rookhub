@@ -19,7 +19,9 @@ public class ClubMember
     [Required, MaxLength(80)]
     public string FirstName { get; set; } = string.Empty;
 
-    [Required, MaxLength(80)]
+    /// <summary>Leer = nicht bekannt (Wunsch 2026-09-30: „Nachname optional, ich weiß den oft nicht"). Die Spalte bleibt
+    /// NOT NULL — ein leerer Text, kein <c>null</c>; sortiert wird dann nach dem Vornamen.</summary>
+    [Required(AllowEmptyStrings = true), MaxLength(80)]
     public string LastName { get; set; } = string.Empty;
 
     /// <summary>Ganzes Geburtsdatum, wenn bekannt — sonst nur <see cref="BirthYear"/>.</summary>
@@ -157,10 +159,11 @@ public class ClubSession
     public List<ClubAttendance> Attendance { get; set; } = new();
 }
 
+/// <summary>Da oder nicht da. Den Wert 2 („entschuldigt") gab es nur in 0.613.0 — er wird nicht mehr vergeben
+/// (Wunsch 2026-09-30: „interessiert mich nicht"); die Zahlen bleiben, wie sie in der Datenbank stehen.</summary>
 public enum ClubAttendanceStatus
 {
     Present = 1,
-    Excused = 2,
     Absent = 3,
 }
 

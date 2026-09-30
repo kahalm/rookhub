@@ -1,4 +1,4 @@
-import { ageClass, attendanceText, byInitial, firstPhone, formatBirth, formatLinkCode, isoDate, longDate, parseBirth, shortDate, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
+import { STATUS_LABEL, ageClass, attendanceText, byInitial, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
 
 describe('club-format', () => {
   it('Altersklasse zählt nach Jahrgang: U10 spielt, wer heuer höchstens 10 wird', () => {
@@ -67,7 +67,21 @@ describe('club-format', () => {
   });
 
   it('Register wie im Karteikasten: nach Anfangsbuchstaben, Umlaut beim Grundbuchstaben', () => {
-    const rows = [{ lastName: 'Auer' }, { lastName: 'Äpfelbacher' }, { lastName: 'Berger' }, { lastName: 'Šarić' }, { lastName: '' }];
+    const rows = [{ firstName: 'x', lastName: 'Auer' }, { firstName: 'x', lastName: 'Äpfelbacher' }, { firstName: 'x', lastName: 'Berger' },
+      { firstName: 'x', lastName: 'Šarić' }, { firstName: '', lastName: '' }];
     expect(byInitial(rows).map(r => [r.letter, r.items.length])).toEqual([['A', 2], ['B', 1], ['S', 1], ['#', 1]]);
+  });
+
+  it('der Nachname ist optional: ohne ihn ordnet und zeigt die Kartei den Vornamen', () => {
+    const emil = { firstName: 'Emil', lastName: '' };
+    const anna = { firstName: 'Anna', lastName: 'Auer' };
+    expect([sortName(emil), nameHead(emil), nameTail(emil), fullName(emil)]).toEqual(['Emil', 'Emil', '', 'Emil']);
+    expect([sortName(anna), nameHead(anna), nameTail(anna), fullName(anna)]).toEqual(['Auer', 'Auer', ' Anna', 'Anna Auer']);
+    expect(nameHead({ firstName: 'Emil', lastName: '  ' })).toBe('Emil');                // nur Leerzeichen = kein Nachname
+    expect(byInitial([anna, emil]).map(r => r.letter)).toEqual(['A', 'E']);
+  });
+
+  it('Anwesenheit kennt zwei Zustände: da und gefehlt', () => {
+    expect(STATUS_LABEL).toEqual({ present: 'da', absent: 'gefehlt' });
   });
 });

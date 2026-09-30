@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
-import { longDate, trainingDate } from '../../core/club-format';
+import { longDate, nameHead, nameTail, trainingDate } from '../../core/club-format';
 
 /** „7 von 12 da" */
 export function tallyText(present: number, total: number): string {
@@ -14,7 +14,9 @@ export function tallyText(present: number, total: number): string {
 /**
  * Die Anwesenheitsliste (Wunsch 2026-09-30: „am Freitag abhaken, wer da ist"). Sie geht für den jüngsten Trainingstag der
  * Gruppe auf — am Freitag für heute, am Montag darauf für den vergangenen Freitag —, jede Zeile ist EIN großer Tipp: da
- * oder nicht. Daneben „entschuldigt". Beim Speichern gilt, wer nicht abgehakt ist, als gefehlt; so stimmt die Quote.
+ * oder nicht (ein „entschuldigt" gibt es bewusst nicht). Beim Speichern gilt, wer nicht abgehakt ist, als gefehlt; so
+ * stimmt die Quote. Dazu das Thema der Einheit und, ausführlicher, was gemacht wurde — beides steht danach im
+ * Trainingstagebuch der Gruppe.
  *
  * Je Gruppe und Tag gibt es eine Einheit, ein Speichern ersetzt sie. Deshalb holt die Seite vor dem ersten Tipp, was für
  * den Tag schon erfasst ist (`sessionByDate`) — eine leer geöffnete Liste überschriebe sonst die erfasste.
@@ -34,8 +36,11 @@ export function tallyText(present: number, total: number): string {
         <label class="field"><span>Tag der Einheit</span>
           <input type="date" name="date" [value]="date()" (change)="changeDate($any($event.target).value)"></label>
         <label class="field"><span>Thema</span>
-          <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="topic.set($any($event.target).value)"></label>
+          <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
+      <label class="field done"><span>Was wurde gemacht?</span>
+        <textarea name="notes" maxlength="2000" rows="3" placeholder="z. B. Gabel wiederholt, Arbeitsblatt 3, zum Schluss Simultan"
+          [value]="notes()" (input)="edit(notes, $any($event.target).value)"></textarea></label>
       @if (session()) { <p class="muted small existing">Für diesen Tag ist schon eine Einheit erfasst — du änderst sie.</p> }
 
       @if (!g.members.length) {
@@ -50,12 +55,11 @@ export function tallyText(present: number, total: number): string {
         </div>
         <ul class="roll">
           @for (m of g.members; track m.id) {
-            <li [class.present]="marks()[m.id] === 'present'" [class.excused]="marks()[m.id] === 'excused'">
+            <li [class.present]="marks()[m.id] === 'present'">
               <button type="button" class="tick" [attr.aria-pressed]="marks()[m.id] === 'present'" [disabled]="loading()" (click)="toggle(m.id)">
                 <span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
-                <span><b>{{ m.lastName }}</b> {{ m.firstName }}</span>
+                <span><b>{{ head(m) }}</b>{{ tail(m) }}</span>
               </button>
-              <button type="button" class="excuse" [attr.aria-pressed]="marks()[m.id] === 'excused'" [disabled]="loading()" (click)="toggleExcused(m.id)">entschuldigt</button>
             </li>
           }
         </ul>
@@ -86,6 +90,8 @@ export class AttendancePageComponent implements OnInit {
   /** Kind → Status; ohne Eintrag gilt es als nicht da. */
   readonly marks = signal<Record<number, Status>>({});
   readonly topic = signal('');
+  /** „Was wurde gemacht?" — ausführlicher als das Thema. */
+  readonly notes = signal('');
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
@@ -98,6 +104,8 @@ export class AttendancePageComponent implements OnInit {
   readonly present = computed(() => (this.group()?.members ?? []).filter(m => this.marks()[m.id] === 'present').length);
   readonly tally = computed(() => tallyText(this.present(), this.group()?.members.length ?? 0));
   readonly long = longDate;
+  readonly head = nameHead;
+  readonly tail = nameTail;
 
   ngOnInit(): void {
     if (!this.allowed) return;
@@ -143,18 +151,21 @@ export class AttendancePageComponent implements OnInit {
   private apply(s: SessionDetail | null): void {
     this.session.set(s);
     this.topic.set(s?.topic ?? '');
+    this.notes.set(s?.notes ?? '');
     const marks: Record<number, Status> = {};
-    for (const a of s?.attendance ?? []) if (a.status) marks[a.memberId] = a.status;
+    for (const a of s?.attendance ?? []) if (a.status === 'present' || a.status === 'absent') marks[a.memberId] = a.status;
     this.marks.set(marks);
   }
 
-  /** Ein Tipp auf die Zeile: da ↔ nicht da (ein „entschuldigt" wird zu „da"). */
+  /** Ein Tipp auf die Zeile: da ↔ nicht da. */
   toggle(memberId: number): void {
     this.mark(memberId, this.marks()[memberId] === 'present' ? 'absent' : 'present');
   }
 
-  toggleExcused(memberId: number): void {
-    this.mark(memberId, this.marks()[memberId] === 'excused' ? 'absent' : 'excused');
+  /** Thema bzw. „Was wurde gemacht?" ändern — danach gilt die Einheit nicht mehr als gespeichert. */
+  edit(field: WritableSignal<string>, value: string): void {
+    field.set(value);
+    this.saved.set(null);
   }
 
   private mark(memberId: number, status: Status): void {
@@ -177,7 +188,7 @@ export class AttendancePageComponent implements OnInit {
     this.saved.set(null);
     try {
       const s = await this.api.saveSession(g.id, {
-        date: this.date(), topic: this.topic().trim() || null, notes: this.session()?.notes ?? null,
+        date: this.date(), topic: this.topic().trim() || null, notes: this.notes().trim() || null,
         // Jedes Kind der Gruppe bekommt einen Eintrag: wer nicht abgehakt ist, hat gefehlt.
         attendance: g.members.map(m => ({ memberId: m.id, status: this.marks()[m.id] ?? 'absent' })),
       });

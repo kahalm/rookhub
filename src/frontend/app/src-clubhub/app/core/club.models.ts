@@ -17,6 +17,7 @@ export interface GroupRef {
 export interface MemberRow {
   id: number;
   firstName: string;
+  /** Leer = nicht bekannt. */
   lastName: string;
   birthYear?: number | null;
   level?: string | null;
@@ -34,7 +35,8 @@ export interface Note {
   canDelete: boolean;
 }
 
-export type Status = 'present' | 'excused' | 'absent';
+/** Da oder nicht da — mehr hält die Anwesenheit nicht fest. */
+export type Status = 'present' | 'absent';
 
 export interface AttendanceEntry {
   sessionId: number;
@@ -47,7 +49,6 @@ export interface AttendanceEntry {
 
 export interface AttendanceSummary {
   present: number;
-  excused: number;
   absent: number;
   recent: AttendanceEntry[];
 }
@@ -115,9 +116,9 @@ export interface Session {
   id: number;
   date: string;
   topic?: string | null;
+  /** Was gemacht wurde, ausführlicher als das Thema. */
   notes?: string | null;
   present: number;
-  excused: number;
   absent: number;
 }
 

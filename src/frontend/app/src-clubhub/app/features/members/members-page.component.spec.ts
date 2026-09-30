@@ -64,6 +64,17 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(el().querySelector('.count')!.textContent).toBe('3 Kinder');
   });
 
+  it('ein Kind ohne Nachnamen steht unter dem Buchstaben seines VORNAMENS, fett wie sonst der Nachname', async () => {
+    api.members.and.resolveTo([KID(1, 'Anna', 'Auer'), KID(4, 'Emil', ''), KID(2, 'Ivo', 'Šarić')]);
+    await create();
+    expect(Array.from(el().querySelectorAll('.letter')).map(l => l.textContent)).toEqual(['A', 'E', 'S']);
+    expect(names()).toEqual(['Auer Anna', 'Emil', 'Šarić Ivo']);
+    expect(el().querySelectorAll('.kid-name b')[1].textContent).toBe('Emil');
+    fixture.componentInstance.q.set('emi');
+    fixture.detectChanges();
+    expect(names()).toEqual(['Emil']);
+  });
+
   it('sucht nach Namen (ohne Akzente) und filtert nach Gruppe — im Browser, ohne neuen Abruf', async () => {
     await create();
     const c = fixture.componentInstance;

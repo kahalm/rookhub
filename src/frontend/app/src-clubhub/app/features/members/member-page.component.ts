@@ -40,7 +40,7 @@ function orNull(value: string | null | undefined): string | null {
         <div class="grid-2">
           <label class="field"><span>Vorname</span>
             <input name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName" (input)="set('firstName', $any($event.target).value)"></label>
-          <label class="field"><span>Nachname</span>
+          <label class="field"><span>Nachname (wenn bekannt)</span>
             <input name="lastName" autocomplete="off" maxlength="80" [value]="form().lastName" (input)="set('lastName', $any($event.target).value)"></label>
         </div>
         <div class="grid-2">
@@ -114,7 +114,7 @@ function orNull(value: string | null | undefined): string | null {
     } @else if (member(); as m) {
       <article class="sheet">
         <header class="sheet-head">
-          <h1>{{ m.firstName }} {{ m.lastName }}</h1>
+          <h1>{{ name() }}</h1>
           <button type="button" class="btn slim edit" (click)="startEdit()">Bearbeiten</button>
           <p class="sub">
             @if (m.birthYear) { <span>Jahrgang {{ m.birthYear }}@if (cls(); as c) {, {{ c }} }</span> }
@@ -161,7 +161,7 @@ function orNull(value: string | null | undefined): string | null {
         <section>
           <h2>Anwesenheit</h2>
           @if (recorded()) {
-            <p>{{ attendance() }}@if (m.attendance.excused) {, {{ m.attendance.excused }}-mal entschuldigt}.</p>
+            <p>{{ attendance() }}.</p>
             <ul class="notes">
               @for (a of m.attendance.recent; track a.sessionId) {
                 <li><span class="cell" [class]="a.status" aria-hidden="true">{{ mark(a.status) }}</span>
@@ -237,11 +237,12 @@ export class MemberPageComponent implements OnInit {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
 
+  readonly name = computed(() => { const m = this.member(); return m ? fullName(m) : ''; });
   readonly cls = computed(() => ageClass(this.member()?.birthYear, new Date().getFullYear()));
   readonly birth = computed(() => formatBirth(this.member() ?? {}));
   readonly recorded = computed(() => {
     const a = this.member()?.attendance;
-    return a ? a.present + a.excused + a.absent : 0;
+    return a ? a.present + a.absent : 0;
   });
   readonly attendance = computed(() => attendanceText(this.member()?.attendance.present ?? 0, this.recorded()));
 
@@ -326,8 +327,8 @@ export class MemberPageComponent implements OnInit {
 
   async save(): Promise<void> {
     const f = this.form();
-    if (!f.firstName.trim() || !f.lastName.trim()) {
-      this.error.set('Vor- und Nachname fehlen noch.');
+    if (!f.firstName.trim()) {
+      this.error.set('Der Vorname fehlt noch.');
       return;
     }
     const birth = parseBirth(this.birthText());
@@ -413,7 +414,7 @@ export class MemberPageComponent implements OnInit {
   }
 
   mark(status: string): string {
-    return status === 'present' ? '✓' : status === 'excused' ? 'E' : '–';
+    return status === 'present' ? '✓' : '–';
   }
 
   label(status: keyof typeof STATUS_LABEL): string {
