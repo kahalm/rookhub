@@ -38,8 +38,10 @@ public class BotStatsController : ControllerBase
     [EnableRateLimiting("anonymous-puzzle")]
     public async Task<ActionResult<BotPlayerProgressDto>> GetPlayerProgress(string discordId)
     {
-        var secret = _config["SchachBot:StatsSecret"];
-        if (string.IsNullOrEmpty(secret))
+        // Platzhalter aus den Beispiel-Dateien zählt wie „leer" (SecretConfigCheck): sonst liest jeder,
+        // der das öffentliche Repo kennt, den Trainingsstand verknüpfter Spieler.
+        var secret = SecretConfigCheck.Usable(_config["SchachBot:StatsSecret"]);
+        if (secret is null)
             return NotFound();  // Feature nicht konfiguriert → wie nicht vorhanden behandeln
 
         var provided = Request.Headers["X-Bot-Signature"].FirstOrDefault();

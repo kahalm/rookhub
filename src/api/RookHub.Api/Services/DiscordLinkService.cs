@@ -16,7 +16,9 @@ public class DiscordLinkService
 
     public DiscordLinkService(IConfiguration config)
     {
-        _secret = config["Discord:LinkSecret"];
+        // Ein Platzhalter aus den Beispiel-Dateien zählt wie „leer" = Feature aus: mit dem öffentlich
+        // bekannten Wert könnte sich jeder ein Link-Token für eine fremde Discord-ID signieren.
+        _secret = SecretConfigCheck.Usable(config["Discord:LinkSecret"]);
     }
 
     public bool Enabled => !string.IsNullOrEmpty(_secret);

@@ -310,6 +310,19 @@ public class BotStatsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPlayerProgress_PlaceholderSecret_IsTreatedAsNotConfigured()
+    {
+        // Platzhalter aus den öffentlichen .env-Beispielen: eine damit korrekt gebaute Signatur darf den
+        // Trainingsstand eines verknüpften Spielers NICHT herausgeben.
+        await CreateLinkedUserAsync("12345");
+        var controller = ValidController("12345", secret: "change_me_shared_with_schach_bot");
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
     public async Task GetPlayerProgress_NoSecretConfigured_ReturnsNotFound()
     {
         await CreateLinkedUserAsync("12345");

@@ -152,6 +152,10 @@ try
             "Encryption:Key ist gesetzt, aber leer. Entweder einen echten Schlüssel hinterlegen " +
             "(ENCRYPTION_KEY) oder die Variable ganz weglassen — ein leerer Wert würde den " +
             "gespeicherten Chessable-Bearer nur zum Schein verschlüsseln.");
+    // Platzhalter aus den öffentlichen Beispiel-Dateien („change_me…", „your_…") als JWT- oder
+    // Verschlüsselungsschlüssel: in Production Startabbruch. Der JWT-Platzhalter hat 43 Byte und
+    // bestand die Längenprüfung oben — jeder Leser des Repos hätte sich ein Admin-JWT signieren können.
+    SecretConfigCheck.ThrowIfCryptoKeyIsPlaceholder(builder.Configuration, builder.Environment);
 
     // Services
     builder.Services.AddScoped<AuthService>();
@@ -824,6 +828,11 @@ try
 
     // Muss VOR UseRateLimiter + dem IP-Logging laufen, damit RemoteIpAddress die echte Client-IP ist.
     app.UseForwardedHeaders();
+
+    // Platzhalter-Geheimnisse einmal beim Start auf Error melden (Folgen je Art in SecretConfigCheck:
+    // eingehend geprüfte Geheimnisse schalten ihr Feature ab, mitgeschickte Schlüssel nur gemeldet).
+    SecretConfigCheck.LogStartupFindings(app.Configuration,
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("RookHub.Api.Startup"));
 
     // Auto-migrate on startup + seed admin
     {

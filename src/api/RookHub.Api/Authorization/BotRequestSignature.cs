@@ -14,7 +14,7 @@ public enum BotSignatureCheck
     Absent,
     /// <summary>Header gesetzt, Signatur + Timestamp gültig — Aufruf stammt vom Schach-Bot.</summary>
     Valid,
-    /// <summary>Header gesetzt, aber falsch/abgelaufen oder Secret serverseitig leer → 401.</summary>
+    /// <summary>Header gesetzt, aber falsch/abgelaufen oder Secret serverseitig leer bzw. Platzhalter → 401.</summary>
     Invalid,
 }
 
@@ -82,10 +82,12 @@ public static class BotRequestSignature
         var provided = request?.Headers[SignatureHeader].FirstOrDefault();
         if (string.IsNullOrEmpty(provided))
             return BotSignatureCheck.Absent;
-        if (string.IsNullOrEmpty(secret))
+        // Platzhalter aus den Beispiel-Dateien wie „leer": mit dem öffentlich bekannten Wert signiert
+        // sonst jeder die Ergebnis-GETs und bekommt die Discord-Verknüpfung der Spieler.
+        if (SecretConfigCheck.Usable(secret) is not { } usableSecret)
             return BotSignatureCheck.Invalid;
         var timestamp = request!.Headers[TimestampHeader].FirstOrDefault();
-        return Verify(secret, request.Path.Value ?? string.Empty, provided, timestamp)
+        return Verify(usableSecret, request.Path.Value ?? string.Empty, provided, timestamp)
             ? BotSignatureCheck.Valid
             : BotSignatureCheck.Invalid;
     }

@@ -24,12 +24,13 @@ public static class AdminSeeder
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             return;
 
-        // Wohlbekannten Platzhalter aus den compose-Beispielen nicht seeden —
-        // verhindert einen versehentlichen Admin mit Default-Passwort.
-        if (password == "change_me")
+        // Wohlbekannte Platzhalter aus den Beispiel-Dateien („change_me…", „your_…") nicht seeden —
+        // verhindert einen versehentlichen Admin mit Default-Passwort. Dieselbe Erkennung wie für
+        // die übrigen Geheimnisse (SecretConfigCheck).
+        if (SecretConfigCheck.IsPlaceholder(password))
         {
             Console.Error.WriteLine(
-                "[AdminSeeder] ADMIN_PASSWORD ist der Platzhalter 'change_me' — Admin wird NICHT angelegt. Bitte ein echtes Passwort setzen.");
+                "[AdminSeeder] ADMIN_PASSWORD ist ein Platzhalter aus den Beispiel-Dateien — Admin wird NICHT angelegt. Bitte ein echtes Passwort setzen.");
             return;
         }
 

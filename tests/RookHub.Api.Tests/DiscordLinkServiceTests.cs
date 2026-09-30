@@ -103,4 +103,17 @@ public class DiscordLinkServiceTests
         Assert.False(svc.Enabled);
         Assert.Null(svc.Verify(token));
     }
+
+    [Fact]
+    public void Verify_PlaceholderSecret_FeatureOff()
+    {
+        // Platzhalter aus den öffentlichen .env-Beispielen = Feature aus: sonst signiert sich jeder, der
+        // das Repo kennt, ein Link-Token für eine fremde Discord-ID und verknüpft sie mit seinem Konto.
+        const string placeholder = "change_me_shared_with_schach_bot";
+        var svc = DiscordTokenTestHelper.Service(secret: placeholder);
+        var token = DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FarFuture, secret: placeholder);
+
+        Assert.False(svc.Enabled);
+        Assert.Null(svc.Verify(token));
+    }
 }

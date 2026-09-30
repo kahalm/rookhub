@@ -99,6 +99,18 @@ public class AdminSeedTests : IDisposable
         Assert.Null(user);
     }
 
+    [Theory]
+    [InlineData("change_me_admin_password")]
+    [InlineData("CHANGE_ME")]
+    [InlineData("your_password")]
+    public async Task SeedAsync_RefusesPlaceholderVariants(string placeholder)
+    {
+        // Dieselbe Erkennung wie für die übrigen Geheimnisse (SecretConfigCheck), nicht nur exakt „change_me".
+        await AdminSeeder.SeedAsync(_db, BuildConfig("admin", placeholder));
+
+        Assert.Null(await _db.AppUsers.FirstOrDefaultAsync(u => u.Username == "admin"));
+    }
+
     [Fact]
     public async Task SeedAsync_NoConfig_NoSeed()
     {
