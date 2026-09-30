@@ -1,29 +1,16 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using RookHub.Api.Services;
 
-namespace RookHub.Api.Services;
+namespace RookHub.Api.Tests;
 
 /// <summary>
-/// Bereinigt Altlasten in Chessable-Repertoire-PGNs, OHNE je eine Partie zu löschen. Ausgeblendet wird über den Header
-/// <c>[RookHubHidden "…"]</c> direkt in der Partie: alle Leser gehen über <see cref="WithoutHidden"/> und überspringen
-/// sie, und wer den Header entfernt, macht sie wieder sichtbar.
-///
-/// Hintergrund: Bis RookHub 0.476 / RepCheck 1.57 las der piratechess-Parser Browser-Uploads positionsbasiert. Schickte
-/// die Extension nur einen Teil der Linien eines Kapitels, landete jede unter Namen und oid des ERSTEN Kapiteleintrags —
-/// als Kopie einer schon vorhandenen Linie oder als Unikat mit falscher oid. Gemessen am 13.09. auf Prod: 2 von 205
-/// Chessable-Repertoires. Gleiche Züge unter VERSCHIEDENEN oids sind dagegen von Chessable gewollte Wiederholungen
-/// (666 Gruppen) und bleiben unangetastet, ebenso Dubletten ganz ohne oid (nicht entscheidbar).
-///
-/// Regeln, idempotent (ein zweiter Lauf ändert nichts):
-///  1. Eine oid an Partien mit VERSCHIEDENEN Linien (Stellung + Hauptvariante) gehört genau einer davon. Welcher,
-///     entscheidet in dieser Reihenfolge: (a) ihr Rohinhalt im geteilten Linien-Cache; (b) die Ausschlussregel — eine
-///     Partie, deren Inhalt schon unter einer ANDEREN, eindeutigen oid steht, trägt sie nicht; (c) sonst die früheste
-///     Partie (der Fehler hängte immer hinten an). Den übrigen wird die oid entfernt (<c>[RookHubRemovedOid]</c>); steht
-///     ihr Inhalt schon in einer anderen sichtbaren Partie, werden sie ausgeblendet, sonst bleiben sie sichtbar.
-///  2. Dieselben Züge in mehreren sichtbaren Partien, die zusammen GENAU EINE oid kennen: die früheste Partie bleibt und
-///     trägt die oid, die übrigen werden ausgeblendet.
+/// WÖRTLICHE Kopie von <see cref="RepertoirePgnCleanup"/> vor dem Umbau auf Indizes (Codereview 2026-09-29, N7-004,
+/// Stand 21b09fa3) — nur Klassenname und Sichtbarkeit geändert. Dient <see cref="RepertoirePgnCleanupScaleTests"/> als
+/// Orakel: die neue Fassung muss auf jedem Korpus dieselben Aktionen und dasselbe PGN liefern. Nicht anpassen, wenn
+/// sich die Regeln ändern — dann gehört der Golden-Test neu gedacht.
 /// </summary>
-public static class RepertoirePgnCleanup
+internal static class LegacyRepertoirePgnCleanup
 {
     /// <summary>Stand der Regeln. Erhöhen, wenn eine Regel dazukommt — der Start-Job prüft dann alle Dateien neu.</summary>
     public const int CurrentVersion = 1;
@@ -133,57 +120,23 @@ public static class RepertoirePgnCleanup
         // ── Regel 1: mehrdeutige oids ────────────────────────────────────────
         var ambiguous = AmbiguousOidsOf(pgn, games);
         var ambiguousSet = new HashSet<string>(ambiguous, StringComparer.Ordinal);
-
-        // Indizes statt eines Laufs über ALLE Partien je Träger: vorher O(n²) in der Partienzahl, über eine Minute
-        // bei 40 000 Partien — im Request des Live-Appends (Codereview 2026-09-29, N7-004). Die Entscheidungen
-        // bleiben dieselben (Golden-Test gegen die alte Fassung):
-        //  · byOid: die Partien je oid in Partienreihenfolge; Sichtbarkeit und oid werden weiter beim Zugriff geprüft.
-        //  · byMoves: die Partien je Zugtext in Partienreihenfolge — die Zwillingssuche.
-        //  · movesUnderUniqueOid: Zugtexte sichtbarer Partien mit einer EINDEUTIGEN oid. Regel 1 fasst nur Träger
-        //    mehrdeutiger oids an; diese Partien bleiben also die ganze Regel über sichtbar und behalten ihre oid —
-        //    die Menge gilt für jede oid der Schleife (die alte Prüfung o.EffectiveOid != oid ist damit immer wahr).
-        var byOid = new Dictionary<string, List<Game>>(StringComparer.Ordinal);
-        var byMoves = new Dictionary<string, List<Game>>(StringComparer.Ordinal);
-        var movesUnderUniqueOid = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var g in games)
-        {
-            if (g.Oid != null) Bucket(byOid, g.Oid).Add(g);
-            Bucket(byMoves, g.Moves).Add(g);
-            if (!g.Hidden && g.Oid != null && !ambiguousSet.Contains(g.Oid)) movesUnderUniqueOid.Add(g.Moves);
-        }
-        // Zwillingssuche: erste sichtbare ANDERE Partie mit demselben Zugtext, in Partienreihenfolge. Unsichtbar wird
-        // in Regel 1 eine Partie nur endgültig (WillHide) — der Zeiger je Zugtext überspringt sie deshalb nur einmal.
-        var twinCursor = new Dictionary<string, int>(StringComparer.Ordinal);
-        Game? TwinOf(Game g)
-        {
-            if (g.Moves.Length == 0) return null;
-            var bucket = byMoves[g.Moves];
-            twinCursor.TryGetValue(g.Moves, out var first);
-            while (first < bucket.Count && !Visible(bucket[first])) first++;
-            twinCursor[g.Moves] = first;
-            for (var i = first; i < bucket.Count; i++)
-                if (bucket[i] != g && Visible(bucket[i])) return bucket[i];
-            return null;
-        }
-
         foreach (var oid in ambiguous)
         {
-            var carriers = (byOid.TryGetValue(oid, out var withOid) ? withOid : new List<Game>())
-                .Where(g => Visible(g) && g.EffectiveOid == oid).ToList();
+            var carriers = games.Where(g => Visible(g) && g.EffectiveOid == oid).ToList();
             if (carriers.Select(g => g.Key(pgn)).Distinct(StringComparer.Ordinal).Count() < 2) continue;
 
             List<Game> rightful;
             string basis;
             if (truthByOid.TryGetValue(oid, out var truth) && !string.IsNullOrWhiteSpace(truth))
             {
-                var truthGame = Games(truth).FirstOrDefault();   // einmal je oid, nicht je Träger
-                rightful = carriers.Where(g => MatchesTruth(pgn, g, truthGame, truth)).ToList();
+                rightful = carriers.Where(g => MatchesTruth(pgn, g, truth)).ToList();
                 basis = "laut Linien-Cache";
                 if (rightful.Count == 0) continue;   // Wahrheit passt zu keiner Partie → lieber nichts anfassen
             }
             else
             {
-                var remaining = carriers.Where(g => !movesUnderUniqueOid.Contains(g.Moves)).ToList();
+                var remaining = carriers.Where(g => !games.Any(o => o != g && Visible(o) && o.Moves == g.Moves
+                    && o.EffectiveOid != null && o.EffectiveOid != oid && !ambiguousSet.Contains(o.EffectiveOid))).ToList();
                 if (remaining.Count > 0 && remaining.Select(g => g.Key(pgn)).Distinct(StringComparer.Ordinal).Count() == 1)
                 {
                     rightful = remaining;
@@ -197,13 +150,12 @@ public static class RepertoirePgnCleanup
                 }
             }
 
-            var rightfulSet = new HashSet<Game>(rightful);
-            foreach (var g in carriers.Where(g => !rightfulSet.Contains(g)))
+            foreach (var g in carriers.Where(g => !rightful.Contains(g)))
             {
                 g.RemoveOid = oid;
                 g.RemovedNote = oid;
                 g.EffectiveOid = null;
-                var twin = TwinOf(g);
+                var twin = games.FirstOrDefault(o => o != g && Visible(o) && o.Moves.Length > 0 && o.Moves == g.Moves);
                 if (twin != null)
                 {
                     g.WillHide = true;
@@ -272,13 +224,10 @@ public static class RepertoirePgnCleanup
             .Select(grp => grp.Key)
             .ToList();
 
-    private static bool MatchesTruth(string pgn, Game g, Game? t, string truthPgn)
-        => t != null && (t.Moves == g.Moves || t.Key(truthPgn) == g.Key(pgn));
-
-    private static List<Game> Bucket(Dictionary<string, List<Game>> index, string key)
+    private static bool MatchesTruth(string pgn, Game g, string truthPgn)
     {
-        if (!index.TryGetValue(key, out var list)) index[key] = list = new List<Game>();
-        return list;
+        var t = Games(truthPgn).FirstOrDefault();
+        return t != null && (t.Moves == g.Moves || t.Key(truthPgn) == g.Key(pgn));
     }
 
     private static string Sanitize(string? text)
