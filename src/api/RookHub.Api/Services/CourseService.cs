@@ -117,7 +117,7 @@ public class CourseService
         // Info-/Erklärlinien sind kein Quiz → zählen nicht zum Kapitel-Fortschritt.
         var puzzles = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new { bp.Id, bp.Chapter })
             .ToListAsync();
         var solvedSet = (await _db.CoursePuzzleResults
@@ -216,7 +216,7 @@ public class CourseService
         db.BookPuzzles
             .Include(bp => bp.Book)
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
+            .InReadingOrder();
 
     /// <summary>Puzzles eines ÖFFENTLICHEN Kurses — ohne Login (kein User/Zugriffs-Kontext).
     /// Basis dafür, dass ein anonymer Besucher einen als <see cref="Book.IsPublic"/> markierten Kurs über
@@ -282,7 +282,7 @@ public class CourseService
 
         var raw = await _db.BookPuzzles
             .Where(bp => bp.BookId == target.BookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => bp.Chapter)
             .ToListAsync();
         var name = raw.Select(NormalizeChapter).FirstOrDefault(n => Matches(n, wanted));
@@ -333,7 +333,7 @@ public class CourseService
 
         var puzzles = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .ToListAsync();
 
         // Fallback (Altbestand ohne Quelle): aus den BookPuzzles rekonstruieren (Round-Lesereihenfolge).
@@ -369,7 +369,7 @@ public class CourseService
         var wanted = NormalizeChapter(chapter?.Trim());
         var puzzles = (await _db.BookPuzzles
                 .Where(bp => bp.BookId == bookId)
-                .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+                .InReadingOrder()
                 .ToListAsync())
             .Where(bp => NormalizeChapter(bp.Chapter?.Trim()) == wanted)
             .ToList();
@@ -1090,7 +1090,7 @@ public class CourseService
             // gesehen), daher wird ihr (Round, Id) separat aufgelöst und die erste Pool-Linie danach
             // gewählt. Nur die Schlüssel (Id, Round) laden — String-Vergleich passiert in-memory
             // (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
-            var keys = await seqPool.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            var keys = await seqPool.InReadingOrder()
                 .Select(bp => new { bp.Id, bp.Round })
                 .ToListAsync();
             int? pickId = null;

@@ -66,7 +66,7 @@ public class CourseAuthoringService
 
         var lines = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new { bp.Id, bp.Chapter, bp.IsInfoOnly })
             .ToListAsync(ct);
 
@@ -206,7 +206,7 @@ public class CourseAuthoringService
         var wanted = Normalize(chapter);
         var lines = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new
             {
                 bp.Id, bp.LineId, bp.Round, bp.Title, bp.Chapter, bp.Fen, bp.Comment, bp.IsInfoOnly, bp.Moves,

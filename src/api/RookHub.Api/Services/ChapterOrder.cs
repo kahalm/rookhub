@@ -36,6 +36,17 @@ public static class ChapterOrder
         return byRound != 0 ? byRound : idA.CompareTo(idB);
     }
 
+    /// <summary>
+    /// Die Lesereihenfolge als SQL-Sortierung — das DB-Gegenstück zu <see cref="Compare"/>:
+    /// <c>Round.Length, Round, Id</c>. EINE Definition statt einer Kopie je Abfrage: die Regel hat sich
+    /// schon einmal geändert (Länge vor Text), und jede vergessene Kopie ließe Kapitelindex, Solver,
+    /// Detailseite und Kalkulations-Modus verschieden zählen (Deep-Links aufs falsche Kapitel).
+    /// Wer die Reihenfolge ändert, ändert sie HIER und in <see cref="Compare"/> —
+    /// <c>ChapterOrderTests</c> prüft, dass beide dieselbe Folge liefern.
+    /// </summary>
+    public static IOrderedQueryable<BookPuzzle> InReadingOrder(this IQueryable<BookPuzzle> query) =>
+        query.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
+
     /// <summary>null/leer/Whitespace → dieselbe Sammel-„ohne Kapitel"-Gruppe (null).</summary>
     public static string? NormalizeChapter(string? raw) => string.IsNullOrWhiteSpace(raw) ? null : raw;
 
@@ -45,7 +56,7 @@ public static class ChapterOrder
     {
         var chapters = await db.BookPuzzles
             .Where(bp => bp.BookId == bookId && !bp.IsInfoOnly)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => bp.Chapter)
             .ToListAsync();
         var names = new List<string?>();

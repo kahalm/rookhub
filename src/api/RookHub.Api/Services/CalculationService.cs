@@ -109,7 +109,7 @@ public class CalculationService
 
         var positions = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new CalcPositionListItemDto
             {
                 Id = bp.Id,
@@ -238,7 +238,7 @@ public class CalculationService
         // Moves/StartPly werden NUR geladen, um daraus den Vorlauf zu schneiden — sie landen nie im DTO.
         var rows = await _db.BookPuzzles
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new { bp.Id, bp.Round, bp.Title, bp.Chapter, bp.Fen, bp.Comment, bp.Moves, bp.StartPly })
             .ToListAsync(ct);
 

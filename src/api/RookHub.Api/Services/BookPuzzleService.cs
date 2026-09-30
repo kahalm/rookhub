@@ -75,7 +75,7 @@ public class BookPuzzleService
 
         // Nur Schlüssel (Id, Round) in Round-Reihenfolge laden; der Cursor-Vergleich passiert
         // in-memory (provider-unabhängig; SQL sortiert nur nach der Round-Spalte).
-        var keys = await BookSiblings(current).OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+        var keys = await BookSiblings(current).InReadingOrder()
             .Select(bp => new { bp.Id, bp.Round })
             .ToListAsync();
         // Cursor-Vergleich über DIESELBE Reihenfolge wie die Sortierung (inkl. Round.Length) —

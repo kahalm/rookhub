@@ -85,7 +85,7 @@ public class WeeklyPostService
         // Länge ZUERST, dann ordinal, dann Id — exakt wie ChapterOrder/CourseService. Rein alphabetisch
         // sortierte „10" vor „9", die gespiegelte Wochenpost-Reihenfolge wich also ab Kapitel-Zeile 10
         // von der Kurs-Reihenfolge ab, und der index-basierte Fortschritt zeigte auf andere Puzzles.
-        return q.OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id);
+        return q.InReadingOrder();
     }
 
     /// <summary>Die Kapitelnamen eines Buchs in Lesereihenfolge — geteilte Logik in

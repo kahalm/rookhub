@@ -171,7 +171,7 @@ public class CourseTranslationService
 
         var sample = await _db.BookPuzzles.AsNoTracking()
             .Where(bp => bp.BookId == bookId && (bp.Comment != null || bp.MoveComments != null))
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Take(LanguageSampleLines)
             .Select(bp => new { bp.Comment, bp.MoveComments })
             .ToListAsync(ct);
@@ -566,7 +566,7 @@ public class CourseTranslationService
     {
         var lines = await _db.BookPuzzles.AsNoTracking()
             .Where(bp => bp.BookId == bookId)
-            .OrderBy(bp => bp.Round.Length).ThenBy(bp => bp.Round).ThenBy(bp => bp.Id)
+            .InReadingOrder()
             .Select(bp => new { bp.Id, bp.Title, bp.Chapter, bp.Comment, bp.MoveComments })
             .ToListAsync(ct);
         var have = (await _db.CommentTexts.AsNoTracking()
