@@ -1,4 +1,7 @@
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -53,4 +56,80 @@ public class AnonymousDataRetentionServiceTests : IDisposable
     [Fact]
     public async Task Prune_EmptyDatabase_IsNoOp()
         => Assert.Equal(0, await AnonymousDataRetentionService.PruneAsync(_db, DateTime.UtcNow));
+
+    // ---- Anonyme getReview-Senke der Extension (A3-003) ----
+
+    private AnonymousDataRetentionService Service(Func<IServiceProvider, ChessableReviewLineService>? reviewLines = null)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(_db);
+        services.AddScoped(reviewLines ?? (_ => new ChessableReviewLineService(_db, new PgnImportService(_db))));
+        return new AnonymousDataRetentionService(
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<AnonymousDataRetentionService>.Instance);
+    }
+
+    private void AddAnonLine(string uid, string oid, int ageDays) =>
+        _db.AnonymousChessableReviewLines.Add(new AnonymousChessableReviewLine
+        { ChessableUid = uid, Bid = "228856", Oid = oid, Json = "{}", UpdatedAt = DateTime.UtcNow.AddDays(-ageDays) });
+
+    [Fact]
+    public async Task RunOnce_PrunesTheAnonymousReviewSink_OldRowsAndUnlinkedAfterTwoWeeks()
+    {
+        // Die Löschung der Anon-Senke lief bisher NUR im Kurslisten-Refresh, und der ist mit
+        // Chessable:Enabled=false (PROD seit 2026-09-09) gar nicht registriert — der offene Extension-Endpunkt
+        // nahm weiter an, gelöscht wurde nie. Der immer laufende Retention-Dienst übernimmt sie.
+        _db.ChessableCredentials.Add(new ChessableCredential { UserId = 7, EncryptedBearer = "enc", ChessableUid = "3" });
+        AddAnonLine("1", "1", 30);    // ohne Konto, älter als 14 Tage → weg
+        AddAnonLine("2", "2", 5);     // ohne Konto, jung → bleibt
+        AddAnonLine("3", "3", 30);    // verknüpft (claimbar) → volle 90 Tage, bleibt
+        AddAnonLine("3", "4", 120);   // verknüpft, älter als 90 Tage → weg
+        await _db.SaveChangesAsync();
+
+        var removed = await Service().RunOnceAsync();
+
+        Assert.Equal(2, removed);
+        Assert.Equal(new[] { "2", "3" }, await _db.AnonymousChessableReviewLines
+            .OrderBy(r => r.Oid).Select(r => r.Oid).ToArrayAsync());
+    }
+
+    [Fact]
+    public async Task RunOnce_ReviewSinkFailure_StillPrunesEndless()
+    {
+        // Getrennte Versuche: scheitert die eine Senke, darf die andere nicht ausfallen (vorher übersprang ein
+        // Fehler im Kurslisten-Refresh die Retention im selben try).
+        _db.EndlessProgresses.Add(new EndlessProgress
+        { AnonymousSessionId = "alt", UpdatedAt = DateTime.UtcNow.AddDays(-90), ActiveGameState = "{}" });
+        await _db.SaveChangesAsync();
+
+        var removed = await Service(_ => throw new InvalidOperationException("Senke kaputt")).RunOnceAsync();
+
+        Assert.Equal(1, removed);
+        Assert.Equal(0, await _db.EndlessProgresses.CountAsync());
+    }
+
+    [Fact]
+    public void ProgramCs_RegistersTheRetentionIndependentOfTheChessableSwitch()
+    {
+        // Verdrahtung: registriert, bevor der Schalter überhaupt gelesen wird — also nie hinter if (chessableEnabled).
+        var src = File.ReadAllText(ProgramCs());
+        var registration = src.IndexOf("AddHostedService<AnonymousDataRetentionService>()", StringComparison.Ordinal);
+        var chessableSwitch = src.IndexOf("var chessableEnabled", StringComparison.Ordinal);
+        Assert.True(registration > 0, "AnonymousDataRetentionService nicht registriert");
+        Assert.True(chessableSwitch > 0, "Chessable-Schalter nicht gefunden");
+        Assert.True(registration < chessableSwitch, "Retention hängt am Chessable-Schalter");
+    }
+
+    private static string ProgramCs([CallerFilePath] string thisFile = "")
+    {
+        var dir = Path.GetDirectoryName(thisFile);
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
+            if (File.Exists(candidate)) return candidate;
+            dir = Path.GetDirectoryName(dir);
+        }
+        Assert.Fail("Program.cs nicht gefunden");
+        return "";
+    }
 }

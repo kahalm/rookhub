@@ -53,16 +53,9 @@ public class ChessableCourseRefreshScheduler : BackgroundService
             using var scope = _scopeFactory.CreateScope();
             var svc = scope.ServiceProvider.GetRequiredService<ChessableCourseRefreshService>();
             await svc.RefreshAllAsync(ct);
-
-            // Retention: ungeclaimte anonyme getReview-Linien (Default-URL-Nutzer ohne RookHub-Account,
-            // die ihre uid nie per Bearer verknüpft haben) nach 90 Tagen entsorgen — hält die Anon-Senke klein.
-            var reviewLines = scope.ServiceProvider.GetRequiredService<ChessableReviewLineService>();
-            var pruned = await reviewLines.PruneAnonOlderThanAsync(TimeSpan.FromDays(90), ct);
-            // Und deutlich früher für uids OHNE verknüpftes Konto: die sind nicht claimbar und damit der
-            // Vorrats-Topf, den der offene Endpoint füllen kann (der legitime Weg dauert Tage, nicht Monate).
-            pruned += await reviewLines.PruneUnlinkedAnonOlderThanAsync(TimeSpan.FromDays(14), ct);
-            if (pruned > 0)
-                _logger.LogInformation("Anon-getReview-Retention: {Count} ungeclaimte Zeilen gelöscht", pruned);
+            // Die Retention der anonymen getReview-Senke liegt NICHT mehr hier, sondern im immer laufenden
+            // AnonymousDataRetentionService: dieser Dienst ist nur mit Chessable:Enabled=true registriert
+            // (PROD: aus), und ein Fehler im Refresh übersprang sie im selben try.
         }
         catch (Exception ex)
         {

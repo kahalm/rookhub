@@ -305,7 +305,9 @@ try
         return tracker;
     });
     // Retention der anonymen Endless-Spielstände (offener Pfad, frei wählbare Session-Id → sonst
-    // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand).
+    // unbegrenztes Wachstum mit je bis zu 1 MB Spielstand) und der anonymen getReview-Senke der Extension
+    // (90 bzw. 14 Tage). IMMER registriert, unabhängig von `Chessable:Enabled`: der Extension-Endpunkt nimmt
+    // auch mit Schalter aus an — hinter dem Schalter (im Kurslisten-Refresh) lief die Retention auf PROD nie.
     builder.Services.AddHostedService<AnonymousDataRetentionService>();
     // Eigener Engine-Broker (Provider auf dem Rechner des Nutzers spricht direkt mit RookHub, ohne Lichess):
     // Registrierung (rhe_…), Selector-Verzeichnis, Engine-Auflösung beider Quellen.
@@ -456,7 +458,8 @@ try
     // Taeglicher Chessable-Kurslisten-Refresh (04:00 UTC): aktualisiert alle hinterlegten Bearer,
     // sperrt tote Tokens, benachrichtigt Admins bei neuen Kursen. Nur wenn der eigene
     // Chessable-Weg ueberhaupt an ist — sonst liefe er jede Nacht gegen eine abgeschaltete
-    // Funktion und sperrte dabei womoeglich Bearer.
+    // Funktion und sperrte dabei womoeglich Bearer. (Die Retention der anonymen getReview-Senke gehoert
+    // deshalb NICHT hierher, sondern in den immer laufenden AnonymousDataRetentionService.)
     if (chessableEnabled)
         builder.Services.AddHostedService<ChessableCourseRefreshScheduler>();
     // Kalkulations-Serie: kündigt freigegebene Wochen an den Verteiler an (Standard alle 5 min).

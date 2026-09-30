@@ -316,7 +316,8 @@ public class ChessableReviewLineService
 
     /// <summary>Retention: ungeclaimte Anon-Zeilen älter als <paramref name="maxAge"/> löschen — der
     /// Absender hat seine Chessable-uid nie mit einem RookHub-Account verknüpft (Default-URL-Nutzer, der
-    /// nie einen Bearer hinterlegt). Verhindert unbegrenztes Wachstum der Anon-Senke. Nächtlich getrieben.
+    /// nie einen Bearer hinterlegt). Verhindert unbegrenztes Wachstum der Anon-Senke. Täglich getrieben vom
+    /// <see cref="AnonymousDataRetentionService"/> (läuft unabhängig von <c>Chessable:Enabled</c>).
     /// Liefert die Zahl gelöschter Zeilen.</summary>
     public async Task<int> PruneAnonOlderThanAsync(TimeSpan maxAge, CancellationToken ct = default)
     {
