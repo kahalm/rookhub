@@ -45,6 +45,9 @@ public static class RateLimitPartitions
     /// Auftrag — 10 je Minute bleibt weit darueber.</summary>
     public const int CrawlerRequestPermitPerMinute = 10;
 
+    /// <summary>Nachricht an das Admin-Team (POST /api/messages/reply) je Konto — jede klingelte bei ALLEN Admins.</summary>
+    public const int UserMessagePermitPerMinute = 10;
+
     public static string ClientIp(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     /// <summary>Globaler Deckel je Adresse — außer für Endpunkte, deren eigene Policy schon die Obergrenze je Adresse
@@ -75,6 +78,9 @@ public static class RateLimitPartitions
     /// ohne Anmeldung — die Endpunkte verlangen sie — je Adresse.</summary>
     public static RateLimitPartition<string> CrawlerRequest(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), CrawlerRequestPermitPerMinute * scale);
+
+    public static RateLimitPartition<string> UserMessage(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), UserMessagePermitPerMinute * scale);
 
     /// <summary>Angemeldet: je Konto. Sonst je Adresse — ohne Visitor-Id, weil diese Endpunkte teuer sind
     /// (semantische Suche) oder keine Visitor-Id kennen (Bot, Extension, Provider-Preflight).</summary>

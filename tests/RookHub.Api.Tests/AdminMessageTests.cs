@@ -1,6 +1,10 @@
+using System.Net;
+using System.Reflection;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -339,5 +343,68 @@ public class AdminMessageTests : IDisposable
     {
         await UserAsync(1, "admin", admin: true);
         Assert.IsType<NotFoundResult>(await AdminController(1).Send(999, new SendMessageDto("hi")));
+    }
+
+    // ---- Drossel + Entprellung (Codereview 2026-09-29, F5-001) ----
+
+    /// <summary>Vorher legte JEDE Nachricht einer Serie bei allen Admins eine Glocke (und einen Web-Push) an —
+    /// 100 Nachrichten/min × Anzahl Admins. Jetzt klingelt es je Thread und Admin nur, solange keine ungesehene da ist.</summary>
+    [Fact]
+    public async Task SendFromUser_Series_RingsOncePerThreadAndAdmin_UntilSeen()
+    {
+        await UserAsync(1, "admin1", admin: true);
+        await UserAsync(2, "bob");
+        await UserAsync(3, "admin2", admin: true);
+        await UserAsync(4, "eve");
+
+        for (var i = 0; i < 5; i++) await _service.SendFromUserAsync(2, $"Nachricht {i}");
+
+        Assert.Equal(5, await _db.AdminMessages.CountAsync(m => m.UserId == 2));
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(1, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+
+        // Ein anderer Thread klingelt für sich.
+        await _service.SendFromUserAsync(4, "Hallo");
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+
+        // Hat admin1 die Glocke gesehen, klingelt die nächste Nachricht bei ihm wieder — bei admin2 (ungesehen) nicht.
+        await _notifications.MarkAllSeenAsync(1);
+        await _service.SendFromUserAsync(2, "noch eine");
+        Assert.Equal(3, await _db.Notifications.CountAsync(n => n.UserId == 1 && n.Type == NotificationType.UserMessageReceived));
+        Assert.Equal(2, await _db.Notifications.CountAsync(n => n.UserId == 3 && n.Type == NotificationType.UserMessageReceived));
+    }
+
+    /// <summary>POST /api/messages/reply hing nur am globalen 100/min-IP-Deckel. Jetzt eigene Partition je KONTO —
+    /// ein zweites Konto hinter derselben Adresse hat sein eigenes Fenster.</summary>
+    [Fact]
+    public void UserReply_IsRateLimitedPerAccount()
+    {
+        var method = typeof(MessageController).GetMethod(nameof(MessageController.Send))!;
+        Assert.Equal("user-message", method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName);
+
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.UserMessage(c, 1));
+        var permit = RateLimitPartitions.UserMessagePermitPerMinute;
+        Assert.Equal(permit, Acquired(limiter, Account(2), permit + 5));
+        Assert.Equal(permit, Acquired(limiter, Account(4), permit + 5));
+        Assert.True(permit < RateLimitPartitions.GlobalPermitPerMinute);
+    }
+
+    private static HttpContext Account(int userId)
+    {
+        var ctx = new DefaultHttpContext();
+        ctx.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.9");
+        ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "Test"));
+        return ctx;
+    }
+
+    private static int Acquired(PartitionedRateLimiter<HttpContext> limiter, HttpContext ctx, int tries)
+    {
+        var ok = 0;
+        for (var i = 0; i < tries; i++)
+        {
+            using var lease = limiter.AttemptAcquire(ctx);
+            if (lease.IsAcquired) ok++;
+        }
+        return ok;
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -27,8 +28,10 @@ public class MessageController : BaseApiController
         => Ok(new MessageUnreadCountDto(await _messages.CountUnreadForUserAsync(GetUserId())));
 
     /// <summary>Der User schreibt dem Admin-Team — startet die Konversation selbst oder antwortet
-    /// im bestehenden Thread (400 nur bei leerem Text).</summary>
+    /// im bestehenden Thread (400 nur bei leerem Text). Gedrosselt je Konto („user-message"): jede Nachricht
+    /// benachrichtigt alle Admins.</summary>
     [HttpPost("reply")]
+    [EnableRateLimiting("user-message")]
     public async Task<IActionResult> Send([FromBody] SendMessageDto dto)
     {
         try { return Ok(await _messages.SendFromUserAsync(GetUserId(), dto.Body)); }
