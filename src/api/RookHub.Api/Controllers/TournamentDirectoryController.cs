@@ -27,14 +27,6 @@ public class TournamentDirectoryController : BaseApiController
     private static readonly Regex TournamentIdPattern = new(@"^\d{1,10}$", RegexOptions.Compiled);
 
     /// <summary>
-    /// Die IDENTITAET eines Verzeichniseintrags: eine chess-results-Nummer oder ein
-    /// Quellen-Kuerzel plus Nummer (<c>f14805</c> fuer den FIDE-Kalender). Bewusst eng — der Wert
-    /// steht in Adressen und wird als Schluessel verglichen; hoechstens zehn Ziffern, wie die
-    /// chess-results-Nummer sie hat.
-    /// </summary>
-    private static readonly Regex PublicIdPattern = new(@"^[a-z]?\d{1,10}$", RegexOptions.Compiled);
-
-    /// <summary>
     /// Obergrenze der Turniere EINES Monats — jenseits davon meldet die Antwort `truncated`.
     ///
     /// <para>5000 wie <see cref="TournamentDirectoryQueryService.MaxMaterialized"/> im Umkreis-Weg.
@@ -203,7 +195,7 @@ public class TournamentDirectoryController : BaseApiController
     [HttpGet("{id}")]
     public async Task<ActionResult<DirectoryEntryDto>> Get(string id, CancellationToken ct)
     {
-        if (!PublicIdPattern.IsMatch(id ?? ""))
+        if (!DirectoryPublicId.IsValid(id))
             return BadRequest(new { message = "Invalid tournament id." });
 
         var item = await _query.GetAsync(id, ct);
@@ -245,7 +237,7 @@ public class TournamentDirectoryController : BaseApiController
     public async Task<IActionResult> Ignore(string id, CancellationToken ct)
     {
         id = (id ?? "").Trim();
-        if (!PublicIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+        if (!DirectoryPublicId.IsValid(id)) return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
         if (await _db.TournamentDirectoryIgnores
@@ -277,7 +269,7 @@ public class TournamentDirectoryController : BaseApiController
     public async Task<IActionResult> Unignore(string id, CancellationToken ct)
     {
         id = (id ?? "").Trim();
-        if (!PublicIdPattern.IsMatch(id)) return BadRequest(new { message = "Invalid tournament ID." });
+        if (!DirectoryPublicId.IsValid(id)) return BadRequest(new { message = "Invalid tournament ID." });
 
         var userId = GetUserId();
         var row = await _db.TournamentDirectoryIgnores
@@ -307,7 +299,7 @@ public class TournamentDirectoryController : BaseApiController
     public async Task<IActionResult> Report(
         string id, [FromBody] DirectoryReportDto dto, CancellationToken ct)
     {
-        if (!PublicIdPattern.IsMatch((id ?? "").Trim()))
+        if (!DirectoryPublicId.IsValid((id ?? "").Trim()))
             return BadRequest(new { message = "Invalid tournament ID." });
 
         var entry = await _db.TournamentDirectoryEntries.AsNoTracking()

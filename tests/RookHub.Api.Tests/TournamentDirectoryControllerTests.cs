@@ -1205,6 +1205,40 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(await CreateController(1).Unignore(id, default));
     }
 
+    /// <summary>
+    /// A5-003: die Kennungen der Verbandskalender (zwei Buchstaben plus Nummer, Polen mit Jahr und
+    /// Bindestrich, Kurzschluessel aus 12 Hex-Zeichen) fielen durch das alte Muster
+    /// <c>^[a-z]?\d{1,10}$</c> — Detailseite, Ausblenden und Melden antworteten 400, der Nutzer
+    /// konnte solche Eintraege weder oeffnen noch loswerden.
+    /// </summary>
+    [Theory]
+    [InlineData("ie12345")]
+    [InlineData("hu4711")]
+    [InlineData("pl2026-4711")]
+    [InlineData("de0123456789ab")]
+    [InlineData("f14805")]
+    public async Task FederationIds_CanBeOpenedIgnoredAndReported(string id)
+    {
+        var userId = await CreateUserAsync("melder");
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = id, ChessResultsId = null, Name = $"Verbandsturnier {id}", Federation = "IRL",
+            StartDate = new DateOnly(2026, 10, 10), EndDate = new DateOnly(2026, 10, 11),
+        });
+        await _db.SaveChangesAsync();
+
+        var get = await CreateController(userId).Get(id, default);
+        Assert.Equal(id, Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(get.Result).Value).Id);
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Ignore(id, default));
+        Assert.Equal(id, Assert.Single(await _db.TournamentDirectoryIgnores.ToListAsync()).PublicId);
+        Assert.IsType<NoContentResult>(await CreateController(userId).Unignore(id, default));
+        Assert.Empty(await _db.TournamentDirectoryIgnores.ToListAsync());
+
+        Assert.IsType<NoContentResult>(await CreateController(userId).Report(id, new DirectoryReportDto(), default));
+        Assert.Contains(id, Assert.Single(await _db.AdminMessages.ToListAsync()).Body);
+    }
+
     // ----- Rueckmeldungen ---------------------------------------------------
 
     /// <summary>
