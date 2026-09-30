@@ -3633,6 +3633,7 @@
     "cancelled": "Otkazano",
     "approximate": "Samo približno locirano: mjesto igranja nije prepoznato, točka pokazuje sredinu regije.",
     "pins": "{{count}} turnira u prikazu",
+    "mapTruncated": "Previše turnira u ovom prikazu — najkasniji nedostaju. Približi kartu ili skrati razdoblje da vidiš sve.",
     "bookmark": "Zabilježi",
     "bookmarkRemove": "Ukloni oznaku",
     "bookmarkRemoved": "Oznaka je uklonjena. Sam turnir ostaje.",

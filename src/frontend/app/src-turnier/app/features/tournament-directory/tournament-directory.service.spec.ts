@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { DirectoryCalendarDay, DirectoryFilter, EMPTY_FILTER } from './tournament-directory.model';
+import {
+  DirectoryCalendarDay, DirectoryEntry, DirectoryFilter, DirectoryMapResponse, EMPTY_FILTER,
+} from './tournament-directory.model';
 
 describe('TournamentDirectoryService', () => {
   let service: TournamentDirectoryService;
@@ -73,7 +75,32 @@ describe('TournamentDirectoryService', () => {
     expect(req.request.params.has('lat')).toBeFalse();
     expect(req.request.params.get('bbox')).toBe('47.0,12.0,48.0,14.0');
     expect(req.request.params.get('fed')).toBe('AUT');
-    req.flush([]);
+    req.flush({ items: [], truncated: false });
+  });
+
+  /**
+   * Die Karte kappt nach Startdatum. Bis 0.606.0 war die Antwort eine nackte Liste, und unter einer
+   * gekappten Karte stand nur „N Turniere im Ausschnitt" — die spaeten Monate fehlten still.
+   */
+  it('reicht beim Kartenaufruf die Marker UND das Kappungs-Kennzeichen durch', () => {
+    let res: DirectoryMapResponse | undefined;
+    service.map(filter(), '47.0,12.0,48.0,14.0').subscribe(r => (res = r));
+
+    const pin = { id: '1', name: 'Open Braunau' } as DirectoryEntry;
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush({ items: [pin], truncated: true });
+
+    expect(res).toEqual({ items: [pin], truncated: true });
+  });
+
+  /** Kommt die Turnierseite vor der API heraus, darf die Karte an der alten Form nicht zerbrechen. */
+  it('liest die alte Antwortform (nackte Liste) als ungekappt', () => {
+    let res: DirectoryMapResponse | undefined;
+    service.map(filter(), '47.0,12.0,48.0,14.0').subscribe(r => (res = r));
+
+    const pin = { id: '1', name: 'Open Braunau' } as DirectoryEntry;
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush([pin]);
+
+    expect(res).toEqual({ items: [pin], truncated: false });
   });
 
   it('lässt beim Kalender from/to weg — Jahr und Monat bestimmen den Zeitraum', () => {

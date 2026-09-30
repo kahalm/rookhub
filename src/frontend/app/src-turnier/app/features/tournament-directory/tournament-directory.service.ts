@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import {
-  DirectoryCalendarDay, DirectoryCalendarResponse, DirectoryEntry, DirectoryFilter, DirectoryPage,
-  DirectoryReport, GeoPlaceSuggestion,
+  DirectoryCalendarDay, DirectoryCalendarResponse, DirectoryEntry, DirectoryFilter, DirectoryMapResponse,
+  DirectoryPage, DirectoryReport, GeoPlaceSuggestion,
 } from './tournament-directory.model';
 
 /**
@@ -20,11 +20,19 @@ export class TournamentDirectoryService {
     return this.http.get<DirectoryPage>('/api/tournament-directory', { params });
   }
 
-  map(filter: DirectoryFilter, bbox: string, limit = 2000): Observable<DirectoryEntry[]> {
+  /**
+   * Kartenmarker im Ausschnitt, samt `truncated`, wenn der Server kappen musste (dann fehlen die
+   * spaetesten Turniere). Die alte Antwortform — eine nackte Liste — wird weiter gelesen: kommt
+   * die Turnierseite vor der API heraus, zeigt die Karte ihre Marker wie bisher (nur ohne Hinweis).
+   */
+  map(filter: DirectoryFilter, bbox: string, limit = 2000): Observable<DirectoryMapResponse> {
     // Der Umkreis geht NICHT mit: die Karte zeigt, was im sichtbaren Ausschnitt liegt.
     const { lat, lon, radiusKm, ...rest } = filter;
     const params = this.toParams(rest as DirectoryFilter).set('bbox', bbox).set('limit', limit);
-    return this.http.get<DirectoryEntry[]>('/api/tournament-directory/map', { params });
+    return this.http.get<DirectoryMapResponse | DirectoryEntry[] | null>('/api/tournament-directory/map', { params })
+      .pipe(map(res => Array.isArray(res)
+        ? { items: res, truncated: false }
+        : { items: res?.items ?? [], truncated: res?.truncated === true }));
   }
 
   calendar(filter: DirectoryFilter, year: number, month: number): Observable<DirectoryCalendarDay[]> {

@@ -3633,6 +3633,7 @@
     "cancelled": "Abgesagt",
     "approximate": "Nur ungefähr verortet: Der Spielort ließ sich nicht auflösen, der Punkt zeigt die Mitte der Region.",
     "pins": "{{count}} Turniere im Ausschnitt",
+    "mapTruncated": "Zu viele Turniere in diesem Ausschnitt — die spätesten fehlen. Zoome hinein oder verkürze den Zeitraum, um alle zu sehen.",
     "bookmark": "Merken",
     "bookmarkRemove": "Merken aufheben",
     "bookmarkRemoved": "Nicht mehr gemerkt. Das Turnier selbst bleibt.",

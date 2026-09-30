@@ -3633,6 +3633,7 @@
     "cancelled": "Cancelled",
     "approximate": "Only roughly located: the venue could not be resolved, the pin shows the middle of the region.",
     "pins": "{{count}} tournaments in view",
+    "mapTruncated": "Too many tournaments in this section — the latest ones are missing. Zoom in or shorten the period to see all of them.",
     "bookmark": "Bookmark",
     "bookmarkRemove": "Remove bookmark",
     "bookmarkRemoved": "Bookmark removed. The tournament itself stays.",

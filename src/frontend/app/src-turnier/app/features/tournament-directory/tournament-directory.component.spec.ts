@@ -1,3 +1,4 @@
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -9,6 +10,7 @@ import { of, throwError } from 'rxjs';
 import { GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
 import { DirectoryEntry, SearchProfile } from './tournament-directory.model';
+import { TournamentMapComponent } from './tournament-map.component';
 
 function profile(id: number, name: string): SearchProfile {
   return {
@@ -27,6 +29,25 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
     kind: 'Individual', isLeague: false, ageGroups: [], gender: 'Open',
     ignored: false, roundDates: [], sources: [],
   };
+}
+
+/**
+ * Statt der Leaflet-Karte: die echte meldet ihren Ausschnitt selbst (nach dem ersten Zeichnen und
+ * bei jeder Groessenaenderung) und loeste damit eigene, zeitabhaengige Kartenabfragen aus. Die
+ * Markerliste wird wie in `groupByPoint` durchlaufen — ein Objekt statt einer Liste fiele hier auf.
+ */
+@Component({ selector: 'app-tournament-map', template: '' })
+class MapStubComponent {
+  private _entries: DirectoryEntry[] = [];
+  @Input() set entries(value: DirectoryEntry[]) { this._entries = [...value]; }
+  get entries(): DirectoryEntry[] { return this._entries; }
+  @Input() centre: unknown;
+  @Input() colourBy: unknown;
+  @Output() colourByChange = new EventEmitter<unknown>();
+  @Output() boundsChanged = new EventEmitter<string>();
+  @Output() tilesFailed = new EventEmitter<void>();
+  @Output() entryIgnored = new EventEmitter<void>();
+  @Output() entrySelected = new EventEmitter<DirectoryEntry>();
 }
 
 describe('TournamentDirectoryComponent', () => {
@@ -262,9 +283,48 @@ describe('TournamentDirectoryComponent', () => {
     component.onBoundsChanged('47.0,12.0,48.0,14.0');
     const req = http.expectOne(r => r.url === '/api/tournament-directory/map');
     expect(req.request.params.get('bbox')).toBe('47.0,12.0,48.0,14.0');
-    req.flush([entry('1')]);
+    req.flush({ items: [entry('1')], truncated: false });
 
     expect(component.pins().length).toBe(1);
+    expect(component.mapTruncated()).toBeFalse();
+    http.verify();
+  });
+
+  /**
+   * Die Karte kappt nach Startdatum. Unter einer gekappten Karte stand bisher nur „N Turniere im
+   * Ausschnitt" — ganze Monate wirkten leer. Jetzt steht dort derselbe Hinweis wie in der Liste,
+   * und er verschwindet wieder, sobald der Ausschnitt passt.
+   */
+  it('zeigt unter der Karte einen Hinweis, wenn der Ausschnitt gekappt ist', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onTabChange(1);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const hint = () => (fixture.nativeElement as HTMLElement).querySelector('.map-truncated');
+
+    component.onBoundsChanged('46.0,5.0,55.0,17.0');
+    http.expectOne(r => r.url === '/api/tournament-directory/map')
+      .flush({ items: [entry('1'), entry('2')], truncated: true });
+    fixture.detectChanges();
+
+    expect(component.pins().map(e => e.id)).toEqual(['1', '2']);
+    expect(component.mapTruncated()).toBeTrue();
+    expect(hint()?.textContent).toContain('tournamentDirectory.mapTruncated');
+
+    component.onBoundsChanged('47.0,12.0,48.0,14.0');
+    http.expectOne(r => r.url === '/api/tournament-directory/map')
+      .flush({ items: [entry('1')], truncated: false });
+    fixture.detectChanges();
+
+    expect(component.mapTruncated()).toBeFalse();
+    expect(hint()).toBeNull();
     http.verify();
   });
 

@@ -3354,6 +3354,7 @@
     "cancelled": "Elmarad",
     "approximate": "Csak hozzávetőlegesen behatárolva: a játszóhelyet nem sikerült feloldani, a pont a régió közepét mutatja.",
     "pins": "{{count}} verseny a képkivágatban",
+    "mapTruncated": "Túl sok verseny van ebben a képkivágatban — a legkésőbbiek hiányoznak. Nagyíts rá, vagy szűkítsd az időszakot, hogy mindet lásd.",
     "bookmark": "Megjelölés",
     "bookmarkRemove": "Megjelölés visszavonása",
     "bookmarkRemoved": "Már nincs megjelölve. Maga a verseny megmarad.",

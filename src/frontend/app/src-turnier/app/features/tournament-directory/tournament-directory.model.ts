@@ -137,6 +137,17 @@ export interface DirectoryPage {
   truncated: boolean;
 }
 
+/**
+ * Die Kartenmarker eines Ausschnitts (`GET /api/tournament-directory/map`). Bis 0.606.0 kam eine
+ * nackte Liste: der Server kappt nach Startdatum, und ueber einen grossen Ausschnitt fehlten still
+ * die spaeten Monate, waehrend unter der Karte „N Turniere im Ausschnitt" stand.
+ */
+export interface DirectoryMapResponse {
+  items: DirectoryEntry[];
+  /** true = der Ausschnitt hat mehr Turniere, als die Karte traegt; es fehlen die spaetesten. */
+  truncated: boolean;
+}
+
 export interface DirectoryCalendarDay {
   date: string;
   items: DirectoryEntry[];

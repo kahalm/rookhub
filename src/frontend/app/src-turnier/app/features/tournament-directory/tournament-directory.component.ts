@@ -117,6 +117,11 @@ export class TournamentDirectoryComponent implements OnInit {
   page = 1;
 
   readonly pins = signal<DirectoryEntry[]>([]);
+  /**
+   * Der Ausschnitt hat mehr Turniere, als die Karte traegt — es fehlen die spaetesten. Ohne das
+   * stand unter einer gekappten Karte nur „N Turniere im Ausschnitt", und ganze Monate wirkten leer.
+   */
+  readonly mapTruncated = signal(false);
   readonly mapLoading = signal(false);
   private lastBounds: string | null = null;
 
@@ -497,9 +502,10 @@ export class TournamentDirectoryComponent implements OnInit {
     // eigenen. Ohne Zaehler gewinnt die zufaellig spaetere Antwort.
     const generation = ++this.pinsGeneration;
     this.directory.map(this.filter, bounds).subscribe({
-      next: pins => {
+      next: res => {
         if (generation !== this.pinsGeneration) return;
-        this.pins.set(pins);
+        this.pins.set(res.items);
+        this.mapTruncated.set(res.truncated);
         this.mapLoading.set(false);
       },
       error: () => { if (generation === this.pinsGeneration) this.mapLoading.set(false); },

@@ -263,6 +263,9 @@
                               (tilesFailed)="onTilesFailed()"
                               (entryIgnored)="onIgnoredFromMap()"
                               (entrySelected)="select($event)" />
+          @if (mapTruncated()) {
+            <p class="hint map-truncated">{{ 'tournamentDirectory.mapTruncated' | translate }}</p>
+          }
           <p class="muted count">
             {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
             @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
