@@ -54,6 +54,8 @@ public class ChessableImportWatchdogService : BackgroundService
     /// und ein verwaister Import wird BEENDET statt zurückgestellt: zurückgestellt stünde er für immer
     /// auf „läuft" und blockierte über die Dedup-Regel in <c>EnqueueReimportAsync</c> jeden neuen Import
     /// desselben Kurses (2026-09-20 auf Prod: „1 Kurs kann aktualisiert werden" ließ sich nicht abräumen).
+    /// AUSNAHME: ein voll gecachter Server-Import (Admin „Kurse von Usern holen") geht zurück in die
+    /// Warteschlange — die netzfreie Fast-Lane läuft seit dem Codereview 2026-09-29 immer und nimmt ihn auf.
     /// </summary>
     internal bool LanesEnabled { get; init; } = true;
 
@@ -235,12 +237,14 @@ public class ChessableImportWatchdogService : BackgroundService
                 continue;
             }
 
-            if (!LanesEnabled)
+            // Voll gecacht (kein Browser-Import, der ist oben erledigt): die Fast-Lane läuft auch mit Schalter aus
+            // und nimmt ihn zurückgestellt wieder auf → unten wie mit Lanes zurück in die Warteschlange.
+            if (!LanesEnabled && import.FullyCached != true)
             {
-                // Eigener Chessable-Weg aus: ein zurückgestellter Import würde NIE wieder aufgegriffen.
-                // Hier kann es sich nur um einen Browser-Import handeln, dessen Sitzung dieser Prozess nicht
-                // mehr kennt (API-Neustart, Tab zu) — die Linien sind längst importiert, nur der Datensatz
-                // sagte weiter „läuft" und blockierte jeden neuen Import desselben Kurses.
+                // Eigener Chessable-Weg aus: ein zurückgestellter Download-Import würde NIE wieder aufgegriffen
+                // (keine Download-Lane, kein Drain). Ein Import aus der Zeit vor der FromBrowser-Spalte bzw. ein
+                // Admin-Download, dessen Treiber weg ist (API-Neustart) — nur der Datensatz sagte weiter „läuft"
+                // und blockierte jeden neuen Import desselben Kurses.
                 _logger.LogWarning(
                     "Chessable-Import-Watchdog: Import {Id} (bid {Bid}) steht seit {Minutes:0} min in Phase {Phase} "
                     + "ohne Treiber, und der eigene Chessable-Weg ist abgeschaltet — Datensatz wird geschlossen",

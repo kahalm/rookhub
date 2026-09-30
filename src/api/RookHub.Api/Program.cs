@@ -431,8 +431,9 @@ try
     // Anonyme Buch-Puzzle-Solves melden hoechstens einmal je Puzzle und 30 s an den Bot (A2-003).
     builder.Services.AddSingleton<AnonymousSolveNotifyThrottle>();
     // Der RookHub-EIGENE Chessable-Weg (Bearer hinterlegen, Kurse ueber piratechess holen) laesst
-    // sich abschalten: `Chessable:Enabled=false`. Dann laufen weder die Import-Lanes noch der
-    // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404. Der Weg ueber die
+    // sich abschalten: `Chessable:Enabled=false`. Dann laufen weder die Download-Lane noch der
+    // naechtliche Kurslisten-Refresh, und `/api/chessable/*` antwortet 404 (ausser `/api/chessable/admin/*`,
+    // siehe Fast-Lane unten). Der Weg ueber die
     // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
     // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
     // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (bounded-DropOldest-Ticketverlust /
@@ -441,12 +442,15 @@ try
     // `Chessable:Enabled` stand: auf PROD (Flag seit 2026-09-09 aus) blieb jeder abgebrochene Browser-Import
     // fuer immer auf „laeuft". Was zu den eigenen Lanes gehoert, schaltet er selbst ab (LanesEnabled).
     builder.Services.AddHostedService<ChessableImportWatchdogService>();
+    // Schnelle Lane: treibt voll-gecachte Importe sofort, parallel zur Download-Lane. Laeuft IMMER: sie ist
+    // netzfrei (kein Chessable-Abruf, der Kurs kommt aus dem piratechess-Cache), und der Admin-Tab „Kurse von
+    // Usern holen" bleibt auch mit `Chessable:Enabled=false` bewusst in Betrieb — ein voll gecachter
+    // Admin-Import bekommt kein Queue-Ticket und stand ohne sie fuer immer auf „wartend" (Codereview 2026-09-29).
+    builder.Services.AddHostedService<ChessableImportFastLaneService>();
     if (chessableEnabled)
     {
         // Beim Start unterbrochene Chessable-Importe ("running") fortsetzen.
         builder.Services.AddHostedService<ChessableImportResumeService>();
-        // Schnelle Lane: treibt voll-gecachte Importe sofort + seriell, parallel zur Download-Lane.
-        builder.Services.AddHostedService<ChessableImportFastLaneService>();
     }
     builder.Services.AddSingleton<AutoSubscriptionService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AutoSubscriptionService>());

@@ -821,6 +821,46 @@ public class ChessableControllerTests : IDisposable
 
     // ---- Admin-Sicht: alle Importe + aktive Queue ----
 
+    /// <summary>A3-008: der Nutzer-Weg zum Abbrechen liegt hinter dem Chessable-Schalter (PROD: 404), der
+    /// Admin-Import „Kurse von Usern holen" läuft aber weiter — ein hängender Import brauchte einen Admin-Ausweg.</summary>
+    [Fact]
+    public async Task CancelImportAdmin_CancelsAnImportOfAnotherUser()
+    {
+        await SeedUserAsync(42);
+        _db.AppUsers.Add(new AppUser { Id = 7, Username = "alice", PasswordHash = "x" });
+        var stuck = new ChessableImport { UserId = 7, BearerUserId = 8, Bid = "228856", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Queued, FullyCached = true,
+            CreatedAt = DateTime.UtcNow.AddDays(-3) };
+        var paused = new ChessableImport { UserId = 7, Bid = "228857", Target = "book",
+            Status = ChessableImportStatus.Paused, Phase = ChessableImportPhase.BearerBlocked, CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.AddRange(stuck, paused);
+        await _db.SaveChangesAsync();
+
+        var ok = Assert.IsType<OkObjectResult>(await _admin.CancelImportAdmin(stuck.Id));
+        var dto = Assert.IsType<ChessableAdminImportDto>(ok.Value);
+        Assert.Equal("cancelled", dto.Status);
+        Assert.Equal("alice", dto.Username);
+        Assert.IsType<OkObjectResult>(await _admin.CancelImportAdmin(paused.Id));
+
+        var rows = await _db.ChessableImports.AsNoTracking().ToListAsync();
+        Assert.All(rows, r => Assert.Equal(ChessableImportStatus.Cancelled, r.Status));
+        Assert.All(rows, r => Assert.NotNull(r.CompletedAt));
+    }
+
+    [Fact]
+    public async Task CancelImportAdmin_LeavesFinishedImportsAlone_And404ForUnknown()
+    {
+        await SeedUserAsync(42);
+        var done = new ChessableImport { UserId = 42, Bid = "b", Target = "book", Status = ChessableImportStatus.Completed,
+            Phase = ChessableImportPhase.Done, CreatedAt = DateTime.UtcNow };
+        _db.ChessableImports.Add(done);
+        await _db.SaveChangesAsync();
+
+        Assert.IsType<OkObjectResult>(await _admin.CancelImportAdmin(done.Id));
+        Assert.Equal(ChessableImportStatus.Completed, (await _db.ChessableImports.AsNoTracking().SingleAsync()).Status);
+        Assert.IsType<NotFoundResult>(await _admin.CancelImportAdmin(987654));
+    }
+
     [Fact]
     public async Task GetAllImportsAdmin_ReturnsImportsOfAllUsersWithUsername()
     {

@@ -368,7 +368,9 @@ fuer immer auf `Running`. Das ist nicht nur Kosmetik: die Dedup-Regel in `Enqueu
 verweigert jeden weiteren Import desselben (User, bid), solange einer laeuft. `LanesEnabled` (aus dem
 Schalter) trennt die Pflichten: die eigenen Lanes werden nur mit dem Schalter angetrieben, die
 Browser-Pflichten immer — und ein verwaister Import wird ohne Lanes BEENDET statt zurueckgestellt
-(zurueckgestellt nimmt ihn dort nie jemand auf).
+(zurueckgestellt nimmt ihn dort nie jemand auf). Ausnahme seit dem Codereview 2026-09-29: ein voll
+gecachter SERVER-Import (Admin „Kurse von Usern holen") geht zurueck in die Warteschlange — die netzfreie
+Fast-Lane laeuft immer und nimmt ihn auf.
 
 **Browser-Importe geraten nie in die Server-Lanes (`ChessableImport.FromBrowser`, Codereview 2026-09-29).**
 `StartBrowserImportAsync`/`ImportPgnDirectAsync` setzen die Spalte (Migration `ChessableImportFromBrowser`, traegt
@@ -699,8 +701,8 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 ### Chessable-Integration (auth, leitet an piratechess-API weiter)
 
 > **Abschaltbar: `Chessable:Enabled=false`** (`CHESSABLE_ENABLED=false`, Vorgabe an). Dann antwortet
-> `/api/chessable/*` mit **404**, und die Import-Lanes sowie der naechtliche Kurslisten-Refresh
-> laufen gar nicht erst an. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
+> `/api/chessable/*` mit **404** (ausser `/api/chessable/admin/*`), und die Download-Lane, der Resume-Dienst
+> sowie der naechtliche Kurslisten-Refresh laufen gar nicht erst an. Der Weg ueber die **RepCheck-Extension** (`/api/extension/*`) bleibt
 > UNBERUEHRT — genau darum geht es: **auf PROD seit 2026-09-09 abgeschaltet**, alle sollen vorerst
 > die Extension benutzen. Der Schalter schliesst die Endpunkte und den Nachtlauf. **Die Seite
 > `/chessable` selbst zeigt seit 0.478.0 nur noch den Hinweis auf die Extension** (Links in beide
@@ -710,7 +712,11 @@ CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.c
 > erst NACH dem Deploy von 0.478.0): jeder angemeldete Nutzer landet dort auf dem Hinweis. Wer den
 > alten Import-Bildschirm zurueckholt, stellt den Eintrag VORHER wieder auf `Admin` — sonst sehen
 > alle Nutzer ein Formular, dessen Endpunkte auf Prod 404 liefern. Der Admin-Tab „Kurse von Usern
-> holen" und das Dashboard-Widget bleiben unveraendert.
+> holen" und das Dashboard-Widget bleiben unveraendert. **Deshalb laeuft die netzfreie Fast-Lane
+> (`ChessableImportFastLaneService`) IMMER** (Codereview 2026-09-29): ein voll gecachter Admin-Import bekommt
+> kein Queue-Ticket und stand ohne sie fuer immer auf „wartend"; der Watchdog stellt einen verwaisten, voll
+> gecachten Server-Import auch ohne Lanes zurueck statt ihn zu schliessen. Einen haengenden Import bricht
+> `POST /api/chessable/admin/imports/{id}/cancel` ab (der Nutzer-Weg `imports/{id}/cancel` antwortet 404).
 
 RookHub speichert nur den per-User Chessable-Bearer (AES-verschlüsselt via `EncryptionService` → `ChessableCredentials.EncryptedBearer`). Alle Chessable-HTTP-Calls (curl-impersonate gegen Cloudflare) liegen im piratechess-Stack; `ChessableProxyService` reicht den Bearer pro Request an `POST /api/chessable/direct/*` durch und authentifiziert sich mit dem `X-Service-Key`-Header (`Chessable:ServiceKey` ↔ piratechess `Service:ApiKey`). Netzwerk: externes Docker-Netz `chessable-bridge` (von piratechess_docker bereitgestellt). **Admin-Download „im Namen eines Users"**: `ChessableImport.BearerUserId` (nullable) entkoppelt Bearer-Quelle von Besitzer — der Service lädt den Bearer von `BearerUserId ?? UserId`. Admin-Import setzt `UserId`=Admin (Repertoire + Notification beim Admin), `BearerUserId`=Ziel-User; piratechess ist stateless, der gespeicherte Bearer des Ziel-Users genügt.
 
@@ -736,6 +742,7 @@ Trainingsstart behaelt.
 | GET | `/api/chessable/courses` | Liste der Kurse des Users (`[{ bid, name }]`) |
 | GET | `/api/chessable/admin/imports` | **Admin**: alle Importe ALLER User (Verlauf, max. 200, neueste zuerst) inkl. `username`/`createdAt`/`completedAt` + globaler Queue-Position |
 | GET | `/api/chessable/admin/active` | **Admin**: nur aktive (laufende/pausierte) Importe aller User — fürs Dashboard-Widget |
+| POST | `/api/chessable/admin/imports/{id}/cancel` | **Admin**: bricht einen wartenden/laufenden/pausierten Import eines beliebigen Users ab (`Error` = „Vom Admin abgebrochen"); 404 unbekannte Id. Läuft auch mit `Chessable:Enabled=false` |
 | GET | `/api/chessable/admin/credentialed-users` | **Admin**: User mit hinterlegtem Bearer (Auswahl für „Kurse von Usern holen") |
 | GET | `/api/chessable/admin/users/{userId}/courses?refresh=` | **Admin**: Kursliste eines Users (mit dessen Bearer; Import-Status gegen die eigenen Admin-Importe markiert) |
 | POST | `/api/chessable/admin/users/{userId}/import/{bid}` | **Admin**: lädt Kurs `{bid}` eines Users ins EIGENE Admin-Konto — als Repertoire ODER Buch (`{ name?, target? }`; `target` "repertoire"/"book", Default "repertoire"). Import-Besitzer = Admin (`UserId`), Bearer vom Ziel-User (`BearerUserId`). 404 unbek. User, 400 wenn Ziel-User keinen Bearer hat / `target` ungültig |

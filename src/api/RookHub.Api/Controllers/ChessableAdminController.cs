@@ -236,6 +236,27 @@ public class ChessableAdminController : BaseApiController
         return Accepted(ChessableImportQueueService.ToDto(import, await _queue.QueuedAheadAsync(import)));
     }
 
+    /// <summary>ADMIN: Bricht einen Import eines BELIEBIGEN Users ab (wartend, laufend oder pausiert). Der Weg der
+    /// Nutzer (<c>POST imports/{id}/cancel</c> im <see cref="ChessableController"/>) antwortet mit
+    /// <c>Chessable:Enabled=false</c> 404 — dieser Admin-Controller (und „Kurse von Usern holen") bleibt aber in
+    /// Betrieb, ein hängender Import stand dann ohne Ausweg im Dashboard-Widget und hielt die Dedup-Sperre.</summary>
+    [HttpPost("admin/imports/{id:int}/cancel")]
+    public async Task<IActionResult> CancelImportAdmin(int id, CancellationToken ct = default)
+    {
+        var import = await _db.ChessableImports.Include(i => i.User).FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (import is null) return NotFound();
+        if (import.Status is ChessableImportStatus.Running or ChessableImportStatus.Paused)
+        {
+            import.Status = ChessableImportStatus.Cancelled;
+            import.Error = "Vom Admin abgebrochen";
+            import.CompletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("Chessable-Import {Id} (bid {Bid}, User {UserId}) von Admin {AdminId} abgebrochen",
+                import.Id, import.Bid, import.UserId, GetUserId());
+        }
+        return Ok(ChessableImportQueueService.ToAdminDto(import, 0));
+    }
+
     /// <summary>ADMIN: Nur die aktiven (laufenden/pausierten) Importe aller User — fürs Dashboard-Widget.</summary>
     [HttpGet("admin/active")]
     public async Task<IActionResult> GetActiveImportsAdmin()

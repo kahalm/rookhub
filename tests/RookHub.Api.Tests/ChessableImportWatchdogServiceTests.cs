@@ -236,11 +236,13 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         // Feste, hohe Id wie oben: die Treiber-Liste (ChessableImportService._localInflight) ist
         // prozessweit statisch — mit einer Auto-Id (1) galt dieser Import als lokal getrieben, sobald
         // eine parallel laufende Testklasse zufaellig denselben Schluessel fuehrte (CI 2026-09-20).
+        // FromBrowser: seit der gleichnamigen Spalte erkennbar; ein voll gecachter SERVER-Import geht dagegen an die
+        // Fast-Lane zurück (siehe OrphanedCachedServerImport_WithOwnChessablePathOff_GoesBackToTheFastLane).
         _db.ChessableImports.Add(new ChessableImport
         {
             Id = 990003, UserId = 5, Bid = "91808", CourseName = "Lifetime Repertoires", Target = "book",
             Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
-            FullyCached = true, CreatedAt = DateTime.UtcNow,
+            FullyCached = true, FromBrowser = true, CreatedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
 
@@ -283,6 +285,59 @@ public class ChessableImportWatchdogServiceTests : IDisposable
         Assert.Equal(ChessableImportStatus.Failed, closed.Status);
         Assert.NotEqual(ChessableImportPhase.Queued, closed.Phase);
         Assert.Contains("ohne Abschluss", closed.Error);
+    }
+
+    /// <summary>PROD-Fall (Schalter aus), A3-008: ein voll gecachter Admin-Import („Kurse von Usern holen"), dessen
+    /// Treiber weg ist (API-Neustart mitten im Fast-Lane-Lauf). Die netzfreie Fast-Lane läuft auch ohne die eigenen
+    /// Lanes — zurückgestellt nimmt sie ihn wieder auf, statt dass er als „Browser-Abruf" geschlossen wird.</summary>
+    [Fact]
+    public async Task OrphanedCachedServerImport_WithOwnChessablePathOff_GoesBackToTheFastLane()
+    {
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            Id = 990801, UserId = 5, BearerUserId = 7, Bid = "91808", CourseName = "c", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Importing,
+            FullyCached = true, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var watchdog = Watchdog(lanesEnabled: false);
+        watchdog.OrphanGrace = TimeSpan.Zero;
+        var imports = Imports();
+
+        Assert.Equal(0, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));   // nur Sichtung
+        Assert.Equal(1, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));
+
+        var job = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Running, job.Status);
+        Assert.Equal(ChessableImportPhase.Queued, job.Phase);
+        Assert.Null(job.Error);
+    }
+
+    /// <summary>Ohne die eigenen Lanes nimmt einen zurückgestellten DOWNLOAD-Import niemand auf — der wird weiter
+    /// geschlossen statt für immer „wartend".</summary>
+    [Fact]
+    public async Task OrphanedDownloadImport_WithOwnChessablePathOff_IsClosed()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 5, Username = "u", PasswordHash = "x" });
+        _db.ChessableImports.Add(new ChessableImport
+        {
+            Id = 990802, UserId = 5, BearerUserId = 7, Bid = "91808", CourseName = "c", Target = "book",
+            Status = ChessableImportStatus.Running, Phase = ChessableImportPhase.Fetching,
+            FullyCached = false, CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var watchdog = Watchdog(lanesEnabled: false);
+        watchdog.OrphanGrace = TimeSpan.Zero;
+        var imports = Imports();
+
+        Assert.Equal(0, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));   // nur Sichtung
+        Assert.Equal(1, await watchdog.ReclaimOrphanedInflightAsync(_db, imports));
+
+        var closed = await _db.ChessableImports.SingleAsync();
+        Assert.Equal(ChessableImportStatus.Failed, closed.Status);
+        Assert.NotNull(closed.CompletedAt);
     }
 
     [Fact]
