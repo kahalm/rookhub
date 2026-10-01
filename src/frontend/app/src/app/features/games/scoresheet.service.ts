@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { SavedGameDetail } from './games.service';
+import { downloadBlob } from '../../shared/download.util';
 
 /** Wie weit ist eine Formular-Einlesung? (`GET /api/scoresheets/{id}`) */
 export interface ScoresheetScan {
@@ -172,17 +173,12 @@ export function photoFileName(gameId: number, blob: Blob, page = 1): string {
 
 /** Foto anzeigen (neuer Tab) bzw. herunterladen — geteilt von Partienliste und Partieseite. */
 export function openPhotoBlob(blob: Blob, download: string | null): void {
-  const url = URL.createObjectURL(blob);
   if (download) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = download;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } else {
-    window.open(url, '_blank', 'noopener');
+    downloadBlob(blob, download);
+    return;
   }
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener');
   // Der neue Tab braucht die Adresse noch einen Moment; danach wird sie freigegeben.
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

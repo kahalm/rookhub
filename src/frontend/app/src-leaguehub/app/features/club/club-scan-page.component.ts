@@ -17,6 +17,7 @@ import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeRes
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
+import { downloadBlob } from '@rh/shared/download.util';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
@@ -633,14 +634,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   downloadPgn(): void {
     const g = this.pgnInput();
-    const url = URL.createObjectURL(new Blob([sheetPgn(g)], { type: 'application/x-chess-pgn' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = sheetPgnFileName(g);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    downloadBlob(new Blob([sheetPgn(g)], { type: 'application/x-chess-pgn' }), sheetPgnFileName(g));
   }
 
   async copyPgn(): Promise<void> {

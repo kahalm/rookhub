@@ -10,6 +10,7 @@ import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
+import { downloadBlob } from '@rh/shared/download.util';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
 import { GameReplayComponent } from '../../shared/game-replay.component';
@@ -372,12 +373,7 @@ export class ClubGamesPageComponent implements OnInit {
     this.downloading.set(true);
     try {
       const blob = await this.api.pgn(null, this.query() || null);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'vereinspartien.pgn';
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(blob, 'vereinspartien.pgn');
     } catch {
       this.error.set('Die PGN-Datei konnte nicht geladen werden.');
     } finally {

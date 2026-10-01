@@ -9,6 +9,7 @@ import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { downloadBlob } from '../../shared/download.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -128,14 +129,7 @@ export class RepertoireEditComponent {
 
   downloadFile(fileId: number, fileName: string): void {
     this.repertoireService.downloadFile(this.repertoireId, fileId).subscribe({
-      next: blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
+      next: blob => { if (!downloadBlob(blob, fileName)) this.snackbar.info(this.translate.instant('repertoire.edit.downloadFailed')); },
       error: () => this.snackbar.info(this.translate.instant('repertoire.edit.downloadFailed')),
     });
   }

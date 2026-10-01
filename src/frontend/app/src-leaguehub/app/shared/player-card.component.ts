@@ -7,6 +7,7 @@ import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/
 import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '../core/league.models';
 import { TREE_FILTER_KEY, effectiveTreeFilter, normalizeTreeFilter } from '../core/tree-filter';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
+import { downloadBlob } from '@rh/shared/download.util';
 import { GameReplayComponent } from './game-replay.component';
 import { OnlineAccountsComponent } from './online-accounts.component';
 import { OpeningTreeComponent } from './opening-tree.component';
@@ -464,13 +465,6 @@ export class PlayerCardComponent {
       this.error.set('Die PGN-Datei konnte nicht geladen werden.');
       return;
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide}.pgn`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    downloadBlob(blob, `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide}.pgn`);
   }
 }

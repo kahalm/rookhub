@@ -13,6 +13,8 @@
  * nur einfacher, sondern die einzige ehrliche Form: chess-results liefert Datum OHNE Uhrzeit, und
  * ein erfundener Beginn um 00:00 waere in einer anderen Zeitzone der Vortag.</p>
  */
+import { downloadBlob } from '../shared/download.util';
+
 export interface CalendarEvent {
   /** Stabile Kennung — dieselbe Kennung aktualisiert den Termin statt ihn zu verdoppeln. */
   uid: string;
@@ -61,27 +63,12 @@ export function icsFileName(title: string): string {
 }
 
 /**
- * Legt die Datei dem Browser zum Speichern/Oeffnen vor. `false`, wenn das nicht ging (gesperrter
- * Speicher, Umgebung ohne Blob-URLs) — der Aufrufer sagt es dann, statt stumm nichts zu tun.
+ * Legt die Datei dem Browser zum Speichern/Oeffnen vor (ueber {@link downloadBlob}). `false`, wenn
+ * das nicht ging (gesperrter Speicher, Umgebung ohne Blob-URLs) — der Aufrufer sagt es dann, statt
+ * stumm nichts zu tun.
  */
 export function downloadIcs(content: string, fileName: string): boolean {
-  try {
-    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    // In den Baum haengen: Firefox loest einen Klick auf ein loses Element nicht aus.
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    // Erst nach dem Klick freigeben — sofort wuerde der Download ins Leere greifen.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    return true;
-  } catch {
-    return false;
-  }
+  return downloadBlob(new Blob([content], { type: 'text/calendar;charset=utf-8' }), fileName);
 }
 
 // ----- innere Helfer -------------------------------------------------------
