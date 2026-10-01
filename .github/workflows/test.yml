@@ -97,29 +97,47 @@ jobs:
         env:
           ROOKHUB_TEST_MYSQL: "server=127.0.0.1;port=3306;user=root;password=test"
 
-  test-crawler:
+  # Vertrag mit dem Crawler (Codereview I2-010). Hier lief frueher die EIGENE Test-Suite des
+  # Crawlers, und zwar gegen dessen main-HEAD: ein roter Crawler-Commit hielt damit jedes
+  # rookhub-Image an (dieser Workflow ist das Gate in docker.yml), waehrend ein echter Vertragsbruch
+  # gruen blieb — kein rookhub-Code wurde gegen den Crawler geprueft, und geprueft wurde nicht
+  # einmal der Stand, der laeuft (das Crawler-Image entsteht aus SEINEM Tag; seine eigene CI testet
+  # vor jedem Image ohnehin). Jetzt: der zuletzt GETAGGTE Crawler, und daran die goldenen
+  # Antworten aus CrawlerContractTests — rot nur, wenn ein Feld fehlt, das RookHub liest bzw.
+  # festhaelt; ein neues Crawler-Feld bricht nichts.
+  test-crawler-contract:
     needs: changes
     if: >-
       ${{ github.event_name == 'workflow_dispatch'
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.crawler == 'true' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ../chessresults_crawler
     steps:
       - uses: actions/checkout@v6
-        with:
-          path: rookhub
+      # Volle Historie, damit die Tags mitkommen.
       - uses: actions/checkout@v6
         with:
           repository: ${{ github.repository_owner }}/chessresults_crawler
-          path: chessresults_crawler
+          path: _crawler
+          fetch-depth: 0
+      - name: Crawler auf seinen letzten Release-Tag stellen
+        working-directory: _crawler
+        run: |
+          tag=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -z "$tag" ]; then
+            echo "::error::Kein Release-Tag vX.Y.Z im Crawler-Repo — gegen welchen Stand soll der Vertrag gelten?"
+            exit 1
+          fi
+          git checkout --quiet "$tag"
+          echo "Vertrag gegen chessresults_crawler $tag"
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet test tests/ChessResultsCrawler.Tests --verbosity normal
-        working-directory: chessresults_crawler
+      # CRAWLER_REPO gesetzt = der Abgleich gegen die Crawler-DTOs ueberspringt sich NICHT
+      # (CrawlerSourceTheoryAttribute) — ein falscher Pfad waere sonst ein stilles Gruen.
+      - run: dotnet test tests/RookHub.Api.Tests --filter "FullyQualifiedName~CrawlerContractTests" --verbosity normal
+        env:
+          CRAWLER_REPO: ${{ github.workspace }}/_crawler
 
   # Engine-Provider (engine-provider/): das Docker-Setup für den Rechner des Nutzers. Seine drei
   # Tests liefen in KEINEM Workflow — wer entrypoint.sh oder PROVIDER_SHA anfasste, hatte eine

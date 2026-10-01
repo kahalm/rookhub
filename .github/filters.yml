@@ -80,9 +80,13 @@ engine-provider:
   - '.github/filters.yml'
   - 'engine-provider/**'
 
-# Der Crawler ist ein EIGENES Repo; dieser Job holt ihn und laesst seine Tests laufen. Fuer
-# rookhub ist er nur dann eine Aussage, wenn sich hier die Gegenstelle aendert (Proxy-Routen).
+# Vertrag mit dem Crawler (Job `test-crawler-contract`): die goldenen Crawler-Antworten gegen den
+# zuletzt getaggten Crawler. Eine Aussage gibt er, wenn sich hier ein LESER aendert — die Leser im
+# Server (`src/api/**`), die goldenen Dateien samt Test (`tests/RookHub.Api.Tests/**`) und die
+# Frontend-Interfaces, die der Test gegen die goldenen Dateien haelt (`core/models.ts`).
 crawler:
   - '.github/workflows/**'
   - '.github/filters.yml'
   - 'src/api/**'
+  - 'tests/RookHub.Api.Tests/**'
+  - 'src/frontend/app/src/app/core/models.ts'

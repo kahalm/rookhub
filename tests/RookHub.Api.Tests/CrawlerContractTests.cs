@@ -15,13 +15,14 @@ namespace RookHub.Api.Tests;
 /// selbstgebautes JSON.
 ///
 /// <para><b>Die Kette.</b> <c>Fixtures/CrawlerContract/*.json</c> ist die GOLDENE Fassung der
-/// Antworten — je Datei ALLE Felder des Crawler-DTOs in dessen Reihenfolge, mit nicht-leeren
+/// Antworten — je Datei die Felder des Crawler-DTOs in dessen Reihenfolge, mit nicht-leeren
 /// Werten. Dagegen pruefen drei Tests: (1) jedes Feld, das RookHubs Server liest, steht mit dem
 /// erwarteten Typ darin; (2) jedes Feld der Frontend-Interfaces in <c>core/models.ts</c> steht
-/// darin; (3) liegt der Crawler-Quelltext daneben (Stack-Kopie, oder <c>CRAWLER_REPO</c> in der
-/// CI), stimmen die Feldnamen mit seinen DTOs ueberein. Ein umbenanntes Crawler-Feld faellt damit
-/// in (3) auf, und nach dem Nachziehen der goldenen Datei in (1)/(2) an genau der Stelle, die es
-/// liest.</para>
+/// darin; (3) liegt der Crawler-Quelltext daneben (Stack-Kopie, oder <c>CRAWLER_REPO</c> im
+/// CI-Job <c>test-crawler-contract</c>, dort der zuletzt getaggte Crawler), traegt sein DTO jedes
+/// Feld der goldenen Datei. Ein umbenanntes oder entferntes Crawler-Feld faellt damit in (3) auf,
+/// und nach dem Nachziehen der goldenen Datei in (1)/(2) an genau der Stelle, die es liest. Ein
+/// NEUES Crawler-Feld bricht nichts und darf in der goldenen Datei fehlen, bis es jemand liest.</para>
 ///
 /// <para><b>SPIEGEL</b>: chessresults_crawler <c>src/ChessResultsCrawler/DTOs/TournamentDtos.cs</c>,
 /// <c>DTOs/PlayerSearchDtos.cs</c> und <c>Services/RoundDetectionService.cs</c>
@@ -239,22 +240,26 @@ public class CrawlerContractTests
     };
 
     /// <summary>
-    /// Die Feldnamen der goldenen Datei sind GENAU die des Crawler-DTOs (camelCase, wie ASP.NET sie
-    /// schreibt). Laeuft nur mit Crawler-Quelltext daneben — in der Stack-Kopie liegt er neben
-    /// rookhub, in der CI setzt der Vertrags-Job <c>CRAWLER_REPO</c>.
+    /// Jedes Feld der goldenen Datei traegt das Crawler-DTO (camelCase, wie ASP.NET es schreibt).
+    /// Umbenannt oder entfernt = rot; ein zusaetzliches Crawler-Feld bricht keinen Leser und ist
+    /// erlaubt — sonst hielte jedes neue Feld im Crawler das RookHub-Gate an (Codereview I2-010).
+    /// Laeuft nur mit Crawler-Quelltext daneben — in der Stack-Kopie liegt er neben rookhub, in der
+    /// CI setzt der Vertrags-Job <c>CRAWLER_REPO</c> (dann ohne Ueberspringen: fehlt die Quelle
+    /// dort, ist das rot).
     /// </summary>
     [CrawlerSourceTheory]
     [MemberData(nameof(CrawlerDtos))]
-    public void Golden_MatchesTheCrawlerDto(string file, string? child, string source, string dto)
+    public void Golden_FieldsExistInTheCrawlerDto(string file, string? child, string source, string dto)
     {
         var path = Path.Combine(CrawlerSourceTheoryAttribute.CrawlerRepo()!, source);
         Assert.True(File.Exists(path), $"Crawler-Quelle fehlt: {source}");
-        var expected = DtoProperties(File.ReadAllText(path), dto)
+        var crawler = DtoProperties(File.ReadAllText(path), dto)
             .Select(JsonNamingPolicy.CamelCase.ConvertName)
-            .ToList();
-        var actual = Sample(file, child).Select(p => p.Key).ToList();
+            .ToHashSet(StringComparer.Ordinal);
+        var missing = Sample(file, child).Select(p => p.Key).Where(k => !crawler.Contains(k)).ToList();
 
-        Assert.Equal(expected, actual);
+        Assert.True(missing.Count == 0,
+            $"{dto} im Crawler hat diese Felder der goldenen Datei {file} nicht (mehr): {string.Join(", ", missing)}");
     }
 
     /// <summary>Die Auto-Properties (<c>public T Name { get; set; }</c>) einer Klasse, in Reihenfolge.</summary>
@@ -314,7 +319,9 @@ public class CrawlerContractTests
 
 /// <summary>
 /// Laeuft nur, wenn der Crawler-Quelltext erreichbar ist: <c>CRAWLER_REPO</c> (CI) oder das
-/// Nachbarverzeichnis <c>../chessresults_crawler</c> (Stack-Kopie). Sonst uebersprungen.
+/// Nachbarverzeichnis <c>../chessresults_crawler</c> (Stack-Kopie). Sonst uebersprungen — aber
+/// NICHT, wenn <c>CRAWLER_REPO</c> gesetzt ist: dann soll ein falscher Pfad rot werden, statt den
+/// Vertrags-Job still gruen zu lassen.
 /// </summary>
 public sealed class CrawlerSourceTheoryAttribute : TheoryAttribute
 {
@@ -327,15 +334,15 @@ public sealed class CrawlerSourceTheoryAttribute : TheoryAttribute
     internal static string? CrawlerRepo()
     {
         var env = Environment.GetEnvironmentVariable("CRAWLER_REPO");
-        var candidates = new List<string>();
-        if (!string.IsNullOrWhiteSpace(env)) candidates.Add(env);
+        if (!string.IsNullOrWhiteSpace(env)) return env;
 
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "compose.dev.yml")))
             dir = dir.Parent;
-        if (dir?.Parent is not null) candidates.Add(Path.Combine(dir.Parent.FullName, "chessresults_crawler"));
+        if (dir?.Parent is null) return null;
 
-        return candidates.FirstOrDefault(c =>
-            File.Exists(Path.Combine(c, "src", "ChessResultsCrawler", "DTOs", "TournamentDtos.cs")));
+        var sibling = Path.Combine(dir.Parent.FullName, "chessresults_crawler");
+        return File.Exists(Path.Combine(sibling, "src", "ChessResultsCrawler", "DTOs", "TournamentDtos.cs"))
+            ? sibling : null;
     }
 }

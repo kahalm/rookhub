@@ -537,6 +537,49 @@ public class CiWorkflowTests
         return block;
     }
 
+    /// <summary>Ein Job-Block aus test.yml, von seiner Zeile bis zum naechsten Job.</summary>
+    private static string TestJob(string name)
+    {
+        var block = Regex.Match(ReadRepoFile(Tests), $@"(?ms)^  {Regex.Escape(name)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+        Assert.True(block.Length > 0, $"test.yml kennt keinen Job '{name}'");
+        return block;
+    }
+
+    /// <summary>
+    /// Der Crawler-Job im Gate prueft den VERTRAG gegen den zuletzt getaggten Crawler (Codereview
+    /// I2-010) — nicht dessen eigene Test-Suite gegen main-HEAD: ein roter Crawler-Commit hielt so
+    /// jedes rookhub-Image an, und ein echter Vertragsbruch blieb gruen. Und er setzt CRAWLER_REPO,
+    /// sonst ueberspraenge sich der Abgleich gegen die Crawler-DTOs still.
+    /// </summary>
+    [Fact]
+    public void CrawlerJob_ChecksTheContractAgainstTheLastCrawlerTag()
+    {
+        Assert.DoesNotContain("ChessResultsCrawler.Tests", ReadRepoFile(Tests));
+
+        var job = TestJob("test-crawler-contract");
+        Assert.Contains("repository: ${{ github.repository_owner }}/chessresults_crawler", job);
+        Assert.Contains("fetch-depth: 0", job);
+        Assert.Matches(@"git tag --list 'v\[0-9\]\*\.\[0-9\]\*\.\[0-9\]\*' --sort=-v:refname", job);
+        Assert.Contains("git checkout --quiet \"$tag\"", job);
+        Assert.Contains("--filter \"FullyQualifiedName~CrawlerContractTests\"", job);
+        Assert.Matches(@"CRAWLER_REPO: \$\{\{ github\.workspace \}\}/_crawler", job);
+        Assert.Contains("path: _crawler", job);
+    }
+
+    /// <summary>
+    /// Der Vertrags-Job laeuft, wenn sich ein LESER aendert — auch die goldenen Dateien samt Test
+    /// und die Frontend-Interfaces, die der Test gegen sie haelt.
+    /// </summary>
+    [Fact]
+    public void CrawlerFilter_CoversEveryReaderOfTheContract()
+    {
+        var block = Regex.Match(ReadRepoFile(Filters), @"(?ms)^crawler:\s*$(.*?)(?=^\S|\z)").Groups[1].Value;
+
+        Assert.Contains("'src/api/**'", block);
+        Assert.Contains("'tests/RookHub.Api.Tests/**'", block);
+        Assert.Contains("'src/frontend/app/src/app/core/models.ts'", block);
+    }
+
     /// <summary>
     /// Beim Handstart bleibt der Filter-Schritt AUS. dorny/paths-filter braucht einen
     /// Vorgaenger-Stand; bei `workflow_dispatch` haelt es master gegen master und setzt jeden
