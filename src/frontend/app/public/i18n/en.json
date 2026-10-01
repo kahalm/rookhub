@@ -2484,7 +2484,9 @@
         "league_manage": "LeagueHub: update data, share links, import",
         "league_contribute": "LeagueHub: add club games (PGN, scoresheet)",
         "club_manage": "ClubHub: whole card index of children and juniors (all children, groups, trainers, delete)",
-        "club_trainer": "ClubHub: trainer — children of the own groups (contacts, attendance, progress)"
+        "club_trainer": "ClubHub: trainer — children of the own groups (contacts, attendance, progress)",
+        "prep_view": "Player prep: search any player in the game database (Megabase, Lumbra)",
+        "prep_manage": "Player prep: import the game database"
       },
       "groupTitle": "Assign roles to a group",
       "groupHint": "Every member of the group has these roles — whoever joins has the rights at once, whoever leaves loses them. The admin role and “Everyone” are not available here.",

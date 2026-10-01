@@ -2095,7 +2095,9 @@
         "league_manage": "LeagueHub: adatok frissítése, linkek megosztása, importálás",
         "league_contribute": "LeagueHub: klubjátszmák hozzáadása (PGN, játszmalap)",
         "club_manage": "ClubHub: a gyerekek és fiatalok teljes kartotékja (minden gyerek, csoportok, edzők, törlés)",
-        "club_trainer": "ClubHub: edző — a saját csoportok gyerekei (elérhetőségek, jelenlét, fejlődés)"
+        "club_trainer": "ClubHub: edző — a saját csoportok gyerekei (elérhetőségek, jelenlét, fejlődés)",
+        "prep_view": "Felkészülés játékos ellen: bármely játékos keresése a játszmaadatbázisban (Megabase, Lumbra)",
+        "prep_manage": "Felkészülés játékos ellen: játszmaadatbázis importálása"
       },
       "groupTitle": "Szerepkörök hozzárendelése egy csoporthoz",
       "groupHint": "A csoport minden tagja megkapja ezeket a szerepköröket — aki csatlakozik, azonnal megkapja a jogokat, aki kilép, elveszíti őket. Az admin szerepkör és az „Everyone” itt nem érhető el.",

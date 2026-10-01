@@ -64,6 +64,11 @@ public static class Permissions
     /// <summary>ClubHub: Trainer — sieht und pflegt die Kinder der Gruppen, denen er zugeteilt ist (Kontakte, Anwesenheit,
     /// Lernstand), und legt dort neue Kinder an.</summary>
     public const string ClubTrainer = "club.trainer";
+    /// <summary>Spielervorbereitung: einen beliebigen Spieler im Partiebestand (Megabase + Lumbra) suchen und seine Karte
+    /// sehen (2026-10-01). Bewusst NICHT <see cref="LeagueView"/> — LeagueHub bleibt geschlossen.</summary>
+    public const string PrepView = "prep.view";
+    /// <summary>Spielervorbereitung: Partiebestand einspielen (und später die Konto-Suche).</summary>
+    public const string PrepManage = "prep.manage";
 
     /// <summary>Alle bekannten Permission-Schlüssel — Basis fürs Seeden der „admin"-Superuser-Rolle.</summary>
     public static readonly IReadOnlyList<string> All = new[]
@@ -71,6 +76,6 @@ public static class Permissions
         UsersManage, BooksManage, PuzzlesManage, DailyManage, WeeklyPostsManage,
         GroupsManage, MessagesAdmin, ChessableAdmin, CiView, MenuManage, CatalogManage,
         TournamentsManage, RolesManage, LeagueView, LeagueManage, LeagueContribute,
-        ClubManage, ClubTrainer,
+        ClubManage, ClubTrainer, PrepView, PrepManage,
     };
 }

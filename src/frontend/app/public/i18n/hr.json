@@ -2484,7 +2484,9 @@
         "league_manage": "LeagueHub: ažuriranje podataka, dijeljenje poveznica, uvoz",
         "league_contribute": "LeagueHub: dodavanje klupskih partija (PGN, zapisnik)",
         "club_manage": "ClubHub: cijela kartoteka djece i mladih (sva djeca, grupe, treneri, brisanje)",
-        "club_trainer": "ClubHub: trener — djeca vlastitih grupa (kontakti, prisutnost, napredak)"
+        "club_trainer": "ClubHub: trener — djeca vlastitih grupa (kontakti, prisutnost, napredak)",
+        "prep_view": "Priprema protiv igrača: pretraži bilo kojeg igrača u bazi partija (Megabase, Lumbra)",
+        "prep_manage": "Priprema protiv igrača: uvoz baze partija"
       },
       "groupTitle": "Dodijeli uloge grupi",
       "groupHint": "Svaki član grupe ima ove uloge — tko se pridruži, odmah dobiva prava, tko ode, gubi ih. Administratorska uloga i „Everyone” ovdje nisu dostupni.",
