@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import {
   TrainingGoalService, ActivityPreset, ActivityPresetInput, ManualActivityKind,
   ActivityTheme, ACTIVITY_THEMES, TIMER_KINDS,
@@ -63,6 +64,7 @@ export class ActivityPresetsCardComponent implements OnInit {
     private service: TrainingGoalService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private confirm: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -107,14 +109,16 @@ export class ActivityPresetsCardComponent implements OnInit {
   }
 
   deletePreset(p: ActivityPreset): void {
-    if (!confirm(this.translate.instant('trainingGoals.presets.deleteConfirm', { label: p.label }))) return;
-    this.service.deletePreset(p.id).subscribe({
-      next: () => {
-        this.presets = this.presets.filter(x => x.id !== p.id);
-        if (this.editingPresetId === p.id) this.cancelPresetEdit();
-      },
-      error: () => this.snackbar.info(this.translate.instant('trainingGoals.presets.deleteFailed'),
-        { action: 'common.ok', duration: 3000 }),
+    this.confirm.ask('trainingGoals.presets.deleteConfirm', { label: p.label }).subscribe(ok => {
+      if (!ok) return;
+      this.service.deletePreset(p.id).subscribe({
+        next: () => {
+          this.presets = this.presets.filter(x => x.id !== p.id);
+          if (this.editingPresetId === p.id) this.cancelPresetEdit();
+        },
+        error: () => this.snackbar.info(this.translate.instant('trainingGoals.presets.deleteFailed'),
+          { action: 'common.ok', duration: 3000 }),
+      });
     });
   }
 }

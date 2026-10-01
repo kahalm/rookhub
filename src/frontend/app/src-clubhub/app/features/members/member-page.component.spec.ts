@@ -5,6 +5,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { GroupRow, Member, MemberInput } from '../../core/club.models';
 import { MemberPageComponent, formatDay } from './member-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const MEMBER = (extra: Partial<Member> = {}): Member => ({
   id: 7, firstName: 'Daniel', lastName: 'Huber', birthYear: 2015, birthDate: '2015-03-12', level: 'Bauerndiplom', archived: false, isTrainer: false,
@@ -25,13 +27,15 @@ const GROUPS: GroupRow[] = [
 describe('MemberPageComponent (Karteiblatt)', () => {
   let fixture: ComponentFixture<MemberPageComponent>;
   let api: jasmine.SpyObj<ClubApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let router: Router;
   const el = () => fixture.nativeElement as HTMLElement;
 
   async function create(id: string | null, query: Record<string, string> = {}): Promise<void> {
     TestBed.configureTestingModule({
       imports: [MemberPageComponent],
-      providers: [provideRouter([]), { provide: ClubApiService, useValue: api },
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, provideRouter([]), { provide: ClubApiService, useValue: api },
         { provide: AuthService, useValue: { has: (p: string) => p === 'club.trainer' } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(id ? { id } : {}), queryParamMap: convertToParamMap(query) } } }],
     });
@@ -56,6 +60,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService',
       ['member', 'groups', 'createMember', 'updateMember', 'deleteMember', 'addNote', 'deleteNote', 'createLinkCode', 'unlink', 'progress']);
     api.groups.and.resolveTo(GROUPS);
@@ -206,10 +211,10 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(el().querySelector<HTMLInputElement>('.note-input')!.value).toBe('');
     expect(el().textContent).toContain('rechnet zwei Züge');
 
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.deleteNote(4);
     expect(api.deleteNote).not.toHaveBeenCalled();
-    ask.and.returnValue(true);
+    ask.and.returnValue(of(true));
     await fixture.componentInstance.deleteNote(4);
     expect(api.deleteNote).toHaveBeenCalledWith(7, 4);
   });
@@ -249,10 +254,10 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     fixture.componentInstance.startEdit();
     await settle();
     expect(el().textContent).toContain('Blatt löschen');
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.remove();
     expect(api.deleteMember).not.toHaveBeenCalled();
-    ask.and.returnValue(true);
+    ask.and.returnValue(of(true));
     await fixture.componentInstance.remove();
     expect(api.deleteMember).toHaveBeenCalledWith(7);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');

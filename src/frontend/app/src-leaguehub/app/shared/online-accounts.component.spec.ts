@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { Account } from '../core/league.models';
 import { OnlineAccountsComponent, accountErrorText, accountStatus, scanNoteText, siteLabel } from './online-accounts.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const SURE: Account = { id: 7, site: 'lichess', user: 'patrik', url: 'https://lichess.org/@/patrik', conf: 'sicher',
   comment: 'Profil nennt den Klarnamen', games: 1234, syncedAt: '2026-09-30T08:00:00Z', error: null };
@@ -12,6 +14,8 @@ const UNSURE: Account = { id: 8, site: 'chess.com', user: 'pat_o', url: 'https:/
 describe('OnlineAccountsComponent', () => {
   let fixture: ComponentFixture<OnlineAccountsComponent>;
   let api: jasmine.SpyObj<LeagueApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let changed: number;
   const el = () => fixture.nativeElement as HTMLElement;
   const button = (text: string) => Array.from(el().querySelectorAll<HTMLButtonElement>('button')).find(b => b.textContent?.trim() === text);
@@ -24,11 +28,12 @@ describe('OnlineAccountsComponent', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService',
       ['addAccount', 'updateAccount', 'deleteAccount', 'syncAccount', 'playerSuggestions', 'scanSuggestions', 'acceptSuggestion', 'rejectSuggestion',
         'accountChecks']);
     api.playerSuggestions.and.resolveTo({ items: [] });
-    TestBed.configureTestingModule({ imports: [OnlineAccountsComponent], providers: [{ provide: LeagueApiService, useValue: api }] });
+    TestBed.configureTestingModule({ imports: [OnlineAccountsComponent], providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, { provide: LeagueApiService, useValue: api }] });
     fixture = TestBed.createComponent(OnlineAccountsComponent);
     changed = 0;
     fixture.componentInstance.changed.subscribe(() => changed++);
@@ -173,7 +178,7 @@ describe('OnlineAccountsComponent', () => {
     api.syncAccount.and.resolveTo({ ...UNSURE, error: null });
     render([SURE, { ...UNSURE, error: 'Konto nicht gefunden' }], true);
     expect(Array.from(el().querySelectorAll('.acc-status')).map(p => !!p.querySelector('button'))).toEqual([false, true]);
-    spyOn(window, 'confirm').and.returnValues(false, true);
+    confirmAsk.and.returnValues(of(false), of(true));
     const c = fixture.componentInstance;
     await c.remove(SURE);
     expect(api.deleteAccount).not.toHaveBeenCalled();
@@ -231,11 +236,10 @@ describe('OnlineAccountsComponent', () => {
     expect(row.textContent).toContain('Online-Konto (verborgen – minderjährig)');
     expect(row.textContent).toContain('40 Online-Partien geholt');
     expect(button('Bearbeiten')).toBeUndefined();
-    spyOn(window, 'confirm').and.returnValue(true);
     api.deleteAccount.and.resolveTo();
     button('Entfernen')!.click();
     await fixture.whenStable();
-    expect(window.confirm).toHaveBeenCalledWith('Das verborgene Online-Konto entfernen? Die geholten Partien gehen mit.');
+    expect(confirmAsk).toHaveBeenCalledWith('Das verborgene Online-Konto entfernen? Die geholten Partien gehen mit.');
     expect(api.deleteAccount).toHaveBeenCalledWith(9);
   });
 });

@@ -9,7 +9,7 @@ describe('WeeklyListComponent file validation', () => {
     infoCalls = 0;
     const snackbar = { info: () => { infoCalls++; } } as any;
     const translate = { instant: (k: string) => k } as any;
-    component = new WeeklyListComponent({} as any, {} as any, snackbar, translate, {} as any);
+    component = new WeeklyListComponent({} as any, {} as any, snackbar, translate, {} as any, {} as any);
   });
 
   function selectFile(name: string, size: number): HTMLInputElement {
@@ -57,7 +57,7 @@ describe('WeeklyListComponent Termin als UTC', () => {
     };
     const snackbar = { info: () => {} } as any;
     const translate = { instant: (k: string) => k } as any;
-    component = new WeeklyListComponent({ isLoggedIn: false } as any, weekly, snackbar, translate, {} as any);
+    component = new WeeklyListComponent({ isLoggedIn: false } as any, weekly, snackbar, translate, {} as any, {} as any);
   });
 
   it('upload schickt die eingegebene Wandzeit als UTC-ISO mit Z', () => {
@@ -92,7 +92,7 @@ describe('WeeklyListComponent Termin als UTC', () => {
 describe('WeeklyListComponent canManage', () => {
   it('follows weeklyposts.manage', () => {
     const make = (has: (p: string) => boolean) =>
-      new WeeklyListComponent({ isAdmin: false, has } as any, {} as any, {} as any, {} as any, {} as any);
+      new WeeklyListComponent({ isAdmin: false, has } as any, {} as any, {} as any, {} as any, {} as any, {} as any);
     expect(make(p => p === 'weeklyposts.manage').canManage).toBeTrue();
     expect(make(() => false).canManage).toBeFalse();
   });

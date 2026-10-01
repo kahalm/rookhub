@@ -30,7 +30,7 @@ describe('CourseListComponent sorting', () => {
 
   function buildWith(items: CourseListItem[]): CourseListComponent {
     const courseService = { getCourses: () => of(items) } as any;
-    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+    const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
     comp.loadCourses();
     return comp;
   }
@@ -82,7 +82,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 2, solvedCount: 0, lastActivityAt: null }),                    // nie begonnen
         item2({ bookId: 3, solvedCount: 10, lastActivityAt: '2026-06-02T10:00:00Z' }), // fertig
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([1]);
     });
@@ -95,7 +95,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 4, solvedCount: 0, isPinned: false }),        // weder gepinnt noch angefangen
         item2({ bookId: 5, solvedCount: 10, isPinned: true }),        // gepinnt, aber schon fertig → NICHT in-progress
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
       comp.loadCourses();
       // Angepinnte zuerst (2, 3), danach der begonnene Rest (1). BookId 4 (weder-noch) und 5 (fertig) draußen.
       expect(comp.inProgressCourses.map(c => c.bookId)).toEqual([2, 3, 1]);
@@ -105,7 +105,7 @@ describe('CourseListComponent sorting', () => {
       const courseService = { getCourses: () => of([
         item2({ bookId: 1, solvedCount: 3, lastActivityAt: '2026-06-01T10:00:00Z' }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
       comp.loadCourses();
       expect(comp.inProgressCourses.length).toBe(1);
 
@@ -119,8 +119,8 @@ describe('CourseListComponent sorting', () => {
 
     it('canManageThemes: Admin für alle, sonst nur Besitzer', () => {
       const cs = { getCourses: () => of([]) } as any;
-      const admin = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: true } as any, {} as any, courseLang());
-      const user = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const admin = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: true } as any, {} as any, courseLang(), {} as any);
+      const user = new CourseListComponent(cs, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
       expect(admin.canManageThemes({ isOwned: false } as any)).toBeTrue();
       expect(user.canManageThemes({ isOwned: true } as any)).toBeTrue();
       expect(user.canManageThemes({ isOwned: false } as any)).toBeFalse();
@@ -131,7 +131,7 @@ describe('CourseListComponent sorting', () => {
         item2({ bookId: 1, displayName: 'Sicilian Defense', isOwned: true }),
         item2({ bookId: 2, displayName: 'French Defense', isOwned: true }),
       ]) } as any;
-      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
       comp.loadCourses();
       comp.search = 'SICIL';
       expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
@@ -161,7 +161,7 @@ describe('CourseListComponent sorting', () => {
         createCourse: jasmine.createSpy('createCourse').and.returnValue(of(created)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, router, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, router, courseLang(), {} as any);
       comp.loadCourses();
 
       const file = new File(['pgn'], 'my.pgn');
@@ -182,7 +182,7 @@ describe('CourseListComponent sorting', () => {
         createCourse: jasmine.createSpy('createCourse').and.returnValue(of(created)),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, { navigate: nav } as any, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, { navigate: nav } as any, courseLang(), {} as any);
       comp.loadCourses();
       comp.createCourse('Leer', null);
 
@@ -200,7 +200,7 @@ describe('CourseListComponent sorting', () => {
       const file = new File(['pgn'], 'd.pgn');
       const dialogRef = { afterClosed: () => of({ name: 'From Dialog', file }) } as any;
       const dialog = { open: jasmine.createSpy('open').and.returnValue(dialogRef) } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router, courseLang(), {} as any);
       comp.loadCourses();
       comp.openCreateDialog();
 
@@ -217,7 +217,7 @@ describe('CourseListComponent sorting', () => {
       } as any;
       const dialogRef = { afterClosed: () => of(undefined) } as any;
       const dialog = { open: () => dialogRef } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, dialog, { isAdmin: false } as any, router, courseLang(), {} as any);
       comp.loadCourses();
       comp.openCreateDialog();
 
@@ -225,14 +225,14 @@ describe('CourseListComponent sorting', () => {
     });
 
     it('löscht einen eigenen Kurs nach Bestätigung aus der Liste', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
+      const confirm = { ask: () => of(true) } as any;
       const notify = jasmine.createSpy('notifyAccessChanged');
       const courseService = {
         getCourses: () => of([ item3({ bookId: 7, isOwned: true }) ]),
         deleteCourse: jasmine.createSpy('deleteCourse').and.returnValue(of(void 0)),
         notifyAccessChanged: notify,
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang(), confirm);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
 
@@ -242,13 +242,13 @@ describe('CourseListComponent sorting', () => {
     });
 
     it('löscht nichts, wenn die Rückfrage abgelehnt wird', () => {
-      spyOn(window, 'confirm').and.returnValue(false);
+      const confirm = { ask: () => of(false) } as any;
       const courseService = {
         getCourses: () => of([ item3({ bookId: 7, isOwned: true }) ]),
         deleteCourse: jasmine.createSpy('deleteCourse'),
         notifyAccessChanged: () => {},
       } as any;
-      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      const comp = new CourseListComponent(courseService, snackbar, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang(), confirm);
       comp.loadCourses();
       comp.deleteCourse(comp.courses[0]);
       expect(courseService.deleteCourse).not.toHaveBeenCalled();
@@ -258,7 +258,8 @@ describe('CourseListComponent sorting', () => {
     // „In Repertoire umwandeln" VERSCHIEBT einen eigenen Kurs: der Server löscht ihn danach samt
     // Fortschritt und Freigaben ALLER Nutzer — also dieselbe Rückfrage wie beim Löschen.
     describe('In Repertoire umwandeln', () => {
-      function setup(isOwned: boolean) {
+      function setup(isOwned: boolean, answer = true) {
+        const ask = jasmine.createSpy('ask').and.returnValue(of(answer));
         const shown: string[] = [];
         const courseService = {
           getCourses: () => of([ item3({ bookId: 7, displayName: 'Mein Kurs', isOwned }) ]),
@@ -266,23 +267,21 @@ describe('CourseListComponent sorting', () => {
           notifyAccessChanged: () => {},
         } as any;
         const snack = { info: (m: string) => shown.push(m) } as any;
-        const comp = new CourseListComponent(courseService, snack, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+        const comp = new CourseListComponent(courseService, snack, translate, {} as any, { isAdmin: false } as any, {} as any, courseLang(), { ask } as any);
         comp.loadCourses();
-        return { comp, courseService, shown };
+        return { comp, courseService, shown, ask };
       }
 
       it('eigener Kurs: ohne Bestätigung wird nichts umgewandelt und der Kurs bleibt', () => {
-        const ask = spyOn(window, 'confirm').and.returnValue(false);
-        const { comp, courseService } = setup(true);
+        const { comp, courseService, ask } = setup(true, false);
         comp.convertToRepertoire(comp.courses[0]);
-        expect(ask).toHaveBeenCalledWith('courses.convertMoveConfirm');
+        expect(ask).toHaveBeenCalledWith('courses.convertMoveConfirm', { name: 'Mein Kurs' });
         expect(courseService.convertToRepertoire).not.toHaveBeenCalled();
         expect(comp.courses.map(c => c.bookId)).toEqual([7]);
         expect(comp.converting).toBeNull();
       });
 
       it('eigener Kurs: nach Bestätigung verschoben, aus der Liste genommen und als verschoben gemeldet', () => {
-        spyOn(window, 'confirm').and.returnValue(true);
         const { comp, courseService, shown } = setup(true);
         comp.convertToRepertoire(comp.courses[0]);
         expect(courseService.convertToRepertoire).toHaveBeenCalledWith(7);
@@ -291,8 +290,7 @@ describe('CourseListComponent sorting', () => {
       });
 
       it('fremder (Gruppen-/Admin-)Kurs bleibt bestehen: Kopie ohne Rückfrage', () => {
-        const ask = spyOn(window, 'confirm');
-        const { comp, courseService, shown } = setup(false);
+        const { comp, courseService, shown, ask } = setup(false);
         comp.convertToRepertoire(comp.courses[0]);
         expect(ask).not.toHaveBeenCalled();
         expect(courseService.convertToRepertoire).toHaveBeenCalledWith(7);
@@ -327,7 +325,7 @@ describe('CourseListComponent offline fallback', () => {
     // Nur a.pgn ist als Buch offline gespeichert.
     saveBookOffline('a.pgn', [], 1);
     const svc: any = { getCourses: jasmine.createSpy().and.returnValues(of(items), throwError(() => new Error('offline'))) };
-    const comp = new CourseListComponent(svc, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+    const comp = new CourseListComponent(svc, {} as any, {} as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
     comp.ngOnInit();                          // Erfolg → Snapshot gecacht
     expect(comp.offlineList).toBeFalse();
     comp.loadCourses();                       // Fehler → Fallback aus dem Cache
@@ -338,7 +336,7 @@ describe('CourseListComponent offline fallback', () => {
   it('keeps the plain error hint when nothing is downloaded', () => {
     const info = jasmine.createSpy('info');
     const svc: any = { getCourses: () => throwError(() => new Error('offline')) };
-    const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+    const comp = new CourseListComponent(svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
     comp.ngOnInit();
     expect(comp.offlineList).toBeFalse();
     expect(comp.courses.length).toBe(0);
@@ -357,7 +355,7 @@ describe('CourseListComponent Offline-Speichern (ehrliche Fehlermeldung)', () =>
     const svc: any = { getBookPuzzles: () => of([{ id: 1, bookFileName: 'b.pgn' }]) };
     const info = jasmine.createSpy('info');
     const comp = new CourseListComponent(
-      svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any, courseLang());
+      svc, { info } as any, { instant: (k: string) => k } as any, {} as any, { isAdmin: false } as any, {} as any, courseLang(), {} as any);
     return { comp, info };
   }
   const course = { bookId: 7, fileName: 'b.pgn', displayName: 'B' } as CourseListItem;

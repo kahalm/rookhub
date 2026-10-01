@@ -16,6 +16,7 @@ import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-to
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { FlashcardBoardComponent } from '../courses/flashcards/flashcard-board.component';
 import { QrCodeComponent } from '../../shared/qr-code/qr-code.component';
 import { Worksheet, WorksheetItem, WorksheetService } from './worksheet.service';
@@ -70,6 +71,7 @@ export class WorksheetDetailComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private confirm = inject(ConfirmService);
 
   ngOnInit(): void {
     // Die Adresse wechselt auch INNERHALB dieser Komponente: „Als Aufgabenblatt speichern" führt von
@@ -229,19 +231,23 @@ export class WorksheetDetailComponent implements OnInit {
 
   clearSheet(): void {
     if (!this.sheet || this.sheet.items.length === 0) return;
-    if (!confirm(this.translate.instant('worksheets.list.clearConfirm', { n: this.sheet.items.length }))) return;
-    this.worksheets.clear(this.sheet.id).subscribe({
-      next: sheet => { this.sheet = sheet; this.cdr.markForCheck(); },
-      error: () => this.failed(),
+    this.confirm.ask('worksheets.list.clearConfirm', { n: this.sheet.items.length }).subscribe(ok => {
+      if (!ok || !this.sheet) return;
+      this.worksheets.clear(this.sheet.id).subscribe({
+        next: sheet => { this.sheet = sheet; this.cdr.markForCheck(); },
+        error: () => this.failed(),
+      });
     });
   }
 
   deleteSheet(): void {
     if (!this.sheet || this.sheet.isClipboard) return;
-    if (!confirm(this.translate.instant('worksheets.list.deleteConfirm', { name: this.sheet.name }))) return;
-    this.worksheets.remove(this.sheet.id).subscribe({
-      next: () => this.router.navigate(['/worksheets']),
-      error: () => this.failed(),
+    this.confirm.ask('worksheets.list.deleteConfirm', { name: this.sheet.name }).subscribe(ok => {
+      if (!ok || !this.sheet) return;
+      this.worksheets.remove(this.sheet.id).subscribe({
+        next: () => this.router.navigate(['/worksheets']),
+        error: () => this.failed(),
+      });
     });
   }
 
@@ -330,15 +336,18 @@ export class WorksheetDetailComponent implements OnInit {
       return;
     }
 
-    if (!confirm(this.translate.instant('worksheets.share.stopConfirm'))) { revert(); this.cdr.markForCheck(); return; }
-    this.busy = true;
-    this.worksheets.unshare(this.sheet.id).subscribe({
-      next: () => {
-        this.busy = false;
-        if (this.sheet) this.sheet.shareToken = null;
-        this.cdr.markForCheck();
-      },
-      error: () => { this.busy = false; revert(); this.failed(); },
+    this.confirm.ask('worksheets.share.stopConfirm').subscribe(ok => {
+      if (!ok) { revert(); this.cdr.markForCheck(); return; }
+      if (!this.sheet) return;
+      this.busy = true;
+      this.worksheets.unshare(this.sheet.id).subscribe({
+        next: () => {
+          this.busy = false;
+          if (this.sheet) this.sheet.shareToken = null;
+          this.cdr.markForCheck();
+        },
+        error: () => { this.busy = false; revert(); this.failed(); },
+      });
     });
   }
 

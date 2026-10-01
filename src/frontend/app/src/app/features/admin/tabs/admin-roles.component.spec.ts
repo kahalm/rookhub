@@ -20,7 +20,7 @@ function make(overrides: any = {}) {
   } as any;
   const snackbar = { info: jasmine.createSpy('info') } as any;
   const translate = { instant: (k: string) => k } as any;
-  return { c: new AdminRolesComponent(admin, snackbar, translate), admin, snackbar };
+  return { c: new AdminRolesComponent(admin, snackbar, translate, {} as any), admin, snackbar };
 }
 
 const role = (over: Partial<Role>): Role =>

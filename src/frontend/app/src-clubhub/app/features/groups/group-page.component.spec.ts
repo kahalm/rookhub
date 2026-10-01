@@ -6,6 +6,8 @@ import { ClubApiService } from '../../core/club-api.service';
 import { Group, GroupRow } from '../../core/club.models';
 import { GroupPageComponent, statusMark } from './group-page.component';
 import { GroupsPageComponent, scheduleText } from './groups-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const GROUP = (extra: Partial<Group> = {}): Group => ({
   id: 1, name: 'Anfänger', weekday: 5, schedule: '17:00, Vereinsheim', archived: false, memberCount: 2, sessionCount: 2, lastSession: '2026-09-25',
@@ -24,13 +26,15 @@ const ROW = (extra: Partial<GroupRow> = {}): GroupRow =>
 
 describe('ClubHub-Gruppen', () => {
   let api: jasmine.SpyObj<ClubApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let perms: Set<string>;
   let router: Router;
 
   function configure(component: unknown, id?: string): void {
     TestBed.configureTestingModule({
       imports: [component as never],
-      providers: [provideRouter([]), { provide: ClubApiService, useValue: api },
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, provideRouter([]), { provide: ClubApiService, useValue: api },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(id ? { id } : {}), queryParamMap: convertToParamMap({}) } } }],
     });
@@ -46,6 +50,7 @@ describe('ClubHub-Gruppen', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     perms = new Set(['club.trainer']);
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService',
       ['groups', 'group', 'createGroup', 'updateGroup', 'deleteGroup', 'addTrainer', 'removeTrainer', 'members', 'addGroupMember', 'removeGroupMember', 'photoBlob', 'deletePhoto']);
@@ -176,10 +181,10 @@ describe('ClubHub-Gruppen', () => {
     it('aus der Gruppe nehmen fragt nach', async () => {
       api.removeGroupMember.and.resolveTo(GROUP({ members: [GROUP().members[0]] }));
       const fixture = await open(GROUP());
-      const ask = spyOn(window, 'confirm').and.returnValue(false);
+      const ask = confirmAsk.and.returnValue(of(false));
       await fixture.componentInstance.removeKid(12, 'Ben');
       expect(api.removeGroupMember).not.toHaveBeenCalled();
-      ask.and.returnValue(true);
+      ask.and.returnValue(of(true));
       await fixture.componentInstance.removeKid(12, 'Ben');
       expect(api.removeGroupMember).toHaveBeenCalledWith(1, 12);
     });
@@ -209,10 +214,10 @@ describe('ClubHub-Gruppen', () => {
     it('Gruppe löschen fragt nach und führt zur Liste', async () => {
       api.deleteGroup.and.resolveTo();
       const fixture = await open(GROUP({ canManage: true }));
-      const ask = spyOn(window, 'confirm').and.returnValue(false);
+      const ask = confirmAsk.and.returnValue(of(false));
       await fixture.componentInstance.deleteGroup();
       expect(api.deleteGroup).not.toHaveBeenCalled();
-      ask.and.returnValue(true);
+      ask.and.returnValue(of(true));
       await fixture.componentInstance.deleteGroup();
       expect(api.deleteGroup).toHaveBeenCalledWith(1);
       expect(router.navigateByUrl).toHaveBeenCalledWith('/gruppen');

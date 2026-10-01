@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { WorksheetDetailComponent } from './worksheet-detail.component';
 import { Worksheet, WorksheetService } from './worksheet.service';
 
@@ -22,10 +23,13 @@ describe('WorksheetDetailComponent', () => {
   let router: { navigate: jasmine.Spy };
   /** Die Route ist ein STROM: „Als Blatt speichern" wechselt die Id, ohne die Komponente neu zu bauen. */
   let params: BehaviorSubject<any>;
+  /** Antwort der Rückfrage (ConfirmService) — je Test umstellbar, Vorgabe „ja". */
+  let confirmAnswer: boolean;
 
   const paramMap = (id: string) => ({ get: (k: string) => (k === 'id' ? id : null) });
 
   function make(loaded: Worksheet = sheet()): WorksheetDetailComponent {
+    confirmAnswer = true;
     worksheets = {
       get: jasmine.createSpy('get').and.returnValue(of(loaded)),
       reorder: jasmine.createSpy('reorder').and.callFake((_id: number, ids: number[]) =>
@@ -53,6 +57,7 @@ describe('WorksheetDetailComponent', () => {
         { provide: SnackbarService, useValue: { warn: () => {}, info: () => {} } },
         { provide: TranslateService, useValue: { instant: (k: string) => k } },
         { provide: ChangeDetectorRef, useValue: { markForCheck: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(confirmAnswer) } },
       ],
     });
     const c = TestBed.runInInjectionContext(() => new WorksheetDetailComponent());
@@ -208,7 +213,7 @@ describe('WorksheetDetailComponent', () => {
 
   it('Teilen beenden fragt nach — und ein Nein lässt den Link stehen', () => {
     const c = make(sheet({ shareToken: 'Ux7f2K' }));
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmAnswer = false;
 
     c.toggleShare(false);
 
@@ -218,7 +223,6 @@ describe('WorksheetDetailComponent', () => {
 
   it('bestätigtes Beenden nimmt den Link weg', () => {
     const c = make(sheet({ shareToken: 'Ux7f2K' }));
-    spyOn(window, 'confirm').and.returnValue(true);
 
     c.toggleShare(false);
 
@@ -231,7 +235,7 @@ describe('WorksheetDetailComponent', () => {
   // [checked] nicht neu. Die Attrappe steht deshalb schon auf dem neuen Wert, wie der echte Schalter.
   it('Abbrechen beim Beenden stellt den Schalter zurück auf „an" — der Link ist ja noch öffentlich', () => {
     const c = make(sheet({ shareToken: 'Ux7f2K' }));
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirmAnswer = false;
     const toggle = { checked: false };
 
     c.toggleShare(false, toggle);
@@ -253,7 +257,6 @@ describe('WorksheetDetailComponent', () => {
 
   it('gescheitertes Beenden stellt den Schalter zurück auf „an"', () => {
     const c = make(sheet({ shareToken: 'Ux7f2K' }));
-    spyOn(window, 'confirm').and.returnValue(true);
     worksheets.unshare.and.returnValue(throwError(() => new Error('500')));
     const toggle = { checked: false };
 

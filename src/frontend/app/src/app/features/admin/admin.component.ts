@@ -221,16 +221,18 @@ export class AdminComponent implements OnInit {
   }
 
   deleteUser(user: AdminUser): void {
-    if (!confirm(this.translate.instant('admin.users.deleteConfirm', { username: user.username }))) return;
+    this.confirm.ask('admin.users.deleteConfirm', { username: user.username }).subscribe(ok => {
+      if (!ok) return;
 
-    this.adminService.deleteUser(user.id).subscribe({
-      next: () => {
-        this.snackbar.info(this.translate.instant('admin.users.deleted', { username: user.username }));
-        this.loadUsers();
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.delete'));
-      }
+      this.adminService.deleteUser(user.id).subscribe({
+        next: () => {
+          this.snackbar.info(this.translate.instant('admin.users.deleted', { username: user.username }));
+          this.loadUsers();
+        },
+        error: err => {
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.delete'));
+        }
+      });
     });
   }
 
@@ -419,16 +421,18 @@ export class AdminComponent implements OnInit {
   }
 
   deleteBook(book: Book): void {
-    if (!confirm(this.translate.instant('admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }))) return;
+    this.confirm.ask('admin.books.deleteConfirm', { name: book.displayName, count: book.puzzleCount }).subscribe(ok => {
+      if (!ok) return;
 
-    this.adminService.deleteBook(book.id).subscribe({
-      next: () => {
-        this.snackbar.info(this.translate.instant('admin.books.deleted', { name: book.displayName }));
-        this.loadBooks();
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.delete'));
-      }
+      this.adminService.deleteBook(book.id).subscribe({
+        next: () => {
+          this.snackbar.info(this.translate.instant('admin.books.deleted', { name: book.displayName }));
+          this.loadBooks();
+        },
+        error: err => {
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.delete'));
+        }
+      });
     });
   }
 
@@ -490,20 +494,22 @@ export class AdminComponent implements OnInit {
   }
 
   deleteGroup(group: Group): void {
-    if (!confirm(this.translate.instant('admin.groups.deleteConfirm', { name: group.name }))) return;
-    this.adminService.deleteGroup(group.id).subscribe({
-      next: () => {
-        this.snackbar.info(this.translate.instant('admin.groups.deleted', { name: group.name }));
-        if (this.selectedGroup?.id === group.id) {
-          this.selectedGroup = null;
-          this.groupMembers = [];
-          this.recomputeAvailableUsers();
+    this.confirm.ask('admin.groups.deleteConfirm', { name: group.name }).subscribe(ok => {
+      if (!ok) return;
+      this.adminService.deleteGroup(group.id).subscribe({
+        next: () => {
+          this.snackbar.info(this.translate.instant('admin.groups.deleted', { name: group.name }));
+          if (this.selectedGroup?.id === group.id) {
+            this.selectedGroup = null;
+            this.groupMembers = [];
+            this.recomputeAvailableUsers();
+          }
+          this.loadGroups();
+        },
+        error: err => {
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.delete'));
         }
-        this.loadGroups();
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.delete'));
-      }
+      });
     });
   }
 

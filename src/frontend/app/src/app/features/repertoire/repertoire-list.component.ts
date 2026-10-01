@@ -13,6 +13,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { CreateRepertoireDialogComponent } from './create-repertoire-dialog.component';
 import { ShareRepertoireDialogComponent, ShareRepertoireDialogData } from './share-repertoire-dialog.component';
@@ -272,7 +273,7 @@ export class RepertoireListComponent implements OnInit {
   /** true = Server nicht erreichbar; Anzeige aus dem Offline-Cache (nur heruntergeladene). */
   offlineList = false;
 
-  constructor(private repertoireService: RepertoireService, private training: RepertoireTrainingService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private repertoireService: RepertoireService, private training: RepertoireTrainingService, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 
   kindLabel(kind: RepertoireKind): string {
     return REPERTOIRE_KIND_LABELS[kind] ?? 'repertoire.kind.none';
@@ -367,39 +368,42 @@ export class RepertoireListComponent implements OnInit {
   }
 
   deleteRepertoire(id: number): void {
-    if (confirm(this.translate.instant('repertoire.list.deleteConfirm'))) {
+    this.confirm.ask('repertoire.list.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
       this.repertoireService.remove(id).subscribe({
         next: () => this.loadRepertoires(),
         error: () => this.snackbar.info(this.translate.instant('repertoire.list.deleteFailed'))
       });
-    }
+    });
   }
 
   /** Repertoire in einen persönlichen Kurs umwandeln (nur bei Puzzle-PGN im Chessable-Stil). Der Server
    *  verschiebt: das Repertoire wird danach samt Trainingsstand und Freigaben ALLER Nutzer gelöscht —
    *  deshalb vorher die Rückfrage wie beim Löschen. */
   convertToCourse(rep: Repertoire): void {
-    if (!confirm(this.translate.instant('repertoire.list.convertMoveConfirm', { name: rep.name }))) return;
-    this.converting = rep.id;
-    this.repertoireService.convertToCourse(rep.id).subscribe({
-      next: course => {
-        this.converting = null;
-        // Verschieben: das Original-Repertoire wurde serverseitig entfernt → aus der Liste nehmen.
-        this.repertoires = this.repertoires.filter(r => r.id !== rep.id);
-        this.snackbar.info(this.translate.instant('repertoire.list.convertedToCourse', { name: course.displayName }), { action: 'common.ok', duration: 3000 });
-      },
-      error: (e) => {
-        this.converting = null;
-        // 400 hat zwei Ursachen, die der Nutzer klar unterscheiden können muss:
-        // code 'repertoire_empty' = noch gar kein PGN drin (dann fehlt der Import, nicht der Puzzle-Marker),
-        // sonst = PGN vorhanden, aber kein quiz-barer Inhalt (reines Eröffnungs-PGN).
-        const key = e?.status === 400
-          ? (e?.error?.code === 'repertoire_empty'
-            ? 'repertoire.list.convertToCourseEmpty'
-            : 'repertoire.list.convertToCourseNoPuzzles')
-          : 'repertoire.list.convertToCourseFailed';
-        this.snackbar.info(this.translate.instant(key), { action: 'common.ok', duration: 4000 });
-      }
+    this.confirm.ask('repertoire.list.convertMoveConfirm', { name: rep.name }).subscribe(ok => {
+      if (!ok) return;
+      this.converting = rep.id;
+      this.repertoireService.convertToCourse(rep.id).subscribe({
+        next: course => {
+          this.converting = null;
+          // Verschieben: das Original-Repertoire wurde serverseitig entfernt → aus der Liste nehmen.
+          this.repertoires = this.repertoires.filter(r => r.id !== rep.id);
+          this.snackbar.info(this.translate.instant('repertoire.list.convertedToCourse', { name: course.displayName }), { action: 'common.ok', duration: 3000 });
+        },
+        error: (e) => {
+          this.converting = null;
+          // 400 hat zwei Ursachen, die der Nutzer klar unterscheiden können muss:
+          // code 'repertoire_empty' = noch gar kein PGN drin (dann fehlt der Import, nicht der Puzzle-Marker),
+          // sonst = PGN vorhanden, aber kein quiz-barer Inhalt (reines Eröffnungs-PGN).
+          const key = e?.status === 400
+            ? (e?.error?.code === 'repertoire_empty'
+              ? 'repertoire.list.convertToCourseEmpty'
+              : 'repertoire.list.convertToCourseNoPuzzles')
+            : 'repertoire.list.convertToCourseFailed';
+          this.snackbar.info(this.translate.instant(key), { action: 'common.ok', duration: 4000 });
+        }
+      });
     });
   }
 

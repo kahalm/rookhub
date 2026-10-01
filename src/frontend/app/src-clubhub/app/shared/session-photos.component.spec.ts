@@ -2,16 +2,20 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ClubApiService } from '../core/club-api.service';
 import { Photo } from '../core/club.models';
 import { SessionPhotosComponent } from './session-photos.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const P = (id: number): Photo => ({ id, width: 1600, height: 1200, createdAt: '2026-09-25T17:00:00Z' });
 
 describe('SessionPhotosComponent', () => {
   let fixture: ComponentFixture<SessionPhotosComponent>;
   let api: jasmine.SpyObj<ClubApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   const el = () => fixture.nativeElement as HTMLElement;
 
   async function create(photos: Photo[], editable: boolean): Promise<void> {
-    TestBed.configureTestingModule({ imports: [SessionPhotosComponent], providers: [{ provide: ClubApiService, useValue: api }] });
+    TestBed.configureTestingModule({ imports: [SessionPhotosComponent], providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, { provide: ClubApiService, useValue: api }] });
     fixture = TestBed.createComponent(SessionPhotosComponent);
     fixture.componentRef.setInput('sessionId', 5);
     fixture.componentRef.setInput('photos', photos);
@@ -22,6 +26,7 @@ describe('SessionPhotosComponent', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['photoBlob', 'deletePhoto']);
     api.photoBlob.and.resolveTo(new Blob(['jpeg'], { type: 'image/jpeg' }));
     spyOn(URL, 'createObjectURL').and.callFake(() => 'blob:x/' + Math.random());
@@ -53,11 +58,11 @@ describe('SessionPhotosComponent', () => {
     await create([P(1), P(2)], true);
     const gone: number[] = [];
     fixture.componentInstance.deleted.subscribe(id => gone.push(id));
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const ask = confirmAsk.and.returnValue(of(false));
     el().querySelectorAll<HTMLButtonElement>('.photo-del')[1].click();
     await fixture.whenStable();
     expect(api.deletePhoto).not.toHaveBeenCalled();
-    ask.and.returnValue(true);
+    ask.and.returnValue(of(true));
     el().querySelectorAll<HTMLButtonElement>('.photo-del')[1].click();
     await fixture.whenStable();
     expect(api.deletePhoto).toHaveBeenCalledWith(5, 2);

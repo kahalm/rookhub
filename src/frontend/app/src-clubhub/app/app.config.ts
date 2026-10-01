@@ -14,6 +14,7 @@ import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { authInterceptor } from '@rh/core/auth.interceptor';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
+import { CONFIRM_LABELS } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 registerLocaleData(localeDe);
 
@@ -35,6 +36,8 @@ export const clubhubConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub; Konto loeschen geht aber nur dort — die Loeschseite verweist dorthin (Codereview UX-023).
     { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
+    // Rueckfragen (ConfirmService) mit deutschen Knoepfen — die Seite stellt keine Sprache ein, sonst kaeme „Cancel“.
+    { provide: CONFIRM_LABELS, useValue: { confirm: 'OK', cancel: 'Abbrechen' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

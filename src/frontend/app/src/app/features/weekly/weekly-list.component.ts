@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
@@ -268,7 +269,8 @@ export class WeeklyListComponent implements OnInit {
     private weekly: WeeklyService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private confirm: ConfirmService,
   ) {}
 
   /** Anlegen, Bearbeiten, Löschen und Spieler-Aufschlüsselung: wer `weeklyposts.manage` hat (Admins immer) — wie der
@@ -429,13 +431,15 @@ export class WeeklyListComponent implements OnInit {
   }
 
   remove(row: WeeklyPostRow): void {
-    if (!confirm(this.translate.instant('weekly.deleteConfirm', { title: row.title }))) return;
-    this.weekly.delete(row.id).subscribe({
-      next: () => {
-        this.snackbar.info(this.translate.instant('weekly.deleted'), { action: 'common.ok', duration: 3000 });
-        this.loadPosts();
-      },
-      error: () => this.snackbar.info(this.translate.instant('weekly.deleteFailed'), { action: 'common.ok', duration: 3000 })
+    this.confirm.ask('weekly.deleteConfirm', { title: row.title }).subscribe(ok => {
+      if (!ok) return;
+      this.weekly.delete(row.id).subscribe({
+        next: () => {
+          this.snackbar.info(this.translate.instant('weekly.deleted'), { action: 'common.ok', duration: 3000 });
+          this.loadPosts();
+        },
+        error: () => this.snackbar.info(this.translate.instant('weekly.deleteFailed'), { action: 'common.ok', duration: 3000 })
+      });
     });
   }
 }

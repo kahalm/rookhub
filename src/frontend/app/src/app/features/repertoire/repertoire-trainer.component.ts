@@ -28,6 +28,7 @@ import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, app
 import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
@@ -190,6 +191,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private offlineQueue: OfflineQueueService,
     private explorer: RepertoireExplorerService,
     private snackbar: SnackbarService,
+    private confirm: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -430,17 +432,20 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
 
   /** Alle SM-2-Zustände dieses Repertoires löschen (Bestätigungs-Dialog vorher). */
   resetProgress(): void {
-    if (!confirm(this.translate.instant('repertoireTrainer.resetConfirm'))) return;
-    this.resetting = true;
-    this.training.reset(this.repertoireId).subscribe({
-      next: () => {
-        this.statesByKey.clear();
-        this.resetting = false;
-        this.buildQueue();
-      },
-      // OnPush: ohne markForCheck bliebe der Knopf grau stehen — und ohne Meldung hielte man den
-      // Reset für erfolgt.
-      error: () => { this.resetting = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.resetFailed'); },
+    this.confirm.ask('repertoireTrainer.resetConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.resetting = true;
+      this.cdr.markForCheck();   // OnPush: die Antwort des Dialogs markiert diese Ansicht nicht
+      this.training.reset(this.repertoireId).subscribe({
+        next: () => {
+          this.statesByKey.clear();
+          this.resetting = false;
+          this.buildQueue();
+        },
+        // OnPush: ohne markForCheck bliebe der Knopf grau stehen — und ohne Meldung hielte man den
+        // Reset für erfolgt.
+        error: () => { this.resetting = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.resetFailed'); },
+      });
     });
   }
 

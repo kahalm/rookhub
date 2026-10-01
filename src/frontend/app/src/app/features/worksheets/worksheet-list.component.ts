@@ -12,6 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { WorksheetService, WorksheetSummary } from './worksheet.service';
 
 /**
@@ -52,6 +53,7 @@ export class WorksheetListComponent implements OnInit {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private confirm = inject(ConfirmService);
 
   get clipboard(): WorksheetSummary | undefined { return this.sheets.find(s => s.isClipboard); }
 
@@ -127,13 +129,17 @@ export class WorksheetListComponent implements OnInit {
   clearClipboard(): void {
     const clip = this.clipboard;
     if (!clip || clip.itemCount === 0) return;
-    if (!confirm(this.translate.instant('worksheets.list.clearConfirm', { n: clip.itemCount }))) return;
-    this.worksheets.clear(clip.id).subscribe({ next: () => this.load(), error: () => this.failed() });
+    this.confirm.ask('worksheets.list.clearConfirm', { n: clip.itemCount }).subscribe(ok => {
+      if (!ok) return;
+      this.worksheets.clear(clip.id).subscribe({ next: () => this.load(), error: () => this.failed() });
+    });
   }
 
   remove(sheet: WorksheetSummary): void {
-    if (!confirm(this.translate.instant('worksheets.list.deleteConfirm', { name: sheet.name }))) return;
-    this.worksheets.remove(sheet.id).subscribe({ next: () => this.load(), error: () => this.failed() });
+    this.confirm.ask('worksheets.list.deleteConfirm', { name: sheet.name }).subscribe(ok => {
+      if (!ok) return;
+      this.worksheets.remove(sheet.id).subscribe({ next: () => this.load(), error: () => this.failed() });
+    });
   }
 
   private failed(): void {

@@ -14,6 +14,8 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
 import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, reasonText, sheetPgn, sheetPgnFileName, yearOf } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
@@ -289,6 +291,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   /** Token des Teilen-Links (ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
   private readonly clubApi = inject(ClubApiService);
+  private readonly confirm = inject(ConfirmService);
   readonly client: ClubClient = this.clubApi.client(this.share);
   private readonly api = this.client;
   readonly allowed = !!this.share || this.auth.has('league.contribute');
@@ -557,7 +560,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   async save(): Promise<void> {
     const legal = this.s.plies().filter(p => !p.illegal);
     if (this.s.illegalCount() > 0
-      && !confirm(`${this.s.illegalCount()} Züge am Ende sind nicht legal und fallen weg. Trotzdem übernehmen?`)) return;
+      && !(await firstValueFrom(this.confirm.ask(`${this.s.illegalCount()} Züge am Ende sind nicht legal und fallen weg. Trotzdem übernehmen?`)))) return;
     this.saving.set(true);
     this.saveError.set(null);
     try {
@@ -641,7 +644,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   }
 
   async discard(): Promise<void> {
-    if (!confirm('Formular verwerfen? Foto und Lesung werden gelöscht.')) return;
+    if (!(await firstValueFrom(this.confirm.ask('Formular verwerfen? Foto und Lesung werden gelöscht.')))) return;
     try {
       await this.api.discard(this.scanRef);
       if (this.share) rememberAnonKey(this.share, this.scanRef, false);

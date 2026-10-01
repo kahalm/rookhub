@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { AdminService } from '../../../core/admin.service';
 import { apiErrorText } from '../../../core/api-error';
 
@@ -27,21 +28,24 @@ export class AdminPuzzleTagsComponent {
     private adminService: AdminService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private confirm: ConfirmService,
   ) {}
 
   backfillPuzzleTags(): void {
     if (this.puzzleTagsBackfilling) return;
-    if (!confirm(this.translate.instant('admin.puzzles.backfillConfirm'))) return;
-    this.puzzleTagsBackfilling = true;
-    this.adminService.backfillPuzzleTags().subscribe({
-      next: () => {
-        this.puzzleTagsBackfilling = false;
-        this.snackbar.info(this.translate.instant('admin.puzzles.backfillStarted'));
-      },
-      error: err => {
-        this.puzzleTagsBackfilling = false;
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.puzzles.backfillError'));
-      }
+    this.confirm.ask('admin.puzzles.backfillConfirm').subscribe(ok => {
+      if (!ok || this.puzzleTagsBackfilling) return;
+      this.puzzleTagsBackfilling = true;
+      this.adminService.backfillPuzzleTags().subscribe({
+        next: () => {
+          this.puzzleTagsBackfilling = false;
+          this.snackbar.info(this.translate.instant('admin.puzzles.backfillStarted'));
+        },
+        error: err => {
+          this.puzzleTagsBackfilling = false;
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.puzzles.backfillError'));
+        }
+      });
     });
   }
 }

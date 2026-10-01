@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
@@ -143,6 +145,7 @@ export class OnlineAccountsComponent {
   readonly changed = output<void>();
 
   private readonly api = inject(LeagueApiService);
+  private readonly confirm = inject(ConfirmService);
   readonly sites = ACCOUNT_SITES;
   readonly label = siteLabel;
   readonly hiddenLabel = HIDDEN_ACCOUNT;
@@ -245,7 +248,7 @@ export class OnlineAccountsComponent {
 
   async remove(a: Account): Promise<void> {
     const what = a.hidden ? 'Das verborgene Online-Konto' : `${siteLabel(a.site)}-Konto „${a.user}“`;
-    if (a.id === undefined || !confirm(`${what} entfernen? Die geholten Partien gehen mit.`)) return;
+    if (a.id === undefined || !(await firstValueFrom(this.confirm.ask(`${what} entfernen? Die geholten Partien gehen mit.`)))) return;
     await this.run(() => this.api.deleteAccount(a.id!));
   }
 

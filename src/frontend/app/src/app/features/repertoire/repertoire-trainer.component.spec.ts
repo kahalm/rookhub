@@ -48,6 +48,8 @@ function state(lineKey: string, dueAtMs: number, extra: Partial<LineStateDto> = 
 /** Explorer ohne Wirkung — „Häufigste zuerst" ist in den übrigen Tests aus. */
 const NO_EXPLORER: any = { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) };
 const NO_SNACKBAR: any = { warn: () => ({}) };
+/** Rückfrage (ConfirmService) sofort bestätigt — `resetProgress` fragt vorher. */
+const CONFIRM_YES: any = { ask: () => of(true) };
 
 /** Explorer-Stub mit gegebener `run`-Antwort und der Vorgabe-Auswahl. */
 function explorerWith(run: any): any {
@@ -95,7 +97,7 @@ function make(
     localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify(chapters));
   }
   // forceColor=false → localStorage NICHT anfassen (Test setzt Overrides/Auto-Erkennung selbst).
-  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog, offlineQueue ?? ({ enqueue: () => {} } as any), explorer, NO_SNACKBAR);
+  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog, offlineQueue ?? ({ enqueue: () => {} } as any), explorer, NO_SNACKBAR, CONFIRM_YES);
   c.ngOnInit();
   return c;
 }
@@ -235,7 +237,6 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
   }));
 
   it('resetProgress clears state and empties the pool', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
     const c = make('w', null);
     const resetSpy = jasmine.createSpy('reset').and.returnValue(of({ deleted: 3 }));
     (c as any).training.reset = resetSpy;
@@ -264,7 +265,6 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     }
 
     it('resetProgress: Fehler meldet sich, gibt den Knopf frei und markiert die OnPush-Ansicht', () => {
-      spyOn(window, 'confirm').and.returnValue(true);
       const c = make('w', null);
       const { warn, markForCheck } = watchFeedback(c);
       (c as any).training.reset = () => throwError(() => new Error('500'));
@@ -324,6 +324,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     expect(c.mode).toBe('learn');
@@ -383,6 +384,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     expect(c.phase).toBe('LEARN_SHOW');                   // e4 vorgezeigt (kein Kommentar)
@@ -417,6 +419,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     // In einen Wiederholungs-Durchlauf versetzen: der 2. Durchlauf zeigt NICHT vor → direkt PLAYING.
@@ -561,6 +564,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     expect(c.phase).toBe('EMPTY');
@@ -600,6 +604,7 @@ describe('RepertoireTrainerComponent offline', () => {
       { enqueue } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     return c;
@@ -824,6 +829,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     expect(c.phase).toBe('LEARN_SHOW');
@@ -859,6 +865,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       { enqueue: () => {} } as any,
       NO_EXPLORER,
       NO_SNACKBAR,
+      {} as any,
     );
     c.ngOnInit();
     (c as any).learnPass = 1;                             // Wiederholungs-Durchlauf: kein Vorzeigen

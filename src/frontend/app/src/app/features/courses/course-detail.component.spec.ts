@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { CourseDetailComponent } from './course-detail.component';
 import { CourseDetail, CourseLine, CourseManageChapter } from './course.service';
 import { CourseLanguageService } from './course-language.service';
@@ -51,6 +51,8 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
               detailOver: Partial<CourseDetail> = {}) {
   const calls: string[] = [];
   const warnings: string[] = [];
+  /** Rückfrage (ConfirmService): antwortet sofort; Vorgabe „ja", ein Test stellt `answer` um. */
+  const confirm: { answer: boolean; ask: () => Observable<boolean> } = { answer: true, ask: () => of(confirm.answer) };
   const courses = {
     getDetail: () => { calls.push('getDetail'); return of(detail(detailOver)); },
     getChapterLines: () => { calls.push('getChapterLines'); return of([line()]); },
@@ -82,8 +84,9 @@ function make(api: Record<string, unknown> = {}, dialogResult: unknown = false,
     { instant: (k: string) => k } as never,
     { sendAndNotify: (target: number | null, items: unknown[]) => calls.push(`worksheet:${target}:${items.length}`) } as never,
     courseLang(),
+    confirm as never,
   );
-  return { component, calls, warnings };
+  return { component, calls, warnings, confirm };
 }
 
 describe('CourseDetailComponent', () => {
@@ -213,14 +216,14 @@ describe('CourseDetailComponent Kapitel', () => {
 
 describe('CourseDetailComponent Löschen & Zurücksetzen (mit Rückfrage)', () => {
   it('löscht ein Kapitel nur nach Bestätigung', () => {
-    const { component, calls } = make();
+    const { component, calls, confirm } = make();
     component.ngOnInit();
 
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirm.answer = false;
     component.deleteChapter(chapter());
     expect(calls).not.toContain('deleteChapter');
 
-    (window.confirm as jasmine.Spy).and.returnValue(true);
+    confirm.answer = true;
     component.deleteChapter(chapter());
     expect(calls).toContain('deleteChapter');
   });
@@ -231,7 +234,6 @@ describe('CourseDetailComponent Löschen & Zurücksetzen (mit Rückfrage)', () =
     const ch = chapter();
     component.toggleChapter(ch);
     const before = calls.filter(c => c === 'getChapterLines').length;
-    spyOn(window, 'confirm').and.returnValue(true);
 
     component.deleteLine(ch, line({ id: 11 }));
 
@@ -243,21 +245,21 @@ describe('CourseDetailComponent Löschen & Zurücksetzen (mit Rückfrage)', () =
   });
 
   it('fragt vor dem Löschen einer Linie nach', () => {
-    const { component, calls } = make();
+    const { component, calls, confirm } = make();
     component.ngOnInit();
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirm.answer = false;
     component.deleteLine(chapter(), line());
     expect(calls).not.toContain('deleteLine');
   });
 
   it('setzt den Kapitel-Fortschritt nur nach Bestätigung zurück', () => {
-    const { component, calls } = make();
+    const { component, calls, confirm } = make();
     component.ngOnInit();
-    spyOn(window, 'confirm').and.returnValue(false);
+    confirm.answer = false;
     component.resetChapter(chapter());
     expect(calls).not.toContain('resetChapter');
 
-    (window.confirm as jasmine.Spy).and.returnValue(true);
+    confirm.answer = true;
     component.resetChapter(chapter());
     expect(calls).toContain('resetChapter');
   });
@@ -265,7 +267,6 @@ describe('CourseDetailComponent Löschen & Zurücksetzen (mit Rückfrage)', () =
   it('setzt den ganzen Kurs nur nach Bestätigung zurück', () => {
     const { component, calls } = make();
     component.ngOnInit();
-    spyOn(window, 'confirm').and.returnValue(true);
     component.resetCourse();
     expect(calls).toContain('reset');
   });

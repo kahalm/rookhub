@@ -12,6 +12,7 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, AdminUser, Group, Role } from '../../../core/admin.service';
 import { apiErrorText } from '../../../core/api-error';
@@ -80,6 +81,7 @@ export class AdminRolesComponent implements OnInit {
     private admin: AdminService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private confirm: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -176,10 +178,12 @@ export class AdminRolesComponent implements OnInit {
 
   deleteRole(role: Role): void {
     if (role.isSystem) return;
-    if (!confirm(this.translate.instant('admin.roles.confirmDelete', { name: role.name }))) return;
-    this.admin.deleteRole(role.id).subscribe({
-      next: () => { this.snackbar.info(this.translate.instant('admin.roles.deleted')); this.loadRoles(); },
-      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError')),
+    this.confirm.ask('admin.roles.confirmDelete', { name: role.name }).subscribe(ok => {
+      if (!ok) return;
+      this.admin.deleteRole(role.id).subscribe({
+        next: () => { this.snackbar.info(this.translate.instant('admin.roles.deleted')); this.loadRoles(); },
+        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError')),
+      });
     });
   }
 

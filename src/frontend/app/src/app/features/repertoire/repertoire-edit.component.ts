@@ -8,6 +8,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { forkJoin, of, catchError, map } from 'rxjs';
 import { RepertoireFile } from '../../core/models';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -66,7 +67,7 @@ export class RepertoireEditComponent {
   @Output() fileUploaded = new EventEmitter<void>();
   @Output() fileDeleted = new EventEmitter<void>();
 
-  constructor(private repertoireService: RepertoireService, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private repertoireService: RepertoireService, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -140,11 +141,12 @@ export class RepertoireEditComponent {
   }
 
   deleteFile(fileId: number): void {
-    if (confirm(this.translate.instant('repertoire.edit.deleteConfirm'))) {
+    this.confirm.ask('repertoire.edit.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
       this.repertoireService.deleteFile(this.repertoireId, fileId).subscribe(() => {
         this.fileDeleted.emit();
       });
-    }
+    });
   }
 
   formatSize(bytes: number): string {

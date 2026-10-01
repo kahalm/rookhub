@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, GroupInput, MemberRow, Status } from '../../core/club.models';
@@ -189,6 +191,7 @@ export class GroupPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmService);
 
   readonly allowed = hasClubAccess(this.auth);
   readonly group = signal<Group | null>(null);
@@ -251,7 +254,7 @@ export class GroupPageComponent implements OnInit {
 
   async removeKid(memberId: number, firstName: string): Promise<void> {
     const g = this.group();
-    if (!g || !confirm(`${firstName} aus der Gruppe nehmen? Das Blatt und die erfasste Anwesenheit bleiben.`)) return;
+    if (!g || !(await firstValueFrom(this.confirm.ask(`${firstName} aus der Gruppe nehmen? Das Blatt und die erfasste Anwesenheit bleiben.`)))) return;
     await this.run(async () => this.show(await this.api.removeGroupMember(g.id, memberId)), 'Das hat nicht geklappt.');
   }
 
@@ -268,7 +271,7 @@ export class GroupPageComponent implements OnInit {
 
   async deleteGroup(): Promise<void> {
     const g = this.group();
-    if (!g || !confirm(`Die Gruppe „${g.name}“ löschen — mit allen Einheiten und der Anwesenheit? Die Kinder bleiben in der Kartei.`)) return;
+    if (!g || !(await firstValueFrom(this.confirm.ask(`Die Gruppe „${g.name}“ löschen — mit allen Einheiten und der Anwesenheit? Die Kinder bleiben in der Kartei.`)))) return;
     await this.run(async () => {
       await this.api.deleteGroup(g.id);
       void this.router.navigateByUrl('/gruppen');

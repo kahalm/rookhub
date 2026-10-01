@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, input, output, signal } from '@angular/core';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { ClubApiService } from '../core/club-api.service';
 import { Photo } from '../core/club.models';
 
@@ -39,6 +41,7 @@ import { Photo } from '../core/club.models';
 })
 export class SessionPhotosComponent {
   private readonly api = inject(ClubApiService);
+  private readonly confirm = inject(ConfirmService);
   readonly sessionId = input.required<number>();
   readonly photos = input<Photo[]>([]);
   readonly editable = input(false);
@@ -104,7 +107,7 @@ export class SessionPhotosComponent {
   }
 
   async remove(p: Photo): Promise<void> {
-    if (!confirm('Dieses Foto löschen?')) return;
+    if (!(await firstValueFrom(this.confirm.ask('Dieses Foto löschen?')))) return;
     this.busy.set(true);
     this.error.set(null);
     try {

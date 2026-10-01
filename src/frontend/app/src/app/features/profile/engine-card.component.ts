@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ExternalEngineService, ExternalEngineInfo, engineSourceOf } from '../analysis/external-engine.service';
 
 /**
@@ -184,6 +185,7 @@ export class EngineCardComponent implements OnInit, OnDestroy {
     // Angular 22 refresht nach HTTP nicht ohne View-Marke (CLAUDE.md-Konvention) — der ganze
     // Inhalt dieser Karte kommt aus HTTP-Antworten, also nach jeder markieren.
     private cdr: ChangeDetectorRef,
+    private confirm: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -207,13 +209,15 @@ export class EngineCardComponent implements OnInit, OnDestroy {
   /** Registrierung einer direkt angemeldeten Engine entfernen (der Server nimmt sie auch aus der
    *  Hintergrund-Liste). Läuft ihr Provider noch, meldet er sich beim nächsten Start wieder an. */
   removeDirect(e: ExternalEngineInfo): void {
-    if (!confirm(this.translate.instant('profile.engine.deleteConfirm', { name: e.name }))) return;
-    this.externalEngines.deleteDirectEngine(e.id).subscribe({
-      next: () => {
-        this.snackbar.success(this.translate.instant('profile.engine.deleted'));
-        this.loadEngines();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('profile.engine.deleteFailed')),
+    this.confirm.ask('profile.engine.deleteConfirm', { name: e.name }).subscribe(ok => {
+      if (!ok) return;
+      this.externalEngines.deleteDirectEngine(e.id).subscribe({
+        next: () => {
+          this.snackbar.success(this.translate.instant('profile.engine.deleted'));
+          this.loadEngines();
+        },
+        error: () => this.snackbar.warn(this.translate.instant('profile.engine.deleteFailed')),
+      });
     });
   }
 

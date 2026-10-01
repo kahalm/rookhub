@@ -10,7 +10,7 @@ function make() {
   } as any;
   const snackbar = { info: jasmine.createSpy('info') } as any;
   const translate = { instant: (k: string) => k } as any;
-  return { c: new ActivityPresetsCardComponent(service, snackbar, translate), service, snackbar };
+  return { c: new ActivityPresetsCardComponent(service, snackbar, translate, {} as any), service, snackbar };
 }
 
 describe('ActivityPresetsCardComponent', () => {

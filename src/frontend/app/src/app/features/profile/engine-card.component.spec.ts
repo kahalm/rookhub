@@ -3,7 +3,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideHttpClient } from '@angular/common/http';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { EngineCardComponent } from './engine-card.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 describe('EngineCardComponent', () => {
   let fixture: ComponentFixture<EngineCardComponent>;
@@ -72,7 +74,7 @@ describe('EngineCardComponent', () => {
   });
 
   it('removes a direct engine via DELETE /api/external-engine/{id} and reloads', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
     http.expectOne('/api/engine/external').flush({
@@ -89,7 +91,7 @@ describe('EngineCardComponent', () => {
   });
 
   it('does not delete when the confirmation is declined', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: false, maskedToken: null });
     http.expectOne('/api/engine/external').flush({

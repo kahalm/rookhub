@@ -3,16 +3,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { LinkPageComponent } from './link-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 describe('LinkPageComponent (Konto verknüpfen)', () => {
   let fixture: ComponentFixture<LinkPageComponent>;
   let api: jasmine.SpyObj<ClubApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   const el = () => fixture.nativeElement as HTMLElement;
 
   async function create(query: Record<string, string> = {}): Promise<void> {
     TestBed.configureTestingModule({
       imports: [LinkPageComponent],
-      providers: [{ provide: ClubApiService, useValue: api },
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, { provide: ClubApiService, useValue: api },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } }],
     });
     fixture = TestBed.createComponent(LinkPageComponent);
@@ -26,6 +30,7 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['linkState', 'redeem', 'selfUnlink']);
     api.linkState.and.resolveTo({ linked: false });
   });
@@ -57,10 +62,10 @@ describe('LinkPageComponent (Konto verknüpfen)', () => {
     api.selfUnlink.and.resolveTo();
     await create();
     expect(el().textContent).toContain('Trainingsminuten');
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.unlink();
     expect(api.selfUnlink).not.toHaveBeenCalled();
-    ask.and.returnValue(true);
+    ask.and.returnValue(of(true));
     await fixture.componentInstance.unlink();
     fixture.detectChanges();
     expect(api.selfUnlink).toHaveBeenCalled();

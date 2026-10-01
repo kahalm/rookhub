@@ -21,7 +21,7 @@ import { REPERTOIRE_OFFLINE_PREFIX } from '../../core/offline.service';
  */
 describe('RepertoireListComponent search filter', () => {
   function make(): RepertoireListComponent {
-    const comp = new RepertoireListComponent({} as any, {} as any, {} as any, {} as any, {} as any);
+    const comp = new RepertoireListComponent({} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
     comp.repertoires = [
       { id: 1, name: 'Sicilian Najdorf', description: 'Sharp lines', kind: 0, fileCount: 2, isPublic: false },
       { id: 2, name: 'London System', description: 'Solid setup', kind: 1, fileCount: 1, isPublic: false },
@@ -62,12 +62,12 @@ describe('RepertoireListComponent search filter', () => {
  */
 describe('RepertoireListComponent convertToCourse Fehlermeldungen', () => {
   function make(error: unknown) {
-    spyOn(window, 'confirm').and.returnValue(true);   // Rückfrage bestätigt (eigener Test unten)
+    const confirm = { ask: () => of(true) } as any;   // Rückfrage bestätigt (eigener Test unten)
     const shown: string[] = [];
     const repertoireService = { convertToCourse: () => throwError(() => error) } as any;
     const snackbar = { info: (msg: string) => shown.push(msg) } as any;
     const translate = { instant: (key: string) => key } as any;
-    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate);
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate, confirm);
     comp.repertoires = [{ id: 7, name: 'Nimzo', kind: 1, fileCount: 0, isPublic: false }] as any;
     return { comp, shown };
   }
@@ -107,31 +107,31 @@ describe('RepertoireListComponent convertToCourse Fehlermeldungen', () => {
  * Freigaben aller Nutzer — deshalb dieselbe Rückfrage wie beim Löschen.
  */
 describe('RepertoireListComponent convertToCourse Rückfrage', () => {
-  function make() {
+  function make(answer: boolean) {
+    const ask = jasmine.createSpy('ask').and.returnValue(of(answer));
+    const confirm = { ask } as any;
     const shown: string[] = [];
     const repertoireService = {
       convertToCourse: jasmine.createSpy('convertToCourse').and.returnValue(of({ bookId: 11, displayName: 'Nimzo' })),
     } as any;
     const snackbar = { info: (msg: string) => shown.push(msg) } as any;
     const translate = { instant: (key: string) => key } as any;
-    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate);
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, snackbar, translate, confirm);
     comp.repertoires = [{ id: 7, name: 'Nimzo', kind: 1, fileCount: 1, isPublic: false }] as any;
-    return { comp, repertoireService, shown };
+    return { comp, repertoireService, shown, ask };
   }
 
   it('ohne Bestätigung wird nichts umgewandelt und das Repertoire bleibt', () => {
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
-    const { comp, repertoireService } = make();
+    const { comp, repertoireService, ask } = make(false);
     comp.convertToCourse(comp.repertoires[0]);
-    expect(ask).toHaveBeenCalledWith('repertoire.list.convertMoveConfirm');
+    expect(ask).toHaveBeenCalledWith('repertoire.list.convertMoveConfirm', { name: 'Nimzo' });
     expect(repertoireService.convertToCourse).not.toHaveBeenCalled();
     expect(comp.repertoires.map(r => r.id)).toEqual([7]);
     expect(comp.converting).toBeNull();
   });
 
   it('nach Bestätigung umgewandelt und aus der Liste genommen', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
-    const { comp, repertoireService, shown } = make();
+    const { comp, repertoireService, shown } = make(true);
     comp.convertToCourse(comp.repertoires[0]);
     expect(repertoireService.convertToCourse).toHaveBeenCalledWith(7);
     expect(comp.repertoires.length).toBe(0);
@@ -158,7 +158,7 @@ describe('RepertoireListComponent offline', () => {
       getLineStates: () => of([{ lineKey: 'k', level: 2, reps: 1, lapses: 0, dueAt: '2026-01-01T00:00:00Z', lastReviewedAt: null, inPool: true, paused: false }]),
       getConfig: () => of({ effective: [{ value: 4, unit: 'h' }], user: [], repertoire: null, source: 'default' }),
     };
-    const comp = new RepertoireListComponent(repertoireService, training, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any);
+    const comp = new RepertoireListComponent(repertoireService, training, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any, {} as any);
     comp.toggleOffline(rep(7, 'Sizilianisch'));
     expect(hasRepertoireOffline(7)).toBeTrue();
     expect(comp.isOffline(rep(7, 'Sizilianisch'))).toBeTrue();
@@ -170,7 +170,7 @@ describe('RepertoireListComponent offline', () => {
   it('falls back to downloaded repertoires when the list request fails (offline)', () => {
     saveRepertoireOffline({ meta: rep(3, 'Caro-Kann'), pgn: '1. e4 c6 *', states: [], config: null, savedAt: '2026-07-18T00:00:00Z' });
     const repertoireService: any = { list: () => throwError(() => new Error('offline')) };
-    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any);
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any, {} as any);
     comp.loadRepertoires();
     expect(comp.offlineList).toBeTrue();
     expect(comp.repertoires.map(r => r.id)).toEqual([3]);
@@ -179,7 +179,7 @@ describe('RepertoireListComponent offline', () => {
   it('keeps the plain error hint when nothing is downloaded', () => {
     const info = jasmine.createSpy('info');
     const repertoireService: any = { list: () => throwError(() => new Error('offline')) };
-    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, { info } as any, { instant: (k: string) => k } as any);
+    const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any, { info } as any, { instant: (k: string) => k } as any, {} as any);
     comp.loadRepertoires();
     expect(comp.offlineList).toBeFalse();
     expect(comp.repertoires.length).toBe(0);
@@ -189,7 +189,7 @@ describe('RepertoireListComponent offline', () => {
   it('a successful load leaves offline mode again', () => {
     saveRepertoireOffline({ meta: rep(3, 'Caro-Kann'), pgn: '*', states: [], config: null, savedAt: '' });
     const svc: any = { list: jasmine.createSpy().and.returnValues(throwError(() => new Error('x')), of([rep(1, 'Live')])) };
-    const comp = new RepertoireListComponent(svc, {} as any, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any);
+    const comp = new RepertoireListComponent(svc, {} as any, {} as any, { info: () => {} } as any, { instant: (k: string) => k } as any, {} as any);
     comp.loadRepertoires();
     expect(comp.offlineList).toBeTrue();
     comp.loadRepertoires();
@@ -284,7 +284,7 @@ describe('RepertoireListComponent PGN-Download', () => {
       getPgnText: () => of('[Event "R"]\n\n1. e4 e6 {[%cal Gd7d5][%alt c5 e5]Französisch} 2. d4 *\n'),
     } as any;
     const comp = new RepertoireListComponent(repertoireService, {} as any, {} as any,
-      { info: () => undefined } as any, { instant: (k: string) => k } as any);
+      { info: () => undefined } as any, { instant: (k: string) => k } as any, {} as any);
 
     comp.downloadPgn({ id: 3, name: 'Französisch Rep' } as any);
 
@@ -295,7 +295,7 @@ describe('RepertoireListComponent PGN-Download', () => {
   it('meldet einen fehlgeschlagenen Download', () => {
     const shown: string[] = [];
     const comp = new RepertoireListComponent({ getPgnText: () => throwError(() => new Error('x')) } as any,
-      {} as any, {} as any, { info: (m: string) => shown.push(m) } as any, { instant: (k: string) => k } as any);
+      {} as any, {} as any, { info: (m: string) => shown.push(m) } as any, { instant: (k: string) => k } as any, {} as any);
     comp.downloadPgn({ id: 3, name: 'R' } as any);
     expect(shown).toEqual(['common.downloadFailed']);
   });

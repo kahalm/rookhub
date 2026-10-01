@@ -13,6 +13,7 @@ import {
   TrainingGoalService, ActivityPreset, ActivityTimer, ManualActivityKind,
 } from './training-goals.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ActivityTimerStopDialogComponent, StopDialogData, StopDialogResult } from './activity-timer-stop-dialog.component';
 
 /** Material-Icon je Timer-Aktivitätsart. */
@@ -106,6 +107,7 @@ export function activityKindIcon(kind: ManualActivityKind): string {
 })
 export class ActivityTimerTileComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
 
   presets: ActivityPreset[] = [];
   running: ActivityTimer | null = null;
@@ -155,22 +157,24 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   start(preset: ActivityPreset): void {
     if (this.busy) return;
-    if (this.running && !confirm(this.translate.instant('trainingGoals.timer.replaceConfirm'))) return;
-    this.busy = true;
-    this.goals.startTimer({ presetId: preset.id }).subscribe({
-      next: t => {
-        this.running = t;
-        this.elapsed = t.elapsedSeconds;
-        this.ensureTicker();
-        this.busy = false;
-        this.snackbar.info(this.translate.instant('trainingGoals.timer.started', { label: preset.label }),
-          { action: 'common.ok', duration: 2000 });
-      },
-      error: () => {
-        this.busy = false;
-        this.snackbar.info(this.translate.instant('trainingGoals.timer.startFailed'),
-          { action: 'common.ok', duration: 3000 });
-      },
+    (this.running ? this.confirm.ask('trainingGoals.timer.replaceConfirm') : of(true)).subscribe(ok => {
+      if (!ok || this.busy) return;
+      this.busy = true;
+      this.goals.startTimer({ presetId: preset.id }).subscribe({
+        next: t => {
+          this.running = t;
+          this.elapsed = t.elapsedSeconds;
+          this.ensureTicker();
+          this.busy = false;
+          this.snackbar.info(this.translate.instant('trainingGoals.timer.started', { label: preset.label }),
+            { action: 'common.ok', duration: 2000 });
+        },
+        error: () => {
+          this.busy = false;
+          this.snackbar.info(this.translate.instant('trainingGoals.timer.startFailed'),
+            { action: 'common.ok', duration: 3000 });
+        },
+      });
     });
   }
 
@@ -216,20 +220,22 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   discard(): void {
     if (!this.running || this.busy) return;
-    if (!confirm(this.translate.instant('trainingGoals.timer.discardConfirm'))) return;
-    this.busy = true;
-    this.goals.discardTimer().subscribe({
-      next: () => {
-        this.running = null;
-        this.elapsed = 0;
-        this.stopTicker();
-        this.busy = false;
-      },
-      error: () => {
-        this.busy = false;
-        this.snackbar.info(this.translate.instant('trainingGoals.timer.discardFailed'),
-          { action: 'common.ok', duration: 3000 });
-      },
+    this.confirm.ask('trainingGoals.timer.discardConfirm').subscribe(ok => {
+      if (!ok || !this.running || this.busy) return;
+      this.busy = true;
+      this.goals.discardTimer().subscribe({
+        next: () => {
+          this.running = null;
+          this.elapsed = 0;
+          this.stopTicker();
+          this.busy = false;
+        },
+        error: () => {
+          this.busy = false;
+          this.snackbar.info(this.translate.instant('trainingGoals.timer.discardFailed'),
+            { action: 'common.ok', duration: 3000 });
+        },
+      });
     });
   }
 

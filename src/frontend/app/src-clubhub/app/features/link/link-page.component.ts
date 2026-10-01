@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { LinkState } from '../../core/club.models';
@@ -46,6 +48,7 @@ import { LinkState } from '../../core/club.models';
 export class LinkPageComponent implements OnInit {
   private readonly api = inject(ClubApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly confirm = inject(ConfirmService);
 
   readonly state = signal<LinkState | null>(null);
   readonly code = signal('');
@@ -64,7 +67,7 @@ export class LinkPageComponent implements OnInit {
   }
 
   async unlink(): Promise<void> {
-    if (!confirm('Die Verknüpfung trennen? Deine Trainer sehen deinen Trainingsstand dann nicht mehr.')) return;
+    if (!(await firstValueFrom(this.confirm.ask('Die Verknüpfung trennen? Deine Trainer sehen deinen Trainingsstand dann nicht mehr.')))) return;
     await this.run(async () => {
       await this.api.selfUnlink();
       this.state.set({ linked: false });

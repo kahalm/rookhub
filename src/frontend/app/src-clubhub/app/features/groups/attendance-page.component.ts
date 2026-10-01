@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
@@ -106,6 +108,7 @@ export class AttendancePageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmService);
 
   readonly allowed = hasClubAccess(this.auth);
   readonly group = signal<Group | null>(null);
@@ -265,7 +268,7 @@ export class AttendancePageComponent implements OnInit {
 
   async remove(s: SessionDetail): Promise<void> {
     const g = this.group();
-    if (!g || !confirm(`Die Einheit vom ${longDate(s.date)} samt Anwesenheit löschen?`)) return;
+    if (!g || !(await firstValueFrom(this.confirm.ask(`Die Einheit vom ${longDate(s.date)} samt Anwesenheit löschen?`)))) return;
     this.busy.set(true);
     this.error.set(null);
     try {

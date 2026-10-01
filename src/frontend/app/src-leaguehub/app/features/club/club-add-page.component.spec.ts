@@ -5,6 +5,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubPreview, ScoresheetScan } from '../../core/club.models';
 import { ClubAddPageComponent, anonKeys } from './club-add-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const SCAN = (status: ScoresheetScan['status']): ScoresheetScan => ({
   id: 7, status, notationLanguage: 'de', createdAt: '2026-09-28T08:00:00Z', rounds: 1, moveCount: 40, uncertainCount: 2,
@@ -20,11 +22,14 @@ const PREVIEW: ClubPreview = { truncated: false, games: [
 describe('ClubAddPageComponent', () => {
   let fixture: ComponentFixture<ClubAddPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let service: { client: jasmine.Spy; savedGame: jasmine.Spy; openScans: jasmine.Spy; allDrafts: jasmine.Spy };
   let query: Record<string, string>;
   let params: Record<string, string>;
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     localStorage.removeItem('lh-anon-scans');
     query = {};
     params = {};
@@ -45,7 +50,7 @@ describe('ClubAddPageComponent', () => {
     const has = (p: string) => Array.isArray(perms) ? perms.includes(p) : perms;
     TestBed.configureTestingModule({
       imports: [ClubAddPageComponent],
-      providers: [
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
         provideRouter([]),
         { provide: ClubApiService, useValue: service },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query), paramMap: convertToParamMap(params) } } },
@@ -134,7 +139,7 @@ describe('ClubAddPageComponent', () => {
     fixture.componentInstance.review()!.toggleInclude(1);                   // Korrektur, Drossel läuft noch …
     fixture.detectChanges();
     api.drafts.calls.reset();
-    const confirmSpy = spyOn(window, 'confirm');
+    const confirmSpy = confirmAsk;
     closeButton(el).click();                                                // … und sofort schließen
     flushMicrotasks();
     fixture.detectChanges();
@@ -159,7 +164,7 @@ describe('ClubAddPageComponent', () => {
     (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = confirmAsk.and.returnValue(of(false));
     closeButton(el).click();
     flushMicrotasks();
     fixture.detectChanges();
@@ -167,7 +172,7 @@ describe('ClubAddPageComponent', () => {
     expect(fixture.componentInstance.review()).not.toBeNull();              // abgelehnt → Übersicht bleibt offen
     expect(api.deleteDraft).not.toHaveBeenCalled();
 
-    confirmSpy.and.returnValue(true);
+    confirmSpy.and.returnValue(of(true));
     closeButton(el).click();
     flushMicrotasks();
     expect(fixture.componentInstance.review()).toBeNull();
@@ -178,7 +183,7 @@ describe('ClubAddPageComponent', () => {
     const D = { ref: '12', id: 12, source: 'datei', label: 'liga.pgn', gameCount: 200, importedCount: 0,
       createdAt: '2026-09-28T17:00:00', updatedAt: '2026-09-28T17:30:00', owner: 'hans', viaShareLink: false, mine: false };
     service.allDrafts.and.resolveTo([D]);
-    const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+    const confirmSpy = confirmAsk.and.returnValue(of(false));
     const el = create(['league.contribute', 'league.manage']);
     flushMicrotasks();
     fixture.detectChanges();
@@ -411,7 +416,6 @@ describe('ClubAddPageComponent', () => {
       { scan: done(9, 'Meins'), viaShareLink: false, mine: true },
     ]);
     api.discard.and.resolveTo();
-    spyOn(window, 'confirm').and.returnValue(true);
     const el = create(['league.contribute', 'league.manage']);
     flushMicrotasks();
     fixture.detectChanges();

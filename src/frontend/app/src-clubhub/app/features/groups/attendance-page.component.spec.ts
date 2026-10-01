@@ -5,6 +5,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { Group, SessionDetail, SessionInput } from '../../core/club.models';
 import { AttendancePageComponent, tallyText } from './attendance-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const GROUP = (extra: Partial<Group> = {}): Group => ({
   id: 1, name: 'Anfänger', weekday: 5, schedule: '17:00', archived: false, memberCount: 3, sessionCount: 0, lastSession: null, trainers: [],
@@ -22,6 +24,8 @@ const SESSION = (extra: Partial<SessionDetail> = {}): SessionDetail =>
 describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   let fixture: ComponentFixture<AttendancePageComponent>;
   let api: jasmine.SpyObj<ClubApiService>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let router: Router;
   const el = () => fixture.nativeElement as HTMLElement;
   const ticks = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.tick'));
@@ -30,7 +34,7 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   async function create(now: Date, query: Record<string, string> = {}): Promise<void> {
     TestBed.configureTestingModule({
       imports: [AttendancePageComponent],
-      providers: [provideRouter([]), { provide: ClubApiService, useValue: api },
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, provideRouter([]), { provide: ClubApiService, useValue: api },
         { provide: AuthService, useValue: { has: (p: string) => p === 'club.trainer' } },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '1' }), queryParamMap: convertToParamMap(query) } } }],
     });
@@ -55,6 +59,7 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
   }
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto']);
     api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.group.and.resolveTo(GROUP());
@@ -160,10 +165,10 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     api.sessionByDate.and.resolveTo(SESSION());
     api.deleteSession.and.resolveTo();
     await create(new Date(2026, 8, 25, 19, 0));
-    const ask = spyOn(window, 'confirm').and.returnValue(false);
+    const ask = confirmAsk.and.returnValue(of(false));
     await fixture.componentInstance.remove(SESSION());
     expect(api.deleteSession).not.toHaveBeenCalled();
-    ask.and.returnValue(true);
+    ask.and.returnValue(of(true));
     await fixture.componentInstance.remove(SESSION());
     expect(api.deleteSession).toHaveBeenCalledWith(5);
     expect(router.navigate).toHaveBeenCalledWith(['/gruppen', 1]);

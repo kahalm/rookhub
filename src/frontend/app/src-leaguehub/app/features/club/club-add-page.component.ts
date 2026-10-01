@@ -7,6 +7,8 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
 import { ANON_NAME, importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from '../../core/chessbase-upload';
 import { partLabel, pgnPortions, portionNote } from '../../core/pgn-portions';
 import { ClubImportReviewComponent } from './club-import-review.component';
@@ -255,6 +257,7 @@ export class ClubAddPageComponent implements OnInit {
   /** Token des Teilen-Links (Weg ohne Anmeldung) — sonst `null`. */
   readonly share = this.route.snapshot.paramMap.get('token');
   private readonly clubApi = inject(ClubApiService);
+  private readonly confirm = inject(ConfirmService);
   readonly client: ClubClient = this.clubApi.client(this.share);
   readonly allowed = !!this.share || this.auth.has('league.contribute');
   /** Ohne Beitragsrecht, aber mit Leserecht: die Sperrkarte nennt das fehlende Recht und führt zu den Vereinspartien. */
@@ -404,7 +407,7 @@ export class ClubAddPageComponent implements OnInit {
 
   async discardDraft(d: ClubDraft): Promise<void> {
     const who = this.foreignOwner(d);
-    if (!confirm(`Liste „${this.draftTitle(d)}"${who ? ` von ${who}` : ''} verwerfen? Schon importierte Partien bleiben, der Rest wird gelöscht.`)) return;
+    if (!(await firstValueFrom(this.confirm.ask(`Liste „${this.draftTitle(d)}"${who ? ` von ${who}` : ''} verwerfen? Schon importierte Partien bleiben, der Rest wird gelöscht.`)))) return;
     try {
       await this.client.deleteDraft(d.ref);
       if (this.share) rememberDraftKey(this.share, d.ref, false);
@@ -419,7 +422,7 @@ export class ClubAddPageComponent implements OnInit {
    */
   async closeCurrent(): Promise<void> {
     const d = this.draft(), rv = this.review();
-    if (!d && rv && !confirm('Die Liste liegt nicht online — schließt du die Übersicht, gehen deine Korrekturen verloren. Trotzdem schließen?')) return;
+    if (!d && rv && !(await firstValueFrom(this.confirm.ask('Die Liste liegt nicht online — schließt du die Übersicht, gehen deine Korrekturen verloren. Trotzdem schließen?')))) return;
     const unsaved = !!this.saveTimer;
     this.review.set(null);
     this.dbNote.set(null);
@@ -464,7 +467,7 @@ export class ClubAddPageComponent implements OnInit {
   }
 
   async discardOther(o: OpenScan): Promise<void> {
-    if (!confirm(`Formular ${o.scan.white || '?'} – ${o.scan.black || '?'} verwerfen? Foto und Lesung werden gelöscht.`)) return;
+    if (!(await firstValueFrom(this.confirm.ask(`Formular ${o.scan.white || '?'} – ${o.scan.black || '?'} verwerfen? Foto und Lesung werden gelöscht.`)))) return;
     try {
       await this.client.discard(String(o.scan.id));
       this.openScans.update(list => list.filter(x => x.scan.id !== o.scan.id));

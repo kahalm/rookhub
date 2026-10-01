@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EMPTY, catchError, filter, switchMap } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { apiErrorText } from '../../core/api-error';
 
 interface ApiToken {
@@ -209,7 +210,7 @@ export class ApiTokensComponent implements OnInit {
   tokens: ApiToken[] = [];
   loading = true;
 
-  constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService) {}
+  constructor(private http: HttpClient, private dialog: MatDialog, private snackbar: SnackbarService, private translate: TranslateService, private confirm: ConfirmService) {}
 
   ngOnInit(): void {
     this.load();
@@ -249,10 +250,12 @@ export class ApiTokensComponent implements OnInit {
   }
 
   revoke(t: ApiToken): void {
-    if (!confirm(this.translate.instant('profile.tokens.revokeConfirm', { name: t.name }))) return;
-    this.http.delete(`/api/profile/tokens/${t.id}`).subscribe({
-      next: () => this.load(),
-      error: () => this.snackbar.info(this.translate.instant('profile.tokens.revokeFailed'))
+    this.confirm.ask('profile.tokens.revokeConfirm', { name: t.name }).subscribe(ok => {
+      if (!ok) return;
+      this.http.delete(`/api/profile/tokens/${t.id}`).subscribe({
+        next: () => this.load(),
+        error: () => this.snackbar.info(this.translate.instant('profile.tokens.revokeFailed'))
+      });
     });
   }
 }

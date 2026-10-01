@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
 import { apiErrorText } from '../../../core/api-error';
@@ -38,6 +39,7 @@ export class AdminDailyPuzzleComponent implements OnInit {
     private adminService: AdminService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private confirm: ConfirmService,
   ) {}
 
   ngOnInit(): void {
@@ -69,19 +71,21 @@ export class AdminDailyPuzzleComponent implements OnInit {
   regenerateDailyPuzzle(): void {
     const date = this.compactDate(this.dailyDate);
     if (date.length !== 8) return;
-    if (!confirm(this.translate.instant('admin.daily.regenerateConfirm'))) return;
+    this.confirm.ask('admin.daily.regenerateConfirm').subscribe(ok => {
+      if (!ok) return;
 
-    this.dailyRegenerating = true;
-    this.adminService.regenerateDailyPuzzle(date).subscribe({
-      next: p => {
-        this.dailyPuzzle = p;
-        this.dailyRegenerating = false;
-        this.snackbar.info(this.translate.instant('admin.daily.regenerated'));
-      },
-      error: err => {
-        this.dailyRegenerating = false;
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.regenerate'));
-      }
+      this.dailyRegenerating = true;
+      this.adminService.regenerateDailyPuzzle(date).subscribe({
+        next: p => {
+          this.dailyPuzzle = p;
+          this.dailyRegenerating = false;
+          this.snackbar.info(this.translate.instant('admin.daily.regenerated'));
+        },
+        error: err => {
+          this.dailyRegenerating = false;
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.regenerate'));
+        }
+      });
     });
   }
 }

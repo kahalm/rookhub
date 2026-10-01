@@ -8,6 +8,8 @@ import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { ClubGame, ClubGameAnalysis } from '../../core/club.models';
 import { ClubGamesPageComponent } from './club-games-page.component';
+import { of } from 'rxjs';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 
 const G = (id: number, extra: Partial<ClubGame> = {}): ClubGame => ({
   id, year: 2024, white: 'Schwaz', black: 'Hengl, Philip', whiteFide: null, blackFide: '222', whiteElo: null, blackElo: 2172,
@@ -17,9 +19,12 @@ const G = (id: number, extra: Partial<ClubGame> = {}): ClubGame => ({
 describe('ClubGamesPageComponent', () => {
   let fixture: ComponentFixture<ClubGamesPageComponent>;
   let api: jasmine.SpyObj<ClubClient>;
+  /** Rückfrage (ConfirmService) — Vorgabe „ja", je Test umstellbar. */
+  let confirmAsk: jasmine.Spy;
   let perms: Set<string>;
 
   beforeEach(() => {
+    confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     perms = new Set(['league.view', 'league.contribute']);
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['list', 'deleteGame', 'pgn', 'updateGame', 'players', 'game', 'evalsUrl']);
     api.evalsUrl.and.callFake((id: number) => `/api/league/club/games/${id}/evals`);
@@ -30,7 +35,7 @@ describe('ClubGamesPageComponent', () => {
   function create(): HTMLElement {
     TestBed.configureTestingModule({
       imports: [ClubGamesPageComponent],
-      providers: [
+      providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
         provideRouter([]),
         provideTranslateService({ fallbackLang: 'de' }), provideHttpClient(), provideHttpClientTesting(),
         { provide: ClubApiService, useValue: { client: () => api } },
@@ -121,7 +126,6 @@ describe('ClubGamesPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    spyOn(window, 'confirm').and.returnValue(true);
     api.deleteGame.and.resolveTo({});
     (Array.from(el.querySelectorAll('tbody tr')[1].querySelectorAll('.btn-link')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
     flushMicrotasks();

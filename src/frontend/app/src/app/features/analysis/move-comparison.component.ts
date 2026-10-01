@@ -14,6 +14,7 @@ import { interval } from 'rxjs';
 import { BoardArrow, ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import {
   MoveComparison, MoveComparisonCandidate, MoveComparisonReply, MoveComparisonService, MoveComparisonSummary,
   MoveComparisonTest, numberedLine,
@@ -233,6 +234,7 @@ export class MoveComparisonComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly translate = inject(TranslateService);
   private readonly snackbar = inject(SnackbarService);
+  private readonly confirm = inject(ConfirmService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly data = signal<MoveComparison | null>(null);
@@ -359,13 +361,15 @@ export class MoveComparisonComponent implements OnInit {
   }
 
   remove(h: MoveComparisonSummary): void {
-    if (!confirm(this.translate.instant('moveCompare.page.deleteConfirm'))) return;
-    this.api.delete(h.id).subscribe({
-      next: () => {
-        this.history.set(this.history().filter(x => x.id !== h.id));
-        if (h.id === this.currentId()) this.router.navigate(['/analysis']);
-      },
-      error: () => this.snackbar.warn(this.translate.instant('moveCompare.page.deleteFailed')),
+    this.confirm.ask('moveCompare.page.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.api.delete(h.id).subscribe({
+        next: () => {
+          this.history.set(this.history().filter(x => x.id !== h.id));
+          if (h.id === this.currentId()) this.router.navigate(['/analysis']);
+        },
+        error: () => this.snackbar.warn(this.translate.instant('moveCompare.page.deleteFailed')),
+      });
     });
   }
 }

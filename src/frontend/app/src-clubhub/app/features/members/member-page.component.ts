@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Contact, ContactKind, GroupRow, Member, MemberInput, Progress } from '../../core/club.models';
@@ -208,6 +210,7 @@ export class MemberPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmService);
 
   readonly allowed = hasClubAccess(this.auth);
   readonly member = signal<Member | null>(null);
@@ -340,7 +343,7 @@ export class MemberPageComponent implements OnInit {
 
   async remove(): Promise<void> {
     const m = this.member();
-    if (!m || !confirm(`Das Blatt von ${fullName(m)} löschen — mit Kontakten, Notizen und Anwesenheit? Das lässt sich nicht rückgängig machen.`)) return;
+    if (!m || !(await firstValueFrom(this.confirm.ask(`Das Blatt von ${fullName(m)} löschen — mit Kontakten, Notizen und Anwesenheit? Das lässt sich nicht rückgängig machen.`)))) return;
     await this.run(async () => {
       await this.api.deleteMember(m.id);
       void this.router.navigateByUrl('/');
@@ -359,7 +362,7 @@ export class MemberPageComponent implements OnInit {
 
   async deleteNote(noteId: number): Promise<void> {
     const m = this.member();
-    if (!m || !confirm('Diese Notiz löschen?')) return;
+    if (!m || !(await firstValueFrom(this.confirm.ask('Diese Notiz löschen?')))) return;
     await this.run(async () => this.member.set(await this.api.deleteNote(m.id, noteId)), 'Die Notiz konnte nicht gelöscht werden.');
   }
 
@@ -374,7 +377,7 @@ export class MemberPageComponent implements OnInit {
 
   async unlink(): Promise<void> {
     const m = this.member();
-    if (!m || (m.linked && !confirm('Die Verknüpfung mit dem Konto trennen? Der Lernstand aus dem Konto ist dann hier nicht mehr zu sehen.'))) return;
+    if (!m || (m.linked && !(await firstValueFrom(this.confirm.ask('Die Verknüpfung mit dem Konto trennen? Der Lernstand aus dem Konto ist dann hier nicht mehr zu sehen.'))))) return;
     await this.run(async () => this.show(await this.api.unlink(m.id)), 'Trennen hat nicht geklappt.');
   }
 

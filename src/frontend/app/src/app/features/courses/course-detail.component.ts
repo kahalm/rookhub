@@ -21,6 +21,7 @@ import { CalcEditionDialogComponent, CalcEditionDialogResult } from './calc-edit
 import { CalcMembersDialogComponent } from './calc-members-dialog.component';
 import { AddLinesDialogComponent, AddLinesDialogData } from './add-lines-dialog.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
 import { WorksheetService } from '../worksheets/worksheet.service';
 import { itemsFromLines } from '../worksheets/worksheet-items.util';
@@ -93,6 +94,7 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
     private translate: TranslateService,
     private worksheets: WorksheetService,
     readonly courseLang: CourseLanguageService,
+    private confirm: ConfirmService,
   ) {}
 
   // ===== Sprache der Kommentare (Kurs-Übersetzung, Stufe C) =================
@@ -412,60 +414,65 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
 
   deleteChapter(chapter: CourseManageChapter): void {
     const name = this.chapterLabel(chapter);
-    if (!confirm(this.translate.instant('courses.detail.deleteChapterConfirm',
-      { name, count: chapter.lineCount }))) return;
-    this.busy = true;
-    this.subs.add(this.courses.deleteChapter(this.bookId, chapter.name).subscribe({
-      next: res => {
-        this.busy = false;
-        this.snackbar.quick(this.translate.instant('courses.detail.chapterDeleted', { count: res.deleted }));
-        this.linesByChapter = {};
-        this.expanded = {};
-        this.load();
-      },
-      error: () => { this.busy = false; this.fail('courses.detail.deleteChapterFailed'); },
-    }));
+    this.confirm.ask('courses.detail.deleteChapterConfirm', { name, count: chapter.lineCount }).subscribe(ok => {
+      if (!ok) return;
+      this.busy = true;
+      this.subs.add(this.courses.deleteChapter(this.bookId, chapter.name).subscribe({
+        next: res => {
+          this.busy = false;
+          this.snackbar.quick(this.translate.instant('courses.detail.chapterDeleted', { count: res.deleted }));
+          this.linesByChapter = {};
+          this.expanded = {};
+          this.load();
+        },
+        error: () => { this.busy = false; this.fail('courses.detail.deleteChapterFailed'); },
+      }));
+    });
   }
 
   deleteLine(chapter: CourseManageChapter, line: CourseLine): void {
-    if (!confirm(this.translate.instant('courses.detail.deleteLineConfirm', { line: line.round }))) return;
-    this.busy = true;
-    this.subs.add(this.courses.deleteLine(this.bookId, line.id).subscribe({
-      next: () => {
-        this.busy = false;
-        // Kein optimistisches Herausfiltern: `load()` zieht Zähler UND die Linien des
-        // aufgeklappten Kapitels frisch nach — das ist die einzige Quelle der Wahrheit.
-        this.load();
-      },
-      error: () => { this.busy = false; this.fail('courses.detail.deleteLineFailed'); },
-    }));
+    this.confirm.ask('courses.detail.deleteLineConfirm', { line: line.round }).subscribe(ok => {
+      if (!ok) return;
+      this.busy = true;
+      this.subs.add(this.courses.deleteLine(this.bookId, line.id).subscribe({
+        next: () => {
+          this.busy = false;
+          // Kein optimistisches Herausfiltern: `load()` zieht Zähler UND die Linien des
+          // aufgeklappten Kapitels frisch nach — das ist die einzige Quelle der Wahrheit.
+          this.load();
+        },
+        error: () => { this.busy = false; this.fail('courses.detail.deleteLineFailed'); },
+      }));
+    });
   }
 
   // ===== Eigener Fortschritt ================================================
 
   resetChapter(chapter: CourseManageChapter): void {
-    if (!confirm(this.translate.instant('courses.detail.resetChapterConfirm',
-      { name: this.chapterLabel(chapter) }))) return;
-    this.busy = true;
-    this.subs.add(this.courses.resetChapter(this.bookId, chapter.name).subscribe({
-      next: res => {
-        this.busy = false;
-        this.snackbar.quick(this.translate.instant('courses.detail.chapterReset', { count: res.cleared }));
-        this.load();
-      },
-      error: () => { this.busy = false; this.fail('courses.detail.resetChapterFailed'); },
-    }));
+    this.confirm.ask('courses.detail.resetChapterConfirm', { name: this.chapterLabel(chapter) }).subscribe(ok => {
+      if (!ok) return;
+      this.busy = true;
+      this.subs.add(this.courses.resetChapter(this.bookId, chapter.name).subscribe({
+        next: res => {
+          this.busy = false;
+          this.snackbar.quick(this.translate.instant('courses.detail.chapterReset', { count: res.cleared }));
+          this.load();
+        },
+        error: () => { this.busy = false; this.fail('courses.detail.resetChapterFailed'); },
+      }));
+    });
   }
 
   resetCourse(): void {
     if (!this.detail) return;
-    if (!confirm(this.translate.instant('courses.detail.resetCourseConfirm',
-      { name: this.detail.displayName }))) return;
-    this.busy = true;
-    this.subs.add(this.courses.reset(this.bookId).subscribe({
-      next: () => { this.busy = false; this.load(); },
-      error: () => { this.busy = false; this.fail('courses.detail.resetCourseFailed'); },
-    }));
+    this.confirm.ask('courses.detail.resetCourseConfirm', { name: this.detail.displayName }).subscribe(ok => {
+      if (!ok) return;
+      this.busy = true;
+      this.subs.add(this.courses.reset(this.bookId).subscribe({
+        next: () => { this.busy = false; this.load(); },
+        error: () => { this.busy = false; this.fail('courses.detail.resetCourseFailed'); },
+      }));
+    });
   }
 
   togglePin(): void {

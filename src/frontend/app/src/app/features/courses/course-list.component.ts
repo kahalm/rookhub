@@ -8,6 +8,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { of } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from './course.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
@@ -260,7 +262,7 @@ export class CourseListComponent implements OnInit {
   loadingChapters: number | null = null;
 
   constructor(private courseService: CourseService, private snackbar: SnackbarService, private translate: TranslateService, private dialog: MatDialog, private auth: AuthService, private router: Router,
-              private courseLang: CourseLanguageService) {}
+              private courseLang: CourseLanguageService, private confirm: ConfirmService) {}
 
   /** Darf der aktuelle Nutzer die Themen-Tags dieses Kurses setzen? Admin (alle) oder Besitzer. */
   canManageThemes(course: CourseListItem): boolean {
@@ -457,15 +459,17 @@ export class CourseListComponent implements OnInit {
   }
 
   reset(course: CourseListItem): void {
-    if (!confirm(this.translate.instant('courses.resetConfirm', { name: course.displayName }))) return;
-    this.courseService.reset(course.bookId).subscribe({
-      next: p => {
-        course.solvedCount = p.solvedCount;
-        course.progressPercent = p.progressPercent;
-        this.rebuildSections();
-        delete this.chaptersByBook[course.bookId]; // Kapitel-Fortschritt neu laden beim nächsten Öffnen
-      },
-      error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
+    this.confirm.ask('courses.resetConfirm', { name: course.displayName }).subscribe(ok => {
+      if (!ok) return;
+      this.courseService.reset(course.bookId).subscribe({
+        next: p => {
+          course.solvedCount = p.solvedCount;
+          course.progressPercent = p.progressPercent;
+          this.rebuildSections();
+          delete this.chaptersByBook[course.bookId]; // Kapitel-Fortschritt neu laden beim nächsten Öffnen
+        },
+        error: () => this.snackbar.info(this.translate.instant('courses.resetFailed'), { action: 'common.ok', duration: 3000 })
+      });
     });
   }
 
@@ -537,20 +541,22 @@ export class CourseListComponent implements OnInit {
 
   /** Eigenen Kurs löschen (mit Rückfrage). */
   deleteCourse(course: CourseListItem): void {
-    if (!confirm(this.translate.instant('courses.deleteConfirm', { name: course.displayName }))) return;
-    this.deleting = course.bookId;
-    this.courseService.deleteCourse(course.bookId).subscribe({
-      next: () => {
-        this.deleting = null;
-        this.courses = this.courses.filter(c => c.bookId !== course.bookId);
-        this.rebuildSections();
-        delete this.chaptersByBook[course.bookId];
-        this.courseService.notifyAccessChanged();
-      },
-      error: () => {
-        this.deleting = null;
-        this.snackbar.info(this.translate.instant('courses.deleteFailed'), { action: 'common.ok', duration: 3000 });
-      }
+    this.confirm.ask('courses.deleteConfirm', { name: course.displayName }).subscribe(ok => {
+      if (!ok) return;
+      this.deleting = course.bookId;
+      this.courseService.deleteCourse(course.bookId).subscribe({
+        next: () => {
+          this.deleting = null;
+          this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+          this.rebuildSections();
+          delete this.chaptersByBook[course.bookId];
+          this.courseService.notifyAccessChanged();
+        },
+        error: () => {
+          this.deleting = null;
+          this.snackbar.info(this.translate.instant('courses.deleteFailed'), { action: 'common.ok', duration: 3000 });
+        }
+      });
     });
   }
 
@@ -558,25 +564,27 @@ export class CourseListComponent implements OnInit {
    *  Repertoire an und löscht danach den Kurs samt Fortschritt und Freigaben ALLER Nutzer — deshalb
    *  vorher die Rückfrage wie beim Löschen. Geteilte Gruppen-/Admin-Kurse bleiben (Kopie, ohne Rückfrage). */
   convertToRepertoire(course: CourseListItem): void {
-    if (course.isOwned && !confirm(this.translate.instant('courses.convertMoveConfirm', { name: course.displayName }))) return;
-    this.converting = course.bookId;
-    this.courseService.convertToRepertoire(course.bookId).subscribe({
-      next: rep => {
-        this.converting = null;
-        // Verschieben: ein EIGENER Kurs wurde serverseitig entfernt → auch aus der Liste nehmen.
-        // Geteilte Gruppen-/Admin-Kurse bleiben bestehen (gehören dem User nicht).
-        if (course.isOwned) {
-          this.courses = this.courses.filter(c => c.bookId !== course.bookId);
-        this.rebuildSections();
-          delete this.chaptersByBook[course.bookId];
-          this.courseService.notifyAccessChanged();
+    (course.isOwned ? this.confirm.ask('courses.convertMoveConfirm', { name: course.displayName }) : of(true)).subscribe(ok => {
+      if (!ok) return;
+      this.converting = course.bookId;
+      this.courseService.convertToRepertoire(course.bookId).subscribe({
+        next: rep => {
+          this.converting = null;
+          // Verschieben: ein EIGENER Kurs wurde serverseitig entfernt → auch aus der Liste nehmen.
+          // Geteilte Gruppen-/Admin-Kurse bleiben bestehen (gehören dem User nicht).
+          if (course.isOwned) {
+            this.courses = this.courses.filter(c => c.bookId !== course.bookId);
+          this.rebuildSections();
+            delete this.chaptersByBook[course.bookId];
+            this.courseService.notifyAccessChanged();
+          }
+          this.snackbar.info(this.translate.instant(course.isOwned ? 'courses.movedToRepertoire' : 'courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
+        },
+        error: () => {
+          this.converting = null;
+          this.snackbar.info(this.translate.instant('courses.convertToRepertoireFailed'), { action: 'common.ok', duration: 3000 });
         }
-        this.snackbar.info(this.translate.instant(course.isOwned ? 'courses.movedToRepertoire' : 'courses.convertedToRepertoire', { name: rep.name }), { action: 'common.ok', duration: 3000 });
-      },
-      error: () => {
-        this.converting = null;
-        this.snackbar.info(this.translate.instant('courses.convertToRepertoireFailed'), { action: 'common.ok', duration: 3000 });
-      }
+      });
     });
   }
 

@@ -7,6 +7,8 @@ import { ClubApiService } from '../../core/club-api.service';
 import { ClubGame, ClubGameDetail, RosterPerson, SideDecision } from '../../core/club.models';
 import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { firstValueFrom } from 'rxjs';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
 import { GameReplayComponent } from '../../shared/game-replay.component';
@@ -163,6 +165,7 @@ type Side = 'white' | 'black';
 export class ClubGamesPageComponent implements OnInit {
   readonly api = inject(ClubApiService).client();
   private readonly auth = inject(AuthService);
+  private readonly confirm = inject(ConfirmService);
   private readonly card = viewChild(PlayerCardComponent);
 
   readonly allowed = this.auth.has('league.view');
@@ -341,7 +344,7 @@ export class ClubGamesPageComponent implements OnInit {
   }
 
   async remove(g: ClubGame): Promise<void> {
-    if (!confirm(`Partie ${g.white} – ${g.black}${g.year ? ` (${g.year})` : ''} aus der Vereins-Datenbank löschen?`)) return;
+    if (!(await firstValueFrom(this.confirm.ask(`Partie ${g.white} – ${g.black}${g.year ? ` (${g.year})` : ''} aus der Vereins-Datenbank löschen?`)))) return;
     this.deleting.set(g.id);
     try {
       await this.api.deleteGame(g.id);
