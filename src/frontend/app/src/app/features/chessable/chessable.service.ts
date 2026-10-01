@@ -2,16 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface ChessableCredential {
-  hasCredentials: boolean;
-  maskedBearer: string | null;
-  /** Circuit-Breaker offen: Bearer von Chessable als gesperrt/gelöscht bzw. tot abgewiesen →
-   *  es laufen KEINE Anfragen mehr, bis „Testen" die Gültigkeit bestätigt. */
-  blocked?: boolean;
-  /** Die Meldung, die den Breaker ausgelöst hat (für die Anzeige). */
-  blockedReason?: string | null;
-}
-
 export interface ChessableTestResult {
   uid: string;
   courseCount: number;
@@ -82,66 +72,26 @@ export interface ChessableCredentialedUser {
   blockedReason?: string | null;
 }
 
+/**
+ * Was vom Chessable-Import über RookHub übrig ist: Seit /chessable nur noch auf die RepCheck-Erweiterung
+ * verweist, nutzen den Dienst nur das Dashboard (aktive Importe, Abbrechen) und der Admin-Tab
+ * „Chessable-Download". Die Nutzer-Wege (Disclaimer, Bearer, Kursliste, Import starten/pausieren …) sind
+ * mit F5-024 aus dem Frontend entfernt; die API-Endpunkte bleiben davon unberührt.
+ */
 @Injectable({ providedIn: 'root' })
 export class ChessableService {
   private readonly apiUrl = '/api/chessable';
 
   constructor(private http: HttpClient) {}
 
-  getDisclaimer(): Observable<{ accepted: boolean }> {
-    return this.http.get<{ accepted: boolean }>(`${this.apiUrl}/disclaimer`);
-  }
-
-  acceptDisclaimer(): Observable<{ accepted: boolean }> {
-    return this.http.post<{ accepted: boolean }>(`${this.apiUrl}/disclaimer`, {});
-  }
-
-  getCredentials(): Observable<ChessableCredential> {
-    return this.http.get<ChessableCredential>(`${this.apiUrl}/credentials`);
-  }
-
-  saveCredentials(bearer: string): Observable<ChessableCredential> {
-    return this.http.post<ChessableCredential>(`${this.apiUrl}/credentials`, { bearer });
-  }
-
-  deleteCredentials(): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/credentials`);
-  }
-
-  test(): Observable<ChessableTestResult> {
-    return this.http.post<ChessableTestResult>(`${this.apiUrl}/test`, {});
-  }
-
   /** ADMIN: Bearer eines Users testen (zugleich Circuit-Breaker-Reset dieses Users). */
   testUser(userId: number): Observable<ChessableTestResult> {
     return this.http.post<ChessableTestResult>(`${this.apiUrl}/admin/users/${userId}/test`, {});
   }
 
-  /** Kursliste — aus dem DB-Cache, oder mit refresh=true frisch von piratechess (+ Cache-Update). */
-  getCourses(refresh = false): Observable<ChessableCoursesResult> {
-    return this.http.get<ChessableCoursesResult>(`${this.apiUrl}/courses`,
-      refresh ? { params: { refresh: 'true' } } : {});
-  }
-
-  /** Startet einen async Kurs-Import (Repertoire oder Buch). Liefert den Import-Satz (status "running"). */
-  startImport(bid: string, target: ChessableImportTarget, name: string): Observable<ChessableImport> {
-    return this.http.post<ChessableImport>(
-      `${this.apiUrl}/courses/${encodeURIComponent(bid)}/import`, { target, name });
-  }
-
   /** Pollt den Status eines Imports. */
   getImport(id: number): Observable<ChessableImport> {
     return this.http.get<ChessableImport>(`${this.apiUrl}/imports/${id}`);
-  }
-
-  /** Letzte Importe des Users (z. B. um beim Laden der Seite einen laufenden Import zu erkennen). */
-  getImports(): Observable<ChessableImport[]> {
-    return this.http.get<ChessableImport[]>(`${this.apiUrl}/imports`);
-  }
-
-  /** ADMIN: Alle Importe aller User (Verlauf + aktive). */
-  getAllImportsAdmin(): Observable<ChessableAdminImport[]> {
-    return this.http.get<ChessableAdminImport[]>(`${this.apiUrl}/admin/imports`);
   }
 
   /** ADMIN: Nur aktive (laufende/pausierte) Importe aller User — fürs Dashboard. */
@@ -176,17 +126,5 @@ export class ChessableService {
   estimateCourseForUser(userId: number, bid: string): Observable<ChessableCourseInfo> {
     return this.http.get<ChessableCourseInfo>(
       `${this.apiUrl}/admin/users/${userId}/courses/${encodeURIComponent(bid)}/estimate`);
-  }
-
-  cancelImport(id: number): Observable<ChessableImport> {
-    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/cancel`, {});
-  }
-
-  pauseImport(id: number): Observable<ChessableImport> {
-    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/pause`, {});
-  }
-
-  resumeImport(id: number): Observable<ChessableImport> {
-    return this.http.post<ChessableImport>(`${this.apiUrl}/imports/${id}/resume`, {});
   }
 }

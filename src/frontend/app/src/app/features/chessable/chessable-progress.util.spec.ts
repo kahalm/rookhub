@@ -6,7 +6,6 @@ import {
   estimateRemainingMinutes,
   chessableStatusLabel,
   chessableQueueLabel,
-  compareImportsByQueue,
 } from './chessable-progress.util';
 
 /** Fake TranslateService: gibt Key (+ JSON-Parameter) zurück → Texte gut prüfbar. */
@@ -57,18 +56,6 @@ describe('chessableQueueLabel', () => {
   it('delegates to the fetch status label while fetching', () => {
     const label = chessableQueueLabel(imp({ phase: 'fetching', chaptersTotal: 4, chaptersDone: 1, linesDone: 5 }), T);
     expect(label).toContain('chessable.phase_fetching');
-  });
-});
-
-describe('compareImportsByQueue', () => {
-  it('orders by queue position (#) ascending, then by creation time', () => {
-    const a = imp({ bid: 'a', queuedAhead: 0, createdAt: '2026-06-29T10:00:00Z' });
-    const b = imp({ bid: 'b', queuedAhead: 2, createdAt: '2026-06-29T09:00:00Z' });
-    const c = imp({ bid: 'c', queuedAhead: 1, createdAt: '2026-06-29T11:00:00Z' });
-    const d = imp({ bid: 'd', queuedAhead: 0, createdAt: '2026-06-29T08:00:00Z' });
-    const sorted = [a, b, c, d].sort(compareImportsByQueue).map(i => i.bid);
-    // queuedAhead 0 (d älter, dann a), dann 1 (c), dann 2 (b)
-    expect(sorted).toEqual(['d', 'a', 'c', 'b']);
   });
 });
 

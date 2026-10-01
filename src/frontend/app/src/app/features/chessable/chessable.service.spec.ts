@@ -17,39 +17,17 @@ describe('ChessableService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('acceptDisclaimer POSTs to /disclaimer', () => {
-    service.acceptDisclaimer().subscribe();
-    const req = httpMock.expectOne('/api/chessable/disclaimer');
-    expect(req.request.method).toBe('POST');
-    req.flush({ accepted: true });
-  });
-
-  it('saveCredentials POSTs the bearer', () => {
-    service.saveCredentials('JWT123').subscribe();
-    const req = httpMock.expectOne('/api/chessable/credentials');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ bearer: 'JWT123' });
-    req.flush({ hasCredentials: true, maskedBearer: '…123' });
-  });
-
-  it('getCourses adds refresh=true only when requested', () => {
-    service.getCourses().subscribe();
-    const plain = httpMock.expectOne((r: HttpRequest<unknown>) => r.url === '/api/chessable/courses');
+  it('getUserCoursesAdmin adds refresh=true only when requested', () => {
+    const url = '/api/chessable/admin/users/42/courses';
+    service.getUserCoursesAdmin(42).subscribe();
+    const plain = httpMock.expectOne((r: HttpRequest<unknown>) => r.url === url);
     expect(plain.request.params.has('refresh')).toBeFalse();
-    plain.flush({ courses: [] });
+    plain.flush({ courses: [], cachedAt: null });
 
-    service.getCourses(true).subscribe();
-    const refreshed = httpMock.expectOne((r: HttpRequest<unknown>) => r.url === '/api/chessable/courses');
+    service.getUserCoursesAdmin(42, true).subscribe();
+    const refreshed = httpMock.expectOne((r: HttpRequest<unknown>) => r.url === url);
     expect(refreshed.request.params.get('refresh')).toBe('true');
-    refreshed.flush({ courses: [] });
-  });
-
-  it('startImport posts target+name and URL-encodes the bid', () => {
-    service.startImport('a/b 1', 'book', 'My Course').subscribe();
-    const req = httpMock.expectOne('/api/chessable/courses/a%2Fb%201/import');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ target: 'book', name: 'My Course' });
-    req.flush({ id: 1, bid: 'a/b 1', status: 'running' });
+    refreshed.flush({ courses: [], cachedAt: null });
   });
 
   it('importForUserAdmin targets the admin user route', () => {
@@ -60,18 +38,7 @@ describe('ChessableService', () => {
     req.flush({ id: 2 });
   });
 
-  it('pause/resume/cancel hit the right import sub-routes', () => {
-    service.pauseImport(5).subscribe();
-    httpMock.expectOne('/api/chessable/imports/5/pause').flush({});
-    service.resumeImport(5).subscribe();
-    httpMock.expectOne('/api/chessable/imports/5/resume').flush({});
-    service.cancelImport(5).subscribe();
-    httpMock.expectOne('/api/chessable/imports/5/cancel').flush({});
-  });
-
-  it('admin list endpoints are wired correctly', () => {
-    service.getAllImportsAdmin().subscribe();
-    httpMock.expectOne('/api/chessable/admin/imports').flush([]);
+  it('admin active-imports endpoint is wired correctly', () => {
     service.getActiveImportsAdmin().subscribe();
     httpMock.expectOne('/api/chessable/admin/active').flush([]);
   });
@@ -88,16 +55,5 @@ describe('ChessableService', () => {
     const req = httpMock.expectOne('/api/chessable/admin/users/42/test');
     expect(req.request.method).toBe('POST');
     req.flush({ uid: 'u', courseCount: 3 });
-  });
-
-  it('getCredentials surfaces the blocked circuit-breaker state', () => {
-    let result: { blocked?: boolean; blockedReason?: string | null } | undefined;
-    service.getCredentials().subscribe(c => (result = c));
-    httpMock.expectOne('/api/chessable/credentials').flush({
-      hasCredentials: true, maskedBearer: '…123',
-      blocked: true, blockedReason: 'Chessable: User is banned or deleted',
-    });
-    expect(result?.blocked).toBeTrue();
-    expect(result?.blockedReason).toContain('banned');
   });
 });

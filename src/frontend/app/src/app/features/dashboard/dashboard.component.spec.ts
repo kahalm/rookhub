@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of, Subject, throwError } from 'rxjs';
 import { DashboardComponent } from './dashboard.component';
 import { DashboardService } from '../../core/dashboard.service';
@@ -353,6 +353,55 @@ describe('DashboardComponent pinned courses', () => {
     expect(link!.textContent!.trim()).toBe('TestNoel');
     expect(link!.getAttribute('href')).toBe('/courses/58');
   });
+});
+
+/**
+ * Codereview F5-024: Die Admin-Warteschlange baute ihre Statuszeile selbst — ohne Gesamt-Linienzahl und ohne
+ * Restzeit, obwohl chessableQueueLabel (chessable-progress.util) beides kann; wer den Text „wie im Chessable-Tab“
+ * änderte, traf die Util-Funktion, und das Dashboard zeigte weiter den alten. Jetzt baut es denselben Text.
+ */
+describe('DashboardComponent admin Chessable queue status line', () => {
+  beforeEach(() => localStorage.removeItem('rookhub_dashboard_layout_v2'));
+
+  it('shows total lines and the remaining time while fetching, the position while queued', fakeAsync(() => {
+    const fetching = {
+      id: 9, bid: '9', courseName: 'Big course', username: 'bob', userId: 2, status: 'running', phase: 'fetching',
+      chaptersDone: 7, chaptersTotal: 36, linesDone: 82, linesTotal: 1000, queuedAhead: 0,
+    };
+    const queued = { ...fetching, id: 10, phase: 'queued', queuedAhead: 2 };
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: true, currentUser: { username: 'me' } } },
+        { provide: DashboardService, useValue: { getRepertoires: () => of([]), getCourses: () => of([]), getSubscriptions: () => of([]), getFriends: () => of([]), getPuzzleStats: () => of({ solved: 0, accuracy: 0, puzzleElo: 1500 }) } },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: (k: string) => MENU.has(k) } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([fetching, queued]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: () => of(0) } },
+      ],
+    });
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const translate = TestBed.inject(TranslateService);
+    // Texte wie in en.json.
+    translate.setTranslation('en', { chessable: {
+      phase_fetching: 'fetching course…', queuePos: 'queue position {{pos}}',
+      fetchProgress: 'chapter {{ch}}/{{total}} · {{lines}} lines',
+      fetchProgressTotal: 'chapter {{ch}}/{{total}} · {{lines}}/{{linesTotal}} lines',
+      etaRemaining: '~{{min}} min left',
+    } });
+    translate.use('en');
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    tick(0); // erster Admin-Poll
+    expect(fixture.componentInstance.chessableActive.map(i => i.statusLabel)).toEqual([
+      'fetching course… chapter 7/36 · 82/1000 lines · ~23 min left', // ceil((1000 − 82) / 40) = 23
+      'queue position 3',
+    ]);
+    fixture.destroy();
+    discardPeriodicTasks();
+  }));
 });
 
 describe('DashboardComponent admin cancel of a stuck Chessable import', () => {

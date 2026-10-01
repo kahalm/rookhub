@@ -21,6 +21,7 @@ import { MenuService } from '../../core/menu.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { FavoritesService } from '../../core/favorites.service';
 import { ChessableService, ChessableAdminImport } from '../chessable/chessable.service';
+import { chessableQueueLabel } from '../chessable/chessable-progress.util';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ActivityTimerTileComponent } from '../training-goals/activity-timer-tile.component';
@@ -536,7 +537,7 @@ export class DashboardComponent implements OnInit {
       timer(0, 10000).pipe(
         switchMap(() => this.chessable.getActiveImportsAdmin().pipe(catchError(() => of([] as ChessableAdminImport[])))),
         takeUntilDestroyed(this.destroyRef),
-      ).subscribe(list => this.chessableActive = list.map(imp => ({ ...imp, statusLabel: this.chessableStatus(imp) })));
+      ).subscribe(list => this.chessableActive = list.map(imp => ({ ...imp, statusLabel: chessableQueueLabel(imp, this.translate) })));
     }
 
     // Scheitert ein Zweig (offline, 500), liefert er null statt Leerwerten: dann bleibt der Wert aus dem
@@ -601,17 +602,5 @@ export class DashboardComponent implements OnInit {
         next: () => this.chessableActive = this.chessableActive.filter(x => x.id !== imp.id),
         error: () => this.snackbar.warn(this.translate.instant('dashboard.chessableQueue.cancelFailed')),
       });
-  }
-
-  /** Kurz-Status eines aktiven Imports: pausiert / Warteschlangen-Position / Hol-Fortschritt. */
-  chessableStatus(imp: ChessableAdminImport): string {
-    if (imp.status === 'paused') return this.translate.instant('chessable.statusPaused');
-    if (imp.phase === 'queued') return this.translate.instant('chessable.queuePos', { pos: imp.queuedAhead + 1 });
-    let s = this.translate.instant('chessable.phase_' + (imp.phase || 'queued'));
-    if (imp.phase === 'fetching' && imp.chaptersTotal > 0) {
-      s += ' ' + this.translate.instant('chessable.fetchProgress',
-        { ch: imp.chaptersDone, total: imp.chaptersTotal, lines: imp.linesDone });
-    }
-    return s;
   }
 }

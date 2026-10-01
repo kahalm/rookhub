@@ -34,7 +34,8 @@ export function estimateRemainingMinutes(linesDone: number, chaptersDone: number
 /**
  * Statuslabel eines Imports: Phase + (beim Holen) Kapitel/Linien-Fortschritt + Rest-Zeit-Schätzung.
  * Erzeugt genau den Text „hole Kurs… Kapitel 7/36 · 82/1000 Linien · noch ca. 23 Min".
- * Reine Funktion (statt Komponenten-Methode), damit Chessable-Tab UND Kursseite denselben Text bauen.
+ * Reine Funktion (statt Komponenten-Methode), damit jede Anzeige eines Imports denselben Text baut — heute die
+ * Admin-Warteschlange im Dashboard (über chessableQueueLabel); bis F5-024 pflegte sie eine eigene, kürzere Kopie.
  */
 export function chessableStatusLabel(imp: ChessableImport, t: TranslateService): string {
   let s = t.instant('chessable.phase_' + (imp.phase || 'queued'));
@@ -57,14 +58,4 @@ export function chessableQueueLabel(imp: ChessableImport, t: TranslateService): 
   if (imp.status === 'paused') return t.instant('chessable.statusPaused');
   if (imp.phase === 'queued') return t.instant('chessable.queuePos', { pos: imp.queuedAhead + 1 });
   return chessableStatusLabel(imp, t);
-}
-
-/**
- * Sortiert die Import-Warteschlange nach „#" (globale Abarbeitungs-Position): zuerst nach
- * `queuedAhead` aufsteigend (in Arbeit = 0 → ganz oben, dann Warteposition 2, 3, …), bei
- * Gleichstand nach Anlegezeitpunkt (älter zuerst). Stabil & rein → in `.sort()` verwendbar.
- */
-export function compareImportsByQueue(a: ChessableImport, b: ChessableImport): number {
-  if (a.queuedAhead !== b.queuedAhead) return a.queuedAhead - b.queuedAhead;
-  return Date.parse(a.createdAt) - Date.parse(b.createdAt);
 }
