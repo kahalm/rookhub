@@ -1,8 +1,16 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.DTOs;
 
 /// <summary>Anfrage: „In welchen Repertoire-Linien kommt diese Stellung vor?" — FEN der Stellung.</summary>
 public class PositionLookupRequestDto
 {
+    /// <summary>Obergrenze für das FEN-Feld der Stellungs-Endpunkte (Lookup, Baum, Ähnlichkeit). Eine
+    /// legale FEN hat unter 100 Zeichen; ohne Deckel zerlegte der Dienst einen 15-MB-Rumpf per
+    /// <c>Split(' ')</c> und allozierte dabei Hunderte MiB je Anfrage — [ApiController] lehnt jetzt mit 400 ab.</summary>
+    public const int MaxFenLength = 120;
+
+    [MaxLength(MaxFenLength)]
     public string Fen { get; set; } = string.Empty;
 }
 
@@ -42,6 +50,7 @@ public class RepertoireLineMatchDto
 /// <summary>Anfrage des Baummodus: FEN der Stellung + gewünschte Halbzug-Tiefe (0 = Server-Default).</summary>
 public class PositionTreeRequestDto
 {
+    [MaxLength(PositionLookupRequestDto.MaxFenLength)]
     public string Fen { get; set; } = string.Empty;
     public int MaxDepth { get; set; }
 }

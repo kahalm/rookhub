@@ -1,9 +1,12 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace RookHub.Api.DTOs;
 
 /// <summary>Anfrage: „Welche Stellungen in meinen Repertoires ähneln dieser hier?"</summary>
 public class SimilarPositionsRequestDto
 {
     /// <summary>FEN der Ausgangsstellung (nur Stellungsfeld + Seite am Zug werden ausgewertet).</summary>
+    [MaxLength(PositionLookupRequestDto.MaxFenLength)]
     public string Fen { get; set; } = string.Empty;
 
     /// <summary>Zu durchsuchende Repertoires; leer/fehlend = alle lesbaren.</summary>
