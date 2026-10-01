@@ -112,6 +112,17 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
             <li>{{ 'legal.privacy.botLogs' | translate }}</li>
           </ul>
 
+          <!-- Turnierdaten (Codereview S3-018): Fristen aus dem RetentionService des Crawlers (chessresults_crawler
+               cb8f041, W4s-B23) — CrawlJobs 30 Tage nach Abschluss, PlayerClubs 180 Tage ohne Auffrischung; Turniere und
+               Spieler bleiben, weil RookHub per CrawlerTournamentId auf sie verweist. ENTWURF (Betreiber): Rechtsgrundlage
+               und Widerspruch fuer Spieler ohne Konto (Art. 14 DSGVO) und eine Frist fuer Turniere/Spieler festlegen. -->
+          <h4>{{ 'legal.privacy.tournamentTitle' | translate }}</h4>
+          <p>{{ 'legal.privacy.tournamentIntro' | translate }}</p>
+          <ul>
+            <li>{{ 'legal.privacy.tournamentData' | translate }}</li>
+            <li>{{ 'legal.privacy.tournamentRetention' | translate }}</li>
+          </ul>
+
           <h4>{{ 'legal.privacy.storageTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.storage' | translate }}</p>
 

@@ -80,6 +80,12 @@ describe('PrivacyComponent', () => {
       expect(text).withContext(k).toContain('legal.privacy.' + k);
   });
 
+  it('nennt die Turnierdaten von chess-results.com samt Speicherdauer (Codereview S3-018)', () => {
+    const text = render().textContent ?? '';
+    for (const k of ['tournamentTitle', 'tournamentIntro', 'tournamentData', 'tournamentRetention'])
+      expect(text).withContext(k).toContain('legal.privacy.' + k);
+  });
+
   it('nennt die KI-Dienste: Formular-Fotos gehen an Anthropic (Codereview A6-008)', () => {
     const el = render();
     // Ohne Sprachdateien stehen die Keys selbst da — sie muessen gerendert werden.
@@ -140,6 +146,16 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['botActivity']).toContain('/motivation aus');
       // Befehlsprotokoll und Motivations-Metadaten gehen nach Elasticsearch (ohne DM-Inhalt, schach-bot v2.83.14).
       expect(p['botLogs']).toContain('Elasticsearch');
+    });
+
+    it(`${lang}: Turnierdaten mit den Fristen des Crawlers — 30 und 180 Tage (S3-018)`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      // chessresults_crawler RetentionService: CrawlJobs 30 Tage nach Abschluss, PlayerClubs 180 Tage ohne Auffrischung.
+      expect(p['tournamentRetention']).toMatch(/\b30\b/);
+      expect(p['tournamentRetention']).toMatch(/\b180\b/);
+      // Daten Dritter (Spieler ohne Konto) aus chess-results.com, Vereins-Nachschlagen ueber die FIDE-ID.
+      expect(p['tournamentIntro']).toContain('chess-results.com');
+      expect(p['tournamentData']).toContain('FIDE');
     });
 
     it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {
