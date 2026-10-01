@@ -4139,6 +4139,11 @@
       "solved4": "Sjajno!"
     },
     "hint": "Savjet",
+    "hintCost": {
+      "free": "besplatno",
+      "heart": "košta jedno srce",
+      "star": "košta jednu zvjezdicu"
+    },
     "spaceKey": "Razmaknica",
     "back": "Početak",
     "loading": "Trenutak …",

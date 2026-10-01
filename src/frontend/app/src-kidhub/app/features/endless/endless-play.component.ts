@@ -8,7 +8,7 @@ import {
 import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
-import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
+import { KidsHintCost, KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
 import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
@@ -53,7 +53,8 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     } @else if (failed()) {
       <kid-error (retry)="start()" />
     } @else if (task(); as t) {
-      <kid-puzzle [task]="t" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()" (next)="onNext()">
+      <kid-puzzle [task]="t" [hintCost]="hintCost()" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()"
+                  (next)="onNext()">
         <div kidTask class="side-text">
           <p class="task">{{ 'kids.endless.task' | translate }}</p>
           @if (store.best() > 0) { <p class="best">🏆 {{ 'kids.endless.best' | translate: { count: store.best() } }}</p> }
@@ -115,6 +116,14 @@ export class EndlessPlayComponent {
     const p = this.current();
     return p ? { fen: p.fen, moves: splitMoves(p.moves), startPly: 0 } : null;
   });
+  /** Tipps in der laufenden Aufgabe. */
+  private readonly hintsThis = signal(0);
+  /** In dieser Aufgabe ist schon ein Herz weg — mehr als eines kostet sie nicht. */
+  private readonly missedThis = signal(false);
+  /** Was der naechste Tipp kostet, am Knopf angezeigt: frei bis `ENDLESS_FREE_HINTS`, danach ein Herz — ausser die
+   *  Aufgabe hat schon eines gekostet. */
+  readonly hintCost = computed<KidsHintCost>(() =>
+    !this.missedThis() && this.hintsThis() >= ENDLESS_FREE_HINTS ? 'heart' : 'free');
 
   private thresholds: EndlessThresholds = endlessThresholds([]);
   private queue: KidsEndlessPuzzle[] = [];
@@ -123,7 +132,6 @@ export class EndlessPlayComponent {
   private fetching = false;
   /** Laufnummer — eine Antwort aus einem abgebrochenen Lauf landet nicht im neuen. */
   private runId = 0;
-  private missedThis = false;
   private maxClean = 0;
   private firstMistake: number | null = null;
   private overTimer: ReturnType<typeof setTimeout> | undefined;
@@ -142,7 +150,8 @@ export class EndlessPlayComponent {
     this.requested = 0;
     this.used = new Set();
     this.fetching = false;
-    this.missedThis = false;
+    this.missedThis.set(false);
+    this.hintsThis.set(0);
     this.maxClean = 0;
     this.firstMistake = null;
     this.lives.set(ENDLESS_LIVES);
@@ -156,14 +165,15 @@ export class EndlessPlayComponent {
 
   /** Der erste Tipp je Aufgabe ist frei, ab dem zweiten kostet er wie ein Fehler. */
   onHint(count: number): void {
+    this.hintsThis.set(count);
     if (count > ENDLESS_FREE_HINTS) this.onMistake();
   }
 
   /** Erster Fehler (oder bezahlter Tipp) in dieser Aufgabe: ein Herz weg. Beim letzten ist der Lauf nach der Pause vorbei. */
   onMistake(): void {
     const puzzle = this.current();
-    if (this.missedThis || this.over() || !puzzle) return;
-    this.missedThis = true;
+    if (this.missedThis() || this.over() || !puzzle) return;
+    this.missedThis.set(true);
     if (this.firstMistake === null) this.firstMistake = puzzle.rating;
     this.lives.update(l => l - 1);
     // Die Pause, in der der falsche Zug stehen bleibt — erst danach das Ende.
@@ -174,7 +184,7 @@ export class EndlessPlayComponent {
     const puzzle = this.current();
     if (this.over() || !puzzle || this.lives() <= 0) return;
     this.solved.update(n => n + 1);
-    if (!this.missedThis) this.maxClean = Math.max(this.maxClean, puzzle.rating);
+    if (!this.missedThis()) this.maxClean = Math.max(this.maxClean, puzzle.rating);
   }
 
   onNext(): void {
@@ -191,7 +201,8 @@ export class EndlessPlayComponent {
 
   private advance(): void {
     const next = this.queue.shift();
-    this.missedThis = false;
+    this.missedThis.set(false);
+    this.hintsThis.set(0);
     this.current.set(next ?? null);
     if (this.queue.length < ENDLESS_REFILL_AT) this.fetch();
   }

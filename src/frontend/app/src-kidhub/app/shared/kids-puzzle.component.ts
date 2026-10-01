@@ -12,6 +12,10 @@ import { KID_STACKED } from './kids-layout';
 /** Was die Eule gerade sagt. */
 export type KidsPuzzleStatus = 'watch' | 'yourTurn' | 'good' | 'wrong' | 'alternative' | 'solved';
 
+/** Was der NAECHSTE Tipp kostet — der Modus rechnet es aus, der Knopf zeigt es vor dem Druck: `free` (Endlos: der
+ *  erste je Aufgabe), `heart` (Endlos: ab dem zweiten), `star` (Stufe: dieser Tipp senkt die Sterne), `null` = nichts. */
+export type KidsHintCost = 'free' | 'heart' | 'star' | null;
+
 /** Pausen, damit das Kind sieht, was passiert (Stellungszug, Antwort des Gegners). */
 export const SETUP_DELAY_MS = 700;
 export const REPLY_DELAY_MS = 550;
@@ -82,8 +86,16 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
               {{ 'common.next' | translate }} ▶ <kbd class="key">{{ 'kids.spaceKey' | translate }}</kbd>
             </button>
           } @else {
-            <button type="button" class="big hint" (click)="showHint()" [disabled]="!interactive()">
+            <!-- Der Preis steht VOR dem Druck am Knopf: ein zweiter Tipp im Endlos-Modus kostete still ein Herz, in den
+                 Stufen kostete er unangekuendigt Sterne (Codereview 2026-09-29, UX-061). -->
+            <button type="button" class="big hint" (click)="showHint()" [disabled]="!interactive()"
+                    [attr.aria-label]="hintCost() ? ('kids.hint' | translate) + ' – ' + (('kids.hintCost.' + hintCost()) | translate) : null">
               💡 {{ 'kids.hint' | translate }}
+              @switch (hintCost()) {
+                @case ('free') { <span class="cost">{{ 'kids.hintCost.free' | translate }}</span> }
+                @case ('heart') { <span class="cost">−❤️</span> }
+                @case ('star') { <span class="cost">−⭐</span> }
+              }
             </button>
           }
         </div>
@@ -128,6 +140,10 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
     .big:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--kid-shadow); }
     .big:disabled { opacity: .5; cursor: default; }
     .hint { background: var(--kid-yellow); color: #3d2c00; }
+    .cost {
+      display: inline-block; margin-left: 8px; padding: 1px 10px; border-radius: 999px; vertical-align: middle;
+      font-size: .8em; background: rgba(255, 255, 255, .6); white-space: nowrap;
+    }
     .next { background: var(--kid-green-strong); }
     /* Nur mit Maus/Tastatur: „Leertaste" am Weiter-Knopf. Am Tablet gibt es keine. */
     .key { display: none; }
@@ -157,6 +173,8 @@ export class KidsPuzzleComponent {
   readonly task = input.required<KidsTask>();
   /** Kurs-Kommentare je Halbzug; der nach dem letzten Zug erscheint, wenn die Aufgabe geloest ist. */
   readonly moveComments = input<Record<number, string> | null>(null);
+  /** Preis des naechsten Tipps (`KidsHintCost`), vom Modus gesetzt — ohne (Kurse) steht nur „Tipp" am Knopf. */
+  readonly hintCost = input<KidsHintCost>(null);
 
   /** Die Aufgabe ist geloest — mit der Zahl der Fehler (Tipps zaehlen mit). */
   readonly solved = output<{ mistakes: number }>();
@@ -298,7 +316,7 @@ export class KidsPuzzleComponent {
   }
 
   /** Erster Druck: die Figur leuchtet. Zweiter Druck: der Pfeil zeigt den Zug. Fuer die Sterne zaehlt jeder Tipp als
-   *  Fehler; im Endlos-Modus ist der erste je Aufgabe frei (`ENDLESS_FREE_HINTS`). */
+   *  Fehler; im Endlos-Modus ist der erste je Aufgabe frei (`ENDLESS_FREE_HINTS`). Was er kostet, zeigt `hintCost`. */
   showHint(): void {
     const hint = this.solver?.hint();
     if (!hint) return;

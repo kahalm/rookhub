@@ -71,6 +71,33 @@ describe('KidsPuzzleComponent', () => {
     expect(c.interactive()).toBeFalse();
   }));
 
+  /** Codereview 2026-09-29, UX-061: der Knopf hiess immer nur „💡 Tipp" — der zweite Tipp im Endlos-Modus kostete still
+   *  ein Herz, in den Stufen kosteten Tipps unangekuendigt Sterne. Der Preis steht jetzt VOR dem Druck am Knopf. */
+  it('zeigt den Preis des naechsten Tipps am Knopf (gratis, −❤️, −⭐; ohne Angabe nichts)', () => {
+    const f = create(mate1);
+    const el = f.nativeElement as HTMLElement;
+    const button = () => el.querySelector<HTMLButtonElement>('button.hint')!;
+    const cost = () => button().querySelector('.cost')?.textContent?.trim() ?? null;
+
+    expect(cost()).withContext('Kurse: kein Preis').toBeNull();
+    expect(button().getAttribute('aria-label')).toBeNull();
+
+    f.componentRef.setInput('hintCost', 'free');
+    f.detectChanges();
+    expect(cost()).toBe('kids.hintCost.free');
+    expect(button().getAttribute('aria-label')).toBe('kids.hint – kids.hintCost.free');
+
+    f.componentRef.setInput('hintCost', 'heart');
+    f.detectChanges();
+    expect(cost()).toBe('−❤️');
+    expect(button().getAttribute('aria-label')).toBe('kids.hint – kids.hintCost.heart');
+
+    f.componentRef.setInput('hintCost', 'star');
+    f.detectChanges();
+    expect(cost()).toBe('−⭐');
+    expect(button().getAttribute('aria-label')).toBe('kids.hint – kids.hintCost.star');
+  });
+
   it('zwei Zuege: nach dem richtigen ersten antwortet der Gegner', fakeAsync(() => {
     const f = create(fork);
     const c = f.componentInstance;

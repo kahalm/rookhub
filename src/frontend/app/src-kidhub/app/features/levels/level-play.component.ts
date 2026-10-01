@@ -3,10 +3,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel, KidsLevelDetail } from '../../core/kids-api.service';
-import { KidsProgressStore } from '../../core/kids-progress.store';
+import { KidsProgressStore, starsFor } from '../../core/kids-progress.store';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { themeIcon, themeNameKey, themeTaskKey } from '../../core/kids-themes';
-import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
+import { KidsHintCost, KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
@@ -46,7 +46,8 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     } @else if (detail(); as d) {
       @if (finished() === null) {
         @if (task(); as t) {
-          <kid-puzzle [task]="t" (solved)="onSolved($event.mistakes)" (next)="onNext()">
+          <kid-puzzle [task]="t" [hintCost]="hintCost()" (mistake)="onPuzzleMistake()" (hinted)="onPuzzleMistake()"
+                      (solved)="onSolved($event.mistakes)" (next)="onNext()">
             <p kidTask class="task">{{ taskKey() | translate }}</p>
           </kid-puzzle>
         }
@@ -125,6 +126,8 @@ export class LevelPlayComponent {
   readonly locked = signal(false);
   /** Die Stufe aus der Adresse — „Nochmal" der Fehlerkachel laedt sie erneut. */
   private levelNo = 0;
+  /** Fehler und Tipps in der laufenden Aufgabe — erst beim Loesen landen sie im Durchgang (`recordSolved`). */
+  private readonly puzzleMistakes = signal(0);
 
   readonly icon = computed(() => themeIcon(this.detail()?.theme ?? ''));
   readonly nameKey = computed(() => themeNameKey(this.detail()?.theme ?? ''));
@@ -132,6 +135,13 @@ export class LevelPlayComponent {
   readonly task = computed<KidsTask | null>(() => {
     const p = this.detail()?.puzzles[this.index()];
     return p ? { fen: p.fen, moves: splitMoves(p.moves), startPly: 0 } : null;
+  });
+  /** Ein Tipp zaehlt als Fehler: der Knopf zeigt „−⭐", wenn GERADE dieser Tipp die Sterne des Durchgangs senkt. */
+  readonly hintCost = computed<KidsHintCost>(() => {
+    const d = this.detail();
+    if (!d) return null;
+    const before = this.progress.level(d.level).runMistakes + this.puzzleMistakes();
+    return starsFor(before + 1) < starsFor(before) ? 'star' : null;
   });
   readonly nextLevel = computed(() => {
     const cur = this.detail()?.level;
@@ -163,6 +173,7 @@ export class LevelPlayComponent {
 
   private load(level: number): void {
     this.levelNo = level;
+    this.puzzleMistakes.set(0);
     this.detail.set(null);
     this.finished.set(null);
     this.failed.set(false);
@@ -195,9 +206,14 @@ export class LevelPlayComponent {
     void this.router.navigate(['/levels', next]);
   }
 
+  onPuzzleMistake(): void {
+    this.puzzleMistakes.update(n => n + 1);
+  }
+
   onSolved(mistakes: number): void {
     const d = this.detail();
     if (d) this.progress.recordSolved(d.level, mistakes);
+    this.puzzleMistakes.set(0);
   }
 
   onNext(): void {
@@ -221,6 +237,7 @@ export class LevelPlayComponent {
     const d = this.detail();
     if (!d) return;
     this.progress.restartRun(d.level);
+    this.puzzleMistakes.set(0);
     this.index.set(0);
     this.finished.set(null);
   }

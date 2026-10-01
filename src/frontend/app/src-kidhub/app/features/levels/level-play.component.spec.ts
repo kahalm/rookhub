@@ -55,6 +55,37 @@ describe('LevelPlayComponent', () => {
     expect(TestBed.inject(KidsProgressStore).isUnlocked(2)).toBeTrue();
   });
 
+  /** Codereview 2026-09-29, UX-061: jeder Tipp zaehlt als Fehler fuer die Sterne — das stand nirgends. Der Knopf zeigt
+   *  „−⭐" genau bei dem Tipp, der die Sterne des Durchgangs senkt (2. und 5. Fehler, `starsFor`). */
+  it('der Tipp-Knopf zeigt −⭐, wenn gerade dieser Tipp die Sterne senkt', () => {
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    const shown = () => (f.nativeElement as HTMLElement).querySelector('kid-puzzle button.hint .cost')?.textContent?.trim();
+
+    expect(c.hintCost()).withContext('0 Fehler: ein Tipp laesst 3 Sterne').toBeNull();
+    expect(shown()).toBeUndefined();
+    c.onPuzzleMistake();                 // Fehlzug oder Tipp in dieser Aufgabe
+    f.detectChanges();
+    expect(c.hintCost()).withContext('1 Fehler: der naechste kostet den 3. Stern').toBe('star');
+    expect(shown()).toBe('−⭐');
+
+    c.onSolved(1);                       // die Aufgabe bringt ihren Fehler in den Durchgang, nicht doppelt
+    expect(c.hintCost()).toBe('star');
+    c.onNext();
+    c.onPuzzleMistake();                 // 2 Fehler
+    expect(c.hintCost()).toBeNull();
+    c.onPuzzleMistake(); c.onPuzzleMistake();   // 4 Fehler: der naechste kostet den 2. Stern
+    expect(c.hintCost()).toBe('star');
+    c.onPuzzleMistake();                 // 5: ab jetzt bleibt es bei einem Stern
+    expect(c.hintCost()).toBeNull();
+
+    c.onSolved(5);
+    c.onNext();
+    c.again();                           // Durchgang von vorn
+    expect(c.hintCost()).toBeNull();
+  });
+
   /** Codereview 2026-09-29, F7-011: im Fehlerfall stand nur ein Satz da — ohne Knopf, mit dem das Kind weiterkommt. */
   it('Ladefehler: Fehlerkachel mit „Nochmal", das die Stufe neu holt', () => {
     api.level.and.returnValues(throwError(() => new Error('500')), of(detail(1)));

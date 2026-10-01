@@ -4139,6 +4139,11 @@
       "solved4": "Awesome!"
     },
     "hint": "Hint",
+    "hintCost": {
+      "free": "free",
+      "heart": "costs a heart",
+      "star": "costs a star"
+    },
     "spaceKey": "Space",
     "back": "Home",
     "loading": "Just a moment …",

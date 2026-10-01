@@ -3822,6 +3822,11 @@
       "solved4": "Nagyszerű!"
     },
     "hint": "Tipp",
+    "hintCost": {
+      "free": "ingyen",
+      "heart": "egy szívbe kerül",
+      "star": "egy csillagba kerül"
+    },
     "spaceKey": "Szóköz",
     "back": "Kezdőlap",
     "loading": "Egy pillanat …",

@@ -4139,6 +4139,11 @@
       "solved4": "Spitze!"
     },
     "hint": "Tipp",
+    "hintCost": {
+      "free": "gratis",
+      "heart": "kostet ein Herz",
+      "star": "kostet einen Stern"
+    },
     "spaceKey": "Leertaste",
     "back": "Start",
     "loading": "Einen Moment …",

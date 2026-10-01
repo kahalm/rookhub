@@ -66,6 +66,34 @@ describe('EndlessPlayComponent', () => {
     expect(c.lives()).toBe(2);
   });
 
+  /** Codereview 2026-09-29, UX-061: der zweite Tipp kostete still ein Herz — jetzt steht der Preis vorher am Knopf. */
+  it('der Tipp-Knopf sagt vorher, was der naechste Tipp kostet', () => {
+    const f = TestBed.createComponent(EndlessPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    const shown = () => (f.nativeElement as HTMLElement).querySelector('kid-puzzle button.hint .cost')?.textContent?.trim();
+
+    expect(c.hintCost()).toBe('free');
+    expect(shown()).toBe('kids.hintCost.free');
+    c.onHint(1);
+    f.detectChanges();
+    expect(c.hintCost()).withContext('der zweite kostet ein Herz').toBe('heart');
+    expect(shown()).toBe('−❤️');
+    c.onHint(2);
+    expect(c.hintCost()).withContext('Herz dieser Aufgabe schon weg: jeder weitere frei').toBe('free');
+
+    c.onSolved(); c.onNext();
+    expect(c.hintCost()).withContext('neue Aufgabe').toBe('free');
+    c.onHint(1);
+    c.onMistake();                       // Fehlzug kostet das Herz dieser Aufgabe
+    expect(c.hintCost()).toBe('free');
+
+    c.onSolved(); c.onNext();
+    c.onHint(1);
+    c.start();                           // neuer Lauf
+    expect(c.hintCost()).toBe('free');
+  });
+
   it('drei Herzen weg: nach der Pause vorbei, Lauf mit erstem Fehler und bestem sauberen Rating gemerkt', fakeAsync(() => {
     const c = create();
     c.onSolved(); c.onNext();            // 700 sauber
