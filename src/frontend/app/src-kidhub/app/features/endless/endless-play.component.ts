@@ -9,6 +9,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
+import { KID_STACKED } from '../../shared/kids-layout';
 
 /**
  * Endlos-Modus: Aufgabe um Aufgabe, jede ein bisschen schwerer (Kurve in `kids-endless.ts`), bis die drei
@@ -65,7 +66,7 @@ import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.com
   styles: [`
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
-            max-width: calc(max(var(--kid-board, 640px), 300px) + 428px); }
+            max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .back { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .hearts { margin-left: auto; font-size: 1.5rem; letter-spacing: 2px; }
@@ -87,7 +88,7 @@ import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.com
     }
     .btn.primary { background: var(--kid-green); color: #fff; }
     @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2); } }
-    @media (max-width: 760px) {
+    @media ${KID_STACKED} {
       .hearts { margin-left: 0; }
       .task { text-align: center; font-size: 1.3rem; }
       .best { text-align: center; }

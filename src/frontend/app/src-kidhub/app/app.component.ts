@@ -10,6 +10,7 @@ import { catchError, filter, map, of, timeout } from 'rxjs';
 import { environment } from '../../src/environments/environment';
 import { KidsApiService } from './core/kids-api.service';
 import { KidsProgressSync } from './core/kids-progress-sync.service';
+import { KID_SHORT, KID_STACKED } from './shared/kids-layout';
 
 /** Die vollstaendig uebersetzten Sprachen — nur die bietet die Kinderseite an. */
 export const KIDS_LANGUAGES: { code: AppLang; label: string }[] = [
@@ -98,14 +99,27 @@ export function isHomeUrl(url: string): boolean {
       --kid-bad-fg: #9b1c1c;
       --kid-info-bg: #fff3c4;
       /* Brettgroesse am PC: so hoch, wie das Fenster erlaubt (Kopfzeile + Titelzeile ≈ 170px), rechts
-         Platz fuer die Spalte daneben. Hier statt im Brett, damit die Titelzeile genauso breit wird. */
-      --kid-board: min(calc(100vh - 170px), calc(100vw - 500px), 820px);
+         Platz fuer die Spalte daneben. Hier statt im Brett, damit die Titelzeile genauso breit wird
+         (--kid-row = Brett + Abstand 28px + Spalte 400px). Die Ansichten stehen in shared/kids-layout.ts. */
+      --kid-vh: 1vh;
+      --kid-board: max(min(calc(var(--kid-vh) * 100 - 170px), calc(100vw - 500px), 820px), 300px);
+      --kid-row: calc(var(--kid-board) + 428px);
       display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh;
       background: radial-gradient(circle at 10% 0%, #fff7d6 0, transparent 40%), var(--kid-bg);
       color: #1f2d3d; font-family: Roboto, "Helvetica Neue", sans-serif;
     }
     @supports (height: 100svh) {
-      :host { --kid-board: min(calc(100svh - 170px), calc(100vw - 500px), 820px); }
+      :host { --kid-vh: 1svh; }
+    }
+    /* Handy quer: das Brett nimmt die Hoehe ganz (Kopfzeile + Titelzeile ≈ 110px, dazu der Schatten unter
+       dem Brett), daneben die Spalte mit ihrer Mindestbreite (280px + Abstand + Rand = 340px). Ohne
+       Untergrenze — 300px liefen bei 390px Fensterhoehe unten aus dem Bild. */
+    @media ${KID_SHORT} {
+      :host { --kid-board: min(calc(var(--kid-vh) * 100 - 116px), calc(100vw - 340px)); }
+    }
+    /* Untereinander: das Brett so breit wie moeglich, die Titelzeile genauso breit wie das Brett. */
+    @media ${KID_STACKED} {
+      :host { --kid-board: min(92vw, 70vh, 640px); --kid-row: var(--kid-board); }
     }
     .top { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
            flex-wrap: wrap; gap: 8px 12px; }

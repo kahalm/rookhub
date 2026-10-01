@@ -7,6 +7,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { themeIcon, themeNameKey, themeTaskKey } from '../../core/kids-themes';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
+import { KID_STACKED } from '../../shared/kids-layout';
 import { isAdvanceKey } from '../../core/kids-keys';
 
 /**
@@ -73,7 +74,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
   styles: [`
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
-            max-width: calc(max(var(--kid-board, 640px), 300px) + 428px); }
+            max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .back { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .info { text-align: center; font-size: 1.2rem; }
@@ -94,7 +95,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
     }
     .btn.primary { background: var(--kid-green); color: #fff; }
     @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2); } }
-    @media (max-width: 760px) {
+    @media ${KID_STACKED} {
       .dots { margin: 4px auto 0; flex-basis: 100%; justify-content: center; }
       .task { text-align: center; font-size: 1.3rem; }
     }

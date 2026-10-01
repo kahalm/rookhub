@@ -7,6 +7,7 @@ import { DrawShape } from 'chessground/draw';
 import { PuzzleBoardComponent } from '@rh/features/puzzles/puzzle-board.component';
 import { KidsMove, KidsSolver, KidsTask } from '../core/kids-solver';
 import { isAdvanceKey } from '../core/kids-keys';
+import { KID_STACKED } from './kids-layout';
 
 /** Was die Eule gerade sagt. */
 export type KidsPuzzleStatus = 'watch' | 'yourTurn' | 'good' | 'wrong' | 'alternative' | 'solved';
@@ -25,8 +26,9 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
  * `WRONG_HOLD_MS` rot markiert stehen, dann springt das Brett zurueck und das Kind probiert weiter.
  * Am PC loest die Leertaste „Weiter" aus.
  *
- * <p>Aufbau: am PC Brett links (so hoch, wie das Fenster erlaubt), rechts die Aufgabe (`[kidTask]`,
- * vom Aufrufer), die Eule und der Knopf; am Handy alles untereinander, die Aufgabe ueber dem Brett.</p>
+ * <p>Aufbau: am PC und am Handy quer Brett links (so hoch, wie das Fenster erlaubt), rechts die Aufgabe
+ * (`[kidTask]`, vom Aufrufer), die Eule und der Knopf; am Handy und Tablet hochkant alles untereinander, die
+ * Aufgabe ueber dem Brett (`KID_STACKED`).</p>
  * Aller Anzeige-Zustand steckt in Signalen: die Antworten des Gegners
  * kommen per Timer, und Angular 22 zeichnet nach einem Timer eine unmarkierte Ansicht nicht neu.
  */
@@ -95,14 +97,14 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
        70vh, und unter Kopfzeile, Punkten und Aufgabe lief die unterste Reihe aus dem Bild. */
     .puzzle {
       display: grid; justify-content: center; align-items: start; column-gap: 28px; row-gap: 14px;
-      grid-template-columns: max(var(--kid-board, 640px), 300px) minmax(280px, 400px);
+      grid-template-columns: var(--kid-board, 640px) minmax(280px, 400px);
       grid-template-rows: auto 1fr;
       grid-template-areas: "board task" "board side";
     }
     .task-slot { grid-area: task; }
     .task-slot:empty { display: none; }
     .board {
-      grid-area: board; width: max(var(--kid-board, 640px), 300px);
+      grid-area: board; width: var(--kid-board, 640px);
       border-radius: 14px; overflow: hidden; box-shadow: 0 6px 0 var(--kid-shadow);
     }
     .side { grid-area: side; display: flex; flex-direction: column; gap: 14px; }
@@ -138,9 +140,10 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
     }
     @keyframes wiggle { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
     @keyframes hop { 40% { transform: translateY(-10px) rotate(-8deg); } }
-    @media (max-width: 760px) {
+    /* Untereinander: die Breite setzt die App-Huelle (--kid-board), die Kopfzeile der Seite geht mit. */
+    @media ${KID_STACKED} {
       .puzzle {
-        grid-template-columns: min(92vw, 70vh, 640px);
+        grid-template-columns: var(--kid-board, 640px);
         grid-template-rows: auto;
         grid-template-areas: "task" "board" "side";
         row-gap: 12px;

@@ -6,6 +6,7 @@ import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
+import { KID_STACKED } from '../../shared/kids-layout';
 
 /** Naechste ungeloeste Linie ab `from` (einschliesslich), am Ende von vorn — `-1`, wenn alle geloest sind. */
 export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number>, from: number): number {
@@ -66,7 +67,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
   styles: [`
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 auto 12px;
-            max-width: calc(max(var(--kid-board, 640px), 300px) + 428px); }
+            max-width: var(--kid-row, 1068px); }
     .head h1 { flex: 1; margin: 0; font-size: 1.5rem; color: var(--kid-title); }
     .back, .count { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .info { text-align: center; font-size: 1.2rem; }
@@ -77,7 +78,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
       margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--kid-card);
       font-size: 1.1rem; line-height: 1.45; white-space: pre-line; max-height: 40vh; overflow-y: auto;
     }
-    @media (max-width: 760px) {
+    @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
       .intro { max-height: 30vh; }
     }
