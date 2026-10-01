@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
@@ -23,7 +21,6 @@ public class PasswordResetService
 {
     public static readonly TimeSpan TokenTtl = TimeSpan.FromHours(1);
     private const int TokenBytes = 32;            // → ~43 Char Base64URL
-    private const int BcryptWorkFactor = 12;      // identisch zu AuthService
 
     private readonly AppDbContext _db;
     private readonly IEmailSender _email;
@@ -68,7 +65,7 @@ public class PasswordResetService
         // Umgekehrt (entwerten+committen vor dem Versand) liess ein SMTP-Ausfall den User mit
         // NULL funktionierenden Links zurueck: der bereits zugestellte alte Link war entwertet,
         // der neue kam nie an (Send-Fehler wird bewusst geschluckt, s. u.).
-        var rawToken = GenerateRawToken();
+        var rawToken = SecretTokens.NewRaw(TokenBytes);
         var mailSite = ResolveSite(site);
         var english = IsEnglish(lang);
         var link = BuildResetLink(rawToken, mailSite.BaseUrlKey);
@@ -97,7 +94,7 @@ public class PasswordResetService
         _db.PasswordResetTokens.Add(new PasswordResetToken
         {
             UserId = user.Id,
-            TokenHash = ComputeHash(rawToken),
+            TokenHash = SecretTokens.Sha256Hex(rawToken),
             CreatedAt = now,
             ExpiresAt = now.Add(TokenTtl),
         });
@@ -112,7 +109,7 @@ public class PasswordResetService
     /// </summary>
     public async Task ResetPasswordAsync(string rawToken, string newPassword, CancellationToken ct = default)
     {
-        var hash = ComputeHash(rawToken);
+        var hash = SecretTokens.Sha256Hex(rawToken);
         var now = DateTime.UtcNow;
         var token = await _db.PasswordResetTokens
             .Include(t => t.User)
@@ -125,7 +122,7 @@ public class PasswordResetService
         if (user == null || user.DeletedAt != null)
             throw new UnauthorizedAccessException("Invalid or expired reset token.");
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, BcryptWorkFactor);
+        user.PasswordHash = PasswordHashing.Hash(newPassword);
         // Security-Stamp rotieren → bestehende JWTs (mit altem sstamp-Claim) werden ungültig.
         user.SecurityStamp = AuthService.NewSecurityStamp();
         // API-Tokens (`rkh_…`) kennen den Stempel nicht und laufen ohne Angabe nie ab: der Reset ist
@@ -233,24 +230,5 @@ public class PasswordResetService
             "<p>Wenn du das nicht warst, kannst du diese E-Mail ignorieren — dein Passwort bleibt unverändert.</p>" +
             $"<p>— {site.NameDe}</p>";
         return (subject, html, text);
-    }
-
-    private static string GenerateRawToken()
-    {
-        var buf = new byte[TokenBytes];
-        RandomNumberGenerator.Fill(buf);
-        return Convert.ToBase64String(buf)
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-    }
-
-    /// <summary>SHA-256-Hex (lowercase) eines Roh-Tokens (identisch zu ApiTokenService).</summary>
-    private static string ComputeHash(string rawToken)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
-        var sb = new StringBuilder(hash.Length * 2);
-        foreach (var b in hash) sb.Append(b.ToString("x2"));
-        return sb.ToString();
     }
 }

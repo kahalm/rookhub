@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -48,11 +46,11 @@ public class AuthHandoffService
             .ToListAsync(ct);
         if (stale.Count > 0) _db.AuthHandoffTokens.RemoveRange(stale);
 
-        var raw = GenerateRawCode();
+        var raw = SecretTokens.NewRaw();
         _db.AuthHandoffTokens.Add(new AuthHandoffToken
         {
             UserId = user.Id,
-            TokenHash = ComputeHash(raw),
+            TokenHash = SecretTokens.Sha256Hex(raw),
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.Add(Lifetime),
         });
@@ -69,7 +67,7 @@ public class AuthHandoffService
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
 
-        var hash = ComputeHash(raw.Trim());
+        var hash = SecretTokens.Sha256Hex(raw.Trim());
         var token = await _db.AuthHandoffTokens.FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
         if (token is null || token.UsedAt != null || token.ExpiresAt < DateTime.UtcNow)
             return null;
@@ -85,14 +83,4 @@ public class AuthHandoffService
         _logger.LogInformation("AuthHandoff: eingeloest fuer User {UserId}", user.Id);
         return await _auth.IssueTokenAsync(user);
     }
-
-    private static string GenerateRawCode()
-    {
-        var buf = new byte[32];
-        RandomNumberGenerator.Fill(buf);
-        return Convert.ToBase64String(buf).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-    }
-
-    private static string ComputeHash(string raw) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
 }

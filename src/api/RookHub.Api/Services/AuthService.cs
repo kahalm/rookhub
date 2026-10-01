@@ -20,10 +20,9 @@ public class AuthService
     private readonly IMemoryCache? _loginFailures;
 
     // Konstanter Dummy-Hash fuer timing-sichere Logins nicht existierender User
-    // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer).
-    private const int BcryptWorkFactor = 12;  // explizit & versionierbar statt Library-Default (10)
+    // (gleicher BCrypt-Workfactor wie echte Hashes -> gleiche Verify-Dauer; Faktor in PasswordHashing).
     private static readonly string DummyHash =
-        BCrypt.Net.BCrypt.HashPassword("rookhub-constant-time-dummy", BcryptWorkFactor);
+        PasswordHashing.Hash("rookhub-constant-time-dummy");
 
     public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger,
         NotificationService? notifications = null, IMemoryCache? loginFailures = null)
@@ -149,7 +148,7 @@ public class AuthService
         {
             Username = dto.Username,
             Email = normalizedEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password, BcryptWorkFactor),
+            PasswordHash = PasswordHashing.Hash(dto.Password),
             SecurityStamp = NewSecurityStamp(),
             Profile = new UserProfile()
         };
@@ -302,7 +301,7 @@ public class AuthService
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
             throw new UnauthorizedAccessException("Current password is incorrect.");
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword, BcryptWorkFactor);
+        user.PasswordHash = PasswordHashing.Hash(dto.NewPassword);
         // Security-Stamp rotieren → alle bisherigen JWTs (mit altem sstamp-Claim) werden ungültig.
         user.SecurityStamp = NewSecurityStamp();
         // API-Tokens (`rkh_…`) tragen KEINEN Stempel-Bezug und laufen ohne Angabe nie ab — der

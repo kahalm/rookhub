@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -164,25 +162,8 @@ public class ApiTokenService
     }
 
     /// <summary>Generiert einen neuen Raw-Token im Format <c>rkh_&lt;43-char-base64url&gt;</c>.</summary>
-    public static string GenerateRawToken()
-    {
-        var buf = new byte[RandomBytes];
-        RandomNumberGenerator.Fill(buf);
-        // URL-safe Base64 ohne Padding (Base64URL).
-        var b64 = Convert.ToBase64String(buf)
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-        return Prefix + b64;
-    }
+    public static string GenerateRawToken() => Prefix + SecretTokens.NewRaw(RandomBytes);
 
     /// <summary>SHA-256-Hex (lowercase) eines Raw-Tokens.</summary>
-    public static string ComputeHash(string rawToken)
-    {
-        var bytes = Encoding.UTF8.GetBytes(rawToken);
-        var hash = SHA256.HashData(bytes);
-        var sb = new StringBuilder(hash.Length * 2);
-        foreach (var b in hash) sb.Append(b.ToString("x2"));
-        return sb.ToString();
-    }
+    public static string ComputeHash(string rawToken) => SecretTokens.Sha256Hex(rawToken);
 }

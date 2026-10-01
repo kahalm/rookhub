@@ -559,7 +559,7 @@ public class ProfileService
 
             user.Username = username;
             user.Email = email;
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
+            user.PasswordHash = PasswordHashing.Hash(Guid.NewGuid().ToString());
             user.IsAdmin = false;
             user.DeletedAt = DateTime.UtcNow;
             foreach (var n in mentions) NotificationService.SetUsername(n, username);
