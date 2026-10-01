@@ -53,6 +53,16 @@ public class CrawlerExceptionFilter : IAsyncExceptionFilter
             context.Result = new ObjectResult(new { message = "Crawler service unavailable." }) { StatusCode = 502 };
             context.ExceptionHandled = true;
         }
+        else if (context.Exception is OperationCanceledException
+                 && context.HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            // Der Browser hat abgebrochen (Rundenwechsel, Seite verlassen — der Proxy reicht RequestAborted an
+            // den Crawler-Aufruf durch). Kein Crawler-Timeout: niemand liest die Antwort, und ein 504 + Warning
+            // stand im Log wie ein echter 30-s-Timeout. Gleiche Regel wie EngineController/ExternalEngineController.
+            _logger.LogDebug("Crawler request aborted by the client");
+            context.Result = new EmptyResult();
+            context.ExceptionHandled = true;
+        }
         else if (context.Exception is TaskCanceledException or OperationCanceledException)
         {
             _logger.LogWarning("Crawler request timed out");

@@ -63,4 +63,26 @@ public class CrawlerExceptionFilterTests
         var result = await RunAsync(new TaskCanceledException("timeout"));
         Assert.Equal(504, result.StatusCode);
     }
+
+    /// <summary>Codereview A10-015: bricht der BROWSER ab (RequestAborted), ist das kein Crawler-Timeout —
+    /// kein 504, keine Warning, sondern eine leere Antwort wie im EngineController.</summary>
+    [Theory]
+    [InlineData(typeof(TaskCanceledException))]
+    [InlineData(typeof(OperationCanceledException))]
+    public async Task ClientAbort_IsNoTimeout_NoWarning(Type exceptionType)
+    {
+        using var aborted = new CancellationTokenSource();
+        aborted.Cancel();
+        var http = new DefaultHttpContext { RequestAborted = aborted.Token };
+        var actionContext = new ActionContext(http, new RouteData(), new ActionDescriptor());
+        var ex = (Exception)Activator.CreateInstance(exceptionType)!;
+        var ctx = new ExceptionContext(actionContext, new List<IFilterMetadata>()) { Exception = ex };
+        var log = new CapturingLogger<CrawlerExceptionFilter>();
+
+        await new CrawlerExceptionFilter(log).OnExceptionAsync(ctx);
+
+        Assert.True(ctx.ExceptionHandled);
+        Assert.IsType<EmptyResult>(ctx.Result);
+        Assert.DoesNotContain(log.Events, e => e.Level >= Microsoft.Extensions.Logging.LogLevel.Warning);
+    }
 }
