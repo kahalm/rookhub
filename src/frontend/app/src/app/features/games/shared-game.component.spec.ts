@@ -2,6 +2,7 @@ import { BehaviorSubject } from 'rxjs';
 import { ChessBoardComponent } from '../../shared/pgn-viewer/chess-board.component';
 import { AnalysisEngineService, AnalysisState } from '../analysis/analysis-engine.service';
 import { LiveEngineSession } from './live-engine-session';
+import { ANALYSIS_PROVIDER_KEY } from '../analysis/analysis-settings';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -253,6 +254,44 @@ describe('SharedGameComponent', () => {
     fixture.detectChanges();
     expect(t.index()).toBe(1);                       // nächste Aufgabe …
     expect(page.trainingAnalysis()).toBeNull();      // … und die Analyse der alten ist vorbei
+  });
+
+  // F4-008: die am Analysebrett gewählte externe Engine rechnet auch in der „Analysieren"-Leiste des Fehler-Trainings —
+  // dort ist live() immer null, der Wächter prüfte bis dahin nur die Live-Engine.
+  it('training: “Analyse” uses the external engine chosen on the analysis board', async () => {
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(ANALYSIS_PROVIDER_KEY); localStorage.setItem(ANALYSIS_PROVIDER_KEY, 'cloud-1'); } catch { /* */ }
+    try {
+      const { fixture, http } = await setup(true);
+      fixture.detectChanges();
+      http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+      fixture.detectChanges();
+      const page = fixture.componentInstance;
+      spyOn(page as never, 'createLiveSession' as never).and.callFake(fakeLive as never);
+      page.mistakes.set({ white: [{
+        ply: 0, white: true, cls: 'mistake' as const, fenBefore: START, playedSan: 'a3', playedUci: 'a2a3',
+        bestUci: 'e2e4', bestSan: 'e4', acceptUci: ['e2e4'], acceptSan: ['e4'], checkUnlisted: false,
+        evalBefore: { cp: 30 }, evalAfter: { cp: -60 }, lostPercent: 9,
+        candidates: [{ uci: 'e2e4', score: { cp: 30 } }, { uci: 'd2d4', score: { cp: 10 } }],
+      }], black: [] });
+      page.trainMistakes();
+      fixture.detectChanges();
+      page.training()!.showSolution();
+      fixture.detectChanges();
+
+      page.toggleTrainingAnalysis();
+      const session = page.trainingAnalysis()!.session;
+      const useRemote = spyOn(session, 'useRemote');
+      http.expectOne('/api/engine/external').flush({
+        hasCredentials: true, tokenInvalid: false, backgroundEngineIds: [],
+        engines: [{ id: 'cloud-1', name: 'Cloud', maxThreads: 8, maxHash: 1024 }],
+      });
+      expect(page.live()).toBeNull();
+      expect(useRemote).toHaveBeenCalledTimes(1);
+      expect(useRemote.calls.mostRecent().args[0].id).toBe('cloud-1');
+    } finally {
+      try { if (stored === null) localStorage.removeItem(ANALYSIS_PROVIDER_KEY); else localStorage.setItem(ANALYSIS_PROVIDER_KEY, stored); } catch { /* */ }
+    }
   });
 
   // 0.526.3: der eigene Teilen-Link führt auf die eigene Ansicht — dieselbe wie über die Partienliste.

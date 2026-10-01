@@ -572,7 +572,10 @@ export class SharedGameComponent implements OnInit, DoCheck {
       next: r => {
         const background = r.backgroundEngineIds ?? [];
         const info = r.engines.find(e => e.id === stored && !background.includes(e.id));
-        if (info && this.live() === session) session.useRemote(info, (id, work) => this.externalEngines.analyse(id, work));
+        // Nur, solange die Session noch läuft: die Live-Engine ODER die „Analysieren"-Leiste des Fehler-Trainings
+        // (dort ist live() immer null, trainMistakes beendet sie — F4-008).
+        const active = this.live() === session || this.trainingAnalysis()?.session === session;
+        if (info && active) session.useRemote(info, (id, work) => this.externalEngines.analyse(id, work));
       },
       error: () => { /* bleibt beim Browser */ },
     });
