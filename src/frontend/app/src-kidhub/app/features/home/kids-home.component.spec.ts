@@ -2,8 +2,9 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { KidsHomeComponent } from './kids-home.component';
+import { KidsProgressStore } from '../../core/kids-progress.store';
 
 /**
  * Codereview 2026-09-29, A10-003: 20 Kinder öffnen im Vereinsraum hinter EINER NAT-Adresse KidHub — ab dem 16. kam
@@ -76,6 +77,28 @@ describe('KidsHomeComponent', () => {
     expect(f.componentInstance.failed()).toBeFalse();
     expect(el.querySelector('kid-error')).toBeNull();
     expect(el.querySelector('a.go')).not.toBeNull();
+  }));
+
+  /** Codereview 2026-09-29, F7-014: der Stand behaelt Stufen, die ein Neuaufbau mit weniger Stufen nicht mehr kennt — die
+   *  Kachel zeigte „4 von 3 Stufen geschafft". */
+  it('zaehlt nur die geschafften Stufen der aktuellen Leiter', fakeAsync(() => {
+    const progress = TestBed.inject(KidsProgressStore);
+    for (const l of [1, 2, 3, 4]) progress.completeRun(l);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { kids: { home: { levelsDone: '{{done}} of {{total}} levels' } } });
+    translate.use('en');
+
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([]);
+    http.expectOne('/api/kids/levels').flush([
+      { level: 1, theme: 'mate1', puzzleCount: 10 }, { level: 2, theme: 'mate1', puzzleCount: 10 },
+      { level: 3, theme: 'capture', puzzleCount: 10 },
+    ]);
+    f.detectChanges();
+
+    expect(f.componentInstance.done()).toBe(3);
+    expect((f.nativeElement as HTMLElement).querySelector('.tile.puzzles .meta')!.textContent).toContain('3 of 3 levels');
   }));
 
   /** Codereview 2026-09-29, UX-062: ohne Stufen fehlte der Startknopf ersatzlos, der Fehlersatz stand klein als letzte

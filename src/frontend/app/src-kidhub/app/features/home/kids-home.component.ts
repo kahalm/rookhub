@@ -23,7 +23,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <p>{{ 'kids.home.subtitle' | translate }}</p>
       @if (current(); as level) {
         <a class="go" [routerLink]="['/levels', level]">
-          {{ (progress.completedLevels() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
+          {{ (done() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
         </a>
       } @else if (failed()) {
         <!-- An der Stelle des Startknopfs, nicht klein unter dem Speicherhinweis: ohne Stufen fehlte der Knopf
@@ -38,7 +38,7 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
         <span class="name">{{ 'kids.home.puzzles' | translate }}</span>
         @if (levels().length > 0) {
           <span class="meta">
-            {{ 'kids.home.levelsDone' | translate: { done: progress.completedLevels(), total: levels().length } }}
+            {{ 'kids.home.levelsDone' | translate: { done: done(), total: levels().length } }}
             · ⭐ {{ progress.totalStars() }}
           </span>
         }
@@ -107,6 +107,8 @@ export class KidsHomeComponent {
   readonly failed = signal(false);
 
   readonly current = computed(() => this.progress.currentLevel(this.levels().map(l => l.level)));
+  /** Geschaffte Stufen der aktuellen Leiter — nie mehr als sie hat (F7-014). */
+  readonly done = computed(() => this.progress.completedOf(this.levels().map(l => l.level)));
   readonly courseLink = computed(() => {
     const list = this.courses();
     return list.length === 1 ? ['/courses', list[0].bookId] : ['/courses'];

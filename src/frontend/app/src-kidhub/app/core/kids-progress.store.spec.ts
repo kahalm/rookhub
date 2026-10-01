@@ -28,8 +28,18 @@ describe('KidsProgressStore', () => {
 
     expect(s.isUnlocked(2)).toBeTrue();
     expect(s.level(1).runIndex).toBe(0);
-    expect(s.completedLevels()).toBe(1);
+    expect(s.completedOf([1, 2])).toBe(1);
     expect(s.totalStars()).toBe(2);
+  });
+
+  /** Codereview 2026-09-29, F7-014: nach einem Neuaufbau mit weniger Stufen stand „38 von 36 Stufen geschafft" da. */
+  it('geschaffte Stufen zaehlen nur in der aktuellen Leiter (verwaiste Stufen nicht)', () => {
+    const s = store();
+    for (const l of [1, 2, 3, 4]) s.completeRun(l);
+    expect(s.completedOf([1, 2, 3])).toBe(3);      // Stufe 4 gibt es nicht mehr
+    expect(s.completedOf([1, 2, 3, 3])).toBe(3);   // doppelt genannt zaehlt einmal
+    expect(s.completedOf([2, 5])).toBe(1);
+    expect(s.completedOf([])).toBe(0);
   });
 
   it('ein schlechterer Durchgang nimmt die besten Sterne nicht weg', () => {

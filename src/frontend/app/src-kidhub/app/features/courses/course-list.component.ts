@@ -31,7 +31,7 @@ import { KID_BACK } from '../../shared/kids-layout';
             <span class="text">
               <span class="name">{{ c.title }}</span>
               @if (c.description) { <span class="desc">{{ c.description }}</span> }
-              <span class="meta">{{ 'kids.courses.progress' | translate: { done: solved(c.bookId), total: c.puzzleCount } }}</span>
+              <span class="meta">{{ 'kids.courses.progress' | translate: { done: solved(c), total: c.puzzleCount } }}</span>
             </span>
           </a>
         }
@@ -78,7 +78,13 @@ export class CourseListComponent {
     });
   }
 
-  solved(bookId: number): number {
-    return this.progress.course(bookId).solved.length;
+  /**
+   * Geloeste Linien des Kurses, hoechstens so viele, wie er hat: der Stand behaelt die Ids geloeschter Linien (der
+   * Server entfernt sie nur bei „Von vorn", jeder Abgleich bringt sie zurueck), und die Liste kennt nur die Zahl,
+   * nicht die Ids der Linien — ungedeckelt stand „10 von 8 geschafft" da (Codereview 2026-09-29, F7-014). Genau
+   * (Schnitt mit den aktuellen Linien) zaehlt die Kursseite.
+   */
+  solved(c: KidsCourse): number {
+    return Math.min(this.progress.course(c.bookId).solved.length, c.puzzleCount);
   }
 }

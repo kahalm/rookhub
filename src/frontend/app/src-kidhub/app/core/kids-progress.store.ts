@@ -102,9 +102,15 @@ export class KidsProgressStore {
   /** Zaehlt jede Aenderung durch das Kind (nicht die Uebernahme aus dem Konto) — Ausloeser fuer den Abgleich. */
   readonly revision = this.changes.asReadonly();
 
-  /** Zahl der geschafften Stufen. */
-  readonly completedLevels = computed(() =>
-    Object.values(this.state().levels).filter(l => l.stars > 0).length);
+  /**
+   * Zahl der geschafften Stufen unter `levels` (die Leiter, wie der Server sie gerade liefert). Nur ueber die
+   * aktuelle Leiter: der Stand behaelt auch Stufen, die ein Neuaufbau mit weniger Stufen nicht mehr kennt — ueber
+   * alle gezaehlt stand auf der Startseite „38 von 36 Stufen geschafft" (Codereview 2026-09-29, F7-014).
+   */
+  completedOf(levels: readonly number[]): number {
+    const stored = this.state().levels;
+    return [...new Set(levels)].filter(l => (stored[l]?.stars ?? 0) > 0).length;
+  }
 
   /** Gesammelte Sterne ueber alle Stufen. */
   readonly totalStars = computed(() =>
