@@ -119,6 +119,10 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
       grid-area: board; width: var(--kid-board, 640px);
       border-radius: 14px; overflow: hidden; box-shadow: 0 6px 0 var(--kid-shadow);
     }
+    /* Brett-Koordinaten fuer Kinder groesser und deckend (UX-060): chessground setzt 9 px bei 0,8 Deckkraft — auf
+       dem bis zu 820 px grossen Brett kaum zu finden, wenn der Trainer „schau auf g8" sagt. Die Farben je Feld
+       stehen in styles.scss. */
+    .board ::ng-deep .cg-wrap coords { font-size: 11px; opacity: 1; }
     .side { grid-area: side; display: flex; flex-direction: column; gap: 14px; }
     .bubble {
       display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 22px;

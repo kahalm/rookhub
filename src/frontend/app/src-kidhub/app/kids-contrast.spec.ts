@@ -14,6 +14,7 @@ import { LevelMapComponent } from './features/levels/level-map.component';
 import { LevelPlayComponent } from './features/levels/level-play.component';
 import { EndlessPlayComponent } from './features/endless/endless-play.component';
 import { KidsPuzzleComponent } from './shared/kids-puzzle.component';
+import { readCoords } from '@rh/testing/board-coords';
 
 type Rgba = [number, number, number, number];
 
@@ -164,6 +165,24 @@ describe('KidHub: Kontrast der Knoepfe mit Schrift', () => {
     f.debugElement.query(By.directive(EndlessPlayComponent)).componentInstance.over.set(true);
     f.detectChanges();
     expectReadable(el('.btn.primary'), 'Nochmal');
+  });
+
+  // UX-060: Die Kinderseite spielt fest im Thema „blue". Die Rangziffern hatten die Farbe fuer das jeweils andere
+  // Feld (2/4/6/8 hell auf hell, unsichtbar) und waren 9 px klein bei 0,8 Deckkraft.
+  it('Brett-Koordinaten: 11 px, deckend, jede in der Farbe fuer IHR Feld (UX-060)', async () => {
+    await go('/levels/1');
+    const wrap = el('app-puzzle-board .cg-wrap');
+    for (const coords of Array.from(wrap.querySelectorAll<HTMLElement>('coords'))) {
+      const style = getComputedStyle(coords);
+      expect(parseFloat(style.fontSize)).withContext(`${coords.className}: Schriftgroesse`).toBeGreaterThanOrEqual(11);
+      expect(Number(style.opacity)).withContext(`${coords.className}: Deckkraft`).toBe(1);
+    }
+    const readings = readCoords(wrap, '#d4e3ed', '#5882a1');
+    expect(readings.length).toBe(16);
+    for (const r of readings) {
+      expect(r.own).withContext(`${r.label} auf ${r.square}: ${r.own.toFixed(2)}:1, andere Feldfarbe ${r.other.toFixed(2)}:1`)
+        .toBeGreaterThan(r.other);
+    }
   });
 
   it('Stufenkarte: der Rahmen der aktuellen Stufe hebt sich ab (3:1, WCAG 1.4.11)', async () => {

@@ -112,41 +112,53 @@ body { background-color: var(--mat-sys-surface); }
   background-size: 25% 25%;
 }
 
+/* Koordinaten-Farben (UX-060): die Rangziffern stehen oben auf der LINKEN Randspalte (Weiss unten: a-Linie,
+   Schwarz unten: h-Linie), chessground faerbt sie aber fuer die rechte — dort liegen helle und dunkle Felder
+   umgekehrt (a1 dunkel, h1 hell). Deshalb tauschen die RAENGE hier gegenueber chessground die Farbe: ungerade
+   Raenge bei Weiss unten bekommen die helle Schrift (dunkles Feld), gerade die dunkle. Die Linienbuchstaben
+   stehen wie bei chessground auf der unteren Reihe und bleiben. Vorher: Thema „blue" 2/4/6/8 hell auf hell
+   (1,0:1, unsichtbar), 1/3/5/7 dunkel auf dunkel (1,9:1). Spec: features/puzzles/board-coords.spec.ts. */
+/* brown (chessground.brown.css) und die Brett-Texturen, die dessen Farben erben */
+.orientation-white .ranks :nth-child(even),
+.orientation-black .ranks :nth-child(odd) { color: rgba(72, 72, 72, 0.8); }
+.orientation-white .ranks :nth-child(odd),
+.orientation-black .ranks :nth-child(even) { color: rgba(255, 255, 255, 0.8); }
+
 /* Coordinate label colors for non-brown themes */
-.board-theme-blue .orientation-white .ranks :nth-child(odd),
-.board-theme-blue .orientation-white .files :nth-child(even),
-.board-theme-blue .orientation-black .ranks :nth-child(even),
-.board-theme-blue .orientation-black .files :nth-child(odd) { color: rgba(40, 60, 80, 0.8); }
 .board-theme-blue .orientation-white .ranks :nth-child(even),
-.board-theme-blue .orientation-white .files :nth-child(odd),
+.board-theme-blue .orientation-white .files :nth-child(even),
 .board-theme-blue .orientation-black .ranks :nth-child(odd),
+.board-theme-blue .orientation-black .files :nth-child(odd) { color: rgba(40, 60, 80, 0.8); }
+.board-theme-blue .orientation-white .ranks :nth-child(odd),
+.board-theme-blue .orientation-white .files :nth-child(odd),
+.board-theme-blue .orientation-black .ranks :nth-child(even),
 .board-theme-blue .orientation-black .files :nth-child(even) { color: rgba(212, 227, 237, 0.9); }
 
-.board-theme-green .orientation-white .ranks :nth-child(odd),
-.board-theme-green .orientation-white .files :nth-child(even),
-.board-theme-green .orientation-black .ranks :nth-child(even),
-.board-theme-green .orientation-black .files :nth-child(odd) { color: rgba(50, 70, 30, 0.8); }
 .board-theme-green .orientation-white .ranks :nth-child(even),
-.board-theme-green .orientation-white .files :nth-child(odd),
+.board-theme-green .orientation-white .files :nth-child(even),
 .board-theme-green .orientation-black .ranks :nth-child(odd),
+.board-theme-green .orientation-black .files :nth-child(odd) { color: rgba(50, 70, 30, 0.8); }
+.board-theme-green .orientation-white .ranks :nth-child(odd),
+.board-theme-green .orientation-white .files :nth-child(odd),
+.board-theme-green .orientation-black .ranks :nth-child(even),
 .board-theme-green .orientation-black .files :nth-child(even) { color: rgba(238, 238, 210, 0.9); }
 
-.board-theme-gray .orientation-white .ranks :nth-child(odd),
-.board-theme-gray .orientation-white .files :nth-child(even),
-.board-theme-gray .orientation-black .ranks :nth-child(even),
-.board-theme-gray .orientation-black .files :nth-child(odd) { color: rgba(60, 60, 60, 0.8); }
 .board-theme-gray .orientation-white .ranks :nth-child(even),
-.board-theme-gray .orientation-white .files :nth-child(odd),
+.board-theme-gray .orientation-white .files :nth-child(even),
 .board-theme-gray .orientation-black .ranks :nth-child(odd),
+.board-theme-gray .orientation-black .files :nth-child(odd) { color: rgba(60, 60, 60, 0.8); }
+.board-theme-gray .orientation-white .ranks :nth-child(odd),
+.board-theme-gray .orientation-white .files :nth-child(odd),
+.board-theme-gray .orientation-black .ranks :nth-child(even),
 .board-theme-gray .orientation-black .files :nth-child(even) { color: rgba(240, 240, 240, 0.9); }
 
-.board-theme-wood .orientation-white .ranks :nth-child(odd),
-.board-theme-wood .orientation-white .files :nth-child(even),
-.board-theme-wood .orientation-black .ranks :nth-child(even),
-.board-theme-wood .orientation-black .files :nth-child(odd) { color: rgba(70, 40, 15, 0.8); }
 .board-theme-wood .orientation-white .ranks :nth-child(even),
-.board-theme-wood .orientation-white .files :nth-child(odd),
+.board-theme-wood .orientation-white .files :nth-child(even),
 .board-theme-wood .orientation-black .ranks :nth-child(odd),
+.board-theme-wood .orientation-black .files :nth-child(odd) { color: rgba(70, 40, 15, 0.8); }
+.board-theme-wood .orientation-white .ranks :nth-child(odd),
+.board-theme-wood .orientation-white .files :nth-child(odd),
+.board-theme-wood .orientation-black .ranks :nth-child(even),
 .board-theme-wood .orientation-black .files :nth-child(even) { color: rgba(230, 209, 160, 0.9); }
 
 /* === Figuren-Sets (lokal gevendort: public/piece/<set>/, Lichess) ========= */
