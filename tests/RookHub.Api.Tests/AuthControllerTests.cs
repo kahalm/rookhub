@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -44,7 +45,7 @@ public class AuthControllerTests : IDisposable
             _db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance);
         var handoff = new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance);
         _shared = new SharedSessionService(_db, _authService, config);
-        _controller = new AuthController(_authService, resetService, handoff, _shared)
+        _controller = new AuthController(_authService, resetService, handoff, _shared, new CapturingTaskQueue())
         {
             // Ohne HttpContext gibt es weder Request.Cookies noch Response.Cookies — und der
             // Controller schreibt beim Anmelden ein Cookie.
@@ -71,6 +72,31 @@ public class AuthControllerTests : IDisposable
         public bool IsEnabled => true;
         public Task SendAsync(string to, string subject, string html, string text, CancellationToken ct = default)
             => Task.CompletedTask;
+    }
+
+    /// <summary>Sammelt eingereihte Arbeiten, statt sie auszufuehren — der Test entscheidet, wann der
+    /// „Hintergrund" laeuft, und mit welchem ServiceProvider.</summary>
+    private sealed class CapturingTaskQueue : IWebhookTaskQueue
+    {
+        public List<Func<IServiceProvider, CancellationToken, Task>> Items { get; } = new();
+
+        public ValueTask EnqueueAsync(Func<IServiceProvider, CancellationToken, Task> workItem)
+        {
+            Items.Add(workItem);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask<Func<IServiceProvider, CancellationToken, Task>> DequeueAsync(CancellationToken cancellationToken)
+            => throw new NotSupportedException();
+
+        /// <summary>Alle gesammelten Arbeiten so ausfuehren, wie es der Worker taete: mit einem Scope, der den
+        /// <paramref name="resetService"/> liefert.</summary>
+        public async Task RunAllAsync(PasswordResetService resetService)
+        {
+            using var sp = new ServiceCollection().AddSingleton(resetService).BuildServiceProvider();
+            foreach (var item in Items) await item(sp, CancellationToken.None);
+            Items.Clear();
+        }
     }
 
     // ---- Register ----
@@ -232,6 +258,38 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ForgotPassword_AnswersBeforeTheMailIsSent_SoTheResponseTimeRevealsNoAccount()
+    {
+        // A1-009: Bei bekannter Adresse wartete die Antwort auf die SMTP-Runde, bei unbekannter kam sie sofort —
+        // die Antwortzeit verriet, ob es das Konto gibt. Jetzt antwortet der Controller, bevor irgendetwas
+        // nachgeschlagen oder verschickt ist; der Versand laeuft als Hintergrundarbeit.
+        await _controller.Register(new RegisterDto { Username = "known", Email = "known@t.com", Password = "Password1!" });
+        var mails = new RecordingEmailSender();
+        var resetService = new PasswordResetService(_db, mails, new ConfigurationBuilder().Build(),
+            NullLogger<PasswordResetService>.Instance);
+        var queue = new CapturingTaskQueue();
+        var controller = new AuthController(_authService, resetService,
+            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared, queue)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        var known = await controller.ForgotPassword(new ForgotPasswordDto { Email = "known@t.com" });
+        var unknown = await controller.ForgotPassword(new ForgotPasswordDto { Email = "nobody@t.com" });
+
+        Assert.IsType<OkObjectResult>(known);
+        Assert.IsType<OkObjectResult>(unknown);
+        Assert.Empty(mails.Sent);
+        Assert.Empty(_db.PasswordResetTokens);
+        // Beide Anfragen sehen gleich aus: je eine Hintergrundarbeit, egal ob es die Adresse gibt.
+        Assert.Equal(2, queue.Items.Count);
+
+        await queue.RunAllAsync(resetService);
+        Assert.Equal("known@t.com", Assert.Single(mails.Sent).To);
+        Assert.Single(_db.PasswordResetTokens);
+    }
+
+    [Fact]
     public async Task ForgotPassword_PassesSiteAndLanguageToTheMail()
     {
         // UX-031: KidHub schickt site/lang mit — der Controller muss sie bis zur Mail durchreichen.
@@ -244,9 +302,10 @@ public class AuthControllerTests : IDisposable
             })
             .Build();
         var mails = new RecordingEmailSender();
-        var controller = new AuthController(_authService,
-            new PasswordResetService(_db, mails, config, NullLogger<PasswordResetService>.Instance),
-            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared)
+        var resetService = new PasswordResetService(_db, mails, config, NullLogger<PasswordResetService>.Instance);
+        var queue = new CapturingTaskQueue();
+        var controller = new AuthController(_authService, resetService,
+            new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance), _shared, queue)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -254,6 +313,7 @@ public class AuthControllerTests : IDisposable
         var result = await controller.ForgotPassword(new ForgotPasswordDto { Email = "kid@t.com", Site = "kidhub", Lang = "en" });
 
         Assert.IsType<OkObjectResult>(result);
+        await queue.RunAllAsync(resetService);
         var mail = Assert.Single(mails.Sent);
         Assert.Equal("KidHub — Reset your password", mail.Subject);
         Assert.Contains("https://kidhub.example/reset-password?token=", mail.Text);

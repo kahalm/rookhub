@@ -17,14 +17,18 @@ public class AuthController : BaseApiController
     private readonly PasswordResetService _passwordReset;
     private readonly AuthHandoffService _handoff;
     private readonly SharedSessionService _sharedSession;
+    /// <summary>Kurze Hintergrundarbeiten mit eigenem Consumer (wie Web-Push) — hier der Reset-Mailversand,
+    /// damit „Passwort vergessen" nicht ueber die Antwortzeit verraet, ob es die Adresse gibt.</summary>
+    private readonly IWebhookTaskQueue _shortTasks;
 
     public AuthController(AuthService authService, PasswordResetService passwordReset,
-        AuthHandoffService handoff, SharedSessionService sharedSession)
+        AuthHandoffService handoff, SharedSessionService sharedSession, IWebhookTaskQueue shortTasks)
     {
         _authService = authService;
         _passwordReset = passwordReset;
         _handoff = handoff;
         _sharedSession = sharedSession;
+        _shortTasks = shortTasks;
     }
 
     [HttpPost("register")]
@@ -278,7 +282,12 @@ public class AuthController : BaseApiController
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
-        await _passwordReset.RequestResetAsync(dto.Email, dto.Site, dto.Lang);
+        // Suche, SMTP-Versand und Token-Persistenz laufen im Hintergrund (eigener DI-Scope): wartete die Antwort
+        // darauf, kaeme sie bei unbekannter Adresse in Millisekunden, bei bekannter erst nach der SMTP-Runde —
+        // ein Konten-Orakel trotz neutraler 200 (Codereview A1-009).
+        var (email, site, lang) = (dto.Email, dto.Site, dto.Lang);
+        await _shortTasks.EnqueueAsync((sp, ct) =>
+            sp.GetRequiredService<PasswordResetService>().RequestResetAsync(email, site, lang, ct));
         return Ok(new { message = "If the address belongs to an account, a reset link has been sent." });
     }
 

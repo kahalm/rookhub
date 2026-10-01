@@ -16,7 +16,8 @@ namespace RookHub.Api.Services;
 ///   Adresse geschickt → wer die Mail nicht hat, kann nicht zuruecksetzen.
 /// - Tokens sind einmalig (<c>UsedAt</c>) und laufen nach <see cref="TokenTtl"/> ab.
 /// - <see cref="RequestResetAsync"/> verraet NICHT, ob eine Adresse existiert (keine
-///   User-Enumeration) — der Controller antwortet immer neutral mit 200.
+///   User-Enumeration) — der Controller antwortet immer neutral mit 200 und ruft es als
+///   Hintergrundarbeit auf, damit auch die Antwortzeit (SMTP-Runde) nichts verraet.
 /// </summary>
 public class PasswordResetService
 {
