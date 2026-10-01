@@ -150,9 +150,11 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
   styles: [`
     .legal-container { padding: 2rem; display: flex; justify-content: center; }
     mat-card { max-width: 760px; width: 100%; }
-    h4 { margin: 1.25rem 0 0.25rem; color: #90caf9; }
-    a { color: #90caf9; }
-    .muted { color: #bdbdbd; font-size: 0.85rem; }
+    /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
+       immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
+    h4 { margin: 1.25rem 0 0.25rem; color: var(--mat-sys-primary); }
+    a { color: var(--mat-sys-primary); }
+    .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }
   `]
 })

@@ -101,8 +101,10 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
   styles: [`
     .legal-container { padding: 2rem; display: flex; justify-content: center; }
     mat-card { max-width: 720px; width: 100%; }
-    h4 { margin: 1.25rem 0 0.25rem; color: #90caf9; }
-    a { color: #90caf9; }
+    /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
+       immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
+    h4 { margin: 1.25rem 0 0.25rem; color: var(--mat-sys-primary); }
+    a { color: var(--mat-sys-primary); }
     .back { margin-top: 1.5rem; }
     .action { margin: 0.75rem 0 0.25rem; }
     .backup-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: -0.25rem; }
