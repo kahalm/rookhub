@@ -12,7 +12,7 @@ import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
-import { ANON_NAME, SheetPgnInput, normalizeResult, reasonText, sheetPgn, sheetPgnFileName, yearOf } from '../../core/club-format';
+import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, reasonText, sheetPgn, sheetPgnFileName, yearOf } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
@@ -21,6 +21,8 @@ import { de } from '../../core/league-format';
 type Side = 'white' | 'black';
 const POLL_MS = 3000;
 const MATCH_DEBOUNCE_MS = 400;
+/** So viele Abrufe hintereinander dürfen still scheitern (Neustart, Funkloch), bevor die Seite es sagt (UX-034). */
+const SILENT_FAILURES = 3;
 
 /**
  * Ein eingelesenes Partieformular prüfen und in die Vereins-Datenbank übernehmen (`/verein/formular/:id`).
@@ -42,6 +44,14 @@ const MATCH_DEBOUNCE_MS = 400;
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
         <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
+    } @else if (loadError(); as e) {
+      <!-- UX-034: früher stand hier minutenlang „Lade …", während die Seite still alle 3 s nachfragte. -->
+      <section class="gate"><h2>Das Formular lässt sich gerade nicht laden</h2>
+        <p>{{ e }} Dein Formular geht dadurch nicht verloren.</p>
+        <div class="actions">
+          <button type="button" class="btn-sec" (click)="reload()">Neu laden</button>
+          <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
+        </div></section>
     } @else if (state(); as st) {
       <section class="club-intro">
         <p><a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
@@ -291,6 +301,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private readonly ticker = new SecondsTicker();
   readonly clock = computed(() => formatClock(readingSeconds(this.state()?.scan.createdAt, this.ticker.now())));
   readonly notFound = signal(false);
+  /** Der Abruf scheitert (anderer Code als 404, oder vorübergehend mehrmals hintereinander) — Klartext statt „Lade …". */
+  readonly loadError = signal<string | null>(null);
+  private failures = 0;
   readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
   readonly saving = signal(false);
@@ -389,16 +402,33 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (url) URL.revokeObjectURL(url);
   }
 
+  /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt. */
+  reload(): void {
+    if (this.pollTimer) clearTimeout(this.pollTimer);
+    this.pollTimer = null;
+    this.failures = 0;
+    this.loadError.set(null);
+    void this.load();
+  }
+
   private async load(): Promise<void> {
     let st: LeagueScanState;
     try {
       st = await this.api.scan(this.scanRef);
     } catch (err) {
-      if (err instanceof HttpErrorResponse && err.status === 404) this.notFound.set(true);
-      else this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
+      if (this.destroyed) return;
+      if (err instanceof HttpErrorResponse && err.status === 404) { this.notFound.set(true); return; }
+      // Nur was von selbst vorbeigeht (0/502/503/504), wird im Hintergrund weiter nachgefragt — nach ein paar stillen
+      // Fehlversuchen mit Hinweis. Jeder andere Code (500, 403, …) sagt es gleich und wartet auf „Neu laden".
+      const transient = isTransientError(err);
+      if (!transient || ++this.failures >= SILENT_FAILURES)
+        this.loadError.set(loadErrorText(err) + (transient ? ' LeagueHub versucht es im Hintergrund weiter.' : ''));
+      if (transient) this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
       return;
     }
     if (this.destroyed) return;
+    this.failures = 0;
+    this.loadError.set(null);
     this.state.set(st);
     const reading = st.scan.status === 'pending' || st.scan.status === 'running';
     this.ticker.run(reading);

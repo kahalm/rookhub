@@ -5,7 +5,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubDraft, ClubImportResult, OpenScan, ScanRef, ScoresheetStatus } from '../../core/club.models';
-import { ANON_NAME, importSummary, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
+import { ANON_NAME, importSummary, loadErrorText, reasonText, scanAvailability, scanStateText, shortDateTime, uploadErrorText } from '../../core/club-format';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBaseSelection, packForUpload } from '../../core/chessbase-upload';
 import { partLabel, pgnPortions, portionNote } from '../../core/pgn-portions';
@@ -197,6 +197,10 @@ const SAVE_DEBOUNCE_MS = 1500;
                   {{ uploading() ? 'Lade hoch …' : 'Formular einlesen' }}</button>
               </div>
             }
+          } @else if (statusError(); as e) {
+            <!-- UX-034: früher „Lade …" für immer und darunter „Hochladen hat nicht geklappt", obwohl nichts hochgeladen war. -->
+            <p class="err">Ob Einlesen gerade geht, ließ sich nicht prüfen. {{ e }}</p>
+            <div class="actions"><button type="button" class="btn-sec" (click)="retryStatus()">Neu laden</button></div>
           } @else {
             <p class="muted">Lade …</p>
           }
@@ -283,6 +287,8 @@ export class ClubAddPageComponent implements OnInit {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly status = signal<ScoresheetStatus | null>(null);
+  /** Der Status-Abruf (geht Einlesen gerade?) kam nicht — eigener Text, kein Upload-Fehler. */
+  readonly statusError = signal<string | null>(null);
   readonly availability = computed(() => { const s = this.status(); return s ? scanAvailability(s) : null; });
   readonly language = signal('auto');
   readonly side = signal<'auto' | 'white' | 'black'>('auto');
@@ -631,8 +637,18 @@ export class ClubAddPageComponent implements OnInit {
   private pgnLabel(pgn: string): string | null { return pgn === this.loadedText ? this.label : null; }
 
   private async loadStatus(): Promise<void> {
-    try { this.status.set(await this.client.scoresheetStatus()); }
-    catch (err) { this.scanError.set(uploadErrorText(err)); }
+    try {
+      this.status.set(await this.client.scoresheetStatus());
+      this.statusError.set(null);
+    } catch (err) {
+      // Nach einem gelungenen Upload bleibt der bisherige Stand stehen — ein Fehler hier ist KEIN gescheiterter Upload.
+      this.statusError.set(loadErrorText(err));
+    }
+  }
+
+  retryStatus(): void {
+    this.statusError.set(null);
+    void this.loadStatus();
   }
 
   private async loadScans(): Promise<void> {

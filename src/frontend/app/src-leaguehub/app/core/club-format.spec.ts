@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { importSummary, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf } from './club-format';
+import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf } from './club-format';
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
@@ -69,5 +69,18 @@ describe('club-format', () => {
     const two = (n: number) => String(n).padStart(2, '0');
     expect(shortDateTime('2026-09-28T08:52:00')).toBe(`${two(d.getDate())}.${two(d.getMonth() + 1)}., ${two(d.getHours())}:${two(d.getMinutes())}`);
     expect(shortDateTime(null)).toBe('');
+  });
+
+  // UX-034: Klartext statt „Fehler 500." — und nur 0/502/503/504 gelten als vorübergehend.
+  it('Ladefehler: Klartext je Art, vorübergehend nur bei 0/502/503/504', () => {
+    for (const st of [0, 502, 503, 504]) {
+      expect(isTransientError(new HttpErrorResponse({ status: st }))).withContext(String(st)).toBeTrue();
+      expect(loadErrorText(new HttpErrorResponse({ status: st }))).toBe('Der Server ist gerade nicht erreichbar.');
+    }
+    for (const st of [400, 403, 404, 429, 500]) expect(isTransientError(new HttpErrorResponse({ status: st }))).withContext(String(st)).toBeFalse();
+    expect(isTransientError(new Error('x'))).toBeFalse();
+    expect(loadErrorText(new HttpErrorResponse({ status: 500 }))).toBe('Der Server hatte ein Problem (500). Bitte gleich noch einmal versuchen.');
+    expect(loadErrorText(new HttpErrorResponse({ status: 429 }))).toContain('in einer Minute');
+    expect(loadErrorText(new Error('kaputt'))).toBe('Beim Laden ist etwas schiefgegangen.');
   });
 });

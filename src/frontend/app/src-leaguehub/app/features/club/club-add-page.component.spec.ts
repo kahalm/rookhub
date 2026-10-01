@@ -210,6 +210,28 @@ describe('ClubAddPageComponent', () => {
     expect(link.getAttribute('href')).toBe('/verein/formular/7');
   }));
 
+  // UX-034 (c): früher „Lade …" für immer und darunter „Hochladen hat nicht geklappt (HTTP 500)" — ohne Upload.
+  it('Formular: scheitert der Status-Abruf, sagt die Seite das (kein Upload-Fehler) und bietet „Neu laden"', fakeAsync(() => {
+    query = { art: 'formular' };
+    api.scoresheetStatus.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const panel = el.querySelector('section.panel')!;
+    expect(panel.textContent).toContain('Ob Einlesen gerade geht, ließ sich nicht prüfen.');
+    expect(panel.textContent).toContain('Der Server hatte ein Problem (500)');
+    expect(panel.textContent).not.toContain('Hochladen hat nicht geklappt');
+    expect(panel.textContent).not.toContain('Lade …');
+    api.scoresheetStatus.and.resolveTo({ available: true, dailyLimit: 10, usedToday: 0, languages: [] });
+    const retry = Array.from(panel.querySelectorAll('button')).find(b => b.textContent?.includes('Neu laden')) as HTMLButtonElement;
+    retry.click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('10 je 24 Stunden (heute: 0 von 10)');
+    expect(el.textContent).not.toContain('ließ sich nicht prüfen');
+    expect(el.querySelector('input[type="file"]')).not.toBeNull();
+  }));
+
   it('über einen Teilen-Link: ohne Anmeldung, Schlüssel gemerkt, Korrektur unter /s/…', fakeAsync(() => {
     params = { token: 'TOK' };
     query = { art: 'formular' };

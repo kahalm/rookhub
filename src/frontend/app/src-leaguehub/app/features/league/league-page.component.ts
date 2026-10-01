@@ -5,6 +5,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { readJson, writeJson, localStore } from '@rh/core/local-json-store';
 import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
+import { loadErrorText } from '../../core/club-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { GameSourcesComponent } from '../../shared/game-sources.component';
@@ -34,6 +35,7 @@ interface Pick { liga?: number; verein?: string }
       <section class="gate">
         <h2>Daten nicht geladen</h2>
         <p>{{ loadError() }}</p>
+        <div class="actions"><button type="button" class="btn-sec" (click)="loadIndex()">Neu laden</button></div>
       </section>
     } @else if (index(); as ix) {
       @if (!ix.leagues.length) {
@@ -163,6 +165,17 @@ export class LeaguePageComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     if (!this.allowed) return;
+    await this.loadIndex();
+    if (this.canManage) {
+      try {
+        if ((await this.api.updateStatus()).running) this.poll();
+      } catch { /* Status ist Beiwerk */ }
+    }
+  }
+
+  /** Bestand holen und die gemerkte Auswahl zeigen — auch „Neu laden", wenn der Bestand nicht kam (UX-034). */
+  async loadIndex(): Promise<void> {
+    this.loadError.set(null);
     const q = this.route.snapshot.queryParamMap;
     const saved = readJson<Pick>(localStore(), PICK_KEY) ?? {};
     const pref = {
@@ -178,11 +191,6 @@ export class LeaguePageComponent implements OnInit {
       await this.showLeague(tnr, pref.runde, pref.verein);
     } catch (err) {
       this.loadError.set(this.errorText(err));
-    }
-    if (this.canManage) {
-      try {
-        if ((await this.api.updateStatus()).running) this.poll();
-      } catch { /* Status ist Beiwerk */ }
     }
   }
 
@@ -286,11 +294,8 @@ export class LeaguePageComponent implements OnInit {
   }
 
   private errorText(err: unknown): string {
-    if (err instanceof HttpErrorResponse) {
-      if (err.status === 403) return 'LeagueHub ist für dein Konto nicht freigeschaltet (Admins und die Vereinsgruppe von SK Schwaz).';
-      if (err.status === 0) return 'Der Server ist gerade nicht erreichbar. Bitte später neu laden.';
-      return `Fehler ${err.status}.`;
-    }
-    return String(err);
+    if (err instanceof HttpErrorResponse && err.status === 403)
+      return 'LeagueHub ist für dein Konto nicht freigeschaltet (Admins und die Vereinsgruppe von SK Schwaz).';
+    return loadErrorText(err);
   }
 }

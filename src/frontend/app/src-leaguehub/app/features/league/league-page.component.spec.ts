@@ -174,6 +174,24 @@ describe('LeaguePageComponent', () => {
     expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
   });
 
+  // UX-034 (d): kam der Bestand nicht, stand nur „Fehler 500." da — ohne Knopf, bis zum Browser-Reload.
+  it('Bestand kommt nicht: Klartext und „Neu laden" holt ihn noch einmal', async () => {
+    api.index.and.returnValues(Promise.reject(new HttpErrorResponse({ status: 500 })), Promise.resolve(INDEX));
+    const el = create();
+    await settle();
+    expect(el.textContent).toContain('Daten nicht geladen');
+    expect(el.textContent).toContain('Der Server hatte ein Problem (500). Bitte gleich noch einmal versuchen.');
+    expect(el.textContent).not.toContain('Fehler 500.');
+    const btn = Array.from(el.querySelectorAll('.gate button')).find(b => b.textContent?.includes('Neu laden')) as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+    btn.click();
+    await settle();
+    expect(api.index).toHaveBeenCalledTimes(2);
+    expect(el.textContent).not.toContain('Daten nicht geladen');
+    expect(el.querySelectorAll('form.pick select').length).toBe(3);
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
+  });
+
   it('ohne league.manage kein Knopf „Daten aktualisieren" und kein Teilen-Link', async () => {
     perms = new Set(['league.view']);
     const el = create();

@@ -1,11 +1,11 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { PlayerSearchComponent } from './player-search.component';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService } from '../../core/club-api.service';
 import { ClubGame, ClubGameDetail, RosterPerson, SideDecision } from '../../core/club.models';
-import { reasonText } from '../../core/club-format';
+import { loadErrorText, reasonText } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
@@ -48,13 +48,20 @@ type Side = 'white' | 'black';
       </form>
 
       <div class="stand">
-        <span>{{ total() === null ? 'Lade …' : countText() }}</span>
+        @if (!firstLoadFailed()) { <span>{{ total() === null ? 'Lade …' : countText() }}</span> }
         @if (total()) { <button type="button" class="btn-sec" [disabled]="downloading()" (click)="download()">PGN herunterladen</button> }
         @if (canContribute) { <a class="btn-pri" routerLink="/verein/neu">Partien hinzufügen</a> }
-        <span class="update-msg" [class.err]="!!error()" role="status">{{ error() ?? notice() ?? '' }}</span>
+        <span class="update-msg" [class.err]="!!error() && !firstLoadFailed()" role="status">{{ (firstLoadFailed() ? null : error()) ?? notice() ?? '' }}</span>
       </div>
 
-      @if (total() === 0) {
+      @if (firstLoadFailed()) {
+        <!-- UX-034: kam schon der erste Abruf nicht, stand „Lade …" neben „Fehler 500." — ohne nächsten Schritt. -->
+        <section class="gate">
+          <h2>Vereinspartien nicht geladen</h2>
+          <p>{{ error() }}</p>
+          <div class="actions"><button type="button" class="btn-sec" (click)="search(query())">Erneut versuchen</button></div>
+        </section>
+      } @else if (total() === 0) {
         <section class="empty">
           <h2>{{ query() ? 'Nichts gefunden' : 'Noch keine Vereinspartien' }}</h2>
           @if (!query() && canContribute) {
@@ -184,6 +191,8 @@ export class ClubGamesPageComponent implements OnInit {
   readonly viewing = signal<{ id: number; game: ClubGameDetail | null; error: string | null } | null>(null);
   /** Rückmeldung der Formular-Korrektur („übernommen"), per Router-Zustand mitgebracht. */
   readonly notice = signal<string | null>((history.state as { msg?: string } | null)?.msg ?? null);
+  /** Schon der erste Abruf kam nicht — dann gibt es keine Liste, nur die Fehlerkarte mit „Erneut versuchen". */
+  readonly firstLoadFailed = computed(() => this.total() === null && !!this.error());
   private page = 1;
   private seq = 0;
 
@@ -367,11 +376,7 @@ export class ClubGamesPageComponent implements OnInit {
   }
 
   private errorText(err: unknown): string {
-    if (err instanceof HttpErrorResponse) {
-      if (err.status === 403) return 'Die Vereinspartien sind für dein Konto nicht freigeschaltet.';
-      if (err.status === 0) return 'Der Server ist gerade nicht erreichbar.';
-      return `Fehler ${err.status}.`;
-    }
-    return String(err);
+    if (err instanceof HttpErrorResponse && err.status === 403) return 'Die Vereinspartien sind für dein Konto nicht freigeschaltet.';
+    return loadErrorText(err);
   }
 }

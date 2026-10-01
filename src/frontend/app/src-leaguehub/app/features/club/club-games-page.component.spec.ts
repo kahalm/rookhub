@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
@@ -140,6 +140,30 @@ describe('ClubGamesPageComponent', () => {
     fixture.detectChanges();
     expect(api.list).toHaveBeenCalledWith(null, 'Hengl', 1);
     expect(el.textContent).toContain('Nichts gefunden');
+  }));
+
+  // UX-034 (b): früher „Lade …" neben „Fehler 500." und kein Weg weiter.
+  it('erster Abruf scheitert: kein „Lade …", sondern Fehlerkarte mit „Erneut versuchen"', fakeAsync(() => {
+    api.list.and.returnValues(
+      Promise.reject(new HttpErrorResponse({ status: 500 })),
+      Promise.resolve({ total: 1, page: 1, pageSize: 50, items: [G(1)] }),
+    );
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('Lade …');
+    expect(el.textContent).not.toContain('Fehler 500.');
+    const gate = el.querySelector('section.gate')!;
+    expect(gate.textContent).toContain('Vereinspartien nicht geladen');
+    expect(gate.textContent).toContain('Der Server hatte ein Problem (500)');
+    expect(el.querySelector('.stand .update-msg')?.textContent?.trim()).toBe('');   // nicht doppelt
+    (gate.querySelector('button') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.list).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('section.gate')).toBeNull();
+    expect(el.querySelectorAll('tbody tr').length).toBe(1);
+    expect(el.textContent).toContain('1 Partie');
   }));
 
   it('ohne Freischaltung kein Abruf', () => {

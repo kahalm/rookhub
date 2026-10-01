@@ -63,6 +63,23 @@ export function uploadErrorText(err: unknown): string {
   return `Hochladen hat nicht geklappt${e ? ` (HTTP ${e.status})` : ''}.`;
 }
 
+/** Geht von selbst vorbei (Neustart, Funkloch, Proxy ohne API) — nur dann lohnt stilles Nachfragen (UX-034). */
+export function isTransientError(err: unknown): boolean {
+  const s = err instanceof HttpErrorResponse ? err.status : -1;
+  return s === 0 || s === 502 || s === 503 || s === 504;
+}
+
+/**
+ * Ein Abruf kam nicht durch — Klartext für alle LeagueHub-Seiten statt „Fehler 500." (UX-034). Den nächsten Schritt
+ * („Erneut versuchen", Rückweg) setzt die Seite dazu; ein 403 erklärt jede Seite selbst.
+ */
+export function loadErrorText(err: unknown): string {
+  if (!(err instanceof HttpErrorResponse)) return 'Beim Laden ist etwas schiefgegangen.';
+  if (isTransientError(err)) return 'Der Server ist gerade nicht erreichbar.';
+  if (err.status === 429) return 'Gerade kamen zu viele Anfragen – bitte in einer Minute noch einmal versuchen.';
+  return `Der Server hatte ein Problem (${err.status}). Bitte gleich noch einmal versuchen.`;
+}
+
 /** Wie weit ist eine Einlesung? */
 export function scanStateText(s: ScoresheetScan): string {
   switch (s.status) {

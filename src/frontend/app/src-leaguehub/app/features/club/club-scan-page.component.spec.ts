@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks, tick } from '@an
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { ClubMatch, LeagueScanState } from '../../core/club.models';
@@ -251,5 +252,49 @@ describe('ClubScanPageComponent', () => {
     const back = (fixture.nativeElement as HTMLElement).querySelector('.ok-text a') as HTMLAnchorElement;
     expect(back.getAttribute('href')).toContain('/s/TOK/hochladen');                      // zurück auf die Hochladeseite des Links
     tick(1000);
+  }));
+
+  // UX-034 (a): früher bei JEDEM Fehler außer 404 still alle 3 s nachfragen und „Lade …" — ohne Meldung, ohne Rückweg.
+  it('Serverfehler (500): gleich Klartext mit „Neu laden" und „← Deine Formulare", kein stilles Nachfragen', fakeAsync(() => {
+    api.scan.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('Lade …');
+    const gate = el.querySelector('section.gate')!;
+    expect(gate.textContent).toContain('Das Formular lässt sich gerade nicht laden');
+    expect(gate.textContent).toContain('Der Server hatte ein Problem (500)');
+    expect(gate.querySelector('a')?.getAttribute('href')).toBe('/verein/neu?art=formular');
+    tick(9000);
+    flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledTimes(1);
+
+    api.scan.and.resolveTo(structuredClone(STATE));
+    (gate.querySelector('button') as HTMLButtonElement).click();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.scan).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('section.gate')).toBeNull();
+    expect(el.textContent).toContain('Partieformular prüfen');
+  }));
+
+  it('vorübergehend nicht erreichbar: nach drei Fehlversuchen ein Hinweis, das Nachfragen läuft weiter und heilt', fakeAsync(() => {
+    api.scan.and.rejectWith(new HttpErrorResponse({ status: 502 }));
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('section.gate')).toBeNull();          // ein Aussetzer bleibt still
+    tick(3000); flushMicrotasks();
+    tick(3000); flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.scan).toHaveBeenCalledTimes(3);
+    expect(el.querySelector('section.gate')?.textContent).toContain('nicht erreichbar');
+    expect(el.querySelector('section.gate')?.textContent).toContain('im Hintergrund weiter');
+
+    api.scan.and.resolveTo(structuredClone(STATE));
+    tick(3000); flushMicrotasks();
+    fixture.detectChanges();
+    expect(el.querySelector('section.gate')).toBeNull();
+    expect(el.textContent).toContain('Partieformular prüfen');
   }));
 });
