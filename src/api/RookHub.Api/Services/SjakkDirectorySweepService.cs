@@ -240,6 +240,8 @@ public class SjakkDirectorySweepService
 
         var locationChanged = entry.LocationText != location;
         entry.LocationText = ExternalDirectorySource.Truncate(location, 300);
+        // Der Ort gehoert zum Gruppenschluessel — ApplyClassification lief schon vor dem Abruf.
+        TournamentDirectoryService.ApplyGrouping(entry);
 
         if (locationChanged || entry.Lat is null)
         {

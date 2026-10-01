@@ -173,6 +173,23 @@ public class ChessScotlandDirectorySweepServiceTests : IDisposable
         Assert.Equal(55.4586, entry.Lat!.Value, 3);
     }
 
+    /// <summary>
+    /// Der Spielort kommt hier erst von der Detailseite — NACH der Klassifizierung. Der
+    /// Gruppenschluessel muss ihn trotzdem enthalten, sonst gruppierte der erste Lauf anders als
+    /// der naechste.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_DetailVenue_IsPartOfTheGroupKey()
+    {
+        await CreateService($"[{Row("Ayr Congress 2026")}]",
+            Detail("Dalblair Road, Ayr. KA7 1UG")).RunAsync();
+
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Equal("Dalblair Road, Ayr. KA7 1UG", entry.LocationText);
+        Assert.NotNull(entry.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(entry), entry.GroupKey);
+    }
+
     [Fact]
     public async Task RunAsync_LeavesAManualCoordinateAlone()
     {

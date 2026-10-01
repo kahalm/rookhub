@@ -577,6 +577,13 @@ public static class ExternalDirectorySource
     /// Publikum und Format aus dem Namen ableiten — dieselbe Ableitung wie im chess-results-Sweep.
     /// Die Turnierart (<see cref="TournamentKind"/>) bleibt bewusst unberuehrt: keine der
     /// Zusatzquellen sagt etwas darueber, und Raten waere schlechter als Schweigen.
+    ///
+    /// <para>Setzt auch Basisname und Gruppenschluessel neu
+    /// (<see cref="TournamentDirectoryService.ApplyGrouping"/>), deshalb erst NACH Name, Termin und
+    /// Ort aufrufen. Vorher pflegten nur chess-results und FIDE den Schluessel: ein Verbandseintrag
+    /// stand bis zum naechsten API-Neustart ungruppiert und danach mit einem Schluessel aus dem
+    /// damaligen Termin/Ort, den spaetere Laeufe nicht mehr nachzogen
+    /// (<see cref="TournamentGroupingBackfillService"/> fuellt nur leere).</para>
     /// </summary>
     public static void ApplyClassification(TournamentDirectoryEntry entry)
     {
@@ -584,6 +591,7 @@ public static class ExternalDirectorySource
         entry.Gender = TournamentClassifier.GenderOf(entry.Name);
         entry.IsLeague = TournamentClassifier.LooksLikeLeague(
             entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
+        TournamentDirectoryService.ApplyGrouping(entry);
     }
 
     public static string? Truncate(string? value, int max) =>

@@ -168,6 +168,22 @@ public class SjakkDirectorySweepServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Der Ort kommt erst von der Detailseite — NACH der Klassifizierung. Der Gruppenschluessel
+    /// muss ihn trotzdem enthalten, sonst gruppierte der erste Lauf anders als der naechste.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_DetailVenue_IsPartOfTheGroupKey()
+    {
+        await CreateService($"[{Row("Fagernes Autumn Blitz 2026", "fagernes-autumn-blitz-2026")}]",
+            Detail(venue: "Scandic Valdres Hotell Fagernes", organizer: null)).RunAsync();
+
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Equal("Scandic Valdres Hotell Fagernes", entry.LocationText);
+        Assert.NotNull(entry.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(entry), entry.GroupKey);
+    }
+
+    /// <summary>
     /// Der HAEUFIGERE Fall (52 von 80): kein Spielort, aber ein Verein. Ein norwegischer
     /// Vereinsname traegt fast immer seinen Ort — aber er ist eine Ableitung, kein Spielort.
     /// <b>Ohne diesen zweiten Weg haetten vier statt 27 Eintraege einen Pin.</b>

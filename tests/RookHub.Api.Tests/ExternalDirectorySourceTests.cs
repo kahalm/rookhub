@@ -270,4 +270,37 @@ public class ExternalDirectorySourceTests : IDisposable
         using var check = Create();
         Assert.Single(check.TournamentDirectorySources.ToList());
     }
+
+    /// <summary>
+    /// Die Verbandsquellen pflegen den Gruppenschluessel genau wie chess-results und FIDE —
+    /// sonst stand ein Verbandseintrag bis zum naechsten API-Neustart ungruppiert und danach mit
+    /// einem Schluessel aus dem damaligen Termin, den spaetere Laeufe nicht mehr nachzogen.
+    /// </summary>
+    [Fact]
+    public void ApplyClassification_SetsTheGroupKey_AndFollowsADateChange()
+    {
+        TournamentDirectoryEntry Entry(string name) => new()
+        {
+            PublicId = name, Name = name, Federation = "POL",
+            StartDate = new DateOnly(2026, 11, 7), EndDate = new DateOnly(2026, 11, 8),
+            LocationText = "Kraków",
+        };
+        var a = Entry("Turniej X grupa A");
+        var b = Entry("Turniej X grupa B");
+
+        ExternalDirectorySource.ApplyClassification(a);
+        ExternalDirectorySource.ApplyClassification(b);
+
+        Assert.Equal("Turniej X", a.BaseName);
+        Assert.NotNull(a.GroupKey);
+        Assert.Equal(a.GroupKey, b.GroupKey);          // zwei Gruppen EINES Turniers
+
+        // Gruppe B wird verlegt: der naechste Lauf zieht den Schluessel nach.
+        b.StartDate = new DateOnly(2026, 11, 14);
+        b.EndDate = new DateOnly(2026, 11, 15);
+        ExternalDirectorySource.ApplyClassification(b);
+
+        Assert.NotEqual(a.GroupKey, b.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(b), b.GroupKey);
+    }
 }
