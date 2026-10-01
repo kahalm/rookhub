@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
+import { directoryCalendarEvent } from './directory-calendar-event';
 import { TournamentListService } from '../../core/tournament-list.service';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
@@ -402,34 +403,9 @@ export class TournamentCardComponent {
 
   /**
    * Der Termin, wie er in den Kalender geht — `null` ohne Startdatum (dann fehlt der Knopf).
-   *
-   * <p>Oeffentlich, weil hier die ganze Abbildung Turnier → Termin steckt: sie laesst sich so
-   * pruefen, ohne einen Download auszuloesen.</p>
+   * Dieselbe Abbildung wie auf der Detailseite ({@link directoryCalendarEvent}).
    */
   calendarEvent(): CalendarEvent | null {
-    const entry = this.entry;
-    if (!entry.startDate) return null;
-
-    const lines = [
-      entry.location,
-      entry.timeControl,
-      entry.rounds ? this.translate.instant('tournamentDirectory.detail.roundsCount', { count: entry.rounds }) : null,
-      entry.organizer,
-      entry.chessResultsId === null
-        ? null
-        : `https://chess-results.com/tnr${entry.chessResultsId}.aspx?lan=1`,
-    ].filter((l): l is string => !!l);
-
-    return {
-      // Die Kennung ist die IDENTITAET des Turniers, nicht die chess-results-Nummer: dieselbe
-      // Kennung aktualisiert den Termin im Kalender des Nutzers statt ihn zu verdoppeln, und ein
-      // FIDE-Turnier hat keine chess-results-Nummer.
-      uid: `directory-${entry.id}@rookhub`,
-      title: entry.name,
-      start: entry.startDate,
-      end: entry.endDate ?? entry.startDate,
-      location: entry.location ?? undefined,
-      description: lines.join('\n'),
-    };
+    return directoryCalendarEvent(this.entry, this.translate);
   }
 }

@@ -5,6 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, TranslationObject, provideTranslateService } from '@ngx-translate/core';
 import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry } from './tournament-directory.model';
+import { directoryCalendarEvent } from './directory-calendar-event';
 
 function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
   return {
@@ -322,5 +323,16 @@ describe('TournamentCardComponent', () => {
     const event = component.calendarEvent()!;
     expect(event.uid).toBe('directory-f14805@rookhub');
     expect(event.description).not.toContain('chess-results.com');
+  });
+
+  /** Dieselbe Abbildung wie die Detailseite — gleiche Kennung, keine rohen Uebersetzungsschluessel (F6-009). */
+  it('baut den Termin wie die Detailseite: Kennung directory-<id>, übersetzte Runden', () => {
+    setup({ organizer: 'SK Braunau' });
+
+    const event = component.calendarEvent()!;
+    expect(event.uid).toBe('directory-1457129@rookhub');
+    expect(event.url).toBe('https://chess-results.com/tnr1457129.aspx?lan=1');
+    expect(event).toEqual(directoryCalendarEvent(entry({ organizer: 'SK Braunau' }), TestBed.inject(TranslateService))!);
+    expect(event.description).not.toContain('roundsCount');
   });
 });

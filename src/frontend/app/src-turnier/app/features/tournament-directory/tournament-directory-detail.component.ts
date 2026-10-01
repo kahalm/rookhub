@@ -19,6 +19,7 @@ import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entr
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
 import { DirectoryEntry } from './tournament-directory.model';
+import { directoryCalendarEvent, directoryChessResultsUrl } from './directory-calendar-event';
 
 /**
  * Ein Turnier aus dem Verzeichnis als eigene Seite.
@@ -139,7 +140,7 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   }
 
   chessResultsUrl(id: string): string {
-    return `https://chess-results.com/tnr${id}.aspx?lan=1`;
+    return directoryChessResultsUrl(id);
   }
 
   /**
@@ -163,34 +164,12 @@ export class TournamentDirectoryDetailComponent implements OnInit {
 
   /**
    * Der Termin, wie er in den Kalender geht — `null`, solange kein Startdatum bekannt ist (ohne
-   * Datum gibt es keinen Termin, und der Knopf ist dann auch nicht zu sehen).
-   *
-   * <p>Oeffentlich, weil hier die ganze Abbildung Turnier → Termin steckt: sie laesst sich so
-   * pruefen, ohne einen Download auszuloesen.</p>
+   * Datum gibt es keinen Termin, und der Knopf ist dann auch nicht zu sehen). Dieselbe Abbildung
+   * wie auf der Karte ({@link directoryCalendarEvent}) — gleiche Kennung, gleicher Inhalt.
    */
   calendarEvent(): CalendarEvent | null {
     const e = this.entry();
-    if (!e?.startDate) return null;
-
-    // Nur, was auch stimmt: chess-results liefert Rundenzahl und Gemeldete nicht immer.
-    const facts = [
-      e.timeControl,
-      e.rounds ? this.translate.instant('tournamentDirectory.detail.rounds') + ': ' + e.rounds : null,
-      e.playerCount ? this.translate.instant('tournamentDirectory.players', { count: e.playerCount }) : null,
-      e.organizer ? this.translate.instant('tournamentDirectory.detail.organizer') + ': ' + e.organizer : null,
-      e.chessResultsId === null ? null : this.chessResultsUrl(e.chessResultsId),
-    ].filter(Boolean);
-
-    return {
-      // Dieselbe Kennung aktualisiert den Termin spaeter, statt ihn zu verdoppeln.
-      uid: `chess-results-${e.id}@rookhub`,
-      title: e.name,
-      start: e.startDate,
-      end: e.endDate,
-      location: e.location,
-      description: facts.join('\n'),
-      url: e.chessResultsId === null ? null : this.chessResultsUrl(e.chessResultsId),
-    };
+    return e ? directoryCalendarEvent(e, this.translate) : null;
   }
 
   onTilesFailed(): void {

@@ -258,7 +258,8 @@ describe('TournamentDirectoryDetailComponent', () => {
 
     const event = component.calendarEvent()!;
 
-    expect(event.uid).toBe('chess-results-1457129@rookhub');
+    // Dieselbe Kennung wie auf der Karte — sonst landet derselbe Termin doppelt im Kalender (F6-009).
+    expect(event.uid).toBe('directory-1457129@rookhub');
     expect(event.title).toBe('Open Braunau 2026');
     expect(event.start).toBe('2026-12-18');
     expect(event.end).toBe('2026-12-20');
