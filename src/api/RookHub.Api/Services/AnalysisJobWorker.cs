@@ -289,6 +289,14 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
             // Punktepartie ohne eigene Engine ist das nicht der Auftraggeber, sondern das Haus-Konto.
             // Eine Engine „RookHub direkt" (rhe_) braucht keinen Token, eine Lichess-Engine (eei_) schon.
             var engineOwnerId = job.EngineOwnerUserId ?? job.UserId;
+            // Fremde Rechenzeit nur, solange die Freigabe gilt (A4-004): schon eingereihte Auftraege fremder Nutzer
+            // liefen sonst nach dem Zuruecknehmen der Haus-Engine (oder dem Verlust der Admin-Rolle) weiter.
+            if (job.EngineOwnerUserId is int houseOwner
+                && !await EngineOwnerResolver.IsHouseEngineSharedAsync(db, houseOwner, ct))
+            {
+                await FailAsync(db, job, EngineOwnerResolver.HouseEngineWithdrawnError);
+                return;
+            }
             var registry = scope.ServiceProvider.GetRequiredService<EngineRegistry>();
             EngineLookup lookup;
             try { lookup = await registry.ResolveAsync(engineOwnerId, job.EngineId, ct); }

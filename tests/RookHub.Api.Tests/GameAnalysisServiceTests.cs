@@ -1365,4 +1365,80 @@ public class GameAnalysisServiceTests : IDisposable
         var result = "{\"depth\":20,\"pvs\":[{\"depth\":20,\"cp\":" + cp + ",\"moves\":[\"" + uci + "\"]}]}";
         return BrokerCandidates.ToJson(BrokerCandidates.Parse(result, fen)!);
     }
+
+    // ── Haus-Engine: Freigabe gilt auch fuer schon angenommene Partien (Codereview 2026-09-29, A4-004) ─────────────
+
+    /// <summary>Eine Punktepartie auf der Haus-Engine des Admins anlegen; liefert Admin und Analyse-Id.</summary>
+    private async Task<(AppUser Admin, int AnalysisId, int UserId)> GuessOnHouseEngineAsync(
+        GameAnalysisOrigin origin = GameAnalysisOrigin.Guess)
+    {
+        var admin = await CreateUserAsync("admin", admin: true);
+        await GiveEngineAsync(admin, house: true);
+        var user = await CreateUserAsync("u");
+        var created = await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = Game }, origin: origin);
+        Assert.Null(created.Reason);
+        return (admin, created.Analysis!.Id, user.Id);
+    }
+
+    [Fact]
+    public async Task HausEngineZurueckgenommen_fuettertNichtNach_diePartieScheitertMitGrund()
+    {
+        var (admin, id, _) = await GuessOnHouseEngineAsync();
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == admin.Id);
+        cred.ShareAsHouseEngine = false;   // der Admin nimmt das Haekchen weg
+        // Ein Auftrag scheitert — bisher reihte die Pumpe die Stellung sofort wieder auf der Haus-Engine ein.
+        var failed = (await OpenJobsOfAsync(id)).First();
+        failed.Status = AnalysisJobStatus.Failed;
+        await _db.SaveChangesAsync();
+        var jobsBefore = await _db.AnalysisJobs.CountAsync();
+
+        await _svc.PumpOneAsync(id);
+
+        _db.ChangeTracker.Clear();
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Failed, head.Status);
+        Assert.Equal(EngineOwnerResolver.HouseEngineWithdrawnError, head.LastError);
+        Assert.Equal(jobsBefore, await _db.AnalysisJobs.CountAsync());   // kein neuer Auftrag auf der Maschine
+    }
+
+    [Fact]
+    public async Task HausEngine_AdminRolleWeg_NeustartReihtNichtsMehrEin()
+    {
+        var (admin, id, userId) = await GuessOnHouseEngineAsync();
+        var adminRow = await _db.AppUsers.FirstAsync(u => u.Id == admin.Id);
+        adminRow.IsAdmin = false;          // die Rolle ist weg, das Haekchen steht noch
+        await _db.SaveChangesAsync();
+
+        var after = await _svc.RestartAsync(userId, id);
+
+        Assert.NotNull(after);
+        Assert.Equal("failed", after!.Status);
+        Assert.Equal(EngineOwnerResolver.HouseEngineWithdrawnError, after.LastError);
+        Assert.Empty(await _db.AnalysisJobs.ToListAsync());   // die alten verworfen, keine neuen angelegt
+    }
+
+    [Fact]
+    public async Task HausEngineZurueckgenommen_keineVertiefung_dasErsteErgebnisBleibt()
+    {
+        var (admin, id, _) = await GuessOnHouseEngineAsync(GameAnalysisOrigin.SavedGame);
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);                             // erster Durchgang fertig
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+
+        var cred = await _db.LichessEngineCredentials.FirstAsync(c => c.UserId == admin.Id);
+        cred.ShareAsHouseEngine = false;
+        await _db.SaveChangesAsync();
+
+        await _svc.PumpOneAsync(id);   // hier legte die Vertiefung bisher Tiefe-30-Auftraege auf die Haus-Engine
+        await _svc.PumpOneAsync(id);
+
+        _db.ChangeTracker.Clear();
+        Assert.Empty(await _db.AnalysisJobs.ToListAsync());
+        var head = await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id);
+        Assert.Equal(GameAnalysisStatus.Done, head.Status);     // die fertige Analyse bleibt brauchbar
+        Assert.NotNull(head.RefinedAt);                          // und haengt nicht ewig auf „wird vertieft"
+        var positions = await _db.GameAnalysisPositions.AsNoTracking().Where(p => p.GameAnalysisId == id).ToListAsync();
+        Assert.All(positions, p => { Assert.True(p.Refined); Assert.Equal(20, p.Depth); });
+    }
 }

@@ -11,6 +11,9 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class EngineOwnerResolver
 {
+    /// <summary>Fehlertext an Auftrag und Analyse, wenn die Haus-Engine nicht mehr freigegeben ist (A4-004).</summary>
+    public const string HouseEngineWithdrawnError = "Haus-Engine nicht mehr freigegeben";
+
     public static async Task<int?> ResolveAsync(AppDbContext db, int userId, CancellationToken ct)
     {
         var own = await db.LichessEngineCredentials.AsNoTracking()
@@ -25,5 +28,20 @@ public static class EngineOwnerResolver
             .OrderBy(c => c.UserId)
             .ToListAsync(ct);
         return house.FirstOrDefault(c => c.BackgroundEngines.Count > 0)?.UserId;
+    }
+
+    /// <summary>
+    /// Gilt die Freigabe der Haus-Engine von <paramref name="ownerUserId"/> NOCH? Dieselbe Regel wie in
+    /// <see cref="ResolveAsync"/> (Haekchen gesetzt, Admin, mindestens eine Hintergrund-Engine) — aber fuer die Arbeit,
+    /// die schon angenommen ist: <see cref="ResolveAsync"/> prueft nur beim Einwurf, danach stand der Besitzer fest am
+    /// Auftrag und an der Analyse. Wer das Haekchen wegnahm oder die Admin-Rolle verlor, rechnete trotzdem weiter fuer
+    /// fremde Partien (Nachfuettern, Vertiefung, Neustart, Worker — Codereview 2026-09-29, A4-004).
+    /// </summary>
+    public static async Task<bool> IsHouseEngineSharedAsync(AppDbContext db, int ownerUserId, CancellationToken ct)
+    {
+        var cred = await db.LichessEngineCredentials.AsNoTracking()
+            .Where(c => c.UserId == ownerUserId && c.ShareAsHouseEngine && c.BackgroundEngineIds != null && c.User!.IsAdmin)
+            .FirstOrDefaultAsync(ct);
+        return cred is not null && cred.BackgroundEngines.Count > 0;
     }
 }

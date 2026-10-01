@@ -944,6 +944,14 @@ public class GameAnalysisService
         var open = analysis.Positions.Count(p => !p.Refined && p.AnalysisJobId != null);
         var room = GameAnalysisTurnRules.RefineJobCap(await EngineSlotsAsync(analysis, ct)) - open;
         if (room <= 0) return false;
+        if (await HouseEngineWithdrawnAsync(analysis, ct))
+        {
+            // Die Vertiefung ist Zugabe: ohne Freigabe bleibt das Ergebnis des ersten Durchgangs stehen — wie bei einer
+            // Stellung, die die Engine nicht annimmt (unten). Noch offene Auftraege laesst der Worker scheitern.
+            var rest = analysis.Positions.Where(p => !p.Refined && p.AnalysisJobId == null).ToList();
+            foreach (var pos in rest) pos.Refined = true;
+            return rest.Count > 0;
+        }
         var suspect = GameAnalysisTurnRules.SuspectPlies(analysis.Positions, analysis.PlyCount);
         var next = analysis.Positions
             .Where(p => !p.Refined && p.AnalysisJobId == null)
@@ -1002,6 +1010,12 @@ public class GameAnalysisService
             .Take(room)
             .ToList();
         if (next.Count == 0) return false;
+        if (await HouseEngineWithdrawnAsync(analysis, ct))
+        {
+            analysis.Status = GameAnalysisStatus.Failed;
+            analysis.LastError = EngineOwnerResolver.HouseEngineWithdrawnError;
+            return true;
+        }
 
         var changed = false;
         foreach (var pos in next)
@@ -1044,6 +1058,14 @@ public class GameAnalysisService
         }
         return changed;
     }
+
+    /// <summary>Rechnet diese Analyse auf einer FREMDEN Haus-Engine, deren Freigabe inzwischen weg ist (Haekchen
+    /// zurueckgenommen, Admin-Rolle verloren, Hintergrund-Liste leer)? Geprueft wird vor JEDEM Nachlegen, nicht nur beim
+    /// Einwurf — sonst fuetterten Pumpe, Vertiefung und Neustart die Maschine weiter (Codereview 2026-09-29, A4-004).
+    /// Eigene Engine und Stapel (<see cref="GameAnalysis.EngineOwnerUserId"/> = <c>null</c>) fragen nichts ab.</summary>
+    private async Task<bool> HouseEngineWithdrawnAsync(GameAnalysis analysis, CancellationToken ct)
+        => analysis.EngineOwnerUserId is int owner
+           && !await EngineOwnerResolver.IsHouseEngineSharedAsync(_db, owner, ct);
 
     private static string JobTitle(GameAnalysis analysis, GameAnalysisPosition pos)
     {

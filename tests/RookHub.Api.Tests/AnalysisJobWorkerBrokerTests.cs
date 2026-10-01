@@ -251,6 +251,58 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         Assert.Contains("andere Engine", job.LastError);
     }
 
+    // ── Haus-Engine (A4-004): fremde Auftraege rechnen nur, solange die Freigabe gilt ──────────────────────────────
+
+    /// <summary>Der Admin aus <see cref="SetupAsync"/> teilt seine Engine als Haus-Engine; ein Gast reiht einen Auftrag
+    /// darauf ein. Danach setzt <paramref name="afterwards"/> die Freigabe (oder nimmt sie zurück).</summary>
+    private async Task<int> GuestJobOnHouseEngineAsync(Action<AppUser, LichessEngineCredential> afterwards)
+    {
+        var (adminId, _) = await SetupAsync();
+        using var scope = _sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var admin = await db.AppUsers.SingleAsync(u => u.Id == adminId);
+        var cred = await db.LichessEngineCredentials.SingleAsync(c => c.UserId == adminId);
+        admin.IsAdmin = true;
+        cred.ShareAsHouseEngine = true;
+        var guest = new AppUser { Username = "gast", PasswordHash = "x" };
+        db.AppUsers.Add(guest);
+        await db.SaveChangesAsync();
+        var dto = await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().CreateAsync(guest.Id,
+            new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = 12, MultiPv = 2 }, remember: false, engineOwnerUserId: adminId);
+        afterwards(admin, cred);
+        await db.SaveChangesAsync();
+        return dto.Id;
+    }
+
+    [Theory]
+    [InlineData(false, true)]    // Haekchen weg
+    [InlineData(true, false)]    // Admin-Rolle weg, Haekchen steht noch
+    public async Task HouseEngineWithdrawn_QueuedGuestJobFailsWithoutReachingTheBroker(bool share, bool isAdmin)
+    {
+        var jobId = await GuestJobOnHouseEngineAsync((admin, cred) => { admin.IsAdmin = isAdmin; cred.ShareAsHouseEngine = share; });
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Failed or AnalysisJobStatus.Done);
+        Assert.Equal(AnalysisJobStatus.Failed, job.Status);
+        Assert.Equal(EngineOwnerResolver.HouseEngineWithdrawnError, job.LastError);
+        Assert.Empty(_broker.Calls);
+    }
+
+    [Fact]
+    public async Task HouseEngineStillShared_GuestJobRunsOnIt()
+    {
+        var jobId = await GuestJobOnHouseEngineAsync((_, _) => { });
+        string engineId;
+        using (var scope = _sp.CreateScope())
+            engineId = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().AnalysisJobs.SingleAsync(j => j.Id == jobId)).EngineId;
+        _broker.Answers[engineId] = (200,
+            "{\"time\":9,\"depth\":12,\"nodes\":90,\"pvs\":[{\"moves\":[\"e7e5\"],\"cp\":-25,\"depth\":12}],\"bestmove\":\"e7e5\"}\n");
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Failed or AnalysisJobStatus.Done);
+        Assert.Equal(AnalysisJobStatus.Done, job.Status);
+    }
+
     [Fact]
     public async Task UnknownLocalEngine_FailsWithASourceNeutralMessage()
     {
