@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Constraints;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -49,12 +53,13 @@ public class BotStatsControllerTests : IDisposable
         return u;
     }
 
-    private BotStatsController BuildController(string? secret, string? signatureHeader, string? timestampHeader = null)
+    private BotStatsController BuildController(string? secret, string? signatureHeader, string? timestampHeader = null,
+        ILogger<BotStatsController>? logger = null)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { ["SchachBot:StatsSecret"] = secret })
             .Build();
-        var controller = new BotStatsController(_service, config, NullLogger<BotStatsController>.Instance)
+        var controller = new BotStatsController(_service, config, logger ?? NullLogger<BotStatsController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -285,6 +290,45 @@ public class BotStatsControllerTests : IDisposable
         var result = await controller.GetPlayerProgress("12345");
 
         Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetPlayerProgress_InvalidSignature_LogsNoWarning()
+    {
+        // A2-013: anonym erreichbar, 30 Anfragen je Minute und IP — eine Warning je Fehlversuch genügte für einen
+        // warn_spike im log-watcher. Der Fehlversuch bleibt sichtbar, aber auf Information.
+        var log = new CapturingLogger<BotStatsController>();
+        var controller = BuildController(Secret, "sha256=deadbeef", logger: log);
+
+        var result = await controller.GetPlayerProgress("12345");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+        Assert.DoesNotContain(log.Events, e => e.Level >= LogLevel.Warning);
+        var entry = Assert.Single(log.Events);
+        Assert.Equal(LogLevel.Information, entry.Level);
+        Assert.Equal("12345", entry.State["DiscordId"]);
+    }
+
+    [Theory]
+    [InlineData("12345", true)]
+    [InlineData("123456789012345678", true)]          // echte Snowflake-Länge
+    [InlineData("12345678901234567890", true)]
+    [InlineData("1234", false)]
+    [InlineData("123456789012345678901", false)]       // 21 Ziffern
+    [InlineData("<script>alert(1)</script>", false)]
+    [InlineData("12345 Achtung: Einbruch!", false)]
+    [InlineData("", false)]
+    public void PlayerProgressRoute_AcceptsOnlyDiscordIds(string segment, bool matches)
+    {
+        // A2-013: ein freies Routen-Segment landete als angreiferbestimmter Text im zentralen Log. Geprüft mit
+        // dem echten Routing-Parser, damit auch das Escaping der Klammern im Template stimmt.
+        var pattern = RoutePatternFactory.Parse(BotStatsController.RouteTemplate);
+        var policy = Assert.Single(pattern.ParameterPolicies["discordId"]);
+        Assert.StartsWith("regex(", policy.Content);
+        var constraint = new RegexInlineRouteConstraint(policy.Content!["regex(".Length..^1]);
+
+        var values = new RouteValueDictionary { ["discordId"] = segment };
+        Assert.Equal(matches, constraint.Match(null, null, "discordId", values, RouteDirection.IncomingRequest));
     }
 
     [Fact]

@@ -34,7 +34,7 @@ public class EndpointAuthInventoryTests
         "GET /api/book-puzzles/{id:int}/results",                    // BookPuzzleController.GetResults
         "GET /api/book-puzzles/{id:int}/track-counts",               // BookPuzzleController.TrackCounts
         "GET /api/book-puzzles/{id:int}",                            // BookPuzzleController.GetById
-        "GET /api/bot/player-progress/{discordId}",                  // BotStatsController.GetPlayerProgress
+        @"GET /api/bot/player-progress/{discordId:regex(^\d{{5,20}}$)}", // BotStatsController.GetPlayerProgress (nur Ziffern, A2-013)
         "POST /api/bot/heartbeat",                                   // BotHeartbeatController.Post (Bot-Signatur IST der Nachweis; ohne sie 401 und keine Heartbeat-Zeile)
         "GET /api/calc-editions/{bookId:int}",                       // CalcSeriesController.ListVisible (freigegebene Ausgaben, Phase 1)
         "GET /api/calculations/books/{bookId}/public",                // CalculationController.GetPublicBook

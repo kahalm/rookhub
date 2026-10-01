@@ -24,6 +24,10 @@ public class BotStatsController : ControllerBase
     /// <summary>Maschinenlesbarer Grund im 404-Body: kein RookHub-Konto mit dieser Discord-ID verknüpft.</summary>
     public const string NotLinkedReason = "not-linked";
 
+    /// <summary>Nur Ziffern (Discord-Snowflake): der Endpunkt ist anonym, und ein freies Segment landete sonst als
+    /// angreiferbestimmter Text im zentralen Log (A2-013).</summary>
+    internal const string RouteTemplate = @"player-progress/{discordId:regex(^\d{{5,20}}$)}";
+
     private readonly BotStatsService _service;
     private readonly IConfiguration _config;
     private readonly ILogger<BotStatsController> _logger;
@@ -43,8 +47,9 @@ public class BotStatsController : ControllerBase
     /// „der Server kann gerade niemanden beurteilen". Vorher war beides 404 — ein leeres Secret ließ den Bot
     /// JEDEN verknüpften Abonnenten als unverknüpft behandeln (Registrier-DM statt Motivation, am Ende Abmeldung).
     /// Der Bot wertet 503 schon heute als „Fortschritt nicht verfügbar" (nichts senden, später erneut).
+    /// Die Route nimmt nur eine Discord-ID (Snowflake, 5–20 Ziffern) an; anderes endet als 404 im Routing.
     /// </summary>
-    [HttpGet("player-progress/{discordId}")]
+    [HttpGet(RouteTemplate)]
     [EnableRateLimiting("anonymous-puzzle")]
     public async Task<ActionResult<BotPlayerProgressDto>> GetPlayerProgress(string discordId)
     {
@@ -58,7 +63,9 @@ public class BotStatsController : ControllerBase
         var timestamp = Request.Headers["X-Bot-Timestamp"].FirstOrDefault();
         if (!VerifySignature(secret, discordId, provided, timestamp))
         {
-            _logger.LogWarning("Bot-Stats: ungültige Signatur für Discord-ID {DiscordId}", discordId);
+            // Information statt Warning: der Endpunkt ist anonym erreichbar, 30 Fehlversuche je Minute und IP
+            // genügten sonst für einen warn_spike im log-watcher — dasselbe Muster, das ClientLog abgestellt hat.
+            _logger.LogInformation("Bot-Stats: ungültige Signatur für Discord-ID {DiscordId}", discordId);
             return Unauthorized();
         }
 
