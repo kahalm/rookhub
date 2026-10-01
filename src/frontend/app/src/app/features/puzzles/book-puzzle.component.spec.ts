@@ -1413,6 +1413,23 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     expect(c.visualizationMode).toBe(0);
   });
 
+  // Codereview UX-045: hinter dem Dialog stand die Grundstellung und „Puzzle wird geladen…", obwohl Titel und
+  // Kommentar schon da waren.
+  it('zeigt hinter dem Dialog schon die Aufgabe (statt Grundstellung) und meldet das Warten auf die Wahl', () => {
+    const c = makeCourse();
+    c.solveMode.defer = true;
+    const AUFGABE = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+    c.setupPuzzle({ ...P, fen: AUFGABE, moves: 'f1b5 a7a6' });
+    expect(c.awaitingSolveMode).toBeTrue();
+    expect(c.boardFen).toBe(AUFGABE);
+    expect(c.orientation).toBe('black');
+    expect(c.setupSolver).not.toHaveBeenCalled();
+
+    c.solveMode.pending('training');
+    expect(c.awaitingSolveMode).toBeFalse();
+    expect(c.setupSolver).toHaveBeenCalled();
+  });
+
   it('Tagespuzzle nutzt den Bereich „daily", das Einzel-Buch-Puzzle „book"', () => {
     const daily = makeSolver();
     daily.dailyDate = '20260808';

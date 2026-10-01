@@ -3536,6 +3536,7 @@
     "switchedTraining": "Training mode",
     "switchedEasy": "Easy mode",
     "switch": "Playing style",
+    "awaitingChoice": "Choose how you want to play — the puzzle starts right after.",
     "scope": {
       "puzzles": "Puzzles",
       "endless": "Endless",

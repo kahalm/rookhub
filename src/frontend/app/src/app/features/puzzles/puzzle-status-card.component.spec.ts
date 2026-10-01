@@ -38,4 +38,21 @@ describe('PuzzleStatusCardComponent', () => {
     fixture.detectChanges();
     expect(card().getAttribute('data-state')).toBe('SOLVED');
   });
+
+  // Codereview UX-045: wartet der Löser nur auf die Spielweise, bittet die Karte um die Wahl statt „lädt…".
+  it('LOADING + awaitingSolveMode: Bitte um die Spielweise statt Lade-Spinner', async () => {
+    const fixture = await setup();
+    fixture.componentRef.setInput('mode', 'book');
+    fixture.componentRef.setInput('state', 'LOADING');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-spinner')).not.toBeNull();
+    expect(el.textContent).toContain('book.status.loading');
+
+    fixture.componentRef.setInput('awaitingSolveMode', true);
+    fixture.detectChanges();
+    expect(el.querySelector('mat-spinner')).toBeNull();
+    expect(el.textContent).toContain('solveMode.awaitingChoice');
+    expect(el.textContent).not.toContain('book.status.loading');
+  });
 });

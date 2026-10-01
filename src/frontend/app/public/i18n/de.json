@@ -3536,6 +3536,7 @@
     "switchedTraining": "Trainingsmodus",
     "switchedEasy": "Einfachmodus",
     "switch": "Spielweise",
+    "awaitingChoice": "Wähle, wie du spielen möchtest — danach startet das Puzzle.",
     "scope": {
       "puzzles": "Puzzles",
       "endless": "Endless",

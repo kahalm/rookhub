@@ -50,6 +50,10 @@ export abstract class BasePuzzleSolver {
 
   /** Gemeinsamer Zustand; Endzustände (SOLVED/FAILED/CORRECT/WRONG/...) setzt die Komponente. */
   state = 'LOADING';
+  /** Die Komponente wartet auf die Spielweise-Wahl (blockierender Dialog vor dem ersten Puzzle eines
+   *  Bereichs): die Aufgabe steht schon auf dem Brett ({@link previewSetup}), aber ohne Uhr und Setup-Zug,
+   *  und die Status-Karte bittet um die Wahl statt „lädt…" zu zeigen. */
+  awaitingSolveMode = false;
 
   onSolutionPath = true;
   alternativeSolve = false;
@@ -295,6 +299,32 @@ export abstract class BasePuzzleSolver {
   }
 
   // ===== Setup =====
+  /**
+   * Zeigt die Stellung, die {@link setupSolver} gleich aufbaut (Vorspiel bis `startPly`, Blickrichtung des
+   * Lösers) — OHNE etwas zu starten: kein Setup-Zug, keine Uhr, keine Zugziele, `state` bleibt. Für die Zeit
+   * hinter dem Spielweise-Dialog ({@link awaitingSolveMode}); setupSolver setzt danach alles neu auf.
+   */
+  protected previewSetup(fen: string, movesStr: string, startPly = 0): void {
+    const moves = movesStr.split(' ');
+    let sp = startPly;   // geklemmt wie in setupSolver
+    if (sp > moves.length - 2) sp = 0;
+    if (sp < -1) sp = -1;
+    try {
+      const chess = new Chess(fen);
+      for (let i = 0; i < sp; i++) applyUci(chess, moves[i]);
+      this.orientation = sp < 0
+        ? (chess.turn() === 'w' ? 'white' : 'black')
+        : (chess.get(moves[sp].substring(0, 2) as Square)?.color === 'w' ? 'black' : 'white');
+      this.boardFen = this.actualFen = chess.fen();
+      this.turnColor = chess.turn() === 'w' ? 'white' : 'black';
+    } catch {
+      this.boardFen = this.actualFen = fen;   // chess.js lehnt die FEN ab: wenigstens die Stellung zeigen
+    }
+    this.lastMove = undefined;
+    this.isCheck = false;
+    this.dests = new Map();
+  }
+
   /**
    * Puzzle aufsetzen. `startPly`: -1 = FEN ist Trainingsstellung (lösen ab moves[0]);
    * 0 = klassisch (moves[0] Setup, lösen ab moves[1]); k = Vorspiel bis moves[k].

@@ -1645,7 +1645,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const scope = this.solveModeScope;
     if (!scope || this.solveModeSuppressed || this.solveModeScopeAsked === scope) return false;
     this.solveModeScopeAsked = scope;
+    // Bis zur Antwort die Aufgabe schon zeigen (ohne Uhr/Setup-Zug) statt Grundstellung + „lädt…".
+    this.awaitingSolveMode = true;
+    this.previewSetup(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
     this.solveMode.ensure(scope, { scopeLabel: this.solveModeLabel }).subscribe(mode => {
+      this.awaitingSolveMode = false;
       this.solveModeChoice = mode;
       // Jetzt mit der gewählten Spielweise aufsetzen (der Guard oben greift nicht mehr).
       this.setupPuzzle(puzzle);

@@ -404,8 +404,13 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
    *  gewählten Spielweise neu aufsetzen (wie im Wochenpost). */
   private askSolveMode(): void {
     if (this.solveModeAskSuppressed) return;
+    // Bis zur Wahl wird ein ankommendes Puzzle nur GEZEIGT, nicht aufgesetzt (loadNext) — sonst liefe die
+    // Uhr hinter dem Dialog und der Gegnerzug wäre schon gespielt. Mit gemerkter Wahl antwortet ensure
+    // synchron, das Flag fällt also sofort wieder.
+    this.awaitingSolveMode = true;
     this.solveMode.ensure(SOLVE_SCOPE, { scopeLabel: this.translate.instant('solveMode.scope.puzzles') })
       .subscribe(mode => {
+        this.awaitingSolveMode = false;
         const vorher = this.visualizationMode;
         this.solveModeChoice = mode;
         this.applySolveModeLevel();
@@ -504,7 +509,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
           if (this.puzzle && this.puzzle.id !== puzzle.id) this.previousPuzzleId = this.puzzle.id;
           this.puzzle = puzzle;
           this.lastShownPuzzle = puzzle;
-          this.setupPuzzle(puzzle);
+          // Spielweise-Dialog noch offen → nur zeigen; askSolveMode setzt nach der Wahl auf.
+          if (this.awaitingSolveMode) this.previewSetup(puzzle.fen, puzzle.moves, 0);
+          else this.setupPuzzle(puzzle);
           this.prefetchNext();
           this.prefetchOfflinePool();
         },

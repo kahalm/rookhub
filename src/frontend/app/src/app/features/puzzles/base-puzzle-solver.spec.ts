@@ -525,3 +525,28 @@ describe('BasePuzzleSolver auf dem gemeinsamen Kern (shared/chess/line-solver)',
     discardPeriodicTasks();
   }));
 });
+
+// Codereview UX-045: Hinter dem Spielweise-Dialog zeigt der Löser die Aufgabe schon, startet aber nichts.
+describe('BasePuzzleSolver previewSetup (Aufgabe zeigen, nichts starten)', () => {
+  it('klassisch (startPly 0): Stellung VOR dem Setup-Zug, Blick des Lösers, keine Zugziele, Zustand bleibt', () => {
+    const s = new TestSolver({} as StockfishService);
+    (s as any).previewSetup(START, 'e2e4 e7e5 g1f3', 0);
+    expect(s.boardFen).toBe(START);
+    expect(s.orientation).toBe('black');      // Weiß spielt den Setup-Zug → Schwarz löst
+    expect(s.dests.size).toBe(0);
+    expect(s.lastMove).toBeUndefined();
+    expect(s.state).toBe('LOADING');
+    expect(s.elapsedSeconds).toBe(0);
+  });
+
+  it('Vorspiel (startPly 2) und Trainingsstellung (startPly -1) wie setupSolver', () => {
+    const s = new TestSolver({} as StockfishService);
+    (s as any).previewSetup(START, 'e2e4 e7e5 g1f3 b8c6', 2);
+    expect(s.boardFen.split(' ')[0]).toBe('rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR');
+    expect(s.orientation).toBe('black');      // g1f3 (Weiß) ist der Setup-Zug
+
+    (s as any).previewSetup(START, 'e2e4 e7e5', -1);
+    expect(s.boardFen).toBe(START);
+    expect(s.orientation).toBe('white');      // FEN ist die Trainingsstellung, Weiß am Zug löst
+  });
+});

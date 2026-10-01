@@ -85,8 +85,13 @@ const CK = {
           @switch (state) {
             @case ('LOADING') {
               <div class="psc-center">
-                <mat-spinner diameter="40"></mat-spinner>
-                <p>{{ ck.loading | translate }}</p>
+                @if (awaitingSolveMode) {
+                  <!-- Aufgabe steht schon auf dem Brett, es fehlt nur die Spielweise (Dialog darüber). -->
+                  <p class="psc-text">{{ 'solveMode.awaitingChoice' | translate }}</p>
+                } @else {
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <p>{{ ck.loading | translate }}</p>
+                }
               </div>
             }
             @case ('SETUP') {
@@ -254,6 +259,9 @@ const CK = {
 export class PuzzleStatusCardComponent {
   @Input() mode: PuzzleMode = 'standard';
   @Input() state = 'LOADING';
+  /** LOADING, aber das Puzzle ist schon da und wartet nur auf die Spielweise-Wahl → Bitte um die Wahl statt
+   *  Lade-Spinner (UX-045). */
+  @Input() awaitingSolveMode = false;
   /** „Du bist am Zug!" im WARTE-Zustand anzeigen. Die Solver setzen das auf false, solange unter dem
    *  Brett schon „Weiß/Schwarz am Zug" steht (Doppelaussage); THINKING/PLAYING behalten ihren Text,
    *  weil der dort etwas anderes sagt („Stockfish denkt…" / „Du spielst weiter"). */

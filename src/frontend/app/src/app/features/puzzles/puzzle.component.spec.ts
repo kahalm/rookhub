@@ -631,3 +631,59 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     c.ngOnDestroy();
   });
 });
+
+// Codereview UX-045: Das erste Puzzle wurde parallel zum Spielweise-Dialog aufgesetzt — hinter dem Dialog lief die
+// Uhr und der Gegnerzug war schon gespielt; nach der Wahl sprang alles zurück auf 0.
+describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
+  function offenerDialog(): { sm: any; antworten: (m: string) => void } {
+    let next: ((m: string) => void) | null = null;
+    const sm: any = {
+      ensure: () => ({ subscribe: (h: any) => { next = typeof h === 'function' ? h : h.next; return { unsubscribe() {} }; } }),
+      set: () => {},
+      levelFor: (mode: string) => (mode === 'easy' ? 0 : 3),
+      modeForLevel: (level: number) => (level > 0 ? 'training' : 'easy'),
+    };
+    return { sm, antworten: (m: string) => next!(m) };
+  }
+
+  it('zeigt das angekommene Puzzle nur (keine Uhr, kein Setup-Zug) und setzt es erst nach der Wahl auf', () => {
+    const { sm, antworten } = offenerDialog();
+    const c = makeComponent({}, sm);
+    c.ngOnInit();
+    expect(c.awaitingSolveMode).toBeTrue();
+    c.puzzleService.getRandom = () => of({ ...PUZZLE });
+    spyOn(c as any, 'prefetchNext');
+    spyOn(c as any, 'prefetchOfflinePool');
+    spyOn(c as any, 'setupPuzzle');
+
+    c.loadNext();
+
+    expect((c as any).setupPuzzle).not.toHaveBeenCalled();
+    expect(c.state).toBe('LOADING');
+    expect(c.boardFen).toBe(PUZZLE.fen);       // Aufgabe steht schon auf dem Brett
+    expect(c.orientation).toBe('black');
+    expect(c.elapsedSeconds).toBe(0);
+
+    antworten('easy');
+
+    expect(c.awaitingSolveMode).toBeFalse();
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
+    c.ngOnDestroy();
+  });
+
+  it('mit gemerkter Wahl wird sofort aufgesetzt (kein Warten)', () => {
+    const c = makeComponent({}, makeSolveMode('training'));
+    c.solveModeStub.gemerkt['puzzles'] = 'training';
+    c.ngOnInit();
+    expect(c.awaitingSolveMode).toBeFalse();
+    c.puzzleService.getRandom = () => of({ ...PUZZLE });
+    spyOn(c as any, 'prefetchNext');
+    spyOn(c as any, 'prefetchOfflinePool');
+    spyOn(c as any, 'setupPuzzle');
+
+    c.loadNext();
+
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
+    c.ngOnDestroy();
+  });
+});

@@ -4207,6 +4207,7 @@
     "switchedTraining": "Edzésmód",
     "switchedEasy": "Egyszerű mód",
     "switch": "Játékmód",
+    "awaitingChoice": "Válaszd ki, hogyan szeretnél játszani — utána rögtön indul a feladvány.",
     "scope": {
       "puzzles": "Feladványok",
       "endless": "Endless",
