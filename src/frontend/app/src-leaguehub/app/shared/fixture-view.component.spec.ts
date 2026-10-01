@@ -124,7 +124,7 @@ describe('FixtureViewComponent', () => {
   });
 
   it('Teilen-Link: Absage des Servers steht als Fehler da', async () => {
-    api.createShare.and.rejectWith({ error: { error: 'Runde ist gesperrt' } });
+    api.createShare.and.rejectWith({ error: { message: 'Runde ist gesperrt' } });
     render(OPEN, { tnr: 42 });
     await fixture.componentInstance.shareLink();
     fixture.detectChanges();

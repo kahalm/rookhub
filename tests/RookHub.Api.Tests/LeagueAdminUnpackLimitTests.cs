@@ -52,6 +52,10 @@ public class LeagueAdminUnpackLimitTests : IDisposable
     {
         var obj = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status413PayloadTooLarge, obj.StatusCode);
+        // Codereview A10-006: einheitliche Fehlerform { message } (vorher { error }).
+        var json = System.Text.Json.JsonSerializer.SerializeToElement(obj.Value);
+        Assert.Contains("MB", json.GetProperty("message").GetString());
+        Assert.False(json.TryGetProperty("error", out _));
     }
 
     [Fact]

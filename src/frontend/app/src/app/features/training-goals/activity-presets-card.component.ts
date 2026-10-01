@@ -100,7 +100,7 @@ export class ActivityPresetsCardComponent implements OnInit {
       },
       error: err => {
         this.savingPreset = false;
-        this.snackbar.info(err?.error?.error ?? this.translate.instant('trainingGoals.presets.saveFailed'),
+        this.snackbar.info(err?.error?.message ?? this.translate.instant('trainingGoals.presets.saveFailed'),
           { action: 'common.ok', duration: 3000 });
       },
     });

@@ -101,6 +101,21 @@ public class PatScopeFenceTests
         Assert.Contains(PatScopeFenceMiddleware.ErrorCode, r.Body);
     }
 
+    /// <summary>Codereview A10-006: der Rumpf trägt neben dem RepCheck-Vertrag (<c>error</c>/<c>detail</c>) die
+    /// einheitliche Fehlerform der API (<c>message</c>, <c>code</c>) — ergänzt, nichts entfernt.</summary>
+    [Fact]
+    public async Task Blocked_BodyCarriesContractAndUnifiedShape()
+    {
+        var r = await RunAsync("/api/profile", scope: "extension");
+        using var doc = System.Text.Json.JsonDocument.Parse(r.Body);
+        var root = doc.RootElement;
+        Assert.Equal(PatScopeFenceMiddleware.ErrorCode, root.GetProperty("error").GetString());
+        Assert.Equal(PatScopeFenceMiddleware.ErrorCode, root.GetProperty("code").GetString());
+        var detail = root.GetProperty("detail").GetString();
+        Assert.Contains("/api/extension", detail);
+        Assert.Equal(detail, root.GetProperty("message").GetString());
+    }
+
     [Theory]
     [InlineData("/api/profile/tokens")]
     [InlineData("/api/repertoires")]

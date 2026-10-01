@@ -219,7 +219,7 @@ public class LeagueController : BaseApiController
     {
         var s = await _league.CreateShareAsync(req.Tnr, req.Round, req.Team, GetUserIdOrNull(), ct);
         return s is null
-            ? BadRequest(new { error = "Diese Runde hat keine Prognose zum Teilen." })
+            ? BadRequest(new { message = "Diese Runde hat keine Prognose zum Teilen." })
             : Ok(new { token = s.Token, expires = s.Expires.ToString("yyyy-MM-dd") });
     }
 
@@ -271,7 +271,7 @@ public class LeagueController : BaseApiController
             : Request.Body;
 
     private ObjectResult UnpackedTooLarge(long limit) =>
-        StatusCode(StatusCodes.Status413PayloadTooLarge, new { error = $"entpackt größer als {limit / (1024 * 1024)} MB — bitte aufteilen" });
+        StatusCode(StatusCodes.Status413PayloadTooLarge, new { message = $"entpackt größer als {limit / (1024 * 1024)} MB — bitte aufteilen" });
 
     /// <summary>Bestand übernehmen (JSON, gern gzip-komprimiert mit <c>Content-Encoding: gzip</c>); 413, wenn der Rumpf
     /// entpackt größer als <see cref="ImportMaxBytes"/> ist.</summary>
@@ -283,9 +283,9 @@ public class LeagueController : BaseApiController
         var body = AdminBody(ImportUnpackedLimit);
         LeagueImportService.Bundle? bundle;
         try { bundle = await JsonSerializer.DeserializeAsync<LeagueImportService.Bundle>(body, LeagueImportService.Json, ct); }
-        catch (JsonException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (JsonException ex) { return BadRequest(new { message = ex.Message }); }
         catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(ImportUnpackedLimit); }
-        if (bundle is null) return BadRequest(new { error = "leer" });
+        if (bundle is null) return BadRequest(new { message = "leer" });
         var res = await _import.ImportAsync(bundle, ct);
         if (rebuild) res["views"] = await _league.RebuildViewsAsync(ct);
         return Ok(res);
@@ -303,7 +303,7 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> ImportGames([FromQuery] string? source, CancellationToken ct)
     {
         var src = (source ?? "").Trim();
-        if (src.Length is 0 or > 20 || !src.All(char.IsLetterOrDigit)) return BadRequest(new { error = "source fehlt/ungültig" });
+        if (src.Length is 0 or > 20 || !src.All(char.IsLetterOrDigit)) return BadRequest(new { message = "source fehlt/ungültig" });
         var body = AdminBody(CollectionUnpackedLimit);
         string pgn;
         try

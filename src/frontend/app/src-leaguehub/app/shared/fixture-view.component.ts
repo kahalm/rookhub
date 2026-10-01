@@ -207,7 +207,7 @@ export class FixtureViewComponent {
       this.copied.set(false);
       this.shareOut.set({ kind: 'link', text: '', url, token: r.token, until: r.expires.split('-').reverse().join('.') });
     } catch (err) {
-      const msg = (err as { error?: { error?: string } })?.error?.error ?? 'Link nicht erstellt.';
+      const msg = (err as { error?: { message?: string } })?.error?.message ?? 'Link nicht erstellt.';
       this.shareOut.set({ kind: 'error', text: msg, url: '', token: '', until: '' });
     }
   }

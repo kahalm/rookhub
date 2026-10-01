@@ -89,12 +89,17 @@ public sealed class PatScopeFenceMiddleware
         LogBlocked(context, scope);
 
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        var detail = AllowedPrefixesByScope.TryGetValue(scope, out var prefixes)
+            ? $"API tokens (scope '{scope}') may only be used on {string.Join(", ", prefixes)}."
+            : $"API tokens (scope '{scope}') may not be used on this API.";
+        // error/detail = Vertrag mit RepCheck (prüft error === ErrorCode); message/code = die einheitliche
+        // Fehlerform der übrigen API (Codereview A10-006) — nur ergänzt, nichts entfernt.
         await context.Response.WriteAsJsonAsync(new
         {
             error = ErrorCode,
-            detail = AllowedPrefixesByScope.TryGetValue(scope, out var prefixes)
-                ? $"API tokens (scope '{scope}') may only be used on {string.Join(", ", prefixes)}."
-                : $"API tokens (scope '{scope}') may not be used on this API.",
+            detail,
+            code = ErrorCode,
+            message = detail,
         });
     }
 

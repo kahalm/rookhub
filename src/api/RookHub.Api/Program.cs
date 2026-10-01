@@ -3,7 +3,6 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -874,6 +873,8 @@ try
     // Domänen-Ausnahmen (NotFound/DomainValidation/Conflict/Forbidden) → { message } mit 404/400/409/403,
     // noch im Endpoint, damit das Request-Log den echten Status sieht (Begründung in DomainExceptionFilter).
     builder.Services.AddControllers(o => o.Filters.Add<RookHub.Api.Filters.DomainExceptionFilter>())
+        // Validierungs-400 mit message (= erste Meldung) neben errors/traceId (Codereview A10-006).
+        .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = ApiErrorResponses.InvalidModelState)
         .AddJsonOptions(opts =>
             opts.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
     builder.Services.AddEndpointsApiExplorer();
@@ -924,32 +925,8 @@ try
 
     // H-5: Global exception handler. Domänen-Ausnahmen kommen hier nicht an (DomainExceptionFilter);
     // was hier landet, ist ein echter Fehler → 500, die Middleware loggt ihn auf Error mit Stacktrace.
-    app.UseExceptionHandler(error =>
-    {
-        error.Run(async context =>
-        {
-            // Kestrel wirft für einen zu großen/kaputten Body eine BadHttpRequestException und trägt den
-            // passenden Status (413 bzw. 400) selbst mit. Den durchreichen statt pauschal 500: ein zu großer
-            // Chunk des Browser-Imports kam beim Nutzer sonst als nacktes „HTTP 500" an und sah nach einem
-            // Serverfehler aus (am 2026-09-20 die halbe Fehlersuche gekostet).
-            var ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
-            var (status, title) = ex is BadHttpRequestException bad
-                ? (bad.StatusCode, bad.StatusCode == StatusCodes.Status413PayloadTooLarge
-                    ? "Request body too large."
-                    : "Malformed request.")
-                : (StatusCodes.Status500InternalServerError, "An unexpected error occurred.");
-
-            context.Response.StatusCode = status;
-            context.Response.ContentType = "application/problem+json";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
-                title,
-                status,
-                message = title
-            });
-        });
-    });
+    // Rumpf { type, title, status, message, traceId }, 413/400 aus Kestrel durchgereicht (ApiErrorResponses).
+    app.UseExceptionHandler(error => error.Run(ApiErrorResponses.WriteUnhandledAsync));
 
     if (!app.Environment.IsProduction())
     {

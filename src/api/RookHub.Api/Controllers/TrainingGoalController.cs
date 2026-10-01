@@ -81,7 +81,7 @@ public class TrainingGoalController : BaseApiController
     public async Task<ActionResult<ManualActivityDto>> AddManual([FromBody] ManualActivityInputDto dto)
     {
         try { return Ok(await _service.AddManualAsync(GetUserId(), dto)); }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Eigene manuelle Aktivität ändern (404, wenn nicht vorhanden/nicht eigene).</summary>
@@ -93,7 +93,7 @@ public class TrainingGoalController : BaseApiController
             var updated = await _service.UpdateManualAsync(GetUserId(), id, dto);
             return updated == null ? NotFound() : Ok(updated);
         }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Eigene manuelle Aktivität löschen (404, wenn nicht vorhanden/nicht eigene).</summary>
@@ -113,7 +113,7 @@ public class TrainingGoalController : BaseApiController
     public async Task<ActionResult<ActivityPresetDto>> AddPreset([FromBody] ActivityPresetInputDto dto)
     {
         try { return Ok(await _service.AddPresetAsync(GetUserId(), dto)); }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Vorlage aktualisieren (404 bei fremder/unbekannter Vorlage).</summary>
@@ -125,7 +125,7 @@ public class TrainingGoalController : BaseApiController
             var updated = await _service.UpdatePresetAsync(GetUserId(), id, dto);
             return updated == null ? NotFound() : Ok(updated);
         }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Vorlage löschen (404 bei fremder/unbekannter Vorlage).</summary>
@@ -147,7 +147,7 @@ public class TrainingGoalController : BaseApiController
     public async Task<ActionResult<ActivityTimerDto>> StartTimer([FromBody] StartActivityTimerDto dto)
     {
         try { return Ok(await _service.StartTimerAsync(GetUserId(), dto)); }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Timer stoppen und als manuellen Aktivitätseintrag speichern. Optional
@@ -161,7 +161,7 @@ public class TrainingGoalController : BaseApiController
             var saved = await _service.StopTimerAsync(GetUserId(), dto);
             return saved == null ? NotFound() : Ok(saved);
         }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     /// <summary>Laufenden Timer verwerfen (ohne Eintrag). 404 wenn keiner aktiv.</summary>
