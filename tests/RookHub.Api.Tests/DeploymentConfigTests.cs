@@ -821,6 +821,39 @@ public class DeploymentConfigTests
             Assert.False(Off(tournament), $"Kacheln auf {tournament} gesperrt");
     }
 
+    /// <summary>
+    /// N6-005: die Kachel-Weiterleitung sprach TLS ohne Zertifikatspruefung (nginx-Vorgabe aus), reichte den
+    /// Inhaltstyp des Fremdservers durch und lieferte die Antwort 30 Tage unter unserer Herkunft aus — ohne CSP, weil
+    /// das add_header der Location die serverweite verdraengt. Wer den Weg zu OSM beeinflusst, haette dort ein
+    /// text/html-Dokument mit Skript ablegen koennen.
+    /// </summary>
+    [Fact]
+    public void TileProxy_VerifiesUpstreamTls_AndServesTilesAsSandboxedImages()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var loc = Regex.Match(nginx, @"location ~ ""\^/tiles/[^""]+"" \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "Kachel-Location in nginx.conf nicht gefunden");
+        var body = loc.Groups["body"].Value;
+
+        Assert.Contains("proxy_ssl_server_name on;", body);
+        Assert.Contains("proxy_ssl_verify on;", body);
+        Assert.Contains("proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;", body);
+        // Kette heute: Blatt, Zwischen-CA, Wurzel — die nginx-Vorgabe 1 liesse sie scheitern.
+        var depth = Regex.Match(body, @"proxy_ssl_verify_depth (?<n>\d+);");
+        Assert.True(depth.Success, "proxy_ssl_verify_depth fehlt");
+        Assert.InRange(int.Parse(depth.Groups["n"].Value), 2, 5);
+
+        Assert.Contains("proxy_hide_header Content-Type;", body);
+        Assert.Contains("add_header Content-Type \"image/png\";", body);
+        // Ohne always: auf nginx-eigenen 404/429 stuende Content-Type sonst doppelt.
+        Assert.DoesNotContain("add_header Content-Type \"image/png\" always;", body);
+        var csp = Regex.Match(body, "add_header Content-Security-Policy \"(?<v>[^\"]+)\" always;");
+        Assert.True(csp.Success, "CSP fehlt in der Kachel-Location (das add_header dort verdraengt die serverweite)");
+        Assert.Contains("default-src 'none'", csp.Groups["v"].Value);
+        Assert.Contains("sandbox", csp.Groups["v"].Value);
+        Assert.Contains("add_header X-Content-Type-Options \"nosniff\" always;", body);
+    }
+
     [Fact]
     public void RateLimitScale_IsRaisedOnlyInTheE2eStack()
     {
