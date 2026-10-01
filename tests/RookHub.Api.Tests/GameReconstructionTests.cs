@@ -542,6 +542,7 @@ public class GameReconstructionServiceTests : IDisposable
         var again = await _service.ShareAsync(1, id);
 
         Assert.False(string.IsNullOrWhiteSpace(token));
+        Assert.Matches(ShareTokensTests.Format, token);
         // Ein zweites Teilen darf einen schon verschickten Link nicht ungueltig machen.
         Assert.Equal(token, again);
         Assert.Equal(token, (await _service.GetAsync(1, id))!.ShareToken);

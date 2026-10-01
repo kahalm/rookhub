@@ -162,20 +162,6 @@ public class SharedLineService
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
-    private async Task<string> GenerateUniqueTokenAsync(CancellationToken ct)
-    {
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            var token = NewToken();
-            if (!await _db.SharedLines.AnyAsync(s => s.ShareToken == token, ct)) return token;
-        }
-        return NewToken();
-    }
-
-    private static string NewToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(16);
-        return Convert.ToBase64String(bytes)
-            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-    }
+    private Task<string> GenerateUniqueTokenAsync(CancellationToken ct)
+        => ShareTokens.NewUniqueAsync(t => _db.SharedLines.AnyAsync(s => s.ShareToken == t, ct));
 }

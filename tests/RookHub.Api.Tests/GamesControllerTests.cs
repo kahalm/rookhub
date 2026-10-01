@@ -81,6 +81,7 @@ public class GamesControllerTests : IDisposable
         });
 
         Assert.Null(saved.SourceUrl);
+        Assert.Matches(ShareTokensTests.Format, saved.ShareToken);
         Assert.Null((await _db.SavedGames.SingleAsync()).SourceUrl);
         Assert.DoesNotContain("phish.example", saved.Pgn);
         Assert.Null((await _service.GetSharedAsync(saved.ShareToken))!.SourceUrl);

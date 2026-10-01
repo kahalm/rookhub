@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -1014,23 +1013,8 @@ public class SavedGameService
         return count;
     }
 
-    private async Task<string> GenerateUniqueTokenAsync()
-    {
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            var token = NewToken();
-            if (!await _db.SavedGames.AnyAsync(g => g.ShareToken == token)) return token;
-        }
-        return NewToken();   // extrem unwahrscheinlicher Kollisions-Fallback
-    }
-
-    /// <summary>URL-sicheres Zufallstoken (~22 Zeichen aus 16 Bytes).</summary>
-    private static string NewToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(16);
-        return Convert.ToBase64String(bytes)
-            .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-    }
+    private Task<string> GenerateUniqueTokenAsync()
+        => ShareTokens.NewUniqueAsync(t => _db.SavedGames.AnyAsync(g => g.ShareToken == t));
 
     private static SavedGameDetailDto MapDetail(SavedGame g) => new()
     {

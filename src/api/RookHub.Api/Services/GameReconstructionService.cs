@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -509,22 +508,8 @@ public class GameReconstructionService
         return dto;
     }
 
-    private async Task<string> NewUniqueTokenAsync(CancellationToken ct)
-    {
-        for (var attempt = 0; attempt < 5; attempt++)
-        {
-            var token = NewToken();
-            if (!await _db.GameReconstructions.AnyAsync(r => r.ShareToken == token, ct)) return token;
-        }
-        return NewToken();   // extrem unwahrscheinlicher Kollisions-Fallback
-    }
-
-    /// <summary>URL-sicheres Zufallstoken (~22 Zeichen aus 16 Bytes) — wie beim Partie-/Blatt-Link.</summary>
-    private static string NewToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(16);
-        return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-    }
+    private Task<string> NewUniqueTokenAsync(CancellationToken ct)
+        => ShareTokens.NewUniqueAsync(t => _db.GameReconstructions.AnyAsync(r => r.ShareToken == t, ct));
 
     private static ReconstructionListItemDto ToListItem(GameReconstruction row, ReconstructionChain.Result chain) => new()
     {

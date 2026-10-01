@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
@@ -207,11 +206,9 @@ public sealed class LeagueService
     private static bool Shareable(JsonObject fx) =>
         fx["bye"] is null && fx["status"]?.GetValue<string>() is "open" or "played" && fx["boards"] is JsonArray;
 
-    public static string NewToken()
-    {
-        var buf = RandomNumberGenerator.GetBytes(18);   // 144 Bit
-        return Convert.ToBase64String(buf).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-    }
+    /// <summary>144 Bit statt der 128 der anderen Teilen-Links; ohne Eindeutigkeits-Abfrage, weil das Token hier der
+    /// Primaerschluessel ist (eine Kollision scheitert laut am Insert).</summary>
+    public static string NewToken() => ShareTokens.New(18);
 
     /// <summary>Ablauf: <see cref="ShareKeepDays"/> nach der Runde — bei einer schon gespielten Runde aber nie vor
     /// heute + <see cref="ShareKeepDays"/>, sonst wäre ein frisch angelegter Link zu einer älteren Runde sofort tot.</summary>

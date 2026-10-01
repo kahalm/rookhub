@@ -344,6 +344,7 @@ public class WorksheetServiceTests : IDisposable
         var second = await _service.ShareAsync(user.Id, sheet.Id);
 
         Assert.False(string.IsNullOrWhiteSpace(first));
+        Assert.Matches(ShareTokensTests.Format, first);
         Assert.Equal(first, second);
     }
 

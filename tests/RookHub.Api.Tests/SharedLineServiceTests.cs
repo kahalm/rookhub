@@ -49,6 +49,7 @@ public class SharedLineServiceTests : IDisposable
         var res = await _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = Pgn, Title = "Sicilian Najdorf" });
         Assert.NotNull(res);
         Assert.False(string.IsNullOrWhiteSpace(res!.ShareToken));
+        Assert.Matches(ShareTokensTests.Format, res.ShareToken);
 
         var dto = await _svc.GetByTokenAsync(res.ShareToken);
         Assert.NotNull(dto);
