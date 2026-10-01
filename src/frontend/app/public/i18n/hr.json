@@ -4404,5 +4404,12 @@
       "deleteFailed": "Usporedba se nije mogla obrisati.",
       "notFound": "Ova usporedba ne postoji (više)."
     }
+  },
+  "promotion": {
+    "group": "Odaberi figuru za promociju",
+    "q": "Promoviraj u damu",
+    "r": "Promoviraj u topa",
+    "b": "Promoviraj u lovca",
+    "n": "Promoviraj u skakača"
   }
 }

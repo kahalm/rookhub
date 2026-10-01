@@ -4404,5 +4404,12 @@
       "deleteFailed": "Der Vergleich konnte nicht gelöscht werden.",
       "notFound": "Diesen Vergleich gibt es nicht (mehr)."
     }
+  },
+  "promotion": {
+    "group": "Umwandlungsfigur wählen",
+    "q": "In eine Dame umwandeln",
+    "r": "In einen Turm umwandeln",
+    "b": "In einen Läufer umwandeln",
+    "n": "In einen Springer umwandeln"
   }
 }

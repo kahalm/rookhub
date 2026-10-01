@@ -1,3 +1,5 @@
+import { TestBed } from '@angular/core/testing';
+import { provideTranslateService } from '@ngx-translate/core';
 import { PromotionPickerComponent } from './promotion-picker.component';
 import { Key } from 'chessground/types';
 
@@ -55,5 +57,61 @@ describe('PromotionPickerComponent', () => {
   it('liefert die korrekte Figurengrafik je Farbe', () => {
     expect(create('a8' as Key, 'white', 'w').image('q')).toBe(`url('/piece/cburnett/wQ.svg')`);
     expect(create('a1' as Key, 'white', 'b').image('r')).toBe(`url('/piece/cburnett/bR.svg')`);
+  });
+});
+
+// Codereview F8-018: Die vier Figuren waren <div (click)> ohne Beschriftung, Esc brach (außer im Puzzle-Brett) nicht ab —
+// ohne Zeigegerät ließ sich keine Umwandlungsfigur wählen. Gerendert, mit echtem Fokus.
+describe('PromotionPickerComponent Tastatur (F8-018)', () => {
+  let opener: HTMLButtonElement;
+
+  function render() {
+    TestBed.configureTestingModule({
+      imports: [PromotionPickerComponent],
+      providers: [provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(PromotionPickerComponent);
+    fixture.componentRef.setInput('color', 'w');
+    fixture.componentRef.setInput('dest', 'a8');
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  beforeEach(() => {
+    opener = document.createElement('button');   // z. B. das Zug-Eingabefeld, aus dem die Umwandlung kam
+    document.body.appendChild(opener);
+    opener.focus();
+  });
+  afterEach(() => opener.remove());
+
+  it('die Figuren sind benannte Knöpfe, beim Öffnen hat die Dame den Fokus', () => {
+    const el = render().nativeElement as HTMLElement;
+    const buttons = Array.from(el.querySelectorAll('button.promotion-piece'));
+    expect(buttons.map(b => b.getAttribute('aria-label')))
+      .toEqual(['promotion.q', 'promotion.r', 'promotion.b', 'promotion.n']);
+    expect(buttons.every(b => b.getAttribute('type') === 'button')).toBeTrue();
+    expect(el.querySelector('[role="group"]')!.getAttribute('aria-label')).toBe('promotion.group');
+    expect(document.activeElement).toBe(buttons[0]);
+  });
+
+  it('Esc bricht ab — auch im Guard-Fenster — und erreicht einen umgebenden Dialog nicht', () => {
+    const fixture = render();
+    const dismiss = spyOn(fixture.componentInstance.dismiss, 'emit');
+    const outer = jasmine.createSpy('keydown am body');
+    document.body.addEventListener('keydown', outer);
+    try {
+      document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    } finally {
+      document.body.removeEventListener('keydown', outer);
+    }
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(outer).not.toHaveBeenCalled();
+  });
+
+  it('gibt den Fokus beim Schließen dorthin zurück, wo er vorher war', () => {
+    const fixture = render();
+    expect(document.activeElement).not.toBe(opener);
+    fixture.destroy();
+    expect(document.activeElement).toBe(opener);
   });
 });

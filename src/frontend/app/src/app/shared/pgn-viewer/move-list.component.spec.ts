@@ -145,3 +145,46 @@ describe('MoveListComponent: aktiver Zug scrollt nur die Zugliste, nie die Seite
     expect(window.scrollY).toBe(0);
   }));
 });
+
+// Codereview F8-018: Die Züge waren <span (click)> ohne Rolle, ohne tabindex, ohne Tastatur — per Tastatur oder
+// Screenreader ließ sich kein bestimmter Zug anspringen. Jetzt Knöpfe (Tab + Enter/Leertaste nativ), der aktive mit
+// aria-current, optisch wie vorher.
+describe('MoveListComponent Tastatur (F8-018)', () => {
+  function render(current: number) {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess();
+    ['e4', 'e5', 'Nf3'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('currentMoveIndex', current);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('Züge sind Knöpfe, der aktive trägt aria-current, ein Klick meldet seinen Index', () => {
+    const fixture = render(1);
+    const el = fixture.nativeElement as HTMLElement;
+    const moves = Array.from(el.querySelectorAll('.move')) as HTMLElement[];
+    expect(moves.map(m => m.textContent!.trim())).toEqual(['e4', 'e5', 'Nf3']);
+    for (const m of moves) {
+      expect(m.tagName).toBe('BUTTON');
+      expect(m.getAttribute('type')).toBe('button');
+    }
+    expect(moves.map(m => m.getAttribute('aria-current'))).toEqual([null, 'true', null]);
+
+    const clicked: number[] = [];
+    fixture.componentInstance.moveClicked.subscribe(i => clicked.push(i));
+    (moves[2] as HTMLButtonElement).click();
+    expect(clicked).toEqual([2]);
+  });
+
+  it('sieht aus wie vorher: kein Knopf-Rahmen, linksbündig, Schrift der Zugliste', () => {
+    const el = render(-1).nativeElement as HTMLElement;
+    const move = el.querySelector('.move') as HTMLElement;
+    const cs = getComputedStyle(move);
+    expect(cs.borderTopWidth).toBe('0px');
+    expect(cs.textAlign).toBe('left');
+    expect(cs.fontFamily).toBe(getComputedStyle(el.querySelector('.move-list')!).fontFamily);
+    expect(cs.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  });
+});

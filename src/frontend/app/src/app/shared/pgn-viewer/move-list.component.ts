@@ -32,14 +32,16 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
         <div class="move-row" [class.row-active]="isRowActive(pair)">
           <span class="move-number">{{ pair.number }}.</span>
           @if (pair.white !== undefined) {
-            <span class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
-                  (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</span>
+            <button type="button" class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
+                    [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
+                    (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</button>
           } @else {
             <span class="move-empty"></span>
           }
           @if (pair.black) {
-            <span class="move" [class.active]="pair.blackIndex === currentMoveIndex"
-                  (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</span>
+            <button type="button" class="move" [class.active]="pair.blackIndex === currentMoveIndex"
+                    [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
+                    (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</button>
           } @else {
             <span class="move-empty"></span>
           }
@@ -76,6 +78,10 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
       user-select: none;
     }
     .move {
+      /* Ein <button> (F8-018: per Tastatur erreichbar, aktiver Zug mit aria-current), sieht aber aus wie der
+         frühere <span>: Knopf-Vorgaben zurücksetzen, font VOR line-height (die Kurzform setzt sie mit). */
+      font: inherit; color: inherit; background: none; border: 0; margin: 0;
+      display: block; width: 100%; box-sizing: border-box; text-align: left;
       cursor: pointer;
       padding: 3px 6px;
       border-radius: 3px;

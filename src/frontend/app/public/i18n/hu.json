@@ -4404,5 +4404,12 @@
       "deleteFailed": "Az összehasonlítást nem sikerült törölni.",
       "notFound": "Ez az összehasonlítás nem létezik (már)."
     }
+  },
+  "promotion": {
+    "group": "Válaszd ki, mivé változzon a gyalog",
+    "q": "Átváltozás vezérré",
+    "r": "Átváltozás bástyává",
+    "b": "Átváltozás futóvá",
+    "n": "Átváltozás huszárrá"
   }
 }
