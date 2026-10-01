@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -69,7 +69,7 @@ export interface CalcMembersDialogData { bookId: number; }
               </span>
             }
             <mat-slide-toggle [checked]="m.isTester" [disabled]="busy"
-                              (change)="setTester(m, $event.checked)"
+                              (change)="setTester(m, $event.checked, $event.source)"
                               [matTooltip]="'calc.series.testerHint' | translate">{{ 'calc.series.tester' | translate }}</mat-slide-toggle>
             <button mat-icon-button color="warn" [disabled]="busy" (click)="remove(m)"
                     [attr.aria-label]="'calc.series.removeMember' | translate">
@@ -186,12 +186,19 @@ export class CalcMembersDialogComponent {
     });
   }
 
-  setTester(m: CalcSeriesMember, isTester: boolean): void {
+  /**
+   * Tester-Häkchen eines Mitglieds. Der Schalter kippt beim Klick selbst um; scheitert das Speichern,
+   * wird er (`toggle` = `$event.source`) ausdrücklich zurückgestellt — das Nachladen allein reicht
+   * nicht: `@for … track m.userId` behält die Zeile, `m.isTester` bleibt gleich, also schreibt Angular
+   * `[checked]` nicht neu.
+   */
+  setTester(m: CalcSeriesMember, isTester: boolean, toggle?: Pick<MatSlideToggle, 'checked'>): void {
     this.busy = true;
     this.service.upsertMember(this.data.bookId, { username: m.username, isTester }).subscribe({
       next: () => { m.isTester = isTester; this.busy = false; this.cdr.markForCheck(); },
       error: () => {
         this.busy = false;
+        if (toggle) toggle.checked = !isTester;
         this.cdr.markForCheck();
         this.snackbar.warn(this.translate.instant('calc.series.saveFailed'));
         this.reload();

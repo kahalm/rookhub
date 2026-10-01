@@ -109,7 +109,7 @@
             </button>
             <!-- Der Kalkulations-Modus wird hier vom Kurs-Verwalter geschaltet (nicht im Admin-Bereich). -->
             <mat-slide-toggle class="calc-toggle" [checked]="d.isCalculation" [disabled]="busy"
-                              (change)="setCalculation($event.checked)"
+                              (change)="setCalculation($event.checked, $event.source)"
                               [matTooltip]="'courses.detail.calcToggleHint' | translate">
               {{ 'courses.detail.calcToggle' | translate }}
             </mat-slide-toggle>

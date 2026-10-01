@@ -227,6 +227,42 @@ describe('WorksheetDetailComponent', () => {
     expect(c.shareUrl).toBe('');
   });
 
+  // mat-slide-toggle kippt beim Klick SELBST um; bleibt der gebundene Wert gleich, schreibt Angular
+  // [checked] nicht neu. Die Attrappe steht deshalb schon auf dem neuen Wert, wie der echte Schalter.
+  it('Abbrechen beim Beenden stellt den Schalter zurück auf „an" — der Link ist ja noch öffentlich', () => {
+    const c = make(sheet({ shareToken: 'Ux7f2K' }));
+    spyOn(window, 'confirm').and.returnValue(false);
+    const toggle = { checked: false };
+
+    c.toggleShare(false, toggle);
+
+    expect(toggle.checked).toBeTrue();
+    expect(c.sheet!.shareToken).toBe('Ux7f2K');
+  });
+
+  it('gescheitertes Teilen stellt den Schalter zurück auf „aus"', () => {
+    const c = make();
+    worksheets.share.and.returnValue(throwError(() => new Error('500')));
+    const toggle = { checked: true };
+
+    c.toggleShare(true, toggle);
+
+    expect(toggle.checked).toBeFalse();
+    expect(c.sheet!.shareToken).toBeNull();
+  });
+
+  it('gescheitertes Beenden stellt den Schalter zurück auf „an"', () => {
+    const c = make(sheet({ shareToken: 'Ux7f2K' }));
+    spyOn(window, 'confirm').and.returnValue(true);
+    worksheets.unshare.and.returnValue(throwError(() => new Error('500')));
+    const toggle = { checked: false };
+
+    c.toggleShare(false, toggle);
+
+    expect(toggle.checked).toBeTrue();
+    expect(c.sheet!.shareToken).toBe('Ux7f2K');
+  });
+
   it('eine Stellung von Hand kommt als FEN mit passender Ausrichtung', () => {
     const c = make();
     c.newFen = ' 8/8/8/8/8/8/8/8 b - - 0 1 ';

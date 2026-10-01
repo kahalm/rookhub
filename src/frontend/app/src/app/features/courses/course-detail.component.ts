@@ -8,7 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -320,14 +320,22 @@ export class CourseDetailComponent implements OnInit, OnDestroy {
   /**
    * Schaltet den Kalkulations-Modus des Kurses um (nur Besitzer/Admin, `canManage`). Danach die
    * Detailseite neu laden: Start-Knopf, Fortschritts-Zählung und die Kapitel-Startlinks hängen
-   * alle am Flag. Schlägt es fehl, stellt das Nachladen den Schalter auf den echten Stand zurück.
+   * alle am Flag. Schlägt es fehl, wird der Schalter (`toggle` = `$event.source`) ausdrücklich
+   * zurückgestellt: er kippt beim Klick selbst um, und das Nachladen allein stellte ihn NICHT zurück —
+   * die Vorlage behält den Inhalt währenddessen stehen, `d.isCalculation` bleibt gleich, also schreibt
+   * Angular `[checked]` nicht neu.
    */
-  setCalculation(value: boolean): void {
+  setCalculation(value: boolean, toggle?: Pick<MatSlideToggle, 'checked'>): void {
     if (!this.detail || this.detail.isCalculation === value) return;
     this.busy = true;
     this.subs.add(this.courses.setCalculation(this.bookId, value).subscribe({
       next: () => { this.busy = false; this.load(); },
-      error: () => { this.busy = false; this.fail('courses.detail.calcToggleFailed'); this.load(); },
+      error: () => {
+        this.busy = false;
+        if (toggle) toggle.checked = !value;
+        this.fail('courses.detail.calcToggleFailed');
+        this.load();
+      },
     }));
   }
 

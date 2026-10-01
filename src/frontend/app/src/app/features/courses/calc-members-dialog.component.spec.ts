@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -106,6 +108,27 @@ describe('CalcMembersDialogComponent (OnPush zeichnet nach HTTP neu)', () => {
     const names = Array.from(el.querySelectorAll('.member .name')).map(n => n.textContent!.trim());
     expect(names).toEqual(['anna', 'carla']);
     expect((el.querySelector('.add-row input') as HTMLInputElement).value).toBe('');
+  });
+
+  it('stellt das Tester-Häkchen zurück, wenn das Speichern scheitert', () => {
+    // mat-slide-toggle kippt beim Klick SELBST um. Das Nachladen hilft nicht: `track m.userId`
+    // behält die Zeile, `m.isTester` bleibt false, Angular schreibt [checked] also nicht neu.
+    const fixture = create();
+    flushReload([member(1, 'anna', false)]);
+    fixture.detectChanges();
+    const toggleEl = fixture.debugElement.query(By.css('.member mat-slide-toggle'));
+    const toggle = toggleEl.componentInstance as MatSlideToggle;
+
+    (toggleEl.nativeElement.querySelector('button') as HTMLButtonElement).click();
+    expect(toggle.checked).toBeTrue();
+    http.expectOne(r => r.method === 'PUT' && r.url === `${URL}/members`)
+      .flush('x', { status: 500, statusText: 'Server Error' });
+    flushReload([member(1, 'anna', false)]);
+    fixture.detectChanges();
+
+    expect(warn).toHaveBeenCalled();
+    expect(toggle.checked).toBeFalse();
+    expect(toggleEl.nativeElement.querySelector('button').getAttribute('aria-checked')).toBe('false');
   });
 
   it('gibt nach einem gescheiterten Laden die Eingabe wieder frei', () => {

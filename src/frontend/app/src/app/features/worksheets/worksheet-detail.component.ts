@@ -12,7 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSlideToggle, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -308,9 +308,15 @@ export class WorksheetDetailComponent implements OnInit {
    * Teilen ein-/ausschalten. Ein einmal erzeugter Link bleibt beim erneuten Einschalten NICHT
    * erhalten — Abschalten ist der Widerruf, und ein gedruckter QR-Code soll danach ins Leere
    * laufen. Deshalb fragt das Abschalten nach.
+   *
+   * FALLE: `mat-slide-toggle` mit `[checked]` + `(change)` ist NICHT kontrolliert — der Schalter
+   * kippt beim Klick selbst um. Bleibt `!!sheet.shareToken` danach gleich (Abbruch, Fehler), schreibt
+   * Angular die Eingabe nicht neu, und der Schalter zeigte „aus", obwohl der Link noch öffentlich
+   * ist. Deshalb wird `toggle` (die `$event.source`) in diesen Zweigen ausdrücklich zurückgestellt.
    */
-  toggleShare(share: boolean): void {
+  toggleShare(share: boolean, toggle?: Pick<MatSlideToggle, 'checked'>): void {
     if (!this.sheet || this.busy) return;
+    const revert = () => { if (toggle) toggle.checked = !share; };
     if (share) {
       this.busy = true;
       this.worksheets.share(this.sheet.id).subscribe({
@@ -319,12 +325,12 @@ export class WorksheetDetailComponent implements OnInit {
           if (this.sheet) this.sheet.shareToken = token;
           this.cdr.markForCheck();
         },
-        error: () => { this.busy = false; this.failed(); },
+        error: () => { this.busy = false; revert(); this.failed(); },
       });
       return;
     }
 
-    if (!confirm(this.translate.instant('worksheets.share.stopConfirm'))) { this.cdr.markForCheck(); return; }
+    if (!confirm(this.translate.instant('worksheets.share.stopConfirm'))) { revert(); this.cdr.markForCheck(); return; }
     this.busy = true;
     this.worksheets.unshare(this.sheet.id).subscribe({
       next: () => {
@@ -332,7 +338,7 @@ export class WorksheetDetailComponent implements OnInit {
         if (this.sheet) this.sheet.shareToken = null;
         this.cdr.markForCheck();
       },
-      error: () => { this.busy = false; this.failed(); },
+      error: () => { this.busy = false; revert(); this.failed(); },
     });
   }
 

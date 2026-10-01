@@ -339,6 +339,17 @@ describe('CourseDetailComponent Kalkulations-Modus', () => {
     expect(calls.filter(c => c === 'getDetail').length).toBe(before + 1);
     expect(component.busy).toBeFalse();
   });
+
+  it('stellt den Schalter nach einem Fehlschlag zurück — das Nachladen allein schreibt [checked] nicht neu', () => {
+    const { component } = make(
+      { setCalculation: () => throwError(() => new Error('nope')) }, false, { isCalculation: false });
+    component.ngOnInit();
+    const toggle = { checked: true };   // mat-slide-toggle ist beim Klick schon selbst umgekippt
+
+    component.setCalculation(true, toggle);
+
+    expect(toggle.checked).toBeFalse();
+  });
 });
 
 describe('CourseDetailComponent — PGN je Kapitel/Linie', () => {

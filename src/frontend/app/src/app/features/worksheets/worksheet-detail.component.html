@@ -133,7 +133,7 @@
       <mat-card class="wd-share">
         <mat-card-content>
           <div class="wd-share-head">
-            <mat-slide-toggle [checked]="!!sheet.shareToken" (change)="toggleShare($event.checked)"
+            <mat-slide-toggle [checked]="!!sheet.shareToken" (change)="toggleShare($event.checked, $event.source)"
                               [disabled]="busy">
               {{ 'worksheets.share.toggle' | translate }}
             </mat-slide-toggle>
