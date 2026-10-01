@@ -1885,6 +1885,8 @@
       "kidsHint": "Gyerekek: ez a kurzus megjelenik a gyerekoldalon, és ott bejelentkezés nélkül játszható (a számolókönyvek kivételével). Csak akkor jelenik meg ott, ha a megjegyzései németül vannak (a fordítás kész).",
       "confirmPublic": "Nyilvánossá teszed a(z) „{{name}}” kurzust? Ezután a megoldásokkal együtt bejelentkezés nélkül elérhető.",
       "confirmKids": "Felteszed a(z) „{{name}}” kurzust a gyerekoldalra? A feladatai ott bejelentkezés nélkül játszhatók.",
+      "confirmForeign": "A(z) „{{name}}” {{owner}} privát kurzusa. Mégis megnyitod? A tartalma ezután bejelentkezés nélkül elérhető.",
+      "ownedBy": "privát · {{name}}",
       "kidsTitles": "Címek a KidHubon",
       "kidsTitlePrompt": "Cím a KidHubon – {{language}} (üres = a könyv neve):",
       "slugPlaceholder": "álnév, pl. mate1",

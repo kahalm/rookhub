@@ -2282,6 +2282,8 @@
       "kidsHint": "Djeca: ovaj se tečaj prikazuje na dječjoj stranici i tamo se može igrati bez prijave (osim knjiga za računanje). Tamo se pojavljuje tek kad su komentari na njemačkom (prijevod gotov).",
       "confirmPublic": "Učiniti tečaj „{{name}}“ javnim? Tada je s rješenjima dostupan bez prijave.",
       "confirmKids": "Staviti tečaj „{{name}}“ na dječju stranicu? Njegovi se zadaci tamo mogu igrati bez prijave.",
+      "confirmForeign": "„{{name}}“ je privatni tečaj korisnika {{owner}}. Ipak ga otvoriti? Njegov je sadržaj tada dostupan bez prijave.",
+      "ownedBy": "privatno · {{name}}",
       "kidsTitles": "Naslovi na KidHubu",
       "kidsTitlePrompt": "Naslov na KidHubu – {{language}} (prazno = naziv knjige):",
       "slugPlaceholder": "alias npr. mate1",

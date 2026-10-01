@@ -2282,6 +2282,8 @@
       "kidsHint": "Kinder: dieser Kurs erscheint auf der Kinderseite und ist dort ohne Anmeldung spielbar (Kalkulationsbücher ausgenommen). Er erscheint dort erst, wenn seine Kommentare Deutsch sind (Übersetzung fertig).",
       "confirmPublic": "Kurs „{{name}}“ öffentlich machen? Er ist dann samt Lösungen ohne Anmeldung abrufbar.",
       "confirmKids": "Kurs „{{name}}“ auf die Kinderseite stellen? Seine Aufgaben sind dort ohne Anmeldung spielbar.",
+      "confirmForeign": "„{{name}}“ ist ein privater Kurs von {{owner}}. Trotzdem freigeben? Sein Inhalt ist dann ohne Anmeldung zugänglich.",
+      "ownedBy": "privat · {{name}}",
       "kidsTitles": "Titel auf KidHub",
       "kidsTitlePrompt": "Titel auf KidHub – {{language}} (leer = Buchname):",
       "slugPlaceholder": "Alias z. B. mate1",

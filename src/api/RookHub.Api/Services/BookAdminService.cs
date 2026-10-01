@@ -40,10 +40,22 @@ public class BookAdminService
                 PublicSlug = b.PublicSlug,
                 Kind = b.Kind,
                 PuzzleCount = b.Puzzles.Count(),
+                OwnerUserId = b.OwnerUserId,
                 CreatedAt = b.CreatedAt,
                 UpdatedAt = b.UpdatedAt,
             })
             .ToListAsync();
+
+        // Besitzer privater Bücher benennen (N9-010): Nutzer-Importe heißen wie der Chessable-Kurs — ohne Namen standen
+        // gleichnamige Kopien verschiedener Nutzer ununterscheidbar untereinander.
+        var ownerIds = books.Where(b => b.OwnerUserId != null).Select(b => b.OwnerUserId!.Value).Distinct().ToList();
+        if (ownerIds.Count > 0)
+        {
+            var owners = await _db.AppUsers.Where(u => ownerIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username);
+            foreach (var dto in books)
+                if (dto.OwnerUserId is int oid && owners.TryGetValue(oid, out var name))
+                    dto.OwnerName = name;
+        }
 
         // Gruppen-Freigaben pro Buch anhängen (eine Abfrage, dann mappen).
         var accessByBook = await _db.BookGroupAccesses

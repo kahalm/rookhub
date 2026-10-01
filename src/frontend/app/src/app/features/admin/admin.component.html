@@ -234,6 +234,9 @@
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.book' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
                     <span class="book-name">{{ b.displayName }}</span>
+                    @if (b.ownerUserId != null) {
+                      <span class="book-owner" [class.foreign]="isForeignBook(b)">{{ 'admin.books.ownedBy' | translate:{ name: b.ownerName || ('#' + b.ownerUserId) } }}</span>
+                    }
                     <button mat-icon-button class="book-rename-btn" (click)="renameBook(b)"
                             [attr.title]="'admin.books.rename' | translate">
                       <mat-icon>edit</mat-icon>
@@ -272,19 +275,19 @@
                 <ng-container matColumnDef="forDaily">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.daily' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
-                    <mat-slide-toggle [(ngModel)]="b.forDaily" (change)="saveBook(b)"></mat-slide-toggle>
+                    <mat-slide-toggle [(ngModel)]="b.forDaily" (change)="toggleExposure(b, 'forDaily')"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forRandom">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.random' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
-                    <mat-slide-toggle [(ngModel)]="b.forRandom" (change)="saveBook(b)"></mat-slide-toggle>
+                    <mat-slide-toggle [(ngModel)]="b.forRandom" (change)="toggleExposure(b, 'forRandom')"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forBlind">
                   <th mat-header-cell *matHeaderCellDef>{{ 'admin.books.columns.blind' | translate }}</th>
                   <td mat-cell *matCellDef="let b">
-                    <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="saveBook(b)"></mat-slide-toggle>
+                    <mat-slide-toggle [(ngModel)]="b.forBlind" (change)="toggleExposure(b, 'forBlind')"></mat-slide-toggle>
                   </td>
                 </ng-container>
                 <ng-container matColumnDef="forKids">

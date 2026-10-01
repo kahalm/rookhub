@@ -495,6 +495,26 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetBooks_NamesTheOwnerOfPrivateCopies_GlobalBooksHaveNone()
+    {
+        // N9-010: zwei Nutzer haben denselben Chessable-Kurs importiert — die Liste muss die Kopien unterscheiden.
+        var u1 = await CreateUserAsync("alice");
+        var u2 = await CreateUserAsync("bob");
+        Book B(string file, int? owner) => new() { FileName = file, DisplayName = "Lifetime Repertoires", OwnerUserId = owner,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
+        _db.Books.AddRange(B("global.pgn", null), B($"chessable-u{u1.Id}-1.pgn", u1.Id), B($"chessable-u{u2.Id}-1.pgn", u2.Id));
+        await _db.SaveChangesAsync();
+
+        var books = Assert.IsType<List<RookHub.Api.DTOs.BookDto>>(Assert.IsType<OkObjectResult>(await _controller.GetBooks()).Value);
+
+        var global = books.Single(b => b.FileName == "global.pgn");
+        Assert.Null(global.OwnerUserId);
+        Assert.Null(global.OwnerName);
+        Assert.Equal("alice", books.Single(b => b.OwnerUserId == u1.Id).OwnerName);
+        Assert.Equal("bob", books.Single(b => b.OwnerUserId == u2.Id).OwnerName);
+    }
+
+    [Fact]
     public async Task UpdateBook_TogglesFlags()
     {
         var book = new Book { FileName = "b.pgn", DisplayName = "b", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };

@@ -29,6 +29,10 @@ public class BookDto
     /// <summary>Art des Buchs (Puzzle/Study) fürs Trainingsziel-Routing.</summary>
     public BookKind Kind { get; set; }
     public int PuzzleCount { get; set; }
+    /// <summary>Besitzer eines privaten Buchs (Nutzer-Import/-Upload); <c>null</c> = globales Buch (N9-010).</summary>
+    public int? OwnerUserId { get; set; }
+    /// <summary>Benutzername des Besitzers, damit die Admin-Liste gleichnamige Kopien unterscheidet.</summary>
+    public string? OwnerName { get; set; }
     /// <summary>Gruppen-Ids, die dieses Buch als Kurs sehen dürfen (für die Admin-Zuweisung).</summary>
     public List<int> AccessGroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }

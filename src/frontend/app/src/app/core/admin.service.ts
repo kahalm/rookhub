@@ -72,6 +72,10 @@ export interface Book {
   /** Art des Buchs fürs Trainingsziel-Routing der Kurszeit. */
   kind: 'Puzzle' | 'Study';
   puzzleCount: number;
+  /** Besitzer eines privaten Buchs (Nutzer-Import/-Upload); null = globales Buch (N9-010). */
+  ownerUserId?: number | null;
+  /** Benutzername des Besitzers — unterscheidet gleichnamige Kopien verschiedener Nutzer. */
+  ownerName?: string | null;
   /** Gruppen-Ids, die dieses Buch als Kurs sehen dürfen. */
   accessGroupIds: number[];
   createdAt: string;

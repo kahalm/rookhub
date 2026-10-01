@@ -10,7 +10,7 @@ const confirmStub = { answer: true, ask: jasmine.createSpy('ask') };
 
 /** Ohne Template/ngOnInit — testet die Komponenten-Logik. Instanziierung läuft im
  *  TestBed-Injection-Context, weil die Komponente `inject(DestroyRef)` als Feld nutzt. */
-function make(adminOverrides: any = {}) {
+function make(adminOverrides: any = {}, auth: any = {}) {
   const adminService = {
     getUsers: jasmine.createSpy('getUsers').and.returnValue(of({ items: [], total: 0 })),
     getGroupMembers: jasmine.createSpy('getGroupMembers').and.returnValue(of([])),
@@ -24,7 +24,7 @@ function make(adminOverrides: any = {}) {
   const router = { navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)) };
   const route = {};
   const c = TestBed.runInInjectionContext(() => new AdminComponent(
-    adminService as any, {} as any, {} as any,
+    adminService as any, {} as any, auth,
     router as any, route as any, snackbar as any, translate as any,
   ));
   return { c, adminService, snackbar, router };
@@ -375,6 +375,50 @@ describe('AdminComponent', () => {
       c.toggleExposure({ id: 9, displayName: 'K', forKids: false } as any, 'forKids');
       expect(confirmStub.ask).not.toHaveBeenCalled();
       expect(updateBook).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // N9-010: private Bücher anderer Konten — Besitzer erkennbar, auch die Pools fragen nach und nennen ihn.
+  describe('fremde private Bücher', () => {
+    const me = { currentUser: { userId: 1 } };
+
+    it('erkennt fremde private Bücher, nicht globale und nicht die eigenen', () => {
+      const { c } = make({}, me);
+      expect(c.isForeignBook({ ownerUserId: 42 } as any)).toBeTrue();
+      expect(c.isForeignBook({ ownerUserId: 1 } as any)).toBeFalse();
+      expect(c.isForeignBook({ ownerUserId: null } as any)).toBeFalse();
+    });
+
+    it('Tagespuzzle auf einer fremden Kopie fragt mit Besitzer nach; Abbrechen stellt zurück', () => {
+      confirmStub.answer = false;
+      const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+      const { c } = make({ updateBook }, me);
+      const book = { id: 7, displayName: 'Lifetime Repertoires', ownerUserId: 42, ownerName: 'bob', forDaily: true } as any;
+
+      c.toggleExposure(book, 'forDaily');
+
+      expect(confirmStub.ask).toHaveBeenCalledWith('admin.books.confirmForeign', { name: 'Lifetime Repertoires', owner: 'bob' });
+      expect(book.forDaily).toBeFalse();
+      expect(updateBook).not.toHaveBeenCalled();
+    });
+
+    it('Pools auf globalen und eigenen Büchern speichern ohne Rückfrage', () => {
+      const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+      const { c } = make({ updateBook }, me);
+
+      c.toggleExposure({ id: 7, displayName: 'G', ownerUserId: null, forRandom: true } as any, 'forRandom');
+      c.toggleExposure({ id: 8, displayName: 'Mein', ownerUserId: 1, forBlind: true } as any, 'forBlind');
+
+      expect(confirmStub.ask).not.toHaveBeenCalled();
+      expect(updateBook).toHaveBeenCalledTimes(2);
+    });
+
+    it('die Suche findet Bücher über den Besitzernamen', () => {
+      const { c } = make({}, me);
+      c.books = [{ id: 1, displayName: 'Kurs', fileName: 'a.pgn', ownerName: 'alice' }, { id: 2, displayName: 'Kurs', fileName: 'b.pgn', ownerName: 'bob' }] as any;
+      c.bookSearch = 'bob';
+      c.applyBookFilter();
+      expect(c.filteredBooks.map(b => b.id)).toEqual([2]);
     });
   });
 });

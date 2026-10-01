@@ -2282,6 +2282,8 @@
       "kidsHint": "Kids: this course appears on the kids' site and can be played there without logging in (calculation books excluded). It only appears there once its comments are in German (translation finished).",
       "confirmPublic": "Make the course “{{name}}” public? It can then be opened with its solutions without signing in.",
       "confirmKids": "Put the course “{{name}}” on the kids' site? Its puzzles can be played there without signing in.",
+      "confirmForeign": "“{{name}}” is a private course of {{owner}}. Open it up anyway? Its content can then be reached without signing in.",
+      "ownedBy": "private · {{name}}",
       "kidsTitles": "Titles on KidHub",
       "kidsTitlePrompt": "Title on KidHub – {{language}} (empty = book name):",
       "slugPlaceholder": "alias e.g. mate1",

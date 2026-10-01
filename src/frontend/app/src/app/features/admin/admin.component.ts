@@ -276,6 +276,7 @@ export class AdminComponent implements OnInit {
     this.filteredBooks = this.books.filter(b => {
       if (q && !((b.displayName ?? '').toLowerCase().includes(q) ||
                  (b.fileName ?? '').toLowerCase().includes(q) ||
+                 (b.ownerName ?? '').toLowerCase().includes(q) ||
                  (b.tags ?? '').toLowerCase().includes(q))) return false;
       if (name && !((b.displayName ?? '').toLowerCase().includes(name) ||
                     (b.fileName ?? '').toLowerCase().includes(name))) return false;
@@ -368,12 +369,21 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  /** „Öffentlich" und „Kinder" schalten ein Buch ohne Anmeldung frei — beim EINSCHALTEN erst nachfragen (F5-013);
-   *  Abbrechen stellt den Schalter zurück. Ausschalten speichert sofort. */
-  toggleExposure(book: Book, field: 'isPublic' | 'forKids'): void {
-    if (!book[field]) { this.saveBook(book); return; }
-    const key = field === 'isPublic' ? 'admin.books.confirmPublic' : 'admin.books.confirmKids';
-    this.confirm.ask(key, { name: book.displayName }).subscribe(ok => {
+  /** Privates Buch eines ANDEREN Kontos (Nutzer-Import/-Upload) — in der Liste markiert (N9-010). */
+  isForeignBook(book: Book): boolean {
+    return book.ownerUserId != null && book.ownerUserId !== this.auth.currentUser?.userId;
+  }
+
+  /** „Öffentlich" und „Kinder" schalten ein Buch ohne Anmeldung frei — beim EINSCHALTEN erst nachfragen (F5-013).
+   *  Bei einem privaten Buch eines anderen Kontos fragen auch die Pools (Täglich/Zufall/Blind, ebenfalls anonym
+   *  lesbar) nach und nennen den Besitzer (N9-010). Abbrechen stellt den Schalter zurück, Ausschalten speichert sofort. */
+  toggleExposure(book: Book, field: 'isPublic' | 'forKids' | 'forDaily' | 'forRandom' | 'forBlind'): void {
+    const foreign = this.isForeignBook(book);
+    if (!book[field] || (!foreign && field !== 'isPublic' && field !== 'forKids')) { this.saveBook(book); return; }
+    const key = foreign ? 'admin.books.confirmForeign'
+      : field === 'isPublic' ? 'admin.books.confirmPublic' : 'admin.books.confirmKids';
+    const params = foreign ? { name: book.displayName, owner: book.ownerName || `#${book.ownerUserId}` } : { name: book.displayName };
+    this.confirm.ask(key, params).subscribe(ok => {
       if (ok) this.saveBook(book);
       else book[field] = false;
     });

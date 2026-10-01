@@ -185,6 +185,9 @@
   }
 }
 .book-name { vertical-align: middle; }
+/* Besitzer privater Bücher (N9-010); fremde hervorgehoben, damit kein Fehlklick die falsche Kopie freigibt. */
+.book-owner { display: block; font-size: 0.75rem; opacity: 0.7; }
+.book-owner.foreign { opacity: 1; font-weight: 600; color: var(--mat-sys-error, #b3261e); }
 .book-rename-btn { width: 30px; height: 30px; line-height: 30px; margin-left: 4px; }
 .book-rename-btn mat-icon { font-size: 17px; width: 17px; height: 17px; opacity: 0.6; }
 
