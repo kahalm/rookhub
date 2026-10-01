@@ -355,10 +355,14 @@ public class GithubActionsService
     /// Internal für den direkten Test der Signaturbildung.
     /// </summary>
     internal IReadOnlyList<(string Name, string Value)> BotBuildInfoHeaders()
+        => BotBuildInfoHeaders(_config["SchachBot:StatsSecret"], DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+    /// <summary>Die Signaturbildung selbst, mit festem Zeitstempel — für den sprachübergreifenden
+    /// Golden-Vektor-Test (<c>BotSignatureVectorTests</c> ↔ schach-bot <c>_verify_build_info_auth</c>).</summary>
+    internal static IReadOnlyList<(string Name, string Value)> BotBuildInfoHeaders(string? secret, long unixSeconds)
     {
-        var secret = _config["SchachBot:StatsSecret"];
         if (string.IsNullOrWhiteSpace(secret)) return Array.Empty<(string, string)>();
-        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var ts = unixSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
         return new[]
         {
             ("X-Bot-Timestamp", ts),

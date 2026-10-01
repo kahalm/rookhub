@@ -209,6 +209,68 @@ public class SchachBotWebhookServiceTests
         // Ohne Exception hier: best-effort wie beim Solver-Webhook.
     }
 
+    /// <summary>JSON-Form der MVC-Antworten, wörtlich wie <c>AddJsonOptions</c> in Program.cs (Web-Vorgaben +
+    /// Enums als Text) — absichtlich NICHT <c>SchachBotWebhookService.WireJson</c>, sonst prüfte der Test sich selbst.</summary>
+    private static readonly JsonSerializerOptions GetResultsJson = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
+    /// <summary>Codereview I2-008: der Live-Webhook trägt DENSELBEN Ergebnis-DTO wie GET /api/book-puzzles/{id}/results.
+    /// Vorher eine handgebaute Projektion, die Mode/TrainingCount/EasyCount wegließ (und früher hintsUsed — die
+    /// Daily-Löser bekamen nie das 💡); ein neues Löser-Feld kam nur über den Catch-up-Pfad beim Bot an.</summary>
+    [Fact]
+    public async Task NotifyAttemptAsync_ResultsHaveTheSameFormAsGetResults()
+    {
+        var handler = new CapturingHandler();
+        var svc = Build(handler, BuildConfig("http://schach-bot:9000/webhook/puzzle-attempt", "s"));
+        var results = new BookPuzzleResultsDto
+        {
+            SolvedCount = 2, AnonymousSolvedCount = 1, AttemptCount = 6, TrainingCount = 1, EasyCount = 1,
+            Solvers = new List<BookSolverDto>
+            {
+                new() { Name = "Anna", DiscordId = "111", DiscordUsername = "anna", TimeSeconds = 42, HintsUsed = 1,
+                        WrongAttempts = 2, Mode = "easy" },
+                new() { Name = "Ben", TimeSeconds = 7 },
+            },
+        };
+
+        await svc.NotifyAttemptAsync(42, results);
+
+        using var doc = JsonDocument.Parse(handler.LastBody!);
+        Assert.Equal(42, doc.RootElement.GetProperty("puzzleId").GetInt32());
+        var rs = doc.RootElement.GetProperty("results");
+        Assert.Equal(JsonSerializer.Serialize(results, GetResultsJson), rs.GetRawText());
+        // Die Felder, die die alte Projektion verlor:
+        Assert.Equal(1, rs.GetProperty("trainingCount").GetInt32());
+        Assert.Equal(1, rs.GetProperty("easyCount").GetInt32());
+        Assert.Equal("easy", rs.GetProperty("solvers")[0].GetProperty("mode").GetString());
+    }
+
+    /// <summary>Dasselbe für den Wochenpost: Webhook-Rumpf = GET /api/weekly-posts/{id}/results (inkl. userId,
+    /// das der signierte Bot dort ohnehin bekommt).</summary>
+    [Fact]
+    public async Task NotifyWeeklyAsync_ResultsHaveTheSameFormAsGetResults()
+    {
+        var handler = new CapturingHandler();
+        var svc = Build(handler, BuildConfig("http://schach-bot:9000/webhook/puzzle-attempt", "s"));
+        var results = new WeeklyPostResultsDto
+        {
+            WeeklyPostId = 7, Total = 3, CompletedCount = 1,
+            Players = new List<WeeklyPlayerResultDto>
+            {
+                new() { UserId = 5, Name = "Anna", DiscordId = "111", PlayedCount = 3, SolvedCount = 2, TotalSeconds = 40,
+                        HintsUsed = 1, TrainingCount = 2, EasyCount = 1, Completed = true },
+            },
+        };
+
+        await svc.NotifyWeeklyAsync(7, results);
+
+        using var doc = JsonDocument.Parse(handler.LastBody!);
+        Assert.Equal(7, doc.RootElement.GetProperty("weeklyPostId").GetInt32());
+        Assert.Equal(JsonSerializer.Serialize(results, GetResultsJson), doc.RootElement.GetProperty("results").GetRawText());
+    }
+
     [Fact]
     public async Task NotifyWeeklyAsync_CarriesModeCountsPerPlayer()
     {

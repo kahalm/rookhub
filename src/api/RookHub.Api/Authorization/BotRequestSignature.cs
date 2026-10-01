@@ -51,6 +51,11 @@ public static class BotRequestSignature
     /// (eine Signatur ohne Timestamp wäre für immer replaybar).
     /// </summary>
     public static bool Verify(string secret, string signedObject, string? provided, string? timestamp)
+        => Verify(secret, signedObject, provided, timestamp, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+    /// <summary>Wie oben, mit festem „jetzt" — für den sprachübergreifenden Golden-Vektor-Test
+    /// (<c>BotSignatureVectorTests</c>), dessen Zeitstempel nie frisch ist.</summary>
+    internal static bool Verify(string secret, string signedObject, string? provided, string? timestamp, long nowUnixSeconds)
     {
         if (string.IsNullOrEmpty(provided))
             return false;
@@ -62,8 +67,7 @@ public static class BotRequestSignature
 
         if (!long.TryParse(timestamp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ts))
             return false;
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        if (Math.Abs(now - ts) > TimestampToleranceSeconds)
+        if (Math.Abs(nowUnixSeconds - ts) > TimestampToleranceSeconds)
             return false;
         var signedMessage = ts.ToString(CultureInfo.InvariantCulture) + "." + signedObject;
 

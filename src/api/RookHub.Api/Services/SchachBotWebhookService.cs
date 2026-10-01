@@ -48,28 +48,10 @@ public class SchachBotWebhookService
             return;
         }
 
-        var payload = new
-        {
-            puzzleId,
-            results = new
-            {
-                solvedCount = results.SolvedCount,
-                anonymousSolvedCount = results.AnonymousSolvedCount,
-                attemptCount = results.AttemptCount,
-                solvers = results.Solvers.Select(s => new
-                {
-                    name = s.Name,
-                    discordId = s.DiscordId,
-                    discordUsername = s.DiscordUsername,
-                    timeSeconds = s.TimeSeconds,
-                    // Der Bot zeigt ein 💡 hinter Lösern mit hintsUsed>0 (puzzle/daily_results.py).
-                    // Fehlte hier (anders als beim Wochenpost) → Daily-Solver bekamen nie das Badge.
-                    hintsUsed = s.HintsUsed,
-                    // Der Bot zeigt je Fehlversuch vor dem ersten Solve ein ❌ hinter der Zeit.
-                    wrongAttempts = s.WrongAttempts,
-                }),
-            },
-        };
+        // Derselbe DTO wie GET /api/book-puzzles/{id}/results (gleiche JSON-Form, siehe WireJson): der Bot
+        // liest beide mit demselben Parser. Eine handgebaute Projektion verlor schon einmal ein Feld
+        // (hintsUsed — Daily-Löser bekamen nie das 💡), über den Catch-up-Pfad kam es an.
+        var payload = new { puzzleId, results };
 
         await PostSignedAsync(url, secret, payload, new WebhookLog(
             ex => _logger.LogWarning(ex, "SchachBot-Webhook: Payload konnte nicht serialisiert werden (puzzleId={PuzzleId})", puzzleId),
@@ -92,29 +74,8 @@ public class SchachBotWebhookService
         // ".../webhook/puzzle-attempt" → ".../webhook/weekly-progress"
         var url = SiblingWebhookUrl(baseUrl, "weekly-progress");
 
-        var payload = new
-        {
-            weeklyPostId,
-            results = new
-            {
-                total = results.Total,
-                completedCount = results.CompletedCount,
-                players = results.Players.Select(p => new
-                {
-                    name = p.Name,
-                    discordId = p.DiscordId,
-                    discordUsername = p.DiscordUsername,
-                    playedCount = p.PlayedCount,
-                    solvedCount = p.SolvedCount,
-                    totalSeconds = p.TotalSeconds,
-                    hintsUsed = p.HintsUsed,
-                    // Gespielte Puzzles je Modus ("training" = Brett eingefroren, "easy" = Figuren ziehbar).
-                    trainingCount = p.TrainingCount,
-                    easyCount = p.EasyCount,
-                    completed = p.Completed,
-                }),
-            },
-        };
+        // Derselbe DTO wie GET /api/weekly-posts/{id}/results (Begründung wie beim Solver-Webhook).
+        var payload = new { weeklyPostId, results };
 
         await PostSignedAsync(url, secret, payload, new WebhookLog(
             ex => _logger.LogWarning(ex, "SchachBot-Weekly-Webhook: Payload nicht serialisierbar (weeklyPostId={Id})", weeklyPostId),
@@ -145,6 +106,16 @@ public class SchachBotWebhookService
             ex => _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook fehlgeschlagen (date={Date})", date)), ct);
     }
 
+    /// <summary>
+    /// JSON-Form der Webhook-Rümpfe = die der MVC-Antworten (<c>AddJsonOptions</c> in Program.cs: Web-Vorgaben,
+    /// also camelCase, plus Enums als Text). So trägt der Live-Webhook genau die Felder, die der Bot über
+    /// GET /results ebenfalls bekommt — eine Form derselben Daten statt zwei.
+    /// </summary>
+    internal static readonly JsonSerializerOptions WireJson = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
     /// <summary>Log-Zeilen eines Webhooks. Die Templates bleiben je Webhook eigen (Kibana-Suchen), der
     /// Versand selbst steht EINMAL in <see cref="PostSignedAsync"/>.</summary>
     private readonly record struct WebhookLog(
@@ -161,7 +132,7 @@ public class SchachBotWebhookService
     private async Task PostSignedAsync(string url, string secret, object payload, WebhookLog log, CancellationToken ct)
     {
         string body;
-        try { body = JsonSerializer.Serialize(payload); }
+        try { body = JsonSerializer.Serialize(payload, WireJson); }
         catch (Exception ex)
         {
             log.SerializeFailed(ex);

@@ -52,6 +52,25 @@ public class GithubActionsServiceTests
             NullLogger<GithubActionsService>.Instance, db);
     }
 
+    /// <summary>Codereview I2-008: der Header-Satz für den build-info-Abruf beim Bot hatte keinen Aufrufer im Test.
+    /// Ohne Secret keine Header (Bot lehnt dann ab), mit Secret frischer Zeitstempel + HMAC über genau diesen.
+    /// Den festen Vektor gegen die Python-Seite hält <c>BotSignatureVectorTests</c>.</summary>
+    [Fact]
+    public void BotBuildInfoHeaders_SignTheFreshTimestamp_OnlyWithSecret()
+    {
+        var handler = new StubHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK));
+        Assert.Empty(Build(handler).BotBuildInfoHeaders());
+
+        var headers = Build(handler, extraSettings: new Dictionary<string, string?> { ["SchachBot:StatsSecret"] = "stats-s3cret" })
+            .BotBuildInfoHeaders();
+
+        Assert.Equal(2, headers.Count);
+        var ts = headers.Single(h => h.Name == "X-Bot-Timestamp").Value;
+        Assert.True(Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(ts)) <= 5);
+        Assert.Equal("sha256=" + SchachBotWebhookService.ComputeHmacHex("stats-s3cret", ts),
+            headers.Single(h => h.Name == "X-Bot-Signature").Value);
+    }
+
     [Fact]
     public async Task NoToken_ReturnsNotConfigured_WithoutCallingGithub()
     {
