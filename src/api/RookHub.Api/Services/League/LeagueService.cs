@@ -244,9 +244,6 @@ public sealed class LeagueService
         return share;
     }
 
-    public Task<LeagueShare?> FindShareAsync(int tnr, int round, string team, CancellationToken ct) =>
-        _db.LeagueShares.AsNoTracking().FirstOrDefaultAsync(s => s.Tnr == tnr && s.Round == round && s.Team == team, ct);
-
     public async Task<bool> DeleteShareAsync(string token, CancellationToken ct)
     {
         var s = await _db.LeagueShares.FindAsync(new object[] { token }, ct);

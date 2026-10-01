@@ -223,14 +223,6 @@ public class LeagueController : BaseApiController
             : Ok(new { token = s.Token, expires = s.Expires.ToString("yyyy-MM-dd") });
     }
 
-    [HttpGet("share")]
-    [HasPermission(Permissions.LeagueManage)]
-    public async Task<IActionResult> FindShare([FromQuery] int tnr, [FromQuery] int round, [FromQuery] string team, CancellationToken ct)
-    {
-        var s = await _league.FindShareAsync(tnr, round, team, ct);
-        return Ok(new { token = s?.Token, expires = s?.Expires.ToString("yyyy-MM-dd") });
-    }
-
     [HttpDelete("share/{token}")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> DeleteShare(string token, CancellationToken ct) =>

@@ -16,6 +16,8 @@ public class RetiredEndpointsTests
         "POST /api/courses/upload",                 // alte Zweitroute zu POST /api/courses
         "GET /api/revenge/notifications/count",     // Badge-Zähler, den keine Navbar abfragt
         "GET /api/kids/progress",                   // KidHub gleicht nur per PUT ab (Antwort = gemeinsamer Stand)
+        // N4-009: lieferte auch abgelaufene Links; LeagueHub holt einen vorhandenen Link über POST (gleicher Link, solange er gilt)
+        "GET /api/league/share",
     ];
 
     [Fact]
