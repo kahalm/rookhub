@@ -333,6 +333,68 @@ public class ChessBaseReaderTests
         Assert.Contains("[WhiteFideId \"1600123\"]", result.Pgn);
     }
 
+    // ── ChessBase 2: Größen aus der Datei (Codereview 2026-09-29, D1-005) ────────────────────────
+    // Kopf, Container, Entitäts-Ids und Zugsatz-Offsets stehen alle in den hochgeladenen Dateien. Vorher lief die
+    // Offset-Rechnung über (oder ein negativer Wert rutschte am Vergleich vorbei), BitConverter warf eine
+    // ArgumentOutOfRangeException, und die GANZE Datenbank galt als unlesbar. Jetzt: leere Namen bzw. ein Fehler an
+    // genau dieser Partie, der Rest wird gelesen.
+
+    private static ChessBaseConverter.Result Cb2With(Action<byte[]>? lid = null, Action<byte[]>? cbh = null)
+    {
+        var files = Cb2Database().Select(f =>
+        {
+            var data = (byte[])f.Item2.Clone();
+            if (f.Item1.EndsWith(".2lid")) lid?.Invoke(data);
+            if (f.Item1.EndsWith(".2cbh")) cbh?.Invoke(data);
+            return (f.Item1, data);
+        }).ToList();
+        return ChessBaseConverter.Convert(ChessBaseFiles.FromFiles(files), 100);
+    }
+
+    private static void Be32(byte[] b, int o, int v) { b[o] = (byte)(v >> 24); b[o + 1] = (byte)(v >> 16); b[o + 2] = (byte)(v >> 8); b[o + 3] = (byte)v; }
+
+    [Fact]
+    public void Cb2_HugeContainers_IdTimesBlockOverflows_NamesEmpty_GameStillRead()
+    {
+        var result = Cb2With(
+            lid: b =>
+            {
+                for (var i = 0; i < 6; i++) Be32(b, 8 + 20 * i, int.MaxValue);   // Block ≈ 12,9 GB
+                Be32(b, 0x0c, 0x100);                                            // 2^40 Spieler
+            },
+            cbh: b => BitConverter.GetBytes(1L << 33).CopyTo(b, 192 + 0x18));   // id · Block > long.MaxValue
+        var game = Assert.Single(result.Games);
+        Assert.Null(game.Error);
+        Assert.Equal("?", game.White);
+        Assert.Equal(new[] { "e4", "e5", "Nf3" }, game.Moves);
+    }
+
+    [Fact]
+    public void Cb2_NegativeHeader_NoException_NamesEmpty()
+    {
+        var game = Assert.Single(Cb2With(lid: b => Be32(b, 0, int.MinValue)).Games);
+        Assert.Null(game.Error);
+        Assert.Equal(("?", "?"), (game.White, game.Black));
+        Assert.Equal(new[] { "e4", "e5", "Nf3" }, game.Moves);
+    }
+
+    [Fact]
+    public void Cb2_TextLengthNearIntMax_DoesNotWrapPastTheRecord()
+    {
+        // Nachname des ersten Spielers mit Länge int.MaxValue: „at + n" lief über und kam am Vergleich vorbei.
+        var game = Assert.Single(Cb2With(lid: b => BitConverter.GetBytes(int.MaxValue).CopyTo(b, 184 + 4)).Games);
+        Assert.Null(game.Error);
+        Assert.Equal("Probe, Paula", game.Black);   // der andere Spieler bleibt lesbar
+    }
+
+    [Fact]
+    public void Cb2_MovesOffsetNearLongMax_IsAnErrorOfThisGame_NotOfTheDatabase()
+    {
+        var game = Assert.Single(Cb2With(cbh: b => BitConverter.GetBytes(long.MaxValue - 10).CopyTo(b, 192 + 0x08)).Games);
+        Assert.Equal("Zugsatz außerhalb der Datei.", game.Error);
+        Assert.Equal("Müßig, Jürgen", game.White);
+    }
+
     // ── Dateien ─────────────────────────────────────────────────────────────────────────────────
 
     [Fact]

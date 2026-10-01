@@ -70,7 +70,8 @@ internal static class Cb2Reader
     /// Inhalts, Reserve B, Prüfsumme, 2 Byte Art (<c>01 00</c> Schach, <c>02 00</c> Chess960), dann A Byte Wörter.</summary>
     internal static (string? StartFen, List<string> Sans) Moves(byte[] cbg, long offset, CancellationToken ct = default)
     {
-        if (offset < 0 || offset + 26 > cbg.Length) throw new ChessBaseMoveException("Zugsatz außerhalb der Datei.");
+        // offset kommt frei aus .2cbh: „offset + 26" liefe bei long.MaxValue über und rutschte am Vergleich vorbei.
+        if (offset < 0 || offset > cbg.Length - 26) throw new ChessBaseMoveException("Zugsatz außerhalb der Datei.");
         var o = (int)offset;
         if (BitConverter.ToUInt64(cbg, o) != 0x1122334455667788UL) throw new ChessBaseMoveException("Zugsatz ohne Kennung.");
         var length = BitConverter.ToInt32(cbg, o + 8);
@@ -183,8 +184,12 @@ internal static class Cb2Reader
         private int Record(int type, long id)
         {
             if (_block <= 0 || id < 0 || id >= _count[type]) return -1;
+            // Kopf, Container und id stehen alle in der Datei (BE32 vorzeichenbehaftet, id ein freier I64 aus .2cbh). Erst
+            // deckeln, dann rechnen: sonst lief id * _block über, ein negatives Ergebnis kam am Vergleich darunter vorbei,
+            // und (int)at warf eine ArgumentOutOfRangeException, die die ganze Datenbank als unlesbar abwies (D1-005).
+            if (_head < 0 || _block > _b.Length || id > (_b.Length - _head) / _block) return -1;
             var at = _head + id * _block + _start[type];
-            if (at + 4 > _b.Length) return -1;
+            if (at < 0 || at + 4 > _b.Length) return -1;
             var length = BitConverter.ToInt32(_b, (int)at);
             return length <= 0 || at + 4 + length > _b.Length ? -1 : (int)at + 4;
         }
@@ -194,7 +199,7 @@ internal static class Cb2Reader
             if (at + 4 > end) return string.Empty;
             var n = BitConverter.ToInt32(_b, at);
             at += 4;
-            if (n < 0 || at + n > end) { at = end; return string.Empty; }
+            if (n < 0 || n > end - at) { at = end; return string.Empty; }   // nicht at + n: läuft bei n ≈ int.MaxValue über
             var s = Encoding.UTF8.GetString(_b, at, n).TrimEnd('\0').Trim();
             at += n;
             return s;
