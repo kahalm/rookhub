@@ -485,11 +485,44 @@ public class TournamentDirectoryQueryService
         }
 
         var normalized = GeoTextNormalizer.Normalize(term);
+        // Die Umschrift-Form wie bei der Verortung (`GeocodingService`): `Normalize` wirft
+        // Kyrillisch und Griechisch RESTLOS weg, „Київ" ergab hier also '' — und StartsWith('')
+        // trifft die ganze Tabelle, mit den ~29 500 ukrainischen PLZ-Zeilen mit LEEREM
+        // Normalnamen als „exakte Treffer" vorn. Ohne Land ist offen, welche Tabelle gilt
+        // (ukrainisch и -> y, sonst i), deshalb beide.
+        var transcribed = GeoTextNormalizer.NormalizeTranscribed(term);
+        var transcribedUa = GeoTextNormalizer.NormalizeTranscribed(term, "UA");
+
+        // Nichts Suchbares uebrig (nur Satzzeichen, eine Schrift ohne Umschrift-Tabelle): lieber
+        // kein Vorschlag als beliebige.
+        if (normalized.Length == 0 && transcribed.Length == 0 && transcribedUa.Length == 0) return [];
+
+        Expression<Func<GeoPlace, bool>> match, exact;
+        if (transcribed == normalized && transcribedUa == normalized)
+        {
+            // Lateinische Eingabe ohne Umlaute — der Normalfall bleibt die Abfrage von bisher.
+            match = g => g.NameNormalized.StartsWith(normalized);
+            exact = g => g.NameNormalized == normalized;
+        }
+        else if (normalized.Length == 0)
+        {
+            match = g => g.NameTranscribed.StartsWith(transcribed) || g.NameTranscribed.StartsWith(transcribedUa);
+            exact = g => g.NameTranscribed == transcribed || g.NameTranscribed == transcribedUa;
+        }
+        else
+        {
+            // Umlaute oder gemischte Schrift: „München" steht als munchen UND muenchen im Lexikon.
+            match = g => g.NameNormalized.StartsWith(normalized)
+                         || g.NameTranscribed.StartsWith(transcribed) || g.NameTranscribed.StartsWith(transcribedUa);
+            exact = g => g.NameNormalized == normalized
+                         || g.NameTranscribed == transcribed || g.NameTranscribed == transcribedUa;
+        }
+
         return await _db.GeoPlaces.AsNoTracking()
-            .Where(g => g.NameNormalized.StartsWith(normalized))
+            .Where(match)
             // Exakte Treffer zuerst, danach die groessten Orte - "Wien" soll nicht hinter
             // "Wiener Neudorf" landen.
-            .OrderByDescending(g => g.NameNormalized == normalized)
+            .OrderByDescending(exact)
             .ThenByDescending(g => g.Population)
             .ThenBy(g => g.Name)
             .Take(limit)

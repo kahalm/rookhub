@@ -1015,6 +1015,69 @@ public class TournamentDirectoryControllerTests : IDisposable
         Assert.Empty(Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value));
     }
 
+    /// <summary>
+    /// Kyrillische oder griechische Eingabe: `Normalize` ergibt dafuer '', und StartsWith('')
+    /// traf frueher die ganze Tabelle — mit den PLZ-Zeilen mit LEEREM Normalnamen als „exakte
+    /// Treffer" vorn. Jetzt sucht die Umschrift-Spalte wie bei der Verortung.
+    /// </summary>
+    [Theory]
+    [InlineData("Київ", "Kyiv (UA)")]
+    [InlineData("Ки", "Kyiv (UA)")]
+    [InlineData("Αθήνα", "Αθήνα (GR)")]
+    public async Task Places_NonLatinInput_SearchesTheTranscription(string q, string expected)
+    {
+        SeedPlaces();
+        SeedNonLatinPlaces();
+
+        var result = await CreateController(1).Places(q, default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal(expected, Assert.Single(suggestions).Label);
+    }
+
+    /// <summary>Bleibt nach beiden Normalformen nichts uebrig, gibt es keinen Vorschlag — nicht zehn beliebige.</summary>
+    [Fact]
+    public async Task Places_NothingSearchableLeft_ReturnsEmpty()
+    {
+        SeedPlaces();
+        SeedNonLatinPlaces();
+
+        var result = await CreateController(1).Places("--", default);
+
+        Assert.Empty(Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value));
+    }
+
+    /// <summary>Umlaut-Eingabe findet weiter ueber den Normalnamen — die Umschrift kommt nur dazu.</summary>
+    [Fact]
+    public async Task Places_UmlautInput_StillFindsTheNormalizedName()
+    {
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "DE", Name = "Munchen", NameNormalized = "munchen", NameTranscribed = "munchen",
+            Lat = 48.14, Lon = 11.58, Kind = GeoPlaceKind.City, Population = 1_500_000,
+        });
+        _db.SaveChanges();
+
+        var result = await CreateController(1).Places("München", default);
+        var suggestions = Assert.IsType<List<GeoPlaceSuggestionDto>>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Equal("Munchen (DE)", Assert.Single(suggestions).Label);
+    }
+
+    /// <summary>
+    /// Wie im echten Lexikon: der Ort selbst lateinisch (GeoNames), die ukrainischen
+    /// PLZ-Zeilen kyrillisch — ihr Normalname ist LEER, nur die Umschrift traegt.
+    /// </summary>
+    private void SeedNonLatinPlaces()
+    {
+        _db.GeoPlaces.AddRange(
+            new GeoPlace { Country = "UA", Name = "Kyiv", NameNormalized = "kyiv", NameTranscribed = "kyiv", Lat = 50.45, Lon = 30.52, Kind = GeoPlaceKind.City, Population = 2_900_000 },
+            new GeoPlace { Country = "UA", PostalCode = "79000", Name = "Львів", NameNormalized = "", NameTranscribed = "lviv", Lat = 49.84, Lon = 24.03, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "UA", PostalCode = "65000", Name = "Одеса", NameNormalized = "", NameTranscribed = "odesa", Lat = 46.48, Lon = 30.72, Kind = GeoPlaceKind.PostalCode },
+            new GeoPlace { Country = "GR", Name = "Αθήνα", NameNormalized = "", NameTranscribed = "athina", Lat = 37.98, Lon = 23.73, Kind = GeoPlaceKind.City, Population = 660_000 });
+        _db.SaveChanges();
+    }
+
     private void SeedPlaces()
     {
         _db.GeoPlaces.AddRange(

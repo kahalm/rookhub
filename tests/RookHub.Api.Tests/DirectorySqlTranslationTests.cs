@@ -105,4 +105,31 @@ public class DirectorySqlTranslationTests
 
         Assert.Contains("ChessArbiterDetailVersion", sql);
     }
+
+    [Fact]
+    public void Ortsvorschlag_mitUmschrift_laesstSichUebersetzen()
+    {
+        using var db = MySqlContext();
+        var normalized = "munchen";
+        var transcribed = "muenchen";
+        var transcribedUa = "muenchen";
+
+        // Der Zweig „Umlaute/gemischte Schrift" aus TournamentDirectoryQueryService.SuggestPlacesAsync.
+        var sql = db.GeoPlaces
+            .Where(g => g.NameNormalized.StartsWith(normalized)
+                        || g.NameTranscribed.StartsWith(transcribed) || g.NameTranscribed.StartsWith(transcribedUa))
+            .OrderByDescending(g => g.NameNormalized == normalized
+                                    || g.NameTranscribed == transcribed || g.NameTranscribed == transcribedUa)
+            .ThenByDescending(g => g.Population)
+            .ThenBy(g => g.Name)
+            .Take(10)
+            .ToQueryString();
+
+        // Beide Spalten im WHERE — nicht still im Speicher gefiltert.
+        Assert.Contains("WHERE", sql);
+        Assert.Contains("`NameNormalized`", sql);
+        Assert.Contains("`NameTranscribed`", sql);
+        Assert.Contains("ORDER BY", sql);
+        Assert.Contains("LIMIT", sql);
+    }
 }
