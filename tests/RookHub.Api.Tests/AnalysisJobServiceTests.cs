@@ -113,6 +113,31 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Equal(new[] { own.Id }, list.Select(j => j.Id));
     }
 
+    /// <summary>
+    /// Die Unterabfrage der Liste sieht nur die Stapel-Analysen des EIGENEN Kontos (Codereview A4-016): die Pumpe
+    /// legt deren Auftraege mit <c>analysis.UserId</c> an, und nur so traegt der Index (UserId, CreatedAt) — ohne die
+    /// Einschraenkung lief jeder Aufruf per Semijoin ueber alle Meister-/Vereinsstellungen. Echte Kennungen kollidieren
+    /// nicht; der Test haengt die Kennung des eigenen Auftrags deshalb absichtlich an eine FREMDE Stapel-Stellung
+    /// (wie ein verwaister Verweis — AnalysisJobId hat keinen Fremdschluessel).
+    /// </summary>
+    [Fact]
+    public async Task List_StapelAnalyseEinesAnderenKontos_blendetNichtsAus()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        var house = await UserWithBackgroundEngineAsync(id: 6);
+        var own = await _svc.CreateAsync(u, new CreateAnalysisJobRequest { Fen = START, TargetDepth = 20, MultiPv = 1 });
+        foreach (var origin in new[] { GameAnalysisOrigin.Library, GameAnalysisOrigin.Club })
+        {
+            var analysis = new GameAnalysis { UserId = house, Title = "Stapel", Pgn = "1. e4 *", Origin = origin };
+            analysis.Positions.Add(new GameAnalysisPosition { Ply = 0, Fen = START, GameMoveUci = "e2e4", AnalysisJobId = own.Id });
+            _db.GameAnalyses.Add(analysis);
+        }
+        await _db.SaveChangesAsync();
+
+        var list = await _svc.ListAsync(u);
+        Assert.Equal(new[] { own.Id }, list.Select(j => j.Id));
+    }
+
     [Fact]
     public async Task Create_UsesBackgroundEngine_AndDefaults()
     {

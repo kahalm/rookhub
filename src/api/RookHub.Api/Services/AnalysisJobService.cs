@@ -59,8 +59,13 @@ public class AnalysisJobService
         // Die Auftraege des Stapels (Meister- und Vereinspartien, GameAnalysisOrigins.IsBatch) gehoeren niemandem zum
         // Anschauen — sie laufen auf dem Konto des Haus-Engine-Besitzers und stuenden dort sonst zu Dutzenden in der Liste.
         // Ebenso die Teilrechnungen eines Zugvergleichs (0.602.0): sie gehören zum Vergleich, nicht in die Liste.
+        // Nur die Stapel-Analysen DIESES Kontos: ihre Auftraege legt die Pumpe mit analysis.UserId an, eine fremde
+        // Stapel-Analyse kann also keinen Auftrag dieser Liste tragen. Ohne die Einschraenkung pruefte jeder Aufruf —
+        // die Seite fragt alle 5–10 s — per Semijoin ueber ALLE Stapel-Stellungen (kein Index auf AnalysisJobId),
+        // auch fuer Nutzer ohne eine einzige; mit ihr traegt der Index (UserId, CreatedAt) auf GameAnalyses.
         var jobs = await _db.AnalysisJobs.Where(j => j.UserId == userId
-                && !_db.GameAnalyses.Any(g => (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
+                && !_db.GameAnalyses.Any(g => g.UserId == userId
+                    && (g.Origin == GameAnalysisOrigin.Library || g.Origin == GameAnalysisOrigin.Club)
                     && g.Positions.Any(p => p.AnalysisJobId == j.Id))
                 && !_db.MoveComparisonLines.Any(l => l.AnalysisJobId == j.Id))
             .OrderByDescending(j => j.CreatedAt).ToListAsync(ct);
