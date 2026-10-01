@@ -1937,6 +1937,7 @@
     "offlineNoCache": "Izvan mreže si i nema spremljenog niza. Otvori beskonačni način jednom dok si na mreži da spremiš zagonetke za izvanmrežno igranje.",
     "help": {
       "title": "Beskonačni način",
+      "open": "Pomoć za beskonačni način",
       "gameplayHeading": "Tijek igre",
       "gameplayP1": "Rješavaš šahovske zagonetke sve veće težine. Počinješ s odabranim rejtingom i napreduješ prema gore. Rejting se automatski povećava kroz Fasttrack faze (vidi dolje).",
       "gameplayP2": "Imaš <strong>3 života</strong>. Kad ostaneš bez života, igra je gotova.",

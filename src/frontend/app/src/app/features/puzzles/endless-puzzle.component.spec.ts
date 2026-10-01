@@ -8,7 +8,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { provideTranslateService, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { PuzzleService } from './puzzle.service';
@@ -1148,7 +1150,7 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
  * Rendert die Endless-Seite (Template) mit ausgeblendeten Kindkomponenten; ngOnInit muss der Aufrufer stilllegen,
  * den Zustand setzt `setup`. Übersetzt ist nur endless.game.lives (für die Leben-Beschriftung).
  */
-function renderEndless(setup: (c: any) => void): HTMLElement {
+function renderEndless(setup: (c: any) => void, extra: { providers?: any[]; imports?: any[] } = {}): HTMLElement {
   const fake = makeComponent();   // liefert die Test-Doppel; gerendert wird eine eigene Instanz über TestBed
   TestBed.configureTestingModule({
     imports: [EndlessPuzzleComponent],
@@ -1170,9 +1172,10 @@ function renderEndless(setup: (c: any) => void): HTMLElement {
       { provide: EndlessChainService, useValue: fake.chainService },
       { provide: SolveModeService, useValue: makeSolveMode() },
       { provide: WorksheetService, useValue: {} },
+      ...(extra.providers ?? []),
     ],
   });
-  TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe, ...(extra.imports ?? [])], schemas: [NO_ERRORS_SCHEMA] } });
   const translate = TestBed.inject(TranslateService);
   translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
   translate.use('en');
@@ -1233,5 +1236,44 @@ describe('EndlessPuzzleComponent Konfig-Raster am Desktop (UX-044)', () => {
     const themes = (el.querySelector('.themes-row') as HTMLElement).getBoundingClientRect();
     expect(themes.top).toBeGreaterThanOrEqual(presets.bottom);
     expect(getComputedStyle(el.querySelector('.theme-preset-chip') as HTMLElement).whiteSpace).toBe('nowrap');
+  });
+});
+
+// Codereview UX-010: Der Hilfe-Knopf war ein Symbol-Knopf ohne Namen, die Hilfe ein eigenes div-Overlay ohne
+// role="dialog", ohne Fokusführung, und Esc schloss es nicht. Jetzt ein echter MatDialog aus dem Template.
+describe('EndlessPuzzleComponent Hilfe als Dialog (UX-010)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+  afterEach(() => TestBed.inject(MatDialog).closeAll());
+
+  const renderWithDialog = () => renderEndless(() => {}, {
+    providers: [MatDialog, provideNoopAnimations()],
+    imports: [MatDialogModule, MatButtonModule],
+  });
+
+  it('der Hilfe-Knopf hat einen Namen', () => {
+    const btn = renderWithDialog().querySelector('.help-btn')!;
+    expect(btn.getAttribute('aria-label')).toBe('endless.help.open');
+    expect(btn.getAttribute('type')).toBe('button');
+  });
+
+  it('öffnet einen Dialog mit Rolle und Titel, holt den Fokus hinein, Esc schließt ihn', async () => {
+    const el = renderWithDialog();
+    (el.querySelector('.help-btn') as HTMLButtonElement).click();
+    await new Promise(r => setTimeout(r));
+
+    const dialog = document.querySelector('.cdk-overlay-container [role="dialog"]') as HTMLElement;
+    expect(dialog).withContext('Dialog-Element im Overlay').not.toBeNull();
+    expect(el.closest('[aria-hidden="true"]')).withContext('Seite dahinter für Screenreader ausgeblendet').not.toBeNull();
+    const title = dialog.querySelector('h2')!;
+    expect(title.textContent).toContain('endless.help.title');
+    expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
+    expect(dialog.querySelector('button[aria-label="common.close"]')).withContext('benannter Schließen-Knopf').not.toBeNull();
+    expect(dialog.contains(document.activeElement)).withContext('Fokus liegt im Dialog').toBeTrue();
+
+    const esc = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    Object.defineProperty(esc, 'keyCode', { get: () => 27 });
+    document.activeElement!.dispatchEvent(esc);
+    await new Promise(r => setTimeout(r));
+    expect(document.querySelector('.cdk-overlay-container [role="dialog"]')).withContext('nach Esc geschlossen').toBeNull();
   });
 });

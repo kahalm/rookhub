@@ -1937,6 +1937,7 @@
     "offlineNoCache": "You're offline and no run is cached. Open Endless once while online to save puzzles for offline play.",
     "help": {
       "title": "Endless Puzzle Mode",
+      "open": "Help on Endless mode",
       "gameplayHeading": "How it works",
       "gameplayP1": "You solve chess puzzles of increasing difficulty. You start at a configurable rating and work your way up. The rating rises automatically along the Fasttrack phases (see below).",
       "gameplayP2": "You have <strong>3 lives</strong>. At 0 lives the game is over.",

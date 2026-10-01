@@ -1540,6 +1540,7 @@
     "offlineNoCache": "Offline vagy, és nincs gyorsítótárazott futam. Nyisd meg a Végtelen módot egyszer online, hogy elmentsd a feladványokat offline játékhoz.",
     "help": {
       "title": "Végtelen feladványmód",
+      "open": "Súgó a végtelen feladványmódhoz",
       "gameplayHeading": "Hogyan működik",
       "gameplayP1": "Növekvő nehézségű sakkfeladványokat oldasz meg. Egy beállítható értékelésen indulsz, és igyekszel minél feljebb jutni. Az értékelés automatikusan emelkedik a Gyorsított fázisok mentén (lásd lent).",
       "gameplayP2": "<strong>3 életed</strong> van. Ha 0-ra csökken, a játék véget ér.",

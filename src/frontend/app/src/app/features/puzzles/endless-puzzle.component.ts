@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener, ChangeDetectionStrategy, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -13,6 +13,7 @@ import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { COMMA, ENTER, SPACE } from '@angular/cdk/keycodes';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SnackbarService } from '../../core/snackbar.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { BoardFsActionsComponent } from './board-fs-actions.component';
@@ -92,7 +93,7 @@ function restoreSessionPuzzles(raw: any[] | null | undefined): EndlessPuzzleAtte
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatProgressSpinnerModule, MatSlideToggleModule,
-    MatChipsModule, MatAutocompleteModule,
+    MatChipsModule, MatAutocompleteModule, MatTooltipModule,
     MatDialogModule, TranslatePipe, PuzzleBoardComponent, BoardFsActionsComponent,
     PuzzleActionBarComponent, PuzzleStatusCardComponent, ChallengeFriendsComponent
   ],
@@ -256,8 +257,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
    *  asynchronen Server-Abgleich erneut angewendet, statt vom gespeicherten Server-Stand überschrieben zu werden. */
   private urlConfigOverrides: Partial<EndlessConfig> = {};
 
-  // Help
-  showHelp = false;
+  // Help — ein MatDialog aus dem Template (UX-010: vorher ein eigenes div-Overlay ohne Dialogrolle, Esc und Fokusführung)
+  @ViewChild('helpDialog', { static: true }) private helpDialog!: TemplateRef<unknown>;
 
   // Eval
   showEval = false;
@@ -711,6 +712,12 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     this.vizArrowEnabled = val;
     if (!val) this.clearVizOpponentArrow();
     this.prefs.setVizArrow(val);
+  }
+
+  /** Hilfe zu Endless als Dialog: Rolle, Fokusfang, Esc und die Rückgabe des Fokus an den Hilfe-Knopf
+   *  bringt MatDialog mit; der Titel (mat-dialog-title) benennt den Dialog. */
+  openHelp(): void {
+    this.dialog.open(this.helpDialog, { width: '600px', maxWidth: '95vw' });
   }
 
   openSettingsDialog(): void {

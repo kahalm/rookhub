@@ -1,12 +1,13 @@
     <div class="endless-page">
-      @if (showHelp) {
-        <div class="help-overlay" (click)="showHelp = false">
-          <div class="help-content" (click)="$event.stopPropagation()">
+      <!-- Hilfe als MatDialog (UX-010): bringt role="dialog", Fokusfang, Esc und die Fokus-Rückgabe mit und blendet die
+           Seite dahinter für Screenreader aus. [aria-label] ist der Eingang von mat-dialog-close (dessen Host-Bindung
+           überschriebe ein [attr.aria-label]). -->
+      <ng-template #helpDialog>
             <div class="help-header">
-              <h2>{{ 'endless.help.title' | translate }}</h2>
-              <button mat-icon-button (click)="showHelp = false"><mat-icon>close</mat-icon></button>
+              <h2 mat-dialog-title>{{ 'endless.help.title' | translate }}</h2>
+              <button mat-icon-button mat-dialog-close [aria-label]="'common.close' | translate"><mat-icon>close</mat-icon></button>
             </div>
-            <div class="help-body">
+            <mat-dialog-content class="help-body">
               <h3>{{ 'endless.help.gameplayHeading' | translate }}</h3>
               <p>{{ 'endless.help.gameplayP1' | translate }}</p>
               <p [innerHTML]="'endless.help.gameplayP2' | translate"></p>
@@ -43,10 +44,8 @@
                 <li [innerHTML]="'endless.help.fasttrackPhase3' | translate:phaseHelp"></li>
               </ul>
               <p>{{ 'endless.help.fasttrackP2' | translate }}</p>
-            </div>
-          </div>
-        </div>
-      }
+            </mat-dialog-content>
+      </ng-template>
       @switch (screen) {
         @case ('config') {
           <div class="config-screen">
@@ -54,7 +53,8 @@
               <mat-card-header>
                 <mat-card-title>
                   {{ 'endless.config.title' | translate }}
-                  <button mat-icon-button class="help-btn" (click)="showHelp = true"><mat-icon>help_outline</mat-icon></button>
+                  <button mat-icon-button class="help-btn" type="button" (click)="openHelp()"
+                          [attr.aria-label]="'endless.help.open' | translate" [matTooltip]="'endless.help.open' | translate"><mat-icon>help_outline</mat-icon></button>
                 </mat-card-title>
                 <mat-card-subtitle>{{ 'endless.config.subtitle' | translate }}</mat-card-subtitle>
               </mat-card-header>

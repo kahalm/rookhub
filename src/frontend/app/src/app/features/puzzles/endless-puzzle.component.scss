@@ -2,20 +2,10 @@
 
     .history-loading { display: flex; justify-content: center; padding: 4rem 0; }
 
-    .help-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
-      display: flex; justify-content: center; align-items: flex-start; padding: 2rem; overflow-y: auto;
-    }
-    .help-content {
-      background: var(--mat-sys-surface-container, white); border-radius: 12px; max-width: 600px; width: 100%;
-      max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    .help-header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 1rem 1.5rem 0; position: sticky; top: 0; background: var(--mat-sys-surface-container, white); z-index: 1;
-    }
-    .help-header h2 { margin: 0; }
-    .help-body { padding: 0 1.5rem 1.5rem; }
+    /* Hilfe-Dialog (MatDialog aus dem Template, UX-010): Titel links, Schließen rechts; der Inhalt scrollt in
+       mat-dialog-content, die Kopfzeile bleibt dabei stehen. */
+    .help-header { display: flex; justify-content: space-between; align-items: center; padding-right: 0.5rem; }
+    .help-header h2 { flex: 1; }
     .help-body h3 { margin: 1.25rem 0 0.5rem; color: #1976d2; }
     .help-body p { margin: 0.25rem 0; line-height: 1.5; }
     .help-body ul { margin: 0.25rem 0; padding-left: 1.5rem; }
@@ -309,8 +299,6 @@
       .config-screen { padding-top: 0.5rem; }
       .gameover-stats { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
       .gameover-card { text-align: center; }
-      .help-overlay { padding: 0.5rem; }
-      .help-content { border-radius: 8px; }
       .threshold-fields { grid-template-columns: 1fr; }
       .themes-row { flex-direction: column; align-items: stretch; }
     }

@@ -1937,6 +1937,7 @@
     "offlineNoCache": "Du bist offline und es ist kein Lauf gespeichert. Öffne den Endlos-Modus einmal online, um Puzzles für den Offline-Modus zu speichern.",
     "help": {
       "title": "Endlos-Modus",
+      "open": "Hilfe zum Endlos-Modus",
       "gameplayHeading": "Spielablauf",
       "gameplayP1": "Du löst Schachpuzzles mit steigender Schwierigkeit. Du startest bei einem konfigurierbaren Rating und arbeitest dich nach oben. Das Rating steigt automatisch entlang der Fasttrack-Phasen (siehe unten).",
       "gameplayP2": "Du hast <strong>3 Leben</strong>. Bei 0 Leben ist das Spiel vorbei.",
