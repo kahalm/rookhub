@@ -99,6 +99,8 @@ internal sealed class LeagueOnlineAccountConfiguration : IEntityTypeConfiguratio
         e.Property(a => a.Confidence).HasMaxLength(20);
         e.Property(a => a.Evidence).HasMaxLength(1000);
         e.Property(a => a.SyncError).HasMaxLength(300);
+        e.Property(a => a.AddedBy).HasMaxLength(60);
+        e.Property(a => a.AddedShareHash).HasMaxLength(64);
         e.HasIndex(a => a.FideId);
     }
 }

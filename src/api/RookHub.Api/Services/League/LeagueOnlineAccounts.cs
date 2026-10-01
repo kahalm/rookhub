@@ -76,6 +76,9 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 
     public sealed record Input(string? Site, string? User, bool? Sure, string? Comment);
 
+    /// <summary>„Hinzugefügt von" für Konten, die über einen Teilen-Link ohne Anmeldung kamen (0.630.0).</summary>
+    public const string Anonymous = "anonym";
+
     /// <summary>Ein Konto als JSON der Spielerkarte. <paramref name="full"/> = mit Kommentar und Abrufstand (angemeldet);
     /// über einen Teilen-Link nur das, was schon vorher sichtbar war. <paramref name="hidden"/> = Konto eines Minderjährigen
     /// (<see cref="LeagueHiddenAccounts"/>): weder Seite noch Name, Adresse oder Kommentar — nur, DASS es eins gibt, und der
@@ -92,13 +95,17 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         if (!full) return o;
         o["id"] = a.Id;
         o["comment"] = withheld ? null : a.Evidence;
+        o["addedBy"] = withheld ? null : a.AddedBy;
         o["games"] = a.GameCount;
         o["syncedAt"] = a.SyncedAt is { } t ? DateTime.SpecifyKind(t, DateTimeKind.Utc).ToString("O") : null;
         o["error"] = a.SyncError;
         return o;
     }
 
-    public async Task<(LeagueOnlineAccount? Account, string? Reason)> CreateAsync(string fide, Input req, CancellationToken ct)
+    /// <summary>Konto anlegen. <paramref name="addedBy"/> = wer (Nutzername bzw. <see cref="Anonymous"/>), <paramref name="shareHash"/> = über
+    /// welchen Teilen-Link (0.630.0).</summary>
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> CreateAsync(string fide, Input req, CancellationToken ct,
+        string? addedBy = null, string? shareHash = null)
     {
         fide = (fide ?? "").Trim();
         if (!await KnownPlayerAsync(fide, ct)) return (null, "unknownPlayer");
@@ -111,6 +118,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         {
             FideId = fide, Site = parsed.Site, UserName = parsed.User, Url = LeagueOnlineSites.ProfileUrl(parsed.Site, parsed.User),
             Confidence = req.Sure == true ? Sure : Unsure, Evidence = Comment(req.Comment), Manual = true, UpdatedAt = DateTime.UtcNow,
+            AddedBy = addedBy is { Length: > 60 } ? addedBy[..60] : addedBy, AddedShareHash = shareHash,
         };
         db.LeagueOnlineAccounts.Add(acc);
         // Ein Vorschlag für genau dieses Konto ist damit erledigt (auch wenn es von Hand eingetragen wurde).
@@ -121,6 +129,26 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         await PatchViewsAsync(fide, ct);
         signal?.Wake();
         return (acc, null);
+    }
+
+    /// <summary>
+    /// Konto über einen Teilen-Link OHNE Anmeldung eintragen (0.630.0, Wunsch: „Hinzufügen von Online-Accounts soll auch für nicht
+    /// registrierte User möglich sein — direkt als sicher, beim Spieler vermerken, wer ihn hinzugefügt hat, in dem Fall dann anonym").
+    /// Immer „gesichert", <see cref="Anonymous"/>, der Link als Hash. Zusätzlich zur Prüfung beim Anlegen: ein Konto, das schon bei
+    /// einem ANDEREN Spieler steht, nimmt der Link nicht an (<c>takenElsewhere</c>) — das entscheidet ein Verwalter.
+    /// </summary>
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> CreateViaShareAsync(string fide, string? site, string? user,
+        string? comment, string shareHash, CancellationToken ct)
+    {
+        if (LeagueOnlineSites.Parse(site, user) is { } parsed)
+        {
+            var lower = parsed.User.ToLower();
+            if (await db.LeagueOnlineAccounts.AnyAsync(a => a.FideId != fide && a.Site == parsed.Site && a.UserName.ToLower() == lower, ct))
+                return (null, "takenElsewhere");
+        }
+        var note = string.IsNullOrWhiteSpace(comment) ? "Über einen Teilen-Link hinzugefügt (anonym)"
+            : "Über einen Teilen-Link hinzugefügt (anonym): " + comment.Trim();
+        return await CreateAsync(fide, new Input(site, user, true, note), ct, Anonymous, shareHash);
     }
 
     /// <summary>Ändern — fehlende Felder bleiben. Ein anderer Name oder eine andere Seite ist ein anderes Konto: die schon
@@ -257,11 +285,12 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     }
 
     /// <summary>Vorschlag übernehmen → ein Konto („gesichert" oder „unsicher"), die Hinweise werden der Kommentar.</summary>
-    public async Task<(LeagueOnlineAccount? Account, string? Reason)> AcceptSuggestionAsync(int id, bool sure, CancellationToken ct)
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> AcceptSuggestionAsync(int id, bool sure, CancellationToken ct,
+        string? addedBy = null)
     {
         var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
         if (x is null) return (null, "notFound");
-        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct);
+        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct, addedBy);
         if (r.Reason == "duplicate")
         {
             db.LeagueAccountSuggestions.Remove(x);                           // das Konto gibt es schon — Vorschlag erledigt

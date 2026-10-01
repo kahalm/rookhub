@@ -93,7 +93,7 @@ public class LeagueController : BaseApiController
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> AddAccount(string fide, [FromBody] LeagueOnlineAccountService.Input req,
         [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        await AccountResultAsync(await accounts.CreateAsync(fide, req ?? new(null, null, null, null), ct), accounts, ct);
+        await AccountResultAsync(await accounts.CreateAsync(fide, req ?? new(null, null, null, null), ct, User.Identity?.Name), accounts, ct);
 
     /// <summary>Ändern — fehlende Felder bleiben; ein anderer Name/eine andere Seite holt die Partien neu.</summary>
     [HttpPut("accounts/{id:int}")]
@@ -167,7 +167,7 @@ public class LeagueController : BaseApiController
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> AcceptSuggestion(int id, [FromBody] AcceptRequest? req, [FromServices] LeagueOnlineAccountService accounts,
         CancellationToken ct) =>
-        await AccountResultAsync(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct), accounts, ct);
+        await AccountResultAsync(await accounts.AcceptSuggestionAsync(id, req?.Sure == true, ct, User.Identity?.Name), accounts, ct);
 
     /// <summary>Konto-Prüfung (i) eines Vorschlags — wie bei einem Konto, die Partien für den Repertoire-Vergleich werden geholt.</summary>
     [HttpGet("suggestions/{id:int}/checks")]
@@ -371,6 +371,27 @@ public class LeagueShareController : ControllerBase
     {
         if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
         return await _league.CardAsync(fide, onlySure: true, ct) is { } c ? Ok(c) : NotFound();
+    }
+
+    public sealed record ShareAccountRequest(string? Site, string? User, string? Comment);
+
+    /// <summary>
+    /// Online-Konto für einen Spieler der geteilten Begegnung eintragen — OHNE Anmeldung (0.630.0): sofort „gesichert", vermerkt als
+    /// „anonym" (+ Hash des Links) → das Konto (bei einem Minderjährigen verborgen); 404 Spieler gehört nicht zum Link, 400 wie beim
+    /// Anlegen und <c>takenElsewhere</c> (steht schon bei einem anderen Spieler).
+    /// </summary>
+    [HttpPost("{token}/player/{fide}/accounts")]
+    public async Task<IActionResult> AddAccount(string token, string fide, [FromBody] ShareAccountRequest? req,
+        [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct)
+    {
+        if (!await _league.ShareCoversAsync(token, fide, ct)) return NotFound();
+        var r = await accounts.CreateViaShareAsync(fide, req?.Site, req?.User, req?.Comment, LeagueClubService.ShareHashOf(token), ct);
+        return r switch
+        {
+            ({ } a, _) => Ok(await accounts.JsonAsync(a, ct)),
+            (_, "unknownPlayer") => NotFound(new { reason = r.Reason }),
+            _ => BadRequest(new { reason = r.Reason }),
+        };
     }
 
     [HttpGet("{token}/player/{fide}/tree")]

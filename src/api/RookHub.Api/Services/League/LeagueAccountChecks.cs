@@ -131,6 +131,9 @@ public sealed class LeagueAccountChecks
         items.Add(await ElsewhereCheckAsync(fide, site, user, ct));
         if (scout?.Result is { Length: > 0 } res) items.Add(new Item("scout", "Team-Suche", Info, res));
         if (sugg is not null) items.Add(new Item("evidence", "Hinweise der Suche", Info, sugg.Evidence));
+        if (account?.AddedBy is { Length: > 0 } by)
+            items.Add(new Item("added", "Eingetragen", Info,
+                by == LeagueOnlineAccountService.Anonymous ? "anonym über einen Teilen-Link" : $"von {by}"));
         return new Result(site, user, LeagueOnlineSites.ProfileUrl(site, user), player.Name, player.Elo, DateTime.UtcNow, prof is not null, items);
     }
 

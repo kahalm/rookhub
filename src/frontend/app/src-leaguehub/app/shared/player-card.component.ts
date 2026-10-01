@@ -131,9 +131,10 @@ type Show = 'w' | 's' | 'b';
               }
             </table>
           }
-          @if (c.accounts.length || canEdit()) {
+          @if (c.accounts.length || canEdit() || token) {
             <h3>Online-Konten</h3>
-            <lh-online-accounts class="acc" [fide]="c.fide" [accounts]="c.accounts" [canEdit]="canEdit()" (changed)="reloadCard()" />
+            <lh-online-accounts class="acc" [fide]="c.fide" [accounts]="c.accounts" [canEdit]="canEdit()" [shareToken]="token"
+                                (changed)="reloadCard()" />
             <p class="muted small-note">„gesichert": das Konto gehört sicher diesem Spieler, „unsicher": nur vermutet.
               Über einen Teilen-Link erscheinen nur gesicherte. Ihre Partien holt LeagueHub im Hintergrund — im Eröffnungsbaum
               wählbar.</p>

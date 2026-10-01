@@ -63,8 +63,10 @@ export class LeagueApiService {
 
   // ── Online-Konten eines Spielers (0.605.0, league.manage) ──
 
-  addAccount(fide: string, input: AccountInput): Promise<Account> {
-    return firstValueFrom(this.http.post<Account>(`/api/league/player/${encodeURIComponent(fide)}/accounts`, input));
+  /** Mit `token` über einen Teilen-Link OHNE Anmeldung (0.630.0): immer „gesichert", vermerkt als „anonym". */
+  addAccount(fide: string, input: AccountInput, token: string | null = null): Promise<Account> {
+    const body = token ? { site: input.site, user: input.user, comment: input.comment } : input;
+    return firstValueFrom(this.http.post<Account>(`${this.base(token)}/player/${encodeURIComponent(fide)}/accounts`, body));
   }
 
   updateAccount(id: number, input: AccountInput): Promise<Account> {

@@ -20,6 +20,7 @@ export function accountErrorText(reason: string | undefined): string {
     case 'invalidUser': return 'Das ist kein gültiger Kontoname (und keine Profiladresse).';
     case 'duplicate': return 'Dieses Konto steht schon da.';
     case 'tooMany': return 'Mehr als 20 Konten je Spieler gehen nicht.';
+    case 'takenElsewhere': return 'Dieses Konto steht schon bei einem anderen Spieler — das klärt ein Verwalter.';
     case 'unknownPlayer': return 'Diesen Spieler kennt LeagueHub nicht.';
     default: return 'Speichern hat nicht geklappt.';
   }

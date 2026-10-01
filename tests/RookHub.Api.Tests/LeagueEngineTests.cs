@@ -262,6 +262,46 @@ public class LeagueEngineTests
     }
 
     [Fact]
+    public async Task Share_AddAccount_WithoutLogin_SureAndAnonymous_OnlyForPlayersOfTheLink()
+    {
+        // Wunsch 2026-10-01: „Hinzufügen von Online-Accounts soll auch für nicht registrierte User möglich sein — direkt als sicher,
+        // beim Spieler vermerken, wer ihn hinzugefügt hat, in dem Fall dann anonym".
+        var (db, svc) = ShareFixture();
+        db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 1, Team = "B", Name = "B2, B", NameKey = "b2, b", FideId = "B2" },
+            new LeaguePlayer { Tnr = 1, Team = "B", Name = "B3, B", NameKey = "b3, b", FideId = "B3" },
+            new LeaguePlayer { Tnr = 1, Team = "C", Name = "C1, C", NameKey = "c1, c", FideId = "C1" });
+        db.LeagueOnlineAccounts.Add(new LeagueOnlineAccount { FideId = "B1", Site = "lichess", UserName = "sicher1", Url = "u", Confidence = "sicher" });
+        await db.SaveChangesAsync();
+        var s = (await svc.CreateShareAsync(1, 1, "A", null, default))!;
+        var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
+        var accounts = new LeagueOnlineAccountService(db);
+        var req = new RookHub.Api.Controllers.LeagueShareController.ShareAccountRequest("lichess", "https://lichess.org/@/NeuerB3", " vom Gegner selbst ");
+
+        var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.AddAccount(s.Token, "B3", req, accounts, default));
+        Assert.Equal("NeuerB3", (string?)((System.Text.Json.Nodes.JsonObject)ok.Value!)["user"]);
+        var acc = await db.LeagueOnlineAccounts.SingleAsync(a => a.FideId == "B3");
+        Assert.Equal(("sicher", "anonym", LeagueClubService.ShareHashOf(s.Token)), (acc.Confidence, acc.AddedBy, acc.AddedShareHash));
+        Assert.Equal("Über einen Teilen-Link hinzugefügt (anonym): vom Gegner selbst", acc.Evidence);
+
+        // Nur Spieler der geteilten Begegnung, nur mit gültigem Link; ein Konto eines anderen Spielers nimmt der Link nicht.
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.AddAccount(s.Token, "C1", req, accounts, default));
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.AddAccount("falsch", "B3", req, accounts, default));
+        var taken = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(await controller.AddAccount(s.Token, "B2",
+            new("lichess", "sicher1", null), accounts, default));
+        Assert.Contains("takenElsewhere", System.Text.Json.JsonSerializer.Serialize(taken.Value));
+        var twice = Assert.IsType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>(await controller.AddAccount(s.Token, "B3", req, accounts, default));
+        Assert.Contains("duplicate", System.Text.Json.JsonSerializer.Serialize(twice.Value));
+        Assert.Single(await db.LeagueOnlineAccounts.Where(a => a.FideId == "B3").ToListAsync());
+
+        // Angemeldet eingetragen: der Nutzername steht da; das Konto-JSON zeigt ihn.
+        var (byUser, _) = await accounts.CreateAsync("C1", new("chess.com", "cee1", true, null), default, "patrik");
+        Assert.Equal("patrik", (string?)LeagueOnlineAccountService.ToJson(byUser!, full: true)["addedBy"]);
+        Assert.Null(LeagueOnlineAccountService.ToJson(byUser!, full: true, hidden: true)["addedBy"]);
+        db.Dispose();
+    }
+
+    [Fact]
     public async Task Share_LockedRound_IsNotShareable_AndRevokedLinkIsGone()
     {
         var (db, svc) = ShareFixture();

@@ -39,6 +39,7 @@ describe('OnlineAccountsComponent', () => {
     expect(siteLabel('chess.com')).toBe('chess.com');
     expect(siteLabel('xyz')).toBe('xyz');
     expect(accountErrorText('duplicate')).toContain('schon da');
+    expect(accountErrorText('takenElsewhere')).toContain('anderen Spieler');
     expect(accountErrorText('invalidUser')).toContain('kein gültiger');
     expect(accountErrorText(undefined)).toContain('nicht geklappt');
     expect(accountStatus({ ...SURE, id: undefined })).toBeNull();                      // Teilen-Link: kein Stand
@@ -89,6 +90,33 @@ describe('OnlineAccountsComponent', () => {
     expect(button('Bearbeiten')).toBeDefined();
   });
 
+  it('Teilen-Link: ohne Anmeldung nur hinzufügen — immer gesichert, als „anonym“, danach Dank und „changed“', async () => {
+    api.addAccount.and.resolveTo(SURE);
+    fixture.componentRef.setInput('shareToken', 'TOKEN');
+    render([{ ...SURE, id: undefined, comment: null }], false);
+    expect(button('Bearbeiten')).toBeUndefined();
+    expect(button('Entfernen')).toBeUndefined();
+    expect(el().querySelector('.sugg')).toBeNull();                                   // keine Vorschläge über den Link
+    (el().querySelector('.acc-add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(button('unsicher')).toBeUndefined();                                       // keine Wahl: immer gesichert
+    expect(el().querySelector('.acc-form')!.textContent).toContain('als „anonym“ vermerkt');
+    const c = fixture.componentInstance;
+    c.formUser.set('NeuerName');
+    c.formComment.set('kenne ihn');
+    await c.save();
+    fixture.detectChanges();
+    expect(api.addAccount).toHaveBeenCalledWith('1606921', { site: 'lichess', user: 'NeuerName', sure: false, comment: 'kenne ihn' }, 'TOKEN');
+    expect(el().textContent).toContain('Danke — das Konto ist eingetragen.');
+    expect(changed).toBe(1);
+  });
+
+  it('angemeldet steht dabei, wer das Konto eingetragen hat', () => {
+    render([{ ...SURE, addedBy: 'patrik' }, { ...UNSURE, addedBy: 'anonym' }], false);
+    const by = Array.from(el().querySelectorAll('.acc-by')).map(x => x.textContent!.trim());
+    expect(by).toEqual(['hinzugefügt von patrik', 'anonym hinzugefügt (Teilen-Link)']);
+  });
+
   it('Konto hinzufügen: Seite, Name, gesichert, Kommentar — danach „changed"', async () => {
     api.addAccount.and.resolveTo(SURE);
     render([], true);
@@ -102,7 +130,7 @@ describe('OnlineAccountsComponent', () => {
     fixture.detectChanges();
     await c.save();
     expect(api.addAccount).toHaveBeenCalledWith('1606921',
-      { site: 'lichess', user: 'https://lichess.org/@/patrik', sure: true, comment: '  Profil nennt den Klarnamen ' });
+      { site: 'lichess', user: 'https://lichess.org/@/patrik', sure: true, comment: '  Profil nennt den Klarnamen ' }, null);
     expect(changed).toBe(1);
     expect(c.adding()).toBeFalse();
   });

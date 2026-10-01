@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
@@ -53,6 +53,7 @@ export function accountStatus(a: Account): string | null {
                 }
                 <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? 'gesichert' : 'unsicher' }}</span>
                 @if (a.minor) { <span class="tag tag-minor" [attr.title]="minorTitle">{{ minorLabel }}</span> }
+                @if (a.addedBy) { <span class="small muted acc-by">{{ addedByText(a.addedBy) }}</span> }
                 @if (a.id !== undefined && !a.hidden) {
                   <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" aria-label="Was geprüft wurde"
                           title="Was geprüft wurde" (click)="toggleChecks(a.id)">i</button>
@@ -75,10 +76,11 @@ export function accountStatus(a: Account): string | null {
     } @else {
       <p class="muted small">Noch kein Online-Konto eingetragen.</p>
     }
-    @if (canEdit() && editing() === null) {
+    @if (canAdd() && editing() === null) {
       @if (adding()) { <ng-container *ngTemplateOutlet="form" /> }
       @else { <button type="button" class="btn-sec acc-add" (click)="startAdd()">Konto hinzufügen</button> }
     }
+    @if (thanks()) { <p class="small acc-thanks" role="status">Danke — das Konto ist eingetragen.</p> }
     <span class="update-msg err" role="status">{{ error() ?? '' }}</span>
     @if (canEdit()) {
       <div class="sugg">
@@ -108,10 +110,15 @@ export function accountStatus(a: Account): string | null {
             <input type="text" autocomplete="off" spellcheck="false" [value]="formUser()" (input)="formUser.set($any($event.target).value)" />
           </label>
         </div>
-        <div class="seg" role="group" aria-label="Zuordnung">
-          <button type="button" [attr.aria-pressed]="formSure()" (click)="formSure.set(true)">gesichert</button>
-          <button type="button" [attr.aria-pressed]="!formSure()" (click)="formSure.set(false)">unsicher</button>
-        </div>
+        @if (shareToken()) {
+          <p class="small muted">Das Konto wird sofort als „gesichert“ eingetragen und als „anonym“ vermerkt — trag bitte nur ein,
+            was du sicher weißt.</p>
+        } @else {
+          <div class="seg" role="group" aria-label="Zuordnung">
+            <button type="button" [attr.aria-pressed]="formSure()" (click)="formSure.set(true)">gesichert</button>
+            <button type="button" [attr.aria-pressed]="!formSure()" (click)="formSure.set(false)">unsicher</button>
+          </div>
+        }
         <label class="field">Kommentar
           <textarea rows="2" maxlength="1000" [value]="formComment()" (input)="formComment.set($any($event.target).value)"
                     placeholder="z. B. woher die Zuordnung kommt"></textarea>
@@ -129,6 +136,10 @@ export class OnlineAccountsComponent {
   readonly fide = input.required<string>();
   readonly accounts = input<Account[]>([]);
   readonly canEdit = input(false);
+  /** Teilen-Link (0.630.0): dann darf man ohne Anmeldung ein Konto HINZUFÜGEN — nicht ändern, nicht entfernen. */
+  readonly shareToken = input<string | null>(null);
+  readonly canAdd = computed(() => this.canEdit() || !!this.shareToken());
+  readonly thanks = signal(false);
   readonly changed = output<void>();
 
   private readonly api = inject(LeagueApiService);
@@ -200,7 +211,13 @@ export class OnlineAccountsComponent {
 
   startAdd(): void {
     this.fill('lichess', '', false, '');
+    this.thanks.set(false);
     this.adding.set(true);
+  }
+
+  /** „hinzugefügt von patrik" bzw. „anonym hinzugefügt (Teilen-Link)". */
+  addedByText(by: string): string {
+    return by === 'anonym' ? 'anonym hinzugefügt (Teilen-Link)' : `hinzugefügt von ${by}`;
   }
 
   startEdit(a: Account): void {
@@ -220,8 +237,9 @@ export class OnlineAccountsComponent {
     await this.run(async () => {
       const id = this.editing();
       if (id !== null) await this.api.updateAccount(id, input);
-      else await this.api.addAccount(this.fide(), input);
+      else await this.api.addAccount(this.fide(), input, this.shareToken());
       this.cancel();
+      if (this.shareToken()) this.thanks.set(true);
     });
   }
 

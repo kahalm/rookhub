@@ -138,6 +138,14 @@ public class LeagueOnlineAccount
     /// <summary>In LeagueHub angelegt oder bearbeitet — ein erneuter Import des Bündels lässt diese Zeile stehen.</summary>
     public bool Manual { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    /// <summary>
+    /// Wer das Konto eingetragen hat (0.630.0, Wunsch: „beim Spieler vermerken, wer ihn hinzugefügt hat, in dem Fall dann anonym"):
+    /// der Nutzername, <see cref="LeagueOnlineAccountService.Anonymous"/> über einen Teilen-Link, <c>null</c> bei älteren Konten und
+    /// denen der Suche.
+    /// </summary>
+    public string? AddedBy { get; set; }
+    /// <summary>Über welchen Teilen-Link eingetragen (SHA-256 hex des Tokens wie bei den Vereinspartien) — der Link selbst steht nirgends.</summary>
+    public string? AddedShareHash { get; set; }
 
     // ── Abruf der Partien (LeagueOnlineSync, 0.605.0) ──
     /// <summary>Letzter Abruf (auch ein gescheiterter); <c>null</c> = noch nie.</summary>

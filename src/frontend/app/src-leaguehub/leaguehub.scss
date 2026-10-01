@@ -469,6 +469,8 @@ lh-online-accounts { display: block; }
 .acc-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .acc-row a { overflow-wrap: anywhere; }
 .acc-row .tag { margin-left: 0; }
+.acc-by { font-size: 13px; }
+.acc-thanks { color: var(--ok); margin: 6px 0 0; }
 .card .tag.tag-sure { color: var(--ok); border-color: currentColor; }
 .acc-comment { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
 .acc-status { margin: 4px 0 0; }

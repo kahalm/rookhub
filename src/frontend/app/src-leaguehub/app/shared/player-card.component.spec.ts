@@ -186,21 +186,25 @@ describe('PlayerCardComponent', () => {
     expect(headings().some(h => h.startsWith('Mit Schwarz gegen 1.d4'))).toBeTrue();
     expect(el().querySelector('.acc')?.textContent).toContain('Lichess: patrik');
     expect(el().querySelector('.acc .tag-sure')?.textContent).toContain('gesichert');
-    expect(el().querySelector('.acc-add')).toBeNull();                              // über den Link nichts zu pflegen
+    expect(el().querySelector('.acc-add')).not.toBeNull();                          // über den Link: nur hinzufügen (0.630.0)
+    expect(Array.from(el().querySelectorAll('lh-online-accounts button')).map(x => x.textContent!.trim())).not.toContain('Entfernen');
     // Schwarz gegen andere: ohne Partien kein Abschnitt
     expect(headings().some(h => h.includes('andere'))).toBeFalse();
   });
 
-  it('Verwalter pflegen die Online-Konten — nie über einen Teilen-Link (0.605.0)', async () => {
+  it('Verwalter pflegen die Online-Konten; über einen Teilen-Link nur hinzufügen, ohne Bearbeiten (0.605.0 / 0.630.0)', async () => {
     perms.add('league.manage');
     await fixture.componentInstance.open('1606921', null, null, null);
     fixture.detectChanges();
     expect(fixture.componentInstance.canEdit()).toBeTrue();
     expect(el().querySelector('.acc-add')).not.toBeNull();
+    // Wunsch 2026-10-01: „Hinzufügen von Online-Accounts soll auch für nicht registrierte User möglich sein".
     await fixture.componentInstance.open('1606921', null, null, 'TOKEN');
     fixture.detectChanges();
     expect(fixture.componentInstance.canEdit()).toBeFalse();
-    expect(el().querySelector('.acc-add')).toBeNull();
+    expect(el().querySelector('.acc-add')).not.toBeNull();
+    expect(Array.from(el().querySelectorAll('lh-online-accounts button')).map(b => b.textContent!.trim()))
+      .not.toContain('Bearbeiten');
   });
 
   it('ohne Konto und ohne Recht kein Abschnitt Online-Konten', async () => {

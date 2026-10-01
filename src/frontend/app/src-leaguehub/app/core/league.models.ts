@@ -50,6 +50,8 @@ export interface Account {
   /** Minderjährig, aber ein ADMIN sieht es (0.625.0) — vollständig, mit dem Hinweis „nur für Admins sichtbar". */
   minor?: boolean;
   id?: number; comment?: string | null; games?: number; syncedAt?: string | null; error?: string | null;
+  /** Wer es eingetragen hat (0.630.0): Nutzername oder „anonym" (über einen Teilen-Link); nur angemeldet. */
+  addedBy?: string | null;
 }
 
 /** Ein Konto, das die Konto-Suche gefunden hat (0.607.0) — ein Verwalter übernimmt oder verwirft es. */

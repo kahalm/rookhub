@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.630.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub share links: anyone with the link can now add an online account to a player of the shared match, without logging in. It is entered as “sure” right away and marked as added anonymously; an account that already belongs to another player is not accepted. Signed in, every account now shows who added it, and the (i) has a line “Added”.", de: "LeagueHub-Teilen-Links: Wer den Link hat, kann jetzt ohne Anmeldung ein Online-Konto für einen Spieler der geteilten Begegnung eintragen. Es steht sofort als „gesichert“ da und ist als „anonym hinzugefügt“ vermerkt; ein Konto, das schon bei einem anderen Spieler steht, wird nicht angenommen. Angemeldet steht jetzt bei jedem Konto, wer es eingetragen hat, und das (i) hat eine Zeile „Eingetragen“." },
+  ] },
   { version: "0.629.0", date: "2026-10-01", changes: [
     { en: "LeagueHub (i): accounts reported by someone else now get their own line “Reported by …” (e.g. “Reported by Ranni”), right after the self-report — with his remark such as “confirmed, own check”. It also shows when his list names a different account for the player or assigns this account to another player.", de: "LeagueHub (i): Konten, die jemand anderer gemeldet hat, bekommen eine eigene Zeile „Gemeldet von …“ (z. B. „Gemeldet von Ranni“), gleich nach der Selbstmeldung — mit seiner Anmerkung wie „bestätigt, eigene Prüfung“. Sie zeigt auch, wenn seine Liste für den Spieler ein anderes Konto nennt oder dieses Konto einem anderen Spieler zuordnet." },
   ] },
