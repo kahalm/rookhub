@@ -168,4 +168,52 @@ describe('NotificationsComponent', () => {
     expect(make({ isAdmin: false, has: (p: string) => p === 'users.manage' }).pushCategories).toContain('admin');
     expect(make({ isAdmin: false, has: () => false }).pushCategories).not.toContain('admin');
   });
+
+  // W5 F5-018: der geklickte Schalter stellt sich selbst um; nach einem Fehler muss er zurueck auf „aus".
+  describe('Push-Schalter', () => {
+    function withPush(push: any, snackbar: any = { warn: jasmine.createSpy('warn') }) {
+      const c = new NotificationsComponent(makeService(), translate, { navigateByUrl: jasmine.createSpy() } as any,
+        { supported: true, permissionDenied: false, ...push } as any, { isAdmin: false } as any, snackbar as any);
+      c.pushPublicKey = 'vapid';
+      return { c, snackbar };
+    }
+
+    it('setzt den Schalter zurueck, wenn die Berechtigung/Subscription scheitert', async () => {
+      const { c, snackbar } = withPush({
+        ensureSubscribed: jasmine.createSpy('ensure').and.rejectWith(new Error('denied')),
+        setPreferences: jasmine.createSpy('prefs'),
+      });
+      const toggle = { checked: true };
+      await c.togglePush('friends', true, toggle);
+      expect(toggle.checked).toBeFalse();
+      expect(c.isPushOn('friends')).toBeFalse();
+      expect(snackbar.warn).toHaveBeenCalled();
+    });
+
+    it('setzt den Schalter zurueck, wenn das Speichern der Bereiche scheitert', async () => {
+      const { c } = withPush({
+        ensureSubscribed: jasmine.createSpy('ensure').and.resolveTo(),
+        setPreferences: jasmine.createSpy('prefs').and.returnValue(throwError(() => ({ status: 500 }))),
+      });
+      const toggle = { checked: true };
+      await c.togglePush('friends', true, toggle);
+      expect(toggle.checked).toBeFalse();
+    });
+
+    it('folgt der effektiven Server-Antwort (Bereich verworfen) und bleibt bei Erfolg an', async () => {
+      const { c } = withPush({
+        ensureSubscribed: jasmine.createSpy('ensure').and.resolveTo(),
+        setPreferences: jasmine.createSpy('prefs').and.callFake((cats: string[]) =>
+          of({ categories: cats.filter(x => x !== 'admin') })),
+        removeSubscription: jasmine.createSpy('remove').and.resolveTo(),
+      });
+      const friends = { checked: true };
+      await c.togglePush('friends', true, friends);
+      expect(friends.checked).toBeTrue();
+      const admin = { checked: true };
+      await c.togglePush('admin', true, admin);
+      expect(admin.checked).toBeFalse();
+      expect(c.isPushOn('friends')).toBeTrue();
+    });
+  });
 });

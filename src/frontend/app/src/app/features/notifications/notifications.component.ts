@@ -50,7 +50,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
               @for (cat of pushCategories; track cat) {
                 <mat-slide-toggle color="primary"
                     [checked]="isPushOn(cat)" [disabled]="pushBusy || pushDenied"
-                    (change)="togglePush(cat, $event.checked)">
+                    (change)="togglePush(cat, $event.checked, $event.source)">
                   {{ ('notifications.category.' + cat) | translate }}
                 </mat-slide-toggle>
               }
@@ -193,9 +193,12 @@ export class NotificationsComponent implements OnInit {
   isPushOn(cat: NotificationCategory): boolean { return this.pushEnabled.has(cat); }
 
   /** Einen Bereich für Push ein-/ausschalten: beim ersten Aktivieren Browser-Berechtigung anfordern +
-   *  Subscription anlegen; beim Deaktivieren des letzten Bereichs die Subscription wieder abmelden. */
-  async togglePush(cat: NotificationCategory, checked: boolean): Promise<void> {
-    if (this.pushBusy || !this.pushPublicKey) return;
+   *  Subscription anlegen; beim Deaktivieren des letzten Bereichs die Subscription wieder abmelden.
+   *  `toggle` ist der geklickte Schalter: er hat sich schon selbst umgestellt, und `[checked]` schreibt
+   *  einen UNVERAENDERTEN Wert nicht zurueck — nach einem Fehler (Berechtigung weggeklickt, Server
+   *  4xx/5xx) oder abweichender Server-Antwort stuende er sonst falsch. Daher am Ende explizit angleichen. */
+  async togglePush(cat: NotificationCategory, checked: boolean, toggle?: { checked: boolean }): Promise<void> {
+    if (this.pushBusy || !this.pushPublicKey) { if (toggle) toggle.checked = this.isPushOn(cat); return; }
     const next = new Set(this.pushEnabled);
     if (checked) next.add(cat); else next.delete(cat);
     this.pushBusy = true;
@@ -211,6 +214,7 @@ export class NotificationsComponent implements OnInit {
       this.snackbar.warn(this.translate.instant('notifications.push.enableError'));
     } finally {
       this.pushBusy = false;
+      if (toggle) toggle.checked = this.isPushOn(cat);
     }
   }
 
