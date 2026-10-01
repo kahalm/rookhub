@@ -3,7 +3,7 @@ import { BoardArrow, ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-boa
 import { GameReviewComponent } from '@rh/features/games/game-review.component';
 import { BoardBadge } from '@rh/features/games/move-badge.util';
 import { ParsedGame, START_FEN, parsePgnText } from '@rh/shared/pgn-viewer/pgn-parser';
-import { de, pgnDate } from '../core/league-format';
+import { de, pgnDate } from '@lh/core/league-format';
 
 /**
  * Eine Partie nachspielen (Spielerkarte → „Letzte Partien", Wunsch 2026-09-28: „die letzten Partien sollen auch klickbar

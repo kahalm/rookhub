@@ -1,4 +1,4 @@
-import { TreeFilter, TreeSource } from './league.models';
+import { TreeFilter, TreeSource } from '@lh/core/league.models';
 
 /** Gemerkte Auswahl des Eröffnungsbaums (je Gerät, für alle Spieler). */
 export const TREE_FILTER_KEY = 'lh-tree-filter';

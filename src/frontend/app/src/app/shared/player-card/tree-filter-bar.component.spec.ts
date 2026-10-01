@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { TreeFilter } from '../core/league.models';
+import { TreeFilter } from '@lh/core/league.models';
 import { TreeFilterBarComponent } from './tree-filter-bar.component';
 
 const BOARD: TreeFilter = { source: 'board', speeds: [], years: null, withUnsure: false };

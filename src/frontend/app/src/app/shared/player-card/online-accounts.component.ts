@@ -3,13 +3,13 @@ import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.compone
 import { firstValueFrom } from 'rxjs';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LeagueApiService } from '../core/league-api.service';
-import { Account, AccountInput, AccountSuggestion, SuggestionList } from '../core/league.models';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { Account, AccountInput, AccountSuggestion, SuggestionList } from '@lh/core/league.models';
 import { AccountSuggestionsComponent } from './account-suggestions.component';
 import { AccountChecksComponent } from './account-checks.component';
-import { ACCOUNT_SITES, HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from '../core/account-format';
+import { ACCOUNT_SITES, HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from './account-format';
 
-export { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
+export { ACCOUNT_SITES, accountErrorText, siteLabel } from './account-format';
 
 /** Ergebnis von „Jetzt suchen" in Worten. */
 export function scanNoteText(r: SuggestionList): string {

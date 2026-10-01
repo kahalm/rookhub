@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, v
 import { AuthService } from '@rh/core/auth.service';
 import { LeagueApiService } from '../../core/league-api.service';
 import { AccountSuggestion } from '../../core/league.models';
-import { AccountSuggestionsComponent } from '../../shared/account-suggestions.component';
-import { PlayerCardComponent } from '../../shared/player-card.component';
+import { AccountSuggestionsComponent } from '@rh/shared/player-card/account-suggestions.component';
+import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
 /** Vorschläge nach Spieler, in der Reihenfolge des stärksten Vorschlags je Spieler. */
 export function groupByPlayer(items: AccountSuggestion[]): { fide: string; name: string; team: string | null; items: AccountSuggestion[] }[] {

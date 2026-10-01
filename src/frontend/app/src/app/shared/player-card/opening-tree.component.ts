@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
-import { LeagueApiService } from '../core/league-api.service';
-import { de } from '../core/league-format';
-import { OpeningTree, TreeFilter } from '../core/league.models';
-import { DEFAULT_TREE_FILTER } from '../core/tree-filter';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { de } from '@lh/core/league-format';
+import { OpeningTree, TreeFilter } from '@lh/core/league.models';
+import { DEFAULT_TREE_FILTER } from './tree-filter';
 
 /** „5.Sf3" bzw. „5…Sf6" für den Halbzug an Stelle `ply` (0-basiert). */
 export function moveLabel(ply: number, san: string): string {

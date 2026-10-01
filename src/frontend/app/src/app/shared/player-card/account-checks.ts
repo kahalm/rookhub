@@ -1,4 +1,4 @@
-import { AccountCheckItem } from './league.models';
+import { AccountCheckItem } from '@lh/core/league.models';
 
 /** Zeichen je Ergebnis — Farbe allein trennt nicht für jeden, deshalb auch ein eigenes Zeichen. */
 export function checkSymbol(status: AccountCheckItem['status']): string {

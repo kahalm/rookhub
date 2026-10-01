@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AuthService } from '@rh/core/auth.service';
 import { provideTranslateService } from '@ngx-translate/core';
-import { LeagueApiService } from '../core/league-api.service';
-import { MyGamesService } from '../core/my-games.service';
-import { PlayerCard, ProfileView } from '../core/league.models';
-import { TREE_FILTER_KEY } from '../core/tree-filter';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { MyGamesService } from '@lh/core/my-games.service';
+import { PlayerCard, ProfileView } from '@lh/core/league.models';
+import { TREE_FILTER_KEY } from './tree-filter';
 import { PlayerCardComponent } from './player-card.component';
 
 const CARD: PlayerCard = {

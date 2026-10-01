@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LeagueApiService } from '../core/league-api.service';
-import { AccountSuggestion } from '../core/league.models';
-import { HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from '../core/account-format';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { AccountSuggestion } from '@lh/core/league.models';
+import { HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from './account-format';
 import { AccountChecksComponent } from './account-checks.component';
 
 /** „zuletzt aktiv 09/2026" — genauer braucht es niemand, um ein verwaistes Konto zu erkennen. */

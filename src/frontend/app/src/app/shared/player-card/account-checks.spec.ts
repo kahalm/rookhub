@@ -1,5 +1,5 @@
 import { checkStatusLabel, checkSymbol, checksSummary } from './account-checks';
-import { AccountCheckItem } from './league.models';
+import { AccountCheckItem } from '@lh/core/league.models';
 
 const I = (status: AccountCheckItem['status']): AccountCheckItem => ({ key: status + Math.random(), label: 'x', status, text: 'y' });
 

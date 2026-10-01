@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { AuthService } from '@rh/core/auth.service';
-import { LeagueApiService } from '../core/league-api.service';
-import { MyGamesService } from '../core/my-games.service';
-import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '../core/league-format';
-import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '../core/league.models';
-import { TREE_FILTER_KEY, effectiveTreeFilter, normalizeTreeFilter } from '../core/tree-filter';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { MyGamesService } from '@lh/core/my-games.service';
+import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '@lh/core/league-format';
+import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '@lh/core/league.models';
+import { TREE_FILTER_KEY, effectiveTreeFilter, normalizeTreeFilter } from './tree-filter';
 import { localStore, readJson, writeJson } from '@rh/core/local-json-store';
 import { downloadBlob } from '@rh/shared/download.util';
 import { GameReplayComponent } from './game-replay.component';

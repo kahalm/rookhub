@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LeagueApiService } from '../core/league-api.service';
-import { AccountChecks } from '../core/league.models';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { AccountChecks } from '@lh/core/league.models';
 import { AccountChecksComponent } from './account-checks.component';
 
 const CHECKS: AccountChecks = {

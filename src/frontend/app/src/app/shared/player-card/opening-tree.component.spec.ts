@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { LeagueApiService } from '../core/league-api.service';
-import { OpeningTree, TreeFilter } from '../core/league.models';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { OpeningTree, TreeFilter } from '@lh/core/league.models';
 import { OpeningTreeComponent, fenAfter, moveLabel } from './opening-tree.component';
 
 const BOARD: TreeFilter = { source: 'board', speeds: [], years: null, withUnsure: false };

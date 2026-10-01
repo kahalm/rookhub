@@ -12,8 +12,8 @@ import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.compone
 import { firstValueFrom } from 'rxjs';
 import { downloadBlob } from '@rh/shared/download.util';
 import { de } from '../../core/league-format';
-import { PlayerCardComponent } from '../../shared/player-card.component';
-import { GameReplayComponent } from '../../shared/game-replay.component';
+import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
+import { GameReplayComponent } from '@rh/shared/player-card/game-replay.component';
 import { AccessGateComponent } from '../../shared/access-gate.component';
 
 /**

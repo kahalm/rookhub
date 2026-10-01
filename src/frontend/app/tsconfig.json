@@ -21,7 +21,8 @@
        Bausteine mit RookHub — per Alias statt Kopie, damit eine Aenderung nicht zweimal
        passieren muss. */
     "paths": {
-      "@rh/*": ["./src/app/*"]
+      "@rh/*": ["./src/app/*"],
+      "@lh/*": ["./src-leaguehub/app/*"]
     }
   },
   "angularCompilerOptions": {

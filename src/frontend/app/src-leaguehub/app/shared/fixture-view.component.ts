@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSign
 import { LeagueApiService } from '../core/league-api.service';
 import { PHASE_TEXT, pct, shareText, shortTeam, tn } from '../core/league-format';
 import { Board, Fixture } from '../core/league.models';
-import { PlayerCardComponent } from './player-card.component';
+import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
 
 /**
  * Eine Begegnung: Kopf (Runde, Datum, Ort, Paarung), Brett-Prognosen (drei Kandidaten je Brett,

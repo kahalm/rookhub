@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { LeagueApiService } from '../core/league-api.service';
-import { AccountChecks } from '../core/league.models';
-import { checkStatusLabel, checkSymbol, checksSummary } from '../core/account-checks';
+import { LeagueApiService } from '@lh/core/league-api.service';
+import { AccountChecks } from '@lh/core/league.models';
+import { checkStatusLabel, checkSymbol, checksSummary } from './account-checks';
 
 /**
  * Konto-Prüfung (i) (0.619.0, Wunsch 2026-09-30: „mach bei den Konten immer ein (i) und zeig an, was alles geprüft wurde").

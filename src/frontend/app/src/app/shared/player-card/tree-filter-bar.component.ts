@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
-import { TreeFilter, TreeSource } from '../core/league.models';
-import { TREE_SPEEDS, TREE_YEARS, normalizeTreeFilter, toggleSpeed } from '../core/tree-filter';
+import { TreeFilter, TreeSource } from '@lh/core/league.models';
+import { TREE_SPEEDS, TREE_YEARS, normalizeTreeFilter, toggleSpeed } from './tree-filter';
 
 /**
  * Filterleiste der Spielerkarte (0.617.0, Wunsch 2026-09-30: „auch an der Stelle will ich die vollen Filtermöglichkeiten"):
