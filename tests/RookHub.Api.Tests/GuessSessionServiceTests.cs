@@ -561,6 +561,46 @@ public class GuessSessionServiceTests : IDisposable
         Assert.False(await _db.GuessSessions.AnyAsync(s => s.Id == oldest));
     }
 
+    /// <summary>Codereview A6-015: der Deckel räumte nur BEENDETE Durchläufe — wer nie zu Ende riet, legte mit
+    /// jedem Start eine weitere Zeile an (anonym 30/min, 43 200 am Tag für EINEN Besitzer statt 50).</summary>
+    [Fact]
+    public async Task Start_AtTheCapWithOnlyRunningRuns_DropsTheOldestRunning()
+    {
+        var (_, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        var t0 = DateTime.UtcNow.AddDays(-100);
+        for (var i = 0; i < GuessSessionService.MaxSessionsPerOwner; i++)
+            _db.GuessSessions.Add(new GuessSession { AnonymousSessionId = AnonA, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(i) });
+        await _db.SaveChangesAsync();
+        var oldest = await _db.GuessSessions.Where(s => s.AnonymousSessionId == AnonA).OrderBy(s => s.StartedAt).Select(s => s.Id).FirstAsync();
+
+        for (var i = 0; i < 3; i++)
+            await _svc.StartAsync(GuessOwner.ForAnonymous(AnonA), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Equal(GuessSessionService.MaxSessionsPerOwner, await _db.GuessSessions.CountAsync(s => s.AnonymousSessionId == AnonA));
+        Assert.False(await _db.GuessSessions.AnyAsync(s => s.Id == oldest));
+    }
+
+    /// <summary>Beendete weichen vor laufenden, auch wenn der laufende älter ist.</summary>
+    [Fact]
+    public async Task Start_AtTheCap_DropsFinishedBeforeRunning()
+    {
+        var (user, analysis) = await SeedAsync();
+        var t0 = DateTime.UtcNow.AddDays(-100);
+        var oldRunning = new GuessSession { UserId = user.Id, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(-1) };
+        var finished = new GuessSession { UserId = user.Id, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(10), Status = GuessSessionStatus.Done };
+        _db.GuessSessions.AddRange(oldRunning, finished);
+        for (var i = 2; i < GuessSessionService.MaxSessionsPerOwner; i++)
+            _db.GuessSessions.Add(new GuessSession { UserId = user.Id, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(i) });
+        await _db.SaveChangesAsync();
+
+        await _svc.StartAsync(GuessOwner.ForUser(user.Id), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Equal(GuessSessionService.MaxSessionsPerOwner, await _db.GuessSessions.CountAsync(s => s.UserId == user.Id));
+        Assert.True(await _db.GuessSessions.AnyAsync(s => s.Id == oldRunning.Id));
+        Assert.False(await _db.GuessSessions.AnyAsync(s => s.Id == finished.Id));
+    }
+
     // ===== Seitenwahl: der Gewinner =====================================================
 
     /// <summary>Ohne Angabe übernimmt der Nutzer die Seite des GEWINNERS — darum geht es im

@@ -176,6 +176,55 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
         Assert.Equal("it-audience-1", Assert.Single(withoutLeagues.Items).Entry.ChessResultsId);
     }
 
+    /// <summary>
+    /// Deckel der Punktepartie (Codereview A6-015): beim Überlauf weichen zuerst beendete, dann die ältesten
+    /// laufenden Durchläufe — sortiert über ein CASE im ORDER BY, mit LIMIT und Include der Züge. Vorher
+    /// räumte der Deckel nur beendete, und wer nie zu Ende riet, legte unbegrenzt Zeilen an.
+    /// </summary>
+    [MySqlFact]
+    public async Task Punktepartie_DeckelRaeumtBeendeteVorLaufenden()
+    {
+        const string Anon = "11111111-2222-3333-4444-555555555555";
+        var userId = await SeedUserAsync("guess");
+        var analysis = new GameAnalysis
+        {
+            UserId = userId, Pgn = "1. e4 *", StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            PlyCount = 1, Status = GameAnalysisStatus.Done,
+        };
+        Db.GameAnalyses.Add(analysis);
+        await Db.SaveChangesAsync();
+        var t0 = DateTime.UtcNow.AddDays(-100);
+        var finished = new GuessSession
+        {
+            UserId = userId, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(10), Status = GuessSessionStatus.Done,
+            Moves = { new GuessMove { Ply = 0, PlayedUci = "e2e4" } },
+        };
+        var oldestRunning = new GuessSession { UserId = userId, GameAnalysisId = analysis.Id, StartedAt = t0 };
+        Db.GuessSessions.AddRange(finished, oldestRunning);
+        for (var i = 2; i < GuessSessionService.MaxSessionsPerOwner; i++)
+            Db.GuessSessions.Add(new GuessSession { UserId = userId, GameAnalysisId = analysis.Id, StartedAt = t0.AddDays(10 + i) });
+        Db.GuessSessions.Add(new GuessSession { AnonymousSessionId = Anon, GameAnalysisId = analysis.Id, StartedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+        var svc = Get<GuessSessionService>();
+
+        // 51 Durchläufe: der beendete weicht, obwohl der älteste laufende älter ist.
+        Assert.Equal(1, await svc.ClaimAnonymousAsync(userId, Anon));
+        Db.ChangeTracker.Clear();
+        Assert.Equal(GuessSessionService.MaxSessionsPerOwner, await Db.GuessSessions.CountAsync(s => s.UserId == userId));
+        Assert.False(await Db.GuessSessions.AnyAsync(s => s.Id == finished.Id));
+        Assert.False(await Db.GuessMoves.AnyAsync());
+
+        // Nur noch laufende: jetzt weicht der älteste laufende.
+        Db.GuessSessions.Add(new GuessSession { AnonymousSessionId = Anon, GameAnalysisId = analysis.Id, StartedAt = DateTime.UtcNow });
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+        Assert.Equal(1, await svc.ClaimAnonymousAsync(userId, Anon));
+        Db.ChangeTracker.Clear();
+        Assert.Equal(GuessSessionService.MaxSessionsPerOwner, await Db.GuessSessions.CountAsync(s => s.UserId == userId));
+        Assert.False(await Db.GuessSessions.AnyAsync(s => s.Id == oldestRunning.Id));
+    }
+
     [MySqlFact]
     public async Task Partienliste_UebersetztUndZaehltDieZuegeNach()
     {

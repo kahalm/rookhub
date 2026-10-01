@@ -333,7 +333,7 @@ public class GuessSessionService
     ///
     /// <para>Gilt nur für Zeilen OHNE Konto; die Kennung muss das Muster erfüllen (wie bei den anonymen Routen —
     /// ein kurzer, erratbarer Wert wäre der Weg in fremde Durchläufe). Der Deckel je Konto gilt danach wie beim
-    /// Start: es weichen nur BEENDETE Durchläufe, der älteste zuerst.</para>
+    /// Start: es weichen zuerst BEENDETE Durchläufe, der älteste zuerst, danach die ältesten laufenden.</para>
     /// </summary>
     /// <returns>Anzahl der übernommenen Durchläufe.</returns>
     public async Task<int> ClaimAnonymousAsync(int userId, string? anonymousSessionId, CancellationToken ct = default)
@@ -362,9 +362,9 @@ public class GuessSessionService
 
     /// <summary>Wie viele Durchläufe ein Besitzer behält. Die Übersicht zeigt ohnehin nur 100;
     /// entscheidend ist aber, dass <c>POST</c> auch OHNE Anmeldung Zeilen anlegt — ohne Deckel
-    /// wächst die Tabelle mit jedem Aufruf, den der Rate-Limiter durchlässt. Weggeräumt werden nur
-    /// BEENDETE Durchläufe (der laufende ist die Arbeit des Nutzers) und immer der älteste zuerst,
-    /// dieselbe Regel wie <c>AnalysisJobService.MaxJobsPerUser</c>.</summary>
+    /// wächst die Tabelle mit jedem Aufruf, den der Rate-Limiter durchlässt. Weggeräumt werden zuerst
+    /// BEENDETE Durchläufe (ein laufender ist die Arbeit des Nutzers), der älteste zuerst; reicht das nicht,
+    /// weichen die ältesten LAUFENDEN — sonst bände der Deckel nicht, sobald niemand einen Durchlauf beendet.</summary>
     public const int MaxSessionsPerOwner = 50;
 
     /// <summary>
@@ -397,13 +397,15 @@ public class GuessSessionService
         var count = await OwnedBy(owner).CountAsync(ct);
         if (count + room <= MaxSessionsPerOwner) return;
 
+        // Beendete zuerst, dann die ältesten laufenden: vorher wichen NUR beendete, und wer nie zu Ende
+        // riet, legte mit jedem Start eine weitere Zeile an — der Deckel band dann gar nicht (Codereview A6-015).
         var stale = await OwnedBy(owner)
-            .Where(s => s.Status == GuessSessionStatus.Done)
-            .OrderBy(s => s.StartedAt)
+            .OrderBy(s => s.Status == GuessSessionStatus.Done ? 0 : 1)
+            .ThenBy(s => s.StartedAt)
             .Take(count + room - MaxSessionsPerOwner)
             .Include(s => s.Moves)
             .ToListAsync(ct);
-        if (stale.Count == 0) return;   // alles läuft noch → nichts wegräumen
+        if (stale.Count == 0) return;
 
         _db.GuessMoves.RemoveRange(stale.SelectMany(s => s.Moves));
         _db.GuessSessions.RemoveRange(stale);
