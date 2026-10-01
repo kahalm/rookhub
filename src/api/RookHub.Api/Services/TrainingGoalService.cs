@@ -90,6 +90,7 @@ public class TrainingGoalService
         Apply(goal, dto);
         goal.UpdatedAt = now;
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return Map(goal.DailyMinutes, goal.PlayGames, goal.WeeklyDaysTarget, "personal", null);
     }
 
@@ -101,6 +102,7 @@ public class TrainingGoalService
         {
             _db.UserTrainingGoals.Remove(goal);
             await _db.SaveChangesAsync();
+            InvalidateDailySeries(userId);
         }
         return await GetEffectiveGoalAsync(userId);
     }
@@ -187,6 +189,7 @@ public class TrainingGoalService
             AttemptedAt = DateTime.UtcNow,
         });
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
     }
 
     /// <summary>Kursname aus der bereits gecachten Kursliste des Users (ChessableCredential.
@@ -287,6 +290,7 @@ public class TrainingGoalService
             existing.UpdatedAt = now;
         }
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return true;
     }
 
@@ -300,6 +304,7 @@ public class TrainingGoalService
         if (existing == null) return false;
         _db.ChessableCourseThemes.Remove(existing);
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return true;
     }
 
@@ -350,6 +355,7 @@ public class TrainingGoalService
         };
         _db.ManualActivities.Add(entity);
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return ToDto(entity);
     }
 
@@ -364,6 +370,7 @@ public class TrainingGoalService
         entity.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         entity.Theme = dto.Theme;
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return ToDto(entity);
     }
 
@@ -374,6 +381,7 @@ public class TrainingGoalService
         if (entity == null) return false;
         _db.ManualActivities.Remove(entity);
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
         return true;
     }
 
@@ -459,9 +467,11 @@ public class TrainingGoalService
     public async Task<DailySeriesDto> GetDailySeriesAsync(int userId)
     {
         // Kurz-Cache je User: die Serie aggregiert die KOMPLETTE Historie über 8 Tabellen pro Request.
-        // Die Daten sind praktisch append-only — 60 s Staleness ist für eine Statistikseite unerheblich,
-        // spart aber die volle Aggregation bei jedem Seitenwechsel/Perioden-Umschalten.
-        var cacheKey = $"tg_daily_series_{userId}";
+        // Gemessene Zeit (Puzzles, Kurse, Partien) ist praktisch append-only — 60 s Staleness ist dafür
+        // unerheblich, spart aber die volle Aggregation bei jedem Seitenwechsel/Perioden-Umschalten.
+        // Was der User auf der Seite SELBST ändert (Einträge, Timer, Ziel, Kurs-Thema), verwirft den
+        // Eintrag sofort (InvalidateDailySeries), sonst widerspricht die Aufschlüsselung dem frischen Tracker.
+        var cacheKey = DailySeriesKey(userId);
         if (_cache is not null && _cache.TryGetValue(cacheKey, out DailySeriesDto? cached) && cached is not null)
             return cached;
 
@@ -477,6 +487,14 @@ public class TrainingGoalService
         _cache?.Set(cacheKey, dto, TimeSpan.FromSeconds(60));
         return dto;
     }
+
+    private static string DailySeriesKey(int userId) => $"tg_daily_series_{userId}";
+
+    /// <summary>Verwirft die gecachte Tagesreihe nach einer Änderung des Users in diesem Dienst.
+    /// Die Seite lädt danach Tracker (frisch) und Tagesreihe gemeinsam neu — ohne das zeigte die
+    /// Perioden-Aufschlüsselung bis zu 60 s den alten Stand (Codereview N9-005). Eine geänderte
+    /// Gruppen-Vorlage trifft viele User und wartet bewusst die 60 s ab.</summary>
+    private void InvalidateDailySeries(int userId) => _cache?.Remove(DailySeriesKey(userId));
 
     /// <summary>Heutiger Fortschritt (Tageszeit-Ziel + Aufschlüsselung) + Wochenstand
     /// (Spielen-Partien + voll erfüllte Tage) der laufenden ISO-Woche.</summary>
@@ -939,6 +957,7 @@ public class TrainingGoalService
         _db.ManualActivities.Add(manual);
         _db.ActivityTimers.Remove(timer);
         await _db.SaveChangesAsync();
+        InvalidateDailySeries(userId);
 
         return ToDto(manual);
     }

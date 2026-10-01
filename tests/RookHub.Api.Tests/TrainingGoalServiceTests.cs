@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -201,6 +202,52 @@ public class TrainingGoalServiceTests : IDisposable
         Assert.Equal(old.Date.ToString("yyyy-MM-dd"), series.Days[0].Date); // älteste zuerst
         Assert.Equal(120, series.Days[0].BySource.RandomPuzzleSeconds);
         Assert.Equal(240, series.Days[1].BySource.RandomPuzzleSeconds);
+    }
+
+    [Fact]
+    public async Task DailySeries_Cache_IsDroppedByOwnChanges()
+    {
+        // Codereview N9-005: die Tagesreihe lag 60 s im Cache, und keine eigene Änderung verwarf ihn —
+        // die Perioden-Aufschlüsselung zeigte nach einer Eingabe den alten Stand, während der Tracker
+        // (frisch) die neue Zeit schon enthielt.
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var svc = new TrainingGoalService(_db, cache);
+        var u = await CreateUserAsync();
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        async Task<TrackerDayDto> Day() => Assert.Single((await svc.GetDailySeriesAsync(u.Id)).Days);
+
+        Assert.Empty((await svc.GetDailySeriesAsync(u.Id)).Days);   // füllt den Cache
+
+        var entry = await svc.AddManualAsync(u.Id, ManualInput(ManualActivityKind.Coaching, 60, date: today));
+        Assert.Equal(3600, (await Day()).TotalSeconds);
+        Assert.Equal("none", (await Day()).Status);
+
+        await svc.SetPersonalGoalAsync(u.Id, Input(daily: 30));
+        Assert.Equal("full", (await Day()).Status);
+
+        await svc.UpdateManualAsync(u.Id, entry.Id, ManualInput(ManualActivityKind.Coaching, 10, date: today));
+        Assert.Equal(600, (await Day()).TotalSeconds);
+        Assert.Equal("partial", (await Day()).Status);
+
+        await svc.DeletePersonalGoalAsync(u.Id);
+        Assert.Equal("none", (await Day()).Status);
+
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = "Buch", Kind = ManualActivityKind.OfflineStudy, StartedAt = DateTime.UtcNow.AddMinutes(-20) });
+        await _db.SaveChangesAsync();
+        await svc.StopTimerAsync(u.Id, new());
+        Assert.Equal(600 + 1200, (await Day()).TotalSeconds);
+
+        await svc.DeleteManualAsync(u.Id, entry.Id);
+        Assert.Equal(1200, (await Day()).TotalSeconds);
+
+        await svc.RecordChessableActivityAsync(u.Id, new() { SecondsActive = 120, CourseId = "777" });
+        Assert.Equal(120, (await Day()).BySource.ChessableSeconds);
+
+        await svc.SetChessableCourseThemeAsync(u.Id, "777", ChessableTheme.Endgame);
+        Assert.Equal(120, (await Day()).ByTheme.EndgameSeconds);
+
+        await svc.ClearChessableCourseThemeAsync(u.Id, "777");
+        Assert.Equal(0, (await Day()).ByTheme.EndgameSeconds);
     }
 
     [Fact]
