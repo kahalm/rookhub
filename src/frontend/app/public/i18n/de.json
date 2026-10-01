@@ -309,6 +309,8 @@
       "submitting": "Anmeldung läuft...",
       "registerLink": "Noch kein Konto? Registrieren",
       "failed": "Anmeldung fehlgeschlagen",
+      "rateLimited": "Zu viele Anmeldeversuche. Bitte warte etwa {{seconds}} Sekunden und versuch es dann noch einmal.",
+      "offline": "Keine Verbindung zum Server. Prüf deine Internetverbindung und versuch es noch einmal.",
       "required": "Bitte logge dich ein oder registriere dich, um fortzufahren.",
       "forgotLink": "Passwort vergessen?",
       "leaguehubNote": "LeagueHub ist für Admins und die Vereinsgruppe von SK Schwaz. Melde dich mit deinem RookHub-Konto an."

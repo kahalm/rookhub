@@ -1,5 +1,5 @@
 import { of, throwError } from 'rxjs';
-import { LoginComponent } from './login.component';
+import { LoginComponent, loginErrorOf, loginRetryAfterSeconds } from './login.component';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -13,9 +13,9 @@ function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefil
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
   const route: any = { snapshot: { queryParams } };
-  const snackbar: any = { warn: jasmine.createSpy('warn') };
-  const translate: any = { instant: (k: string) => k };
-  return { c: new LoginComponent(auth, prefill, router, route, snackbar, translate), auth, router, snackbar, prefill };
+  // Schluessel samt Parametern zurueck, damit die Specs auch die Wartezeit sehen.
+  const translate: any = { instant: (k: string, p?: object) => (p ? `${k} ${JSON.stringify(p)}` : k) };
+  return { c: new LoginComponent(auth, prefill, router, route, translate), auth, router, prefill };
 }
 
 describe('LoginComponent', () => {
@@ -69,26 +69,114 @@ describe('LoginComponent', () => {
     expect(prefill.password).toBe('');
   });
 
-  it('warns on login error and clears loading', () => {
-    const { c, auth, router, snackbar } = make();
-    auth.login.and.returnValue(throwError(() => ({ error: { message: 'nope' } })));
+  it('shows the error in the form, never the raw server text, and clears loading', () => {
+    const { c, auth, router } = make();
+    auth.login.and.returnValue(throwError(() => ({ status: 500, error: { message: 'nope' } })));
     c.onSubmit();
-    expect(snackbar.warn).toHaveBeenCalledWith('nope');
+    expect(c.error()).toEqual({ kind: 'failed', text: 'auth.login.failed' });
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(c.loading).toBeFalse();
   });
 
   it('shows the error in the UI language when the server sends a code (F5-019)', () => {
-    const { auth, router, snackbar, prefill } = make();
+    const { auth, router, prefill } = make();
     const translate: any = {
       instant: (k: string) => k === 'apiErrors.login_invalid' ? 'Benutzername oder Passwort ist falsch.' : k,
     };
-    const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, snackbar, translate);
+    const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, translate);
     auth.login.and.returnValue(throwError(() => ({
       status: 401, error: { message: 'Invalid username or password.', code: 'login_invalid' },
     })));
     c.onSubmit();
-    expect(snackbar.warn).toHaveBeenCalledWith('Benutzername oder Passwort ist falsch.');
+    expect(c.error()).toEqual({ kind: 'credentials', text: 'Benutzername oder Passwort ist falsch.' });
+  });
+
+  describe('Fehlerarten (UX-019)', () => {
+    function failWith(err: object) {
+      const made = make();
+      made.auth.login.and.returnValue(throwError(() => err));
+      made.c.onSubmit();
+      return made.c.error();
+    }
+
+    it('429 des IP-Limiters: eigener Text mit der Wartezeit statt „Anmeldung fehlgeschlagen“', () => {
+      expect(failWith({ status: 429, error: { code: 'rate_limited', retryAfterSeconds: 42 } }))
+        .toEqual({ kind: 'rateLimited', text: 'auth.login.rateLimited {"seconds":42}' });
+      // Ohne Rumpf (aeltere API) bzw. ohne Angabe: das Fenster des Limiters.
+      expect(failWith({ status: 429, error: null })!.text).toBe('auth.login.rateLimited {"seconds":60}');
+    });
+
+    it('429 der Konto-Bremse behält seinen Code-Text (wenige Sekunden, nicht das IP-Fenster)', () => {
+      const { auth, router, prefill } = make();
+      const translate: any = { instant: (k: string) => k === 'apiErrors.login_throttled' ? 'Konto-Bremse' : k };
+      const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, translate);
+      auth.login.and.returnValue(throwError(() => ({ status: 429, error: { code: 'login_throttled' } })));
+      c.onSubmit();
+      expect(c.error()).toEqual({ kind: 'rateLimited', text: 'Konto-Bremse' });
+    });
+
+    it('401 ohne Code: übersetzter Text statt der englischen Servermeldung', () => {
+      expect(failWith({ status: 401, error: { message: 'Invalid username or password.' } }))
+        .toEqual({ kind: 'credentials', text: 'apiErrors.login_invalid' });
+    });
+
+    it('ohne Verbindung (Status 0): eigener Hinweis', () => {
+      expect(failWith({ status: 0, error: new ProgressEvent('error') }))
+        .toEqual({ kind: 'offline', text: 'auth.login.offline' });
+    });
+
+    it('ein neuer Versuch räumt die alte Meldung ab', () => {
+      const { c, auth } = make();
+      auth.login.and.returnValue(throwError(() => ({ status: 401 })));
+      c.onSubmit();
+      expect(c.error()).not.toBeNull();
+      auth.login.and.returnValue(of({}));
+      c.onSubmit();
+      expect(c.error()).toBeNull();
+    });
+
+    it('loginErrorOf / loginRetryAfterSeconds', () => {
+      expect(loginErrorOf({ status: 400 })).toBe('credentials');
+      expect(loginErrorOf({ status: 403 })).toBe('failed');
+      expect(loginErrorOf(undefined)).toBe('failed');
+      expect(loginRetryAfterSeconds({ error: { retryAfterSeconds: 1.2 } })).toBe(2);
+      expect(loginRetryAfterSeconds({ headers: { get: (h: string) => (h === 'Retry-After' ? '17' : null) } })).toBe(17);
+      expect(loginRetryAfterSeconds({})).toBe(60);
+    });
+  });
+});
+
+/** UX-019: die Meldung steht im Formular (role=alert), beim falschen Passwort mit dem Weg „Passwort vergessen?“. */
+describe('LoginComponent Template (Fehlermeldung im Formular, UX-019)', () => {
+  async function renderWith(err: object): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { login: () => throwError(() => err) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.onSubmit();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('falsches Passwort: Meldung mit Link zu „Passwort vergessen?“', async () => {
+    const el = await renderWith({ status: 401, error: { code: 'login_invalid' } });
+    const alert = el.querySelector('.form-error[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert!.querySelector('a')!.getAttribute('href')).toBe('/forgot-password');
+  });
+
+  it('Rate-Limit: Meldung ohne Passwort-Link', async () => {
+    const el = await renderWith({ status: 429, error: { code: 'rate_limited', retryAfterSeconds: 30 } });
+    const alert = el.querySelector('.form-error[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert!.querySelector('a')).toBeNull();
   });
 });
 

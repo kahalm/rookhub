@@ -309,6 +309,8 @@
       "submitting": "Logging in...",
       "registerLink": "Don't have an account? Register",
       "failed": "Login failed",
+      "rateLimited": "Too many sign-in attempts. Please wait about {{seconds}} seconds, then try again.",
+      "offline": "Can't reach the server. Check your internet connection and try again.",
       "required": "Please log in or register to continue.",
       "forgotLink": "Forgot password?",
       "leaguehubNote": "LeagueHub is for admins and the SK Schwaz club group. Sign in with your RookHub account."

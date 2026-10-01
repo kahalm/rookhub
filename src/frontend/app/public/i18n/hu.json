@@ -147,6 +147,8 @@
       "submitting": "Bejelentkezés folyamatban...",
       "registerLink": "Még nincs fiókod? Regisztrálj",
       "failed": "Sikertelen bejelentkezés",
+      "rateLimited": "Túl sok bejelentkezési kísérlet. Várj kb. {{seconds}} másodpercet, aztán próbáld újra.",
+      "offline": "A szerver nem érhető el. Ellenőrizd az internetkapcsolatot, és próbáld újra.",
       "required": "Please log in or register to continue.",
       "forgotLink": "Elfelejtette a jelszót?",
       "leaguehubNote": "A LeagueHub az adminoknak és az SK Schwaz klubcsoportjának szól. Jelentkezz be a RookHub-fiókoddal."

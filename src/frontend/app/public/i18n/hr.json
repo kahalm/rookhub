@@ -309,6 +309,8 @@
       "submitting": "Prijava u tijeku...",
       "registerLink": "Nemaš račun? Registriraj se",
       "failed": "Prijava nije uspjela",
+      "rateLimited": "Previše pokušaja prijave. Pričekaj oko {{seconds}} sekundi, pa pokušaj ponovno.",
+      "offline": "Nema veze s poslužiteljem. Provjeri internetsku vezu i pokušaj ponovno.",
       "required": "Prijavi se ili registriraj se za nastavak.",
       "forgotLink": "Zaboravljena lozinka?",
       "leaguehubNote": "LeagueHub je za administratore i klupsku grupu SK Schwaz. Prijavi se svojim RookHub računom."
