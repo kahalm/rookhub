@@ -318,8 +318,6 @@ describe('ClubAddPageComponent', () => {
     const pgn = Array.from({ length: 1001 }, (_, i) => game(i + 1)).join('\n\n');
     api.preview.and.resolveTo(PREVIEW);
     await fixture.componentInstance.pickFile({ target: { files: [new File([pgn], 'Verein.pgn')] } } as unknown as Event);
-    fixture.detectChanges();
-    (el.querySelector('.btn-pri') as HTMLButtonElement).click();
     for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
     fixture.detectChanges();
 
@@ -330,6 +328,46 @@ describe('ClubAddPageComponent', () => {
     expect(el.querySelector('.portion-note')?.textContent).toContain('in 3 Pakete');
     expect(api.drafts).toHaveBeenCalled();
   });
+
+  // UX-037: die Wahl einer PGN-Datei füllte nur das Textfeld (am Handy unter dem Rand) — sichtbar passierte nichts, und
+  // dieselbe Datei noch einmal zu wählen löste kein change aus. ChessBase und Lichess starteten die Übersicht selbst.
+  it('eine PGN-Datei wählen führt gleich in die Übersicht und leert das Feld für eine erneute Wahl (UX-037)', async () => {
+    const el = create();
+    api.preview.and.resolveTo(PREVIEW);
+    const input = { files: [new File(['[White "x"]\n1. e4 *'], 'Mannschaft.pgn')], value: 'C:\\fakepath\\Mannschaft.pgn' };
+    await fixture.componentInstance.pickFile({ target: input } as unknown as Event);
+    fixture.detectChanges();
+    expect(input.value).toBe('');
+    expect(api.createDraft).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 'datei', 'Mannschaft.pgn');
+    expect(api.preview).toHaveBeenCalledWith('[White "x"]\n1. e4 *', 7);
+    expect(el.querySelector('.review-table')?.textContent).toContain('Hengl, Philip');
+    expect(api.importPgn).not.toHaveBeenCalled();                            // gespeichert wird erst mit „Importieren"
+  });
+
+  it('nach dem Hochladen eines Fotos ist das Dateifeld wieder leer (UX-037)', fakeAsync(() => {
+    query = { art: 'formular' };
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const input = el.querySelector('input[type=file][accept^="image"]') as HTMLInputElement;
+    const file = new File(['x'], 'bogen.jpg', { type: 'image/jpeg' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(input.value).toContain('bogen.jpg');
+    expect(fixture.componentInstance.photo()).toBe(file);
+    api.upload.and.resolveTo({ ref: '7', scan: SCAN('pending') });
+    void fixture.componentInstance.upload();
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.upload).toHaveBeenCalled();
+    expect(input.value).toBe('');
+    expect(fixture.componentInstance.photo()).toBeNull();
+    fixture.destroy();
+    flush();
+  }));
 
   it('am Deckel der offenen Listen sagt die Seite, wie viele Pakete fehlen', async () => {
     const el = create();

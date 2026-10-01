@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -179,7 +179,7 @@ const SAVE_DEBOUNCE_MS = 1500;
               Zug; danach prüfst du die Züge und Namen selbst, bevor etwas gespeichert wird.</p>
             @if (availability()!.ok) {
               <label class="field">Foto des Formulars
-                <input type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
+                <input #photoInput type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)" />
               </label>
               <div class="field-row">
                 <label class="field">Notation
@@ -301,6 +301,7 @@ export class ClubAddPageComponent implements OnInit {
   readonly language = signal('auto');
   readonly side = signal<'auto' | 'white' | 'black'>('auto');
   readonly photo = signal<File | null>(null);
+  private readonly photoInput = viewChild<ElementRef<HTMLInputElement>>('photoInput');
   readonly uploading = signal(false);
   readonly scanError = signal<string | null>(null);
   readonly scans = signal<ScanRef[]>([]);
@@ -486,14 +487,26 @@ export class ClubAddPageComponent implements OnInit {
     return this.share ? ['/s', this.share, 'formular', sc.ref] : ['/verein/formular', sc.ref];
   }
 
+  /** Eine PGN-Datei: lesen und gleich in die Übersicht — wie ChessBase-Datenbank und Lichess-Studie (UX-037). Vorher füllte
+   *  die Wahl nur das Textfeld, das am Handy unter dem Rand lag: sichtbar passierte nichts, und dieselbe Datei noch einmal
+   *  zu wählen löste kein `change` aus. */
   async pickFile(ev: Event): Promise<void> {
-    const f = (ev.target as HTMLInputElement).files?.[0];
+    const input = ev.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
     if (!f) return;
     this.dbNote.set(null);
     this.portionNote.set(null);
-    this.pgn.set(await f.text());
+    this.importError.set(null);
+    try {
+      this.pgn.set(await f.text());
+    } catch {
+      this.importError.set('Die Datei ließ sich nicht lesen.');
+      return;
+    }
     this.loaded(this.pgn(), 'datei', f.name);
     this.result.set(null);
+    await this.startPreview();                                         // teilt in Pakete wie jede andere Liste
   }
 
   /**
@@ -710,6 +723,9 @@ export class ClubAddPageComponent implements OnInit {
       if (this.share) rememberAnonKey(this.share, sc.ref);
       this.scans.set([sc, ...this.scans().filter(s => s.ref !== sc.ref)]);
       this.photo.set(null);
+      // UX-037: das Feld zeigte sonst weiter den Dateinamen, während „Formular einlesen" gesperrt blieb.
+      const input = this.photoInput()?.nativeElement;
+      if (input) input.value = '';
       await this.loadStatus();
       this.schedulePoll();
     } catch (err) {
