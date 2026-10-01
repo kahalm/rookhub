@@ -134,17 +134,25 @@ public sealed class LeagueClubService
     }
 
     /// <summary>Die Partien in Reihenfolge, 1-basiert nummeriert — Übersicht und Übernahme zählen gleich.</summary>
-    private static List<Parsed> ParseAll(string pgn, out bool truncated)
+    private static List<Parsed> ParseAll(string pgn, out bool truncated) => CheckAll(SplitAll(pgn, out truncated));
+
+    /// <summary>Nur zerlegt (Kopfzeilen + Zugtext, nummeriert wie <see cref="ParseAll"/>), noch nicht nachgespielt —
+    /// <see cref="Parsed.Sans"/> und <see cref="Parsed.Error"/> sind leer.</summary>
+    private static List<Parsed> SplitAll(string pgn, out bool truncated)
     {
         var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
         truncated = games.Count > MaxImportGames;
+        return games.Take(MaxImportGames)
+            .Select((g, i) => new Parsed(i + 1, g.Headers ?? new Dictionary<string, string>(), null, null, g.MoveText)).ToList();
+    }
+
+    /// <summary>Die zerlegten Partien nachgespielt: Hauptvariante oder der Grund, warum sie sich nicht übernehmen lässt.</summary>
+    private static List<Parsed> CheckAll(List<Parsed> split)
+    {
         var start = new Chess.ChessBoard().ToFen();
         var result = new List<Parsed>();
-        var index = 0;
-        foreach (var (rawHeaders, moveText) in games.Take(MaxImportGames))
+        foreach (var (index, h, _, _, moveText) in split)
         {
-            index++;
-            var h = rawHeaders ?? new Dictionary<string, string>();
             string? Error()
             {
                 if (h.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)
@@ -317,16 +325,27 @@ public sealed class LeagueClubService
     internal static int? YearOf(string? date, DateTime now) =>
         date is { Length: >= 4 } && int.TryParse(date[..4], out var y) && y >= 1900 && y <= now.Year + 1 ? y : null;
 
-    /// <summary>Gleiche Partie schon da (Datenbank oder derselbe Upload)?</summary>
-    private async Task<bool> IsDuplicateAsync(LeagueClubGame g, List<LeagueClubGame> pending, CancellationToken ct)
+    /// <summary>Die schon gespeicherten Partien mit den Zügen dieser Partien (Hash, Jahr, Namen) — für alle Partien eines
+    /// Aufrufs zusammen, je 500 Hashes eine Abfrage. Vorher fragte jede Partie einzeln (bis 500 Rundreisen je Übersicht
+    /// oder Import, auch anonym über den Teilen-Link; Codereview 2026-09-29, N4-004).</summary>
+    private async Task<ILookup<string, LeagueClubGame>> StoredByHashAsync(IEnumerable<LeagueClubGame> games, CancellationToken ct)
+    {
+        var hashes = games.Select(g => g.MovesHash).Distinct(StringComparer.Ordinal).ToList();
+        var rows = new List<LeagueClubGame>();
+        foreach (var chunk in hashes.Chunk(500))
+            rows.AddRange(await _db.LeagueClubGames.AsNoTracking().Where(x => chunk.Contains(x.MovesHash))
+                .Select(x => new LeagueClubGame { MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black })
+                .ToListAsync(ct));
+        return rows.ToLookup(x => x.MovesHash, StringComparer.Ordinal);
+    }
+
+    /// <summary>Gleiche Partie schon da (Datenbank — <paramref name="stored"/> aus <see cref="StoredByHashAsync"/> — oder
+    /// derselbe Upload)?</summary>
+    private static bool IsDuplicate(LeagueClubGame g, List<LeagueClubGame> pending, ILookup<string, LeagueClubGame> stored)
     {
         bool Same(LeagueClubGame x) => x.MovesHash == g.MovesHash && x.Year == g.Year
             && (g.Plies >= ShortGamePlies || (x.White == g.White && x.Black == g.Black));
-        if (pending.Any(Same)) return true;
-        var candidates = await _db.LeagueClubGames.AsNoTracking().Where(x => x.MovesHash == g.MovesHash && x.Year == g.Year)
-            .Select(x => new LeagueClubGame { MovesHash = x.MovesHash, Year = x.Year, White = x.White, Black = x.Black })
-            .ToListAsync(ct);
-        return candidates.Any(Same);
+        return pending.Any(Same) || stored[g.MovesHash].Any(Same);
     }
 
     private static LeagueClubPreviewSideDto SideDto(Side s, bool owner) => new()
@@ -373,6 +392,7 @@ public sealed class LeagueClubService
         var pending = new List<LeagueClubGame>();
         var dto = new LeagueClubPreviewDto { Truncated = truncated };
         var similar = new Dictionary<string, List<LeagueRosterPersonDto>>();
+        var candidates = new List<(LeagueClubPreviewGameDto Dto, LeagueClubGame Game)>();
         foreach (var p in parsed)
         {
             var (w, b, ownerSide) = Defaults(p, owner, lk);
@@ -386,11 +406,14 @@ public sealed class LeagueClubService
             AddSimilar(g.White.Match, g.White.Raw, lk.Roster, similar);
             AddSimilar(g.Black.Match, g.Black.Raw, lk.Roster, similar);
             if (p.Sans != null && Build(w, b, p.Sans, g.Year, p.H("Result"), p.H("Event")).Game is { } built)
-            {
-                g.Duplicate = await IsDuplicateAsync(built, pending, ct);
-                pending.Add(built);
-            }
+                candidates.Add((g, built));
             dto.Games.Add(g);
+        }
+        var stored = await StoredByHashAsync(candidates.Select(c => c.Game), ct);
+        foreach (var (g, built) in candidates)
+        {
+            g.Duplicate = IsDuplicate(built, pending, stored);
+            pending.Add(built);
         }
         return dto;
     }
@@ -417,8 +440,20 @@ public sealed class LeagueClubService
         IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct)
     {
         var result = new LeagueClubImportResultDto();
-        var parsed = ParseAll(pgn, out var truncated);
+        var split = SplitAll(pgn, out var truncated);
         result.Truncated = truncated;
+        var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
+            ?? split.Select(p => (p.Index, (LeagueClubImportGameDecision?)null)).ToList();
+        // Über einen Teilen-Link: vorher reservieren, was dieser Aufruf höchstens speichern darf (nie mehr, als er Partien
+        // hat — sonst hielte eine 10er-Portion 50 Plätze, und ein gleichzeitiger Upload über denselben Link bekäme kurz vor
+        // dem Deckel unnötig shareLimit); der Rest geht am Ende zurück.
+        using var lease = shareHash is null ? null
+            : _shareQuota.Reserve(shareHash, Math.Min(LeagueShareUploadQuota.PerCall, work.Count));
+        var budget = lease?.Granted ?? int.MaxValue;
+        // Am Deckel speichert dieser Aufruf nichts — dann weder nachspielen noch abgleichen noch Dubletten suchen, jede
+        // Partie gleich „shareLimit" (Codereview 2026-09-29, N4-004: vorher lief die ganze Arbeit durch).
+        if (budget == 0 && work.Count > 0) return RefuseAll(result, work.Select(x => x.Index), split, shareHash!);
+        var parsed = CheckAll(split);
         var byIndex = parsed.ToDictionary(p => p.Index);
         var chosen = (decisions ?? Array.Empty<LeagueClubImportGameDecision>()).Where(d => d != null)
             .SelectMany(d => new[] { d.White, d.Black }).Where(s => s != null).ToList();
@@ -429,27 +464,16 @@ public sealed class LeagueClubService
         var remember = new List<(string Raw, LeagueNameAliases.Entry Target)>();
         var now = _now();
         var pending = new List<LeagueClubGame>();
-        var work = decisions?.Where(d => d != null).DistinctBy(d => d.Index).Select(d => (d.Index, (LeagueClubImportGameDecision?)d)).ToList()
-            ?? parsed.Select(p => (p.Index, (LeagueClubImportGameDecision?)null)).ToList();
-        // Über einen Teilen-Link: vorher reservieren, was dieser Aufruf höchstens speichern darf (nie mehr, als er Partien
-        // hat — sonst hielte eine 10er-Portion 50 Plätze, und ein gleichzeitiger Upload über denselben Link bekäme kurz vor
-        // dem Deckel unnötig shareLimit); der Rest geht am Ende zurück.
-        using var lease = shareHash is null ? null
-            : _shareQuota.Reserve(shareHash, Math.Min(LeagueShareUploadQuota.PerCall, work.Count));
-        var budget = lease?.Granted ?? int.MaxValue;
+        // Erst alle Partien bauen, dann die Dubletten aller zusammen nachschlagen (N4-004), dann in Reihenfolge entscheiden.
+        var built = new List<(int Index, Parsed? P, LeagueClubGame? Game, string? Reason)>();
         foreach (var (index, decision) in work)
         {
             if (!byIndex.TryGetValue(index, out var p))
             {
-                result.Failed.Add(new LeagueClubFailureDto { Index = index, Reason = "notFound" });
+                built.Add((index, null, null, "notFound"));
                 continue;
             }
-            void Fail(string reason) => result.Failed.Add(new LeagueClubFailureDto
-            {
-                Index = index, White = p.H("White") is { } w0 ? Clip(w0, 120) : null, Black = p.H("Black") is { } b0 ? Clip(b0, 120) : null,
-                Reason = reason,
-            });
-            if (p.Error != null || p.Sans == null) { Fail(p.Error ?? "illegal"); continue; }
+            if (p.Error != null || p.Sans == null) { built.Add((index, p, null, p.Error ?? "illegal")); continue; }
             Side w, b;
             if (decision == null) (w, b, _) = Defaults(p, owner, lk);
             else
@@ -464,9 +488,14 @@ public sealed class LeagueClubService
                 }
             }
             var (game, reason) = Build(w, b, p.Sans, YearOf(p.H("Date"), now), p.H("Result"), p.H("Event"));
-            if (game == null) { Fail(reason!); continue; }
-            if (await IsDuplicateAsync(game, pending, ct)) { result.Duplicates++; continue; }
-            if (pending.Count >= budget) { Fail(ShareLimitReason); continue; }
+            built.Add((index, p, game, reason));
+        }
+        var stored = await StoredByHashAsync(built.Where(x => x.Game != null).Select(x => x.Game!), ct);
+        foreach (var (index, p, game, reason) in built)
+        {
+            if (game == null) { result.Failed.Add(FailureOf(index, p, reason!)); continue; }
+            if (IsDuplicate(game, pending, stored)) { result.Duplicates++; continue; }
+            if (pending.Count >= budget) { result.Failed.Add(FailureOf(index, p, ShareLimitReason)); continue; }
             Stamp(game, userId, now, shareHash);
             pending.Add(game);
         }
@@ -489,6 +518,27 @@ public sealed class LeagueClubService
             if (string.IsNullOrWhiteSpace(raw) || d is null || (string.IsNullOrWhiteSpace(d.Name) && string.IsNullOrWhiteSpace(d.Fide))) return;
             if (decided.Identity is { } id && id != byDefault.Identity) remember.Add((raw, id));
         }
+    }
+
+    /// <summary>Eine abgelehnte Partie: Nummer, die Namen der Kopfzeile (gekürzt) und der Grund; <paramref name="p"/>
+    /// <c>null</c> = die Nummer gibt es nicht (dann nur Nummer und Grund).</summary>
+    private static LeagueClubFailureDto FailureOf(int index, Parsed? p, string reason) => new()
+    {
+        Index = index, White = p?.H("White") is { } w0 ? Clip(w0, 120) : null, Black = p?.H("Black") is { } b0 ? Clip(b0, 120) : null,
+        Reason = reason,
+    };
+
+    /// <summary>Ein Aufruf über einen Teilen-Link, dessen Deckel schon voll ist: jede Partie <c>shareLimit</c> (eine
+    /// unbekannte Nummer <c>notFound</c>), ohne sie nachzuspielen, abzugleichen oder nach Dubletten zu suchen (N4-004).</summary>
+    private LeagueClubImportResultDto RefuseAll(LeagueClubImportResultDto result, IEnumerable<int> work, List<Parsed> split,
+        string shareHash)
+    {
+        var byIndex = split.ToDictionary(p => p.Index);
+        foreach (var index in work)
+            result.Failed.Add(byIndex.TryGetValue(index, out var p) ? FailureOf(index, p, ShareLimitReason) : FailureOf(index, null, "notFound"));
+        _log.LogWarning("Vereins-Datenbank: Teilen-Link {Link} am Deckel — {Refused} Partien nicht übernommen",
+            shareHash[..8], result.Failed.Count(f => f.Reason == ShareLimitReason));
+        return result;
     }
 
     /// <summary>Gemerkte Zuordnungen speichern — NUR mit Konto (ein Teilen-Link soll nicht festlegen, wer ein Name für
@@ -532,7 +582,7 @@ public sealed class LeagueClubService
         var b = Decided(new LeagueClubSideDecision { Name = req.Black, Fide = req.BlackFide, Replace = req.BlackReplace }, req.Black, null, req.BlackElo, lk);
         var (game, reason) = Build(w, b, sans, year, req.Result, req.Event);
         if (game == null) return (null, reason, null);
-        if (await IsDuplicateAsync(game, new(), ct)) return (null, "duplicate", null);
+        if (IsDuplicate(game, new(), await StoredByHashAsync(new[] { game }, ct))) return (null, "duplicate", null);
         using var lease = shareHash is null ? null : _shareQuota.Reserve(shareHash, 1);
         if (lease is { Granted: 0 })
         {

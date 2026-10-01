@@ -148,6 +148,32 @@ public class LeagueShareUploadTests : IDisposable
         Assert.Equal(5, (await club.ImportViaShareAsync("tokA", Games(5, 2010), null)).Added);
     }
 
+    /// <summary>Codereview 2026-09-29, N4-004: am vollen Deckel lief die ganze Arbeit (nachspielen, abgleichen, je Partie eine
+    /// Dubletten-Abfrage) weiter, nur um am Ende alles abzulehnen. Jetzt gleich „shareLimit" für jede Partie — auch für eine,
+    /// die doppelt oder illegal wäre (geprüft wird ja nichts mehr); eine unbekannte Nummer bleibt „notFound".</summary>
+    [Fact]
+    public async Task ShareImport_DeckAlreadyFull_RefusesEveryGameWithoutCheckingOrLookingUp()
+    {
+        var me = await SeedAsync();
+        var club = Club();
+        Assert.Equal(1, (await club.ImportPgnAsync(me, Pgn("Hengl, Philip", "Schnabl, Andreas"), null)).Added);
+        using (var earlier = _quota.Reserve(LeagueClubService.ShareHashOf("tokA"), LeagueShareUploadQuota.PerLinkPerDay))
+            earlier.Kept = LeagueShareUploadQuota.PerLinkPerDay;
+        var pgn = Pgn("Hengl, Philip", "Schnabl, Andreas")                                    // 1: schon gespeichert
+            + Pgn("Hengl, Philip", "Schnabl, Andreas", 2023, "1. e4 e5 2. Ke3 1-0")           // 2: illegal
+            + Pgn("Schnabl, Andreas", "Hengl, Philip", 2022);                                 // 3: neu
+
+        var all = await club.ImportViaShareAsync("tokA", pgn, null);
+        var picked = await club.ImportViaShareAsync("tokA", pgn, [new() { Index = 3 }, new() { Index = 9 }]);
+
+        Assert.Equal((0, 0), (all.Added, all.Duplicates));
+        Assert.Equal(new[] { (1, "Hengl, Philip"), (2, "Hengl, Philip"), (3, "Schnabl, Andreas") },
+            all.Failed.Select(f => (f.Index, f.White!)));
+        Assert.All(all.Failed, f => Assert.Equal(LeagueClubService.ShareLimitReason, f.Reason));
+        Assert.Equal(new[] { (3, LeagueClubService.ShareLimitReason), (9, "notFound") }, picked.Failed.Select(f => (f.Index, f.Reason)));
+        Assert.Equal(1, _db.LeagueClubGames.Count());
+    }
+
     [Fact]
     public void Lease_WhatIsNotKeptGoesBack()
     {

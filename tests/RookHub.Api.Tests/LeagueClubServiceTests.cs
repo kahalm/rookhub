@@ -1,6 +1,9 @@
+using System.Linq.Expressions;
 using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
@@ -495,6 +498,64 @@ public class LeagueClubServiceTests : IDisposable
         var r5 = await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Schnabl, Andreas", shortGame, date: "2025.01.01"), null);
         Assert.Equal((1, 1, 1), (r3.Added, r4.Added, r5.Added));
         Assert.Equal(4, _db.LeagueClubGames.Count());
+    }
+
+    /// <summary>Zählt die Abfragen eines InMemory-Kontexts: ohne Cache übersetzter Abfragen (<see cref="EveryQueryCompiled"/>)
+    /// geht jede Ausführung durch die Übersetzung, und die meldet sich hier.</summary>
+    private sealed class QueryCounter : IQueryExpressionInterceptor
+    {
+        public int Count;
+        public Expression QueryCompilationStarting(Expression queryExpression, QueryExpressionEventData eventData)
+        {
+            Interlocked.Increment(ref Count);
+            return queryExpression;
+        }
+    }
+
+#pragma warning disable EF1001 // interne EF-Schnittstelle — nur im Test, um jede Ausführung zu zählen
+    private sealed class EveryQueryCompiled : Microsoft.EntityFrameworkCore.Query.Internal.ICompiledQueryCache
+    {
+        public Func<QueryContext, TResult> GetOrAddQuery<TResult>(object cacheKey, Func<Func<QueryContext, TResult>> compiler) => compiler();
+    }
+#pragma warning restore EF1001
+
+    /// <summary>Codereview 2026-09-29, N4-004: Übersicht und Import fragten Dubletten je Partie einzeln ab — bis 500 Abfragen
+    /// je Aufruf, auch anonym über den Teilen-Link. Jetzt für alle Partien zusammen: gleich viele Abfragen bei 2 wie bei 40
+    /// Partien derselben Spieler.</summary>
+    [Fact]
+    public async Task PreviewAndImport_LookUpDuplicatesForAllGamesTogether_NotOneQueryPerGame()
+    {
+        var counter = new QueryCounter();
+#pragma warning disable EF1001
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(counter).ReplaceService<Microsoft.EntityFrameworkCore.Query.Internal.ICompiledQueryCache, EveryQueryCompiled>().Options);
+#pragma warning restore EF1001
+        foreach (var (name, fide) in new[] { ("Hengl, Philip", "222"), ("Schnabl, Andreas Dr.", "333") })
+            db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = name, NameKey = LeagueNames.NameKey(name), FideId = fide });
+        await db.SaveChangesAsync();
+        var club = new LeagueClubService(db, NullLogger<LeagueClubService>.Instance, () => Now);
+        static string Games(int count, int firstYear) =>
+            string.Concat(Enumerable.Range(0, count).Select(i => Pgn("Hengl, Philip", "Schnabl, Andreas", date: $"{firstYear + i}.05.12")));
+        async Task<int> Queries(Func<Task> act)
+        {
+            db.ChangeTracker.Clear();
+            var before = counter.Count;
+            await act();
+            return counter.Count - before;
+        }
+
+        await club.ImportPgnAsync(null, Games(1, 1900), null);                        // Karten anlegen, damit beide Läufe gleich beginnen
+        var previewFew = await Queries(() => club.PreviewAsync(null, Games(2, 1950)));
+        var previewMany = await Queries(() => club.PreviewAsync(null, Games(40, 1950)));
+        var importFew = await Queries(() => club.ImportPgnAsync(null, Games(2, 1910), null));
+        var importMany = await Queries(() => club.ImportPgnAsync(null, Games(40, 1950), null));
+
+        Assert.True(previewFew > 0);                                                   // der Zähler sieht die Abfragen
+        Assert.Equal(previewFew, previewMany);
+        Assert.Equal(importFew, importMany);
+        Assert.Equal(43, await db.LeagueClubGames.CountAsync());
+        Assert.Equal((0, 40), ((await club.ImportPgnAsync(null, Games(40, 1950), null)).Added,
+            (await club.PreviewAsync(null, Games(40, 1950))).Games.Count(g => g.Duplicate)));   // die Dubletten stimmen weiter
     }
 
     // ── Spielerkarten ───────────────────────────────────────────────
