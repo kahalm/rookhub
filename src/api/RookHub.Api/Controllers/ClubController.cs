@@ -204,13 +204,14 @@ public class ClubController : BaseApiController
     /// <summary>Code einlösen. Am „auth"-Limiter (10/min je IP) — der Code ist kurz genug zum Abtippen, also nicht zum Raten.</summary>
     [HttpPost("link")]
     [EnableRateLimiting("auth")]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<ClubLinkStateDto>> Redeem([FromBody] ClubLinkRedeemDto input, CancellationToken ct) =>
-        IsImpersonating() ? Forbid() : Ok(await _club.RedeemAsync(GetUserId(), input.Code, ct));
+        Ok(await _club.RedeemAsync(GetUserId(), input.Code, ct));
 
     [HttpDelete("link")]
+    [DenyWhileImpersonating]
     public async Task<IActionResult> SelfUnlink(CancellationToken ct)
     {
-        if (IsImpersonating()) return Forbid();
         await _club.SelfUnlinkAsync(GetUserId(), ct);
         return NoContent();
     }

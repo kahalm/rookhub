@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -60,8 +61,11 @@ public class NotificationController : BaseApiController
     public async Task<IActionResult> PushConfig()
         => Ok(new PushConfigDto(_push.PublicKey, await _push.GetEnabledCategoriesAsync(GetUserId())));
 
-    /// <summary>Registriert/aktualisiert eine Browser-Push-Subscription dieses Users.</summary>
+    /// <summary>Registriert/aktualisiert eine Browser-Push-Subscription dieses Users. Nicht während einer Impersonation:
+    /// der Server hängt eine bekannte Subscription auf den neuen Nutzer um — der Admin-Browser bekäme danach die Pushes
+    /// des Zielkontos statt der eigenen.</summary>
     [HttpPost("push/subscribe")]
+    [DenyWhileImpersonating]
     public async Task<IActionResult> PushSubscribe([FromBody] PushSubscribeInputDto dto)
     {
         try { await _push.SubscribeAsync(GetUserId(), dto.Endpoint ?? "", dto.P256dh ?? "", dto.Auth ?? ""); return NoContent(); }

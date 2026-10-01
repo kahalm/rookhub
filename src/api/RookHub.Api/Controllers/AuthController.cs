@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
@@ -81,10 +82,9 @@ public class AuthController : BaseApiController
     /// alle Impersonations-Sperren (E-Mail aendern, API-Token anlegen) und der Admin-Bezug im Log weg.</remarks>
     [Authorize]
     [HttpPost("handoff")]
+    [DenyWhileImpersonating]
     public async Task<IActionResult> Handoff(CancellationToken ct)
     {
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         var code = await _handoff.IssueAsync(GetUserId(), ct);
         return Ok(new { code, expiresInSeconds = (int)AuthHandoffService.Lifetime.TotalSeconds });
     }
@@ -335,10 +335,9 @@ public class AuthController : BaseApiController
 
     [HttpPut("change-password")]
     [Authorize]
+    [DenyWhileImpersonating]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             // Antwort trägt ein frisches Token: der rotierte Security-Stamp entwertet auch das Token

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
 
 namespace RookHub.Api.Controllers;
 
@@ -24,11 +25,10 @@ public abstract class BaseApiController : ControllerBase
 
     /// <summary>
     /// True, wenn das aktuelle Token aus einer Admin-Impersonation stammt (trägt den <c>imp</c>-Claim).
-    /// Destruktive/irreversible Aktionen (Konto löschen, Passwort ändern, API-Token erstellen) dürfen
-    /// im Impersonations-Kontext NICHT ausgeführt werden — ein Admin soll fremde Konten nicht
-    /// dauerhaft verändern oder dauerhafte Zugangstoken in fremdem Namen erzeugen können.
+    /// Actions mit dauerhafter Wirkung sperrt <see cref="DenyWhileImpersonatingAttribute"/> als Ganzes; diese
+    /// Abfrage bleibt für Sonderfälle, die nur einen TEIL der Action sperren (E-Mail-Änderung in <c>PUT /api/profile</c>).
     /// </summary>
-    protected bool IsImpersonating() => User.FindFirst("imp") is not null;
+    protected bool IsImpersonating() => DenyWhileImpersonatingAttribute.IsImpersonating(User);
 
     /// <summary>Ob der aktuelle Nutzer die Admin-Rolle trägt. Zentral hier, damit alle Controller
     /// dieselbe Prüfung nutzen (statt sie je Controller zu duplizieren).</summary>

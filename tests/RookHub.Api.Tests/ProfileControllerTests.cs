@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
@@ -187,9 +188,11 @@ public class ProfileControllerTests : IDisposable
         var u = await CreateUserAsync("imp-discord");
         SetUser(u.Id, impersonatorAdminId: 999);
 
-        var result = await _controller.UnlinkDiscord();
+        // Die Sperre ist ein Filter-Attribut ([DenyWhileImpersonating]) — also mit den Filtern aufrufen wie die Pipeline.
+        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.UnlinkDiscord),
+            async () => ((IConvertToActionResult)await _controller.UnlinkDiscord()).Convert());
 
-        var status = Assert.IsType<ObjectResult>(result.Result);
+        var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);
     }
 
@@ -199,8 +202,9 @@ public class ProfileControllerTests : IDisposable
         var u = await CreateUserAsync("imp-target");
         SetUser(u.Id, impersonatorAdminId: 999);
 
-        var result = await _controller.CreateToken(new CreateApiTokenDto { Name = "ext" });
-        var status = Assert.IsType<ObjectResult>(result.Result);
+        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.CreateToken),
+            async () => ((IConvertToActionResult)await _controller.CreateToken(new CreateApiTokenDto { Name = "ext" })).Convert());
+        var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);
         // Es darf KEIN Token angelegt worden sein.
         Assert.Empty(_db.UserApiTokens);
@@ -212,7 +216,8 @@ public class ProfileControllerTests : IDisposable
         var u = await CreateUserAsync("imp-target2");
         SetUser(u.Id, impersonatorAdminId: 999);
 
-        var result = await _controller.DeleteAccount(new DeleteAccountDto { Password = "x" });
+        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.DeleteAccount),
+            () => _controller.DeleteAccount(new DeleteAccountDto { Password = "x" }));
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);
     }

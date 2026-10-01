@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
 using RookHub.Api.Services;
 
@@ -30,10 +31,9 @@ public class ProfileController : BaseApiController
         => Ok(await _apiTokens.ListAsync(GetUserId()));
 
     [HttpPost("tokens")]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<ApiTokenCreatedDto>> CreateToken([FromBody] CreateApiTokenDto dto)
     {
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             return Ok(await _apiTokens.CreateAsync(GetUserId(), dto.Name, dto.Scope, dto.ExpiresInDays));
@@ -117,11 +117,9 @@ public class ProfileController : BaseApiController
     /// 400 bei ungültigem/abgelaufenem Token oder deaktiviertem Feature, 409 bei Kollision.
     /// </summary>
     [HttpPost("discord/link")]
+    [DenyWhileImpersonating]   // auch eine Identitätsbindung (siehe UpdateProfile)
     public async Task<ActionResult<ProfileDto>> LinkDiscord([FromBody] LinkDiscordDto dto)
     {
-        // Auch eine Identitätsbindung — im Impersonations-Kontext gesperrt (siehe UpdateProfile).
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         var identity = _discordLink.Verify(dto.Token);
         if (identity == null)
             return BadRequest(new { message = "Invalid or expired Discord link token." });
@@ -141,10 +139,9 @@ public class ProfileController : BaseApiController
     }
 
     [HttpDelete("discord")]
+    [DenyWhileImpersonating]
     public async Task<ActionResult<ProfileDto>> UnlinkDiscord()
     {
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             return Ok(await _profileService.UnlinkDiscordAsync(GetUserId()));
@@ -160,10 +157,9 @@ public class ProfileController : BaseApiController
     /// bleibt anonym erhalten. Verlangt das aktuelle Passwort zur Bestätigung (401 bei falschem).
     /// </summary>
     [HttpDelete("account")]
+    [DenyWhileImpersonating]
     public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto)
     {
-        if (IsImpersonating())
-            return StatusCode(403, new { message = "Not allowed while impersonating another user." });
         try
         {
             await _profileService.DeleteAccountAsync(GetUserId(), dto?.Password ?? string.Empty);
