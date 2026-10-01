@@ -676,13 +676,6 @@
       "yourTurn": "당신의 차례! 최선의 수를 찾으세요.",
       "yourMove": "당신의 수...",
       "opponentThinking": "상대가 생각 중...",
-      "evalStart": "시작",
-      "evalNow": "현재",
-      "showEval": "평가 보기",
-      "hideEval": "평가 숨기기",
-      "reset": "초기화",
-      "mouseslip": "실수 취소",
-      "giveUp": "포기",
       "checkmate": "체크메이트!",
       "alternativeSolution": "대안 해답 — 퍼즐의 의도한 라인과 다릅니다.",
       "correct": "정답!",
@@ -763,9 +756,6 @@
       "fullGame": "전체 게임"
     },
     "actions": {
-      "reset": "초기화",
-      "giveUp": "포기",
-      "mouseslip": "실수 취소",
       "nextPuzzle": "다음 퍼즐",
       "skip": "건너뜀",
       "viewFullGame": "전체 게임 보기",

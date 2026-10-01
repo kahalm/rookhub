@@ -676,13 +676,6 @@
       "yourTurn": "Din tur! Hitta det bästa draget.",
       "yourMove": "Ditt drag...",
       "opponentThinking": "Motståndaren tänker...",
-      "evalStart": "Start",
-      "evalNow": "Nu",
-      "showEval": "Visa eval",
-      "hideEval": "Dölj eval",
-      "reset": "Återställ",
-      "mouseslip": "Råkade flytta",
-      "giveUp": "Ge upp",
       "checkmate": "Schackmatt!",
       "alternativeSolution": "Alternativ lösning — uppgiften hade en annan avsedd linje.",
       "correct": "Rätt!",
@@ -763,9 +756,6 @@
       "fullGame": "Hela partiet"
     },
     "actions": {
-      "reset": "Återställ",
-      "giveUp": "Ge upp",
-      "mouseslip": "Råkade flytta",
       "nextPuzzle": "Nästa uppgift",
       "skip": "Hoppa över",
       "viewFullGame": "Visa hela partiet",

@@ -11,11 +11,33 @@ export type PuzzleSolverMode = 'standard' | 'endless' | 'book';
 /** Löse-States, in denen die Aktionen überhaupt sinnvoll sind. */
 export const SOLVING_STATES = ['AWAITING_USER_MOVE', 'THINKING', 'PLAYING'] as const;
 
-export const SOLVER_ACTION_KEYS = {
-  standard: { reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp' },
-  endless: { reset: 'endless.game.reset', mouseslip: 'endless.game.mouseslip', giveUp: 'endless.game.giveUp' },
-  book: { reset: 'book.actions.reset', mouseslip: 'book.actions.mouseslip', giveUp: 'book.actions.giveUp' },
+/**
+ * Derselbe Knopf heißt in allen drei Lösern gleich (Codereview F2-012): Endless sagte auf Deutsch und
+ * Kroatisch „Reset", „Mouseslip", „Give Up", „Show Eval", das Buch „Mausverrutscher", während dieselbe
+ * Leiste auf /puzzles „Zurücksetzen", „Mausrutscher", „Aufgeben" zeigte. Was eine Aktion im Modus
+ * kostet (Endless: ein Leben), erklärt dessen Hilfe, nicht die Beschriftung. Die Tabelle je Modus
+ * bleibt, damit die Aufrufer weiter `[mode]` nachschlagen.
+ */
+const SHARED_ACTION_KEYS = {
+  reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp',
 } as const;
+
+export const SOLVER_ACTION_KEYS: Readonly<Record<PuzzleSolverMode, typeof SHARED_ACTION_KEYS>> = {
+  standard: SHARED_ACTION_KEYS,
+  endless: SHARED_ACTION_KEYS,
+  book: SHARED_ACTION_KEYS,
+};
+
+/** Bewertungs-Knopf und -Zeile im „Your turn"-Panel — ebenfalls ein Satz Keys für alle Modi. */
+const SHARED_EVAL_KEYS = {
+  show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now',
+} as const;
+
+export const SOLVER_EVAL_KEYS: Readonly<Record<PuzzleSolverMode, typeof SHARED_EVAL_KEYS>> = {
+  standard: SHARED_EVAL_KEYS,
+  endless: SHARED_EVAL_KEYS,
+  book: SHARED_EVAL_KEYS,
+};
 
 /** Wird gerade gelöst (Aktionen sichtbar)? */
 export function isSolvingState(state: string): boolean {

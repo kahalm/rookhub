@@ -676,13 +676,6 @@
       "yourTurn": "आपकी बारी! सर्वश्रेष्ठ चाल खोजें।",
       "yourMove": "आपकी चाल...",
       "opponentThinking": "प्रतिद्वंद्वी सोच रहा है...",
-      "evalStart": "शुरुआत",
-      "evalNow": "अभी",
-      "showEval": "मूल्यांकन दिखाएं",
-      "hideEval": "मूल्यांकन छुपाएं",
-      "reset": "रीसेट",
-      "mouseslip": "माउस स्लिप",
-      "giveUp": "हार मानें",
       "checkmate": "शतरंज!",
       "alternativeSolution": "वैकल्पिक समाधान — पहेली में एक अलग इच्छित लाइन थी।",
       "correct": "सही!",
@@ -763,9 +756,6 @@
       "fullGame": "पूरा खेल"
     },
     "actions": {
-      "reset": "रीसेट",
-      "giveUp": "हार मानें",
-      "mouseslip": "माउस स्लिप",
       "nextPuzzle": "अगली पहेली",
       "skip": "छोड़ें",
       "viewFullGame": "पूरा खेल देखें",

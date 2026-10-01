@@ -676,13 +676,6 @@
       "yourTurn": "نوبت شماست! بهترین حرکت را پیدا کنید.",
       "yourMove": "حرکت شما...",
       "opponentThinking": "حریف در حال فکر کردن است...",
-      "evalStart": "شروع",
-      "evalNow": "اکنون",
-      "showEval": "نمایش ارزیابی",
-      "hideEval": "پنهان کردن ارزیابی",
-      "reset": "بازنشانی",
-      "mouseslip": "لغزش موس",
-      "giveUp": "تسلیم شدن",
       "checkmate": "کیش و مات!",
       "alternativeSolution": "راه‌حل جایگزین — این تاکتیک دنباله متفاوتی داشت.",
       "correct": "درست!",
@@ -763,9 +756,6 @@
       "fullGame": "بازی کامل"
     },
     "actions": {
-      "reset": "بازنشانی",
-      "giveUp": "تسلیم شدن",
-      "mouseslip": "لغزش موس",
       "nextPuzzle": "تاکتیک بعدی",
       "skip": "رد کردن",
       "viewFullGame": "مشاهده بازی کامل",

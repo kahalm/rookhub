@@ -1,4 +1,5 @@
 import { FORMAT_LOCALES, SUPPORTED_LANGS } from './core/locale.service';
+import { SOLVER_ACTION_KEYS, SOLVER_EVAL_KEYS } from './features/puzzles/solver-actions.util';
 
 /**
  * Sprachdateien-Parität (periodische Aufgabe „Übersetzungen prüfen", jetzt als Test):
@@ -70,6 +71,28 @@ describe('i18n Sprachdateien', () => {
       expect(stale).withContext(`${lang}: Keys, die en nicht kennt`).toEqual([]);
     }
   });
+  /**
+   * Codereview F2-012: Die Löse-Knöpfe (Zurücksetzen, Mausrutscher, Aufgeben, Bewertung an/aus) sind in
+   * Standard, Endless und Buch dieselben. Endless hatte eigene Keys, die in de/hr nie übersetzt wurden
+   * („Reset", „Mouseslip", „Give Up", „Show Eval"), das Buch eigene mit anderem Wort („Mausverrutscher").
+   * Jeder Key, den ein Modus für diese Knöpfe holt, existiert und ist in den gepflegten Sprachen übersetzt.
+   */
+  for (const lang of FORMAT_LOCALES.filter(l => l !== 'en')) {
+    it(`${lang}: Löse-Knöpfe aller drei Modi übersetzt`, async () => {
+      const l = await load(lang);
+      const keys = new Set<string>();
+      for (const mode of ['standard', 'endless', 'book'] as const) {
+        const a = SOLVER_ACTION_KEYS[mode];
+        const e = SOLVER_EVAL_KEYS[mode];
+        // start/now („Start“) dürfen wie en lauten — nur die Knopf-Beschriftungen müssen abweichen.
+        [a.reset, a.mouseslip, a.giveUp, e.show, e.hide].forEach(k => keys.add(k));
+        [e.start, e.now].forEach(k => expect(l[k]).withContext(`${lang}: ${k} fehlt`).toBeTruthy());
+      }
+      const untranslated = [...keys].filter(k => !l[k] || l[k] === en[k]).map(k => `${k} = „${l[k]}“`);
+      expect(untranslated).withContext(`${lang}: Löse-Knöpfe fehlen oder stehen auf Englisch`).toEqual([]);
+    });
+  }
+
   it('kennt zu jedem Schnellstart-Eintrag Titel und Beschreibung (alle gepflegten Sprachen)', async () => {
     // `quickstartItems` baut die i18n-Keys aus dem `key` zusammen (`app.qs.<key>Title|Desc`) —
     // ein neuer Eintrag ohne Texte fiele sonst erst im UI als roher Schlüssel auf.

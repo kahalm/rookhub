@@ -676,13 +676,6 @@
       "yourTurn": "¡Tu turno! Encuentra la mejor jugada.",
       "yourMove": "Tu jugada...",
       "opponentThinking": "El rival está calculando...",
-      "evalStart": "Inicio",
-      "evalNow": "Ahora",
-      "showEval": "Mostrar evaluación",
-      "hideEval": "Ocultar evaluación",
-      "reset": "Reiniciar",
-      "mouseslip": "Error de ratón",
-      "giveUp": "Rendirse",
       "checkmate": "¡Jaque mate!",
       "alternativeSolution": "Solución alternativa — el ejercicio tenía una línea prevista diferente.",
       "correct": "¡Correcto!",
@@ -763,9 +756,6 @@
       "fullGame": "Partida completa"
     },
     "actions": {
-      "reset": "Reiniciar",
-      "giveUp": "Rendirse",
-      "mouseslip": "Error de ratón",
       "nextPuzzle": "Siguiente ejercicio",
       "skip": "Omitir",
       "viewFullGame": "Ver partida completa",

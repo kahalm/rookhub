@@ -676,13 +676,6 @@
       "yourTurn": "轮到你了！找出最佳走法。",
       "yourMove": "你的回合…",
       "opponentThinking": "对手思考中…",
-      "evalStart": "初始",
-      "evalNow": "当前",
-      "showEval": "显示评估",
-      "hideEval": "隐藏评估",
-      "reset": "重置",
-      "mouseslip": "误操作",
-      "giveUp": "放弃",
       "checkmate": "将死！",
       "alternativeSolution": "替代解法——本题有不同的预期走法线。",
       "correct": "正确！",
@@ -763,9 +756,6 @@
       "fullGame": "完整对局"
     },
     "actions": {
-      "reset": "重置",
-      "giveUp": "放弃",
-      "mouseslip": "误操作",
       "nextPuzzle": "下一题",
       "skip": "跳过",
       "viewFullGame": "查看完整对局",

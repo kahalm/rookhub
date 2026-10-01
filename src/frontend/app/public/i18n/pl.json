@@ -676,13 +676,6 @@
       "yourTurn": "Twój ruch! Znajdź najlepszy ruch.",
       "yourMove": "Twój ruch...",
       "opponentThinking": "Przeciwnik myśli...",
-      "evalStart": "Start",
-      "evalNow": "Teraz",
-      "showEval": "Pokaż ocenę",
-      "hideEval": "Ukryj ocenę",
-      "reset": "Resetuj",
-      "mouseslip": "Pomyłka myszy",
-      "giveUp": "Poddaj się",
       "checkmate": "Mat!",
       "alternativeSolution": "Alternatywne rozwiązanie — zadanie miało inną zamierzoną linię.",
       "correct": "Poprawnie!",
@@ -763,9 +756,6 @@
       "fullGame": "Pełna partia"
     },
     "actions": {
-      "reset": "Resetuj",
-      "giveUp": "Poddaj się",
-      "mouseslip": "Pomyłka myszy",
       "nextPuzzle": "Następne zadanie",
       "skip": "Pomiń",
       "viewFullGame": "Obejrzyj pełną partię",

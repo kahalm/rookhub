@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { SOLVER_ACTION_KEYS, canMouseslip, canReset } from './solver-actions.util';
+import { SOLVER_ACTION_KEYS, SOLVER_EVAL_KEYS, canMouseslip, canReset } from './solver-actions.util';
 
 export type ActivePuzzleState = 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING';
 export type PuzzleMode = 'standard' | 'endless' | 'book';
@@ -29,12 +29,6 @@ const STATUS_KEYS = {
     thinking: 'book.status.stockfishThinking',
     yourMove: 'book.status.yourMoveVsStockfish',
   },
-} as const;
-
-const EVAL_KEYS = {
-  standard: { show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now' },
-  endless: { show: 'endless.game.showEval', hide: 'endless.game.hideEval', start: 'endless.game.evalStart', now: 'endless.game.evalNow' },
-  book: { show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now' },
 } as const;
 
 // Keys + Sichtbarkeits-Regeln liegen in solver-actions.util.ts — die Vollbild-Icon-Leiste
@@ -152,7 +146,7 @@ export class PuzzleYourTurnComponent {
     return k.yourTurn;
   }
 
-  get ek() { return EVAL_KEYS[this.mode]; }
+  get ek() { return SOLVER_EVAL_KEYS[this.mode]; }
   get ak() { return ACTION_KEYS[this.mode]; }
 
   formatTime = formatPuzzleTime;

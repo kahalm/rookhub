@@ -1634,13 +1634,6 @@
       "yourTurn": "Te jössz! Találd meg a legjobb lépést.",
       "yourMove": "A te lépésed...",
       "opponentThinking": "Az ellenfél gondolkodik...",
-      "evalStart": "Kezdet",
-      "evalNow": "Most",
-      "showEval": "Értékelés mutatása",
-      "hideEval": "Értékelés elrejtése",
-      "reset": "Visszaállítás",
-      "mouseslip": "Egércsúszás",
-      "giveUp": "Feladás",
       "checkmate": "Matt!",
       "alternativeSolution": "Alternatív megoldás – a feladványnak más volt a szándékolt vonala.",
       "correct": "Helyes!",
@@ -1734,9 +1727,6 @@
       "loadError": "A betöltés nem sikerült. Kérlek, ellenőrizd a kapcsolatot."
     },
     "actions": {
-      "reset": "Visszaállítás",
-      "giveUp": "Feladás",
-      "mouseslip": "Egércsúszás",
       "nextPuzzle": "Következő feladvány",
       "skip": "Kihagyás",
       "viewFullGame": "Teljes játszma megtekintése",

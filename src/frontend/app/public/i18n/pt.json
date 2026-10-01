@@ -676,13 +676,6 @@
       "yourTurn": "A sua vez! Encontre o melhor lance.",
       "yourMove": "O seu lance...",
       "opponentThinking": "O adversário está a calcular...",
-      "evalStart": "Início",
-      "evalNow": "Agora",
-      "showEval": "Mostrar avaliação",
-      "hideEval": "Ocultar avaliação",
-      "reset": "Recomeçar",
-      "mouseslip": "Erro de rato",
-      "giveUp": "Desistir",
       "checkmate": "Xeque-mate!",
       "alternativeSolution": "Solução alternativa — o puzzle tinha uma linha prevista diferente.",
       "correct": "Correto!",
@@ -763,9 +756,6 @@
       "fullGame": "Partida completa"
     },
     "actions": {
-      "reset": "Recomeçar",
-      "giveUp": "Desistir",
-      "mouseslip": "Erro de rato",
       "nextPuzzle": "Próximo puzzle",
       "skip": "Saltar",
       "viewFullGame": "Ver partida completa",

@@ -676,13 +676,6 @@
       "yourTurn": "Đến lượt bạn! Tìm nước đi tốt nhất.",
       "yourMove": "Nước đi của bạn...",
       "opponentThinking": "Đối thủ đang suy nghĩ...",
-      "evalStart": "Ban đầu",
-      "evalNow": "Hiện tại",
-      "showEval": "Hiển thị đánh giá",
-      "hideEval": "Ẩn đánh giá",
-      "reset": "Đặt lại",
-      "mouseslip": "Trượt chuột",
-      "giveUp": "Bỏ cuộc",
       "checkmate": "Chiếu hết!",
       "alternativeSolution": "Lời giải thay thế — bài tập có đường lời giải dự kiến khác.",
       "correct": "Đúng rồi!",
@@ -763,9 +756,6 @@
       "fullGame": "Toàn bộ ván cờ"
     },
     "actions": {
-      "reset": "Đặt lại",
-      "giveUp": "Bỏ cuộc",
-      "mouseslip": "Trượt chuột",
       "nextPuzzle": "Bài tập tiếp theo",
       "skip": "Bỏ qua",
       "viewFullGame": "Xem toàn bộ ván cờ",

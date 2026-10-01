@@ -1,4 +1,4 @@
-import { SOLVER_ACTION_KEYS, canMouseslip, canReset, isSolvingState } from './solver-actions.util';
+import { SOLVER_ACTION_KEYS, SOLVER_EVAL_KEYS, canMouseslip, canReset, isSolvingState } from './solver-actions.util';
 
 describe('solver-actions.util', () => {
   it('isSolvingState covers exactly the three solving states', () => {
@@ -26,14 +26,16 @@ describe('solver-actions.util', () => {
     expect(canMouseslip('THINKING', true, false, true)).toBeTrue();       // … mit showMouseslipInThinking
   });
 
-  it('every mode has its own translation keys', () => {
+  // Codereview F2-012: Endless zeigte auf Deutsch „Reset"/„Mouseslip"/„Give Up"/„Show Eval", das Buch
+  // „Mausverrutscher" — dieselben Knöpfe wie auf /puzzles, nur mit eigenen, auseinandergelaufenen Keys.
+  it('all three solvers label the same action with the same key', () => {
     for (const mode of ['standard', 'endless', 'book'] as const) {
-      const k = SOLVER_ACTION_KEYS[mode];
-      expect(k.reset.length).toBeGreaterThan(0);
-      expect(k.mouseslip.length).toBeGreaterThan(0);
-      expect(k.giveUp.length).toBeGreaterThan(0);
+      expect(SOLVER_ACTION_KEYS[mode]).withContext(mode).toEqual({
+        reset: 'puzzles.actions.reset', mouseslip: 'puzzles.actions.mouseslip', giveUp: 'puzzles.actions.giveUp',
+      });
+      expect(SOLVER_EVAL_KEYS[mode]).withContext(mode).toEqual({
+        show: 'puzzles.eval.show', hide: 'puzzles.eval.hide', start: 'puzzles.eval.start', now: 'puzzles.eval.now',
+      });
     }
-    expect(SOLVER_ACTION_KEYS.endless.reset).toBe('endless.game.reset');
-    expect(SOLVER_ACTION_KEYS.book.giveUp).toBe('book.actions.giveUp');
   });
 });

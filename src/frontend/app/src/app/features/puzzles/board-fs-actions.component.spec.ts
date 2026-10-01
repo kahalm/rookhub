@@ -62,13 +62,13 @@ describe('BoardFsActionsComponent', () => {
     expect(c.showMouseslipAction).toBeTrue();       // Endless
   });
 
-  it('uses the translation keys of its mode', () => {
+  it('uses the same translation keys in every mode (same buttons as the normal action row)', () => {
     const c = make();
     expect(c.keys.reset).toBe('puzzles.actions.reset');
     c.mode = 'endless';
-    expect(c.keys.giveUp).toBe('endless.game.giveUp');
+    expect(c.keys.giveUp).toBe('puzzles.actions.giveUp');
     c.mode = 'book';
-    expect(c.keys.mouseslip).toBe('book.actions.mouseslip');
+    expect(c.keys.mouseslip).toBe('puzzles.actions.mouseslip');
   });
 
   it('emits the four solver actions', () => {

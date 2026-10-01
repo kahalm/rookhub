@@ -676,13 +676,6 @@
       "yourTurn": "Sıra sizde! En iyi hamleyi bulun.",
       "yourMove": "Hamleniz...",
       "opponentThinking": "Rakip düşünüyor...",
-      "evalStart": "Başlangıç",
-      "evalNow": "Şimdi",
-      "showEval": "Değerlendirmeyi Göster",
-      "hideEval": "Değerlendirmeyi Gizle",
-      "reset": "Sıfırla",
-      "mouseslip": "Fare kayması",
-      "giveUp": "Vazgeç",
       "checkmate": "Mat!",
       "alternativeSolution": "Alternatif çözüm — problemin farklı bir amaçlanan satırı vardı.",
       "correct": "Doğru!",
@@ -763,9 +756,6 @@
       "fullGame": "Tam oyun"
     },
     "actions": {
-      "reset": "Sıfırla",
-      "giveUp": "Vazgeç",
-      "mouseslip": "Fare kayması",
       "nextPuzzle": "Sonraki problem",
       "skip": "Atla",
       "viewFullGame": "Tam oyunu gör",

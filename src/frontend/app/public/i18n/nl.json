@@ -676,13 +676,6 @@
       "yourTurn": "Jij bent aan de beurt! Vind de beste zet.",
       "yourMove": "Jouw zet...",
       "opponentThinking": "Tegenstander denkt na...",
-      "evalStart": "Start",
-      "evalNow": "Nu",
-      "showEval": "Evaluatie tonen",
-      "hideEval": "Evaluatie verbergen",
-      "reset": "Opnieuw",
-      "mouseslip": "Muisfout",
-      "giveUp": "Opgeven",
       "checkmate": "Schaakmat!",
       "alternativeSolution": "Alternatieve oplossing — de puzzel had een andere bedoelde lijn.",
       "correct": "Correct!",
@@ -763,9 +756,6 @@
       "fullGame": "Volledige partij"
     },
     "actions": {
-      "reset": "Opnieuw",
-      "giveUp": "Opgeven",
-      "mouseslip": "Muisfout",
       "nextPuzzle": "Volgende puzzel",
       "skip": "Overslaan",
       "viewFullGame": "Volledige partij bekijken",

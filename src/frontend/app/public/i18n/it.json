@@ -676,13 +676,6 @@
       "yourTurn": "Tocca a te! Trova la mossa migliore.",
       "yourMove": "La tua mossa...",
       "opponentThinking": "L'avversario sta pensando...",
-      "evalStart": "Inizio",
-      "evalNow": "Ora",
-      "showEval": "Mostra valutazione",
-      "hideEval": "Nascondi valutazione",
-      "reset": "Ricomincia",
-      "mouseslip": "Scivolata del mouse",
-      "giveUp": "Rinuncia",
       "checkmate": "Scacco matto!",
       "alternativeSolution": "Soluzione alternativa — il puzzle aveva una linea prevista diversa.",
       "correct": "Corretto!",
@@ -763,9 +756,6 @@
       "fullGame": "Partita completa"
     },
     "actions": {
-      "reset": "Ricomincia",
-      "giveUp": "Rinuncia",
-      "mouseslip": "Scivolata del mouse",
       "nextPuzzle": "Puzzle successivo",
       "skip": "Salta",
       "viewFullGame": "Vedi la partita completa",

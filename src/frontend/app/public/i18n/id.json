@@ -676,13 +676,6 @@
       "yourTurn": "Giliran Anda! Temukan langkah terbaik.",
       "yourMove": "Langkah Anda...",
       "opponentThinking": "Lawan sedang berpikir...",
-      "evalStart": "Mulai",
-      "evalNow": "Sekarang",
-      "showEval": "Tampilkan Eval",
-      "hideEval": "Sembunyikan Eval",
-      "reset": "Ulang",
-      "mouseslip": "Salah klik",
-      "giveUp": "Menyerah",
       "checkmate": "Skakmat!",
       "alternativeSolution": "Solusi alternatif — puzzle memiliki jalur yang berbeda dari yang dimaksud.",
       "correct": "Benar!",
@@ -763,9 +756,6 @@
       "fullGame": "Permainan penuh"
     },
     "actions": {
-      "reset": "Ulang",
-      "giveUp": "Menyerah",
-      "mouseslip": "Salah klik",
       "nextPuzzle": "Puzzle berikutnya",
       "skip": "Lewati",
       "viewFullGame": "Lihat permainan penuh",

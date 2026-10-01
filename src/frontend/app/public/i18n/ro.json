@@ -676,13 +676,6 @@
       "yourTurn": "Rândul tău! Găsește cea mai bună mutare.",
       "yourMove": "Mutarea ta...",
       "opponentThinking": "Adversarul gândește...",
-      "evalStart": "Start",
-      "evalNow": "Acum",
-      "showEval": "Arată evaluarea",
-      "hideEval": "Ascunde evaluarea",
-      "reset": "Resetează",
-      "mouseslip": "Alunecare mouse",
-      "giveUp": "Renunță",
       "checkmate": "Șah mat!",
       "alternativeSolution": "Soluție alternativă — problema avea o altă linie intenționată.",
       "correct": "Corect!",
@@ -763,9 +756,6 @@
       "fullGame": "Partida completă"
     },
     "actions": {
-      "reset": "Resetează",
-      "giveUp": "Renunță",
-      "mouseslip": "Alunecare mouse",
       "nextPuzzle": "Problema următoare",
       "skip": "Sari",
       "viewFullGame": "Vezi partida completă",

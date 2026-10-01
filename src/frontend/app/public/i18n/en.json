@@ -2035,13 +2035,6 @@
       "yourTurn": "Your turn! Find the best move.",
       "yourMove": "Your move...",
       "opponentThinking": "Opponent is thinking...",
-      "evalStart": "Start",
-      "evalNow": "Now",
-      "showEval": "Show Eval",
-      "hideEval": "Hide Eval",
-      "reset": "Reset",
-      "mouseslip": "Mouseslip",
-      "giveUp": "Give Up",
       "checkmate": "Checkmate!",
       "alternativeSolution": "Alternative solution — the puzzle had a different intended line.",
       "correct": "Correct!",
@@ -2137,9 +2130,6 @@
       "loadError": "Failed to load. Please check your connection."
     },
     "actions": {
-      "reset": "Reset",
-      "giveUp": "Give Up",
-      "mouseslip": "Mouseslip",
       "nextPuzzle": "Next puzzle",
       "skip": "Skip",
       "viewFullGame": "View full game",

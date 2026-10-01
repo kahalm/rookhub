@@ -676,13 +676,6 @@
       "yourTurn": "Jste na tahu! Najděte nejlepší tah.",
       "yourMove": "Váš tah...",
       "opponentThinking": "Soupeř přemýšlí...",
-      "evalStart": "Start",
-      "evalNow": "Nyní",
-      "showEval": "Zobrazit hodnocení",
-      "hideEval": "Skrýt hodnocení",
-      "reset": "Resetovat",
-      "mouseslip": "Překlep myší",
-      "giveUp": "Vzdát se",
       "checkmate": "Mat!",
       "alternativeSolution": "Alternativní řešení – úloha měla jinou zamýšlenou linii.",
       "correct": "Správně!",
@@ -763,9 +756,6 @@
       "fullGame": "Celá partie"
     },
     "actions": {
-      "reset": "Resetovat",
-      "giveUp": "Vzdát se",
-      "mouseslip": "Překlep myší",
       "nextPuzzle": "Další úloha",
       "skip": "Přeskočit",
       "viewFullGame": "Zobrazit celou partii",

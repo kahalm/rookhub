@@ -676,13 +676,6 @@
       "yourTurn": "あなたの番！最善手を見つけましょう。",
       "yourMove": "あなたの手...",
       "opponentThinking": "相手が考えています...",
-      "evalStart": "開始",
-      "evalNow": "現在",
-      "showEval": "評価を表示",
-      "hideEval": "評価を非表示",
-      "reset": "リセット",
-      "mouseslip": "マウスミス",
-      "giveUp": "あきらめる",
       "checkmate": "チェックメイト！",
       "alternativeSolution": "別の解答 — このパズルには異なる想定ラインがありました。",
       "correct": "正解！",
@@ -763,9 +756,6 @@
       "fullGame": "全対局"
     },
     "actions": {
-      "reset": "リセット",
-      "giveUp": "あきらめる",
-      "mouseslip": "マウスミス",
       "nextPuzzle": "次のパズル",
       "skip": "スキップ",
       "viewFullGame": "全対局を見る",

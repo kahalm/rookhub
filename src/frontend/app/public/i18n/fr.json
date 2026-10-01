@@ -676,13 +676,6 @@
       "yourTurn": "À vous de jouer ! Trouvez le meilleur coup.",
       "yourMove": "Votre coup...",
       "opponentThinking": "L'adversaire réfléchit...",
-      "evalStart": "Départ",
-      "evalNow": "Maintenant",
-      "showEval": "Afficher l'évaluation",
-      "hideEval": "Masquer l'évaluation",
-      "reset": "Réinitialiser",
-      "mouseslip": "Glissement souris",
-      "giveUp": "Abandonner",
       "checkmate": "Échec et mat !",
       "alternativeSolution": "Solution alternative — le puzzle avait une ligne prévue différente.",
       "correct": "Correct !",
@@ -763,9 +756,6 @@
       "fullGame": "Partie complète"
     },
     "actions": {
-      "reset": "Réinitialiser",
-      "giveUp": "Abandonner",
-      "mouseslip": "Glissement souris",
       "nextPuzzle": "Puzzle suivant",
       "skip": "Passer",
       "viewFullGame": "Voir la partie complète",

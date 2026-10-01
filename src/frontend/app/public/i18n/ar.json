@@ -676,13 +676,6 @@
       "yourTurn": "دورك! ابحث عن أفضل حركة.",
       "yourMove": "حركتك...",
       "opponentThinking": "الخصم يفكّر...",
-      "evalStart": "البداية",
-      "evalNow": "الآن",
-      "showEval": "إظهار التقييم",
-      "hideEval": "إخفاء التقييم",
-      "reset": "إعادة تعيين",
-      "mouseslip": "انزلاق الفأرة",
-      "giveUp": "الاستسلام",
       "checkmate": "كش ملك!",
       "alternativeSolution": "حل بديل — كان اللغز يحتوي على خط مقصود مختلف.",
       "correct": "صحيح!",
@@ -763,9 +756,6 @@
       "fullGame": "اللعبة الكاملة"
     },
     "actions": {
-      "reset": "إعادة تعيين",
-      "giveUp": "الاستسلام",
-      "mouseslip": "انزلاق الفأرة",
       "nextPuzzle": "اللغز التالي",
       "skip": "تخطي",
       "viewFullGame": "عرض اللعبة الكاملة",
