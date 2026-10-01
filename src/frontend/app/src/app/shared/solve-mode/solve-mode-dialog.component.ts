@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
 
@@ -11,6 +12,15 @@ export interface SolveModeDialogData {
   intro?: string;
   /** Was der Trainingsmodus hier konkret bedeutet — hängt an der eingestellten Stufe. */
   trainingDesc?: string;
+  /** „Für alle Puzzle-Bereiche übernehmen" anbieten (setzt der `SolveModeService` für die
+   *  Bereiche ohne Id; Kurse fragen weiter einzeln). */
+  offerApplyAll?: boolean;
+}
+
+/** Antwort des Dialogs: die Wahl und ob sie als geräteweite Grundwahl gelten soll. */
+export interface SolveModeDialogResult {
+  mode: 'training' | 'easy';
+  applyAll: boolean;
 }
 
 /**
@@ -25,7 +35,7 @@ export interface SolveModeDialogData {
   selector: 'app-solve-mode-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatDialogModule, MatIconModule, TranslatePipe],
+  imports: [MatDialogModule, MatCheckboxModule, MatIconModule, TranslatePipe],
   template: `
     <h2 mat-dialog-title>
       {{ (data.scopeLabel ? 'solveMode.titleFor' : 'solveMode.title') | translate:{ scope: data.scopeLabel } }}
@@ -49,6 +59,12 @@ export interface SolveModeDialogData {
         </span>
       </button>
 
+      @if (data.offerApplyAll) {
+        <mat-checkbox class="sm-all" [checked]="applyAll" (change)="applyAll = $event.checked">
+          {{ 'solveMode.applyAll' | translate }}
+        </mat-checkbox>
+      }
+
       <p class="sm-hint">{{ 'solveMode.switchHint' | translate }}</p>
     </mat-dialog-content>
   `,
@@ -66,14 +82,17 @@ export interface SolveModeDialogData {
     .sm-text { display: flex; flex-direction: column; gap: 2px; }
     .sm-name { font-weight: 600; }
     .sm-desc { font-size: .85rem; color: color-mix(in srgb, currentColor 65%, transparent); }
+    .sm-all { display: block; margin: 0 0 4px; }
     .sm-hint { margin: 4px 0 0; font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
   `],
 })
 export class SolveModeDialogComponent {
-  private readonly ref = inject(MatDialogRef<SolveModeDialogComponent, 'training' | 'easy'>);
+  private readonly ref = inject(MatDialogRef<SolveModeDialogComponent, SolveModeDialogResult>);
   readonly data: SolveModeDialogData = inject(MAT_DIALOG_DATA, { optional: true }) || {};
+  /** Voreingestellt an: die meisten wollen überall gleich spielen und nicht je Bereich gefragt werden. */
+  applyAll = true;
 
   pick(mode: 'training' | 'easy'): void {
-    this.ref.close(mode);
+    this.ref.close({ mode, applyAll: !!this.data.offerApplyAll && this.applyAll });
   }
 }

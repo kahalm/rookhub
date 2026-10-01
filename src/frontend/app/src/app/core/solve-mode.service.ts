@@ -3,7 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { PreferencesService } from './preferences.service';
-import { SolveModeDialogComponent, SolveModeDialogData } from '../shared/solve-mode/solve-mode-dialog.component';
+import { SolveModeDialogComponent, SolveModeDialogData, SolveModeDialogResult } from '../shared/solve-mode/solve-mode-dialog.component';
 
 /** Die beiden Spielweisen. Die Zeichenketten sind der Vertrag zum Server (Spalte `Mode`
  *  auf PuzzleAttempts/CourseAttempts/BookPuzzleAttempts/EndlessSessions/WeeklyPostAttempts)
@@ -20,6 +20,13 @@ const STORE_KEY = 'rookhub_solve_modes';
  */
 const MAX_EINTRAEGE = 200;
 
+/**
+ * Eintrag der geräteweiten Grundwahl („für alle Puzzle-Bereiche übernehmen" im Dialog). Gilt für
+ * die Bereiche OHNE Id (puzzles, daily, book, endless), die keine eigene Wahl haben — Kurse und
+ * Wochenposts (`course:<id>`, `weekly:<id>`) fragen weiter einzeln.
+ */
+const GRUNDWAHL = '*';
+
 interface Eintrag { mode: SolveMode; at: number; }
 
 /**
@@ -29,6 +36,9 @@ interface Eintrag { mode: SolveMode; at: number; }
  * Gefragt wird **einmalig je Bereich** — für Kurse zusätzlich je Kurs, weil sich ein
  * Taktikbuch anders trainiert als ein Eröffnungskurs. Danach gilt die gemerkte Wahl
  * wortlos; umschalten kann man jederzeit über die Aktionsleiste des Solvers.
+ * In den Bereichen ohne Id bietet der Dialog „für alle Puzzle-Bereiche übernehmen" an
+ * (voreingestellt, UX-004): dann wird die Wahl zur geräteweiten Grundwahl, und Puzzles,
+ * Tagespuzzle, Buch-Puzzles und Endless fragen nicht noch einmal einzeln.
  *
  * Die Wahl liegt im localStorage, nicht auf dem Server: sie steht in einer Reihe mit den
  * übrigen Anzeige-Einstellungen (Brett-Thema, Figurensatz, Visualisierungsstufe), gilt wie
@@ -44,11 +54,14 @@ export class SolveModeService {
   static scopeCourse(bookId: number): string { return `course:${bookId}`; }
   static scopeWeekly(weeklyId: number): string { return `weekly:${weeklyId}`; }
 
-  /** Gemerkte Wahl, oder null wenn für diesen Bereich noch nie gefragt wurde. */
+  /** Bereich ohne Id (puzzles, daily, book, endless)? Nur dort gilt die Grundwahl. */
+  static isShared(scope: string): boolean { return scope !== GRUNDWAHL && !scope.includes(':'); }
+
+  /** Gemerkte Wahl, oder null wenn für diesen Bereich noch nie gefragt wurde. Ein Bereich ohne
+   *  eigene Wahl fällt auf die Grundwahl zurück, sofern er einer ohne Id ist. */
   get(scope: string): SolveMode | null {
     const alle = this.lesen();
-    const e = alle[scope];
-    return e && (e.mode === 'easy' || e.mode === 'training') ? e.mode : null;
+    return modeOf(alle[scope]) ?? (SolveModeService.isShared(scope) ? modeOf(alle[GRUNDWAHL]) : null);
   }
 
   set(scope: string, mode: SolveMode): void {
@@ -57,7 +70,7 @@ export class SolveModeService {
     this.schreiben(alle);
   }
 
-  /** Wahl für einen Bereich vergessen — der nächste Einstieg fragt wieder. */
+  /** Wahl für einen Bereich vergessen — der nächste Einstieg fragt wieder (bzw. nimmt die Grundwahl). */
   clear(scope: string): void {
     const alle = this.lesen();
     if (!(scope in alle)) return;
@@ -76,14 +89,23 @@ export class SolveModeService {
   ensure(scope: string, data: SolveModeDialogData = {}): Observable<SolveMode> {
     const gemerkt = this.get(scope);
     if (gemerkt) return of(gemerkt);
+    const shared = SolveModeService.isShared(scope);
     return this.dialog
-      .open(SolveModeDialogComponent, { width: '460px', maxWidth: '94vw', disableClose: true, data })
+      // autoFocus 'dialog': den Container fokussieren, nicht die erste Karte — sonst trägt
+      // „Trainingsmodus" den Fokusrahmen und sieht vorausgewählt aus (UX-004).
+      .open(SolveModeDialogComponent, {
+        width: '460px', maxWidth: '94vw', disableClose: true, autoFocus: 'dialog',
+        data: { ...data, offerApplyAll: shared },
+      })
       .afterClosed()
-      .pipe(map((gewaehlt: SolveMode | undefined) => {
+      .pipe(map((r: SolveModeDialogResult | undefined) => {
         // Abgebrochen (Escape ist durch disableClose aus, aber defensiv) → Trainingsmodus,
         // das bisherige Verhalten. Gemerkt wird nur eine echte Wahl.
-        const mode: SolveMode = gewaehlt === 'easy' ? 'easy' : 'training';
-        if (gewaehlt) this.set(scope, mode);
+        const mode: SolveMode = r?.mode === 'easy' ? 'easy' : 'training';
+        if (r) {
+          this.set(scope, mode);
+          if (shared && r.applyAll) this.set(GRUNDWAHL, mode);
+        }
         return mode;
       }));
   }
@@ -116,7 +138,8 @@ export class SolveModeService {
   }
 
   private schreiben(alle: Record<string, Eintrag>): void {
-    const keys = Object.keys(alle);
+    // Die Grundwahl zählt nicht mit und fliegt nie raus — sonst fragten alle Bereiche wieder.
+    const keys = Object.keys(alle).filter(k => k !== GRUNDWAHL);
     if (keys.length > MAX_EINTRAEGE) {
       // Älteste zuerst wegwerfen; sie werden beim nächsten Einstieg einfach neu erfragt.
       keys.sort((a, b) => (alle[a]?.at || 0) - (alle[b]?.at || 0));
@@ -124,4 +147,8 @@ export class SolveModeService {
     }
     try { localStorage.setItem(STORE_KEY, JSON.stringify(alle)); } catch { /* Privatmodus */ }
   }
+}
+
+function modeOf(e: Eintrag | undefined): SolveMode | null {
+  return e && (e.mode === 'easy' || e.mode === 'training') ? e.mode : null;
 }
