@@ -111,15 +111,11 @@ public class AuthController : BaseApiController
     /// Holen des Codes an (<see cref="Handoff"/>), im Browser des Opfers fehlt es oder gehoert dem Opfer. Ohne
     /// Elterndomaene (localhost, IP) gibt es kein Cookie, dann bleibt es beim Code allein.</para>
     /// <para>Neuer Pfad <c>rh-session/handoff</c>: nur dorthin schickt der Browser das Cookie mit (sein Pfad ist
-    /// <c>/api/auth/rh-session</c>, N6-001). Der alte Pfad <c>handoff/exchange</c> bleibt als Uebergang fuer
-    /// Oberflaechen aus dem Browser-Cache (eine Version, danach entfernen) und unterliegt derselben Pruefung —
-    /// dort kommt nur noch ein altes Cookie (Pfad <c>/api/auth</c>) an, sonst endet der Sprung in der
-    /// Anmeldemaske.</para>
+    /// <c>/api/auth/rh-session</c>, N6-001). Der alte Pfad bleibt als Uebergang (<see cref="LegacyHandoffExchange"/>).</para>
     /// </remarks>
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
     [HttpPost("rh-session/handoff")]
-    [HttpPost("handoff/exchange")]
     public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
     {
         HashSet<int>? holders = null;
@@ -137,6 +133,15 @@ public class AuthController : BaseApiController
         await WriteSharedSessionAsync(res, ct);
         return Ok(res);
     }
+
+    /// <summary>Uebergang (eine Version, danach entfernen): alter Pfad von <see cref="HandoffExchange"/> fuer
+    /// Oberflaechen aus dem Browser-Cache — mit derselben Pruefung. Hierher kommt nur noch ein altes Cookie (Pfad
+    /// <c>/api/auth</c>); ohne eins endet der Sprung in der Anmeldemaske.</summary>
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    [HttpPost("handoff/exchange")]
+    public Task<ActionResult<AuthResponseDto>> LegacyHandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
+        => HandoffExchange(dto, ct);
 
     // ===== Geteilte Anmeldung ueber beide Oberflaechen (siehe SharedSessionService) =====
 

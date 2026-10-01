@@ -51,7 +51,8 @@ public class AuthRateLimitTests
         foreach (var strict in new[]
                  {
                      nameof(AuthController.Register), nameof(AuthController.Login), nameof(AuthController.Handoff),
-                     nameof(AuthController.HandoffExchange), nameof(AuthController.ForgotPassword),
+                     nameof(AuthController.HandoffExchange), nameof(AuthController.LegacyHandoffExchange),
+                     nameof(AuthController.ForgotPassword),
                      nameof(AuthController.ResetPassword), nameof(AuthController.ChangePassword),
                  })
             Assert.Equal("auth", policies[strict]);

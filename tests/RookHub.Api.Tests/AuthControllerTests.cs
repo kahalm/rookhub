@@ -449,6 +449,19 @@ public class AuthControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task LegacyHandoffExchange_AppliesTheSameCheck()
+    {
+        // Der alte Pfad (Uebergang fuer Oberflaechen aus dem Browser-Cache) darf kein Weg an der Pruefung vorbei sein.
+        var attacker = await AddUserAsync("attacker");
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.LegacyHandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
     public async Task HandoffExchange_WithTheSharedCookieOfTheSameAccount_TurnsTheCodeIntoALogin()
     {
         // Der gewoehnliche Sprung: derselbe Browser hat beim Holen des Codes das Cookie bekommen.
