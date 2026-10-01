@@ -320,6 +320,65 @@ describe('TournamentMapComponent', () => {
       query === '(pointer: coarse)' ? ({ matches: coarse } as MediaQueryList) : original(query));
   }
 
+  /**
+   * Die Karte nimmt bis zu 70 % der Bildschirmhoehe ein. Mit Leaflets Vorgaben zoomte das Mausrad
+   * sie beim Hinunterscrollen, und am Handy verschob jeder Wisch auf ihr die Karte statt der
+   * Seite (touch-action: none) — „Dein Turnier fehlt?" darunter erreichte man kaum.
+   */
+  it('zoomt mit dem Mausrad erst nach einem Klick in die Karte und nur, solange der Zeiger darauf bleibt', () => {
+    fakePointer(false);
+    fixture.detectChanges();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (component as any).map;
+    const host = component.mapEl.nativeElement;
+
+    expect(map.scrollWheelZoom.enabled()).withContext('Rad zoomt schon beim Drueberscrollen').toBeFalse();
+
+    host.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    expect(map.scrollWheelZoom.enabled()).withContext('nach dem Klick').toBeTrue();
+
+    host.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(map.scrollWheelZoom.enabled()).withContext('nach dem Verlassen').toBeFalse();
+  });
+
+  it('erklärt beim Mausrad über der noch nicht angeklickten Karte, wie man zoomt', () => {
+    fakePointer(false);
+    fixture.detectChanges();
+    const host = component.mapEl.nativeElement;
+
+    host.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.gestureHint()).toBe('wheel');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.gesture-hint')).not.toBeNull();
+  });
+
+  it('lässt am Handy einen Finger die Seite scrollen, statt die Karte zu verschieben', () => {
+    fakePointer(true);
+    fixture.detectChanges();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = (component as any).map;
+    const host = component.mapEl.nativeElement;
+
+    expect(map.dragging.enabled()).withContext('ein Finger verschiebt die Karte').toBeFalse();
+    // Leaflets Stylesheet: nur mit Ziehen UND Kneifen steht touch-action auf none.
+    expect(getComputedStyle(host).touchAction).not.toBe('none');
+
+    host.dispatchEvent(new TouchEvent('touchmove', {
+      bubbles: true,
+      touches: [new Touch({ identifier: 1, target: host, clientX: 10, clientY: 10 })],
+    }));
+    fixture.detectChanges();
+    expect(component.gestureHint()).toBe('touch');
+  });
+
+  it('lässt die Karte mit der Maus weiterhin ziehen', () => {
+    fakePointer(false);
+    fixture.detectChanges();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((component as any).map.dragging.enabled()).toBeTrue();
+  });
+
   it('zoomt auf Wunsch eine Stufe weiter heraus als der eingepasste Ausschnitt', async () => {
     // Auf der Detailseite sitzt der eingepasste Ausschnitt so knapp um den Ort, dass die
     // Umgebung fehlt, an der man ihn erkennt.

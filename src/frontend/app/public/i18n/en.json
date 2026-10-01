@@ -3861,7 +3861,11 @@
         "bookmarked": "bookmarked",
         "approximate": "approximate location only"
       },
-      "legendTitle": "Legend"
+      "legendTitle": "Legend",
+      "gestureHint": {
+        "wheel": "Click the map first to zoom with the mouse wheel",
+        "touch": "Use two fingers to move the map"
+      }
     },
     "bookmarkedImporting": "Bookmarked. Fetching the tournament — entrants and results follow in a moment.",
     "place": {

@@ -3544,7 +3544,11 @@
         "bookmarked": "megjelölve",
         "approximate": "csak hozzávetőleges helyszín"
       },
-      "legendTitle": "Jelmagyarázat"
+      "legendTitle": "Jelmagyarázat",
+      "gestureHint": {
+        "wheel": "Előbb kattints a térképre, hogy az egérgörgővel nagyíthass",
+        "touch": "A térképet két ujjal mozgathatod"
+      }
     },
     "bookmarkedImporting": "Megjelölve. A verseny letöltése folyik — a résztvevők és az eredmények mindjárt jönnek.",
     "place": {

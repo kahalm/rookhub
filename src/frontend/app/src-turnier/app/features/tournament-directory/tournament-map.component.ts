@@ -60,6 +60,13 @@ const PinRadius = 7;
  *    beide auf der Landesmitte sitzen (dort liegen fuenf, anderswo bis zu 111). Bewusst KEIN
  *    Auseinanderruecken um ein paar Pixel: das behauptete Positionen, die niemand kennt. Der
  *    gebuendelte Pin traegt stattdessen die ANZAHL, und sein Popup listet alle auf.
+ *  - Gesten, die die SEITE meinen, bleiben bei der Seite. Die Karte ist bis zu 70 % der
+ *    Bildschirmhoehe gross; mit Leaflets Vorgaben zoomte das Mausrad sie, sobald der Zeiger beim
+ *    Hinunterscrollen darueber kam, und am Handy verschob jeder Wisch, der auf ihr begann, Europa
+ *    statt der Seite. Deshalb zoomt das Rad erst nach einem Klick in die Karte (bis der Zeiger sie
+ *    verlaesst), und auf Touch-Geraeten scrollt EIN Finger die Seite, ZWEI verschieben und zoomen
+ *    die Karte (Leaflets Kneif-Zoom verschiebt dabei mit). Wer es anders versucht, bekommt einen
+ *    kurzen Hinweis, statt dass scheinbar nichts geschieht.
  */
 @Component({
   selector: 'app-tournament-map',
@@ -69,6 +76,14 @@ const PinRadius = 7;
   template: `
     <div class="map-wrap" #wrapEl>
       <div class="map-host" #mapEl [style.height]="height"></div>
+
+      <!-- Nur ein Fingerzeig, keine Meldung: er erscheint bei jedem Scrollen ueber der Karte und
+           waere fuer einen Screenreader Laerm (die Tastatur bedient die Karte ohnehin). -->
+      @if (gestureHint(); as hint) {
+        <div class="gesture-hint" aria-hidden="true">
+          {{ 'tournamentDirectory.map.gestureHint.' + hint | translate }}
+        </div>
+      }
 
       <!-- Kartenzubehoer, kein Formular: es steht UEBER der Karte und darf ihre Ereignisse nicht
            ausloesen (siehe disableClickPropagation in ngAfterViewInit). -->
@@ -123,6 +138,25 @@ const PinRadius = 7;
       border-radius: 12px;
       overflow: hidden;
       background: var(--mat-sys-surface-container);
+    }
+
+    /* Mitten auf der Karte, ueber den Punkten und unter Leaflets Popups (700); faengt keine
+       Ereignisse ab, damit die Geste, die ihn ausgeloest hat, ungestoert weiterlaeuft. */
+    .gesture-hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 650;
+      max-width: 80%;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(32, 33, 36, 0.82);
+      color: #fff;
+      font-size: 0.9rem;
+      line-height: 1.35;
+      text-align: center;
+      pointer-events: none;
     }
 
     /* Unten links: Leaflets eigene Bedienelemente sitzen oben links (Zoom) und unten rechts
@@ -415,6 +449,13 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.legendOpen.update(open => !open);
   }
 
+  /**
+   * Welcher Gesten-Hinweis gerade ueber der Karte steht: `wheel` (Mausrad, bevor jemand in die
+   * Karte geklickt hat) oder `touch` (ein Finger, der die Seite scrollt statt die Karte).
+   */
+  readonly gestureHint = signal<'wheel' | 'touch' | null>(null);
+  private gestureHintTimer?: ReturnType<typeof setTimeout>;
+
   pickColourBy(event: Event): void {
     const chosen = (event.target as HTMLSelectElement).value as PinColourBy;
     if (chosen === this.colourBy) return;
@@ -443,10 +484,15 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       center: start ? [start.lat, start.lon] : [47.7, 13.4],
       zoom: start?.zoom ?? 6,
       zoomControl: true,
+      // Seiten-Gesten bleiben bei der Seite (Klassenkommentar): das Rad erst nach einem Klick,
+      // auf Touch-Geraeten verschieben zwei Finger statt einem.
+      scrollWheelZoom: false,
+      dragging: !coarse,
     });
     // Der gemerkte Ausschnitt gehoert zu DIESEM Umkreis: dann gilt er als eingepasst, sonst
     // zoege `applyCentre` die Ansicht sofort wieder auf den ganzen Kreis zurueck.
     if (start && start.centre !== null && start.centre === this.centreKey()) this.lastFitted = start.centre;
+    this.wireGestures(coarse);
 
     // Gleiche Herkunft: nginx holt die Kachel bei OpenStreetMap und legt sie in seinen Cache.
     // Direkt aus dem Browser zu laden setzt voraus, dass JEDER Betrachter selbst ins offene Netz
@@ -503,10 +549,46 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   }
 
   ngOnDestroy(): void {
+    clearTimeout(this.gestureHintTimer);
     this.forgetPopup();
     this.resizeObserver?.disconnect();
     this.map?.remove();
     this.map = undefined;
+  }
+
+  /**
+   * Schaltet das Mausrad-Zoomen mit dem Klick in die Karte ein und beim Verlassen wieder aus;
+   * zeigt den Hinweis, wenn eine Geste die Karte nicht bewegt. `mouseleave` und nicht Leaflets
+   * `mouseout`: Letzteres feuert auch beim Verlassen eines Punktes und schaltete das Rad mitten
+   * auf der Karte wieder ab. Die beiden Hinweis-Lauscher sind `passive` — sie duerfen das
+   * Scrollen der Seite, das sie begleiten, nicht aufhalten.
+   */
+  private wireGestures(coarse: boolean): void {
+    const map = this.map!;
+    const host = this.mapEl.nativeElement;
+    // In einem Popup (Turnierliste eines Punktes) oder auf Leaflets Knoepfen ist ein Finger
+    // richtig — dort scrollt bzw. tippt man, die Karte soll sich gar nicht bewegen.
+    const onMapItself = (e: Event) =>
+      !(e.target as Element | null)?.closest?.('.leaflet-popup, .leaflet-control');
+    if (coarse) {
+      host.addEventListener('touchmove', e => {
+        if (e.touches.length === 1 && onMapItself(e)) this.showGestureHint('touch');
+      }, { passive: true });
+      return;
+    }
+    const enableWheel = () => map.scrollWheelZoom.enable();
+    host.addEventListener('mousedown', enableWheel);
+    map.on('focus', enableWheel);   // auch per Tab in die Karte
+    host.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+    host.addEventListener('wheel', e => {
+      if (!map.scrollWheelZoom.enabled() && onMapItself(e)) this.showGestureHint('wheel');
+    }, { passive: true });
+  }
+
+  private showGestureHint(kind: 'wheel' | 'touch'): void {
+    this.gestureHint.set(kind);
+    clearTimeout(this.gestureHintTimer);
+    this.gestureHintTimer = setTimeout(() => this.gestureHint.set(null), 1500);
   }
 
   private applyEntries(): void {

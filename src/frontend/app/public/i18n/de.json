@@ -3861,7 +3861,11 @@
         "bookmarked": "gemerkt",
         "approximate": "nur ungefähr verortet"
       },
-      "legendTitle": "Legende"
+      "legendTitle": "Legende",
+      "gestureHint": {
+        "wheel": "Klicke zuerst in die Karte, um mit dem Mausrad zu zoomen",
+        "touch": "Verschiebe die Karte mit zwei Fingern"
+      }
     },
     "bookmarkedImporting": "Gemerkt. Das Turnier wird geholt — Teilnehmer und Ergebnisse folgen gleich.",
     "place": {
