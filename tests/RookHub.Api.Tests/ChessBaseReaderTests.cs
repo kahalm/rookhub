@@ -212,30 +212,31 @@ public class ChessBaseReaderTests
         return files.Select(f => Form(f.Item1, f.Item2)).ToList();
     }
 
+    // Beide Upload-Tests ohne Stoppuhr: Budget und Client-Abbruch laufen über Timer, deren Rückruf der Thread-Pool
+    // ausführt — auf einem vollen CI-Runner Sekunden zu spät (gemessen 5,06 s bzw. 7,5/8,4 s bei 100 ms). Was zählt, ist
+    // der AUSGANG: ungebremst rechnet diese Datenbank weit über eine Minute und endet mit einem Ergebnis.
+
     [Fact]
     public async Task Upload_ABuiltDatabase_StopsAtTheBudget()
     {
-        var service = new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance) { Budget = TimeSpan.FromMilliseconds(100) };
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        var (r, reason, _) = await service.ConvertAsync(SharedSkipStreamDatabase(), default);
-        watch.Stop();
-        Assert.Null(r);
+        var files = SharedSkipStreamDatabase();
+        var service = new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance) { Budget = TimeSpan.FromMilliseconds(50) };
+        var (r, reason, _) = await service.ConvertAsync(files, default);
+        Assert.Null(r);                                                       // kein Ergebnis: das Budget hat abgebrochen
         Assert.Equal("tooLarge", reason);
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"{watch.ElapsedMilliseconds} ms");
     }
 
     [Fact]
     public async Task Upload_ClientGone_StopsTheConversion()
     {
-        // Bricht der Client ab, endet auch die Rechnung — vorher lief Convert ohne Token bis zum Schluss weiter. Die Dateien
-        // entstehen VOR dem Token: ein schon abgelaufener Token scheiterte bereits beim Einlesen und bewiese nichts.
+        // Bricht der Client ab, endet auch die Rechnung — vorher lief Convert ohne Token bis zum Schluss weiter. Ohne Budget
+        // kann NUR der Client-Token die Rechnung beenden: käme er nicht an, liefe sie durch und gäbe ein Ergebnis statt der
+        // Ausnahme (mit dem 15-s-Budget dagegen endete auch ein überhörter Token als Ausnahme — der Client ist ja weg). Die
+        // Dateien entstehen VOR dem Token: ein schon abgelaufener Token scheiterte bereits beim Einlesen und bewiese nichts.
         var files = SharedSkipStreamDatabase();
+        var service = new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance) { Budget = Timeout.InfiniteTimeSpan };
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
-        var watch = System.Diagnostics.Stopwatch.StartNew();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new ChessBaseImportService(NullLogger<ChessBaseImportService>.Instance).ConvertAsync(files, cts.Token));
-        watch.Stop();
-        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), $"{watch.ElapsedMilliseconds} ms");
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ConvertAsync(files, cts.Token));
     }
 
     // ── ChessBase 2: Zugwörter ──────────────────────────────────────────────────────────────────

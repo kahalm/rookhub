@@ -21,8 +21,17 @@ public sealed class GapSearchGate
 
     public GapSearchGate(int slots) => _slots = new SemaphoreSlim(slots, slots);
 
+    /// <summary>Läuft, sobald eine Suche ihren Platz hat — nur die Tests setzen es: so bricht eine Anfrage GENAU zwischen
+    /// Laden (EF prüft den Token) und Rechnen ab, ohne Timer, der auf einem vollen CI-Runner zu spät käme.</summary>
+    internal Action? Entered { get; init; }
+
     /// <summary>Einen Platz nehmen, ohne zu warten; <c>false</c> = alle belegt.</summary>
-    public bool TryEnter() => _slots.Wait(0);
+    public bool TryEnter()
+    {
+        if (!_slots.Wait(0)) return false;
+        Entered?.Invoke();
+        return true;
+    }
 
     public void Exit() => _slots.Release();
 }

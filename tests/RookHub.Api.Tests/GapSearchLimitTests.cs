@@ -191,22 +191,27 @@ public class GapSearchLimitTests : IDisposable
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(1), $"{sw.Elapsed.TotalMilliseconds:0} ms");
     }
 
+    /// <summary>Die Anfrage bricht ab, sobald die Suche ihren Platz hat — also nach dem Laden (ein schon abgebrochener
+    /// Token scheiterte bereits an EF und bewiese nichts) und bevor sie rechnet. Ohne Stoppuhr: vorher feuerte ein
+    /// 200-ms-Timer, und auf einem vollen CI-Runner kam der Thread-Pool-Rückruf erst nach dem Budget der Suche (4 s).
+    /// Kein einziger Knoten heißt: der Token hat sie beendet — Zeit- und Knoten-Budget greifen erst viel später, und
+    /// käme der Token nicht an, kämmte die Suche bis zu ihrem Budget weiter (ImpossibleButNear).</summary>
     [Fact]
     public async Task SolveGap_PassesTheRequestTokenToTheSearch()
     {
-        var service = new GameReconstructionService(_db, new GapSearchGate(1));
+        using var request = new CancellationTokenSource();
+        var service = new GameReconstructionService(_db, new GapSearchGate(1) { Entered = request.Cancel });
         var id = (await service.CreateAsync(1, new ReconstructionHeadRequest { Title = "Abbruch" })).Id;
         await service.AddPartAsync(1, id, new ReconstructionPartRequest { Kind = ReconstructionPartKind.Position, Fen = Start });
         var target = (await service.AddPartAsync(1, id,
             new ReconstructionPartRequest { Kind = ReconstructionPartKind.Position, Fen = ImpossibleButNear }))!.Parts[1].Id;
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-        var sw = Stopwatch.StartNew();
-        var dto = await service.SolveGapAsync(1, id, target, GapSolver.MaxSearchPlies, cts.Token);
-        sw.Stop();
+        var dto = await service.SolveGapAsync(1, id, target, GapSolver.MaxSearchPlies, request.Token);
 
+        Assert.True(request.IsCancellationRequested);
         Assert.True(dto!.BudgetExhausted);
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2), $"{sw.Elapsed.TotalMilliseconds:0} ms");
+        Assert.Equal("budget", dto.Reason);
+        Assert.Equal(0, dto.Nodes);
     }
 
     // ── Hilfen ───────────────────────────────────────────────────────────────────────────────────
