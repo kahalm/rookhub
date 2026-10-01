@@ -2846,6 +2846,7 @@
       "reach": "passt zu den nächsten {{count}} Einträgen",
       "confirm": "Stimmt",
       "delete": "Zug löschen",
+      "deleted": "Zug gelöscht.",
       "comment": "Kommentar zu diesem Zug",
       "tipReplace": "Einen Zug am Brett spielen, um diesen zu ersetzen.",
       "tipInsert": "Einen Zug am Brett spielen, um ihn vor diesem einzufügen.",

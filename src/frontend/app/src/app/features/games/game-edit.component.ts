@@ -166,6 +166,12 @@ import { LeaveConfirm } from '../../core/unsaved-changes.guard';
           <mat-card class="cursor-card">
             <div class="cursor-panel">
               @if (busy()) { <mat-progress-bar mode="indeterminate" /> }
+              @if (session.canUndoRemove()) {
+                <div class="undo-line">
+                  <span>{{ 'games.edit.deleted' | translate }}</span>
+                  <button mat-button (click)="session.undoRemove()" [disabled]="busy()"><mat-icon>undo</mat-icon> {{ 'common.undo' | translate }}</button>
+                </div>
+              }
               @if (current(); as p) {
                 <div class="where">
                   <strong>{{ plyLabel(cursor()) }}</strong>
@@ -192,7 +198,8 @@ import { LeaveConfirm } from '../../core/unsaved-changes.guard';
                   @if (!p.illegal && !p.confirmed && (p.uncertain || isScoresheet())) {
                     <button mat-stroked-button (click)="confirm()"><mat-icon>check</mat-icon> {{ 'games.edit.confirm' | translate }}</button>
                   }
-                  <button mat-stroked-button (click)="remove()" [disabled]="busy()"><mat-icon>backspace</mat-icon> {{ 'games.edit.delete' | translate }}</button>
+                  <!-- Abgesetzt von „Stimmt" (UX-070): Textknopf in Warnfarbe, ganz rechts. -->
+                  <button mat-button color="warn" class="del" (click)="remove()" [disabled]="busy()"><mat-icon>backspace</mat-icon> {{ 'games.edit.delete' | translate }}</button>
                 </div>
                 <mat-form-field appearance="outline" subscriptSizing="dynamic" class="comment">
                   <mat-label>{{ 'games.edit.comment' | translate }}</mat-label>
@@ -289,6 +296,8 @@ import { LeaveConfirm } from '../../core/unsaved-changes.guard';
     .o-reach { font-size: 0.8rem; margin-right: 8px; }
     .o-preview { font-family: monospace; font-size: 0.8rem; opacity: 0.7; }
     .ply-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ply-actions .del { margin-left: auto; }
+    .undo-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 0.9rem; }
     .comment { width: 100%; }
     .tip { font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin: 0; }
     .moves-card { padding: 12px; }

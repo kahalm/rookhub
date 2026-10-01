@@ -287,6 +287,10 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .club-h3 { margin: 16px 0 8px; font: 600 18px/1.2 var(--cond); }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; min-width: 0; }
 .panel .actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 12px; }
+/* „Zug löschen" abgesetzt von „Stimmt so" (UX-070): rot, ganz rechts in der Zeile. */
+.actions .btn-link.del { color: var(--red); margin-left: auto; }
+.actions .btn-link.del:disabled { opacity: .5; cursor: progress; }
+.undo-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 8px; }
 
 .club-search { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
 .club-search input { flex: 1 1 220px; min-width: 0; }

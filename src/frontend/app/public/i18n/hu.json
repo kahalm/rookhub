@@ -3160,6 +3160,7 @@
       "reach": "illik a következő {{count}} bejegyzéshez",
       "confirm": "Helyes",
       "delete": "Lépés törlése",
+      "deleted": "Lépés törölve.",
       "comment": "Megjegyzés ehhez a lépéshez",
       "tipReplace": "Lépj a táblán, hogy felülírd ezt a lépést.",
       "tipInsert": "Lépj a táblán, hogy ez elé szúrd be.",

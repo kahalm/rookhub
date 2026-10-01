@@ -130,6 +130,10 @@ const SILENT_FAILURES = 3;
                 }
               }
               @if (s.busy()) { <p class="muted small">Lese den Rest neu …</p> }
+              @if (s.canUndoRemove()) {
+                <p class="undo-line small">Zug gelöscht.
+                  <button type="button" class="btn-sec" [disabled]="s.busy()" (click)="s.undoRemove()">Rückgängig</button></p>
+              }
               @if (s.current(); as p) {
                 <p class="where">
                   <b>{{ s.plyLabel(s.cursor()) }}</b> <span class="san" [class.bad]="p.illegal">{{ de(p.san) }}</span>
@@ -152,7 +156,9 @@ const SILENT_FAILURES = 3;
                 }
                 <div class="actions">
                   @if (!p.illegal && !p.confirmed) { <button type="button" class="btn-sec" (click)="s.confirm()">Stimmt so</button> }
-                  <button type="button" class="btn-sec" [disabled]="s.busy()" (click)="s.remove()">Zug löschen</button>
+                  <!-- Abgesetzt von „Stimmt so" (UX-070): Link-Optik in Rot, ganz rechts — „Stimmt so" ist die häufigste
+                       Aktion der Seite, ein Fehlgriff daneben nahm den Zug heraus. -->
+                  <button type="button" class="btn-link del" [disabled]="s.busy()" (click)="s.remove()">Zug löschen</button>
                 </div>
                 <p class="muted small">{{ s.mode() === 'insert' ? 'Ein Zug am Brett wird VOR diesem eingefügt.' : 'Ein Zug am Brett ersetzt diesen.' }}</p>
               } @else {

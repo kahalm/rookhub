@@ -59,6 +59,29 @@ describe('GameEditComponent', () => {
     expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Bc4', 'Nc6', 'Nf3']);
   });
 
+  // UX-070: „Zug löschen" ist von „Stimmt" abgesetzt (Textknopf in Warnfarbe) und lässt sich zurücknehmen.
+  it('after deleting a move, “Undo” brings it back', async () => {
+    const { fixture, c, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/games/5').flush(detail());
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    c.go(2);
+    fixture.detectChanges();
+    expect(el.querySelector('.ply-actions .del')?.getAttribute('color')).toBe('warn');
+    expect(el.querySelector('.undo-line')).toBeNull();
+    c.remove();
+    fixture.detectChanges();
+    expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nc6', 'Bb5']);
+
+    el.querySelector<HTMLButtonElement>('.undo-line button')!.click();
+    fixture.detectChanges();
+    expect(c.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bb5']);
+    expect(c.cursor()).toBe(2);
+    expect(el.querySelector('.undo-line')).toBeNull();
+  });
+
   // W3 F4-002: vorher rechnete die Korrekturseite immer ab der Grundstellung — das Brett zeigte bei einer Partie mit
   // FEN-Kopf für jeden Halbzug die Grundstellung, und ein Zug daran machte den Rest illegal.
   it('a game with a FEN header: the board starts from that position, a move there keeps the rest legal', async () => {

@@ -57,6 +57,16 @@ export class SheetEditSession {
    *  und Legalität rechnen ab hier — vorher immer ab der Grundstellung, und bei einer Partie mit FEN-Kopf zeigte das Brett
    *  für jeden Halbzug die Grundstellung, ein Zug daran machte den Rest illegal. */
   readonly startFen = signal(START_FEN);
+  /**
+   * Stand vor dem letzten „Zug löschen" (Codereview 2026-09-29, UX-070): Löschen liest den Rest neu, die Folgezüge und
+   * ihre Bestätigungen können sich dabei ändern — zurück ging es vorher nur durch Nachspielen im Einfügemodus und neues
+   * Prüfen. Jede andere Änderung (Zug, Lesart, Bestätigen, Kommentar, neuer Stand) verwirft ihn, sonst nähme
+   * Rückgängig sie still mit zurück. Nur ein Schritt.
+   */
+  private readonly beforeRemove = signal<{
+    plies: EditPly[]; unresolved: string[]; unresolvedFrom: number | null; cursor: number;
+  } | null>(null);
+  readonly canUndoRemove = computed(() => this.beforeRemove() !== null);
 
   readonly legalCount = computed(() => {
     const idx = this.plies().findIndex(p => p.illegal);
@@ -149,6 +159,7 @@ export class SheetEditSession {
     boxes?: readonly (number[] | null)[]; written?: readonly string[]; pages?: readonly number[];
   }, comments: readonly (string | null)[] = []): void {
     this.isScoresheet.set(true);
+    this.beforeRemove.set(null);
     this.plies.set(fromServer(state.plies, comments));
     this.unresolved.set([...(state.unresolved ?? [])]);
     this.unresolvedFrom.set(state.unresolvedFrom ?? null);
@@ -218,6 +229,7 @@ export class SheetEditSession {
     const uci = uciOf(san, this.cursorFen());
     if (!uci) return;
     const mine = userPly(san, uci, w, written, comment);
+    this.beforeRemove.set(null);
     this.host.changed?.();
 
     if (!this.isScoresheet()) {
@@ -235,7 +247,8 @@ export class SheetEditSession {
   remove(): void {
     const i = this.cursor();
     const list = this.plies();
-    if (i >= list.length) return;
+    if (i >= list.length || this.busy()) return;
+    this.beforeRemove.set({ plies: list, unresolved: this.unresolved(), unresolvedFrom: this.unresolvedFrom(), cursor: i });
     this.host.changed?.();
     if (!this.isScoresheet()) {
       this.plies.set(revalidate([...list.slice(0, i), ...list.slice(i + 1)], this.startFen()));
@@ -244,9 +257,22 @@ export class SheetEditSession {
     this.reResolve(resolveRequest(list, i, 'delete'), list.slice(0, i), list.slice(i + 1), i);
   }
 
+  /** Das letzte „Zug löschen" zurücknehmen: Züge, Lesarten, Bestätigungen und Cursor wie davor. Nicht während der Rest
+   *  noch neu gelesen wird — die Antwort käme danach an und überschriebe den zurückgeholten Stand. */
+  undoRemove(): void {
+    const before = this.beforeRemove();
+    if (!before || this.busy()) return;
+    this.beforeRemove.set(null);
+    this.plies.set(before.plies);
+    this.unresolved.set(before.unresolved);
+    this.unresolvedFrom.set(before.unresolvedFrom);
+    this.go(before.cursor);
+  }
+
   /** Ja, dieser Zug stimmt — die Stelle ist nicht mehr unsicher. */
   confirm(): void {
     const i = this.cursor();
+    this.beforeRemove.set(null);
     this.plies.update(list => list.map((p, k) => k === i ? { ...p, confirmed: true, uncertain: false } : p));
     this.host.changed?.();
     if (this.uncertainLeft() > 0) this.nextUncertain();
@@ -255,6 +281,7 @@ export class SheetEditSession {
 
   setComment(text: string): void {
     const i = this.cursor();
+    this.beforeRemove.set(null);
     this.plies.update(list => list.map((p, k) => k === i ? { ...p, comment: text.trim() ? text : null } : p));
     this.host.changed?.();
   }

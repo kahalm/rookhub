@@ -2846,6 +2846,7 @@
       "reach": "odgovara sljedećim zapisima: {{count}}",
       "confirm": "Točno",
       "delete": "Obriši potez",
+      "deleted": "Potez obrisan.",
       "comment": "Komentar uz ovaj potez",
       "tipReplace": "Odigraj potez na ploči da zamijeniš ovaj.",
       "tipInsert": "Odigraj potez na ploči da ga umetneš ispred ovoga.",

@@ -2846,6 +2846,7 @@
       "reach": "fits the next {{count}} entries",
       "confirm": "Correct",
       "delete": "Delete move",
+      "deleted": "Move deleted.",
       "comment": "Comment on this move",
       "tipReplace": "Play a move on the board to replace this one.",
       "tipInsert": "Play a move on the board to insert it before this one.",

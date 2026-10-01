@@ -141,6 +141,34 @@ describe('ClubScanPageComponent', () => {
     expect(c.s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nh3', 'Nc6']);
   }));
 
+  // UX-070: „Zug löschen" steht abgesetzt neben „Stimmt so" und lässt sich zurücknehmen.
+  it('„Zug löschen" ist abgesetzt; danach holt „Rückgängig" den Zug samt Rest zurück', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const buttons = () => Array.from(el.querySelectorAll<HTMLButtonElement>('.scan-check button'));
+    const del = buttons().find(b => b.textContent?.trim() === 'Zug löschen')!;
+    const ok = buttons().find(b => b.textContent?.trim() === 'Stimmt so')!;
+    expect(del.className).toContain('del');
+    expect(del.className).not.toContain('btn-sec');
+    expect(ok.className).toContain('btn-sec');
+    expect(el.querySelector('.undo-line')).toBeNull();
+
+    api.resolve.and.returnValue(of({ plies: [PLY(3, 'Sc6', 'Nc6', 'b8c6')], unresolved: [] }));
+    del.click();
+    fixture.detectChanges();
+    expect(c.s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nc6']);
+    const undo = el.querySelector<HTMLButtonElement>('.undo-line button')!;
+    expect(undo.textContent?.trim()).toBe('Rückgängig');
+
+    undo.click();
+    fixture.detectChanges();
+    expect(c.s.plies().map(p => p.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+    expect(c.s.cursor()).toBe(2);
+    expect(el.querySelector('.undo-line')).toBeNull();
+  }));
+
   it('ersetzt standardmäßig Schwaz-Spieler und die eigene Seite; eingreifen geht', fakeAsync(() => {
     api.match.and.resolveTo(MATCH(false));
     const el = create();
