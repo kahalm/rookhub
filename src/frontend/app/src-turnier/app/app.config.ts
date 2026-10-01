@@ -2,28 +2,19 @@ import { ApplicationConfig, inject, provideAppInitializer, isDevMode, LOCALE_ID,
 import { PermissionRefresher } from '@rh/core/permission-refresher.service';
 import { RouteReuseStrategy, provideRouter } from '@angular/router';
 import { ReloadOnParamChangeStrategy } from './core/reload-on-param-change.strategy';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
-import { registerLocaleData } from '@angular/common';
-import localeDe from '@angular/common/locales/de';
-import localeHr from '@angular/common/locales/hr';
-import localeHu from '@angular/common/locales/hu';
 
 import { routes } from './app.routes';
-import { authInterceptor } from '@rh/core/auth.interceptor';
-import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.interceptor';
-import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
-import { retryInterceptor } from '@rh/core/retry.interceptor';
+import { provideRhHttpClient } from '@rh/core/http-chain';
 import { resolveStartupLocale } from '@rh/core/locale.service';
+import { registerFormatLocaleData } from '@rh/core/locale-data';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 
-registerLocaleData(localeDe);
-registerLocaleData(localeHr);
-registerLocaleData(localeHu);
+registerFormatLocaleData();
 
 /**
  * Die Turnierseite teilt sich Auth, Sprache und die HTTP-Kette mit RookHub (Import ueber `@rh/*`,
@@ -41,7 +32,7 @@ export const turnierConfig: ApplicationConfig = {
     provideRouter(routes),
     // Gleiche Route, andere Id (Gruppen-Umschaltung): Seite neu aufbauen — siehe die Klasse.
     { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
-    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
+    provideRhHttpClient(),
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist
     // auf RookHubs Profil (Codereview UX-023).

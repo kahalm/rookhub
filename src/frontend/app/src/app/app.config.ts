@@ -1,31 +1,22 @@
 import { ApplicationConfig, inject, provideAppInitializer, isDevMode, provideZoneChangeDetection, LOCALE_ID } from '@angular/core';
 import { PermissionRefresher } from './core/permission-refresher.service';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
-import { registerLocaleData } from '@angular/common';
-import localeDe from '@angular/common/locales/de';
-import localeHr from '@angular/common/locales/hr';
-import localeHu from '@angular/common/locales/hu';
 
 import { routes } from './app.routes';
-import { authInterceptor } from './core/auth.interceptor';
-import { renderAfterHttpInterceptor } from './core/render-after-http.interceptor';
-import { connectivityInterceptor } from './core/connectivity.interceptor';
-import { retryInterceptor } from './core/retry.interceptor';
+import { provideRhHttpClient } from './core/http-chain';
 import { visitorInterceptor } from './core/visitor.interceptor';
 import { resolveStartupLocale } from './core/locale.service';
+import { registerFormatLocaleData } from './core/locale-data';
 import { provideFullscreenSafeOverlays } from './shared/fullscreen/fullscreen-overlay.service';
 
 // Locale-Daten für die übersetzten Sprachen registrieren (en ist eingebaut), damit
 // DatePipe/DecimalPipe/PercentPipe entsprechend der gewählten Sprache formatieren
 // statt immer en-US. Die effektive Start-Locale steckt im LOCALE_ID-Provider unten.
-registerLocaleData(localeDe);
-registerLocaleData(localeHr);
-registerLocaleData(localeHu);
+registerFormatLocaleData();
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -35,8 +26,8 @@ export const appConfig: ApplicationConfig = {
     // Aktive Locale (en/de/hr) für Angular-Pipes; aus gespeicherter Sprache beim Start.
     { provide: LOCALE_ID, useFactory: resolveStartupLocale },
     provideRouter(routes),
-    // connectivity zuerst (äußerster) — sieht Erfolge/finale Fehler NACH den Retries.
-    provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, visitorInterceptor, authInterceptor, renderAfterHttpInterceptor])),
+    // Gemeinsame Kette (connectivity zuerst — sieht Erfolge/finale Fehler NACH den Retries); nur hier mit visitorInterceptor.
+    provideRhHttpClient([visitorInterceptor]),
     provideAnimationsAsync(),
     // Dialoge/Menüs/Snackbars NICHT als Popover in der obersten Browser-Ebene — dort verschwanden
     // sie beim Wechsel der Vollbild-Arten (Begründung und Messung am Provider).
