@@ -51,12 +51,6 @@ public class KidsController : BaseApiController
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    /// <summary>Der Fortschritt im Konto (Stufen, Kurs-Linien).</summary>
-    [HttpGet("progress")]
-    [Authorize]
-    public async Task<ActionResult<KidsProgressDto>> GetProgress(CancellationToken ct) =>
-        Ok(await _progress!.GetAsync(GetUserId(), ct));
-
     /// <summary>Den Stand des Browsers mit dem Konto zusammenfuehren (<see cref="KidsProgressMerge"/>) —
     /// Antwort ist der gemeinsame Stand, den KidHub danach anzeigt.</summary>
     [HttpPut("progress")]

@@ -81,11 +81,4 @@ public class ExplorerControllerTests : IDisposable
             (await Controller().Games(fen, null, "masters", null, null, CancellationToken.None)).Result).Value);
         Assert.Equal("tokenMissing", dto.Status);
     }
-
-    [Fact]
-    public void Sources_WithoutLocal()
-    {
-        var dto = Assert.IsType<ExplorerSourcesDto>(Assert.IsType<OkObjectResult>(Controller().Sources().Result).Value);
-        Assert.False(dto.Local);
-    }
 }

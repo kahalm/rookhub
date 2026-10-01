@@ -88,10 +88,6 @@ public class RevengeNotificationService
             .ToListAsync();
     }
 
-    /// <summary>Anzahl ungelesener Revanche-Benachrichtigungen — fürs Navbar-Badge.</summary>
-    public async Task<int> GetUnseenCountAsync(int userId)
-        => await _db.RevengeNotifications.CountAsync(n => n.TargetUserId == userId && n.SeenAt == null);
-
     /// <summary>Markiert alle ungelesenen Benachrichtigungen eines Users als gesehen.</summary>
     public async Task MarkAllSeenAsync(int userId)
     {

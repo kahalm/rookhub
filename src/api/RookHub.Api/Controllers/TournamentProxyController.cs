@@ -2,7 +2,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Authorization;
 using RookHub.Api.Filters;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 using RookHub.Api.Validation;
 
@@ -198,14 +200,15 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Diagnose: aktuelle Austritts-IP des Crawler-VPNs. NUR Admin — der Crawler selbst
-    /// gatet diesen Endpoint aus gutem Grund (die IP identifiziert die Crawler-Identität gegenüber
-    /// chess-results.com, und wer sie kennt, kann sie gezielt beobachten oder sperren). Das Frontend
-    /// ruft ihn nicht auf; er ist reines Werkzeug.</summary>
+    /// <summary>Diagnose: aktuelle Austritts-IP des Crawler-VPNs. Nur mit <see cref="Permissions.TournamentsManage"/>
+    /// (Admin hat sie immer) — der Crawler selbst gatet diesen Endpoint aus gutem Grund (die IP identifiziert die
+    /// Crawler-Identität gegenüber chess-results.com, und wer sie kennt, kann sie gezielt beobachten oder sperren).
+    /// Das Frontend ruft ihn nicht auf; er ist reines Werkzeug. Als Attribut statt Rollenprüfung im Rumpf, damit
+    /// Inventur und Swagger den Riegel sehen.</summary>
     [HttpGet("crawler/ip")]
+    [HasPermission(Permissions.TournamentsManage)]
     public async Task<IActionResult> GetCrawlerIp()
     {
-        if (!User.IsInRole("Admin")) return NotFound();
         var result = await _proxy.GetAsync("/api/health/ip", RequestCt);
         return Ok(result);
     }

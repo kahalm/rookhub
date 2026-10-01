@@ -53,7 +53,7 @@ public class KidsLanguageHintDto
 }
 
 /// <summary>
-/// Der Fortschritt eines Kindes auf KidHub (<c>GET/PUT /api/kids/progress</c>) — dieselbe Form im Konto
+/// Der Fortschritt eines Kindes auf KidHub (<c>PUT /api/kids/progress</c>) — dieselbe Form im Konto
 /// wie im Browser. Zeiten sind Millisekunden seit 1970 (UTC), so wie JavaScript sie zaehlt.
 /// </summary>
 public class KidsProgressDto

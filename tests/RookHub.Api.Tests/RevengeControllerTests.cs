@@ -164,23 +164,6 @@ public class RevengeControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UnseenCount_CountsOnlyUnseenForUser()
-    {
-        var avenger = await CreateUserAsync("avenger");
-        var target = await CreateUserAsync("target");
-        var puzzle = await CreatePuzzleAsync();
-        _db.RevengeNotifications.Add(new RevengeNotification { AvengerUserId = avenger.Id, TargetUserId = target.Id, PuzzleId = puzzle.Id, Solved = true });
-        _db.RevengeNotifications.Add(new RevengeNotification { AvengerUserId = avenger.Id, TargetUserId = target.Id, PuzzleId = puzzle.Id, Solved = false, SeenAt = DateTime.UtcNow });
-        await _db.SaveChangesAsync();
-
-        SetUser(target.Id);
-        var result = await _controller.UnseenCount();
-
-        var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(1, (int)ok.Value!.GetType().GetProperty("count")!.GetValue(ok.Value)!);
-    }
-
-    [Fact]
     public async Task MarkSeen_MarksAllUnseen()
     {
         var avenger = await CreateUserAsync("avenger");

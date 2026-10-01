@@ -181,9 +181,8 @@ public class CourseController : BaseApiController
     /// <summary>Legt einen persönlichen Kurs des Users an (eigenes Buch, nur für ihn sichtbar) — mit PGN
     /// als Inhalt ODER leer, wenn keine Datei mitkommt. Der leere Kurs wird danach auf der Detailseite
     /// Kapitel für Kapitel gefüllt; ohne Datei ist der Name deshalb Pflicht (er kann nicht aus einem
-    /// Dateinamen abgeleitet werden). Die alte Route <c>upload</c> bleibt gültig.</summary>
+    /// Dateinamen abgeleitet werden).</summary>
     [HttpPost]
-    [HttpPost("upload")]
     [RequestSizeLimit(11 * 1024 * 1024)]  // 10-MB-PGN-Limit + Multipart-Overhead
     public async Task<ActionResult<CourseListItemDto>> Create(IFormFile? file, [FromForm] string? name)
     {

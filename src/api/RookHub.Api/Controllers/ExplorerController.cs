@@ -54,10 +54,6 @@ public class ExplorerController : BaseApiController
         }
     }
 
-    /// <summary>Welche Quellen es gibt (dieselbe Antwort wie am Repertoire-Endpunkt).</summary>
-    [HttpGet("sources")]
-    public ActionResult<ExplorerSourcesDto> Sources() => Ok(_explorer.Sources());
-
     private static IEnumerable<string> Split(string? csv) =>
         (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 

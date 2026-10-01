@@ -11,6 +11,11 @@ public class RetiredEndpointsTests
     private static readonly string[] Retired =
     [
         "GET /api/my-groups",                       // MeController.MyGroups (A1-019)
+        // N11-010: Doppel bzw. Karteileichen
+        "GET /api/explorer/sources",                // Doppel zu GET /api/repertoires/explorer/sources (das nutzt das Frontend)
+        "POST /api/courses/upload",                 // alte Zweitroute zu POST /api/courses
+        "GET /api/revenge/notifications/count",     // Badge-Zähler, den keine Navbar abfragt
+        "GET /api/kids/progress",                   // KidHub gleicht nur per PUT ab (Antwort = gemeinsamer Stand)
     ];
 
     [Fact]

@@ -494,15 +494,17 @@ public class TournamentProxyControllerTests : IDisposable
             .GetCustomAttribute<AllowAnonymousAttribute>());
     }
     [Fact]
-    public async Task GetCrawlerIp_NonAdmin_IsNotFound()
+    public void GetCrawlerIp_RequiresTournamentsManage()
     {
         // Der Endpoint verrät die Austritts-IP des Crawler-VPNs (Crawler-Identität gegenüber
-        // chess-results.com). Der Crawler selbst gatet ihn; RookHub reichte ihn an JEDEN
-        // angemeldeten Nutzer durch, ohne dass das Frontend ihn überhaupt aufruft.
-        SetupResponse("{\"ip\":\"203.0.113.7\"}");
-        SetUserRole(isAdmin: false);
-
-        Assert.IsType<NotFoundResult>(await _controller.GetCrawlerIp());
+        // chess-results.com). Der Crawler selbst gatet ihn; RookHub reichte ihn einst an JEDEN
+        // angemeldeten Nutzer durch. Der Riegel steht als Attribut (Codereview N11-010) — eine
+        // Rollenprüfung im Rumpf sahen weder Inventur noch Swagger; Admin erfüllt jede Permission.
+        var perm = M(nameof(TournamentProxyController.GetCrawlerIp))
+            .GetCustomAttribute<RookHub.Api.Authorization.HasPermissionAttribute>();
+        Assert.NotNull(perm);
+        Assert.Equal(RookHub.Api.Authorization.PermissionPolicyProvider.Prefix + RookHub.Api.Models.Permissions.TournamentsManage,
+            perm!.Policy);
     }
 
     [Fact]

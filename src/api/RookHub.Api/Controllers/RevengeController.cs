@@ -29,11 +29,6 @@ public class RevengeController : BaseApiController
     public async Task<ActionResult<List<RevengeNotificationDto>>> Notifications()
         => Ok(await _service.GetForUserAsync(GetUserId()));
 
-    /// <summary>Anzahl ungelesener Revanche-Benachrichtigungen (Navbar-Badge).</summary>
-    [HttpGet("notifications/count")]
-    public async Task<IActionResult> UnseenCount()
-        => Ok(new { count = await _service.GetUnseenCountAsync(GetUserId()) });
-
     /// <summary>Alle eigenen Revanche-Benachrichtigungen als gelesen markieren.</summary>
     [HttpPost("notifications/seen")]
     public async Task<IActionResult> MarkSeen()
