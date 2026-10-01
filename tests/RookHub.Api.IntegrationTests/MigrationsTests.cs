@@ -26,6 +26,67 @@ public class MigrationsTests
 
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.Equal(geplant.Count, (await db.Database.GetAppliedMigrationsAsync()).Count());
+
+        // Codereview A9-009: „laeuft durch" heisst nicht „hat alles angelegt". Eine nach dem Rebase
+        // neu erzeugte Migration, der nur EIN AddColumn fehlt (Rest nicht leer), ist im Inventar-Waechter
+        // gruen, laeuft hier fehlerfrei durch und laesst den Snapshot-Modell-Vergleich unberuehrt — auf
+        // Dev/Prod endet dann jede Abfrage in „Unknown column" (WorksheetSharing/WorksheetThemes, 8 Tage
+        // HTTP 500). Deshalb: die migrierte Datenbank selbst gegen das Modell halten.
+        var abweichungen = await SchemaGegenModellAsync(db);
+        Assert.True(abweichungen.Count == 0,
+            "Migriertes Schema passt nicht zum Modell — fehlt eine Operation in einer Migration "
+            + "(leerer/halber Rumpf nach Rebase?):\n  " + string.Join("\n  ", abweichungen));
+
+        // Gegenprobe auf demselben Schema (spart einen zweiten Migrationslauf): genau der Vorfall —
+        // eine fehlende Spalte — und eine abweichende Nullbarkeit muessen gemeldet werden.
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE `Worksheets` DROP COLUMN `SharedAt`");
+        await db.Database.ExecuteSqlRawAsync("ALTER TABLE `Worksheets` MODIFY `Themes` varchar(300) NULL");
+        Assert.Equal(
+            ["Worksheets.SharedAt fehlt", "Worksheets.Themes: Datenbank NULL, Modell NOT NULL"],
+            await SchemaGegenModellAsync(db));
+    }
+
+    /// <summary>
+    /// Haelt jede Spalte jeder gemappten Tabelle des Modells gegen <c>information_schema.COLUMNS</c> des
+    /// aktuellen Schemas: fehlt sie, oder stimmt die Nullbarkeit nicht? Spalten, die nur in der Datenbank
+    /// stehen, zaehlen nicht („nie loeschen, nur ausblenden"). Namen ohne Gross-/Kleinschreibung, wie MariaDB
+    /// Spaltennamen vergleicht. Liefert die Abweichungen sortiert, je Zeile „Tabelle.Spalte …".
+    /// </summary>
+    private static async Task<List<string>> SchemaGegenModellAsync(DbContext db)
+    {
+        var ist = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var conn = db.Database.GetDbConnection();
+        await db.Database.OpenConnectionAsync();
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                SELECT TABLE_NAME, COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                """;
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                ist[$"{reader.GetString(0)}.{reader.GetString(1)}"] = reader.GetString(2) == "YES";
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync();
+        }
+
+        var abweichungen = new List<string>();
+        foreach (var tabelle in db.Model.GetRelationalModel().Tables)
+        foreach (var spalte in tabelle.Columns)
+        {
+            var name = $"{tabelle.Name}.{spalte.Name}";
+            if (!ist.TryGetValue(name, out var nullbar))
+                abweichungen.Add($"{name} fehlt");
+            // Berechnete Spalten (z. B. Friendships.PairLow/PairHigh) fuehrt MariaDB immer als nullbar —
+            // NOT NULL ist dort fuer generierte Spalten nicht erlaubt; das ist kein Drift.
+            else if (nullbar != spalte.IsNullable && spalte.ComputedColumnSql is null)
+                abweichungen.Add($"{name}: Datenbank {(nullbar ? "NULL" : "NOT NULL")}, Modell {(spalte.IsNullable ? "NULL" : "NOT NULL")}");
+        }
+        abweichungen.Sort(StringComparer.Ordinal);
+        return abweichungen;
     }
 
     /// <summary>
