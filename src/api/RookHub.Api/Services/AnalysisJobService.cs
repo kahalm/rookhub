@@ -41,15 +41,12 @@ public class AnalysisJobService
     public const int MaxOpenJobsPerUser = 150;
 
     private readonly AppDbContext _db;
-    private readonly EncryptionService _encryption;
     private readonly IAnalysisJobControl? _control;
     private readonly EngineRegistry? _registry;
 
-    public AnalysisJobService(AppDbContext db, EncryptionService encryption, IAnalysisJobControl? control = null,
-        EngineRegistry? registry = null)
+    public AnalysisJobService(AppDbContext db, IAnalysisJobControl? control = null, EngineRegistry? registry = null)
     {
         _db = db;
-        _encryption = encryption;
         _control = control;
         _registry = registry;
     }
@@ -497,13 +494,6 @@ public class AnalysisJobService
         foreach (var j in running) { j.Status = AnalysisJobStatus.Paused; j.UpdatedAt = DateTime.UtcNow; }
         if (running.Count > 0) await _db.SaveChangesAsync(ct);
         return running.Count;
-    }
-
-    /// <summary>Entschlüsselter Lichess-Token des Users (null = keiner/nicht lesbar).</summary>
-    public async Task<string?> TokenAsync(int userId, CancellationToken ct = default)
-    {
-        var cred = await _db.LichessEngineCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-        return cred is null ? null : _encryption.TryDecrypt(cred.EncryptedToken);
     }
 
     /// <summary>Gespeicherte Ergebnis-Zeile auf die ersten <paramref name="multiPv"/> Linien kürzen.

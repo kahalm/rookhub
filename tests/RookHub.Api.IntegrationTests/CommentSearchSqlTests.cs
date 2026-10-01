@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -48,11 +47,7 @@ public class CommentSearchSqlTests(CommentSearchFixture fixture) : IAsyncLifetim
 
     private static CommentSearchService Search(AppDbContext db)
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
-        }).Build();
-        var analyses = new GameAnalysisService(db, new AnalysisJobService(db, new EncryptionService(config)),
+        var analyses = new GameAnalysisService(db, new AnalysisJobService(db),
             new CommentSetService(db, NullLogger<CommentSetService>.Instance), NullLogger<GameAnalysisService>.Instance);
         return new CommentSearchService(db, new AxisEmbedder(), new LibraryGameService(db, analyses),
             NullLogger<CommentSearchService>.Instance);

@@ -55,7 +55,7 @@ public class MoveComparisonServiceTests : IDisposable
             ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
         }).Build();
         _encryption = new EncryptionService(config);
-        _jobs = new AnalysisJobService(_db, _encryption, new FakeControl());
+        _jobs = new AnalysisJobService(_db, new FakeControl());
         _svc = new MoveComparisonService(_db, _jobs, _llm, new MoveComparisonExplainJobs(),
             new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             NullLogger<MoveComparisonService>.Instance);

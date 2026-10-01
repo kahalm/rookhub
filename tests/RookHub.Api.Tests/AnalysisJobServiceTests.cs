@@ -39,7 +39,7 @@ public class AnalysisJobServiceTests : IDisposable
             ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
         }).Build();
         _encryption = new EncryptionService(config);
-        _svc = new AnalysisJobService(_db, _encryption, _control);
+        _svc = new AnalysisJobService(_db, _control);
     }
 
     public void Dispose()
@@ -678,7 +678,7 @@ public class AnalysisJobServiceTests : IDisposable
             NullLogger<LichessEngineService>.Instance);
         _sp ??= new ServiceCollection().BuildServiceProvider();
         var directory = new EngineSelectorDirectory(_sp.GetRequiredService<IServiceScopeFactory>());
-        return new AnalysisJobService(_db, _encryption, _control,
+        return new AnalysisJobService(_db, _control,
             new EngineRegistry(_db, _encryption, lichess, directory, new LocalBrokerOptions()));
     }
 
@@ -807,5 +807,17 @@ public class AnalysisJobServiceTests : IDisposable
 
         Assert.Equal("eei_live", dto.EngineId);
         Assert.Empty(_control.Preempted);
+    }
+
+    /// <summary>Den Lichess-Token entschlüsselt allein <see cref="EngineRegistry.TokenOf"/> (Codereview A4-010): die
+    /// aufruferlose Kopie <c>TokenAsync</c> hier samt eigener <see cref="EncryptionService"/>-Abhängigkeit hätte eine
+    /// geänderte Token-Regel (z. B. „leerer EncryptedToken = kein Token") nicht mitbekommen.</summary>
+    [Fact]
+    public void TokenDecryption_LivesOnlyInEngineRegistry()
+    {
+        var t = typeof(AnalysisJobService);
+        Assert.Null(t.GetMethod("TokenAsync"));
+        Assert.DoesNotContain(t.GetConstructors().SelectMany(c => c.GetParameters()),
+            p => p.ParameterType == typeof(EncryptionService));
     }
 }

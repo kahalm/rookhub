@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -21,11 +20,7 @@ public class OpeningLinePrefixSqlTests(OpeningLinePrefixSqlFixture fixture)
 
     private static GameAnalysisService Analyses(AppDbContext db)
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
-        }).Build();
-        return new GameAnalysisService(db, new AnalysisJobService(db, new EncryptionService(config)),
+        return new GameAnalysisService(db, new AnalysisJobService(db),
             new CommentSetService(db, NullLogger<CommentSetService>.Instance), NullLogger<GameAnalysisService>.Instance);
     }
 

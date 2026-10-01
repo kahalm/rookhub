@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -32,11 +31,7 @@ public class GameAnalysisServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         _db = new AppDbContext(options);
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
-        }).Build();
-        var jobs = new AnalysisJobService(_db, new EncryptionService(config), null);
+        var jobs = new AnalysisJobService(_db, null);
         var comments = new CommentSetService(_db, NullLogger<CommentSetService>.Instance);
         _svc = new GameAnalysisService(_db, jobs, comments, NullLogger<GameAnalysisService>.Instance, _reviewTexts);
     }
@@ -547,9 +542,7 @@ public class GameAnalysisServiceTests : IDisposable
         _db.LichessEngineCredentials.Add(cred);
         await _db.SaveChangesAsync();
 
-        var jobs = new AnalysisJobService(_db, new EncryptionService(
-            new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-            { ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!" }).Build()), null);
+        var jobs = new AnalysisJobService(_db, null);
 
         var a = await jobs.CreateAsync(user.Id, new CreateAnalysisJobRequest
         { Fen = GamePlies.StartFen(), TargetDepth = 20, MultiPv = 3 }, remember: false);

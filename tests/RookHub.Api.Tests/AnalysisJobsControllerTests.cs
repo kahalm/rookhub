@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -25,11 +24,7 @@ public class AnalysisJobsControllerTests : IDisposable
     {
         _db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Encryption:Key"] = "TestEncryptionKey32CharsLong!!!!",
-        }).Build();
-        _controller = new AnalysisJobsController(new AnalysisJobService(_db, new EncryptionService(config)), new AnalysisJobLive());
+        _controller = new AnalysisJobsController(new AnalysisJobService(_db), new AnalysisJobLive());
     }
 
     public void Dispose() => _db.Dispose();

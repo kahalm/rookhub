@@ -42,7 +42,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
     }).Build();
 
     private GameAnalysisService Analyses(QuietHours? quiet = null) =>
-        new(_db, new AnalysisJobService(_db, new EncryptionService(Config())),
+        new(_db, new AnalysisJobService(_db),
             new CommentSetService(_db, NullLogger<CommentSetService>.Instance),
             NullLogger<GameAnalysisService>.Instance, quiet: quiet);
 
@@ -253,7 +253,7 @@ public class MasterAnalysisSchedulerTests : IDisposable
         Assert.DoesNotContain(await svc.ListAsync(Owner, includeSavedGames: true), a => a.Id == dto.Id);
         Assert.DoesNotContain(await svc.ListPublicAsync(), a => a.Id == dto.Id);
         Assert.NotEmpty(_db.AnalysisJobs);
-        Assert.Empty(await new AnalysisJobService(_db, new EncryptionService(Config())).ListAsync(Owner));
+        Assert.Empty(await new AnalysisJobService(_db).ListAsync(Owner));
     }
 
     [Fact]
