@@ -122,6 +122,44 @@ public class AuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Register_UsernameEqualToAnotherAccountsEmail_Throws()
+    {
+        // A1-010: Der Login gibt dem Benutzernamen Vorrang vor der E-Mail. Ein Konto namens
+        // „opfer@example.org" fing sonst jeden E-Mail-Login des echten Inhabers ab.
+        await _authService.RegisterAsync(new RegisterDto { Username = "opfer", Email = "opfer@example.org", Password = "password123" });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(
+            new RegisterDto { Username = " Opfer@Example.ORG ", Password = "password123" }));
+        Assert.Equal("Username or email already in use.", ex.Message);
+
+        var login = await _authService.LoginAsync(new LoginDto { Username = "opfer@example.org", Password = "password123" });
+        Assert.Equal("opfer", login.Username);
+    }
+
+    [Fact]
+    public async Task Register_EmailEqualToAnotherAccountsUsername_Throws()
+    {
+        // Gegenrichtung: die E-Mail-Anmeldung des neuen Kontos landete immer beim fremden Benutzernamen.
+        await _authService.RegisterAsync(new RegisterDto { Username = "Mail@Example.org", Password = "password123" });
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _authService.RegisterAsync(
+            new RegisterDto { Username = "neu", Email = "mail@example.org", Password = "password123" }));
+        Assert.Equal("Username or email already in use.", ex.Message);
+    }
+
+    [Fact]
+    public async Task Register_OwnEmailAsUsername_StillWorks()
+    {
+        // Die eigene Adresse als Benutzername bleibt erlaubt — Name und E-Mail gehoeren demselben Konto.
+        var result = await _authService.RegisterAsync(
+            new RegisterDto { Username = "me@example.org", Email = "me@example.org", Password = "password123" });
+
+        Assert.True(result.UserId > 0);
+        var login = await _authService.LoginAsync(new LoginDto { Username = "me@example.org", Password = "password123" });
+        Assert.Equal(result.UserId, login.UserId);
+    }
+
+    [Fact]
     public async Task Register_WithoutEmail_Succeeds()
     {
         var dto = new RegisterDto { Username = "noemail", Email = null, Password = "password123" };
@@ -294,8 +332,11 @@ public class AuthServiceTests : IDisposable
         // Usernames duerfen '@' enthalten — bei Kollision mit einer fremden E-Mail muss der
         // Lookup deterministisch bleiben: Username gewinnt, die E-Mail-Anmeldung des anderen
         // Kontos schlaegt dann fehl (statt je nach Query-Reihenfolge zu wechseln).
+        // Neu anlegen laesst sich so eine Kollision nicht mehr (A1-010) — sie stammt aus dem Bestand.
         await _authService.RegisterAsync(new RegisterDto { Username = "taken@example.com", Email = "a@example.com", Password = "ownerPass123" });
-        await _authService.RegisterAsync(new RegisterDto { Username = "other", Email = "taken@example.com", Password = "otherPass123" });
+        var other = await _authService.RegisterAsync(new RegisterDto { Username = "other", Email = "b@example.com", Password = "otherPass123" });
+        (await _db.AppUsers.FindAsync(other.UserId))!.Email = "taken@example.com";
+        await _db.SaveChangesAsync();
 
         var asOwner = await _authService.LoginAsync(new LoginDto { Username = "taken@example.com", Password = "ownerPass123" });
         Assert.Equal("taken@example.com", asOwner.Username);

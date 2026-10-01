@@ -93,8 +93,10 @@ public class ProfileService
                     throw new UnauthorizedAccessException("Current password is incorrect.");
             }
 
+            // Auch nicht der Benutzername eines ANDEREN Kontos: der Login gibt dem Benutzernamen Vorrang,
+            // die E-Mail-Anmeldung landete sonst immer dort (Codereview A1-010).
             if (normalizedEmail != null && await _db.AppUsers
-                    .AnyAsync(u => u.Id != userId && u.Email == normalizedEmail))
+                    .AnyAsync(u => u.Id != userId && (u.Email == normalizedEmail || u.Username.ToLower() == normalizedEmail)))
                 throw new InvalidOperationException("This email address is already in use.");
 
             previousEmail = user.Email;

@@ -590,6 +590,30 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_EmailEqualToAnotherAccountsUsername_Throws()
+    {
+        // A1-010: Der Login gibt dem Benutzernamen Vorrang — die neue Adresse liefe sonst immer ins fremde Konto.
+        await CreateUserAsync("Carol@Example.org");
+        var bobId = await CreateUserWithPasswordAsync("bob", "Secret123!");
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _profileService.UpdateProfileAsync(bobId,
+                new UpdateProfileDto { Email = "carol@example.org", CurrentPassword = "Secret123!" }));
+    }
+
+    [Fact]
+    public async Task UpdateProfile_EmailEqualToOwnUsername_Succeeds()
+    {
+        var userId = await CreateUserWithPasswordAsync("dave@example.org", "Secret123!");
+        var user = await _db.AppUsers.FindAsync(userId);
+        user!.Email = null;
+        await _db.SaveChangesAsync();
+
+        var result = await _profileService.UpdateProfileAsync(userId,
+            new UpdateProfileDto { Email = "dave@example.org", CurrentPassword = "Secret123!" });
+        Assert.Equal("dave@example.org", result.Email);
+    }
+
+    [Fact]
     public async Task UpdateProfile_SameEmailAsOwn_Succeeds()
     {
         var userId = await CreateUserAsync(); // testuser@example.com

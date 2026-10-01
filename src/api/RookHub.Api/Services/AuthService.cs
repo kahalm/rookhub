@@ -126,12 +126,23 @@ public class AuthService
         if (await _db.AppUsers.AnyAsync(u => u.Username.ToLower() == username.ToLower()))
             throw new InvalidOperationException("Username or email already in use.");
 
+        // Benutzername und E-Mail ueber Kreuz pruefen: der Login sucht zuerst den Benutzernamen und faellt
+        // erst ohne Treffer auf die E-Mail zurueck. Ein Konto namens „opfer@example.org" fing sonst jeden
+        // E-Mail-Login des echten Inhabers ab (Codereview A1-010). Bestandskollisionen bleiben unberuehrt.
+        if (username.Contains('@'))
+        {
+            var usernameAsEmail = username.Trim().ToLowerInvariant();
+            if (await _db.AppUsers.AnyAsync(u => u.Email == usernameAsEmail))
+                throw new InvalidOperationException("Username or email already in use.");
+        }
+
         // Email ist optional: leer/null -> kein Email hinterlegt, keine Dublettenpruefung.
         var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email)
             ? null
             : dto.Email.Trim().ToLowerInvariant();
 
-        if (normalizedEmail != null && await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail))
+        if (normalizedEmail != null && await _db.AppUsers.AnyAsync(u => u.Email == normalizedEmail
+                || u.Username.ToLower() == normalizedEmail))
             throw new InvalidOperationException("Username or email already in use.");
 
         var user = new AppUser
