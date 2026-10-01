@@ -110,6 +110,24 @@ describe('GuessListComponent', () => {
     expect(fixture.componentInstance.percent(fixture.componentInstance.ownGames[0])).toBe(25);
   });
 
+  // Codereview F4-012: die beiden Umschalter trugen feste englische Vorlesetexte („filter“, „side“).
+  it('benennt Filter- und Seiten-Umschalter übersetzt statt mit festem Englisch', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([analysis({ id: 2, status: 'done', analyzedPlies: 40, annotated: true, isPublic: true })]);
+    http.expectOne('/api/game-analyses').flush([analysis({ id: 3, status: 'done', analyzedPlies: 40 })]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    http.expectOne('/api/guess-sessions').flush([]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('mat-button-toggle-group.small-toggle')?.getAttribute('aria-label')).toBe('guess.filterLabel');
+
+    fixture.componentInstance.tab = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+    expect(el.querySelector('.side-pick mat-button-toggle-group')?.getAttribute('aria-label')).toBe('guess.sideLabel');
+  });
+
   it('fragt ohne Anmeldung weder eigene Partien noch das Kontingent ab', () => {
     setup(false);
     http.expectOne('/api/game-analyses/public').flush([]);

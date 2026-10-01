@@ -1508,3 +1508,62 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     expect(c.__maia.release).toHaveBeenCalled();
   });
 });
+
+/** Die echte Vorlage mit Query-Parametern; die schweren Kind-Komponenten fallen weg (wie oben). */
+async function renderAnalysis(params: Record<string, string> = {}): Promise<ComponentFixture<AnalysisComponent>> {
+  const engine: any = {
+    analysis$: new Subject(), engineFatalError$: new Subject(), remoteFallback$: new Subject(), remoteInterrupted$: new Subject(),
+    setMultiPv: () => {}, setDepth: () => {}, setRemoteEngine: () => {},
+    analyze: () => Promise.resolve(), stop: () => {}, destroy: () => {},
+  };
+  TestBed.overrideComponent(AnalysisComponent, {
+    remove: { imports: [AnalysisBoardComponent, PositionSetupComponent, PositionRepertoiresComponent, HelpHintComponent,
+      OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent] },
+    add: { schemas: [NO_ERRORS_SCHEMA] },
+  });
+  await TestBed.configureTestingModule({
+    imports: [AnalysisComponent],
+    providers: [
+      provideNoopAnimations(),
+      provideTranslateService({ fallbackLang: 'en' }),
+      { provide: AnalysisEngineService, useValue: engine },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } } },
+      { provide: Router, useValue: { navigateByUrl: () => {} } },
+      { provide: SnackbarService, useValue: { show: () => {}, warn: () => {} } },
+      { provide: AuthService, useValue: { isLoggedIn: false } },
+      { provide: ExternalEngineService, useValue: { listEngines: () => new Subject(), analyse: () => {} } },
+      { provide: AnalysisHistoryService, useValue: { save: () => of({}), get: () => of({}), list: () => of([]) } },
+      { provide: MatDialog, useValue: { open: () => {} } },
+    ],
+  }).compileComponents();
+  const fixture = TestBed.createComponent(AnalysisComponent);
+  fixture.detectChanges();   // kein whenStable: die Seite hält eigene Zeitgeber offen
+  return fixture;
+}
+
+// Codereview F4-012: ?from= setzen auch Partienliste, Partie, Favoriten und Kalkulation — der Knopf hieß trotzdem immer
+// „Zurück zum Puzzle"; falsche FEN/PGN meldeten sich fest auf Englisch („Invalid FEN" + „OK").
+describe('AnalysisComponent Zurück-Knopf + Meldungen (übersetzt)', () => {
+  it('der Zurück-Knopf heißt neutral „Zurück", auch aus der Partienliste', async () => {
+    const fixture = await renderAnalysis({ from: '/games' });
+    const back = fixture.nativeElement.querySelector('.back-btn') as HTMLButtonElement;
+    expect(back).not.toBeNull();
+    expect(back.textContent).toContain('common.back');
+    expect(back.textContent).not.toContain('backToPuzzle');
+    fixture.destroy();
+  });
+
+  it('falsche FEN und falsches PGN melden sich über i18n-Keys, die Aktion ist „common.ok"', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    const show = jasmine.createSpy('show');
+    c.snackbar = { show };
+    c.fenInput = 'kein fen';
+    c.loadFen();
+    expect(show).toHaveBeenCalledWith('analysis.invalidFen', { action: 'common.ok', duration: 2500 });
+    c.pgnInput = 'kein PGN';
+    c.loadPgn();
+    expect(show).toHaveBeenCalledWith('analysis.invalidPgn', { action: 'common.ok', duration: 2500 });
+    c.ngOnDestroy();
+  });
+});

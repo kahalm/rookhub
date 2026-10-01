@@ -103,7 +103,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
             <div class="sec-head">
               @if (hasAnnotated) {
                 <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="onFilterChange()"
-                                         aria-label="filter" class="small-toggle">
+                                         [attr.aria-label]="'guess.filterLabel' | translate" class="small-toggle">
                   <mat-button-toggle [value]="false">{{ 'guess.filterAll' | translate }}</mat-button-toggle>
                   <mat-button-toggle [value]="true">{{ 'guess.filterAnnotated' | translate }}</mat-button-toggle>
                 </mat-button-toggle-group>
@@ -201,7 +201,7 @@ export type GuessSort = 'title' | 'short' | 'long' | 'event';
               } @else {
                 <div class="side-pick">
                   <span class="muted small">{{ 'guess.sideLabel' | translate }}</span>
-                  <mat-button-toggle-group [(ngModel)]="guessWhite" aria-label="side">
+                  <mat-button-toggle-group [(ngModel)]="guessWhite" [attr.aria-label]="'guess.sideLabel' | translate">
                     <mat-button-toggle [value]="true">{{ 'guess.white' | translate }}</mat-button-toggle>
                     <mat-button-toggle [value]="false">{{ 'guess.black' | translate }}</mat-button-toggle>
                   </mat-button-toggle-group>

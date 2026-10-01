@@ -111,7 +111,7 @@ const EVAL_SETTLE_DEPTH = 10;
         <div class="side-col">
           @if (returnTo) {
             <button mat-stroked-button class="back-btn" (click)="backToPuzzle()">
-              <mat-icon>arrow_back</mat-icon> {{ 'analysis.backToPuzzle' | translate }}
+              <mat-icon>arrow_back</mat-icon> {{ 'common.back' | translate }}
             </button>
           }
           @if (engineCrashed) {
@@ -551,7 +551,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (orientationParam === 'white' || orientationParam === 'black') {
       this.orientation = orientationParam;
     }
-    // Herkunft (z.B. das Puzzle) für den Zurück-Button merken.
+    // Herkunft für den Zurück-Button merken — Puzzle, Favoriten, Partienliste, Partie oder Kalkulation, daher heißt
+    // der Knopf neutral „Zurück" (F4-012; vorher stand dort immer „Zurück zum Puzzle").
     const from = params.get('from');
     if (from && from.startsWith('/') && !from.startsWith('//') && !from.includes('://')) {
       this.returnTo = from;
@@ -1166,7 +1167,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   loadFen(): void {
     const fen = this.fenInput.trim();
     if (!fen) return;
-    if (!this.isValidFen(fen)) { this.snackbar.show('Invalid FEN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
+    if (!this.isValidFen(fen)) { this.snackbar.show(this.translate.instant('analysis.invalidFen'), { action: 'common.ok', duration: 2500 }); return; }
     this.newSession();
     this.fenInput = '';
     this.resetToStart(fen);
@@ -1185,7 +1186,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const pgn = this.pgnInput.trim();
     if (!pgn) return;
     const parsed = parsePgnTree(pgn);
-    if (!parsed) { this.snackbar.show('Invalid PGN', { action: 'OK', rawAction: true, duration: 2500 }); return; }
+    if (!parsed) { this.snackbar.show(this.translate.instant('analysis.invalidPgn'), { action: 'common.ok', duration: 2500 }); return; }
     this.newSession(pgnTitle(parsed.headers));
     if (!keepText) this.pgnInput = '';
     const main = mainline(parsed.root);
