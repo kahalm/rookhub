@@ -72,7 +72,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
     h1 { font-size: clamp(2rem, 7vw, 3.4rem); margin: 0 0 6px; color: var(--kid-title); letter-spacing: .5px; }
     .hero p { font-size: 1.25rem; margin: 0 0 22px; }
     .go {
-      display: inline-block; text-decoration: none; background: var(--kid-green); color: #fff;
+      display: inline-block; text-decoration: none; background: var(--kid-green-strong); color: #fff;
       font-size: 1.6rem; font-weight: 800; padding: 16px 32px; border-radius: 999px;
       box-shadow: 0 6px 0 var(--kid-shadow);
     }

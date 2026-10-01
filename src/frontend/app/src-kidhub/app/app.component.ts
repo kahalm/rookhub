@@ -89,7 +89,10 @@ export function isHomeUrl(url: string): boolean {
       --kid-card: #ffffff;
       --kid-shadow: rgba(30, 70, 120, .22);
       --kid-title: #1d4f91;
+      /* Helles Gruen nur fuer Flaechen OHNE Schrift (geloeste Punkte) — weisse Schrift darauf hat 2,7:1.
+         Knoepfe mit Schrift und Rahmen, die etwas anzeigen, nehmen das kraeftige (5,1:1 zu Weiss). */
       --kid-green: #2fb35f;
+      --kid-green-strong: #1a7f3e;
       --kid-yellow: #ffcc33;
       --kid-sky: #cfe9ff;
       --kid-peach: #ffe1cc;
@@ -128,7 +131,7 @@ export function isHomeUrl(url: string): boolean {
     .acct { font: inherit; font-weight: 800; font-size: .95rem; text-decoration: none; cursor: pointer;
             padding: 7px 14px; border-radius: 999px; border: 2px solid var(--kid-title);
             background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow); }
-    .acct.primary { background: var(--kid-green); border-color: var(--kid-green); color: #fff; }
+    .acct.primary { background: var(--kid-green-strong); border-color: var(--kid-green-strong); color: #fff; }
     .acct:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
     .logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--kid-title);
             font-size: 1.35rem; font-weight: 900; }

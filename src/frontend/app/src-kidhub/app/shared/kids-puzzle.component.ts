@@ -128,13 +128,13 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
     .big:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--kid-shadow); }
     .big:disabled { opacity: .5; cursor: default; }
     .hint { background: var(--kid-yellow); color: #3d2c00; }
-    .next { background: var(--kid-green); }
+    .next { background: var(--kid-green-strong); }
     /* Nur mit Maus/Tastatur: „Leertaste" am Weiter-Knopf. Am Tablet gibt es keine. */
     .key { display: none; }
     @media (hover: hover) and (pointer: fine) {
       .key {
         display: inline-block; margin-left: 10px; padding: 1px 8px; border-radius: 6px; vertical-align: middle;
-        font: inherit; font-size: .75rem; font-weight: 700; background: rgba(255, 255, 255, .25);
+        font: inherit; font-size: .75rem; font-weight: 700; background: rgba(0, 0, 0, .2);
         border: 1px solid rgba(255, 255, 255, .6);
       }
     }

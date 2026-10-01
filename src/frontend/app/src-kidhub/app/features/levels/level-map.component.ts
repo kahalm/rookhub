@@ -69,7 +69,7 @@ import { themeIcon, themeNameKey } from '../../core/kids-themes';
     }
     a.level:hover { transform: translateY(-2px); }
     .level.done { background: var(--kid-good-bg); }
-    .level.current { outline: 4px solid var(--kid-green); animation: pulse 1.6s ease-in-out infinite; }
+    .level.current { outline: 4px solid var(--kid-green-strong); animation: pulse 1.6s ease-in-out infinite; }
     .level.locked { opacity: .55; filter: grayscale(.7); }
     .num { position: absolute; top: 8px; left: 12px; font-weight: 800; font-size: 1.05rem; }
     .icon { font-size: 2.6rem; line-height: 1.2; }

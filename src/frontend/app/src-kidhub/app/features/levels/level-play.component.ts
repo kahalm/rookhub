@@ -93,7 +93,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
       font: inherit; font-size: 1.25rem; font-weight: 800; padding: 14px 22px; border-radius: 18px; border: 0;
       background: var(--kid-card); color: inherit; text-decoration: none; cursor: pointer; box-shadow: 0 5px 0 var(--kid-shadow);
     }
-    .btn.primary { background: var(--kid-green); color: #fff; }
+    .btn.primary { background: var(--kid-green-strong); color: #fff; }
     @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2); } }
     @media ${KID_STACKED} {
       .dots { margin: 4px auto 0; flex-basis: 100%; justify-content: center; }
