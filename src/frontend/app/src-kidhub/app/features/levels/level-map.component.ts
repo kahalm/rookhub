@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { themeIcon, themeNameKey } from '../../core/kids-themes';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
  * Alle Stufen als grosse Knoepfe mit Thema und Sternen. Gesperrt ist, was hinter der ersten noch
@@ -13,7 +14,7 @@ import { themeIcon, themeNameKey } from '../../core/kids-themes';
   selector: 'kid-level-map',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, KidsErrorComponent],
   template: `
     <header class="head">
       <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
@@ -24,7 +25,7 @@ import { themeIcon, themeNameKey } from '../../core/kids-themes';
     @if (loading()) {
       <p class="info">{{ 'kids.loading' | translate }}</p>
     } @else if (failed()) {
-      <p class="info">{{ 'kids.loadError' | translate }}</p>
+      <kid-error (retry)="load()" />
     } @else if (levels().length === 0) {
       <p class="info">{{ 'kids.levels.empty' | translate }}</p>
     } @else {
@@ -97,6 +98,13 @@ export class LevelMapComponent {
   })));
 
   constructor() {
+    this.load();
+  }
+
+  /** Stufen holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */
+  load(): void {
+    this.loading.set(true);
+    this.failed.set(false);
     this.api.levels().subscribe({
       next: levels => { this.levels.set(levels); this.loading.set(false); },
       error: () => { this.failed.set(true); this.loading.set(false); },

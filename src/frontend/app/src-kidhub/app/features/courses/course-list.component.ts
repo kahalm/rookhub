@@ -3,13 +3,14 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** Die fuer Kinder freigegebenen Kurse (ein Admin schaltet sie in der Buecherverwaltung frei). */
 @Component({
   selector: 'kid-course-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, KidsErrorComponent],
   template: `
     <header class="head">
       <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
@@ -17,6 +18,8 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
     </header>
     @if (loading()) {
       <p class="info">{{ 'kids.loading' | translate }}</p>
+    } @else if (failed()) {
+      <kid-error (retry)="load()" />
     } @else if (courses().length === 0) {
       <p class="info">{{ 'kids.courses.empty' | translate }}</p>
     } @else {
@@ -58,11 +61,20 @@ export class CourseListComponent {
 
   readonly courses = signal<KidsCourse[]>([]);
   readonly loading = signal(true);
+  /** Abruf gescheitert — eigener Zustand, damit ein Fehler nicht wie „Noch keine Kurse" aussieht. */
+  readonly failed = signal(false);
 
   constructor() {
+    this.load();
+  }
+
+  /** Kurse holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */
+  load(): void {
+    this.loading.set(true);
+    this.failed.set(false);
     this.api.courses(this.translate.currentLang() ?? undefined).subscribe({
       next: courses => { this.courses.set(courses); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      error: () => { this.failed.set(true); this.loading.set(false); },
     });
   }
 

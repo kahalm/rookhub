@@ -6,6 +6,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { KidsApiService, KidsCourse, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsEndlessStore } from '../../core/kids-endless.store';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
  * Startseite: ein grosser „Los geht's"-Knopf zur naechsten offenen Stufe, darunter die zwei Wege —
@@ -15,7 +16,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
   selector: 'kid-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, KidsErrorComponent],
   template: `
     <section class="hero">
       <h1>{{ 'kids.home.title' | translate }}</h1>
@@ -63,7 +64,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
     </p>
 
     @if (failed()) {
-      <p class="error">{{ 'kids.loadError' | translate }}</p>
+      <kid-error (retry)="load()" />
     }
   `,
   styles: [`
@@ -90,7 +91,6 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
     .icon { font-size: 3.4rem; line-height: 1.1; }
     .name { font-size: 1.7rem; font-weight: 800; }
     .meta { font-size: 1.05rem; opacity: .85; text-align: center; }
-    .error { text-align: center; margin-top: 20px; font-weight: 700; }
     .saved { text-align: center; margin: 22px 0 0; font-size: .95rem; opacity: .8; }
   `],
 })
@@ -112,6 +112,13 @@ export class KidsHomeComponent {
   });
 
   constructor() {
+    this.load();
+  }
+
+  /** Stufen und Kurse holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel (was schon kam, liefert der
+   *  Zwischenspeicher von `KidsApiService` ohne neuen Abruf). */
+  load(): void {
+    this.failed.set(false);
     this.api.levels().subscribe({
       next: levels => this.levels.set(levels),
       error: () => this.failed.set(true),

@@ -3908,6 +3908,7 @@
     "back": "Kezdőlap",
     "loading": "Egy pillanat …",
     "loadError": "Ez most nem sikerült. Próbáld újra később.",
+    "retry": "Újra",
     "language": "Nyelv"
   },
   "turnierAdmin": {

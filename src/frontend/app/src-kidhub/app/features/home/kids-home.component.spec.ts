@@ -42,7 +42,7 @@ describe('KidsHomeComponent', () => {
     expect(f.componentInstance.current()).toBe(1);
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelector('a.go')).not.toBeNull();
-    expect(el.querySelector('.error')).toBeNull();
+    expect(el.querySelector('kid-error')).toBeNull();
   }));
 
   it('ein zweites 429 zeigt das Fehlerbild (nur EIN Nachholversuch)', fakeAsync(() => {
@@ -54,6 +54,27 @@ describe('KidsHomeComponent', () => {
     http.expectOne('/api/kids/levels').flush(null, { status: 429, statusText: 'Too Many Requests', headers: { 'Retry-After': '1' } });
     f.detectChanges();
     expect(f.componentInstance.failed()).toBeTrue();
-    expect((f.nativeElement as HTMLElement).querySelector('.error')).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('kid-error')).not.toBeNull();
+  }));
+
+  /** Codereview 2026-09-29, F7-011: im Fehlerfall stand nur ein Satz da — ohne Knopf, mit dem das Kind weiterkommt. */
+  it('Fehlerbild mit „Nochmal": holt die Stufen neu, danach steht der Startknopf da', fakeAsync(() => {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([]);
+    http.expectOne('/api/kids/levels').flush(null, { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const again = el.querySelector<HTMLButtonElement>('kid-error button.again');
+    expect(again).withContext('Knopf „Nochmal"').not.toBeNull();
+
+    again!.click();
+    // Die Kurse kamen schon — die liefert der Zwischenspeicher, neu geholt werden nur die Stufen.
+    http.expectOne('/api/kids/levels').flush([{ level: 1, theme: 'mate1', puzzleCount: 10 }]);
+    f.detectChanges();
+
+    expect(f.componentInstance.failed()).toBeFalse();
+    expect(el.querySelector('kid-error')).toBeNull();
+    expect(el.querySelector('a.go')).not.toBeNull();
   }));
 });

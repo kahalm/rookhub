@@ -4231,6 +4231,7 @@
     "back": "Početak",
     "loading": "Trenutak …",
     "loadError": "Nažalost, nije uspjelo. Pokušaj ponovno kasnije.",
+    "retry": "Pokušaj ponovno",
     "language": "Jezik"
   },
   "turnierAdmin": {

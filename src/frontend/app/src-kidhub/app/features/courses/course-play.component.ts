@@ -7,6 +7,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** Naechste ungeloeste Linie ab `from` (einschliesslich), am Ende von vorn — `-1`, wenn alle geloest sind. */
 export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number>, from: number): number {
@@ -26,7 +27,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
   selector: 'kid-course-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent],
+  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
     <header class="head">
       <a class="back" routerLink="/courses">← {{ 'kids.courses.title' | translate }}</a>
@@ -37,7 +38,7 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     </header>
 
     @if (failed()) {
-      <p class="info">{{ 'kids.loadError' | translate }}</p>
+      <kid-error (retry)="load(bookId())" />
     } @else if (loading()) {
       <p class="info">{{ 'kids.loading' | translate }}</p>
     } @else if (current(); as line) {
@@ -133,7 +134,8 @@ export class CoursePlayComponent {
     });
   }
 
-  private load(bookId: number): void {
+  /** Linien des Kurses holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */
+  load(bookId: number): void {
     this.bookId.set(bookId);
     this.loading.set(true);
     this.failed.set(false);

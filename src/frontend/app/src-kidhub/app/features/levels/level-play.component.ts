@@ -9,6 +9,7 @@ import { themeIcon, themeNameKey, themeTaskKey } from '../../core/kids-themes';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
 import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { isAdvanceKey } from '../../core/kids-keys';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
  * Eine Stufe spielen: zehn Aufgaben nacheinander, oben die Punkte fuer den Fortschritt, am Ende
@@ -20,7 +21,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
   selector: 'kid-level-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent],
+  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
     <header class="head">
       <a class="back" routerLink="/levels">← {{ 'kids.levels.title' | translate }}</a>
@@ -38,7 +39,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
     </header>
 
     @if (failed()) {
-      <p class="info">{{ 'kids.loadError' | translate }}</p>
+      <kid-error (retry)="retry()" />
     } @else if (locked()) {
       <p class="info">🔒 {{ 'kids.levels.lockedHint' | translate }}</p>
       <p class="info"><a routerLink="/levels">{{ 'kids.levels.title' | translate }}</a></p>
@@ -123,6 +124,8 @@ export class LevelPlayComponent {
   readonly finished = signal<number | null>(null);
   readonly failed = signal(false);
   readonly locked = signal(false);
+  /** Die Stufe aus der Adresse — „Nochmal" der Fehlerkachel laedt sie erneut. */
+  private levelNo = 0;
 
   readonly icon = computed(() => themeIcon(this.detail()?.theme ?? ''));
   readonly nameKey = computed(() => themeNameKey(this.detail()?.theme ?? ''));
@@ -147,10 +150,20 @@ export class LevelPlayComponent {
       }
       this.load(level);
     });
+    this.loadLevels();
+  }
+
+  /** Die Leiter nur fuer „Naechste Stufe" — scheitert sie, holt der Abschluss der Stufe sie nach. */
+  private loadLevels(): void {
     this.api.levels().subscribe({ next: levels => this.allLevels.set(levels), error: () => {} });
   }
 
+  retry(): void {
+    this.load(this.levelNo);
+  }
+
   private load(level: number): void {
+    this.levelNo = level;
     this.detail.set(null);
     this.finished.set(null);
     this.failed.set(false);
@@ -163,7 +176,7 @@ export class LevelPlayComponent {
         // Letzte Aufgabe geloest, aber „Weiter" nicht mehr gedrueckt: der Durchgang ist fertig.
         if (run >= detail.puzzles.length) {
           this.detail.set(detail);
-          this.finished.set(this.progress.completeRun(level));
+          this.complete(level);
           return;
         }
         this.index.set(Math.max(0, run));
@@ -194,8 +207,15 @@ export class LevelPlayComponent {
     if (this.index() + 1 < d.puzzles.length) {
       this.index.update(i => i + 1);
     } else {
-      this.finished.set(this.progress.completeRun(d.level));
+      this.complete(d.level);
     }
+  }
+
+  /** Durchgang fertig: Sterne vergeben. Fehlt die Leiter (ihr Abruf scheiterte beim Oeffnen), jetzt noch einmal
+   *  holen — sonst fehlten „Naechste Stufe" und die Leertaste still. */
+  private complete(level: number): void {
+    this.finished.set(this.progress.completeRun(level));
+    if (this.allLevels().length === 0) this.loadLevels();
   }
 
   again(): void {

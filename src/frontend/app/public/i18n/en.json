@@ -4231,6 +4231,7 @@
     "back": "Home",
     "loading": "Just a moment …",
     "loadError": "Sorry, that didn't work. Please try again later.",
+    "retry": "Try again",
     "language": "Language"
   },
   "turnierAdmin": {

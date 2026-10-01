@@ -119,6 +119,26 @@ describe('EndlessPlayComponent', () => {
     expect(c.failed()).toBeTrue();
   });
 
+  it('Fehlerkachel: „Nochmal" startet einen neuen Lauf', () => {
+    let first = true;
+    api.endlessBatch.and.callFake((w: { minRating: number; maxRating: number }[]) => {
+      const res = first ? [] : answer(w);
+      first = false;
+      return of(res);
+    });
+    const f = TestBed.createComponent(EndlessPlayComponent);
+    f.detectChanges();
+    const again = (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('kid-error button.again');
+    expect(again).withContext('Knopf „Nochmal"').not.toBeNull();
+
+    again!.click();
+    f.detectChanges();
+
+    expect(api.endlessBatch.calls.count()).toBeGreaterThan(1);
+    expect(f.componentInstance.failed()).toBeFalse();
+    expect(f.componentInstance.current()?.rating).toBe(700);
+  });
+
   it('spaeter keine Aufgaben mehr: der Lauf endet als geschafft', () => {
     let first = true;
     api.endlessBatch.and.callFake((w: { minRating: number; maxRating: number }[]) => {

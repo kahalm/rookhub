@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { LevelPlayComponent } from './level-play.component';
 import { KidsApiService, KidsLevelDetail } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
@@ -53,6 +53,43 @@ describe('LevelPlayComponent', () => {
     expect(c.finished()).toBe(3);
     expect(c.nextLevel()).toBe(2);
     expect(TestBed.inject(KidsProgressStore).isUnlocked(2)).toBeTrue();
+  });
+
+  /** Codereview 2026-09-29, F7-011: im Fehlerfall stand nur ein Satz da — ohne Knopf, mit dem das Kind weiterkommt. */
+  it('Ladefehler: Fehlerkachel mit „Nochmal", das die Stufe neu holt', () => {
+    api.level.and.returnValues(throwError(() => new Error('500')), of(detail(1)));
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const again = el.querySelector<HTMLButtonElement>('kid-error button.again');
+    expect(again).withContext('Knopf „Nochmal"').not.toBeNull();
+
+    again!.click();
+    f.detectChanges();
+
+    expect(api.level).toHaveBeenCalledTimes(2);
+    expect(api.level.calls.mostRecent().args[0]).toBe(1);
+    expect(el.querySelector('kid-error')).toBeNull();
+    expect(f.componentInstance.task()?.moves).toEqual(['g4g3', 'b8h8']);
+  });
+
+  /** F7-011: scheiterte nur der Zusatzabruf der Leiter, fehlte am Ende still „Naechste Stufe" (samt Leertaste). */
+  it('scheitert die Leiter beim Oeffnen, holt der Abschluss der Stufe sie nach', () => {
+    api.levels.and.returnValues(
+      throwError(() => new Error('429')),
+      of([{ level: 1, theme: 'mate1', puzzleCount: 2 }, { level: 2, theme: 'promote', puzzleCount: 2 }]),
+    );
+    const f = TestBed.createComponent(LevelPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    expect(c.allLevels()).toEqual([]);
+
+    c.onSolved(0); c.onNext(); c.onSolved(0); c.onNext();
+    f.detectChanges();
+
+    expect(api.levels).toHaveBeenCalledTimes(2);
+    expect(c.nextLevel()).toBe(2);
+    expect((f.nativeElement as HTMLElement).querySelector('.buttons a.btn.primary')).not.toBeNull();
   });
 
   it('macht einen angefangenen Durchgang bei der naechsten Aufgabe weiter', () => {

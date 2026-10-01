@@ -10,6 +10,7 @@ import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
 import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
  * Endlos-Modus: Aufgabe um Aufgabe, jede ein bisschen schwerer (Kurve in `kids-endless.ts`), bis die drei
@@ -21,7 +22,7 @@ import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
   selector: 'kid-endless-play',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent],
+  imports: [RouterLink, TranslatePipe, KidsPuzzleComponent, KidsErrorComponent],
   template: `
     <header class="head">
       <a class="back" routerLink="/">← {{ 'kids.back' | translate }}</a>
@@ -50,8 +51,7 @@ import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
         </div>
       </section>
     } @else if (failed()) {
-      <p class="info">{{ 'kids.loadError' | translate }}</p>
-      <p class="info"><button type="button" class="btn" (click)="start()">↻ {{ 'kids.endless.again' | translate }}</button></p>
+      <kid-error (retry)="start()" />
     } @else if (task(); as t) {
       <kid-puzzle [task]="t" (mistake)="onMistake()" (hinted)="onHint($event)" (solved)="onSolved()" (next)="onNext()">
         <div kidTask class="side-text">

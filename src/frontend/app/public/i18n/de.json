@@ -4231,6 +4231,7 @@
     "back": "Start",
     "loading": "Einen Moment …",
     "loadError": "Das hat leider nicht geklappt. Bitte später noch einmal versuchen.",
+    "retry": "Nochmal",
     "language": "Sprache"
   },
   "turnierAdmin": {
