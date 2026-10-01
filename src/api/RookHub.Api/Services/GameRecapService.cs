@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -124,16 +123,9 @@ public sealed class GameRecapService
         var allowed = positions.Select(p => p.GameMoveSan)
             .Concat(flaws.SelectMany(f => f.BestLine.Concat(f.Refutation))).ToList();
 
-        string? text = null;
-        var system = SystemPrompt(language);
-        for (var attempt = 0; attempt < 2 && text == null; attempt++)
-        {
-            var json = await _llm.CompleteJsonAsync("recap", system,
-                attempt == 0 ? facts : facts + "\n\nIMPORTANT: at most 50 words; mention only moves that appear above.", Schema, 800, ct);
-            var candidate = TextOf(json);
-            if (candidate != null && GameMoveExplanationService.MentionsOnly(candidate, allowed)) text = candidate;
-            else if (candidate != null) _logger.LogInformation("Nacherzählung für Partie {GameId} verworfen (fremder Zug)", gameId);
-        }
+        var text = await GroundedText.WriteAsync(_llm, "recap", SystemPrompt(language), facts,
+            "\n\nIMPORTANT: at most 50 words; mention only moves that appear above.", Schema, 800, MaxLength, allowed,
+            () => _logger.LogInformation("Nacherzählung für Partie {GameId} verworfen (fremder Zug)", gameId), ct);
         if (text == null)
         {
             _failures.Note(gameId);
@@ -179,12 +171,11 @@ public sealed class GameRecapService
         var ordered = positions.OrderBy(p => p.Ply).ToList();
         var lines = new List<string>
         {
-            $"White: {game.White ?? "?"}{Elo(game.WhiteElo)}, Black: {game.Black ?? "?"}{Elo(game.BlackElo)}, result {game.Result ?? "*"}"
-                + (game.TimeControl is { Length: > 0 } tc ? $", time control {tc}" : "") + $", {(ordered.Count + 1) / 2} moves.",
+            GameFacts.Players(game) + $", {(ordered.Count + 1) / 2} moves.",
         };
         if (OpeningName(game.Pgn) is { } opening) lines.Add($"Opening: {Cap(opening)}.");
         lines.Add($"First moves: {string.Join(' ', ordered.Take(10).Select(p => MoveNumber(p) + p.GameMoveSan))}");
-        lines.Add($"Accuracy: White {Pct(analysis.AccuracyWhite)}, Black {Pct(analysis.AccuracyBlack)}.");
+        lines.Add(GameFacts.Accuracy(analysis));
 
         var course = Course(ordered, analysis.PlyCount);
         if (course.Count > 0)
@@ -344,22 +335,6 @@ public sealed class GameRecapService
 
     /// <summary>Ein Kopfwert aus dem Upload, auf <see cref="MaxHeaderLength"/> Zeichen gekürzt.</summary>
     private static string Cap(string value) => value.Length <= MaxHeaderLength ? value : value[..MaxHeaderLength].TrimEnd() + "…";
-
-    private static string Elo(int? elo) => elo is int e ? $" ({e})" : "";
-    private static string Pct(double? v) => v is double d ? $"{Math.Round(d)} %" : "unknown";
-
-    private static string? TextOf(string? json)
-    {
-        if (json == null) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var text = doc.RootElement.TryGetProperty("recap", out var e) && e.ValueKind == JsonValueKind.String
-                ? e.GetString()?.Trim() : null;
-            return string.IsNullOrWhiteSpace(text) || text.Length > MaxLength ? null : text;
-        }
-        catch (JsonException) { return null; }
-    }
 }
 
 /// <summary>

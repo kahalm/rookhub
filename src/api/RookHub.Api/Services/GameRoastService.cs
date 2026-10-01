@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -26,6 +25,9 @@ public sealed class GameRoastService
 
     /// <summary>Deckel je Nutzer und 24 h — die Spark ist geteilt, und „Neu würfeln" lädt zum Dauerklicken ein.</summary>
     public const int MaxPerDay = 60;
+
+    /// <summary>Obergrenze des Textes; eine längere Antwort gilt als misslungen.</summary>
+    public const int MaxLength = 2000;
 
     private readonly AppDbContext _db;
     private readonly IClaudeJsonClient _llm;
@@ -102,16 +104,9 @@ public sealed class GameRoastService
         var allowed = positions.Select(p => p.GameMoveSan)
             .Concat(flaws.SelectMany(f => f.BestLine.Concat(f.Refutation))).ToList();
 
-        string? text = null;
-        var system = SystemPrompt(style, language);
-        for (var attempt = 0; attempt < 2 && text == null; attempt++)
-        {
-            var json = await _llm.CompleteJsonAsync("roast", system,
-                attempt == 0 ? facts : facts + "\n\nIMPORTANT: mention only moves that appear above.", Schema, 1500, ct);
-            var candidate = TextOf(json);
-            if (candidate != null && GameMoveExplanationService.MentionsOnly(candidate, allowed)) text = candidate;
-            else if (candidate != null) _logger.LogInformation("Roast für Partie {GameId} verworfen (fremder Zug)", gameId);
-        }
+        var text = await GroundedText.WriteAsync(_llm, "roast", SystemPrompt(style, language), facts,
+            "\n\nIMPORTANT: mention only moves that appear above.", Schema, 1500, MaxLength, allowed,
+            () => _logger.LogInformation("Roast für Partie {GameId} verworfen (fremder Zug)", gameId), ct);
         if (text == null) return new(null, "failed");
 
         var row = await _db.GameRoasts.FirstOrDefaultAsync(r => r.SavedGameId == gameId && r.Language == language && r.Style == style, ct);
@@ -162,12 +157,11 @@ public sealed class GameRoastService
         var side = game.OwnerSide;
         var lines = new List<string>
         {
-            $"White: {game.White ?? "?"}{Elo(game.WhiteElo)}, Black: {game.Black ?? "?"}{Elo(game.BlackElo)}, result {game.Result ?? "*"}"
-                + (game.TimeControl is { Length: > 0 } tc ? $", time control {tc}" : "") + $", {positions.Count} half-moves.",
+            GameFacts.Players(game) + $", {positions.Count} half-moves.",
             side is "white" or "black"
                 ? $"The player played {side} and {Outcome(game.Result, side)}."
                 : "Which side the player had is unknown — roast both sides.",
-            $"Accuracy: White {Pct(analysis.AccuracyWhite)}, Black {Pct(analysis.AccuracyBlack)}.",
+            GameFacts.Accuracy(analysis),
             $"Opening: {string.Join(' ', positions.Take(8).Select(p => p.GameMoveSan))}",
         };
         var own = side is "white" or "black" ? flaws.Where(f => f.White == (side == "white")).ToList() : flaws.ToList();
@@ -183,9 +177,6 @@ public sealed class GameRoastService
         return string.Join('\n', lines);
     }
 
-    private static string Elo(int? elo) => elo is int e ? $" ({e})" : "";
-    private static string Pct(double? v) => v is double d ? $"{Math.Round(d)} %" : "unknown";
-
     private static string Outcome(string? result, string side) => (result, side) switch
     {
         ("1-0", "white") or ("0-1", "black") => "won",
@@ -193,17 +184,4 @@ public sealed class GameRoastService
         ("1/2-1/2", _) => "drew",
         _ => "the result is open",
     };
-
-    private static string? TextOf(string? json)
-    {
-        if (json == null) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var text = doc.RootElement.TryGetProperty("roast", out var e) && e.ValueKind == JsonValueKind.String
-                ? e.GetString()?.Trim() : null;
-            return string.IsNullOrWhiteSpace(text) || text.Length > 2000 ? null : text;
-        }
-        catch (JsonException) { return null; }
-    }
 }

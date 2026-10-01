@@ -1,6 +1,5 @@
 using Chess;
 using System.Collections.Concurrent;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -225,7 +224,7 @@ public sealed class GameMoveExplanationService
             var json = await _llm.CompleteJsonAsync("explanation", system,
                 attempt == 0 ? prompt : prompt + "\n\nIMPORTANT: your previous answer mentioned a move that is not in the lines above. Mention ONLY moves that appear in the lines above.",
                 Schema, 1200, ct);
-            var text = TextOf(json);
+            var text = GroundedText.TextOf(json, "explanation", MaxTextLength);
             if (text != null && IsGrounded(text, flaw)) return (text, with);
             if (text != null) _logger.LogInformation("Fehler-Erklärung Halbzug {Ply} verworfen (nennt einen fremden Zug): {Text}", flaw.Ply, text);
         }
@@ -358,18 +357,8 @@ public sealed class GameMoveExplanationService
     private static string MoveNumber(string fen)
         => fen.Split(' ') is { Length: >= 6 } parts && int.TryParse(parts[5], out var n) ? n.ToString() : "?";
 
-    private static string? TextOf(string? json)
-    {
-        if (json == null) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var text = doc.RootElement.TryGetProperty("explanation", out var e) && e.ValueKind == JsonValueKind.String
-                ? e.GetString()?.Trim() : null;
-            return string.IsNullOrWhiteSpace(text) || text.Length > 1200 ? null : text;
-        }
-        catch (JsonException) { return null; }
-    }
+    /// <summary>Obergrenze einer Erklärung; eine längere Antwort gilt als misslungen.</summary>
+    private const int MaxTextLength = 1200;
 
     // ── Prüfen ─────────────────────────────────────────────────────────────────────────────────────
 
