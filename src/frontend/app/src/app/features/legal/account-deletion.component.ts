@@ -21,12 +21,12 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
     <div class="legal-container">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ 'legal.accountDeletion.title' | translate }}</mat-card-title>
+          <h1 mat-card-title>{{ 'legal.accountDeletion.title' | translate }}</h1>
         </mat-card-header>
         <mat-card-content>
           <p>{{ (home ? 'legal.accountDeletion.introPartner' : 'legal.accountDeletion.intro') | translate }}</p>
 
-          <h4>{{ 'legal.accountDeletion.inAppTitle' | translate }}</h4>
+          <h2>{{ 'legal.accountDeletion.inAppTitle' | translate }}</h2>
           <p>{{ (home ? 'legal.accountDeletion.inPartner' : 'legal.accountDeletion.inApp') | translate }}</p>
 
           <!-- Vor dem Knopf: sofort und ohne Rueckgaengig — die PGN-Exporte gibt es je Kurs, Repertoire und Partie (UX-021). -->
@@ -62,25 +62,25 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
           }
 
           <!-- Was ProfileService.DeleteAccountAsync wirklich loescht, in Nutzersprache gruppiert (UX-021). -->
-          <h4>{{ 'legal.accountDeletion.removedTitle' | translate }}</h4>
+          <h2>{{ 'legal.accountDeletion.removedTitle' | translate }}</h2>
           <ul class="removed">
             @for (key of removedKeys; track key) {
               <li>{{ 'legal.accountDeletion.' + key | translate }}</li>
             }
           </ul>
 
-          <h4>{{ 'legal.accountDeletion.keptTitle' | translate }}</h4>
+          <h2>{{ 'legal.accountDeletion.keptTitle' | translate }}</h2>
           <p>{{ 'legal.accountDeletion.kept' | translate }}</p>
           @if (league) {
             <!-- LeagueHub: hochgeladene Vereinspartien bleiben (mit Namen, also nicht „anonym"), ohne Vermerk des
                  Hochladenden — selbst loeschen geht danach nicht mehr (CanDelete: Verwalter oder der Hochladende). -->
-            <h4>{{ 'legal.accountDeletion.keptLeagueTitle' | translate }}</h4>
+            <h2>{{ 'legal.accountDeletion.keptLeagueTitle' | translate }}</h2>
             <p class="league-kept">{{ 'legal.accountDeletion.keptLeague' | translate }}
               <a routerLink="/verein" data-login-required>{{ 'legal.accountDeletion.leagueGamesLink' | translate }}</a></p>
             <p>{{ 'legal.accountDeletion.keptLeagueShares' | translate }}</p>
           }
 
-          <h4>{{ 'legal.accountDeletion.contactTitle' | translate }}</h4>
+          <h2>{{ 'legal.accountDeletion.contactTitle' | translate }}</h2>
           <p>
             {{ 'legal.accountDeletion.contact' | translate }}:
             <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a>
@@ -103,7 +103,8 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink }
     mat-card { max-width: 720px; width: 100%; }
     /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
        immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
-    h4 { margin: 1.25rem 0 0.25rem; color: var(--mat-sys-primary); }
+    /* Abschnitte als h2 unter dem h1-Titel (UX-057) — Aussehen wie vorher als h4. */
+    h2 { margin: 1.25rem 0 0.25rem; font-size: 1em; font-weight: bold; color: var(--mat-sys-primary); }
     a { color: var(--mat-sys-primary); }
     .back { margin-top: 1.5rem; }
     .action { margin: 0.75rem 0 0.25rem; }

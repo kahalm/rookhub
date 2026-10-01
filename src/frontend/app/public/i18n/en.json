@@ -767,6 +767,7 @@
     "privacy": {
       "title": "Privacy Policy",
       "updated": "Last updated: 1 October 2026",
+      "tocTitle": "Contents",
       "intro": "RookHub is a chess training platform (puzzles, endless mode, courses, repertoires). This policy explains how personal data is processed under the GDPR.",
       "kidIntro": "KidHub is the chess site for children. Here we explain in simple words which data we store and why. The detailed version for parents follows below.",
       "kidTitle": "The most important points",
@@ -821,6 +822,7 @@
       "storage": "We do not use tracking cookies. Browser storage (localStorage) holds e.g. your login token, settings and — if enabled — offline puzzles. These remain on your device.",
       "retentionTitle": "Retention & deletion",
       "retention": "Account data is stored until you delete your account. You can delete your account at any time — identity and personal data are removed, anonymised statistics are retained. More:",
+      "retentionLink": "How to delete your account",
       "rightsTitle": "Your rights",
       "rights": "You have the right to access, rectification, erasure, restriction, data portability and objection, as well as the right to lodge a complaint with a supervisory authority (in Austria: the Data Protection Authority).",
       "contactTitle": "Contact",

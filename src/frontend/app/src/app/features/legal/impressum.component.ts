@@ -20,9 +20,9 @@ import { legalBackLink } from './legal-site';
   template: `
     <div class="legal-container">
       <mat-card>
-        <mat-card-header><mat-card-title>{{ 'legal.impressum.title' | translate }}</mat-card-title></mat-card-header>
+        <mat-card-header><h1 mat-card-title>{{ 'legal.impressum.title' | translate }}</h1></mat-card-header>
         <mat-card-content>
-          <h4>{{ 'legal.impressum.contactTitle' | translate }}</h4>
+          <h2>{{ 'legal.impressum.contactTitle' | translate }}</h2>
           <p>
             {{ 'legal.impressum.contact' | translate }}:
             <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
@@ -45,7 +45,8 @@ import { legalBackLink } from './legal-site';
     mat-card { max-width: 760px; width: 100%; }
     /* Theme-Token statt festem Hellblau/-grau (F7-015, wie die Anmeldemaske): #90caf9 hatte im hellen Modus — KidHub
        immer, RookHub/LeagueHub auf Wunsch — 1,75:1 auf Weiss, #bdbdbd 1,9:1. */
-    h4 { margin: 1.25rem 0 0.25rem; color: var(--mat-sys-primary); }
+    /* Abschnitte als h2 unter dem h1-Titel (UX-057) — Aussehen wie vorher als h4. */
+    h2 { margin: 1.25rem 0 0.25rem; font-size: 1em; font-weight: bold; color: var(--mat-sys-primary); }
     a { color: var(--mat-sys-primary); }
     .muted { color: var(--mat-sys-on-surface-variant); font-size: 0.85rem; }
     .back { margin-top: 1.5rem; }

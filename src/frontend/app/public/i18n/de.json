@@ -767,6 +767,7 @@
     "privacy": {
       "title": "Datenschutzerklärung",
       "updated": "Stand: 1. Oktober 2026",
+      "tocTitle": "Inhalt",
       "intro": "RookHub ist eine Schach-Trainingsplattform (Puzzles, Endlosmodus, Kurse, Repertoires). Diese Erklärung informiert über die Verarbeitung personenbezogener Daten gemäß DSGVO.",
       "kidIntro": "KidHub ist die Schachseite für Kinder. Hier steht in einfachen Worten, welche Daten wir speichern und warum. Darunter folgt die ausführliche Fassung für Eltern.",
       "kidTitle": "Das Wichtigste in Kürze",
@@ -821,6 +822,7 @@
       "storage": "Wir setzen keine Tracking-Cookies. Im Browser-Speicher (localStorage) liegen u. a. dein Login-Token, Einstellungen und — sofern aktiviert — Offline-Puzzles. Diese verbleiben auf deinem Gerät.",
       "retentionTitle": "Speicherdauer & Löschung",
       "retention": "Kontodaten werden bis zur Löschung des Kontos gespeichert. Du kannst dein Konto jederzeit selbst löschen — Identität und persönliche Daten werden entfernt, anonymisierte Statistiken bleiben erhalten. Mehr dazu:",
+      "retentionLink": "Konto löschen – so geht’s",
       "rightsTitle": "Deine Rechte",
       "rights": "Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie auf Beschwerde bei einer Aufsichtsbehörde (in Österreich: Datenschutzbehörde).",
       "contactTitle": "Kontakt",

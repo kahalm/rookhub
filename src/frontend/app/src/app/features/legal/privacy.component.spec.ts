@@ -96,6 +96,56 @@ describe('PrivacyComponent', () => {
     expect(el.textContent).toContain('legal.privacy.aiLocal');
     expect(el.textContent).toContain('legal.privacy.thirdTextLlm');
   });
+
+  // UX-057: der Titel stand in <mat-card-title> (keine Ueberschriften-Rolle), die Abschnitte als h4 — kein h1, h2/h3
+  // uebersprungen (WCAG 1.3.1); am Handy 2 679 px ohne Sprungmarken; der Link zur Loeschseite hiess „/account-deletion".
+  describe('Gliederung, Inhaltsverzeichnis und Linktext (UX-057)', () => {
+    const variants: [string, LegalSite | undefined][] = [
+      ['RookHub', undefined],
+      ['KidHub', { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' }],
+      ['LeagueHub', { contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' }],
+    ];
+
+    for (const [name, site] of variants) {
+      it(`${name}: genau ein h1 (der Titel), Abschnitte als h2, keine tieferen Ebenen`, () => {
+        const el = render(site);
+        const h1 = el.querySelectorAll('h1');
+        expect(h1.length).toBe(1);
+        expect(h1[0].textContent).toContain('legal.privacy.title');
+        expect(el.querySelectorAll('h2').length).toBeGreaterThan(5);
+        expect(el.querySelectorAll('h3, h4, h5, h6').length).toBe(0);
+      });
+
+      it(`${name}: das Inhaltsverzeichnis fuehrt zu JEDEM Abschnitt, in Reihenfolge, und zu nichts anderem`, () => {
+        const el = render(site);
+        const headings = Array.from(el.querySelectorAll('h2')).map(h => h.id);
+        const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('nav.toc a'))
+          .map(a => (a.getAttribute('href') ?? '').split('#')[1]);
+        expect(links.length).withContext('Inhaltsverzeichnis vorhanden').toBeGreaterThan(5);
+        expect(headings.every(id => !!id)).withContext('jede h2 traegt eine id').toBeTrue();
+        expect(new Set(headings).size).toBe(headings.length);
+        expect(links).toEqual(headings);
+      });
+    }
+
+    it('ein Klick springt zum Abschnitt und setzt den Fokus auf die Ueberschrift', () => {
+      const el = render();
+      const target = el.querySelector<HTMLElement>('#privacy-rights')!;
+      const scroll = spyOn(target, 'scrollIntoView');
+      const link = Array.from(el.querySelectorAll<HTMLAnchorElement>('nav.toc a'))
+        .find(a => a.getAttribute('href')?.endsWith('#privacy-rights'))!;
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+      link.dispatchEvent(click);
+      expect(click.defaultPrevented).toBeTrue();
+      expect(scroll).toHaveBeenCalled();
+      expect(document.activeElement).toBe(target);
+    });
+
+    it('der Link zur Konto-Loeschung nennt sein Ziel in Worten statt als Pfad', () => {
+      const link = render().querySelector<HTMLAnchorElement>('a[href="/account-deletion"]')!;
+      expect(link.textContent?.trim()).toBe('legal.privacy.retentionLink');
+    });
+  });
 });
 
 /** Die Texte selbst: Anbieter, Drittland und der Upload-Hinweis in den gepflegten Sprachen. */

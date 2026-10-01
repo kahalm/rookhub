@@ -49,6 +49,17 @@ describe('AccountDeletionComponent', () => {
     expect(kid.textContent).toContain('legal.backHome');
   });
 
+  it('Titel als h1, Abschnitte als h2 — keine uebersprungene Ebene (UX-057)', () => {
+    TestBed.configureTestingModule({ imports: [AccountDeletionComponent], providers: base() });
+    const f = TestBed.createComponent(AccountDeletionComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('h1').length).toBe(1);
+    expect(el.querySelector('h1')?.textContent).toContain('legal.accountDeletion.title');
+    expect(el.querySelectorAll('h2').length).toBeGreaterThan(2);
+    expect(el.querySelectorAll('h3, h4, h5, h6').length).toBe(0);
+  });
+
   describe('ein gangbarer Weg zur Loeschung (UX-023)', () => {
     const render = (site?: object, homeUrl: string | null = null) => {
       TestBed.resetTestingModule();

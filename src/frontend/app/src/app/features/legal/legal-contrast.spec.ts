@@ -38,7 +38,7 @@ describe('Rechtsseiten: Ueberschriften, Links und Stand-Zeile lesbar in beiden M
         const f = TestBed.createComponent(cmp);
         f.detectChanges();
         const el = f.nativeElement as HTMLElement;
-        const targets = Array.from(el.querySelectorAll('h4, a:not(.mat-mdc-button-base), .muted'));
+        const targets = Array.from(el.querySelectorAll('h2, a:not(.mat-mdc-button-base), .muted'));
         expect(targets.length).toBeGreaterThan(1);
         for (const t of targets) {
           const ratio = textContrast(t);

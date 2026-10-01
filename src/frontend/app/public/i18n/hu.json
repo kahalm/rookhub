@@ -532,6 +532,7 @@
     "privacy": {
       "title": "Adatvédelmi nyilatkozat",
       "updated": "Utoljára frissítve: 2026. október 1.",
+      "tocTitle": "Tartalom",
       "intro": "A RookHub egy sakk-edzőplatform (feladványok, végtelen mód, tanfolyamok, repertoárok). Ez a nyilatkozat elmagyarázza, hogyan kezeljük a személyes adatokat a GDPR alapján.",
       "kidIntro": "A KidHub a gyerekeknek szóló sakkoldal. Itt egyszerű szavakkal elmondjuk, milyen adatokat tárolunk és miért. Alatta következik a részletes változat a szülőknek.",
       "kidTitle": "A legfontosabbak röviden",
@@ -586,6 +587,7 @@
       "storage": "Nem használunk nyomkövető sütiket. A böngésző tárhelye (localStorage) tartalmazza pl. a bejelentkezési tokenedet, beállításokat és – ha engedélyezve van – az offline feladványokat. Ezek az eszközödön maradnak.",
       "retentionTitle": "Megőrzés és törlés",
       "retention": "A fiókadatokat a fiók törléséig tároljuk. Fiókod bármikor törölheted – a személyazonosság és személyes adatok törlődnek, az anonimizált statisztikák megmaradnak. Bővebben:",
+      "retentionLink": "Így törölheted a fiókodat",
       "rightsTitle": "Jogaid",
       "rights": "Jogod van hozzáférni, helyesbíteni, törölni, korlátozni, adathordozhatósághoz, tiltakozni, valamint panaszt benyújtani egy felügyeleti hatóságnál (Ausztriában: az Adatvédelmi Hatóságnál).",
       "contactTitle": "Kapcsolat",

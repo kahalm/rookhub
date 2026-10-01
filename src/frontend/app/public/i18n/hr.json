@@ -767,6 +767,7 @@
     "privacy": {
       "title": "Pravila o privatnosti",
       "updated": "Zadnja izmjena: 1. listopada 2026.",
+      "tocTitle": "Sadržaj",
       "intro": "RookHub je platforma za šahovsku obuku (zagonetke, beskonačni način, tečajevi, repertoari). Ova pravila objašnjavaju kako se osobni podaci obrađuju prema GDPR-u.",
       "kidIntro": "KidHub je šahovska stranica za djecu. Ovdje jednostavnim riječima objašnjavamo koje podatke spremamo i zašto. Ispod slijedi detaljna verzija za roditelje.",
       "kidTitle": "Najvažnije ukratko",
@@ -821,6 +822,7 @@
       "storage": "Ne koristimo kolačiće za praćenje. Pohrana preglednika (localStorage) sadrži npr. tvoj token za prijavu, postavke i — ako je omogućeno — zagonetke za offline igranje. Ovi podaci ostaju na tvojem uređaju.",
       "retentionTitle": "Zadržavanje i brisanje",
       "retention": "Podaci računa pohranjuju se do brisanja tvojeg računa. Račun možeš izbrisati u bilo kojem trenutku — identitet i osobni podaci uklanjaju se, anonimizirana statistika zadržava se. Više:",
+      "retentionLink": "Kako izbrisati račun",
       "rightsTitle": "Tvoja prava",
       "rights": "Imaš pravo na pristup, ispravak, brisanje, ograničenje, prenosivost podataka i prigovor, kao i pravo podnošenja pritužbe nadzornom tijelu (u Austriji: Datenschutzbehörde).",
       "contactTitle": "Kontakt",
