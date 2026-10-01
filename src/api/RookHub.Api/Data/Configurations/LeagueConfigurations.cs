@@ -211,6 +211,11 @@ internal sealed class LeagueViewConfiguration : IEntityTypeConfiguration<LeagueV
     {
         e.HasKey(v => v.Tnr);
         e.Property(v => v.Tnr).ValueGeneratedNever();
+        // Drei Schreiber laden das ganze JSON, ändern es und schreiben es zurück („Daten aktualisieren", Partienzahl nach
+        // jeder Vereinspartie, Online-Konten) — ohne Token gewann der letzte mit seinem ALTEN Stand (W5 N4-007). Das
+        // UPDATE vergleicht jetzt den geladenen Inhalt; Kollision → LeagueService.PatchViewsAsync lädt neu. Kein
+        // Schema-Eingriff (nur das WHERE), daher keine Migration.
+        e.Property(v => v.Json).IsConcurrencyToken();
     }
 }
 

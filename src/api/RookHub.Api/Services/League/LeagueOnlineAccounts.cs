@@ -311,7 +311,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     }
 
     /// <summary>Die Konten in den fertigen Ansichten (<c>roster[].acc</c>) nachziehen — sonst stünden sie in der Meldeliste
-    /// erst nach dem nächsten „Daten aktualisieren".</summary>
+    /// erst nach dem nächsten „Daten aktualisieren". Mit Konkurrenzschutz (<see cref="LeagueService.PatchViewsAsync"/>).</summary>
     public async Task PatchViewsAsync(string fide, CancellationToken ct)
     {
         // Konten Minderjähriger stehen nie in der Meldeliste (die sieht jeder mit Leserecht und jeder Teilen-Link).
@@ -319,10 +319,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         var acc = new JsonArray(hidden ? Array.Empty<JsonNode>()
             : (await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).OrderBy(a => a.Id).ToListAsync(ct))
                 .Select(a => (JsonNode)ToJson(a, full: false)).ToArray());
-        foreach (var view in await db.LeagueViews.ToListAsync(ct))
+        await LeagueService.PatchViewsAsync(db, json =>
         {
-            if (!view.Json.Contains($"\"{fide}\"", StringComparison.Ordinal)) continue;
-            if (JsonNode.Parse(view.Json) is not JsonObject root || root["fixtures"] is not JsonObject teams) continue;
+            if (!json.Contains($"\"{fide}\"", StringComparison.Ordinal)) return null;
+            if (JsonNode.Parse(json) is not JsonObject root || root["fixtures"] is not JsonObject teams) return null;
             var changed = false;
             foreach (var (_, rounds) in teams)
                 foreach (var (_, fx) in rounds?.AsObject() ?? new JsonObject())
@@ -332,9 +332,8 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
                         r["acc"] = acc.DeepClone();
                         changed = true;
                     }
-            if (changed) view.Json = root.ToJsonString();
-        }
-        await db.SaveChangesAsync(ct);
+            return changed ? root.ToJsonString() : null;
+        }, ct);
     }
 
     /// <summary>Ein Konto als JSON für die Antwort an den Verwalter — verborgen, wenn es einem Minderjährigen gehört (außer für einen

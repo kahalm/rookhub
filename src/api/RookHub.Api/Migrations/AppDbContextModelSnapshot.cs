@@ -4157,6 +4157,7 @@ namespace RookHub.Api.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("Json")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("longtext");
 

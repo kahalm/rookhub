@@ -49,30 +49,78 @@ public sealed class LeagueService
         var w = await LoadWorldAsync(ct);
         if (w.Seasons.Count == 0) return 0;
         var season = w.Seasons[^1];
-        // Nur die Zählung: ohne Projektion käme jede Zeile samt Pgn/ProfileJson (bis ~2 MB je Spieler) mit —
-        // die Selektoren von ToDictionaryAsync laufen erst im Client.
-        var counts = await _db.LeaguePlayerProfiles.AsNoTracking().Select(p => new { p.FideId, p.GameCount })
-            .ToDictionaryAsync(p => p.FideId, p => p.GameCount, ct);
-        // Konten Minderjähriger stehen nie in der Meldeliste (LeagueHiddenAccounts).
-        var hidden = await LeagueHiddenAccounts.FidesAsync(_db, null, ct);
-        var accounts = (await _db.LeagueOnlineAccounts.AsNoTracking().ToListAsync(ct))
-            .Where(a => !hidden.Contains(a.FideId))
-            .GroupBy(a => a.FideId).ToDictionary(g => g.Key, g => g.ToList());
-        var builder = new LeagueViewBuilder(w, _model, counts, accounts);
-        var now = DateTime.UtcNow;
-        var n = 0;
-        foreach (var t in w.T.Values.Where(t => t.Season == season && t.Stage == "Liga"))
+        var leagues = w.T.Values.Where(t => t.Season == season && t.Stage == "Liga").ToList();
+        var tnrs = leagues.Select(t => t.Tnr).ToList();
+        for (var attempt = 1; ; attempt++)
         {
-            var json = builder.Build(t.Tnr, w.Games).ToJsonString(Compact);
-            var row = await _db.LeagueViews.FindAsync(new object[] { t.Tnr }, ct);
-            if (row is null) _db.LeagueViews.Add(new LeagueView { Tnr = t.Tnr, Json = json, GeneratedAt = now });
-            else { row.Json = json; row.GeneratedAt = now; }
-            n++;
+            // Die Ansichten VOR Zählwerten und Konten laden (W5 N4-007): zieht ein Patch (hochgeladene Partie, Konto)
+            // dazwischen nach, ist die Zeile beim Speichern eine andere (Json = Concurrency-Token) — dann neu lesen und
+            // rechnen, statt seinen Stand mit den älteren Zählwerten zu überschreiben.
+            var rows = await _db.LeagueViews.Where(v => tnrs.Contains(v.Tnr)).ToDictionaryAsync(v => v.Tnr, ct);
+            // Nur die Zählung: ohne Projektion käme jede Zeile samt Pgn/ProfileJson (bis ~2 MB je Spieler) mit —
+            // die Selektoren von ToDictionaryAsync laufen erst im Client.
+            var counts = await _db.LeaguePlayerProfiles.AsNoTracking().Select(p => new { p.FideId, p.GameCount })
+                .ToDictionaryAsync(p => p.FideId, p => p.GameCount, ct);
+            // Konten Minderjähriger stehen nie in der Meldeliste (LeagueHiddenAccounts).
+            var hidden = await LeagueHiddenAccounts.FidesAsync(_db, null, ct);
+            var accounts = (await _db.LeagueOnlineAccounts.AsNoTracking().ToListAsync(ct))
+                .Where(a => !hidden.Contains(a.FideId))
+                .GroupBy(a => a.FideId).ToDictionary(g => g.Key, g => g.ToList());
+            var builder = new LeagueViewBuilder(w, _model, counts, accounts);
+            var now = DateTime.UtcNow;
+            var n = 0;
+            foreach (var t in leagues)
+            {
+                var json = builder.Build(t.Tnr, w.Games).ToJsonString(Compact);
+                if (!rows.TryGetValue(t.Tnr, out var row)) _db.LeagueViews.Add(new LeagueView { Tnr = t.Tnr, Json = json, GeneratedAt = now });
+                else { row.Json = json; row.GeneratedAt = now; }
+                n++;
+            }
+            try { await _db.SaveChangesAsync(ct); }
+            catch (DbUpdateConcurrencyException) when (attempt < ViewWriteAttempts)
+            {
+                DetachViews(_db);
+                continue;
+            }
+            await CleanupSharesAsync(ct);
+            _log.LogInformation("LeagueHub: {Count} Ligen der Saison {Season} neu gerechnet", n, season);
+            return n;
         }
-        await _db.SaveChangesAsync(ct);
-        await CleanupSharesAsync(ct);
-        _log.LogInformation("LeagueHub: {Count} Ligen der Saison {Season} neu gerechnet", n, season);
-        return n;
+    }
+
+    /// <summary>So oft versucht ein Schreiber der Ansichten es, wenn ihm ein anderer dazwischen geschrieben hat.</summary>
+    internal const int ViewWriteAttempts = 5;
+
+    /// <summary>
+    /// Die fertigen Ansichten nachziehen, ohne die Ligen neu zu rechnen (Partienzahl, Online-Konten): <paramref name="patch"/>
+    /// bekommt das JSON einer Ansicht und liefert das geänderte oder <c>null</c> (unverändert). Speichert selbst.
+    /// <para>Konkurrenzschutz (W5 N4-007): <see cref="LeagueView.Json"/> ist Concurrency-Token. Hat „Daten aktualisieren"
+    /// oder ein paralleler Patch die Zeile seit dem Laden geändert, wird neu geladen und erneut gepatcht — sonst schriebe
+    /// dieser Patch sein geändertes ALTES JSON über die frisch gerechnete Prognose bzw. die Korrektur des anderen.</para>
+    /// </summary>
+    internal static async Task PatchViewsAsync(AppDbContext db, Func<string, string?> patch, CancellationToken ct)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            foreach (var view in await db.LeagueViews.ToListAsync(ct))
+                if (patch(view.Json) is { } json) view.Json = json;
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < ViewWriteAttempts)
+            {
+                DetachViews(db);
+            }
+        }
+    }
+
+    /// <summary>Geladene Ansichten vergessen, damit der nächste Versuch den Stand aus der Datenbank liest (ein noch
+    /// verfolgter Eintrag käme sonst mit seinen alten Werten zurück).</summary>
+    private static void DetachViews(AppDbContext db)
+    {
+        foreach (var e in db.ChangeTracker.Entries<LeagueView>().ToList()) e.State = EntityState.Detached;
     }
 
     public async Task<JsonObject> IndexAsync(CancellationToken ct)

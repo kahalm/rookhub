@@ -182,7 +182,7 @@ public sealed class LeagueProfileStore
     /// <summary>
     /// Die Partienzahl in den fertig gerechneten Liga-Ansichten nachziehen (Meldeliste, Feld <c>g</c>), ohne die Ligen
     /// neu zu rechnen — das bräuchte die ganze Historie im Speicher und gehört zum Knopf „Daten aktualisieren", nicht zu
-    /// jeder hochgeladenen Vereinspartie. Speichert selbst.
+    /// jeder hochgeladenen Vereinspartie. Speichert selbst, mit Konkurrenzschutz (<see cref="LeagueService.PatchViewsAsync"/>).
     /// </summary>
     public async Task PatchViewCountsAsync(IReadOnlyCollection<string> fides, CancellationToken ct)
     {
@@ -190,10 +190,10 @@ public sealed class LeagueProfileStore
         var ids = fides.ToList();
         var counts = await _db.LeaguePlayerProfiles.AsNoTracking().Where(p => ids.Contains(p.FideId))
             .Select(p => new { p.FideId, p.GameCount }).ToDictionaryAsync(p => p.FideId, p => p.GameCount, ct);
-        foreach (var view in await _db.LeagueViews.ToListAsync(ct))
+        await LeagueService.PatchViewsAsync(_db, json =>
         {
-            var root = System.Text.Json.Nodes.JsonNode.Parse(view.Json) as System.Text.Json.Nodes.JsonObject;
-            if (root?["fixtures"] is not System.Text.Json.Nodes.JsonObject teams) continue;
+            var root = System.Text.Json.Nodes.JsonNode.Parse(json) as System.Text.Json.Nodes.JsonObject;
+            if (root?["fixtures"] is not System.Text.Json.Nodes.JsonObject teams) return null;
             var changed = false;
             foreach (var (_, rounds) in teams)
                 foreach (var (_, fx) in rounds?.AsObject() ?? new System.Text.Json.Nodes.JsonObject())
@@ -206,9 +206,8 @@ public sealed class LeagueProfileStore
                         r["g"] = g;
                         changed = true;
                     }
-            if (changed) view.Json = root.ToJsonString();
-        }
-        await _db.SaveChangesAsync(ct);
+            return changed ? root.ToJsonString() : null;
+        }, ct);
     }
 
     /// <summary>
