@@ -889,6 +889,8 @@ try
 
     var app = builder.Build();
 
+    // Die ROHE X-Forwarded-For-Kette fürs Log-Feld ForwardedFor merken, bevor UseForwardedHeaders sie verbraucht.
+    app.UseForwardedChainCapture();
     // Muss VOR UseRateLimiter + dem IP-Logging laufen, damit RemoteIpAddress die echte Client-IP ist.
     app.UseForwardedHeaders();
 
@@ -971,19 +973,15 @@ try
         if (!string.IsNullOrEmpty(ip))
             scopes.Add(LogContext.PushProperty("IpAddress", ip));
         // IpAddress oben ist die VERTRAUENSWUERDIGE, aufgeloeste Client-IP (Basis fuer
-        // Rate-Limiter). Zusaetzlich die ROHE Weiterleitungs-Kette mitschreiben, damit alle
-        // Hops sichtbar sind — inkl. einer evtl. oeffentlichen IP, die nicht als kanonische
-        // Client-IP gewaehlt wurde. UseForwardedHeaders verschiebt das Original-XFF nach
-        // X-Original-For (X-Forwarded-For enthaelt danach nur noch Unverbrauchtes), daher
-        // bevorzugt X-Original-For lesen, sonst Fallback auf X-Forwarded-For.
-        var fwd = ctx.Request.Headers["X-Original-For"].ToString();
-        if (string.IsNullOrEmpty(fwd))
-            fwd = ctx.Request.Headers["X-Forwarded-For"].ToString();
+        // Rate-Limiter). Zusaetzlich die ROHE Weiterleitungs-Kette, wie sie ankam — alle Hops
+        // inkl. vom Client vorangestellter Eintraege, die nicht als Client-IP gewaehlt wurden.
+        // Gemerkt VOR UseForwardedHeaders (ForwardedChainCapture, auf 256 Zeichen gekappt):
+        // X-Original-For traegt nur den Socket-Peer (frontend-nginx mit Port), nicht die Kette.
+        // X-Real-IP wird nicht mehr geloggt — frontend-nginx ueberschreibt es mit $remote_addr,
+        // dort stand also immer das Docker-Gateway (Codereview A10-008).
+        var fwd = ForwardedChainCapture.Get(ctx);
         if (!string.IsNullOrEmpty(fwd))
             scopes.Add(LogContext.PushProperty("ForwardedFor", fwd));
-        var realIp = ctx.Request.Headers["X-Real-IP"].ToString();
-        if (!string.IsNullOrEmpty(realIp))
-            scopes.Add(LogContext.PushProperty("XRealIp", realIp));
         if (ctx.User?.Identity?.IsAuthenticated == true)
         {
             var userId = ctx.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

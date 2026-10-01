@@ -1,6 +1,6 @@
 # Log-Retention in Elasticsearch (DSGVO)
 
-Die Log-Data-Streams enthalten personenbezogene Daten: `labels.XRealIp`,
+Die Log-Data-Streams enthalten personenbezogene Daten: `labels.IpAddress`, `labels.ForwardedFor` (ältere Einträge auch `labels.XRealIp`),
 `user.name`, `metadata.UserId`, User-Agent/Gerätetyp. Ohne Löschfrist wachsen
 sie unbegrenzt — sowohl ein Speicher- als auch ein Datenschutzproblem
 (Speicherbegrenzung, Art. 5 Abs. 1 lit. e DSGVO).

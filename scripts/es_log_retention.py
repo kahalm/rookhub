@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RookHub — Log-Retention in Elasticsearch (ILM-Policy + Template-Verknuepfung).
 
-Die Log-Data-Streams enthalten personenbezogene Daten (labels.XRealIp, user.name,
+Die Log-Data-Streams enthalten personenbezogene Daten (labels.IpAddress, labels.ForwardedFor, user.name,
 metadata.UserId, User-Agent). Ohne Loeschfrist wachsen sie unbegrenzt — DSGVO-
 relevant. Dieses Skript legt eine ILM-Policy an und haengt sie an die vom
 Serilog/ECS-Sink gebootstrappten Data-Streams UND deren Index-Templates.
