@@ -348,11 +348,20 @@ Alles, was UCI spricht, funktioniert — der Provider startet es einfach als Unt
 Es geht auch direkt, wenn Python 3 und eine Engine vorhanden sind:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install aiohttp
+python3 -m venv .venv && .venv/bin/pip install "aiohttp==3.14.3"
 curl -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
+echo "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1  example-provider.py" | sha256sum -c -
+curl -O https://raw.githubusercontent.com/kahalm/rookhub/master/engine-provider/patch_force_close.py
+.venv/bin/python patch_force_close.py example-provider.py
 LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
   --engine /usr/games/stockfish --name "RookHub Heim-Engine" --max-threads 6
 ```
+
+Das sind dieselben drei Sicherungen wie im Image: die aiohttp-Fassung aus dem Dockerfile, die
+Prüfsumme des gepinnten Skripts (auf macOS `shasum -a 256 -c -` statt `sha256sum -c -`; stimmt sie
+nicht, das Skript NICHT starten — es bekäme den Token zu sehen) und die frische Verbindung je Upload
+(`patch_force_close.py`, Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen
+nach 15 s mit 503). `patch_force_close.py` liegt im geklonten Repo schon in diesem Ordner.
 
 Die virtuelle Umgebung ist kein Zierrat: aktuelle Linux-Distributionen (Debian 12+, Ubuntu 23.04+)
 und Homebrew lehnen ein direktes `pip install` in die System-Python ab
@@ -372,7 +381,7 @@ gebraucht. Auf einem Einzelrechner ist der direkte Weg der einfachere.
 „Add python.exe to PATH" ankreuzen. Dann in der PowerShell:
 
 ```powershell
-pip install aiohttp
+pip install "aiohttp==3.14.3"
 ```
 
 (Das `externally-managed-environment` aus dem Abschnitt oben betrifft nur Linux/macOS.)
@@ -390,12 +399,20 @@ Das NNUE-Netz steckt in der `.exe`, es wird also nur diese eine Datei gebraucht.
 **Nach `C:\stockfish\` entpacken — bewusst ein Pfad OHNE Leerzeichen**: der Provider startet die
 Engine über die Kommandozeile, ein Pfad wie `C:\Program Files\…` würde dort zerlegt.
 
-**3. Provider holen** (dieselbe gepinnte Fassung wie im Container):
+**3. Provider holen** (dieselbe gepinnte Fassung wie im Container — mit Prüfsumme und demselben Patch):
 
 ```powershell
 cd C:\stockfish
 curl.exe -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
+if ((Get-FileHash .\example-provider.py -Algorithm SHA256).Hash -ne "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1") { Remove-Item .\example-provider.py; throw "Pruefsumme stimmt nicht - Datei verworfen" }
+curl.exe -O https://raw.githubusercontent.com/kahalm/rookhub/master/engine-provider/patch_force_close.py
+python patch_force_close.py example-provider.py
 ```
+
+Die Prüfsumme schützt den Token (ein verändertes Skript bekäme ihn zu sehen), der Patch die
+Uploads: ohne ihn stirbt ein Teil davon im ersten Byte, und RookHub bekommt nach 15 s einen 503
+(Abschnitt „Ein Eingriff bleibt" oben). `run_provider.ps1` (unten) prüft beim Start, ob der Patch
+drin ist, und holt ihn mit dem daneben liegenden `patch_force_close.py` nach.
 
 **4. Starten:**
 

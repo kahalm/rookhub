@@ -267,6 +267,43 @@ public class DeploymentConfigTests
         Assert.DoesNotContain("heartbeat.test.py", text);
     }
 
+    /// <summary>
+    /// Die Wege OHNE Docker (README Linux/macOS + Windows, <c>windows/run_provider.ps1</c>) holen dasselbe Skript wie
+    /// das Image — und muessen dieselben drei Sicherungen tragen (Codereview A4-017): die aiohttp-Fassung, die
+    /// Pruefsumme des gepinnten Provider-Skripts und <c>patch_force_close.py</c> (frische Verbindung je Upload; ohne
+    /// sie endet ein Teil der Suchen nach 15 s mit 503). Die Werte kommen aus dem Dockerfile, damit ein Pin-Wechsel
+    /// nur dort beginnt und hier sofort auffaellt.
+    /// </summary>
+    [Fact]
+    public void EngineProvider_WegeOhneDocker_tragenDieselbenSicherungenWieDasImage()
+    {
+        var dockerfile = ReadRepoFile("engine-provider/Dockerfile");
+        var sha = Regex.Match(dockerfile, @"ARG PROVIDER_SHA=(\S+)").Groups[1].Value;
+        var sum = Regex.Match(dockerfile, @"ARG PROVIDER_SHA256=(\S+)").Groups[1].Value;
+        var aiohttp = Regex.Match(dockerfile, @"pip install --no-cache-dir ""(aiohttp==[^""]+)""").Groups[1].Value;
+        Assert.Matches("^[0-9a-f]{40}$", sha);
+        Assert.Matches("^[0-9a-f]{64}$", sum);
+        Assert.StartsWith("aiohttp==", aiohttp);
+
+        var readme = ReadRepoFile("engine-provider/README.md");
+        // Jeder Abruf des Provider-Skripts nennt den Pin des Images — kein zweiter, abweichender Commit.
+        var pins = Regex.Matches(readme, @"lichess-org/external-engine/([0-9a-f]{40})/example-provider\.py");
+        Assert.Equal(2, pins.Count);   // Linux/macOS und Windows
+        Assert.All(pins, m => Assert.Equal(sha, m.Groups[1].Value));
+        // … gefolgt von der Pruefsumme und dem Patch, je Weg einmal.
+        Assert.Equal(2, Regex.Matches(readme, Regex.Escape(sum), RegexOptions.IgnoreCase).Count);
+        Assert.Equal(2, Regex.Matches(readme, @"patch_force_close\.py example-provider\.py").Count);
+        // Jedes pip install in einem Befehl pinnt aiohttp wie das Image (die Erwaehnung im Fliesstext steht in Backticks).
+        var installs = Regex.Matches(readme, @"pip install(?!`)[^\r\n]*");
+        Assert.Equal(2, installs.Count);
+        Assert.All(installs, m => Assert.Contains($"\"{aiohttp}\"", m.Value));
+
+        // Der Auto-Restart-Wrapper (vom README fuer den Dauerbetrieb empfohlen) prueft und holt den Patch nach.
+        var wrapper = ReadRepoFile("engine-provider/windows/run_provider.ps1");
+        Assert.Contains("patch_force_close.py", wrapper);
+        Assert.Contains("force_close=True", wrapper);
+    }
+
     [Fact]
     public void AuditWorkflow_ScansAllThreeEcosystems()
     {

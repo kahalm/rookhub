@@ -56,6 +56,21 @@ if ($rookhubUrl) {
     $argList += @("--lichess", $rookhubUrl.TrimEnd("/"), "--broker", $rookhubUrl.TrimEnd("/"))
 }
 
+# Frische Verbindung je Upload - derselbe Eingriff wie im Docker-Image (README, "Ein Eingriff bleibt"):
+# ungepatcht stirbt ein Teil der Uploads im ersten Byte, und RookHub bekommt nach 15 s einen 503.
+# patch_force_close.py liegt nach README-Schritt 3 neben dem Provider-Skript; der Aufruf ist idempotent
+# und bricht ab (ohne etwas zu aendern), wenn die Textstelle im Provider nicht passt.
+$patch = Join-Path (Split-Path -Parent $script) "patch_force_close.py"
+if (-not (Select-String -Path $script -SimpleMatch "force_close=True" -Quiet -ErrorAction SilentlyContinue)) {
+    if (Test-Path $patch) {
+        $patchOut = & $pythonExe $patch $script 2>&1 | Out-String
+        "$(Get-Date -Format o) [wrapper] patch_force_close: $($patchOut.Trim())" | Out-File -FilePath $wrapperLog -Append -Encoding utf8
+    }
+    if (-not (Select-String -Path $script -SimpleMatch "force_close=True" -Quiet -ErrorAction SilentlyContinue)) {
+        "$(Get-Date -Format o) [wrapper] WARNUNG: $script ist NICHT gepatcht (force_close) - einzelne Suchen enden mit 503, siehe README Schritt 3" | Out-File -FilePath $wrapperLog -Append -Encoding utf8
+    }
+}
+
 while ($true) {
     "$(Get-Date -Format o) [wrapper] starte example-provider.py" | Out-File -FilePath $wrapperLog -Append -Encoding utf8
 
