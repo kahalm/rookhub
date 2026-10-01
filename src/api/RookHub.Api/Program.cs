@@ -737,6 +737,7 @@ try
     // S-6: Global rate limiting for all endpoints
     // Faktor auf ALLE Deckel unten; setzt nur der E2E-Stack (siehe RateLimitScale).
     var permitScale = RookHub.Api.Services.RateLimitScale.FromConfig(builder.Configuration);
+    builder.Services.AddSingleton<RateLimitRejectionHandler>();
     builder.Services.AddRateLimiter(options =>
     {
         // 100/min je IP — außer für die Kinderseiten-Lesezugriffe („kids-read"), deren eigene Policy die Obergrenze je
@@ -854,6 +855,9 @@ try
         // Codereview N9-003). Die Glocke der Freundschaftsanfrage entprellt zusätzlich FriendService.
         options.AddPolicy("user-social", ctx => RookHub.Api.Services.RateLimitPartitions.UserSocial(ctx, permitScale));
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        // Retry-After + Rumpf, und eine gedrosselte Warnung je (IP, Policy): vorher hinterließ eine Absage keine Spur —
+        // UseRateLimiter steht vor dem Request-Log, und die Middleware meldet sie nur auf Debug (Codereview A10-010).
+        options.OnRejected = RateLimitRejectionHandler.OnRejectedAsync;
     });
 
     builder.Services.AddMemoryCache();
