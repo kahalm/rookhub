@@ -53,4 +53,24 @@ public sealed class PermissionResolver(AppDbContext db, IMemoryCache cache)
             : await db.RolePermissions.Where(rp => distinct.Contains(rp.RoleId)).Select(rp => rp.Permission).Distinct().ToListAsync(ct);
         return new Effective(isAdmin, perms.ToHashSet());
     }
+
+    /// <summary>Alle (nicht gelöschten) Konten, die <paramref name="permission"/> gerade haben: Admin-Flag, eigene Rolle
+    /// oder Rolle einer ihrer Gruppen — die Empfänger einer Glocke „an die Admins" (Codereview F5-005). Vorher stand dort
+    /// überall <c>Where(u =&gt; u.IsAdmin)</c>: eine Rolle mit z. B. <c>messages.admin</c> öffnete die Endpunkte, die Glocke
+    /// klingelte aber nur bei Admins.</summary>
+    public static async Task<List<int>> UserIdsWithPermissionAsync(AppDbContext db, string permission, CancellationToken ct = default)
+    {
+        var roleIds = await db.RolePermissions.Where(rp => rp.Permission == permission).Select(rp => rp.RoleId).Distinct().ToListAsync(ct);
+        var holders = new HashSet<int>();
+        if (roleIds.Count > 0)
+        {
+            holders.UnionWith(await db.UserRoles.Where(ur => roleIds.Contains(ur.RoleId)).Select(ur => ur.UserId).ToListAsync(ct));
+            var groupIds = await db.GroupRoles.Where(gr => roleIds.Contains(gr.RoleId)).Select(gr => gr.GroupId).Distinct().ToListAsync(ct);
+            if (groupIds.Count > 0)
+                holders.UnionWith(await db.UserGroups.Where(ug => groupIds.Contains(ug.GroupId)).Select(ug => ug.UserId).ToListAsync(ct));
+        }
+        var candidates = holders.ToList();
+        return await db.AppUsers.Where(u => u.DeletedAt == null && (u.IsAdmin || candidates.Contains(u.Id)))
+            .Select(u => u.Id).ToListAsync(ct);
+    }
 }

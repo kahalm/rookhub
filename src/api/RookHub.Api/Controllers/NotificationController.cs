@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -14,11 +15,14 @@ public class NotificationController : BaseApiController
 {
     private readonly NotificationService _notifications;
     private readonly PushNotificationService _push;
+    private readonly PermissionResolver? _permissions;
 
-    public NotificationController(NotificationService notifications, PushNotificationService push)
+    public NotificationController(NotificationService notifications, PushNotificationService push,
+        PermissionResolver? permissions = null)
     {
         _notifications = notifications;
         _push = push;
+        _permissions = permissions;
     }
 
     /// <summary>Letzte Benachrichtigungen (neueste zuerst). <paramref name="unseenOnly"/>=true liefert
@@ -80,12 +84,14 @@ public class NotificationController : BaseApiController
         return NoContent();
     }
 
-    /// <summary>Setzt die aktivierten Push-Bereiche (leer = Push aus). „admin" nur für Admins.
-    /// Antwortet mit den effektiv gespeicherten Keys. 400 bei ungültigem Bereich.</summary>
+    /// <summary>Setzt die aktivierten Push-Bereiche (leer = Push aus). „admin" nur für die Nutzerverwaltung
+    /// (<c>users.manage</c>, Admins immer) — der Bereich trägt nur „neue Registrierung", und diese Glocke geht seit F5-005
+    /// an alle mit dem Recht. Antwortet mit den effektiv gespeicherten Keys. 400 bei ungültigem Bereich.</summary>
     [HttpPut("push/preferences")]
     public async Task<IActionResult> PushPreferences([FromBody] PushPreferencesInputDto dto)
     {
-        try { return Ok(new { categories = await _push.SetEnabledCategoriesAsync(GetUserId(), dto.Categories ?? new List<string>(), IsAdmin) }); }
+        var adminArea = await HasPermissionAsync(_permissions, Permissions.UsersManage);
+        try { return Ok(new { categories = await _push.SetEnabledCategoriesAsync(GetUserId(), dto.Categories ?? new List<string>(), adminArea) }); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 }

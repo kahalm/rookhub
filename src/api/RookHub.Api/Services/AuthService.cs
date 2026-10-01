@@ -175,7 +175,8 @@ public class AuthService
         {
             try
             {
-                var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+                // An alle mit der Nutzerverwaltung (users.manage — Admins immer), nicht nur ans Admin-Flag (F5-005).
+                var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.UsersManage);
                 if (adminIds.Count > 0)
                     await _notifications.CreateManyAsync(adminIds, NotificationType.NewUserRegistered,
                         new Dictionary<string, string> { ["username"] = user.Username }, "/admin");

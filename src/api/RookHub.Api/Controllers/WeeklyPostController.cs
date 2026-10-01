@@ -29,25 +29,29 @@ public class WeeklyPostController : BaseApiController
     /// <summary>Für <c>SchachBot:StatsSecret</c> (Bot-Signatur von <c>{id}/results</c>, <see cref="BotRequestSignature"/>).</summary>
     private readonly IConfiguration? _config;
     private readonly ILogger<WeeklyPostController>? _logger;
+    private readonly PermissionResolver? _permissions;
 
     // config/logger optional, damit bestehende Test-Konstruktionen ohne Änderung kompilieren.
     public WeeklyPostController(AppDbContext db, WeeklyPostService progress,
-        IConfiguration? config = null, ILogger<WeeklyPostController>? logger = null)
+        IConfiguration? config = null, ILogger<WeeklyPostController>? logger = null, PermissionResolver? permissions = null)
     {
         _db = db;
         _progress = progress;
         _config = config;
         _logger = logger;
+        _permissions = permissions;
     }
 
-    private bool IsAdmin() => User?.IsInRole("Admin") ?? false;
+    /// <summary>Noch nicht fällige Posts sieht, wer sie anlegen darf (<c>weeklyposts.manage</c>, Admins immer) — vorher
+    /// das Admin-Flag: eine Rolle mit dem Recht legte einen Post an und sah ihn danach nicht in der Liste (F5-005).</summary>
+    private Task<bool> CanSeeUnpublishedAsync() => HasPermissionAsync(_permissions, Permissions.WeeklyPostsManage);
     private static bool IsPublished(WeeklyPost w) => w.ScheduledAt <= DateTime.UtcNow;
 
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var admin = IsAdmin();
+        var admin = await CanSeeUnpublishedAsync();
         var posts = await _db.WeeklyPosts
             .Where(w => admin || w.ScheduledAt <= DateTime.UtcNow)
             .OrderByDescending(w => w.ScheduledAt)
@@ -83,7 +87,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<IActionResult> GetById(int id)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null || (!IsAdmin() && !IsPublished(w)))
+        if (w == null || (!IsPublished(w) && !await CanSeeUnpublishedAsync()))
             return NotFound(new { message = "Weekly post not found." });
         return Ok(new WeeklyPostDetailDto
         {
@@ -110,7 +114,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<IActionResult> GetPuzzles(int id)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null || (!IsAdmin() && !IsPublished(w)))
+        if (w == null || (!IsPublished(w) && !await CanSeeUnpublishedAsync()))
             return NotFound(new { message = "Weekly post not found." });
 
         var puzzles = await _progress.GetPlayPuzzlesAsync(w);
@@ -123,7 +127,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<ActionResult<WeeklyPostProgressDto>> RecordAttempt(int id, [FromBody] RecordWeeklyAttemptDto dto)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null || (!IsAdmin() && !IsPublished(w)))
+        if (w == null || (!IsPublished(w) && !await CanSeeUnpublishedAsync()))
             return NotFound(new { message = "Weekly post not found." });
         try
         {
@@ -146,7 +150,7 @@ public class WeeklyPostController : BaseApiController
             HttpContext, _config?[BotRequestSignature.SecretConfigKey], _logger);
         if (access == DiscordFieldAccess.InvalidSignature) return Unauthorized();
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null || (!IsAdmin() && !IsPublished(w)))
+        if (w == null || (!IsPublished(w) && !await CanSeeUnpublishedAsync()))
             return NotFound(new { message = "Weekly post not found." });
         try
         {
@@ -184,7 +188,7 @@ public class WeeklyPostController : BaseApiController
     public async Task<ActionResult<WeeklyPostProgressDto>> GetProgress(int id)
     {
         var w = await _db.WeeklyPosts.FindAsync(id);
-        if (w == null || (!IsAdmin() && !IsPublished(w)))
+        if (w == null || (!IsPublished(w) && !await CanSeeUnpublishedAsync()))
             return NotFound(new { message = "Weekly post not found." });
         try
         {

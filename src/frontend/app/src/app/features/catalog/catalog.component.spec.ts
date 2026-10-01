@@ -29,7 +29,8 @@ describe('CatalogComponent', () => {
 
   // W3 F5-003: setGrants ERSETZT alle Freigaben — nach einem Ladefehler darf Speichern nichts entziehen.
   describe('Freigaben', () => {
-    function setup(getGrants: any) {
+    // Codereview F5-005: Besitzer ist, wer catalog.manage hat — hier bewusst KEIN Admin.
+    function setup(getGrants: any, has: (p: string) => boolean = p => p === 'catalog.manage') {
       const svc = {
         list: jasmine.createSpy('list').and.returnValue(of([])),
         getGrants,
@@ -44,7 +45,7 @@ describe('CatalogComponent', () => {
           provideRouter([]),
           provideTranslateService({ fallbackLang: 'en' }),
           { provide: CatalogService, useValue: svc },
-          { provide: AuthService, useValue: { isAdmin: true } },
+          { provide: AuthService, useValue: { isAdmin: false, has } },
           { provide: AdminService, useValue: {
             getUsers: () => of({ items: [], totalCount: 0 }), getGroups: () => of([]) } },
           { provide: SnackbarService, useValue: snackbar },
@@ -73,6 +74,14 @@ describe('CatalogComponent', () => {
       expect(btn.disabled).toBeFalse();
       c.saveGrants();
       expect(svc.setGrants).toHaveBeenCalledWith({ userIds: [3], groupIds: [1] });
+    });
+
+    it('ohne catalog.manage: keine Besitzer-Karte, keine Besitzer-Abfragen', () => {
+      const getGrants = jasmine.createSpy('getGrants').and.returnValue(of({ userIds: [], groupIds: [] }));
+      const { fixture, svc } = setup(getGrants, () => false);
+      expect(getGrants).not.toHaveBeenCalled();
+      expect(svc.getRequests).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.grant-selects')).toBeNull();
     });
   });
 });

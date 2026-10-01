@@ -87,3 +87,13 @@ describe('WeeklyListComponent Termin als UTC', () => {
     expect(component.uploadTime).toBe('19:00');
   });
 });
+
+// Codereview F5-005: Anlegen/Bearbeiten/Löschen hängen am Recht weeklyposts.manage (wie der Server), nicht am Admin-Flag.
+describe('WeeklyListComponent canManage', () => {
+  it('follows weeklyposts.manage', () => {
+    const make = (has: (p: string) => boolean) =>
+      new WeeklyListComponent({ isAdmin: false, has } as any, {} as any, {} as any, {} as any, {} as any);
+    expect(make(p => p === 'weeklyposts.manage').canManage).toBeTrue();
+    expect(make(() => false).canManage).toBeFalse();
+  });
+});

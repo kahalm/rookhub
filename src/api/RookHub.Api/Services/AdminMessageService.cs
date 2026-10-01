@@ -215,9 +215,9 @@ public class AdminMessageService
         _db.AdminMessages.Add(msg);
         await _db.SaveChangesAsync();
 
-        // Glocke bei allen Admins (Link in den Admin-Bereich).
+        // Glocke bei allen, die die Nachrichten bearbeiten dürfen (messages.admin — Admins immer), Link in den Admin-Bereich.
         var senderName = (await _db.AppUsers.FindAsync(userId))?.Username ?? "user";
-        var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+        var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.MessagesAdmin);
         // Deep-Link: öffnet im Admin-Bereich direkt den Nachrichten-Tab + diese Konversation.
         var link = $"/admin?tab=messages&thread={userId}";
         // Entprellt wird nur eine SERIE: Liegt im Thread schon eine ANDERE ungelesene User-Nachricht, bekommt ein Admin,

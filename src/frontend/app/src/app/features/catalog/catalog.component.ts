@@ -158,7 +158,8 @@ export class CatalogComponent implements OnInit {
   busyItem: string | null = null;
 
   ngOnInit(): void {
-    this.isAdmin = this.auth.isAdmin;
+    // Besitzer ist, wer catalog.manage hat (Admins immer) — wie der Server seit F5-005.
+    this.isAdmin = this.auth.has('catalog.manage');
     this.loadList();
     if (this.isAdmin) {
       this.svc.getGrants().subscribe({

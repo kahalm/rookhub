@@ -35,7 +35,7 @@ interface WeeklyPostRow extends WeeklyPost {
       <h1>{{ 'weekly.title' | translate }}</h1>
       <p class="intro">{{ 'weekly.intro' | translate }}</p>
 
-      @if (auth.isAdmin) {
+      @if (canManage) {
         <mat-card class="upload-card">
           <mat-card-header><mat-card-title>{{ 'weekly.upload.title' | translate }}</mat-card-title></mat-card-header>
           <mat-card-content>
@@ -87,7 +87,7 @@ interface WeeklyPostRow extends WeeklyPost {
             <mat-card class="wp-card">
               <div class="wp-row">
                 <div class="wp-meta">
-                  @if (auth.isAdmin) {
+                  @if (canManage) {
                     <input class="inline-title" [(ngModel)]="r.title" (change)="savePost(r)"
                            [placeholder]="'weekly.columns.title' | translate">
                     <input class="inline-desc" [(ngModel)]="r.description" (change)="savePost(r)" maxlength="500"
@@ -123,7 +123,7 @@ interface WeeklyPostRow extends WeeklyPost {
                           [attr.title]="'weekly.leaderboard.toggle' | translate" [attr.aria-expanded]="expandedId === r.id">
                     <mat-icon>{{ expandedId === r.id ? 'expand_less' : 'leaderboard' }}</mat-icon>
                   </button>
-                  @if (auth.isAdmin) {
+                  @if (canManage) {
                     <button mat-icon-button color="warn" (click)="remove(r)" [attr.title]="'common.delete' | translate">
                       <mat-icon>delete</mat-icon>
                     </button>
@@ -144,7 +144,7 @@ interface WeeklyPostRow extends WeeklyPost {
                             <th>{{ 'weekly.leaderboard.player' | translate }}</th>
                             <th class="lb-acc">{{ 'weekly.leaderboard.accuracy' | translate }}</th>
                             <th class="lb-time">{{ 'weekly.leaderboard.time' | translate }}</th>
-                            @if (auth.isAdmin) { <th class="lb-info"></th> }
+                            @if (canManage) { <th class="lb-info"></th> }
                           </tr>
                         </thead>
                         <tbody>
@@ -154,7 +154,7 @@ interface WeeklyPostRow extends WeeklyPost {
                               <td class="lb-player">{{ p.discordUsername || p.name }}@if (p.completed) {<mat-icon class="lb-done" [attr.title]="'weekly.leaderboard.completed' | translate">emoji_events</mat-icon>}</td>
                               <td class="lb-acc">{{ p.solvedCount }}/{{ boardTotal[r.id] }} · {{ accuracyPct(p, boardTotal[r.id]) }}%</td>
                               <td class="lb-time">⏱ {{ fmtTime(p.totalSeconds) }}</td>
-                              @if (auth.isAdmin) {
+                              @if (canManage) {
                                 <td class="lb-info">
                                   <button mat-icon-button (click)="openBreakdown(r.id, p)"
                                           [attr.title]="'weekly.breakdown.open' | translate">
@@ -269,6 +269,12 @@ export class WeeklyListComponent implements OnInit {
     private translate: TranslateService,
     private dialog: MatDialog
   ) {}
+
+  /** Anlegen, Bearbeiten, Löschen und Spieler-Aufschlüsselung: wer `weeklyposts.manage` hat (Admins immer) — wie der
+   *  Server; vorher hing es am Admin-Flag, eine Rolle mit dem Recht sah die Knöpfe nicht (Codereview F5-005). */
+  get canManage(): boolean {
+    return this.auth.has('weeklyposts.manage');
+  }
 
   /** Admin: Detailaufschlüsselung eines Spielers öffnen (eine Zeile je Puzzle). */
   openBreakdown(weeklyId: number, p: WeeklyPlayerResult): void {

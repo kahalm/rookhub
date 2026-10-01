@@ -33,4 +33,19 @@ public abstract class BaseApiController : ControllerBase
     /// <summary>Ob der aktuelle Nutzer die Admin-Rolle trägt. Zentral hier, damit alle Controller
     /// dieselbe Prüfung nutzen (statt sie je Controller zu duplizieren).</summary>
     protected bool IsAdmin => User.IsInRole("Admin");
+
+    /// <summary>Dieselbe Prüfung wie <see cref="HasPermissionAttribute"/>, aber im Rumpf einer Action — für Stellen, an
+    /// denen das Recht nur einen TEIL der Antwort freischaltet (unveröffentlichte Wochenposts, Push-Bereich „admin") oder
+    /// die einen Forbid-Zweig selbst führen. Admin-Rolle erfüllt alles; sonst der Live-Stand des
+    /// <see cref="Services.PermissionResolver"/>, ohne ihn (Tests) der <c>perm</c>-Claim (F5-005: vorher hing das am
+    /// Admin-Flag, eine Rolle mit dem Recht wirkte dort nicht).</summary>
+    protected async Task<bool> HasPermissionAsync(Services.PermissionResolver? resolver, string permission)
+    {
+        if (User?.IsInRole("Admin") == true) return true;
+        if (User?.Identity?.IsAuthenticated != true) return false;
+        if (resolver != null)
+            return int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
+                && (await resolver.GetAsync(userId)).Has(permission);
+        return User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, permission);
+    }
 }

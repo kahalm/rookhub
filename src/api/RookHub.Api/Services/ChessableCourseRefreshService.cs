@@ -54,7 +54,8 @@ public class ChessableCourseRefreshService
     public async Task<RefreshSummary> RefreshAllAsync(CancellationToken ct = default)
     {
         var creds = await _db.ChessableCredentials.ToListAsync(ct);
-        var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync(ct);
+        // Glocke „neuer Kurs" an alle mit chessable.admin (Admins immer), nicht nur ans Admin-Flag (F5-005).
+        var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.ChessableAdmin, ct);
 
         var summary = new RefreshSummary { Total = creds.Count };
         foreach (var cred in creds)

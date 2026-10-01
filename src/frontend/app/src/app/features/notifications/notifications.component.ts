@@ -168,8 +168,8 @@ export class NotificationsComponent implements OnInit {
     private snackbar: SnackbarService,
   ) {
     this.hidden = readHiddenCategories();
-    // „admin"-Bereich nur für Admins anbieten.
-    this.pushCategories = NOTIFICATION_CATEGORIES.filter(c => c !== 'admin' || this.auth.isAdmin);
+    // „admin"-Bereich (neue Registrierungen) nur für die Nutzerverwaltung anbieten — wie der Server seit F5-005.
+    this.pushCategories = NOTIFICATION_CATEGORIES.filter(c => c !== 'admin' || this.auth.has('users.manage'));
   }
 
   ngOnInit(): void {

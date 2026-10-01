@@ -24,7 +24,7 @@ describe('NotificationsComponent', () => {
       of({ items: [notif(1), notif(2)], total: 3 }),
       of({ items: [notif(3)], total: 3 }),
     );
-    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
 
     c.loadMore();
     expect(c.items.map(n => n.id)).toEqual([1, 2]);
@@ -39,7 +39,7 @@ describe('NotificationsComponent', () => {
   it('open marks an unseen notification as seen and navigates when it has a link', () => {
     const svc = makeService();
     const router: any = { navigateByUrl: jasmine.createSpy('nav') };
-    const c = new NotificationsComponent(svc, translate, router, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+    const c = new NotificationsComponent(svc, translate, router, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
 
     const n = notif(7, false, '/friends');
     c.open(n);
@@ -52,7 +52,7 @@ describe('NotificationsComponent', () => {
   it('open neither re-marks an already-seen notification nor navigates without a link', () => {
     const svc = makeService();
     const router: any = { navigateByUrl: jasmine.createSpy('nav') };
-    const c = new NotificationsComponent(svc, translate, router, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+    const c = new NotificationsComponent(svc, translate, router, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
 
     c.open(notif(8, true, null));
 
@@ -62,7 +62,7 @@ describe('NotificationsComponent', () => {
 
   it('loadMore clears the loading flag on error', () => {
     const svc = makeService({ history: jasmine.createSpy('history').and.returnValue(throwError(() => new Error('x'))) });
-    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
 
     c.loadMore();
 
@@ -77,7 +77,7 @@ describe('NotificationsComponent', () => {
     function withItems(items: AppNotification[]): NotificationsComponent {
       const svc = makeService();
       svc.history.and.returnValue(of({ items, total: items.length }));
-      const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+      const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
       c.loadMore();
       return c;
     }
@@ -129,8 +129,16 @@ describe('NotificationsComponent', () => {
       // Frischer Component-Instanz-Aufbau → liest Storage im Constructor
       const svc = makeService();
       svc.history.and.returnValue(of({ items: [], total: 0 }));
-      const c2 = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+      const c2 = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
       expect(c2.isHidden('friends')).toBeTrue();
     });
+  });
+
+  // Codereview F5-005: der Push-Bereich „admin" (neue Registrierungen) folgt dem Recht users.manage, nicht dem Admin-Flag.
+  it('offers the admin push area to users.manage holders, not by the admin flag', () => {
+    const make = (auth: any) => new NotificationsComponent(makeService(), translate, { navigateByUrl: jasmine.createSpy() } as any,
+      { supported: false, permissionDenied: false } as any, auth, {} as any);
+    expect(make({ isAdmin: false, has: (p: string) => p === 'users.manage' }).pushCategories).toContain('admin');
+    expect(make({ isAdmin: false, has: () => false }).pushCategories).not.toContain('admin');
   });
 });

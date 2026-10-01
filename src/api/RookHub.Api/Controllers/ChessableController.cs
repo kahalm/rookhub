@@ -167,13 +167,14 @@ public class ChessableController : BaseApiController, IActionFilter
         // ungeprüften Bearer-JWT zur Verfügung (fälschbar → fremde Anon-Daten claimbar). Er hängt am
         // „Testen"-Endpoint, der den Bearer aktiv gegen Chessable prüft und die uid BEWIESEN zurückgibt.
 
-        // Erstmalig hinterlegter Bearer → Admins informieren (Glocke). Best-effort, blockiert das Speichern nicht.
+        // Erstmalig hinterlegter Bearer → alle mit chessable.admin informieren (Glocke; Admins immer). Best-effort,
+        // blockiert das Speichern nicht.
         if (isNewCredential)
         {
             try
             {
                 var username = await _db.AppUsers.Where(u => u.Id == userId).Select(u => u.Username).FirstOrDefaultAsync() ?? "?";
-                var adminIds = await _db.AppUsers.Where(u => u.IsAdmin).Select(u => u.Id).ToListAsync();
+                var adminIds = await PermissionResolver.UserIdsWithPermissionAsync(_db, Permissions.ChessableAdmin);
                 await _notifications.CreateManyAsync(adminIds, NotificationType.ChessableTokenAdded,
                     new Dictionary<string, string> { ["username"] = username }, "/admin");
             }
