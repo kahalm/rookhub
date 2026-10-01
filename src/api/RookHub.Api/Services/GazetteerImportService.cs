@@ -394,8 +394,7 @@ public class GazetteerImportService
         // die einzelne Anweisung oder der ganze Block erneut laufen soll. Ohne die Umklammerung
         // scheitert JEDER Import mit „does not support user-initiated transactions": am
         // 2026-09-09 kamen so alle sieben Laender des PLZ-Imports mit 500 zurueck, und die
-        // Verortung blieb auf dem Ortsnamen sitzen. Dasselbe Muster wie in
-        // <c>AdminService.ClearPuzzlesAsync</c>.
+        // Verortung blieb auf dem Ortsnamen sitzen.
         //
         // Der Block ist wiederholbar: er loescht den ganzen Bereich und fuellt ihn aus
         // <paramref name="places"/> neu — er haengt also nicht davon ab, wie weit ein

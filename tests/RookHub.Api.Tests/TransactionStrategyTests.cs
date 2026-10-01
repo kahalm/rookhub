@@ -59,7 +59,7 @@ public class TransactionStrategyTests
         Assert.True(offenders.Count == 0,
             "Transaktion ohne Execution-Strategy — bei aktivem EnableRetryOnFailure wirft EF dort:\n"
             + string.Join('\n', offenders)
-            + "\n\nMuster (siehe AdminService.ClearPuzzlesAsync / GazetteerImportService.ReplaceAsync):\n"
+            + "\n\nMuster (siehe GazetteerImportService.ReplaceAsync):\n"
             + "  var strategy = _db.Database.CreateExecutionStrategy();\n"
             + "  await strategy.ExecuteAsync(async () => { await using var tx = ...; ...; await tx.CommitAsync(ct); });");
     }

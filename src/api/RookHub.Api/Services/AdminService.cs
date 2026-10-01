@@ -230,37 +230,4 @@ public class AdminService
     }
 
     public Task<int> GetPuzzleCountAsync() => _db.Puzzles.CountAsync();
-
-    public async Task ClearPuzzlesAsync()
-    {
-        // InMemory-Provider unterstützt keine Transaktionen → nur mit relationalem Provider umklammern.
-        if (!_db.Database.IsRelational())
-        {
-            // Relational raeumt der Fremdschluessel (Cascade) die Kinder-Leiter mit ab; InMemory nicht.
-            await _db.KidsPuzzles.ExecuteDeleteAsync();
-            await _db.PuzzleAttempts.ExecuteDeleteAsync();
-            await _db.Puzzles.ExecuteDeleteAsync();
-            return;
-        }
-
-        // EnableRetryOnFailure aktiviert eine Execution-Strategy, die user-initiierte
-        // Transaktionen nur innerhalb von ExecuteAsync erlaubt (sonst wird der Retry-Umfang
-        // mehrdeutig) — daher die komplette Transaktion in die Strategy einschließen.
-        var strategy = _db.Database.CreateExecutionStrategy();
-        await strategy.ExecuteAsync(async () =>
-        {
-            await using var tx = await _db.Database.BeginTransactionAsync();
-            try
-            {
-                await _db.PuzzleAttempts.ExecuteDeleteAsync();
-                await _db.Puzzles.ExecuteDeleteAsync();
-                await tx.CommitAsync();
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
-        });
-    }
 }

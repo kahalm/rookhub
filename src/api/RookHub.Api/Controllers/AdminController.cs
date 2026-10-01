@@ -175,14 +175,6 @@ public class AdminController : BaseApiController
     [HasPermission(Permissions.PuzzlesManage)]
     public async Task<IActionResult> GetPuzzleCount() => Ok(new { count = await _admin.GetPuzzleCountAsync() });
 
-    [HttpDelete("puzzles")]
-    [HasPermission(Permissions.PuzzlesManage)]
-    public async Task<IActionResult> ClearPuzzles()
-    {
-        await _admin.ClearPuzzlesAsync();
-        return NoContent();
-    }
-
     /// <summary>
     /// Stößt den einmaligen Backfill der normalisierten PuzzleTags-Tabelle an (Hintergrund-Job).
     /// Nötig EINMAL nach dem Deploy, damit der schnelle Themen-Filter („schwächste Themen") greift —

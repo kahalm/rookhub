@@ -18,6 +18,9 @@ public class RetiredEndpointsTests
         "GET /api/kids/progress",                   // KidHub gleicht nur per PUT ab (Antwort = gemeinsamer Stand)
         // N4-009: lieferte auch abgelaufene Links; LeagueHub holt einen vorhandenen Link über POST (gleicher Link, solange er gilt)
         "GET /api/league/share",
+        // A9-008: Komplettlöschung aller Puzzles ohne Aufrufer — scheiterte relational am Restrict-FK der
+        // RevengeNotifications und hätte FavoritePuzzles/PuzzleChallenges/WorksheetItems mit toten Ids zurückgelassen
+        "DELETE /api/admin/puzzles",
     ];
 
     [Fact]
