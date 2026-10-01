@@ -763,4 +763,51 @@ public class CiWorkflowTests
         Assert.Matches(@"BUILD_GIT_SHA=\$GIT_SHA\b", dockerfile);
         Assert.Matches(@"BUILD_GIT_REF=\$GIT_REF\b", dockerfile);
     }
+
+    private const string FrontendApp = "src/frontend/app";
+
+    /// <summary>
+    /// Der Frontend-Linter (Codereview F8-004) laeuft im Gate — und blockiert in PHASE 1 nichts. Vorher
+    /// gab es weder Linter noch Formatter; Default- neben OnPush-CD, Konstruktor-DI neben inject(),
+    /// @Input() neben input() wuchsen ungezaehlt weiter. Der Schritt zaehlt die Warnungen je Regel in
+    /// die Job-Summary; solange er per continue-on-error nicht blockiert, darf eslint.config.mjs keine
+    /// Regel auf 'error' stellen (sonst waere ein roter Lint-Schritt Alltag und niemand saehe hin).
+    /// Phase 2 (Ratsche) aendert diesen Test bewusst mit.
+    /// </summary>
+    [Fact]
+    public void FrontendLint_RunsInTheGate_AndOnlyWarns()
+    {
+        var job = TestJob("build-frontend");
+        var step = Step(job, Regex.Escape("name: ESLint (nur Warnungen, Zaehler in der Job-Summary)"));
+        Assert.Contains("working-directory: src/frontend/app", step);
+        Assert.Contains("continue-on-error: true", step);
+        Assert.Contains("npx eslint . --format json", step);
+        Assert.Contains("GITHUB_STEP_SUMMARY", step);
+        Assert.True(job.IndexOf("run: npm ci", StringComparison.Ordinal)
+                    < job.IndexOf("name: ESLint", StringComparison.Ordinal),
+            "der Lint-Schritt braucht node_modules — er muss NACH npm ci stehen");
+
+        var package = ReadRepoFile($"{FrontendApp}/package.json");
+        Assert.Contains("\"lint\": \"eslint .\"", package);
+        var lockfile = ReadRepoFile($"{FrontendApp}/package-lock.json");
+        foreach (var pkg in new[] { "eslint", "angular-eslint", "typescript-eslint" })
+        {
+            Assert.Matches($@"""devDependencies"":\s*\{{[^}}]*""{Regex.Escape(pkg)}"":", package);
+            Assert.Contains($"\"node_modules/{pkg}\": {{", lockfile);
+        }
+
+        var config = ReadRepoFile($"{FrontendApp}/eslint.config.mjs");
+        Assert.Contains("files: ['src*/**/*.ts']", config);
+        foreach (var rule in new[]
+                 {
+                     "@angular-eslint/prefer-on-push-component-change-detection",
+                     "@angular-eslint/prefer-inject",
+                     "@angular-eslint/prefer-signals",
+                     "@typescript-eslint/no-explicit-any",
+                     "'no-console'",
+                     "'no-empty'",
+                 })
+            Assert.Contains(rule, config);
+        Assert.DoesNotMatch(@"(?m)^\s*'[^']+':\s*\[?\s*(?:'error'|2\b)", config);
+    }
 }

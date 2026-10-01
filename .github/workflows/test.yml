@@ -224,6 +224,34 @@ jobs:
           cache-dependency-path: src/frontend/app/package-lock.json
       - run: npm ci
         working-directory: src/frontend/app
+      # Linter (Codereview F8-004), PHASE 1: eslint.config.mjs stellt jede Regel auf 'warn'. Der
+      # Schritt zaehlt die Warnungen je Regel in die Job-Summary und blockiert NICHTS — er wird nur
+      # rot, wenn ESLint selbst scheitert (Konfigurations- oder Parse-Fehler), und continue-on-error
+      # laesst das Gate auch dann weiterlaufen. Phase 2 = Ratsche (Zahl darf nur sinken).
+      - name: ESLint (nur Warnungen, Zaehler in der Job-Summary)
+        working-directory: src/frontend/app
+        continue-on-error: true
+        shell: bash
+        run: |
+          rc=0
+          npx eslint . --format json --output-file "$RUNNER_TEMP/eslint.json" || rc=$?
+          if [ -s "$RUNNER_TEMP/eslint.json" ]; then
+            node -e '
+              const files = require(process.argv[1]);
+              const perRule = {};
+              for (const f of files)
+                for (const m of f.messages) {
+                  const rule = m.ruleId ?? "(Parse-Fehler)";
+                  perRule[rule] = (perRule[rule] || 0) + 1;
+                }
+              const total = Object.values(perRule).reduce((a, b) => a + b, 0);
+              console.log(`## ESLint (Frontend, nur Warnungen)\n\n${total} Meldungen in ${files.length} Dateien\n`);
+              console.log("| Regel | Anzahl |\n|---|---:|");
+              for (const [rule, n] of Object.entries(perRule).sort((a, b) => b[1] - a[1]))
+                console.log(`| ${rule} | ${n} |`);
+            ' "$RUNNER_TEMP/eslint.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$rc"
       # karma.conf sucht ohne CHROME_BIN eine Puppeteer-Cache-Shell, die es auf dem
       # Runner nicht gibt. Leerer Wert ist unschaedlich (karma faellt auf sein eigenes
       # Chrome-Lookup zurueck).
