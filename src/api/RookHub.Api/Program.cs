@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RookHub.Api.Data;
+using RookHub.Api.Logging;
 using RookHub.Api.Middleware;
 using RookHub.Api.Services;
 using Serilog;
@@ -28,14 +29,8 @@ try
     builder.Host.UseSerilog((context, services, configuration) =>
     {
         configuration
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
-            // Erwartetes, harmloses Startup-Rauschen: DataProtection persistiert den Key-Ring
-            // bewusst unverschlüsselt in das gemountete /keys-Volume (privat, durable). Die zwei
-            // Hinweise ("no XML encryptor" / "may not be persisted") kämen bei JEDEM Neustart →
-            // hier auf Error angehoben, echte DataProtection-Fehler bleiben sichtbar.
-            .MinimumLevel.Override("Microsoft.AspNetCore.DataProtection", LogEventLevel.Error)
+            // Grundlevel + Overrides (u. a. HttpClient auf Warning) in Logging/SerilogLevels.cs.
+            .ApplyRookHubLevels()
             .Enrich.FromLogContext()
             .Enrich.WithMachineName()
             .Enrich.WithProperty("Application", "RookHub")
