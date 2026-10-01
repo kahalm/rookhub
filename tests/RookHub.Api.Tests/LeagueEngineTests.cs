@@ -235,11 +235,26 @@ public class LeagueEngineTests
     {
         // „Die Info auch auf den Link hin" (0.627.0): Partien je Quelle über den Teilen-Link — aber nur mit gültigem Token.
         var (db, svc) = ShareFixture();
+        db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 1, Team = "A", Name = "A1, A", NameKey = "a1, a", FideId = "A1" },
+            new LeaguePlayer { Tnr = 1, Team = "B", Name = "B1, B", NameKey = "b1, b", FideId = "B1" },
+            new LeaguePlayer { Tnr = 2, Team = "Z", Name = "Z1, Z", NameKey = "z1, z", FideId = "Z1" });   // andere Liga
+        await db.SaveChangesAsync();
         var s = await svc.CreateShareAsync(1, 1, "A", null, default);
         var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
         var sources = new LeagueGameSources(db);
         var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Sources(s!.Token, sources, default));
-        Assert.NotNull(((System.Text.Json.Nodes.JsonObject)ok.Value!)["boardTotal"]);
+        var body = (System.Text.Json.Nodes.JsonObject)ok.Value!;
+        Assert.NotNull(body["boardTotal"]);
+        // Gegner = die Meldeliste der GETEILTEN Begegnung, vom Server bestimmt (0.628.0).
+        var pub = (await svc.PublicShareAsync(s.Token, default))!;
+        var rosterFides = pub["fixture"]!["roster"]!.AsArray().Select(r => (string?)r!["fide"]).Where(f => !string.IsNullOrEmpty(f)).Distinct().Count();
+        Assert.True(rosterFides > 0);
+        Assert.Equal(rosterFides, body["opponent"]!["players"]!.GetValue<int>());
+        // Liga = die Liga des Links (alle ihre Meldelisten), ebenfalls vom Server bestimmt.
+        var leagueFides = await db.LeaguePlayers.Where(p => p.Tnr == 1 && p.FideId != null && p.FideId != "").Select(p => p.FideId).Distinct().CountAsync();
+        Assert.Equal(2, leagueFides);
+        Assert.Equal(leagueFides, body["league"]!["players"]!.GetValue<int>());
         Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources("falsch", sources, default));
         Assert.True(await svc.DeleteShareAsync(s.Token, default));
         Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources(s.Token, sources, default));

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.628.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub: the games per source are now a small table (source | total | league | match), grouped into over-the-board and online with a bar for each source’s share. “League” counts the games of all players on the rosters of the selected league, “match” those of the selected opponent’s roster — on the start page they follow league, round and club, on a share link they are the shared league and opponent. Each game counts once per column. “–” means none of these players has an account on that site.", de: "LeagueHub: Die Partien je Quelle stehen jetzt als kleine Tabelle da (Quelle | Gesamt | Liga | Begegnung), gruppiert nach Brett und Online, mit einem Balken für den Anteil jeder Quelle. „Liga“ zählt die Partien aller Spieler aus den Meldelisten der gewählten Liga, „Begegnung“ die der Meldeliste des Gegners — auf der Startseite folgen sie Liga, Runde und Verein, auf einem Teilen-Link sind es Liga und Gegner des Links. Jede Partie zählt je Spalte einmal. „–“ heißt: Keiner dieser Spieler hat auf dieser Seite ein Konto." },
+  ] },
   { version: "0.627.0", date: "2026-10-01", changes: [
     { en: "LeagueHub share links: the shared match now also shows how many games are in the database and where they come from (Lumbra, ChessBase Megabase, chess-results, Lichess broadcasts, club database; online from Lichess and chess.com) — only the numbers.", de: "LeagueHub-Teilen-Links: Die geteilte Begegnung zeigt jetzt auch, wie viele Partien im Bestand sind und woher sie kommen (Lumbra, ChessBase-Megabase, chess-results, Lichess-Übertragungen, Vereins-Datenbank; online von Lichess und chess.com) — nur die Zahlen." },
   ] },

@@ -13,9 +13,14 @@ export class LeagueApiService {
     return firstValueFrom(this.http.get<LeagueIndex>('/api/league/index'));
   }
 
-  /** Partien im Bestand je Quelle (0.626.0; über einen Teilen-Link seit 0.627.0) — der Server zählt höchstens alle 30 min neu. */
-  sources(token: string | null = null): Promise<GameSources> {
-    return firstValueFrom(this.http.get<GameSources>(`${this.base(token)}/sources`));
+  /** Partien im Bestand je Quelle (0.626.0; über einen Teilen-Link seit 0.627.0) — der Server zählt höchstens alle 30 min neu.
+   *  `tnr` = Liga, `fides` = Meldeliste des Gegners (0.628.0, nur angemeldet; über den Link bestimmt der Server beides selbst). */
+  sources(token: string | null = null, fides: string[] = [], tnr: number | null = null): Promise<GameSources> {
+    const q = token ? [] : [
+      ...(tnr ? [`tnr=${tnr}`] : []),
+      ...(fides.length ? [`fides=${fides.map(encodeURIComponent).join(',')}`] : []),
+    ];
+    return firstValueFrom(this.http.get<GameSources>(`${this.base(token)}/sources${q.length ? '?' + q.join('&') : ''}`));
   }
 
   async league(tnr: number, fresh = false): Promise<League> {

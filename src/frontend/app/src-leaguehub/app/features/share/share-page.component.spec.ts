@@ -26,6 +26,8 @@ describe('SharePageComponent', () => {
     api.sources.and.resolveTo({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }], boardTotal: 34838,
       online: [{ key: 'chess.com', label: 'chess.com', games: 29522 }], onlineTotal: 29522, countedAt: '2026-10-01T14:30:00Z',
+      league: { players: 226, board: { Lumbra: 12106 }, boardTotal: 12106, online: { 'chess.com': { games: 13132, accounts: 25 } }, onlineTotal: 13132, onlineAccounts: 25 },
+      opponent: { players: 11, board: { Lumbra: 187 }, boardTotal: 187, online: { 'chess.com': { games: 12, accounts: 1 } }, onlineTotal: 12, onlineAccounts: 1 },
     });
   });
 
@@ -54,9 +56,13 @@ describe('SharePageComponent', () => {
     await f.whenStable();
     f.detectChanges();
     expect(api.sources).toHaveBeenCalledWith('TOKEN123');
-    const src = el.querySelector('.src-count')!.textContent!;
-    expect(src).toContain('34.838 Brettpartien: 34.838 aus Lumbra.');
-    expect(src).toContain('29.522 Online-Partien: 29.522 von chess.com.');
+    // Liga und Gegner bestimmt über den Link der Server — die Seite schickt nichts mit.
+    const rows = Array.from(el.querySelectorAll('.src-tbl tbody tr')).map(r => Array.from(r.children).map(c => c.textContent!.trim()));
+    expect(rows).toEqual([['Brett', '34.838', '12.106', '187'], ['Lumbra', '34.838', '12.106', '187'],
+      ['Online', '29.522', '13.132', '12'], ['chess.com', '29.522', '13.132', '12']]);
+    const head = el.querySelector('.src-tbl thead')!.textContent!;
+    expect(head).toContain('Landesliga · 226 Spieler');
+    expect(head).toContain('Wörgl · 11 Spieler');
   });
 
   it('abgelaufen oder widerrufen: „Link ungültig"', async () => {

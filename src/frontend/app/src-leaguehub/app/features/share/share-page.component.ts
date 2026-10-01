@@ -4,8 +4,8 @@ import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
 import { GameSources, SharedFixture } from '../../core/league.models';
-import { boardSourcesText, onlineSourcesText } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
+import { GameSourcesComponent } from '../../shared/game-sources.component';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
@@ -15,7 +15,7 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
   selector: 'lh-share-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, RouterLink],
+  imports: [FixtureViewComponent, GameSourcesComponent, RouterLink],
   template: `
     @if (invalid()) {
       <section class="gate">
@@ -34,12 +34,7 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
         </div>
       </section>
       <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
-      @if (sources(); as s) {
-        <div class="src-count small">
-          @if (boardText(s); as b) { <p>{{ b }}.</p> }
-          @if (onlineText(s); as o) { <p>{{ o }}.</p> }
-        </div>
-      }
+      @if (sources(); as s) { <lh-game-sources [sources]="s" [league]="d.league" [opponent]="d.fixture.opp" /> }
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" />
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien von SK Schwaz.</p>
@@ -56,10 +51,8 @@ export class SharePageComponent implements OnInit {
   readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
   readonly data = signal<SharedFixture | null>(null);
   readonly invalid = signal(false);
-  /** Partien je Quelle wie auf der Startseite (0.627.0); fehlt die Zählung, fehlt nur die Zeile. */
+  /** Partien je Quelle wie auf der Startseite (0.627.0; als Tabelle mit Gegner seit 0.628.0); fehlt die Zählung, fehlt nur die Tabelle. */
   readonly sources = signal<GameSources | null>(null);
-  readonly boardText = boardSourcesText;
-  readonly onlineText = onlineSourcesText;
 
   async ngOnInit(): Promise<void> {
     try {

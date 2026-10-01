@@ -14,6 +14,16 @@ export interface GameSources {
   board: GameSourceRow[]; boardTotal: number;
   online: GameSourceRow[]; onlineTotal: number;
   countedAt: string;
+  /** Nur mit Liga (0.628.0): dieselbe Zählung für alle Meldelisten der Liga. */
+  league?: PlayerSources;
+  /** Nur mit Begegnung (0.628.0): dieselbe Zählung für die Meldeliste des Gegners. */
+  opponent?: PlayerSources;
+}
+/** Zählung für eine Gruppe Spieler; online nur Seiten, auf denen einer von ihnen ein Konto hat. */
+export interface PlayerSources {
+  players: number;
+  board: Record<string, number>; boardTotal: number;
+  online: Record<string, { games: number; accounts: number }>; onlineTotal: number; onlineAccounts: number;
 }
 
 export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null }

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -40,10 +41,14 @@ public class LeagueController : BaseApiController
         await _league.LeagueJsonAsync(tnr, ct) is { } json ? Content(json, "application/json") : NotFound();
 
     /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;
-    /// 30 min im Speicher.</summary>
+    /// 30 min im Speicher. Seit 0.628.0: <c>?tnr=</c> fügt <c>league</c> hinzu (alle Meldelisten dieser Liga), <c>?fides=1,2,…</c>
+    /// (die Meldeliste des Gegners, höchstens 40) <c>opponent</c>.</summary>
     [HttpGet("sources")]
     [HasPermission(Permissions.LeagueView)]
-    public async Task<IActionResult> Sources([FromServices] LeagueGameSources sources, CancellationToken ct) => Ok(await sources.GetAsync(ct));
+    public async Task<IActionResult> Sources([FromQuery] int? tnr, [FromQuery] string? fides, [FromServices] LeagueGameSources sources,
+        CancellationToken ct) =>
+        Ok(await sources.GetAsync(ct, fides?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            leagueTnr: tnr));
 
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
@@ -348,10 +353,16 @@ public class LeagueShareController : ControllerBase
         await _league.PublicShareAsync(token, ct) is { } v ? Ok(v) : NotFound();
 
     /// <summary>Partien im Bestand je Quelle wie auf der Startseite (0.627.0, Wunsch: „die Info auch auf den Link hin") — nur Zahlen,
-    /// kein Konto, kein Name; derselbe 30-min-Speicher.</summary>
+    /// kein Konto, kein Name; derselbe 30-min-Speicher. Seit 0.628.0 mit <c>league</c> (die Liga des Links) und <c>opponent</c> (die
+    /// Meldeliste des Gegners der GETEILTEN Begegnung) — beides vom Server bestimmt, nicht frei wählbar; online nur gesicherte Konten
+    /// wie auf der Karte des Links.</summary>
     [HttpGet("{token}/sources")]
-    public async Task<IActionResult> Sources(string token, [FromServices] LeagueGameSources sources, CancellationToken ct) =>
-        await _league.ShareValidAsync(token, ct) ? Ok(await sources.GetAsync(ct)) : NotFound();
+    public async Task<IActionResult> Sources(string token, [FromServices] LeagueGameSources sources, CancellationToken ct)
+    {
+        if (await _league.PublicShareAsync(token, ct) is not { } share || await _league.ShareTnrAsync(token, ct) is not { } tnr) return NotFound();
+        var fides = (share["fixture"]?["roster"] as JsonArray ?? []).Select(r => (string?)r?["fide"]);
+        return Ok(await sources.GetAsync(ct, fides, onlySure: true, leagueTnr: tnr));
+    }
 
     [HttpGet("{token}/player/{fide}")]
     public async Task<IActionResult> Player(string token, string fide, CancellationToken ct)

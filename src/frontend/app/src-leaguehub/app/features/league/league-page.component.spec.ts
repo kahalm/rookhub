@@ -18,7 +18,10 @@ function league(tnr: number, teams: string[]): League {
     ],
     fixtures: Object.fromEntries(teams.map(t => [t, {
       '1': { opp: 'X', home: true, status: 'played', boards: [], roster: [] },
-      '2': { opp: `Gegner von ${t}`, home: false, status: 'open', boards: [], roster: [] },
+      '2': { opp: `Gegner von ${t}`, home: false, status: 'open', boards: [], roster: [
+        { rb: 1, n: 'Gast, Gerd', elo: 1800, p: 90, prev: '', cur: '', fide: `${t}-1`, g: 5, acc: [] },
+        { rb: 2, n: 'Ohne, Fide', elo: null, p: 40, prev: '', cur: '', fide: null, g: 0, acc: [] },
+      ] },
       '3': { opp: 'Y', home: true, status: 'locked', unlock_after: 2 },
     }])),
   };
@@ -37,11 +40,14 @@ describe('LeaguePageComponent', () => {
     query = {};
     api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources']);
     api.index.and.resolveTo(INDEX);
-    api.sources.and.resolveTo({
+    api.sources.and.callFake(async (_token: string | null = null, fides: string[] = [], tnr: number | null = null) => ({
       board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }, { key: 'Mega', label: 'ChessBase-Megabase', games: 18839 }], boardTotal: 53677,
       online: [{ key: 'lichess', label: 'Lichess', games: 667881 }, { key: 'chess.com', label: 'chess.com', games: 29528 }], onlineTotal: 697409,
       countedAt: '2026-10-01T13:00:00Z',
-    });
+      league: tnr ? { players: 177, board: { Lumbra: 29982, Mega: 12311 }, boardTotal: 42293,
+        online: { lichess: { games: 345890, accounts: 54 } }, onlineTotal: 345890, onlineAccounts: 54 } : undefined,
+      opponent: fides.length ? { players: fides.length, board: { Lumbra: 187 }, boardTotal: 187, online: {}, onlineTotal: 0, onlineAccounts: 0 } : undefined,
+    }));
     api.league.and.callFake(async (tnr: number) => league(tnr, tnr === 10 ? ['Kufstein', 'Schwaz', 'Wörgl'] : ['Absam', 'Hall']));
     api.updateStatus.and.resolveTo({ running: false, started: null, finished: null, ok: null, message: null });
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
@@ -86,17 +92,28 @@ describe('LeaguePageComponent', () => {
       queryParams: { liga: 10, runde: 2, verein: 'Schwaz' }, replaceUrl: true }));
     expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Schwaz' });
     expect(el.textContent).toContain('Stand der Daten: 27.09.2026 21:00');
-    // Partien je Quelle (0.626.0) unter dem Stand der Daten.
-    const src = el.querySelector('.src-count')!.textContent!;
-    expect(src).toContain('53.677 Brettpartien: 34.838 aus Lumbra, 18.839 aus der ChessBase-Megabase.');
-    expect(src).toContain('697.409 Online-Partien: 667.881 von Lichess, 29.528 von chess.com.');
+    // Partien je Quelle (0.626.0) als Tabelle mit Liga und Begegnung (0.628.0): die Liga + die Meldeliste des Gegners, ohne leere FIDE-IDs.
+    expect(api.sources).toHaveBeenCalledWith(null, ['Schwaz-1'], 10);
+    const rows = Array.from(el.querySelectorAll('.src-tbl tbody tr')).map(r => Array.from(r.children).map(c => c.textContent!.trim()));
+    expect(rows).toEqual([
+      ['Brett', '53.677', '42.293', '187'], ['Lumbra', '34.838', '29.982', '187'], ['ChessBase-Megabase', '18.839', '12.311', '0'],
+      ['Online', '697.409', '345.890', '–'], ['Lichess', '667.881', '345.890', '–'], ['chess.com', '29.528', '–', '–'],
+    ]);
+    const head = el.querySelector('.src-tbl thead')!.textContent!;
+    expect(head).toContain('Landesliga · 177 Spieler');
+    expect(head).toContain('Gegner von Schwaz · 1 Spieler');
+    // Anderer Verein → andere Meldeliste → neu geholt.
+    c.pickTeam('Wörgl');
+    await settle();
+    expect(api.sources).toHaveBeenCalledWith(null, ['Wörgl-1'], 10);
+    expect(el.querySelector('.src-tbl thead')!.textContent).toContain('Gegner von Wörgl');
   });
 
-  it('ohne Zählung (Fehler) fehlt nur die Zeile', async () => {
+  it('ohne Zählung (Fehler) fehlt nur die Tabelle', async () => {
     api.sources.and.rejectWith(new Error('x'));
     const el = create();
     await settle();
-    expect(el.querySelector('.src-count')).toBeNull();
+    expect(el.querySelector('.src-tbl')).toBeNull();
     expect(el.querySelector('lh-fixture')).not.toBeNull();
   });
 

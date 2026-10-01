@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
@@ -6,8 +6,8 @@ import { readJson, writeJson, localStore } from '@rh/core/local-json-store';
 import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
-import { boardSourcesText, onlineSourcesText } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
+import { GameSourcesComponent } from '../../shared/game-sources.component';
 
 const PICK_KEY = 'leaguehub';
 const POLL_MS = 4000;
@@ -23,7 +23,7 @@ interface Pick { liga?: number; verein?: string }
   selector: 'lh-league-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent],
+  imports: [FixtureViewComponent, GameSourcesComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
@@ -67,12 +67,7 @@ interface Pick { liga?: number; verein?: string }
           }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
-        @if (sources(); as s) {
-          <div class="src-count small">
-            @if (boardText(s); as b) { <p>{{ b }}.</p> }
-            @if (onlineText(s); as o) { <p>{{ o }}.</p> }
-          </div>
-        }
+        @if (sources(); as s) { <lh-game-sources [sources]="s" [league]="league()?.name" [opponent]="fixture()?.opp" /> }
 
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [round]="round()" [team]="team()"
@@ -108,8 +103,9 @@ export class LeaguePageComponent implements OnInit {
   readonly index = signal<LeagueIndex | null>(null);
   /** Partien je Quelle (0.626.0, Wunsch: „x Spiele aus Lumbra, y aus ChessBase, z aus Lichess, w aus chess.com"). */
   readonly sources = signal<GameSources | null>(null);
-  readonly boardText = boardSourcesText;
-  readonly onlineText = onlineSourcesText;
+  /** Meldeliste des Gegners in der gewählten Begegnung — ändert sie sich (oder die Liga), werden „Liga" und „Begegnung" neu geholt (0.628.0). */
+  private readonly oppFides = computed(() => (this.fixture()?.roster ?? []).map(r => r.fide).filter((f): f is string => !!f));
+  private sourcesKey = '';
   readonly league = signal<League | null>(null);
   readonly tnr = signal(0);
   readonly round = signal(0);
@@ -126,16 +122,27 @@ export class LeaguePageComponent implements OnInit {
   private polling = false;
   private destroyed = false;
 
-  /** Nebenbei: fehlt die Zählung, fehlt nur die Zeile — die Prognose hängt nicht daran. */
-  private async loadSources(): Promise<void> {
+  /** Nebenbei: fehlt die Zählung, fehlt nur die Tabelle — die Prognose hängt nicht daran. Eine Antwort, die nach einem
+   *  Wechsel der Begegnung eintrifft, wird verworfen. */
+  private async loadSources(tnr: number, fides: string[]): Promise<void> {
+    const key = `${tnr}|${fides.join(',')}`;
+    if (key === this.sourcesKey && this.sources()) return;
+    this.sourcesKey = key;
     try {
-      this.sources.set(await this.api.sources());
+      const s = await this.api.sources(null, fides, tnr);
+      if (this.sourcesKey === key) this.sources.set(s);
     } catch {
-      this.sources.set(null);
+      if (this.sourcesKey === key) this.sources.set(null);
     }
   }
 
   constructor() {
+    effect(() => {
+      const tnr = this.league()?.tnr;
+      if (!tnr) return;
+      const fides = this.oppFides();
+      untracked(() => void this.loadSources(tnr, fides));
+    });
     this.destroyRef.onDestroy(() => {
       this.destroyed = true;
       if (this.pollTimer) clearTimeout(this.pollTimer);
@@ -155,7 +162,6 @@ export class LeaguePageComponent implements OnInit {
       const ix = await this.api.index();
       this.index.set(ix);
       if (!ix.leagues.length) return;
-      void this.loadSources();
       const tnr = ix.leagues.some(l => l.tnr === pref.liga) ? pref.liga : ix.leagues[0].tnr;
       await this.showLeague(tnr, pref.runde, pref.verein);
     } catch (err) {

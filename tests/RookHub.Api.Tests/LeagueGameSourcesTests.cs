@@ -85,4 +85,81 @@ public class LeagueGameSourcesTests : IDisposable
         Assert.Equal(4, (await new LeagueGameSources(_db, cache).GetAsync(default))["onlineTotal"]!.GetValue<int>());
         Assert.Equal(5, (await new LeagueGameSources(_db).GetAsync(default))["onlineTotal"]!.GetValue<int>());
     }
+
+    [Fact]
+    public async Task Opponent_CountsOnlyThesePlayers_SharedGameOnce_OnlineWithAccounts()
+    {
+        _db.LeaguePlayerProfiles.AddRange(
+            new LeaguePlayerProfile { FideId = "222", Name = "Muster, Max", Pgn = MusterPgn },
+            new LeaguePlayerProfile { FideId = "333", Name = "Huber, Franz", Pgn = HuberPgn },
+            new LeaguePlayerProfile { FideId = "999", Name = "Fremd, Fritz", Pgn = Game("Fremd, Fritz", "X, Y", "2020.01.01", "1") });
+        _db.LeagueClubGames.AddRange(
+            new LeagueClubGame { White = "Schwaz", Black = "Huber, Franz", BlackFide = "333", Pgn = "1. d4 *", MovesHash = "a" },
+            new LeagueClubGame { White = "Schwaz", Black = "Fremd, Fritz", BlackFide = "999", Pgn = "1. e4 *", MovesHash = "b" });
+        var sure = new LeagueOnlineAccount { FideId = "222", Site = "lichess", UserName = "a", Url = "u", Confidence = "sicher" };
+        var unsure = new LeagueOnlineAccount { FideId = "333", Site = "chess.com", UserName = "b", Url = "u", Confidence = "wahrscheinlich" };
+        _db.LeagueOnlineAccounts.AddRange(sure, unsure);
+        await _db.SaveChangesAsync();
+        _db.LeagueOnlineGames.AddRange(
+            new LeagueOnlineGame { AccountId = sure.Id, FideId = "222", ExternalId = "l1", PlayedAt = DateTime.UtcNow, Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4" },
+            new LeagueOnlineGame { AccountId = sure.Id, FideId = "222", ExternalId = "l2", PlayedAt = DateTime.UtcNow, Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4" },
+            new LeagueOnlineGame { AccountId = unsure.Id, FideId = "333", ExternalId = "c1", PlayedAt = DateTime.UtcNow, Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4" });
+        await _db.SaveChangesAsync();
+
+        // Gegner = Muster + Huber (+ leere/doppelte Einträge der Meldeliste): ihre gemeinsame Partie einmal, Fremd nicht.
+        var r = await new LeagueGameSources(_db).GetAsync(default, new[] { "222", "333", null, "", "222" });
+        var o = r["opponent"]!.AsObject();
+        Assert.Equal(2, o["players"]!.GetValue<int>());
+        Assert.Equal(7, o["boardTotal"]!.GetValue<int>());                          // 6 aus den PGN + 1 Vereinspartie von Huber
+        Assert.Equal(1, o["board"]!["Verein"]!.GetValue<int>());
+        Assert.Equal(2, o["board"]!["Mega"]!.GetValue<int>());
+        Assert.Equal((2, 1), (o["online"]!["lichess"]!["games"]!.GetValue<int>(), o["online"]!["lichess"]!["accounts"]!.GetValue<int>()));
+        Assert.Equal((1, 1), (o["online"]!["chess.com"]!["games"]!.GetValue<int>(), o["online"]!["chess.com"]!["accounts"]!.GetValue<int>()));
+        Assert.Equal((3, 2), (o["onlineTotal"]!.GetValue<int>(), o["onlineAccounts"]!.GetValue<int>()));
+        Assert.Equal(9, r["boardTotal"]!.GetValue<int>());                          // Gesamt bleibt Gesamt
+
+        // Teilen-Link: online nur gesicherte Konten — das unsichere chess.com-Konto zählt nicht, auch nicht als Konto.
+        var shared = (await new LeagueGameSources(_db).GetAsync(default, new[] { "222", "333" }, onlySure: true))["opponent"]!;
+        Assert.Null(shared["online"]!["chess.com"]);
+        Assert.Equal((2, 1), (shared["onlineTotal"]!.GetValue<int>(), shared["onlineAccounts"]!.GetValue<int>()));
+
+        // Ohne Gegner kein Block; ein Gegner ohne Daten zählt 0 und hat kein Konto.
+        Assert.Null((await new LeagueGameSources(_db).GetAsync(default))["opponent"]);
+        var none = (await new LeagueGameSources(_db).GetAsync(default, new[] { "4711" }))["opponent"]!;
+        Assert.Equal((1, 0, 0), (none["players"]!.GetValue<int>(), none["boardTotal"]!.GetValue<int>(), none["onlineAccounts"]!.GetValue<int>()));
+        // Höchstens 40 Spieler.
+        var many = (await new LeagueGameSources(_db).GetAsync(default, Enumerable.Range(1, 100).Select(i => i.ToString())))["opponent"]!;
+        Assert.Equal(LeagueGameSources.MaxOpponentPlayers, many["players"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public async Task League_CountsAllRostersOfThatLeague_Cached_UnknownLeagueIsEmpty()
+    {
+        _db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 1, Team = "Kufstein", Name = "Muster, Max", NameKey = "muster, max", FideId = "222" },
+            new LeaguePlayer { Tnr = 1, Team = "Kufstein", Name = "Muster, Max", NameKey = "muster, max", FideId = "222" },  // zweimal gemeldet
+            new LeaguePlayer { Tnr = 1, Team = "Schwaz", Name = "Huber, Franz", NameKey = "huber, franz", FideId = "333" },
+            new LeaguePlayer { Tnr = 1, Team = "Schwaz", Name = "Ohne, Fide", NameKey = "ohne, fide", FideId = null },
+            new LeaguePlayer { Tnr = 2, Team = "Absam", Name = "Fremd, Fritz", NameKey = "fremd, fritz", FideId = "999" });
+        _db.LeaguePlayerProfiles.AddRange(
+            new LeaguePlayerProfile { FideId = "222", Name = "Muster, Max", Pgn = MusterPgn },
+            new LeaguePlayerProfile { FideId = "333", Name = "Huber, Franz", Pgn = HuberPgn },
+            new LeaguePlayerProfile { FideId = "999", Name = "Fremd, Fritz", Pgn = Game("Fremd, Fritz", "X, Y", "2020.01.01", "1") });
+        await _db.SaveChangesAsync();
+
+        var cache = new MemoryCache(new MemoryCacheOptions());
+        var r = await new LeagueGameSources(_db, cache).GetAsync(default, new[] { "333" }, leagueTnr: 1);
+        var l = r["league"]!;
+        Assert.Equal((2, 6), (l["players"]!.GetValue<int>(), l["boardTotal"]!.GetValue<int>()));   // Fremd (Liga 2) zählt nicht
+        Assert.Equal((1, 2), (r["opponent"]!["players"]!.GetValue<int>(), r["opponent"]!["boardTotal"]!.GetValue<int>()));
+        Assert.Equal(7, r["boardTotal"]!.GetValue<int>());
+
+        // 30 min gemerkt — ein neuer Spieler der Liga zählt erst danach; die Begegnung ist immer frisch.
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Schwaz", Name = "Fremd, Fritz", NameKey = "fremd, fritz", FideId = "999" });
+        await _db.SaveChangesAsync();
+        Assert.Equal(2, (await new LeagueGameSources(_db, cache).GetAsync(default, leagueTnr: 1))["league"]!["players"]!.GetValue<int>());
+        Assert.Equal(3, (await new LeagueGameSources(_db).GetAsync(default, leagueTnr: 1))["league"]!["players"]!.GetValue<int>());
+        Assert.Equal(0, (await new LeagueGameSources(_db).GetAsync(default, leagueTnr: 4711))["league"]!["players"]!.GetValue<int>());
+        Assert.Null((await new LeagueGameSources(_db).GetAsync(default))["league"]);
+    }
 }

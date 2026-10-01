@@ -14,11 +14,18 @@ namespace RookHub.Api.Services.League;
 /// derselben Regel wie die Karte (<see cref="LeagueProfileBuilder.StoredSource"/>). Dazu die Vereinspartien
 /// (<see cref="Models.LeagueClubGame"/>). <b>Online-Partien</b>: je Seite die verschiedenen Partie-Kennungen.</para>
 /// <para>Das Zählen liest alle Profile (Prod 01.10.2026: 595 Profile, 58 MB PGN) — deshalb <see cref="CacheFor"/> im Speicher.</para>
+/// <para><b>Liga und Begegnung</b> (0.628.0, Tabelle „Quelle | Gesamt | Liga | Begegnung" — Fassung B des Entwurfs vom 01.10.2026):
+/// dieselbe Zählung für die Spieler aller Meldelisten einer Liga (Block <c>league</c>, 30 min gemerkt je Liga) bzw. für die
+/// Meldeliste des Gegners der gewählten Begegnung (Block <c>opponent</c>, jedes Mal frisch — nur ein paar Profile), beide über
+/// <see cref="PlayersAsync"/>. Online je Seite mit der Zahl der Konten, damit die Oberfläche „kein Konto" von „0 Partien"
+/// unterscheidet.</para>
 /// </summary>
 public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = null)
 {
     public static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(30);
     private const string CacheKey = "league-game-sources";
+    /// <summary>Mehr Spieler hat keine Meldeliste — Deckel für die frei übergebene Liste.</summary>
+    public const int MaxOpponentPlayers = 40;
 
     /// <summary>Anzeige je Quelle; unbekannte Quellen (über <c>POST /api/league/admin/games</c> frei benannt) stehen, wie sie heißen.</summary>
     public static string Label(string source) => source switch
@@ -33,7 +40,70 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         _ => source,
     };
 
-    public async Task<JsonObject> GetAsync(CancellationToken ct)
+    /// <summary>Gesamt (30 min gemerkt); mit <paramref name="leagueTnr"/> der Block <c>league</c> (alle Meldelisten dieser Liga), mit
+    /// <paramref name="opponentFides"/> der Block <c>opponent</c>. <paramref name="onlySure"/> = Teilen-Link: online nur „gesicherte"
+    /// Konten (wie die Karte dort).</summary>
+    public async Task<JsonObject> GetAsync(CancellationToken ct, IEnumerable<string?>? opponentFides = null, bool onlySure = false,
+        int? leagueTnr = null)
+    {
+        var res = await TotalsAsync(ct);
+        if (leagueTnr is { } tnr) res["league"] = await LeagueAsync(tnr, onlySure, ct);
+        var fides = (opponentFides ?? []).Where(f => !string.IsNullOrWhiteSpace(f)).Select(f => f!.Trim()).Distinct()
+            .Take(MaxOpponentPlayers).ToList();
+        if (fides.Count > 0) res["opponent"] = await PlayersAsync(fides, onlySure, ct);
+        return res;
+    }
+
+    /// <summary>Alle Spieler der Meldelisten dieser Liga (<see cref="Models.LeaguePlayer"/> mit FIDE-ID) — 30 min gemerkt; eine
+    /// unbekannte Liga zählt 0 Spieler.</summary>
+    private async Task<JsonObject> LeagueAsync(int tnr, bool onlySure, CancellationToken ct)
+    {
+        var key = $"{CacheKey}:league:{tnr}:{onlySure}";
+        if (cache?.TryGetValue(key, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
+        var fides = await db.LeaguePlayers.AsNoTracking().Where(p => p.Tnr == tnr && p.FideId != null && p.FideId != "")
+            .Select(p => p.FideId!).Distinct().ToListAsync(ct);
+        var r = await PlayersAsync(fides, onlySure, ct);
+        cache?.Set(key, r, CacheFor);
+        return (JsonObject)r.DeepClone();
+    }
+
+    /// <summary>
+    /// Partien der Spieler <paramref name="fides"/> je Quelle → <c>{ players, board{ Quelle: n }, boardTotal, online{ Seite: { games,
+    /// accounts } }, onlineTotal, onlineAccounts }</c>. Eine Partie zweier dieser Spieler zählt einmal.
+    /// </summary>
+    public async Task<JsonObject> PlayersAsync(IReadOnlyCollection<string> fides, bool onlySure, CancellationToken ct)
+    {
+        var board = new Dictionary<string, int>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        await foreach (var pgn in db.LeaguePlayerProfiles.AsNoTracking().Where(p => fides.Contains(p.FideId)).Select(p => p.Pgn)
+                           .AsAsyncEnumerable().WithCancellation(ct))
+            CountBoard(pgn, seen, board);
+        var club = await db.LeagueClubGames.AsNoTracking()
+            .CountAsync(g => (g.WhiteFide != null && fides.Contains(g.WhiteFide)) || (g.BlackFide != null && fides.Contains(g.BlackFide)), ct);
+        if (club > 0) board[LeagueProfileStore.ClubSource] = club;
+        var accounts = await db.LeagueOnlineAccounts.AsNoTracking()
+            .Where(a => fides.Contains(a.FideId) && (!onlySure || a.Confidence == LeagueOnlineAccountService.Sure))
+            .Select(a => new { a.Id, a.Site }).ToListAsync(ct);
+        var ids = accounts.Select(a => a.Id).ToList();
+        var games = ids.Count == 0 ? new Dictionary<string, int>() : (await db.LeagueOnlineGames.AsNoTracking()
+                .Where(g => ids.Contains(g.AccountId))
+                .GroupBy(g => g.Account.Site)
+                .Select(g => new { Site = g.Key, Games = g.Select(x => x.ExternalId).Distinct().Count() })
+                .ToListAsync(ct))
+            .ToDictionary(x => x.Site, x => x.Games);
+        var online = new JsonObject();
+        foreach (var site in accounts.Select(a => a.Site).Distinct().OrderBy(s => s, StringComparer.Ordinal))
+            online[site] = new JsonObject { ["games"] = games.GetValueOrDefault(site), ["accounts"] = accounts.Count(a => a.Site == site) };
+        var boardJson = new JsonObject();
+        foreach (var (k, v) in board.OrderByDescending(kv => kv.Value)) boardJson[k] = v;
+        return new JsonObject
+        {
+            ["players"] = fides.Count, ["board"] = boardJson, ["boardTotal"] = board.Values.Sum(),
+            ["online"] = online, ["onlineTotal"] = games.Values.Sum(), ["onlineAccounts"] = accounts.Count,
+        };
+    }
+
+    private async Task<JsonObject> TotalsAsync(CancellationToken ct)
     {
         if (cache?.TryGetValue(CacheKey, out JsonObject? hit) == true && hit is not null) return (JsonObject)hit.DeepClone();
         var board = new Dictionary<string, int>(StringComparer.Ordinal);

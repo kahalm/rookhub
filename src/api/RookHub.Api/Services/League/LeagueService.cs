@@ -209,6 +209,9 @@ public sealed class LeagueService
     /// <summary>Gilt dieser Teilen-Link noch? (Die Upload-Wege ohne Anmeldung hängen daran.)</summary>
     public async Task<bool> ShareValidAsync(string token, CancellationToken ct) => await ValidShareAsync(token, ct) != null;
 
+    /// <summary>Die Liga (Turnier-Nr.) eines gültigen Teilen-Links, sonst <c>null</c> (0.628.0, Spalte „Liga" der Quellen-Tabelle).</summary>
+    public async Task<int?> ShareTnrAsync(string token, CancellationToken ct) => (await ValidShareAsync(token, ct))?.Tnr;
+
     /// <summary>Das Token des gültigen Links in der Schreibweise SEINER Zeile — <c>null</c> = kein gültiger Link. Die
     /// Spalte vergleicht in MariaDB groß/klein- und akzent-blind (Collation der Datenbank): „abc…" und „Ábc…" finden auch
     /// den Link „AbC…". Was am Link hängt (Vermerk an den Partien, Deckel je Link), hängt deshalb an diesem Token und

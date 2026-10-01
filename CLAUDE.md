@@ -1510,6 +1510,16 @@ Rollenverwaltung an).
   Oberfläche: zwei Zeilen unter „Stand der Daten" auf der Startseite (`core/game-sources.ts`); fehlt die Zählung, fehlt nur
   die Zeile. Seit 0.627.0 auch auf dem Teilen-Link: `GET /api/league/s/{token}/sources` (anonym, nur mit gültigem Token,
   sonst 404; nur Zahlen), Zeile unter „Geteilte Begegnung … Stand der Daten" in `share-page.component.ts`.
+  **Seit 0.628.0 eine Tabelle** (`shared/game-sources.component.ts`, Regeln rein in `core/game-sources.ts` → `sourceGroups`;
+  Fassung B von Entwurf 2 vom 01.10.2026): Quelle | Gesamt | Liga | Begegnung, nach Brett/Online gruppiert, Anteil an Gesamt als
+  Balken (größte Quelle rot). „Liga" = Block `league` (alle `LeaguePlayers` dieser Turnier-Nr. mit FIDE-ID, 30 min gemerkt je
+  Liga), „Begegnung" = Block `opponent` (Meldeliste des Gegners, jedes Mal frisch) — beide `{ players, board{Quelle: n},
+  boardTotal, online{Seite: {games, accounts}}, onlineTotal, onlineAccounts }` aus `LeagueGameSources.PlayersAsync`; eine
+  Partie zweier Spieler derselben Gruppe zählt einmal. Angemeldet schickt die Startseite `?tnr=` und die Meldeliste der
+  gewählten Begegnung als `?fides=` (höchstens 40; neu geholt, wenn sich Liga oder Meldeliste ändert; späte Antworten
+  verworfen); über den Link nimmt der SERVER Liga und Meldeliste der geteilten Begegnung (`LeagueService.ShareTnrAsync`) und
+  zählt online nur gesicherte Konten. „–" = auf dieser Seite hat keiner der Spieler ein Konto (≠ 0 Partien). Prod 01.10.:
+  Landesliga 177 Spieler / 46.058 Brett, 1. Klasse 226 / 18.783.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

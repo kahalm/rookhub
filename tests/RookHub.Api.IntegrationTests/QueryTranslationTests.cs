@@ -75,9 +75,20 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Pgn = "[White \"Muster, Max\"]\n[Black \"Huber, Franz\"]\n[Date \"2024.03.01\"]\n\n1. e4 1-0\n" });
         await Db.SaveChangesAsync();
 
-        var r = await new RookHub.Api.Services.League.LeagueGameSources(Db).GetAsync(default);
+        Db.LeaguePlayers.AddRange(
+            new LeaguePlayer { Tnr = 7, Team = "Kufstein", Name = "Muster, Max", NameKey = "muster, max", FideId = "222" },
+            new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "Huber, Franz", NameKey = "huber, franz", FideId = "333" },
+            new LeaguePlayer { Tnr = 7, Team = "Schwaz", Name = "Ohne, Fide", NameKey = "ohne, fide" });
+        await Db.SaveChangesAsync();
+        var r = await new RookHub.Api.Services.League.LeagueGameSources(Db).GetAsync(default, new[] { "222", "333" }, onlySure: true, leagueTnr: 7);
+        // Liga-Block: die verschiedenen FIDE-IDs der Meldelisten, dann dieselbe Zählung.
+        Assert.Equal((2, 3), (r["league"]!["players"]!.GetValue<int>(), r["league"]!["onlineTotal"]!.GetValue<int>()));
         Assert.Equal(3, r["onlineTotal"]!.GetValue<int>());
         Assert.Equal(1, r["boardTotal"]!.GetValue<int>());
+        // Gegner-Block (0.628.0): Contains über die FIDE-Liste + COUNT(DISTINCT) je Seite.
+        var o = r["opponent"]!;
+        Assert.Equal((3, 3), (o["onlineTotal"]!.GetValue<int>(), o["onlineAccounts"]!.GetValue<int>()));
+        Assert.Equal(1, o["boardTotal"]!.GetValue<int>());
     }
 
     [MySqlFact]
