@@ -34,13 +34,18 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       <!-- Die Marke fuehrt zur Startseite (/ = Kalender, siehe app.routes.ts), nicht auf die Merkliste (F6-019). -->
       <a class="brand" routerLink="/">{{ 'turnier.brand' | translate }}</a>
 
-      <!-- Kalender zuerst (die Startseite); die Merkliste heisst „Gemerkt" wie der Knopf, der sie fuellt. -->
-      <nav class="links">
-        <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on">{{ 'nav.tournamentCalendar' | translate }}</a>
-        <a mat-button routerLink="/tournaments" routerLinkActive="on"
-           [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournamentBookmarks' | translate }}</a>
-        <a mat-button routerLink="/tournaments/history" routerLinkActive="on">{{ 'nav.tournamentHistory' | translate }}</a>
-      </nav>
+      <!-- Kalender zuerst (die Startseite); die Merkliste heisst „Gemerkt" wie der Knopf, der sie fuellt.
+           Nur angemeldet (UX-038): alle drei Ziele haben einen authGuard. Ein Gast auf der Anmeldemaske kam mit
+           jedem Klick auf dieselbe Maske zurueck, die Links wirkten tot; was die Seite bietet, sagt ihm die
+           Einleitung der Maske. Die Marke bleibt: sie fuehrt ihn mit Hinweis zur Anmeldung. -->
+      @if (auth.isLoggedIn) {
+        <nav class="links">
+          <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on">{{ 'nav.tournamentCalendar' | translate }}</a>
+          <a mat-button routerLink="/tournaments" routerLinkActive="on"
+             [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournamentBookmarks' | translate }}</a>
+          <a mat-button routerLink="/tournaments/history" routerLinkActive="on">{{ 'nav.tournamentHistory' | translate }}</a>
+        </nav>
+      }
 
       <span class="spacer"></span>
 
@@ -51,9 +56,11 @@ import { authLinkQuery } from '@rh/core/return-url.util';
         <mat-icon>menu</mat-icon>
       </button>
       <mat-menu #navMenu="matMenu">
-        <a mat-menu-item routerLink="/tournaments/calendar"><mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}</a>
-        <a mat-menu-item routerLink="/tournaments"><mat-icon>bookmarks</mat-icon> {{ 'nav.tournamentBookmarks' | translate }}</a>
-        <a mat-menu-item routerLink="/tournaments/history"><mat-icon>emoji_events</mat-icon> {{ 'nav.tournamentHistory' | translate }}</a>
+        @if (auth.isLoggedIn) {
+          <a mat-menu-item routerLink="/tournaments/calendar"><mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}</a>
+          <a mat-menu-item routerLink="/tournaments"><mat-icon>bookmarks</mat-icon> {{ 'nav.tournamentBookmarks' | translate }}</a>
+          <a mat-menu-item routerLink="/tournaments/history"><mat-icon>emoji_events</mat-icon> {{ 'nav.tournamentHistory' | translate }}</a>
+        }
         @if (partnerUrl) {
           <button mat-menu-item (click)="toRookHub()">
             <mat-icon>open_in_new</mat-icon> {{ 'turnier.toRookHub' | translate }}

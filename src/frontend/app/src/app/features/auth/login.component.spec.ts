@@ -9,12 +9,19 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE } from '../legal/legal-site';
 import { AUTH_INTRO } from './auth-intro';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { Component } from '@angular/core';
+
+/** ActivatedRoute-Ersatz: die Komponente liest die Query laufend aus queryParamMap (UX-038). */
+function routeWith(queryParams: Record<string, string>): any {
+  return { snapshot: { queryParams }, queryParamMap: of(convertToParamMap(queryParams)) };
+}
 
 function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefillService()) {
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
-  const route: any = { snapshot: { queryParams } };
+  const route: any = routeWith(queryParams);
   // Schluessel samt Parametern zurueck, damit die Specs auch die Wartezeit sehen.
   const translate: any = { instant: (k: string, p?: object) => (p ? `${k} ${JSON.stringify(p)}` : k) };
   return { c: new LoginComponent(auth, prefill, router, route, translate), auth, router, prefill };
@@ -85,7 +92,7 @@ describe('LoginComponent', () => {
     const translate: any = {
       instant: (k: string) => k === 'apiErrors.login_invalid' ? 'Benutzername oder Passwort ist falsch.' : k,
     };
-    const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, translate);
+    const c = new LoginComponent(auth, prefill, router, routeWith({}), translate);
     auth.login.and.returnValue(throwError(() => ({
       status: 401, error: { message: 'Invalid username or password.', code: 'login_invalid' },
     })));
@@ -111,7 +118,7 @@ describe('LoginComponent', () => {
     it('429 der Konto-Bremse behält seinen Code-Text (wenige Sekunden, nicht das IP-Fenster)', () => {
       const { auth, router, prefill } = make();
       const translate: any = { instant: (k: string) => k === 'apiErrors.login_throttled' ? 'Konto-Bremse' : k };
-      const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, translate);
+      const c = new LoginComponent(auth, prefill, router, routeWith({}), translate);
       auth.login.and.returnValue(throwError(() => ({ status: 429, error: { code: 'login_throttled' } })));
       c.onSubmit();
       expect(c.error()).toEqual({ kind: 'rateLimited', text: 'Konto-Bremse' });
@@ -264,7 +271,7 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: AuthService, useValue: {} },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParams: query } } },
+        { provide: ActivatedRoute, useValue: routeWith(query) },
         ...extra,
       ],
     }).compileComponents();
@@ -307,5 +314,46 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
 
   it('RookHub (Vorgabe): keine Einleitung', async () => {
     expect((await render({})).querySelector('.site-note')).toBeNull();
+  });
+});
+
+/**
+ * UX-038: Ein Gast auf /login klickt einen geschuetzten Menuepunkt — der authGuard schickt ihn auf /login mit neuer
+ * Query zurueck. Der Router verwendet die Komponente weiter (gleiche Route); sie las Ziel und Hinweis nur einmal im
+ * Konstruktor: die Maske blieb unveraendert (kein Hinweis, altes Ruecksprungziel), der Klick wirkte tot.
+ */
+describe('LoginComponent — neue Query auf derselben Route (UX-038)', () => {
+  @Component({ standalone: true, template: '' })
+  class StubPageComponent {}
+
+  it('zeigt nach der Umleitung auf dieselbe Maske den Hinweis und uebernimmt das neue Ziel', async () => {
+    await TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'login', component: LoginComponent }, { path: '**', component: StubPageComponent }]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { login: jasmine.createSpy('login').and.returnValue(of({})) } },
+      ],
+    }).compileComponents();
+    const harness = await RouterTestingHarness.create();
+    const first = await harness.navigateByUrl('/login', LoginComponent);
+    expect(harness.routeNativeElement!.querySelector('.auth-required')).withContext('nacktes /login: kein Hinweis').toBeNull();
+
+    // Was der authGuard nach dem Klick auf „Meine Turniere" liefert.
+    const again = await harness.navigateByUrl('/login?returnUrl=%2Ftournaments%2Fhistory&authRequired=1', LoginComponent);
+    harness.detectChanges();
+    expect(again).withContext('Komponente wird weiterverwendet').toBe(first);
+    expect(harness.routeNativeElement!.querySelector('.auth-required')).withContext('Hinweis sichtbar').not.toBeNull();
+    expect(again.returnUrl).toBe('/tournaments/history');
+    expect(again.areaKey).toBe('nav.tournaments');
+    // Auch der Weg zur Registrierung traegt das neue Ziel.
+    const register = harness.routeNativeElement!.querySelector('a[href^="/register"]')!;
+    expect(register.getAttribute('href')).toBe('/register?returnUrl=%2Ftournaments%2Fhistory');
+
+    // Nach der Anmeldung geht es dorthin — nicht zum alten Ziel.
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    again.username = 'u'; again.password = 'p';
+    again.onSubmit();
+    expect(navigate).toHaveBeenCalledWith('/tournaments/history');
   });
 });

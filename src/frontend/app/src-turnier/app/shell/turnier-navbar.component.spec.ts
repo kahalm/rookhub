@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '@rh/core/handoff.service';
+import { AuthService } from '@rh/core/auth.service';
 import { LocaleService } from '@rh/core/locale.service';
 import { TurnierNavbarComponent } from './turnier-navbar.component';
 
@@ -21,8 +22,9 @@ import { TurnierNavbarComponent } from './turnier-navbar.component';
 describe('TurnierNavbarComponent', () => {
   const PARTNER = 'https://rookhub.test';
 
-  function setup(partnerUrl: string | null): ComponentFixture<TurnierNavbarComponent> {
-    localStorage.clear();   // ausgeloggt: die breitere Fassung mit „Anmelden“ als Textknopf
+  /** loggedIn: die drei Wege gibt es nur angemeldet (UX-038); ausgeloggt steht „Anmelden“ als Textknopf in der Zeile. */
+  function setup(partnerUrl: string | null, loggedIn = false): ComponentFixture<TurnierNavbarComponent> {
+    localStorage.clear();
     TestBed.configureTestingModule({
       imports: [TurnierNavbarComponent],
       providers: [
@@ -30,6 +32,8 @@ describe('TurnierNavbarComponent', () => {
         provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
         // Auf localhost gibt es keine Schwesterseite — mit Partner ist die Zeile am laengsten.
         { provide: HandoffService, useValue: { partnerUrl, jump: () => Promise.resolve() } },
+        ...(loggedIn ? [{ provide: AuthService, useValue:
+          { isLoggedIn: true, isAdmin: false, currentUser: { username: 'tester' }, logout: () => {} } }] : []),
       ],
     });
     const fixture = TestBed.createComponent(TurnierNavbarComponent);
@@ -70,9 +74,10 @@ describe('TurnierNavbarComponent', () => {
       expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth);
 
       // Das ☰ ist da, die Textlinks sind weg; Anmelden bleibt als die eine Aktion in der Zeile.
+      // (Ausgeloggt gibt es die Textlinks gar nicht — UX-038; die angemeldete Fassung prueft der Test danach.)
       const menuBtn = host.querySelector('button[aria-label="nav.menu"]') as HTMLElement;
       expect(getComputedStyle(menuBtn).display).not.toBe('none');
-      expect(getComputedStyle(host.querySelector('.links') as HTMLElement).display).toBe('none');
+      expect(host.querySelector('.links')).toBeNull();
       const login = host.querySelector('a[href^="/login"]') as HTMLElement;   // mit returnUrl (UX-020)
       expect(getComputedStyle(login).display).not.toBe('none');
     } finally {
@@ -80,8 +85,24 @@ describe('TurnierNavbarComponent', () => {
     }
   });
 
+  it('angemeldet bei 360px: die Textlinks sind in der Zeile ausgeblendet, die Zeile laeuft nicht ueber', async () => {
+    const restore = await narrowViewport(360);
+    try {
+      const fixture = setup(PARTNER, true);
+      const host = fixture.nativeElement as HTMLElement;
+      host.style.width = '360px';
+      host.style.display = 'block';
+      fixture.detectChanges();
+      const toolbar = host.querySelector('mat-toolbar') as HTMLElement;
+      expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth);
+      expect(getComputedStyle(host.querySelector('.links') as HTMLElement).display).toBe('none');
+    } finally {
+      restore();
+    }
+  });
+
   it('das ☰-Menue traegt die drei Wege, den RookHub-Sprung, Design und Sprache', () => {
-    const fixture = setup(PARTNER);
+    const fixture = setup(PARTNER, true);
     const host = fixture.nativeElement as HTMLElement;
     const trigger = host.querySelector('button[aria-label="nav.menu"]') as HTMLButtonElement;
     expect(trigger).withContext('☰ fehlt').toBeTruthy();
@@ -109,7 +130,7 @@ describe('TurnierNavbarComponent', () => {
    * hiess „Turniere" und war neben „Meine Turniere" (dem Verlauf) nicht als „gemerkt" zu erkennen.
    */
   it('Marke fuehrt zur Startseite, die Merkliste heisst „Gemerkt", Kalender steht vorn (F6-019)', () => {
-    const fixture = setup(null);
+    const fixture = setup(null, true);
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('a.brand')!.getAttribute('href')).toBe('/');
 
@@ -161,6 +182,27 @@ describe('TurnierNavbarComponent', () => {
     }
   });
 
+  /**
+   * UX-038: Logo und alle drei Menuepunkte standen auch fuer Gaeste da, alle Ziele haben einen authGuard — auf der
+   * Anmeldemaske fuehrte jeder Klick ohne sichtbare Reaktion auf dieselbe Maske zurueck.
+   */
+  it('Gaeste sehen keine geschuetzten Wege, weder in der Zeile noch im ☰; die Marke bleibt (UX-038)', () => {
+    const fixture = setup(PARTNER);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.links')).withContext('Textlinks fuer Gaeste').toBeNull();
+    expect(host.querySelector('a.brand')!.getAttribute('href')).toBe('/');
+
+    const trigger = host.querySelector('button[aria-label="nav.menu"]') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const hrefs = overlayItems().map(i => i.getAttribute('href')).filter(Boolean);
+    expect(hrefs.filter(h => h!.startsWith('/tournaments'))).toEqual([]);
+    // Design und Sprache bleiben auch fuer Gaeste erreichbar.
+    expect(overlayItems().some(i => i.textContent?.includes('nav.language'))).toBeTrue();
+    trigger.click();
+    fixture.detectChanges();
+  });
+
   it('ohne Schwesterseite (localhost) fehlt der RookHub-Sprung auch im Menue', () => {
     const fixture = setup(null);
     const host = fixture.nativeElement as HTMLElement;
@@ -176,7 +218,7 @@ describe('TurnierNavbarComponent', () => {
 
   it('am Schreibtisch (Karma-Fenster, breiter als 768px) bleibt alles wie bisher in der Zeile', () => {
     if (window.innerWidth <= 768) { pending('Fenster schmaler als der Bruch'); return; }
-    const fixture = setup(PARTNER);
+    const fixture = setup(PARTNER, true);
     const host = fixture.nativeElement as HTMLElement;
 
     expect(getComputedStyle(host.querySelector('.links') as HTMLElement).display).toBe('flex');

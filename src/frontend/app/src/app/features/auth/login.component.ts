@@ -1,7 +1,8 @@
-import { Component, ChangeDetectionStrategy, Inject, Optional, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Inject, OnDestroy, Optional, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router, ActivatedRoute } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute, ParamMap } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -156,7 +157,7 @@ export function loginRetryAfterSeconds(err: any): number {
     @media (max-width: 768px) { mat-card-actions { flex-wrap: wrap; } }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
   // username/password über den Prefill-Service, damit die Eingaben beim
   // Wechsel zur Registrierung (und zurück) erhalten bleiben.
   get username(): string { return this.prefill.username; }
@@ -168,16 +169,26 @@ export class LoginComponent {
   // Signal statt Feld: nach einer HTTP-Antwort rendert Angular 22 eine unmarkierte View nicht neu (wie bei der Registrierung).
   readonly error = signal<{ kind: LoginError; text: string } | null>(null);
 
-  returnUrl: string;
-  authRequired = false;
+  /**
+   * Ziel, Hinweis-Schalter und Bereichsname aus der Query — als Signal und LAUFEND gelesen (UX-038): ein Gast auf
+   * /login, der einen geschuetzten Menuepunkt anklickt, landet ueber den authGuard wieder auf /login, nur mit neuer
+   * Query. Der Router verwendet die Komponente dabei weiter (gleiche Route), der Konstruktor laeuft nicht noch
+   * einmal — mit dem einmal gelesenen Snapshot blieb die Maske unveraendert (kein Hinweis, altes Ruecksprungziel),
+   * und der Klick wirkte tot.
+   */
+  private readonly query = signal<{ returnUrl: string; authRequired: boolean; areaKey: string | null }>(
+    { returnUrl: '/dashboard', authRequired: false, areaKey: null });
+  private readonly querySub: Subscription;
+  get returnUrl(): string { return this.query().returnUrl; }
+  get authRequired(): boolean { return this.query().authRequired; }
+  /** Menüname des Ziels für den Anmelde-Hinweis (UX-027), sonst der allgemeine Satz. */
+  get areaKey(): string | null { return this.query().areaKey; }
   /** KidHub hat kein Impressum (siehe LEGAL_SITE). */
   readonly legal: LegalSite;
   /** LeagueHub (LEGAL_SITE.kind): Hinweis auf die geschlossene Gruppe und das RookHub-Konto (UX-033). */
   readonly leagueHub: boolean;
   /** App-eigene Einleitung (Turnierseite, UX-027); RookHub: leer. */
   readonly intro: AuthIntro;
-  /** Menüname des Ziels für den Anmelde-Hinweis (UX-027), sonst der allgemeine Satz. */
-  readonly areaKey: string | null;
   /** „Konto kostenlos, E-Mail freiwillig“ — nicht auf LeagueHub (Konto allein öffnet dort nichts) und nicht, wo die
    *  Einleitung der Oberfläche das schon sagt. */
   readonly showFreeNote: boolean;
@@ -189,11 +200,16 @@ export class LoginComponent {
     this.legal = legal ?? defaultLegalSite();
     this.leagueHub = this.legal.kind === 'leaguehub';
     this.intro = intro ?? {};
-    const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-    this.returnUrl = sanitizeReturnUrl(raw);
-    this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';
-    this.areaKey = loginAreaKey(this.returnUrl);
     this.showFreeNote = !this.leagueHub && !this.intro.login;
+    // Meldet sofort den aktuellen Stand (wie bisher der Snapshot) und danach jede neue Query derselben Route.
+    this.querySub = this.route.queryParamMap.subscribe(q => this.applyQuery(q));
+  }
+
+  ngOnDestroy(): void { this.querySub.unsubscribe(); }
+
+  private applyQuery(q: ParamMap): void {
+    const returnUrl = sanitizeReturnUrl(q.get('returnUrl') || '/dashboard');
+    this.query.set({ returnUrl, authRequired: q.get('authRequired') === '1', areaKey: loginAreaKey(returnUrl) });
   }
 
 
