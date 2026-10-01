@@ -1471,6 +1471,11 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.loadWeeklyAt(this.weeklyIndex + 1);
   }
 
+  /** Die Übersicht /weekly steht hinter authGuard; ein Gast (geteilter Link auf /weekly/:id) landete über
+   *  Pfeil und „Zur Übersicht" ungefragt auf der Anmeldeseite → für Gäste keine Übersichts-Knöpfe. Anmelden
+   *  bietet ihnen der Gast-Hinweis der Kontext-Karte an. */
+  get canOpenWeeklyOverview(): boolean { return this.isLoggedIn; }
+
   backToWeekly(): void {
     this.router.navigate(['/weekly']);
   }

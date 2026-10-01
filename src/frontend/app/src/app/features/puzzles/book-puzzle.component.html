@@ -113,7 +113,7 @@
             <mat-card class="context-card">
               <mat-card-content>
                 <div class="ctx-head">
-                  @if (inWeekly || inCourse) {
+                  @if ((inWeekly && canOpenWeeklyOverview) || inCourse) {
                     <button mat-icon-button class="ctx-back"
                             (click)="inWeekly ? backToWeekly() : backToCourses()"
                             [attr.aria-label]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate"
@@ -284,9 +284,11 @@
 
                 @if (weeklyCompleted) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.weekly.allSolved' | translate }}</p>
-                  <div class="ctx-nav">
-                    <button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
-                  </div>
+                  @if (canOpenWeeklyOverview) {
+                    <div class="ctx-nav">
+                      <button mat-raised-button color="primary" (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                    </div>
+                  }
                 } @else if (courseCompleted) {
                   @if (courseFullyDone) {
                     <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>
@@ -415,9 +417,11 @@
                     <mat-icon>{{ weeklyTotal === 0 ? 'info' : 'emoji_events' }}</mat-icon>
                     {{ (weeklyTotal === 0 ? 'book.weekly.noPuzzles' : 'book.weekly.allSolved') | translate }}
                   </p>
-                  <div class="ctx-nav">
-                    <button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
-                  </div>
+                  @if (canOpenWeeklyOverview) {
+                    <div class="ctx-nav">
+                      <button mat-stroked-button (click)="backToWeekly()">{{ 'book.course.toOverview' | translate }}</button>
+                    </div>
+                  }
                 }
                 @if (inCourse && courseCompleted) {
                   <p class="ctx-done"><mat-icon>emoji_events</mat-icon> {{ 'book.course.completed' | translate }}</p>

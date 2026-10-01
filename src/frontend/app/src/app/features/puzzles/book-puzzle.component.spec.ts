@@ -6,6 +6,25 @@ import { saveSolveElapsed, loadSolveElapsed } from './solve-elapsed.util';
 import { CommentSegment } from './comment-variation.util';
 import { CourseLanguageService } from '../courses/course-language.service';
 import { saveLastSolved, loadLastSolved, clearLastSolved } from './last-solved-store';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { provideTranslateService, TranslatePipe } from '@ngx-translate/core';
+import { PuzzleService } from './puzzle.service';
+import { StockfishService } from './stockfish.service';
+import { PreferencesService } from '../../core/preferences.service';
+import { CourseService } from '../courses/course.service';
+import { WeeklyService } from '../weekly/weekly.service';
+import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
+import { ChallengeService } from '../../core/challenge.service';
+import { LongSolveService } from './long-solve.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { SolveModeService } from '../../core/solve-mode.service';
+import { WorksheetService } from '../worksheets/worksheet.service';
 
 /**
  * Fokussierter Test der Lade-Epoche (loadEpoch) ohne TestBed/Template: eine veraltete,
@@ -1930,5 +1949,71 @@ describe('BookPuzzleComponent Einstellungen speichern (F2-009)', () => {
     c.openSettingsDialog();
 
     expect(c.enPassantForced).toBeTrue();
+  });
+});
+
+// Codereview UX-009: Gäste dürfen /weekly/:id spielen, die Übersicht /weekly steht aber hinter authGuard — Pfeil
+// und „Zur Übersicht" führten ungefragt auf die Anmeldeseite. Gerendert (Template), Kindkomponenten ausgeblendet.
+describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht (UX-009)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));   // nichts laden — den Zustand setzt der Test
+
+  function render(loggedIn: boolean, completed = false): HTMLElement {
+    const prefs: any = {
+      boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, bookStockfishDepth: 12,
+      visualization: 0, vizArrow: true, offPathWarnMoves: 3, enPassantForced: true,
+    };
+    const route: any = {
+      snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } },
+      paramMap: { subscribe: () => ({ unsubscribe() {} }) },
+    };
+    TestBed.configureTestingModule({
+      imports: [BookPuzzleComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: PuzzleService, useValue: {} },
+        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+        { provide: PreferencesService, useValue: prefs },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: MatDialog, useValue: {} },
+        { provide: CourseService, useValue: {} },
+        { provide: WeeklyService, useValue: {} },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/weekly/5' } },
+        { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
+        { provide: ChallengeService, useValue: {} },
+        { provide: LongSolveService, useValue: { resolve: (s: number) => of(s) } },
+        { provide: FavoritesService, useValue: { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) } },
+        { provide: SolveModeService, useValue: makeSolveModeStub(prefs) },
+        { provide: WorksheetService, useValue: {} },
+      ],
+    });
+    TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    const fixture = TestBed.createComponent(BookPuzzleComponent);
+    const c: any = fixture.componentInstance;
+    c.inWeekly = true;
+    c.weeklyId = 5;
+    const pz = (id: number, moves: string) => ({ id, lineId: `l${id}`, bookFileName: 'wochenpost.pgn', bookTitle: 'Wochenpost', round: '1', fen: FEN, moves });
+    c.weeklyPuzzles = [pz(0, 'e2e4 e7e5'), pz(1, 'd2d4 d7d5')];
+    c.puzzle = { ...c.weeklyPuzzles[0] };
+    c.weeklyCompleted = completed;
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+  const overviewButtons = (el: HTMLElement) =>
+    [...el.querySelectorAll('button')].filter(b => b.textContent?.includes('book.course.toOverview'));
+
+  it('angemeldet: Pfeil zur Wochenpost-Übersicht', () => {
+    expect(render(true).querySelector('.ctx-back')).not.toBeNull();
+  });
+
+  it('Gast: kein Pfeil zur (geschützten) Übersicht', () => {
+    expect(render(false).querySelector('.ctx-back')).toBeNull();
+  });
+
+  it('Gast nach „alle gelöst": kein „Zur Übersicht", angemeldet schon', () => {
+    expect(overviewButtons(render(false, true)).length).toBe(0);
+    TestBed.resetTestingModule();
+    expect(overviewButtons(render(true, true)).length).toBe(1);
   });
 });
