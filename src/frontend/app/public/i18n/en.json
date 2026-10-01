@@ -2950,6 +2950,30 @@
       "makeMainline": "Make main line",
       "deleteFrom": "Delete from here",
       "hint": "Right-click a move (long press on a phone): star, promote a variation, make it the main line or delete from there."
+    },
+    "maia": {
+      "title": "Sparring against Maia",
+      "strength": "Strength",
+      "start": "Start",
+      "stop": "End sparring",
+      "switchSides": "Switch sides",
+      "restart": "Again from the starting position",
+      "maiaMove": "Maia moves",
+      "thinking": "Maia is thinking …",
+      "status": "Maia {{elo}} · {{side}}",
+      "youWhite": "You play White",
+      "youBlack": "You play Black",
+      "downloadInfo": "Maia needs a model once (46 MB). It stays stored on this device.",
+      "downloadInfoNoStore": "Maia needs a model (46 MB). This browser cannot store it — it is downloaded again on every visit.",
+      "download": "Download",
+      "downloading": "Loading model … {{percent}} %",
+      "loading": "Preparing model …",
+      "errorUnavailable": "The Maia model is not available on this server.",
+      "errorFailed": "Maia could not be loaded.",
+      "retry": "Try again",
+      "moveFailed": "Maia could not provide a move.",
+      "enginePaused": "Engine paused during sparring",
+      "hint": "Maia-3 is a neural network from the University of Toronto. It has learned from millions of games which moves people of a given playing strength choose — including their typical mistakes.\n\nThe strength corresponds to a Lichess blitz rating; as a rule of thumb it is about 200 points above FIDE Elo.\n\nMaia does not calculate ahead but plays by feel. The engine stays off meanwhile so that you do the calculating yourself."
     }
   },
   "stats": {

@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace RookHub.Api.Tests;
@@ -426,6 +428,10 @@ public class DeploymentConfigTests
             "/assets/stockfish/stockfish.wasm", "/fonts/inter-abc123.woff2", "/media/board-abc123.png",
             "/courses/12", "/courses/12/calc", "/meinkurs/1.e4", "/tournaments/pl2026-123",
             "/g/Ab3dEf9h", "/t/1474416", "/puzzles/book/77", "/analysis", "/tiles/5/17/11.png",
+            // Maia-Sparring: onnxruntime-Laufzeit, Worker und Modell.
+            "/assets/ort/ort.wasm.min.js", "/assets/ort/ort-wasm-simd-threaded.mjs",
+            "/assets/ort/ort-wasm-simd-threaded.wasm", "/assets/maia/maia-worker.js",
+            "/assets/maia/maia3_simplified.onnx",
         })
             Assert.False(Blocked(legit), $"App-Pfad wuerde faelschlich 404: {legit}");
 
@@ -447,6 +453,173 @@ public class DeploymentConfigTests
             Assert.Contains($"location ^~ {api} {{", nginx);
             Assert.DoesNotContain($"location {api} {{", nginx);
         }
+    }
+
+    /// <summary>
+    /// Maia-Sparring im Analysebrett: das Modell (45 MB) liegt NICHT im Repo, der Docker-Build holt es per Pin.
+    /// Drei Stellen muessen dabei zusammenpassen, und keine davon prueft ein Compiler:
+    /// <list type="number">
+    /// <item><b>Pin ↔ Browser.</b> <c>fetch.sh</c> ist die einzige Stelle fuer Commit/Pruefsumme/Groesse;
+    /// <c>maia-model.ts</c> traegt die ersten acht Zeichen der Pruefsumme (Cache-Schluessel) und die Groesse. Die
+    /// Groesse ist im Browser der EINZIGE Beweis, dass das Modell da ist — eine fehlende Datei beantwortet der
+    /// SPA-Fallback mit 200 und der index.html. Ein neuer Pin nur in fetch.sh hiesse: jedes Modell gilt als falsch.</item>
+    /// <item><b>.mjs ↔ nginx.</b> nginx:alpine kennt die Endung nicht und liefert application/octet-stream; ein Modul
+    /// mit falschem Typ lehnt der Browser ab („Failed to fetch dynamically imported module", live nachgestellt).
+    /// Ein add_header in der Location ersetzte die serverweiten Header samt CSP.</item>
+    /// <item><b>Dockerfile.</b> Nur das RookHub-Image holt das Modell, und das ARG muss VOR dem Schritt stehen —
+    /// sonst ist $APP_PROJECT dort leer, die Bedingung nie wahr, und das Image kaeme still ohne Modell.</item>
+    /// </list>
+    /// </summary>
+    [Fact]
+    public void Maia_ModelPin_AndDelivery_StayConsistent()
+    {
+        var fetch = ReadRepoFile("src/frontend/app/maia-model/fetch.sh");
+        var commit = Regex.Match(fetch, @"(?m)^COMMIT=(?<v>[0-9a-f]{40})\s*$");
+        var sha = Regex.Match(fetch, @"(?m)^SHA256=(?<v>[0-9a-f]{64})\s*$");
+        var bytes = Regex.Match(fetch, @"(?m)^BYTES=(?<v>\d+)\s*$");
+        Assert.True(commit.Success, "COMMIT=<40 Hex> fehlt in fetch.sh");
+        Assert.True(sha.Success, "SHA256=<64 Hex> fehlt in fetch.sh");
+        Assert.True(bytes.Success, "BYTES=<Zahl> fehlt in fetch.sh");
+        Assert.Contains("set -eu", fetch);
+        Assert.Contains("NAME=maia3_simplified.onnx", fetch);
+
+        var model = ReadRepoFile("src/frontend/app/src/app/features/analysis/maia/maia-model.ts");
+        var decl = Regex.Match(model,
+            @"MAIA_MODEL = \{ url: '(?<url>[^']+)', version: '(?<version>[^']+)', bytes: (?<bytes>\d+) \}");
+        Assert.True(decl.Success, "MAIA_MODEL-Deklaration in maia-model.ts nicht gefunden");
+        Assert.Equal(sha.Groups["v"].Value[..8], decl.Groups["version"].Value);
+        Assert.Equal(bytes.Groups["v"].Value, decl.Groups["bytes"].Value);
+        Assert.Equal("/assets/maia/maia3_simplified.onnx", decl.Groups["url"].Value);
+
+        // Ein geaenderter Pin muss das Image neu bauen (Pfadfilter der CI) — und die Attribution nennt den Commit,
+        // dessen Modell tatsaechlich ausgeliefert wird.
+        Assert.Contains("'src/frontend/app/maia-model/**'", ReadRepoFile(".github/filters.yml"));
+        Assert.Contains(commit.Groups["v"].Value, ReadRepoFile("src/frontend/app/public/CHESS-ASSETS.md"));
+
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var mjs = Regex.Match(nginx, @"location ~\* \\\.mjs\$ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(mjs.Success, "location ~* \\.mjs$ fehlt in nginx.conf");
+        Assert.Contains("types { application/javascript mjs; }", mjs.Groups["body"].Value);
+        Assert.Contains("default_type application/javascript;", mjs.Groups["body"].Value);
+        Assert.DoesNotContain("add_header", mjs.Groups["body"].Value);
+
+        var docker = ReadRepoFile("src/frontend/Dockerfile");
+        var runs = Regex.Matches(docker, @"(?m)^RUN .*maia-model/fetch\.sh.*$");
+        Assert.Single(runs);
+        Assert.Equal("RUN if [ \"$APP_PROJECT\" = \"app\" ]; then sh maia-model/fetch.sh; fi", runs[0].Value.TrimEnd());
+        var arg = docker.IndexOf("ARG APP_PROJECT=app", StringComparison.Ordinal);
+        // Am Zeilenanfang gesucht: der Kommentar ueber dem Schritt nennt `COPY app/ .` selbst.
+        var copyAll = Regex.Match(docker, @"(?m)^COPY app/ \.\s*$");
+        Assert.True(copyAll.Success, "`COPY app/ .` fehlt im Dockerfile");
+        Assert.True(arg >= 0 && arg < runs[0].Index, "ARG APP_PROJECT muss vor dem Modell-Schritt stehen");
+        Assert.True(runs[0].Index < copyAll.Index, "Das Modell kommt vor `COPY app/ .` (Layer-Cache bei Quelltext-Aenderungen)");
+        Assert.Contains("COPY app/maia-model/fetch.sh maia-model/fetch.sh", docker);
+        Assert.Contains("app/maia-model/*.onnx", ReadRepoFile("src/frontend/.dockerignore"));
+    }
+
+    /// <summary>
+    /// Die Laufzeit (onnxruntime-web) und das Modell gehoeren NUR ins RookHub-Bundle, und das Modell NIE in den
+    /// Angular-Service-Worker: der ngsw puffert eine Datei ganz, ohne dass die Seite einen Fortschritt saehe — die
+    /// 45 MB legt eigener Code in die Cache API. Laufzeit und Worker stehen in einer `lazy`-Gruppe (offline nach dem
+    /// ersten Benutzen, aber kein Download fuer jeden, der RookHub nur oeffnet). onnxruntime-web ist EXAKT gepinnt:
+    /// die drei kopierten Dateien sind ein Vertrag mit dem Worker, ein Minor-Sprung kann sie umbenennen.
+    /// </summary>
+    [Fact]
+    public void Maia_RuntimeAndModel_OnlyInTheRookHubBundle_AndNeverInTheServiceWorker()
+    {
+        const string modelPath = "/assets/maia/maia3_simplified.onnx";
+        using var ngsw = JsonDocument.Parse(ReadRepoFile("src/frontend/app/ngsw-config.json"));
+        JsonElement? maiaGroup = null;
+        foreach (var group in ngsw.RootElement.GetProperty("assetGroups").EnumerateArray())
+        {
+            var files = group.GetProperty("resources").TryGetProperty("files", out var f)
+                ? f.EnumerateArray().Select(x => x.GetString()!).ToList()
+                : new List<string>();
+            // Ausschluss-Muster (`!…`) werden bewusst nicht ausgewertet: das Modell soll gar nicht erst unter ein
+            // Einschluss-Muster fallen.
+            foreach (var pattern in files.Where(p => !p.StartsWith('!')))
+                Assert.False(NgswGlob(pattern).IsMatch(modelPath),
+                    $"ngsw-Gruppe '{group.GetProperty("name").GetString()}' trifft das Modell ({pattern})");
+            if (group.GetProperty("name").GetString() == "maia") maiaGroup = group;
+        }
+        if (ngsw.RootElement.TryGetProperty("dataGroups", out var dataGroups))
+            foreach (var group in dataGroups.EnumerateArray())
+                foreach (var url in group.GetProperty("urls").EnumerateArray())
+                    Assert.False(NgswGlob(url.GetString()!).IsMatch(modelPath), $"ngsw-dataGroup trifft das Modell ({url})");
+
+        Assert.NotNull(maiaGroup);
+        var maia = maiaGroup.Value;
+        Assert.Equal("lazy", maia.GetProperty("installMode").GetString());
+        Assert.Equal("lazy", maia.GetProperty("updateMode").GetString());
+        var maiaPatterns = maia.GetProperty("resources").GetProperty("files").EnumerateArray()
+            .Select(x => NgswGlob(x.GetString()!)).ToList();
+        foreach (var asset in new[]
+        {
+            "/assets/ort/ort.wasm.min.js", "/assets/ort/ort-wasm-simd-threaded.mjs",
+            "/assets/ort/ort-wasm-simd-threaded.wasm", "/assets/maia/maia-worker.js",
+        })
+            Assert.True(maiaPatterns.Any(p => p.IsMatch(asset)), $"ngsw-Gruppe 'maia' deckt {asset} nicht ab");
+
+        // Der Nachbau der ngsw-Globs selbst: `*` bleibt in EINEM Pfadstueck, `**` geht ueber beliebig viele.
+        Assert.DoesNotMatch(NgswGlob("/*.js"), "/assets/maia/maia-worker.js");
+        Assert.Matches(NgswGlob("/*.js"), "/main-AB12CD34.js");
+        Assert.Matches(NgswGlob("/assets/stockfish/**"), "/assets/stockfish/stockfish-18-lite-single.wasm");
+
+        // angular.json: die drei Eintraege stehen NUR beim Projekt `app` (in dessen Build) — die anderen vier
+        // Bundles (turnier, kidhub, leaguehub, clubhub) haben kein Sparring.
+        using var angular = JsonDocument.Parse(ReadRepoFile("src/frontend/app/angular.json"));
+        var expected = new[]
+        {
+            ("{ort.wasm.min.js,ort-wasm-simd-threaded.mjs,ort-wasm-simd-threaded.wasm}", "node_modules/onnxruntime-web/dist", "/assets/ort"),
+            ("maia-worker.js", "src/app/features/analysis/maia", "/assets/maia"),
+            ("*.onnx", "maia-model", "/assets/maia"),
+        };
+        foreach (var project in angular.RootElement.GetProperty("projects").EnumerateObject())
+        {
+            var found = new List<(string Target, string Glob, string Input, string Output)>();
+            foreach (var target in project.Value.GetProperty("architect").EnumerateObject())
+            {
+                if (!target.Value.TryGetProperty("options", out var options)
+                    || !options.TryGetProperty("assets", out var assets)) continue;
+                foreach (var asset in assets.EnumerateArray().Where(a => a.ValueKind == JsonValueKind.Object))
+                {
+                    var input = asset.GetProperty("input").GetString()!;
+                    if (!input.Contains("onnxruntime", StringComparison.Ordinal)
+                        && !input.Contains("maia", StringComparison.Ordinal)) continue;
+                    found.Add((target.Name, asset.GetProperty("glob").GetString()!, input,
+                        asset.TryGetProperty("output", out var o) ? o.GetString()! : ""));
+                }
+            }
+            if (project.Name == "app")
+                Assert.Equal(expected.Select(e => ("build", e.Item1, e.Item2, e.Item3)), found);
+            else
+                Assert.True(found.Count == 0, $"Projekt '{project.Name}' kopiert Maia/onnxruntime-Dateien");
+        }
+
+        using var package = JsonDocument.Parse(ReadRepoFile("src/frontend/app/package.json"));
+        var ort = package.RootElement.GetProperty("dependencies").GetProperty("onnxruntime-web").GetString()!;
+        Assert.Matches(@"^\d+\.\d+\.\d+$", ort);   // kein ^ oder ~
+    }
+
+    /// <summary>Nachbau von <c>globToRegex</c> aus @angular/service-worker (config/src/glob.ts): `**` als ganzes
+    /// Pfadstueck = beliebig viele Stuecke, `*` = beliebig viele Zeichen ohne `/`, `?` = ein Zeichen ohne `/`;
+    /// Klammern und `|` gehen als Regex durch (so nutzt ngsw-config.json sie fuer Endungslisten).</summary>
+    private static Regex NgswGlob(string glob)
+    {
+        var segments = glob.Split('/');
+        var regex = new StringBuilder("^");
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var last = i == segments.Length - 1;
+            if (segments[i] == "**")
+            {
+                regex.Append(last ? ".*" : @"(?:.+\/)?");
+                continue;
+            }
+            regex.Append(segments[i].Replace(".", @"\.").Replace("+", @"\+").Replace("*", "[^/]*").Replace("?", "[^/]"));
+            if (!last) regex.Append(@"\/");
+        }
+        return new Regex(regex.Append('$').ToString());
     }
 
     /// <summary>

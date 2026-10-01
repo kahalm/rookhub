@@ -69,6 +69,17 @@
           "/assets/stockfish/**"
         ]
       }
+    },
+    {
+      "name": "maia",
+      "installMode": "lazy",
+      "updateMode": "lazy",
+      "resources": {
+        "files": [
+          "/assets/ort/**",
+          "/assets/maia/maia-worker.js"
+        ]
+      }
     }
   ],
   "dataGroups": []

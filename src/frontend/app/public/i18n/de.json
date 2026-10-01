@@ -2950,6 +2950,30 @@
       "makeMainline": "Zur Hauptvariante machen",
       "deleteFrom": "Ab hier löschen",
       "hint": "Rechtsklick auf einen Zug (am Handy lange drücken): Stern, Variante hochstufen, zur Hauptvariante machen oder ab dort löschen."
+    },
+    "maia": {
+      "title": "Sparring gegen Maia",
+      "strength": "Stärke",
+      "start": "Starten",
+      "stop": "Sparring beenden",
+      "switchSides": "Seite wechseln",
+      "restart": "Nochmal ab der Ausgangsstellung",
+      "maiaMove": "Maia zieht",
+      "thinking": "Maia überlegt …",
+      "status": "Maia {{elo}} · {{side}}",
+      "youWhite": "Du spielst Weiß",
+      "youBlack": "Du spielst Schwarz",
+      "downloadInfo": "Maia braucht einmalig ein Modell (46 MB). Es bleibt auf diesem Gerät gespeichert.",
+      "downloadInfoNoStore": "Maia braucht ein Modell (46 MB). Dieser Browser kann es nicht speichern — es wird bei jedem Besuch neu geladen.",
+      "download": "Herunterladen",
+      "downloading": "Modell wird geladen … {{percent}} %",
+      "loading": "Modell wird vorbereitet …",
+      "errorUnavailable": "Das Maia-Modell ist auf diesem Server nicht verfügbar.",
+      "errorFailed": "Maia konnte nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "moveFailed": "Maia konnte keinen Zug liefern.",
+      "enginePaused": "Engine pausiert während des Sparrings",
+      "hint": "Maia-3 ist ein neuronales Netz der Universität Toronto. Es hat aus Millionen Partien gelernt, welche Züge Menschen einer bestimmten Spielstärke wählen — samt ihrer typischen Fehler.\n\nDie Stärke entspricht einer Lichess-Blitz-Wertung; als Faustregel liegt sie rund 200 Punkte über der FIDE-Elo.\n\nMaia rechnet nicht voraus, sondern spielt nach Gefühl. Die Engine bleibt währenddessen aus, damit du selbst rechnest."
     }
   },
   "stats": {

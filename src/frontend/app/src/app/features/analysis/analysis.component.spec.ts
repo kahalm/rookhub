@@ -5,6 +5,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
@@ -20,6 +21,8 @@ import { ExternalEngineService } from './external-engine.service';
 import { AnalysisHistoryService } from './analysis-history.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
+import { MaiaEngineService } from './maia/maia-engine.service';
+import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 
 /**
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
@@ -43,7 +46,7 @@ function makeComponent(params: Record<string, string | null>, opts: {
     destroy: () => {},                  // in ngOnDestroy aufgerufen
   };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
-  const snackBar: any = { open: () => {} };
+  const snackBar: any = { open: () => {}, show: jasmine.createSpy('show'), warn: jasmine.createSpy('warn') };
   const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
   // auth: die „Stellung in meinen Repertoires"-Karte wird nur eingeloggt gerendert.
   const auth: any = { isLoggedIn: opts.loggedIn ?? false };
@@ -68,7 +71,20 @@ function makeComponent(params: Record<string, string | null>, opts: {
     list: jasmine.createSpy('list').and.returnValue(of([])),
   };
   const dialog: any = { open: jasmine.createSpy('open') };
-  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog);
+  // Maia-Sparring: chooseMove liefert ein Promise, das der Test über __maia.calls selbst auflöst/ablehnt.
+  const maia: any = {
+    calls: [] as { fen: string; elo: number; resolve: (uci: string | null) => void; reject: (e: unknown) => void }[],
+    release: jasmine.createSpy('release'),
+    statusValue: 'ready',
+    prepare: jasmine.createSpy('prepare').and.returnValue(Promise.resolve(true)),
+  };
+  maia.status = () => maia.statusValue;
+  maia.chooseMove = jasmine.createSpy('chooseMove').and.callFake((fen: string, elo: number) =>
+    new Promise((resolve, reject) => maia.calls.push({ fen, elo, resolve, reject })));
+  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog, maia);
+  c.maiaDelayMs = 0;
+  c.__maia = maia;
+  c.__snackbar = snackBar;
   c.__history = history;
   c.__dialog = dialog;
   // Vergleichs-Engine ueber den Seam: sonst baut startCompare() den echten Service und
@@ -1143,7 +1159,7 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
     };
     TestBed.overrideComponent(AnalysisComponent, {
       remove: { imports: [AnalysisBoardComponent, PositionSetupComponent, PositionRepertoiresComponent, HelpHintComponent,
-        OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent] },
+        OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent, MaiaSparringCardComponent] },
       add: { schemas: [NO_ERRORS_SCHEMA] },
     });
     await TestBed.configureTestingModule({
@@ -1159,6 +1175,8 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
         { provide: ExternalEngineService, useValue: { listEngines: () => new Subject(), analyse: () => {} } },
         { provide: AnalysisHistoryService, useValue: { save: () => of({}), get: () => of({}), list: () => of([]) } },
         { provide: MatDialog, useValue: { open: () => {} } },
+        // Kein echter Maia-Dienst: der baute beim ersten Start einen Worker samt 45-MB-Modell.
+        { provide: MaiaEngineService, useValue: { chooseMove: () => Promise.resolve(null), release: () => {}, status: () => 'idle', prepare: () => Promise.resolve(false) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AnalysisComponent);
@@ -1177,5 +1195,316 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
     ]);
     const debugButtons = fixture.debugElement.queryAll(By.css('.moves-card .controls > button'));
     expect(debugButtons.map(d => d.injector.get(MatTooltip).message)).toEqual(buttons.map(b => b.getAttribute('aria-label')!));
+  });
+
+  it('während des Sparrings: Engine-Schalter gesperrt, „Engine pausiert" statt „Engine aus"', async () => {
+    const c: any = fixture.componentInstance;
+    c.sparring = { start: c.root, userColor: 'white', engineWasOn: true };
+    c.engineOn = false;
+    fixture.detectChanges();
+    await new Promise(r => setTimeout(r));   // ngModel reicht disabled asynchron an den Schalter
+    fixture.detectChanges();
+    const card: HTMLElement = fixture.nativeElement.querySelector('.engine-card');
+    expect(card.textContent).toContain('analysis.maia.enginePaused');
+    expect(card.textContent).not.toContain('analysis.engineOff');
+    expect(fixture.debugElement.query(By.directive(MatSlideToggle)).componentInstance.disabled).toBeTrue();
+  });
+});
+
+describe('AnalysisComponent Sparring gegen Maia', () => {
+  const flush = () => new Promise<void>(r => setTimeout(r));
+  const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+
+  /** Komponente an der Grundstellung, Engine an, Sparring gestartet (der Nutzer spielt Weiß). */
+  function sparringAtStart(params: Record<string, string | null> = { fen: START }) {
+    const c = makeComponent(params);
+    c.ngOnInit();
+    c.engineOn = true;
+    c.startSparring();
+    return c;
+  }
+
+  it('Start schaltet die Engine aus, merkt den Zustand und schreibt NICHT in localStorage', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+    const stop = spyOn(c.__engine, 'stop').and.callThrough();
+    const setItem = spyOn(Storage.prototype, 'setItem').and.callThrough();
+    c.startSparring();
+    expect(c.sparring).toEqual({ start: c.root, userColor: 'white', engineWasOn: true });
+    expect(c.engineOn).toBeFalse();
+    expect(c.orientation).toBe('white');
+    expect(stop).toHaveBeenCalled();
+    expect(c.shapes).toEqual([]);
+    expect(setItem.calls.allArgs().filter(a => a[0] === 'rookhub_analysis_engine')).toEqual([]);
+    c.ngOnDestroy();
+  });
+
+  it('startet nicht in einer Stellung, die zu Ende ist (Matt)', () => {
+    const c = makeComponent({ fen: START, moves: 'f2f3,e7e5,g2g4,d8h4' });
+    c.ngOnInit();
+    c.startSparring();
+    expect(c.sparring).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('eigener Zug → Maia antwortet: ihr Zug steht als Kind im Baum und auf dem Brett', async () => {
+    const c = sparringAtStart();
+    c.maiaElo = 1400;
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    expect(c.maiaThinking).toBeTrue();
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(AFTER_E4, 1400);
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    const e4 = c.root.children[0];
+    expect(e4.children.map((n: any) => n.san)).toEqual(['e5']);
+    expect(c.currentNode).toBe(e4.children[0]);
+    expect(c.boardFen).toBe(e4.children[0].fen);
+    expect(c.maiaThinking).toBeFalse();
+    expect(c.maiaToMove).toBeFalse();   // jetzt ist der Nutzer wieder dran
+    c.ngOnDestroy();
+  });
+
+  it('eine Antwort nach einer Navigation verfällt — Maia zieht danach nicht von selbst', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.goTo(0);
+    expect(c.maiaThinking).toBeFalse();
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.root.children[0].children).toEqual([]);
+    expect(c.currentNode).toBe(c.root);
+    expect(c.sparring).not.toBeNull();           // das Sparring bleibt aktiv
+    expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
+  });
+
+  it('ein Zug für Maias Seite löst nichts aus', () => {
+    // Nach 1.e4 steht Schwarz am Zug: der Nutzer spielt Schwarz, Weiß ist Maia.
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.startSparring();
+    expect(c.sparring.userColor).toBe('black');
+    c.goTo(0);                                    // zurück: Weiß (= Maia) am Zug, aber kein automatischer Zug
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    c.onMove({ orig: 'd2', dest: 'd4' });         // der Nutzer zieht für Maia
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    expect(c.maiaThinking).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('„Maia zieht" fordert in Maias Zugrecht einen Zug an, sonst nicht', async () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.startSparring();                            // Nutzer = Schwarz
+    c.requestMaiaMove();                          // Schwarz am Zug → nichts
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    c.goTo(0);
+    expect(c.maiaToMove).toBeTrue();
+    c.requestMaiaMove();
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.maiaElo);
+    c.__maia.calls[0].resolve('d2d4');
+    await flush();
+    expect(c.root.children.map((n: any) => n.san)).toEqual(['e4', 'd4']);   // als Variante
+    expect(c.currentNode.san).toBe('d4');
+    c.ngOnDestroy();
+  });
+
+  it('Seite wechseln in Maias Zugrecht fordert sofort einen Zug', async () => {
+    const c = sparringAtStart();
+    c.switchSparringSides();
+    expect(c.sparring.userColor).toBe('black');
+    expect(c.orientation).toBe('black');
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(START, c.maiaElo);
+    c.__maia.calls[0].resolve('e2e4');
+    await flush();
+    expect(c.currentNode.san).toBe('e4');
+    c.ngOnDestroy();
+  });
+
+  it('„Nochmal" springt zur Ausgangsstellung — und ist dort Maia am Zug, zieht sie', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    c.restartSparring();
+    expect(c.currentNode).toBe(c.root);
+    expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);   // Weiß = Nutzer am Zug
+
+    c.switchSparringSides();                                 // jetzt Maia = Weiß → sofort ein Zug
+    c.__maia.calls[1].resolve('d2d4');
+    await flush();
+    expect(c.currentNode.san).toBe('d4');
+    c.restartSparring();
+    expect(c.currentNode).toBe(c.root);
+    expect(c.__maia.chooseMove).toHaveBeenCalledTimes(3);
+    c.ngOnDestroy();
+  });
+
+  it('Beenden stellt engineOn wieder her (an bleibt an, aus bleibt aus)', () => {
+    const c = sparringAtStart();
+    c.stopSparring();
+    expect(c.sparring).toBeNull();
+    expect(c.engineOn).toBeTrue();
+    expect(c.__engine.analyze).toHaveBeenCalledWith(c.currentFen);
+
+    c.engineOn = false;
+    c.startSparring();
+    c.stopSparring();
+    expect(c.engineOn).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('Beenden lässt eine laufende Antwort verfallen', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.stopSparring();
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.root.children[0].children).toEqual([]);
+    expect(c.maiaThinking).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('reset() und FEN laden beenden das Sparring', () => {
+    const c = sparringAtStart();
+    c.reset();
+    expect(c.sparring).toBeNull();
+    expect(c.engineOn).toBeTrue();
+
+    c.startSparring();
+    c.fenInput = '4k3/8/8/8/8/8/4P3/4K3 w - - 0 1';
+    c.loadFen();
+    expect(c.sparring).toBeNull();
+    expect(c.engineOn).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('Löschen der Ausgangsstellung beendet es, Löschen woanders nicht', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5' });
+    c.ngOnInit();
+    c.engineOn = true;
+    c.goTo(1);
+    c.startSparring();                            // ab 1.e4, Nutzer = Schwarz
+    const e4 = c.root.children[0];
+    c.goTo(0);
+    c.onMove({ orig: 'd2', dest: 'd4' });         // Variante 1.d4 — Zug für Maias Seite, keine Antwort
+    c.onTreeAction({ kind: 'delete', node: c.root.children[1] });
+    expect(c.sparring).not.toBeNull();
+
+    c.goTo(2);
+    c.onTreeAction({ kind: 'delete', node: e4 });
+    expect(c.sparring).toBeNull();
+    expect(c.engineOn).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('Maia wandelt um: a7a8q wird richtig gespielt', async () => {
+    const c = makeComponent({ fen: '8/P5k1/8/8/8/8/6K1/8 w - - 0 1' });
+    c.ngOnInit();
+    c.startSparring();
+    c.switchSparringSides();                      // Maia = Weiß
+    c.__maia.calls[0].resolve('a7a8q');
+    await flush();
+    expect(c.currentNode.san).toBe('a8=Q');
+    expect(c.currentNode.uci).toBe('a7a8q');
+    expect(c.currentFen.startsWith('Q7/6k1/')).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('nach Matt/Patt keine Anfrage', () => {
+    const c = makeComponent({ fen: START, moves: 'f2f3,e7e5,g2g4' });
+    c.ngOnInit();
+    c.startSparring();                            // Nutzer = Schwarz
+    c.onMove({ orig: 'd8', dest: 'h4' });         // Qh4#
+    expect(c.terminal).toBe('mate-black-wins');
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('kein Zug (null) beendet nur das Überlegen', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.calls[0].resolve(null);
+    await flush();
+    expect(c.maiaThinking).toBeFalse();
+    expect(c.currentNode.san).toBe('e4');
+    expect(c.__snackbar.warn).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('chooseMove wirft → Snackbar, das Sparring bleibt', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.calls[0].reject(new Error('worker gone'));
+    await flush();
+    expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.maia.moveFailed');
+    expect(c.maiaThinking).toBeFalse();
+    expect(c.sparring).not.toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('Sitzung weg (Status error) → nach dem Fehlschlag im Hintergrund neu aufbauen', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.statusValue = 'error';             // der Worker ist gestorben
+    c.__maia.calls[0].reject(new Error('Maia failed'));
+    await flush();
+    expect(c.__snackbar.warn).toHaveBeenCalledWith('analysis.maia.moveFailed');
+    expect(c.__maia.prepare).toHaveBeenCalledTimes(1);
+    expect(c.sparring).not.toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('nur diese eine Anfrage scheiterte (Status ready) → kein Neuaufbau', async () => {
+    const c = sparringAtStart();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    c.__maia.calls[0].reject(new Error('boom'));
+    await flush();
+    expect(c.__snackbar.warn).toHaveBeenCalled();
+    expect(c.__maia.prepare).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('ein Zug aus Explorer/Repertoire zählt wie ein eigener: Maia antwortet', async () => {
+    const c = sparringAtStart();
+    c.playRepertoireMoves(['e4']);
+    expect(c.__maia.chooseMove).toHaveBeenCalledOnceWith(AFTER_E4, c.maiaElo);
+    c.__maia.calls[0].resolve('c7c5');
+    await flush();
+    expect(c.root.children[0].children.map((n: any) => n.san)).toEqual(['c5']);
+    expect(c.currentNode.san).toBe('c5');
+    c.ngOnDestroy();
+  });
+
+  it('Explorer/Repertoire-Zug für Maias Seite löst nichts aus', () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.startSparring();                            // Nutzer = Schwarz
+    c.goTo(0);                                    // Weiß (= Maia) am Zug
+    c.playRepertoireMoves(['d4']);                // der Nutzer zieht für Maia → danach ist er selbst dran
+    expect(c.currentNode.san).toBe('d4');
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('die Stärke: nur Werte der Auswahl, je Gerät gemerkt', () => {
+    try { localStorage.setItem('rookhub_analysis_maia_elo', '2000'); } catch {}
+    const c = makeComponent({ fen: START });
+    expect(c.maiaElo).toBe(2000);
+    c.onMaiaEloChange(1234);
+    expect(c.maiaElo).toBe(2000);
+    c.onMaiaEloChange(1200);
+    expect(c.maiaElo).toBe(1200);
+    expect(localStorage.getItem('rookhub_analysis_maia_elo')).toBe('1200');
+    try { localStorage.removeItem('rookhub_analysis_maia_elo'); } catch {}
+    c.ngOnInit();
+    c.ngOnDestroy();
+  });
+
+  it('ngOnDestroy gibt Maia frei', () => {
+    const c = sparringAtStart();
+    c.ngOnDestroy();
+    expect(c.__maia.release).toHaveBeenCalled();
   });
 });

@@ -2950,6 +2950,30 @@
       "makeMainline": "Postavi kao glavnu varijantu",
       "deleteFrom": "Obriši odavde",
       "hint": "Desni klik na potez (na mobitelu dugi pritisak): zvjezdica, unaprijedi varijantu, postavi kao glavnu ili obriši odande."
+    },
+    "maia": {
+      "title": "Sparing protiv Maie",
+      "strength": "Jačina",
+      "start": "Započni",
+      "stop": "Završi sparing",
+      "switchSides": "Zamijeni strane",
+      "restart": "Ponovno od početne pozicije",
+      "maiaMove": "Maia vuče potez",
+      "thinking": "Maia razmišlja …",
+      "status": "Maia {{elo}} · {{side}}",
+      "youWhite": "Igraš bijelima",
+      "youBlack": "Igraš crnima",
+      "downloadInfo": "Maia jednom treba model (46 MB). Ostaje spremljen na ovom uređaju.",
+      "downloadInfoNoStore": "Maia treba model (46 MB). Ovaj ga preglednik ne može spremiti — učitava se pri svakom posjetu.",
+      "download": "Preuzmi",
+      "downloading": "Model se učitava … {{percent}} %",
+      "loading": "Model se priprema …",
+      "errorUnavailable": "Maia model nije dostupan na ovom poslužitelju.",
+      "errorFailed": "Maiu nije bilo moguće učitati.",
+      "retry": "Pokušaj ponovno",
+      "moveFailed": "Maia nije mogla odigrati potez.",
+      "enginePaused": "Motor je pauziran tijekom sparinga",
+      "hint": "Maia-3 je neuronska mreža Sveučilišta u Torontu. Iz milijuna partija naučila je koje poteze biraju ljudi određene jačine igre — zajedno s njihovim tipičnim pogreškama.\n\nJačina odgovara Lichess blitz rejtingu; okvirno je oko 200 bodova iznad FIDE Elo rejtinga.\n\nMaia ne računa unaprijed, nego igra po osjećaju. Motor za to vrijeme ostaje isključen, kako bi ti sam računao."
     }
   },
   "stats": {

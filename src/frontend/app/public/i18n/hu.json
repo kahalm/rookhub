@@ -2200,6 +2200,30 @@
       "makeMainline": "Legyen főváltozat",
       "deleteFrom": "Törlés innentől",
       "hint": "Jobb kattintás egy lépésen (telefonon hosszan nyomva): csillag, változat előléptetése, főváltozattá tétel vagy törlés onnantól."
+    },
+    "maia": {
+      "title": "Edzőjátszma Maia ellen",
+      "strength": "Erősség",
+      "start": "Indítás",
+      "stop": "Edzőjátszma befejezése",
+      "switchSides": "Oldalcsere",
+      "restart": "Újra a kiinduló állástól",
+      "maiaMove": "Maia lép",
+      "thinking": "Maia gondolkodik …",
+      "status": "Maia {{elo}} · {{side}}",
+      "youWhite": "Te vagy a világos",
+      "youBlack": "Te vagy a sötét",
+      "downloadInfo": "Maiának egyszer szüksége van egy modellre (46 MB). Ezen az eszközön tárolva marad.",
+      "downloadInfoNoStore": "Maiának szüksége van egy modellre (46 MB). Ez a böngésző nem tudja tárolni — minden látogatáskor újra letöltődik.",
+      "download": "Letöltés",
+      "downloading": "Modell betöltése … {{percent}} %",
+      "loading": "Modell előkészítése …",
+      "errorUnavailable": "A Maia-modell nem érhető el ezen a szerveren.",
+      "errorFailed": "Maiát nem sikerült betölteni.",
+      "retry": "Újrapróbálás",
+      "moveFailed": "Maia nem tudott lépést adni.",
+      "enginePaused": "A motor szünetel az edzőjátszma alatt",
+      "hint": "A Maia-3 a Torontói Egyetem neurális hálózata. Több millió játszmából tanulta meg, milyen lépéseket választanak egy adott játékerősségű emberek — jellegzetes hibáikkal együtt.\n\nAz erősség egy Lichess villám-értékszámnak felel meg; ökölszabályként nagyjából 200 ponttal a FIDE-Élő fölött van.\n\nMaia nem számol előre, hanem érzésből játszik. A motor közben kikapcsolva marad, hogy te magad számolj."
     }
   },
   "stats": {

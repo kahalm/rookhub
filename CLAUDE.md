@@ -2708,6 +2708,47 @@ springen kann". `Services/AnalysisHistoryService.cs`, Tabelle `AnalysisHistoryEn
 | POST | `/api/analysis-history` | Speichern `{ id?, startFen, title?, tree: { s?, n: [{ p, u, s?, e? }] }, current }` → der Eintrag samt Kennung und Baum; 400 bei unlesbarer Stellung oder einem Baum, der nicht aufgeht |
 | DELETE | `/api/analysis-history/{id}` | Eintrag löschen |
 
+### Maia-Sparring im Analysebrett (0.632.0)
+
+Wunsch: „Maia-3 in unterschiedlicher Stärke für Sparring von Stellungen, Knopf im Analyse-Modus". Maia-3 (CSSLab,
+Universität Toronto, GPL-3.0) ist ein neuronales Netz, das den Zug eines MENSCHEN einer bestimmten Stärke vorhersagt —
+kein Rechner. Karte „Sparring gegen Maia" zwischen Engine-Karte und Zugliste; kein Backend, kein Endpunkt, keine
+Migration. Code: `features/analysis/maia/` (siehe `src/frontend/CLAUDE.md`). Entscheidungen und warum:
+1. **Läuft im Browser** (ONNX-Modell + `onnxruntime-web` WASM, eigener Worker) — kein Dienst, kein Container.
+2. **Modell `maia3_simplified.onnx` nicht im Repo** (45 MB): `src/frontend/app/maia-model/fetch.sh` holt es beim Docker-Build
+   (nur `APP_PROJECT=app`, VOR `COPY app/ .` → Layer-Cache) bzw. lokal (`sh maia-model/fetch.sh`) und prüft sha256.
+3. **`onnxruntime-web` exakt gepinnt** und NIE in TypeScript importiert: drei Dateien aus `dist/` gehen als Assets nach
+   `/assets/ort/`, der Worker lädt sie per `importScripts` (Muster wie Stockfish).
+4. **Klassischer Worker als statische Datei** (`maia-worker.js` → `/assets/maia/`), kein gebündelter TS-Worker.
+5. **Zwischenspeicher = Cache API mit eigenem Code** (Fortschritt!), nicht der ngsw: der puffert ohne Fortschritt. Laufzeit +
+   Worker stehen in der `lazy`-Gruppe `maia` (`ngsw-config.json`), das `.onnx` in KEINER Gruppe. Ohne sicheren Kontext (Dev
+   über HTTP) gibt es keine Cache API — die Rückfrage sagt dann „wird bei jedem Besuch neu geladen" (`canStore`).
+6. **Stärke = Elo als roher Wert** ans Modell (`elo_self` = `elo_oppo`), 600–2600 in 200er-Schritten, Vorgabe 1600, je Gerät
+   (`rookhub_analysis_maia_elo`).
+7. **Gewürfelt, nicht der wahrscheinlichste Zug** (Temperatur 1, Nucleus `topP` 0,95) — dieselbe Stellung soll verschiedene
+   Antworten bekommen.
+8. **Engine während des Sparrings AUS** (sonst Bewertung + Pfeile), Schalter gesperrt; danach kommt der vorige Zustand.
+
+**Zwei Fallen, live nachgestellt:** (1) `nginx:alpine` kennt `.mjs` nicht und liefert `application/octet-stream` — ORT scheitert
+mit „Failed to fetch dynamically imported module"; `nginx.conf` hat dafür `location ~* \.mjs$` (ohne `add_header`, das ersetzte
+die CSP). (2) Eine fehlende Datei unter `/assets/` beantwortet der SPA-Fallback mit **200 + index.html** — ob das Modell da ist,
+erkennt `MaiaModelStore` deshalb nur an der GRÖSSE, nie am Status, und legt eine falsche Größe nie in den Cache.
+
+**Pin ändern:** COMMIT/SHA256/BYTES in `maia-model/fetch.sh` UND `version` (erste acht Zeichen der sha256) + `bytes` in
+`maia/maia-model.ts`, dazu der Commit in `public/CHESS-ASSETS.md`. `DeploymentConfigTests.Maia_ModelPin_AndDelivery_StayConsistent`
+hält das zusammen (dazu Dockerfile-Bedingung, `.mjs`-Regel, ngsw, angular.json nur bei `app`, exakter ORT-Pin).
+
+**Sparring-Regeln** (`analysis.component.ts`): Start (die Karte meldet `start` erst mit fertigem Modell) nur in einer Stellung mit
+legalen Zügen — der Nutzer spielt die Seite am Zug, Brett dreht sich, `engineOn` wird gemerkt, aber nicht in localStorage
+geschrieben. Auf einen EIGENEN Zug antwortet Maia (Mindest-Bedenkzeit `maiaDelayMs` 500), auch auf einen per Explorer/Repertoire-Karte
+gespielten (`playRepertoireMoves`); ein Zug für Maias Seite löst nichts aus. Jede Navigation (`goTo`/`goToNode`), der Editor, „Seite wechseln" und das Ende lassen eine laufende Antwort verfallen
+(`maiaEpoch`) — Maia zieht nach einer Navigation NIE von selbst, dafür gibt es „Maia zieht". „Seite wechseln" und „Nochmal ab der
+Ausgangsstellung" fordern sofort einen Zug, wenn dann Maia am Zug ist. Beenden, jeder neue Baum (Zurücksetzen, FEN/PGN, Stellung
+aufbauen, Verlauf-Eintrag) und das Löschen der Ausgangsstellung beenden das Sparring und stellen `engineOn` wieder her; ein Fehler
+von Maia → Snackbar, das Sparring bleibt, und ist die Sitzung dabei weg (Status nicht `ready`), baut `prepare()` sie im Hintergrund
+aus dem Cache neu auf. Maias Züge laufen über `goToNode` und landen damit im Zugbaum und im Analyse-Verlauf.
+Verlassen der Seite → `release()` (gibt ~150 MB frei; das Modell kommt beim nächsten Mal in ~1 s aus dem Cache).
+
 ### Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was
 sind bei Zug 2 die besten Züge, und warum gehen die bei Zug 1 nicht (so gut)". `Services/MoveComparisonService.cs`,

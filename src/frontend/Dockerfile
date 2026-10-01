@@ -2,11 +2,20 @@ FROM node:24-alpine AS build
 WORKDIR /app
 COPY app/package*.json ./
 RUN npm ci
-COPY app/ .
 # Welches Projekt des Workspaces gebaut wird: `app` = RookHub, `turnier` = Turnierseite, `kidhub` = Kinderseite,
 # `leaguehub` = Aufstellungs-Prognosen, `clubhub` = Kartei der Kinder und Jugendlichen.
 # Alle teilen sich node_modules und den Quellbaum (Alias `@rh/*`), deshalb EIN Dockerfile.
+# Steht VOR dem Modell-Schritt: dort entscheidet das Argument — ohne ARG davor waere $APP_PROJECT im RUN leer,
+# die Bedingung nie wahr, und das RookHub-Image kaeme still ohne Modell aus dem Build.
 ARG APP_PROJECT=app
+# Maia-3-Modell fuer das Sparring im Analysebrett (45 MB, nicht im Repo): fetch.sh holt es per gepinntem Commit und
+# bricht bei falscher Pruefsumme ab. Nur RookHub braucht es — die vier anderen Images holen nichts. Bewusst VOR
+# `COPY app/ .`: so kommen die 45 MB bei einer Quelltext-Aenderung aus dem Layer-Cache, neu geladen wird nur, wenn
+# sich fetch.sh (also der Pin) oder die Abhaengigkeiten darueber aendern. Eine lokal geholte Datei bleibt per
+# .dockerignore draussen.
+COPY app/maia-model/fetch.sh maia-model/fetch.sh
+RUN if [ "$APP_PROJECT" = "app" ]; then sh maia-model/fetch.sh; fi
+COPY app/ .
 RUN npx ng build ${APP_PROJECT} --configuration=production
 
 FROM nginx:alpine

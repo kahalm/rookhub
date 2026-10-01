@@ -58,6 +58,21 @@
                 "output": "/assets/stockfish"
               },
               {
+                "glob": "{ort.wasm.min.js,ort-wasm-simd-threaded.mjs,ort-wasm-simd-threaded.wasm}",
+                "input": "node_modules/onnxruntime-web/dist",
+                "output": "/assets/ort"
+              },
+              {
+                "glob": "maia-worker.js",
+                "input": "src/app/features/analysis/maia",
+                "output": "/assets/maia"
+              },
+              {
+                "glob": "*.onnx",
+                "input": "maia-model",
+                "output": "/assets/maia"
+              },
+              {
                 "glob": ".well-known/**",
                 "input": "public"
               }

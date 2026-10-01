@@ -1,3 +1,7 @@
 app/node_modules
 app/dist
 app/.angular
+# Maia-Modell: der Build holt es selbst (Dockerfile, maia-model/fetch.sh) — eine lokal geholte Kopie
+# gehoert nicht in den Build-Kontext (45 MB je Build hochgeladen, und sie verdeckte den gepinnten Abruf).
+app/maia-model/*.onnx
+app/maia-model/*.part

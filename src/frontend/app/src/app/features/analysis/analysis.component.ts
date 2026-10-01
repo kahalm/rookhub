@@ -36,6 +36,9 @@ import {
   playSan, playUci, promote, removeNode, starredNodes, toDto,
 } from './analysis-tree';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
+import { MaiaEngineService } from './maia/maia-engine.service';
+import { MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS } from './maia/maia-model';
+import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -70,7 +73,7 @@ const EVAL_SETTLE_DEPTH = 10;
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
     PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent,
-    IconLabelDirective
+    IconLabelDirective, MaiaSparringCardComponent
   ],
   template: `
     <div class="analysis-page">
@@ -123,7 +126,8 @@ const EVAL_SETTLE_DEPTH = 10;
           <mat-card class="engine-card">
             <mat-card-content>
               <div class="engine-head">
-                <mat-slide-toggle [(ngModel)]="engineOn" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
+                <!-- Während des Sparrings gesperrt: die Engine verriete Bewertung und Pfeile (Maia-Regel 2). -->
+                <mat-slide-toggle [(ngModel)]="engineOn" [disabled]="!!sparring" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
                 <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }} · <span class="search-time" [title]="'analysis.searchTime' | translate">{{ searchTime }}</span></span>
                 <span class="he-spacer"></span>
                 <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
@@ -231,10 +235,20 @@ const EVAL_SETTLE_DEPTH = 10;
                   </div>
                 }
               } @else {
-                <p class="muted">{{ 'analysis.engineOff' | translate }}</p>
+                <p class="muted">{{ (sparring ? 'analysis.maia.enginePaused' : 'analysis.engineOff') | translate }}</p>
               }
             </mat-card-content>
           </mat-card>
+
+          <!-- Sparring gegen Maia: die Karte führt den Lade-Ablauf selbst und meldet „start" erst mit fertigem Modell.
+               Im Stellungs-Editor ausgeblendet — dort gibt es keine Stellung, von der aus man starten könnte. -->
+          @if (!editing) {
+            <app-maia-sparring-card
+              [active]="!!sparring" [userColor]="sparring?.userColor ?? turnColor" [thinking]="maiaThinking"
+              [maiaToMove]="maiaToMove" [elo]="maiaElo"
+              (start)="startSparring()" (stop)="stopSparring()" (switchSides)="switchSparringSides()"
+              (restart)="restartSparring()" (maiaMove)="requestMaiaMove()" (eloChange)="onMaiaEloChange($event)" />
+          }
 
           <mat-card class="moves-card">
             <mat-card-content>
@@ -427,6 +441,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   pgnInput = '';
   editing = false;
 
+  // ---- Sparring gegen Maia (0.632.0) — einfache Felder + markForCheck nach allem Asynchronen ----
+  /** Läuft ein Sparring: ab welcher Stellung, welche Seite der Nutzer spielt, und ob die Engine vorher an war. */
+  sparring: { start: AnalysisNode; userColor: Color; engineWasOn: boolean } | null = null;
+  maiaThinking = false;
+  /** Gewählte Stärke (je Gerät gemerkt, nur Werte aus MAIA_ELO_OPTIONS). */
+  maiaElo: number = MAIA_DEFAULT_ELO;
+  /** Jede Navigation/jeder Abbruch zählt hoch — eine späte Maia-Antwort für eine verlassene Stellung verfällt. */
+  private maiaEpoch = 0;
+  /** Mindest-Bedenkzeit, damit Maias Zug nicht im selben Augenblick wie der eigene aufs Brett knallt (Specs: 0). */
+  protected maiaDelayMs = 500;
+
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
   historyId: number | null = null;
@@ -502,7 +527,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   constructor(private engine: AnalysisEngineService, private route: ActivatedRoute, private snackbar: SnackbarService,
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
-              @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog) {
+              @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
+              private maia: MaiaEngineService) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -511,6 +537,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       if (DEPTH_OPTIONS.includes(d)) this.depthSetting = d;
       this.compareOn = localStorage.getItem(COMPARE_KEY) === '1';
       this.compareEngineId = localStorage.getItem(COMPARE_ENGINE_KEY) || 'wasm';
+      const elo = parseInt(localStorage.getItem(MAIA_ELO_KEY) || '', 10);
+      if ((MAIA_ELO_OPTIONS as readonly number[]).includes(elo)) this.maiaElo = elo;
     } catch {}
   }
 
@@ -658,6 +686,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.enginesSub?.unsubscribe();
     this.stopCompare();          // eigene Instanz + deren Worker/Streams beenden
     this.engine.destroy();
+    // Maia freigeben (~150 MB: Modell + Sitzung im Worker) — beim nächsten Besuch kommt es in ~1 s aus dem Cache.
+    this.maiaEpoch++;
+    this.maia.release();
   }
 
   // ---- Navigation ----
@@ -667,12 +698,14 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   get currentFen(): string { return this.currentNode.fen; }
 
   goTo(ply: number): void {
+    this.abortMaia();
     this.ply = Math.max(0, Math.min(ply, this.line.length));
     this.refresh();
   }
 
   /** Auf einen beliebigen Knoten springen (Klick in Zugliste, Variante, Sternliste) — die Linie läuft dann durch ihn. */
   goToNode(node: AnalysisNode): void {
+    this.abortMaia();
     this.line = lineThrough(node);
     this.ply = pathTo(node).length;
     this.refresh();
@@ -680,6 +713,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
   private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
+    // Ein neuer Baum beendet ein Sparring (Maia-Regel 9) — die Engine kommt zurück wie beim „Beenden".
+    if (this.sparring) this.endSparring();
     this.root = root;
     this.treeVersion++;
     this.goToNode(current);
@@ -702,6 +737,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   onMove(ev: { orig: Key; dest: Key; promotion?: string }): void {
     let c: Chess;
     try { c = new Chess(this.currentFen); } catch { return; }
+    const mover: Color = c.turn() === 'w' ? 'white' : 'black';
     const piece = c.get(ev.orig as any);
     const isPromo = piece?.type === 'p' && (ev.dest[1] === '8' || ev.dest[1] === '1');
     // Umwandlungsfigur kommt jetzt aus dem Picker; Dame nur als Fallback.
@@ -716,6 +752,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
     this.treeVersion++;
     this.goToNode(node);
+    // Sparring: auf den EIGENEN Zug antwortet Maia. Zieht der Nutzer für Maias Seite, kommt keine Antwort.
+    if (this.sparring && mover === this.sparring.userColor) this.requestMaiaMove();
   }
 
   /** Baummodus des Repertoire-Panels bzw. Explorer: die geklickte Zugfolge ab der aktuellen Stellung aufs Brett
@@ -732,6 +770,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (node === this.currentNode) return;
     this.treeVersion++;
     this.goToNode(node);
+    // Sparring: ein Zug aus Explorer/Repertoire zählt wie ein eigener — steht danach Maia am Zug, antwortet sie. Zog die
+    // Folge für Maias Seite, ist danach der Nutzer dran, und es kommt (wie in onMove) keine Anfrage.
+    if (this.maiaToMove) this.requestMaiaMove();
   }
 
   // ---- Refresh board + engine for current ply ----
@@ -1114,7 +1155,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private resetToStart(fen = this.startFen): void { this.setTree(createRoot(fen)); }
 
   // ---- Stellung aufbauen (Brett-Editor) ----
-  startEditing(): void { this.editing = true; }
+  startEditing(): void { this.abortMaia(); this.editing = true; }
   onSetupApply(fen: string): void {
     this.editing = false;
     this.newSession();
@@ -1186,11 +1227,20 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       case 'mainline': makeMainline(e.node); break;
       case 'delete': {
         const within = isWithin(current, e.node);
+        // Fällt die Ausgangsstellung des Sparrings weg, endet es (Maia-Regel 9).
+        const endsSparring = !!this.sparring && isWithin(this.sparring.start, e.node);
         const parent = removeNode(e.node);
         if (!parent) return;
+        if (endsSparring) this.endSparring();
         this.treeVersion++;
         // Stand man in dem, was wegfällt, geht es beim Zug davor weiter.
         if (within) { this.goToNode(parent); return; }
+        if (endsSparring) {
+          this.treeVersion++;
+          this.line = lineThrough(current);
+          this.refresh();   // die Engine läuft wieder (falls sie vorher an war)
+          return;
+        }
         break;
       }
     }
@@ -1198,6 +1248,117 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.treeVersion++;
     this.line = lineThrough(current);
     this.scheduleHistorySave();
+  }
+
+  // ---- Sparring gegen Maia ----
+  //
+  // Maias Züge laufen über goToNode → refresh → scheduleHistorySave: die gespielte Linie landet ohne weiteres Zutun im
+  // Zugbaum und im Analyse-Verlauf. Die Karte (MaiaSparringCardComponent) lädt das Modell; hier steht nur das Spiel.
+
+  /** Sparring läuft, Maia ist am Zug, und die Stellung ist nicht zu Ende — die Karte bietet dann „Maia zieht" an. */
+  get maiaToMove(): boolean {
+    return !!this.sparring && this.turnColor !== this.sparring.userColor && this.dests.size > 0;
+  }
+
+  /** Von der Karte, sobald das Modell bereit ist: ab HIER, der Nutzer spielt die Seite am Zug, die Engine geht aus
+   *  (ihr Zustand wird gemerkt, aber NICHT in localStorage — die Dauereinstellung des Nutzers bleibt). */
+  startSparring(): void {
+    if (this.sparring || this.editing || this.dests.size === 0) return;   // zu Ende: es gibt nichts zu spielen
+    this.sparring = { start: this.currentNode, userColor: this.turnColor, engineWasOn: this.engineOn };
+    this.engineOn = false;
+    this.orientation = this.sparring.userColor;
+    this.refresh();
+    this.cdr.markForCheck();
+  }
+
+  /** „Beenden": eine laufende Antwort verfällt, die Engine kommt in den Zustand von vorher zurück. */
+  stopSparring(): void {
+    if (!this.sparring) return;
+    this.endSparring();
+    this.refresh();
+    this.cdr.markForCheck();
+  }
+
+  /** „Seite wechseln": ist jetzt Maia am Zug, zieht sie gleich. */
+  switchSparringSides(): void {
+    if (!this.sparring) return;
+    this.abortMaia();
+    const userColor: Color = this.sparring.userColor === 'white' ? 'black' : 'white';
+    this.sparring = { ...this.sparring, userColor };
+    this.orientation = userColor;
+    if (this.maiaToMove) this.requestMaiaMove();
+    this.cdr.markForCheck();
+  }
+
+  /** „Nochmal ab der Ausgangsstellung": zurück zum Start; ist dort Maia am Zug, zieht sie. */
+  restartSparring(): void {
+    if (!this.sparring) return;
+    this.goToNode(this.sparring.start);
+    if (this.maiaToMove) this.requestMaiaMove();
+    this.cdr.markForCheck();
+  }
+
+  /** Maia nach ihrem Zug in der aktuellen Stellung fragen und ihn — wenn er noch gefragt ist — wie einen eigenen Zug
+   *  in den Baum spielen. Eine Navigation, ein Abbruch oder das Ende des Sparrings dazwischen lassen ihn verfallen. */
+  requestMaiaMove(): void {
+    if (!this.maiaToMove) return;
+    const epoch = ++this.maiaEpoch;
+    const node = this.currentNode;
+    this.maiaThinking = true;
+    this.cdr.markForCheck();
+    const pause = this.maiaDelayMs > 0
+      ? new Promise<void>(resolve => setTimeout(resolve, this.maiaDelayMs))
+      : Promise.resolve();
+    Promise.all([this.maia.chooseMove(node.fen, this.maiaElo), pause]).then(
+      ([uci]) => {
+        if (!this.maiaStillWanted(epoch, node)) return;
+        this.maiaThinking = false;
+        if (uci) {
+          const next = playUci(node, uci);
+          if (next) {
+            this.treeVersion++;
+            this.goToNode(next);   // zählt maiaEpoch selbst hoch — die Antwort ist da schon verbucht
+          } else {
+            this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));
+          }
+        }
+        this.cdr.markForCheck();
+      },
+      () => {
+        if (!this.maiaStillWanted(epoch, node)) return;
+        this.maiaThinking = false;
+        this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));   // das Sparring bleibt aktiv
+        // Ist die Sitzung selbst weg (Worker gestorben → Status `error`), im Hintergrund neu aufbauen: das Modell liegt
+        // im Cache, der nächste Klick auf „Maia zieht" geht dann wieder. War es nur diese eine Anfrage, bleibt alles.
+        if (this.maia.status() !== 'ready') this.maia.prepare().catch(() => {});
+        this.cdr.markForCheck();
+      },
+    );
+  }
+
+  onMaiaEloChange(elo: number): void {
+    if (!(MAIA_ELO_OPTIONS as readonly number[]).includes(elo)) return;
+    this.maiaElo = elo;   // gilt ab dem nächsten Maia-Zug
+    try { localStorage.setItem(MAIA_ELO_KEY, String(elo)); } catch {}
+  }
+
+  private maiaStillWanted(epoch: number, node: AnalysisNode): boolean {
+    return epoch === this.maiaEpoch && !!this.sparring && this.currentNode === node;
+  }
+
+  /** Eine laufende Maia-Antwort verfallen lassen (Navigation, Seite wechseln, Editor, Ende). */
+  private abortMaia(): void {
+    this.maiaEpoch++;
+    this.maiaThinking = false;
+  }
+
+  /** Sparring beenden, ohne neu zu zeichnen — die Aufrufer tun es selbst (refresh bzw. goToNode). */
+  private endSparring(): void {
+    const sparring = this.sparring;
+    if (!sparring) return;
+    this.abortMaia();
+    this.engineOn = sparring.engineWasOn;
+    this.sparring = null;
   }
 
   // ---- Analyse-Verlauf ----

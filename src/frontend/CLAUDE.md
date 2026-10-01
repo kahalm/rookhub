@@ -139,6 +139,28 @@ Auftragsseite (`analysis-jobs.component.ts`) benutzen diese drei — keine eigen
   Browser-Erweiterung, Vorgabe; `engine` = Engine-Provider), die Liste zeigt ihn als Spalte. Ein Engine-Token erreicht
   serverseitig NUR `/api/external-engine/*`.
 
+## Maia-Sparring (`features/analysis/maia/`, 0.632.0)
+
+Sparringsgegner im Analysebrett (Entscheidungen, Fallen, Pin und Regeln: Haupt-CLAUDE.md „Maia-Sparring im Analysebrett").
+
+- `maia-model.ts` — feste Werte: Modell-Adresse, `version`/`bytes` (Pin-Spiegel von `maia-model/fetch.sh`), Stärken, Vorgabe,
+  localStorage-Schlüssel, `MAIA_TOP_P`.
+- `maia-encoding.ts` — rein, ohne Angular: Stellung → Tokens (Schwarz am Zug wird gespiegelt), Zug ↔ Index (Formel statt
+  Tabelle), Softmax nur über legale Züge, Nucleus-Würfel `pickMove`. Spec mit LITERALEN Vektoren aus dem Plan.
+- `maia-model-store.ts` — Modell laden (Fortschritt aus der ERWARTETEN Größe) und in der Cache API halten; die Größe entscheidet,
+  nie der Status (SPA-Fallback); `canStore` = ob der Browser es behalten kann. Seams: `fetch`, `caches` (`null` = keine), Modell.
+- `maia-worker.js` — klassischer Worker, statisch nach `/assets/maia/` kopiert, rechnet nur das Netz.
+- `maia-engine.service.ts` — root-Dienst ohne DI (`new` in Specs): Status/Fortschritt/Fehler/`canStore` als Signale, EIN laufendes
+  `prepare()`/`download()`, Antworten über die `id`, Init-Frist `initTimeoutMs` (60 s), `release()`. Seams: `createWorker`,
+  `store`, `rng`.
+- `maia-sparring-card.component.ts` — die Karte (OnPush, Signale): führt den Lade-Ablauf selbst (Rückfrage mit 46 MB, Fortschritt,
+  Fehler + „Erneut versuchen") und meldet `start` erst mit fertigem Modell; die aktive Ansicht schickt nur Ereignisse.
+
+**Regel: onnxruntime-web wird NIE in TypeScript importiert.** Die drei Laufzeit-Dateien kommen als Assets (`angular.json`, nur
+Projekt `app`) nach `/assets/ort/` und werden im Worker per `importScripts` geladen — ein Import zöge die Laufzeit in ein Bundle
+(der Abnahme-Check `grep -l onnxruntime dist/app/browser/*.js` muss leer bleiben). Specs fälschen Worker und Store, es entsteht nie
+ein echter Worker; in TestBed-Specs des Analysebretts steht `MaiaEngineService` deshalb als Fake-Provider.
+
 ## Formular-Korrektur als geteilte Sitzung (0.573.0)
 
 `features/games/sheet-edit-session.ts` (`SheetEditSession`) hält den Arbeitsstand einer Partie-Korrektur in Signalen:
