@@ -4,9 +4,12 @@ import { of, Subject, throwError } from 'rxjs';
 import { AdminComponent } from './admin.component';
 import { ADMIN_TAB_KEYS } from './admin-tabs';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
 
 /** Rückfrage-Doppelgänger: `answer` legt fest, was der Dialog liefert (F5-013). */
 const confirmStub = { answer: true, ask: jasmine.createSpy('ask') };
+/** Eingabe-Doppelgänger (F5-016): `answer` = Werte je Feld-Key, `null` = abgebrochen. */
+const promptStub: { answer: Record<string, string> | null; ask: jasmine.Spy } = { answer: null, ask: jasmine.createSpy('ask') };
 
 /** Ohne Template/ngOnInit — testet die Komponenten-Logik. Instanziierung läuft im
  *  TestBed-Injection-Context, weil die Komponente `inject(DestroyRef)` als Feld nutzt. */
@@ -36,10 +39,13 @@ describe('AdminComponent', () => {
   beforeEach(() => {
     confirmStub.answer = true;
     confirmStub.ask = jasmine.createSpy('ask').and.callFake(() => of(confirmStub.answer));
+    promptStub.answer = null;
+    promptStub.ask = jasmine.createSpy('ask').and.callFake(() => of(promptStub.answer));
     TestBed.configureTestingModule({
       providers: [
         { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
         { provide: ConfirmService, useValue: confirmStub },
+        { provide: PromptService, useValue: promptStub },
       ],
     });
   });
@@ -113,6 +119,31 @@ describe('AdminComponent', () => {
     c.selectedGroup = null;
     c.addMember({ id: 5, username: 'x' } as any);
     expect(adminService.addGroupMember).not.toHaveBeenCalled();
+  });
+
+  // F5-016: das ✕ am Chip nimmt ein Mitglied erst nach Rückfrage heraus.
+  it('removeMember fragt mit Name und Gruppe nach; Abbrechen nimmt niemanden heraus', () => {
+    const removeGroupMember = jasmine.createSpy('removeGroupMember').and.returnValue(of(null));
+    const { c } = make({ removeGroupMember });
+    c.selectedGroup = { id: 4, name: 'Schwaz', memberCount: 2 } as any;
+    confirmStub.answer = false;
+
+    c.removeMember({ userId: 9, username: 'bob' });
+
+    expect(confirmStub.ask).toHaveBeenCalledWith('admin.groups.removeMemberConfirm', { username: 'bob', group: 'Schwaz' });
+    expect(removeGroupMember).not.toHaveBeenCalled();
+  });
+
+  it('removeMember nimmt nach Bestätigung heraus und lädt Mitglieder + Gruppen neu', () => {
+    const removeGroupMember = jasmine.createSpy('removeGroupMember').and.returnValue(of(null));
+    const { c, adminService } = make({ removeGroupMember });
+    c.selectedGroup = { id: 4, name: 'Schwaz', memberCount: 2 } as any;
+
+    c.removeMember({ userId: 9, username: 'bob' });
+
+    expect(removeGroupMember).toHaveBeenCalledWith(4, 9);
+    expect(adminService.getGroupMembers).toHaveBeenCalledWith(4);
+    expect(adminService.getGroups).toHaveBeenCalled();
   });
 
   it('Mitglieder hinzufügen (0.591.0): Liste ohne Mitglieder, neueste zuerst; ein Klick fügt genau dieses Konto hinzu', () => {
@@ -256,10 +287,11 @@ describe('AdminComponent', () => {
     const { c } = make({ updateBook });
     const book = { id: 7, displayName: 'Old Name', fileName: 'x.pgn', tags: null, minElo: 800, maxElo: 1200 } as any;
     c.books = [book];
-    spyOn(window, 'prompt').and.returnValue('  New Name  ');
+    promptStub.answer = { name: '  New Name  ' };
 
     c.renameBook(book);
 
+    expect(promptStub.ask.calls.mostRecent().args[0].fields).toEqual([{ key: 'name', label: 'admin.books.renamePrompt', value: 'Old Name' }]);
     // Nur der Name: der Endpunkt lässt fehlende Felder unverändert, auch die Elo-Spanne (N9-009).
     expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name' });
     expect(book.displayName).toBe('New Name');
@@ -270,25 +302,27 @@ describe('AdminComponent', () => {
     const { c } = make({ updateBook });
     const book = { id: 7, displayName: 'Same', fileName: 'x.pgn', tags: null } as any;
 
-    const promptSpy = spyOn(window, 'prompt').and.returnValue(null);   // cancelled
+    promptStub.answer = null;                                           // cancelled
     c.renameBook(book);
-    promptSpy.and.returnValue('Same');                                  // unchanged
+    promptStub.answer = { name: 'Same' };                               // unchanged
     c.renameBook(book);
 
     expect(updateBook).not.toHaveBeenCalled();
   });
 
-  it('editKidsTitles fragt je KidHub-Sprache und speichert alle, ohne die Elo zu verlieren', () => {
+  it('editKidsTitles fragt alle KidHub-Sprachen in EINEM Dialog ab und speichert alle, ohne die Elo zu verlieren', () => {
     const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({ kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One' } }));
     const { c } = make({ updateBook });
     const book = { id: 9, displayName: 'Learn Chess', forKids: true, minElo: null, maxElo: 1000, kidsTitles: { de: 'Alt' } } as any;
-    const answers = [' Matt in einem Zug ', 'Checkmate in One', '', ''];
-    const promptSpy = spyOn(window, 'prompt').and.callFake(() => answers.shift()!);
+    promptStub.answer = { de: ' Matt in einem Zug ', en: 'Checkmate in One', hr: '', hu: '' };
 
     c.editKidsTitles(book);
 
-    expect(promptSpy.calls.count()).toBe(4);
-    expect(promptSpy.calls.first().args[1]).toBe('Alt');               // vorhandener Titel vorbelegt
+    // F5-016: ein Dialog statt vier Abfragen nacheinander; vorhandener Titel vorbelegt.
+    expect(promptStub.ask).toHaveBeenCalledTimes(1);
+    const fields = promptStub.ask.calls.mostRecent().args[0].fields;
+    expect(fields.map((f: any) => f.key)).toEqual(['de', 'en', 'hr', 'hu']);
+    expect(fields[0].value).toBe('Alt');
     expect(updateBook).toHaveBeenCalledWith(9, {
       kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One', hr: '', hu: '' },
     });
@@ -304,11 +338,10 @@ describe('AdminComponent', () => {
     expect(updateBook.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ minElo: 0, maxElo: 1800 }));
   });
 
-  it('editKidsTitles: Abbrechen bei einer Sprache speichert nichts', () => {
+  it('editKidsTitles: Abbrechen speichert nichts', () => {
     const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
     const { c } = make({ updateBook });
-    const answers: (string | null)[] = ['Matt', null];
-    spyOn(window, 'prompt').and.callFake(() => answers.shift() ?? null);
+    promptStub.answer = null;
 
     c.editKidsTitles({ id: 9, displayName: 'x', forKids: true } as any);
 

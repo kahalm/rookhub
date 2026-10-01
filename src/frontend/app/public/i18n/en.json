@@ -652,6 +652,7 @@
       "createToken": "Create a Lichess token (engine:read)",
       "tokenLabel": "Lichess API token",
       "stored": "Stored token",
+      "removeTokenConfirm": "Delete the stored Lichess token? The Lichess engines disappear from the list; to use them again you need a new token from Lichess.",
       "saved": "Token saved",
       "saveFailed": "Could not save the token",
       "tokenInvalid": "Lichess rejected this token. Create a new one with the engine:read scope.",
@@ -843,6 +844,7 @@
     },
     "sentOn": "Sent {{date}}",
     "requestSent": "Friend request sent",
+    "removeConfirm": "Remove {{name}} from your friends? To undo this, you would have to send a new friend request.",
     "stats": {
       "title": "Stats comparison",
       "compare": "Compare stats",
@@ -2279,7 +2281,7 @@
       "searchPlaceholder": "Search books…",
       "noMatch": "No books match your search.",
       "rename": "Rename book",
-      "renamePrompt": "New book name:",
+      "renamePrompt": "New book name",
       "empty": "No books imported yet.",
       "eloFrom": "from",
       "eloTo": "to",
@@ -2311,7 +2313,7 @@
       "confirmForeign": "“{{name}}” is a private course of {{owner}}. Open it up anyway? Its content can then be reached without signing in.",
       "ownedBy": "private · {{name}}",
       "kidsTitles": "Titles on KidHub",
-      "kidsTitlePrompt": "Title on KidHub – {{language}} (empty = book name):",
+      "kidsTitlesHint": "Leave a field empty to show the book name in that language.",
       "slugPlaceholder": "alias e.g. mate1",
       "slugHint": "Optional short alias for the public link: the course is then reachable at /<alias> (e.g. /mate1). Lowercase letters, digits and hyphens, unique. Empty = no alias.",
       "errors": {
@@ -2348,6 +2350,7 @@
       "noMembers": "No members.",
       "created": "Group \"{{name}}\" created",
       "deleteConfirm": "Delete group \"{{name}}\"?",
+      "removeMemberConfirm": "Remove {{username}} from the group “{{group}}”?",
       "deleted": "Group \"{{name}}\" deleted",
       "columns": {
         "group": "Group",
@@ -2535,6 +2538,7 @@
     "replay": "Solve again",
     "analyze": "Analyze",
     "removeTooltip": "Remove from favorites",
+    "removeConfirm": "Remove this puzzle from your favorites?",
     "removeError": "Could not remove favorite.",
     "sourceStandard": "Standard puzzle",
     "sourceBook": "Course / book puzzle",
@@ -3051,6 +3055,7 @@
       "add": "Add",
       "saved": "Activity saved",
       "deleted": "Activity deleted",
+      "deleteConfirm": "Delete this entry ({{kind}} on {{date}})? It cannot be restored.",
       "marker": "manually logged",
       "kinds": {
         "OtbGame": "OTB game (rapid/classical)",

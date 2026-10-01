@@ -25,6 +25,7 @@ import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
 import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
@@ -108,6 +109,7 @@ export class AdminComponent implements OnInit {
   selectedTabIndex = 0;
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
+  private prompts = inject(PromptService);
 
   constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
@@ -318,16 +320,20 @@ export class AdminComponent implements OnInit {
 
   /** Buch umbenennen (nur DisplayName; Backend akzeptiert das im Update-DTO). */
   renameBook(book: Book): void {
-    const next = prompt(this.translate.instant('admin.books.renamePrompt'), book.displayName);
-    if (next == null) return;
-    const name = next.trim();
-    if (!name || name === book.displayName) return;
-    this.adminService.updateBook(book.id, { displayName: name }).subscribe({
-      next: () => {
-        book.displayName = name;
-        this.applyBookFilter();
-      },
-      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'))
+    this.prompts.ask({
+      title: this.translate.instant('admin.books.rename'),
+      fields: [{ key: 'name', label: this.translate.instant('admin.books.renamePrompt'), value: book.displayName }],
+    }).subscribe(res => {
+      if (!res) return;
+      const name = (res['name'] ?? '').trim();
+      if (!name || name === book.displayName) return;
+      this.adminService.updateBook(book.id, { displayName: name }).subscribe({
+        next: () => {
+          book.displayName = name;
+          this.applyBookFilter();
+        },
+        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'))
+      });
     });
   }
 
@@ -355,19 +361,24 @@ export class AdminComponent implements OnInit {
   }
 
   /**
-   * Titel auf KidHub, je Sprache der Kinderseite nacheinander abgefragt (wie das Umbenennen per Eingabefeld).
-   * Abbrechen bei einer Sprache verwirft alles; leer lassen = kein eigener Titel in dieser Sprache.
+   * Titel auf KidHub, alle Sprachen der Kinderseite in EINEM Dialog (F5-016 — vorher vier Abfragen
+   * hintereinander, Abbrechen bei der letzten verwarf alle). Abbrechen speichert nichts; leer lassen =
+   * kein eigener Titel in dieser Sprache. Die Sprachnamen stehen in der eigenen Sprache (wie in der Sprachwahl).
    */
   editKidsTitles(book: Book): void {
-    const titles: Record<string, string> = {};
-    for (const [code, name] of [['de', 'Deutsch'], ['en', 'English'], ['hr', 'Hrvatski'], ['hu', 'Magyar']]) {
-      const next = prompt(this.translate.instant('admin.books.kidsTitlePrompt', { language: name }), book.kidsTitles?.[code] ?? '');
-      if (next == null) return;
-      titles[code] = next.trim();
-    }
-    this.adminService.updateBook(book.id, { kidsTitles: titles }).subscribe({
-      next: saved => { book.kidsTitles = saved.kidsTitles; },
-      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save')),
+    const languages = [['de', 'Deutsch'], ['en', 'English'], ['hr', 'Hrvatski'], ['hu', 'Magyar']];
+    this.prompts.ask({
+      title: this.translate.instant('admin.books.kidsTitles'),
+      hint: this.translate.instant('admin.books.kidsTitlesHint'),
+      fields: languages.map(([code, name]) => ({ key: code, label: name, value: book.kidsTitles?.[code] ?? '' })),
+    }).subscribe(res => {
+      if (!res) return;
+      const titles: Record<string, string> = {};
+      for (const [code] of languages) titles[code] = (res[code] ?? '').trim();
+      this.adminService.updateBook(book.id, { kidsTitles: titles }).subscribe({
+        next: saved => { book.kidsTitles = saved.kidsTitles; },
+        error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save')),
+      });
     });
   }
 
@@ -623,17 +634,21 @@ export class AdminComponent implements OnInit {
     });
   }
 
+  /** Mitglied aus der Gruppe nehmen — erst nach Rückfrage (F5-016): das ✕ am Chip liegt klein neben dem Namen. */
   removeMember(member: GroupMember): void {
     if (!this.selectedGroup) return;
-    const groupId = this.selectedGroup.id;
-    this.adminService.removeGroupMember(groupId, member.userId).subscribe({
-      next: () => {
-        this.loadMembers(groupId);
-        this.loadGroups(); // Mitgliederzahl aktualisieren
-      },
-      error: err => {
-        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.removeMember'));
-      }
+    const group = this.selectedGroup;
+    this.confirm.ask('admin.groups.removeMemberConfirm', { username: member.username, group: group.name }).subscribe(ok => {
+      if (!ok) return;
+      this.adminService.removeGroupMember(group.id, member.userId).subscribe({
+        next: () => {
+          this.loadMembers(group.id);
+          this.loadGroups(); // Mitgliederzahl aktualisieren
+        },
+        error: err => {
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.removeMember'));
+        }
+      });
     });
   }
 }

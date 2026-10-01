@@ -652,6 +652,7 @@
       "createToken": "Izradi Lichess token (engine:read)",
       "tokenLabel": "Lichess API token",
       "stored": "Spremljeni token",
+      "removeTokenConfirm": "Izbrisati spremljeni Lichess token? Lichess motori nestaju s popisa; za ponovno korištenje trebaš novi token s Lichessa.",
       "saved": "Token spremljen",
       "saveFailed": "Token nije spremljen",
       "tokenInvalid": "Lichess je odbio ovaj token. Izradi novi s opsegom engine:read.",
@@ -843,6 +844,7 @@
     },
     "sentOn": "Poslano {{date}}",
     "requestSent": "Zahtjev za prijateljstvo poslan",
+    "removeConfirm": "Ukloniti {{name}} iz prijatelja? Poništiti se može samo novim zahtjevom za prijateljstvo.",
     "stats": {
       "title": "Usporedba statistike",
       "compare": "Usporedi statistiku",
@@ -2279,7 +2281,7 @@
       "searchPlaceholder": "Pretraži knjige…",
       "noMatch": "Nijedna knjiga ne odgovara pretrazi.",
       "rename": "Preimenuj knjigu",
-      "renamePrompt": "Novi naziv knjige:",
+      "renamePrompt": "Novi naziv knjige",
       "empty": "Još nema uvezenih knjiga.",
       "eloFrom": "od",
       "eloTo": "do",
@@ -2311,7 +2313,7 @@
       "confirmForeign": "„{{name}}“ je privatni tečaj korisnika {{owner}}. Ipak ga otvoriti? Njegov je sadržaj tada dostupan bez prijave.",
       "ownedBy": "privatno · {{name}}",
       "kidsTitles": "Naslovi na KidHubu",
-      "kidsTitlePrompt": "Naslov na KidHubu – {{language}} (prazno = naziv knjige):",
+      "kidsTitlesHint": "Ostavi polje prazno = na tom jeziku prikazuje se naziv knjige.",
       "slugPlaceholder": "alias npr. mate1",
       "slugHint": "Neobavezni kratki alias za javnu poveznicu: tečaj je tada dostupan na /<alias> (npr. /mate1). Mala slova, brojke i crtice, jedinstveno. Prazno = bez aliasa.",
       "errors": {
@@ -2348,6 +2350,7 @@
       "noMembers": "Nema članova.",
       "created": "Grupa \"{{name}}\" stvorena",
       "deleteConfirm": "Izbrisati grupu \"{{name}}\"?",
+      "removeMemberConfirm": "Ukloniti {{username}} iz grupe „{{group}}“?",
       "deleted": "Grupa \"{{name}}\" izbrisana",
       "columns": {
         "group": "Grupa",
@@ -2535,6 +2538,7 @@
     "replay": "Riješi ponovno",
     "analyze": "Analiziraj",
     "removeTooltip": "Ukloni iz favorita",
+    "removeConfirm": "Ukloniti ovu zagonetku iz favorita?",
     "removeError": "Favorit se nije mogao ukloniti.",
     "sourceStandard": "Standardna zagonetka",
     "sourceBook": "Zagonetka tečaja / knjige",
@@ -3051,6 +3055,7 @@
       "add": "Dodaj",
       "saved": "Aktivnost spremljena",
       "deleted": "Aktivnost izbrisana",
+      "deleteConfirm": "Izbrisati ovaj unos ({{kind}}, {{date}})? Ne može se vratiti.",
       "marker": "ručno uneseno",
       "kinds": {
         "OtbGame": "OTB partija (rapid/classical)",

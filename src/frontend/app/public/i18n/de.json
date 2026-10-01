@@ -652,6 +652,7 @@
       "createToken": "Lichess-Token erstellen (engine:read)",
       "tokenLabel": "Lichess-API-Token",
       "stored": "Gespeicherter Token",
+      "removeTokenConfirm": "Gespeicherten Lichess-Token löschen? Die Lichess-Engines verschwinden aus der Liste; um sie wieder zu nutzen, brauchst du einen neuen Token von Lichess.",
       "saved": "Token gespeichert",
       "saveFailed": "Token konnte nicht gespeichert werden",
       "tokenInvalid": "Lichess hat diesen Token abgewiesen. Erstelle einen neuen mit dem Scope engine:read.",
@@ -843,6 +844,7 @@
     },
     "sentOn": "Gesendet am {{date}}",
     "requestSent": "Freundschaftsanfrage gesendet",
+    "removeConfirm": "{{name}} aus deinen Freunden entfernen? Rückgängig geht es nur mit einer neuen Freundschaftsanfrage.",
     "stats": {
       "title": "Statistik-Vergleich",
       "compare": "Statistik vergleichen",
@@ -2279,7 +2281,7 @@
       "searchPlaceholder": "Bücher durchsuchen…",
       "noMatch": "Keine Bücher passen zur Suche.",
       "rename": "Buch umbenennen",
-      "renamePrompt": "Neuer Buchname:",
+      "renamePrompt": "Neuer Buchname",
       "empty": "Noch keine Bücher importiert.",
       "eloFrom": "von",
       "eloTo": "bis",
@@ -2311,7 +2313,7 @@
       "confirmForeign": "„{{name}}“ ist ein privater Kurs von {{owner}}. Trotzdem freigeben? Sein Inhalt ist dann ohne Anmeldung zugänglich.",
       "ownedBy": "privat · {{name}}",
       "kidsTitles": "Titel auf KidHub",
-      "kidsTitlePrompt": "Titel auf KidHub – {{language}} (leer = Buchname):",
+      "kidsTitlesHint": "Feld leer lassen = in dieser Sprache steht der Buchname.",
       "slugPlaceholder": "Alias z. B. mate1",
       "slugHint": "Optionaler Kurz-Alias für den öffentlichen Link: der Kurs ist dann unter /<Alias> erreichbar (z. B. /mate1). Kleinbuchstaben, Ziffern und Bindestriche, eindeutig. Leer = kein Alias.",
       "errors": {
@@ -2348,6 +2350,7 @@
       "noMembers": "Keine Mitglieder.",
       "created": "Gruppe „{{name}}“ angelegt",
       "deleteConfirm": "Gruppe „{{name}}“ löschen?",
+      "removeMemberConfirm": "{{username}} aus der Gruppe „{{group}}“ entfernen?",
       "deleted": "Gruppe „{{name}}“ gelöscht",
       "columns": {
         "group": "Gruppe",
@@ -2535,6 +2538,7 @@
     "replay": "Nochmal lösen",
     "analyze": "Analysieren",
     "removeTooltip": "Aus Favoriten entfernen",
+    "removeConfirm": "Dieses Puzzle aus den Favoriten entfernen?",
     "removeError": "Favorit konnte nicht entfernt werden.",
     "sourceStandard": "Standard-Puzzle",
     "sourceBook": "Kurs-/Buch-Puzzle",
@@ -3051,6 +3055,7 @@
       "add": "Hinzufügen",
       "saved": "Aktivität gespeichert",
       "deleted": "Aktivität gelöscht",
+      "deleteConfirm": "Diesen Eintrag ({{kind}} am {{date}}) löschen? Er lässt sich nicht wiederherstellen.",
       "marker": "manuell eingetragen",
       "kinds": {
         "OtbGame": "OTB-Partie (Rapid/Classical)",

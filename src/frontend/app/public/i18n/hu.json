@@ -445,6 +445,7 @@
       "createToken": "Lichess-token létrehozása (engine:read)",
       "tokenLabel": "Lichess API-token",
       "stored": "Mentett token",
+      "removeTokenConfirm": "Törlöd a mentett Lichess-tokent? A Lichess-motorok eltűnnek a listáról; újbóli használatukhoz új tokenre van szükséged a Lichesstől.",
       "saved": "Token elmentve",
       "saveFailed": "A tokent nem sikerült elmenteni",
       "tokenInvalid": "A Lichess elutasította ezt a tokent. Hozz létre egy újat engine:read jogosultsággal.",
@@ -605,6 +606,7 @@
     },
     "sentOn": "Elküldve: {{date}}",
     "requestSent": "Barátkérés elküldve",
+    "removeConfirm": "Eltávolítod {{name}} felhasználót az ismerőseid közül? Visszacsinálni csak új ismerőskéréssel lehet.",
     "errors": {
       "loadFriends": "Nem sikerült betölteni a barátokat",
       "loadRequests": "Nem sikerült betölteni a kéréseket",
@@ -1903,7 +1905,7 @@
       "searchPlaceholder": "Könyvek keresése…",
       "noMatch": "Nincs a keresésnek megfelelő könyv.",
       "rename": "Könyv átnevezése",
-      "renamePrompt": "Új könyvnév:",
+      "renamePrompt": "Új könyvnév",
       "publicHint": "Nyilvános: ez a tanfolyam regisztráció nélkül, a közvetlen linkjén keresztül használható. A névtelen látogatók haladása helyben, a böngészőben marad.",
       "kidsHint": "Gyerekek: ez a kurzus megjelenik a gyerekoldalon, és ott bejelentkezés nélkül játszható (a számolókönyvek kivételével). Csak akkor jelenik meg ott, ha a megjegyzései németül vannak (a fordítás kész).",
       "confirmPublic": "Nyilvánossá teszed a(z) „{{name}}” kurzust? Ezután a megoldásokkal együtt bejelentkezés nélkül elérhető.",
@@ -1911,7 +1913,7 @@
       "confirmForeign": "A(z) „{{name}}” {{owner}} privát kurzusa. Mégis megnyitod? A tartalma ezután bejelentkezés nélkül elérhető.",
       "ownedBy": "privát · {{name}}",
       "kidsTitles": "Címek a KidHubon",
-      "kidsTitlePrompt": "Cím a KidHubon – {{language}} (üres = a könyv neve):",
+      "kidsTitlesHint": "Üresen hagyott mező = ezen a nyelven a könyv neve jelenik meg.",
       "slugPlaceholder": "álnév, pl. mate1",
       "slugHint": "Opcionális rövid álnév a nyilvános linkhez: a tanfolyam ekkor a /<álnév> címen érhető el (pl. /mate1). Kisbetűk, számjegyek és kötőjelek, egyedi. Üresen = nincs álnév.",
       "filters": {
@@ -1935,6 +1937,7 @@
       "noMembers": "Nincsenek tagok.",
       "created": "\"{{name}}\" csoport létrehozva",
       "deleteConfirm": "Törli a(z) \"{{name}}\" csoportot?",
+      "removeMemberConfirm": "Eltávolítod {{username}} felhasználót a(z) „{{group}}” csoportból?",
       "deleted": "\"{{name}}\" csoport törölve",
       "columns": {
         "group": "Csoport",
@@ -2292,6 +2295,7 @@
       "add": "Add",
       "saved": "Activity saved",
       "deleted": "Activity deleted",
+      "deleteConfirm": "Törlöd ezt a bejegyzést ({{kind}}, {{date}})? Nem állítható vissza.",
       "marker": "manually logged",
       "kinds": {
         "OtbGame": "OTB game (rapid/classical)",
@@ -2848,6 +2852,7 @@
     "replay": "Megoldás újra",
     "analyze": "Elemzés",
     "removeTooltip": "Eltávolítás a kedvencek közül",
+    "removeConfirm": "Eltávolítod ezt a feladványt a kedvencek közül?",
     "removeError": "A kedvencet nem sikerült eltávolítani.",
     "sourceStandard": "Standard feladvány",
     "sourceBook": "Tanfolyam-/könyvfeladvány",

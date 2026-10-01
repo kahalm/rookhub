@@ -243,19 +243,24 @@ export class EngineCardComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Lichess-Token entfernen — erst nach Rückfrage (F5-016): der Server kennt nur die maskierte Form,
+   *  zurück geht es nur mit einem neuen Token von Lichess. */
   remove(): void {
-    this.externalEngines.deleteToken().subscribe({
-      next: () => {
-        this.hasCredentials = false;
-        this.maskedToken = null;
-        this.tokenInvalid = false;
-        this.listFailed = false;
-        // Die Lichess-Engines fallen weg, direkt angemeldete bleiben (samt ihrem Platz in der
-        // Hintergrund-Liste) — also neu holen statt alles zu leeren.
-        this.loadEngines();
-        this.cdr.markForCheck();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
+    this.confirm.ask('profile.engine.removeTokenConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.externalEngines.deleteToken().subscribe({
+        next: () => {
+          this.hasCredentials = false;
+          this.maskedToken = null;
+          this.tokenInvalid = false;
+          this.listFailed = false;
+          // Die Lichess-Engines fallen weg, direkt angemeldete bleiben (samt ihrem Platz in der
+          // Hintergrund-Liste) — also neu holen statt alles zu leeren.
+          this.loadEngines();
+          this.cdr.markForCheck();
+        },
+        error: () => this.snackbar.warn(this.translate.instant('profile.engine.saveFailed')),
+      });
     });
   }
 

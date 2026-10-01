@@ -16,6 +16,7 @@ import {
 } from './training-goals.service';
 import { MANUAL_KINDS, isMinutesKind } from './manual-activity.util';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 /**
  * Karte „Manuelle Offline-Aktivität eintragen": Formular (Art/Datum/Menge/Thema/Notiz) + Liste der
@@ -74,6 +75,7 @@ export class ManualActivitiesCardComponent {
     private service: TrainingGoalService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private confirm: ConfirmService,
   ) {}
 
   /** Lokales Datum als yyyy-MM-dd (für date-Input + Default). */
@@ -125,14 +127,20 @@ export class ManualActivitiesCardComponent {
     this.manualEdit = this.emptyManual();
   }
 
+  /** Eintrag löschen — erst nach Rückfrage (F5-016): der Server löscht hart, es gibt kein Rückgängig,
+   *  und der Mülleimer liegt direkt neben „Bearbeiten“. */
   deleteManual(m: ManualActivity): void {
-    this.service.deleteManual(m.id).subscribe({
-      next: () => {
-        if (this.editingManualId === m.id) this.cancelManualEdit();
-        this.snackbar.success(this.translate.instant('trainingGoals.manual.deleted'));
-        this.changed.emit();
-      },
-      error: () => this.snackbar.warn(this.translate.instant('trainingGoals.error')),
+    const kind = this.translate.instant('trainingGoals.manual.kinds.' + m.kind);
+    this.confirm.ask('trainingGoals.manual.deleteConfirm', { kind, date: m.date }).subscribe(ok => {
+      if (!ok) return;
+      this.service.deleteManual(m.id).subscribe({
+        next: () => {
+          if (this.editingManualId === m.id) this.cancelManualEdit();
+          this.snackbar.success(this.translate.instant('trainingGoals.manual.deleted'));
+          this.changed.emit();
+        },
+        error: () => this.snackbar.warn(this.translate.instant('trainingGoals.error')),
+      });
     });
   }
 

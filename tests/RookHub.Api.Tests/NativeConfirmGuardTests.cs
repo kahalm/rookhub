@@ -21,6 +21,15 @@ public class NativeConfirmGuardTests
         @"(?<![\w.$])confirm\s*\(\s*[^)\s]|\b(?:window|globalThis|self)\s*\.\s*confirm\s*\(",
         RegexOptions.Compiled);
 
+    /// <summary>
+    /// Dasselbe für <c>prompt(…)</c> (W5 F5-016): Texteingaben laufen über den <c>PromptService</c>
+    /// (<c>src/app/shared/prompt-dialog</c>), der mehrere Felder in EINEM Dialog abfragt. <c>evt.prompt()</c> (das
+    /// PWA-Installationsereignis) und <c>this.prompts.ask(…)</c> bleiben erlaubt.
+    /// </summary>
+    private static readonly Regex NativePrompt = new(
+        @"(?<![\w.$])prompt\s*\(\s*[^)\s]|\b(?:window|globalThis|self)\s*\.\s*prompt\s*\(",
+        RegexOptions.Compiled);
+
     private static readonly Regex BlockComment = new(@"/\*.*?\*/", RegexOptions.Compiled | RegexOptions.Singleline);
     private static readonly Regex LineComment = new(@"(?<![:\\])//.*$", RegexOptions.Compiled | RegexOptions.Multiline);
 
@@ -54,8 +63,26 @@ public class NativeConfirmGuardTests
     [InlineData("reconfirm('x')")]
     public void Muster_LaesstDienstUndEigeneMethodenDurch(string line) => Assert.DoesNotMatch(NativeConfirm, line);
 
+    [Theory]
+    [InlineData("const next = prompt(this.translate.instant('admin.books.renamePrompt'), book.displayName);")]
+    [InlineData("const v = window.prompt('Name?');")]
+    public void Muster_ErkenntNativePrompts(string line) => Assert.Matches(NativePrompt, line);
+
+    [Theory]
+    [InlineData("await evt.prompt();")]
+    [InlineData("this.prompts.ask({ fields }).subscribe(res => {")]
+    [InlineData("const renamePrompt = 'x';")]
+    public void Muster_LaesstPromptDienstDurch(string line) => Assert.DoesNotMatch(NativePrompt, line);
+
     [Fact]
-    public void KeineOberflaeche_RuftDasNativeConfirm()
+    public void KeineOberflaeche_RuftDasNativeConfirm() => AssertKeinTreffer(NativeConfirm,
+        "Native Rückfrage gefunden — bitte ConfirmService.ask(…) nehmen (shared/confirm-dialog):\n");
+
+    [Fact]
+    public void KeineOberflaeche_RuftDasNativePrompt() => AssertKeinTreffer(NativePrompt,
+        "Native Texteingabe gefunden — bitte PromptService.ask(…) nehmen (shared/prompt-dialog):\n");
+
+    private static void AssertKeinTreffer(Regex pattern, string message)
     {
         var app = Path.Combine(RepoRoot(), "src", "frontend", "app");
         var files = Directory.GetDirectories(app, "src*")
@@ -70,11 +97,10 @@ public class NativeConfirmGuardTests
         {
             var lines = StripComments(File.ReadAllText(file)).Split('\n');
             for (var i = 0; i < lines.Length; i++)
-                if (NativeConfirm.IsMatch(lines[i]))
+                if (pattern.IsMatch(lines[i]))
                     hits.Add($"{Path.GetRelativePath(app, file)}:{i + 1}: {lines[i].Trim()}");
         }
 
-        Assert.True(hits.Count == 0,
-            "Native Rückfrage gefunden — bitte ConfirmService.ask(…) nehmen (shared/confirm-dialog):\n" + string.Join("\n", hits));
+        Assert.True(hits.Count == 0, message + string.Join("\n", hits));
     }
 }

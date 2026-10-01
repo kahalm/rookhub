@@ -23,6 +23,7 @@ import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../co
 import { RevengeService, RevengeNotification } from '../../core/revenge.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
 import { apiErrorText } from '../../core/api-error';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -84,7 +85,7 @@ import { apiErrorText } from '../../core/api-error';
                       <mat-icon [matBadge]="friend.openRevengeCount" [matBadgeHidden]="!friend.openRevengeCount"
                                 matBadgeColor="warn" matBadgeSize="small">sports_martial_arts</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="removeFriend(friend.friendshipId)"
+                    <button mat-icon-button color="warn" (click)="removeFriend(friend)"
                             [attr.aria-label]="'friends.aria.removeFriend' | translate" [matTooltip]="'friends.aria.removeFriend' | translate">
                       <mat-icon>person_remove</mat-icon>
                     </button>
@@ -244,6 +245,7 @@ export class FriendsComponent implements OnInit {
   loading = true;
 
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
   // Such-Trigger über switchMap: ein neuer Suchlauf bricht den vorigen ab, damit eine
   // langsamere ältere Antwort nicht ein neueres Ergebnis überschreibt (Out-of-order-Race).
   private searchTrigger = new Subject<string>();
@@ -381,10 +383,15 @@ export class FriendsComponent implements OnInit {
     });
   }
 
-  removeFriend(id: number): void {
-    this.friendsService.remove(id).subscribe({
-      next: () => this.loadData(),
-      error: () => this.snackbar.info(this.translate.instant('friends.errors.removeFriend'))
+  /** Freundschaft beenden — erst nach Rückfrage (F5-016): zurück geht es nur über eine neue Anfrage,
+   *  die der andere wieder annehmen muss. */
+  removeFriend(friend: Friend): void {
+    this.confirm.ask('friends.removeConfirm', { name: friend.username }).subscribe(ok => {
+      if (!ok) return;
+      this.friendsService.remove(friend.friendshipId).subscribe({
+        next: () => this.loadData(),
+        error: () => this.snackbar.info(this.translate.instant('friends.errors.removeFriend'))
+      });
     });
   }
 

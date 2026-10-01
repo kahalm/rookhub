@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FavoritesService, FavoritePuzzle } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -101,6 +102,7 @@ export class FavoritesComponent implements OnInit {
   favorites: FavoritePuzzle[] = [];
   loading = true;
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
 
   constructor(
     private service: FavoritesService,
@@ -137,11 +139,16 @@ export class FavoritesComponent implements OnInit {
     });
   }
 
+  /** Aus den Favoriten nehmen — erst nach Rückfrage (F5-016): ohne Rückgängig müsste man das Puzzle
+   *  erst wiederfinden, um es erneut zu markieren. */
   remove(f: FavoritePuzzle): void {
-    const source = f.source === 'Book' ? 'book' : 'standard';
-    this.service.remove(source, f.puzzleId).subscribe({
-      next: () => { this.favorites = this.favorites.filter(x => x.id !== f.id); },
-      error: () => this.snackbar.warn(this.translate.instant('favorites.removeError')),
+    this.confirm.ask('favorites.removeConfirm').subscribe(ok => {
+      if (!ok) return;
+      const source = f.source === 'Book' ? 'book' : 'standard';
+      this.service.remove(source, f.puzzleId).subscribe({
+        next: () => { this.favorites = this.favorites.filter(x => x.id !== f.id); },
+        error: () => this.snackbar.warn(this.translate.instant('favorites.removeError')),
+      });
     });
   }
 

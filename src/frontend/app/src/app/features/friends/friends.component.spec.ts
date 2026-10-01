@@ -9,6 +9,7 @@ import { ChallengeService } from '../../core/challenge.service';
 import { RevengeService } from '../../core/revenge.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 describe('FriendsComponent search race', () => {
   let component: FriendsComponent;
@@ -301,5 +302,52 @@ describe('FriendsComponent Fehlertext in der UI-Sprache (F5-019)', () => {
 
     expect(info).toHaveBeenCalledWith('Ihr seid bereits befreundet, oder eine Anfrage ist schon offen.');
     http.verify();
+  });
+});
+
+// F5-016: Freund entfernen ist ohne Rückgängig (neue Anfrage + Annahme nötig) → erst nach Rückfrage.
+describe('FriendsComponent removeFriend', () => {
+  function setup(answer: boolean) {
+    const confirm = { ask: jasmine.createSpy('ask').and.returnValue(of(answer)) };
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info: () => {}, success: () => {} } },
+        { provide: ConfirmService, useValue: confirm },
+      ],
+    });
+    TestBed.overrideComponent(FriendsComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/friends').flush([]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    httpMock.expectOne('/api/friends/requests/sent').flush([]);
+    return { component: fixture.componentInstance, httpMock, confirm };
+  }
+  const friend = { friendshipId: 31, userId: 7, username: 'anna', displayName: null } as any;
+
+  it('Abbrechen: keine DELETE-Anfrage', () => {
+    const { component, httpMock, confirm } = setup(false);
+    component.removeFriend(friend);
+    expect(confirm.ask).toHaveBeenCalledWith('friends.removeConfirm', { name: 'anna' });
+    httpMock.expectNone(r => r.method === 'DELETE');
+    httpMock.verify();
+  });
+
+  it('Bestätigen: DELETE der Freundschaft, danach neu laden', () => {
+    const { component, httpMock } = setup(true);
+    component.removeFriend(friend);
+    const req = httpMock.expectOne(r => r.method === 'DELETE');
+    expect(req.request.url).toContain('31');
+    req.flush(null);
+    httpMock.expectOne('/api/friends').flush([]);
+    httpMock.expectOne('/api/friends/requests').flush([]);
+    httpMock.expectOne('/api/friends/requests/sent').flush([]);
+    httpMock.verify();
   });
 });

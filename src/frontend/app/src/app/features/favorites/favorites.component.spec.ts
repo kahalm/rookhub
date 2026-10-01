@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { FavoritesComponent } from './favorites.component';
 import { FavoritePuzzle, FavoritesService } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 const STD: FavoritePuzzle = {
   id: 1, puzzleId: 42, source: 'Standard', rating: 1500, themes: 'fork pin', title: null,
@@ -15,13 +16,14 @@ const BOOK: FavoritePuzzle = {
   fen: '8/8/8/8/8/8/8/K6k w - - 0 1', moves: 'a1b1', createdAt: '2026-06-30',
 };
 
-function setup(overrides: any = {}) {
+function setup(overrides: any = {}, confirmAnswer = true) {
   const service: any = {
     list: jasmine.createSpy('list').and.returnValue(of([])),
     remove: jasmine.createSpy('remove').and.returnValue(of(false)),
     ...overrides,
   };
   const router: any = { navigate: jasmine.createSpy('navigate') };
+  const confirm = { ask: jasmine.createSpy('ask').and.returnValue(of(confirmAnswer)) };
   TestBed.configureTestingModule({
     imports: [FavoritesComponent],
     providers: [
@@ -29,11 +31,12 @@ function setup(overrides: any = {}) {
       { provide: FavoritesService, useValue: service },
       { provide: Router, useValue: router },
       { provide: SnackbarService, useValue: { warn: jasmine.createSpy('warn') } },
+      { provide: ConfirmService, useValue: confirm },
     ],
   });
   TestBed.overrideComponent(FavoritesComponent, { set: { template: '' } });
   const fixture = TestBed.createComponent(FavoritesComponent);
-  return { c: fixture.componentInstance, fixture, service, router };
+  return { c: fixture.componentInstance, fixture, service, router, confirm };
 }
 
 describe('FavoritesComponent', () => {
@@ -74,12 +77,21 @@ describe('FavoritesComponent', () => {
     expect(router.navigate.calls.mostRecent().args[1].queryParams.orientation).toBe('white');
   });
 
-  it('remove entfernt den Eintrag aus der Liste', () => {
-    const { c, service } = setup({ remove: jasmine.createSpy('remove').and.returnValue(of(false)) });
+  it('remove entfernt den Eintrag nach Bestätigung aus der Liste', () => {
+    const { c, service, confirm } = setup({ remove: jasmine.createSpy('remove').and.returnValue(of(false)) });
     c.favorites = [STD, BOOK];
     c.remove(BOOK);
+    expect(confirm.ask).toHaveBeenCalledWith('favorites.removeConfirm');
     expect(service.remove).toHaveBeenCalledWith('book', 77);
     expect(c.favorites.map(f => f.id)).toEqual([1]);
+  });
+
+  it('remove: Abbrechen der Rückfrage lässt den Favoriten stehen (F5-016)', () => {
+    const { c, service } = setup({}, false);
+    c.favorites = [STD, BOOK];
+    c.remove(BOOK);
+    expect(service.remove).not.toHaveBeenCalled();
+    expect(c.favorites.length).toBe(2);
   });
 
   it('themeList splittet und begrenzt auf 6', () => {

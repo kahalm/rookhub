@@ -162,6 +162,7 @@ describe('EngineCardComponent', () => {
   });
 
   it('resets the state after deleting the token — direct engines stay', () => {
+    spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(true));
     fixture.detectChanges();
     http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
     http.expectOne('/api/engine/external').flush({
@@ -184,5 +185,19 @@ describe('EngineCardComponent', () => {
     expect(component.lichessEngines.length).toBe(0);
     expect(component.directEngines.length).toBe(1);
     expect(component.maskedToken).toBeNull();
+  });
+
+  // F5-016: der Token lässt sich nicht wiederherstellen (nur maskiert gespeichert) → erst nach Rückfrage.
+  it('keeps the token when the confirmation is declined', () => {
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+    fixture.detectChanges();
+    http.expectOne('/api/engine/credentials').flush({ hasCredentials: true, maskedToken: '****abcd' });
+    http.expectOne('/api/engine/external').flush({ hasCredentials: true, tokenInvalid: false, engines: [] });
+
+    component.remove();
+
+    expect(ask).toHaveBeenCalledWith('profile.engine.removeTokenConfirm');
+    http.expectNone(r => r.url === '/api/engine/credentials' && r.method === 'DELETE');
+    expect(component.hasCredentials).toBeTrue();
   });
 });
