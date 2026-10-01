@@ -116,11 +116,6 @@
       "daily": "Denní úloha",
       "endless": "Nekonečný mód"
     },
-    "subscriptions": {
-      "title": "Odběry turnajů",
-      "count": "{{count}} odběrů",
-      "browse": "Procházet turnaje"
-    },
     "friends": {
       "title": "Přátelé",
       "count": "{{count}} přátel",
@@ -507,17 +502,11 @@
       "veryHard": "Velmi těžká"
     },
     "theme": {
-      "mode": "Mód",
-      "modeNormal": "Normální",
-      "modeRandom": "Náhodný",
-      "modeCrazy": "Crazy",
       "boardTheme": "Téma šachovnice",
       "pieces": "Figurky"
     },
     "viz": {
-      "title": "Vizualizace (Úroveň {{level}})",
       "countdown": "Figurky zmizí za {{seconds}}s…",
-      "noMoveYet": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
       "show": "Zobrazit",
       "showing": "Zobrazuji…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1. práh",
       "secondThreshold": "2. práh",
       "auto": "Auto: {{value}}",
-      "step": "Krok {{step}}",
-      "phase1Label": "Fáze 1 (Úr. 1–5)",
-      "phase2Label": "Fáze 2 (Úr. 6–10)",
-      "phase3Label": "Fáze 3 (Úr. 11+)",
       "curveHint": "Křivka hodnocení gauntletu (pevná při spuštění):",
       "curvePuzzle": "Úloha {{n}}",
       "settings": "Nastavení",
-      "visualizationLevel": "Vizualizace: Úroveň {{level}}",
-      "mode": "Mód",
-      "modeNormal": "Normální",
-      "modeRandom": "Náhodný",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Téma šachovnice",
-      "pieces": "Figurky",
       "highscore": "Highscore: {{rating}} hodnocení",
       "sessionsPlayed": "{{count}} sezení odehráno",
       "viewHistory": "Zobrazit historii",
@@ -664,9 +642,7 @@
       "start": "Start"
     },
     "game": {
-      "visualization": "Vizualizace (Úroveň {{level}})",
       "vizCountdown": "Figurky zmizí za {{seconds}}s...",
-      "vizNoMove": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
       "vizShow": "Zobrazit",
       "vizShowing": "Zobrazuji...",
       "loadingPuzzle": "Načítám úlohu...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Sdílet úlohu",
       "backToPuzzle": "Zpět na úlohu"
     },
-    "settings": {
-      "title": "Nastavení",
-      "visualizationLevel": "Vizualizace: Úroveň {{level}}",
-      "stockfishDepth": "Hloubka Stockfishe",
-      "depthHint": "1 (slabý) – 24 (silný)",
-      "mode": "Mód",
-      "modeNormal": "Normální",
-      "modeRandom": "Náhodný",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Téma šachovnice",
-      "pieces": "Figurky"
-    },
     "viz": {
-      "titleLevel": "Vizualizace (Úroveň {{level}})",
       "countdown": "Figurky zmizí za {{seconds}}s...",
-      "noMoveYet": "Zatím žádný tah – klikněte na výchozí pole → cílové pole.",
       "show": "Zobrazit",
-      "showing": "Zobrazuji...",
-      "level0": "Normální – Drag & Drop",
-      "level1": "Naslepo – šachovnice zmrazena, tahy jako text",
-      "level2": "Dáma – figurky jsou po 3s nahrazeny dámskými kameny",
-      "level3": "Tma – figurky jsou po 3s nahrazeny černými žetony",
-      "level4": "Neviditelné – figurky po 3s zcela zmizí"
+      "showing": "Zobrazuji..."
     },
     "course": {
       "backToCourses": "Na přehled kurzů",

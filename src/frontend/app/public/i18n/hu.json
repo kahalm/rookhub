@@ -232,11 +232,6 @@
       "daily": "Napi feladvány",
       "endless": "Végtelen"
     },
-    "subscriptions": {
-      "title": "Verseny-feliratkozások",
-      "count": "{{count}} feliratkozás",
-      "browse": "Versenyek böngészése"
-    },
     "friends": {
       "title": "Barátok",
       "count": "{{count}} barát",
@@ -461,7 +456,6 @@
       "noEngines": "Még nincs külső motor — csatlakoztass egyet közvetlenül vagy a Lichessen keresztül.",
       "specs": "{{threads}} szál, {{hash}} MiB hash",
       "backgroundLabel": "Háttérmotor a feladatokhoz",
-      "backgroundNone": "Nincs",
       "backgroundHint": "A háttérmotor akkor dolgozza fel az elemzési feladataidat, amikor éppen szabad, és szünetel, amíg élőben elemzel külső motorral. Az élő választóban nem jelenik meg — érdemes külön motort regisztrálni hozzá (ENGINE_COUNT=2 a szolgáltatónál).",
       "backgroundSaved": "Háttérmotor elmentve.",
       "backgroundFailed": "A háttérmotort nem sikerült elmenteni.",
@@ -1061,17 +1055,11 @@
       "veryHardDesc": "Feladványok kb. 600 Elóval a szinted felett — nagyon igényes."
     },
     "theme": {
-      "mode": "Mód",
-      "modeNormal": "Normál",
-      "modeRandom": "Véletlenszerű",
-      "modeCrazy": "Őrült",
       "boardTheme": "Táblastílus",
       "pieces": "Bábuk"
     },
     "viz": {
-      "title": "Vizualizáció ({{level}}. szint)",
       "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek…",
-      "noMoveYet": "Még nincs lépés – kattints a forrás-mezőre → célmezőre.",
       "show": "Mutatás",
       "showing": "Mutatás…",
       "level0Name": "Normál",
@@ -1079,7 +1067,6 @@
       "level2Name": "Korongok",
       "level3Name": "Sötét",
       "level4Name": "Láthatatlan",
-      "modeSelectAria": "Vizualizációs mód kiválasztása",
       "level0Desc": "Drag & drop — a tábla látható, nincs korlátozás.",
       "level1Desc": "A tábla befagyasztva, a lépések csak szövegként látszanak.",
       "level2Desc": "A bábukat 3 mp után színes korongok váltják fel.",
@@ -1370,18 +1357,6 @@
     "offlineListHint": "Offline vagy — a letöltött tanfolyamaid láthatók (utolsó ismert állapot).",
     "startChapterSequential": "Fejezet indítása (sorrendben)",
     "startChapterRandom": "Fejezet indítása (véletlenszerűen)",
-    "upload": {
-      "title": "Saját tanfolyam feltöltése",
-      "hint": "Adj hozzá egy feladvány-PGN-t (Chessable-stílus: FEN-nel és edzésjelölőkkel) személyes tanfolyamként.",
-      "restriction": "Ez csak ilyen stílusú feladvány-PGN-ekkel működik. Más PGN-ed van? Kérd meg egy adminisztrátort, hogy importálja, vagy kérdezz a",
-      "nameLabel": "Tanfolyam neve",
-      "namePlaceholder": "Opcionális — különben a fájlnévből",
-      "button": "PGN feltöltése",
-      "uploading": "Feltöltés…",
-      "choosePgn": "PGN kiválasztása…",
-      "success": "„{{name}}” létrehozva ({{count}} feladvány)",
-      "failed": "A feltöltés nem sikerült. Kérlek, ellenőrizd a PGN-t."
-    },
     "create": {
       "title": "Új tanfolyam létrehozása",
       "hint": "Hozz létre saját tanfolyamot — csak te látod. Az állásokat utána fejezetről fejezetre adhatod hozzá a tanfolyam oldalán.",
@@ -1592,20 +1567,9 @@
       "firstThreshold": "1. küszöb",
       "secondThreshold": "2. küszöb",
       "auto": "Auto: {{value}}",
-      "step": "{{step}}. lépés",
-      "phase1Label": "1. fázis (1–5. szint)",
-      "phase2Label": "2. fázis (6–10. szint)",
-      "phase3Label": "3. fázis (11.+ szint)",
       "curveHint": "A gauntlet értékelési görbéje (rögzített a kezdéskor):",
       "curvePuzzle": "{{n}}. feladvány",
       "settings": "Beállítások",
-      "visualizationLevel": "Vizualizáció: {{level}}. szint",
-      "mode": "Mód",
-      "modeNormal": "Normál",
-      "modeRandom": "Véletlenszerű",
-      "modeCrazy": "Őrült",
-      "boardTheme": "Táblastílus",
-      "pieces": "Bábuk",
       "highscore": "Csúcseredmény: {{rating}} értékelés",
       "sessionsPlayed": "{{count}} menet játszva",
       "viewHistory": "Előzmények megtekintése",
@@ -1618,9 +1582,7 @@
       "advanced": "Finomhangolás"
     },
     "game": {
-      "visualization": "Vizualizáció ({{level}}. szint)",
       "vizCountdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",
-      "vizNoMove": "Még nincs lépés – kattints a forrás-mezőre → célmezőre.",
       "vizShow": "Mutatás",
       "vizShowing": "Mutatás...",
       "loadingPuzzle": "Feladvány betöltése...",
@@ -1735,29 +1697,10 @@
       "showOriginalSolution": "Eredeti megoldás mutatása",
       "prev": "Vissza"
     },
-    "settings": {
-      "title": "Beállítások",
-      "visualizationLevel": "Vizualizáció: {{level}}. szint",
-      "stockfishDepth": "Stockfish mélység",
-      "depthHint": "1 (gyenge) – 24 (erős)",
-      "mode": "Mód",
-      "modeNormal": "Normál",
-      "modeRandom": "Véletlenszerű",
-      "modeCrazy": "Őrült",
-      "boardTheme": "Táblastílus",
-      "pieces": "Bábuk"
-    },
     "viz": {
-      "titleLevel": "Vizualizáció ({{level}}. szint)",
       "countdown": "A bábuk {{seconds}} másodperc múlva eltűnnek...",
-      "noMoveYet": "Még nincs lépés – kattints a forrás-mezőre → célmezőre.",
       "show": "Mutatás",
-      "showing": "Mutatás...",
-      "level0": "Normál – Húzd és ejtsd",
-      "level1": "Vakon – tábla befagyasztva, lépések szövegként",
-      "level2": "Dáma – a bábuk 3 másodperc után dámakövekre cserélődnek",
-      "level3": "Sötét – a bábuk 3 másodperc után fekete korongokra cserélődnek",
-      "level4": "Láthatatlan – a bábuk 3 másodperc után teljesen eltűnnek"
+      "showing": "Mutatás..."
     },
     "course": {
       "backToCourses": "Tanfolyam áttekintéséhez",
@@ -2670,8 +2613,6 @@
       "foundCount": "{{count}} hasonló állás",
       "atMove": "lépés: {{move}}",
       "startPosition": "kiindulási állás",
-      "prevMove": "Egy lépéssel vissza",
-      "nextMove": "Egy lépéssel előre",
       "openHint": "Állás megnyitása a repertoárban",
       "moveHitExact": "→ itt is {{move}}",
       "moveHitSameTarget": "→ itt {{move}} (ugyanaz a célmező)",
@@ -2953,7 +2894,6 @@
     "title": "Mentett játszmák",
     "hint": "Azok a játszmák, amelyeket a chess.com-on vagy a lichessen a RepCheck böngészőbővítménnyel mentesz, itt jelennek meg.",
     "empty": "Még nincsenek mentett játszmák. Egy chess.com- vagy lichess-elemzőoldalon kattints a RepCheck bővítményben a „Játszma mentése” gombra.",
-    "moves": "lépés",
     "replay": "Újrajátszás",
     "openInAnalysis": "Megnyitás az elemzésben",
     "share": "Megosztási link másolása",
@@ -3076,7 +3016,6 @@
       "again": "Elölről",
       "summary": "{{solved}} / {{total}} lépést találtál meg magad.",
       "progressShort": "{{solved}} / {{total}} megtalálva · {{open}} nyitott",
-      "tooltip": "A parti hibáinak gyakorlása",
       "onlyOpen": "Csak nyitott hibás partik ({{count}})",
       "analyze": "Elemzés",
       "triedEval": "{{san}} után: {{eval}} (legjobb lépés: {{best}})",
@@ -3247,8 +3186,7 @@
       "notFound": "Ez a feladat már nem létezik.",
       "toJobs": "Feladatok oldala",
       "elapsed": "Idő",
-      "speed": "Sebesség",
-      "depth": "Mélység"
+      "speed": "Sebesség"
     }
   },
   "gameAnalysis": {
@@ -3299,7 +3237,6 @@
   "guess": {
     "title": "Pontjátszma",
     "intro": "Találd ki egy elemzett játszma lépéseit egyenként: az egyik oldalt te vezeted, meglépsz, és rögtön pontot kapsz — ahhoz a lépéshez mérve, amit valóban játszottak.",
-    "startNew": "Új pontjátszma",
     "yourRuns": "A meneteid",
     "play": "Játék",
     "toAnalyses": "Játszmaelemzések",
@@ -3513,7 +3450,6 @@
       "region": "Régió",
       "timeControl": "Időbeosztás",
       "rounds": "Fordulók",
-      "players": "Résztvevők",
       "organizer": "Szervező",
       "arbiter": "Főbíró",
       "groups": "Csoportok",
@@ -3581,7 +3517,6 @@
       "custom": "Egyéni időszak"
     },
     "map": {
-      "openDetail": "Versenyoldal megnyitása",
       "thisVenue": "Ez a helyszín: {{name}}",
       "samePoint": "{{count}} verseny ezen a ponton",
       "samePointVague": "Ezeknél a versenyeknél csak a régió ismert, a pontos helyszín nem.",
@@ -3718,8 +3653,6 @@
       "title": "A profilom",
       "person": "Név és e-mail",
       "nameHelp": "A versenytörténet a chess-resultson keres rád, és ott a NÉV alapján megy a keresés — szám szerinti keresés nincs. Vezetéknév nélkül ez az oldal nem tud versenytörténetet mutatni.\n\nA megjelenített név az, amit mások látnak. A bejelentkezési neved sosem látszik.",
-      "displayNameHint": "Ez látszik másoknak a „{{username}}” helyett.",
-      "identity": "Játékosazonosítók",
       "identityHelp": "Két embert is hívhatnak ugyanúgy, és a névkeresés mindkettőt hozza. Egy FIDE-azonosító vagy egy chess-results-azonosító dönti el, melyikük vagy te.\n\nEnélkül a versenytörténet az összes névrokonod összes versenyét mutatja — és ez fel is tűnik, mert olyan versenyek lesznek benne, amelyeket sosem játszottál.\n\nMindkét szám ott áll a saját chess-results-játékosoldaladon.",
       "saveError": "Nem sikerült menteni. Próbáld meg még egyszer.",
       "loadError": "A profilt nem sikerült betölteni. Semmi nem veszett el — ellenőrizd a kapcsolatot, és próbáld újra."
@@ -4124,10 +4057,6 @@
       "courses": "{{count}} tanfolyam régebbi feldolgozást használ, és frissíthető — pl. hogy megjelenjenek a könyv lépésenkénti megjegyzései.",
       "repertoires": "{{count}} repertoár régebbi feldolgozást használ, és frissíthető."
     },
-    "needsReimport": {
-      "courses": "{{count}} kézzel feltöltött tanfolyam nem frissíthető automatikusan — importáld újra a PGN-t a legújabb feldolgozáshoz.",
-      "repertoires": "{{count}} repertoár kézi újraimportálást igényel a frissítéshez."
-    },
     "itemNeedsReimport": {
       "courses": "Ez a tanfolyam régebbi feldolgozásból származik, és itt nem frissíthető. Töltsd le újra a RepCheck bővítménnyel, hogy naprakész legyen.",
       "repertoires": "Ez a repertoár régebbi feldolgozásból származik, és itt nem frissíthető. Töltsd le újra a RepCheck bővítménnyel, hogy naprakész legyen."
@@ -4136,8 +4065,7 @@
     "updateTip": "A tárolt forrással rendelkező elemek újrafeldolgozása és a Chessable-elemek újbóli letöltése (a gyorsítótárazottak azonnal frissülnek, letöltés nélkül).",
     "working": "Frissítés folyamatban…",
     "started": "A frissítés elindult — a háttérben fut.",
-    "failed": "A frissítés sikertelen. Kérlek, próbáld újra.",
-    "dismiss": "Értem"
+    "failed": "A frissítés sikertelen. Kérlek, próbáld újra."
   },
   "remembered": {
     "title": "Megjelölt állások",
@@ -4287,14 +4215,10 @@
     "boardLocked": "Amíg egy lépés nem játszható, a tábla nem tudja folytatni a sort — előbb javítsd ki a lépésszöveget.",
     "gap": {
       "close": "Hézag kitöltése",
-      "title": "Mely lépések vezettek ide?",
       "depth": "Keresés eddig:",
       "plies": "{{count}} féllépés",
       "searching": "Keresés…",
-      "found": "{{count}} út található",
-      "apply": "Átvétel",
       "applied": "A hézag bezárult — a beszúrt lépések bizonytalanként vannak megjelölve.",
-      "severalHint": "Több lépéssorrend is ebbe az állásba vezet — azt válaszd, amelyik elhangzott a partiban.",
       "doesNotFit": "Ezek a lépések nem ehhez az álláshoz vezetnek.",
       "failed": "A keresést nem sikerült lefuttatni.",
       "none": "Legfeljebb {{count}} féllépéssel nincs út — valószínűleg több lépés van közte.",

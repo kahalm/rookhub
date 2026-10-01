@@ -40,6 +40,11 @@ module.exports = function (config) {
       require('@angular-devkit/build-angular/plugins/karma'),
     ],
     reporters: ['progress', 'kjhtml'],
+    // Quelltexte aller Projekte ausliefern, aber NICHT einbinden: i18n-usage.spec.ts liest sie über
+    // window.__karma__.files + fetch und findet so Sprachschlüssel, die kein Code mehr holt (Codereview F8-011).
+    files: [
+      { pattern: 'src*/**/*.@(ts|html)', included: false, served: true, watched: false, nocache: true },
+    ],
     browsers: ['ChromeHeadlessNoSandbox'],
     customLaunchers: {
       // --no-sandbox: nötig, wenn als root / ohne User-Namespaces im Container

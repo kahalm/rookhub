@@ -116,11 +116,6 @@
       "daily": "تاکتیک روزانه",
       "endless": "بی‌پایان"
     },
-    "subscriptions": {
-      "title": "اشتراک مسابقات",
-      "count": "{{count}} اشتراک",
-      "browse": "مرور مسابقات"
-    },
     "friends": {
       "title": "دوستان",
       "count": "{{count}} دوست",
@@ -507,17 +502,11 @@
       "veryHard": "خیلی سخت"
     },
     "theme": {
-      "mode": "حالت",
-      "modeNormal": "معمولی",
-      "modeRandom": "تصادفی",
-      "modeCrazy": "دیوانه‌وار",
       "boardTheme": "قالب صفحه",
       "pieces": "مهره‌ها"
     },
     "viz": {
-      "title": "تجسم (سطح {{level}})",
       "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند…",
-      "noMoveYet": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
       "show": "نمایش",
       "showing": "در حال نمایش…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "آستانه اول",
       "secondThreshold": "آستانه دوم",
       "auto": "خودکار: {{value}}",
-      "step": "گام {{step}}",
-      "phase1Label": "فاز ۱ (سطح ۱–۵)",
-      "phase2Label": "فاز ۲ (سطح ۶–۱۰)",
-      "phase3Label": "فاز ۳ (سطح ۱۱+)",
       "curveHint": "منحنی رتبه (هنگام شروع ثابت می‌شود):",
       "curvePuzzle": "تاکتیک {{n}}",
       "settings": "تنظیمات",
-      "visualizationLevel": "تجسم: سطح {{level}}",
-      "mode": "حالت",
-      "modeNormal": "معمولی",
-      "modeRandom": "تصادفی",
-      "modeCrazy": "دیوانه‌وار",
-      "boardTheme": "قالب صفحه",
-      "pieces": "مهره‌ها",
       "highscore": "بهترین رکورد: رتبه {{rating}}",
       "sessionsPlayed": "{{count}} جلسه بازی شده",
       "viewHistory": "مشاهده تاریخچه",
@@ -664,9 +642,7 @@
       "start": "شروع"
     },
     "game": {
-      "visualization": "تجسم (سطح {{level}})",
       "vizCountdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
-      "vizNoMove": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
       "vizShow": "نمایش",
       "vizShowing": "در حال نمایش...",
       "loadingPuzzle": "در حال بارگذاری تاکتیک...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "اشتراک‌گذاری تاکتیک",
       "backToPuzzle": "بازگشت به تاکتیک"
     },
-    "settings": {
-      "title": "تنظیمات",
-      "visualizationLevel": "تجسم: سطح {{level}}",
-      "stockfishDepth": "عمق Stockfish",
-      "depthHint": "۱ (ضعیف) – ۲۴ (قوی)",
-      "mode": "حالت",
-      "modeNormal": "معمولی",
-      "modeRandom": "تصادفی",
-      "modeCrazy": "دیوانه‌وار",
-      "boardTheme": "قالب صفحه",
-      "pieces": "مهره‌ها"
-    },
     "viz": {
-      "titleLevel": "تجسم (سطح {{level}})",
       "countdown": "مهره‌ها در {{seconds}} ثانیه ناپدید می‌شوند...",
-      "noMoveYet": "هنوز حرکتی انجام نشده — روی خانه مبدأ کلیک کنید، سپس روی خانه مقصد.",
       "show": "نمایش",
-      "showing": "در حال نمایش...",
-      "level0": "معمولی — کشیدن و رها کردن",
-      "level1": "کور — صفحه ثابت، حرکات به‌صورت متن",
-      "level2": "دامه — مهره‌ها بعد از ۳ ثانیه با دامه جایگزین می‌شوند",
-      "level3": "تاریک — مهره‌ها بعد از ۳ ثانیه با نشانه‌های سیاه جایگزین می‌شوند",
-      "level4": "نامرئی — مهره‌ها بعد از ۳ ثانیه کاملاً ناپدید می‌شوند"
+      "showing": "در حال نمایش..."
     },
     "course": {
       "backToCourses": "به نمای کلی دوره",

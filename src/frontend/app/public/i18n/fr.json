@@ -116,11 +116,6 @@
       "daily": "Puzzle du jour",
       "endless": "Infini"
     },
-    "subscriptions": {
-      "title": "Abonnements aux tournois",
-      "count": "{{count}} abonnements",
-      "browse": "Parcourir les tournois"
-    },
     "friends": {
       "title": "Amis",
       "count": "{{count}} amis",
@@ -507,17 +502,11 @@
       "veryHard": "Très difficile"
     },
     "theme": {
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Aléatoire",
-      "modeCrazy": "Fou",
       "boardTheme": "Thème de l'échiquier",
       "pieces": "Pièces"
     },
     "viz": {
-      "title": "Visualisation (Niveau {{level}})",
       "countdown": "Les pièces disparaissent dans {{seconds}}s…",
-      "noMoveYet": "Aucun coup — cliquez sur la case de départ puis la case cible.",
       "show": "Afficher",
       "showing": "Affichage…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1er seuil",
       "secondThreshold": "2e seuil",
       "auto": "Auto : {{value}}",
-      "step": "Pas {{step}}",
-      "phase1Label": "Phase 1 (Nv 1–5)",
-      "phase2Label": "Phase 2 (Nv 6–10)",
-      "phase3Label": "Phase 3 (Nv 11+)",
       "curveHint": "Courbe de classement du gauntlet (fixée au démarrage) :",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Paramètres",
-      "visualizationLevel": "Visualisation : Niveau {{level}}",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Aléatoire",
-      "modeCrazy": "Fou",
-      "boardTheme": "Thème de l'échiquier",
-      "pieces": "Pièces",
       "highscore": "Meilleur score : {{rating}} de classement",
       "sessionsPlayed": "{{count}} parties jouées",
       "viewHistory": "Voir l'historique",
@@ -664,9 +642,7 @@
       "start": "Démarrer"
     },
     "game": {
-      "visualization": "Visualisation (Niveau {{level}})",
       "vizCountdown": "Les pièces disparaissent dans {{seconds}}s...",
-      "vizNoMove": "Aucun coup — cliquez sur la case de départ puis la case cible.",
       "vizShow": "Afficher",
       "vizShowing": "Affichage...",
       "loadingPuzzle": "Chargement du puzzle...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Partager le puzzle",
       "backToPuzzle": "Retour au puzzle"
     },
-    "settings": {
-      "title": "Paramètres",
-      "visualizationLevel": "Visualisation : Niveau {{level}}",
-      "stockfishDepth": "Profondeur Stockfish",
-      "depthHint": "1 (faible) – 24 (fort)",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Aléatoire",
-      "modeCrazy": "Fou",
-      "boardTheme": "Thème de l'échiquier",
-      "pieces": "Pièces"
-    },
     "viz": {
-      "titleLevel": "Visualisation (Niveau {{level}})",
       "countdown": "Les pièces disparaissent dans {{seconds}}s...",
-      "noMoveYet": "Aucun coup — cliquez sur la case de départ puis la case cible.",
       "show": "Afficher",
-      "showing": "Affichage...",
-      "level0": "Normal — Glisser-déposer",
-      "level1": "À l'aveugle — échiquier figé, coups en texte",
-      "level2": "Dames — les pièces sont remplacées par des dames après 3s",
-      "level3": "Sombre — les pièces sont remplacées par des jetons noirs après 3s",
-      "level4": "Invisible — les pièces disparaissent complètement après 3s"
+      "showing": "Affichage..."
     },
     "course": {
       "backToCourses": "Vers la vue d'ensemble des cours",

@@ -116,11 +116,6 @@
       "daily": "今日のパズル",
       "endless": "エンドレス"
     },
-    "subscriptions": {
-      "title": "トーナメント購読",
-      "count": "{{count}} 件",
-      "browse": "トーナメントを探す"
-    },
     "friends": {
       "title": "フレンド",
       "count": "{{count}} 人",
@@ -507,17 +502,11 @@
       "veryHard": "とても難しい"
     },
     "theme": {
-      "mode": "モード",
-      "modeNormal": "ノーマル",
-      "modeRandom": "ランダム",
-      "modeCrazy": "クレイジー",
       "boardTheme": "盤のテーマ",
       "pieces": "駒"
     },
     "viz": {
-      "title": "可視化（レベル {{level}}）",
       "countdown": "{{seconds}} 秒後に駒が消えます…",
-      "noMoveYet": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
       "show": "表示",
       "showing": "表示中…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "第1閾値",
       "secondThreshold": "第2閾値",
       "auto": "自動: {{value}}",
-      "step": "ステップ {{step}}",
-      "phase1Label": "フェーズ 1（Lv 1〜5）",
-      "phase2Label": "フェーズ 2（Lv 6〜10）",
-      "phase3Label": "フェーズ 3（Lv 11+）",
       "curveHint": "ガントレットのレーティング曲線（開始時に固定されます）:",
       "curvePuzzle": "パズル {{n}}",
       "settings": "設定",
-      "visualizationLevel": "可視化: レベル {{level}}",
-      "mode": "モード",
-      "modeNormal": "ノーマル",
-      "modeRandom": "ランダム",
-      "modeCrazy": "クレイジー",
-      "boardTheme": "盤のテーマ",
-      "pieces": "駒",
       "highscore": "ハイスコア: {{rating}} レーティング",
       "sessionsPlayed": "{{count}} セッションプレイ済み",
       "viewHistory": "履歴を見る",
@@ -664,9 +642,7 @@
       "start": "スタート"
     },
     "game": {
-      "visualization": "可視化（レベル {{level}}）",
       "vizCountdown": "{{seconds}} 秒後に駒が消えます...",
-      "vizNoMove": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
       "vizShow": "表示",
       "vizShowing": "表示中...",
       "loadingPuzzle": "パズルを読み込み中...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "パズルを共有",
       "backToPuzzle": "パズルに戻る"
     },
-    "settings": {
-      "title": "設定",
-      "visualizationLevel": "可視化: レベル {{level}}",
-      "stockfishDepth": "Stockfish の深さ",
-      "depthHint": "1（弱）〜 24（強）",
-      "mode": "モード",
-      "modeNormal": "ノーマル",
-      "modeRandom": "ランダム",
-      "modeCrazy": "クレイジー",
-      "boardTheme": "盤のテーマ",
-      "pieces": "駒"
-    },
     "viz": {
-      "titleLevel": "可視化（レベル {{level}}）",
       "countdown": "{{seconds}} 秒後に駒が消えます...",
-      "noMoveYet": "まだ手がありません — 移動元のマスをクリックしてからターゲットのマスをクリックしてください。",
       "show": "表示",
-      "showing": "表示中...",
-      "level0": "ノーマル — ドラッグ＆ドロップ",
-      "level1": "ブラインドフォールド — 盤が固定され、手がテキストで表示",
-      "level2": "チェッカー — 3秒後に駒がチェッカーに置き換わります",
-      "level3": "ダーク — 3秒後に駒が黒いトークンに置き換わります",
-      "level4": "インビジブル — 3秒後に駒が完全に消えます"
+      "showing": "表示中..."
     },
     "course": {
       "backToCourses": "コース一覧へ",

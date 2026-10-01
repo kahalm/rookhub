@@ -116,11 +116,6 @@
       "daily": "오늘의 퍼즐",
       "endless": "무한 모드"
     },
-    "subscriptions": {
-      "title": "대회 구독",
-      "count": "{{count}}개 구독",
-      "browse": "대회 탐색"
-    },
     "friends": {
       "title": "친구",
       "count": "{{count}}명",
@@ -507,17 +502,11 @@
       "veryHard": "매우 어려움"
     },
     "theme": {
-      "mode": "모드",
-      "modeNormal": "일반",
-      "modeRandom": "랜덤",
-      "modeCrazy": "크레이지",
       "boardTheme": "보드 테마",
       "pieces": "기물"
     },
     "viz": {
-      "title": "시각화 (레벨 {{level}})",
       "countdown": "기물이 {{seconds}}초 후 사라집니다…",
-      "noMoveYet": "아직 수를 두지 않았습니다 — 출발 칸 → 목표 칸을 클릭하세요.",
       "show": "보기",
       "showing": "표시 중…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1차 임계값",
       "secondThreshold": "2차 임계값",
       "auto": "자동: {{value}}",
-      "step": "스텝 {{step}}",
-      "phase1Label": "1단계 (레벨 1–5)",
-      "phase2Label": "2단계 (레벨 6–10)",
-      "phase3Label": "3단계 (레벨 11+)",
       "curveHint": "가로막기(고정 시작 후) 등급 곡선:",
       "curvePuzzle": "퍼즐 {{n}}",
       "settings": "설정",
-      "visualizationLevel": "시각화: 레벨 {{level}}",
-      "mode": "모드",
-      "modeNormal": "일반",
-      "modeRandom": "랜덤",
-      "modeCrazy": "크레이지",
-      "boardTheme": "보드 테마",
-      "pieces": "기물",
       "highscore": "최고 기록: 등급 {{rating}}",
       "sessionsPlayed": "{{count}}회 플레이",
       "viewHistory": "기록 보기",
@@ -664,9 +642,7 @@
       "start": "시작"
     },
     "game": {
-      "visualization": "시각화 (레벨 {{level}})",
       "vizCountdown": "기물이 {{seconds}}초 후 사라집니다...",
-      "vizNoMove": "아직 수를 두지 않았습니다 — 출발 칸 → 목표 칸을 클릭하세요.",
       "vizShow": "보기",
       "vizShowing": "표시 중...",
       "loadingPuzzle": "퍼즐 로딩 중...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "퍼즐 공유",
       "backToPuzzle": "퍼즐로 돌아가기"
     },
-    "settings": {
-      "title": "설정",
-      "visualizationLevel": "시각화: 레벨 {{level}}",
-      "stockfishDepth": "Stockfish 탐색 깊이",
-      "depthHint": "1(약) – 24(강)",
-      "mode": "모드",
-      "modeNormal": "일반",
-      "modeRandom": "랜덤",
-      "modeCrazy": "크레이지",
-      "boardTheme": "보드 테마",
-      "pieces": "기물"
-    },
     "viz": {
-      "titleLevel": "시각화 (레벨 {{level}})",
       "countdown": "기물이 {{seconds}}초 후 사라집니다...",
-      "noMoveYet": "아직 수를 두지 않았습니다 — 출발 칸 → 목표 칸을 클릭하세요.",
       "show": "보기",
-      "showing": "표시 중...",
-      "level0": "일반 — 드래그 앤 드롭",
-      "level1": "블라인드 — 보드 고정, 수는 텍스트로",
-      "level2": "체커 — 3초 후 기물이 체커로 교체됨",
-      "level3": "어두움 — 3초 후 기물이 검은 토큰으로 교체됨",
-      "level4": "투명 — 3초 후 기물이 완전히 사라짐"
+      "showing": "표시 중..."
     },
     "course": {
       "backToCourses": "코스 개요로",

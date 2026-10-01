@@ -116,11 +116,6 @@
       "daily": "Zadanie dnia",
       "endless": "Tryb nieskończony"
     },
-    "subscriptions": {
-      "title": "Subskrypcje turniejów",
-      "count": "{{count}} subskrypcji",
-      "browse": "Przeglądaj turnieje"
-    },
     "friends": {
       "title": "Znajomi",
       "count": "{{count}} znajomych",
@@ -507,17 +502,11 @@
       "veryHard": "Bardzo trudne"
     },
     "theme": {
-      "mode": "Tryb",
-      "modeNormal": "Normalny",
-      "modeRandom": "Losowy",
-      "modeCrazy": "Szalony",
       "boardTheme": "Motyw szachownicy",
       "pieces": "Bierki"
     },
     "viz": {
-      "title": "Wizualizacja (poziom {{level}})",
       "countdown": "Bierki znikają za {{seconds}}s…",
-      "noMoveYet": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
       "show": "Pokaż",
       "showing": "Wyświetlanie…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1. próg",
       "secondThreshold": "2. próg",
       "auto": "Auto: {{value}}",
-      "step": "Krok {{step}}",
-      "phase1Label": "Faza 1 (Poz. 1–5)",
-      "phase2Label": "Faza 2 (Poz. 6–10)",
-      "phase3Label": "Faza 3 (Poz. 11+)",
       "curveHint": "Krzywa ocen (ustalana przy starcie):",
       "curvePuzzle": "Zadanie {{n}}",
       "settings": "Ustawienia",
-      "visualizationLevel": "Wizualizacja: poziom {{level}}",
-      "mode": "Tryb",
-      "modeNormal": "Normalny",
-      "modeRandom": "Losowy",
-      "modeCrazy": "Szalony",
-      "boardTheme": "Motyw szachownicy",
-      "pieces": "Bierki",
       "highscore": "Rekord: {{rating}} Elo",
       "sessionsPlayed": "Rozegrane sesje: {{count}}",
       "viewHistory": "Zobacz historię",
@@ -664,9 +642,7 @@
       "start": "Start"
     },
     "game": {
-      "visualization": "Wizualizacja (poziom {{level}})",
       "vizCountdown": "Bierki znikają za {{seconds}}s...",
-      "vizNoMove": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
       "vizShow": "Pokaż",
       "vizShowing": "Wyświetlanie...",
       "loadingPuzzle": "Ładowanie zadania...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Udostępnij zadanie",
       "backToPuzzle": "Wróć do zadania"
     },
-    "settings": {
-      "title": "Ustawienia",
-      "visualizationLevel": "Wizualizacja: poziom {{level}}",
-      "stockfishDepth": "Głębokość Stockfisha",
-      "depthHint": "1 (słabe) – 24 (silne)",
-      "mode": "Tryb",
-      "modeNormal": "Normalny",
-      "modeRandom": "Losowy",
-      "modeCrazy": "Szalony",
-      "boardTheme": "Motyw szachownicy",
-      "pieces": "Bierki"
-    },
     "viz": {
-      "titleLevel": "Wizualizacja (poziom {{level}})",
       "countdown": "Bierki znikają za {{seconds}}s...",
-      "noMoveYet": "Brak ruchu — kliknij pole źródłowe → pole docelowe.",
       "show": "Pokaż",
-      "showing": "Wyświetlanie...",
-      "level0": "Normalny — przeciągnij i upuść",
-      "level1": "Na ślepo — szachownica zamrożona, ruchy jako tekst",
-      "level2": "Warcaby — bierki zastępowane warcabami po 3s",
-      "level3": "Ciemny — bierki zastępowane czarnymi żetonami po 3s",
-      "level4": "Niewidoczny — bierki całkowicie znikają po 3s"
+      "showing": "Wyświetlanie..."
     },
     "course": {
       "backToCourses": "Do przeglądu kursu",

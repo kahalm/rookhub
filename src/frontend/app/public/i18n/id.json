@@ -116,11 +116,6 @@
       "daily": "Puzzle harian",
       "endless": "Tanpa Batas"
     },
-    "subscriptions": {
-      "title": "Langganan Turnamen",
-      "count": "{{count}} langganan",
-      "browse": "Jelajahi Turnamen"
-    },
     "friends": {
       "title": "Teman",
       "count": "{{count}} teman",
@@ -507,17 +502,11 @@
       "veryHard": "Sangat sulit"
     },
     "theme": {
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Acak",
-      "modeCrazy": "Gila",
       "boardTheme": "Tema Papan",
       "pieces": "Bidak"
     },
     "viz": {
-      "title": "Visualisasi (Level {{level}})",
       "countdown": "Bidak menghilang dalam {{seconds}}d…",
-      "noMoveYet": "Belum ada langkah — klik kotak asal → kotak tujuan.",
       "show": "Tampilkan",
       "showing": "Menampilkan…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "Ambang Batas ke-1",
       "secondThreshold": "Ambang Batas ke-2",
       "auto": "Otomatis: {{value}}",
-      "step": "Langkah {{step}}",
-      "phase1Label": "Fase 1 (Lv 1–5)",
-      "phase2Label": "Fase 2 (Lv 6–10)",
-      "phase3Label": "Fase 3 (Lv 11+)",
       "curveHint": "Kurva rating dari gauntlet (tetap saat Anda mulai):",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Pengaturan",
-      "visualizationLevel": "Visualisasi: Level {{level}}",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Acak",
-      "modeCrazy": "Gila",
-      "boardTheme": "Tema Papan",
-      "pieces": "Bidak",
       "highscore": "Skor tertinggi: Rating {{rating}}",
       "sessionsPlayed": "{{count}} sesi dimainkan",
       "viewHistory": "Lihat Riwayat",
@@ -664,9 +642,7 @@
       "start": "Mulai"
     },
     "game": {
-      "visualization": "Visualisasi (Level {{level}})",
       "vizCountdown": "Bidak menghilang dalam {{seconds}}d...",
-      "vizNoMove": "Belum ada langkah — klik kotak asal → kotak tujuan.",
       "vizShow": "Tampilkan",
       "vizShowing": "Menampilkan...",
       "loadingPuzzle": "Memuat puzzle...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Bagikan puzzle",
       "backToPuzzle": "Kembali ke puzzle"
     },
-    "settings": {
-      "title": "Pengaturan",
-      "visualizationLevel": "Visualisasi: Level {{level}}",
-      "stockfishDepth": "Kedalaman Stockfish",
-      "depthHint": "1 (lemah) – 24 (kuat)",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Acak",
-      "modeCrazy": "Gila",
-      "boardTheme": "Tema Papan",
-      "pieces": "Bidak"
-    },
     "viz": {
-      "titleLevel": "Visualisasi (Level {{level}})",
       "countdown": "Bidak menghilang dalam {{seconds}}d...",
-      "noMoveYet": "Belum ada langkah — klik kotak asal → kotak tujuan.",
       "show": "Tampilkan",
-      "showing": "Menampilkan...",
-      "level0": "Normal — Seret & Lepas",
-      "level1": "Blindfold — papan beku, langkah sebagai teks",
-      "level2": "Checker — bidak diganti dengan checker setelah 3 detik",
-      "level3": "Gelap — bidak diganti dengan token hitam setelah 3 detik",
-      "level4": "Tak terlihat — bidak menghilang sepenuhnya setelah 3 detik"
+      "showing": "Menampilkan..."
     },
     "course": {
       "backToCourses": "Ke ikhtisar kursus",

@@ -116,11 +116,6 @@
       "daily": "Puzzle del giorno",
       "endless": "Infinito"
     },
-    "subscriptions": {
-      "title": "Iscrizioni tornei",
-      "count": "{{count}} iscrizioni",
-      "browse": "Sfoglia tornei"
-    },
     "friends": {
       "title": "Amici",
       "count": "{{count}} amici",
@@ -507,17 +502,11 @@
       "veryHard": "Molto difficile"
     },
     "theme": {
-      "mode": "Modalità",
-      "modeNormal": "Normale",
-      "modeRandom": "Casuale",
-      "modeCrazy": "Folle",
       "boardTheme": "Tema scacchiera",
       "pieces": "Pezzi"
     },
     "viz": {
-      "title": "Visualizzazione (Livello {{level}})",
       "countdown": "I pezzi scompaiono in {{seconds}}s…",
-      "noMoveYet": "Nessuna mossa ancora — clicca la casella di partenza → casella di destinazione.",
       "show": "Mostra",
       "showing": "Visualizzazione…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1ª soglia",
       "secondThreshold": "2ª soglia",
       "auto": "Auto: {{value}}",
-      "step": "Passo {{step}}",
-      "phase1Label": "Fase 1 (Lv 1–5)",
-      "phase2Label": "Fase 2 (Lv 6–10)",
-      "phase3Label": "Fase 3 (Lv 11+)",
       "curveHint": "Curva di valutazione del gauntlet (fissa all'avvio):",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Impostazioni",
-      "visualizationLevel": "Visualizzazione: Livello {{level}}",
-      "mode": "Modalità",
-      "modeNormal": "Normale",
-      "modeRandom": "Casuale",
-      "modeCrazy": "Folle",
-      "boardTheme": "Tema scacchiera",
-      "pieces": "Pezzi",
       "highscore": "Record: {{rating}} di valutazione",
       "sessionsPlayed": "{{count}} sessioni giocate",
       "viewHistory": "Vedi cronologia",
@@ -664,9 +642,7 @@
       "start": "Inizia"
     },
     "game": {
-      "visualization": "Visualizzazione (Livello {{level}})",
       "vizCountdown": "I pezzi scompaiono in {{seconds}}s...",
-      "vizNoMove": "Nessuna mossa ancora — clicca la casella di partenza → casella di destinazione.",
       "vizShow": "Mostra",
       "vizShowing": "Visualizzazione...",
       "loadingPuzzle": "Caricamento puzzle...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Condividi puzzle",
       "backToPuzzle": "Torna al puzzle"
     },
-    "settings": {
-      "title": "Impostazioni",
-      "visualizationLevel": "Visualizzazione: Livello {{level}}",
-      "stockfishDepth": "Profondità Stockfish",
-      "depthHint": "1 (debole) – 24 (forte)",
-      "mode": "Modalità",
-      "modeNormal": "Normale",
-      "modeRandom": "Casuale",
-      "modeCrazy": "Folle",
-      "boardTheme": "Tema scacchiera",
-      "pieces": "Pezzi"
-    },
     "viz": {
-      "titleLevel": "Visualizzazione (Livello {{level}})",
       "countdown": "I pezzi scompaiono in {{seconds}}s...",
-      "noMoveYet": "Nessuna mossa ancora — clicca la casella di partenza → casella di destinazione.",
       "show": "Mostra",
-      "showing": "Visualizzazione...",
-      "level0": "Normale — Trascina e rilascia",
-      "level1": "Bendato — scacchiera bloccata, mosse come testo",
-      "level2": "Dama — i pezzi vengono sostituiti da pedine dopo 3s",
-      "level3": "Buio — i pezzi vengono sostituiti da token neri dopo 3s",
-      "level4": "Invisibile — i pezzi scompaiono completamente dopo 3s"
+      "showing": "Visualizzazione..."
     },
     "course": {
       "backToCourses": "Al riepilogo del corso",

@@ -116,11 +116,6 @@
       "endless": "Infinit",
       "daily": "Problema zilei"
     },
-    "subscriptions": {
-      "title": "Abonamente la turnee",
-      "count": "{{count}} abonamente",
-      "browse": "Explorează turnee"
-    },
     "friends": {
       "title": "Prieteni",
       "count": "{{count}} prieteni",
@@ -507,17 +502,11 @@
       "veryHard": "Foarte dificil"
     },
     "theme": {
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatoriu",
-      "modeCrazy": "Nebunesc",
       "boardTheme": "Temă tablă",
       "pieces": "Piese"
     },
     "viz": {
-      "title": "Vizualizare (Nivel {{level}})",
       "countdown": "Piesele dispar în {{seconds}}s…",
-      "noMoveYet": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
       "show": "Arată",
       "showing": "Se afișează…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "Primul prag",
       "secondThreshold": "Al doilea prag",
       "auto": "Auto: {{value}}",
-      "step": "Pas {{step}}",
-      "phase1Label": "Faza 1 (Niv 1–5)",
-      "phase2Label": "Faza 2 (Niv 6–10)",
-      "phase3Label": "Faza 3 (Niv 11+)",
       "curveHint": "Curba de rating a gauntlet-ului (fixă la pornire):",
       "curvePuzzle": "Problema {{n}}",
       "settings": "Setări",
-      "visualizationLevel": "Vizualizare: Nivel {{level}}",
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatoriu",
-      "modeCrazy": "Nebunesc",
-      "boardTheme": "Temă tablă",
-      "pieces": "Piese",
       "highscore": "Record: Rating {{rating}}",
       "sessionsPlayed": "{{count}} sesiuni jucate",
       "viewHistory": "Vezi istoricul",
@@ -664,9 +642,7 @@
       "start": "Start"
     },
     "game": {
-      "visualization": "Vizualizare (Nivel {{level}})",
       "vizCountdown": "Piesele dispar în {{seconds}}s...",
-      "vizNoMove": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
       "vizShow": "Arată",
       "vizShowing": "Se afișează...",
       "loadingPuzzle": "Se încarcă problema...",
@@ -766,29 +742,10 @@
       "prevDaily": "Ziua anterioară",
       "nextDaily": "Ziua următoare"
     },
-    "settings": {
-      "title": "Setări",
-      "visualizationLevel": "Vizualizare: Nivel {{level}}",
-      "stockfishDepth": "Adâncime Stockfish",
-      "depthHint": "1 (slab) – 24 (puternic)",
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatoriu",
-      "modeCrazy": "Nebunesc",
-      "boardTheme": "Temă tablă",
-      "pieces": "Piese"
-    },
     "viz": {
-      "titleLevel": "Vizualizare (Nivel {{level}})",
       "countdown": "Piesele dispar în {{seconds}}s...",
-      "noMoveYet": "Nicio mutare încă — apasă câmpul de plecare → câmpul țintă.",
       "show": "Arată",
-      "showing": "Se afișează...",
-      "level0": "Normal — Trage și plasează",
-      "level1": "Orb — tablă înghețată, mutări ca text",
-      "level2": "Dame — piesele sunt înlocuite cu dame după 3s",
-      "level3": "Întunecat — piesele sunt înlocuite cu jetoane negre după 3s",
-      "level4": "Invizibil — piesele dispar complet după 3s"
+      "showing": "Se afișează..."
     },
     "course": {
       "backToCourses": "La prezentarea generală a cursurilor",

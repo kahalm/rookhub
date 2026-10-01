@@ -116,11 +116,6 @@
       "daily": "Dagens uppgift",
       "endless": "Ändlöst"
     },
-    "subscriptions": {
-      "title": "Turneringsprenumerationer",
-      "count": "{{count}} prenumerationer",
-      "browse": "Bläddra bland turneringar"
-    },
     "friends": {
       "title": "Vänner",
       "count": "{{count}} vänner",
@@ -507,17 +502,11 @@
       "veryHard": "Mycket svår"
     },
     "theme": {
-      "mode": "Läge",
-      "modeNormal": "Normal",
-      "modeRandom": "Slumpmässig",
-      "modeCrazy": "Galen",
       "boardTheme": "Brädtema",
       "pieces": "Pjäser"
     },
     "viz": {
-      "title": "Visualisering (Nivå {{level}})",
       "countdown": "Pjäser försvinner om {{seconds}}s…",
-      "noMoveYet": "Inget drag än — klicka på från-ruta → målruta.",
       "show": "Visa",
       "showing": "Visar…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1:a tröskel",
       "secondThreshold": "2:a tröskel",
       "auto": "Auto: {{value}}",
-      "step": "Steg {{step}}",
-      "phase1Label": "Fas 1 (Nv 1–5)",
-      "phase2Label": "Fas 2 (Nv 6–10)",
-      "phase3Label": "Fas 3 (Nv 11+)",
       "curveHint": "Betygskurva för gauntlet (fast när du börjar):",
       "curvePuzzle": "Uppgift {{n}}",
       "settings": "Inställningar",
-      "visualizationLevel": "Visualisering: Nivå {{level}}",
-      "mode": "Läge",
-      "modeNormal": "Normal",
-      "modeRandom": "Slumpmässig",
-      "modeCrazy": "Galen",
-      "boardTheme": "Brädtema",
-      "pieces": "Pjäser",
       "highscore": "Rekord: {{rating}} betyg",
       "sessionsPlayed": "{{count}} sessioner spelade",
       "viewHistory": "Visa historik",
@@ -664,9 +642,7 @@
       "start": "Starta"
     },
     "game": {
-      "visualization": "Visualisering (Nivå {{level}})",
       "vizCountdown": "Pjäser försvinner om {{seconds}}s...",
-      "vizNoMove": "Inget drag än — klicka på från-ruta → målruta.",
       "vizShow": "Visa",
       "vizShowing": "Visar...",
       "loadingPuzzle": "Laddar uppgift...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Dela uppgift",
       "backToPuzzle": "Tillbaka till uppgiften"
     },
-    "settings": {
-      "title": "Inställningar",
-      "visualizationLevel": "Visualisering: Nivå {{level}}",
-      "stockfishDepth": "Stockfish-djup",
-      "depthHint": "1 (svag) – 24 (stark)",
-      "mode": "Läge",
-      "modeNormal": "Normal",
-      "modeRandom": "Slumpmässig",
-      "modeCrazy": "Galen",
-      "boardTheme": "Brädtema",
-      "pieces": "Pjäser"
-    },
     "viz": {
-      "titleLevel": "Visualisering (Nivå {{level}})",
       "countdown": "Pjäser försvinner om {{seconds}}s...",
-      "noMoveYet": "Inget drag än — klicka på från-ruta → målruta.",
       "show": "Visa",
-      "showing": "Visar...",
-      "level0": "Normal — Dra och släpp",
-      "level1": "Blindfold — brädet fryst, drag som text",
-      "level2": "Brickor — pjäserna ersätts med brickor efter 3s",
-      "level3": "Mörkt — pjäserna ersätts med svarta marker efter 3s",
-      "level4": "Osynligt — pjäserna försvinner helt efter 3s"
+      "showing": "Visar..."
     },
     "course": {
       "backToCourses": "Till kursöversikt",

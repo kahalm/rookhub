@@ -116,11 +116,6 @@
       "daily": "每日一题",
       "endless": "无尽模式"
     },
-    "subscriptions": {
-      "title": "比赛订阅",
-      "count": "{{count}} 个订阅",
-      "browse": "浏览比赛"
-    },
     "friends": {
       "title": "好友",
       "count": "{{count}} 位好友",
@@ -507,17 +502,11 @@
       "veryHard": "非常困难"
     },
     "theme": {
-      "mode": "模式",
-      "modeNormal": "普通",
-      "modeRandom": "随机",
-      "modeCrazy": "疯狂",
       "boardTheme": "棋盘主题",
       "pieces": "棋子"
     },
     "viz": {
-      "title": "可视化（第 {{level}} 级）",
       "countdown": "棋子将在 {{seconds}} 秒后消失…",
-      "noMoveYet": "尚未落子——点击起始格 → 目标格。",
       "show": "显示",
       "showing": "显示中…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "第 1 阈值",
       "secondThreshold": "第 2 阈值",
       "auto": "自动：{{value}}",
-      "step": "步长 {{step}}",
-      "phase1Label": "阶段 1（Lv 1–5）",
-      "phase2Label": "阶段 2（Lv 6–10）",
-      "phase3Label": "阶段 3（Lv 11+）",
       "curveHint": "挑战赛的评分曲线（开始后固定）：",
       "curvePuzzle": "第 {{n}} 题",
       "settings": "设置",
-      "visualizationLevel": "可视化：第 {{level}} 级",
-      "mode": "模式",
-      "modeNormal": "普通",
-      "modeRandom": "随机",
-      "modeCrazy": "疯狂",
-      "boardTheme": "棋盘主题",
-      "pieces": "棋子",
       "highscore": "最高分：{{rating}} 评分",
       "sessionsPlayed": "已进行 {{count}} 场",
       "viewHistory": "查看历史",
@@ -664,9 +642,7 @@
       "start": "开始"
     },
     "game": {
-      "visualization": "可视化（第 {{level}} 级）",
       "vizCountdown": "棋子将在 {{seconds}} 秒后消失…",
-      "vizNoMove": "尚未落子——点击起始格 → 目标格。",
       "vizShow": "显示",
       "vizShowing": "显示中…",
       "loadingPuzzle": "加载题目中…",
@@ -766,29 +742,10 @@
       "sharePuzzle": "分享题目",
       "backToPuzzle": "返回题目"
     },
-    "settings": {
-      "title": "设置",
-      "visualizationLevel": "可视化：第 {{level}} 级",
-      "stockfishDepth": "Stockfish 深度",
-      "depthHint": "1（弱）– 24（强）",
-      "mode": "模式",
-      "modeNormal": "普通",
-      "modeRandom": "随机",
-      "modeCrazy": "疯狂",
-      "boardTheme": "棋盘主题",
-      "pieces": "棋子"
-    },
     "viz": {
-      "titleLevel": "可视化（第 {{level}} 级）",
       "countdown": "棋子将在 {{seconds}} 秒后消失…",
-      "noMoveYet": "尚未落子——点击起始格 → 目标格。",
       "show": "显示",
-      "showing": "显示中…",
-      "level0": "普通——拖放",
-      "level1": "盲棋——棋盘冻结，走法以文字显示",
-      "level2": "跳棋——棋子在 3 秒后替换为跳棋",
-      "level3": "暗棋——棋子在 3 秒后替换为黑色标记",
-      "level4": "隐形——棋子在 3 秒后完全消失"
+      "showing": "显示中…"
     },
     "course": {
       "backToCourses": "返回课程概览",

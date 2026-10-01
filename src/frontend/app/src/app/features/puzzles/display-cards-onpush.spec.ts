@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { VizCardComponent } from './viz-card.component';
 import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 
 /**
@@ -13,12 +12,8 @@ import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
 // an die OnPush-Kinder — getestet wird damit die Re-Render-Reaktion der KINDER auf Input-Änderung.
 @Component({
   standalone: true,
-  imports: [VizCardComponent, PuzzleActionBarComponent],
+  imports: [PuzzleActionBarComponent],
   template: `
-    <app-viz-card
-      [visualizationMode]="vizLevel"
-      [vizPiecesHidden]="true"
-      (vizShowClicked)="vizClicks = vizClicks + 1"></app-viz-card>
     <app-puzzle-action-bar
       [levelText]="levelText"
       [rating]="rating"
@@ -26,10 +21,8 @@ import { PuzzleActionBarComponent } from './puzzle-action-bar.component';
   `,
 })
 class HostComponent {
-  vizLevel = 1;
   levelText = 'Easy';
   rating = 1500;
-  vizClicks = 0;
   shareClicks = 0;
 }
 
@@ -47,32 +40,14 @@ describe('Display cards (OnPush)', () => {
     fixture.detectChanges();
   });
 
-  it('viz-card and puzzle-action-bar are OnPush', () => {
-    expect((VizCardComponent as any).ɵcmp.onPush).toBeTrue();
+  it('puzzle-action-bar is OnPush', () => {
     expect((PuzzleActionBarComponent as any).ɵcmp.onPush).toBeTrue();
   });
 
-  it('re-renders the viz level badge when the bound input changes', () => {
-    // Direkt gegen die OnPush-Karte via setInput (kanonischer, versions-stabiler Weg, der die
-    // OnPush-Komponente als dirty markiert) — ab Angular 22 propagiert ein direkter Host-Feld-Wechsel
-    // + manuelles detectChanges nicht mehr zuverlässig an das OnPush-Kind.
-    const child = TestBed.createComponent(VizCardComponent);
-    child.componentRef.setInput('visualizationMode', 1);
-    child.detectChanges();
-    const el = child.nativeElement as HTMLElement;
-    expect(el.querySelector('.viz-level-badge')?.textContent).toContain('1');
-
-    child.componentRef.setInput('visualizationMode', 4);
-    child.detectChanges();
-    expect(el.querySelector('.viz-level-badge')?.textContent).toContain('4');
-  });
-
-  it('emits the viz show + share outputs on click (OnPush does not swallow events)', () => {
+  it('emits the share output on click (OnPush does not swallow events)', () => {
     const el = fixture.nativeElement as HTMLElement;
-    (el.querySelector('.viz-show-btn') as HTMLButtonElement).click();
     (el.querySelector('.pab-share') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(host.vizClicks).toBe(1);
     expect(host.shareClicks).toBe(1);
   });
 });

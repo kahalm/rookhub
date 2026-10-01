@@ -116,11 +116,6 @@
       "daily": "Bài tập hàng ngày",
       "endless": "Vô tận"
     },
-    "subscriptions": {
-      "title": "Giải đấu theo dõi",
-      "count": "{{count}} giải đấu",
-      "browse": "Duyệt giải đấu"
-    },
     "friends": {
       "title": "Bạn bè",
       "count": "{{count}} bạn bè",
@@ -507,17 +502,11 @@
       "veryHard": "Rất khó"
     },
     "theme": {
-      "mode": "Chế độ",
-      "modeNormal": "Bình thường",
-      "modeRandom": "Ngẫu nhiên",
-      "modeCrazy": "Điên rồ",
       "boardTheme": "Giao diện bàn cờ",
       "pieces": "Quân cờ"
     },
     "viz": {
-      "title": "Trực quan hóa (Cấp {{level}})",
       "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s…",
-      "noMoveYet": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
       "show": "Hiển thị",
       "showing": "Đang hiển thị…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "Ngưỡng thứ 1",
       "secondThreshold": "Ngưỡng thứ 2",
       "auto": "Tự động: {{value}}",
-      "step": "Bước {{step}}",
-      "phase1Label": "Giai đoạn 1 (Lv 1–5)",
-      "phase2Label": "Giai đoạn 2 (Lv 6–10)",
-      "phase3Label": "Giai đoạn 3 (Lv 11+)",
       "curveHint": "Đường cong xếp hạng của thử thách (cố định khi bắt đầu):",
       "curvePuzzle": "Bài {{n}}",
       "settings": "Cài đặt",
-      "visualizationLevel": "Trực quan hóa: Cấp {{level}}",
-      "mode": "Chế độ",
-      "modeNormal": "Bình thường",
-      "modeRandom": "Ngẫu nhiên",
-      "modeCrazy": "Điên rồ",
-      "boardTheme": "Giao diện bàn cờ",
-      "pieces": "Quân cờ",
       "highscore": "Điểm cao nhất: Xếp hạng {{rating}}",
       "sessionsPlayed": "{{count}} phiên đã chơi",
       "viewHistory": "Xem lịch sử",
@@ -664,9 +642,7 @@
       "start": "Bắt đầu"
     },
     "game": {
-      "visualization": "Trực quan hóa (Cấp {{level}})",
       "vizCountdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
-      "vizNoMove": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
       "vizShow": "Hiển thị",
       "vizShowing": "Đang hiển thị...",
       "loadingPuzzle": "Đang tải bài tập...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Chia sẻ bài tập",
       "backToPuzzle": "Quay lại bài tập"
     },
-    "settings": {
-      "title": "Cài đặt",
-      "visualizationLevel": "Trực quan hóa: Cấp {{level}}",
-      "stockfishDepth": "Độ sâu Stockfish",
-      "depthHint": "1 (yếu) – 24 (mạnh)",
-      "mode": "Chế độ",
-      "modeNormal": "Bình thường",
-      "modeRandom": "Ngẫu nhiên",
-      "modeCrazy": "Điên rồ",
-      "boardTheme": "Giao diện bàn cờ",
-      "pieces": "Quân cờ"
-    },
     "viz": {
-      "titleLevel": "Trực quan hóa (Cấp {{level}})",
       "countdown": "Quân cờ sẽ biến mất trong {{seconds}}s...",
-      "noMoveYet": "Chưa có nước đi — nhấp ô xuất phát → ô đích.",
       "show": "Hiển thị",
-      "showing": "Đang hiển thị...",
-      "level0": "Bình thường — Kéo & Thả",
-      "level1": "Bịt mắt — bàn cờ đóng băng, nước đi hiển thị dạng văn bản",
-      "level2": "Quân nhỏ — quân cờ được thay bằng các ô nhỏ sau 3 giây",
-      "level3": "Tối — quân cờ được thay bằng các ô đen sau 3 giây",
-      "level4": "Vô hình — quân cờ biến mất hoàn toàn sau 3 giây"
+      "showing": "Đang hiển thị..."
     },
     "course": {
       "backToCourses": "Đến tổng quan khóa học",

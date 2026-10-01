@@ -116,11 +116,6 @@
       "daily": "दैनिक पहेली",
       "endless": "अनंत"
     },
-    "subscriptions": {
-      "title": "टूर्नामेंट सदस्यताएँ",
-      "count": "{{count}} सदस्यताएँ",
-      "browse": "टूर्नामेंट देखें"
-    },
     "friends": {
       "title": "मित्र",
       "count": "{{count}} मित्र",
@@ -507,17 +502,11 @@
       "veryHard": "बहुत कठिन"
     },
     "theme": {
-      "mode": "मोड",
-      "modeNormal": "सामान्य",
-      "modeRandom": "यादृच्छिक",
-      "modeCrazy": "क्रेज़ी",
       "boardTheme": "बोर्ड थीम",
       "pieces": "मोहरे"
     },
     "viz": {
-      "title": "विज़ुअलाइज़ेशन (स्तर {{level}})",
       "countdown": "मोहरे {{seconds}} सेकंड में गायब होंगे…",
-      "noMoveYet": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
       "show": "दिखाएं",
       "showing": "दिखाया जा रहा है…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1ली सीमा",
       "secondThreshold": "2री सीमा",
       "auto": "Auto: {{value}}",
-      "step": "चरण {{step}}",
-      "phase1Label": "चरण 1 (Lv 1–5)",
-      "phase2Label": "चरण 2 (Lv 6–10)",
-      "phase3Label": "चरण 3 (Lv 11+)",
       "curveHint": "गॉन्टलेट की रेटिंग वक्र (शुरू होने पर निश्चित):",
       "curvePuzzle": "पहेली {{n}}",
       "settings": "सेटिंग्स",
-      "visualizationLevel": "विज़ुअलाइज़ेशन: स्तर {{level}}",
-      "mode": "मोड",
-      "modeNormal": "सामान्य",
-      "modeRandom": "यादृच्छिक",
-      "modeCrazy": "क्रेज़ी",
-      "boardTheme": "बोर्ड थीम",
-      "pieces": "मोहरे",
       "highscore": "हाईस्कोर: {{rating}} रेटिंग",
       "sessionsPlayed": "{{count}} सत्र खेले",
       "viewHistory": "इतिहास देखें",
@@ -664,9 +642,7 @@
       "start": "शुरू करें"
     },
     "game": {
-      "visualization": "विज़ुअलाइज़ेशन (स्तर {{level}})",
       "vizCountdown": "मोहरे {{seconds}} सेकंड में गायब होंगे...",
-      "vizNoMove": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
       "vizShow": "दिखाएं",
       "vizShowing": "दिखाया जा रहा है...",
       "loadingPuzzle": "पहेली लोड हो रही है...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "पहेली साझा करें",
       "backToPuzzle": "पहेली पर वापस"
     },
-    "settings": {
-      "title": "सेटिंग्स",
-      "visualizationLevel": "विज़ुअलाइज़ेशन: स्तर {{level}}",
-      "stockfishDepth": "Stockfish Depth",
-      "depthHint": "1 (कमज़ोर) – 24 (मज़बूत)",
-      "mode": "मोड",
-      "modeNormal": "सामान्य",
-      "modeRandom": "यादृच्छिक",
-      "modeCrazy": "क्रेज़ी",
-      "boardTheme": "बोर्ड थीम",
-      "pieces": "मोहरे"
-    },
     "viz": {
-      "titleLevel": "विज़ुअलाइज़ेशन (स्तर {{level}})",
       "countdown": "मोहरे {{seconds}} सेकंड में गायब होंगे...",
-      "noMoveYet": "अभी कोई चाल नहीं — स्रोत वर्ग → लक्ष्य वर्ग क्लिक करें।",
       "show": "दिखाएं",
-      "showing": "दिखाया जा रहा है...",
-      "level0": "सामान्य — खींचें और छोड़ें",
-      "level1": "ब्लाइंडफोल्ड — बोर्ड जमा हुआ, चालें टेक्स्ट के रूप में",
-      "level2": "चेकर — मोहरे 3 सेकंड बाद चेकर से बदल जाते हैं",
-      "level3": "अंधकार — मोहरे 3 सेकंड बाद काले टोकन से बदल जाते हैं",
-      "level4": "अदृश्य — मोहरे 3 सेकंड बाद पूरी तरह गायब हो जाते हैं"
+      "showing": "दिखाया जा रहा है..."
     },
     "course": {
       "backToCourses": "पाठ्यक्रम अवलोकन पर",

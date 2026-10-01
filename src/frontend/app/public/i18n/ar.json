@@ -116,11 +116,6 @@
       "daily": "لغز اليوم",
       "endless": "لا نهاية"
     },
-    "subscriptions": {
-      "title": "اشتراكات البطولة",
-      "count": "{{count}} اشتراك",
-      "browse": "تصفح البطولات"
-    },
     "friends": {
       "title": "الأصدقاء",
       "count": "{{count}} صديق",
@@ -507,17 +502,11 @@
       "veryHard": "صعب جداً"
     },
     "theme": {
-      "mode": "الوضع",
-      "modeNormal": "عادي",
-      "modeRandom": "عشوائي",
-      "modeCrazy": "مجنون",
       "boardTheme": "مظهر اللوحة",
       "pieces": "القطع"
     },
     "viz": {
-      "title": "التصوير الذهني (المستوى {{level}})",
       "countdown": "القطع تختفي في {{seconds}} ثانية…",
-      "noMoveYet": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
       "show": "إظهار",
       "showing": "جارٍ الإظهار…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "العتبة الأولى",
       "secondThreshold": "العتبة الثانية",
       "auto": "تلقائي: {{value}}",
-      "step": "خطوة {{step}}",
-      "phase1Label": "المرحلة 1 (Lv 1–5)",
-      "phase2Label": "المرحلة 2 (Lv 6–10)",
-      "phase3Label": "المرحلة 3 (Lv 11+)",
       "curveHint": "منحنى التقييم للمسابقة (ثابت عند البدء):",
       "curvePuzzle": "اللغز {{n}}",
       "settings": "الإعدادات",
-      "visualizationLevel": "التصوير الذهني: المستوى {{level}}",
-      "mode": "الوضع",
-      "modeNormal": "عادي",
-      "modeRandom": "عشوائي",
-      "modeCrazy": "مجنون",
-      "boardTheme": "مظهر اللوحة",
-      "pieces": "القطع",
       "highscore": "أعلى نتيجة: تقييم {{rating}}",
       "sessionsPlayed": "{{count}} جلسة ملعوبة",
       "viewHistory": "عرض السجل",
@@ -664,9 +642,7 @@
       "start": "ابدأ"
     },
     "game": {
-      "visualization": "التصوير الذهني (المستوى {{level}})",
       "vizCountdown": "القطع تختفي في {{seconds}} ثانية...",
-      "vizNoMove": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
       "vizShow": "إظهار",
       "vizShowing": "جارٍ الإظهار...",
       "loadingPuzzle": "جارٍ تحميل اللغز...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "مشاركة اللغز",
       "backToPuzzle": "العودة إلى اللغز"
     },
-    "settings": {
-      "title": "الإعدادات",
-      "visualizationLevel": "التصوير الذهني: المستوى {{level}}",
-      "stockfishDepth": "عمق Stockfish",
-      "depthHint": "1 (ضعيف) – 24 (قوي)",
-      "mode": "الوضع",
-      "modeNormal": "عادي",
-      "modeRandom": "عشوائي",
-      "modeCrazy": "مجنون",
-      "boardTheme": "مظهر اللوحة",
-      "pieces": "القطع"
-    },
     "viz": {
-      "titleLevel": "التصوير الذهني (المستوى {{level}})",
       "countdown": "القطع تختفي في {{seconds}} ثانية...",
-      "noMoveYet": "لا حركة بعد — انقر المربع الأصل ← المربع الهدف.",
       "show": "إظهار",
-      "showing": "جارٍ الإظهار...",
-      "level0": "عادي — سحب وإفلات",
-      "level1": "أعمى — اللوحة مجمّدة، الحركات كنص",
-      "level2": "شطرنج الدامة — تُستبدل القطع بأحجار الدامة بعد 3 ثوانٍ",
-      "level3": "مظلم — تُستبدل القطع برموز سوداء بعد 3 ثوانٍ",
-      "level4": "غير مرئي — تختفي القطع كلياً بعد 3 ثوانٍ"
+      "showing": "جارٍ الإظهار..."
     },
     "course": {
       "backToCourses": "إلى نظرة عامة على الدورات",

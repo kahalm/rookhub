@@ -116,11 +116,6 @@
       "daily": "Günlük problem",
       "endless": "Sonsuz"
     },
-    "subscriptions": {
-      "title": "Turnuva Abonelikleri",
-      "count": "{{count}} abonelik",
-      "browse": "Turnuvalara Göz At"
-    },
     "friends": {
       "title": "Arkadaşlar",
       "count": "{{count}} arkadaş",
@@ -507,17 +502,11 @@
       "veryHard": "Çok zor"
     },
     "theme": {
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Rastgele",
-      "modeCrazy": "Çılgın",
       "boardTheme": "Tahta Teması",
       "pieces": "Taşlar"
     },
     "viz": {
-      "title": "Görselleştirme (Seviye {{level}})",
       "countdown": "Taşlar {{seconds}} saniyede kayboluyor…",
-      "noMoveYet": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
       "show": "Göster",
       "showing": "Gösteriliyor…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1. Eşik",
       "secondThreshold": "2. Eşik",
       "auto": "Otomatik: {{value}}",
-      "step": "Adım {{step}}",
-      "phase1Label": "Aşama 1 (Sv. 1–5)",
-      "phase2Label": "Aşama 2 (Sv. 6–10)",
-      "phase3Label": "Aşama 3 (Sv. 11+)",
       "curveHint": "Gauntlet'ın derece eğrisi (başladığınızda sabitlenir):",
       "curvePuzzle": "Problem {{n}}",
       "settings": "Ayarlar",
-      "visualizationLevel": "Görselleştirme: Seviye {{level}}",
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Rastgele",
-      "modeCrazy": "Çılgın",
-      "boardTheme": "Tahta Teması",
-      "pieces": "Taşlar",
       "highscore": "En Yüksek Skor: {{rating}} Derece",
       "sessionsPlayed": "{{count}} oturum oynandı",
       "viewHistory": "Geçmişi Gör",
@@ -664,9 +642,7 @@
       "start": "Başla"
     },
     "game": {
-      "visualization": "Görselleştirme (Seviye {{level}})",
       "vizCountdown": "Taşlar {{seconds}} saniyede kayboluyor...",
-      "vizNoMove": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
       "vizShow": "Göster",
       "vizShowing": "Gösteriliyor...",
       "loadingPuzzle": "Problem yükleniyor...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Problemi paylaş",
       "backToPuzzle": "Probleme dön"
     },
-    "settings": {
-      "title": "Ayarlar",
-      "visualizationLevel": "Görselleştirme: Seviye {{level}}",
-      "stockfishDepth": "Stockfish Derinliği",
-      "depthHint": "1 (zayıf) – 24 (güçlü)",
-      "mode": "Mod",
-      "modeNormal": "Normal",
-      "modeRandom": "Rastgele",
-      "modeCrazy": "Çılgın",
-      "boardTheme": "Tahta Teması",
-      "pieces": "Taşlar"
-    },
     "viz": {
-      "titleLevel": "Görselleştirme (Seviye {{level}})",
       "countdown": "Taşlar {{seconds}} saniyede kayboluyor...",
-      "noMoveYet": "Henüz hamle yok — başlangıç karesi → hedef kareye tıklayın.",
       "show": "Göster",
-      "showing": "Gösteriliyor...",
-      "level0": "Normal — Sürükle ve Bırak",
-      "level1": "Kör — tahta donmuş, hamleler metin olarak",
-      "level2": "Dama — taşlar 3 saniye sonra dama taşlarıyla değiştirilir",
-      "level3": "Karanlık — taşlar 3 saniye sonra siyah simgelerle değiştirilir",
-      "level4": "Görünmez — taşlar 3 saniye sonra tamamen kaybolur"
+      "showing": "Gösteriliyor..."
     },
     "course": {
       "backToCourses": "Kurs genel bakışına git",

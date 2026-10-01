@@ -116,11 +116,6 @@
       "daily": "Puzzle do dia",
       "endless": "Sem fim"
     },
-    "subscriptions": {
-      "title": "Subscrições de torneios",
-      "count": "{{count}} subscrições",
-      "browse": "Ver torneios"
-    },
     "friends": {
       "title": "Amigos",
       "count": "{{count}} amigos",
@@ -507,17 +502,11 @@
       "veryHard": "Muito difícil"
     },
     "theme": {
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatório",
-      "modeCrazy": "Louco",
       "boardTheme": "Tema do tabuleiro",
       "pieces": "Peças"
     },
     "viz": {
-      "title": "Visualização (Nível {{level}})",
       "countdown": "As peças desaparecem em {{seconds}}s…",
-      "noMoveYet": "Ainda sem lance — clique na casa de origem → casa de destino.",
       "show": "Mostrar",
       "showing": "A mostrar…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1.º Limiar",
       "secondThreshold": "2.º Limiar",
       "auto": "Auto: {{value}}",
-      "step": "Passo {{step}}",
-      "phase1Label": "Fase 1 (Nv 1–5)",
-      "phase2Label": "Fase 2 (Nv 6–10)",
-      "phase3Label": "Fase 3 (Nv 11+)",
       "curveHint": "Curva de classificação do desafio (fixada ao iniciar):",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Definições",
-      "visualizationLevel": "Visualização: Nível {{level}}",
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatório",
-      "modeCrazy": "Louco",
-      "boardTheme": "Tema do tabuleiro",
-      "pieces": "Peças",
       "highscore": "Recorde: {{rating}} de classificação",
       "sessionsPlayed": "{{count}} sessões jogadas",
       "viewHistory": "Ver histórico",
@@ -664,9 +642,7 @@
       "start": "Iniciar"
     },
     "game": {
-      "visualization": "Visualização (Nível {{level}})",
       "vizCountdown": "As peças desaparecem em {{seconds}}s...",
-      "vizNoMove": "Ainda sem lance — clique na casa de origem → casa de destino.",
       "vizShow": "Mostrar",
       "vizShowing": "A mostrar...",
       "loadingPuzzle": "A carregar puzzle...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Partilhar puzzle",
       "backToPuzzle": "Voltar ao puzzle"
     },
-    "settings": {
-      "title": "Definições",
-      "visualizationLevel": "Visualização: Nível {{level}}",
-      "stockfishDepth": "Profundidade Stockfish",
-      "depthHint": "1 (fraco) – 24 (forte)",
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatório",
-      "modeCrazy": "Louco",
-      "boardTheme": "Tema do tabuleiro",
-      "pieces": "Peças"
-    },
     "viz": {
-      "titleLevel": "Visualização (Nível {{level}})",
       "countdown": "As peças desaparecem em {{seconds}}s...",
-      "noMoveYet": "Ainda sem lance — clique na casa de origem → casa de destino.",
       "show": "Mostrar",
-      "showing": "A mostrar...",
-      "level0": "Normal — Arrastar e largar",
-      "level1": "Vendado — tabuleiro fixo, lances como texto",
-      "level2": "Damas — as peças são substituídas por damas após 3s",
-      "level3": "Escuro — as peças são substituídas por fichas pretas após 3s",
-      "level4": "Invisível — as peças desaparecem completamente após 3s"
+      "showing": "A mostrar..."
     },
     "course": {
       "backToCourses": "Para a visão geral do curso",

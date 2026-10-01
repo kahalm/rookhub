@@ -393,11 +393,6 @@
       "daily": "Dnevna zagonetka",
       "endless": "Beskonačno"
     },
-    "subscriptions": {
-      "title": "Pretplate na turnire",
-      "count": "{{count}} pretplata",
-      "browse": "Pregledaj turnire"
-    },
     "friends": {
       "title": "Prijatelji",
       "count": "{{count}} prijatelja",
@@ -550,8 +545,6 @@
       "foundCount": "Slične pozicije: {{count}}",
       "atMove": "potez {{move}}",
       "startPosition": "početna pozicija",
-      "prevMove": "Jedan potez natrag",
-      "nextMove": "Jedan potez naprijed",
       "openHint": "Otvori ovu poziciju u repertoaru",
       "moveHitExact": "→ i ovdje {{move}}",
       "moveHitSameTarget": "→ ovdje {{move}} (isto ciljno polje)",
@@ -667,7 +660,6 @@
       "noEngines": "Još nema vanjskog motora — poveži ga izravno ili preko Lichessa.",
       "specs": "{{threads}} niti, {{hash}} MiB hash",
       "backgroundLabel": "Pozadinski motor za zadatke",
-      "backgroundNone": "Nijedan",
       "backgroundHint": "Pozadinski motor obrađuje tvoje analize kad god je slobodan i pauzira dok analiziraš uživo vanjskim motorom. Ne prikazuje se u izboru za analizu uživo — najbolje je registrirati zaseban motor (ENGINE_COUNT=2 u provideru).",
       "backgroundSaved": "Pozadinski motor spremljen.",
       "backgroundFailed": "Pozadinski motor nije bilo moguće spremiti.",
@@ -1338,10 +1330,6 @@
       "veryHardDesc": "Zagonetke ~600 Elo iznad tvoje razine — vrlo zahtjevno."
     },
     "theme": {
-      "mode": "Način",
-      "modeNormal": "Normalno",
-      "modeRandom": "Nasumično",
-      "modeCrazy": "Ludo",
       "boardTheme": "Tema ploče",
       "pieces": "Figure"
     },
@@ -1370,9 +1358,7 @@
       }
     },
     "viz": {
-      "title": "Vizualizacija (razina {{level}})",
       "countdown": "Figure nestaju za {{seconds}}s…",
-      "noMoveYet": "Još nema poteza — klikni početno polje → ciljno polje.",
       "show": "Prikaži",
       "showing": "Prikazuje se…",
       "level0Name": "Normalno",
@@ -1380,7 +1366,6 @@
       "level2Name": "Žetoni",
       "level3Name": "Tamno",
       "level4Name": "Nevidljivo",
-      "modeSelectAria": "Odaberi način vizualizacije",
       "level0Desc": "Povuci i ispusti — ploča vidljiva, bez ograničenja.",
       "level1Desc": "Ploča zamrznuta, potezi prikazani samo kao tekst.",
       "level2Desc": "Figure se nakon 3 s zamjenjuju žetonima u boji.",
@@ -1402,18 +1387,6 @@
     "title": "Tečajevi",
     "intro": "Prorađuj uvezenu knjigu zagonetku po zagonetku — slijedno ili nasumično. Tvoj napredak se sprema.",
     "emptyHint": "Još nema tečajeva. Stvori vlastiti tečaj gore — sa ili bez PGN-a.",
-    "upload": {
-      "title": "Učitaj vlastiti tečaj",
-      "hint": "Dodaj PGN sa zagonetkama (Chessable stil: s FEN-om i oznakama treninga) kao osobni tečaj.",
-      "restriction": "Ovo radi samo s PGN-ovima sa zagonetkama u tom stilu. Imaš drugačiji PGN? Zamoli admina da ga uveze ili pitaj na našem",
-      "nameLabel": "Naziv tečaja",
-      "namePlaceholder": "Neobavezno — inače iz naziva datoteke",
-      "button": "Učitaj PGN",
-      "uploading": "Učitavanje…",
-      "choosePgn": "Odaberi PGN…",
-      "success": "„{{name}}“ stvoren ({{count}} zagonetki)",
-      "failed": "Učitavanje nije uspjelo. Provjeri PGN."
-    },
     "create": {
       "title": "Stvori novi tečaj",
       "hint": "Napravi vlastiti tečaj — vidljiv samo tebi. Pozicije zatim možeš dodavati poglavlje po poglavlje na stranici tečaja.",
@@ -1992,20 +1965,9 @@
       "firstThreshold": "1. prag",
       "secondThreshold": "2. prag",
       "auto": "Auto: {{value}}",
-      "step": "Korak {{step}}",
-      "phase1Label": "Faza 1 (Lv 1–5)",
-      "phase2Label": "Faza 2 (Lv 6–10)",
-      "phase3Label": "Faza 3 (Lv 11+)",
       "curveHint": "Krivulja rejtinga lanca (fiksirana na početku):",
       "curvePuzzle": "Zagonetka {{n}}",
       "settings": "Postavke",
-      "visualizationLevel": "Vizualizacija: razina {{level}}",
-      "mode": "Način",
-      "modeNormal": "Normalno",
-      "modeRandom": "Nasumično",
-      "modeCrazy": "Ludo",
-      "boardTheme": "Tema ploče",
-      "pieces": "Figure",
       "highscore": "Najbolji rezultat: {{rating}} rejting",
       "sessionsPlayed": "{{count}} odigranih sesija",
       "viewHistory": "Prikaži povijest",
@@ -2017,9 +1979,7 @@
       "advanced": "Fino podešavanje"
     },
     "game": {
-      "visualization": "Vizualizacija (razina {{level}})",
       "vizCountdown": "Figure nestaju za {{seconds}}s...",
-      "vizNoMove": "Još nema poteza — klikni polazno polje → ciljno polje.",
       "vizShow": "Prikaži",
       "vizShowing": "Prikazuje se...",
       "loadingPuzzle": "Učitavanje zagonetke...",
@@ -2136,29 +2096,10 @@
       "showOriginalSolution": "Prikaži izvorno rješenje",
       "prev": "Natrag"
     },
-    "settings": {
-      "title": "Postavke",
-      "visualizationLevel": "Vizualizacija: razina {{level}}",
-      "stockfishDepth": "Stockfish dubina",
-      "depthHint": "1 (slabo) – 24 (jako)",
-      "mode": "Način",
-      "modeNormal": "Normalno",
-      "modeRandom": "Nasumično",
-      "modeCrazy": "Ludo",
-      "boardTheme": "Tema ploče",
-      "pieces": "Figure"
-    },
     "viz": {
-      "titleLevel": "Vizualizacija (razina {{level}})",
       "countdown": "Figure nestaju za {{seconds}}s...",
-      "noMoveYet": "Još nema poteza — klikni polazno polje → ciljno polje.",
       "show": "Prikaži",
-      "showing": "Prikazujem...",
-      "level0": "Normalno — Povuci i ispusti",
-      "level1": "Naslijepo — ploča zamrznuta, potezi kao tekst",
-      "level2": "Žetoni — figure se nakon 3s zamjenjuju žetonima",
-      "level3": "Tamno — figure se nakon 3s zamjenjuju crnim žetonima",
-      "level4": "Nevidljivo — figure nakon 3s potpuno nestaju"
+      "showing": "Prikazujem..."
     },
     "course": {
       "backToCourses": "Na pregled tečajeva",
@@ -2641,7 +2582,6 @@
     "title": "Spremljene partije",
     "hint": "Partije koje spremiš s chess.com ili lichess pomoću RepCheck proširenja preglednika pojavljuju se ovdje.",
     "empty": "Još nema spremljenih partija. Na stranici analize na chess.com ili lichess klikni „Spremi partiju“ u RepCheck proširenju.",
-    "moves": "poteza",
     "replay": "Ponovi",
     "openInAnalysis": "Otvori u analizi",
     "share": "Kopiraj poveznicu za dijeljenje",
@@ -2764,7 +2704,6 @@
       "again": "Ispočetka",
       "summary": "Samostalno pronađeno: {{solved}} od {{total}}.",
       "progressShort": "{{solved}} od {{total}} pronađeno · {{open}} otvoreno",
-      "tooltip": "Trening pogrešaka za ovu partiju",
       "onlyOpen": "Samo partije s otvorenim pogreškama ({{count}})",
       "analyze": "Analiziraj",
       "triedEval": "Nakon {{san}}: {{eval}} (najbolji potez: {{best}})",
@@ -3453,10 +3392,6 @@
       "courses": "{{count}} tečaj(eva) koristi stariju obradu i može se ažurirati — npr. za prikaz komentara poteza iz knjige.",
       "repertoires": "{{count}} repertoar(a) koristi stariju obradu i može se ažurirati."
     },
-    "needsReimport": {
-      "courses": "{{count}} ručno učitan(ih) tečaj(eva) ne može se automatski ažurirati — ponovno uvezi PGN za najnoviju obradu.",
-      "repertoires": "{{count}} repertoar(a) treba ručni ponovni uvoz za ažuriranje."
-    },
     "itemNeedsReimport": {
       "courses": "Ovaj tečaj potječe iz starije obrade i ovdje se ne može ažurirati. Dohvati ga ponovno pomoću proširenja RepCheck kako bi bio aktualan.",
       "repertoires": "Ovaj repertoar potječe iz starije obrade i ovdje se ne može ažurirati. Dohvati ga ponovno pomoću proširenja RepCheck kako bi bio aktualan."
@@ -3465,8 +3400,7 @@
     "updateTip": "Obradi stavke sa spremljenim izvorom i ponovno preuzmi Chessable stavke (predmemorirane idu odmah, bez preuzimanja).",
     "working": "Ažuriranje…",
     "started": "Ažuriranje pokrenuto — radi u pozadini.",
-    "failed": "Ažuriranje nije uspjelo. Pokušaj ponovno.",
-    "dismiss": "U redu"
+    "failed": "Ažuriranje nije uspjelo. Pokušaj ponovno."
   },
   "remembered": {
     "title": "Zapamćene pozicije",
@@ -3569,8 +3503,7 @@
       "notFound": "Ovaj zadatak više ne postoji.",
       "toJobs": "Stranica zadataka",
       "elapsed": "Vrijeme",
-      "speed": "Brzina",
-      "depth": "Dubina"
+      "speed": "Brzina"
     }
   },
   "gameAnalysis": {
@@ -3621,7 +3554,6 @@
   "guess": {
     "title": "Bodovna partija",
     "intro": "Pogodi analiziranu partiju potez po potez: preuzimaš jednu stranu, odigraš svoj potez i odmah dobiješ bodove — mjereno prema potezu koji je stvarno odigran.",
-    "startNew": "Nova bodovna partija",
     "yourRuns": "Tvoji prolazi",
     "play": "Igraj",
     "toAnalyses": "Analize partija",
@@ -3835,7 +3767,6 @@
       "region": "Regija",
       "timeControl": "Tempo igre",
       "rounds": "Kola",
-      "players": "Igrači",
       "organizer": "Organizator",
       "arbiter": "Glavni sudac",
       "groups": "Skupine",
@@ -3903,7 +3834,6 @@
       "custom": "Vlastito razdoblje"
     },
     "map": {
-      "openDetail": "Otvori stranicu turnira",
       "thisVenue": "Ovo mjesto: {{name}}",
       "samePoint": "{{count}} turnira na ovoj točki",
       "samePointVague": "Za ove turnire poznata je samo regija, ne i točno mjesto igranja.",
@@ -4040,8 +3970,6 @@
       "title": "Moj profil",
       "person": "Ime i e-pošta",
       "nameHelp": "Povijest turnira traži te na chess-resultsu, a tamo se traži po IMENU — pretraga po broju ne postoji. Bez prezimena ova stranica ne može prikazati povijest.\n\nPrikazano ime je ono koje drugi vide. Tvoje ime za prijavu nikada se ne prikazuje.",
-      "displayNameHint": "Prikazuje se drugima umjesto „{{username}}“.",
-      "identity": "Identifikatori igrača",
       "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
       "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",
       "loadError": "Profil se nije mogao učitati. Ništa nije izgubljeno — provjeri vezu i pokušaj ponovno."
@@ -4287,14 +4215,10 @@
     "boardLocked": "Dok jedan potez nije moguć, ploča ne može nastaviti niz — najprije ispravi tekst poteza.",
     "gap": {
       "close": "Zatvori prazninu",
-      "title": "Koji su potezi doveli ovamo?",
       "depth": "Traži do",
       "plies": "{{count}} polupoteza",
       "searching": "Tražim…",
-      "found": "Pronađeno putova: {{count}}",
-      "apply": "Preuzmi",
       "applied": "Praznina je zatvorena — umetnuti potezi označeni su kao nesigurni.",
-      "severalHint": "Više redoslijeda poteza završava u ovom položaju — uzmi onaj koji je odigran.",
       "doesNotFit": "Ovi potezi ne vode do tog položaja.",
       "failed": "Pretraga se nije mogla pokrenuti.",
       "none": "Nema puta s najviše {{count}} polupoteza — između je vjerojatno više poteza.",

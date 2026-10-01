@@ -393,11 +393,6 @@
       "daily": "Tagespuzzle",
       "endless": "Endlos"
     },
-    "subscriptions": {
-      "title": "Turnier-Abonnements",
-      "count": "{{count}} Abonnements",
-      "browse": "Turniere durchsuchen"
-    },
     "friends": {
       "title": "Freunde",
       "count": "{{count}} Freunde",
@@ -550,8 +545,6 @@
       "foundCount": "{{count}} ähnliche Stellung(en)",
       "atMove": "Zug {{move}}",
       "startPosition": "Ausgangsstellung",
-      "prevMove": "Einen Zug zurück",
-      "nextMove": "Einen Zug vor",
       "openHint": "Diese Stellung im Repertoire öffnen",
       "moveHitExact": "→ hier auch {{move}}",
       "moveHitSameTarget": "→ hier {{move}} (gleiches Zielfeld)",
@@ -667,7 +660,6 @@
       "noEngines": "Noch keine externe Engine — verbinde eine direkt oder über Lichess.",
       "specs": "{{threads}} Threads, {{hash}} MiB Hash",
       "backgroundLabel": "Hintergrund-Engine für Aufträge",
-      "backgroundNone": "Keine",
       "backgroundHint": "Die Hintergrund-Engine rechnet deine Analyse-Aufträge, sobald sie frei ist, und pausiert, solange du live mit einer externen Engine analysierst. Sie erscheint nicht im Live-Picker — am besten eine eigene Engine dafür registrieren (ENGINE_COUNT=2 im Provider).",
       "backgroundSaved": "Hintergrund-Engine gespeichert.",
       "backgroundFailed": "Hintergrund-Engine konnte nicht gespeichert werden.",
@@ -1338,10 +1330,6 @@
       "veryHardDesc": "Puzzles ca. 600 Elo über deinem Niveau — sehr anspruchsvoll."
     },
     "theme": {
-      "mode": "Modus",
-      "modeNormal": "Normal",
-      "modeRandom": "Zufällig",
-      "modeCrazy": "Verrückt",
       "boardTheme": "Brett-Design",
       "pieces": "Figuren"
     },
@@ -1370,9 +1358,7 @@
       }
     },
     "viz": {
-      "title": "Visualisierung (Level {{level}})",
       "countdown": "Figuren verschwinden in {{seconds}}s…",
-      "noMoveYet": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
       "show": "Anzeigen",
       "showing": "Wird angezeigt…",
       "level0Name": "Normal",
@@ -1380,7 +1366,6 @@
       "level2Name": "Spielsteine",
       "level3Name": "Dunkel",
       "level4Name": "Unsichtbar",
-      "modeSelectAria": "Visualisierungsmodus wählen",
       "level0Desc": "Drag & Drop — Brett sichtbar, keine Einschränkungen.",
       "level1Desc": "Brett eingefroren, Züge nur als Text sichtbar.",
       "level2Desc": "Figuren werden nach 3 s durch farbige Spielsteine ersetzt.",
@@ -1402,18 +1387,6 @@
     "title": "Kurse",
     "intro": "Arbeite ein importiertes Buch puzzleweise durch — sequenziell oder zufällig. Dein Fortschritt wird gespeichert.",
     "emptyHint": "Noch keine Kurse. Lege oben einen eigenen Kurs an — mit oder ohne PGN.",
-    "upload": {
-      "title": "Eigenen Kurs hochladen",
-      "hint": "Füge ein Puzzle-PGN (Chessable-Stil: mit FEN und Trainingsmarkern) als persönlichen Kurs hinzu.",
-      "restriction": "Das funktioniert nur mit Puzzle-PGNs in diesem Stil. Hast du ein anderes PGN? Wende dich an einen Admin zum Importieren oder frag in unserem",
-      "nameLabel": "Kursname",
-      "namePlaceholder": "Optional — sonst aus dem Dateinamen",
-      "button": "PGN hochladen",
-      "uploading": "Wird hochgeladen…",
-      "choosePgn": "PGN wählen…",
-      "success": "„{{name}}“ angelegt ({{count}} Puzzles)",
-      "failed": "Upload fehlgeschlagen. Bitte PGN prüfen."
-    },
     "create": {
       "title": "Neuen Kurs erstellen",
       "hint": "Lege einen eigenen Kurs an — nur für dich sichtbar. Die Stellungen kannst du danach Kapitel für Kapitel auf der Kursseite einfügen.",
@@ -1992,20 +1965,9 @@
       "firstThreshold": "1. Schwellenwert",
       "secondThreshold": "2. Schwellenwert",
       "auto": "Auto: {{value}}",
-      "step": "Schritt {{step}}",
-      "phase1Label": "Phase 1 (Lv 1–5)",
-      "phase2Label": "Phase 2 (Lv 6–10)",
-      "phase3Label": "Phase 3 (Lv 11+)",
       "curveHint": "Rating-Verlauf der Kette (beim Start fest vorgegeben):",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Einstellungen",
-      "visualizationLevel": "Visualisierung: Level {{level}}",
-      "mode": "Modus",
-      "modeNormal": "Normal",
-      "modeRandom": "Zufällig",
-      "modeCrazy": "Verrückt",
-      "boardTheme": "Brett-Design",
-      "pieces": "Figuren",
       "highscore": "Highscore: {{rating}} Rating",
       "sessionsPlayed": "{{count}} Sessions gespielt",
       "viewHistory": "Verlauf ansehen",
@@ -2017,9 +1979,7 @@
       "advanced": "Feineinstellungen"
     },
     "game": {
-      "visualization": "Visualisierung (Level {{level}})",
       "vizCountdown": "Figuren verschwinden in {{seconds}}s...",
-      "vizNoMove": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
       "vizShow": "Anzeigen",
       "vizShowing": "Wird angezeigt...",
       "loadingPuzzle": "Puzzle wird geladen...",
@@ -2136,29 +2096,10 @@
       "showOriginalSolution": "Originale Lösung zeigen",
       "prev": "Zurück"
     },
-    "settings": {
-      "title": "Einstellungen",
-      "visualizationLevel": "Visualisierung: Level {{level}}",
-      "stockfishDepth": "Stockfish-Tiefe",
-      "depthHint": "1 (schwach) – 24 (stark)",
-      "mode": "Modus",
-      "modeNormal": "Normal",
-      "modeRandom": "Zufällig",
-      "modeCrazy": "Verrückt",
-      "boardTheme": "Brett-Design",
-      "pieces": "Figuren"
-    },
     "viz": {
-      "titleLevel": "Visualisierung (Level {{level}})",
       "countdown": "Figuren verschwinden in {{seconds}}s...",
-      "noMoveYet": "Noch kein Zug — klick Von-Feld → Ziel-Feld.",
       "show": "Anzeigen",
-      "showing": "Wird angezeigt...",
-      "level0": "Normal — Drag & Drop",
-      "level1": "Blindspiel — Brett eingefroren, Züge als Text",
-      "level2": "Checker — Figuren werden nach 3s durch Spielsteine ersetzt",
-      "level3": "Dunkel — Figuren werden nach 3s durch schwarze Steine ersetzt",
-      "level4": "Unsichtbar — Figuren verschwinden nach 3s komplett"
+      "showing": "Wird angezeigt..."
     },
     "course": {
       "backToCourses": "Zur Kursübersicht",
@@ -2641,7 +2582,6 @@
     "title": "Gespeicherte Partien",
     "hint": "Partien, die du auf chess.com oder lichess mit der RepCheck-Browser-Erweiterung speicherst, erscheinen hier.",
     "empty": "Noch keine gespeicherten Partien. Klicke auf einer chess.com- oder lichess-Analyseseite in der RepCheck-Erweiterung auf „Partie speichern“.",
-    "moves": "Züge",
     "replay": "Nachspielen",
     "openInAnalysis": "In Analyse öffnen",
     "share": "Teilen-Link kopieren",
@@ -2764,7 +2704,6 @@
       "again": "Von vorn",
       "summary": "{{solved}} von {{total}} selbst gefunden.",
       "progressShort": "{{solved}} von {{total}} gefunden · {{open}} offen",
-      "tooltip": "Fehler-Training dieser Partie",
       "onlyOpen": "Nur Partien mit offenen Fehlern ({{count}})",
       "analyze": "Analysieren",
       "triedEval": "Nach {{san}}: {{eval}} (bester Zug: {{best}})",
@@ -3453,10 +3392,6 @@
       "courses": "{{count}} Kurs(e) nutzen eine ältere Aufbereitung und können aktualisiert werden — z. B. um die Zug-Kommentare des Buchs anzuzeigen.",
       "repertoires": "{{count}} Repertoire(s) nutzen eine ältere Aufbereitung und können aktualisiert werden."
     },
-    "needsReimport": {
-      "courses": "{{count}} manuell hochgeladene(r) Kurs(e) können nicht automatisch aktualisiert werden — PGN neu importieren, um die neueste Aufbereitung zu erhalten.",
-      "repertoires": "{{count}} Repertoire(s) brauchen einen manuellen Re-Import zur Aktualisierung."
-    },
     "itemNeedsReimport": {
       "courses": "Dieser Kurs stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol ihn über die RepCheck-Erweiterung neu, dann ist er auf dem aktuellen Stand.",
       "repertoires": "Dieses Repertoire stammt aus einer älteren Aufbereitung und lässt sich hier nicht aktualisieren. Hol es über die RepCheck-Erweiterung neu, dann ist es auf dem aktuellen Stand."
@@ -3465,8 +3400,7 @@
     "updateTip": "Einträge mit gespeicherter Quelle aufbereiten und Chessable-Einträge neu holen (gecachte gehen sofort, ohne Download).",
     "working": "Wird aktualisiert…",
     "started": "Aktualisierung gestartet — läuft im Hintergrund.",
-    "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen.",
-    "dismiss": "Verstanden"
+    "failed": "Aktualisierung fehlgeschlagen. Bitte erneut versuchen."
   },
   "remembered": {
     "title": "Gemerkte Stellungen",
@@ -3569,8 +3503,7 @@
       "notFound": "Diesen Auftrag gibt es nicht mehr.",
       "toJobs": "Auftragsseite",
       "elapsed": "Zeit",
-      "speed": "Tempo",
-      "depth": "Tiefe"
+      "speed": "Tempo"
     }
   },
   "gameAnalysis": {
@@ -3621,7 +3554,6 @@
   "guess": {
     "title": "Punktepartie",
     "intro": "Eine analysierte Partie Zug für Zug erraten: Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte — gemessen am Zug, der wirklich gespielt wurde.",
-    "startNew": "Neue Punktepartie",
     "yourRuns": "Deine Durchläufe",
     "play": "Spielen",
     "toAnalyses": "Partie-Analysen",
@@ -3835,7 +3767,6 @@
       "region": "Region",
       "timeControl": "Bedenkzeit",
       "rounds": "Runden",
-      "players": "Teilnehmer",
       "organizer": "Veranstalter",
       "arbiter": "Hauptschiedsrichter",
       "groups": "Gruppen",
@@ -3903,7 +3834,6 @@
       "custom": "Eigener Zeitraum"
     },
     "map": {
-      "openDetail": "Turnierseite öffnen",
       "thisVenue": "Dieser Spielort: {{name}}",
       "samePoint": "{{count}} Turniere an diesem Punkt",
       "samePointVague": "Für diese Turniere ist nur die Region bekannt, nicht der genaue Ort.",
@@ -4040,8 +3970,6 @@
       "title": "Mein Profil",
       "person": "Name und E-Mail",
       "nameHelp": "Der Turnierverlauf sucht dich auf chess-results, und dort wird über den NAMEN gesucht — eine Suche über eine Nummer gibt es nicht. Ohne Nachnamen kann diese Seite keinen Verlauf zeigen.\n\nDer Anzeigename ist der, den andere sehen. Dein Anmeldename wird nie angezeigt.",
-      "displayNameHint": "Wird anderen statt „{{username}}“ angezeigt.",
-      "identity": "Spielerkennungen",
       "identityHelp": "Zwei Menschen können denselben Namen tragen, und die Namenssuche liefert beide. Eine FIDE-ID oder eine chess-results-ID entscheidet, welcher davon du bist.\n\nOhne sie zeigt der Verlauf alle Turniere aller Namensgleichen — und du merkst das, weil Turniere darin stehen, die du nie gespielt hast.\n\nBeide Nummern stehen auf deiner eigenen chess-results-Spielerseite.",
       "saveError": "Konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
       "loadError": "Das Profil konnte nicht geladen werden. Deine Angaben sind nicht verloren — prüfe die Verbindung und versuche es erneut."
@@ -4287,14 +4215,10 @@
     "boardLocked": "Solange ein Zug nicht möglich ist, kann das Brett die Folge nicht weiterspielen — bring zuerst den Zugtext in Ordnung.",
     "gap": {
       "close": "Lücke schließen",
-      "title": "Welche Züge führten hierher?",
       "depth": "Suchen bis",
       "plies": "{{count}} Halbzüge",
       "searching": "Suche läuft…",
-      "found": "{{count}} Weg(e) gefunden",
-      "apply": "Übernehmen",
       "applied": "Die Lücke ist geschlossen — die eingesetzten Züge sind als unsicher markiert.",
-      "severalHint": "Mehrere Zugfolgen enden in dieser Stellung — nimm die, die gespielt wurde.",
       "doesNotFit": "Diese Züge führen nicht zu dieser Stellung.",
       "failed": "Die Suche ließ sich nicht ausführen.",
       "none": "Kein Weg mit bis zu {{count}} Halbzügen — dazwischen liegen wohl mehr Züge.",

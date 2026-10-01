@@ -293,7 +293,7 @@ export abstract class BasePuzzleSolver {
     return formatSanList(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }
 
-  /** Wie `vizMoveText`, aber Gegnerzüge in `<strong>` (für [innerHTML]-Bindung in VizCard). */
+  /** Wie `vizMoveText`, aber Gegnerzüge in `<strong>` (für die [innerHTML]-Bindung der Solver-Templates). */
   get vizMoveHtml(): string {
     return formatSanListHtml(this.vizMoves, this.vizStartWhite, this.vizStartNum);
   }

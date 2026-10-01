@@ -116,11 +116,6 @@
       "daily": "Dagelijkse puzzel",
       "endless": "Eindeloos"
     },
-    "subscriptions": {
-      "title": "Toernooi-abonnementen",
-      "count": "{{count}} abonnementen",
-      "browse": "Toernooien bekijken"
-    },
     "friends": {
       "title": "Vrienden",
       "count": "{{count}} vrienden",
@@ -507,17 +502,11 @@
       "veryHard": "Zeer moeilijk"
     },
     "theme": {
-      "mode": "Modus",
-      "modeNormal": "Normaal",
-      "modeRandom": "Willekeurig",
-      "modeCrazy": "Crazy",
       "boardTheme": "Bordthema",
       "pieces": "Stukken"
     },
     "viz": {
-      "title": "Visualisatie (niveau {{level}})",
       "countdown": "Stukken verdwijnen over {{seconds}}s…",
-      "noMoveYet": "Nog geen zet — klik op het startvak → doelvak.",
       "show": "Tonen",
       "showing": "Tonen…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1e drempelwaarde",
       "secondThreshold": "2e drempelwaarde",
       "auto": "Auto: {{value}}",
-      "step": "Stap {{step}}",
-      "phase1Label": "Fase 1 (Nv 1–5)",
-      "phase2Label": "Fase 2 (Nv 6–10)",
-      "phase3Label": "Fase 3 (Nv 11+)",
       "curveHint": "Ratingcurve van de gauntlet (vastgesteld bij de start):",
       "curvePuzzle": "Puzzel {{n}}",
       "settings": "Instellingen",
-      "visualizationLevel": "Visualisatie: niveau {{level}}",
-      "mode": "Modus",
-      "modeNormal": "Normaal",
-      "modeRandom": "Willekeurig",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Bordthema",
-      "pieces": "Stukken",
       "highscore": "Highscore: {{rating}} rating",
       "sessionsPlayed": "{{count}} sessies gespeeld",
       "viewHistory": "Geschiedenis bekijken",
@@ -664,9 +642,7 @@
       "start": "Starten"
     },
     "game": {
-      "visualization": "Visualisatie (niveau {{level}})",
       "vizCountdown": "Stukken verdwijnen over {{seconds}}s...",
-      "vizNoMove": "Nog geen zet — klik op het startvak → doelvak.",
       "vizShow": "Tonen",
       "vizShowing": "Tonen...",
       "loadingPuzzle": "Puzzel laden...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Puzzel delen",
       "backToPuzzle": "Terug naar puzzel"
     },
-    "settings": {
-      "title": "Instellingen",
-      "visualizationLevel": "Visualisatie: niveau {{level}}",
-      "stockfishDepth": "Stockfish-diepte",
-      "depthHint": "1 (zwak) – 24 (sterk)",
-      "mode": "Modus",
-      "modeNormal": "Normaal",
-      "modeRandom": "Willekeurig",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Bordthema",
-      "pieces": "Stukken"
-    },
     "viz": {
-      "titleLevel": "Visualisatie (niveau {{level}})",
       "countdown": "Stukken verdwijnen over {{seconds}}s...",
-      "noMoveYet": "Nog geen zet — klik op het startvak → doelvak.",
       "show": "Tonen",
-      "showing": "Tonen...",
-      "level0": "Normaal — slepen & neerzetten",
-      "level1": "Blind — bord bevroren, zetten als tekst",
-      "level2": "Dam — stukken worden na 3s vervangen door damschijven",
-      "level3": "Donker — stukken worden na 3s vervangen door zwarte fiches",
-      "level4": "Onzichtbaar — stukken verdwijnen volledig na 3s"
+      "showing": "Tonen..."
     },
     "course": {
       "backToCourses": "Naar cursusoverzicht",

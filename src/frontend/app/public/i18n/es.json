@@ -116,11 +116,6 @@
       "daily": "Ejercicio del día",
       "endless": "Sin fin"
     },
-    "subscriptions": {
-      "title": "Suscripciones a torneos",
-      "count": "{{count}} suscripciones",
-      "browse": "Explorar torneos"
-    },
     "friends": {
       "title": "Amigos",
       "count": "{{count}} amigos",
@@ -507,17 +502,11 @@
       "veryHard": "Muy difícil"
     },
     "theme": {
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatorio",
-      "modeCrazy": "Loco",
       "boardTheme": "Tema del tablero",
       "pieces": "Piezas"
     },
     "viz": {
-      "title": "Visualización (Nivel {{level}})",
       "countdown": "Las piezas desaparecen en {{seconds}}s…",
-      "noMoveYet": "Sin jugada aún — haz clic en la casilla de origen → casilla de destino.",
       "show": "Mostrar",
       "showing": "Mostrando…"
     },
@@ -640,20 +629,9 @@
       "firstThreshold": "1.º umbral",
       "secondThreshold": "2.º umbral",
       "auto": "Auto: {{value}}",
-      "step": "Paso {{step}}",
-      "phase1Label": "Fase 1 (Nv 1–5)",
-      "phase2Label": "Fase 2 (Nv 6–10)",
-      "phase3Label": "Fase 3 (Nv 11+)",
       "curveHint": "Curva de puntuación del desafío (fija al iniciar):",
       "curvePuzzle": "Ejercicio {{n}}",
       "settings": "Configuración",
-      "visualizationLevel": "Visualización: Nivel {{level}}",
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatorio",
-      "modeCrazy": "Loco",
-      "boardTheme": "Tema del tablero",
-      "pieces": "Piezas",
       "highscore": "Puntuación máxima: {{rating}}",
       "sessionsPlayed": "{{count}} sesiones jugadas",
       "viewHistory": "Ver historial",
@@ -664,9 +642,7 @@
       "start": "Iniciar"
     },
     "game": {
-      "visualization": "Visualización (Nivel {{level}})",
       "vizCountdown": "Las piezas desaparecen en {{seconds}}s...",
-      "vizNoMove": "Sin jugada aún — haz clic en la casilla de origen → casilla de destino.",
       "vizShow": "Mostrar",
       "vizShowing": "Mostrando...",
       "loadingPuzzle": "Cargando ejercicio...",
@@ -766,29 +742,10 @@
       "sharePuzzle": "Compartir ejercicio",
       "backToPuzzle": "Volver al ejercicio"
     },
-    "settings": {
-      "title": "Configuración",
-      "visualizationLevel": "Visualización: Nivel {{level}}",
-      "stockfishDepth": "Profundidad de Stockfish",
-      "depthHint": "1 (débil) – 24 (fuerte)",
-      "mode": "Modo",
-      "modeNormal": "Normal",
-      "modeRandom": "Aleatorio",
-      "modeCrazy": "Loco",
-      "boardTheme": "Tema del tablero",
-      "pieces": "Piezas"
-    },
     "viz": {
-      "titleLevel": "Visualización (Nivel {{level}})",
       "countdown": "Las piezas desaparecen en {{seconds}}s...",
-      "noMoveYet": "Sin jugada aún — haz clic en la casilla de origen → casilla de destino.",
       "show": "Mostrar",
-      "showing": "Mostrando...",
-      "level0": "Normal — Arrastrar y soltar",
-      "level1": "A ciegas — tablero inmovilizado, jugadas como texto",
-      "level2": "Damas — las piezas se reemplazan por fichas de damas tras 3s",
-      "level3": "Oscuro — las piezas se reemplazan por fichas negras tras 3s",
-      "level4": "Invisible — las piezas desaparecen completamente tras 3s"
+      "showing": "Mostrando..."
     },
     "course": {
       "backToCourses": "A la vista general del curso",

@@ -100,8 +100,7 @@ describe('i18n Sprachdateien', () => {
    * de/hr/hu genauso lauten (Lehnwörter, Kürzel, reine Platzhalter).
    */
   const ENDLESS_SAME_AS_EN_OK = new Set([
-    'endless.config.auto', 'endless.config.phase1Label', 'endless.config.phase2Label', 'endless.config.phase3Label',
-    'endless.config.curvePuzzle', 'endless.config.modeNormal', 'endless.config.highscore', 'endless.config.start',
+    'endless.config.auto', 'endless.config.curvePuzzle', 'endless.config.highscore', 'endless.config.start',
     'endless.game.levelRange', 'endless.game.statRating', 'endless.game.statLevel', 'endless.history.colEloDelta',
   ]);
   for (const lang of FORMAT_LOCALES.filter(l => l !== 'en')) {

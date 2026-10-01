@@ -393,11 +393,6 @@
       "daily": "Daily puzzle",
       "endless": "Endless"
     },
-    "subscriptions": {
-      "title": "Tournament Subscriptions",
-      "count": "{{count}} subscriptions",
-      "browse": "Browse Tournaments"
-    },
     "friends": {
       "title": "Friends",
       "count": "{{count}} friends",
@@ -550,8 +545,6 @@
       "foundCount": "{{count}} similar position(s)",
       "atMove": "move {{move}}",
       "startPosition": "starting position",
-      "prevMove": "One move back",
-      "nextMove": "One move forward",
       "openHint": "Open this position in the repertoire",
       "moveHitExact": "→ {{move}} here too",
       "moveHitSameTarget": "→ here {{move}} (same target square)",
@@ -667,7 +660,6 @@
       "noEngines": "No external engine yet — connect one directly or via Lichess.",
       "specs": "{{threads}} threads, {{hash}} MiB hash",
       "backgroundLabel": "Background engine for jobs",
-      "backgroundNone": "None",
       "backgroundHint": "The background engine works through your analysis jobs whenever it is free and pauses while you analyse live with an external engine. It is hidden from the live picker — best register a dedicated engine for it (ENGINE_COUNT=2 in the provider).",
       "backgroundSaved": "Background engine saved.",
       "backgroundFailed": "Could not save the background engine.",
@@ -1338,10 +1330,6 @@
       "veryHardDesc": "Puzzles ~600 Elo above your level — very demanding."
     },
     "theme": {
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Random",
-      "modeCrazy": "Crazy",
       "boardTheme": "Board Theme",
       "pieces": "Pieces"
     },
@@ -1370,9 +1358,7 @@
       }
     },
     "viz": {
-      "title": "Visualization (Level {{level}})",
       "countdown": "Pieces disappear in {{seconds}}s…",
-      "noMoveYet": "No move yet — click from-square → target square.",
       "show": "Show",
       "showing": "Showing…",
       "level0Name": "Normal",
@@ -1380,7 +1366,6 @@
       "level2Name": "Checker",
       "level3Name": "Dark",
       "level4Name": "Invisible",
-      "modeSelectAria": "Choose visualization mode",
       "level0Desc": "Drag & drop — board visible, no restrictions.",
       "level1Desc": "Board frozen, moves shown only as text.",
       "level2Desc": "Pieces are replaced by colored checkers after 3s.",
@@ -1402,18 +1387,6 @@
     "title": "Courses",
     "intro": "Work through an imported book puzzle by puzzle — sequentially or randomly. Your progress is saved.",
     "emptyHint": "No courses yet. Create your own course above — with or without a PGN.",
-    "upload": {
-      "title": "Upload your own course",
-      "hint": "Add a puzzle PGN (Chessable style: with FEN and training markers) as a personal course.",
-      "restriction": "This only works with puzzle PGNs in that style. Have a different PGN? Ask an admin to import it, or ask in our",
-      "nameLabel": "Course name",
-      "namePlaceholder": "Optional — derived from the file name",
-      "button": "Upload PGN",
-      "uploading": "Uploading…",
-      "choosePgn": "Choose PGN…",
-      "success": "\"{{name}}\" created ({{count}} puzzles)",
-      "failed": "Upload failed. Please check the PGN."
-    },
     "create": {
       "title": "Create a new course",
       "hint": "Create your own course — visible only to you. You can add the positions chapter by chapter on the course page afterwards.",
@@ -1992,20 +1965,9 @@
       "firstThreshold": "1st Threshold",
       "secondThreshold": "2nd Threshold",
       "auto": "Auto: {{value}}",
-      "step": "Step {{step}}",
-      "phase1Label": "Phase 1 (Lv 1–5)",
-      "phase2Label": "Phase 2 (Lv 6–10)",
-      "phase3Label": "Phase 3 (Lv 11+)",
       "curveHint": "Rating curve of the gauntlet (fixed when you start):",
       "curvePuzzle": "Puzzle {{n}}",
       "settings": "Settings",
-      "visualizationLevel": "Visualization: Level {{level}}",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Random",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Board Theme",
-      "pieces": "Pieces",
       "highscore": "Highscore: {{rating}} Rating",
       "sessionsPlayed": "{{count}} sessions played",
       "viewHistory": "View History",
@@ -2017,9 +1979,7 @@
       "advanced": "Fine-tuning"
     },
     "game": {
-      "visualization": "Visualization (Level {{level}})",
       "vizCountdown": "Pieces disappear in {{seconds}}s...",
-      "vizNoMove": "No move yet — click from-square → target square.",
       "vizShow": "Show",
       "vizShowing": "Showing...",
       "loadingPuzzle": "Loading puzzle...",
@@ -2136,29 +2096,10 @@
       "showOriginalSolution": "Show original solution",
       "prev": "Previous"
     },
-    "settings": {
-      "title": "Settings",
-      "visualizationLevel": "Visualization: Level {{level}}",
-      "stockfishDepth": "Stockfish Depth",
-      "depthHint": "1 (weak) – 24 (strong)",
-      "mode": "Mode",
-      "modeNormal": "Normal",
-      "modeRandom": "Random",
-      "modeCrazy": "Crazy",
-      "boardTheme": "Board Theme",
-      "pieces": "Pieces"
-    },
     "viz": {
-      "titleLevel": "Visualization (Level {{level}})",
       "countdown": "Pieces disappear in {{seconds}}s...",
-      "noMoveYet": "No move yet — click from-square → target square.",
       "show": "Show",
-      "showing": "Showing...",
-      "level0": "Normal — Drag & Drop",
-      "level1": "Blindfold — board frozen, moves as text",
-      "level2": "Checker — pieces are replaced by checkers after 3s",
-      "level3": "Dark — pieces are replaced by black tokens after 3s",
-      "level4": "Invisible — pieces disappear completely after 3s"
+      "showing": "Showing..."
     },
     "course": {
       "backToCourses": "To course overview",
@@ -2641,7 +2582,6 @@
     "title": "Saved games",
     "hint": "Games you save from chess.com or lichess with the RepCheck browser extension show up here.",
     "empty": "No saved games yet. On a chess.com or lichess analysis page, click “Save game” in the RepCheck extension.",
-    "moves": "moves",
     "replay": "Replay",
     "openInAnalysis": "Open in analysis",
     "share": "Copy share link",
@@ -2764,7 +2704,6 @@
       "again": "Start over",
       "summary": "You found {{solved}} of {{total}} yourself.",
       "progressShort": "{{solved}} of {{total}} found · {{open}} open",
-      "tooltip": "Mistake training for this game",
       "onlyOpen": "Only games with open mistakes ({{count}})",
       "analyze": "Analyse",
       "triedEval": "After {{san}}: {{eval}} (best move: {{best}})",
@@ -3453,10 +3392,6 @@
       "courses": "{{count}} course(s) use an older processing version and can be updated — e.g. to show the book's per-move comments.",
       "repertoires": "{{count}} repertoire(s) use an older processing version and can be updated."
     },
-    "needsReimport": {
-      "courses": "{{count}} manually uploaded course(s) can't be updated automatically — re-import the PGN to get the latest processing.",
-      "repertoires": "{{count}} repertoire(s) need a manual re-import to be updated."
-    },
     "itemNeedsReimport": {
       "courses": "This course comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date.",
       "repertoires": "This repertoire comes from an older processing version and cannot be updated here. Fetch it again with the RepCheck extension to bring it up to date."
@@ -3465,8 +3400,7 @@
     "updateTip": "Reprocess items with a stored source and re-download Chessable items (cached ones update instantly, no download).",
     "working": "Updating…",
     "started": "Update started — running in the background.",
-    "failed": "Update failed. Please try again.",
-    "dismiss": "Got it"
+    "failed": "Update failed. Please try again."
   },
   "remembered": {
     "title": "Remembered positions",
@@ -3569,8 +3503,7 @@
       "notFound": "This job no longer exists.",
       "toJobs": "Jobs page",
       "elapsed": "Time",
-      "speed": "Speed",
-      "depth": "Depth"
+      "speed": "Speed"
     }
   },
   "gameAnalysis": {
@@ -3621,7 +3554,6 @@
   "guess": {
     "title": "Point game",
     "intro": "Guess an analysed game move by move: you take one side, play your move and get points right away — measured against the move that was actually played.",
-    "startNew": "New point game",
     "yourRuns": "Your runs",
     "play": "Play",
     "toAnalyses": "Game analyses",
@@ -3835,7 +3767,6 @@
       "region": "Region",
       "timeControl": "Time control",
       "rounds": "Rounds",
-      "players": "Players",
       "organizer": "Organizer",
       "arbiter": "Chief arbiter",
       "groups": "Sections",
@@ -3903,7 +3834,6 @@
       "custom": "Custom period"
     },
     "map": {
-      "openDetail": "Open the tournament page",
       "thisVenue": "This venue: {{name}}",
       "samePoint": "{{count}} tournaments at this point",
       "samePointVague": "For these tournaments only the region is known, not the exact venue.",
@@ -4040,8 +3970,6 @@
       "title": "My profile",
       "person": "Name and email",
       "nameHelp": "The tournament history looks you up on chess-results, and it searches by NAME — there is no lookup by number there. Without a last name this site cannot show you a history.\n\nThe display name is what other people see. Your login name is never shown.",
-      "displayNameHint": "Shown to others instead of „{{username}}“.",
-      "identity": "Player identifiers",
       "identityHelp": "Two people can share a name, and the search by name returns both. A FIDE ID or a chess-results ID decides which of them is you.\n\nWithout one, the history shows every tournament of everyone with your name — and you will notice, because there will be tournaments in it you never played.\n\nBoth numbers are on your own chess-results player page.",
       "saveError": "Could not be saved. Please try again.",
       "loadError": "The profile could not be loaded. Nothing is lost — check your connection and try again."
@@ -4287,14 +4215,10 @@
     "boardLocked": "As long as one move cannot be played, the board cannot continue the line — fix the move text first.",
     "gap": {
       "close": "Close the gap",
-      "title": "Which moves led here?",
       "depth": "Search up to",
       "plies": "{{count}} half-moves",
       "searching": "Searching…",
-      "found": "{{count}} way(s) found",
-      "apply": "Use this",
       "applied": "The gap is closed — the inserted moves are marked as unsure.",
-      "severalHint": "Several move orders end in this position — take the one that was played.",
       "doesNotFit": "These moves do not lead to that position.",
       "failed": "The search could not be run.",
       "none": "No way found with up to {{count}} half-moves — there are probably more moves in between.",
