@@ -30,6 +30,12 @@ html.dark-theme {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+/* Die Seite malt ihre Flaeche selbst (UX-055): vorher kam das Dunkel nur aus `color-scheme: dark` (Leinwand
+   #121212). axe wertet die Leinwand nicht aus und rechnete gegen Weiss — Messfehler zuhauf, echte Verstoesse
+   blieben unsichtbar. Die Textfarbe bleibt bewusst die des Browsers: die vielen `color-mix(currentColor …)`-Toene
+   der Komponenten rechnen von ihr aus und wuerden mit on-surface im Dunkelmodus blasser. LeagueHub/ClubHub setzen
+   ihren eigenen body-Hintergrund danach, KidHub malt seine Huelle selbst. */
+body { background-color: var(--mat-sys-surface); }
 
 /* Primaerknoepfe (Codereview W5 UX-052): im M3-Thema ist mat-raised-button der „protected"-Knopf — Flaeche
    = surface, Schrift = primary, und `color` wirkt dort nicht mehr. Im Dunkelthema war „APK herunterladen",

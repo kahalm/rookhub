@@ -5,6 +5,7 @@ import { AppFooterComponent } from './app-footer.component';
 import { DISCORD_INVITE_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { setDarkTheme, textContrast } from '../../testing/contrast';
 
 /**
  * Die Fusszeile gehoert BEIDEN Oberflaechen (RookHub und Turnierseite). Geprueft wird vor allem
@@ -92,6 +93,29 @@ describe('AppFooterComponent', () => {
     expect(getComputedStyle(overlay!).position).toBe('fixed');
 
     await fixture.componentInstance.changelogLoad;   // dynamic import nicht offen lassen
+  });
+
+  // ----- Kontrast der Markenlinks (UX-055) ---------------------------------------------------
+  // Discord-Blau #5865F2 hatte auf der dunklen Seite nur 4,07:1 (axe rechnete gegen Weiss und sah 4,61:1), Ko-fi
+  // #ff5e5b im hellen Modus 3,0:1. Gemessen wird gegen die Flaeche, auf der die Fusszeile wirklich steht (body).
+  describe('Kontrast der Discord- und Ko-fi-Links (UX-055)', () => {
+    let wasDark: boolean;
+    beforeEach(() => { wasDark = document.documentElement.classList.contains('dark-theme'); });
+    afterEach(() => setDarkTheme(wasDark));
+
+    for (const dark of [false, true]) {
+      it(`erreichen 4,5:1 auf der Seite (${dark ? 'dunkel' : 'hell'})`, () => {
+        setDarkTheme(dark);
+        const fixture = buildFixture();
+        fixture.detectChanges();
+        for (const sel of ['.discord-link', '.kofi-link']) {
+          const link = (fixture.nativeElement as HTMLElement).querySelector(sel)!;
+          const ratio = textContrast(link);
+          expect(ratio).withContext(`${sel} (${dark ? 'dunkel' : 'hell'}): ${ratio.toFixed(2)}:1`)
+            .toBeGreaterThanOrEqual(4.5);
+        }
+      });
+    }
   });
 
   // ----- Ausblenden am Handy: Vorgabe ja, per Input abschaltbar (Turnierseite) --------------

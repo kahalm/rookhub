@@ -1,3 +1,5 @@
+import { parseColor } from '../testing/contrast';
+
 /**
  * Die semantischen Farb-Tokens aus `src/_tokens.scss` (Codereview 2026-09-29, F8-003). Die globalen
  * Styles laufen im Test mit (angular.json → test.styles), also werden die Tokens hier so aufgeloest,
@@ -90,6 +92,18 @@ describe('Design-Tokens (_tokens.scss)', () => {
       setDark(dark);
       expect(token('--rh-error')).toEqual(resolve('var(--mat-sys-error)'));
       expect(token('--rh-accent')).toEqual(resolve('var(--mat-sys-primary)'));
+    }
+  });
+
+  // UX-055: html und body hatten keinen Hintergrund, das Dunkel kam nur aus `color-scheme: dark` (Leinwand #121212).
+  // axe wertet die Leinwand nicht aus und rechnete gegen Weiss: 134 von 178 Kontrasttreffern waren Messfehler, und
+  // echte Verstoesse (Discord-Link 4,07:1) galten als bestanden. Die Seite malt ihre Flaeche jetzt selbst.
+  it('die Seite (body) malt ihre Flaeche selbst: deckend, in beiden Modi die Material-Flaeche', () => {
+    for (const dark of [false, true]) {
+      setDark(dark);
+      const [r, g, b, a] = parseColor(getComputedStyle(document.body).backgroundColor);
+      expect(a).withContext(`body-Hintergrund deckt nicht (${dark ? 'dunkel' : 'hell'})`).toBe(1);
+      expect([r, g, b]).toEqual(resolve('var(--mat-sys-surface)')!);
     }
   });
 

@@ -122,20 +122,26 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
     .footer-sep { margin: 0 6px; color: color-mix(in srgb, currentColor 40%, transparent); }
+    /* Markenfarben je Modus abgestimmt (UX-055), jeweils mindestens 4,5:1 auf der Seite: Discord-Blau #5865F2
+       hatte im Dunkeln 4,07:1, Ko-fi #ff5e5b im Hellen 3,0:1. Hell dunkler, dunkel heller getoent. */
     .discord-link {
       display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
-      color: #5865F2; font-weight: 600; text-decoration: none;
+      color: #4752c4; font-weight: 600; text-decoration: none;
     }
-    .discord-link:hover { color: #4752c4; text-decoration: underline; }
+    .discord-link:hover { color: #3a43a8; text-decoration: underline; }
+    :host-context(.dark-theme) .discord-link { color: #7983f5; }
+    :host-context(.dark-theme) .discord-link:hover { color: #9aa1f8; }
     .discord-link mat-icon {
       font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
     }
     .discord-link mat-icon svg { display: block; width: 100%; height: 100%; }
     .kofi-link {
       display: inline-flex; align-items: center; gap: 4px; vertical-align: middle;
-      color: #ff5e5b; font-weight: 600; text-decoration: none;
+      color: #c7302d; font-weight: 600; text-decoration: none;
     }
-    .kofi-link:hover { color: #e04b48; text-decoration: underline; }
+    .kofi-link:hover { color: #a52623; text-decoration: underline; }
+    :host-context(.dark-theme) .kofi-link { color: #ff5e5b; }
+    :host-context(.dark-theme) .kofi-link:hover { color: #ff7e7b; }
     .kofi-link mat-icon {
       font-size: 1.05rem; width: 1.05rem; height: 1.05rem; line-height: 1.05rem;
     }
