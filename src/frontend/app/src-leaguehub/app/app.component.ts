@@ -32,7 +32,7 @@ import { environment } from '../../src/environments/environment';
           }
         </nav>
       </div>
-      <p class="wrap lede">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für die Tiroler Mannschaftsmeisterschaft.</p>
+      <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für die Tiroler Mannschaftsmeisterschaft.</p>
       @if (nav().view) {
         <nav class="wrap tabs" aria-label="Bereiche">
           <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
@@ -71,6 +71,9 @@ export class LeagueHubAppComponent implements OnInit {
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
   readonly wide = computed(() => this.url().startsWith('/verein/formular/'));
+  /** „Formular prüfen" (angemeldet und über den Teilen-Link): am Handy fällt dort der Werbesatz weg (UX-036) — er kostete
+   *  drei Zeilen über Prüfteil und Brett, und vom Brett war im ersten Bildschirm nur die oberste Reihe zu sehen. */
+  readonly work = computed(() => /^\/(verein|s\/[^/?#]+)\/formular\//.test(this.url()));
   /** „Anmelden“ fuehrt hierher zurueck (UX-020) — bisher fest „/“, auch von /verein/neu, /s/<token> oder der
    *  Registrierung mit eigenem Ziel. Rueckfall „/“: LeagueHub hat kein /dashboard. */
   readonly authQuery = computed(() => authLinkQuery(this.url(), '/'));

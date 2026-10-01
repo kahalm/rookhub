@@ -73,13 +73,17 @@ const SILENT_FAILURES = 3;
         } @else {
           <p class="muted">Orange markiert sind unsichere Stellen: dort die richtige Lesart wählen oder den Zug am Brett spielen
             — danach wird der Rest neu gelesen. Pfeiltasten blättern.</p>
+          <!-- UX-036: Namen und „Übernehmen" stehen unter Zugliste (und Foto) — am Handy ≈ 2 700 px tiefer, ohne Hinweis. -->
+          <p class="small"><button type="button" class="btn-link to-save" (click)="toSave()">Weiter zu Namen &amp; Übernehmen ↓</button></p>
         }
       </section>
 
       @if (st.scan.status === 'done') {
         <div class="scan-wrap"><div class="scan-layout" [class.with-photo]="!!photoUrl()">
           @if (photoUrl(); as src) {
-            <section class="panel scan-photo">
+            <section class="panel scan-photo" [class.open]="photoOpen()">
+              <p class="photo-toggle"><button type="button" class="btn-link" [attr.aria-expanded]="photoOpen()" (click)="photoOpen.set(!photoOpen())">
+                {{ photoOpen() ? 'Ganzes Foto ausblenden' : 'Ganzes Foto zeigen' }}</button></p>
               <div class="photo-scroll" [class.zoom]="zoom()">
                 <div class="photo-frame">
                   <img [src]="src" alt="Foto des Partieformulars" (load)="s.onPhotoLoad($event)" />
@@ -89,7 +93,7 @@ const SILENT_FAILURES = 3;
                   }
                 </div>
               </div>
-              <p><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
+              <p class="photo-zoom"><button type="button" class="btn-link" (click)="zoom.set(!zoom())">{{ zoom() ? 'Kleiner' : 'Größer' }}</button></p>
             </section>
           }
 
@@ -164,6 +168,8 @@ const SILENT_FAILURES = 3;
               } @else {
                 <p class="muted small">Ende der Partie — ein Zug am Brett hängt einen an.</p>
                 @if (s.unresolved().length) { <p class="small">Als Nächstes auf dem Formular: <b>{{ s.unresolved()[0] }}</b></p> }
+                <!-- UX-036: ohne unsichere Stellen kommt der Abschlusshinweis nie — am Ende der Partie geht es hier weiter. -->
+                <div class="actions"><button type="button" class="btn-sec to-save" (click)="toSave()">Weiter zu den Namen</button></div>
               }
             </div>
           </section>
@@ -322,6 +328,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   private failures = 0;
   readonly photoUrl = signal<string | null>(null);
   readonly zoom = signal(false);
+  /** Am Handy ist das ganze Foto eingeklappt (UX-036), am PC steht es immer da. */
+  readonly photoOpen = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal<string | null>(null);
   private readonly doneDlg = viewChild<ElementRef<HTMLDialogElement>>('doneDlg');

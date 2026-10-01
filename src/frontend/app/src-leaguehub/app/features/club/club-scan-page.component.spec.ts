@@ -110,6 +110,58 @@ describe('ClubScanPageComponent', () => {
     expect(check.getBoundingClientRect().left).toBeGreaterThan(board.getBoundingClientRect().left);
   });
 
+  // UX-036: am Handy lag „In die Vereins-Datenbank übernehmen" bei 2 750 von 3 022 px — hinter Zugliste und GANZEM Foto,
+  // dessen Ausschnitt oben schon steht. Jetzt ist das ganze Foto am Handy eingeklappt, am PC steht es wie bisher.
+  it('am Handy (390 px) ist das ganze Foto eingeklappt, „Ganzes Foto zeigen" klappt es auf; breit steht es immer da (UX-036)', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 600;
+    const blob: Blob = await new Promise(r => canvas.toBlob(b => r(b!), 'image/png'));
+    api.photo.and.resolveTo(blob);
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '390px';
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const shown = (sel: string) => { const e = el.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none'; };
+    expect(shown('.scan-photo .photo-scroll')).toBeFalse();
+    expect(shown('.scan-photo .photo-zoom')).toBeFalse();
+    const toggle = el.querySelector('.scan-photo .photo-toggle button') as HTMLButtonElement;
+    expect(shown('.scan-photo .photo-toggle')).toBeTrue();
+    expect(toggle.textContent?.trim()).toBe('Ganzes Foto zeigen');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    toggle.click();
+    fixture.detectChanges();
+    expect(shown('.scan-photo .photo-scroll')).toBeTrue();
+    expect(toggle.textContent?.trim()).toBe('Ganzes Foto ausblenden');
+    toggle.click();
+    fixture.detectChanges();
+    el.style.width = '1300px';                                                    // PC: Foto | Brett | Prüfen, ohne Schalter
+    expect(shown('.scan-photo .photo-scroll')).toBeTrue();
+    expect(shown('.scan-photo .photo-toggle')).toBeFalse();
+  });
+
+  it('„Weiter zu Namen & Übernehmen" oben und am Ende der Partie führen zum Speicherteil (UX-036)', fakeAsync(() => {
+    const el = create();
+    flushMicrotasks();
+    fixture.detectChanges();
+    const panel = el.querySelector('section.save-panel') as HTMLElement;
+    const scroll = spyOn(panel, 'scrollIntoView');
+    const top = el.querySelector('.club-intro button.to-save') as HTMLButtonElement;
+    expect(top.textContent).toContain('Weiter zu Namen & Übernehmen');
+    top.click();
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(el.querySelector('.scan-check button.to-save')).toBeNull();            // mitten in der Partie: Prüfen geht vor
+    const c = fixture.componentInstance;
+    c.s.go(c.s.legalCount());                                                     // Ende der Partie (ohne Abschlussdialog)
+    fixture.detectChanges();
+    const end = el.querySelector('.scan-check button.to-save') as HTMLButtonElement;
+    expect(end.textContent?.trim()).toBe('Weiter zu den Namen');
+    end.click();
+    expect(scroll).toHaveBeenCalledTimes(2);
+    tick(1000);
+  }));
+
   it('nach der letzten unsicheren Stelle kommt der Hinweis mit „Übernehmen" und „Weiter bearbeiten"', fakeAsync(() => {
     const st = structuredClone(STATE);
     st.boxes = [null, null, [100, 300, 400, 340], null];
