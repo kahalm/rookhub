@@ -29,14 +29,6 @@ export function weeklyStartIndex(puzzles: BookPuzzleDto[], p: WeeklyProgress): n
   return idx >= 0 ? idx : 0;
 }
 
-/** Sekunden als `m:ss` bzw. `h:mm:ss` (Kurs-/Wochenpost-Zeitanzeige). */
-export function formatSecondsClock(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
-  const p2 = (n: number) => n.toString().padStart(2, '0');
-  return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
-}
-
 /** Grobe Restzeit-Schätzung als `N min` bzw. `H h M min` (mind. 1 min). Für die Kurs-ETA
  *  „so lange dauert noch das ganze Buch/Kapitel bei deinem bisherigen Tempo". */
 export function formatEtaShort(seconds: number): string {

@@ -9,15 +9,6 @@ import { ChessableImport } from './chessable.service';
 // gesetzt (nach dem Rotate-on-Block-Speedup; vorher gemessen ~26). Gecachte Linien sind quasi sofort.
 export const CHESSABLE_LINES_PER_MIN = 40;
 
-/** Kompakte Dauer aus Millisekunden: "1 h 5 min", "12 min", "45 s"; "—" bei ungültig/negativ. */
-export function formatDuration(ms: number): string {
-  if (!isFinite(ms) || ms < 0) return '—';
-  const s = Math.floor(ms / 1000);
-  if (s >= 3600) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
-  if (s >= 60) return `${Math.floor(s / 60)} min`;
-  return `${s} s`;
-}
-
 /**
  * Gesamt-Zeilenzahl: bevorzugt den EXAKTEN Wert (`linesTotal`, aus getCourse?includeVariations);
  * fällt auf die lineare Hochrechnung aus dem Kapitel-Fortschritt zurück, solange der exakte Wert

@@ -1,6 +1,6 @@
 import {
   CALC_GRADE_KEYS, CALC_GRADE_OPTIONS, CalcGrade, applyReviewPatch, emptyReview, formatScore,
-  formatSeconds, gradePoints, isNoopPatch, maxPoints, mergeReviewPatch, newSecondsToken,
+  gradePoints, isNoopPatch, maxPoints, mergeReviewPatch, newSecondsToken,
   normalizeGrade, sumPoints, sumSeconds, toReviewBody,
 } from './calc-review.util';
 
@@ -161,14 +161,7 @@ describe('calc-review toReviewBody', () => {
   });
 });
 
-describe('calc-review formatSeconds + Summen', () => {
-  it('formatiert m:ss bzw. h:mm:ss', () => {
-    expect(formatSeconds(0)).toBe('0:00');
-    expect(formatSeconds(65)).toBe('1:05');
-    expect(formatSeconds(3723)).toBe('1:02:03');
-    expect(formatSeconds(-5)).toBe('0:00');
-  });
-
+describe('calc-review Summen', () => {
   it('summiert Punkte und Zeit; nicht bewertete Stellungen zählen als 0', () => {
     const rows: { grade: CalcGrade | null; secondsSpent: number }[] = [
       { grade: 4, secondsSpent: 120 },

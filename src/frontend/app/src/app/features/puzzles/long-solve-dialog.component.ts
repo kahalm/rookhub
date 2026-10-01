@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { TranslatePipe } from '@ngx-translate/core';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 
 /**
  * Nachfrage bei auffällig langer Lösezeit (> Schwellwert): vermutlich lag der Tab offen,
@@ -37,12 +38,7 @@ export class LongSolveDialogComponent {
     private ref: MatDialogRef<LongSolveDialogComponent, boolean>,
   ) {}
 
-  get formatted(): string {
-    const s = Math.max(0, Math.floor(this.data.seconds));
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-  }
+  get formatted(): string { return formatSecondsClock(this.data.seconds); }
 
   close(reallyTookThatLong: boolean): void {
     this.ref.close(reallyTookThatLong);

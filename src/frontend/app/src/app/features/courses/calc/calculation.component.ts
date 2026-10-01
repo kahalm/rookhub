@@ -30,7 +30,7 @@ import {
 } from './calc-tree.util';
 import {
   CALC_GRADE_OPTIONS, CALC_MAX_POINTS_PER_POSITION, CalcGrade, CalcReview, CalcReviewPatch,
-  applyReviewPatch, emptyReview, formatScore, formatSeconds, gradePoints, isNoopPatch, maxPoints,
+  applyReviewPatch, emptyReview, formatScore, gradePoints, isNoopPatch, maxPoints,
   mergeReviewPatch, newSecondsToken, normalizeGrade, sumPoints,
 } from './calc-review.util';
 import {
@@ -46,6 +46,7 @@ import {
 import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
 import { localStore, readJson, writeJson } from '../../../core/local-json-store';
 import { AuthService } from '../../../core/auth.service';
+import { formatSecondsClock } from '../../../shared/clock-format.util';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { labelOr } from '../course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
@@ -340,7 +341,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /** Angezeigte kumulierte Kapitel-Zeit (m:ss bzw. h:mm:ss). */
   get timerDisplay(): string {
-    return formatSeconds(this.timerSeconds);
+    return formatSecondsClock(this.timerSeconds);
   }
 
   /**
@@ -1279,11 +1280,11 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   /** Rechenzeit an der ANGEZEIGTEN Stellung inkl. der laufenden Sitzung. */
   get positionTimeDisplay(): string {
-    return formatSeconds(this.review.secondsSpent + this.liveSeconds);
+    return formatSecondsClock(this.review.secondsSpent + this.liveSeconds);
   }
 
   timeDisplay(seconds: number): string {
-    return formatSeconds(seconds);
+    return formatSecondsClock(seconds);
   }
 
   /** Punkte der ANGEZEIGTEN Stellung („2 / 4"); null-Stufe hat keine Punktzahl, sondern gar keine. */
@@ -1311,7 +1312,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
     const name = group.label || group.chapter || this.translate.instant('courses.noChapter');
     const score = formatScore(group.points, group.maxPoints);
     const summary = group.seconds
-      ? this.translate.instant('calc.review.chapterSummary', { score, time: formatSeconds(group.seconds) })
+      ? this.translate.instant('calc.review.chapterSummary', { score, time: formatSecondsClock(group.seconds) })
       : this.translate.instant('calc.review.chapterScore', { score });
     return `${name} · ${summary}`;
   }

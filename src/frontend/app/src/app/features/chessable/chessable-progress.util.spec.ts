@@ -4,7 +4,6 @@ import {
   CHESSABLE_LINES_PER_MIN,
   effectiveTotalLines,
   estimateRemainingMinutes,
-  formatDuration,
   chessableStatusLabel,
   chessableQueueLabel,
   compareImportsByQueue,
@@ -92,16 +91,3 @@ describe('effectiveTotalLines / estimateRemainingMinutes (re-tested via util)', 
   });
 });
 
-describe('formatDuration', () => {
-  it('formats ms compactly as h/min/s', () => {
-    expect(formatDuration(0)).toBe('0 s');
-    expect(formatDuration(45_000)).toBe('45 s');
-    expect(formatDuration(90_000)).toBe('1 min');
-    expect(formatDuration(3_661_000)).toBe('1 h 1 min');
-  });
-
-  it('returns a dash for invalid/negative input', () => {
-    expect(formatDuration(-5)).toBe('—');
-    expect(formatDuration(NaN)).toBe('—');
-  });
-});

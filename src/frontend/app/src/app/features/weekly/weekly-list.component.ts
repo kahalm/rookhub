@@ -17,6 +17,7 @@ import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.compon
 import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { apiErrorText } from '../../core/api-error';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 
 interface WeeklyPostRow extends WeeklyPost {
   editDate: string;   // YYYY-MM-DD (Admin-Edit)
@@ -343,12 +344,7 @@ export class WeeklyListComponent implements OnInit {
   }
 
   /** Gesamtzeit als m:ss bzw. h:mm:ss. */
-  fmtTime(seconds: number): string {
-    const s = Math.max(0, Math.floor(seconds));
-    const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
-    const p2 = (n: number) => n.toString().padStart(2, '0');
-    return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
-  }
+  fmtTime(seconds: number): string { return formatSecondsClock(seconds); }
 
   /** Genauigkeit eines Spielers in % (gelöst / gesamt). */
   accuracyPct(p: WeeklyPlayerResult, total: number): number {

@@ -20,7 +20,8 @@ import {
   latestCommentUpTo as latestCommentUpToUtil,
   displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
 } from './book-comment.util';
-import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatSecondsClock, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
+import { formatUtcDate, shiftDailyDate, weeklyStartIndex as computeWeeklyStartIndex, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 import { SharePuzzleDialogComponent } from './share-puzzle-dialog.component';
 import { PuzzleSettingsDialogComponent, PuzzleSettingsDialogData, PuzzleSettingsDialogResult } from './puzzle-settings-dialog.component';
 import { PuzzleStatusCardComponent } from './puzzle-status-card.component';

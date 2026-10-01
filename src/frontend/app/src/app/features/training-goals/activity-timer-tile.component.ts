@@ -14,6 +14,7 @@ import {
 } from './training-goals.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 import { ActivityTimerStopDialogComponent, StopDialogData, StopDialogResult } from './activity-timer-stop-dialog.component';
 
 /** Material-Icon je Timer-Aktivitätsart. */
@@ -49,7 +50,7 @@ export function activityKindIcon(kind: ManualActivityKind): string {
           <mat-icon class="run-kind-icon">{{ icon(running.kind) }}</mat-icon>
           <span class="run-label" [title]="running.label">{{ running.label }}</span>
         </div>
-        <div class="run-duration" aria-live="polite">{{ formatDuration(elapsed) }}</div>
+        <div class="run-duration" aria-live="polite">{{ elapsedClock(elapsed) }}</div>
         <div class="run-actions">
           <button mat-flat-button color="primary" (click)="openStopDialog()" [disabled]="busy">
             <mat-icon>stop_circle</mat-icon>
@@ -241,14 +242,8 @@ export class ActivityTimerTileComponent implements OnInit, OnDestroy {
 
   icon(kind: ManualActivityKind): string { return activityKindIcon(kind); }
 
-  formatDuration(totalSeconds: number): string {
-    const s = Math.max(0, Math.floor(totalSeconds));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-  }
+  /** Laufende Zeit als Uhr (m:ss bzw. h:mm:ss) — nicht formatDuration aus duration.util (Wert + Einheit). */
+  elapsedClock(totalSeconds: number): string { return formatSecondsClock(totalSeconds); }
 
   private ensureTicker(): void {
     if (this.running && !this.tickHandle) {

@@ -1,4 +1,4 @@
-import { formatUtcDate, shiftDailyDate, weeklyStartIndex, formatSecondsClock, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
+import { formatUtcDate, shiftDailyDate, weeklyStartIndex, formatEtaShort, estimateRemainingSeconds } from './book-nav.util';
 
 describe('book-nav.util', () => {
   describe('formatUtcDate', () => {
@@ -28,17 +28,6 @@ describe('book-nav.util', () => {
       expect(weeklyStartIndex(puzzles, { completed: true, playedIndices: [10, 11] } as any)).toBe(0);
       // alle gespielt, aber nicht als completed markiert → 0 (findIndex −1)
       expect(weeklyStartIndex(puzzles, { completed: false, playedIndices: [10, 11, 12] } as any)).toBe(0);
-    });
-  });
-
-  describe('formatSecondsClock', () => {
-    it('m:ss unter einer Stunde, h:mm:ss darüber', () => {
-      expect(formatSecondsClock(0)).toBe('0:00');
-      expect(formatSecondsClock(65)).toBe('1:05');
-      expect(formatSecondsClock(600)).toBe('10:00');
-      expect(formatSecondsClock(3661)).toBe('1:01:01');
-      expect(formatSecondsClock(-5)).toBe('0:00');   // negativ → 0
-      expect(formatSecondsClock(90.9)).toBe('1:30');  // floored
     });
   });
 

@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { TranslatePipe } from '@ngx-translate/core';
 import { WeeklyService, WeeklyPlayerBreakdown } from './weekly.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { formatSecondsClock } from '../../shared/clock-format.util';
 
 /** Daten des Dialogs: welcher Wochenpost + welcher Spieler. */
 export interface WeeklyBreakdownDialogData {
@@ -122,10 +123,5 @@ export class WeeklyBreakdownDialogComponent implements OnInit {
   }
 
   /** Zeit als m:ss bzw. h:mm:ss. */
-  fmtTime(seconds: number): string {
-    const s = Math.max(0, Math.floor(seconds));
-    const sec = s % 60, m = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
-    const p2 = (n: number) => n.toString().padStart(2, '0');
-    return h > 0 ? `${h}:${p2(m)}:${p2(sec)}` : `${m}:${p2(sec)}`;
-  }
+  fmtTime(seconds: number): string { return formatSecondsClock(seconds); }
 }

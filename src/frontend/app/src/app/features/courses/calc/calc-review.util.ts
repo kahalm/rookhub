@@ -209,16 +209,6 @@ export function toReviewBody(patch: CalcReviewPatch): CalcReviewBody {
   return body;
 }
 
-/** Zeitangabe als m:ss bzw. h:mm:ss (eine Quelle für Kapitel-Timer, Stellungszeit und Summen). */
-export function formatSeconds(seconds: number): string {
-  const total = Math.max(0, Math.floor(seconds || 0));
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
-
 /** Summe der Punkte (nicht bewertete Stellungen zählen als 0, nicht als Lücke). */
 export function sumPoints(items: readonly { grade: CalcGrade | null }[]): number {
   return items.reduce((sum, item) => sum + gradePoints(item.grade), 0);
