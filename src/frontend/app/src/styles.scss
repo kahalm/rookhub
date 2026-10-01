@@ -320,3 +320,14 @@ $rh-piece-roles: (pawn: 'P', knight: 'N', bishop: 'B', rook: 'R', queen: 'Q', ki
 @media (prefers-reduced-motion: reduce) {
   .rh-badge-pop { animation: none; }
 }
+
+/* Touch-Ziele in der Hinweiszeile unter dem Brett (Codereview UX-007): „Tipp", das Auge („Figuren zeigen") und
+   „Tipps melden" waren am Handy nur ~26 px hoch, 0.5rem auseinander — ein Fehltreffer auf „Tipp" verbraucht eine
+   Tipp-Stufe, und die zählt in die Wertung. Die Grundregeln stehen je Löser (puzzle-/book-puzzle-/endless-puzzle.
+   component.scss); die Vergrößerung für grobe Zeiger steht EINMAL hier statt dreimal kopiert und belastet die knappen
+   Komponenten-Budgets nicht (endless-puzzle liegt schon über der Warnschwelle). Das Symbol bleibt klein. */
+@media (pointer: coarse) {
+  .board-hint-tip, .board-hint-eye, .board-hint-flag {
+    min-height: 44px; min-width: 44px; justify-content: center;
+  }
+}

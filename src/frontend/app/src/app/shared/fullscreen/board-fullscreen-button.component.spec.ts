@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { BoardFullscreenButtonComponent } from './board-fullscreen-button.component';
+import { coarsePointerRules } from '../../testing/coarse-pointer-rules';
 
 describe('BoardFullscreenButtonComponent', () => {
   beforeEach(async () => {
@@ -96,5 +97,24 @@ describe('BoardFullscreenButtonComponent', () => {
 
     // Nach dem Abmelden darf ein Vollbild-Wechsel die zerstörte Komponente nicht mehr anfassen.
     expect(() => document.dispatchEvent(new Event('fullscreenchange'))).not.toThrow();
+  });
+
+  // Codereview UX-007: 22 × 22 px bei 45 % Deckkraft — am Handy kaum zu treffen.
+  it('hat bei grobem Zeiger eine Trefferfläche von 44 px Breite, die nicht aufs Brett ragt', () => {
+    const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
+    fixture.componentRef.setInput('target', document.createElement('div'));
+    fixture.detectChanges();   // erzeugt die Komponente → ihre Stile hängen im Dokument
+
+    const coarse = coarsePointerRules().filter(r =>
+      r.selectorText.includes('.board-fs-btn') && !r.selectorText.includes('app-fullscreen'));
+    const after = coarse.find(r => r.selectorText.includes('::after'));
+    expect(after).toBeDefined();
+    const width = 22 - parseFloat(after!.style.left) - parseFloat(after!.style.right);
+    const height = 22 - parseFloat(after!.style.top) - parseFloat(after!.style.bottom);
+    expect(width).toBeGreaterThanOrEqual(44);
+    expect(height).toBeGreaterThan(22);
+    expect(parseFloat(after!.style.bottom)).toBeGreaterThanOrEqual(-2);   // endet an der Brettkante (margin-bottom 2 px)
+    const btn = coarse.find(r => !r.selectorText.includes('::after'));
+    expect(btn?.style.position).toBe('relative');
   });
 });

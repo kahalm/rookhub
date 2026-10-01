@@ -29,6 +29,10 @@ import { TranslatePipe } from '@ngx-translate/core';
       font-size: 0.8em; color: #1976d2; cursor: pointer; user-select: none;
     }
     .puzzle-tags-toggle:hover { text-decoration: underline; }
+    /* Grober Zeiger (Codereview UX-007): der 0.8em-Text allein ist kein Touch-Ziel — Innenabstand bis 44 px. */
+    @media (pointer: coarse) {
+      .puzzle-tags-toggle { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.5rem; }
+    }
     .puzzle-tags-chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
     .puzzle-tags-chip {
       background: color-mix(in srgb, currentColor 8%, transparent); border-radius: 12px; padding: 2px 10px;
