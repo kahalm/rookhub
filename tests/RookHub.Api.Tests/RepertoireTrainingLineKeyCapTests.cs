@@ -64,6 +64,21 @@ public class RepertoireTrainingLineKeyCapTests
     }
 
     [Fact]
+    public void MakeDue_CapsKeysLikePromote()
+    {
+        AssertValid(new MakeDueRequest { LineKeys = Keys(LineKeyListAttribute.MaxKeys) }, true);
+        AssertValid(new MakeDueRequest { LineKeys = Keys(LineKeyListAttribute.MaxKeys + 1) }, false);
+        AssertValid(new MakeDueRequest { LineKeys = new List<string> { new string('x', LineKeyListAttribute.MaxKeyLength + 1) } }, false);
+    }
+
+    [Fact]
+    public void MakeDue_EmptyList_StaysValid_MeansWholeCourse()
+    {
+        // Fehlt "lineKeys" im JSON, bleibt die vorbelegte leere Liste = ganzer Kurs.
+        AssertValid(new MakeDueRequest(), true);
+    }
+
+    [Fact]
     public void BlankAndNullKeys_StayAllowed_TheServiceFiltersThem()
     {
         AssertValid(new PromoteLinesRequest { LineKeys = new List<string> { "", "  ", null!, "l1" } }, true);

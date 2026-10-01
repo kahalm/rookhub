@@ -62,6 +62,7 @@ public class SetPausedRequest
 /// <summary>Macht einen Satz Linien sofort fällig (und hebt eine Pause auf). Leere Liste = ganzer Kurs.</summary>
 public class MakeDueRequest
 {
+    [LineKeyList]
     public List<string> LineKeys { get; set; } = new();
 }
 
