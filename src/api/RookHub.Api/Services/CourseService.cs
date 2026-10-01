@@ -39,7 +39,7 @@ public class CourseService
 
     public CourseService(AppDbContext db, ILogger<CourseService> logger, PgnImportService pgnImport, BookAdminService bookAdmin, FriendService friends, NotificationService notifications, ChessableProxyService? chessableProxy = null, IConfiguration? configuration = null)
     {
-        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
+        _chessableEnabled = ChessableSwitch.IsEnabled(configuration);
         _db = db;
         _logger = logger;
         _pgnImport = pgnImport;

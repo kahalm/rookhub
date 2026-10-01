@@ -472,7 +472,7 @@ try
     // hinter/unter einem Chessable-Import-Schwung in der allgemeinen Queue verhungern.
     // Schalter fuer den RookHub-eigenen Chessable-Weg (siehe unten). Vorgabe AN, damit eine
     // Installation ohne die Variable sich wie bisher verhaelt.
-    var chessableEnabled = builder.Configuration.GetValue("Chessable:Enabled", true);
+    var chessableEnabled = ChessableSwitch.IsEnabled(builder.Configuration);
     builder.Services.AddSingleton<IWebhookTaskQueue, WebhookTaskQueue>();
     builder.Services.AddHostedService<WebhookTaskWorker>();
     // Eigene Queue + Consumer fuer die Tipp-Generierung (Stockfish + LLM je Linie): ein grosser Kurs-Upload hielt den

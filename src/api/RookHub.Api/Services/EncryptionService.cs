@@ -48,7 +48,7 @@ public class EncryptionService
     /// </summary>
     public static void ThrowIfKeyRequiredButMissing(IConfiguration configuration)
     {
-        if (configuration["Encryption:Key"] is null && configuration.GetValue("Chessable:Enabled", true))
+        if (configuration["Encryption:Key"] is null && ChessableSwitch.IsEnabled(configuration))
             throw new InvalidOperationException(
                 "Encryption:Key fehlt (ENCRYPTION_KEY). Mit dem eigenen Chessable-Weg (Chessable:Enabled, Vorgabe an) " +
                 "ist er Pflicht, weil die Chessable-Bearer verschlüsselt gespeichert werden — einen echten Zufallswert " +

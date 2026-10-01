@@ -75,7 +75,7 @@ public class ChessableController : BaseApiController, IActionFilter
         IConfiguration configuration,
         ILogger<ChessableController> logger)
     {
-        _enabled = configuration.GetValue("Chessable:Enabled", true);
+        _enabled = ChessableSwitch.IsEnabled(configuration);
         _db = db;
         _encryption = encryption;
         _chessable = chessable;

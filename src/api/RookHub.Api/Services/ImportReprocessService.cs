@@ -101,7 +101,7 @@ public partial class ImportReprocessService
         IConfiguration? configuration = null,
         ICachedLineSource? cachedLines = null)
     {
-        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
+        _chessableEnabled = ChessableSwitch.IsEnabled(configuration);
         _db = db;
         _pgnImport = pgnImport;
         _chessableImport = chessableImport;

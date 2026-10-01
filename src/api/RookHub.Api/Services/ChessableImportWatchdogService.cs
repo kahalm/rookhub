@@ -66,7 +66,7 @@ public class ChessableImportWatchdogService : BackgroundService
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
-        LanesEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
+        LanesEnabled = ChessableSwitch.IsEnabled(configuration);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

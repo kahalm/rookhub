@@ -30,7 +30,7 @@ public class RepertoireService
 
     public RepertoireService(AppDbContext db, RepertoireAnalyzeService analyzeCache, FriendService friends, NotificationService notifications, RepertoirePositionLookupService? positionLookup = null, IConfiguration? configuration = null)
     {
-        _chessableEnabled = configuration?.GetValue("Chessable:Enabled", true) ?? true;
+        _chessableEnabled = ChessableSwitch.IsEnabled(configuration);
         _db = db;
         _analyzeCache = analyzeCache;
         _positionLookup = positionLookup;
