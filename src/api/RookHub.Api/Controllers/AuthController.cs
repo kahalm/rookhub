@@ -181,10 +181,43 @@ public class AuthController : BaseApiController
     /// <summary>Uebergang (eine Version, danach entfernen): alter Pfad von <see cref="SharedSession"/> fuer
     /// Oberflaechen, die noch aus dem Browser-Cache laufen. Hierher kommt nur noch das ALTE Cookie
     /// (Pfad <c>/api/auth</c>); es wird eingetauscht und durch das neue ersetzt.</summary>
+    /// <remarks>
+    /// Das NEUE Cookie kommt hier nie an — „kein Cookie" heisst an diesem Pfad also auch „schon umgezogen".
+    /// Mit 204 meldete sich eine alte Fassung mit uebernommener Sitzung beim zweiten Abgleich ab (Offline-Inhalte
+    /// weg) und raeumte ueber <c>session/end</c> auch das neue Cookie ab — alle anderen uebernommenen Sitzungen
+    /// gleich mit. Deshalb entscheidet ohne Cookie das Merk-Cookie (<see cref="SharedSessionService.MovedMarkerName"/>):
+    /// <list type="bullet">
+    ///   <item>keins: abgemeldet oder nie angemeldet → wie bisher 204, die alte Fassung meldet sich ab.</item>
+    ///   <item>vorhanden und es gehoert dem Konto des mitgeschickten Tokens (oder es kommt gar keins mit, eine
+    ///         Uebernahme beim Start) → 410: hier ist nichts zu holen, die Anmeldung lebt am neuen Pfad. Die
+    ///         alte Fassung wertet das als „keine Antwort" und laesst die Sitzung stehen. Bewusst nicht 401/403
+    ///         (log-watcher <c>auth_bruteforce</c>) und nicht 502–504 (Wiederholung im retry.interceptor).</item>
+    ///   <item>vorhanden, aber fuer ein ANDERES Konto (am Geraet hat sich inzwischen jemand anderes angemeldet)
+    ///         → 204: die alte Fassung meldet sich ab statt im vorigen Konto weiterzulaufen. Uebernehmen kann
+    ///         sie das andere Konto von hier aus nicht, der Wert ist kein Nachweis.</item>
+    /// </list>
+    /// </remarks>
     [AllowAnonymous]
     [EnableRateLimiting("auth-session")]
     [HttpPost("session")]
-    public Task<ActionResult<AuthResponseDto>> LegacySharedSession(CancellationToken ct) => SharedSession(ct);
+    public async Task<ActionResult<AuthResponseDto>> LegacySharedSession(CancellationToken ct)
+    {
+        if (SharedSessionCookieValues().Count == 0 && MovedSessionBelongsToCaller())
+            return StatusCode(StatusCodes.Status410Gone);
+        return await SharedSession(ct);
+    }
+
+    /// <summary>Liegt ein Merk-Cookie, das zum Konto des mitgeschickten Tokens passt (oder kommt kein Token mit)?</summary>
+    private bool MovedSessionBelongsToCaller()
+    {
+        var marker = Request.Cookies[_sharedSession.MovedMarkerName];
+        if (string.IsNullOrEmpty(marker)) return false;
+        var userId = GetUserIdOrNull();
+        if (userId is null) return true;
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            System.Text.Encoding.ASCII.GetBytes(marker),
+            System.Text.Encoding.ASCII.GetBytes(_sharedSession.MovedMarkerFor(userId.Value)));
+    }
 
     /// <summary>Uebergang (eine Version, danach entfernen): alter Pfad von <see cref="EndSharedSession"/>.</summary>
     [AllowAnonymous]
@@ -197,8 +230,11 @@ public class AuthController : BaseApiController
     {
         var value = await _sharedSession.IssueAsync(res.UserId, ct);
         if (value is null) return;
-        Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(
-            DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime)));
+        var expires = DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime);
+        Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(expires));
+        // Uebergang (N6-001): Merker fuer die Alt-Route, siehe LegacySharedSession. Gleiche Laufzeit wie das Cookie.
+        Response.Cookies.Append(_sharedSession.MovedMarkerName, _sharedSession.MovedMarkerFor(res.UserId),
+            SharedSessionCookieOptions(expires, SharedSessionService.MovedMarkerPath));
         DeleteLegacySharedSessionCookie();
     }
 
@@ -209,6 +245,9 @@ public class AuthController : BaseApiController
         // uebereinstimmen, sonst legt der Browser ein zweites an und das alte bleibt liegen.
         Response.Cookies.Append(_sharedSession.CookieName, "",
             SharedSessionCookieOptions(DateTimeOffset.UnixEpoch));
+        // Der Merker geht mit: ohne ihn antwortet die Alt-Route 204, und eine alte Fassung meldet sich ebenfalls ab.
+        Response.Cookies.Append(_sharedSession.MovedMarkerName, "",
+            SharedSessionCookieOptions(DateTimeOffset.UnixEpoch, SharedSessionService.MovedMarkerPath));
         DeleteLegacySharedSessionCookie();
     }
 
@@ -266,8 +305,32 @@ public class AuthController : BaseApiController
     [HttpGet("permissions")]
     public async Task<ActionResult<AuthPermissionsDto>> GetPermissions([FromServices] PermissionResolver resolver, CancellationToken ct)
     {
-        var live = await resolver.GetAsync(GetUserId(), ct);
+        var userId = GetUserId();
+        await MoveLegacySharedSessionCookieAsync(userId, ct);
+        var live = await resolver.GetAsync(userId, ct);
         return Ok(new AuthPermissionsDto { IsAdmin = User.IsInRole("Admin"), Permissions = live.Permissions.OrderBy(p => p).ToList() });
+    }
+
+    /// <summary>
+    /// Uebergang (N6-001, Nacharbeit): zieht ein altes Cookie (Pfad <c>/api/auth</c>) um, das der Browser hierher
+    /// noch mitschickt. Wer nur selbst angemeldet ist, ruft den Tausch nie auf — das alte Cookie ginge sonst bis zu
+    /// 30 Tage weiter an jeden Host der Elterndomaene mit einer Anmeldung unter <c>/api/auth</c>. Die Rechte holt
+    /// jede angemeldete Oberflaeche beim Start und alle paar Minuten, hier ist es also schnell weg.
+    /// <para>Das NEUE Cookie kommt hier nie an (sein Pfad ist kein Praefix von <c>/api/auth/permissions</c>), jeder
+    /// Wert ist also ein altes. Umgezogen wird nur die Anmeldung DIESES Kontos; ein taugliches Cookie eines anderen
+    /// Kontos (Impersonation, anderer Nutzer am Geraet) bleibt unangetastet, bis der Tausch es umzieht. Ein
+    /// untaugliches wird geloescht wie beim Tausch.</para>
+    /// </summary>
+    private async Task MoveLegacySharedSessionCookieAsync(int userId, CancellationToken ct)
+    {
+        if (!_sharedSession.IsEnabled) return;
+        var cookies = SharedSessionCookieValues();
+        if (cookies.Count == 0) return;
+        AuthResponseDto? res = null;
+        foreach (var cookie in cookies)
+            if ((res = await _sharedSession.RedeemAsync(cookie, ct)) != null) break;
+        if (res is null) DeleteLegacySharedSessionCookie();
+        else if (res.UserId == userId) await WriteSharedSessionAsync(res, ct);
     }
 
     [HttpPut("change-password")]

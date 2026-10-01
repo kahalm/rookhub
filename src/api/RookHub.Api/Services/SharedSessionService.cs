@@ -53,6 +53,34 @@ public class SharedSessionService
     /// </summary>
     public const string LegacyCookiePath = "/api/auth";
 
+    /// <summary>
+    /// Pfad des Merk-Cookies (<see cref="MovedMarkerName"/>): genau die Alt-Route <c>POST /api/auth/session</c>
+    /// samt <c>session/end</c>. Uebergang wie <see cref="LegacyCookiePath"/>, mit den Alt-Routen entfernen.
+    /// </summary>
+    public const string MovedMarkerPath = "/api/auth/session";
+
+    /// <summary>
+    /// Name des Merk-Cookies, das neben dem Cookie liegt (Codereview N6-001, Nacharbeit): eine aeltere
+    /// Oberflaeche aus dem Browser-Cache gleicht ueber <c>/api/auth/session</c> ab, und dorthin schickt der
+    /// Browser das Cookie mit seinem neuen Pfad nicht mehr. Ohne Merker hiesse „kein Cookie" dort sowohl
+    /// „abgemeldet" als auch „umgezogen" — und jede uebernommene Sitzung meldete sich beim zweiten Abgleich
+    /// ab. Der Wert ist KEIN Nachweis (siehe <see cref="MovedMarkerFor"/>), er darf an andere Anwendungen
+    /// unter <c>/api/auth/session</c> gehen.
+    /// </summary>
+    public string MovedMarkerName => CookieName + "_moved";
+
+    /// <summary>
+    /// Wert des Merk-Cookies fuer ein Konto: ein HMAC der Nutzer-Id, gekuerzt auf 128 Bit. Daraus laesst
+    /// sich keine Anmeldung machen und die Id nicht ablesen; die Alt-Route erkennt damit nur, ob die
+    /// geteilte Anmeldung noch dem Konto der fragenden Oberflaeche gehoert.
+    /// </summary>
+    public string MovedMarkerFor(int userId)
+    {
+        using var hmac = new System.Security.Cryptography.HMACSHA256(SigningKey().Key);
+        var mac = hmac.ComputeHash(Encoding.UTF8.GetBytes(Audience + "|moved|" + userId));
+        return Base64UrlEncoder.Encode(mac.AsSpan(0, 16).ToArray());
+    }
+
     /// <summary>So lange wie eine gewoehnliche Anmeldung ohne „eingeloggt bleiben".</summary>
     public static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
 
