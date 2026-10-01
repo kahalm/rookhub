@@ -35,7 +35,7 @@ import {
   imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatBadgeModule, TranslatePipe],
   template: `
     <mat-toolbar color="primary">
-      <span class="logo" routerLink="/dashboard">RookHub</span>
+      <span class="logo" routerLink="/">RookHub</span>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
         <!-- UI-Entrümpelung Navbar: 3 Icons — Vollbild (oft benutzt), Glocke, Menü.

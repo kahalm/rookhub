@@ -152,6 +152,16 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     expect(iconBtns.length).toBe(2);      // Vollbild + ☰ — keine Icon-Reihe mehr
   });
 
+  // Das Logo führt auf die Startadresse, nicht hart aufs Dashboard: „/“ entscheidet selbst — Gäste in einen
+  // offenen Bereich, Angemeldete aufs Dashboard (UX-025). Vorher landete ein Gast so vor der Anmeldesperre.
+  for (const loggedIn of [false, true]) {
+    it(`das Logo führt auf „/“ (${loggedIn ? 'angemeldet' : 'Gast'})`, () => {
+      const fixture = render({ loggedIn, keys: ['dashboard', 'puzzles'] });
+      const logo = fixture.debugElement.query(By.css('mat-toolbar .logo'));
+      expect(logo.injector.get(RouterLink).urlTree?.toString()).toBe('/');
+    });
+  }
+
   it('ausgeloggt: das ☰-Menü bietet den Theme-Umschalter (Anonyme haben keine Profil-Theme-Karte)', () => {
     const fixture = render({ loggedIn: false, keys: ['puzzles'] });
     const el: HTMLElement = fixture.nativeElement;

@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/auth.service';
 import { authGuard } from './core/auth.guard';
 import { guestGuard } from './core/guest.guard';
 import { adminGuard } from './core/admin.guard';
@@ -7,7 +9,10 @@ import { menuGuard } from './core/menu.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+  // Startadresse (UX-025): angemeldet das Dashboard, Gäste ein OFFENER Bereich. Vorher führte „/“ (und das Logo)
+  // auch Gäste aufs Dashboard und damit vor die Anmeldesperre „… um fortzufahren“, obwohl Puzzles, Endless,
+  // Punktepartie und Analyse ohne Konto laufen. Ein String-Ziel verhält sich wie das bisherige redirectTo.
+  { path: '', redirectTo: () => inject(AuthService).isLoggedIn ? '/dashboard' : '/puzzles', pathMatch: 'full' },
   { path: 'login', loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
   { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password.component').then(m => m.ForgotPasswordComponent) },

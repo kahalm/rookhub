@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, CanActivateFn, Route, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { appConfig } from './app.config';
+import { AuthService } from './core/auth.service';
 import { checkSharedPageLinks } from './testing/shared-page-links';
 import { AuthService } from './core/auth.service';
 
@@ -87,6 +88,25 @@ describe('app.routes', () => {
 
   it('leitet alles Längere weiterhin aufs Dashboard um', async () => {
     expect(await matchedPath('/noel/KW46/zuviel')).toBe('dashboard');
+  });
+});
+
+describe('app.routes — Startadresse (UX-025)', () => {
+  // Die Umleitung von „/“ fragt den Anmeldestand; die Tabelle ist dieselbe, nur ohne Guards (s. o.).
+  function start(isLoggedIn: boolean): void {
+    TestBed.configureTestingModule({
+      providers: [provideRouter(testRoutes()), { provide: AuthService, useValue: { isLoggedIn } }],
+    });
+  }
+
+  it('schickt Gäste von „/“ in einen offenen Bereich (Puzzles) statt vor die Anmeldesperre des Dashboards', async () => {
+    start(false);
+    expect(await matchedPath('/')).toBe('puzzles');
+  });
+
+  it('schickt Angemeldete von „/“ weiterhin aufs Dashboard', async () => {
+    start(true);
+    expect(await matchedPath('/')).toBe('dashboard');
   });
 });
 
