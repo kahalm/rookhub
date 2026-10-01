@@ -26,10 +26,11 @@ function makeSolveMode(antwort: 'training' | 'easy' = 'training', prefsViz = 3):
   return stub;
 }
 
-function makeComponent(params: Record<string, string> = {}, solveMode: any = makeSolveMode()): any {
+function makeComponent(params: Record<string, string> = {}, solveMode: any = makeSolveMode(), prefsOverrides: Record<string, unknown> = {}): any {
   const prefs: any = {
     boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, visualization: 0,
     setVisualization(v: number) { this.visualization = v; },
+    ...prefsOverrides,
   };
   const stockfish: any = { init: () => Promise.resolve(), getEval: () => Promise.resolve('') };
   const auth: any = { isLoggedIn: false };
@@ -576,6 +577,57 @@ describe('PuzzleComponent Einstellungen speichern (F2-009)', () => {
     c.openSettingsDialog();
 
     expect(c.enPassantForced).toBeTrue();
+    c.ngOnDestroy();
+  });
+});
+
+// Codereview F2-016: „Gelöste ausschließen" wurde nur zugewiesen — nicht gemerkt (nach Neuladen wieder aus) und nicht
+// auf das vorgeladene Puzzle/den Offline-Pool angewendet (das nächste Puzzle konnte ein gelöstes sein).
+describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
+  it('liest den gemerkten Schalter beim Start', () => {
+    const c = makeComponent({}, makeSolveMode(), { puzzleExcludeSolved: true });
+    expect(c.excludeSolved).toBeTrue();
+    c.ngOnDestroy();
+  });
+
+  it('Umschalten merkt den Schalter, verwirft Vorab-Puzzle und Offline-Pool — das nächste Puzzle kommt gefiltert', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.state = 'AWAITING_USER_MOVE';
+    (c as any).nextPuzzle = { ...PUZZLE, id: 77 };            // noch mit excludeSolved=false vorgeladen
+    (c as any).offlinePuzzlePool = [{ ...PUZZLE, id: 78 }];
+    stubSettingsDialog(c, { excludeSolved: true });
+    c.prefs.setPuzzleExcludeSolved = jasmine.createSpy('setPuzzleExcludeSolved');
+    spyOn(c as any, 'setupPuzzle');
+
+    c.openSettingsDialog();
+
+    expect(c.excludeSolved).toBeTrue();
+    expect(c.prefs.setPuzzleExcludeSolved).toHaveBeenCalledWith(true);
+    expect((c as any).nextPuzzle).toBeNull();
+    expect((c as any).offlinePuzzlePool).toEqual([]);
+    expect((c as any).setupPuzzle).not.toHaveBeenCalled();   // das laufende Puzzle bleibt
+
+    const getRandom = jasmine.createSpy('getRandom').and.returnValue({ subscribe: () => ({ unsubscribe() {} }) });
+    c.puzzleService.getRandom = getRandom;
+    c.loadNext();
+    expect(getRandom).toHaveBeenCalledTimes(1);
+    expect(getRandom.calls.mostRecent().args[3]).toBeTrue();   // excludeSolved
+    c.ngOnDestroy();
+  });
+
+  it('eine noch laufende Vorab-Anfrage mit dem alten Filter wird verworfen', () => {
+    const c = makeComponent();
+    let antwort: ((p: any) => void) | null = null;
+    c.puzzleService.getRandom = () => ({ subscribe: (h: any) => { antwort = h.next; return { unsubscribe() {} }; } });
+    (c as any).prefetchNext();                                 // läuft noch mit excludeSolved=false
+    stubSettingsDialog(c, { excludeSolved: true });
+    c.prefs.setPuzzleExcludeSolved = () => {};
+
+    c.openSettingsDialog();
+    antwort!({ ...PUZZLE, id: 79 });
+
+    expect((c as any).nextPuzzle).toBeNull();
     c.ngOnDestroy();
   });
 });

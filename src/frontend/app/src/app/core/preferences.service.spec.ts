@@ -56,6 +56,17 @@ describe('PreferencesService', () => {
     expect(svc.visualization).toBe(0);
   });
 
+  // Codereview F2-016: „Gelöste ausschließen" stand nach jedem Neuladen wieder auf aus.
+  it('merkt „Gelöste ausschließen" lokal und liest es beim nächsten Start', () => {
+    const svc = make();
+    expect(svc.puzzleExcludeSolved).toBeFalse();
+    svc.setPuzzleExcludeSolved(true);
+    expect(JSON.parse(localStorage.getItem('rookhub_puzzle_config')!).excludeSolved).toBeTrue();
+    TestBed.resetTestingModule();
+    expect(make().puzzleExcludeSolved).toBeTrue();
+    httpMock.verify(); // nur lokal, kein PUT
+  });
+
   it('setStockfishDepth clamps to 1..24 (logged out → no server call)', () => {
     const svc = make();
     svc.setStockfishDepth(99);

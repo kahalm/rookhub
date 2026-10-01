@@ -35,6 +35,8 @@ export class PreferencesService {
   visualization = 1;
   /** Standard-Puzzle: „5 schwächste Themen trainieren" (nur lokal, geräteabhängig). */
   puzzleWorstTags = false;
+  /** Standard-Puzzle: „Gelöste ausschließen" (nur lokal, geräteabhängig — wie puzzleWorstTags). */
+  puzzleExcludeSolved = false;
   /** Gegnerzug-Pfeil im Viz-Modus anzeigen (nur lokal). */
   vizArrow = true;
   /** Nach wie vielen off-path-Zügen (gegen Stockfish) gewarnt wird, wenn die Eval nicht mind. +2
@@ -63,6 +65,7 @@ export class PreferencesService {
         if (saved.stockfishDepth) this.stockfishDepth = this.clampDepth(saved.stockfishDepth);
         if (saved.difficulty) this.puzzleDifficulty = saved.difficulty;
         if (typeof saved.worstTags === 'boolean') this.puzzleWorstTags = saved.worstTags;
+        if (typeof saved.excludeSolved === 'boolean') this.puzzleExcludeSolved = saved.excludeSolved;
       }
     } catch {}
     try {
@@ -178,6 +181,11 @@ export class PreferencesService {
     this.savePuzzleConfigLocal();
   }
 
+  setPuzzleExcludeSolved(enabled: boolean): void {
+    this.puzzleExcludeSolved = enabled;
+    this.savePuzzleConfigLocal();
+  }
+
   setBookStockfishDepth(depth: number): void {
     this.bookStockfishDepth = this.clampDepth(depth);
     this.saveBookConfigLocal();
@@ -189,7 +197,8 @@ export class PreferencesService {
       localStorage.setItem(PUZZLE_CONFIG_KEY, JSON.stringify({
         stockfishDepth: this.stockfishDepth,
         difficulty: this.puzzleDifficulty,
-        worstTags: this.puzzleWorstTags
+        worstTags: this.puzzleWorstTags,
+        excludeSolved: this.puzzleExcludeSolved
       }));
     } catch {}
   }

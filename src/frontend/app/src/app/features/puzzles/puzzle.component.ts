@@ -536,9 +536,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private prefetchNext(): void {
     const epoch = this.loadEpoch;
+    const excludeSolved = this.excludeSolved;   // Filter umgeschaltet, während die Anfrage lief → verwerfen
     const r = this.ratingRange();
-    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam)
-      .subscribe({ next: p => { if (epoch === this.loadEpoch) this.nextPuzzle = p; }, error: () => {} });
+    this.puzzleService.getRandom(r.min, r.max, undefined, excludeSolved, this.worstThemesParam)
+      .subscribe({ next: p => { if (epoch === this.loadEpoch && excludeSolved === this.excludeSolved) this.nextPuzzle = p; }, error: () => {} });
   }
 
   /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
@@ -829,6 +830,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     const d = this.prefs.puzzleDifficulty;
     if (d && d in DIFFICULTY_OFFSET) this.difficulty = d as typeof this.difficulty;
     this.worstTagsEnabled = this.prefs.puzzleWorstTags;
+    this.excludeSolved = this.prefs.puzzleExcludeSolved;
   }
 
   /** Aktive Schwächen-Themen für die Sichtbar-Anzeige während des Lösens (leer, wenn Filter aus). */
@@ -938,8 +940,15 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         this.onDifficultyChange();
         this.loadNext();
       }
-      if (result.excludeSolved !== undefined) {
+      if (result.excludeSolved !== undefined && result.excludeSolved !== this.excludeSolved) {
         this.excludeSolved = result.excludeSolved;
+        this.prefs.setPuzzleExcludeSolved(this.excludeSolved);
+        // Vorab geladenes Puzzle + Offline-Pool galten für den alten Filter → verwerfen und neu füllen.
+        // Das laufende Puzzle bleibt; erst das nächste kommt mit dem neuen Filter.
+        this.nextPuzzle = null;
+        this.offlinePuzzlePool = [];
+        this.saveOfflinePool();
+        this.prefetchOfflinePool();
       }
       if (result.worstTags !== undefined && result.worstTags !== this.worstTagsEnabled) {
         this.worstTagsEnabled = result.worstTags;
