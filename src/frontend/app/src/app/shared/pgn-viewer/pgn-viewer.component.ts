@@ -1,4 +1,4 @@
-import { Component, HostListener, Inject, OnInit, ChangeDetectionStrategy, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Inject, OnInit, ChangeDetectionStrategy, inject, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { BoardBadge } from '../../features/games/move-badge.util';
 import { GameEvalsStatus } from '../../features/games/game-review.util';
 import { AnalyzeGameService } from '../../features/games/analyze-game.service';
 import { GuessUploadStatus } from '../../features/analysis/game-analysis.service';
+import { isBoardHotkey } from '../keyboard.util';
 
 export interface PgnViewerData {
   pgn: string;
@@ -251,6 +252,7 @@ export interface PgnViewerData {
 })
 export class PgnViewerComponent implements OnInit {
   private analyzeGame = inject(AnalyzeGameService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   flipped = false;
   // Signale: sie ändern sich in HTTP-Antworten und in der Ausgabe der Kurve, und nur ein gelesenes
@@ -299,6 +301,9 @@ export class PgnViewerComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    // Der Betrachter lebt selbst in einem Dialog: Tasten im EIGENEN Fenster gehoeren ihm, ein darueber
+    // geoeffnetes Menue (Partie-Auswahl) und Eingabefelder nicht.
+    if (!isBoardHotkey(event, this.host.nativeElement)) return;
     switch (event.key) {
       case 'ArrowLeft':
         event.preventDefault();

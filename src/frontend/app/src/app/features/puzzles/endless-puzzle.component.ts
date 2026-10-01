@@ -45,6 +45,7 @@ import { PUZZLE_THEME_PRESETS, ThemePreset, isThemePresetActive } from './puzzle
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { Key } from 'chessground/types';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 // AWAITING_USER_MOVE = first move only (no buttons)
 // THINKING = opponent responding (buttons visible, board locked)
@@ -1385,6 +1386,7 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }

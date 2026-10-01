@@ -60,6 +60,7 @@ import { WeeklyMode, WeeklyService } from '../weekly/weekly.service';
 import { WeeklyModeDialogComponent } from '../weekly/weekly-mode-dialog.component';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 // 'INFO' = Chessable-Info-/Erklärlinie: kein Quiz, nur Durchklicken (Review-Modus ab Stellung 0).
 type BookPuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'COURSE_DONE' | 'INFO';
@@ -1924,8 +1925,8 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED' && !this.reviewMode) return;
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    // Auch nicht im offenen Einstellungsdialog/Menue: Enter auf einer Auswahl luede sonst das naechste Puzzle.
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') { this.reviewPrev(); return; }
     if (e.key === 'ArrowRight') { this.reviewNext(); return; }
     // Leertaste/Enter = „nächstes Puzzle" (wie ein Klick auf den primären Weiter-Knopf) im

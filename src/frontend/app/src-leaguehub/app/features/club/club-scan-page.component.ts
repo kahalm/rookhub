@@ -8,6 +8,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@rh/core/auth.service';
 import { ChessBoardComponent, UserBoardMove } from '@rh/shared/pgn-viewer/chess-board.component';
 import { scrollIntoContainer } from '@rh/shared/pgn-viewer/move-list.component';
+import { isBoardHotkey } from '@rh/shared/keyboard.util';
 import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
@@ -563,8 +564,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    const target = e.target as HTMLElement | null;
-    if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') { this.s.go(this.s.cursor() - 1); e.preventDefault(); }
     if (e.key === 'ArrowRight') { this.s.go(this.s.cursor() + 1); e.preventDefault(); }
   }

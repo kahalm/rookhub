@@ -40,6 +40,7 @@ import { BasePuzzleSolver } from './base-puzzle-solver';
 import { LongSolveService } from './long-solve.service';
 import { SolveMode, SolveModeService } from '../../core/solve-mode.service';
 import { of } from 'rxjs';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 type PuzzleState = 'LOADING' | 'SETUP' | 'AWAITING_USER_MOVE' | 'THINKING' | 'PLAYING' | 'SOLVED' | 'FAILED' | 'ERROR';
 
@@ -645,6 +646,7 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (this.state !== 'SOLVED' && this.state !== 'FAILED') return;
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') this.reviewPrev();
     if (e.key === 'ArrowRight') this.reviewNext();
   }

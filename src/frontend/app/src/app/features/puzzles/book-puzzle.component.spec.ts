@@ -2034,3 +2034,64 @@ describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht 
     expect(overviewButtons(render(true, true)).length).toBe(1);
   });
 });
+
+/**
+ * Tasten im Einstellungsdialog (⋮ → Einstellungen, jederzeit erreichbar) blaetterten das geloeste Kurs-Puzzle
+ * dahinter: Pfeil rechts auf einem Auswahlfeld = reviewNext(), Enter auf einer Option = naechstes Puzzle.
+ */
+describe('BookPuzzleComponent Tastatur hinter offenem Dialog', () => {
+  let overlay: HTMLElement;
+  afterEach(() => overlay?.remove());
+
+  function solvedInCourse(): any {
+    const c: any = makeComponent();
+    c.state = 'SOLVED';
+    c.inCourse = true;
+    spyOn(c, 'reviewNext');
+    spyOn(c, 'courseNext');
+    return c;
+  }
+
+  function press(c: any, key: string, target: EventTarget, prevented = false): KeyboardEvent {
+    const e = new KeyboardEvent('keydown', { key, cancelable: true });
+    Object.defineProperty(e, 'target', { value: target });
+    if (prevented) e.preventDefault();
+    c.onKeyDown(e);
+    return e;
+  }
+
+  function dialogOption(): HTMLElement {
+    overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const pane = document.createElement('div');
+    pane.className = 'cdk-overlay-pane';
+    const option = document.createElement('mat-option');
+    pane.appendChild(option);
+    overlay.appendChild(pane);
+    document.body.appendChild(overlay);
+    return option;
+  }
+
+  it('auf der Seite: Pfeil rechts blaettert, Enter laedt das naechste Kurs-Puzzle', () => {
+    const c = solvedInCourse();
+    press(c, 'ArrowRight', document.body);
+    press(c, 'Enter', document.body);
+    expect(c.reviewNext).toHaveBeenCalledTimes(1);
+    expect(c.courseNext).toHaveBeenCalledTimes(1);
+  });
+
+  it('im offenen Dialog: weder Blaettern noch naechstes Puzzle', () => {
+    const c = solvedInCourse();
+    const option = dialogOption();
+    press(c, 'ArrowRight', option);
+    press(c, 'Enter', option);
+    expect(c.reviewNext).not.toHaveBeenCalled();
+    expect(c.courseNext).not.toHaveBeenCalled();
+  });
+
+  it('schon verarbeitete Taste (mat-select ruft preventDefault) blaettert nicht noch einmal', () => {
+    const c = solvedInCourse();
+    press(c, 'ArrowRight', document.createElement('mat-select'), true);
+    expect(c.reviewNext).not.toHaveBeenCalled();
+  });
+});

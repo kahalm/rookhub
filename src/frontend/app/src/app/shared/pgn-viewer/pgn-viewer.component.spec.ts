@@ -122,4 +122,56 @@ describe('PgnViewerComponent', () => {
       expect(Math.round(board.getBoundingClientRect().width)).toBe(Math.round(expected));
     }
   });
+
+  // ----- Pfeiltasten: der Betrachter ist selbst ein Dialog -----
+
+  /** Ein Overlay-Fenster wie von MatDialog/MatMenu: Container > Fenster. */
+  function overlayPane(): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'cdk-overlay-container';
+    const pane = document.createElement('div');
+    pane.className = 'cdk-overlay-pane';
+    container.appendChild(pane);
+    document.body.appendChild(container);
+    return pane;
+  }
+
+  function arrowRight(viewer: PgnViewerComponent, target: EventTarget, prevented = false): void {
+    const e = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+    Object.defineProperty(e, 'target', { value: target });
+    if (prevented) e.preventDefault();
+    viewer.onKeyDown(e);
+  }
+
+  it('arrow keys inside its own dialog step through the game', async () => {
+    const fixture = await setup({ pgn });
+    fixture.detectChanges();
+    const pane = overlayPane();
+    pane.appendChild(fixture.nativeElement);   // wie im echten Dialog: der Betrachter liegt im Overlay-Fenster
+    const step = spyOn(fixture.componentInstance.service, 'goForward');
+
+    arrowRight(fixture.componentInstance, fixture.nativeElement.querySelector('button') ?? fixture.nativeElement);
+    arrowRight(fixture.componentInstance, pane);   // Fokus auf dem Dialog-Rahmen
+    expect(step).toHaveBeenCalledTimes(2);
+    pane.parentElement!.remove();
+  });
+
+  it('a menu opened over the viewer, an input or an already handled key does not step the game', async () => {
+    const fixture = await setup({ pgn });
+    fixture.detectChanges();
+    const step = spyOn(fixture.componentInstance.service, 'goForward');
+
+    const menu = overlayPane();
+    const item = document.createElement('button');
+    menu.appendChild(item);
+    arrowRight(fixture.componentInstance, item);
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    arrowRight(fixture.componentInstance, input);
+    arrowRight(fixture.componentInstance, document.body, true);   // geschlossenes mat-select wechselt mit ←/→ die Partie (preventDefault)
+
+    expect(step).not.toHaveBeenCalled();
+    menu.parentElement!.remove();
+    input.remove();
+  });
 });

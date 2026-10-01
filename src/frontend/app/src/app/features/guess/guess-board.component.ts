@@ -17,6 +17,7 @@ import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GuessAccept, GuessHistoryMove, GuessResult, GuessReviewMove, GuessService, GuessSession } from './guess.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /** Umwandlungsfigur aus dem SAN („e8=Q+" → „q"); leer, wenn der Zug keine Umwandlung ist. */
 function promotionOf(san: string | undefined): string {
@@ -584,9 +585,7 @@ export class GuessBoardComponent implements OnInit, OnDestroy {
    */
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    const el = e.target as HTMLElement | null;
-    if (el?.closest?.('input, textarea, select, [contenteditable="true"], .cdk-overlay-container')) return;
+    if (e.shiftKey || !isBoardHotkey(e)) return;
     if (!this.session?.history.length) return;
 
     switch (e.key) {
