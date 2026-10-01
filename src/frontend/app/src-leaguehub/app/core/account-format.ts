@@ -6,6 +6,10 @@ export const ACCOUNT_SITES: { key: string; label: string }[] = [
 
 export const siteLabel = (site: string | null): string => ACCOUNT_SITES.find(s => s.key === site)?.label ?? site ?? '';
 
+/** Kennzeichen eines Kontos, das nur ein Admin sieht (Minderjährige, 0.625.0). */
+export const MINOR_ACCOUNT = 'minderjährig – nur für Admins sichtbar';
+export const MINOR_ACCOUNT_TITLE = 'Andere sehen nur, dass es ein Konto gibt; über Teilen-Links und in der Meldeliste steht es nie.';
+
 /** Anzeige eines Kontos, dessen Seite und Name verborgen bleiben (Minderjährige, 0.610.0). */
 export const HIDDEN_ACCOUNT = 'Online-Konto (verborgen – minderjährig)';
 

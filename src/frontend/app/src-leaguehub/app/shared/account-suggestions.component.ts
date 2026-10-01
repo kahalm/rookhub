@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output, signal } fro
 import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../core/league-api.service';
 import { AccountSuggestion } from '../core/league.models';
-import { HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
+import { HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from '../core/account-format';
 import { AccountChecksComponent } from './account-checks.component';
 
 /** „zuletzt aktiv 09/2026" — genauer braucht es niemand, um ein verwaistes Konto zu erkennen. */
@@ -38,6 +38,7 @@ export function suggestionFacts(s: AccountSuggestion): string {
               <a [href]="s.url" target="_blank" rel="noopener">{{ label(s.site) }}: {{ s.user }}</a>
               <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(s.id)" aria-label="Was geprüft wurde"
                       title="Was geprüft wurde" (click)="toggleChecks(s.id)">i</button>
+              @if (s.minor) { <span class="tag tag-minor" [attr.title]="minorTitle">{{ minorLabel }}</span> }
             }
             @if (showPlayer() && s.name) {
               <button type="button" class="btn-link sugg-player" (click)="openPlayer.emit(s.fide)">{{ s.name }}</button>
@@ -73,6 +74,8 @@ export class AccountSuggestionsComponent {
   readonly label = siteLabel;
   readonly facts = suggestionFacts;
   readonly hiddenLabel = HIDDEN_ACCOUNT;
+  readonly minorLabel = MINOR_ACCOUNT;
+  readonly minorTitle = MINOR_ACCOUNT_TITLE;
   readonly busy = signal<number | null>(null);
   readonly error = signal<string | null>(null);
   /** Erledigte bleiben mit einem Satz stehen, bis die Liste neu kommt — sonst springt die Liste unter dem Finger weg. */

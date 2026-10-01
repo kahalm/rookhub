@@ -40,6 +40,15 @@ describe('AccountSuggestionsComponent', () => {
     expect(el().textContent).toContain('Das Profil war gerade nicht abrufbar');
   });
 
+  it('Vorschlag eines Minderjährigen für einen Admin: Konto, (i) und Kennzeichen', () => {
+    fixture.componentRef.setInput('items', [S(1, { minor: true })]);
+    fixture.detectChanges();
+    const row = el().querySelector('.sugg-list li')!;
+    expect(row.textContent).toContain('chess.com: Max_Muster');
+    expect(row.querySelector('.tag-minor')?.textContent).toContain('nur für Admins sichtbar');
+    expect(row.querySelector('.chk-btn')).not.toBeNull();
+  });
+
   it('Hilfen: zuletzt aktiv, Profilangaben', () => {
     expect(lastActiveText('2026-09-01T10:00:00Z')).toBe('zuletzt aktiv 09/2026');
     expect(lastActiveText(null)).toBeNull();

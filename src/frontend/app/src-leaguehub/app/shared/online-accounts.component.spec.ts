@@ -80,6 +80,15 @@ describe('OnlineAccountsComponent', () => {
     expect(el().querySelector('.chk')).toBeNull();
   });
 
+  it('ein Admin sieht das Konto eines Minderjährigen vollständig, gekennzeichnet, mit (i) und Bearbeiten', () => {
+    render([{ ...SURE, minor: true }], true);
+    const row = el().querySelector('.acc-list li')!;
+    expect(row.textContent).toContain('Lichess: patrik');
+    expect(row.querySelector('.tag-minor')?.textContent).toContain('nur für Admins sichtbar');
+    expect(row.querySelector('.chk-btn')).not.toBeNull();
+    expect(button('Bearbeiten')).toBeDefined();
+  });
+
   it('Konto hinzufügen: Seite, Name, gesichert, Kommentar — danach „changed"', async () => {
     api.addAccount.and.resolveTo(SURE);
     render([], true);

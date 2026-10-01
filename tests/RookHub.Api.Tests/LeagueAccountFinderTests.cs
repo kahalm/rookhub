@@ -337,6 +337,19 @@ public class LeagueAccountFinderTests : IDisposable
         foreach (var text in new[] { overview.ToJsonString(), json.ToJsonString(), card.ToJsonString(), shared.ToJsonString(), view })
             foreach (var name in new[] { "MaxMuster", "Max_Muster", "Muster1987", "max_muster", "maxmuster" })
                 Assert.DoesNotContain(name, text, StringComparison.OrdinalIgnoreCase);
+
+        // Admins sehen alles, gekennzeichnet (0.625.0, Wunsch: „Admins sollen auch bei Minderjährigen die Onlinekonten für die
+        // Prüfung auf sicher/unsicher/verwerfen sehen, sonst kann ich das nicht entscheiden") — der Teilen-Link nie.
+        var adminItem = (await svc.SuggestionsAsync(null, default, reveal: true))["items"]![0]!;
+        Assert.Equal((true, (bool?)null), (adminItem["minor"]!.GetValue<bool>(), (bool?)adminItem["hidden"]));
+        Assert.False(string.IsNullOrEmpty((string?)adminItem["user"]));
+        Assert.False(string.IsNullOrEmpty((string?)adminItem["url"]));
+        var adminJson = await svc.JsonAsync(acc!, default, reveal: true);
+        Assert.Equal(("MaxMuster", true), ((string?)adminJson["user"], adminJson["minor"]!.GetValue<bool>()));
+        Assert.StartsWith("Vorschlag der Konto-Suche", (string?)adminJson["comment"]);
+        var adminCard = (await league.CardAsync("222", onlySure: false, default, reveal: true))!;
+        Assert.Equal("MaxMuster", (string?)adminCard["accounts"]![0]!["user"]);
+        Assert.Empty((await league.CardAsync("222", onlySure: true, default, reveal: true))!["accounts"]!.AsArray());
     }
 
     [Fact]

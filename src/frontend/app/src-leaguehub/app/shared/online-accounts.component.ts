@@ -5,7 +5,7 @@ import { LeagueApiService } from '../core/league-api.service';
 import { Account, AccountInput, AccountSuggestion, SuggestionList } from '../core/league.models';
 import { AccountSuggestionsComponent } from './account-suggestions.component';
 import { AccountChecksComponent } from './account-checks.component';
-import { ACCOUNT_SITES, HIDDEN_ACCOUNT, accountErrorText, siteLabel } from '../core/account-format';
+import { ACCOUNT_SITES, HIDDEN_ACCOUNT, MINOR_ACCOUNT, MINOR_ACCOUNT_TITLE, accountErrorText, siteLabel } from '../core/account-format';
 
 export { ACCOUNT_SITES, accountErrorText, siteLabel } from '../core/account-format';
 
@@ -52,6 +52,7 @@ export function accountStatus(a: Account): string | null {
                   <a [href]="a.url" target="_blank" rel="noopener">{{ label(a.site) }}: {{ a.user }}</a>
                 }
                 <span class="tag" [class.tag-sure]="a.conf === 'sicher'">{{ a.conf === 'sicher' ? 'gesichert' : 'unsicher' }}</span>
+                @if (a.minor) { <span class="tag tag-minor" [attr.title]="minorTitle">{{ minorLabel }}</span> }
                 @if (a.id !== undefined && !a.hidden) {
                   <button type="button" class="chk-btn" [attr.aria-expanded]="checksOpen().has(a.id)" aria-label="Was geprüft wurde"
                           title="Was geprüft wurde" (click)="toggleChecks(a.id)">i</button>
@@ -134,6 +135,8 @@ export class OnlineAccountsComponent {
   readonly sites = ACCOUNT_SITES;
   readonly label = siteLabel;
   readonly hiddenLabel = HIDDEN_ACCOUNT;
+  readonly minorLabel = MINOR_ACCOUNT;
+  readonly minorTitle = MINOR_ACCOUNT_TITLE;
   readonly status = accountStatus;
 
   readonly adding = signal(false);

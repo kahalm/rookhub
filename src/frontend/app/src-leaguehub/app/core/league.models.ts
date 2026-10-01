@@ -28,6 +28,8 @@ export interface Account {
   /** Bei einem Minderjährigen (`hidden`) leer — der Server verrät Seite, Name und Adresse nicht (0.610.0). */
   site: string | null; user: string | null; url: string | null; conf: string;
   hidden?: boolean;
+  /** Minderjährig, aber ein ADMIN sieht es (0.625.0) — vollständig, mit dem Hinweis „nur für Admins sichtbar". */
+  minor?: boolean;
   id?: number; comment?: string | null; games?: number; syncedAt?: string | null; error?: string | null;
 }
 
@@ -35,6 +37,8 @@ export interface Account {
 export interface AccountSuggestion {
   /** Bei einem Minderjährigen (`hidden`) leer — entschieden wird nach den Hinweisen (0.610.0). */
   id: number; fide: string; site: string | null; user: string | null; url: string | null; hidden?: boolean;
+  /** Minderjährig, für einen Admin trotzdem vollständig (0.625.0). */
+  minor?: boolean;
   /** Wie stark die Hinweise sind (sortiert die Liste). */
   score: number;
   /** Die Hinweise als Satz („Nutzername aus dem Namen; Klarname im Profil …"). */

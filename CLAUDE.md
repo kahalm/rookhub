@@ -1871,6 +1871,11 @@ LeagueHub sucht selbst nach Konten und legt sie als VORSCHLAG ab (`LeagueAccount
   das Konto von selbst sichtbar. Ohne Such-Eintrag (nie abgesucht) gilt ein Konto als sichtbar — die Suche erfasst jeden Spieler
   der laufenden Saison. In DB und Server-Log steht die Verknüpfung weiter (nur Betreiber). Testfall
   `Minors_AreSearched_ButNothingIdentifyingLeavesTheServer` prüft ALLE Ausgaben auf den Nutzernamen.
+  **Ausnahme ADMINS** (0.625.0, Wunsch „Admins sollen auch bei Minderjährigen die Onlinekonten für die Prüfung auf
+  sicher/unsicher/verwerfen sehen, sonst kann ich das nicht entscheiden"): Rolle `Admin` (`IsAdmin` im Controller → `reveal`)
+  bekommt Karte, Vorschläge, Konto-Antworten und die Prüfung (i) VOLLSTÄNDIG, mit `minor: true` (Oberfläche: Etikett „minderjährig –
+  nur für Admins sichtbar"). Wer nur `league.view`/`league.manage` hat, sieht weiter nichts; Teilen-Links (`onlySure`) und die
+  Meldeliste der Ansichten zeigen es nie, auch nicht einem Admin.
 * **Nicht wieder vorschlagen**: verworfene Vorschläge bleiben als `Rejected` stehen; ein ENTFERNTES Konto wird als verworfener
   Vorschlag gemerkt; ein angelegtes Konto erledigt den passenden Vorschlag (Vergleich ohne Groß/klein).
 * **Takt**: im `LeagueOnlineSyncScheduler` nach jedem Abruf-Durchgang, je Runde höchstens 5 min (`SearchBudget`), 1 s Pause je
@@ -1966,8 +1971,11 @@ wie im Wunsch:
 * Dazu FIDE-Wertung und Tiroler Ort im Profil, Tiroler Lichess-Teams und andere Team-Battles, zuletzt aktiv, gesperrt, bei einem anderen
   Spieler eingetragen, das Ergebnis der Team-Suche und (Vorschlag) ihre Hinweise.
 Das Profil wird dafür FRISCH geholt (dieselben Abrufe wie die Suche); ist die Seite nicht erreichbar, stehen die Profil-Prüfungen auf
-„nicht geprüft — …" und das Ergebnis wird nur eine Minute gemerkt, sonst `CacheFor` 10 min (IMemoryCache). Verborgene Konten
-(Minderjährige) → 404. Oberfläche: rundes (i) in der Konto- bzw. Vorschlags-Zeile (`shared/account-checks.component.ts`, reine Regeln
+„nicht geprüft — …" und das Ergebnis wird nur eine Minute gemerkt (ebenso, wenn die Partien eines Vorschlags gerade nicht kamen),
+sonst `CacheFor` 10 min (IMemoryCache). Verborgene Konten (Minderjährige) → 404, außer für Admins (0.625.0). **Partien eines
+Lichess-Vorschlags NUR mit `Accept: application/x-ndjson`** — ohne den Kopf liefert Lichess PGN, das Lesen scheiterte, und bis 0.624
+zeigte JEDER Lichess-Vorschlag „Partien gerade nicht abrufbar". Lichess gibt Partien nur einem Abruf je Adresse zugleich heraus;
+läuft der Hintergrund-Abruf, kommt 429 → Text „Lichess bremst gerade …". Oberfläche: rundes (i) in der Konto- bzw. Vorschlags-Zeile (`shared/account-checks.component.ts`, reine Regeln
 in `core/account-checks.ts`), Liste darunter mit Zeichen (✓ ! ✕ – i) + Wort für Vorleser + Satz, oben die Zusammenfassung.
 
 | Methode | Endpoint | Recht | Zweck |

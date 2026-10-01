@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.625.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub: admins now see the online accounts of minors in full — on the player card, among the suggestions and in the (i) — marked “minor – visible to admins only”, so they can decide between sure, unsure and reject. Everyone else still only sees that an account exists; share links and the line-up lists never show it.", de: "LeagueHub: Admins sehen die Online-Konten Minderjähriger jetzt vollständig — auf der Spielerkarte, bei den Vorschlägen und im (i) —, gekennzeichnet mit „minderjährig – nur für Admins sichtbar“, damit sie zwischen gesichert, unsicher und verwerfen entscheiden können. Alle anderen sehen weiterhin nur, dass es ein Konto gibt; Teilen-Links und Meldelisten zeigen es nie." },
+    { en: "LeagueHub (i): the repertoire match for Lichess suggestions works again — it always said “games currently unavailable” because LeagueHub asked Lichess for the wrong format. If Lichess is busy (it hands out games to only one request at a time), the line now says so.", de: "LeagueHub (i): Die Repertoire-Übereinstimmung bei Lichess-Vorschlägen geht wieder — sie zeigte immer „Partien gerade nicht abrufbar“, weil LeagueHub Lichess nach dem falschen Format gefragt hat. Bremst Lichess gerade (es gibt Partien nur einer Anfrage zugleich heraus), sagt die Zeile das jetzt." },
+  ] },
   { version: "0.624.2", date: "2026-10-01", changes: [
     { en: "LeagueHub account scouting retries once when Lichess is briefly unavailable (a 502 or no connection at all), so a short hiccup no longer costs a team battle its players for a month. A real answer — not found, no access, or rate limited — is never retried.", de: "Die LeagueHub-Konto-Suche versucht es einmal erneut, wenn Lichess kurz nicht erreichbar ist (502 oder gar keine Verbindung) — ein kurzer Aussetzer kostet einem Team-Battle nicht mehr für einen Monat seine Spieler. Eine echte Antwort (nicht gefunden, kein Zugang, Drossel) wird nie wiederholt." },
   ] },

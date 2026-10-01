@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -63,19 +64,20 @@ public sealed class LeagueAccountChecks
             : p.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
-    /// <summary>Prüfung eines eingetragenen Kontos; <c>null</c> = unbekannt oder verborgen.</summary>
-    public async Task<Result?> ForAccountAsync(int id, CancellationToken ct)
+    /// <summary>Prüfung eines eingetragenen Kontos; <c>null</c> = unbekannt oder verborgen (Minderjähriger — außer für einen Admin,
+    /// <paramref name="reveal"/>, 0.625.0).</summary>
+    public async Task<Result?> ForAccountAsync(int id, CancellationToken ct, bool reveal = false)
     {
         var a = await _db.LeagueOnlineAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (a is null || await HiddenAsync(a.FideId, ct)) return null;
+        if (a is null || !reveal && await HiddenAsync(a.FideId, ct)) return null;
         return await CachedAsync($"league-checks:a:{id}", () => BuildAsync(a.FideId, a.Site, a.UserName, a, null, ct));
     }
 
-    /// <summary>Prüfung eines Vorschlags; <c>null</c> = unbekannt oder verborgen.</summary>
-    public async Task<Result?> ForSuggestionAsync(int id, CancellationToken ct)
+    /// <summary>Prüfung eines Vorschlags; <c>null</c> = unbekannt oder verborgen (außer für einen Admin).</summary>
+    public async Task<Result?> ForSuggestionAsync(int id, CancellationToken ct, bool reveal = false)
     {
         var s = await _db.LeagueAccountSuggestions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (s is null || await HiddenAsync(s.FideId, ct)) return null;
+        if (s is null || !reveal && await HiddenAsync(s.FideId, ct)) return null;
         return await CachedAsync($"league-checks:s:{id}", () => BuildAsync(s.FideId, s.Site, s.UserName, null, s, ct));
     }
 
@@ -87,7 +89,8 @@ public sealed class LeagueAccountChecks
     {
         if (_cache?.TryGetValue(key, out Result? hit) == true && hit is not null) return hit;
         var r = await build();
-        _cache?.Set(key, r, r.ProfileLoaded ? CacheFor : CacheForFailed);
+        // Was nur gerade nicht ging (Profil oder Partien), soll beim nächsten Aufklappen neu versucht werden.
+        _cache?.Set(key, r, r.ProfileLoaded && !r.Items.Any(i => i.Text.StartsWith(GamesUnavailable)) ? CacheFor : CacheForFailed);
         return r;
     }
 
@@ -397,8 +400,8 @@ public sealed class LeagueAccountChecks
         }
         else
         {
-            var games = await RecentGamesAsync(site, user, ct);
-            if (games is null) return new Item(key, label, None, "Partien gerade nicht abrufbar");
+            var (games, why) = await RecentGamesAsync(site, user, ct);
+            if (games is null) return new Item(key, label, None, $"{GamesUnavailable} — {why}");
             online = LeagueFingerprint.Usable(games, g => g.Speed).Take(MaxOnlineGames)
                 .Select(g => ((IReadOnlyList<string>)g.Moves.ToList(), g.White)).ToList();
         }
@@ -415,22 +418,32 @@ public sealed class LeagueAccountChecks
         return new Item(key, label, share >= RepertoireGood ? Ok : share >= RepertoireLow ? Weak : Warn, text);
     }
 
-    /// <summary>Die letzten Partien eines Vorschlags (Lichess: ein Abruf; chess.com: die jüngsten Monatsarchive). <c>null</c> = nicht
-    /// zu holen.</summary>
-    private async Task<List<LeagueOnlineSync.Game>?> RecentGamesAsync(string site, string user, CancellationToken ct)
+    public const string GamesUnavailable = "Partien gerade nicht abrufbar";
+
+    /// <summary>Die letzten Partien eines Vorschlags (Lichess: ein Abruf; chess.com: die jüngsten Monatsarchive). <c>(null, Grund)</c> =
+    /// nicht zu holen.</summary>
+    private async Task<(List<LeagueOnlineSync.Game>? Games, string? Why)> RecentGamesAsync(string site, string user, CancellationToken ct)
     {
+        var label = LeagueOnlineSites.Label(site);
         try
         {
             if (site == LeagueOnlineSites.Lichess)
             {
-                using var r = await _http.GetAsync($"{_lichess}/api/games/user/{Uri.EscapeDataString(user)}?max={MaxOnlineGames * 2}&moves=true"
-                                                   + "&clocks=false&evals=false&opening=false&pgnInJson=false", ct);
-                if (!r.IsSuccessStatusCode) return null;
-                return LeagueOnlineSync.ParseLichess(await r.Content.ReadAsStringAsync(ct), user).Games;
+                // OHNE diesen Kopf liefert Lichess PGN statt einer Partie je Zeile — das Lesen scheiterte, und jeder Lichess-Vorschlag
+                // zeigte „Partien gerade nicht abrufbar" (0.625.0; der Hintergrund-Abruf setzt ihn schon immer).
+                using var req = new HttpRequestMessage(HttpMethod.Get, $"{_lichess}/api/games/user/{Uri.EscapeDataString(user)}?max={MaxOnlineGames * 2}"
+                                                                     + "&moves=true&clocks=false&evals=false&opening=false&pgnInJson=false");
+                req.Headers.Accept.ParseAdd("application/x-ndjson");
+                using var r = await _http.SendAsync(req, ct);
+                // Lichess gibt Partien nur EINEM Abruf je Adresse zugleich heraus — läuft gerade der Hintergrund-Abruf, kommt 429.
+                if (r.StatusCode == HttpStatusCode.TooManyRequests) return (null, "Lichess bremst gerade (der Hintergrund holt Partien), gleich nochmal aufklappen");
+                if (!r.IsSuccessStatusCode) return (null, $"Lichess antwortet {(int)r.StatusCode}");
+                return (LeagueOnlineSync.ParseLichess(await r.Content.ReadAsStringAsync(ct), user).Games, null);
             }
             var name = Uri.EscapeDataString(user.ToLowerInvariant());
             using var list = await _http.GetAsync($"https://api.chess.com/pub/player/{name}/games/archives", ct);
-            if (!list.IsSuccessStatusCode) return null;
+            if (list.StatusCode == HttpStatusCode.TooManyRequests) return (null, "chess.com bremst gerade, gleich nochmal aufklappen");
+            if (!list.IsSuccessStatusCode) return (null, $"chess.com antwortet {(int)list.StatusCode}");
             var games = new List<LeagueOnlineSync.Game>();
             foreach (var url in LeagueOnlineSync.ArchivesFrom(await list.Content.ReadAsStringAsync(ct), 0, 0).AsEnumerable().Reverse().Take(3))
             {
@@ -439,11 +452,15 @@ public sealed class LeagueAccountChecks
                 games.AddRange(LeagueOnlineSync.ParseChessCom(await m.Content.ReadAsStringAsync(ct), user).Games);
                 if (games.Count >= MaxOnlineGames * 2) break;
             }
-            return games.OrderByDescending(g => g.PlayedAt).ToList();
+            return (games.OrderByDescending(g => g.PlayedAt).ToList(), null);
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException && !ct.IsCancellationRequested)
+        catch (System.Text.Json.JsonException)
         {
-            return null;
+            return (null, $"Antwort von {label} unlesbar");
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            return (null, $"{label} nicht erreichbar");
         }
     }
 }

@@ -42,7 +42,7 @@ public class LeagueController : BaseApiController
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Player(string fide, CancellationToken ct) =>
-        await _league.CardAsync(fide, onlySure: false, ct) is { } c ? Ok(c) : NotFound();
+        await _league.CardAsync(fide, onlySure: false, ct, reveal: IsAdmin) is { } c ? Ok(c) : NotFound();
 
     [HttpGet("player/{fide}/pgn")]
     [HasPermission(Permissions.LeagueView)]
@@ -98,16 +98,16 @@ public class LeagueController : BaseApiController
 
     /// <summary>Partien dieses Kontos gleich (neu) abrufen lassen.</summary>
     /// <summary>Konto-Prüfung (i) eines eingetragenen Kontos (0.619.0) → <c>{ site, user, url, player, elo, checkedAt, profileLoaded,
-    /// items[{ key, label, status (ok/warn/fail/none/info), text }] }</c>; 404 unbekannt oder verborgen (minderjährig).</summary>
+    /// items[{ key, label, status (ok/weak/warn/fail/none/info), text }] }</c>; 404 unbekannt oder verborgen (minderjährig — außer für Admins).</summary>
     [HttpGet("accounts/{id:int}/checks")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> AccountChecks(int id, [FromServices] LeagueAccountChecks checks, CancellationToken ct) =>
-        await checks.ForAccountAsync(id, ct) is { } r ? Ok(r) : NotFound();
+        await checks.ForAccountAsync(id, ct, reveal: IsAdmin) is { } r ? Ok(r) : NotFound();
 
     [HttpPost("accounts/{id:int}/sync")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> SyncAccount(int id, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(await accounts.JsonAsync(a, ct)) : NotFound();
+        await accounts.RequestSyncAsync(id, ct) is { } a ? Ok(await accounts.JsonAsync(a, ct, reveal: IsAdmin)) : NotFound();
 
     // ---- Konto-Vorschläge (0.607.0) ------------------------------------------------------------
 
@@ -115,12 +115,12 @@ public class LeagueController : BaseApiController
     [HttpGet("suggestions")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> Suggestions([FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        Ok(await accounts.SuggestionsAsync(null, ct));
+        Ok(await accounts.SuggestionsAsync(null, ct, reveal: IsAdmin));
 
     [HttpGet("player/{fide}/suggestions")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> PlayerSuggestions(string fide, [FromServices] LeagueOnlineAccountService accounts, CancellationToken ct) =>
-        Ok(await accounts.SuggestionsAsync(fide, ct));
+        Ok(await accounts.SuggestionsAsync(fide, ct, reveal: IsAdmin));
 
     /// <summary>Für diesen Spieler jetzt suchen → <c>{ items, found, skipped }</c> (<c>skipped</c> bleibt seit 0.610.0 leer; früher „minderjährig" /
     /// „Jahrgang unbekannt"); 404 unbekannter Spieler, 503 <c>rateLimited</c>/<c>unreachable</c>.</summary>
@@ -143,7 +143,7 @@ public class LeagueController : BaseApiController
         {
             return StatusCode(503, new { reason = "unreachable" });
         }
-        var res = await accounts.SuggestionsAsync(fide, ct);
+        var res = await accounts.SuggestionsAsync(fide, ct, reveal: IsAdmin);
         res["found"] = r.Found;
         res["skipped"] = r.Skipped;
         return Ok(res);
@@ -162,7 +162,7 @@ public class LeagueController : BaseApiController
     [HttpGet("suggestions/{id:int}/checks")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> SuggestionChecks(int id, [FromServices] LeagueAccountChecks checks, CancellationToken ct) =>
-        await checks.ForSuggestionAsync(id, ct) is { } r ? Ok(r) : NotFound();
+        await checks.ForSuggestionAsync(id, ct, reveal: IsAdmin) is { } r ? Ok(r) : NotFound();
 
     /// <summary>Selbstmeldungen einer Quelle einspielen (ersetzt die Einträge dieser Quelle) <c>{ source, items[{ fide, site, user, team }] }</c>
     /// → <c>{ added, updated, unchanged, removed, skipped[{ index, reason }], dryRun }</c>; 400 <c>noSource</c>/<c>tooMany</c>.</summary>
@@ -183,7 +183,7 @@ public class LeagueController : BaseApiController
     private async Task<IActionResult> AccountResultAsync((Models.LeagueOnlineAccount? Account, string? Reason) r,
         LeagueOnlineAccountService accounts, CancellationToken ct) => r switch
     {
-        ({ } a, _) => Ok(await accounts.JsonAsync(a, ct)),
+        ({ } a, _) => Ok(await accounts.JsonAsync(a, ct, reveal: IsAdmin)),
         (_, "notFound" or "unknownPlayer") => NotFound(new { reason = r.Reason }),
         _ => BadRequest(new { reason = r.Reason }),
     };

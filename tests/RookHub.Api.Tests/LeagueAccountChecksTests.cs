@@ -157,7 +157,11 @@ public class LeagueAccountChecksTests : IDisposable
                       + "\"perfs\":{\"blitz\":{\"games\":300,\"rating\":2100},\"bullet\":{\"games\":4,\"rating\":1600,\"prov\":true},"
                       + "\"rapid\":{\"games\":0,\"rating\":1500}}},"
                       + "{\"id\":\"trigonias\",\"username\":\"Trigonias\",\"perfs\":{\"rapid\":{\"games\":80,\"rating\":2150}}}]");
-        if (u.Contains("/api/games/user/Trigonias")) return Ok(LichessGames("Trigonias", 30));
+        // Wie Lichess: eine Partie je Zeile NUR mit „Accept: application/x-ndjson", sonst PGN (0.625.0 — daran scheiterte das (i)).
+        if (u.Contains("/api/games/user/Trigonias"))
+            return req.Headers.Accept.Any(a => a.MediaType == "application/x-ndjson")
+                ? Ok(LichessGames("Trigonias", 30)) : Ok("[Event \"Rated blitz game\"]\n\n1. e4 e5 1-0\n");
+        if (u.Contains("/api/games/user/Busy")) return new HttpResponseMessage(HttpStatusCode.TooManyRequests) { Content = new StringContent("") };
         return new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("") };
     });
 
@@ -301,6 +305,10 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Null(await Checks(http).ForSuggestionAsync(sugg.Id, default));
         Assert.Null(await Checks(http).ForAccountAsync(9999, default));
         Assert.Empty(http.Urls);
+        // Ein Admin darf prüfen (0.625.0) — sonst kann er über einen Minderjährigen nicht entscheiden.
+        Assert.Equal("KleinKind", (await Checks(http).ForAccountAsync(kid.Id, default, reveal: true))!.User);
+        Assert.NotNull(await Checks(http).ForSuggestionAsync(sugg.Id, default, reveal: true));
+        Assert.Null(await Checks(http).ForAccountAsync(9999, default, reveal: true));
     }
 
     [Fact]
@@ -332,8 +340,14 @@ public class LeagueAccountChecksTests : IDisposable
         var d = (await Checks(down).ForSuggestionAsync(sugg.Id, default))!;
         Assert.False(d.ProfileLoaded);
         Assert.Equal((LeagueAccountChecks.None, "nicht geprüft — Lichess nicht erreichbar"), (Of(d, "name").Status, Of(d, "name").Text));
-        Assert.Equal((LeagueAccountChecks.None, "Partien gerade nicht abrufbar"), (Of(d, "repertoire").Status, Of(d, "repertoire").Text));
+        Assert.Equal((LeagueAccountChecks.None, "Partien gerade nicht abrufbar — Lichess antwortet 503"), (Of(d, "repertoire").Status, Of(d, "repertoire").Text));
         Assert.Equal(LeagueAccountChecks.None, Of(d, "username").Status);                      // braucht kein Profil
+
+        // Lichess gibt Partien nur einem Abruf zugleich heraus: 429 sagt, warum — und wird nicht 10 min gemerkt.
+        sugg.UserName = "Busy";
+        await _db.SaveChangesAsync();
+        var busy = (await Checks(World()).ForSuggestionAsync(sugg.Id, default))!;
+        Assert.StartsWith("Partien gerade nicht abrufbar — Lichess bremst gerade", Of(busy, "repertoire").Text);
     }
 
     // ── Selbstmeldungen einspielen ─────────────────────────────────────────────────────────────

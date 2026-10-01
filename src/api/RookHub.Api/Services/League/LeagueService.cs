@@ -98,8 +98,9 @@ public sealed class LeagueService
     public async Task<string?> LeagueJsonAsync(int tnr, CancellationToken ct) =>
         (await _db.LeagueViews.AsNoTracking().FirstOrDefaultAsync(v => v.Tnr == tnr, ct))?.Json;
 
-    /// <summary>Spielerkarte: Eröffnungsprofil + Online-Konten (<paramref name="onlySure"/>: nur „sicher" — für Teilen-Links).</summary>
-    public async Task<JsonObject?> CardAsync(string fide, bool onlySure, CancellationToken ct)
+    /// <summary>Spielerkarte: Eröffnungsprofil + Online-Konten (<paramref name="onlySure"/>: nur „sicher" — für Teilen-Links).
+    /// <paramref name="reveal"/> = ein Admin fragt: Konten Minderjähriger vollständig (0.625.0) — nie zusammen mit <paramref name="onlySure"/>.</summary>
+    public async Task<JsonObject?> CardAsync(string fide, bool onlySure, CancellationToken ct, bool reveal = false)
     {
         var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
             .Select(x => new { x.ProfileJson, x.Name, x.GameCount }).FirstOrDefaultAsync(ct);
@@ -110,7 +111,7 @@ public sealed class LeagueService
         // Minderjährige (0.610.0): angemeldet steht nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts.
         var hidden = (await LeagueHiddenAccounts.FidesAsync(_db, new[] { fide }, ct)).Contains(fide);
         card["accounts"] = new JsonArray((hidden && onlySure ? new List<LeagueOnlineAccount>() : shown)
-            .Select(a => (JsonNode)LeagueOnlineAccountService.ToJson(a, full: !onlySure, hidden: hidden)).ToArray());
+            .Select(a => (JsonNode)LeagueOnlineAccountService.ToJson(a, full: !onlySure, hidden: hidden, reveal: reveal && !onlySure)).ToArray());
         // Online-Partien der gezeigten Konten — der Baum kann sie einbeziehen, auch ohne eine einzige Brettpartie. Die der
         // UNSICHEREN zählt der Baum seit 0.612.0 nur auf Wunsch mit (Schalter „auch unsichere Konten").
         card["online"] = shown.Sum(a => a.GameCount);
