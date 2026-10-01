@@ -47,4 +47,11 @@ describe('TreeFilterBarComponent', () => {
     expect(el.querySelector('.chips')).not.toBeNull();
     expect(el.querySelector('.check')).toBeNull();
   });
+
+  it('ohne Recht dazu (Spielervorbereitung ohne prep.manage) kein Schalter für unsichere Konten', () => {
+    const both: TreeFilter = { ...BOARD, source: 'both' };
+    const el = create({ filter: both, active: both, boardGames: 4, onlineGames: 30, unsureGames: 7, unsure: false });
+    expect(el.querySelector('.chips')).not.toBeNull();
+    expect(el.querySelector('.check')).toBeNull();
+  });
 });

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { AuthService } from '@rh/core/auth.service';
-import { LeagueApiService } from '@lh/core/league-api.service';
+import { PLAYER_CARD_API } from './player-card-api';
 import { MyGamesService } from '@lh/core/my-games.service';
 import { NAME_VS_D4, NAME_VS_E4, NAME_WHITE, SPEED, de, pgnDate } from '@lh/core/league-format';
 import { OpeningStats, PlayerCard, ProfileView, RecentGame, TreeFilter } from '@lh/core/league.models';
@@ -26,7 +26,7 @@ type Show = 'w' | 's' | 'b';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog #dlg class="card" aria-labelledby="card-name" (click)="backdrop($event)" (close)="onClosed()">
+    <dialog #dlg class="card" [class.inline]="inline()" aria-labelledby="card-name" (click)="backdrop($event)" (close)="onClosed()">
       <div class="card-head">
         <div>
           <h2 id="card-name">{{ card()?.name || (loading() ? '…' : '') }}</h2>
@@ -34,8 +34,8 @@ type Show = 'w' | 's' | 'b';
             <p class="card-meta">
               @if (c.n) { {{ c.n }} Partien @if (c.years) { ({{ c.years[0] }}–{{ c.years[1] }}) } }
               @else { Keine Partien gefunden }
-              <span class="muted">{{ srcText(c) }}</span> –
-              <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a>
+              <span class="muted">{{ srcText(c) }}</span>@if (c.fide) { –
+              <a [href]="'https://ratings.fide.com/profile/' + c.fide" target="_blank" rel="noopener">FIDE-Profil</a> }
             </p>
           }
         </div>
@@ -75,7 +75,7 @@ type Show = 'w' | 's' | 'b';
                 {{ treeOpen() ? 'Eröffnungsbaum schließen' : 'Eröffnungsbaum anzeigen' }}</button>
             </div>
             <lh-tree-filter-bar [filter]="filter()" [active]="active()" [boardGames]="c.n" [onlineGames]="c.online ?? 0"
-                                [unsureGames]="c.onlineUnsure ?? 0" [token]="token" (changed)="setFilter($event)" />
+                                [unsureGames]="c.onlineUnsure ?? 0" [token]="token" [unsure]="unsureAllowed()" (changed)="setFilter($event)" />
             @if (!storedProfile()) {
               <p class="muted small filtered" role="status">
                 @if (profile(); as p) { Gefiltert: {{ p.n }} Partien@if (p.online) { ({{ p.board }} am Brett, {{ p.online }} online)}
@@ -85,7 +85,7 @@ type Show = 'w' | 's' | 'b';
               </p>
             }
             @if (treeOpen()) {
-              <lh-opening-tree [fide]="c.fide" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" [filter]="active()" />
+              <lh-opening-tree [fide]="key(c)" [token]="token" [startColor]="show() === 's' ? 's' : 'w'" [filter]="active()" />
             }
           }
           @if (sections(); as sec) {
@@ -141,7 +141,7 @@ type Show = 'w' | 's' | 'b';
               wählbar.</p>
           }
           }
-          <p class="muted small-note spaced">Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt.
+          <p class="muted small-note spaced">@if (note(); as n) { {{ n }} } @else {Quellen: Lumbra's GigaBase (Turnierpartien, Stand Juli 2026), die ChessBase-Megabase, die Partiedatenbank von chess-results.com, Lichess-Übertragungen von Turnieren am Brett und die Vereinspartien von SK Schwaz (nur mit Jahr). Zuordnung über die FIDE-ID. Blitz- und Schnellschach sind mitgezählt. }
             @if (c.online) { Online-Partien der eingetragenen Konten zählen im Eröffnungsprofil und im Baum, wenn oben „Brett + online" oder „Online" gewählt ist (unsichere Konten nur mit dem Schalter). }</p>
         }
       </div>
@@ -170,11 +170,15 @@ type Show = 'w' | 's' | 'b';
   imports: [NgTemplateOutlet, OpeningTreeComponent, GameReplayComponent, OnlineAccountsComponent, TreeFilterBarComponent],
 })
 export class PlayerCardComponent {
-  private readonly api = inject(LeagueApiService);
+  private readonly api = inject(PLAYER_CARD_API);
   private readonly auth = inject(AuthService);
   readonly myGames = inject(MyGamesService);
   /** Online-Konten pflegen: Verwalter, nie über einen Teilen-Link. */
   readonly canEdit = signal(false);
+  /** Als Teil einer Seite statt als Dialog darüber (Spielervorbereitung): ohne Abdunkeln, schließt nicht beim Klick daneben. */
+  readonly inline = input(false);
+  /** Eigener Hinweis zu den Quellen statt des LeagueHub-Textes. */
+  readonly note = input<string | null>(null);
   private readonly dlg = viewChild.required<ElementRef<HTMLDialogElement>>('dlg');
 
   readonly card = signal<PlayerCard | null>(null);
@@ -229,12 +233,12 @@ export class PlayerCardComponent {
       const key = `${this.seq}:${JSON.stringify(f)}`;
       if (key === this.profileKey) return;
       this.profileKey = key;
-      untracked(() => void this.loadProfile(c.fide, f, key));
+      untracked(() => void this.loadProfile(this.key(c), f, key));
     });
     // Farbe gewählt (oder die Karte aus einer Brett-Zeile mit Farbe geöffnet): deren letzte Partien holen, einmal je Karte.
     effect(() => {
       const c = this.card(), s = this.show();
-      if (c && s !== 'b' && !this.byColor()[s]) void this.loadColor(c.fide, s);
+      if (c && s !== 'b' && !this.byColor()[s]) void this.loadColor(this.key(c), s);
     });
   }
 
@@ -287,7 +291,7 @@ export class PlayerCardComponent {
   /** Öffnet die Karte; <paramref name="token"/> = Teilen-Link (dann ohne Anmeldung). */
   async open(fide: string, color: 'w' | 's' | null, board: number | null, token: string | null): Promise<void> {
     this.token = token;
-    this.canEdit.set(!token && this.auth.has('league.manage'));
+    this.canEdit.set(!token && this.api.accountsEditable !== false && this.auth.has('league.manage'));
     this.color.set(color);
     this.board.set(board);
     this.show.set(color ?? 'b');
@@ -306,7 +310,7 @@ export class PlayerCardComponent {
     this.loading.set(true);
     const my = ++this.seq;
     const d = this.dlg().nativeElement;
-    if (!d.open) d.showModal();
+    if (!d.open) { if (this.inline()) d.show(); else d.showModal(); }
     try {
       const c = await this.api.card(fide, token);
       if (my === this.seq) this.card.set(c);
@@ -327,7 +331,7 @@ export class PlayerCardComponent {
     if (!c) return;
     const my = this.seq;
     try {
-      const fresh = await this.api.card(c.fide, this.token);
+      const fresh = await this.api.card(this.key(c), this.token);
       if (my === this.seq) this.card.set(fresh);
     } catch { /* die alte Karte bleibt stehen */ }
   }
@@ -356,7 +360,7 @@ export class PlayerCardComponent {
     if (!this.recentGames) {
       this.replayLoading.set(true);
       try {
-        const r = await this.api.recent(c.fide, this.token);
+        const r = await this.api.recent(this.key(c), this.token);
         if (my !== this.seq) return;
         this.recentGames = r.games;
       } catch {
@@ -440,7 +444,16 @@ export class PlayerCardComponent {
   }
 
   backdrop(ev: MouseEvent): void {
-    if (ev.target === this.dlg().nativeElement) this.close();
+    if (!this.inline() && ev.target === this.dlg().nativeElement) this.close();
+  }
+
+  /** Womit die API den Spieler findet: `key`, sonst die FIDE-ID (LeagueHub). */
+  key(c: PlayerCard): string {
+    return c.key ?? c.fide;
+  }
+
+  unsureAllowed(): boolean {
+    return this.api.unsureAllowed?.() ?? true;
   }
 
   lastName(c: PlayerCard): string {
@@ -460,12 +473,12 @@ export class PlayerCardComponent {
   async download(c: PlayerCard): Promise<void> {
     let blob: Blob;
     try {
-      blob = await this.api.pgn(c.fide, this.token);
+      blob = await this.api.pgn(this.key(c), this.token);
     } catch {
       this.error.set('Die PGN-Datei konnte nicht geladen werden.');
       return;
     }
-    const name = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide}.pgn`;
+    const name = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide || this.key(c)}.pgn`;
     if (!downloadBlob(blob, name)) this.error.set('Die PGN-Datei konnte nicht geladen werden.');
   }
 }

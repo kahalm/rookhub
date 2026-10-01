@@ -166,6 +166,8 @@ export interface ProfileView {
 
 export interface PlayerCard {
   fide: string;
+  /** Womit die API den Spieler findet, wenn es nicht die FIDE-ID ist (Spielervorbereitung: die Id im Bestand). */
+  key?: string;
   name?: string;
   n: number;
   with_moves?: number;

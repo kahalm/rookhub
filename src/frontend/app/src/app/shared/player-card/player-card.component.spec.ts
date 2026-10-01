@@ -6,6 +6,7 @@ import { MyGamesService } from '@lh/core/my-games.service';
 import { PlayerCard, ProfileView } from '@lh/core/league.models';
 import { TREE_FILTER_KEY } from './tree-filter';
 import { PlayerCardComponent } from './player-card.component';
+import { PLAYER_CARD_API, PlayerCardApi } from './player-card-api';
 
 const CARD: PlayerCard = {
   fide: '1606921', name: 'Oberschmid, Patrik', n: 20, years: ['2019', '2026'], src: { Lumbra: 12, 'chess-results': 8 },
@@ -267,5 +268,51 @@ describe('PlayerCardComponent', () => {
     fixture.detectChanges();
     expect(headings().find(h => h.startsWith('Mit Weiß'))).toContain('(9 Partien)');   // zurück: ohne neuen Abruf
     expect(api.profile).toHaveBeenCalledTimes(1);
+  });
+
+  it('über eine andere Schnittstelle (Spielervorbereitung): Aufrufe über key, ohne FIDE-ID kein FIDE-Link, inline, eigene Notiz', async () => {
+    TestBed.resetTestingModule();
+    const other = {
+      card: jasmine.createSpy('card').and.resolveTo({ ...CARD, fide: '', key: '4711', accounts: [] }),
+      profile: jasmine.createSpy('profile'), recent: jasmine.createSpy('recent').and.resolveTo({ fide: '', games: [] }),
+      tree: jasmine.createSpy('tree'), pgn: jasmine.createSpy('pgn').and.resolveTo(new Blob(['x'])),
+      accountsEditable: false, unsureAllowed: () => false,
+    };
+    perms.add('league.manage');
+    TestBed.configureTestingModule({ imports: [PlayerCardComponent],
+      providers: [provideTranslateService({ fallbackLang: 'de' }), { provide: PLAYER_CARD_API, useValue: other },
+        { provide: MyGamesService, useValue: myGames }, { provide: AuthService, useValue: { has: (p: string) => perms.has(p) } }] });
+    fixture = TestBed.createComponent(PlayerCardComponent);
+    fixture.componentRef.setInput('inline', true);
+    fixture.componentRef.setInput('note', 'Quellen: Megabase und Lumbra.');
+    fixture.detectChanges();
+    const dlg = el().querySelector('dialog')!;
+    const modal = spyOn(dlg, 'showModal').and.callThrough();
+
+    await fixture.componentInstance.open('4711', null, null, null);
+    fixture.detectChanges();
+    expect(other.card).toHaveBeenCalledWith('4711', null);
+    expect(modal).not.toHaveBeenCalled();                                      // als Teil der Seite, nicht darüber
+    expect(dlg.open).toBeTrue();
+    expect(dlg.classList).toContain('inline');
+    expect(el().querySelector('.card-meta a')).toBeNull();                     // keine FIDE-ID, kein FIDE-Profil
+    expect(el().textContent).toContain('Quellen: Megabase und Lumbra.');
+    expect(el().textContent).not.toContain('SK Schwaz');
+    expect(fixture.componentInstance.canEdit()).toBeFalse();                   // Konten pflegt nur LeagueHub
+    expect(el().querySelector('lh-online-accounts')).toBeNull();               // keine Konten geliefert: nichts Leeres
+    dlg.dispatchEvent(new MouseEvent('click', { bubbles: true }));             // Klick „daneben" schließt inline nicht
+    expect(dlg.open).toBeTrue();
+
+    (Array.from(el().querySelectorAll<HTMLButtonElement>('.seg button')).find(b => b.textContent === 'Schwarz')!).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(other.recent).toHaveBeenCalledWith('4711', null, 's');
+    await fixture.componentInstance.download((await other.card.calls.mostRecent().returnValue));
+    expect(other.pgn).toHaveBeenCalledWith('4711', null);
+    expect(api.card).not.toHaveBeenCalled();
+  });
+
+  it('LeagueHub: das Token liefert ohne eigenen Eintrag den LeagueApiService', () => {
+    expect(TestBed.inject(PLAYER_CARD_API)).toBe(api as unknown as PlayerCardApi);
   });
 });

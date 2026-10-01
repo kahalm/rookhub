@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { Chess } from 'chess.js';
 import { ChessBoardComponent } from '@rh/shared/pgn-viewer/chess-board.component';
-import { LeagueApiService } from '@lh/core/league-api.service';
+import { PLAYER_CARD_API } from './player-card-api';
 import { de } from '@lh/core/league-format';
 import { OpeningTree, TreeFilter } from '@lh/core/league.models';
 import { DEFAULT_TREE_FILTER } from './tree-filter';
@@ -93,7 +93,7 @@ export class OpeningTreeComponent implements OnChanges {
   @Input() filter: TreeFilter = DEFAULT_TREE_FILTER;
   readonly active = signal<TreeFilter>(DEFAULT_TREE_FILTER);
 
-  private readonly api = inject(LeagueApiService);
+  private readonly api = inject(PLAYER_CARD_API);
   readonly color = signal<'w' | 's'>('w');
   readonly line = signal<string[]>([]);
   readonly data = signal<OpeningTree | null>(null);

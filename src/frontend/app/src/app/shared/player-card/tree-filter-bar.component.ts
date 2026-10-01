@@ -28,7 +28,7 @@ import { TREE_SPEEDS, TREE_YEARS, normalizeTreeFilter, toggleSpeed } from './tre
               <button type="button" class="fchip" [attr.aria-pressed]="active.speeds.includes(sp.key)" (click)="flipSpeed(sp.key)">{{ sp.label }}</button>
             }
           </div>
-          @if (!token) {
+          @if (!token && unsure) {
             <label class="check small" title="Konten, bei denen nicht sicher ist, dass sie ihm gehören — standardmäßig nicht dabei"><input type="checkbox" [checked]="active.withUnsure" (change)="setWithUnsure($any($event.target).checked)" />
               auch unsichere Konten@if (unsureGames > 0) { ({{ unsureGames }} Partien) }</label>
           }
@@ -56,6 +56,8 @@ export class TreeFilterBarComponent {
   @Input() unsureGames = 0;
   /** Teilen-Link: nur gesicherte Konten, also kein Schalter. */
   @Input() token: string | null = null;
+  /** Den Schalter überhaupt anbieten (Spielervorbereitung: nur mit `prep.manage`). */
+  @Input() unsure = true;
   @Output() readonly changed = new EventEmitter<TreeFilter>();
 
   readonly sources: { k: TreeSource; label: string }[] = [
