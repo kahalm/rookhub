@@ -114,9 +114,9 @@ export function isHomeUrl(url: string): boolean {
     @supports (height: 100svh) {
       :host { --kid-vh: 1svh; }
     }
-    /* Handy quer: das Brett nimmt die Hoehe ganz (Kopfzeile + Titelzeile ≈ 110px, dazu der Schatten unter
-       dem Brett), daneben die Spalte mit ihrer Mindestbreite (280px + Abstand + Rand = 340px). Ohne
-       Untergrenze — 300px liefen bei 390px Fensterhoehe unten aus dem Bild. */
+    /* Handy quer: das Brett nimmt die Hoehe ganz (Kopfzeile + EINE Titelzeile ≈ 110px — die Seiten brechen ihre
+       Titelzeile dort nicht um —, dazu der Schatten unter dem Brett), daneben die Spalte mit ihrer Mindestbreite
+       (280px + Abstand + Rand = 340px). Ohne Untergrenze — 300px liefen bei 390px Fensterhoehe unten aus dem Bild. */
     @media ${KID_SHORT} {
       :host { --kid-board: min(calc(var(--kid-vh) * 100 - 116px), calc(100vw - 340px)); }
     }

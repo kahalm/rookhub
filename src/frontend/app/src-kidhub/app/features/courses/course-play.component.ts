@@ -6,7 +6,7 @@ import { KidsApiService, KidsCourseLine } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, parseAltMoves, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
-import { KID_STACKED } from '../../shared/kids-layout';
+import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 
 /** Naechste ungeloeste Linie ab `from` (einschliesslich), am Ende von vorn — `-1`, wenn alle geloest sind. */
 export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number>, from: number): number {
@@ -81,6 +81,13 @@ export function nextUnsolved(lines: { id: number }[], solved: ReadonlySet<number
     @media ${KID_STACKED} {
       .chapter, .line-title { text-align: center; }
       .intro { max-height: 30vh; }
+    }
+    /* Handy quer: EINE Titelzeile ueber dem Brett (damit rechnet die App-Huelle) — ein langer Kurstitel wird gekuerzt,
+       statt umzubrechen und die unterste Reihe aus dem Bild zu schieben. */
+    @media ${KID_SHORT} {
+      .head { flex-wrap: nowrap; }
+      .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
+      .back, .count { flex-shrink: 0; white-space: nowrap; }
     }
     .done { text-align: center; padding: 30px 12px; }
     .confetti { font-size: 4.5rem; }

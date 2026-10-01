@@ -7,7 +7,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { themeIcon, themeNameKey, themeTaskKey } from '../../core/kids-themes';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
-import { KID_STACKED } from '../../shared/kids-layout';
+import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { isAdvanceKey } from '../../core/kids-keys';
 
 /**
@@ -98,6 +98,16 @@ import { isAdvanceKey } from '../../core/kids-keys';
     @media ${KID_STACKED} {
       .dots { margin: 4px auto 0; flex-basis: 100%; justify-content: center; }
       .task { text-align: center; font-size: 1.3rem; }
+    }
+    /* Handy quer: das Brett rechnet mit EINER Titelzeile darueber (App-Huelle). Mit zehn Punkten und einem langen
+       Thema („1. szint · Matt 1 lépésben") brach sie um und schob die unterste Reihe aus dem Bild. Titel etwas
+       kleiner, Punkte enger — so passen die Titel aller vier Sprachen ganz; was trotzdem zu lang ist, wird gekuerzt. */
+    @media ${KID_SHORT} {
+      .head { flex-wrap: nowrap; gap: 12px; }
+      .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
+      .back { flex-shrink: 0; white-space: nowrap; }
+      .dots { flex-shrink: 0; gap: 6px; }
+      .dots li { width: 14px; height: 14px; }
     }
   `],
 })

@@ -9,7 +9,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_STACKED } from '../../shared/kids-layout';
+import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 
 /**
  * Endlos-Modus: Aufgabe um Aufgabe, jede ein bisschen schwerer (Kurve in `kids-endless.ts`), bis die drei
@@ -92,6 +92,12 @@ import { KID_STACKED } from '../../shared/kids-layout';
       .hearts { margin-left: 0; }
       .task { text-align: center; font-size: 1.3rem; }
       .best { text-align: center; }
+    }
+    /* Handy quer: EINE Titelzeile ueber dem Brett (damit rechnet die App-Huelle) — der Titel wird notfalls gekuerzt. */
+    @media ${KID_SHORT} {
+      .head { flex-wrap: nowrap; gap: 12px; }
+      .head h1 { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 1.25rem; }
+      .back, .hearts, .score { flex-shrink: 0; white-space: nowrap; }
     }
   `],
 })
