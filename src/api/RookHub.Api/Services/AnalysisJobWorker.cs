@@ -375,6 +375,15 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                         await FailAsync(db, job, $"Stellung abgewiesen: {upstream.Error}");
                         return;
                     }
+                    // Lichess sagt nicht, WORAN es liegt — meist an einer Stellung, die Gera laedt und lila-engine
+                    // abweist (Gegner im Schach …), und die aendert sich durch Warten nicht. Ohne Zaehler lief so ein
+                    // Auftrag ewig im Zwei-Minuten-Takt gegen Lichess und belegte einen offenen Platz (A4-006). Nicht
+                    // sofort Failed wie beim eigenen Broker: nach MaxFruitlessAttempts Anlaeufen (Gutschrift bei Fortschritt).
+                    if (code == 400 && ++job.FruitlessAttempts >= AnalysisJob.MaxFruitlessAttempts)
+                    {
+                        await FailAsync(db, job, $"Broker antwortete {code} in {job.FruitlessAttempts} Läufen");
+                        return;
+                    }
                     // 503/504 heisst beim Broker: fuer DIESE Engine ist gerade kein Provider
                     // verbunden. Das ist eine Aussage ueber die ENGINE und nicht ueber den Auftrag,
                     // also umhaengen statt zwei Minuten dieselbe Tuer anzuklopfen. Am 2026-09-12 auf

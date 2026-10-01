@@ -251,6 +251,64 @@ public class AnalysisJobWorkerBrokerTests : IAsyncDisposable
         Assert.Contains("andere Engine", job.LastError);
     }
 
+    // ── Lichess-Broker antwortet 400 (A4-006): Fehlversuch zaehlen statt ewig im Zwei-Minuten-Takt ───────────────
+
+    /// <summary>Ein Nutzer mit einer Lichess-Engine (<c>eei_</c>); die Engine liegt schon im Cache, damit die Auflösung
+    /// ohne Netz auskommt. Liefert die Auftrags-Id, mit <paramref name="fruitless"/> bisherigen Fehlversuchen.</summary>
+    private async Task<int> LichessJobAsync(int fruitless)
+    {
+        const string engineId = "eei_cloud";
+        int jobId;
+        using (var scope = _sp.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = new AppUser { Username = "lichess", PasswordHash = "x" };
+            db.AppUsers.Add(user);
+            await db.SaveChangesAsync();
+            var cred = new LichessEngineCredential
+            {
+                UserId = user.Id, EncryptedToken = scope.ServiceProvider.GetRequiredService<EncryptionService>().Encrypt("lip_token"),
+            };
+            cred.SetBackgroundEngines([engineId]);
+            db.LichessEngineCredentials.Add(cred);
+            await db.SaveChangesAsync();
+            _sp.GetRequiredService<IMemoryCache>().Set($"lichess-engine:{user.Id}:{engineId}",
+                new LichessExternalEngine(engineId, "Cloud", 2, 64, "cs"));
+            jobId = (await scope.ServiceProvider.GetRequiredService<AnalysisJobService>().CreateAsync(user.Id,
+                new CreateAnalysisJobRequest { Fen = Fen, TargetDepth = 12, MultiPv = 2 }, remember: false)).Id;
+            var job = await db.AnalysisJobs.SingleAsync(j => j.Id == jobId);
+            job.FruitlessAttempts = fruitless;
+            await db.SaveChangesAsync();
+        }
+        _broker.Answers[engineId] = (400, "");
+        return jobId;
+    }
+
+    [Fact]
+    public async Task LichessBroker_400_CountsAsFruitlessAttempt_AndBacksOff()
+    {
+        var jobId = await LichessJobAsync(fruitless: 0);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+        Assert.Equal(AnalysisJobStatus.Paused, job.Status);      // ein einzelner 400 ist noch kein Urteil
+        Assert.Equal(1, job.FruitlessAttempts);
+        Assert.Equal("Broker antwortete 400", job.LastError);
+        Assert.NotNull(job.NextAttemptAt);
+    }
+
+    [Fact]
+    public async Task LichessBroker_400_FailsAfterMaxFruitlessAttempts_InsteadOfLoopingForever()
+    {
+        var jobId = await LichessJobAsync(fruitless: AnalysisJob.MaxFruitlessAttempts - 1);
+
+        await _worker.StartAsync(CancellationToken.None);
+        var job = await WaitForAsync(jobId, j => j.Status is AnalysisJobStatus.Failed or AnalysisJobStatus.Paused);
+        Assert.Equal(AnalysisJobStatus.Failed, job.Status);
+        Assert.Equal($"Broker antwortete 400 in {AnalysisJob.MaxFruitlessAttempts} Läufen", job.LastError);
+        Assert.Single(_broker.Calls);
+    }
+
     // ── Haus-Engine (A4-004): fremde Auftraege rechnen nur, solange die Freigabe gilt ──────────────────────────────
 
     /// <summary>Der Admin aus <see cref="SetupAsync"/> teilt seine Engine als Haus-Engine; ein Gast reiht einen Auftrag
