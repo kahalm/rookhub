@@ -31,10 +31,10 @@ public class EngineController : BaseApiController
 {
     /// <summary>Obergrenzen der durchgereichten Work-Parameter — schützt Provider (und unser
     /// Proxy-Streaming) vor absurden Anfragen; die Engine-Maxima klemmen zusätzlich.</summary>
-    private const int MaxDepth = 60;
+    private const int MaxDepth = EngineProtocol.MaxDepth;
     private const int MaxMovetimeMs = 300_000;
     private const long MaxNodes = 5_000_000_000;
-    private const int MaxMoves = 600;
+    private const int MaxMoves = EngineProtocol.MaxMoves;
 
     /// <summary>Absolute Obergrenze für EINEN Analyse-Stream. Keines der Work-Limits begrenzt die
     /// Laufzeit (Tiefe 60 rechnet auf echter Hardware Stunden), und der einzige andere Abbruchgrund
@@ -395,7 +395,7 @@ public class EngineController : BaseApiController
     /// <summary>Baut das Work-Objekt (oneOf depth/movetime/nodes + gemeinsame Felder; <c>variant</c> fest
     /// <c>chess</c>) — dasselbe für beide Broker.</summary>
     private static EngineWork BuildWork(EngineAnalyseRequest r, int threads, int hash) =>
-        new(r.SessionId!, threads, hash, Math.Clamp(r.MultiPv, 1, 5), r.InitialFen!, r.Moves ?? [],
+        new(r.SessionId!, threads, hash, Math.Clamp(r.MultiPv, 1, EngineProtocol.MaxMultiPv), r.InitialFen!, r.Moves ?? [],
             r.Depth, r.Depth is null ? r.Movetime : null, r.Depth is null && r.Movetime is null ? r.Nodes : null);
 
     private static string? ValidateWork(EngineAnalyseRequest? r)

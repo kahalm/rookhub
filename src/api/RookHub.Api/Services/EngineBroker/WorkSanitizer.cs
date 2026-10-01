@@ -56,8 +56,8 @@ public sealed record SanitizedWork(EngineWork Work, string RootFen);
 /// </summary>
 public static class WorkSanitizer
 {
-    public const int MaxMoves = 600;
-    public const int MaxMultiPv = 5;
+    public const int MaxMoves = EngineProtocol.MaxMoves;
+    public const int MaxMultiPv = EngineProtocol.MaxMultiPv;
 
     public static SanitizedWork Sanitize(EngineWork work, int maxThreads, int maxHash)
     {
@@ -67,7 +67,7 @@ public static class WorkSanitizer
         if (work.Depth is < 1 || work.Movetime is < 1 || work.Nodes is < 1)
             throw new InvalidWorkException("search limit must be positive");
         if (work.Threads < 1 || work.Hash < 1) throw new InvalidWorkException("threads and hash must be positive");
-        if (work.MultiPv > MaxMultiPv) throw new InvalidWorkException("invalid multipv: supported range is 1 to 5");
+        if (work.MultiPv > MaxMultiPv) throw new InvalidWorkException(EngineProtocol.MultiPvRangeError);
         if (work.Moves.Count > MaxMoves) throw new InvalidWorkException("too many moves");
 
         var fen = NormalizeFen(work.InitialFen);

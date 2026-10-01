@@ -105,7 +105,7 @@ public static class UciLineParser
             {
                 case "multipv":
                     if (!Unsigned32(p.Next(), out var mpv, ref err)) break;
-                    if (mpv > 5) { err = "invalid multipv: supported range is 1 to 5"; break; }
+                    if (mpv > EngineProtocol.MaxMultiPv) { err = EngineProtocol.MultiPvRangeError; break; }
                     info.MultiPv = (int)Math.Max(1u, mpv);
                     break;
                 case "depth": if (Unsigned32(p.Next(), out var d, ref err)) info.Depth = d; break;

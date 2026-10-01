@@ -334,7 +334,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
                 Hash: Math.Clamp(engine.MaxHash, 16, 32768),
                 // Das Protokoll erlaubt 1..5; ein größerer Wert würde vom Broker abgewiesen und der Auftrag
                 // liefe endlos in die Wiederholung. Zweiter Riegel neben AnalysisJobService.MaxMultiPv.
-                MultiPv: Math.Clamp(job.MultiPv, 1, 5),
+                MultiPv: Math.Clamp(job.MultiPv, 1, EngineProtocol.MaxMultiPv),
                 InitialFen: job.Fen, Moves: [], Depth: job.TargetDepth);
 
             EngineAnalysisSession upstream;

@@ -28,11 +28,11 @@ public interface IAnalysisJobControl
 /// </summary>
 public class AnalysisJobService
 {
-    public const int MaxDepth = 60;
+    public const int MaxDepth = EngineProtocol.MaxDepth;
     /// <summary>Obergrenze der Linien: das Lichess-External-Engine-Protokoll erlaubt <c>work.multiPv</c> nur
     /// 1..5 (der Broker weist mehr beim Deserialisieren ab) — derselbe Deckel wie im Live-Pfad
     /// (<c>EngineController.BuildWork</c>). Ein höherer Wert würde jeden Lauf in die Wiederholung schicken.</summary>
-    public const int MaxMultiPv = 5;
+    public const int MaxMultiPv = EngineProtocol.MaxMultiPv;
     /// <summary>Offene Aufträge je User (Queued/Paused/Running) — gegen Endlos-Listen.
     /// <para>150 seit 0.475.9: der Deckel muss ueber
     /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> (96) liegen, sonst bindet ER und die
