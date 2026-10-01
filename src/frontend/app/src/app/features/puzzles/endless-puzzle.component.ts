@@ -1580,7 +1580,13 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
 
   private saveConfig(): void {
     this.storage.saveConfig(this.config);
-    this.storage.saveProgressToServer(this.config, this.highscore, null);
+    // Während eines Laufs (Tiefen-Regler im Spielbildschirm) den zuletzt gesicherten Spielstand
+    // mitschicken: null heißt für den Server „kein offener Lauf" und löschte das geräteübergreifende
+    // Fortsetzen — über den Debounce sogar einen gerade geplanten Spielstand. Der lokale Stand ist der,
+    // den syncActiveGameToServer zuletzt geschrieben hat (samt richtiger Fortsetz-Position).
+    const runInProgress = this.screen === 'play' && !this.historyView && this.lives > 0;
+    this.storage.saveProgressToServer(this.config, this.highscore,
+      runInProgress ? this.storage.loadActiveGameLocal() : null);
   }
 
   private checkHighscore(): void {

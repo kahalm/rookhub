@@ -1032,3 +1032,35 @@ describe('EndlessPuzzleComponent Einstellungen speichern (F2-009)', () => {
     expect(c.enPassantForced).toBeTrue();
   });
 });
+
+// Codereview F2-011: Der Tiefen-Regler im Spielbildschirm rief saveConfig, und das schickte immer
+// activeGameState=null — der Server löschte den offenen Lauf (geräteübergreifendes Fortsetzen weg),
+// der Debounce verdrängte sogar einen gerade geplanten Spielstand.
+describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
+  const GAME = { lives: 2, solved: 6, level: 6, chainIndex: 6, seed: 's' };
+
+  it('schickt während des Laufs den gesicherten Spielstand mit statt null', () => {
+    const c = makeComponent();
+    c.state = 'AWAITING_USER_MOVE';
+    c.lives = 2;
+    c.storage.loadActiveGameLocal = () => ({ ...GAME });
+    const save = spyOn(c.storage, 'saveProgressToServer');
+
+    c.config.stockfishDepth = 20;
+    c.onDepthChange();
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.calls.mostRecent().args[2]).toEqual(GAME);
+  });
+
+  it('außerhalb eines Laufs bleibt es bei null (startGame räumt so den alten Lauf ab)', () => {
+    const c = makeComponent();
+    c.state = 'CONFIG';
+    c.storage.loadActiveGameLocal = () => ({ ...GAME });
+    const save = spyOn(c.storage, 'saveProgressToServer');
+
+    c.onDepthChange();
+
+    expect(save.calls.mostRecent().args[2]).toBeNull();
+  });
+});
