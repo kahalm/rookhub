@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { TurnierAdminComponent } from './turnier-admin.component';
 
@@ -60,6 +60,25 @@ describe('TurnierAdminComponent', () => {
 
     expect(component.users().length).toBe(2);
     expect(fixture.nativeElement.querySelectorAll('.ta-users li').length).toBe(2);
+  });
+
+  /**
+   * Codereview UX-043: jeder Knopf hiess „Als dieser Nutzer einsteigen" — in der
+   * Schaltflaechenliste eines Screenreaders bis zu 50-mal dasselbe ohne Bezug. Der vorgelesene
+   * Name nennt jetzt das Konto; der sichtbare Text bleibt vorne (Sprachsteuerung).
+   */
+  it('nennt am Einstiegs-Knopf das Konto', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', {
+      admin: { users: { impersonate: 'Als dieser Nutzer einsteigen' } },
+      turnierAdmin: { impersonateAria: '{{action}}: {{name}}' },
+    });
+    translate.use('de');
+    flushUsers();
+
+    const labels = [...fixture.nativeElement.querySelectorAll('.ta-users li button')].map(
+      (b: Element) => b.getAttribute('aria-label'));
+    expect(labels).toEqual(['Als dieser Nutzer einsteigen: spieler', 'Als dieser Nutzer einsteigen: chefin']);
   });
 
   it('gibt den Suchbegriff mit', () => {

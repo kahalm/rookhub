@@ -881,7 +881,7 @@
       "removed": "{{name}} eltávolítva a kedvencekből",
       "addedShort": "{{name}} kedvencnek jelölve",
       "removedShort": "{{name}} eltávolítva",
-      "toggleAria": "Kedvenc ki-/bekapcsolása",
+      "toggleNameAria": "{{name}} kedvencként",
       "saveFailed": "A(z) {{name}} kedvenc mentése nem sikerült – próbáld újra.",
       "filterSaveFailed": "A kedvencszűrőt nem sikerült menteni; a következő betöltéskor visszaáll."
     },
@@ -3618,7 +3618,8 @@
       "shown": "Újra látható.",
       "hideError": "Nem sikerült elrejteni. Próbáld meg még egyszer.",
       "showIgnored": "Elrejtettek mutatása",
-      "rounds": "{{count}} forduló, {{from}} – {{to}}"
+      "rounds": "{{count}} forduló, {{from}} – {{to}}",
+      "actionAria": "{{action}}: {{name}}"
     },
     "source": {
       "Unknown": "Ismeretlen forrás",
@@ -3796,7 +3797,8 @@
     "title": "Belépés felhasználóként",
     "lead": "Nézd meg a versenyoldalt valaki más fiókjával — így lehet megválaszolni, hogy „miért üres a naptára?”. Egy piros sáv végig jelzi, és vissza is vezet. A többi adminisztráció a RookHubban marad.",
     "none": "Ehhez egy fiók sem illik.",
-    "loadFailed": "A fióklistát nem sikerült betölteni."
+    "loadFailed": "A fióklistát nem sikerült betölteni.",
+    "impersonateAria": "{{action}}: {{name}}"
   },
   "tournamentsMoved": {
     "leaving": "A versenyeknek saját oldaluk lett — átirányítunk.",

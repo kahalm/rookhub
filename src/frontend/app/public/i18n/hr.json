@@ -1114,7 +1114,7 @@
       "removed": "{{name}} uklonjen iz favorita",
       "addedShort": "{{name}} označen kao favorit",
       "removedShort": "{{name}} uklonjen",
-      "toggleAria": "Uključi/isključi favorit",
+      "toggleNameAria": "{{name}} kao favorit",
       "saveFailed": "Favorit {{name}} nije moguće spremiti – pokušaj ponovno.",
       "filterSaveFailed": "Filtar favorita nije moguće spremiti; vratit će se pri sljedećem učitavanju."
     },
@@ -3897,7 +3897,8 @@
       "shown": "Ponovno prikazano.",
       "hideError": "Nije se moglo sakriti. Pokušaj ponovno.",
       "showIgnored": "Prikaži skrivene",
-      "rounds": "{{count}} kola, {{from}} do {{to}}"
+      "rounds": "{{count}} kola, {{from}} do {{to}}",
+      "actionAria": "{{action}}: {{name}}"
     },
     "source": {
       "Unknown": "Nepoznat izvor",
@@ -4075,7 +4076,8 @@
     "title": "Prijavi se kao korisnik",
     "lead": "Pogledaj turnirsku stranicu s računom druge osobe — način da odgovoriš na „zašto je njegov kalendar prazan?“. Crvena traka to govori cijelo vrijeme i vodi natrag. Sve ostalo iz administracije ostaje u RookHubu.",
     "none": "Nijedan račun ne odgovara tome.",
-    "loadFailed": "Popis računa nije se mogao učitati."
+    "loadFailed": "Popis računa nije se mogao učitati.",
+    "impersonateAria": "{{action}}: {{name}}"
   },
   "tournamentsMoved": {
     "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",

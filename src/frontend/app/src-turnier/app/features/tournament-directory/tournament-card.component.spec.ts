@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslationObject, provideTranslateService } from '@ngx-translate/core';
 import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry } from './tournament-directory.model';
 
@@ -30,7 +30,7 @@ describe('TournamentCardComponent', () => {
   let component: TournamentCardComponent;
   let http: HttpTestingController;
 
-  function setup(over: Partial<DirectoryEntry> = {}) {
+  function setup(over: Partial<DirectoryEntry> = {}, translations?: TranslationObject) {
     TestBed.configureTestingModule({
       imports: [TournamentCardComponent],
       providers: [
@@ -42,6 +42,11 @@ describe('TournamentCardComponent', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput('entry', entry(over));
     http = TestBed.inject(HttpTestingController);
+    if (translations) {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('de', translations);
+      translate.use('de');
+    }
     fixture.detectChanges();
   }
 
@@ -243,6 +248,54 @@ describe('TournamentCardComponent', () => {
 
     expect(component.ignored()).toBeTrue();
     http.verify();
+  });
+
+  /** Die Texte, wie sie de.json traegt — der vorgelesene Name ist Tooltip plus Turniername. */
+  const DE = {
+    tournamentDirectory: {
+      bookmark: 'Merken', bookmarkRemove: 'Merken aufheben',
+      detail: { toCalendar: 'In privaten Kalender übertragen' },
+      report: { cta: 'Falsches Event melden' },
+      card: { hide: 'Für mich ausblenden', show: 'Wieder zeigen', actionAria: '{{action}}: {{name}}' },
+    },
+  };
+
+  const ariaLabels = (): (string | null)[] =>
+    [...fixture.nativeElement.querySelectorAll('.tc-actions button')].map(
+      (b: Element) => b.getAttribute('aria-label'));
+
+  /**
+   * Codereview UX-043: der Screenreader las „Merken" auch bei einem schon gemerkten Turnier —
+   * wer darauf drueckte, hob das Merken auf. Der vorgelesene Name folgt jetzt dem Zustand wie
+   * der Tooltip, und er nennt das Turnier: auf Seite 1 stehen bis zu 50 Karten mit denselben
+   * vier Symbolen, in der Schaltflaechenliste waren das 200 gleichlautende Eintraege.
+   */
+  it('nennt im vorgelesenen Namen Zustand und Turnier', () => {
+    setup({ subscribed: true }, DE);
+
+    expect(ariaLabels()).toEqual([
+      'Merken aufheben: Open Braunau',
+      'In privaten Kalender übertragen: Open Braunau',
+      'Für mich ausblenden: Open Braunau',
+      'Falsches Event melden: Open Braunau',
+    ]);
+  });
+
+  it('wechselt den vorgelesenen Namen mit dem Zustand', () => {
+    setup({ ignored: true }, DE);
+    const [bookmark, , ignore] = [...fixture.nativeElement.querySelectorAll('.tc-actions button')] as HTMLElement[];
+    expect(bookmark.getAttribute('aria-label')).toBe('Merken: Open Braunau');
+    expect(ignore.getAttribute('aria-label')).toBe('Wieder zeigen: Open Braunau');
+
+    component.bookmark();
+    http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' }).flush({ id: 5, status: 'Pending' });
+    component.toggleIgnore();
+    http.expectOne('/api/tournament-directory/1457129/ignore').flush(null);
+    fixture.detectChanges();
+
+    expect(bookmark.getAttribute('aria-label')).toBe('Merken aufheben: Open Braunau');
+    expect(ignore.getAttribute('aria-label')).toBe('Für mich ausblenden: Open Braunau');
   });
 
   /**

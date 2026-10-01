@@ -108,10 +108,16 @@ import { DirectoryEntry } from './tournament-directory.model';
         <!-- Merken setzt eine chess-results-Nummer voraus (Abo + Crawl-Auftrag tragen sie). Ein
              FIDE-Turnier hat keine, und ein Knopf, der ins Leere fuehrt, ist schlimmer als ein
              fehlender. -->
+        <!-- Vorgelesen wird, was der Tooltip zeigt, plus der Turniername: der Knopf sagt so
+             seinen Zustand („Merken aufheben" = schon gemerkt) und zu welchem Eintrag er gehoert —
+             auf Seite 1 stehen bis zu 50 Karten mit denselben vier Symbolen. Bewusst KEIN
+             aria-pressed dazu: ein wechselnder Name plus „gedrueckt" liest sich doppeldeutig
+             („Merken aufheben, gedrueckt" — ist es jetzt gemerkt oder nicht?). -->
         @if (bookmarkable) {
+          @let bookmarkText = (subscribed() ? 'tournamentDirectory.bookmarkRemove' : 'tournamentDirectory.bookmark') | translate;
           <button mat-icon-button (click)="bookmark()" [disabled]="busy()"
-                  [matTooltip]="(subscribed() ? 'tournamentDirectory.bookmarkRemove' : 'tournamentDirectory.bookmark') | translate"
-                  [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
+                  [matTooltip]="bookmarkText"
+                  [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: bookmarkText, name: entry.name }">
             <mat-icon [class.on]="subscribed()">{{ subscribed() ? 'bookmark' : 'bookmark_add' }}</mat-icon>
           </button>
         }
@@ -119,20 +125,21 @@ import { DirectoryEntry } from './tournament-directory.model';
         @if (entry.startDate) {
           <button mat-icon-button (click)="addToCalendar()"
                   [matTooltip]="'tournamentDirectory.detail.toCalendar' | translate"
-                  [attr.aria-label]="'tournamentDirectory.detail.toCalendar' | translate">
+                  [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ('tournamentDirectory.detail.toCalendar' | translate), name: entry.name }">
             <mat-icon>event_available</mat-icon>
           </button>
         }
 
+        @let ignoreText = (ignored() ? 'tournamentDirectory.card.show' : 'tournamentDirectory.card.hide') | translate;
         <button mat-icon-button (click)="toggleIgnore()" [disabled]="busy()"
-                [matTooltip]="(ignored() ? 'tournamentDirectory.card.show' : 'tournamentDirectory.card.hide') | translate"
-                [attr.aria-label]="'tournamentDirectory.card.hide' | translate">
+                [matTooltip]="ignoreText"
+                [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ignoreText, name: entry.name }">
           <mat-icon>{{ ignored() ? 'visibility' : 'visibility_off' }}</mat-icon>
         </button>
 
         <button mat-icon-button (click)="report()"
                 [matTooltip]="'tournamentDirectory.report.cta' | translate"
-                [attr.aria-label]="'tournamentDirectory.report.cta' | translate">
+                [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ('tournamentDirectory.report.cta' | translate), name: entry.name }">
           <mat-icon>flag</mat-icon>
         </button>
       </div>

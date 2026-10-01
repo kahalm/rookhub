@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { TournamentPlayer, TournamentTeam } from '@rh/core/models';
 import { PLAYER_COLUMNS, TEAM_COLUMNS } from './tournament-table.util';
 import { TournamentTablesComponent } from './tournament-tables.component';
@@ -154,5 +154,42 @@ describe('TournamentTablesComponent', () => {
 
     (cell!.querySelector('.fav-icon') as HTMLElement).click();
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * Codereview UX-043: jeder Stern hiess „Favorit umschalten" — auf einer Turnierseite mit 178
+   * Spielern 178-mal derselbe Name in der Schaltflaechenliste, ohne Hinweis, wem er gilt. Der
+   * Zustand steht weiter in aria-pressed.
+   */
+  function useGermanStarLabel() {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { tournaments: { favorites: { toggleNameAria: '{{name}} als Favorit' } } });
+    translate.use('de');
+  }
+
+  it('nennt am Stern den Spieler', () => {
+    useGermanStarLabel();
+    component.players = component.displayedPlayers = [player({ snr: 1, name: 'Anna Muster' }), player({ id: 2, snr: 2, name: 'Bert Beispiel' })];
+    component.favoriteSnrs = new Set([2]);
+    fixture.detectChanges();
+
+    const stars = [...fixture.nativeElement.querySelectorAll('td .fav-icon')] as HTMLElement[];
+    expect(stars.map(s => s.getAttribute('aria-label'))).toEqual(['Anna Muster als Favorit', 'Bert Beispiel als Favorit']);
+    expect(stars.map(s => s.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    const cards = [...fixture.nativeElement.querySelectorAll('.player-card')] as HTMLElement[];
+    expect(cards.map(c => c.getAttribute('aria-label'))).toEqual(['Anna Muster als Favorit', 'Bert Beispiel als Favorit']);
+  });
+
+  it('nennt am Stern die Mannschaft', () => {
+    useGermanStarLabel();
+    component.teams = component.displayedTeams = [team({ name: 'SK Dornbirn' })];
+    component.favoriteTeamSnrs = new Set([1]);
+    component.selectedTabIndex = 1;
+    fixture.detectChanges();
+    fixture.detectChanges();
+
+    const star = fixture.nativeElement.querySelector('td.fav-cell .fav-icon') as HTMLElement;
+    expect(star.getAttribute('aria-label')).toBe('SK Dornbirn als Favorit');
+    expect(star.getAttribute('aria-pressed')).toBe('true');
   });
 });

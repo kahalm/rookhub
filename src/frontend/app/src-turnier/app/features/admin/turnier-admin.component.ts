@@ -72,7 +72,11 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
                   }
                 </span>
                 <span class="muted ta-mail">{{ u.email }}</span>
-                <button mat-stroked-button (click)="impersonate(u)" [disabled]="busyId() !== null">
+                <!-- Vorgelesen mit dem Benutzernamen: in der Schaltflaechenliste eines Screenreaders
+                     stuenden sonst bis zu 50-mal dieselben Worte ohne Bezug. Der sichtbare Text steht
+                     vorne, damit Sprachsteuerung ihn weiter trifft (WCAG 2.5.3). -->
+                <button mat-stroked-button (click)="impersonate(u)" [disabled]="busyId() !== null"
+                        [attr.aria-label]="'turnierAdmin.impersonateAria' | translate: { action: ('admin.users.impersonate' | translate), name: u.username }">
                   <mat-icon>login</mat-icon>
                   {{ 'admin.users.impersonate' | translate }}
                 </button>

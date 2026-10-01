@@ -1114,7 +1114,7 @@
       "removed": "{{name}} removed from favorites",
       "addedShort": "{{name}} favorited",
       "removedShort": "{{name}} removed",
-      "toggleAria": "Toggle favorite",
+      "toggleNameAria": "{{name}} as favorite",
       "saveFailed": "Could not save the favorite {{name}} — please try again.",
       "filterSaveFailed": "Could not save the favorites filter; it will reset on the next reload."
     },
@@ -3897,7 +3897,8 @@
       "shown": "Shown again.",
       "hideError": "Could not be hidden. Please try again.",
       "showIgnored": "Show hidden ones",
-      "rounds": "{{count}} rounds, {{from}} to {{to}}"
+      "rounds": "{{count}} rounds, {{from}} to {{to}}",
+      "actionAria": "{{action}}: {{name}}"
     },
     "source": {
       "Unknown": "Unknown source",
@@ -4075,7 +4076,8 @@
     "title": "Sign in as a user",
     "lead": "Open the tournament site with someone elses account — the way to answer „why is their calendar empty“. A red banner says so the whole time, and it takes you back. Everything else in administration stays in RookHub.",
     "none": "No account matches that.",
-    "loadFailed": "The account list could not be loaded."
+    "loadFailed": "The account list could not be loaded.",
+    "impersonateAria": "{{action}}: {{name}}"
   },
   "tournamentsMoved": {
     "leaving": "Tournaments have moved to their own site — taking you there.",

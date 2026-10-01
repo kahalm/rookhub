@@ -1114,7 +1114,7 @@
       "removed": "{{name}} aus Favoriten entfernt",
       "addedShort": "{{name}} favorisiert",
       "removedShort": "{{name}} entfernt",
-      "toggleAria": "Favorit umschalten",
+      "toggleNameAria": "{{name}} als Favorit",
       "saveFailed": "Favorit {{name}} konnte nicht gespeichert werden – bitte erneut versuchen.",
       "filterSaveFailed": "Der Favoriten-Filter konnte nicht gespeichert werden und springt beim nächsten Laden zurück."
     },
@@ -3897,7 +3897,8 @@
       "shown": "Wieder eingeblendet.",
       "hideError": "Konnte nicht ausgeblendet werden. Bitte noch einmal versuchen.",
       "showIgnored": "Ausgeblendete zeigen",
-      "rounds": "{{count}} Runden, {{from}} bis {{to}}"
+      "rounds": "{{count}} Runden, {{from}} bis {{to}}",
+      "actionAria": "{{action}}: {{name}}"
     },
     "source": {
       "Unknown": "Unbekannte Quelle",
@@ -4075,7 +4076,8 @@
     "title": "Als Nutzer einsteigen",
     "lead": "Die Turnierseite mit dem Konto eines anderen ansehen — der Weg, „warum ist dessen Kalender leer?“ zu beantworten. Ein roter Streifen sagt es die ganze Zeit und führt zurück. Alles Übrige der Verwaltung bleibt in RookHub.",
     "none": "Kein Konto passt dazu.",
-    "loadFailed": "Die Kontenliste konnte nicht geladen werden."
+    "loadFailed": "Die Kontenliste konnte nicht geladen werden.",
+    "impersonateAria": "{{action}}: {{name}}"
   },
   "tournamentsMoved": {
     "leaving": "Turniere haben eine eigene Seite — du wirst weitergeleitet.",
