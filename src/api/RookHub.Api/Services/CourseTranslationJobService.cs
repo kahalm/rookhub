@@ -53,6 +53,8 @@ public enum CourseTranslationJobOutcome
     Withdrawn,
     /// <summary>Der Auftrag lief gar nicht (mehr).</summary>
     NotRunning,
+    /// <summary>Das Modell antwortete nicht — der Auftrag steht wieder in der Schlange, nichts gilt als gescheitert.</summary>
+    Unreachable,
 }
 
 /// <summary>
@@ -603,6 +605,18 @@ public class CourseTranslationJobService
                 row.Status = CourseTranslationJobStatus.Queued;
                 await _db.SaveChangesAsync(CancellationToken.None);
                 return CourseTranslationJobOutcome.NotConfigured;
+            case CourseTranslationRunStatus.Unreachable:
+                // Das Modell antwortet nicht: zurueck in die Schlange, der Dienst versucht es spaeter. Ohne das waere der
+                // Auftrag „fertig" mit lauter gescheiterten Linien, und die Automatik fasste den Kurs sieben Tage nicht an.
+                row.Status = CourseTranslationJobStatus.Queued;
+                row.LinesTotal = run.LinesTotal;
+                row.LinesDone = run.LinesDone;
+                row.LinesFailed = 0;
+                row.LastError = "model unreachable";
+                await _db.SaveChangesAsync(CancellationToken.None);
+                _logger.LogWarning("Kurs-Uebersetzung {JobId} (Kurs {BookId}, {Lang}): Modell nicht erreichbar, zurueck in die Schlange.",
+                    jobId, row.BookId, row.Language);
+                return CourseTranslationJobOutcome.Unreachable;
             default:
                 outcome = CourseTranslationJobOutcome.Failed;
                 row.LastError = run.Status == CourseTranslationRunStatus.NotFound ? "course not found" : "invalid language";

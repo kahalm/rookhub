@@ -32,6 +32,9 @@ public sealed class FakeCourseTranslator : IClaudeJsonClient
     /// <summary>Scheitert (liefert <c>null</c>) — wie ein abgebrochener Modellaufruf.</summary>
     public bool Fail { get; set; }
 
+    /// <summary>Das Modell ist weg (<see cref="IClaudeJsonClient.IsUnreachable"/>) — ein Fehlschlag sagt dann nichts ueber den Text.</summary>
+    public bool IsUnreachable { get; set; }
+
     /// <summary>Scheitert nur bei Auftraegen, deren System-Text dies enthaelt (z. B. nur die Kapitel-Fuhre).</summary>
     public string? FailIfSystemContains { get; set; }
 

@@ -110,6 +110,9 @@ public class CourseTranslationWorker : BackgroundService
     /// <summary>Ohne Text-Modell schaut der Dienst so selten nach.</summary>
     public static readonly TimeSpan NotConfiguredPoll = TimeSpan.FromMinutes(10);
 
+    /// <summary>Antwortet das Modell nicht, wartet der Dienst so lange bis zum naechsten Versuch.</summary>
+    public static readonly TimeSpan UnreachablePoll = TimeSpan.FromMinutes(5);
+
     /// <summary>Hoechstens so lange am Stueck schlafen, wenn die Spark gesperrt ist.</summary>
     public static readonly TimeSpan MaxQuietSleep = TimeSpan.FromMinutes(10);
 
@@ -187,12 +190,13 @@ public class CourseTranslationWorker : BackgroundService
         }
         if (claimed is not { } job) return IdlePoll;
 
-        await RunClaimedAsync(job.Id, job.Automatic, stoppingToken);
-        return TimeSpan.Zero;
+        var outcome = await RunClaimedAsync(job.Id, job.Automatic, stoppingToken);
+        return outcome == CourseTranslationJobOutcome.Unreachable ? UnreachablePoll : TimeSpan.Zero;
     }
 
-    private async Task RunClaimedAsync(int jobId, bool automatic, CancellationToken stoppingToken)
+    private async Task<CourseTranslationJobOutcome?> RunClaimedAsync(int jobId, bool automatic, CancellationToken stoppingToken)
     {
+        CourseTranslationJobOutcome? result = null;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var run = _signal.Begin(jobId, automatic, cts);
         using var watchStop = new CancellationTokenSource();
@@ -203,6 +207,7 @@ public class CourseTranslationWorker : BackgroundService
             var outcome = await scope.ServiceProvider.GetRequiredService<CourseTranslationJobService>()
                 .RunAsync(jobId, cts.Token);
             _logger.LogInformation("Kurs-Uebersetzung {JobId}: {Outcome}", jobId, outcome);
+            result = outcome;
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {
@@ -233,6 +238,7 @@ public class CourseTranslationWorker : BackgroundService
             try { await watch; }
             catch (OperationCanceledException) { }
         }
+        return result;
     }
 
     /// <summary>Waehrend ein Auftrag laeuft: beginnt die Sperrzeit, wird er abgebrochen (und zurueckgestellt).</summary>

@@ -70,6 +70,9 @@ public sealed class CommentTranslator
     /// <summary>Ein Text-Modell ist konfiguriert (eigene Hardware oder <c>Anthropic:TextApiKey</c>).</summary>
     public bool IsAvailable => _llm.IsConfigured;
 
+    /// <summary>Das Modell antwortet gerade nicht (<see cref="IClaudeJsonClient.IsUnreachable"/>).</summary>
+    public bool IsUnreachable => _llm.IsUnreachable;
+
     /// <summary>Womit uebersetzt wird — gehoert an den gespeicherten Satz.</summary>
     public string ModelName => _llm.TranslationModel;
 

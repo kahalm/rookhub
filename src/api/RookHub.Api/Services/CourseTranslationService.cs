@@ -57,6 +57,9 @@ public enum CourseTranslationRunStatus
     NotConfigured,
     NotFound,
     InvalidLanguage,
+    /// <summary>Das Modell antwortete nicht (<see cref="IClaudeJsonClient.IsUnreachable"/>) — der Lauf hat angehalten,
+    /// statt Linien als gescheitert zu verbuchen. Fertiges bleibt, der naechste Lauf macht weiter.</summary>
+    Unreachable,
 }
 
 /// <param name="LinesTotal">Linien mit offener Arbeit zu Beginn des Laufs.</param>
@@ -451,10 +454,21 @@ public class CourseTranslationService
         var chapters = await ChapterDictionaryAsync(bookId, source, to, neededChapters, ct);
         var chaptersMissing = neededChapters.Keys.Count(h => !chapters.ContainsKey(h));
 
+        // Ist das Modell weg (Verbindung abgelehnt, Strom verstummt), haelt der Lauf an: am 30.09.2026 verbuchte ein
+        // Auftrag in zehn Minuten Spark-Ausfall 252 von 264 Linien als gescheitert und galt danach als fertig.
+        using var reach = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var unreachable = false;
+        async Task<bool> ModelGoneAsync(LineTranslationResult result)
+        {
+            if (!IsFailure(result) || !_translator.IsUnreachable) return false;
+            unreachable = true;
+            await reach.CancelAsync();
+            return true;
+        }
         var options = new ParallelOptions
         {
             MaxDegreeOfParallelism = Math.Clamp(parallel ?? _parallel, 1, 64),
-            CancellationToken = ct,
+            CancellationToken = reach.Token,
         };
         _logger.LogInformation(
             "Kurs {BookId} nach {Lang}: {Lines} Linien offen, {Chapters} Kapitelnamen ({Missing} ohne Uebersetzung), {Parallel} parallel.",
@@ -474,22 +488,39 @@ public class CourseTranslationService
                 .ToHashSet(StringComparer.Ordinal)))
             .Where(x => x.Owned.Count > 0)
             .ToList();
-        await Parallel.ForEachAsync(phase1, options, async (item, token) =>
+        try
         {
-            var result = await RunLineAsync(item.Id, to, source, chapters, item.Owned, token);
-            // Fertig ist die Linie nur, wenn nichts mehr offen ist; gescheiterte und halbe gehen in Phase 2.
-            if (!IsFailure(result) && result.Remaining == 0) await tally.CountAsync(item.Id, ok: true, token);
-        });
+            await Parallel.ForEachAsync(phase1, options, async (item, token) =>
+            {
+                var result = await RunLineAsync(item.Id, to, source, chapters, item.Owned, token);
+                if (await ModelGoneAsync(result)) return;
+                // Fertig ist die Linie nur, wenn nichts mehr offen ist; gescheiterte und halbe gehen in Phase 2.
+                if (!IsFailure(result) && result.Remaining == 0) await tally.CountAsync(item.Id, ok: true, token);
+            });
 
-        // Phase 2: was noch offen ist — nach Phase 1 fast nur noch Wiederverwendung.
-        var initial = open.Select(l => l.Id).ToHashSet();
-        var (stillOpen, _) = await OpenWorkAsync(bookId, to, ct);
-        var phase2 = stillOpen.Select(l => l.Id).Where(id => initial.Contains(id) && !tally.IsCounted(id)).ToList();
-        await Parallel.ForEachAsync(phase2, options, async (lineId, token) =>
+            // Phase 2: was noch offen ist — nach Phase 1 fast nur noch Wiederverwendung.
+            var initial = open.Select(l => l.Id).ToHashSet();
+            var (stillOpen, _) = await OpenWorkAsync(bookId, to, reach.Token);
+            var phase2 = stillOpen.Select(l => l.Id).Where(id => initial.Contains(id) && !tally.IsCounted(id)).ToList();
+            await Parallel.ForEachAsync(phase2, options, async (lineId, token) =>
+            {
+                var result = await RunLineAsync(lineId, to, source, chapters, null, token);
+                if (await ModelGoneAsync(result)) return;
+                await tally.CountAsync(lineId, ok: !IsFailure(result), token);
+            });
+        }
+        catch (OperationCanceledException) when (unreachable && !ct.IsCancellationRequested)
         {
-            var result = await RunLineAsync(lineId, to, source, chapters, null, token);
-            await tally.CountAsync(lineId, ok: !IsFailure(result), token);
-        });
+            // Der eigene Abbruch: unten als „nicht erreichbar" melden.
+        }
+        if (unreachable)
+        {
+            _logger.LogWarning(
+                "Kurs {BookId} nach {Lang}: Modell nicht erreichbar — angehalten nach {Done} von {Lines} Linien, nichts gilt als gescheitert.",
+                bookId, to, tally.Done, open.Count);
+            return new CourseTranslationRun(CourseTranslationRunStatus.Unreachable, source, open.Count, tally.Done, 0,
+                neededChapters.Count, chaptersMissing);
+        }
 
         // Wer weder fertig gezaehlt noch in Phase 2 offen war (etwa eine inzwischen geloeschte Linie), hat nichts mehr zu tun.
         foreach (var line in open)

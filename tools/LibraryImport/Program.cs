@@ -963,9 +963,11 @@ async Task<int> TranslateLibraryAsync(IClaudeJsonClient client, ILoggerFactory l
                       + (includeUnd ? " · mit unbestimmter Quellsprache" : " · ohne unbestimmte Quellsprache"));
 
     var queue = new System.Collections.Concurrent.ConcurrentQueue<int>(ids);
-    int seen = 0, done = 0, lines = 0, empty = 0, errors = 0;
+    int seen = 0, done = 0, lines = 0, empty = 0, errors = 0, pauseNoted = 0;
     var started = DateTime.UtcNow;
     var translationLogger = loggers.CreateLogger<CommentTranslationService>();
+    // Laenger als OpenAiJsonClient.UnreachableFor: nach der Pause darf wieder probiert werden.
+    var unreachablePause = TimeSpan.FromSeconds(75);
 
     async Task Worker()
     {
@@ -983,6 +985,17 @@ async Task<int> TranslateLibraryAsync(IClaudeJsonClient client, ILoggerFactory l
                     Interlocked.Increment(ref done);
                     Interlocked.Add(ref lines, written);
                     Console.WriteLine($"  #{id,-6} {written,3} Anmerkungen nach {target}");
+                }
+                else if (client.IsUnreachable)
+                {
+                    // Das Modell antwortet nicht: die Partie kommt zurueck in die Reihe und der Lauf wartet, statt die
+                    // Kandidatenliste in Sekunden „ohne Ergebnis" durchzureichen.
+                    queue.Enqueue(id);
+                    if (Interlocked.Exchange(ref pauseNoted, 1) == 0)
+                        Console.WriteLine($"{DateTime.Now:HH:mm:ss} WRN Modell nicht erreichbar — Partien zurueck in die Reihe, {unreachablePause.TotalSeconds:0} s Pause.");
+                    await Task.Delay(unreachablePause);
+                    Interlocked.Exchange(ref pauseNoted, 0);
+                    continue;
                 }
                 else Interlocked.Increment(ref empty);
             }

@@ -152,8 +152,22 @@ internal static class OpenAiChat
     /// Formular-Lesung dauert dort Minuten. Solange Tokens fließen, bleibt die Verbindung offen. Antwortet ein Server
     /// trotzdem mit einem ganzen JSON-Objekt (Stream ignoriert), wird das gelesen.
     /// </summary>
+    /// <summary>So lange darf der Antwortstrom schweigen. Vor dem Spark kappt der Proxy selbst nach 90 s — die Frist
+    /// liegt darueber und greift nur, wenn auch der Proxy nichts mehr sagt (01.10.2026: sieben Stunden Stillstand,
+    /// die Verbindungen blieben offen und lieferten nichts).</summary>
+    internal static readonly TimeSpan DefaultStreamIdle = TimeSpan.FromSeconds(120);
+
+    /// <summary>
+    /// Kam gar keine brauchbare Antwort vom SERVER (Verbindung abgelehnt, Zeitueberschreitung, Strom abgerissen oder
+    /// verstummt, 502/503/504)? Dann ist das Modell weg — im Unterschied zu einer Antwort, die inhaltlich nichts taugt.
+    /// </summary>
+    internal static bool IsTransportFailure(Reply reply)
+        => reply.Error != null && (reply.Status == 0
+            || reply.Error.StartsWith("stream:", StringComparison.Ordinal)
+            || reply.Status is HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout);
+
     internal static async Task<Reply> SendAsync(HttpClient http, string baseUrl, string? apiKey, JsonObject body,
-        CancellationToken ct)
+        CancellationToken ct, TimeSpan? streamIdle = null)
     {
         body["stream"] = true;
         body["stream_options"] = new JsonObject { ["include_usage"] = true };
@@ -187,7 +201,7 @@ internal static class OpenAiChat
                 return ParseCompletion(response.StatusCode, await response.Content.ReadAsStringAsync(ct));
             try
             {
-                return await ReadStreamAsync(response, ct);
+                return await ReadStreamAsync(response, streamIdle ?? DefaultStreamIdle, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -203,14 +217,29 @@ internal static class OpenAiChat
     /// <summary>Server-Sent Events: <c>data: {…}</c>-Zeilen bis <c>data: [DONE]</c>. Gesammelt wird nur
     /// <c>delta.content</c> (Denken steht bei vLLM in <c>reasoning</c>/<c>reasoning_content</c> und bleibt draußen),
     /// dazu der Stoppgrund und die Tokens aus dem letzten Stück.</summary>
-    private static async Task<Reply> ReadStreamAsync(HttpResponseMessage response, CancellationToken ct)
+    private static async Task<Reply> ReadStreamAsync(HttpResponseMessage response, TimeSpan idle, CancellationToken ct)
     {
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
         var content = new StringBuilder();
         string? finish = null;
         int input = 0, output = 0;
-        while (await reader.ReadLineAsync(ct) is { } line)
+        // Die Frist gilt je Zeile, nicht fuer die ganze Antwort: der HttpClient-Timeout deckt bei einem Strom nur die
+        // Kopfzeilen, und eine lange Antwort darf lange dauern — nur schweigen darf sie nicht.
+        using var idleCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        async Task<string?> NextLineAsync()
+        {
+            idleCts.CancelAfter(idle);
+            try
+            {
+                return await reader.ReadLineAsync(idleCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new TimeoutException($"keine Daten seit {idle.TotalSeconds:0.#} s");
+            }
+        }
+        while (await NextLineAsync() is { } line)
         {
             if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
             var data = line[5..].Trim();

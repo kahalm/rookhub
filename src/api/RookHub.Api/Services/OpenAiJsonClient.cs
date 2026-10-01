@@ -39,6 +39,16 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
     private readonly string? _apiKey;
     private readonly string? _configuredModel;
     private readonly bool _thinking;
+    private readonly TimeSpan _streamIdle;
+    private int _transportFailures;
+    private long _lastTransportFailure;
+
+    /// <summary>Ab so vielen Transportfehlern in Folge gilt das Modell als nicht erreichbar.</summary>
+    internal const int UnreachableAfter = 3;
+
+    /// <summary>So lange nach dem letzten Transportfehler haelt die Meldung — danach darf wieder probiert werden
+    /// (sonst kaeme sie nie zurueck: wer anhaelt, fragt nicht mehr, und nur eine Antwort setzt den Zaehler zurueck).</summary>
+    internal static readonly TimeSpan UnreachableFor = TimeSpan.FromSeconds(60);
     private readonly SemaphoreSlim _gate;
     private string? _resolvedModel;
     private bool _schemaRejected;
@@ -51,6 +61,10 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         _apiKey = string.IsNullOrWhiteSpace(config["TextLlm:ApiKey"]) ? null : config["TextLlm:ApiKey"]!.Trim();
         _configuredModel = string.IsNullOrWhiteSpace(config["TextLlm:Model"]) ? null : config["TextLlm:Model"]!.Trim();
         _thinking = bool.TryParse(config["TextLlm:Thinking"], out var t) && t;
+        _streamIdle = double.TryParse(config["TextLlm:StreamIdleSeconds"], System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var idle) && idle > 0
+            ? TimeSpan.FromSeconds(idle)
+            : OpenAiChat.DefaultStreamIdle;
         _gate = new SemaphoreSlim(Math.Clamp(config.GetValue("TextLlm:MaxConcurrent", DefaultMaxConcurrent), 1, 64));
     }
 
@@ -60,6 +74,21 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
     public string TranslationModel => _configuredModel ?? _resolvedModel ?? "local";
 
     public bool IsLocal => true;
+
+    public bool IsUnreachable
+        => Volatile.Read(ref _transportFailures) >= UnreachableAfter
+           && Environment.TickCount64 - Interlocked.Read(ref _lastTransportFailure) < (long)UnreachableFor.TotalMilliseconds;
+
+    /// <summary>Jede Antwort des Servers (auch eine unbrauchbare) setzt den Zaehler zurueck; nur Transportfehler zaehlen.</summary>
+    private void Track(OpenAiChat.Reply reply)
+    {
+        if (OpenAiChat.IsTransportFailure(reply))
+        {
+            Interlocked.Exchange(ref _lastTransportFailure, Environment.TickCount64);
+            Interlocked.Increment(ref _transportFailures);
+        }
+        else Interlocked.Exchange(ref _transportFailures, 0);
+    }
 
     public Task<string?> CompleteJsonAsync(string purpose, string system, string userPrompt, JsonNode schema,
         int maxTokens, CancellationToken ct = default)
@@ -114,14 +143,15 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         }
 
         var useSchema = !_schemaRejected;
-        var reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(useSchema), ct);
+        var reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(useSchema), ct, _streamIdle);
         if (useSchema && reply.Status == System.Net.HttpStatusCode.BadRequest)
         {
             _logger.LogWarning("{Purpose} via {Model}: response_format abgelehnt ({Error}) — weiter ohne Schema.",
                 purpose, model, reply.Error);
             _schemaRejected = true;
-            reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(false), ct);
+            reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(false), ct, _streamIdle);
         }
+        Track(reply);
         if (reply.Error != null)
         {
             _logger.LogWarning("{Purpose} via {Model} fehlgeschlagen: {Error}", purpose, model, reply.Error);

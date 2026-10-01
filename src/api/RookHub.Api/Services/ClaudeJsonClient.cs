@@ -30,6 +30,13 @@ public interface IClaudeJsonClient
     /// <summary>Welches Modell die Uebersetzung benutzt — gehoert an den gespeicherten Satz.</summary>
     string TranslationModel { get; }
 
+    /// <summary>
+    /// Das Modell ist gerade NICHT ERREICHBAR (mehrere Transportfehler in Folge, der letzte eben erst) — ein
+    /// Fehlschlag sagt dann nichts ueber den Text. Wer in Serie arbeitet (Kurs-Auftrag, Bibliothekslauf), haelt an und
+    /// versucht es spaeter, statt Arbeit als gescheitert zu verbuchen. Vorgabe <c>false</c>: der Claude-Weg meldet es nicht.
+    /// </summary>
+    bool IsUnreachable => false;
+
     /// <summary>Laeuft auf EIGENER Hardware (kein Geld je Aufruf). Funktionen, die nur dann laufen sollen (Fehler-
     /// Erklaerungen, 0.534.0), fragen das — ueber den Claude-Text-Schluessel sollen sie keine Kosten erzeugen.</summary>
     bool IsLocal => false;

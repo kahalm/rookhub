@@ -170,6 +170,51 @@ public class CourseTranslationWorkerTests
         Assert.Equal(CourseTranslationJobStatus.Queued, (await JobAsync(kit, job.Id)).Status);
     }
 
+    [Fact]
+    public async Task Step_ModelUnreachable_TheJobGoesBackToWaiting_NothingCountsAsFailed_AndTheWorkerWaits()
+    {
+        // 30.09.2026: zehn Minuten Spark-Ausfall („Connection refused") — der Auftrag verbuchte 252 von 264 Linien als
+        // gescheitert, galt als fertig, und die Automatik fasste den Kurs sieben Tage nicht mehr an.
+        using var kit = Kit(Clock(FridayAfternoon));
+        var book = await CourseAsync(kit, "A", lines: 3);
+        var job = await AddJobAsync(kit, book.Id, "de", requestedBy: null);
+        var worker = kit.Worker();
+        kit.Llm.Fail = true;
+        kit.Llm.IsUnreachable = true;
+
+        Assert.Equal(CourseTranslationWorker.UnreachablePoll, await worker.StepAsync(default));
+        var waiting = await JobAsync(kit, job.Id);
+        Assert.Equal(CourseTranslationJobStatus.Queued, waiting.Status);
+        Assert.Equal(0, waiting.LinesFailed);
+        Assert.Equal("model unreachable", waiting.LastError);
+        Assert.Null(waiting.FinishedAt);
+        Assert.Single(kit.Llm.Calls);   // nach dem ersten Fehlschlag ist Schluss — keine Linie um Linie
+
+        // Das Modell ist wieder da: derselbe Auftrag laeuft durch.
+        kit.Llm.Fail = false;
+        kit.Llm.IsUnreachable = false;
+        Assert.Equal(TimeSpan.Zero, await worker.StepAsync(default));
+        var done = await JobAsync(kit, job.Id);
+        Assert.Equal(CourseTranslationJobStatus.Done, done.Status);
+        Assert.Equal((3, 3, 0), (done.LinesTotal, done.LinesDone, done.LinesFailed));
+        Assert.Null(done.LastError);
+    }
+
+    [Fact]
+    public async Task Step_ModelAnswersButTheTextFails_StillCountsTheLinesAsFailed()
+    {
+        // Gegenprobe: ein Modell, das antwortet und Unbrauchbares liefert, ist KEIN Ausfall — die Linien gelten als gescheitert.
+        using var kit = Kit(Clock(FridayAfternoon));
+        var book = await CourseAsync(kit, "A", lines: 2);
+        var job = await AddJobAsync(kit, book.Id, "de", requestedBy: null);
+        kit.Llm.Fail = true;
+
+        Assert.Equal(TimeSpan.Zero, await kit.Worker().StepAsync(default));
+        var failed = await JobAsync(kit, job.Id);
+        Assert.Equal(CourseTranslationJobStatus.Failed, failed.Status);
+        Assert.Equal(2, failed.LinesFailed);
+    }
+
     // ── Sperrzeiten ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]

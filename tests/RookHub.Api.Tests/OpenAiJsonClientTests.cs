@@ -77,6 +77,60 @@ public class OpenAiJsonClientTests
     }
 
     [Fact]
+    public async Task StalledStream_IsGivenUpAfterTheIdleTimeout_InsteadOfWaitingForever()
+    {
+        // 01.10.2026: die Spark nahm Anfragen an, schickte nichts mehr und liess die Verbindung offen — Bibliothek und
+        // Kurse standen sieben Stunden still, ohne eine Fehlerzeile. Der HttpClient-Timeout deckt bei einem Strom nur
+        // die Kopfzeilen; die Frist gilt deshalb je gelesener Zeile.
+        _handler.Stall();
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m"),
+            ("TextLlm:StreamIdleSeconds", "0.2")));
+
+        var call = client.TranslateCommentsJsonAsync("sys", "{}");
+
+        Assert.Null(await call.WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task StalledStream_ACancelledCallStillCancels_NotATimeout()
+    {
+        _handler.Stall();
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m"),
+            ("TextLlm:StreamIdleSeconds", "30")));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.TranslateCommentsJsonAsync("sys", "{}", cts.Token).WaitAsync(TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task Unreachable_AfterThreeTransportFailuresInARow_AndAnyAnswerClearsIt()
+    {
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m")));
+        Assert.False(client.IsUnreachable);
+
+        // Ein Server, der antwortet (auch mit 500 oder einem abgeschnittenen Text), ist erreichbar.
+        _handler.Fail(System.Net.HttpStatusCode.InternalServerError).Fail(System.Net.HttpStatusCode.InternalServerError)
+            .Fail(System.Net.HttpStatusCode.InternalServerError).Reply("{\"hint1\":\"a\"", finish: "length");
+        for (var i = 0; i < 4; i++) Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.False(client.IsUnreachable);
+
+        // Verbindung abgelehnt: erst der dritte Fehlschlag in Folge zaehlt als „weg".
+        _handler.Refuse().Refuse();
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.False(client.IsUnreachable);
+        _handler.Fail(System.Net.HttpStatusCode.ServiceUnavailable);   // der Proxy antwortet, das Modell dahinter nicht
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.True(client.IsUnreachable);
+
+        // Die naechste Antwort — gleich welche — hebt es auf.
+        _handler.Reply("{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}");
+        Assert.NotNull(await client.GenerateHintsJsonAsync("s", "u"));
+        Assert.False(client.IsUnreachable);
+    }
+
+    [Fact]
     public async Task ServerError_OrCutOff_IsNull()
     {
         _handler.Fail(System.Net.HttpStatusCode.InternalServerError).Reply("{\"hint1\":\"a\"", finish: "length");

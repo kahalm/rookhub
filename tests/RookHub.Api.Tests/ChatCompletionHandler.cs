@@ -16,7 +16,8 @@ public sealed class ChatCompletionHandler : HttpMessageHandler
 {
     public sealed record Request(string Url, string? Authorization, JsonNode Body);
 
-    private sealed record Scripted(HttpStatusCode Status, string? Raw, string? Content, string Finish, int Input, int Output);
+    private sealed record Scripted(HttpStatusCode Status, string? Raw, string? Content, string Finish, int Input, int Output,
+        bool Refuse = false, bool Stall = false);
 
     private readonly Queue<Scripted> _script = new();
 
@@ -31,6 +32,20 @@ public sealed class ChatCompletionHandler : HttpMessageHandler
     public ChatCompletionHandler Fail(HttpStatusCode status, string body = "{\"error\":\"nope\"}")
     {
         _script.Enqueue(new(status, body, null, "", 0, 0));
+        return this;
+    }
+
+    /// <summary>Der Server ist weg: die Anfrage scheitert schon an der Verbindung (wie „Connection refused").</summary>
+    public ChatCompletionHandler Refuse()
+    {
+        _script.Enqueue(new(0, null, null, "", 0, 0, Refuse: true));
+        return this;
+    }
+
+    /// <summary>Der Server nimmt an, schickt ein erstes Stück und verstummt dann — die Verbindung bleibt offen.</summary>
+    public ChatCompletionHandler Stall()
+    {
+        _script.Enqueue(new(HttpStatusCode.OK, null, null, "", 0, 0, Stall: true));
         return this;
     }
 
@@ -74,6 +89,17 @@ public sealed class ChatCompletionHandler : HttpMessageHandler
         if (_script.Count == 0)
             return new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = new StringContent("{}") };
         var s = _script.Dequeue();
+        if (s.Refuse) throw new HttpRequestException("Connection refused (spark:443)");
+        if (s.Stall)
+        {
+            var first = "data: " + JsonSerializer.Serialize(new
+            {
+                choices = new[] { new { index = 0, delta = new { content = "{\"items\":[" } } },
+            }) + "\n\n";
+            var stalled = new StreamContent(new StallingStream(Encoding.UTF8.GetBytes(first)));
+            stalled.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/event-stream");
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = stalled };
+        }
         if (s.Raw != null)
             return new HttpResponseMessage(s.Status) { Content = new StringContent(s.Raw, Encoding.UTF8, "application/json") };
         var streaming = node["stream"] is JsonValue v && v.TryGetValue<bool>(out var b) && b;
@@ -84,4 +110,37 @@ public sealed class ChatCompletionHandler : HttpMessageHandler
                 : new StringContent(Completion(s.Content!, s.Finish, s.Input, s.Output), Encoding.UTF8, "application/json"),
         };
     }
+}
+
+/// <summary>Liefert einmal seine Bytes und danach nichts mehr — bis der Leser aufgibt (Abbruch über den Token).</summary>
+internal sealed class StallingStream(byte[] first) : Stream
+{
+    private bool _sent;
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (!_sent)
+        {
+            _sent = true;
+            first.CopyTo(buffer);
+            return first.Length;
+        }
+        await Task.Delay(Timeout.Infinite, cancellationToken);
+        return 0;
+    }
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+    public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    public override void Flush() { }
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

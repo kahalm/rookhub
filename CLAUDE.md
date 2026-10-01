@@ -3481,7 +3481,12 @@ Bibliothekszeile und Analyse, eindeutig `(BookPuzzleId, Language)`, Cascade). Wa
   `CourseAttempt`), ueber die Sprachen hinweg (der frischeste Kurs bekommt de UND en vor dem naechsten), Kurse in der
   Quellsprache nicht. Vorauswahl in SQL („Linie mit Text ohne Satz in der Sprache"), den Fingerabdruck prueft der
   Lauf. **Sperrfrist `AutoCooldown` (7 Tage)** nach einem fertigen Auftrag der Sprache — sonst holte eine Linie, die nie
-  einen Satz bekommt, die Automatik in eine Schleife.
+  einen Satz bekommt, die Automatik in eine Schleife. **Modell nicht erreichbar (0.624.1):** scheitert eine Linie,
+  während `IsUnreachable` wahr ist, bricht `TranslateCourseAsync` den Lauf ab (`CourseTranslationRunStatus.Unreachable`),
+  der Auftrag geht mit `LastError = "model unreachable"` und OHNE gescheiterte Linien zurück auf `Queued`, und der Dienst
+  wartet `UnreachablePoll` (5 min) statt sofort den nächsten zu nehmen. Anlass 30.09.2026: zehn Minuten „Connection
+  refused" — Auftrag 53 verbuchte 252 von 264 Linien als gescheitert, galt als fertig, und die Sperrfrist hielt den Kurs
+  sieben Tage halb übersetzt.
 * **Nachziehen** (`EnqueueRefreshAsync`/`NotifyCourseChangedAsync`): aendert sich ein Kurs mit Uebersetzungen — der
   Import-Kern `PgnImportService.ImportIntoBookAsync` (Aktualisieren, Neu-Aufbereiten, Cache-Weg, angehaengte Linien,
   auch nur geaenderte Etiketten), `CourseAuthoringService` (Kapitel umbenennen, Linien einfuegen) —, bekommt jede
@@ -4618,6 +4623,15 @@ Nicht direkt angegangene Bugs, geparkte Features, Refactoring-Ideen und periodis
   Gedankenstriche bleiben) — keine Quelle enthält sie, Suche und Kopieren stolpern darüber. Den Bestand (alle
   Maschinentexte in CommentTexts, GameRecaps, GameRoasts, GameMoveExplanations) hat die SQL-Migration
   `NormalizeLlmTypography` einmal bereinigt (von Hand geschrieben, Designer = Kopie des vorigen, Modell unverändert).
+  **Ausfälle der Spark (0.624.1):** (1) *Verstummter Strom* — der HttpClient-Timeout deckt bei `ResponseHeadersRead` nur
+  die Kopfzeilen; `OpenAiChat.ReadStreamAsync` gibt deshalb auf, wenn `TextLlm:StreamIdleSeconds` (Vorgabe 120, über der
+  90-s-Kappung des Proxys) lang KEINE Zeile kommt (01.10.2026: sieben Stunden Stillstand ohne Fehlerzeile). (2) *Modell
+  weg* — `OpenAiChat.IsTransportFailure` (keine Antwort, Strom abgerissen/verstummt, 502/503/504) zählt der
+  `OpenAiJsonClient`; ab drei in Folge ist `IClaudeJsonClient.IsUnreachable` wahr, 60 s nach dem letzten Fehler verfällt
+  es wieder (wer anhält, fragt nicht mehr — sonst käme es nie zurück), jede Antwort des Servers setzt es zurück. Ein
+  500 oder ein unbrauchbarer Text ist KEIN Ausfall. Serien-Arbeit hält dann an, statt Arbeit als gescheitert zu
+  verbuchen: Kurs-Auftrag siehe „Hintergrunddienst", `tools/LibraryImport translate` legt die Partie zurück in die
+  Reihe und wartet 75 s.
 - **Kurs-Übersetzung: zwei Einstellungen, Automatik nur auf Prod** (0.548.0) – `CourseTranslation:Parallel` (Vorgabe 4,
   Linien je Lauf gleichzeitig) und `CourseTranslation:AutoLanguages` (Compose `COURSE_TRANSLATION_AUTO_LANGUAGES`,
   Komma-Liste, nur die 25 Oberflächensprachen, Vorgabe LEER = aus). Prod bekommt `de,en` erst auf Zuruf in der `.env`;
