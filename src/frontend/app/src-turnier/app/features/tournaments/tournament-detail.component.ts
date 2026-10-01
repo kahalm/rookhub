@@ -20,9 +20,9 @@ import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
-import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, sortTableData, toDisplayPairings } from './tournament-table.util';
+import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
-import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites, filterPairingsByFavorites } from './tournament-favorites.util';
+import { displayedTables } from './tournament-favorites.util';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -59,12 +59,10 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   selectedTabIndex = 0;
   hasTeamPairings = false;
 
-  // Cached display data (refreshed via refreshDisplayed* methods)
+  // Cached display data (refreshed via refreshDisplayed())
   displayedPlayers: TournamentPlayer[] = [];
   displayedTeams: TournamentTeam[] = [];
   displayedPairings: DisplayPairing[] = [];
-  private _favoriteTeamNames = new Set<string>();
-  private _favoriteNames = new Set<string>();
 
   // Sort states
   playerSort: Sort = { active: '', direction: '' };
@@ -388,7 +386,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   loadPlayers(): void {
     this.playersLoading = true;
     this.api.getPlayers(this.id).subscribe({
-      next: (p) => { this.players = p; this.playersLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedPlayers(); },
+      next: (p) => { this.players = p; this.playersLoading = false; this.refreshDisplayed(); },
       error: () => { this.playersLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPlayersFailed')); }
     });
   }
@@ -451,7 +449,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   loadTeams(): void {
     this.teamsLoading = true;
     this.api.getTeams(this.id).subscribe({
-      next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshFavoriteHelpers(); this.refreshDisplayedTeams(); },
+      next: (t) => { this.teams = t; this.teamsLoading = false; this.refreshDisplayed(); },
       error: () => { this.teamsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadTeamsFailed')); }
     });
   }
@@ -464,7 +462,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.pairings = pairings;
         this.hasTeamPairings = hasTeamPairings;
         this.pairingsLoading = false;
-        this.refreshDisplayedPairings();
+        this.refreshDisplayed();
       },
       error: () => { this.pairingsLoading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadPairingsFailed')); }
     });
@@ -484,12 +482,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       next: (favs) => {
         this.favoriteSnrs = new Set(favs.filter(f => f.playerSnr).map(f => f.playerSnr!));
         this.favoriteTeamSnrs = new Set(favs.filter(f => f.teamSnr).map(f => f.teamSnr!));
-        this.refreshAllDisplayed();
+        this.refreshDisplayed();
       },
       error: () => {}
     });
     this.api.getFavoriteSettings(this.id).subscribe({
-      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; this.refreshAllDisplayed(); },
+      next: (s) => { this.showFavoritesOnly = s.showFavoritesOnly; this.refreshDisplayed(); },
       error: () => {}
     });
   }
@@ -500,7 +498,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
    */
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
-    this.refreshAllDisplayed();
+    this.refreshDisplayed();
     this.api.saveFavoriteSettings(this.id, checked).subscribe({
       error: () => this.snackbar.warn(this.translate.instant('tournaments.favorites.filterSaveFailed'))
     });
@@ -516,51 +514,25 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   onPlayerSort(sort: Sort): void {
     this.playerSort = sort;
-    this.refreshDisplayedPlayers();
+    this.refreshDisplayed();
   }
 
   onTeamSort(sort: Sort): void {
     this.teamSort = sort;
-    this.refreshDisplayedTeams();
+    this.refreshDisplayed();
   }
 
   onPairingSort(sort: Sort): void {
     this.pairingSort = sort;
-    this.refreshDisplayedPairings();
+    this.refreshDisplayed();
   }
 
-  private refreshFavoriteHelpers(): void {
-    const { playerNames, teamNames } = computeFavoriteNames(this.players, this.teams, this.favoriteSnrs, this.favoriteTeamSnrs);
-    this._favoriteNames = playerNames;
-    this._favoriteTeamNames = teamNames;
-  }
-
-  private refreshDisplayedPlayers(): void {
-    const data = this.showFavoritesOnly
-      ? filterPlayersByFavorites(this.players, this.favoriteSnrs, this._favoriteTeamNames)
-      : this.players;
-    this.displayedPlayers = sortTableData(data, this.playerSort);
-  }
-
-  private refreshDisplayedTeams(): void {
-    const data = this.showFavoritesOnly
-      ? filterTeamsByFavorites(this.teams, this._favoriteTeamNames)
-      : this.teams;
-    this.displayedTeams = sortTableData(data, this.teamSort);
-  }
-
-  private refreshDisplayedPairings(): void {
-    const data = this.showFavoritesOnly
-      ? filterPairingsByFavorites(this.pairings, this.hasTeamPairings, this._favoriteNames, this._favoriteTeamNames)
-      : this.pairings;
-    this.displayedPairings = sortTableData(data, this.pairingSort);
-  }
-
-  private refreshAllDisplayed(): void {
-    this.refreshFavoriteHelpers();
-    this.refreshDisplayedPlayers();
-    this.refreshDisplayedTeams();
-    this.refreshDisplayedPairings();
+  /** Favoriten-Filter und Sortierung wie in der öffentlichen Ansicht (tournament-favorites.util). */
+  private refreshDisplayed(): void {
+    const d = displayedTables(this);
+    this.displayedPlayers = d.players;
+    this.displayedTeams = d.teams;
+    this.displayedPairings = d.pairings;
   }
 
   isFavorite(player: TournamentPlayer): boolean {
@@ -570,7 +542,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   toggleFavorite(player: TournamentPlayer): void {
     const add = !this.favoriteSnrs.has(player.snr);
     this.favoriteSnrs = withSnr(this.favoriteSnrs, player.snr, add);
-    this.refreshAllDisplayed();
+    this.refreshDisplayed();
     this.saveFavorite(
       add ? this.api.addPlayerFavorite(this.id, player.snr) : this.api.removePlayerFavorite(this.id, player.snr),
       add, player.name,
@@ -584,7 +556,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   toggleTeamFavorite(team: TournamentTeam): void {
     const add = !this.favoriteTeamSnrs.has(team.snr);
     this.favoriteTeamSnrs = withSnr(this.favoriteTeamSnrs, team.snr, add);
-    this.refreshAllDisplayed();
+    this.refreshDisplayed();
     this.saveFavorite(
       add ? this.api.addTeamFavorite(this.id, team.snr) : this.api.removeTeamFavorite(this.id, team.snr),
       add, team.name,
@@ -604,7 +576,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
       error: (err: HttpErrorResponse) => {
         if (err?.status === (add ? 409 : 404)) { confirm(); return; }
         revert();
-        this.refreshAllDisplayed();
+        this.refreshDisplayed();
         this.snackbar.warn(this.translate.instant('tournaments.favorites.saveFailed', { name }));
       }
     });

@@ -463,4 +463,41 @@ describe('TournamentDetailComponent', () => {
     expect(page.querySelector('.load-failed a[href="/tournaments/calendar"]')).toBeTruthy();
     TestBed.inject(HttpTestingController).verify();
   });
+
+  // ----- Favoriten-Ansicht: alle drei Tabellen nach jedem Laden neu (W5 F6-024) -----
+
+  /** Vorher frischte das Laden der Spieler nur die Spielerliste auf — die Teamliste blieb auf dem Stand ohne Spieler. */
+  it('Teams vor Spielern geladen: das Team des favorisierten Spielers steht trotzdem in der Teamliste', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TournamentDetailComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TournamentDetailComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const c = fixture.componentInstance;
+    fixture.detectChanges(); // ngOnInit
+    http.expectOne('/api/tournament-favorites?tournamentId=4711').flush([{ id: 1, playerSnr: 1 }]);
+    http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: true });
+    http.expectOne('/api/tournaments/4711').flush({
+      id: 1, name: 'Mannschaftsmeisterschaft', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+    });
+    http.expectOne('/api/subscriptions').flush([]);
+    http.expectOne('/api/tournament-monitors/4711').flush({ active: false, activeUntil: null, lastKnownRounds: 0 });
+
+    http.expectOne('/api/tournaments/4711/teams').flush([{ snr: 10, name: 'Red' }, { snr: 11, name: 'Blue' }]);
+    expect(c.displayedTeams).toEqual([]);
+    http.expectOne('/api/tournaments/4711/players').flush([
+      { snr: 1, name: 'Alice', teamName: 'Red' }, { snr: 2, name: 'Bob', teamName: 'Red' }, { snr: 3, name: 'Carol', teamName: 'Blue' },
+    ]);
+
+    expect(c.displayedPlayers.map(p => p.name)).toEqual(['Alice', 'Bob']);
+    expect(c.displayedTeams.map(t => t.name)).toEqual(['Red']);
+  });
 });

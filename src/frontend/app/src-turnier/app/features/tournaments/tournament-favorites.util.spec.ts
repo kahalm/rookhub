@@ -4,6 +4,8 @@ import {
   filterPlayersByFavorites,
   filterTeamsByFavorites,
   filterPairingsByFavorites,
+  displayedTables,
+  TournamentTablesState,
 } from './tournament-favorites.util';
 
 const players = [
@@ -71,6 +73,43 @@ describe('tournament-favorites.util', () => {
       const result = filterPairingsByFavorites(pairings, true, new Set(['Alice']), new Set(['Red']));
       expect(result.length).toBe(1);
       expect(result[0].white).toBe('Red');
+    });
+  });
+
+  // W5 F6-024: beide Turnier-Ansichten filtern + sortieren über diese eine Funktion.
+  describe('displayedTables', () => {
+    const noSort = { active: '', direction: '' as const };
+    const pairings = [
+      { board: 1, white: 'Carol', black: 'Dave', result: '1-0' },
+      { board: 2, white: 'Alice', black: 'Eve', result: '0-1' },
+    ] as DisplayPairing[];
+    const state = (over: Partial<TournamentTablesState> = {}): TournamentTablesState => ({
+      players, teams, pairings, hasTeamPairings: false,
+      favoriteSnrs: new Set<number>(), favoriteTeamSnrs: new Set<number>(), showFavoritesOnly: false,
+      playerSort: noSort, teamSort: noSort, pairingSort: noSort, ...over,
+    });
+
+    it('ohne Filter und Sortierung bleiben es dieselben Arrays', () => {
+      const d = displayedTables(state());
+      expect(d.players).toBe(players);
+      expect(d.teams).toBe(teams);
+      expect(d.pairings).toBe(pairings);
+    });
+
+    it('nur Favoriten: ein favorisierter Spieler bringt Team und Teamkollegen mit, Paarungen nach Spielernamen', () => {
+      const d = displayedTables(state({ favoriteSnrs: new Set([1]), showFavoritesOnly: true }));
+      expect(d.players.map(p => p.name)).toEqual(['Alice', 'Bob']);
+      expect(d.teams.map(t => t.name)).toEqual(['Red']);
+      expect(d.pairings.map(p => p.board)).toEqual([2]);
+    });
+
+    it('sortiert nach dem Filtern je Tabelle', () => {
+      const d = displayedTables(state({
+        favoriteTeamSnrs: new Set([10, 11]), showFavoritesOnly: true,
+        playerSort: { active: 'name', direction: 'desc' }, teamSort: { active: 'name', direction: 'asc' },
+      }));
+      expect(d.players.map(p => p.name)).toEqual(['Carol', 'Bob', 'Alice']);
+      expect(d.teams.map(t => t.name)).toEqual(['Blue', 'Red']);
     });
   });
 });

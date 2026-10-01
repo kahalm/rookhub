@@ -1,4 +1,6 @@
+import { Sort } from '@angular/material/sort';
 import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/models';
+import { sortTableData } from './tournament-table.util';
 
 /** Aufgelöste Favoriten-Namen (für die „nur Favoriten"-Filterung der Tabellen). */
 export interface FavoriteNames {
@@ -57,4 +59,46 @@ export function filterPairingsByFavorites(
 ): DisplayPairing[] {
   const names = hasTeamPairings ? favoriteTeamNames : favoritePlayerNames;
   return pairings.filter(p => names.has(p.white) || names.has(p.black));
+}
+
+/** Was die drei Turnier-Tabellen zum Anzeigen brauchen: Daten, Favoriten, Filter, Sortierung. */
+export interface TournamentTablesState {
+  players: TournamentPlayer[];
+  teams: TournamentTeam[];
+  pairings: DisplayPairing[];
+  hasTeamPairings: boolean;
+  favoriteSnrs: Set<number>;
+  favoriteTeamSnrs: Set<number>;
+  showFavoritesOnly: boolean;
+  playerSort: Sort;
+  teamSort: Sort;
+  pairingSort: Sort;
+}
+
+export interface DisplayedTables {
+  players: TournamentPlayer[];
+  teams: TournamentTeam[];
+  pairings: DisplayPairing[];
+}
+
+/**
+ * Die angezeigten Zeilen aller drei Tabellen — bei „nur Favoriten" gefiltert, dann sortiert. Beide
+ * Turnier-Ansichten (angemeldet und öffentlich) rufen das nach JEDER Änderung auf und halten das
+ * Ergebnis in Feldern: als Getter bekäme mat-table je Änderungslauf ein neues Array. Immer alle drei,
+ * weil die Favoriten-Namen von Spielern UND Teams abhängen — kommen die Teams vor den Spielern, fehlte
+ * sonst das Team eines favorisierten Spielers in der Teamliste.
+ */
+export function displayedTables(s: TournamentTablesState): DisplayedTables {
+  let { players, teams, pairings } = s;
+  if (s.showFavoritesOnly) {
+    const { playerNames, teamNames } = computeFavoriteNames(s.players, s.teams, s.favoriteSnrs, s.favoriteTeamSnrs);
+    players = filterPlayersByFavorites(players, s.favoriteSnrs, teamNames);
+    teams = filterTeamsByFavorites(teams, teamNames);
+    pairings = filterPairingsByFavorites(pairings, s.hasTeamPairings, playerNames, teamNames);
+  }
+  return {
+    players: sortTableData(players, s.playerSort),
+    teams: sortTableData(teams, s.teamSort),
+    pairings: sortTableData(pairings, s.pairingSort),
+  };
 }

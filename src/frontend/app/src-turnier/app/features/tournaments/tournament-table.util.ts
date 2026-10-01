@@ -4,8 +4,9 @@ import { DisplayPairing } from '@rh/core/models';
 /**
  * Geteilte Tabellen-Logik für die Turnier-Ansichten (authentifiziert =
  * tournament-detail, öffentlich = public-tournament). Reine Funktionen/Konstanten
- * ohne Komponenten-State — die unterschiedliche Daten-/Favoriten-Haltung der beiden
- * Komponenten (gecachte Felder vs. Getter, Server vs. localStorage) bleibt dort.
+ * ohne Komponenten-State — die unterschiedliche Favoriten-Ablage der beiden
+ * Komponenten (Server vs. localStorage) bleibt dort; Filtern + Sortieren für beide:
+ * `displayedTables` in tournament-favorites.util.
  */
 
 export const PLAYER_COLUMNS = ['fav', 'snr', 'title', 'name', 'fideId', 'elo', 'country', 'team', 'board'];
