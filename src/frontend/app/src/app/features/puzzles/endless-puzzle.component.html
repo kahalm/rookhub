@@ -179,7 +179,7 @@
                           <input matInput type="number" [(ngModel)]="fasttrackAvgFirst" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgFirst !== fasttrackAutoFirst) {
-                          <span class="auto-hint" (click)="resetThreshold(1)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoFirst } }}</span>
+                          <button type="button" class="auto-hint" (click)="resetThreshold(1)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoFirst } }}</button>
                         }
                       </div>
                       <div class="threshold-field-wrap">
@@ -188,7 +188,7 @@
                           <input matInput type="number" [(ngModel)]="fasttrackAvgSecond" (ngModelChange)="onThresholdChange()" [min]="puzzleRange.min" [max]="puzzleRange.max" step="50">
                         </mat-form-field>
                         @if (fasttrackAvgSecond !== fasttrackAutoSecond) {
-                          <span class="auto-hint" (click)="resetThreshold(2)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoSecond } }}</span>
+                          <button type="button" class="auto-hint" (click)="resetThreshold(2)">{{ 'endless.config.auto' | translate:{ value: fasttrackAutoSecond } }}</button>
                         }
                       </div>
                     </div>
@@ -213,7 +213,7 @@
                   </button>
                 </div>
 
-                <div class="lives-display config-lives">
+                <div class="lives-display config-lives" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: 3, max: 3 }">
                   @for (i of [1,2,3]; track i) {
                     <mat-icon class="heart full">favorite</mat-icon>
                   }
@@ -347,7 +347,7 @@
                 <div class="quick-stats">
                   <span class="qs-pill"><mat-icon>star</mat-icon>{{ puzzle.rating }}</span>
                   <span class="qs-pill"><mat-icon>flag</mat-icon>Lv {{ level }}</span>
-                  <div class="qs-hearts">
+                  <div class="qs-hearts" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: lives, max: 3 }">
                     @for (i of [1,2,3]; track i) {
                       <mat-icon class="heart-sm" [class.full]="i <= lives">
                         {{ i <= lives ? 'favorite' : 'favorite_border' }}
@@ -440,7 +440,7 @@
                       <span class="stat-label">{{ 'endless.game.statTime' | translate }}</span>
                     </div>
                   </div>
-                  <div class="lives-display">
+                  <div class="lives-display" role="img" [attr.aria-label]="'endless.game.lives' | translate:{ lives: lives, max: 3 }">
                     @for (i of [1,2,3]; track i) {
                       <mat-icon [class]="i <= lives ? 'heart full' : 'heart empty'">
                         {{ i <= lives ? 'favorite' : 'favorite_border' }}

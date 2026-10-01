@@ -2014,6 +2014,7 @@
       "statLevel": "Level",
       "statSolved": "Gelöst",
       "statTime": "Zeit",
+      "lives": "{{lives}} von {{max}} Leben",
       "phaseLabel": "Phase {{phase}} (Schritt {{step}})",
       "showOriginalSolution": "Originale Lösung zeigen"
     },

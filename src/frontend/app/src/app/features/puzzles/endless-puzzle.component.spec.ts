@@ -3,6 +3,26 @@ import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
 import { ThemePreset } from './puzzle-theme-presets';
 import { chainRatingAt, CHAIN_FLAT_STEP, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { provideTranslateService, TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PuzzleService } from './puzzle.service';
+import { StockfishService } from './stockfish.service';
+import { EndlessStorageService } from './endless-storage.service';
+import { AuthService } from '../../core/auth.service';
+import { PreferencesService } from '../../core/preferences.service';
+import { OfflineService } from '../../core/offline.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { OfflineQueueService } from '../../core/offline-queue.service';
+import { LongSolveService } from './long-solve.service';
+import { FavoritesService } from '../../core/favorites.service';
+import { SolveModeService } from '../../core/solve-mode.service';
+import { WorksheetService } from '../worksheets/worksheet.service';
 
 /**
  * Fokussierter Test der Analyse-Navigation im Endless-Modus (ohne TestBed/Template):
@@ -1121,5 +1141,74 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
     expect(params(help.fasttrackPhase1)).toEqual(['p1End']);
     expect(params(help.fasttrackPhase2)).toEqual(['p2End', 'p2Start']);
     expect(params(help.fasttrackPhase3)).toEqual(['flatStep', 'p3Start']);
+  });
+});
+
+// Codereview UX-047: „Auto: …" (Schwelle zurücksetzen) war ein <span (click)> ohne Tastaturzugang, und die drei
+// Herzen (Leben) waren reine mat-icons (aria-hidden) ohne Textalternative. Gerendert (Template), Kinder ausgeblendet.
+describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));   // nichts laden — den Zustand setzt der Test
+
+  function render(setup: (c: any) => void): HTMLElement {
+    const fake = makeComponent();   // liefert die Test-Doppel; gerendert wird eine eigene Instanz über TestBed
+    TestBed.configureTestingModule({
+      imports: [EndlessPuzzleComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: PuzzleService, useValue: fake.puzzleService },
+        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+        { provide: EndlessStorageService, useValue: fake.storage },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: PreferencesService, useValue: fake.prefs },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/endless' } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        { provide: MatDialog, useValue: {} },
+        { provide: OfflineService, useValue: { puzzleCount: 0, endlessRuns: 0 } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
+        { provide: LongSolveService, useValue: { resolve: (x: number) => sub(x) } },
+        { provide: FavoritesService, useValue: { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) } },
+        { provide: EndlessChainService, useValue: fake.chainService },
+        { provide: SolveModeService, useValue: makeSolveMode() },
+        { provide: WorksheetService, useValue: {} },
+      ],
+    });
+    TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
+    translate.use('en');
+    const fixture = TestBed.createComponent(EndlessPuzzleComponent);
+    setup(fixture.componentInstance);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('„Auto: …" ist ein Knopf (per Tastatur erreichbar) und setzt die Schwelle zurück', () => {
+    let c: any;
+    const el = render(x => {
+      c = x;
+      c.showAdvanced = true;
+      Object.assign(c.fasttrack, { phase1Step: 50, avgFirst: 1200, autoFirst: 1000, avgSecond: 1500, autoSecond: 1500 });
+    });
+    const hints = el.querySelectorAll('.auto-hint');
+    expect(hints.length).toBe(1);
+    expect(hints[0].tagName).toBe('BUTTON');
+    expect(hints[0].getAttribute('type')).toBe('button');
+    const reset = spyOn(c, 'resetThreshold');
+    (hints[0] as HTMLButtonElement).click();
+    expect(reset).toHaveBeenCalledWith(1);
+  });
+
+  it('Startbildschirm: die Herzen sagen, wie viele Leben es gibt', () => {
+    const lives = render(() => {}).querySelector('.config-lives')!;
+    expect(lives.getAttribute('role')).toBe('img');
+    expect(lives.getAttribute('aria-label')).toBe('3 of 3 lives');
+  });
+
+  it('im Lauf: die Herzen nennen die verbleibenden Leben', () => {
+    const el = render(c => { c.state = 'AWAITING_USER_MOVE'; c.puzzle = { ...PUZZLE }; c.lives = 2; });
+    const hearts = el.querySelector('.qs-hearts')!;
+    expect(hearts.getAttribute('role')).toBe('img');
+    expect(hearts.getAttribute('aria-label')).toBe('2 of 3 lives');
   });
 });

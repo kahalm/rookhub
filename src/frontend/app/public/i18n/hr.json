@@ -2014,6 +2014,7 @@
       "statLevel": "Razina",
       "statSolved": "Riješeno",
       "statTime": "Vrijeme",
+      "lives": "{{lives}} od {{max}} života",
       "phaseLabel": "Faza {{phase}} (korak {{step}})",
       "showOriginalSolution": "Prikaži izvorno rješenje"
     },

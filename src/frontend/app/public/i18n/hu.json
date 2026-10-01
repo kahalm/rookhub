@@ -1617,6 +1617,7 @@
       "statLevel": "Szint",
       "statSolved": "Megoldva",
       "statTime": "Idő",
+      "lives": "{{lives}} / {{max}} élet",
       "phaseLabel": "{{phase}}. fázis ({{step}}. lépés)",
       "showOriginalSolution": "Eredeti megoldás mutatása"
     },

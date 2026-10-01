@@ -2035,52 +2035,58 @@ describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht 
   });
 });
 
+/**
+ * Rendert die Löser-Seite (Template) mit ausgeblendeten Kindkomponenten: Eingaben landen als DOM-Eigenschaft,
+ * Ausgaben als DOM-Ereignis am Element. ngOnInit muss der Aufrufer stilllegen; den Zustand setzt `setup`.
+ */
+function renderBookPuzzle(setup: (c: any) => void, url = '/puzzles/book/1'): { el: HTMLElement; c: any } {
+  const prefs: any = {
+    boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, bookStockfishDepth: 12,
+    visualization: 0, vizArrow: true, offPathWarnMoves: 3, enPassantForced: true,
+  };
+  const route: any = {
+    snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } },
+    paramMap: { subscribe: () => ({ unsubscribe() {} }) },
+  };
+  TestBed.configureTestingModule({
+    imports: [BookPuzzleComponent],
+    providers: [
+      provideTranslateService({ fallbackLang: 'en' }),
+      { provide: PuzzleService, useValue: {} },
+      { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+      { provide: PreferencesService, useValue: prefs },
+      { provide: ActivatedRoute, useValue: route },
+      { provide: MatDialog, useValue: {} },
+      { provide: CourseService, useValue: {} },
+      { provide: WeeklyService, useValue: {} },
+      { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url } },
+      { provide: AuthService, useValue: { isLoggedIn: false } },
+      { provide: SnackbarService, useValue: { info: () => {} } },
+      { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
+      { provide: ChallengeService, useValue: {} },
+      { provide: LongSolveService, useValue: { resolve: (s: number) => of(s) } },
+      { provide: FavoritesService, useValue: { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) } },
+      { provide: SolveModeService, useValue: makeSolveModeStub(prefs) },
+      { provide: WorksheetService, useValue: {} },
+    ],
+  });
+  TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  const fixture = TestBed.createComponent(BookPuzzleComponent);
+  const c: any = fixture.componentInstance;
+  c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+  setup(c);
+  fixture.detectChanges();
+  return { el: fixture.nativeElement as HTMLElement, c };
+}
+
 // Codereview UX-005: Der Spielweise-Dialog verweist aufs ⋮-Menü — beim Tages- und Buch-Puzzle fehlte der Punkt
 // dort, und der Kartenknopf trug den ZUSTAND („Trainingsmodus") als Beschriftung, sah also wie eine Statusanzeige aus.
 describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlung (UX-005)', () => {
   beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));   // nichts laden — den Zustand setzt der Test
 
-  function render(setup: (c: any) => void): { el: HTMLElement; c: any } {
-    const prefs: any = {
-      boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, bookStockfishDepth: 12,
-      visualization: 0, vizArrow: true, offPathWarnMoves: 3, enPassantForced: true,
-    };
-    const route: any = {
-      snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } },
-      paramMap: { subscribe: () => ({ unsubscribe() {} }) },
-    };
-    TestBed.configureTestingModule({
-      imports: [BookPuzzleComponent],
-      providers: [
-        provideTranslateService({ fallbackLang: 'en' }),
-        { provide: PuzzleService, useValue: {} },
-        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
-        { provide: PreferencesService, useValue: prefs },
-        { provide: ActivatedRoute, useValue: route },
-        { provide: MatDialog, useValue: {} },
-        { provide: CourseService, useValue: {} },
-        { provide: WeeklyService, useValue: {} },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/daily/20260714' } },
-        { provide: AuthService, useValue: { isLoggedIn: false } },
-        { provide: SnackbarService, useValue: { info: () => {} } },
-        { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
-        { provide: ChallengeService, useValue: {} },
-        { provide: LongSolveService, useValue: { resolve: (s: number) => of(s) } },
-        { provide: FavoritesService, useValue: { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) } },
-        { provide: SolveModeService, useValue: makeSolveModeStub(prefs) },
-        { provide: WorksheetService, useValue: {} },
-      ],
-    });
-    // Kindkomponenten ausgeblendet: Eingaben landen als DOM-Eigenschaft, Ausgaben als DOM-Ereignis am Element.
-    TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
-    const fixture = TestBed.createComponent(BookPuzzleComponent);
-    const c: any = fixture.componentInstance;
-    c.dailyDate = '20260714';   // Tagespuzzle: eigener Bereich „daily"
-    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
-    setup(c);
-    fixture.detectChanges();
-    return { el: fixture.nativeElement as HTMLElement, c };
-  }
+  // Tagespuzzle: eigener Bereich „daily"
+  const render = (setup: (c: any) => void) =>
+    renderBookPuzzle(c => { c.dailyDate = '20260714'; setup(c); }, '/puzzles/daily/20260714');
   const bar = (el: HTMLElement) => el.querySelector('app-puzzle-action-bar') as any;
 
   it('Tagespuzzle: die Aktionsleiste bekommt die Spielweise (Punkt im ⋮-Menü)', () => {
@@ -2108,6 +2114,42 @@ describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlun
     const { el } = render(c => { c.solveModeChoice = 'training'; c.solveModeSuppressed = true; });
     expect(el.querySelector('.ctx-mode-btn')).toBeNull();
     expect(bar(el).solveModeChoice).toBeNull();
+  });
+});
+
+// Codereview UX-047: mat-progress-bar ohne Namen (axe aria-progressbar-name, serious, auf /weekly/:id) — ein
+// Screenreader sagte nur „Fortschrittsbalken". Dieselbe Form hatten die Buch-, Kapitel- und Kursbalken.
+describe('BookPuzzleComponent Fortschrittsbalken mit Namen (UX-047)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));
+
+  const bars = (el: HTMLElement) => [...el.querySelectorAll('mat-progress-bar')];
+
+  it('Wochenpost: der Balken trägt den Fortschrittstext als Namen', () => {
+    const { el } = renderBookPuzzle(c => {
+      c.inWeekly = true; c.weeklyId = 5;
+      c.weeklyPuzzles = [{ ...c.puzzle }, { ...c.puzzle, id: 43 }];
+      c.weeklyPlayed = 1; c.weeklySolved = 1;
+    }, '/weekly/5');
+    expect(bars(el).length).toBe(1);
+    expect(bars(el)[0].getAttribute('aria-label')).toBe('book.weekly.progress');
+  });
+
+  it('Kurs: Buch- und Kapitelbalken tragen „Ganzes Buch" bzw. den Kapitelnamen', () => {
+    const { el } = renderBookPuzzle(c => {
+      c.inCourse = true; c.courseTotal = 10;
+      const stats = { total: 10, solvedCount: 3, attemptedCount: 0, progressPercent: 30, accuracyPercent: 0, totalSeconds: 0 };
+      c.courseBookStats = stats; c.courseChapterStats = stats;
+      spyOnProperty(c, 'courseChapterDisplay', 'get').and.returnValue('Kapitel 2');
+    }, '/courses/7/solve');
+    expect(bars(el).map(b => b.getAttribute('aria-label'))).toEqual(['book.course.wholeBook', 'Kapitel 2']);
+  });
+
+  it('Kurs ohne Buchstatistik: der Sammelbalken hat ebenfalls einen Namen', () => {
+    const { el } = renderBookPuzzle(c => {
+      c.inCourse = true; c.courseTotal = 10; c.courseSolved = 3; c.courseBookStats = null;
+    }, '/courses/7/solve');
+    expect(bars(el).length).toBe(1);
+    expect(bars(el)[0].getAttribute('aria-label')).toBe('book.course.wholeBook');
   });
 });
 

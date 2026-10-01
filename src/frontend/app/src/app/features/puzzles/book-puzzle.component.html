@@ -199,7 +199,8 @@
 
                 @if (inWeekly && weeklyTotal > 0) {
                   <div class="ctx-progress">
-                    <mat-progress-bar mode="determinate" [value]="weeklyPercent"></mat-progress-bar>
+                    <mat-progress-bar mode="determinate" [value]="weeklyPercent"
+                                      [attr.aria-label]="'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved}"></mat-progress-bar>
                     <p class="ctx-stats">
                       {{ 'book.weekly.progress' | translate:{played: weeklyPlayed, total: weeklyTotal, solved: weeklySolved} }}
                       @if (weeklySeconds > 0) {<span> · ⏱ {{ weeklyTimeDisplay }}</span>}
@@ -235,7 +236,8 @@
                       <!-- Ganzes Buch -->
                       <div class="cs-scope">
                         <span class="cs-label">{{ 'book.course.wholeBook' | translate }}</span>
-                        <mat-progress-bar mode="determinate" [value]="bk.progressPercent"></mat-progress-bar>
+                        <mat-progress-bar mode="determinate" [value]="bk.progressPercent"
+                                          [attr.aria-label]="'book.course.wholeBook' | translate"></mat-progress-bar>
                         <div class="cs-stats">
                           <span class="cs-prog">{{ bk.solvedCount }}/{{ bk.total }} ({{ bk.progressPercent }}%)</span>
                           @if (bk.attemptedCount > 0) {
@@ -257,7 +259,8 @@
                       @if (courseChapterStats; as ch) {
                         <div class="cs-scope cs-chapter">
                           <span class="cs-label">{{ courseChapterDisplay || ('book.course.noChapter' | translate) }}</span>
-                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"></mat-progress-bar>
+                          <mat-progress-bar mode="determinate" [value]="ch.progressPercent"
+                                            [attr.aria-label]="courseChapterDisplay || ('book.course.noChapter' | translate)"></mat-progress-bar>
                           <div class="cs-stats">
                             <span class="cs-prog">{{ ch.solvedCount }}/{{ ch.total }} ({{ ch.progressPercent }}%)</span>
                             @if (ch.attemptedCount > 0) {
@@ -277,7 +280,8 @@
                         </div>
                       }
                     } @else {
-                      <mat-progress-bar mode="determinate" [value]="coursePercent"></mat-progress-bar>
+                      <mat-progress-bar mode="determinate" [value]="coursePercent"
+                                        [attr.aria-label]="'book.course.wholeBook' | translate"></mat-progress-bar>
                       <p class="ctx-stats">{{ courseSolved }}/{{ courseTotal }} ({{ coursePercent }}%)</p>
                     }
                   </div>
