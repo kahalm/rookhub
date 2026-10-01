@@ -98,8 +98,8 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
 
         <button mat-icon-button class="row-drop" (click)="unbookmark(sub)"
                 [disabled]="removing() === sub.id"
-                [matTooltip]="'tournaments.actions.unsubscribe' | translate"
-                [attr.aria-label]="'tournaments.actions.unsubscribe' | translate">
+                [matTooltip]="'tournamentDirectory.bookmarkRemove' | translate"
+                [attr.aria-label]="'tournamentDirectory.bookmarkRemove' | translate">
           <mat-icon>bookmark_remove</mat-icon>
         </button>
       </mat-card>

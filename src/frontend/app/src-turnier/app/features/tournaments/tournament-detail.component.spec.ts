@@ -76,24 +76,69 @@ describe('TournamentDetailComponent', () => {
     expect(actions.some(a => a.hasAttribute('color'))).toBeFalse();
   });
 
-  /** Aus: Icon 'visibility', Beschriftung 'Beobachten'. */
-  it('zeigt bei inaktiver Beobachtung das Auge und die Start-Beschriftung', async () => {
+  /** Aus: Icon 'notifications_active' (die Glocke gehoert seit F6-011 allein dem Beobachten), Beschriftung 'Beobachten'. */
+  it('zeigt bei inaktiver Beobachtung die Glocke und die Start-Beschriftung', async () => {
     const fixture = await render({ active: false, activeUntil: null });
     const monitorBtn = actionsOf(fixture).find(a => a.getAttribute('aria-label') === 'tournaments.actions.monitor');
     expect(monitorBtn).toBeTruthy();
-    expect(monitorBtn!.querySelector('mat-icon')!.textContent!.trim()).toBe('visibility');
+    expect(monitorBtn!.querySelector('mat-icon')!.textContent!.trim()).toBe('notifications_active');
   });
 
   /**
-   * An: Icon 'visibility_off' (= Aktion 'Beobachtung beenden'), Beschriftung mit Endzeit — vorher
+   * An: Icon 'notifications_off' (= Aktion 'Beobachtung beenden'), Beschriftung mit Endzeit — vorher
    * sahen an und aus auf dem Handy identisch aus (gleiches Icon, Label weg, color="primary" faerbte nichts).
+   * Bis F6-011 war es 'visibility_off' — dasselbe Symbol heisst in der Kurzansicht „Für mich ausblenden".
    */
-  it('zeigt bei aktiver Beobachtung das durchgestrichene Auge und die Endzeit-Beschriftung', async () => {
+  it('zeigt bei aktiver Beobachtung die durchgestrichene Glocke und die Endzeit-Beschriftung', async () => {
     const fixture = await render({ active: true, activeUntil: '2026-09-09T18:30:00' });
     const monitorBtn = actionsOf(fixture).find(a => a.getAttribute('aria-label') === 'tournaments.actions.monitoringUntil');
     expect(monitorBtn).withContext('Monitor-Knopf mit monitoringUntil-Label').toBeTruthy();
-    expect(monitorBtn!.querySelector('mat-icon')!.textContent!.trim()).toBe('visibility_off');
+    expect(monitorBtn!.querySelector('mat-icon')!.textContent!.trim()).toBe('notifications_off');
     expect(actionsOf(fixture).some(a => a.getAttribute('aria-label') === 'tournaments.actions.monitor')).toBeFalse();
+  });
+
+  // ----- Ein Begriff, eine Rangfolge (F6-011) --------------------------------
+
+  const icons = (fixture: ComponentFixture<TournamentDetailComponent>): string[] =>
+    actionsOf(fixture).map(a => a.querySelector('mat-icon')!.textContent!.trim());
+
+  /**
+   * Gemerkt wird im Kalender mit dem Lesezeichen („Merken"); hier hiess dieselbe Aktion „Abonnieren" mit Glocke —
+   * man hielt es fuer ein zweites Abo. Und das durchgestrichene Auge (Kurzansicht: „Für mich ausblenden") stand
+   * hier fuer „Beobachtung beenden".
+   */
+  it('nennt das Abo „Merken" mit Lesezeichen wie der Kalender, ohne Glocke und Auge dafuer', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const bookmark = actionsOf(fixture).find(a => a.getAttribute('aria-label') === 'tournamentDirectory.bookmark');
+    expect(bookmark).withContext('Merken-Knopf').toBeTruthy();
+    expect(bookmark!.querySelector('mat-icon')!.textContent!.trim()).toBe('bookmark_add');
+    expect(actionsOf(fixture).some(a => (a.getAttribute('aria-label') ?? '').startsWith('tournaments.actions.subscribe'))).toBeFalse();
+    expect(icons(fixture)).not.toContain('notifications');
+    expect(icons(fixture).some(i => i.startsWith('visibility'))).toBeFalse();
+  });
+
+  it('zeigt ein gemerktes Turnier mit vollem Lesezeichen und „Merken aufheben"', async () => {
+    const fixture = await render({ active: true, activeUntil: '2026-09-09T18:30:00' }, undefined, {
+      subscriptions: [{ id: 9, crawlerTournamentId: '4711', tournamentName: 'Schach Tirol Open', subscribedAt: '', tournamentDbId: null, eventDate: null }],
+    });
+    const remove = actionsOf(fixture).find(a => a.getAttribute('aria-label') === 'tournamentDirectory.bookmarkRemove');
+    expect(remove).withContext('Merken-aufheben-Knopf').toBeTruthy();
+    expect(remove!.querySelector('mat-icon')!.textContent!.trim()).toBe('bookmark');
+    expect(icons(fixture).some(i => i.startsWith('visibility'))).toBeFalse();
+  });
+
+  /** UI-Dichte-Regel: vorher fuenf gleich gewichtete mat-raised-button. Jetzt 1 primaer, 3 sekundaer, 1 Textlink. */
+  it('stuft die Aktionen: Merken primaer, drei umrandet, Chess-Results als Textlink', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const actions = actionsOf(fixture);
+    const has = (cls: string) => actions.filter(a => a.classList.contains(cls));
+    expect(has('mat-mdc-raised-button').length).withContext('keine erhabenen Knoepfe mehr').toBe(0);
+    expect(has('mat-mdc-unelevated-button').map(a => a.getAttribute('aria-label'))).toEqual(['tournamentDirectory.bookmark']);
+    expect(has('mat-mdc-outlined-button').map(a => a.getAttribute('aria-label')))
+      .toEqual(['tournaments.actions.monitor', 'tournaments.actions.refresh', 'tournaments.actions.share']);
+    const link = actions.find(a => a.getAttribute('aria-label') === 'tournaments.actions.chessResults')!;
+    expect(link.classList.contains('mat-mdc-button')).toBeTrue();
+    expect(link.classList.contains('mat-mdc-outlined-button')).toBeFalse();
   });
 
   // ----- Gruppen derselben Veranstaltung -----------------------------------

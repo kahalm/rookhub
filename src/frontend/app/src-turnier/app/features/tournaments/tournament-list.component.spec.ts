@@ -75,6 +75,16 @@ describe('TournamentListComponent', () => {
     http.verify();
   });
 
+  /** F6-011: dieselbe Aktion heisst ueberall „Merken"/„Merken aufheben" — hier stand „Abo beenden". */
+  it('beschriftet das Entfernen als „Merken aufheben" wie Kalender und Turnierseite', async () => {
+    await setup([sub()]);
+    fixture.detectChanges();
+
+    const drop = (fixture.nativeElement as HTMLElement).querySelector('.row-drop')!;
+    expect(drop.getAttribute('aria-label')).toBe('tournamentDirectory.bookmarkRemove');
+    expect(drop.querySelector('mat-icon')!.textContent!.trim()).toBe('bookmark_remove');
+  });
+
   it('holt nur die Abos — nicht mehr die Liste aller geholten Turniere', async () => {
     await setup([sub()]);
 

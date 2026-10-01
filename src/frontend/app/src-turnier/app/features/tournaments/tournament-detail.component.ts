@@ -183,11 +183,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.subscription = sub;
         this.subscriptions = [...(this.subscriptions ?? []).filter(s => s.id !== sub.id), sub];
         this.toggling = false;
-        this.snackbar.success(this.translate.instant('tournaments.actions.subscribed'));
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarked'));
       },
       error: (err) => {
         this.toggling = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('tournaments.actions.failed'));
+        this.snackbar.info(err.error?.message || this.translate.instant('tournamentDirectory.bookmarkError'));
       }
     });
   }
@@ -201,11 +201,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.subscription = null;
         this.subscriptions = (this.subscriptions ?? []).filter(s => s.id !== subscriptionId);
         this.toggling = false;
-        this.snackbar.success(this.translate.instant('tournaments.actions.unsubscribed'));
+        this.snackbar.success(this.translate.instant('tournamentDirectory.bookmarkRemoved'));
       },
       error: () => {
         this.toggling = false;
-        this.snackbar.info(this.translate.instant('tournaments.actions.unsubscribeFailed'));
+        this.snackbar.info(this.translate.instant('tournamentDirectory.bookmarkRemoveError'));
       }
     });
   }
