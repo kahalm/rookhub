@@ -24,5 +24,13 @@ EXPOSE 8080
 # dem non-root appuser gehoeren, damit die Keys schreibbar sind.
 RUN mkdir -p /keys && chown appuser /keys
 
+# Commit + Ref des Builds (vom CI als --build-arg gesetzt, dasselbe Paar wie beim Frontend). Die API
+# meldet damit ihren eigenen Stand an die Admin-CI-Seite (GithubActionsService.OwnApiBuild) — vorher
+# kannte die nur den Frontend-Commit. Bewusst am ENDE: alles darueber bleibt je Commit dieselbe Schicht.
+ARG GIT_SHA=unknown
+ARG GIT_REF=
+ENV BUILD_GIT_SHA=$GIT_SHA \
+    BUILD_GIT_REF=$GIT_REF
+
 USER appuser
 ENTRYPOINT ["dotnet", "RookHub.Api.dll"]

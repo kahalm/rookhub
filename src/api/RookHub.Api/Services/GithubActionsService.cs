@@ -69,6 +69,27 @@ public class GithubActionsService
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>Repo-Name DIESES Stacks in der CI-Liste. Für ihn kennt der Server ZWEI laufende Stände:
+    /// das Frontend (über dessen <c>/build-info.json</c>, <see cref="CiRepoDto.RunningSha"/>) und sich selbst,
+    /// die API (<see cref="OwnApiBuild"/>, <see cref="CiRepoDto.ApiSha"/>).</summary>
+    private const string SelfRepo = "rookhub";
+
+    /// <summary>
+    /// Commit/Ref, aus dem DIESES API-Image gebaut ist (Codereview I1-017). Das Dockerfile legt die
+    /// build-args <c>GIT_SHA</c>/<c>GIT_REF</c> als <c>BUILD_GIT_SHA</c>/<c>BUILD_GIT_REF</c> in die Umgebung
+    /// (dieselben Namen wie piratechess). Ohne (lokal, altes Image, „unknown“) null. Vorher meldete die API
+    /// ihren Commit nirgends: ein Push nur an <c>src/api</c> baute ein neues API-Image, die Admin-CI markierte
+    /// aber weiter den älteren Frontend-Lauf — und ein ausgebliebener API-Build (Dev lief am 09.09. noch auf
+    /// 0.452.1) war dort unsichtbar. Gelesen wird die EIGENE Umgebung, kein HTTP-Abruf und kein Endpunkt.
+    /// </summary>
+    internal (string Sha, string? Ref)? OwnApiBuild()
+    {
+        var sha = _config["BUILD_GIT_SHA"]?.Trim();
+        if (string.IsNullOrEmpty(sha) || !IsPlausibleSha(sha)) return null;
+        var refName = _config["BUILD_GIT_REF"]?.Trim();
+        return (sha, string.IsNullOrEmpty(refName) ? null : refName);
+    }
+
     /// <summary>Plausible Git-SHA: 7–64 Hex-Zeichen. Alles andere (z. B. „abc&amp;per_page=100",
     /// Whitespace, „v1.2 dirty") würde die GitHub-Query verfälschen bzw. eine ungültige URI bauen.</summary>
     internal static bool IsPlausibleSha(string sha) =>
@@ -168,19 +189,33 @@ public class GithubActionsService
     }
 
     /// <summary>Reichert einen Repo-DTO um die laufende Build-SHA/Ref an und lädt — falls der laufende
-    /// Build aus den Top-5 herausgefallen ist — den Run gezielt per head_sha als 6. Zeile nach.</summary>
+    /// Build aus den Top-5 herausgefallen ist — den Run gezielt per head_sha als 6. Zeile nach. Für rookhub
+    /// zusätzlich der Stand der API (<see cref="OwnApiBuild"/>) samt eigener Nachlade-Zeile: API- und
+    /// Frontend-Image entstehen aus verschiedenen Läufen, sobald ein Push nur eine Seite berührt.</summary>
     private async Task<CiRepoDto> MergeRunningAsync(CiRepoDto r, IReadOnlyDictionary<string, BuildInfo> running,
         string owner, string token, CancellationToken ct)
     {
-        if (!running.TryGetValue(r.Repo, out var bi) || (bi.Sha is not { Length: > 0 } && bi.Ref is not { Length: > 0 }))
-            return r;
-        var repoDto = r with { RunningSha = bi.Sha, RunningRef = bi.Ref };
-        if (repoDto.Error is null && bi.Sha is { Length: > 0 }
-            && !repoDto.Runs.Any(run => RunMatchesBuild(run, bi)))
+        var repoDto = r;
+        var builds = new List<BuildInfo>(2);
+        if (running.TryGetValue(r.Repo, out var bi) && (bi.Sha is { Length: > 0 } || bi.Ref is { Length: > 0 }))
         {
-            var extra = await FetchRunByShaAsync(owner, r.Repo, token, bi, ct);
-            if (extra != null)
-                repoDto = repoDto with { Runs = repoDto.Runs.Append(extra).ToList() };
+            repoDto = repoDto with { RunningSha = bi.Sha, RunningRef = bi.Ref };
+            builds.Add(bi);
+        }
+        if (string.Equals(r.Repo, SelfRepo, StringComparison.OrdinalIgnoreCase) && OwnApiBuild() is { } api)
+        {
+            repoDto = repoDto with { ApiSha = api.Sha, ApiRef = api.Ref };
+            builds.Add(new BuildInfo(api.Sha, api.Ref));
+        }
+        foreach (var b in builds)
+        {
+            if (repoDto.Error is null && b.Sha is { Length: > 0 }
+                && !repoDto.Runs.Any(run => RunMatchesBuild(run, b)))
+            {
+                var extra = await FetchRunByShaAsync(owner, r.Repo, token, b, ct);
+                if (extra != null && repoDto.Runs.All(run => run.Id != extra.Id))
+                    repoDto = repoDto with { Runs = repoDto.Runs.Append(extra).ToList() };
+            }
         }
         return repoDto;
     }

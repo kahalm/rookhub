@@ -227,6 +227,102 @@ public class GithubActionsServiceTests
         Assert.Equal("master", repo.RunningRef);
     }
 
+    /// <summary>
+    /// Codereview I1-017: das API-Image meldete seinen Commit nirgends — die Admin-CI kannte für rookhub nur das
+    /// Frontend. Ein Push nur an src/api baute ein neues API-Image, markiert blieb der ältere Frontend-Lauf, und
+    /// ein ausgebliebener API-Build war unsichtbar. Jetzt liest der Dienst die EIGENE Umgebung (BUILD_GIT_SHA/
+    /// BUILD_GIT_REF aus dem Dockerfile) und meldet sie getrennt vom Frontend als ApiSha/ApiRef.
+    /// </summary>
+    [Fact]
+    public async Task RookhubRepo_CarriesTheApiBuild_SeparateFromTheFrontend()
+    {
+        var handler = new StubHandler((_, _) => Json(RunsJson));   // GitHub-Lauf abc1234def5678 auf master
+        // Frontend (build-info.json) läuft auf einem ANDEREN Commit als die API.
+        var biHandler = new StubHandler((req, _) =>
+            req.RequestUri!.AbsoluteUri.EndsWith("/build-info.json")
+                ? Json("""{ "sha": "fff1234def5678", "ref": "master" }""")
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?>
+        {
+            ["BUILD_GIT_SHA"] = "abc1234def5678",
+            ["BUILD_GIT_REF"] = "master",
+        }, buildInfoHandler: biHandler);
+
+        var repo = Assert.Single((await svc.GetOverviewAsync()).Repos);
+
+        Assert.Equal("abc1234def5678", repo.ApiSha);
+        Assert.Equal("master", repo.ApiRef);
+        Assert.Equal("fff1234def5678", repo.RunningSha);   // RunningSha bleibt das Frontend
+    }
+
+    /// <summary>Liegt der Lauf, der die laufende API gebaut hat, nicht unter den letzten Läufen, wird er wie beim
+    /// Frontend gezielt per head_sha nachgeladen — sonst gäbe es nichts zu markieren.</summary>
+    [Fact]
+    public async Task ApiBuildOutsideTheRecentRuns_IsLoadedAsExtraRow()
+    {
+        const string apiRunJson = """
+        { "total_count": 1, "workflow_runs": [ {
+            "id": 7, "name": "Build & Push Docker Images", "display_title": "api only", "head_branch": "master",
+            "event": "push", "status": "completed", "conclusion": "success", "run_number": 40,
+            "created_at": "2026-06-30T10:00:00Z", "updated_at": "2026-06-30T10:05:00Z",
+            "head_sha": "0aa1234def5678", "html_url": "https://github.com/kahalm/rookhub/actions/runs/7", "actor": { "login": "kahalm" } } ] }
+        """;
+        string? askedSha = null;
+        var handler = new StubHandler((req, _) =>
+        {
+            var url = req.RequestUri!.AbsoluteUri;
+            if (url.Contains("head_sha="))
+            {
+                askedSha = System.Web.HttpUtility.ParseQueryString(req.RequestUri.Query)["head_sha"];
+                return Json(apiRunJson);
+            }
+            return Json(RunsJson);
+        });
+        var svc = Build(handler, extraSettings: new Dictionary<string, string?>
+        {
+            ["BUILD_GIT_SHA"] = "0aa1234def5678",
+            ["BUILD_GIT_REF"] = "master",
+        });
+
+        var repo = Assert.Single((await svc.GetOverviewAsync()).Repos);
+
+        Assert.Equal("0aa1234def5678", askedSha);
+        Assert.Equal(new long[] { 1, 7 }, repo.Runs.Select(r => r.Id).ToArray());
+    }
+
+    [Theory]
+    [InlineData("unknown")]           // Vorgabe des Dockerfiles ohne build-arg
+    [InlineData("")]
+    [InlineData("abc1234&per_page=1")]
+    public async Task ApiBuild_WithoutAPlausibleSha_IsUnknown(string sha)
+    {
+        var svc = Build(new StubHandler((_, _) => Json(RunsJson)), extraSettings: new Dictionary<string, string?>
+        {
+            ["BUILD_GIT_SHA"] = sha,
+            ["BUILD_GIT_REF"] = "master",
+        });
+
+        var repo = Assert.Single((await svc.GetOverviewAsync()).Repos);
+
+        Assert.Null(repo.ApiSha);
+        Assert.Null(repo.ApiRef);
+    }
+
+    /// <summary>Der eigene API-Stand gehört zu rookhub — ein anderer Stack bekommt ihn nicht untergeschoben.</summary>
+    [Fact]
+    public async Task ApiBuild_OnlyForTheRookhubRepo()
+    {
+        var svc = Build(new StubHandler((_, _) => Json(RunsJson)), extraSettings: new Dictionary<string, string?>
+        {
+            ["GitHub:Repos:0"] = "chessresults_crawler",
+            ["BUILD_GIT_SHA"] = "abc1234def5678",
+        });
+
+        var repo = Assert.Single((await svc.GetOverviewAsync()).Repos);
+
+        Assert.Null(repo.ApiSha);
+    }
+
     [Fact]
     public async Task NoStackConfigured_LeavesRunningBuildNull()
     {

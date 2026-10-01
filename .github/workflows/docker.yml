@@ -125,10 +125,16 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # GIT_SHA/GIT_REF wie bei den Frontend-Images: das API-Image traegt damit seinen Commit
+      # (ENV BUILD_GIT_SHA/BUILD_GIT_REF), und die Admin-CI-Seite markiert den Lauf, der die LAUFENDE
+      # API gebaut hat — getrennt vom Frontend (Codereview I1-017).
       - uses: docker/build-push-action@v7
         with:
           context: src/api/RookHub.Api
           push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            GIT_REF=${{ github.ref_name }}
           tags: ${{ env.REGISTRY }}/kahalm/rookhub-api:ci-${{ github.run_id }}
 
   prebuild-frontend:

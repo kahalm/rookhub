@@ -78,6 +78,51 @@ describe('AdminGithubActionsComponent.isRunningBuild', () => {
     // Kein runningSha (Stack nicht erreichbar/altes Image) → nichts markiert.
     expect(comp.isRunningBuild(makeRun({ headSha: 'crawlersha', ref: 'master' }), stack(null, null))).toBe(false);
   });
+
+  /**
+   * Codereview I1-017: für rookhub laufen API und Frontend aus VERSCHIEDENEN Läufen, sobald ein Push nur eine Seite
+   * berührt. Markiert war allein der Frontend-Lauf — ein neues (oder ausgebliebenes) API-Image war unsichtbar.
+   */
+  describe('liveTags (rookhub: API und Frontend getrennt)', () => {
+    const apiRun = makeRun({ id: 2, headSha: 'aaa1111', ref: 'master' });
+    const frontRun = makeRun({ id: 3, headSha: 'fff2222', ref: 'master' });
+    const split: CiRepo = { repo: 'rookhub', error: null, runs: [apiRun, frontRun],
+      runningSha: 'fff2222', runningRef: 'master', apiSha: 'aaa1111', apiRef: 'master' };
+
+    it('markiert den API-Lauf als API und den Frontend-Lauf als Frontend', () => {
+      initWith({ sha: 'fff2222', ref: 'master' });
+      expect(comp.liveTags(apiRun, split)).toEqual(['api']);
+      expect(comp.liveTags(frontRun, split)).toEqual(['frontend']);
+      expect(comp.liveTags(makeRun({ headSha: 'ccc3333', ref: 'master' }), split)).toEqual([]);
+    });
+
+    it('ein Lauf, der beides gebaut hat, trägt EIN Abzeichen „beides"', () => {
+      initWith({ sha: 'aaa1111', ref: 'master' });
+      const same: CiRepo = { ...split, runningSha: 'aaa1111' };
+      expect(comp.liveTags(apiRun, same)).toEqual(['both']);
+    });
+
+    it('der API-Ref zählt wie beim Frontend: gleicher Commit, anderer Ref → nicht markiert', () => {
+      initWith({ sha: 'fff2222', ref: 'master' });
+      expect(comp.liveTags(makeRun({ headSha: 'aaa1111', ref: 'v0.600.0', isTag: true }), split)).toEqual([]);
+    });
+
+    it('ohne API-Angabe (altes Image) bleibt es beim bisherigen einen Abzeichen', () => {
+      initWith({ sha: 'fff2222', ref: 'master' });
+      const old: CiRepo = { ...split, apiSha: null, apiRef: null };
+      expect(comp.liveTags(frontRun, old)).toEqual(['live']);
+      expect(comp.liveTags(apiRun, old)).toEqual([]);
+      // Fremd-Stacks kennen keine API-Angabe.
+      expect(comp.liveTags(makeRun({ headSha: 'crawlersha', ref: 'master' }), stack('crawlersha', 'master'))).toEqual(['live']);
+    });
+
+    it('nennt den API-Commit für die Kopfzeile', () => {
+      initWith(null);
+      expect(comp.apiSha).toBeNull();
+      comp.overview = { configured: true, repos: [split], fetchedAt: '' };
+      expect(comp.apiSha).toBe('aaa1111');
+    });
+  });
 });
 
 /**

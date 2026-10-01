@@ -20,6 +20,29 @@ export interface CiRepo {
   typicalSeconds?: Record<string, number> | null;
   /** SHA/Ref des in DIESEM Stack laufenden Images (vom Server abgefragt). Für rookhub null → Browser liefert es selbst. */
   runningSha?: string | null; runningRef?: string | null;
+  /** Nur rookhub: SHA/Ref des laufenden API-Images. `runningSha` ist dort das FRONTEND — ein Push nur an der API
+   *  baut nur ein neues API-Image, die beiden Stände können auseinanderliegen. */
+  apiSha?: string | null; apiRef?: string | null;
+}
+
+/** Welchen laufenden Stand hat ein Lauf gebaut? `live` = den einzigen bekannten (Fremd-Stack bzw. rookhub ohne
+ *  API-Angabe), `both` = API UND Frontend, sonst eines der beiden. */
+export type LiveTag = 'live' | 'both' | 'api' | 'frontend';
+
+const LIVE_LABEL: Record<LiveTag, string> = {
+  live: 'admin.ci.live', both: 'admin.ci.live', api: 'admin.ci.liveApi', frontend: 'admin.ci.liveFrontend',
+};
+const LIVE_TOOLTIP: Record<LiveTag, string> = {
+  live: 'admin.ci.runningBuildTooltip', both: 'admin.ci.liveBothTooltip',
+  api: 'admin.ci.liveApiTooltip', frontend: 'admin.ci.runningBuildTooltip',
+};
+
+/** SHA passt (Präfix-tolerant) UND — sofern ein Ref gemeldet ist — auch der Ref. */
+function matchesBuild(run: CiRun, sha: string | null | undefined, ref: string | null | undefined): boolean {
+  if (!sha || !run.headSha) return false;
+  const shaMatch = sha === run.headSha || sha.startsWith(run.headSha) || run.headSha.startsWith(sha);
+  if (!shaMatch) return false;
+  return !ref || run.ref === ref;
 }
 export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: string; }
 
@@ -41,6 +64,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
           {{ 'admin.ci.subtitle' | translate }}
           @if (lastUpdated) { · {{ 'admin.ci.updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }} }
           @if (buildSha) { · {{ 'admin.ci.runningBuild' | translate }} {{ buildSha.slice(0, 7) }} }
+          @if (apiSha) { · {{ 'admin.ci.runningApi' | translate }} {{ apiSha.slice(0, 7) }} }
         </span>
         @for (b of running; track b.repo) {
           <span class="ci-eta" [matTooltip]="'admin.ci.etaTooltip' | translate">
@@ -83,7 +107,7 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                 <p class="empty">{{ 'admin.ci.noRuns' | translate }}</p>
               }
               @for (run of repo.runs; track run.id) {
-                <a class="run" [class.run-deployed]="isRunningBuild(run, repo)" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
+                <a class="run" [class.run-deployed]="liveTags(run, repo).length > 0" [href]="run.htmlUrl" target="_blank" rel="noopener noreferrer">
                   <span class="run-badge" [ngClass]="badgeClass(run)"
                         [matTooltip]="run.conclusion || run.status">
                     <mat-icon>{{ badgeIcon(run) }}</mat-icon>
@@ -91,9 +115,9 @@ export interface CiOverview { configured: boolean; repos: CiRepo[]; fetchedAt: s
                   <span class="run-main">
                     <span class="run-title">
                       {{ run.title || run.name }}
-                      @if (isRunningBuild(run, repo)) {
-                        <span class="run-live-tag" [matTooltip]="'admin.ci.runningBuildTooltip' | translate">
-                          <mat-icon>fiber_manual_record</mat-icon>{{ 'admin.ci.live' | translate }}
+                      @for (tag of liveTags(run, repo); track tag) {
+                        <span class="run-live-tag" [matTooltip]="liveTooltip(tag) | translate">
+                          <mat-icon>fiber_manual_record</mat-icon>{{ liveLabel(tag) | translate }}
                         </span>
                       }
                     </span>
@@ -358,12 +382,30 @@ export class AdminGithubActionsComponent implements OnInit {
     const isRookhub = repo.repo === 'rookhub';
     const sha = repo.runningSha ?? (isRookhub ? this.buildSha : null);
     const ref = repo.runningSha ? (repo.runningRef ?? null) : (isRookhub ? this.buildRef : null);
-    if (!sha || !run.headSha) return false;
-    const shaMatch = sha === run.headSha || sha.startsWith(run.headSha) || run.headSha.startsWith(sha);
-    if (!shaMatch) return false;
-    if (!ref) return true;
-    return run.ref === ref;
+    return matchesBuild(run, sha, ref);
   }
+
+  /** Commit des laufenden API-Images (vom Server, Codereview I1-017) — null bei alten Images. */
+  get apiSha(): string | null {
+    return this.overview?.repos.find(r => r.repo === 'rookhub')?.apiSha ?? null;
+  }
+
+  /**
+   * Welche laufenden Stände hat dieser Lauf gebaut? Für rookhub getrennt nach API und Frontend: ein Push nur an
+   * `src/api` baut nur das API-Image, und markiert war vorher allein der Frontend-Lauf — ein neuer oder
+   * ausgebliebener API-Build war hier unsichtbar. Ohne API-Angabe (altes Image) bleibt es beim einen Abzeichen.
+   */
+  liveTags(run: CiRun, repo: CiRepo): LiveTag[] {
+    const front = this.isRunningBuild(run, repo);
+    if (repo.repo !== 'rookhub' || !repo.apiSha) return front ? ['live'] : [];
+    const api = matchesBuild(run, repo.apiSha, repo.apiRef);
+    if (front && api) return ['both'];
+    if (api) return ['api'];
+    return front ? ['frontend'] : [];
+  }
+
+  liveLabel(tag: LiveTag): string { return LIVE_LABEL[tag]; }
+  liveTooltip(tag: LiveTag): string { return LIVE_TOOLTIP[tag]; }
 
   badgeClass(run: CiRun): string {
     if (run.status !== 'completed') return 'run';

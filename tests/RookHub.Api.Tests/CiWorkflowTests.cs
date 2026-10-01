@@ -731,4 +731,36 @@ public class CiWorkflowTests
         Assert.Contains("WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}", block);
         Assert.Contains("bash .github/scripts/ci_alert.sh", block);
     }
+
+    /// <summary>
+    /// Jedes Image traegt den Commit, aus dem es gebaut ist (Codereview I1-017). Bis dahin bekamen nur die
+    /// Frontend-Images GIT_SHA/GIT_REF — das API-Image meldete seinen Stand nirgends, die Admin-CI-Seite
+    /// markierte fuer rookhub den Frontend-Lauf, und ein ausgebliebener API-Build (Dev am 09.09. auf 0.452.1)
+    /// war dort unsichtbar. Die build-args stehen im VORBAU: hinter dem Gate wird nicht mehr gebaut.
+    /// </summary>
+    [Theory]
+    [InlineData("prebuild-api")]
+    [InlineData("prebuild-frontend")]
+    [InlineData("prebuild-turnier")]
+    [InlineData("prebuild-kidhub")]
+    [InlineData("prebuild-leaguehub")]
+    [InlineData("prebuild-clubhub")]
+    public void EveryPrebuildJob_StampsTheCommitIntoTheImage(string job)
+    {
+        var block = Job(job);
+        Assert.Contains("GIT_SHA=${{ github.sha }}", block);
+        Assert.Contains("GIT_REF=${{ github.ref_name }}", block);
+    }
+
+    /// <summary>Das API-Image legt die build-args in seine Umgebung — dort liest
+    /// <c>GithubActionsService.OwnApiBuild</c> sie.</summary>
+    [Fact]
+    public void ApiImage_CarriesItsCommitInTheEnvironment()
+    {
+        var dockerfile = ReadRepoFile("src/api/RookHub.Api/Dockerfile");
+        Assert.Matches(@"(?m)^ARG GIT_SHA=", dockerfile);
+        Assert.Matches(@"(?m)^ARG GIT_REF=", dockerfile);
+        Assert.Matches(@"BUILD_GIT_SHA=\$GIT_SHA\b", dockerfile);
+        Assert.Matches(@"BUILD_GIT_REF=\$GIT_REF\b", dockerfile);
+    }
 }

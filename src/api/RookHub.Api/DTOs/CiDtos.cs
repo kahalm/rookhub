@@ -30,7 +30,12 @@ public record CiRepoDto(string Repo, string? Error, List<CiRunDto> Runs,
     string? RunningSha = null, string? RunningRef = null,
     /// <summary>Typische Laufzeit JE WORKFLOW-NAMEN in Sekunden — Grundlage der Restzeit-Schätzung
     /// in der Oberfläche. Aus mehr Läufen gerechnet als die angezeigten fünf.</summary>
-    Dictionary<string, int>? TypicalSeconds = null);
+    Dictionary<string, int>? TypicalSeconds = null,
+    /// <summary>Nur für rookhub: Commit/Ref des laufenden API-Images (aus dessen eigener Umgebung,
+    /// <c>BUILD_GIT_SHA</c>/<c>BUILD_GIT_REF</c>). <see cref="RunningSha"/> ist dort das FRONTEND — ein Push
+    /// nur an der API baut nur ein neues API-Image, die beiden Stände können also auseinanderliegen.
+    /// null = unbekannt (altes Image, lokal).</summary>
+    string? ApiSha = null, string? ApiRef = null);
 
 /// <summary>Gesamtübersicht über alle beteiligten Repos. <see cref="Configured"/>=false, wenn kein
 /// GitHub-Token hinterlegt ist (dann bleibt <see cref="Repos"/> leer und die UI zeigt einen Hinweis).</summary>
