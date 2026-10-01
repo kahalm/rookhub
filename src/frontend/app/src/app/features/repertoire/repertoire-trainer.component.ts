@@ -27,6 +27,7 @@ import { isInfoLineGame } from './repertoire-info-line.util';
 import { isStateDue, isStateLearnable, earliestDueIso, relDueLabel, shuffle, applySrReview, applyPromote, DEFAULT_SR_LEVELS } from './repertoire-sr.util';
 import { getRepertoireOffline, refreshRepertoireOffline, updateRepertoireOfflineStates } from './repertoire-offline.util';
 import { OfflineQueueService } from '../../core/offline-queue.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { startNumbering, prettyMoveLabel } from './repertoire-move-format.util';
 import { parseWhiteEval } from './repertoire-eval.util';
 import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/line-solver';
@@ -188,6 +189,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private offlineQueue: OfflineQueueService,
     private explorer: RepertoireExplorerService,
+    private snackbar: SnackbarService,
   ) {}
 
   ngOnInit(): void {
@@ -390,8 +392,14 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.poolBusy = false;
         this.buildQueue();
       },
-      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+      // Der Pool wurde serverseitig schon geändert — nur die Anzeige ist veraltet: das sagen.
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.reloadFailed'); },
     });
+  }
+
+  /** Nutzer-Aktion gescheitert → Snackbar statt Schweigen (src/frontend/CLAUDE.md „Fehlerbehandlung"). */
+  private warn(key: string): void {
+    this.snackbar.warn(this.translate.instant(key));
   }
 
   /** „Alle in den Pool aufnehmen" (Kurs bzw. gefiltertes Kapitel) → sofort fällig. */
@@ -401,7 +409,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.poolBusy = true; this.cdr.markForCheck();
     this.training.promote(this.repertoireId, keys).subscribe({
       next: () => this.reloadStatesAndRebuild(),
-      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.poolFailed'); },
     });
   }
 
@@ -411,7 +419,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
     this.poolBusy = true; this.cdr.markForCheck();
     this.training.makeDue(this.repertoireId, keys).subscribe({
       next: () => this.reloadStatesAndRebuild(),
-      error: () => { this.poolBusy = false; this.cdr.markForCheck(); },
+      error: () => { this.poolBusy = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.poolFailed'); },
     });
   }
 
@@ -430,7 +438,9 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
         this.resetting = false;
         this.buildQueue();
       },
-      error: () => { this.resetting = false; },
+      // OnPush: ohne markForCheck bliebe der Knopf grau stehen — und ohne Meldung hielte man den
+      // Reset für erfolgt.
+      error: () => { this.resetting = false; this.cdr.markForCheck(); this.warn('repertoireTrainer.resetFailed'); },
     });
   }
 

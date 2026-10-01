@@ -47,6 +47,7 @@ function state(lineKey: string, dueAtMs: number, extra: Partial<LineStateDto> = 
 
 /** Explorer ohne Wirkung — „Häufigste zuerst" ist in den übrigen Tests aus. */
 const NO_EXPLORER: any = { run: () => EMPTY, effectiveSettings: () => of(DEFAULT_EXPLORER_SETTINGS) };
+const NO_SNACKBAR: any = { warn: () => ({}) };
 
 /** Explorer-Stub mit gegebener `run`-Antwort und der Vorgabe-Auswahl. */
 function explorerWith(run: any): any {
@@ -94,7 +95,7 @@ function make(
     localStorage.setItem('rookhub_rep_train_chaptercolor_1', JSON.stringify(chapters));
   }
   // forceColor=false → localStorage NICHT anfassen (Test setzt Overrides/Auto-Erkennung selbst).
-  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog, offlineQueue ?? ({ enqueue: () => {} } as any), explorer);
+  const c = new RepertoireTrainerComponent(route, training, prefs, translate, cdr, stockfish, dialog, offlineQueue ?? ({ enqueue: () => {} } as any), explorer, NO_SNACKBAR);
   c.ngOnInit();
   return c;
 }
@@ -252,6 +253,55 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
     expect(spy.calls.mostRecent().args[1].length).toBe(2);   // beide Linien
   });
 
+  describe('scheitert nicht still (Fehler → Snackbar + Ansicht markiert)', () => {
+    /** Snackbar und ChangeDetector als Spione einsetzen — die Komponente ist OnPush. */
+    function watchFeedback(c: RepertoireTrainerComponent) {
+      const warn = jasmine.createSpy('warn');
+      const markForCheck = jasmine.createSpy('markForCheck');
+      (c as any).snackbar = { warn };
+      (c as any).cdr = { markForCheck };
+      return { warn, markForCheck };
+    }
+
+    it('resetProgress: Fehler meldet sich, gibt den Knopf frei und markiert die OnPush-Ansicht', () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      const c = make('w', null);
+      const { warn, markForCheck } = watchFeedback(c);
+      (c as any).training.reset = () => throwError(() => new Error('500'));
+      c.resetProgress();
+      expect(c.resetting).toBeFalse();
+      expect(markForCheck).toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith('repertoireTrainer.resetFailed');
+    });
+
+    it('promoteAllToPool: Fehler meldet sich', () => {
+      const c = make('w', null, PGN, []);
+      const { warn } = watchFeedback(c);
+      (c as any).training.promote = () => throwError(() => new Error('500'));
+      c.promoteAllToPool();
+      expect(c.poolBusy).toBeFalse();
+      expect(warn).toHaveBeenCalledWith('repertoireTrainer.poolFailed');
+    });
+
+    it('makeAllDue: Fehler meldet sich', () => {
+      const c = make('w', null);
+      const { warn } = watchFeedback(c);
+      (c as any).training.makeDue = () => throwError(() => new Error('500'));
+      c.makeAllDue();
+      expect(c.poolBusy).toBeFalse();
+      expect(warn).toHaveBeenCalledWith('repertoireTrainer.poolFailed');
+    });
+
+    it('Neuladen nach geglückter Pool-Aktion scheitert: sagt, dass nur die Anzeige veraltet ist', () => {
+      const c = make('w', null);
+      const { warn } = watchFeedback(c);
+      (c as any).training.getLineStates = () => throwError(() => new Error('502'));
+      c.makeAllDue();
+      expect(c.poolBusy).toBeFalse();
+      expect(warn).toHaveBeenCalledWith('repertoireTrainer.reloadFailed');
+    });
+  });
+
   it('learn mode: line must be played 3× (1 learn + 2 replays) before it is promoted to the pool', fakeAsync(() => {
     const promote = jasmine.createSpy('promote').and.returnValue(of({ affected: 1 }));
     const route: any = {
@@ -273,6 +323,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     expect(c.mode).toBe('learn');
@@ -331,6 +382,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     expect(c.phase).toBe('LEARN_SHOW');                   // e4 vorgezeigt (kein Kommentar)
@@ -364,6 +416,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     // In einen Wiederholungs-Durchlauf versetzen: der 2. Durchlauf zeigt NICHT vor → direkt PLAYING.
@@ -507,6 +560,7 @@ describe('RepertoireTrainerComponent (line mode, due-strict pool)', () => {
       { markForCheck: () => {} } as any, { init: () => Promise.resolve() } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     expect(c.phase).toBe('EMPTY');
@@ -545,6 +599,7 @@ describe('RepertoireTrainerComponent offline', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     return c;
@@ -768,6 +823,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     expect(c.phase).toBe('LEARN_SHOW');
@@ -802,6 +858,7 @@ describe('RepertoireTrainerComponent — Feldvergleich statt Zug-TEXT', () => {
       { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } as any, {} as any,
       { enqueue: () => {} } as any,
       NO_EXPLORER,
+      NO_SNACKBAR,
     );
     c.ngOnInit();
     (c as any).learnPass = 1;                             // Wiederholungs-Durchlauf: kein Vorzeigen
