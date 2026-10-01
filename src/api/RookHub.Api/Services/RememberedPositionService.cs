@@ -13,27 +13,20 @@ namespace RookHub.Api.Services;
 ///
 /// Kursname: die Extension liefert ihn — wenn der User einen Chessable-Bearer hinterlegt hat —
 /// bereits autoritativ (aus der Chessable-API) mit. Fehlt er (z. B. Userscript ohne Token, oder
-/// nur DOM-Heuristik verfügbar), löst der Server ihn aus dem gespeicherten Bearer des Users auf:
-/// bevorzugt aus der bereits gecachten Kursliste (<see cref="ChessableCredential.CachedCoursesJson"/>,
-/// nächtlich aktualisiert), sonst best-effort per Live-Abruf.
+/// nur DOM-Heuristik verfügbar), nimmt der Server ihn aus der bereits gecachten Kursliste des Users
+/// (<see cref="ChessableCredential.CachedCoursesJson"/>) — bewusst OHNE Live-Abruf (N8-006): der
+/// Extension-Weg läuft auch mit <c>Chessable:Enabled=false</c>, und ein Abruf je Anfrage ginge am
+/// Schalter und am Bearer-Breaker vorbei über den geteilten VPN-Tunnel. Dieselbe Regel wie
+/// <see cref="TrainingGoalService"/> und <see cref="ChessableImportService"/>; kennt der Cache den Kurs
+/// noch nicht, trägt <see cref="ListAsync"/> den Namen später nach.
 /// </summary>
 public class RememberedPositionService
 {
     private readonly AppDbContext _db;
-    private readonly EncryptionService _encryption;
-    private readonly ChessableProxyService _chessable;
-    private readonly ILogger<RememberedPositionService> _logger;
 
-    public RememberedPositionService(
-        AppDbContext db,
-        EncryptionService encryption,
-        ChessableProxyService chessable,
-        ILogger<RememberedPositionService> logger)
+    public RememberedPositionService(AppDbContext db)
     {
         _db = db;
-        _encryption = encryption;
-        _chessable = chessable;
-        _logger = logger;
     }
 
     /// <summary>Mindest-Plausibilitaet einer FEN (Placement + Zugrecht); haelt offensichtlichen Müll fern.</summary>
@@ -141,37 +134,12 @@ public class RememberedPositionService
         return true;
     }
 
-    /// <summary>Löst den Kursnamen aus dem gespeicherten Chessable-Bearer des Users auf:
-    /// erst aus der gecachten Kursliste, sonst best-effort per Live-Abruf. Nie werfend.</summary>
+    /// <summary>Kursname aus der gecachten Kursliste des Users — kein Netzwerk, nie werfend (N8-006).</summary>
     private async Task<string?> ResolveCourseNameAsync(int userId, string? courseId)
     {
         if (string.IsNullOrWhiteSpace(courseId)) return null;
-
-        var cred = await _db.ChessableCredentials.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.UserId == userId);
-        if (cred is null) return null;
-
-        // 1) Cache-first (nächtlich aktualisiert) — kein Netzwerk.
-        var cached = ParseCourseMap(cred.CachedCoursesJson);
-        if (cached.TryGetValue(courseId, out var cachedName)) return cachedName;
-
-        // 2) Live-Fallback nur, wenn ein brauchbarer Bearer vorhanden ist (nicht gesperrt).
-        if (cred.BlockedAt is not null) return null;
-        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
-        if (string.IsNullOrWhiteSpace(bearer)) return null;
-
-        try
-        {
-            var courses = await _chessable.GetCoursesAsync(bearer);
-            var match = courses.FirstOrDefault(c => c.Bid == courseId);
-            return Clean(match?.Name, 200);
-        }
-        catch (Exception ex)
-        {
-            // Kursname ist „nice to have" — ein Chessable-/Proxy-Ausfall darf das Merken nicht scheitern lassen.
-            _logger.LogDebug(ex, "Kursname-Auflösung für User {UserId} / Kurs {CourseId} fehlgeschlagen", userId, courseId);
-            return null;
-        }
+        var cached = await LoadCachedCourseMapAsync(userId);
+        return cached.TryGetValue(courseId, out var name) ? Clean(name, 200) : null;
     }
 
     private async Task<Dictionary<string, string>> LoadCachedCourseMapAsync(int userId)

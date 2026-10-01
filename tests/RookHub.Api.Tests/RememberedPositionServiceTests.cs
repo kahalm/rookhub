@@ -1,9 +1,6 @@
-using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -13,14 +10,13 @@ namespace RookHub.Api.Tests;
 
 /// <summary>
 /// „Remember line": Kursname wird über den Chessable-Bearer aufgelöst — von der Extension
-/// mitgeliefert (Vorrang), sonst serverseitig aus der gecachten Kursliste (cache-first) bzw.
-/// per Live-Abruf. Ohne Bearer/Treffer bleibt der Name leer (kein Fehler).
+/// mitgeliefert (Vorrang), sonst serverseitig aus der gecachten Kursliste, ohne Live-Abruf
+/// (N8-006). Ohne Bearer/Treffer bleibt der Name leer (kein Fehler).
 /// </summary>
 public class RememberedPositionServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly EncryptionService _encryption;
-    private readonly StubHandler _handler;
     private readonly RememberedPositionService _svc;
 
     private const string Fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -36,9 +32,8 @@ public class RememberedPositionServiceTests : IDisposable
             .Build();
         _encryption = new EncryptionService(config);
 
-        _handler = new StubHandler();
-        var proxy = new ChessableProxyService(new HttpClient(_handler) { BaseAddress = new Uri("http://pc:8080") });
-        _svc = new RememberedPositionService(_db, _encryption, proxy, NullLogger<RememberedPositionService>.Instance);
+        // Ohne ChessableProxyService: der Dienst hat keinen Weg mehr zu Chessable (N8-006).
+        _svc = new RememberedPositionService(_db);
     }
 
     public void Dispose() => _db.Dispose();
@@ -60,9 +55,6 @@ public class RememberedPositionServiceTests : IDisposable
 
     private static string CacheJson(params (string bid, string name)[] courses)
         => JsonSerializer.Serialize(courses.Select(c => new ChessableCourseDto(c.bid, c.name)).ToList());
-
-    private void ReplyWithCourses(params ChessableCourseDto[] courses)
-        => _handler.Reply = (_, _) => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(courses) };
 
     [Fact]
     public async Task SaveAsync_ProvidedCourseName_TakesPrecedence()
@@ -87,15 +79,21 @@ public class RememberedPositionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_CacheMiss_LiveFallbackResolvesName()
+    public async Task SaveAsync_CacheMiss_NoLiveFetch_NameStaysEmpty_UntilTheCacheKnowsIt()
     {
-        await SeedCredAsync(1, cachedJson: null);
-        ReplyWithCourses(new ChessableCourseDto("116242", "Live Fetched Course"));
+        // N8-006: kein Live-Abruf bei Chessable (am Schalter Chessable:Enabled und am Bearer-Breaker vorbei, je Anfrage
+        // auslösbar) — die Liste trägt den Namen später aus dem Cache nach.
+        await SeedCredAsync(1, CacheJson(("999", "Other")));
         var dto = new RememberLineInputDto { Fen = Fen, CourseId = "116242" };
 
         var result = await _svc.SaveAsync(1, dto);
 
-        Assert.Equal("Live Fetched Course", result.CourseName);
+        Assert.True(result.Id > 0);
+        Assert.Null(result.CourseName);
+
+        (await _db.ChessableCredentials.SingleAsync()).CachedCoursesJson = CacheJson(("116242", "Later Cached"));
+        await _db.SaveChangesAsync();
+        Assert.Equal("Later Cached", (await _svc.ListAsync(1)).Single().CourseName);
     }
 
     [Fact]
@@ -111,22 +109,9 @@ public class RememberedPositionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_BlockedBearer_NoLiveFallback()
+    public async Task SaveAsync_CorruptCache_StillSavesWithoutName()
     {
-        await SeedCredAsync(1, cachedJson: null, blockedAt: DateTime.UtcNow);
-        _handler.Reply = (_, _) => throw new Exception("must not be called");
-        var dto = new RememberLineInputDto { Fen = Fen, CourseId = "116242" };
-
-        var result = await _svc.SaveAsync(1, dto);
-
-        Assert.Null(result.CourseName);
-    }
-
-    [Fact]
-    public async Task SaveAsync_LiveFetchThrows_StillSavesWithoutName()
-    {
-        await SeedCredAsync(1, cachedJson: null);
-        _handler.Reply = (_, _) => new HttpResponseMessage(HttpStatusCode.InternalServerError);
+        await SeedCredAsync(1, cachedJson: "{kaputt");
         var dto = new RememberLineInputDto { Fen = Fen, CourseId = "116242" };
 
         var result = await _svc.SaveAsync(1, dto);
@@ -195,13 +180,5 @@ public class RememberedPositionServiceTests : IDisposable
         Assert.False(await _svc.DeleteAsync(2, mine.Id));          // fremder Eintrag → nicht löschbar
         Assert.True(await _svc.DeleteAsync(1, mine.Id));           // eigener → gelöscht
         Assert.Empty(await _svc.ListAsync(1));
-    }
-
-    private class StubHandler : HttpMessageHandler
-    {
-        public Func<HttpRequestMessage, CancellationToken, HttpResponseMessage> Reply { get; set; }
-            = (_, _) => new HttpResponseMessage(HttpStatusCode.OK);
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-            => Task.FromResult(Reply(request, ct));
     }
 }
