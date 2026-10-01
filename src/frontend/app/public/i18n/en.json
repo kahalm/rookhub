@@ -3627,6 +3627,7 @@
     "startFailed": "Could not start the point game",
     "moveFailed": "The move could not be scored",
     "deleteFailed": "Delete failed",
+    "deleteConfirm": "Delete the run on “{{title}}”? Its moves and points are lost.",
     "status": {
       "running": "running",
       "done": "finished"

@@ -16,6 +16,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { AuthService } from '../../core/auth.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AnalysisJob, AnalysisJobLive, AnalysisJobsService } from './analysis-jobs.service';
 import { EngineDisplayLine, formatElapsed, formatKiloNodes, formatKiloNps, mapBrokerLine, toDisplayLines } from './engine-lines.util';
 import { ExternalEngineInfo, ExternalEngineService, engineTagKey } from './external-engine.service';
@@ -205,6 +206,7 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   tagOf(e: ExternalEngineInfo): string | null { return engineTagKey(e); }
   saving = false;
   private readonly auth = inject(AuthService);
+  private readonly confirm = inject(ConfirmService);
   readonly depthOptions = JOB_DEPTH_OPTIONS;
   readonly lineOptions = JOB_LINE_OPTIONS;
   readonly formatElapsed = formatElapsed;
@@ -365,10 +367,12 @@ export class AnalysisJobsComponent implements OnInit, OnDestroy {
   }
 
   remove(job: AnalysisJob): void {
-    if (!confirm(this.translate.instant('analysisJobs.deleteConfirm'))) return;
-    this.jobsApi.delete(job.id).subscribe({
-      next: () => { this.jobs = this.jobs.filter(j => j.id !== job.id); if (this.expandedId === job.id) this.expandedId = null; this.cdr.markForCheck(); },
-      error: () => this.snackbar.warn(this.translate.instant('analysisJobs.deleteFailed')),
+    this.confirm.ask('analysisJobs.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.jobsApi.delete(job.id).subscribe({
+        next: () => { this.jobs = this.jobs.filter(j => j.id !== job.id); if (this.expandedId === job.id) this.expandedId = null; this.cdr.markForCheck(); },
+        error: () => this.snackbar.warn(this.translate.instant('analysisJobs.deleteFailed')),
+      });
     });
   }
 

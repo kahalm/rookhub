@@ -4,7 +4,9 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { ANALYSIS_POLL_MS, GamesListComponent } from './games-list.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 describe('GamesListComponent', () => {
   async function setup() {
@@ -200,5 +202,28 @@ describe('GamesListComponent', () => {
 
     expect(c.shownGames().map(g => g.id)).toEqual([1]);
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('.game').length).toBe(1);
+  });
+
+  /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm: die native Rueckfrage
+   *  liegt im Vollbild hinter der Seite und laesst sich vom Browser stummschalten (Codereview W5 F4-013). */
+  it('remove: asks via ConfirmService — declined sends no DELETE, confirmed deletes', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(listRequest).flush([game(null)]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    const native = spyOn(window, 'confirm').and.returnValue(true);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+    const c = fixture.componentInstance;
+
+    c.remove(c.games[0]);
+    expect(ask).toHaveBeenCalledWith('games.deleteConfirm');
+    http.expectNone(r => r.method === 'DELETE');
+    expect(c.games.length).toBe(1);
+
+    ask.and.returnValue(of(true));
+    c.remove(c.games[0]);
+    http.expectOne({ method: 'DELETE', url: '/api/games/4' }).flush(null);
+    expect(c.games.length).toBe(0);
+    expect(native).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ import { Subscription, interval } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GuessService, GuessSession } from './guess.service';
 import { GameAnalysis, GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
@@ -284,6 +285,7 @@ export class GuessListComponent implements OnInit, OnDestroy {
   private snackbar = inject(SnackbarService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+  private confirm = inject(ConfirmService);
 
   sessions: GuessSession[] = [];
   /** Kuratierter Bestand — auch ohne Anmeldung. */
@@ -547,10 +549,15 @@ export class GuessListComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Der Lauf geht samt Zuegen und Punkten endgueltig weg — darum erst nach Ja (Codereview W5 F4-013). */
   remove(s: GuessSession): void {
-    this.guess.delete(s.id).subscribe({
-      next: () => { this.sessions = this.sessions.filter(x => x.id !== s.id); this.cdr.markForCheck(); },
-      error: () => this.snackbar.warn(this.translate.instant('guess.deleteFailed')),
+    const title = s.title || this.translate.instant('guess.untitled');
+    this.confirm.ask('guess.deleteConfirm', { title }).subscribe(ok => {
+      if (!ok) return;
+      this.guess.delete(s.id).subscribe({
+        next: () => { this.sessions = this.sessions.filter(x => x.id !== s.id); this.cdr.markForCheck(); },
+        error: () => this.snackbar.warn(this.translate.instant('guess.deleteFailed')),
+      });
     });
   }
 }

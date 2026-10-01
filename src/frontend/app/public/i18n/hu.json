@@ -3348,6 +3348,7 @@
     "startFailed": "A pontjátszmát nem sikerült elindítani",
     "moveFailed": "A lépést nem sikerült értékelni",
     "deleteFailed": "A törlés nem sikerült",
+    "deleteConfirm": "Törlöd ezt a menetet: „{{title}}”? A lépések és a pontok elvesznek.",
     "status": {
       "running": "fut",
       "done": "befejezve"

@@ -19,6 +19,7 @@ import { formatTimeControl, TimeControlLabel } from './time-control.util';
 import { AnalyzeGameService } from './analyze-game.service';
 import { GuessUploadStatus } from '../analysis/game-analysis.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.service';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
@@ -307,6 +308,7 @@ export class GamesListComponent implements OnInit {
   private analyzeGame = inject(AnalyzeGameService);
   private scoresheets = inject(ScoresheetService);
   private dialog = inject(MatDialog);
+  private confirm = inject(ConfirmService);
   private poll?: Subscription;
 
   constructor(
@@ -438,10 +440,12 @@ export class GamesListComponent implements OnInit {
   }
 
   remove(g: SavedGame): void {
-    if (!confirm(this.translate.instant('games.deleteConfirm'))) return;
-    this.service.delete(g.id).subscribe({
-      next: () => { this.games = this.games.filter(x => x.id !== g.id); },
-      error: () => this.snackbar.warn(this.translate.instant('games.deleteError')),
+    this.confirm.ask('games.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.service.delete(g.id).subscribe({
+        next: () => { this.games = this.games.filter(x => x.id !== g.id); },
+        error: () => this.snackbar.warn(this.translate.instant('games.deleteError')),
+      });
     });
   }
 }

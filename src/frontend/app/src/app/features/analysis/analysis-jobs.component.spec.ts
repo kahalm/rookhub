@@ -4,7 +4,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { AnalysisJobsComponent } from './analysis-jobs.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../core/auth.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -191,5 +193,25 @@ describe('AnalysisJobsComponent', () => {
     const put = http.expectOne('/api/analysis-jobs/1');
     expect(put.request.body).toEqual({ targetDepth: 40, multiPv: 2, engineId: 'eei_bg' });
     put.flush(job(1, { houseEngine: true, targetDepth: 40, status: 'queued' }));
+  });
+
+  /** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm (Codereview W5 F4-013). */
+  it('remove: asks via ConfirmService — declined sends no DELETE, confirmed deletes', async () => {
+    const { c, http } = await make();
+    http.expectOne('/api/analysis-jobs').flush([job(1), job(2)]);
+    http.expectOne('/api/engine/external').flush({ hasCredentials: false, tokenInvalid: false, engines: [] });
+    const native = spyOn(window, 'confirm').and.returnValue(true);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+
+    c.remove(c.jobs[0]);
+    expect(ask).toHaveBeenCalledWith('analysisJobs.deleteConfirm');
+    http.expectNone(r => r.method === 'DELETE');
+    expect(c.jobs.length).toBe(2);
+
+    ask.and.returnValue(of(true));
+    c.remove(c.jobs[0]);
+    http.expectOne({ method: 'DELETE', url: '/api/analysis-jobs/1' }).flush(null);
+    expect(c.jobs.map(j => j.id)).toEqual([2]);
+    expect(native).not.toHaveBeenCalled();
   });
 });

@@ -3627,6 +3627,7 @@
     "startFailed": "Bodovnu partiju nije bilo moguće pokrenuti",
     "moveFailed": "Potez nije bilo moguće ocijeniti",
     "deleteFailed": "Brisanje nije uspjelo",
+    "deleteConfirm": "Izbrisati prolaz za „{{title}}“? Potezi i bodovi se gube.",
     "status": {
       "running": "u tijeku",
       "done": "završeno"

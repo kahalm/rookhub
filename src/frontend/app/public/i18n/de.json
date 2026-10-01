@@ -3627,6 +3627,7 @@
     "startFailed": "Punktepartie ließ sich nicht starten",
     "moveFailed": "Zug konnte nicht gewertet werden",
     "deleteFailed": "Löschen fehlgeschlagen",
+    "deleteConfirm": "Den Durchlauf zu „{{title}}“ löschen? Züge und Punkte gehen verloren.",
     "status": {
       "running": "läuft",
       "done": "beendet"

@@ -14,6 +14,7 @@ import { PreferencesService } from '../../core/preferences.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SnackbarService } from '../../core/snackbar.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../core/auth.service';
 import { RememberedService, RememberedPosition } from '../../core/remembered.service';
 
@@ -172,6 +173,7 @@ export class RememberedLinesComponent implements OnInit {
   items: RememberedPosition[] = [];
   loading = true;
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
 
   /** Hintergrund-Engine des Users (für den Dialog: ohne sie nur der Hinweis). null = noch nicht geladen. */
   private hasBackgroundEngine: boolean | undefined;
@@ -298,10 +300,12 @@ export class RememberedLinesComponent implements OnInit {
   }
 
   remove(p: RememberedPosition): void {
-    if (!confirm(this.translate.instant('remembered.deleteConfirm'))) return;
-    this.remembered.remove(p.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => { this.items = this.items.filter(x => x.id !== p.id); },
-      error: () => this.snackbar.info(this.translate.instant('remembered.errors.delete')),
+    this.confirm.ask('remembered.deleteConfirm').subscribe(ok => {
+      if (!ok) return;
+      this.remembered.remove(p.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: () => { this.items = this.items.filter(x => x.id !== p.id); },
+        error: () => this.snackbar.info(this.translate.instant('remembered.errors.delete')),
+      });
     });
   }
 }

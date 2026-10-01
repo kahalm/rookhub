@@ -4,7 +4,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { RememberedLinesComponent } from './remembered-lines.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../core/auth.service';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -88,5 +90,35 @@ describe('RememberedLinesComponent Mehrfachauswahl', () => {
       item(1, { jobId: 10, status: 'queued', reachedDepth: 0, targetDepth: 30, multiPv: 3, evalText: null, updatedAt: '' }), item(2),
     ]);
     expect(c.selected.size).toBe(0);
+  });
+});
+
+/** Loeschen fragt ueber den Material-Dialog (ConfirmService) statt window.confirm (Codereview W5 F4-013). */
+describe('RememberedLinesComponent Loeschen', () => {
+  it('fragt ueber den ConfirmService — abgelehnt kein DELETE, bestaetigt geloescht', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RememberedLinesComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: AuthService, useValue: { isLoggedIn: true } }],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RememberedLinesComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const item = (id: number) => ({ id, fen: START, courseId: null, courseName: null, sourceUrl: null, createdAt: '2026-08-26T10:00:00Z', analysis: null });
+    http.expectOne(r => r.url.startsWith('/api/extension/remembered-lines')).flush([item(1), item(2)]);
+    const c = fixture.componentInstance;
+    const native = spyOn(window, 'confirm').and.returnValue(true);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+
+    c.remove(c.items[0]);
+    expect(ask).toHaveBeenCalledWith('remembered.deleteConfirm');
+    http.expectNone(r => r.method === 'DELETE');
+    expect(c.items.length).toBe(2);
+
+    ask.and.returnValue(of(true));
+    c.remove(c.items[0]);
+    http.expectOne({ method: 'DELETE', url: '/api/extension/remembered-lines/1' }).flush(null);
+    expect(c.items.map(p => p.id)).toEqual([2]);
+    expect(native).not.toHaveBeenCalled();
   });
 });

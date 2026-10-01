@@ -4,7 +4,10 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { GuessListComponent } from './guess-list.component';
+import { GuessSession } from './guess.service';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GameAnalysis } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 
@@ -114,5 +117,36 @@ describe('GuessListComponent', () => {
     http.expectOne(r => r.url === '/api/guess-sessions/anonymous').flush([]);
     http.expectNone('/api/game-analyses/guess/status');
     http.expectNone('/api/game-analyses');
+  });
+
+  /** Der Muelleimer an „Deine Durchlaeufe" loeschte einen Lauf samt Punkten mit einem Klick (Codereview
+   *  W5 F4-013). Jetzt erst nach Ja — ueber den ConfirmService, nicht window.confirm. */
+  it('loescht einen Durchlauf erst nach Rueckfrage — abgelehnt geht kein DELETE raus', () => {
+    const fixture = setup();
+    http.expectOne('/api/view-state/guess.list').flush({ annotatedOnly: false });
+    http.expectOne('/api/game-analyses/public').flush([]);
+    http.expectOne('/api/game-analyses').flush([]);
+    http.expectOne('/api/game-analyses/guess/status').flush({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+    const run = (id: number, title: string | null) => ({ id, title, guessWhite: true, status: 'done', points: 3, maxPoints: 10 } as GuessSession);
+    http.expectOne('/api/guess-sessions').flush([run(4, 'A – B'), run(5, null)]);
+    const c = fixture.componentInstance;
+    const native = spyOn(window, 'confirm').and.returnValue(true);
+    const ask = spyOn(TestBed.inject(ConfirmService), 'ask').and.returnValue(of(false));
+
+    c.remove(c.sessions[0]);
+    expect(ask).toHaveBeenCalledWith('guess.deleteConfirm', { title: 'A – B' });
+    http.expectNone(r => r.method === 'DELETE');
+    expect(c.sessions.length).toBe(2);
+
+    // Ohne Titel nennt die Frage „Ohne Titel" wie die Liste.
+    c.remove(c.sessions[1]);
+    expect(ask).toHaveBeenCalledWith('guess.deleteConfirm', { title: 'guess.untitled' });
+    http.expectNone(r => r.method === 'DELETE');
+
+    ask.and.returnValue(of(true));
+    c.remove(c.sessions[0]);
+    http.expectOne({ method: 'DELETE', url: '/api/guess-sessions/4' }).flush(null);
+    expect(c.sessions.map(x => x.id)).toEqual([5]);
+    expect(native).not.toHaveBeenCalled();
   });
 });
