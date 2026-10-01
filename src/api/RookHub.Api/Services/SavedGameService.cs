@@ -92,6 +92,8 @@ public class SavedGameService
     public async Task<SavedGameDetailDto> SaveAsync(int userId, SaveGameInputDto dto)
     {
         var source = NormalizeSource(dto.Source) ?? throw new ArgumentException("Invalid source.");
+        // Vorab entschaerfen: der Link geht in die Spalte, in den [Site]-Header und beim Heilen in den Bestand.
+        dto.SourceUrl = SafeSourceUrl(dto.SourceUrl);
         var moves = (dto.Moves ?? new())
             .Select(m => (m ?? string.Empty).Trim())
             .Where(m => m.Length > 0)
@@ -280,7 +282,7 @@ public class SavedGameService
             Black = r.Black,
             Result = r.Result,
             PlayedAt = r.PlayedAt,
-            SourceUrl = r.SourceUrl,
+            SourceUrl = SafeSourceUrl(r.SourceUrl),
             ShareToken = r.ShareToken,
             MoveCount = r.MoveCount ?? (healed.TryGetValue(r.Id, out var c) ? c : 0),
             CreatedAt = r.CreatedAt,
@@ -386,7 +388,7 @@ public class SavedGameService
             Black = g.Black,
             Result = g.Result,
             PlayedAt = g.PlayedAt,
-            SourceUrl = g.SourceUrl,
+            SourceUrl = SafeSourceUrl(g.SourceUrl),
             Pgn = g.Pgn,
             CreatedAt = g.CreatedAt,
             WhiteElo = ParseEloHeader(g.Pgn, "WhiteElo"),
@@ -861,6 +863,26 @@ public class SavedGameService
     private static string? Clip(string? s, int max)
         => string.IsNullOrWhiteSpace(s) ? null : (s.Trim().Length > max ? s.Trim()[..max] : s.Trim());
 
+    /// <summary>Hosts der beiden Quellen (<see cref="AllowedSources"/>), jeweils samt Subdomains (www., m.).</summary>
+    private static readonly string[] SourceUrlHosts = ["chess.com", "lichess.org"];
+
+    /// <summary>
+    /// Der Herkunfts-Link einer Partie, wie ihn die Oberflaechen als „Original oeffnen" rendern — auch auf der
+    /// ANONYMEN Teilen-Seite <c>/g/{token}</c> (Codereview F4-014). Nur absolute http(s)-Adressen der beiden
+    /// Quellen; alles andere wird <c>null</c>, statt unter dem Etikett der App auf eine beliebige Seite zu
+    /// fuehren (javascript: neutralisiert Angular ohnehin, eine fremde https-Seite nicht). Gilt beim Speichern
+    /// UND beim Ausliefern — so ist auch ein frueher gespeicherter Wert entschaerft.
+    /// </summary>
+    public static string? SafeSourceUrl(string? raw)
+    {
+        var s = Clip(raw, 1000);
+        if (s is null || !Uri.TryCreate(s, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)) return null;
+        var host = uri.Host;
+        return SourceUrlHosts.Any(h => host.Equals(h, StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith("." + h, StringComparison.OrdinalIgnoreCase)) ? s : null;
+    }
+
     /// <summary>Baut ein PGN aus SAN-Zugliste + Headern (Seven-Tag-Roster, Best-Effort).</summary>
     public static string BuildPgn(List<string> moves, SaveGameInputDto dto, string result)
     {
@@ -1018,7 +1040,7 @@ public class SavedGameService
         Black = g.Black,
         Result = g.Result,
         PlayedAt = g.PlayedAt,
-        SourceUrl = g.SourceUrl,
+        SourceUrl = SafeSourceUrl(g.SourceUrl),
         ShareToken = g.ShareToken,
         MoveCount = CountPlies(g.Pgn),
         CreatedAt = g.CreatedAt,

@@ -56,6 +56,40 @@ public class RememberedPositionServiceTests : IDisposable
     private static string CacheJson(params (string bid, string name)[] courses)
         => JsonSerializer.Serialize(courses.Select(c => new ChessableCourseDto(c.bid, c.name)).ToList());
 
+    // ---- Codereview F4-014: die Liste rendert SourceUrl als Link ----
+
+    [Theory]
+    [InlineData("https://www.chessable.com/variation/123/", true)]
+    [InlineData("/analysis/jobs", true)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("data:text/html,hi", false)]
+    [InlineData("//phish.example/x", false)]
+    [InlineData("/\\phish.example/x", false)]
+    [InlineData("ftp://example.org/x", false)]
+    public async Task SaveAsync_KeepsOnlyHttpLinksAndAppPaths(string raw, bool kept)
+    {
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        await _db.SaveChangesAsync();
+
+        var result = await _svc.SaveAsync(1, new RememberLineInputDto { Fen = Fen, SourceUrl = raw });
+
+        Assert.Equal(kept ? raw : null, result.SourceUrl);
+        Assert.Equal(kept ? raw : null, (await _db.RememberedPositions.SingleAsync()).SourceUrl);
+    }
+
+    [Fact]
+    public async Task ListAsync_DoesNotHandOutAnEarlierStoredUnsafeLink()
+    {
+        _db.AppUsers.Add(new AppUser { Id = 1, Username = "u1", PasswordHash = "x" });
+        _db.RememberedPositions.Add(new RememberedPosition
+        {
+            UserId = 1, Fen = Fen, SourceUrl = "javascript:alert(1)", CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Null(Assert.Single(await _svc.ListAsync(1)).SourceUrl);
+    }
+
     [Fact]
     public async Task SaveAsync_ProvidedCourseName_TakesPrecedence()
     {

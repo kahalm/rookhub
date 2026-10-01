@@ -52,6 +52,69 @@ public class GamesControllerTests : IDisposable
             Source = "lichess", Moves = new() { "e4", "c5" }, White = "a", Black = "b", Result = "0-1", ExternalId = Guid.NewGuid().ToString("N"),
         });
 
+    // ---- Codereview F4-014: der Herkunfts-Link wird als „Original oeffnen" gerendert, auch auf /g/{token} ----
+
+    [Theory]
+    [InlineData("https://www.chess.com/game/live/184299739920", true)]
+    [InlineData("https://lichess.org/abcdEFGH", true)]
+    [InlineData("http://m.lichess.org/abcdEFGH", true)]
+    [InlineData("https://phish.example/rookhub-login", false)]
+    [InlineData("https://chess.com.phish.example/x", false)]
+    [InlineData("https://lichess.org@phish.example/x", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("data:text/html,hi", false)]
+    [InlineData("//phish.example/x", false)]
+    [InlineData("/g/abc", false)]
+    public void SafeSourceUrl_KeepsOnlyHttpLinksOfTheTwoSources(string raw, bool kept)
+        => Assert.Equal(kept ? raw : null, SavedGameService.SafeSourceUrl(raw));
+
+    [Fact]
+    public async Task Save_WithAForeignSourceUrl_StoresNoLink_AndNoSiteHeader()
+    {
+        // Fund-Weg: ueber die Save-Schnittstelle eine Phishing-Adresse als SourceUrl ablegen und den Teilen-Link
+        // verbreiten — auf /g/<token> stuende „Original oeffnen" und fuehrte auf die fremde Seite.
+        var user = await CreateUserAsync();
+
+        var saved = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "lichess", Moves = new() { "e4", "c5" }, SourceUrl = "https://phish.example/rookhub-login",
+        });
+
+        Assert.Null(saved.SourceUrl);
+        Assert.Null((await _db.SavedGames.SingleAsync()).SourceUrl);
+        Assert.DoesNotContain("phish.example", saved.Pgn);
+        Assert.Null((await _service.GetSharedAsync(saved.ShareToken))!.SourceUrl);
+    }
+
+    [Fact]
+    public async Task Save_WithThePlatformLink_KeepsIt()
+    {
+        var user = await CreateUserAsync();
+
+        var saved = await _service.SaveAsync(user.Id, new SaveGameInputDto
+        {
+            Source = "chess.com", Moves = new() { "e4", "c5" }, SourceUrl = "https://www.chess.com/game/live/1",
+        });
+
+        Assert.Equal("https://www.chess.com/game/live/1", saved.SourceUrl);
+        Assert.Equal("https://www.chess.com/game/live/1", (await _service.GetSharedAsync(saved.ShareToken))!.SourceUrl);
+    }
+
+    [Fact]
+    public async Task EarlierStoredForeignSourceUrl_IsNotHandedOut()
+    {
+        // Altbestand: frueher ungeprueft gespeichert — die Teilen-Seite, die Liste und das Detail liefern ihn nicht aus.
+        var user = await CreateUserAsync();
+        var saved = await SeedGameAsync(user.Id);
+        var row = await _db.SavedGames.SingleAsync();
+        row.SourceUrl = "https://phish.example/rookhub-login";
+        await _db.SaveChangesAsync();
+
+        Assert.Null((await _service.GetSharedAsync(saved.ShareToken))!.SourceUrl);
+        Assert.Null(Assert.Single(await _service.ListAsync(user.Id)).SourceUrl);
+        Assert.Null((await _service.GetAsync(user.Id, saved.Id))!.SourceUrl);
+    }
+
     [Fact]
     public async Task Save_SameExternalId_DedupsToSingleGame()
     {

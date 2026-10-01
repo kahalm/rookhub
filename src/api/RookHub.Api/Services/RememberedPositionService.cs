@@ -43,6 +43,21 @@ public class RememberedPositionService
         return s.Length > max ? s[..max] : s;
     }
 
+    /// <summary>
+    /// Herkunft einer gemerkten Stellung, wie sie die Liste als Link rendert (Codereview F4-014; PD-011 liess den
+    /// Wert ungeprueft, solange er nie als href erschien): eine absolute http(s)-Adresse (die Chessable-Seite aus
+    /// RepCheck) oder ein Pfad IN der App (<c>/analysis/jobs</c>). Alles andere — javascript:, data:, ein
+    /// protokoll-relatives <c>//host</c> — wird <c>null</c>. Beim Speichern und beim Ausliefern (Altbestand).
+    /// </summary>
+    public static string? SafeSourceUrl(string? raw)
+    {
+        var s = Clean(raw, 1000);
+        if (s is null) return null;
+        if (s.StartsWith('/')) return s.StartsWith("//") || s.StartsWith("/\\") ? null : s;
+        return Uri.TryCreate(s, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) ? s : null;
+    }
+
     /// <summary>Legt eine gemerkte Stellung an; gibt sie als DTO zurueck. Wirft bei ungueltiger FEN.</summary>
     public async Task<RememberedPositionDto> SaveAsync(int userId, RememberLineInputDto dto)
     {
@@ -59,7 +74,7 @@ public class RememberedPositionService
             Fen = dto.Fen.Trim(),
             CourseId = courseId,
             CourseName = courseName,
-            SourceUrl = Clean(dto.SourceUrl, 1000),
+            SourceUrl = SafeSourceUrl(dto.SourceUrl),
             CreatedAt = DateTime.UtcNow,
         };
         _db.RememberedPositions.Add(entity);
@@ -85,6 +100,7 @@ public class RememberedPositionService
                 CreatedAt = p.CreatedAt,
             })
             .ToListAsync();
+        foreach (var p in list) p.SourceUrl = SafeSourceUrl(p.SourceUrl);
 
         // Backfill für Alt-Einträge ohne Namen: aus der (bereits vorhandenen) gecachten
         // Kursliste des Users — rein in-memory, kein Netz-Call.
