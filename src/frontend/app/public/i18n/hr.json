@@ -1958,15 +1958,15 @@
       "patternMates": "Matni obrasci",
       "endgame": "Završnice"
     },
-    "offlineNoCache": "Izvan mreže si i nema spremljenog niza. Otvori Endless jednom dok si na mreži da spremiš zagonetke za izvanmrežno igranje.",
+    "offlineNoCache": "Izvan mreže si i nema spremljenog niza. Otvori beskonačni način jednom dok si na mreži da spremiš zagonetke za izvanmrežno igranje.",
     "help": {
-      "title": "Endless Puzzle Mode",
+      "title": "Beskonačni način",
       "gameplayHeading": "Tijek igre",
       "gameplayP1": "Rješavaš šahovske zagonetke sve veće težine. Počinješ s odabranim rejtingom i napreduješ prema gore. Rejting se automatski povećava kroz Fasttrack faze (vidi dolje).",
       "gameplayP2": "Imaš <strong>3 života</strong>. Kad ostaneš bez života, igra je gotova.",
       "movesHeading": "Potezi i Stockfish",
       "movesP1": "Svaka zagonetka ima <strong>predviđeno rješenje</strong> (niz poteza). Dok igraš ispravne poteze, slijediš tu liniju rješenja.",
-      "movesP2": "Ako odigraš <strong>pogrešan potez</strong>, <strong>Stockfish</strong> (šahovski motor) preuzima protivničku stranu. Tada slobodno nastavljaš igrati protiv Stockfisha. Jačina se podešava putem Stockfish Depth.",
+      "movesP2": "Ako odigraš <strong>pogrešan potez</strong>, <strong>Stockfish</strong> (šahovski motor) preuzima protivničku stranu. Tada slobodno nastavljaš igrati protiv Stockfisha. Jačina se podešava putem Stockfish dubine.",
       "movesItem1": "<strong>Mat Stockfishu</strong> računa se kao alternativno rješenje — bez gubitka života!",
       "movesItem2": "<strong>Stockfish ti da mat</strong> — gubiš život",
       "movesItem3": "Igra protiv Stockfisha nastavlja se beskonačno do mata ili predaje",
@@ -1976,9 +1976,9 @@
       "buttonsMouseslip": "<strong>Klizanje mišem</strong> — Poništava zadnji pogrešan potez (jednom po zagonetki, besplatno)",
       "buttonsGiveUp": "<strong>Predaj se</strong> — Predaja, košta život",
       "settingsHeading": "Postavke",
-      "settingsStartRating": "<strong>Start Rating</strong> — S kojim rejtingom zagonetke počinješ",
-      "settingsStockfishDepth": "<strong>Stockfish Depth</strong> — Jačina motora (1 = vrlo slab, 24 = maksimalna jačina)",
-      "settingsThemes": "<strong>Themes</strong> — Opcionalno: samo određene taktičke teme (npr. \"fork pin\")",
+      "settingsStartRating": "<strong>Početni rejting</strong> — S kojim rejtingom zagonetke počinješ",
+      "settingsStockfishDepth": "<strong>Stockfish dubina</strong> — Jačina motora (1 = vrlo slab, 24 = maksimalna jačina)",
+      "settingsThemes": "<strong>Teme</strong> — Opcionalno: samo određene taktičke teme (npr. \"fork pin\")",
       "fasttrackHeading": "Porast težine (Fasttrack)",
       "fasttrackP1": "Porast se prilagođava tvojoj dosadašnjoj izvedbi: analizira tvoje posljednje sesije i izračunava pri kojem rejtingu obično gubiš živote.",
       "fasttrackPhase1": "<strong>Faza 1 (zagonetke 1–{{p1End}})</strong> — Brzi porast do tvog 1. praga",
@@ -1987,12 +1987,12 @@
       "fasttrackP2": "Vrijednosti pragova (1./2. prag) izračunavaju se automatski, ali se mogu ručno prilagoditi. Klik na \"Auto: …\" vraća vrijednost."
     },
     "config": {
-      "title": "Endless Puzzle Mode",
+      "title": "Beskonačni način",
       "subtitle": "Progresivna težina — koliko daleko možeš doći?",
-      "startRating": "Start Rating",
-      "stockfishDepth": "Stockfish Depth",
+      "startRating": "Početni rejting",
+      "stockfishDepth": "Stockfish dubina",
       "stockfishDepthHint": "1 (slabo) – 24 (jako)",
-      "themes": "Themes (opcionalno)",
+      "themes": "Teme (opcionalno)",
       "themesPlaceholder": "npr. fork pin (bilo koja)",
       "themesHint": "Pretraži i odaberi teme — zagonetka treba samo jednu.",
       "clearThemes": "Obriši sve",
@@ -2055,7 +2055,7 @@
       "showOriginalSolution": "Prikaži izvorno rješenje"
     },
     "gameOver": {
-      "title": "Game Over",
+      "title": "Kraj igre",
       "wonTitle": "Pobjeda!",
       "wonSubtitle": "Prošao si cijeli lanac.",
       "wonText": "Lanac je svladan – pokreni novu igru za sljedeći izazov.",
@@ -2078,7 +2078,7 @@
       "backToHistory": "Natrag na povijest"
     },
     "history": {
-      "title": "Povijest Endless Puzzlea",
+      "title": "Povijest beskonačnog načina",
       "noSessions": "Još nema odigranih sesija.",
       "startPlaying": "Počni igrati",
       "filterAll": "Sve",
@@ -2096,7 +2096,7 @@
       "colDuration": "Trajanje",
       "colConfig": "Konfiguracija",
       "colMistakes": "Pogreške",
-      "backToEndless": "Natrag na Endless Mode"
+      "backToEndless": "Natrag na beskonačni način"
     },
     "loadFailed": "Trenutno nije bilo moguće učitati nove zagonetke. Pokušaj ponovno kasnije."
   },

@@ -93,6 +93,27 @@ describe('i18n Sprachdateien', () => {
     });
   }
 
+  /**
+   * Codereview UX-006: Endless sprach in der deutschen und kroatischen Oberfläche Englisch („Endless Puzzle
+   * Mode“, „Start Rating“, „Stockfish Depth“, „Themes (optional)“, „Game Over“, „Max Rating“). Kein
+   * endless.*-Text einer gepflegten Sprache steht wortgleich wie en — außer den Einträgen unten, die in
+   * de/hr/hu genauso lauten (Lehnwörter, Kürzel, reine Platzhalter).
+   */
+  const ENDLESS_SAME_AS_EN_OK = new Set([
+    'endless.config.auto', 'endless.config.phase1Label', 'endless.config.phase2Label', 'endless.config.phase3Label',
+    'endless.config.curvePuzzle', 'endless.config.modeNormal', 'endless.config.highscore', 'endless.config.start',
+    'endless.game.levelRange', 'endless.game.statRating', 'endless.game.statLevel', 'endless.history.colEloDelta',
+  ]);
+  for (const lang of FORMAT_LOCALES.filter(l => l !== 'en')) {
+    it(`${lang}: Endless-Texte übersetzt (nicht wortgleich wie en)`, async () => {
+      const l = await load(lang);
+      const english = Object.keys(en)
+        .filter(k => k.startsWith('endless.') && !ENDLESS_SAME_AS_EN_OK.has(k) && l[k] === en[k])
+        .map(k => `${k} = „${l[k]}“`);
+      expect(english).withContext(`${lang}: endless.* steht auf Englisch`).toEqual([]);
+    });
+  }
+
   it('kennt zu jedem Schnellstart-Eintrag Titel und Beschreibung (alle gepflegten Sprachen)', async () => {
     // `quickstartItems` baut die i18n-Keys aus dem `key` zusammen (`app.qs.<key>Title|Desc`) —
     // ein neuer Eintrag ohne Texte fiele sonst erst im UI als roher Schlüssel auf.
