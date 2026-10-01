@@ -80,6 +80,66 @@ public class RepertoireServiceExtendedTests : IDisposable
             _service.GetByIdAsync(repId, otherUser));
     }
 
+    // ---- Codereview N8-004: erst prüfen, dann laden — und nie die Dateiinhalte für die Detailansicht ----
+    // Nachweis über den Change-Tracker: Include(r => r.Files) materialisierte (und verfolgte) jede Datei samt
+    // PgnContent/ChessableOidsCache; eine Projektion auf die Kopfdaten materialisiert keine RepertoireFile.
+
+    [Fact]
+    public async Task GetById_ForeignId_LoadsNothingBeforeThe404()
+    {
+        var (_, repId) = await CreateRepertoireWithFileAsync();
+        var otherUser = await CreateUserAsync("other");
+        _db.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetByIdAsync(repId, otherUser));
+
+        Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
+        Assert.Empty(_db.ChangeTracker.Entries<Repertoire>());
+    }
+
+    [Fact]
+    public async Task GetCombinedPgn_ForeignId_LoadsNothingBeforeThe404()
+    {
+        var (_, repId) = await CreateRepertoireWithFileAsync();
+        var otherUser = await CreateUserAsync("other");
+        _db.ChangeTracker.Clear();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetCombinedPgnAsync(repId, otherUser));
+
+        Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
+        Assert.Empty(_db.ChangeTracker.Entries<Repertoire>());
+    }
+
+    [Fact]
+    public async Task GetById_OwnRepertoire_ListsTheFilesWithoutLoadingTheirContents()
+    {
+        var (userId, repId) = await CreateRepertoireWithFileAsync();
+        _db.ChangeTracker.Clear();
+
+        var result = await _service.GetByIdAsync(repId, userId);
+
+        var file = Assert.Single(result.Files);
+        Assert.Equal("game.pgn", file.FileName);
+        Assert.True(file.FileSize > 0);
+        Assert.True(result.IsOwner);
+        Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
+    }
+
+    [Fact]
+    public async Task GetCombinedPgn_KeepsTheFileOrder_OfTheLineSource()
+    {
+        // gameIndex zählt über die Dateien in File.Id-Reihenfolge (RepertoireLineSource) — das PGN muss dazu passen.
+        var (userId, repId) = await CreateRepertoireWithFileAsync();
+        using var second = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("[Event \"Zwei\"]\n1. d4 d5 *"));
+        await _service.UploadFileAsync(repId, userId, "second.pgn", second);
+        _db.ChangeTracker.Clear();
+
+        var pgn = await _service.GetCombinedPgnAsync(repId, userId);
+
+        Assert.True(pgn.IndexOf("1. e4 e5", StringComparison.Ordinal) < pgn.IndexOf("1. d4 d5", StringComparison.Ordinal));
+        Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
+    }
+
     #endregion
 
     #region Update

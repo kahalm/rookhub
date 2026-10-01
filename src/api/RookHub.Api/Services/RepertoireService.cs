@@ -150,12 +150,25 @@ public class RepertoireService
     public async Task<RepertoireDetailDto> GetByIdAsync(int id, int userId)
     {
         // Lesend: Besitzer ODER Empfänger einer Freigabe (Bearbeiten bleibt in UpdateAsync owner-only).
-        var rep = await _db.Repertoires
-            .Include(r => r.Files)
+        // ZUERST prüfen, dann laden — und die Dateien nur als Kopfdaten: Include(r => r.Files) zog sämtliche
+        // PgnContent-/ChessableOidsCache-LONGTEXTs (bis 1000 × 10 MB) in den Speicher, auch für eine FREMDE Id
+        // vor dem 404, obwohl die Antwort nur Name, Größe und Datum braucht (Codereview N8-004).
+        if (!await CanAccessAsync(id, userId))
+            throw new KeyNotFoundException("Repertoire not found.");
+        var rep = await _db.Repertoires.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new KeyNotFoundException("Repertoire not found.");
-        if (rep.UserId != userId && !await CanAccessAsync(id, userId))
-            throw new KeyNotFoundException("Repertoire not found.");
+        var files = await _db.RepertoireFiles.AsNoTracking()
+            .Where(f => f.RepertoireId == id)
+            .OrderBy(f => f.Id)
+            .Select(f => new RepertoireFileDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                FileSize = f.FileSize,
+                UploadedAt = f.UploadedAt
+            })
+            .ToListAsync();
 
         return new RepertoireDetailDto
         {
@@ -166,13 +179,7 @@ public class RepertoireService
             Kind = rep.Kind,
             CreatedAt = rep.CreatedAt,
             UpdatedAt = rep.UpdatedAt,
-            Files = rep.Files.Select(f => new RepertoireFileDto
-            {
-                Id = f.Id,
-                FileName = f.FileName,
-                FileSize = f.FileSize,
-                UploadedAt = f.UploadedAt
-            }).ToList(),
+            Files = files,
             UseForExtension = rep.UseForExtension,
             ChessableCourseId = rep.ChessableCourseId,
             IsOwner = rep.UserId == userId
@@ -473,16 +480,19 @@ public class RepertoireService
     public async Task<string> GetCombinedPgnAsync(int repertoireId, int userId)
     {
         // Lesend: Besitzer ODER Empfänger einer Freigabe (Recipient braucht das PGN zum Trainieren).
-        var rep = await _db.Repertoires
-            .Include(r => r.Files)
-            .FirstOrDefaultAsync(r => r.Id == repertoireId)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
-        if (rep.UserId != userId && !await CanAccessAsync(repertoireId, userId))
+        // ZUERST prüfen, dann laden: sonst las jede Anfrage auf eine FREMDE Id den ganzen Dateibestand samt
+        // ChessableOidsCache aus der DB, bevor 404 kam (Codereview N8-004). Geladen wird nur noch PgnContent.
+        if (!await CanAccessAsync(repertoireId, userId))
             throw new KeyNotFoundException("Repertoire not found.");
+        var pgns = await _db.RepertoireFiles.AsNoTracking()
+            .Where(f => f.RepertoireId == repertoireId)
+            .OrderBy(f => f.Id)
+            .Select(f => f.PgnContent)
+            .ToListAsync();
 
-        // Ausgeblendete Altlasten (RepertoirePgnCleanup) nie ausliefern — gleich gefiltert wie RepertoireLineSource,
-        // damit gameIndex zwischen Server und Client dieselbe Linie meint.
-        return string.Join("\n\n", rep.Files.Select(f => RepertoirePgnCleanup.WithoutHidden(f.PgnContent)));
+        // Ausgeblendete Altlasten (RepertoirePgnCleanup) nie ausliefern — gleich gefiltert und in derselben
+        // Reihenfolge (File.Id) wie RepertoireLineSource, damit gameIndex zwischen Server und Client dieselbe Linie meint.
+        return string.Join("\n\n", pgns.Select(RepertoirePgnCleanup.WithoutHidden));
     }
 
     /// <summary>
