@@ -103,6 +103,7 @@
     "search": "Pretraži",
     "clear": "Očisti",
     "back": "Natrag",
+    "loadFailed": "Učitavanje nije uspjelo. Provjeri vezu i pokušaj ponovno.",
     "retry": "Pokušaj ponovno",
     "loading": "Učitavanje…",
     "ok": "U redu",
@@ -2468,6 +2469,7 @@
       "claimedBy": "Preuzeo {{name}}",
       "claim": "Preuzmi",
       "takeOver": "Preuzmi",
+      "assignFailed": "Dodjelu nije bilo moguće promijeniti – pokušaj ponovno.",
       "release": "Otpusti"
     },
     "courseDl": {

@@ -28,6 +28,7 @@
     "close": "Bezárás",
     "search": "Keresés",
     "back": "Vissza",
+    "loadFailed": "Nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
     "retry": "Újra",
     "loading": "Betöltés…",
     "ok": "OK",
@@ -2076,6 +2077,7 @@
       "claimedBy": "Kezeli: {{name}}",
       "claim": "Átvétel",
       "takeOver": "Átvétel",
+      "assignFailed": "A hozzárendelést nem sikerült módosítani – próbáld újra.",
       "release": "Visszaadás"
     },
     "courseDl": {

@@ -12,6 +12,7 @@ import { CatalogService, CatalogItem, CatalogRequest } from './catalog.service';
 import { AuthService } from '../../core/auth.service';
 import { AdminService, AdminUser, Group } from '../../core/admin.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -19,7 +20,7 @@ import { SnackbarService } from '../../core/snackbar.service';
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatSelectModule, MatChipsModule, TranslatePipe,
+    MatSelectModule, MatChipsModule, TranslatePipe, LoadErrorComponent,
   ],
   template: `
   <div class="catalog">
@@ -80,6 +81,8 @@ import { SnackbarService } from '../../core/snackbar.service';
       <h2>{{ 'catalog.listTitle' | translate }}</h2>
       @if (loading) {
         <p class="empty">…</p>
+      } @else if (loadError) {
+        <app-load-error (retry)="loadList()" />
       } @else if (items.length === 0) {
         <p class="empty">{{ 'catalog.empty' | translate }}</p>
       } @else {
@@ -144,6 +147,8 @@ export class CatalogComponent implements OnInit {
 
   isAdmin = false;
   loading = true;
+  /** Laden der Liste gescheitert — sonst saehe sie aus wie „nichts freigegeben". */
+  loadError = false;
   items: CatalogItem[] = [];
   requests: CatalogRequest[] = [];
   users: AdminUser[] = [];
@@ -172,11 +177,12 @@ export class CatalogComponent implements OnInit {
     }
   }
 
-  private loadList(): void {
+  loadList(): void {
     this.loading = true;
+    this.loadError = false;
     this.svc.list().subscribe({
       next: items => { this.items = items; this.loading = false; },
-      error: () => { this.items = []; this.loading = false; },
+      error: () => { this.items = []; this.loading = false; this.loadError = true; },
     });
   }
 

@@ -6,22 +6,26 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MessageService, ChatMessage } from '../../core/message.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 /** Nachrichten-Thread des Users mit dem Admin-Team: Verlauf lesen + antworten. */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatFormFieldModule, MatInputModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent],
   template: `
     <div class="msg-container">
       <h1>{{ 'messages.title' | translate }}</h1>
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError) {
+        <app-load-error (retry)="retry()" />
       } @else {
         @if (messages.length === 0) {
           <p class="empty">{{ 'messages.emptyUserCanWrite' | translate }}</p>
@@ -74,10 +78,16 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 export class MessagesComponent implements OnInit {
   messages: ChatMessage[] = [];
   loading = true;
+  /** Erstes Laden gescheitert — sonst saehe die Seite aus wie „noch keine Nachrichten". */
+  loadError = false;
   sending = false;
   draft = '';
 
-  constructor(private messageService: MessageService) {}
+  constructor(
+    private messageService: MessageService,
+    private snackbar: SnackbarService,
+    private translate: TranslateService,
+  ) {}
 
   ngOnInit(): void { this.load(true); }
 
@@ -89,17 +99,27 @@ export class MessagesComponent implements OnInit {
     if (!this.loading && !this.sending) this.load(true);
   }
 
+  /** Erneut-Knopf des Fehlerzustands. */
+  retry(): void {
+    this.loading = true;
+    this.loadError = false;
+    this.load(true);
+  }
+
   private load(markSeen: boolean): void {
     this.messageService.getThread().subscribe({
       next: list => {
         this.messages = list;
         this.loading = false;
+        this.loadError = false;
         // Beim Öffnen die Admin-Nachrichten als gelesen markieren (leert das Navbar-Badge).
         if (markSeen && list.some(m => m.fromAdmin && !m.readByRecipient)) {
           this.messageService.markUserSeen().subscribe({ error: () => {} });
         }
       },
-      error: () => { this.loading = false; },
+      // Nur das erste Laden (mit Spinner) wird zum Fehlerzustand; ein Hintergrund-Nachladen beim
+      // Fokuswechsel bleibt still und laesst den angezeigten Verlauf stehen.
+      error: () => { if (this.loading) this.loadError = true; this.loading = false; },
     });
   }
 
@@ -109,7 +129,11 @@ export class MessagesComponent implements OnInit {
     this.sending = true;
     this.messageService.send(body).subscribe({
       next: m => { this.messages = [...this.messages, m]; this.draft = ''; this.sending = false; },
-      error: () => { this.sending = false; },
+      // Entwurf bleibt stehen; der Nutzer muss aber erfahren, dass nichts angekommen ist.
+      error: () => {
+        this.sending = false;
+        this.snackbar.warn(this.translate.instant('messages.sendError'));
+      },
     });
   }
 }

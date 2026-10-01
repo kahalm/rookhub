@@ -14,6 +14,7 @@ import { debounceTime, distinctUntilChanged, switchMap, catchError, tap } from '
 import { SnackbarService } from '../../../core/snackbar.service';
 import { AuthService } from '../../../core/auth.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { AdminService, AdminUser } from '../../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/message.service';
 
@@ -29,7 +30,7 @@ import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/m
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule,
-    MatMenuModule, TranslatePipe, LoadingSpinnerComponent,
+    MatMenuModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent,
   ],
   templateUrl: './admin-messages.component.html',
   styleUrl: './admin-messages.component.scss',
@@ -37,6 +38,8 @@ import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/m
 export class AdminMessagesComponent implements OnInit {
   threads: AdminThreadSummary[] = [];
   threadsLoading = false;
+  /** Letztes Laden der Thread-Liste gescheitert (bei leerer Liste statt „keine Threads" angezeigt). */
+  threadsLoadError = false;
   selectedThreadUserId: number | null = null;
   selectedThreadName = '';
   threadMessages: ChatMessage[] = [];
@@ -93,6 +96,7 @@ export class AdminMessagesComponent implements OnInit {
       next: list => {
         this.threads = list;
         this.threadsLoading = false;
+        this.threadsLoadError = false;
         if (this.pendingThreadUserId != null) {
           const uid = this.pendingThreadUserId;
           this.pendingThreadUserId = null;
@@ -100,7 +104,7 @@ export class AdminMessagesComponent implements OnInit {
           if (t) this.openThread(uid, t.username);
         }
       },
-      error: () => { this.threadsLoading = false; },
+      error: () => { this.threadsLoading = false; this.threadsLoadError = true; },
     });
   }
 
@@ -183,7 +187,7 @@ export class AdminMessagesComponent implements OnInit {
   claimThread(userId: number): void {
     this.messageService.claimThread(userId).subscribe({
       next: () => this.loadThreads(),
-      error: () => {},
+      error: () => this.snackbar.warn(this.translate.instant('admin.messages.assignFailed')),
     });
   }
 
@@ -191,7 +195,7 @@ export class AdminMessagesComponent implements OnInit {
   releaseThread(userId: number): void {
     this.messageService.releaseThread(userId).subscribe({
       next: () => this.loadThreads(),
-      error: () => {},
+      error: () => this.snackbar.warn(this.translate.instant('admin.messages.assignFailed')),
     });
   }
 }

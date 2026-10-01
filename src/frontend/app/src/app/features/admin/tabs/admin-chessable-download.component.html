@@ -30,7 +30,11 @@
   }
 
   @if (dlUsers.length === 0 && !dlUsersLoading) {
-    <p class="empty">{{ 'admin.courseDl.noUsers' | translate }}</p>
+    @if (dlUsersError) {
+      <app-load-error (retry)="loadDlUsers()" />
+    } @else {
+      <p class="empty">{{ 'admin.courseDl.noUsers' | translate }}</p>
+    }
   }
 
   @if (dlCoursesLoading) {

@@ -107,6 +107,7 @@
     "search": "Search",
     "clear": "Clear",
     "back": "Back",
+    "loadFailed": "Could not load. Check your connection and try again.",
     "retry": "Retry",
     "loading": "Loading…",
     "ok": "OK",
@@ -2468,6 +2469,7 @@
       "claimedBy": "Handled by {{name}}",
       "claim": "Take over",
       "takeOver": "Take over",
+      "assignFailed": "The assignment could not be changed — please try again.",
       "release": "Release"
     },
     "courseDl": {

@@ -107,6 +107,7 @@
     "search": "Suchen",
     "clear": "Leeren",
     "back": "Zurück",
+    "loadFailed": "Konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
     "retry": "Wiederholen",
     "loading": "Wird geladen…",
     "ok": "OK",
@@ -2468,6 +2469,7 @@
       "claimedBy": "Übernommen von {{name}}",
       "claim": "Übernehmen",
       "takeOver": "Übernehmen",
+      "assignFailed": "Die Zuweisung konnte nicht geändert werden – bitte erneut versuchen.",
       "release": "Freigeben"
     },
     "courseDl": {

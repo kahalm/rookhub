@@ -1,8 +1,8 @@
+import { of, throwError } from 'rxjs';
 import { AdminChessableDownloadComponent } from './admin-chessable-download.component';
 
 /** Reine Logik-Tests (ohne Template/ngOnInit) — Filter-Getter der Kurs-Download-Ansicht. */
-function make() {
-  const chessable = {} as any;
+function make(chessable: any = {}) {
   const snackbar = { info: () => {}, show: () => {} } as any;
   const translate = { instant: (k: string) => k } as any;
   return new AdminChessableDownloadComponent(chessable, snackbar, translate);
@@ -63,5 +63,18 @@ describe('AdminChessableDownloadComponent', () => {
     c.dlSelectedUserId = 1;
     c.onDlShowExpiredChange();
     expect(c.dlSelectedUserId).toBe(1);
+  });
+
+  // W5 F5-017: ein Ladefehler der User-Liste darf nicht wie „keine User mit Zugang" aussehen.
+  it('loadDlUsers setzt bei Fehler dlUsersError und loescht ihn beim naechsten Erfolg', () => {
+    const getCredentialedUsersAdmin = jasmine.createSpy('get').and.returnValues(
+      throwError(() => ({ status: 500 })), of([{ userId: 1, username: 'a' }]));
+    const c = make({ getCredentialedUsersAdmin });
+    c.loadDlUsers();
+    expect(c.dlUsersLoading).toBeFalse();
+    expect(c.dlUsersError).toBeTrue();
+    c.loadDlUsers();
+    expect(c.dlUsersError).toBeFalse();
+    expect(c.dlUsers.length).toBe(1);
   });
 });

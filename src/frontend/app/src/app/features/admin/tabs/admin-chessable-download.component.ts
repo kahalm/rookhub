@@ -13,6 +13,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { timer, Subscription } from 'rxjs';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../../chessable/chessable.service';
 import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable-progress.util';
 import { apiErrorText } from '../../../core/api-error';
@@ -30,7 +31,7 @@ import { apiErrorText } from '../../../core/api-error';
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule,
     MatCheckboxModule, MatTooltipModule, MatSlideToggleModule, MatProgressSpinnerModule, TranslatePipe,
-    LoadingSpinnerComponent,
+    LoadingSpinnerComponent, LoadErrorComponent,
   ],
   templateUrl: './admin-chessable-download.component.html',
   styleUrl: './admin-chessable-download.component.scss',
@@ -45,6 +46,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   dlHideLoaded = false;
   dlCoursesLoading = false;
   dlCoursesError: string | null = null;
+  /** Letztes Laden der User-Liste gescheitert — bei leerer Liste statt „keine User mit Zugang" angezeigt. */
+  dlUsersError = false;
   dlImports: Record<string, ChessableImport> = {};
   dlEstimates: Record<string, { info?: ChessableCourseInfo; loading: boolean; error?: string }> = {};
   private dlPollSubs: Record<string, Subscription> = {};
@@ -66,8 +69,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   loadDlUsers(): void {
     this.dlUsersLoading = true;
     this.chessable.getCredentialedUsersAdmin().subscribe({
-      next: list => { this.dlUsers = list; this.dlUsersLoading = false; },
-      error: () => { this.dlUsersLoading = false; },
+      next: list => { this.dlUsers = list; this.dlUsersLoading = false; this.dlUsersError = false; },
+      error: () => { this.dlUsersLoading = false; this.dlUsersError = true; },
     });
   }
 

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { FavoritesComponent } from './favorites.component';
 import { FavoritePuzzle, FavoritesService } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
@@ -97,5 +97,18 @@ describe('FavoritesComponent', () => {
   it('themeList splittet und begrenzt auf 6', () => {
     const { c } = setup();
     expect(c.themeList('a b,c  d')).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  // W5 F5-017: ein Ladefehler darf nicht wie „noch keine Favoriten" aussehen.
+  it('Ladefehler → loadError, Erneut laedt nochmal', () => {
+    const list = jasmine.createSpy('list').and.returnValues(throwError(() => ({ status: 500 })), of([STD]));
+    const { fixture, c } = setup({ list });
+    fixture.detectChanges(); // ngOnInit
+    expect(c.loading).toBeFalse();
+    expect(c.loadError).toBeTrue();
+    c.load();
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(c.loadError).toBeFalse();
+    expect(c.favorites.length).toBe(1);
   });
 });

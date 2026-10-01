@@ -24,6 +24,8 @@
 
       @if (threadsLoading) {
         <app-loading-spinner />
+      } @else if (threadsLoadError && threads.length === 0) {
+        <app-load-error (retry)="loadThreads()" />
       } @else if (threads.length === 0) {
         <p class="empty">{{ 'admin.messages.noThreads' | translate }}</p>
       } @else {

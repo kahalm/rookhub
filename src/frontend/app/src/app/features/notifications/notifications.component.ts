@@ -17,6 +17,7 @@ import { PushService } from '../../core/push.service';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 
@@ -25,7 +26,7 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule, MatChipsModule, MatSlideToggleModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent],
   template: `
     <div class="notif-container">
       <h1>{{ 'notifications.historyTitle' | translate }}</h1>
@@ -60,6 +61,8 @@ const HIDDEN_STORAGE_KEY = 'rookhub_notifications_hidden_categories';
 
       @if (loading && items.length === 0) {
         <app-loading-spinner />
+      } @else if (loadError && items.length === 0) {
+        <app-load-error (retry)="loadMore()" />
       } @else if (items.length === 0) {
         <p class="empty">{{ 'notifications.empty' | translate }}</p>
       } @else {
@@ -149,6 +152,8 @@ export class NotificationsComponent implements OnInit {
   hidden = new Set<NotificationCategory>();
   private page = 0;
   private readonly pageSize = 30;
+  /** Letztes Seiten-Laden gescheitert — bei leerer Liste statt „keine Benachrichtigungen" angezeigt. */
+  loadError = false;
 
   // ----- Push -----
   /** Bereiche im Push-Panel (Admin-Bereich nur für Admins). */
@@ -245,6 +250,7 @@ export class NotificationsComponent implements OnInit {
 
   loadMore(): void {
     this.loading = true;
+    this.loadError = false;
     this.notif.history(this.page + 1, this.pageSize).subscribe({
       next: res => {
         this.items = [...this.items, ...res.items];
@@ -252,7 +258,12 @@ export class NotificationsComponent implements OnInit {
         this.page++;
         this.loading = false;
       },
-      error: () => { this.loading = false; },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+        // „Mehr laden" geklickt und gescheitert: Liste bleibt stehen, aber nicht still.
+        if (this.items.length > 0) this.snackbar.warn(this.translate.instant('common.loadFailed'));
+      },
     });
   }
 

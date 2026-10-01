@@ -84,4 +84,30 @@ describe('CatalogComponent', () => {
       expect(fixture.nativeElement.querySelector('.grant-selects')).toBeNull();
     });
   });
+
+  // W5 F5-017: ein Ladefehler der Liste darf nicht wie „nichts freigegeben" aussehen.
+  it('Ladefehler der Liste → Fehlerhinweis mit Erneut-Knopf statt Leertext', () => {
+    const list = jasmine.createSpy('list').and.returnValues(throwError(() => ({ status: 500 })), of([]));
+    TestBed.configureTestingModule({
+      imports: [CatalogComponent],
+      providers: [
+        provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CatalogService, useValue: { list } },
+        { provide: AuthService, useValue: { isAdmin: false } },
+        { provide: AdminService, useValue: {} },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+      ],
+    });
+    const fixture = TestBed.createComponent(CatalogComponent);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.loadError).toBeTrue();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.textContent).not.toContain('catalog.empty');
+    (el.querySelector('app-load-error button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('app-load-error')).toBeNull();
+    expect(el.textContent).toContain('catalog.empty');
+  });
 });

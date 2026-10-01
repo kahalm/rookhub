@@ -26,6 +26,7 @@ import { formatDuration } from './duration.util';
 import { clampGoal } from './goal.util';
 import { BreakRow, breakdownRows } from './breakdown.util';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -99,7 +100,7 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
   imports: [
     CommonModule, FormsModule, MatCardModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatProgressBarModule, MatTooltipModule, MatTabsModule,
-    TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
+    TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent, HelpHintComponent,
     ManualActivitiesCardComponent, ActivityPresetsCardComponent, ChessableThemesCardComponent,
     PeriodBreakdownCardComponent,
   ],
@@ -110,6 +111,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError) {
+        <app-load-error (retry)="reload()" />
       } @else {
         <!-- Vier Reiter statt eines Stapels: Alltagsfall (Ziele) vorn, Auswertung und
              Verwaltung dahinter. matTabContent lädt den Inhalt erst beim Öffnen. -->
@@ -408,6 +411,8 @@ export function buildGoalTracker(days: { date: string; status: GoalStatus; hasMa
 })
 export class TrainingGoalsComponent implements OnInit {
   loading = true;
+  /** Laden gescheitert — sonst stuende dort „kein Ziel" und leere Auswertungen, als gaebe es nichts. */
+  loadError = false;
   saving = false;
   syncingPlay = false;
   goal: TrainingGoal | null = null;
@@ -476,6 +481,7 @@ export class TrainingGoalsComponent implements OnInit {
 
   reload(): void {
     this.loading = true;
+    this.loadError = false;
     forkJoin({
       goal: this.service.getGoal(),
       today: this.service.getToday(),
@@ -494,7 +500,7 @@ export class TrainingGoalsComponent implements OnInit {
         this.manualList = manual;
         this.loading = false;
       },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.loadError = true; },
     });
   }
 

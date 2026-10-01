@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -21,6 +21,27 @@ describe('TrainingGoalsComponent', () => {
     }).compileComponents();
     const fixture = TestBed.createComponent(TrainingGoalsComponent);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  // W5 F5-017: scheitert das Laden, stand dort „kein Ziel" und leere Auswertungen, als gaebe es nichts.
+  it('Ladefehler → Fehlerhinweis statt der Reiter', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TrainingGoalsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TrainingGoalsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    // forkJoin bricht die uebrigen Anfragen ab, sobald die erste scheitert.
+    for (const r of http.match(() => true)) if (!r.cancelled) r.flush('x', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.loadError).toBeTrue();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.querySelector('mat-tab-group')).toBeNull();
   });
 });
 

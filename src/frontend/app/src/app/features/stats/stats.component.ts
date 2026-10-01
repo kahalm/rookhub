@@ -14,6 +14,7 @@ import { forkJoin } from 'rxjs';
 import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, ActivityDay, PuzzleBreakdown, CourseStatsDto, AttemptStatsDto } from '../puzzles/puzzle.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
@@ -160,7 +161,7 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
   standalone: true,
   imports: [
     CommonModule, FormsModule, RouterModule, MatCardModule, MatIconModule,
-    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent
+    MatFormFieldModule, MatSelectModule, MatButtonToggleModule, MatTableModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, LoadErrorComponent
   ],
   template: `
     <div class="stats-container">
@@ -173,6 +174,8 @@ export function buildOverlay(points: EloHistoryPoint[], w = 600, h = 180, pad = 
 
       @if (loading) {
         <app-loading-spinner />
+      } @else if (loadError) {
+        <app-load-error (retry)="load()" />
       } @else {
         <div class="cards">
           @if (mode === 'standard') {
@@ -431,6 +434,8 @@ export class StatsComponent implements OnInit {
   mode: 'standard' | 'course' = 'standard';
 
   loading = true;
+  /** Laden gescheitert — sonst zeigten die Karten Nullen und „–" wie bei einem neuen Konto. */
+  loadError = false;
   stats: PuzzleStatsDto | null = null;
   courseStats: CourseStatsDto | null = null;
   perLevel: { level: number; elo: number }[] = [];
@@ -469,8 +474,9 @@ export class StatsComponent implements OnInit {
 
   onModeChange(): void { this.load(); }
 
-  private load(): void {
+  load(): void {
     this.loading = true;
+    this.loadError = false;
     this.cols = this.mode === 'course'
       ? ['date', 'rating', 'result', 'time', 'open']   // Kurs-Modus: kein Δ-Elo
       : ['date', 'rating', 'result', 'elo', 'time', 'open'];
@@ -499,7 +505,7 @@ export class StatsComponent implements OnInit {
         this.rebuildCurve();
         this.loading = false;
       },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.loadError = true; },
     });
   }
 
@@ -521,7 +527,7 @@ export class StatsComponent implements OnInit {
         this.applyBreakdown(breakdown);
         this.loading = false;
       },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.loadError = true; },
     });
   }
 

@@ -70,6 +70,33 @@ describe('NotificationsComponent', () => {
     expect(c.items).toEqual([]);
   });
 
+  // F5-017: ein Ladefehler darf nicht wie „keine Benachrichtigungen" aussehen.
+  it('a failing first page sets the error state, the retry clears it', () => {
+    const svc = makeService({ history: jasmine.createSpy('history').and.returnValues(
+      throwError(() => ({ status: 500 })), of({ items: [notif(1)], total: 1 })) });
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+
+    c.loadMore();
+    expect(c.loadError).toBeTrue();
+
+    c.loadMore();
+    expect(c.loadError).toBeFalse();
+    expect(c.items.map(n => n.id)).toEqual([1]);
+  });
+
+  it('a failing "load more" keeps the list and reports the failure', () => {
+    const snackbar = { warn: jasmine.createSpy('warn') };
+    const svc = makeService({ history: jasmine.createSpy('history').and.returnValues(
+      of({ items: [notif(1)], total: 2 }), throwError(() => ({ status: 500 }))) });
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, snackbar as any);
+
+    c.loadMore();
+    c.loadMore();
+
+    expect(c.items.map(n => n.id)).toEqual([1]);
+    expect(snackbar.warn).toHaveBeenCalledOnceWith('common.loadFailed');
+  });
+
   describe('category filter', () => {
     beforeEach(() => localStorage.removeItem('rookhub_notifications_hidden_categories'));
     afterEach(() => localStorage.removeItem('rookhub_notifications_hidden_categories'));

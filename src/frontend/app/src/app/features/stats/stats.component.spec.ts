@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -104,5 +104,26 @@ describe('StatsComponent', () => {
     expect(c.current).toBe(c.courseStats);
     values = Array.from(fixture.nativeElement.querySelectorAll('.cards .stat .val')).map(e => (e as HTMLElement).textContent!.trim());
     expect(values).toEqual(['5', '7', '71.4%', '1', '2']);   // keine Elo-Kachel
+  });
+
+  // W5 F5-017: scheitert das Laden, zeigten die Karten Nullen und „–" wie bei einem neuen Konto.
+  it('Ladefehler → Fehlerhinweis statt Null-Karten', async () => {
+    await TestBed.configureTestingModule({
+      imports: [StatsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(StatsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    // forkJoin bricht die uebrigen Anfragen ab, sobald die erste scheitert.
+    for (const r of http.match(() => true)) if (!r.cancelled) r.flush('x', { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.loadError).toBeTrue();
+    expect(el.querySelector('app-load-error')).not.toBeNull();
+    expect(el.querySelector('.cards')).toBeNull();
   });
 });

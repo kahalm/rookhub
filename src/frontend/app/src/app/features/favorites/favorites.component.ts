@@ -11,6 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FavoritesService, FavoritePuzzle } from '../../core/favorites.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -18,7 +19,7 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
   standalone: true,
   imports: [
     CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatTooltipModule,
-    MatProgressSpinnerModule, TranslatePipe,
+    MatProgressSpinnerModule, TranslatePipe, LoadErrorComponent,
   ],
   template: `
     <div class="fav-page">
@@ -29,6 +30,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 
       @if (loading) {
         <div class="center"><mat-spinner diameter="40"></mat-spinner></div>
+      } @else if (loadError) {
+        <app-load-error (retry)="load()" />
       } @else if (favorites.length === 0) {
         <mat-card class="empty">
           <mat-icon>favorite_border</mat-icon>
@@ -101,6 +104,8 @@ import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.compo
 export class FavoritesComponent implements OnInit {
   favorites: FavoritePuzzle[] = [];
   loading = true;
+  /** Laden gescheitert — sonst saehe die Seite aus wie „noch keine Favoriten". */
+  loadError = false;
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
 
@@ -111,10 +116,14 @@ export class FavoritesComponent implements OnInit {
     private translate: TranslateService,
   ) {}
 
-  ngOnInit(): void {
+  ngOnInit(): void { this.load(); }
+
+  load(): void {
+    this.loading = true;
+    this.loadError = false;
     this.service.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => { this.favorites = list; this.loading = false; },
-      error: () => { this.loading = false; },
+      error: () => { this.loading = false; this.loadError = true; },
     });
   }
 
