@@ -36,7 +36,9 @@ import {
   imports: [CommonModule, RouterModule, MatToolbarModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatBadgeModule, TranslatePipe],
   template: `
     <mat-toolbar color="primary">
-      <span class="logo" routerLink="/">RookHub</span>
+      <!-- Links, keine span/button mit routerLink (UX-059): nur ein Anker ist per Enter bedienbar, fuer Screenreader
+           ein Link und laesst sich per Mittelklick in einem neuen Tab oeffnen. mat-button auf <a> sieht gleich aus. -->
+      <a class="logo" routerLink="/">RookHub</a>
       <span class="spacer"></span>
       @if (auth.isLoggedIn) {
         <!-- UI-Entrümpelung Navbar: 3 Icons — Vollbild (oft benutzt), Glocke, Menü.
@@ -184,8 +186,8 @@ import {
         <!-- Ausgeloggt (entrümpelt wie die eingeloggte Leiste): nur Puzzles/Analyse als
              Text-Links (≤768px im ☰), alles Sekundäre (Hilfe/Info/Discord/Theme/Vollbild/
              Sprache) liegt IMMER im ☰-Menü statt als Icon-Reihe in der Leiste. -->
-        @if (can('puzzles')) { <button mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
-        @if (can('analysis')) { <button mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+        @if (can('puzzles')) { <a mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</a> }
+        @if (can('analysis')) { <a mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</a> }
         <!-- Auf den Anmelde-/Passwortseiten kein Vollbild (nutzt dort nichts) und unten keine Kopie der Karten-Links
              „Anmelden"/„Registrieren" — auf /register standen sonst zwei gleiche Knoepfe (Codereview W5 UX-052). -->
         @if (fsSupported && !onAuthPage) {
@@ -238,9 +240,9 @@ import {
           </button>
         </mat-menu>
         @if (!onAuthPage) {
-          <button mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</button>
+          <a mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
           <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss). -->
-          <button mat-raised-button color="primary" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</button>
+          <a mat-raised-button color="primary" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</a>
         }
       }
       <mat-menu #langMenu="matMenu">
@@ -255,7 +257,7 @@ import {
     </mat-toolbar>
   `,
   styles: [`
-    .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
+    .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; color: inherit; text-decoration: none; }
     .spacer { flex: 1 1 auto; }
     .menu-version { margin-left: 4px; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }

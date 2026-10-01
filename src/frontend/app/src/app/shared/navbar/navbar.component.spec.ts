@@ -164,6 +164,23 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     });
   }
 
+  // Logo und Gast-Navigation sind ANKER (UX-059): ein span mit routerLink bekommt zwar tabindex 0, reagiert aber
+  // nur auf click — Enter tat nichts, Screenreader lasen bloßen Text, Mittelklick öffnete keinen neuen Tab.
+  it('das Logo ist ein Link mit href', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const logo = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .logo') as HTMLElement;
+    expect(logo.tagName).toBe('A');
+    expect(logo.getAttribute('href')).toBe('/');
+  });
+
+  it('ausgeloggt: Puzzles, Analyse, Anmelden und Registrieren sind Links mit href, keine Knöpfe', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles', 'analysis'] });
+    const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar a[mat-button], mat-toolbar a[mat-raised-button]'))
+      .map(a => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/puzzles', '/analysis', '/login', '/register']);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar button[mat-button], mat-toolbar button[mat-raised-button]').length).toBe(0);
+  });
+
   it('ausgeloggt: das ☰-Menü bietet den Theme-Umschalter (Anonyme haben keine Profil-Theme-Karte)', () => {
     const fixture = render({ loggedIn: false, keys: ['puzzles'] });
     const el: HTMLElement = fixture.nativeElement;
