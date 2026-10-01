@@ -867,6 +867,35 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
     c.ngOnDestroy();
   });
 
+  it('gibt das Training wieder frei, sobald nach einem Ladefehler die nächste Stellung lädt', () => {
+    // Ein einziger gescheiterter Abruf (502 beim Deploy, Funkloch) sperrte den Start-Knopf bis zum
+    // Neuladen der Seite: `loadError` wurde nur in `loadBook` zurückgesetzt, nie beim Erfolg von
+    // `loadPosition` — `canTrain` blieb false, obwohl die nächste Stellung geladen war.
+    const { component: c, warnings } = make({
+      getBook: () => of({
+        bookId: 1, displayName: 'B', isCalculation: true,
+        positions: [item(1, { chapter: 'A' }), item(2, { chapter: 'A' }), item(3, { chapter: 'A' })],
+      }),
+      getPosition: (id: number) =>
+        id === 2 ? throwError(() => new Error('502')) : of(position({ id, chapter: 'A' })),
+    });
+    c.ngOnInit();
+    c.nextPosition();                 // Stellung 2 scheitert
+    expect(c.loadError).toBeTrue();
+    expect(c.canTrain).toBeFalse();
+
+    c.nextPosition();                 // Stellung 3 lädt fehlerfrei
+
+    expect(c.position?.id).toBe(3);
+    expect(c.loadError).toBeFalse();
+    expect(c.canTrain).toBeTrue();
+    expect(c.trainingDisabled).toBeFalse();
+    c.toggleTraining();
+    expect(c.timerRunning).toBeTrue();
+    expect(warnings).toEqual([]);
+    c.ngOnDestroy();
+  });
+
   it('formatiert die Anzeige als m:ss bzw. h:mm:ss', () => {
     const c = makeForTimer();
     load(c, position({ chapter: null }));

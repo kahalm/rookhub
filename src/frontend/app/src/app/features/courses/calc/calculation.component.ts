@@ -590,6 +590,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
     this.subs.add(this.backend.getPosition(bookPuzzleId, this.courseLang.requestLang(this.langRef)).subscribe({
       next: pos => {
         if (epoch !== this.loadEpoch) return;
+        // Ein früherer Fehlschlag (Funkloch, 502 beim Deploy) darf nicht kleben bleiben: sonst
+        // bliebe `canTrain` für den Rest des Besuchs false, obwohl diese Stellung geladen ist.
+        this.loadError = false;
         this.position = pos;
         this.applyPosition(pos);
         this.loading = false;
