@@ -18,7 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -192,6 +192,15 @@ export class TournamentDirectoryComponent implements OnInit {
 
   /** Der gedrosselte Weg zum Server. */
   private readonly persist = new Subject<Record<string, unknown>>();
+
+  /**
+   * Stand des Abgleichs mit dem Server (`syncStoredView`). Solange er aussteht, geht nichts hinauf:
+   * der Server-Stand kann juenger sein (am anderen Geraet eingestellt), und schon der erste Aufbau
+   * speichert die Ansicht. Scheitert der Abruf, geht nur hinauf, was der Nutzer DANACH geaendert hat —
+   * der unveraenderte, womoeglich alte lokale Stand ueberschreibt den Server nicht.
+   */
+  private remoteSync: 'pending' | 'done' | 'failed' = 'pending';
+  private stateAtSyncFailure = '';
 
   /**
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
@@ -869,6 +878,8 @@ export class TournamentDirectoryComponent implements OnInit {
   private watchPersist(): void {
     this.persist.pipe(
       debounceTime(TournamentDirectoryComponent.PersistDebounceMs),
+      filter(state => this.remoteSync === 'done'
+        || (this.remoteSync === 'failed' && JSON.stringify(state) !== this.stateAtSyncFailure)),
       // Nichts schicken, was schon oben steht — das Umschalten zwischen zwei Reitern und zurueck
       // ist kein neuer Zustand.
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
@@ -976,6 +987,14 @@ export class TournamentDirectoryComponent implements OnInit {
     this.viewStates.get<Record<string, unknown>>(TournamentDirectoryComponent.StateKey)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(remote => {
+        // Server nicht erreichbar (nicht „hat nichts"): weder uebernehmen noch hinaufschieben — sein
+        // Stand kann juenger sein. Spaetere Aenderungen des Nutzers gehen trotzdem hinauf (remoteSync).
+        if (remote === undefined) {
+          this.remoteSync = 'failed';
+          this.stateAtSyncFailure = JSON.stringify(this.viewState());
+          return;
+        }
+        this.remoteSync = 'done';
         if (!remote) {
           this.queuePersist(this.viewState());
           return;

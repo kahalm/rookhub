@@ -17,13 +17,18 @@ import { Observable, catchError, map, of } from 'rxjs';
 export class ViewStateService {
   private readonly http = inject(HttpClient);
 
-  /** Der gespeicherte Zustand, oder `null` (kein gespeicherter Zustand / nicht erreichbar). */
-  get<T>(key: string): Observable<T | null> {
+  /**
+   * Der gespeicherte Zustand; `null` = der Server hat sicher nichts gespeichert (204), `undefined` =
+   * nicht erreichbar/Fehler. Die Unterscheidung traegt: wer bei „nichts gespeichert" den lokalen
+   * Zustand hinaufschiebt, darf das bei einem Fehler NICHT tun — sonst ueberschriebe ein Funkloch
+   * den juengeren Stand eines anderen Geraets mit dem alten dieses Geraets.
+   */
+  get<T>(key: string): Observable<T | null | undefined> {
     // 204 (nichts gespeichert) kommt mit LEEREM Rumpf — `observe: response`, weil ein leerer
     // Rumpf sonst als `null` nicht von einem Fehler zu unterscheiden waere.
     return this.http.get<T>(`/api/view-state/${key}`, { observe: 'response' }).pipe(
       map(res => res.body ?? null),
-      catchError(() => of(null)),
+      catchError(() => of(undefined)),
     );
   }
 

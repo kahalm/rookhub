@@ -80,7 +80,8 @@ describe('TournamentDirectoryComponent', () => {
   beforeEach(clearViewKeys);
   afterEach(clearViewKeys);
 
-  async function setup(queryParams: Record<string, string> = {}, user: { id: number; impersonating?: boolean } = { id: ME }) {
+  async function setup(queryParams: Record<string, string> = {}, user: { id: number; impersonating?: boolean } = { id: ME },
+                       viewState: 'none' | 'fail' | 'hold' = 'none') {
     await TestBed.configureTestingModule({
       imports: [TournamentDirectoryComponent],
       providers: [
@@ -104,7 +105,8 @@ describe('TournamentDirectoryComponent', () => {
     http = TestBed.inject(HttpTestingController);
     navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
     fixture.detectChanges();
-    flushViewState();
+    if (viewState === 'fail') http.expectOne('/api/view-state/turnier.directory').flush('x', { status: 500, statusText: 'Server Error' });
+    else if (viewState === 'none') flushViewState();
   }
 
   /**
@@ -1534,6 +1536,55 @@ describe('TournamentDirectoryComponent', () => {
       jasmine.clock().tick(1300);
       expect(component.placeLabel).toBe('Wien (AT)');
       http.expectNone(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
+  /**
+   * W5 F6-015: Scheitert der Abruf (Funkloch, 500), ist das NICHT „der Server hat nichts". Frueher
+   * wurde dann der lokale (aeltere) Zustand hinaufgeschoben und ueberschrieb den Stand, den der
+   * Nutzer an einem anderen Geraet eingestellt hatte.
+   */
+  it('schiebt bei gescheitertem Abruf den unveraenderten Stand nicht zum Server, eine spaetere Aenderung schon', async () => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    try {
+      await setup({}, { id: ME }, 'fail');
+      flushProfiles([]);
+      flushList([]);
+      jasmine.clock().tick(1300);
+      http.expectNone(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+
+      // Was der Nutzer danach einstellt, ist juenger als jeder Server-Stand — das geht hinauf.
+      component.choosePlace({ label: 'Wien (AT)', country: 'AT', postalCode: null, lat: 48.21, lon: 16.37 });
+      flushList([]);
+      jasmine.clock().tick(1300);
+      const put = http.expectOne(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+      expect(put.request.body).toEqual(jasmine.objectContaining({ placeLabel: 'Wien (AT)' }));
+      put.flush(null, { status: 204, statusText: 'No Content' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
+  /** Solange der Abruf aussteht, geht der erste Aufbau nicht hinauf; das 204 schiebt ihn danach hoch. */
+  it('wartet mit dem Schreiben, bis der Server-Stand bekannt ist', async () => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    try {
+      await setup({}, { id: ME }, 'hold');
+      flushProfiles([]);
+      flushList([]);
+      jasmine.clock().tick(1300);
+      http.expectNone(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+
+      flushViewState();
+      jasmine.clock().tick(1300);
+      http.expectOne(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory')
+        .flush(null, { status: 204, statusText: 'No Content' });
     } finally {
       jasmine.clock().uninstall();
     }
