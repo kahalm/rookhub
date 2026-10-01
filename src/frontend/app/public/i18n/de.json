@@ -73,6 +73,25 @@
       "mo": "Monate"
     }
   },
+  "apiErrors": {
+    "rate_limited": "Zu viele Anfragen. Bitte kurz warten und erneut versuchen.",
+    "login_invalid": "Benutzername oder Passwort ist falsch.",
+    "login_throttled": "Zu viele Anmeldeversuche für dieses Konto. Bitte ein paar Sekunden warten und erneut versuchen.",
+    "account_locked": "Dieses Konto wurde von einem Administrator gesperrt.",
+    "user_not_found": "Benutzer nicht gefunden.",
+    "friend_request_self": "Du kannst dir nicht selbst eine Freundschaftsanfrage schicken.",
+    "friendship_exists": "Ihr seid bereits befreundet, oder eine Anfrage ist schon offen.",
+    "token_limit_reached": "Du hast die Höchstzahl an API-Tokens erreicht. Widerrufe einen, den du nicht mehr brauchst.",
+    "admin_self_delete": "Du kannst dein eigenes Konto hier nicht löschen.",
+    "admin_self_change": "Du kannst deinen eigenen Admin-Status nicht ändern.",
+    "user_delete_references": "Der Benutzer konnte nicht gelöscht werden: es bestehen noch abhängige Verweise.",
+    "role_key_taken": "Eine Rolle mit diesem Key existiert bereits.",
+    "role_system_protected": "System-Rollen können nicht gelöscht werden.",
+    "group_name_taken": "Eine Gruppe mit diesem Namen existiert bereits.",
+    "book_alias_invalid": "Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.",
+    "book_alias_reserved": "Dieser Alias ist reserviert.",
+    "book_alias_taken": "Dieser Alias ist bereits vergeben."
+  },
   "common": {
     "moreActions": "Weitere Aktionen",
     "save": "Speichern",

@@ -54,7 +54,7 @@ public class RoleAdminService
     {
         var key = dto.Key.Trim().ToLowerInvariant();
         if (await _db.Roles.AnyAsync(r => r.Key == key))
-            throw new DomainValidationException("Eine Rolle mit diesem Key existiert bereits.");
+            throw new DomainValidationException("Eine Rolle mit diesem Key existiert bereits.") { Code = ApiErrorCodes.RoleKeyTaken };
 
         var perms = ValidatePermissions(dto.Permissions);
         var role = new Role { Key = key, Name = dto.Name.Trim(), IsSystem = false };
@@ -88,7 +88,7 @@ public class RoleAdminService
         var role = await _db.Roles.FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new NotFoundException("Rolle nicht gefunden.");
         if (role.IsSystem)
-            throw new DomainValidationException("System-Rollen können nicht gelöscht werden.");
+            throw new DomainValidationException("System-Rollen können nicht gelöscht werden.") { Code = ApiErrorCodes.RoleSystemProtected };
         _db.GroupRoles.RemoveRange(_db.GroupRoles.Where(gr => gr.RoleId == id));   // InMemory kaskadiert nicht
         _db.Roles.Remove(role);   // UserRoles + RolePermissions cascaden
         await _db.SaveChangesAsync();
@@ -98,7 +98,7 @@ public class RoleAdminService
     public async Task<UserRolesDto> GetUserRolesAsync(int userId)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
-            throw new NotFoundException("User nicht gefunden.");
+            throw new NotFoundException("User nicht gefunden.") { Code = ApiErrorCodes.UserNotFound };
         var roleIds = await _db.UserRoles.Where(ur => ur.UserId == userId).Select(ur => ur.RoleId).ToListAsync();
         return new UserRolesDto { UserId = userId, RoleIds = roleIds };
     }
@@ -108,7 +108,7 @@ public class RoleAdminService
     public async Task SetUserRolesAsync(int userId, SetUserRolesDto dto)
     {
         if (!await _db.AppUsers.AnyAsync(u => u.Id == userId))
-            throw new NotFoundException("User nicht gefunden.");
+            throw new NotFoundException("User nicht gefunden.") { Code = ApiErrorCodes.UserNotFound };
 
         var adminRoleId = await _db.Roles.Where(r => r.Key == RoleSeeder.AdminKey).Select(r => r.Id).FirstOrDefaultAsync();
         var target = new HashSet<int>(dto.RoleIds);

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -80,7 +81,8 @@ public class BookPublicSlugTests : IDisposable
     public async Task Update_ReservedSlug_Throws(string slug)
     {
         var book = await SeedBookAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => _admin.UpdateBookAsync(book.Id, new UpdateBookDto { PublicSlug = slug }));
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _admin.UpdateBookAsync(book.Id, new UpdateBookDto { PublicSlug = slug }));
+        Assert.Equal(ApiErrorCodes.BookAliasReserved, ex.Code);
     }
 
     [Theory]
@@ -93,7 +95,8 @@ public class BookPublicSlugTests : IDisposable
     public async Task Update_InvalidSlug_Throws(string slug)
     {
         var book = await SeedBookAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => _admin.UpdateBookAsync(book.Id, new UpdateBookDto { PublicSlug = slug }));
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _admin.UpdateBookAsync(book.Id, new UpdateBookDto { PublicSlug = slug }));
+        Assert.Equal(ApiErrorCodes.BookAliasInvalid, ex.Code);
     }
 
     [Fact]
@@ -101,7 +104,8 @@ public class BookPublicSlugTests : IDisposable
     {
         await SeedBookAsync(slug: "taken");
         var other = await SeedBookAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => _admin.UpdateBookAsync(other.Id, new UpdateBookDto { PublicSlug = "TAKEN" }));
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _admin.UpdateBookAsync(other.Id, new UpdateBookDto { PublicSlug = "TAKEN" }));
+        Assert.Equal(ApiErrorCodes.BookAliasTaken, ex.Code);
     }
 
     [Fact]

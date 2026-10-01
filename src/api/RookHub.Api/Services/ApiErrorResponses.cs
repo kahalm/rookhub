@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using RookHub.Api.Exceptions;
 
 namespace RookHub.Api.Services;
 
@@ -31,6 +32,15 @@ public static class ApiErrorResponses
     };
 
     public static string TraceId(HttpContext context) => Activity.Current?.Id ?? context.TraceIdentifier;
+
+    /// <summary>
+    /// Rumpf einer erwarteten Fehlerantwort: <c>{ message }</c>, mit Fehlercode <c>{ message, code }</c> (F5-019,
+    /// <see cref="ApiErrorCodes"/>). Ohne Code bleibt die Form exakt die bisherige.
+    /// </summary>
+    public static object Body(string message, string? code) => code is null ? new { message } : new { message, code };
+
+    /// <summary><see cref="Body(string, string?)"/> aus einer Ausnahme — der Code kommt von <see cref="IApiErrorCode"/>.</summary>
+    public static object Body(Exception ex) => Body(ex.Message, (ex as IApiErrorCode)?.Code);
 
     /// <summary>
     /// Rumpf des globalen Handlers (<c>app.UseExceptionHandler</c>). Domänen-Ausnahmen kommen hier nicht an

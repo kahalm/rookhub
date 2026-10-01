@@ -14,6 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, AdminUser, Group, Role } from '../../../core/admin.service';
+import { apiErrorText } from '../../../core/api-error';
 
 /**
  * Admin-Tab „Rollen & Berechtigungen" (RBAC Phase 4): Rollen anlegen/bearbeiten/löschen inkl.
@@ -135,7 +136,7 @@ export class AdminRolesComponent implements OnInit {
       },
       error: err => {
         this.creating = false;
-        this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
   }
@@ -168,7 +169,7 @@ export class AdminRolesComponent implements OnInit {
       },
       error: err => {
         this.savingRole = false;
-        this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
   }
@@ -178,7 +179,7 @@ export class AdminRolesComponent implements OnInit {
     if (!confirm(this.translate.instant('admin.roles.confirmDelete', { name: role.name }))) return;
     this.admin.deleteRole(role.id).subscribe({
       next: () => { this.snackbar.info(this.translate.instant('admin.roles.deleted')); this.loadRoles(); },
-      error: err => this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError')),
+      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError')),
     });
   }
 
@@ -218,7 +219,7 @@ export class AdminRolesComponent implements OnInit {
       },
       error: err => {
         this.savingGroupRoles = false;
-        this.snackbar.info(err?.error?.message || this.translate.instant('admin.roles.saveError'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.roles.saveError'));
       },
     });
   }

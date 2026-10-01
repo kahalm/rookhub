@@ -237,6 +237,7 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.DeleteUser(self.Id);
 
         Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("admin_self_delete", ApiErrorCodesTests.CodeOf(result));   // F5-019
     }
 
     [Fact]
@@ -268,6 +269,7 @@ public class AdminControllerTests : IDisposable
         var result = await _controller.ToggleAdmin(self.Id);
 
         Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("admin_self_change", ApiErrorCodesTests.CodeOf(result));
     }
 
     [Fact]

@@ -11,6 +11,7 @@ import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 import { siteKindOf } from '../../core/partner-site';
+import { apiErrorCodeText } from '../../core/api-error';
 
 /** Seiten-Schluessel der Reset-Mail — genau die feste Liste der API (`ForgotPasswordDto.Site`). */
 export type ResetMailSite = 'kidhub' | 'leaguehub' | 'turnier';
@@ -113,7 +114,8 @@ export class ForgotPasswordComponent {
       },
       error: (err) => {
         this.loading = false;
-        const msg = err.error?.message
+        const msg = apiErrorCodeText(err, this.translate)
+          || err.error?.message
           || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
           || this.translate.instant('auth.forgot.failed');
         this.snackbar.warn(msg);

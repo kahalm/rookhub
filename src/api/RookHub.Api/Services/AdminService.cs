@@ -2,13 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
 
 /// <summary>
 /// Admin-Backend-Operationen für Benutzer- und Puzzle-Verwaltung (vormals inline im AdminController).
-/// Self-Delete/Self-Toggle → <see cref="InvalidOperationException"/> (400), nicht gefunden →
+/// Self-Delete/Self-Toggle → <see cref="DomainValidationException"/> mit Fehlercode (400), nicht gefunden →
 /// <see cref="KeyNotFoundException"/> (404).
 /// </summary>
 public class AdminService
@@ -79,7 +80,7 @@ public class AdminService
     public async Task DeleteUserAsync(int id, int currentUserId, bool actorIsAdmin = true)
     {
         if (id == currentUserId)
-            throw new InvalidOperationException("Cannot delete yourself.");
+            throw new DomainValidationException("Cannot delete yourself.") { Code = ApiErrorCodes.AdminSelfDelete };
         if (!actorIsAdmin && await _db.AppUsers.AnyAsync(u => u.Id == id && u.IsAdmin && u.DeletedAt == null))
             throw new UnauthorizedAccessException("Only an admin may delete an admin account.");
 
@@ -115,7 +116,7 @@ public class AdminService
     private async Task<AppUser> LoadForAdminChangeAsync(int id, int currentUserId, bool actorIsAdmin)
     {
         if (id == currentUserId)
-            throw new InvalidOperationException("Cannot toggle your own admin status.");
+            throw new DomainValidationException("Cannot toggle your own admin status.") { Code = ApiErrorCodes.AdminSelfChange };
         if (!actorIsAdmin)
             throw new UnauthorizedAccessException("Only an admin may change the admin flag.");
 

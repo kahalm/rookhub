@@ -193,6 +193,7 @@ public class AuthControllerTests : IDisposable
         });
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
+        Assert.Equal("login_invalid", ApiErrorCodesTests.CodeOf(result.Result));   // F5-019
     }
 
     [Fact]
@@ -213,6 +214,7 @@ public class AuthControllerTests : IDisposable
         Assert.Equal(403, status.StatusCode);
         var body = System.Text.Json.JsonSerializer.Serialize(status.Value);
         Assert.Contains("\"lockedUntil\"", body);
+        Assert.Equal("account_locked", ApiErrorCodesTests.CodeOf(status));
         Assert.Contains(until.ToString("yyyy-MM-ddTHH:mm:ss"), body);
     }
 
@@ -244,6 +246,7 @@ public class AuthControllerTests : IDisposable
         var status = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(StatusCodes.Status429TooManyRequests, status.StatusCode);
         Assert.Equal("5", _http.Response.Headers.RetryAfter.ToString());
+        Assert.Equal("login_throttled", ApiErrorCodesTests.CodeOf(status));
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => running);
     }
 

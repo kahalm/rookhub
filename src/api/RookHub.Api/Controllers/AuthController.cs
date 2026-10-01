@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -59,16 +60,17 @@ public class AuthController : BaseApiController
         {
             // Konto-Bremse (nicht der IP-Limiter): für dieses Konto läuft schon eine gebremste Prüfung.
             Response.Headers.RetryAfter = "5";
-            return StatusCode(StatusCodes.Status429TooManyRequests, new { message = ex.Message });
+            return StatusCode(StatusCodes.Status429TooManyRequests, new { message = ex.Message, code = ApiErrorCodes.LoginThrottled });
         }
         catch (AccountLockedException ex)
         {
             // Nur mit richtigem Passwort erreichbar (siehe AuthService.LoginAsync) — kein Konto-Orakel.
-            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message, lockedUntil = ex.LockedUntilForClient });
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { message = ex.Message, code = ApiErrorCodes.AccountLocked, lockedUntil = ex.LockedUntilForClient });
         }
         catch (UnauthorizedAccessException)
         {
-            return Unauthorized(new { message = "Invalid username or password." });
+            return Unauthorized(new { message = "Invalid username or password.", code = ApiErrorCodes.LoginInvalid });
         }
     }
 

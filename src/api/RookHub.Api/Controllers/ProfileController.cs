@@ -40,7 +40,7 @@ public class ProfileController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiErrorResponses.Body(ex));
         }
     }
 

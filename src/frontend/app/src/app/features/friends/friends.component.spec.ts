@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { of, Subject } from 'rxjs';
 import { FriendsComponent } from './friends.component';
 import { ChallengeService } from '../../core/challenge.service';
@@ -268,3 +268,38 @@ describe('FriendsComponent Deep-Link aus der Benachrichtigung', () => {
   });
 });
 
+
+describe('FriendsComponent Fehlertext in der UI-Sprache (F5-019)', () => {
+  it('zeigt bei einer doppelten Anfrage den übersetzten Code statt der englischen Servermeldung', () => {
+    const info = jasmine.createSpy('info');
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [FriendsComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ChallengeService, useValue: { getIncoming: () => of([]), getOutgoing: () => of([]) } },
+        { provide: RevengeService, useValue: { getNotifications: () => of([]), markSeen: () => of(null) } },
+        { provide: SnackbarService, useValue: { info, success: () => {} } },
+      ],
+    });
+    TestBed.overrideComponent(FriendsComponent, { set: { template: '' } });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('de', { apiErrors: { friendship_exists: 'Ihr seid bereits befreundet, oder eine Anfrage ist schon offen.' } });
+    translate.use('de');
+    const fixture = TestBed.createComponent(FriendsComponent);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/friends').flush([]);
+    http.expectOne('/api/friends/requests').flush([]);
+    http.expectOne('/api/friends/requests/sent').flush([]);
+
+    fixture.componentInstance.sendRequest(5);
+    http.expectOne('/api/friends/request/5').flush(
+      { message: 'A friendship or request already exists.', code: 'friendship_exists' },
+      { status: 409, statusText: 'Conflict' });
+
+    expect(info).toHaveBeenCalledWith('Ihr seid bereits befreundet, oder eine Anfrage ist schon offen.');
+    http.verify();
+  });
+});

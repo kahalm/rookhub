@@ -73,6 +73,25 @@
       "mo": "mjeseci"
     }
   },
+  "apiErrors": {
+    "rate_limited": "Previše zahtjeva. Pričekaj trenutak i pokušaj ponovno.",
+    "login_invalid": "Pogrešno korisničko ime ili lozinka.",
+    "login_throttled": "Previše pokušaja prijave za ovaj račun. Pričekaj nekoliko sekundi i pokušaj ponovno.",
+    "account_locked": "Ovaj račun je zaključao administrator.",
+    "user_not_found": "Korisnik nije pronađen.",
+    "friend_request_self": "Ne možeš poslati zahtjev za prijateljstvo samom sebi.",
+    "friendship_exists": "Već ste prijatelji ili zahtjev već čeka odgovor.",
+    "token_limit_reached": "Dosegnut je najveći broj API tokena. Opozovi jedan koji ti više ne treba.",
+    "admin_self_delete": "Ovdje ne možeš izbrisati vlastiti račun.",
+    "admin_self_change": "Ne možeš promijeniti vlastiti administratorski status.",
+    "user_delete_references": "Korisnika nije moguće izbrisati: drugi zapisi još upućuju na ovaj račun.",
+    "role_key_taken": "Uloga s tim ključem već postoji.",
+    "role_system_protected": "Sustavske uloge ne mogu se izbrisati.",
+    "group_name_taken": "Grupa s tim imenom već postoji.",
+    "book_alias_invalid": "Neispravan alias: samo mala slova, znamenke i crtice, 2–40 znakova, na početku slovo.",
+    "book_alias_reserved": "Ovaj alias je rezerviran.",
+    "book_alias_taken": "Ovaj alias je već zauzet."
+  },
   "common": {
     "moreActions": "Više radnji",
     "save": "Spremi",

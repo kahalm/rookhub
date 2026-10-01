@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Authorization;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -73,14 +74,18 @@ public class AdminController : BaseApiController
             await _admin.DeleteUserAsync(id, GetUserId(), IsAdmin);
             return NoContent();
         }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiErrorResponses.Body(ex)); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException)
         {
             // Verbleibende FK-Referenzen mit Restrict (statt Cascade) wuerden sonst als
             // unbehandelter 500 enden -> klare 409-Antwort.
-            return Conflict(new { message = "Benutzer konnte nicht geloescht werden: es bestehen noch abhaengige Referenzen." });
+            return Conflict(new
+            {
+                message = "Benutzer konnte nicht geloescht werden: es bestehen noch abhaengige Referenzen.",
+                code = ApiErrorCodes.UserDeleteReferences,
+            });
         }
     }
 
@@ -91,7 +96,7 @@ public class AdminController : BaseApiController
     public async Task<IActionResult> ToggleAdmin(int id)
     {
         try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId(), IsAdmin)); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiErrorResponses.Body(ex)); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
     }
@@ -104,7 +109,7 @@ public class AdminController : BaseApiController
     {
         if (dto?.IsAdmin is not bool isAdmin) return BadRequest(new { message = "isAdmin is required." });
         try { return Ok(await _admin.SetAdminAsync(id, GetUserId(), isAdmin, IsAdmin)); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(ApiErrorResponses.Body(ex)); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
     }

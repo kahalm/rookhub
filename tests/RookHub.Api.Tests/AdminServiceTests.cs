@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
@@ -147,7 +148,8 @@ public class AdminServiceTests : IDisposable
     {
         var admin = TestServices.Admin(_db, _cache);
         await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.DeleteUserAsync(424242, ActorId));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => admin.DeleteUserAsync(ActorId, ActorId));
+        var self = await Assert.ThrowsAsync<DomainValidationException>(() => admin.DeleteUserAsync(ActorId, ActorId));
+        Assert.Equal(ApiErrorCodes.AdminSelfDelete, self.Code);
     }
 
     [Fact]

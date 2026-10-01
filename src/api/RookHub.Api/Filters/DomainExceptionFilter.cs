@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using RookHub.Api.Exceptions;
+using RookHub.Api.Services;
 
 namespace RookHub.Api.Filters;
 
@@ -35,7 +36,8 @@ public sealed class DomainExceptionFilter : IExceptionFilter
         };
         if (status is null) return;
 
-        context.Result = new ObjectResult(new { message = context.Exception.Message }) { StatusCode = status };
+        // { message } bzw. mit Fehlercode { message, code } (F5-019).
+        context.Result = new ObjectResult(ApiErrorResponses.Body(context.Exception)) { StatusCode = status };
         context.ExceptionHandled = true;
     }
 }

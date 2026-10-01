@@ -55,10 +55,12 @@ public class DomainExceptionControllerTests : IDisposable
         }
     }
 
-    private static void AssertError(ObjectResult result, int status, string message)
+    private static void AssertError(ObjectResult result, int status, string message, string? code = null)
     {
         Assert.Equal(status, result.StatusCode);
-        Assert.Equal(JsonSerializer.Serialize(new { message }), JsonSerializer.Serialize(result.Value));
+        // Mit Fehlercode (F5-019) kommt code dazu, message bleibt wortgleich.
+        Assert.Equal(code is null ? JsonSerializer.Serialize(new { message }) : JsonSerializer.Serialize(new { message, code }),
+            JsonSerializer.Serialize(result.Value));
     }
 
     [Fact]
@@ -70,7 +72,8 @@ public class DomainExceptionControllerTests : IDisposable
         AssertError(await Http(async () => (await controller.Update(999_901,
             new UpdateRoleDto { Name = "x", Permissions = new() })).Result), 404, "Rolle nicht gefunden.");
         AssertError(await Http(async () => await controller.Delete(999_902)), 404, "Rolle nicht gefunden.");
-        AssertError(await Http(async () => (await controller.GetUserRoles(999_903)).Result), 404, "User nicht gefunden.");
+        AssertError(await Http(async () => (await controller.GetUserRoles(999_903)).Result), 404, "User nicht gefunden.",
+            "user_not_found");
         AssertError(await Http(async () => (await controller.Create(new CreateRoleDto
         {
             Key = "bad", Name = "Bad", Permissions = new() { "nonsense.permission" },
@@ -78,7 +81,7 @@ public class DomainExceptionControllerTests : IDisposable
 
         var member = await _db.Roles.FirstAsync(r => r.Key == "member");
         AssertError(await Http(async () => await controller.Delete(member.Id)), 400,
-            "System-Rollen können nicht gelöscht werden.");
+            "System-Rollen können nicht gelöscht werden.", "role_system_protected");
     }
 
     /// <summary>Vorher: catch (InvalidOperationException ex) → 400 „Cannot access a disposed context

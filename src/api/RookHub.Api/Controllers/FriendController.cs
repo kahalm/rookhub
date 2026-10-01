@@ -108,11 +108,11 @@ public class FriendController : BaseApiController
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { message = ex.Message });
+            return Conflict(ApiErrorResponses.Body(ex));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = ex.Message });
+            return NotFound(ApiErrorResponses.Body(ex));
         }
     }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -49,7 +50,8 @@ public class FriendServiceTests : IDisposable
     public async Task SendRequest_ToSelf_Throws()
     {
         var user1 = await CreateUserAsync("alice");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _friendService.SendRequestAsync(user1, user1));
+        var ex = await Assert.ThrowsAsync<ConflictException>(() => _friendService.SendRequestAsync(user1, user1));
+        Assert.Equal(ApiErrorCodes.FriendRequestSelf, ex.Code);
     }
 
     [Fact]

@@ -175,6 +175,7 @@ public class FriendControllerTests : IDisposable
         var result = await _controller.SendRequest(user2.Id);
 
         Assert.IsType<ConflictObjectResult>(result);
+        Assert.Equal("friendship_exists", ApiErrorCodesTests.CodeOf(result));   // F5-019
     }
 
     [Fact]
@@ -186,6 +187,7 @@ public class FriendControllerTests : IDisposable
         var result = await _controller.SendRequest(user1.Id);
 
         Assert.IsType<ConflictObjectResult>(result);
+        Assert.Equal("friend_request_self", ApiErrorCodesTests.CodeOf(result));
     }
 
     [Fact]
@@ -197,6 +199,7 @@ public class FriendControllerTests : IDisposable
         var result = await _controller.SendRequest(99999);
 
         Assert.IsType<NotFoundObjectResult>(result);
+        Assert.Equal("user_not_found", ApiErrorCodesTests.CodeOf(result));
     }
 
     // ---- Accept ----

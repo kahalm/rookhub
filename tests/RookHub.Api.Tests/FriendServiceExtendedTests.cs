@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -212,6 +213,7 @@ public class FriendServiceExtendedTests : IDisposable
         await _db.SaveChangesAsync();
 
         Assert.Empty(await _friendService.SearchUsersAsync("deleted", me));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _friendService.SendRequestAsync(me, gone));
+        var ex = await Assert.ThrowsAsync<NotFoundException>(() => _friendService.SendRequestAsync(me, gone));
+        Assert.Equal(ApiErrorCodes.UserNotFound, ex.Code);
     }
 }

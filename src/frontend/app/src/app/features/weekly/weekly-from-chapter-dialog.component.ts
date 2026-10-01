@@ -11,6 +11,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CourseService, CourseListItem, CourseChapter } from '../courses/course.service';
 import { WeeklyService, weeklyScheduledAtUtc } from './weekly.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 
 /** Prefill für den Dialog: vorgeschlagener Termin (wie beim PGN-Upload). */
 export interface WeeklyFromChapterDialogData {
@@ -210,7 +211,7 @@ export class WeeklyFromChapterDialogComponent implements OnInit {
         next: post => { this.saving = false; this.ref.close(post); },
         error: err => {
           this.saving = false;
-          this.snackbar.info(err.error?.message || this.translate.instant('weekly.fromChapter.createFailed'), { action: 'common.ok', duration: 4000 });
+          this.snackbar.info(apiErrorText(err, this.translate, 'weekly.fromChapter.createFailed'), { action: 'common.ok', duration: 4000 });
         },
       });
   }

@@ -73,6 +73,25 @@
       "mo": "months"
     }
   },
+  "apiErrors": {
+    "rate_limited": "Too many requests. Please wait a moment and try again.",
+    "login_invalid": "Invalid username or password.",
+    "login_throttled": "Too many login attempts for this account. Please wait a few seconds and try again.",
+    "account_locked": "This account has been locked by an administrator.",
+    "user_not_found": "User not found.",
+    "friend_request_self": "You cannot send a friend request to yourself.",
+    "friendship_exists": "You are already friends, or a request is already pending.",
+    "token_limit_reached": "You have reached the maximum number of API tokens. Revoke one you no longer need.",
+    "admin_self_delete": "You cannot delete your own account here.",
+    "admin_self_change": "You cannot change your own admin status.",
+    "user_delete_references": "The user could not be deleted: other records still refer to this account.",
+    "role_key_taken": "A role with this key already exists.",
+    "role_system_protected": "System roles cannot be deleted.",
+    "group_name_taken": "A group with this name already exists.",
+    "book_alias_invalid": "Invalid alias: only lowercase letters, digits and hyphens, 2–40 characters, starting with a letter.",
+    "book_alias_reserved": "This alias is reserved.",
+    "book_alias_taken": "This alias is already taken."
+  },
   "common": {
     "moreActions": "More actions",
     "save": "Save",

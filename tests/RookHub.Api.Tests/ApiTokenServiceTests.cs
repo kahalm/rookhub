@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -96,7 +97,8 @@ public class ApiTokenServiceTests : IDisposable
         var uid = await CreateUserAsync();
         for (int i = 0; i < ApiTokenService.MaxTokensPerUser; i++)
             await _svc.CreateAsync(uid, "n" + i, null, null);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreateAsync(uid, "overflow", null, null));
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _svc.CreateAsync(uid, "overflow", null, null));
+        Assert.Equal(ApiErrorCodes.TokenLimitReached, ex.Code);
     }
 
     [Fact]
@@ -117,7 +119,8 @@ public class ApiTokenServiceTests : IDisposable
         // Die noch gueltigen zaehlen weiter: 1 alter + der neue = 2 von 20, bis 20 fehlen noch 18.
         for (int i = 0; i < ApiTokenService.MaxTokensPerUser - 2; i++)
             await _svc.CreateAsync(uid, "m" + i, null, null);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreateAsync(uid, "overflow", null, null));
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _svc.CreateAsync(uid, "overflow", null, null));
+        Assert.Equal(ApiErrorCodes.TokenLimitReached, ex.Code);
     }
 
     [Fact]

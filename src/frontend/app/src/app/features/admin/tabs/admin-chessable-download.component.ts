@@ -15,6 +15,7 @@ import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../../chessable/chessable.service';
 import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable-progress.util';
+import { apiErrorText } from '../../../core/api-error';
 
 /**
  * Admin-Tab „Kurse von Usern holen": lädt im Namen eines Users (mit dessen Bearer) dessen
@@ -109,7 +110,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
       },
       error: err => {
         this.dlTesting = false;
-        this.snackbar.info(err?.error?.message || this.translate.instant('chessable.testFailed'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'chessable.testFailed'));
         this.loadDlUsers();
       },
     });
@@ -129,7 +130,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     this.chessable.getUserCoursesAdmin(this.dlSelectedUserId, refresh).subscribe({
       next: res => { this.dlCourses = res.courses; this.dlCoursesLoading = false; },
       error: err => {
-        this.dlCoursesError = err?.error?.message || this.translate.instant('admin.courseDl.loadError');
+        this.dlCoursesError = apiErrorText(err, this.translate, 'admin.courseDl.loadError');
         this.dlCoursesLoading = false;
       },
     });
@@ -155,7 +156,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     this.dlEstimates[bid] = { loading: true };
     this.chessable.estimateCourseForUser(this.dlSelectedUserId, bid).subscribe({
       next: info => { this.dlEstimates[bid] = { info, loading: false }; },
-      error: err => { this.dlEstimates[bid] = { loading: false, error: err?.error?.message || this.translate.instant('admin.courseDl.estimateError') }; },
+      error: err => { this.dlEstimates[bid] = { loading: false, error: apiErrorText(err, this.translate, 'admin.courseDl.estimateError') }; },
     });
   }
 
@@ -167,7 +168,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
       next: imp => { this.dlImports[bid] = imp; this.pollDlImport(bid, imp.id); },
       error: err => {
         delete this.dlImports[bid];
-        this.snackbar.show(err?.error?.message || this.translate.instant('admin.courseDl.importError'), { duration: 3500 });
+        this.snackbar.show(apiErrorText(err, this.translate, 'admin.courseDl.importError'), { duration: 3500 });
       },
     });
   }

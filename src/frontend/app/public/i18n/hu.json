@@ -1,4 +1,23 @@
 {
+  "apiErrors": {
+    "rate_limited": "Túl sok kérés. Várj egy kicsit, és próbáld újra.",
+    "login_invalid": "Hibás felhasználónév vagy jelszó.",
+    "login_throttled": "Túl sok bejelentkezési kísérlet ennél a fióknál. Várj néhány másodpercet, és próbáld újra.",
+    "account_locked": "Ezt a fiókot egy adminisztrátor zárolta.",
+    "user_not_found": "A felhasználó nem található.",
+    "friend_request_self": "Magadnak nem küldhetsz barátkérelmet.",
+    "friendship_exists": "Már barátok vagytok, vagy már függőben van egy kérés.",
+    "token_limit_reached": "Elérted az API-tokenek maximális számát. Vonj vissza egyet, amelyre már nincs szükséged.",
+    "admin_self_delete": "A saját fiókodat itt nem törölheted.",
+    "admin_self_change": "A saját admin státuszodat nem módosíthatod.",
+    "user_delete_references": "A felhasználót nem sikerült törölni: más rekordok még hivatkoznak erre a fiókra.",
+    "role_key_taken": "Már létezik szerepkör ezzel a kulccsal.",
+    "role_system_protected": "A rendszerszerepkörök nem törölhetők.",
+    "group_name_taken": "Már létezik csoport ezzel a névvel.",
+    "book_alias_invalid": "Érvénytelen alias: csak kisbetűk, számjegyek és kötőjelek, 2–40 karakter, betűvel kezdődik.",
+    "book_alias_reserved": "Ez az alias fenntartott.",
+    "book_alias_taken": "Ez az alias már foglalt."
+  },
   "common": {
     "moreActions": "További műveletek",
     "save": "Mentés",

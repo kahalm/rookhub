@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { AdminService } from '../../../core/admin.service';
+import { apiErrorText } from '../../../core/api-error';
 
 /**
  * Admin-Tab „Puzzles" (Standard): stößt den einmaligen PuzzleTags-Backfill als Hintergrund-Job an.
@@ -39,7 +40,7 @@ export class AdminPuzzleTagsComponent {
       },
       error: err => {
         this.puzzleTagsBackfilling = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.puzzles.backfillError'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.puzzles.backfillError'));
       }
     });
   }

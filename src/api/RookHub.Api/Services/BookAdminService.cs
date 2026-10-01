@@ -164,17 +164,19 @@ public class BookAdminService
     };
 
     /// <summary>Normalisiert + validiert den öffentlichen Kurz-Alias und setzt ihn (Leerstring = entfernen).
-    /// Wirft <see cref="ArgumentException"/> (→ 400) bei ungültigem/reserviertem/vergebenem Alias.</summary>
+    /// Wirft <see cref="DomainValidationException"/> mit Fehlercode (→ 400 über den DomainExceptionFilter) bei
+    /// ungültigem/reserviertem/vergebenem Alias.</summary>
     private async Task ApplyPublicSlugAsync(Book book, string raw)
     {
         var slug = raw.Trim().ToLowerInvariant();
         if (slug.Length == 0) { book.PublicSlug = null; return; }   // Leerstring → Alias entfernen
         if (!System.Text.RegularExpressions.Regex.IsMatch(slug, "^[a-z][a-z0-9-]{1,39}$") || slug.EndsWith("-") || slug.Contains("--"))
-            throw new ArgumentException("Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.");
+            throw new DomainValidationException("Ungültiger Alias: nur Kleinbuchstaben, Ziffern und Bindestriche, 2–40 Zeichen, Beginn mit Buchstabe.")
+                { Code = ApiErrorCodes.BookAliasInvalid };
         if (_reservedSlugs.Contains(slug))
-            throw new ArgumentException($"Alias „{slug}“ ist reserviert.");
+            throw new DomainValidationException($"Alias „{slug}“ ist reserviert.") { Code = ApiErrorCodes.BookAliasReserved };
         if (await _db.Books.AnyAsync(b => b.Id != book.Id && b.PublicSlug == slug))
-            throw new ArgumentException($"Alias „{slug}“ ist bereits vergeben.");
+            throw new DomainValidationException($"Alias „{slug}“ ist bereits vergeben.") { Code = ApiErrorCodes.BookAliasTaken };
         book.PublicSlug = slug;
     }
 

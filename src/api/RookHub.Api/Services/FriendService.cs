@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -118,7 +119,7 @@ public class FriendService
     public async Task<Friendship> SendRequestAsync(int requesterId, int addresseeId)
     {
         if (requesterId == addresseeId)
-            throw new InvalidOperationException("Cannot send friend request to yourself.");
+            throw new ConflictException("Cannot send friend request to yourself.") { Code = ApiErrorCodes.FriendRequestSelf };
 
         var existing = await _db.Friendships.FirstOrDefaultAsync(f =>
             (f.RequesterId == requesterId && f.AddresseeId == addresseeId) ||
@@ -132,7 +133,7 @@ public class FriendService
             }
             else
             {
-                throw new InvalidOperationException("A friendship or request already exists.");
+                throw new ConflictException("A friendship or request already exists.") { Code = ApiErrorCodes.FriendshipExists };
             }
         }
 
@@ -140,7 +141,7 @@ public class FriendService
         // `deleted_{id}`), das Konto existiert also weiter. Eine Anfrage dorthin könnte niemand mehr
         // annehmen und stünde beim Absender dauerhaft auf „wartet auf Bestätigung".
         if (!await _db.AppUsers.AnyAsync(u => u.Id == addresseeId && u.DeletedAt == null))
-            throw new KeyNotFoundException("User not found.");
+            throw new NotFoundException("User not found.") { Code = ApiErrorCodes.UserNotFound };
 
         var friendship = new Friendship
         {
@@ -159,7 +160,7 @@ public class FriendService
             // NUR der echte Unique-Index-Race meldet „gibt's schon". FALLE: ohne den Filter wurde
             // auch ein transienter DB-Fehler (Deadlock/Timeout) als „Anfrage existiert bereits"
             // gemeldet — der User hielt die Anfrage für gestellt, obwohl ein Retry genügt hätte.
-            throw new InvalidOperationException("A friendship or request already exists.");
+            throw new ConflictException("A friendship or request already exists.") { Code = ApiErrorCodes.FriendshipExists };
         }
 
         // Adressat benachrichtigen: neue Freundschaftsanfrage. Der Link zeigt auf den ANFRAGEN-Tab

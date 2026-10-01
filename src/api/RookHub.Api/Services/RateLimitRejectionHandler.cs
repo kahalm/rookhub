@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using RookHub.Api.Exceptions;
 using Serilog.Context;
 
 namespace RookHub.Api.Services;
@@ -17,7 +18,8 @@ namespace RookHub.Api.Services;
 /// zurück).</para>
 ///
 /// <para><b>Jetzt:</b> <c>Retry-After</c> (wo der Limiter eine Wartezeit kennt — Fenster ja, reine Gleichzeitigkeit nein),
-/// Rumpf <c>{ message, retryAfterSeconds }</c>, und eine Warnung je (Adresse, Policy) und Minute; die Absagen dazwischen
+/// Rumpf <c>{ message, code, retryAfterSeconds }</c> (<c>code</c> = <c>rate_limited</c>, F5-019), und eine Warnung je
+/// (Adresse, Policy) und Minute; die Absagen dazwischen
 /// werden gezählt und mit der nächsten Warnung gemeldet (<c>SuppressedRejections</c>). Jede einzeln zu loggen hieße, dem
 /// Scanner die Elasticsearch-Platte zu überlassen.</para>
 ///
@@ -58,7 +60,8 @@ public sealed class RateLimitRejectionHandler
 
         LogRejection(context, retryAfterSeconds, DateTimeOffset.UtcNow);
 
-        await context.Response.WriteAsJsonAsync(new { message = Message, retryAfterSeconds }, cancellationToken);
+        await context.Response.WriteAsJsonAsync(
+            new { message = Message, code = ApiErrorCodes.RateLimited, retryAfterSeconds }, cancellationToken);
     }
 
     private void LogRejection(HttpContext context, int? retryAfterSeconds, DateTimeOffset now)

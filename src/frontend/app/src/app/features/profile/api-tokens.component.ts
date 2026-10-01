@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { EMPTY, catchError, filter, switchMap } from 'rxjs';
 import { SnackbarService } from '../../core/snackbar.service';
+import { apiErrorText } from '../../core/api-error';
 
 interface ApiToken {
   id: number;
@@ -230,7 +231,7 @@ export class ApiTokensComponent implements OnInit {
         filter(result => !!result),
         switchMap(result => this.http.post<ApiTokenCreated>('/api/profile/tokens', result).pipe(
           catchError(err => {
-            this.snackbar.info(err.error?.message || this.translate.instant('profile.tokens.createFailed'));
+            this.snackbar.info(apiErrorText(err, this.translate, 'profile.tokens.createFailed'));
             return EMPTY;   // Fehler → Kette beenden, kein Show-Dialog
           })
         )),

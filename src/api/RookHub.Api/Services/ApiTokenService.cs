@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -55,7 +56,8 @@ public class ApiTokenService
         var now = DateTime.UtcNow;
         var count = await _db.UserApiTokens.CountAsync(t => t.UserId == userId && (t.ExpiresAt == null || t.ExpiresAt >= now));
         if (count >= MaxTokensPerUser)
-            throw new InvalidOperationException($"Maximum of {MaxTokensPerUser} tokens per user reached.");
+            throw new DomainValidationException($"Maximum of {MaxTokensPerUser} tokens per user reached.")
+                { Code = ApiErrorCodes.TokenLimitReached };
 
         var rawToken = GenerateRawToken();
         var hash = ComputeHash(rawToken);

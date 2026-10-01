@@ -10,6 +10,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { AdminService, DailyPuzzleInfo } from '../../../core/admin.service';
+import { apiErrorText } from '../../../core/api-error';
 
 /**
  * Admin-Tab „Tagespuzzle": zeigt das Tagespuzzle eines UTC-Datums und erlaubt das Neu-Generieren.
@@ -59,7 +60,7 @@ export class AdminDailyPuzzleComponent implements OnInit {
         this.dailyLoading = false;
         // 404 = noch kein Tagespuzzle für dieses Datum (z. B. leerer Pool) — kein Fehler-Toast nötig.
         if (err.status !== 404) {
-          this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.load'));
+          this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.load'));
         }
       }
     });
@@ -79,7 +80,7 @@ export class AdminDailyPuzzleComponent implements OnInit {
       },
       error: err => {
         this.dailyRegenerating = false;
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.daily.errors.regenerate'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.daily.errors.regenerate'));
       }
     });
   }

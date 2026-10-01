@@ -22,6 +22,7 @@ import { Friend, FriendRequest, SentFriendRequest, UserSearchResult } from '../.
 import { ChallengeService, IncomingChallenge, OutgoingChallenge } from '../../core/challenge.service';
 import { RevengeService, RevengeNotification } from '../../core/revenge.service';
 import { InAppNotificationService } from '../../core/in-app-notification.service';
+import { apiErrorText } from '../../core/api-error';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -362,7 +363,7 @@ export class FriendsComponent implements OnInit {
   sendRequest(userId: number): void {
     this.friendsService.sendRequest(userId).subscribe({
       next: () => this.snackbar.success(this.translate.instant('friends.requestSent')),
-      error: (err) => this.snackbar.info(err.error?.message || this.translate.instant('friends.errors.sendRequest'))
+      error: (err) => this.snackbar.info(apiErrorText(err, this.translate, 'friends.errors.sendRequest'))
     });
   }
 

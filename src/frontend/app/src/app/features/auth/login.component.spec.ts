@@ -77,6 +77,19 @@ describe('LoginComponent', () => {
     expect(router.navigateByUrl).not.toHaveBeenCalled();
     expect(c.loading).toBeFalse();
   });
+
+  it('shows the error in the UI language when the server sends a code (F5-019)', () => {
+    const { auth, router, snackbar, prefill } = make();
+    const translate: any = {
+      instant: (k: string) => k === 'apiErrors.login_invalid' ? 'Benutzername oder Passwort ist falsch.' : k,
+    };
+    const c = new LoginComponent(auth, prefill, router, { snapshot: { queryParams: {} } } as any, snackbar, translate);
+    auth.login.and.returnValue(throwError(() => ({
+      status: 401, error: { message: 'Invalid username or password.', code: 'login_invalid' },
+    })));
+    c.onSubmit();
+    expect(snackbar.warn).toHaveBeenCalledWith('Benutzername oder Passwort ist falsch.');
+  });
 });
 
 /**

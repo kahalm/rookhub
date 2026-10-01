@@ -15,6 +15,7 @@ import { WeeklyService, WeeklyPost, WeeklyProgress, WeeklyPlayerResult, sortLead
 import { WeeklyBreakdownDialogComponent } from './weekly-breakdown-dialog.component';
 import { WeeklyFromChapterDialogComponent } from './weekly-from-chapter-dialog.component';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { apiErrorText } from '../../core/api-error';
 
 interface WeeklyPostRow extends WeeklyPost {
   editDate: string;   // YYYY-MM-DD (Admin-Edit)
@@ -409,7 +410,7 @@ export class WeeklyListComponent implements OnInit {
         this.loadPosts();   // lädt neu + setzt nächsten Termin-Vorschlag
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('weekly.uploadFailed'), { action: 'common.ok', duration: 4000 });
+        this.snackbar.info(apiErrorText(err, this.translate, 'weekly.uploadFailed'), { action: 'common.ok', duration: 4000 });
         this.uploading = false;
       }
     });
@@ -421,7 +422,7 @@ export class WeeklyListComponent implements OnInit {
     this.weekly.update(row.id, { title: row.title, description: row.description ?? '', scheduledAt }).subscribe({
       next: p => { row.scheduledAt = p.scheduledAt; row.description = p.description ?? null; },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('weekly.saveFailed'), { action: 'common.ok', duration: 3000 });
+        this.snackbar.info(apiErrorText(err, this.translate, 'weekly.saveFailed'), { action: 'common.ok', duration: 3000 });
         this.loadPosts();
       }
     });

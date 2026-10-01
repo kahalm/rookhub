@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -54,7 +55,7 @@ public class GroupController : BaseApiController
         if (name.Length == 0)
             return BadRequest(new { message = "Name is required." });
         if (await _db.Groups.AnyAsync(g => g.Name == name))
-            return BadRequest(new { message = "Group name already exists." });
+            return BadRequest(new { message = "Group name already exists.", code = ApiErrorCodes.GroupNameTaken });
 
         var group = new Group { Name = name, Description = dto.Description, CreatedAt = DateTime.UtcNow };
         _db.Groups.Add(group);
@@ -65,7 +66,7 @@ public class GroupController : BaseApiController
         catch (DbUpdateException)
         {
             // Race: paralleler Create mit gleichem Namen -> Unique-Index -> sauberer 400 statt 500.
-            return BadRequest(new { message = "Group name already exists." });
+            return BadRequest(new { message = "Group name already exists.", code = ApiErrorCodes.GroupNameTaken });
         }
         return Ok(new GroupDto { Id = group.Id, Name = group.Name, Description = group.Description, MemberCount = 0, CreatedAt = group.CreatedAt });
     }
@@ -83,7 +84,7 @@ public class GroupController : BaseApiController
         {
             var name = dto.Name.Trim();
             if (await _db.Groups.AnyAsync(g => g.Name == name && g.Id != id))
-                return BadRequest(new { message = "Group name already exists." });
+                return BadRequest(new { message = "Group name already exists.", code = ApiErrorCodes.GroupNameTaken });
             group.Name = name;
         }
         if (dto.Description != null) group.Description = dto.Description;

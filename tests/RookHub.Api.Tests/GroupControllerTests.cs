@@ -55,6 +55,7 @@ public class GroupControllerTests : IDisposable
         await CreateGroupAsync("Dup");
         var r = await _controller.Create(new CreateGroupDto { Name = "Dup" });
         Assert.IsType<BadRequestObjectResult>(r);
+        Assert.Equal("group_name_taken", ApiErrorCodesTests.CodeOf(r));   // F5-019
     }
 
     [Fact]

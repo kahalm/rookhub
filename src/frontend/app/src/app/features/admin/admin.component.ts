@@ -34,6 +34,7 @@ import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
+import { apiErrorText } from '../../core/api-error';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -213,7 +214,7 @@ export class AdminComponent implements OnInit {
           },
           error: err => {
             this.adminBusyId = null;
-            this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'));
+            this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.toggleAdmin'));
           }
         });
       });
@@ -228,7 +229,7 @@ export class AdminComponent implements OnInit {
         this.loadUsers();
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.delete'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.users.errors.delete'));
       }
     });
   }
@@ -324,7 +325,7 @@ export class AdminComponent implements OnInit {
         book.displayName = name;
         this.applyBookFilter();
       },
-      error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save'))
+      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'))
     });
   }
 
@@ -344,7 +345,7 @@ export class AdminComponent implements OnInit {
         this.loadBooks();
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.import'), { duration: 4000 });
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.import'), { duration: 4000 });
         this.booksUploading = false;
         input.value = '';
       }
@@ -364,7 +365,7 @@ export class AdminComponent implements OnInit {
     }
     this.adminService.updateBook(book.id, { kidsTitles: titles }).subscribe({
       next: saved => { book.kidsTitles = saved.kidsTitles; },
-      error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save')),
+      error: err => this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save')),
     });
   }
 
@@ -402,7 +403,7 @@ export class AdminComponent implements OnInit {
       maxElo: book.maxElo ?? 0
     }).subscribe({
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.save'));
         this.loadBooks(); // Stand zurücksetzen
       }
     });
@@ -411,7 +412,7 @@ export class AdminComponent implements OnInit {
   saveBookGroups(book: Book): void {
     this.adminService.updateBookGroups(book.id, book.accessGroupIds ?? []).subscribe({
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.saveGroups'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.saveGroups'));
         this.loadBooks(); // Stand zurücksetzen
       }
     });
@@ -426,7 +427,7 @@ export class AdminComponent implements OnInit {
         this.loadBooks();
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.delete'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.books.errors.delete'));
       }
     });
   }
@@ -483,7 +484,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups();
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.create'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.create'));
       }
     });
   }
@@ -501,7 +502,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups();
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.delete'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.delete'));
       }
     });
   }
@@ -611,7 +612,7 @@ export class AdminComponent implements OnInit {
       },
       error: err => {
         this.addingUserId = null;
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.addMember'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.addMember'));
       }
     });
   }
@@ -625,7 +626,7 @@ export class AdminComponent implements OnInit {
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.groups.errors.removeMember'));
+        this.snackbar.info(apiErrorText(err, this.translate, 'admin.groups.errors.removeMember'));
       }
     });
   }

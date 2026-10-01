@@ -13,6 +13,7 @@ import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { apiErrorCodeText } from '../../core/api-error';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -119,7 +120,8 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading = false;
-        const msg = err.error?.message
+        const msg = apiErrorCodeText(err, this.translate)
+          || err.error?.message
           || (err.error?.errors && Object.values(err.error.errors).flat().join(' '))
           || this.translate.instant('auth.login.failed');
         this.snackbar.warn(msg);

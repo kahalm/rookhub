@@ -122,6 +122,8 @@ public class RateLimitRejectionHandlerTests
         ctx.Response.Body.Position = 0;
         using var json = await JsonDocument.ParseAsync(ctx.Response.Body);
         Assert.Equal(RateLimitRejectionHandler.Message, json.RootElement.GetProperty("message").GetString());
+        // F5-019: die Oberfläche übersetzt den Code (apiErrors.rate_limited) statt den englischen Satz zu zeigen.
+        Assert.Equal("rate_limited", json.RootElement.GetProperty("code").GetString());
         Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("retryAfterSeconds").ValueKind);
     }
 
