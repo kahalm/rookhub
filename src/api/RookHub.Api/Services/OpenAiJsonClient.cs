@@ -26,12 +26,20 @@ namespace RookHub.Api.Services;
 /// Tausende Anfragen gleichzeitig an die geteilte Spark schicken (A6-005), und alle anderen Aufträge standen dahinter.
 /// Wer darüber liegt, wartet auf einen freien Platz (auch das Werkzeug <c>tools/LibraryImport</c> mit <c>--parallel</c>;
 /// dort hebt <c>TextLlm__MaxConcurrent</c> die Grenze).</para>
+/// <para>Rückfall ohne Schema (A6-004): ein 400 auf eine Anfrage MIT <c>response_format</c> heißt nicht automatisch
+/// „Server kann kein Schema" — vLLM antwortet 400 auch auf einen zu langen Prompt. Abgeschaltet wird das Schema nur, wenn
+/// die Meldung es nennt (<see cref="IsSchemaRejection"/>) oder dieselbe Anfrage ohne Schema durchgeht, und auch dann nur
+/// für <see cref="SchemaRetryAfter"/> — vorher reichte EIN überlanger Prompt, und alle Zwecke liefen bis zum Neustart
+/// ohne Grammatik-Erzwingung.</para>
 /// </remarks>
 public sealed class OpenAiJsonClient : IClaudeJsonClient
 {
     /// <summary>So viele Anfragen gleichzeitig, wenn <c>TextLlm:MaxConcurrent</c> nichts sagt (vLLM rechnet bis rund 64
     /// Folgen gebündelt, der Durchsatz wächst über 5 parallel kaum noch — die Spark ist der Engpass).</summary>
     public const int DefaultMaxConcurrent = 8;
+
+    /// <summary>So lange bleibt ein abgelehntes <c>response_format</c> aus; danach wird es wieder mitgeschickt (A6-004).</summary>
+    public static readonly TimeSpan SchemaRetryAfter = TimeSpan.FromHours(1);
 
     private readonly HttpClient _http;
     private readonly ILogger _logger;
@@ -50,13 +58,16 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
     /// (sonst kaeme sie nie zurueck: wer anhaelt, fragt nicht mehr, und nur eine Antwort setzt den Zaehler zurueck).</summary>
     internal static readonly TimeSpan UnreachableFor = TimeSpan.FromSeconds(60);
     private readonly SemaphoreSlim _gate;
+    private readonly TimeProvider _time;
     private string? _resolvedModel;
-    private bool _schemaRejected;
+    /// <summary>Bis zu diesem Zeitpunkt (UTC-Ticks) ohne Schema; 0 = Schema an. Der Client ist ein Singleton.</summary>
+    private long _schemaRejectedUntil;
 
-    public OpenAiJsonClient(HttpClient http, IConfiguration config, ILogger logger)
+    public OpenAiJsonClient(HttpClient http, IConfiguration config, ILogger logger, TimeProvider? time = null)
     {
         _http = http;
         _logger = logger;
+        _time = time ?? TimeProvider.System;
         _baseUrl = (config["TextLlm:BaseUrl"] ?? "").Trim();
         _apiKey = string.IsNullOrWhiteSpace(config["TextLlm:ApiKey"]) ? null : config["TextLlm:ApiKey"]!.Trim();
         _configuredModel = string.IsNullOrWhiteSpace(config["TextLlm:Model"]) ? null : config["TextLlm:Model"]!.Trim();
@@ -142,14 +153,20 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
             return body;
         }
 
-        var useSchema = !_schemaRejected;
+        var useSchema = _time.GetUtcNow().UtcTicks >= Volatile.Read(ref _schemaRejectedUntil);
         var reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(useSchema), ct, _streamIdle);
         if (useSchema && reply.Status == System.Net.HttpStatusCode.BadRequest)
         {
-            _logger.LogWarning("{Purpose} via {Model}: response_format abgelehnt ({Error}) — weiter ohne Schema.",
-                purpose, model, reply.Error);
-            _schemaRejected = true;
+            // Einmal ohne Schema. Abgeschaltet wird es nur, wenn der Server es als Grund nennt oder ohne Schema antwortet —
+            // ein 400 wegen des Prompts (zu lang) kommt ohne Schema genauso und lässt das Schema für alle anderen an.
+            var rejected = reply;
             reply = await OpenAiChat.SendAsync(_http, _baseUrl, _apiKey, Body(false), ct, _streamIdle);
+            if (IsSchemaRejection(rejected.Error) || reply.Error == null)
+            {
+                _logger.LogWarning("{Purpose} via {Model}: response_format abgelehnt ({Error}) — weiter ohne Schema.",
+                    purpose, model, rejected.Error);
+                Volatile.Write(ref _schemaRejectedUntil, (_time.GetUtcNow() + SchemaRetryAfter).UtcTicks);
+            }
         }
         Track(reply);
         if (reply.Error != null)
@@ -166,6 +183,13 @@ public sealed class OpenAiJsonClient : IClaudeJsonClient
         if (json == null) _logger.LogWarning("{Purpose} via {Model}: keine JSON-Antwort.", purpose, model);
         return json == null ? null : PlainTypography(json);
     }
+
+    /// <summary>Nennt die Fehlermeldung eines 400 das strukturierte Ausgeben (vLLM: <c>response_format</c>,
+    /// <c>json_schema</c>, <c>guided_*</c>, <c>structured_outputs</c>, Grammatik)? Ein zu langer Prompt nennt nichts davon.</summary>
+    internal static bool IsSchemaRejection(string? error)
+        => error != null && SchemaWords.Any(w => error.Contains(w, StringComparison.OrdinalIgnoreCase));
+
+    private static readonly string[] SchemaWords = { "response_format", "json_schema", "guided", "structured", "grammar" };
 
     /// <summary>
     /// Nimmt dem Modelltext die unsichtbare Typografie, die gpt-oss setzt und die keine Quelle je enthält: geschützte

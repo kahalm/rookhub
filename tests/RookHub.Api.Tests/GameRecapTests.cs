@@ -251,6 +251,25 @@ public class GameRecapTests : IDisposable
         Assert.Equal(expected, GameRecapService.Ending(game, Positions(0, 0)));
     }
 
+    [Fact]
+    public void Facts_CapOverlongHeaderValuesFromTheUpload()
+    {
+        // A6-004: der PGN-Kopf wird ungekürzt gespeichert; ein Megabyte [Termination] oder [Opening] sprengte das
+        // Kontextfenster des Modells (vLLM: 400).
+        var huge = new string('x', 1_000_000);
+        var game = new SavedGameDetailDto
+        {
+            Pgn = $"[Opening \"{huge}\"]\n[Termination \"{huge}\"]\n\n1. e4 e5 1-0", Result = "1-0", White = "A", Black = "B",
+        };
+        var analysis = new GameAnalysis { PlyCount = 2, AccuracyWhite = 90, AccuracyBlack = 80 };
+
+        var facts = GameRecapService.Facts(game, analysis, Positions(0, 0), []);
+
+        Assert.True(facts.Length < 2_000, $"facts length {facts.Length}");
+        Assert.Contains("Opening: " + new string('x', GameRecapService.MaxHeaderLength) + "….", facts);
+        Assert.Contains("How it ended: " + new string('x', GameRecapService.MaxHeaderLength) + "….", facts);
+    }
+
     // ── Lesen ──────────────────────────────────────────────────────────────────────────────────
 
     [Fact]

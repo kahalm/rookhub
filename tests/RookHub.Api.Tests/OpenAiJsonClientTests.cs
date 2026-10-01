@@ -140,6 +140,70 @@ public class OpenAiJsonClientTests
         Assert.Null(await client.GenerateHintsJsonAsync("s", "u"));
     }
 
+    // ── Rückfall ohne Schema (A6-004) ──────────────────────────────────────────────────────────────
+
+    private const string ContextTooLong = "{\"object\":\"error\",\"message\":\"This model's maximum context length is 131072 tokens. "
+        + "However, you requested 412345 tokens (411545 in the messages, 800 in the completion). Please reduce the length of the messages or completion.\",\"type\":\"BadRequestError\",\"code\":400}";
+
+    private static bool SentSchema(ChatCompletionHandler.Request r) => r.Body["response_format"] != null;
+
+    [Fact]
+    public async Task BadRequest_ForAnOverlongPrompt_KeepsTheSchemaForEveryoneElse()
+    {
+        // Ein überlanger Prompt (z. B. ein Megabyte [Termination] im Upload) ist bei vLLM ein 400 — mit und ohne Schema.
+        _handler.Fail(System.Net.HttpStatusCode.BadRequest, ContextTooLong)
+            .Fail(System.Net.HttpStatusCode.BadRequest, ContextTooLong)
+            .Reply("{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}");
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m")));
+
+        Assert.Null(await client.GenerateHintsJsonAsync("s", "riesig"));
+        Assert.NotNull(await client.GenerateHintsJsonAsync("s", "normal"));
+
+        Assert.Equal([true, false, true], _handler.Requests.Select(SentSchema));
+    }
+
+    [Fact]
+    public async Task BadRequest_NamingResponseFormat_FallsBackWithoutSchema_ForAnHour()
+    {
+        var time = new QuietHoursTests.ManualTime { Now = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero) };
+        const string hints = "{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}";
+        _handler.Fail(System.Net.HttpStatusCode.BadRequest, "{\"message\":\"Unsupported response_format type: json_schema\"}")
+            .Reply(hints).Reply(hints).Reply(hints);
+        var client = new OpenAiJsonClient(new HttpClient(_handler),
+            Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m")), NullLogger.Instance, time);
+
+        Assert.Equal(hints, await client.GenerateHintsJsonAsync("s", "1"));
+        time.Now += OpenAiJsonClient.SchemaRetryAfter - TimeSpan.FromMinutes(1);
+        Assert.Equal(hints, await client.GenerateHintsJsonAsync("s", "2"));
+        time.Now += TimeSpan.FromMinutes(2);
+        Assert.Equal(hints, await client.GenerateHintsJsonAsync("s", "3"));
+
+        // abgelehnt, ohne wiederholt, eine Stunde ohne, danach wieder mit.
+        Assert.Equal([true, false, false, true], _handler.Requests.Select(SentSchema));
+    }
+
+    [Fact]
+    public async Task BadRequest_WithoutSaying_ButAnsweredWithoutSchema_AlsoFallsBack()
+    {
+        const string hints = "{\"hint1\":\"a\",\"hint2\":\"b\",\"hint3\":\"c\"}";
+        _handler.Fail(System.Net.HttpStatusCode.BadRequest, "{\"error\":\"unknown field\"}").Reply(hints).Reply(hints);
+        var client = Client(Config(("TextLlm:BaseUrl", "http://spark/v1"), ("TextLlm:Model", "m")));
+
+        Assert.Equal(hints, await client.GenerateHintsJsonAsync("s", "1"));
+        Assert.Equal(hints, await client.GenerateHintsJsonAsync("s", "2"));
+
+        Assert.Equal([true, false, false], _handler.Requests.Select(SentSchema));
+    }
+
+    [Theory]
+    [InlineData("HTTP 400: {\"message\":\"guided_json is not supported\"}", true)]
+    [InlineData("HTTP 400: Invalid JSON_SCHEMA", true)]
+    [InlineData("HTTP 400: structured_outputs backend failed to compile the grammar", true)]
+    [InlineData("HTTP 400: This model's maximum context length is 131072 tokens.", false)]
+    [InlineData(null, false)]
+    public void IsSchemaRejection_OnlyWhenTheMessageNamesIt(string? error, bool expected)
+        => Assert.Equal(expected, OpenAiJsonClient.IsSchemaRejection(error));
+
     [Fact]
     public void Create_OwnHardwareWinsOverClaude_AndWithoutBothEverythingIsOff()
     {

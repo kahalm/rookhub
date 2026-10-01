@@ -33,6 +33,11 @@ public sealed class GameRecapService
     /// <summary>So viele Abschnitte des Verlaufs bekommt das Modell höchstens — eine wilde Partie wäre sonst eine Liste.</summary>
     public const int MaxCourseSegments = 8;
 
+    /// <summary>So lang darf ein Kopfwert aus dem Upload (Eröffnung, Termination) in den Fakten höchstens sein (A6-004):
+    /// der PGN-Kopf wird ungekürzt gespeichert, und ein Megabyte langer <c>[Termination]</c> sprengte sonst das
+    /// Kontextfenster des Modells.</summary>
+    public const int MaxHeaderLength = 200;
+
     private readonly AppDbContext _db;
     private readonly IClaudeJsonClient _llm;
     private readonly SavedGameService _games;
@@ -177,7 +182,7 @@ public sealed class GameRecapService
             $"White: {game.White ?? "?"}{Elo(game.WhiteElo)}, Black: {game.Black ?? "?"}{Elo(game.BlackElo)}, result {game.Result ?? "*"}"
                 + (game.TimeControl is { Length: > 0 } tc ? $", time control {tc}" : "") + $", {(ordered.Count + 1) / 2} moves.",
         };
-        if (OpeningName(game.Pgn) is { } opening) lines.Add($"Opening: {opening}.");
+        if (OpeningName(game.Pgn) is { } opening) lines.Add($"Opening: {Cap(opening)}.");
         lines.Add($"First moves: {string.Join(' ', ordered.Take(10).Select(p => MoveNumber(p) + p.GameMoveSan))}");
         lines.Add($"Accuracy: White {Pct(analysis.AccuracyWhite)}, Black {Pct(analysis.AccuracyBlack)}.");
 
@@ -304,7 +309,7 @@ public sealed class GameRecapService
         if (last != null && last.GameMoveSan.EndsWith('#'))
             return $"The game ended in checkmate with {MoveNumber(last)}{last.GameMoveSan}.";
         if (PgnHeader(game.Pgn, "Termination") is { Length: > 0 } t && !t.Equals("Normal", StringComparison.OrdinalIgnoreCase))
-            return $"How it ended: {t}.";
+            return $"How it ended: {Cap(t)}.";
         return game.Result switch
         {
             "1-0" => "White won (no checkmate on the board — not stated whether by resignation or on time).",
@@ -336,6 +341,9 @@ public sealed class GameRecapService
     }
 
     private static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
+
+    /// <summary>Ein Kopfwert aus dem Upload, auf <see cref="MaxHeaderLength"/> Zeichen gekürzt.</summary>
+    private static string Cap(string value) => value.Length <= MaxHeaderLength ? value : value[..MaxHeaderLength].TrimEnd() + "…";
 
     private static string Elo(int? elo) => elo is int e ? $" ({e})" : "";
     private static string Pct(double? v) => v is double d ? $"{Math.Round(d)} %" : "unknown";
