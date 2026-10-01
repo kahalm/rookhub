@@ -72,6 +72,13 @@ interface Pick { liga?: number; verein?: string }
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [round]="round()" [team]="team()"
                       [fixture]="fixture()" />
+        } @else if (leagueError(); as e) {
+          <!-- F7-010: eine Liga, die nicht kommt, nimmt nicht die ganze Seite mit — Auswahl bleibt, andere Liga geht. -->
+          <section class="gate">
+            <h2>Liga nicht geladen</h2>
+            <p>{{ e }}</p>
+            <div class="actions"><button type="button" class="btn-sec" (click)="retryLeague()">Erneut versuchen</button></div>
+          </section>
         } @else {
           <p class="muted">Lade Liga …</p>
         }
@@ -110,7 +117,10 @@ export class LeaguePageComponent implements OnInit {
   readonly tnr = signal(0);
   readonly round = signal(0);
   readonly team = signal('');
+  /** Der Bestand (Index) kam nicht — dann gibt es nichts zu wählen, die Seite zeigt nur das. */
   readonly loadError = signal<string | null>(null);
+  /** Nur die gewählte Liga kam nicht — steht an Stelle der Begegnung, die Auswahl bleibt (F7-010). */
+  readonly leagueError = signal<string | null>(null);
   readonly updating = signal(false);
   readonly updateMsg = signal('');
   readonly updateErr = signal(false);
@@ -120,6 +130,8 @@ export class LeaguePageComponent implements OnInit {
   readonly label = roundLabel;
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private polling = false;
+  /** Der zuletzt angeforderte Ligawechsel — „Erneut versuchen" wiederholt genau ihn. */
+  private lastShow: [number, number, string, boolean] = [0, 0, '', false];
   private destroyed = false;
 
   /** Nebenbei: fehlt die Zählung, fehlt nur die Tabelle — die Prognose hängt nicht daran. Eine Antwort, die nach einem
@@ -178,6 +190,10 @@ export class LeaguePageComponent implements OnInit {
     await this.showLeague(tnr, 0, this.team());
   }
 
+  retryLeague(): Promise<void> {
+    return this.showLeague(...this.lastShow);
+  }
+
   pickRound(round: number): void {
     this.round.set(round);
     this.remember();
@@ -190,13 +206,15 @@ export class LeaguePageComponent implements OnInit {
 
   /** Liga laden und Runde/Verein wählen: gewünschte Runde, sonst die erste offene, sonst die letzte. */
   private async showLeague(tnr: number, wantRound: number, wantTeam: string, fresh = false): Promise<void> {
+    this.lastShow = [tnr, wantRound, wantTeam, fresh];
     this.tnr.set(tnr);
     this.league.set(null);
+    this.leagueError.set(null);
     let L: League;
     try {
       L = await this.api.league(tnr, fresh);
     } catch (err) {
-      this.loadError.set(this.errorText(err));
+      if (this.tnr() === tnr) this.leagueError.set(this.errorText(err));
       return;
     }
     if (this.tnr() !== tnr) return;   // inzwischen eine andere Liga gewählt

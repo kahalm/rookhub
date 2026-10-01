@@ -129,6 +129,51 @@ describe('LeaguePageComponent', () => {
     expect([c.tnr(), c.round(), c.team()]).toEqual([10, 2, 'Schwaz']);
   });
 
+  // F7-010: Funkloch beim Ligawechsel — früher ersetzte „Daten nicht geladen" die ganze Seite bis zum Browser-Reload.
+  it('Ligawechsel scheitert: Auswahl bleibt, Fehler an Stelle der Begegnung, „Erneut versuchen" lädt nach', async () => {
+    const el = create();
+    await settle();
+    const c = fixture.componentInstance;
+    let fail = true;
+    api.league.and.callFake(async (tnr: number) => {
+      if (tnr === 20 && fail) throw new HttpErrorResponse({ status: 0 });
+      return league(tnr, tnr === 10 ? ['Kufstein', 'Schwaz', 'Wörgl'] : ['Absam', 'Hall']);
+    });
+
+    await c.pickLeague(20);
+    await settle();
+    expect(el.textContent).not.toContain('Daten nicht geladen');
+    expect(el.querySelectorAll('form.pick select').length).toBe(3);
+    expect(el.textContent).toContain('Liga nicht geladen');
+    expect(el.textContent).toContain('nicht erreichbar');
+    const retry = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Erneut versuchen'));
+    expect(retry).toBeTruthy();
+
+    fail = false;
+    retry!.click();
+    await settle();
+    expect(el.textContent).not.toContain('Liga nicht geladen');
+    expect([c.tnr(), c.round(), c.team()]).toEqual([20, 2, 'Absam']);
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Absam');
+  });
+
+  it('Ligawechsel scheitert: eine andere Liga lässt sich trotzdem wählen', async () => {
+    const el = create();
+    await settle();
+    const c = fixture.componentInstance;
+    api.league.and.callFake(async (tnr: number) => {
+      if (tnr === 20) throw new HttpErrorResponse({ status: 500 });
+      return league(tnr, ['Kufstein', 'Schwaz', 'Wörgl']);
+    });
+    await c.pickLeague(20);
+    await settle();
+    expect(el.textContent).toContain('Liga nicht geladen');
+    await c.pickLeague(10);
+    await settle();
+    expect(el.textContent).not.toContain('Liga nicht geladen');
+    expect(el.querySelector('lh-fixture .match')?.textContent).toContain('Gegner von Schwaz');
+  });
+
   it('ohne league.manage kein Knopf „Daten aktualisieren" und kein Teilen-Link', async () => {
     perms = new Set(['league.view']);
     const el = create();
