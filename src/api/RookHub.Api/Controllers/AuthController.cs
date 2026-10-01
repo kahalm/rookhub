@@ -89,20 +89,51 @@ public class AuthController : BaseApiController
     [DenyWhileImpersonating]
     public async Task<IActionResult> Handoff(CancellationToken ct)
     {
-        var code = await _handoff.IssueAsync(GetUserId(), ct);
+        var userId = GetUserId();
+        var code = await _handoff.IssueAsync(userId, ct);
+        // Eingeloest wird der Code nur in einem Browser, der die geteilte Anmeldung DIESES Kontos traegt (siehe
+        // HandoffExchange, Codereview F1-008). Der Sprung legt sie deshalb hier frisch an — auch wenn das Cookie
+        // (30 Tage) aelter ist als das Token (bis 90 Tage mit „eingeloggt bleiben"). Bisher schrieb erst der
+        // Tausch drueben das Cookie dieses Kontos; im Ergebnis aendert sich fuer den Sprung also nichts.
+        await WriteSharedSessionAsync(userId, ct);
         return Ok(new { code, expiresInSeconds = (int)AuthHandoffService.Lifetime.TotalSeconds });
     }
 
     /// <summary>Loest einen Uebergabe-Code gegen eine eigene Anmeldung ein. Offen, weil der Aufrufer
     /// hier ja noch nicht angemeldet IST — der Code ist der Nachweis. 400 sagt bewusst nur, dass es
     /// nicht ging: unbekannt, abgelaufen und verbraucht sind von aussen nicht zu unterscheiden.</summary>
+    /// <remarks>
+    /// <para><b>An den Browser gebunden (Codereview F1-008):</b> Der Code allein ist kein Nachweis, DASS der
+    /// einloesende Browser der springende ist. Ein Angreifer liesse sich von seinem Server laufend frische Codes
+    /// fuer das EIGENE Konto holen und das Opfer auf <c>…?h=&lt;Code&gt;</c> leiten — still als Angreifer
+    /// angemeldet, samt geteiltem Cookie fuer alle Oberflaechen (Login-CSRF). Bei eingerichteter Elterndomaene
+    /// verlangt der Tausch deshalb zusaetzlich das geteilte Cookie DESSELBEN Kontos — der Sprung legt es beim
+    /// Holen des Codes an (<see cref="Handoff"/>), im Browser des Opfers fehlt es oder gehoert dem Opfer. Ohne
+    /// Elterndomaene (localhost, IP) gibt es kein Cookie, dann bleibt es beim Code allein.</para>
+    /// <para>Neuer Pfad <c>rh-session/handoff</c>: nur dorthin schickt der Browser das Cookie mit (sein Pfad ist
+    /// <c>/api/auth/rh-session</c>, N6-001). Der alte Pfad <c>handoff/exchange</c> bleibt als Uebergang fuer
+    /// Oberflaechen aus dem Browser-Cache (eine Version, danach entfernen) und unterliegt derselben Pruefung —
+    /// dort kommt nur noch ein altes Cookie (Pfad <c>/api/auth</c>) an, sonst endet der Sprung in der
+    /// Anmeldemaske.</para>
+    /// </remarks>
     [AllowAnonymous]
     [EnableRateLimiting("auth")]
+    [HttpPost("rh-session/handoff")]
     [HttpPost("handoff/exchange")]
     public async Task<ActionResult<AuthResponseDto>> HandoffExchange([FromBody] HandoffExchangeDto dto, CancellationToken ct)
     {
+        HashSet<int>? holders = null;
+        if (_sharedSession.IsEnabled)
+        {
+            holders = new HashSet<int>();
+            foreach (var cookie in SharedSessionCookieValues())
+                if (await _sharedSession.RedeemAsync(cookie, ct) is { } shared) holders.Add(shared.UserId);
+            // Ohne taugliches Cookie kann kein Code mehr passen — dann gar nicht erst einloesen.
+            if (holders.Count == 0) return BadRequest(new { message = "Handoff code is not valid." });
+        }
         var res = await _handoff.RedeemAsync(dto?.Code, ct);
-        if (res is null) return BadRequest(new { message = "Handoff code is not valid." });
+        if (res is null || (holders != null && !holders.Contains(res.UserId)))
+            return BadRequest(new { message = "Handoff code is not valid." });
         await WriteSharedSessionAsync(res, ct);
         return Ok(res);
     }
@@ -230,14 +261,17 @@ public class AuthController : BaseApiController
     public IActionResult LegacyEndSharedSession() => EndSharedSession();
 
     /// <summary>Legt das Cookie neu an. Tut nichts, solange keine Elterndomaene eingerichtet ist.</summary>
-    private async Task WriteSharedSessionAsync(AuthResponseDto res, CancellationToken ct = default)
+    private Task WriteSharedSessionAsync(AuthResponseDto res, CancellationToken ct = default) =>
+        WriteSharedSessionAsync(res.UserId, ct);
+
+    private async Task WriteSharedSessionAsync(int userId, CancellationToken ct = default)
     {
-        var value = await _sharedSession.IssueAsync(res.UserId, ct);
+        var value = await _sharedSession.IssueAsync(userId, ct);
         if (value is null) return;
         var expires = DateTimeOffset.UtcNow.Add(SharedSessionService.Lifetime);
         Response.Cookies.Append(_sharedSession.CookieName, value, SharedSessionCookieOptions(expires));
         // Uebergang (N6-001): Merker fuer die Alt-Route, siehe LegacySharedSession. Gleiche Laufzeit wie das Cookie.
-        Response.Cookies.Append(_sharedSession.MovedMarkerName, _sharedSession.MovedMarkerFor(res.UserId),
+        Response.Cookies.Append(_sharedSession.MovedMarkerName, _sharedSession.MovedMarkerFor(userId),
             SharedSessionCookieOptions(expires, SharedSessionService.MovedMarkerPath));
         DeleteLegacySharedSessionCookie();
     }

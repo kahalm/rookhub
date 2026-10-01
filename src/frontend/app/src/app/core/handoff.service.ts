@@ -11,7 +11,9 @@ import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } 
  * <p>Beide liegen auf verschiedenen Origins und teilen den `localStorage` NICHT — wer hier
  * angemeldet ist, ist es drueben nicht, obwohl dasselbe Konto dahintersteht. Der Sprung holt
  * deshalb einen Einmal-Code (60 s, einmal einloesbar) und haengt ihn an die Ziel-URL; die
- * Gegenseite tauscht ihn beim Start gegen ihre eigene Anmeldung.</p>
+ * Gegenseite tauscht ihn beim Start gegen ihre eigene Anmeldung. Wo es die geteilte Anmeldung (unten)
+ * gibt, tauscht der Server ihn nur gegen das Cookie DESSELBEN Kontos — das Holen des Codes legt es an;
+ * ein fremder Code, den jemand einem anderen Browser unterschiebt, meldet dort niemanden an (F1-008).</p>
  *
  * <p>Ohne Anmeldung — und waehrend einer Impersonation — wird schlicht ohne Code gesprungen: dann
  * landet man drueben auf der oeffentlichen Seite bzw. der Anmeldemaske.</p>
@@ -39,6 +41,10 @@ export class HandoffService {
 
   /** Tausch des geteilten Cookies — derselbe Pfad, den das Cookie traegt (`Path=/api/auth/rh-session`, N6-001). */
   static readonly SharedSessionUrl = '/api/auth/rh-session';
+
+  /** Einloesen eines Uebergabe-Codes — UNTER dem Pfad des Cookies, damit der Browser es mitschickt: der Server
+   *  tauscht den Code nur, wenn das geteilte Cookie zum selben Konto gehoert (kein Login-CSRF, Codereview F1-008). */
+  static readonly ExchangeUrl = '/api/auth/rh-session/handoff';
 
   /** Mindestabstand zwischen zwei Abgleichen beim Zurueckkehren in den Tab — hin- und herschalten
    *  fragt nicht jedes Mal (der Endpunkt teilt sich sein IP-Fenster mit dem Abmelden). */
@@ -131,7 +137,7 @@ export class HandoffService {
     if (code) {
       try {
         const res = await firstValueFrom(
-          this.http.post<AuthResponse>('/api/auth/handoff/exchange', { code }));
+          this.http.post<AuthResponse>(HandoffService.ExchangeUrl, { code }));
         // Der Tausch legt — wo eingerichtet — auch das geteilte Cookie an. Nur wenn es danach
         // wirklich steht, haengt diese Anmeldung an ihm: ohne Elterndomaene (localhost, Dev ueber
         // HTTP) antwortet der Abgleich immer 204, und das hiesse sonst „abmelden".

@@ -91,7 +91,9 @@ describe('HandoffService', () => {
     history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
 
     const done = svc.consumeIncoming();
-    const req = http.expectOne('/api/auth/handoff/exchange');
+    // Unter dem Pfad des geteilten Cookies: nur dorthin schickt der Browser es mit, und der Server tauscht den
+    // Code nur gegen das Cookie DESSELBEN Kontos (Codereview F1-008, Login-CSRF mit einem fremden Code).
+    const req = http.expectOne('/api/auth/rh-session/handoff');
     expect(req.request.body).toEqual({ code: 'EINMAL' });
     req.flush(session);
     // Danach die Frage, ob der Tausch auch das geteilte Cookie angelegt hat (hier: nein).
@@ -111,7 +113,7 @@ describe('HandoffService', () => {
     history.replaceState({}, '', `${location.pathname}?h=ALT`);
 
     const done = svc.consumeIncoming();
-    http.expectOne('/api/auth/handoff/exchange')
+    http.expectOne('/api/auth/rh-session/handoff')
       .flush('abgelaufen', { status: 400, statusText: 'Bad Request' });
 
     expect(await done).toBeFalse();
@@ -404,7 +406,7 @@ describe('HandoffService', () => {
       history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
 
       const done = svc.consumeIncoming();
-      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      http.expectOne('/api/auth/rh-session/handoff').flush(session);
       await settle();
       http.expectOne('/api/auth/rh-session').flush(session);
 
@@ -422,7 +424,7 @@ describe('HandoffService', () => {
       history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
 
       const done = svc.consumeIncoming();
-      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      http.expectOne('/api/auth/rh-session/handoff').flush(session);
       await settle();
       http.expectOne('/api/auth/rh-session').flush(session);               // der Tausch legte das Cookie an
       expect(await done).toBeTrue();
@@ -448,7 +450,7 @@ describe('HandoffService', () => {
       history.replaceState({}, '', `${location.pathname}?h=EINMAL`);
 
       const done = svc.consumeIncoming();
-      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      http.expectOne('/api/auth/rh-session/handoff').flush(session);
       await settle();
       http.expectOne('/api/auth/rh-session').flush(null, noContent);
 

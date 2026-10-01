@@ -389,6 +389,121 @@ public class AuthControllerTests : IDisposable
         Assert.False(await _db.AuthHandoffTokens.AnyAsync());
     }
 
+    // ---- Codereview F1-008: der Uebergabe-Code ist an den Browser gebunden (kein Login-CSRF) ----
+
+    private async Task<AppUser> AddUserAsync(string name)
+    {
+        await _controller.Register(new RegisterDto { Username = name, Email = name + "@t.com", Password = "Password1!" });
+        _http.Response.Headers.Remove("Set-Cookie");
+        return await _db.AppUsers.FirstAsync(u => u.Username == name);
+    }
+
+    private Task<string> IssueCodeAsync(int userId) =>
+        new AuthHandoffService(_db, _authService, NullLogger<AuthHandoffService>.Instance).IssueAsync(userId);
+
+    [Fact]
+    public async Task Handoff_LeavesTheSharedCookieOfTheCaller_SoTheJumpCanBeRedeemedOverThere()
+    {
+        // Der Nachweis drueben ist das geteilte Cookie DESSELBEN Kontos — der Sprung legt es beim Holen des Codes an,
+        // auch wenn das alte (30 Tage) inzwischen abgelaufen ist.
+        var user = await AddUserAsync("u");
+        SignIn(user.Id);
+
+        await _controller.Handoff(CancellationToken.None);
+
+        var cookie = SetCookieHeader("rh_session", "/api/auth/rh-session");
+        Assert.NotNull(cookie);
+        Assert.False(IsDeletion(cookie));
+        Assert.Equal(user.Id, (await _shared.RedeemAsync(CookieValue(cookie)))?.UserId);
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithoutASharedCookie_IsRejected_AndLeavesNoCookie()
+    {
+        // Fund-Weg: der Angreifer holt sich serverseitig einen frischen Code fuer SEIN Konto und leitet das Opfer auf
+        // …?h=<Code>. Im Browser des Opfers liegt kein Cookie dieses Kontos — kein Tausch, keine Anmeldung, kein
+        // rh_session des Angreifers fuer RookHub, KidHub und LeagueHub.
+        var attacker = await AddUserAsync("attacker");
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithTheSharedCookieOfAnotherAccount_IsRejected_AndKeepsThatCookie()
+    {
+        // Das Opfer ist auf einer anderen Oberflaeche angemeldet (sein Cookie liegt) — der Code des Angreifers darf es
+        // weder anmelden noch das Cookie auf den Angreifer umschreiben.
+        var victim = await AddUserAsync("victim");
+        var attacker = await AddUserAsync("attacker");
+        _http.Request.Headers.Cookie = $"rh_session={await _shared.IssueAsync(victim.Id)}";
+        var code = await IssueCodeAsync(attacker.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Null(SetCookieHeader("rh_session"));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithTheSharedCookieOfTheSameAccount_TurnsTheCodeIntoALogin()
+    {
+        // Der gewoehnliche Sprung: derselbe Browser hat beim Holen des Codes das Cookie bekommen.
+        var user = await AddUserAsync("u");
+        _http.Request.Headers.Cookie = $"rh_session=alt.und.kaputt; rh_session={await _shared.IssueAsync(user.Id)}";
+        var code = await IssueCodeAsync(user.Id);
+
+        var result = await _controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+        Assert.False(IsDeletion(SetCookieHeader("rh_session", "/api/auth/rh-session")));
+    }
+
+    [Fact]
+    public void HandoffExchange_IsServedUnderTheCookiePath()
+    {
+        // Das Cookie traegt Path=/api/auth/rh-session (N6-001) — nur unter diesem Pfad schickt der Browser es mit.
+        var routes = typeof(AuthController).GetMethod(nameof(AuthController.HandoffExchange))!
+            .GetCustomAttributes(typeof(HttpPostAttribute), false).Cast<HttpPostAttribute>()
+            .Select(a => "/api/auth/" + a.Template).ToList();
+
+        Assert.Contains(routes, r => r.StartsWith(SharedSessionService.CookiePath + "/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task HandoffExchange_WithoutAParentDomain_StaysCodeOnly()
+    {
+        // localhost/IP: es gibt kein geteiltes Cookie — dann bleibt der Code der einzige Nachweis (unveraendert).
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "TestSecretKeyThatIsLongEnoughForHmacSha256!!",
+                ["Jwt:Issuer"] = "TestIssuer",
+                ["Jwt:Audience"] = "TestAudience",
+            })
+            .Build();
+        var auth = new AuthService(_db, config, NullLogger<AuthService>.Instance, null, TestServices.Cache());
+        var handoff = new AuthHandoffService(_db, auth, NullLogger<AuthHandoffService>.Instance);
+        var http = new DefaultHttpContext();
+        var controller = new AuthController(auth,
+            new PasswordResetService(_db, new FakeEmailSender(), config, NullLogger<PasswordResetService>.Instance),
+            handoff, new SharedSessionService(_db, auth, config), new CapturingTaskQueue())
+        {
+            ControllerContext = new ControllerContext { HttpContext = http },
+        };
+        var user = await AddUserAsync("u");
+        var code = await handoff.IssueAsync(user.Id);
+
+        var result = await controller.HandoffExchange(new HandoffExchangeDto { Code = code }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(user.Id, Assert.IsType<AuthResponseDto>(ok.Value).UserId);
+    }
+
     // ---- Geteilte Anmeldung ueber beide Oberflaechen ----
 
     [Fact]

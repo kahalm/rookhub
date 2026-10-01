@@ -39,7 +39,8 @@ public class SharedSessionService
     public const string Audience = "rookhub-shared-session";
 
     /// <summary>
-    /// Nur der Tausch und das Abmelden brauchen das Cookie — ein EIGENER Pfad, den sonst keine Anwendung
+    /// Nur der Tausch, das Abmelden und das Einloesen eines Uebergabe-Codes (<c>rh-session/handoff</c>, F1-008)
+    /// brauchen das Cookie — ein EIGENER Pfad, den sonst keine Anwendung
     /// unter der Elterndomaene bedient. Mit <c>/api/auth</c> schickte der Browser das 30-Tage-Cookie an
     /// jeden Host der Domaene, der dort eine Anmeldung hat (Dev-Stacks, RCT, Lernkompass, Cal.com;
     /// Codereview N6-001). Gegen Hosts unter derselben Elterndomaene hilft der Pfad allein nicht ganz
