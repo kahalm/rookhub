@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.626.1", date: "2026-10-01", changes: [
+    { en: "Build only: three time-based tests from the code review no longer depend on the wall clock, so CI runs stop failing on slow runners.", de: "Nur Build: drei zeitabhängige Tests aus dem Codereview hängen nicht mehr an der Wanduhr, damit CI-Läufe auf langsamen Runnern nicht mehr scheitern." },
+  ]},
   { version: "0.626.0", date: "2026-10-01", changes: [
     { en: "LeagueHub start page: below “data as of” it now says how many games are in the database and where they come from — over-the-board games from Lumbra, the ChessBase Megabase, chess-results, Lichess broadcasts and the club database, online games from Lichess and chess.com. Each game counts once, even if it appears on two player cards.", de: "LeagueHub-Startseite: Unter „Stand der Daten“ steht jetzt, wie viele Partien im Bestand sind und woher sie kommen — Brettpartien aus Lumbra, der ChessBase-Megabase, von chess-results, aus Lichess-Übertragungen und der Vereins-Datenbank, Online-Partien von Lichess und chess.com. Jede Partie zählt einmal, auch wenn sie auf zwei Spielerkarten steht." },
   ] },
