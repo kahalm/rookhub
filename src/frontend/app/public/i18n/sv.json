@@ -956,7 +956,6 @@
     "engine": "Motor",
     "depth": "Djup",
     "lines": "Linjer",
-    "maxDepth": "Maximalt djup",
     "calculating": "Beräknar…",
     "engineOff": "Motor av",
     "start": "Start",

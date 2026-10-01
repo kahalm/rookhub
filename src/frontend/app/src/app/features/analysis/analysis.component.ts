@@ -131,7 +131,7 @@ const EVAL_SETTLE_DEPTH = 10;
                 <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }} · <span class="search-time" [title]="'analysis.searchTime' | translate">{{ searchTime }}</span></span>
                 <span class="he-spacer"></span>
                 <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
-                  <mat-label>{{ 'analysis.maxDepth' | translate }}</mat-label>
+                  <mat-label>{{ 'analysis.depth' | translate }}</mat-label>
                   <mat-select [(ngModel)]="depthSetting" (selectionChange)="onDepthChange()">
                     @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
                   </mat-select>
@@ -320,7 +320,6 @@ const EVAL_SETTLE_DEPTH = 10;
               </mat-form-field>
               <div class="io-actions">
                 <button mat-stroked-button (click)="loadFen()"><mat-icon>input</mat-icon> {{ 'analysis.loadFen' | translate }}</button>
-                <button mat-stroked-button (click)="copyFen()"><mat-icon>content_copy</mat-icon> {{ 'analysis.copyFen' | translate }}</button>
                 <button mat-stroked-button (click)="startEditing()"><mat-icon>grid_view</mat-icon> {{ 'analysis.setup.button' | translate }}</button>
               </div>
               <mat-form-field appearance="outline" class="full">
@@ -350,7 +349,7 @@ const EVAL_SETTLE_DEPTH = 10;
     .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .search-time { font-variant-numeric: tabular-nums; }
     .he-spacer { flex: 1 1 auto; }
-    .num-field { width: 104px; }
+    .num-field { width: 120px; }
     .engine-field { width: 190px; }
     .engine-tag { opacity: 0.65; font-size: 0.85em; }
     .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
@@ -391,7 +390,7 @@ const EVAL_SETTLE_DEPTH = 10;
     .movetree { margin-top: 8px; }
     .tree-hint { margin: 6px 0 0; font-size: .75rem; color: color-mix(in srgb, currentColor 50%, transparent); }
     .io-card .full { width: 100%; }
-    .io-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+    .io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
     .board-tap { display: none; }
     @media (max-width: 768px) {
       .board-col { width: 100%; min-width: 0; position: relative; }
@@ -1171,13 +1170,6 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.newSession();
     this.fenInput = '';
     this.resetToStart(fen);
-  }
-
-  copyFen(): void {
-    navigator.clipboard?.writeText(this.currentFen).then(
-      () => this.snackbar.show(this.currentFen, { action: 'OK', rawAction: true, duration: 2000 }),
-      () => {}
-    );
   }
 
   /** PGN samt Varianten laden (0.604.0 — vorher nur die Hauptlinie) und ans Ende der Hauptlinie springen.

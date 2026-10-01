@@ -956,7 +956,6 @@
     "engine": "Motor",
     "depth": "Adâncime",
     "lines": "Linii",
-    "maxDepth": "Adâncime maximă",
     "calculating": "Se calculează…",
     "engineOff": "Motor oprit",
     "start": "Start",

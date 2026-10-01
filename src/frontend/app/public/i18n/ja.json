@@ -956,7 +956,6 @@
     "engine": "エンジン",
     "depth": "深さ",
     "lines": "候補手",
-    "maxDepth": "最大深さ",
     "calculating": "計算中…",
     "engineOff": "エンジン オフ",
     "start": "開始",

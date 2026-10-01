@@ -956,7 +956,6 @@
     "engine": "Engine",
     "depth": "Hloubka",
     "lines": "Linie",
-    "maxDepth": "Max. hloubka",
     "calculating": "Počítám…",
     "engineOff": "Engine vypnut",
     "start": "Start",

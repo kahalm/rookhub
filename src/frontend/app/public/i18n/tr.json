@@ -956,7 +956,6 @@
     "engine": "Motor",
     "depth": "Derinlik",
     "lines": "Satırlar",
-    "maxDepth": "Maksimum derinlik",
     "calculating": "Hesaplanıyor…",
     "engineOff": "Motor kapalı",
     "start": "Başlangıç",

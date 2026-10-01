@@ -2915,7 +2915,6 @@
     "engine": "Engine",
     "depth": "Depth",
     "lines": "Lines",
-    "maxDepth": "Max depth",
     "calculating": "Calculating…",
     "engineOff": "Engine off",
     "start": "Start",

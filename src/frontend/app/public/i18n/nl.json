@@ -956,7 +956,6 @@
     "engine": "Motor",
     "depth": "Diepte",
     "lines": "Lijnen",
-    "maxDepth": "Maximale diepte",
     "calculating": "Berekenen…",
     "engineOff": "Motor uit",
     "start": "Start",

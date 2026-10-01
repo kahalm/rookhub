@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
 import { AnalysisEngineService } from './analysis-engine.service';
@@ -1509,8 +1509,9 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   });
 });
 
-/** Die echte Vorlage mit Query-Parametern; die schweren Kind-Komponenten fallen weg (wie oben). */
-async function renderAnalysis(params: Record<string, string> = {}): Promise<ComponentFixture<AnalysisComponent>> {
+/** Die echte Vorlage mit Query-Parametern; die schweren Kind-Komponenten fallen weg (wie oben). Mit `lang` gelten die
+ *  echten Texte aus `public/i18n` (Karma serviert sie), sonst stehen die Schlüssel da. */
+async function renderAnalysis(params: Record<string, string> = {}, lang?: string): Promise<ComponentFixture<AnalysisComponent>> {
   const engine: any = {
     analysis$: new Subject(), engineFatalError$: new Subject(), remoteFallback$: new Subject(), remoteInterrupted$: new Subject(),
     setMultiPv: () => {}, setDepth: () => {}, setRemoteEngine: () => {},
@@ -1536,6 +1537,11 @@ async function renderAnalysis(params: Record<string, string> = {}): Promise<Comp
       { provide: MatDialog, useValue: { open: () => {} } },
     ],
   }).compileComponents();
+  if (lang) {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation(lang, await (await fetch(`/i18n/${lang}.json`)).json());
+    translate.use(lang);
+  }
   const fixture = TestBed.createComponent(AnalysisComponent);
   fixture.detectChanges();   // kein whenStable: die Seite hält eigene Zeitgeber offen
   return fixture;
@@ -1566,4 +1572,54 @@ describe('AnalysisComponent Zurück-Knopf + Meldungen (übersetzt)', () => {
     expect(show).toHaveBeenCalledWith('analysis.invalidPgn', { action: 'common.ok', duration: 2500 });
     c.ngOnDestroy();
   });
+});
+
+// Codereview UX-048: das 104-px-Auswahlfeld kürzte „Max. Tiefe" zu „Max. T", die FEN-Karte trug drei zweizeilige Knöpfe,
+// und „FEN kopieren" stand dazu noch im ⋮-Menü derselben Seite. Gemessen wird mit der echten Schrift (Roboto, selbst
+// ausgeliefert unter /fonts) — ohne sie misst der Browser mit einer Ersatzschrift.
+describe('AnalysisComponent Seitenleiste: Beschriftungen passen (UX-048)', () => {
+  let fonts: HTMLLinkElement;
+  beforeAll(async () => {
+    fonts = document.createElement('link');
+    fonts.rel = 'stylesheet';
+    fonts.href = '/fonts/fonts.css';
+    const loaded = new Promise(r => { fonts.onload = r; fonts.onerror = r; });
+    document.head.appendChild(fonts);
+    await loaded;
+    await Promise.all([document.fonts.load('16px Roboto'), document.fonts.load('500 14px Roboto')]);
+  });
+  afterAll(() => fonts.remove());
+
+  it('die FEN-Karte zeigt nur „FEN laden" und „Stellung aufbauen" — Kopieren bleibt im ⋮-Menü', async () => {
+    const fixture = await renderAnalysis();
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.io-actions button')) as HTMLElement[];
+    expect(buttons.map(b => b.querySelector('.mdc-button__label')!.textContent!.trim()))
+      .toEqual(['analysis.loadFen', 'analysis.setup.button']);
+    fixture.destroy();
+  });
+
+  for (const lang of ['en', 'de', 'hr', 'hu']) {
+    it(`${lang}: Tiefe- und Linien-Feld zeigen ihre Beschriftung ungekürzt, die FEN-Knöpfe bleiben am Handy einzeilig`, async () => {
+      const fixture = await renderAnalysis({}, lang);
+      const el = fixture.nativeElement as HTMLElement;
+      const side = el.querySelector('.side-col') as HTMLElement;
+      side.style.flex = '0 0 366px';   // 390 px Handy minus Seitenrand
+      side.style.width = '366px';
+      fixture.detectChanges();
+      await new Promise(r => setTimeout(r, 30));
+
+      const labels = Array.from(el.querySelectorAll('.num-field .mdc-floating-label')) as HTMLElement[];
+      expect(labels.length).toBe(2);
+      for (const l of labels) {
+        expect(l.scrollWidth).withContext(`„${l.textContent!.trim()}" gekürzt`).toBeLessThanOrEqual(l.clientWidth);
+      }
+      for (const b of Array.from(el.querySelectorAll('.io-actions button')) as HTMLElement[]) {
+        const label = b.querySelector('.mdc-button__label') as HTMLElement;
+        const cs = getComputedStyle(label);
+        const line = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25;
+        expect(label.getBoundingClientRect().height).withContext(`„${label.textContent!.trim()}" zweizeilig`).toBeLessThan(line * 1.5);
+      }
+      fixture.destroy();
+    });
+  }
 });

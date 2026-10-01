@@ -956,7 +956,6 @@
     "engine": "Motor",
     "depth": "Profundidade",
     "lines": "Linhas",
-    "maxDepth": "Profundidade máxima",
     "calculating": "A calcular…",
     "engineOff": "Motor desligado",
     "start": "Início",
