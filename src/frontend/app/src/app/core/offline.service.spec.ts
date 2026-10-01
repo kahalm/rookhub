@@ -115,6 +115,30 @@ describe('OfflineService', () => {
     expect(localStorage.getItem('rh.andere.seite')).toBe('x');
   });
 
+  it('clearOnLogout räumt Dashboard-Snapshot, Discord-Vormerkung und anonyme Raten-Sitzung ab (F1-010)', () => {
+    // Gemeldet im Codereview 2026-09-29 (F1-010): logout() verspricht, dass nichts für den NÄCHSTEN Nutzer
+    // desselben Geräts übrig bleibt — der Dashboard-Snapshot (Turniere samt Ort/Termin, Kurse, Elo), die
+    // Discord-Vormerkung und die anonyme Raten-Sitzung blieben aber liegen.
+    localStorage.setItem('rookhub_dashboard_cache_v1_u7', '{"puzzleElo":1500}');
+    localStorage.setItem('rookhub_discord_link', 'alt.token');
+    localStorage.setItem('rookhub_guess_session', 'anon-123');
+    sessionStorage.setItem('rookhub_discord_link', 'body.sig');
+    sessionStorage.setItem('irgendwas_anderes', 'x');
+
+    try {
+      new OfflineService().clearOnLogout();
+
+      expect(localStorage.getItem('rookhub_dashboard_cache_v1_u7')).toBeNull();
+      expect(localStorage.getItem('rookhub_discord_link')).toBeNull();
+      expect(localStorage.getItem('rookhub_guess_session')).toBeNull();
+      expect(sessionStorage.getItem('rookhub_discord_link')).toBeNull();
+      expect(sessionStorage.getItem('irgendwas_anderes')).toBe('x');
+    } finally {
+      sessionStorage.removeItem('rookhub_discord_link');
+      sessionStorage.removeItem('irgendwas_anderes');
+    }
+  });
+
   it('clearAll (Profil-Knopf „Cache leeren") lässt den laufenden Endless-Lauf stehen', () => {
     // Bewusster Unterschied: „Cache leeren" soll Platz freigeben, nicht die Arbeit des ANGEMELDETEN
     // Nutzers wegwerfen.

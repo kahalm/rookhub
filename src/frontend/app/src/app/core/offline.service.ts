@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { allKeys, localStore, readJson, readRaw, removeKey, writeJson } from './local-json-store';
+import { allKeys, localStore, readJson, readRaw, removeKey, sessionStore, writeJson } from './local-json-store';
 
 /** localStorage-Keys der Offline-Caches. */
 export const ENDLESS_POOL_KEY = 'rookhub_endless_offline_pool';
@@ -86,8 +86,16 @@ export class OfflineService {
     'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)
     'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
     'rookhub_puzzle_session',      // anonyme Puzzle-Sitzung
+    'rookhub_guess_session',       // anonyme Partie-Raten-Sitzung (Gegenstück zur Puzzle-Sitzung)
+    'rookhub_dashboard_cache_',    // Dashboard-Snapshot je Konto: Turniere samt Ort/Termin, Kurse, Elo
+    'rookhub_discord_link',        // Discord-Vormerkung, Altbestand im localStorage (heute sessionStorage, s. u.)
     'rh.turnier.',                 // Turnierseite: Kalender-Filter samt Ort/Koordinaten, Verlaufs-Reiter
   ];
+
+  /** Nutzer-Spuren im sessionStorage DIESES Tabs, die beim Abmelden ebenfalls verschwinden: die
+   *  Discord-Vormerkung bleibt nach einem vorübergehenden Fehler beim Einlösen liegen — der NÄCHSTE, der
+   *  sich im selben Tab anmeldet, würde sonst gefragt, ob er den Discord-Account des vorigen verknüpft. */
+  private static readonly SessionTraceKeys = ['rookhub_discord_link'];
 
   /** Keys, die beim Abmelden gelöscht werden: Offline-Caches UND die lokalen Nutzer-Spuren. */
   private logoutKeys(): string[] {
@@ -127,6 +135,7 @@ export class OfflineService {
    *  soll — nicht den laufenden Endless-Lauf oder die Kalkulations-Notizen des ANGEMELDETEN Nutzers. */
   clearOnLogout(): void {
     for (const k of this.logoutKeys()) removeKey(localStore(), k);
+    for (const k of OfflineService.SessionTraceKeys) removeKey(sessionStore(), k);
   }
 
   /** Menschlich lesbare Größe. */
