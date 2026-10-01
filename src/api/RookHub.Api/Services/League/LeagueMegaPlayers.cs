@@ -105,11 +105,40 @@ public sealed class LeagueMegaPlayers
         return new Lookup(rows.DistinctBy(r => r.Id));
     }
 
-    /// <summary>Alles ersetzen: TSV-Zeilen <c>name \t fide \t games \t last_year \t max_elo</c>. Liefert die Zeilenzahl.</summary>
+    /// <summary>
+    /// Alles ersetzen: TSV-Zeilen <c>name \t fide \t games \t last_year \t max_elo</c>. Liefert die Zeilenzahl.
+    /// <para>Relational liegen Löschen und alle Portionen in EINER Transaktion (wie <c>LeagueImportService.ReplaceAllAsync</c>):
+    /// bricht der Upload ab (<paramref name="ct"/> = RequestAborted, Proxy-Zeitlimit, zu großer Rumpf, Datenbankfehler),
+    /// bleibt das alte Verzeichnis vollständig stehen statt eines halben, und ein paralleler Abgleich liest bis zum
+    /// Commit den alten Stand — nie ein Teilverzeichnis, in dem ein Name fälschlich eindeutig wäre.</para>
+    /// </summary>
     public async Task<int> ReplaceAsync(TextReader tsv, CancellationToken ct)
     {
-        if (_db.Database.IsRelational()) await _db.LeagueMegaPlayers.ExecuteDeleteAsync(ct);
-        else { _db.LeagueMegaPlayers.RemoveRange(_db.LeagueMegaPlayers); await _db.SaveChangesAsync(ct); }
+        if (!_db.Database.IsRelational())
+        {
+            _db.LeagueMegaPlayers.RemoveRange(_db.LeagueMegaPlayers);
+            await _db.SaveChangesAsync(ct);
+            return await FillAsync(tsv, ct);
+        }
+        // Die Transaktion muss in der Execution-Strategy laufen (EnableRetryOnFailure verweigert sonst eine selbst
+        // geöffnete). Der Rumpf ist aber ein Strom und lässt sich nicht zurückspulen: ein Wiederholversuch bricht ab —
+        // die Transaktion ist dann zurückgerollt, das alte Verzeichnis steht — statt mit dem Rest der Datei neu zu füllen.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        var started = false;
+        return await strategy.ExecuteAsync(async () =>
+        {
+            if (started) throw new InvalidOperationException("Megabase-Verzeichnis: Einspielen nicht wiederholbar — Datei neu hochladen.");
+            started = true;
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+            await _db.LeagueMegaPlayers.ExecuteDeleteAsync(ct);
+            var n = await FillAsync(tsv, ct);
+            await tx.CommitAsync(ct);
+            return n;
+        });
+    }
+
+    private async Task<int> FillAsync(TextReader tsv, CancellationToken ct)
+    {
         var auto = _db.ChangeTracker.AutoDetectChangesEnabled;
         _db.ChangeTracker.AutoDetectChangesEnabled = false;
         var n = 0;

@@ -348,8 +348,9 @@ public class LeagueController : BaseApiController
     }
 
     /// <summary>Spielerverzeichnis der ganzen Megabase ersetzen (TSV, gern gzip) — Skript <c>scan_mega_players.py</c>.
-    /// 413, wenn der Rumpf entpackt größer als <see cref="CollectionMaxBytes"/> ist (das Verzeichnis ist dann — wie bei
-    /// jedem Abbruch mitten im Rumpf — nur zum Teil ersetzt; einfach mit der richtigen Datei wiederholen).</summary>
+    /// 413, wenn der Rumpf entpackt größer als <see cref="CollectionMaxBytes"/> ist (das alte Verzeichnis bleibt dann — wie
+    /// bei jedem Abbruch mitten im Rumpf — vollständig stehen, <see cref="LeagueMegaPlayers.ReplaceAsync"/> ersetzt in EINER
+    /// Transaktion; einfach mit der richtigen Datei wiederholen).</summary>
     [HttpPost("admin/mega-players")]
     [HasPermission(Permissions.LeagueManage)]
     [RequestSizeLimit(CollectionMaxBytes)]
