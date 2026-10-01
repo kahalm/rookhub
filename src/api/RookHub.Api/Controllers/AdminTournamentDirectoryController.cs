@@ -813,14 +813,17 @@ public class AdminTournamentDirectoryController : BaseApiController
             entry.Lat = primary.Lat;
             entry.Lon = primary.Lon;
             entry.GeoSource = primary.Source;
-            entry.GeoPlaceName = primary.PlaceName;
+            // Gekuerzt wie im Sweep (`TournamentDirectoryService.GeocodeAsync`): ein ueberlanger
+            // Teilort liesse sonst das EINE SaveChanges am Ende des ganzen Laufs scheitern.
+            entry.GeoPlaceName = ExternalDirectorySource.Truncate(primary.PlaceName, 200);
             entry.UpdatedAt = DateTime.UtcNow;
 
             if (entry.Venues.Count > 0) _db.TournamentDirectoryVenues.RemoveRange(entry.Venues);
             entry.Venues = located.Count < 2 ? [] : located
                 .Select((r, i) => new TournamentDirectoryVenue
                 {
-                    Ordinal = i, Name = r.PlaceName, SourceText = r.SourceText,
+                    Ordinal = i, Name = ExternalDirectorySource.Truncate(r.PlaceName, 200)!,
+                    SourceText = ExternalDirectorySource.Truncate(r.SourceText, 300),
                     Lat = r.Lat, Lon = r.Lon, GeoSource = r.Source,
                 })
                 .ToList();

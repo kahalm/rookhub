@@ -491,6 +491,92 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Equal(48.0, entry.Lat!.Value, 4);
     }
 
+    /// <summary>
+    /// Ein von der QUELLE mitgelieferter Pin ist genauer als jeder Lexikon-Treffer — dieselbe
+    /// Schutzliste wie die Nachverortung von Hand (`GeocodeMissing`).
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_SourceProvidedCoordinates_SurviveTheNextSweep()
+    {
+        await CreateService($"[{Row("111", "Open", "2026-12-18", "2026-12-20", "Ranshofen")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        entry.Lat = 48.2;
+        entry.Lon = 13.0;
+        entry.GeoSource = GeoSource.SourceProvided;
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Open", "2026-12-18", "2026-12-20", "Woanders")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(GeoSource.SourceProvided, entry.GeoSource);
+        Assert.Equal(48.2, entry.Lat!.Value, 4);
+    }
+
+    /// <summary>
+    /// Ein ueber die VEREINSNAMEN bewiesener Pin („St.Veit" -> St. Veit an der Glan) und danach
+    /// ein ergaenzter Ortstext: der Sweep verortet neu und faellt dabei wieder auf das
+    /// gleichnamige St. Veit in Tirol. Ohne Zuruecksetzen von `TeamHintCheckedAt` naehme die
+    /// Vereinsnamen-Aufloesung den Eintrag nie wieder vor — der Pin waere endgueltig falsch bzw.
+    /// weg.
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_TeamHintPin_LocationChanged_RearmsTheClubNameResolution()
+    {
+        _db.GeoPlaces.Add(new GeoPlace
+        {
+            Country = "AT", Name = "St. Veit", NameNormalized = GeoTextNormalizer.Normalize("St. Veit"),
+            Lat = 47.3167, Lon = 11.0667, Kind = GeoPlaceKind.City,
+        });
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Open", "2026-12-18", "2026-12-20", "St.Veit")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        // Was VenueDisambiguationService nach einem Seitenabruf hinterlaesst.
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        entry.Lat = 46.7681;
+        entry.Lon = 14.3603;
+        entry.GeoSource = GeoSource.TeamHint;
+        entry.TeamHintCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.TeamHintVersion = VenueDisambiguationService.CurrentVersion;
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Open", "2026-12-18", "2026-12-20", "St.Veit, Mehrzweckhalle")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        // Die Aufloesung darf (und wird) wieder laufen: Vermerk weg, Eintrag wieder im Topf
+        // (`GeoSource` City oder Ambiguous, siehe VenueDisambiguationService.RunAsync).
+        Assert.Null(entry.TeamHintCheckedAt);
+        Assert.Contains(entry.GeoSource, new[] { GeoSource.City, GeoSource.Ambiguous });
+    }
+
+    /// <summary>Ohne geaenderten Ortstext bleibt ein TeamHint-Pin unangetastet — samt Vermerk.</summary>
+    [Fact]
+    public async Task SweepFederationAsync_TeamHintPin_SameLocation_StaysUntouched()
+    {
+        var json = $"[{Row("111", "Open", "2026-12-18", "2026-12-20", "St.Veit")}]";
+        await CreateService(json).SweepFederationAsync("AUT", Today);
+
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        var checkedAt = DateTime.UtcNow.AddDays(-1);
+        entry.Lat = 46.7681;
+        entry.Lon = 14.3603;
+        entry.GeoSource = GeoSource.TeamHint;
+        entry.TeamHintCheckedAt = checkedAt;
+        await _db.SaveChangesAsync();
+
+        await CreateService(json).SweepFederationAsync("AUT", Today);
+
+        entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Equal(GeoSource.TeamHint, entry.GeoSource);
+        Assert.Equal(checkedAt, entry.TeamHintCheckedAt);
+        Assert.Equal(46.7681, entry.Lat!.Value, 4);
+    }
+
     // ----- Umkreis-Meldung --------------------------------------------------
 
     [Fact]

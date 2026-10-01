@@ -765,8 +765,17 @@ public class TournamentDirectoryService
     private async Task GeocodeAsync(TournamentDirectoryEntry entry, CancellationToken ct)
     {
         // Eine von Hand gesetzte Koordinate nie ueberschreiben - sie ist die Korrektur eines
-        // Fehlgriffs und wuerde sonst jede Nacht zurueckfallen.
-        if (entry.GeoSource == GeoSource.Manual) return;
+        // Fehlgriffs und wuerde sonst jede Nacht zurueckfallen. Ebenso eine von der QUELLE
+        // mitgelieferte: sie ist genauer als alles, was das Ortslexikon daraus machen kann.
+        // Dieselbe Schutzliste wie `AdminTournamentDirectoryController.GeocodeMissing`.
+        if (entry.GeoSource is GeoSource.Manual or GeoSource.SourceProvided) return;
+
+        // Ein ueber die VEREINSNAMEN bewiesener Pin (`VenueDisambiguationService`) wird hier
+        // trotzdem neu verortet — der Ortstext hat sich geaendert, der Beweis galt dem alten. Aber
+        // die Vereinsnamen-Aufloesung muss danach WIEDER laufen duerfen: `TeamHintCheckedAt` haelt
+        // sie sonst fuer immer fern, und ein „St.Veit" -> „St.Veit, Mehrzweckhalle", das das
+        // Ortslexikon wieder mehrdeutig findet, kostete den Pin endgueltig (Karte, Umkreissuche).
+        if (entry.GeoSource == GeoSource.TeamHint) entry.TeamHintCheckedAt = null;
 
         var results = await _geocoding.ResolveManyAsync(
             entry.LocationText, entry.State, entry.Federation, ct);
