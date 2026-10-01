@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
@@ -72,13 +73,15 @@ public class EngineControllerTests : IDisposable
         SetUser(42);
     }
 
-    private EngineController CreateController(LocalBrokerOptions brokerOptions, EngineHub hub)
+    private EngineController CreateController(LocalBrokerOptions brokerOptions, EngineHub hub,
+        ILogger<EngineController>? logger = null)
     {
         var registry = new EngineRegistry(_db, _encryption, _lichess, _directory, brokerOptions);
         var broker = new EngineBrokerRouter(
             new LocalEngineBroker(hub, brokerOptions, NullLogger<LocalEngineBroker>.Instance),
             new LichessEngineBroker(_lichess));
-        return new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(), NullLogger<EngineController>.Instance);
+        return new EngineController(_db, _encryption, registry, broker, new EngineActivityTracker(),
+            logger ?? NullLogger<EngineController>.Instance);
     }
 
     public void Dispose()
@@ -119,6 +122,11 @@ public class EngineControllerTests : IDisposable
         /// <summary>Hält Analyse-Anfragen fest (simuliert einen laufenden Stream) — für den Deckel-Test.</summary>
         public bool BlockAnalyse;
         public int AnalyseCalls;
+
+        /// <summary>Hält die Engine-LISTE fest, bis der Aufrufer abbricht — der Browser-Abbruch während der
+        /// Lichess-Auflösung (Codereview A4-008).</summary>
+        public bool BlockList;
+        public readonly TaskCompletionSource ListEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public void ReleaseAnalyse() => _release.TrySetResult();
 
@@ -127,6 +135,11 @@ public class EngineControllerTests : IDisposable
             if (request.Method == HttpMethod.Get)
             {
                 ListCalls++;
+                if (BlockList)
+                {
+                    ListEntered.TrySetResult();
+                    await Task.Delay(Timeout.Infinite, ct);
+                }
                 CapturedAuthHeader = request.Headers.Authorization?.ToString();
                 return new HttpResponseMessage(ListStatus)
                 {
@@ -503,6 +516,36 @@ public class EngineControllerTests : IDisposable
             Assert.IsType<OkObjectResult>(await _controller.ListExternalEngines(CancellationToken.None)).Value);
         Assert.True(dto.LichessUnreachable);
         Assert.Single(dto.Engines);
+    }
+
+    /// <summary>Codereview A4-008: bricht der Browser ab, während Lichess die Engine-Liste noch nicht geliefert hat
+    /// (kalter Secret-Cache, schnelles Durchblättern), ist das kein Lichess-Ausfall — leere Antwort, keine Warning,
+    /// kein 502. Vorher nahm nur der Broker-Aufruf in Analyse den Abbruch heraus.</summary>
+    [Theory]
+    [InlineData("list")]
+    [InlineData("background")]
+    [InlineData("analyse")]
+    public async Task LichessCall_BrowserAborts_IsNo502_AndNoWarning(string endpoint)
+    {
+        await CreateUserAsync();
+        await _controller.SaveCredentials(new SaveLichessTokenRequest { Token = "lip_tok" });
+        var log = new CapturingLogger<EngineController>();
+        var controller = CreateController(_brokerOptions, _hub, log);
+        controller.ControllerContext = _controller.ControllerContext;
+        _handler.BlockList = true;
+        using var abort = new CancellationTokenSource();
+
+        var call = endpoint switch
+        {
+            "list" => controller.ListExternalEngines(abort.Token),
+            "background" => controller.SetBackgroundEngine(new SetBackgroundEngineRequest { EngineIds = ["eei_abc"] }, abort.Token),
+            _ => controller.Analyse("eei_abc", ValidRequest(), abort.Token),
+        };
+        await _handler.ListEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        abort.Cancel();
+
+        Assert.IsType<EmptyResult>(await call);
+        Assert.DoesNotContain(log.Events, e => e.Level >= LogLevel.Warning);
     }
 
     [Fact]

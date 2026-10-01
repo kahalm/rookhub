@@ -143,16 +143,10 @@ public class EngineController : BaseApiController
     public async Task<IActionResult> ListExternalEngines(CancellationToken ct)
     {
         var userId = GetUserId();
-        EngineListing listing;
-        try
-        {
-            listing = await _registry.ListAsync(userId, ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            _logger.LogWarning(ex, "Lichess-Engine-Liste fehlgeschlagen (User {UserId})", userId);
-            return StatusCode(502, new { message = "Lichess unreachable" });
-        }
+        EngineListing listing = null!;
+        if (await TryUpstreamAsync(async () => listing = await _registry.ListAsync(userId, ct),
+                ex => _logger.LogWarning(ex, "Lichess-Engine-Liste fehlgeschlagen (User {UserId})", userId), ct) is { } listFailed)
+            return listFailed;
         if (listing.LichessUnreachable)
             _logger.LogWarning("Lichess-Engine-Liste fehlgeschlagen (User {UserId}) — nur eigene Engines", userId);
 
@@ -214,19 +208,19 @@ public class EngineController : BaseApiController
 
         if (ids.Count > 0)
         {
-            try
-            {
-                // JEDE pruefen: eine nicht registrierte Engine in der Liste hiesse, dass ein Teil der
-                // Auftraege still in einer Warteschlange landet, die niemand abarbeitet.
-                foreach (var id in ids)
-                    if ((await _registry.ResolveAsync(userId, id, ct)).Engine is null)
-                        return NotFound(new { message = "Engine not found" });
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engines (User {UserId})", userId);
-                return StatusCode(502, new { message = "Lichess unreachable" });
-            }
+            // JEDE pruefen: eine nicht registrierte Engine in der Liste hiesse, dass ein Teil der
+            // Auftraege still in einer Warteschlange landet, die niemand abarbeitet.
+            var missing = false;
+            if (await TryUpstreamAsync(async () =>
+                    {
+                        foreach (var id in ids)
+                            if ((await _registry.ResolveAsync(userId, id, ct)).Engine is null) { missing = true; return; }
+                    },
+                    ex => _logger.LogWarning(ex, "Lichess nicht erreichbar beim Setzen der Hintergrund-Engines (User {UserId})", userId),
+                    ct) is { } resolveFailed)
+                return resolveFailed;
+            if (missing)
+                return NotFound(new { message = "Engine not found" });
         }
 
         if (cred is null)
@@ -290,16 +284,10 @@ public class EngineController : BaseApiController
         if (error is not null)
             return BadRequest(new { message = error });
 
-        EngineLookup lookup;
-        try
-        {
-            lookup = await _registry.ResolveAsync(userId, id, ct);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            _logger.LogWarning(ex, "External-Engine-Auflösung fehlgeschlagen (User {UserId})", userId);
-            return StatusCode(502, new { message = "Lichess unreachable" });
-        }
+        EngineLookup lookup = null!;
+        if (await TryUpstreamAsync(async () => lookup = await _registry.ResolveAsync(userId, id, ct),
+                ex => _logger.LogWarning(ex, "External-Engine-Auflösung fehlgeschlagen (User {UserId})", userId), ct) is { } lookupFailed)
+            return lookupFailed;
         if (lookup.Failure == EngineLookupFailure.NoToken)
             return BadRequest(new { message = "No Lichess token configured" });
         if (lookup.Engine is not { } engine)
@@ -328,23 +316,11 @@ public class EngineController : BaseApiController
 
         try
         {
-            EngineAnalysisSession upstream;
-            try
-            {
-                upstream = await _broker.AnalyseAsync(engine, work, streamCt);
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Der Browser hat abgebrochen, bevor der Broker antwortete — das ist der NORMALE
-                // Weg bei jedem Stellungswechsel und kein Fehler. Ohne diesen Zweig landete er im
-                // catch darunter und erschien als 502 „Broker nicht erreichbar" im Log.
-                return new EmptyResult();
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                _logger.LogWarning(ex, "External-Engine-Analyse nicht erreichbar (Engine {EngineId})", id);
-                return StatusCode(502, new { message = "Engine broker unreachable" });
-            }
+            EngineAnalysisSession upstream = null!;
+            if (await TryUpstreamAsync(async () => upstream = await _broker.AnalyseAsync(engine, work, streamCt),
+                    ex => _logger.LogWarning(ex, "External-Engine-Analyse nicht erreichbar (Engine {EngineId})", id), ct,
+                    "Engine broker unreachable") is { } analyseFailed)
+                return analyseFailed;
 
             await using (upstream)
             {
@@ -388,6 +364,32 @@ public class EngineController : BaseApiController
             _activity.End(userId, engine.Id);
         }
         return new EmptyResult();
+    }
+
+    /// <summary>
+    /// EINE Fehlerregel für die Aufrufe an Lichess bzw. den Broker (Codereview A4-008 — vorher vier catch-Blöcke,
+    /// nur einer nahm den Browser-Abbruch heraus). Bricht der Browser ab (<paramref name="ct"/> =
+    /// <c>RequestAborted</c>), ist das der NORMALE Weg bei jedem Stellungswechsel und kein Fehler: leere Antwort,
+    /// kein Log. Sonst wird ein <see cref="HttpRequestException"/>/<see cref="TaskCanceledException"/> (Timeout)
+    /// mit dem Log des Aufrufers zu 502. <c>null</c> = der Aufruf ging durch.
+    /// </summary>
+    private async Task<IActionResult?> TryUpstreamAsync(Func<Task> call, Action<Exception> logFailure,
+        CancellationToken ct, string failureMessage = "Lichess unreachable")
+    {
+        try
+        {
+            await call();
+            return null;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            logFailure(ex);
+            return StatusCode(502, new { message = failureMessage });
+        }
     }
 
     /// <summary>Baut das Work-Objekt (oneOf depth/movetime/nodes + gemeinsame Felder; <c>variant</c> fest
