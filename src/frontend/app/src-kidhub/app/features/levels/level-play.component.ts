@@ -7,7 +7,7 @@ import { KidsProgressStore } from '../../core/kids-progress.store';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { themeIcon, themeNameKey, themeTaskKey } from '../../core/kids-themes';
 import { KidsPuzzleComponent } from '../../shared/kids-puzzle.component';
-import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
@@ -72,12 +72,11 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <p class="info">{{ 'kids.loading' | translate }}</p>
     }
   `,
-  styles: [`
+  styles: [KID_BACK, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
-    .back { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .info { text-align: center; font-size: 1.2rem; }
     .dots { list-style: none; display: flex; gap: 8px; padding: 0; margin: 0 0 0 auto; }
     .dots li { width: 18px; height: 18px; border-radius: 50%; background: var(--kid-card); box-shadow: inset 0 0 0 2px var(--kid-shadow); }

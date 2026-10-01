@@ -9,7 +9,7 @@ import { KidsEndlessStore } from '../../core/kids-endless.store';
 import { isAdvanceKey } from '../../core/kids-keys';
 import { KidsTask, splitMoves } from '../../core/kids-solver';
 import { KidsPuzzleComponent, WRONG_HOLD_MS } from '../../shared/kids-puzzle.component';
-import { KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
+import { KID_BACK, KID_SHORT, KID_STACKED } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /**
@@ -63,12 +63,11 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       <p class="info">{{ 'kids.loading' | translate }}</p>
     }
   `,
-  styles: [`
+  styles: [KID_BACK, `
     :host { display: block; max-width: 1320px; margin: 0 auto; padding: 8px 16px 24px; }
     .head { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 auto 12px;
             max-width: var(--kid-row, 1068px); }
     .head h1 { margin: 0; font-size: 1.5rem; color: var(--kid-title); }
-    .back { font-size: 1.1rem; font-weight: 800; text-decoration: none; color: inherit; }
     .hearts { margin-left: auto; font-size: 1.5rem; letter-spacing: 2px; }
     .hearts .lost { opacity: .45; }
     .score { font-size: 1.3rem; font-weight: 800; color: var(--kid-title); }

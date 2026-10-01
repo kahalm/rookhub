@@ -40,6 +40,8 @@ interface Layout {
   headItems: { name: string; box: Box }[];
   /** Ein Fortschrittspunkt der Stufe (falls vorhanden) — gequetscht wird er zum Oval. */
   dot: Box | null;
+  /** Trifft ein Tipp 4 px ueber bzw. unter dem Rueckweg-Knopf noch den Knopf? (Tippflaeche groesser als die Pille) */
+  backReach: { above: boolean; below: boolean };
 }
 
 /**
@@ -65,10 +67,14 @@ function layoutAt(page: Page, w: number, h: number): Layout {
     const box = (selector: string): Box => rect(doc.querySelector(selector)!);
     const head = doc.querySelector('.head')!;
     const dot = doc.querySelector('.dots li');
+    const back = doc.querySelector('.head .back')!;
+    const b = rect(back);
+    const hits = (y: number) => doc.elementFromPoint(b.left + b.width / 2, y)?.closest('.back') === back;
     return {
       board: box('.board'), task: box('.task-slot'), head: rect(head),
       headItems: Array.from(head.children).map(el => ({ name: el.className || el.tagName.toLowerCase(), box: rect(el) })),
       dot: dot ? rect(dot) : null,
+      backReach: { above: hits(b.top - 4), below: hits(b.bottom + 4) },
     };
   } finally {
     frame.remove();
@@ -187,6 +193,12 @@ describe('KidHub: Aufgabenseite je Fenstergroesse', () => {
     }
     const title = l.headItems.find(i => i.name === 'h1');
     expect(title?.box.width ?? 0).withContext(`${label}: vom Titel bleibt etwas zu lesen`).toBeGreaterThanOrEqual(90);
+    // Die Pille ist hier flacher (die Zeile darf nicht hoeher werden) — getippt wird sie trotzdem auf 44 px
+    // (Codereview 2026-09-29, F7-012).
+    const back = l.headItems.find(i => i.name.split(' ').includes('back'));
+    expect(back?.box.height ?? 0).withContext(`${label}: Rueckweg-Pille`).toBeGreaterThanOrEqual(34);
+    expect(l.backReach).withContext(`${label}: Tippflaeche des Rueckwegs ober-/unterhalb der Pille`)
+      .toEqual({ above: true, below: true });
     if (l.dot) expect(l.dot.width).withContext(`${label}: Punkt rund statt gequetscht`).toBeGreaterThanOrEqual(l.dot.height - 0.5);
   }
 

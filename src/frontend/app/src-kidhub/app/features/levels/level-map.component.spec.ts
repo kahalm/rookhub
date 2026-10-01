@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { LevelMapComponent } from './level-map.component';
+import { LevelMapComponent, NUDGE_MS } from './level-map.component';
 import { KidsApiService } from '../../core/kids-api.service';
 
 describe('LevelMapComponent', () => {
@@ -39,4 +39,27 @@ describe('LevelMapComponent', () => {
     expect(el.querySelector('kid-error')).toBeNull();
     expect(el.querySelectorAll('.grid li').length).toBe(2);
   });
+
+  /** Codereview 2026-09-29, F7-012: gesperrte Stufen waren ein span ohne Handler — ein Tipp bewirkte nichts, der
+   *  Hinweis „Schaff zuerst die Stufe davor!" erschien nur beim Direktaufruf der Adresse. */
+  it('Tipp auf eine gesperrte Stufe: sie wackelt und der Hinweis erscheint, kurz darauf ist er wieder weg', fakeAsync(() => {
+    api.levels.and.returnValue(of([{ level: 1, theme: 'mate1', puzzleCount: 10 }, { level: 2, theme: 'promote', puzzleCount: 10 }]));
+    const f = TestBed.createComponent(LevelMapComponent);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    const locked = el.querySelector<HTMLButtonElement>('button.level.locked');
+    expect(locked).withContext('gesperrte Stufe als Knopf').not.toBeNull();
+    expect(locked!.getAttribute('aria-disabled')).toBe('true');
+    expect(el.querySelector('[role="status"]')?.textContent?.trim()).toBe('');
+
+    locked!.click();
+    f.detectChanges();
+    expect(locked!.classList).toContain('nudge');
+    expect(el.querySelector('[role="status"] .toast')?.textContent).toContain('kids.levels.lockedHint');
+
+    tick(NUDGE_MS);
+    f.detectChanges();
+    expect(locked!.classList).not.toContain('nudge');
+    expect(el.querySelector('.toast')).toBeNull();
+  }));
 });

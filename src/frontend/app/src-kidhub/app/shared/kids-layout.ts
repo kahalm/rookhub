@@ -22,3 +22,24 @@ export const KID_STACKED = '(width < 600px), (max-aspect-ratio: 1/1), (width <= 
  * und kuerzen einen langen Titel, statt ihn umzubrechen.
  */
 export const KID_SHORT = '(width >= 600px) and (height <= 500px)';
+
+/**
+ * Rueckweg-Knopf („← Start", „← Stufen", „← Kurse") aller Unterseiten — EINE Regel statt fuenf Kopien. Vorher ein
+ * Textlink von ~21 px Hoehe ohne Polsterung, am Handy schwer zu treffen; jetzt eine Pille mit mindestens 44 px
+ * Tipphoehe (Codereview 2026-09-29, F7-012). Handy quer muss die Titelzeile einzeilig und hoechstens 36 px hoch
+ * bleiben (damit rechnet das Brett, siehe {@link KID_SHORT}): dort ist die Pille flacher, und eine unsichtbare Flaeche
+ * ober- und unterhalb haelt die Tipphoehe bei 44 px, ohne die Zeile hoeher zu machen.
+ */
+export const KID_BACK = `
+  .back {
+    position: relative; display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px;
+    padding: 6px 16px; border-radius: 999px; background: var(--kid-card); box-shadow: 0 3px 0 var(--kid-shadow);
+    font-size: 1.1rem; font-weight: 800; line-height: 1.2; text-decoration: none; color: inherit; white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .back:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kid-shadow); }
+  @media ${KID_SHORT} {
+    .back { min-height: 34px; padding: 3px 14px; }
+    .back::after { content: ''; position: absolute; left: 0; right: 0; top: -5px; bottom: -5px; }
+  }
+`;

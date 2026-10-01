@@ -1,10 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
 import { themeIcon, themeNameKey } from '../../core/kids-themes';
+import { KID_BACK } from '../../shared/kids-layout';
 import { KidsErrorComponent } from '../../shared/kids-error.component';
+
+/** So lange wackelt eine gesperrte Stufe nach dem Tippen und steht der Hinweis da. */
+export const NUDGE_MS = 2500;
 
 /**
  * Alle Stufen als grosse Knoepfe mit Thema und Sternen. Gesperrt ist, was hinter der ersten noch
@@ -44,22 +48,29 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
                 </span>
               </a>
             } @else {
-              <span class="level locked" [attr.aria-label]="'kids.levels.locked' | translate">
+              <!-- Ein Knopf, kein stummes span: ein Tipp wackelt die Kachel und sagt, warum es nicht geht. -->
+              <button type="button" class="level locked" [class.nudge]="nudged() === l.level" aria-disabled="true"
+                      [attr.aria-label]="('kids.levels.level' | translate: { level: l.level }) + ' – ' + ('kids.levels.locked' | translate)"
+                      (click)="nudge(l.level)">
                 <span class="num">{{ l.level }}</span>
                 <span class="icon" aria-hidden="true">🔒</span>
                 <span class="name">{{ l.nameKey | translate }}</span>
-              </span>
+              </button>
             }
           </li>
         }
       </ol>
     }
+    <!-- Immer da (leer), damit Vorleseprogramme den Hinweis beim Erscheinen ansagen. -->
+    <div class="toast-slot" role="status">
+      @if (nudged() !== null) { <p class="toast">🔒 {{ 'kids.levels.lockedHint' | translate }}</p> }
+    </div>
   `,
-  styles: [`
+  styles: [KID_BACK, `
     :host { display: block; max-width: 980px; margin: 0 auto; padding: 16px; }
     .head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .head h1 { flex: 1; margin: 0; font-size: 1.9rem; color: var(--kid-title); text-align: center; }
-    .back, .stars { font-size: 1.15rem; font-weight: 800; text-decoration: none; color: inherit; white-space: nowrap; }
+    .stars { font-size: 1.15rem; font-weight: 800; text-decoration: none; color: inherit; white-space: nowrap; }
     .info { text-align: center; font-size: 1.2rem; }
     .grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px;
             grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
@@ -72,12 +83,20 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
     .level.done { background: var(--kid-good-bg); }
     .level.current { outline: 4px solid var(--kid-green-strong); animation: pulse 1.6s ease-in-out infinite; }
     .level.locked { opacity: .55; filter: grayscale(.7); }
+    button.level { width: 100%; font: inherit; color: inherit; border: 0; cursor: pointer; }
+    .level.locked.nudge { animation: wiggle .45s ease-in-out; }
+    .toast-slot { position: fixed; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center;
+                  padding: 0 16px; pointer-events: none; z-index: 10; }
+    .toast { margin: 0; max-width: 520px; padding: 14px 20px; border-radius: 20px; background: var(--kid-info-bg);
+             box-shadow: 0 5px 0 var(--kid-shadow); font-size: 1.15rem; font-weight: 800; text-align: center; }
     .num { position: absolute; top: 8px; left: 12px; font-weight: 800; font-size: 1.05rem; }
     .icon { font-size: 2.6rem; line-height: 1.2; }
     .name { font-weight: 700; font-size: .98rem; text-align: center; }
     .row { font-size: 1.35rem; letter-spacing: 2px; color: #c9c9c9; }
     .row .on { color: #ffb300; }
     @keyframes pulse { 50% { transform: scale(1.04); } }
+    @keyframes wiggle { 25% { transform: translateX(-6px) rotate(-3deg); } 75% { transform: translateX(6px) rotate(3deg); } }
+    @media (prefers-reduced-motion: reduce) { .level.locked.nudge { animation: none; } }
   `],
 })
 export class LevelMapComponent {
@@ -87,6 +106,9 @@ export class LevelMapComponent {
   readonly levels = signal<KidsLevel[]>([]);
   readonly loading = signal(true);
   readonly failed = signal(false);
+  /** Die gesperrte Stufe, auf die gerade getippt wurde — sie wackelt, unten steht der Hinweis. */
+  readonly nudged = signal<number | null>(null);
+  private nudgeTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly current = computed(() => this.progress.currentLevel(this.levels().map(l => l.level)));
   readonly tiles = computed(() => this.levels().map(l => ({
@@ -98,7 +120,15 @@ export class LevelMapComponent {
   })));
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.nudgeTimer));
     this.load();
+  }
+
+  /** Tipp auf eine gesperrte Stufe: kurz wackeln und den Hinweis zeigen, statt nichts zu tun. */
+  nudge(level: number): void {
+    clearTimeout(this.nudgeTimer);
+    this.nudged.set(level);
+    this.nudgeTimer = setTimeout(() => this.nudged.set(null), NUDGE_MS);
   }
 
   /** Stufen holen — beim Oeffnen und ueber „Nochmal" der Fehlerkachel. */
