@@ -636,3 +636,66 @@ describe('AuthService forgotPassword (UX-031)', () => {
     again.flush({});
   });
 });
+
+describe('AuthService: gesperrter Browser-Speicher (F1-013)', () => {
+  // Chrome mit „Cookies blockieren": jeder Zugriff auf den localStorage wirft. Die Sitzung gilt dann nur im
+  // Tab (persistSession fängt das ab) — aber Anmelden und Abmelden dürfen daran nicht reißen.
+  let svc: AuthService;
+  let http: HttpTestingController;
+  let router: Router;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    svc = TestBed.inject(AuthService);
+    http = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
+  });
+
+  afterEach(() => localStorage.clear());
+
+  function blockStorage(): void {
+    const blocked = () => { const e = new Error('SecurityError'); e.name = 'SecurityError'; throw e; };
+    spyOn(Storage.prototype, 'getItem').and.callFake(blocked);
+    spyOn(Storage.prototype, 'setItem').and.callFake(blocked);
+    spyOn(Storage.prototype, 'removeItem').and.callFake(blocked);
+  }
+
+  it('die Anmeldung gelingt — der Login-Stream reißt nicht am Nachlauf (anonyme Sitzung übernehmen)', () => {
+    blockStorage();
+    const next = jasmine.createSpy('next');
+    const error = jasmine.createSpy('error');
+
+    svc.login('u', 'p').subscribe({ next, error });
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+
+    expect(error).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+    expect(svc.isLoggedIn).toBeTrue();
+    expect(svc.storageFull).toBeTrue();
+  });
+
+  it('Abmelden wirkt: Sitzung weg, Ende der geteilten Anmeldung, zurück zur Anmeldung', () => {
+    svc.adoptSession({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+    blockStorage();
+    const nav = spyOn(router, 'navigate').and.resolveTo(true);
+
+    expect(() => svc.logout()).not.toThrow();
+
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(nav).toHaveBeenCalledWith(['/login']);
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session/end' }).flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('ohne schreibbare Admin-Sicherung beginnt keine Impersonation (sonst gäbe es keinen Rücksprung)', () => {
+    svc.adoptSession({ token: jwt(3600), username: 'admin', userId: 1, isAdmin: true });
+    blockStorage();
+
+    expect(svc.impersonate({ token: jwt(3600), username: 'opfer', userId: 2, isAdmin: false })).toBeFalse();
+
+    expect(svc.currentUser?.username).toBe('admin');
+    expect(svc.isImpersonating).toBeFalse();
+  });
+});

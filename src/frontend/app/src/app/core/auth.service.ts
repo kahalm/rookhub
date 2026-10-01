@@ -6,6 +6,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { OfflineService } from './offline.service';
 import { SnackbarService } from './snackbar.service';
 import { ClientLogService } from './client-log.service';
+import { localStore, readRaw, removeKey, writeJson } from './local-json-store';
 
 export interface AuthResponse {
   token: string;
@@ -190,22 +191,26 @@ export class AuthService {
   /**
    * „Als Nutzer einsteigen": sichert die aktuelle (Admin-)Session und übernimmt das
    * vom Server gelieferte Impersonation-Token. Rücksprung via {@link stopImpersonation}.
+   *
+   * @returns `false`, wenn die Admin-Sicherung nicht geschrieben werden konnte (Speicher voll/gesperrt) —
+   *          dann bleibt alles beim Alten: ohne Sicherung gäbe es keinen Rücksprung, der Ausstieg meldete ab.
    */
-  impersonate(target: AuthResponse): void {
+  impersonate(target: AuthResponse): boolean {
     const admin = this.currentUserSubject.value;
     // Nur sichern, wenn wir nicht ohnehin schon in einer Impersonation stecken.
     if (admin && !admin.impersonating) {
-      localStorage.setItem(this.adminBackupKey, JSON.stringify(admin));
+      if (!writeJson(localStore(), this.adminBackupKey, admin)) return false;
     }
     const user: AuthResponse = { ...target, impersonating: true };
     this.persistSession(user);
     this.currentUserSubject.next(user);
     this.loadPreferences();
+    return true;
   }
 
   /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren. */
   stopImpersonation(): void {
-    const stored = localStorage.getItem(this.adminBackupKey);
+    const stored = readRaw(localStore(), this.adminBackupKey);
     // Ohne Sicherung gibt es keinen Rücksprung — dann nicht im fremden Konto hängenbleiben (der Streifen
     // steht, sein Knopf täte sonst nichts), sondern abmelden wie bei einer beschädigten Sicherung.
     if (!stored) { this.logout(); return; }
@@ -215,7 +220,7 @@ export class AuthService {
     } catch {
       // Beschädigtes Admin-Backup: nicht in einem halben Zustand hängenbleiben —
       // Reste verwerfen und sauber ausloggen.
-      localStorage.removeItem(this.adminBackupKey);
+      removeKey(localStore(), this.adminBackupKey);
       this.logout();
       return;
     }
@@ -231,7 +236,7 @@ export class AuthService {
       this.loadPreferences();
       return;
     }
-    localStorage.removeItem(this.adminBackupKey);
+    removeKey(localStore(), this.adminBackupKey);
     this.currentUserSubject.next(admin);
     this.loadPreferences();
   }
@@ -403,7 +408,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('rookhub_user');
+    removeKey(localStore(), 'rookhub_user');
     this.clearLocalTraces();
     // Die GETEILTE Anmeldung mit beenden: sie liegt als Cookie auf der Elterndomaene und ist der
     // einzige Teil dieser Sitzung, den localStorage.removeItem nicht erreicht. Bliebe sie stehen,
@@ -458,7 +463,7 @@ export class AuthService {
    *  Wechsel auf die geteilte Anmeldung eines anderen Kontos ({@link switchToSharedSession}), beim
    *  Ablauf ({@link endExpiredSession}) und beim Kontowechsel ueber die Anmeldemaske ({@link storeUser}). */
   private clearLocalTraces(): void {
-    localStorage.removeItem('rookhub_admin_user');
+    removeKey(localStore(), 'rookhub_admin_user');
     // Geräte-lokale Offline-Inhalte (heruntergeladene Repertoires/Kurse, Kursliste, Tagespuzzle,
     // Pools) beim Abmelden löschen — sonst blieben sie für den NÄCHSTEN Nutzer desselben Geräts
     // les-/sichtbar. Die Offline-Schreib-Queue bleibt bewusst bestehen (sie ist user-gestempelt und
@@ -517,10 +522,10 @@ export class AuthService {
   private claimAnonymousPuzzleSession(): void {
     // Punktepartie: eigene Kennung (GuessService.AnonKey), unabhängig von der Puzzle-Sitzung — ein Besucher
     // kann nur geraten und nie ein Puzzle gelöst haben (Codereview N11-003).
-    if (localStorage.getItem('rookhub_guess_session'))
+    if (readRaw(localStore(), 'rookhub_guess_session'))
       import('../features/guess/guess.service').then(m =>
         this.withService(() => this.injector.get(m.GuessService), guess => guess.claimAnonymous().subscribe()));
-    const sessionId = localStorage.getItem('rookhub_puzzle_session');
+    const sessionId = readRaw(localStore(), 'rookhub_puzzle_session');
     if (!sessionId) return;
     // Lazy import to avoid circular dependency
     import('../features/puzzles/puzzle.service').then(m =>

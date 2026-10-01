@@ -138,7 +138,11 @@ export class AdminComponent implements OnInit {
     this.adminService.impersonate(u.id).subscribe({
       next: res => {
         this.impersonatingId = null;
-        this.auth.impersonate(res);
+        // Admin-Sicherung nicht schreibbar (Speicher voll/gesperrt): nicht einsteigen — ohne sie gäbe es keinen Rücksprung.
+        if (!this.auth.impersonate(res)) {
+          this.snackbar.info(this.translate.instant('admin.users.impersonateFailed'));
+          return;
+        }
         this.menu.refresh();
         this.snackbar.info(this.translate.instant('admin.users.impersonateStarted', { name: u.username }));
         this.router.navigate(['/dashboard']);
