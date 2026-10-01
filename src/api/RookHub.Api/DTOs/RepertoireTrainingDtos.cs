@@ -17,18 +17,44 @@ public record LineStateDto(
     bool InPool,
     bool Paused);
 
+/// <summary>
+/// Deckel für die Linien-Schlüssel-Listen des Repertoire-Trainers (promote/pause/make-due): höchstens
+/// <see cref="MaxKeys"/> Einträge, jeder höchstens <see cref="MaxKeyLength"/> Zeichen (= Spalte
+/// <c>RepertoireCardState.CardKey</c>). Ohne Deckel baute ein 15-MB-Rumpf ein SQL-IN mit
+/// Hunderttausenden Werten und (promote/pause) ebenso viele INSERTs; ein überlanger Schlüssel endete als
+/// 500 an der Spaltenlänge. Leere/Whitespace-Einträge bleiben erlaubt — der Dienst filtert sie wie bisher.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property)]
+public sealed class LineKeyListAttribute : ValidationAttribute
+{
+    /// <summary>Wie <c>RepertoireLineSource.MaxGamesPerUser</c>: mehr Linien hat kein reales Repertoire —
+    /// „ganzer Kurs" schickt alle Schlüssel eines Repertoires in einem Aufruf.</summary>
+    public const int MaxKeys = 20_000;
+    public const int MaxKeyLength = 120;
+
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
+    {
+        if (value is not IReadOnlyCollection<string?> keys) return ValidationResult.Success;   // null meldet [Required]
+        if (keys.Count > MaxKeys)
+            return new ValidationResult($"At most {MaxKeys} line keys per request.");
+        if (keys.Any(k => k is { Length: > MaxKeyLength }))
+            return new ValidationResult($"A line key must not exceed {MaxKeyLength} characters.");
+        return ValidationResult.Success;
+    }
+}
+
 /// <summary>Nimmt einen Satz Linien in den Übungspool auf (Learn/manuell) — sofort fällig. Für
 /// „ganzer Kurs"/„Kapitel" schickt das Frontend die jeweiligen Linien-Schlüssel.</summary>
 public class PromoteLinesRequest
 {
-    [Required]
+    [Required, LineKeyList]
     public List<string> LineKeys { get; set; } = new();
 }
 
 /// <summary>Pausiert/aktiviert einen Satz Linien (Kapitel = alle seine Linien-Schlüssel).</summary>
 public class SetPausedRequest
 {
-    [Required]
+    [Required, LineKeyList]
     public List<string> LineKeys { get; set; } = new();
     public bool Paused { get; set; }
 }
