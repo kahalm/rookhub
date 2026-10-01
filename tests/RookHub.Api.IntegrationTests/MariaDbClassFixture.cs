@@ -62,8 +62,9 @@ public abstract class MariaDbClassFixture : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
-        Factory?.Dispose();
-        if (Schema is not null) await Schema.DisposeAsync();
+        // Wirft das Abbauen der Anwendung, bleibt das Schema sonst liegen (Codereview N11-005).
+        try { Factory?.Dispose(); }
+        finally { if (Schema is not null) await Schema.DisposeAsync(); }
     }
 
     /// <summary>

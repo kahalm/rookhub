@@ -10,6 +10,11 @@ namespace RookHub.Api.IntegrationTests;
 /// Verbindungszeichenfolge ueber die Umgebungsvariable ROOKHUB_TEST_MYSQL, z. B.
 ///   server=127.0.0.1;port=3307;user=root;password=test
 /// OHNE database= — jeder Test legt sich sein eigenes Schema an und raeumt es wieder weg.
+///
+/// Gedacht ist ein WEGWERF-Container. Ein Server, der ein Schema der Anwendung fuehrt (Dev/Prod),
+/// wird beim ersten Schema abgelehnt (<see cref="MariaDbSchema.EnsureThrowawayServerAsync"/>), ausser
+/// <c>ROOKHUB_TEST_MYSQL_ALLOW_SHARED=1</c>; verwaiste <c>rh_it_*</c>-Schemata aelter als sechs Stunden
+/// raeumt der Lauf selbst weg.
 /// </summary>
 public sealed class MySqlFactAttribute : FactAttribute
 {
