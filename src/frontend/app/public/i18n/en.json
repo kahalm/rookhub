@@ -1184,6 +1184,7 @@
       "loadSubscriptionFailed": "Failed to load subscription status",
       "reloadTournamentFailed": "Failed to reload tournament",
       "refreshStartFailed": "Failed to start refresh",
+      "refreshAlreadyRunning": "This tournament is already being refreshed. Please reload in a minute.",
       "dataRefreshed": "Data refreshed!",
       "refreshFailed": "Refresh failed",
       "loadPlayersFailed": "Failed to load players",

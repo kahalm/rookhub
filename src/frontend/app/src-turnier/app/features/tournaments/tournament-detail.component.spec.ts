@@ -134,6 +134,69 @@ describe('TournamentDetailComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.group-switch')).toBeNull();
   });
 
+  // ----- Aktualisieren, waehrend schon ein Auftrag laeuft (I2-009) ----------
+
+  /**
+   * Runden-Monitor, Nachtabruf oder ein anderer Nutzer haben den Crawl schon angestossen — der
+   * Crawler antwortet 409. Das hiess bisher „Aktualisierung konnte nicht gestartet werden",
+   * obwohl die frischen Daten eine Minute spaeter da waren.
+   */
+  it('meldet „läuft schon" statt eines Fehlschlags, wenn der Crawl bereits läuft (409)', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    const c = fixture.componentInstance;
+
+    c.refresh();
+    expect(c.refreshing).toBeTrue();
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' })
+      .flush({ error: "A crawl job for '4711' is already running." }, { status: 409, statusText: 'Conflict' });
+
+    expect(c.refreshing).toBeFalse();
+    expect(info).toHaveBeenCalledWith('tournaments.detail.refreshAlreadyRunning');
+    expect(info).not.toHaveBeenCalledWith('tournaments.detail.refreshStartFailed');
+    http.verify();
+  });
+
+  /** Nennt der Crawler die Nummer des laufenden Auftrags, wird er verfolgt wie ein eigener. */
+  it('verfolgt bei 409 mit Auftragsnummer den laufenden Auftrag', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    const c = fixture.componentInstance;
+    jasmine.clock().install();
+    try {
+      c.refresh();
+      http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' })
+        .flush({ message: 'already running', jobId: 42 }, { status: 409, statusText: 'Conflict' });
+      expect(c.refreshing).toBeTrue();
+      expect(info).not.toHaveBeenCalled();
+
+      jasmine.clock().tick(2000);
+      http.expectOne('/api/tournaments/crawl/42').flush({ id: 42, status: 'Running' });
+      expect(c.refreshing).toBeTrue();
+    } finally {
+      c.ngOnDestroy();
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
+  it('meldet andere Fehler beim Starten weiter als Fehlschlag', async () => {
+    const fixture = await render({ active: false, activeUntil: null });
+    const http = TestBed.inject(HttpTestingController);
+    const info = spyOn(TestBed.inject(SnackbarService), 'info');
+    const c = fixture.componentInstance;
+
+    c.refresh();
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' })
+      .flush({ error: 'Crawl queue is full. Try again later.' }, { status: 429, statusText: 'Too Many Requests' });
+
+    expect(c.refreshing).toBeFalse();
+    expect(info).toHaveBeenCalledWith('tournaments.detail.refreshStartFailed');
+    http.verify();
+  });
+
   // ----- Abo: eine Kennung je Turnier (A5-001) ------------------------------
 
   const sub = (id: number, crawlerTournamentId: string): Subscription => ({

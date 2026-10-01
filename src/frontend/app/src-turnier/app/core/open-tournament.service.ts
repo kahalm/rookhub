@@ -2,7 +2,8 @@ import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap, takeWhile, timer } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { catchError, map, of, switchMap, takeWhile, timer } from 'rxjs';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { TournamentListService } from './tournament-list.service';
 
@@ -76,9 +77,13 @@ export class OpenTournamentService {
     this.snackbar.info(this.translate.instant('turnier.history.fetching'));
 
     this.tournaments.startCrawl(chessResultsId).pipe(
-      catchError(() => of(null)),
-    ).subscribe(job => {
-      if (!job) {
+      map(job => !!job),
+      // 409 = fuer dieses Turnier laeuft schon ein Holen-Auftrag (ein anderer Nutzer, der
+      // Nachtabruf). Dann eben mitwarten — `pollImport` braucht keine Auftragsnummer. Vorher brach
+      // das Oeffnen mit „konnte nicht geholt werden" ab (Codereview 2026-09-29, I2-009).
+      catchError((err: unknown) => of(err instanceof HttpErrorResponse && err.status === 409)),
+    ).subscribe(queued => {
+      if (!queued) {
         this.opening.set(null);
         this.snackbar.warn(this.translate.instant('turnier.history.fetchFailed'));
         return;

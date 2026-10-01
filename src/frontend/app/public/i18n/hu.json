@@ -946,6 +946,7 @@
       "loadSubscriptionFailed": "Nem sikerült betölteni a feliratkozás állapotát",
       "reloadTournamentFailed": "Nem sikerült újratölteni a versenyt",
       "refreshStartFailed": "Nem sikerült elindítani a frissítést",
+      "refreshAlreadyRunning": "Ez a verseny már frissül. Egy perc múlva töltsd újra.",
       "dataRefreshed": "Adatok frissítve!",
       "refreshFailed": "Sikertelen frissítés",
       "loadPlayersFailed": "Nem sikerült betölteni a játékosokat",

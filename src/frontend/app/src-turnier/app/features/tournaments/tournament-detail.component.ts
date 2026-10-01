@@ -313,7 +313,18 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const crawlId = this.tournament.chessResultsId.replace(/^tnr/i, '');
     this.api.startCrawl(crawlId).subscribe({
       next: (job) => this.pollRefreshJob(job.id),
-      error: () => {
+      error: (err: unknown) => {
+        // 409: fuer dieses Turnier laeuft schon ein Auftrag (Runden-Monitor, Nachtabruf, ein
+        // anderer Nutzer) — kein Fehlschlag, die frischen Daten kommen ohnehin. Nennt der Crawler
+        // die Nummer des laufenden Auftrags, wird er verfolgt wie ein eigener; sonst sagt die
+        // Meldung, was los ist (Codereview 2026-09-29, I2-009).
+        if (err instanceof HttpErrorResponse && err.status === 409) {
+          const jobId = (err.error as { jobId?: unknown } | null)?.jobId;
+          if (typeof jobId === 'number') { this.pollRefreshJob(jobId); return; }
+          this.refreshing = false;
+          this.snackbar.info(this.translate.instant('tournaments.detail.refreshAlreadyRunning'));
+          return;
+        }
         this.refreshing = false;
         this.snackbar.info(this.translate.instant('tournaments.detail.refreshStartFailed'));
       }

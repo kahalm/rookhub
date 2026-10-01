@@ -1184,6 +1184,7 @@
       "loadSubscriptionFailed": "Abo-Status konnte nicht geladen werden",
       "reloadTournamentFailed": "Turnier konnte nicht neu geladen werden",
       "refreshStartFailed": "Aktualisierung konnte nicht gestartet werden",
+      "refreshAlreadyRunning": "Dieses Turnier wird gerade schon aktualisiert. Bitte in einer Minute neu laden.",
       "dataRefreshed": "Daten aktualisiert!",
       "refreshFailed": "Aktualisierung fehlgeschlagen",
       "loadPlayersFailed": "Spieler konnten nicht geladen werden",

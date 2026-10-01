@@ -1184,6 +1184,7 @@
       "loadSubscriptionFailed": "Učitavanje statusa pretplate nije uspjelo",
       "reloadTournamentFailed": "Ponovno učitavanje turnira nije uspjelo",
       "refreshStartFailed": "Pokretanje osvježavanja nije uspjelo",
+      "refreshAlreadyRunning": "Ovaj se turnir već osvježava. Učitaj ponovno za minutu.",
       "dataRefreshed": "Podaci osvježeni!",
       "refreshFailed": "Osvježavanje nije uspjelo",
       "loadPlayersFailed": "Učitavanje igrača nije uspjelo",
