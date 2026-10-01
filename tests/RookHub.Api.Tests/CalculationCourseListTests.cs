@@ -100,6 +100,73 @@ public class CalculationCourseListTests : IDisposable
     }
 
     [Fact]
+    public async Task PinOnWithdrawnCourse_LeavesCourseList()
+    {
+        // Codereview A7-006: ein Pin wird nur beim Anpinnen geprüft. Freigabe zurücknehmen, aus dem
+        // Verteiler austragen oder die Serie privat schalten räumen ihn nicht ab — die Kursliste
+        // listete den Kurs danach über den Pin weiter (Name, Fortschritt), der Klick lief auf 404.
+        var owner = await CreateUserAsync("owner");
+        var pinner = await CreateUserAsync("pinner");
+
+        var shared = await SeedBookAsync(owner.Id, isCalculation: false);
+        var series = await SeedBookAsync(owner.Id, isCalculation: true);
+        var wasPublic = await SeedBookAsync(owner.Id, isCalculation: false);
+        wasPublic.IsPublic = true;
+        series.IsPublic = true;
+        _db.CourseShares.Add(new CourseShare
+        {
+            BookId = shared.Id, OwnerId = owner.Id, RecipientId = pinner.Id, SharedAt = DateTime.UtcNow,
+        });
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = series.Id, UserId = pinner.Id });
+        await _db.SaveChangesAsync();
+        foreach (var b in new[] { shared, series, wasPublic })
+            await _courses.PinCourseAsync(pinner.Id, b.Id, isAdmin: false);
+        Assert.Equal(3, (await _courses.GetCoursesAsync(pinner.Id, isAdmin: false)).Count);
+
+        // Zugang je Buch über den dokumentierten Weg entziehen.
+        await _courses.UnshareCourseAsync(owner.Id, shared.Id, pinner.Id);
+        series.IsPublic = false;
+        wasPublic.IsPublic = false;
+        await _db.SaveChangesAsync();
+        await new CalcEditionService(_db, TestServices.Friends(_db)).RemoveMemberAsync(series.Id, pinner.Id);
+
+        foreach (var b in new[] { shared, series, wasPublic })
+            Assert.False(await _courses.CanAccessAsync(pinner.Id, b.Id, isAdmin: false));
+        Assert.Empty(await _courses.GetCoursesAsync(pinner.Id, isAdmin: false));
+        Assert.False(await _courses.HasAnyAccessAsync(pinner.Id, isAdmin: false));
+    }
+
+    [Fact]
+    public async Task HasAnyAccess_FollowsCourseList_ForSeriesMembersAndPins()
+    {
+        // Codereview A7-006: der Menüeintrag „Kurse" hing an einer eigenen Regel ohne Verteiler und
+        // Pins — ein Konto, das Kurse nur darüber sah, bekam keinen Eintrag, obwohl /courses etwas zeigte.
+        var owner = await CreateUserAsync("owner");
+        var member = await CreateUserAsync("member");
+        var pinner = await CreateUserAsync("pinner");
+        var stranger = await CreateUserAsync("stranger");
+
+        var series = await SeedBookAsync(owner.Id, isCalculation: true);
+        var pub = await SeedBookAsync(owner.Id, isCalculation: false);
+        pub.IsPublic = true;
+        _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = series.Id, UserId = member.Id });
+        await _db.SaveChangesAsync();
+        await _courses.PinCourseAsync(pinner.Id, pub.Id, isAdmin: false);
+
+        foreach (var u in new[] { owner, member, pinner, stranger })
+        {
+            var listed = await _courses.GetCoursesAsync(u.Id, isAdmin: false);
+            Assert.Equal(listed.Count > 0, await _courses.HasAnyAccessAsync(u.Id, isAdmin: false));
+            // Spiegel zu CourseAccess: die Liste zeigt nie einen Kurs, den der Klick verweigert.
+            foreach (var item in listed)
+                Assert.True(await _courses.CanAccessAsync(u.Id, item.BookId, isAdmin: false));
+        }
+        Assert.True(await _courses.HasAnyAccessAsync(member.Id, isAdmin: false));
+        Assert.True(await _courses.HasAnyAccessAsync(pinner.Id, isAdmin: false));
+        Assert.False(await _courses.HasAnyAccessAsync(stranger.Id, isAdmin: false));
+    }
+
+    [Fact]
     public async Task CalculationBook_CountsAllPositions_AndTreesAsDone()
     {
         var user = await CreateUserAsync();

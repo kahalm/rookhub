@@ -336,5 +336,11 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
         Assert.False(needs[ids["cb-alt"]]);      // Re-Fetch (bzw. ohne Chessable-Weg: lokal)
         Assert.False(needs[ids["cb-modern"]]);   // aus dem Linien-Cache
         Assert.False(needs[ids["aktuell"]]);     // nicht veraltet — auch ohne Quelle kein (!)
+
+        // Menüeintrag „Kurse" fragt dieselbe Kurslisten-Abfrage (Codereview A7-006) — hier gegen
+        // MariaDB übersetzt, InMemory merkt eine nicht übersetzbare Unterabfrage nicht.
+        var kurse2 = scope.ServiceProvider.GetRequiredService<CourseService>();
+        Assert.True(await kurse2.HasAnyAccessAsync(uid, isAdmin: false));
+        Assert.False(await kurse2.HasAnyAccessAsync(await UserAsync("ohne-kurse"), isAdmin: false));
     }
 }

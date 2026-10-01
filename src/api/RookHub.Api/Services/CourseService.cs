@@ -60,11 +60,6 @@ public class CourseService
         total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(solved, total) / total);
 
     /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?</summary>
-    /// <summary>Id der System-Gruppe „Everyone" (jeder implizit Mitglied), oder <c>null</c> falls (noch)
-    /// keine existiert. Eine Buch-Freigabe an diese Gruppe gilt für alle Nutzer.</summary>
-    private Task<int?> EveryoneGroupIdAsync() =>
-        _db.Groups.Where(g => g.IsEveryone).Select(g => (int?)g.Id).FirstOrDefaultAsync();
-
     // Regel liegt in CourseAccess (geteilt mit CalculationService), damit es genau EINE Definition gibt.
     public Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin) =>
         CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin);
@@ -316,30 +311,43 @@ public class CourseService
     // „Kurs → Repertoire umwandeln" liegt seit v0.499.4 im CourseRepertoireConversionService —
     // zusammen mit der Gegenrichtung, die vorher im RepertoireController ausgeschrieben stand.
 
+    /// <summary>
+    /// Die Bücher, die in der Kursliste des Users stehen (Admin: alle) — EINE Quelle für
+    /// <see cref="GetCoursesAsync"/> und <see cref="HasAnyAccessAsync"/> (Menüeintrag „Kurse"), damit
+    /// der Menüeintrag genau dann erscheint, wenn die Liste etwas zeigt.
+    ///
+    /// <para>Immer eine TEILMENGE von <see cref="CourseAccess.CanAccessAsync"/>: dieselben Zweige
+    /// (eigen, geteilt, Verteiler, Gruppe inkl. „Everyone"), nur ein öffentlicher Kurs steht bewusst
+    /// NICHT für jeden in der Liste, sondern nur für den, der ihn angepinnt hat. Ein Pin allein öffnet
+    /// dagegen nichts: er wird nur beim Anpinnen geprüft, und Freigabe zurücknehmen, aus dem Verteiler
+    /// austragen oder die Serie privat schalten räumen ihn nicht ab — ohne die Bedingung
+    /// <c>IsPublic</c> listete die Kursliste den Kurs danach weiter (Name, Beschreibung, Fortschritt),
+    /// der Klick lief auf 404 (Codereview A7-006).</para>
+    /// </summary>
+    private IQueryable<Book> ListedCourses(int userId, bool isAdmin)
+    {
+        if (isAdmin) return _db.Books;
+        var everyoneIds = _db.Groups.Where(g => g.IsEveryone).Select(g => g.Id);
+        return _db.Books.Where(b => b.OwnerUserId == userId
+            || _db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
+            // Verteiler der Kalkulations-Serie: genau dieser Pfad TRÄGT das „privat" der Serie
+            // (sobald IsPublic aus ist, sehen nur noch Mitglieder den Kurs). Er fehlte hier —
+            // ein Mitglied fand den Kurs weder unter /courses noch im Dashboard, sondern nur
+            // über den Deep-Link aus der In-App-Ankündigung.
+            || _db.CalcSeriesMembers.Any(m => m.BookId == b.Id && m.UserId == userId)
+            // Selbst angepinnte öffentliche Kurse: anpinnen darf man JEDES zugängliche Buch (auch ein
+            // öffentliches über den Direkt-Link), angezeigt wurden Pins aber nur aus dieser
+            // Liste — der Pin blieb also unsichtbar. Alle anderen Zugänge stehen schon oben.
+            || (b.IsPublic && _db.CoursePins.Any(p => p.BookId == b.Id && p.UserId == userId))
+            || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
+                (everyoneIds.Contains(a.GroupId) ||
+                 _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId))));
+    }
+
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des Users (Admin: alle).</summary>
     public async Task<List<CourseListItemDto>> GetCoursesAsync(int userId, bool isAdmin)
     {
-        IQueryable<Book> booksQuery = _db.Books;
-        if (!isAdmin)
-        {
-            var everyoneId = await EveryoneGroupIdAsync();
-            booksQuery = booksQuery.Where(b => b.OwnerUserId == userId
-                || _db.CourseShares.Any(cs => cs.BookId == b.Id && cs.RecipientId == userId)
-                // Verteiler der Kalkulations-Serie: genau dieser Pfad TRÄGT das „privat" der Serie
-                // (sobald IsPublic aus ist, sehen nur noch Mitglieder den Kurs). Er fehlte hier —
-                // ein Mitglied fand den Kurs weder unter /courses noch im Dashboard, sondern nur
-                // über den Deep-Link aus der In-App-Ankündigung.
-                || _db.CalcSeriesMembers.Any(m => m.BookId == b.Id && m.UserId == userId)
-                // Selbst angepinnte Kurse: anpinnen darf man JEDES zugängliche Buch (auch ein
-                // öffentliches über den Direkt-Link), angezeigt wurden Pins aber nur aus dieser
-                // Liste — der Pin blieb also unsichtbar.
-                || _db.CoursePins.Any(p => p.BookId == b.Id && p.UserId == userId)
-                || _db.BookGroupAccesses.Any(a => a.BookId == b.Id &&
-                    (a.GroupId == everyoneId ||
-                     _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId))));
-        }
-
-        var books = await booksQuery
+        var books = await ListedCourses(userId, isAdmin)
             .OrderBy(b => b.DisplayName)
             .Select(b => new
             {
@@ -545,19 +553,11 @@ public class CourseService
         return BookThemeTags.ParseKeys(book.Themes);
     }
 
-    /// <summary>Hat der User Zugriff auf mindestens einen Kurs? (Basis für die Menü-Sichtbarkeit.)</summary>
-    public async Task<bool> HasAnyAccessAsync(int userId, bool isAdmin)
-    {
-        if (isAdmin)
-            return await _db.Books.AnyAsync();
-        if (await _db.Books.AnyAsync(b => b.OwnerUserId == userId)) return true;
-        if (await _db.CourseShares.AnyAsync(cs => cs.RecipientId == userId)) return true;
-        var everyoneId = await EveryoneGroupIdAsync();
-        // Freigabe an „Everyone" gilt universell, sobald überhaupt ein Buch freigegeben ist.
-        if (everyoneId != null && await _db.BookGroupAccesses.AnyAsync(a => a.GroupId == everyoneId)) return true;
-        return await _db.BookGroupAccesses.AnyAsync(a =>
-            _db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId));
-    }
+    /// <summary>Hat der User mindestens einen Kurs in seiner Kursliste? (Basis für die Menü-Sichtbarkeit.)
+    /// Dieselbe Menge wie <see cref="GetCoursesAsync"/> — vorher fehlten hier Verteiler und Pins, und ein
+    /// Konto, das Kurse nur darüber sah, bekam keinen Menüeintrag „Kurse" (Codereview A7-006).</summary>
+    public Task<bool> HasAnyAccessAsync(int userId, bool isAdmin) =>
+        ListedCourses(userId, isAdmin).AnyAsync();
 
     // --- Kurs mit ausgewählten Personen teilen -----------------------------------------------
     // Nur der Besitzer eines PERSÖNLICHEN Kurses (Book.OwnerUserId == userId) darf ihn teilen; die
