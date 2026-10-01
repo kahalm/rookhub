@@ -4146,7 +4146,11 @@
     "lead": "Pogledaj turnirsku stranicu s računom druge osobe — način da odgovoriš na „zašto je njegov kalendar prazan?“. Crvena traka to govori cijelo vrijeme i vodi natrag. Sve ostalo iz administracije ostaje u RookHubu.",
     "none": "Nijedan račun ne odgovara tome.",
     "loadFailed": "Popis računa nije se mogao učitati.",
-    "impersonateAria": "{{action}}: {{name}}"
+    "impersonateAria": "{{action}}: {{name}}",
+    "searchLabel": "Pretraži korisnike",
+    "self": "Tvoj račun",
+    "truncated": "Prikazano {{shown}} od {{total}} računa — suzi popis pretragom.",
+    "confirmAdmin": "„{{name}}“ je administratorski račun. Ipak se prijaviti kao taj administrator?"
   },
   "tournamentsMoved": {
     "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",

@@ -7,6 +7,8 @@ import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { MenuService } from '@rh/core/menu.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { of } from 'rxjs';
 import { TurnierAdminComponent } from './turnier-admin.component';
 
 /**
@@ -166,6 +168,66 @@ describe('TurnierAdminComponent', () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(auth.currentUser?.username).toBe('chef');
     expect(component.busyId()).toBeNull();
+  });
+
+  // ----- Codereview UX-078 -----
+
+  /** Ins eigene Konto lehnt der Server ab (400) — ein Knopf dafuer fuehrte nur zu „fehlgeschlagen". */
+  it('bietet für das eigene Konto keinen Einstieg an', () => {
+    http.expectOne(r => r.url === '/api/admin/users').flush({
+      items: [
+        { id: 1, username: 'chef', email: 'chef@t.local', isAdmin: true, createdAt: '2026-01-01', groups: [] },
+        ...users().items,
+      ],
+      totalCount: 3, page: 1, pageSize: 50,
+    });
+    fixture.detectChanges();
+
+    const rows = [...fixture.nativeElement.querySelectorAll('.ta-users li')] as HTMLElement[];
+    expect(rows.length).toBe(3);
+    expect(rows[0].querySelector('button')).withContext('Knopf beim eigenen Konto').toBeNull();
+    expect(rows[0].querySelector('.ta-self')).not.toBeNull();
+    expect(rows[1].querySelector('button')).not.toBeNull();
+
+    component.impersonate(component.users()[0]);
+    http.expectNone('/api/admin/users/1/impersonate');
+  });
+
+  /** In ein Admin-Konto erst nach Rueckfrage — erlaubt (Support-Fall), aber mit fremden Admin-Rechten. */
+  it('fragt vor dem Einstieg in ein Admin-Konto nach', () => {
+    flushUsers();
+    const confirm = TestBed.inject(ConfirmService);
+    const ask = spyOn(confirm, 'ask').and.returnValue(of(false));
+    const chefin = component.users()[1];
+
+    component.impersonate(chefin);
+    expect(ask).toHaveBeenCalledWith('turnierAdmin.confirmAdmin', { name: 'chefin' });
+    http.expectNone('/api/admin/users/8/impersonate');
+
+    ask.and.returnValue(of(true));
+    component.impersonate(chefin);
+    http.expectOne('/api/admin/users/8/impersonate');
+
+    // Ein gewoehnliches Konto ohne Rueckfrage.
+    ask.calls.reset();
+    component.busyId.set(null);
+    component.impersonate(component.users()[0]);
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  /** Geholt wird eine Seite (50) — wer weiter hinten steht, fehlte bisher ohne jeden Hinweis. */
+  it('sagt, wenn mehr Konten passen, als die Liste zeigt', () => {
+    http.expectOne(r => r.url === '/api/admin/users').flush({ ...users(), totalCount: 135 });
+    fixture.detectChanges();
+
+    const more = fixture.nativeElement.querySelector('.ta-more') as HTMLElement | null;
+    expect(more).withContext('Hinweis auf weitere Konten').not.toBeNull();
+    expect(component.total()).toBe(135);
+  });
+
+  it('zeigt keinen Hinweis, wenn alle passenden Konten da sind', () => {
+    flushUsers();
+    expect(fixture.nativeElement.querySelector('.ta-more')).toBeNull();
   });
 
   /** Scheitert der Einstieg, bleibt der Admin angemeldet — kein halber Zustand. */

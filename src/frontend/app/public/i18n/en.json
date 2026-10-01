@@ -4146,7 +4146,11 @@
     "lead": "Open the tournament site with someone elses account — the way to answer „why is their calendar empty“. A red banner says so the whole time, and it takes you back. Everything else in administration stays in RookHub.",
     "none": "No account matches that.",
     "loadFailed": "The account list could not be loaded.",
-    "impersonateAria": "{{action}}: {{name}}"
+    "impersonateAria": "{{action}}: {{name}}",
+    "searchLabel": "Search users",
+    "self": "Your account",
+    "truncated": "Showing {{shown}} of {{total}} accounts — narrow it down with the search.",
+    "confirmAdmin": "“{{name}}” is an admin account. Sign in as this admin anyway?"
   },
   "tournamentsMoved": {
     "leaving": "Tournaments have moved to their own site — taking you there.",

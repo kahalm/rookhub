@@ -3829,7 +3829,11 @@
     "lead": "Nézd meg a versenyoldalt valaki más fiókjával — így lehet megválaszolni, hogy „miért üres a naptára?”. Egy piros sáv végig jelzi, és vissza is vezet. A többi adminisztráció a RookHubban marad.",
     "none": "Ehhez egy fiók sem illik.",
     "loadFailed": "A fióklistát nem sikerült betölteni.",
-    "impersonateAria": "{{action}}: {{name}}"
+    "impersonateAria": "{{action}}: {{name}}",
+    "searchLabel": "Felhasználók keresése",
+    "self": "A te fiókod",
+    "truncated": "{{shown}} / {{total}} fiók látható — szűkítsd a kereséssel.",
+    "confirmAdmin": "„{{name}}” adminisztrátori fiók. Mégis belépsz ezzel az adminnal?"
   },
   "tournamentsMoved": {
     "leaving": "A versenyeknek saját oldaluk lett — átirányítunk.",

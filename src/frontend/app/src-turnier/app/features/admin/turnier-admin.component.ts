@@ -12,6 +12,7 @@ import { AdminService, AdminUser } from '@rh/core/admin.service';
 import { AuthService } from '@rh/core/auth.service';
 import { MenuService } from '@rh/core/menu.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 
 /**
@@ -48,10 +49,11 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
 
       <mat-card class="ta-card">
         <mat-form-field appearance="outline" class="ta-search">
-          <mat-label>{{ 'admin.users.searchLabel' | translate }}</mat-label>
+          <!-- Eigener Schluessel: RookHubs Admin-Panel sagt durchgehend „User", diese Seite „Nutzer". -->
+          <mat-label>{{ 'turnierAdmin.searchLabel' | translate }}</mat-label>
           <input matInput [(ngModel)]="search" (keyup.enter)="load()">
           <button matSuffix mat-icon-button (click)="load()"
-                  [attr.aria-label]="'admin.users.searchLabel' | translate">
+                  [attr.aria-label]="'turnierAdmin.searchLabel' | translate">
             <mat-icon>search</mat-icon>
           </button>
         </mat-form-field>
@@ -75,14 +77,26 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
                 <!-- Vorgelesen mit dem Benutzernamen: in der Schaltflaechenliste eines Screenreaders
                      stuenden sonst bis zu 50-mal dieselben Worte ohne Bezug. Der sichtbare Text steht
                      vorne, damit Sprachsteuerung ihn weiter trifft (WCAG 2.5.3). -->
-                <button mat-stroked-button (click)="impersonate(u)" [disabled]="busyId() !== null"
-                        [attr.aria-label]="'turnierAdmin.impersonateAria' | translate: { action: ('admin.users.impersonate' | translate), name: u.username }">
-                  <mat-icon>login</mat-icon>
-                  {{ 'admin.users.impersonate' | translate }}
-                </button>
+                <!-- Ins eigene Konto lehnt der Server ab (400) — ein Knopf dafuer fuehrte nur zur
+                     Meldung „fehlgeschlagen" (Codereview UX-078). -->
+                @if (u.id === selfId) {
+                  <span class="muted ta-self">{{ 'turnierAdmin.self' | translate }}</span>
+                } @else {
+                  <button mat-stroked-button (click)="impersonate(u)" [disabled]="busyId() !== null"
+                          [attr.aria-label]="'turnierAdmin.impersonateAria' | translate: { action: ('admin.users.impersonate' | translate), name: u.username }">
+                    <mat-icon>login</mat-icon>
+                    {{ 'admin.users.impersonate' | translate }}
+                  </button>
+                }
               </li>
             }
           </ul>
+          <!-- Geholt wird eine Seite (50): wer weiter hinten steht, fehlte bisher ohne jeden Hinweis. -->
+          @if (total() > users().length) {
+            <p class="muted ta-more">
+              {{ 'turnierAdmin.truncated' | translate: { shown: users().length, total: total() } }}
+            </p>
+          }
         }
       </mat-card>
     </div>
@@ -108,6 +122,7 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
     .muted { color: var(--mat-sys-on-surface-variant); }
     /* Die Adresse schiebt den Knopf nach rechts und bricht selbst um, statt die Zeile zu dehnen. */
     .ta-mail { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+    .ta-more { margin: 12px 0 0; }
   `],
 })
 export class TurnierAdminComponent implements OnInit {
@@ -117,9 +132,12 @@ export class TurnierAdminComponent implements OnInit {
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmService);
 
   search = '';
   readonly users = signal<AdminUser[]>([]);
+  /** Wie viele Konten zur Suche passen — die Liste zeigt hoechstens die erste Seite davon. */
+  readonly total = signal(0);
   readonly loading = signal(true);
   /** Wessen Einstieg gerade laeuft — sperrt alle Knoepfe, nicht nur den einen. */
   readonly busyId = signal<number | null>(null);
@@ -133,6 +151,7 @@ export class TurnierAdminComponent implements OnInit {
     this.admin.getUsers(this.search, 1, 50).subscribe({
       next: res => {
         this.users.set(res.items ?? []);
+        this.total.set(res.totalCount ?? res.items?.length ?? 0);
         this.loading.set(false);
       },
       error: () => {
@@ -142,11 +161,27 @@ export class TurnierAdminComponent implements OnInit {
     });
   }
 
+  /** Das angemeldete Konto — fuer das gibt es keinen Einstieg. */
+  get selfId(): number | null {
+    return this.auth.currentUser?.userId ?? null;
+  }
+
   /**
    * Einsteigen und auf den Kalender wechseln — auf DIESER Seite ist das die Ansicht, um deren
-   * Inhalt es geht. RookHub schickt an dieser Stelle ins Dashboard.
+   * Inhalt es geht. RookHub schickt an dieser Stelle ins Dashboard. In ein ADMIN-Konto erst nach
+   * Rueckfrage: erlaubt ist es (Support-Fall), aber man handelt dann mit fremden Admin-Rechten.
    */
   impersonate(u: AdminUser): void {
+    if (this.busyId() !== null || u.id === this.selfId) return;
+    if (!u.isAdmin) {
+      this.startImpersonation(u);
+      return;
+    }
+    this.confirm.ask('turnierAdmin.confirmAdmin', { name: u.username })
+      .subscribe(ok => { if (ok) this.startImpersonation(u); });
+  }
+
+  private startImpersonation(u: AdminUser): void {
     if (this.busyId() !== null) return;
     this.busyId.set(u.id);
 
