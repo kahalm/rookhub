@@ -27,33 +27,58 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBack } fro
           <p>{{ (home ? 'legal.accountDeletion.introPartner' : 'legal.accountDeletion.intro') | translate }}</p>
 
           <h4>{{ 'legal.accountDeletion.inAppTitle' | translate }}</h4>
+          <p>{{ (home ? 'legal.accountDeletion.inPartner' : 'legal.accountDeletion.inApp') | translate }}</p>
+
+          <!-- Vor dem Knopf: sofort und ohne Rueckgaengig — die PGN-Exporte gibt es je Kurs, Repertoire und Partie (UX-021). -->
+          <p class="backup"><strong>{{ 'legal.accountDeletion.backupTitle' | translate }}:</strong>
+            {{ 'legal.accountDeletion.backup' | translate }}</p>
+          @if (!home) {
+            <p class="backup-links">
+              @for (l of exportLinks; track l.path) {
+                <a [routerLink]="l.path" data-login-required>{{ l.label | translate }}</a>
+              }
+            </p>
+          } @else if (homeUrl) {
+            <p class="backup-links">
+              @for (l of exportLinks; track l.path) {
+                <a [href]="homeUrl + l.path">{{ l.label | translate }}</a>
+              }
+            </p>
+          }
+
           @if (!home) {
             <!-- Der eine Knopf zur Karte im Profil; abgemeldet fuehrt der authGuard ueber die Anmeldung dorthin
                  (data-login-required: die Routen-Specs lassen diesen Link deshalb eine Anmeldung verlangen). -->
-            <p>{{ 'legal.accountDeletion.inApp' | translate }}</p>
             <p class="action">
               <a mat-flat-button color="warn" class="delete-now" data-login-required
                  [routerLink]="deleteRoute" [queryParams]="deleteQuery">{{ 'legal.accountDeletion.deleteNow' | translate }}</a>
             </p>
-          } @else {
+          } @else if (homeDeleteUrl) {
             <!-- KidHub, LeagueHub, ClubHub, Turnierseite: dasselbe Konto, geloescht wird es in RookHub. -->
-            <p>{{ 'legal.accountDeletion.inPartner' | translate }}</p>
-            @if (homeDeleteUrl) {
-              <p class="action">
-                <a mat-flat-button color="warn" class="delete-now" [href]="homeDeleteUrl"
-                   (click)="openOnHome($event)">{{ 'legal.accountDeletion.deleteOnRookHub' | translate }}</a>
-              </p>
-            }
+            <p class="action">
+              <a mat-flat-button color="warn" class="delete-now" [href]="homeDeleteUrl"
+                 (click)="openOnHome($event)">{{ 'legal.accountDeletion.deleteOnRookHub' | translate }}</a>
+            </p>
           }
 
+          <!-- Was ProfileService.DeleteAccountAsync wirklich loescht, in Nutzersprache gruppiert (UX-021). -->
           <h4>{{ 'legal.accountDeletion.removedTitle' | translate }}</h4>
-          <ul>
-            <li>{{ 'legal.accountDeletion.removed1' | translate }}</li>
-            <li>{{ 'legal.accountDeletion.removed2' | translate }}</li>
+          <ul class="removed">
+            @for (key of removedKeys; track key) {
+              <li>{{ 'legal.accountDeletion.' + key | translate }}</li>
+            }
           </ul>
 
           <h4>{{ 'legal.accountDeletion.keptTitle' | translate }}</h4>
           <p>{{ 'legal.accountDeletion.kept' | translate }}</p>
+          @if (league) {
+            <!-- LeagueHub: hochgeladene Vereinspartien bleiben (mit Namen, also nicht „anonym"), ohne Vermerk des
+                 Hochladenden — selbst loeschen geht danach nicht mehr (CanDelete: Verwalter oder der Hochladende). -->
+            <h4>{{ 'legal.accountDeletion.keptLeagueTitle' | translate }}</h4>
+            <p class="league-kept">{{ 'legal.accountDeletion.keptLeague' | translate }}
+              <a routerLink="/verein" data-login-required>{{ 'legal.accountDeletion.leagueGamesLink' | translate }}</a></p>
+            <p>{{ 'legal.accountDeletion.keptLeagueShares' | translate }}</p>
+          }
 
           <h4>{{ 'legal.accountDeletion.contactTitle' | translate }}</h4>
           <p>
@@ -73,6 +98,8 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBack } fro
     a { color: #90caf9; }
     .back { margin-top: 1.5rem; }
     .action { margin: 0.75rem 0 0.25rem; }
+    .backup-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: -0.25rem; }
+    .backup-links a, .league-kept a { display: inline-block; padding: 10px 0; }
   `]
 })
 export class AccountDeletionComponent {
@@ -87,10 +114,26 @@ export class AccountDeletionComponent {
   /** Ziel in RookHub: das Profil mit aufgeklappter Karte „Konto loeschen" (Codereview UX-023). */
   readonly deleteRoute = ACCOUNT_DELETE_ROUTE;
   readonly deleteQuery = ACCOUNT_DELETE_QUERY;
+  /** RookHub dieser Oberflaeche (ohne Schraegstrich am Ende), `null` auf RookHub selbst und ohne bekannte Adresse. */
+  readonly homeUrl = this.home ? this.handoff.accountHomeUrl : null;
+  /** LeagueHub: was mit Vereinspartien, Entwuerfen und Teilen-Links geschieht (UX-021). */
+  readonly league = this.site.kind === 'leaguehub';
+  /** „Was entfernt wird" — Gruppen aus DeleteAccountAsync (eigene Kurse samt Freigaben und fremdem Fortschritt,
+   *  Partien und Fotos, Aufgabenblaetter und Teilen-Links, KidHub, Verbindungen); LeagueHub zusaetzlich die Entwuerfe. */
+  readonly removedKeys = [
+    'removed1', 'removedCourses', 'removed2', 'removedGames', 'removedShared', 'removedKids', 'removedConnections',
+    ...(this.league ? ['removedLeague'] : []),
+  ];
+  /** Wo es die PGN-Exporte gibt: je Kurs, in der Repertoire-Liste und in jeder Partie. */
+  readonly exportLinks = [
+    { path: '/courses', label: 'nav.courses' },
+    { path: '/repertoires', label: 'nav.repertoires' },
+    { path: '/games', label: 'nav.games' },
+  ];
   /** `profile?section=delete` — ohne fuehrenden Schraegstrich, wie ihn der Sprung erwartet. */
   private readonly deletePath = `${ACCOUNT_DELETE_ROUTE.slice(1)}?${new URLSearchParams(ACCOUNT_DELETE_QUERY)}`;
   /** Dasselbe Ziel als Adresse auf RookHub — `null` ohne bekannte Adresse (localhost, IP): dann nur der Text. */
-  readonly homeDeleteUrl = this.home && this.handoff.accountHomeUrl ? `${this.handoff.accountHomeUrl}/${this.deletePath}` : null;
+  readonly homeDeleteUrl = this.homeUrl ? `${this.homeUrl}/${this.deletePath}` : null;
 
   /** Angemeldet nimmt der Sprung die Anmeldung mit (Einmal-Code), sonst meldet man sich drueben an. Strg/Mittelklick
    *  (neuer Tab) bleibt beim schlichten Link. */

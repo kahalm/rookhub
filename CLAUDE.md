@@ -4276,7 +4276,11 @@ Kinderseite" unter REST API.
   keine Karte „Konto löschen" — `/account-deletion` sagt „dein Konto hier ist ein RookHub-Konto" und verlinkt RookHubs
   `/profile?section=delete` (`accountHomeUrl()` in `partner-site.ts`, angemeldet per Einmal-Code
   `HandoffService.jumpToAccountHome`). Ohne `accountHome` (RookHub) führt der Knopf „Konto jetzt löschen" direkt dorthin;
-  `?section=delete` klappt im Profil die Karte auf und scrollt zu ihr. Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
+  `?section=delete` klappt im Profil die Karte auf und scrollt zu ihr. Die Liste „Was entfernt wird" (`removedKeys` in
+  `account-deletion.component.ts`) und `profile.delete.warn` geben wieder, was `ProfileService.DeleteAccountAsync`
+  löscht (UX-021: eigene Kurse samt Freigaben und fremdem Fortschritt, Partien mit Formular-Fotos, Aufgabenblätter und
+  Teilen-Links, KidHub-Fortschritt, Verbindungen) — wer dort etwas ergänzt oder herausnimmt, zieht die Texte nach
+  (en/de/hr/hu). LeagueHub (`kind`) nennt zusätzlich Entwürfe, bleibende Vereinspartien und Teilen-Links. Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
   Kontaktadresse der Oberfläche. **Rechtsseiten allgemein** (Betreiber-Entscheidung 2026-09-30, UX-001):
   `environments/operator.ts` (`OPERATOR`) enthält nur noch die Kontaktadresse `rookhub@oberschm.id` — kein
   Diensteanbieter-Block mit Name/Anschrift im Impressum, keine Platzhalter.

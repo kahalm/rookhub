@@ -117,4 +117,76 @@ describe('AccountDeletionComponent', () => {
       expect(el.textContent).toContain('legal.accountDeletion.inPartner');
     });
   });
+
+  // DeleteAccountAsync loescht weit mehr als „Identitaet, Repertoires, Turnier-Abos, Freunde": eigene Kurse samt
+  // Freigaben und fremdem Fortschritt, Partien mit Formular-Fotos, Aufgabenblaetter, Teilen-Links, KidHub-Fortschritt,
+  // Verbindungen. Ein Trainer las die alte Liste und hielt seine Kurse fuer sicher (UX-021).
+  describe('was verloren geht und was bleibt (UX-021)', () => {
+    const render = (site?: object, homeUrl: string | null = null) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AccountDeletionComponent],
+        providers: [...base(), ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+      });
+      spyOnProperty(TestBed.inject(HandoffService), 'accountHomeUrl', 'get').and.returnValue(homeUrl);
+      const f = TestBed.createComponent(AccountDeletionComponent);
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    };
+    const removed = (el: HTMLElement) => [...el.querySelectorAll('ul.removed li')].map(li => li.textContent?.trim());
+
+    it('nennt Kurse, Partien, Aufgabenblaetter/Teilen-Links, KidHub und Verbindungen — vor dem Knopf der Sicherungs-Hinweis', () => {
+      const el = render();
+      expect(removed(el)).toEqual([
+        'legal.accountDeletion.removed1', 'legal.accountDeletion.removedCourses', 'legal.accountDeletion.removed2',
+        'legal.accountDeletion.removedGames', 'legal.accountDeletion.removedShared', 'legal.accountDeletion.removedKids',
+        'legal.accountDeletion.removedConnections',
+      ]);
+      const backup = el.querySelector('p.backup');
+      expect(backup?.textContent).toContain('legal.accountDeletion.backup');
+      // Der Hinweis steht VOR dem Knopf, nicht unter der Liste.
+      expect(backup!.compareDocumentPosition(el.querySelector('a.delete-now')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const exports = [...el.querySelectorAll('.backup-links a')];
+      expect(exports.map(a => a.getAttribute('href'))).toEqual(['/courses', '/repertoires', '/games']);
+      expect(exports.every(a => a.hasAttribute('data-login-required'))).toBeTrue();
+      expect(el.textContent).not.toContain('legal.accountDeletion.keptLeague');
+    });
+
+    it('LeagueHub: Entwuerfe gehen, Vereinspartien bleiben ohne Hochlader-Vermerk — mit Weg zu den eigenen Uploads', () => {
+      const el = render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub', accountHome: 'rookhub' }, 'https://rookhub.example');
+      expect(removed(el)).toContain('legal.accountDeletion.removedLeague');
+      expect(el.textContent).toContain('legal.accountDeletion.keptLeagueTitle');
+      expect(el.textContent).toContain('legal.accountDeletion.keptLeague');
+      expect(el.textContent).toContain('legal.accountDeletion.keptLeagueShares');
+      expect(el.querySelector('.league-kept a')?.getAttribute('href')).toBe('/verein');
+      // Die PGN-Exporte liegen in RookHub.
+      expect([...el.querySelectorAll('.backup-links a')].map(a => a.getAttribute('href')))
+        .toEqual(['https://rookhub.example/courses', 'https://rookhub.example/repertoires', 'https://rookhub.example/games']);
+    });
+
+    it('ohne bekannte RookHub-Adresse keine Export-Links ins Leere', () => {
+      const el = render({ contactEmail: 'x@y.z', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' }, null);
+      expect(el.querySelector('.backup-links')).toBeNull();
+      expect(el.querySelector('p.backup')).not.toBeNull();
+    });
+
+    it('jeder gezeigte Text hat in den gepflegten Sprachen eine Uebersetzung; die Profil-Warnung nennt die Kurse', async () => {
+      const el = render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub', accountHome: 'rookhub' });
+      // Ohne Uebersetzung stehen die Schluessel ohne Leerzeichen hintereinander — am naechsten „legal." trennen.
+      const keys = [...el.textContent!.matchAll(/legal\.accountDeletion\.([A-Za-z0-9]+?)(?=legal\.|[^A-Za-z0-9]|$)/g)].map(m => m[1]);
+      expect(keys.length).toBeGreaterThan(10);
+      for (const lang of ['en', 'de', 'hr', 'hu']) {
+        let json: Record<string, any> | undefined;
+        for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+          const res = await fetch(url);
+          if (res.ok) { json = await res.json(); break; }
+        }
+        const section = json!['legal']['accountDeletion'];
+        for (const k of keys) expect(section[k]).withContext(`${lang}: ${k}`).toBeTruthy();
+      }
+      const en = await (await fetch('/i18n/en.json').then(r => r.ok ? r : fetch('/base/i18n/en.json'))).json();
+      expect(en.profile.delete.warn).toContain('courses');
+      expect(en.profile.delete.warn).toContain('KidHub');
+    });
+  });
 });
