@@ -68,7 +68,6 @@
     "resetDefaults": "Auf Standard zurücksetzen",
     "unit": {
       "h": "Stunden",
-      "d": "Tage",
       "w": "Wochen",
       "mo": "Monate"
     }
@@ -638,7 +637,6 @@
         "nameHint": "z. B. „Chess.com-Extension (Laptop)“",
         "expires": "Ablauf",
         "never": "nie",
-        "days": "Tage",
         "create": "Erstellen",
         "scope": "Bereich",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
@@ -648,7 +646,6 @@
       "show": {
         "title": "Token erstellt",
         "warning": "Dieser Token wird NUR jetzt einmalig angezeigt. Kopiere ihn in deine Extension — danach ist er nicht mehr abrufbar.",
-        "copy": "Kopieren",
         "copied": "In die Zwischenablage kopiert"
       },
       "scope": {
@@ -974,7 +971,6 @@
       "noDescription": "Keine Beschreibung",
       "modeLines": "Linien",
       "modeTree": "Baum",
-      "modeEdit": "Bearbeiten",
       "modeHoles": "Lochfinder"
     },
     "dialog": {
@@ -985,7 +981,6 @@
       "kind": "Kategorie",
       "create": "Erstellen",
       "editTitle": "Repertoire bearbeiten",
-      "save": "Speichern",
       "useForExtension": "Für die Extension verwenden",
       "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung dieses Repertoire zur Abweichungserkennung im Analysemodus.",
       "chessableCourseId": "Chessable-Kurs-ID",
@@ -1104,7 +1099,6 @@
       },
       "threshold": "Grenzwert",
       "thresholdHelp": "Ab welchem Anteil der Partien in einer Stellung ein fehlender Gegnerzug als Loch zählt. 1 % findet auch Nebenvarianten, 5 % nur die Hauptzüge. Erlaubt sind 0,1 bis 50 %.",
-      "cancel": "Abbrechen",
       "search": "Löcher suchen",
       "progress": "{{done}} Stellungen ausgewertet, {{open}} offen",
       "rateLimited": "Lichess bremst gerade – es geht in {{seconds}} s weiter.",
@@ -1587,7 +1581,6 @@
       "linkedTooltip": "Verknüpft mit {{name}} — zum Ändern klicken",
       "openLinked": "Verknüpften Kurs öffnen"
     },
-    "moreActions": "Weitere Aktionen",
     "browseTooltip": "Linien durchsehen",
     "flashcards": {
       "title": "Flashcards",
@@ -1847,7 +1840,6 @@
       "username": "Benutzername",
       "tester": "Tester",
       "testerHint": "Sieht eine Woche schon ab deren Tester-Vorschau-Zeitpunkt.",
-      "addMember": "Hinzufügen",
       "noMembers": "Noch keine Mitglieder.",
       "userNotFound": "Kein Nutzer mit diesem Namen.",
       "memberAdded": "Mitglied hinzugefügt",
@@ -2142,8 +2134,7 @@
       "sharePuzzle": "Puzzle teilen",
       "backToPuzzle": "Zurück zum Puzzle",
       "showOriginalSolution": "Originale Lösung zeigen",
-      "prev": "Zurück",
-      "next": "Weiter"
+      "prev": "Zurück"
     },
     "settings": {
       "title": "Einstellungen",
@@ -2209,8 +2200,7 @@
       "subtitle": "Nur zur Erklärung — durchklicken, nichts zu lösen."
     },
     "variation": {
-      "previewing": "Zeigt eine Variante aus dem Kommentar",
-      "back": "Zurück"
+      "previewing": "Zeigt eine Variante aus dem Kommentar"
     }
   },
   "admin": {
@@ -2417,7 +2407,6 @@
       "intro": "Lege fest, wer welchen Menüeintrag sieht. Ausgeblendete Einträge werden auch beim direkten Aufruf der Seiten-URL gesperrt. Admins sehen immer alles.",
       "level": "Sichtbarkeit",
       "groups": "Gruppen",
-      "save": "Speichern",
       "saved": "Menü-Sichtbarkeit gespeichert.",
       "saveError": "Menü-Sichtbarkeit konnte nicht gespeichert werden.",
       "loadError": "Menü-Sichtbarkeit konnte nicht geladen werden.",
@@ -2560,8 +2549,6 @@
     "count": "{{n}} Stellungen",
     "print": "Drucken / als PDF speichern",
     "printHint": "{{n}} Diagramme je Seite, mit Platz für die Lösung. Im Druckdialog als Ziel „Als PDF speichern“ wählen.",
-    "whiteToMove": "Weiß am Zug",
-    "blackToMove": "Schwarz am Zug",
     "footer": "Lösungen in RookHub",
     "nameLine": "Name: ______________________",
     "perPage": {
@@ -2574,7 +2561,6 @@
       "none": "Noch keine Themen — danach findest du das Blatt später wieder.",
       "suggested": "Vorgeschlagen aus den {{n}} Aufgaben:",
       "own": "Eigenes Thema",
-      "add": "Hinzufügen",
       "remove": "Thema entfernen",
       "all": "Alle",
       "noMatch": "Kein Aufgabenblatt mit dem Thema „{{theme}}“."
@@ -2603,9 +2589,7 @@
       "retry": "Nochmal versuchen",
       "reset": "Stellung zurücksetzen",
       "showSolution": "Lösung zeigen",
-      "next": "Weiter",
-      "finish": "Fertig",
-      "prev": "Zurück"
+      "finish": "Fertig"
     },
     "list": {
       "hint": "Erst sammeln, dann ordnen, dann drucken: In der Zwischenablage landet alles, was du an ein Aufgabenblatt schickst. Dort wirfst du raus, sortierst um und schreibst Überschriften dazu — und sicherst das Ganze unter einem Namen.",
@@ -2615,7 +2599,6 @@
       "open": "Öffnen",
       "clear": "Alle Stellungen entfernen",
       "clearConfirm": "{{n}} Stellungen vom Blatt nehmen?",
-      "delete": "Löschen",
       "deleteConfirm": "Aufgabenblatt „{{name}}“ mit allen Stellungen löschen?",
       "nameLabel": "Name des Aufgabenblatts",
       "saveClipboard": "Als Aufgabenblatt speichern",
@@ -2637,8 +2620,7 @@
       "addFen": "Stellung hinzufügen",
       "addRejected": "Nicht übernommen: Die Stellung steht schon auf dem Blatt, oder die FEN ist unbrauchbar.",
       "saveError": "Die Änderung konnte nicht gespeichert werden.",
-      "rename": "Umbenennen",
-      "more": "Weitere Aktionen"
+      "rename": "Umbenennen"
     },
     "send": {
       "menu": "An Aufgabenblatt senden",
@@ -2704,7 +2686,6 @@
       "go": "Roasten!",
       "again": "Neu würfeln",
       "busy": "Die KI wetzt die Zunge …",
-      "copy": "Kopieren",
       "share": "Teilen",
       "notConfigured": "Das Roasten ist auf diesem Server nicht eingerichtet.",
       "noAnalysis": "Erst die Partie analysieren lassen — ohne Analyse gibt es nichts zu roasten.",
@@ -2779,7 +2760,6 @@
       "retry": "Nochmal",
       "show": "Lösung zeigen",
       "skip": "Überspringen",
-      "next": "Weiter",
       "finish": "Abschließen",
       "again": "Von vorn",
       "summary": "{{solved}} von {{total}} selbst gefunden.",
@@ -2814,7 +2794,6 @@
       "sec": "{{count}} s",
       "days": "{{count}} T/Zug"
     },
-    "moreActions": "Weitere Aktionen",
     "source": {
       "scoresheet": "Partieformular",
       "pgn": "PGN-Upload"
@@ -2872,7 +2851,6 @@
       "sideNone": "nicht festgelegt"
     },
     "pgnCopy": "PGN kopieren",
-    "pgnDownload": "PGN herunterladen",
     "pgnCopied": "PGN kopiert",
     "pgnCopyFailed": "PGN konnte nicht kopiert werden",
     "pgnUpload": {
@@ -2941,9 +2919,7 @@
       "apply": "Übernehmen",
       "erase": "Radierer",
       "clear": "Brett leeren",
-      "startpos": "Grundstellung",
-      "whiteToMove": "Weiß am Zug",
-      "blackToMove": "Schwarz am Zug"
+      "startpos": "Grundstellung"
     },
     "queueBackground": "Im Hintergrund analysieren",
     "openJobs": "Analyse-Aufträge",
@@ -3446,7 +3422,6 @@
     "adminTeam": "Admin-Team",
     "you": "Du",
     "replyLabel": "Deine Antwort",
-    "send": "Senden",
     "sendError": "Nachricht konnte nicht gesendet werden.",
     "emptyUserCanWrite": "Noch keine Nachrichten. Schreib dem Admin-Team unten — du bekommst die Antwort hier.",
     "writeLabel": "Deine Nachricht"
@@ -3892,7 +3867,6 @@
       "none": "Kein Umkreis",
       "manage": "Suchprofile verwalten",
       "new": "Neues Suchprofil",
-      "edit": "Bearbeiten",
       "delete": "Löschen",
       "newTitle": "Neues Suchprofil",
       "editTitle": "Suchprofil bearbeiten",
@@ -4217,7 +4191,6 @@
       "solved4": "Spitze!"
     },
     "hint": "Tipp",
-    "next": "Weiter",
     "spaceKey": "Leertaste",
     "back": "Start",
     "loading": "Einen Moment …",

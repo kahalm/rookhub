@@ -108,7 +108,7 @@
                       (keydown.control.enter)="sendAdminMessage()" [disabled]="adminSending"></textarea>
           </mat-form-field>
           <button mat-raised-button color="primary" (click)="sendAdminMessage()" [disabled]="adminSending || !adminDraft.trim()">
-            <mat-icon>send</mat-icon> {{ 'messages.send' | translate }}
+            <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>
       }

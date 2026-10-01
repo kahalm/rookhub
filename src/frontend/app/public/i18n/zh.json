@@ -16,7 +16,9 @@
     "whiteToMove": "白方走棋",
     "blackToMove": "黑方走棋",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "天",
+    "copy": "复制"
   },
   "nav": {
     "discord": "Discord 社区",
@@ -190,13 +192,11 @@
         "nameHint": "例如：「Chess.com 扩展（笔记本）」",
         "expires": "到期时间",
         "never": "永不",
-        "days": "天",
         "create": "创建"
       },
       "show": {
         "title": "令牌已创建",
         "warning": "此令牌仅显示一次。请将其复制到你的扩展中——之后无法再次查看。",
-        "copy": "复制",
         "copied": "已复制到剪贴板"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "暂无描述",
       "modeLines": "变化线",
-      "modeTree": "树形图",
-      "modeEdit": "编辑"
+      "modeTree": "树形图"
     },
     "dialog": {
       "title": "新建开局库",
@@ -333,8 +332,7 @@
       "public": "公开",
       "kind": "分类",
       "create": "创建",
-      "editTitle": "编辑开局库",
-      "save": "保存"
+      "editTitle": "编辑开局库"
     },
     "kind": {
       "none": "—",

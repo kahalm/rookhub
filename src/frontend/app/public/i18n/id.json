@@ -16,7 +16,9 @@
     "whiteToMove": "Giliran putih",
     "blackToMove": "Giliran hitam",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "hari",
+    "copy": "Salin"
   },
   "nav": {
     "discord": "Komunitas Discord",
@@ -180,13 +182,11 @@
         "nameHint": "mis. \"Ekstensi Chess.com (laptop)\"",
         "expires": "Kedaluwarsa",
         "never": "tidak pernah",
-        "days": "hari",
         "create": "Buat"
       },
       "show": {
         "title": "Token dibuat",
         "warning": "Token ini hanya ditampilkan SEKARANG, sekali saja. Salin ke ekstensi Anda — tidak dapat diambil kembali nanti.",
-        "copy": "Salin",
         "copied": "Disalin ke clipboard"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Tidak ada deskripsi",
       "modeLines": "Baris",
-      "modeTree": "Pohon",
-      "modeEdit": "Edit"
+      "modeTree": "Pohon"
     },
     "dialog": {
       "title": "Repertoir Baru",
@@ -333,8 +332,7 @@
       "public": "Publik",
       "kind": "Kategori",
       "create": "Buat",
-      "editTitle": "Edit repertoar",
-      "save": "Simpan"
+      "editTitle": "Edit repertoar"
     },
     "kind": {
       "none": "—",

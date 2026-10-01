@@ -28,7 +28,7 @@
         <mat-icon>picture_as_pdf</mat-icon>{{ 'worksheets.print' | translate }}
       </a>
       <button mat-icon-button [matMenuTriggerFor]="sheetMenu"
-              [attr.aria-label]="'worksheets.detail.more' | translate">
+              [attr.aria-label]="'common.moreActions' | translate">
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #sheetMenu="matMenu">
@@ -42,7 +42,7 @@
         </button>
         @if (!sheet.isClipboard) {
           <button mat-menu-item class="wd-danger" (click)="deleteSheet()">
-            <mat-icon>delete</mat-icon><span>{{ 'worksheets.list.delete' | translate }}</span>
+            <mat-icon>delete</mat-icon><span>{{ 'common.delete' | translate }}</span>
           </button>
         }
       </mat-menu>
@@ -121,7 +121,7 @@
             <input matInput [(ngModel)]="newTheme" maxlength="40" (keyup.enter)="addTheme(newTheme)" />
           </mat-form-field>
           <button mat-stroked-button (click)="addTheme(newTheme)" [disabled]="!newTheme.trim()">
-            <mat-icon>add</mat-icon>{{ 'worksheets.themes.add' | translate }}
+            <mat-icon>add</mat-icon>{{ 'common.add' | translate }}
           </button>
         </div>
       </mat-card-content>
@@ -181,7 +181,7 @@
 
             <div class="wd-fields">
               <span class="wd-turn">
-                {{ (whiteToMove(item) ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+                {{ (whiteToMove(item) ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
               </span>
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wd-field wd-field--heading">
                 <mat-label>{{ 'worksheets.detail.heading' | translate }}</mat-label>

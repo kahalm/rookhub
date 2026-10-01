@@ -16,7 +16,9 @@
     "whiteToMove": "Muove il Bianco",
     "blackToMove": "Muove il Nero",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "giorni",
+    "copy": "Copia"
   },
   "nav": {
     "discord": "Comunità Discord",
@@ -190,13 +192,11 @@
         "nameHint": "es. \"Estensione Chess.com (laptop)\"",
         "expires": "Scade",
         "never": "mai",
-        "days": "giorni",
         "create": "Crea"
       },
       "show": {
         "title": "Token creato",
         "warning": "Questo token viene mostrato SOLO ora, una volta sola. Copialo nella tua estensione — non potrà essere recuperato in seguito.",
-        "copy": "Copia",
         "copied": "Copiato negli appunti"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Nessuna descrizione",
       "modeLines": "Linee",
-      "modeTree": "Albero",
-      "modeEdit": "Modifica"
+      "modeTree": "Albero"
     },
     "dialog": {
       "title": "Nuovo repertorio",
@@ -333,8 +332,7 @@
       "public": "Pubblico",
       "kind": "Categoria",
       "create": "Crea",
-      "editTitle": "Modifica repertorio",
-      "save": "Salva"
+      "editTitle": "Modifica repertorio"
     },
     "kind": {
       "none": "—",

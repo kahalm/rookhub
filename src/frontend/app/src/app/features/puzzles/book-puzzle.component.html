@@ -156,7 +156,7 @@
                         <div class="cmt-variation-bar">
                           <span>{{ 'book.variation.previewing' | translate }}</span>
                           <button mat-stroked-button type="button" (click)="exitVariationPreview()">
-                            <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                            <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
                           </button>
                         </div>
                       }
@@ -458,7 +458,7 @@
                           [attr.aria-label]="'book.actions.prev' | translate"><mat-icon>chevron_left</mat-icon></button>
                   <span class="info-line-pos">{{ reviewIndex }} / {{ reviewTotal }}</span>
                   <button mat-icon-button (click)="reviewNext()" [disabled]="reviewIndex >= reviewTotal"
-                          [attr.aria-label]="'book.actions.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+                          [attr.aria-label]="'common.next' | translate"><mat-icon>chevron_right</mat-icon></button>
                 </div>
               </mat-card-content>
             </mat-card>

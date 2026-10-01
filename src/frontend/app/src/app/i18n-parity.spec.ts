@@ -114,6 +114,23 @@ describe('i18n Sprachdateien', () => {
     });
   }
 
+  /**
+   * Codereview F8-010: Gleiche Knopftexte standen je Feature neu (book.actions.next, worksheets.solve.next,
+   * games.mistakes.next … neben common.next) und laufen dann auseinander — derselbe Mausrutscher-Knopf hieß
+   * „Mausrutscher“, „Mouseslip“ und „Mausverrutscher“. Ein Key außerhalb von common.*, der in allen gepflegten
+   * Sprachen wortgleich einen common.*-Text trägt, ist ein Doppel: stattdessen den common.*-Key benutzen.
+   */
+  it('kein Key außerhalb von common.* doppelt wortgleich einen common.*-Text', async () => {
+    const all = [en, ...(await Promise.all(FORMAT_LOCALES.filter(l => l !== 'en').map(load)))];
+    const common = Object.keys(en).filter(k => k.startsWith('common.'));
+    const doubles = Object.keys(en)
+      .filter(k => !k.startsWith('common.'))
+      .map(k => [k, common.find(c => all.every(l => l[k] === l[c]))] as const)
+      .filter(([, c]) => !!c)
+      .map(([k, c]) => `${k} = ${c}`);
+    expect(doubles).withContext('Doppel eines common.*-Texts — common.* verwenden').toEqual([]);
+  });
+
   it('kennt zu jedem Schnellstart-Eintrag Titel und Beschreibung (alle gepflegten Sprachen)', async () => {
     // `quickstartItems` baut die i18n-Keys aus dem `key` zusammen (`app.qs.<key>Title|Desc`) —
     // ein neuer Eintrag ohne Texte fiele sonst erst im UI als roher Schlüssel auf.

@@ -79,7 +79,7 @@ const SOLVED_KEYS = ['kids.feedback.solved1', 'kids.feedback.solved2', 'kids.fee
         <div class="actions">
           @if (status() === 'solved') {
             <button type="button" class="big next" (click)="next.emit()">
-              {{ 'kids.next' | translate }} ▶ <kbd class="key">{{ 'kids.spaceKey' | translate }}</kbd>
+              {{ 'common.next' | translate }} ▶ <kbd class="key">{{ 'kids.spaceKey' | translate }}</kbd>
             </button>
           } @else {
             <button type="button" class="big hint" (click)="showHint()" [disabled]="!interactive()">

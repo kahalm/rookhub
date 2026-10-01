@@ -16,7 +16,9 @@
     "whiteToMove": "Vez das brancas",
     "blackToMove": "Vez das pretas",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "dias",
+    "copy": "Copiar"
   },
   "nav": {
     "discord": "Comunidade no Discord",
@@ -180,13 +182,11 @@
         "nameHint": "p. ex. \"Extensão Chess.com (portátil)\"",
         "expires": "Expira",
         "never": "nunca",
-        "days": "dias",
         "create": "Criar"
       },
       "show": {
         "title": "Token criado",
         "warning": "Este token é mostrado APENAS agora, uma vez. Copie-o para a sua extensão — não poderá ser recuperado mais tarde.",
-        "copy": "Copiar",
         "copied": "Copiado para a área de transferência"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Sem descrição",
       "modeLines": "Linhas",
-      "modeTree": "Árvore",
-      "modeEdit": "Editar"
+      "modeTree": "Árvore"
     },
     "dialog": {
       "title": "Novo Repertório",
@@ -333,8 +332,7 @@
       "public": "Público",
       "kind": "Categoria",
       "create": "Criar",
-      "editTitle": "Editar repertório",
-      "save": "Salvar"
+      "editTitle": "Editar repertório"
     },
     "kind": {
       "none": "—",

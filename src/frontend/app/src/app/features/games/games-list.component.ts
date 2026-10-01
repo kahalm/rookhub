@@ -126,7 +126,7 @@ export type AnalysisState = 'none' | 'running' | 'done';
                 </a>
                 <!-- Alles Weitere ins ⋮: eine Zeile mit sechs Knöpfen liest sich nicht mehr. -->
                 <button mat-icon-button [matMenuTriggerFor]="menu"
-                        [matTooltip]="'games.moreActions' | translate" [attr.aria-label]="'games.moreActions' | translate">
+                        [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #menu="matMenu">

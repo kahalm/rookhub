@@ -46,7 +46,7 @@ import { RepertoireTrainingService, SrLevel } from './repertoire-training.servic
               <mat-form-field appearance="outline" class="unit" subscriptSizing="dynamic">
                 <mat-select [(ngModel)]="lvl.unit">
                   <mat-option value="h">{{ 'srConfig.unit.h' | translate }}</mat-option>
-                  <mat-option value="d">{{ 'srConfig.unit.d' | translate }}</mat-option>
+                  <mat-option value="d">{{ 'common.days' | translate }}</mat-option>
                   <mat-option value="w">{{ 'srConfig.unit.w' | translate }}</mat-option>
                   <mat-option value="mo">{{ 'srConfig.unit.mo' | translate }}</mat-option>
                 </mat-select>

@@ -16,7 +16,9 @@
     "whiteToMove": "Vit att dra",
     "blackToMove": "Svart att dra",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "dagar",
+    "copy": "Kopiera"
   },
   "nav": {
     "discord": "Discord-community",
@@ -190,13 +192,11 @@
         "nameHint": "t.ex. \"Chess.com-utökning (laptop)\"",
         "expires": "Går ut",
         "never": "aldrig",
-        "days": "dagar",
         "create": "Skapa"
       },
       "show": {
         "title": "Token skapad",
         "warning": "Den här token visas BARA nu, en gång. Kopiera den till din utökning — den kan inte hämtas senare.",
-        "copy": "Kopiera",
         "copied": "Kopierad till urklipp"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Ingen beskrivning",
       "modeLines": "Linjer",
-      "modeTree": "Träd",
-      "modeEdit": "Redigera"
+      "modeTree": "Träd"
     },
     "dialog": {
       "title": "Ny repertoar",
@@ -333,8 +332,7 @@
       "public": "Offentlig",
       "kind": "Kategori",
       "create": "Skapa",
-      "editTitle": "Redigera repertoar",
-      "save": "Spara"
+      "editTitle": "Redigera repertoar"
     },
     "kind": {
       "none": "—",

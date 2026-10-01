@@ -206,7 +206,7 @@ interface ChapterGroup {
                       <div class="cmt-variation-bar">
                         <span>{{ 'book.variation.previewing' | translate }}</span>
                         <button mat-stroked-button type="button" (click)="exitVariationPreview()">
-                          <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                          <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
                         </button>
                       </div>
                     }

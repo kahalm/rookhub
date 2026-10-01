@@ -400,7 +400,6 @@
         "nameHint": "pl. \"Chess.com kiterjesztés (laptop)\"",
         "expires": "Lejárat",
         "never": "soha",
-        "days": "nap",
         "create": "Létrehozás",
         "scope": "Hatókör",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
@@ -410,7 +409,6 @@
       "show": {
         "title": "Token létrehozva",
         "warning": "Ez a token CSAK most, egyszer látható. Másold be a kiterjesztésedbe – később nem lehet visszakeresni.",
-        "copy": "Másolás",
         "copied": "Vágólapra másolva"
       },
       "scope": {
@@ -730,7 +728,6 @@
       "noDescription": "Nincs leírás",
       "modeLines": "Vonalak",
       "modeTree": "Fa",
-      "modeEdit": "Szerkesztés",
       "modeHoles": "Lyukkereső"
     },
     "dialog": {
@@ -741,7 +738,6 @@
       "kind": "Kategória",
       "create": "Létrehozás",
       "editTitle": "Repertoár szerkesztése",
-      "save": "Mentés",
       "useForExtension": "Használat a bővítményhez",
       "useForExtensionHint": "Ha be van kapcsolva, a böngészőbővítmény ezt a repertoárt használja az eltérések felismerésére, amíg egy játszmát elemzel.",
       "chessableCourseId": "Chessable-tanfolyam azonosítója",
@@ -866,7 +862,6 @@
       },
       "threshold": "Küszöbérték",
       "thresholdHelp": "Egy állás játszmáinak mekkora hányadától számít lyuknak egy hiányzó ellenféllépés. 1 % a mellékváltozatokat is megtalálja, 5 % csak a főlépéseket. Megengedett: 0,1–50 %.",
-      "cancel": "Mégse",
       "search": "Lyukak keresése",
       "progress": "{{done}} állás kiértékelve, {{open}} hátra van",
       "rateLimited": "A Lichess éppen lassít minket – {{seconds}} mp múlva folytatjuk.",
@@ -1315,7 +1310,6 @@
       "linkedTooltip": "Összekapcsolva ezzel: {{name}} — kattints a módosításhoz",
       "openLinked": "Összekapcsolt tanfolyam megnyitása"
     },
-    "moreActions": "További műveletek",
     "browseTooltip": "Változatok átnézése",
     "flashcards": {
       "title": "Tanulókártyák",
@@ -1739,8 +1733,7 @@
       "sharePuzzle": "Feladvány megosztása",
       "backToPuzzle": "Vissza a feladványhoz",
       "showOriginalSolution": "Eredeti megoldás mutatása",
-      "prev": "Vissza",
-      "next": "Tovább"
+      "prev": "Vissza"
     },
     "settings": {
       "title": "Beállítások",
@@ -1817,8 +1810,7 @@
       "subtitle": "Csak magyarázat — kattints végig, nincs mit megoldani."
     },
     "variation": {
-      "previewing": "Egy változatot mutat a kommentárból",
-      "back": "Vissza"
+      "previewing": "Egy változatot mutat a kommentárból"
     }
   },
   "admin": {
@@ -2025,7 +2017,6 @@
       "intro": "Határozd meg, ki melyik menüpontot látja. A rejtett bejegyzések akkor is le vannak tiltva, ha az oldal URL-jét közvetlenül nyitod meg. Az adminok mindig mindent látnak.",
       "level": "Láthatóság",
       "groups": "Csoportok",
-      "save": "Mentés",
       "saved": "A menü láthatósága elmentve.",
       "saveError": "A menü láthatóságát nem sikerült elmenteni.",
       "loadError": "A menü láthatóságát nem sikerült betölteni.",
@@ -2186,9 +2177,7 @@
       "apply": "Alkalmaz",
       "erase": "Radír",
       "clear": "Tábla ürítése",
-      "startpos": "Alapállás",
-      "whiteToMove": "Világos lép",
-      "blackToMove": "Sötét lép"
+      "startpos": "Alapállás"
     },
     "queueBackground": "Elemzés a háttérben",
     "openJobs": "Elemzési feladatok",
@@ -2590,7 +2579,6 @@
     "resetDefaults": "Vissza az alapértékekre",
     "unit": {
       "h": "óra",
-      "d": "nap",
       "w": "hét",
       "mo": "hónap"
     }
@@ -2841,7 +2829,6 @@
       "username": "Felhasználónév",
       "tester": "Tesztelő",
       "testerHint": "Egy hetet már a tesztelői előnézet időpontjától lát.",
-      "addMember": "Hozzáadás",
       "noMembers": "Még nincsenek tagok.",
       "userNotFound": "Nincs ilyen nevű felhasználó.",
       "memberAdded": "Tag hozzáadva",
@@ -2874,8 +2861,6 @@
     "count": "{{n}} állás",
     "print": "Nyomtatás / mentés PDF-ként",
     "printHint": "Oldalanként {{n}} diagram, hellyel a megoldásnak. A nyomtatási párbeszédben válaszd célként a „Mentés PDF-ként“ lehetőséget.",
-    "whiteToMove": "Világos lép",
-    "blackToMove": "Sötét lép",
     "footer": "Megoldások a RookHubban",
     "nameLine": "Név: ______________________",
     "perPage": {
@@ -2888,7 +2873,6 @@
       "none": "Még nincsenek témák — ezek alapján találod meg később a lapot.",
       "suggested": "A(z) {{n}} feladat alapján javasolva:",
       "own": "Saját téma",
-      "add": "Hozzáadás",
       "remove": "Téma eltávolítása",
       "all": "Mind",
       "noMatch": "Nincs feladatlap „{{theme}}“ témával."
@@ -2917,9 +2901,7 @@
       "retry": "Újra",
       "reset": "Állás visszaállítása",
       "showSolution": "Megoldás mutatása",
-      "next": "Tovább",
-      "finish": "Kész",
-      "prev": "Vissza"
+      "finish": "Kész"
     },
     "list": {
       "hint": "Előbb gyűjts, aztán rendezz, aztán nyomtass: minden a vágólapra kerül, amit feladatlapra küldesz. Ott kidobálsz, átrendezel és címeket írsz hozzá — majd néven mented az egészet.",
@@ -2929,7 +2911,6 @@
       "open": "Megnyitás",
       "clear": "Minden állás eltávolítása",
       "clearConfirm": "Leveszel {{n}} állást a lapról?",
-      "delete": "Törlés",
       "deleteConfirm": "Törlöd a(z) „{{name}}“ feladatlapot az összes állásával?",
       "nameLabel": "A feladatlap neve",
       "saveClipboard": "Mentés feladatlapként",
@@ -2951,8 +2932,7 @@
       "addFen": "Állás hozzáadása",
       "addRejected": "Nem került fel: az állás már a lapon van, vagy a FEN használhatatlan.",
       "saveError": "A módosítást nem sikerült menteni.",
-      "rename": "Átnevezés",
-      "more": "További műveletek"
+      "rename": "Átnevezés"
     },
     "send": {
       "menu": "Küldés feladatlapra",
@@ -3018,7 +2998,6 @@
       "go": "Roastolás!",
       "again": "Újra",
       "busy": "Az AI élesíti a nyelvét …",
-      "copy": "Másolás",
       "share": "Megosztás",
       "notConfigured": "A roastolás nincs beállítva ezen a szerveren.",
       "noAnalysis": "Előbb elemeztesd a játszmát — elemzés nélkül nincs mit roastolni.",
@@ -3093,7 +3072,6 @@
       "retry": "Újra",
       "show": "Megoldás mutatása",
       "skip": "Kihagyás",
-      "next": "Tovább",
       "finish": "Befejezés",
       "again": "Elölről",
       "summary": "{{solved}} / {{total}} lépést találtál meg magad.",
@@ -3128,7 +3106,6 @@
       "sec": "{{count}} mp",
       "days": "{{count}} nap/lépés"
     },
-    "moreActions": "További műveletek",
     "source": {
       "scoresheet": "Játszmalap",
       "pgn": "PGN-feltöltés"
@@ -3186,7 +3163,6 @@
       "sideNone": "nincs megadva"
     },
     "pgnCopy": "PGN másolása",
-    "pgnDownload": "PGN letöltése",
     "pgnCopied": "PGN másolva",
     "pgnCopyFailed": "A PGN-t nem sikerült másolni",
     "pgnUpload": {
@@ -3569,7 +3545,6 @@
       "none": "Nincs körzet",
       "manage": "Keresési profilok kezelése",
       "new": "Új keresési profil",
-      "edit": "Szerkesztés",
       "delete": "Törlés",
       "newTitle": "Új keresési profil",
       "editTitle": "Keresési profil szerkesztése",
@@ -3894,7 +3869,6 @@
       "solved4": "Nagyszerű!"
     },
     "hint": "Tipp",
-    "next": "Tovább",
     "spaceKey": "Szóköz",
     "back": "Kezdőlap",
     "loading": "Egy pillanat …",
@@ -4119,7 +4093,6 @@
     "adminTeam": "Admin-csapat",
     "you": "Te",
     "replyLabel": "A válaszod",
-    "send": "Küldés",
     "sendError": "Az üzenetet nem sikerült elküldeni.",
     "emptyUserCanWrite": "Még nincsenek üzenetek. Írj lent az admin-csapatnak — a választ itt kapod meg.",
     "writeLabel": "Az üzeneted"

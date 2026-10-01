@@ -16,7 +16,9 @@
     "whiteToMove": "Aux Blancs de jouer",
     "blackToMove": "Aux Noirs de jouer",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "jours",
+    "copy": "Copier"
   },
   "nav": {
     "discord": "Communauté Discord",
@@ -190,13 +192,11 @@
         "nameHint": "ex. « Extension Chess.com (ordinateur portable) »",
         "expires": "Expire",
         "never": "jamais",
-        "days": "jours",
         "create": "Créer"
       },
       "show": {
         "title": "Jeton créé",
         "warning": "Ce jeton est affiché UNE SEULE fois. Copiez-le dans votre extension — il ne pourra pas être récupéré ultérieurement.",
-        "copy": "Copier",
         "copied": "Copié dans le presse-papiers"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Pas de description",
       "modeLines": "Lignes",
-      "modeTree": "Arbre",
-      "modeEdit": "Modifier"
+      "modeTree": "Arbre"
     },
     "dialog": {
       "title": "Nouveau répertoire",
@@ -333,8 +332,7 @@
       "public": "Public",
       "kind": "Catégorie",
       "create": "Créer",
-      "editTitle": "Modifier le répertoire",
-      "save": "Enregistrer"
+      "editTitle": "Modifier le répertoire"
     },
     "kind": {
       "none": "—",

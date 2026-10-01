@@ -68,7 +68,6 @@
     "resetDefaults": "Reset to defaults",
     "unit": {
       "h": "hours",
-      "d": "days",
       "w": "weeks",
       "mo": "months"
     }
@@ -638,7 +637,6 @@
         "nameHint": "e.g. \"Chess.com extension (laptop)\"",
         "expires": "Expires",
         "never": "never",
-        "days": "days",
         "create": "Create",
         "scope": "Scope",
         "scopeExtension": "Extension (chess.com, lichess.org, Chessable)",
@@ -648,7 +646,6 @@
       "show": {
         "title": "Token created",
         "warning": "This token is shown ONLY once, right now. Copy it into your extension — it cannot be retrieved later.",
-        "copy": "Copy",
         "copied": "Copied to clipboard"
       },
       "scope": {
@@ -974,7 +971,6 @@
       "noDescription": "No description",
       "modeLines": "Lines",
       "modeTree": "Tree",
-      "modeEdit": "Edit",
       "modeHoles": "Hole finder"
     },
     "dialog": {
@@ -985,7 +981,6 @@
       "kind": "Category",
       "create": "Create",
       "editTitle": "Edit Repertoire",
-      "save": "Save",
       "useForExtension": "Use for the extension",
       "useForExtensionHint": "When enabled, the browser extension uses this repertoire for deviation detection while you analyze a game.",
       "chessableCourseId": "Chessable Course ID",
@@ -1104,7 +1099,6 @@
       },
       "threshold": "Threshold",
       "thresholdHelp": "The share of games in a position from which a missing opponent move counts as a hole. 1 % also finds sidelines, 5 % only the main moves. Allowed: 0.1 to 50 %.",
-      "cancel": "Cancel",
       "search": "Find holes",
       "progress": "{{done}} positions analysed, {{open}} pending",
       "rateLimited": "Lichess is slowing us down – continuing in {{seconds}} s.",
@@ -1587,7 +1581,6 @@
       "linkedTooltip": "Linked with {{name}} — click to change",
       "openLinked": "Open linked course"
     },
-    "moreActions": "More actions",
     "browseTooltip": "Browse lines",
     "flashcards": {
       "title": "Flashcards",
@@ -1847,7 +1840,6 @@
       "username": "Username",
       "tester": "Tester",
       "testerHint": "Sees a week already from its tester-preview time.",
-      "addMember": "Add",
       "noMembers": "No members yet.",
       "userNotFound": "No user with that name.",
       "memberAdded": "Member added",
@@ -2142,8 +2134,7 @@
       "sharePuzzle": "Share puzzle",
       "backToPuzzle": "Back to puzzle",
       "showOriginalSolution": "Show original solution",
-      "prev": "Previous",
-      "next": "Next"
+      "prev": "Previous"
     },
     "settings": {
       "title": "Settings",
@@ -2209,8 +2200,7 @@
       "subtitle": "For reference only — click through, nothing to solve."
     },
     "variation": {
-      "previewing": "Showing a line from the comment",
-      "back": "Back"
+      "previewing": "Showing a line from the comment"
     }
   },
   "admin": {
@@ -2417,7 +2407,6 @@
       "intro": "Decide who sees each menu entry. Hidden entries are also blocked when the page URL is opened directly. Admins always see everything.",
       "level": "Visibility",
       "groups": "Groups",
-      "save": "Save",
       "saved": "Menu visibility saved.",
       "saveError": "Could not save menu visibility.",
       "loadError": "Could not load menu visibility.",
@@ -2560,8 +2549,6 @@
     "count": "{{n}} positions",
     "print": "Print / save as PDF",
     "printHint": "{{n}} diagrams per page, with room for the solution. In the print dialog choose „Save as PDF“ as the destination.",
-    "whiteToMove": "White to move",
-    "blackToMove": "Black to move",
     "footer": "Solutions in RookHub",
     "nameLine": "Name: ______________________",
     "perPage": {
@@ -2574,7 +2561,6 @@
       "none": "No themes yet — they are how you find this sheet again later.",
       "suggested": "Suggested from the {{n}} tasks:",
       "own": "Own theme",
-      "add": "Add",
       "remove": "Remove theme",
       "all": "All",
       "noMatch": "No worksheet with the theme „{{theme}}“."
@@ -2603,9 +2589,7 @@
       "retry": "Try again",
       "reset": "Reset the position",
       "showSolution": "Show the solution",
-      "next": "Next",
-      "finish": "Done",
-      "prev": "Back"
+      "finish": "Done"
     },
     "list": {
       "hint": "Collect first, then arrange, then print: everything you send to a worksheet lands in the clipboard. There you throw things out, reorder them and add headings — and save the lot under a name.",
@@ -2615,7 +2599,6 @@
       "open": "Open",
       "clear": "Remove all positions",
       "clearConfirm": "Take {{n}} positions off the sheet?",
-      "delete": "Delete",
       "deleteConfirm": "Delete worksheet „{{name}}“ with all its positions?",
       "nameLabel": "Worksheet name",
       "saveClipboard": "Save as worksheet",
@@ -2637,8 +2620,7 @@
       "addFen": "Add position",
       "addRejected": "Not added: the position is already on the sheet, or the FEN is unusable.",
       "saveError": "The change could not be saved.",
-      "rename": "Rename",
-      "more": "More actions"
+      "rename": "Rename"
     },
     "send": {
       "menu": "Send to worksheet",
@@ -2704,7 +2686,6 @@
       "go": "Roast!",
       "again": "Roll again",
       "busy": "The AI is sharpening its tongue …",
-      "copy": "Copy",
       "share": "Share",
       "notConfigured": "Roasting is not set up on this server.",
       "noAnalysis": "Analyse the game first — without an analysis there is nothing to roast.",
@@ -2779,7 +2760,6 @@
       "retry": "Try again",
       "show": "Show solution",
       "skip": "Skip",
-      "next": "Next",
       "finish": "Finish",
       "again": "Start over",
       "summary": "You found {{solved}} of {{total}} yourself.",
@@ -2814,7 +2794,6 @@
       "sec": "{{count}} s",
       "days": "{{count}} d/move"
     },
-    "moreActions": "More actions",
     "source": {
       "scoresheet": "Scoresheet",
       "pgn": "PGN upload"
@@ -2872,7 +2851,6 @@
       "sideNone": "not set"
     },
     "pgnCopy": "Copy PGN",
-    "pgnDownload": "Download PGN",
     "pgnCopied": "PGN copied",
     "pgnCopyFailed": "Could not copy the PGN",
     "pgnUpload": {
@@ -2941,9 +2919,7 @@
       "apply": "Apply",
       "erase": "Eraser",
       "clear": "Empty board",
-      "startpos": "Starting position",
-      "whiteToMove": "White to move",
-      "blackToMove": "Black to move"
+      "startpos": "Starting position"
     },
     "queueBackground": "Analyse in the background",
     "openJobs": "Analysis jobs",
@@ -3446,7 +3422,6 @@
     "adminTeam": "Admin team",
     "you": "You",
     "replyLabel": "Your reply",
-    "send": "Send",
     "sendError": "Could not send the message.",
     "emptyUserCanWrite": "No messages yet. Write to the admin team below — they will get back to you here.",
     "writeLabel": "Your message"
@@ -3892,7 +3867,6 @@
       "none": "No radius",
       "manage": "Manage search profiles",
       "new": "New search profile",
-      "edit": "Edit",
       "delete": "Delete",
       "newTitle": "New search profile",
       "editTitle": "Edit search profile",
@@ -4217,7 +4191,6 @@
       "solved4": "Awesome!"
     },
     "hint": "Hint",
-    "next": "Next",
     "spaceKey": "Space",
     "back": "Home",
     "loading": "Just a moment …",

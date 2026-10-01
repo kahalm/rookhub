@@ -60,9 +60,9 @@ export type ApiTokenScope = 'extension' | 'engine';
           <mat-label>{{ 'profile.tokens.dialog.expires' | translate }}</mat-label>
           <mat-select [(ngModel)]="expiresInDays" name="expiresInDays">
             <mat-option [value]="null">{{ 'profile.tokens.dialog.never' | translate }}</mat-option>
-            <mat-option [value]="30">30 {{ 'profile.tokens.dialog.days' | translate }}</mat-option>
-            <mat-option [value]="90">90 {{ 'profile.tokens.dialog.days' | translate }}</mat-option>
-            <mat-option [value]="365">365 {{ 'profile.tokens.dialog.days' | translate }}</mat-option>
+            <mat-option [value]="30">30 {{ 'common.days' | translate }}</mat-option>
+            <mat-option [value]="90">90 {{ 'common.days' | translate }}</mat-option>
+            <mat-option [value]="365">365 {{ 'common.days' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
       </form>
@@ -93,7 +93,7 @@ export class CreateTokenDialogComponent {
       <p class="warning">⚠️ {{ 'profile.tokens.show.warning' | translate }}</p>
       <div class="token-box">
         <code>{{ token }}</code>
-        <button mat-icon-button (click)="copy()" [attr.title]="'profile.tokens.show.copy' | translate">
+        <button mat-icon-button (click)="copy()" [attr.title]="'common.copy' | translate">
           <mat-icon>content_copy</mat-icon>
         </button>
       </div>

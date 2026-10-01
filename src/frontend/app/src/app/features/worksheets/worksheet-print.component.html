@@ -47,7 +47,7 @@
                 <span class="ws-no">{{ t.no }}</span>
                 @if (t.heading) { <span class="ws-heading">{{ t.heading }}</span> }
                 <span class="ws-turn">
-                  {{ (t.whiteToMove ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+                  {{ (t.whiteToMove ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
                 </span>
               </div>
               <app-flashcard-board class="ws-board" [fen]="t.fen" [orientation]="t.orientation"

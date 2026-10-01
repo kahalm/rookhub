@@ -131,7 +131,7 @@ const RECAP_RETRY_MS = 15_000;
                    für die eigene Partie dazu korrigieren, Roast und — bei einer eingelesenen — das Formular-Foto. -->
               @if (game) {
                 <button mat-icon-button class="game-menu" [matMenuTriggerFor]="gameMenu"
-                        [matTooltip]="'games.moreActions' | translate" [attr.aria-label]="'games.moreActions' | translate">
+                        [matTooltip]="'common.moreActions' | translate" [attr.aria-label]="'common.moreActions' | translate">
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #gameMenu="matMenu">
@@ -142,7 +142,7 @@ const RECAP_RETRY_MS = 15_000;
                     <mat-icon>content_copy</mat-icon><span>{{ 'games.pgnCopy' | translate }}</span>
                   </button>
                   <button mat-menu-item (click)="downloadPgn()">
-                    <mat-icon>file_download</mat-icon><span>{{ 'games.pgnDownload' | translate }}</span>
+                    <mat-icon>file_download</mat-icon><span>{{ 'common.downloadPgn' | translate }}</span>
                   </button>
                   @if (own && gameId) {
                     <a mat-menu-item [routerLink]="['/games', gameId, 'edit']">

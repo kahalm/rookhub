@@ -69,7 +69,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
               <mat-icon>travel_explore</mat-icon>
             </mat-button-toggle>
             @if (repertoire.isOwner !== false) {
-              <mat-button-toggle value="edit" [attr.aria-label]="'repertoire.detail.modeEdit' | translate" [attr.title]="'repertoire.detail.modeEdit' | translate">
+              <mat-button-toggle value="edit" [attr.aria-label]="'common.edit' | translate" [attr.title]="'common.edit' | translate">
                 <mat-icon>edit</mat-icon>
               </mat-button-toggle>
             }
@@ -137,7 +137,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
                   <div class="cmt-variation-bar">
                     <span>{{ 'book.variation.previewing' | translate }}</span>
                     <button mat-stroked-button type="button" (click)="exitCommentPreview()">
-                      <mat-icon>undo</mat-icon> {{ 'book.variation.back' | translate }}
+                      <mat-icon>undo</mat-icon> {{ 'common.back' | translate }}
                     </button>
                   </div>
                 }

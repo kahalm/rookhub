@@ -31,7 +31,7 @@
     <mat-card class="wsv-task">
       @if (t.item.heading) { <h2 class="wsv-heading">{{ t.item.heading }}</h2> }
       <p class="wsv-turn">
-        {{ (t.item.orientation === 'white' ? 'worksheets.whiteToMove' : 'worksheets.blackToMove') | translate }}
+        {{ (t.item.orientation === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate }}
       </p>
 
       <div class="wsv-board">
@@ -59,7 +59,7 @@
 
       <div class="wsv-actions">
         <button mat-icon-button (click)="prev()" [disabled]="current === 0"
-                [attr.aria-label]="'worksheets.solve.prev' | translate">
+                [attr.aria-label]="'common.back' | translate">
           <mat-icon>chevron_left</mat-icon>
         </button>
         @if (t.state === 'wrong') {
@@ -79,7 +79,7 @@
         }
         <span class="wsv-spacer"></span>
         <button mat-flat-button color="primary" (click)="next()">
-          {{ (atEnd ? 'worksheets.solve.finish' : 'worksheets.solve.next') | translate }}
+          {{ (atEnd ? 'worksheets.solve.finish' : 'common.next') | translate }}
           <mat-icon>chevron_right</mat-icon>
         </button>
       </div>

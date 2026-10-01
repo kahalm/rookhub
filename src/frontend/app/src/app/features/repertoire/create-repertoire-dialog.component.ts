@@ -50,7 +50,7 @@ import { Repertoire } from '../../core/models';
     <mat-dialog-actions align="end">
       <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
       <button mat-raised-button color="primary" [disabled]="!name" (click)="dialogRef.close({ name, description, isPublic, kind, useForExtension, chessableCourseId: chessableCourseId || null, updateChessableCourseId: true })">
-        {{ (editMode ? 'repertoire.dialog.save' : 'repertoire.dialog.create') | translate }}
+        {{ (editMode ? 'common.save' : 'repertoire.dialog.create') | translate }}
       </button>
     </mat-dialog-actions>
   `,

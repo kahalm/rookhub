@@ -16,7 +16,9 @@
     "whiteToMove": "Albul la mutare",
     "blackToMove": "Negrul la mutare",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "zile",
+    "copy": "Copiază"
   },
   "nav": {
     "discord": "Comunitatea Discord",
@@ -213,13 +215,11 @@
         "nameHint": "ex. „Extenșie Chess.com (laptop)”",
         "expires": "Expiră",
         "never": "niciodată",
-        "days": "zile",
         "create": "Creează"
       },
       "show": {
         "title": "Token creat",
         "warning": "Acest token este afișat DOAR acum, o singură dată. Copiază-l în extensia ta — nu poate fi recuperat ulterior.",
-        "copy": "Copiază",
         "copied": "Copiat în clipboard"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Fără descriere",
       "modeLines": "Linii",
-      "modeTree": "Arbore",
-      "modeEdit": "Editare"
+      "modeTree": "Arbore"
     },
     "dialog": {
       "title": "Repertoriu nou",
@@ -333,8 +332,7 @@
       "public": "Public",
       "create": "Creează",
       "kind": "Categorie",
-      "editTitle": "Editare repertoriu",
-      "save": "Salvați"
+      "editTitle": "Editare repertoriu"
     },
     "lines": {
       "allLines": "Toate liniile",

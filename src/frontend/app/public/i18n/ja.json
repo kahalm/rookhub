@@ -16,7 +16,9 @@
     "whiteToMove": "白の手番",
     "blackToMove": "黒の手番",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "日",
+    "copy": "コピー"
   },
   "nav": {
     "discord": "Discordコミュニティ",
@@ -180,13 +182,11 @@
         "nameHint": "例: 「Chess.com 拡張機能（ノートPC）」",
         "expires": "有効期限",
         "never": "なし",
-        "days": "日",
         "create": "作成"
       },
       "show": {
         "title": "トークンを作成しました",
         "warning": "このトークンは今回のみ表示されます。拡張機能にコピーしてください — 後から取得することはできません。",
-        "copy": "コピー",
         "copied": "クリップボードにコピーしました"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "説明なし",
       "modeLines": "ライン",
-      "modeTree": "ツリー",
-      "modeEdit": "編集"
+      "modeTree": "ツリー"
     },
     "dialog": {
       "title": "新規レパートリー",
@@ -333,8 +332,7 @@
       "public": "公開",
       "kind": "カテゴリー",
       "create": "作成",
-      "editTitle": "レパートリーを編集",
-      "save": "保存"
+      "editTitle": "レパートリーを編集"
     },
     "kind": {
       "none": "—",

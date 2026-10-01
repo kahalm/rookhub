@@ -16,7 +16,9 @@
     "whiteToMove": "Beyaz oynar",
     "blackToMove": "Siyah oynar",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "gün",
+    "copy": "Kopyala"
   },
   "nav": {
     "discord": "Discord topluluğu",
@@ -180,13 +182,11 @@
         "nameHint": "örn. \"Chess.com uzantısı (dizüstü)\"",
         "expires": "Son kullanma",
         "never": "hiçbir zaman",
-        "days": "gün",
         "create": "Oluştur"
       },
       "show": {
         "title": "Token oluşturuldu",
         "warning": "Bu token YALNIZCA şimdi, bir kez gösterilmektedir. Uzantınıza kopyalayın — daha sonra alınamaz.",
-        "copy": "Kopyala",
         "copied": "Panoya kopyalandı"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Açıklama yok",
       "modeLines": "Satırlar",
-      "modeTree": "Ağaç",
-      "modeEdit": "Düzenle"
+      "modeTree": "Ağaç"
     },
     "dialog": {
       "title": "Yeni Repertuar",
@@ -333,8 +332,7 @@
       "public": "Herkese açık",
       "kind": "Kategori",
       "create": "Oluştur",
-      "editTitle": "Repertuarı düzenle",
-      "save": "Kaydet"
+      "editTitle": "Repertuarı düzenle"
     },
     "kind": {
       "none": "—",

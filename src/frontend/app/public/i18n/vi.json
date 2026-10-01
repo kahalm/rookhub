@@ -16,7 +16,9 @@
     "whiteToMove": "Đến lượt Trắng",
     "blackToMove": "Đến lượt Đen",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "ngày",
+    "copy": "Sao chép"
   },
   "nav": {
     "discord": "Cộng đồng Discord",
@@ -190,13 +192,11 @@
         "nameHint": "ví dụ: \"Tiện ích Chess.com (laptop)\"",
         "expires": "Hết hạn",
         "never": "không bao giờ",
-        "days": "ngày",
         "create": "Tạo"
       },
       "show": {
         "title": "Token đã được tạo",
         "warning": "Token này chỉ được hiển thị MỘT LẦN duy nhất. Hãy sao chép vào tiện ích của bạn — không thể lấy lại sau này.",
-        "copy": "Sao chép",
         "copied": "Đã sao chép vào clipboard"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Không có mô tả",
       "modeLines": "Đường nước",
-      "modeTree": "Cây nước",
-      "modeEdit": "Chỉnh sửa"
+      "modeTree": "Cây nước"
     },
     "dialog": {
       "title": "Repertoire mới",
@@ -333,8 +332,7 @@
       "public": "Công khai",
       "kind": "Danh mục",
       "create": "Tạo",
-      "editTitle": "Chỉnh sửa hệ thống nước đi",
-      "save": "Lưu"
+      "editTitle": "Chỉnh sửa hệ thống nước đi"
     },
     "kind": {
       "none": "—",

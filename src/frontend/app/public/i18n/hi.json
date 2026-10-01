@@ -16,7 +16,9 @@
     "whiteToMove": "सफेद की चाल",
     "blackToMove": "काली की चाल",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "दिन",
+    "copy": "कॉपी करें"
   },
   "nav": {
     "discord": "Discord समुदाय",
@@ -190,13 +192,11 @@
         "nameHint": "जैसे \"Chess.com extension (laptop)\"",
         "expires": "समाप्ति",
         "never": "कभी नहीं",
-        "days": "दिन",
         "create": "बनाएं"
       },
       "show": {
         "title": "टोकन बनाया गया",
         "warning": "यह टोकन केवल अभी, एक बार दिखाया जाता है। इसे अपने एक्सटेंशन में कॉपी करें — इसे बाद में पुनः प्राप्त नहीं किया जा सकता।",
-        "copy": "कॉपी करें",
         "copied": "क्लिपबोर्ड में कॉपी हुआ"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "कोई विवरण नहीं",
       "modeLines": "लाइनें",
-      "modeTree": "ट्री",
-      "modeEdit": "संपादित करें"
+      "modeTree": "ट्री"
     },
     "dialog": {
       "title": "नया रेपर्टोयर",
@@ -333,8 +332,7 @@
       "public": "सार्वजनिक",
       "kind": "श्रेणी",
       "create": "बनाएं",
-      "editTitle": "रेपर्टोयर संपादित करें",
-      "save": "सहेजें"
+      "editTitle": "रेपर्टोयर संपादित करें"
     },
     "kind": {
       "none": "—",

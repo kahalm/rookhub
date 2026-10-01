@@ -93,8 +93,8 @@ export function composeFen(boardFen: string, side: 'w' | 'b'): string {
         <button mat-icon-button [class.active]="brush === 'trash'" (click)="toggleTrash()"
                 [matTooltip]="'analysis.setup.erase' | translate"><mat-icon>delete</mat-icon></button>
         <mat-button-toggle-group [value]="side" (change)="side = $event.value" hideSingleSelectionIndicator="true">
-          <mat-button-toggle value="w">{{ 'analysis.setup.whiteToMove' | translate }}</mat-button-toggle>
-          <mat-button-toggle value="b">{{ 'analysis.setup.blackToMove' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="w">{{ 'common.whiteToMove' | translate }}</mat-button-toggle>
+          <mat-button-toggle value="b">{{ 'common.blackToMove' | translate }}</mat-button-toggle>
         </mat-button-toggle-group>
         <span class="ps-spacer"></span>
         <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>

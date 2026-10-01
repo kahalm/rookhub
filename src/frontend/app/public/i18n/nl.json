@@ -16,7 +16,9 @@
     "whiteToMove": "Wit aan zet",
     "blackToMove": "Zwart aan zet",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "dagen",
+    "copy": "Kopiëren"
   },
   "nav": {
     "discord": "Discord-community",
@@ -180,13 +182,11 @@
         "nameHint": "bijv. \"Chess.com-extensie (laptop)\"",
         "expires": "Verloopt",
         "never": "nooit",
-        "days": "dagen",
         "create": "Aanmaken"
       },
       "show": {
         "title": "Token aangemaakt",
         "warning": "Dit token wordt ALLEEN nu, eenmalig getoond. Kopieer het naar je extensie — het kan later niet meer worden opgehaald.",
-        "copy": "Kopiëren",
         "copied": "Gekopieerd naar klembord"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Geen beschrijving",
       "modeLines": "Lijnen",
-      "modeTree": "Boom",
-      "modeEdit": "Bewerken"
+      "modeTree": "Boom"
     },
     "dialog": {
       "title": "Nieuw repertoire",
@@ -333,8 +332,7 @@
       "public": "Openbaar",
       "kind": "Categorie",
       "create": "Aanmaken",
-      "editTitle": "Repertoire bewerken",
-      "save": "Opslaan"
+      "editTitle": "Repertoire bewerken"
     },
     "kind": {
       "none": "—",

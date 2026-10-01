@@ -16,7 +16,9 @@
     "whiteToMove": "نوبت سفید",
     "blackToMove": "نوبت سیاه",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "روز",
+    "copy": "کپی"
   },
   "nav": {
     "discord": "انجمن دیسکورد",
@@ -180,13 +182,11 @@
         "nameHint": "مثلاً «افزونه Chess.com (لپ‌تاپ)»",
         "expires": "انقضا",
         "never": "هرگز",
-        "days": "روز",
         "create": "ایجاد"
       },
       "show": {
         "title": "توکن ایجاد شد",
         "warning": "این توکن فقط همین یک‌بار نمایش داده می‌شود. آن را در افزونه خود کپی کنید — بعداً قابل بازیابی نیست.",
-        "copy": "کپی",
         "copied": "در کلیپ‌بورد کپی شد"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "بدون توضیحات",
       "modeLines": "خطوط",
-      "modeTree": "درخت",
-      "modeEdit": "ویرایش"
+      "modeTree": "درخت"
     },
     "dialog": {
       "title": "رپرتوار جدید",
@@ -333,8 +332,7 @@
       "public": "عمومی",
       "kind": "دسته‌بندی",
       "create": "ایجاد",
-      "editTitle": "ویرایش رپرتوار",
-      "save": "ذخیره"
+      "editTitle": "ویرایش رپرتوار"
     },
     "kind": {
       "none": "—",

@@ -52,7 +52,7 @@ import { LoadErrorComponent } from '../../shared/load-error/load-error.component
                       (keydown.control.enter)="send()" [disabled]="sending"></textarea>
           </mat-form-field>
           <button mat-raised-button color="primary" (click)="send()" [disabled]="sending || !draft.trim()">
-            <mat-icon>send</mat-icon> {{ 'messages.send' | translate }}
+            <mat-icon>send</mat-icon> {{ 'common.send' | translate }}
           </button>
         </div>
       }

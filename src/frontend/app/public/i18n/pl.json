@@ -16,7 +16,9 @@
     "whiteToMove": "Ruch białych",
     "blackToMove": "Ruch czarnych",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "dni",
+    "copy": "Kopiuj"
   },
   "nav": {
     "discord": "Społeczność Discord",
@@ -190,13 +192,11 @@
         "nameHint": "np. \"Rozszerzenie Chess.com (laptop)\"",
         "expires": "Wygasa",
         "never": "nigdy",
-        "days": "dni",
         "create": "Utwórz"
       },
       "show": {
         "title": "Token utworzony",
         "warning": "Ten token jest wyświetlany TYLKO teraz, jednorazowo. Skopiuj go do rozszerzenia — nie można go później odzyskać.",
-        "copy": "Kopiuj",
         "copied": "Skopiowano do schowka"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Brak opisu",
       "modeLines": "Linie",
-      "modeTree": "Drzewo",
-      "modeEdit": "Edytuj"
+      "modeTree": "Drzewo"
     },
     "dialog": {
       "title": "Nowy repertuar",
@@ -333,8 +332,7 @@
       "public": "Publiczny",
       "kind": "Kategoria",
       "create": "Utwórz",
-      "editTitle": "Edytuj repertuar",
-      "save": "Zapisz"
+      "editTitle": "Edytuj repertuar"
     },
     "kind": {
       "none": "—",

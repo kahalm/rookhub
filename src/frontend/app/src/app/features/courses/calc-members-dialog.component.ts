@@ -48,7 +48,7 @@ export interface CalcMembersDialogData { bookId: number; }
         </mat-form-field>
         <mat-slide-toggle [(ngModel)]="newIsTester" [disabled]="busy">{{ 'calc.series.tester' | translate }}</mat-slide-toggle>
         <button mat-flat-button color="primary" [disabled]="busy || !newUsername.trim()" (click)="add()">
-          <mat-icon>person_add</mat-icon> {{ 'calc.series.addMember' | translate }}
+          <mat-icon>person_add</mat-icon> {{ 'common.add' | translate }}
         </button>
       </div>
 

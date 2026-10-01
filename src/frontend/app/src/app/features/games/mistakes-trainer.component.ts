@@ -117,7 +117,7 @@ import { MistakesSession } from './mistakes-session';
         } @else {
           <span class="spacer"></span>
           <button mat-flat-button color="primary" (click)="session.next()">
-            {{ (session.last() ? 'games.mistakes.finish' : 'games.mistakes.next') | translate }}
+            {{ (session.last() ? 'games.mistakes.finish' : 'common.next') | translate }}
           </button>
         }
       </div>

@@ -55,7 +55,7 @@ export interface GameRoastData {
     </div>
     <div mat-dialog-actions align="end">
       @if (current(); as r) {
-        <button mat-button (click)="copy(r)" [disabled]="busy()"><mat-icon>content_copy</mat-icon> {{ 'games.roast.copy' | translate }}</button>
+        <button mat-button (click)="copy(r)" [disabled]="busy()"><mat-icon>content_copy</mat-icon> {{ 'common.copy' | translate }}</button>
         @if (canShare) {
           <button mat-button (click)="share(r)" [disabled]="busy()"><mat-icon>share</mat-icon> {{ 'games.roast.share' | translate }}</button>
         }

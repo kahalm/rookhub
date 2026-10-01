@@ -16,7 +16,9 @@
     "whiteToMove": "دور الأبيض",
     "blackToMove": "دور الأسود",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "أيام",
+    "copy": "نسخ"
   },
   "nav": {
     "discord": "مجتمع Discord",
@@ -180,13 +182,11 @@
         "nameHint": "مثال: \"إضافة Chess.com (حاسوب محمول)\"",
         "expires": "تاريخ الانتهاء",
         "never": "أبداً",
-        "days": "أيام",
         "create": "إنشاء"
       },
       "show": {
         "title": "تم إنشاء الرمز",
         "warning": "يُعرض هذا الرمز مرة واحدة فقط الآن. انسخه في إضافتك — لا يمكن استرجاعه لاحقاً.",
-        "copy": "نسخ",
         "copied": "تم النسخ إلى الحافظة"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "لا يوجد وصف",
       "modeLines": "الخطوط",
-      "modeTree": "الشجرة",
-      "modeEdit": "تعديل"
+      "modeTree": "الشجرة"
     },
     "dialog": {
       "title": "مخزون جديد",
@@ -333,8 +332,7 @@
       "public": "عام",
       "kind": "الفئة",
       "create": "إنشاء",
-      "editTitle": "تعديل الريبرتوار",
-      "save": "حفظ"
+      "editTitle": "تعديل الريبرتوار"
     },
     "kind": {
       "none": "—",

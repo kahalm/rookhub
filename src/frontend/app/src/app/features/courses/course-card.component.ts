@@ -106,8 +106,8 @@ import { labelOr } from './course-language.util';
             </div>
             <div class="util-actions">
               <button mat-icon-button [matMenuTriggerFor]="actionMenu"
-                      [matTooltip]="'courses.moreActions' | translate"
-                      [attr.aria-label]="'courses.moreActions' | translate">
+                      [matTooltip]="'common.moreActions' | translate"
+                      [attr.aria-label]="'common.moreActions' | translate">
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #actionMenu="matMenu">
@@ -220,8 +220,8 @@ import { labelOr } from './course-language.util';
                             <mat-icon>play_arrow</mat-icon>
                           </button>
                           <button mat-icon-button [matMenuTriggerFor]="chapterMenu"
-                                  [matTooltip]="'courses.moreActions' | translate"
-                                  [attr.aria-label]="'courses.moreActions' | translate">
+                                  [matTooltip]="'common.moreActions' | translate"
+                                  [attr.aria-label]="'common.moreActions' | translate">
                             <mat-icon>more_vert</mat-icon>
                           </button>
                           <mat-menu #chapterMenu="matMenu">

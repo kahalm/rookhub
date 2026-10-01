@@ -101,7 +101,7 @@ export interface HoleBoardView {
           <span class="spacer"></span>
           @if (running()) {
             <button mat-stroked-button type="button" (click)="cancel()">
-              <mat-icon>stop</mat-icon> {{ 'repertoire.holes.cancel' | translate }}
+              <mat-icon>stop</mat-icon> {{ 'common.cancel' | translate }}
             </button>
           } @else {
             <button mat-flat-button color="primary" type="button" (click)="start()" [disabled]="!canStart()">

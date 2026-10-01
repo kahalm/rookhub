@@ -16,7 +16,9 @@
     "whiteToMove": "Bílý na tahu",
     "blackToMove": "Černý na tahu",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "days": "dní",
+    "copy": "Kopírovat"
   },
   "nav": {
     "discord": "Discord komunita",
@@ -190,13 +192,11 @@
         "nameHint": "např. \"Rozšíření Chess.com (notebook)\"",
         "expires": "Vyprší",
         "never": "nikdy",
-        "days": "dní",
         "create": "Vytvořit"
       },
       "show": {
         "title": "Token vytvořen",
         "warning": "Tento token je zobrazen POUZE nyní, jednou. Zkopírujte ho do svého rozšíření – nelze ho později získat zpět.",
-        "copy": "Kopírovat",
         "copied": "Zkopírováno do schránky"
       }
     },
@@ -323,8 +323,7 @@
     "detail": {
       "noDescription": "Bez popisu",
       "modeLines": "Linie",
-      "modeTree": "Strom",
-      "modeEdit": "Upravit"
+      "modeTree": "Strom"
     },
     "dialog": {
       "title": "Nový repertoár",
@@ -333,8 +332,7 @@
       "public": "Veřejný",
       "kind": "Kategorie",
       "create": "Vytvořit",
-      "editTitle": "Upravit repertoár",
-      "save": "Uložit"
+      "editTitle": "Upravit repertoár"
     },
     "kind": {
       "none": "—",
