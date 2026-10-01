@@ -116,4 +116,24 @@ public class DiscordLinkServiceTests
         Assert.False(svc.Enabled);
         Assert.Null(svc.Verify(token));
     }
+    [Fact]
+    public void RedeemedToken_BelongsToTheFirstAccount_UntilItExpires()
+    {
+        // A1-011: ohne Vermerk war ein Token 30 Tage lang für JEDES Konto einlösbar.
+        var svc = DiscordTokenTestHelper.Service();
+        var token = DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FarFuture);
+        var identity = svc.Verify(token)!;
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(DiscordTokenTestHelper.FarFuture), identity.ExpiresAt);
+
+        Assert.False(svc.IsRedeemedByOther(token, userId: 1));
+        svc.MarkRedeemed(token, identity, userId: 1);
+
+        Assert.True(svc.IsRedeemedByOther(token, userId: 2));
+        Assert.False(svc.IsRedeemedByOther(token, userId: 1));          // derselbe darf erneut
+        svc.MarkRedeemed(token, identity, userId: 2);                   // der erste Einlöser behält es
+        Assert.True(svc.IsRedeemedByOther(token, userId: 2));
+        // Ein anderes Token derselben Discord-ID (neuer Bot-Link) ist davon unberührt.
+        var other = DiscordTokenTestHelper.Make("42", "y", DiscordTokenTestHelper.FarFuture);
+        Assert.False(svc.IsRedeemedByOther(other, userId: 2));
+    }
 }

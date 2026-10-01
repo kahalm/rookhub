@@ -120,13 +120,17 @@ public class ProfileController : BaseApiController
     [DenyWhileImpersonating]   // auch eine Identitätsbindung (siehe UpdateProfile)
     public async Task<ActionResult<ProfileDto>> LinkDiscord([FromBody] LinkDiscordDto dto)
     {
+        var userId = GetUserId();
         var identity = _discordLink.Verify(dto.Token);
-        if (identity == null)
+        // Ein von einem anderen Konto schon eingelöstes Token gilt wie ein ungültiges (A1-011).
+        if (identity == null || _discordLink.IsRedeemedByOther(dto.Token, userId))
             return BadRequest(new { message = "Invalid or expired Discord link token." });
 
         try
         {
-            return Ok(await _profileService.LinkDiscordAsync(GetUserId(), identity.Id, identity.Username));
+            var profile = await _profileService.LinkDiscordAsync(userId, identity.Id, identity.Username);
+            _discordLink.MarkRedeemed(dto.Token, identity, userId);
+            return Ok(profile);
         }
         catch (KeyNotFoundException ex)
         {

@@ -373,6 +373,46 @@ public class ProfileControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task LinkDiscord_TokenRedeemedByAnotherAccount_IsRejected_EvenAfterUnlink()
+    {
+        // A1-011: A verknüpft per Bot-Link und trennt später; B hat denselben Link (weitergeleitete DM,
+        // geteiltes Gerät) — ohne Vermerk bekäme B die fremde Discord-ID.
+        var a = await CreateUserAsync("alice");
+        var b = await CreateUserAsync("bob");
+        var token = DiscordTokenTestHelper.Make("4242", "AliceDisco", DiscordTokenTestHelper.FarFuture);
+
+        SetUser(a.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.IsType<OkObjectResult>((await _controller.UnlinkDiscord()).Result);
+
+        SetUser(b.Id);
+        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.Null((await _db.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == b.Id)).DiscordId);
+
+        // Der erste Einlöser selbst darf den Link erneut nutzen.
+        SetUser(a.Id);
+        var again = Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.Equal("4242", ((ProfileDto)again.Value!).DiscordId);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_Conflict_DoesNotClaimTheToken()
+    {
+        // Ein 409 (ID gehört gerade jemand anderem) bindet das Token nicht an den abgewiesenen Nutzer.
+        var owner = await CreateUserAsync("owner");
+        owner.Profile!.DiscordId = "888";
+        await _db.SaveChangesAsync();
+        var me = await CreateUserAsync("me");
+        var token = DiscordTokenTestHelper.Make("888", "Owner", DiscordTokenTestHelper.FarFuture);
+
+        SetUser(me.Id);
+        Assert.IsType<ConflictObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+
+        SetUser(owner.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+    }
+
+    [Fact]
     public async Task UnlinkDiscord_ClearsLink()
     {
         var user = await CreateUserAsync();
