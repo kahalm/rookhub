@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, Injector, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable, firstValueFrom, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -39,7 +39,15 @@ export class AuthService {
   private destroyed = false;
 
   constructor(private http: HttpClient, private router: Router, private injector: Injector) {
-    inject(DestroyRef).onDestroy(() => this.destroyed = true);
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.destroyed = true);
+    // Ein Abmelden ohne Netz holt das Ende der geteilten Anmeldung nach, sobald das Netz zurueck ist
+    // (siehe sessionEndPending) — nicht erst beim naechsten Start.
+    if (typeof window !== 'undefined') {
+      const onOnline = () => { if (this.sessionEndPending && !this.isLoggedIn) void this.flushSessionEnd(); };
+      window.addEventListener('online', onOnline);
+      destroyRef.onDestroy(() => window.removeEventListener('online', onOnline));
+    }
     // Beim Start schon abgelaufen: hier (nicht in getStoredUser) beenden — das Aufraeumen braucht den
     // Injektor, und der ist erst im Konstruktor gesetzt, nicht schon beim Initialisieren der Felder.
     this.getValidUser();
@@ -149,6 +157,7 @@ export class AuthService {
    * entscheidet der Aufrufer.
    */
   adoptSession(user: AuthResponse): void {
+    this.setSessionEndPending(false);   // neue Anmeldung: ein altes ausstehendes Abmelden gilt nicht mehr
     this.persistSession(user);
     this.currentUserSubject.next(user);
     this.loadPreferences();
@@ -375,9 +384,47 @@ export class AuthService {
     // beendet hat. Ohne Rueckmeldung abschicken — ein Abmelden darf an nichts haengen.
     // `rh-session/end`: das Cookie liegt seit N6-001 unter genau diesem Pfad (der Server raeumt dabei
     // auch das alte unter `/api/auth` ab).
-    this.http.post('/api/auth/rh-session/end', {}).subscribe({ error: () => { /* egal */ } });
+    // Scheitert der Aufruf (offline, API-Neustart), bliebe das 30-Tage-Cookie gueltig, und der naechste
+    // Start ohne Sitzung uebernaehme genau diese Anmeldung — womoeglich fuer den naechsten Nutzer am
+    // Geraet. Deshalb ein Merker, der erst faellt, wenn der Server geantwortet hat; solange er steht,
+    // holt HandoffService.adoptSharedSession das Ende nach, statt zu uebernehmen (Codereview F1-004).
+    this.setSessionEndPending(true);
+    void this.flushSessionEnd();
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
+  }
+
+  /** Merker: ein Abmelden hat die GETEILTE Anmeldung (Cookie) noch nicht beim Server beendet. */
+  static readonly SessionEndPendingKey = 'rookhub_session_end_pending';
+
+  /** Steht ein Ende der geteilten Anmeldung noch aus (siehe {@link logout})? */
+  get sessionEndPending(): boolean {
+    try { return localStorage.getItem(AuthService.SessionEndPendingKey) !== null; } catch { return false; }
+  }
+
+  private setSessionEndPending(pending: boolean): void {
+    try {
+      if (pending) localStorage.setItem(AuthService.SessionEndPendingKey, '1');
+      else localStorage.removeItem(AuthService.SessionEndPendingKey);
+    } catch { /* Speicher voll/gesperrt: dann bleibt es beim einmaligen Versuch */ }
+  }
+
+  /**
+   * Die geteilte Anmeldung beim Server beenden und danach den Merker abraeumen. `true`, wenn der Server
+   * geantwortet hat. Ohne Antwort (offline, 408/429, 5xx) bleibt der Merker stehen — nachgeholt wird beim
+   * naechsten Start ({@link HandoffService.adoptSharedSession}) bzw. sobald das Netz zurueck ist. Eine
+   * endgueltige Antwort (andere 4xx) raeumt ihn ebenfalls ab: ein Wiederholen aenderte nichts, und ein
+   * stehender Merker sperrte die geteilte Anmeldung in diesem Browser auf Dauer.
+   */
+  async flushSessionEnd(): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.post('/api/auth/rh-session/end', {}), { defaultValue: null });
+    } catch (e) {
+      const status = e instanceof HttpErrorResponse ? e.status : 0;
+      if (status === 0 || status === 408 || status === 429 || status >= 500) return false;
+    }
+    this.setSessionEndPending(false);
+    return true;
   }
 
   /** Was beim Nutzerwechsel am Geraet lokal verschwinden muss — beim Abmelden ({@link logout}), beim
@@ -420,6 +467,7 @@ export class AuthService {
     // anmeldet (anonym gespielt, jetzt registriert). Kein session/end: das Cookie gehoert schon dem neuen.
     const previous = this.getValidUser();
     if (previous && previous.userId !== user.userId) this.clearLocalTraces();
+    this.setSessionEndPending(false);   // die Anmeldung hat das Cookie eben neu geschrieben
     this.persistSession(user);
     this.currentUserSubject.next(user);
     this.claimAnonymousPuzzleSession();

@@ -161,6 +161,13 @@ export class HandoffService {
    */
   async adoptSharedSession(): Promise<boolean> {
     if (this.auth.isLoggedIn) return false;
+    // Ein Abmelden ohne Netz hat die geteilte Anmeldung noch nicht beendet: erst nachholen, NICHT
+    // uebernehmen — sonst meldete dieser Start genau die Anmeldung wieder an, die eben beendet wurde,
+    // womoeglich fuer den naechsten Nutzer am Geraet (Codereview F1-004).
+    if (this.auth.sessionEndPending) {
+      await this.auth.flushSessionEnd();
+      return false;
+    }
     try {
       const res = await firstValueFrom(this.http.post<AuthResponse | null>(HandoffService.SharedSessionUrl, {}));
       if (!res) return false;

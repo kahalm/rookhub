@@ -36,7 +36,12 @@ describe('KidHubAppComponent', () => {
     });
   });
 
-  afterEach(() => { localStorage.removeItem('rookhub_lang'); localStorage.removeItem('rookhub_user'); });
+  // Auch der Merker eines Abmeldens ohne Antwort (F1-004): sonst holte der naechste Test beim Start das
+  // Ende der geteilten Anmeldung nach, statt sie zu uebernehmen.
+  afterEach(() => {
+    localStorage.removeItem('rookhub_lang'); localStorage.removeItem('rookhub_user');
+    localStorage.removeItem(AuthService.SessionEndPendingKey);
+  });
 
   function selected(f: { nativeElement: HTMLElement }): string {
     return (f.nativeElement.querySelector('footer select') as HTMLSelectElement).value;

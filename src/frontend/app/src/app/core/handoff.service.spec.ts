@@ -125,6 +125,30 @@ describe('HandoffService', () => {
     http.verify();
   });
 
+  it('übernimmt nach einem Abmelden ohne Netz die geteilte Anmeldung nicht, sondern holt das Ende nach (F1-004)', async () => {
+    // Fund-Weg: Nutzer A meldet sich im Flugmodus ab, das Ende der geteilten Anmeldung scheitert, das
+    // 30-Tage-Cookie bleibt. Der nächste Start ohne Sitzung (womöglich Nutzer B) übernahm es — B war A.
+    auth.adoptSession(session);
+    drainPreferences();
+    auth.logout();
+    http.expectOne('/api/auth/rh-session/end').error(new ProgressEvent('error'));
+    await settle();
+
+    const first = svc.consumeIncoming();
+    http.expectOne('/api/auth/rh-session/end').error(new ProgressEvent('error'));   // immer noch offline
+    expect(await first).toBeFalse();
+    expect(auth.currentUser).toBeNull();
+    expect(auth.sessionEndPending).toBeTrue();
+
+    const second = svc.adoptSharedSession();
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session/end' }).flush(null, noContent);
+    expect(await second).toBeFalse();
+    expect(auth.currentUser).toBeNull();
+    expect(auth.sessionEndPending).toBeFalse();
+    http.expectNone('/api/auth/rh-session');
+    http.verify();
+  });
+
   describe('Sprung zur Schwesterseite', () => {
     let go: jasmine.Spy;
 

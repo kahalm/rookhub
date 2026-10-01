@@ -230,6 +230,41 @@ describe('AuthService logout clears offline content', () => {
     expect(localStorage.getItem('rookhub_user')).toBeNull();
     http.verify();
   });
+
+  it('merkt sich ein Abmelden ohne Netz und holt das Ende der geteilten Anmeldung nach, sobald das Netz zurück ist (F1-004)', async () => {
+    // Gemeldet im Codereview 2026-09-29 (F1-004): das Ende war ein einmaliger Versuch, Fehler wurden
+    // verschluckt. Im Flugmodus blieb das 30-Tage-Cookie gültig — der nächste Start ohne Sitzung holte
+    // sich genau die Anmeldung zurück, die eben beendet wurde.
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    const settle = () => new Promise<void>(r => setTimeout(r));
+
+    svc.logout();
+    http.expectOne('/api/auth/rh-session/end').error(new ProgressEvent('error'));   // offline: Status 0
+    await settle();
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(svc.sessionEndPending).toBeTrue();
+
+    window.dispatchEvent(new Event('online'));
+    http.expectOne({ method: 'POST', url: '/api/auth/rh-session/end' }).flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+    expect(svc.sessionEndPending).toBeFalse();
+    http.verify();
+  });
+
+  it('eine neue Anmeldung räumt ein ausstehendes Abmelden ab — kein nachgeschobenes Ende für das neue Cookie', async () => {
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    localStorage.setItem(AuthService.SessionEndPendingKey, '1');
+
+    svc.login('u', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+    http.match('/api/profile').forEach(r => r.flush({}));
+
+    expect(svc.sessionEndPending).toBeFalse();
+    window.dispatchEvent(new Event('online'));
+    http.expectNone('/api/auth/rh-session/end');
+  });
 });
 
 describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () => {
