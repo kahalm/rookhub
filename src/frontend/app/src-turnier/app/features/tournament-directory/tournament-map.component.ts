@@ -16,6 +16,18 @@ import {
 export type BoundsString = string;
 
 /**
+ * Ein Kartenausschnitt zum Wiederherstellen: Mitte, Zoomstufe und der Umkreis, unter dem er
+ * galt (`lat|lon|radiusKm` wie in `applyCentre`, `null` = ohne Umkreis). Mitte + Zoom statt der
+ * Grenzen: ein `fitBounds` auf die alten Grenzen landet je nach Rundung eine Stufe daneben.
+ */
+export interface MapView {
+  lat: number;
+  lon: number;
+  zoom: number;
+  centre: string | null;
+}
+
+/**
  * Kopfradius eines Turnier-Pins in Pixeln — der Wert fuer EIN Turnier. Ein gebuendelter Punkt
  * waechst darueber hinaus, damit seine Anzahl hineinpasst (`pinRadiusFor`); wie hoch er dann
  * ueber seinem Ort steht, sagt `MapPinMarker.heightAbove`.
@@ -341,6 +353,14 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * darauf laufen unveraendert.
    */
   @Input() showChrome = true;
+  /**
+   * Hier STARTEN statt bei Oesterreich, Zoom 6. Die Karte steht beim Elternteil in einem
+   * `@if` und wird bei jedem Reiterwechsel und nach „Turnier oeffnen -> zurueck" neu gebaut —
+   * der verschobene Ausschnitt war dann jedes Mal weg (Codereview 2026-09-29, F6-018). Gilt der
+   * Ausschnitt fuer denselben Umkreis wie jetzt, wird nicht neu eingepasst; bei einem anderen
+   * Umkreis gewinnt das Einpassen. Nur beim Aufbau gelesen.
+   */
+  @Input() initialView: MapView | null = null;
 
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
   /** Feuert, wenn Kacheln nicht geladen werden koennen — sonst bleibt die Karte stumm schwarz. */
@@ -351,6 +371,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Output() entryIgnored = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
   /** Der Betrachter hat ein anderes Merkmal zum Einfaerben gewaehlt. */
   @Output() colourByChange = new EventEmitter<PinColourBy>();
+  /** Feuert mit `boundsChanged`: der Ausschnitt zum Wiederherstellen (siehe `initialView`). */
+  @Output() viewChanged = new EventEmitter<MapView>();
 
   @ViewChild('chromeEl', { static: true }) chromeEl!: ElementRef<HTMLDivElement>;
 
@@ -407,13 +429,19 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     // Touch-Geraet? Dann zaehlt ein Tipp ein paar Pixel neben dem Pin noch als Treffer (siehe
     // Klassenkommentar). Defensiv: nicht jede Testumgebung kennt matchMedia.
     const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    const start = this.initialView;
     this.map = L.map(this.mapEl.nativeElement, {
       preferCanvas: true,
       renderer: L.canvas({ tolerance: coarse ? 8 : 0 }),
-      center: [47.7, 13.4],   // Österreich als Startbild; der erste Filter zieht sofort nach
-      zoom: 6,
+      // Österreich als Startbild; der erste Filter zieht sofort nach — ausser es gibt einen
+      // gemerkten Ausschnitt (siehe initialView).
+      center: start ? [start.lat, start.lon] : [47.7, 13.4],
+      zoom: start?.zoom ?? 6,
       zoomControl: true,
     });
+    // Der gemerkte Ausschnitt gehoert zu DIESEM Umkreis: dann gilt er als eingepasst, sonst
+    // zoege `applyCentre` die Ansicht sofort wieder auf den ganzen Kreis zurueck.
+    if (start && start.centre !== null && start.centre === this.centreKey()) this.lastFitted = start.centre;
 
     // Gleiche Herkunft: nginx holt die Kachel bei OpenStreetMap und legt sie in seinen Cache.
     // Direkt aus dem Browser zu laden setzt voraus, dass JEDER Betrachter selbst ins offene Netz
@@ -733,12 +761,17 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     return this.translate.instant(key, params);
   }
 
+  /** Schluessel des Umkreises — `null` ohne Mittelpunkt. Dieselbe Form in `MapView.centre`. */
+  private centreKey(): string | null {
+    return this.centre ? `${this.centre.lat}|${this.centre.lon}|${this.centre.radiusKm}` : null;
+  }
+
   private applyCentre(): void {
     if (!this.map || !this.radiusLayer) return;
     this.radiusLayer.clearLayers();
     if (!this.centre) { this.lastFitted = null; return; }
 
-    const key = `${this.centre.lat}|${this.centre.lon}|${this.centre.radiusKm}`;
+    const key = this.centreKey()!;
 
     const centre = L.latLng(this.centre.lat, this.centre.lon);
     if (this.showRadius) {
@@ -791,6 +824,11 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     const b = this.map.getBounds();
     this.boundsChanged.emit(
       `${b.getSouth().toFixed(5)},${b.getWest().toFixed(5)},${b.getNorth().toFixed(5)},${b.getEast().toFixed(5)}`);
+    const c = this.map.getCenter();
+    this.viewChanged.emit({
+      lat: Number(c.lat.toFixed(5)), lon: Number(c.lng.toFixed(5)), zoom: this.map.getZoom(),
+      centre: this.centreKey(),
+    });
   }
 }
 

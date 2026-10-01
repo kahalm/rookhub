@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -44,7 +45,9 @@ class MapStubComponent {
   get entries(): DirectoryEntry[] { return this._entries; }
   @Input() centre: unknown;
   @Input() colourBy: unknown;
+  @Input() initialView: unknown;
   @Output() colourByChange = new EventEmitter<unknown>();
+  @Output() viewChanged = new EventEmitter<unknown>();
   @Output() boundsChanged = new EventEmitter<string>();
   @Output() tilesFailed = new EventEmitter<void>();
   @Output() entryIgnored = new EventEmitter<void>();
@@ -772,6 +775,61 @@ describe('TournamentDirectoryComponent', () => {
     retry!.click();
     http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({ tournaments: [], days: [] });
     expect(component.calendarFailed()).toBeFalse();
+    http.verify();
+  });
+
+  /**
+   * Codereview 2026-09-29, F6-018: die Karte wird bei jedem Reiterwechsel und nach „Turnier
+   * öffnen → zurück" neu gebaut. Ohne gemerkten Ausschnitt begann sie jedes Mal bei Österreich.
+   */
+  it('reicht den gemerkten Kartenausschnitt nach Reiterwechsel und Rückkehr an die neue Karte', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onTabChange(1);
+    fixture.detectChanges();
+    const bayern = { lat: 48.5, lon: 11.5, zoom: 9, centre: null };
+    component.onMapViewChanged(bayern);
+    component.onBoundsChanged('48.0,10.5,49.0,12.5');
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush({ items: [], truncated: false });
+
+    // Liste und zurueck zur Karte: eine NEUE Karte, die beim gemerkten Ausschnitt anfaengt.
+    component.onTabChange(0);
+    flushList([]);
+    fixture.detectChanges();
+    component.onTabChange(1);
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush({ items: [], truncated: false });
+    fixture.detectChanges();
+    const stub = fixture.debugElement.query(By.directive(MapStubComponent)).componentInstance as MapStubComponent;
+    expect(stub.initialView).toEqual(bayern);
+
+    // Seite verlassen (Turnier geoeffnet) und neu betreten.
+    TestBed.resetTestingModule();
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    await setup();
+    flushProfiles([]);
+    fixture.detectChanges();
+    expect(component.tab).toBe('map');
+    expect(component.mapView).toEqual(bayern);
+    const again = fixture.debugElement.query(By.directive(MapStubComponent)).componentInstance as MapStubComponent;
+    expect(again.initialView).toEqual(bayern);
+  });
+
+  it('startet ohne gemerkten Ausschnitt wie bisher und verwirft unbrauchbare Werte', async () => {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({ tab: 'list', mapView: { lat: 'x', lon: 11, zoom: 9 } }));
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    expect(component.mapView).toBeNull();
     http.verify();
   });
 

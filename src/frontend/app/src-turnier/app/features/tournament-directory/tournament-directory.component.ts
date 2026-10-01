@@ -35,7 +35,7 @@ import {
   TournamentCardDialogComponent, TournamentCardDialogData,
 } from './tournament-card-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
-import { TournamentMapComponent } from './tournament-map.component';
+import { MapView, TournamentMapComponent } from './tournament-map.component';
 import {
   DEFAULT_RADIUS_KM, DIRECTORY_AGE_GROUPS, DIRECTORY_GENDERS, DIRECTORY_KINDS, DIRECTORY_RADII,
   DIRECTORY_RANGE_PRESETS, DirectoryCalendarDay, DirectoryEntry, DirectoryFilter,
@@ -149,6 +149,13 @@ export class TournamentDirectoryComponent implements OnInit {
   /** Der letzte Kartenausschnitt kam nicht — sonst stuende dort „0 Turniere im Ausschnitt". */
   readonly mapFailed = signal(false);
   private lastBounds: string | null = null;
+  /**
+   * Der zuletzt gezeigte Kartenausschnitt (Mitte + Zoom). Die Karte steht in `@if (tab === 'map')`
+   * und wird bei jedem Reiterwechsel neu gebaut, nach „Turnier oeffnen -> zurueck" sogar die ganze
+   * Seite — sie begann dann jedes Mal wieder bei Oesterreich (Codereview 2026-09-29, F6-018).
+   * Reist im gemerkten Anzeigezustand mit.
+   */
+  mapView: MapView | null = null;
 
   readonly calendarDays = signal<DirectoryCalendarDay[]>([]);
   calendarYear = new Date().getFullYear();
@@ -572,6 +579,12 @@ export class TournamentDirectoryComponent implements OnInit {
     this.loadPins(bounds);
   }
 
+  onMapViewChanged(view: MapView): void {
+    this.mapView = view;
+    // Kein reload(): `boundsChanged` laedt die Punkte schon. Nur merken.
+    this.storeView();
+  }
+
   loadPins(bounds: string): void {
     this.mapLoading.set(true);
     // Beim erneuten Betreten des Karten-Reiters laufen zwei Abfragen gegeneinander: `reload()`
@@ -841,6 +854,7 @@ export class TournamentDirectoryComponent implements OnInit {
       calendarYear: this.calendarYear,
       calendarMonth: this.calendarMonth,
       mapColourBy: this.mapColourBy,
+      mapView: this.mapView,
     };
   }
 
@@ -965,6 +979,8 @@ export class TournamentDirectoryComponent implements OnInit {
     if (typeof colourBy === 'string' && (PIN_COLOUR_SCHEMES as string[]).includes(colourBy)) {
       this.mapColourBy = colourBy as PinColourBy;
     }
+    // Ein alter Zustand ohne Ausschnitt startet wie bisher bei der Vorgabe.
+    this.mapView = parseMapView(stored['mapView']);
 
     this.filter.kinds = pick(stored['kinds'], DIRECTORY_KINDS);
     this.filter.ageGroups = pick(stored['ageGroups'], DIRECTORY_AGE_GROUPS);
@@ -1003,6 +1019,17 @@ export class TournamentDirectoryComponent implements OnInit {
 /** Aus dem gemerkten Zustand: ein nicht leerer String oder `null`. Alles andere ist Muell. */
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
+}
+
+/** Aus dem gemerkten Zustand: ein brauchbarer Kartenausschnitt oder `null`. */
+function parseMapView(value: unknown): MapView | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+  if (!finite(v['lat']) || !finite(v['lon']) || !finite(v['zoom'])) return null;
+  if (Math.abs(v['lat']) > 90 || Math.abs(v['lon']) > 180 || v['zoom'] < 0 || v['zoom'] > 18) return null;
+  const centre = v['centre'];
+  return { lat: v['lat'], lon: v['lon'], zoom: v['zoom'], centre: typeof centre === 'string' ? centre : null };
 }
 
 /**

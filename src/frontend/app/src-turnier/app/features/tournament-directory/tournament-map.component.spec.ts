@@ -52,6 +52,59 @@ describe('TournamentMapComponent', () => {
     expect(bounds!).toMatch(/^-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+,-?\d+\.\d+$/);
   });
 
+  // ----- Gemerkter Ausschnitt (F6-018) ----------------------------------------
+
+  it('startet ohne gemerkten Ausschnitt bei Österreich, Zoom 6', () => {
+    fixture.detectChanges();
+    const map = (component as any).map;
+
+    expect(map.getZoom()).toBe(6);
+    expect(map.getCenter().lat).toBeCloseTo(47.7, 1);
+    expect(map.getCenter().lng).toBeCloseTo(13.4, 1);
+  });
+
+  it('startet beim gemerkten Ausschnitt und meldet ihn zurück', async () => {
+    let view: unknown = null;
+    component.viewChanged.subscribe(v => (view = v));
+    component.initialView = { lat: 48.5, lon: 11.5, zoom: 9, centre: null };
+
+    fixture.detectChanges();
+    await Promise.resolve();
+    const map = (component as any).map;
+
+    expect(map.getZoom()).toBe(9);
+    expect(map.getCenter().lat).toBeCloseTo(48.5, 3);
+    expect(map.getCenter().lng).toBeCloseTo(11.5, 3);
+    expect(view).toEqual(jasmine.objectContaining({ zoom: 9, centre: null }));
+  });
+
+  // Zoom 13 mit Absicht: das Einpassen auf 100 km liegt mehr als vier Stufen darunter, Leaflet
+  // springt dann ohne Animation — bei hoechstens vier Stufen zoomte es animiert und erst im
+  // naechsten Bild, und die Erwartung kaeme zu frueh.
+  it('passt nicht neu ein, wenn der gemerkte Ausschnitt zu DEMSELBEN Umkreis gehört', async () => {
+    component.centre = { lat: 47.8, lon: 13.04, radiusKm: 100 };
+    component.initialView = { lat: 47.95, lon: 13.3, zoom: 13, centre: '47.8|13.04|100' };
+
+    fixture.detectChanges();
+    await Promise.resolve();
+    const map = (component as any).map;
+
+    expect(map.getZoom()).toBe(13);
+    expect(map.getCenter().lat).toBeCloseTo(47.95, 3);
+  });
+
+  it('passt auf einen ANDEREN Umkreis neu ein, statt den alten Ausschnitt zu zeigen', async () => {
+    component.centre = { lat: 48.21, lon: 16.37, radiusKm: 100 };
+    component.initialView = { lat: 47.95, lon: 13.3, zoom: 13, centre: '47.8|13.04|100' };
+
+    fixture.detectChanges();
+    await Promise.resolve();
+    const map = (component as any).map;
+
+    expect(map.getZoom()).toBeLessThan(13);
+    expect(map.getCenter().lng).toBeCloseTo(16.37, 0);
+  });
+
   it('überspringt Einträge ohne Koordinaten, statt an ihnen zu scheitern', () => {
     component.entries = [entry('1', 47.8, 13.04), entry('2', null, null)];
 
