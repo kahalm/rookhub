@@ -125,8 +125,7 @@ public class LibraryGameService
         int? minCommentedPlies, int page, int pageSize, CancellationToken ct = default,
         string? line = null, bool byPosition = false)
     {
-        page = Math.Max(1, page);
-        pageSize = Math.Clamp(pageSize <= 0 ? DefaultPageSize : pageSize, 1, MaxPageSize);
+        (page, pageSize) = Paging.Normalize(page, pageSize <= 0 ? DefaultPageSize : pageSize, MaxPageSize);
 
         var rows = _db.LibraryGames.AsNoTracking()
             .Where(g => g.Status != LibraryGameStatus.Duplicate && g.Status != LibraryGameStatus.Rejected);

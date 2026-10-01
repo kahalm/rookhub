@@ -744,6 +744,20 @@ public class LeagueClubServiceTests : IDisposable
         Assert.StartsWith("e2e4 c7c5 g1f3 d7d6 d2d4 c5d4", item.Uci);
     }
 
+    /// <summary>A9-011: <c>page=int.MaxValue</c> ergab Skip(-100) (MariaDB: 500, InMemory: erste Seite).</summary>
+    [Fact]
+    public async Task List_HugePage_ReturnsAnEmptyPageInsteadOfOverflowing()
+    {
+        var me = await SeedAsync();
+        var club = Club();
+        await club.ImportPgnAsync(me, Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+
+        var list = await club.ListAsync(me, true, null, null, int.MaxValue, default);
+
+        Assert.Empty(list.Items);
+        Assert.Equal(1, list.Total);
+    }
+
     /// <summary>0.594.0: eine Seite ohne FIDE-ID, deren Name in einer Meldeliste steht (Ligaspieler ohne FIDE-ID wie Kinsiz,
     /// Atlas) — die Liste sagt es, damit die Seite dort keinen „bitte zuordnen"-Bleistift zeigt.</summary>
     [Fact]

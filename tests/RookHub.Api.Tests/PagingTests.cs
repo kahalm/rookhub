@@ -17,6 +17,24 @@ public class PagingTests
         Assert.Equal(expSize, s);
     }
 
+    /// <summary>A9-011: <c>?page=2147483647</c> lief in <c>Skip((page - 1) * pageSize)</c> unchecked über
+    /// (→ OFFSET -200 → MariaDB-Syntaxfehler → 500). Die Seite ist jetzt nach oben gedeckelt, der Offset
+    /// passt für jede Obergrenze in ein int.</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(50)]
+    [InlineData(100)]
+    [InlineData(200)]
+    [InlineData(1500)]
+    public void Normalize_HugePage_KeepsTheSkipOffsetInRange(int max)
+    {
+        var (p, s) = Paging.Normalize(int.MaxValue, int.MaxValue, max);
+        Assert.Equal(int.MaxValue / max, p);
+        Assert.Equal(max, s);
+        var offset = checked((p - 1) * s);                       // würde ohne Deckel OverflowException werfen
+        Assert.InRange(offset, 0, int.MaxValue);
+    }
+
     [Fact]
     public void Normalize_RespectsCustomMax()
     {

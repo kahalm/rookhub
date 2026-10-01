@@ -215,6 +215,21 @@ public class LibraryGameServiceTests : IDisposable
         Assert.Equal("Spieler3", second.Items[0].White);
     }
 
+    /// <summary>A9-011 (anonym erreichbar): <c>page=int.MaxValue</c> ergab Skip(-200) — in MariaDB ein
+    /// Syntaxfehler (500), in InMemory still die ERSTE Seite. Jetzt eine leere Seite.</summary>
+    [Fact]
+    public async Task Search_riesigeSeite_liefertLeereSeiteStattUeberlauf()
+    {
+        var user = await CreateUserAsync();
+        await AddGameAsync("Spieler", "Gegner");
+
+        var page = await _svc.SearchAsync(user.Id, null, null, null, int.MaxValue, 100);
+
+        Assert.Empty(page.Items);
+        Assert.Equal(1, page.Total);
+        Assert.Equal(int.MaxValue / LibraryGameService.MaxPageSize, page.Page);
+    }
+
     /// <summary>Eine Zeile muss sagen, ob die Partie schon spielbar ist — sonst fordert man an, was
     /// daneben schon fertig liegt.</summary>
     [Fact]

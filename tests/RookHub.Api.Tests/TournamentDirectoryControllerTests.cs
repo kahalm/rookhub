@@ -68,6 +68,21 @@ public class TournamentDirectoryControllerTests : IDisposable
 
     // ----- Filter -----------------------------------------------------------
 
+    /// <summary>A9-011: <c>page=int.MaxValue</c> ergab Skip(-100) — in MariaDB ein Syntaxfehler (500),
+    /// in InMemory still die erste Seite. Jetzt eine leere Seite mit richtiger Gesamtzahl.</summary>
+    [Fact]
+    public async Task Search_HugePage_ReturnsAnEmptyPageInsteadOfOverflowing()
+    {
+        await AddEntryAsync("1", "Erstes", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12));
+        await AddEntryAsync("2", "Zweites", new DateOnly(2026, 10, 17), new DateOnly(2026, 10, 18));
+
+        var result = await CreateController(1).Search(page: int.MaxValue);
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
+
+        Assert.Empty(page.Items);
+        Assert.Equal(2, page.Total);
+    }
+
     [Fact]
     public async Task Search_DateWindow_KeepsOverlappingTournaments()
     {

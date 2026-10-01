@@ -156,8 +156,7 @@ public class TournamentDirectoryQueryService
     public async Task<DirectorySearchResult> SearchAsync(
         DirectorySearchQuery query, int maxPageSize, CancellationToken ct = default)
     {
-        var page = Math.Max(1, query.Page);
-        var pageSize = Math.Clamp(query.PageSize, 1, Math.Max(1, maxPageSize));
+        var (page, pageSize) = Paging.Normalize(query.Page, query.PageSize, Math.Max(1, maxPageSize));
         var filtered = ApplyFilters(_db.TournamentDirectoryEntries.AsNoTracking(), query);
 
         var radius = query.RadiusKm;

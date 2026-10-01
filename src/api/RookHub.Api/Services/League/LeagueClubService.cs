@@ -599,7 +599,7 @@ public sealed class LeagueClubService
     {
         var query = Filter(fide, q);
         var total = await query.CountAsync(ct);
-        page = Math.Max(1, page);
+        (page, _) = Paging.Normalize(page, PageSize, PageSize);
         var rows = await query.OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)
             .Skip((page - 1) * PageSize).Take(PageSize).ToListAsync(ct);
         var items = rows.Select(g => ToDto(g, userId, canManage)).ToList();
