@@ -8,7 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
-import { LocaleService, AppLang } from '@rh/core/locale.service';
+import { LocaleService } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { authLinkQuery } from '@rh/core/return-url.util';
@@ -82,9 +82,15 @@ import { authLinkQuery } from '@rh/core/return-url.util';
       <button mat-icon-button class="wide" [matMenuTriggerFor]="langMenu" [attr.aria-label]="'nav.language' | translate">
         <mat-icon>language</mat-icon>
       </button>
+      <!-- Dieselbe Auswahl wie RookHubs Navbar (locale.languages: alle Sprachen mit Eigenbezeichnung, Haken an der
+           aktuellen). Vorher fest EN/DE/HR ohne Markierung: wer ueber das geteilte Cookie oder den Browser z. B. auf
+           Ungarisch kam, sah hier weder, was eingestellt ist, noch fuehrte nach einem Wechsel ein Weg zurueck. -->
       <mat-menu #langMenu="matMenu">
-        @for (l of languages; track l) {
-          <button mat-menu-item (click)="setLang(l)">{{ l.toUpperCase() }}</button>
+        @for (l of locale.languages; track l.code) {
+          <button mat-menu-item (click)="locale.use(l.code)">
+            <mat-icon>{{ locale.current === l.code ? 'check' : 'translate' }}</mat-icon>
+            <span>{{ l.label }}</span>
+          </button>
         }
       </mat-menu>
 
@@ -133,7 +139,7 @@ import { authLinkQuery } from '@rh/core/return-url.util';
 })
 export class TurnierNavbarComponent {
   auth = inject(AuthService);
-  private locale = inject(LocaleService);
+  readonly locale = inject(LocaleService);
   private translate = inject(TranslateService);
   private handoff = inject(HandoffService);
   readonly theme = inject(ThemeService);
@@ -144,10 +150,7 @@ export class TurnierNavbarComponent {
    *  hat kein /dashboard, den Rueckfall der Maske. */
   get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url, '/'); }
 
-  readonly languages: AppLang[] = ['en', 'de', 'hr'];
   get partnerUrl(): string | null { return this.handoff.partnerUrl; }
-
-  setLang(lang: AppLang): void { this.locale.use(lang); }
 
   /** Zurueck nach RookHub — angemeldet, wenn es geht (Einmal-Code, siehe HandoffService). */
   toRookHub(): void { void this.handoff.jump('dashboard'); }

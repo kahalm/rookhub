@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '@rh/core/handoff.service';
+import { LocaleService } from '@rh/core/locale.service';
 import { TurnierNavbarComponent } from './turnier-navbar.component';
 
 /**
@@ -125,6 +126,39 @@ describe('TurnierNavbarComponent', () => {
     expect(bookmarks.querySelector('mat-icon')?.textContent?.trim()).toBe('bookmarks');
     trigger.click();
     fixture.detectChanges();
+  });
+
+  /**
+   * F6-020/UX-073: Das Menue bot fest „EN/DE/HR" ohne Markierung. Die Startsprache kommt aber aus dem geteilten
+   * Cookie, dem Geraet oder dem Browser und kann jede der 25 Sprachen sein — wer so auf Ungarisch kam, sah nicht,
+   * was eingestellt ist, und fand nach einem Wechsel keinen Weg zurueck.
+   */
+  it('Sprachmenue: alle Sprachen mit Eigenbezeichnung wie RookHub, Haken an der aktuellen (F6-020, UX-073)', () => {
+    const fixture = setup(null);
+    const locale = TestBed.inject(LocaleService);
+    locale.applyUnsaved('hu');   // z. B. ueber das geteilte Cookie aus RookHub
+    try {
+      fixture.detectChanges();
+      const trigger = (fixture.nativeElement as HTMLElement)
+        .querySelector('mat-toolbar button.wide[aria-label="nav.language"]') as HTMLButtonElement;
+      trigger.click();
+      fixture.detectChanges();
+
+      const items = overlayItems();
+      expect(items.length).withContext('alle Sprachen').toBe(locale.languages.length);
+      const icon = (i: HTMLElement) => i.querySelector('mat-icon')?.textContent?.trim();
+      const magyar = items.find(i => i.textContent?.includes('Magyar'));
+      expect(magyar).withContext('Ungarisch waehlbar').toBeTruthy();
+      expect(icon(magyar!)).toBe('check');
+      expect(items.filter(i => icon(i) === 'check').length).withContext('genau ein Haken').toBe(1);
+      expect(items.some(i => i.textContent?.trim() === 'EN')).withContext('keine nackten Kuerzel').toBeFalse();
+
+      const use = spyOn(locale, 'use');
+      items.find(i => i.textContent?.includes('Deutsch'))!.click();
+      expect(use).toHaveBeenCalledWith('de');
+    } finally {
+      locale.applyUnsaved('en');
+    }
   });
 
   it('ohne Schwesterseite (localhost) fehlt der RookHub-Sprung auch im Menue', () => {
