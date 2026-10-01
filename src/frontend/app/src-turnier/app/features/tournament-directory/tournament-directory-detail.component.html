@@ -39,14 +39,14 @@
 
       <dl class="detail-grid">
         <dt>{{ 'tournamentDirectory.detail.date' | translate }}</dt>
-        <dd>{{ entry.startDate }}@if (entry.endDate && entry.endDate !== entry.startDate) { <span> – {{ entry.endDate }}</span> }</dd>
+        <dd>{{ entry.startDate | tournamentDate: entry.endDate }}</dd>
         <!-- Bei einer Liga sagt der Zeitraum fast nichts: September bis April, gespielt an elf
              Tagen. Stehen die Runden fest, gehoeren sie hierher. -->
         @if (entry.roundDates.length > 1) {
           <dt>{{ 'tournamentDirectory.detail.playDates' | translate }}</dt>
           <dd class="play-dates">
             @for (r of entry.roundDates; track r.round) {
-              <span class="play-date">{{ r.round }}. {{ r.date }}</span>
+              <span class="play-date">{{ r.round }}. {{ r.date | tournamentDate: null : 'playDay' }}</span>
             }
           </dd>
         }

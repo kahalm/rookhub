@@ -5,6 +5,7 @@ import {
 } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import * as L from 'leaflet';
+import { formatTournamentDates } from '../../core/tournament-date';
 import { MapPinMarker, pinRadiusFor } from './map-pin-marker';
 import { TournamentCardComponent } from './tournament-card.component';
 import { DirectoryEntry, DirectoryVenue } from './tournament-directory.model';
@@ -760,7 +761,7 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
       name.textContent = member.entry.name;
       const when = document.createElement('span');
       when.className = 'tm-group-when';
-      when.textContent = dateRange(member.entry);
+      when.textContent = dateRange(member.entry, this.translate.currentLang());
 
       row.append(name, when);
       row.addEventListener('click', () => this.renderGroupCard(host, group, member));
@@ -847,7 +848,8 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     }
     const { entry, spot } = group.members[0];
     const place = entry.venues.length > 1 ? spot.name : (entry.location ?? '');
-    return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(dateRange(entry))}` +
+    const when = dateRange(entry, this.translate.currentLang());
+    return `<strong>${escapeHtml(entry.name)}</strong><br>${escapeHtml(when)}` +
            (place ? `<br>${escapeHtml(place)}` : '');
   }
 
@@ -1044,10 +1046,12 @@ function venuesOf(entry: DirectoryEntry): DirectoryVenue[] {
             geoSource: entry.geoSource }];
 }
 
-/** „18.12. – 20.12." bzw. nur der eine Tag; leer, wenn chess-results gar kein Datum lieferte. */
-function dateRange(entry: DirectoryEntry): string {
-  const when = [entry.startDate, entry.endDate].filter(Boolean);
-  return when.length === 2 && when[0] !== when[1] ? `${when[0]} – ${when[1]}` : (when[0] ?? '');
+/**
+ * „18.–20. Dez. 2026" bzw. nur der eine Tag, in der Oberflaechensprache; leer, wenn chess-results
+ * gar kein Datum lieferte (Codereview F6-010: bis dahin roh „2026-12-18 – 2026-12-20").
+ */
+function dateRange(entry: DirectoryEntry, locale: string | null): string {
+  return formatTournamentDates(entry.startDate, entry.endDate, locale);
 }
 
 /** Turnier- und Ortsnamen kommen von chess-results — also fremder Text in einem innerHTML-Tooltip. */

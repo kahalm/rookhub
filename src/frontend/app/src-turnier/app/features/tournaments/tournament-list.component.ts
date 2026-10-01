@@ -11,6 +11,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subscription } from '@rh/core/models';
 import { TournamentListService } from '../../core/tournament-list.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
+import { TournamentDatePipe } from '../../core/tournament-date';
 
 /**
  * „Gemerkt": die GEMERKTEN Turniere, und sonst nichts. (Bis F6-019 hiess die Seite nur „Turniere", und
@@ -37,7 +38,7 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule,
-    TranslatePipe, LoadingSpinnerComponent,
+    TranslatePipe, LoadingSpinnerComponent, TournamentDatePipe,
   ],
   template: `
     <div class="page">
@@ -92,7 +93,7 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
                 [class.busy]="opening() === sub.crawlerTournamentId">
           <span class="row-name">{{ sub.tournamentName }}</span>
           <span class="row-date muted">
-            @if (sub.eventDate) { {{ sub.eventDate }} } @else { {{ 'tournaments.list.noDate' | translate }} }
+            @if (sub.eventDate) { {{ sub.eventDate | tournamentDate }} } @else { {{ 'tournaments.list.noDate' | translate }} }
           </span>
         </button>
 

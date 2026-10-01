@@ -323,7 +323,8 @@ describe('TournamentDirectoryDetailComponent', () => {
 
     const dates = [...fixture.nativeElement.querySelectorAll('.play-date')]
       .map((n: Element) => n.textContent?.trim());
-    expect(dates).toEqual(['1. 2026-09-26', '2. 2026-10-10']);
+    // Mit Wochentag statt ISO (Codereview F6-010); ohne gewaehlte Sprache englisch.
+    expect(dates).toEqual(['1. Sat, Sep 26', '2. Sat, Oct 10']);
   });
 
   /**

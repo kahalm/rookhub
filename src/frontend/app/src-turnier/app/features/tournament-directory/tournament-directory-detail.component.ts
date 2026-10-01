@@ -15,6 +15,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { TournamentListService } from '../../core/tournament-list.service';
+import { TournamentDatePipe } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { TournamentMapComponent } from './tournament-map.component';
@@ -44,7 +45,7 @@ import { directoryCalendarEvent, directoryChessResultsUrl } from './directory-ca
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatTooltipModule,
-    TranslatePipe, LoadingSpinnerComponent, TournamentMapComponent,
+    TranslatePipe, LoadingSpinnerComponent, TournamentMapComponent, TournamentDatePipe,
   ],
   templateUrl: './tournament-directory-detail.component.html',
   styleUrls: ['./tournament-directory-detail.component.scss'],

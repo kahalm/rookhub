@@ -256,7 +256,8 @@ describe('TournamentMapComponent', () => {
     // Enthaltensein, nicht auf Gleichheit.
     const lines = [...popup.querySelectorAll('.tc-line')].map(n => n.textContent ?? '');
     expect(lines.length).toBe(2);
-    expect(lines[0]).toContain('2026-10-10 – 2026-10-12');
+    // Sprachgerecht, nicht ISO (Codereview F6-010); ohne gewaehlte Sprache englisch.
+    expect(lines[0].replace(/\s/g, ' ')).toContain('Oct 10 – 12, 2026');
     expect(lines[1]).toContain('Salzburg');
     expect(popup.querySelectorAll('.badge').length).toBeGreaterThanOrEqual(3);
     expect(popup.querySelector('.badge.warn')).withContext('abgesagt fehlt').not.toBeNull();

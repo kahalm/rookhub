@@ -199,7 +199,15 @@ describe('TournamentCardComponent', () => {
   it('zeigt einen einzelnen Tag ohne Bis-Datum', () => {
     setup({ startDate: '2026-12-18', endDate: '2026-12-18' });
 
-    expect(component.dateText).toBe('2026-12-18');
+    // Ohne gewaehlte Sprache: englisch, wie die Uebersetzungen (Codereview F6-010: vorher ISO).
+    expect(component.dateText).toBe('Dec 18, 2026');
+  });
+
+  it('schreibt den Zeitraum sprachgerecht statt als ISO-Datum', () => {
+    setup({ startDate: '2026-12-18', endDate: '2026-12-20' });
+
+    expect(component.dateText).not.toContain('2026-12-18');
+    expect(component.dateText.replace(/\s/g, ' ')).toBe('Dec 18 – 20, 2026');
   });
 
   /**

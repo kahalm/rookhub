@@ -11,6 +11,7 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { directoryCalendarEvent } from './directory-calendar-event';
 import { TournamentListService } from '../../core/tournament-list.service';
+import { formatTournamentDates, formatTournamentDay } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { DirectoryEntry } from './tournament-directory.model';
@@ -293,16 +294,21 @@ export class TournamentCardComponent {
   get dateText(): string {
     const start = this.entry.startDate;
     const end = this.entry.endDate;
-    if (!start) return end ?? '';
+    // Sprachgerecht statt „2026-12-18" (Codereview F6-010, siehe tournament-date.ts).
+    const lang = this.translate.currentLang();
+    if (!start) return formatTournamentDay(end, lang);
 
     // Sind die Spieltermine bekannt, sagen sie mehr als der Zeitraum: eine Liga laeuft von
     // September bis April, gespielt wird an elf Tagen.
     const rounds = this.entry.roundDates ?? [];
     if (rounds.length > 1) {
-      return this.translate.instant('tournamentDirectory.card.rounds',
-        { count: rounds.length, from: rounds[0].date, to: rounds[rounds.length - 1].date });
+      return this.translate.instant('tournamentDirectory.card.rounds', {
+        count: rounds.length,
+        from: formatTournamentDay(rounds[0].date, lang),
+        to: formatTournamentDay(rounds[rounds.length - 1].date, lang),
+      });
     }
-    return !end || end === start ? start : `${start} – ${end}`;
+    return formatTournamentDates(start, end, lang);
   }
 
   /**

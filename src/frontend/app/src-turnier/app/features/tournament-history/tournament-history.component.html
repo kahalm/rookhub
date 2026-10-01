@@ -140,7 +140,7 @@
                 <button type="button" class="row running" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
-                  <span class="row-date">{{ entry.endDate }}</span>
+                  <span class="row-date">{{ entry.endDate | tournamentDate }}</span>
                   <span class="row-name">
                     {{ entry.name }}
                     @if (entry.speed !== 'unknown') {
@@ -161,7 +161,7 @@
               <button type="button" class="row upcoming" (click)="open(entry)"
                       [disabled]="opening() !== null"
                       [class.busy]="opening() === entry.chessResultsId">
-                <span class="row-date">{{ entry.endDate }}</span>
+                <span class="row-date">{{ entry.endDate | tournamentDate }}</span>
                 <span class="row-name">{{ entry.name }}</span>
                 <span class="row-meta">
                   @if (entry.rounds) {
@@ -205,7 +205,7 @@
                 <button type="button" class="row" (click)="open(entry)"
                         [disabled]="opening() !== null"
                         [class.busy]="opening() === entry.chessResultsId">
-                  <span class="row-date">{{ entry.endDate }}</span>
+                  <span class="row-date">{{ entry.endDate | tournamentDate }}</span>
                   <span class="row-name">
                     {{ entry.name }}
                     @if (entry.speed !== 'unknown') {
