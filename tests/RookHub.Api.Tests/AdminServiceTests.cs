@@ -150,6 +150,22 @@ public class AdminServiceTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => admin.DeleteUserAsync(ActorId, ActorId));
     }
 
+    [Fact]
+    public async Task DeleteUser_AdminTarget_OnlyByAnAdmin()
+    {
+        var admin = TestServices.Admin(_db, _cache);
+        var victim = await AddUserAsync("adminkonto", isAdmin: true, stamp: "s1");
+
+        // Delegierte Rolle (users.manage, selbst kein Admin) löscht keine Admins (N9-002).
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => admin.DeleteUserAsync(victim.Id, ActorId, actorIsAdmin: false));
+        Assert.Null((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == victim.Id)).DeletedAt);
+        // Unbekannt bleibt 404, nicht 403.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => admin.DeleteUserAsync(424242, ActorId, actorIsAdmin: false));
+
+        await admin.DeleteUserAsync(victim.Id, ActorId, actorIsAdmin: true);
+        Assert.NotNull((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == victim.Id)).DeletedAt);
+    }
+
     // ---- Sperren statt Löschen (Codereview 2026-09-29, F5-011) ----
 
     [Fact]

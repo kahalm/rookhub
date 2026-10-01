@@ -70,10 +70,11 @@ public class AdminController : BaseApiController
     {
         try
         {
-            await _admin.DeleteUserAsync(id, GetUserId());
+            await _admin.DeleteUserAsync(id, GetUserId(), IsAdmin);
             return NoContent();
         }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException)
         {

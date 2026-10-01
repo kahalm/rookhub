@@ -328,6 +328,24 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteUser_AdminTarget_ByNonAdminPermissionHolder_ReturnsForbidden_OthersStayDeletable()
+    {
+        // Gleiche Grenze wie Toggle/Sperre/Impersonation (N9-002): sonst löschte eine delegierte Rolle die Admins weg.
+        var admin = await CreateUserAsync("realadmin", isAdmin: true);
+        var normal = await CreateUserAsync("normaluser");
+        SetUser(99, isAdmin: false);
+
+        var status = Assert.IsType<ObjectResult>(await _controller.DeleteUser(admin.Id));
+        Assert.Equal(403, status.StatusCode);
+        Assert.Null((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == admin.Id)).DeletedAt);
+        Assert.IsType<NoContentResult>(await _controller.DeleteUser(normal.Id));   // Support-Fall bleibt
+
+        SetUser(99, isAdmin: true);
+        Assert.IsType<NoContentResult>(await _controller.DeleteUser(admin.Id));    // ein echter Admin darf
+        Assert.NotNull((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == admin.Id)).DeletedAt);
+    }
+
+    [Fact]
     public async Task Impersonate_AdminTarget_ByNonAdminPermissionHolder_ReturnsForbidden()
     {
         // Das Impersonations-Token trägt die Rollen des ZIELS → Einstieg in ein Admin-Konto wäre

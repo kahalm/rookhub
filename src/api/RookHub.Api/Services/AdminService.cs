@@ -73,11 +73,15 @@ public class AdminService
     /// <summary>Löscht einen User über DENSELBEN Kern wie die Selbstlöschung (<see cref="ProfileService.EraseUserAsync"/>):
     /// Identität anonymisiert, persönliche Inhalte entfernt, anonyme Statistik bleibt. Vorher: hartes
     /// <c>AppUsers.Remove</c> — Spalten ohne FK blieben als Waisen stehen (eine Verteiler-Waise der Kalk-Serie
-    /// ließ jede weitere Ankündigung am FK der Benachrichtigungen scheitern), Restrict-FKs endeten in 409.</summary>
-    public async Task DeleteUserAsync(int id, int currentUserId)
+    /// ließ jede weitere Ankündigung am FK der Benachrichtigungen scheitern), Restrict-FKs endeten in 409.
+    /// Ein Admin-Konto löscht nur ein Admin (<paramref name="actorIsAdmin"/>) — dieselbe Grenze wie bei Toggle, Sperre
+    /// und Impersonation; sonst löschte eine delegierte Rolle mit <c>users.manage</c> die Admins weg.</summary>
+    public async Task DeleteUserAsync(int id, int currentUserId, bool actorIsAdmin = true)
     {
         if (id == currentUserId)
             throw new InvalidOperationException("Cannot delete yourself.");
+        if (!actorIsAdmin && await _db.AppUsers.AnyAsync(u => u.Id == id && u.IsAdmin && u.DeletedAt == null))
+            throw new UnauthorizedAccessException("Only an admin may delete an admin account.");
 
         await _profile.EraseUserAsync(id);   // KeyNotFoundException → 404
         // Das Token des Gelöschten fällt sofort, nicht erst nach Ablauf des Auth-Caches.
