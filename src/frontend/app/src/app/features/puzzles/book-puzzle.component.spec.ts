@@ -1773,3 +1773,51 @@ describe('BookPuzzleComponent Sprache der Kurs-Kommentare', () => {
     expect(c.offlineLangStale).toBeFalse();
   });
 });
+
+// Codereview N9-001 (Client-Teil): der Buch-Solver schickte /resolve sogar VOR dem Versuchs-POST — der Server fand
+// keinen gelösten Versuch und buchte echte Lösungen als „nicht gelöst". Jetzt erst im next-Zweig des Versuchs.
+describe('BookPuzzleComponent Challenge erst nach dem gespeicherten Versuch', () => {
+  function challengeComponent() {
+    const c: any = makeComponent();
+    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    c.auth = { isLoggedIn: true };
+    c.challengeId = 7;
+    c.solveSeconds = 21;
+    const attempt$ = new Subject<unknown>();
+    c.puzzleService.recordBookAttempt = jasmine.createSpy('recordBookAttempt').and.returnValue(attempt$);
+    const resolve = jasmine.createSpy('resolve').and.returnValue(of({}));
+    c.challengeService = { resolve };
+    c.offlineQueue = { enqueue: jasmine.createSpy('enqueue') };
+    return { c, attempt$, resolve };
+  }
+
+  it('meldet die Challenge erst, wenn der Versuchs-POST geantwortet hat', () => {
+    const { c, attempt$, resolve } = challengeComponent();
+    (c as any).recordBookAttempt(true);
+
+    expect(c.puzzleService.recordBookAttempt).toHaveBeenCalled();
+    expect(resolve).not.toHaveBeenCalled();
+
+    attempt$.next({});
+    expect(resolve).toHaveBeenCalledOnceWith(7, true, 21);
+  });
+
+  it('scheitert der Versuch, geht nur er in die Schlange — kein /resolve', () => {
+    const { c, attempt$, resolve } = challengeComponent();
+    (c as any).recordBookAttempt(true);
+    attempt$.error(new Error('500'));
+
+    expect(resolve).not.toHaveBeenCalled();
+    expect(c.offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it('der erste gemeldete Versuch entscheidet: ein späterer Solve meldet nicht noch einmal', () => {
+    const { c, resolve } = challengeComponent();
+    // je Versuch eine eigene, einmal antwortende Anfrage (wie HttpClient)
+    c.puzzleService.recordBookAttempt.and.callFake(() => of({}));
+    (c as any).recordBookAttempt(false);   // Fehlzug zuerst
+    (c as any).recordBookAttempt(true);    // Spätlöser
+
+    expect(resolve).toHaveBeenCalledOnceWith(7, false, 21);
+  });
+});

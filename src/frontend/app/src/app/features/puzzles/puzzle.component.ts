@@ -694,21 +694,28 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       screenWidth: window.innerWidth, screenHeight: window.innerHeight,
     };
     if (!this.isLoggedIn) body['sessionId'] = this.puzzleService.ensureSessionId();
+    // Challenge und Revanche: der erste Versuch entscheidet, gemeldet wird erst NACH dem gespeicherten Versuch
+    // (Codereview N9-001). Gleichzeitig abgeschickt prüfte der Server, bevor der Versuch stand — echte Lösungen wurden
+    // als „nicht gelöst" gebucht, die Revanche-Glocke fiel aus. Offline oder bei Fehler geht nur der Versuch in die
+    // Schlange: beim Nachsenden schließt der Server die Challenge selbst und legt über revengeUserId die Glocke an.
+    const challengeId = this.isLoggedIn ? this.claimChallenge() : null;
+    const revengeTo = this.isLoggedIn ? this.claimRevenge(solved) : null;
+    if (revengeTo != null) body['revengeUserId'] = revengeTo;
     if (!navigator.onLine) {
       // Offline gelöst → für späteres Hochladen vormerken (Stats aktualisieren sich beim Sync).
       this.offlineQueue.enqueue('POST', url, body);
       return;
     }
     if (this.isLoggedIn) {
-      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel).subscribe({
+      this.puzzleService.recordAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel, revengeTo).subscribe({
         next: res => {
           if (res.eloChange != null) this.lastEloChange = res.eloChange;
           this.puzzleService.getStats(this.visualizationMode).subscribe(s => this.stats = s);
+          if (challengeId != null) this.challengeService.resolve(challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
+          if (revengeTo != null) this.revengeService.recordResult(revengeTo, id, solved).subscribe({ next: () => {}, error: () => {} });
         },
         error: () => this.offlineQueue.enqueue('POST', url, body),
       });
-      this.resolveChallengeIfNeeded(solved, seconds);
-      this.notifyRevengeIfNeeded(solved);
     } else {
       this.puzzleService.recordAnonymousAttempt(id, solved, seconds, log, this.visualizationMode, this.evalShown, this.vizShowCount, this.maxHintLevel).subscribe({
         next: () => this.puzzleService.getAnonymousStats().subscribe(s => this.stats = s),
@@ -717,19 +724,22 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     }
   }
 
-  /** Meldet das Ergebnis genau einmal an eine offene Challenge zurück (fire-and-forget). */
-  private resolveChallengeIfNeeded(solved: boolean, seconds: number = this.elapsedSeconds): void {
-    if (this.challengeId == null || this.challengeResolved) return;
+  /** Beansprucht genau einmal die offene Challenge für diesen (ersten) Versuch; die Meldung folgt erst nach dem
+   *  gespeicherten Versuch (fire-and-forget). `null` = nichts zu melden. Sofort beansprucht, damit ein späteres,
+   *  fremdes Puzzle derselben Seite die Challenge nicht mit seinem Ergebnis meldet. */
+  private claimChallenge(): number | null {
+    if (this.challengeId == null || this.challengeResolved) return null;
     this.challengeResolved = true;
-    this.challengeService.resolve(this.challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
+    return this.challengeId;
   }
 
-  /** Informiert genau einmal den Freund, dessen gescheitertes Puzzle gerade gerächt wurde (fire-and-forget). */
-  private notifyRevengeIfNeeded(solved: boolean): void {
-    if (this.revengeUserId == null || this.revengeNotified || !this.puzzle) return;
+  /** Beansprucht genau einmal je Puzzle die Revanche-Meldung an den Freund, dessen gescheitertes Puzzle gerade
+   *  gerächt wurde, und zählt den Solve sofort für die Abschlusskarte. Liefert den Freund oder `null`. */
+  private claimRevenge(solved: boolean): number | null {
+    if (this.revengeUserId == null || this.revengeNotified || !this.puzzle) return null;
     this.revengeNotified = true;
     if (solved) this.revengeSolvedCount++;
-    this.revengeService.recordResult(this.revengeUserId, this.puzzle.id, solved).subscribe({ next: () => {}, error: () => {} });
+    return this.revengeUserId;
   }
 
   /** Offene Revenge-Puzzles des Freundes laden und als Warteschlange für die Revanche-Runde merken. */

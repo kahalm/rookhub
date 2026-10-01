@@ -754,9 +754,13 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     }
     // Ergebnis an eine ggf. offene Freundes-Challenge zurückmelden (nur Standalone; der ERSTE
     // gemeldete Versuch entscheidet — wie die bisherige Erstversuch-Semantik der Challenge).
+    // Gemeldet wird erst NACH dem gespeicherten Versuch (Codereview N9-001): vorher ging /resolve
+    // sogar VOR dem Versuch hinaus, der Server fand keinen gelösten Versuch und buchte echte Lösungen
+    // als „nicht gelöst". Offline oder bei Fehler schließt der Server die Challenge beim Nachsenden.
+    let challengeId: number | null = null;
     if (!this.bookChallengeResolved) {
       this.bookChallengeResolved = true;
-      this.resolveChallengeIfNeeded(solved);
+      challengeId = this.claimChallenge();
     }
     if (this.auth.isLoggedIn) {
       // Versuch wird erfasst → gemerkte Tagespuzzle-Zwischenzeit verfällt (Erstversuch ist gewertet).
@@ -766,10 +770,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
       // sonst auf „training" raten. Offline-Body identisch zum Online-Body, sonst geht die
       // Spielweise beim Nachsenden verloren.
       const mode = this.attemptSolveMode;
-      const body = { solved, timeSeconds: this.solveSeconds, hintsUsed: this.maxHintLevel, mode };
+      const seconds = this.solveSeconds;
+      const body = { solved, timeSeconds: seconds, hintsUsed: this.maxHintLevel, mode };
       if (!navigator.onLine) { this.offlineQueue.enqueue('POST', url, body); return; }
-      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, this.solveSeconds, this.maxHintLevel, mode)
-        .subscribe({ error: () => this.offlineQueue.enqueue('POST', url, body) });
+      this.puzzleService.recordBookAttempt(this.puzzle.id, solved, seconds, this.maxHintLevel, mode)
+        .subscribe({
+          next: () => {
+            if (challengeId != null) this.challengeService.resolve(challengeId, solved, seconds).subscribe({ next: () => {}, error: () => {} });
+          },
+          error: () => this.offlineQueue.enqueue('POST', url, body),
+        });
     } else if (solved) {
       // Anonym (nicht eingeloggt): nur Solves zählen fürs Tagespuzzle mit (namenlos) — die
       // gemerkte Zwischenzeit kumuliert daher bis zum ersten SOLVE weiter.
@@ -898,11 +908,12 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (ov.crazyPieceMode) this.crazyPieceMode = ov.crazyPieceMode;   // ?anarchy=max+1 → Feld bestimmt Stil
   }
 
-  /** Meldet das Ergebnis genau einmal an eine offene Buch-Challenge zurück (fire-and-forget). */
-  private resolveChallengeIfNeeded(solved: boolean): void {
-    if (this.challengeId == null || this.challengeResolved) return;
+  /** Beansprucht genau einmal die offene Buch-Challenge für diesen Versuch; die Meldung folgt erst nach dem
+   *  gespeicherten Versuch (fire-and-forget). `null` = nichts zu melden. */
+  private claimChallenge(): number | null {
+    if (this.challengeId == null || this.challengeResolved) return null;
     this.challengeResolved = true;
-    this.challengeService.resolve(this.challengeId, solved, this.solveSeconds).subscribe({ next: () => {}, error: () => {} });
+    return this.challengeId;
   }
 
   /** Lädt den verknüpften Partner-Kurs (falls vorhanden) für den Schnellwechsel-Knopf. */

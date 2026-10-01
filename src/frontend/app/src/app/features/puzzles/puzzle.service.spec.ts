@@ -90,6 +90,14 @@ describe('PuzzleService', () => {
     expect(req.request.body.visualizationLevel).toBe(2);
     expect(req.request.body.hintsUsed).toBe(3);
     expect(req.request.body.screenWidth).toBe(window.innerWidth);
+    expect('revengeUserId' in req.request.body).toBeFalse();   // ohne Revanche bleibt das Feld weg
+    req.flush({});
+  });
+
+  it('recordAttempt schickt im Revanche-Modus revengeUserId mit (Server legt die Glocke an, N9-001)', () => {
+    service.recordAttempt(5, true, 42, 'log', 2, true, 1, 3, 9).subscribe();
+    const req = httpMock.expectOne('/api/puzzles/5/attempt');
+    expect(req.request.body.revengeUserId).toBe(9);
     req.flush({});
   });
 

@@ -180,10 +180,13 @@ export class PuzzleService {
     return this.http.get<PuzzleDto>(`/api/puzzles/${id}`);
   }
 
-  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0, hintsUsed = 0): Observable<PuzzleAttemptDto> {
+  /** `revengeUserId` (Revanche-Modus): mit dem gespeicherten Versuch legt der Server die Revanche-Glocke selbst an
+   *  (Codereview N9-001); ohne Wert bleibt das Feld weg. */
+  recordAttempt(id: number, solved: boolean, timeSpentSeconds: number, moveLog?: string, visualizationLevel = 0, evalShown = false, vizShowCount = 0, hintsUsed = 0, revengeUserId: number | null = null): Observable<PuzzleAttemptDto> {
     return this.http.post<PuzzleAttemptDto>(`/api/puzzles/${id}/attempt`, {
       solved, timeSpentSeconds, moveLog, visualizationLevel, evalShown, vizShowCount, hintsUsed,
-      screenWidth: window.innerWidth, screenHeight: window.innerHeight
+      screenWidth: window.innerWidth, screenHeight: window.innerHeight,
+      ...(revengeUserId != null ? { revengeUserId } : {}),
     });
   }
 

@@ -1,5 +1,5 @@
 import { fakeAsync, tick } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of } from 'rxjs';
 import { PuzzleComponent } from './puzzle.component';
 
 /**
@@ -422,5 +422,82 @@ describe('PuzzleComponent Spielweise', () => {
     expect(sm.set).toHaveBeenCalledWith('puzzles', 'training');
     expect(c.solveModeChoice).toBe('training');
     c.ngOnDestroy();
+  });
+});
+
+// Codereview N9-001 (Client-Teil): /resolve und /revenge/result gingen gleichzeitig mit dem Versuchs-POST hinaus, der
+// Server prüfte, bevor der Versuch stand — echte Lösungen wurden als „nicht gelöst" gebucht, die Revanche-Glocke fiel
+// aus. Jetzt: erst im next-Zweig des Versuchs; bei Fehler oder offline nur der Versuch (mit revengeUserId) in die Schlange.
+describe('PuzzleComponent Challenge/Revanche erst nach dem gespeicherten Versuch', () => {
+  function challengeComponent() {
+    const c = makeComponent();
+    (c as any).authService = { isLoggedIn: true };
+    c.puzzle = { ...PUZZLE };
+    (c as any).challengeId = 7;
+    (c as any).revengeUserId = 9;
+    const attempt$ = new Subject<any>();
+    c.puzzleService.recordAttempt = jasmine.createSpy('recordAttempt').and.returnValue(attempt$);
+    c.puzzleService.getStats = () => of({});
+    const resolve = jasmine.createSpy('resolve').and.returnValue(of({}));
+    const recordResult = jasmine.createSpy('recordResult').and.returnValue(of({}));
+    (c as any).challengeService = { resolve };
+    (c as any).revengeService = { recordResult };
+    return { c, attempt$, resolve, recordResult };
+  }
+
+  it('meldet Challenge und Revanche erst, wenn der Versuchs-POST geantwortet hat', () => {
+    const { c, attempt$, resolve, recordResult } = challengeComponent();
+    (c as any).recordAttempt(true, 12);
+
+    expect(c.puzzleService.recordAttempt).toHaveBeenCalled();
+    expect(c.puzzleService.recordAttempt.calls.mostRecent().args[8]).toBe(9);   // revengeUserId im Versuch
+    expect(resolve).not.toHaveBeenCalled();
+    expect(recordResult).not.toHaveBeenCalled();
+    expect(c.revengeSolvedCount).toBe(1);   // Abschlusskarte zählt sofort, nicht erst mit der Antwort
+
+    attempt$.next({ eloChange: 4 });
+    expect(resolve).toHaveBeenCalledOnceWith(7, true, 12);
+    expect(recordResult).toHaveBeenCalledOnceWith(9, PUZZLE.id, true);
+  });
+
+  it('scheitert der Versuch, geht nur er (mit revengeUserId) in die Schlange — kein /resolve, keine Revanche-Meldung', () => {
+    const { c, attempt$, resolve, recordResult } = challengeComponent();
+    (c as any).recordAttempt(false, 30);
+    attempt$.error(new Error('500'));
+
+    expect(resolve).not.toHaveBeenCalled();
+    expect(recordResult).not.toHaveBeenCalled();
+    expect(c.offlineQueue.enqueue).toHaveBeenCalledTimes(1);
+    const [method, url, body] = c.offlineQueue.enqueue.calls.mostRecent().args;
+    expect([method, url]).toEqual(['POST', `/api/puzzles/${PUZZLE.id}/attempt`]);
+    expect(body.revengeUserId).toBe(9);   // beim Nachsenden legt der Server die Glocke an
+  });
+
+  it('ein späteres Puzzle derselben Seite meldet die Challenge nicht mit seinem Ergebnis', () => {
+    const { c, attempt$, resolve } = challengeComponent();
+    (c as any).recordAttempt(true, 12);
+    attempt$.error(new Error('offline'));   // Challenge-Puzzle: Versuch in der Schlange
+
+    const next$ = new Subject<any>();
+    c.puzzleService.recordAttempt.and.returnValue(next$);
+    c.puzzle = { ...PUZZLE, id: 2 };
+    c.attemptRecorded = false;              // wie loadNext()
+    (c as any).revengeNotified = false;
+    (c as any).recordAttempt(false, 5);
+    next$.next({});
+
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('offline: nur der Versuch samt revengeUserId in die Schlange, keine Meldung', () => {
+    const spy = spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+    try {
+      const { c, resolve, recordResult } = challengeComponent();
+      (c as any).recordAttempt(true, 12);
+      expect(c.puzzleService.recordAttempt).not.toHaveBeenCalled();
+      expect(resolve).not.toHaveBeenCalled();
+      expect(recordResult).not.toHaveBeenCalled();
+      expect(c.offlineQueue.enqueue.calls.mostRecent().args[2].revengeUserId).toBe(9);
+    } finally { spy.and.callThrough(); }
   });
 });
