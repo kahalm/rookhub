@@ -539,30 +539,40 @@ export class DashboardComponent implements OnInit {
       ).subscribe(list => this.chessableActive = list.map(imp => ({ ...imp, statusLabel: this.chessableStatus(imp) })));
     }
 
+    // Scheitert ein Zweig (offline, 500), liefert er null statt Leerwerten: dann bleibt der Wert aus dem
+    // Zwischenstand stehen, statt von 0/[]/1500 überschrieben zu werden — sonst verschwänden offline die
+    // angepinnten Kurse, und der Nullstand würde auch noch als Snapshot fürs nächste Öffnen gespeichert.
     forkJoin({
-      repertoires: this.dashboardService.getRepertoires().pipe(catchError(() => of([]))),
-      courses: this.dashboardService.getCourses().pipe(catchError(() => of([]))),
-      subscriptions: this.dashboardService.getSubscriptions().pipe(catchError(() => of([]))),
-      friends: this.dashboardService.getFriends().pipe(catchError(() => of([]))),
-      puzzleStats: this.dashboardService.getPuzzleStats().pipe(
-        catchError(() => of({ totalAttempts: 0, solved: 0, accuracy: 0, currentStreak: 0, bestStreak: 0, puzzleElo: 1500 }))
-      ),
-      favorites: this.favorites.count().pipe(catchError(() => of(0))),
+      repertoires: this.dashboardService.getRepertoires().pipe(catchError(() => of(null))),
+      courses: this.dashboardService.getCourses().pipe(catchError(() => of(null))),
+      subscriptions: this.dashboardService.getSubscriptions().pipe(catchError(() => of(null))),
+      friends: this.dashboardService.getFriends().pipe(catchError(() => of(null))),
+      puzzleStats: this.dashboardService.getPuzzleStats().pipe(catchError(() => of(null))),
+      favorites: this.favorites.count().pipe(catchError(() => of(null))),
     }).pipe(
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(({ repertoires, courses, subscriptions, friends, puzzleStats, favorites }) => {
-      this.repertoireCount = repertoires.length;
-      this.courseCount = courses.length;
-      this.pinnedCourses = courses.filter(c => c.isPinned)
-        .sort((a, b) => a.displayName.localeCompare(b.displayName));
-      this.subscriptions = subscriptions;
-      this.subscriptionCount = subscriptions.length;
-      this.friendCount = friends.length;
-      this.favoriteCount = favorites;
-      this.puzzleSolved = puzzleStats.solved || 0;
-      this.puzzleAccuracy = puzzleStats.accuracy || 0;
-      this.puzzleElo = puzzleStats.puzzleElo || 1500;
-      // Frischen Snapshot fürs nächste Öffnen ablegen (per User in localStorage).
+      if (repertoires) this.repertoireCount = repertoires.length;
+      if (courses) {
+        this.courseCount = courses.length;
+        this.pinnedCourses = courses.filter(c => c.isPinned)
+          .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      }
+      if (subscriptions) {
+        this.subscriptions = subscriptions;
+        this.subscriptionCount = subscriptions.length;
+      }
+      if (friends) this.friendCount = friends.length;
+      if (favorites !== null) this.favoriteCount = favorites;
+      if (puzzleStats) {
+        this.puzzleSolved = puzzleStats.solved || 0;
+        this.puzzleAccuracy = puzzleStats.accuracy || 0;
+        this.puzzleElo = puzzleStats.puzzleElo || 1500;
+      }
+      // Nichts frisch geladen (z. B. ganz offline) → den letzten guten Snapshot nicht anfassen.
+      if ([repertoires, courses, subscriptions, friends, puzzleStats, favorites].every(v => v === null)) return;
+      // Frischen Snapshot fürs nächste Öffnen ablegen (per User in localStorage); gescheiterte Zweige
+      // behalten darin ihren alten Wert.
       this.cache.save({
         repertoireCount: this.repertoireCount,
         courseCount: this.courseCount,

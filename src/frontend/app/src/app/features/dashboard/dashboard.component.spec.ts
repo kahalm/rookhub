@@ -156,6 +156,69 @@ describe('DashboardComponent cached snapshot', () => {
     expect(cached.puzzleElo).toBe(1900);
     expect(cached.favoriteCount).toBe(4);
   });
+
+  // F5-006: Ladefehler (offline, 500) dürfen den Zwischenstand nicht mit Nullen überschreiben.
+  function setupWithSnapshot(service: Record<string, () => unknown>, favCount: () => unknown) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      repertoireCount: 12, courseCount: 42,
+      pinnedCourses: [{ bookId: 9, displayName: 'Najdorf', isPinned: true }], subscriptions: [],
+      subscriptionCount: 3, friendCount: 5, favoriteCount: 8,
+      puzzleSolved: 1234, puzzleAccuracy: 87, puzzleElo: 2100,
+    }));
+    TestBed.configureTestingModule({
+      imports: [DashboardComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isAdmin: false, currentUser: { username: 'me', userId: 7 } } },
+        { provide: DashboardService, useValue: service },
+        { provide: MenuService, useValue: { visible$: of(MENU), isVisible: () => true } },
+        { provide: ChessableService, useValue: { getActiveImportsAdmin: () => of([]) } },
+        { provide: InAppNotificationService, useValue: { arrived$: new Subject<void>().asObservable() } },
+        { provide: FavoritesService, useValue: { count: favCount } },
+      ],
+    });
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+    const fixture = TestBed.createComponent(DashboardComponent);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('keeps the cached values and the stored snapshot when every request fails (offline)', () => {
+    const fail = () => throwError(() => new Error('offline'));
+    const c = setupWithSnapshot({
+      getRepertoires: fail, getCourses: fail, getSubscriptions: fail, getFriends: fail, getPuzzleStats: fail,
+    }, fail);
+    expect(c.repertoireCount).toBe(12);
+    expect(c.courseCount).toBe(42);
+    expect(c.pinnedCourses.length).toBe(1);
+    expect(c.friendCount).toBe(5);
+    expect(c.favoriteCount).toBe(8);
+    expect(c.puzzleElo).toBe(2100);
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!);
+    expect(cached.courseCount).toBe(42);
+    expect(cached.pinnedCourses.length).toBe(1);
+    expect(cached.puzzleElo).toBe(2100);
+  });
+
+  it('takes the fresh branches but keeps the cached value of a single failing one', () => {
+    const c = setupWithSnapshot({
+      getRepertoires: () => of([{}, {}]),
+      getCourses: () => throwError(() => new Error('500')),
+      getSubscriptions: () => of([]),
+      getFriends: () => of([{}]),
+      getPuzzleStats: () => of({ solved: 55, accuracy: 91, puzzleElo: 1900 }),
+    }, () => of(4));
+    expect(c.repertoireCount).toBe(2);
+    expect(c.courseCount).toBe(42);
+    expect(c.pinnedCourses.map(p => p.displayName)).toEqual(['Najdorf']);
+    expect(c.puzzleElo).toBe(1900);
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY)!);
+    expect(cached.repertoireCount).toBe(2);
+    expect(cached.courseCount).toBe(42);
+    expect(cached.pinnedCourses.length).toBe(1);
+    expect(cached.favoriteCount).toBe(4);
+  });
 });
 
 describe('DashboardComponent tiles', () => {
