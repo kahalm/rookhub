@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { AuthService } from './auth.service';
 import { MenuService } from './menu.service';
+import { blockedNotice } from './blocked-notice';
 
 /**
  * Zugriff auf das Durchspielen eines Kurses (`/courses/:bookId/...`).
@@ -12,7 +13,7 @@ import { MenuService } from './menu.service';
  *   (der `…/public`-Endpoint liefert 404 bei nicht-öffentlichen Kursen → die Komponente zeigt
  *   „nicht verfügbar"). Nicht-öffentliche Kurse sind anonym so nicht spielbar.
  * - **Eingeloggt**: wie {@link menuGuard}('courses') die admin-konfigurierte Menü-Sichtbarkeit
- *   respektieren; ausgeblendet → zurück aufs Dashboard. Fail-open bei API-Fehlern.
+ *   respektieren; ausgeblendet → zurück aufs Dashboard, mit Hinweis (UX-026). Fail-open bei API-Fehlern.
  */
 export const coursePlayGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
@@ -20,8 +21,13 @@ export const coursePlayGuard: CanActivateFn = () => {
 
   const menu = inject(MenuService);
   const router = inject(Router);
+  const blocked = blockedNotice();
   return menu.check('courses').pipe(
-    map(ok => ok ? true : router.createUrlTree(['/dashboard'])),
+    map(ok => {
+      if (ok) return true;
+      blocked();
+      return router.createUrlTree(['/dashboard']);
+    }),
     catchError(() => of(true)),
   );
 };

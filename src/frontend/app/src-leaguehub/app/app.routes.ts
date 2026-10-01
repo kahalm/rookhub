@@ -35,5 +35,7 @@ export const routes: Routes = [
   { path: 'impressum', loadComponent: () => import('@rh/features/legal/impressum.component').then(m => m.ImpressumComponent) },
   { path: 'privacy', loadComponent: () => import('@rh/features/legal/privacy.component').then(m => m.PrivacyComponent) },
   { path: 'account-deletion', loadComponent: () => import('@rh/features/legal/account-deletion.component').then(m => m.AccountDeletionComponent) },
-  { path: '**', redirectTo: '' },
+  // Unbekannte Adressen (UX-026): Hinweisseite ohne Guard. Vorher leitete '**' auf '' um, BEVOR der authGuard lief —
+  // Gäste bekamen die Anmeldemaske mit returnUrl „/“ (das Ziel war verloren), Angemeldete standen stumm auf den Prognosen.
+  { path: '**', loadComponent: () => import('@rh/shared/not-found/not-found.component').then(m => m.NotFoundComponent) },
 ];

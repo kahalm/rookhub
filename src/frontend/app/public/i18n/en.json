@@ -277,6 +277,12 @@
       "guessDesc": "Take over one side of an annotated master game and guess move by move — points for every move, measured against what was really played."
     },
     "feedback": "Feedback / Report a bug",
+    "blocked": "This area isn't enabled for your account.",
+    "notFound": {
+      "title": "Page not found",
+      "text": "There is nothing (any longer) at this address — the link may be outdated or mistyped.",
+      "home": "Go to the start page"
+    },
     "updateAvailable": "A new version is available.",
     "offlineQueueFull": "Offline storage is full — new results can no longer be saved for later upload.",
     "reload": "Reload",

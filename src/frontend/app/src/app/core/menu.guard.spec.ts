@@ -4,21 +4,28 @@ import { Observable, of, throwError, isObservable } from 'rxjs';
 import { menuGuard } from './menu.guard';
 import { AuthService } from './auth.service';
 import { MenuService } from './menu.service';
+import { SnackbarService } from './snackbar.service';
+import { TranslateService } from '@ngx-translate/core';
 
 describe('menuGuard', () => {
+  let snack: jasmine.Spy;
+
   /** `visible` = die Keys, die der Nutzer laut Snapshot sehen darf (Ausweich-Ziel des Guards). */
   function configure(loggedIn: boolean, check$: Observable<boolean>, visible: string[] = ['dashboard']) {
+    snack = jasmine.createSpy('info');
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
         { provide: MenuService, useValue: { check: () => check$, isVisible: (k: string) => visible.includes(k) } },
+        { provide: SnackbarService, useValue: { info: snack } },
+        { provide: TranslateService, useValue: { instant: (k: string) => k } },
       ],
     });
   }
 
-  function runSync(): boolean | UrlTree {
-    const result = TestBed.runInInjectionContext(() => menuGuard('courses')({} as any, {} as any));
+  function runSync(key = 'courses'): boolean | UrlTree {
+    const result = TestBed.runInInjectionContext(() => menuGuard(key)({} as any, {} as any));
     let value!: boolean | UrlTree;
     (isObservable(result) ? result : of(result as any)).subscribe(v => (value = v));
     return value;
@@ -27,6 +34,25 @@ describe('menuGuard', () => {
   it('lässt durch, wenn der Menüeintrag sichtbar ist', () => {
     configure(true, of(true));
     expect(runSync()).toBe(true);
+    expect(snack).not.toHaveBeenCalled();
+  });
+
+  it('nennt Angemeldeten beim Umleiten den Grund, statt sie stumm aufs Dashboard zu stellen (UX-026)', () => {
+    configure(true, of(false));
+    runSync();
+    expect(snack).toHaveBeenCalledOnceWith('app.blocked');
+  });
+
+  it('meldet keine Sperre, wenn nur das Dashboard (die Startseite) ausgeblendet ist', () => {
+    configure(true, of(false), ['help']);
+    expect((runSync('dashboard') as UrlTree).toString()).toContain('/help');
+    expect(snack).not.toHaveBeenCalled();
+  });
+
+  it('meldet Gästen keine Sperre — sie gehen zur Anmeldung', () => {
+    configure(false, of(false));
+    runSync();
+    expect(snack).not.toHaveBeenCalled();
   });
 
   it('leitet eingeloggte Nutzer ohne Sichtbarkeit auf /dashboard um', () => {

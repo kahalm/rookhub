@@ -5,7 +5,7 @@ import { routes } from './app.routes';
 import { appConfig } from './app.config';
 import { AuthService } from './core/auth.service';
 import { checkSharedPageLinks } from './testing/shared-page-links';
-import { AuthService } from './core/auth.service';
+import { NotFoundComponent } from './shared/not-found/not-found.component';
 
 /**
  * Reihenfolge-Test der Routentabelle.
@@ -14,7 +14,7 @@ import { AuthService } from './core/auth.service';
  * (ein Segment) und `:slug/:chapter` (ZWEI Segmente). Die zweiteilige ist die gefährliche: steht
  * sie auch nur eine Zeile zu früh, verschluckt sie jede echte zweiteilige Route (`/courses/403`,
  * `/repertoires/12`, `/tournaments/9`, `/t/5`, …) — niemand käme mehr in seine Kurse, und zwar
- * ohne Fehlermeldung: der Slug-Auflöser schickt bei unbekanntem Alias einfach aufs Dashboard.
+ * ohne Fehlermeldung: der Slug-Auflöser zeigt bei unbekanntem Alias nur „Seite nicht gefunden“.
  *
  * Geprüft wird gegen den ECHTEN Router: dieselbe Tabelle, dieselbe Reihenfolge, nur ohne Guards
  * (die würden HTTP ziehen) und ohne Lazy-Chunks (die brauchen die volle Komponenten-DI). Was hier
@@ -86,8 +86,13 @@ describe('app.routes', () => {
     expect(await matchedPath('/noel/KW46')).toBe(':slug/:chapter');
   });
 
-  it('leitet alles Längere weiterhin aufs Dashboard um', async () => {
-    expect(await matchedPath('/noel/KW46/zuviel')).toBe('dashboard');
+  it('zeigt für alles Längere die Hinweisseite, statt still aufs Dashboard umzuleiten (UX-026)', async () => {
+    expect(await matchedPath('/noel/KW46/zuviel')).toBe('**');
+    // Ohne Umleitung und ohne Guard: Gäste sollen nicht vor der Anmeldemaske landen und dabei das Ziel verlieren.
+    const catchAll = routes.at(-1)!;
+    expect(catchAll.redirectTo).toBeUndefined();
+    expect(catchAll.canActivate).toBeUndefined();
+    expect(await catchAll.loadComponent!()).toBe(NotFoundComponent);
   });
 });
 

@@ -277,6 +277,12 @@
       "guessDesc": "Preuzmi jednu stranu komentirane majstorske partije i pogađaj potez za potezom — bodovi za svaki potez, mjereni prema stvarno odigranom."
     },
     "feedback": "Povratne informacije / Prijavi grešku",
+    "blocked": "Ovo područje nije omogućeno za tvoj račun.",
+    "notFound": {
+      "title": "Stranica nije pronađena",
+      "text": "Na ovoj adresi nema (više) ničega — poveznica je možda zastarjela ili pogrešno upisana.",
+      "home": "Na početnu stranicu"
+    },
     "updateAvailable": "Dostupna je nova verzija.",
     "offlineQueueFull": "Izvanmrežna memorija je puna — novi rezultati se više ne mogu spremiti za kasniji prijenos.",
     "reload": "Ponovno učitaj",

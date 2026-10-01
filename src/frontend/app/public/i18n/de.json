@@ -277,6 +277,12 @@
       "guessDesc": "Übernimm eine Seite einer kommentierten Meisterpartie und rate Zug für Zug — Punkte je Zug, gemessen am wirklich gespielten Zug."
     },
     "feedback": "Feedback / Bug melden",
+    "blocked": "Dieser Bereich ist für dein Konto nicht freigeschaltet.",
+    "notFound": {
+      "title": "Seite nicht gefunden",
+      "text": "Unter dieser Adresse gibt es nichts (mehr) – vielleicht ist der Link veraltet oder vertippt.",
+      "home": "Zur Startseite"
+    },
     "updateAvailable": "Eine neue Version ist verfügbar.",
     "offlineQueueFull": "Der Offline-Speicher ist voll — neue Ergebnisse können nicht mehr für die spätere Übertragung gemerkt werden.",
     "reload": "Neu laden",

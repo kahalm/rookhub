@@ -76,6 +76,22 @@ describe('PublicSlugComponent', () => {
     const fixture = TestBed.createComponent(PublicSlugComponent);
     expect(fixture.componentInstance).toBeTruthy();
   });
+
+  it('rendert die Hinweisseite, wenn der Alias unbekannt ist', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PublicSlugComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => (k === 'slug' ? 'profil' : null) } } } },
+        { provide: CourseService, useValue: { resolvePublicSlug: () => throwError(() => new Error('404')) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PublicSlugComponent);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found h1')?.textContent).toContain('app.notFound.title');
+  });
 });
 
 describe('PublicSlugComponent /{slug}', () => {
@@ -101,15 +117,23 @@ describe('PublicSlugComponent /{slug}', () => {
     expect(navigations[0].commands).toEqual(['/courses', 5, 'random']);
   });
 
-  it('schickt unbekannte Aliasse aufs Dashboard', () => {
-    const { navigations } = run({ slug: 'gibtsnicht' }, { book: 'error' });
-    expect(navigations[0].commands).toEqual(['/dashboard']);
+  // UX-026: vorher still aufs Dashboard (Gäste: Anmeldemaske) — niemand erkannte den veralteten oder vertippten Link.
+  it('zeigt bei unbekannten Aliassen „Seite nicht gefunden“ und bleibt auf der Adresse', () => {
+    const { component, navigations } = run({ slug: 'gibtsnicht' }, { book: 'error' });
+    expect(navigations).toEqual([]);
+    expect(component.notFound()).toBeTrue();
   });
 
-  it('schickt einen leeren Slug aufs Dashboard, ohne zu fragen', () => {
-    const { navigations, asked } = run({ slug: '  ' });
-    expect(navigations[0].commands).toEqual(['/dashboard']);
+  it('zeigt bei einem leeren Slug die Hinweisseite, ohne zu fragen', () => {
+    const { component, navigations, asked } = run({ slug: '  ' });
+    expect(navigations).toEqual([]);
+    expect(component.notFound()).toBeTrue();
     expect(asked.slug).toBeUndefined();
+  });
+
+  it('lässt die Hinweisseite weg, solange die Auflösung klappt', () => {
+    const { component } = run({ slug: 'mate1' }, { book: { bookId: 5, isCalculation: false } });
+    expect(component.notFound()).toBeFalse();
   });
 });
 
@@ -151,8 +175,9 @@ describe('PublicSlugComponent /{slug}/{kapitel}', () => {
     expect(navigations[0].commands).toEqual(['/courses', 5, 'random']);
   });
 
-  it('schickt ein unbekanntes Kapitel aufs Dashboard', () => {
-    const { navigations } = run({ slug: 'noel', chapter: 'KW99' }, { chapter: 'error' });
-    expect(navigations[0].commands).toEqual(['/dashboard']);
+  it('zeigt bei einem unbekannten (z. B. umbenannten) Kapitel „Seite nicht gefunden“ statt des Dashboards', () => {
+    const { component, navigations } = run({ slug: 'noel', chapter: 'KW99' }, { chapter: 'error' });
+    expect(navigations).toEqual([]);
+    expect(component.notFound()).toBeTrue();
   });
 });

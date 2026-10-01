@@ -1,11 +1,14 @@
-import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NotFoundComponent } from '../../shared/not-found/not-found.component';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
 /**
  * Kurz-URL für öffentliche Kurse: `/{slug}` (z. B. `/mate1`) und `/{slug}/{kapitel}`
  * (z. B. `/noel/KW46`). Löst den Alias serverseitig auf und springt in den Modus, der zu diesem
- * Buch gehört. Unbekannter Alias → Dashboard (wie der bisherige Catch-all).
+ * Buch gehört. Unbekannter Alias oder Kapitel → „Seite nicht gefunden“ an Ort und Stelle, die Adresse bleibt
+ * stehen (wie der Catch-all, UX-026) — vorher sprang er still aufs Dashboard, und niemand erkannte, dass etwa eine
+ * Kapitel-Kurz-URL nach dem Umbenennen veraltet war. Auch jeder einteilige Tippfehler (/profil) landet hier.
  *
  * **Die Verzweigung ist kein Kosmetik-Detail**: die Stellungen eines Kalkulationsbuchs sind
  * `IsInfoOnly` und damit aus allen Solver-Pools ausgeschlossen — der Solver meldete dort sofort
@@ -25,28 +28,32 @@ import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './cour
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-slug',
   standalone: true,
-  template: '',
+  imports: [NotFoundComponent],
+  template: `@if (notFound()) { <app-not-found /> }`,
 })
 export class PublicSlugComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private courses = inject(CourseService);
 
+  /** Auflösung gescheitert: Hinweisseite statt Weiterleitung. */
+  readonly notFound = signal(false);
+
   ngOnInit(): void {
     const slug = (this.route.snapshot.paramMap.get('slug') || '').trim();
     const chapter = (this.route.snapshot.paramMap.get('chapter') || '').trim();
-    if (!slug) { this.toDashboard(); return; }
+    if (!slug) { this.showNotFound(); return; }
 
     if (chapter) {
       this.courses.resolvePublicSlugChapter(slug, chapter).subscribe({
         next: res => this.goChapter(res),
-        error: () => this.toDashboard(),
+        error: () => this.showNotFound(),
       });
       return;
     }
     this.courses.resolvePublicSlug(slug).subscribe({
       next: res => this.goBook(res),
-      error: () => this.toDashboard(),
+      error: () => this.showNotFound(),
     });
   }
 
@@ -78,7 +85,7 @@ export class PublicSlugComponent implements OnInit {
     this.goBook(res);
   }
 
-  private toDashboard(): void {
-    this.router.navigate(['/dashboard'], { replaceUrl: true });
+  private showNotFound(): void {
+    this.notFound.set(true);
   }
 }

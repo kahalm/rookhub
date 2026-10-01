@@ -4,6 +4,7 @@ import { OPERATOR } from '../../src/environments/operator';
 import { leaguehubConfig } from './app.config';
 import { routes } from './app.routes';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
+import { NotFoundComponent } from '@rh/shared/not-found/not-found.component';
 
 describe('LeagueHub-Routen', () => {
   it('die Prognose-Seite braucht eine Anmeldung, der Teilen-Link nicht', () => {
@@ -32,6 +33,16 @@ describe('LeagueHub-Routen', () => {
     const legal = leaguehubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
       { useFactory: () => LegalSite } | undefined;
     expect(legal?.useFactory()).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', accountHome: 'rookhub' });
+  });
+
+  it('unbekannte Adressen zeigen „Seite nicht gefunden“ ohne Guard, statt auf „/“ umzuleiten (UX-026)', async () => {
+    // Vorher leitete '**' auf '' um, BEVOR der authGuard lief: Gäste bekamen die Anmeldemaske mit returnUrl „/“
+    // (Ziel verloren), Angemeldete standen ohne Hinweis auf den Prognosen.
+    const catchAll = routes.at(-1)!;
+    expect(catchAll.path).toBe('**');
+    expect(catchAll.redirectTo).toBeUndefined();
+    expect(catchAll.canActivate).toBeUndefined();
+    expect(await catchAll.loadComponent!()).toBe(NotFoundComponent);
   });
 
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {

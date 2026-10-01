@@ -101,7 +101,7 @@ export const routes: Routes = [
   // Turniere sind seit v0.409.0 eine eigene Seite. Diese drei Adressen bleiben hier als
   // AUFFANGSTELLE stehen (nicht ersatzlos gestrichen): alte Lesezeichen, geteilte /t/{id}-Links
   // und die Dashboard-Liste „Abonnierte Turniere" zeigen weiter dorthin — ohne sie fallen sie in
-  // die Kurz-URL-Route unten, bekommen 404 und landen still auf dem Dashboard.
+  // die Kurz-URL-Route unten, bekommen 404 und zeigen nur „Seite nicht gefunden“.
   { path: 'tournaments', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
   { path: 'tournaments/:id', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
   { path: 't/:id', loadComponent: () => import('./features/tournaments-moved/tournaments-moved.component').then(m => m.TournamentsMovedComponent) },
@@ -116,5 +116,7 @@ export const routes: Routes = [
   // niemand käme mehr in seine Kurse. Dieselbe Disziplin wie beim einteiligen ':slug' darüber.
   // Abgesichert durch app.routes.spec.ts (Reihenfolge-Test).
   { path: ':slug/:chapter', loadComponent: () => import('./features/courses/public-slug.component').then(m => m.PublicSlugComponent) },
-  { path: '**', redirectTo: '/dashboard' }
+  // Unbekannte Adressen (UX-026): Hinweisseite OHNE Guard statt stummer Umleitung aufs Dashboard — Gäste sahen dort
+  // die Anmeldemaske „… um fortzufahren“ und verloren das Ziel, Angemeldete standen kommentarlos auf dem Dashboard.
+  { path: '**', loadComponent: () => import('./shared/not-found/not-found.component').then(m => m.NotFoundComponent) }
 ];

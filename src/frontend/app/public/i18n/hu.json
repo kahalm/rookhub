@@ -102,6 +102,12 @@
     "changelogMore": "Régebbi verziók megjelenítése",
     "quickstartTitle": "Gyorsindítás",
     "feedback": "Visszajelzés / Hiba bejelentése",
+    "blocked": "Ez a terület nincs engedélyezve a fiókodhoz.",
+    "notFound": {
+      "title": "Az oldal nem található",
+      "text": "Ezen a címen nincs (már) semmi — lehet, hogy a hivatkozás elavult vagy elgépelték.",
+      "home": "Ugrás a kezdőlapra"
+    },
     "updateAvailable": "Új verzió érhető el.",
     "reload": "Újratöltés",
     "qs": {
