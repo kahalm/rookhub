@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { Title } from '@angular/platform-browser';
+import { HttpErrorResponse } from '@angular/common/http';
 import { LeagueApiService } from '../../core/league-api.service';
 import { SharePageComponent } from './share-page.component';
 
@@ -65,12 +66,49 @@ describe('SharePageComponent', () => {
     expect(head).toContain('Wörgl · 11 Spieler');
   });
 
-  it('abgelaufen oder widerrufen: „Link ungültig"', async () => {
-    api.shared.and.rejectWith(new Error('404'));
+  it('abgelaufen oder widerrufen (404): „Link ungültig"', async () => {
+    api.shared.and.rejectWith(new HttpErrorResponse({ status: 404 }));
     const f = create();
     await f.whenStable();
     f.detectChanges();
-    expect((f.nativeElement as HTMLElement).textContent).toContain('Link ungültig');
+    const el = f.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Link ungültig');
+    expect(el.querySelector('.gate button')).toBeNull();
     expect(api.sources).not.toHaveBeenCalled();
+  });
+
+  // F7-009: 429 (viele Handys im selben Vereins-WLAN) oder Funkloch heißt NICHT, dass der Link tot ist.
+  for (const [status, hint] of [[429, 'in einer Minute'], [0, 'nicht erreichbar'], [502, 'HTTP 502']] as const) {
+    it(`vorübergehender Fehler ${status}: kein „Link ungültig", sondern Hinweis und „Neu laden"`, async () => {
+      api.shared.and.rejectWith(new HttpErrorResponse({ status }));
+      const f = create();
+      await f.whenStable();
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      expect(el.textContent).not.toContain('Link ungültig');
+      expect(el.textContent).not.toContain('widerrufen');
+      expect(el.textContent).toContain(hint);
+      expect(el.querySelector('.gate button')?.textContent).toContain('Neu laden');
+    });
+  }
+
+  it('„Neu laden" holt die Begegnung noch einmal', async () => {
+    api.shared.and.returnValues(
+      Promise.reject(new HttpErrorResponse({ status: 429 })),
+      Promise.resolve({
+        league: 'Landesliga', season: '2026/27', round: 2, team: 'Schwaz/', generated: '27.09.2026 21:00', expires: '2026-10-11',
+        fixture: { opp: 'Wörgl', home: true, status: 'open', boards: [], roster: [] },
+      }),
+    );
+    const f = create();
+    await f.whenStable();
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    (el.querySelector('.gate button') as HTMLButtonElement).click();
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.shared).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('.gate')).toBeNull();
+    expect(el.querySelector('.match')?.textContent).toContain('Wörgl');
   });
 });

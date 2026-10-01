@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
@@ -9,7 +10,8 @@ import { GameSourcesComponent } from '../../shared/game-sources.component';
 
 /**
  * Geteilte Begegnung (`/s/:token`) — OHNE Anmeldung. Zeigt genau die geteilte Begegnung samt Meldeliste
- * und Spielerkarten; Online-Konten nur „sicher" (entscheidet der Server). Abgelaufen/widerrufen → „Link ungültig".
+ * und Spielerkarten; Online-Konten nur „sicher" (entscheidet der Server). Abgelaufen/widerrufen (404) → „Link ungültig";
+ * jeder andere Fehler (429 aus demselben Vereins-WLAN, Funkloch, 5xx) sagt das und bietet „Neu laden" — F7-009.
  */
 @Component({
   selector: 'lh-share-page',
@@ -21,6 +23,12 @@ import { GameSourcesComponent } from '../../shared/game-sources.component';
       <section class="gate">
         <h2>Link ungültig</h2>
         <p>Dieser Link ist abgelaufen oder wurde widerrufen.</p>
+      </section>
+    } @else if (loadError(); as e) {
+      <section class="gate">
+        <h2>Gerade nicht erreichbar</h2>
+        <p>{{ e }}</p>
+        <div class="actions"><button type="button" class="btn-sec" (click)="load()">Neu laden</button></div>
       </section>
     } @else if (data(); as d) {
       <!-- Ganz oben und auffällig (Wunsch des Nutzers): wer den Link bekommt, soll seine Partien beisteuern. -->
@@ -53,14 +61,27 @@ export class SharePageComponent implements OnInit {
   readonly invalid = signal(false);
   /** Partien je Quelle wie auf der Startseite (0.627.0; als Tabelle mit Gegner seit 0.628.0); fehlt die Zählung, fehlt nur die Tabelle. */
   readonly sources = signal<GameSources | null>(null);
+  /** Vorübergehender Fehler (kein 404): der Link kann gültig sein — Klartext und „Neu laden" statt „Link ungültig". */
+  readonly loadError = signal<string | null>(null);
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): Promise<void> {
+    return this.load();
+  }
+
+  async load(): Promise<void> {
+    this.loadError.set(null);
     try {
       const d = await this.api.shared(this.token);
       this.data.set(d);
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
-    } catch {
-      this.invalid.set(true);
+    } catch (err) {
+      const status = err instanceof HttpErrorResponse ? err.status : null;
+      if (status === 404) this.invalid.set(true);
+      else this.loadError.set(
+        status === 429 ? 'Gerade kamen sehr viele Anfragen aus deinem Netz (etwa dasselbe WLAN). Bitte in einer Minute neu laden.'
+        : status === 0 ? 'Der Server ist gerade nicht erreichbar — prüfe die Verbindung und lade neu.'
+        : status !== null ? `Der Server hatte ein Problem (HTTP ${status}). Bitte gleich noch einmal versuchen.`
+        : 'Die Begegnung ließ sich gerade nicht laden. Bitte neu laden.');
       return;
     }
     try {
