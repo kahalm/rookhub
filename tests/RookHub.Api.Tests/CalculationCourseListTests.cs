@@ -185,6 +185,44 @@ public class CalculationCourseListTests : IDisposable
     }
 
     [Fact]
+    public async Task ResultOnLineTurnedInfo_CountsNowhere_AndInfoLineCannotBeSolved()
+    {
+        // Codereview A7-009: ein Re-Import stellt eine gelöste Linie auf Info um, das Ergebnis bleibt.
+        // Kursliste und Buch-Statistik zählten es weiter mit (100 %), Kapitel und Detailseite nicht
+        // (2 von 3) — und dieselbe /results-Antwort trug SolvedCount 2 neben Book.SolvedCount 3.
+        var user = await CreateUserAsync();
+        var book = await SeedBookAsync(user.Id, isCalculation: false);
+        var a = await SeedLineAsync(book, "1", infoOnly: false);
+        var b = await SeedLineAsync(book, "2", infoOnly: false);
+        var turned = await SeedLineAsync(book, "3", infoOnly: false);
+        var open = await SeedLineAsync(book, "4", infoOnly: false);
+        foreach (var line in new[] { a, b, turned })
+            _db.CoursePuzzleResults.Add(new CoursePuzzleResult
+            {
+                UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id, SolvedAt = DateTime.UtcNow,
+            });
+        turned.IsInfoOnly = true;   // wie PgnImportService beim Aktualisieren
+        await _db.SaveChangesAsync();
+
+        var item = (await _courses.GetCoursesAsync(user.Id, isAdmin: false)).Single();
+        Assert.Equal(3, item.PuzzleCount);
+        Assert.Equal(2, item.SolvedCount);
+        Assert.Equal(67, item.ProgressPercent);
+        Assert.Equal(2, (await _courses.GetChaptersAsync(user.Id, book.Id, isAdmin: false)).Sum(c => c.SolvedCount));
+
+        var progress = await _courses.RecordResultAsync(user.Id, book.Id,
+            new RecordCourseResultDto { BookPuzzleId = open.Id, Solved = false }, isAdmin: false);
+        Assert.Equal(2, progress.SolvedCount);
+        Assert.Equal(2, progress.Book!.SolvedCount);
+
+        // Eine Info-Linie wird durchgeklickt, nicht gelöst: kein neues Ergebnis, kein Versuch.
+        var attemptsBefore = await _db.CourseAttempts.CountAsync();
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _courses.RecordResultAsync(user.Id, book.Id,
+            new RecordCourseResultDto { BookPuzzleId = turned.Id, Solved = true }, isAdmin: false));
+        Assert.Equal(attemptsBefore, await _db.CourseAttempts.CountAsync());
+    }
+
+    [Fact]
     public async Task NormalBook_KeepsClassicCounting()
     {
         var user = await CreateUserAsync();

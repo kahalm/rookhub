@@ -59,6 +59,16 @@ public class CourseService
     private static int Percent(int solved, int total) =>
         total <= 0 ? 0 : (int)Math.Round(100.0 * Math.Min(solved, total) / total);
 
+    /// <summary>Gelöste QUIZ-Linien des Users — die Zählbasis jedes Kurs-Fortschritts. Info-/Erklärlinien
+    /// sind kein Quiz und zählen nicht (wie in <see cref="GetChaptersAsync"/>, <see cref="BuildProgressAsync"/>
+    /// und auf der Detailseite). Ergebnisse an Info-Linien gibt es trotzdem: ein Re-Import stellt eine
+    /// gelöste Linie auf <see cref="BookPuzzle.IsInfoOnly"/> um und lässt das Ergebnis stehen. Ohne diesen
+    /// Filter zeigten Kursliste und Buch-Statistik dann mehr Gelöstes als Kapitel und Detailseite
+    /// (Codereview A7-009).</summary>
+    private IQueryable<CoursePuzzleResult> SolvedQuizResults(int userId) =>
+        _db.CoursePuzzleResults.Where(cr => cr.UserId == userId
+            && cr.BookPuzzle != null && !cr.BookPuzzle.IsInfoOnly);
+
     /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?</summary>
     // Regel liegt in CourseAccess (geteilt mit CalculationService), damit es genau EINE Definition gibt.
     public Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin) =>
@@ -386,8 +396,7 @@ public class CourseService
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
 
-        var solvedByBook = await _db.CoursePuzzleResults
-            .Where(cr => cr.UserId == userId)
+        var solvedByBook = await SolvedQuizResults(userId)
             .GroupBy(cr => cr.BookId)
             .Select(g => new { BookId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.BookId, x => x.Count);
@@ -1009,10 +1018,16 @@ public class CourseService
 
         var puzzleChapter = await _db.BookPuzzles
             .Where(bp => bp.Id == dto.BookPuzzleId && bp.BookId == bookId)
-            .Select(bp => new { bp.Chapter })
+            .Select(bp => new { bp.Chapter, bp.IsInfoOnly })
             .FirstOrDefaultAsync();
         if (puzzleChapter == null)
             throw new KeyNotFoundException("Puzzle does not belong to this book.");
+        // Eine Info-/Erklärlinie wird nicht gelöst, sondern durchgeklickt (MarkInfoSeenAsync, dort
+        // umgekehrt geprüft). Ein Ergebnis daran zählte nirgends mit und machte die Zählungen nur
+        // uneinheitlich (Codereview A7-009) — z. B. eine offline vorgemerkte Lösung, deren Linie ein
+        // Re-Import inzwischen auf Info umgestellt hat.
+        if (puzzleChapter.IsInfoOnly)
+            throw new KeyNotFoundException("Info lines are not solved.");
 
         // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
         // dto.SolveMode ist die SPIELWEISE, NICHT dto.Mode (= sequential/random).
@@ -1221,8 +1236,8 @@ public class CourseService
                 .ToListAsync()).ToHashSet()
             : new HashSet<int>();
 
-        var solvedIds = (await _db.CoursePuzzleResults
-            .Where(cr => cr.UserId == userId && cr.BookId == bookId)
+        var solvedIds = (await SolvedQuizResults(userId)
+            .Where(cr => cr.BookId == bookId)
             .Select(cr => cr.BookPuzzleId)
             .ToListAsync()).ToHashSet();
 
