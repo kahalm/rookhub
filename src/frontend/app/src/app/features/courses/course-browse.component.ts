@@ -14,7 +14,7 @@ import { BookPuzzleDto } from '../puzzles/puzzle.service';
 import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ReviewNavComponent } from '../puzzles/review-nav.component';
 import { parseMoveShapes } from '../puzzles/move-shapes.util';
-import { applyUci, fenSideToMove, tryLoadFen } from '../puzzles/puzzle-move.util';
+import { applyUci, fenSideToMove, moveNumberLabels, tryLoadFen } from '../puzzles/puzzle-move.util';
 import { replayIllegalFen } from '../puzzles/illegal-board.util';
 import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
 import { PreferencesService } from '../../core/preferences.service';
@@ -186,7 +186,7 @@ interface ChapterGroup {
               @if (sanMoves.length) {
                 <div class="move-strip">
                   @for (m of sanMoves; track $index) {
-                    @if ($index % 2 === 0) { <span class="move-no">{{ ($index / 2) + 1 }}.</span> }
+                    @if (moveNumbers[$index]; as no) { <span class="move-no">{{ no }}</span> }
                     <button class="san" [class.current]="plyIndex === $index + 1"
                             (click)="goTo($index + 1)">{{ m }}</button>
                   }
@@ -346,6 +346,9 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   comment: string | null = null;
   reviewShapes: DrawShape[] = [];
   sanMoves: string[] = [];
+  /** Zugnummer vor jedem Halbzug des Streifens („23…"/„24." bzw. null) — aus Seite am Zug und
+   *  Vollzugzähler der Linien-FEN, nicht „Weiß ab 1." (Kurslinien beginnen oft mitten in der Partie). */
+  moveNumbers: (string | null)[] = [];
 
   boardTheme = 'brown';
   pieceSet = 'cburnett';
@@ -629,6 +632,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     this.totalPlies = this.uciMoves.length;
     // SAN-Folge einmal aus der FEN ableiten (für den Zug-Streifen).
     this.sanMoves = this.buildSan(line.fen, this.uciMoves);
+    this.moveNumbers = moveNumberLabels(line.fen, this.sanMoves.length);
     // Orientierung aus der Seite am Zug in der Startstellung (wie Info-Durchsicht); bei einer von
     // chess.js abgelehnten Diagramm-FEN direkt aus dem 2. FEN-Feld.
     const chess = tryLoadFen(line.fen);

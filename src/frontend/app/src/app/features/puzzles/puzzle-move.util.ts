@@ -102,6 +102,26 @@ export function formatSanList(moves: string[], startWhite: boolean, startNum: nu
 }
 
 /**
+ * Zugnummern für einen klickbaren Zugstreifen ab `fen`, je Halbzug ein Eintrag: „23." vor einem weißen
+ * Zug, „23…" vor einem SCHWARZEN ersten Zug (Schwarz am Zug in der Start-FEN), sonst `null` (Schwarz
+ * hinter seinem weißen Partner). Dieselbe Regel wie {@link formatSanList}. Seite am Zug und
+ * Vollzugzähler kommen roh aus dem 2./6. FEN-Feld — so stimmt die Nummer auch bei einer von chess.js
+ * abgelehnten Diagramm-FEN; ein fehlender/unsinniger Zähler zählt als 1.
+ */
+export function moveNumberLabels(fen: string, count: number): (string | null)[] {
+  const n = parseInt(fen.split(/\s+/)[5] ?? '', 10);
+  let num = Number.isFinite(n) && n >= 1 ? n : 1;
+  let white = fenSideToMove(fen) === 'w';
+  const labels: (string | null)[] = [];
+  for (let i = 0; i < count; i++) {
+    labels.push(white ? `${num}.` : i === 0 ? `${num}…` : null);
+    if (!white) num++;
+    white = !white;
+  }
+  return labels;
+}
+
+/**
  * Wie {@link formatSanList}, aber Gegnerzüge (immer Index 1, 3, 5… in der viz-Sequenz —
  * der erste Zug ist stets der User) werden in `<strong>` eingebettet.
  * Ausgabe ist sicheres HTML (nur SAN-Notation + Zugnummern + strong-Tags).

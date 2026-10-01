@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import { Key } from 'chessground/types';
-import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml, tryLoadFen, fenSideToMove } from './puzzle-move.util';
+import { parseUci, applyUci, tryFreeMove, calcDests, formatSanList, formatSanListHtml, tryLoadFen, fenSideToMove, moveNumberLabels } from './puzzle-move.util';
 
 describe('puzzle-move.util', () => {
   describe('parseUci', () => {
@@ -109,6 +109,25 @@ describe('puzzle-move.util', () => {
     });
     it('fällt ohne Farb-Feld auf Weiß zurück', () => {
       expect(fenSideToMove('8/8/8/8/8/8/8/8')).toBe('w');
+    });
+  });
+
+  describe('moveNumberLabels', () => {
+    it('Weiß am Zug, Zug 1: Nummer vor jedem weißen Zug', () => {
+      expect(moveNumberLabels('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', 3))
+        .toEqual(['1.', null, '2.']);
+    });
+    it('Schwarz am Zug, Zug 23: „23…" vorneweg, dann „24." vor dem weißen Zug', () => {
+      expect(moveNumberLabels('r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 0 23', 3))
+        .toEqual(['23…', '24.', null]);
+    });
+    it('illegale Diagramm-FEN: Seite und Nummer roh aus der FEN', () => {
+      expect(moveNumberLabels('8/5pp1/6P1/8/8/8/8/7R b - - 0 7', 2)).toEqual(['7…', '8.']);
+    });
+    it('fehlender oder unsinniger Zähler zählt als 1; keine Züge, keine Nummern', () => {
+      expect(moveNumberLabels('8/8/8/8/8/8/8/8 w', 2)).toEqual(['1.', null]);
+      expect(moveNumberLabels('8/8/8/8/8/8/8/8 b - - 0 0', 1)).toEqual(['1…']);
+      expect(moveNumberLabels('8/8/8/8/8/8/8/8 w - - 0 5', 0)).toEqual([]);
     });
   });
 });

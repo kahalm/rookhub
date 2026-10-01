@@ -121,6 +121,18 @@ describe('CourseBrowseComponent', () => {
     expect(comp.variationPreview).toBeNull();
   });
 
+  it('numbers the move strip from the line FEN (Black to move, move 23), not „1." with White first', () => {
+    // Chessable-Kurslinie ab einer Partiestellung: Schwarz am Zug im 23. Zug.
+    const fen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 23';
+    const comp = build([line({ id: 1, fen, moves: 'e7e5 g1f3 b8c6' })]);
+    expect(comp.sanMoves).toEqual(['e5', 'Nf3', 'Nc6']);
+    expect(comp.moveNumbers).toEqual(['23…', '24.', null]);
+
+    // Linie ab der Grundstellung: wie bisher „1." vor Weiß.
+    const start = build([line({ id: 2 })]);
+    expect(start.moveNumbers).toEqual(['1.', null]);
+  });
+
   it('renders an illegal-FEN pattern line (no king) without throwing, stepping by coordinates', () => {
     // Chessable-Muster-/Info-Diagramme sind bewusst illegal (hier ohne Könige); chess.js verwirft sie.
     const badFen = '8/5pp1/6P1/8/8/8/8/7R w - - 0 1';
