@@ -141,6 +141,47 @@ describe('TournamentDetailComponent', () => {
     expect(link.classList.contains('mat-mdc-outlined-button')).toBeFalse();
   });
 
+  // ----- Handy (UX-042) -------------------------------------------------------
+
+  /** Viewport des Test-Dokuments (das Karma-iframe) auf Handybreite stellen; Rueckgabe = zuruecksetzen (Muster turnier-navbar.spec). */
+  async function narrowViewport(width: number): Promise<() => void> {
+    const frame = window.frameElement as HTMLElement | null;
+    if (!frame) pending('Karma laeuft nicht im iframe — der Viewport laesst sich nicht verstellen');
+    const prev = frame!.style.width;
+    frame!.style.width = `${width}px`;
+    await new Promise<void>(r => requestAnimationFrame(() => r()));
+    expect(window.innerWidth).withContext('Viewport nicht verstellt').toBeLessThanOrEqual(width);
+    return () => { frame!.style.width = prev; };
+  }
+
+  /**
+   * Am Handy waren alle fuenf Aktionen nackte Symbolkreise — Glocke („Abonnieren") und Auge („Beobachten") nicht zu
+   * unterscheiden; die Gruppenleiste endete abgeschnitten ohne Hinweis, dass sie scrollt.
+   */
+  it('am Handy behalten Merken und Beobachten ihren Text, die Gruppenleiste blendet am Rand aus', async () => {
+    const restore = await narrowViewport(360);
+    try {
+      const fixture = await render({ active: false, activeUntil: null }, rally);
+      const labelShown = (aria: string) => {
+        const btn = actionsOf(fixture).find(a => a.getAttribute('aria-label') === aria)!;
+        return getComputedStyle(btn.querySelector('.btn-label')!).display !== 'none';
+      };
+      expect(labelShown('tournamentDirectory.bookmark')).withContext('Merken mit Text').toBeTrue();
+      expect(labelShown('tournaments.actions.monitor')).withContext('Beobachten mit Text').toBeTrue();
+      // Die eindeutigen Symbole bleiben Kreise (Tooltip + aria-label tragen den Text).
+      expect(labelShown('tournaments.actions.refresh')).toBeFalse();
+      expect(labelShown('tournaments.actions.share')).toBeFalse();
+      expect(labelShown('tournaments.actions.chessResults')).toBeFalse();
+
+      const strip = (fixture.nativeElement as HTMLElement).querySelector('.group-switch') as HTMLElement;
+      const style = getComputedStyle(strip);
+      const mask = style.getPropertyValue('mask-image') || style.getPropertyValue('-webkit-mask-image');
+      expect(mask).withContext('Rand blendet aus').toContain('linear-gradient');
+    } finally {
+      restore();
+    }
+  });
+
   // ----- Gruppen derselben Veranstaltung -----------------------------------
 
   const rally: TournamentGroup[] = [

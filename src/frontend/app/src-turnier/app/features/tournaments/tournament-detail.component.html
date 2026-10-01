@@ -20,9 +20,12 @@
               </mat-button-toggle-group>
             </div>
           }
-          <!-- Mobil (<=768px) sind das nackte Icon-Kreise: .btn-label{display:none} nimmt den Text auch aus dem
-               Accessibility-Tree. Tooltip + aria-label tragen die Beschriftung (Muster aus tournament-list); das
-               color="primary"/"warn" war unter dem M3-Theme wirkungslos und ist weg.
+          <!-- Mobil (<=768px) sind Aktualisieren, Teilen und Chess-Results nackte Icon-Kreise: .btn-label{display:none}
+               nimmt den Text auch aus dem Accessibility-Tree. Tooltip + aria-label tragen die Beschriftung (Muster aus
+               tournament-list); das color="primary"/"warn" war unter dem M3-Theme wirkungslos und ist weg.
+               Merken und Beobachten (.keep-label) behalten ihren Text auch am Handy (UX-042): als zwei Symbolkreise
+               waren sie nicht zu unterscheiden, und wer am Turniertag ueber neue Runden informiert werden wollte,
+               legte mit der Glocke ein Abo fuer Terminaenderungen an.
                F6-011: EIN Begriff fuer POST/DELETE /api/subscriptions — „Merken" mit Lesezeichen wie in Kalender,
                Kurzansicht und Merkliste (vorher hier „Abonnieren" mit Glocke: das sah aus wie ein zweites Abo).
                Rangfolge nach der UI-Dichte-Regel: Merken primaer (gefuellt, solange nicht gemerkt), Beobachten,
@@ -31,12 +34,12 @@
                „Für mich ausblenden" und kommt hier nicht mehr vor. -->
           <mat-card-actions class="action-bar">
             @if (subscription) {
-              <button mat-stroked-button (click)="unsubscribe()" [disabled]="toggling"
+              <button mat-stroked-button class="keep-label" (click)="unsubscribe()" [disabled]="toggling"
                       [matTooltip]="'tournamentDirectory.bookmarkRemove' | translate" [attr.aria-label]="'tournamentDirectory.bookmarkRemove' | translate">
                 <mat-icon>bookmark</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmarkRemove' | translate }}</span>
               </button>
             } @else {
-              <button mat-flat-button (click)="subscribe()" [disabled]="toggling"
+              <button mat-flat-button class="keep-label" (click)="subscribe()" [disabled]="toggling"
                       [matTooltip]="'tournamentDirectory.bookmark' | translate" [attr.aria-label]="'tournamentDirectory.bookmark' | translate">
                 <mat-icon>bookmark_add</mat-icon><span class="btn-label"> {{ 'tournamentDirectory.bookmark' | translate }}</span>
               </button>
@@ -44,13 +47,13 @@
             @if (monitoring) {
               <!-- notifications_off = Aktion 'Beobachtung beenden': ohne Beschriftung sahen an und aus mobil sonst
                    identisch aus, die Endzeit steht dort nur noch im Tooltip/aria-label. -->
-              <button mat-stroked-button (click)="toggleMonitor()" [disabled]="monitorToggling"
+              <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
                       [matTooltip]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }"
                       [attr.aria-label]="'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') }">
                 <mat-icon>notifications_off</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitoringUntil' | translate:{ time: (monitorActiveUntil | date:'HH:mm') } }}</span>
               </button>
             } @else {
-              <button mat-stroked-button (click)="toggleMonitor()" [disabled]="monitorToggling"
+              <button mat-stroked-button class="keep-label" (click)="toggleMonitor()" [disabled]="monitorToggling"
                       [matTooltip]="'tournaments.actions.monitor' | translate" [attr.aria-label]="'tournaments.actions.monitor' | translate">
                 <mat-icon>notifications_active</mat-icon><span class="btn-label"> {{ 'tournaments.actions.monitor' | translate }}</span>
               </button>

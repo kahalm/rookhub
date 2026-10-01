@@ -819,6 +819,16 @@ describe('TournamentHistoryComponent', () => {
     expect(host.querySelector('.track-add')).not.toBeNull();
   });
 
+  /** UX-042: am Handy ist der Text des Knopfs ausgeblendet und das Symbol aria-hidden — er hatte keinen zugaenglichen Namen. */
+  it('gibt dem Plus einen zugaenglichen Namen, auch wenn der Text am Handy fehlt', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    fixture.detectChanges();
+
+    const button = (fixture.nativeElement as HTMLElement).querySelector('.track-add')!;
+    expect(button.getAttribute('aria-label')).toBe('turnier.history.track.add');
+  });
+
   /** „Nicht mehr verfolgen" nimmt den Reiter weg und springt auf den eigenen zurueck. */
   it('entfernt einen verfolgten Spieler und kehrt zum eigenen Reiter zurueck', async () => {
     const req = await setup([], [tracked({ id: 3 })]);

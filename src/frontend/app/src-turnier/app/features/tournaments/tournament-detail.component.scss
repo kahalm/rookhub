@@ -13,14 +13,28 @@
     @media (max-width: 768px) {
       .detail-container { padding: 0.75rem; }
       .btn-label { display: none; }
-      .action-bar button, .action-bar a {
+      .action-bar button:not(.keep-label), .action-bar a:not(.keep-label) {
         min-width: 0 !important; padding: 0 !important; width: 44px; height: 44px; border-radius: 50%;
         display: inline-flex; align-items: center; justify-content: center;
       }
-      :host ::ng-deep .action-bar .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
+      :host ::ng-deep .action-bar :not(.keep-label) > .mat-icon { margin: 0 !important; font-size: 24px; width: 24px; height: 24px; }
+      // UX-042: Merken und Beobachten behalten am Handy ihren Text (gleiche 44px Hoehe wie die Kreise daneben).
+      .action-bar .keep-label { height: 44px; }
+      .action-bar .keep-label .btn-label { display: inline; }
     }
 
 /* Gruppen-Umschaltung: am Handy darf die Leiste seitlich scrollen statt die Seite zu verbreitern. */
 .group-switch { padding: 0 16px 8px; overflow-x: auto; }
 .group-switch mat-button-toggle-group { flex-wrap: nowrap; }
 .group-switch mat-button-toggle { white-space: nowrap; }
+/* UX-042: Ohne Hinweis endete die Leiste am Handy abgeschnitten („Gebietsklas…") und niemand ahnte, dass sie
+   scrollt. Der rechte Rand blendet aus; er liegt im (verbreiterten) Innenabstand: passt die Leiste, faellt nur
+   leerer Rand ins Ausblenden, ist sie zu breit, verblasst der angeschnittene Eintrag — und am Ende des Scrollwegs
+   steht auch der letzte Eintrag voll sichtbar vor dem Rand. */
+@media (max-width: 768px) {
+  .group-switch {
+    padding-right: 32px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  }
+}

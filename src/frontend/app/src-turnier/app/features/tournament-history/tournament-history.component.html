@@ -34,8 +34,11 @@
       </mat-tab-group>
     }
 
+    <!-- aria-label (UX-042): am Handy ist der Text ausgeblendet (display:none) und das Symbol aria-hidden — der Knopf
+         hatte dort GAR keinen zugaenglichen Namen. -->
     <button mat-stroked-button type="button" class="track-add" (click)="addTracked()"
-            [matTooltip]="'turnier.history.track.help' | translate">
+            [matTooltip]="'turnier.history.track.help' | translate"
+            [attr.aria-label]="'turnier.history.track.add' | translate">
       <mat-icon>add</mat-icon>
       <span class="track-add-label">{{ 'turnier.history.track.add' | translate }}</span>
     </button>
