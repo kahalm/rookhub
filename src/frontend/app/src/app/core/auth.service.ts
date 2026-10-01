@@ -47,6 +47,10 @@ export class AuthService {
       const onOnline = () => { if (this.sessionEndPending && !this.isLoggedIn) void this.flushSessionEnd(); };
       window.addEventListener('online', onOnline);
       destroyRef.onDestroy(() => window.removeEventListener('online', onOnline));
+      // Anmelden, Abmelden und Impersonation in einem ANDEREN Tab gelten hier mit (siehe followOtherTab).
+      const onStorage = (e: StorageEvent) => this.followOtherTab(e);
+      window.addEventListener('storage', onStorage);
+      destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
     }
     // Beim Start schon abgelaufen: hier (nicht in getStoredUser) beenden — das Aufraeumen braucht den
     // Injektor, und der ist erst im Konstruktor gesetzt, nicht schon beim Initialisieren der Felder.
@@ -139,9 +143,11 @@ export class AuthService {
 
   private readonly adminBackupKey = 'rookhub_admin_user';
 
-  /** Läuft gerade eine Admin-Impersonation? */
+  /** Läuft gerade eine Admin-Impersonation? Entscheidend ist allein das Token dieses Tabs — NICHT die
+   *  Admin-Sicherung im (mit allen Tabs geteilten) Speicher: fehlte sie, verschwand der rote Streifen,
+   *  während das fremde Token weiter galt (Codereview F1-005). */
   get isImpersonating(): boolean {
-    return !!this.getValidUser()?.impersonating && !!localStorage.getItem(this.adminBackupKey);
+    return !!this.getValidUser()?.impersonating;
   }
 
   /** Benutzername des Admins, der eingestiegen ist (für das Banner). */
@@ -200,7 +206,9 @@ export class AuthService {
   /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren. */
   stopImpersonation(): void {
     const stored = localStorage.getItem(this.adminBackupKey);
-    if (!stored) return;
+    // Ohne Sicherung gibt es keinen Rücksprung — dann nicht im fremden Konto hängenbleiben (der Streifen
+    // steht, sein Knopf täte sonst nichts), sondern abmelden wie bei einer beschädigten Sicherung.
+    if (!stored) { this.logout(); return; }
     let admin: AuthResponse;
     try {
       admin = JSON.parse(stored);
@@ -226,6 +234,25 @@ export class AuthService {
     localStorage.removeItem(this.adminBackupKey);
     this.currentUserSubject.next(admin);
     this.loadPreferences();
+  }
+
+  /**
+   * Ein ANDERER Tab hat die gespeicherte Sitzung geändert (das storage-Ereignis feuert nur in den übrigen
+   * Tabs). Ohne Abgleich hielt jeder Tab seine Sitzung im Speicher, solange er offen war: stieg der Admin
+   * in Tab 1 aus einer Impersonation aus, arbeitete Tab 2 mit dem fremden Token weiter; meldete man sich
+   * in Tab 1 ab, schickte Tab 2 weiter das gültige Token (Codereview F1-005).
+   *
+   * <p>Aufgeräumt (Offline-Inhalte, Spuren, geteilte Anmeldung) hat der andere Tab schon — hier wird nur
+   * die Sitzung dieses Tabs nachgezogen, ohne erneutes `session/end`.</p>
+   */
+  private followOtherTab(e: StorageEvent): void {
+    if (e.key !== null && e.key !== 'rookhub_user') return;   // null: der Speicher wurde ganz geleert
+    const current = this.currentUserSubject.value;
+    const stored = this.getStoredUser();
+    if ((stored?.token ?? null) === (current?.token ?? null)) return;
+    this.currentUserSubject.next(stored);
+    if (!stored) { this.router.navigate(['/login']); return; }
+    if (stored.userId !== current?.userId) this.loadPreferences();
   }
 
   private loadPreferences(): void {

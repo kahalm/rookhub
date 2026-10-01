@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { OfflineService } from './offline.service';
 
@@ -104,6 +104,85 @@ describe('AuthService stopImpersonation', () => {
     expect(() => svc.stopImpersonation()).not.toThrow();
     expect(localStorage.getItem('rookhub_admin_user')).toBeNull();
     expect(svc.isLoggedIn).toBeFalse();
+  });
+});
+
+describe('AuthService: andere Tabs desselben Browsers (F1-005)', () => {
+  // Gemeldet im Codereview 2026-09-29 (F1-005): jeder Tab hielt seine Sitzung im Speicher, ohne Abgleich
+  // über das storage-Ereignis. Stieg der Admin in Tab 1 aus einer Impersonation aus, arbeitete Tab 2 mit
+  // dem fremden Token weiter — und weil isImpersonating die (geteilte) Admin-Sicherung verlangte, ohne
+  // roten Streifen. Ebenso blieb Tab 2 nach einem Abmelden in Tab 1 angemeldet.
+  const admin = { token: jwt(7200), username: 'admin', userId: 1, isAdmin: true };
+  const imp = { token: jwt(3600), username: 'x', userId: 9, isAdmin: false, impersonating: true, impersonatorUsername: 'admin' };
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+  });
+  afterEach(() => localStorage.clear());
+
+  /** Was der ANDERE Tab tut: in den Speicher schreiben — das Ereignis feuert nur hier, nicht dort. */
+  function otherTab(write: () => void, key: string | null = 'rookhub_user'): void {
+    write();
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: key ? localStorage.getItem(key) : null }));
+  }
+
+  it('folgt dem Aussteigen aus einer Impersonation in einem anderen Tab', () => {
+    localStorage.setItem('rookhub_admin_user', JSON.stringify(admin));
+    localStorage.setItem('rookhub_user', JSON.stringify(imp));
+    const svc = TestBed.inject(AuthService);
+    expect(svc.isImpersonating).toBeTrue();
+
+    otherTab(() => {   // stopImpersonation in Tab 1
+      localStorage.setItem('rookhub_user', JSON.stringify(admin));
+      localStorage.removeItem('rookhub_admin_user');
+    });
+
+    expect(svc.token).toBe(admin.token);
+    expect(svc.currentUser?.username).toBe('admin');
+    expect(svc.isImpersonating).toBeFalse();
+    TestBed.inject(HttpTestingController).match('/api/profile').forEach(r => r.flush({}));
+  });
+
+  it('folgt einem Abmelden in einem anderen Tab — ohne erneutes Ende der geteilten Anmeldung', () => {
+    localStorage.setItem('rookhub_user', JSON.stringify(admin));
+    const svc = TestBed.inject(AuthService);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    expect(svc.isLoggedIn).toBeTrue();
+
+    otherTab(() => localStorage.removeItem('rookhub_user'));
+
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(svc.token).toBeNull();
+    expect(navigate).toHaveBeenCalledWith(['/login']);
+    TestBed.inject(HttpTestingController).expectNone('/api/auth/rh-session/end');
+  });
+
+  it('lässt fremde Schlüssel und unveränderte Sitzungen in Ruhe', () => {
+    localStorage.setItem('rookhub_user', JSON.stringify(admin));
+    const svc = TestBed.inject(AuthService);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+
+    otherTab(() => localStorage.setItem('rookhub_lang', 'hr'), 'rookhub_lang');
+    otherTab(() => localStorage.setItem('rookhub_user', JSON.stringify(admin)));
+
+    expect(svc.token).toBe(admin.token);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('zeigt die Impersonation auch ohne Admin-Sicherung an, und der Ausstieg meldet dann ab', () => {
+    // Das Token entscheidet, nicht die geteilte Sicherung: fehlt sie, darf der Streifen nicht verschwinden,
+    // während das fremde Token weiter gilt. Ohne Sicherung gibt es keinen Rücksprung — dann abmelden.
+    localStorage.setItem('rookhub_user', JSON.stringify(imp));
+    const svc = TestBed.inject(AuthService);
+    expect(svc.isImpersonating).toBeTrue();
+
+    svc.stopImpersonation();
+
+    expect(svc.isLoggedIn).toBeFalse();
+    expect(localStorage.getItem('rookhub_user')).toBeNull();
   });
 });
 

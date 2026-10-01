@@ -91,8 +91,8 @@ export class HandoffService {
     // Waehrend einer Impersonation gar nicht erst fragen: eingeloest wird der Code drueben zu einer
     // GEWOEHNLICHEN Anmeldung des Zielkontos (30 Tage, ohne imp-Claim, samt geteiltem Cookie) — alle
     // Impersonations-Sperren waeren weg. Der Server lehnt ohnehin mit 403 ab (A1-001); drueben steht
-    // dann die Anmeldemaske. Geprueft wird das Token-Merkmal, nicht `isImpersonating`: das verlangt
-    // zusaetzlich das Admin-Backup, der Server schaut nur aufs Token.
+    // dann die Anmeldemaske. Geprueft wird das Token-Merkmal, wie es auch der Server tut (seit F1-005
+    // liest `isImpersonating` dasselbe, ohne zusaetzlich das Admin-Backup zu verlangen).
     if (this.auth.currentUser?.impersonating) { this.go(target); return; }
     try {
       const res = await firstValueFrom(this.http.post<{ code: string }>('/api/auth/handoff', {}));

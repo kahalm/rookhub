@@ -187,7 +187,7 @@ describe('HandoffService', () => {
     });
 
     it('springt auch ohne Admin-Sicherung ohne Code, solange das Token eine Impersonation ist', async () => {
-      // isImpersonating verlangt zusätzlich das Admin-Backup; der Server prüft nur das Token.
+      // Der Server prüft nur das Token — die Admin-Sicherung darf dafür keine Rolle spielen.
       auth.adoptSession({ ...session, impersonating: true });
 
       await svc.jump();
