@@ -202,20 +202,28 @@ export class TournamentDirectoryDetailComponent implements OnInit {
    * `TournamentListService.bookmarkAndImport`). Hier wird der Auftrag zusaetzlich VERFOLGT: ist er
    * durch, erscheint der Knopf zu Teilnehmern und Ergebnissen von selbst — sonst muesste man die
    * Seite neu laden, um zu sehen, dass das Merken etwas gebracht hat.
+   *
+   * <p>Derselbe `busy`-Riegel wie beim Aufheben: ein Doppeltipp schickte sonst zwei Abos los —
+   * „Gemerkt" und gleich danach „Merken fehlgeschlagen" (Codereview 2026-09-29, F6-008).</p>
    */
   bookmark(): void {
     const entry = this.entry();
-    if (!entry) return;
+    if (!entry || this.busy()) return;
     if (entry.chessResultsId === null) return;
+    this.busy.set(true);
     this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
       next: ({ job }) => {
+        this.busy.set(false);
         // Neues Objekt statt Mutation: ein Signal meldet nur eine geaenderte REFERENZ.
         this.entry.set({ ...entry, subscribed: true });
         this.snackbar.success(this.translate.instant(
           job ? 'tournamentDirectory.bookmarkedImporting' : 'tournamentDirectory.bookmarked'));
         if (job) this.watchImport(job.id, entry);
       },
-      error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError')),
+      error: () => {
+        this.busy.set(false);
+        this.snackbar.warn(this.translate.instant('tournamentDirectory.bookmarkError'));
+      },
     });
   }
 

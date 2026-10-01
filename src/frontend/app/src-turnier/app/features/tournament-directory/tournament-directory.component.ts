@@ -665,6 +665,13 @@ export class TournamentDirectoryComponent implements OnInit {
     const ref = this.dialog.open(TournamentCardDialogComponent, { data, width: '340px' });
 
     ref.afterClosed().subscribe(chosen => {
+      // Gemerkt oder aufgehoben: in den Kalendereintrag zurueckschreiben (wie die Karte in
+      // `applySubscribed`), sonst oeffnete das Fenster beim naechsten Mal mit dem alten Zustand.
+      // Ein Neuladen braucht es nicht: der Kalender zeigt „gemerkt" nicht an, und ein
+      // mehrtaegiges Turnier ist an allen Tagen DASSELBE Objekt (siehe DirectoryCalendarResponse).
+      const subscribed = ref.componentInstance?.subscribed ?? null;
+      if (subscribed !== null) entry.subscribed = subscribed;
+
       if (chosen) {
         this.select(chosen);
         return;
@@ -674,6 +681,7 @@ export class TournamentDirectoryComponent implements OnInit {
       if (ref.componentInstance?.ignored ?? false) this.reload();
     });
   }
+
 
   /**
    * Aus der KARTE heraus aus-/eingeblendet. Anders als in der Liste laesst sich hier kein

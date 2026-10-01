@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of, switchMap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
 import { Tournament, Subscription, CrawlJob } from '@rh/core/models';
 
 /**
@@ -34,14 +34,26 @@ export class TournamentListService {
    *
    * <p>Liess er sich nicht einreihen, bleibt das Abo trotzdem stehen (`job: null`) — gemerkt ist
    * gemerkt, und der naechste Refresh holt es ohnehin.</p>
+   *
+   * <p>„Schon gemerkt" (409) ist KEIN Fehler, sondern das Ziel — idempotent wie
+   * `unsubscribeByTournament`. Der Fall entsteht aus veraltetem Client-Zustand (Kalender-Fenster
+   * neu geoeffnet, Reiter gewechselt, Doppeltipp); er meldete „Merken fehlgeschlagen", obwohl das
+   * Turnier gemerkt war (Codereview 2026-09-29, F6-008). Dann `subscription: null` und kein
+   * zweiter Crawl-Auftrag — der erste wurde beim eigentlichen Merken eingereiht.</p>
    */
   bookmarkAndImport(chessResultsId: string, tournamentName: string):
-      Observable<{ subscription: Subscription; job: CrawlJob | null }> {
+      Observable<{ subscription: Subscription | null; job: CrawlJob | null }> {
     return this.subscribe(chessResultsId, tournamentName).pipe(
-      switchMap(subscription => this.startCrawl(chessResultsId).pipe(
-        map(job => ({ subscription, job: job as CrawlJob | null })),
-        catchError(() => of({ subscription, job: null })),
-      )),
+      map(subscription => ({ subscription: subscription as Subscription | null, already: false })),
+      catchError((err: unknown) => err instanceof HttpErrorResponse && err.status === 409
+        ? of({ subscription: null, already: true })
+        : throwError(() => err)),
+      switchMap(({ subscription, already }) => already
+        ? of({ subscription, job: null })
+        : this.startCrawl(chessResultsId).pipe(
+            map(job => ({ subscription, job: job as CrawlJob | null })),
+            catchError(() => of({ subscription, job: null })),
+          )),
     );
   }
 

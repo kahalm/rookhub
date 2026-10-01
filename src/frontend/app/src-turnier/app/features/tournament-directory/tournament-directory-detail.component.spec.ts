@@ -159,6 +159,49 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.verify();
   });
 
+  /**
+   * Codereview 2026-09-29, F6-008: bookmark() hatte — anders als removeBookmark() — keinen
+   * Riegel. Ein Doppeltipp schickte zwei Abos los: „Gemerkt", dann „Merken fehlgeschlagen".
+   */
+  it('schickt bei einem Doppeltipp auf „Merken" nur ein Abo los und sperrt den Knopf', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+
+    component.bookmark();
+    component.bookmark();
+    fixture.detectChanges();
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.detail-actions button')!;
+    expect(button.disabled).toBeTrue();
+
+    // expectOne faellt bei zwei gleichen Anfragen um.
+    http.expectOne({ method: 'POST', url: '/api/subscriptions' }).flush({ id: 1 });
+    http.expectOne({ method: 'POST', url: '/api/tournaments/crawl' }).flush({ id: 7, status: 'Pending' });
+    expect(component.busy()).toBeFalse();
+    expect(component.entry()?.subscribed).toBeTrue();
+    http.verify();
+  });
+
+  it('wertet „schon gemerkt" (409) als gemerkt statt als Fehler', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    const snackbar = TestBed.inject(SnackbarService);
+    const warn = spyOn(snackbar, 'warn');
+    const success = spyOn(snackbar, 'success');
+
+    component.bookmark();
+    http.expectOne({ method: 'POST', url: '/api/subscriptions' })
+      .flush({ message: 'Already subscribed to this tournament.' }, { status: 409, statusText: 'Conflict' });
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith('tournamentDirectory.bookmarked');
+    expect(component.entry()?.subscribed).toBeTrue();
+    expect(component.busy()).toBeFalse();
+    http.verify();
+  });
+
   it('bleibt gemerkt, wenn sich der Holen-Auftrag nicht einreihen laesst', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

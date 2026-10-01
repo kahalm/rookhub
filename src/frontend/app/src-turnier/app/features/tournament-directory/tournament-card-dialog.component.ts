@@ -29,7 +29,8 @@ export interface TournamentCardDialogData {
     <mat-dialog-content>
       <app-tournament-card [entry]="data.entry" [overview]="true"
                            (selected)="dialogRef.close($event)"
-                           (ignoredChanged)="ignored = true" />
+                           (ignoredChanged)="ignored = true"
+                           (subscribedChanged)="subscribed = $event.subscribed" />
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -46,6 +47,13 @@ export class TournamentCardDialogComponent {
    * kann er eine einzelne Zeile nicht herausnehmen, ein Turnier steht an mehreren Tagen.
    */
   ignored = false;
+
+  /**
+   * Wurde hier gemerkt oder das Merken aufgehoben? `null` = unveraendert. Der Kalender schreibt
+   * den Zustand dann in seine Eintraege zurueck — sonst zeigte das naechste Oeffnen desselben
+   * Turniers wieder „Merken", und der Klick lief auf „schon gemerkt" (Codereview 2026-09-29, F6-008).
+   */
+  subscribed: boolean | null = null;
 
   constructor(
     public dialogRef: MatDialogRef<TournamentCardDialogComponent, DirectoryEntry | null>,

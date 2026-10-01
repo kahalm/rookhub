@@ -121,7 +121,7 @@
         } @else if (!entry.subscribed) {
           <!-- Derselbe Rahmen-Knopf wie alle daneben: gefuellt stach er als einziger heraus und
                sah aus wie aus einer anderen Seite (gemeldet 27.09.). -->
-          <button mat-stroked-button (click)="bookmark()">
+          <button mat-stroked-button (click)="bookmark()" [disabled]="busy()">
             <mat-icon>bookmark_add</mat-icon>
             {{ 'tournamentDirectory.bookmark' | translate }}
           </button>

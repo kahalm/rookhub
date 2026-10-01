@@ -6,7 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
 import { GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
@@ -179,6 +179,47 @@ describe('TournamentDirectoryComponent', () => {
 
     component.select(entry('42'));
     expect(navigate).toHaveBeenCalledWith(['/tournaments/calendar', '42']);
+    http.verify();
+  });
+
+  /**
+   * Codereview 2026-09-29, F6-008: im Kalender-Fenster gemerkt, Fenster zu, dasselbe Turnier
+   * wieder geoeffnet — die neue Kurzansicht las das unveraenderte `subscribed: false`, zeigte
+   * „Merken", und der Klick lief auf „schon gemerkt" (409).
+   */
+  it('schreibt „gemerkt" aus dem Kalender-Fenster in den Eintrag zurück', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    const closed = new Subject<DirectoryEntry | null>();
+    const ref = { afterClosed: () => closed, componentInstance: { subscribed: true as boolean | null, ignored: false } };
+    spyOn((component as any).dialog, 'open').and.returnValue(ref);
+
+    const e = entry('77');
+    component.openFromCalendar(e);
+    closed.next(null);
+
+    expect(e.subscribed).toBeTrue();
+    // Nur gemerkt, nichts ausgeblendet: kein Neuladen, keine Navigation.
+    expect(navigate).not.toHaveBeenCalled();
+    http.verify();
+  });
+
+  it('lässt den Eintrag unberührt, wenn im Kalender-Fenster nichts gemerkt wurde', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    const closed = new Subject<DirectoryEntry | null>();
+    const ref = { afterClosed: () => closed, componentInstance: { subscribed: null, ignored: false } };
+    spyOn((component as any).dialog, 'open').and.returnValue(ref);
+
+    const e = { ...entry('78'), subscribed: true };
+    component.openFromCalendar(e);
+    closed.next(null);
+
+    expect(e.subscribed).toBeTrue();
     http.verify();
   });
 
