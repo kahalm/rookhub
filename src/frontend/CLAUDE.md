@@ -35,6 +35,10 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - Bauen: `npx ng build turnier --configuration=production` bzw. `npx ng serve turnier`.
 - Routen der Turnierseite (Codereview 2026-09-29, F6-001): wie KidHub/LeagueHub auch `forgot-password`,
   `reset-password`, `privacy`, `impressum` und `account-deletion` (Masken über `@rh/*`).
+- Jede App (RookHub, Turnierseite, KidHub, LeagueHub, ClubHub) prueft in ihrer `app.routes.spec.ts` mit
+  `checkSharedPageLinks` (`src/app/testing/shared-page-links.ts`, UX-003), dass jeder GERENDERTE Link der geteilten
+  Anmelde- und Rechtsseiten auf seinen eigenen Weg fuehrt (nicht in '**'/`:slug`). Neue App mit diesen Seiten: dort
+  aufrufen; neue geteilte Seite: in `SHARED_AUTH_LEGAL_PAGES` eintragen.
 - Gemerkte Ansicht der Turnierseite (F6-002): der lokale Schlüssel der Kalender-Filterleiste ist NUTZERGEBUNDEN
   (`rh.turnier.directoryView.<userId>`), `'rh.turnier.'` steht in den Abmelde-Spuren (wird beim Abmelden geräumt), und
   beim Einstieg als ein Nutzer (Impersonation) geht kein View-State zum Server.

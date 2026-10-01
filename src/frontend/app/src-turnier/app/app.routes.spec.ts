@@ -8,6 +8,8 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { ForgotPasswordComponent } from '@rh/features/auth/forgot-password.component';
 import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { routes } from './app.routes';
+import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
+import { turnierConfig } from './app.config';
 
 /**
  * Die Turnierseite benutzt RookHubs Anmeldemaske und Rechtsseiten (`@rh/*`). Deren Links muessen
@@ -21,6 +23,13 @@ describe('Turnier-Routen', () => {
   it('hat fuer jeden Link der geteilten Anmelde- und Rechtsseiten einen eigenen Weg', () => {
     const paths = routes.map(r => r.path);
     for (const p of linkedBySharedPages) expect(paths).withContext(p).toContain(p);
+  });
+
+  it('jeder GERENDERTE Link der geteilten Seiten trifft seinen eigenen Weg (UX-003)', async () => {
+    // Die Liste oben ist von Hand; das hier liest die Links aus den Templates und faengt damit auch neue.
+    const report = await checkSharedPageLinks(routes, turnierConfig);
+    expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.problems).toEqual([]);
   });
 
   it('laesst Passwort-Reset und Rechtsseiten ohne Anmeldung zu', () => {

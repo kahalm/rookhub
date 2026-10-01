@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Route, Router, provideRouter } from '@angular/router';
 import { routes } from './app.routes';
+import { appConfig } from './app.config';
+import { checkSharedPageLinks } from './testing/shared-page-links';
 
 /**
  * Reihenfolge-Test der Routentabelle.
@@ -84,5 +86,14 @@ describe('app.routes', () => {
 
   it('leitet alles Längere weiterhin aufs Dashboard um', async () => {
     expect(await matchedPath('/noel/KW46/zuviel')).toBe('dashboard');
+  });
+});
+
+describe('app.routes — Links der Anmelde- und Rechtsseiten', () => {
+  // Eigener Block ohne das beforeEach oben: der Helfer stellt sich das TestBed selbst zusammen.
+  it('jeder Link der geteilten Anmelde- und Rechtsseiten trifft seinen eigenen Weg, nicht die Kurz-URL (UX-003)', async () => {
+    const report = await checkSharedPageLinks(routes, appConfig);
+    expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.problems).toEqual([]);
   });
 });

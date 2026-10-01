@@ -1,5 +1,7 @@
 import { authGuard } from '@rh/core/auth.guard';
 import { routes } from './app.routes';
+import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
+import { clubhubConfig } from './app.config';
 
 describe('ClubHub-Routen', () => {
   it('Kartei, Karteiblatt, Gruppen und Anwesenheit gibt es nur angemeldet', () => {
@@ -17,5 +19,11 @@ describe('ClubHub-Routen', () => {
     for (const r of routes) {
       expect(/^(g|t|puzzles)(\/|$)/.test(r.path ?? '')).withContext(r.path ?? '').toBeFalse();
     }
+  });
+
+  it('jeder Link der geteilten Anmelde- und Rechtsseiten hat hier einen Weg (UX-003)', async () => {
+    const report = await checkSharedPageLinks(routes, clubhubConfig);
+    expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.problems).toEqual([]);
   });
 });
