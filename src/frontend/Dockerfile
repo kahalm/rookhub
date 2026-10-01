@@ -26,8 +26,9 @@ ARG GIT_SHA=unknown
 # genau EINEN Run: bei :dev den master-Push-Run, bei :prod den Tag-Run (gleiche SHA, zwei Runs).
 ARG GIT_REF=
 ARG APP_PROJECT=app
-# Dieselbe nginx-Konfiguration fuer beide Seiten: gleicher /api-Proxy, gleicher Kachel-Cache,
-# gleiche Header. Unterschiedlich ist nur, WELCHES Bundle im html-Verzeichnis landet.
+# Dieselbe nginx-Konfiguration fuer alle Seiten: gleicher /api-Proxy, gleicher Kachel-Cache,
+# gleiche Header. Unterschiedlich ist nur, WELCHES Bundle im html-Verzeichnis landet; was davon je
+# Seite abweicht (Kacheln, Link-Vorschau), entscheidet nginx.conf am Host.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/${APP_PROJECT}/browser /usr/share/nginx/html
 RUN printf '{"sha":"%s","ref":"%s"}' "$GIT_SHA" "$GIT_REF" > /usr/share/nginx/html/build-info.json && \

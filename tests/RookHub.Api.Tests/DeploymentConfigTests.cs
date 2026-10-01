@@ -381,6 +381,49 @@ public class DeploymentConfigTests
             Assert.Contains(code, codes);
     }
 
+    /// <summary>
+    /// F8-012: dieselbe nginx.conf steckt in allen fuenf Images, die OG-Weiche schickte /g, /t, /puzzles aber auf JEDEM
+    /// Host an den Renderer, und die Host-Map kannte nur die Turnierseite. KidHub/LeagueHub/ClubHub bekamen RookHubs
+    /// Shell mit Bundle-Namen, die es dort nicht gibt — weisse Seite. Dazu standen zwei widerspruechliche
+    /// Cache-Control-Header auf der Antwort (API und map).
+    /// </summary>
+    [Fact]
+    public void OgPreview_IsOnlyForRookHubAndTheTournamentSite_OtherSitesServeTheirOwnShell()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var map = Regex.Match(nginx, @"map \$host \$rookhub_og_site \{(?<body>[^}]*)\}");
+        Assert.True(map.Success, "map $host $rookhub_og_site fehlt");
+        Assert.Contains("default \"\";", map.Groups["body"].Value);
+        var rules = Regex.Matches(map.Groups["body"].Value, @"~\*(?<re>\S+)\s+""(?<v>[^""]*)"";")
+            .Select(m => (Re: new Regex(m.Groups["re"].Value, RegexOptions.IgnoreCase), Value: m.Groups["v"].Value))
+            .ToList();
+        Assert.NotEmpty(rules);
+        // Wie nginx: der erste passende Regex-Eintrag gewinnt, sonst default.
+        string Site(string host) => rules.FirstOrDefault(r => r.Re.IsMatch(host)).Value ?? "";
+
+        foreach (var host in new[] { "kidhub.oberschmid.homes", "kidhub-dev.oberschmid.homes", "leaguehub.oberschmid.homes",
+                     "leaguehub-dev.oberschmid.homes", "clubhub.oberschmid.homes", "clubhub-dev.oberschmid.homes" })
+            Assert.Equal("none", Site(host));
+        foreach (var host in new[] { "tournament.oberschmid.homes", "turnier.oberschmid.homes", "turnier-dev.oberschmid.homes" })
+            Assert.Equal("turnier", Site(host));
+        foreach (var host in new[] { "rookhub.oberschmid.homes", "rookhub-dev.oberschmid.homes", "localhost", "172.18.0.5" })
+            Assert.Equal("", Site(host));
+
+        var og = Regex.Match(nginx, @"location ~ \^/\(g\|t\|puzzles\)\(/\|\$\) \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(og.Success, "OG-Location in nginx.conf nicht gefunden");
+        var body = og.Groups["body"].Value;
+        // Seiten ohne Vorschau bekommen ihre eigene index.html, BEVOR etwas an die API geht.
+        var rewrite = body.IndexOf("if ($rookhub_og_site = none) { rewrite ^ /index.html last; }", StringComparison.Ordinal);
+        Assert.True(rewrite >= 0, "OG-Location schickt Seiten ohne Vorschau nicht auf ihre eigene Shell");
+        Assert.True(rewrite < body.IndexOf("proxy_pass ", StringComparison.Ordinal));
+        // Genau EIN Cache-Control: das der map; das der API wird verworfen.
+        Assert.Contains("proxy_hide_header Cache-Control;", body);
+        var cache = Regex.Match(nginx, @"map \$uri \$rookhub_cache_control \{(?<body>.*?)\n\}", RegexOptions.Singleline);
+        Assert.True(cache.Success);
+        Assert.Contains("~^/(g|t|l|puzzles|", cache.Groups["body"].Value);
+        Assert.Contains("~^/(index\\.html|", cache.Groups["body"].Value);
+    }
+
     [Fact]
     public void Csp_AllowsBlobImages_ButNoForeignImageOrigin()
     {

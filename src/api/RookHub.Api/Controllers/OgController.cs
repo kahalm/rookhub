@@ -54,6 +54,8 @@ public class OgController : ControllerBase
             html = Inject(html, page);
 
         // Kurz cachen: Crawler dürfen frische Tags bekommen, ohne den API bei jedem Hard-Load zu treffen.
+        // Hinter dem Frontend-nginx wird dieser Header verworfen (proxy_hide_header): dort gilt Cache-Control aus
+        // seiner map — no-cache, must-revalidate wie jede index.html (F8-012). Er bleibt für direkte Aufrufe.
         Response.Headers.CacheControl = "public, max-age=300";
         return Content(html, "text/html; charset=utf-8");
     }
