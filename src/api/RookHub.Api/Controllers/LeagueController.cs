@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 using RookHub.Api.Services.League;
 
 namespace RookHub.Api.Controllers;
@@ -252,18 +253,38 @@ public class LeagueController : BaseApiController
 
     // ---- Übernahme aus der Python-Fassung --------------------------------------------------------------
 
-    /// <summary>Bestand übernehmen (JSON, gern gzip-komprimiert mit <c>Content-Encoding: gzip</c>).</summary>
+    /// <summary>Rumpf-Obergrenze von <c>admin/import</c> — unkomprimiert UND (bei gzip) entpackt.</summary>
+    internal const long ImportMaxBytes = 200L * 1024 * 1024;
+    /// <summary>Rumpf-Obergrenze von <c>admin/games</c> und <c>admin/mega-players</c> — unkomprimiert UND entpackt.
+    /// Real (28.09.): Megabase-Auswahl 52 MB PGN, Spielerverzeichnis 15 MB TSV.</summary>
+    internal const long CollectionMaxBytes = 400L * 1024 * 1024;
+    // Entpackt-Grenzen; Tests verkleinern sie, statt Hunderte MB zu erzeugen.
+    internal long ImportUnpackedLimit { get; init; } = ImportMaxBytes;
+    internal long CollectionUnpackedLimit { get; init; } = CollectionMaxBytes;
+
+    /// <summary>Der Rumpf, bei <c>Content-Encoding: gzip</c> entpackt — aber höchstens <paramref name="limit"/> Bytes:
+    /// <c>RequestSizeLimit</c> zählt nur die komprimierten Bytes, eine gzip-Bombe hätte sonst den ganzen API-Prozess
+    /// (alle Nutzer) in den Speicherdruck getrieben. Darüber wirft das Lesen <see cref="LimitedReadStream.LimitExceededException"/>.</summary>
+    private Stream AdminBody(long limit) =>
+        Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase)
+            ? new LimitedReadStream(new GZipStream(Request.Body, CompressionMode.Decompress), limit)
+            : Request.Body;
+
+    private ObjectResult UnpackedTooLarge(long limit) =>
+        StatusCode(StatusCodes.Status413PayloadTooLarge, new { error = $"entpackt größer als {limit / (1024 * 1024)} MB — bitte aufteilen" });
+
+    /// <summary>Bestand übernehmen (JSON, gern gzip-komprimiert mit <c>Content-Encoding: gzip</c>); 413, wenn der Rumpf
+    /// entpackt größer als <see cref="ImportMaxBytes"/> ist.</summary>
     [HttpPost("admin/import")]
     [HasPermission(Permissions.LeagueManage)]
-    [RequestSizeLimit(200 * 1024 * 1024)]
+    [RequestSizeLimit(ImportMaxBytes)]
     public async Task<IActionResult> Import([FromQuery] bool rebuild, CancellationToken ct)
     {
-        Stream body = Request.Body;
-        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
-            body = new GZipStream(Request.Body, CompressionMode.Decompress);
+        var body = AdminBody(ImportUnpackedLimit);
         LeagueImportService.Bundle? bundle;
         try { bundle = await JsonSerializer.DeserializeAsync<LeagueImportService.Bundle>(body, LeagueImportService.Json, ct); }
         catch (JsonException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(ImportUnpackedLimit); }
         if (bundle is null) return BadRequest(new { error = "leer" });
         var res = await _import.ImportAsync(bundle, ct);
         if (rebuild) res["views"] = await _league.RebuildViewsAsync(ct);
@@ -273,20 +294,24 @@ public class LeagueController : BaseApiController
     /// <summary>
     /// Eine fremde Partiesammlung einspielen (PGN, gern gzip mit <c>Content-Encoding: gzip</c>), z. B. die aus der
     /// ChessBase-Megabase gefilterten Partien der TMM-Spieler (<c>source=Mega</c>, Skript <c>mega_decide.py</c> im
-    /// league-analyzer). Zugeordnet wird NUR über die FIDE-ID im Kopf.
+    /// league-analyzer). Zugeordnet wird NUR über die FIDE-ID im Kopf. 413, wenn der Rumpf entpackt größer als
+    /// <see cref="CollectionMaxBytes"/> ist.
     /// </summary>
     [HttpPost("admin/games")]
     [HasPermission(Permissions.LeagueManage)]
-    [RequestSizeLimit(400 * 1024 * 1024)]
+    [RequestSizeLimit(CollectionMaxBytes)]
     public async Task<IActionResult> ImportGames([FromQuery] string? source, CancellationToken ct)
     {
         var src = (source ?? "").Trim();
         if (src.Length is 0 or > 20 || !src.All(char.IsLetterOrDigit)) return BadRequest(new { error = "source fehlt/ungültig" });
-        Stream body = Request.Body;
-        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
-            body = new GZipStream(Request.Body, CompressionMode.Decompress);
+        var body = AdminBody(CollectionUnpackedLimit);
         string pgn;
-        using (var reader = new StreamReader(body, Encoding.UTF8)) pgn = await reader.ReadToEndAsync(ct);
+        try
+        {
+            using var reader = new StreamReader(body, Encoding.UTF8);
+            pgn = await reader.ReadToEndAsync(ct);
+        }
+        catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(CollectionUnpackedLimit); }
         var (games, players) = await _league.ImportGamesAsync(pgn, src, ct);
         return Ok(new { games, players });
     }
@@ -322,17 +347,17 @@ public class LeagueController : BaseApiController
         }
     }
 
-    /// <summary>Spielerverzeichnis der ganzen Megabase ersetzen (TSV, gern gzip) — Skript <c>scan_mega_players.py</c>.</summary>
+    /// <summary>Spielerverzeichnis der ganzen Megabase ersetzen (TSV, gern gzip) — Skript <c>scan_mega_players.py</c>.
+    /// 413, wenn der Rumpf entpackt größer als <see cref="CollectionMaxBytes"/> ist (das Verzeichnis ist dann — wie bei
+    /// jedem Abbruch mitten im Rumpf — nur zum Teil ersetzt; einfach mit der richtigen Datei wiederholen).</summary>
     [HttpPost("admin/mega-players")]
     [HasPermission(Permissions.LeagueManage)]
-    [RequestSizeLimit(400 * 1024 * 1024)]
+    [RequestSizeLimit(CollectionMaxBytes)]
     public async Task<IActionResult> ImportMegaPlayers([FromServices] LeagueMegaPlayers mega, CancellationToken ct)
     {
-        Stream body = Request.Body;
-        if (Request.Headers.ContentEncoding.ToString().Contains("gzip", StringComparison.OrdinalIgnoreCase))
-            body = new GZipStream(Request.Body, CompressionMode.Decompress);
-        using var reader = new StreamReader(body, Encoding.UTF8);
-        return Ok(new { players = await mega.ReplaceAsync(reader, ct) });
+        using var reader = new StreamReader(AdminBody(CollectionUnpackedLimit), Encoding.UTF8);
+        try { return Ok(new { players = await mega.ReplaceAsync(reader, ct) }); }
+        catch (LimitedReadStream.LimitExceededException) { return UnpackedTooLarge(CollectionUnpackedLimit); }
     }
 
     [HttpPost("admin/rebuild")]
