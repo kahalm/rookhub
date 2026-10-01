@@ -90,6 +90,16 @@ describe('analysis-tree', () => {
     expect(numberedSan(e5)).toBe('1...e5');
   });
 
+  it('Start mit Schwarz am Zug (Puzzle-Analyse, FEN laden): Nummern und Paare aus der Start-FEN (F4-005)', () => {
+    // Vor dem Zugbaum (0.604.0) nummerierte die Zugliste „Weiß zuerst, ab 1." — hier stand „1. a6 Ba4 2. Nf6".
+    const root = createRoot('r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 27');
+    const nf6 = play(root, 'a6 Ba4 Nf6');
+    const rows = buildMoveTable(root).map(it => `${(it as MoveRow).number}: ${cell((it as MoveRow).white)} | ${cell((it as MoveRow).black)}`);
+    expect(rows).toEqual(['27: … | a6', '28: Ba4 | Nf6']);
+    expect(numberedSan(nf6.parent!.parent!)).toBe('27...a6');
+    expect(numberedSan(nf6.parent!)).toBe('28.Ba4');
+  });
+
   it('Zugtabelle wie Lichess: Varianten unterbrechen die Zeile', () => {
     const root = createRoot(START);
     const c5 = play(root, 'e4 c5');
