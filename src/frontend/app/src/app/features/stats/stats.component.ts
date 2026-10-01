@@ -15,6 +15,7 @@ import { PuzzleService, PuzzleStatsDto, EloHistoryPoint, ThemeStat, RatingBand, 
 import { PreferencesService } from '../../core/preferences.service';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
+import { LatestRequest } from '../../shared/latest-request.util';
 
 export interface Curve { poly: string; path: string; minElo: number; maxElo: number; w: number; h: number; first: string; last: string; }
 export interface HeatCell { date: string; count: number; level: number; }   // level -1 = Zukunft (leer)
@@ -454,6 +455,9 @@ export class StatsComponent implements OnInit {
   ratingBands: RatingBand[] = [];
   heatmap: HeatCell[][] = [];
   private maxBandSolved = 0;
+  /** Laden des GEWÄHLTEN Modus: ein Wechsel bricht das Laden des vorigen ab — sonst landeten dessen
+   *  Zeilen (recentRows/Themen teilen sich beide Modi) unter der neuen Überschrift. */
+  private loadRequest = new LatestRequest();
 
   constructor(private puzzles: PuzzleService, private prefs: PreferencesService) {
     this.level = prefs.visualization;
@@ -485,12 +489,12 @@ export class StatsComponent implements OnInit {
   }
 
   private loadStandard(): void {
-    forkJoin({
+    this.loadRequest.run(forkJoin({
       stats: this.puzzles.getStats(),
       history: this.puzzles.getHistory(1, 30),
       elo: this.puzzles.getEloHistory(1000),
       breakdown: this.puzzles.getBreakdown(),
-    }).subscribe({
+    }), {
       next: ({ stats, history, elo, breakdown }) => {
         this.stats = stats;
         this.eloPoints = elo;
@@ -510,11 +514,11 @@ export class StatsComponent implements OnInit {
   }
 
   private loadCourse(): void {
-    forkJoin({
+    this.loadRequest.run(forkJoin({
       stats: this.puzzles.getCourseStats(),
       history: this.puzzles.getCourseHistory(1, 30),
       breakdown: this.puzzles.getCourseBreakdown(),
-    }).subscribe({
+    }), {
       next: ({ stats, history, breakdown }) => {
         this.courseStats = stats;
         this.perLevel = [];

@@ -1,6 +1,6 @@
 import { DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AdminMessagesComponent } from './admin-messages.component';
 
 /** Instanziierung im Injection-Context (die Komponente nutzt `inject(DestroyRef)` als Feld). */
@@ -63,5 +63,35 @@ describe('AdminMessagesComponent', () => {
     expect(c.threadsLoadError).toBeTrue();
     c.loadThreads();
     expect(c.threadsLoadError).toBeFalse();
+  });
+
+  // W5 F5-004: Thread A langsam, dann Thread B — A's Verlauf darf nicht unter B's Kopf landen
+  // (die Antwort des Admins ginge sonst an B).
+  it('openThread: die spaete Antwort des vorher geoeffneten Threads landet nicht im neuen', () => {
+    const a$ = new Subject<any[]>();
+    const b$ = new Subject<any[]>();
+    const getAdminThread = jasmine.createSpy('getAdminThread').and.callFake((id: number) => id === 1 ? a$ : b$);
+    const c = make({ getAdminThread });
+    c.openThread(1, 'a');
+    c.openThread(2, 'b');
+    expect(a$.observed).toBeFalse();
+    b$.next([{ id: 20, fromAdmin: true, body: 'an b' }]);
+    a$.next([{ id: 10, fromAdmin: true, body: 'an a' }]);
+    expect(c.selectedThreadUserId).toBe(2);
+    expect(c.threadMessages.map(m => m.id)).toEqual([20]);
+    expect(c.threadLoading).toBeFalse();
+  });
+
+  it('closeThread und neue Konversation brechen das Laden ab und raeumen den Ladezustand', () => {
+    const a$ = new Subject<any[]>();
+    const c = make({ getAdminThread: jasmine.createSpy('getAdminThread').and.returnValue(a$) });
+    c.openThread(1, 'a');
+    c.closeThread();
+    expect(c.threadLoading).toBeFalse();
+    c.startConversation({ id: 9, username: 'neu' } as any);
+    a$.next([{ id: 10, fromAdmin: true, body: 'an a' }]);
+    expect(c.selectedThreadUserId).toBe(9);
+    expect(c.threadMessages).toEqual([]);
+    expect(c.threadLoading).toBeFalse();
   });
 });

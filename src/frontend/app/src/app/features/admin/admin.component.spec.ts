@@ -509,6 +509,53 @@ describe('AdminComponent', () => {
       expect(c.filteredBooks.map(b => b.id)).toEqual([2]);
     });
   });
+
+  // W5 F5-004: Gruppe A (langsam), dann B — A's Mitglieder duerfen nicht unter B stehen.
+  it('selectGroup: die spaete Mitgliederliste der vorher gewaehlten Gruppe landet nicht bei der neuen', () => {
+    const a$ = new Subject<any[]>();
+    const b$ = new Subject<any[]>();
+    const getGroupMembers = jasmine.createSpy('getGroupMembers').and.callFake((id: number) => id === 1 ? a$ : b$);
+    const { c } = make({ getGroupMembers, getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(of({ source: 'none' })) });
+    c.selectGroup({ id: 1, name: 'A', memberCount: 1 } as any);
+    c.selectGroup({ id: 2, name: 'B', memberCount: 1 } as any);
+    expect(a$.observed).toBeFalse();
+    b$.next([{ userId: 22, username: 'b-mitglied' }]);
+    a$.next([{ userId: 11, username: 'a-mitglied' }]);
+    expect(c.groupMembers.map(m => m.userId)).toEqual([22]);
+    expect(c.membersLoading).toBeFalse();
+  });
+
+  it('Hinzufuegen in A, Antwort erst nach dem Wechsel zu B: B behaelt seine Mitgliederliste', () => {
+    const add$ = new Subject<any>();
+    const getGroupMembers = jasmine.createSpy('getGroupMembers').and.callFake((id: number) => of([{ userId: id * 10, username: 'm' }]));
+    const { c } = make({
+      getGroupMembers,
+      addGroupMember: jasmine.createSpy('addGroupMember').and.returnValue(add$),
+      getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(of({ source: 'none' })),
+    });
+    c.selectGroup({ id: 1, name: 'A', memberCount: 1 } as any);
+    c.addMember({ id: 5, username: 'neu' } as any);
+    c.selectGroup({ id: 2, name: 'B', memberCount: 1 } as any);
+    add$.next(null);
+    expect(getGroupMembers.calls.allArgs()).toEqual([[1], [2]]);
+    expect(c.groupMembers.map(m => m.userId)).toEqual([20]);
+  });
+
+  // W5 F5-004: ein Fehler im Such-Request beendete den Strom — danach reagierte die Suche bis zum Neuladen nicht.
+  it('Mitgliedersuche ueberlebt einen fehlgeschlagenen Request', fakeAsync(() => {
+    const getUsers = jasmine.createSpy('getUsers').and.returnValues(
+      throwError(() => ({ status: 500 })),
+      of({ items: [{ id: 900, username: 'Schnabl', createdAt: '2025-01-01', groups: [] }], totalCount: 1 }));
+    const { c } = make({ getUsers, getGroupTrainingGoal: jasmine.createSpy('goal').and.returnValue(of({ source: 'none' })) });
+    c.selectGroup({ id: 1, name: 'Schwaz', memberCount: 0 } as any);
+    c.onMemberSearch('sch');
+    tick(300);
+    expect(c.memberCandidates).toEqual([]);
+    c.onMemberSearch('schn');
+    tick(300);
+    expect(getUsers).toHaveBeenCalledTimes(2);
+    expect(c.memberCandidates.map(u => u.id)).toEqual([900]);
+  }));
 });
 
 /**

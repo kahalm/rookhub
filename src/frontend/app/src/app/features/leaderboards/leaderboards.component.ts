@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslatePipe } from '@ngx-translate/core';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { LatestRequest } from '../../shared/latest-request.util';
 import { LeaderboardService, Leaderboards, LeaderboardEntry, LeaderboardPeriod } from './leaderboard.service';
 
 interface CategoryDef {
@@ -103,6 +104,9 @@ export class LeaderboardsComponent implements OnInit {
     { key: 'courseLines', titleKey: 'leaderboards.category.courseLines', icon: 'menu_book', unitKey: 'leaderboards.unit.lines' },
   ];
 
+  /** Laden des GEWÄHLTEN Zeitraums: ein Wechsel bricht das Laden des vorigen ab (sonst Monatsliste unter „Woche"). */
+  private request = new LatestRequest();
+
   constructor(private service: LeaderboardService) {}
 
   ngOnInit(): void { this.load(); }
@@ -120,7 +124,7 @@ export class LeaderboardsComponent implements OnInit {
   private load(): void {
     this.loading = true;
     this.error = false;
-    this.service.get(this.period).subscribe({
+    this.request.run(this.service.get(this.period), {
       next: data => { this.data = data; this.loading = false; },
       error: () => { this.error = true; this.loading = false; },
     });

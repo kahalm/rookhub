@@ -1,6 +1,6 @@
 import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -26,6 +26,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
+import { LatestRequest } from '../../shared/latest-request.util';
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
 import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
@@ -81,6 +82,8 @@ export class AdminComponent implements OnInit {
   selectedGroup: Group | null = null;
   groupMembers: GroupMember[] = [];
   membersLoading = false;
+  /** Mitgliederliste der GEWÄHLTEN Gruppe: ein Gruppenwechsel bricht das Laden der vorigen ab. */
+  private membersRequest = new LatestRequest();
   allUsers: AdminUser[] = [];
   /** Suche beim Hinzufügen (0.591.0): leer = die neuesten Konten aus {@link allUsers}, sonst Server-Suche. */
   memberSearch = '';
@@ -134,12 +137,11 @@ export class AdminComponent implements OnInit {
     this.memberSearch$.pipe(
       debounceTime(250),
       distinctUntilChanged(),
-      switchMap(q => q.trim().length < 2 ? of(null) : this.adminService.getUsers(q.trim(), 1, 50)),
+      // catchError INNEN: ein Fehler fällt auf die vorab geladenen Konten zurück, ohne den Strom zu beenden
+      // (sonst reagierte die Suche bis zum Neuladen nicht mehr).
+      switchMap(q => q.trim().length < 2 ? of(null) : this.adminService.getUsers(q.trim(), 1, 50).pipe(catchError(() => of(null)))),
       takeUntilDestroyed(),
-    ).subscribe({
-      next: res => { this.searchResults = res?.items ?? null; this.recomputeAvailableUsers(); },
-      error: () => { this.searchResults = null; this.recomputeAvailableUsers(); },
-    });
+    ).subscribe(res => { this.searchResults = res?.items ?? null; this.recomputeAvailableUsers(); });
   }
 
   /** „Als Nutzer einsteigen": Impersonation-Token holen, übernehmen und ins Dashboard wechseln. */
@@ -540,6 +542,8 @@ export class AdminComponent implements OnInit {
         next: () => {
           this.snackbar.info(this.translate.instant('admin.groups.deleted', { name: group.name }));
           if (this.selectedGroup?.id === group.id) {
+            this.membersRequest.cancel();
+            this.membersLoading = false;
             this.selectedGroup = null;
             this.groupMembers = [];
             this.recomputeAvailableUsers();
@@ -614,7 +618,7 @@ export class AdminComponent implements OnInit {
 
   loadMembers(groupId: number): void {
     this.membersLoading = true;
-    this.adminService.getGroupMembers(groupId).subscribe({
+    this.membersRequest.run(this.adminService.getGroupMembers(groupId), {
       next: members => {
         this.groupMembers = members;
         this.recomputeAvailableUsers();
@@ -653,7 +657,7 @@ export class AdminComponent implements OnInit {
       next: () => {
         this.addingUserId = null;
         this.snackbar.info(this.translate.instant('admin.groups.added', { name: user.username }));
-        this.loadMembers(groupId);
+        if (this.selectedGroup?.id === groupId) this.loadMembers(groupId);   // inzwischen andere Gruppe gewählt → deren Liste bleibt
         this.loadGroups(); // Mitgliederzahl aktualisieren
       },
       error: err => {
@@ -671,7 +675,7 @@ export class AdminComponent implements OnInit {
       if (!ok) return;
       this.adminService.removeGroupMember(group.id, member.userId).subscribe({
         next: () => {
-          this.loadMembers(group.id);
+          if (this.selectedGroup?.id === group.id) this.loadMembers(group.id);
           this.loadGroups(); // Mitgliederzahl aktualisieren
         },
         error: err => {

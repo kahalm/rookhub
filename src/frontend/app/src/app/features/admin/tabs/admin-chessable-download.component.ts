@@ -14,6 +14,7 @@ import { timer, Subscription } from 'rxjs';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
+import { LatestRequest } from '../../../shared/latest-request.util';
 import { ChessableService, ChessableCredentialedUser, ChessableCourse, ChessableImport, ChessableImportTarget, ChessableCourseInfo } from '../../chessable/chessable.service';
 import { CHESSABLE_LINES_PER_MIN } from '../../chessable/chessable-progress.util';
 import { apiErrorText } from '../../../core/api-error';
@@ -51,6 +52,9 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   dlImports: Record<string, ChessableImport> = {};
   dlEstimates: Record<string, { info?: ChessableCourseInfo; loading: boolean; error?: string }> = {};
   private dlPollSubs: Record<string, Subscription> = {};
+  /** Kursliste des GEWÄHLTEN Users: ein Wechsel bricht das Laden der vorigen ab — sonst stünden A's Kurse
+   *  unter B, und „Importieren" holte sie mit B's Bearer. */
+  private dlCoursesRequest = new LatestRequest();
 
   constructor(
     private chessable: ChessableService,
@@ -88,6 +92,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
   /** „Auch abgelaufene anzeigen" umgeschaltet: ist der gewählte User nun ausgeblendet, Auswahl + Kursliste leeren. */
   onDlShowExpiredChange(): void {
     if (this.dlSelectedUserId != null && !this.dlVisibleUsers().some(u => u.userId === this.dlSelectedUserId)) {
+      this.dlCoursesRequest.cancel();
+      this.dlCoursesLoading = false;
       this.dlSelectedUserId = null;
       this.dlCourses = [];
       this.dlCoursesError = null;
@@ -121,6 +127,8 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
 
   /** User gewählt → dessen Chessable-Kursliste laden. */
   onDlUserChange(): void {
+    this.dlCoursesRequest.cancel();
+    this.dlCoursesLoading = false;
     this.dlCourses = [];
     this.dlCoursesError = null;
     if (this.dlSelectedUserId != null) this.loadDlCourses(false);
@@ -130,7 +138,7 @@ export class AdminChessableDownloadComponent implements OnInit, OnDestroy {
     if (this.dlSelectedUserId == null) return;
     this.dlCoursesLoading = true;
     this.dlCoursesError = null;
-    this.chessable.getUserCoursesAdmin(this.dlSelectedUserId, refresh).subscribe({
+    this.dlCoursesRequest.run(this.chessable.getUserCoursesAdmin(this.dlSelectedUserId, refresh), {
       next: res => { this.dlCourses = res.courses; this.dlCoursesLoading = false; },
       error: err => {
         this.dlCoursesError = apiErrorText(err, this.translate, 'admin.courseDl.loadError');

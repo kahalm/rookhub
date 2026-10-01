@@ -4,6 +4,7 @@ import { provideHttpClientTesting, HttpTestingController } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { Subject, of } from 'rxjs';
 import { StatsComponent } from './stats.component';
 
 describe('StatsComponent', () => {
@@ -125,5 +126,34 @@ describe('StatsComponent', () => {
     expect(fixture.componentInstance.loadError).toBeTrue();
     expect(el.querySelector('app-load-error')).not.toBeNull();
     expect(el.querySelector('.cards')).toBeNull();
+  });
+
+  // W5 F5-004: „Standard" (langsam) → „Kurs" — die spaete Standard-Antwort darf die Kurs-Tabelle nicht ueberschreiben.
+  it('Moduswechsel: die spaete Antwort des vorigen Modus landet nicht unter dem neuen', () => {
+    const std = { stats: new Subject<any>(), history: new Subject<any>(), elo: new Subject<any>(), breakdown: new Subject<any>() };
+    const emptyBreakdown = { themes: [], ratingBands: [], activity: [] };
+    const puzzles = {
+      getStats: () => std.stats, getHistory: () => std.history, getEloHistory: () => std.elo, getBreakdown: () => std.breakdown,
+      getCourseStats: () => of({ totalAttempts: 7, solved: 5, accuracy: 71.4, currentStreak: 1, bestStreak: 2 }),
+      getCourseHistory: () => of([{ bookRating: 1500, solved: true, timeSeconds: 12, attemptedAt: '2026-09-30', bookPuzzleId: 77 }]),
+      getCourseBreakdown: () => of(emptyBreakdown),
+    };
+    const c = new StatsComponent(puzzles as any, { visualization: 0 } as any);
+    c.ngOnInit();
+    c.mode = 'course';
+    c.onModeChange();
+    expect(std.stats.observed).toBeFalse();
+
+    const late: [Subject<any>, unknown][] = [
+      [std.stats, { totalAttempts: 40, solved: 30, accuracy: 75, currentStreak: 3, bestStreak: 9, puzzleElo: 1620 }],
+      [std.history, [{ puzzleRating: 1800, solved: false, timeSpentSeconds: 30, attemptedAt: '2026-09-29', eloChange: -8, puzzleId: 5 }]],
+      [std.elo, []],
+      [std.breakdown, emptyBreakdown],
+    ];
+    for (const [s$, v] of late) { s$.next(v); s$.complete(); }
+
+    expect(c.recentRows.map(r => r.link)).toEqual([['/puzzles/book', 77]]);
+    expect(c.stats).toBeNull();
+    expect(c.loading).toBeFalse();
   });
 });

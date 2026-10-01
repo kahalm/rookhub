@@ -15,6 +15,7 @@ import { SnackbarService } from '../../../core/snackbar.service';
 import { AuthService } from '../../../core/auth.service';
 import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner.component';
 import { LoadErrorComponent } from '../../../shared/load-error/load-error.component';
+import { LatestRequest } from '../../../shared/latest-request.util';
 import { AdminService, AdminUser } from '../../../core/admin.service';
 import { MessageService, AdminThreadSummary, ChatMessage } from '../../../core/message.service';
 
@@ -56,6 +57,9 @@ export class AdminMessagesComponent implements OnInit {
   // Such-Trigger für die User-Suche: gedrosselt + switchMap, damit nicht jeder Tastendruck einen
   // Request feuert und eine ältere Antwort keine neuere überschreibt (Out-of-order-Race).
   private msgUserSearchTrigger = new Subject<string>();
+  // Verlauf des geöffneten Threads: ein Klick auf einen anderen Thread bricht das Laden des vorigen ab —
+  // sonst stünde A's Verlauf unter B's Kopf, und die Antwort darauf ginge an B.
+  private threadRequest = new LatestRequest();
 
   constructor(
     private messageService: MessageService,
@@ -115,7 +119,7 @@ export class AdminMessagesComponent implements OnInit {
     this.msgUserResults = [];
     this.msgUserSearch = '';
     this.threadLoading = true;
-    this.messageService.getAdminThread(userId).subscribe({
+    this.threadRequest.run(this.messageService.getAdminThread(userId), {
       next: list => {
         this.threadMessages = list;
         this.threadLoading = false;
@@ -160,6 +164,8 @@ export class AdminMessagesComponent implements OnInit {
   startConversation(user: AdminUser): void {
     const existing = this.threads.find(t => t.userId === user.id);
     if (existing) { this.openThread(user.id, user.username); return; }
+    this.threadRequest.cancel();
+    this.threadLoading = false;
     this.selectedThreadUserId = user.id;
     this.selectedThreadName = user.username;
     this.threadMessages = [];
@@ -168,6 +174,8 @@ export class AdminMessagesComponent implements OnInit {
   }
 
   closeThread(): void {
+    this.threadRequest.cancel();
+    this.threadLoading = false;
     this.selectedThreadUserId = null;
     this.threadMessages = [];
     this.adminDraft = '';

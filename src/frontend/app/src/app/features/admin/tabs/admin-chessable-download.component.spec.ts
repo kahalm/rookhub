@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AdminChessableDownloadComponent } from './admin-chessable-download.component';
 
 /** Reine Logik-Tests (ohne Template/ngOnInit) — Filter-Getter der Kurs-Download-Ansicht. */
@@ -76,5 +76,36 @@ describe('AdminChessableDownloadComponent', () => {
     c.loadDlUsers();
     expect(c.dlUsersError).toBeFalse();
     expect(c.dlUsers.length).toBe(1);
+  });
+
+  // W5 F5-004: User A (langsam), dann B — A's Kurse duerfen nicht unter B stehen (Import liefe mit B's Bearer).
+  it('onDlUserChange: die spaete Kursliste des vorher gewaehlten Users landet nicht beim neuen', () => {
+    const a$ = new Subject<any>();
+    const b$ = new Subject<any>();
+    const c = make({ getUserCoursesAdmin: jasmine.createSpy('courses').and.callFake((uid: number) => uid === 1 ? a$ : b$) });
+    c.dlSelectedUserId = 1;
+    c.onDlUserChange();
+    c.dlSelectedUserId = 2;
+    c.onDlUserChange();
+    expect(a$.observed).toBeFalse();
+    b$.next({ courses: [{ bid: 'b1', name: 'B-Kurs' }] });
+    a$.next({ courses: [{ bid: 'a1', name: 'A-Kurs' }] });
+    expect(c.dlCourses.map(x => x.bid)).toEqual(['b1']);
+    expect(c.dlCoursesLoading).toBeFalse();
+  });
+
+  it('onDlShowExpiredChange: geleerte Auswahl bricht das Laden ab, keine Kurse kommen nach', () => {
+    const a$ = new Subject<any>();
+    const c = make({ getUserCoursesAdmin: jasmine.createSpy('courses').and.returnValue(a$) });
+    c.dlUsers = [{ userId: 2, username: 'dead', blocked: true }] as any;
+    c.dlShowExpired = true;
+    c.dlSelectedUserId = 2;
+    c.onDlUserChange();
+    c.dlShowExpired = false;
+    c.onDlShowExpiredChange();
+    a$.next({ courses: [{ bid: 'a1', name: 'A-Kurs' }] });
+    expect(c.dlSelectedUserId).toBeNull();
+    expect(c.dlCourses).toEqual([]);
+    expect(c.dlCoursesLoading).toBeFalse();
   });
 });

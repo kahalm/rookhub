@@ -8,8 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { Subject, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '../../../core/snackbar.service';
 import { ConfirmService } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -108,11 +108,10 @@ export class AdminRolesComponent implements OnInit {
     this.searchInput.pipe(
       debounceTime(300),
       distinctUntilChanged(),
-      switchMap(q => { this.searchingUsers = true; return this.admin.getUsers(q, 1, 20); }),
-    ).subscribe({
-      next: res => { this.userResults = res.items; this.searchingUsers = false; },
-      error: () => { this.searchingUsers = false; },
-    });
+      // catchError INNEN: ein fehlgeschlagener Such-Request darf den Strom nicht beenden — sonst
+      // reagierte das Suchfeld bis zum Neuladen nicht mehr.
+      switchMap(q => { this.searchingUsers = true; return this.admin.getUsers(q, 1, 20).pipe(catchError(() => of(null))); }),
+    ).subscribe(res => { if (res) this.userResults = res.items; this.searchingUsers = false; });
   }
 
   loadRoles(): void {

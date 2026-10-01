@@ -1,3 +1,4 @@
+import { fakeAsync, tick } from '@angular/core/testing';
 import { of, throwError, Subject } from 'rxjs';
 import { AdminRolesComponent } from './admin-roles.component';
 import { Group, Role } from '../../../core/admin.service';
@@ -166,4 +167,20 @@ describe('AdminRolesComponent', () => {
     c.saveGroupRoles();
     expect(admin.setGroupRoles).toHaveBeenCalledWith(1, [3, 5]);
   });
+
+  // W5 F5-004: ein fehlgeschlagener Such-Request beendete den Strom — danach reagierte die Suche nicht mehr.
+  it('Nutzersuche ueberlebt einen fehlgeschlagenen Request', fakeAsync(() => {
+    const getUsers = jasmine.createSpy('getUsers').and.returnValues(
+      throwError(() => ({ status: 500 })),
+      of({ items: [{ id: 5, username: 'eva' }], totalCount: 1, page: 1, pageSize: 20 }));
+    const { c } = make({ getUsers });
+    c.ngOnInit();
+    c.onUserSearch('ev');
+    tick(300);
+    expect(c.searchingUsers).toBeFalse();
+    c.onUserSearch('eva');
+    tick(300);
+    expect(getUsers).toHaveBeenCalledTimes(2);
+    expect(c.userResults.map(u => u.id)).toEqual([5]);
+  }));
 });

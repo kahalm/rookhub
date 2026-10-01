@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { LeaderboardsComponent } from './leaderboards.component';
 import { Leaderboards } from './leaderboard.service';
 
@@ -48,5 +48,21 @@ describe('LeaderboardsComponent', () => {
     expect(c.error).toBeTrue();
     expect(c.loading).toBeFalse();
     expect(c.rows('puzzles').length).toBe(0);
+  });
+
+  // W5 F5-004: „Monat" (langsam) → „Gesamt" — die spaete Monatsliste darf nicht unter „Gesamt" stehen.
+  it('Zeitraumwechsel: die spaete Antwort des vorigen Zeitraums landet nicht beim neuen', () => {
+    const subjects: Record<string, Subject<Leaderboards>> = { weekly: new Subject(), monthly: new Subject(), alltime: new Subject() };
+    const svc: any = { get: jasmine.createSpy('get').and.callFake((p: string) => subjects[p]) };
+    const c = new LeaderboardsComponent(svc);
+    c.ngOnInit();
+    c.onPeriod('monthly');
+    c.onPeriod('alltime');
+    expect(subjects['weekly'].observed).toBeFalse();
+    expect(subjects['monthly'].observed).toBeFalse();
+    subjects['alltime'].next(data('alltime'));
+    subjects['monthly'].next(data('monthly'));
+    expect(c.data?.period).toBe('alltime');
+    expect(c.loading).toBeFalse();
   });
 });
