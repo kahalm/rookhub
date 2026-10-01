@@ -334,6 +334,27 @@ public class ChessableControllerTests : IDisposable
         Assert.Contains("Invalid bearer", JsonSerializer.Serialize(bad.Value));
     }
 
+    /// <summary>Codereview A3-015: piratechess-5xx (Neustart) ist kein Eingabefehler — 502 statt 400, und der
+    /// Bearer-Breaker bleibt zu (die Meldung ist keine Bearer-Ablehnung).</summary>
+    [Fact]
+    public async Task Test_ProxyUnavailable_Maps502_NotBadRequest()
+    {
+        await SeedUserAsync(42);
+        await _controller.SaveCredentials(new SaveChessableBearerRequest("good-bearer-1234567890"));
+        _handler.Reply = (_, _) => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+        {
+            Content = new StringContent("<html>503 Service Unavailable</html>"),
+        };
+
+        var result = await _controller.Test(CancellationToken.None);
+
+        var obj = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status502BadGateway, obj.StatusCode);
+        Assert.Equal(ChessableProxyException.UnreachableMessage, JsonSerializer.SerializeToElement(obj.Value).GetProperty("message").GetString());
+        var cred = await _db.ChessableCredentials.SingleAsync(c => c.UserId == 42);
+        Assert.Null(cred.BlockedAt);
+    }
+
     [Fact]
     public async Task Test_BannedBearer_OpensBreaker()
     {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using RookHub.Api.DTOs;
+using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Authorization;
 using RookHub.Api.Services;
@@ -117,8 +118,7 @@ public class ExtensionController : BaseApiController
         }
         catch (ChessableProxyException ex)
         {
-            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
-            return StatusCode(code, new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
 
         if (string.IsNullOrWhiteSpace(parsed.Pgn))
@@ -319,6 +319,7 @@ public class ExtensionController : BaseApiController
     /// </summary>
     [HttpPost("chessable/ingest")]
     [RequestSizeLimit(64_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
     public async Task<IActionResult> ChessableIngest([FromBody] ChessableIngestRequest dto, CancellationToken ct)
     {
         if (dto == null || !IsValidBid(dto.Bid))
@@ -550,6 +551,7 @@ public class ExtensionController : BaseApiController
     /// </summary>
     [HttpPost("chessable/ingest/chunk")]
     [RequestSizeLimit(48_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
     public async Task<IActionResult> ChessableIngestChunk([FromBody] ChessableIngestChunkRequest dto, CancellationToken ct)
     {
         if (dto == null || string.IsNullOrWhiteSpace(dto.SessionId) || !IsValidBid(dto.Bid))
@@ -611,8 +613,7 @@ public class ExtensionController : BaseApiController
             catch (ChessableProxyException ex)
             {
                 _logger.LogWarning(ex, "Browser-Import: Parser-Fehler (User {UserId}, bid {Bid})", userId, dto.Bid);
-                var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
-                return StatusCode(code, new { message = ex.Message });
+                return ChessableProxyExceptionFilter.ResultFor(ex);
             }
 
             if (!string.IsNullOrWhiteSpace(parsed.Pgn))
@@ -677,6 +678,7 @@ public class ExtensionController : BaseApiController
     /// </summary>
     [HttpPost("chessable/ingest/live")]
     [RequestSizeLimit(16_000_000)]
+    [TypeFilter(typeof(ChessableProxyExceptionFilter))]   // piratechess nicht erreichbar → 502 (A3-015)
     public async Task<IActionResult> ChessableIngestLive([FromBody] ChessableLiveIngestRequest dto, CancellationToken ct)
     {
         if (dto == null || !IsValidBid(dto.Bid))
@@ -701,8 +703,7 @@ public class ExtensionController : BaseApiController
         }
         catch (ChessableProxyException ex)
         {
-            var code = ex.Status == System.Net.HttpStatusCode.BadRequest ? 400 : 502;
-            return StatusCode(code, new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
 
         // Reine Info-/Erklärlinien liefern kein PGN → nichts anzuhängen, aber kein Fehler (Client macht weiter).

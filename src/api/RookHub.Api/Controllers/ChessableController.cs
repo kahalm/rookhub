@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -23,6 +24,8 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+// piratechess-Fehler und -Ausfälle mit EINER Regel auf HTTP (Codereview A3-015).
+[TypeFilter(typeof(ChessableProxyExceptionFilter))]
 // Rate-Limiting BEWUSST nicht mehr klassenweit deaktiviert: [DisableRateLimiting] sitzt nur noch auf
 // den Import-Endpunkten (Einreihen im Schwung + Status-Polling erschöpften sonst das 100-Req/min-
 // Fenster, 429 beim ~16. Add). POST /test und GET /courses (insb. ?refresh=true) lösen dagegen einen
@@ -242,7 +245,7 @@ public class ChessableController : BaseApiController, IActionFilter
             _logger.LogWarning("Chessable test failed: {Status} {Message}", ex.Status, ex.Message);
             if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
                 await _breaker.TripAsync(userId, ex.Message, ct);
-            return BadRequest(new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
     }
 
@@ -283,7 +286,7 @@ public class ChessableController : BaseApiController, IActionFilter
             _logger.LogWarning("Chessable courses failed: {Status} {Message}", ex.Status, ex.Message);
             if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
                 await _breaker.TripAsync(userId, ex.Message, ct);
-            return BadRequest(new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
     }
 

@@ -12,6 +12,9 @@ namespace RookHub.Api.Services;
 /// </summary>
 public class ChessableProxyException : Exception
 {
+    /// <summary>Meldung, wenn piratechess nichts Lesbares liefert oder gar nicht erreichbar ist.</summary>
+    public const string UnreachableMessage = "Chessable-Dienst nicht erreichbar (bitte später erneut versuchen).";
+
     public HttpStatusCode Status { get; }
     public ChessableProxyException(HttpStatusCode status, string message) : base(message)
     {
@@ -293,7 +296,7 @@ public class ChessableProxyService : ICachedLineSource
         {
             _logger?.LogWarning("Chessable-Proxy antwortete {Status}; Body (gekürzt): {Body}",
                 (int)response.StatusCode, body.Length > 500 ? body[..500] : body);
-            message = "Chessable-Dienst nicht erreichbar (bitte später erneut versuchen).";
+            message = ChessableProxyException.UnreachableMessage;
         }
 
         throw new ChessableProxyException(response.StatusCode, message);

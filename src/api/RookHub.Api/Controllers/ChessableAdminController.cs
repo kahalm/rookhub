@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Filters;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -20,6 +21,8 @@ namespace RookHub.Api.Controllers;
 [ApiController]
 [Route("api/chessable")]
 [HasPermission(Permissions.ChessableAdmin)]
+// piratechess-Fehler und -Ausfälle mit EINER Regel auf HTTP (Codereview A3-015).
+[TypeFilter(typeof(ChessableProxyExceptionFilter))]
 // Wie der User-Controller vom globalen Minutenlimit ausnehmen (Kurs-Schwung/Polling).
 [DisableRateLimiting]
 public class ChessableAdminController : BaseApiController
@@ -119,7 +122,7 @@ public class ChessableAdminController : BaseApiController
             _logger.LogWarning("Admin Chessable courses (user {UserId}) failed: {Status} {Message}", userId, ex.Status, ex.Message);
             if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
                 await _breaker.TripAsync(userId, ex.Message, ct);
-            return BadRequest(new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
     }
 
@@ -146,7 +149,7 @@ public class ChessableAdminController : BaseApiController
             _logger.LogWarning("Admin course estimate (user {UserId}, bid {Bid}) failed: {Status} {Message}", userId, bid, ex.Status, ex.Message);
             if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
                 await _breaker.TripAsync(userId, ex.Message, ct);
-            return BadRequest(new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
     }
 
@@ -172,7 +175,7 @@ public class ChessableAdminController : BaseApiController
             _logger.LogWarning("Admin Chessable test (user {UserId}) failed: {Status} {Message}", userId, ex.Status, ex.Message);
             if (ChessableBearerBreaker.IsBearerFatal(ex.Message))
                 await _breaker.TripAsync(userId, ex.Message, ct);
-            return BadRequest(new { message = ex.Message });
+            return ChessableProxyExceptionFilter.ResultFor(ex);
         }
     }
 
