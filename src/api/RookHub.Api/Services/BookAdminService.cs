@@ -119,8 +119,10 @@ public class BookAdminService
         if (dto.IsPublic.HasValue) book.IsPublic = dto.IsPublic.Value;
         if (dto.PublicSlug != null) await ApplyPublicSlugAsync(book, dto.PublicSlug);
         if (dto.Kind.HasValue) book.Kind = dto.Kind.Value;
-        book.MinElo = dto.MinElo;
-        book.MaxElo = dto.MaxElo;
+        // Wie alle Felder: null = unverändert; 0 entfernt die Grenze. Vorher wurde die Spanne immer
+        // gesetzt — jedes Teil-Update ohne Elo leerte sie still (Codereview N9-009).
+        if (dto.MinElo.HasValue) book.MinElo = dto.MinElo.Value == 0 ? null : dto.MinElo;
+        if (dto.MaxElo.HasValue) book.MaxElo = dto.MaxElo.Value == 0 ? null : dto.MaxElo;
         book.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 

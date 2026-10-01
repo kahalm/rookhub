@@ -86,6 +86,7 @@ export interface UpdateBook {
   displayName?: string;
   difficulty?: string | null;
   rating?: number | null;
+  /** Elo-Grenzen: undefined/null = unverändert, 0 = Grenze entfernen. */
   minElo?: number | null;
   maxElo?: number | null;
   tags?: string | null;

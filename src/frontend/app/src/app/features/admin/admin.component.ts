@@ -319,8 +319,7 @@ export class AdminComponent implements OnInit {
     if (next == null) return;
     const name = next.trim();
     if (!name || name === book.displayName) return;
-    // min/max mitschicken: der Endpunkt setzt die Elo-Spanne immer — ohne sie leerte das Umbenennen sie.
-    this.adminService.updateBook(book.id, { displayName: name, minElo: book.minElo, maxElo: book.maxElo }).subscribe({
+    this.adminService.updateBook(book.id, { displayName: name }).subscribe({
       next: () => {
         book.displayName = name;
         this.applyBookFilter();
@@ -363,7 +362,7 @@ export class AdminComponent implements OnInit {
       if (next == null) return;
       titles[code] = next.trim();
     }
-    this.adminService.updateBook(book.id, { kidsTitles: titles, minElo: book.minElo, maxElo: book.maxElo }).subscribe({
+    this.adminService.updateBook(book.id, { kidsTitles: titles }).subscribe({
       next: saved => { book.kidsTitles = saved.kidsTitles; },
       error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save')),
     });
@@ -398,8 +397,9 @@ export class AdminComponent implements OnInit {
       forKids: book.forKids,
       publicSlug: book.publicSlug ?? '',
       kind: book.kind,
-      minElo: book.minElo,
-      maxElo: book.maxElo
+      // Geleertes Elo-Feld = null; der Endpunkt liest null als „unverändert", 0 entfernt die Grenze (N9-009).
+      minElo: book.minElo ?? 0,
+      maxElo: book.maxElo ?? 0
     }).subscribe({
       error: err => {
         this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save'));

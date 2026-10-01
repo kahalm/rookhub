@@ -558,6 +558,44 @@ public class AdminControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBook_WithoutElo_KeepsTheRange_ZeroClearsIt()
+    {
+        // Codereview N9-009: MinElo/MaxElo wurden als einzige Felder immer gesetzt — ein Teil-Update
+        // ohne sie ({isPublic:true}, Umbenennen) leerte die Elo-Spanne still.
+        var book = new Book { FileName = "b.pgn", DisplayName = "b", MinElo = 1200, MaxElo = 1600, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { IsPublic = true, DisplayName = "Neu" });
+        var updated = await _db.Books.FindAsync(book.Id);
+        Assert.Equal(1200, updated!.MinElo);
+        Assert.Equal(1600, updated.MaxElo);
+
+        // Eine Grenze einzeln ändern lässt die andere stehen, 0 entfernt sie.
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { MaxElo = 1800 });
+        Assert.Equal(1200, updated.MinElo);
+        Assert.Equal(1800, updated.MaxElo);
+        await _controller.UpdateBook(book.Id, new RookHub.Api.DTOs.UpdateBookDto { MinElo = 0 });
+        Assert.Null(updated.MinElo);
+        Assert.Equal(1800, updated.MaxElo);
+    }
+
+    [Theory]
+    [InlineData(-1, false)]
+    [InlineData(0, true)]
+    [InlineData(3500, true)]
+    [InlineData(3501, false)]
+    public void UpdateBookDto_EloRange_IsValidated(int elo, bool valid)
+    {
+        foreach (var dto in new[] { new RookHub.Api.DTOs.UpdateBookDto { MinElo = elo }, new RookHub.Api.DTOs.UpdateBookDto { MaxElo = elo } })
+        {
+            var ok = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+                dto, new System.ComponentModel.DataAnnotations.ValidationContext(dto), null, validateAllProperties: true);
+            Assert.Equal(valid, ok);
+        }
+    }
+
+    [Fact]
     public async Task ImportBooks_DefaultsKindToPuzzle()
     {
         var file = MakePgnFile("sample.pgn", SamplePgn);

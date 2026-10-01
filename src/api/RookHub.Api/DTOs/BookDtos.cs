@@ -54,7 +54,11 @@ public class UpdateBookDto
     public string? Difficulty { get; set; }
     [Range(1, 10)]
     public int? Rating { get; set; }
+    /// <summary>Untere Elo-Grenze; <c>null</c> = unverändert, <c>0</c> = Grenze entfernen.</summary>
+    [Range(0, 3500)]
     public int? MinElo { get; set; }
+    /// <summary>Obere Elo-Grenze; <c>null</c> = unverändert, <c>0</c> = Grenze entfernen.</summary>
+    [Range(0, 3500)]
     public int? MaxElo { get; set; }
     [MaxLength(200)]
     public string? Tags { get; set; }

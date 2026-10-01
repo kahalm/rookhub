@@ -260,8 +260,8 @@ describe('AdminComponent', () => {
 
     c.renameBook(book);
 
-    // Die Elo-Spanne geht mit: der Endpunkt setzt sie immer, ohne sie leerte das Umbenennen sie.
-    expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name', minElo: 800, maxElo: 1200 });
+    // Nur der Name: der Endpunkt lässt fehlende Felder unverändert, auch die Elo-Spanne (N9-009).
+    expect(updateBook).toHaveBeenCalledWith(7, { displayName: 'New Name' });
     expect(book.displayName).toBe('New Name');
   });
 
@@ -290,9 +290,18 @@ describe('AdminComponent', () => {
     expect(promptSpy.calls.count()).toBe(4);
     expect(promptSpy.calls.first().args[1]).toBe('Alt');               // vorhandener Titel vorbelegt
     expect(updateBook).toHaveBeenCalledWith(9, {
-      kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One', hr: '', hu: '' }, minElo: null, maxElo: 1000,
+      kidsTitles: { de: 'Matt in einem Zug', en: 'Checkmate in One', hr: '', hu: '' },
     });
     expect(book.kidsTitles).toEqual({ de: 'Matt in einem Zug', en: 'Checkmate in One' });
+  });
+
+  it('saveBook schickt ein geleertes Elo-Feld als 0 (Grenze entfernen), null hiesse unverändert', () => {
+    const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+    const { c } = make({ updateBook });
+
+    c.saveBook({ id: 3, displayName: 'x', kind: 'Puzzle', minElo: null, maxElo: 1800 } as any);
+
+    expect(updateBook.calls.mostRecent().args[1]).toEqual(jasmine.objectContaining({ minElo: 0, maxElo: 1800 }));
   });
 
   it('editKidsTitles: Abbrechen bei einer Sprache speichert nichts', () => {
