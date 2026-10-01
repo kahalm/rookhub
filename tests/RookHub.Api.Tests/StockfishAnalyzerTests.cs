@@ -64,6 +64,59 @@ public class StockfishAnalyzerTests
         Assert.Equal(0, hint.MateIn);
     }
 
+    // ── Eingabe in die UCI-Zeile (A4-018): ein Zeilenumbruch waere ein zweiter Befehl ─────────────────────────────
+
+    private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    [Fact]
+    public void BuildPositionCommand_GueltigeStellungUndZuege_wieBisher()
+    {
+        Assert.Equal($"position fen {StartFen}", StockfishAnalyzer.BuildPositionCommand(StartFen, null));
+        Assert.Equal($"position fen {StartFen}", StockfishAnalyzer.BuildPositionCommand(StartFen, "  "));
+        Assert.Equal($"position fen {StartFen} moves e2e4 e7e5 g1f3",
+            StockfishAnalyzer.BuildPositionCommand(StartFen, " e2e4 e7e5  g1f3 "));
+        Assert.Equal("position fen 4k3/P7/8/8/8/8/8/4K3 w - - 0 1 moves a7a8q",
+            StockfishAnalyzer.BuildPositionCommand("4k3/P7/8/8/8/8/8/4K3 w - - 0 1", "a7a8q"));
+        // Ein abschliessender Umbruch (getrimmt) ist kein zweiter Befehl.
+        Assert.Equal($"position fen {StartFen}", StockfishAnalyzer.BuildPositionCommand(StartFen + "\n", null));
+    }
+
+    [Theory]
+    [InlineData(StartFen + "\nsetoption name Debug Log File value /keys/key.xml", null)]
+    [InlineData(StartFen + "\rquit", null)]
+    [InlineData(StartFen, "e2e4\nsetoption name Debug Log File value /keys/key.xml")]
+    [InlineData(StartFen, "e2e4 setoption")]
+    [InlineData(StartFen, "e2e4 e7e5\n")]
+    public void BuildPositionCommand_ZeilenumbruchOderFremdeZeichen_wirdAbgewiesen(string fen, string? setup)
+    {
+        Assert.Null(StockfishAnalyzer.BuildPositionCommand(fen, setup));
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_mehrzeiligeFen_startetKeineEngine()
+    {
+        // Pfad, den es nicht gibt: kaeme der Aufruf bis zum Prozessstart, liefe er ebenfalls auf null — deshalb
+        // zaehlt hier, dass schon VOR dem Start abgewiesen wird: ein Prozess wird gar nicht erst versucht.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Stockfish:Path"] = "/nonexistent/stockfish" })
+            .Build();
+        var logger = new CollectingLogger();
+        var analyzer = new StockfishAnalyzer(config, logger);
+
+        Assert.Null(await analyzer.AnalyzeAsync(StartFen + "\nsetoption name Debug Log File value /tmp/x"));
+        Assert.Contains(logger.Messages, m => m.Contains("abgewiesen"));
+        Assert.DoesNotContain(logger.Messages, m => m.Contains("nicht verfügbar"));
+    }
+
+    private sealed class CollectingLogger : Microsoft.Extensions.Logging.ILogger<StockfishAnalyzer>
+    {
+        public List<string> Messages { get; } = new();
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+            TState state, Exception? exception, Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
+    }
+
     [Fact]
     public void ParseUciOutput_Empty_ReturnsNull()
     {

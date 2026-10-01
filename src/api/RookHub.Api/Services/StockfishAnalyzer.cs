@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace RookHub.Api.Services;
 
@@ -37,9 +38,12 @@ public class StockfishAnalyzer
     public async Task<EngineHint?> AnalyzeAsync(string fen, string? setupMovesUci = null, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(fen)) return null;
-        var positionCmd = string.IsNullOrWhiteSpace(setupMovesUci)
-            ? $"position fen {fen}"
-            : $"position fen {fen} moves {setupMovesUci.Trim()}";
+        var positionCmd = BuildPositionCommand(fen, setupMovesUci);
+        if (positionCmd is null)
+        {
+            _logger.LogWarning("StockfishAnalyzer: Stellung oder Setup-Zuege abgewiesen (kein einzeiliges FEN/UCI)");
+            return null;
+        }
         try
         {
             var psi = new ProcessStartInfo
@@ -103,6 +107,28 @@ public class StockfishAnalyzer
             _logger.LogWarning(ex, "StockfishAnalyzer: Engine nicht verfügbar ({Path}).", _path);
             return null;
         }
+    }
+
+    // Nur der FEN-Zeichensatz bzw. reine UCI-Zuege, \z statt $ (.NET-$ liesse ein abschliessendes \n durch).
+    private static readonly Regex FenChars = new(@"\A[A-Za-z0-9/ \-]{1,120}\z", RegexOptions.CultureInvariant);
+    private static readonly Regex UciMove = new(@"\A[a-h][1-8][a-h][1-8][qrbnQRBN]?\z", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Die <c>position</c>-Zeile fuer Stockfish — oder <c>null</c>, wenn FEN oder Setup-Zuege etwas anderes enthalten als
+    /// FEN-Zeichen bzw. UCI-Zuege. Stockfish liest zeilenweise: ein Zeilenumbruch in der FEN waere ein ZWEITER Befehl
+    /// (z. B. <c>setoption name Debug Log File value …</c> ueberschreibt eine Datei des API-Nutzers). Der JSON-Import
+    /// der Buch-Puzzles uebernimmt Fen und Moves ungeprueft (Codereview 2026-09-29, A4-018) — die Klasse prueft deshalb
+    /// selbst, statt sich auf den Aufrufer zu verlassen. Ein einzelner unbrauchbarer Zug verwirft die ganze Zeile: sonst
+    /// bewertete die Engine eine andere Stellung als die Loesungsstellung.
+    /// </summary>
+    internal static string? BuildPositionCommand(string fen, string? setupMovesUci)
+    {
+        fen = fen.Trim();
+        if (!FenChars.IsMatch(fen)) return null;
+        if (string.IsNullOrWhiteSpace(setupMovesUci)) return $"position fen {fen}";
+        var moves = setupMovesUci.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (moves.Length == 0 || !moves.All(UciMove.IsMatch)) return null;
+        return $"position fen {fen} moves {string.Join(' ', moves)}";
     }
 
     /// <summary>
