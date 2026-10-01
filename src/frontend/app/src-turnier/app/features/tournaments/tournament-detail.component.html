@@ -100,4 +100,21 @@
           (fillClubs)="fillClubs()">
         </app-tournament-tables>
       </div>
+    } @else {
+      <!-- Kein Turnier: sagen warum, und einen Weg weiter anbieten — vorher blieb die Seite leer. -->
+      <div class="detail-container">
+        <mat-card class="load-failed" role="alert">
+          <p>{{ (loadFailure === 'notFound' ? 'tournaments.detail.notFound' : 'tournaments.detail.loadTournamentFailed') | translate }}</p>
+          <div class="load-failed-actions">
+            @if (loadFailure !== 'notFound') {
+              <button mat-stroked-button (click)="loadTournament()">
+                <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+              </button>
+            }
+            <a mat-stroked-button routerLink="/tournaments/calendar">
+              <mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}
+            </a>
+          </div>
+        </mat-card>
+      </div>
     }

@@ -6,6 +6,9 @@
     mat-card-title, mat-card-subtitle { overflow-wrap: anywhere; }
     .action-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .empty-hint { padding: 1.5rem; color: color-mix(in srgb, currentColor 47%, transparent); }
+    .load-failed { padding: 1rem; }
+    .load-failed p { margin: 0 0 0.75rem; }
+    .load-failed-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
     @media (max-width: 768px) {
       .detail-container { padding: 0.75rem; }

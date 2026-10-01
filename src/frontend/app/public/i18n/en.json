@@ -1179,7 +1179,8 @@
       "undoFailed": "Undo failed — bookmark it again in the calendar."
     },
     "detail": {
-      "loadTournamentFailed": "Failed to load tournament",
+      "loadTournamentFailed": "The tournament could not be loaded right now. Check your connection and try again.",
+      "notFound": "This tournament isn't here (any more). Look for it in the tournament calendar — it can be fetched again from there.",
       "loadSubscriptionFailed": "Failed to load subscription status",
       "reloadTournamentFailed": "Failed to reload tournament",
       "refreshStartFailed": "Failed to start refresh",

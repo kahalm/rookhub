@@ -250,4 +250,68 @@ describe('TournamentDetailComponent', () => {
     expect(c.showFavoritesOnly).toBeTrue();
     expect(warn).toHaveBeenCalledWith('tournaments.favorites.filterSaveFailed');
   });
+
+  // ----- Kein Turnier: Fehlerkarte statt leerer Seite (Codereview F6-013) -----
+
+  /** Wie `render`, aber das Turnier selbst antwortet mit `status`. */
+  async function renderFailing(status: number): Promise<ComponentFixture<TournamentDetailComponent>> {
+    await TestBed.configureTestingModule({
+      imports: [TournamentDetailComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(TournamentDetailComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges(); // ngOnInit
+    http.expectOne('/api/tournament-favorites?tournamentId=4711').flush([]);
+    http.expectOne('/api/tournament-favorites/settings/4711').flush({ showFavoritesOnly: false });
+    http.expectOne('/api/tournaments/4711').flush({ message: 'boom' }, { status, statusText: 'x' });
+    http.expectOne('/api/subscriptions').flush([]);
+    http.expectOne('/api/tournament-monitors/4711').flush({ active: false, activeUntil: null, lastKnownRounds: 0 });
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('zeigt bei einem Serverfehler eine Fehlerkarte mit „Erneut versuchen" und Weg zum Kalender', async () => {
+    const fixture = await renderFailing(500);
+    const http = TestBed.inject(HttpTestingController);
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(fixture.componentInstance.loadFailure).toBe('error');
+    expect(page.textContent).toContain('tournaments.detail.loadTournamentFailed');
+    expect(page.querySelector('.load-failed a[href="/tournaments/calendar"]'))
+      .withContext('Weg zum Kalender fehlt').toBeTruthy();
+
+    const retry = page.querySelector<HTMLButtonElement>('.load-failed button');
+    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+    retry!.click();
+    http.expectOne('/api/tournaments/4711').flush({
+      id: 1, name: 'Schach Tirol Open', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+    });
+    http.expectOne('/api/tournaments/4711/players').flush([]);
+    http.expectOne('/api/tournaments/4711/teams').flush([]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.loadFailure).toBeNull();
+    expect(page.querySelector('.load-failed')).toBeNull();
+    expect(page.textContent).toContain('Schach Tirol Open');
+    http.verify();
+  });
+
+  it('sagt bei 404, dass es das Turnier hier nicht gibt, und verweist auf den Kalender', async () => {
+    const fixture = await renderFailing(404);
+    const page = fixture.nativeElement as HTMLElement;
+
+    expect(fixture.componentInstance.loadFailure).toBe('notFound');
+    expect(page.textContent).toContain('tournaments.detail.notFound');
+    expect(page.textContent).not.toContain('tournaments.detail.loadTournamentFailed');
+    expect(page.querySelector('.load-failed a[href="/tournaments/calendar"]')).toBeTruthy();
+    TestBed.inject(HttpTestingController).verify();
+  });
 });

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -28,7 +28,7 @@ import { computeFavoriteNames, filterPlayersByFavorites, filterTeamsByFavorites,
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-detail',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
+  imports: [CommonModule, RouterLink, MatCardModule, MatButtonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, MatProgressBarModule, MatDialogModule, TranslatePipe, LoadingSpinnerComponent, TournamentTablesComponent],
   templateUrl: './tournament-detail.component.html',
   styleUrls: ['./tournament-detail.component.scss'],
 })
@@ -40,6 +40,12 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   rounds: number[] = [];
   selectedRound = 1;
   loading = true;
+  /**
+   * Warum kein Turnier da ist: `notFound` (404 — nie geholt oder entfernt) oder `error` (Server/Netz).
+   * Ohne das blieb unter der Navbar eine leere Seite, und nur ein 3-s-Snackbar sagte etwas
+   * (Codereview F6-013).
+   */
+  loadFailure: 'notFound' | 'error' | null = null;
   playersLoading = false;
   teamsLoading = false;
   pairingsLoading = false;
@@ -114,6 +120,15 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
     if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
     this.loadFavorites();
+    this.loadTournament();
+    this.loadSubscription();
+    this.loadMonitorStatus();
+  }
+
+  /** Das Turnier selbst; „Erneut versuchen" auf der Fehlerkarte ruft nur diesen Teil noch einmal. */
+  loadTournament(): void {
+    this.loading = true;
+    this.loadFailure = null;
     this.api.getTournament(this.id).subscribe({
       next: (t) => {
         this.tournament = t;
@@ -126,10 +141,11 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
         this.loadTeams();
         if (this.selectedTabIndex === 2) this.loadPairings();
       },
-      error: () => { this.loading = false; this.snackbar.info(this.translate.instant('tournaments.detail.loadTournamentFailed')); }
+      error: (err: unknown) => {
+        this.loading = false;
+        this.loadFailure = err instanceof HttpErrorResponse && err.status === 404 ? 'notFound' : 'error';
+      }
     });
-    this.loadSubscription();
-    this.loadMonitorStatus();
   }
 
   ngOnDestroy(): void {

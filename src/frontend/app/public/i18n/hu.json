@@ -941,7 +941,8 @@
       "undoFailed": "A visszavonás nem sikerült — jelöld meg újra a naptárban."
     },
     "detail": {
-      "loadTournamentFailed": "Nem sikerült betölteni a versenyt",
+      "loadTournamentFailed": "A versenyt most nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
+      "notFound": "Ez a verseny itt nem található (már). Keresd meg a versenynaptárban — onnan újra lekérhető.",
       "loadSubscriptionFailed": "Nem sikerült betölteni a feliratkozás állapotát",
       "reloadTournamentFailed": "Nem sikerült újratölteni a versenyt",
       "refreshStartFailed": "Nem sikerült elindítani a frissítést",

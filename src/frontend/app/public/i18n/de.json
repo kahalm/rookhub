@@ -1179,7 +1179,8 @@
       "undoFailed": "Rückgängig hat nicht geklappt — im Kalender neu merken."
     },
     "detail": {
-      "loadTournamentFailed": "Turnier konnte nicht geladen werden",
+      "loadTournamentFailed": "Das Turnier konnte gerade nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
+      "notFound": "Dieses Turnier gibt es hier nicht (mehr). Such es im Turnierkalender — von dort lässt es sich neu holen.",
       "loadSubscriptionFailed": "Abo-Status konnte nicht geladen werden",
       "reloadTournamentFailed": "Turnier konnte nicht neu geladen werden",
       "refreshStartFailed": "Aktualisierung konnte nicht gestartet werden",

@@ -1179,7 +1179,8 @@
       "undoFailed": "Poništavanje nije uspjelo — zabilježi ponovno u kalendaru."
     },
     "detail": {
-      "loadTournamentFailed": "Učitavanje turnira nije uspjelo",
+      "loadTournamentFailed": "Turnir se trenutno nije mogao učitati. Provjeri vezu i pokušaj ponovno.",
+      "notFound": "Ovog turnira ovdje nema (više). Potraži ga u kalendaru turnira — odande se može ponovno dohvatiti.",
       "loadSubscriptionFailed": "Učitavanje statusa pretplate nije uspjelo",
       "reloadTournamentFailed": "Ponovno učitavanje turnira nije uspjelo",
       "refreshStartFailed": "Pokretanje osvježavanja nije uspjelo",
