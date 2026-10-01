@@ -69,7 +69,15 @@
   @if (loading()) {
     <app-loading-spinner />
   } @else if (failed()) {
-    <p class="hint warn">{{ 'turnier.history.loadError' | translate }}</p>
+    <!-- Mit „Erneut versuchen": in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. -->
+    <p class="hint warn" role="alert">
+      {{ 'turnier.history.loadError' | translate }}
+      @if (activeKey(); as key) {
+        <button mat-stroked-button (click)="load(key)">
+          <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+        </button>
+      }
+    </p>
   } @else {
     @if (current(); as history) {
       <mat-card class="player-card">

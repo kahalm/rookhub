@@ -425,8 +425,7 @@
       "newRoundSnack": "Có vòng mới! Vòng {{round}}"
     },
     "list": {
-      "title": "Giải đấu",
-      "crawlerUnavailable": "Không thể kết nối đến bộ thu thập giải đấu. Hãy đảm bảo dịch vụ thu thập đang chạy."
+      "title": "Giải đấu"
     },
     "detail": {
       "loadTournamentFailed": "Không thể tải giải đấu",

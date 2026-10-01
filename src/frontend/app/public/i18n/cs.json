@@ -425,8 +425,7 @@
       "newRoundSnack": "Nové kolo k dispozici! Kolo {{round}}"
     },
     "list": {
-      "title": "Turnaje",
-      "crawlerUnavailable": "Nelze se připojit k modulu pro načítání turnajů. Ujistěte se, že je služba spuštěna."
+      "title": "Turnaje"
     },
     "detail": {
       "loadTournamentFailed": "Načtení turnaje se nezdařilo",

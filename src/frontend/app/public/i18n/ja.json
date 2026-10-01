@@ -425,8 +425,7 @@
       "newRoundSnack": "新しいラウンドが利用可能です！ ラウンド {{round}}"
     },
     "list": {
-      "title": "トーナメント",
-      "crawlerUnavailable": "トーナメントクローラーに接続できませんでした。クローラーサービスが起動しているか確認してください。"
+      "title": "トーナメント"
     },
     "detail": {
       "loadTournamentFailed": "トーナメントの読み込みに失敗しました",

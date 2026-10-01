@@ -425,8 +425,7 @@
       "newRoundSnack": "Ny omgång tillgänglig! Omgång {{round}}"
     },
     "list": {
-      "title": "Turneringar",
-      "crawlerUnavailable": "Kunde inte ansluta till turneringshämtaren. Kontrollera att hämtartjänsten körs."
+      "title": "Turneringar"
     },
     "detail": {
       "loadTournamentFailed": "Det gick inte att läsa in turnering",

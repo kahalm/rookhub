@@ -425,8 +425,7 @@
       "newRoundSnack": "Yeni tur mevcut! Tur {{round}}"
     },
     "list": {
-      "title": "Turnuvalar",
-      "crawlerUnavailable": "Turnuva tarayıcısına bağlanılamadı. Tarayıcı hizmetinin çalıştığından emin olun."
+      "title": "Turnuvalar"
     },
     "detail": {
       "loadTournamentFailed": "Turnuva yüklenemedi",

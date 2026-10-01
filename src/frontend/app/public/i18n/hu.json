@@ -930,7 +930,7 @@
     },
     "list": {
       "title": "Versenyek",
-      "crawlerUnavailable": "Nem sikerült csatlakozni a verseny-beolvasóhoz. Ellenőrizd, hogy a beolvasó szolgáltatás fut-e.",
+      "loadFailed": "A megjelölt versenyeidet nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
       "emptyBookmarks": "Még nem jelöltél meg versenyt. Jelöld meg őket a naptárban — itt fognak megjelenni.",
       "upcoming": "Következik",
       "past": "Lezárult",
@@ -3685,7 +3685,7 @@
       "identity": "Játékosazonosítók",
       "identityHelp": "Két embert is hívhatnak ugyanúgy, és a névkeresés mindkettőt hozza. Egy FIDE-azonosító vagy egy chess-results-azonosító dönti el, melyikük vagy te.\n\nEnélkül a versenytörténet az összes névrokonod összes versenyét mutatja — és ez fel is tűnik, mert olyan versenyek lesznek benne, amelyeket sosem játszottál.\n\nMindkét szám ott áll a saját chess-results-játékosoldaladon.",
       "saveError": "Nem sikerült menteni. Próbáld meg még egyszer.",
-      "loadError": "A profilt nem sikerült betölteni."
+      "loadError": "A profilt nem sikerült betölteni. Semmi nem veszett el — ellenőrizd a kapcsolatot, és próbáld újra."
     },
     "history": {
       "title": "A versenyeim",
@@ -3705,7 +3705,7 @@
       "noName": "A profilodból hiányzik a vezetéknév — a chess-resultson név alapján keresünk, tehát nincs mit kikeresni.",
       "sourceUnavailable": "A chess-results nem volt elérhető. Az utoljára lehozott állapot látszik.",
       "empty": "Ezen a néven nem találtunk versenyt.",
-      "loadError": "A versenytörténetet nem sikerült betölteni.",
+      "loadError": "A versenytörténetet nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
       "fetching": "A verseny letöltése folyik — ez eltart egy pillanatig.",
       "fetchSlow": "Még tart a letöltés. A feladat fut tovább; nézz vissza egy perc múlva.",
       "fetchFailed": "A versenyt nem sikerült lehozni. Próbáld meg később.",

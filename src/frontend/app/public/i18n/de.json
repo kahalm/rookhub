@@ -1168,7 +1168,7 @@
     },
     "list": {
       "title": "Turniere",
-      "crawlerUnavailable": "Verbindung zum Turnier-Crawler fehlgeschlagen. Stelle sicher, dass der Crawler-Dienst läuft.",
+      "loadFailed": "Deine gemerkten Turniere konnten nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
       "emptyBookmarks": "Du hast noch kein Turnier gemerkt. Im Kalender merken — hier tauchen sie dann auf.",
       "upcoming": "Kommt",
       "past": "Vorbei",
@@ -3964,7 +3964,7 @@
       "identity": "Spielerkennungen",
       "identityHelp": "Zwei Menschen können denselben Namen tragen, und die Namenssuche liefert beide. Eine FIDE-ID oder eine chess-results-ID entscheidet, welcher davon du bist.\n\nOhne sie zeigt der Verlauf alle Turniere aller Namensgleichen — und du merkst das, weil Turniere darin stehen, die du nie gespielt hast.\n\nBeide Nummern stehen auf deiner eigenen chess-results-Spielerseite.",
       "saveError": "Konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
-      "loadError": "Das Profil konnte nicht geladen werden."
+      "loadError": "Das Profil konnte nicht geladen werden. Deine Angaben sind nicht verloren — prüfe die Verbindung und versuche es erneut."
     },
     "history": {
       "title": "Meine Turniere",
@@ -3984,7 +3984,7 @@
       "noName": "In deinem Profil fehlt der Nachname — chess-results wird über den Namen gesucht, es gibt also nichts nachzuschlagen.",
       "sourceUnavailable": "chess-results war nicht erreichbar. Gezeigt wird der letzte geholte Stand.",
       "empty": "Unter diesem Namen wurden keine Turniere gefunden.",
-      "loadError": "Der Verlauf konnte nicht geladen werden.",
+      "loadError": "Der Verlauf konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
       "fetching": "Turnier wird geholt — das dauert einen Moment.",
       "fetchSlow": "Wird noch geholt. Der Auftrag läuft weiter; schau in einer Minute nochmal.",
       "fetchFailed": "Das Turnier konnte nicht geholt werden. Bitte später nochmal.",

@@ -425,8 +425,7 @@
       "newRoundSnack": "新轮次已发布！第 {{round}} 轮"
     },
     "list": {
-      "title": "比赛",
-      "crawlerUnavailable": "无法连接到比赛爬虫。请确认爬虫服务正在运行。"
+      "title": "比赛"
     },
     "detail": {
       "loadTournamentFailed": "加载比赛失败",

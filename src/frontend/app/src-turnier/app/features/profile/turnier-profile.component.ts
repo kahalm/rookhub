@@ -81,7 +81,13 @@ interface TurnierProfile {
           </button>
         </div>
       } @else {
-        <p class="muted">{{ 'turnier.profile.loadError' | translate }}</p>
+        <!-- Ohne Formular und ohne Knopf blieb nur Neuladen — in der PWA unsichtbar (UX-074). -->
+        <mat-card class="card failed" role="alert">
+          <p>{{ 'turnier.profile.loadError' | translate }}</p>
+          <button mat-stroked-button (click)="load()">
+            <mat-icon>refresh</mat-icon> {{ 'common.retry' | translate }}
+          </button>
+        </mat-card>
       }
     </div>
   `,
@@ -114,6 +120,8 @@ interface TurnierProfile {
 
     .actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
+    .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.failed p { margin: 0; }
   `],
 })
 export class TurnierProfileComponent implements OnInit {
@@ -132,6 +140,11 @@ export class TurnierProfileComponent implements OnInit {
   readonly currentPassword = signal('');
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
     this.profiles.getProfile<TurnierProfile>().subscribe({
       next: profile => {
         this.profile.set(profile);

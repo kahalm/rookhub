@@ -425,8 +425,7 @@
       "newRoundSnack": "Rundă nouă disponibilă! Runda {{round}}"
     },
     "list": {
-      "title": "Turnee",
-      "crawlerUnavailable": "Nu s-a putut conecta la serviciul de preluare date. Asigură-te că serviciul rulează."
+      "title": "Turnee"
     },
     "detail": {
       "loadTournamentFailed": "Încărcarea turneului a eșuat",

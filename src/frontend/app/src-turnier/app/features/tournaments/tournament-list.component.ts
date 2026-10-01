@@ -45,8 +45,11 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
       @if (loading()) {
         <app-loading-spinner />
       } @else if (failed()) {
-        <mat-card class="card">
-          <p>{{ 'tournaments.list.crawlerUnavailable' | translate }}</p>
+        <!-- Die Merkliste kommt aus der EIGENEN Datenbank, nicht vom Crawler — der fruehere Satz
+             „Stelle sicher, dass der Crawler-Dienst laeuft" nannte die falsche Ursache und einen
+             Schritt, den kein Nutzer gehen kann (Codereview UX-074). -->
+        <mat-card class="card failed" role="alert">
+          <p>{{ 'tournaments.list.loadFailed' | translate }}</p>
           <button mat-stroked-button (click)="load()">{{ 'common.retry' | translate }}</button>
         </mat-card>
       } @else if (upcoming().length === 0 && past().length === 0) {
@@ -107,7 +110,8 @@ import { OpenTournamentService } from '../../core/open-tournament.service';
     h2 { font-size: 1rem; margin: 1.25rem 0 0.5rem; }
 
     .card { padding: 1rem; }
-    .card.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.empty, .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+    .card.failed p { margin: 0; }
 
     .rows { display: flex; flex-direction: column; gap: 0.5rem; }
     /* mat-card ist selbst „display: flex; flex-direction: column" — ohne ausdrueckliches „row"

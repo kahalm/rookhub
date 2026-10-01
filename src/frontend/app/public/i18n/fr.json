@@ -425,8 +425,7 @@
       "newRoundSnack": "Nouvelle ronde disponible ! Ronde {{round}}"
     },
     "list": {
-      "title": "Tournois",
-      "crawlerUnavailable": "Impossible de se connecter au récupérateur de tournois. Assurez-vous que le service est en cours d'exécution."
+      "title": "Tournois"
     },
     "detail": {
       "loadTournamentFailed": "Impossible de charger le tournoi",

@@ -425,8 +425,7 @@
       "newRoundSnack": "Dostępna nowa runda! Runda {{round}}"
     },
     "list": {
-      "title": "Turnieje",
-      "crawlerUnavailable": "Nie można połączyć się z crawlerem turniejów. Upewnij się, że usługa crawlera działa."
+      "title": "Turnieje"
     },
     "detail": {
       "loadTournamentFailed": "Nie udało się załadować turnieju",

@@ -425,8 +425,7 @@
       "newRoundSnack": "새 라운드 공개! {{round}}라운드"
     },
     "list": {
-      "title": "대회",
-      "crawlerUnavailable": "대회 수집기에 연결할 수 없습니다. 수집기 서비스가 실행 중인지 확인하세요."
+      "title": "대회"
     },
     "detail": {
       "loadTournamentFailed": "대회 로드 실패",

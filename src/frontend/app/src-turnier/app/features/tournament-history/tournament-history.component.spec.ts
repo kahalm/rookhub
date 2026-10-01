@@ -110,6 +110,29 @@ describe('TournamentHistoryComponent', () => {
     http.verify();
   });
 
+  /** Mit „Erneut versuchen": in der installierten PWA gibt es keinen Neuladen-Knopf (UX-074). */
+  it('bietet bei einem Ladefehler „Erneut versuchen" an und lädt denselben Reiter neu', async () => {
+    const req = await setup();
+    req.flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(component.failed()).toBeTrue();
+    const warn = (fixture.nativeElement as HTMLElement).querySelector('.hint.warn');
+    expect(warn?.textContent).toContain('turnier.history.loadError');
+    const retry = warn!.querySelector<HTMLButtonElement>('button');
+    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+
+    retry!.click();
+    const again = http.expectOne(r => r.url === '/api/tournament-history');
+    expect(again.request.params.get('userIds')).toBe('1');
+    again.flush([history()]);
+    fixture.detectChanges();
+
+    expect(component.failed()).toBeFalse();
+    expect(component.current()).not.toBeNull();
+    http.verify();
+  });
+
   /** Ein Reiter je Konto: ich zuerst, danach die Freunde — auch die ohne Namen im Profil. */
   it('legt für jedes Konto einen Reiter an', async () => {
     const req = await setup([

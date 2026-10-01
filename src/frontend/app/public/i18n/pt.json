@@ -425,8 +425,7 @@
       "newRoundSnack": "Nova ronda disponível! Ronda {{round}}"
     },
     "list": {
-      "title": "Torneios",
-      "crawlerUnavailable": "Não foi possível ligar ao importador de torneios. Certifique-se de que o serviço está em execução."
+      "title": "Torneios"
     },
     "detail": {
       "loadTournamentFailed": "Falha ao carregar torneio",

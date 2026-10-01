@@ -202,7 +202,8 @@ describe('TurnierProfileComponent', () => {
     expect(component.profile()).not.toBeNull();
   });
 
-  it('meldet einen Ladefehler statt eine leere Seite zu zeigen', () => {
+  /** Mit „Erneut versuchen" — ohne Knopf blieb nur Neuladen, in der PWA unsichtbar (UX-074). */
+  it('meldet einen Ladefehler mit „Erneut versuchen" statt eine leere Seite zu zeigen', () => {
     TestBed.configureTestingModule({
       imports: [TurnierProfileComponent],
       providers: [
@@ -221,6 +222,17 @@ describe('TurnierProfileComponent', () => {
 
     expect(component.loading()).toBeFalse();
     expect(component.profile()).toBeNull();
-    expect(fixture.nativeElement.querySelector('.muted')).toBeTruthy();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.failed');
+    expect(card?.textContent).toContain('turnier.profile.loadError');
+
+    const retry = card!.querySelector<HTMLButtonElement>('button');
+    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+    retry!.click();
+    http.expectOne('/api/profile').flush(loaded());
+    fixture.detectChanges();
+
+    expect(component.profile()?.lastName).toBe('Oberschmid');
+    expect((fixture.nativeElement as HTMLElement).querySelector('.failed')).toBeNull();
+    http.verify();
   });
 });

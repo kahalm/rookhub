@@ -425,8 +425,7 @@
       "newRoundSnack": "¡Nueva ronda disponible! Ronda {{round}}"
     },
     "list": {
-      "title": "Torneos",
-      "crawlerUnavailable": "No se pudo conectar al procesador de torneos. Asegúrate de que el servicio esté en ejecución."
+      "title": "Torneos"
     },
     "detail": {
       "loadTournamentFailed": "Error al cargar el torneo",

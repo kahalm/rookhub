@@ -1168,7 +1168,7 @@
     },
     "list": {
       "title": "Turniri",
-      "crawlerUnavailable": "Povezivanje s crawlerom turnira nije uspjelo. Provjeri radi li crawler usluga.",
+      "loadFailed": "Tvoji zabilježeni turniri nisu se mogli učitati. Provjeri vezu i pokušaj ponovno.",
       "emptyBookmarks": "Još nisi zabilježio nijedan turnir. Zabilježi ih u kalendaru — pojavit će se ovdje.",
       "upcoming": "Predstoji",
       "past": "Prošlo",
@@ -3964,7 +3964,7 @@
       "identity": "Identifikatori igrača",
       "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
       "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",
-      "loadError": "Profil se nije mogao učitati."
+      "loadError": "Profil se nije mogao učitati. Ništa nije izgubljeno — provjeri vezu i pokušaj ponovno."
     },
     "history": {
       "title": "Moji turniri",
@@ -3984,7 +3984,7 @@
       "noName": "U tvojem profilu nedostaje prezime — chess-results se traži po imenu, nema se što potražiti.",
       "sourceUnavailable": "chess-results nije bio dostupan. Prikazuje se zadnje dohvaćeno stanje.",
       "empty": "Pod ovim imenom nisu nađeni turniri.",
-      "loadError": "Povijest se nije mogla učitati.",
+      "loadError": "Povijest se nije mogla učitati. Provjeri vezu i pokušaj ponovno.",
       "fetching": "Turnir se dohvaća — ovo traje trenutak.",
       "fetchSlow": "Još se dohvaća. Zadatak se nastavlja; pogledaj ponovno za minutu.",
       "fetchFailed": "Turnir se nije mogao dohvatiti. Pokušaj kasnije.",

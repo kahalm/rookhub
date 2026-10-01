@@ -425,8 +425,7 @@
       "newRoundSnack": "جولة جديدة متاحة! الجولة {{round}}"
     },
     "list": {
-      "title": "البطولات",
-      "crawlerUnavailable": "تعذّر الاتصال بزاحف البطولة. تأكد من تشغيل خدمة الزاحف."
+      "title": "البطولات"
     },
     "detail": {
       "loadTournamentFailed": "فشل تحميل البطولة",

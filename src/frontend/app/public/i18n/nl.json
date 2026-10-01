@@ -425,8 +425,7 @@
       "newRoundSnack": "Nieuwe ronde beschikbaar! Ronde {{round}}"
     },
     "list": {
-      "title": "Toernooien",
-      "crawlerUnavailable": "Geen verbinding met de toernooi-crawler. Controleer of de crawler actief is."
+      "title": "Toernooien"
     },
     "detail": {
       "loadTournamentFailed": "Toernooi laden mislukt",

@@ -44,6 +44,37 @@ describe('TournamentListComponent', () => {
 
   afterEach(() => TestBed.resetTestingModule());
 
+  /**
+   * Die Merkliste kommt aus der eigenen Datenbank. Der fruehere Satz „Stelle sicher, dass der
+   * Crawler-Dienst laeuft" nannte die falsche Ursache und einen Schritt fuer Betreiber (UX-074).
+   */
+  it('meldet einen Ladefehler ohne Crawler-Hinweis und mit „Erneut versuchen"', async () => {
+    await TestBed.configureTestingModule({
+      imports: [TournamentListComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(TournamentListComponent);
+    component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/subscriptions').flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.textContent).toContain('tournaments.list.loadFailed');
+    expect(page.textContent).not.toContain('crawlerUnavailable');
+
+    page.querySelector<HTMLButtonElement>('.failed button')!.click();
+    http.expectOne('/api/subscriptions').flush([sub()]);
+    fixture.detectChanges();
+    expect(component.failed()).toBeFalse();
+    expect(component.upcoming().length).toBe(1);
+    http.verify();
+  });
+
   it('holt nur die Abos — nicht mehr die Liste aller geholten Turniere', async () => {
     await setup([sub()]);
 

@@ -425,8 +425,7 @@
       "newRoundSnack": "Babak baru tersedia! Babak {{round}}"
     },
     "list": {
-      "title": "Turnamen",
-      "crawlerUnavailable": "Tidak dapat terhubung ke crawler turnamen. Pastikan layanan crawler sedang berjalan."
+      "title": "Turnamen"
     },
     "detail": {
       "loadTournamentFailed": "Gagal memuat turnamen",
