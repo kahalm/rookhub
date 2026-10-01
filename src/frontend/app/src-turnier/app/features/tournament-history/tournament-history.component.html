@@ -58,7 +58,11 @@
     }
 
     @if (friends().length === 0 && tracked().length === 0) {
-      <span class="hint">{{ 'turnier.history.noFriendsYet' | translate }}</span>
+      <!-- Mit dem Weg dorthin: der Satz allein half nur, wer RookHub schon kannte (UX-079). -->
+      <span class="hint">
+        {{ 'turnier.history.noFriendsYet' | translate }}
+        <trn-rookhub-link path="friends">{{ 'turnier.history.friendsLink' | translate }}</trn-rookhub-link>
+      </span>
     }
 
     @if (pending() > 0) {

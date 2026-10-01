@@ -14,6 +14,7 @@ import { MenuService } from '@rh/core/menu.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
+import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 
 /**
  * Die Admin-Seite der Turnierseite — und sie hat GENAU eine Aufgabe: als ein Nutzer einsteigen.
@@ -40,12 +41,16 @@ import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spin
   changeDetection: ChangeDetectionStrategy.Default,
   imports: [
     FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent,
+    MatInputModule, MatTooltipModule, TranslatePipe, LoadingSpinnerComponent, RookHubLinkComponent,
   ],
   template: `
     <div class="ta-page">
       <h1>{{ 'turnierAdmin.title' | translate }}</h1>
-      <p class="muted">{{ 'turnierAdmin.lead' | translate }}</p>
+      <!-- „Alles Uebrige bleibt in RookHub" — mit dem Weg dorthin (Codereview UX-079). -->
+      <p class="muted">
+        {{ 'turnierAdmin.lead' | translate }}
+        <trn-rookhub-link path="admin">{{ 'turnierAdmin.rookhubAdmin' | translate }}</trn-rookhub-link>
+      </p>
 
       <mat-card class="ta-card">
         <mat-form-field appearance="outline" class="ta-search">

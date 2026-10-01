@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -33,6 +34,8 @@ describe('TurnierProfileComponent', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        // Der Link „Konto loeschen" ist ein routerLink (Codereview UX-079).
+        provideRouter([]),
         // Kein Rest aus anderen Specs im localStorage soll hier eine Impersonation vortaeuschen.
         { provide: AuthService, useValue: { isImpersonating: false } },
       ],
@@ -46,6 +49,37 @@ describe('TurnierProfileComponent', () => {
   }
 
   afterEach(() => TestBed.resetTestingModule());
+
+  /**
+   * Codereview UX-079: Passwort und Loeschen gibt es nur in RookHubs Profil — die Seite sagte das
+   * nirgends, ein reiner Turnierseiten-Nutzer fand beides nicht.
+   */
+  it('zeigt den Weg zu Passwort und Konto-Löschung', () => {
+    setup();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.account');
+
+    expect(card).withContext('Karte „Konto" fehlt').not.toBeNull();
+    expect(card!.querySelector('trn-rookhub-link')?.getAttribute('path')).toBe('profile');
+    expect(card!.querySelector('a.delete-link')?.getAttribute('href')).toBe('/account-deletion');
+  });
+
+  it('zeigt den Weg auch, wenn das Profil nicht geladen werden konnte', () => {
+    TestBed.configureTestingModule({
+      imports: [TurnierProfileComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AuthService, useValue: { isImpersonating: false } },
+      ],
+    });
+    fixture = TestBed.createComponent(TurnierProfileComponent);
+    http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/profile').flush(null, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.account a.delete-link')).not.toBeNull();
+  });
 
   it('lädt das Profil und rendert die sechs pflegbaren Felder', () => {
     setup();
@@ -209,6 +243,8 @@ describe('TurnierProfileComponent', () => {
       providers: [
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
+        // Der Link „Konto loeschen" ist ein routerLink (Codereview UX-079).
+        provideRouter([]),
         // Kein Rest aus anderen Specs im localStorage soll hier eine Impersonation vortaeuschen.
         { provide: AuthService, useValue: { isImpersonating: false } },
       ],

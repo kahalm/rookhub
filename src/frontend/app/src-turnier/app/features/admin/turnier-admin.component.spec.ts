@@ -170,6 +170,13 @@ describe('TurnierAdminComponent', () => {
     expect(component.busyId()).toBeNull();
   });
 
+  /** Codereview UX-079: „Alles Uebrige bleibt in RookHub" — jetzt mit dem Weg dorthin. */
+  it('verlinkt die übrige Verwaltung in RookHub', () => {
+    flushUsers();
+    const link = (fixture.nativeElement as HTMLElement).querySelector('trn-rookhub-link');
+    expect(link?.getAttribute('path')).toBe('admin');
+  });
+
   // ----- Codereview UX-078 -----
 
   /** Ins eigene Konto lehnt der Server ab (400) — ein Knopf dafuer fuehrte nur zu „fehlgeschlagen". */

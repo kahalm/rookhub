@@ -3987,7 +3987,11 @@
       "nameHelp": "Povijest turnira traži te na chess-resultsu, a tamo se traži po IMENU — pretraga po broju ne postoji. Bez prezimena ova stranica ne može prikazati povijest.\n\nPrikazano ime je ono koje drugi vide. Tvoje ime za prijavu nikada se ne prikazuje.",
       "identityHelp": "Dvije osobe mogu nositi isto ime, a pretraga po imenu vraća obje. FIDE ID ili chess-results ID odlučuje koja si od njih.\n\nBez njega povijest prikazuje sve turnire svih imenjaka — i to ćeš primijetiti, jer će u njoj biti turniri koje nikada nisi igrao.\n\nOba broja nalaze se na tvojoj chess-results stranici igrača.",
       "saveError": "Nije se moglo spremiti. Pokušaj ponovno.",
-      "loadError": "Profil se nije mogao učitati. Ništa nije izgubljeno — provjeri vezu i pokušaj ponovno."
+      "loadError": "Profil se nije mogao učitati. Ništa nije izgubljeno — provjeri vezu i pokušaj ponovno.",
+      "accountTitle": "Račun",
+      "accountText": "Lozinkom i računom upravljaš u RookHubu — to je isti račun kao ovdje.",
+      "changePassword": "Promijeni lozinku u RookHubu",
+      "deleteAccount": "Izbriši račun"
     },
     "history": {
       "title": "Moji turniri",
@@ -4024,6 +4028,7 @@
       "countGames": "partija: {{count}}",
       "countsTooltip": "Odigrane partije u ovoj vremenskoj kontroli.",
       "noFriendsYet": "Dodaj prijatelje na RookHubu da usporediš svoju povijest s njihovom.",
+      "friendsLink": "Prijatelji u RookHubu",
       "allSpeeds": "Sve",
       "pointsTooltip": "Bodovi iz odigranih partija. Broj partija dolazi s kartona igrača, ne iz broja kola turnira.",
       "track": {
@@ -4150,7 +4155,8 @@
     "searchLabel": "Pretraži korisnike",
     "self": "Tvoj račun",
     "truncated": "Prikazano {{shown}} od {{total}} računa — suzi popis pretragom.",
-    "confirmAdmin": "„{{name}}“ je administratorski račun. Ipak se prijaviti kao taj administrator?"
+    "confirmAdmin": "„{{name}}“ je administratorski račun. Ipak se prijaviti kao taj administrator?",
+    "rookhubAdmin": "Na administraciju u RookHubu"
   },
   "tournamentsMoved": {
     "leaving": "Turniri imaju vlastitu stranicu — preusmjeravamo te.",

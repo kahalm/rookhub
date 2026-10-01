@@ -18,6 +18,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 import { TournamentDatePipe } from '../../core/tournament-date';
+import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 import { HISTORY_SPEEDS, HistoryFriend, HistorySpeed, PlayerHistory, PlayerHistoryEntry, SpeedSummary, TrackedPlayer } from './tournament-history.model';
 import { TournamentHistoryService } from './tournament-history.service';
 import { TrackPlayerDialogComponent } from './track-player-dialog.component';
@@ -77,7 +78,7 @@ export const trackedKey = (id: number): string => `t:${id}`;
   imports: [
     CommonModule, FormsModule, MatButtonModule, MatButtonToggleModule, MatCardModule,
     MatDialogModule, MatIconModule, MatTabsModule, MatTooltipModule, RouterLink, TranslatePipe,
-    LoadingSpinnerComponent, HelpHintComponent, TournamentDatePipe,
+    LoadingSpinnerComponent, HelpHintComponent, TournamentDatePipe, RookHubLinkComponent,
   ],
   templateUrl: './tournament-history.component.html',
   styleUrls: ['./tournament-history.component.scss'],

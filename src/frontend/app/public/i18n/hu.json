@@ -3670,7 +3670,11 @@
       "nameHelp": "A versenytörténet a chess-resultson keres rád, és ott a NÉV alapján megy a keresés — szám szerinti keresés nincs. Vezetéknév nélkül ez az oldal nem tud versenytörténetet mutatni.\n\nA megjelenített név az, amit mások látnak. A bejelentkezési neved sosem látszik.",
       "identityHelp": "Két embert is hívhatnak ugyanúgy, és a névkeresés mindkettőt hozza. Egy FIDE-azonosító vagy egy chess-results-azonosító dönti el, melyikük vagy te.\n\nEnélkül a versenytörténet az összes névrokonod összes versenyét mutatja — és ez fel is tűnik, mert olyan versenyek lesznek benne, amelyeket sosem játszottál.\n\nMindkét szám ott áll a saját chess-results-játékosoldaladon.",
       "saveError": "Nem sikerült menteni. Próbáld meg még egyszer.",
-      "loadError": "A profilt nem sikerült betölteni. Semmi nem veszett el — ellenőrizd a kapcsolatot, és próbáld újra."
+      "loadError": "A profilt nem sikerült betölteni. Semmi nem veszett el — ellenőrizd a kapcsolatot, és próbáld újra.",
+      "accountTitle": "Fiók",
+      "accountText": "A jelszavadat és a fiókodat a RookHubban kezeled — ugyanaz a fiók, mint itt.",
+      "changePassword": "Jelszó módosítása a RookHubban",
+      "deleteAccount": "Fiók törlése"
     },
     "history": {
       "title": "A versenyeim",
@@ -3707,6 +3711,7 @@
       "countGames": "{{count}} játszma",
       "countsTooltip": "Ebben az időbeosztásban lejátszott játszmák.",
       "noFriendsYet": "Vegyél fel ismerősöket a RookHubon, hogy összevethesd velük a versenytörténetedet.",
+      "friendsLink": "Ismerősök a RookHubban",
       "allSpeeds": "Mind",
       "pointsTooltip": "Pontok a lejátszott játszmákból. A játszmák száma a játékoskártyáról származik, nem a verseny fordulószámából.",
       "track": {
@@ -3833,7 +3838,8 @@
     "searchLabel": "Felhasználók keresése",
     "self": "A te fiókod",
     "truncated": "{{shown}} / {{total}} fiók látható — szűkítsd a kereséssel.",
-    "confirmAdmin": "„{{name}}” adminisztrátori fiók. Mégis belépsz ezzel az adminnal?"
+    "confirmAdmin": "„{{name}}” adminisztrátori fiók. Mégis belépsz ezzel az adminnal?",
+    "rookhubAdmin": "Tovább az adminisztrációhoz a RookHubban"
   },
   "tournamentsMoved": {
     "leaving": "A versenyeknek saját oldaluk lett — átirányítunk.",

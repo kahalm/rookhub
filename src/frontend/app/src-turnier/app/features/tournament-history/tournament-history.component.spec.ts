@@ -210,6 +210,17 @@ describe('TournamentHistoryComponent', () => {
    * Ein Grund ist besser als eine leere Tabelle: „trage deinen Namen ein" ist eine
    * Handlungsanweisung, „keine Turniere" waere eine Falschaussage.
    */
+  /** Codereview UX-079: „Fuege auf RookHub Freunde hinzu" stand als reiner Text da, ohne Weg dorthin. */
+  it('verlinkt den Freunde-Hinweis nach RookHub', async () => {
+    const req = await setup();
+    req.flush([history()]);
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('.hint trn-rookhub-link');
+    expect(link).withContext('Link im Freunde-Hinweis').not.toBeNull();
+    expect(link!.getAttribute('path')).toBe('friends');
+  });
+
   it('nennt den Grund, wenn der Nachname fehlt', async () => {
     const req = await setup();
     req.flush([history({ status: 'noName', entries: [] })]);

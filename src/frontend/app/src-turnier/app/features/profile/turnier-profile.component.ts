@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,6 +15,7 @@ import {
 import { AuthService } from '@rh/core/auth.service';
 import { ProfileService } from '@rh/core/profile.service';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { RookHubLinkComponent } from '../../shell/rookhub-link.component';
 
 /**
  * Was hier gepflegt werden kann: Name, Anzeigename, E-Mail — und die beiden Spielerkennungen.
@@ -49,7 +51,7 @@ interface TurnierProfile {
   imports: [
     FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule,
     MatInputModule, TranslatePipe, LoadingSpinnerComponent, HelpHintComponent,
-    ProfileIdentityFormComponent,
+    ProfileIdentityFormComponent, RouterLink, RookHubLinkComponent,
   ],
   template: `
     <div class="page">
@@ -89,6 +91,21 @@ interface TurnierProfile {
           </button>
         </mat-card>
       }
+
+      <!-- Passwort und Loeschen gibt es nur in RookHubs Profil (dasselbe Konto). Ohne Verweis an
+           dieser Stelle fand ein reiner Turnierseiten-Nutzer beides nicht (Codereview UX-079). Auch
+           wenn das Profil nicht laden konnte: gerade dann sucht man womoeglich das Passwort. -->
+      @if (!loading()) {
+        <mat-card class="card spaced account">
+          <h2>{{ 'turnier.profile.accountTitle' | translate }}</h2>
+          <p class="muted">{{ 'turnier.profile.accountText' | translate }}</p>
+          <div class="account-links">
+            <trn-rookhub-link path="profile">{{ 'turnier.profile.changePassword' | translate }}</trn-rookhub-link>
+            <!-- Die eigene Loeschseite erklaert, was verschwindet, und fuehrt dann nach RookHub. -->
+            <a routerLink="/account-deletion" class="delete-link">{{ 'turnier.profile.deleteAccount' | translate }}</a>
+          </div>
+        </mat-card>
+      }
     </div>
   `,
   styles: [`
@@ -119,6 +136,9 @@ interface TurnierProfile {
     .spaced { margin-top: 1.25rem; }
 
     .actions { display: flex; justify-content: flex-end; margin-top: 1rem; }
+    .account p { margin: 0 0 0.5rem; }
+    .account-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+    .delete-link { padding: 6px 0; color: var(--mat-sys-primary); text-underline-offset: 2px; }
     .muted { color: color-mix(in srgb, currentColor 60%, transparent); }
     .card.failed { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
     .card.failed p { margin: 0; }

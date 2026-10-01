@@ -3987,7 +3987,11 @@
       "nameHelp": "The tournament history looks you up on chess-results, and it searches by NAME — there is no lookup by number there. Without a last name this site cannot show you a history.\n\nThe display name is what other people see. Your login name is never shown.",
       "identityHelp": "Two people can share a name, and the search by name returns both. A FIDE ID or a chess-results ID decides which of them is you.\n\nWithout one, the history shows every tournament of everyone with your name — and you will notice, because there will be tournaments in it you never played.\n\nBoth numbers are on your own chess-results player page.",
       "saveError": "Could not be saved. Please try again.",
-      "loadError": "The profile could not be loaded. Nothing is lost — check your connection and try again."
+      "loadError": "The profile could not be loaded. Nothing is lost — check your connection and try again.",
+      "accountTitle": "Account",
+      "accountText": "Your password and account are managed in RookHub — it is the same account as here.",
+      "changePassword": "Change password in RookHub",
+      "deleteAccount": "Delete account"
     },
     "history": {
       "title": "My tournaments",
@@ -4024,6 +4028,7 @@
       "countGames": "{{count}} games",
       "countsTooltip": "Games played in this time control.",
       "noFriendsYet": "Add friends on RookHub to compare your history with theirs.",
+      "friendsLink": "Friends in RookHub",
       "allSpeeds": "All",
       "pointsTooltip": "Points from games played. The number of games comes from the player card, not from the tournament round count.",
       "track": {
@@ -4150,7 +4155,8 @@
     "searchLabel": "Search users",
     "self": "Your account",
     "truncated": "Showing {{shown}} of {{total}} accounts — narrow it down with the search.",
-    "confirmAdmin": "“{{name}}” is an admin account. Sign in as this admin anyway?"
+    "confirmAdmin": "“{{name}}” is an admin account. Sign in as this admin anyway?",
+    "rookhubAdmin": "Go to the admin panel in RookHub"
   },
   "tournamentsMoved": {
     "leaving": "Tournaments have moved to their own site — taking you there.",

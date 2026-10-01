@@ -3987,7 +3987,11 @@
       "nameHelp": "Der Turnierverlauf sucht dich auf chess-results, und dort wird über den NAMEN gesucht — eine Suche über eine Nummer gibt es nicht. Ohne Nachnamen kann diese Seite keinen Verlauf zeigen.\n\nDer Anzeigename ist der, den andere sehen. Dein Anmeldename wird nie angezeigt.",
       "identityHelp": "Zwei Menschen können denselben Namen tragen, und die Namenssuche liefert beide. Eine FIDE-ID oder eine chess-results-ID entscheidet, welcher davon du bist.\n\nOhne sie zeigt der Verlauf alle Turniere aller Namensgleichen — und du merkst das, weil Turniere darin stehen, die du nie gespielt hast.\n\nBeide Nummern stehen auf deiner eigenen chess-results-Spielerseite.",
       "saveError": "Konnte nicht gespeichert werden. Bitte noch einmal versuchen.",
-      "loadError": "Das Profil konnte nicht geladen werden. Deine Angaben sind nicht verloren — prüfe die Verbindung und versuche es erneut."
+      "loadError": "Das Profil konnte nicht geladen werden. Deine Angaben sind nicht verloren — prüfe die Verbindung und versuche es erneut.",
+      "accountTitle": "Konto",
+      "accountText": "Passwort und Konto verwaltest du in RookHub — es ist dasselbe Konto wie hier.",
+      "changePassword": "Passwort in RookHub ändern",
+      "deleteAccount": "Konto löschen"
     },
     "history": {
       "title": "Meine Turniere",
@@ -4024,6 +4028,7 @@
       "countGames": "{{count}} Partien",
       "countsTooltip": "Gespielte Partien in dieser Bedenkzeit.",
       "noFriendsYet": "Füge auf RookHub Freunde hinzu, um deinen Verlauf mit ihrem zu vergleichen.",
+      "friendsLink": "Freunde in RookHub",
       "allSpeeds": "Alle",
       "pointsTooltip": "Punkte aus gespielten Partien. Die Partienzahl kommt von der Spielerkarte, nicht aus der Rundenzahl des Turniers.",
       "track": {
@@ -4150,7 +4155,8 @@
     "searchLabel": "Nutzer suchen",
     "self": "Dein Konto",
     "truncated": "{{shown}} von {{total}} Konten gezeigt — grenze mit der Suche ein.",
-    "confirmAdmin": "„{{name}}“ ist ein Admin-Konto. Trotzdem als dieser Admin einsteigen?"
+    "confirmAdmin": "„{{name}}“ ist ein Admin-Konto. Trotzdem als dieser Admin einsteigen?",
+    "rookhubAdmin": "Zur Verwaltung in RookHub"
   },
   "tournamentsMoved": {
     "leaving": "Turniere haben eine eigene Seite — du wirst weitergeleitet.",
