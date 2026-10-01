@@ -18,6 +18,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { GapResult, PartKind, PartInput, Reconstruction, ReconstructionPart, ReconstructService } from './reconstruct.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
  * Seite am Zug in einer FEN umstellen. Das en-passant-Feld fällt dabei weg: es beschreibt den Zug
@@ -178,11 +179,10 @@ export class ReconstructDetailComponent implements OnInit {
     this.editPly.set(null);
   }
 
-  /** Pfeiltasten am PC: blättern, solange der Fokus nicht in einem Textfeld steht. */
+  /** Pfeiltasten am PC: blättern, solange der Fokus nicht in einem Textfeld oder offenen Menü/Dialog steht. */
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    const target = e.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+    if (!isBoardHotkey(e)) return;
     if (this.editingId() === null) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); this.goPly(-1); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); this.goPly(1); }

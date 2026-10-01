@@ -636,4 +636,41 @@ describe('SharedGameComponent', () => {
 
     expect(game.service.currentMoveIndex).toBe(before);
   });
+
+  // Gemeldet im Codereview 2026-09-29 (F4-006): ⋮ → „Im Hintergrund analysieren" öffnet einen Dialog mit Titelfeld.
+  // Pfeil links im Feld rief preventDefault + goBack: der Cursor stand still, die Partie dahinter blätterte.
+  it('arrow keys typed into a dialog input move the cursor, not the game behind the dialog', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    page.service.goToEnd();
+    const end = page.service.currentMoveIndex;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const pane = document.createElement('div');
+    pane.className = 'cdk-overlay-pane';
+    const title = document.createElement('input');
+    pane.appendChild(title);
+    overlay.appendChild(pane);
+    document.body.appendChild(overlay);
+    try {
+      const typed = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true });
+      title.dispatchEvent(typed);                     // läuft bis zum window-Listener der Seite hoch
+      expect(typed.defaultPrevented).withContext('der Cursor im Feld darf wandern').toBeFalse();
+      expect(page.service.currentMoveIndex).withContext('die Partie bleibt stehen').toBe(end);
+
+      const menuItem = document.createElement('button');
+      pane.appendChild(menuItem);
+      menuItem.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+      expect(page.service.currentMoveIndex).withContext('auch nicht aus einem Menü').toBe(end);
+    } finally {
+      overlay.remove();
+    }
+
+    key('ArrowLeft');                                 // auf der Seite blättert ← wie gewohnt
+    expect(page.service.currentMoveIndex).toBe(end - 1);
+  });
 });

@@ -41,6 +41,7 @@ import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.se
 import { ScoresheetPhotoDialogComponent } from './scoresheet-photo-dialog.component';
 import { GameRoastData, GameRoastDialogComponent } from './game-roast-dialog.component';
 import { SimilarGamesComponent } from './similar-games.component';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
 const RECAP_TRIES = 8;
@@ -760,6 +761,9 @@ export class SharedGameComponent implements OnInit, DoCheck {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    // Nicht im Titel-Feld des Auftragsdialogs (der Cursor blieb stehen, die Partie dahinter blaetterte) und
+    // nicht in einem offenen Menue/Dialog.
+    if (!isBoardHotkey(event)) return;
     // Im Training zeigt das Brett die Aufgabe — die Pfeile blätterten sonst unsichtbar in der Partie darunter. In
     // der Analyse einer Aufgabe laufen sie durch die eigene Variante.
     const t = this.training();

@@ -40,6 +40,7 @@ import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS } from './maia/maia-model';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -732,8 +733,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); this.prev(); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); this.next(); }
     else if (e.key === 'Home') { e.preventDefault(); this.goTo(0); }

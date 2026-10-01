@@ -13,6 +13,7 @@ import { START_FEN } from '../analysis/position-setup.component';
 import { PreferencesService } from '../../core/preferences.service';
 import { withSideToMove } from './reconstruct-detail.component';
 import { PartKind, ReconstructService, SharedReconstruction, SharedReconstructionPart } from './reconstruct.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
  * Eine Zeile der geteilten Partie: ein Zug, eine erinnerte Stellung oder eine LÜCKE.
@@ -311,6 +312,7 @@ export class SharedReconstructionComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    if (!isBoardHotkey(event)) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.go(-1); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.go(1); }
   }

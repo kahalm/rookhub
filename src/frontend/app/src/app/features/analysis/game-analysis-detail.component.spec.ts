@@ -102,4 +102,28 @@ describe('GameAnalysisDetailComponent', () => {
     expect(c.percent).toBe(67);   // 2 von 3
     expect(c.positions.filter(p => !p.analyzed).length).toBe(1);
   });
+
+  it('blaettert nicht, wenn die Pfeiltaste einem Eingabefeld oder offenen Menue gehoert', () => {
+    const c = load().componentInstance;
+    const press = (target: EventTarget, init: KeyboardEventInit = {}) => {
+      const e = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true, ...init });
+      Object.defineProperty(e, 'target', { value: target });
+      c.onKey(e);
+    };
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const item = document.createElement('button');
+    overlay.appendChild(item);
+    document.body.appendChild(overlay);
+    try {
+      press(item);
+      press(document.createElement('input'));
+      press(document.body, { altKey: true });
+      expect(c.index).toBe(-1);
+    } finally {
+      overlay.remove();
+    }
+    press(document.body);
+    expect(c.index).toBe(0);
+  });
 });

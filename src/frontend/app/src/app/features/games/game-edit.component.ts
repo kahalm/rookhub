@@ -30,6 +30,7 @@ import { ScoresheetService, openPhotoBlob, photoFileName } from './scoresheet.se
 import { commentsForSave, headersOf, isoDateOf, pliesOfPgn, startFenOf, stripSheetNotes, toServer } from './game-edit.util';
 import { SheetEditSession } from './sheet-edit-session';
 import { LeaveConfirm } from '../../core/unsaved-changes.guard';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
  * Partie korrigieren (`/games/:id/edit`, 0.529.0). Für jede eigene Partie: Züge und Kopfdaten. Bei einer aus
@@ -516,8 +517,7 @@ export class GameEditComponent implements OnInit, OnDestroy, LeaveConfirm {
 
   @HostListener('document:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
-    const target = e.target as HTMLElement | null;
-    if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') { this.go(this.cursor() - 1); e.preventDefault(); }
     if (e.key === 'ArrowRight') { this.go(this.cursor() + 1); e.preventDefault(); }
   }

@@ -127,4 +127,34 @@ describe('SharedReconstructionComponent', () => {
     expect(fixture.componentInstance.game).toBeNull();
     expect(fixture.componentInstance.loading).toBeFalse();
   });
+
+  it('Pfeiltasten in einem Eingabefeld oder offenen Menue blaettern nicht', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/reconstructions/shared/')).flush(shared([
+      part({ moves: 'e4 e5', startPly: 0 }),
+    ]));
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const start = c.stepIndex;
+    const press = (target: EventTarget) => {
+      const e = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+      Object.defineProperty(e, 'target', { value: target });
+      c.onKeyDown(e);
+    };
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const item = document.createElement('button');
+    overlay.appendChild(item);
+    document.body.appendChild(overlay);
+    try {
+      press(item);
+      press(document.createElement('textarea'));
+      expect(c.stepIndex).toBe(start);
+    } finally {
+      overlay.remove();
+    }
+    press(document.body);
+    expect(c.stepIndex).toBe(start + 1);
+  });
 });

@@ -14,6 +14,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { GameAnalysis, GameAnalysisPosition, GameAnalysisService } from './game-analysis.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
  * Eine Partie-Analyse durchblättern (`/analysis/games/:id`): Brett links, Zugliste rechts, je Zug
@@ -191,6 +192,7 @@ export class GameAnalysisDetailComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKey(e: KeyboardEvent): void {
+    if (!isBoardHotkey(e)) return;
     if (e.key === 'ArrowLeft') { this.go(-1); e.preventDefault(); }
     if (e.key === 'ArrowRight') { this.go(1); e.preventDefault(); }
   }
