@@ -77,10 +77,10 @@
     {{ 'tournamentDirectory.profile.notifyNew' | translate }}
   </mat-checkbox>
 
-  @if (error) { <p class="error">{{ error | translate }}</p> }
+  @if (error) { <p class="error">{{ error | translate: errorParams }}</p> }
 </div>
 
 <div class="dialog-actions">
   <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
-  <button mat-flat-button color="primary" (click)="save()">{{ 'common.save' | translate }}</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="saving">{{ 'common.save' | translate }}</button>
 </div>

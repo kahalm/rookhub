@@ -223,6 +223,55 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /**
+   * Codereview 2026-09-29, F6-003: der Suchprofil-Dialog speichert selbst und schliesst mit dem
+   * GESPEICHERTEN Profil; die Seite uebernimmt es nur noch — ohne eigene Anfrage.
+   */
+  it('übernimmt das im Dialog gespeicherte Suchprofil und wählt es', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+
+    const open = spyOn((component as any).dialog, 'open').and.returnValue({ afterClosed: () => of(profile(21, 'Zweitwohnsitz')) });
+    component.newProfile();
+
+    expect(open).toHaveBeenCalled();
+    // Kein POST von hier — gespeichert hat der Dialog.
+    http.expectNone({ method: 'POST', url: '/api/tournament-search-profiles' });
+    const req = flushList([]);
+    expect(component.profiles().map(p => p.id)).toEqual([3, 21]);
+    expect(component.filter.profileId).toBe(21);
+    expect(req.request.params.get('profileId')).toBe('21');
+    http.verify();
+  });
+
+  it('ersetzt beim Bearbeiten das Profil durch die gespeicherte Fassung', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause'), profile(4, 'Ferienhaus')]);
+    flushList([]);
+
+    spyOn((component as any).dialog, 'open').and.returnValue({ afterClosed: () => of({ ...profile(4, 'Ferienhaus'), radiusKm: 50 }) });
+    component.editProfile(profile(4, 'Ferienhaus'));
+    flushList([]);
+
+    expect(component.profiles().find(p => p.id === 4)?.radiusKm).toBe(50);
+    expect(component.profiles().length).toBe(2);
+    http.verify();
+  });
+
+  it('lässt alles, wie es ist, wenn der Suchprofil-Dialog abgebrochen wird', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+
+    spyOn((component as any).dialog, 'open').and.returnValue({ afterClosed: () => of(null) });
+    component.newProfile();
+
+    expect(component.profiles().length).toBe(1);
+    expect(component.filter.profileId).toBe(3);
+    http.verify();
+  });
+
   it('baut nach der Rückkehr dieselbe Ansicht wieder auf', async () => {
     // Ohne das fiele der Weg „Turnier öffnen → zurück" auf die Vorgabefilter zurück.
     await setup();

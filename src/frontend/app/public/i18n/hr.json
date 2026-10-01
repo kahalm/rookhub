@@ -3820,7 +3820,9 @@
       "notifyNew": "Obavijesti me o novim turnirima u ovom polumjeru",
       "errorName": "Molimo daj profilu naziv.",
       "errorPlace": "Odaberi mjesto s popisa ili upotrijebi gumb za lokaciju — poslužitelju trebaju koordinate.",
-      "saveError": "Profil pretrage nije se mogao spremiti."
+      "saveError": "Profil pretrage nije se mogao spremiti.",
+      "errorNameTaken": "Profil pretrage s tim nazivom već postoji. Odaberi drugi naziv.",
+      "errorLimit": "Možeš imati najviše {{max}} profila pretrage. Najprije obriši jedan."
     },
     "speedFilter": "Filtriraj po tempu igre",
     "moreFilters": "Filtri",

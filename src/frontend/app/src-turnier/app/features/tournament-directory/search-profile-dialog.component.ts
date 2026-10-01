@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, Inject, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -14,6 +15,7 @@ import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switc
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryService } from './tournament-directory.service';
+import { SearchProfileService } from './search-profile.service';
 import { GeoPlaceSuggestion, SearchProfile, SearchProfileInput } from './tournament-directory.model';
 
 export interface SearchProfileDialogData {
@@ -24,6 +26,11 @@ export interface SearchProfileDialogData {
  * Suchprofil anlegen oder aendern. Der Ort wird ueber den Gazetteer aufgeloest statt frei
  * eingetippt: der Server braucht Koordinaten, um nachts ohne Browser rechnen zu koennen — ein
  * blosser Ortsname wuerde die Benachrichtigung stumm lassen.
+ *
+ * <p>Gespeichert wird IM Dialog (wie bei „Spieler verfolgen", „Fehler melden", „Turnier fehlt"),
+ * geschlossen erst mit dem gespeicherten Profil. Vorher schloss der Dialog mit der Eingabe und der
+ * Aufrufer speicherte: bei „Name schon vergeben" (409) oder dem 21. Profil (400) waren alle
+ * Eingaben weg, und die Meldung nannte keinen Grund (Codereview 2026-09-29, F6-003).</p>
  */
 @Component({
   selector: 'app-search-profile-dialog',
@@ -58,12 +65,17 @@ export class SearchProfileDialogComponent {
   noMatch = false;
   searchFailed = false;
   error: string | null = null;
+  /** Platzhalter zur Fehlermeldung (die Obergrenze beim 21. Profil). */
+  errorParams: Record<string, unknown> | null = null;
+  /** Speichern laeuft — sperrt den Knopf gegen ein zweites Profil per Doppeltipp. */
+  saving = false;
 
   /**
    * Standort wie in der Filterleiste: ohne Treffer im Ortslexikon war ein Profil sonst nicht
    * anzulegen. In Signalen, weil die Ortung ausserhalb der Angular-Zone antwortet.
    */
   private readonly geolocation = inject(GeolocationService);
+  private readonly profileService = inject(SearchProfileService);
   private readonly destroyRef = inject(DestroyRef);
   readonly locating = signal(false);
   readonly locationError = signal<GeolocationFailure | null>(null);
@@ -72,7 +84,7 @@ export class SearchProfileDialogComponent {
 
   constructor(
     private directory: TournamentDirectoryService,
-    private dialogRef: MatDialogRef<SearchProfileDialogComponent, SearchProfileInput | null>,
+    private dialogRef: MatDialogRef<SearchProfileDialogComponent, SearchProfile | null>,
     @Inject(MAT_DIALOG_DATA) public data: SearchProfileDialogData,
   ) {
     const profile = data.profile;
@@ -195,6 +207,8 @@ export class SearchProfileDialogComponent {
   }
 
   save(): void {
+    if (this.saving) return;
+    this.errorParams = null;
     if (!this.name.trim()) {
       this.error = 'tournamentDirectory.profile.errorName';
       return;
@@ -204,7 +218,7 @@ export class SearchProfileDialogComponent {
       return;
     }
 
-    this.dialogRef.close({
+    const input: SearchProfileInput = {
       name: this.name.trim(),
       placeQuery: this.placeQuery.trim() || null,
       lat: this.lat,
@@ -216,6 +230,44 @@ export class SearchProfileDialogComponent {
       minPlayers: this.minPlayers && this.minPlayers > 0 ? this.minPlayers : null,
       notifyNew: this.notifyNew,
       sortOrder: this.data.profile?.sortOrder ?? 0,
+    };
+
+    const profile = this.data.profile;
+    const request = profile
+      ? this.profileService.update(profile.id, input)
+      : this.profileService.create(input);
+
+    this.saving = true;
+    this.error = null;
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: saved => {
+        this.saving = false;
+        this.dialogRef.close(saved);
+      },
+      // Der Dialog bleibt offen, die Eingaben stehen — und die Meldung sagt, was zu aendern ist.
+      error: (err: unknown) => {
+        this.saving = false;
+        this.showSaveError(err);
+      },
     });
+  }
+
+  private showSaveError(err: unknown): void {
+    const status = err instanceof HttpErrorResponse ? err.status : 0;
+    if (status === 409) {
+      this.error = 'tournamentDirectory.profile.errorNameTaken';
+      return;
+    }
+    // Die Obergrenze kennt nur der Server; seine Botschaft traegt sie („At most 20 …").
+    const message = err instanceof HttpErrorResponse
+      ? (err.error as { message?: unknown } | null)?.message
+      : null;
+    const limit = status === 400 && typeof message === 'string' ? /^At most (\d+)/.exec(message) : null;
+    if (limit) {
+      this.error = 'tournamentDirectory.profile.errorLimit';
+      this.errorParams = { max: Number(limit[1]) };
+      return;
+    }
+    this.error = 'tournamentDirectory.profile.saveError';
   }
 }

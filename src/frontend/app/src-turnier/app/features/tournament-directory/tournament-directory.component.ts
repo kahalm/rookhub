@@ -734,24 +734,20 @@ export class TournamentDirectoryComponent implements OnInit {
     });
   }
 
+  /**
+   * Der Dialog speichert selbst und schliesst mit dem GESPEICHERTEN Profil — ein Fehler (Name
+   * vergeben, Obergrenze) bleibt im Dialog samt Eingaben stehen (Codereview 2026-09-29, F6-003).
+   */
   private openProfileDialog(profile: SearchProfile | null): void {
     const data: SearchProfileDialogData = { profile };
-    this.dialog.open(SearchProfileDialogComponent, { data, width: '460px' })
-      .afterClosed().subscribe(input => {
-        if (!input) return;
-        const request = profile
-          ? this.profileService.update(profile.id, input)
-          : this.profileService.create(input);
-
-        request.subscribe({
-          next: saved => {
-            this.profiles.update(list => (profile
-              ? list.map(p => (p.id === saved.id ? saved : p))
-              : [...list, saved]));
-            this.onProfileChange(saved.id);
-          },
-          error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.profile.saveError')),
-        });
+    this.dialog.open<SearchProfileDialogComponent, SearchProfileDialogData, SearchProfile | null>(
+      SearchProfileDialogComponent, { data, width: '460px' })
+      .afterClosed().subscribe(saved => {
+        if (!saved) return;
+        this.profiles.update(list => (profile
+          ? list.map(p => (p.id === saved.id ? saved : p))
+          : [...list, saved]));
+        this.onProfileChange(saved.id);
       });
   }
 

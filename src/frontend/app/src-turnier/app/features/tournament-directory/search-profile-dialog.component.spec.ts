@@ -7,13 +7,13 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { GeolocationService } from '../../core/geolocation.service';
 import { SearchProfileDialogComponent } from './search-profile-dialog.component';
-import { SearchProfileInput } from './tournament-directory.model';
+import { SearchProfile } from './tournament-directory.model';
 
 describe('SearchProfileDialogComponent', () => {
   let fixture: ComponentFixture<SearchProfileDialogComponent>;
   let component: SearchProfileDialogComponent;
   let http: HttpTestingController;
-  let closed: SearchProfileInput | null | undefined;
+  let closed: SearchProfile | null | undefined;
 
   async function setup(profile: SearchProfileDialogComponent['data']['profile'] = null) {
     closed = undefined;
@@ -23,7 +23,7 @@ describe('SearchProfileDialogComponent', () => {
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: MAT_DIALOG_DATA, useValue: { profile } },
-        { provide: MatDialogRef, useValue: { close: (v: SearchProfileInput | null) => (closed = v) } },
+        { provide: MatDialogRef, useValue: { close: (v: SearchProfile | null) => (closed = v) } },
       ],
     }).compileComponents();
 
@@ -34,6 +34,19 @@ describe('SearchProfileDialogComponent', () => {
   }
 
   afterEach(() => http.verify());
+
+  /**
+   * Der Dialog speichert selbst (F6-003): die Eingabe steht im Rumpf der Anfrage, geschlossen
+   * wird erst mit dem gespeicherten Profil.
+   */
+  function expectSave(method: 'POST' | 'PUT' = 'POST', id?: number) {
+    const url = id === undefined ? '/api/tournament-search-profiles' : `/api/tournament-search-profiles/${id}`;
+    return http.expectOne({ method, url });
+  }
+
+  function saved(body: Record<string, unknown>, id = 9): SearchProfile {
+    return { ...(body as Omit<SearchProfile, 'id'>), id };
+  }
 
   it('verweigert das Speichern ohne Namen', async () => {
     await setup();
@@ -68,9 +81,13 @@ describe('SearchProfileDialogComponent', () => {
 
     component.save();
 
-    expect(closed).toEqual(jasmine.objectContaining({
+    const req = expectSave();
+    expect(req.request.body).toEqual(jasmine.objectContaining({
       name: 'Zuhause', lat: 47.8, lon: 13.04, radiusKm: 75, speeds: ['Blitz'], notifyNew: true,
     }));
+    expect(closed).toBeUndefined();
+    req.flush(saved(req.request.body));
+    expect(closed).toEqual(jasmine.objectContaining({ id: 9, name: 'Zuhause', lat: 47.8 }));
   });
 
   it('füllt das Formular beim Bearbeiten vor', async () => {
@@ -86,7 +103,10 @@ describe('SearchProfileDialogComponent', () => {
     expect(component.notifyNew).toBeFalse();
 
     component.save();
-    expect(closed).toEqual(jasmine.objectContaining({ name: 'Ferienhaus', sortOrder: 2 }));
+    const req = expectSave('PUT', 5);
+    expect(req.request.body).toEqual(jasmine.objectContaining({ name: 'Ferienhaus', sortOrder: 2 }));
+    req.flush(saved(req.request.body, 5));
+    expect(closed).toEqual(jasmine.objectContaining({ id: 5, name: 'Ferienhaus' }));
   });
 
   it('fragt erst ab zwei Zeichen nach Ortsvorschlägen', async () => {
@@ -117,7 +137,9 @@ describe('SearchProfileDialogComponent', () => {
 
     component.save();
 
-    expect(closed!.minPlayers).toBeNull();
+    const req = expectSave();
+    expect(req.request.body.minPlayers).toBeNull();
+    req.flush(saved(req.request.body));
   });
 
   // ----- Ohne Lexikon-Treffer anlegbar, Suche mit Rueckmeldung (F6-007) --------
@@ -139,7 +161,9 @@ describe('SearchProfileDialogComponent', () => {
     component.name = 'Zuhause';
     component.save();
     // Mittelpunkt sind die Koordinaten des GERAETS, der Ort ist nur die Beschriftung.
-    expect(closed).toEqual(jasmine.objectContaining({ name: 'Zuhause', lat: 47.27, lon: 11.39, placeQuery: '6020 Innsbruck (AT)' }));
+    const req = expectSave();
+    expect(req.request.body).toEqual(jasmine.objectContaining({ name: 'Zuhause', lat: 47.27, lon: 11.39, placeQuery: '6020 Innsbruck (AT)' }));
+    req.flush(saved(req.request.body));
   });
 
   it('legt das Profil auch ohne Ort im Lexikon an — mit den Koordinaten als Beschriftung', async () => {
@@ -155,7 +179,9 @@ describe('SearchProfileDialogComponent', () => {
     expect(component.placeQuery).toBe('59.910, 10.750');
     component.name = 'Oslo';
     component.save();
-    expect(closed).toEqual(jasmine.objectContaining({ name: 'Oslo', lat: 59.91, lon: 10.75 }));
+    const req = expectSave();
+    expect(req.request.body).toEqual(jasmine.objectContaining({ name: 'Oslo', lat: 59.91, lon: 10.75 }));
+    req.flush(saved(req.request.body));
   });
 
   it('meldet eine abgelehnte Standortfreigabe', async () => {
@@ -197,5 +223,87 @@ describe('SearchProfileDialogComponent', () => {
       .flush([{ label: '5020 Salzburg (AT)', country: 'AT', postalCode: '5020', lat: 47.8, lon: 13.04 }]);
     expect(component.suggestions.length).toBe(1);
     expect(component.searchFailed).toBeFalse();
+  });
+
+  // ----- Speichern im Dialog: Fehler lassen die Eingaben stehen (F6-003) ----------
+
+  function fillValid() {
+    component.name = 'Zuhause';
+    component.choose({ label: '6380 St. Johann (AT)', country: 'AT', postalCode: '6380', lat: 47.52, lon: 12.42 });
+    component.radiusKm = 150;
+    component.selectedSpeeds = ['Rapid'];
+    component.weekendOnly = true;
+  }
+
+  /**
+   * Zweites Profil, wieder „Zuhause" genannt: vorher schloss der Dialog VOR dem Speichern, das 409
+   * kam als „konnte nicht gespeichert werden", und Ort, Umkreis und Bedenkzeiten waren weg.
+   */
+  it('bleibt bei „Name schon vergeben" (409) offen, behält die Eingaben und nennt den Grund', async () => {
+    await setup();
+    fillValid();
+
+    component.save();
+    expect(component.saving).toBeTrue();
+    expectSave().flush({ message: 'A search profile with this name already exists.' }, { status: 409, statusText: 'Conflict' });
+    fixture.detectChanges();
+
+    expect(closed).toBeUndefined();
+    expect(component.saving).toBeFalse();
+    expect(component.error).toBe('tournamentDirectory.profile.errorNameTaken');
+    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.profile.errorNameTaken');
+    expect(component.lat).toBe(47.52);
+    expect(component.radiusKm).toBe(150);
+    expect(component.selectedSpeeds).toEqual(['Rapid']);
+    expect(component.weekendOnly).toBeTrue();
+
+    // Neuer Name, zweiter Versuch — aus demselben Dialog.
+    component.name = 'Zweitwohnsitz';
+    component.save();
+    const req = expectSave();
+    expect(req.request.body).toEqual(jasmine.objectContaining({ name: 'Zweitwohnsitz', lat: 47.52 }));
+    req.flush(saved(req.request.body, 21));
+    expect(closed).toEqual(jasmine.objectContaining({ id: 21, name: 'Zweitwohnsitz' }));
+    expect(component.error).toBeNull();
+  });
+
+  it('nennt beim 21. Profil die Obergrenze des Servers', async () => {
+    await setup();
+    fillValid();
+
+    component.save();
+    expectSave().flush({ message: 'At most 20 search profiles per user.' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(closed).toBeUndefined();
+    expect(component.error).toBe('tournamentDirectory.profile.errorLimit');
+    expect(component.errorParams).toEqual({ max: 20 });
+  });
+
+  it('meldet einen sonstigen Fehler allgemein und bleibt offen', async () => {
+    await setup();
+    fillValid();
+
+    component.save();
+    expectSave().flush('kaputt', { status: 500, statusText: 'Server Error' });
+
+    expect(closed).toBeUndefined();
+    expect(component.error).toBe('tournamentDirectory.profile.saveError');
+    expect(component.name).toBe('Zuhause');
+  });
+
+  it('schickt bei einem Doppeltipp auf „Speichern" nur eine Anfrage', async () => {
+    await setup();
+    fillValid();
+
+    component.save();
+    component.save();
+    fixture.detectChanges();
+    const button = Array.from(fixture.nativeElement.querySelectorAll('.dialog-actions button') as NodeListOf<HTMLButtonElement>)
+      .find(b => b.textContent?.includes('common.save'))!;
+    expect(button.disabled).toBeTrue();
+
+    const req = expectSave();
+    req.flush(saved(req.request.body));
+    expect(closed).toEqual(jasmine.objectContaining({ id: 9 }));
   });
 });

@@ -3541,7 +3541,9 @@
       "notifyNew": "Értesíts az ebben a körzetben induló új versenyekről",
       "errorName": "Adj nevet a profilnak.",
       "errorPlace": "Válassz egy települést a listából, vagy használd a helymeghatározás gombot — a szervernek koordináták kellenek.",
-      "saveError": "A keresési profilt nem sikerült menteni."
+      "saveError": "A keresési profilt nem sikerült menteni.",
+      "errorNameTaken": "Már van ilyen nevű keresési profil. Válassz másik nevet.",
+      "errorLimit": "Legfeljebb {{max}} keresési profilod lehet. Előbb törölj egyet."
     },
     "speedFilter": "Szűrés időbeosztás szerint",
     "moreFilters": "Szűrők",
