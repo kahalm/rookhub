@@ -23,6 +23,7 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { AuthService } from '../../core/auth.service';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
+import { defaults as chessgroundDefaults } from 'chessground/state';
 
 /**
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
@@ -1622,4 +1623,35 @@ describe('AnalysisComponent Seitenleiste: Beschriftungen passen (UX-048)', () =>
       fixture.destroy();
     });
   }
+});
+
+// Codereview UX-049: die Pfeile hatten Farben, die Linienliste nicht — welcher Pfeil zu welcher Linie gehört, musste man
+// über Feld und SAN selbst zuordnen; ab fünf Linien gab es zweimal Blau.
+describe('AnalysisComponent Linienliste trägt die Pfeilfarbe (UX-049)', () => {
+  it('jede Linie hat einen Punkt in der Farbe ihres Pfeils, fünf Linien = fünf verschiedene Farben', async () => {
+    const fixture = await renderAnalysis();
+    const c = fixture.componentInstance as any;
+    c.engineOn = true;
+    const firsts = ['e2e4', 'd2d4', 'g1f3', 'c2c4', 'b1c3'];
+    c.onEngineUpdate(c.currentFen, 20, firsts.map((u, i) => ({
+      multipv: i + 1, depth: 20, scoreType: 'cp', score: 30, evalText: '+0.30', pvUci: [u],
+    })));
+    fixture.detectChanges();
+
+    const brushes: string[] = c.shapes.map((s: { brush: string }) => s.brush);
+    expect(brushes.length).toBe(5);
+    expect(new Set(brushes).size).withContext(brushes.join(',')).toBe(5);
+
+    const marks = Array.from(fixture.nativeElement.querySelectorAll('.lines .line-row .line-mark')) as HTMLElement[];
+    expect(marks.length).toBe(5);
+    const board = chessgroundDefaults().drawable.brushes;
+    const probe = document.createElement('span');
+    document.body.appendChild(probe);
+    const rgb = (color: string) => { probe.style.background = color; return getComputedStyle(probe).backgroundColor; };
+    marks.forEach((m, i) => {
+      expect(getComputedStyle(m).backgroundColor).withContext(`Linie ${i + 1} (${brushes[i]})`).toBe(rgb(board[brushes[i]].color));
+    });
+    probe.remove();
+    fixture.destroy();
+  });
 });

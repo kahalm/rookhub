@@ -14,6 +14,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Chess } from 'chess.js';
 import { Color, Key } from 'chessground/types';
 import { DrawShape } from 'chessground/draw';
+import { defaults as chessgroundDefaults } from 'chessground/state';
 import { Subscription, interval } from 'rxjs';
 import { EngineDisplayLine, formatElapsed as formatElapsedUtil, formatKiloNodes, formatKiloNps, toDisplayLines as toDisplayLinesUtil, uciLineToSan as uciLineToSanUtil } from './engine-lines.util';
 import { AnalysisBoardComponent } from './analysis-board.component';
@@ -57,7 +58,11 @@ const COMPARE_ENGINE_KEY = 'rookhub_analysis_compare_engine';
 // ACHTUNG: Jeder Wert hier muss den Clamp in AnalysisEngineService.setDepth überleben,
 // sonst wählt man 50 und bekommt stillschweigend weniger (Test hält das fest).
 export const DEPTH_OPTIONS = [12, 16, 18, 20, 22, 26, 30, 35, 40, 45, 50];
-const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'blue'];
+// Fünf verschiedene Pinsel (UX-049: die fünfte Linie war wieder Blau). Die Linienliste setzt dieselbe Farbe als Punkt vor
+// jede Linie — die Farben kommen aus den Standardpinseln von chessground, also genau die des Pfeils auf dem Brett.
+const ARROW_BRUSHES = ['green', 'blue', 'yellow', 'red', 'purple'];
+const arrowBrush = (i: number): string => ARROW_BRUSHES[i] || 'blue';
+const BOARD_BRUSHES = chessgroundDefaults().drawable.brushes;
 /** Ab dieser Tiefe übernimmt die Bewertungsleiste den Wert einer neuen Suche. Darunter schwanken
  *  die Zahlen stark (Tiefe 1–5 liegt gern eine Figur daneben) — die Leiste bliebe sonst bei jedem
  *  Zug unruhig. Muss unter dem kleinsten DEPTH_OPTIONS-Wert liegen, sonst erreicht eine
@@ -201,8 +206,9 @@ const EVAL_SETTLE_DEPTH = 10;
                   <p class="muted">{{ 'analysis.calculating' | translate }}</p>
                 } @else {
                   <div class="lines">
-                    @for (l of displayLines; track $index) {
+                    @for (l of displayLines; track $index; let i = $index) {
                       <div class="line-row">
+                        <span class="line-mark" [style.background]="lineColor(i)" aria-hidden="true"></span>
                         <span class="line-eval" [class.neg]="!l.positive">{{ l.evalText }}</span>
                         <span class="line-san">{{ l.san }}</span>
                       </div>
@@ -374,6 +380,8 @@ const EVAL_SETTLE_DEPTH = 10;
     .muted { color: color-mix(in srgb, currentColor 47%, transparent); font-style: italic; margin: 8px 0 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .line-row { display: flex; gap: 8px; font-size: .9rem; }
+    .line-mark { flex: 0 0 auto; align-self: center; width: 10px; height: 10px; border-radius: 50%;
+      box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
     .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: #1b5e20; }
     .line-eval.neg { color: #b71c1c; }
     .line-san { font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -863,7 +871,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
     this.shapes = lines.map((l, i) => {
       const u = l.pvUci[0];
-      return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: ARROW_BRUSHES[i] || 'blue' } as DrawShape : null;
+      return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i) } as DrawShape : null;
     }).filter((s): s is DrawShape => !!s);
     // Bewertungsleiste HALTEN, bis die neue Suche etwas Belastbares liefert. Jede Suche beginnt mit
     // einem Zwischenstand ohne Linien; früher sprang die Leiste darauf auf 0.00 und erst Sekunden
@@ -889,6 +897,11 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  Nebeneinander-Ansicht, die dieselbe Bewertung links anders einfaerbt als rechts, waere
    *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
    *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
+  /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). */
+  lineColor(i: number): string {
+    return BOARD_BRUSHES[arrowBrush(i)]?.color ?? 'transparent';
+  }
+
   private toDisplayLines(fen: string, lines: AnalysisLine[]): EngineDisplayLine[] {
     return toDisplayLinesUtil(fen, lines, 12);
   }
