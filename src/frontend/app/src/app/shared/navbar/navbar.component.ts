@@ -21,7 +21,8 @@ import { MessageService } from '../../core/message.service';
 import { notificationText, notificationIcon } from '../../core/notification-text';
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
-import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
+import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
+import { environment } from '../../../environments/environment';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
 import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
 import {
@@ -167,6 +168,8 @@ import {
           @if (can('chessable')) { <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button> }
           @if (can('install')) { <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
+          <!-- Rueckmeldung und Version: am Handy ist die Fusszeile aus, das Menue ist der einzige Weg (UX-053). -->
+          <a mat-menu-item class="feedback-item" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
           <!-- Eingeloggt der einzige Weg zu den Rechtsseiten am Handy (die Fusszeile ist dort aus, UX-017). -->
           <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</button>
           @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
@@ -174,7 +177,7 @@ import {
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
           </button>
-          <button mat-menu-item (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }}</button>
+          <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></button>
           <button mat-menu-item (click)="auth.logout()">{{ 'nav.logout' | translate }}</button>
         </mat-menu>
       } @else {
@@ -203,6 +206,15 @@ import {
           <button mat-menu-item (click)="quickstartClick.emit()">
             <mat-icon>info_outline</mat-icon>
             <span>{{ 'nav.info' | translate }}</span>
+          </button>
+          <!-- Rueckmeldung und Version: am Handy ist die Fusszeile aus, das Menue ist der einzige Weg (UX-053). -->
+          <a mat-menu-item class="feedback-item" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">
+            <mat-icon>bug_report</mat-icon>
+            <span>{{ 'app.feedback' | translate }}</span>
+          </a>
+          <button mat-menu-item class="changelog-item" (click)="changelogClick.emit()">
+            <mat-icon>history</mat-icon>
+            <span>{{ 'nav.changelog' | translate }} <span class="menu-version">v{{ version }}</span></span>
           </button>
           <a mat-menu-item [href]="discordUrl" target="_blank" rel="noopener noreferrer">
             <mat-icon svgIcon="discord"></mat-icon>
@@ -245,6 +257,7 @@ import {
   styles: [`
     .logo { cursor: pointer; font-weight: bold; font-size: 1.3em; }
     .spacer { flex: 1 1 auto; }
+    .menu-version { margin-left: 4px; font-size: 0.85em; color: color-mix(in srgb, currentColor 60%, transparent); }
     .lang-menu-label { padding: 8px 16px 4px; font-size: 0.75rem; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
     .notif-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px 4px 16px; }
     .notif-header-title { font-size: 0.75rem; font-weight: 600; color: color-mix(in srgb, currentColor 47%, transparent); text-transform: uppercase; }
@@ -332,6 +345,9 @@ export class NavbarComponent implements OnInit {
   /** Einladungslink zum öffentlichen RookHub-Discord (Community). */
   readonly discordUrl = DISCORD_INVITE_URL;
   readonly kofiUrl = KOFI_URL;
+  /** Issue-Tracker und Versionsnummer im ☰-Menü — am Handy ist die Fußzeile aus (UX-053). */
+  readonly feedbackUrl = FEEDBACK_URL;
+  readonly version = environment.version;
 
   // ===== App-Vollbild ======================================================
   // Schaltet die GANZE GUI (documentElement) ins echte Vollbild — anders als der Brett-

@@ -18,6 +18,8 @@ import { ThemeService } from '../../core/theme.service';
 import { HandoffService } from '../../core/handoff.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
+import { FEEDBACK_URL } from '../../core/community';
+import { environment } from '../../../environments/environment';
 
 describe('NavbarComponent', () => {
   // Über TestBed in einem Injection-Context bauen: NavbarComponent nutzt
@@ -187,6 +189,39 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     trigger.click();
     fixture.detectChanges();
     expect(legalItems()).toEqual(['legal.privacy.title', 'legal.impressum.title']);
+    trigger.click();
+    fixture.detectChanges();
+  });
+
+  // Am Handy ist die Fusszeile aus (hide-on-mobile) — „Feedback / Bug melden“ und die Versionsnummer waren dort
+  // nirgends erreichbar, das Gast-Menü hatte beides nicht, das Konto-Menü kein Feedback (UX-053).
+  const overlayItem = (cls: string) => document.querySelector(`.cdk-overlay-container .${cls}`) as HTMLElement | null;
+
+  it('ausgeloggt: das ☰-Menü führt zum Feedback und zum Changelog mit Versionsnummer', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles'] });
+    const emitted = spyOn(fixture.componentInstance.changelogClick, 'emit');
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    expect(overlayItem('feedback-item')?.getAttribute('href')).toBe(FEEDBACK_URL);
+    const changelog = overlayItem('changelog-item')!;
+    expect(changelog.textContent).toContain('v' + environment.version);
+    changelog.click();
+    expect(emitted).toHaveBeenCalled();
+    fixture.detectChanges();
+  });
+
+  it('eingeloggt: ☰ → Konto führt zum Feedback, der Changelog zeigt die Versionsnummer', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const account = Array.from(document.querySelectorAll('.cdk-overlay-container button'))
+      .find(b => b.textContent?.includes('nav.account')) as HTMLButtonElement;
+    account.click();
+    fixture.detectChanges();
+    expect(overlayItem('feedback-item')?.getAttribute('href')).toBe(FEEDBACK_URL);
+    expect(overlayItem('changelog-item')?.textContent).toContain('v' + environment.version);
     trigger.click();
     fixture.detectChanges();
   });

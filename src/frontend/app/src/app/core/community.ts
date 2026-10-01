@@ -15,6 +15,9 @@ export const REPCHECK_FIREFOX_URL = 'https://addons.mozilla.org/firefox/addon/re
  */
 export const KOFI_URL = 'https://ko-fi.com/kahalm';
 
+/** Issue-Tracker für Rückmeldungen und Fehlerberichte — Fußzeile UND ☰-Menü (am Handy ist die Fußzeile aus, UX-053). */
+export const FEEDBACK_URL = 'https://github.com/kahalm/rookhub/issues';
+
 /**
  * Discord-Markenlogo als SVG-Literal (nicht im Material-Standardsatz enthalten).
  * Wird in AppComponent + NavbarComponent via `iconRegistry.addSvgIconLiteral('discord', …)`

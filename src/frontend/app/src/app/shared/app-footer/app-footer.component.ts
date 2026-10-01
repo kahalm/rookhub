@@ -6,7 +6,7 @@ import { A11yModule } from '@angular/cdk/a11y';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../environments/environment';
 import { ChangelogEntry } from '../../../environments/changelog';
-import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
+import { DISCORD_INVITE_URL, DISCORD_SVG, FEEDBACK_URL, KOFI_URL } from '../../core/community';
 import { partnerSiteUrl } from '../../core/partner-site';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
 
@@ -45,7 +45,7 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
         <a class="feedback-link" [href]="helpHref">{{ 'nav.help' | translate }}</a>
       }
       <span class="footer-sep">·</span>
-      <a class="feedback-link" href="https://github.com/kahalm/rookhub/issues" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
+      <a class="feedback-link" [href]="feedbackUrl" target="_blank" rel="noopener noreferrer">{{ 'app.feedback' | translate }}</a>
       <span class="footer-sep">·</span>
       <a class="discord-link" [href]="discordUrl" target="_blank" rel="noopener noreferrer"
          [attr.aria-label]="'nav.discord' | translate">
@@ -99,8 +99,8 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
   `,
   styles: [`
     .app-footer { text-align: center; padding: 8px; color: color-mix(in srgb, currentColor 47%, transparent); font-size: 0.75rem; }
-    /* Am Handy ausblenden ist RookHubs Vorgabe (das Menue traegt Hilfe/Changelog/Discord
-       selbst). Die Turnierseite hat keinen solchen Ersatz und schaltet es per Input ab —
+    /* Am Handy ausblenden ist RookHubs Vorgabe (das Menue traegt Hilfe/Changelog mit Version/
+       Feedback/Discord selbst, UX-053). Die Turnierseite hat keinen solchen Ersatz und schaltet es per Input ab —
        die Klasse traegt die Absicht der Huelle, nicht ein Selektor auf ein Wurzel-Tag. */
     @media (max-width: 768px) { .app-footer.hide-on-mobile { display: none; } }
     @media (max-width: 768px) {
@@ -179,10 +179,11 @@ export class AppFooterComponent {
   readonly production = environment.production;
   readonly discordUrl = DISCORD_INVITE_URL;
   readonly kofiUrl = KOFI_URL;
+  readonly feedbackUrl = FEEDBACK_URL;
 
   /**
-   * Bis 768px ausblenden? Vorgabe ja (RookHub: das Menue fuehrt zu Hilfe, Changelog und
-   * Discord). Die Turnierseite setzt false — dort waere die Fusszeile am Handy sonst der
+   * Bis 768px ausblenden? Vorgabe ja (RookHub: das ☰-Menue fuehrt zu Hilfe, Changelog mit
+   * Versionsnummer, Feedback und Discord — fuer Gaeste wie Angemeldete, UX-053). Die Turnierseite setzt false — dort waere die Fusszeile am Handy sonst der
    * einzige, aber unsichtbare Weg zu Version, Hilfe und Rueckmeldung gewesen.
    */
   @Input() hideOnMobile = true;
