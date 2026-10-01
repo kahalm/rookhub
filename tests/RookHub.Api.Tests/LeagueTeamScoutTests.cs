@@ -153,7 +153,7 @@ public class LeagueTeamScoutTests : IDisposable
     private LeagueTeamScout Scout(FakeHttp http) =>
         new(_db, new HttpClient(http), NullLogger<LeagueTeamScout>.Instance,
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["LeagueOnline:TeamPlaces"] = "Kufstein" }).Build())
-        { Pause = TimeSpan.Zero };
+        { Pause = TimeSpan.Zero, RetryPause = TimeSpan.Zero };
 
     private static string Pgn(string white, string whiteFide, string black, string line, int year) =>
         $"[Event \"Liga\"]\n[Date \"{year}.01.01\"]\n[White \"{white}\"]\n[Black \"{black}\"]\n[WhiteFideId \"{whiteFide}\"]\n[Result \"1-0\"]\n\n"
@@ -234,6 +234,46 @@ public class LeagueTeamScoutTests : IDisposable
             ? Status(HttpStatusCode.TooManyRequests) : world.Answer(req));
         await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => Scout(http).RefreshPoolAsync(default));
         Assert.Empty(await _db.LeagueScoutAccounts.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Pool_RetriesOnceAfterATransientFailure_AndKeepsTheBattle()
+    {
+        // 01.10.2026 auf Prod: von 155 Team-Battles in Folge kamen 37 mit 502 zurueck, alle binnen drei Sekunden —
+        // einzeln abgefragt antworten dieselben Kennungen mit 200. Ein 502 ist hier die Last, keine Auskunft.
+        var world = World();
+        var first = true;
+        var http = new FakeHttp(req =>
+        {
+            if (req.RequestUri!.ToString().EndsWith("/api/tournament/tb1") && first) { first = false; return Status(HttpStatusCode.BadGateway); }
+            return world.Answer(req);
+        });
+        Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToListAsync();
+        Assert.Equal((string?)"SK Kufstein", pool[1].PlayedFor);                              // der zweite Versuch trug
+        Assert.Equal((string?)"Online TMM 2021", pool[1].Events);
+        Assert.Equal(2, http.Urls.Count(x => x.EndsWith("/api/tournament/tb1")));             // genau EIN Wiederholversuch
+    }
+
+    [Fact]
+    public async Task Pool_ATransientFailureThatStays_IsSkippedNotFatal()
+    {
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().EndsWith("/api/tournament/tb1")
+            ? Status(HttpStatusCode.ServiceUnavailable) : world.Answer(req));
+        Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));                          // die Mitglieder bleiben
+        Assert.All(await _db.LeagueScoutAccounts.ToListAsync(), a => Assert.Null(a.PlayedFor));
+        Assert.Equal(2, http.Urls.Count(x => x.EndsWith("/api/tournament/tb1")));             // zweimal versucht, dann Schluss
+    }
+
+    [Fact]
+    public async Task Pool_A401IsAnAnswer_AndIsNotRetried()
+    {
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/team/sk-kufstein/users")
+            ? Status(HttpStatusCode.Unauthorized) : world.Answer(req));
+        await Scout(http).RefreshPoolAsync(default);
+        Assert.Equal(1, http.Urls.Count(x => x.Contains("/api/team/sk-kufstein/users")));      // kein zweiter Versuch
     }
 
     [Fact]

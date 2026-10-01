@@ -62,6 +62,12 @@ public sealed partial class LeagueTeamScout
 
     public TimeSpan Pause { get; init; } = TimeSpan.FromSeconds(1);
 
+    /// <summary>Ein Wiederholversuch je Abruf (also hoechstens zwei Anfragen) — siehe <see cref="GetAsync"/>.</summary>
+    private const int MaxAttempts = 2;
+
+    /// <summary>Pause vor dem Wiederholversuch; im Test 0.</summary>
+    public TimeSpan RetryPause { get; init; } = TimeSpan.FromSeconds(2);
+
     // ── Lesen (rein, getestet) ──────────────────────────────────────────────────────────────────
 
     /// <summary>Beide Schreibweisen eines Orts, klein: „Wörgl" → „woergl" und „worgl".</summary>
@@ -173,7 +179,36 @@ public sealed partial class LeagueTeamScout
 
     // ── Abrufen ─────────────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Ein Abruf, mit EINEM Wiederholversuch bei einem VORÜBERGEHENDEN Fehler (5xx oder keine Verbindung).
+    /// Gemessen am 2026-10-01 auf Prod: von 155 Team-Battles in Folge beantwortete Lichess 37 mit <c>502</c>, alle
+    /// binnen drei Sekunden — und dieselben Turnier-Kennungen antworten einzeln abgefragt mit 200. Ein 502 ist hier
+    /// also die Last, keine Auskunft; ohne Wiederholung verloren diese 37 Battles ihr <c>PlayedFor</c>/<c>Events</c>
+    /// bis zum nächsten Pool-Lauf (<see cref="PoolEvery"/>, 30 Tage).
+    /// NICHT wiederholt wird, was eine ANTWORT ist: 404 (<c>null</c>), 401/403 (siehe <see cref="GetOpenAsync"/>)
+    /// und 429 — das ist eine <see cref="LeagueOnlineSync.RateLimitedException"/> und beendet den Durchgang.
+    /// </summary>
     private async Task<string?> GetAsync(string url, CancellationToken ct, string? accept = null)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await FetchOnceAsync(url, ct, accept);
+            }
+            catch (HttpRequestException e) when (attempt < MaxAttempts && IsTransient(e))
+            {
+                _logger.LogInformation("LeagueHub: Team-Suche — {Url} voruebergehend nicht erreichbar ({Status}), neuer Versuch",
+                    url, (int?)e.StatusCode);
+                if (RetryPause > TimeSpan.Zero) await Task.Delay(RetryPause, ct);
+            }
+        }
+    }
+
+    /// <summary>5xx und „keine Verbindung" (<see cref="HttpRequestException.StatusCode"/> ist dann <c>null</c>) sind vorübergehend.</summary>
+    private static bool IsTransient(HttpRequestException e) => e.StatusCode is null || (int)e.StatusCode >= 500;
+
+    private async Task<string?> FetchOnceAsync(string url, CancellationToken ct, string? accept = null)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         if (accept is not null) req.Headers.Accept.ParseAdd(accept);

@@ -1907,6 +1907,16 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   von `HttpRequestException`, und genau das nagelt `Pool_ATooManyRequests_StillEndsTheRun` fest. Die Team-SUCHE selbst
   (`/api/team/search`) bleibt ungeduldet: antwortet die nicht, ist nichts zu holen, und ein Abbruch ist die richtige
   Meldung.
+* **Ein 502 ist die Last, keine Auskunft — deshalb EIN Wiederholversuch** (0.624.2, am 01.10.2026 auf Prod gemessen):
+  der erste Pool-Lauf mit 0.623.1 brachte 413 Konten (vorher 0) und meldete „30 Tiroler Teams, 155 Team-Battles,
+  413 neue Konten, 37 uebersprungen" — die 37 waren KEIN 401/403, sondern **502 auf Team-Battles, alle binnen drei
+  Sekunden**, und dieselben Turnier-Kennungen antworten einzeln abgefragt mit 200. Der Duldungs-`catch` schluckte sie
+  endgültig, ihr `PlayedFor`/`Events` wäre erst beim nächsten Pool-Lauf (30 Tage) gekommen. `GetAsync` wiederholt
+  deshalb EINMAL (`MaxAttempts` 2) nach `RetryPause` (2 s, im Test 0), aber NUR bei einem vorübergehenden Fehler —
+  `IsTransient`: 5xx oder gar keine Verbindung (`HttpRequestException.StatusCode` ist dann `null`). Was eine ANTWORT
+  ist, wird nie wiederholt: 404 (`null`), 401/403 (die Duldung oben) und 429 (`RateLimitedException`, beendet den
+  Durchgang). Die Wiederholung sitzt in `GetAsync`, gilt also auch für die Team-Suche und den Partien-Abruf der
+  Konto-Prüfung — dort kostete ein 502 bisher dem Konto einen Tag.
 * **Prüfen** (`RunOnceAsync`, je Konto einmal, dann alle `RecheckDays` 90): Profile gesammelt über `POST /api/users`. (1) Steht ein
   Klarname im Profil, der zu einem Spieler der laufenden Saison passt (alle Nachnamen-Teile + Vorname voll, `FirstNameMatch`), gilt das
   Urteil der Namenssuche (`Judge` mit `lead` = die Team-Herkunft als erster Hinweis statt „Nutzername aus dem Namen"), +1 Punkt.
