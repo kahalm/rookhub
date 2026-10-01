@@ -1,6 +1,25 @@
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { MatTooltip } from '@angular/material/tooltip';
+import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
 import { AnalysisEngineService } from './analysis-engine.service';
+import { AnalysisBoardComponent } from './analysis-board.component';
+import { PositionSetupComponent } from './position-setup.component';
+import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
+import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { OpeningExplorerComponent } from './opening-explorer.component';
+import { PositionMenuComponent } from './position-menu.component';
+import { AnalysisMoveTreeComponent } from './analysis-move-tree.component';
+import { ExternalEngineService } from './external-engine.service';
+import { AnalysisHistoryService } from './analysis-history.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { AuthService } from '../../core/auth.service';
 
 /**
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
@@ -1107,5 +1126,56 @@ describe('AnalysisComponent Zugbaum (0.604.0)', () => {
     expect(sans(c.line)).toEqual(['e4', 'c5', 'Nf3']);
     expect(sans(c.root.children[0].children)).toEqual(['e5', 'c5']);
     c.ngOnDestroy();
+  });
+});
+
+// Codereview UX-014: die Brett-Steuerknöpfe trugen nur matTooltip — der Text landet dort als aria-describedby, die
+// Knöpfe hießen für Screenreader bloß „Schaltfläche" (axe button-name, critical, 6 Knoten). Gerendert wird die echte
+// Vorlage; nur die schweren Kind-Komponenten (Brett, Explorer, Menü …) fallen weg, die Knopfreihe bleibt unverändert.
+describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
+  let fixture: ComponentFixture<AnalysisComponent>;
+
+  beforeEach(async () => {
+    const engine: any = {
+      analysis$: new Subject(), engineFatalError$: new Subject(), remoteFallback$: new Subject(), remoteInterrupted$: new Subject(),
+      setMultiPv: () => {}, setDepth: () => {}, setRemoteEngine: () => {},
+      analyze: () => Promise.resolve(), stop: () => {}, destroy: () => {},
+    };
+    TestBed.overrideComponent(AnalysisComponent, {
+      remove: { imports: [AnalysisBoardComponent, PositionSetupComponent, PositionRepertoiresComponent, HelpHintComponent,
+        OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent] },
+      add: { schemas: [NO_ERRORS_SCHEMA] },
+    });
+    await TestBed.configureTestingModule({
+      imports: [AnalysisComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AnalysisEngineService, useValue: engine },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+        { provide: Router, useValue: { navigateByUrl: () => {} } },
+        { provide: SnackbarService, useValue: { show: () => {}, warn: () => {} } },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: ExternalEngineService, useValue: { listEngines: () => new Subject(), analyse: () => {} } },
+        { provide: AnalysisHistoryService, useValue: { save: () => of({}), get: () => of({}), list: () => of([]) } },
+        { provide: MatDialog, useValue: { open: () => {} } },
+      ],
+    }).compileComponents();
+    fixture = TestBed.createComponent(AnalysisComponent);
+    fixture.detectChanges();   // kein whenStable: die Seite hält eigene Zeitgeber offen
+  });
+
+  afterEach(() => fixture.destroy());
+
+  it('jeder Symbolknopf der Zugreihe hat ein aria-label mit dem Text seines Tooltips', () => {
+    const buttons: HTMLButtonElement[] = Array.from(fixture.nativeElement.querySelectorAll('.moves-card .controls > button'));
+    // Anfang, Zurück, Vor, Ende, Stern, Brett drehen, Zurücksetzen (das ⋮-Menü ist eine eigene Komponente)
+    expect(buttons.length).toBe(7);
+    expect(buttons.map(b => b.getAttribute('aria-label'))).toEqual([
+      'analysis.start', 'pgnViewer.nav.previous', 'pgnViewer.nav.next', 'pgnViewer.nav.last',
+      'analysis.star.add', 'analysis.flip', 'analysis.reset',
+    ]);
+    const debugButtons = fixture.debugElement.queryAll(By.css('.moves-card .controls > button'));
+    expect(debugButtons.map(d => d.injector.get(MatTooltip).message)).toEqual(buttons.map(b => b.getAttribute('aria-label')!));
   });
 });

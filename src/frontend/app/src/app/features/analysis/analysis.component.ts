@@ -21,6 +21,7 @@ import { PositionSetupComponent } from './position-setup.component';
 import { AnalysisEngineService, AnalysisLine, RemoteInterruption } from './analysis-engine.service';
 import { ExternalEngineService, ExternalEngineInfo, engineTagKey } from './external-engine.service';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
+import { IconLabelDirective } from '../../shared/icon-label/icon-label.directive';
 import { SnackbarService } from '../../core/snackbar.service';
 import { PositionRepertoiresComponent } from '../repertoire/position-repertoires.component';
 import { OpeningExplorerComponent } from './opening-explorer.component';
@@ -68,7 +69,8 @@ const EVAL_SETTLE_DEPTH = 10;
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatSlideToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatTooltipModule, TranslatePipe, AnalysisBoardComponent, PositionSetupComponent,
-    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent
+    PositionRepertoiresComponent, HelpHintComponent, OpeningExplorerComponent, PositionMenuComponent, AnalysisMoveTreeComponent,
+    IconLabelDirective
   ],
   template: `
     <div class="analysis-page">
@@ -237,17 +239,19 @@ const EVAL_SETTLE_DEPTH = 10;
           <mat-card class="moves-card">
             <mat-card-content>
               <div class="controls">
-                <button mat-icon-button (click)="goTo(0)" [disabled]="ply === 0" [matTooltip]="'analysis.start' | translate"><mat-icon>first_page</mat-icon></button>
-                <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [matTooltip]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
-                <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
-                <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [matTooltip]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
+                <!-- appIconLabel statt matTooltip (Codereview UX-014): derselbe Text wird auch der zugängliche Name —
+                     mit Tooltip allein hießen die Knöpfe für Screenreader nur „Schaltfläche". -->
+                <button mat-icon-button (click)="goTo(0)" [disabled]="ply === 0" [appIconLabel]="'analysis.start' | translate"><mat-icon>first_page</mat-icon></button>
+                <button mat-icon-button (click)="prev()" [disabled]="ply === 0" [appIconLabel]="'pgnViewer.nav.previous' | translate"><mat-icon>chevron_left</mat-icon></button>
+                <button mat-icon-button (click)="next()" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.next' | translate"><mat-icon>chevron_right</mat-icon></button>
+                <button mat-icon-button (click)="goTo(line.length)" [disabled]="ply >= line.length" [appIconLabel]="'pgnViewer.nav.last' | translate"><mat-icon>last_page</mat-icon></button>
                 <button mat-icon-button class="star-btn" [class.on]="!!currentNode.starred" (click)="toggleStar()"
-                        [matTooltip]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
+                        [appIconLabel]="(currentNode.starred ? 'analysis.star.remove' : 'analysis.star.add') | translate">
                   <mat-icon>{{ currentNode.starred ? 'star' : 'star_border' }}</mat-icon>
                 </button>
                 <span class="spacer"></span>
-                <button mat-icon-button (click)="flip()" [matTooltip]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
-                <button mat-icon-button (click)="reset()" [matTooltip]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
+                <button mat-icon-button (click)="flip()" [appIconLabel]="'analysis.flip' | translate"><mat-icon>cached</mat-icon></button>
+                <button mat-icon-button (click)="reset()" [appIconLabel]="'analysis.reset' | translate"><mat-icon>restart_alt</mat-icon></button>
                 <!-- ⋮ für die Stellung (0.527.0): Chessable-Suche, teilen, FEN kopieren, Hintergrund-Analyse + Aufträge —
                      die beiden letzten standen vorher als eigene Symbole in der Engine-Zeile. -->
                 <app-position-menu [fen]="currentFen" [orientation]="orientation" [depth]="depthSetting" [lines]="linesCount"
