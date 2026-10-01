@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -556,6 +557,62 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Equal(43, await db.LeagueClubGames.CountAsync());
         Assert.Equal((0, 40), ((await club.ImportPgnAsync(null, Games(40, 1950), null)).Added,
             (await club.PreviewAsync(null, Games(40, 1950))).Games.Count(g => g.Duplicate)));   // die Dubletten stimmen weiter
+    }
+
+    /// <summary>Codereview 2026-09-29, F7-007: Suche und Namensabgleich lasen bei JEDEM Aufruf (jede Tipp-Pause, auch über
+    /// den Teilen-Link) alle Meldelisten-Zeilen und bauten den Index neu. Jetzt aus dem Cache, solange sich Anzahl und
+    /// höchste Id der Zeilen nicht ändern — Meldelisten werden nur gelöscht und neu angelegt, das trifft den Schlüssel.</summary>
+    [Fact]
+    public async Task Roster_CachedAcrossRequests_RebuiltWhenTheRostersAreReplaced()
+    {
+        await SeedAsync();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        LeagueClubService Request() => new(_db, NullLogger<LeagueClubService>.Instance, () => Now, cache: cache);   // je Anfrage ein Dienst
+        static string Names(List<LeagueRosterPersonDto> l) => string.Join(" | ", l.Select(p => p.Name));
+
+        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync("hengl", false, default)));
+        Assert.Equal(1, cache.Count);
+
+        // An Ort und Stelle geändert (das tut kein Schreibweg): nicht neu gelesen — der Index kommt aus dem Cache.
+        var hengl = await _db.LeaguePlayers.SingleAsync(p => p.FideId == "222");
+        hengl.Name = "Hengl, Philipp";
+        hengl.NameKey = LeagueNames.NameKey(hengl.Name);
+        await _db.SaveChangesAsync();
+        Assert.Equal("Hengl, Philip", Names(await Request().SuggestAsync("hengl", false, default)));
+        Assert.True((await Request().MatchAsync("Hengl, Philip", null, default)).White.League);
+
+        // Wie LeagueRefresh.ReplaceAsync: Zeilen der Liga gelöscht und neu angelegt — neue Ids, neuer Index.
+        var old = await _db.LeaguePlayers.Where(p => p.Tnr == 7 && p.Team == "Absam").ToListAsync();
+        _db.LeaguePlayers.RemoveRange(old);
+        Player(7, "Absam", "Hengl, Philipp", "222");
+        Player(7, "Absam", "Schnabl, Andreas Dr.", "333");
+        await _db.SaveChangesAsync();
+        Assert.Equal("Hengl, Philipp", Names(await Request().SuggestAsync("hengl", false, default)));
+        Assert.Equal(("Hengl, Philipp", "222"), ((await Request().MatchAsync("Hengl, Philipp", null, default)).White.Name,
+            (await Request().MatchAsync("Hengl, Philipp", null, default)).White.Fide));
+    }
+
+    /// <summary>Die API baut <see cref="LeagueClubService"/> mit dem allgemeinen Cache (DI) — sonst wäre der Cache wirkungslos.</summary>
+    [Fact]
+    public async Task DependencyInjection_LeagueClubServiceGetsTheMemoryCache()
+    {
+        var services = new ServiceCollection();
+        var dbName = Guid.NewGuid().ToString();
+        services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(dbName));
+        services.AddLogging();
+        services.AddMemoryCache();
+        services.AddScoped<LeagueClubService>();
+        using var provider = services.BuildServiceProvider();
+        using (var seed = provider.CreateScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 7, Team = "Absam", Name = "Hengl, Philip", NameKey = LeagueNames.NameKey("Hengl, Philip"), FideId = "222" });
+            db.SaveChanges();
+        }
+
+        using var scope = provider.CreateScope();
+        Assert.Single(await scope.ServiceProvider.GetRequiredService<LeagueClubService>().SuggestAsync("hengl", false, default));
+        Assert.Equal(1, ((MemoryCache)provider.GetRequiredService<IMemoryCache>()).Count);
     }
 
     // ── Spielerkarten ───────────────────────────────────────────────

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -52,16 +53,24 @@ public sealed class LeagueClubService
     private readonly Func<DateTime> _now;
     private readonly GameAnalysisService? _analyses;
     private readonly LeagueShareUploadQuota _shareQuota;
+    private readonly IMemoryCache? _cache;
+
+    /// <summary>So lange gilt ein gecachter Meldelisten-Index höchstens (<see cref="RosterAsync"/>) — auch falls eine Änderung
+    /// den Schlüssel einmal nicht träfe.</summary>
+    internal static readonly TimeSpan RosterCacheTime = TimeSpan.FromMinutes(10);
 
     /// <param name="analyses">Die Analysen des Stapels (<see cref="GameAnalysisOrigin.Club"/>) ziehen beim Korrigieren
     /// und Löschen einer Partie nach; ohne (Tests) bleibt es bei der Partie.</param>
     /// <param name="shareQuota">Der Deckel der Teilen-Link-Uploads — in der App ein Singleton (Program.cs), ohne (Tests)
     /// ein eigener je Dienst.</param>
+    /// <param name="cache">Der allgemeine Cache der App — hält den Meldelisten-Index (<see cref="RosterAsync"/>); ohne
+    /// (Tests) wird er je Aufruf gebaut.</param>
     public LeagueClubService(AppDbContext db, ILogger<LeagueClubService> log, Func<DateTime>? now = null,
-        GameAnalysisService? analyses = null, LeagueShareUploadQuota? shareQuota = null)
+        GameAnalysisService? analyses = null, LeagueShareUploadQuota? shareQuota = null, IMemoryCache? cache = null)
     {
         _db = db; _log = log; _now = now ?? (() => DateTime.UtcNow); _analyses = analyses;
         _shareQuota = shareQuota ?? new LeagueShareUploadQuota();
+        _cache = cache;
     }
 
     /// <summary>Der Vermerk eines Teilen-Links an seinen Partien: SHA-256 (hex) des Tokens — der Link selbst (144 Bit
@@ -69,13 +78,31 @@ public sealed class LeagueClubService
     public static string ShareHashOf(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim()))).ToLowerInvariant();
 
+    private sealed record RosterKey(int Players, int? MaxPlayerId, int Tournaments);
+
+    /// <summary>
+    /// Die Meldelisten aller Saisonen als Abgleich-Index. Gecacht (Codereview 2026-09-29, F7-007): Suche und Namensabgleich
+    /// fragen das bei jeder Tipp-Pause, auch ohne Konto über den Teilen-Link — vorher las jeder Aufruf alle Meldelisten-Zeilen
+    /// und baute den Index neu. Schlüssel: Anzahl und höchste Id der Meldelisten-Zeilen und Anzahl der Ligen. Meldelisten
+    /// werden nie an Ort und Stelle geändert, nur gelöscht und neu angelegt (<see cref="LeagueRefresh.ReplaceAsync"/>, die
+    /// Übernahme in <see cref="LeagueImportService"/>) — jede Änderung bringt neue Ids, der Index wird neu gebaut.
+    /// </summary>
     public async Task<LeagueRosterIndex> RosterAsync(CancellationToken ct)
     {
+        RosterKey? key = null;
+        if (_cache != null)
+        {
+            key = new RosterKey(await _db.LeaguePlayers.CountAsync(ct), await _db.LeaguePlayers.MaxAsync(p => (int?)p.Id, ct),
+                await _db.LeagueTournaments.CountAsync(ct));
+            if (_cache.TryGetValue(key, out LeagueRosterIndex? hit) && hit != null) return hit;
+        }
         var seasons = await _db.LeagueTournaments.AsNoTracking().Select(t => new { t.Tnr, t.Season })
             .ToDictionaryAsync(t => t.Tnr, t => t.Season, ct);
         var rows = await _db.LeaguePlayers.AsNoTracking().Select(p => new { p.Tnr, p.Team, p.Name, p.NameKey, p.FideId }).ToListAsync(ct);
-        return new(rows.Select(r => new LeagueRosterIndex.Row(r.Tnr, r.Team, r.Name, r.NameKey, r.FideId,
+        var roster = new LeagueRosterIndex(rows.Select(r => new LeagueRosterIndex.Row(r.Tnr, r.Team, r.Name, r.NameKey, r.FideId,
             seasons.GetValueOrDefault(r.Tnr) ?? "")));
+        if (key != null) _cache!.Set(key, roster, RosterCacheTime);
+        return roster;
     }
 
     /// <summary>Gemerkte Zuordnungen und das Megabase-Verzeichnis für diese Namen und FIDE-IDs — die Zuordnungen zuerst,
