@@ -36,16 +36,18 @@ public class ChessableProblemMoveService
     public async Task<int> UpsertBatchAsync(int userId, string bid,
         List<ChessableProblemMoveEntryDto> entries, CancellationToken ct = default)
     {
+        // oid in kanonischer Form (ChessableIds, A3-013): „00123" und „123" sind dieselbe Linie.
         var clean = (entries ?? new())
-            .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Oid)
-                && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit))
-            .GroupBy(e => e.Oid.Trim())
+            .Where(e => e is not null)
+            .Select(e => (Oid: ChessableIds.CanonicalOid(e.Oid?.Trim())!, E: e))
+            .Where(x => x.Oid is not null)
+            .GroupBy(x => x.Oid)
             .Select(g => g.Last())   // letzter Stand je oid gewinnt innerhalb des Batches
             .Take(MaxEntriesPerBatch)
             .ToList();
         if (clean.Count == 0) return 0;
 
-        var oids = clean.Select(e => e.Oid.Trim()).ToList();
+        var oids = clean.Select(x => x.Oid).ToList();
         var existing = await _db.ChessableProblemMoves
             .Where(p => p.UserId == userId && p.Bid == bid && oids.Contains(p.Oid))
             .ToDictionaryAsync(p => p.Oid, ct);
@@ -53,9 +55,8 @@ public class ChessableProblemMoveService
 
         var now = DateTime.UtcNow;
         var written = 0;
-        foreach (var e in clean)
+        foreach (var (oid, e) in clean)
         {
-            var oid = e.Oid.Trim();
             existing.TryGetValue(oid, out var row);
             var json = e.ProblemMoves is { } pm ? NormalizeJson(pm) : null;
             var delta = (row is null ? ChessableSinkBytes.RowOverheadBytes : 0)

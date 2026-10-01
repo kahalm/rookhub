@@ -132,6 +132,9 @@ public class ChessableAdminController : BaseApiController
     [HttpGet("admin/users/{userId:int}/courses/{bid}/estimate")]
     public async Task<IActionResult> EstimateCourseAdmin(int userId, string bid, CancellationToken ct)
     {
+        // Dieselbe bid-Pruefung wie beim Admin-Import (A3-013) — vorher ging hier jede Zeichenkette an piratechess.
+        if (!ChessableIds.IsValidBid(bid))
+            return BadRequest(new { message = "bid must be numeric (max 12 digits)" });
         var cred = await _db.ChessableCredentials.FirstOrDefaultAsync(c => c.UserId == userId, ct);
         if (cred is null) return BadRequest(new { message = "User has no Chessable bearer saved" });
         if (cred.BlockedAt is not null)
@@ -185,7 +188,7 @@ public class ChessableAdminController : BaseApiController
     [HttpPost("admin/users/{userId:int}/import/{bid}")]
     public async Task<IActionResult> StartImportForUserAdmin(int userId, string bid, [FromBody] AdminChessableImportRequest? request, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(bid) || bid.Length > 12 || !bid.All(char.IsAsciiDigit))
+        if (!ChessableIds.IsValidBid(bid))
             return BadRequest(new { message = "bid must be numeric (max 12 digits)" });
         // Leeres Ziel ⇒ "repertoire" (Default + rückwärtskompatibel zu Clients ohne target).
         var target = string.IsNullOrWhiteSpace(request?.Target) ? "repertoire" : request!.Target!.Trim().ToLowerInvariant();

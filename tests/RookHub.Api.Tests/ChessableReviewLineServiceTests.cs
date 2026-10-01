@@ -322,8 +322,8 @@ public class ChessableReviewLineServiceTests : IDisposable
     public async Task AnonUpsert_PerUidCap_RejectsNewOids_ButUpdatesExisting()
     {
         var cap = ChessableReviewLineService.MaxAnonRowsPerUid;
-        // uid bis zum Deckel füllen (eine bestehende oid = "0" merken wir uns für den Update-Fall).
-        var seed = Enumerable.Range(0, cap).Select(i => new AnonymousChessableReviewLine
+        // uid bis zum Deckel füllen (eine bestehende oid = "1" merken wir uns für den Update-Fall; oids sind positiv).
+        var seed = Enumerable.Range(1, cap).Select(i => new AnonymousChessableReviewLine
         { ChessableUid = "42", Bid = "1", Oid = i.ToString(), Json = "{\"v\":1}" }).ToList();
         _db.AnonymousChessableReviewLines.AddRange(seed);
         await _db.SaveChangesAsync();
@@ -334,9 +334,9 @@ public class ChessableReviewLineServiceTests : IDisposable
         Assert.Equal(0, await _db.AnonymousChessableReviewLines.CountAsync(r => r.Oid == "999999"));
 
         // BESTEHENDE oid → Update bleibt erlaubt (kein neuer Datensatz).
-        await _service.UpsertAnonBatchAsync("42", "1", new() { Entry("0", "{\"v\":2}") });
+        await _service.UpsertAnonBatchAsync("42", "1", new() { Entry("1", "{\"v\":2}") });
         Assert.Equal(cap, await _db.AnonymousChessableReviewLines.CountAsync(r => r.ChessableUid == "42"));
-        Assert.Equal("{\"v\":2}", (await _db.AnonymousChessableReviewLines.SingleAsync(r => r.ChessableUid == "42" && r.Oid == "0")).Json);
+        Assert.Equal("{\"v\":2}", (await _db.AnonymousChessableReviewLines.SingleAsync(r => r.ChessableUid == "42" && r.Oid == "1")).Json);
     }
 
     [Fact]

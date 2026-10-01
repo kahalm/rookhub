@@ -101,19 +101,20 @@ public class ChessableReviewLineService
     public async Task<int> UpsertBatchAsync(int userId, string bid,
         List<ChessableReviewLineEntryDto> entries, CancellationToken ct = default)
     {
+        // oid in kanonischer Form (ChessableIds, A3-013): „00123" und „123" sind dieselbe Linie.
         var clean = (entries ?? new())
             .Where(e => e is not null
-                && !string.IsNullOrWhiteSpace(e.Oid)
-                && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit)
                 && !string.IsNullOrWhiteSpace(e.Json)
                 && e.Json.Length <= MaxJsonLength)
-            .GroupBy(e => e.Oid.Trim())
+            .Select(e => (Oid: ChessableIds.CanonicalOid(e.Oid?.Trim())!, E: e))
+            .Where(x => x.Oid is not null)
+            .GroupBy(x => x.Oid)
             .Select(g => g.Last())   // letzter Stand je oid gewinnt innerhalb des Batches
             .Take(MaxEntriesPerBatch)
             .ToList();
         if (clean.Count == 0) return 0;
 
-        var oids = clean.Select(e => e.Oid.Trim()).ToList();
+        var oids = clean.Select(x => x.Oid).ToList();
         var existing = await _db.ChessableReviewLines
             .Where(r => r.UserId == userId && r.Bid == bid && oids.Contains(r.Oid))
             .ToDictionaryAsync(r => r.Oid, ct);
@@ -121,9 +122,8 @@ public class ChessableReviewLineService
 
         var now = DateTime.UtcNow;
         var written = 0;
-        foreach (var e in clean)
+        foreach (var (oid, e) in clean)
         {
-            var oid = e.Oid.Trim();
             existing.TryGetValue(oid, out var row);
             var delta = row is null
                 ? ChessableSinkBytes.Utf8(e.Json) + ChessableSinkBytes.RowOverheadBytes
@@ -169,17 +169,17 @@ public class ChessableReviewLineService
 
         var clean = (entries ?? new())
             .Where(e => e is not null
-                && !string.IsNullOrWhiteSpace(e.Oid)
-                && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit)
                 && !string.IsNullOrWhiteSpace(e.Json)
                 && e.Json.Length <= MaxAnonJsonBytes && ChessableSinkBytes.Utf8(e.Json) <= MaxAnonJsonBytes)
-            .GroupBy(e => e.Oid.Trim())
+            .Select(e => (Oid: ChessableIds.CanonicalOid(e.Oid?.Trim())!, E: e))
+            .Where(x => x.Oid is not null)
+            .GroupBy(x => x.Oid)
             .Select(g => g.Last())
             .Take(MaxAnonEntriesPerBatch)
             .ToList();
         if (clean.Count == 0) return 0;
 
-        var oids = clean.Select(e => e.Oid.Trim()).ToList();
+        var oids = clean.Select(x => x.Oid).ToList();
         var existing = await _db.AnonymousChessableReviewLines
             .Where(r => r.ChessableUid == uid && r.Bid == bid && oids.Contains(r.Oid))
             .ToDictionaryAsync(r => r.Oid, ct);
@@ -193,9 +193,8 @@ public class ChessableReviewLineService
 
         var now = DateTime.UtcNow;
         var written = 0;
-        foreach (var e in clean)
+        foreach (var (oid, e) in clean)
         {
-            var oid = e.Oid.Trim();
             existing.TryGetValue(oid, out var row);
             if (row is null)
             {

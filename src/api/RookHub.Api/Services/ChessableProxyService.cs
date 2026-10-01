@@ -96,7 +96,7 @@ public class ChessableProxyService : ICachedLineSource
     /// <summary>Taugt <paramref name="bid"/> als Kurs-Id für den Linien-Cache (dieselbe Form, die piratechess
     /// verlangt)? Eine frei eingetragene Kurs-Id eines Repertoires (<c>ChessableCourseId</c>) kann alles sein — dafür
     /// kennt der Cache ohnehin keine Linie, also gar nicht erst fragen.</summary>
-    private static bool IsCourseBid(string? bid) => bid is { Length: > 0 and <= 12 } && bid.All(char.IsAsciiDigit);
+    private static bool IsCourseBid(string? bid) => ChessableIds.IsValidBid(bid);
 
     /// <summary>
     /// „Wahrheit" je oid für die Repertoire-Bereinigung: das PGN, das piratechess aus dem geteilten Linien-Cache für
@@ -114,7 +114,9 @@ public class ChessableProxyService : ICachedLineSource
         string mode = "None", CancellationToken ct = default)
     {
         var list = oids
-            .Where(o => int.TryParse(o, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0)
+            // Kanonisch (ohne fuehrende Nullen): sonst ging „00123" als ungueltige JSON-Zahl in die Anfrage (A3-013).
+            .Select(ChessableIds.CanonicalOid)
+            .OfType<string>()
             .Distinct(StringComparer.Ordinal)
             .ToList();
         var result = new Dictionary<string, string>(StringComparer.Ordinal);

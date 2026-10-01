@@ -60,7 +60,7 @@ public class ExtensionController : BaseApiController
         _logger = logger;
     }
 
-    private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
+    private static bool IsValidBid(string? bid) => ChessableIds.IsValidBid(bid);
 
     /// <summary>Obergrenze einer Linien-Cache-Abfrage — höchstens die von piratechess
     /// (<c>BrowserCourseAssembler.MaxOidsPerLookup</c>), sonst beantwortet piratechess eine hier erlaubte Anfrage mit 400
@@ -68,8 +68,7 @@ public class ExtensionController : BaseApiController
     /// (<c>ChessableCourseJobContractTests</c>): RepCheck <c>SHARED_CACHE_BATCH</c> ≤ dies ≤ piratechess.</summary>
     internal const int MaxCachedLineLookup = 10000;
 
-    private static bool IsValidOid(string? oid)
-        => int.TryParse(oid, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
+    private static bool IsValidOid(string? oid) => ChessableIds.TryParseOid(oid, out _);
 
     /// <summary>Form der <c>LineOids</c> prüfen — dieselben Regeln wie piratechess, aber hier mit klarer Meldung
     /// statt eines durchgereichten 400. <c>null</c> = in Ordnung.</summary>
@@ -358,10 +357,11 @@ public class ExtensionController : BaseApiController
     public async Task<ActionResult<ChessableLineTrainedResultDto>> ChessableLineTrained(
         [FromBody] ChessableLineTrainedInputDto dto, CancellationToken ct)
     {
-        if (dto == null || !IsValidBid(dto.Bid) || string.IsNullOrWhiteSpace(dto.Oid) || dto.Oid.Length > 32
-            || !dto.Oid.All(char.IsAsciiDigit))
+        // oid in kanonischer Form (wie im PGN-Header [ChessableOid]); vorher reichten bis zu 32 Ziffern (A3-013).
+        var oid = dto == null ? null : ChessableIds.CanonicalOid(dto.Oid);
+        if (dto == null || !IsValidBid(dto.Bid) || oid is null)
             return BadRequest(new { message = "Valid bid and oid required." });
-        return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, dto.Oid.Trim(), ct));
+        return Ok(await _trainedLines.MarkTrainedAsync(GetUserId(), dto.Bid, oid, ct));
     }
 
     /// <summary>Rumpf-Deckel der drei Chessable-Roh-Senken (problem-moves, session-moves, review-lines), wie beim

@@ -301,7 +301,7 @@ public class ChessableController : BaseApiController, IActionFilter
     {
         // Format prüfen (Ziffern, ≤12) wie im ExtensionController: eine erfundene bid führte sonst in
         // den Eigentums-Check und dort — je nach Cache-Alter — zu einem Chessable-Live-Abruf.
-        if (string.IsNullOrWhiteSpace(bid) || bid.Length > 12 || !bid.All(char.IsAsciiDigit))
+        if (!ChessableIds.IsValidBid(bid))
             return BadRequest(new { message = "bid must be numeric (max 12 digits)" });
         var target = (request?.Target ?? "").Trim().ToLowerInvariant();
         if (target is not ("repertoire" or "book"))

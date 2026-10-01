@@ -41,10 +41,10 @@ public class ChessableSessionMoveService
     {
         var now = DateTime.UtcNow;
         var clean = (entries ?? new())
-            .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Oid)
-                && e.Oid.Trim().Length <= 32 && e.Oid.Trim().All(char.IsAsciiDigit))
-            .Select(e => (Oid: e.Oid.Trim(), Json: NormalizeJson(e.Moves)))
-            .Where(x => x.Json is not null)
+            // oid in kanonischer Form (ChessableIds, A3-013).
+            .Where(e => e is not null)
+            .Select(e => (Oid: ChessableIds.CanonicalOid(e.Oid?.Trim())!, Json: NormalizeJson(e.Moves)))
+            .Where(x => x.Oid is not null && x.Json is not null)
             .Take(MaxEntriesPerBatch)
             .ToList();
         if (clean.Count == 0) return 0;
