@@ -514,6 +514,10 @@ public class ChessableImportService : ICourseReimporter
 
                     var prog = await WithConnectionRetryAsync(
                         () => _proxy.GetCourseProgressAsync(import.FetchJobId!, ct), import.Id, ct);
+                    // Abgebrochen, während dieser Import weiterläuft (Wettlauf mit dem eigenen Abbruch nach Stillstand,
+                    // oder ein piratechess, der abgebrochene Jobs aufbewahrt): dasselbe wie ein verschwundener Job.
+                    if (prog?.Status == ChessableCourseJobStatus.Cancelled)
+                        prog = null;
                     if (prog is null)
                     {
                         // Job weg (piratechess-Neustart) → neu starten und weiter pollen.
@@ -530,7 +534,7 @@ public class ChessableImportService : ICourseReimporter
                     import.LinesDone = prog.LinesDone;
                     if (prog.LinesTotal > 0) import.LinesTotal = prog.LinesTotal;
 
-                    if (prog.Status == "completed")
+                    if (prog.Status == ChessableCourseJobStatus.Completed)
                     {
                         pgn = prog.Pgn ?? "";
                         import.LineCount = prog.LineCount;
@@ -545,8 +549,16 @@ public class ChessableImportService : ICourseReimporter
                         }
                         break;
                     }
-                    if (prog.Status == "failed")
+                    if (prog.Status == ChessableCourseJobStatus.Failed)
                         throw new InvalidOperationException(prog.Error ?? "Kurs-Abruf fehlgeschlagen");
+                    if (prog.Status != ChessableCourseJobStatus.Running)
+                    {
+                        // Ein Status, den dieser Stand nicht kennt (piratechess neuer als rookhub): sofort scheitern,
+                        // statt FetchStallPolls lang (≈ 10 min je Versuch, bis MaxAttempts) einen Stillstand abzuwarten.
+                        // Den Job vorher anhalten — er könnte bei piratechess noch über die VPN-IP holen.
+                        await CancelFetchJobAsync(import, ct);
+                        throw new InvalidOperationException($"Unbekannter Status des Kurs-Abrufs von piratechess: \"{prog.Status}\"");
+                    }
 
                     // Stillstand erkennen: Stall-Zähler NUR bei echtem Fortschritt zurücksetzen.
                     int marker = prog.ChaptersDone + prog.LinesDone;

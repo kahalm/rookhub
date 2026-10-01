@@ -62,8 +62,11 @@ public class ExtensionController : BaseApiController
 
     private static bool IsValidBid(string? bid) => !string.IsNullOrEmpty(bid) && bid.Length <= 12 && bid.All(char.IsAsciiDigit);
 
-    /// <summary>Obergrenze einer Linien-Cache-Abfrage (dieselbe wie bei piratechess).</summary>
-    private const int MaxCachedLineLookup = 10000;
+    /// <summary>Obergrenze einer Linien-Cache-Abfrage — höchstens die von piratechess
+    /// (<c>BrowserCourseAssembler.MaxOidsPerLookup</c>), sonst beantwortet piratechess eine hier erlaubte Anfrage mit 400
+    /// und die Extension holt still alle Linien selbst. Kette mit literalem Spiegeltest
+    /// (<c>ChessableCourseJobContractTests</c>): RepCheck <c>SHARED_CACHE_BATCH</c> ≤ dies ≤ piratechess.</summary>
+    internal const int MaxCachedLineLookup = 10000;
 
     private static bool IsValidOid(string? oid)
         => int.TryParse(oid, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;

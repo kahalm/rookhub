@@ -119,6 +119,23 @@ public record ChessableCourseStartDto(string JobId);
 /// <c>Cached</c>=true → sofort verfügbar (kein Chessable-Abruf nötig).</summary>
 public record ChessableCourseInfoDto(string Bid, int TotalLines, bool Cached);
 
+/// <summary>
+/// Statuswerte eines piratechess-Kurs-Abruf-Jobs (<see cref="ChessableCourseProgressDto.Status"/>) — SPIEGEL von
+/// piratechess <c>Services/CourseFetchJobStore.cs</c> (<c>CourseFetchJob.Status</c>), auf beiden Seiten mit LITERALEN
+/// Werten im Test (<c>ChessableCourseJobContractTests</c> ↔ piratechess <c>CourseFetchJobStoreTests</c>). Einen
+/// Wert, den rookhub nicht kennt, behandelt die Poll-Schleife als Fehler statt als Stillstand
+/// (<c>ChessableImportService.RunAsync</c>).
+/// </summary>
+public static class ChessableCourseJobStatus
+{
+    public const string Running = "running";
+    public const string Completed = "completed";
+    public const string Failed = "failed";
+    /// <summary>Abgebrochen (piratechess S2-008). Der Abbruch gibt den Job frei (ein Poll liefert danach 404);
+    /// sieht rookhub den Status trotzdem, gilt er wie ein verschwundener Job.</summary>
+    public const string Cancelled = "cancelled";
+}
+
 /// <summary>Fortschritt/Ergebnis eines piratechess-Kurs-Abruf-Jobs (/direct/course/{jobId}).</summary>
 public record ChessableCourseProgressDto(
     string Status, int ChaptersDone, int ChaptersTotal, int LinesDone, int LinesTotal,

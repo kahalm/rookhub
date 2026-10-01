@@ -1315,9 +1315,11 @@ public class ChessableImportServiceTests : IDisposable
         importId = imp.Id;
     }
 
+    /// <summary>Laufender Job ohne Fortschritt. Bis W5 I2-007 stand hier "fetching" — eine IMPORT-Phase von rookhub,
+    /// kein Status von piratechess; die Schleife wertete jeden unbekannten Status still als Stillstand.</summary>
     private static HttpResponseMessage FetchingStatic() => JsonOk(new
     {
-        status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
+        status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
         chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null
     });
 
@@ -1350,7 +1352,7 @@ public class ChessableImportServiceTests : IDisposable
             if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
             n++;
             return n < 5
-                ? JsonOk(new { status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
+                ? JsonOk(new { status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
                 : JsonOk(new { status = "completed", chaptersDone = 5, chaptersTotal = 5, linesDone = 5, chapterCount = 5, lineCount = 5, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
         }));
         svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000; // 5 Polls > Stall-Fenster 2
@@ -1375,6 +1377,61 @@ public class ChessableImportServiceTests : IDisposable
         var reloaded = await _db.ChessableImports.FindAsync(id);
         Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status); // letzter Versuch erschöpft → terminal
         Assert.Equal(0, _queue.Count);            // kein weiterer Resume
+    }
+
+    // --- I2-007: Statuswerte des piratechess-Kurs-Jobs als Vertrag. Ein Status, den rookhub nicht kennt, lief bis
+    //     hierher als „kein Fortschritt" FetchStallPolls lang (≈ 10 min) je Versuch und scheiterte erst nach
+    //     MaxAttempts mit „Zeitüberschreitung". ---
+
+    /// <summary>Unbekannter Status → sofort gescheitert (ein Poll), Job angehalten, nicht neu eingereiht.</summary>
+    [Fact]
+    public async Task RunAsync_UnknownJobStatus_FailsAtOnce_AndCancelsTheJob()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var deletes = new List<string>();
+        var polls = 0;
+        var svc = BuildSvc(new ScriptedHandler(CountingCancels(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
+            polls++;
+            return JsonOk(new { status = "throttled", chaptersDone = 1, chaptersTotal = 5, linesDone = 1, chapterCount = 0,
+                lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null });
+        }, deletes)));
+        svc.PollDelayMs = 0;   // Stall-Fenster bleibt auf der Vorgabe (240): ohne die Regel liefe die Schleife so lange
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Failed, reloaded!.Status);
+        Assert.Contains("throttled", reloaded.Error);
+        Assert.Equal(1, polls);
+        Assert.Equal(new[] { "/api/chessable/direct/course/job-1" }, deletes);
+        Assert.Equal(0, _queue.Count);
+    }
+
+    /// <summary>„cancelled", während der Import weiterläuft → wie ein verschwundener Job: neuen Job starten, weiter pollen.</summary>
+    [Fact]
+    public async Task RunAsync_CancelledJobStatus_StartsANewJob_AndCompletes()
+    {
+        SeedFetchUserAndImport(attempts: 0, out var id);
+        var starts = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = $"job-{++starts}" });
+            return req.RequestUri.AbsolutePath.EndsWith("/course/job-1")
+                ? JsonOk(new { status = ChessableCourseJobStatus.Cancelled, chaptersDone = 1, chaptersTotal = 5, linesDone = 1,
+                    chapterCount = 0, lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null })
+                : JsonOk(new { status = ChessableCourseJobStatus.Completed, chaptersDone = 5, chaptersTotal = 5, linesDone = 5,
+                    chapterCount = 5, lineCount = 5, courseName = "CN", pgn = "1. e4 e5 *", error = (string?)null });
+        }));
+        svc.PollDelayMs = 0; svc.FetchStallPolls = 2; svc.FetchMaxPolls = 1000;
+
+        await svc.RunAsync(id);
+
+        var reloaded = await _db.ChessableImports.FindAsync(id);
+        Assert.Equal(ChessableImportStatus.Completed, reloaded!.Status);
+        Assert.Equal(2, starts);
+        Assert.Equal("job-2", reloaded.FetchJobId);
     }
 
     // --- S2-008: den piratechess-Job bei Abbruch, Pause und Stillstand mit anhalten. Vorher hörte rookhub nur auf zu
@@ -1496,7 +1553,7 @@ public class ChessableImportServiceTests : IDisposable
         {
             if (req.RequestUri!.AbsolutePath.EndsWith("/course/start")) return JsonOk(new { jobId = "job-1" });
             n++;
-            return JsonOk(new { status = "fetching", chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0,
+            return JsonOk(new { status = ChessableCourseJobStatus.Running, chaptersDone = 1, chaptersTotal = 5, linesDone = n, chapterCount = 0,
                 lineCount = 0, courseName = (string?)null, pgn = (string?)null, error = (string?)null });
         }, deletes)));
         svc.PollDelayMs = 0; svc.FetchStallPolls = 1000; svc.FetchMaxPolls = 3;
