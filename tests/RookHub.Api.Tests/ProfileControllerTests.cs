@@ -189,7 +189,7 @@ public class ProfileControllerTests : IDisposable
         SetUser(u.Id, impersonatorAdminId: 999);
 
         // Die Sperre ist ein Filter-Attribut ([DenyWhileImpersonating]) — also mit den Filtern aufrufen wie die Pipeline.
-        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.UnlinkDiscord),
+        var result = await TestActionFilters.InvokeAsync(_controller, nameof(ProfileController.UnlinkDiscord),
             async () => ((IConvertToActionResult)await _controller.UnlinkDiscord()).Convert());
 
         var status = Assert.IsType<ObjectResult>(result);
@@ -202,7 +202,7 @@ public class ProfileControllerTests : IDisposable
         var u = await CreateUserAsync("imp-target");
         SetUser(u.Id, impersonatorAdminId: 999);
 
-        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.CreateToken),
+        var result = await TestActionFilters.InvokeAsync(_controller, nameof(ProfileController.CreateToken),
             async () => ((IConvertToActionResult)await _controller.CreateToken(new CreateApiTokenDto { Name = "ext" })).Convert());
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);
@@ -216,7 +216,7 @@ public class ProfileControllerTests : IDisposable
         var u = await CreateUserAsync("imp-target2");
         SetUser(u.Id, impersonatorAdminId: 999);
 
-        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(ProfileController.DeleteAccount),
+        var result = await TestActionFilters.InvokeAsync(_controller, nameof(ProfileController.DeleteAccount),
             () => _controller.DeleteAccount(new DeleteAccountDto { Password = "x" }));
         var status = Assert.IsType<ObjectResult>(result);
         Assert.Equal(403, status.StatusCode);

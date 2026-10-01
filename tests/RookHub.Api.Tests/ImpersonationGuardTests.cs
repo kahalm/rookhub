@@ -127,24 +127,6 @@ public class ImpersonationGuardTests
         new DenyWhileImpersonatingAttribute().OnActionExecuting(ctx);
         return ctx.Result;
     }
-
-    /// <summary>Für Controller-Tests, die Actions direkt aufrufen (ohne MVC-Pipeline): führt die als Attribut
-    /// deklarierten <see cref="IActionFilter"/> der Klasse und der Action vorher aus — wie die Pipeline — und ruft die
-    /// Action nur, wenn keiner kurzschließt.</summary>
-    internal static async Task<IActionResult> InvokeWithActionFiltersAsync(ControllerBase controller, string actionName,
-        Func<Task<IActionResult>> action)
-    {
-        var method = controller.GetType().GetMethod(actionName, BindingFlags.Public | BindingFlags.Instance)!;
-        var filters = controller.GetType().GetCustomAttributes(true).Concat(method.GetCustomAttributes(true)).OfType<IActionFilter>();
-        var ctx = new ActionExecutingContext(new ActionContext(controller.HttpContext, new RouteData(), new ActionDescriptor()),
-            new List<IFilterMetadata>(), new Dictionary<string, object?>(), controller);
-        foreach (var filter in filters)
-        {
-            filter.OnActionExecuting(ctx);
-            if (ctx.Result is not null) return ctx.Result;
-        }
-        return await action();
-    }
 }
 
 /// <summary>Sonde für <see cref="ImpersonationGuardTests.Pipeline_AnswerEqualsTheFormerInlineGuard_AndTheActionDoesNotRun"/>.

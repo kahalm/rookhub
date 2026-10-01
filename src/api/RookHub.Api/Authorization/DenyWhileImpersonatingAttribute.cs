@@ -12,7 +12,7 @@ namespace RookHub.Api.Authorization;
 /// fremde Konten nicht dauerhaft verändert oder Zugänge in fremdem Namen erzeugt.
 ///
 /// <para><b>Warum ein Attribut statt <c>if (IsImpersonating()) return …</c> in jeder Action:</b> dieselbe
-/// Begründung wie bei <see cref="RequireExtensionScopeAttribute"/> — die nächste Action vergisst die Zeile, und
+/// Begründung wie bei <see cref="RequireTokenScopeAttribute"/> — die nächste Action vergisst die Zeile, und
 /// niemand sieht es (so fehlte sie an <c>push/subscribe</c>: der Admin-Browser bekam danach die Pushes des
 /// Zielkontos). Welche Actions es tragen MÜSSEN, hält <c>ImpersonationGuardTests</c> als Liste fest.</para>
 ///

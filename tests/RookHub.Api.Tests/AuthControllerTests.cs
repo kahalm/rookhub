@@ -321,7 +321,7 @@ public class AuthControllerTests : IDisposable
         SignIn(target.Id, impersonatedBy: 990001);
 
         // Die Sperre ist ein Filter-Attribut ([DenyWhileImpersonating]) — also mit den Filtern aufrufen wie die Pipeline.
-        var result = await ImpersonationGuardTests.InvokeWithActionFiltersAsync(_controller, nameof(AuthController.Handoff),
+        var result = await TestActionFilters.InvokeAsync(_controller, nameof(AuthController.Handoff),
             () => _controller.Handoff(CancellationToken.None));
 
         var status = Assert.IsType<ObjectResult>(result);

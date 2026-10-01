@@ -14,9 +14,9 @@ using RookHub.Api.Services;
 namespace RookHub.Api.Tests;
 
 // HINWEIS Scope-Prüfung: die 17 „if (ScopeGuard() …)"-Zeilen der Actions sind durch EIN
-// Klassen-Attribut ersetzt (`[RequireExtensionScope]`). Ein direkt instanziierter Controller
+// Klassen-Attribut ersetzt (`[RequireTokenScope]`). Ein direkt instanziierter Controller
 // führt keine Filter aus — die frühere „falscher Scope → Forbid"-Prüfung je Action konnte hier
-// also nicht mehr greifen. Sie lebt jetzt in `RequireExtensionScopeTests` (Filter + Verdrahtung).
+// also nicht mehr greifen. Sie lebt jetzt in `RequireTokenScopeTests` (Filter + Verdrahtung).
 public class ExtensionControllerTests : IDisposable
 {
     private readonly AppDbContext _db;

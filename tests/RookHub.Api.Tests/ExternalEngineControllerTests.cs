@@ -73,6 +73,10 @@ public class ExternalEngineControllerTests : IDisposable
         Name = name, MaxThreads = 8, MaxHash = 1024, Variants = ["chess"], ProviderSecret = "provider-secret-0123456789",
     };
 
+    /// <summary>Mit den Filter-Attributen aufrufen wie die Pipeline — die Scope-Prüfung ist [RequireTokenScope].</summary>
+    private Task<IActionResult> Filtered(string action, Func<Task<IActionResult>> call)
+        => TestActionFilters.InvokeAsync(_controller, action, call);
+
     private static int StatusOf(IActionResult r) => r switch
     {
         ObjectResult o => o.StatusCode ?? 200,
@@ -108,8 +112,9 @@ public class ExternalEngineControllerTests : IDisposable
         var id = ((ExternalEngineRegistrationDto)((OkObjectResult)await _controller.Create(Req(), CancellationToken.None)).Value!).Id;
 
         As(null);
-        Assert.Equal(403, StatusOf(await _controller.Create(Req("zweite"), CancellationToken.None)));
-        Assert.Equal(403, StatusOf(await _controller.Update(id, Req(), CancellationToken.None)));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.Create), () => _controller.Create(Req("zweite"), CancellationToken.None))));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.Update), () => _controller.Update(id, Req(), CancellationToken.None))));
+        Assert.Empty(_db.ExternalEngineRegistrations.Where(r => r.Name == "zweite"));
 
         var list = Assert.IsType<OkObjectResult>(await _controller.List(CancellationToken.None));
         Assert.Null(Assert.Single(Assert.IsType<List<ExternalEngineRegistrationDto>>(list.Value)).ClientSecret);
@@ -124,9 +129,11 @@ public class ExternalEngineControllerTests : IDisposable
     {
         await UserAsync();
         As("extension");
-        Assert.Equal(403, StatusOf(await _controller.List(CancellationToken.None)));
-        Assert.Equal(403, StatusOf(await _controller.Create(Req(), CancellationToken.None)));
-        Assert.Equal(403, StatusOf(await _controller.Delete("rhe_x", CancellationToken.None)));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.List), () => _controller.List(CancellationToken.None))));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.Create), () => _controller.Create(Req(), CancellationToken.None))));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.Update), () => _controller.Update("rhe_x", Req(), CancellationToken.None))));
+        Assert.Equal(403, StatusOf(await Filtered(nameof(ExternalEngineController.Delete), () => _controller.Delete("rhe_x", CancellationToken.None))));
+        Assert.Empty(_db.ExternalEngineRegistrations);
     }
 
     [Fact]

@@ -16,7 +16,7 @@ namespace RookHub.Api.Controllers;
 [EnableCors("ExtensionPolicy")]
 // Eine Stelle statt 17: prüft je Anfrage, dass ein PAT den Scope „extension" trägt (JWT-Nutzer
 // haben keinen scope-Claim und dürfen immer). Vorher stand dieselbe Zeile in JEDER Action.
-[RequireExtensionScope]
+[RequireTokenScope(ApiTokenService.DefaultScope)]
 public class ExtensionController : BaseApiController
 {
     private readonly RepertoireService _repertoireService;
