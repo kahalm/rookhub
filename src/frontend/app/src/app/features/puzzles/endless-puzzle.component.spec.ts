@@ -1144,44 +1144,50 @@ describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
   });
 });
 
+/**
+ * Rendert die Endless-Seite (Template) mit ausgeblendeten Kindkomponenten; ngOnInit muss der Aufrufer stilllegen,
+ * den Zustand setzt `setup`. Übersetzt ist nur endless.game.lives (für die Leben-Beschriftung).
+ */
+function renderEndless(setup: (c: any) => void): HTMLElement {
+  const fake = makeComponent();   // liefert die Test-Doppel; gerendert wird eine eigene Instanz über TestBed
+  TestBed.configureTestingModule({
+    imports: [EndlessPuzzleComponent],
+    providers: [
+      provideTranslateService({ fallbackLang: 'en' }),
+      { provide: PuzzleService, useValue: fake.puzzleService },
+      { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+      { provide: EndlessStorageService, useValue: fake.storage },
+      { provide: AuthService, useValue: { isLoggedIn: false } },
+      { provide: PreferencesService, useValue: fake.prefs },
+      { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/endless' } },
+      { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
+      { provide: MatDialog, useValue: {} },
+      { provide: OfflineService, useValue: { puzzleCount: 0, endlessRuns: 0 } },
+      { provide: SnackbarService, useValue: { info: () => {} } },
+      { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
+      { provide: LongSolveService, useValue: { resolve: (x: number) => sub(x) } },
+      { provide: FavoritesService, useValue: { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) } },
+      { provide: EndlessChainService, useValue: fake.chainService },
+      { provide: SolveModeService, useValue: makeSolveMode() },
+      { provide: WorksheetService, useValue: {} },
+    ],
+  });
+  TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+  const translate = TestBed.inject(TranslateService);
+  translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
+  translate.use('en');
+  const fixture = TestBed.createComponent(EndlessPuzzleComponent);
+  setup(fixture.componentInstance);
+  fixture.detectChanges();
+  return fixture.nativeElement as HTMLElement;
+}
+
 // Codereview UX-047: „Auto: …" (Schwelle zurücksetzen) war ein <span (click)> ohne Tastaturzugang, und die drei
 // Herzen (Leben) waren reine mat-icons (aria-hidden) ohne Textalternative. Gerendert (Template), Kinder ausgeblendet.
 describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
   beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));   // nichts laden — den Zustand setzt der Test
 
-  function render(setup: (c: any) => void): HTMLElement {
-    const fake = makeComponent();   // liefert die Test-Doppel; gerendert wird eine eigene Instanz über TestBed
-    TestBed.configureTestingModule({
-      imports: [EndlessPuzzleComponent],
-      providers: [
-        provideTranslateService({ fallbackLang: 'en' }),
-        { provide: PuzzleService, useValue: fake.puzzleService },
-        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
-        { provide: EndlessStorageService, useValue: fake.storage },
-        { provide: AuthService, useValue: { isLoggedIn: false } },
-        { provide: PreferencesService, useValue: fake.prefs },
-        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/endless' } },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
-        { provide: MatDialog, useValue: {} },
-        { provide: OfflineService, useValue: { puzzleCount: 0, endlessRuns: 0 } },
-        { provide: SnackbarService, useValue: { info: () => {} } },
-        { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
-        { provide: LongSolveService, useValue: { resolve: (x: number) => sub(x) } },
-        { provide: FavoritesService, useValue: { contains: () => sub(false), add: () => sub(true), remove: () => sub(false), count: () => sub(0), list: () => sub([]) } },
-        { provide: EndlessChainService, useValue: fake.chainService },
-        { provide: SolveModeService, useValue: makeSolveMode() },
-        { provide: WorksheetService, useValue: {} },
-      ],
-    });
-    TestBed.overrideComponent(EndlessPuzzleComponent, { set: { imports: [CommonModule, FormsModule, MatAutocompleteModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
-    const translate = TestBed.inject(TranslateService);
-    translate.setTranslation('en', { endless: { game: { lives: '{{lives}} of {{max}} lives' } } });
-    translate.use('en');
-    const fixture = TestBed.createComponent(EndlessPuzzleComponent);
-    setup(fixture.componentInstance);
-    fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
-  }
+  const render = renderEndless;
 
   it('„Auto: …" ist ein Knopf (per Tastatur erreichbar) und setzt die Schwelle zurück', () => {
     let c: any;
@@ -1210,5 +1216,22 @@ describe('EndlessPuzzleComponent a11y: Auto-Knopf und Leben (UX-047)', () => {
     const hearts = el.querySelector('.qs-hearts')!;
     expect(hearts.getAttribute('role')).toBe('img');
     expect(hearts.getAttribute('aria-label')).toBe('2 of 3 lives');
+  });
+});
+
+// Codereview UX-044: Das Konfig-Raster hatte am Desktop zwei Spalten — „Alle löschen" (nowrap) drückte die
+// Schnellauswahl links auf ~100 px, die Chips brachen mitten im Wort um, das Raster ragte über den Kartenrand.
+describe('EndlessPuzzleComponent Konfig-Raster am Desktop (UX-044)', () => {
+  beforeEach(() => spyOn(EndlessPuzzleComponent.prototype, 'ngOnInit'));
+
+  it('ist einspaltig: Schnellauswahl und Themenfeld stehen untereinander, Chips ohne Umbruch', () => {
+    expect(window.innerWidth).withContext('Desktop-Viewport (karma --window-size)').toBeGreaterThan(768);
+    const el = renderEndless(() => {});
+    const fields = el.querySelector('.config-fields') as HTMLElement;
+    expect(getComputedStyle(fields).gridTemplateColumns.trim().split(/\s+/).length).toBe(1);
+    const presets = (el.querySelector('.theme-presets') as HTMLElement).getBoundingClientRect();
+    const themes = (el.querySelector('.themes-row') as HTMLElement).getBoundingClientRect();
+    expect(themes.top).toBeGreaterThanOrEqual(presets.bottom);
+    expect(getComputedStyle(el.querySelector('.theme-preset-chip') as HTMLElement).whiteSpace).toBe('nowrap');
   });
 });

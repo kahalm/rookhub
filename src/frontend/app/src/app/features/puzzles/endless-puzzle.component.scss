@@ -24,8 +24,9 @@
 
     .config-screen { display: flex; justify-content: center; padding-top: 2rem; }
     .config-card { max-width: 500px; width: 100%; }
-    .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
-    .config-fields mat-form-field:last-of-type { grid-column: 1 / -1; }
+    /* Immer EINE Spalte (UX-044): in der 500-px-Karte drückte „Alle löschen" (nowrap) die Schnellauswahl links
+       auf ~100 px, die Chips brachen mitten im Wort um und das Raster ragte über den Kartenrand. */
+    .config-fields { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1rem; margin-top: 1rem; }
     .config-fields .worst-tags-row { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem; margin-top: -0.25rem; }
     .config-fields .worst-tags-hint { font-size: 0.8rem; opacity: 0.65; }
     .fasttrack-section { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -98,7 +99,7 @@
       padding: 5px 11px; border-radius: 16px; cursor: pointer;
       border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
       background: var(--mat-sys-surface-container, #fff); color: inherit;
-      font-size: 0.85em; line-height: 1.2; transition: background 0.15s, border-color 0.15s;
+      font-size: 0.85em; line-height: 1.2; transition: background 0.15s, border-color 0.15s; white-space: nowrap;
     }
     .theme-preset-chip:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
     .theme-preset-chip.active {
@@ -305,7 +306,6 @@
       // unter dem Brett nur so breit aus wie ihr Inhalt.
       .board-section, .info-section { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .config-fields { grid-template-columns: 1fr; }
       .config-screen { padding-top: 0.5rem; }
       .gameover-stats { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
       .gameover-card { text-align: center; }
