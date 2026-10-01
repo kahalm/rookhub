@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OPERATOR } from '../../../environments/operator';
+import { legalBackLink } from './legal-site';
 
 /**
  * Impressum. Route: /impressum
@@ -27,7 +28,14 @@ import { OPERATOR } from '../../../environments/operator';
             <a [href]="'mailto:' + operator.email">{{ operator.email }}</a>
           </p>
 
-          <p class="back"><a routerLink="/login">{{ 'legal.impressum.back' | translate }}</a></p>
+<p class="back">
+            <!-- Aus der App gekommen: ein Schritt zurueck; direkt aufgerufen: das Ersatzziel (UX-017). -->
+            @if (back.history) {
+              <a [href]="back.href" (click)="back.go($event)">{{ back.label | translate }}</a>
+            } @else {
+              <a [routerLink]="back.link">{{ back.label | translate }}</a>
+            }
+          </p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -43,4 +51,6 @@ import { OPERATOR } from '../../../environments/operator';
 })
 export class ImpressumComponent {
   readonly operator = OPERATOR;
+  /** „Zurueck" dorthin, wo man herkam; direkt aufgerufen zur Anmeldung (vorher immer fest /login). */
+  readonly back = legalBackLink('legal.impressum.back');
 }

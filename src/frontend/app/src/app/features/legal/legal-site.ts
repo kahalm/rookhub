@@ -1,4 +1,6 @@
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
+import { Location } from '@angular/common';
+import { Router } from '@angular/router';
 import { OPERATOR } from '../../../environments/operator';
 
 /**
@@ -45,6 +47,45 @@ export function defaultLegalSite(): LegalSite {
 export function legalBack(site: LegalSite, loginLabel: string): { link: string; label: string } {
   const link = site.back ?? '/login';
   return { link, label: link === '/login' ? loginLabel : 'legal.backHome' };
+}
+
+/** Ruecklink am Ende einer Rechtsseite, wie ihn {@link legalBackLink} liefert. */
+export interface LegalBackLink {
+  /** Ersatzziel ohne Verlauf (`/login`, KidHub `/`) — als routerLink, damit die Routen-Specs es pruefen. */
+  link: string;
+  /** Schon fertig gewaehlter i18n-Schluessel: „Zurueck" mit Verlauf, sonst der Text des Ersatzziels. */
+  label: string;
+  /** Kam man innerhalb der App hierher? Dann fuehrt der Link zurueck, wo man war. */
+  history: boolean;
+  /** Adresse des Ersatzziels — fuer Strg-/Mittelklick (neuer Tab), wenn der Link zurueck fuehrt. */
+  href: string;
+  /** Klick-Behandlung: mit Verlauf ein Schritt zurueck (Location.back()), sonst nichts (der routerLink gilt). */
+  go(event: MouseEvent): void;
+}
+
+/**
+ * Ruecklink der Rechtsseiten (Codereview UX-017): Wer aus der App kam — Fusszeile, ☰-Menue, Anmeldemaske, eingeloggt
+ * vom Dashboard —, kommt mit „Zurueck" genau dorthin zurueck, statt immer auf /login zu landen (eingeloggt leitete das
+ * ohnehin aufs Dashboard um). Direkt aufgerufen (Lesezeichen, Mail, Play Store, neuer Tab) gibt es keinen Schritt
+ * zurueck in der App: dann das Ziel aus {@link legalBack}. Nur im Injektionskontext aufrufen (Feld-Initialisierer).
+ */
+export function legalBackLink(loginLabel: string): LegalBackLink {
+  const router = inject(Router);
+  const location = inject(Location);
+  const { link, label } = legalBack(inject(LEGAL_SITE), loginLabel);
+  // Waehrend die Seite entsteht, laeuft ihre eigene Navigation noch — die letzte ERFOLGREICHE ist die Seite davor.
+  const history = router.lastSuccessfulNavigation() !== null;
+  return {
+    link,
+    label: history ? 'common.back' : label,
+    history,
+    href: router.serializeUrl(router.parseUrl(link)),
+    go: (e: MouseEvent) => {
+      if (!history || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      location.back();
+    },
+  };
 }
 
 export const LEGAL_SITE = new InjectionToken<LegalSite>('LEGAL_SITE', {

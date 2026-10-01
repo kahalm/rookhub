@@ -22,6 +22,7 @@ import { notificationText, notificationIcon } from '../../core/notification-text
 import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
+import { LEGAL_SITE } from '../../features/legal/legal-site';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../fullscreen/fullscreen.util';
@@ -165,6 +166,9 @@ import {
           @if (can('chessable')) { <button mat-menu-item routerLink="/chessable">{{ 'nav.chessable' | translate }}</button> }
           @if (can('install')) { <button mat-menu-item routerLink="/install">{{ 'nav.installApp' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
+          <!-- Eingeloggt der einzige Weg zu den Rechtsseiten am Handy (die Fusszeile ist dort aus, UX-017). -->
+          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</button>
+          @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
           <button mat-menu-item [matMenuTriggerFor]="langMenu">
             <mat-icon>language</mat-icon>
             <span>{{ 'nav.language' | translate }}</span>
@@ -191,6 +195,8 @@ import {
           @if (can('puzzles')) { <button mat-menu-item routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
           @if (can('help')) { <button mat-menu-item routerLink="/help">{{ 'nav.help' | translate }}</button> }
+          <button mat-menu-item class="legal-item" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</button>
+          @if (imprint) { <button mat-menu-item class="legal-item" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</button> }
           <button mat-menu-item (click)="quickstartClick.emit()">
             <mat-icon>info_outline</mat-icon>
             <span>{{ 'nav.info' | translate }}</span>
@@ -275,6 +281,9 @@ export class NavbarComponent implements OnInit {
   // Ziel ist der KALENDER, nicht die Liste der schon geholten Turniere — dasselbe Startziel,
   // das die Turnierseite auch beim direkten Aufruf waehlt (siehe deren app.routes).
   toTurnier(): void { void this.handoff.jump('tournaments/calendar'); }
+
+  /** Impressum im ☰-Menue (neben dem Datenschutz) — nur, wo LEGAL_SITE eins vorsieht (UX-017). */
+  readonly imprint = inject(LEGAL_SITE).imprint;
 
   @Output() changelogClick = new EventEmitter<void>();
   @Output() quickstartClick = new EventEmitter<void>();

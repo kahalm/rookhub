@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HandoffService } from '../../core/handoff.service';
-import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBack } from './legal-site';
+import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBackLink } from './legal-site';
 
 /**
  * Öffentlich (ohne Login) erreichbare Info-Seite zur Konto-Löschung — erfüllt die
@@ -86,7 +86,14 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBack } fro
             <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a>
           </p>
 
-          <p class="back"><a [routerLink]="back.link">{{ back.label | translate }}</a></p>
+          <p class="back">
+            <!-- Aus der App gekommen: ein Schritt zurueck; direkt aufgerufen: das Ersatzziel (UX-017). -->
+            @if (back.history) {
+              <a [href]="back.href" (click)="back.go($event)">{{ back.label | translate }}</a>
+            } @else {
+              <a [routerLink]="back.link">{{ back.label | translate }}</a>
+            }
+          </p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -105,8 +112,8 @@ import { ACCOUNT_DELETE_QUERY, ACCOUNT_DELETE_ROUTE, LEGAL_SITE, legalBack } fro
 export class AccountDeletionComponent {
   /** Kontakt je Oberflaeche (KidHub: eigene Adresse, siehe LEGAL_SITE). */
   readonly site = inject(LEGAL_SITE);
-  /** Ruecklink je Oberflaeche (KidHub: zur Startseite statt zur Anmeldemaske). */
-  readonly back = legalBack(this.site, 'legal.accountDeletion.back');
+  /** „Zurueck" dorthin, wo man herkam; direkt aufgerufen zur Anmeldung (KidHub: Startseite). */
+  readonly back = legalBackLink('legal.accountDeletion.back');
 
   private readonly handoff = inject(HandoffService);
   /** Wird das Konto woanders gefuehrt (KidHub, LeagueHub, ClubHub, Turnierseite → RookHub)? Sonst ist hier RookHub. */

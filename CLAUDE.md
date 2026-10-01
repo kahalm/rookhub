@@ -4280,7 +4280,11 @@ Kinderseite" unter REST API.
   `account-deletion.component.ts`) und `profile.delete.warn` geben wieder, was `ProfileService.DeleteAccountAsync`
   löscht (UX-021: eigene Kurse samt Freigaben und fremdem Fortschritt, Partien mit Formular-Fotos, Aufgabenblätter und
   Teilen-Links, KidHub-Fortschritt, Verbindungen) — wer dort etwas ergänzt oder herausnimmt, zieht die Texte nach
-  (en/de/hr/hu). LeagueHub (`kind`) nennt zusätzlich Entwürfe, bleibende Vereinspartien und Teilen-Links. Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
+  (en/de/hr/hu). LeagueHub (`kind`) nennt zusätzlich Entwürfe, bleibende Vereinspartien und Teilen-Links. Wege zu den
+  Rechtsseiten (UX-017): die gemeinsame Fußzeile (`app-footer`, RookHub und Turnierseite) zeigt „Impressum · Datenschutz",
+  wo die App die Route hat (Impressum nur mit `imprint`), das ☰-Menü (Gast und „Konto") dieselben zwei Einträge — am
+  Handy ist RookHubs Fußzeile aus. Der Rücklink (`legalBackLink`) heißt „Zurück" und geht einen Schritt zurück, wenn man
+  aus der App kam (`Router.lastSuccessfulNavigation()`), sonst zum Ersatzziel `back` (Vorgabe `/login`). Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
   Kontaktadresse der Oberfläche. **Rechtsseiten allgemein** (Betreiber-Entscheidung 2026-09-30, UX-001):
   `environments/operator.ts` (`OPERATOR`) enthält nur noch die Kontaktadresse `rookhub@oberschm.id` — kein
   Diensteanbieter-Block mit Name/Anschrift im Impressum, keine Platzhalter.

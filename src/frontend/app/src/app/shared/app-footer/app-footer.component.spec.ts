@@ -4,6 +4,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { AppFooterComponent } from './app-footer.component';
 import { DISCORD_INVITE_URL } from '../../core/community';
 import { environment } from '../../../environments/environment';
+import { LEGAL_SITE } from '../../features/legal/legal-site';
 
 /**
  * Die Fusszeile gehoert BEIDEN Oberflaechen (RookHub und Turnierseite). Geprueft wird vor allem
@@ -11,10 +12,11 @@ import { environment } from '../../../environments/environment';
  * per dynamic import() erst beim Oeffnen.
  */
 describe('AppFooterComponent', () => {
-  function buildFixture(routes: { path: string }[] = []) {
+  function buildFixture(routes: { path: string }[] = [], legal?: object) {
     TestBed.configureTestingModule({
       providers: [provideRouter(routes.map(r => ({ path: r.path, children: [] }))),
-                  provideTranslateService({ fallbackLang: 'en' })],
+                  provideTranslateService({ fallbackLang: 'en' }),
+                  ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : [])],
     });
     return TestBed.createComponent(AppFooterComponent);
   }
@@ -120,5 +122,27 @@ describe('AppFooterComponent', () => {
     const footer = build();
     expect(footer.helpRoute).toBeFalse();
     expect(footer.helpHref).toBeFalsy();
+  });
+
+  // Impressum und Datenschutz standen nur unter der Anmeldekarte — die sehen Eingeloggte nie (guestGuard), am Handy
+  // fehlte ohnehin jeder Weg (UX-017). Jetzt in der gemeinsamen Fusszeile, also auch auf der Turnierseite.
+  describe('Rechtslinks (UX-017)', () => {
+    const legalHrefs = (fixture: ReturnType<typeof buildFixture>) => {
+      fixture.detectChanges();
+      return [...(fixture.nativeElement as HTMLElement).querySelectorAll('a.legal-link')].map(a => a.getAttribute('href'));
+    };
+
+    it('zeigt Impressum und Datenschutz, wo die App beide Wege hat', () => {
+      expect(legalHrefs(buildFixture([{ path: 'privacy' }, { path: 'impressum' }]))).toEqual(['/impressum', '/privacy']);
+    });
+
+    it('ohne Impressum laut LEGAL_SITE nur den Datenschutz', () => {
+      const fixture = buildFixture([{ path: 'privacy' }, { path: 'impressum' }], { contactEmail: 'x@y.z', imprint: false });
+      expect(legalHrefs(fixture)).toEqual(['/privacy']);
+    });
+
+    it('kein Link auf einen Weg, den die App nicht hat', () => {
+      expect(legalHrefs(buildFixture())).toEqual([]);
+    });
   });
 });

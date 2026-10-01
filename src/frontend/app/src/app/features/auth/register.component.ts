@@ -149,8 +149,8 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                     border-left: 3px solid var(--mat-sys-primary); }
     .kids-parents p { margin: 0.25rem 0 0; }
     .privacy-note { margin: 16px 0 0; font-size: 0.8rem; text-align: center; }
-    /* Wie die Rechtslinks unter der Anmeldekarte: Theme-Farbe, grosszuegige Beruehrflaeche ohne Layoutsprung. */
-    .privacy-note a { color: var(--mat-sys-primary); display: inline-block; padding: 12px 4px; margin: -12px 0; }
+    /* Wie die Rechtslinks unter der Anmeldekarte: Theme-Farbe, Beruehrflaeche mindestens 44px (UX-017) ohne Layoutsprung. */
+    .privacy-note a { color: var(--mat-sys-primary); display: inline-block; padding: 15px 4px; margin: -15px 0; }
   `]
 })
 export class RegisterComponent {

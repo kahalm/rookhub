@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { LEGAL_SITE, legalBack } from './legal-site';
+import { LEGAL_SITE, legalBackLink } from './legal-site';
 
 /**
  * Öffentliche Datenschutzerklärung (DSGVO). Route: /privacy — wird auch als
@@ -109,7 +109,14 @@ import { LEGAL_SITE, legalBack } from './legal-site';
           <h4>{{ 'legal.privacy.contactTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.contact' | translate }}: <a [href]="'mailto:' + site.contactEmail">{{ site.contactEmail }}</a></p>
 
-          <p class="back"><a [routerLink]="back.link">{{ back.label | translate }}</a></p>
+          <p class="back">
+            <!-- Aus der App gekommen: ein Schritt zurueck; direkt aufgerufen: das Ersatzziel (UX-017). -->
+            @if (back.history) {
+              <a [href]="back.href" (click)="back.go($event)">{{ back.label | translate }}</a>
+            } @else {
+              <a [routerLink]="back.link">{{ back.label | translate }}</a>
+            }
+          </p>
         </mat-card-content>
       </mat-card>
     </div>
@@ -127,5 +134,6 @@ export class PrivacyComponent {
   /** Kontakt und Impressum je Oberflaeche (KidHub: eigene Adresse, kein Impressum). */
   readonly site = inject(LEGAL_SITE);
   readonly kind = this.site.kind ?? 'rookhub';
-  readonly back = legalBack(this.site, 'legal.privacy.back');
+  /** „Zurueck" dorthin, wo man herkam; direkt aufgerufen zur Anmeldung (KidHub: Startseite). */
+  readonly back = legalBackLink('legal.privacy.back');
 }

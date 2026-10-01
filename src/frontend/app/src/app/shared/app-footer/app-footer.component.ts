@@ -8,6 +8,7 @@ import { environment } from '../../../environments/environment';
 import { ChangelogEntry } from '../../../environments/changelog';
 import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
 import { partnerSiteUrl } from '../../core/partner-site';
+import { LEGAL_SITE } from '../../features/legal/legal-site';
 
 /**
  * Die Fusszeile — und das Changelog-Overlay, das ihr Versionslink oeffnet.
@@ -51,6 +52,16 @@ import { partnerSiteUrl } from '../../core/partner-site';
          [attr.aria-label]="'nav.support' | translate">
         <mat-icon aria-hidden="true">local_cafe</mat-icon><span>{{ 'nav.support' | translate }}</span>
       </a>
+      <!-- Impressum und Datenschutz fuer alle, auch eingeloggt (UX-017) — vorher nur unter der Anmeldekarte, die
+           Eingeloggte nie sehen. Nur, wo die App die Route hat (wie der Hilfe-Link); KidHub-artig ohne Impressum. -->
+      @if (imprintRoute) {
+        <span class="footer-sep">·</span>
+        <a class="feedback-link legal-link" routerLink="/impressum">{{ 'legal.impressum.title' | translate }}</a>
+      }
+      @if (privacyRoute) {
+        <span class="footer-sep">·</span>
+        <a class="feedback-link legal-link" routerLink="/privacy">{{ 'legal.privacy.title' | translate }}</a>
+      }
     </footer>
 
     @if (showChangelog) {
@@ -87,6 +98,8 @@ import { partnerSiteUrl } from '../../core/partner-site';
          treffen. Padding statt groesserer Schrift: die Zeile bleibt eine Fusszeile. Auf RookHub
          ist sie hier ohnehin ausgeblendet, die Regel wirkt dort nicht. */
       .app-footer a, .app-footer .version-link { display: inline-block; padding: 10px 4px; }
+      /* Rechtslinks mit vollem Beruehrziel (44 px, UX-017). */
+      .app-footer a.legal-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; vertical-align: middle; }
     }
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
@@ -153,6 +166,10 @@ export class AppFooterComponent {
 
   /** Hat DIESE App eine eigene Hilfeseite? (RookHub ja, die Turnierseite nein.) */
   readonly helpRoute = this.router.config.some(r => r.path === 'help');
+  /** Rechtsseiten in der Fusszeile (UX-017): RookHub und Turnierseite haben beide Wege; ein Impressum nur, wo
+   *  LEGAL_SITE eins vorsieht. */
+  readonly privacyRoute = this.router.config.some(r => r.path === 'privacy');
+  readonly imprintRoute = inject(LEGAL_SITE).imprint && this.router.config.some(r => r.path === 'impressum');
   /** Sonst die Hilfe der Schwesterseite — oder gar kein Link. */
   readonly helpHref = this.helpRoute ? null : partnerSiteUrl() && `${partnerSiteUrl()}/help`;
 

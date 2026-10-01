@@ -163,6 +163,35 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     trigger.click();
     fixture.detectChanges();
   });
+
+  // Impressum/Datenschutz standen nur unter der Anmeldekarte — eingeloggt nie erreichbar, am Handy (Fusszeile aus)
+  // auch abgemeldet nicht (UX-017). mat-menu-item ist 48 px hoch, also ein volles Beruehrziel.
+  const legalItems = () => Array.from(document.querySelectorAll('.cdk-overlay-container button.legal-item'))
+    .map(b => b.textContent?.trim());
+
+  it('ausgeloggt: das ☰-Menü führt zu Datenschutz und Impressum', () => {
+    const fixture = render({ loggedIn: false, keys: ['puzzles'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar button[aria-label="nav.menu"]') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    expect(legalItems()).toEqual(['legal.privacy.title', 'legal.impressum.title']);
+    trigger.click();
+    fixture.detectChanges();
+  });
+
+  it('eingeloggt: ☰ → Konto führt zu Datenschutz und Impressum', () => {
+    const fixture = render({ loggedIn: true, keys: ['dashboard'] });
+    const trigger = (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar .msg-mail') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const account = Array.from(document.querySelectorAll('.cdk-overlay-container button'))
+      .find(b => b.textContent?.includes('nav.account')) as HTMLButtonElement;
+    account.click();
+    fixture.detectChanges();
+    expect(legalItems()).toEqual(['legal.privacy.title', 'legal.impressum.title']);
+    trigger.click();
+    fixture.detectChanges();
+  });
 });
 
 describe('NavbarComponent App-Vollbild', () => {
