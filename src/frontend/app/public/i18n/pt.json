@@ -215,7 +215,6 @@
       "title": "Eliminar conta",
       "hint": "Elimine permanentemente a sua conta.",
       "button": "Eliminar conta",
-      "warn": "Aviso: a sua identidade e dados pessoais serão removidos de forma irreversível. Introduza a sua palavra-passe para confirmar.",
       "password": "Palavra-passe",
       "confirm": "Eliminar permanentemente",
       "deleting": "A eliminar...",

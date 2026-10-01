@@ -215,7 +215,6 @@
       "title": "Usuń konto",
       "hint": "Trwale usuń swoje konto.",
       "button": "Usuń konto",
-      "warn": "Uwaga: Twoja tożsamość i dane osobowe zostaną nieodwracalnie usunięte. Wprowadź hasło, aby potwierdzić.",
       "password": "Hasło",
       "confirm": "Usuń trwale",
       "deleting": "Usuwanie...",

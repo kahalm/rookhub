@@ -215,7 +215,6 @@
       "title": "Xóa tài khoản",
       "hint": "Xóa vĩnh viễn tài khoản của bạn.",
       "button": "Xóa tài khoản",
-      "warn": "Cảnh báo: danh tính và dữ liệu cá nhân của bạn sẽ bị xóa không thể khôi phục. Vui lòng nhập mật khẩu để xác nhận.",
       "password": "Mật khẩu",
       "confirm": "Xóa vĩnh viễn",
       "deleting": "Đang xóa...",

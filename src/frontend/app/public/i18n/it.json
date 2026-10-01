@@ -215,7 +215,6 @@
       "title": "Elimina account",
       "hint": "Elimina definitivamente il tuo account.",
       "button": "Elimina account",
-      "warn": "Attenzione: la tua identità e i dati personali verranno rimossi in modo irreversibile. Inserisci la password per confermare.",
       "password": "Password",
       "confirm": "Elimina definitivamente",
       "deleting": "Eliminazione in corso...",

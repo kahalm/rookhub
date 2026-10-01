@@ -215,7 +215,6 @@
       "title": "Account verwijderen",
       "hint": "Verwijder je account permanent.",
       "button": "Account verwijderen",
-      "warn": "Waarschuwing: je identiteit en persoonlijke gegevens worden onomkeerbaar verwijderd. Voer je wachtwoord in ter bevestiging.",
       "password": "Wachtwoord",
       "confirm": "Permanent verwijderen",
       "deleting": "Verwijderen...",

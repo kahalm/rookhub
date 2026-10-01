@@ -215,7 +215,6 @@
       "title": "Supprimer le compte",
       "hint": "Supprimez définitivement votre compte.",
       "button": "Supprimer le compte",
-      "warn": "Attention : votre identité et vos données personnelles seront supprimées de façon irréversible. Veuillez saisir votre mot de passe pour confirmer.",
       "password": "Mot de passe",
       "confirm": "Supprimer définitivement",
       "deleting": "Suppression...",

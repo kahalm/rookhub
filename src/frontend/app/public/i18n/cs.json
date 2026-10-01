@@ -215,7 +215,6 @@
       "title": "Smazat účet",
       "hint": "Trvale smazat váš účet.",
       "button": "Smazat účet",
-      "warn": "Upozornění: vaše identita a osobní údaje budou nevratně odstraněny. Pro potvrzení zadejte heslo.",
       "password": "Heslo",
       "confirm": "Smazat trvale",
       "deleting": "Mažu...",

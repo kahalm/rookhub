@@ -215,7 +215,6 @@
       "title": "Hesabı sil",
       "hint": "Hesabınızı kalıcı olarak silin.",
       "button": "Hesabı sil",
-      "warn": "Uyarı: kimliğiniz ve kişisel verileriniz geri alınamaz şekilde silinecektir. Onaylamak için şifrenizi girin.",
       "password": "Şifre",
       "confirm": "Kalıcı olarak sil",
       "deleting": "Siliniyor...",

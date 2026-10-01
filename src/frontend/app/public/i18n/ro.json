@@ -185,7 +185,6 @@
       "title": "Șterge cont",
       "hint": "Șterge permanent contul tău.",
       "button": "Șterge cont",
-      "warn": "Avertisment: identitatea și datele tale personale vor fi eliminate ireversibil. Te rugăm să introduci parola pentru confirmare.",
       "password": "Parolă",
       "confirm": "Șterge permanent",
       "deleting": "Se șterge...",

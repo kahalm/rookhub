@@ -215,7 +215,6 @@
       "title": "Ta bort konto",
       "hint": "Ta bort ditt konto permanent.",
       "button": "Ta bort konto",
-      "warn": "Varning: din identitet och personliga data tas bort oåterkalleligt. Ange ditt lösenord för att bekräfta.",
       "password": "Lösenord",
       "confirm": "Ta bort permanent",
       "deleting": "Tar bort...",

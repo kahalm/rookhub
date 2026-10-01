@@ -84,16 +84,18 @@ describe('i18n Sprachdateien', () => {
   });
 
   /**
-   * Rechtstexte (Codereview UX-022): Datenschutzerklaerung und Loeschseite. Die gepflegten Sprachen tragen jeden
-   * Schluessel und denselben „Stand“ wie en. Die uebrigen Sprachen fallen per Schluessel-Luecke auf en zurueck und
-   * behalten nur Uebersetzungen von en-Texten, die sich seit dem Uebersetzen nicht geaendert haben: bis 2026-10 stand
-   * dort „Stand: 3. Juni“ und zu chess.com „keine automatische Datenuebertragung“, waehrend en den 6-Stunden-Abruf
-   * beschrieb. Aendert sich einer der en-Texte unten, schlaegt der Test an — dann die Uebersetzungen dieses
-   * Schluessels in den uebrigen Sprachen loeschen und den Eintrag streichen (es gilt en), oder alle neu uebersetzen
-   * und den Fingerabdruck nachziehen.
+   * Rechtstexte (Codereview UX-022): Datenschutzerklaerung, Loeschseite und die Loesch-Karte im Profil (deren
+   * Warnung vor der Passwort-Eingabe nennt seit UX-021 Kurse, Partien, Aufgabenblaetter usw., die Juni-Uebersetzungen
+   * nur „Identitaet und persoenliche Daten“). Die gepflegten Sprachen tragen jeden Schluessel und denselben „Stand“
+   * wie en. Die uebrigen Sprachen fallen per Schluessel-Luecke auf en zurueck und behalten nur Uebersetzungen von
+   * en-Texten, die sich seit dem Uebersetzen nicht geaendert haben: bis 2026-10 stand dort „Stand: 3. Juni“ und zu
+   * chess.com „keine automatische Datenuebertragung“, waehrend en den 6-Stunden-Abruf beschrieb. Aendert sich einer
+   * der en-Texte unten, schlaegt der Test an — dann die Uebersetzungen dieses Schluessels in den uebrigen Sprachen
+   * loeschen und den Eintrag streichen (es gilt en), oder alle neu uebersetzen und den Fingerabdruck nachziehen.
    */
-  describe('Rechtstexte (legal.privacy, legal.accountDeletion)', () => {
-    const isLegal = (k: string) => k.startsWith('legal.privacy.') || k.startsWith('legal.accountDeletion.');
+  describe('Rechtstexte (legal.privacy, legal.accountDeletion, profile.delete)', () => {
+    const isLegal = (k: string) =>
+      k.startsWith('legal.privacy.') || k.startsWith('legal.accountDeletion.') || k.startsWith('profile.delete.');
 
     /** FNV-1a (32 bit) ueber den en-Text — der Stand, von dem aus die uebrigen Sprachen uebersetzt sind. */
     const fingerprint = (s: string): string => {
@@ -124,6 +126,12 @@ describe('i18n Sprachdateien', () => {
       'legal.accountDeletion.keptTitle': '5398635d', 'legal.accountDeletion.kept': 'aef76a8e',
       'legal.accountDeletion.contactTitle': '73ac94c3', 'legal.accountDeletion.contact': '2d120dae',
       'legal.accountDeletion.back': '78247cd6',
+      // profile.delete.warn fehlt bewusst: en seit UX-021 vollstaendig, die Juni-Uebersetzungen nicht (es gilt en).
+      'profile.delete.title': '76a85421', 'profile.delete.hint': 'a5ce1ca7', 'profile.delete.button': '76a85421',
+      'profile.delete.password': '2cc30838', 'profile.delete.confirm': 'd8100383',
+      'profile.delete.deleting': '32be65e1', 'profile.delete.done': '24eca02e',
+      'profile.delete.wrongPassword': '3024a25f', 'profile.delete.failed': '7639131d',
+      'profile.delete.moreInfo': '8d527148',
     };
 
     /** Monatsnamen (Wortstaemme, klein) der gepflegten Sprachen — hr im Genitiv („30. rujna“). */
