@@ -184,14 +184,15 @@
                 }
 
                 <!-- Spielweise (Kurs/Tagespuzzle/Buch-Puzzle) umschalten: wirkt ab dem nächsten
-                     Puzzle (siehe toggleSolveMode). Der Wochenpost hat seinen eigenen Knopf. -->
+                     Puzzle (siehe toggleSolveMode). Der Wochenpost hat seinen eigenen Knopf.
+                     Beschriftet als HANDLUNG (Ziel-Modus), nicht als Zustand — sonst hält man ihn
+                     für eine Statusanzeige (UX-005); derselbe Punkt steht auch im ⋮-Menü. -->
                 @if (showSolveModeSwitch) {
                   <div class="ctx-mode">
                     <button mat-stroked-button class="ctx-mode-btn" (click)="toggleSolveMode()"
-                            [matTooltip]="'solveMode.switchHint' | translate"
-                            [attr.aria-label]="'solveMode.switch' | translate">
-                      <mat-icon>{{ solveModeChoice === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
-                      {{ (solveModeChoice === 'easy' ? 'solveMode.easy' : 'solveMode.training') | translate }}
+                            [matTooltip]="'solveMode.switchNextHint' | translate">
+                      <mat-icon>{{ solveModeChoice === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
+                      {{ (solveModeChoice === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
                     </button>
                   </div>
                 }
@@ -210,8 +211,8 @@
                       <!-- Spielweise umschalten: wirkt ab dem nächsten Puzzle (siehe toggleWeeklyMode). -->
                       <button mat-stroked-button class="ctx-mode-btn" (click)="toggleWeeklyMode()"
                               [matTooltip]="'weekly.mode.switchHint' | translate">
-                        <mat-icon>{{ weeklyMode === 'easy' ? 'pan_tool' : 'psychology' }}</mat-icon>
-                        {{ (weeklyMode === 'easy' ? 'weekly.mode.easy' : 'weekly.mode.training') | translate }}
+                        <mat-icon>{{ weeklyMode === 'easy' ? 'psychology' : 'pan_tool' }}</mat-icon>
+                        {{ (weeklyMode === 'easy' ? 'solveMode.switchToTraining' : 'solveMode.switchToEasy') | translate }}
                       </button>
                     } @else {
                       <!-- Gast: durchspielen geht, gewertet wird nur eingeloggt. Der Rücksprung
@@ -525,7 +526,9 @@
               (loveLastClicked)="favoriteTracker.toggleLast()"
               [canWorksheetLast]="isLoggedIn"
               [translateBookId]="inCourse && isLoggedIn ? courseBookId : null"
-              (worksheetLastPicked)="sendLastToWorksheet($event)">
+              (worksheetLastPicked)="sendLastToWorksheet($event)"
+              [solveModeChoice]="showSolveModeSwitch ? solveModeChoice : null"
+              (solveModeToggle)="toggleSolveMode()">
               @if ((state === 'SOLVED' || state === 'FAILED') && !reviewMode) {
                 <button mat-stroked-button (click)="enterReview()">
                   <mat-icon>history_edu</mat-icon> {{ 'book.actions.viewFullGame' | translate }}

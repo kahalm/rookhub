@@ -2035,6 +2035,82 @@ describe('BookPuzzleComponent Wochenpost als Gast: keine Knöpfe zur Übersicht 
   });
 });
 
+// Codereview UX-005: Der Spielweise-Dialog verweist aufs ⋮-Menü — beim Tages- und Buch-Puzzle fehlte der Punkt
+// dort, und der Kartenknopf trug den ZUSTAND („Trainingsmodus") als Beschriftung, sah also wie eine Statusanzeige aus.
+describe('BookPuzzleComponent Spielweise-Umschalter im ⋮-Menü und als Handlung (UX-005)', () => {
+  beforeEach(() => spyOn(BookPuzzleComponent.prototype, 'ngOnInit'));   // nichts laden — den Zustand setzt der Test
+
+  function render(setup: (c: any) => void): { el: HTMLElement; c: any } {
+    const prefs: any = {
+      boardTheme: 'green', pieceSet: 'cburnett', themeMode: 'fixed', stockfishDepth: 12, bookStockfishDepth: 12,
+      visualization: 0, vizArrow: true, offPathWarnMoves: 3, enPassantForced: true,
+    };
+    const route: any = {
+      snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } },
+      paramMap: { subscribe: () => ({ unsubscribe() {} }) },
+    };
+    TestBed.configureTestingModule({
+      imports: [BookPuzzleComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: PuzzleService, useValue: {} },
+        { provide: StockfishService, useValue: { init: () => Promise.resolve(), getEval: () => Promise.resolve('') } },
+        { provide: PreferencesService, useValue: prefs },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: MatDialog, useValue: {} },
+        { provide: CourseService, useValue: {} },
+        { provide: WeeklyService, useValue: {} },
+        { provide: Router, useValue: { navigate: jasmine.createSpy('navigate'), url: '/puzzles/daily/20260714' } },
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: OfflineQueueService, useValue: { enqueue: () => {} } },
+        { provide: ChallengeService, useValue: {} },
+        { provide: LongSolveService, useValue: { resolve: (s: number) => of(s) } },
+        { provide: FavoritesService, useValue: { contains: () => of(false), add: () => of(true), remove: () => of(false), count: () => of(0), list: () => of([]) } },
+        { provide: SolveModeService, useValue: makeSolveModeStub(prefs) },
+        { provide: WorksheetService, useValue: {} },
+      ],
+    });
+    // Kindkomponenten ausgeblendet: Eingaben landen als DOM-Eigenschaft, Ausgaben als DOM-Ereignis am Element.
+    TestBed.overrideComponent(BookPuzzleComponent, { set: { imports: [CommonModule, TranslatePipe], schemas: [NO_ERRORS_SCHEMA] } });
+    const fixture = TestBed.createComponent(BookPuzzleComponent);
+    const c: any = fixture.componentInstance;
+    c.dailyDate = '20260714';   // Tagespuzzle: eigener Bereich „daily"
+    c.puzzle = { id: 42, fen: FEN, moves: 'e2e4 e7e5', bookFileName: 'b' };
+    setup(c);
+    fixture.detectChanges();
+    return { el: fixture.nativeElement as HTMLElement, c };
+  }
+  const bar = (el: HTMLElement) => el.querySelector('app-puzzle-action-bar') as any;
+
+  it('Tagespuzzle: die Aktionsleiste bekommt die Spielweise (Punkt im ⋮-Menü)', () => {
+    const { el } = render(c => { c.solveModeChoice = 'training'; });
+    expect(bar(el).solveModeChoice).toBe('training');
+  });
+
+  it('der ⋮-Punkt schaltet die Spielweise um', () => {
+    const { el, c } = render(c => { c.solveModeChoice = 'training'; });
+    const toggle = spyOn(c, 'toggleSolveMode');
+    bar(el).dispatchEvent(new CustomEvent('solveModeToggle'));
+    expect(toggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('der Kartenknopf nennt die Handlung (Ziel-Modus), nicht den Zustand', () => {
+    const training = render(c => { c.solveModeChoice = 'training'; }).el.querySelector('.ctx-mode-btn')!;
+    expect(training.textContent).toContain('solveMode.switchToEasy');
+    expect(training.textContent).not.toContain('solveMode.training');
+    TestBed.resetTestingModule();
+    const easy = render(c => { c.solveModeChoice = 'easy'; }).el.querySelector('.ctx-mode-btn')!;
+    expect(easy.textContent).toContain('solveMode.switchToTraining');
+  });
+
+  it('per Link festgelegte Ansicht: weder Kartenknopf noch ⋮-Punkt', () => {
+    const { el } = render(c => { c.solveModeChoice = 'training'; c.solveModeSuppressed = true; });
+    expect(el.querySelector('.ctx-mode-btn')).toBeNull();
+    expect(bar(el).solveModeChoice).toBeNull();
+  });
+});
+
 /**
  * Tasten im Einstellungsdialog (⋮ → Einstellungen, jederzeit erreichbar) blaetterten das geloeste Kurs-Puzzle
  * dahinter: Pfeil rechts auf einem Auswahlfeld = reviewNext(), Enter auf einer Option = naechstes Puzzle.

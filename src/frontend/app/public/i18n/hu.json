@@ -4133,6 +4133,9 @@
     "switchedTraining": "Edzésmód",
     "switchedEasy": "Egyszerű mód",
     "switch": "Játékmód",
+    "switchToEasy": "Váltás egyszerű módra",
+    "switchToTraining": "Váltás edzésmódra",
+    "switchNextHint": "A következő feladványtól érvényes.",
     "awaitingChoice": "Válaszd ki, hogyan szeretnél játszani — utána rögtön indul a feladvány.",
     "scope": {
       "puzzles": "Feladványok",

@@ -3449,6 +3449,9 @@
     "switchedTraining": "Training mode",
     "switchedEasy": "Easy mode",
     "switch": "Playing style",
+    "switchToEasy": "Switch to easy mode",
+    "switchToTraining": "Switch to training mode",
+    "switchNextHint": "Takes effect from the next puzzle.",
     "awaitingChoice": "Choose how you want to play — the puzzle starts right after.",
     "scope": {
       "puzzles": "Puzzles",

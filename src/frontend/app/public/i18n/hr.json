@@ -3449,6 +3449,9 @@
     "switchedTraining": "Trening način",
     "switchedEasy": "Jednostavan način",
     "switch": "Način igre",
+    "switchToEasy": "Prebaci na jednostavan način",
+    "switchToTraining": "Prebaci na trening način",
+    "switchNextHint": "Vrijedi od sljedeće zagonetke.",
     "awaitingChoice": "Odaberi kako želiš igrati — odmah nakon toga zagonetka počinje.",
     "scope": {
       "puzzles": "Zagonetke",

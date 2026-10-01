@@ -3449,6 +3449,9 @@
     "switchedTraining": "Trainingsmodus",
     "switchedEasy": "Einfachmodus",
     "switch": "Spielweise",
+    "switchToEasy": "Zum Einfachmodus wechseln",
+    "switchToTraining": "Zum Trainingsmodus wechseln",
+    "switchNextHint": "Gilt ab dem nächsten Puzzle.",
     "awaitingChoice": "Wähle, wie du spielen möchtest — danach startet das Puzzle.",
     "scope": {
       "puzzles": "Puzzles",
