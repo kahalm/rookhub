@@ -143,4 +143,32 @@ describe('CalcMembersDialogComponent (OnPush zeichnet nach HTTP neu)', () => {
     expect(el.querySelector('mat-progress-bar')).toBeNull();
     expect((el.querySelector('.add-row input') as HTMLInputElement).disabled).toBeFalse();
   });
+
+  it('meldet beim Hinzufügen „Nutzer nicht gefunden" (404) getrennt vom allgemeinen Fehler und behält die Eingabe', () => {
+    // Codereview F3-026: wer einen Namen vertippt, soll das erfahren — kein stilles Nichts, kein
+    // generisches „Speichern fehlgeschlagen". Die Eingabe bleibt stehen, damit man sie korrigieren kann.
+    const fixture = create();
+    flushReload([member(1, 'anna')]);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+
+    c.newUsername = '  karla ';
+    c.newIsTester = true;
+    c.add();
+    const put = http.expectOne(r => r.method === 'PUT' && r.url === `${URL}/members`);
+    expect(put.request.body).toEqual({ username: 'karla', isTester: true });
+    put.flush('x', { status: 404, statusText: 'Not Found' });
+    fixture.detectChanges();
+
+    expect(warn).toHaveBeenCalledOnceWith('calc.series.userNotFound');
+    expect(c.newUsername).toBe('  karla ');
+    expect(c.busy).toBeFalse();
+    expect((fixture.nativeElement.querySelector('.add-row input') as HTMLInputElement).disabled).toBeFalse();
+
+    c.add();
+    http.expectOne(r => r.method === 'PUT' && r.url === `${URL}/members`)
+      .flush('x', { status: 500, statusText: 'Server Error' });
+    expect(warn).toHaveBeenCalledWith('calc.series.saveFailed');
+    expect(quick).not.toHaveBeenCalled();             // kein „hinzugefügt" und kein Nachladen
+  });
 });
