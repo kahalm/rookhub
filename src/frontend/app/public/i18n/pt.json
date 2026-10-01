@@ -236,7 +236,6 @@
       "title": "Eliminar conta",
       "intro": "Esta página explica como eliminar a sua conta RookHub e o que acontece aos seus dados.",
       "inAppTitle": "Como eliminar a sua conta",
-      "inApp": "Inicie sessão na aplicação e aceda a Perfil → \"Eliminar conta\". Confirme com a sua palavra-passe. A conta é eliminada imediatamente.",
       "removedTitle": "O que é removido",
       "removed1": "A sua identidade e dados pessoais (nome de utilizador, email, nome de exibição/real, FIDE/ChessResults ID, nome Chess.com/Lichess, ligação Discord) e acesso de sessão.",
       "removed2": "Conteúdo e ligações pessoais: repertórios, subscrições/favoritos de torneios, amizades e memberships de grupos.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Política de Privacidade",
-      "updated": "Última atualização: 3 de junho de 2026",
       "intro": "O RookHub é uma plataforma de treino de xadrez (puzzles, modo sem fim, cursos, repertórios). Esta política explica como os dados pessoais são tratados ao abrigo do RGPD.",
       "controllerTitle": "Responsável pelo tratamento",
       "controller": "O responsável pelo tratamento de dados é o operador indicado no aviso legal",
@@ -264,7 +262,6 @@
       "thirdIntro": "Os dados não são vendidos. Dependendo da utilização, os seguintes serviços estão envolvidos:",
       "thirdDiscord": "Discord: apenas mediante ligação voluntária de conta (ID/nome Discord) para exibição no bot Discord do RookHub.",
       "thirdChessresults": "chess-results.com: os dados de torneios são obtidos do lado do servidor quando define um ChessResults ID ou carrega torneios.",
-      "thirdChesssites": "Chess.com / Lichess: apenas os nomes de utilizador que introduz voluntariamente; sem transferência automática de dados.",
       "thirdLogging": "Elasticsearch/Kibana: registo/monitorização auto-hospedado na nossa infraestrutura.",
       "thirdHosting": "Alojamento: operado na nossa própria infraestrutura de servidores com um proxy reverso TLS.",
       "storageTitle": "Armazenamento local (cookies/storage)",

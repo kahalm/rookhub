@@ -236,7 +236,6 @@
       "title": "アカウント削除",
       "intro": "このページでは、RookHub アカウントの削除方法とデータに関する取り扱いを説明します。",
       "inAppTitle": "アカウントの削除方法",
-      "inApp": "アプリにサインインし、プロフィール → 「アカウントを削除」に進んでください。パスワードで確認するとアカウントは即時削除されます。",
       "removedTitle": "削除されるもの",
       "removed1": "お客様の ID および個人データ（ユーザー名、メールアドレス、表示名/実名、FIDE/ChessResults ID、Chess.com/Lichess ユーザー名、Discord 連携）とログインアクセス。",
       "removed2": "個人コンテンツおよびリンク: レパートリー、トーナメント購読/お気に入り、フレンド関係およびグループメンバーシップ。",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "プライバシーポリシー",
-      "updated": "最終更新: 2026年6月3日",
       "intro": "RookHub はチェストレーニングプラットフォームです（パズル、エンドレスモード、コース、レパートリー）。本ポリシーでは、GDPR に基づく個人データの取り扱いを説明します。",
       "controllerTitle": "管理者",
       "controller": "データ処理の管理者はインプリントに記載された運営者です",
@@ -264,7 +262,6 @@
       "thirdIntro": "データは販売されません。ご利用状況に応じて、以下のサービスが関与します。",
       "thirdDiscord": "Discord: RookHub Discord ボットでの表示のために任意のアカウント連携（Discord ID/名前）を行った場合のみ。",
       "thirdChessresults": "chess-results.com: ChessResults ID を設定するか、トーナメントを読み込む際にサーバーサイドでトーナメントデータを取得します。",
-      "thirdChesssites": "Chess.com / Lichess: 任意で入力したユーザー名のみ。自動データ転送は行いません。",
       "thirdLogging": "Elasticsearch/Kibana: 自社インフラ上でのセルフホスティングによるロギング/モニタリング。",
       "thirdHosting": "ホスティング: TLS リバースプロキシを備えた自社サーバーインフラで運営。",
       "storageTitle": "ローカルストレージ（Cookie/ストレージ）",

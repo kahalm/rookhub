@@ -236,7 +236,6 @@
       "title": "Hapus akun",
       "intro": "Halaman ini menjelaskan cara menghapus akun RookHub Anda dan apa yang terjadi pada data Anda.",
       "inAppTitle": "Cara menghapus akun",
-      "inApp": "Masuk ke aplikasi dan buka Profil → \"Hapus akun\". Konfirmasi dengan kata sandi Anda. Akun dihapus segera.",
       "removedTitle": "Yang dihapus",
       "removed1": "Identitas dan data pribadi Anda (nama pengguna, email, nama tampilan/asli, FIDE/ChessResults ID, nama Chess.com/Lichess, tautan Discord) dan akses masuk.",
       "removed2": "Konten dan tautan pribadi: repertoir, langganan/favorit turnamen, pertemanan dan keanggotaan grup.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Kebijakan Privasi",
-      "updated": "Terakhir diperbarui: 3 Juni 2026",
       "intro": "RookHub adalah platform pelatihan catur (puzzle, mode tanpa batas, kursus, repertoir). Kebijakan ini menjelaskan bagaimana data pribadi diproses berdasarkan GDPR.",
       "controllerTitle": "Pengendali",
       "controller": "Pengendali pemrosesan data adalah operator yang disebutkan dalam imprint",
@@ -264,7 +262,6 @@
       "thirdIntro": "Data tidak dijual. Tergantung penggunaan Anda, layanan berikut terlibat:",
       "thirdDiscord": "Discord: hanya saat penghubungan akun secara sukarela (Discord ID/nama) untuk ditampilkan di bot Discord RookHub.",
       "thirdChessresults": "chess-results.com: data turnamen diambil di sisi server saat Anda menetapkan ChessResults ID atau memuat turnamen.",
-      "thirdChesssites": "Chess.com / Lichess: hanya nama pengguna yang Anda masukkan secara sukarela; tidak ada transfer data otomatis.",
       "thirdLogging": "Elasticsearch/Kibana: logging/monitoring yang dihosting sendiri di infrastruktur kami.",
       "thirdHosting": "Hosting: dioperasikan pada infrastruktur server kami sendiri dengan reverse proxy TLS.",
       "storageTitle": "Penyimpanan lokal (cookie/storage)",

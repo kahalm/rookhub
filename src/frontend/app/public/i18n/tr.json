@@ -236,7 +236,6 @@
       "title": "Hesabı sil",
       "intro": "Bu sayfa, RookHub hesabınızı nasıl sileceğinizi ve verilerinize ne olacağını açıklar.",
       "inAppTitle": "Hesabınızı nasıl silersiniz",
-      "inApp": "Uygulamaya giriş yapın ve Profil → \"Hesabı sil\" bölümüne gidin. Şifrenizle onaylayın. Hesap hemen silinir.",
       "removedTitle": "Neler silinir",
       "removed1": "Kimliğiniz ve kişisel verileriniz (kullanıcı adı, e-posta, görünen/gerçek ad, FIDE/ChessResults ID, Chess.com/Lichess adı, Discord bağlantısı) ve giriş erişimi.",
       "removed2": "Kişisel içerik ve bağlantılar: repertuarlar, turnuva abonelikleri/favorileri, arkadaşlıklar ve grup üyelikleri.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Gizlilik Politikası",
-      "updated": "Son güncelleme: 3 Haziran 2026",
       "intro": "RookHub bir satranç antrenman platformudur (problemler, sonsuz mod, kurslar, repertuarlar). Bu politika, kişisel verilerin GDPR kapsamında nasıl işlendiğini açıklar.",
       "controllerTitle": "Veri sorumlusu",
       "controller": "Veri işlemenin sorumlusu, künye bilgilerinde belirtilen işletmecedir",
@@ -264,7 +262,6 @@
       "thirdIntro": "Veriler satılmaz. Kullanımınıza bağlı olarak aşağıdaki hizmetler devreye girer:",
       "thirdDiscord": "Discord: yalnızca gönüllü hesap bağlama sırasında (Discord ID/adı) RookHub Discord botunda görüntülenmek için.",
       "thirdChessresults": "chess-results.com: ChessResults ID ayarladığınızda veya turnuvaları yüklediğinizde turnuva verileri sunucu tarafında çekilir.",
-      "thirdChesssites": "Chess.com / Lichess: yalnızca gönüllü olarak girdiğiniz kullanıcı adları; otomatik veri aktarımı yapılmaz.",
       "thirdLogging": "Elasticsearch/Kibana: altyapımızda kendi barındırdığımız günlük kaydı/izleme.",
       "thirdHosting": "Barındırma: TLS ters proxy ile kendi sunucu altyapımızda çalıştırılır.",
       "storageTitle": "Yerel depolama (çerezler/depolama)",

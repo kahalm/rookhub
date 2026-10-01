@@ -236,7 +236,6 @@
       "title": "Supprimer le compte",
       "intro": "Cette page explique comment supprimer votre compte RookHub et ce qui arrive à vos données.",
       "inAppTitle": "Comment supprimer votre compte",
-      "inApp": "Connectez-vous à l'application et accédez à Profil → « Supprimer le compte ». Confirmez avec votre mot de passe. Le compte est supprimé immédiatement.",
       "removedTitle": "Ce qui est supprimé",
       "removed1": "Votre identité et vos données personnelles (nom d'utilisateur, e-mail, nom affiché/réel, ID FIDE/ChessResults, nom Chess.com/Lichess, lien Discord) et l'accès à la connexion.",
       "removed2": "Contenus et liens personnels : répertoires, abonnements/favoris de tournois, amitiés et appartenances à des groupes.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Politique de confidentialité",
-      "updated": "Dernière mise à jour : 3 juin 2026",
       "intro": "RookHub est une plateforme d'entraînement aux échecs (puzzles, mode infini, cours, répertoires). Cette politique explique comment les données personnelles sont traitées conformément au RGPD.",
       "controllerTitle": "Responsable du traitement",
       "controller": "Le responsable du traitement des données est l'opérateur désigné dans les mentions légales",
@@ -264,7 +262,6 @@
       "thirdIntro": "Les données ne sont pas vendues. Selon votre utilisation, les services suivants interviennent :",
       "thirdDiscord": "Discord : uniquement en cas de liaison volontaire de compte (ID/nom Discord) pour l'affichage dans le bot Discord RookHub.",
       "thirdChessresults": "chess-results.com : les données de tournoi sont récupérées côté serveur lorsque vous définissez un ID ChessResults ou chargez des tournois.",
-      "thirdChesssites": "Chess.com / Lichess : uniquement les noms d'utilisateur que vous saisissez volontairement ; aucun transfert automatique de données.",
       "thirdLogging": "Elasticsearch/Kibana : journalisation/surveillance auto-hébergée sur notre infrastructure.",
       "thirdHosting": "Hébergement : exploité sur notre propre infrastructure serveur avec un proxy inverse TLS.",
       "storageTitle": "Stockage local (cookies/stockage)",

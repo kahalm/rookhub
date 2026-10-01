@@ -236,7 +236,6 @@
       "title": "Usuń konto",
       "intro": "Ta strona wyjaśnia, jak usunąć konto RookHub i co dzieje się z Twoimi danymi.",
       "inAppTitle": "Jak usunąć konto",
-      "inApp": "Zaloguj się do aplikacji i przejdź do Profil → „Usuń konto”. Potwierdź hasłem. Konto zostanie natychmiast usunięte.",
       "removedTitle": "Co zostaje usunięte",
       "removed1": "Twoja tożsamość i dane osobowe (nazwa użytkownika, e-mail, nazwa wyświetlana/prawdziwe imię i nazwisko, FIDE/ChessResults ID, nazwa Chess.com/Lichess, połączenie Discord) oraz dostęp do konta.",
       "removed2": "Treści osobiste i powiązania: repertuary, subskrypcje/ulubione turniejów, znajomości i członkostwa w grupach.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Polityka prywatności",
-      "updated": "Ostatnia aktualizacja: 3 czerwca 2026",
       "intro": "RookHub to platforma treningowa do szachów (zadania, tryb nieskończony, kursy, repertuary). Niniejsza polityka wyjaśnia, jak dane osobowe są przetwarzane zgodnie z RODO.",
       "controllerTitle": "Administrator danych",
       "controller": "Administratorem danych jest operator wskazany w stopce redakcyjnej",
@@ -264,7 +262,6 @@
       "thirdIntro": "Dane nie są sprzedawane. W zależności od sposobu korzystania korzystamy z następujących usług:",
       "thirdDiscord": "Discord: wyłącznie przy dobrowolnym łączeniu konta (Discord ID/nazwa) do wyświetlania w bocie Discord RookHub.",
       "thirdChessresults": "chess-results.com: dane turniejowe są pobierane po stronie serwera, gdy ustawisz ChessResults ID lub wczytujesz turnieje.",
-      "thirdChesssites": "Chess.com / Lichess: wyłącznie nazwy użytkowników, które dobrowolnie podajesz; brak automatycznej transmisji danych.",
       "thirdLogging": "Elasticsearch/Kibana: własne logowanie/monitorowanie na naszej infrastrukturze.",
       "thirdHosting": "Hosting: działamy na własnej infrastrukturze serwerowej z odwrotnym serwerem proxy TLS.",
       "storageTitle": "Lokalne przechowywanie (cookies/storage)",

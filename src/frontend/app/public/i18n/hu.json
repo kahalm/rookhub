@@ -535,7 +535,7 @@
       "thirdIntro": "Az adatokat nem adjuk el. Használattól függően a következő szolgáltatások érintettek:",
       "thirdDiscord": "Discord: csak önkéntes fiókkapcsoláskor (Discord azonosító/név) a RookHub Discord botban való megjelenítéshez.",
       "thirdChessresults": "chess-results.com: versenyadatok szerveroldali lekérése, ha megadsz egy ChessResults azonosítót vagy betöltesz versenyeket.",
-      "thirdChesssites": "Chess.com / Lichess: csak az önkéntesen megadott felhasználóneveket; nincs automatikus adatátvitel.",
+      "thirdChesssites": "Chess.com / Lichess: ha a profilodban megadod az ottani felhasználóneved, szerverünk automatikusan lekérdezi e platformok nyilvános játszma-interfészeit — a háttérben alapértelmezés szerint 6 óránként, amíg számodra aktív egy heti „játszmák” cél, valamint amikor az edzéscéloknál kézzel szinkronizálsz. Ennek során az ottani felhasználónevedet továbbítjuk az adott platformnak; a chess.com-ot egy egyesült államokbeli szolgáltató üzemelteti (harmadik országba történő továbbítás). Csak a naponkénti rapid/klasszikus játszmáid számát és a legutóbb lekért játszma időpontját tároljuk — játszmalépéseket nem. Ha törlöd a felhasználónevet a profilodból, a lekérdezés megszűnik.",
       "thirdLogging": "Elasticsearch/Kibana: saját üzemeltetésű naplózás/monitorozás az infrastruktúránkon.",
       "thirdHosting": "Tárhely: saját szerver-infrastruktúrán működik TLS fordított proxy-val.",
       "thirdAnthropic": "Anthropic PBC (USA): a Claude nevű MI-modelljével olvassa be a játszmalapok fényképeit — részletek az „MI-szolgáltatások” részben.",

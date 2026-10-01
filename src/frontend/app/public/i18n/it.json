@@ -236,7 +236,6 @@
       "title": "Elimina account",
       "intro": "Questa pagina spiega come eliminare il tuo account RookHub e cosa succede ai tuoi dati.",
       "inAppTitle": "Come eliminare il tuo account",
-      "inApp": "Accedi all'app e vai su Profilo → \"Elimina account\". Conferma con la tua password. L'account viene eliminato immediatamente.",
       "removedTitle": "Cosa viene rimosso",
       "removed1": "La tua identità e i dati personali (nome utente, email, nome visualizzato/reale, FIDE/ChessResults ID, nome Chess.com/Lichess, collegamento Discord) e l'accesso all'account.",
       "removed2": "Contenuti e link personali: repertori, iscrizioni/preferiti ai tornei, amicizie e appartenenze a gruppi.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Informativa sulla privacy",
-      "updated": "Ultimo aggiornamento: 3 giugno 2026",
       "intro": "RookHub è una piattaforma di allenamento agli scacchi (puzzle, modalità infinita, corsi, repertori). Questa informativa spiega come vengono trattati i dati personali ai sensi del GDPR.",
       "controllerTitle": "Titolare del trattamento",
       "controller": "Il titolare del trattamento dei dati è l'operatore indicato nell'impronta",
@@ -264,7 +262,6 @@
       "thirdIntro": "I dati non vengono venduti. A seconda dell'utilizzo, sono coinvolti i seguenti servizi:",
       "thirdDiscord": "Discord: solo su collegamento volontario dell'account (ID/nome Discord) per la visualizzazione nel bot Discord di RookHub.",
       "thirdChessresults": "chess-results.com: i dati dei tornei vengono recuperati lato server quando imposti un ChessResults ID o carichi tornei.",
-      "thirdChesssites": "Chess.com / Lichess: solo i nomi utente che inserisci volontariamente; nessun trasferimento automatico di dati.",
       "thirdLogging": "Elasticsearch/Kibana: logging/monitoraggio self-hosted sulla nostra infrastruttura.",
       "thirdHosting": "Hosting: gestito sulla nostra infrastruttura server con reverse proxy TLS.",
       "storageTitle": "Archiviazione locale (cookie/storage)",

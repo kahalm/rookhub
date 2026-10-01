@@ -116,6 +116,15 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['aiScoresheet']).not.toMatch(/nach der Korrektur verworfen|discarded after the correction|odbacuje nakon ispravka|javítás után elvetjük/);
     });
 
+    it(`${lang}: Chess.com/Lichess-Abruf wie im Code — automatisch alle 6 Stunden, US-Anbieter (UX-022)`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      // PlayTimeSyncService fragt standardmaessig alle 6 h ab und schickt den Benutzernamen an chess.com (USA); der
+      // Altstand vom Juni sagte das Gegenteil („keine automatische Datenuebertragung“).
+      expect(p['thirdChesssites']).toMatch(/\b6\b/);
+      expect(p['thirdChesssites']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
+      expect(p['thirdChesssites']).not.toMatch(/keine automatische|no automatic|nema automatsk|nincs automatikus/);
+    });
+
     it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {
       const p = (await load(lang))['legal']['privacy'];
       expect(p['leagueBasis']).toMatch(/6(\s*Abs\. 1|\(1\)|\. cikk \(1\))/);

@@ -83,4 +83,91 @@ describe('i18n Sprachdateien', () => {
     }
   });
 
+  /**
+   * Rechtstexte (Codereview UX-022): Datenschutzerklaerung und Loeschseite. Die gepflegten Sprachen tragen jeden
+   * Schluessel und denselben „Stand“ wie en. Die uebrigen Sprachen fallen per Schluessel-Luecke auf en zurueck und
+   * behalten nur Uebersetzungen von en-Texten, die sich seit dem Uebersetzen nicht geaendert haben: bis 2026-10 stand
+   * dort „Stand: 3. Juni“ und zu chess.com „keine automatische Datenuebertragung“, waehrend en den 6-Stunden-Abruf
+   * beschrieb. Aendert sich einer der en-Texte unten, schlaegt der Test an — dann die Uebersetzungen dieses
+   * Schluessels in den uebrigen Sprachen loeschen und den Eintrag streichen (es gilt en), oder alle neu uebersetzen
+   * und den Fingerabdruck nachziehen.
+   */
+  describe('Rechtstexte (legal.privacy, legal.accountDeletion)', () => {
+    const isLegal = (k: string) => k.startsWith('legal.privacy.') || k.startsWith('legal.accountDeletion.');
+
+    /** FNV-1a (32 bit) ueber den en-Text — der Stand, von dem aus die uebrigen Sprachen uebersetzt sind. */
+    const fingerprint = (s: string): string => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+      return h.toString(16).padStart(8, '0');
+    };
+
+    /** Was die nicht gepflegten Sprachen uebersetzt haben duerfen, mit dem Fingerabdruck des en-Texts von damals. */
+    const TRANSLATED_FROM_EN: Readonly<Record<string, string>> = {
+      'legal.privacy.title': '2526541f', 'legal.privacy.intro': '11947df0',
+      'legal.privacy.controllerTitle': 'a15e8ea1', 'legal.privacy.controller': 'f991e755',
+      'legal.privacy.dataTitle': 'df172352', 'legal.privacy.dataIntro': 'f6c135d3',
+      'legal.privacy.dataAccount': '07a9ced8', 'legal.privacy.dataProfile': 'acf57914',
+      'legal.privacy.dataUsage': 'e3661c7e', 'legal.privacy.dataTechnical': '22f3e113',
+      'legal.privacy.purposesTitle': '8f067ecb', 'legal.privacy.purposes': '74d5163f',
+      'legal.privacy.thirdTitle': '0883fee4', 'legal.privacy.thirdIntro': '66056906',
+      'legal.privacy.thirdDiscord': 'd11a95bf', 'legal.privacy.thirdChessresults': 'c7a5e460',
+      'legal.privacy.thirdLogging': '1c02fd53', 'legal.privacy.thirdHosting': '6325d96e',
+      'legal.privacy.storageTitle': 'c9258e8d', 'legal.privacy.storage': 'ca3d4776',
+      'legal.privacy.retentionTitle': 'f2846ea7', 'legal.privacy.retention': '731855af',
+      'legal.privacy.rightsTitle': 'cccb11a5', 'legal.privacy.rights': '76ad9910',
+      'legal.privacy.contactTitle': '73ac94c3', 'legal.privacy.contact': '36e2a115',
+      'legal.privacy.back': '78247cd6',
+      'legal.accountDeletion.title': '76a85421', 'legal.accountDeletion.intro': '815ca664',
+      'legal.accountDeletion.inAppTitle': '3220e42f', 'legal.accountDeletion.removedTitle': '835d70fd',
+      'legal.accountDeletion.removed1': '2d56c130', 'legal.accountDeletion.removed2': '81be7724',
+      'legal.accountDeletion.keptTitle': '5398635d', 'legal.accountDeletion.kept': 'aef76a8e',
+      'legal.accountDeletion.contactTitle': '73ac94c3', 'legal.accountDeletion.contact': '2d120dae',
+      'legal.accountDeletion.back': '78247cd6',
+    };
+
+    /** Monatsnamen (Wortstaemme, klein) der gepflegten Sprachen — hr im Genitiv („30. rujna“). */
+    const MONTHS: Readonly<Record<string, readonly string[]>> = {
+      en: ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'],
+      de: ['januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember'],
+      hr: ['siječ', 'veljač', 'ožuj', 'trav', 'svib', 'lip', 'srp', 'kolovoz', 'ruj', 'listopad', 'studen', 'prosin'],
+      hu: ['január', 'február', 'március', 'április', 'május', 'június', 'július', 'augusztus', 'szeptember', 'október', 'november', 'december'],
+    };
+    /** „Stand: 30. September 2026“ → „2026-9-30“; Tag, Monat oder Jahr nicht erkannt → NaN/0 im Ergebnis. */
+    const legalDate = (lang: string, text: string): string => {
+      const nums = (text.match(/\d+/g) ?? []).map(Number);
+      const lower = text.toLowerCase();
+      const month = (MONTHS[lang] ?? []).findIndex(m => lower.includes(m)) + 1;
+      return `${nums.find(n => n > 1000)}-${month}-${nums.find(n => n >= 1 && n <= 31)}`;
+    };
+
+    it('die en-Texte, von denen aus uebersetzt wurde, sind unveraendert', () => {
+      const changed = Object.entries(TRANSLATED_FROM_EN)
+        .filter(([k, fp]) => !(k in en) || fingerprint(en[k]) !== fp)
+        .map(([k]) => `${k} (jetzt ${k in en ? fingerprint(en[k]) : 'geloescht'})`);
+      expect(changed).withContext('en geaendert: Uebersetzungen loeschen oder neu uebersetzen').toEqual([]);
+    });
+
+    for (const lang of FORMAT_LOCALES.filter(l => l !== 'en')) {
+      it(`${lang}: jeder Rechtstext-Schluessel von en, derselbe Stand`, async () => {
+        const l = await load(lang);
+        const missing = Object.keys(en).filter(k => isLegal(k) && !(k in l));
+        expect(missing).withContext(`${lang}: fehlende Rechtstexte`).toEqual([]);
+        expect(MONTHS[lang]).withContext(`${lang}: Monatsnamen fuer den Stand fehlen`).toBeDefined();
+        expect(legalDate(lang, l['legal.privacy.updated'] ?? ''))
+          .withContext(`${lang}: legal.privacy.updated „${l['legal.privacy.updated']}“`)
+          .toBe(legalDate('en', en['legal.privacy.updated']));
+      });
+    }
+
+    it('die uebrigen Sprachen tragen keinen eigenen Stand und keine veralteten Rechtstexte', async () => {
+      expect(legalDate('en', en['legal.privacy.updated'])).toMatch(/^\d{4}-([1-9]|1[0-2])-\d{1,2}$/);
+      for (const lang of SUPPORTED_LANGS.filter(l => !FORMAT_LOCALES.includes(l))) {
+        const l = await load(lang);
+        const stale = Object.keys(l).filter(k => isLegal(k) && !(k in TRANSLATED_FROM_EN));
+        expect(stale).withContext(`${lang}: Rechtstexte ohne aktuellen en-Stand (loeschen, dann gilt en)`).toEqual([]);
+      }
+    });
+  });
+
 });

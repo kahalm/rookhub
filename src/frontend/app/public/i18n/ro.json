@@ -236,7 +236,6 @@
       "title": "Șterge cont",
       "intro": "Această pagină explică cum să ștergi contul RookHub și ce se întâmplă cu datele tale.",
       "inAppTitle": "Cum să ștergi contul",
-      "inApp": "Conectează-te la aplicație și mergi la Profil → „Șterge cont“. Confirmă cu parola ta. Contul este șters imediat.",
       "removedTitle": "Ce este eliminat",
       "removed1": "Identitatea și datele tale personale (nume utilizator, email, nume afișat/real, ID FIDE/ChessResults, nume Chess.com/Lichess, link Discord) și accesul la cont.",
       "removed2": "Conținut personal și legături: repertorii, abonamente/favorite la turnee, prietenii și apartenența la grupuri.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Politică de confidențialitate",
-      "updated": "Ultima actualizare: 3 iunie 2026",
       "intro": "RookHub este o platformă de antrenament la șah (probleme, mod infinit, cursuri, repertorii). Această politică explică modul în care sunt prelucrate datele personale în conformitate cu GDPR.",
       "controllerTitle": "Operator",
       "controller": "Operatorul pentru prelucrarea datelor este operatorul menționat în imprint",
@@ -264,7 +262,6 @@
       "thirdIntro": "Datele nu sunt vândute. În funcție de utilizare, sunt implicate următoarele servicii:",
       "thirdDiscord": "Discord: doar la conectarea voluntară a contului (ID Discord/nume) pentru afișare în botul RookHub de pe Discord.",
       "thirdChessresults": "chess-results.com: datele de turneu sunt preluate pe server atunci când setezi un ID ChessResults sau încarci turnee.",
-      "thirdChesssites": "Chess.com / Lichess: doar numele de utilizator pe care le introduci voluntar; niciun transfer automat de date.",
       "thirdLogging": "Elasticsearch/Kibana: jurnalizare/monitorizare auto-găzduită pe infrastructura noastră.",
       "thirdHosting": "Găzduire: operată pe propria infrastructură de servere cu un proxy TLS invers.",
       "storageTitle": "Stocare locală (cookie-uri/stocare)",

@@ -236,7 +236,6 @@
       "title": "Xóa tài khoản",
       "intro": "Trang này giải thích cách xóa tài khoản RookHub và những gì xảy ra với dữ liệu của bạn.",
       "inAppTitle": "Cách xóa tài khoản",
-      "inApp": "Đăng nhập vào ứng dụng và vào Hồ sơ → \"Xóa tài khoản\". Xác nhận bằng mật khẩu. Tài khoản sẽ bị xóa ngay lập tức.",
       "removedTitle": "Những gì bị xóa",
       "removed1": "Danh tính và dữ liệu cá nhân của bạn (tên người dùng, email, tên hiển thị/tên thật, ID FIDE/ChessResults, tên Chess.com/Lichess, liên kết Discord) và quyền truy cập đăng nhập.",
       "removed2": "Nội dung và liên kết cá nhân: kho repertoire, đăng ký/yêu thích giải đấu, quan hệ bạn bè và thành viên nhóm.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Chính sách bảo mật",
-      "updated": "Cập nhật lần cuối: ngày 3 tháng 6 năm 2026",
       "intro": "RookHub là nền tảng luyện tập cờ vua (bài tập, chế độ vô tận, khóa học, repertoire). Chính sách này giải thích cách xử lý dữ liệu cá nhân theo GDPR.",
       "controllerTitle": "Người kiểm soát dữ liệu",
       "controller": "Người kiểm soát việc xử lý dữ liệu là nhà điều hành được đề cập trong phần ghi chú pháp lý",
@@ -264,7 +262,6 @@
       "thirdIntro": "Dữ liệu không được bán. Tùy thuộc vào cách sử dụng, các dịch vụ sau có liên quan:",
       "thirdDiscord": "Discord: chỉ khi liên kết tài khoản tự nguyện (ID Discord/tên) để hiển thị trong bot Discord của RookHub.",
       "thirdChessresults": "chess-results.com: dữ liệu giải đấu được lấy phía máy chủ khi bạn đặt ID ChessResults hoặc tải giải đấu.",
-      "thirdChesssites": "Chess.com / Lichess: chỉ tên người dùng bạn tự nguyện nhập; không có chuyển dữ liệu tự động.",
       "thirdLogging": "Elasticsearch/Kibana: ghi nhật ký/giám sát tự lưu trữ trên cơ sở hạ tầng của chúng tôi.",
       "thirdHosting": "Lưu trữ: vận hành trên cơ sở hạ tầng máy chủ riêng với proxy ngược TLS.",
       "storageTitle": "Lưu trữ cục bộ (cookie/storage)",

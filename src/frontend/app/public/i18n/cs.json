@@ -236,7 +236,6 @@
       "title": "Smazat účet",
       "intro": "Tato stránka vysvětluje, jak smazat váš RookHub účet a co se stane s vašimi daty.",
       "inAppTitle": "Jak smazat váš účet",
-      "inApp": "Přihlaste se do aplikace a přejděte do Profil → Smazat účet. Potvrďte heslem. Účet je okamžitě smazán.",
       "removedTitle": "Co je odstraněno",
       "removed1": "Vaše identita a osobní údaje (uživatelské jméno, e-mail, zobrazované/skutečné jméno, FIDE/ChessResults ID, Chess.com/Lichess jméno, Discord odkaz) a přístup k přihlášení.",
       "removed2": "Osobní obsah a vazby: repertoáry, odběry/oblíbené turnaje, přátelství a členství ve skupinách.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Zásady ochrany osobních údajů",
-      "updated": "Poslední aktualizace: 3. června 2026",
       "intro": "RookHub je platforma pro šachový trénink (úlohy, nekonečný mód, kurzy, repertoáry). Tyto zásady vysvětlují, jak jsou osobní údaje zpracovávány v souladu s GDPR.",
       "controllerTitle": "Správce",
       "controller": "Správcem zpracování osobních údajů je provozovatel uvedený v impresu",
@@ -264,7 +262,6 @@
       "thirdIntro": "Data nejsou prodávána. V závislosti na vašem používání jsou zapojeny následující služby:",
       "thirdDiscord": "Discord: pouze při dobrovolném propojení účtu (Discord ID/jméno) pro zobrazení v RookHub Discord botu.",
       "thirdChessresults": "chess-results.com: turnajová data jsou načítána na straně serveru, pokud nastavíte ChessResults ID nebo načítáte turnaje.",
-      "thirdChesssites": "Chess.com / Lichess: pouze uživatelská jména, která dobrovolně zadáte; žádný automatický přenos dat.",
       "thirdLogging": "Elasticsearch/Kibana: vlastní hostování protokolů/monitoringu na naší infrastruktuře.",
       "thirdHosting": "Hosting: provozováno na vlastní serverové infrastruktuře s TLS reverzním proxy.",
       "storageTitle": "Lokální úložiště (cookies/storage)",

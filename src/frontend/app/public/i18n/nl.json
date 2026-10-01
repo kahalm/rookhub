@@ -236,7 +236,6 @@
       "title": "Account verwijderen",
       "intro": "Op deze pagina wordt uitgelegd hoe je je RookHub-account verwijdert en wat er met je gegevens gebeurt.",
       "inAppTitle": "Hoe verwijder je je account",
-      "inApp": "Log in op de app en ga naar Profiel → \"Account verwijderen\". Bevestig met je wachtwoord. Het account wordt onmiddellijk verwijderd.",
       "removedTitle": "Wat wordt verwijderd",
       "removed1": "Je identiteit en persoonlijke gegevens (gebruikersnaam, e-mailadres, weergave-/echte naam, FIDE/ChessResults ID, Chess.com/Lichess-naam, Discord-koppeling) en toegang tot het account.",
       "removed2": "Persoonlijke inhoud en koppelingen: repertoires, toernooi-abonnementen/-favorieten, vriendschappen en groepslidmaatschappen.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Privacybeleid",
-      "updated": "Laatst bijgewerkt: 3 juni 2026",
       "intro": "RookHub is een schaaktrainingsplatform (puzzels, eindeloze modus, cursussen, repertoires). Dit beleid legt uit hoe persoonsgegevens worden verwerkt onder de AVG.",
       "controllerTitle": "Verwerkingsverantwoordelijke",
       "controller": "De verwerkingsverantwoordelijke is de exploitant vermeld in het impressum",
@@ -264,7 +262,6 @@
       "thirdIntro": "Gegevens worden niet verkocht. Afhankelijk van uw gebruik zijn de volgende diensten betrokken:",
       "thirdDiscord": "Discord: alleen bij vrijwillige accountkoppeling (Discord ID/naam) voor weergave in de RookHub Discord-bot.",
       "thirdChessresults": "chess-results.com: toernooigegevens worden server-side opgehaald wanneer u een ChessResults ID instelt of toernooien laadt.",
-      "thirdChesssites": "Chess.com / Lichess: alleen de gebruikersnamen die u vrijwillig invoert; geen automatische gegevensoverdracht.",
       "thirdLogging": "Elasticsearch/Kibana: zelfgehoste logging/monitoring op onze infrastructuur.",
       "thirdHosting": "Hosting: beheerd op onze eigen serverinfrastructuur met een TLS reverse proxy.",
       "storageTitle": "Lokale opslag (cookies/storage)",

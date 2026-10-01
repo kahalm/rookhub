@@ -236,7 +236,6 @@
       "title": "Ta bort konto",
       "intro": "Den här sidan förklarar hur du tar bort ditt RookHub-konto och vad som händer med dina uppgifter.",
       "inAppTitle": "Hur du tar bort ditt konto",
-      "inApp": "Logga in i appen och gå till Profil → \"Ta bort konto\". Bekräfta med ditt lösenord. Kontot tas bort omedelbart.",
       "removedTitle": "Vad som tas bort",
       "removed1": "Din identitet och personliga data (användarnamn, e-post, visnings-/riktigt namn, FIDE/ChessResults ID, Chess.com/Lichess-namn, Discord-länk) och inloggningsåtkomst.",
       "removed2": "Personligt innehåll och länkar: repertoarer, turneringsprenumerationer/-favoriter, vänskaper och gruppmedlemskap.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Integritetspolicy",
-      "updated": "Senast uppdaterad: 3 juni 2026",
       "intro": "RookHub är en schackträningsplattform (uppgifter, ändlöst läge, kurser, repertoarer). Denna policy förklarar hur personuppgifter behandlas enligt GDPR.",
       "controllerTitle": "Personuppgiftsansvarig",
       "controller": "Personuppgiftsansvarig för databehandlingen är den operatör som anges i impressum",
@@ -264,7 +262,6 @@
       "thirdIntro": "Uppgifter säljs inte. Beroende på din användning är följande tjänster inblandade:",
       "thirdDiscord": "Discord: endast vid frivillig kontolänkning (Discord ID/namn) för visning i RookHub Discord-boten.",
       "thirdChessresults": "chess-results.com: turneringsdata hämtas server-sidan när du anger ett ChessResults ID eller laddar turneringar.",
-      "thirdChesssites": "Chess.com / Lichess: endast de användarnamn du frivilligt anger; ingen automatisk dataöverföring.",
       "thirdLogging": "Elasticsearch/Kibana: självhostad loggning/övervakning på vår infrastruktur.",
       "thirdHosting": "Hosting: drivs på vår egen serverinfrastruktur med en TLS-omvänd proxy.",
       "storageTitle": "Lokal lagring (cookies/storage)",

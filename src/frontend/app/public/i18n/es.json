@@ -236,7 +236,6 @@
       "title": "Eliminar cuenta",
       "intro": "Esta página explica cómo eliminar tu cuenta de RookHub y qué sucede con tus datos.",
       "inAppTitle": "Cómo eliminar tu cuenta",
-      "inApp": "Inicia sesión en la app y ve a Perfil → \"Eliminar cuenta\". Confirma con tu contraseña. La cuenta se elimina de inmediato.",
       "removedTitle": "Qué se elimina",
       "removed1": "Tu identidad y datos personales (usuario, correo electrónico, nombre visible/real, ID de FIDE/ChessResults, nombre en Chess.com/Lichess, enlace de Discord) y el acceso de inicio de sesión.",
       "removed2": "Contenido personal y enlaces: repertorios, suscripciones/favoritos de torneos, amistades y membresías de grupos.",
@@ -248,7 +247,6 @@
     },
     "privacy": {
       "title": "Política de privacidad",
-      "updated": "Última actualización: 3 de junio de 2026",
       "intro": "RookHub es una plataforma de entrenamiento de ajedrez (ejercicios, modo sin fin, cursos, repertorios). Esta política explica cómo se tratan los datos personales en virtud del RGPD.",
       "controllerTitle": "Responsable",
       "controller": "El responsable del tratamiento de datos es el operador indicado en el aviso legal",
@@ -264,7 +262,6 @@
       "thirdIntro": "Los datos no se venden. Según el uso, intervienen los siguientes servicios:",
       "thirdDiscord": "Discord: solo al vincular voluntariamente la cuenta (ID/nombre de Discord) para su visualización en el bot de RookHub en Discord.",
       "thirdChessresults": "chess-results.com: los datos de torneos se obtienen en el servidor cuando estableces un ID de ChessResults o cargas torneos.",
-      "thirdChesssites": "Chess.com / Lichess: solo los nombres de usuario que introduces voluntariamente; sin transferencia automática de datos.",
       "thirdLogging": "Elasticsearch/Kibana: registro/monitoreo alojado en nuestra propia infraestructura.",
       "thirdHosting": "Alojamiento: operado en nuestra propia infraestructura de servidores con un proxy inverso TLS.",
       "storageTitle": "Almacenamiento local (cookies/storage)",
