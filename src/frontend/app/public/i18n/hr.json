@@ -1392,6 +1392,14 @@
     },
     "bar": {
       "more": "Više"
+    },
+    "keyboardMove": {
+      "board": "Šahovska ploča",
+      "label": "Unesi potez",
+      "placeholder": "npr. Sf3 ili g1f3",
+      "invalid": "„{{move}}“ ovdje nije dopušten potez.",
+      "notYourTurn": "Pričekaj dok ne budeš na potezu.",
+      "lastMove": "Zadnji potez: {{from}}–{{to}}"
     }
   },
   "courses": {

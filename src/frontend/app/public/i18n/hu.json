@@ -1157,6 +1157,14 @@
     },
     "bar": {
       "more": "Több"
+    },
+    "keyboardMove": {
+      "board": "Sakktábla",
+      "label": "Lépés megadása",
+      "placeholder": "pl. Hf3 vagy g1f3",
+      "invalid": "„{{move}}” itt nem szabályos lépés.",
+      "notYourTurn": "Várj, amíg te következel.",
+      "lastMove": "Utolsó lépés: {{from}}–{{to}}"
     }
   },
   "courses": {

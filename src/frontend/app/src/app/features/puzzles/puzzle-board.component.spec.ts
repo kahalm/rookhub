@@ -334,3 +334,148 @@ describe('PuzzleBoardComponent Vollbild-Projektion', () => {
     expect(host.querySelector('#probe')).not.toBeNull();
   });
 });
+
+/**
+ * Codereview F2-004: Das Brett nahm Züge nur über Maus/Touch an — kein Löser war ohne Zeigegerät lösbar (WCAG 2.1.1).
+ * Jetzt gibt es eine Zug-Eingabe per Tastatur, die denselben Weg geht wie ein gezogener Zug.
+ */
+describe('PuzzleBoardComponent Zug-Eingabe per Tastatur (F2-004)', () => {
+  const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+  const PROMO = '8/P6k/8/8/8/8/7K/8 w - - 0 1';
+
+  function create(fen = START, dests: [string, string[]][] = [['g1', ['f3', 'h3']], ['e2', ['e3', 'e4']]]) {
+    const comp = new PuzzleBoardComponent();
+    comp.fen = fen;
+    comp.orientation = 'white';
+    comp.turnColor = 'white';
+    comp.dests = new Map(dests) as unknown as Map<Key, Key[]>;
+    return comp;
+  }
+
+  it('ein getippter legaler Zug wird gemeldet wie ein gezogener', () => {
+    const comp = create();
+    const emit = spyOn(comp.moveMade, 'emit');
+    expect(comp.keyboardMove('Nf3')).toBeTrue();
+    expect(emit).toHaveBeenCalledWith({ orig: 'g1' as Key, dest: 'f3' as Key });
+    expect(comp.kbdFeedback).toBeNull();
+  });
+
+  it('nicht am Zug oder Brett gesperrt: kein Zug, eine Rückmeldung', () => {
+    const notMine = create();
+    notMine.turnColor = 'black';
+    const emit1 = spyOn(notMine.moveMade, 'emit');
+    expect(notMine.keyboardMove('Nf3')).toBeFalse();
+    expect(emit1).not.toHaveBeenCalled();
+    expect(notMine.kbdFeedback).toEqual({ key: 'puzzles.keyboardMove.notYourTurn' });
+
+    const locked = create();
+    locked.viewOnly = true;
+    const emit2 = spyOn(locked.moveMade, 'emit');
+    expect(locked.keyboardMove('Nf3')).toBeFalse();
+    expect(emit2).not.toHaveBeenCalled();
+  });
+
+  it('illegal, unlesbar oder vom Brett gerade nicht erlaubt (dests): Rückmeldung mit dem Getippten', () => {
+    const comp = create();
+    const emit = spyOn(comp.moveMade, 'emit');
+    expect(comp.keyboardMove('e5')).toBeFalse();
+    expect(comp.kbdFeedback).toEqual({ key: 'puzzles.keyboardMove.invalid', params: { move: 'e5' } });
+    expect(comp.keyboardMove('Nc3')).toBeFalse();          // legal, aber das Brett bietet b1 gerade nicht an
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('Umwandlung ohne Figur öffnet die Auswahl, mit Figur geht sie gleich durch, autoQueen nimmt die Dame', () => {
+    const ask = create(PROMO, [['a7', ['a8']]]);
+    const emitAsk = spyOn(ask.moveMade, 'emit');
+    expect(ask.keyboardMove('a8')).toBeTrue();
+    expect(emitAsk).not.toHaveBeenCalled();
+    expect(ask.pendingPromotion).toEqual({ orig: 'a7' as Key, dest: 'a8' as Key });
+    expect(ask.promotionColor).toBe('w');
+
+    const named = create(PROMO, [['a7', ['a8']]]);
+    const emitNamed = spyOn(named.moveMade, 'emit');
+    named.keyboardMove('a8=N');
+    expect(emitNamed).toHaveBeenCalledWith({ orig: 'a7' as Key, dest: 'a8' as Key, promotion: 'n' });
+
+    const kids = create(PROMO, [['a7', ['a8']]]);
+    kids.autoQueen = true;
+    const emitKids = spyOn(kids.moveMade, 'emit');
+    kids.keyboardMove('a7a8');
+    expect(emitKids).toHaveBeenCalledWith({ orig: 'a7' as Key, dest: 'a8' as Key, promotion: 'q' });
+  });
+
+  it('Viz-Modus: es zählt die tatsächliche Stellung, nicht das eingefrorene Brett', () => {
+    const comp = create(START, []);                        // eingefrorenes Brett, chessground-dests leer
+    comp.visualization = 2;
+    comp.actualFen = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+    const emit = spyOn(comp.moveMade, 'emit');
+    expect(comp.keyboardMove('Qh5')).toBeTrue();           // auf dem eingefrorenen Brett ginge Dh5 nicht
+    expect(emit).toHaveBeenCalledWith({ orig: 'd1' as Key, dest: 'h5' as Key });
+  });
+
+  it('Viz-Modus nimmt wie das Antippen auch Züge der Gegenseite (Kalkulation: Varianten für beide Seiten)', () => {
+    const comp = create(START, []);
+    comp.visualization = 1;
+    comp.actualFen = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';   // Schwarz am Zug
+    const emit = spyOn(comp.moveMade, 'emit');
+    expect(comp.keyboardMove('e5')).toBeTrue();
+    expect(emit).toHaveBeenCalledWith({ orig: 'e7' as Key, dest: 'e5' as Key });
+  });
+
+  describe('gerendert', () => {
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [PuzzleBoardComponent],
+        providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+      }).compileComponents();
+    });
+
+    function render() {
+      const fixture = TestBed.createComponent(PuzzleBoardComponent);
+      fixture.componentInstance.dests = new Map([['g1', ['f3', 'h3']]]) as unknown as Map<Key, Key[]>;
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    it('das Eingabefeld ist per Tab erreichbar, aber erst mit Fokus sichtbar; Enter zieht und leert das Feld', () => {
+      const fixture = render();
+      const el = fixture.nativeElement as HTMLElement;
+      const box = el.querySelector('.kbd-move') as HTMLElement;
+      const input = el.querySelector('input.kbd-input') as HTMLInputElement;
+      expect(input).withContext('Zug-Eingabefeld').not.toBeNull();
+      expect(input.tabIndex).toBe(0);
+      expect(el.querySelector(`label[for="${input.id}"]`)!.textContent!.trim()).toBe('puzzles.keyboardMove.label');
+      expect(box.getBoundingClientRect().width).withContext('ohne Fokus unsichtbar').toBeLessThanOrEqual(1);
+
+      input.focus();
+      expect(box.getBoundingClientRect().width).withContext('mit Fokus sichtbar').toBeGreaterThan(1);
+
+      const emit = spyOn(fixture.componentInstance.moveMade, 'emit');
+      input.value = 'g1f3';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(emit).toHaveBeenCalledWith({ orig: 'g1' as Key, dest: 'f3' as Key });
+      expect(input.value).toBe('');
+
+      input.value = 'Nc3';
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      fixture.detectChanges();
+      const status = el.querySelector(`#${input.id}-status`) as HTMLElement;
+      expect(status.getAttribute('role')).toBe('status');
+      expect(input.getAttribute('aria-describedby')).toBe(status.id);
+      expect(status.textContent!.trim()).toBe('puzzles.keyboardMove.invalid');
+      expect(input.value).withContext('ein abgelehnter Zug bleibt zum Korrigieren stehen').toBe('Nc3');
+    });
+
+    it('das Brett hat einen Namen samt Seite am Zug, der letzte Zug steht in einer Live-Region', () => {
+      const fixture = render();
+      fixture.componentInstance.lastMove = ['e2' as Key, 'e4' as Key];
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const board = el.querySelector('.cg-wrap') as HTMLElement;
+      expect(board.getAttribute('role')).toBe('img');
+      expect(board.getAttribute('aria-label')).toBe('puzzles.keyboardMove.board, common.whiteToMove');
+      const live = el.querySelector('[aria-live="polite"]') as HTMLElement;
+      expect(live.textContent!.trim()).toBe('puzzles.keyboardMove.lastMove');
+    });
+  });
+});

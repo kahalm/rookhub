@@ -14,12 +14,17 @@ import {
 import {
   PromotionPickerComponent, PromotionPiece,
 } from '../../shared/promotion-picker/promotion-picker.component';
+import { TranslatePipe } from '@ngx-translate/core';
+import { parseKeyboardMove } from './keyboard-move.util';
+
+/** Rückmeldung der Zug-Eingabe per Tastatur (i18n-Schlüssel + Parameter). */
+interface KeyboardFeedback { key: string; params?: Record<string, string>; }
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-puzzle-board',
   standalone: true,
-  imports: [CommonModule, BoardFullscreenButtonComponent, PromotionPickerComponent],
+  imports: [CommonModule, BoardFullscreenButtonComponent, PromotionPickerComponent, TranslatePipe],
   template: `
     <div #fsHost class="board-fs-host">
      @if (allowFullscreen) {
@@ -27,7 +32,9 @@ import {
        <app-board-fullscreen-button [target]="fsHost" />
      }
      <div class="board-wrapper" [class]="'board-theme-' + boardTheme + ' piece-set-' + pieceSet">
-      <div #boardEl class="cg-wrap"></div>
+      <div #boardEl class="cg-wrap" role="img"
+           [attr.aria-label]="('puzzles.keyboardMove.board' | translate) + ', '
+             + ((turnColor === 'white' ? 'common.whiteToMove' : 'common.blackToMove') | translate)"></div>
       @if (vizSelectedSquare) {
         <!-- DOM-Overlay als verlässliche Viz-Auswahlmarkierung (unabhängig von chessground-SVG). -->
         <div class="viz-select-overlay"
@@ -44,6 +51,21 @@ import {
           (dismiss)="cancelPromotion()" />
       }
      </div>
+     <!-- Zug-Eingabe per Tastatur (F2-004): unsichtbar, bis sie den Fokus hat (wie ein Sprunglink) — Maus- und
+          Touch-Nutzer sehen nichts Neues, Tastatur- und Screenreader-Nutzer erreichen sie mit Tab. Derselbe Weg wie
+          ein gezogener Zug: nur legale Züge, nur am Zug, dann moveMade (Umwandlung ohne Figur → Auswahl). -->
+     <div class="kbd-move">
+       <label class="kbd-label" [for]="kbdId">{{ 'puzzles.keyboardMove.label' | translate }}</label>
+       <input #kbdInput class="kbd-input" type="text" [id]="kbdId" autocomplete="off" autocapitalize="off"
+              spellcheck="false" enterkeyhint="go" [attr.aria-describedby]="kbdId + '-status'"
+              [placeholder]="'puzzles.keyboardMove.placeholder' | translate"
+              (keydown.enter)="submitKeyboardMove(kbdInput)" (input)="kbdFeedback = null" />
+       <span class="kbd-status" [id]="kbdId + '-status'" role="status">{{
+         kbdFeedback ? (kbdFeedback.key | translate: kbdFeedback.params) : '' }}</span>
+     </div>
+     <!-- Der letzte Zug für Screenreader (auch der des Gegners) -->
+     <span class="sr-only" aria-live="polite">{{
+       lastMove ? ('puzzles.keyboardMove.lastMove' | translate: { from: lastMove[0], to: lastMove[1] }) : '' }}</span>
      <!-- Vom Consumer in die Vollbild-Hülle projizierte Elemente (z. B. der Kalkulations-Timer).
           Mit data-fs-only sind sie NUR im Vollbild sichtbar (globale Regel in styles.scss) —
           nötig, weil der Browser im Vollbild ausschließlich diesen Teilbaum rendert. -->
@@ -90,6 +112,25 @@ import {
       pointer-events: none;
       z-index: 50;
       box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+    }
+    /* Zug-Eingabe per Tastatur (F2-004): versteckt wie ein Sprunglink, sichtbar sobald sie den Fokus hat. */
+    .kbd-move {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px;
+      margin-top: 6px; font-size: 0.875rem;
+    }
+    .kbd-move:not(:focus-within), .sr-only {
+      position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+      overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+    .kbd-input {
+      font: inherit; width: 10em; padding: 4px 6px; color: inherit; background: transparent;
+      border: 1px solid color-mix(in srgb, currentColor 40%, transparent); border-radius: 4px;
+    }
+    .kbd-status { flex-basis: 100%; }
+    /* Im Vollbild liegt das Feld unten links über dem schwarzen Balken (sonst schwarz auf schwarz neben dem Brett). */
+    .board-fs-host:fullscreen .kbd-move:focus-within {
+      position: absolute; left: 8px; bottom: 8px; z-index: 60;
+      padding: 6px 10px; border-radius: 6px; background: #fff; color: #000;
     }
   `]
 })
@@ -153,6 +194,12 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
   // liegen in PromotionPickerComponent - dieselbe, die auch das Analysebrett benutzt.
   pendingPromotion: { orig: Key; dest: Key } | null = null;
   promotionColor: 'w' | 'b' = 'w';
+
+  // Zug-Eingabe per Tastatur (F2-004)
+  private static nextKbdId = 0;
+  readonly kbdId = `kbd-move-${PuzzleBoardComponent.nextKbdId++}`;
+  /** Rückmeldung unter dem Eingabefeld (Live-Region); null = nichts zu sagen. */
+  kbdFeedback: KeyboardFeedback | null = null;
 
   ngAfterViewInit(): void {
     this.ensureChessgroundCss();
@@ -384,6 +431,53 @@ export class PuzzleBoardComponent implements AfterViewInit, OnChanges, OnDestroy
       } catch { /* fallback to orientation */ }
     }
     this.promotionColor = color;
+  }
+
+  /** Enter im Eingabefeld: Zug ausführen; gelungen → Feld leeren (der Fokus bleibt für den nächsten Zug). */
+  submitKeyboardMove(input: HTMLInputElement): void {
+    if (!input.value.trim()) return;
+    if (this.keyboardMove(input.value)) input.value = '';
+  }
+
+  /**
+   * Ein getippter Zug (F2-004) geht denselben Weg wie ein gezogener: legal in der Stellung und vom Brett gerade
+   * angenommen — dann `moveMade`. Ohne Viz-Modus heißt das wie bei chessground: die Seite der Brett-Ausrichtung ist
+   * am Zug und der Zug steht in `dests`. Im Viz-Modus zählt wie beim Antippen nur die Legalität in der
+   * tatsächlichen Stellung (`actualFen`) — der Kalkulations-Modus gibt dort Züge BEIDER Seiten ein, und die Löser
+   * prüfen selbst, ob sie gerade einen Zug erwarten. Eine Umwandlung ohne genannte Figur öffnet die Auswahl (bzw.
+   * wird mit `autoQueen` gleich zur Dame). Gibt zurück, ob der Zug angenommen wurde.
+   */
+  keyboardMove(text: string): boolean {
+    if (this.pendingPromotion) return false;
+    const viz = this.visualization > 0;
+    const fen = viz ? (this.actualFen ?? this.fen) : this.fen;
+    const sideToMove: Color = fen.split(' ')[1] === 'b' ? 'black' : 'white';
+    const myTurn = !this.viewOnly && (viz || this.turnColor === this.orientation);
+    if (!myTurn) {
+      this.kbdFeedback = { key: 'puzzles.keyboardMove.notYourTurn' };
+      return false;
+    }
+    const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
+    const mv = parseKeyboardMove(fen, text, lang);
+    if (!mv || (!viz && !this.dests.get(mv.orig)?.includes(mv.dest))) {
+      this.kbdFeedback = { key: 'puzzles.keyboardMove.invalid', params: { move: text.trim() } };
+      return false;
+    }
+    this.kbdFeedback = null;
+    if (viz && this.vizFrom) { this.vizFrom = undefined; this.clearVizSelection(); }
+    if (mv.needsPromotion) {
+      if (this.autoQueen) {
+        this.moveMade.emit({ orig: mv.orig, dest: mv.dest, promotion: 'q' });
+      } else {
+        this.pendingPromotion = { orig: mv.orig, dest: mv.dest };
+        this.promotionColor = sideToMove === 'white' ? 'w' : 'b';
+      }
+      return true;
+    }
+    this.moveMade.emit(mv.promotion
+      ? { orig: mv.orig, dest: mv.dest, promotion: mv.promotion }
+      : { orig: mv.orig, dest: mv.dest });
+    return true;
   }
 
   @HostListener('document:keydown.escape')

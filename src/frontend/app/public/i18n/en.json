@@ -1392,6 +1392,14 @@
     },
     "bar": {
       "more": "More"
+    },
+    "keyboardMove": {
+      "board": "Chessboard",
+      "label": "Enter a move",
+      "placeholder": "e.g. Nf3 or g1f3",
+      "invalid": "“{{move}}” is not a legal move here.",
+      "notYourTurn": "Wait until it is your move.",
+      "lastMove": "Last move: {{from}}–{{to}}"
     }
   },
   "courses": {

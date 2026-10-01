@@ -1392,6 +1392,14 @@
     },
     "bar": {
       "more": "Mehr"
+    },
+    "keyboardMove": {
+      "board": "Schachbrett",
+      "label": "Zug eingeben",
+      "placeholder": "z. B. Sf3 oder g1f3",
+      "invalid": "„{{move}}“ ist hier kein legaler Zug.",
+      "notYourTurn": "Warte, bis du am Zug bist.",
+      "lastMove": "Letzter Zug: {{from}}–{{to}}"
     }
   },
   "courses": {
