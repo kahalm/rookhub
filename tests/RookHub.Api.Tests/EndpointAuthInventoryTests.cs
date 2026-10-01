@@ -157,9 +157,9 @@ public class EndpointAuthInventoryTests
         "PUT /api/endless/progress/anonymous",                       // EndlessController.SaveAnonymousProgress
     ];
 
-    private record Endpoint(string Method, string Template, bool Anonymous);
+    internal record Endpoint(string Method, string Template, bool Anonymous);
 
-    private static List<Endpoint> Inventory()
+    internal static List<Endpoint> Inventory()
     {
         var result = new List<Endpoint>();
         var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
