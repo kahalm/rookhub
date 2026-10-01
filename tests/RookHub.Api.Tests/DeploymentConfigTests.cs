@@ -397,6 +397,40 @@ public class DeploymentConfigTests
         Assert.All(sources, s => Assert.Contains(s, new[] { "'self'", "data:", "blob:" }));
     }
 
+    /// <summary>
+    /// F8-017: ein <c>add_header</c> IN einer location ersetzt alle serverweiten <c>add_header</c> — die exakte
+    /// assetlinks-Location setzte Cache-Control selbst und lieferte die Datei ohne CSP, nosniff, HSTS und
+    /// X-Frame-Options aus. Dazu erlaubte worker-src ungenutzte blob:-Worker, und X-XSS-Protection stand auf dem
+    /// veralteten „1; mode=block".
+    /// </summary>
+    [Fact]
+    public void SecurityHeaders_ReachAssetlinks_NoBlobWorkers_NoLegacyXssFilter()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+
+        var assetlinks = Regex.Match(nginx, @"location = /\.well-known/assetlinks\.json \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(assetlinks.Success, "assetlinks-Location fehlt in nginx.conf");
+        Assert.DoesNotContain("add_header", assetlinks.Groups["body"].Value);
+        var map = Regex.Match(nginx, @"map \$uri \$rookhub_cache_control \{(?<body>.*?)\n\}", RegexOptions.Singleline);
+        Assert.True(map.Success, "map $rookhub_cache_control fehlt");
+        Assert.Contains("/.well-known/assetlinks.json  \"public, max-age=3600\";", map.Groups["body"].Value);
+
+        // Jede location, die doch eigene add_header braucht (Kacheln), muss mindestens nosniff wiederholen.
+        foreach (Match loc in Regex.Matches(nginx, @"\n    location (?<head>[^\n]*?) \{\n(?<body>.*?)\n    \}", RegexOptions.Singleline))
+            if (loc.Groups["body"].Value.Contains("add_header"))
+                Assert.True(loc.Groups["body"].Value.Contains("add_header X-Content-Type-Options \"nosniff\" always;"),
+                    $"location {loc.Groups["head"].Value.Trim()} setzt add_header, verliert damit nosniff");
+
+        var csp = Regex.Match(nginx, "Content-Security-Policy \"(?<v>[^\"]+)\"");
+        Assert.True(csp.Success, "CSP fehlt in nginx.conf");
+        var worker = Regex.Match(csp.Groups["v"].Value, "worker-src (?<v>[^;]+);");
+        Assert.True(worker.Success, "worker-src fehlt");
+        Assert.Equal(new[] { "'self'" }, worker.Groups["v"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.DoesNotContain("X-XSS-Protection \"1", nginx);
+        Assert.Contains("add_header X-XSS-Protection \"0\" always;", nginx);
+    }
+
     [Fact]
     public void ScannerPaths_Get404_WhileAppFilesAndApiStayUntouched()
     {
