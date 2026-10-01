@@ -3742,6 +3742,7 @@
     "cancelled": "Abgesagt",
     "approximate": "Nur ungefähr verortet: Der Spielort ließ sich nicht auflösen, der Punkt zeigt die Mitte der Region.",
     "pins": "{{count}} Turniere im Ausschnitt",
+    "pinsLocatedOnly": "nur Turniere mit bekanntem Spielort — die übrigen stehen in der Liste",
     "mapTruncated": "Zu viele Turniere in diesem Ausschnitt — die spätesten fehlen. Zoome hinein oder verkürze den Zeitraum, um alle zu sehen.",
     "bookmark": "Merken",
     "bookmarkRemove": "Merken aufheben",
@@ -3817,7 +3818,7 @@
       "weekendOnly": "Nur Turniere, die am Wochenende beginnen",
       "notifyNew": "Über neue Turniere in diesem Umkreis benachrichtigen",
       "errorName": "Bitte gib dem Profil einen Namen.",
-      "errorPlace": "Bitte einen Ort aus der Liste wählen — der Server braucht Koordinaten.",
+      "errorPlace": "Bitte einen Ort aus der Liste wählen oder den Standort-Knopf nehmen — der Server braucht Koordinaten.",
       "saveError": "Das Suchprofil konnte nicht gespeichert werden."
     },
     "speedFilter": "Nach Bedenkzeit filtern",
@@ -3863,6 +3864,8 @@
       "label": "Ort",
       "hint": "Suchen oder Standort verwenden",
       "useCurrent": "Meinen aktuellen Standort verwenden",
+      "noMatch": "Kein Ort gefunden — versuch die Postleitzahl, einen größeren Ort in der Nähe oder den Standort-Knopf.",
+      "searchFailed": "Die Ortssuche ist gerade nicht erreichbar. Tipp weiter, um es erneut zu versuchen, oder nimm den Standort-Knopf.",
       "error": {
         "unsupported": "Dieser Browser kann keinen Standort melden.",
         "denied": "Der Zugriff auf den Standort ist gesperrt. In den Browser-Einstellungen für diese Seite lässt er sich erlauben.",

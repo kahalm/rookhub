@@ -40,6 +40,9 @@
 
 .ok { color: var(--mat-sys-primary); }
 
+/* Kein Treffer, Suche weg oder Standort gescheitert: ein Satz unter dem Ortsfeld (F6-007). */
+.place-note { margin: -0.5rem 0 0.75rem; font-size: 0.85rem; }
+
 .error { color: var(--mat-sys-error); margin: 0.25rem 0 0; font-size: 0.85rem; }
 
 .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }

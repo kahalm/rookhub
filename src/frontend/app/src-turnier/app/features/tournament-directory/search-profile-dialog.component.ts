@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, Inject, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -10,8 +10,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSliderModule } from '@angular/material/slider';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryService } from './tournament-directory.service';
 import { GeoPlaceSuggestion, SearchProfile, SearchProfileInput } from './tournament-directory.model';
 
@@ -50,7 +51,22 @@ export class SearchProfileDialogComponent {
 
   suggestions: GeoPlaceSuggestion[] = [];
   searching = false;
+  /**
+   * Die Ortssuche fand nichts bzw. scheiterte. Ohne die beiden stand nach der Sanduhr nichts da,
+   * und der Dialog verlangte trotzdem „einen Ort aus der Liste" (Codereview F6-007).
+   */
+  noMatch = false;
+  searchFailed = false;
   error: string | null = null;
+
+  /**
+   * Standort wie in der Filterleiste: ohne Treffer im Ortslexikon war ein Profil sonst nicht
+   * anzulegen. In Signalen, weil die Ortung ausserhalb der Angular-Zone antwortet.
+   */
+  private readonly geolocation = inject(GeolocationService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly locating = signal(false);
+  readonly locationError = signal<GeolocationFailure | null>(null);
 
   private readonly placeTerm$ = new Subject<string>();
 
@@ -84,11 +100,57 @@ export class SearchProfileDialogComponent {
       // Sanduhr-Flag steht. Ohne diese Bedingung verwirft distinctUntilChanged die Anfrage, und
       // die Sanduhr bleibt fuer immer.
       distinctUntilChanged((a, b) => a === b && this.suggestions.length > 0),
-      switchMap(term => this.directory.places(term)),
+      // Fehler INNEN abfangen: draussen beendete der erste den Strom, und die Sanduhr blieb stehen.
+      switchMap(term => this.directory.places(term).pipe(
+        map(results => ({ results, failed: false })),
+        catchError(() => of({ results: [] as GeoPlaceSuggestion[], failed: true })),
+      )),
       takeUntilDestroyed(),
-    ).subscribe({
-      next: results => { this.suggestions = results; this.searching = false; },
-      error: () => { this.suggestions = []; this.searching = false; },
+    ).subscribe(({ results, failed }) => {
+      this.suggestions = results;
+      this.searching = false;
+      this.searchFailed = failed;
+      this.noMatch = !failed && results.length === 0;
+    });
+  }
+
+  get geolocationSupported(): boolean {
+    return this.geolocation.supported;
+  }
+
+  /**
+   * Den Standort des Browsers als Mittelpunkt nehmen — erst die Ortung, dann der naechste Ort aus
+   * dem eigenen Lexikon als NAME. Findet sich keiner, gelten die Koordinaten trotzdem (dann stehen
+   * sie selbst im Feld): der Server braucht Koordinaten, keinen Lexikon-Treffer.
+   */
+  useCurrentLocation(): void {
+    this.locationError.set(null);
+    this.locating.set(true);
+    this.geolocation.current().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: fix => {
+        const fallback = `${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}`;
+        const apply = (label: string) => {
+          this.lat = fix.lat;
+          this.lon = fix.lon;
+          this.placeQuery = label;
+          this.chosenLabel = label;
+          this.suggestions = [];
+          this.noMatch = false;
+          this.searchFailed = false;
+          this.error = null;
+          this.locating.set(false);
+        };
+        this.directory.nearestPlace(fix.lat, fix.lon)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: place => apply(place?.label ?? fallback),
+            error: () => apply(fallback),
+          });
+      },
+      error: (failure: GeolocationFailure) => {
+        this.locating.set(false);
+        this.locationError.set(failure);
+      },
     });
   }
 
@@ -109,6 +171,9 @@ export class SearchProfileDialogComponent {
     }
 
     const term = value.trim();
+    this.noMatch = false;
+    this.searchFailed = false;
+    this.locationError.set(null);
     if (term.length < 2) {
       this.suggestions = [];
       this.searching = false;
@@ -124,6 +189,8 @@ export class SearchProfileDialogComponent {
     this.lat = suggestion.lat;
     this.lon = suggestion.lon;
     this.suggestions = [];
+    this.noMatch = false;
+    this.searchFailed = false;
     this.error = null;
   }
 

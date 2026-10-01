@@ -3463,6 +3463,7 @@
     "cancelled": "Elmarad",
     "approximate": "Csak hozzávetőlegesen behatárolva: a játszóhelyet nem sikerült feloldani, a pont a régió közepét mutatja.",
     "pins": "{{count}} verseny a képkivágatban",
+    "pinsLocatedOnly": "csak az ismert helyszínű versenyek — a többi a listában szerepel",
     "mapTruncated": "Túl sok verseny van ebben a képkivágatban — a legkésőbbiek hiányoznak. Nagyíts rá, vagy szűkítsd az időszakot, hogy mindet lásd.",
     "bookmark": "Megjelölés",
     "bookmarkRemove": "Megjelölés visszavonása",
@@ -3538,7 +3539,7 @@
       "weekendOnly": "Csak hétvégén kezdődő versenyek",
       "notifyNew": "Értesíts az ebben a körzetben induló új versenyekről",
       "errorName": "Adj nevet a profilnak.",
-      "errorPlace": "Válassz egy települést a listából — a szervernek koordináták kellenek.",
+      "errorPlace": "Válassz egy települést a listából, vagy használd a helymeghatározás gombot — a szervernek koordináták kellenek.",
       "saveError": "A keresési profilt nem sikerült menteni."
     },
     "speedFilter": "Szűrés időbeosztás szerint",
@@ -3584,6 +3585,8 @@
       "label": "Település",
       "hint": "Keress rá, vagy használd a helyzetedet",
       "useCurrent": "A jelenlegi helyzetem használata",
+      "noMatch": "Nincs találat — próbáld az irányítószámmal, egy közeli nagyobb településsel vagy a helymeghatározás gombbal.",
+      "searchFailed": "A helykeresés most nem érhető el. Gépelj tovább az újrapróbáláshoz, vagy használd a helymeghatározás gombot.",
       "error": {
         "unsupported": "Ez a böngésző nem tud helyzetet megadni.",
         "denied": "A helyzethez való hozzáférés le van tiltva. A böngésző beállításaiban ennél az oldalnál engedélyezheted.",

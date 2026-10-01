@@ -18,7 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subject, catchError, debounceTime, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
@@ -216,6 +216,12 @@ export class TournamentDirectoryComponent implements OnInit {
   placeLabel = '';
   readonly placeSuggestions = signal<GeoPlaceSuggestion[]>([]);
   readonly placeSearching = signal(false);
+  /**
+   * Die Ortssuche lief, fand aber nichts bzw. scheiterte. Ohne diese beiden stand nach der Sanduhr
+   * einfach nichts da — unbekannter Ort und kaputte Suche sahen gleich aus (Codereview F6-007).
+   */
+  readonly placeNoMatch = signal(false);
+  readonly placeSearchFailed = signal(false);
   readonly locating = signal(false);
   readonly locationError = signal<GeolocationFailure | null>(null);
 
@@ -233,12 +239,24 @@ export class TournamentDirectoryComponent implements OnInit {
       // steht. Ohne diese Bedingung verwirft distinctUntilChanged die Anfrage und die Sanduhr
       // bleibt fuer immer.
       distinctUntilChanged((a, b) => a === b && this.placeSuggestions().length > 0),
-      switchMap(term => this.directory.places(term)),
+      // Der Fehler wird INNEN abgefangen: draussen beendete er den ganzen Strom, danach setzte
+      // jede Eingabe nur noch die Sanduhr, und sie blieb bis zum Neuladen stehen.
+      switchMap(term => this.directory.places(term).pipe(
+        map(results => ({ results, failed: false })),
+        catchError(() => of({ results: [] as GeoPlaceSuggestion[], failed: true })),
+      )),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe({
-      next: results => { this.placeSuggestions.set(results); this.placeSearching.set(false); },
-      error: () => { this.placeSuggestions.set([]); this.placeSearching.set(false); },
+    ).subscribe(({ results, failed }) => {
+      this.placeSuggestions.set(results);
+      this.placeSearching.set(false);
+      this.placeSearchFailed.set(failed);
+      this.placeNoMatch.set(!failed && results.length === 0);
     });
+  }
+
+  private resetPlaceSearchState(): void {
+    this.placeNoMatch.set(false);
+    this.placeSearchFailed.set(false);
   }
 
   onPlaceInput(value: string): void {
@@ -250,6 +268,7 @@ export class TournamentDirectoryComponent implements OnInit {
     if (value.trim() !== (this.chosenPlaceLabel ?? '').trim()) this.clearCentre();
 
     const term = value.trim();
+    this.resetPlaceSearchState();
     if (term.length < 2) {
       this.placeSuggestions.set([]);
       this.placeSearching.set(false);
@@ -269,12 +288,14 @@ export class TournamentDirectoryComponent implements OnInit {
     // das Profil und das Feld behauptete etwas anderes als die Liste zeigt.
     this.filter.profileId = null;
     this.placeSuggestions.set([]);
+    this.resetPlaceSearchState();
     this.reload();
   }
 
   clearPlace(): void {
     this.placeLabel = '';
     this.placeSuggestions.set([]);
+    this.resetPlaceSearchState();
     this.locationError.set(null);
     this.clearCentre();
     this.filter.profileId = null;

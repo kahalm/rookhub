@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
+import { of, throwError } from 'rxjs';
+import { GeolocationService } from '../../core/geolocation.service';
 import { SearchProfileDialogComponent } from './search-profile-dialog.component';
 import { SearchProfileInput } from './tournament-directory.model';
 
@@ -116,5 +118,84 @@ describe('SearchProfileDialogComponent', () => {
     component.save();
 
     expect(closed!.minPlayers).toBeNull();
+  });
+
+  // ----- Ohne Lexikon-Treffer anlegbar, Suche mit Rueckmeldung (F6-007) --------
+
+  it('nimmt den Browser-Standort samt nächstem Ort als Mittelpunkt', async () => {
+    await setup();
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(of({ lat: 47.27, lon: 11.39, accuracyM: 30 }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('my_location');
+
+    component.useCurrentLocation();
+    http.expectOne(r => r.url === '/api/tournament-directory/places/nearest')
+      .flush({ label: '6020 Innsbruck (AT)', country: 'AT', postalCode: '6020', lat: 47.26, lon: 11.4 });
+
+    expect(component.placeQuery).toBe('6020 Innsbruck (AT)');
+    expect(component.locating()).toBeFalse();
+    component.name = 'Zuhause';
+    component.save();
+    // Mittelpunkt sind die Koordinaten des GERAETS, der Ort ist nur die Beschriftung.
+    expect(closed).toEqual(jasmine.objectContaining({ name: 'Zuhause', lat: 47.27, lon: 11.39, placeQuery: '6020 Innsbruck (AT)' }));
+  });
+
+  it('legt das Profil auch ohne Ort im Lexikon an — mit den Koordinaten als Beschriftung', async () => {
+    await setup();
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(of({ lat: 59.91, lon: 10.75, accuracyM: 30 }));
+
+    component.useCurrentLocation();
+    http.expectOne(r => r.url === '/api/tournament-directory/places/nearest')
+      .flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(component.placeQuery).toBe('59.910, 10.750');
+    component.name = 'Oslo';
+    component.save();
+    expect(closed).toEqual(jasmine.objectContaining({ name: 'Oslo', lat: 59.91, lon: 10.75 }));
+  });
+
+  it('meldet eine abgelehnte Standortfreigabe', async () => {
+    await setup();
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(throwError(() => 'denied'));
+
+    component.useCurrentLocation();
+    fixture.detectChanges();
+
+    expect(component.locating()).toBeFalse();
+    expect(component.locationError()).toBe('denied');
+    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.place.error.denied');
+    expect(component.lat).toBeNull();
+  });
+
+  it('sagt „kein Ort gefunden" und übersteht einen Fehler der Ortssuche', async () => {
+    await setup();
+
+    component.onPlaceInput('Kleinstdorf');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places').flush([]);
+    fixture.detectChanges();
+    expect(component.noMatch).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.place.noMatch');
+
+    component.onPlaceInput('Kleinstdorfx');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places')
+      .flush('kaputt', { status: 500, statusText: 'Server Error' });
+    expect(component.searchFailed).toBeTrue();
+    expect(component.searching).toBeFalse();
+
+    // Der Such-Strom lebt noch: die naechste Eingabe fragt wieder.
+    component.onPlaceInput('Salzburg');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places')
+      .flush([{ label: '5020 Salzburg (AT)', country: 'AT', postalCode: '5020', lat: 47.8, lon: 13.04 }]);
+    expect(component.suggestions.length).toBe(1);
+    expect(component.searchFailed).toBeFalse();
   });
 });

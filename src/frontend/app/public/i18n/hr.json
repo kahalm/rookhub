@@ -3742,6 +3742,7 @@
     "cancelled": "Otkazano",
     "approximate": "Samo približno locirano: mjesto igranja nije prepoznato, točka pokazuje sredinu regije.",
     "pins": "{{count}} turnira u prikazu",
+    "pinsLocatedOnly": "samo turniri s poznatim mjestom održavanja — ostali su na popisu",
     "mapTruncated": "Previše turnira u ovom prikazu — najkasniji nedostaju. Približi kartu ili skrati razdoblje da vidiš sve.",
     "bookmark": "Zabilježi",
     "bookmarkRemove": "Ukloni oznaku",
@@ -3817,7 +3818,7 @@
       "weekendOnly": "Samo turniri koji počinju vikendom",
       "notifyNew": "Obavijesti me o novim turnirima u ovom polumjeru",
       "errorName": "Molimo daj profilu naziv.",
-      "errorPlace": "Odaberi mjesto s popisa — poslužitelju trebaju koordinate.",
+      "errorPlace": "Odaberi mjesto s popisa ili upotrijebi gumb za lokaciju — poslužitelju trebaju koordinate.",
       "saveError": "Profil pretrage nije se mogao spremiti."
     },
     "speedFilter": "Filtriraj po tempu igre",
@@ -3863,6 +3864,8 @@
       "label": "Mjesto",
       "hint": "Traži ili koristi lokaciju",
       "useCurrent": "Koristi moju trenutnu lokaciju",
+      "noMatch": "Mjesto nije pronađeno — pokušaj s poštanskim brojem, većim mjestom u blizini ili gumbom za lokaciju.",
+      "searchFailed": "Pretraga mjesta trenutno nije dostupna. Nastavi tipkati za ponovni pokušaj ili upotrijebi gumb za lokaciju.",
       "error": {
         "unsupported": "Ovaj pregljednik ne može prijaviti lokaciju.",
         "denied": "Pristup lokaciji je blokiran. Možeš ga dopustiti u postavkama pregljednika za ovu stranicu.",

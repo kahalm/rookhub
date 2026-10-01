@@ -3742,6 +3742,7 @@
     "cancelled": "Cancelled",
     "approximate": "Only roughly located: the venue could not be resolved, the pin shows the middle of the region.",
     "pins": "{{count}} tournaments in view",
+    "pinsLocatedOnly": "only tournaments with a known venue — the others are in the list",
     "mapTruncated": "Too many tournaments in this section — the latest ones are missing. Zoom in or shorten the period to see all of them.",
     "bookmark": "Bookmark",
     "bookmarkRemove": "Remove bookmark",
@@ -3817,7 +3818,7 @@
       "weekendOnly": "Only tournaments starting on a weekend",
       "notifyNew": "Notify me about new tournaments in this radius",
       "errorName": "Please give the profile a name.",
-      "errorPlace": "Please pick a place from the list — the server needs coordinates.",
+      "errorPlace": "Please pick a place from the list or use the location button — the server needs coordinates.",
       "saveError": "Could not save the search profile."
     },
     "speedFilter": "Filter by time control",
@@ -3863,6 +3864,8 @@
       "label": "Place",
       "hint": "Search or use my location",
       "useCurrent": "Use my current location",
+      "noMatch": "No place found — try the postcode, a larger town nearby or the location button.",
+      "searchFailed": "Place search is not available right now. Keep typing to try again, or use the location button.",
       "error": {
         "unsupported": "This browser cannot report a location.",
         "denied": "Location access is blocked. You can allow it in the browser settings for this site.",

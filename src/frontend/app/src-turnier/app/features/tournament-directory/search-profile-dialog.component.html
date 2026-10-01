@@ -15,6 +15,14 @@
            [placeholder]="'tournamentDirectory.profile.placePlaceholder' | translate" />
     @if (searching) { <mat-icon matSuffix>hourglass_empty</mat-icon> }
     @if (lat !== null && !searching) { <mat-icon matSuffix class="ok">place</mat-icon> }
+    <!-- Wie in der Filterleiste: ohne Treffer im Ortslexikon bleibt der Standort als Weg. -->
+    @if (geolocationSupported) {
+      <button matSuffix mat-icon-button type="button" (click)="useCurrentLocation()" [disabled]="locating()"
+              [attr.aria-label]="'tournamentDirectory.place.useCurrent' | translate"
+              [title]="'tournamentDirectory.place.useCurrent' | translate">
+        <mat-icon>{{ locating() ? 'hourglass_top' : 'my_location' }}</mat-icon>
+      </button>
+    }
   </mat-form-field>
 
   @if (suggestions.length) {
@@ -23,6 +31,13 @@
         <li><button type="button" (click)="choose(s)">{{ s.label }}</button></li>
       }
     </ul>
+  } @else if (noMatch) {
+    <p class="place-note">{{ 'tournamentDirectory.place.noMatch' | translate }}</p>
+  } @else if (searchFailed) {
+    <p class="place-note">{{ 'tournamentDirectory.place.searchFailed' | translate }}</p>
+  }
+  @if (locationError(); as failure) {
+    <p class="place-note">{{ 'tournamentDirectory.place.error.' + failure | translate }}</p>
   }
 
   <div class="radius">

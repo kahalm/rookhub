@@ -733,6 +733,69 @@ describe('TournamentDirectoryComponent', () => {
    * Ein selbst gewaehlter Ort ERSETZT das Profil. Liefe beides mit, gewaenne serverseitig das
    * Profil — das Ortsfeld behauptete dann etwas anderes, als die Liste darunter zeigt.
    */
+  // ----- Ortssuche ohne Treffer bzw. mit Fehler (Codereview F6-007) -----------
+
+  it('sagt „kein Ort gefunden", statt nach der Sanduhr nichts zu zeigen', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onPlaceInput('Kleinstdorf');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places').flush([]);
+
+    expect(component.placeSearching()).toBeFalse();
+    expect(component.placeNoMatch()).toBeTrue();
+    expect(component.placeSearchFailed()).toBeFalse();
+    http.verify();
+  });
+
+  it('übersteht einen Fehler der Ortssuche — die nächste Eingabe sucht wieder', async () => {
+    // Vorher beendete der erste Fehler den ganzen Such-Strom: danach setzte jede Eingabe nur
+    // noch die Sanduhr, und sie blieb bis zum Neuladen stehen.
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onPlaceInput('Hallein');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places')
+      .flush('kaputt', { status: 500, statusText: 'Server Error' });
+
+    expect(component.placeSearching()).toBeFalse();
+    expect(component.placeSearchFailed()).toBeTrue();
+    expect(component.placeNoMatch()).toBeFalse();
+
+    component.onPlaceInput('Halleinx');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places')
+      .flush([{ label: '5400 Hallein (AT)', country: 'AT', postalCode: '5400', lat: 47.68, lon: 13.1 }]);
+
+    expect(component.placeSuggestions().length).toBe(1);
+    expect(component.placeSearchFailed()).toBeFalse();
+    expect(component.placeSearching()).toBeFalse();
+    http.verify();
+  });
+
+  it('sagt unter der Karte, dass dort nur verortete Turniere stehen', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onTabChange(1);
+    component.onBoundsChanged('47.0,12.0,48.0,14.0');
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush({ items: [], truncated: false });
+    fixture.detectChanges();
+
+    const count = (fixture.nativeElement as HTMLElement).querySelector('.count');
+    expect(count?.textContent).toContain('tournamentDirectory.pinsLocatedOnly');
+    http.verify();
+  });
+
   it('legt bei eigener Ortswahl das Suchprofil ab', async () => {
     await setup();
     flushProfiles([profile(3, 'Zuhause')]);

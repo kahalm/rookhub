@@ -24,6 +24,12 @@
         @for (place of placeSuggestions(); track place.label) {
           <mat-option [value]="place">{{ place.label }}</mat-option>
         }
+        <!-- Leer und kaputt sehen sonst gleich aus: nach der Sanduhr stand einfach nichts da. -->
+        @if (placeNoMatch()) {
+          <mat-option disabled class="place-note">{{ 'tournamentDirectory.place.noMatch' | translate }}</mat-option>
+        } @else if (placeSearchFailed()) {
+          <mat-option disabled class="place-note">{{ 'tournamentDirectory.place.searchFailed' | translate }}</mat-option>
+        }
       </mat-autocomplete>
 
       @if (placeSearching()) {
@@ -298,6 +304,9 @@
           } @else {
             <p class="muted count">
               {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
+              <!-- Die Karte kennt nur verortete Turniere; ohne den Satz lasen sich „40 in der
+                   Liste, 0 auf der Karte" wie ein Fehler (Codereview F6-007). -->
+              <span class="located-only"> · {{ 'tournamentDirectory.pinsLocatedOnly' | translate }}</span>
               @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
             </p>
           }
