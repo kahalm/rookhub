@@ -106,6 +106,19 @@ describe('RepertoireService', () => {
     req.flush({ matches: [] });
   });
 
+  it('findSimilarPositions passes the time-budget flag through (absent = complete)', () => {
+    let cut: any, whole: any;
+    service.findSimilarPositions({ fen: 'x', repertoireIds: [], preset: 'ausgewogen', includeMirrored: true, sameSideToMove: false, limit: 40 })
+      .subscribe(r => cut = r);
+    httpMock.expectOne('/api/repertoires/similar-positions').flush({ matches: [], truncated: true });
+    expect(cut.truncated).toBeTrue();
+
+    service.findSimilarPositions({ fen: 'x', repertoireIds: [], preset: 'ausgewogen', includeMirrored: true, sameSideToMove: false, limit: 40 })
+      .subscribe(r => whole = r);
+    httpMock.expectOne('/api/repertoires/similar-positions').flush({ matches: [] });
+    expect(whole.truncated).toBeFalse();
+  });
+
   it('findSimilarPositions accepts the breakdown flat OR nested', () => {
     let flat: any, nested: any;
     service.findSimilarPositions({ fen: 'x', repertoireIds: [], preset: 'ausgewogen', includeMirrored: true, sameSideToMove: false, limit: 40 })

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,8 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { Observable, Subscription, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
 import {
   RepertoireService, RepertoirePositionMatch, RepertoireLineMatch,
@@ -53,6 +53,12 @@ const SIMILAR_LIMIT = 40;
  * spielt ein Klick im Baum die Zugfolge aufs Brett — die Stellung ändert sich, das Panel lädt neu
  * und der Baum wächst mit; so klickt man sich durchs eigene Repertoire.
  *
+ * Baum und Ähnlich rechnen je Anfrage über ALLE Linien (Server: Zeitbudget, je Konto ein Fenster und
+ * höchstens zwei gleichzeitige Scans). Deshalb bestellt jede neue Stellung die noch laufende Anfrage
+ * ab — HttpClient bricht sie ab, der Server beendet den Durchlauf —, statt beim Durchklicken eine
+ * Schlange veralteter Scans aufzubauen. Ein abgelaufenes Zeitbudget (`truncated`) und eine Absage
+ * wegen zu vieler Anfragen (429) bekommen je einen eigenen Hinweis.
+ *
  * Der Ziel-`lineKey` wird bewusst aus dem CLIENT-Parse des Repertoire-PGN berechnet (identisch zu
  * Trainer/Linienliste), nicht aus Server-SAN — so ist die Linien-Identität garantiert konsistent.
  * Eingebunden in Analyse, PGN-Viewer (Recap-Dialog) und die geteilte-Partie-Seite; blendet sich für
@@ -92,8 +98,11 @@ const SIMILAR_LIMIT = 40;
             @if (loading) {
               <div class="pr-muted"><mat-spinner diameter="16"></mat-spinner> {{ 'positionInReps.loading' | translate }}</div>
             } @else if (error) {
-              <div class="pr-muted pr-error">{{ 'positionInReps.error' | translate }}</div>
+              <div class="pr-muted pr-error">{{ (rateLimited ? 'positionInReps.rateLimited' : 'positionInReps.error') | translate }}</div>
             } @else if (mode === 'similar') {
+              @if (truncated) {
+                <div class="pr-muted pr-note">{{ 'positionInReps.truncated' | translate }}</div>
+              }
               <app-similar-positions
                 [matches]="similar"
                 [options]="simOptions"
@@ -113,6 +122,9 @@ const SIMILAR_LIMIT = 40;
                 (selectionChange)="setSimilarSelection($event)"
                 (open)="openMatch($event)" />
             } @else if (mode === 'tree') {
+              @if (truncated) {
+                <div class="pr-muted pr-note">{{ 'positionInReps.truncated' | translate }}</div>
+              }
               @if (trees.length === 0) {
                 <div class="pr-muted">{{ 'positionInReps.none' | translate }}</div>
               } @else {
@@ -200,6 +212,7 @@ const SIMILAR_LIMIT = 40;
     .pr-tree-empty { margin: 2px 0 6px 22px; font-size: .8rem; }
     .pr-muted { color: color-mix(in srgb, currentColor 55%, transparent); font-style: italic; display: flex; align-items: center; gap: 8px; }
     .pr-error { color: #c62828; }
+    .pr-note { font-size: .8rem; margin-bottom: 6px; }
     .pr-count { font-size: .82rem; color: color-mix(in srgb, currentColor 60%, transparent); margin-bottom: 6px; }
     .pr-rep { margin-bottom: 4px; }
     .pr-rep-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none; color: inherit; cursor: pointer; padding: 4px 2px; text-align: left; font: inherit; }
@@ -216,7 +229,7 @@ const SIMILAR_LIMIT = 40;
     .pr-line-actions .mat-mdc-icon-button { --mdc-icon-button-state-layer-size: 32px; --mdc-icon-button-icon-size: 18px; width: 32px; height: 32px; padding: 4px; }
   `]
 })
-export class PositionRepertoiresComponent implements OnChanges {
+export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   @Input() fen = '';
   /** Feuert vor jeder Navigation — z. B. damit ein umschließender Dialog sich schließt. */
   @Output() navigated = new EventEmitter<void>();
@@ -228,6 +241,10 @@ export class PositionRepertoiresComponent implements OnChanges {
   open = false;
   loading = false;
   error = false;
+  /** Der Fehler war eine Absage wegen zu vieler Anfragen (429) — eigener Hinweis statt „fehlgeschlagen". */
+  rateLimited = false;
+  /** Baum/Ähnlich: der Server hat am Zeitbudget aufgehört — das Ergebnis ist unvollständig. */
+  truncated = false;
   mode: PanelMode = 'list';
   repertoires: RepertoirePositionMatch[] = [];
   trees: RepertoirePositionTree[] = [];
@@ -258,6 +275,8 @@ export class PositionRepertoiresComponent implements OnChanges {
   private loadedFen = '';
   private loadedMode: PanelMode | null = null;
   private reqId = 0;
+  /** Die laufende Anfrage — eine neue Stellung bestellt sie ab (siehe Klassen-Doku). */
+  private pending: Subscription | null = null;
   private pgnCache = new Map<number, ParsedGame[]>();
   private simOptionsLoaded = false;
   /** Sobald der Nutzer die Auswahl angefasst hat, wird sie nicht mehr auf „alle" zurückgesetzt. */
@@ -288,6 +307,10 @@ export class PositionRepertoiresComponent implements OnChanges {
     if (this.open && this.fen !== this.loadedFen) this.load();
   }
 
+  ngOnDestroy(): void {
+    this.pending?.unsubscribe();
+  }
+
   toggle(): void {
     this.open = !this.open;
     if (this.open) this.load();
@@ -309,8 +332,20 @@ export class PositionRepertoiresComponent implements OnChanges {
     this.loadedMode = this.mode;
     this.loading = true;
     this.error = false;
+    this.rateLimited = false;
+    this.truncated = false;
+    // Die vorige Frage ist überholt: abbestellen statt nur ihre Antwort zu verwerfen — sonst rechnet der
+    // Server sie zu Ende und belegt dabei einen der zwei Scan-Plätze des Kontos.
+    this.pending?.unsubscribe();
+    this.pending = null;
     const myReq = ++this.reqId;
-    const fail = () => { if (myReq === this.reqId) { this.error = true; this.loading = false; this.loadedMode = null; } };
+    const fail = (err?: unknown) => {
+      if (myReq !== this.reqId) return;
+      this.error = true;
+      this.rateLimited = (err as { status?: number } | null)?.status === 429;
+      this.loading = false;
+      this.loadedMode = null;
+    };
 
     if (this.mode === 'similar') {
       this.loadSimilar(myReq, fail);
@@ -318,10 +353,11 @@ export class PositionRepertoiresComponent implements OnChanges {
     }
 
     if (this.mode === 'tree') {
-      this.repertoireService.lookupPositionTree(this.fen).subscribe({
+      this.pending = this.repertoireService.lookupPositionTree(this.fen).subscribe({
         next: (res) => {
           if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
           this.trees = res.repertoires ?? [];
+          this.truncated = res.truncated === true;
           this.totalOccurrences = this.trees.reduce((s, r) => s + r.occurrences, 0);
           this.openReps = new Set(this.trees.map(r => r.repertoireId)); // alle aufgeklappt
           this.loading = false;
@@ -331,7 +367,7 @@ export class PositionRepertoiresComponent implements OnChanges {
       return;
     }
 
-    this.repertoireService.lookupPosition(this.fen).subscribe({
+    this.pending = this.repertoireService.lookupPosition(this.fen).subscribe({
       next: (res) => {
         if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
         this.repertoires = res.repertoires ?? [];
@@ -345,19 +381,15 @@ export class PositionRepertoiresComponent implements OnChanges {
 
   // ===== Ähnliche Stellungen =====
 
-  /** Erst die Repertoire-Liste (einmalig, für den Filter), dann die eigentliche Suche. */
-  private loadSimilar(myReq: number, fail: () => void): void {
-    this.repertoireOptions().subscribe({
-      next: (opts) => {
-        if (myReq !== this.reqId) return;
+  /** Erst die Repertoire-Liste (einmalig, für den Filter), dann die eigentliche Suche — als EINE
+   * Kette, damit das Abbestellen (neue Stellung) auch die Suche selbst abbricht. */
+  private loadSimilar(myReq: number, fail: (err?: unknown) => void): void {
+    this.pending = this.repertoireOptions().pipe(
+      switchMap(opts => {
         this.applyOptions(opts);
         // Bewusst KEINE Anfrage, wenn der Nutzer alles abgewählt hat — leere Liste hieße für den
         // Server „alle", und das wäre das Gegenteil dessen, was er gerade eingestellt hat.
-        if (this.simOptions.length > 0 && this.simSelected.size === 0) {
-          this.similar = [];
-          this.loading = false;
-          return;
-        }
+        if (this.simOptions.length > 0 && this.simSelected.size === 0) return of(null);
         const ids = this.simOptions.filter(o => this.simSelected.has(o.id)).map(o => o.id);
         const req: SimilarPositionsRequest = {
           fen: this.fen,
@@ -372,17 +404,22 @@ export class PositionRepertoiresComponent implements OnChanges {
           req.move = this.simMove;
           if (this.simOnlyWithMove) req.onlyWithMove = true;
         }
-        this.repertoireService.findSimilarPositions(req).subscribe({
-          next: (res) => {
-            if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
-            // Der Server sortiert bereits nach Score; hier wird die Zusage der Sicht abgesichert.
-            // Sortiert wird nach dem ENDWERT — das ist die Reihenfolge, die die Liste zeigt.
-            this.similar = this.applyMoveFilter([...(res.matches ?? [])])
-              .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-            this.loading = false;
-          },
-          error: fail,
-        });
+        return this.repertoireService.findSimilarPositions(req);
+      }),
+    ).subscribe({
+      next: (res) => {
+        if (myReq !== this.reqId) return; // veraltete Antwort verwerfen
+        if (!res) {                       // nichts ausgewählt → nichts gefragt
+          this.similar = [];
+          this.loading = false;
+          return;
+        }
+        // Der Server sortiert bereits nach Score; hier wird die Zusage der Sicht abgesichert.
+        // Sortiert wird nach dem ENDWERT — das ist die Reihenfolge, die die Liste zeigt.
+        this.similar = this.applyMoveFilter([...(res.matches ?? [])])
+          .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        this.truncated = res.truncated === true;
+        this.loading = false;
       },
       error: fail,
     });

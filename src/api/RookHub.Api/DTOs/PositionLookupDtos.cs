@@ -51,8 +51,9 @@ public class PositionTreeRequestDto
 public class PositionTreeResultDto
 {
     public List<RepertoirePositionTreeDto> Repertoires { get; set; } = new();
-    /// <summary><c>true</c>, wenn das Zeitbudget der Anfrage vor dem letzten Repertoire aufgebraucht
-    /// war — das angebrochene Repertoire trägt dann selbst <c>truncated</c>, die übrigen fehlen.</summary>
+    /// <summary><c>true</c>, wenn das Zeitbudget der Anfrage aufgebraucht war, bevor alle Linien durchsucht
+    /// waren — das zuletzt gelieferte Repertoire ist dann womöglich nur zum Teil durchsucht, die übrigen fehlen.
+    /// Das <c>truncated</c> je Repertoire meint davon unabhängig nur die Knoten-Obergrenze.</summary>
     public bool Truncated { get; set; }
 }
 

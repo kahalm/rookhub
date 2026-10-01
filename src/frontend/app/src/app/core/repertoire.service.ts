@@ -75,6 +75,10 @@ export interface RepertoirePositionTree {
 
 export interface PositionTreeResult {
   repertoires: RepertoirePositionTree[];
+  /** Zeitbudget der Anfrage aufgebraucht, bevor alle Linien durchsucht waren: das zuletzt gelieferte
+   * Repertoire ist womöglich nur zum Teil durchsucht, die übrigen fehlen (unabhängig vom
+   * `truncated` je Repertoire = Knoten-Obergrenze). Fehlt bei älteren Servern. */
+  truncated?: boolean;
 }
 
 /**
@@ -183,6 +187,8 @@ export interface SimilarPositionMatch {
 
 export interface SimilarPositionsResult {
   matches: SimilarPositionMatch[];
+  /** Zeitbudget der Anfrage aufgebraucht: die Treffer stammen nur aus dem schon verglichenen Teil. */
+  truncated?: boolean;
 }
 
 /** Rohform eines Treffers, wie er über die Leitung kommt (siehe `normalizeSimilarMatch`). */
@@ -339,8 +345,8 @@ export class RepertoireService {
    * nur unscharf: der Server verdichtet jede Stellung zu Bitmasken und gewichtet Bauerngerüst,
    * Material, Figurenplatzierung und Königsstellung (Voreinstellung `preset`). Sortiert nach Score. */
   findSimilarPositions(req: SimilarPositionsRequest): Observable<SimilarPositionsResult> {
-    return this.http.post<{ matches?: SimilarPositionWireMatch[] }>(`${this.apiUrl}/similar-positions`, req).pipe(
-      map(res => ({ matches: (res?.matches ?? []).map(normalizeSimilarMatch) })),
+    return this.http.post<{ matches?: SimilarPositionWireMatch[]; truncated?: boolean }>(`${this.apiUrl}/similar-positions`, req).pipe(
+      map(res => ({ matches: (res?.matches ?? []).map(normalizeSimilarMatch), truncated: res?.truncated === true })),
     );
   }
 

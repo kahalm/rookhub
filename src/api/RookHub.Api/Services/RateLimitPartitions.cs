@@ -73,9 +73,19 @@ public static class RateLimitPartitions
     public const string RepertoireScanPolicy = "repertoire-scan";
     /// <summary>Anfragen je Konto und Minute (beide Endpunkte teilen EIN Fenster). Jede spielt alle lesbaren
     /// Repertoire-Linien nach (bis zum Zeitbudget der Dienste); vorher galt nur der globale Deckel von 100/min je
-    /// Adresse (Codereview 2026-09-29, N7-001). Die Stellungssuche (<c>position-lookup</c>) liest dagegen aus dem
-    /// gecachten Index und bleibt draußen — sie lädt bei jedem Schritt durch eine Partie neu.</summary>
-    public const int RepertoireScanPermitPerMinute = 30;
+    /// Adresse (Codereview 2026-09-29, N7-001). Bewusst ÜBER diesem Deckel: das Panel lädt im Baum- und im
+    /// Ähnlich-Modus bei JEDEM Schritt durch eine Partie neu (Pfeiltasten in Analyse, PGN-Viewer, geteilter
+    /// Partie) — 30/min zeigte beim gemächlichen Durchklicken schon nach einer halben Minute Fehler. Die Rechenzeit
+    /// deckelt <see cref="RepertoireScanConcurrentPerAccount"/>, nicht das Fenster. Die Stellungssuche
+    /// (<c>position-lookup</c>) liest aus dem gecachten Index und bleibt ganz draußen.</summary>
+    public const int RepertoireScanPermitPerMinute = 120;
+    /// <summary>Gleichzeitig laufende Scans je Konto. Begrenzt die CPU besser als jedes Fenster: höchstens zwei
+    /// Durchläufe à Zeitbudget (8 s) je Konto statt bis zu „Fenster × 8 s" parallel.</summary>
+    public const int RepertoireScanConcurrentPerAccount = 2;
+    /// <summary>Wartende Scans je Konto, wenn beide Plätze belegt sind. Es wartet nur der NEUESTE
+    /// (<see cref="QueueProcessingOrder.NewestFirst"/>): kommt ein weiterer, bekommt der ältere Wartende 429 — das
+    /// Panel hat dessen Antwort ohnehin schon verworfen (Durchklicken), die jüngste Stellung kommt aber durch.</summary>
+    public const int RepertoireScanQueuePerAccount = 1;
 
     /// <summary>Policy-Name der sozialen Glocken-Auslöser: Freundschaftsanfrage und Challenge
     /// (<c>POST /api/friends/request/{userId}</c>, <c>POST /api/challenges</c>).</summary>
@@ -129,8 +139,11 @@ public static class RateLimitPartitions
     public static RateLimitPartition<string> ExtensionAnalyze(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), ExtensionAnalyzePermitPerMinute * scale);
 
+    /// <summary>Fenster UND Gleichzeitigkeit je Konto (<see cref="WindowAndConcurrencyLimiter"/>).</summary>
     public static RateLimitPartition<string> RepertoireScan(HttpContext ctx, int scale) =>
-        FixedWindow(UserOrIp(ctx), RepertoireScanPermitPerMinute * scale);
+        RateLimitPartition.Get(UserOrIp(ctx), _ => new WindowAndConcurrencyLimiter(
+            RepertoireScanPermitPerMinute * scale, TimeSpan.FromMinutes(1),
+            RepertoireScanConcurrentPerAccount * scale, RepertoireScanQueuePerAccount));
 
     public static RateLimitPartition<string> UserSocial(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), UserSocialPermitPerMinute * scale);

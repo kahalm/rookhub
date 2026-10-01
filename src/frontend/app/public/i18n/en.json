@@ -461,6 +461,8 @@
     "button": "In which repertoires?",
     "loading": "Searching your repertoires…",
     "error": "Search failed. Please try again.",
+    "rateLimited": "Too many searches in a short time. Please wait a moment and try again.",
+    "truncated": "The search hit its time limit: not all lines were searched, so this result is incomplete.",
     "none": "This position isn't in any of your repertoires.",
     "foundCount": "{{reps}} repertoire(s) · {{lines}} line(s)",
     "unnamedLine": "(unnamed line)",

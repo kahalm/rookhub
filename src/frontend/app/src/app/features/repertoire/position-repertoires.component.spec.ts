@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { PositionRepertoiresComponent } from './position-repertoires.component';
 import { PositionLookupResult, PositionTreeResult, SimilarPositionsResult } from '../../core/repertoire.service';
 
@@ -462,5 +462,106 @@ describe('PositionRepertoiresComponent', () => {
     expect(path).toEqual(['/repertoires', 7, 'train']);
     expect(extras.queryParams.chapter).toBe('Dragon');
     expect(typeof extras.queryParams.line).toBe('string');
+  });
+
+  // ===== Deckel des Servers (Codereview N7-001): Abbestellen, 429, Zeitbudget =====
+
+  const step = (c: PositionRepertoiresComponent, fen: string) => {
+    c.fen = fen;
+    c.ngOnChanges({ fen: { currentValue: fen, previousValue: '', firstChange: false, isFirstChange: () => false } });
+  };
+  /** Eine Antwort, die nie kommt — zählt, wie oft sie abbestellt wurde. */
+  const hanging = () => {
+    const state = { cancelled: 0 };
+    const obs = new Observable<never>(() => () => { state.cancelled++; });
+    return { obs, state };
+  };
+  const after2Nc6 = 'r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+
+  it('a new position cancels the still running tree request instead of letting it run on', () => {
+    const { c, repSvc } = make();
+    const { obs, state } = hanging();
+    c.toggle();
+    repSvc.lookupPositionTree.and.returnValue(obs);
+    c.setMode('tree');
+    expect(c.loading).toBeTrue();
+
+    repSvc.lookupPositionTree.and.returnValue(of(treeResult));
+    step(c, after2Nc6);
+
+    expect(state.cancelled).toBe(1);                // HttpClient bricht ab → der Server beendet den Walk
+    expect(repSvc.lookupPositionTree).toHaveBeenCalledTimes(2);
+    expect(c.loading).toBeFalse();
+    expect(c.trees.length).toBe(1);
+  });
+
+  it('a new position cancels the running similar search, too (list + search are one chain)', () => {
+    const { c, repSvc } = make();
+    const { obs, state } = hanging();
+    c.toggle();
+    repSvc.findSimilarPositions.and.returnValue(obs);
+    c.setMode('similar');
+
+    repSvc.findSimilarPositions.and.returnValue(of(similarResult));
+    step(c, after2Nc6);
+
+    expect(state.cancelled).toBe(1);
+    expect(c.similar.length).toBe(2);
+  });
+
+  it('closing the page (destroy) cancels the running request', () => {
+    const { c, repSvc } = make();
+    const { obs, state } = hanging();
+    repSvc.lookupPositionTree.and.returnValue(obs);
+    c.setMode('tree');
+    c.toggle();
+
+    c.ngOnDestroy();
+
+    expect(state.cancelled).toBe(1);
+  });
+
+  it('429 shows its own notice instead of the generic error; the next position tries again', () => {
+    const { c, repSvc } = make();
+    repSvc.lookupPositionTree.and.returnValue(throwError(() => ({ status: 429 })));
+    c.toggle();
+    c.setMode('tree');
+    expect(c.error).toBeTrue();
+    expect(c.rateLimited).toBeTrue();
+
+    repSvc.lookupPositionTree.and.returnValue(throwError(() => ({ status: 500 })));
+    step(c, after2Nc6);
+    expect(c.error).toBeTrue();
+    expect(c.rateLimited).toBeFalse();              // anderer Fehler → der allgemeine Hinweis
+
+    repSvc.lookupPositionTree.and.returnValue(of(treeResult));
+    step(c, 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2');
+    expect(c.error).toBeFalse();
+    expect(c.rateLimited).toBeFalse();
+  });
+
+  it('a tree cut at the time budget says so; a complete one does not', () => {
+    const { c, repSvc } = make();
+    repSvc.lookupPositionTree.and.returnValue(of({ ...treeResult, truncated: true }));
+    c.toggle();
+    c.setMode('tree');
+    expect(c.truncated).toBeTrue();
+    expect(c.trees[0].truncated).toBeFalse();       // der Knoten-Deckel je Repertoire bleibt davon getrennt
+
+    repSvc.lookupPositionTree.and.returnValue(of(treeResult));
+    step(c, after2Nc6);
+    expect(c.truncated).toBeFalse();
+  });
+
+  it('a similar search cut at the time budget says so, even without any hit', () => {
+    const { c, repSvc } = make();
+    repSvc.findSimilarPositions.and.returnValue(of({ matches: [], truncated: true }));
+    c.toggle();
+    c.setMode('similar');
+    expect(c.similar.length).toBe(0);
+    expect(c.truncated).toBeTrue();
+
+    c.setMode('list');
+    expect(c.truncated).toBeFalse();                // die Listen-Sicht kennt kein Zeitbudget
   });
 });

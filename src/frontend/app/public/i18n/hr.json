@@ -461,6 +461,8 @@
     "button": "U kojim repertoarima?",
     "loading": "Pretražujem tvoje repertoare…",
     "error": "Pretraga nije uspjela. Pokušaj ponovno.",
+    "rateLimited": "Previše pretraga u kratkom vremenu. Pričekaj trenutak i pokušaj ponovno.",
+    "truncated": "Pretraga je dosegnula vremensko ograničenje: nisu pretražene sve linije, pa je rezultat nepotpun.",
     "none": "Ova pozicija nije ni u jednom tvom repertoaru.",
     "foundCount": "{{reps}} repertoar(a) · {{lines}} linija",
     "unnamedLine": "(neimenovana linija)",

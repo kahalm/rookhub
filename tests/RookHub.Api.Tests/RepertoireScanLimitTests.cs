@@ -76,9 +76,120 @@ public class RepertoireScanLimitTests : IDisposable
         using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.RepertoireScan(c, 1));
         var permit = RateLimitPartitions.RepertoireScanPermitPerMinute;
 
-        Assert.InRange(permit, 20, 30);
+        // Über dem globalen Deckel von 100/min je Adresse: das Panel lädt bei jedem Schritt durch eine Partie neu,
+        // 30/min zeigte beim gemächlichen Durchklicken Fehler (Nacharbeit N7-001). Die CPU deckelt die Gleichzeitigkeit.
+        Assert.InRange(permit, 60, 120);
         Assert.Equal(permit, Acquired(limiter, Context(42), permit + 5));
         Assert.Equal(permit, Acquired(limiter, Context(43), permit));
+    }
+
+    [Fact]
+    public void RepertoireScan_AllowsTwoScansAtOnce_PerAccount()
+    {
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.RepertoireScan(c, 1));
+
+        using var first = limiter.AttemptAcquire(Context(42));
+        using var second = limiter.AttemptAcquire(Context(42));
+        using var third = limiter.AttemptAcquire(Context(42));
+        using var neighbour = limiter.AttemptAcquire(Context(43));
+
+        Assert.Equal(2, RateLimitPartitions.RepertoireScanConcurrentPerAccount);
+        Assert.True(first.IsAcquired);
+        Assert.True(second.IsAcquired);
+        Assert.False(third.IsAcquired);         // ein dritter gleichzeitiger Scan desselben Kontos
+        Assert.True(neighbour.IsAcquired);      // ein anderes Konto hinter derselben Adresse nicht
+    }
+
+    /// <summary>Beim Durchklicken zählt nur die jüngste Stellung: sie wartet auf einen freien Platz, ein älterer
+    /// Wartender wird verdrängt (dessen Antwort hat das Panel ohnehin verworfen).</summary>
+    [Fact]
+    public async Task RepertoireScan_QueuesOnlyTheNewest_AndServesItWhenASlotFrees()
+    {
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.RepertoireScan(c, 1));
+        var first = limiter.AttemptAcquire(Context(42));
+        using var second = limiter.AttemptAcquire(Context(42));
+
+        var older = limiter.AcquireAsync(Context(42)).AsTask();
+        Assert.False(older.IsCompleted);
+        var newer = limiter.AcquireAsync(Context(42)).AsTask();
+
+        using var olderLease = await older.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(olderLease.IsAcquired);
+        Assert.False(newer.IsCompleted);
+
+        first.Dispose();
+        using var newerLease = await newer.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(newerLease.IsAcquired);
+    }
+
+    /// <summary>Erst der Platz, dann das Fenster: wer am Platz scheitert, verbraucht kein Fenster-Kontingent.</summary>
+    [Fact]
+    public void RepertoireScan_RejectedForASlot_DoesNotSpendTheWindow()
+    {
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(c => RateLimitPartitions.RepertoireScan(c, 1));
+        var permit = RateLimitPartitions.RepertoireScanPermitPerMinute;
+        var first = limiter.AttemptAcquire(Context(42));
+        var second = limiter.AttemptAcquire(Context(42));
+
+        Assert.Equal(0, Acquired(limiter, Context(42), 10));
+        first.Dispose();
+        second.Dispose();
+
+        Assert.Equal(permit - 2, Acquired(limiter, Context(42), permit));
+    }
+
+    /// <summary>Das Fenster hat keinen eigenen Timer — nachgefüllt wird es vom Herzschlag des partitionierten Limiters.
+    /// Erkennte der die Kette nicht als <see cref="ReplenishingRateLimiter"/>, bliebe das Fenster für immer leer.</summary>
+    [Fact]
+    public async Task WindowAndConcurrency_WindowRefills_ThroughThePartitionedLimiter()
+    {
+        using var limiter = PartitionedRateLimiter.Create<string, string>(key =>
+            RateLimitPartition.Get(key, _ => new WindowAndConcurrencyLimiter(2, TimeSpan.FromMilliseconds(50), 2, 1)));
+        for (var i = 0; i < 2; i++) { using var ok = limiter.AttemptAcquire("k"); Assert.True(ok.IsAcquired); }
+        using (var spent = limiter.AttemptAcquire("k")) Assert.False(spent.IsAcquired);
+
+        var refilled = false;
+        for (var i = 0; i < 60 && !refilled; i++)
+        {
+            await Task.Delay(50);
+            using var lease = limiter.AttemptAcquire("k");
+            refilled = lease.IsAcquired;
+        }
+        Assert.True(refilled);
+    }
+
+    [Fact]
+    public async Task WindowAndConcurrency_IsIdleOnlyWithoutHeldSlotAndWithAFullWindow()
+    {
+        using var limiter = new WindowAndConcurrencyLimiter(5, TimeSpan.FromMilliseconds(20), 2, 1);
+        Assert.NotNull(limiter.IdleDuration);
+        Assert.False(limiter.IsAutoReplenishing);
+
+        var lease = limiter.AttemptAcquire();
+        Assert.True(lease.IsAcquired);
+        Assert.Null(limiter.IdleDuration);      // Platz belegt
+        lease.Dispose();
+        Assert.Null(limiter.IdleDuration);      // Platz frei, Fenster aber angebrochen
+
+        await Task.Delay(40);
+        Assert.True(limiter.TryReplenish());
+        Assert.NotNull(limiter.IdleDuration);
+    }
+
+    /// <summary>Wirft der partitionierte Limiter eine Partition weg, entsorgt sie ihre Glieder — ein Wartender bekommt
+    /// dann eine Absage, statt ewig zu hängen. (<see cref="RateLimiter.CreateChained"/> allein entsorgt nichts.)</summary>
+    [Fact]
+    public async Task WindowAndConcurrency_Dispose_ReleasesWaitingScans()
+    {
+        var limiter = new WindowAndConcurrencyLimiter(10, TimeSpan.FromMinutes(1), 1, 1);
+        using var held = limiter.AttemptAcquire();
+        var waiting = limiter.AcquireAsync().AsTask();
+        Assert.False(waiting.IsCompleted);
+
+        await limiter.DisposeAsync();
+
+        using var lease = await waiting.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.False(lease.IsAcquired);
     }
 
     // ── Zeitbudget der Ähnlichkeitssuche ─────────────────────────────────────────────────────────

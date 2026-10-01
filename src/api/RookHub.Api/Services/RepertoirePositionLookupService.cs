@@ -217,8 +217,10 @@ public class RepertoirePositionLookupService
                 Kind = first.Kind,
                 Shared = first.Shared,
                 Occurrences = occurrences,
-                // Am Budget abgebrochen = dieses Repertoire ist nur zum Teil durchsucht.
-                Truncated = builder.Truncated || budget.Exhausted,
+                // NUR die Knoten-Obergrenze: der Hinweis je Repertoire sagt „sehr viele Verzweigungen". Ein
+                // abgelaufenes Zeitbudget meldet result.Truncated für die ganze Antwort (das Panel zeigt dafür
+                // einen eigenen Hinweis) — sonst stünde am angebrochenen Repertoire der falsche Grund.
+                Truncated = builder.Truncated,
                 Moves = builder.Root.Children.Select(ToDto).ToList(),
             });
             if (budget.Exhausted) break;       // die übrigen Repertoires bleiben ungeprüft

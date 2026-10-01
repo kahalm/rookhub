@@ -461,6 +461,8 @@
     "button": "In welchen Repertoires?",
     "loading": "Durchsuche deine Repertoires…",
     "error": "Suche fehlgeschlagen. Bitte erneut versuchen.",
+    "rateLimited": "Zu viele Suchen in kurzer Zeit. Bitte kurz warten und erneut versuchen.",
+    "truncated": "Die Suche hat ihr Zeitlimit erreicht: nicht alle Linien wurden durchsucht, das Ergebnis ist unvollständig.",
     "none": "Diese Stellung kommt in keinem deiner Repertoires vor.",
     "foundCount": "{{reps}} Repertoire(s) · {{lines}} Linie(n)",
     "unnamedLine": "(unbenannte Linie)",

@@ -2556,6 +2556,8 @@
     "button": "Mely repertoárokban?",
     "loading": "Repertoárjaid átvizsgálása…",
     "error": "A keresés nem sikerült. Próbáld újra.",
+    "rateLimited": "Túl sok keresés rövid idő alatt. Várj egy kicsit, és próbáld újra.",
+    "truncated": "A keresés elérte az időkorlátot: nem minden vonalat néztünk át, ezért az eredmény hiányos.",
     "none": "Ez az állás egyik repertoárodban sem szerepel.",
     "foundCount": "{{reps}} repertoár · {{lines}} változat",
     "unnamedLine": "(névtelen változat)",
