@@ -115,4 +115,28 @@ public class PgnTokensTests
         Assert.Equal(bare.MovesHash, stats.MovesHash);
         Assert.Equal(bare.OpeningLine, stats.OpeningLine);
     }
+
+    // ── Varianten entfernen (N3-008) ──────────────────────────────────────
+
+    [Theory]
+    [InlineData("e4 e5", "e4 e5")]                                  // ohne Klammer unverändert
+    [InlineData("e4 (d4) e5", "e4   e5")]                           // flach
+    [InlineData("e4 (d4 (c4) Nf3) e5", "e4   e5")]                  // verschachtelt
+    [InlineData("e4(d4)e5", "e4 e5")]                               // angeklebt: Leerzeichen statt „e4e5"
+    [InlineData("e4) e5", "e4  e5")]                                // verirrte „)"
+    [InlineData("e4 (d4 e5", "e4  ")]                               // nie geschlossen: Rest weg
+    public void RemoveVariations_Vectors(string input, string expected)
+        => Assert.Equal(expected, PgnTokens.RemoveVariations(input));
+
+    /// <summary>Angeklebte Variante: der Partie-Upload klebte die Nachbarzüge vorher zu einem Token
+    /// zusammen („1. e4(1. d4)1... e5" → „e41... e5" → ungültig).</summary>
+    [Fact]
+    public void Variation_GluedToMoves_BothParsersReadTheMainline()
+    {
+        const string movetext = "1. e4(1. d4 (1. c4) d5)1... e5 2. Nf3 *";
+        var expected = new[] { "e4", "e5", "Nf3" };
+        Assert.Equal(expected, PgnParser.ExtractMainlineSans(movetext));
+        Assert.Equal(expected, ReconstructionChain.SplitMoves(movetext));
+        Assert.Equal(expected, PgnMoveTree.ParseSections(Headers + movetext).Single().Moves.Select(m => m.San));
+    }
 }

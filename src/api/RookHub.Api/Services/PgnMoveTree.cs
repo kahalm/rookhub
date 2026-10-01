@@ -25,7 +25,8 @@ public sealed record ParsedSection(string? White, string? Black, string? StartFe
 /// über <see cref="PgnTokens.IsResultToken"/>),
 /// <see cref="ChessableTrainedLineService.MainlineSans"/> (überspringt Varianten ganz und weist
 /// jedes Token MIT Punkt ab — wegen „e.p.") und <see cref="ReconstructionChain.SplitMoves"/>
-/// (behält Suffix-Annotationen, entfernt nur die innersten Klammerpaare).</para>
+/// (behält Suffix-Annotationen, anderer Zugnummern-Regex; Varianten entfernt es über
+/// <see cref="PgnTokens.RemoveVariations"/>).</para>
 /// </summary>
 public static class PgnMoveTree
 {

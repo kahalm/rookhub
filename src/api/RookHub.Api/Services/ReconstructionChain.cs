@@ -55,7 +55,7 @@ public static class ReconstructionChain
         if (string.IsNullOrWhiteSpace(text)) return moves;
 
         var cleaned = System.Text.RegularExpressions.Regex.Replace(text, @"\{[^}]*\}", " ");
-        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\([^()]*\)", " ");
+        cleaned = PgnTokens.RemoveVariations(cleaned);                                        // auch verschachtelt
         foreach (var raw in cleaned.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {
             var token = raw.Trim();

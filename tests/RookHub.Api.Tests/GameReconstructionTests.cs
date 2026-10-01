@@ -26,6 +26,39 @@ public class ReconstructionChainTests
         Assert.Equal(new[] { "e4", "e5", "Nf3", "Nc6", "Bb5", "a6" }, moves);
     }
 
+    /// <summary>Verschachtelte Varianten (Codereview N3-008): der frühere Regex entfernte nur die
+    /// INNERSTEN Klammerpaare, einmal — aus „(1... c5 (1... e6) 2. Nf3)" blieben „(1..." und „Nf3)"
+    /// als Tokens stehen und wurden als erster illegaler Zug gemeldet.</summary>
+    [Theory]
+    [InlineData("1. e4 e5 (1... c5 (1... e6) 2. Nf3) 2. Nf3")]
+    [InlineData("1. e4 e5 ((1... c5) 1... e6) 2. Nf3")]
+    [InlineData("1. e4 e5 (1... c5 (1... e6 (1... d5)) 2. Nf3) 2. Nf3")]
+    [InlineData("1. e4 e5(1... c5 (1... e6))2. Nf3")]
+    public void SplitMoves_RemovesNestedVariations(string text)
+        => Assert.Equal(new[] { "e4", "e5", "Nf3" }, ReconstructionChain.SplitMoves(text));
+
+    /// <summary>Eine nie geschlossene Klammer nimmt den Rest mit, wie bei jedem PGN-Leser.</summary>
+    [Fact]
+    public void SplitMoves_UnclosedVariation_TakesTheRest()
+        => Assert.Equal(new[] { "e4", "e5" }, ReconstructionChain.SplitMoves("1. e4 e5 (1... c5 2. Nf3"));
+
+    /// <summary>Eine verirrte schließende Klammer wird kein Zug („e5)" stand früher als Fehlzug da).</summary>
+    [Fact]
+    public void SplitMoves_StrayClosingParen_IsDropped()
+        => Assert.Equal(new[] { "e4", "e5", "Nf3" }, ReconstructionChain.SplitMoves("1. e4 e5) 2. Nf3"));
+
+    [Fact]
+    public void Analyze_NestedVariation_IsNoBadMove()
+    {
+        var result = ReconstructionChain.Analyze(new[] { Moves(0, "1. e4 e5 (1... c5 (1... e6) 2. Nf3) 2. Nf3 Nc6") });
+
+        var part = Assert.Single(result.Parts);
+        Assert.True(part.Valid);
+        Assert.Null(part.FirstBadMove);
+        Assert.Equal(4, part.PlyCount);
+        Assert.Equal("e4 e5 Nf3 Nc6", result.PrefixSan);
+    }
+
     [Fact]
     public void Analyze_FirstMovesStartFromTheInitialPosition()
     {

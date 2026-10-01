@@ -473,7 +473,7 @@ public static partial class PgnParser
     internal static List<string> ExtractMainlineSans(string moveText)
     {
         var s = CommentRegex().Replace(moveText, " ");
-        s = RemoveVariations(s);
+        s = PgnTokens.RemoveVariations(s);
         s = NagRegex().Replace(s, " ");
         s = MoveNumberRegex().Replace(s, " ");
 
@@ -644,16 +644,4 @@ public static partial class PgnParser
         return true;
     }
 
-    private static string RemoveVariations(string s)
-    {
-        var sb = new StringBuilder(s.Length);
-        int depth = 0;
-        foreach (char c in s)
-        {
-            if (c == '(') depth++;
-            else if (c == ')') { if (depth > 0) depth--; }
-            else if (depth == 0) sb.Append(c);
-        }
-        return sb.ToString();
-    }
 }

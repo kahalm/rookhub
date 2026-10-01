@@ -51,4 +51,31 @@ public static class PgnTokens
     /// </summary>
     public static bool IsResultToken(ReadOnlySpan<char> token)
         => token is "1-0" or "0-1" or "1/2-1/2" or "1/2" or "*" or "½-½";
+
+    /// <summary>
+    /// Entfernt alle Varianten „(…)" samt beliebig tiefer Schachtelung — mit einem Tiefenzaehler,
+    /// nicht mit einem Regex. Jede entfernte Variante wird zu EINEM Leerzeichen (sonst klebten
+    /// „e4(d4)e5" die Nachbarzuege zu „e4e5" zusammen), eine verirrte „)" ebenso; eine nie
+    /// geschlossene „(" nimmt den Rest des Textes mit, wie bei jedem PGN-Leser. Kommentare
+    /// („{…}") muss der Aufrufer VORHER entfernen — eine Klammer im Kommentar ist keine Variante.
+    ///
+    /// <para><see cref="ReconstructionChain.SplitMoves"/> entfernte bis 0.624.0 per
+    /// <c>\([^()]*\)</c> nur die INNERSTEN Paare, einmal: aus „(1... c5 (1... e6) 2. Nf3)" blieben
+    /// die Tokens „(1..." und „Nf3)" stehen und wurden als erster illegaler Zug gemeldet
+    /// (Codereview 2026-09-29, N3-008). <see cref="PgnParser"/> hatte die Zaehler-Fassung schon,
+    /// nur ohne das Leerzeichen.</para>
+    /// </summary>
+    public static string RemoveVariations(string s)
+    {
+        if (s.IndexOf('(') < 0 && s.IndexOf(')') < 0) return s;
+        var sb = new System.Text.StringBuilder(s.Length);
+        int depth = 0;
+        foreach (char c in s)
+        {
+            if (c == '(') { if (depth++ == 0) sb.Append(' '); }
+            else if (c == ')') { if (depth > 0) depth--; else sb.Append(' '); }
+            else if (depth == 0) sb.Append(c);
+        }
+        return sb.ToString();
+    }
 }
