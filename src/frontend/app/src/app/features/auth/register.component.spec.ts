@@ -7,6 +7,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { LEGAL_SITE } from '../legal/legal-site';
+import { AUTH_INTRO } from './auth-intro';
 
 describe('RegisterComponent — optionale Email', () => {
   function make(email: string, prefill = new AuthPrefillService()) {
@@ -326,6 +327,24 @@ describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
     expect((await render()).querySelector('.site-note')).toBeNull();
     TestBed.resetTestingModule();
     expect((await render(KIDHUB)).querySelector('.site-note')).toBeNull();
+  });
+
+  // UX-027: auf der Turnierseite legt die Karte ein vollständiges RookHub-Konto an, sagte das aber nicht.
+  it('Turnierseite: vor dem Formular der Hinweis „gilt auch für RookHub“ (AUTH_INTRO)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [RegisterComponent],
+      providers: [
+        provideRouter([]), provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: AUTH_INTRO, useValue: { register: 'turnier.authIntro.register' } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const note = el.querySelector('.site-note')!;
+    expect(text(note)).toContain('turnier.authIntro.register');
+    expect(note.compareDocumentPosition(el.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('ohne DI (Konstruktor mit new) gilt die Vorgabe — keine KidHub-Variante', () => {

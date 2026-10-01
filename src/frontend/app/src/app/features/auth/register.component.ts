@@ -13,6 +13,7 @@ import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { HelpHintComponent } from '../../shared/help-hint/help-hint.component';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
+import { AUTH_INTRO, AuthIntro } from './auth-intro';
 
 /** Mindestlänge des Benutzernamens — wie `[MinLength(3)]` am RegisterDto (API). */
 export const USERNAME_MIN_LENGTH = 3;
@@ -75,6 +76,10 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                Freischaltung durch einen Admin sichtbar ist — sonst endet die Registrierung ohne Vorwarnung auf der Sperrkarte. -->
           @if (leagueHub) {
             <p class="site-note" role="note">{{ 'auth.register.leaguehubNote' | translate }}</p>
+          }
+          <!-- Turnierseite (UX-027): das neue Konto ist ein RookHub-Konto — vorher sagte die Karte das nicht. -->
+          @if (introKey) {
+            <p class="site-note" role="note">{{ introKey | translate }}</p>
           }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
             <mat-form-field appearance="outline" [subscriptSizing]="kids ? 'dynamic' : 'fixed'">
@@ -182,14 +187,18 @@ export class RegisterComponent {
   readonly kids: boolean;
   /** LeagueHub (LEGAL_SITE.kind): Hinweis „RookHub-Konto, Freischaltung durch einen Admin" vor dem Anlegen (UX-033). */
   readonly leagueHub: boolean;
+  /** App-eigene Zeile über dem Formular (Turnierseite: „gilt auch für RookHub", UX-027), sonst `null`. */
+  readonly introKey: string | null;
 
   returnUrl: string;
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute,
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
-              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
+              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite,
+              @Optional() @Inject(AUTH_INTRO) intro?: AuthIntro) {
     this.kids = (legal ?? defaultLegalSite()).kind === 'kidhub';
     this.leagueHub = (legal ?? defaultLegalSite()).kind === 'leaguehub';
+    this.introKey = intro?.register ?? null;
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
   }

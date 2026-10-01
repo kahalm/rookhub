@@ -312,6 +312,8 @@
       "rateLimited": "Too many sign-in attempts. Please wait about {{seconds}} seconds, then try again.",
       "offline": "Can't reach the server. Check your internet connection and try again.",
       "required": "Please log in or register to continue.",
+      "requiredFor": "Please sign in or register – afterwards you’ll go straight to “{{area}}”.",
+      "freeNote": "An account is free, and your email address is optional.",
       "forgotLink": "Forgot password?",
       "leaguehubNote": "LeagueHub is for admins and the SK Schwaz club group. Sign in with your RookHub account."
     },
@@ -4001,6 +4003,10 @@
   "turnier": {
     "brand": "Tournaments",
     "toRookHub": "To RookHub",
+    "authIntro": {
+      "login": "Tournament calendar with radius search and alerts for new tournaments near you, favorites and your played tournaments – free. Already have a RookHub account? Sign in with it.",
+      "register": "Your account also works on RookHub – puzzles, courses and analysis with the same sign-in."
+    },
     "profile": {
       "title": "My profile",
       "person": "Name and email",

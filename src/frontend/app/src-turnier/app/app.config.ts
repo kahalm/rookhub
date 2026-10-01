@@ -19,6 +19,7 @@ import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { resolveStartupLocale } from '@rh/core/locale.service';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
+import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 
 registerLocaleData(localeDe);
 registerLocaleData(localeHr);
@@ -45,6 +46,9 @@ export const turnierConfig: ApplicationConfig = {
     // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist
     // auf RookHubs Profil (Codereview UX-023).
     { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
+    // Die Anmeldemaske ist hier die Startseite jedes neuen Besuchers: sie sagt, was die Seite bietet und dass das
+    // RookHub-Konto gilt; die Registrierung, dass das neue Konto auch in RookHub gilt (Codereview UX-027).
+    { provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login', register: 'turnier.authIntro.register' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

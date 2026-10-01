@@ -150,6 +150,8 @@
       "rateLimited": "Túl sok bejelentkezési kísérlet. Várj kb. {{seconds}} másodpercet, aztán próbáld újra.",
       "offline": "A szerver nem érhető el. Ellenőrizd az internetkapcsolatot, és próbáld újra.",
       "required": "Please log in or register to continue.",
+      "requiredFor": "Jelentkezz be vagy regisztrálj – utána egyenesen ide jutsz: „{{area}}”.",
+      "freeNote": "A fiók ingyenes, az e-mail-cím megadása nem kötelező.",
       "forgotLink": "Elfelejtette a jelszót?",
       "leaguehubNote": "A LeagueHub az adminoknak és az SK Schwaz klubcsoportjának szól. Jelentkezz be a RookHub-fiókoddal."
     },
@@ -3722,6 +3724,10 @@
   "turnier": {
     "brand": "Versenyek",
     "toRookHub": "A RookHubra",
+    "authIntro": {
+      "login": "Versenynaptár körzetkereséssel és értesítéssel a közeli új versenyekről, kedvencek és a lejátszott versenyeid – ingyen. Már van RookHub-fiókod? Jelentkezz be azzal.",
+      "register": "A fiókod a RookHubon is érvényes – feladványok, kurzusok és elemzés ugyanazzal a bejelentkezéssel."
+    },
     "profile": {
       "title": "A profilom",
       "person": "Név és e-mail",

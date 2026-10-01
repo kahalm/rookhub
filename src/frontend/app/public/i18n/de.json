@@ -312,6 +312,8 @@
       "rateLimited": "Zu viele Anmeldeversuche. Bitte warte etwa {{seconds}} Sekunden und versuch es dann noch einmal.",
       "offline": "Keine Verbindung zum Server. Prüf deine Internetverbindung und versuch es noch einmal.",
       "required": "Bitte logge dich ein oder registriere dich, um fortzufahren.",
+      "requiredFor": "Bitte logge dich ein oder registriere dich – danach geht es direkt weiter zu „{{area}}“.",
+      "freeNote": "Ein Konto ist kostenlos, die E-Mail-Adresse freiwillig.",
       "forgotLink": "Passwort vergessen?",
       "leaguehubNote": "LeagueHub ist für Admins und die Vereinsgruppe von SK Schwaz. Melde dich mit deinem RookHub-Konto an."
     },
@@ -4001,6 +4003,10 @@
   "turnier": {
     "brand": "Turniere",
     "toRookHub": "Zu RookHub",
+    "authIntro": {
+      "login": "Turnierkalender mit Umkreissuche und Meldung über neue Turniere in deiner Nähe, Favoriten und deine gespielten Turniere – kostenlos. Du hast schon ein RookHub-Konto? Dann melde dich damit an.",
+      "register": "Dein Konto gilt auch für RookHub – Puzzles, Kurse und Analyse mit derselben Anmeldung."
+    },
     "profile": {
       "title": "Mein Profil",
       "person": "Name und E-Mail",

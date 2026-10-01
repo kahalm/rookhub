@@ -312,6 +312,8 @@
       "rateLimited": "Previše pokušaja prijave. Pričekaj oko {{seconds}} sekundi, pa pokušaj ponovno.",
       "offline": "Nema veze s poslužiteljem. Provjeri internetsku vezu i pokušaj ponovno.",
       "required": "Prijavi se ili registriraj se za nastavak.",
+      "requiredFor": "Prijavi se ili se registriraj – nakon toga ideš izravno na „{{area}}“.",
+      "freeNote": "Račun je besplatan, a e-adresa nije obavezna.",
       "forgotLink": "Zaboravljena lozinka?",
       "leaguehubNote": "LeagueHub je za administratore i klupsku grupu SK Schwaz. Prijavi se svojim RookHub računom."
     },
@@ -4001,6 +4003,10 @@
   "turnier": {
     "brand": "Turniri",
     "toRookHub": "Na RookHub",
+    "authIntro": {
+      "login": "Kalendar turnira s pretragom po udaljenosti i obavijestima o novim turnirima u blizini, favoriti i tvoji odigrani turniri – besplatno. Već imaš RookHub račun? Prijavi se njime.",
+      "register": "Tvoj račun vrijedi i za RookHub – zagonetke, tečajevi i analiza s istom prijavom."
+    },
     "profile": {
       "title": "Moj profil",
       "person": "Ime i e-pošta",

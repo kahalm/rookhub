@@ -1,13 +1,15 @@
 import { of, throwError } from 'rxjs';
-import { LoginComponent, loginErrorOf, loginRetryAfterSeconds } from './login.component';
+import { LoginComponent, loginAreaKey, loginErrorOf, loginRetryAfterSeconds } from './login.component';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideTranslateService } from '@ngx-translate/core';
+import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE } from '../legal/legal-site';
+import { AUTH_INTRO } from './auth-intro';
+import { ActivatedRoute } from '@angular/router';
 
 function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefillService()) {
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
@@ -236,5 +238,74 @@ describe('LoginComponent — LeagueHub-Hinweis (UX-033)', () => {
     expect((await render()).querySelector('.site-note')).toBeNull();
     TestBed.resetTestingModule();
     expect((await render({ contactEmail: 'x@y.z', imprint: false, kind: 'kidhub' })).querySelector('.site-note')).toBeNull();
+  });
+});
+
+/**
+ * UX-027: derselbe Satz „… um fortzufahren“ auf 35 geschützten Routen — der Hinweis nennt jetzt den Bereich, in den die
+ * Anmeldung zurückführt, und dass ein Konto nichts kostet; auf der Turnierseite steht eine eigene Einleitung.
+ */
+describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
+  it('loginAreaKey: Menüname des ersten Segments, sonst null', () => {
+    expect(loginAreaKey('/friends/7/revenge')).toBe('nav.friends');
+    expect(loginAreaKey('/worksheets/3/print?x=1')).toBe('nav.worksheets');
+    expect(loginAreaKey('/training-goals')).toBe('nav.trainingGoals');
+    expect(loginAreaKey('/tournaments/calendar')).toBe('nav.tournaments');
+    expect(loginAreaKey('/verein/neu')).toBeNull();
+    expect(loginAreaKey('/')).toBeNull();
+    expect(loginAreaKey('/constructor')).toBeNull();
+  });
+
+  async function render(query: Record<string, string>, extra: object[] = []): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParams: query } } },
+        ...extra,
+      ],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      auth: { login: { required: 'GENERIC', requiredFor: 'Then on to {{area}}.', freeNote: 'FREE' } },
+      nav: { friends: 'Friends' },
+      turnier: { authIntro: { login: 'TOURNAMENT INTRO' } },
+    }, true);
+    translate.use('en');
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('nennt den Bereich, in den es nach der Anmeldung geht, und dass das Konto kostenlos ist', async () => {
+    const el = await render({ returnUrl: '/friends/7/revenge', authRequired: '1' });
+    const box = el.querySelector('.auth-required')!;
+    expect(box.textContent).toContain('Then on to Friends.');
+    expect(box.textContent).not.toContain('GENERIC');
+    expect(box.querySelector('.auth-sub')?.textContent).toContain('FREE');
+  });
+
+  it('ohne Menünamen für das Ziel: der allgemeine Satz', async () => {
+    const el = await render({ returnUrl: '/verein/neu', authRequired: '1' });
+    expect(el.querySelector('.auth-required')!.textContent).toContain('GENERIC');
+  });
+
+  it('LeagueHub: kein „kostenlos“ (das Konto allein öffnet dort nichts)', async () => {
+    const el = await render({ returnUrl: '/friends', authRequired: '1' },
+      [{ provide: LEGAL_SITE, useValue: { contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub' } }]);
+    expect(el.querySelector('.auth-sub')).toBeNull();
+  });
+
+  it('Turnierseite: eigene Einleitung über dem Formular, auch ohne Umleitung', async () => {
+    const el = await render({}, [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login' } }]);
+    const notes = Array.from(el.querySelectorAll('.site-note')).map(n => n.textContent);
+    expect(notes.join('|')).toContain('TOURNAMENT INTRO');
+  });
+
+  it('RookHub (Vorgabe): keine Einleitung', async () => {
+    expect((await render({})).querySelector('.site-note')).toBeNull();
   });
 });

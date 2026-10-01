@@ -11,6 +11,7 @@ import { routes } from './app.routes';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 import { turnierConfig } from './app.config';
 import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
+import { AUTH_INTRO, AuthIntro } from '@rh/features/auth/auth-intro';
 
 /**
  * Die Turnierseite benutzt RookHubs Anmeldemaske und Rechtsseiten (`@rh/*`). Deren Links muessen
@@ -38,6 +39,12 @@ describe('Turnier-Routen', () => {
     const legal = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
       { useFactory: () => LegalSite } | undefined;
     expect(legal?.useFactory()).toEqual(jasmine.objectContaining({ imprint: true, accountHome: 'rookhub' }));
+  });
+
+  it('die Anmeldemaske (hier die Startseite) erklaert das Angebot, die Registrierung das RookHub-Konto (UX-027)', () => {
+    const intro = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === AUTH_INTRO) as
+      { useValue: AuthIntro } | undefined;
+    expect(intro?.useValue).toEqual({ login: 'turnier.authIntro.login', register: 'turnier.authIntro.register' });
   });
 
   it('laesst Passwort-Reset und Rechtsseiten ohne Anmeldung zu', () => {

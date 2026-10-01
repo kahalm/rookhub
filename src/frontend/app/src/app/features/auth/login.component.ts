@@ -13,6 +13,27 @@ import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { sanitizeReturnUrl } from '../../core/return-url.util';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
 import { apiErrorCodeText } from '../../core/api-error';
+import { AUTH_INTRO, AuthIntro } from './auth-intro';
+
+/**
+ * Erstes Segment des Ziels → Name des Bereichs aus dem Menü (`nav.*`), damit der Anmelde-Hinweis sagt, wohin es danach
+ * geht (UX-027): vorher stand auf 35 geschützten Routen derselbe Satz „… um fortzufahren“, ob der Gast von einer
+ * Revanche, einer Partie oder einem Aufgabenblatt kam. Nur Bereiche mit Menüeintrag, sonst bleibt der allgemeine Satz.
+ */
+const AREA_KEYS: Readonly<Record<string, string>> = {
+  dashboard: 'nav.dashboard', friends: 'nav.friends', repertoires: 'nav.repertoires', puzzles: 'nav.puzzles',
+  favorites: 'nav.favorites', worksheets: 'nav.worksheets', weekly: 'nav.weekly', analysis: 'nav.analysis',
+  games: 'nav.games', reconstruct: 'nav.reconstruct', remembered: 'nav.remembered', stats: 'nav.stats',
+  leaderboards: 'nav.leaderboards', 'training-goals': 'nav.trainingGoals', catalog: 'nav.catalog',
+  chessable: 'nav.chessable', profile: 'nav.profile', admin: 'nav.admin', courses: 'nav.courses',
+  tournaments: 'nav.tournaments',
+};
+
+/** i18n-Schlüssel des Bereichs, in den die Anmeldung zurückführt — `null`, wenn es keinen Menünamen dafür gibt. */
+export function loginAreaKey(returnUrl: string): string | null {
+  const first = returnUrl.split(/[?#]/)[0].split('/').find(s => s) ?? '';
+  return Object.prototype.hasOwnProperty.call(AREA_KEYS, first) ? AREA_KEYS[first] : null;
+}
 
 /** Was bei der Anmeldung schiefging — steuert Text und nächsten Schritt (UX-019). */
 export type LoginError = 'credentials' | 'rateLimited' | 'offline' | 'failed';
@@ -51,11 +72,25 @@ export function loginRetryAfterSeconds(err: any): number {
         </mat-card-header>
         <mat-card-content>
           @if (authRequired) {
-            <p class="auth-required">{{ 'auth.login.required' | translate }}</p>
+            <!-- UX-027: wohin es nach der Anmeldung geht (Menüname des Ziels) und dass ein Konto nichts kostet. -->
+            <p class="auth-required">
+              @if (areaKey; as area) {
+                {{ 'auth.login.requiredFor' | translate:{ area: (area | translate) } }}
+              } @else {
+                {{ 'auth.login.required' | translate }}
+              }
+              @if (showFreeNote) {
+                <span class="auth-sub">{{ 'auth.login.freeNote' | translate }}</span>
+              }
+            </p>
           }
           <!-- LeagueHub (UX-033): wer hier ist, soll wissen, dass es nur für eine Gruppe ist und welches Konto gilt. -->
           @if (leagueHub) {
             <p class="auth-required site-note">{{ 'auth.login.leaguehubNote' | translate }}</p>
+          }
+          <!-- Turnierseite (UX-027): die Maske ist dort die Startseite — was die Seite bietet und welches Konto gilt. -->
+          @if (intro.login; as introKey) {
+            <p class="auth-required site-note">{{ introKey | translate }}</p>
           }
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
@@ -109,6 +144,7 @@ export function loginRetryAfterSeconds(err: any): number {
     .legal-links span { color: color-mix(in srgb, currentColor 53%, transparent); margin: 0 6px; }
     mat-card { width: 400px; max-width: 90vw; }
     .auth-required { background: rgba(144, 202, 249, 0.15); border-left: 3px solid #90caf9; padding: 0.6rem 0.8rem; border-radius: 4px; margin: 0.5rem 0 0; font-size: 0.9rem; }
+    .auth-sub { display: block; margin-top: 0.3rem; opacity: 0.85; }
     .auth-form { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
     mat-form-field { width: 100%; }
     .form-error { margin-top: 12px; padding: 12px; border-radius: 8px;
@@ -138,15 +174,26 @@ export class LoginComponent {
   readonly legal: LegalSite;
   /** LeagueHub (LEGAL_SITE.kind): Hinweis auf die geschlossene Gruppe und das RookHub-Konto (UX-033). */
   readonly leagueHub: boolean;
+  /** App-eigene Einleitung (Turnierseite, UX-027); RookHub: leer. */
+  readonly intro: AuthIntro;
+  /** Menüname des Ziels für den Anmelde-Hinweis (UX-027), sonst der allgemeine Satz. */
+  readonly areaKey: string | null;
+  /** „Konto kostenlos, E-Mail freiwillig“ — nicht auf LeagueHub (Konto allein öffnet dort nichts) und nicht, wo die
+   *  Einleitung der Oberfläche das schon sagt. */
+  readonly showFreeNote: boolean;
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private translate: TranslateService,
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
-              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
+              @Optional() @Inject(LEGAL_SITE) legal?: LegalSite,
+              @Optional() @Inject(AUTH_INTRO) intro?: AuthIntro) {
     this.legal = legal ?? defaultLegalSite();
     this.leagueHub = this.legal.kind === 'leaguehub';
+    this.intro = intro ?? {};
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
     this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';
+    this.areaKey = loginAreaKey(this.returnUrl);
+    this.showFreeNote = !this.leagueHub && !this.intro.login;
   }
 
 
