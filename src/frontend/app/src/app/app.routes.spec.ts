@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Route, Router, provideRouter } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivateFn, Route, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { appConfig } from './app.config';
 import { checkSharedPageLinks } from './testing/shared-page-links';
+import { AuthService } from './core/auth.service';
 
 /**
  * Reihenfolge-Test der Routentabelle.
@@ -97,5 +98,27 @@ describe('app.routes — Links der Anmelde- und Rechtsseiten', () => {
     // „Konto jetzt loeschen" fuehrt ins Profil — bewusst ueber die Anmeldung (data-login-required, UX-023).
     expect(report.links).toContain('/account-deletion → /profile');
     expect(report.problems).toEqual([]);
+  });
+});
+
+describe('app.routes — Kurs-Seiten hinter der Anmeldung (F1-017)', () => {
+  // Bisher eigener courseAccessGuard mit derselben Bedingung wie authGuard, aber Umleitung auf das nackte /login:
+  // kein Hinweis „bitte einloggen“, und nach der Anmeldung das Dashboard statt der Kursseite.
+  const COURSE_PAGES = ['courses', 'courses/:bookId', 'courses/:bookId/browse',
+    'courses/:bookId/chapter/:chapterIndex/browse', 'courses/:bookId/flashcards'];
+
+  it('schicken Gäste mit Rücksprungziel und Anmelde-Hinweis auf /login', () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: AuthService, useValue: { isLoggedIn: false } }],
+    });
+    for (const path of COURSE_PAGES) {
+      const guard = routes.find(r => r.path === path)?.canActivate?.[0] as CanActivateFn;
+      const url = '/' + path.replace(':bookId', '340').replace(':chapterIndex', '2');
+      const result = TestBed.runInInjectionContext(
+        () => guard({} as ActivatedRouteSnapshot, { url } as RouterStateSnapshot)) as UrlTree;
+      expect(result instanceof UrlTree).withContext(path).toBeTrue();
+      expect(result.toString().split('?')[0]).withContext(path).toBe('/login');
+      expect(result.queryParams).withContext(path).toEqual({ returnUrl: url, authRequired: '1' });
+    }
   });
 });

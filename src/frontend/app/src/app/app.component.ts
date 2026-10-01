@@ -206,8 +206,8 @@ export class AppComponent implements OnInit {
    *
    * `mate` zeigt auf den öffentlichen Kurs „Mate in 1/2/3" (Polgar 5334, Prod-Buch 340) und startet
    * ihn SEQUENZIELL — die Aufgaben stehen dort nach Schwierigkeit, das ist für Neulinge der
-   * sinnvolle Einstieg. Die Buch-Id ist umgebungsabhängig: existiert sie nicht (Dev), fängt der
-   * `courseAccessGuard` das ab und leitet weiter, statt eine leere Seite zu zeigen.
+   * sinnvolle Einstieg. Die Buch-Id ist umgebungsabhängig: existiert sie nicht (Dev), zeigt der Solver
+   * seinen Ladefehler (Gast: „nicht verfügbar") — die Route (`coursePlayGuard`) prüft nicht, ob es das Buch gibt.
    */
   /** Buch-Id des öffentlichen Kurses „Mate in 1/2/3" (Prod). Eine Stelle, falls sie sich ändert.
    *  MUSS vor `quickstartItems` stehen — sonst nutzt der Feld-Initialisierer sie vor der Deklaration. */

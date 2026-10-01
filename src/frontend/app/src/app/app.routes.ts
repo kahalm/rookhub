@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
 import { guestGuard } from './core/guest.guard';
 import { adminGuard } from './core/admin.guard';
-import { courseAccessGuard } from './core/course-access.guard';
 import { coursePlayGuard } from './core/course-play.guard';
 import { menuGuard } from './core/menu.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
@@ -67,13 +66,16 @@ export const routes: Routes = [
   { path: 'training-goals', loadComponent: () => import('./features/training-goals/training-goals.component').then(m => m.TrainingGoalsComponent), canActivate: [authGuard, menuGuard('training-goals')] },
   { path: 'notifications', loadComponent: () => import('./features/notifications/notifications.component').then(m => m.NotificationsComponent), canActivate: [authGuard] },
   { path: 'messages', loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent), canActivate: [authGuard] },
-  { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
+  // Kurse: jeder Angemeldete, auch ohne sichtbaren Kurs (dort laedt man ein eigenes PGN hoch); den Zugriff je Buch
+  // sichern die Endpunkte (404). authGuard statt des frueheren courseAccessGuard (F1-017): gleiche Bedingung, aber
+  // Gaeste behalten Ruecksprungziel und Anmelde-Hinweis.
+  { path: 'courses', loadComponent: () => import('./features/courses/course-list.component').then(m => m.CourseListComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'catalog', loadComponent: () => import('./features/catalog/catalog.component').then(m => m.CatalogComponent), canActivate: [authGuard, menuGuard('catalog')] },
-  { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
-  { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
-  { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/chapter/:chapterIndex/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/browse', loadComponent: () => import('./features/courses/course-browse.component').then(m => m.CourseBrowseComponent), canActivate: [authGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId', loadComponent: () => import('./features/courses/course-detail.component').then(m => m.CourseDetailComponent), canActivate: [authGuard, menuGuard('courses')] },
   // MUSS vor der :mode-Route stehen, sonst landet „calc" im Buch-Puzzle-Solver.
-  { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [courseAccessGuard, menuGuard('courses')] },
+  { path: 'courses/:bookId/flashcards', loadComponent: () => import('./features/courses/flashcards/flashcards.component').then(m => m.FlashcardsComponent), canActivate: [authGuard, menuGuard('courses')] },
   { path: 'courses/:bookId/calc', loadComponent: () => import('./features/courses/calc/calculation.component').then(m => m.CalculationComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/chapter/:chapterIndex/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
   { path: 'courses/:bookId/:mode', loadComponent: () => import('./features/puzzles/book-puzzle.component').then(m => m.BookPuzzleComponent), canActivate: [coursePlayGuard] },
