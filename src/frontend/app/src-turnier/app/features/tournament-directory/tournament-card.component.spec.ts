@@ -201,6 +201,20 @@ describe('TournamentCardComponent', () => {
     expect(component.dateText).toBe('2026-12-18');
   });
 
+  /**
+   * Codereview UX-039: ein Eintrag mit unplausibler Laufzeit („2007 bis 2026") kommt nur mit dem
+   * Schalter in die Antwort — dann sagt die Karte, warum er sonst fehlt.
+   */
+  it('kennzeichnet einen unplausiblen Zeitraum, sonst nicht', () => {
+    setup({ startDate: '2007-12-26', endDate: '2026-12-10', implausible: true });
+    expect(fixture.nativeElement.querySelector('.badge.implausible')?.textContent?.trim())
+      .toBe('tournamentDirectory.card.implausible');
+
+    TestBed.resetTestingModule();
+    setup();
+    expect(fixture.nativeElement.querySelector('.badge.implausible')).toBeNull();
+  });
+
   /** Publikum und Format stehen als Kurzangaben mit — dieselben, nach denen der Filter fragt. */
   it('zeigt Mannschaft, Altersklasse und Geschlechtsklasse als Kurzangaben', () => {
     setup({ kind: 'Team', ageGroups: ['U12'], gender: 'Female' });

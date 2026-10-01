@@ -103,6 +103,7 @@ export class TournamentDirectoryService {
     if (filter.adultsOnly) params = params.set('adultsOnly', true);
     if (filter.hideLeagues) params = params.set('hideLeagues', true);
     if (filter.includeIgnored) params = params.set('includeIgnored', true);
+    if (filter.includeImplausible) params = params.set('includeImplausible', true);
     return params;
   }
 }

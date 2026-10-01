@@ -3788,7 +3788,7 @@
     "tilesFailed": "Die Kartenkacheln ließen sich nicht laden. Die Turniere sitzen richtig, nur die Hintergrundkarte fehlt.",
     "range": {
       "label": "Zeitraum",
-      "quarter": "Nächstes Quartal",
+      "quarter": "Nächste drei Monate",
       "halfYear": "Nächste sechs Monate",
       "year": "Nächste zwölf Monate",
       "all": "Alles Kommende",
@@ -3862,6 +3862,12 @@
     },
     "adultsOnly": "Nur Erwachsene",
     "hideLeagues": "Ligen ausblenden",
+    "showImplausible": "Unplausible Zeiträume zeigen",
+    "showImplausibleHint": "Einträge, die laut Quelle über ein Jahr laufen und keine Spieltermine nennen oder schon vor über einem Jahr begonnen haben – meist ein Tippfehler im Datum. Ohne den Schalter sind sie ausgeblendet.",
+    "ongoing": {
+      "title": "Läuft bereits",
+      "hint": "Diese Wettbewerbe haben vor dem gewählten Zeitraum begonnen und laufen noch hinein – meist Ligen und Saisonwettbewerbe."
+    },
     "audienceHelp": "Einzel oder Mannschaft kommt von chess-results selbst — und alles, was nicht als Mannschaftsturnier erkannt wird, zählt als Einzel.\n\nAltersklasse und Geschlechtsklasse kommen aus keinem Feld: es gibt keines, sie werden aus dem Turniernamen gelesen. Das klappt, wo der Name die Klasse nennt („U12 weiblich“, „UNDER 16 BOYS“) — und gar nicht, wo er das nicht tut.\n\n„Nur Erwachsene“ blendet alles mit einem Jugendmerkmal im Namen aus. Senioren bleiben — Seniorenschach ist Erwachsenenschach.\n\nEine Liga ist ein Mannschaftswettbewerb über eine ganze Saison, oder einer, der es im Namen sagt.\n\nEtwas in der falschen Schublade? Auf jeder Turnierseite gibt es „falsches Event melden“, und dort wird gefragt, wie solche Turniere in deiner Region heißen. Genau das verbessert es für alle.",
     "missing": {
       "cta": "Dein Turnier fehlt? Hier eintragen",
@@ -3898,7 +3904,8 @@
       "hideError": "Konnte nicht ausgeblendet werden. Bitte noch einmal versuchen.",
       "showIgnored": "Ausgeblendete zeigen",
       "rounds": "{{count}} Runden, {{from}} bis {{to}}",
-      "actionAria": "{{action}}: {{name}}"
+      "actionAria": "{{action}}: {{name}}",
+      "implausible": "Zeitraum unplausibel"
     },
     "source": {
       "Unknown": "Unbekannte Quelle",

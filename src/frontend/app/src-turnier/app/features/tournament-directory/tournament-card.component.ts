@@ -99,6 +99,11 @@ import { DirectoryEntry } from './tournament-directory.model';
         @if (entry.cancelled) {
           <span class="badge warn">{{ 'tournamentDirectory.cancelled' | translate }}</span>
         }
+        <!-- Nur mit dem Schalter „Unplausible Zeitraeume zeigen" in der Antwort (UX-039): der
+             Hinweis sagt, warum dieser Eintrag sonst fehlt und dem Zeitraum nicht zu trauen ist. -->
+        @if (entry.implausible) {
+          <span class="badge warn implausible">{{ 'tournamentDirectory.card.implausible' | translate }}</span>
+        }
         @if (ignored()) {
           <span class="badge">{{ 'tournamentDirectory.card.ignored' | translate }}</span>
         }

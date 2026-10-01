@@ -370,6 +370,88 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /**
+   * Codereview UX-039: der Server liefert erst, was im Zeitraum BEGINNT, dann was schon laeuft.
+   * Die Liste setzt den zweiten Teil als eigenen Block „laeuft bereits" ab — sonst sehen die
+   * Saisonligen wie Termine der naechsten Wochen aus.
+   */
+  it('zeigt bereits laufende Wettbewerbe als eigenen Block unter den kommenden', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('111', 'Open Braunau'), { ...entry('222', 'Landesliga'), ongoing: true }], 30);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const block = root.querySelector('.ongoing-block') as HTMLElement;
+    expect(block).withContext('Block „laeuft bereits"').not.toBeNull();
+    expect(block.querySelector('.block-title')?.textContent?.trim()).toBe('tournamentDirectory.ongoing.title');
+    expect([...block.querySelectorAll('.tc-name')].map(n => n.textContent?.trim())).toEqual(['Landesliga']);
+    const upcoming = root.querySelector('.tab-body > .entry-grid') as HTMLElement;
+    expect([...upcoming.querySelectorAll('.tc-name')].map(n => n.textContent?.trim())).toEqual(['Open Braunau']);
+    // Die Zahl darueber zaehlt beide Bloecke zusammen.
+    expect(component.entries().length).toBe(2);
+    http.verify();
+  });
+
+  it('zeigt ohne laufende Wettbewerbe keinen zweiten Block', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('111')]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.ongoing-block')).toBeNull();
+    http.verify();
+  });
+
+  /**
+   * Codereview UX-039: unplausible Laufzeiten sind standardmaessig aus; der Schalter holt sie
+   * zurueck, zaehlt als Zusatzfilter und ueberlebt den Seitenwechsel wie „Ligen ausblenden".
+   */
+  it('blendet unplausible Zeiträume standardmäßig aus und holt sie auf Wunsch zurück', async () => {
+    await setup();
+    flushProfiles([]);
+    const first = flushList([]);
+    expect(first.request.params.has('includeImplausible')).toBeFalse();
+    expect(component.activeExtraFilters).toBe(0);
+
+    component.onIncludeImplausibleChange(true);
+    const req = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect(req.request.params.get('includeImplausible')).toBe('true');
+    req.flush({ items: [], total: 0, truncated: false });
+
+    expect(component.activeExtraFilters).toBe(1);
+    expect(JSON.parse(localStorage.getItem(LOCAL_KEY)!).includeImplausible).toBeTrue();
+    http.verify();
+  });
+
+  it('übernimmt „unplausible zeigen" aus der gemerkten Ansicht', async () => {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({ tab: 'list', includeImplausible: true }));
+
+    await setup();
+    flushProfiles([]);
+    const req = flushList([]);
+
+    expect(component.filter.includeImplausible).toBeTrue();
+    expect(req.request.params.get('includeImplausible')).toBe('true');
+    http.verify();
+  });
+
+  /**
+   * Codereview UX-039: die Vorgabe heisst „Naechste drei Monate", denn so rechnet `rangeFor`
+   * (heute + 3 Monate). „Naechstes Quartal" las sich wie das Kalenderquartal Q4.
+   */
+  it('beschriftet die Vorgabe als die nächsten drei Monate, nicht als Quartal', async () => {
+    const expected: Record<string, RegExp> = { en: /three months/i, de: /drei Monate/i, hr: /tri mjeseca/i, hu: /három hónap/i };
+    for (const [lang, pattern] of Object.entries(expected)) {
+      let json: { tournamentDirectory: { range: { quarter: string } } } | null = null;
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      expect(json?.tournamentDirectory.range.quarter).withContext(lang).toMatch(pattern);
+    }
+  });
+
   it('lässt „Alles Kommende" das Enddatum weg', async () => {
     await setup();
     flushProfiles([]);

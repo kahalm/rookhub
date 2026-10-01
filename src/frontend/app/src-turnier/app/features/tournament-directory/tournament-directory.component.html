@@ -185,6 +185,14 @@
         {{ 'tournamentDirectory.card.showIgnored' | translate }}
       </mat-slide-toggle>
 
+      <!-- Unplausible Laufzeiten („2007 bis 2026") blendet der Server standardmaessig aus; der
+           Schalter holt sie zurueck — sie koennen echte Langzeitwettbewerbe sein. -->
+      <mat-slide-toggle class="implausible-toggle" [ngModel]="filter.includeImplausible"
+                        (ngModelChange)="onIncludeImplausibleChange($event)"
+                        [matTooltip]="'tournamentDirectory.showImplausibleHint' | translate">
+        {{ 'tournamentDirectory.showImplausible' | translate }}
+      </mat-slide-toggle>
+
       <app-help-hint [text]="'tournamentDirectory.audienceHelp' | translate" />
 
       <mat-chip-listbox class="speed-chips" [ngModel]="filter.speed" (ngModelChange)="onSpeedChange($event)"
@@ -231,14 +239,30 @@
             <p class="hint">{{ 'tournamentDirectory.truncated' | translate }}</p>
           }
           <p class="muted count">{{ 'tournamentDirectory.count' | translate: { shown: entries().length, total: total() } }}</p>
-          <div class="entry-grid">
-            @for (entry of entries(); track trackById($index, entry)) {
-              <mat-card class="entry-card">
-                <app-tournament-card [entry]="entry" (selected)="select($event)"
-                                     (ignoredChanged)="onIgnoredChanged($event)" />
-              </mat-card>
-            }
-          </div>
+          @if (upcomingEntries().length > 0) {
+            <div class="entry-grid">
+              @for (entry of upcomingEntries(); track trackById($index, entry)) {
+                <mat-card class="entry-card">
+                  <app-tournament-card [entry]="entry" (selected)="select($event)"
+                                       (ignoredChanged)="onIgnoredChanged($event)" />
+                </mat-card>
+              }
+            </div>
+          }
+          @if (ongoingEntries().length > 0) {
+            <section class="ongoing-block" aria-labelledby="ongoing-title">
+              <h2 id="ongoing-title" class="block-title">{{ 'tournamentDirectory.ongoing.title' | translate }}</h2>
+              <p class="muted block-hint">{{ 'tournamentDirectory.ongoing.hint' | translate }}</p>
+              <div class="entry-grid">
+                @for (entry of ongoingEntries(); track trackById($index, entry)) {
+                  <mat-card class="entry-card">
+                    <app-tournament-card [entry]="entry" (selected)="select($event)"
+                                         (ignoredChanged)="onIgnoredChanged($event)" />
+                  </mat-card>
+                }
+              </div>
+            </section>
+          }
           @if (entries().length < total()) {
             <div class="more-row">
               <button mat-stroked-button (click)="loadMore()" [disabled]="loading()">

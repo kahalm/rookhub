@@ -101,7 +101,7 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly kinds = DIRECTORY_KINDS;
   readonly pageSize = 50;
 
-  /** Vorgabe: das kommende Quartal (siehe rangeFor). */
+  /** Vorgabe: die naechsten drei Monate (siehe rangeFor). */
   rangePreset: DirectoryRangePreset = 'quarter';
   /** Die Zusatzfilter stehen eingeklappt — die Leiste war sonst die halbe Seite. */
   filtersOpen = false;
@@ -117,6 +117,16 @@ export class TournamentDirectoryComponent implements OnInit {
   readonly truncated = signal(false);
   readonly loading = signal(false);
   page = 1;
+
+  /**
+   * Die Liste in zwei Bloecken: erst was im Zeitraum BEGINNT, dann was schon laeuft. Der Server
+   * liefert sie in genau dieser Reihenfolge (Codereview UX-039) — vorher standen auf DEV 583
+   * laufende oder unplausible Eintraege vor dem ersten kommenden Turnier. Der zweite Block
+   * bekommt eine eigene Ueberschrift, damit die Saisonligen nicht wie Termine der naechsten
+   * Wochen aussehen. Ohne `from` kennt der Server kein „laeuft bereits", dann bleibt es ein Block.
+   */
+  readonly upcomingEntries = computed(() => this.entries().filter(e => !e.ongoing));
+  readonly ongoingEntries = computed(() => this.entries().filter(e => e.ongoing));
 
   readonly pins = signal<DirectoryEntry[]>([]);
   /**
@@ -438,7 +448,8 @@ export class TournamentDirectoryComponent implements OnInit {
       + (this.filter.genders.length > 0 ? 1 : 0)
       + (this.filter.adultsOnly ? 1 : 0)
       + (this.filter.hideLeagues ? 1 : 0)
-      + (this.filter.includeIgnored ? 1 : 0);
+      + (this.filter.includeIgnored ? 1 : 0)
+      + (this.filter.includeImplausible ? 1 : 0);
   }
 
   resetFilter(): void {
@@ -610,6 +621,12 @@ export class TournamentDirectoryComponent implements OnInit {
     this.reload();
   }
 
+  /** Gilt fuer Liste, Karte und Kalender gleich — der Server blendet sie ueberall aus. */
+  onIncludeImplausibleChange(includeImplausible: boolean): void {
+    this.filter.includeImplausible = includeImplausible;
+    this.reload();
+  }
+
   trackById = (_: number, entry: DirectoryEntry) => entry.id;
 
   /**
@@ -748,6 +765,7 @@ export class TournamentDirectoryComponent implements OnInit {
       adultsOnly: this.filter.adultsOnly,
       hideLeagues: this.filter.hideLeagues,
       includeIgnored: this.filter.includeIgnored,
+      includeImplausible: this.filter.includeImplausible,
       calendarYear: this.calendarYear,
       calendarMonth: this.calendarMonth,
       mapColourBy: this.mapColourBy,
@@ -864,6 +882,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.filter.adultsOnly = stored['adultsOnly'] === true;
     this.filter.hideLeagues = stored['hideLeagues'] === true;
     this.filter.includeIgnored = stored['includeIgnored'] === true;
+    this.filter.includeImplausible = stored['includeImplausible'] === true;
 
     const speed = stored['speed'];
     if (typeof speed === 'string' && this.speeds.includes(speed as TournamentSpeed)) {

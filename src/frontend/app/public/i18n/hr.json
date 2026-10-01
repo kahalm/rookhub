@@ -3788,7 +3788,7 @@
     "tilesFailed": "Karta se nije mogla učitati. Turniri su na pravim mjestima, nedostaje samo podloga.",
     "range": {
       "label": "Razdoblje",
-      "quarter": "Sljedeće tromjesečje",
+      "quarter": "Sljedeća tri mjeseca",
       "halfYear": "Sljedećih šest mjeseci",
       "year": "Sljedećih dvanaest mjeseci",
       "all": "Sve nadolazeće",
@@ -3862,6 +3862,12 @@
     },
     "adultsOnly": "Samo odrasli",
     "hideLeagues": "Sakrij lige",
+    "showImplausible": "Prikaži nevjerodostojna razdoblja",
+    "showImplausibleHint": "Unosi koji prema izvoru traju dulje od godinu dana i ne navode datume kola ili su počeli prije više od godinu dana – obično pogreška u datumu. Bez ovog prekidača su skriveni.",
+    "ongoing": {
+      "title": "Već u tijeku",
+      "hint": "Ova natjecanja počela su prije odabranog razdoblja i još traju u njemu – uglavnom lige i sezonska natjecanja."
+    },
     "audienceHelp": "Pojedinačno ili ekipno dolazi sa samog chess-resultsa — i sve što nije prepoznato kao ekipni turnir računa se kao pojedinačno.\n\nUzrasna i rodna kategorija ne dolaze iz nijednog polja: takvo ne postoji, pa se čitaju iz imena turnira. To radi gdje ime navodi kategoriju („U12 djevojke“, „UNDER 16 BOYS“), a nikako gdje je ne navodi.\n\n„Samo odrasli“ skriva sve s uzrasnom oznakom u imenu. Seniori ostaju — seniorski šah je šah odraslih.\n\nLiga je ekipno natjecanje kroz cijelu sezonu ili ono koje to kaže u svom imenu.\n\nNešto je u pogrešnoj kutiji? Na stranici turnira postoji „prijavi pogrešan događaj“ i pita kako se takvi turniri zovu u tvojoj regiji. To je ono što ovo popravlja za sve.",
     "missing": {
       "cta": "Tvoj turnir nedostaje? Prijavi ga ovdje",
@@ -3898,7 +3904,8 @@
       "hideError": "Nije se moglo sakriti. Pokušaj ponovno.",
       "showIgnored": "Prikaži skrivene",
       "rounds": "{{count}} kola, {{from}} do {{to}}",
-      "actionAria": "{{action}}: {{name}}"
+      "actionAria": "{{action}}: {{name}}",
+      "implausible": "Nevjerodostojno razdoblje"
     },
     "source": {
       "Unknown": "Nepoznat izvor",

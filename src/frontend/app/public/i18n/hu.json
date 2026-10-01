@@ -3509,7 +3509,7 @@
     "tilesFailed": "A térképcsempéket nem sikerült betölteni. A versenyek a helyükön ülnek, csak a háttértérkép hiányzik.",
     "range": {
       "label": "Időszak",
-      "quarter": "A következő negyedév",
+      "quarter": "A következő három hónap",
       "halfYear": "A következő hat hónap",
       "year": "A következő tizenkét hónap",
       "all": "Minden közelgő",
@@ -3583,6 +3583,12 @@
     },
     "adultsOnly": "Csak felnőtt",
     "hideLeagues": "Ligák elrejtése",
+    "showImplausible": "Valószínűtlen időszakok mutatása",
+    "showImplausibleHint": "Bejegyzések, amelyek a forrás szerint egy évnél tovább tartanak, és nem adnak meg fordulódátumokat, vagy már több mint egy éve kezdődtek – többnyire elírás a dátumban. E kapcsoló nélkül rejtve vannak.",
+    "ongoing": {
+      "title": "Már folyamatban",
+      "hint": "Ezek a versenyek a kiválasztott időszak előtt kezdődtek, és még belenyúlnak – többnyire ligák és szezonális versenyek."
+    },
     "audienceHelp": "Az „egyéni vagy csapat” magától a chess-resultstól jön — és minden, amit nem ismer fel csapatversenyként, egyéninek számít.\n\nA korosztály és a nemi kategória nem mezőből jön: olyan nincs, ezért a verseny nevéből olvassuk ki. Ez ott működik, ahol a név megnevezi a kategóriát („U12 lány”, „UNDER 16 BOYS”) — és sehol ott, ahol nem.\n\nA „Csak felnőtt” mindent elrejt, aminek ifjúsági jelölés van a nevében. A szeniorok maradnak — a szeniorsakk felnőttsakk.\n\nA liga egy egész szezonon át futó csapatverseny, vagy olyan, amelyik ezt a nevében is kimondja.\n\nValami rossz fiókba került? Minden versenyoldalon van „hibás esemény jelentése”, és ott azt kérdezzük, hogyan hívják az ilyen versenyeket a te vidékeden. Épp ez az, ami mindenkinek javít rajta.",
     "missing": {
       "cta": "Hiányzik a versenyed? Itt jelentsd be",
@@ -3619,7 +3625,8 @@
       "hideError": "Nem sikerült elrejteni. Próbáld meg még egyszer.",
       "showIgnored": "Elrejtettek mutatása",
       "rounds": "{{count}} forduló, {{from}} – {{to}}",
-      "actionAria": "{{action}}: {{name}}"
+      "actionAria": "{{action}}: {{name}}",
+      "implausible": "Valószínűtlen időszak"
     },
     "source": {
       "Unknown": "Ismeretlen forrás",

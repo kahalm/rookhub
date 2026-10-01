@@ -66,6 +66,33 @@ describe('TournamentDirectoryService', () => {
     req.flush({ items: [], total: 0, truncated: false });
   });
 
+  /**
+   * Codereview UX-039: unplausible Laufzeiten blendet der Server standardmaessig aus — in Liste,
+   * Karte UND Kalender. Der Schalter muss deshalb in allen drei Abfragen ankommen, sonst zeigt die
+   * Karte etwas anderes als die Liste darueber.
+   */
+  it('schickt „unplausible zeigen" an Liste, Karte und Kalender, sonst gar nicht', () => {
+    service.search(filter()).subscribe();
+    const off = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect(off.request.params.has('includeImplausible')).toBeFalse();
+    off.flush({ items: [], total: 0, truncated: false });
+
+    const on = filter({ includeImplausible: true });
+    service.search(on).subscribe();
+    service.map(on, '47.0,12.0,48.0,14.0').subscribe();
+    service.calendar(on, 2026, 10).subscribe();
+
+    const list = http.expectOne(r => r.url === '/api/tournament-directory');
+    const map = http.expectOne(r => r.url === '/api/tournament-directory/map');
+    const calendar = http.expectOne(r => r.url === '/api/tournament-directory/calendar');
+    for (const req of [list, map, calendar]) {
+      expect(req.request.params.get('includeImplausible')).withContext(req.request.url).toBe('true');
+    }
+    list.flush({ items: [], total: 0, truncated: false });
+    map.flush({ items: [], truncated: false });
+    calendar.flush({ tournaments: [], days: [] });
+  });
+
   it('lässt beim Kartenaufruf den Umkreis weg — dort zählt der sichtbare Ausschnitt', () => {
     service.map(filter({ lat: 47.8, lon: 13.0, radiusKm: 50, federation: 'AUT' }),
       '47.0,12.0,48.0,14.0').subscribe();

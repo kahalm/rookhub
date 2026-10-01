@@ -93,6 +93,19 @@ export interface DirectoryEntry {
   /** Aus dem NAMEN gelesene Klassen; leer = offenes Erwachsenenturnier. */
   ageGroups: TournamentAgeGroup[];
   gender: TournamentGender;
+  /**
+   * Laeuft bereits: begann VOR dem abgefragten Zeitraum (`from` bzw. Monatserster) und ragt hinein.
+   * Die Liste fuehrt solche Eintraege als eigenen Block „laeuft bereits" nach denen, die im Zeitraum
+   * beginnen — der Server liefert sie in dieser Reihenfolge (Codereview UX-039). Optional, weil eine
+   * aeltere API das Feld nicht kennt.
+   */
+  ongoing?: boolean;
+  /**
+   * Unplausible Laufzeit laut Quelle (ueber ein Jahr und ohne Spieltermine oder schon ueber ein Jahr
+   * vor dem Zeitraum begonnen, etwa „2007-12-26 bis 2026-12-10"). Kommt nur mit dem Schalter
+   * `includeImplausible` in die Antwort und steht dann als Hinweis auf der Karte.
+   */
+  implausible?: boolean;
 }
 
 /**
@@ -219,6 +232,11 @@ export interface DirectoryFilter {
    * unwiederbringlich weg, und niemand wuesste, was er einmal weggeklickt hat.
    */
   includeIgnored: boolean;
+  /**
+   * Auch Eintraege mit unplausibler Laufzeit zeigen. Vorgabe ist AUS: auf DEV standen sonst Dutzende
+   * „2007 bis 2026"-Eintraege vor jedem echten Turnier (Codereview UX-039).
+   */
+  includeImplausible: boolean;
 }
 
 /** Benannte Zeitraeume der Filterleiste. `custom` blendet die beiden Datumsfelder ein. */
@@ -228,7 +246,9 @@ export const DIRECTORY_RANGE_PRESETS: DirectoryRangePreset[] =
   ['quarter', 'halfYear', 'year', 'all', 'custom'];
 
 /**
- * Vorgabe ist das kommende Quartal: ohne Einschraenkung stehen ueber tausend Turniere bis weit
+ * Vorgabe sind die naechsten drei Monate ab heute (Kennung `quarter`, beschriftet „Naechste drei
+ * Monate" — „Naechstes Quartal" las sich wie Q4, gemeint war nie das Kalenderquartal; die Kennung
+ * bleibt, weil sie in gemerkten Ansichten steht): ohne Einschraenkung stehen ueber tausend Turniere bis weit
  * ins naechste Jahr in der Liste, und die ersten Bildschirme davon sind nie die interessanten.
  */
 export function rangeFor(preset: DirectoryRangePreset, today = new Date()): { from: string | null; to: string | null } {
@@ -256,7 +276,7 @@ export const EMPTY_FILTER: DirectoryFilter = {
   federation: null, speed: null, text: null, weekendOnly: false,
   minPlayers: null, profileId: null,
   kinds: [], ageGroups: [], genders: [], adultsOnly: false, hideLeagues: false,
-  includeIgnored: false,
+  includeIgnored: false, includeImplausible: false,
 };
 
 /**
