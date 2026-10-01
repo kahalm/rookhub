@@ -68,6 +68,23 @@ public sealed partial class LeagueTeamScout
     /// <summary>Pause vor dem Wiederholversuch; im Test 0.</summary>
     public TimeSpan RetryPause { get; init; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// Pause zwischen den Abrufen des BESTANDS-Aufbaus. Deutlich länger als <see cref="Pause"/>, weil der Aufbau
+    /// hunderte Abrufe in Folge macht: am 01.10.2026 auf Prod trat Lichess' Drossel nach 54 Abrufen in 61 s zu
+    /// (also schon bei einer Sekunde Abstand), und weil früher erst am ENDE gespeichert wurde, war jeder Anlauf
+    /// vollständig verloren.
+    /// </summary>
+    public TimeSpan PoolPause { get; init; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>Wie oft der Bestands-Aufbau eine Drossel aussitzt, bevor er den Durchgang doch beendet; im Test 0 oder 2.</summary>
+    public int RateLimitWaits { get; init; } = 3;
+
+    /// <summary>Wartezeit nach einer Drossel (Lichess empfiehlt eine Minute); im Test ~0.</summary>
+    public TimeSpan RateLimitCooldown { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>Nach so vielen abgearbeiteten Teams bzw. Team-Battles wird zwischengespeichert.</summary>
+    private const int SaveEvery = 25;
+
     // ── Lesen (rein, getestet) ──────────────────────────────────────────────────────────────────
 
     /// <summary>Beide Schreibweisen eines Orts, klein: „Wörgl" → „woergl" und „worgl".</summary>
@@ -188,19 +205,34 @@ public sealed partial class LeagueTeamScout
     /// NICHT wiederholt wird, was eine ANTWORT ist: 404 (<c>null</c>), 401/403 (siehe <see cref="GetOpenAsync"/>)
     /// und 429 — das ist eine <see cref="LeagueOnlineSync.RateLimitedException"/> und beendet den Durchgang.
     /// </summary>
-    private async Task<string?> GetAsync(string url, CancellationToken ct, string? accept = null)
+    private async Task<string?> GetAsync(string url, CancellationToken ct, string? accept = null, bool bulk = false)
     {
-        for (var attempt = 1; ; attempt++)
+        var tries = 0;
+        var waits = 0;
+        while (true)
         {
             try
             {
-                return await FetchOnceAsync(url, ct, accept);
+                tries++;
+                return await FetchOnceAsync(url, ct, accept, bulk);
             }
-            catch (HttpRequestException e) when (attempt < MaxAttempts && IsTransient(e))
+            catch (HttpRequestException e) when (tries < MaxAttempts && IsTransient(e))
             {
                 _logger.LogInformation("LeagueHub: Team-Suche — {Url} voruebergehend nicht erreichbar ({Status}), neuer Versuch",
                     url, (int?)e.StatusCode);
                 if (RetryPause > TimeSpan.Zero) await Task.Delay(RetryPause, ct);
+            }
+            catch (LeagueOnlineSync.RateLimitedException) when (bulk && waits < RateLimitWaits)
+            {
+                // Der BESTANDS-Aufbau sitzt eine Drossel aus, statt den ganzen Durchgang zu beenden: er macht hunderte
+                // Abrufe in Folge und traf die Drossel am 01.10.2026 zweimal nach rund einer Minute — jedes Mal ohne
+                // einen einzigen gespeicherten Treffer. Der Aufbau laeuft nur alle PoolEvery (30 Tage), die Minute
+                // Warten ist also billig. Die Konto-Pruefung bleibt unberuehrt: dort beendet ein 429 den Durchgang.
+                waits++;
+                tries = 0;
+                _logger.LogWarning("LeagueHub: Team-Suche — Lichess drosselt, warte {Seconds} s und mache weiter ({Wait}/{Max})",
+                    (int)RateLimitCooldown.TotalSeconds, waits, RateLimitWaits);
+                if (RateLimitCooldown > TimeSpan.Zero) await Task.Delay(RateLimitCooldown, ct);
             }
         }
     }
@@ -208,7 +240,7 @@ public sealed partial class LeagueTeamScout
     /// <summary>5xx und „keine Verbindung" (<see cref="HttpRequestException.StatusCode"/> ist dann <c>null</c>) sind vorübergehend.</summary>
     private static bool IsTransient(HttpRequestException e) => e.StatusCode is null || (int)e.StatusCode >= 500;
 
-    private async Task<string?> FetchOnceAsync(string url, CancellationToken ct, string? accept = null)
+    private async Task<string?> FetchOnceAsync(string url, CancellationToken ct, string? accept = null, bool bulk = false)
     {
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         if (accept is not null) req.Headers.Accept.ParseAdd(accept);
@@ -217,7 +249,8 @@ public sealed partial class LeagueTeamScout
         if (r.StatusCode == HttpStatusCode.NotFound) return null;
         r.EnsureSuccessStatusCode();
         var body = await r.Content.ReadAsStringAsync(ct);
-        if (Pause > TimeSpan.Zero) await Task.Delay(Pause, ct);
+        var pause = bulk ? PoolPause : Pause;
+        if (pause > TimeSpan.Zero) await Task.Delay(pause, ct);
         return body;
     }
 
@@ -229,11 +262,11 @@ public sealed partial class LeagueTeamScout
     /// und kein Team danach wurde je gelesen (LeagueScoutAccounts blieb seit der Einfuehrung leer).
     /// Ein 429 (<see cref="LeagueOnlineSync.RateLimitedException"/>) fliegt weiter: dann endet der Durchgang wirklich.
     /// </summary>
-    private async Task<string?> GetOpenAsync(string url, CancellationToken ct, string? accept = null)
+    private async Task<string?> GetOpenAsync(string url, CancellationToken ct, string? accept = null, bool bulk = false)
     {
         try
         {
-            return await GetAsync(url, ct, accept);
+            return await GetAsync(url, ct, accept, bulk);
         }
         catch (HttpRequestException e) when (e.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
@@ -261,79 +294,99 @@ public sealed partial class LeagueTeamScout
     public async Task<int> RefreshPoolAsync(CancellationToken ct)
     {
         var teams = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var place in _places)
-        {
-            var json = await GetAsync($"{_lichess}/api/team/search?text={Uri.EscapeDataString(place)}", ct);
-            if (json is null) continue;
-            foreach (var (id, name) in ParseTeamSearch(json))
-                if (IsLocalTeam(name, _places)) teams[id] = name;
-        }
-        var pool = await _db.LeagueScoutAccounts.ToDictionaryAsync(a => a.UserName, ct);
-        var added = 0;
-        LeagueScoutAccount Upsert(string user)
-        {
-            var key = user.ToLowerInvariant();
-            if (!pool.TryGetValue(key, out var a))
-            {
-                a = new LeagueScoutAccount { UserName = Cut(key, 30), DisplayName = Cut(user, 30), FoundAt = DateTime.UtcNow };
-                pool[key] = a;
-                _db.LeagueScoutAccounts.Add(a);
-                added++;
-            }
-            return a;
-        }
         var battles = new HashSet<string>(StringComparer.Ordinal);
+        var added = 0;
         var skipped = 0;
-        foreach (var (id, name) in teams)
+        var done = 0;
+        try
         {
-            // Ein Team, das gerade nichts hergibt, darf den Durchgang NICHT beenden: SaveChangesAsync steht erst am
-            // Ende der Methode, eine Ausnahme hier verwarf also den ganzen Bestand (2026-09-30: LeagueScoutAccounts
-            // blieb seit der Einfuehrung leer, weil ein Team seine Mitgliederliste verborgen hat → 401).
-            // Ein 429 fliegt weiter (RateLimitedException erbt von Exception, nicht von HttpRequestException).
-            try
+            foreach (var place in _places)
             {
-                if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/users", ct, "application/x-ndjson") is { } members)
-                    foreach (var u in ParseTeamMembers(members))
-                    {
-                        var a = Upsert(u);
-                        a.Teams = Join(a.Teams, name, 500);
-                    }
-                if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/arena?max=500", ct, "application/x-ndjson") is { } arenas)
-                    foreach (var b in ParseTeamBattles(arenas)) battles.Add(b);
+                var json = await GetAsync($"{_lichess}/api/team/search?text={Uri.EscapeDataString(place)}", ct, bulk: true);
+                if (json is null) continue;
+                foreach (var (id, name) in ParseTeamSearch(json))
+                    if (IsLocalTeam(name, _places)) teams[id] = name;
             }
-            catch (HttpRequestException e)
+            var pool = await _db.LeagueScoutAccounts.ToDictionaryAsync(a => a.UserName, ct);
+            LeagueScoutAccount Upsert(string user)
             {
-                skipped++;
-                _logger.LogWarning(e, "LeagueHub: Team-Suche — Team {Team} uebersprungen ({Status})", id, (int?)e.StatusCode);
-            }
-        }
-        foreach (var b in battles)
-        {
-            // Dieselbe Regel wie bei den Teams: ein Battle, das nicht zu lesen ist, kostet nur sich selbst.
-            try
-            {
-                if (await GetOpenAsync($"{_lichess}/api/tournament/{b}", ct) is not { } info) continue;
-                var names = ParseBattleTeams(info);
-                if (!names.Keys.Any(teams.ContainsKey)) continue;
-                var series = EventSeries(ParseTournamentName(info));
-                if (await GetOpenAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson") is not { } results) continue;
-                foreach (var (user, team) in ParseResults(results))
+                var key = user.ToLowerInvariant();
+                if (!pool.TryGetValue(key, out var a))
                 {
-                    if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
-                    var a = Upsert(user);
-                    a.PlayedFor = Join(a.PlayedFor, teamName, 200);
-                    if (series is not null) a.Events = Join(a.Events, series, 500);
+                    a = new LeagueScoutAccount { UserName = Cut(key, 30), DisplayName = Cut(user, 30), FoundAt = DateTime.UtcNow };
+                    pool[key] = a;
+                    _db.LeagueScoutAccounts.Add(a);
+                    added++;
                 }
+                return a;
             }
-            catch (HttpRequestException e)
+            foreach (var (id, name) in teams)
             {
-                skipped++;
-                _logger.LogWarning(e, "LeagueHub: Team-Suche — Team-Battle {Battle} uebersprungen ({Status})", b, (int?)e.StatusCode);
+                // Ein Team, das gerade nichts hergibt, darf den Durchgang NICHT beenden: SaveChangesAsync steht erst am
+                // Ende der Methode, eine Ausnahme hier verwarf also den ganzen Bestand (2026-09-30: LeagueScoutAccounts
+                // blieb seit der Einfuehrung leer, weil ein Team seine Mitgliederliste verborgen hat → 401).
+                // Ein 429 fliegt weiter (RateLimitedException erbt von Exception, nicht von HttpRequestException).
+                try
+                {
+                    if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/users", ct, "application/x-ndjson", bulk: true) is { } members)
+                        foreach (var u in ParseTeamMembers(members))
+                        {
+                            var a = Upsert(u);
+                            a.Teams = Join(a.Teams, name, 500);
+                        }
+                    if (await GetOpenAsync($"{_lichess}/api/team/{Uri.EscapeDataString(id)}/arena?max=500", ct, "application/x-ndjson", bulk: true) is { } arenas)
+                        foreach (var b in ParseTeamBattles(arenas)) battles.Add(b);
+                }
+                catch (HttpRequestException e)
+                {
+                    skipped++;
+                    _logger.LogWarning(e, "LeagueHub: Team-Suche — Team {Team} uebersprungen ({Status})", id, (int?)e.StatusCode);
+                }
+                if (++done % SaveEvery == 0) await _db.SaveChangesAsync(ct);
+            }
+            foreach (var b in battles)
+            {
+                // Dieselbe Regel wie bei den Teams: ein Battle, das nicht zu lesen ist, kostet nur sich selbst.
+                try
+                {
+                    if (await GetOpenAsync($"{_lichess}/api/tournament/{b}", ct, bulk: true) is not { } info) continue;
+                    var names = ParseBattleTeams(info);
+                    if (!names.Keys.Any(teams.ContainsKey)) continue;
+                    var series = EventSeries(ParseTournamentName(info));
+                    if (await GetOpenAsync($"{_lichess}/api/tournament/{b}/results?nb=1000", ct, "application/x-ndjson", bulk: true) is not { } results) continue;
+                    foreach (var (user, team) in ParseResults(results))
+                    {
+                        if (team is null || !teams.TryGetValue(team, out var teamName)) continue;       // nur wer für ein Tiroler Team spielte
+                        var a = Upsert(user);
+                        a.PlayedFor = Join(a.PlayedFor, teamName, 200);
+                        if (series is not null) a.Events = Join(a.Events, series, 500);
+                    }
+                }
+                catch (HttpRequestException e)
+                {
+                    skipped++;
+                    _logger.LogWarning(e, "LeagueHub: Team-Suche — Team-Battle {Battle} uebersprungen ({Status})", b, (int?)e.StatusCode);
+                }
+                if (++done % SaveEvery == 0) await _db.SaveChangesAsync(ct);
             }
         }
-        await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("LeagueHub: Team-Suche — {Teams} Tiroler Teams, {Battles} Team-Battles, {Added} neue Konten, {Skipped} uebersprungen",
-            teams.Count, battles.Count, added, skipped);
+        finally
+        {
+            // Gespeichert wird AUCH beim Verlassen durch eine Ausnahme — und zwar mit CancellationToken.None: ein
+            // abgebrochener Token wuerde genau das Speichern verhindern, das die Arbeit retten soll (dieselbe Lehre
+            // wie beim Rundenplan-Lauf des Turnierverzeichnisses). Ein Fehler beim Speichern darf die urspruengliche
+            // Ausnahme nicht verdecken — der Takt muss eine Drossel als Drossel sehen.
+            try
+            {
+                await _db.SaveChangesAsync(CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "LeagueHub: Team-Suche — Zwischenstand konnte nicht gespeichert werden");
+            }
+            _logger.LogInformation("LeagueHub: Team-Suche — {Teams} Tiroler Teams, {Battles} Team-Battles, {Added} neue Konten, {Skipped} uebersprungen",
+                teams.Count, battles.Count, added, skipped);
+        }
         return added;
     }
 

@@ -1922,6 +1922,25 @@ findet nur Konten, deren Name aus dem Spielernamen kommt. Die Team-Suche nimmt d
   ist, wird nie wiederholt: 404 (`null`), 401/403 (die Duldung oben) und 429 (`RateLimitedException`, beendet den
   Durchgang). Die Wiederholung sitzt in `GetAsync`, gilt also auch für die Team-Suche und den Partien-Abruf der
   Konto-Prüfung — dort kostete ein 502 bisher dem Konto einen Tag.
+* **Der Bestands-Aufbau speichert ZWISCHEN und sitzt eine Drossel aus** (0.625.1, am 01.10.2026 auf Prod gemessen):
+  mit 0.624.2 kam der Lauf zweimal (11:12, 11:43) überhaupt nicht mehr durch — `Lichess: zu viele Anfragen`, gemessen
+  **54 Abrufe in 61 s** auf `/api/team/…`, beim zweiten Mal ohne jede Fremdlast (die (i)-Prüfungen des Nutzers endeten
+  eine halbe Stunde davor). Weil `SaveChangesAsync` am ENDE stand, schrieb jeder abgebrochene Anlauf NICHTS und begann
+  von vorn: der Takt klopfte alle 30 min vergeblich an, der Bestand blieb auf dem Stand des einen geglückten Laufs.
+  Drei Änderungen, alle nur für den AUFBAU (`bulk: true` an seinen vier Abruf-Stellen; die Konto-Prüfung bleibt, wie sie
+  war — dort beendet ein 429 den Durchgang weiter):
+  - **`PoolPause`** (3 s statt `Pause` 1 s) — bei einer Sekunde Abstand trat die Drossel zu.
+  - **Eine Drossel wird AUSGESESSEN**, nicht als Ende gelesen: `RateLimitWaits` (3) mal `RateLimitCooldown` (60 s,
+    Lichess' Empfehlung), dann endet der Durchgang doch. Der Aufbau läuft nur alle `PoolEvery` (30 Tage) — die Minute
+    Warten ist billig gegen einen verlorenen Lauf.
+  - **Zwischengespeichert alle `SaveEvery` (25)** Teams bzw. Battles, UND im `finally` mit `CancellationToken.None` —
+    dieselbe Lehre wie beim Rundenplan-Lauf des Turnierverzeichnisses: ein abgebrochener Token verhinderte genau das
+    Speichern, das die Arbeit retten soll. Ein Fehler beim Speichern wird geloggt und verdeckt die ursprüngliche
+    Ausnahme NICHT (der Takt muss eine Drossel als Drossel sehen). Die Abschlusszeile steht ebenfalls im `finally`,
+    sagt also auch bei einem Abbruch, was erreicht wurde.
+  **Was damit noch NICHT gelöst ist:** ein Anlauf beginnt immer bei Team 1 — die Abrufe der schon abgearbeiteten Teams
+  laufen erneut (die DATEN bleiben, `Upsert` findet sie im Bestand). Erst wenn ein Lauf durchkommt, ist der Bestand
+  vollständig; eine Fortschrittsmarke je Team gibt es nicht.
 * **Prüfen** (`RunOnceAsync`, je Konto einmal, dann alle `RecheckDays` 90): Profile gesammelt über `POST /api/users`. (1) Steht ein
   Klarname im Profil, der zu einem Spieler der laufenden Saison passt (alle Nachnamen-Teile + Vorname voll, `FirstNameMatch`), gilt das
   Urteil der Namenssuche (`Judge` mit `lead` = die Team-Herkunft als erster Hinweis statt „Nutzername aus dem Namen"), +1 Punkt.

@@ -150,10 +150,10 @@ public class LeagueTeamScoutTests : IDisposable
         return Status(HttpStatusCode.NotFound);
     });
 
-    private LeagueTeamScout Scout(FakeHttp http) =>
+    private LeagueTeamScout Scout(FakeHttp http, int rateLimitWaits = 3) =>
         new(_db, new HttpClient(http), NullLogger<LeagueTeamScout>.Instance,
             new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["LeagueOnline:TeamPlaces"] = "Kufstein" }).Build())
-        { Pause = TimeSpan.Zero, RetryPause = TimeSpan.Zero };
+        { Pause = TimeSpan.Zero, RetryPause = TimeSpan.Zero, PoolPause = TimeSpan.Zero, RateLimitCooldown = TimeSpan.Zero, RateLimitWaits = rateLimitWaits };
 
     private static string Pgn(string white, string whiteFide, string black, string line, int year) =>
         $"[Event \"Liga\"]\n[Date \"{year}.01.01\"]\n[White \"{white}\"]\n[Black \"{black}\"]\n[WhiteFideId \"{whiteFide}\"]\n[Result \"1-0\"]\n\n"
@@ -232,8 +232,8 @@ public class LeagueTeamScoutTests : IDisposable
         var world = World();
         var http = new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/team/sk-kufstein/users")
             ? Status(HttpStatusCode.TooManyRequests) : world.Answer(req));
-        await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => Scout(http).RefreshPoolAsync(default));
-        Assert.Empty(await _db.LeagueScoutAccounts.ToListAsync());
+        var scout = Scout(http, rateLimitWaits: 0);                                             // ohne Aussitzen
+        await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => scout.RefreshPoolAsync(default));
     }
 
     [Fact]
@@ -264,6 +264,40 @@ public class LeagueTeamScoutTests : IDisposable
         Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));                          // die Mitglieder bleiben
         Assert.All(await _db.LeagueScoutAccounts.ToListAsync(), a => Assert.Null(a.PlayedFor));
         Assert.Equal(2, http.Urls.Count(x => x.EndsWith("/api/tournament/tb1")));             // zweimal versucht, dann Schluss
+    }
+
+    [Fact]
+    public async Task Pool_SitsOutOneThrottle_AndFinishesTheRun()
+    {
+        // 01.10.2026 auf Prod: der Bestands-Aufbau traf Lichess' Drossel zweimal nach rund einer Minute (54 Abrufe in
+        // 61 s) und verlor jedes Mal ALLES. Er sitzt sie jetzt aus — er laeuft nur alle 30 Tage, die Minute ist billig.
+        var world = World();
+        var throttled = true;
+        var http = new FakeHttp(req =>
+        {
+            if (req.RequestUri!.ToString().Contains("/api/team/sk-kufstein/arena") && throttled) { throttled = false; return Status(HttpStatusCode.TooManyRequests); }
+            return world.Answer(req);
+        });
+        Assert.Equal(2, await Scout(http).RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToListAsync();
+        Assert.Equal((string?)"SK Kufstein", pool[1].PlayedFor);                               // das Battle kam noch dran
+        Assert.Equal(2, http.Urls.Count(x => x.Contains("/api/team/sk-kufstein/arena")));      // derselbe Abruf, zweiter Versuch
+    }
+
+    [Fact]
+    public async Task Pool_KeepsWhatItGot_WhenTheThrottleDoesNotLetUp()
+    {
+        // Der Kern des Problems war nicht die Drossel, sondern dass SaveChangesAsync erst am ENDE stand: jeder
+        // abgebrochene Anlauf schrieb NICHTS und begann von vorn. Jetzt wird im finally gespeichert.
+        var world = World();
+        var http = new FakeHttp(req => req.RequestUri!.ToString().Contains("/api/team/sk-kufstein/arena")
+            ? Status(HttpStatusCode.TooManyRequests) : world.Answer(req));
+        var scout = Scout(http, rateLimitWaits: 1);
+        await Assert.ThrowsAsync<LeagueOnlineSync.RateLimitedException>(() => scout.RefreshPoolAsync(default));
+        var pool = await _db.LeagueScoutAccounts.OrderBy(a => a.UserName).ToListAsync();
+        Assert.Equal(new[] { "katzenpapa", "trigonias" }, pool.Select(a => a.UserName));        // die Mitglieder sind da
+        Assert.All(pool, a => Assert.Equal((string?)"SK Kufstein", a.Teams));
+        Assert.All(pool, a => Assert.Null(a.PlayedFor));                                       // die Battles nicht mehr
     }
 
     [Fact]
