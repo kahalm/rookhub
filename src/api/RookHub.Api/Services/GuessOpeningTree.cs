@@ -96,19 +96,21 @@ public class GuessOpeningTree
         // meldete die Wurzel bei `e4` 60 498 Partien und die Ebene danach 60 497 — wieder eine Zahl,
         // die sich beim Klicken aendert. Die ZAEHLUNG der Fortsetzungen unten laesst sie dagegen zu
         // Recht weg: eine Partie ohne naechsten Zug traegt zu keinem Ast bei.
-        var mitTrenner = prefix + " %";
+        var mitTrenner = OpeningLines.ContinuationPattern(prefix);
         if (onlyPlayable)
         {
             var q = _db.GameAnalyses.AsNoTracking().Where(g => g.IsPublic && g.OpeningLine != null);
             if (prefix.Length > 0)
-                q = q.Where(g => g.OpeningLine == prefix || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+                q = q.Where(g => g.OpeningLine == prefix
+                              || EF.Functions.Like(g.OpeningLine!, mitTrenner, OpeningLines.LikeEscape));
             return await q.CountAsync(ct);
         }
         var r = _db.LibraryGames.AsNoTracking()
             .Where(g => g.OpeningLine != null && g.Status != Models.LibraryGameStatus.Rejected
                                  && g.Status != Models.LibraryGameStatus.Duplicate);
         if (prefix.Length > 0)
-            r = r.Where(g => g.OpeningLine == prefix || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+            r = r.Where(g => g.OpeningLine == prefix
+                          || EF.Functions.Like(g.OpeningLine!, mitTrenner, OpeningLines.LikeEscape));
         return await r.CountAsync(ct);
     }
 
@@ -116,7 +118,8 @@ public class GuessOpeningTree
     /// <para>Bewusst rohes SQL und nicht LINQ: die Zerlegung der Zeile haengt an
     /// <c>SUBSTRING_INDEX</c>, das kein Anbieter einheitlich uebersetzt — und die InMemory-Datenbank
     /// der Tests kennt es gar nicht (siehe CLAUDE.md zur InMemory-Luecke). Der Praefix geht als
-    /// PARAMETER hinein, die einzige Zahl im Text (<paramref name="ab"/>) ist eine gerechnete
+    /// PARAMETER hinein (maskiert ueber <see cref="OpeningLines.ContinuationPattern"/>, daher das
+    /// <c>ESCAPE</c>), die einzige Zahl im Text (<paramref name="ab"/>) ist eine gerechnete
     /// Laenge.</para></summary>
     private async Task<Dictionary<string, int>> CountBySqlAsync(string prefix, bool onlyPlayable,
         int ab, CancellationToken ct)
@@ -124,14 +127,16 @@ public class GuessOpeningTree
         var tabelle = onlyPlayable
             ? "FROM `GameAnalyses` WHERE `IsPublic` = 1 AND `OpeningLine` IS NOT NULL"
             : $"FROM `LibraryGames` WHERE `Status` NOT IN ({Ausgemustert}) AND `OpeningLine` IS NOT NULL";
-        var filter = prefix.Length == 0 ? " AND `OpeningLine` <> ''" : " AND `OpeningLine` LIKE {0}";
+        var filter = prefix.Length == 0
+            ? " AND `OpeningLine` <> ''"
+            : " AND `OpeningLine` LIKE {0} ESCAPE '" + OpeningLines.LikeEscape + "'";
         var sql = $"SELECT SUBSTRING_INDEX(SUBSTRING(`OpeningLine`, {ab + 1}), ' ', 1) AS `San`, "
                 + $"COUNT(*) AS `Games` {tabelle}{filter} GROUP BY `San` "
                 + $"ORDER BY `Games` DESC, `San` ASC LIMIT {MaxMoves}";
 
         var rows = prefix.Length == 0
             ? _db.Database.SqlQueryRaw<OpeningTally>(sql)
-            : _db.Database.SqlQueryRaw<OpeningTally>(sql, prefix + " %");
+            : _db.Database.SqlQueryRaw<OpeningTally>(sql, OpeningLines.ContinuationPattern(prefix));
         return (await rows.ToListAsync(ct))
             .Where(r => !string.IsNullOrEmpty(r.San))
             .ToDictionary(r => r.San, r => r.Games, StringComparer.Ordinal);
@@ -163,20 +168,20 @@ public class GuessOpeningTree
     /// </summary>
     private async Task<List<string>> LinesAsync(string prefix, bool onlyPlayable, CancellationToken ct)
     {
-        var muster = prefix + " %";
+        var muster = OpeningLines.ContinuationPattern(prefix);
 
         if (onlyPlayable)
         {
             var query = _db.GameAnalyses.AsNoTracking()
                 .Where(g => g.IsPublic && g.OpeningLine != null);
-            if (prefix.Length > 0) query = query.Where(g => EF.Functions.Like(g.OpeningLine!, muster));
+            if (prefix.Length > 0) query = query.Where(g => EF.Functions.Like(g.OpeningLine!, muster, OpeningLines.LikeEscape));
             return await query.Select(g => g.OpeningLine!).ToListAsync(ct);
         }
 
         var roh = _db.LibraryGames.AsNoTracking()
             .Where(g => g.OpeningLine != null && g.Status != Models.LibraryGameStatus.Rejected
                                  && g.Status != Models.LibraryGameStatus.Duplicate);
-        if (prefix.Length > 0) roh = roh.Where(g => EF.Functions.Like(g.OpeningLine!, muster));
+        if (prefix.Length > 0) roh = roh.Where(g => EF.Functions.Like(g.OpeningLine!, muster, OpeningLines.LikeEscape));
         return await roh.Select(g => g.OpeningLine!).ToListAsync(ct);
     }
 

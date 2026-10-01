@@ -351,8 +351,11 @@ public class GameAnalysisService
         var prefix = GuessOpeningTree.Normalize(line);
         if (prefix.Length > 0)
         {
-            var muster = prefix + "%";
-            query = query.Where(g => g.OpeningLine != null && EF.Functions.Like(g.OpeningLine, muster));
+            // Dieselbe Menge wie der Baum (GuessOpeningTree): die Partie, die genau hier endet, plus
+            // alles, was danach weitergeht — Platzhalter aus der anonymen Eingabe maskiert.
+            var muster = OpeningLines.ContinuationPattern(prefix);
+            query = query.Where(g => g.OpeningLine != null && (g.OpeningLine == prefix
+                || EF.Functions.Like(g.OpeningLine, muster, OpeningLines.LikeEscape)));
         }
 
         var rows = await ProjectAsync(query, ct);

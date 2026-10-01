@@ -412,6 +412,22 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.Empty(await _svc.ListPublicAsync());
     }
 
+    /// <summary>Der Stellungsfilter des Bestands (anonym, <c>?line=</c>): dieselbe Menge wie der Baum —
+    /// die Partie, die genau hier endet, und was danach weitergeht —, LIKE-Platzhalter maskiert (A6-017).</summary>
+    [Fact]
+    public async Task ListPublic_stellungsfilter_maskiertPlatzhalter()
+    {
+        var user = await CreateUserWithEngineAsync();
+        (await AddAnalysisAsync(user.Id, true, true, "e4")).OpeningLine = "e4 e5";
+        (await AddAnalysisAsync(user.Id, true, true, "d4")).OpeningLine = "d4 d5";
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _svc.ListPublicAsync(line: "_4"));
+        Assert.Empty(await _svc.ListPublicAsync(line: "%"));
+        Assert.Equal("e4", Assert.Single(await _svc.ListPublicAsync(line: "e4")).Title);
+        Assert.Equal("e4", Assert.Single(await _svc.ListPublicAsync(line: "e4 e5")).Title);
+    }
+
     /// <summary>Grundlage des Filters „alle / nur kommentierte": eine geschweifte Klammer im PGN
     /// IST ein Kommentar.</summary>
     [Fact]

@@ -164,4 +164,34 @@ public class GuessOpeningTreeTests : IDisposable
         Assert.Equal(40, ast.Total);
         Assert.Equal(40, ast.Moves.Sum(m => m.Games));
     }
+
+    /// <summary>
+    /// LIKE-Platzhalter aus der ANONYMEN Eingabe (Codereview A6-017): bis 0.624.0 traf
+    /// <c>?line=_4</c> „e4 …" UND „d4 …" (beide Eroeffnungen in einem Ast), <c>?line=%</c> alles.
+    /// Gilt fuer beide Quellen und fuer Gesamtzahl wie Fortsetzungen.
+    /// </summary>
+    [Theory]
+    [InlineData("_4")]
+    [InlineData("%")]
+    [InlineData("e_ e5")]
+    public async Task Branch_likePlatzhalterImPraefix_sindGewoehnlicheZeichen(string line)
+    {
+        await AnalysisAsync("e4 e5 Nf3");
+        await AnalysisAsync("d4 d5 c4");
+        await LibraryAsync("e4 e5 Nf3");
+        await LibraryAsync("d4 d5 c4");
+
+        foreach (var onlyPlayable in new[] { true, false })
+        {
+            var ast = await _tree.BranchAsync(line, onlyPlayable);
+            Assert.Equal(0, ast.Total);
+            Assert.Empty(ast.Moves);
+        }
+    }
+
+    [Theory]
+    [InlineData("e4", "e4")]
+    [InlineData("a_b%c!d", "a!_b!%c!!d")]
+    public void ContinuationPattern_maskiertPlatzhalter(string prefix, string escaped)
+        => Assert.Equal(escaped + " %", OpeningLines.ContinuationPattern(prefix));
 }

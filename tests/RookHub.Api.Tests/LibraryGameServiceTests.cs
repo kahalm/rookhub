@@ -471,4 +471,18 @@ public class LibraryGameServiceTests : IDisposable
         Assert.Equal(1, gefiltert.Total);
         Assert.Equal(2, namenssuche.Total);
     }
+
+    /// <summary>Der Stellungsfilter der Liste maskiert die LIKE-Platzhalter wie der Baum (A6-017):
+    /// <c>_4</c> ist kein „irgendein Zeichen + 4".</summary>
+    [Fact]
+    public async Task Search_mitStellung_platzhalterTreffenNichts()
+    {
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "e4 e5" });
+        _db.LibraryGames.Add(new LibraryGame { Pgn = "x", OpeningLine = "d4 d5" });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(0, (await _svc.SearchAsync(0, null, null, null, 1, 50, line: "_4", byPosition: true)).Total);
+        Assert.Equal(0, (await _svc.SearchAsync(0, null, null, null, 1, 50, line: "%", byPosition: true)).Total);
+        Assert.Equal(1, (await _svc.SearchAsync(0, null, null, null, 1, 50, line: "e4", byPosition: true)).Total);
+    }
 }

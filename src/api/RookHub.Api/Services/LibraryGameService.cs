@@ -141,9 +141,9 @@ public class LibraryGameService
             if (prefix.Length > 0)
             {
                 // Wie im Baum: die Partie, die GENAU hier endet, erreicht die Stellung auch.
-                var mitTrenner = prefix + " %";
+                var mitTrenner = OpeningLines.ContinuationPattern(prefix);
                 rows = rows.Where(g => g.OpeningLine == prefix
-                                    || EF.Functions.Like(g.OpeningLine!, mitTrenner));
+                                    || EF.Functions.Like(g.OpeningLine!, mitTrenner, OpeningLines.LikeEscape));
             }
         }
 
