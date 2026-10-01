@@ -7,10 +7,15 @@ name: E2E (Playwright)
 # BEWUSST kein Gate für Push/PR: der Lauf baut einen ganzen Stack (compose.e2e.yml) und braucht
 # Minuten. Er ist per Hand startbar (Actions → „E2E (Playwright)" → Run workflow) und läuft
 # zusätzlich nachts, damit ein Bruch am nächsten Morgen sichtbar ist statt erst beim Nutzer.
+#
+# Sichtbar heißt: ein roter NACHTLAUF meldet sich in Discord (Schritt am Ende, Secret
+# DISCORD_CI_WEBHOOK). Ohne diesen Schritt war das E2E ab 4be56d1b (04.09.) neun Nächte rot,
+# bis es am 13.09. jemand bemerkte — die Actions-Oberfläche allein hat keinen Empfänger.
 on:
   workflow_dispatch:
   schedule:
-    # 03:30 UTC — nach dem Watchtower-Fenster (~02:00), damit die Nacht-Images mitgeprüft sind.
+    # 03:30 UTC. Geprüft wird der Stand von master AUS DEM QUELLBAUM: compose.e2e.yml baut api und
+    # frontend selbst — die ghcr-Images, die Watchtower nachts zieht, sieht dieser Lauf NICHT.
     - cron: '30 3 * * *'
 
 jobs:
@@ -38,3 +43,11 @@ jobs:
           path: src/frontend/app/playwright-report
           if-no-files-found: ignore
           retention-days: 7
+      # Nur der Nachtlauf meldet sich — einen Handstart sieht, wer ihn gestartet hat. cancelled()
+      # gehört dazu: ein hängender Lauf endet an timeout-minutes als ABGEBROCHEN, nicht als rot.
+      - name: Roten Nachtlauf melden
+        if: (failure() || cancelled()) && github.event_name == 'schedule'
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        run: |
+          bash .github/scripts/ci_alert.sh "RookHub: der nächtliche E2E-Lauf (Playwright) ist rot."

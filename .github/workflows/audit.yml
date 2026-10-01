@@ -6,6 +6,12 @@ name: Dependency Audit
 # Test-Gate her und darf den Release-Pfad nicht rotfaerben, wenn irgendwo in der
 # Lieferkette ein neues Advisory auftaucht. Ergebnis steht im Job-Log + in der
 # Job-Summary; die Entscheidung (Update / akzeptieren) trifft ein Mensch.
+#
+# Damit dieser Mensch es auch ERFAEHRT (Codereview I1-014): jeder Scan-Schritt endet bei einem
+# Befund (bzw. wenn er gar nicht pruefen konnte) mit Exit 1 und einer ::warning::-Annotation —
+# der Job bleibt dank continue-on-error gruen, aber steps.scan.outcome traegt den Befund, und der
+# Job `melden` schickt ihn beim Montagslauf nach Discord. Vorher pipte jeder Schritt in `tee`
+# ohne pipefail und war damit per Konstruktion immer gruen; gelesen hat die Summary niemand.
 
 on:
   schedule:
@@ -23,6 +29,8 @@ jobs:
   nuget:
     name: NuGet (dotnet list package --vulnerable)
     runs-on: ubuntu-latest
+    outputs:
+      befund: ${{ steps.scan.outcome }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -32,18 +40,29 @@ jobs:
         run: dotnet restore src/api/RookHub.Api/RookHub.Api.csproj
         continue-on-error: true
       - name: Vulnerable packages (inkl. transitiv)
+        id: scan
         continue-on-error: true
+        shell: bash
         run: |
-          {
-            echo '## NuGet'
-            echo '```'
-            dotnet list src/api/RookHub.Api/RookHub.Api.csproj package --vulnerable --include-transitive 2>&1
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          rc=0
+          out=$(dotnet list src/api/RookHub.Api/RookHub.Api.csproj package --vulnerable --include-transitive 2>&1) || rc=$?
+          printf '%s\n' "$out"
+          { echo '## NuGet'; echo '```'; printf '%s\n' "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # `dotnet list` endet auch MIT Befund mit 0 — die Schwere steht in der Tabelle (Zeilen mit „>").
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning title=NuGet-Audit::dotnet list package konnte nicht pruefen (Exit $rc)"
+            exit 1
+          fi
+          if grep -Eq '^\s*>.*\s(High|Critical)\s' <<<"$out"; then
+            echo '::warning title=NuGet-Audit::Paket mit Schwachstelle high/critical — siehe Job-Summary'
+            exit 1
+          fi
 
   npm:
     name: npm audit (Frontend)
     runs-on: ubuntu-latest
+    outputs:
+      befund: ${{ steps.scan.outcome }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -52,26 +71,35 @@ jobs:
           cache: 'npm'
           cache-dependency-path: src/frontend/app/package-lock.json
       - name: npm audit
+        id: scan
         working-directory: src/frontend/app
         continue-on-error: true
+        shell: bash
         run: |
-          {
-            echo '## npm (high + critical)'
-            echo '```'
-            npm audit --audit-level=high 2>&1
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # Exit != 0 heisst: Befund ab high ODER Audit gescheitert (z. B. Registry nicht erreichbar).
+          rc=0
+          out=$(npm audit --audit-level=high 2>&1) || rc=$?
+          printf '%s\n' "$out"
+          { echo '## npm (high + critical)'; echo '```'; printf '%s\n' "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning title=npm-Audit::Schwachstelle high/critical oder Audit gescheitert (Exit $rc) — siehe Job-Summary"
+            exit 1
+          fi
 
   pip:
     name: pip-audit (Python-Skripte)
     runs-on: ubuntu-latest
+    outputs:
+      befund: ${{ steps.scan.outcome }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: pip-audit
+        id: scan
         continue-on-error: true
+        shell: bash
         run: |
           # Die Python-Anteile (scripts/*.py, .github/scripts/*.py) fahren heute rein
           # auf der Standardbibliothek — ohne requirements-Datei gibt es nichts zu
@@ -83,12 +111,40 @@ jobs:
             exit 0
           fi
           python -m pip install --quiet pip-audit
-          {
-            echo '## pip-audit'
-            echo '```'
-            for f in $files; do
-              echo "--- $f"
-              pip-audit -r "$f" 2>&1
-            done
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # pip-audit kennt keine Schwere — JEDER Befund (Exit != 0) zaehlt.
+          rc=0
+          out=$(for f in $files; do echo "--- $f"; pip-audit -r "$f" 2>&1 || echo "PIP_AUDIT_EXIT $?"; done)
+          grep -q '^PIP_AUDIT_EXIT ' <<<"$out" && rc=1
+          printf '%s\n' "$out"
+          { echo '## pip-audit'; echo '```'; printf '%s\n' "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ne 0 ]; then
+            echo '::warning title=pip-audit::Schwachstelle gefunden oder Pruefung gescheitert — siehe Job-Summary'
+            exit 1
+          fi
+
+  # Meldet einen Befund nach Discord (Secret DISCORD_CI_WEBHOOK) — NUR beim Montagslauf: ein Push
+  # auf master meldete ein bekanntes Advisory sonst bei jedem Push erneut. Ein Job, der gar nicht
+  # bis zum Scan kam, hat kein `befund` und wird ebenfalls gemeldet.
+  melden:
+    name: Befund melden (Discord)
+    needs: [nuget, npm, pip]
+    if: >-
+      ${{ always() && github.event_name == 'schedule'
+          && (needs.nuget.outputs.befund != 'success'
+              || needs.npm.outputs.befund != 'success'
+              || needs.pip.outputs.befund != 'success') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}
+          NUGET: ${{ needs.nuget.outputs.befund }}
+          NPM: ${{ needs.npm.outputs.befund }}
+          PIP: ${{ needs.pip.outputs.befund }}
+        run: |
+          rot=""
+          [ "$NUGET" = success ] || rot="$rot NuGet"
+          [ "$NPM" = success ] || rot="$rot npm"
+          [ "$PIP" = success ] || rot="$rot pip"
+          bash .github/scripts/ci_alert.sh "RookHub: der Dependency-Audit meldet einen Befund in:$rot (Schwachstelle oder gescheiterte Pruefung, Details in der Job-Summary)."

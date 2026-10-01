@@ -620,4 +620,86 @@ public class CiWorkflowTests
                 + "das Image entstuende ungeprueft");
         }
     }
+
+    private const string E2e = ".github/workflows/e2e.yml";
+    private const string Audit = ".github/workflows/audit.yml";
+
+    /// <summary>Ein Job-Block aus einem beliebigen Workflow, von seiner Zeile bis zum naechsten Job.</summary>
+    private static string WorkflowJob(string workflow, string name)
+    {
+        var block = Regex.Match(ReadRepoFile(workflow), $@"(?ms)^  {Regex.Escape(name)}:\s*$(.*?)(?=^  [a-z]|\z)").Groups[1].Value;
+        Assert.True(block.Length > 0, $"{workflow} kennt keinen Job '{name}'");
+        return block;
+    }
+
+    /// <summary>Ein Schritt (ab „- name:" bzw. „- id:"-Zeile) bis zum naechsten Schritt oder Job.</summary>
+    private static string Step(string jobBlock, string marker)
+    {
+        var block = Regex.Match(jobBlock, $@"(?ms)^      - {marker}\s*$(.*?)(?=^      - |^  \S|\z)").Groups[1].Value;
+        Assert.True(block.Length > 0, $"Schritt '{marker}' fehlt");
+        return block;
+    }
+
+    /// <summary>
+    /// Der naechtliche E2E-Lauf braucht einen EMPFAENGER (Codereview I1-014). Ab 4be56d1b (04.09.)
+    /// war er neun Naechte rot, bis es am 13.09. jemand bemerkte — die Actions-Oberflaeche allein
+    /// meldet nichts. Der Melde-Schritt steht NACH dem Lauf (sonst sieht failure() ihn nicht), nimmt
+    /// den Abbruch am Job-Timeout mit und meldet nur den Nachtlauf.
+    /// </summary>
+    [Fact]
+    public void NightlyE2e_ReportsARedRun()
+    {
+        var text = ReadRepoFile(E2e);
+        Assert.Matches(@"(?m)^  schedule:\s*$", text);
+
+        var job = WorkflowJob(E2e, "e2e");
+        var step = Step(job, "name: Roten Nachtlauf melden");
+        Assert.Contains("if: (failure() || cancelled()) && github.event_name == 'schedule'", step);
+        Assert.Contains("WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}", step);
+        Assert.Contains("bash .github/scripts/ci_alert.sh", step);
+        Assert.True(job.IndexOf("bash scripts/e2e.sh", StringComparison.Ordinal)
+                    < job.IndexOf("Roten Nachtlauf melden", StringComparison.Ordinal),
+            "der Melde-Schritt muss NACH dem E2E-Lauf stehen");
+
+        Assert.True(File.Exists(Path.Combine(RepoRoot(), ".github", "scripts", "ci_alert.sh")),
+            ".github/scripts/ci_alert.sh fehlt");
+    }
+
+    /// <summary>
+    /// Der Audit bleibt nicht blockierend (PD-016), darf aber nicht per Konstruktion gruen sein
+    /// (Codereview I1-014): vorher pipte jeder Scan in `tee` ohne pipefail — der Schritt war nie rot,
+    /// und gelesen hat die Summary niemand. Jetzt endet ein Scan mit Befund rot (continue-on-error
+    /// haelt den Job gruen), sein outcome wandert als Job-Output nach `melden`, und der meldet den
+    /// Montagslauf nach Discord.
+    /// </summary>
+    [Theory]
+    [InlineData("nuget")]
+    [InlineData("npm")]
+    [InlineData("pip")]
+    public void AuditScan_CanTurnRed_AndHandsItsOutcomeOn(string job)
+    {
+        var block = WorkflowJob(Audit, job);
+        Assert.Contains("befund: ${{ steps.scan.outcome }}", block);
+
+        var scan = Regex.Match(block, @"(?ms)^      - name: [^\n]*\n        id: scan\s*$(.*?)(?=^      - |^  \S|\z)").Groups[1].Value;
+        Assert.True(scan.Length > 0, $"audit.yml/{job}: kein Schritt mit id: scan");
+        Assert.Contains("continue-on-error: true", scan);
+        Assert.Contains("shell: bash", scan);
+        Assert.Contains("::warning", scan);
+        Assert.Contains("exit 1", scan);
+        Assert.DoesNotContain("} | tee", scan);
+    }
+
+    [Fact]
+    public void AuditFinding_IsReportedOnTheWeeklyRun()
+    {
+        var block = WorkflowJob(Audit, "melden");
+        Assert.Contains("needs: [nuget, npm, pip]", block);
+        Assert.Contains("always()", block);
+        Assert.Contains("github.event_name == 'schedule'", block);
+        foreach (var job in new[] { "nuget", "npm", "pip" })
+            Assert.Contains($"needs.{job}.outputs.befund != 'success'", block);
+        Assert.Contains("WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}", block);
+        Assert.Contains("bash .github/scripts/ci_alert.sh", block);
+    }
 }
