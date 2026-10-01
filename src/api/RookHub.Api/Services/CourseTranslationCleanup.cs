@@ -5,7 +5,7 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Raeumt die Kurs-Uebersetzungen (<see cref="Models.CommentSet.BookPuzzleId"/>) von Linien ab, die gerade
-/// geloescht werden — gerufen von JEDEM Pfad, der <c>BookPuzzles</c> loescht
+/// geloescht werden — ueber <see cref="BookPuzzleDependents"/> gerufen von JEDEM Pfad, der <c>BookPuzzles</c> loescht
 /// (<see cref="CourseAuthoringService"/> Linie/Kapitel, <see cref="BookAdminService.DeleteBookAsync"/> und damit
 /// Kurs loeschen, Kurs → Repertoire, Konto loeschen; der Rueckbau in
 /// <see cref="CourseService.UploadPersonalCourseAsync"/>). Markiert nur zum Loeschen; gespeichert wird im
@@ -20,21 +20,11 @@ namespace RookHub.Api.Services;
 public static class CourseTranslationCleanup
 {
     /// <summary>Kurs-Saetze (und unter InMemory ihre Texte) der Linien <paramref name="lineIds"/> zum Loeschen
-    /// markieren — als Unterabfrage (Buch loeschen: „alle Linien des Buchs").</summary>
+    /// markieren — als Unterabfrage (Buch loeschen: „alle Linien des Buchs", Linie/Kapitel: „diese Ids").</summary>
     public static async Task RemoveForLinesAsync(AppDbContext db, IQueryable<int> lineIds, CancellationToken ct = default)
         => await RemoveAsync(db, await db.CommentSets
             .Where(s => s.BookPuzzleId != null && lineIds.Contains(s.BookPuzzleId.Value))
             .ToListAsync(ct), ct);
-
-    /// <summary>Dasselbe fuer eine feste Liste von Linien-Ids (Linie/Kapitel loeschen).</summary>
-    public static async Task RemoveForLinesAsync(AppDbContext db, IReadOnlyCollection<int> lineIds,
-        CancellationToken ct = default)
-    {
-        if (lineIds.Count == 0) return;
-        await RemoveAsync(db, await db.CommentSets
-            .Where(s => s.BookPuzzleId != null && lineIds.Contains(s.BookPuzzleId.Value))
-            .ToListAsync(ct), ct);
-    }
 
     private static async Task RemoveAsync(AppDbContext db, List<Models.CommentSet> sets, CancellationToken ct)
     {

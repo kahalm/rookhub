@@ -217,6 +217,58 @@ public class CourseTranslationSqlTests(CourseTranslationFixture fixture)
         Assert.Empty(await after.CourseTranslationJobs.ToListAsync());
     }
 
+    /// <summary>Codereview A9-007: beide Löschpfade gehen über EINE Liste (BookPuzzleDependents). Gegen MariaDB,
+    /// weil nur hier die Restrict-Fremdschlüssel auf BookPuzzle greifen — InMemory hätte eine vergessene Tabelle
+    /// nie bemerkt. Je Restrict-Tabelle eine Zeile an jeder Linie, dazu „Track solves" und ein Buch-Favorit.</summary>
+    [MySqlFact]
+    public async Task Loeschpfade_RaeumenAlleAbhaengigenDerLinienAb()
+    {
+        var book = await BookAsync("en");
+        var doomed = await LineAsync(book, "001", "Eins", "Geht");
+        var keep = await LineAsync(book, "002", "Eins", "Bleibt");
+        var seed = Get<AppDbContext>();
+        var user = new AppUser { Username = $"u{Guid.NewGuid():N}"[..20], PasswordHash = "x", CreatedAt = DateTime.UtcNow };
+        seed.AppUsers.Add(user);
+        await seed.SaveChangesAsync();
+        var day = new DateOnly(2031, 1, 1);
+        foreach (var line in new[] { doomed, keep })
+        {
+            seed.CoursePuzzleResults.Add(new CoursePuzzleResult { UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id });
+            seed.CourseAttempts.Add(new CourseAttempt { UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id });
+            seed.CourseInfoViews.Add(new CourseInfoView { UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id });
+            seed.BookPuzzleAttempts.Add(new BookPuzzleAttempt { UserId = user.Id, BookPuzzleId = line.Id, AttemptedAt = DateTime.UtcNow });
+            seed.DailyPuzzles.Add(new DailyPuzzle { Date = day, BookPuzzleId = line.Id, CreatedAt = DateTime.UtcNow });
+            day = day.AddDays(1);
+            seed.CalculationTrees.Add(new CalculationTree { UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id });
+            seed.CourseFlashcardMarks.Add(new CourseFlashcardMark { UserId = user.Id, BookId = book.Id, BookPuzzleId = line.Id });
+            seed.SharedPuzzleAttempts.Add(new SharedPuzzleAttempt { BookPuzzleId = line.Id, IdentityKey = "s:anon" });
+            seed.FavoritePuzzles.Add(new FavoritePuzzle { UserId = user.Id, PuzzleId = line.Id, Source = PuzzleSource.Book });
+        }
+        await seed.SaveChangesAsync();
+
+        async Task<int> DependentsOf(int lineId)
+        {
+            var db = Get<AppDbContext>();
+            return await db.CoursePuzzleResults.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.CourseAttempts.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.CourseInfoViews.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.BookPuzzleAttempts.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.DailyPuzzles.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.CalculationTrees.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.CourseFlashcardMarks.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.SharedPuzzleAttempts.CountAsync(x => x.BookPuzzleId == lineId)
+                + await db.FavoritePuzzles.CountAsync(x => x.PuzzleId == lineId && x.Source == PuzzleSource.Book);
+        }
+
+        await new CourseAuthoringService(Get<AppDbContext>()).DeleteLineAsync(0, book.Id, doomed.Id, isAdmin: true);
+        Assert.Equal(0, await DependentsOf(doomed.Id));
+        Assert.Equal(9, await DependentsOf(keep.Id));
+
+        await new BookAdminService(Get<AppDbContext>()).DeleteBookAsync(book.Id);
+        Assert.Equal(0, await DependentsOf(keep.Id));
+        Assert.False(await Get<AppDbContext>().BookPuzzles.AnyAsync(bp => bp.BookId == book.Id));
+    }
+
     /// <summary>Die Abfragen der Auftraege (Stufe B) gegen MariaDB: die Vorauswahl der Automatik (korrelierte
     /// Unterabfragen, MAX ueber Kursversuche, Sortierung nach „zuletzt benutzt"), die Warteschlange (Sortierung nach
     /// „angefordert"), die Kursansicht (GROUP BY Sprache) und die Admin-Ansicht (Benutzername per Unterabfrage), dazu ein

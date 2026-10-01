@@ -471,32 +471,15 @@ public class CourseAuthoringService
     }
 
     /// <summary>
-    /// Entfernt Linien samt aller Datensätze, die per Restrict-FK daran hängen (sonst blockt der
-    /// DB-Constraint): Kurs-Ergebnisse/Versuche/Info-Ansichten, Buch-Puzzle-Versuche, Tagespuzzle-
-    /// Zuordnungen und die Analysebäume des Kalkulations-Modus — und die Kurs-Übersetzungen der Linien
-    /// (Cascade in MariaDB, ausdrücklich für InMemory, siehe <see cref="CourseTranslationCleanup"/>).
+    /// Entfernt Linien samt aller Datensätze, die daran hängen (Restrict-FKs, sonst blockt der
+    /// DB-Constraint, dazu Verweise ohne FK und die Kurs-Übersetzungen) — dieselbe Liste wie beim
+    /// Buch-Löschen, siehe <see cref="BookPuzzleDependents"/>.
     /// </summary>
     private async Task RemoveLinesAsync(int bookId, List<BookPuzzle> lines, CancellationToken ct)
     {
         var ids = lines.Select(l => l.Id).ToList();
-        await CourseTranslationCleanup.RemoveForLinesAsync(_db, ids, ct);
-        _db.CoursePuzzleResults.RemoveRange(
-            await _db.CoursePuzzleResults.Where(cr => ids.Contains(cr.BookPuzzleId)).ToListAsync(ct));
-        _db.CourseAttempts.RemoveRange(
-            await _db.CourseAttempts.Where(a => ids.Contains(a.BookPuzzleId)).ToListAsync(ct));
-        _db.CourseInfoViews.RemoveRange(
-            await _db.CourseInfoViews.Where(iv => ids.Contains(iv.BookPuzzleId)).ToListAsync(ct));
-        _db.BookPuzzleAttempts.RemoveRange(
-            await _db.BookPuzzleAttempts.Where(a => ids.Contains(a.BookPuzzleId)).ToListAsync(ct));
-        _db.DailyPuzzles.RemoveRange(
-            await _db.DailyPuzzles.Where(d => ids.Contains(d.BookPuzzleId)).ToListAsync(ct));
-        _db.CalculationTrees.RemoveRange(
-            await _db.CalculationTrees.Where(t => ids.Contains(t.BookPuzzleId)).ToListAsync(ct));
-        _db.CourseFlashcardMarks.RemoveRange(
-            await _db.CourseFlashcardMarks.Where(m => ids.Contains(m.BookPuzzleId)).ToListAsync(ct));
-        // „Track solves" geteilter Einzel-Puzzles — ohne FK-Navigation, siehe BookAdminService.
-        _db.SharedPuzzleAttempts.RemoveRange(
-            await _db.SharedPuzzleAttempts.Where(a => ids.Contains(a.BookPuzzleId)).ToListAsync(ct));
+        await BookPuzzleDependents.RemoveForLinesAsync(_db,
+            _db.BookPuzzles.Where(bp => ids.Contains(bp.Id)).Select(bp => bp.Id), ct);
         _db.BookPuzzles.RemoveRange(lines);
 
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId, ct);

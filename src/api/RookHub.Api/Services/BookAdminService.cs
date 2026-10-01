@@ -180,42 +180,23 @@ public class BookAdminService
         var book = await _db.Books.FindAsync(id)
             ?? throw new KeyNotFoundException("Book not found.");
 
-        // Kurs-Daten (Fortschritt + gelöste Puzzles) und zugehörige Puzzles explizit entfernen.
-        // FK-Cascade greift bei InMemory nicht; zudem hat CoursePuzzleResult eine Restrict-FK
-        // auf BookPuzzle — EF löscht beim SaveChanges die Dependents (CoursePuzzleResult) vor
-        // den Principals (BookPuzzle), sodass die Reihenfolge auch real korrekt ist.
-        _db.CoursePuzzleResults.RemoveRange(_db.CoursePuzzleResults.Where(cr => cr.BookId == id));
-        _db.CourseInfoViews.RemoveRange(_db.CourseInfoViews.Where(iv => iv.BookId == id));
-        _db.CourseAttempts.RemoveRange(_db.CourseAttempts.Where(a => a.BookId == id));
+        // Kurs-Daten und zugehörige Puzzles explizit entfernen. FK-Cascade greift bei InMemory nicht.
+        // Alles, was an den LINIEN hängt (Restrict-FKs auf BookPuzzle, Verweise ohne FK, Übersetzungen),
+        // räumt BookPuzzleDependents ab — dieselbe Liste wie „Linie/Kapitel löschen". EF löscht beim
+        // SaveChanges die Dependents vor den Principals (BookPuzzle), die Reihenfolge stimmt also auch real.
+        var puzzleIds = _db.BookPuzzles.Where(bp => bp.BookId == id).Select(bp => bp.Id);
+        await BookPuzzleDependents.RemoveForLinesAsync(_db, puzzleIds);
         _db.CourseProgresses.RemoveRange(_db.CourseProgresses.Where(cp => cp.BookId == id));
         _db.CoursePins.RemoveRange(_db.CoursePins.Where(p => p.BookId == id));
         _db.CourseShares.RemoveRange(_db.CourseShares.Where(cs => cs.BookId == id));
         // Verknüpfungen in BEIDE Richtungen entfernen (LinkedBookId hat keinen Cascade-FK).
         _db.CourseLinks.RemoveRange(_db.CourseLinks.Where(l => l.BookId == id || l.LinkedBookId == id));
         _db.BookGroupAccesses.RemoveRange(_db.BookGroupAccesses.Where(a => a.BookId == id));
-        // BookPuzzleAttempt hat (wie CoursePuzzleResult) eine Restrict-FK auf BookPuzzle →
-        // die Versuche (Tagespuzzle-/Buch-Solves) explizit vor den Puzzles entfernen, sonst
-        // schlägt SaveChanges bei einem Buch mit aufgezeichneten Solves mit FK-Fehler fehl.
-        var puzzleIds = _db.BookPuzzles.Where(bp => bp.BookId == id).Select(bp => bp.Id);
-        _db.BookPuzzleAttempts.RemoveRange(_db.BookPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
-        // DailyPuzzle hat eine Restrict-FK auf BookPuzzle → Historie verfaellt
-        // beim Buch-Loeschen mit. Sonst blockt der DB-Constraint die Loeschung.
-        _db.DailyPuzzles.RemoveRange(_db.DailyPuzzles.Where(d => puzzleIds.Contains(d.BookPuzzleId)));
-        // Ebenso die Analysebäume des Kalkulations-Modus (Restrict-FK auf BookPuzzle).
-        _db.CalculationTrees.RemoveRange(_db.CalculationTrees.Where(t => t.BookId == id));
-        _db.CourseFlashcardMarks.RemoveRange(_db.CourseFlashcardMarks.Where(m => m.BookId == id));
         // KidHub-Fortschritt im Kinderkurs: Cascade-FKs auf Book, ausdruecklich wegen InMemory.
         _db.KidsCourseLines.RemoveRange(_db.KidsCourseLines.Where(l => l.BookId == id));
         _db.KidsCourseProgresses.RemoveRange(_db.KidsCourseProgresses.Where(p => p.BookId == id));
-        // „Track solves"-Zeilen geteilter Einzel-Puzzles: bewusst OHNE FK-Navigation angelegt, also
-        // räumt hier weder die DB noch etwas anderes auf. Ohne diese Zeile blieben sie als Waisen
-        // stehen (der Bereich ist anonym erreichbar, ein geteiltes Puzzle sammelt viele) und die
-        // Zähler-Abfrage lieferte für die tote Id weiter Treffer.
-        _db.SharedPuzzleAttempts.RemoveRange(_db.SharedPuzzleAttempts.Where(a => puzzleIds.Contains(a.BookPuzzleId)));
-        // Kurs-Übersetzungen der Linien (CommentSets mit BookPuzzleId) und die Übersetzungsaufträge des Buchs.
-        // Beides hat Cascade-FKs — ausdrücklich trotzdem, weil InMemory nicht kaskadiert (siehe
-        // CourseTranslationCleanup; dort auch, warum die TEXTE in MariaDB dem Fremdschlüssel überlassen bleiben).
-        await CourseTranslationCleanup.RemoveForLinesAsync(_db, puzzleIds);
+        // Die Übersetzungsaufträge des Buchs (Cascade-FK, ausdrücklich wegen InMemory; die Übersetzungen
+        // der Linien selbst räumt BookPuzzleDependents oben ab).
         _db.CourseTranslationJobs.RemoveRange(_db.CourseTranslationJobs.Where(j => j.BookId == id));
         var puzzles = _db.BookPuzzles.Where(bp => bp.BookId == id);
         _db.BookPuzzles.RemoveRange(puzzles);
