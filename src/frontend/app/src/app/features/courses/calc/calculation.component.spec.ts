@@ -103,6 +103,15 @@ function make(
         navigated.push(extras?.queryParams ?? {});
         return Promise.resolve(true);
       },
+      // Nur so viel Router, wie der Rückweg aus der Analyse braucht: `merge` mit der Query der Route.
+      createUrlTree: (_commands: unknown, extras?: { queryParams?: Record<string, unknown> }) =>
+        ({ queryParams: { ...queryParams, ...(extras?.queryParams ?? {}) } }),
+      serializeUrl: (tree: { queryParams: Record<string, unknown> }) => {
+        const q = Object.entries(tree.queryParams)
+          .filter(([, v]) => v !== null && v !== undefined)
+          .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
+        return '/courses/1/calc' + (q ? `?${q}` : '');
+      },
       url: '/courses/1/calc',
     } as never,
     apiStub as never,
@@ -205,6 +214,36 @@ describe('CalculationComponent Zug-Eingabe (Brett eingefroren)', () => {
     expect(navigated.length).toBe(1);
     expect(navigated[0]['fen']).toBe(component.startFen);
     expect(navigated[0]['moves']).toBe('f3e5');
+  });
+
+  it('keeps position and chapter in the way back from the analysis board', () => {
+    // Ohne `?pos`/`?chapter` im `from` baute „Zurück" die Seite neu und wählte die erste OFFENE
+    // Stellung des ersten offenen Kapitels — die gerade bewertete hat jetzt aber einen Baum.
+    const { component, navigated } = makeWithBook({
+      positions: [
+        item(1, { chapter: 'A' }), item(2, { chapter: 'A' }),
+        item(3, { chapter: 'B' }), item(4, { chapter: 'B' }),
+      ],
+    });
+    component.jumpToPosition(4);
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+
+    component.analyzeCurrentLine();
+
+    expect(navigated[navigated.length - 1]['from']).toBe('/courses/1/calc?pos=4&chapter=B');
+  });
+
+  it('keeps the entry position in the way back even before the URL was ever synced', () => {
+    // Der erste Einstieg schreibt `pos` NICHT in die URL — `router.url` allein reichte also nicht.
+    const { component, navigated } = makeWithBook({
+      positions: [item(1, { chapter: 'A', hasTree: true }), item(2, { chapter: 'A' })],
+    });
+    expect(component.position?.id).toBe(2);
+    expect(navigated.length).toBe(0);
+
+    component.analyzeCurrentLine();
+
+    expect(navigated[0]['from']).toBe('/courses/1/calc?pos=2&chapter=A');
   });
 
   it('records moves for BOTH sides in one line', () => {

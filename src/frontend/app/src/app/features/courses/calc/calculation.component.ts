@@ -1307,8 +1307,24 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   private openAnalysis(uci: string[]): void {
     this.router.navigate(['/analysis'], {
-      queryParams: { fen: this.startFen, moves: uci.join(','), from: this.router.url.split('?')[0] },
+      queryParams: { fen: this.startFen, moves: uci.join(','), from: this.analysisReturnUrl() },
     });
+  }
+
+  /**
+   * Rückweg aus der Analyse: dieselbe Seite MIT Stellung und Kapitel (wie {@link syncUrl}). Ohne
+   * `?pos` wählte die neu gebaute Komponente die erste OFFENE Stellung des ersten offenen Kapitels
+   * — die gerade bewertete hat jetzt aber einen Baum, man landete also woanders. Nicht einfach
+   * `router.url`: der erste Einstieg schreibt `pos` gar nicht in die URL (`enterChapter(…, false)`).
+   */
+  private analysisReturnUrl(): string {
+    const id = this.position?.id ?? this.chapterPositions[this.index]?.id ?? null;
+    if (id === null) return this.router.url;
+    return this.router.serializeUrl(this.router.createUrlTree([], {
+      relativeTo: this.route,
+      queryParams: { pos: id, chapter: this.chapter?.chapter ?? null },
+      queryParamsHandling: 'merge',
+    }));
   }
 
   // ===== Stellungs-Navigation (Stufe 2: INNERHALB des Kapitels) =============
