@@ -159,6 +159,56 @@ public class SchachBotWebhookServiceTests
             SchachBotWebhookService.SiblingWebhookUrl("http://schach-bot:9000", "weekly-progress"));
     }
 
+    /// <summary>Codereview A1-017: alle drei Webhooks gehen über DENSELBEN Versandweg — gleicher Signatur-Vertrag
+    /// (POST, application/json, frischer X-Webhook-Timestamp, X-Webhook-Signature = HMAC über "&lt;ts&gt;.&lt;body&gt;").
+    /// Vorher stand der Block dreimal da und nur der Solver-Webhook war geprüft; ein Formatwechsel an nur einer
+    /// Stelle hätte der Bot für die anderen Routen still mit 401 abgelehnt.</summary>
+    [Theory]
+    [InlineData("attempt", "http://schach-bot:9000/webhook/puzzle-attempt")]
+    [InlineData("weekly", "http://schach-bot:9000/webhook/weekly-progress")]
+    [InlineData("regenerate", "http://schach-bot:9000/webhook/daily-regenerate")]
+    public async Task AllWebhooks_ShareTheSignedPostContract(string kind, string expectedUrl)
+    {
+        var handler = new CapturingHandler();
+        const string secret = "contract-secret";
+        var svc = Build(handler, BuildConfig("http://schach-bot:9000/webhook/puzzle-attempt", secret));
+
+        switch (kind)
+        {
+            case "attempt": await svc.NotifyAttemptAsync(42, new BookPuzzleResultsDto { SolvedCount = 1 }); break;
+            case "weekly": await svc.NotifyWeeklyAsync(7, new WeeklyPostResultsDto { WeeklyPostId = 7, Total = 3 }); break;
+            default: await svc.NotifyDailyRegeneratedAsync(new DateOnly(2026, 10, 1), 5); break;
+        }
+
+        var req = handler.LastRequest!;
+        Assert.Equal(HttpMethod.Post, req.Method);
+        Assert.Equal(expectedUrl, req.RequestUri!.ToString());
+        Assert.Equal("application/json", req.Content!.Headers.ContentType!.MediaType);
+        var tsHeader = req.Headers.GetValues("X-Webhook-Timestamp").Single();
+        var ts = long.Parse(tsHeader, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts) <= 300);
+        Assert.Equal("sha256=" + SchachBotWebhookService.ComputeHmacHex(secret, tsHeader + "." + handler.LastBody!),
+            req.Headers.GetValues("X-Webhook-Signature").Single());
+        if (kind == "regenerate")
+            Assert.Equal("{\"date\":\"2026-10-01\",\"puzzleId\":5}", handler.LastBody);
+    }
+
+    [Fact]
+    public async Task NotifyWeeklyAndRegenerate_SwallowHttpErrorsAndExceptions()
+    {
+        var failing = new CapturingHandler { Status = HttpStatusCode.ServiceUnavailable };
+        var svc = Build(failing, BuildConfig("http://x/webhook/puzzle-attempt", "s"));
+        await svc.NotifyWeeklyAsync(1, new WeeklyPostResultsDto());
+        await svc.NotifyDailyRegeneratedAsync(new DateOnly(2026, 10, 1), 1);
+        Assert.NotNull(failing.LastRequest);
+
+        var throwing = new CapturingHandler { ThrowOnSend = new HttpRequestException("connect failed") };
+        svc = Build(throwing, BuildConfig("http://x/webhook/puzzle-attempt", "s"));
+        await svc.NotifyWeeklyAsync(1, new WeeklyPostResultsDto());
+        await svc.NotifyDailyRegeneratedAsync(new DateOnly(2026, 10, 1), 1);
+        // Ohne Exception hier: best-effort wie beim Solver-Webhook.
+    }
+
     [Fact]
     public async Task NotifyWeeklyAsync_CarriesModeCountsPerPlayer()
     {

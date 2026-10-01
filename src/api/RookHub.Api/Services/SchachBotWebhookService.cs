@@ -71,41 +71,11 @@ public class SchachBotWebhookService
             },
         };
 
-        string body;
-        try
-        {
-            body = JsonSerializer.Serialize(payload);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "SchachBot-Webhook: Payload konnte nicht serialisiert werden (puzzleId={PuzzleId})", puzzleId);
-            return;
-        }
-
-        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var signature = ComputeHmacHex(secret, ts + "." + body);
-
-        try
-        {
-            using var content = new StringContent(body, Encoding.UTF8);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-            req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
-            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
-            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!resp.IsSuccessStatusCode)
-            {
-                _logger.LogWarning("SchachBot-Webhook: HTTP {Status} (puzzleId={PuzzleId})", (int)resp.StatusCode, puzzleId);
-            }
-        }
-        catch (TaskCanceledException)
-        {
-            _logger.LogDebug("SchachBot-Webhook abgebrochen (puzzleId={PuzzleId})", puzzleId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "SchachBot-Webhook fehlgeschlagen (puzzleId={PuzzleId})", puzzleId);
-        }
+        await PostSignedAsync(url, secret, payload, new WebhookLog(
+            ex => _logger.LogWarning(ex, "SchachBot-Webhook: Payload konnte nicht serialisiert werden (puzzleId={PuzzleId})", puzzleId),
+            status => _logger.LogWarning("SchachBot-Webhook: HTTP {Status} (puzzleId={PuzzleId})", status, puzzleId),
+            () => _logger.LogDebug("SchachBot-Webhook abgebrochen (puzzleId={PuzzleId})", puzzleId),
+            ex => _logger.LogWarning(ex, "SchachBot-Webhook fehlgeschlagen (puzzleId={PuzzleId})", puzzleId)), ct);
     }
 
     /// <summary>
@@ -146,29 +116,11 @@ public class SchachBotWebhookService
             },
         };
 
-        string body;
-        try { body = JsonSerializer.Serialize(payload); }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "SchachBot-Weekly-Webhook: Payload nicht serialisierbar (weeklyPostId={Id})", weeklyPostId);
-            return;
-        }
-
-        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var signature = ComputeHmacHex(secret, ts + "." + body);
-        try
-        {
-            using var content = new StringContent(body, Encoding.UTF8);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-            req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
-            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
-            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!resp.IsSuccessStatusCode)
-                _logger.LogWarning("SchachBot-Weekly-Webhook: HTTP {Status} (weeklyPostId={Id})", (int)resp.StatusCode, weeklyPostId);
-        }
-        catch (TaskCanceledException) { _logger.LogDebug("SchachBot-Weekly-Webhook abgebrochen (weeklyPostId={Id})", weeklyPostId); }
-        catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-Weekly-Webhook fehlgeschlagen (weeklyPostId={Id})", weeklyPostId); }
+        await PostSignedAsync(url, secret, payload, new WebhookLog(
+            ex => _logger.LogWarning(ex, "SchachBot-Weekly-Webhook: Payload nicht serialisierbar (weeklyPostId={Id})", weeklyPostId),
+            status => _logger.LogWarning("SchachBot-Weekly-Webhook: HTTP {Status} (weeklyPostId={Id})", status, weeklyPostId),
+            () => _logger.LogDebug("SchachBot-Weekly-Webhook abgebrochen (weeklyPostId={Id})", weeklyPostId),
+            ex => _logger.LogWarning(ex, "SchachBot-Weekly-Webhook fehlgeschlagen (weeklyPostId={Id})", weeklyPostId)), ct);
     }
 
     /// <summary>
@@ -186,29 +138,61 @@ public class SchachBotWebhookService
         var url = SiblingWebhookUrl(baseUrl, "daily-regenerate");
 
         var payload = new { date = date.ToString("yyyy-MM-dd"), puzzleId = newPuzzleId };
+        await PostSignedAsync(url, secret, payload, new WebhookLog(
+            ex => _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook: Payload nicht serialisierbar (date={Date})", date),
+            status => _logger.LogWarning("SchachBot-DailyRegenerate-Webhook: HTTP {Status} (date={Date})", status, date),
+            () => _logger.LogDebug("SchachBot-DailyRegenerate-Webhook abgebrochen (date={Date})", date),
+            ex => _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook fehlgeschlagen (date={Date})", date)), ct);
+    }
+
+    /// <summary>Log-Zeilen eines Webhooks. Die Templates bleiben je Webhook eigen (Kibana-Suchen), der
+    /// Versand selbst steht EINMAL in <see cref="PostSignedAsync"/>.</summary>
+    private readonly record struct WebhookLog(
+        Action<Exception> SerializeFailed,
+        Action<int> HttpError,
+        Action Cancelled,
+        Action<Exception> Failed);
+
+    /// <summary>
+    /// Der eine Versandweg aller Bot-Webhooks: serialisieren, mit dem aktuellen Zeitstempel signieren
+    /// (<see cref="BuildSignedRequest"/>), POSTen. Schluckt alle Fehler (best-effort) und meldet sie
+    /// nur über <paramref name="log"/>.
+    /// </summary>
+    private async Task PostSignedAsync(string url, string secret, object payload, WebhookLog log, CancellationToken ct)
+    {
         string body;
         try { body = JsonSerializer.Serialize(payload); }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook: Payload nicht serialisierbar (date={Date})", date);
+            log.SerializeFailed(ex);
             return;
         }
 
         var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var signature = ComputeHmacHex(secret, ts + "." + body);
         try
         {
-            using var content = new StringContent(body, Encoding.UTF8);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-            req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + signature);
-            req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
+            using var req = BuildSignedRequest(url, secret, body, ts);
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode)
-                _logger.LogWarning("SchachBot-DailyRegenerate-Webhook: HTTP {Status} (date={Date})", (int)resp.StatusCode, date);
+                log.HttpError((int)resp.StatusCode);
         }
-        catch (TaskCanceledException) { _logger.LogDebug("SchachBot-DailyRegenerate-Webhook abgebrochen (date={Date})", date); }
-        catch (Exception ex) { _logger.LogWarning(ex, "SchachBot-DailyRegenerate-Webhook fehlgeschlagen (date={Date})", date); }
+        catch (TaskCanceledException) { log.Cancelled(); }
+        catch (Exception ex) { log.Failed(ex); }
+    }
+
+    /// <summary>
+    /// Signatur-Vertrag mit dem Bot (<c>core/webhook_server.py</c>, <c>_verify_signature</c>), an EINER Stelle:
+    /// <c>X-Webhook-Timestamp</c> = <paramref name="ts"/> (Unix-Sekunden), <c>X-Webhook-Signature</c> =
+    /// <c>"sha256=" + hex(HMAC_SHA256(secret, "&lt;ts&gt;.&lt;body&gt;"))</c>, Body als <c>application/json</c>.
+    /// </summary>
+    internal static HttpRequestMessage BuildSignedRequest(string url, string secret, string body, string ts)
+    {
+        var content = new StringContent(body, Encoding.UTF8);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+        var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+        req.Headers.TryAddWithoutValidation("X-Webhook-Signature", "sha256=" + ComputeHmacHex(secret, ts + "." + body));
+        req.Headers.TryAddWithoutValidation("X-Webhook-Timestamp", ts);
+        return req;
     }
 
     /// <summary>
