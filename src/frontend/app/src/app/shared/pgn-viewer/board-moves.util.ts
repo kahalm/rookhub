@@ -1,4 +1,4 @@
-import { Chess } from 'chess.js';
+import { Chess, Square } from 'chess.js';
 
 /** Legale Ziele je Ausgangsfeld für die Seite am Zug — Chessground-`dests`-Format. */
 export function legalDests(fen: string): { color: 'white' | 'black'; dests: Map<string, string[]> } | null {
@@ -15,11 +15,20 @@ export function legalDests(fen: string): { color: 'white' | 'black'; dests: Map<
   }
 }
 
-/** Wendet einen Nutzer-Zug auf die FEN an (Umwandlung immer Dame). */
-export function applyUserMove(fen: string, from: string, to: string): { san: string; fen: string } | null {
+/** Ist from→to in `fen` eine Bauernumwandlung (Figur wählbar)? Unlesbare FEN → false. */
+export function isPromotionMove(fen: string, from: string, to: string): boolean {
+  try {
+    return new Chess(fen).moves({ square: from as Square, verbose: true }).some(m => m.to === to && !!m.promotion);
+  } catch {
+    return false;
+  }
+}
+
+/** Wendet einen Nutzer-Zug auf die FEN an; eine Umwandlung wird zu `promotion` (Vorgabe Dame). */
+export function applyUserMove(fen: string, from: string, to: string, promotion = 'q'): { san: string; fen: string } | null {
   try {
     const chess = new Chess(fen);
-    const move = chess.move({ from, to, promotion: 'q' });
+    const move = chess.move({ from, to, promotion });
     return { san: move.san, fen: chess.fen() };
   } catch {
     return null;

@@ -95,7 +95,7 @@ export class LiveEngineSession {
    *  lag, fällt weg, wie beim Analysebrett ohne Varianten-Baum). */
   play(move: UserBoardMove, gameFen: string): void {
     if (this.cursor() === 0) this.baseFen = gameFen;
-    const uci = move.from + move.to + (this.isPromotion(move) ? 'q' : '');
+    const uci = move.from + move.to + (move.promotion ?? '');   // gewählte Umwandlungsfigur (Brett-Wähler)
     this.moves.set([...this.variation(), { san: move.san, uci, fen: move.fen, from: move.from, to: move.to }]);
     this.cursor.update(c => c + 1);
     this.analyze(move.fen);
@@ -144,10 +144,5 @@ export class LiveEngineSession {
     this.depth.set(0);
     this.bestUci.set(null);
     void this.engine.analyze(fen);
-  }
-
-  /** Das Brett wandelt immer in eine Dame um (`UserBoardMove.san` endet dann auf „=Q"). */
-  private isPromotion(move: UserBoardMove): boolean {
-    return /=[QRBN]/.test(move.san);
   }
 }

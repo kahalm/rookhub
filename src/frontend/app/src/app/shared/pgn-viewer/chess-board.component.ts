@@ -1,16 +1,18 @@
 import { DrawShape } from 'chessground/draw';
 import {
   Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output,
-  AfterViewInit, SimpleChanges, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+  AfterViewInit, SimpleChanges, ViewChild, ChangeDetectionStrategy, signal } from '@angular/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
 import { Config } from 'chessground/config';
 import { Key } from 'chessground/types';
 import { BoardFullscreenButtonComponent } from '../fullscreen/board-fullscreen-button.component';
-import { applyUserMove, legalDests, turnColorOf } from './board-moves.util';
+import { PromotionPickerComponent, PromotionPiece } from '../promotion-picker/promotion-picker.component';
+import { applyUserMove, isPromotionMove, legalDests, turnColorOf } from './board-moves.util';
 
-/** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). */
-export interface UserBoardMove { from: string; to: string; san: string; fen: string; }
+/** Vom Nutzer auf einem `playable`-Brett ausgeführter Zug (FEN = Stellung DANACH). `promotion` = gewählte
+ *  Umwandlungsfigur, nur bei einer Umwandlung gesetzt (SAN und FEN tragen sie schon). */
+export interface UserBoardMove { from: string; to: string; san: string; fen: string; promotion?: PromotionPiece; }
 
 /** Ein vom Aufrufer vorgegebener Pfeil (z. B. der beste Zug der Engine) — Chessground-„autoShape". `brush` =
  *  Chessground-Farbe (Vorgabe grün; die Live-Engine zeichnet blau, damit man sie von der Partie-Analyse trennt). */
@@ -20,12 +22,16 @@ export interface BoardArrow { from: string; to: string; brush?: string; }
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-chess-board',
   standalone: true,
-  imports: [BoardFullscreenButtonComponent],
+  imports: [BoardFullscreenButtonComponent, PromotionPickerComponent],
   template: `
     <div #fsHost class="cb-fs-host">
       <app-board-fullscreen-button [target]="fsHost" />
       <div class="cb-wrap">
         <div #boardEl [class]="'cg-square board-theme-' + boardTheme + ' piece-set-' + pieceSet"></div>
+        @if (pendingPromotion(); as p) {
+          <app-promotion-picker [color]="p.color" [dest]="p.dest" [orientation]="flipped ? 'black' : 'white'"
+                                [pieceSet]="pieceSet" (choose)="selectPromotion($event)" (dismiss)="cancelPromotion()" />
+        }
       </div>
     </div>
   `,
@@ -66,10 +72,13 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   @Input() boardTheme = 'brown';
   /** Figurenset aus den User-Preferences (styles.scss `.piece-set-*` cg-board piece Regeln). */
   @Input() pieceSet = 'cburnett';
-  /** Opt-in: legale Züge der Seite am Zug per Drag/Klick erlauben (Umwandlung immer Dame).
+  /** Opt-in: legale Züge der Seite am Zug per Drag/Klick erlauben; bei einer Umwandlung fragt das
+   * Brett die Figur ab (geteilter Umwandlungs-Wähler, wie Puzzle- und Analysebrett).
    * Der Aufrufer MUSS auf (userMove) reagieren und die neue FEN zurückbinden — das Brett
    * selbst bleibt zustandslos (Anzeige der [fen]-Bindung). */
   @Input() playable = false;
+  /** Umwandlung ohne Rückfrage in eine Dame (für Stellen, die das bewusst wollen). */
+  @Input() autoQueen = false;
   /**
    * Pfeile, die der Aufrufer vorgibt (`setAutoShapes`) — getrennt von denen, die der Nutzer per Rechtsklick
    * zieht: die bleiben stehen, wenn sich diese Liste ändert.
@@ -88,6 +97,10 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   private fenChangedAt = 0;
   private badgeTimer: number | null = null;
   @Output() userMove = new EventEmitter<UserBoardMove>();
+
+  /** Offene Umwandlungs-Auswahl. Ein Signal, weil der Zug aus einem Chessground-Callback kommt (kein
+   *  Template-Ereignis) — so zeichnet Angular den Wähler auch unter einem OnPush-Elternteil. */
+  readonly pendingPromotion = signal<{ orig: Key; dest: Key; color: 'w' | 'b' } | null>(null);
 
   @ViewChild('boardEl') boardEl!: ElementRef<HTMLElement>;
 
@@ -195,6 +208,8 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    // Neue Stellung oder gesperrt, während die Umwandlungs-Auswahl offen ist: sie gehört zur alten.
+    if (changes['fen'] || changes['playable']) this.pendingPromotion.set(null);
     if (!this.ground) return;
     if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable']) {
       this.ground.set({
@@ -261,13 +276,47 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
   }
 
   private onBoardMove(orig: Key, dest: Key): void {
-    const applied = applyUserMove(this.fen, orig, dest);
+    if (isPromotionMove(this.fen, orig, dest)) {
+      if (this.autoQueen) { this.emitMove(orig, dest, 'q'); return; }
+      // Erst die Figur wählen lassen — der Bauer steht solange auf dem Zielfeld (Chessground hat ihn gezogen).
+      this.pendingPromotion.set({ orig, dest, color: turnColorOf(this.fen) === 'white' ? 'w' : 'b' });
+      return;
+    }
+    this.emitMove(orig, dest);
+  }
+
+  selectPromotion(piece: PromotionPiece): void {
+    const p = this.pendingPromotion();
+    if (!p) return;
+    this.pendingPromotion.set(null);
+    this.emitMove(p.orig, p.dest, piece);
+  }
+
+  /** Auswahl abgebrochen: den optisch schon gezogenen Bauern zurück — Brett wieder auf die Bindung. */
+  cancelPromotion(): void {
+    if (!this.pendingPromotion()) return;
+    this.pendingPromotion.set(null);
+    this.resetToBinding();
+  }
+
+  private emitMove(orig: Key, dest: Key, promotion?: PromotionPiece): void {
+    const applied = applyUserMove(this.fen, orig, dest, promotion);
     if (!applied) {
       // Sollte bei dests-beschränkten Zügen nicht passieren — Brett auf die Bindung zurücksetzen.
       this.ground?.set({ fen: this.fen });
       return;
     }
-    this.userMove.emit({ from: orig, to: dest, san: applied.san, fen: applied.fen });
+    this.userMove.emit({ from: orig, to: dest, san: applied.san, fen: applied.fen, ...(promotion ? { promotion } : {}) });
+  }
+
+  /** Chessground auf die [fen]-Bindung zurück — inkl. `turnColor`, den es nach dem Nutzerzug selbst umgedreht hat. */
+  private resetToBinding(): void {
+    this.ground?.set({
+      fen: this.fen,
+      turnColor: turnColorOf(this.fen),
+      lastMove: this.lastMove as Key[] | undefined,
+      ...this.interactionConfig(),
+    });
   }
 
   ngOnDestroy(): void {

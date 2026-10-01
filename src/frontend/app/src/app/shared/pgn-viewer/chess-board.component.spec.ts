@@ -2,7 +2,9 @@ import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { ChessBoardComponent } from './chess-board.component';
+import { ChessBoardComponent, UserBoardMove } from './chess-board.component';
+import { applyUserMove, isPromotionMove } from './board-moves.util';
+import { PromotionPickerComponent } from '../promotion-picker/promotion-picker.component';
 import {
   BoardFullscreenButtonComponent,
 } from '../fullscreen/board-fullscreen-button.component';
@@ -246,5 +248,120 @@ describe('ChessBoardComponent Zugfolge (Punktepartie)', () => {
 
     c.ngOnDestroy();
     host.remove();
+  });
+});
+
+/**
+ * Umwandlung auf dem geteilten Brett (Codereview F8-016): vorher wurde jeder Umwandlungszug ohne Rückfrage
+ * zur Dame — eine Unterverwandlung (Punktepartie, Formular-Korrektur, Rekonstruieren) war nicht eingebbar.
+ */
+describe('ChessBoardComponent Umwandlung mit Auswahl', () => {
+  const PROMO = '8/P6k/8/8/8/8/7K/8 w - - 0 1';
+
+  function make(fen: string) {
+    const host = document.createElement('div');
+    host.style.width = '400px';
+    document.body.appendChild(host);
+    const el = document.createElement('div');
+    host.appendChild(el);
+    const c = new ChessBoardComponent();
+    (c as any).boardEl = { nativeElement: el };
+    c.fen = fen;
+    c.playable = true;
+    c.ngAfterViewInit();
+    const moves: UserBoardMove[] = [];
+    c.userMove.subscribe(m => moves.push(m));
+    return { c, host, moves };
+  }
+
+  it('erkennt Umwandlungszüge und wandelt in die gewählte Figur um', () => {
+    expect(isPromotionMove(PROMO, 'a7', 'a8')).toBeTrue();
+    expect(isPromotionMove(PROMO, 'h2', 'g2')).toBeFalse();
+    expect(isPromotionMove('kein fen', 'a7', 'a8')).toBeFalse();
+    expect(applyUserMove(PROMO, 'a7', 'a8', 'n')!.san).toBe('a8=N');
+    expect(applyUserMove(PROMO, 'a7', 'a8')!.san).toBe('a8=Q');
+  });
+
+  it('fragt die Figur ab und meldet erst nach der Wahl — auch eine Unterverwandlung', () => {
+    const { c, host, moves } = make(PROMO);
+    (c as any).onBoardMove('a7', 'a8');
+    expect(moves.length).withContext('noch kein Zug gemeldet').toBe(0);
+    expect(c.pendingPromotion()).toEqual({ orig: 'a7', dest: 'a8', color: 'w' });
+
+    c.selectPromotion('n');
+    expect(c.pendingPromotion()).toBeNull();
+    expect(moves.length).toBe(1);
+    expect(moves[0].san).toBe('a8=N');
+    expect(moves[0].promotion).toBe('n');
+    expect(moves[0].fen.startsWith('N7/')).toBeTrue();
+
+    c.ngOnDestroy();
+    host.remove();
+  });
+
+  it('Abbruch: kein Zug, der Bauer steht wieder auf a7, Weiß bleibt am Zug', () => {
+    const { c, host, moves } = make(PROMO);
+    const ground = (c as any).ground;
+    ground.move('a7', 'a8');                       // so hat Chessground den Bauern optisch schon gezogen
+    ground.state.turnColor = 'black';
+    (c as any).onBoardMove('a7', 'a8');
+    c.cancelPromotion();
+
+    expect(moves.length).toBe(0);
+    expect(c.pendingPromotion()).toBeNull();
+    expect(ground.state.pieces.get('a7')?.role).toBe('pawn');
+    expect(ground.state.pieces.get('a8')).toBeUndefined();
+    expect(ground.state.turnColor).toBe('white');
+    expect(ground.state.movable.color).toBe('white');
+
+    c.ngOnDestroy();
+    host.remove();
+  });
+
+  it('autoQueen: sofort eine Dame, ohne Auswahl; gewöhnliche Züge ohne promotion-Feld', () => {
+    const { c, host, moves } = make(PROMO);
+    c.autoQueen = true;
+    (c as any).onBoardMove('a7', 'a8');
+    expect(c.pendingPromotion()).toBeNull();
+    expect(moves[0].san).toBe('a8=Q');
+    expect(moves[0].promotion).toBe('q');
+
+    (c as any).onBoardMove('h2', 'g2');
+    expect(moves[1].san).toBe('Kg2');
+    expect('promotion' in moves[1]).toBeFalse();
+
+    c.ngOnDestroy();
+    host.remove();
+  });
+
+  it('eine neue Stellung schließt eine offene Auswahl', () => {
+    const { c, host } = make(PROMO);
+    (c as any).onBoardMove('a7', 'a8');
+    c.fen = '8/P6k/8/8/8/8/6K1/8 w - - 0 1';
+    c.ngOnChanges({ fen: { firstChange: false } as never });
+    expect(c.pendingPromotion()).toBeNull();
+
+    c.ngOnDestroy();
+    host.remove();
+  });
+
+  it('zeigt den geteilten Umwandlungs-Wähler über dem Brett', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ChessBoardComponent);
+    fixture.componentRef.setInput('fen', PROMO);
+    fixture.componentRef.setInput('playable', true);
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(PromotionPickerComponent))).toBeNull();
+
+    (fixture.componentInstance as any).onBoardMove('a7', 'a8');
+    fixture.detectChanges();
+    const picker = fixture.debugElement.query(By.directive(PromotionPickerComponent));
+    expect(picker).withContext('Wähler sichtbar').not.toBeNull();
+    expect(picker.nativeElement.parentElement.classList).toContain('cb-wrap');   // deckt genau das Brett ab
+    expect((picker.componentInstance as PromotionPickerComponent).dest).toBe('a8');
+    expect((picker.componentInstance as PromotionPickerComponent).color).toBe('w');
   });
 });

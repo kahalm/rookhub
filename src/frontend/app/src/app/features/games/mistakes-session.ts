@@ -21,9 +21,9 @@ export type PositionEvaluator = (fen: string) => Promise<EvalScore | null>;
  * des Nutzers abgelöst). Die Seite bindet `boardFen`/`lastMove`/`flipped` an ihr Brett und reicht dessen
  * Züge an {@link onMove}; das Panel unter dem Brett (`MistakesTrainerComponent`) zeigt Aufgabe und Knöpfe.
  *
- * Geurteilt wird mit `sameMove` aus dem gemeinsamen Löser-Kern — das Brett wandelt ohne Rückfrage in
- * eine Dame um, und die Regel dort lässt eine fehlende Umwandlungsfigur gelten (eine Unterverwandlung
- * als Lösung ließe sich auf diesem Brett gar nicht eingeben). Als richtig zählt der Bestzug der Engine
+ * Geurteilt wird mit `sameMove` aus dem gemeinsamen Löser-Kern — mit der am Brett gewählten
+ * Umwandlungsfigur (`UserBoardMove.promotion`, seit dem Umwandlungs-Wähler des geteilten Bretts): eine
+ * andere Figur als die erwartete ist ein anderer Zug; fehlt sie, gilt jede. Als richtig zählt der Bestzug der Engine
  * UND jeder gleichwertige Kandidat derselben Suche (`Mistake.acceptUci`, siehe `EQUIVALENT_LIMIT`). Ein Zug
  * ausserhalb der Kandidaten geht an den {@link UnlistedMoveJudge} (Browser-Engine) — aber nur, wenn schon der
  * schwächste Kandidat gleichwertig war (`Mistake.checkUnlisted`); sonst ist er sicher daneben.
@@ -87,8 +87,9 @@ export class MistakesSession {
     this.boardFen.set(e.fen);
     this.lastMove.set([e.from, e.to]);
     const accepted = m.acceptUci?.length ? m.acceptUci : [m.bestUci];
-    if (accepted.some(uci => sameMove(e.from + e.to, uci))) {
-      this.found(e.san, sameMove(e.from + e.to, m.bestUci), false);
+    const userUci = e.from + e.to + (e.promotion ?? '');
+    if (accepted.some(uci => sameMove(userUci, uci))) {
+      this.found(e.san, sameMove(userUci, m.bestUci), false);
     } else if (m.checkUnlisted && this.judge) {
       this.tried.set(e.san);
       this.phase.set('checking');

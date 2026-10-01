@@ -96,12 +96,24 @@ describe('MistakesSession', () => {
     expect(c.solved()).toBe(0);
   });
 
-  it('eine Umwandlung zaehlt auch ohne genannte Figur — das Brett wandelt ohne Rueckfrage in eine Dame um', () => {
+  it('eine Umwandlung zaehlt auch ohne genannte Figur', () => {
     const c = setup({ white: [fehler({ fenBefore: '4k3/4P3/8/8/8/8/8/4K3 w - - 0 1', bestUci: 'e7e8q', bestSan: 'e8=Q+', acceptUci: ['e7e8q'], acceptSan: ['e8=Q+'] })], black: [] });
 
     c.onMove({ from: 'e7', to: 'e8', san: 'e8=Q+', fen: 'danach' });
 
     expect(c.phase()).toBe('right');
+  });
+
+  it('die am Brett gewaehlte Umwandlungsfigur zaehlt: Springer statt Dame ist daneben, Dame ist richtig (F8-016)', () => {
+    const umwandlung = () => setup({ white: [fehler({ fenBefore: '4k3/4P3/8/8/8/8/8/4K3 w - - 0 1', bestUci: 'e7e8q', bestSan: 'e8=Q+', acceptUci: ['e7e8q'], acceptSan: ['e8=Q+'] })], black: [] });
+
+    const falsch = umwandlung();
+    falsch.onMove({ from: 'e7', to: 'e8', san: 'e8=N', fen: 'danach', promotion: 'n' });
+    expect(falsch.phase()).toBe('wrong');
+
+    const richtig = umwandlung();
+    richtig.onMove({ from: 'e7', to: 'e8', san: 'e8=Q+', fen: 'danach', promotion: 'q' });
+    expect(richtig.phase()).toBe('right');
   });
 
   it('am Ende steht die Bilanz', () => {
