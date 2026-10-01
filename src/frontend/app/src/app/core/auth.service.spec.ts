@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { OfflineService } from './offline.service';
+import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from './anon-session';
 
 // Minimaler JWT (nur der payload-Teil wird ausgewertet) mit relativem exp.
 function jwt(expSecondsFromNow: number): string {
@@ -697,5 +698,22 @@ describe('AuthService: gesperrter Browser-Speicher (F1-013)', () => {
 
     expect(svc.currentUser?.username).toBe('admin');
     expect(svc.isImpersonating).toBeFalse();
+  });
+
+  it('übernimmt beim Anmelden die anonymen Puzzle-Versuche, die unter der Speicher-Kennung liefen (F2-018)', async () => {
+    blockStorage();
+    const anon = getOrCreateAnonSessionId(ANON_PUZZLE_SESSION_KEY);   // wie PuzzleService bei jedem anonymen Versuch
+
+    svc.login('u', 'p').subscribe();
+    http.expectOne('/api/auth/login').flush({ token: jwt(3600), username: 'u', userId: 1, isAdmin: false });
+
+    // Der Dienst kommt per dynamischem Import (Zirkelbezug) — die Anfrage folgt erst danach.
+    let claim = http.match('/api/puzzles/claim-session');
+    for (let i = 0; i < 50 && claim.length === 0; i++) {
+      await new Promise<void>(r => setTimeout(r, 10));
+      claim = http.match('/api/puzzles/claim-session');
+    }
+    expect(claim.length).toBe(1);
+    expect(claim[0].request.body).toEqual({ sessionId: anon });
   });
 });

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { allKeys, localStore, readJson, readRaw, removeKey, sessionStore, writeJson } from './local-json-store';
+import { ANON_PUZZLE_SESSION_KEY } from './anon-session';
 
 /** localStorage-Keys der Offline-Caches. */
 export const ENDLESS_POOL_KEY = 'rookhub_endless_offline_pool';
@@ -92,7 +93,7 @@ export class OfflineService {
     'rookhub_solve_modes',         // Spielweise je Bereich
     'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)
     'rookhub_menu_keys',           // Menü-Sichtbarkeit des vorigen Nutzers
-    'rookhub_puzzle_session',      // anonyme Puzzle-Sitzung
+    ANON_PUZZLE_SESSION_KEY,       // anonyme Puzzle-Sitzung
     'rookhub_guess_session',       // anonyme Partie-Raten-Sitzung (Gegenstück zur Puzzle-Sitzung)
     'rookhub_dashboard_cache_',    // Dashboard-Snapshot je Konto: Turniere samt Ort/Termin, Kurse, Elo
     'rookhub_discord_link',        // Discord-Vormerkung, Altbestand im localStorage (heute sessionStorage, s. u.)

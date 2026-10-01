@@ -1,4 +1,11 @@
 /**
+ * Schlüssel der anonymen Puzzle-Sitzung. EINE Kennung für Puzzle-Versuche, Endless-Fortschritt, die
+ * Besucherzählung (`X-Visitor-Id`) und das Übernehmen ins Konto beim Anmelden — vorher stand der Name
+ * fünfmal als Literal da, mit zwei Erzeugern und Lesern ohne die Rückfallebene unten.
+ */
+export const ANON_PUZZLE_SESSION_KEY = 'rookhub_puzzle_session';
+
+/**
  * Die Kennung eines Besuchers OHNE Konto — der Ersatz für die User-Id in allen anonymen Pfaden
  * (Puzzle-Versuche, Endless-Fortschritt, Punktepartie).
  *
@@ -49,5 +56,19 @@ export function getOrCreateAnonSessionId(key: string): string {
       memory.set(key, id);
     }
     return id;
+  }
+}
+
+/**
+ * Die schon vergebene Kennung lesen, OHNE eine neue anzulegen — für das Übernehmen ins Konto beim
+ * Anmelden: gibt es keine, gibt es nichts zu übernehmen. Bei gesperrtem Speicher gilt dieselbe
+ * Rückfallebene wie in {@link getOrCreateAnonSessionId}, sonst übernähme das Konto die Versuche nicht,
+ * die eben unter der Speicher-Kennung liefen. Wirft nie.
+ */
+export function readAnonSessionId(key: string): string | null {
+  try {
+    return localStorage.getItem(key) || null;
+  } catch {
+    return memory.get(key) ?? null;
   }
 }

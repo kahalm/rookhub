@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { EndlessStorageService, EndlessConfig } from './endless-storage.service';
 import { AuthService } from '../../core/auth.service';
 import { ENDLESS_POOL_KEY } from '../../core/offline.service';
+import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
 
 const CONFIG: EndlessConfig = {
   startElo: 1500, themes: '', stockfishDepth: 8,
@@ -79,6 +80,57 @@ describe('EndlessStorageService per-identity migration flag', () => {
     svc.migrateLocalToServer(CONFIG, 100, []);
     http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress')).flush({});
     expect(localStorage.getItem('rookhub_endless_synced:u8')).toBe('1');
+  });
+});
+
+describe('EndlessStorageService anonyme Kennung (F2-018)', () => {
+  // Vorher las Endless die Kennung roh: bei gesperrtem Speicher null -> Lauf und Fortschritt erreichten
+  // den Server nie, während die Versuche desselben Laufs über PuzzleService (mit Rückfallebene) ankamen.
+  let svc: EndlessStorageService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    localStorage.removeItem(ANON_PUZZLE_SESSION_KEY);
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { isLoggedIn: false } },
+      ],
+    });
+    svc = TestBed.inject(EndlessStorageService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => { http.verify(); localStorage.removeItem(ANON_PUZZLE_SESSION_KEY); });
+
+  it('meldet Lauf und Fortschritt bei gesperrtem Speicher unter derselben Kennung wie die Puzzle-Versuche', () => {
+    spyOn(Storage.prototype, 'getItem').and.throwError('SecurityError');
+    spyOn(Storage.prototype, 'setItem').and.throwError('SecurityError');
+    const puzzleId = getOrCreateAnonSessionId(ANON_PUZZLE_SESSION_KEY);   // wie PuzzleService.ensureSessionId
+
+    svc.loadFromServer().subscribe();
+    const get = http.expectOne(r => r.method === 'GET' && r.url.endsWith('/progress/anonymous'));
+    expect(get.request.params.get('sessionId')).toBe(puzzleId);
+    get.flush({ progress: null, sessions: [] });
+
+    svc.recordSessionToServer({
+      timestamp: 1, totalSolved: 3, maxRating: 1600, durationSeconds: 60, config: CONFIG, mistakeAtRatings: [],
+    }).subscribe();
+    const post = http.expectOne(r => r.method === 'POST' && r.url.endsWith('/sessions/anonymous'));
+    expect(post.request.body.sessionId).toBe(puzzleId);
+    post.flush({ id: 7 });
+  });
+
+  it('legt eine fehlende Kennung an, wenn ein anonymer Lauf gemeldet wird — und übernimmt ohne Kennung nichts', () => {
+    svc.claimEndlessSession().subscribe();
+    http.expectNone(r => r.url.endsWith('/claim-session'));
+    expect(localStorage.getItem(ANON_PUZZLE_SESSION_KEY)).toBeNull();
+
+    svc.saveProgressImmediate(CONFIG, 100, null);
+    const put = http.expectOne(r => r.method === 'PUT' && r.url.endsWith('/progress/anonymous'));
+    expect(put.request.body.sessionId).toBe(localStorage.getItem(ANON_PUZZLE_SESSION_KEY)!);
+    put.flush({});
   });
 });
 

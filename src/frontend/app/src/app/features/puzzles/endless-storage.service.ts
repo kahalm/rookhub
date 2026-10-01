@@ -5,6 +5,7 @@ import { OfflineQueueService } from '../../core/offline-queue.service';
 import { Observable, of, catchError, map, tap } from 'rxjs';
 import { PuzzleDto } from './puzzle.service';
 import { ENDLESS_POOL_KEY } from '../../core/offline.service';
+import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId, readAnonSessionId } from '../../core/anon-session';
 
 export interface EndlessConfig {
   startElo: number;
@@ -252,8 +253,11 @@ export class EndlessStorageService {
 
   // --- Server Sync ---
 
-  private getSessionId(): string | null {
-    try { return localStorage.getItem('rookhub_puzzle_session'); } catch { return null; }
+  /** Die anonyme Kennung — DIESELBE wie bei den Puzzle-Versuchen desselben Laufs, angelegt, falls es noch
+   *  keine gibt; bei gesperrtem Speicher die Kennung dieses Seitenaufrufs. Vorher las Endless roh und bekam
+   *  dort `null`: Lauf und Fortschritt erreichten den Server nie, die Versuche desselben Laufs schon. */
+  private getSessionId(): string {
+    return getOrCreateAnonSessionId(ANON_PUZZLE_SESSION_KEY);
   }
 
   loadFromServer(): Observable<EndlessSyncResponse | null> {
@@ -400,7 +404,7 @@ export class EndlessStorageService {
   }
 
   claimEndlessSession(): Observable<any> {
-    const sessionId = this.getSessionId();
+    const sessionId = readAnonSessionId(ANON_PUZZLE_SESSION_KEY);   // nichts anlegen: ohne Kennung nichts zu übernehmen
     if (!sessionId) return of(null);
     return this.http.post(`${this.apiUrl}/claim-session`, { anonymousSessionId: sessionId })
       .pipe(catchError(() => of(null)));

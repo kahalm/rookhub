@@ -7,6 +7,7 @@ import { OfflineService } from './offline.service';
 import { SnackbarService } from './snackbar.service';
 import { ClientLogService } from './client-log.service';
 import { localStore, readRaw, removeKey, writeJson } from './local-json-store';
+import { ANON_PUZZLE_SESSION_KEY, readAnonSessionId } from './anon-session';
 
 export interface AuthResponse {
   token: string;
@@ -525,7 +526,9 @@ export class AuthService {
     if (readRaw(localStore(), 'rookhub_guess_session'))
       import('../features/guess/guess.service').then(m =>
         this.withService(() => this.injector.get(m.GuessService), guess => guess.claimAnonymous().subscribe()));
-    const sessionId = readRaw(localStore(), 'rookhub_puzzle_session');
+    // Mit der Rückfallebene von anon-session: bei gesperrtem Speicher liefen die Versuche unter einer
+    // Speicher-Kennung — auch die gehören jetzt ins Konto.
+    const sessionId = readAnonSessionId(ANON_PUZZLE_SESSION_KEY);
     if (!sessionId) return;
     // Lazy import to avoid circular dependency
     import('../features/puzzles/puzzle.service').then(m =>

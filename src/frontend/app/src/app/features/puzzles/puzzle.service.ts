@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { getOrCreateAnonSessionId } from '../../core/anon-session';
+import { ANON_PUZZLE_SESSION_KEY, getOrCreateAnonSessionId } from '../../core/anon-session';
 import { map } from 'rxjs/operators';
 
 /** „Track solves"-Zähler eines geteilten Puzzles (Erstversuch je Besucher). */
@@ -243,7 +243,7 @@ export class PuzzleService {
    * im unsicheren Kontext) und liefert 32 Hex-Zeichen.
    */
   private getOrCreateSessionId(): string {
-    return getOrCreateAnonSessionId('rookhub_puzzle_session');
+    return getOrCreateAnonSessionId(ANON_PUZZLE_SESSION_KEY);
   }
 
   /** Anonyme Puzzle-Session-Id (für das Offline-Vormerken anonymer Versuche). */
