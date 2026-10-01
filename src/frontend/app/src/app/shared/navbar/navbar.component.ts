@@ -23,6 +23,7 @@ import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
+import { authLinkQuery } from '../../core/return-url.util';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../fullscreen/fullscreen.util';
@@ -222,8 +223,8 @@ import {
             <span>{{ 'nav.language' | translate }}</span>
           </button>
         </mat-menu>
-        <button mat-button routerLink="/login">{{ 'nav.login' | translate }}</button>
-        <button mat-raised-button routerLink="/register">{{ 'nav.register' | translate }}</button>
+        <button mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</button>
+        <button mat-raised-button routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</button>
       }
       <mat-menu #langMenu="matMenu">
         <div class="lang-menu-label">{{ 'nav.language' | translate }}</div>
@@ -284,6 +285,9 @@ export class NavbarComponent implements OnInit {
 
   /** Impressum im ☰-Menue (neben dem Datenschutz) — nur, wo LEGAL_SITE eins vorsieht (UX-017). */
   readonly imprint = inject(LEGAL_SITE).imprint;
+
+  /** „Anmelden“/„Registrieren“ fuehren hierher zurueck — auf der Maske selbst zu deren Ziel (UX-020). */
+  get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url); }
 
   @Output() changelogClick = new EventEmitter<void>();
   @Output() quickstartClick = new EventEmitter<void>();

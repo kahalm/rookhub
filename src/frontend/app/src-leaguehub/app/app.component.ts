@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
 import { HandoffService } from '@rh/core/handoff.service';
+import { authLinkQuery } from '@rh/core/return-url.util';
 import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { environment } from '../../src/environments/environment';
@@ -27,7 +28,7 @@ import { environment } from '../../src/environments/environment';
             <span class="who">{{ u.username }}</span>
             <button type="button" class="btn-sec" (click)="logout()">Abmelden</button>
           } @else {
-            <a class="btn-sec" routerLink="/login" [queryParams]="{ returnUrl: '/' }">Anmelden</a>
+            <a class="btn-sec" routerLink="/login" [queryParams]="authQuery()">Anmelden</a>
           }
         </nav>
       </div>
@@ -70,6 +71,9 @@ export class LeagueHubAppComponent implements OnInit {
   private readonly url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)),
     { initialValue: this.router.url });
   readonly wide = computed(() => this.url().startsWith('/verein/formular/'));
+  /** „Anmelden“ fuehrt hierher zurueck (UX-020) — bisher fest „/“, auch von /verein/neu, /s/<token> oder der
+   *  Registrierung mit eigenem Ziel. Rueckfall „/“: LeagueHub hat kein /dashboard. */
+  readonly authQuery = computed(() => authLinkQuery(this.url(), '/'));
 
   ngOnInit(): void {
     // Die Seite ist deutsch (Tiroler Ligen); die geteilten Masken (Anmelden, Datenschutz) zeigen es ebenso —

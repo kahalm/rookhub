@@ -11,6 +11,7 @@ import { AuthService } from '@rh/core/auth.service';
 import { LocaleService, AppLang } from '@rh/core/locale.service';
 import { HandoffService } from '@rh/core/handoff.service';
 import { ThemeService } from '@rh/core/theme.service';
+import { authLinkQuery } from '@rh/core/return-url.util';
 
 /**
  * Kopfzeile der Turnierseite. Bewusst schmal: zwei Wege (Liste, Kalender), Sprache, Konto — und
@@ -106,7 +107,7 @@ import { ThemeService } from '@rh/core/theme.service';
           </button>
         </mat-menu>
       } @else {
-        <a mat-button routerLink="/login">{{ 'nav.login' | translate }}</a>
+        <a mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</a>
       }
     </mat-toolbar>
   `,
@@ -136,6 +137,10 @@ export class TurnierNavbarComponent {
   readonly theme = inject(ThemeService);
 
   private router = inject(Router);
+
+  /** „Anmelden“ fuehrt hierher zurueck, z. B. auf das geteilte Turnier /t/42 (UX-020). Rueckfall „/“: die Turnierseite
+   *  hat kein /dashboard, den Rueckfall der Maske. */
+  get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url, '/'); }
 
   readonly languages: AppLang[] = ['en', 'de', 'hr'];
   get partnerUrl(): string | null { return this.handoff.partnerUrl; }

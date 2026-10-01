@@ -1,8 +1,10 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { of } from 'rxjs';
-import { Router, provideRouter } from '@angular/router';
+import { Router, RouterLink, provideRouter } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { NavbarComponent } from './navbar.component';
 import { AuthService } from '../../core/auth.service';
@@ -241,5 +243,46 @@ describe('NavbarComponent App-Vollbild', () => {
     document.dispatchEvent(new Event('fullscreenchange'));
     expect(nav.fsActive).toBeTrue();
     expect(nav.fsLabel).toBe('nav.fullscreenExit');
+  });
+});
+
+/** UX-020: die Kopfzeilen-Knöpfe reichen das Ziel weiter — bisher führten sie nach der Anmeldung aufs Dashboard. */
+describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () => {
+  @Component({ standalone: true, template: '' })
+  class StubPageComponent {}
+
+  async function renderAt(url: string) {
+    TestBed.configureTestingModule({
+      imports: [NavbarComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: { currentUser$: of(null), isLoggedIn: false, isAdmin: false, logout: () => {} } },
+        { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
+        { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
+        { provide: MenuService, useValue: { visible$: of(new Set<string>()) } },
+        { provide: InAppNotificationService, useValue: { unseenCount$: of(0), refreshCount: () => {}, reset: () => {}, list: () => of([]), markAllSeen: () => of(null) } },
+        { provide: MessageService, useValue: { userUnread$: of(0), refreshUserUnread: () => {}, reset: () => {} } },
+        { provide: LocaleService, useValue: { languages: [], current: 'en', use: () => {} } },
+        { provide: ThemeService, useValue: { preference: 'system', isDark: false, toggle: () => {} } },
+        provideRouter([{ path: '**', component: StubPageComponent }]),
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl(url);
+    const fixture = TestBed.createComponent(NavbarComponent);
+    fixture.detectChanges();
+    const link = (path: string) =>
+      fixture.debugElement.query(By.css(`mat-toolbar [routerLink="${path}"]`)).injector.get(RouterLink).urlTree!.toString();
+    return { login: link('/login'), register: link('/register') };
+  }
+
+  it('auf der Maske mit Ziel: „Registrieren“ oben behält es (wie der Link in der Karte)', async () => {
+    const { register, login } = await renderAt('/login?returnUrl=%2Ffriends%2F7%2Frevenge&authRequired=1');
+    expect(register).toBe('/register?returnUrl=%2Ffriends%2F7%2Frevenge');
+    expect(login).toBe('/login?returnUrl=%2Ffriends%2F7%2Frevenge');
+  });
+
+  it('auf einer offenen Seite: zurück zu genau dieser Seite', async () => {
+    expect((await renderAt('/puzzles/daily/today')).login).toBe('/login?returnUrl=%2Fpuzzles%2Fdaily%2Ftoday');
   });
 });

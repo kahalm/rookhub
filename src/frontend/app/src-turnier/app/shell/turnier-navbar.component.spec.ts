@@ -1,7 +1,8 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { HandoffService } from '@rh/core/handoff.service';
@@ -71,7 +72,7 @@ describe('TurnierNavbarComponent', () => {
       const menuBtn = host.querySelector('button[aria-label="nav.menu"]') as HTMLElement;
       expect(getComputedStyle(menuBtn).display).not.toBe('none');
       expect(getComputedStyle(host.querySelector('.links') as HTMLElement).display).toBe('none');
-      const login = host.querySelector('a[href="/login"]') as HTMLElement;
+      const login = host.querySelector('a[href^="/login"]') as HTMLElement;   // mit returnUrl (UX-020)
       expect(getComputedStyle(login).display).not.toBe('none');
     } finally {
       restore();
@@ -126,5 +127,38 @@ describe('TurnierNavbarComponent', () => {
     const rookhub = host.querySelector('mat-toolbar button.wide') as HTMLElement;
     expect(rookhub.textContent).toContain('turnier.toRookHub');
     expect(getComputedStyle(rookhub).display).not.toBe('none');
+  });
+});
+
+/** UX-020: „Anmelden“ führt zurück, z. B. auf das geteilte Turnier — bisher über den Rückfall /dashboard in den Kalender. */
+describe('TurnierNavbarComponent „Anmelden“ behält das Ziel (UX-020)', () => {
+  @Component({ standalone: true, template: '' })
+  class StubPageComponent {}
+
+  async function loginHrefAt(url: string): Promise<string | null> {
+    localStorage.clear();   // ausgeloggt
+    TestBed.configureTestingModule({
+      imports: [TurnierNavbarComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        provideRouter([{ path: '**', component: StubPageComponent }]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: HandoffService, useValue: { partnerUrl: null, jump: () => Promise.resolve() } },
+      ],
+    });
+    await TestBed.inject(Router).navigateByUrl(url);
+    const fixture = TestBed.createComponent(TurnierNavbarComponent);
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('mat-toolbar a[href^="/login"]')!.getAttribute('href');
+  }
+
+  it('auf dem geteilten Turnier /t/42: zurück dorthin', async () => {
+    expect(await loginHrefAt('/t/42')).toBe('/login?returnUrl=%2Ft%2F42');
+  });
+
+  it('auf der Registrierung mit Ziel: das Ziel, nicht die Registrierung; ohne Ziel „/“ (kein /dashboard hier)', async () => {
+    expect(await loginHrefAt('/register?returnUrl=%2Ft%2F42')).toBe('/login?returnUrl=%2Ft%2F42');
+    TestBed.resetTestingModule();
+    expect(await loginHrefAt('/register')).toBe('/login?returnUrl=%2F');
   });
 });
