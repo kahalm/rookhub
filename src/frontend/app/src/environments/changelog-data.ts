@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.625.2", date: "2026-10-01", changes: [
+    { en: "Team pairings of national-team events are read correctly again: on pages that label four columns “Team” (federation code and name on each side) the crawler took the code and the name of the SAME team, so not a single pairing was stored — the European Team Championship 2019 produced 180 warnings per crawl instead of results.", de: "Mannschaftspaarungen von Nationalmannschafts-Turnieren werden wieder richtig gelesen: auf Seiten mit vier „Team\"-Spalten (Föderationskennung und Name je Seite) nahm der Crawler Kennung und Name DERSELBEN Mannschaft, es wurde also keine einzige Paarung gespeichert — die Mannschafts-EM 2019 erzeugte 180 Warnungen je Crawl statt Ergebnisse." },
+  ] },
   { version: "0.625.1", date: "2026-10-01", changes: [
     { en: "Building the pool of team accounts now saves as it goes and waits out a Lichess rate limit instead of throwing the whole run away — it ran into the limit after about a minute and kept losing everything it had collected. It also fetches more slowly, which is what tripped the limit.", de: "Der Aufbau des Team-Konten-Bestands speichert jetzt zwischen und sitzt eine Lichess-Drossel aus, statt den ganzen Lauf wegzuwerfen — er lief nach rund einer Minute in die Drossel und verlor jedes Mal alles Gesammelte. Außerdem ruft er langsamer ab; genau das hatte die Drossel ausgelöst." },
   ] },
