@@ -9,6 +9,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { AuthService } from '@rh/core/auth.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { GeolocationService } from '../../core/geolocation.service';
 import { TournamentDirectoryComponent } from './tournament-directory.component';
 import { DirectoryEntry, SearchProfile } from './tournament-directory.model';
@@ -245,6 +246,54 @@ describe('TournamentDirectoryComponent', () => {
     expect(component.profiles().map(p => p.id)).toEqual([3, 21]);
     expect(component.filter.profileId).toBe(21);
     expect(req.request.params.get('profileId')).toBe('21');
+    http.verify();
+  });
+
+  /**
+   * Codereview 2026-09-29, F6-014: „Löschen" steht im Menü direkt unter „Bearbeiten" — ein
+   * Fehlgriff ist per Rückgängig zurückzuholen, und ein Fehlschlag sagt „löschen", nicht „speichern".
+   */
+  it('löscht ein Suchprofil mit Rückgängig: gleiche Felder neu angelegt, alter Platz, wieder gewählt', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause'), profile(4, 'Ferienhaus')]);
+    flushList([]);
+    const action = new Subject<void>();
+    const show = spyOn(TestBed.inject(SnackbarService), 'show').and.returnValue({ onAction: () => action } as any);
+
+    component.deleteProfile(profile(3, 'Zuhause'));
+    http.expectOne({ method: 'DELETE', url: '/api/tournament-search-profiles/3' }).flush(null);
+    flushList([]);   // das gewählte Profil ist weg → ohne Umkreis neu laden
+
+    expect(component.profiles().map(p => p.id)).toEqual([4]);
+    expect(component.filter.profileId).toBeNull();
+    expect(show).toHaveBeenCalledWith('tournamentDirectory.profile.deleted', { action: 'common.undo', duration: 6000 });
+
+    action.next();
+    const post = http.expectOne({ method: 'POST', url: '/api/tournament-search-profiles' });
+    const { id: _id, ...fields } = profile(3, 'Zuhause');
+    expect(post.request.body).toEqual(fields);
+    post.flush(profile(30, 'Zuhause'));
+    const req = flushList([]);
+
+    expect(component.profiles().map(p => p.id)).toEqual([30, 4]);
+    expect(component.filter.profileId).toBe(30);
+    expect(req.request.params.get('profileId')).toBe('30');
+    http.verify();
+  });
+
+  it('ein gescheitertes Löschen meldet „nicht gelöscht" und lässt das Profil stehen', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+    const warn = spyOn(TestBed.inject(SnackbarService), 'warn');
+
+    component.deleteProfile(profile(3, 'Zuhause'));
+    http.expectOne({ method: 'DELETE', url: '/api/tournament-search-profiles/3' })
+      .flush('kaputt', { status: 500, statusText: 'Server Error' });
+
+    expect(warn).toHaveBeenCalledWith('tournamentDirectory.profile.deleteError');
+    expect(component.profiles().map(p => p.id)).toEqual([3]);
+    expect(component.filter.profileId).toBe(3);
     http.verify();
   });
 

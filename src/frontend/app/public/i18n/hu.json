@@ -3569,6 +3569,9 @@
       "errorName": "Adj nevet a profilnak.",
       "errorPlace": "Válassz egy települést a listából, vagy használd a helymeghatározás gombot — a szervernek koordináták kellenek.",
       "saveError": "A keresési profilt nem sikerült menteni.",
+      "deleted": "A(z) „{{name}}” keresési profil törölve",
+      "deleteError": "A keresési profilt nem sikerült törölni.",
+      "undoFailed": "A visszavonás nem sikerült — hozd létre újra a keresési profilt.",
       "errorNameTaken": "Már van ilyen nevű keresési profil. Válassz másik nevet.",
       "errorLimit": "Legfeljebb {{max}} keresési profilod lehet. Előbb törölj egyet."
     },

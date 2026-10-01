@@ -3848,6 +3848,9 @@
       "errorName": "Molimo daj profilu naziv.",
       "errorPlace": "Odaberi mjesto s popisa ili upotrijebi gumb za lokaciju — poslužitelju trebaju koordinate.",
       "saveError": "Profil pretrage nije se mogao spremiti.",
+      "deleted": "Profil pretrage „{{name}}“ obrisan",
+      "deleteError": "Profil pretrage nije se mogao obrisati.",
+      "undoFailed": "Poništavanje nije uspjelo — ponovno izradi profil pretrage.",
       "errorNameTaken": "Profil pretrage s tim nazivom već postoji. Odaberi drugi naziv.",
       "errorLimit": "Možeš imati najviše {{max}} profila pretrage. Najprije obriši jedan."
     },

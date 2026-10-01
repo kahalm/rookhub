@@ -3848,6 +3848,9 @@
       "errorName": "Please give the profile a name.",
       "errorPlace": "Please pick a place from the list or use the location button — the server needs coordinates.",
       "saveError": "Could not save the search profile.",
+      "deleted": "Search profile “{{name}}” deleted",
+      "deleteError": "Could not delete the search profile.",
+      "undoFailed": "Undo did not work — please create the search profile again.",
       "errorNameTaken": "A search profile with this name already exists. Please choose another name.",
       "errorLimit": "You can keep at most {{max}} search profiles. Delete one first."
     },

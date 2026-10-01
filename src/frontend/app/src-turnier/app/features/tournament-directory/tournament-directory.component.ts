@@ -737,13 +737,42 @@ export class TournamentDirectoryComponent implements OnInit {
     this.openProfileDialog(profile);
   }
 
+  /**
+   * Suchprofil loeschen — mit Rueckgaengig (Codereview 2026-09-29, F6-014). „Loeschen" steht im
+   * Menue direkt unter „Bearbeiten"; ein Fehlgriff nahm Ort, Radius, Filter und die naechtliche
+   * Meldung ohne Rueckweg mit. Wie „Nicht mehr merken" in der Merkliste kein Bestaetigungsdialog,
+   * sondern 6 s Rueckgaengig: es legt das Profil mit denselben Feldern neu an (neue Id) und setzt es
+   * an seinen alten Platz; war es gewaehlt, ist es danach wieder gewaehlt. Der naechtliche Sweep
+   * meldet nur neu gefundene Turniere, ein neu angelegtes Profil loest also keine Nachmeldung aus.
+   */
   deleteProfile(profile: SearchProfile): void {
     this.profileService.remove(profile.id).subscribe({
       next: () => {
+        const index = this.profiles().findIndex(p => p.id === profile.id);
+        const wasActive = this.filter.profileId === profile.id;
         this.profiles.update(list => list.filter(p => p.id !== profile.id));
-        if (this.filter.profileId === profile.id) this.onProfileChange(null);
+        if (wasActive) this.onProfileChange(null);
+        const ref = this.snackbar.show(
+          this.translate.instant('tournamentDirectory.profile.deleted', { name: profile.name }),
+          { action: 'common.undo', duration: 6000 });
+        ref.onAction().subscribe(() => this.restoreProfile(profile, index, wasActive));
       },
-      error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.profile.saveError')),
+      error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.profile.deleteError')),
+    });
+  }
+
+  private restoreProfile(profile: SearchProfile, index: number, reselect: boolean): void {
+    const { id: _id, ...input } = profile;
+    this.profileService.create(input).subscribe({
+      next: created => {
+        this.profiles.update(list => {
+          const next = [...list];
+          next.splice(index < 0 ? next.length : Math.min(index, next.length), 0, created);
+          return next;
+        });
+        if (reselect) this.onProfileChange(created.id);
+      },
+      error: () => this.snackbar.warn(this.translate.instant('tournamentDirectory.profile.undoFailed')),
     });
   }
 

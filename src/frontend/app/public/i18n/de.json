@@ -3848,6 +3848,9 @@
       "errorName": "Bitte gib dem Profil einen Namen.",
       "errorPlace": "Bitte einen Ort aus der Liste wählen oder den Standort-Knopf nehmen — der Server braucht Koordinaten.",
       "saveError": "Das Suchprofil konnte nicht gespeichert werden.",
+      "deleted": "Suchprofil „{{name}}“ gelöscht",
+      "deleteError": "Das Suchprofil konnte nicht gelöscht werden.",
+      "undoFailed": "Rückgängig hat nicht geklappt — bitte das Suchprofil neu anlegen.",
       "errorNameTaken": "Es gibt schon ein Suchprofil mit diesem Namen. Bitte wähle einen anderen.",
       "errorLimit": "Mehr als {{max}} Suchprofile gehen nicht. Lösche zuerst eines."
     },
