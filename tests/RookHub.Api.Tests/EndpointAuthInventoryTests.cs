@@ -53,6 +53,7 @@ public class EndpointAuthInventoryTests
         "GET /api/kids/levels/{level:int}",                          // KidsController.GetLevel
         "POST /api/kids/endless/batch",                              // KidsController.GetEndlessBatch (Endlos-Modus, Puzzles je Rating-Fenster)
         "GET /api/league/s/{token}",                                 // LeagueShareController.Get (Teilen-Link: EINE Begegnung, Token 144 Bit)
+        "GET /api/league/s/{token}/sources",                         // LeagueShareController.Sources (nur Zahlen: Partien je Quelle, 0.627.0)
         "GET /api/league/s/{token}/player/{fide}",                   // LeagueShareController.Player (nur Spieler der geteilten Meldeliste)
         "GET /api/league/s/{token}/player/{fide}/pgn",               // LeagueShareController.Pgn (dito)
         "GET /api/league/s/{token}/player/{fide}/tree",              // LeagueShareController.Tree (Eröffnungsbaum, dito)

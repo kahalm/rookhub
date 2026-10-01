@@ -1508,7 +1508,8 @@ Rollenverwaltung an).
   `LeagueClubGames` als „Vereins-Datenbank"; online je Seite `COUNT(DISTINCT ExternalId)`. Prod 01.10.2026: rund 34.800
   Lumbra, 18.800 ChessBase-Megabase, 4.600 chess-results, 212 Lichess-Übertragungen; 667.881 Lichess, 29.528 chess.com.
   Oberfläche: zwei Zeilen unter „Stand der Daten" auf der Startseite (`core/game-sources.ts`); fehlt die Zählung, fehlt nur
-  die Zeile.
+  die Zeile. Seit 0.627.0 auch auf dem Teilen-Link: `GET /api/league/s/{token}/sources` (anonym, nur mit gültigem Token,
+  sonst 404; nur Zahlen), Zeile unter „Geteilte Begegnung … Stand der Daten" in `share-page.component.ts`.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

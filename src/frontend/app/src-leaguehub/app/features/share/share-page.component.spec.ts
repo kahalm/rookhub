@@ -22,7 +22,11 @@ describe('SharePageComponent', () => {
   }
 
   beforeEach(() => {
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['shared', 'card', 'pgn', 'createShare', 'deleteShare', 'sources']);
+    api.sources.and.resolveTo({
+      board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }], boardTotal: 34838,
+      online: [{ key: 'chess.com', label: 'chess.com', games: 29522 }], onlineTotal: 29522, countedAt: '2026-10-01T14:30:00Z',
+    });
   });
 
   it('zeigt die geteilte Begegnung ohne „Link teilen"', async () => {
@@ -46,6 +50,13 @@ describe('SharePageComponent', () => {
     const links = Array.from(cta.querySelectorAll('a')).map(a => a.getAttribute('href'));
     expect(links).toEqual(['/s/TOKEN123/hochladen?art=formular', '/s/TOKEN123/hochladen']);
     expect(TestBed.inject(Title).getTitle()).toBe('Schwaz – Runde 2 | LeagueHub');
+    // Partien je Quelle wie auf der Startseite — über den Link (0.627.0).
+    await f.whenStable();
+    f.detectChanges();
+    expect(api.sources).toHaveBeenCalledWith('TOKEN123');
+    const src = el.querySelector('.src-count')!.textContent!;
+    expect(src).toContain('34.838 Brettpartien: 34.838 aus Lumbra.');
+    expect(src).toContain('29.522 Online-Partien: 29.522 von chess.com.');
   });
 
   it('abgelaufen oder widerrufen: „Link ungültig"', async () => {
@@ -54,5 +65,6 @@ describe('SharePageComponent', () => {
     await f.whenStable();
     f.detectChanges();
     expect((f.nativeElement as HTMLElement).textContent).toContain('Link ungültig');
+    expect(api.sources).not.toHaveBeenCalled();
   });
 });

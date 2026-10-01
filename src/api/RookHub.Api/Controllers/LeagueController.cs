@@ -347,6 +347,12 @@ public class LeagueShareController : ControllerBase
     public async Task<IActionResult> Get(string token, CancellationToken ct) =>
         await _league.PublicShareAsync(token, ct) is { } v ? Ok(v) : NotFound();
 
+    /// <summary>Partien im Bestand je Quelle wie auf der Startseite (0.627.0, Wunsch: „die Info auch auf den Link hin") — nur Zahlen,
+    /// kein Konto, kein Name; derselbe 30-min-Speicher.</summary>
+    [HttpGet("{token}/sources")]
+    public async Task<IActionResult> Sources(string token, [FromServices] LeagueGameSources sources, CancellationToken ct) =>
+        await _league.ShareValidAsync(token, ct) ? Ok(await sources.GetAsync(ct)) : NotFound();
+
     [HttpGet("{token}/player/{fide}")]
     public async Task<IActionResult> Player(string token, string fide, CancellationToken ct)
     {

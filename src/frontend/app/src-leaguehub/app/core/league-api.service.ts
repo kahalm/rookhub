@@ -13,9 +13,9 @@ export class LeagueApiService {
     return firstValueFrom(this.http.get<LeagueIndex>('/api/league/index'));
   }
 
-  /** Partien im Bestand je Quelle (0.626.0) — der Server zählt höchstens alle 30 min neu. */
-  sources(): Promise<GameSources> {
-    return firstValueFrom(this.http.get<GameSources>('/api/league/sources'));
+  /** Partien im Bestand je Quelle (0.626.0; über einen Teilen-Link seit 0.627.0) — der Server zählt höchstens alle 30 min neu. */
+  sources(token: string | null = null): Promise<GameSources> {
+    return firstValueFrom(this.http.get<GameSources>(`${this.base(token)}/sources`));
   }
 
   async league(tnr: number, fresh = false): Promise<League> {

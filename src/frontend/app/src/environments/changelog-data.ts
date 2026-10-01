@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.627.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub share links: the shared match now also shows how many games are in the database and where they come from (Lumbra, ChessBase Megabase, chess-results, Lichess broadcasts, club database; online from Lichess and chess.com) — only the numbers.", de: "LeagueHub-Teilen-Links: Die geteilte Begegnung zeigt jetzt auch, wie viele Partien im Bestand sind und woher sie kommen (Lumbra, ChessBase-Megabase, chess-results, Lichess-Übertragungen, Vereins-Datenbank; online von Lichess und chess.com) — nur die Zahlen." },
+  ] },
   { version: "0.626.1", date: "2026-10-01", changes: [
     { en: "Build only: three time-based tests from the code review no longer depend on the wall clock, so CI runs stop failing on slow runners.", de: "Nur Build: drei zeitabhängige Tests aus dem Codereview hängen nicht mehr an der Wanduhr, damit CI-Läufe auf langsamen Runnern nicht mehr scheitern." },
   ]},

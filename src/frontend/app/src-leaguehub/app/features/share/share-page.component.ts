@@ -3,7 +3,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { LeagueApiService } from '../../core/league-api.service';
 import { tn } from '../../core/league-format';
-import { SharedFixture } from '../../core/league.models';
+import { GameSources, SharedFixture } from '../../core/league.models';
+import { boardSourcesText, onlineSourcesText } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 
 /**
@@ -33,6 +34,12 @@ import { FixtureViewComponent } from '../../shared/fixture-view.component';
         </div>
       </section>
       <p class="stand">Geteilte Begegnung, nur zum Ansehen. Stand der Daten: {{ d.generated }}, Link gültig bis {{ until(d.expires) }}.</p>
+      @if (sources(); as s) {
+        <div class="src-count small">
+          @if (boardText(s); as b) { <p>{{ b }}.</p> }
+          @if (onlineText(s); as o) { <p>{{ o }}.</p> }
+        </div>
+      }
       <lh-fixture [leagueName]="d.league" [round]="d.round" [team]="d.team" [fixture]="d.fixture" [shareToken]="token" />
       <div class="foot-note">
         <p>Quelle: Paarungen und Meldelisten von chess-results.com; Partien aus Lumbra's GigaBase, der ChessBase-Megabase, der Partiedatenbank von chess-results.com und den Vereinspartien von SK Schwaz.</p>
@@ -49,6 +56,10 @@ export class SharePageComponent implements OnInit {
   readonly token = inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
   readonly data = signal<SharedFixture | null>(null);
   readonly invalid = signal(false);
+  /** Partien je Quelle wie auf der Startseite (0.627.0); fehlt die Zählung, fehlt nur die Zeile. */
+  readonly sources = signal<GameSources | null>(null);
+  readonly boardText = boardSourcesText;
+  readonly onlineText = onlineSourcesText;
 
   async ngOnInit(): Promise<void> {
     try {
@@ -57,6 +68,12 @@ export class SharePageComponent implements OnInit {
       this.title.setTitle(`${tn(d.team)} – Runde ${d.round} | LeagueHub`);
     } catch {
       this.invalid.set(true);
+      return;
+    }
+    try {
+      this.sources.set(await this.api.sources(this.token));
+    } catch {
+      this.sources.set(null);
     }
   }
 

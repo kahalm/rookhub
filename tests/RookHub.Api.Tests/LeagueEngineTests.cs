@@ -231,6 +231,22 @@ public class LeagueEngineTests
     }
 
     [Fact]
+    public async Task Share_SourcesOnlyWithAValidLink()
+    {
+        // „Die Info auch auf den Link hin" (0.627.0): Partien je Quelle über den Teilen-Link — aber nur mit gültigem Token.
+        var (db, svc) = ShareFixture();
+        var s = await svc.CreateShareAsync(1, 1, "A", null, default);
+        var controller = new RookHub.Api.Controllers.LeagueShareController(svc);
+        var sources = new LeagueGameSources(db);
+        var ok = Assert.IsType<Microsoft.AspNetCore.Mvc.OkObjectResult>(await controller.Sources(s!.Token, sources, default));
+        Assert.NotNull(((System.Text.Json.Nodes.JsonObject)ok.Value!)["boardTotal"]);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources("falsch", sources, default));
+        Assert.True(await svc.DeleteShareAsync(s.Token, default));
+        Assert.IsType<Microsoft.AspNetCore.Mvc.NotFoundResult>(await controller.Sources(s.Token, sources, default));
+        db.Dispose();
+    }
+
+    [Fact]
     public async Task Share_LockedRound_IsNotShareable_AndRevokedLinkIsGone()
     {
         var (db, svc) = ShareFixture();
