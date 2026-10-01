@@ -33,7 +33,7 @@ import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
-import { adminTabIndex, ADMIN_TAB_KEYS } from './admin-tabs';
+import { adminTabIndex, ADMIN_TAB_KEYS, AdminTabKey } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 import { apiErrorText } from '../../core/api-error';
 
@@ -107,6 +107,14 @@ export class AdminComponent implements OnInit {
 
   /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
   selectedTabIndex = 0;
+  /**
+   * Tabs mit eigenem, erst per Knopf gespeichertem Formular (Menü-Sichtbarkeit, Rollen): einmal geöffnet, bleiben sie
+   * bestehen (F5-020). Als `matTabContent` wurden sie beim Verlassen zerstört und beim Zurückkehren neu geladen — ein
+   * kurzer Blick in einen anderen Tab verwarf alle ungespeicherten Änderungen ohne Hinweis. Erst beim ersten Öffnen
+   * gerendert (kein Laden beim Seitenaufruf), danach hält das `@if` im eigenen Template die Komponente am Leben.
+   */
+  readonly keptTabs = new Set<AdminTabKey>();
+  private static readonly KeptTabKeys: readonly AdminTabKey[] = ['menu', 'roles'];
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private prompts = inject(PromptService);
@@ -151,7 +159,7 @@ export class AdminComponent implements OnInit {
     // Nachrichten-Tab selbst behandelt, siehe AdminMessagesComponent).
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(qp => {
       const tabIdx = adminTabIndex(qp.get('tab'));   // beliebiger Tab-Key, Index aus admin-tabs.ts
-      if (tabIdx >= 0) this.selectedTabIndex = tabIdx;
+      if (tabIdx >= 0) this.selectTab(tabIdx);
     });
 
     this.adminService.getConfig().subscribe({
@@ -164,7 +172,7 @@ export class AdminComponent implements OnInit {
    *  den Tab behält (queryParamsHandling 'merge' lässt ?thread=… o. Ä. unberührt; replaceUrl
    *  vermeidet eine zusätzliche History-Position je Klick). */
   onTabChange(index: number): void {
-    this.selectedTabIndex = index;
+    this.selectTab(index);
     const tab = ADMIN_TAB_KEYS[index];
     if (!tab) return;
     this.router.navigate([], {
@@ -173,6 +181,12 @@ export class AdminComponent implements OnInit {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+  }
+
+  private selectTab(index: number): void {
+    this.selectedTabIndex = index;
+    const key = ADMIN_TAB_KEYS[index];
+    if (key && AdminComponent.KeptTabKeys.includes(key)) this.keptTabs.add(key);
   }
 
 

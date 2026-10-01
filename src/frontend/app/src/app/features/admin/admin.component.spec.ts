@@ -1,8 +1,22 @@
-import { DestroyRef } from '@angular/core';
+import { Component, DestroyRef, OnDestroy } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, Subject, throwError } from 'rxjs';
 import { AdminComponent } from './admin.component';
 import { ADMIN_TAB_KEYS } from './admin-tabs';
+import { AdminService } from '../../core/admin.service';
+import { MenuService } from '../../core/menu.service';
+import { AuthService } from '../../core/auth.service';
+import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
+import { AdminRolesComponent } from './tabs/admin-roles.component';
+import { AdminMessagesComponent } from './tabs/admin-messages.component';
+import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
+import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
+import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
+import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { PromptService } from '../../shared/prompt-dialog/prompt-dialog.component';
 
@@ -462,5 +476,100 @@ describe('AdminComponent', () => {
       c.applyBookFilter();
       expect(c.filteredBooks.map(b => b.id)).toEqual([2]);
     });
+  });
+});
+
+/**
+ * F5-020: Menü- und Rollen-Tab speichern erst per Knopf. Als lazy `matTabContent` zerstörte ein Tabwechsel die
+ * Komponente samt ungespeicherter Änderungen; jetzt wird sie beim ersten Öffnen erzeugt und danach behalten.
+ * Gerendert mit dem echten Template, die Tab-Komponenten als Zähl-Attrappen.
+ */
+@Component({ selector: 'app-admin-menu-visibility', standalone: true, template: 'menu' })
+class MenuTabStub implements OnDestroy {
+  static created = 0;
+  static destroyed = 0;
+  draft = '';
+  constructor() { MenuTabStub.created++; }
+  ngOnDestroy(): void { MenuTabStub.destroyed++; }
+}
+@Component({ selector: 'app-admin-roles', standalone: true, template: 'roles' })
+class RolesTabStub implements OnDestroy {
+  static created = 0;
+  static destroyed = 0;
+  constructor() { RolesTabStub.created++; }
+  ngOnDestroy(): void { RolesTabStub.destroyed++; }
+}
+@Component({ selector: 'app-admin-messages', standalone: true, template: '' }) class MessagesTabStub {}
+@Component({ selector: 'app-admin-daily-puzzle', standalone: true, template: '' }) class DailyTabStub {}
+@Component({ selector: 'app-admin-puzzle-tags', standalone: true, template: '' }) class TagsTabStub {}
+@Component({ selector: 'app-admin-chessable-download', standalone: true, template: '' }) class DownloadTabStub {}
+@Component({ selector: 'app-admin-github-actions', standalone: true, template: '' }) class CiTabStub {}
+
+describe('AdminComponent – Tabs mit eigenem Formular (F5-020)', () => {
+  async function render(queryParams: Record<string, string> = {}) {
+    MenuTabStub.created = MenuTabStub.destroyed = 0;
+    RolesTabStub.created = RolesTabStub.destroyed = 0;
+    const adminService = {
+      getUsers: () => of({ items: [], totalCount: 0 }),
+      getBooks: () => of([]),
+      getGroups: () => of([]),
+      getConfig: () => of({ kibanaUrl: '' }),
+    };
+    TestBed.configureTestingModule({
+      imports: [AdminComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AdminService, useValue: adminService },
+        { provide: MenuService, useValue: { refresh: () => {} } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap(queryParams)) } },
+      ],
+    });
+    TestBed.overrideComponent(AdminComponent, {
+      remove: { imports: [AdminMenuVisibilityComponent, AdminRolesComponent, AdminMessagesComponent, AdminDailyPuzzleComponent,
+        AdminPuzzleTagsComponent, AdminChessableDownloadComponent, AdminGithubActionsComponent] },
+      add: { imports: [MenuTabStub, RolesTabStub, MessagesTabStub, DailyTabStub, TagsTabStub, DownloadTabStub, CiTabStub] },
+    });
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(AdminComponent);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const go = async (key: string) => {
+      fixture.componentInstance.onTabChange(ADMIN_TAB_KEYS.indexOf(key as any));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    };
+    return { fixture, go };
+  }
+
+  it('lädt Menü und Rollen nicht beim Seitenaufruf, behält sie aber nach dem ersten Öffnen über Tabwechsel hinweg', async () => {
+    const { fixture, go } = await render();
+    expect(MenuTabStub.created).toBe(0);
+    expect(RolesTabStub.created).toBe(0);
+
+    await go('menu');
+    expect(MenuTabStub.created).toBe(1);
+    const menu = fixture.debugElement.query(By.directive(MenuTabStub)).componentInstance as MenuTabStub;
+    menu.draft = 'fünf Einträge auf Gruppen';
+
+    await go('messages');
+    await go('roles');
+    await go('users');
+    await go('menu');
+
+    expect(MenuTabStub.destroyed).toBe(0);
+    expect(MenuTabStub.created).toBe(1);
+    expect(fixture.debugElement.query(By.directive(MenuTabStub)).componentInstance).toBe(menu);
+    expect(menu.draft).toBe('fünf Einträge auf Gruppen');
+    expect(RolesTabStub.created).toBe(1);
+    expect(RolesTabStub.destroyed).toBe(0);
+  });
+
+  it('ein Deep-Link auf den Rollen-Tab öffnet ihn gleich', async () => {
+    await render({ tab: 'roles' });
+    expect(RolesTabStub.created).toBe(1);
+    expect(MenuTabStub.created).toBe(0);
   });
 });

@@ -505,10 +505,12 @@
           </div>
         </mat-tab>
 
+        <!-- Menü und Rollen NICHT als matTabContent (F5-020): ihr Formular wird erst per Knopf gespeichert, ein
+             Tabwechsel zerstörte es samt ungespeicherter Änderungen. Erst beim ersten Öffnen gerendert, dann behalten. -->
         <mat-tab [label]="'admin.tabs.menu' | translate">
-          <ng-template matTabContent>
+          @if (keptTabs.has('menu')) {
             <app-admin-menu-visibility />
-          </ng-template>
+          }
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.messages' | translate">
@@ -530,9 +532,9 @@
         </mat-tab>
 
         <mat-tab [label]="'admin.tabs.roles' | translate">
-          <ng-template matTabContent>
+          @if (keptTabs.has('roles')) {
             <app-admin-roles />
-          </ng-template>
+          }
         </mat-tab>
 
       </mat-tab-group>
