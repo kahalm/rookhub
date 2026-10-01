@@ -257,13 +257,7 @@ public class VenueDisambiguationService
     /// </summary>
     private async Task<List<string>> FetchTeamNamesAsync(string chessResultsId, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-
-        using var response = await client.GetAsync(
-            $"/api/tournament-search/teams?id={Uri.EscapeDataString(chessResultsId)}", ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        return await _httpClientFactory.GetCrawlerJsonAsync<List<string>>(
+            $"/api/tournament-search/teams?id={Uri.EscapeDataString(chessResultsId)}", ct) ?? [];
     }
 }

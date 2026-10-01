@@ -2,6 +2,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -277,15 +278,8 @@ public class ChessArbiterDirectorySweepService
 
     private async Task<List<CrawlerChessArbiterEvent>> FetchListAsync(DateOnly today, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/chess-arbiter-calendar?today={today:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<ChessArbiterRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<ChessArbiterRow>>(
+            $"/api/chess-arbiter-calendar?today={today:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Year is { Length: > 0 }
                         && r.Name is { Length: > 0 })
@@ -325,7 +319,7 @@ public class ChessArbiterDirectorySweepService
                 return (ChessArbiterDetailOutcome.Unavailable, null);
 
             var body = await response.Content.ReadAsStringAsync(ct);
-            var row = JsonSerializer.Deserialize<ChessArbiterDetailRow>(body, JsonOptions);
+            var row = JsonSerializer.Deserialize<ChessArbiterDetailRow>(body, DirectoryCrawlerClient.JsonOptions);
             // Leerer Rumpf trotz 200: wie 204 zu behandeln waere geraten — der Crawler sagt es
             // ausdruecklich, alles andere ist eine unerwartete Antwort und wird wiederholt.
             return row is null
@@ -340,8 +334,6 @@ public class ChessArbiterDirectorySweepService
             return (ChessArbiterDetailOutcome.Unavailable, null);
         }
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record ChessArbiterRow(
         string? Year, string? EventId, string? Name, string? StartDate, string? Place,
@@ -362,8 +354,4 @@ public class ChessArbiterDirectorySweepService
     public sealed record CrawlerChessArbiterDetail(
         DateOnly? Start, DateOnly? End, string? Place, string? TimeControl, int? Rounds,
         string? System, int? PlayerCount);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

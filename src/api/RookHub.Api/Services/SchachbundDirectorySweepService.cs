@@ -4,6 +4,7 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -220,15 +221,8 @@ public class SchachbundDirectorySweepService
 
     private async Task<List<CrawlerSchachbundEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/schachbund-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<SchachbundRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<SchachbundRow>>(
+            $"/api/schachbund-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerSchachbundEvent(
@@ -242,8 +236,6 @@ public class SchachbundDirectorySweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record SchachbundRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Region,
         string? Place, string? TimeControl, int? Rounds, string? System, string? Url);
@@ -251,8 +243,4 @@ public class SchachbundDirectorySweepService
     public sealed record CrawlerSchachbundEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Region, string? Place,
         string? TimeControl, int? Rounds, string? System, string? Url);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

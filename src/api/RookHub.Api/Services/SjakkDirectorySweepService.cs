@@ -5,6 +5,7 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -306,14 +307,8 @@ public class SjakkDirectorySweepService
 
     private async Task<List<CrawlerSjakkEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/sjakk-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<SjakkRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<SjakkRow>>(
+            $"/api/sjakk-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerSjakkEvent(
@@ -328,22 +323,12 @@ public class SjakkDirectorySweepService
 
     private async Task<SjakkDetail?> FetchDetailAsync(string slug, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/sjakk-calendar/detail?slug={Uri.EscapeDataString(slug)}", ct);
-
         // 404 = die Seite gibt es nicht mehr oder sie ist nicht lesbar. Kein Fehler: der Termin
         // steht schon, nur seine Zusatzangaben fehlen.
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        return JsonSerializer.Deserialize<SjakkDetail>(body, JsonOptions);
+        return await _httpClientFactory.GetCrawlerJsonAsync<SjakkDetail>(
+            $"/api/sjakk-calendar/detail?slug={Uri.EscapeDataString(slug)}", ct,
+            absentOn: System.Net.HttpStatusCode.NotFound);
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record SjakkRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Url);
@@ -354,8 +339,4 @@ public class SjakkDirectorySweepService
 
     public sealed record CrawlerSjakkEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Url);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

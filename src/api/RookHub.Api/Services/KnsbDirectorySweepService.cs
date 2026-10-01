@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -213,14 +214,8 @@ public class KnsbDirectorySweepService
     private async Task<KnsbFetch> FetchAsync(DateOnly from, CancellationToken ct)
     {
         var unreadable = new List<string>();
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/knsb-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<KnsbRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<KnsbRow>>(
+            $"/api/knsb-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         var result = new List<CrawlerKnsbEvent>();
         foreach (var r in rows)
         {
@@ -240,14 +235,9 @@ public class KnsbDirectorySweepService
         return new KnsbFetch(result, unreadable);
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record KnsbRow(
         string? Slug, string? Name, string? StartDate, string? Url, string? Speed, bool Online);
 
     public sealed record CrawlerKnsbEvent(
         string Slug, string Name, DateOnly StartDate, string? Url, string? Speed, bool Online);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, CultureInfo.InvariantCulture, out var d) ? d : null;
 }

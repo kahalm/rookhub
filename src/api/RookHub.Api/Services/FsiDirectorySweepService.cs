@@ -2,6 +2,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -206,15 +207,8 @@ public class FsiDirectorySweepService
 
     private async Task<List<CrawlerFsiEvent>> FetchAsync(DateOnly from, DateOnly to, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/fsi-calendar?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<FsiRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<FsiRow>>(
+            $"/api/fsi-calendar?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerFsiEvent(
@@ -228,8 +222,6 @@ public class FsiDirectorySweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record FsiRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Region,
         string? Province, string? Place, string? EventType, string? TimeControl, int? Rounds);
@@ -237,8 +229,4 @@ public class FsiDirectorySweepService
     public sealed record CrawlerFsiEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Region,
         string? Province, string? Place, string? EventType, string? TimeControl, int? Rounds);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

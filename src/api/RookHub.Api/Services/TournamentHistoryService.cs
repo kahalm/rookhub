@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -486,14 +487,14 @@ public class TournamentHistoryService
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             _log.LogWarning(ex, "Turnierverlauf {Key}: Trefferliste nicht erreichbar", identity.Key);
-            if (sync is not null) sync.LastError = Truncate(ex.Message);
+            if (sync is not null) sync.LastError = Truncate(ex.Message, 500);
             else _db.PlayerHistorySyncs.Add(new PlayerHistorySync
             {
                 PlayerKey = identity.Key,
                 // NICHT jetzt: der Zeitstempel steht fuer einen erfolgreichen Abruf. Sonst
                 // bliebe ein Konto nach einem Netzfehler zwoelf Stunden ohne Verlauf.
                 LastFetchedAt = DateTime.MinValue,
-                LastError = Truncate(ex.Message),
+                LastError = Truncate(ex.Message, 500),
             });
             await _db.SaveChangesAsync(ct);
             // Der Zwischenspeicher gilt weiter — eine alte Liste ist besser als keine.
@@ -828,51 +829,30 @@ public class TournamentHistoryService
         var path = $"/api/tournament-search/player-history?lastName={Uri.EscapeDataString(identity.LastName)}";
         if (identity.FirstName is not null) path += $"&firstName={Uri.EscapeDataString(identity.FirstName)}";
 
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(path, ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<List<CrawlerPlayerTournament>>(json, JsonOptions) ?? [];
+        return await _httpClientFactory.GetCrawlerJsonAsync<List<CrawlerPlayerTournament>>(path, ct) ?? [];
     }
 
     private async Task<CrawlerPlayerCard?> FetchCardFromCrawlerAsync(
         string chessResultsId, int snr, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/tournament-search/player-card?id={Uri.EscapeDataString(chessResultsId)}&snr={snr}", ct);
-
         // 204: die Seite hat keinen Player-info-Block (falsche Startnummer). Kein Fehler, aber
         // auch nichts zu speichern.
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent) return null;
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return string.IsNullOrWhiteSpace(json)
-            ? null
-            : JsonSerializer.Deserialize<CrawlerPlayerCard>(json, JsonOptions);
+        return await _httpClientFactory.GetCrawlerJsonAsync<CrawlerPlayerCard>(
+            $"/api/tournament-search/player-card?id={Uri.EscapeDataString(chessResultsId)}&snr={snr}", ct,
+            absentOn: System.Net.HttpStatusCode.NoContent, emptyAsAbsent: true);
     }
 
     private async Task<CrawlerTournamentInfo?> FetchTournamentInfoFromCrawlerAsync(
         string chessResultsId, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/tournament-search/tournament-info?id={Uri.EscapeDataString(chessResultsId)}", ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return string.IsNullOrWhiteSpace(json)
-            ? null
-            : JsonSerializer.Deserialize<CrawlerTournamentInfo>(json, JsonOptions);
+        return await _httpClientFactory.GetCrawlerJsonAsync<CrawlerTournamentInfo>(
+            $"/api/tournament-search/tournament-info?id={Uri.EscapeDataString(chessResultsId)}", ct,
+            emptyAsAbsent: true);
     }
 
     internal sealed record CrawlerTournamentInfo(
         string TournamentId, string? Name, string? DateText, string? Location, string? TimeControl,
         string? TimeControlKind, int? TotalRounds);
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     internal sealed record CrawlerPlayerTournament(
         string TournamentId, string TournamentName, string? EndDate, int? Snr,
@@ -890,7 +870,4 @@ public class TournamentHistoryService
         return DateOnly.TryParseExact(text.Trim(), formats, CultureInfo.InvariantCulture,
             DateTimeStyles.None, out var date) ? date : null;
     }
-
-    private static string Truncate(string? value, int max = 500) =>
-        (value ?? "").Length <= max ? value ?? "" : value![..max];
 }

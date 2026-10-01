@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -347,14 +348,8 @@ public class ChessScotlandDirectorySweepService
 
     private async Task<List<CrawlerChessScotlandEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/chess-scotland-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<ChessScotlandRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<ChessScotlandRow>>(
+            $"/api/chess-scotland-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.Slug is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerChessScotlandEvent(
@@ -370,22 +365,12 @@ public class ChessScotlandDirectorySweepService
 
     private async Task<ChessScotlandDetail?> FetchDetailAsync(string slug, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/chess-scotland-calendar/detail?slug={Uri.EscapeDataString(slug)}", ct);
-
         // 404 = die Seite gibt es nicht mehr oder sie ist nicht lesbar. Kein Fehler: der Termin
         // steht schon, nur sein Spielort fehlt noch.
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        return JsonSerializer.Deserialize<ChessScotlandDetail>(body, JsonOptions);
+        return await _httpClientFactory.GetCrawlerJsonAsync<ChessScotlandDetail>(
+            $"/api/chess-scotland-calendar/detail?slug={Uri.EscapeDataString(slug)}", ct,
+            absentOn: System.Net.HttpStatusCode.NotFound);
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record ChessScotlandRow(
         string? Slug, string? Name, string? StartDate, string? EndDate, string? Url,
@@ -396,7 +381,4 @@ public class ChessScotlandDirectorySweepService
     public sealed record CrawlerChessScotlandEvent(
         string Slug, string Name, DateOnly? Start, DateOnly? End, string? Url,
         List<string> Categories, List<string> TimeControls);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, CultureInfo.InvariantCulture, out var d) ? d : null;
 }

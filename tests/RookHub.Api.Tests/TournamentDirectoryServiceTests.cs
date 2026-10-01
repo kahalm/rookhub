@@ -116,6 +116,48 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.NotNull(await _db.TournamentDirectoryEntries.SingleOrDefaultAsync(e => e.PublicId == "f4711"));
     }
 
+    /// <summary>
+    /// Fehlende Angaben der Trefferliste bleiben <c>NULL</c> — wie bei den Verbandseintraegen.
+    /// Die eigene Kuerzungs-Kopie des Sweeps machte daraus einen Leerstring (Codereview A5-013),
+    /// chess-results-Eintraege trugen fehlenden Veranstalter/Turnierleiter/Bundesland als
+    /// <c>''</c>. Und ein Altbestand-Eintrag mit <c>''</c> meldet beim Umstellen KEINE Aenderung:
+    /// der Aenderungs-Hash liest beides als „kein Ort".
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_MissingTextFields_StayNull_WithoutChangeNotification()
+    {
+        const string sparse = """
+            [{"chessResultsId":"111","name":"Open Braunau","federation":"AUT",
+              "startDate":"2026-12-18","endDate":"2026-12-20","rounds":7,"playerCount":10}]
+            """;
+        await CreateSubscriptionAsync("111");
+        _db.TournamentDirectoryEntries.Add(new TournamentDirectoryEntry
+        {
+            PublicId = "111", ChessResultsId = "111", Name = "Open Braunau", Federation = "AUT",
+            State = "", LocationText = "", TimeControlText = "", Organizer = "", Director = "",
+            ChiefArbiter = "",
+            StartDate = new DateOnly(2026, 12, 18), EndDate = new DateOnly(2026, 12, 20),
+            ChangeHash = TournamentDirectoryService.ComputeChangeHash(
+                new DateOnly(2026, 12, 18), new DateOnly(2026, 12, 20), ""),
+            FirstSeenAt = DateTime.UtcNow, LastSeenAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var (result, _) = await CreateService(sparse).SweepFederationAsync("AUT", Today);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, result.Changed);
+        Assert.Empty(_db.Notifications);
+        var entry = await _db.TournamentDirectoryEntries.SingleAsync();
+        Assert.Null(entry.State);
+        Assert.Null(entry.LocationText);
+        Assert.Null(entry.TimeControlText);
+        Assert.Null(entry.Organizer);
+        Assert.Null(entry.Director);
+        Assert.Null(entry.ChiefArbiter);
+        Assert.Equal("Open Braunau", entry.Name);
+    }
+
     [Fact]
     public async Task SweepFederationAsync_SecondRunWithSameData_ChangesNothingAndNotifiesNobody()
     {

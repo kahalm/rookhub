@@ -4,6 +4,7 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -197,14 +198,8 @@ public class WcuDirectorySweepService
 
     private async Task<List<CrawlerWcuEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/wcu-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<WcuRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<WcuRow>>(
+            $"/api/wcu-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerWcuEvent(
@@ -217,15 +212,9 @@ public class WcuDirectorySweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record WcuRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Place, string? Url);
 
     public sealed record CrawlerWcuEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Place, string? Url);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

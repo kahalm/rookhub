@@ -2,6 +2,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -156,14 +157,8 @@ public class ChessHuDirectorySweepService
 
     private async Task<List<CrawlerChessHuEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/chess-hu-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<ChessHuRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<ChessHuRow>>(
+            $"/api/chess-hu-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerChessHuEvent(
@@ -177,16 +172,10 @@ public class ChessHuDirectorySweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record ChessHuRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Place,
         bool HasVenue, bool FideRated);
 
     public sealed record CrawlerChessHuEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Place, bool HasVenue);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

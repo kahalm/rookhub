@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -478,20 +479,12 @@ public class TournamentDirectoryService
     /// Holt eine Trefferliste vom Crawler. Eigener Client (<see cref="CrawlerClientName"/>) statt
     /// des geteilten Live-Proxys, weil eine Suche hinter dem Rate-Limiter des Crawlers legitim
     /// laenger braucht als die 30 s, die fuer eine Live-Abfrage richtig sind.
+    ///
+    /// <para>Ein leerer Rumpf ist eine leere Liste (<see cref="ParseRows"/> liest aus einem
+    /// Nicht-Array keine Zeile).</para>
     /// </summary>
-    private async Task<JsonElement> FetchAsync(string path, CancellationToken ct)
-    {
-        var client = _httpClientFactory.CreateClient(CrawlerClientName);
-        using var response = await client.GetAsync(path, ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        return string.IsNullOrWhiteSpace(body)
-            ? JsonSerializer.Deserialize<JsonElement>("[]")
-            : JsonSerializer.Deserialize<JsonElement>(body);
-    }
+    private Task<JsonElement> FetchAsync(string path, CancellationToken ct) =>
+        _httpClientFactory.GetCrawlerJsonAsync<JsonElement>(path, ct, emptyAsAbsent: true);
 
     // ----- Benachrichtigungen ----------------------------------------------
 
@@ -894,9 +887,6 @@ public class TournamentDirectoryService
     }
 
     private static string DetailLink(string publicId) => $"/tournaments/calendar?t={publicId}";
-
-    private static string Truncate(string? value, int max) =>
-        value is null ? "" : value.Length <= max ? value : value[..max];
 
     // ----- Antwort des Crawlers --------------------------------------------
 

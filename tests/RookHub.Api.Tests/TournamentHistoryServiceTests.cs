@@ -173,6 +173,28 @@ public class TournamentHistoryServiceTests : IDisposable
         Assert.Equal(before + 1, _handler.HistoryCalls);
     }
 
+    /// <summary>
+    /// Ein Fehlerstatus des Crawlers kommt als <see cref="RookHub.Api.Exceptions.CrawlerRequestException"/>
+    /// mit Status und Rumpf an — wie bei allen anderen Hintergrunddiensten (Codereview A5-013).
+    /// Vorher ueber <c>EnsureSuccessStatusCode</c> als nackte <see cref="HttpRequestException"/>:
+    /// im Vermerk stand dann nur „Response status code does not indicate success", der Grund des
+    /// Crawlers fehlte.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_CrawlerStatusFehler_VermerktStatusUndGrundDesCrawlers()
+    {
+        var userId = await CreateUserAsync();
+        _handler.HistoryStatus = HttpStatusCode.ServiceUnavailable;
+        _handler.History = """{"message":"Crawler queue full"}""";
+
+        var history = Assert.Single(await CreateService().GetAsync([userId]));
+
+        Assert.Equal(TournamentHistoryService.HistoryStatus.SourceUnavailable, history.Status);
+        var sync = await _db.PlayerHistorySyncs.SingleAsync();
+        Assert.StartsWith("Crawler returned 503", sync.LastError);
+        Assert.Contains("Crawler queue full", sync.LastError);
+    }
+
     // ----- Wer ist der Spieler? --------------------------------------------
 
     /// <summary>

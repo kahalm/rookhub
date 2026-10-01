@@ -3,6 +3,7 @@ using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -289,15 +290,8 @@ public class ChessSkDirectorySweepService
     private async Task<List<CrawlerChessSkEvent>> FetchAsync(
         DateOnly from, bool details, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/chess-sk-calendar?from={from:yyyy-MM-dd}&details={(details ? "true" : "false")}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<ChessSkRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<ChessSkRow>>(
+            $"/api/chess-sk-calendar?from={from:yyyy-MM-dd}&details={(details ? "true" : "false")}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerChessSkEvent(
@@ -320,8 +314,6 @@ public class ChessSkDirectorySweepService
     private static string FederationOf(string? country) =>
         country is { Length: 3 } ? country.ToUpperInvariant() : "SVK";
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record ChessSkRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? City,
         string? Address, string? Country, string? ChessResultsId, string? Website, string? Url,
@@ -336,8 +328,4 @@ public class ChessSkDirectorySweepService
         /// <summary>Die Quelle fuehrt Online-Turniere als eigene Art — sie haben keinen Spielort.</summary>
         public bool Online => string.Equals(Type, "online", StringComparison.OrdinalIgnoreCase);
     }
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

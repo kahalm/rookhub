@@ -2,6 +2,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -445,15 +446,8 @@ public class FfeDirectorySweepService
     private async Task<List<CrawlerFfeEvent>> FetchListAsync(int months, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/ffe-calendar?from={today:yyyy-MM-dd}&months={months}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<FfeRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<FfeRow>>(
+            $"/api/ffe-calendar?from={today:yyyy-MM-dd}&months={months}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerFfeEvent(
@@ -482,7 +476,7 @@ public class FfeDirectorySweepService
             if (!response.IsSuccessStatusCode) return null;
 
             var body = await response.Content.ReadAsStringAsync(ct);
-            var row = JsonSerializer.Deserialize<FfeDetailRow>(body, JsonOptions);
+            var row = JsonSerializer.Deserialize<FfeDetailRow>(body, DirectoryCrawlerClient.JsonOptions);
             return row is null
                 ? null
                 : new CrawlerFfeDetail(ParseDate(row.StartDate), ParseDate(row.EndDate),
@@ -495,8 +489,6 @@ public class FfeDirectorySweepService
             return null;
         }
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record FfeRow(
         string? EventId, string? Name, string? StartDate, string? City, string? Department,
@@ -513,8 +505,4 @@ public class FfeDirectorySweepService
     public sealed record CrawlerFfeDetail(
         DateOnly? Start, DateOnly? End, string? City, string? Department, string? Address,
         string? TimeControl, int? Rounds, string? PairingSystem);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

@@ -2,6 +2,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -170,14 +171,8 @@ public class FrsahDirectorySweepService
 
     private async Task<List<CrawlerFrsahEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/frsah-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<FrsahRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<FrsahRow>>(
+            $"/api/frsah-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerFrsahEvent(
@@ -190,16 +185,10 @@ public class FrsahDirectorySweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record FrsahRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Url,
         string? Place, string? City, string? PostalCode, string? Country);
 
     public sealed record CrawlerFrsahEvent(
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Place, string? Url);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

@@ -242,17 +242,9 @@ public class TournamentRoundPlanService
 
     private async Task<List<CrawlerRoundDate>> FetchRoundPlanAsync(string chessResultsId, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-
-        using var response = await client.GetAsync(
-            $"/api/tournament-search/rounds?id={Uri.EscapeDataString(chessResultsId)}", ct);
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<List<CrawlerRoundDate>>(json, JsonOptions) ?? [];
+        return await _httpClientFactory.GetCrawlerJsonAsync<List<CrawlerRoundDate>>(
+            $"/api/tournament-search/rounds?id={Uri.EscapeDataString(chessResultsId)}", ct) ?? [];
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     /// <summary>Die Antwort des Crawlers — Datum als ISO-Text, hier geparst.</summary>
     internal sealed record CrawlerRoundDate(int Round, DateOnly Date, string? Time)

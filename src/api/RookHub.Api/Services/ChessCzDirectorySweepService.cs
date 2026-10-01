@@ -5,6 +5,7 @@ using RookHub.Api.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -357,14 +358,8 @@ public class ChessCzDirectorySweepService
 
     private async Task<List<CrawlerChessCzEvent>> FetchAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/chess-cz-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<ChessCzRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<ChessCzRow>>(
+            $"/api/chess-cz-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerChessCzEvent(
@@ -390,8 +385,6 @@ public class ChessCzDirectorySweepService
 
     private static string UrlOf(string slug) => $"https://www.chess.cz/akce/{slug}/";
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record ChessCzRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Place,
         string? Country, string? ChessResultsId, bool Youth, bool NonTournament,
@@ -401,8 +394,4 @@ public class ChessCzDirectorySweepService
         string EventId, string Name, DateOnly? Start, DateOnly? End, string? Place,
         string Federation, string? ChessResultsId, string? Url, bool Youth, bool NonTournament,
         int? Round, string? Series);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

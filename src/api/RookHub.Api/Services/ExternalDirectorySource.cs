@@ -594,6 +594,8 @@ public static class ExternalDirectorySource
         TournamentDirectoryService.ApplyGrouping(entry);
     }
 
-    public static string? Truncate(string? value, int max) =>
-        value is null ? null : value.Length <= max ? value : value[..max];
+    /// <summary>Dieselbe Kuerzung wie <see cref="DirectoryText.Truncate"/> — hier fuer die
+    /// vielen Aufrufer der Zusatzquellen erhalten.</summary>
+    [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(value))]
+    public static string? Truncate(string? value, int max) => DirectoryText.Truncate(value, max);
 }

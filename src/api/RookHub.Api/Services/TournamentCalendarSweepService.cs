@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -236,15 +237,8 @@ public class TournamentCalendarSweepService
 
     private async Task<List<CrawlerCalendarEntry>> FetchAsync(string federation, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
-            $"/api/tournament-search/calendar?fed={Uri.EscapeDataString(federation)}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<CalendarRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<CalendarRow>>(
+            $"/api/tournament-search/calendar?fed={Uri.EscapeDataString(federation)}", ct) ?? [];
         return rows
             .Where(r => r.Name is { Length: > 0 })
             .Select(r => new CrawlerCalendarEntry(
@@ -254,8 +248,6 @@ public class TournamentCalendarSweepService
             .ToList();
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record CalendarRow(
         string? Name, string? Federation, string? StartDate, string? EndDate,
         string? CalendarId, string? Url, string? ChessResultsId);
@@ -263,11 +255,4 @@ public class TournamentCalendarSweepService
     internal sealed record CrawlerCalendarEntry(
         string Name, string? Federation, DateOnly? Start, DateOnly? End,
         string? CalendarId, string? Url, string? ChessResultsId);
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
-
-    private static string? Truncate(string? value, int max) =>
-        value is null ? null : value.Length <= max ? value : value[..max];
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -315,18 +316,13 @@ public class FideDirectorySweepService
 
     private async Task<FideFetch> FetchYearAsync(int year, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/fide-calendar?year={year}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<FideEventRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<FideEventRow>>(
+            $"/api/fide-calendar?year={year}", ct) ?? [];
         var parsed = rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerFideEvent(
-                r.EventId!, r.Name!, ParseDate(r.StartDate), ParseDate(r.EndDate), r.City, r.Country))
+                r.EventId!, r.Name!, ParseDate(r.StartDate) ?? default, ParseDate(r.EndDate) ?? default,
+                r.City, r.Country))
             .ToList();
 
         // Zeilen ohne lesbaren Termin fallen aus der Verarbeitung, ihre Kennungen aber NICHT aus
@@ -339,18 +335,9 @@ public class FideDirectorySweepService
             [.. parsed.Where(e => e.Start == default || e.End == default).Select(e => e.EventId)]);
     }
 
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record FideEventRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? City, string? Country);
 
     internal sealed record CrawlerFideEvent(
         string EventId, string Name, DateOnly Start, DateOnly End, string? City, string? Country);
-
-    private static DateOnly ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var date)
-            ? date : default;
-
-    private static string? Truncate(string? value, int max) =>
-        value is null ? null : value.Length <= max ? value : value[..max];
 }

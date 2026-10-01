@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -326,14 +327,8 @@ public class IcuDirectorySweepService
 
     private async Task<List<CrawlerIcuEvent>> FetchListAsync(DateOnly from, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync($"/api/icu-calendar?from={from:yyyy-MM-dd}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        var rows = JsonSerializer.Deserialize<List<IcuRow>>(body, JsonOptions) ?? [];
+        var rows = await _httpClientFactory.GetCrawlerJsonAsync<List<IcuRow>>(
+            $"/api/icu-calendar?from={from:yyyy-MM-dd}", ct) ?? [];
         return rows
             .Where(r => r.EventId is { Length: > 0 } && r.Name is { Length: > 0 })
             .Select(r => new CrawlerIcuEvent(
@@ -362,7 +357,7 @@ public class IcuDirectorySweepService
             if (!response.IsSuccessStatusCode) return null;
 
             var body = await response.Content.ReadAsStringAsync(ct);
-            var row = JsonSerializer.Deserialize<IcuDetailRow>(body, JsonOptions);
+            var row = JsonSerializer.Deserialize<IcuDetailRow>(body, DirectoryCrawlerClient.JsonOptions);
             return row is null
                 ? null
                 : new ParsedIcuDetail(row.ChessResultsId, row.PlayerCount, row.Website);
@@ -373,8 +368,6 @@ public class IcuDirectorySweepService
             return null;
         }
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private sealed record IcuRow(
         string? EventId, string? Name, string? StartDate, string? EndDate, string? Url,
@@ -409,8 +402,4 @@ public class IcuDirectorySweepService
         private bool Has(string category) =>
             Categories.Any(c => string.Equals(c, category, StringComparison.OrdinalIgnoreCase));
     }
-
-    private static DateOnly? ParseDate(string? text) =>
-        DateOnly.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var d)
-            ? d : null;
 }

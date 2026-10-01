@@ -3,6 +3,7 @@ using RookHub.Api.Data;
 using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using System.Text.Json;
+using static RookHub.Api.Services.DirectoryText;
 
 namespace RookHub.Api.Services;
 
@@ -250,24 +251,12 @@ public class FideEventDetailService
 
     private async Task<CrawlerFideDetail?> FetchAsync(string fideId, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient(TournamentDirectoryService.CrawlerClientName);
-        using var response = await client.GetAsync(
+        return await _httpClientFactory.GetCrawlerJsonAsync<CrawlerFideDetail>(
             $"/api/fide-calendar/event?id={Uri.EscapeDataString(fideId)}", ct);
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        if (!response.IsSuccessStatusCode)
-            throw new CrawlerRequestException(response.StatusCode, body);
-
-        return JsonSerializer.Deserialize<CrawlerFideDetail>(body, JsonOptions);
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     internal sealed record CrawlerFideDetail(
         string? EventId, string? EventType, string? TimeControl, string? TimeControlText,
         string? System, int? Rounds, int? Players, string? Country, string? City,
         string? VenueAddress, string? Website);
-
-    private static string? Truncate(string? value, int max) =>
-        value is null ? null : value.Length <= max ? value : value[..max];
 }
