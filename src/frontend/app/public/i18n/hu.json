@@ -92,6 +92,7 @@
     "guess": "Pontjátszma",
     "tournamentCalendar": "Versenynaptár",
     "tournamentHistory": "Versenyeim",
+    "tournamentBookmarks": "Megjelölt",
     "reconstruct": "Játszma rekonstruálása",
     "scoresheet": "Játszmalap beolvasása"
   },
@@ -956,7 +957,7 @@
       "newRoundSnack": "Új forduló érhető el! {{round}}. forduló"
     },
     "list": {
-      "title": "Versenyek",
+      "title": "Megjelölt versenyek",
       "loadFailed": "A megjelölt versenyeidet nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra.",
       "emptyBookmarks": "Még nem jelöltél meg versenyt. Jelöld meg őket a naptárban — itt fognak megjelenni.",
       "upcoming": "Következik",

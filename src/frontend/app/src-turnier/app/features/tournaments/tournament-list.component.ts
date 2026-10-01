@@ -13,7 +13,8 @@ import { TournamentListService } from '../../core/tournament-list.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 
 /**
- * „Meine Turniere": die GEMERKTEN Turniere, und sonst nichts.
+ * „Gemerkt": die GEMERKTEN Turniere, und sonst nichts. (Bis F6-019 hiess die Seite nur „Turniere", und
+ * „Meine Turniere" im Menue fuehrte zum Verlauf — die Merkliste war als solche nicht zu erkennen.)
  *
  * <p><b>Was hier vorher stand</b> und warum es weg ist: eine Liste ALLER jemals geholten Turniere
  * — also auch der Turniere, die jemand anderes irgendwann einmal importiert hat — mit einem

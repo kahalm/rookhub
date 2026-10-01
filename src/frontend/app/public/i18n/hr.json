@@ -254,6 +254,7 @@
     "guess": "Bodovna partija",
     "tournamentCalendar": "Kalendar turnira",
     "tournamentHistory": "Moji turniri",
+    "tournamentBookmarks": "Zabilježeno",
     "reconstruct": "Rekonstrukcija partije",
     "scoresheet": "Učitaj zapisnik partije"
   },
@@ -1194,7 +1195,7 @@
       "newRoundSnack": "Dostupno novo kolo! Kolo {{round}}"
     },
     "list": {
-      "title": "Turniri",
+      "title": "Zabilježeni turniri",
       "loadFailed": "Tvoji zabilježeni turniri nisu se mogli učitati. Provjeri vezu i pokušaj ponovno.",
       "emptyBookmarks": "Još nisi zabilježio nijedan turnir. Zabilježi ih u kalendaru — pojavit će se ovdje.",
       "upcoming": "Predstoji",

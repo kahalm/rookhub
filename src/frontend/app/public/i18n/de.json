@@ -254,6 +254,7 @@
     "guess": "Punktepartie",
     "tournamentCalendar": "Turnierkalender",
     "tournamentHistory": "Meine Turniere",
+    "tournamentBookmarks": "Gemerkt",
     "reconstruct": "Partie rekonstruieren",
     "scoresheet": "Partieformular einlesen"
   },
@@ -1194,7 +1195,7 @@
       "newRoundSnack": "Neue Runde verfügbar! Runde {{round}}"
     },
     "list": {
-      "title": "Turniere",
+      "title": "Gemerkte Turniere",
       "loadFailed": "Deine gemerkten Turniere konnten nicht geladen werden. Prüfe die Verbindung und versuche es erneut.",
       "emptyBookmarks": "Du hast noch kein Turnier gemerkt. Im Kalender merken — hier tauchen sie dann auf.",
       "upcoming": "Kommt",

@@ -254,6 +254,7 @@
     "guess": "Point game",
     "tournamentCalendar": "Tournament calendar",
     "tournamentHistory": "My tournaments",
+    "tournamentBookmarks": "Bookmarked",
     "reconstruct": "Reconstruct game",
     "scoresheet": "Read a scoresheet"
   },
@@ -1194,7 +1195,7 @@
       "newRoundSnack": "New round available! Round {{round}}"
     },
     "list": {
-      "title": "Tournaments",
+      "title": "Bookmarked tournaments",
       "loadFailed": "Your bookmarked tournaments could not be loaded. Check your connection and try again.",
       "emptyBookmarks": "You have not bookmarked a tournament yet. Bookmark them in the calendar — they will appear here.",
       "upcoming": "Coming up",

@@ -14,7 +14,7 @@ import { ThemeService } from '@rh/core/theme.service';
 import { authLinkQuery } from '@rh/core/return-url.util';
 
 /**
- * Kopfzeile der Turnierseite. Bewusst schmal: zwei Wege (Liste, Kalender), Sprache, Konto — und
+ * Kopfzeile der Turnierseite. Bewusst schmal: drei Wege (Kalender, Gemerkt, Meine Turniere), Sprache, Konto — und
  * der Sprung zurueck nach RookHub, der die Anmeldung mitnimmt.
  *
  * <p>Am Handy (bis 768px, der Bruch der ganzen App) traegt die Zeile nur Marke, ☰ und
@@ -31,12 +31,14 @@ import { authLinkQuery } from '@rh/core/return-url.util';
     MatIconModule, MatMenuModule, MatTooltipModule, TranslatePipe],
   template: `
     <mat-toolbar color="primary" class="tb">
-      <a class="brand" routerLink="/tournaments">{{ 'turnier.brand' | translate }}</a>
+      <!-- Die Marke fuehrt zur Startseite (/ = Kalender, siehe app.routes.ts), nicht auf die Merkliste (F6-019). -->
+      <a class="brand" routerLink="/">{{ 'turnier.brand' | translate }}</a>
 
+      <!-- Kalender zuerst (die Startseite); die Merkliste heisst „Gemerkt" wie der Knopf, der sie fuellt. -->
       <nav class="links">
-        <a mat-button routerLink="/tournaments" routerLinkActive="on"
-           [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournaments' | translate }}</a>
         <a mat-button routerLink="/tournaments/calendar" routerLinkActive="on">{{ 'nav.tournamentCalendar' | translate }}</a>
+        <a mat-button routerLink="/tournaments" routerLinkActive="on"
+           [routerLinkActiveOptions]="{ exact: true }">{{ 'nav.tournamentBookmarks' | translate }}</a>
         <a mat-button routerLink="/tournaments/history" routerLinkActive="on">{{ 'nav.tournamentHistory' | translate }}</a>
       </nav>
 
@@ -49,9 +51,9 @@ import { authLinkQuery } from '@rh/core/return-url.util';
         <mat-icon>menu</mat-icon>
       </button>
       <mat-menu #navMenu="matMenu">
-        <a mat-menu-item routerLink="/tournaments">{{ 'nav.tournaments' | translate }}</a>
-        <a mat-menu-item routerLink="/tournaments/calendar">{{ 'nav.tournamentCalendar' | translate }}</a>
-        <a mat-menu-item routerLink="/tournaments/history">{{ 'nav.tournamentHistory' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments/calendar"><mat-icon>event</mat-icon> {{ 'nav.tournamentCalendar' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments"><mat-icon>bookmarks</mat-icon> {{ 'nav.tournamentBookmarks' | translate }}</a>
+        <a mat-menu-item routerLink="/tournaments/history"><mat-icon>emoji_events</mat-icon> {{ 'nav.tournamentHistory' | translate }}</a>
         @if (partnerUrl) {
           <button mat-menu-item (click)="toRookHub()">
             <mat-icon>open_in_new</mat-icon> {{ 'turnier.toRookHub' | translate }}

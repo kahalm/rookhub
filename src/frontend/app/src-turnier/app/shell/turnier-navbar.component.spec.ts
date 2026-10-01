@@ -89,7 +89,7 @@ describe('TurnierNavbarComponent', () => {
     fixture.detectChanges();
     const items = overlayItems();
     const hrefs = items.map(i => i.getAttribute('href')).filter(Boolean);
-    expect(hrefs).toEqual(['/tournaments', '/tournaments/calendar', '/tournaments/history']);
+    expect(hrefs).toEqual(['/tournaments/calendar', '/tournaments', '/tournaments/history']);
     const texts = items.map(i => i.textContent ?? '');
     // Uebersetzungen sind im Test nicht geladen — die Pipe liefert die Schluessel.
     expect(texts.some(t => t.includes('turnier.toRookHub'))).withContext('RookHub-Sprung').toBeTrue();
@@ -99,6 +99,30 @@ describe('TurnierNavbarComponent', () => {
     // Anmelden gehoert NICHT ins Menue — es bleibt als Knopf in der Zeile.
     expect(hrefs).not.toContain('/login');
 
+    trigger.click();
+    fixture.detectChanges();
+  });
+
+  /**
+   * F6-019: Die Marke fuehrte auf /tournaments (die Merkliste), die Startseite ist aber der Kalender; die Merkliste
+   * hiess „Turniere" und war neben „Meine Turniere" (dem Verlauf) nicht als „gemerkt" zu erkennen.
+   */
+  it('Marke fuehrt zur Startseite, die Merkliste heisst „Gemerkt", Kalender steht vorn (F6-019)', () => {
+    const fixture = setup(null);
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('a.brand')!.getAttribute('href')).toBe('/');
+
+    const links = Array.from(host.querySelectorAll<HTMLAnchorElement>('nav.links a'));
+    expect(links.map(a => a.getAttribute('href'))).toEqual(['/tournaments/calendar', '/tournaments', '/tournaments/history']);
+    // Uebersetzungen sind nicht geladen — die Pipe liefert die Schluessel.
+    expect(links.map(a => a.textContent?.trim())).toEqual(['nav.tournamentCalendar', 'nav.tournamentBookmarks', 'nav.tournamentHistory']);
+
+    const trigger = host.querySelector('button[aria-label="nav.menu"]') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const bookmarks = overlayItems().find(i => i.getAttribute('href') === '/tournaments')!;
+    expect(bookmarks.textContent).toContain('nav.tournamentBookmarks');
+    expect(bookmarks.querySelector('mat-icon')?.textContent?.trim()).toBe('bookmarks');
     trigger.click();
     fixture.detectChanges();
   });
