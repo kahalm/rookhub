@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -50,18 +51,14 @@ public class CourseAuthoringService
     private async Task<Book> LoadReadableAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)
     {
         if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin, ct))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
         return await _db.Books.FirstAsync(b => b.Id == bookId, ct);
     }
 
-    /// <summary>Buch laden + Schreib-Recht erzwingen: Besitzer oder Admin (sonst 403).</summary>
-    private async Task<Book> LoadManageableAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)
-    {
-        var book = await LoadReadableAsync(userId, bookId, isAdmin, ct);
-        if (!isAdmin && book.OwnerUserId != userId)
-            throw new UnauthorizedAccessException("Only the owner or an admin may edit this course.");
-        return book;
-    }
+    /// <summary>Buch laden + Schreib-Recht erzwingen: Besitzer oder Admin (sonst 403) — die eine Regel in
+    /// <see cref="CourseAccess.LoadManageableAsync"/>.</summary>
+    private Task<Book> LoadManageableAsync(int userId, int bookId, bool isAdmin, CancellationToken ct)
+        => CourseAccess.LoadManageableAsync(_db, userId, bookId, isAdmin, ct);
 
     // ===== Detailseite =======================================================
 
@@ -286,7 +283,7 @@ public class CourseAuthoringService
             .Select(e => new CourseLineIssueDto { LineNumber = e.LineNumber, Text = e.Text, Reason = e.Reason })
             .ToList();
         if (parsed.Positions.Count == 0 && issues.Count == 0)
-            throw new ArgumentException("No positions found.");
+            throw new DomainValidationException("No positions found.");
 
         var chapter = Normalize(dto.Chapter);
         if (chapter is { Length: > 200 }) chapter = chapter[..200];
@@ -415,21 +412,21 @@ public class CourseAuthoringService
 
         var all = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).ToListAsync(ct);
         if (to != null && all.Any(bp => Normalize(bp.Chapter) == to))
-            throw new ArgumentException("A chapter with that name already exists.");
+            throw new DomainValidationException("A chapter with that name already exists.");
 
         var affected = all.Where(bp => Normalize(bp.Chapter) == from).ToList();
-        if (affected.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+        if (affected.Count == 0) throw new NotFoundException("Chapter not found.");
 
         var edition = from == null ? null
             : await _db.CalcEditions.FirstOrDefaultAsync(e => e.BookId == bookId && e.Chapter == from, ct);
         if (edition != null)
         {
             if (to == null)
-                throw new ArgumentException("This chapter has a scheduled edition and needs a name.");
+                throw new DomainValidationException("This chapter has a scheduled edition and needs a name.");
             // Eigene Ausgabe ausnehmen: in MariaDB vergleicht die Spalte ohne Groß-/Kleinschreibung,
             // eine reine Schreibweisen-Korrektur träfe sonst sich selbst.
             if (await _db.CalcEditions.AnyAsync(e => e.BookId == bookId && e.Chapter == to && e.Id != edition.Id, ct))
-                throw new ArgumentException("An edition for that chapter name already exists.");
+                throw new DomainValidationException("An edition for that chapter name already exists.");
             edition.Chapter = to;
             edition.UpdatedAt = DateTime.UtcNow;
         }
@@ -452,7 +449,7 @@ public class CourseAuthoringService
         var wanted = Normalize(chapter);
         var all = await _db.BookPuzzles.Where(bp => bp.BookId == bookId).ToListAsync(ct);
         var doomed = all.Where(bp => Normalize(bp.Chapter) == wanted).ToList();
-        if (doomed.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+        if (doomed.Count == 0) throw new NotFoundException("Chapter not found.");
         if (wanted != null)
             _db.CalcEditions.RemoveRange(
                 await _db.CalcEditions.Where(e => e.BookId == bookId && e.Chapter == wanted).ToListAsync(ct));
@@ -466,7 +463,7 @@ public class CourseAuthoringService
     {
         await LoadManageableAsync(userId, bookId, isAdmin, ct);
         var line = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == bookPuzzleId && bp.BookId == bookId, ct)
-            ?? throw new KeyNotFoundException("Line not found.");
+            ?? throw new NotFoundException("Line not found.");
         await RemoveLinesAsync(bookId, new List<BookPuzzle> { line }, ct);
     }
 
@@ -508,7 +505,7 @@ public class CourseAuthoringService
             .Select(bp => new { bp.Id, bp.Chapter })
             .ToListAsync(ct);
         var ids = all.Where(bp => Normalize(bp.Chapter) == wanted).Select(bp => bp.Id).ToList();
-        if (ids.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+        if (ids.Count == 0) throw new NotFoundException("Chapter not found.");
 
         var results = await _db.CoursePuzzleResults
             .Where(cr => cr.UserId == userId && ids.Contains(cr.BookPuzzleId)).ToListAsync(ct);

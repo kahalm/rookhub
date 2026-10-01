@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -91,7 +92,7 @@ public class CourseConversionTests : IDisposable
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _conversion.ConvertCourseToRepertoireAsync(userId: 2, bookId: book.Id, isAdmin: false));
     }
 
@@ -116,7 +117,7 @@ public class CourseConversionTests : IDisposable
         var rep = await _repertoires.CreateFromPgnAsync(userId: 1, name: "Opening", fileName: "o.pgn", pgn: PlainPgn);
         var pgn = await _repertoires.GetCombinedPgnAsync(rep.Id, userId: 1);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _courses.UploadPersonalCourseAsync(userId: 1, "Opening.pgn", pgn, "Opening"));
     }
 
@@ -164,7 +165,7 @@ public class CourseConversionTests : IDisposable
     {
         var rep = await _repertoires.CreateFromPgnAsync(userId: 1, name: "Opening", fileName: "o.pgn", pgn: PlainPgn);
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(
             () => _conversion.ConvertRepertoireToCourseAsync(userId: 1, repertoireId: rep.Id));
 
         Assert.IsNotType<CourseConversionException>(ex);
@@ -178,7 +179,7 @@ public class CourseConversionTests : IDisposable
     {
         var rep = await _repertoires.CreateFromPgnAsync(userId: 1, name: "Puzzles", fileName: "p.pgn", pgn: PuzzlePgn);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _conversion.ConvertRepertoireToCourseAsync(userId: 2, repertoireId: rep.Id));
 
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));

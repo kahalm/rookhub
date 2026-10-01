@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -180,7 +181,7 @@ public class BookAdminService
     public async Task DeleteBookAsync(int id)
     {
         var book = await _db.Books.FindAsync(id)
-            ?? throw new KeyNotFoundException("Book not found.");
+            ?? throw new NotFoundException("Book not found.");
 
         // Kurs-Daten und zugehörige Puzzles explizit entfernen. FK-Cascade greift bei InMemory nicht.
         // Alles, was an den LINIEN hängt (Restrict-FKs auf BookPuzzle, Verweise ohne FK, Übersetzungen),

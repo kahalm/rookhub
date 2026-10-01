@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -77,7 +78,7 @@ public class CourseAuthoringServiceTests : IDisposable
     {
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: 999);
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetDetailAsync(user.Id, book.Id, isAdmin: false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetDetailAsync(user.Id, book.Id, isAdmin: false));
     }
 
     [Fact]
@@ -219,7 +220,7 @@ public class CourseAuthoringServiceTests : IDisposable
         book.IsPublic = true;                             // Zugriff ja, Schreibrecht nein
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.SetCalculationAsync(guest.Id, book.Id, true, isAdmin: false));
         Assert.False((await _db.Books.FindAsync(book.Id))!.IsCalculation);
     }
@@ -240,7 +241,7 @@ public class CourseAuthoringServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: 999);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.SetCalculationAsync(user.Id, book.Id, true, isAdmin: false));
     }
 
@@ -346,7 +347,7 @@ public class CourseAuthoringServiceTests : IDisposable
     {
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(user.Id);
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.AddLinesAsync(user.Id, book.Id, new AddCourseLinesDto { Text = "  \n " }, isAdmin: false));
     }
 
@@ -362,7 +363,7 @@ public class CourseAuthoringServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.AddLinesAsync(guest.Id, book.Id, Paste("K", Fen1), isAdmin: false));
         Assert.Empty(_db.BookPuzzles);
     }
@@ -465,7 +466,7 @@ public class CourseAuthoringServiceTests : IDisposable
         await SeedLineAsync(book, "1", "A", infoOnly: true, fen: Fen1);
         await SeedLineAsync(book, "2", "B", infoOnly: true, fen: Fen2);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.RenameChapterAsync(user.Id, book.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.RenameChapterAsync(user.Id, book.Id,
             new RenameCourseChapterDto { Chapter = "A", NewName = "B" }, isAdmin: false));
     }
 
@@ -475,7 +476,7 @@ public class CourseAuthoringServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(user.Id);
         await SeedLineAsync(book, "1", "A", infoOnly: true, fen: Fen1);
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.RenameChapterAsync(user.Id, book.Id,
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.RenameChapterAsync(user.Id, book.Id,
             new RenameCourseChapterDto { Chapter = "gibtsnicht", NewName = "X" }, isAdmin: false));
     }
 
@@ -548,7 +549,7 @@ public class CourseAuthoringServiceTests : IDisposable
         var other = await SeedBookAsync(user.Id);
         var foreignLine = await SeedLineAsync(other, "1", null, infoOnly: true, fen: Fen1);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.DeleteLineAsync(user.Id, mine.Id, foreignLine.Id, isAdmin: false));
     }
 
@@ -561,7 +562,7 @@ public class CourseAuthoringServiceTests : IDisposable
         book.IsPublic = true;                             // Zugriff ja, Schreibrecht nein
         await SeedLineAsync(book, "1", "K", infoOnly: true, fen: Fen1);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.DeleteChapterAsync(guest.Id, book.Id, "K", isAdmin: false));
     }
 
@@ -686,7 +687,7 @@ public class CourseAuthoringServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(user.Id);
         await SeedLineAsync(book, "1", "K", infoOnly: false, fen: Fen1);
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.ResetChapterProgressAsync(user.Id, book.Id, "gibtsnicht", isAdmin: false));
     }
 }

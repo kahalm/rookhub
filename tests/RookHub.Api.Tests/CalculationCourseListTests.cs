@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -217,7 +218,7 @@ public class CalculationCourseListTests : IDisposable
 
         // Eine Info-Linie wird durchgeklickt, nicht gelöst: kein neues Ergebnis, kein Versuch.
         var attemptsBefore = await _db.CourseAttempts.CountAsync();
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _courses.RecordResultAsync(user.Id, book.Id,
+        await Assert.ThrowsAsync<NotFoundException>(() => _courses.RecordResultAsync(user.Id, book.Id,
             new RecordCourseResultDto { BookPuzzleId = turned.Id, Solved = true }, isAdmin: false));
         Assert.Equal(attemptsBefore, await _db.CourseAttempts.CountAsync());
     }

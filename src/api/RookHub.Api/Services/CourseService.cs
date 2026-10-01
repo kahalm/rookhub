@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -9,7 +10,7 @@ namespace RookHub.Api.Services;
 /// „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet (Fortschritt user-bezogen
 /// in der DB; Modus sequential/random bestimmt nur die Reihenfolge). Geschäftslogik vormals inline
 /// im CourseController. Sichtbarkeit/Zugriff wird je Buch erzwungen — kein Zugriff → 404 via
-/// <see cref="KeyNotFoundException"/> (Controller bildet auf HTTP ab). `isAdmin` reicht der Controller
+/// <see cref="NotFoundException"/> (der globale DomainExceptionFilter bildet auf HTTP ab). `isAdmin` reicht der Controller
 /// herein (HTTP-Concern).
 /// </summary>
 public class CourseService
@@ -77,7 +78,7 @@ public class CourseService
     private async Task EnsureAccessAsync(int userId, int bookId, bool isAdmin)
     {
         if (!await CanAccessAsync(userId, bookId, isAdmin))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
     }
 
     /// <summary>Normalisiert einen rohen Kapitelwert: leer/Whitespace → <c>null</c> (Sammel-„ohne Kapitel").</summary>
@@ -206,7 +207,7 @@ public class CourseService
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
         var puzzles = await PuzzlesWithBookInReadingOrder(_db, bookId).ToListAsync();
         return puzzles.Select(BookPuzzleService.MapToDto).ToList();
     }
@@ -229,7 +230,7 @@ public class CourseService
     /// <para><paramref name="skip"/>/<paramref name="take"/> paginieren DB-seitig (stabile Lese-Reihenfolge
     /// Round→Id): der Client holt die erste kleine Seite → sofort spielbar, den Rest im Hintergrund.
     /// Ohne beide Parameter wird (rückwärtskompatibel) das ganze Buch geliefert.</para>
-    /// Nicht öffentlich / nicht vorhanden → <see cref="KeyNotFoundException"/> (404).
+    /// Nicht öffentlich / nicht vorhanden → <see cref="NotFoundException"/> (404).
     /// <para><b>Kalkulationsbücher liefert dieser Pfad NICHT aus</b> (ebenfalls 404): ein
     /// Kalkulationsbuch ist kein Solver-Kurs, und der Solver-Pfad reicht über
     /// <see cref="BookPuzzleService.MapToDto"/> <see cref="BookPuzzle.Moves"/> durch — also genau
@@ -240,7 +241,7 @@ public class CourseService
     public async Task<List<BookPuzzleDto>> GetPublicCoursePuzzlesAsync(int bookId, int? skip = null, int? take = null)
     {
         if (!await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic && !b.IsCalculation))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
         IQueryable<BookPuzzle> query = PuzzlesWithBookInReadingOrder(_db, bookId);
         if (skip is int s && s > 0) query = query.Skip(s);
         if (take is int t && t > 0) query = query.Take(t);
@@ -509,7 +510,7 @@ public class CourseService
     }
 
     /// <summary>Pinnt einen (zugänglichen) Kurs fürs Dashboard des Users an. Idempotent —
-    /// ein zweiter Aufruf ändert nichts. Kein Zugriff → <see cref="KeyNotFoundException"/> (404).</summary>
+    /// ein zweiter Aufruf ändert nichts. Kein Zugriff → <see cref="NotFoundException"/> (404).</summary>
     public async Task PinCourseAsync(int userId, int bookId, bool isAdmin)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
@@ -530,18 +531,14 @@ public class CourseService
     }
 
     /// <summary>Setzt die Themen-Tags eines Kurs-Buchs (gilt buch-global, für alle, die es trainieren).
-    /// Nur der Admin (alle Bücher) bzw. der Besitzer eines persönlichen Kurses darf das —
-    /// <see cref="UnauthorizedAccessException"/> (→403) sonst; <see cref="KeyNotFoundException"/> (→404)
-    /// wenn nicht zugänglich; <see cref="InvalidOperationException"/> (→400) bei ungültigem Theme-Key.
+    /// Nur der Admin (alle Bücher) bzw. der Besitzer eines persönlichen Kurses darf das — die Regel in
+    /// <see cref="CourseAccess.LoadManageableAsync"/> (404 nicht zugänglich, 403 nicht berechtigt);
+    /// <see cref="DomainValidationException"/> (→400) bei ungültigem Theme-Key.
     /// Leere/nur-ungültige Liste → <c>null</c> (Rückfall auf Default „tactics"). Gibt die effektiven
     /// (ggf. auf Default aufgelösten) Keys zurück.</summary>
     public async Task<List<string>> SetBookThemesAsync(int userId, int bookId, IEnumerable<string> themeKeys, bool isAdmin)
     {
-        await EnsureAccessAsync(userId, bookId, isAdmin);
-        var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
-            ?? throw new KeyNotFoundException("Book not found.");
-        if (!isAdmin && book.OwnerUserId != userId)
-            throw new UnauthorizedAccessException("Only an admin or the course owner can set themes.");
+        var book = await CourseAccess.LoadManageableAsync(_db, userId, bookId, isAdmin);
 
         // Keys validieren + normalisieren (Reihenfolge stabil, dedupliziert). Ungültiger Key → 400.
         var normalized = new List<string>();
@@ -550,7 +547,7 @@ public class CourseService
             var key = (raw ?? string.Empty).Trim().ToLowerInvariant();
             if (key.Length == 0) continue;
             if (!BookThemeTags.IsValidKey(key))
-                throw new InvalidOperationException($"Unknown theme '{raw}'.");
+                throw new DomainValidationException($"Unknown theme '{raw}'.");
             if (!normalized.Contains(key)) normalized.Add(key);
         }
 
@@ -573,14 +570,14 @@ public class CourseService
     // Empfänger müssen befreundet sein (wie bei Puzzle-Challenges) — sonst wird der Empfänger mit
     // Grund übersprungen. Gruppen-/globale Bücher werden über die Gruppen-Freigabe geteilt, nicht hier.
 
-    /// <summary>Wirft <see cref="KeyNotFoundException"/> (→404), wenn das Buch fehlt, und
-    /// <see cref="UnauthorizedAccessException"/> (→403), wenn der User nicht der Besitzer ist.</summary>
+    /// <summary>Wirft <see cref="NotFoundException"/> (→404), wenn das Buch fehlt, und
+    /// <see cref="ForbiddenException"/> (→403), wenn der User nicht der Besitzer ist.</summary>
     private async Task<Book> EnsureOwnedBookAsync(int userId, int bookId)
     {
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId)
-            ?? throw new KeyNotFoundException("Book not found.");
+            ?? throw new NotFoundException("Book not found.");
         if (book.OwnerUserId != userId)
-            throw new UnauthorizedAccessException("Only the owner can share this course.");
+            throw new ForbiddenException("Only the owner can share this course.");
         return book;
     }
 
@@ -653,9 +650,9 @@ public class CourseService
     public async Task LinkCoursesAsync(int userId, int bookId, int linkedBookId, bool isAdmin)
     {
         if (bookId == linkedBookId)
-            throw new InvalidOperationException("Cannot link a course to itself.");
+            throw new DomainValidationException("Cannot link a course to itself.");
         if (!await CanAccessAsync(userId, bookId, isAdmin) || !await CanAccessAsync(userId, linkedBookId, isAdmin))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
 
         // Alte Verknüpfungen entfernen, die eines der beiden Bücher betreffen (1:1 je Buch).
         var stale = await _db.CourseLinks
@@ -709,7 +706,7 @@ public class CourseService
         CancellationToken ct = default, string? chessableBid = null)
     {
         if (string.IsNullOrWhiteSpace(pgn) || !RepertoireService.LooksLikePgn(pgn))
-            throw new InvalidOperationException("The file does not look like a valid PGN.");
+            throw new DomainValidationException("The file does not look like a valid PGN.");
 
         // Pro-User-eindeutiger interner Dateiname (NICHT der Anzeigename) → kollisionsfrei mit
         // globalen Büchern und Chessable-Importen (chessable-u{userId}-{bid}.pgn).
@@ -736,7 +733,7 @@ public class CourseService
             _db.BookPuzzles.RemoveRange(_db.BookPuzzles.Where(bp => bp.BookId == book.Id));
             _db.Books.Remove(book);
             await _db.SaveChangesAsync(ct);
-            throw new InvalidOperationException("No playable lines found in the PGN.");
+            throw new DomainValidationException("No playable lines found in the PGN.");
         }
 
         var name = string.IsNullOrWhiteSpace(displayName)
@@ -775,7 +772,7 @@ public class CourseService
     {
         var name = displayName?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name))
-            throw new InvalidOperationException("A course name is required.");
+            throw new DomainValidationException("A course name is required.");
         if (name.Length > 200) name = name[..200];
 
         var now = DateTime.UtcNow;
@@ -875,7 +872,7 @@ public class CourseService
     {
         var book = await _db.Books.FirstOrDefaultAsync(b => b.Id == bookId);
         if (book is null || book.OwnerUserId != userId)
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
         await _bookAdmin.DeleteBookAsync(bookId);
     }
 
@@ -883,14 +880,14 @@ public class CourseService
     /// Nächstes ungelöstes Puzzle des Kurses. sequential: Buchreihenfolge (Id), mit <paramref name="after"/>
     /// das nächste danach; random: zufällig, <paramref name="exclude"/> vermeidet direkte Wiederholung.
     /// Aktualisiert den zuletzt genutzten Modus.
-    /// <para>KALKULATIONSBÜCHER → <see cref="KeyNotFoundException"/> (404): Solver-Weg, liefert über
+    /// <para>KALKULATIONSBÜCHER → <see cref="NotFoundException"/> (404): Solver-Weg, liefert über
     /// <see cref="BookPuzzleService.MapToDto"/> die Züge (siehe <see cref="CourseAccess.IsCalculationBookAsync"/>).</para>
     /// </summary>
     public async Task<CourseNextPuzzleDto> GetNextAsync(int userId, int bookId, string mode, int? after, int? exclude, bool isAdmin, int? chapterIndex = null)
     {
         await EnsureAccessAsync(userId, bookId, isAdmin);
         if (await CourseAccess.IsCalculationBookAsync(_db, bookId))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
 
         mode = NormalizeOrderMode(mode);
         await UpsertProgressAsync(userId, bookId, mode);
@@ -1021,13 +1018,13 @@ public class CourseService
             .Select(bp => new { bp.Chapter, bp.IsInfoOnly })
             .FirstOrDefaultAsync();
         if (puzzleChapter == null)
-            throw new KeyNotFoundException("Puzzle does not belong to this book.");
+            throw new NotFoundException("Puzzle does not belong to this book.");
         // Eine Info-/Erklärlinie wird nicht gelöst, sondern durchgeklickt (MarkInfoSeenAsync, dort
         // umgekehrt geprüft). Ein Ergebnis daran zählte nirgends mit und machte die Zählungen nur
         // uneinheitlich (Codereview A7-009) — z. B. eine offline vorgemerkte Lösung, deren Linie ein
         // Re-Import inzwischen auf Info umgestellt hat.
         if (puzzleChapter.IsInfoOnly)
-            throw new KeyNotFoundException("Info lines are not solved.");
+            throw new NotFoundException("Info lines are not solved.");
 
         // Zeit/Tipps/Spielweise/Startzeit: eine Normalisierung für alle Recorder (siehe AttemptRecording).
         // dto.SolveMode ist die SPIELWEISE, NICHT dto.Mode (= sequential/random).
@@ -1095,7 +1092,7 @@ public class CourseService
         var isInfo = await _db.BookPuzzles
             .AnyAsync(bp => bp.Id == bookPuzzleId && bp.BookId == bookId && bp.IsInfoOnly);
         if (!isInfo)
-            throw new KeyNotFoundException("Info line does not belong to this book.");
+            throw new NotFoundException("Info line does not belong to this book.");
 
         var already = await _db.CourseInfoViews
             .AnyAsync(iv => iv.UserId == userId && iv.BookPuzzleId == bookPuzzleId);

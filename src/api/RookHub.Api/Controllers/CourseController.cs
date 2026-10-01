@@ -12,6 +12,8 @@ namespace RookHub.Api.Controllers;
 /// Sichtbarkeit: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen
 /// per <see cref="Models.BookGroupAccess"/> freigegeben wurden. Die Logik liegt im
 /// <see cref="CourseService"/>; kein Zugriff → 404.
+/// Fehlerfälle werfen die Dienste als Domänen-Ausnahme (404/403/400), der globale DomainExceptionFilter
+/// macht daraus <c>{ message }</c> — hier wird nichts gefangen (Codereview A7-011).
 /// </summary>
 [ApiController]
 [Route("api/courses")]
@@ -73,13 +75,9 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<List<BookPuzzleDto>>> GetAllPuzzles(int bookId, [FromQuery] string? lang = null,
         CancellationToken ct = default)
     {
-        try
-        {
-            var lines = await _service.GetAllPuzzlesAsync(GetUserId(), bookId, IsAdmin);
-            if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
-            return Ok(lines);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var lines = await _service.GetAllPuzzlesAsync(GetUserId(), bookId, IsAdmin);
+        if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
+        return Ok(lines);
     }
 
     /// <summary>Puzzles eines ÖFFENTLICHEN Kurses — OHNE Login. Ermöglicht das registrierungsfreie
@@ -93,13 +91,9 @@ public class CourseController : BaseApiController
     {
         int? clampedTake = take is int t ? Math.Clamp(t, 1, 1000) : null;
         int? clampedSkip = skip is int s && s > 0 ? s : null;
-        try
-        {
-            var lines = await _service.GetPublicCoursePuzzlesAsync(bookId, clampedSkip, clampedTake);
-            if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
-            return Ok(lines);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var lines = await _service.GetPublicCoursePuzzlesAsync(bookId, clampedSkip, clampedTake);
+        if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
+        return Ok(lines);
     }
 
     /// <summary>Löst einen öffentlichen Kurz-Alias (z. B. <c>mate1</c>) auf sein Ziel auf — OHNE Login:
@@ -134,44 +128,31 @@ public class CourseController : BaseApiController
     [HttpGet("{bookId}/line-status")]
     public async Task<ActionResult<CourseLineStatusDto>> GetLineStatus(int bookId)
     {
-        try { return Ok(await _service.GetLineStatusAsync(GetUserId(), bookId, IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(await _service.GetLineStatusAsync(GetUserId(), bookId, IsAdmin));
     }
 
     /// <summary>Lädt das Buch als PGN herunter (ein Spiel je Linie).</summary>
     [HttpGet("{bookId}/pgn")]
     public async Task<IActionResult> DownloadPgn(int bookId)
     {
-        try
-        {
-            var (pgn, fileName) = await _pgnExport.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
-            return PgnDownload(pgn, fileName);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var (pgn, fileName) = await _pgnExport.GetBookPgnAsync(GetUserId(), bookId, IsAdmin);
+        return PgnDownload(pgn, fileName);
     }
 
     /// <summary>Lädt EIN Kapitel als PGN herunter (<c>chapter</c> leer = „ohne Kapitel").</summary>
     [HttpGet("{bookId:int}/chapter-pgn")]
     public async Task<IActionResult> DownloadChapterPgn(int bookId, [FromQuery] string? chapter)
     {
-        try
-        {
-            var (pgn, fileName) = await _pgnExport.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
-            return PgnDownload(pgn, fileName);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var (pgn, fileName) = await _pgnExport.GetChapterPgnAsync(GetUserId(), bookId, chapter, IsAdmin);
+        return PgnDownload(pgn, fileName);
     }
 
     /// <summary>Lädt EINE Linie als PGN herunter.</summary>
     [HttpGet("{bookId:int}/lines/{lineId:int}/pgn")]
     public async Task<IActionResult> DownloadLinePgn(int bookId, int lineId)
     {
-        try
-        {
-            var (pgn, fileName) = await _pgnExport.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
-            return PgnDownload(pgn, fileName);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var (pgn, fileName) = await _pgnExport.GetLinePgnAsync(GetUserId(), bookId, lineId, IsAdmin);
+        return PgnDownload(pgn, fileName);
     }
 
     /// <summary>PGN als Datei ausliefern — ohne die internen Marker <c>[%alt]</c>/<c>[%info]</c>, Info-Linien
@@ -184,9 +165,7 @@ public class CourseController : BaseApiController
     [HttpPost("{bookId}/convert-to-repertoire")]
     public async Task<IActionResult> ConvertToRepertoire(int bookId)
     {
-        try { return Ok(await _conversion.ConvertCourseToRepertoireAsync(GetUserId(), bookId, IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _conversion.ConvertCourseToRepertoireAsync(GetUserId(), bookId, IsAdmin));
     }
 
     /// <summary>Sichtbare Bücher als Kurse inkl. Fortschritt des aktuellen Users (Admin: alle).</summary>
@@ -210,30 +189,25 @@ public class CourseController : BaseApiController
     {
         if (file == null || file.Length == 0)
         {
-            try { return Ok(await _service.CreatePersonalCourseAsync(GetUserId(), name ?? string.Empty)); }
-            catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+            return Ok(await _service.CreatePersonalCourseAsync(GetUserId(), name ?? string.Empty));
         }
         if (!Path.GetExtension(file.FileName).Equals(".pgn", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { message = "Only .pgn files are allowed." });
         if (file.Length > RepertoireService.MaxFileSize)
             return BadRequest(new { message = $"File size exceeds maximum of {RepertoireService.MaxFileSize / 1024 / 1024} MB." });
 
-        try
-        {
-            using var reader = new StreamReader(file.OpenReadStream());
-            var pgn = await reader.ReadToEndAsync();
-            var course = await _service.UploadPersonalCourseAsync(GetUserId(), file.FileName, pgn, name);
-            return Ok(course);
-        }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        using var reader = new StreamReader(file.OpenReadStream());
+        var pgn = await reader.ReadToEndAsync();
+        var course = await _service.UploadPersonalCourseAsync(GetUserId(), file.FileName, pgn, name);
+        return Ok(course);
     }
 
     /// <summary>Löscht einen eigenen Kurs des Users (nur der Besitzer; sonst 404).</summary>
     [HttpDelete("{bookId}")]
     public async Task<IActionResult> Delete(int bookId)
     {
-        try { await _service.DeletePersonalCourseAsync(GetUserId(), bookId); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        await _service.DeletePersonalCourseAsync(GetUserId(), bookId);
+        return NoContent();
     }
 
     /// <summary>Teilt einen eigenen Kurs mit ausgewählten (befreundeten) Nutzern (Batch).
@@ -241,44 +215,37 @@ public class CourseController : BaseApiController
     [HttpPost("{bookId}/share")]
     public async Task<ActionResult<CourseShareResultDto>> Share(int bookId, [FromBody] ShareCourseInputDto dto)
     {
-        try { return Ok(await _service.ShareCourseAsync(GetUserId(), bookId, dto.RecipientUserIds ?? new List<int>(), IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        return Ok(await _service.ShareCourseAsync(GetUserId(), bookId, dto.RecipientUserIds ?? new List<int>(), IsAdmin));
     }
 
     /// <summary>Mit welchen Nutzern ist dieser eigene Kurs aktuell geteilt? (Für den Teilen-Dialog.)</summary>
     [HttpGet("{bookId}/shares")]
     public async Task<ActionResult<List<CourseShareRecipientDto>>> Shares(int bookId)
     {
-        try { return Ok(await _service.GetShareRecipientsAsync(GetUserId(), bookId)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        return Ok(await _service.GetShareRecipientsAsync(GetUserId(), bookId));
     }
 
     /// <summary>Nimmt die Freigabe des eigenen Kurses für einen Empfänger zurück (idempotent).</summary>
     [HttpDelete("{bookId}/share/{recipientId}")]
     public async Task<IActionResult> Unshare(int bookId, int recipientId)
     {
-        try { await _service.UnshareCourseAsync(GetUserId(), bookId, recipientId); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        await _service.UnshareCourseAsync(GetUserId(), bookId, recipientId);
+        return NoContent();
     }
 
     /// <summary>Verknüpft diesen Kurs mit einem anderen (Buch↔Workbook) für den Schnellwechsel.</summary>
     [HttpPost("{bookId}/link")]
     public async Task<IActionResult> Link(int bookId, [FromBody] LinkCourseInputDto dto)
     {
-        try { await _service.LinkCoursesAsync(GetUserId(), bookId, dto.LinkedBookId, IsAdmin); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        await _service.LinkCoursesAsync(GetUserId(), bookId, dto.LinkedBookId, IsAdmin);
+        return NoContent();
     }
 
     /// <summary>Der aktuell verknüpfte Partner-Kurs (oder leere Felder). Literale Route.</summary>
     [HttpGet("{bookId}/link")]
     public async Task<ActionResult<CourseLinkDto>> GetLink(int bookId)
     {
-        try { return Ok(await _service.GetLinkAsync(GetUserId(), bookId, IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(await _service.GetLinkAsync(GetUserId(), bookId, IsAdmin));
     }
 
     /// <summary>Hebt die Verknüpfung dieses Kurses wieder auf (idempotent).</summary>
@@ -312,13 +279,9 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<List<CourseChapterDto>>> GetChapters(int bookId, [FromQuery] string? lang = null,
         CancellationToken ct = default)
     {
-        try
-        {
-            var chapters = await _service.GetChaptersAsync(GetUserId(), bookId, IsAdmin);
-            if (_localizer is not null) await _localizer.ApplyAsync(bookId, chapters, lang, ct);
-            return Ok(chapters);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var chapters = await _service.GetChaptersAsync(GetUserId(), bookId, IsAdmin);
+        if (_localizer is not null) await _localizer.ApplyAsync(bookId, chapters, lang, ct);
+        return Ok(chapters);
     }
 
     /// <summary>Nächstes ungelöstes Puzzle des Kurses (sequential/random); aktualisiert den letzten Modus.
@@ -333,21 +296,16 @@ public class CourseController : BaseApiController
         [FromQuery] string? lang = null,
         CancellationToken ct = default)
     {
-        try
-        {
-            var next = await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin, chapterIndex);
-            if (_localizer is not null) await _localizer.ApplyAsync(next.Puzzle, lang, ct);
-            return Ok(next);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var next = await _service.GetNextAsync(GetUserId(), bookId, mode, after, exclude, IsAdmin, chapterIndex);
+        if (_localizer is not null) await _localizer.ApplyAsync(next.Puzzle, lang, ct);
+        return Ok(next);
     }
 
     /// <summary>Zeichnet einen Lösungsversuch auf. Bei Solved wird das Puzzle (idempotent) als gelöst markiert.</summary>
     [HttpPost("{bookId}/results")]
     public async Task<IActionResult> RecordResult(int bookId, [FromBody] RecordCourseResultDto dto)
     {
-        try { return Ok(await _service.RecordResultAsync(GetUserId(), bookId, dto, IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(await _service.RecordResultAsync(GetUserId(), bookId, dto, IsAdmin));
     }
 
     /// <summary>Merkt eine sequenziell durchgeklickte Info-/Erklärlinie — beim nächsten Wiedereinstieg
@@ -356,24 +314,23 @@ public class CourseController : BaseApiController
     [HttpPost("{bookId}/info-seen")]
     public async Task<IActionResult> MarkInfoSeen(int bookId, [FromBody] MarkInfoSeenDto dto)
     {
-        try { await _service.MarkInfoSeenAsync(GetUserId(), bookId, dto.BookPuzzleId, IsAdmin); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        await _service.MarkInfoSeenAsync(GetUserId(), bookId, dto.BookPuzzleId, IsAdmin);
+        return NoContent();
     }
 
     /// <summary>Setzt den Fortschritt eines Kurses zurück (löscht alle gelösten Markierungen).</summary>
     [HttpPost("{bookId}/reset")]
     public async Task<IActionResult> Reset(int bookId)
     {
-        try { return Ok(await _service.ResetAsync(GetUserId(), bookId, IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(await _service.ResetAsync(GetUserId(), bookId, IsAdmin));
     }
 
     /// <summary>Pinnt den Kurs fürs Dashboard an (persönlich, idempotent). 404 wenn nicht zugänglich.</summary>
     [HttpPost("{bookId}/pin")]
     public async Task<IActionResult> Pin(int bookId)
     {
-        try { await _service.PinCourseAsync(GetUserId(), bookId, IsAdmin); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        await _service.PinCourseAsync(GetUserId(), bookId, IsAdmin);
+        return NoContent();
     }
 
     /// <summary>Löst den Kurs wieder vom Dashboard (idempotent).</summary>
@@ -389,10 +346,7 @@ public class CourseController : BaseApiController
     [HttpPut("{bookId}/themes")]
     public async Task<IActionResult> SetThemes(int bookId, [FromBody] SetCourseThemesInputDto dto)
     {
-        try { return Ok(new { themes = await _service.SetBookThemesAsync(GetUserId(), bookId, dto.Themes ?? new List<string>(), IsAdmin) }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(new { themes = await _service.SetBookThemesAsync(GetUserId(), bookId, dto.Themes ?? new List<string>(), IsAdmin) });
     }
 
     // ===== Detailseite + Inhaltspflege (CourseAuthoringService) ==============
@@ -406,13 +360,9 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<CourseDetailDto>> GetDetail(int bookId, CancellationToken ct,
         [FromQuery] string? lang = null)
     {
-        try
-        {
-            var detail = await _authoring.GetDetailAsync(GetUserId(), bookId, IsAdmin, ct);
-            if (_localizer is not null) await _localizer.ApplyAsync(detail, lang, ct);
-            return Ok(detail);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var detail = await _authoring.GetDetailAsync(GetUserId(), bookId, IsAdmin, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(detail, lang, ct);
+        return Ok(detail);
     }
 
     /// <summary>Schaltet den Kalkulations-Modus des Kurses ein/aus (Besitzer/Admin, 403 sonst; 404
@@ -421,13 +371,8 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> SetCalculation(int bookId, [FromBody] SetCourseCalculationDto dto,
         CancellationToken ct)
     {
-        try
-        {
-            var value = await _authoring.SetCalculationAsync(GetUserId(), bookId, dto.IsCalculation, IsAdmin, ct);
-            return Ok(new { isCalculation = value });
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        var value = await _authoring.SetCalculationAsync(GetUserId(), bookId, dto.IsCalculation, IsAdmin, ct);
+        return Ok(new { isCalculation = value });
     }
 
     /// <summary>Als Flashcard markierte Linien-Ids des Users in diesem Kurs. 404 unzugänglich.</summary>
@@ -435,7 +380,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> GetFlashcardMarks(int bookId, CancellationToken ct)
     {
         var ids = await _flashcards.GetCourseMarksAsync(GetUserId(), bookId, IsAdmin, ct);
-        return ids is null ? NotFound() : Ok(new { lineIds = ids });
+        return ids is null ? NotFound(new { message = "Book not found." }) : Ok(new { lineIds = ids });
     }
 
     /// <summary>Markiert eine Kurs-Linie als Flashcard (idempotent). 404 unzugänglich/Linie fremd.</summary>
@@ -443,7 +388,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> MarkFlashcard(int bookId, int lineId, CancellationToken ct)
     {
         var res = await _flashcards.SetCourseMarkAsync(GetUserId(), bookId, lineId, marked: true, IsAdmin, ct);
-        return res is null ? NotFound() : Ok(new { marked = true });
+        return res is null ? NotFound(new { message = "Line not found." }) : Ok(new { marked = true });
     }
 
     /// <summary>Entfernt die Flashcard-Markierung einer Kurs-Linie (idempotent).</summary>
@@ -451,7 +396,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> UnmarkFlashcard(int bookId, int lineId, CancellationToken ct)
     {
         var res = await _flashcards.SetCourseMarkAsync(GetUserId(), bookId, lineId, marked: false, IsAdmin, ct);
-        return res is null ? NotFound() : Ok(new { marked = false });
+        return res is null ? NotFound(new { message = "Line not found." }) : Ok(new { marked = false });
     }
 
     /// <summary>Linien EINES Kapitels (`chapter` leer = „ohne Kapitel") — ohne Lösungszüge. Eine für den
@@ -461,8 +406,7 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<List<CourseLineDto>>> GetChapterLines(int bookId, [FromQuery] string? chapter,
         CancellationToken ct)
     {
-        try { return Ok(await _authoring.GetChapterLinesAsync(GetUserId(), bookId, chapter, IsAdmin, ct)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(await _authoring.GetChapterLinesAsync(GetUserId(), bookId, chapter, IsAdmin, ct));
     }
 
     /// <summary>Fügt Stellungen als neue Linien ein (Memo-Text, eine Stellung je Zeile, optional
@@ -472,19 +416,15 @@ public class CourseController : BaseApiController
     public async Task<ActionResult<AddCourseLinesResultDto>> AddLines(int bookId,
         [FromBody] AddCourseLinesDto dto, CancellationToken ct)
     {
-        try { return Ok(await _authoring.AddLinesAsync(GetUserId(), bookId, dto, IsAdmin, ct)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _authoring.AddLinesAsync(GetUserId(), bookId, dto, IsAdmin, ct));
     }
 
     /// <summary>Löscht eine einzelne Linie des Buchs (samt abhängiger Nutzerdaten). Nur Besitzer/Admin.</summary>
     [HttpDelete("{bookId:int}/lines/{lineId:int}")]
     public async Task<IActionResult> DeleteLine(int bookId, int lineId, CancellationToken ct)
     {
-        try { await _authoring.DeleteLineAsync(GetUserId(), bookId, lineId, IsAdmin, ct); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        await _authoring.DeleteLineAsync(GetUserId(), bookId, lineId, IsAdmin, ct);
+        return NoContent();
     }
 
     /// <summary>Benennt ein Kapitel um (leerer neuer Name = „ohne Kapitel"). Nur Besitzer/Admin;
@@ -493,10 +433,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> RenameChapter(int bookId, [FromBody] RenameCourseChapterDto dto,
         CancellationToken ct)
     {
-        try { return Ok(new { updated = await _authoring.RenameChapterAsync(GetUserId(), bookId, dto, IsAdmin, ct) }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(new { updated = await _authoring.RenameChapterAsync(GetUserId(), bookId, dto, IsAdmin, ct) });
     }
 
     /// <summary>Löscht ein ganzes Kapitel = alle seine Linien. Nur Besitzer/Admin.</summary>
@@ -504,9 +441,7 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> DeleteChapter(int bookId, [FromBody] CourseChapterRefDto dto,
         CancellationToken ct)
     {
-        try { return Ok(new { deleted = await _authoring.DeleteChapterAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        return Ok(new { deleted = await _authoring.DeleteChapterAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) });
     }
 
     /// <summary>Setzt den EIGENEN Fortschritt eines Kapitels zurück (gelöste Linien, Zeit-/Versuchs-Log,
@@ -516,7 +451,6 @@ public class CourseController : BaseApiController
     public async Task<IActionResult> ResetChapter(int bookId, [FromBody] CourseChapterRefDto dto,
         CancellationToken ct)
     {
-        try { return Ok(new { cleared = await _authoring.ResetChapterProgressAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        return Ok(new { cleared = await _authoring.ResetChapterProgressAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) });
     }
 }

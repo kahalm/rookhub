@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -354,8 +355,8 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isCalculation: true, slug: "noel");
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "e1g1 g8f6 d2d4 e5d4");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _course.GetPublicCoursePuzzlesAsync(book.Id));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(() => _course.GetPublicCoursePuzzlesAsync(book.Id));
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _course.GetPublicCoursePuzzlesAsync(book.Id, skip: 0, take: 1));
     }
 
@@ -380,9 +381,9 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isCalculation: true, slug: "noel");
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "e1g1 g8f6 d2d4 e5d4");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _course.GetAllPuzzlesAsync(userId: 42, book.Id, isAdmin: false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _course.GetAllPuzzlesAsync(userId: 1, book.Id, isAdmin: true));
     }
 
@@ -476,9 +477,9 @@ public class PublicCalculationAccessTests : IDisposable
         await _db.SaveChangesAsync();
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "a1a2");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => new CoursePgnExportService(_db).GetBookPgnAsync(userId: 42, book.Id, isAdmin: false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => new CoursePgnExportService(_db).GetBookPgnAsync(userId: 1, book.Id, isAdmin: true));
     }
 
@@ -506,7 +507,7 @@ public class PublicCalculationAccessTests : IDisposable
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, moves: "e1g1 g8f6");
         var conversion = TestServices.Conversion(_db, courses: _course);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => conversion.ConvertCourseToRepertoireAsync(userId: 42, book.Id, isAdmin: false));
 
         Assert.True(await _db.Books.AnyAsync(b => b.Id == book.Id));
@@ -521,9 +522,9 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isCalculation: true, slug: "noel");
         await SeedLineAsync(book, "1", "KW46", infoOnly: false, moves: "e1g1 g8f6 d2d4 e5d4", startPly: 0);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _course.GetNextAsync(userId: 42, book.Id, "sequential", null, null, isAdmin: false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _course.GetNextAsync(userId: 42, book.Id, "random", null, null, isAdmin: false));
         // Kein Nebeneffekt vor der Sperre (kein CourseProgress angelegt).
         Assert.False(await _db.CourseProgresses.AnyAsync(cp => cp.BookId == book.Id));

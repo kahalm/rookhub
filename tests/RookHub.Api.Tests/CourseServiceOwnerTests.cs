@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -224,7 +225,7 @@ public class CourseServiceOwnerTests : IDisposable
     [Fact]
     public async Task UploadPersonalCourse_InvalidPgn_ThrowsAndCreatesNoBook()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.UploadPersonalCourseAsync(userId: 1, "notpgn.pgn", "this is not a pgn at all", null));
         Assert.Empty(_db.Books);
     }
@@ -254,7 +255,7 @@ public class CourseServiceOwnerTests : IDisposable
     public async Task CreatePersonalCourse_WithoutName_ThrowsAndCreatesNoBook()
     {
         // Ohne Datei gibt es keinen Dateinamen, aus dem sich ein Anzeigename ableiten liesse.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.CreatePersonalCourseAsync(userId: 1, "   "));
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.CreatePersonalCourseAsync(userId: 1, "   "));
         Assert.Empty(_db.Books);
     }
 
@@ -285,7 +286,7 @@ public class CourseServiceOwnerTests : IDisposable
     public async Task DeletePersonalCourse_NonOwner_Throws()
     {
         var dto = await _svc.UploadPersonalCourseAsync(userId: 1, "line.pgn", SamplePgn, null);
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.DeletePersonalCourseAsync(userId: 2, dto.BookId));
         Assert.True(await _db.Books.AnyAsync(b => b.Id == dto.BookId)); // unangetastet
     }
@@ -294,7 +295,7 @@ public class CourseServiceOwnerTests : IDisposable
     public async Task DeletePersonalCourse_GroupBook_Throws_NotOwned()
     {
         var book = await SeedGroupBookAsync(groupId: 3, memberUserId: 1);
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.DeletePersonalCourseAsync(userId: 1, book.Id));
     }
 
@@ -352,7 +353,7 @@ public class CourseServiceOwnerTests : IDisposable
     public async Task PinCourse_InaccessibleBook_Throws_AndPinsNothing()
     {
         var book = await SeedPersonalBookAsync(ownerUserId: 1); // gehört User 1
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.PinCourseAsync(userId: 2, book.Id, isAdmin: false));
         Assert.Empty(_db.CoursePins);
     }

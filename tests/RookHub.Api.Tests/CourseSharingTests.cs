@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -145,7 +146,7 @@ public class CourseSharingTests : IDisposable
         await MakeFriendsAsync(2, 3);
         var book = await SeedPersonalBookAsync(ownerUserId: 1);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.ShareCourseAsync(userId: 2, book.Id, new List<int> { 3 }, isAdmin: false));
         Assert.Empty(_db.CourseShares);
     }
@@ -177,7 +178,7 @@ public class CourseSharingTests : IDisposable
         Assert.Equal("friend", recipients.Single().Username);
 
         // Nicht-Besitzer darf die Freigabeliste nicht lesen.
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _svc.GetShareRecipientsAsync(userId: 2, book.Id));
+        await Assert.ThrowsAsync<ForbiddenException>(() => _svc.GetShareRecipientsAsync(userId: 2, book.Id));
     }
 
     [Fact]
@@ -205,7 +206,7 @@ public class CourseSharingTests : IDisposable
         var book = await SeedPersonalBookAsync(ownerUserId: 1);
         await _svc.ShareCourseAsync(userId: 1, book.Id, new List<int> { 2 }, isAdmin: false);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.UnshareCourseAsync(userId: 2, book.Id, recipientId: 2));
         Assert.Single(_db.CourseShares);
     }

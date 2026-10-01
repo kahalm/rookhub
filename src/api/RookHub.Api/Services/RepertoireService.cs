@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -190,7 +191,7 @@ public class RepertoireService
     {
         var count = await _db.Repertoires.CountAsync(r => r.UserId == userId);
         if (count >= MaxRepertoiresPerUser)
-            throw new InvalidOperationException($"Maximum of {MaxRepertoiresPerUser} repertoires per user reached.");
+            throw new DomainValidationException($"Maximum of {MaxRepertoiresPerUser} repertoires per user reached.");
 
         var rep = new Repertoire
         {
@@ -223,12 +224,12 @@ public class RepertoireService
 
     /// <summary>Legt ein Repertoire aus fertigem PGN an (eine Datei) — für „Kurs → Repertoire umwandeln".
     /// <see cref="Repertoire.UseForExtension"/> standardmäßig aus (wie bei importierten Chessable-Kursen);
-    /// im Bearbeiten-Dialog aktivierbar. Wirft <see cref="InvalidOperationException"/> bei Nicht-PGN.</summary>
+    /// im Bearbeiten-Dialog aktivierbar. Wirft <see cref="DomainValidationException"/> bei Nicht-PGN.</summary>
     public async Task<RepertoireDto> CreateFromPgnAsync(int userId, string name, string fileName, string pgn,
         RepertoireKind kind = RepertoireKind.None)
     {
         if (string.IsNullOrWhiteSpace(pgn) || !LooksLikePgn(pgn))
-            throw new InvalidOperationException("The content does not look like a valid PGN.");
+            throw new DomainValidationException("The content does not look like a valid PGN.");
         var trimmed = string.IsNullOrWhiteSpace(name) ? "Repertoire" : name.Trim();
         if (trimmed.Length > 200) trimmed = trimmed[..200];
 
@@ -388,13 +389,13 @@ public class RepertoireService
         var rep = await _db.Repertoires
             .Include(r => r.Files)
             .FirstOrDefaultAsync(r => r.Id == repertoireId && r.UserId == userId)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
+            ?? throw new NotFoundException("Repertoire not found.");
 
         if (rep.Files.Count >= MaxFilesPerRepertoire)
-            throw new InvalidOperationException($"Maximum of {MaxFilesPerRepertoire} files per repertoire reached.");
+            throw new DomainValidationException($"Maximum of {MaxFilesPerRepertoire} files per repertoire reached.");
 
         if (fileStream.CanSeek && fileStream.Length > MaxFileSize)
-            throw new InvalidOperationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
+            throw new DomainValidationException($"File size exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
 
         // S-14: Sanitize filename to prevent path traversal
         var safeFileName = Path.GetFileName(fileName);
@@ -406,17 +407,17 @@ public class RepertoireService
 
         // S-24: Content-length check after ReadToEnd (for non-seekable streams)
         if (content.Length > MaxFileSize)
-            throw new InvalidOperationException($"File content exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
+            throw new DomainValidationException($"File content exceeds maximum of {MaxFileSize / 1024 / 1024} MB.");
 
         // S-13: PGN content validation — verlangt ein echtes Tag-Pair ODER einen echten ersten Zug,
         // nicht nur die Teilstrings "[Event" / "1." irgendwo (die auch beliebigen Text durchlassen).
         if (!LooksLikePgn(content))
-            throw new InvalidOperationException("File does not appear to be valid PGN content.");
+            throw new DomainValidationException("File does not appear to be valid PGN content.");
 
         // A6-001: tiefer geschachtelte Varianten würde der Server-Parser ohnehin abschneiden (Stack-Schutz,
         // siehe PgnMoveTree.MaxVariationDepth) — lieber gleich sagen als still Teile der Datei ignorieren.
         if (PgnMoveTree.VariationDepthOf(content) > PgnMoveTree.MaxVariationDepth)
-            throw new InvalidOperationException($"PGN variations are nested too deeply (maximum {PgnMoveTree.MaxVariationDepth} levels).");
+            throw new DomainValidationException($"PGN variations are nested too deeply (maximum {PgnMoveTree.MaxVariationDepth} levels).");
 
         // Chessable-Kurs-ID aus [Site]-Tag (piratechess-Export) automatisch übernehmen,
         // wenn noch keine ID am Repertoire gesetzt ist.

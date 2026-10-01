@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -280,7 +281,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var invalidContent = "This is not PGN content at all";
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(invalidContent));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<DomainValidationException>(() =>
             _service.UploadFileAsync(rep.Id, userId, "bad.pgn", stream));
     }
 
@@ -297,7 +298,7 @@ public class RepertoireServiceExtendedTests : IDisposable
             await _service.CreateAsync(userId, new CreateRepertoireDto { Name = $"Rep{i}" });
         }
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() =>
             _service.CreateAsync(userId, new CreateRepertoireDto { Name = "One Too Many" }));
         Assert.Contains("Maximum", ex.Message);
     }
@@ -318,7 +319,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var extraPgn = "[Event \"Extra\"]\n1. d4 d5 *";
         using var extraStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(extraPgn));
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = await Assert.ThrowsAsync<DomainValidationException>(() =>
             _service.UploadFileAsync(rep.Id, userId, "extra.pgn", extraStream));
         Assert.Contains("Maximum", ex.Message);
     }

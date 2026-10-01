@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -47,6 +48,31 @@ public static class CourseAccess
                    (everyoneIds.Contains(a.GroupId)
                     || db.UserGroups.Any(ug => ug.UserId == userId && ug.GroupId == a.GroupId)))
         ), ct);
+    }
+
+    /// <summary>Antwort der Besitzer-oder-Admin-Regel (<see cref="LoadManageableAsync"/>) — überall dieselbe.</summary>
+    public const string ManageForbiddenMessage = "Only the owner or an admin may edit this course.";
+
+    /// <summary>
+    /// DIE Besitzer-oder-Admin-Regel für das Verwalten eines Kurs-Buchs (Inhalte, Themen, Kalkulations-Serie):
+    /// nicht lesbar oder unbekannt → <see cref="NotFoundException"/> (404, kein Existenz-Orakel), lesbar aber
+    /// weder Besitzer noch Admin → <see cref="ForbiddenException"/> (403). Beides wird vom globalen
+    /// <c>DomainExceptionFilter</c> zu <c>{ message }</c>. Liefert das (getrackte) Buch.
+    ///
+    /// <para>Vorher stand die Regel je Dienst mit eigener Antwort: <c>UnauthorizedAccessException</c> mit
+    /// verschiedenen Texten (Inhaltspflege, Themen) und ein <c>bool</c>, aus dem der Controller ein
+    /// <c>Forbid()</c> ohne Rumpf machte — auch für ein Buch, das es gar nicht gibt (Kalkulations-Serie,
+    /// Codereview A7-011).</para>
+    /// </summary>
+    public static async Task<Book> LoadManageableAsync(AppDbContext db, int userId, int bookId, bool isAdmin,
+        CancellationToken ct = default)
+    {
+        if (!await CanAccessAsync(db, userId, bookId, isAdmin, ct))
+            throw new NotFoundException("Book not found.");
+        var book = await db.Books.FirstAsync(b => b.Id == bookId, ct);
+        if (!isAdmin && book.OwnerUserId != userId)
+            throw new ForbiddenException(ManageForbiddenMessage);
+        return book;
     }
 
     /// <summary>

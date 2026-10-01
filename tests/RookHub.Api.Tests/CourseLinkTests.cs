@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -84,7 +85,7 @@ public class CourseLinkTests : IDisposable
     public async Task Link_ToSelf_Throws()
     {
         var a = await SeedBookAsync(1, "A");
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _svc.LinkCoursesAsync(1, a.Id, a.Id, false));
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.LinkCoursesAsync(1, a.Id, a.Id, false));
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class CourseLinkTests : IDisposable
     {
         var mine = await SeedBookAsync(1, "Mine");
         var other = await SeedBookAsync(2, "Other");   // gehört User 2
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.LinkCoursesAsync(1, mine.Id, other.Id, false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.LinkCoursesAsync(1, mine.Id, other.Id, false));
         Assert.Empty(_db.CourseLinks);
     }
 

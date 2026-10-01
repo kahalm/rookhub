@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Tests;
@@ -74,7 +75,7 @@ public class RepertoireServiceTests : IDisposable
         // Enthaelt "1." (in "Chapter 1.") aber keinen echten Zug und kein Tag-Pair -> abgelehnt.
         var junk = "Chapter 1. Introduction\nThis is just prose, not a game.";
         using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(junk));
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _repertoireService.UploadFileAsync(rep.Id, userId, "notes.pgn", stream));
     }
 
@@ -97,7 +98,7 @@ public class RepertoireServiceTests : IDisposable
         if (accepted) Assert.Equal("deep.pgn", (await upload()).FileName);
         else
         {
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(upload);
+            var ex = await Assert.ThrowsAsync<DomainValidationException>(upload);
             Assert.Contains("nested too deeply", ex.Message);
             Assert.Empty(_db.RepertoireFiles);
         }

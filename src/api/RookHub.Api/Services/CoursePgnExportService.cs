@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -23,7 +24,7 @@ public class CoursePgnExportService
 
     /// <summary>
     /// Die EINE Pforte aller PGN-Exporte: kein Kurszugriff (<see cref="CourseAccess.CanAccessAsync"/>)
-    /// ODER Kalkulationsbuch → <see cref="KeyNotFoundException"/> (404), auch für Admins. Ein PGN-Export
+    /// ODER Kalkulationsbuch → <see cref="NotFoundException"/> (404), auch für Admins. Ein PGN-Export
     /// enthält die Züge — in einem Kalkulationsbuch die Lösung — und beim Buch/Kapitel alle Wochen samt
     /// künftig terminierter Ausgaben (siehe <see cref="CourseAccess.IsCalculationBookAsync"/>). Wer die
     /// Zugfolgen braucht, schaltet als Besitzer/Admin den Kalkulations-Modus aus.
@@ -32,7 +33,7 @@ public class CoursePgnExportService
     {
         if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin)
             || await CourseAccess.IsCalculationBookAsync(_db, bookId))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
     }
 
     /// <summary>Exportiert ein (zugängliches) Buch als PGN. Liefert PGN-Text + Dateiname.
@@ -80,7 +81,7 @@ public class CoursePgnExportService
     /// Jede Linie kommt wie beim Kurs-Download bevorzugt unverändert aus dem Roh-PGN (Varianten + Kommentare
     /// bleiben erhalten); nur Linien ohne Gegenstück dort werden rekonstruiert. Kein Zugriff, leeres
     /// Kapitel oder KALKULATIONSBUCH (die Züge wären die Lösung, wie bei <see cref="CourseService.GetAllPuzzlesAsync"/>)
-    /// → <see cref="KeyNotFoundException"/>.</summary>
+    /// → <see cref="NotFoundException"/>.</summary>
     public async Task<(string Pgn, string FileName)> GetChapterPgnAsync(int userId, int bookId, string? chapter, bool isAdmin)
     {
         await EnsureExportAllowedAsync(userId, bookId, isAdmin);
@@ -92,20 +93,20 @@ public class CoursePgnExportService
                 .ToListAsync())
             .Where(bp => ChapterOrder.NormalizeChapter(bp.Chapter?.Trim()) == wanted)
             .ToList();
-        if (puzzles.Count == 0) throw new KeyNotFoundException("Chapter not found.");
+        if (puzzles.Count == 0) throw new NotFoundException("Chapter not found.");
         var fileName = PgnFileName(book.DisplayName, wanted ?? "no_chapter");
         return (BuildLinesPgn(book, puzzles), fileName);
     }
 
     /// <summary>PGN EINER Linie (<paramref name="lineId"/> = <see cref="BookPuzzle.Id"/>), bevorzugt
     /// unverändert aus dem Roh-PGN. Kein Zugriff, Linie gehört nicht zum Buch oder Kalkulationsbuch
-    /// → <see cref="KeyNotFoundException"/>.</summary>
+    /// → <see cref="NotFoundException"/>.</summary>
     public async Task<(string Pgn, string FileName)> GetLinePgnAsync(int userId, int bookId, int lineId, bool isAdmin)
     {
         await EnsureExportAllowedAsync(userId, bookId, isAdmin);
         var book = await _db.Books.Include(b => b.Source).FirstAsync(b => b.Id == bookId);   // BuildLinesPgn liest das Roh-PGN
         var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == lineId && bp.BookId == bookId)
-            ?? throw new KeyNotFoundException("Line not found.");
+            ?? throw new NotFoundException("Line not found.");
         var fileName = PgnFileName(book.DisplayName, $"{puzzle.Round} {puzzle.Title}");
         return (BuildLinesPgn(book, [puzzle]), fileName);
     }

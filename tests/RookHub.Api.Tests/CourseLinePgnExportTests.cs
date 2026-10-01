@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -121,8 +122,8 @@ public class CourseLinePgnExportTests : IDisposable
         book.IsCalculation = true;
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetChapterPgnAsync(1, book.Id, "Kapitel A", isAdmin: true));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetLinePgnAsync(1, book.Id, LineId("001.001"), isAdmin: true));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetChapterPgnAsync(1, book.Id, "Kapitel A", isAdmin: true));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetLinePgnAsync(1, book.Id, LineId("001.001"), isAdmin: true));
     }
 
     [Fact]
@@ -134,9 +135,9 @@ public class CourseLinePgnExportTests : IDisposable
         _db.Books.Add(other);
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetChapterPgnAsync(1, book.Id, "Gibt es nicht", false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetLinePgnAsync(1, other.Id, LineId("001.001"), false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetLinePgnAsync(2, book.Id, LineId("001.001"), false));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetChapterPgnAsync(2, book.Id, "Kapitel A", false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetChapterPgnAsync(1, book.Id, "Gibt es nicht", false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetLinePgnAsync(1, other.Id, LineId("001.001"), false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetLinePgnAsync(2, book.Id, LineId("001.001"), false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetChapterPgnAsync(2, book.Id, "Kapitel A", false));
     }
 }

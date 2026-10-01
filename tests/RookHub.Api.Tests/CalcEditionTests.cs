@@ -5,6 +5,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -113,9 +114,9 @@ public class CalcEditionTests : IDisposable
     public async Task CanManage_OwnerAndAdminOnly()
     {
         var bookId = await SeedBookAsync();
-        Assert.True(await _editions.CanManageAsync(OwnerId, bookId, isAdmin: false));
-        Assert.False(await _editions.CanManageAsync(ViewerId, bookId, isAdmin: false));
-        Assert.True(await _editions.CanManageAsync(ViewerId, bookId, isAdmin: true));
+        await _editions.EnsureCanManageAsync(OwnerId, bookId, isAdmin: false);
+        await Assert.ThrowsAsync<ForbiddenException>(() => _editions.EnsureCanManageAsync(ViewerId, bookId, isAdmin: false));
+        await _editions.EnsureCanManageAsync(ViewerId, bookId, isAdmin: true);
     }
 
     [Fact]
@@ -425,7 +426,7 @@ public class CalcEditionTests : IDisposable
         // Buch-Id-Iteration ohne Login lesbar — „privat schalten" über IsPublic griff hier nicht.
         var bookId = await SeedSeriesBookAsync(isPublic: false);
 
-        Assert.IsType<NotFoundResult>((await Controller(null).ListVisible(bookId, default)).Result);
+        Assert.IsType<NotFoundObjectResult>((await Controller(null).ListVisible(bookId, default)).Result);
     }
 
     [Fact]
@@ -453,7 +454,7 @@ public class CalcEditionTests : IDisposable
     {
         var bookId = await SeedSeriesBookAsync(isPublic: false);
 
-        Assert.IsType<NotFoundResult>((await Controller(77).ListVisible(bookId, default)).Result);
+        Assert.IsType<NotFoundObjectResult>((await Controller(77).ListVisible(bookId, default)).Result);
     }
 
     // ===== Kurs-Detailseite: dieselbe Termin-Sperre wie der Kalkulations-Modus (Codereview 2026-09-29, A7-002) =====
@@ -542,7 +543,7 @@ public class CalcEditionTests : IDisposable
         var bookId = await SeedBookAsync();
         await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
             new RenameCourseChapterDto { Chapter = "Woche B", NewName = "  " }, isAdmin: false));
 
         Assert.Equal(2, await _db.BookPuzzles.CountAsync(p => p.Chapter == "Woche B"));   // nichts verändert
@@ -557,7 +558,7 @@ public class CalcEditionTests : IDisposable
         await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(7) });
         await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche C", PublishAt = DateTime.UtcNow.AddDays(14) });
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _authoring.RenameChapterAsync(OwnerId, bookId,
             new RenameCourseChapterDto { Chapter = "Woche B", NewName = "Woche C" }, isAdmin: false));
         Assert.Equal(2, await _db.BookPuzzles.CountAsync(p => p.Chapter == "Woche B"));
     }
@@ -681,9 +682,10 @@ public class CalcEditionTests : IDisposable
         book.IsCalculation = false;
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertMemberAsync(bookId, "viewer", isTester: false));
-        Assert.IsType<BadRequestObjectResult>((await Controller(OwnerId).UpsertMember(bookId,
-            new CalcSeriesMemberInputDto { Username = "viewer" }, default)).Result);
+        await Assert.ThrowsAsync<DomainValidationException>(() => _editions.UpsertMemberAsync(bookId, "viewer", isTester: false));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => (await Controller(OwnerId).UpsertMember(bookId,
+            new CalcSeriesMemberInputDto { Username = "viewer" }, default)).Result), 400,
+            "Only calculation books have a distribution list.");
         Assert.False(await _db.CalcSeriesMembers.AnyAsync());
     }
 
@@ -696,7 +698,7 @@ public class CalcEditionTests : IDisposable
             _db.CalcSeriesMembers.Add(new CalcSeriesMember { BookId = bookId, UserId = 1000 + i });
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertMemberAsync(bookId, "tester", isTester: false));
+        await Assert.ThrowsAsync<DomainValidationException>(() => _editions.UpsertMemberAsync(bookId, "tester", isTester: false));
         Assert.Equal(CalcEditionService.MaxMembersPerBook, await _db.CalcSeriesMembers.CountAsync(m => m.BookId == bookId));
         Assert.True((await _editions.UpsertMemberAsync(bookId, "viewer", isTester: true))!.IsTester);
     }
@@ -710,10 +712,11 @@ public class CalcEditionTests : IDisposable
             _db.CalcEditions.Add(new CalcEdition { BookId = bookId, Chapter = $"x{i}", PublishAt = DateTime.UtcNow.AddDays(-1) });
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _editions.UpsertAsync(bookId,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _editions.UpsertAsync(bookId,
             new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(-1) }));
-        Assert.IsType<BadRequestObjectResult>((await Controller(OwnerId).Upsert(bookId,
-            new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(-1) }, default)).Result);
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => (await Controller(OwnerId).Upsert(bookId,
+            new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(-1) }, default)).Result), 400,
+            $"At most {CalcEditionService.MaxEditionsPerBook} editions per book.");
         Assert.Equal(CalcEditionService.MaxEditionsPerBook, await _db.CalcEditions.CountAsync(e => e.BookId == bookId));
 
         var edited = await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche A", Title = "neu", PublishAt = DateTime.UtcNow.AddDays(2) });
@@ -728,10 +731,11 @@ public class CalcEditionTests : IDisposable
         await _editions.UpsertMemberAsync(bookId, "tester", isTester: true);
 
         // Fremdes Mitglied austragen: weiterhin nur Besitzer/Admin.
-        Assert.IsType<ForbidResult>(await Controller(ViewerId).RemoveMember(bookId, TesterId, default));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => await Controller(ViewerId).RemoveMember(bookId, TesterId, default)),
+            403, CourseAccess.ManageForbiddenMessage);
         // Sich selbst austragen: ohne Verwaltungsrecht erlaubt, idempotent (danach 404).
         Assert.IsType<NoContentResult>(await Controller(ViewerId).RemoveMember(bookId, ViewerId, default));
-        Assert.IsType<NotFoundResult>(await Controller(ViewerId).RemoveMember(bookId, ViewerId, default));
+        Assert.IsType<NotFoundObjectResult>(await Controller(ViewerId).RemoveMember(bookId, ViewerId, default));
         Assert.Equal(new[] { TesterId }, await _db.CalcSeriesMembers.Select(m => m.UserId).ToArrayAsync());
     }
 }

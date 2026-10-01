@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -60,7 +61,7 @@ public class CourseServiceThemesTests : IDisposable
         var book = await SeedBookAsync(ownerUserId: 1);
         _db.CourseShares.Add(new CourseShare { BookId = book.Id, OwnerId = 1, RecipientId = 2, SharedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync();
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.SetBookThemesAsync(userId: 2, book.Id, new[] { "endgame" }, isAdmin: false));
     }
 
@@ -68,7 +69,7 @@ public class CourseServiceThemesTests : IDisposable
     public async Task InvalidKey_Throws400()
     {
         var book = await SeedBookAsync(ownerUserId: 1);
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.SetBookThemesAsync(userId: 1, book.Id, new[] { "bogus" }, isAdmin: false));
     }
 

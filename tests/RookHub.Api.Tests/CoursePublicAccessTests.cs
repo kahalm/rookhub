@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -85,13 +86,13 @@ public class CoursePublicAccessTests : IDisposable
     public async Task GetPublicCoursePuzzles_Throws_ForNonPublicBook()
     {
         var book = await SeedBookAsync(isPublic: false);
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetPublicCoursePuzzlesAsync(book.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetPublicCoursePuzzlesAsync(book.Id));
     }
 
     [Fact]
     public async Task GetPublicCoursePuzzles_Throws_ForMissingBook()
     {
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetPublicCoursePuzzlesAsync(9999));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetPublicCoursePuzzlesAsync(9999));
     }
 
     [Fact]

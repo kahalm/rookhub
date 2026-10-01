@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -32,9 +33,12 @@ public class CalcEditionService
         _friends = friends;
     }
 
-    /// <summary>Darf der User die Ausgaben dieses Buchs verwalten? (Besitzer oder Admin.)</summary>
-    public async Task<bool> CanManageAsync(int userId, int bookId, bool isAdmin, CancellationToken ct = default)
-        => isAdmin || await _db.Books.AnyAsync(b => b.Id == bookId && b.OwnerUserId == userId, ct);
+    /// <summary>Verwalten nur durch Besitzer oder Admin — die eine Regel in
+    /// <see cref="CourseAccess.LoadManageableAsync"/>: nicht lesbar/unbekannt → 404, lesbar aber nicht
+    /// berechtigt → 403, jeweils <c>{ message }</c>. Vorher ein <c>bool</c> ohne Existenz-Prüfung, aus dem
+    /// der Controller <c>Forbid()</c> ohne Rumpf machte — auch für ein Buch, das es nicht gibt.</summary>
+    public Task EnsureCanManageAsync(int userId, int bookId, bool isAdmin, CancellationToken ct = default)
+        => CourseAccess.LoadManageableAsync(_db, userId, bookId, isAdmin, ct);
 
     private static CalcEditionDto Map(CalcEdition e, DateTime now) => new()
     {
@@ -59,7 +63,7 @@ public class CalcEditionService
         return eds.Select(e => Map(e, now)).ToList();
     }
 
-    /// <summary>Upsert je (Buch, Kapitel). Wirft <see cref="InvalidOperationException"/>, wenn eine NEUE
+    /// <summary>Upsert je (Buch, Kapitel). Wirft <see cref="DomainValidationException"/>, wenn eine NEUE
     /// Ausgabe den Deckel <see cref="MaxEditionsPerBook"/> überschreiten würde.</summary>
     public async Task<CalcEditionDto> UpsertAsync(int bookId, CalcEditionInputDto input, CancellationToken ct = default)
     {
@@ -69,7 +73,7 @@ public class CalcEditionService
         if (e is null)
         {
             if (await _db.CalcEditions.CountAsync(x => x.BookId == bookId, ct) >= MaxEditionsPerBook)
-                throw new InvalidOperationException($"At most {MaxEditionsPerBook} editions per book.");
+                throw new DomainValidationException($"At most {MaxEditionsPerBook} editions per book.");
             e = new CalcEdition { BookId = bookId, Chapter = chapter, CreatedAt = now };
             _db.CalcEditions.Add(e);
         }
@@ -122,7 +126,7 @@ public class CalcEditionService
     /// der Kurs erschien zudem in deren Kursliste. Wer schon im Verteiler steht, bleibt änderbar (Tester-Häkchen)
     /// und kann sich selbst austragen (<see cref="RemoveMemberAsync"/>).</para>
     ///
-    /// <para>Wirft <see cref="InvalidOperationException"/> bei einem Nicht-Kalkulationsbuch oder vollem Verteiler.</para></summary>
+    /// <para>Wirft <see cref="DomainValidationException"/> bei einem Nicht-Kalkulationsbuch oder vollem Verteiler.</para></summary>
     public async Task<CalcSeriesMemberDto?> UpsertMemberAsync(int bookId, string username, bool isTester, bool isAdmin = false, CancellationToken ct = default)
     {
         var name = (username ?? string.Empty).Trim();
@@ -140,9 +144,9 @@ public class CalcEditionService
                 && (book.OwnerUserId is not int ownerId || !await _friends.AreFriendsAsync(ownerId, user.Id)))
                 return null;
             if (!book.IsCalculation)
-                throw new InvalidOperationException("Only calculation books have a distribution list.");
+                throw new DomainValidationException("Only calculation books have a distribution list.");
             if (await _db.CalcSeriesMembers.CountAsync(m => m.BookId == bookId, ct) >= MaxMembersPerBook)
-                throw new InvalidOperationException($"At most {MaxMembersPerBook} members per distribution list.");
+                throw new DomainValidationException($"At most {MaxMembersPerBook} members per distribution list.");
             existing = new CalcSeriesMember { BookId = bookId, UserId = user.Id, IsTester = isTester, CreatedAt = DateTime.UtcNow };
             _db.CalcSeriesMembers.Add(existing);
         }

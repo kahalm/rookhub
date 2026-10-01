@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 
 namespace RookHub.Api.Services;
 
@@ -58,15 +59,15 @@ public class CourseRepertoireConversionService
     /// <summary>„Repertoire → Kurs umwandeln" (Verschieben): legt aus dem kombinierten Repertoire-PGN
     /// einen persönlichen Kurs an und ENTFERNT anschließend das Original-Repertoire. Funktioniert nur mit
     /// Puzzle-PGN im Chessable-Stil (FEN + Round + Trainingsmarker je Zug); ein reines Eröffnungs-
-    /// Repertoire ohne Puzzle-Marker wirft <see cref="InvalidOperationException"/> (→ 400) — dann bleibt
+    /// Repertoire ohne Puzzle-Marker wirft <see cref="DomainValidationException"/> (→ 400) — dann bleibt
     /// das Repertoire erhalten. Ein noch LEERES Repertoire (nie eine PGN importiert) wirft eine
     /// <see cref="CourseConversionException"/> mit <c>Code = "repertoire_empty"</c>.</summary>
-    /// <exception cref="KeyNotFoundException">Das Repertoire gehört dem Nutzer nicht (→ 404).</exception>
+    /// <exception cref="NotFoundException">Das Repertoire gehört dem Nutzer nicht (→ 404).</exception>
     public async Task<CourseListItemDto> ConvertRepertoireToCourseAsync(int userId, int repertoireId)
     {
         // Umwandeln VERSCHIEBT (löscht das Original) → nur der Besitzer, nicht ein Freigabe-Empfänger.
         if (!await _repertoires.IsOwnerAsync(repertoireId, userId))
-            throw new KeyNotFoundException("Repertoire not found.");
+            throw new NotFoundException("Repertoire not found.");
 
         var detail = await _repertoires.GetByIdAsync(repertoireId, userId);
         var pgn = await _repertoires.GetCombinedPgnAsync(repertoireId, userId);

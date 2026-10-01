@@ -354,7 +354,8 @@ public class CourseControllerTests : IDisposable
         var (book, ids) = await SeedMixedBookAsync("MixQuiz", false, true);  // quiz, info
 
         // Quiz-Linien werden über CoursePuzzleResult gemerkt, nicht als Info-View.
-        Assert.IsType<NotFoundObjectResult>(await _controller.MarkInfoSeen(book.Id, new MarkInfoSeenDto { BookPuzzleId = ids[0] }));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => await _controller.MarkInfoSeen(book.Id,
+            new MarkInfoSeenDto { BookPuzzleId = ids[0] })), 404, "Info line does not belong to this book.");
         Assert.Empty(_db.CourseInfoViews);
     }
 
@@ -389,7 +390,8 @@ public class CourseControllerTests : IDisposable
     public async Task GetNext_BookNotFound_Returns404()
     {
         await CreateUserAsync();
-        Assert.IsType<NotFoundObjectResult>(await _controller.GetNext(999, "sequential"));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => await _controller.GetNext(999, "sequential")),
+            404, "Book not found.");
     }
 
     [Fact]
@@ -437,8 +439,9 @@ public class CourseControllerTests : IDisposable
         var (_, idsB) = await SeedBookAsync("B", 1);
 
         // Puzzle aus Buch B gegen Buch A aufzeichnen -> 404.
-        var res = await _controller.RecordResult(bookA.Id, new RecordCourseResultDto { BookPuzzleId = idsB[0], Solved = true });
-        Assert.IsType<NotFoundObjectResult>(res);
+        var res = await DomainHttp.ResultAsync(async () => await _controller.RecordResult(bookA.Id,
+            new RecordCourseResultDto { BookPuzzleId = idsB[0], Solved = true }));
+        DomainHttp.AssertError(res, 404, "Puzzle does not belong to this book.");
     }
 
     [Fact]
@@ -567,7 +570,8 @@ public class CourseControllerTests : IDisposable
     {
         var (book, _) = await SeedBookAsync("Secret", 2);
         SetUser(_controller, 2, isAdmin: false);
-        Assert.IsType<NotFoundObjectResult>((await _controller.GetAllPuzzles(book.Id)).Result);
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => (await _controller.GetAllPuzzles(book.Id)).Result),
+            404, "Book not found.");
     }
 
     [Fact]
@@ -591,7 +595,8 @@ public class CourseControllerTests : IDisposable
         var (book, _) = await SeedBookAsync("Course", 2);
 
         SetUser(_controller, 2, isAdmin: false);
-        Assert.IsType<NotFoundObjectResult>(await _controller.GetNext(book.Id, "sequential"));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => await _controller.GetNext(book.Id, "sequential")),
+            404, "Book not found.");
 
         // Zugriff gewähren -> funktioniert.
         var groupId = await CreateGroupAsync("G");
@@ -923,9 +928,9 @@ public class CourseControllerTests : IDisposable
     [Fact]
     public async Task Create_WithoutFileAndWithoutName_IsBadRequest()
     {
-        var result = await _controller.Create(file: null, name: "  ");
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.Create(file: null, name: "  ")).Result);
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        DomainHttp.AssertError(result, 400, "A course name is required.");
         Assert.Empty(_db.Books);
     }
 

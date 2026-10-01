@@ -20,6 +20,9 @@ namespace RookHub.Api.Controllers;
 /// <c>GET api/courses/{bookId}</c> ohne gesperrte Wochen in Kapitelliste und Zählern,
 /// <c>GET api/courses/{bookId}/lines?chapter=</c> liefert für eine gesperrte Woche eine leere Liste wie
 /// für ein unbekanntes Kapitel).
+/// Fehlerfälle werfen die Dienste als Domänen-Ausnahme; Verwalten prüft die eine Besitzer-oder-Admin-Regel
+/// (<see cref="CourseAccess.LoadManageableAsync"/>: 404 nicht lesbar, 403 nicht berechtigt). Jede
+/// Fehlerantwort trägt <c>{ message }</c> (Codereview A7-011).
 /// </summary>
 [ApiController]
 [Route("api/calc-editions")]
@@ -49,7 +52,7 @@ public class CalcSeriesController : BaseApiController
         var allowed = userId is null
             ? await _db.Books.AnyAsync(b => b.Id == bookId && b.IsPublic, ct)
             : await CourseAccess.CanAccessAsync(_db, userId.Value, bookId, IsAdmin, ct);
-        if (!allowed) return NotFound();
+        if (!allowed) return NotFound(new { message = "Book not found." });
         return Ok(await _service.ListVisibleAsync(bookId, ct));
     }
 
@@ -57,7 +60,7 @@ public class CalcSeriesController : BaseApiController
     [HttpGet("{bookId:int}/manage")]
     public async Task<ActionResult<List<CalcEditionDto>>> ListManage(int bookId, CancellationToken ct)
     {
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
         return Ok(await _service.ListAsync(bookId, ct));
     }
 
@@ -67,17 +70,16 @@ public class CalcSeriesController : BaseApiController
     public async Task<ActionResult<CalcEditionDto>> Upsert(int bookId, [FromBody] CalcEditionInputDto dto, CancellationToken ct)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Chapter)) return BadRequest(new { message = "Chapter required." });
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        try { return Ok(await _service.UpsertAsync(bookId, dto, ct)); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
+        return Ok(await _service.UpsertAsync(bookId, dto, ct));
     }
 
     /// <summary>Ausgabe löschen. Nur Besitzer/Admin.</summary>
     [HttpDelete("{bookId:int}/{editionId:int}")]
     public async Task<IActionResult> Delete(int bookId, int editionId, CancellationToken ct)
     {
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        return await _service.DeleteAsync(bookId, editionId, ct) ? NoContent() : NotFound();
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
+        return await _service.DeleteAsync(bookId, editionId, ct) ? NoContent() : NotFound(new { message = "Edition not found." });
     }
 
     // ===== Privater Verteiler (Phase 2) — Besitzer/Admin; Austragen auch selbst =====
@@ -86,7 +88,7 @@ public class CalcSeriesController : BaseApiController
     [HttpGet("{bookId:int}/members")]
     public async Task<ActionResult<List<CalcSeriesMemberDto>>> ListMembers(int bookId, CancellationToken ct)
     {
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
         return Ok(await _service.ListMembersAsync(bookId, ct));
     }
 
@@ -98,13 +100,9 @@ public class CalcSeriesController : BaseApiController
     public async Task<ActionResult<CalcSeriesMemberDto>> UpsertMember(int bookId, [FromBody] CalcSeriesMemberInputDto dto, CancellationToken ct)
     {
         if (dto is null || string.IsNullOrWhiteSpace(dto.Username)) return BadRequest(new { message = "Username required." });
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        try
-        {
-            var member = await _service.UpsertMemberAsync(bookId, dto.Username, dto.IsTester, IsAdmin, ct);
-            return member is null ? NotFound(new { message = "User not found or not a friend." }) : Ok(member);
-        }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
+        var member = await _service.UpsertMemberAsync(bookId, dto.Username, dto.IsTester, IsAdmin, ct);
+        return member is null ? NotFound(new { message = "User not found or not a friend." }) : Ok(member);
     }
 
     /// <summary>Mitglied entfernen. Besitzer/Admin — oder das Mitglied sich selbst (Austragen: wer in einen
@@ -112,8 +110,8 @@ public class CalcSeriesController : BaseApiController
     [HttpDelete("{bookId:int}/members/{userId:int}")]
     public async Task<IActionResult> RemoveMember(int bookId, int userId, CancellationToken ct)
     {
-        if (userId != GetUserId() && !await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
-        return await _service.RemoveMemberAsync(bookId, userId, ct) ? NoContent() : NotFound();
+        if (userId != GetUserId()) await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
+        return await _service.RemoveMemberAsync(bookId, userId, ct) ? NoContent() : NotFound(new { message = "Member not found." });
     }
 
     /// <summary>„Gesehen"-Übersicht (Phase 3): welches Mitglied welche Ausgabe wann geöffnet hat.
@@ -121,7 +119,7 @@ public class CalcSeriesController : BaseApiController
     [HttpGet("{bookId:int}/views")]
     public async Task<ActionResult<List<CalcEditionViewDto>>> ListViews(int bookId, CancellationToken ct)
     {
-        if (!await _service.CanManageAsync(GetUserId(), bookId, IsAdmin, ct)) return Forbid();
+        await _service.EnsureCanManageAsync(GetUserId(), bookId, IsAdmin, ct);
         return Ok(await _service.ListViewsAsync(bookId, ct));
     }
 }

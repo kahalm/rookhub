@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -73,6 +74,6 @@ public class CourseServiceLineStatusTests : IDisposable
         _db.Books.Add(book);
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.GetLineStatusAsync(UserId, book.Id, isAdmin: false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.GetLineStatusAsync(UserId, book.Id, isAdmin: false));
     }
 }
