@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
 import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-site';
+import { sanitizeReturnUrl } from './return-url.util';
 
 /**
  * Der Sprung zwischen RookHub und der Turnierseite.
@@ -259,11 +260,14 @@ export class HandoffService {
    * sieht dann „nicht angemeldet" und schickt auf `/login?returnUrl=…`. Kurz darauf gelingt die
    * Uebernahme, aber niemand navigiert zurueck: der Nutzer sitzt angemeldet vor dem
    * Anmeldeformular. Betrifft beide Wege — den Einmal-Code UND die geteilte Anmeldung.</p>
+   *
+   * <p>Das Ziel prueft {@link sanitizeReturnUrl}, dieselbe Regel wie die Maske selbst (F1-016): bisher reichte hier
+   * ein fuehrender Schraegstrich, `//host` und `scheme://…` kamen durch. Rueckfall `/`, nicht `/dashboard` —
+   * die Turnierseite, KidHub und LeagueHub haben kein Dashboard.</p>
    */
   private leaveLoginMask(): void {
     const url = new URL(location.href);
     if (!url.pathname.endsWith('/login')) return;
-    const back = url.searchParams.get('returnUrl');
-    void this.router.navigateByUrl(back && back.startsWith('/') ? back : '/');
+    void this.router.navigateByUrl(sanitizeReturnUrl(url.searchParams.get('returnUrl'), '/'));
   }
 }

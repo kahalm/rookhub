@@ -120,6 +120,31 @@ describe('HandoffService', () => {
     http.verify();
   });
 
+  describe('Verlassen der Anmeldemaske nach der Übernahme (F1-016)', () => {
+    /** Übernimmt die geteilte Anmeldung, während die Adresse auf der Maske mit diesem Rücksprungziel steht. */
+    async function adoptOnLoginMask(returnUrl: string): Promise<jasmine.Spy> {
+      history.replaceState({}, '', `/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      const nav = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+      const done = svc.consumeIncoming();
+      http.expectOne({ method: 'POST', url: '/api/auth/rh-session' }).flush(session);
+      expect(await done).toBeTrue();
+      drainPreferences();
+      return nav;
+    }
+
+    it('folgt einem app-internen Ziel', async () => {
+      expect(await adoptOnLoginMask('/courses/340')).toHaveBeenCalledWith('/courses/340');
+    });
+
+    it('lässt //host und scheme:// nicht durch, sondern geht auf die Startseite — wie die Maske selbst', async () => {
+      expect(await adoptOnLoginMask('//evil.example')).toHaveBeenCalledWith('/');
+    });
+
+    it('lässt auch ein eingebettetes scheme:// nicht durch', async () => {
+      expect(await adoptOnLoginMask('/x?next=https://evil.example')).toHaveBeenCalledWith('/');
+    });
+  });
+
   it('überschreibt eine bestehende Anmeldung nicht mit der geteilten', async () => {
     auth.adoptSession(session);
 
