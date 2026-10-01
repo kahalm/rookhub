@@ -54,7 +54,7 @@ describe('BoardFullscreenButtonComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.active).toBeTrue();
     expect(fixture.componentInstance.label).toBe('common.fullscreenExit');
-    expect(fixture.nativeElement.querySelector('mat-icon').textContent.trim()).toBe('fullscreen_exit');
+    expect(fixture.nativeElement.querySelector('mat-icon').textContent.trim()).toBe('close_fullscreen');
 
     current = null;                       // Esc
     document.dispatchEvent(new Event('fullscreenchange'));
@@ -116,5 +116,15 @@ describe('BoardFullscreenButtonComponent', () => {
     expect(parseFloat(after!.style.bottom)).toBeGreaterThanOrEqual(-2);   // endet an der Brettkante (margin-bottom 2 px)
     const btn = coarse.find(r => !r.selectorText.includes('::after'));
     expect(btn?.style.position).toBe('relative');
+  });
+
+  // Codereview UX-046: Brett- und App-Vollbild zeigten beide „fullscreen“, wenige Zentimeter auseinander.
+  it('zeigt ein eigenes Symbol, nicht das „fullscreen“ des App-Vollbilds in der Kopfzeile', () => {
+    const fixture = TestBed.createComponent(BoardFullscreenButtonComponent);
+    fixture.componentRef.setInput('target', document.createElement('div'));
+    fixture.detectChanges();
+    const icon = (fixture.nativeElement.querySelector('mat-icon').textContent || '').trim();
+    expect(icon).toBe('open_in_full');
+    expect(['fullscreen', 'fullscreen_exit']).not.toContain(icon);
   });
 });

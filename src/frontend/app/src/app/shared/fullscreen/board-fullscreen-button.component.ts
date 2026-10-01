@@ -24,6 +24,10 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
  * `matTooltip` — im Vollbild-Element selbst ist das die einfachere Wahl (CDK-Overlays müssen
  * dafür erst über den `FullscreenOverlayService` mit umziehen).</p>
  *
+ * <p>Eigenes Symbol (open_in_full / close_fullscreen), NICHT das „fullscreen“ des App-Vollbilds in der
+ * Kopfzeile: beide Knöpfe stehen auf jeder Brettseite wenige Zentimeter auseinander, und am Touchgerät
+ * gibt es keinen Tooltip, der sie unterscheidet (Codereview UX-046).</p>
+ *
  * <p>Kann der Browser kein Element-Vollbild (iOS-Safari), rendert die Komponente nichts.</p>
  */
 @Component({
@@ -36,7 +40,7 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
       <button type="button" class="board-fs-btn" [class.board-fs-btn--on]="active"
               (click)="toggle($event)"
               [attr.title]="label" [attr.aria-label]="label">
-        <mat-icon>{{ active ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+        <mat-icon>{{ active ? 'close_fullscreen' : 'open_in_full' }}</mat-icon>
       </button>
     }
   `,
