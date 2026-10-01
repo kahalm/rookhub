@@ -35,8 +35,13 @@ describe('LeaguePageComponent', () => {
     localStorage.removeItem('leaguehub');
     perms = new Set(['league.view', 'league.manage']);
     query = {};
-    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn']);
+    api = jasmine.createSpyObj<LeagueApiService>('LeagueApiService', ['index', 'league', 'clearCache', 'startUpdate', 'updateStatus', 'createShare', 'deleteShare', 'card', 'pgn', 'sources']);
     api.index.and.resolveTo(INDEX);
+    api.sources.and.resolveTo({
+      board: [{ key: 'Lumbra', label: 'Lumbra', games: 34838 }, { key: 'Mega', label: 'ChessBase-Megabase', games: 18839 }], boardTotal: 53677,
+      online: [{ key: 'lichess', label: 'Lichess', games: 667881 }, { key: 'chess.com', label: 'chess.com', games: 29528 }], onlineTotal: 697409,
+      countedAt: '2026-10-01T13:00:00Z',
+    });
     api.league.and.callFake(async (tnr: number) => league(tnr, tnr === 10 ? ['Kufstein', 'Schwaz', 'Wörgl'] : ['Absam', 'Hall']));
     api.updateStatus.and.resolveTo({ running: false, started: null, finished: null, ok: null, message: null });
     router = jasmine.createSpyObj<Router>('Router', ['navigate']);
@@ -81,6 +86,18 @@ describe('LeaguePageComponent', () => {
       queryParams: { liga: 10, runde: 2, verein: 'Schwaz' }, replaceUrl: true }));
     expect(JSON.parse(localStorage.getItem('leaguehub')!)).toEqual({ liga: 10, verein: 'Schwaz' });
     expect(el.textContent).toContain('Stand der Daten: 27.09.2026 21:00');
+    // Partien je Quelle (0.626.0) unter dem Stand der Daten.
+    const src = el.querySelector('.src-count')!.textContent!;
+    expect(src).toContain('53.677 Brettpartien: 34.838 aus Lumbra, 18.839 aus der ChessBase-Megabase.');
+    expect(src).toContain('697.409 Online-Partien: 667.881 von Lichess, 29.528 von chess.com.');
+  });
+
+  it('ohne Zählung (Fehler) fehlt nur die Zeile', async () => {
+    api.sources.and.rejectWith(new Error('x'));
+    const el = create();
+    await settle();
+    expect(el.querySelector('.src-count')).toBeNull();
+    expect(el.querySelector('lh-fixture')).not.toBeNull();
   });
 
   it('nimmt Liga, Runde und Verein aus der Adresse; ein unbekannter Verein fällt zurück', async () => {

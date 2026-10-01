@@ -39,6 +39,12 @@ public class LeagueController : BaseApiController
     public async Task<IActionResult> League(int tnr, CancellationToken ct) =>
         await _league.LeagueJsonAsync(tnr, ct) is { } json ? Content(json, "application/json") : NotFound();
 
+    /// <summary>Partien im Bestand je Quelle (0.626.0) → <c>{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }</c>;
+    /// 30 min im Speicher.</summary>
+    [HttpGet("sources")]
+    [HasPermission(Permissions.LeagueView)]
+    public async Task<IActionResult> Sources([FromServices] LeagueGameSources sources, CancellationToken ct) => Ok(await sources.GetAsync(ct));
+
     [HttpGet("player/{fide}")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<IActionResult> Player(string fide, CancellationToken ct) =>

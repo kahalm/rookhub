@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Account, AccountChecks, AccountInput, Broadcast, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
+import { Account, AccountChecks, AccountInput, Broadcast, GameSources, League, LeagueIndex, OpeningTree, PlayerCard, ProfileView, RecentGames, SharedFixture, SuggestionList, TreeFilter, UpdateStatus } from './league.models';
 
 /** LeagueHub-Endpunkte (`/api/league/*`). Teilen-Links (`/api/league/s/{token}`) gehen ohne Anmeldung. */
 @Injectable({ providedIn: 'root' })
@@ -11,6 +11,11 @@ export class LeagueApiService {
 
   index(): Promise<LeagueIndex> {
     return firstValueFrom(this.http.get<LeagueIndex>('/api/league/index'));
+  }
+
+  /** Partien im Bestand je Quelle (0.626.0) — der Server zählt höchstens alle 30 min neu. */
+  sources(): Promise<GameSources> {
+    return firstValueFrom(this.http.get<GameSources>('/api/league/sources'));
   }
 
   async league(tnr: number, fresh = false): Promise<League> {

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.626.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub start page: below “data as of” it now says how many games are in the database and where they come from — over-the-board games from Lumbra, the ChessBase Megabase, chess-results, Lichess broadcasts and the club database, online games from Lichess and chess.com. Each game counts once, even if it appears on two player cards.", de: "LeagueHub-Startseite: Unter „Stand der Daten“ steht jetzt, wie viele Partien im Bestand sind und woher sie kommen — Brettpartien aus Lumbra, der ChessBase-Megabase, von chess-results, aus Lichess-Übertragungen und der Vereins-Datenbank, Online-Partien von Lichess und chess.com. Jede Partie zählt einmal, auch wenn sie auf zwei Spielerkarten steht." },
+  ] },
   { version: "0.625.2", date: "2026-10-01", changes: [
     { en: "Team pairings of national-team events are read correctly again: on pages that label four columns “Team” (federation code and name on each side) the crawler took the code and the name of the SAME team, so not a single pairing was stored — the European Team Championship 2019 produced 180 warnings per crawl instead of results.", de: "Mannschaftspaarungen von Nationalmannschafts-Turnieren werden wieder richtig gelesen: auf Seiten mit vier „Team\"-Spalten (Föderationskennung und Name je Seite) nahm der Crawler Kennung und Name DERSELBEN Mannschaft, es wurde also keine einzige Paarung gespeichert — die Mannschafts-EM 2019 erzeugte 180 Warnungen je Crawl statt Ergebnisse." },
   ] },

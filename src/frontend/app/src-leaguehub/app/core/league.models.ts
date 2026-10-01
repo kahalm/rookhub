@@ -7,6 +7,15 @@ export interface LeagueIndex {
   leagues: { tnr: number; name: string }[];
 }
 
+/** Partien im Bestand je Quelle (0.626.0, `GET /api/league/sources`). `key`: Lumbra, Mega, chess-results, Lichess-Übertragung,
+ *  Verein bzw. lichess, chess.com (oder ein frei benannter Import). */
+export interface GameSourceRow { key: string; label: string; games: number }
+export interface GameSources {
+  board: GameSourceRow[]; boardTotal: number;
+  online: GameSourceRow[]; onlineTotal: number;
+  countedAt: string;
+}
+
 export interface Candidate { n: string; elo: number | null; rb: number | null; p: number; fide: string | null }
 
 export interface ActualBoard {

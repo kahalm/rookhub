@@ -277,6 +277,8 @@ try
     // Entwürfe der PGN-Importe (0.595.0): liegen online, bis alles importiert oder verworfen ist.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
+        sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();
     // Online-Konten der Ligaspieler + Abruf ihrer Partien (Lichess/chess.com, 0.605.0).
     builder.Services.AddSingleton<RookHub.Api.Services.League.LeagueOnlineSyncSignal>();

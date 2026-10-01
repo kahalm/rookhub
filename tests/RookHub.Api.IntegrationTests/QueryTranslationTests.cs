@@ -58,6 +58,29 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
     /// steht auf Done, damit der laufende Worker der Test-Anwendung sie nicht anfasst.
     /// </summary>
     [MySqlFact]
+    public async Task LeagueHub_PartienJeQuelle_ZaehltOnlinePartienJeSeiteOhneDoppelte()
+    {
+        // GroupBy über die Navigation + Count(Distinct) — muss als COUNT(DISTINCT …) beim Server landen (0.626.0).
+        var a = new LeagueOnlineAccount { FideId = "222", Site = "lichess", UserName = "a", Url = "u", Confidence = "sicher" };
+        var b = new LeagueOnlineAccount { FideId = "333", Site = "lichess", UserName = "b", Url = "u", Confidence = "sicher" };
+        var c = new LeagueOnlineAccount { FideId = "222", Site = "chess.com", UserName = "c", Url = "u", Confidence = "sicher" };
+        Db.LeagueOnlineAccounts.AddRange(a, b, c);
+        await Db.SaveChangesAsync();
+        LeagueOnlineGame G(LeagueOnlineAccount x, string id) => new()
+        {
+            AccountId = x.Id, FideId = x.FideId, ExternalId = id, PlayedAt = DateTime.UtcNow, Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4",
+        };
+        Db.LeagueOnlineGames.AddRange(G(a, "x1"), G(b, "x1"), G(a, "x2"), G(c, "c1"));
+        Db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile { FideId = "222", Name = "Muster, Max",
+            Pgn = "[White \"Muster, Max\"]\n[Black \"Huber, Franz\"]\n[Date \"2024.03.01\"]\n\n1. e4 1-0\n" });
+        await Db.SaveChangesAsync();
+
+        var r = await new RookHub.Api.Services.League.LeagueGameSources(Db).GetAsync(default);
+        Assert.Equal(3, r["onlineTotal"]!.GetValue<int>());
+        Assert.Equal(1, r["boardTotal"]!.GetValue<int>());
+    }
+
+    [MySqlFact]
     public async Task Partieformular_ListeTraegtScanId_UndLoeschenLaedtDasFotoNicht()
     {
         var userId = await SeedUserAsync("sheet");

@@ -1499,7 +1499,17 @@ Rollenverwaltung an).
 - **Freigabe-Regel** (Wunsch des Nutzers): Prognose nur für die NÄCHSTE Runde einer Liga; Landesliga
   Samstag + Sonntag gemeinsam; spätere Runden „gesperrt" bis die vorige gespielt ist. JSON-Feldnamen der
   Ansicht bewusst wie in Python (snake_case), damit die Parität direkt prüfbar ist.
-- **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/{tnr}`,
+- **Partien je Quelle** (0.626.0, Wunsch „auf der Hauptseite ausweisen: x Spiele aus Lumbra, y aus ChessBase, z aus Lichess,
+  w aus chess.com"): `GET /api/league/sources` (league.view, `Services/League/LeagueGameSources.cs`) →
+  `{ board[{ key, label, games }], boardTotal, online[…], onlineTotal, countedAt }`, 30 min im IMemoryCache. Brettpartien
+  liegen je SPIELER in `LeaguePlayerProfiles.Pgn` (eine Partie zweier Ligaspieler steht zweimal da) — gezählt wird jede
+  einmal (Schlüssel: beide Namen nur aus Buchstaben + Datum + Runde, nur Kopfzeilen gelesen), Quelle nach
+  `LeagueProfileBuilder.StoredSource` (Kopf `LeagueSource`, sonst FIDE-IDs = Lumbra, sonst chess-results), dazu
+  `LeagueClubGames` als „Vereins-Datenbank"; online je Seite `COUNT(DISTINCT ExternalId)`. Prod 01.10.2026: rund 34.800
+  Lumbra, 18.800 ChessBase-Megabase, 4.600 chess-results, 212 Lichess-Übertragungen; 667.881 Lichess, 29.528 chess.com.
+  Oberfläche: zwei Zeilen unter „Stand der Daten" auf der Startseite (`core/game-sources.ts`); fehlt die Zählung, fehlt nur
+  die Zeile.
+- **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),
   `POST /api/league/admin/import` (Bestand aus `export_bundle.py`, gzip, `?rebuild=true`),

@@ -5,7 +5,8 @@ import { AuthService } from '@rh/core/auth.service';
 import { readJson, writeJson, localStore } from '@rh/core/local-json-store';
 import { LeagueApiService } from '../../core/league-api.service';
 import { roundLabel, tn } from '../../core/league-format';
-import { League, LeagueIndex } from '../../core/league.models';
+import { GameSources, League, LeagueIndex } from '../../core/league.models';
+import { boardSourcesText, onlineSourcesText } from '../../core/game-sources';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 
 const PICK_KEY = 'leaguehub';
@@ -66,6 +67,12 @@ interface Pick { liga?: number; verein?: string }
           }
           <span class="update-msg" [class.err]="updateErr()" role="status" aria-live="polite">{{ updateMsg() }}</span>
         </div>
+        @if (sources(); as s) {
+          <div class="src-count small">
+            @if (boardText(s); as b) { <p>{{ b }}.</p> }
+            @if (onlineText(s); as o) { <p>{{ o }}.</p> }
+          </div>
+        }
 
         @if (league(); as L) {
           <lh-fixture [leagueName]="L.name" [tnr]="canManage ? L.tnr : null" [round]="round()" [team]="team()"
@@ -99,6 +106,10 @@ export class LeaguePageComponent implements OnInit {
   readonly username = this.auth.currentUser?.username ?? '';
 
   readonly index = signal<LeagueIndex | null>(null);
+  /** Partien je Quelle (0.626.0, Wunsch: „x Spiele aus Lumbra, y aus ChessBase, z aus Lichess, w aus chess.com"). */
+  readonly sources = signal<GameSources | null>(null);
+  readonly boardText = boardSourcesText;
+  readonly onlineText = onlineSourcesText;
   readonly league = signal<League | null>(null);
   readonly tnr = signal(0);
   readonly round = signal(0);
@@ -114,6 +125,15 @@ export class LeaguePageComponent implements OnInit {
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private polling = false;
   private destroyed = false;
+
+  /** Nebenbei: fehlt die Zählung, fehlt nur die Zeile — die Prognose hängt nicht daran. */
+  private async loadSources(): Promise<void> {
+    try {
+      this.sources.set(await this.api.sources());
+    } catch {
+      this.sources.set(null);
+    }
+  }
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -135,6 +155,7 @@ export class LeaguePageComponent implements OnInit {
       const ix = await this.api.index();
       this.index.set(ix);
       if (!ix.leagues.length) return;
+      void this.loadSources();
       const tnr = ix.leagues.some(l => l.tnr === pref.liga) ? pref.liga : ix.leagues[0].tnr;
       await this.showLeague(tnr, pref.runde, pref.verein);
     } catch (err) {
