@@ -356,6 +356,74 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /**
+   * Zweimal schnell weitergeblaettert (November, Dezember), und die November-Antwort kommt NACH der
+   * Dezember-Antwort: vorher stand dann Dezember im Kopf und die November-Tage im Raster — leer,
+   * die Agenda „kein Turnier" (Codereview F6-005).
+   */
+  it('lässt eine überholte Kalender-Antwort den angezeigten Monat NICHT überschreiben', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    const calendarReq = () => http.expectOne(r => r.url === '/api/tournament-directory/calendar');
+    const month = (date: string, id: string) => ({ tournaments: [entry(id)], days: [{ date, ids: [id] }] });
+
+    component.onMonthChanged({ year: 2026, month: 11 });
+    const stale = calendarReq();
+    component.onMonthChanged({ year: 2026, month: 12 });
+    const fresh = calendarReq();
+    expect(fresh.request.params.get('month')).toBe('12');
+
+    // Erst die AKTUELLE, dann die überholte Antwort.
+    fresh.flush(month('2026-12-18', 'dez'));
+    stale.flush(month('2026-11-14', 'nov'));
+
+    expect(component.calendarDays().map(d => d.date)).toEqual(['2026-12-18']);
+    expect(component.calendarLoading()).toBeFalse();
+    http.verify();
+  });
+
+  it('beendet das Laden des Kalenders erst mit der Antwort der aktuellen Anfrage', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    const calendarReq = () => http.expectOne(r => r.url === '/api/tournament-directory/calendar');
+
+    component.onMonthChanged({ year: 2026, month: 11 });
+    const stale = calendarReq();
+    component.onMonthChanged({ year: 2026, month: 12 });
+    const fresh = calendarReq();
+
+    stale.flush({ tournaments: [entry('nov')], days: [{ date: '2026-11-14', ids: ['nov'] }] });
+    expect(component.calendarDays()).toEqual([]);
+    expect(component.calendarLoading()).withContext('überholte Antwort beendet das Laden nicht').toBeTrue();
+
+    fresh.flush({ tournaments: [entry('dez')], days: [{ date: '2026-12-18', ids: ['dez'] }] });
+    expect(component.calendarDays().map(d => d.date)).toEqual(['2026-12-18']);
+    expect(component.calendarLoading()).toBeFalse();
+    expect(component.calendarFailed()).toBeFalse();
+    http.verify();
+  });
+
+  it('ignoriert den Fehler einer überholten Kalender-Anfrage', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    const calendarReq = () => http.expectOne(r => r.url === '/api/tournament-directory/calendar');
+
+    component.onMonthChanged({ year: 2026, month: 11 });
+    const stale = calendarReq();
+    component.onMonthChanged({ year: 2026, month: 12 });
+    const fresh = calendarReq();
+
+    fresh.flush({ tournaments: [entry('dez')], days: [{ date: '2026-12-18', ids: ['dez'] }] });
+    stale.flush('kaputt', { status: 500, statusText: 'Server Error' });
+
+    expect(component.calendarFailed()).toBeFalse();
+    expect(component.calendarDays().map(d => d.date)).toEqual(['2026-12-18']);
+    http.verify();
+  });
+
   it('schränkt standardmäßig aufs kommende Quartal ein', async () => {
     // Ohne Vorgabe stehen über tausend Turniere bis weit ins nächste Jahr in der Liste.
     await setup();

@@ -501,6 +501,13 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   private listGeneration = 0;
   private pinsGeneration = 0;
+  /**
+   * Dasselbe fuer den Kalender (Codereview F6-005): zweimal schnell weitergeblaettert, und die
+   * langsamere November-Antwort kam NACH der Dezember-Antwort — das Raster zeigte Dezember mit
+   * den Tagen des Novembers, also leer, die Agenda „kein Turnier". Ebenso ueberschrieb die
+   * spaete Antwort eines alten Filters die neue.
+   */
+  private calendarGeneration = 0;
 
   loadList(): void {
     this.loading.set(true);
@@ -578,9 +585,15 @@ export class TournamentDirectoryComponent implements OnInit {
   private loadCalendar(): void {
     this.calendarLoading.set(true);
     this.calendarFailed.set(false);
+    const generation = ++this.calendarGeneration;
     this.directory.calendar(this.filter, this.calendarYear, this.calendarMonth).subscribe({
-      next: days => { this.calendarDays.set(days); this.calendarLoading.set(false); },
+      next: days => {
+        if (generation !== this.calendarGeneration) return;
+        this.calendarDays.set(days);
+        this.calendarLoading.set(false);
+      },
       error: () => {
+        if (generation !== this.calendarGeneration) return;
         this.calendarLoading.set(false);
         // Die Tage gehoeren zu einem anderen Monat oder Filter — die Fehlerzeile sagt, was los ist.
         this.calendarDays.set([]);
