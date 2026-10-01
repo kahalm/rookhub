@@ -23,13 +23,14 @@ public class GameRecapController : BaseApiController
 
     /// <summary>Die Nacherzählung. Fehlt sie bei fertiger Analyse — eine Analyse von vor 0.541.0, oder der Lauf danach ist
     /// gescheitert —, wird sie im Hintergrund geschrieben und <c>pending</c> gesetzt; die Seite fragt später nach. Auch in der
-    /// Sperrzeit der Spark: wer die Partie öffnet, wartet auf genau diesen einen Text (0.585.0).</summary>
+    /// Sperrzeit der Spark: wer die Partie öffnet, wartet auf genau diesen einen Text (0.585.0). Ist das Schreiben für diese
+    /// Partie gerade gescheitert (<see cref="GameRecapFailures"/>), kein neuer Versuch und kein <c>pending</c> (A6-012).</summary>
     [HttpGet("{id:int}/recap")]
     public async Task<ActionResult<GameRecapDto>> Get(int id, CancellationToken ct)
     {
         var dto = await _service.GetAsync(GetUserId(), id, ct);
         if (dto == null) return NotFound();
-        if (dto.Text == null && dto.Available && dto.HasAnalysis)
+        if (dto.Text == null && dto.Available && dto.HasAnalysis && !_service.RecentlyFailed(id))
         {
             _scheduler.ScheduleRecap(id);
             dto.Pending = true;

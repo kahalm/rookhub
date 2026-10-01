@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -36,16 +37,23 @@ public sealed class GameRecapService
     private readonly IClaudeJsonClient _llm;
     private readonly SavedGameService _games;
     private readonly ILogger<GameRecapService> _logger;
+    private readonly GameRecapFailures _failures;
 
-    public GameRecapService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRecapService> logger)
+    public GameRecapService(AppDbContext db, IClaudeJsonClient llm, SavedGameService games, ILogger<GameRecapService> logger,
+        GameRecapFailures? failures = null)
     {
         _db = db;
         _llm = llm;
         _games = games;
         _logger = logger;
+        _failures = failures ?? new GameRecapFailures();
     }
 
     public bool Available => _llm.IsConfigured && _llm.IsLocal;
+
+    /// <summary>Für diese Partie ist das Schreiben gerade gescheitert (<see cref="GameRecapFailures.Pause"/>) — das Öffnen der
+    /// Partie stößt dann keinen neuen Versuch an (A6-012).</summary>
+    public bool RecentlyFailed(int gameId) => _failures.IsPaused(gameId);
 
     /// <summary>Ergebnis des Schreibens: der Text (wie gezeigt, mit den Figurenbuchstaben der Sprache), oder ein Grund (<c>notConfigured</c>, <c>exists</c>, <c>notFound</c>,
     /// <c>noAnalysis</c>, <c>failed</c>).</summary>
@@ -121,7 +129,11 @@ public sealed class GameRecapService
             if (candidate != null && GameMoveExplanationService.MentionsOnly(candidate, allowed)) text = candidate;
             else if (candidate != null) _logger.LogInformation("Nacherzählung für Partie {GameId} verworfen (fremder Zug)", gameId);
         }
-        if (text == null) return new(null, "failed");
+        if (text == null)
+        {
+            _failures.Note(gameId);
+            return new(null, "failed");
+        }
 
         var row = await _db.GameRecaps.FirstOrDefaultAsync(r => r.SavedGameId == gameId && r.Language == language, ct);
         if (row == null)
@@ -133,6 +145,7 @@ public sealed class GameRecapService
         row.Model = _llm.TranslationModel;
         row.CreatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        _failures.Clear(gameId);
         return new(PieceLetters.Convert(text, "en", language), null);
     }
 
@@ -339,4 +352,42 @@ public sealed class GameRecapService
         }
         catch (JsonException) { return null; }
     }
+}
+
+/// <summary>
+/// Gescheiterte Nacherzählungen (A6-012): verwirft die Prüfung jede Antwort (das Modell nennt verlässlich einen fremden
+/// Zug) oder antwortet das Modell nicht, wurde früher bei JEDEM Abruf von <c>GET /api/games/{id}/recap</c> neu geschrieben
+/// — die Seite fragt achtmal im 15-s-Takt nach, das waren bis zu 16 Modellaufrufe je Öffnen, bei jedem Öffnen wieder.
+/// Jetzt merkt sich der Prozess den Fehlschlag je Partie; für <see cref="Pause"/> stößt das Öffnen keinen neuen Versuch an
+/// und meldet nicht mehr <c>pending</c> (die Seite hört auf zu fragen). Der Lauf nach einer (vertieften) Analyse
+/// (<see cref="GameReviewTexts.WriteAsync"/>) versucht es trotzdem — dort ändern sich die Fakten. Nur Arbeitsspeicher:
+/// ein Neustart vergisst die Liste, dann kostet das nächste Öffnen wieder höchstens einen Versuch.
+/// </summary>
+public sealed class GameRecapFailures
+{
+    /// <summary>So lange fragt das Öffnen einer Partie nach einem Fehlschlag nicht erneut beim Modell an.</summary>
+    public static readonly TimeSpan Pause = TimeSpan.FromHours(6);
+
+    /// <summary>Ab so vielen gemerkten Partien werden abgelaufene Einträge weggeräumt.</summary>
+    private const int PruneThreshold = 1024;
+
+    private readonly TimeProvider _time;
+    private readonly ConcurrentDictionary<int, DateTimeOffset> _failedAt = new();
+
+    // DI setzt nichts, Tests eine Uhr.
+    public GameRecapFailures(TimeProvider? time = null) => _time = time ?? TimeProvider.System;
+
+    public void Note(int savedGameId)
+    {
+        var now = _time.GetUtcNow();
+        _failedAt[savedGameId] = now;
+        if (_failedAt.Count <= PruneThreshold) return;
+        foreach (var (id, at) in _failedAt)
+            if (now - at >= Pause) _failedAt.TryRemove(id, out _);
+    }
+
+    public void Clear(int savedGameId) => _failedAt.TryRemove(savedGameId, out _);
+
+    public bool IsPaused(int savedGameId)
+        => _failedAt.TryGetValue(savedGameId, out var at) && _time.GetUtcNow() - at < Pause;
 }

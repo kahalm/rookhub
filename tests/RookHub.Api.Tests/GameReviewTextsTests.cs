@@ -52,9 +52,9 @@ public class GameReviewTextsTests : IDisposable
         new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
         NullLogger<GameMoveExplanationService>.Instance);
 
-    private GameReviewTexts Service() => new(_db, Explanations(),
+    private GameReviewTexts Service(GameRecapFailures? recapFailures = null) => new(_db, Explanations(),
         new GameRoastService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRoastService>.Instance),
-        new GameRecapService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRecapService>.Instance),
+        new GameRecapService(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRecapService>.Instance, recapFailures),
         _jobs, NullLogger<GameReviewTexts>.Instance);
 
     // Schäfermatt: 3…Sf6?? ist der einzige Fehler — ein Zug von SCHWARZ.
@@ -222,6 +222,24 @@ public class GameReviewTextsTests : IDisposable
         Assert.Equal("de", (await _db.GameRecaps.SingleAsync()).Language);
         Assert.Empty(_db.GameMoveExplanations);
         Assert.Empty(_db.GameRoasts);
+    }
+
+    [Fact]
+    public async Task RecapOnOpening_AfterARecentFailure_DoesNotAskTheModel_ButTheRunAfterTheAnalysisDoes()
+    {
+        // A6-012: zwei Abrufe kurz nacheinander können beide einen Nachtrag einplanen; der zweite darf nach dem
+        // Fehlschlag des ersten nicht wieder beim Modell anfragen.
+        var (_, gameId, analysisId) = await SeedAsync(reviewLanguage: "de");
+        var failures = new GameRecapFailures();
+        failures.Note(gameId);
+
+        await Service(failures).WriteRecapAsync(gameId, CancellationToken.None);
+        Assert.Empty(_llm.Calls);
+
+        // Nach einer (neuen) Analyse ändern sich die Fakten — dieser Lauf versucht es trotzdem.
+        await Service(failures).WriteAsync(analysisId, refined: false, CancellationToken.None);
+        Assert.Equal("recap", _llm.Calls[0].Purpose);
+        Assert.False(failures.IsPaused(gameId));
     }
 
     [Fact]

@@ -452,6 +452,8 @@ try
     builder.Services.AddScoped<GameMoveExplanationService>();
     builder.Services.AddScoped<GameRoastService>();
     builder.Services.AddScoped<GameRecapService>();
+    // Gescheiterte Nacherzählungen je Partie (A6-012): das Öffnen fragt dann 6 h nicht erneut beim Modell an.
+    builder.Services.AddSingleton<GameRecapFailures>();
     // Sperrzeiten der Spark (0.546.0): TextLlm:QuietHours / TextLlm:TimeZone.
     builder.Services.AddSingleton(sp => new QuietHours(sp.GetRequiredService<IConfiguration>()));
     builder.Services.AddScoped<SimilarGamesService>();

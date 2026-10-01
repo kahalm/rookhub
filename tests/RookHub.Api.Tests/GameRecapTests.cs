@@ -305,4 +305,47 @@ public class GameRecapTests : IDisposable
 
         Assert.IsType<NotFoundResult>((await Controller(u2).Get(gameId, default)).Result);
     }
+
+    [Fact]
+    public async Task Controller_AfterAFailedRecap_DoesNotAskTheModelAgainOnOpening_UntilThePauseIsOver()
+    {
+        // A6-012: verwirft die Prüfung jede Antwort, stieß früher jeder Abruf der Seite (8× im 15-s-Takt) zwei neue
+        // Modellaufrufe an — bei jedem Öffnen wieder.
+        var (userId, gameId) = await SeedAsync();
+        var time = new QuietHoursTests.ManualTime { Now = new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero) };
+        var failures = new GameRecapFailures(time);
+        var scheduler = new RecordingScheduler();
+        GameRecapService FailingService() => new(_db, _llm, TestServices.SavedGames(_db), NullLogger<GameRecapService>.Instance, failures);
+        GameRecapController Controller() => new(FailingService(), scheduler)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "t")),
+                },
+            },
+        };
+        _llm.Answers.Enqueue("{\"recap\":\"Nach 3.Bb5 war alles klar.\"}");
+        _llm.Answers.Enqueue("{\"recap\":\"Und 5.Bb5 auch.\"}");
+        Assert.Equal("failed", (await FailingService().WriteAsync(userId, gameId, "de")).Reason);
+        Assert.Equal(2, _llm.Calls.Count);
+
+        // Gleich danach und noch kurz vor Ablauf der Pause: kein Auftrag, kein „pending" — die Seite hört auf zu fragen.
+        var again = Assert.IsType<GameRecapDto>(Assert.IsType<OkObjectResult>((await Controller().Get(gameId, default)).Result).Value);
+        Assert.Equal((null, false), (again.Text, again.Pending));
+        time.Now += GameRecapFailures.Pause - TimeSpan.FromMinutes(1);
+        Assert.False(Assert.IsType<GameRecapDto>(Assert.IsType<OkObjectResult>((await Controller().Get(gameId, default)).Result).Value).Pending);
+        Assert.Empty(scheduler.Recaps);
+
+        // Nach der Pause ein neuer Versuch.
+        time.Now += TimeSpan.FromMinutes(2);
+        Assert.True(Assert.IsType<GameRecapDto>(Assert.IsType<OkObjectResult>((await Controller().Get(gameId, default)).Result).Value).Pending);
+        Assert.Equal([gameId], scheduler.Recaps);
+
+        // Gelingt er, ist der Vermerk weg.
+        _llm.Answers.Enqueue("{\"recap\":\"Weiß gewinnt mit 4.Qxf7#.\"}");
+        Assert.Null((await FailingService().WriteAsync(userId, gameId, "de")).Reason);
+        Assert.False(failures.IsPaused(gameId));
+    }
 }

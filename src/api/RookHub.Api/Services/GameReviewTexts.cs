@@ -100,10 +100,11 @@ public sealed class GameReviewTexts
     }
 
     /// <summary>Nur die Nacherzählung — für eine Analyse von VOR 0.541.0, beim Öffnen der eigenen Partie angestoßen
-    /// (<c>GET /api/games/{id}/recap</c>). Schreibt nichts, was schon da ist.</summary>
+    /// (<c>GET /api/games/{id}/recap</c>). Schreibt nichts, was schon da ist, und versucht es nach einem Fehlschlag erst
+    /// nach der Pause wieder (<see cref="GameRecapFailures"/>, A6-012).</summary>
     public async Task WriteRecapAsync(int savedGameId, CancellationToken ct)
     {
-        if (!_recaps.Available) return;
+        if (!_recaps.Available || _recaps.RecentlyFailed(savedGameId)) return;
         var game = await _db.SavedGames.AsNoTracking().Where(g => g.Id == savedGameId)
             .Select(g => new { g.Id, g.UserId, g.GameAnalysisId, g.ReviewLanguage }).FirstOrDefaultAsync(ct);
         if (game?.GameAnalysisId is null) return;
