@@ -177,7 +177,7 @@ public class EndpointAuthInventoryTests
                          .Where(m => !m.IsSpecialName && m.GetCustomAttribute<NonActionAttribute>() == null))
             {
                 var verbs = m.GetCustomAttributes<HttpMethodAttribute>(inherit: true).ToList();
-                if (verbs.Count == 0) continue;   // keine Action (Attribut-Routing ist Pflicht bei [ApiController])
+                if (verbs.Count == 0) continue;   // keine Action — dass es keine verblose öffentliche Methode gibt, hält NoVerblessPublicMethods fest
                 var anon = classAnon || m.GetCustomAttributes<AllowAnonymousAttribute>(inherit: true).Any()
                            || (!classAuth && !m.GetCustomAttributes<AuthorizeAttribute>(inherit: true).Any());
                 foreach (var v in verbs)
@@ -277,6 +277,32 @@ public class EndpointAuthInventoryTests
         => attrs.Any(a => a is RookHub.Api.Authorization.HasPermissionAttribute
                           || !string.IsNullOrEmpty(a.Roles)
                           || !string.IsNullOrEmpty(a.Policy));
+
+    /// <summary>
+    /// Öffentliche Instanzmethoden ohne Verb-Attribut und ohne <c>[NonAction]</c> registriert MVC als Action OHNE
+    /// Verb-Einschränkung auf der Klassen-Route — die Inventare oben überspringen sie (keine Verben), sie sind aber
+    /// erreichbar. So lagen <c>ChessableController.OnActionExecuting/OnActionExecuted</c> (IActionFilter an einem
+    /// <c>ControllerBase</c>) als zwei Catch-all-Actions auf <c>api/Chessable</c>: AmbiguousMatch-500 vor Auth und
+    /// Rate-Limiter, Swagger-Dokument kaputt (Codereview 2026-09-29, N11-001). An einem anonymen Controller wäre
+    /// eine solche Hilfsmethode still ein anonymer Endpunkt.
+    /// </summary>
+    [Fact]
+    public void NoVerblessPublicMethods()
+    {
+        var asm = typeof(RookHub.Api.Controllers.ProfileController).Assembly;
+        var verbless = asm.GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && typeof(ControllerBase).IsAssignableFrom(t))
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                .Where(m => m.DeclaringType != typeof(object) && !m.IsSpecialName && !m.IsGenericMethodDefinition
+                            && m.GetCustomAttribute<NonActionAttribute>(inherit: true) == null
+                            && !m.GetCustomAttributes<HttpMethodAttribute>(inherit: true).Any())
+                .Select(m => $"{t.Name}.{m.Name}"))
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+        Assert.True(verbless.Count == 0,
+            "Öffentliche Methode ohne [Http…] und ohne [NonAction] (MVC macht daraus eine verblose Action):\n  "
+            + string.Join("\n  ", verbless));
+    }
 
     [Fact]
     public void NoDuplicateRouteTemplates()

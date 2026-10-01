@@ -45,12 +45,18 @@ public class ChessableController : BaseApiController, IActionFilter
     /// ist die ehrlichste Auskunft. Der Weg ueber die RepCheck-EXTENSION (<c>ExtensionController</c>)
     /// ist UNBERUEHRT: genau darum geht es beim Abschalten (Entscheidung 2026-09-09, alle sollen
     /// vorerst die Extension benutzen). 404 und nicht 403, weil es keine Rechtefrage ist.
+    /// <para><c>[NonAction]</c> an beiden Filter-Methoden (wie <c>Controller</c> sie markiert): sonst registrierte MVC
+    /// sie als zwei verblose Actions auf <c>api/Chessable</c> — ein Aufruf dort endete in AmbiguousMatch-500, und Swagger
+    /// brach an „Ambiguous HTTP method". Als Filter wirken sie trotzdem: MVC hängt jeden <c>IActionFilter</c>-Controller
+    /// unabhängig vom Attribut in die Pipeline.</para>
     /// </summary>
+    [NonAction]
     public void OnActionExecuting(ActionExecutingContext context)
     {
         if (!_enabled) context.Result = NotFound(new { message = "Chessable is disabled." });
     }
 
+    [NonAction]
     public void OnActionExecuted(ActionExecutedContext context) { }
 
     private readonly bool _enabled;
