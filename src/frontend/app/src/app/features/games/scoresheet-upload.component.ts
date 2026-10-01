@@ -336,7 +336,9 @@ export class ScoresheetUploadComponent implements OnInit, OnDestroy {
       },
       error: (err: HttpErrorResponse) => {
         this.uploading.set(false);
-        const reason = err.error?.reason ?? 'failed';
+        // Eine 413 kommt vom Frontend-nginx (Rumpf über seiner Grenze) als HTML-Seite ohne `reason` — auch das heißt
+        // „zu groß", nicht „fehlgeschlagen" (A6-020).
+        const reason = err.error?.reason ?? (err.status === 413 ? 'tooLarge' : 'failed');
         this.error.set(this.translate.instant('scoresheet.error.' + reason));
       },
     });

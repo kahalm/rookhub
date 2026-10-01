@@ -156,6 +156,21 @@ describe('ScoresheetUploadComponent', () => {
     expect(c.uploading()).toBeFalse();
   });
 
+  // A6-020: nginx weist einen zu großen Rumpf mit einer HTML-413 ab — ohne `reason`. Das ist „zu groß", nicht „fehlgeschlagen".
+  it('a 413 from the proxy (HTML, no reason) says the photo is too large', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne('/api/scoresheets/status').flush(status());
+    http.expectOne(r => r.url.startsWith('/api/scoresheets?')).flush([]);
+    const c = fixture.componentInstance;
+    c.onFile({ target: { files: [new File([new Uint8Array([1])], 'a.jpg', { type: 'image/jpeg' })], value: '' } } as unknown as Event);
+    c.upload();
+    http.expectOne({ method: 'POST', url: '/api/scoresheets' })
+      .flush('<html><head><title>413 Request Entity Too Large</title></head></html>', { status: 413, statusText: 'Request Entity Too Large' });
+    expect(c.error()).toBe('scoresheet.error.tooLarge');
+    expect(c.uploading()).toBeFalse();
+  });
+
   // Gemeldet 2026-09-28: ein Abruf, der nicht durchkam, beendete das Nachfragen — die Seite zeigte weiter „wird gelesen".
   it('a failed status request is skipped, the next one still finds the finished game', fakeAsync(async () => {
     const { fixture, http } = await setup();

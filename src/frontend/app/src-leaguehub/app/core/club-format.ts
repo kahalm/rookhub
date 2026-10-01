@@ -56,6 +56,8 @@ export function uploadErrorText(err: unknown): string {
     case 'globalBudget': return 'Das Budget fürs Einlesen ist gerade aufgebraucht.';
     case 'noFile': return 'Kein Foto gewählt.';
   }
+  // Eine 413 kommt vom Frontend-nginx als HTML-Seite ohne `reason` (Rumpf über seiner Grenze) — A6-020.
+  if (e?.status === 413) return 'Das Foto ist zu groß.';
   if (e?.status === 403) return 'Dafür fehlt dir die Berechtigung (Vereinsmitglieder).';
   if (e?.status === 0) return 'Der Server ist gerade nicht erreichbar.';
   return `Hochladen hat nicht geklappt${e ? ` (HTTP ${e.status})` : ''}.`;

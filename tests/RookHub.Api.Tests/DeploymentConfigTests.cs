@@ -815,6 +815,49 @@ public class DeploymentConfigTests
     }
 
     /// <summary>
+    /// A6-020: der LeagueHub-Upload eines Formular-Fotos (angemeldet und über den Teilen-Link) nimmt in der API bis zu
+    /// 30 MB je Foto, die generische /api/-Location deckelte aber bei 15 MB — ein großes Handyfoto bekam eine HTML-413
+    /// von nginx und die Seite nur „Hochladen hat nicht geklappt". Die verschachtelte Location muss mindestens so viel
+    /// durchlassen, wie beide Upload-Actions annehmen, und darf nur genau diese beiden Pfade treffen.
+    /// </summary>
+    [Fact]
+    public void LeagueScanUploadLocation_AllowsTheApiRequestSizeLimit_OnlyOnTheUploadPaths()
+    {
+        var nginx = ReadRepoFile("src/frontend/nginx.conf");
+        var api = Regex.Match(nginx, @"location \^~ /api/ \{(?<body>.*?)\n    \}", RegexOptions.Singleline);
+        Assert.True(api.Success, "location ^~ /api/ fehlt in nginx.conf");
+        // Verschachtelt in /api/: auf oberster Ebene griffe eine Regex-Location wegen ^~ nie.
+        var loc = Regex.Match(api.Groups["body"].Value, @"location ~ (?<re>\S+) \{(?<body>.*?)\n        \}", RegexOptions.Singleline);
+        Assert.True(loc.Success, "verschachtelte Location für den LeagueHub-Formular-Upload fehlt in location ^~ /api/");
+        var path = new Regex(loc.Groups["re"].Value);
+        foreach (var upload in new[] { "/api/league/club/scans", "/api/league/s/AbC-12_xyz/club/scans" })
+            Assert.True(path.IsMatch(upload), $"Upload-Pfad nicht getroffen: {upload}");
+        foreach (var other in new[] { "/api/league/club/scans/5", "/api/league/club/scans/lookup", "/api/league/s/x/club/scans/lookup",
+                     "/api/league/s/x/club/games/preview", "/api/league/club/games/chessbase", "/api/scoresheets" })
+            Assert.False(path.IsMatch(other), $"Location träfe auch {other}");
+
+        var body = loc.Groups["body"].Value;
+        Assert.Contains("proxy_pass http://$rookhub_api$request_uri;", body);
+        Assert.Contains("set $rookhub_api api:8080;", body);
+        var size = Regex.Match(body, @"client_max_body_size (?<n>\d+)M;");
+        Assert.True(size.Success, "client_max_body_size (in M) fehlt in der Upload-Location");
+        var nginxBytes = long.Parse(size.Groups["n"].Value) * 1024 * 1024;
+
+        foreach (var controller in new[] { typeof(RookHub.Api.Controllers.LeagueClubController), typeof(RookHub.Api.Controllers.LeagueShareClubController) })
+        {
+            var upload = controller.GetMethod("Upload")!;
+            var post = upload.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.HttpPostAttribute), false)
+                .Cast<Microsoft.AspNetCore.Mvc.HttpPostAttribute>().Single();
+            Assert.Equal("scans", post.Template);
+            var limit = upload.GetCustomAttributesData()
+                .Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute));
+            var apiBytes = Convert.ToInt64(limit.ConstructorArguments[0].Value);
+            Assert.True(nginxBytes >= apiBytes, $"nginx erlaubt {nginxBytes} Bytes, {controller.Name}.Upload bis {apiBytes}");
+        }
+        Assert.True(nginxBytes >= RookHub.Api.Services.ScoresheetScanService.MaxUploadBytes);
+    }
+
+    /// <summary>
     /// F8-002: die Kachel-Weiterleitung an OSM war anonym, ungedrosselt und auf allen vier Seiten offen, und sie nahm
     /// jedes z (zwei Stellen) und x/y (sieben Stellen) an. Jeder Cache-Fehlgriff geht unter unserem User-Agent zu OSM —
     /// ein Massenabruf liesse OSM uns sperren, und die Turnierkarte bliebe fuer alle schwarz.

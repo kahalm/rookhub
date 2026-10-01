@@ -36,6 +36,8 @@ describe('club-format', () => {
     expect(uploadErrorText(new HttpErrorResponse({ status: 400, error: { reason: 'dailyLimit' } }))).toContain('Tageslimit');
     expect(uploadErrorText(new HttpErrorResponse({ status: 400, error: { reason: 'anonDailyLimit' } }))).toContain('morgen');
     expect(uploadErrorText(new HttpErrorResponse({ status: 403 }))).toContain('Berechtigung');
+    // A6-020: die 413 des Frontend-nginx (HTML, ohne reason) ist „zu groß", nicht „hat nicht geklappt (HTTP 413)".
+    expect(uploadErrorText(new HttpErrorResponse({ status: 413, error: '<html>413 Request Entity Too Large</html>' }))).toBe('Das Foto ist zu groß.');
   });
 
   it('Jahr aus gelesenen Datumsangaben, Ergebnis in PGN-Form', () => {
