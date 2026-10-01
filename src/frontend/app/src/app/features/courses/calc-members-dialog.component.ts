@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -23,6 +23,10 @@ export interface CalcMembersDialogData { bookId: number; }
  * bereits freigegebenen Wochen es schon geöffnet hat (Phase 3c, „Gesehen"; Quelle: `GET .../views`).
  * Der Dialog hält seinen Zustand selbst und spricht direkt mit {@link CalcEditionsService} — der
  * Aufrufer (Kurs-Detailseite) muss nichts nachladen. Zugriff ist serverseitig auf Besitzer/Admin beschränkt.
+ *
+ * OnPush mit Zustand in FELDERN: jeder HTTP-Rückruf muss die Ansicht selbst markieren
+ * (`cdr.markForCheck()`). Der renderAfterHttp-Interceptor tickt nur die App, und das überspringt eine
+ * unmarkierte OnPush-Ansicht — ohne Markierung blieben Ladebalken, leere Liste und gesperrte Knöpfe stehen.
  */
 @Component({
   selector: 'app-calc-members-dialog',
@@ -110,6 +114,7 @@ export class CalcMembersDialogComponent {
     private service: CalcEditionsService,
     private snackbar: SnackbarService,
     private translate: TranslateService,
+    private cdr: ChangeDetectorRef,
   ) {
     this.reload();
   }
@@ -118,8 +123,12 @@ export class CalcMembersDialogComponent {
     this.busy = true;
     // KRITISCH: die Mitgliederliste — das ist der Zweck des Dialogs. Schlägt sie fehl, melden.
     this.service.members(this.data.bookId).subscribe({
-      next: members => { this.members = members; this.loaded = true; this.busy = false; },
-      error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.membersLoadFailed')); },
+      next: members => { this.members = members; this.loaded = true; this.busy = false; this.cdr.markForCheck(); },
+      error: () => {
+        this.busy = false;
+        this.cdr.markForCheck();
+        this.snackbar.warn(this.translate.instant('calc.series.membersLoadFailed'));
+      },
     });
     // BEST-EFFORT: die „Gesehen"-Anzeige (N/M). Fällt sie aus, bleibt die Verwaltung voll nutzbar —
     // dann nur ohne die Zähler (kein eigener Fehler, um die Mitglieder-Verwaltung nicht zu stören).
@@ -138,8 +147,9 @@ export class CalcMembersDialogComponent {
           (map[v.userId] ??= new Set()).add(v.chapter);
         }
         this.seenByUser = Object.fromEntries(Object.entries(map).map(([k, set]) => [k, [...set].sort()]));
+        this.cdr.markForCheck();
       },
-      error: () => { this.releasedCount = 0; this.seenByUser = {}; },
+      error: () => { this.releasedCount = 0; this.seenByUser = {}; this.cdr.markForCheck(); },
     });
   }
 
@@ -162,11 +172,13 @@ export class CalcMembersDialogComponent {
       next: () => {
         this.newUsername = '';
         this.newIsTester = false;
+        this.cdr.markForCheck();
         this.snackbar.quick(this.translate.instant('calc.series.memberAdded'));
         this.reload();
       },
       error: (err: HttpErrorResponse) => {
         this.busy = false;
+        this.cdr.markForCheck();
         // 404 = es gibt keinen Nutzer mit diesem Namen (kein stiller Fehlschlag: der Nutzer hat gerade getippt).
         const key = err?.status === 404 ? 'calc.series.userNotFound' : 'calc.series.saveFailed';
         this.snackbar.warn(this.translate.instant(key));
@@ -177,8 +189,13 @@ export class CalcMembersDialogComponent {
   setTester(m: CalcSeriesMember, isTester: boolean): void {
     this.busy = true;
     this.service.upsertMember(this.data.bookId, { username: m.username, isTester }).subscribe({
-      next: () => { m.isTester = isTester; this.busy = false; },
-      error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); this.reload(); },
+      next: () => { m.isTester = isTester; this.busy = false; this.cdr.markForCheck(); },
+      error: () => {
+        this.busy = false;
+        this.cdr.markForCheck();
+        this.snackbar.warn(this.translate.instant('calc.series.saveFailed'));
+        this.reload();
+      },
     });
   }
 
@@ -186,7 +203,7 @@ export class CalcMembersDialogComponent {
     this.busy = true;
     this.service.removeMember(this.data.bookId, m.userId).subscribe({
       next: () => { this.snackbar.quick(this.translate.instant('calc.series.memberRemoved')); this.reload(); },
-      error: () => { this.busy = false; this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); },
+      error: () => { this.busy = false; this.cdr.markForCheck(); this.snackbar.warn(this.translate.instant('calc.series.saveFailed')); },
     });
   }
 }
