@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { map, catchError, of } from 'rxjs';
 import { AuthService } from './auth.service';
 import { MenuService } from './menu.service';
+import { loginRedirect } from './auth.guard';
 
 /**
  * Sperrt den direkten URL-Aufruf einer Seite, deren Menüeintrag der Admin für den
@@ -17,14 +18,14 @@ import { MenuService } from './menu.service';
  * ansonsten auf die guard-freie Hilfeseite ausgewichen.
  */
 export function menuGuard(key: string): CanActivateFn {
-  return () => {
+  return (_route, state) => {
     const menu = inject(MenuService);
     const auth = inject(AuthService);
     const router = inject(Router);
     return menu.check(key).pipe(
       map(ok => {
         if (ok) return true;
-        if (!auth.isLoggedIn) return router.createUrlTree(['/login']);
+        if (!auth.isLoggedIn) return loginRedirect(router, state?.url);   // mit Rücksprung + Hinweis (UX-024)
         // Erste Route wählen, die der Nutzer WIRKLICH sehen darf. `check()` hat den Snapshot gerade
         // aufgefrischt, `isVisible` ist also aktuell und kostet keinen weiteren Request.
         const fallback = ['dashboard', 'help', 'install'].find(k => k !== key && menu.isVisible(k));

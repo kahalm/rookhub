@@ -2150,6 +2150,11 @@ describe('CalculationComponent Uhr und Anmerkungen', () => {
     }
   });
 
+  it('Turm „Zurück“: angemeldet zur Kursübersicht, als Gast zur Startseite (UX-024)', () => {
+    expect(make().component.homeLink).toBe('/courses');
+    expect(make({}, {}, false).component.homeLink).toBe('/');
+  });
+
   it('blendet die Zug-Anmerkungen erst auf Wunsch ein und merkt sich das nicht', () => {
     const { component: c } = make();
     expect(c.showAnnotations).toBeFalse();
@@ -2203,6 +2208,8 @@ describe('CalculationComponent Hinweis „nur auf diesem Gerät"', () => {
     const href = note!.querySelector('a')!.getAttribute('href')!;
     expect(href).toContain('/login');
     expect(href).toContain('returnUrl');
+    // Der Turm („Zurück“) führt Gäste zur Startseite, nicht vor die Anmeldemaske von /courses (UX-024).
+    expect(el.querySelector('a.calc-home')!.getAttribute('href')).toBe('/');
     // Nichts Modales — der Hinweis steht in der Seite.
     expect(document.querySelector('mat-dialog-container')).toBeNull();
     c.ngOnDestroy();

@@ -2175,6 +2175,7 @@
       "roundFinished": "Zufalls-Runde durch — noch {{remaining}} Aufgaben zu lösen",
       "continueRemaining": "Mit den restlichen weitermachen",
       "toOverview": "Zur Übersicht",
+      "toStart": "Zur Startseite",
       "restart": "Von vorn beginnen",
       "restarted": "Kurs zurückgesetzt — von vorn",
       "restartFailed": "Zurücksetzen fehlgeschlagen",

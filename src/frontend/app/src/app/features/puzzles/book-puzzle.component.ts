@@ -1287,8 +1287,15 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     this.retryFn?.();
   }
 
+  /** Rückweg aus dem Kurs: angemeldet zur Kursübersicht. Gäste spielen nur öffentliche Kurse (Kurz-URL /{slug}) — für
+   *  sie hat /courses keine Seite, nur die Anmeldemaske (UX-024); sie gehen zur Startseite. */
   backToCourses(): void {
-    this.router.navigate(['/courses']);
+    this.router.navigate([this.isLoggedIn ? '/courses' : '/']);
+  }
+
+  /** Beschriftung des Rückpfeils und der „Zur Übersicht“-Knöpfe im Kurs — für Gäste „Zur Startseite“ (s. o.). */
+  courseBackKey(overview: 'book.course.backToCourses' | 'book.course.toOverview'): string {
+    return this.isLoggedIn ? overview : 'book.course.toStart';
   }
 
   /** Kurs zurücksetzen und von vorn beginnen — bringt im Random-Modus auch die falsch gelösten

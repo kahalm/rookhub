@@ -2175,6 +2175,7 @@
       "roundFinished": "Nasumični krug završen — preostalo {{remaining}} zagonetki",
       "continueRemaining": "Nastavi s preostalima",
       "toOverview": "Na pregled",
+      "toStart": "Na početnu stranicu",
       "restart": "Počni ispočetka",
       "restarted": "Tečaj resetiran — počinješ ispočetka",
       "restartFailed": "Resetiranje nije uspjelo",

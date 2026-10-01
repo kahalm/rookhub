@@ -155,6 +155,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Anmelde-Link führt GENAU hierher zurück (inkl. `?pos=`/`?chapter=`). */
   get loginReturnUrl(): string { return this.router.url; }
 
+  /** Ziel des Turms („Zurück“): angemeldet die Kursübersicht. Gäste kommen nur über die Kurz-URL eines öffentlichen
+   *  Kurses hierher — /courses zeigte ihnen nur die Anmeldemaske (UX-024), sie gehen zur Startseite. */
+  get homeLink(): string { return this.auth?.isLoggedIn ? '/courses' : '/'; }
+
   /** Der ruhige Geräte-Hinweis (anonym, Speicher tut es) — wegklickbar. */
   get showLocalNotice(): boolean {
     return this.localOnly && !this.localSaveFailed && !this.noticeDismissed;

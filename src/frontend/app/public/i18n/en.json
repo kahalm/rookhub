@@ -2175,6 +2175,7 @@
       "roundFinished": "Random round finished — {{remaining}} puzzles still to solve",
       "continueRemaining": "Continue with remaining",
       "toOverview": "To overview",
+      "toStart": "To the start page",
       "restart": "Restart from scratch",
       "restarted": "Course reset — starting over",
       "restartFailed": "Reset failed",

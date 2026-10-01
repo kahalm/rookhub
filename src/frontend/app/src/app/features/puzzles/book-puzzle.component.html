@@ -116,8 +116,8 @@
                   @if (inWeekly || inCourse) {
                     <button mat-icon-button class="ctx-back"
                             (click)="inWeekly ? backToWeekly() : backToCourses()"
-                            [attr.aria-label]="(inWeekly ? 'book.weekly.backToWeekly' : 'book.course.backToCourses') | translate"
-                            [matTooltip]="(inWeekly ? 'book.weekly.backToWeekly' : 'book.course.backToCourses') | translate">
+                            [attr.aria-label]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate"
+                            [matTooltip]="(inWeekly ? 'book.weekly.backToWeekly' : courseBackKey('book.course.backToCourses')) | translate">
                       <mat-icon>arrow_back</mat-icon>
                     </button>
                   }
@@ -299,7 +299,7 @@
                         <mat-icon>replay</mat-icon> {{ (courseFullyDone ? 'book.course.restart' : 'book.course.continueRemaining') | translate }}
                       </button>
                     }
-                    <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                    <button mat-stroked-button (click)="backToCourses()">{{ courseBackKey('book.course.toOverview') | translate }}</button>
                   </div>
                 } @else if (state === 'INFO') {
                   <div class="ctx-nav">
@@ -427,7 +427,7 @@
                         <mat-icon>replay</mat-icon> {{ 'book.course.restart' | translate }}
                       </button>
                     }
-                    <button mat-stroked-button (click)="backToCourses()">{{ 'book.course.toOverview' | translate }}</button>
+                    <button mat-stroked-button (click)="backToCourses()">{{ courseBackKey('book.course.toOverview') | translate }}</button>
                   </div>
                 }
               </mat-card-content>

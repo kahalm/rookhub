@@ -13,7 +13,7 @@ describe('adminGuard', () => {
     });
   }
 
-  const run = () => TestBed.runInInjectionContext(() => adminGuard({} as any, {} as any));
+  const run = () => TestBed.runInInjectionContext(() => adminGuard({} as any, { url: '/admin' } as any));
 
   it('lässt eingeloggte Admins durch', () => {
     configure(true, true);
@@ -27,8 +27,12 @@ describe('adminGuard', () => {
     expect(res.toString()).toContain('/dashboard');
   });
 
-  it('leitet anonyme Nutzer auf /dashboard um', () => {
+  it('schickt anonyme Nutzer direkt zur Anmeldung, mit /admin als Ziel und Hinweis (UX-024)', () => {
+    // Bisher erst aufs Dashboard — dessen authGuard gab dann „/dashboard“ statt „/admin“ als Ziel mit.
     configure(false, false);
-    expect((run() as UrlTree) instanceof UrlTree).toBeTrue();
+    const res = run() as UrlTree;
+    expect(res instanceof UrlTree).toBeTrue();
+    expect(res.toString().split('?')[0]).toBe('/login');
+    expect(res.queryParams).toEqual({ returnUrl: '/admin', authRequired: '1' });
   });
 });

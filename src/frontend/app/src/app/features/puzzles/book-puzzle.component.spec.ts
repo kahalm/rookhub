@@ -735,6 +735,29 @@ describe('BookPuzzleComponent anonymer öffentlicher Kurs', () => {
   });
 });
 
+describe('BookPuzzleComponent Rückweg aus dem Kurs (UX-024)', () => {
+  // Gäste spielen nur öffentliche Kurse (Kurz-URL); /courses hat für sie keine Seite, nur die Anmeldemaske.
+  it('führt Gäste zur Startseite und beschriftet Pfeil und „Zur Übersicht“ entsprechend', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = false;
+    c.inCourse = true;
+    c.backToCourses();
+    expect(c.router.navigate).toHaveBeenCalledWith(['/']);
+    expect(c.courseBackKey('book.course.backToCourses')).toBe('book.course.toStart');
+    expect(c.courseBackKey('book.course.toOverview')).toBe('book.course.toStart');
+  });
+
+  it('führt Angemeldete wie bisher zur Kursübersicht', () => {
+    const c = makeComponent();
+    c.auth.isLoggedIn = true;
+    c.inCourse = true;
+    c.backToCourses();
+    expect(c.router.navigate).toHaveBeenCalledWith(['/courses']);
+    expect(c.courseBackKey('book.course.backToCourses')).toBe('book.course.backToCourses');
+    expect(c.courseBackKey('book.course.toOverview')).toBe('book.course.toOverview');
+  });
+});
+
 describe('BookPuzzleComponent Info-/Erklärlinien (kein Quiz)', () => {
   it('eine IsInfoOnly-Linie geht in den INFO-Durchklick-Modus statt ins Quiz', () => {
     const c = makeComponent();

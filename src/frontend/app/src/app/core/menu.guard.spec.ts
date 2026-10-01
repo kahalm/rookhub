@@ -54,6 +54,15 @@ describe('menuGuard', () => {
     expect((runSync() as UrlTree).toString()).toContain('/login');
   });
 
+  it('gibt anonymen Nutzern Rücksprungziel und Anmelde-Hinweis mit (UX-024)', () => {
+    configure(false, of(false));
+    const result = TestBed.runInInjectionContext(() => menuGuard('analysis')({} as any, { url: '/analysis?fen=x' } as any));
+    let res!: UrlTree;
+    (isObservable(result) ? result : of(result as any)).subscribe(v => (res = v as UrlTree));
+    expect(res.toString().split('?')[0]).toBe('/login');
+    expect(res.queryParams).toEqual({ returnUrl: '/analysis?fen=x', authRequired: '1' });
+  });
+
   it('fail-open: bei API-Fehler wird NICHT ausgesperrt (true)', () => {
     configure(true, throwError(() => new Error('netz weg')));
     expect(runSync()).toBe(true);
