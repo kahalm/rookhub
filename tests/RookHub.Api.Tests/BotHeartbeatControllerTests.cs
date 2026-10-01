@@ -55,10 +55,13 @@ public class BotHeartbeatControllerTests
         Assert.IsType<NoContentResult>(result);
         var line = Assert.Single(log.Events);
         Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Information, line.Level);
-        // Vertrag mit dem log-watcher: gezählt wird labels.HeartbeatService == "schach-bot" (HEARTBEAT_CHECKS
-        // schach-bot=rookhub-logs-*); die Altform sucht den gerenderten Satz "Heartbeat: schach-bot".
+        // Vertrag mit dem log-watcher: gezählt wird NUR labels.HeartbeatService == "schach-bot" (HEARTBEAT_CHECKS
+        // schach-bot=rookhub-logs-*, Form name=index). Eine Phrasen-Prüfung auf "Heartbeat: schach-bot" NICHT
+        // konfigurieren — die ist über die Request-Logzeile (GET /api/Heartbeat:%20schach-bot) fälschbar.
         Assert.Equal("schach-bot", line.State["HeartbeatService"]);
         Assert.Equal("healthy", line.State["HeartbeatStatus"]);
+        // Gerendert von Microsoft.Extensions.Logging (ohne Anführungszeichen); in ES steht die Serilog-Form
+        // 'Heartbeat: "schach-bot" "healthy"' — auch deshalb taugt der Satz nicht als Prüfmerkmal.
         Assert.Equal("Heartbeat: schach-bot healthy", line.Message);
         // Derselbe Kopf wie der Heartbeat der API selbst (HeartbeatService) — ein Template, nicht zwei.
         Assert.Equal("Heartbeat: {HeartbeatService} {HeartbeatStatus}", line.State["{OriginalFormat}"]);
@@ -79,6 +82,9 @@ public class BotHeartbeatControllerTests
     private static (string? Signature, string? Timestamp) RejectedHeaders(string fall)
     {
         var ts = Now;
+        // Deutlich außerhalb ±TimestampToleranceSeconds, nicht nur 1 s: Verify liest UtcNow erst nach Build()/Post().
+        // Tickt dazwischen die Sekunde, wäre „ts + 301" genau 300 s entfernt — im Fenster, 204 statt 401 (Flake).
+        var outside = BotRequestSignature.TimestampToleranceSeconds + 60;
         return fall switch
         {
             "ohne-header" => (null, null),                                                  // anonymer Aufruf
@@ -86,8 +92,8 @@ public class BotHeartbeatControllerTests
             "alt-signatur" => ("sha256=" + SchachBotWebhookService.ComputeHmacHex(Secret, Path), Ts(ts)),
             "falsches-secret" => (Sign("anderes_secret_value", ts), Ts(ts)),
             "anderer-pfad" => (Sign(Secret, ts, "/api/client-log"), Ts(ts)),
-            "zu-alt" => (Sign(Secret, ts - 301), Ts(ts - 301)),
-            "zu-weit-in-der-zukunft" => (Sign(Secret, ts + 301), Ts(ts + 301)),
+            "zu-alt" => (Sign(Secret, ts - outside), Ts(ts - outside)),
+            "zu-weit-in-der-zukunft" => (Sign(Secret, ts + outside), Ts(ts + outside)),
             "timestamp-passt-nicht" => (Sign(Secret, ts - 10), Ts(ts)),
             "timestamp-keine-zahl" => (Sign(Secret, ts), "gestern"),
             _ => throw new ArgumentOutOfRangeException(nameof(fall), fall, null),

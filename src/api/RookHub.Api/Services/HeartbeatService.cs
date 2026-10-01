@@ -15,9 +15,10 @@ public class HeartbeatService : BackgroundService
 
     /// <summary>
     /// Kopf jeder Heartbeat-Zeile — Vertrag mit dem log-watcher: <c>{HeartbeatService}</c> wird zu
-    /// <c>labels.HeartbeatService</c> (danach zählt er, <c>HEARTBEAT_CHECKS</c> als <c>name=index</c>), die Altform
-    /// sucht den gerenderten Satz „Heartbeat: rookhub-api". Der signierte Bot-Heartbeat
-    /// (<see cref="Controllers.BotHeartbeatController"/>) schreibt denselben Kopf mit <c>schach-bot</c>.
+    /// <c>labels.HeartbeatService</c> (danach zählt er, <c>HEARTBEAT_CHECKS</c> als <c>name=index</c>). Den gerenderten
+    /// Satz (in ES <c>Heartbeat: "rookhub-api" "healthy" …</c>, Serilog setzt Strings in Anführungszeichen) NICHT als
+    /// Prüfmerkmal nehmen: eine Phrasen-Suche trifft auch Request-Logzeilen und ist damit fälschbar. Der signierte
+    /// Bot-Heartbeat (<see cref="Controllers.BotHeartbeatController"/>) schreibt denselben Kopf mit <c>schach-bot</c>.
     /// </summary>
     public const string LogTemplatePrefix = "Heartbeat: {HeartbeatService} {HeartbeatStatus}";
 
