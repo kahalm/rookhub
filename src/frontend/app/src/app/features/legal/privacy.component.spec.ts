@@ -74,6 +74,12 @@ describe('PrivacyComponent', () => {
     expect(kid.textContent).not.toContain('legal.privacy.leagueTitle');
   });
 
+  it('beschreibt, was der Discord-Bot speichert (Codereview S4-008)', () => {
+    const text = render().textContent ?? '';
+    for (const k of ['botTitle', 'botIntro', 'botDmLog', 'botActivity', 'botLogs'])
+      expect(text).withContext(k).toContain('legal.privacy.' + k);
+  });
+
   it('nennt die KI-Dienste: Formular-Fotos gehen an Anthropic (Codereview A6-008)', () => {
     const el = render();
     // Ohne Sprachdateien stehen die Keys selbst da — sie muessen gerendert werden.
@@ -123,6 +129,17 @@ describe('Datenschutz-Texte (en/de/hr/hu)', () => {
       expect(p['thirdChesssites']).toMatch(/\b6\b/);
       expect(p['thirdChesssites']).toMatch(/US-Anbieter|US provider|SAD|egyesült államok/);
       expect(p['thirdChesssites']).not.toMatch(/keine automatische|no automatic|nema automatsk|nincs automatikus/);
+    });
+
+    it(`${lang}: Discord-Bot wie im Bot — DM-Log 300 Zeichen und 30 Tage, Abbestellen, Protokolle in ES (S4-008)`, async () => {
+      const p = (await load(lang))['legal']['privacy'];
+      // schach-bot core/dm_log.py: ein- und ausgehende DMs, auf 300 Zeichen gekuerzt, nach 30 Tagen weg.
+      expect(p['botDmLog']).toMatch(/\b300\b/);
+      expect(p['botDmLog']).toMatch(/\b30\b/);
+      // Spiel-Status nur fuer /motivation-Abonnenten; Abbestellen ist der Ausweg.
+      expect(p['botActivity']).toContain('/motivation aus');
+      // Befehlsprotokoll und Motivations-Metadaten gehen nach Elasticsearch (ohne DM-Inhalt, schach-bot v2.83.14).
+      expect(p['botLogs']).toContain('Elasticsearch');
     });
 
     it(`${lang}: LeagueHub-Abschnitt nennt Rechtsgrundlage, Widerspruch und Teilen-Links`, async () => {

@@ -97,6 +97,21 @@ import { LEGAL_SITE, legalBackLink } from './legal-site';
           <p>{{ 'legal.privacy.aiScoresheet' | translate }}</p>
           <p>{{ 'legal.privacy.aiLocal' | translate }}</p>
 
+          <!-- Discord-Bot (Codereview S4-008): Stand ab schach-bot v2.83.14 — DM-Log (core/dm_log.py: ein- und ausgehend,
+               300 Zeichen, ?dl=-Token maskiert, 30 Tage, /dm-log nur Admins/Moderatoren), Spiel-Status nur fuer
+               /motivation-Abonnenten (commands/motivation.py, nach ES nur die Laenge der DM), Befehlsprotokoll
+               (core/command_log.py) und Puzzle-Reaktionen in den Monats-Indizes schach-bot-logs-* / schach-bot-events-*.
+               ENTWURF (Betreiber): fuer diese Indizes gibt es keine Loeschfrist (docs/log-retention.md nimmt sie bewusst
+               aus) — sobald eine eingerichtet ist, hier nennen. Der KI-Chat per DM (commands/chat.py, Anthropic) ist ohne
+               CLAUDE_API_KEY aus (Prod: nicht gesetzt); wird er eingeschaltet, gehoert er in diesen Abschnitt. -->
+          <h4>{{ 'legal.privacy.botTitle' | translate }}</h4>
+          <p>{{ 'legal.privacy.botIntro' | translate }}</p>
+          <ul>
+            <li>{{ 'legal.privacy.botDmLog' | translate }}</li>
+            <li>{{ 'legal.privacy.botActivity' | translate }}</li>
+            <li>{{ 'legal.privacy.botLogs' | translate }}</li>
+          </ul>
+
           <h4>{{ 'legal.privacy.storageTitle' | translate }}</h4>
           <p>{{ 'legal.privacy.storage' | translate }}</p>
 
