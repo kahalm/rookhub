@@ -1406,8 +1406,8 @@
     "noMatch": "Keine Kurse passen zu „{{query}}“.",
     "sectionPublic": "Öffentliche Kurse",
     "sectionPublicHint": "Über deine Gruppen freigegebene Kurse.",
-    "sectionChessable": "Chessable-Kurse",
-    "sectionChessableHint": "Von dir selbst importierte Kurse.",
+    "sectionOwn": "Eigene Kurse",
+    "sectionOwnHint": "Von dir selbst importierte oder angelegte Kurse.",
     "puzzleCount": "{{count}} Puzzles",
     "completed": "Kurs abgeschlossen",
     "detail": {

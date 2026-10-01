@@ -1,6 +1,12 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { CourseListComponent } from './course-list.component';
-import { CourseListItem } from './course.service';
+import { CourseListItem, CourseService } from './course.service';
 import { saveBookOffline } from '../puzzles/book-offline.util';
 import { CourseLanguageService } from './course-language.service';
 
@@ -58,7 +64,7 @@ describe('CourseListComponent sorting', () => {
     ]);
 
     expect(comp.publicCourses.map(c => c.bookId)).toEqual([2, 1]);
-    expect(comp.chessableCourses.map(c => c.bookId)).toEqual([4, 3]);
+    expect(comp.ownCourses.map(c => c.bookId)).toEqual([4, 3]);
   });
 
   describe('inProgressCourses', () => {
@@ -129,7 +135,7 @@ describe('CourseListComponent sorting', () => {
       comp.loadCourses();
       comp.search = 'SICIL';
       expect(comp.filtered.map(c => c.bookId)).toEqual([1]);
-      expect(comp.chessableCourses.map(c => c.bookId)).toEqual([1]);
+      expect(comp.ownCourses.map(c => c.bookId)).toEqual([1]);
       comp.search = '';
       expect(comp.filtered.length).toBe(2);
     });
@@ -371,5 +377,59 @@ describe('CourseListComponent Offline-Speichern (ehrliche Fehlermeldung)', () =>
     expect(comp.isOffline(course)).toBeFalse();      // kein vorgetäuschtes ☁-Häkchen
     expect(comp.savingOffline).toBeNull();
     expect(info.calls.mostRecent().args[0]).toBe('courses.offlineFailed');
+  });
+});
+
+/**
+ * Die Sektion der eigenen Kurse (`isOwned`) hieß „Chessable-Kurse / Von dir selbst importierte
+ * Kurse" — dort landen aber auch leer angelegte Kurse, „Partien importieren" und aus Repertoires
+ * umgewandelte Kurse, die mit Chessable nichts zu tun haben.
+ */
+describe('CourseListComponent Sektion „Eigene Kurse"', () => {
+  function own(over: Partial<CourseListItem> = {}): CourseListItem {
+    return {
+      bookId: 5, fileName: 'leer.pgn', displayName: 'Kalkulation leer', difficulty: null, rating: null,
+      tags: null, description: null, puzzleCount: 0, solvedCount: 0, progressPercent: 0,
+      lastMode: null, lastActivityAt: null, isOwned: true, isPinned: false, ...over,
+    };
+  }
+
+  it('zeigt einen leer angelegten eigenen Kurs unter „Eigene Kurse", nicht unter „Chessable-Kurse"', async () => {
+    await TestBed.configureTestingModule({
+      imports: [CourseListComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: CourseService, useValue: { getCourses: () => of([own()]) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(CourseListComponent);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.ownCourses.map(c => c.bookId)).toEqual([5]);
+    // Ohne geladene Übersetzungen zeigt die Pipe den Schlüssel — genau der soll es sein.
+    const headings = Array.from(fixture.nativeElement.querySelectorAll('h2') as NodeListOf<HTMLElement>)
+      .map(h => h.textContent!.trim());
+    expect(headings).toContain('courses.sectionOwn');
+    expect(headings).not.toContain('courses.sectionChessable');
+  });
+
+  it('beschriftet die Sektion in jeder Sprache ohne „Chessable"', async () => {
+    for (const lang of ['en', 'de', 'hr']) {
+      let json: { courses: Record<string, unknown> } | undefined;
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { json = await res.json(); break; }
+      }
+      for (const key of ['sectionOwn', 'sectionOwnHint']) {
+        const text = json!.courses[key];
+        expect(typeof text).withContext(`${lang}: courses.${key}`).toBe('string');
+        expect(text as string).withContext(`${lang}: courses.${key}`).not.toContain('Chessable');
+      }
+      expect('sectionChessable' in json!.courses).withContext(`${lang}: alter Schlüssel`).toBeFalse();
+    }
   });
 });

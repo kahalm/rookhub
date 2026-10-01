@@ -168,12 +168,12 @@ import { CourseCardComponent } from './course-card.component';
             </div>
           </section>
         }
-        @if (chessableCourses.length > 0) {
+        @if (ownCourses.length > 0) {
           <section class="course-section">
-            <h2>{{ 'courses.sectionChessable' | translate }}</h2>
-            <p class="section-hint">{{ 'courses.sectionChessableHint' | translate }}</p>
+            <h2>{{ 'courses.sectionOwn' | translate }}</h2>
+            <p class="section-hint">{{ 'courses.sectionOwnHint' | translate }}</p>
             <div class="course-grid">
-              @for (c of chessableCourses; track c.bookId) {
+              @for (c of ownCourses; track c.bookId) {
                 <app-course-card [course]="c"
                   [pinning]="pinning === c.bookId"
                   [savingOffline]="savingOffline === c.bookId"
@@ -287,7 +287,7 @@ export class CourseListComponent implements OnInit {
   }
 
   /** Angefangene, noch nicht abgeschlossene Kurse — „In Arbeit". Erscheinen ZUSÄTZLICH oben,
-   *  bleiben aber auch in ihrer normalen Sektion (öffentlich/Chessable). Reihenfolge = zuletzt
+   *  bleiben aber auch in ihrer normalen Sektion (öffentlich/eigene). Reihenfolge = zuletzt
    *  verwendet zuerst (durch sortCourses bereits vorsortiert). */
   // Vorberechnete Sektionen statt Getter-Kaskade: die fünf Getter liefen bei JEDEM
   // Change-Detection-Zyklus (Default-Strategie: jedes Event der Seite), und jeder davon
@@ -301,8 +301,10 @@ export class CourseListComponent implements OnInit {
   sharedCourses: CourseListItem[] = [];
   /** Öffentliche Kurse — über eine Gruppe freigegeben (bzw. globale Admin-Bücher). */
   publicCourses: CourseListItem[] = [];
-  /** Eigene, selbst importierte Chessable-Kurse. */
-  chessableCourses: CourseListItem[] = [];
+  /** Eigene Kurse (`isOwned`): aus Chessable importiert, aber genauso über „Kurs erstellen" leer
+   *  angelegt, per „Partien importieren" oder aus einem Repertoire umgewandelt — deshalb heißt die
+   *  Sektion „Eigene Kurse" und nicht „Chessable-Kurse". */
+  ownCourses: CourseListItem[] = [];
 
   /** Sektionen aus Liste + Suche neu ableiten. MUSS nach jeder Änderung an `courses`
    *  (Zuweisung ODER Mutation von isPinned/solvedCount/puzzleCount/isShared/isOwned) laufen —
@@ -327,7 +329,7 @@ export class CourseListComponent implements OnInit {
     ];
     this.sharedCourses = this.filtered.filter(c => c.isShared);
     this.publicCourses = this.filtered.filter(c => !c.isOwned && !c.isShared);
-    this.chessableCourses = this.filtered.filter(c => c.isOwned);
+    this.ownCourses = this.filtered.filter(c => c.isOwned);
   }
 
   isOffline(c: CourseListItem): boolean {
@@ -412,7 +414,7 @@ export class CourseListComponent implements OnInit {
 
   /**
    * Angefangene Kurse (lastActivityAt gesetzt) nach vorn — nach letzter Verwendung absteigend;
-   * noch nicht angefangene danach, alphabetisch. Wird je Sektion (öffentlich/Chessable) durch die
+   * noch nicht angefangene danach, alphabetisch. Wird je Sektion (öffentlich/eigene) durch die
    * order-erhaltenden Filter-Getter beibehalten.
    */
   private sortCourses(list: CourseListItem[]): CourseListItem[] {

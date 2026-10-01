@@ -1406,8 +1406,8 @@
     "noMatch": "No courses match “{{query}}”.",
     "sectionPublic": "Public courses",
     "sectionPublicHint": "Courses shared with you via your groups.",
-    "sectionChessable": "Chessable courses",
-    "sectionChessableHint": "Courses you imported yourself.",
+    "sectionOwn": "Your courses",
+    "sectionOwnHint": "Courses you imported or created yourself.",
     "puzzleCount": "{{count}} puzzles",
     "completed": "Course completed",
     "detail": {

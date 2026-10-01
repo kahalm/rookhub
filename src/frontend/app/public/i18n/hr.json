@@ -1406,8 +1406,8 @@
     "noMatch": "Nijedan tečaj ne odgovara „{{query}}“.",
     "sectionPublic": "Javni tečajevi",
     "sectionPublicHint": "Tečajevi koji su ti dostupni preko tvojih grupa.",
-    "sectionChessable": "Chessable tečajevi",
-    "sectionChessableHint": "Tečajevi koje si sam uvezao.",
+    "sectionOwn": "Vlastiti tečajevi",
+    "sectionOwnHint": "Tečajevi koje si sam uvezao ili izradio.",
     "puzzleCount": "{{count}} zagonetki",
     "completed": "Tečaj završen",
     "detail": {

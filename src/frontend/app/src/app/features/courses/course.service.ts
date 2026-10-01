@@ -22,7 +22,7 @@ export interface CourseListItem {
   /** Showstopper: veraltete Aufbereitung, die sich hier NICHT automatisch beheben lässt — die Karte
    *  zeigt dafür ein (!). Hilft nur: den Kurs über die RepCheck-Erweiterung neu holen. */
   needsReimport?: boolean;
-  /** true = eigener (selbst importierter) Chessable-Kurs; false = über eine Gruppe freigegebener öffentlicher Kurs. */
+  /** true = eigener Kurs (Chessable-Import, selbst angelegt, PGN-Import oder aus Repertoire); false = über eine Gruppe freigegebener öffentlicher Kurs. */
   isOwned: boolean;
   /** true = vom Nutzer fürs Dashboard angepinnt (persönlich). */
   isPinned: boolean;
