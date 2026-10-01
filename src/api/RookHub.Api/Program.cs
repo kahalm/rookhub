@@ -277,8 +277,13 @@ try
     // Entwürfe der PGN-Importe (0.595.0): liegen online, bis alles importiert oder verworfen ist.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueClubDraftService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueMegaPlayers>();
-    // Spielervorbereitung (Prep): Partiebestand aus Megabase + Lumbra paketweise einspielen.
+    // Spielervorbereitung (Prep): Partiebestand aus Megabase + Lumbra paketweise einspielen, suchen, Karte.
     builder.Services.AddScoped<RookHub.Api.Services.Prep.PrepImportService>();
+    builder.Services.AddScoped<RookHub.Api.Services.Prep.PrepPlayerSearch>();
+    // Grenzen der Karte (jüngste N Partien, „alle“ höchstens M) einstellbar — siehe PrepCardService.
+    builder.Services.AddScoped(sp => new RookHub.Api.Services.Prep.PrepCardService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
+        sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),
+        RookHub.Api.Services.Prep.PrepCardService.LimitFrom(builder.Configuration), RookHub.Api.Services.Prep.PrepCardService.MaxFrom(builder.Configuration)));
     builder.Services.AddScoped(sp => new RookHub.Api.Services.League.LeagueGameSources(
         sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(), sp.GetService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
     builder.Services.AddScoped<RookHub.Api.Services.League.LichessStudySource>();

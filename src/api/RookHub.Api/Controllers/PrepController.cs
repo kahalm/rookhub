@@ -29,6 +29,75 @@ public class PrepController : BaseApiController
 
     public PrepController(PrepImportService import) => _import = import;
 
+    // ---- Lesen (Phase 2) -----------------------------------------------------------------------------
+
+    /// <summary>Spieler suchen: Namens-Präfix („Carlsen", „Carlsen, M", „Magnus Carlsen", Umlaute in beiden Schreibweisen) oder
+    /// FIDE-ID → <c>{ items[{ id, name, fide, games, firstYear, lastYear, maxElo }] }</c>, meistgespielte zuerst.</summary>
+    [HttpGet("players")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Players([FromQuery] string? q, [FromQuery] int? take, [FromServices] PrepPlayerSearch search,
+        CancellationToken ct)
+    {
+        var hits = await search.SearchAsync(q, take ?? PrepPlayerSearch.DefaultTake, ct);
+        return Ok(new
+        {
+            items = hits.Select(h => new
+            {
+                id = h.Id, name = h.Name, fide = h.FideId, games = h.Games, firstYear = h.FirstYear, lastYear = h.LastYear, maxElo = h.MaxElo,
+            }),
+        });
+    }
+
+    /// <summary>Spielerkarte in der Form der Liga-Karte (Profil, Quellen, letzte Partien, Online-Konten) plus <c>id</c>, <c>games</c>
+    /// (im Bestand), <c>loaded</c>/<c>limited</c>/<c>limit</c>/<c>since</c> (Vorgabe: die jüngsten <see cref="PrepCardService.DefaultLimit"/>,
+    /// <c>all=true</c>: bis <see cref="PrepCardService.DefaultMax"/>) und <c>twin</c> (Namens-Zwilling ohne FIDE-ID, nur mit <c>twin=true</c>
+    /// dabei). Gilt für alle Unterseiten.</summary>
+    [HttpGet("player/{id:int}")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Player(int id, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards,
+        CancellationToken ct) =>
+        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l ? Ok(await cards.CardAsync(l, ct)) : NotFound();
+
+    /// <summary>Eröffnungsprofil über gefilterte Partien — Filter wie bei der Liga (<c>source</c>, <c>speeds</c>, <c>years</c>,
+    /// Online nur gesicherter Konten außer <c>unsure=true</c>).</summary>
+    [HttpGet("player/{id:int}/profile")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Profile(int id, [FromQuery] string? source, [FromQuery] string? speeds, [FromQuery] int? years,
+        [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards, CancellationToken ct) =>
+        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l
+            ? Ok(await cards.ProfileAsync(l, Services.League.LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true), ct))
+            : NotFound();
+
+    /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen; Filter wie das Profil.</summary>
+    [HttpGet("player/{id:int}/tree")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Tree(int id, [FromQuery] string? color, [FromQuery] string? line, [FromQuery] string? source,
+        [FromQuery] string? speeds, [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin,
+        [FromServices] PrepCardService cards, CancellationToken ct) =>
+        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l
+            ? Ok(await cards.TreeAsync(l, color ?? "w", line,
+                Services.League.LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true), ct))
+            : NotFound();
+
+    /// <summary>Die letzten Partien samt PGN zum Nachspielen; <c>color</c> w/s = nur mit dieser Farbe.</summary>
+    [HttpGet("player/{id:int}/recent")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Recent(int id, [FromQuery] string? color, [FromQuery] bool? all, [FromQuery] bool? twin,
+        [FromServices] PrepCardService cards, CancellationToken ct) =>
+        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l ? Ok(await cards.RecentAsync(l, color, ct)) : NotFound();
+
+    /// <summary>Die geladenen Partien als PGN-Datei (Grenze und Zwilling wie die Karte) — der einzige Download, je Spieler.</summary>
+    [HttpGet("player/{id:int}/pgn")]
+    [HasPermission(Permissions.PrepView)]
+    public async Task<IActionResult> Pgn(int id, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards,
+        CancellationToken ct)
+    {
+        if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
+        return LeagueController.PgnFile(l.Player.FideId ?? $"p{l.Player.Id}", l.Player.Name, await cards.PgnAsync(l, ct));
+    }
+
+    // ---- Einspielen (Phase 1) ------------------------------------------------------------------------
+
     /// <summary>
     /// Ein Paket des Bestands einspielen (PGN, gern gzip mit <c>Content-Encoding: gzip</c>) → Zähler des Pakets.
     /// <c>source</c> = <c>Mega</c> | <c>Lumbra</c>, <c>chunk</c> = Paketnummer, <c>first</c> = Nummer der ersten Partie

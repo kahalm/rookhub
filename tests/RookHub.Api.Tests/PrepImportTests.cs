@@ -1,10 +1,8 @@
 using System.IO.Compression;
-using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RookHub.Api.Authorization;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -285,12 +283,9 @@ public class PrepImportTests : IDisposable
     }
 
     [Fact]
-    public void PrepController_EveryAction_BehindPrepManage()
+    public void Permissions_PrepViewAndManage_Known()
     {
-        var actions = typeof(PrepController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        Assert.NotEmpty(actions);
-        Assert.All(actions, a => Assert.Equal(PermissionPolicyProvider.Prefix + Permissions.PrepManage,
-            a.GetCustomAttribute<HasPermissionAttribute>()?.Policy));
+        // Welche Aktion hinter welchem Recht steht, prüft PrepCardTests (Lesen: prep.view, Einspielen: prep.manage).
         Assert.Contains(Permissions.PrepView, Permissions.All);
         Assert.Contains(Permissions.PrepManage, Permissions.All);
     }

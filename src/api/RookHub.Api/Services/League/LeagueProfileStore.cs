@@ -228,6 +228,18 @@ public sealed class LeagueProfileStore
             years is >= 1 and <= 50 ? years : null, onlySure);
     }
 
+    /// <summary>Die Online-Partien eines Spielers nach <paramref name="filter"/> — Tempo, ab <paramref name="cutoff"/>, ohne
+    /// <c>unsure</c> nur die gesicherter Konten. Dieselbe Auswahl für Baum und Profil der Karte und für die Spielervorbereitung
+    /// (<c>Services/Prep</c>, 0.633.0), damit die Regel nur hier steht.</summary>
+    public static IQueryable<LeagueOnlineGame> OnlineGames(AppDbContext db, string fide, TreeFilter filter, DateTime? cutoff)
+    {
+        var q = db.LeagueOnlineGames.AsNoTracking().Where(g => g.FideId == fide);
+        if (filter.Speeds.Count > 0) q = q.Where(g => filter.Speeds.Contains(g.Speed));
+        if (cutoff is { } c) q = q.Where(g => g.PlayedAt >= c);
+        if (filter.OnlySure) q = q.Where(g => g.Account.Confidence == LeagueOnlineAccountService.Sure);
+        return q;
+    }
+
     /// <summary>
     /// Eröffnungsbaum eines Spielers (Knopf „Eröffnungsbaum anzeigen" auf der Spielerkarte, Wunsch 2026-09-28): alle
     /// seine Partien (fremde + Vereinspartien, mit <paramref name="filter"/> auch die Online-Partien seiner Konten) mit
@@ -277,10 +289,7 @@ public sealed class LeagueProfileStore
         if (filter.Online)
         {
             var white = color == "w";
-            var q = _db.LeagueOnlineGames.AsNoTracking().Where(g => g.FideId == fide && g.White == white);
-            if (filter.Speeds.Count > 0) q = q.Where(g => filter.Speeds.Contains(g.Speed));
-            if (cutoff is { } c) q = q.Where(g => g.PlayedAt >= c);
-            if (filter.OnlySure) q = q.Where(g => g.Account.Confidence == LeagueOnlineAccountService.Sure);
+            var q = OnlineGames(_db, fide, filter, cutoff).Where(g => g.White == white);
             if (prefix.Count > 0)
             {
                 var pre = string.Join(' ', prefix);
@@ -352,10 +361,7 @@ public sealed class LeagueProfileStore
 
         if (filter.Online)
         {
-            var q = _db.LeagueOnlineGames.AsNoTracking().Where(g => g.FideId == fide);
-            if (filter.Speeds.Count > 0) q = q.Where(g => filter.Speeds.Contains(g.Speed));
-            if (cutoff is { } c) q = q.Where(g => g.PlayedAt >= c);
-            if (filter.OnlySure) q = q.Where(g => g.Account.Confidence == LeagueOnlineAccountService.Sure);
+            var q = OnlineGames(_db, fide, filter, cutoff);
             foreach (var g in await q.Select(g => new { g.Line, g.Result, g.White, g.PlayedAt }).ToListAsync(ct))
             {
                 online++;
