@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -15,21 +16,57 @@ namespace RookHub.Api.Services.League;
 /// <para><b>Doppelte über die ZÜGE</b>, nicht über die Namen: eine anonymisierte Vereinspartie heißt auf einer Seite
 /// „Schwaz", dieselbe Partie von chess-results trägt den echten Namen. Gleiches Jahr + gleiche Hauptvariante = dieselbe
 /// Partie; die fremde Fassung gewinnt (sie trägt das volle Datum).</para>
+///
+/// <para><b>Zerlegt wird je Karte und Stand EINMAL</b> (Codereview 2026-09-29, N4-003): Baum, Profil, letzte Partien und
+/// PGN lesen die fremden Partien aus einem Cache (<see cref="CacheServiceKey"/>), Schlüssel FIDE-ID +
+/// <see cref="LeaguePlayerProfile.UpdatedAt"/> — jedes Schreiben der Karte setzt den Zeitpunkt neu. Vorher zerlegte jeder
+/// Klick im Eröffnungsbaum (auch anonym über einen Teilen-Link) das ganze gespeicherte PGN, bis 2 MB, und das zweimal.</para>
 /// </summary>
 public sealed class LeagueProfileStore
 {
     public const string ClubSource = "Verein";
-    private readonly AppDbContext _db;
+    /// <summary>DI-Schlüssel des eigenen Caches der zerlegten Karten-Partien (Program.cs) — mit Größengrenze, die der
+    /// allgemeine <see cref="IMemoryCache"/> nicht hat (wie <see cref="RepertoireAnalyzeService.CacheServiceKey"/>).</summary>
+    public const string CacheServiceKey = "league-profile-games";
+    /// <summary>Größengrenze des eigenen Caches in Partien (Size eines Eintrags = Partien der Karte, eine Meldeliste eines
+    /// Teilen-Links = 1). Grob geschätzt 7 KB je zerlegter Partie samt Hauptvariante — 10 000 sind rund 70 MB; die größte
+    /// Karte hatte am 29.09. 2 418 Partien.</summary>
+    public const long CacheSizeLimit = 10_000;
+    /// <summary>So lange bleibt eine Karte ungenutzt im Cache — eine Sitzung im Eröffnungsbaum dauert ein paar Minuten.</summary>
+    internal static readonly TimeSpan CacheIdle = TimeSpan.FromMinutes(10);
 
-    public LeagueProfileStore(AppDbContext db) => _db = db;
+    private readonly AppDbContext _db;
+    private readonly IMemoryCache? _cache;
+
+    /// <param name="cache">Der Cache <see cref="CacheServiceKey"/> — ohne (Schreibwege, Tests) wird je Aufruf zerlegt.</param>
+    public LeagueProfileStore(AppDbContext db, IMemoryCache? cache = null)
+    {
+        _db = db;
+        _cache = cache;
+    }
 
     /// <summary>Jahr + Hauptvariante — der Schlüssel, an dem dieselbe Partie in zwei Quellen erkannt wird.</summary>
-    public static string MovesKey(IReadOnlyDictionary<string, string> headers, string raw)
+    public static string MovesKey(IReadOnlyDictionary<string, string> headers, string raw) => MovesKey(headers, SansOf(raw));
+
+    private static string MovesKey(IReadOnlyDictionary<string, string> headers, IReadOnlyList<string> sans)
     {
         headers.TryGetValue("Date", out var date);
         var year = date is { Length: >= 4 } && date[..4].All(char.IsDigit) ? date[..4] : "????";
-        var moveText = PgnParser.SplitGames(raw).Select(g => g.MoveText).FirstOrDefault() ?? "";
-        return year + "|" + string.Join(' ', PgnParser.ExtractMainlineSans(moveText));
+        return year + "|" + string.Join(' ', sans);
+    }
+
+    /// <summary>Die Hauptvariante einer Partie (englische SAN, bereinigt wie überall, <c>PgnParser.ExtractMainlineSans</c>).</summary>
+    private static List<string> SansOf(string raw) =>
+        PgnParser.ExtractMainlineSans(PgnParser.SplitGames(raw).Select(g => g.MoveText).FirstOrDefault() ?? "");
+
+    /// <summary>Eine Brettpartie, deren Hauptvariante beim ersten Bedarf EINMAL zerlegt wird und dann bleibt — auch über
+    /// Anfragen hinweg, wenn die Partie im Cache liegt (gleichzeitige Leser rechnen schlimmstenfalls beide, das Ergebnis
+    /// ist dasselbe).</summary>
+    private sealed class BoardGame(LeagueProfileBuilder.Game game)
+    {
+        private List<string>? _sans;
+        public LeagueProfileBuilder.Game Game { get; } = game;
+        public IReadOnlyList<string> Sans => LazyInitializer.EnsureInitialized(ref _sans, () => SansOf(Game.Raw));
     }
 
     /// <summary>So viele Halbzüge vom Anfang genügen, um dieselbe Partie über zwei Quellen zu erkennen.</summary>
@@ -51,17 +88,45 @@ public sealed class LeagueProfileStore
     }
 
     /// <summary>Vereinspartien dazunehmen, die nicht schon unter den fremden stehen.</summary>
-    public static List<LeagueProfileBuilder.Game> WithClub(List<LeagueProfileBuilder.Game> external, IEnumerable<LeagueClubGame> club)
+    public static List<LeagueProfileBuilder.Game> WithClub(List<LeagueProfileBuilder.Game> external, IEnumerable<LeagueClubGame> club) =>
+        WithClub(external.Select(g => new BoardGame(g)).ToList(), club).Select(b => b.Game).ToList();
+
+    /// <summary>Wie oben über zerlegte Partien; die Schlüssel der fremden nur, wenn es überhaupt eine Vereinspartie gibt.</summary>
+    private static List<BoardGame> WithClub(List<BoardGame> external, IEnumerable<LeagueClubGame> club)
     {
-        var known = external.Select(g => MovesKey(g.Headers, g.Raw)).ToHashSet(StringComparer.Ordinal);
-        var all = new List<LeagueProfileBuilder.Game>(external);
+        HashSet<string>? known = null;
+        var all = new List<BoardGame>(external);
         foreach (var c in club)
         {
             var parsed = LeagueProfileBuilder.Parse(c.Pgn, ClubSource).FirstOrDefault();
-            if (parsed is null || !known.Add(MovesKey(parsed.Headers, parsed.Raw))) continue;
-            all.Add(parsed);
+            if (parsed is null) continue;
+            var b = new BoardGame(parsed);
+            known ??= external.Select(x => MovesKey(x.Game.Headers, x.Sans)).ToHashSet(StringComparer.Ordinal);
+            if (!known.Add(MovesKey(parsed.Headers, b.Sans))) continue;
+            all.Add(b);
         }
-        return all.OrderByDescending(g => g.Headers.TryGetValue("Date", out var d) ? d : "", StringComparer.Ordinal).ToList();
+        return all.OrderByDescending(b => b.Game.Headers.TryGetValue("Date", out var d) ? d : "", StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>Die fremden Partien einer Karte, zerlegt; <c>null</c> = keine Karte. <see cref="HasPgn"/>: das gespeicherte
+    /// PGN ist nicht leer (der Download fragt das).</summary>
+    private sealed record Card(string Name, List<BoardGame> Games, bool HasPgn);
+
+    private sealed record CardKey(string Fide, DateTime UpdatedAt);
+
+    /// <summary>Die Karte mit ihren fremden Partien — aus dem Cache, solange sich <see cref="LeaguePlayerProfile.UpdatedAt"/>
+    /// nicht geändert hat; sonst einmal gelesen und zerlegt. Ohne Cache je Aufruf.</summary>
+    private async Task<Card?> CardAsync(string fide, CancellationToken ct)
+    {
+        var head = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
+            .Select(x => new { x.Name, x.UpdatedAt }).FirstOrDefaultAsync(ct);
+        if (head is null) return null;
+        var key = new CardKey(fide, head.UpdatedAt);
+        if (_cache != null && _cache.TryGetValue(key, out Card? hit) && hit != null) return hit;
+        var pgn = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide).Select(x => x.Pgn).FirstOrDefaultAsync(ct);
+        var card = new Card(head.Name, Stored(pgn).Select(g => new BoardGame(g)).ToList(), !string.IsNullOrEmpty(pgn));
+        _cache?.Set(key, card, new MemoryCacheEntryOptions { Size = Math.Max(1, card.Games.Count), SlidingExpiration = CacheIdle });
+        return card;
     }
 
     /// <summary>Alle Brettpartien eines Spielers (fremde + Vereinspartien) samt seinem Namen — für den Stellungs-Abgleich der
@@ -251,8 +316,7 @@ public sealed class LeagueProfileStore
     public async Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct, TreeFilter? filter = null)
     {
         filter ??= TreeFilter.Default;
-        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
-            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
         if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
         var name = await NameAsync(fide, p?.Name, ct);
@@ -273,14 +337,14 @@ public sealed class LeagueProfileStore
         }
 
         if (filter.Board)
-            foreach (var g in WithClub(Stored(p?.Pgn), club))
+            foreach (var b in WithClub(p?.Games ?? new(), club))
             {
+                var g = b.Game;
                 if (LeagueProfileBuilder.ColorOf(g, fide, name) != color) continue;
                 if (g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)) continue;
                 var year = g.Headers.TryGetValue("Date", out var d) && d.Length >= 4 && d[..4].All(char.IsDigit) ? d[..4] : "";
                 if (cutoff is { } c && (year.Length == 0 || int.Parse(year) < c.Year)) continue;
-                var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
-                var sans = PgnParser.ExtractMainlineSans(moveText);
+                var sans = b.Sans;
                 if (sans.Count < prefix.Count || !prefix.Select((m, k) => sans[k] == m).All(x => x)) continue;
                 board++;
                 Count(sans, LeagueProfileBuilder.Points(g, color), year);
@@ -335,8 +399,7 @@ public sealed class LeagueProfileStore
     public async Task<JsonObject?> ProfileAsync(string fide, CancellationToken ct, TreeFilter? filter = null)
     {
         filter ??= TreeFilter.Default;
-        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
-            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
         if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
         var name = await NameAsync(fide, p?.Name, ct);
@@ -346,17 +409,17 @@ public sealed class LeagueProfileStore
         int board = 0, online = 0;
 
         if (filter.Board)
-            foreach (var g in WithClub(Stored(p?.Pgn), club))
+            foreach (var b in WithClub(p?.Games ?? new(), club))
             {
+                var g = b.Game;
                 var color = LeagueProfileBuilder.ColorOf(g, fide, name);
                 if (color is null) continue;
                 if (g.Headers.TryGetValue("FEN", out var fen) && !string.IsNullOrWhiteSpace(fen)) continue;
                 var year = g.Headers.TryGetValue("Date", out var d) && d.Length >= 4 && d[..4].All(char.IsDigit) ? d[..4] : "";
                 if (cutoff is { } c && (year.Length == 0 || int.Parse(year) < c.Year)) continue;
-                var moveText = PgnParser.SplitGames(g.Raw).Select(x => x.MoveText).FirstOrDefault() ?? "";
                 board++;
                 if (year.Length > 0) years.Add(year);
-                games.Add(new(PgnParser.ExtractMainlineSans(moveText).Take(8).ToList(), color, LeagueProfileBuilder.Points(g, color)));
+                games.Add(new(b.Sans.Take(8).ToList(), color, LeagueProfileBuilder.Points(g, color)));
             }
 
         if (filter.Online)
@@ -395,16 +458,16 @@ public sealed class LeagueProfileStore
     /// </summary>
     public async Task<JsonObject?> RecentAsync(string fide, CancellationToken ct, string? color = null)
     {
-        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
-            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
         if (p is null && club.Count == 0) return null;
         var name = await NameAsync(fide, p?.Name, ct);
         color = color is "w" or "s" ? color : null;
+        var games = WithClub(p?.Games ?? new(), club).Select(b => b.Game).ToList();
         return new JsonObject
         {
             ["fide"] = fide,
-            ["games"] = new JsonArray(LeagueProfileBuilder.Recent(fide, name, WithClub(Stored(p?.Pgn), club), color)
+            ["games"] = new JsonArray(LeagueProfileBuilder.Recent(fide, name, games, color)
                 .Select(x =>
                 {
                     var e = LeagueProfileBuilder.RecentEntry(x.G, x.Color);   // dieselben Angaben wie die Karte …
@@ -417,12 +480,11 @@ public sealed class LeagueProfileStore
     /// <summary>Alle Partien eines Spielers als PGN (fremde + Vereinspartien) — für den Download.</summary>
     public async Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct)
     {
-        var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
-            .Select(x => new { x.Name, x.Pgn }).FirstOrDefaultAsync(ct);
+        var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
-        if ((p is null || string.IsNullOrEmpty(p.Pgn)) && club.Count == 0) return null;
-        var games = WithClub(Stored(p?.Pgn), club);
+        if ((p is null || !p.HasPgn) && club.Count == 0) return null;
+        var games = WithClub(p?.Games ?? new(), club);
         var name = await NameAsync(fide, p?.Name, ct);
-        return (name, string.Join("\n\n", games.Select(g => g.Raw)) + "\n");
+        return (name, string.Join("\n\n", games.Select(b => b.Game.Raw)) + "\n");
     }
 }

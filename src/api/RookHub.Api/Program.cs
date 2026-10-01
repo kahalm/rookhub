@@ -267,6 +267,13 @@ try
     builder.Services.AddScoped<KidsEndlessService>();
     // LeagueHub (TMM-Aufstellungs-Prognosen): Modell einmal laden, Aktualisieren als Einzel-Lauf
     builder.Services.AddSingleton(_ => RookHub.Api.Services.League.LeagueModel.FromEmbedded());
+    // Zerlegte Karten-Partien (Baum, Profil, letzte Partien, PGN) und Meldelisten geteilter Begegnungen: eigener Cache mit
+    // Größengrenze in Partien (Codereview N4-003) — wie oben beim Repertoire, der allgemeine IMemoryCache hat keine.
+    builder.Services.AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RookHub.Api.Services.League.LeagueProfileStore.CacheServiceKey,
+        (_, _) => new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions
+        {
+            SizeLimit = RookHub.Api.Services.League.LeagueProfileStore.CacheSizeLimit,
+        }));
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();

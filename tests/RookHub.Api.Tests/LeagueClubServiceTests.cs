@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -652,6 +653,48 @@ public class LeagueClubServiceTests : IDisposable
         var black = (await store.TreeAsync("222", "s", "e4", default))!;
         Assert.Equal(1, black["total"]!.GetValue<int>());
         Assert.Equal(100, black["moves"]!.AsArray()[0]!["score"]!.GetValue<int>());   // 0-1 = Sieg für Schwarz
+    }
+
+    /// <summary>Codereview 2026-09-29, N4-003: jeder Klick im Eröffnungsbaum (auch anonym über einen Teilen-Link) zerlegte das
+    /// ganze gespeicherte PGN der Karte neu, zweimal. Mit Cache wird je Karte und Stand (<c>UpdatedAt</c>) EINMAL gelesen und
+    /// zerlegt — Baum, Profil, letzte Partien und Download bedienen sich daraus; ein neuer Stand liest neu, die
+    /// Vereinspartien kommen weiter frisch dazu.</summary>
+    [Fact]
+    public async Task Card_StoredPgnReadOncePerVersion_FromTheCache_AndAgainAfterAnUpdate()
+    {
+        var me = await SeedAsync();
+        await new LeagueProfileStore(_db).ImportGamesAsync(string.Join("\n",
+            MegaGame("Hengl, Philip", "222", "A, A", null, "1. e4 c5 2. Nf3 d6", "2019.03.01"),
+            MegaGame("Hengl, Philip", "222", "C, C", null, "1. d4 d5", "2021.03.01", "1/2-1/2")), "Mega", default);
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = LeagueProfileStore.CacheSizeLimit });
+        LeagueProfileStore Store() => new(_db, cache);                   // je Anfrage ein Store, der Cache bleibt
+        static string Moves(JsonObject t) => string.Join(" ", t["moves"]!.AsArray().Select(m => $"{m!["san"]}:{m["n"]}").Order());
+
+        Assert.Equal("d4:1 e4:1", Moves((await Store().TreeAsync("222", "w", null, default))!));
+        Assert.Equal(1, cache.Count);
+
+        // Das PGN ändert sich OHNE neuen Stand — kein Schreibweg tut das; hier zeigt es, dass nicht neu gelesen wird.
+        var row = await _db.LeaguePlayerProfiles.SingleAsync(p => p.FideId == "222");
+        var stored = row.Pgn;
+        row.Pgn = MegaGame("Hengl, Philip", "222", "B, B", null, "1. c4 e5", "2024.03.01");
+        await _db.SaveChangesAsync();
+        Assert.Equal("d4:1 e4:1", Moves((await Store().TreeAsync("222", "w", null, default))!));
+        Assert.Equal("c5:1", Moves((await Store().TreeAsync("222", "w", "e4", default))!));   // der nächste Klick: dieselben Partien
+        Assert.Equal(2, (await Store().ProfileAsync("222", default))!["board"]!.GetValue<int>());
+        Assert.Contains("1. d4 d5", (await Store().PgnAsync("222", default))!.Value.Pgn);
+        Assert.Equal(2, (await Store().RecentAsync("222", default))!["games"]!.AsArray().Count);
+
+        // Eine Vereinspartie (RefreshCardsAsync → RebuildAsync setzt UpdatedAt): neuer Stand, neu gelesen — samt Vereinspartie.
+        row.Pgn = stored;
+        await _db.SaveChangesAsync();
+        await Club().ImportPgnAsync(me, Pgn("Hengl, Philip", "Oberschmid, Patrik"), null);
+        Assert.Equal("d4:1 e4:2", Moves((await Store().TreeAsync("222", "w", null, default))!));
+
+        row.Pgn = MegaGame("Hengl, Philip", "222", "B, B", null, "1. c4 e5", "2024.03.01");
+        row.UpdatedAt = row.UpdatedAt.AddSeconds(1);
+        await _db.SaveChangesAsync();
+        Assert.Equal("c4:1 e4:1", Moves((await Store().TreeAsync("222", "w", null, default))!));   // neues PGN + Vereinspartie
+        Assert.Equal(2, (await Store().ProfileAsync("222", default))!["board"]!.GetValue<int>());
     }
 
     // ── Einzelne Partie, Liste, Löschen ─────────────────────────────

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 
@@ -22,10 +23,14 @@ public sealed class LeagueService
     private readonly AppDbContext _db;
     private readonly LeagueModel _model;
     private readonly ILogger<LeagueService> _log;
+    private readonly IMemoryCache? _cache;
 
-    public LeagueService(AppDbContext db, LeagueModel model, ILogger<LeagueService> log)
+    /// <param name="cache">Der Cache der zerlegten Karten-Partien und geteilten Meldelisten
+    /// (<see cref="LeagueProfileStore.CacheServiceKey"/>, Codereview N4-003); ohne (Tests) wird je Aufruf gerechnet.</param>
+    public LeagueService(AppDbContext db, LeagueModel model, ILogger<LeagueService> log,
+        [FromKeyedServices(LeagueProfileStore.CacheServiceKey)] IMemoryCache? cache = null)
     {
-        _db = db; _model = model; _log = log;
+        _db = db; _model = model; _log = log; _cache = cache;
     }
 
     public async Task<string?> CurrentSeasonAsync(CancellationToken ct) =>
@@ -121,7 +126,7 @@ public sealed class LeagueService
 
     /// <summary>Alle Partien des Spielers — die fremden UND die der Vereins-Datenbank (auch auf Teilen-Links: „pgn sind
     /// nicht geschützt", Wunsch des Nutzers).</summary>
-    public Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct) => new LeagueProfileStore(_db).PgnAsync(fide, ct);
+    public Task<(string Name, string Pgn)?> PgnAsync(string fide, CancellationToken ct) => new LeagueProfileStore(_db, _cache).PgnAsync(fide, ct);
 
     /// <summary>Fremde Partiesammlung einspielen (<see cref="LeagueProfileStore.ImportGamesAsync"/>).</summary>
     public Task<(int Games, int Players)> ImportGamesAsync(string pgn, string source, CancellationToken ct) =>
@@ -129,16 +134,16 @@ public sealed class LeagueService
 
     /// <summary>Die letzten Partien der Karte samt PGN (<see cref="LeagueProfileStore.RecentAsync"/>).</summary>
     public Task<JsonObject?> RecentAsync(string fide, CancellationToken ct, string? color = null) =>
-        new LeagueProfileStore(_db).RecentAsync(fide, ct, color);
+        new LeagueProfileStore(_db, _cache).RecentAsync(fide, ct, color);
 
     /// <summary>Eröffnungsbaum des Spielers mit einer Farbe ab einer Zugfolge (<see cref="LeagueProfileStore.TreeAsync"/>).</summary>
     public Task<JsonObject?> TreeAsync(string fide, string color, string? line, CancellationToken ct,
         LeagueProfileStore.TreeFilter? filter = null) =>
-        new LeagueProfileStore(_db).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct, filter);
+        new LeagueProfileStore(_db, _cache).TreeAsync(fide, color is "s" or "b" ? "s" : "w", line, ct, filter);
 
     /// <summary>Eröffnungsprofil der Karte über gefilterte Partien (<see cref="LeagueProfileStore.ProfileAsync"/>, 0.617.0).</summary>
     public Task<JsonObject?> ProfileAsync(string fide, CancellationToken ct, LeagueProfileStore.TreeFilter? filter = null) =>
-        new LeagueProfileStore(_db).ProfileAsync(fide, ct, filter);
+        new LeagueProfileStore(_db, _cache).ProfileAsync(fide, ct, filter);
 
     // ---- Teilen-Links -------------------------------------------------------------------------------
 
@@ -248,11 +253,34 @@ public sealed class LeagueService
         };
     }
 
-    /// <summary>Darf dieser Link die Karte/PGN dieses Spielers zeigen? (Nur Spieler der geteilten Meldeliste.)</summary>
+    /// <summary>Darf dieser Link die Karte/PGN dieses Spielers zeigen? (Nur Spieler der geteilten Meldeliste.) Jeder Klick
+    /// auf einer geteilten Karte fragt das, auch jeder im Eröffnungsbaum — die Meldeliste kommt deshalb je Ansicht EINMAL
+    /// aus dem Liga-JSON (<see cref="ShareRosterAsync"/>), statt je Anfrage die ganze Liga zu parsen und die Begegnung zu
+    /// klonen (Codereview 2026-09-29, N4-003).</summary>
     public async Task<bool> ShareCoversAsync(string token, string fide, CancellationToken ct)
     {
-        var v = await PublicShareAsync(token, ct);
-        return v?["fixture"]?["roster"]?.AsArray().Any(r => r?["fide"]?.GetValue<string>() == fide) == true;
+        var s = await ValidShareAsync(token, ct);
+        return s is not null && (await ShareRosterAsync(s, ct)).Contains(fide);
+    }
+
+    private sealed record ShareRosterKey(int Tnr, int Round, string Team, DateTime GeneratedAt);
+
+    /// <summary>Die FIDE-IDs der Meldeliste einer geteilten Begegnung (leer, wenn sie nicht teilbar ist) — im Cache bis zum
+    /// nächsten Rechnen der Ansicht (<see cref="LeagueView.GeneratedAt"/>). Was danach noch in das JSON geschrieben wird
+    /// (Partienzahlen, Konten), ändert die Meldeliste nicht.</summary>
+    private async Task<HashSet<string>> ShareRosterAsync(LeagueShare s, CancellationToken ct)
+    {
+        var generated = await _db.LeagueViews.AsNoTracking().Where(v => v.Tnr == s.Tnr)
+            .Select(v => (DateTime?)v.GeneratedAt).FirstOrDefaultAsync(ct);
+        if (generated is null) return new HashSet<string>(StringComparer.Ordinal);
+        var key = new ShareRosterKey(s.Tnr, s.Round, s.Team, generated.Value);
+        if (_cache != null && _cache.TryGetValue(key, out HashSet<string>? hit) && hit != null) return hit;
+        var f = await FixtureAsync(s.Tnr, s.Round, s.Team, ct);
+        var fides = f is null || !Shareable(f.Value.Fixture) ? new HashSet<string>(StringComparer.Ordinal)
+            : (f.Value.Fixture["roster"]?.AsArray() ?? new JsonArray()).Select(r => r?["fide"]?.GetValue<string>())
+                .OfType<string>().ToHashSet(StringComparer.Ordinal);
+        _cache?.Set(key, fides, new MemoryCacheEntryOptions { Size = 1, SlidingExpiration = LeagueProfileStore.CacheIdle });
+        return fides;
     }
 
     private async Task CleanupSharesAsync(CancellationToken ct)

@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
@@ -196,10 +198,10 @@ public class LeagueEngineTests
 
     // ---- Teilen-Links -----------------------------------------------------------------------------
 
-    private static (AppDbContext Db, LeagueService Svc) ShareFixture()
+    private static (AppDbContext Db, LeagueService Svc) ShareFixture(IMemoryCache? cache = null)
     {
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
-        var svc = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance);
+        var svc = new LeagueService(db, LeagueModel.FromEmbedded(), NullLogger<LeagueService>.Instance, cache);
         var w = TinyWorld();
         var v = new LeagueViewBuilder(w, LeagueModel.FromEmbedded(), new Dictionary<string, int>(),
             new Dictionary<string, List<LeagueOnlineAccount>>
@@ -228,6 +230,87 @@ public class LeagueEngineTests
         Assert.True(await svc.ShareCoversAsync(s1.Token, "B3", default));
         Assert.False(await svc.ShareCoversAsync(s1.Token, "C1", default));  // anderer Gegner: gehört nicht zum Link
         db.Dispose();
+    }
+
+    /// <summary>Codereview 2026-09-29, N4-003: jede Karten-Anfrage über einen Teilen-Link (jeder Klick im Baum) parste die
+    /// ganze Liga-Ansicht und klonte die Begegnung, nur um zu prüfen, ob der Spieler in der Meldeliste steht. Jetzt je
+    /// Ansicht (<c>GeneratedAt</c>) einmal; ein widerrufener Link gilt trotzdem sofort nicht mehr.</summary>
+    [Fact]
+    public async Task ShareCovers_ReadsTheRosterOncePerView_LinkStillCheckedEveryTime()
+    {
+        using var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = LeagueProfileStore.CacheSizeLimit });
+        var (db, svc) = ShareFixture(cache);
+        var s = await svc.CreateShareAsync(1, 1, "A", 7, default);
+        Assert.True(await svc.ShareCoversAsync(s!.Token, "B3", default));
+        Assert.False(await svc.ShareCoversAsync(s.Token, "C1", default));
+
+        var view = db.LeagueViews.Single();
+        var json = view.Json;
+        view.Json = "{}";                                                 // ohne neues GeneratedAt: nicht neu gelesen
+        db.SaveChanges();
+        Assert.True(await svc.ShareCoversAsync(s.Token, "B3", default));
+
+        view.GeneratedAt = view.GeneratedAt.AddMinutes(1);                // neu gerechnet: neu gelesen
+        db.SaveChanges();
+        Assert.False(await svc.ShareCoversAsync(s.Token, "B3", default));
+        view.Json = json;
+        view.GeneratedAt = view.GeneratedAt.AddMinutes(1);
+        db.SaveChanges();
+        Assert.True(await svc.ShareCoversAsync(s.Token, "B3", default));
+
+        Assert.True(await svc.DeleteShareAsync(s.Token, default));
+        Assert.False(await svc.ShareCoversAsync(s.Token, "B3", default));  // Link weg: der Cache hilft ihm nicht
+        db.Dispose();
+    }
+
+    /// <summary>Die API baut <see cref="LeagueService"/> mit dem eigenen, begrenzten Cache (Program.cs) — mit SizeLimit wirft
+    /// jeder Eintrag ohne Size, also prüft das auch, dass alle eine haben.</summary>
+    [Fact]
+    public async Task DependencyInjection_LeagueServiceGetsTheKeyedSizeLimitedCache()
+    {
+        var services = new ServiceCollection();
+        var dbName = Guid.NewGuid().ToString();
+        services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(dbName));
+        services.AddLogging();
+        services.AddMemoryCache();
+        services.AddSingleton(LeagueModel.FromEmbedded());
+        services.AddKeyedSingleton<IMemoryCache>(LeagueProfileStore.CacheServiceKey, (_, _) =>
+            new MemoryCache(new MemoryCacheOptions { SizeLimit = LeagueProfileStore.CacheSizeLimit }));
+        services.AddScoped<LeagueService>();
+        using var provider = services.BuildServiceProvider();
+        using (var seed = provider.CreateScope())
+        {
+            var db = seed.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.LeaguePlayerProfiles.Add(new LeaguePlayerProfile
+            {
+                FideId = "222", Name = "Hengl, Philip", UpdatedAt = DateTime.UtcNow,
+                Pgn = "[Date \"2024.01.01\"]\n[White \"Hengl, Philip\"]\n[Black \"X, Y\"]\n[WhiteFideId \"222\"]\n[Result \"1-0\"]\n\n1. e4 e5 1-0\n",
+            });
+            db.SaveChanges();
+        }
+
+        using var scope = provider.CreateScope();
+        var tree = await scope.ServiceProvider.GetRequiredService<LeagueService>().TreeAsync("222", "w", null, default);
+
+        Assert.Equal(1, tree!["total"]!.GetValue<int>());
+        Assert.Equal(1, ((MemoryCache)provider.GetRequiredKeyedService<IMemoryCache>(LeagueProfileStore.CacheServiceKey)).Count);
+        Assert.Equal(0, ((MemoryCache)provider.GetRequiredService<IMemoryCache>()).Count);
+        var src = File.ReadAllText(ProgramCs());
+        Assert.Contains("AddKeyedSingleton<Microsoft.Extensions.Caching.Memory.IMemoryCache>(RookHub.Api.Services.League.LeagueProfileStore.CacheServiceKey", src);
+        Assert.Contains("SizeLimit = RookHub.Api.Services.League.LeagueProfileStore.CacheSizeLimit", src);
+    }
+
+    private static string ProgramCs([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "")
+    {
+        var dir = Path.GetDirectoryName(thisFile);
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var candidate = Path.Combine(dir, "src", "api", "RookHub.Api", "Program.cs");
+            if (File.Exists(candidate)) return candidate;
+            dir = Path.GetDirectoryName(dir);
+        }
+        Assert.Fail("Program.cs nicht gefunden");
+        return "";
     }
 
     [Fact]
