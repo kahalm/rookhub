@@ -104,6 +104,7 @@ public sealed class LeagueAccountChecks
         {
             await SelfReportAsync(fide, site, user, ct),
         };
+        items.AddRange(await ReportedChecksAsync(fide, site, user, ct));
         var scout = site == LeagueOnlineSites.Lichess
             ? await _db.LeagueScoutAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.UserName == user.ToLower(), ct)
             : null;
@@ -187,7 +188,7 @@ public sealed class LeagueAccountChecks
         const string key = "self", label = "Selbstmeldung";
         var lower = user.ToLower();
         var reports = await _db.LeagueSelfReports.AsNoTracking()
-            .Where(r => (r.Site == site && r.UserName.ToLower() == lower) || r.FideId == fide).ToListAsync(ct);
+            .Where(r => r.Reporter == null && ((r.Site == site && r.UserName.ToLower() == lower) || r.FideId == fide)).ToListAsync(ct);
         static string From(LeagueSelfReport r) => r.Source + (string.IsNullOrWhiteSpace(r.Team) ? "" : $", für „{r.Team}“");
         bool Same(LeagueSelfReport r) => r.Site == site && r.UserName.Equals(user, StringComparison.OrdinalIgnoreCase);
         if (reports.FirstOrDefault(r => Same(r) && r.FideId == fide) is { } own)
@@ -199,6 +200,48 @@ public sealed class LeagueAccountChecks
         if (reports.FirstOrDefault(r => r.FideId == fide) is { } otherSite)
             return new Item(key, label, None, $"selbst gemeldet nur {LeagueOnlineSites.Label(otherSite.Site)}: {otherSite.UserName} ({otherSite.Source})");
         return new Item(key, label, None, "keine Selbstmeldung bekannt");
+    }
+
+    /// <summary>
+    /// Je Meldendem eine Zeile „Gemeldet von …" (0.629.0, Wunsch: „trag alle aus dem xlsx nach, mit einem neuen Menüpunkt im (i):
+    /// gemeldet Ranni"): dieses Konto für ihn gemeldet → spricht dafür; für einen ANDEREN Spieler → dagegen; für ihn ein anderes
+    /// Konto derselben Seite → stutzig; sonst nichts zu prüfen. Jeder, der je etwas gemeldet hat, bekommt seine Zeile — so sieht man
+    /// auch, dass ein Konto in seiner Liste FEHLT.
+    /// </summary>
+    private async Task<List<Item>> ReportedChecksAsync(string fide, string site, string user, CancellationToken ct)
+    {
+        var reporters = await _db.LeagueSelfReports.AsNoTracking().Where(r => r.Reporter != null).Select(r => r.Reporter!).Distinct()
+            .OrderBy(r => r).ToListAsync(ct);
+        if (reporters.Count == 0) return [];
+        var lower = user.ToLower();
+        var reports = await _db.LeagueSelfReports.AsNoTracking()
+            .Where(r => r.Reporter != null && ((r.Site == site && r.UserName.ToLower() == lower) || r.FideId == fide)).ToListAsync(ct);
+        var items = new List<Item>();
+        foreach (var who in reporters)
+        {
+            var mine = reports.Where(r => r.Reporter == who).ToList();
+            items.Add(await ReportedItemAsync(who, mine, fide, site, user, ct));
+        }
+        return items;
+    }
+
+    private async Task<Item> ReportedItemAsync(string who, List<LeagueSelfReport> reports, string fide, string site, string user,
+        CancellationToken ct)
+    {
+        var key = "reported:" + who;
+        var label = $"Gemeldet von {who}";
+        static string Detail(LeagueSelfReport r) =>
+            string.Join("; ", new[] { r.Note, r.Source }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        bool Same(LeagueSelfReport r) => r.Site == site && r.UserName.Equals(user, StringComparison.OrdinalIgnoreCase);
+        if (reports.FirstOrDefault(r => Same(r) && r.FideId == fide) is { } own)
+            return new Item(key, label, Ok, $"für ihn gemeldet ({Detail(own)})");
+        if (reports.FirstOrDefault(r => Same(r) && r.FideId != fide) is { } other)
+            return new Item(key, label, Fail, $"gemeldet für {await NameOrAnonymousAsync(other.FideId, ct)} — nicht für ihn ({other.Source})");
+        if (reports.FirstOrDefault(r => r.FideId == fide && r.Site == site) is { } sameSite)
+            return new Item(key, label, Warn, $"nennt für ihn ein anderes {LeagueOnlineSites.Label(site)}-Konto („{sameSite.UserName}“, {Detail(sameSite)})");
+        if (reports.FirstOrDefault(r => r.FideId == fide) is { } otherSite)
+            return new Item(key, label, None, $"nennt für ihn nur {LeagueOnlineSites.Label(otherSite.Site)}: {otherSite.UserName}");
+        return new Item(key, label, None, $"nicht in der Liste von {who}");
     }
 
     /// <summary>Der Name eines anderen Spielers — oder „einem anderen Spieler", wenn dessen Konten verborgen sind (minderjährig).</summary>
@@ -472,10 +515,12 @@ public sealed class LeagueAccountChecks
 /// </summary>
 public static class LeagueSelfReportImport
 {
-    public const int MaxSourceLength = 120, MaxTeamLength = 200, MaxItems = 5000;
+    public const int MaxSourceLength = 120, MaxTeamLength = 200, MaxItems = 5000, MaxReporterLength = 60, MaxNoteLength = 200;
 
-    public sealed record Entry(string? Fide, string? Site, string? User, string? Team);
-    public sealed record Request(string? Source, List<Entry>? Items);
+    /// <summary><paramref name="Note"/> (0.629.0): Anmerkung des Meldenden je Konto.</summary>
+    public sealed record Entry(string? Fide, string? Site, string? User, string? Team, string? Note = null);
+    /// <summary><paramref name="Reporter"/> (0.629.0): leer = Selbstmeldungen; sonst wer die Liste gemeldet hat („Ranni").</summary>
+    public sealed record Request(string? Source, List<Entry>? Items, string? Reporter = null);
     public sealed record Problem(int Index, string Reason);
     public sealed record Outcome(int Added, int Updated, int Unchanged, int Removed, List<Problem> Skipped, bool DryRun);
 
@@ -484,12 +529,15 @@ public static class LeagueSelfReportImport
     {
         var source = (req.Source ?? "").Trim();
         if (source.Length is 0 or > MaxSourceLength) return (null, "noSource");
+        var reporter = string.IsNullOrWhiteSpace(req.Reporter) ? null : req.Reporter.Trim();
+        if (reporter is { Length: > MaxReporterLength }) return (null, "invalidReporter");
+        static string? Clip(string? s, int max) => string.IsNullOrWhiteSpace(s) ? null : s.Trim() is var t && t.Length > max ? t[..max] : s.Trim();
         var items = req.Items ?? new();
         if (items.Count > MaxItems) return (null, "tooMany");
         var known = (await db.LeaguePlayers.AsNoTracking().Where(p => p.FideId != null && p.FideId != "").Select(p => p.FideId!).Distinct().ToListAsync(ct))
             .Concat(await db.LeaguePlayerProfiles.AsNoTracking().Select(p => p.FideId).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
         var skipped = new List<Problem>();
-        var wanted = new Dictionary<string, (string Fide, string Site, string User, string? Team)>(StringComparer.Ordinal);
+        var wanted = new Dictionary<string, (string Fide, string Site, string User, string? Team, string? Note)>(StringComparer.Ordinal);
         for (var i = 0; i < items.Count; i++)
         {
             var e = items[i];
@@ -499,8 +547,7 @@ public static class LeagueSelfReportImport
             if (LeagueOnlineSites.Parse(e.Site, e.User) is not { } acc) { skipped.Add(new(i, "invalidUser")); continue; }
             var key = acc.Site + "|" + acc.User.ToLowerInvariant();
             if (wanted.ContainsKey(key)) { skipped.Add(new(i, "duplicate")); continue; }
-            var team = string.IsNullOrWhiteSpace(e.Team) ? null : e.Team.Trim();
-            wanted[key] = (fide, acc.Site, acc.User, team is { Length: > MaxTeamLength } ? team[..MaxTeamLength] : team);
+            wanted[key] = (fide, acc.Site, acc.User, Clip(e.Team, MaxTeamLength), Clip(e.Note, MaxNoteLength));
         }
         var existing = await db.LeagueSelfReports.Where(r => r.Source == source).ToListAsync(ct);
         int added = 0, updated = 0, unchanged = 0, removed = 0;
@@ -514,9 +561,9 @@ public static class LeagueSelfReportImport
                 if (!dryRun) db.LeagueSelfReports.Remove(r);
                 continue;
             }
-            if (r.FideId == w.Fide && r.Team == w.Team && r.UserName == w.User) { unchanged++; continue; }
+            if (r.FideId == w.Fide && r.Team == w.Team && r.UserName == w.User && r.Note == w.Note && r.Reporter == reporter) { unchanged++; continue; }
             updated++;
-            if (!dryRun) { r.FideId = w.Fide; r.Team = w.Team; r.UserName = w.User; }
+            if (!dryRun) { r.FideId = w.Fide; r.Team = w.Team; r.UserName = w.User; r.Note = w.Note; r.Reporter = reporter; }
         }
         foreach (var (key, w) in wanted)
         {
@@ -525,7 +572,8 @@ public static class LeagueSelfReportImport
             if (!dryRun)
                 db.LeagueSelfReports.Add(new LeagueSelfReport
                 {
-                    FideId = w.Fide, Site = w.Site, UserName = w.User, Source = source, Team = w.Team, CreatedAt = DateTime.UtcNow,
+                    FideId = w.Fide, Site = w.Site, UserName = w.User, Source = source, Team = w.Team, Reporter = reporter, Note = w.Note,
+                    CreatedAt = DateTime.UtcNow,
                 });
         }
         if (!dryRun) await db.SaveChangesAsync(ct);

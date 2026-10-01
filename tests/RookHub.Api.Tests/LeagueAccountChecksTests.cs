@@ -382,4 +382,50 @@ public class LeagueAccountChecksTests : IDisposable
         Assert.Equal((0, 0, 2, 0), (again!.Added, again.Updated, again.Unchanged, again.Removed));
         Assert.Equal("noSource", (await LeagueSelfReportImport.ImportAsync(_db, new(" ", new()), false, default)).Reason);
     }
+
+    [Fact]
+    public async Task ReportedByAThirdPerson_OwnLineInTheChecks_NotASelfReport()
+    {
+        // Wunsch 2026-10-01: „trag alle aus dem xlsx nach, mit einem neuen Menüpunkt im (i): gemeldet Ranni".
+        var acc = await SeedAsync();                                                             // Selbstmeldung „maxmuster" liegt schon
+        var req = new LeagueSelfReportImport.Request("Vorbereitung 2026-10-01", new()
+        {
+            new("222", "lichess", "MaxMuster", "SK Kufstein", "bestätigt, eigene Prüfung"),
+            new("333", "chess.com", "franzh", null, "uninteressant — keine brauchbaren Partien"),
+        }, Reporter: "Ranni");
+        var (ok, reason) = await LeagueSelfReportImport.ImportAsync(_db, req, dryRun: false, default);
+        Assert.Null(reason);
+        Assert.Equal(2, ok!.Added);
+        var stored = await _db.LeagueSelfReports.SingleAsync(r => r.Source == "Vorbereitung 2026-10-01" && r.FideId == "222");
+        Assert.Equal(("Ranni", "bestätigt, eigene Prüfung"), (stored.Reporter, stored.Note));
+
+        var r = (await Checks(World()).ForAccountAsync(acc.Id, default))!;
+        // Die Selbstmeldung bleibt die der Meldeliste — die Liste von Ranni ist KEINE Selbstmeldung.
+        Assert.Equal("selbst gemeldet (Meldeliste Online-TMM 2021, für „SK Kufstein“)", Of(r, "self").Text);
+        Assert.Equal((LeagueAccountChecks.Ok, "Gemeldet von Ranni", "für ihn gemeldet (bestätigt, eigene Prüfung; Vorbereitung 2026-10-01)"),
+            (Of(r, "reported:Ranni").Status, Of(r, "reported:Ranni").Label, Of(r, "reported:Ranni").Text));
+        Assert.Equal(1, r.Items.IndexOf(Of(r, "reported:Ranni")));                              // gleich nach der Selbstmeldung
+
+        // Für einen anderen Spieler gemeldet → dagegen; ein anderes Konto derselben Seite → stutzig; sonst „nicht in der Liste".
+        _db.LeagueSelfReports.RemoveRange(_db.LeagueSelfReports.Where(x => x.Reporter == "Ranni"));
+        _db.LeagueSelfReports.AddRange(
+            new LeagueSelfReport { FideId = "333", Site = "lichess", UserName = "MaxMuster", Source = "V", Reporter = "Ranni", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal(LeagueAccountChecks.Fail, Of((await Checks(World()).ForAccountAsync(acc.Id, default))!, "reported:Ranni").Status);
+        _db.LeagueSelfReports.RemoveRange(_db.LeagueSelfReports.Where(x => x.Reporter == "Ranni"));
+        _db.LeagueSelfReports.Add(new LeagueSelfReport { FideId = "222", Site = "lichess", UserName = "MaxAlt", Source = "V", Reporter = "Ranni", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal(LeagueAccountChecks.Warn, Of((await Checks(World()).ForAccountAsync(acc.Id, default))!, "reported:Ranni").Status);
+        _db.LeagueSelfReports.RemoveRange(_db.LeagueSelfReports.Where(x => x.Reporter == "Ranni"));
+        _db.LeagueSelfReports.Add(new LeagueSelfReport { FideId = "333", Site = "lichess", UserName = "Jemand", Source = "V", Reporter = "Ranni", CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        Assert.Equal((LeagueAccountChecks.None, "nicht in der Liste von Ranni"),
+            (Of((await Checks(World()).ForAccountAsync(acc.Id, default))!, "reported:Ranni").Status, Of((await Checks(World()).ForAccountAsync(acc.Id, default))!, "reported:Ranni").Text));
+
+        // Ohne jede Meldung Dritter gibt es die Zeile gar nicht; ein zu langer Name wird abgelehnt.
+        _db.LeagueSelfReports.RemoveRange(_db.LeagueSelfReports.Where(x => x.Reporter != null));
+        await _db.SaveChangesAsync();
+        Assert.DoesNotContain((await Checks(World()).ForAccountAsync(acc.Id, default))!.Items, i => i.Key.StartsWith("reported:"));
+        Assert.Equal("invalidReporter", (await LeagueSelfReportImport.ImportAsync(_db, req with { Reporter = new string('x', 61) }, false, default)).Reason);
+    }
 }

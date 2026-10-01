@@ -176,7 +176,9 @@ public class LeagueController : BaseApiController
         await checks.ForSuggestionAsync(id, ct, reveal: IsAdmin) is { } r ? Ok(r) : NotFound();
 
     /// <summary>Selbstmeldungen einer Quelle einspielen (ersetzt die Einträge dieser Quelle) <c>{ source, items[{ fide, site, user, team }] }</c>
-    /// → <c>{ added, updated, unchanged, removed, skipped[{ index, reason }], dryRun }</c>; 400 <c>noSource</c>/<c>tooMany</c>.</summary>
+    /// → <c>{ added, updated, unchanged, removed, skipped[{ index, reason }], dryRun }</c>; 400 <c>noSource</c>/<c>tooMany</c>/<c>invalidReporter</c>.
+    /// Seit 0.629.0 optional <c>reporter</c> (wer die Liste gemeldet hat — dann im (i) „Gemeldet von …" statt Selbstmeldung) und je
+    /// Eintrag <c>note</c>.</summary>
     [HttpPost("admin/self-reports")]
     [HasPermission(Permissions.LeagueManage)]
     public async Task<IActionResult> ImportSelfReports([FromBody] LeagueSelfReportImport.Request? req, [FromQuery] bool dryRun,

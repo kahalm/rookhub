@@ -172,6 +172,8 @@ internal sealed class LeagueSelfReportConfiguration : IEntityTypeConfiguration<L
         e.Property(a => a.UserName).HasMaxLength(60);
         e.Property(a => a.Source).HasMaxLength(120);
         e.Property(a => a.Team).HasMaxLength(200);
+        e.Property(a => a.Reporter).HasMaxLength(60);
+        e.Property(a => a.Note).HasMaxLength(200);
         e.HasIndex(a => new { a.Site, a.UserName, a.Source }).IsUnique();
         e.HasIndex(a => a.FideId);
     }

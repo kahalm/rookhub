@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.629.0", date: "2026-10-01", changes: [
+    { en: "LeagueHub (i): accounts reported by someone else now get their own line “Reported by …” (e.g. “Reported by Ranni”), right after the self-report — with his remark such as “confirmed, own check”. It also shows when his list names a different account for the player or assigns this account to another player.", de: "LeagueHub (i): Konten, die jemand anderer gemeldet hat, bekommen eine eigene Zeile „Gemeldet von …“ (z. B. „Gemeldet von Ranni“), gleich nach der Selbstmeldung — mit seiner Anmerkung wie „bestätigt, eigene Prüfung“. Sie zeigt auch, wenn seine Liste für den Spieler ein anderes Konto nennt oder dieses Konto einem anderen Spieler zuordnet." },
+  ] },
   { version: "0.628.0", date: "2026-10-01", changes: [
     { en: "LeagueHub: the games per source are now a small table (source | total | league | match), grouped into over-the-board and online with a bar for each source’s share. “League” counts the games of all players on the rosters of the selected league, “match” those of the selected opponent’s roster — on the start page they follow league, round and club, on a share link they are the shared league and opponent. Each game counts once per column. “–” means none of these players has an account on that site.", de: "LeagueHub: Die Partien je Quelle stehen jetzt als kleine Tabelle da (Quelle | Gesamt | Liga | Begegnung), gruppiert nach Brett und Online, mit einem Balken für den Anteil jeder Quelle. „Liga“ zählt die Partien aller Spieler aus den Meldelisten der gewählten Liga, „Begegnung“ die der Meldeliste des Gegners — auf der Startseite folgen sie Liga, Runde und Verein, auf einem Teilen-Link sind es Liga und Gegner des Links. Jede Partie zählt je Spalte einmal. „–“ heißt: Keiner dieser Spieler hat auf dieser Seite ein Konto." },
   ] },

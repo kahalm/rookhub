@@ -292,6 +292,13 @@ public class LeagueSelfReport
     public string Source { get; set; } = string.Empty;
     /// <summary>Für welches Team gemeldet.</summary>
     public string? Team { get; set; }
+    /// <summary>
+    /// <c>null</c> = der Spieler hat es SELBST gemeldet. Sonst der Name dessen, der die Zuordnung gemeldet hat (0.629.0, z. B. „Ranni"
+    /// mit seiner Vorbereitungs-Liste vom 01.10.2026) — im (i) eine eigene Zeile „Gemeldet von …", nicht „Selbstmeldung".
+    /// </summary>
+    public string? Reporter { get; set; }
+    /// <summary>Anmerkung des Meldenden („bestätigt, eigene Prüfung", „uninteressant — keine brauchbaren Partien").</summary>
+    public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
