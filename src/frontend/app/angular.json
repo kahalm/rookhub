@@ -79,7 +79,12 @@
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/leaflet/dist/leaflet.css"
+              "node_modules/leaflet/dist/leaflet.css",
+              {
+                "input": "src/app/features/prep/prep-card.scss",
+                "bundleName": "prep-card",
+                "inject": false
+              }
             ],
             "scripts": [],
             "allowedCommonJsDependencies": [

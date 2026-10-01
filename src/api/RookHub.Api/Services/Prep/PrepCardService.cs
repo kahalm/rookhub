@@ -249,12 +249,13 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
     }
 
     /// <summary>Kopf jeder Antwort: geladen/gesamt, Grenze, Zwilling.</summary>
-    private static void Scope(JsonObject o, Loaded l)
+    private void Scope(JsonObject o, Loaded l)
     {
         o["games"] = l.PrepTotal;
         o["loaded"] = l.PrepLoaded;
         o["limited"] = l.Limited;
         o["limit"] = l.Limit;
+        o["max"] = Cap(true);                    // so viele lädt all=true höchstens — die Seite sagt es dazu
         o["since"] = l.Since is { } s ? DateText(s) : null;
         o["twin"] = l.Twin is { } t ? new JsonObject { ["id"] = t.Id, ["name"] = t.Name, ["games"] = t.Games } : null;
         o["twinIncluded"] = l.TwinIncluded;

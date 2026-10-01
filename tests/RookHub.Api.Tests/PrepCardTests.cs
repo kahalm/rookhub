@@ -229,6 +229,7 @@ public class PrepCardTests : IDisposable
         var c = await cards.CardAsync(l, false, default);
         Assert.Equal("2023.03.01", c["since"]!.GetValue<string>());
         Assert.Equal(2, c["limit"]!.GetValue<int>());
+        Assert.Equal(PrepCardService.DefaultMax, c["max"]!.GetValue<int>());
 
         var all = (await cards.LoadAsync(huber.Id, true, false, default))!;
         Assert.False(all.Limited);

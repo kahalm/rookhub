@@ -105,7 +105,7 @@ describe('NavbarComponent', () => {
 });
 
 describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
-  function render(opts: { loggedIn?: boolean; keys?: string[] } = {}) {
+  function render(opts: { loggedIn?: boolean; keys?: string[]; perms?: string[] } = {}) {
     TestBed.configureTestingModule({
       imports: [NavbarComponent],
       providers: [
@@ -114,6 +114,7 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
         { provide: AuthService, useValue: {
           currentUser$: of(opts.loggedIn ? { username: 'u' } : null),
           isLoggedIn: !!opts.loggedIn, isAdmin: false, logout: () => {},
+          has: (p: string) => (opts.perms ?? []).includes(p),
         } },
         { provide: CourseService, useValue: { checkAccess: () => of({ hasAccess: false }), accessChanged$: of(undefined) } },
         { provide: CatalogService, useValue: { access: () => of({ hasAccess: false }) } },
@@ -145,6 +146,12 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const c = fixture.componentInstance;
     expect(c.anyTraining).toBeTrue();     // puzzles sichtbar
     expect(c.anyLibrary).toBeFalse();     // nichts aus Analyse & Sammlung freigegeben
+  });
+
+  it('„Gegner vorbereiten" nur mit dem Recht prep.view — dann auch ohne andere Einträge in „Analyse & Sammlung"', () => {
+    expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['prep.view'] }).componentInstance.anyLibrary).toBeTrue();
+    TestBed.resetTestingModule();
+    expect(render({ loggedIn: true, keys: ['puzzles'], perms: ['league.view', 'prep.manage'] }).componentInstance.anyLibrary).toBeFalse();
   });
 
   it('ausgeloggt: nur Puzzles/Analyse + ☰ + Login/Registrieren in der Leiste', () => {

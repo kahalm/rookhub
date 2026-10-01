@@ -256,7 +256,8 @@
     "tournamentHistory": "Moji turniri",
     "tournamentBookmarks": "Zabilježeno",
     "reconstruct": "Rekonstrukcija partije",
-    "scoresheet": "Učitaj zapisnik partije"
+    "scoresheet": "Učitaj zapisnik partije",
+    "prep": "Priprema za protivnika"
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
@@ -4415,5 +4416,26 @@
     "r": "Promoviraj u topa",
     "b": "Promoviraj u lovca",
     "n": "Promoviraj u skakača"
+  },
+  "prep": {
+    "title": "Priprema za protivnika",
+    "intro": "Pretražite bilo kojeg igrača iz baze partija (ChessBase Megabase i Lumbrina GigaBase): profil otvaranja, stablo otvaranja i posljednje partije za pregled.",
+    "searchLabel": "Ime ili FIDE ID",
+    "searchHint": "Početak imena: „Carlsen“, „Carlsen, M“ ili „Magnus Carlsen“",
+    "searchError": "Pretraga nije uspjela. Pokušajte ponovno.",
+    "noHits": "Nije pronađen nijedan igrač.",
+    "games": "{{games}} partija",
+    "maxElo": "Elo do {{elo}}",
+    "back": "Natrag na pretragu",
+    "loadedSome": "Učitano: najnovijih {{loaded}} od {{total}} partija u bazi (od {{since}}).",
+    "loadedAll": "Učitane su sve partije iz baze ({{total}}).",
+    "loadAll": "Učitaj sve — najviše {{max}}",
+    "loadAllHint": "To može potrajati do pola minute.",
+    "capped": "Ne može se učitati više od {{max}} partija — ovo su najnovije.",
+    "loadingAll": "Učitava se do {{max}} partija — to može potrajati do pola minute …",
+    "twin": "Uključi {{games}} partija pod istim imenom bez FIDE ID-a",
+    "twinHint": "Isto ime, ali bez FIDE ID-a — vjerojatno isti igrač, ali to nije sigurno. Uključite ih samo ako odgovaraju.",
+    "sources": "Izvori: ChessBase Megabase i Lumbrina GigaBase (partija koja je u obje računa se jednom); uz FIDE ID i partije koje poznaje LeagueHub (chess-results, Lichess prijenosi, klupske partije) te online partije potvrđenih računa. Ubrojene su i brzopotezne i ubrzane partije.",
+    "noFide": "bez FIDE ID-a"
   }
 }

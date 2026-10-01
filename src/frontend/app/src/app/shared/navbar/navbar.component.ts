@@ -135,6 +135,7 @@ import {
         </mat-menu>
         <mat-menu #libraryMenu="matMenu">
           @if (can('analysis')) { <button mat-menu-item routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
+          @if (auth.has('prep.view')) { <button mat-menu-item routerLink="/prep">{{ 'nav.prep' | translate }}</button> }
           @if (can('games')) { <button mat-menu-item routerLink="/games">{{ 'nav.games' | translate }}</button> }
           @if (can('scoresheet')) { <button mat-menu-item routerLink="/games/scoresheet">{{ 'nav.scoresheet' | translate }}</button> }
           @if (can('reconstruct')) { <button mat-menu-item routerLink="/reconstruct">{{ 'nav.reconstruct' | translate }}</button> }
@@ -331,7 +332,7 @@ export class NavbarComponent implements OnInit {
   }
   get anyLibrary(): boolean {
     return this.can('analysis') || this.can('games') || this.can('scoresheet') || this.can('reconstruct') || this.can('remembered')
-      || (this.showCatalog && this.can('catalog'));
+      || (this.showCatalog && this.can('catalog')) || this.auth.has('prep.view');
   }
 
   /** Glocken-Badge: Anzahl ungelesener In-App-Benachrichtigungen. */

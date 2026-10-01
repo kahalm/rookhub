@@ -95,7 +95,8 @@
     "tournamentHistory": "Versenyeim",
     "tournamentBookmarks": "Megjelölt",
     "reconstruct": "Játszma rekonstruálása",
-    "scoresheet": "Játszmalap beolvasása"
+    "scoresheet": "Játszmalap beolvasása",
+    "prep": "Felkészülés ellenfélre"
   },
   "app": {
     "changelogTitle": "Változásnapló",
@@ -4415,5 +4416,26 @@
     "r": "Átváltozás bástyává",
     "b": "Átváltozás futóvá",
     "n": "Átváltozás huszárrá"
+  },
+  "prep": {
+    "title": "Felkészülés ellenfélre",
+    "intro": "Keressen meg bármely játékost a játszmaadatbázisban (ChessBase Megabase és Lumbra GigaBase): megnyitási profil, megnyitásfa és a legutóbbi játszmák visszajátszásra.",
+    "searchLabel": "Név vagy FIDE-azonosító",
+    "searchHint": "A név eleje: „Carlsen”, „Carlsen, M” vagy „Magnus Carlsen”",
+    "searchError": "A keresés nem sikerült. Kérjük, próbálja újra.",
+    "noHits": "Nincs ilyen játékos.",
+    "games": "{{games}} játszma",
+    "maxElo": "Élő legfeljebb {{elo}}",
+    "back": "Vissza a kereséshez",
+    "loadedSome": "Betöltve: a legutóbbi {{loaded}} az adatbázis {{total}} játszmájából ({{since}} óta).",
+    "loadedAll": "Az adatbázis összes játszmája betöltve ({{total}}).",
+    "loadAll": "Összes betöltése — legfeljebb {{max}}",
+    "loadAllHint": "Ez akár fél percig is eltarthat.",
+    "capped": "Legfeljebb {{max}} játszma tölthető be — ezek a legutóbbiak.",
+    "loadingAll": "Legfeljebb {{max}} játszma betöltése — ez akár fél percig is eltarthat …",
+    "twin": "{{games}} azonos nevű, FIDE-azonosító nélküli játszma hozzávétele",
+    "twinHint": "Azonos név, de FIDE-azonosító nélkül — valószínűleg ugyanaz a játékos, de ez nem biztos. Csak akkor vegye hozzá, ha illik.",
+    "sources": "Források: ChessBase Megabase és Lumbra GigaBase (a mindkettőben szereplő játszma egyszer számít); FIDE-azonosítóval a LeagueHub által ismert játszmák is (chess-results, Lichess-közvetítések, klubjátszmák), valamint a megerősített fiókok online játszmái. A villám- és rapidjátszmák is beleszámítanak.",
+    "noFide": "FIDE-azonosító nélkül"
   }
 }

@@ -1,0 +1,15 @@
+/* Die Seite um die Karte. */
+.prep { max-width: 760px; margin: 0 auto; padding: 16px; }
+.prep h1 { margin: 4px 0 6px; font: 500 26px/1.2 Roboto, "Helvetica Neue", sans-serif; }
+.prep .lede { margin: 0 0 16px; color: var(--mat-sys-on-surface-variant); max-width: 64ch; }
+.prep .back { display: inline-block; margin: 0 0 12px; color: var(--mat-sys-primary); text-decoration: none; }
+.prep .back:hover { text-decoration: underline; }
+.prep .hint { color: var(--mat-sys-on-surface-variant); font-size: 14px; }
+.prep .err { color: var(--rh-error); }
+.prep-scope {
+  display: grid; gap: 8px; margin: 0 0 14px; padding: 12px 14px;
+  border: 1px solid var(--mat-sys-outline-variant); border-radius: 10px; background: var(--mat-sys-surface-container-low);
+}
+.prep-scope p { margin: 0; }
+.prep-scope .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.prep-scope .hint { margin: 0; }

@@ -256,7 +256,8 @@
     "tournamentHistory": "Meine Turniere",
     "tournamentBookmarks": "Gemerkt",
     "reconstruct": "Partie rekonstruieren",
-    "scoresheet": "Partieformular einlesen"
+    "scoresheet": "Partieformular einlesen",
+    "prep": "Gegner vorbereiten"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -4415,5 +4416,26 @@
     "r": "In einen Turm umwandeln",
     "b": "In einen Läufer umwandeln",
     "n": "In einen Springer umwandeln"
+  },
+  "prep": {
+    "title": "Gegner vorbereiten",
+    "intro": "Jeden Spieler des Partiebestands suchen (ChessBase-Megabase und Lumbras GigaBase): Eröffnungsprofil, Eröffnungsbaum und die letzten Partien zum Nachspielen.",
+    "searchLabel": "Name oder FIDE-ID",
+    "searchHint": "Namensanfang: „Carlsen“, „Carlsen, M“ oder „Magnus Carlsen“",
+    "searchError": "Die Suche hat nicht geklappt. Bitte noch einmal versuchen.",
+    "noHits": "Kein Spieler gefunden.",
+    "games": "{{games}} Partien",
+    "maxElo": "Elo bis {{elo}}",
+    "back": "Zurück zur Suche",
+    "loadedSome": "Geladen: die jüngsten {{loaded}} von {{total}} Partien im Bestand (seit {{since}}).",
+    "loadedAll": "Alle {{total}} Partien im Bestand sind geladen.",
+    "loadAll": "Alle laden — höchstens {{max}}",
+    "loadAllHint": "Das kann bis zu einer halben Minute dauern.",
+    "capped": "Mehr als {{max}} Partien lassen sich nicht laden — es sind die jüngsten.",
+    "loadingAll": "Lädt bis zu {{max}} Partien — das kann bis zu einer halben Minute dauern …",
+    "twin": "{{games}} Partien unter demselben Namen ohne FIDE-ID mitnehmen",
+    "twinHint": "Gleicher Name, aber ohne FIDE-ID — vermutlich derselbe Spieler, sicher ist es nicht. Nur dazunehmen, wenn es passt.",
+    "sources": "Quellen: die ChessBase-Megabase und Lumbras GigaBase (eine Partie, die beide führen, zählt einmal); mit FIDE-ID dazu die Partien, die LeagueHub kennt (chess-results, Lichess-Übertragungen, Vereinspartien), und Online-Partien gesicherter Konten. Blitz- und Schnellschach sind mitgezählt.",
+    "noFide": "ohne FIDE-ID"
   }
 }

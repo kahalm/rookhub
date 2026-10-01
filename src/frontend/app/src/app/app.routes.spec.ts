@@ -73,12 +73,14 @@ describe('app.routes', () => {
     expect(await matchedPath('/friends/3/stats')).toBe('friends/:userId/stats');
     expect(await matchedPath('/courses/403/calc')).toBe('courses/:bookId/calc');
     expect(await matchedPath('/courses/403/flashcards')).toBe('courses/:bookId/flashcards');
+    expect(await matchedPath('/prep/31252')).toBe('prep/:id');
   });
 
   it('lässt literale Einzelsegmente vor dem Slug matchen', async () => {
     expect(await matchedPath('/dashboard')).toBe('dashboard');
     expect(await matchedPath('/courses')).toBe('courses');
     expect(await matchedPath('/analysis')).toBe('analysis');
+    expect(await matchedPath('/prep')).toBe('prep');
   });
 
   it('fängt unbekannte Einzel- und Doppelsegmente als Kurz-URL ab', async () => {

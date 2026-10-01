@@ -256,7 +256,8 @@
     "tournamentHistory": "My tournaments",
     "tournamentBookmarks": "Bookmarked",
     "reconstruct": "Reconstruct game",
-    "scoresheet": "Read a scoresheet"
+    "scoresheet": "Read a scoresheet",
+    "prep": "Prepare for an opponent"
   },
   "app": {
     "changelogTitle": "Changelog",
@@ -4415,5 +4416,26 @@
     "r": "Promote to rook",
     "b": "Promote to bishop",
     "n": "Promote to knight"
+  },
+  "prep": {
+    "title": "Prepare for an opponent",
+    "intro": "Search any player of the game database (ChessBase Megabase and Lumbra’s GigaBase): opening profile, opening tree and the latest games to replay.",
+    "searchLabel": "Name or FIDE ID",
+    "searchHint": "Start of the name: “Carlsen”, “Carlsen, M” or “Magnus Carlsen”",
+    "searchError": "The search failed. Please try again.",
+    "noHits": "No player found.",
+    "games": "{{games}} games",
+    "maxElo": "Elo up to {{elo}}",
+    "back": "Back to the search",
+    "loadedSome": "Loaded: the latest {{loaded}} of {{total}} games in the database (since {{since}}).",
+    "loadedAll": "All {{total}} games in the database are loaded.",
+    "loadAll": "Load all — at most {{max}}",
+    "loadAllHint": "This can take up to half a minute.",
+    "capped": "More than {{max}} games cannot be loaded — these are the latest.",
+    "loadingAll": "Loading up to {{max}} games — this can take up to half a minute …",
+    "twin": "Include {{games}} games under the same name without a FIDE ID",
+    "twinHint": "Same name, but no FIDE ID — probably the same player, but that is not certain. Only include them if they fit.",
+    "sources": "Sources: ChessBase Megabase and Lumbra’s GigaBase (a game in both counts once); with a FIDE ID also the games LeagueHub knows (chess-results, Lichess broadcasts, club games) and online games of confirmed accounts. Blitz and rapid games are included.",
+    "noFide": "no FIDE ID"
   }
 }

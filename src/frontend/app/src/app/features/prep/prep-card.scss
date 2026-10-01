@@ -1,0 +1,67 @@
+@use 'sass:meta';
+
+/* Spielervorbereitung: die Spielerkarte von LeagueHub in der Haupt-App. Ihre Gestaltung steht EINMAL, in
+   src-leaguehub/leaguehub.scss — hier auf .prep-card-scope begrenzt geladen (die html-/body-Regeln dort treffen so
+   nichts). Eigenes Style-Bündel (angular.json: bundleName prep-card, inject: false), das die Spielerseite erst beim
+   Öffnen nachlädt: ganz geladen ist leaguehub.scss größer als das Budget einer Komponente, und ins Start-Bündel der
+   App gehört sie nicht. Die Farbvariablen der Karte kommen aus den Material-Tokens der App: hell/dunkel folgt dem Design-Modus,
+   ohne zweite Farbtabelle. Nur Brettfelder und Balken brauchen eigene Werte. */
+.prep-card-scope {
+  --paper: var(--mat-sys-surface-container-low, #f3f5f8);
+  --surface: var(--mat-sys-surface, #ffffff);
+  --ink: var(--mat-sys-on-surface, #17202b);
+  --muted: var(--mat-sys-on-surface-variant, #5a6878);
+  --line: var(--mat-sys-outline-variant, #d9dfe7);
+  --red: var(--rh-error, #c8102e);
+  --ok: var(--rh-success, #1f7a4d);
+  --warn: var(--rh-warn, #b45309);
+  --focus: var(--mat-sys-primary, #1c5fd4);
+  --bar: #aab5c2;
+  --track: #e8ecf1;
+  --sq-white: #ffffff;
+  --sq-black: #26303c;
+  --sq-border: #26303c;
+  --cond: Roboto, "Helvetica Neue", sans-serif;
+  --body: Roboto, "Helvetica Neue", sans-serif;
+  color: var(--ink);
+  font-family: var(--body);
+  @include meta.load-css('../../../../src-leaguehub/leaguehub');
+}
+
+html.dark-theme .prep-card-scope {
+  --bar: #5d6b7b;
+  --track: #222b36;
+  --sq-white: #e9edf2;
+  --sq-black: #0b0f14;
+  --sq-border: #97a5b5;
+}
+
+/* Als Teil der Seite statt als Dialog darüber. */
+.prep-card-scope dialog.card.inline {
+  position: static;
+  display: block;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  overflow: visible;
+}
+.prep-card-scope dialog.card.inline:not([open]) { display: none; }
+.prep-card-scope .card.inline .card-head { position: static; }
+.prep-card-scope .card.inline .card-close { display: none; }
+
+
+/* Am Handy: in „Letzte Partien" steht die Zugfolge unter dem Gegner statt in einer eigenen, schmalen Spalte — dort brach
+   sie nach jedem Halbzug um (in LeagueHub bei 390 px genauso; deren Gestaltung bleibt unverändert). Datum links und
+   Ergebnis rechts über beide Zeilen. */
+@media (max-width: 520px) {
+  .prep-card-scope .card table.recent { display: block; }
+  .prep-card-scope .card table.recent tr {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 4px; border-bottom: 1px solid var(--line);
+  }
+  .prep-card-scope .card table.recent td { border-bottom: 0; }
+  .prep-card-scope .card table.recent td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; }
+  .prep-card-scope .card table.recent td:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .prep-card-scope .card table.recent td:nth-child(3) { grid-column: 2; grid-row: 2; padding-top: 0; }
+  .prep-card-scope .card table.recent td:nth-child(4) { grid-column: 3; grid-row: 1 / span 2; }
+}

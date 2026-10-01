@@ -7,6 +7,7 @@ import { guestGuard } from './core/guest.guard';
 import { adminGuard } from './core/admin.guard';
 import { coursePlayGuard } from './core/course-play.guard';
 import { menuGuard } from './core/menu.guard';
+import { permissionGuard } from './core/permission.guard';
 import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 
 export const routes: Routes = [
@@ -59,6 +60,10 @@ export const routes: Routes = [
   { path: 'analysis/jobs', loadComponent: () => import('./features/analysis/analysis-jobs.component').then(m => m.AnalysisJobsComponent), canActivate: [authGuard] },
   { path: 'analysis/compare/:id', loadComponent: () => import('./features/analysis/move-comparison.component').then(m => m.MoveComparisonComponent), canActivate: [authGuard] },
   { path: 'analysis', loadComponent: () => import('./features/analysis/analysis.component').then(m => m.AnalysisComponent), canActivate: [menuGuard('analysis')] },
+  // Spielervorbereitung (0.636.0): jeden Spieler des Partiebestands (Megabase + Lumbra) suchen und seine Karte lesen —
+  // nur mit dem Recht prep.view (ohne es kein Menüpunkt und 403 an der API).
+  { path: 'prep', loadComponent: () => import('./features/prep/prep-search.component').then(m => m.PrepSearchComponent), canActivate: [authGuard, permissionGuard('prep.view')] },
+  { path: 'prep/:id', loadComponent: () => import('./features/prep/prep-player.component').then(m => m.PrepPlayerComponent), canActivate: [authGuard, permissionGuard('prep.view')] },
   { path: 'games', loadComponent: () => import('./features/games/games-list.component').then(m => m.GamesListComponent), canActivate: [authGuard, menuGuard('games')] },
   // Partieformular einlesen (0.529.0) — Literal VOR games/:id, sonst wäre „scoresheet" eine Partie-Id.
   { path: 'games/scoresheet', loadComponent: () => import('./features/games/scoresheet-upload.component').then(m => m.ScoresheetUploadComponent), canActivate: [authGuard, menuGuard('scoresheet')] },
