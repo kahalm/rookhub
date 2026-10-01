@@ -73,6 +73,13 @@ export interface TeamPairingResponse {
   awayScore: number | null;
 }
 
+/**
+ * Antwort von `GET /api/tournaments/{id}/pairings`: Einzel-Paarungen ODER Mannschafts-Paarungen,
+ * je nach Turniertyp (Crawler `PairingResponse` bzw. `TeamPairingResponse`). Die Feldnamen haelt
+ * `CrawlerContractTests` gegen die goldenen Crawler-Antworten fest.
+ */
+export type CrawlerPairing = TournamentPairing | TeamPairingResponse;
+
 /** Display model used after transforming raw pairing data */
 export interface DisplayPairing {
   board: number;

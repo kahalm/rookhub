@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob } from '@rh/core/models';
+import { Tournament, TournamentPlayer, TournamentTeam, Subscription, TournamentFavorite, TournamentMonitorStatus, CrawlJob, CrawlerPairing } from '@rh/core/models';
 
 /**
  * Kapselt alle HTTP-Endpunkte rund um die Turnier-Detailansicht
@@ -33,8 +33,8 @@ export class TournamentDetailService {
     return this.http.get<TournamentTeam[]>(`/api/tournaments/${id}/teams`);
   }
   // Response kann TeamPairingResponse[] oder TournamentPairing[] sein (vom Turniertyp abhängig)
-  getPairings(id: string, round: number): Observable<any[]> {
-    return this.http.get<any[]>(`/api/tournaments/${id}/pairings?round=${round}`);
+  getPairings(id: string, round: number): Observable<CrawlerPairing[]> {
+    return this.http.get<CrawlerPairing[]>(`/api/tournaments/${id}/pairings?round=${round}`);
   }
   getTeamDetails(id: string, teamSnr: number): Observable<TournamentTeam> {
     return this.http.get<TournamentTeam>(`/api/tournaments/${id}/teams/${teamSnr}`);
