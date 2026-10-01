@@ -1,10 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
 using RookHub.Api.Models;
@@ -338,9 +335,6 @@ public class AuthService
 
     private string GenerateJwt(AppUser user, bool rememberMe = false, IEnumerable<Claim>? extraClaims = null, TimeSpan? lifetime = null)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured")));
-
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -358,18 +352,11 @@ public class AuthService
         if (extraClaims != null)
             claims.AddRange(extraClaims);
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
+        return JwtTokens.Issue(_config, _config["Jwt:Audience"], claims,
             // „Eingeloggt bleiben": 90 Tage, sonst 30. JWTs sind stateless und werden nur über DeletedAt
             // + SecurityStamp (Passwort-Reset/-Änderung) invalidiert — ein abgegriffenes Token bliebe sonst
             // unnötig lange gültig, daher kein Jahr mehr.
-            expires: DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 90 : 30)),
-            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+            DateTime.UtcNow.Add(lifetime ?? TimeSpan.FromDays(rememberMe ? 90 : 30)));
     }
 
     /// <summary>

@@ -77,7 +77,7 @@ public class SharedSessionService
     /// </summary>
     public string MovedMarkerFor(int userId)
     {
-        using var hmac = new System.Security.Cryptography.HMACSHA256(SigningKey().Key);
+        using var hmac = new System.Security.Cryptography.HMACSHA256(JwtTokens.SigningKey(_config).Key);
         var mac = hmac.ComputeHash(Encoding.UTF8.GetBytes(Audience + "|moved|" + userId));
         return Base64UrlEncoder.Encode(mac.AsSpan(0, 16).ToArray());
     }
@@ -134,14 +134,7 @@ public class SharedSessionService
         // auch die geteilte Anmeldung, sonst holte man sich dort ein frisches Token zurueck.
         if (user.SecurityStamp != null) claims.Add(new Claim("sstamp", user.SecurityStamp));
 
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: Audience,
-            claims: claims,
-            expires: DateTime.UtcNow.Add(Lifetime),
-            signingCredentials: new SigningCredentials(SigningKey(), SecurityAlgorithms.HmacSha256));
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return JwtTokens.Issue(_config, Audience, claims, DateTime.UtcNow.Add(Lifetime));
     }
 
     /// <summary>
@@ -155,19 +148,10 @@ public class SharedSessionService
         ClaimsPrincipal principal;
         try
         {
-            principal = new JwtSecurityTokenHandler().ValidateToken(cookieValue, new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = _config["Jwt:Issuer"],
-                // Der eigene Adressat ist der Kern: ein normales Zugriffstoken darf hier NICHT
-                // durchgehen und dieses hier nirgendwo sonst.
-                ValidAudience = Audience,
-                IssuerSigningKey = SigningKey(),
-                ClockSkew = TimeSpan.FromMinutes(1),
-            }, out _);
+            // Dieselben Pruefregeln wie der JWT-Handler der API, nur mit dem eigenen Adressaten — der ist der
+            // Kern: ein normales Zugriffstoken darf hier NICHT durchgehen und dieses hier nirgendwo sonst.
+            principal = new JwtSecurityTokenHandler().ValidateToken(
+                cookieValue, JwtTokens.ValidationParameters(_config, Audience), out _);
         }
         catch (Exception ex) when (ex is SecurityTokenException or ArgumentException)
         {
@@ -185,7 +169,4 @@ public class SharedSessionService
 
         return await _auth.IssueTokenAsync(user);
     }
-
-    private SymmetricSecurityKey SigningKey() => new(Encoding.UTF8.GetBytes(
-        _config["Jwt:Key"] ?? throw new InvalidOperationException("JWT key not configured")));
 }

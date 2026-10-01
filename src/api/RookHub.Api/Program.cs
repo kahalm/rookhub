@@ -77,10 +77,9 @@ try
         .ConfigureWarnings(w => w.Log(
             (Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.SaveChangesFailed, LogLevel.Information))));
 
-    // JWT Authentication
-    var jwtKey = builder.Configuration["Jwt:Key"]
-        ?? throw new InvalidOperationException("JWT key not configured");
-    if (Encoding.UTF8.GetBytes(jwtKey).Length < 32)
+    // JWT Authentication — Schluessel, Aussteller und Pruefregeln aus JwtTokens (dieselben wie beim Ausstellen
+    // in AuthService und beim Cookie-Tausch in SharedSessionService).
+    if (JwtTokens.SigningKey(builder.Configuration).Key.Length < 32)
         throw new InvalidOperationException("JWT key must be at least 32 bytes for HMAC-SHA256");
     // Default-Scheme ist ein Policy-Scheme, das anhand des Bearer-Prefixes entscheidet:
     // `rkh_…` → ApiToken-Handler (Personal Access Tokens fuer Maschinen-Clients),
@@ -104,19 +103,9 @@ try
     // Policy-Scheme "Bearer" oben ("Scheme already exists: Bearer" → Startup-Crash).
     .AddJwtBearer("Jwt", options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            // Standard-Toleranz ist 5 min — auf 1 min straffen, damit abgelaufene Tokens
-            // (insb. nach Logout/Passwortwechsel) nicht unnötig lange akzeptiert werden.
-            ClockSkew = TimeSpan.FromMinutes(1)
-        };
+        // ClockSkew 1 min statt 5 (siehe JwtTokens.ClockSkew).
+        options.TokenValidationParameters =
+            JwtTokens.ValidationParameters(builder.Configuration, builder.Configuration["Jwt:Audience"]);
         // Gelöschte/anonymisierte Konten dürfen ihr noch gültiges JWT nicht weiterverwenden, ein
         // rotierter Security-Stamp (Passwortwechsel) entwertet es ebenfalls — und jede Ablehnung wird
         // GELOGGT (Logger RookHub.Api.JwtAuth), sonst ist ein 401 nicht von einem falschen Passwort zu
