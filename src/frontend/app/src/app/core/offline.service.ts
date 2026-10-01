@@ -81,6 +81,8 @@ export class OfflineService {
   private static readonly LocalTracePrefixes = [
     'rookhub_endless_',            // Konfiguration, Historie, Highscore, laufender Lauf, Ketten-Seed …
     'rookhub_calc_local_',         // Analysebäume/Bewertungen ohne Konto
+    'rookhub_calc_timer_',         // Kapitel-Uhr der Kalkulation je Kurs (ohne Nutzerbezug — fremde Trainingszeit)
+    'rookhub_calc_note_off_',      // weggeklickter Kalkulations-Hinweis je Kurs (verrät, welche Kurse offen waren)
     'rookhub_course_local_solved_',// lokal gelöste Kurs-Linien
     'rookhub_solve_modes',         // Spielweise je Bereich
     'rookhub_course_lang',         // Sprachwahl je Kurs (verrät, welche Kurse offen waren)

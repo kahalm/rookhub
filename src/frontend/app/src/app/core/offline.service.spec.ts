@@ -139,6 +139,19 @@ describe('OfflineService', () => {
     }
   });
 
+  it('clearOnLogout räumt Kapitel-Uhr und Hinweis-Merker der Kalkulation ab (F3-019)', () => {
+    // Gemeldet im Codereview 2026-09-29 (F3-019): die Kapitel-Uhr liegt je Kurs ohne Nutzerbezug im
+    // Speicher. Nutzer B öffnete auf dem Vereins-Tablet denselben Kurs und trainierte auf der Zeit von A
+    // weiter; der weggeklickte Hinweis verriet, welche Kurse A offen hatte.
+    localStorage.setItem('rookhub_calc_timer_12', '{"Kapitel 1":4200}');
+    localStorage.setItem('rookhub_calc_note_off_12', '1');
+
+    new OfflineService().clearOnLogout();
+
+    expect(localStorage.getItem('rookhub_calc_timer_12')).toBeNull();
+    expect(localStorage.getItem('rookhub_calc_note_off_12')).toBeNull();
+  });
+
   it('clearAll (Profil-Knopf „Cache leeren") lässt den laufenden Endless-Lauf stehen', () => {
     // Bewusster Unterschied: „Cache leeren" soll Platz freigeben, nicht die Arbeit des ANGEMELDETEN
     // Nutzers wegwerfen.
