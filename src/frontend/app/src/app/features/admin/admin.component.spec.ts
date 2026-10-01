@@ -1,8 +1,12 @@
 import { DestroyRef } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { AdminComponent } from './admin.component';
 import { ADMIN_TAB_KEYS } from './admin-tabs';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
+
+/** Rückfrage-Doppelgänger: `answer` legt fest, was der Dialog liefert (F5-013). */
+const confirmStub = { answer: true, ask: jasmine.createSpy('ask') };
 
 /** Ohne Template/ngOnInit — testet die Komponenten-Logik. Instanziierung läuft im
  *  TestBed-Injection-Context, weil die Komponente `inject(DestroyRef)` als Feld nutzt. */
@@ -29,9 +33,16 @@ function make(adminOverrides: any = {}) {
 describe('AdminComponent', () => {
   // Die Komponente nutzt `inject(DestroyRef)` als Feld → Instanziierung im Injection-Context
   // (DestroyRef-Stub, da kein ngOnInit/Lifecycle läuft).
-  beforeEach(() => TestBed.configureTestingModule({
-    providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
-  }));
+  beforeEach(() => {
+    confirmStub.answer = true;
+    confirmStub.ask = jasmine.createSpy('ask').and.callFake(() => of(confirmStub.answer));
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
+        { provide: ConfirmService, useValue: confirmStub },
+      ],
+    });
+  });
 
   it('onTabChange sets the index and writes ?tab=<key> to the URL (merge, replaceUrl)', () => {
     const { c, router } = make();
@@ -293,5 +304,77 @@ describe('AdminComponent', () => {
     c.editKidsTitles({ id: 9, displayName: 'x', forKids: true } as any);
 
     expect(updateBook).not.toHaveBeenCalled();
+  });
+
+  // F5-013: Admin-Recht nur nach Rückfrage, als Soll-Wert, Knopf während der Anfrage gesperrt.
+  describe('Admin-Recht', () => {
+    it('fragt mit dem Namen nach und setzt dann den Soll-Wert', () => {
+      const setAdmin = jasmine.createSpy('setAdmin').and.returnValue(of({ id: 4, isAdmin: true }));
+      const { c } = make({ setAdmin });
+      const user = { id: 4, username: 'bob', isAdmin: false } as any;
+
+      c.toggleAdmin(user);
+
+      expect(confirmStub.ask).toHaveBeenCalledWith('admin.users.confirmPromote', { username: 'bob' });
+      expect(setAdmin).toHaveBeenCalledWith(4, true);
+      expect(user.isAdmin).toBeTrue();
+      expect(c.adminBusyId).toBeNull();
+    });
+
+    it('Abbrechen ändert nichts', () => {
+      confirmStub.answer = false;
+      const setAdmin = jasmine.createSpy('setAdmin');
+      const { c } = make({ setAdmin });
+
+      c.toggleAdmin({ id: 4, username: 'bob', isAdmin: true } as any);
+
+      expect(confirmStub.ask).toHaveBeenCalledWith('admin.users.confirmDemote', { username: 'bob' });
+      expect(setAdmin).not.toHaveBeenCalled();
+    });
+
+    it('ein zweiter Klick während der Anfrage schickt keine zweite', () => {
+      const pending = new Subject<any>();
+      const setAdmin = jasmine.createSpy('setAdmin').and.returnValue(pending);
+      const { c } = make({ setAdmin });
+      const user = { id: 4, username: 'bob', isAdmin: false } as any;
+
+      c.toggleAdmin(user);
+      expect(c.adminBusyId).toBe(4);
+      c.toggleAdmin(user);
+      expect(setAdmin).toHaveBeenCalledTimes(1);
+
+      pending.next({ id: 4, isAdmin: true });
+      expect(c.adminBusyId).toBeNull();
+    });
+  });
+
+  // F5-013: „Öffentlich" und „Kinder" erst nach Rückfrage einschalten; Abbrechen stellt den Schalter zurück.
+  describe('Öffentlich/Kinder', () => {
+    it('Einschalten fragt nach; Abbrechen stellt zurück und speichert nicht', () => {
+      confirmStub.answer = false;
+      const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+      const { c } = make({ updateBook });
+      const book = { id: 9, displayName: 'Privatkurs', isPublic: true, forKids: false } as any;   // ngModel hat schon umgestellt
+
+      c.toggleExposure(book, 'isPublic');
+
+      expect(confirmStub.ask).toHaveBeenCalledWith('admin.books.confirmPublic', { name: 'Privatkurs' });
+      expect(book.isPublic).toBeFalse();
+      expect(updateBook).not.toHaveBeenCalled();
+    });
+
+    it('Einschalten mit OK speichert; Ausschalten speichert ohne Rückfrage', () => {
+      const updateBook = jasmine.createSpy('updateBook').and.returnValue(of({}));
+      const { c } = make({ updateBook });
+
+      c.toggleExposure({ id: 9, displayName: 'K', forKids: true } as any, 'forKids');
+      expect(confirmStub.ask).toHaveBeenCalledWith('admin.books.confirmKids', { name: 'K' });
+      expect(updateBook).toHaveBeenCalledTimes(1);
+
+      confirmStub.ask.calls.reset();
+      c.toggleExposure({ id: 9, displayName: 'K', forKids: false } as any, 'forKids');
+      expect(confirmStub.ask).not.toHaveBeenCalled();
+      expect(updateBook).toHaveBeenCalledTimes(2);
+    });
   });
 });

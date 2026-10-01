@@ -2221,6 +2221,8 @@
     "users": {
       "searchLabel": "Search users",
       "toggleAdmin": "Toggle admin",
+      "confirmPromote": "Make user “{{username}}” an admin? The account gets every permission at once.",
+      "confirmDemote": "Remove admin rights from user “{{username}}”? All sessions of this account end at once.",
       "deleteUser": "Delete user",
       "deleteConfirm": "Delete user \"{{username}}\"? This cannot be undone.",
       "deleted": "User \"{{username}}\" deleted",
@@ -2278,6 +2280,8 @@
       },
       "publicHint": "Public: this course can be used without registration via its direct link. An anonymous visitor's progress stays local to the browser.",
       "kidsHint": "Kids: this course appears on the kids' site and can be played there without logging in (calculation books excluded). It only appears there once its comments are in German (translation finished).",
+      "confirmPublic": "Make the course “{{name}}” public? It can then be opened with its solutions without signing in.",
+      "confirmKids": "Put the course “{{name}}” on the kids' site? Its puzzles can be played there without signing in.",
       "kidsTitles": "Titles on KidHub",
       "kidsTitlePrompt": "Title on KidHub – {{language}} (empty = book name):",
       "slugPlaceholder": "alias e.g. mate1",

@@ -278,6 +278,46 @@ public class AdminControllerTests : IDisposable
         Assert.IsType<NotFoundResult>(result);
     }
 
+    // ---- Admin-Recht als Soll-Wert (F5-013) ----
+
+    [Fact]
+    public async Task SetAdmin_IsIdempotent_ADoubleClickDoesNotTakeTheRightAway()
+    {
+        var user = await CreateUserAsync("target", isAdmin: false);
+
+        // Zweimal „zum Admin machen" (Doppelklick bzw. zweiter Admin mit veralteter Liste): bleibt Admin.
+        Assert.IsType<OkObjectResult>(await _controller.SetAdmin(user.Id, new SetAdminDto { IsAdmin = true }));
+        var second = Assert.IsType<OkObjectResult>(await _controller.SetAdmin(user.Id, new SetAdminDto { IsAdmin = true }));
+        Assert.True(Assert.IsType<AdminUserDto>(second.Value).IsAdmin);
+        Assert.True((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id)).IsAdmin);
+
+        // Entzug ebenso idempotent; der zweite Aufruf rotiert den Stamp nicht noch einmal.
+        Assert.IsType<OkObjectResult>(await _controller.SetAdmin(user.Id, new SetAdminDto { IsAdmin = false }));
+        var stamp = (await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id)).SecurityStamp;
+        Assert.IsType<OkObjectResult>(await _controller.SetAdmin(user.Id, new SetAdminDto { IsAdmin = false }));
+        var after = await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == user.Id);
+        Assert.False(after.IsAdmin);
+        Assert.Equal(stamp, after.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task SetAdmin_MissingValue_Self_Unknown_AndNonAdminActor_AreRejected()
+    {
+        var target = await CreateUserAsync("target");
+        Assert.IsType<BadRequestObjectResult>(await _controller.SetAdmin(target.Id, new SetAdminDto()));   // {} ist kein Entzug
+        Assert.IsType<BadRequestObjectResult>(await _controller.SetAdmin(target.Id, null));
+        Assert.IsType<NotFoundResult>(await _controller.SetAdmin(9999, new SetAdminDto { IsAdmin = true }));
+
+        var self = await CreateUserAsync("self");
+        SetUser(self.Id);
+        Assert.IsType<BadRequestObjectResult>(await _controller.SetAdmin(self.Id, new SetAdminDto { IsAdmin = false }));
+
+        SetUser(99, isAdmin: false);   // users.manage ohne Admin-Rolle
+        var status = Assert.IsType<ObjectResult>(await _controller.SetAdmin(target.Id, new SetAdminDto { IsAdmin = true }));
+        Assert.Equal(403, status.StatusCode);
+        Assert.False((await _db.AppUsers.AsNoTracking().SingleAsync(u => u.Id == target.Id)).IsAdmin);
+    }
+
     // ---- Sperren (F5-011) ----
 
     [Fact]

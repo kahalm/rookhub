@@ -173,8 +173,9 @@ export class AdminService {
     return this.http.delete<void>(`/api/admin/users/${id}`);
   }
 
-  toggleAdmin(id: number): Observable<AdminUser> {
-    return this.http.post<AdminUser>(`/api/admin/users/${id}/toggle-admin`, {});
+  /** Admin-Recht auf einen Soll-Wert setzen — idempotent, ein Doppelklick entzieht es nicht wieder (F5-013). */
+  setAdmin(id: number, isAdmin: boolean): Observable<AdminUser> {
+    return this.http.put<AdminUser>(`/api/admin/users/${id}/admin`, { isAdmin });
   }
 
   /** „Als Nutzer einsteigen": liefert ein Impersonation-Token für den Zielnutzer. */

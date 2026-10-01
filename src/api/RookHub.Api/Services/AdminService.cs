@@ -98,15 +98,34 @@ public class AdminService
     /// Live-Resolver dem Konto auch nach neuem Anmelden weiter alle Rechte.</remarks>
     public async Task<AdminUserDto> ToggleAdminAsync(int id, int currentUserId, bool actorIsAdmin = true)
     {
+        var user = await LoadForAdminChangeAsync(id, currentUserId, actorIsAdmin);
+        return await ApplyAdminAsync(user, !user.IsAdmin);
+    }
+
+    /// <summary>Setzt das Admin-Flag auf den SOLL-Wert (Codereview F5-013) — idempotent: steht es schon so, ändert sich
+    /// nichts (kein Stamp-Wechsel, keine beendeten Sitzungen). Das Umschalten (<see cref="ToggleAdminAsync"/>) entzog bei
+    /// einem Doppelklick oder einer veralteten Liste zweier Admins das eben vergebene Recht wieder. Dieselben Grenzen
+    /// wie dort.</summary>
+    public async Task<AdminUserDto> SetAdminAsync(int id, int currentUserId, bool isAdmin, bool actorIsAdmin = true)
+    {
+        var user = await LoadForAdminChangeAsync(id, currentUserId, actorIsAdmin);
+        return user.IsAdmin == isAdmin ? await UserDtoAsync(user) : await ApplyAdminAsync(user, isAdmin);
+    }
+
+    private async Task<AppUser> LoadForAdminChangeAsync(int id, int currentUserId, bool actorIsAdmin)
+    {
         if (id == currentUserId)
             throw new InvalidOperationException("Cannot toggle your own admin status.");
         if (!actorIsAdmin)
             throw new UnauthorizedAccessException("Only an admin may change the admin flag.");
 
-        var user = await _db.AppUsers.FindAsync(id)
+        return await _db.AppUsers.FindAsync(id)
             ?? throw new KeyNotFoundException();
+    }
 
-        user.IsAdmin = !user.IsAdmin;
+    private async Task<AdminUserDto> ApplyAdminAsync(AppUser user, bool isAdmin)
+    {
+        user.IsAdmin = isAdmin;
         await MirrorAdminRoleAsync(user);
         if (!user.IsAdmin) user.SecurityStamp = AuthService.NewSecurityStamp();
         await _db.SaveChangesAsync();

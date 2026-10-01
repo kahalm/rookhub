@@ -24,6 +24,7 @@ import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AdminGithubActionsComponent } from './admin-github-actions.component';
 import { AdminChessableDownloadComponent } from './tabs/admin-chessable-download.component';
 import { AdminDailyPuzzleComponent } from './tabs/admin-daily-puzzle.component';
@@ -99,10 +100,13 @@ export class AdminComponent implements OnInit {
 
 
   impersonatingId: number | null = null;
+  /** Konto, dessen Admin-Recht gerade gespeichert wird — sein Knopf ist so lange gesperrt (F5-013). */
+  adminBusyId: number | null = null;
 
   /** Aktiver Tab (für Deep-Links wie /admin?tab=messages). Tab-Reihenfolge: siehe `admin-tabs.ts`. */
   selectedTabIndex = 0;
   private destroyRef = inject(DestroyRef);
+  private confirm = inject(ConfirmService);
 
   constructor(private adminService: AdminService, private menu: MenuService, private auth: AuthService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService) {
     // Suche beim Hinzufügen von Mitgliedern: ab zwei Zeichen über den Server (auch jenseits der vorab geladenen 500).
@@ -191,17 +195,28 @@ export class AdminComponent implements OnInit {
     this.loadUsers();
   }
 
+  /** Admin-Recht vergeben bzw. entziehen (F5-013): erst nach Rückfrage mit dem Kontonamen, als Soll-Wert (ein
+   *  Doppelklick oder eine veraltete Liste schaltet nicht zurück) und mit gesperrtem Knopf, solange gespeichert wird. */
   toggleAdmin(user: AdminUser): void {
-    this.adminService.toggleAdmin(user.id).subscribe({
-      next: updated => {
-        user.isAdmin = updated.isAdmin;
-        const key = updated.isAdmin ? 'admin.users.nowAdmin' : 'admin.users.noLongerAdmin';
-        this.snackbar.info(this.translate.instant(key, { username: user.username }));
-      },
-      error: err => {
-        this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'));
-      }
-    });
+    if (this.adminBusyId !== null) return;
+    const target = !user.isAdmin;
+    this.confirm.ask(target ? 'admin.users.confirmPromote' : 'admin.users.confirmDemote', { username: user.username })
+      .subscribe(ok => {
+        if (!ok || this.adminBusyId !== null) return;
+        this.adminBusyId = user.id;
+        this.adminService.setAdmin(user.id, target).subscribe({
+          next: updated => {
+            this.adminBusyId = null;
+            user.isAdmin = updated.isAdmin;
+            const key = updated.isAdmin ? 'admin.users.nowAdmin' : 'admin.users.noLongerAdmin';
+            this.snackbar.info(this.translate.instant(key, { username: user.username }));
+          },
+          error: err => {
+            this.adminBusyId = null;
+            this.snackbar.info(err.error?.message || this.translate.instant('admin.users.errors.toggleAdmin'));
+          }
+        });
+      });
   }
 
   deleteUser(user: AdminUser): void {
@@ -350,6 +365,17 @@ export class AdminComponent implements OnInit {
     this.adminService.updateBook(book.id, { kidsTitles: titles, minElo: book.minElo, maxElo: book.maxElo }).subscribe({
       next: saved => { book.kidsTitles = saved.kidsTitles; },
       error: err => this.snackbar.info(err.error?.message || this.translate.instant('admin.books.errors.save')),
+    });
+  }
+
+  /** „Öffentlich" und „Kinder" schalten ein Buch ohne Anmeldung frei — beim EINSCHALTEN erst nachfragen (F5-013);
+   *  Abbrechen stellt den Schalter zurück. Ausschalten speichert sofort. */
+  toggleExposure(book: Book, field: 'isPublic' | 'forKids'): void {
+    if (!book[field]) { this.saveBook(book); return; }
+    const key = field === 'isPublic' ? 'admin.books.confirmPublic' : 'admin.books.confirmKids';
+    this.confirm.ask(key, { name: book.displayName }).subscribe(ok => {
+      if (ok) this.saveBook(book);
+      else book[field] = false;
     });
   }
 

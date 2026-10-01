@@ -33,11 +33,12 @@ describe('AdminService', () => {
     req.flush(null);
   });
 
-  it('toggleAdmin + impersonate POST to their routes', () => {
-    service.toggleAdmin(3).subscribe();
-    const toggle = httpMock.expectOne('/api/admin/users/3/toggle-admin');
-    expect(toggle.request.method).toBe('POST');
-    toggle.flush({});
+  it('setAdmin PUTs the target value, impersonate POSTs to its route', () => {
+    service.setAdmin(3, true).subscribe();
+    const set = httpMock.expectOne('/api/admin/users/3/admin');
+    expect(set.request.method).toBe('PUT');
+    expect(set.request.body).toEqual({ isAdmin: true });
+    set.flush({});
 
     service.impersonate(3).subscribe();
     httpMock.expectOne('/api/admin/users/3/impersonate').flush({ token: 't' });

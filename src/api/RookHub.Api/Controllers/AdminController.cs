@@ -84,11 +84,26 @@ public class AdminController : BaseApiController
         }
     }
 
+    /// <summary>Veraltet (F5-013): schaltet um statt einen Soll-Wert zu setzen. Bleibt eine Version für noch
+    /// zwischengespeicherte Oberflächen (PWA); die aktuelle nutzt <see cref="SetAdmin"/>.</summary>
     [HttpPost("users/{id}/toggle-admin")]
     [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> ToggleAdmin(int id)
     {
         try { return Ok(await _admin.ToggleAdminAsync(id, GetUserId(), IsAdmin)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (KeyNotFoundException) { return NotFound(); }
+    }
+
+    /// <summary>Admin-Recht auf einen Soll-Wert setzen (<c>{ isAdmin: true|false }</c>) — idempotent: ein Doppelklick
+    /// oder eine veraltete Liste entzieht nicht wieder, was gerade vergeben wurde (F5-013). Fehlt der Wert: 400.</summary>
+    [HttpPut("users/{id}/admin")]
+    [HasPermission(Permissions.UsersManage)]
+    public async Task<IActionResult> SetAdmin(int id, [FromBody] SetAdminDto? dto)
+    {
+        if (dto?.IsAdmin is not bool isAdmin) return BadRequest(new { message = "isAdmin is required." });
+        try { return Ok(await _admin.SetAdminAsync(id, GetUserId(), isAdmin, IsAdmin)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
         catch (KeyNotFoundException) { return NotFound(); }

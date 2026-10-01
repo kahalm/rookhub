@@ -1813,6 +1813,8 @@
     "users": {
       "searchLabel": "Felhasználók keresése",
       "toggleAdmin": "Admin jogosultság váltása",
+      "confirmPromote": "Adminná teszed „{{username}}” felhasználót? A fiók azonnal minden jogosultságot megkap.",
+      "confirmDemote": "Elveszed „{{username}}” felhasználó admin jogosultságát? A fiók összes munkamenete azonnal véget ér.",
       "deleteUser": "Felhasználó törlése",
       "deleteConfirm": "Törli a(z) \"{{username}}\" felhasználót? Ez nem vonható vissza.",
       "deleted": "\"{{username}}\" felhasználó törölve",
@@ -1881,6 +1883,8 @@
       "renamePrompt": "Új könyvnév:",
       "publicHint": "Nyilvános: ez a tanfolyam regisztráció nélkül, a közvetlen linkjén keresztül használható. A névtelen látogatók haladása helyben, a böngészőben marad.",
       "kidsHint": "Gyerekek: ez a kurzus megjelenik a gyerekoldalon, és ott bejelentkezés nélkül játszható (a számolókönyvek kivételével). Csak akkor jelenik meg ott, ha a megjegyzései németül vannak (a fordítás kész).",
+      "confirmPublic": "Nyilvánossá teszed a(z) „{{name}}” kurzust? Ezután a megoldásokkal együtt bejelentkezés nélkül elérhető.",
+      "confirmKids": "Felteszed a(z) „{{name}}” kurzust a gyerekoldalra? A feladatai ott bejelentkezés nélkül játszhatók.",
       "kidsTitles": "Címek a KidHubon",
       "kidsTitlePrompt": "Cím a KidHubon – {{language}} (üres = a könyv neve):",
       "slugPlaceholder": "álnév, pl. mate1",

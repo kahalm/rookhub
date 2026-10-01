@@ -14,6 +14,13 @@ public class AdminUserDto
     public DateTime? LockedUntil { get; set; }
 }
 
+/// <summary>Body von <c>PUT /api/admin/users/{id}/admin</c>: Soll-Wert des Admin-Rechts (F5-013). Nullable, damit ein
+/// fehlendes Feld nicht still als <c>false</c> (Entzug) gelesen wird.</summary>
+public class SetAdminDto
+{
+    public bool? IsAdmin { get; set; }
+}
+
 /// <summary>Body von <c>POST /api/admin/users/{id}/lock</c>: Sperrende (UTC); <c>null</c> = unbefristet.</summary>
 public class LockUserDto
 {
