@@ -14,7 +14,8 @@ import { SnackbarService } from '../../core/snackbar.service';
 import { BoardFsActionsComponent } from './board-fs-actions.component';
 import { PuzzleBoardComponent } from './puzzle-board.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
-import { buildCommentSegments, CommentSegment } from './comment-variation.util';
+import { CommentSegment } from './comment-variation.util';
+import { CommentBlockCache, lineStepAt } from './line-step.util';
 import {
   latestCommentUpTo as latestCommentUpToUtil,
   displayComment as computeDisplayComment, buildCommentLines, hasTrailingSolutionComment as computeHasTrailingComment,
@@ -1002,21 +1003,14 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
   // ---- Klickbare Züge in Kommentaren (Variante auf dem Brett vorspielen) ----
   /** Brett-Vorschau einer angeklickten Kommentar-Variante (überlagert boardFen/lastMove); null = aus. */
   variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
-  private cmtCacheKey = '';
-  private cmtCache: CommentSegment[][] = [];
+  private readonly cmtCache = new CommentBlockCache();
 
   /** {@link commentLines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
-   *  Kommentar-Inhalt + Puzzle, da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom Ply). */
+   *  Kommentar-Inhalt + Puzzle, da die Auflösung nur von Puzzle-FEN/-Zügen abhängt (nicht vom Ply);
+   *  derselbe Cache wie in der Kurs-Durchsicht (`line-step.util`). */
   get commentBlocks(): CommentSegment[][] {
-    const lines = this.commentLines;
-    const key = (this.puzzle?.id ?? 0) + '|' + lines.join('');
-    if (key !== this.cmtCacheKey) {
-      const fen = this.puzzle?.fen ?? '';
-      const ucis = (this.puzzle?.moves ?? '').split(' ').filter(m => m);
-      this.cmtCache = fen ? lines.map(l => buildCommentSegments(l, fen, ucis)) : lines.map(l => [{ text: l }]);
-      this.cmtCacheKey = key;
-    }
-    return this.cmtCache;
+    return this.cmtCache.get(this.puzzle?.id ?? 0, this.commentLines, this.puzzle?.fen ?? '',
+      () => (this.puzzle?.moves ?? '').split(' ').filter(m => m));
   }
 
   /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
@@ -1893,20 +1887,16 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     if (!this.puzzle) return;
     this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
     const moves = this.puzzle.moves.split(' ').filter(m => m);
-    index = Math.max(0, Math.min(index, moves.length));
+    // Dieselbe Regel wie die Kurs-Durchsicht (`lineStepAt`): illegale Diagramm-FEN → per Koordinaten
+    // nachgespielt (vorher `renderStaticInfo`), chess.js bekommt dann einen nie angezeigten Platzhalter.
+    const step = lineStepAt(this.puzzle.fen, moves, index);
+    index = step.index;
     this.reviewIndex = index;
-    const chess = tryLoadFen(this.puzzle.fen);
-    if (!chess) { this.renderStaticInfo(index); return; }   // illegale Diagramm-FEN → per Koordinaten
-    this.chess = chess;
-    let last: [Key, Key] | undefined;
-    for (let i = 0; i < index; i++) {
-      this.applyUci(moves[i]);
-      last = [moves[i].substring(0, 2) as Key, moves[i].substring(2, 4) as Key];
-    }
-    this.lastMove = last;
-    this.boardFen = this.chess.fen();
-    this.turnColor = this.chess.turn() === 'w' ? 'white' : 'black';
-    this.isCheck = this.chess.isCheck();
+    this.chess = step.chess ?? new Chess();
+    this.lastMove = step.lastMove;
+    this.boardFen = step.fen;
+    this.turnColor = step.turnColor;
+    this.isCheck = step.isCheck;
     this.dests = new Map();
     // Ganze-Partie-Review: index = Anzahl gespielter Halbzüge ab FEN; letzter Zug = moves[index-1].
     // Bei Zügen ohne Kommentar den zuletzt gesehenen behalten (statt bis zur Einleitung zurückzufallen).

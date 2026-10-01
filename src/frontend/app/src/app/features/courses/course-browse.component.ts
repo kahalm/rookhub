@@ -15,8 +15,9 @@ import { PuzzleBoardComponent } from '../puzzles/puzzle-board.component';
 import { ReviewNavComponent } from '../puzzles/review-nav.component';
 import { parseMoveShapes } from '../puzzles/move-shapes.util';
 import { applyUci, fenSideToMove, moveNumberLabels, tryLoadFen } from '../puzzles/puzzle-move.util';
-import { replayIllegalFen } from '../puzzles/illegal-board.util';
-import { buildCommentSegments, CommentSegment } from '../puzzles/comment-variation.util';
+import { CommentSegment } from '../puzzles/comment-variation.util';
+import { CommentBlockCache, lineStepAt } from '../puzzles/line-step.util';
+import { latestCommentUpTo } from '../puzzles/book-comment.util';
 import { PreferencesService } from '../../core/preferences.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { SendToWorksheetComponent } from '../worksheets/send-to-worksheet.component';
@@ -48,8 +49,9 @@ interface ChapterGroup {
  * werden kann (◀/▶, Anfang/Ende, Auto-Wiedergabe, Pfeiltasten) — inkl. Zug-Kommentaren und
  * Chessable-Board-Annotationen wie in der Lösungs-Durchsicht des Buch-Puzzle-Solvers.
  *
- * Reines Ansehen: kein Quiz, kein Fortschritt, keine Zeitmessung. Stepping-Logik gespiegelt aus
- * `BookPuzzleComponent.reviewGoTo` (ganze Linie ab FEN).
+ * Reines Ansehen: kein Quiz, kein Fortschritt, keine Zeitmessung. Stepping, Kommentar-Rückwärtssuche
+ * und Kommentar-Segmente teilt sie sich mit dem Buch-Solver (`puzzles/line-step.util`,
+ * `book-comment.util.latestCommentUpTo`) — ganze Linie ab FEN, Einleitung = Halbzug -1.
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -357,8 +359,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
 
   /** Brett-Vorschau eines angeklickten Kommentar-Zugs (überlagert boardFen/lastMove); null = aus. */
   variationPreview: { fen: string; lastMove: [Key, Key] } | null = null;
-  private cmtCacheKey = '';
-  private cmtCache: CommentSegment[][] = [];
+  private readonly cmtCache = new CommentBlockCache();
 
   private uciMoves: string[] = [];
   private shapesByPly: Record<number, DrawShape[]> = {};
@@ -414,14 +415,7 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
   /** {@link commentLines} in klickbare Segmente zerlegt (Text + spielbare Zug-Chips). Gecacht je
    *  Linie + Kommentar-Inhalt — die Auflösung hängt nur von Linien-FEN/-Zügen ab, nicht vom Ply. */
   get commentBlocks(): CommentSegment[][] {
-    const lines = this.commentLines;
-    const key = (this.selected?.id ?? 0) + '|' + lines.join('');
-    if (key !== this.cmtCacheKey) {
-      const fen = this.selected?.fen ?? '';
-      this.cmtCache = fen ? lines.map(l => buildCommentSegments(l, fen, this.uciMoves)) : lines.map(l => [{ text: l }]);
-      this.cmtCacheKey = key;
-    }
-    return this.cmtCache;
+    return this.cmtCache.get(this.selected?.id ?? 0, this.commentLines, this.selected?.fen ?? '', () => this.uciMoves);
   }
 
   /** Spielt die angeklickte Variante bis zu diesem Zug als Brett-Vorschau (view-only). */
@@ -650,46 +644,22 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
     return san;
   }
 
-  /** Ganze Linie ab FEN durchklicken (index = Anzahl gespielter Halbzüge). Spiegelt reviewGoTo. */
+  /** Ganze Linie ab FEN durchklicken (index = Anzahl gespielter Halbzüge) — dieselbe Regel wie
+   *  der Buch-Solver (`lineStepAt`, inkl. Chessable-Muster-Diagrammen mit ILLEGALER FEN, die rein per
+   *  Koordinaten nachgespielt werden). */
   goTo(index: number): void {
     if (!this.selected) return;
     this.variationPreview = null;   // Stellungswechsel → Varianten-Vorschau beenden
-    index = Math.max(0, Math.min(index, this.uciMoves.length));
-    this.plyIndex = index;
-    const chess = tryLoadFen(this.selected.fen);
-    if (chess) {
-      let last: [Key, Key] | undefined;
-      for (let i = 0; i < index; i++) {
-        applyUci(chess, this.uciMoves[i]);
-        last = [this.uciMoves[i].substring(0, 2) as Key, this.uciMoves[i].substring(2, 4) as Key];
-      }
-      this.lastMove = last;
-      this.boardFen = chess.fen();
-      this.turnColor = chess.turn() === 'w' ? 'white' : 'black';
-      this.isCheck = chess.isCheck();
-    } else {
-      // Chessable-Muster-/Info-Diagramm mit ILLEGALER FEN (z. B. ohne König): chess.js verwirft die
-      // Stellung → rein per Koordinaten nachspielen (wie im Solver, `renderStaticInfo`).
-      const replay = replayIllegalFen(this.selected.fen, this.uciMoves, index);
-      this.lastMove = replay.lastMove as [Key, Key] | undefined;
-      this.boardFen = replay.fen;
-      this.turnColor = replay.whiteToMove ? 'white' : 'black';
-      this.isCheck = false;
-    }
-    this.comment = this.latestCommentUpTo(index - 1);
-    this.reviewShapes = this.shapesByPly[index - 1] ?? [];
-    if (this.autoplay && index >= this.totalPlies) this.stopAutoplay();
-  }
-
-  /** Kommentar des zuletzt kommentierten Halbzugs im Bereich [-1 .. plyPlayed] (rückwärts). */
-  private latestCommentUpTo(plyPlayed: number): string | null {
-    const mc = this.selected?.moveComments;
-    if (!mc) return null;
-    for (let ply = plyPlayed; ply >= -1; ply--) {
-      const c = mc[String(ply)];
-      if (c) return c;
-    }
-    return null;
+    const step = lineStepAt(this.selected.fen, this.uciMoves, index);
+    this.plyIndex = step.index;
+    this.lastMove = step.lastMove;
+    this.boardFen = step.fen;
+    this.turnColor = step.turnColor;
+    this.isCheck = step.isCheck;
+    // Zuletzt kommentierter Halbzug im Bereich [-1 .. zuletzt gespielt] (-1 = Einleitung der Linie).
+    this.comment = latestCommentUpTo(this.selected.moveComments, -1, step.index - 1);
+    this.reviewShapes = this.shapesByPly[step.index - 1] ?? [];
+    if (this.autoplay && step.index >= this.totalPlies) this.stopAutoplay();
   }
 
   nextPly(): void { this.stopAutoplay(); this.goTo(this.plyIndex + 1); }
