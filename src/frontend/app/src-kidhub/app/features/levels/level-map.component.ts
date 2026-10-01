@@ -1,5 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, Injector, afterNextRender, computed, effect, inject, signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router, RouterLink, Scroll } from '@angular/router';
+import { filter, take } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { KidsApiService, KidsLevel } from '../../core/kids-api.service';
 import { KidsProgressStore } from '../../core/kids-progress.store';
@@ -9,6 +13,9 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
 
 /** So lange wackelt eine gesperrte Stufe nach dem Tippen und steht der Hinweis da. */
 export const NUDGE_MS = 2500;
+
+/** Ab dieser aktuellen Stufe springt die Karte beim Oeffnen zu ihr — die ersten vier stehen auch am Handy oben im Bild. */
+export const SCROLL_FROM_LEVEL = 5;
 
 /**
  * Alle Stufen als grosse Knoepfe mit Thema und Sternen. Gesperrt ist, was hinter der ersten noch
@@ -109,6 +116,13 @@ export class LevelMapComponent {
   /** Die gesperrte Stufe, auf die gerade getippt wurde — sie wackelt, unten steht der Hinweis. */
   readonly nudged = signal<number | null>(null);
   private nudgeTimer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Erst springen, wenn der Router fertig ist: er stellt nach jeder Navigation an den Seitenanfang
+   * (`scrollPositionRestoration: 'top'`, `Scroll`-Ereignis) und holte die Karte sonst gleich wieder nach oben.
+   * Ohne laufende Navigation gibt es nichts abzuwarten.
+   */
+  private readonly routerScrolled = signal(inject(Router).currentNavigation() === null);
+  private jumped = false;
 
   readonly current = computed(() => this.progress.currentLevel(this.levels().map(l => l.level)));
   readonly tiles = computed(() => this.levels().map(l => ({
@@ -121,6 +135,18 @@ export class LevelMapComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.nudgeTimer));
+    inject(Router).events.pipe(filter(e => e instanceof Scroll), take(1), takeUntilDestroyed())
+      .subscribe(() => this.routerScrolled.set(true));
+    // Am Handy ist die Karte ueber 3 000 px lang (40 Stufen, 2 Spalten): wer bei Stufe 25 steht, sah oben nur die
+    // fertigen Stufen 1–10 und musste fast 2 000 px wischen (Codereview 2026-09-29, UX-063). Einmal je Oeffnen.
+    const host = inject<ElementRef<HTMLElement>>(ElementRef);
+    const injector = inject(Injector);
+    effect(() => {
+      const level = this.current();
+      if (this.jumped || !this.routerScrolled() || level === null || level < SCROLL_FROM_LEVEL) return;
+      this.jumped = true;
+      afterNextRender(() => host.nativeElement.querySelector('.level.current')?.scrollIntoView({ block: 'center' }), { injector });
+    });
     this.load();
   }
 

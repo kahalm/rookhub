@@ -128,7 +128,9 @@ export function isHomeUrl(url: string): boolean {
            flex-wrap: wrap; gap: 8px 12px; }
     .account { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
     .who { font-weight: 700; color: var(--kid-title); }
+    /* Tippziele mindestens 44 px hoch (Codereview 2026-09-29, UX-063: vorher 36 px Konto-Knoepfe, 24/16 px im Fuss). */
     .acct { font: inherit; font-weight: 800; font-size: .95rem; text-decoration: none; cursor: pointer;
+            display: inline-flex; align-items: center; box-sizing: border-box; min-height: 44px;
             padding: 7px 14px; border-radius: 999px; border: 2px solid var(--kid-title);
             background: var(--kid-card); color: var(--kid-title); box-shadow: 0 3px 0 var(--kid-shadow); }
     .acct.primary { background: var(--kid-green-strong); border-color: var(--kid-green-strong); color: #fff; }
@@ -139,8 +141,8 @@ export function isHomeUrl(url: string): boolean {
     main { flex: 1; }
     .foot { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center;
             padding: 14px; font-size: .85rem; opacity: .75; }
-    .foot a { color: inherit; }
-    select { font: inherit; border-radius: 10px; padding: 2px 6px; border: 1px solid var(--kid-shadow); background: #fff; }
+    .foot a { color: inherit; display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; }
+    select { font: inherit; border-radius: 10px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--kid-shadow); background: #fff; }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   `],
 })

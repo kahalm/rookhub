@@ -1,8 +1,10 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Event, NavigationEnd, provideRouter, Router, Scroll } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
-import { LevelMapComponent, NUDGE_MS } from './level-map.component';
+import { of, Subject, throwError } from 'rxjs';
+import { KidsLevel } from '../../core/kids-api.service';
+import { LevelMapComponent, NUDGE_MS, SCROLL_FROM_LEVEL } from './level-map.component';
 import { KidsApiService } from '../../core/kids-api.service';
 
 describe('LevelMapComponent', () => {
@@ -62,4 +64,70 @@ describe('LevelMapComponent', () => {
     expect(locked!.classList).not.toContain('nudge');
     expect(el.querySelector('.toast')).toBeNull();
   }));
+});
+
+/**
+ * Codereview 2026-09-29, UX-063: am Handy ist die Karte 3 251 px lang (40 Stufen, 2 Spalten) und blieb beim Oeffnen oben —
+ * bei Fortschritt bis Stufe 24 lag die aktuelle Stufe 25 bei y = 1 951 px, sichtbar waren nur die fertigen Stufen 1–10.
+ */
+describe('LevelMapComponent — Sprung zur aktuellen Stufe', () => {
+  const KEY = 'rh-kids-progress-v1';
+  const LADDER: KidsLevel[] = Array.from({ length: 40 }, (_, i) => ({ level: i + 1, theme: 'mate1', puzzleCount: 10 }));
+  let calls: string[];
+
+  /** Stufen 1 … `done` geschafft. */
+  function progressUpTo(done: number): void {
+    const levels = Object.fromEntries(Array.from({ length: done }, (_, i) => [i + 1, { stars: 3, runIndex: 0, runMistakes: 0 }]));
+    localStorage.setItem(KEY, JSON.stringify({ levels, courses: {} }));
+  }
+
+  function setup(): void {
+    const api = jasmine.createSpyObj<KidsApiService>('KidsApiService', ['levels']);
+    api.levels.and.returnValue(of(LADDER));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'levels', component: LevelMapComponent }]),
+        provideTranslateService({ fallbackLang: 'en' }), { provide: KidsApiService, useValue: api },
+      ],
+    });
+    calls = [];
+    spyOn(Element.prototype, 'scrollIntoView').and.callFake(function (this: Element) {
+      calls.push('current:' + this.querySelector('.num')?.textContent);
+    });
+  }
+  afterEach(() => localStorage.removeItem(KEY));
+
+  it('Stufe 25 offen: die Karte springt beim Oeffnen zu ihr', () => {
+    progressUpTo(24);
+    setup();
+    const f = TestBed.createComponent(LevelMapComponent);
+    f.detectChanges();
+    expect(calls).toEqual(['current:25']);
+    expect((Element.prototype.scrollIntoView as jasmine.Spy).calls.mostRecent().args[0]).toEqual({ block: 'center' });
+
+    f.detectChanges();
+    expect(calls).withContext('nur einmal je Oeffnen').toEqual(['current:25']);
+  });
+
+  it(`aktuelle Stufe unter ${SCROLL_FROM_LEVEL}: kein Sprung, sie steht ohnehin oben`, () => {
+    progressUpTo(SCROLL_FROM_LEVEL - 2);
+    setup();
+    TestBed.createComponent(LevelMapComponent).detectChanges();
+    expect(calls).toEqual([]);
+  });
+
+  /** Der Router stellt nach jeder Navigation an den Seitenanfang (`scrollPositionRestoration: 'top'`) und meldet das
+   *  mit `Scroll` — ein Sprung davor waere gleich wieder weg. (Den Scroller selbst startet erst das echte Bootstrap.) */
+  it('per Navigation geoeffnet: springt erst nach dem Scroll-Ereignis des Routers', async () => {
+    progressUpTo(24);
+    setup();
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/levels', LevelMapComponent);
+    harness.detectChanges();
+    expect(calls).withContext('vor dem Scroll-Ereignis').toEqual([]);
+
+    (TestBed.inject(Router).events as Subject<Event>).next(new Scroll(new NavigationEnd(1, '/levels', '/levels'), null, null));
+    harness.detectChanges();
+    expect(calls).toEqual(['current:25']);
+  });
 });

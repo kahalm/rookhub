@@ -100,4 +100,17 @@ describe('KidHub: Tippziele', () => {
       }
     });
   }
+
+  /** Codereview 2026-09-29, UX-063 (gemessen bei 390×844): „Anmelden" 99×36, „Registrieren" 113×36 px, Sprachwahl im
+   *  Fuss 86×24 px, die Fusslinks 138×16 und 147×16 px. */
+  it(`Startseite: Konto-Knoepfe, Sprachwahl und Fusslinks sind mindestens ${MIN_TARGET} px hoch`, async () => {
+    const page = await renderPage('/');
+    for (const [w, h] of [[390, 844], [1280, 800]] as const) {
+      for (const [selector, count] of [['.account .acct', 2], ['.foot select', 1], ['.foot a', 2]] as const) {
+        const boxes = boxesAt(page, w, h, selector);
+        expect(boxes.length).withContext(`${w}×${h} ${selector}: Anzahl`).toBe(count);
+        boxes.forEach((b, i) => expect(b.height).withContext(`${w}×${h} ${selector} #${i + 1}: Hoehe`).toBeGreaterThanOrEqual(MIN_TARGET));
+      }
+    }
+  });
 });
