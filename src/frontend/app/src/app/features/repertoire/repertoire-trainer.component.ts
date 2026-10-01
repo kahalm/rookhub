@@ -35,16 +35,17 @@ import { ExpectedMove, judgeMove, resolveExpectedUci } from '../../shared/chess/
 import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from './repertoire-explorer.service';
 import { normalizeFen } from './position-filter.util';
 import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
+import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
 
 function readFreqOrder(): boolean {
-  try { return localStorage.getItem(FREQ_ORDER_KEY) === '1'; } catch { return false; }
+  return readRaw(localStore(), FREQ_ORDER_KEY) === '1';
 }
 
 function saveFreqOrder(on: boolean): void {
-  try { localStorage.setItem(FREQ_ORDER_KEY, on ? '1' : '0'); } catch { /* nur diese Sitzung */ }
+  writeRaw(localStore(), FREQ_ORDER_KEY, on ? '1' : '0');   // gesperrt/voll → nur diese Sitzung
 }
 
 type Phase = 'LOADING' | 'EMPTY' | 'PLAYING' | 'FEEDBACK' | 'DONE' | 'LINE_DONE' | 'LEARN_SHOW' | 'COMMENT';

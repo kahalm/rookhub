@@ -1900,6 +1900,39 @@ describe('CalculationComponent ohne Konto (alles lokal)', () => {
     expect(c.localSaveFailed).toBeFalse();
     c.ngOnDestroy();
   });
+
+  it('meldet auch, wenn die Kapitel-Uhr nicht gespeichert werden kann — beim Übergang, nicht jede Sekunde (F3-011)', () => {
+    // Vorher schluckte persistTimer den Schreibfehler: nach dem Neuladen war die Uhr weg, während
+    // dieselbe Seite für den Baum warnte.
+    jasmine.clock().install();
+    try {
+      const { component: c } = anonymous();
+      c.startTraining();
+      expect(c.timerRunning).toBeTrue();
+      const setItem = spyOn(Storage.prototype, 'setItem').and.throwError('QuotaExceededError');
+
+      jasmine.clock().tick(1000);
+      expect(c.showLocalWarning).toBeTrue();
+
+      // Die Uhr schreibt jede Sekunde — die weggeklickte Warnung bleibt trotzdem weg …
+      c.dismissLocalWarning();
+      jasmine.clock().tick(3000);
+      expect(c.showLocalWarning).toBeFalse();
+
+      // … bis nach einem gelungenen Schreiben ein NEUER Fehlschlag kommt.
+      setItem.and.callThrough();
+      jasmine.clock().tick(1000);
+      setItem.and.throwError('QuotaExceededError');
+      jasmine.clock().tick(1000);
+      expect(c.showLocalWarning).toBeTrue();
+
+      setItem.and.callThrough();
+      c.ngOnDestroy();
+    } finally {
+      jasmine.clock().uninstall();
+      localStorage.removeItem('rookhub_calc_timer_1');
+    }
+  });
 });
 
 describe('CalculationComponent Hinweis wegklicken', () => {

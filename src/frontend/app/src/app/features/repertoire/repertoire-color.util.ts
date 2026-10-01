@@ -15,6 +15,8 @@
  * (localStorage, pro Gerät — analog zum bisherigen Farb-Toggle).
  */
 
+import { localStore, readJson, writeJson } from '../../core/local-json-store';
+
 export type TrainColor = 'w' | 'b';
 
 /** Seite am Zug in dieser (Start-)FEN. */
@@ -60,23 +62,20 @@ const OVR_KEY = (id: number) => `rookhub_rep_train_chaptercolor_${id}`;
 
 /** Manuelle Farb-Overrides je Kapitel aus dem localStorage (pro Gerät, pro Repertoire). */
 export function readChapterColorOverrides(repId: number): Record<string, TrainColor> {
-  try {
-    const raw = localStorage.getItem(OVR_KEY(repId));
-    if (!raw) return {};
-    const obj = JSON.parse(raw) as Record<string, unknown>;
-    const out: Record<string, TrainColor> = {};
-    for (const k of Object.keys(obj || {})) {
-      if (obj[k] === 'w' || obj[k] === 'b') out[k] = obj[k];
-    }
-    return out;
-  } catch { return {}; }
+  const obj = readJson<Record<string, unknown>>(localStore(), OVR_KEY(repId));
+  const out: Record<string, TrainColor> = {};
+  if (!obj || typeof obj !== 'object') return out;
+  for (const k of Object.keys(obj)) {
+    if (obj[k] === 'w' || obj[k] === 'b') out[k] = obj[k];
+  }
+  return out;
 }
 
 /** Override für ein Kapitel setzen (überschreibt die Auto-Erkennung dauerhaft). */
 export function setChapterColorOverride(repId: number, chapter: string, color: TrainColor): void {
   const cur = readChapterColorOverrides(repId);
   cur[chapter] = color;
-  try { localStorage.setItem(OVR_KEY(repId), JSON.stringify(cur)); } catch { /* Storage voll/blockiert → ignorieren */ }
+  writeJson(localStore(), OVR_KEY(repId), cur);   // Storage voll/blockiert → gilt nur für diese Sitzung
 }
 
 /** Effektive Farb-Map je Kapitel = Auto-Erkennung, von den manuellen Overrides überschrieben. */

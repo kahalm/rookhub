@@ -5,6 +5,7 @@ import { Chess } from 'chess.js';
 import { START_FEN } from '../../shared/pgn-viewer/pgn-parser';
 import { startNumbering } from './repertoire-move-format.util';
 import { TrainColor } from './repertoire-color.util';
+import { localStore, readJson, writeJson } from '../../core/local-json-store';
 
 /**
  * Lochfinder + Linien-Häufigkeiten aus dem Lichess-Explorer (`POST /api/repertoires/{id}/explorer-analysis`).
@@ -161,9 +162,8 @@ const SETTINGS_KEY = 'rookhub_explorer_settings';
 /** Gemerkte Auswahl (je Gerät). Unbrauchbares fällt auf die Vorgabe zurück. */
 export function readExplorerSettings(): ExplorerSettings {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { ...DEFAULT_EXPLORER_SETTINGS };
-    const s = JSON.parse(raw) as Partial<ExplorerSettings>;
+    const s = readJson<Partial<ExplorerSettings>>(localStore(), SETTINGS_KEY);
+    if (!s || typeof s !== 'object') return { ...DEFAULT_EXPLORER_SETTINGS };
     const ratings = Array.isArray(s.ratings) ? s.ratings.filter(r => EXPLORER_RATINGS.includes(r)) : [];
     const speeds = Array.isArray(s.speeds) ? s.speeds.filter(x => EXPLORER_SPEEDS.includes(x)) : [];
     const t = Number(s.thresholdPercent);
@@ -181,7 +181,7 @@ export function readExplorerSettings(): ExplorerSettings {
 }
 
 export function saveExplorerSettings(s: ExplorerSettings): void {
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* Speicher gesperrt → nur diese Sitzung */ }
+  writeJson(localStore(), SETTINGS_KEY, s);   // Speicher gesperrt → nur diese Sitzung
 }
 
 export function clampThreshold(percent: number): number {

@@ -19,6 +19,7 @@ import { lineKeyFromSans } from './repertoire-line-key.util';
 import { moveKey, parseMoveInput } from './similar-move.util';
 import { PositionTreeComponent } from './position-tree.component';
 import { SimilarPositionsComponent, SimilarRepertoireOption } from './similar-positions.component';
+import { localStore, readJson, readRaw, writeJson, writeRaw } from '../../core/local-json-store';
 
 interface ChapterGroup { name: string; lines: RepertoireLineMatch[]; }
 
@@ -283,7 +284,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   private simSelectionTouched = false;
 
   constructor(public auth: AuthService, private repertoireService: RepertoireService, private router: Router) {
-    const saved = (() => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } })();
+    const saved = readRaw(localStore(), MODE_KEY);
     if (saved === 'tree' || saved === 'list' || saved === 'similar') this.mode = saved;
     this.restoreSimilarPrefs();
   }
@@ -319,7 +320,7 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   setMode(mode: PanelMode): void {
     if (this.mode === mode) return;
     this.mode = mode;
-    try { localStorage.setItem(MODE_KEY, mode); } catch { /* Privatmodus: Auswahl gilt nur für die Sitzung */ }
+    writeRaw(localStore(), MODE_KEY, mode);   // Privatmodus: Auswahl gilt nur für die Sitzung
     if (this.open) this.load();
   }
 
@@ -523,24 +524,21 @@ export class PositionRepertoiresComponent implements OnChanges, OnDestroy {
   }
 
   private restoreSimilarPrefs(): void {
-    try {
-      const raw = localStorage.getItem(SIMILAR_PREFS_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { preset?: string; mirrored?: boolean; sameSide?: boolean };
-      if (saved.preset === 'struktur' || saved.preset === 'ausgewogen' || saved.preset === 'stellungsbild') {
-        this.simPreset = saved.preset;
-      }
-      if (typeof saved.mirrored === 'boolean') this.simMirrored = saved.mirrored;
-      if (typeof saved.sameSide === 'boolean') this.simSameSide = saved.sameSide;
-    } catch { /* kaputter/gesperrter Speicher: Voreinstellungen bleiben auf Default */ }
+    // Kaputter/gesperrter Speicher: Voreinstellungen bleiben auf Default.
+    const saved = readJson<{ preset?: string; mirrored?: boolean; sameSide?: boolean }>(localStore(), SIMILAR_PREFS_KEY);
+    if (!saved || typeof saved !== 'object') return;
+    if (saved.preset === 'struktur' || saved.preset === 'ausgewogen' || saved.preset === 'stellungsbild') {
+      this.simPreset = saved.preset;
+    }
+    if (typeof saved.mirrored === 'boolean') this.simMirrored = saved.mirrored;
+    if (typeof saved.sameSide === 'boolean') this.simSameSide = saved.sameSide;
   }
 
   private saveSimilarPrefs(): void {
-    try {
-      localStorage.setItem(SIMILAR_PREFS_KEY, JSON.stringify({
-        preset: this.simPreset, mirrored: this.simMirrored, sameSide: this.simSameSide,
-      }));
-    } catch { /* Privatmodus: Auswahl gilt nur für die Sitzung */ }
+    // Privatmodus: Auswahl gilt nur für die Sitzung.
+    writeJson(localStore(), SIMILAR_PREFS_KEY, {
+      preset: this.simPreset, mirrored: this.simMirrored, sameSide: this.simSameSide,
+    });
   }
 
   toggleRep(id: number): void {

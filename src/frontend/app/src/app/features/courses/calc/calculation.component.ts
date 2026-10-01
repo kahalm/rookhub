@@ -44,6 +44,7 @@ import {
   CalcTimerDialogComponent, CalcTimerDialogData, CalcTimerDialogResult,
 } from './calc-timer-dialog.component';
 import { readCalcNoticeDismissed, writeCalcNoticeDismissed } from './calc-local.util';
+import { localStore, readJson, writeJson } from '../../../core/local-json-store';
 import { AuthService } from '../../../core/auth.service';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { labelOr } from '../course-language.util';
@@ -222,6 +223,9 @@ export class CalculationComponent implements OnInit, OnDestroy {
   timerSeconds = 0;
   /** Kapitel-Schlüssel des laufenden Zählers ('' = „ohne Kapitel"); null = noch nicht geladen. */
   private timerChapterKey: string | null = null;
+  /** Ist der LETZTE Schreibversuch der Kapitel-Uhr gescheitert? Gemeldet wird nur der Übergang in den
+   *  Fehlschlag (siehe {@link persistTimer}). */
+  private timerPersistFailed = false;
   private timerHandle?: ReturnType<typeof setInterval>;
   readonly noDests = new Map<Key, Key[]>();
 
@@ -348,17 +352,24 @@ export class CalculationComponent implements OnInit, OnDestroy {
   }
 
   private readTimerStore(): Record<string, number> {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(this.timerStorageKey()) ?? '{}');
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch { return {}; }
+    const parsed = readJson<Record<string, number>>(localStore(), this.timerStorageKey());
+    return parsed && typeof parsed === 'object' ? parsed : {};
   }
 
+  /**
+   * Speicher voll/gesperrt wird GEMELDET wie beim Baum-Speicher (anonym: die Warnung „kann gerade
+   * nichts speichern" — sie nennt die Zeit ausdrücklich mit), statt still verschluckt: sonst war die
+   * Kapitel-Uhr nach dem Neuladen weg, während dieselbe Seite für den Baum warnte. Gemeldet wird nur
+   * der ÜBERGANG in den Fehlschlag: die Uhr schreibt jede Sekunde, eine weggeklickte Warnung stünde
+   * sonst sekündlich wieder da. Zurückgenommen wird sie hier nicht — das bleibt dem Baum-Speicher.
+   */
   private persistTimer(): void {
     if (this.timerChapterKey === null) return;
     const store = this.readTimerStore();
     store[this.timerChapterKey] = this.timerSeconds;
-    try { localStorage.setItem(this.timerStorageKey(), JSON.stringify(store)); } catch { /* voll/gesperrt */ }
+    const ok = writeJson(localStore(), this.timerStorageKey(), store);
+    if (!ok && !this.timerPersistFailed) this.setLocalSaveFailed(this.localOnly);
+    this.timerPersistFailed = !ok;
   }
 
   /**
