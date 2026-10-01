@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Authorization;
 using RookHub.Api.Models;
+using RookHub.Api.Services;
 using RookHub.Api.Services.Prep;
 
 namespace RookHub.Api.Controllers;
@@ -26,8 +27,25 @@ public class PrepController : BaseApiController
     public const int MaxPgnBytes = 64 * 1024 * 1024;
 
     private readonly PrepImportService _import;
+    private readonly PermissionResolver? _permissions;
 
-    public PrepController(PrepImportService import) => _import = import;
+    public PrepController(PrepImportService import, PermissionResolver? permissions = null)
+    {
+        _import = import;
+        _permissions = permissions;
+    }
+
+    /// <summary>Verwalter (<c>prep.manage</c>) — LIVE wie <c>[HasPermission]</c>. Nur sie sehen unsichere Online-Konten samt
+    /// Kommentaren und können deren Partien in Baum und Profil nehmen: unsichere Konten sind Vermutungen über echte Personen
+    /// mit internen Notizen, <c>prep.view</c> bekommt ein breiterer Kreis (Vorgabe des Betreuers 2026-10-02).</summary>
+    private async Task<bool> CanManageAsync() =>
+        User.IsInRole("Admin") || (_permissions != null
+            ? (await _permissions.GetAsync(GetUserId())).Has(Permissions.PrepManage)
+            : User.HasClaim(PermissionAuthorizationHandler.PermissionClaimType, Permissions.PrepManage));
+
+    /// <summary>Filter aus der Adresse; <c>unsure=true</c> wirkt nur für Verwalter, sonst still wie <c>false</c>.</summary>
+    private async Task<Services.League.LeagueProfileStore.TreeFilter> FilterAsync(string? source, string? speeds, int? years, bool? unsure) =>
+        Services.League.LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: !(unsure == true && await CanManageAsync()));
 
     // ---- Lesen (Phase 2) -----------------------------------------------------------------------------
 
@@ -48,7 +66,8 @@ public class PrepController : BaseApiController
         });
     }
 
-    /// <summary>Spielerkarte in der Form der Liga-Karte (Profil, Quellen, letzte Partien, Online-Konten) plus <c>id</c>, <c>games</c>
+    /// <summary>Spielerkarte in der Form der Liga-Karte (Profil, Quellen, letzte Partien, Online-Konten — mit <c>prep.view</c> nur
+    /// gesicherte ohne Kommentar wie über einen Teilen-Link, mit <c>prep.manage</c> wie für LeagueHub-Leser) plus <c>id</c>, <c>games</c>
     /// (im Bestand), <c>loaded</c>/<c>limited</c>/<c>limit</c>/<c>since</c> (Vorgabe: die jüngsten <see cref="PrepCardService.DefaultLimit"/>,
     /// <c>all=true</c>: bis <see cref="PrepCardService.DefaultMax"/>) und <c>twin</c> (Namens-Zwilling ohne FIDE-ID, nur mit <c>twin=true</c>
     /// dabei). Gilt für alle Unterseiten.</summary>
@@ -56,16 +75,16 @@ public class PrepController : BaseApiController
     [HasPermission(Permissions.PrepView)]
     public async Task<IActionResult> Player(int id, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards,
         CancellationToken ct) =>
-        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l ? Ok(await cards.CardAsync(l, ct)) : NotFound();
+        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l ? Ok(await cards.CardAsync(l, await CanManageAsync(), ct)) : NotFound();
 
     /// <summary>Eröffnungsprofil über gefilterte Partien — Filter wie bei der Liga (<c>source</c>, <c>speeds</c>, <c>years</c>,
-    /// Online nur gesicherter Konten außer <c>unsure=true</c>).</summary>
+    /// Online nur gesicherter Konten außer <c>unsure=true</c>, das nur mit <c>prep.manage</c> wirkt).</summary>
     [HttpGet("player/{id:int}/profile")]
     [HasPermission(Permissions.PrepView)]
     public async Task<IActionResult> Profile(int id, [FromQuery] string? source, [FromQuery] string? speeds, [FromQuery] int? years,
         [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards, CancellationToken ct) =>
         await cards.LoadAsync(id, all == true, twin == true, ct) is { } l
-            ? Ok(await cards.ProfileAsync(l, Services.League.LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true), ct))
+            ? Ok(await cards.ProfileAsync(l, await FilterAsync(source, speeds, years, unsure), ct))
             : NotFound();
 
     /// <summary>Eröffnungsbaum: <c>color</c> w/s, <c>line</c> = Züge mit Leerzeichen; Filter wie das Profil.</summary>
@@ -75,8 +94,7 @@ public class PrepController : BaseApiController
         [FromQuery] string? speeds, [FromQuery] int? years, [FromQuery] bool? unsure, [FromQuery] bool? all, [FromQuery] bool? twin,
         [FromServices] PrepCardService cards, CancellationToken ct) =>
         await cards.LoadAsync(id, all == true, twin == true, ct) is { } l
-            ? Ok(await cards.TreeAsync(l, color ?? "w", line,
-                Services.League.LeagueProfileStore.TreeFilter.Parse(source, speeds, years, onlySure: unsure != true), ct))
+            ? Ok(await cards.TreeAsync(l, color ?? "w", line, await FilterAsync(source, speeds, years, unsure), ct))
             : NotFound();
 
     /// <summary>Die letzten Partien samt PGN zum Nachspielen; <c>color</c> w/s = nur mit dieser Farbe.</summary>

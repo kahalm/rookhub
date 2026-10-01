@@ -316,10 +316,11 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
 
     /// <summary>
     /// Die Karte: das Profil (Vorgabe-Filter: Brettpartien), die Quellen, die letzten Partien und — mit FIDE-ID — die
-    /// Online-Konten genau so, wie LeagueHub sie einem angemeldeten Nicht-Admin zeigt (<see cref="LeagueService.CardAsync"/>
-    /// ohne <c>reveal</c>: Konten Minderjähriger nur als „es gibt eins").
+    /// Online-Konten über <see cref="LeagueService.CardAsync"/>, nie mit <c>reveal</c>. <paramref name="manage"/> (<c>prep.manage</c>):
+    /// wie LeagueHub sie einem angemeldeten Nicht-Admin zeigt (auch unsichere, mit Kommentar; Minderjährige nur „es gibt eins");
+    /// sonst wie über einen Teilen-Link (nur gesicherte, ohne Kommentar, bei Minderjährigen gar keins).
     /// </summary>
-    public async Task<JsonObject> CardAsync(Loaded l, CancellationToken ct)
+    public async Task<JsonObject> CardAsync(Loaded l, bool manage, CancellationToken ct)
     {
         var o = await ProfileAsync(l, LeagueProfileStore.TreeFilter.Default, ct);
         var src = new JsonObject();
@@ -329,7 +330,7 @@ public sealed class PrepCardService(AppDbContext db, IMemoryCache cache, LeagueS
         o["lastYear"] = l.Player.LastYear;
         o["maxElo"] = l.Player.MaxElo;
         o["recent"] = new JsonArray((await RecentEntriesAsync(l, null, ct)).Select(e => (JsonNode)e.Entry).ToArray());
-        if (l.Player.FideId is { } fide && await league.CardAsync(fide, onlySure: false, ct, reveal: false) is { } lc)
+        if (l.Player.FideId is { } fide && await league.CardAsync(fide, onlySure: !manage, ct, reveal: false) is { } lc)
         {
             o["accounts"] = lc["accounts"]?.DeepClone() ?? new JsonArray();
             o["online"] = lc["online"]?.DeepClone() ?? 0;

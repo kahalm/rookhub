@@ -154,7 +154,7 @@ public class PrepCardTests : IDisposable
         var gruber = await _db.PrepPlayers.SingleAsync(p => p.NameKey == "gruber, karl");
         var cards = Cards();
         var l = (await cards.LoadAsync(gruber.Id, false, false, default))!;
-        var c = await cards.CardAsync(l, default);
+        var c = await cards.CardAsync(l, false, default);
 
         Assert.Equal(gruber.Id, c["id"]!.GetValue<int>());
         Assert.Null(c["fide"]);
@@ -226,14 +226,14 @@ public class PrepCardTests : IDisposable
         Assert.Equal(2, l.PrepLoaded);
         Assert.Equal(4, l.PrepTotal);
         Assert.Equal(new[] { 20240517, 20230301 }, l.Games.Select(g => g.PlayedOn!.Value));
-        var c = await cards.CardAsync(l, default);
+        var c = await cards.CardAsync(l, false, default);
         Assert.Equal("2023.03.01", c["since"]!.GetValue<string>());
         Assert.Equal(2, c["limit"]!.GetValue<int>());
 
         var all = (await cards.LoadAsync(huber.Id, true, false, default))!;
         Assert.False(all.Limited);
         Assert.Equal(4, all.PrepLoaded);
-        Assert.Equal(PrepCardService.DefaultMax, (await cards.CardAsync(all, default))["limit"]!.GetValue<int>());
+        Assert.Equal(PrepCardService.DefaultMax, (await cards.CardAsync(all, false, default))["limit"]!.GetValue<int>());
     }
 
     [Fact]
@@ -270,12 +270,12 @@ public class PrepCardTests : IDisposable
         await SeedHuberAsync();
         var huber = await Player("990001");
         var cards = Cards();
-        var plain = await cards.CardAsync((await cards.LoadAsync(huber.Id, false, false, default))!, default);
+        var plain = await cards.CardAsync((await cards.LoadAsync(huber.Id, false, false, default))!, false, default);
         Assert.Equal(4, plain["n"]!.GetValue<int>());
         Assert.Equal(1, plain["twin"]!["games"]!.GetValue<int>());
         Assert.False(plain["twinIncluded"]!.GetValue<bool>());
 
-        var with = await cards.CardAsync((await cards.LoadAsync(huber.Id, false, true, default))!, default);
+        var with = await cards.CardAsync((await cards.LoadAsync(huber.Id, false, true, default))!, false, default);
         Assert.Equal(5, with["n"]!.GetValue<int>());
         Assert.True(with["twinIncluded"]!.GetValue<bool>());
         Assert.Contains("c4", with["white"]!["first"]!.AsArray().Select(f => f![0]!.GetValue<string>()));
@@ -331,7 +331,7 @@ public class PrepCardTests : IDisposable
         var cards = Cards();
         var l = (await cards.LoadAsync((await Player("990001")).Id, false, false, default))!;
         Assert.Equal(6, l.Games.Count);                       // 4 Bestand + chess-results Moser + Verein Wolf
-        var c = await cards.CardAsync(l, default);
+        var c = await cards.CardAsync(l, false, default);
         Assert.Equal(4, c["src"]!["Mega"]!.GetValue<int>());
         Assert.Equal(1, c["src"]!["chess-results"]!.GetValue<int>());
         Assert.Equal(1, c["src"]![LeagueProfileStore.ClubSource]!.GetValue<int>());
@@ -396,10 +396,22 @@ public class PrepCardTests : IDisposable
         var blitz = await cards.ProfileAsync(l, LeagueProfileStore.TreeFilter.Parse("online", "blitz", null, onlySure: true), default);
         Assert.Equal(1, blitz["n"]!.GetValue<int>());
 
-        var c = await cards.CardAsync(l, default);
-        Assert.Equal(2, c["accounts"]!.AsArray().Count);
-        Assert.Equal(3, c["online"]!.GetValue<int>());
-        Assert.Equal(1, c["onlineUnsure"]!.GetValue<int>());
+        // Verwalter (prep.manage): wie für LeagueHub-Leser — auch das unsichere Konto, mit Kommentar.
+        var manager = await cards.CardAsync(l, true, default);
+        Assert.Equal(2, manager["accounts"]!.AsArray().Count);
+        Assert.Equal("geheimer Kommentar", manager["accounts"]![0]!["comment"]!.GetValue<string>());
+        Assert.Equal(3, manager["online"]!.GetValue<int>());
+        Assert.Equal(1, manager["onlineUnsure"]!.GetValue<int>());
+
+        // Leser (nur prep.view): wie über einen Teilen-Link — nur das gesicherte Konto, kein Kommentar, keine Notizen.
+        var viewer = await cards.CardAsync(l, false, default);
+        var acc = Assert.Single(viewer["accounts"]!.AsArray())!;
+        Assert.Equal("huberfranz", acc["user"]!.GetValue<string>());
+        Assert.Null(acc["comment"]);
+        Assert.DoesNotContain("hubi99", viewer.ToJsonString());
+        Assert.DoesNotContain("geheimer", viewer.ToJsonString());
+        Assert.Equal(2, viewer["online"]!.GetValue<int>());
+        Assert.Equal(0, viewer["onlineUnsure"]!.GetValue<int>());
     }
 
     [Fact]
@@ -411,16 +423,19 @@ public class PrepCardTests : IDisposable
         await _db.SaveChangesAsync();
         var cards = Cards();
         var l = (await cards.LoadAsync((await Player("990001")).Id, false, false, default))!;
-        var json = (await cards.CardAsync(l, default)).ToJsonString()
+        var json = (await cards.CardAsync(l, false, default)).ToJsonString()
+                   + (await cards.CardAsync(l, true, default)).ToJsonString()
                    + (await cards.TreeAsync(l, "w", null, LeagueProfileStore.TreeFilter.Parse("both", null, null, false), default)).ToJsonString()
                    + (await cards.ProfileAsync(l, LeagueProfileStore.TreeFilter.Parse("both", null, null, false), default)).ToJsonString()
                    + (await cards.RecentAsync(l, null, default)).ToJsonString()
                    + await cards.PgnAsync(l, default);
         foreach (var secret in new[] { "huberfranz", "hubi99", "lichess", "chesscom", "geheimer" })
             Assert.DoesNotContain(secret, json, StringComparison.OrdinalIgnoreCase);
-        var accounts = (await cards.CardAsync(l, default))["accounts"]!.AsArray();
+        // Verwalter: nur, DASS es Konten gibt; Leser: gar keins (wie über einen Teilen-Link).
+        var accounts = (await cards.CardAsync(l, true, default))["accounts"]!.AsArray();
         Assert.Equal(2, accounts.Count);
         Assert.All(accounts, a => Assert.True(a!["hidden"]!.GetValue<bool>()));
+        Assert.Empty((await cards.CardAsync(l, false, default))["accounts"]!.AsArray());
     }
 
     // ── PGN und letzte Partien ─────────────────────────────────────────────────────────────────

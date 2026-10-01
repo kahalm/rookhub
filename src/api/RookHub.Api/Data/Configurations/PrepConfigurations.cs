@@ -16,7 +16,9 @@ internal sealed class PrepPlayerConfiguration : IEntityTypeConfiguration<PrepPla
         e.Property(p => p.NameKey).HasMaxLength(120);
         e.Property(p => p.FideId).HasMaxLength(16);
         e.HasIndex(p => p.KeyHash).IsUnique();
-        e.HasIndex(p => p.NameKey);
+        // Suche (PrepPlayerSearch): Präfix auf NameKey, sortiert nach Games — mit Games im Index liest sie den Bereich
+        // nur im Index, ohne eine Zeile je Kandidat (Namens-Zwilling: NameKey = …, ebenfalls über diesen Index).
+        e.HasIndex(p => new { p.NameKey, p.Games });
         e.HasIndex(p => p.FideId);
     }
 }

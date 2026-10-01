@@ -11,7 +11,9 @@ namespace RookHub.Api.Services.Prep;
 ///
 /// <para>Bewusst nicht wie das Megabase-Verzeichnis von LeagueHub (<see cref="LeagueMegaPlayers.SearchAsync"/>) mit
 /// <c>LIKE '%wort%'</c>: das liest jede Zeile, bei 432 000 Zeilen Zehntelsekunden, beim vollen Bestand (weit über eine
-/// Million Spieler) auf kaltem Puffer viele Sekunden. Ein Präfix ist ein Bereich im Index.</para>
+/// Million Spieler) auf kaltem Puffer viele Sekunden. Ein Präfix ist ein Bereich im Index — im Index (NameKey, Games),
+/// damit „die meistgespielten zuerst" keine Zeile lesen muss: gemessen 2026-10-02 an 1,09 Mio. Spielern (Lumbra doppelt, ≈ mit
+/// Megabase), 128 MB Puffer, kalt: `ka%` (17 000 Kandidaten) 0,19 s statt 2,4 s mit dem Index auf NameKey allein.</para>
 ///
 /// <para>Umlaute beidseitig: der Bestand schreibt „Höcher" (Lumbra) als „hocher", die Megabase „Hoecher" als „hoecher".
 /// Getippt „Höcher" fragt beides (<see cref="LeagueRosterIndex.Spellings"/>), getippt „Hoecher" zusätzlich „hocher"

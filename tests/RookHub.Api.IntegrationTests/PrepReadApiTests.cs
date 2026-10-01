@@ -137,11 +137,57 @@ public class PrepReadApiTests(PrepReadFixture fixture) : IAsyncLifetime, IClassF
             foreach (var secret in new[] { "klarakind2014", "lichess", "Schulschach" })
                 Assert.DoesNotContain(secret, all.ToString(), StringComparison.OrdinalIgnoreCase);
             var card = JsonNode.Parse(await client.GetStringAsync($"/api/prep/player/{id}"))!;
-            Assert.True(card["accounts"]![0]!["hidden"]!.GetValue<bool>());
+            // Verwalter (hier der Admin): nur, DASS es ein Konto gibt; Leser: gar keins.
+            if (client == admin) Assert.True(card["accounts"]![0]!["hidden"]!.GetValue<bool>());
+            else Assert.Empty(card["accounts"]!.AsArray());
             // Die Partie zählt im Baum (wie bei LeagueHub), das Konto bleibt verborgen.
             var tree = JsonNode.Parse(await client.GetStringAsync($"/api/prep/player/{id}/tree?color=w&source=both"))!;
             Assert.Equal(1, tree["online"]!.GetValue<int>());
         }
+    }
+
+    [MySqlFact]
+    public async Task Accounts_ViewerOnlySure_ManagerAlsoUnsure()
+    {
+        await ImportAsync(Game("Konto, Karl", "Mair, Josef", "1. e4 c5 2. Nf3 d6", "2025.05.17", "990060"));
+        await using (var db = fixture.Schema.NewContext())
+        {
+            var sure = new LeagueOnlineAccount { FideId = "990060", Site = "lichess", UserName = "sicherkonto", Url = "https://lichess.org/@/sicherkonto",
+                Confidence = "sicher", GameCount = 1, Evidence = "Notiz-geheim" };
+            var unsure = new LeagueOnlineAccount { FideId = "990060", Site = "chesscom", UserName = "vermutet99", Url = "https://www.chess.com/member/vermutet99",
+                Confidence = "wahrscheinlich", GameCount = 1 };
+            db.LeagueOnlineAccounts.AddRange(sure, unsure);
+            await db.SaveChangesAsync();
+            db.LeagueOnlineGames.AddRange(
+                new LeagueOnlineGame { AccountId = sure.Id, FideId = "990060", ExternalId = "s1", PlayedAt = DateTime.UtcNow.AddDays(-2), Speed = "blitz",
+                    White = true, Result = "1-0", Line = "d4 d5", Moves = "d4 d5", Plies = 2 },
+                new LeagueOnlineGame { AccountId = unsure.Id, FideId = "990060", ExternalId = "u1", PlayedAt = DateTime.UtcNow.AddDays(-2), Speed = "blitz",
+                    White = true, Result = "1-0", Line = "g3 d5", Moves = "g3 d5", Plies = 2 });
+            await db.SaveChangesAsync();
+        }
+        var id = await PlayerIdAsync("990060");
+        using var viewer = Client(await UserAsync("nurleser", false, Permissions.PrepView));
+        using var manager = Client(await UserAsync("prepverwalter", false, Permissions.PrepView, Permissions.PrepManage));
+
+        var v = await viewer.GetStringAsync($"/api/prep/player/{id}");
+        var vAcc = Assert.Single(JsonNode.Parse(v)!["accounts"]!.AsArray())!;
+        Assert.Equal("sicherkonto", vAcc["user"]!.GetValue<string>());
+        Assert.DoesNotContain("vermutet99", v);
+        Assert.DoesNotContain("Notiz-geheim", v);
+        // unsure=true wirkt für Leser nicht — still wie false.
+        var vTree = JsonNode.Parse(await viewer.GetStringAsync($"/api/prep/player/{id}/tree?color=w&source=online&unsure=true"))!;
+        Assert.Equal(1, vTree["online"]!.GetValue<int>());
+        Assert.Equal("d4", Assert.Single(vTree["moves"]!.AsArray())!["san"]!.GetValue<string>());
+        var vProfile = JsonNode.Parse(await viewer.GetStringAsync($"/api/prep/player/{id}/profile?source=online&unsure=true"))!;
+        Assert.Equal(1, vProfile["online"]!.GetValue<int>());
+
+        var m = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{id}"))!;
+        Assert.Equal(new[] { "sicherkonto", "vermutet99" }, m["accounts"]!.AsArray().Select(a => a!["user"]!.GetValue<string>()).OrderBy(x => x));
+        Assert.Contains(m["accounts"]!.AsArray(), a => a!["comment"]?.GetValue<string>() == "Notiz-geheim");
+        var mTree = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{id}/tree?color=w&source=online&unsure=true"))!;
+        Assert.Equal(2, mTree["online"]!.GetValue<int>());
+        var mSure = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{id}/tree?color=w&source=online"))!;
+        Assert.Equal(1, mSure["online"]!.GetValue<int>());
     }
 
     [MySqlFact]
