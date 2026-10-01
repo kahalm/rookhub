@@ -372,6 +372,30 @@ describe('TournamentMapComponent', () => {
     expect(component.gestureHint()).toBe('touch');
   });
 
+  /**
+   * Gemessen am Handy (390x844): 591 px Karte, 70 % des Bildschirms. Ein Viewport von 390 px
+   * laesst sich in Karma nicht herstellen — geprueft wird deshalb die Regel selbst, die der
+   * Browser auf schmalen Bildschirmen anwendet.
+   */
+  it('begrenzt die Karte auf schmalen Bildschirmen auf gut die halbe Bildschirmhöhe', () => {
+    fixture.detectChanges();
+
+    const caps: string[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const rule of Array.from(rules)) {
+        if (!(rule instanceof CSSMediaRule) || !rule.media.mediaText.includes('max-width: 768px')) continue;
+        for (const inner of Array.from(rule.cssRules)) {
+          if (inner instanceof CSSStyleRule && inner.selectorText.startsWith('.map-host')) {
+            caps.push(inner.style.maxHeight);
+          }
+        }
+      }
+    }
+    expect(caps).withContext('keine Hoehengrenze fuer schmale Bildschirme').toContain('55svh');
+  });
+
   it('lässt die Karte mit der Maus weiterhin ziehen', () => {
     fakePointer(false);
     fixture.detectChanges();

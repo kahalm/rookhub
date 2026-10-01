@@ -140,6 +140,14 @@ const PinRadius = 7;
       background: var(--mat-sys-surface-container);
     }
 
+    /* Am Handy hoechstens gut die Haelfte des Bildschirms: mit 70vh (591 von 844 px) fuellte die
+       Kalenderkarte nach dem Scrollen fast alles, Filter und „Dein Turnier fehlt?" lagen
+       ausserhalb. max-height und nicht height, damit die Hoehe von aussen (Detailseite: 320px)
+       gilt, solange sie darunter bleibt. vh als Rueckfall fuer Browser ohne svh. */
+    @media (max-width: 768px) {
+      .map-host { max-height: 55vh; max-height: 55svh; }
+    }
+
     /* Mitten auf der Karte, ueber den Punkten und unter Leaflets Popups (700); faengt keine
        Ereignisse ab, damit die Geste, die ihn ausgeloest hat, ungestoert weiterlaeuft. */
     .gesture-hint {
