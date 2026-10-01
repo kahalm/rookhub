@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Teman</strong> — Valfritt: enbart vissa taktiska teman (t.ex. \"gaffel nål\")",
       "fasttrackHeading": "Svårighetsökning (Fasttrack)",
       "fasttrackP1": "Ökningen anpassar sig efter dina tidigare prestationer: den analyserar dina senaste sessioner och beräknar betyget vid vilket du vanligtvis förlorar liv.",
-      "fasttrackPhase1": "<strong>Fas 1 (Uppgifter 1–5)</strong> — Snabb ökning upp till din 1:a tröskel",
-      "fasttrackPhase2": "<strong>Fas 2 (Uppgifter 6–10)</strong> — Ökning från 1:a till 2:a tröskel",
-      "fasttrackPhase3": "<strong>Fas 3 (från Uppgift 11)</strong> — Konstant steg om 20",
+      "fasttrackPhase1": "<strong>Fas 1 (Uppgifter 1–{{p1End}})</strong> — Snabb ökning upp till din 1:a tröskel",
+      "fasttrackPhase2": "<strong>Fas 2 (Uppgifter {{p2Start}}–{{p2End}})</strong> — Ökning från 1:a till 2:a tröskel",
+      "fasttrackPhase3": "<strong>Fas 3 (från Uppgift {{p3Start}})</strong> — Konstant steg om {{flatStep}}",
       "fasttrackP2": "Tröskelvärdena (1:a/2:a tröskel) beräknas automatiskt men kan justeras manuellt. Klicka på \"Auto: …\" för att återställa värdet."
     },
     "config": {

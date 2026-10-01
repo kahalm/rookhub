@@ -1979,9 +1979,9 @@
       "settingsThemes": "<strong>Themes</strong> — Optional: nur bestimmte Taktik-Themen (z.B. „fork pin“)",
       "fasttrackHeading": "Schwierigkeits-Anstieg (Fasttrack)",
       "fasttrackP1": "Der Anstieg passt sich deiner bisherigen Performance an: er analysiert deine letzten Sessions und berechnet, bei welchem Rating du typischerweise Leben verlierst.",
-      "fasttrackPhase1": "<strong>Phase 1 (Puzzle 1–5)</strong> — Schneller Anstieg bis zu deinem 1. Schwellenwert",
-      "fasttrackPhase2": "<strong>Phase 2 (Puzzle 6–10)</strong> — Anstieg vom 1. zum 2. Schwellenwert",
-      "fasttrackPhase3": "<strong>Phase 3 (ab Puzzle 11)</strong> — Konstanter Schritt von 20",
+      "fasttrackPhase1": "<strong>Phase 1 (Puzzle 1–{{p1End}})</strong> — Schneller Anstieg bis zu deinem 1. Schwellenwert",
+      "fasttrackPhase2": "<strong>Phase 2 (Puzzle {{p2Start}}–{{p2End}})</strong> — Anstieg vom 1. zum 2. Schwellenwert",
+      "fasttrackPhase3": "<strong>Phase 3 (ab Puzzle {{p3Start}})</strong> — Konstanter Schritt von {{flatStep}}",
       "fasttrackP2": "Die Schwellenwerte (1./2. Schwellenwert) werden automatisch berechnet, können aber manuell angepasst werden. Klick auf „Auto: …“ setzt den Wert zurück."
     },
     "config": {

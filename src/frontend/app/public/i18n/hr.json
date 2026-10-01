@@ -1979,9 +1979,9 @@
       "settingsThemes": "<strong>Themes</strong> — Opcionalno: samo određene taktičke teme (npr. \"fork pin\")",
       "fasttrackHeading": "Porast težine (Fasttrack)",
       "fasttrackP1": "Porast se prilagođava tvojoj dosadašnjoj izvedbi: analizira tvoje posljednje sesije i izračunava pri kojem rejtingu obično gubiš živote.",
-      "fasttrackPhase1": "<strong>Faza 1 (zagonetke 1–5)</strong> — Brzi porast do tvog 1. praga",
-      "fasttrackPhase2": "<strong>Faza 2 (zagonetke 6–10)</strong> — Porast od 1. do 2. praga",
-      "fasttrackPhase3": "<strong>Faza 3 (od zagonetke 11)</strong> — Stalni korak od 20",
+      "fasttrackPhase1": "<strong>Faza 1 (zagonetke 1–{{p1End}})</strong> — Brzi porast do tvog 1. praga",
+      "fasttrackPhase2": "<strong>Faza 2 (zagonetke {{p2Start}}–{{p2End}})</strong> — Porast od 1. do 2. praga",
+      "fasttrackPhase3": "<strong>Faza 3 (od zagonetke {{p3Start}})</strong> — Stalni korak od {{flatStep}}",
       "fasttrackP2": "Vrijednosti pragova (1./2. prag) izračunavaju se automatski, ali se mogu ručno prilagoditi. Klik na \"Auto: …\" vraća vrijednost."
     },
     "config": {

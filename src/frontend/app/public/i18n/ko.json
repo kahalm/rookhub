@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>테마</strong> — 선택 사항: 특정 전술 테마만(예: \"fork pin\")",
       "fasttrackHeading": "난이도 상승 (패스트트랙)",
       "fasttrackP1": "상승 폭은 과거 성과에 적응합니다: 최근 세션을 분석하여 목숨을 잃는 경향이 있는 등급을 계산합니다.",
-      "fasttrackPhase1": "<strong>1단계 (퍼즐 1–5)</strong> — 첫 번째 임계값까지 빠르게 상승",
-      "fasttrackPhase2": "<strong>2단계 (퍼즐 6–10)</strong> — 첫 번째에서 두 번째 임계값까지 상승",
-      "fasttrackPhase3": "<strong>3단계 (퍼즐 11부터)</strong> — 20씩 일정하게 상승",
+      "fasttrackPhase1": "<strong>1단계 (퍼즐 1–{{p1End}})</strong> — 첫 번째 임계값까지 빠르게 상승",
+      "fasttrackPhase2": "<strong>2단계 (퍼즐 {{p2Start}}–{{p2End}})</strong> — 첫 번째에서 두 번째 임계값까지 상승",
+      "fasttrackPhase3": "<strong>3단계 (퍼즐 {{p3Start}}부터)</strong> — {{flatStep}}씩 일정하게 상승",
       "fasttrackP2": "임계값(1차/2차)은 자동으로 계산되지만 수동으로 조정할 수 있습니다. \"자동: …\"을 클릭하면 값이 초기화됩니다."
     },
     "config": {

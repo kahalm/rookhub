@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Teme</strong> — Opțional: doar anumite teme tactice (ex. „furculiță ac“)",
       "fasttrackHeading": "Creșterea dificultății (Fasttrack)",
       "fasttrackP1": "Creșterea se adaptează la performanța ta anterioară: analizează sesiunile recente și calculează ratingul la care pierzi de obicei vieți.",
-      "fasttrackPhase1": "<strong>Faza 1 (Problemele 1–5)</strong> — Creștere rapidă până la primul prag",
-      "fasttrackPhase2": "<strong>Faza 2 (Problemele 6–10)</strong> — Creștere de la primul la al doilea prag",
-      "fasttrackPhase3": "<strong>Faza 3 (de la Problema 11)</strong> — Pas constant de 20",
+      "fasttrackPhase1": "<strong>Faza 1 (Problemele 1–{{p1End}})</strong> — Creștere rapidă până la primul prag",
+      "fasttrackPhase2": "<strong>Faza 2 (Problemele {{p2Start}}–{{p2End}})</strong> — Creștere de la primul la al doilea prag",
+      "fasttrackPhase3": "<strong>Faza 3 (de la Problema {{p3Start}})</strong> — Pas constant de {{flatStep}}",
       "fasttrackP2": "Valorile pragului (primul/al doilea prag) sunt calculate automat, dar pot fi ajustate manual. Apasă „Auto: …“ pentru a reseta valoarea."
     },
     "config": {

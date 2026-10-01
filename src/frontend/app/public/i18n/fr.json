@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Thèmes</strong> — Facultatif : seulement certains thèmes tactiques (ex. « fourchette clouage »)",
       "fasttrackHeading": "Augmentation de la difficulté (Fasttrack)",
       "fasttrackP1": "L'augmentation s'adapte à vos performances passées : elle analyse vos sessions récentes et calcule le classement auquel vous perdez typiquement des vies.",
-      "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–5)</strong> — Augmentation rapide jusqu'à votre 1er seuil",
-      "fasttrackPhase2": "<strong>Phase 2 (Puzzles 6–10)</strong> — Augmentation du 1er au 2e seuil",
-      "fasttrackPhase3": "<strong>Phase 3 (à partir du puzzle 11)</strong> — Pas constant de 20",
+      "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–{{p1End}})</strong> — Augmentation rapide jusqu'à votre 1er seuil",
+      "fasttrackPhase2": "<strong>Phase 2 (Puzzles {{p2Start}}–{{p2End}})</strong> — Augmentation du 1er au 2e seuil",
+      "fasttrackPhase3": "<strong>Phase 3 (à partir du puzzle {{p3Start}})</strong> — Pas constant de {{flatStep}}",
       "fasttrackP2": "Les valeurs de seuil (1er/2e seuil) sont calculées automatiquement mais peuvent être ajustées manuellement. Cliquez sur « Auto : … » pour réinitialiser la valeur."
     },
     "config": {

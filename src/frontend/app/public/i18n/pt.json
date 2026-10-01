@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Temas</strong> — Opcional: apenas determinados temas táticos (ex.: \"garfo pregado\")",
       "fasttrackHeading": "Aumento de dificuldade (Fasttrack)",
       "fasttrackP1": "O aumento adapta-se ao seu desempenho anterior: analisa as suas sessões recentes e calcula a classificação à qual normalmente perde vidas.",
-      "fasttrackPhase1": "<strong>Fase 1 (Puzzles 1–5)</strong> — Aumento rápido até ao 1.º limiar",
-      "fasttrackPhase2": "<strong>Fase 2 (Puzzles 6–10)</strong> — Aumento do 1.º para o 2.º limiar",
-      "fasttrackPhase3": "<strong>Fase 3 (a partir do Puzzle 11)</strong> — Passo constante de 20",
+      "fasttrackPhase1": "<strong>Fase 1 (Puzzles 1–{{p1End}})</strong> — Aumento rápido até ao 1.º limiar",
+      "fasttrackPhase2": "<strong>Fase 2 (Puzzles {{p2Start}}–{{p2End}})</strong> — Aumento do 1.º para o 2.º limiar",
+      "fasttrackPhase3": "<strong>Fase 3 (a partir do Puzzle {{p3Start}})</strong> — Passo constante de {{flatStep}}",
       "fasttrackP2": "Os valores de limiar (1.º/2.º limiar) são calculados automaticamente mas podem ser ajustados manualmente. Clique em \"Auto: …\" para repor o valor."
     },
     "config": {

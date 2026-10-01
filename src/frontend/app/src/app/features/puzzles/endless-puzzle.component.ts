@@ -603,10 +603,20 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
         return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: Math.round((FIRST_RUN_ANCHOR2_RATING - FIRST_RUN_ANCHOR1_RATING) / (FIRST_RUN_ANCHOR2_INDEX - FIRST_RUN_ANCHOR1_INDEX)) });
       return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: CHAIN_FLAT_STEP });
     }
-    if (this.chainIndex < CHAIN_T1_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 1, step: this.fasttrackPhase1Step });
-    if (this.chainIndex < CHAIN_T2_INDEX) return this.translate.instant('endless.game.phaseLabel', { phase: 2, step: this.fasttrackPhase2Step });
-    return this.translate.instant('endless.game.phaseLabel', { phase: 3, step: 20 });
+    // Adaptive Kurve: Phasengrenzen und Schritt aus derselben Kurve, die die Kette erzeugt
+    // (chainRatingAt) — step = Anstieg zum nächsten Puzzle. Früher fest „/5" bzw. „20" aus einem
+    // älteren linearen Modell, während die Kette bis Puzzle 10/25 log-förmig und danach um 15 stieg.
+    const i = this.chainIndex, s = this.config.startElo, t1 = this.fasttrackAvgFirst, t2 = this.fasttrackAvgSecond;
+    const step = chainRatingAt(i + 1, s, t1, t2) - chainRatingAt(i, s, t1, t2);
+    const phase = i < CHAIN_T1_INDEX ? 1 : i < CHAIN_T2_INDEX ? 2 : 3;
+    return this.translate.instant('endless.game.phaseLabel', { phase, step });
   }
+
+  /** Phasengrenzen der Hilfe (1-basierte Puzzle-Nummern) aus denselben Konstanten wie die Kette. */
+  readonly phaseHelp = {
+    p1End: CHAIN_T1_INDEX, p2Start: CHAIN_T1_INDEX + 1, p2End: CHAIN_T2_INDEX,
+    p3Start: CHAIN_T2_INDEX + 1, flatStep: CHAIN_FLAT_STEP,
+  };
 
   /**
    * Erster Lauf des Users (keine abgeschlossene Session in der Historie) → bewusst steile,

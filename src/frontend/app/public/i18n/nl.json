@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Thema's</strong> — Optioneel: alleen bepaalde tactische thema's (bijv. \"vork pen\")",
       "fasttrackHeading": "Moeilijkheidstoename (Fasttrack)",
       "fasttrackP1": "De toename past zich aan je eerdere prestaties aan: het analyseert je recente sessies en berekent de rating waarbij je doorgaans levens verliest.",
-      "fasttrackPhase1": "<strong>Fase 1 (puzzels 1–5)</strong> — Snelle toename tot je 1e drempelwaarde",
-      "fasttrackPhase2": "<strong>Fase 2 (puzzels 6–10)</strong> — Toename van de 1e naar de 2e drempelwaarde",
-      "fasttrackPhase3": "<strong>Fase 3 (vanaf puzzel 11)</strong> — Vaste stap van 20",
+      "fasttrackPhase1": "<strong>Fase 1 (puzzels 1–{{p1End}})</strong> — Snelle toename tot je 1e drempelwaarde",
+      "fasttrackPhase2": "<strong>Fase 2 (puzzels {{p2Start}}–{{p2End}})</strong> — Toename van de 1e naar de 2e drempelwaarde",
+      "fasttrackPhase3": "<strong>Fase 3 (vanaf puzzel {{p3Start}})</strong> — Vaste stap van {{flatStep}}",
       "fasttrackP2": "De drempelwaarden (1e/2e drempel) worden automatisch berekend maar kunnen handmatig worden aangepast. Klik op \"Auto: …\" om de waarde te resetten."
     },
     "config": {

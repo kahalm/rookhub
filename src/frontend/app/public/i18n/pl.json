@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Motywy</strong> — Opcjonalnie: tylko określone motywy taktyczne (np. „widelec szpila”)",
       "fasttrackHeading": "Wzrost trudności (Fasttrack)",
       "fasttrackP1": "Wzrost dostosowuje się do Twoich ostatnich wyników: analizuje ostatnie sesje i oblicza ocenę, przy której zazwyczaj tracisz życia.",
-      "fasttrackPhase1": "<strong>Faza 1 (zadania 1–5)</strong> — Szybki wzrost do Twojego 1. progu",
-      "fasttrackPhase2": "<strong>Faza 2 (zadania 6–10)</strong> — Wzrost od 1. do 2. progu",
-      "fasttrackPhase3": "<strong>Faza 3 (od zadania 11)</strong> — Stały krok o 20",
+      "fasttrackPhase1": "<strong>Faza 1 (zadania 1–{{p1End}})</strong> — Szybki wzrost do Twojego 1. progu",
+      "fasttrackPhase2": "<strong>Faza 2 (zadania {{p2Start}}–{{p2End}})</strong> — Wzrost od 1. do 2. progu",
+      "fasttrackPhase3": "<strong>Faza 3 (od zadania {{p3Start}})</strong> — Stały krok o {{flatStep}}",
       "fasttrackP2": "Wartości progów (1./2. próg) są obliczane automatycznie, ale można je dostosować ręcznie. Kliknij „Auto: …”, aby zresetować wartość."
     },
     "config": {

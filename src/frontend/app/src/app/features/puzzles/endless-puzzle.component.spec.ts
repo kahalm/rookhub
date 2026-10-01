@@ -2,6 +2,7 @@ import { throwError } from 'rxjs';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { EndlessChainService } from './endless-chain.service';
 import { ThemePreset } from './puzzle-theme-presets';
+import { chainRatingAt, CHAIN_FLAT_STEP, CHAIN_T1_INDEX, CHAIN_T2_INDEX } from './endless-prefetch.util';
 
 /**
  * Fokussierter Test der Analyse-Navigation im Endless-Modus (ohne TestBed/Template):
@@ -1062,5 +1063,63 @@ describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
     c.onDepthChange();
 
     expect(save.calls.mostRecent().args[2]).toBeNull();
+  });
+});
+
+// Codereview F2-013: Phasenanzeige und Hilfe stammten aus einem älteren linearen Modell — „Phase 3 (Schritt 20)"
+// und „Phase 1 (Puzzle 1–5)", während die Kette bis Puzzle 10/25 log-förmig und danach um 15 stieg.
+describe('EndlessPuzzleComponent Phasenanzeige (F2-013)', () => {
+  /** Kein Erst-Lauf (eine Session in der Historie) → adaptive Kurve; translate gibt die Parameter mit aus. */
+  function adaptive(): any {
+    const c = makeComponent();
+    c.sessionHistory = [{ timestamp: 1, config: { ...c.config }, totalSolved: 5, maxRating: 1200, durationSeconds: 60, mistakeAtRatings: [1000] }];
+    c.translate.instant = (k: string, p?: object) => (p ? `${k} ${JSON.stringify(p)}` : k);
+    return c;
+  }
+  const label = (phase: number, step: number) => `endless.game.phaseLabel ${JSON.stringify({ phase, step })}`;
+  const stepAt = (c: any, i: number) => {
+    const s = c.config.startElo, t1 = c.fasttrackAvgFirst, t2 = c.fasttrackAvgSecond;
+    return chainRatingAt(i + 1, s, t1, t2) - chainRatingAt(i, s, t1, t2);
+  };
+
+  it('nennt ab Phase 3 den echten Schritt der Kette (CHAIN_FLAT_STEP, nicht 20)', () => {
+    const c = adaptive();
+    c.chainIndex = 30;
+    expect(c.currentPhaseLabel).toBe(label(3, CHAIN_FLAT_STEP));
+  });
+
+  it('Phase 1/2: Schritt = Anstieg der Kette zum nächsten Puzzle, Grenzen bei CHAIN_T1_INDEX/CHAIN_T2_INDEX', () => {
+    const c = adaptive();
+    for (const [i, phase] of [[0, 1], [CHAIN_T1_INDEX - 1, 1], [CHAIN_T1_INDEX, 2], [CHAIN_T2_INDEX - 1, 2], [CHAIN_T2_INDEX, 3]]) {
+      c.chainIndex = i;
+      expect(c.currentPhaseLabel).withContext(`chainIndex ${i}`).toBe(label(phase, stepAt(c, i)));
+    }
+    c.chainIndex = 0;
+    expect(stepAt(c, 0)).not.toBe(c.fasttrackPhase1Step);   // die alte „/5"-Anzeige lag daneben
+  });
+
+  it('Hilfe-Parameter decken sich mit den Phasengrenzen (1-basierte Puzzle-Nummern)', () => {
+    const c = adaptive();
+    expect(c.phaseHelp).toEqual({
+      p1End: CHAIN_T1_INDEX, p2Start: CHAIN_T1_INDEX + 1, p2End: CHAIN_T2_INDEX,
+      p3Start: CHAIN_T2_INDEX + 1, flatStep: CHAIN_FLAT_STEP,
+    });
+    c.chainIndex = c.phaseHelp.p1End - 1;      // letztes Puzzle von Phase 1 laut Hilfe
+    expect(c.currentPhaseLabel).toContain('"phase":1');
+    c.chainIndex = c.phaseHelp.p3Start - 1;    // erstes Puzzle von Phase 3 laut Hilfe
+    expect(c.currentPhaseLabel).toContain('"phase":3');
+  });
+
+  it('die Hilfetexte (en) setzen genau diese Parameter ein, keine festen Zahlen mehr', async () => {
+    let en: any = null;
+    for (const url of ['/i18n/en.json', '/base/i18n/en.json']) {
+      const res = await fetch(url);
+      if (res.ok) { en = await res.json(); break; }
+    }
+    const help = en.endless.help;
+    const params = (s: string) => [...s.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]).sort();
+    expect(params(help.fasttrackPhase1)).toEqual(['p1End']);
+    expect(params(help.fasttrackPhase2)).toEqual(['p2End', 'p2Start']);
+    expect(params(help.fasttrackPhase3)).toEqual(['flatStep', 'p3Start']);
   });
 });

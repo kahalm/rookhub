@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Temi</strong> — Facoltativo: solo certi temi tattici (es. \"forchetta inchiodatura\")",
       "fasttrackHeading": "Aumento della difficoltà (Fasttrack)",
       "fasttrackP1": "L'aumento si adatta alle prestazioni passate: analizza le sessioni recenti e calcola la valutazione alla quale si perdono tipicamente le vite.",
-      "fasttrackPhase1": "<strong>Fase 1 (Puzzle 1–5)</strong> — Aumento rapido fino alla 1ª soglia",
-      "fasttrackPhase2": "<strong>Fase 2 (Puzzle 6–10)</strong> — Aumento dalla 1ª alla 2ª soglia",
-      "fasttrackPhase3": "<strong>Fase 3 (dal Puzzle 11)</strong> — Incremento costante di 20",
+      "fasttrackPhase1": "<strong>Fase 1 (Puzzle 1–{{p1End}})</strong> — Aumento rapido fino alla 1ª soglia",
+      "fasttrackPhase2": "<strong>Fase 2 (Puzzle {{p2Start}}–{{p2End}})</strong> — Aumento dalla 1ª alla 2ª soglia",
+      "fasttrackPhase3": "<strong>Fase 3 (dal Puzzle {{p3Start}})</strong> — Incremento costante di {{flatStep}}",
       "fasttrackP2": "I valori soglia (1ª/2ª soglia) vengono calcolati automaticamente ma possono essere modificati manualmente. Clicca \"Auto: …\" per reimpostare il valore."
     },
     "config": {

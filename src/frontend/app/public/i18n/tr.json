@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Temalar</strong> — İsteğe bağlı: yalnızca belirli taktik temalar (örn. \"çatal bağlama\")",
       "fasttrackHeading": "Zorluk artışı (Hızlı Geçiş)",
       "fasttrackP1": "Artış geçmiş performansınıza göre uyarlanır: son oturumlarınızı analiz eder ve genellikle can kaybettiğiniz dereceyi hesaplar.",
-      "fasttrackPhase1": "<strong>Aşama 1 (Problem 1–5)</strong> — 1. eşiğe kadar hızlı artış",
-      "fasttrackPhase2": "<strong>Aşama 2 (Problem 6–10)</strong> — 1. eşikten 2. eşiğe artış",
-      "fasttrackPhase3": "<strong>Aşama 3 (Problem 11'den itibaren)</strong> — Sabit 20 adım",
+      "fasttrackPhase1": "<strong>Aşama 1 (Problem 1–{{p1End}})</strong> — 1. eşiğe kadar hızlı artış",
+      "fasttrackPhase2": "<strong>Aşama 2 (Problem {{p2Start}}–{{p2End}})</strong> — 1. eşikten 2. eşiğe artış",
+      "fasttrackPhase3": "<strong>Aşama 3 (Problem {{p3Start}} ve sonrası)</strong> — Sabit {{flatStep}} adım",
       "fasttrackP2": "Eşik değerleri (1./2. eşik) otomatik hesaplanır ancak manuel olarak ayarlanabilir. Değeri sıfırlamak için \"Otomatik: …\" düğmesine tıklayın."
     },
     "config": {

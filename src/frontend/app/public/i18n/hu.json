@@ -1578,9 +1578,9 @@
       "settingsThemes": "<strong>Témák</strong> – opcionális: csak bizonyos taktikai témák (pl. \"villa szeg\")",
       "fasttrackHeading": "Nehézségnövelés (Gyorsított)",
       "fasttrackP1": "A növekedés az eddigi teljesítményedhez igazodik: elemzi a közelmúlt meneteit, és kiszámítja azt az értékelést, ahol általában életet veszítesz.",
-      "fasttrackPhase1": "<strong>1. fázis (1–5. feladvány)</strong> – Gyors növekedés az 1. küszöbig",
-      "fasttrackPhase2": "<strong>2. fázis (6–10. feladvány)</strong> – Növekedés az 1. és 2. küszöb között",
-      "fasttrackPhase3": "<strong>3. fázis (11. feladványtól)</strong> – Állandó 20-as lépés",
+      "fasttrackPhase1": "<strong>1. fázis (1–{{p1End}}. feladvány)</strong> – Gyors növekedés az 1. küszöbig",
+      "fasttrackPhase2": "<strong>2. fázis ({{p2Start}}–{{p2End}}. feladvány)</strong> – Növekedés az 1. és 2. küszöb között",
+      "fasttrackPhase3": "<strong>3. fázis ({{p3Start}}. feladványtól)</strong> – Állandó lépésköz: {{flatStep}}",
       "fasttrackP2": "A küszöbértékek (1./2. küszöb) automatikusan kerülnek kiszámításra, de kézzel is módosíthatók. Kattints az \"Auto: …\" gombra az érték visszaállításához."
     },
     "config": {

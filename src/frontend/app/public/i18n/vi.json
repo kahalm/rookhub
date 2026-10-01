@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Chủ đề</strong> — Tùy chọn: chỉ các chủ đề chiến thuật nhất định (ví dụ: \"nĩa ghim\")",
       "fasttrackHeading": "Tăng độ khó (Fasttrack)",
       "fasttrackP1": "Mức tăng thích nghi theo hiệu suất gần đây của bạn: nó phân tích các phiên chơi gần đây và tính toán xếp hạng mà bạn thường mất mạng.",
-      "fasttrackPhase1": "<strong>Giai đoạn 1 (Bài 1–5)</strong> — Tăng nhanh đến ngưỡng thứ 1",
-      "fasttrackPhase2": "<strong>Giai đoạn 2 (Bài 6–10)</strong> — Tăng từ ngưỡng thứ 1 đến thứ 2",
-      "fasttrackPhase3": "<strong>Giai đoạn 3 (từ Bài 11)</strong> — Bước tăng cố định là 20",
+      "fasttrackPhase1": "<strong>Giai đoạn 1 (Bài 1–{{p1End}})</strong> — Tăng nhanh đến ngưỡng thứ 1",
+      "fasttrackPhase2": "<strong>Giai đoạn 2 (Bài {{p2Start}}–{{p2End}})</strong> — Tăng từ ngưỡng thứ 1 đến thứ 2",
+      "fasttrackPhase3": "<strong>Giai đoạn 3 (từ Bài {{p3Start}})</strong> — Bước tăng cố định là {{flatStep}}",
       "fasttrackP2": "Các giá trị ngưỡng (ngưỡng 1/2) được tính tự động nhưng có thể điều chỉnh thủ công. Nhấp \"Tự động: …\" để đặt lại giá trị."
     },
     "config": {

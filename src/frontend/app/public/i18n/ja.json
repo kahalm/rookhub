@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>テーマ</strong> — オプション: 特定の戦術テーマのみ（例: 「fork pin」）",
       "fasttrackHeading": "難易度の上昇（ファストトラック）",
       "fasttrackP1": "上昇は過去のパフォーマンスに基づいて調整されます。直近のセッションを分析し、通常ライフを失うレーティングを計算します。",
-      "fasttrackPhase1": "<strong>フェーズ 1（パズル 1〜5）</strong> — 第1閾値まで急速に上昇",
-      "fasttrackPhase2": "<strong>フェーズ 2（パズル 6〜10）</strong> — 第1閾値から第2閾値まで上昇",
-      "fasttrackPhase3": "<strong>フェーズ 3（パズル 11 以降）</strong> — 20 ずつ一定のステップ",
+      "fasttrackPhase1": "<strong>フェーズ 1（パズル 1〜{{p1End}}）</strong> — 第1閾値まで急速に上昇",
+      "fasttrackPhase2": "<strong>フェーズ 2（パズル {{p2Start}}〜{{p2End}}）</strong> — 第1閾値から第2閾値まで上昇",
+      "fasttrackPhase3": "<strong>フェーズ 3（パズル {{p3Start}} 以降）</strong> — {{flatStep}} ずつ一定のステップ",
       "fasttrackP2": "閾値（第1/第2）は自動で計算されますが、手動で調整することもできます。「自動: …」をクリックして値をリセットしてください。"
     },
     "config": {

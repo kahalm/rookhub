@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Témata</strong> – Volitelné: pouze určitá taktická témata (např. \"vidlička špendlík\")",
       "fasttrackHeading": "Zvyšování obtížnosti (Fasttrack)",
       "fasttrackP1": "Zvyšování se přizpůsobuje vašemu minulému výkonu: analyzuje vaše nedávné sezení a vypočítá hodnocení, při kterém obvykle ztrácíte životy.",
-      "fasttrackPhase1": "<strong>Fáze 1 (Úlohy 1–5)</strong> – Rychlý nárůst k 1. prahu",
-      "fasttrackPhase2": "<strong>Fáze 2 (Úlohy 6–10)</strong> – Nárůst od 1. ke 2. prahu",
-      "fasttrackPhase3": "<strong>Fáze 3 (od Úlohy 11)</strong> – Konstantní krok 20",
+      "fasttrackPhase1": "<strong>Fáze 1 (Úlohy 1–{{p1End}})</strong> – Rychlý nárůst k 1. prahu",
+      "fasttrackPhase2": "<strong>Fáze 2 (Úlohy {{p2Start}}–{{p2End}})</strong> – Nárůst od 1. ke 2. prahu",
+      "fasttrackPhase3": "<strong>Fáze 3 (od Úlohy {{p3Start}})</strong> – Konstantní krok {{flatStep}}",
       "fasttrackP2": "Prahové hodnoty (1./2. práh) se počítají automaticky, ale lze je nastavit ručně. Klikněte na \"Auto: …\" pro resetování hodnoty."
     },
     "config": {

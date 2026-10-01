@@ -1979,9 +1979,9 @@
       "settingsThemes": "<strong>Themes</strong> — Optional: only certain tactical themes (e.g. \"fork pin\")",
       "fasttrackHeading": "Difficulty increase (Fasttrack)",
       "fasttrackP1": "The increase adapts to your past performance: it analyses your recent sessions and calculates the rating at which you typically lose lives.",
-      "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–5)</strong> — Fast increase up to your 1st threshold",
-      "fasttrackPhase2": "<strong>Phase 2 (Puzzles 6–10)</strong> — Increase from the 1st to the 2nd threshold",
-      "fasttrackPhase3": "<strong>Phase 3 (from Puzzle 11)</strong> — Constant step of 20",
+      "fasttrackPhase1": "<strong>Phase 1 (Puzzles 1–{{p1End}})</strong> — Fast increase up to your 1st threshold",
+      "fasttrackPhase2": "<strong>Phase 2 (Puzzles {{p2Start}}–{{p2End}})</strong> — Increase from the 1st to the 2nd threshold",
+      "fasttrackPhase3": "<strong>Phase 3 (from Puzzle {{p3Start}})</strong> — Constant step of {{flatStep}}",
       "fasttrackP2": "The threshold values (1st/2nd threshold) are calculated automatically but can be adjusted manually. Click \"Auto: …\" to reset the value."
     },
     "config": {

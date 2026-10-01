@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>主题</strong>——可选：仅限特定战术主题（例如「闪击 牵制」）",
       "fasttrackHeading": "难度递增（快速提升）",
       "fasttrackP1": "递增幅度根据你的历史表现自动调整：分析你近期的对局，计算你通常在哪个评分段失命。",
-      "fasttrackPhase1": "<strong>阶段 1（第 1–5 题）</strong>——快速提升至第 1 阈值",
-      "fasttrackPhase2": "<strong>阶段 2（第 6–10 题）</strong>——从第 1 阈值提升至第 2 阈值",
-      "fasttrackPhase3": "<strong>阶段 3（第 11 题起）</strong>——每步固定上涨 20",
+      "fasttrackPhase1": "<strong>阶段 1（第 1–{{p1End}} 题）</strong>——快速提升至第 1 阈值",
+      "fasttrackPhase2": "<strong>阶段 2（第 {{p2Start}}–{{p2End}} 题）</strong>——从第 1 阈值提升至第 2 阈值",
+      "fasttrackPhase3": "<strong>阶段 3（第 {{p3Start}} 题起）</strong>——每步固定上涨 {{flatStep}}",
       "fasttrackP2": "阈值（第 1/第 2 阈值）自动计算，也可手动调整。点击「自动：…」以重置为自动值。"
     },
     "config": {

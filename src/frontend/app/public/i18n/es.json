@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Temas</strong> — Opcional: solo ciertos temas tácticos (p. ej. \"horquilla clavada\")",
       "fasttrackHeading": "Aumento de dificultad (Fasttrack)",
       "fasttrackP1": "El aumento se adapta a tu rendimiento pasado: analiza tus sesiones recientes y calcula la puntuación a la que normalmente pierdes vidas.",
-      "fasttrackPhase1": "<strong>Fase 1 (Ejercicios 1–5)</strong> — Aumento rápido hasta tu 1.º umbral",
-      "fasttrackPhase2": "<strong>Fase 2 (Ejercicios 6–10)</strong> — Aumento del 1.º al 2.º umbral",
-      "fasttrackPhase3": "<strong>Fase 3 (desde el ejercicio 11)</strong> — Paso constante de 20",
+      "fasttrackPhase1": "<strong>Fase 1 (Ejercicios 1–{{p1End}})</strong> — Aumento rápido hasta tu 1.º umbral",
+      "fasttrackPhase2": "<strong>Fase 2 (Ejercicios {{p2Start}}–{{p2End}})</strong> — Aumento del 1.º al 2.º umbral",
+      "fasttrackPhase3": "<strong>Fase 3 (desde el ejercicio {{p3Start}})</strong> — Paso constante de {{flatStep}}",
       "fasttrackP2": "Los valores de umbral (1.º/2.º umbral) se calculan automáticamente pero pueden ajustarse manualmente. Haz clic en \"Auto: …\" para restablecer el valor."
     },
     "config": {

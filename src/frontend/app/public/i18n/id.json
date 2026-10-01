@@ -624,9 +624,9 @@
       "settingsThemes": "<strong>Tema</strong> — Opsional: hanya tema taktis tertentu (mis. \"garpu pin\")",
       "fasttrackHeading": "Peningkatan kesulitan (Fasttrack)",
       "fasttrackP1": "Peningkatan disesuaikan dengan performa masa lalu Anda: menganalisis sesi terkini dan menghitung rating di mana Anda biasanya kehilangan nyawa.",
-      "fasttrackPhase1": "<strong>Fase 1 (Puzzle 1–5)</strong> — Peningkatan cepat hingga ambang batas ke-1",
-      "fasttrackPhase2": "<strong>Fase 2 (Puzzle 6–10)</strong> — Peningkatan dari ambang batas ke-1 ke ke-2",
-      "fasttrackPhase3": "<strong>Fase 3 (mulai Puzzle 11)</strong> — Langkah konstan sebesar 20",
+      "fasttrackPhase1": "<strong>Fase 1 (Puzzle 1–{{p1End}})</strong> — Peningkatan cepat hingga ambang batas ke-1",
+      "fasttrackPhase2": "<strong>Fase 2 (Puzzle {{p2Start}}–{{p2End}})</strong> — Peningkatan dari ambang batas ke-1 ke ke-2",
+      "fasttrackPhase3": "<strong>Fase 3 (mulai Puzzle {{p3Start}})</strong> — Langkah konstan sebesar {{flatStep}}",
       "fasttrackP2": "Nilai ambang batas (ke-1/ke-2) dihitung otomatis tetapi dapat disesuaikan secara manual. Klik \"Otomatis: …\" untuk mereset nilainya."
     },
     "config": {
