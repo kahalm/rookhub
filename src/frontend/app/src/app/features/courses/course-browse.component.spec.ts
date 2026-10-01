@@ -266,4 +266,35 @@ describe('CourseBrowseComponent', () => {
       expect(comp.comment).toBe('english');
     });
   });
+
+  // Codereview 2026-09-29 (F3-015): Pfeil runter im offenen Menue „An Aufgabenblatt" waehlte das Ziel UND sprang zur
+  // naechsten Linie — Enter schickte dann die Stellung einer ANDEREN Linie aufs Blatt.
+  it('arrow keys inside an open menu move the menu selection, not the line', () => {
+    const comp = build([line({ id: 1 }), line({ id: 2 })]);
+    const press = (target: EventTarget, handled = false) => {
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+      Object.defineProperty(e, 'target', { value: target });
+      if (handled) e.preventDefault();      // MatMenu/ListKeyManager: preventDefault, aber kein stopPropagation
+      comp.onKeyDown(e);
+    };
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const pane = document.createElement('div');
+    pane.className = 'cdk-overlay-pane';
+    const item = document.createElement('button');
+    item.setAttribute('mat-menu-item', '');
+    pane.appendChild(item);
+    overlay.appendChild(pane);
+    document.body.appendChild(overlay);
+    try {
+      press(item);
+      press(item, true);
+      press(document.body, true);
+      expect(comp.selected?.id).toBe(1);
+    } finally {
+      overlay.remove();
+    }
+    press(document.body);                   // auf der Seite: naechste Linie wie gewohnt
+    expect(comp.selected?.id).toBe(2);
+  });
 });

@@ -31,6 +31,7 @@ import { MarkSet } from '../../shared/lines/mark-set';
 import { CourseLanguageService, CourseRef } from './course-language.service';
 import { labelOr } from './course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from './course-lang-picker.component';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /** Eine Gruppe von Linien unter einem Kapitel (name=null → „ohne Kapitel"). Die Gruppierung selbst
  *  liegt in `shared/lines/chapter-groups.util` — sie teilt sich diese Ansicht mit der
@@ -691,8 +692,9 @@ export class CourseBrowseComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    // Nicht im offenen Menue („An Aufgabenblatt"): Pfeil runter waehlte dort das Ziel UND sprang zur naechsten
+    // Linie — Enter schickte dann deren Stellung aufs Blatt.
+    if (!isBoardHotkey(e)) return;
     if (!this.selected) return;
     if (e.key === 'ArrowLeft') { e.preventDefault(); this.prevPly(); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); this.nextPly(); }

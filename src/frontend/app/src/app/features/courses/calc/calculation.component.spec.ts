@@ -770,6 +770,25 @@ describe('CalculationComponent Tastatur', () => {
     component.onKeydown({ key: 'ArrowLeft', target: { tagName: 'INPUT' }, preventDefault: () => { /* egal */ } } as never);
     expect(component.cursorId).toBe(cursor);
   });
+
+  it('leaves keys alone that an open chapter/position menu already handles', () => {
+    const { component } = make();
+    load(component);
+    component.onMove({ orig: 'f3' as never, dest: 'e5' as never });
+    const cursor = component.cursorId;
+    const overlay = document.createElement('div');
+    overlay.className = 'cdk-overlay-container';
+    const item = document.createElement('button');
+    overlay.appendChild(item);
+    document.body.appendChild(overlay);
+    try {
+      component.onKeydown({ key: 'ArrowLeft', target: item, preventDefault: () => { /* egal */ } } as never);
+      component.onKeydown({ key: 'ArrowLeft', target: { tagName: 'DIV' }, defaultPrevented: true, preventDefault: () => { /* egal */ } } as never);
+      expect(component.cursorId).toBe(cursor);
+    } finally {
+      overlay.remove();
+    }
+  });
 });
 
 describe('CalculationComponent Symbol-Erklärungen', () => {

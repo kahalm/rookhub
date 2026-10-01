@@ -29,6 +29,7 @@ import { findPositionInGames, formatSansWithNumbers, normalizeFen } from './posi
 import { RepertoireDetail } from '../../core/models';
 import { downloadBlob } from '../../shared/download.util';
 import { pgnFileName, repertoireDownloadPgn } from '../../shared/pgn-export.util';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
 
@@ -474,6 +475,7 @@ export class RepertoireDetailComponent implements OnInit, DoCheck {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
     if (this.mode !== 'lines' || this.viewerService.selectedLineIndex < 0) return;
+    if (!isBoardHotkey(event)) return;
     switch (event.key) {
       case 'ArrowLeft':
         event.preventDefault();

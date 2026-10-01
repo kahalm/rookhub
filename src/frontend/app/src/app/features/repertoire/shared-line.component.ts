@@ -11,6 +11,7 @@ import { MoveListComponent } from '../../shared/pgn-viewer/move-list.component';
 import { PgnViewerService } from '../../shared/pgn-viewer/pgn-viewer.service';
 import { PreferencesService } from '../../core/preferences.service';
 import { RepertoireService, SharedLine } from '../../core/repertoire.service';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /**
  * Öffentliche Nur-Ansehen-Seite einer geteilten Repertoire-Linie (Route <c>/l/:token</c>, kein
@@ -126,6 +127,7 @@ export class SharedLineComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    if (!isBoardHotkey(event)) return;
     if (event.key === 'ArrowLeft') { event.preventDefault(); this.service.goBack(); }
     else if (event.key === 'ArrowRight') { event.preventDefault(); this.service.goForward(); }
   }

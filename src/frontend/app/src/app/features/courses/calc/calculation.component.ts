@@ -49,6 +49,7 @@ import { AuthService } from '../../../core/auth.service';
 import { CourseLanguageService, CourseRef } from '../course-language.service';
 import { labelOr } from '../course-language.util';
 import { CourseLangPickerComponent, MachineNoteComponent } from '../course-lang-picker.component';
+import { isBoardHotkey } from '../../../shared/keyboard.util';
 import {
   CalcChapterSums, CalcPositionGroup, applyChapterSums, chapterGroupLabel, groupByChapter,
   pickChapterIndex, serverChapterSums,
@@ -1570,10 +1571,7 @@ export class CalculationComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const target = event.target as HTMLElement | null;
-    const tag = target?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+    if (!isBoardHotkey(event)) return;
 
     switch (event.key) {
       case 'ArrowLeft': this.goBack(); break;

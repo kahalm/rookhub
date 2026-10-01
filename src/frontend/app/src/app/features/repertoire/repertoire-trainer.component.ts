@@ -36,6 +36,7 @@ import { ExplorerAnalysisResult, RepertoireExplorerService, formatPercent } from
 import { normalizeFen } from './position-filter.util';
 import { destsAt, linesInChapter, userMoveCount } from './repertoire-trainer.util';
 import { localStore, readRaw, writeRaw } from '../../core/local-json-store';
+import { isBoardHotkey } from '../../shared/keyboard.util';
 
 /** „Häufigste zuerst" merkt sich das Gerät — wie die übrigen Anzeige-Vorlieben des Trainers. */
 const FREQ_ORDER_KEY = 'rookhub_rep_train_freq_order';
@@ -865,8 +866,7 @@ export class RepertoireTrainerComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent): void {
     if (e.key !== ' ' && e.key !== 'Spacebar' && e.key !== 'Enter') return;
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (!isBoardHotkey(e)) return;
     let acted = true;
     if (this.phase === 'LINE_DONE') this.continueLine();
     else if (this.phase === 'COMMENT') this.continueFromComment();

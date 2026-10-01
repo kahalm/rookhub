@@ -16,6 +16,7 @@ import { Flashcard, buildFlashcard, buildRepertoireFlashcards } from './flashcar
 import { FlashcardBoardComponent } from './flashcard-board.component';
 import { BoardFullscreenButtonComponent } from '../../../shared/fullscreen/board-fullscreen-button.component';
 import { CourseLanguageService } from '../course-language.service';
+import { isBoardHotkey } from '../../../shared/keyboard.util';
 
 /**
  * Druckansicht „Flashcards": je Kurs-Linie eine Karteikarte — VORN die Endstellung mit den
@@ -236,8 +237,7 @@ export class FlashcardsComponent implements OnInit {
   @HostListener('document:keydown', ['$event'])
   onKey(event: KeyboardEvent): void {
     if (this.view !== 'digital' || this.loading || !this.cards.length) return;
-    const t = event.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (!isBoardHotkey(event)) return;
     if (event.key === 'ArrowRight') { this.next(); event.preventDefault(); }
     else if (event.key === 'ArrowLeft') { this.prev(); event.preventDefault(); }
     else if (event.key === ' ' || event.key === 'Enter') { this.flip(); event.preventDefault(); }
