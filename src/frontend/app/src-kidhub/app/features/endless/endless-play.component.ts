@@ -32,7 +32,10 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
           <span [class.lost]="$index >= lives()">{{ $index < lives() ? '❤️' : '🤍' }}</span>
         }
       </span>
-      <span class="score">⭐ {{ solved() }}</span>
+      <!-- ✅ statt ⭐: der Stern heisst auf KidHub „Bewertungsstern einer Stufe" (Startseite, Stufenkarte) — hier zaehlen die
+           geschafften Aufgaben des Laufs, die in keine Sternsumme eingehen (Codereview 2026-09-29, UX-065). -->
+      <span class="score" role="img" [attr.aria-label]="'kids.endless.result' | translate: { count: solved() }"
+            [title]="'kids.endless.result' | translate: { count: solved() }">✅ {{ solved() }}</span>
     </header>
 
     @if (over()) {

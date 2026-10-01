@@ -94,6 +94,23 @@ describe('EndlessPlayComponent', () => {
     expect(c.hintCost()).toBe('free');
   });
 
+  /** Codereview 2026-09-29, UX-065: der Kopf zeigte die geschafften Aufgaben als „⭐ N" — derselbe Stern wie die
+   *  Bewertungssterne der Stufen auf Start und Stufenkarte, in deren Summe der Lauf aber nie eingeht. */
+  it('zaehlt die geschafften Aufgaben im Kopf mit eigenem Zeichen, nicht mit dem Bewertungsstern', () => {
+    const f = TestBed.createComponent(EndlessPlayComponent);
+    f.detectChanges();
+    const c = f.componentInstance;
+    c.onSolved(); c.onNext();
+    c.onSolved(); c.onNext();
+    f.detectChanges();
+
+    const head = (f.nativeElement as HTMLElement).querySelector('header.head')!;
+    const score = head.querySelector<HTMLElement>('.score')!;
+    expect(score.textContent!.trim()).toBe('✅ 2');
+    expect(head.textContent).not.toContain('⭐');
+    expect(score.getAttribute('aria-label')).toBe('kids.endless.result');
+  });
+
   it('drei Herzen weg: nach der Pause vorbei, Lauf mit erstem Fehler und bestem sauberen Rating gemerkt', fakeAsync(() => {
     const c = create();
     c.onSolved(); c.onNext();            // 700 sauber
