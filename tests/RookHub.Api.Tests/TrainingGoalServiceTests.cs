@@ -1069,6 +1069,43 @@ public class TrainingGoalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task StopTimer_LongLabelAndNote_NoteFitsTheColumn()
+    {
+        // Codereview N9-006: „{Label} — {Notiz}" kam auf bis zu 303 Zeichen, die Spalte hat 200 —
+        // MariaDB lehnte den INSERT ab, das Stoppen endete mit 500 und der Timer blieb stehen.
+        var u = await CreateUserAsync();
+        var label = new string('L', 100);
+        _db.ActivityTimers.Add(new ActivityTimer { UserId = u.Id, Label = label, Kind = ManualActivityKind.Coaching, StartedAt = DateTime.UtcNow.AddMinutes(-30) });
+        await _db.SaveChangesAsync();
+
+        var saved = await _service.StopTimerAsync(u.Id, new() { Note = new string('n', 180) });
+
+        Assert.NotNull(saved);
+        Assert.Equal(TrainingGoalService.ManualNoteMaxLength, saved!.Note!.Length);
+        Assert.StartsWith(label + " — n", saved.Note);
+        Assert.Empty(_db.ActivityTimers.Where(t => t.UserId == u.Id));
+    }
+
+    [Fact]
+    public void ComposeTimerNote_ShortStaysWhole_LongCutsBeforeSurrogatePair()
+    {
+        Assert.Equal("Coaching", TrainingGoalService.ComposeTimerNote("Coaching", "   "));
+        Assert.Equal("Coaching — Endspiele", TrainingGoalService.ComposeTimerNote("Coaching", "  Endspiele "));
+
+        // Zeichen 200 wäre die erste Hälfte eines Emoji → kein halbes Surrogat im Text.
+        var note = TrainingGoalService.ComposeTimerNote(new string('a', 100), new string('b', 96) + "😀😀");
+        Assert.Equal(199, note.Length);
+        Assert.False(char.IsHighSurrogate(note[^1]));
+    }
+
+    [Fact]
+    public void ManualNoteMaxLength_MatchesTheColumn()
+    {
+        var max = _db.Model.FindEntityType(typeof(ManualActivity))!.FindProperty(nameof(ManualActivity.Note))!.GetMaxLength();
+        Assert.Equal(TrainingGoalService.ManualNoteMaxLength, max);
+    }
+
+    [Fact]
     public async Task StopTimer_PersistsThemeOverride()
     {
         var u = await CreateUserAsync();

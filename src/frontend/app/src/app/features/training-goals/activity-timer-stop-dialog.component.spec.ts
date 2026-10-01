@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { ActivityTimerStopDialogComponent } from './activity-timer-stop-dialog.component';
+import { ActivityTimerStopDialogComponent, timerNoteMaxLength } from './activity-timer-stop-dialog.component';
 
 describe('ActivityTimerStopDialogComponent', () => {
   it('creates (template AOT-compiles + DI resolves)', async () => {
@@ -23,5 +23,30 @@ describe('ActivityTimerStopDialogComponent', () => {
     }).compileComponents();
     const fixture = TestBed.createComponent(ActivityTimerStopDialogComponent);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  // Codereview N9-006: der Server speichert „{Label} — {Notiz}" in 200 Zeichen; das Feld erlaubte fest
+  // 180 Zeichen Notiz, mit langem Label scheiterte das Stoppen (heute: still gekürzt).
+  it('limits the note to what fits next to the label', () => {
+    expect(timerNoteMaxLength('x'.repeat(100))).toBe(97);
+    expect(timerNoteMaxLength('Coaching mit Trainer Huber – Endspieltechnik')).toBe(153);
+    expect(timerNoteMaxLength('x'.repeat(300))).toBe(0);
+  });
+
+  it('binds the limit to the note input', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ActivityTimerStopDialogComponent],
+      providers: [
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: MatDialogRef, useValue: { close: () => {} } },
+        { provide: MAT_DIALOG_DATA, useValue: { label: 'L'.repeat(100), startedAtIso: new Date().toISOString(), theme: null } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ActivityTimerStopDialogComponent);
+    fixture.detectChanges();
+    const inputs = Array.from(fixture.nativeElement.querySelectorAll('input[maxlength]')) as HTMLInputElement[];
+    expect(inputs.length).toBe(1);
+    expect(inputs[0].getAttribute('maxlength')).toBe('97');
   });
 });

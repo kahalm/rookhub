@@ -950,7 +950,7 @@ public class TrainingGoalService
             Date = date,
             Kind = timer.Kind,
             Amount = minutes,
-            Note = string.IsNullOrWhiteSpace(dto.Note) ? timer.Label : $"{timer.Label} — {dto.Note!.Trim()}",
+            Note = ComposeTimerNote(timer.Label, dto.Note),
             Theme = dto.Theme ?? timer.Theme,   // Override > Timer > null
             CreatedAt = DateTime.UtcNow,
         };
@@ -960,6 +960,21 @@ public class TrainingGoalService
         InvalidateDailySeries(userId);
 
         return ToDto(manual);
+    }
+
+    /// <summary>Spaltenbreite von <see cref="ManualActivity.Note"/> (AppDbContext: HasMaxLength(200)).</summary>
+    internal const int ManualNoteMaxLength = 200;
+
+    /// <summary>Notiz des Timer-Eintrags: „{Label} — {Notiz}", gekürzt auf <see cref="ManualNoteMaxLength"/>.
+    /// Label (bis 100) und Notiz (bis 200) passen zusammen nicht in die Spalte — ungekürzt lehnte MariaDB
+    /// den INSERT ab, das Stoppen scheiterte mit 500 und der Timer blieb stehen (Codereview N9-006).
+    /// Kein Schnitt mitten in einem Surrogat-Paar.</summary>
+    internal static string ComposeTimerNote(string label, string? note)
+    {
+        var text = string.IsNullOrWhiteSpace(note) ? label : $"{label} — {note.Trim()}";
+        if (text.Length <= ManualNoteMaxLength) return text;
+        var cut = char.IsHighSurrogate(text[ManualNoteMaxLength - 1]) ? ManualNoteMaxLength - 1 : ManualNoteMaxLength;
+        return text[..cut].TrimEnd();
     }
 
     /// <summary>Wirft den laufenden Timer weg, ohne einen Eintrag zu erzeugen. true wenn etwas
