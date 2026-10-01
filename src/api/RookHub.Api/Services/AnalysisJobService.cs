@@ -35,9 +35,9 @@ public class AnalysisJobService
     public const int MaxMultiPv = EngineProtocol.MaxMultiPv;
     /// <summary>Offene Aufträge je User (Queued/Paused/Running) — gegen Endlos-Listen.
     /// <para>150 seit 0.475.9: der Deckel muss ueber
-    /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> (96) liegen, sonst bindet ER und die
-    /// Blockgroesse der Partie waere wirkungslos. Die 54 Plaetze Abstand bleiben fuer von Hand
-    /// eingereihte Stellungen.</para></summary>
+    /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> liegen, sonst bindet ER und die
+    /// Blockgroesse der Partie waere wirkungslos. Eingefuehrt mit dem Block von 96 (0.475.9); seit der Block
+    /// wieder 32 ist (0.475.10), bleibt der Abstand fuer von Hand eingereihte Stellungen entsprechend groesser.</para></summary>
     public const int MaxOpenJobsPerUser = 150;
 
     private readonly AppDbContext _db;

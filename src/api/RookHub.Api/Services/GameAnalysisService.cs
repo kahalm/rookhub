@@ -13,9 +13,9 @@ namespace RookHub.Api.Services;
 ///
 /// <para>Die Klammer drumherum macht drei Dinge, die der Einzel-Auftrag nicht kann:</para>
 /// <list type="number">
-/// <item><b>In Blöcken nachfüttern.</b> Eine 80-Halbzug-Partie hat 80 Stellungen, offen sein dürfen
-/// aber nur 50 Aufträge je Nutzer (<see cref="AnalysisJobService.MaxOpenJobsPerUser"/>). Es laufen
-/// deshalb höchstens <see cref="GameAnalysisDefaults.MaxOpenJobsPerGame"/> gleichzeitig, der Rest
+/// <item><b>In Blöcken nachfüttern.</b> Eine 80-Halbzug-Partie hat 80 Stellungen, der Deckel je Nutzer
+/// (<see cref="AnalysisJobService.MaxOpenJobsPerUser"/>) gilt aber für ALLE seine offenen Aufträge zusammen.
+/// Es laufen deshalb höchstens <see cref="GameAnalysisDefaults.MaxOpenJobsPerGame"/> gleichzeitig, der Rest
 /// rückt nach — so bleibt daneben Luft für von Hand eingereihte Stellungen.</item>
 /// <item><b>Ergebnisse kopieren.</b> <c>MaxJobsPerUser</c> räumt die ältesten FERTIGEN Aufträge weg;
 /// ohne Kopie hätte der Trimmer die Analyse nach zweieinhalb Partien aufgefressen.</item>

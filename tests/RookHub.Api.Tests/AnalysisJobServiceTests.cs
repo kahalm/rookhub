@@ -138,6 +138,20 @@ public class AnalysisJobServiceTests : IDisposable
         Assert.Equal(new[] { own.Id }, list.Select(j => j.Id));
     }
 
+    /// <summary>
+    /// Die Deckel, die CLAUDE.md an mehreren Stellen nennt (Codereview A4-012 fand dort fuenf veraltete Zahlen):
+    /// wer hier dreht, zieht CLAUDE.md mit („Hintergrund-Analyseauftraege", „Punktepartie", REST-Tabelle). Und der
+    /// Deckel je Nutzer muss ueber dem Block je Partie bleiben — sonst bindet er, und die Blockgroesse ist wirkungslos.
+    /// </summary>
+    [Fact]
+    public void Deckel_wieInClaudeMd_undNutzerdeckelUeberDemBlock()
+    {
+        Assert.Equal(150, AnalysisJobService.MaxOpenJobsPerUser);
+        Assert.Equal(32, GameAnalysisDefaults.MaxOpenJobsPerGame);
+        Assert.Equal(5, AnalysisJobService.MaxMultiPv);
+        Assert.True(AnalysisJobService.MaxOpenJobsPerUser > GameAnalysisDefaults.MaxOpenJobsPerGame);
+    }
+
     [Fact]
     public async Task Create_UsesBackgroundEngine_AndDefaults()
     {
