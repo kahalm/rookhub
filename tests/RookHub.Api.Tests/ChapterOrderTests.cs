@@ -80,7 +80,7 @@ public class ChapterOrderTests : IDisposable
     {
         // Gleiches SQL wie die frühere ausgeschriebene Kopie: ORDER BY CHAR_LENGTH(Round), Round, Id.
         using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql("server=localhost;database=x;user=x;password=x", new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
             .Options);
 
         var sql = db.BookPuzzles.Where(bp => bp.BookId == 1).InReadingOrder().ToQueryString();

@@ -70,7 +70,7 @@ public class LeagueMegaPlayersSqlTests(LeagueMegaPlayersSqlFixture fixture)
     }
 
     private AppDbContext RetryingContext() => new(new DbContextOptionsBuilder<AppDbContext>()
-        .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)),
+        .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current,
             o => o.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null))
         .Options);
 

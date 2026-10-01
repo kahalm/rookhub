@@ -43,7 +43,7 @@ public class CourseAccessTests(CourseAccessFixture fixture)
     {
         await fixture.ResetAsync();
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current)
             .AddInterceptors(_counter)
             .Options;
         _db = new AppDbContext(options);

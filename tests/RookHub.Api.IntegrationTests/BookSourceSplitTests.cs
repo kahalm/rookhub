@@ -100,7 +100,7 @@ public class BookSourceSplitTests(BookSourceSplitFixture fixture)
     private AppDbContext Fresh(CommandTextRecorder? recorder = null)
     {
         var builder = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)));
+            .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current);
         if (recorder != null) builder.AddInterceptors(recorder);
         var db = new AppDbContext(builder.Options);
         _contexts.Add(db);

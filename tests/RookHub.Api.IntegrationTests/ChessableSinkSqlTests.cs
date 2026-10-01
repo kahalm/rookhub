@@ -84,7 +84,7 @@ public class ChessableSinkSqlTests(ChessableSinkSqlFixture fixture)
 
     private AppDbContext Recorded(CommandTextRecorder recorder) =>
         new(new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current)
             .AddInterceptors(recorder)
             .Options);
 

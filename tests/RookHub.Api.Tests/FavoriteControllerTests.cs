@@ -282,7 +282,7 @@ public class FavoriteControllerTests : IDisposable
         // Korrelierte Unterabfrage (BookId ODER Altbestand über den Dateinamen) muss als SQL laufen,
         // nicht clientseitig — sonst wirft EF auf MariaDB, was InMemory nie zeigt.
         using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql("server=localhost;database=x;user=x;password=x", new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
             .Options);
 
         var sql = FavoriteService.CalculationLines(db).Where(p => p.Id == 1).Select(p => p.Id).ToQueryString();

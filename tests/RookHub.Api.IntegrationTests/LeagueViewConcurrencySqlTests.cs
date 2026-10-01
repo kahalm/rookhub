@@ -39,7 +39,7 @@ public class LeagueViewConcurrencySqlTests(LeagueViewConcurrencySqlFixture fixtu
             other.SaveChanges();
         });
         await using (var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-                         .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)),
+                         .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current,
                              o => o.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null))
                          .AddInterceptors(once).Options))
             await new LeagueProfileStore(db).PatchViewCountsAsync(new[] { "B1" }, default);

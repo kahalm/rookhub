@@ -726,7 +726,7 @@ public class GamesControllerTests : IDisposable
     public void UsageQuery_TranslatesToOneAggregateQuery_OnTheRealProvider()
     {
         using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql("server=localhost;database=x;user=x;password=x", new MariaDbServerVersion(new Version(11, 4)))
+            .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
             .Options);
         var sql = SavedGameService.UsageQuery(db, 7).ToQueryString();
         Assert.Contains("COUNT(*)", sql);

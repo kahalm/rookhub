@@ -56,7 +56,9 @@ try
     // Database
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
+        // Feste Server-Fassung statt AutoDetect: AutoDetect oeffnete je Scope eine eigene Verbindung ausserhalb der
+        // Retry-Strategie unten und warf bei einem MariaDB-Neustart schon beim Aufloesen des DbContext (A9-010).
+        options.UseMySql(connectionString, DbServerVersion.Current,
             // Transiente DB-Fehler (z. B. kurzer Verbindungsverlust beim MariaDB-Neustart/Recreate)
             // automatisch wiederholen, statt Background-Tasks/Requests hart fehlschlagen zu lassen.
             mySql => mySql.EnableRetryOnFailure(

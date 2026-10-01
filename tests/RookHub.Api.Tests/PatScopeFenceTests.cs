@@ -22,9 +22,9 @@ namespace RookHub.Api.Tests;
 /// Zaun verhindern soll (Präfix-Liste läuft auseinander), wäre damit unentdeckt geblieben.</para>
 ///
 /// <para>WARUM kein <c>WebApplicationFactory</c>-Test der ganzen Pipeline: der Host kommt im
-/// Testlauf nicht hoch. <c>Program.cs</c> registriert den DbContext mit
-/// <c>ServerVersion.AutoDetect(connectionString)</c> und ruft direkt nach <c>builder.Build()</c>
-/// <c>db.Database.Migrate()</c> — beides braucht eine ECHTE MariaDB, und ein InMemory-Ersatz kann
+/// Testlauf nicht hoch. <c>Program.cs</c> registriert den DbContext fuer MariaDB
+/// (<c>DbServerVersion.Current</c>) und ruft direkt nach <c>builder.Build()</c>
+/// <c>db.Database.Migrate()</c> — das braucht eine ECHTE MariaDB, und ein InMemory-Ersatz kann
 /// <c>Migrate()</c> gar nicht. Der Startfehler landet im globalen try/catch von <c>Program.cs</c>,
 /// die Factory scheitert mit „The entry point exited without ever building an IHost" (erneut
 /// empirisch geprüft, 2026-08-08). Die Verdrahtung in der echten Pipeline sichern deshalb die

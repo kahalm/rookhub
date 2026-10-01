@@ -57,7 +57,7 @@ public class CourseTranslationSqlTests(CourseTranslationFixture fixture)
             }).Build());
         services.AddSingleton<IClaudeJsonClient>(_llm);
         services.AddDbContext<AppDbContext>(o =>
-            o.UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0))));
+            o.UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current));
         services.AddScoped<CourseTranslationService>();
         services.AddScoped<CourseCommentLocalizer>();
         // Auftraege (Stufe B): nie gesperrt — der Test haengt nicht an der echten Uhr.

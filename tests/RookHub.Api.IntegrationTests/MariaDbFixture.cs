@@ -39,7 +39,7 @@ public sealed class MariaDbSchema : IAsyncDisposable
     public AppDbContext NewContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(ConnectionString, new MySqlServerVersion(new Version(11, 0, 0)))
+            .UseMySql(ConnectionString, DbServerVersion.Current)
             .Options;
         return new AppDbContext(options);
     }

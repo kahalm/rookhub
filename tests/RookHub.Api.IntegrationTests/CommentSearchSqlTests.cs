@@ -27,7 +27,7 @@ public class CommentSearchSqlTests(CommentSearchFixture fixture) : IAsyncLifetim
     private AppDbContext Fresh()
     {
         var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
-            .UseMySql(fixture.Schema.ConnectionString, new MySqlServerVersion(new Version(11, 0, 0))).Options);
+            .UseMySql(fixture.Schema.ConnectionString, DbServerVersion.Current).Options);
         _contexts.Add(db);
         return db;
     }

@@ -22,7 +22,7 @@ public class BookSourceSplitSqlTests
 {
     /// <summary>Kontext auf dem echten Provider; es wird nie verbunden, nur übersetzt.</summary>
     private static AppDbContext MySqlContext() => new(new DbContextOptionsBuilder<AppDbContext>()
-        .UseMySql("server=localhost;database=x;user=x;password=x", new MySqlServerVersion(new Version(11, 0, 0)))
+        .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
         .Options);
 
     [Fact]

@@ -20,7 +20,7 @@ public class DirectorySqlTranslationTests
     /// <summary>Ein Kontext auf dem ECHTEN Provider. Es wird nie verbunden — nur uebersetzt;
     /// die Server-Fassung ist deshalb fest angegeben (Autoerkennung braeuchte den Server).</summary>
     private static AppDbContext MySqlContext() => new(new DbContextOptionsBuilder<AppDbContext>()
-        .UseMySql("server=localhost;database=x;user=x;password=x", new MariaDbServerVersion(new Version(11, 4)))
+        .UseMySql("server=localhost;database=x;user=x;password=x", DbServerVersion.Current)
         .Options);
 
     [Fact]

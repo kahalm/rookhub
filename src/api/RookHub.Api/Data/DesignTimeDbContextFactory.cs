@@ -19,7 +19,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured. Set it via environment variable or appsettings.json.");
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseMySql(connectionString, new MySqlServerVersion(new Version(11, 0, 0)));
+        optionsBuilder.UseMySql(connectionString, DbServerVersion.Current);
         return new AppDbContext(optionsBuilder.Options);
     }
 }
