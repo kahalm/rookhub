@@ -237,8 +237,8 @@ public sealed class GameRecapService
         {
             // Die Lage nach Halbzug i = die Bewertung der Stellung vor Halbzug i + 1; nach dem letzten die des gespielten Zugs.
             (int? Cp, int? Mate, bool WhiteToMove)? eval = i + 1 < n
-                ? rows.TryGetValue(i + 1, out var r) && byPly.TryGetValue(i + 1, out var next) ? (r.Cp, r.Mate, WhiteToMove(next.Fen)) : null
-                : final is not null && byPly.TryGetValue(i, out var last) ? (final.Cp, final.Mate, !WhiteToMove(last.Fen)) : null;
+                ? rows.TryGetValue(i + 1, out var r) && byPly.TryGetValue(i + 1, out var next) ? (r.Cp, r.Mate, FenFields.WhiteToMove(next.Fen)) : null
+                : final is not null && byPly.TryGetValue(i, out var last) ? (final.Cp, final.Mate, !FenFields.WhiteToMove(last.Fen)) : null;
             int? standing = eval is { } e && GameAccuracy.WinPercent(e.Cp, e.Mate, e.WhiteToMove) is double w ? StandingOf(w) : previous;
             if (standing is not int s) continue;
             if (runs.Count > 0 && runs[^1].Standing == s) runs[^1] = runs[^1] with { Length = runs[^1].Length + 1 };
@@ -271,7 +271,7 @@ public sealed class GameRecapService
     // ── Kleinteile ─────────────────────────────────────────────────────────────────────────────────
 
     /// <summary>„13." bzw. „13..." aus dem Zugzähler der Stellung VOR dem Halbzug.</summary>
-    private static string MoveNumber(GameAnalysisPosition p) => MoveNumber(p.Fen, WhiteToMove(p.Fen));
+    private static string MoveNumber(GameAnalysisPosition p) => MoveNumber(p.Fen, FenFields.WhiteToMove(p.Fen));
 
     private static string MoveNumber(string fenBefore, bool white)
         => (fenBefore.Split(' ') is { Length: >= 6 } parts ? parts[5] : "?") + (white ? "." : "...");
@@ -280,7 +280,7 @@ public sealed class GameRecapService
     /// „8...Qd8 9.Bd3" — das Modell übernimmt die Züge, wie sie dastehen, und soll sie mit Nummer nennen.</summary>
     internal static string Numbered(string fen, IEnumerable<string> sans)
     {
-        var white = WhiteToMove(fen);
+        var white = FenFields.WhiteToMove(fen);
         var number = fen.Split(' ') is { Length: >= 6 } parts && int.TryParse(parts[5], out var n) ? n : 1;
         var tokens = new List<string>();
         foreach (var san in sans)
@@ -330,8 +330,6 @@ public sealed class GameRecapService
         var m = Regex.Match(pgn, "\\[" + Regex.Escape(tag) + "\\s+\"([^\"]*)\"\\]");
         return m.Success ? m.Groups[1].Value.Trim() : null;
     }
-
-    private static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
 
     /// <summary>Ein Kopfwert aus dem Upload, auf <see cref="MaxHeaderLength"/> Zeichen gekürzt.</summary>
     private static string Cap(string value) => value.Length <= MaxHeaderLength ? value : value[..MaxHeaderLength].TrimEnd() + "…";

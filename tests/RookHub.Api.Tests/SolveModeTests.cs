@@ -46,15 +46,6 @@ public class SolveModeTests : IDisposable
     public void Normalize_UnknownOrMissing_FallsBackToTraining(string? input, string expected)
         => Assert.Equal(expected, SolveMode.Normalize(input));
 
-    [Fact]
-    public void WeeklyPostAttempt_Constants_DelegateToSolveMode()
-    {
-        // Die öffentlichen Namen der Wochenpost bleiben erhalten, zeigen aber auf SolveMode.
-        // (Das frühere `NormalizeMode` ist seit 0.499.11 weg — es rief niemand mehr auf.)
-        Assert.Equal(SolveMode.Training, WeeklyPostAttempt.ModeTraining);
-        Assert.Equal(SolveMode.Easy, WeeklyPostAttempt.ModeEasy);
-    }
-
     [Theory]
     [InlineData(5, 2, 3, 2)]
     [InlineData(5, 0, 5, 0)]   // nichts „easy" → alles Training (Altbestand)

@@ -344,7 +344,7 @@ public sealed class MoveComparisonService
     /// <summary>Gerechnete Kandidaten, der beste (für die Seite am Zug) zuerst.</summary>
     private static List<(MoveComparisonLine Line, double Score)> Ranked(MoveComparison c)
     {
-        var moverWhite = WhiteToMove(c.Fen);
+        var moverWhite = FenFields.WhiteToMove(c.Fen);
         return c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate && l.State == MoveComparisonLineState.Done)
             .Select(l => (Line: l, Ev: EvalOf(l.Fen, l.ResultJson)))
             .Where(x => x.Ev is not null)
@@ -457,7 +457,7 @@ public sealed class MoveComparisonService
     {
         var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
         if (best is null) return null;
-        var moverWhite = WhiteToMove(c.Fen);
+        var moverWhite = FenFields.WhiteToMove(c.Fen);
         var bestSan = SanOf(c.Fen, best.CandidateUci);
         var weakSan = SanOf(c.Fen, weak.CandidateUci);
         if (bestSan is null || weakSan is null) return null;
@@ -585,7 +585,7 @@ public sealed class MoveComparisonService
     {
         var result = new List<Pv>();
         if (string.IsNullOrEmpty(fen) || BrokerCandidates.Parse(resultJson, fen) is not { } cands) return result;
-        var sign = WhiteToMove(fen) ? 1 : -1;   // Parse liefert die Sicht der Seite am Zug — zurück nach Weiß
+        var sign = FenFields.WhiteToMove(fen) ? 1 : -1;   // Parse liefert die Sicht der Seite am Zug — zurück nach Weiß
         foreach (var cand in cands)
         {
             var line = GameMistakes.LineSans(fen, cand.Pv is { Count: > 0 } pv ? pv : [cand.Uci], LinePlies);
@@ -615,7 +615,7 @@ public sealed class MoveComparisonService
         {
             var board = ChessBoard.LoadFromFen(fen);
             if (board.Moves().Length > 0) return null;
-            var white = WhiteToMove(fen);
+            var white = FenFields.WhiteToMove(fen);
             var mated = white ? board.WhiteKingChecked : board.BlackKingChecked;
             if (!mated) return new Ev(0, "0.00", 0, null, false);
             return white ? new Ev(-MateScore, "#-0", null, null, true) : new Ev(MateScore, "#0", null, null, true);
@@ -643,7 +643,7 @@ public sealed class MoveComparisonService
         (string? Json, int Depth) Current(MoveComparisonLine l)
             => l.AnalysisJobId is int id && jobs.TryGetValue(id, out var j) ? j : (l.ResultJson, l.ReachedDepth);
 
-        var moverWhite = WhiteToMove(c.Fen);
+        var moverWhite = FenFields.WhiteToMove(c.Fen);
         var best = c.Lines.FirstOrDefault(l => l.Kind == MoveComparisonLineKind.Candidate && l.CandidateUci == c.BestUci);
         var candidates = c.Lines.Where(l => l.Kind == MoveComparisonLineKind.Candidate)
             .Select(l =>
@@ -704,8 +704,6 @@ public sealed class MoveComparisonService
     };
 
     // ── Brett ──────────────────────────────────────────────────────────────────────────────────────
-
-    private static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
 
     /// <summary>Ein legaler Zug zu einer UCI-Angabe — auch als König-schlägt-Turm (so schreibt der Broker Rochaden).</summary>
     internal static Move? FindMove(Move[] legal, string? raw)

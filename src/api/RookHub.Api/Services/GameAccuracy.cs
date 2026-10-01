@@ -139,7 +139,7 @@ public static class GameAccuracy
         var rows = new Dictionary<int, GameEvalPlyDto>();
         foreach (var p in plies) if (p.Ply >= 0 && p.Ply < n) rows[p.Ply] = p;
 
-        bool WhiteToMoveAt(int j) => j < n ? WhiteToMove(fens[j]) : n > 0 && !WhiteToMove(fens[n - 1]);
+        bool WhiteToMoveAt(int j) => j < n ? FenFields.WhiteToMove(fens[j]) : n > 0 && !FenFields.WhiteToMove(fens[n - 1]);
 
         var evalAt = new (int? Cp, int? Mate)?[n + 1];
         for (var j = 0; j < n; j++)
@@ -186,10 +186,6 @@ public static class GameAccuracy
         var final = GameEvals.FinalOf(plies.LastOrDefault(), plyCount);
         return (plies, final, fens);
     }
-
-    /// <summary>Wie <c>whiteToMove</c> im Client: nur ein <c>b</c> im zweiten Feld heisst Schwarz.</summary>
-    private static bool WhiteToMove(string fen)
-        => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
 
     /// <summary>Standardabweichung der Grundgesamtheit (lila <c>Maths.standardDeviation</c>), Luecken ausgelassen.</summary>
     private static double StdDev(IReadOnlyList<double?> values)

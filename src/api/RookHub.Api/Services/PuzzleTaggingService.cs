@@ -120,7 +120,7 @@ public class PuzzleTaggingService
             for (int i = 0; i < moves.Length; i++)
             {
                 var legal = board.Moves(generateSan: false);
-                var played = Array.Find(legal, m => MoveToUci(m) == moves[i]);
+                var played = Array.Find(legal, m => PgnParser.ToUci(m) == moves[i]);
                 if (played is null) break; // UCI passt zu keinem legalen Zug → hier abbrechen
 
                 // Nur an Zügen des Lösers prüfen (firstSolverPly, +2, +4, …).
@@ -135,15 +135,6 @@ public class PuzzleTaggingService
         }
         catch { /* ungültige FEN/UCI → als „nein" behandeln (Robustheit) */ }
         return false;
-    }
-
-    private static string MoveToUci(Move m)
-    {
-        var u = m.OriginalPosition.ToString() + m.NewPosition.ToString();
-        var ss = m.Parameter?.ShortStr;
-        if (!string.IsNullOrEmpty(ss) && ss.StartsWith('=') && ss.Length >= 2)
-            u += char.ToLowerInvariant(ss[1]);
-        return u;
     }
 
     /// <summary>

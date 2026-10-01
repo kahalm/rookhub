@@ -412,7 +412,7 @@ public class WeeklyPostControllerTests : IDisposable
         await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = true, TimeSeconds = 5, Mode = "easy" });
 
         var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
-        Assert.Equal(WeeklyPostAttempt.ModeEasy, a.Mode);
+        Assert.Equal(SolveMode.Easy, a.Mode);
     }
 
     [Fact]
@@ -426,7 +426,7 @@ public class WeeklyPostControllerTests : IDisposable
         await _controller.RecordAttempt(id, new RecordWeeklyAttemptDto { PuzzleIndex = 0, Solved = false, TimeSeconds = 9, Mode = "training" });
 
         var a = await _db.WeeklyPostAttempts.SingleAsync(x => x.UserId == 1 && x.PuzzleIndex == 0);
-        Assert.Equal(WeeklyPostAttempt.ModeEasy, a.Mode);
+        Assert.Equal(SolveMode.Easy, a.Mode);
     }
 
     [Fact]
@@ -442,7 +442,7 @@ public class WeeklyPostControllerTests : IDisposable
 
         var modes = await _db.WeeklyPostAttempts.Where(x => x.UserId == 1).OrderBy(x => x.PuzzleIndex)
             .Select(x => x.Mode).ToListAsync();
-        Assert.Equal(new[] { WeeklyPostAttempt.ModeTraining, WeeklyPostAttempt.ModeTraining }, modes);
+        Assert.Equal(new[] { SolveMode.Training, SolveMode.Training }, modes);
     }
 
     [Fact]

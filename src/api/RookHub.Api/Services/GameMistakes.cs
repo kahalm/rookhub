@@ -59,8 +59,8 @@ public static class GameMistakes
             if (GameEvals.PlyOf(p.Ply, p.Fen, p.GameMoveUci, p.CandidatesJson, p.Depth) is { } dto) rows[p.Ply] = dto;
         var final = GameEvals.FinalOf(rows.Count > 0 ? rows[rows.Keys.Max()] : null, n);
 
-        bool WhiteAt(int j) => byPly.TryGetValue(j, out var p) ? WhiteToMove(p.Fen)
-            : j > 0 && byPly.TryGetValue(j - 1, out var q) && !WhiteToMove(q.Fen);
+        bool WhiteAt(int j) => byPly.TryGetValue(j, out var p) ? FenFields.WhiteToMove(p.Fen)
+            : j > 0 && byPly.TryGetValue(j - 1, out var q) && !FenFields.WhiteToMove(q.Fen);
         (int? Cp, int? Mate)? EvalAt(int j) => j < n
             ? rows.TryGetValue(j, out var r) && (r.Cp is not null || r.Mate is not null) ? (r.Cp, r.Mate) : null
             : final is not null && (final.Cp is not null || final.Mate is not null) ? (final.Cp, final.Mate) : null;
@@ -156,6 +156,4 @@ public static class GameMistakes
         var pawns = (cp ?? 0) * sign / 100.0;
         return pawns.ToString("+0.00;-0.00;0.00", System.Globalization.CultureInfo.InvariantCulture);
     }
-
-    private static bool WhiteToMove(string fen) => !(fen.Split(' ') is { Length: >= 2 } parts && parts[1] == "b");
 }

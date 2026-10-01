@@ -274,11 +274,7 @@ public class ChessableTrainedLineService
     private static bool Matches(Move m, string token)
     {
         if (!string.IsNullOrEmpty(m.San) && CanonicalSan(m.San) == token) return true;
-        var uci = m.OriginalPosition.ToString() + m.NewPosition.ToString();
-        var promo = m.Parameter?.ShortStr;
-        var promoChar = !string.IsNullOrEmpty(promo) && promo.StartsWith('=') && promo.Length >= 2
-            ? char.ToLowerInvariant(promo[1]) : '\0';
-        if (promoChar != '\0') uci += promoChar;
+        var uci = PgnParser.ToUci(m);
         if (string.Equals(uci, token, StringComparison.OrdinalIgnoreCase)) return true;
 
         var la = LongAlgRegex.Match(token);

@@ -37,24 +37,12 @@ public class WeeklyPostAttempt
     public int Mouseslips { get; set; }
 
     /// <summary>
-    /// Spielmodus dieses Versuchs: <see cref="ModeTraining"/> (Brett eingefroren, Figuren werden NICHT
-    /// gezogen — bisheriges Verhalten und Default für Altbestand) oder <see cref="ModeEasy"/> (Figuren
+    /// Spielmodus dieses Versuchs: <see cref="SolveMode.Training"/> (Brett eingefroren, Figuren werden NICHT
+    /// gezogen — bisheriges Verhalten und Default für Altbestand) oder <see cref="SolveMode.Easy"/> (Figuren
     /// normal ziehbar). Wird nur beim ERSTEN Versuch je (Post, User, Index) geschrieben (idempotent).
     /// </summary>
     [Required, MaxLength(10)]
     public string Mode { get; set; } = SolveMode.Training;
-
-    // Die beiden folgenden Konstanten sind nur noch Durchreichen auf <see cref="SolveMode"/> — die
-    // eine Wahrheit für alle Solver-Bereiche. Die Namen bleiben, weil der Spalten-Default im
-    // <see cref="Data.AppDbContext"/> und die Auswertungen im Dienst sie benutzen.
-    // (Ein drittes Mitglied `NormalizeMode` gab es bis 0.499.11; seit die Recorder über
-    // `AttemptRecording` gehen, rief es niemand mehr auf — `SolveMode.Normalize` ist die Stelle.)
-
-    /// <summary>Modus „Training": Brett eingefroren, Figuren nicht ziehbar (Default/Altbestand).</summary>
-    public const string ModeTraining = SolveMode.Training;
-
-    /// <summary>Modus „Einfach": Figuren normal ziehbar.</summary>
-    public const string ModeEasy = SolveMode.Easy;
 
     public DateTime AttemptedAt { get; set; } = DateTime.UtcNow;
 }

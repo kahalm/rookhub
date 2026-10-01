@@ -256,7 +256,7 @@ public class WeeklyPostService
                 // Über alle Puzzles des Posts: höchste genutzte Tipp-Stufe → > 0 ⇒ „mit Tipps gelöst" (💡).
                 HintsUsed = g.Max(a => a.HintsUsed),
                 // Gespielte Puzzles je Modus (Altbestand ohne Modus zählt als „training").
-                EasyCount = g.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy),
+                EasyCount = g.Count(a => a.Mode == SolveMode.Easy),
             })
             .ToListAsync();
 
@@ -409,7 +409,7 @@ public class WeeklyPostService
             }
             var played = grp.Count();
             // Alles, was nicht ausdrücklich „easy" ist, zählt als „training" (auch Altbestand ohne Modus).
-            var easy = grp.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy);
+            var easy = grp.Count(a => a.Mode == SolveMode.Easy);
             result.Add(new WeeklyPostProgressDto
             {
                 WeeklyPostId = grp.Key,
@@ -447,7 +447,7 @@ public class WeeklyPostService
             .ToListAsync();
 
         // Alles, was nicht ausdrücklich „easy" ist, zählt als „training" (auch Altbestand ohne Modus).
-        var easy = played.Count(a => a.Mode == WeeklyPostAttempt.ModeEasy);
+        var easy = played.Count(a => a.Mode == SolveMode.Easy);
         return new WeeklyPostProgressDto
         {
             WeeklyPostId = weeklyPostId,
