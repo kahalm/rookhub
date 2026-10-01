@@ -152,6 +152,19 @@ describe('OfflineService', () => {
     expect(localStorage.getItem('rookhub_calc_note_off_12')).toBeNull();
   });
 
+  it('clearAll und clearOnLogout räumen den „vollständig"-Marker eines Offline-Kurses mit ab (F1-009)', () => {
+    // Bliebe er stehen, während die Kursinhalte weg sind, gälte ein späterer Torso als ganzer Kurs.
+    localStorage.setItem(BOOK_OFFLINE_PREFIX + 'kurs.pgn', '[]');
+    localStorage.setItem('rookhub_book_complete_66', '1');
+    new OfflineService().clearAll();
+    expect(localStorage.getItem(BOOK_OFFLINE_PREFIX + 'kurs.pgn')).toBeNull();
+    expect(localStorage.getItem('rookhub_book_complete_66')).toBeNull();
+
+    localStorage.setItem('rookhub_book_complete_66', '1');
+    new OfflineService().clearOnLogout();
+    expect(localStorage.getItem('rookhub_book_complete_66')).toBeNull();
+  });
+
   it('clearAll (Profil-Knopf „Cache leeren") lässt den laufenden Endless-Lauf stehen', () => {
     // Bewusster Unterschied: „Cache leeren" soll Platz freigeben, nicht die Arbeit des ANGEMELDETEN
     // Nutzers wegwerfen.

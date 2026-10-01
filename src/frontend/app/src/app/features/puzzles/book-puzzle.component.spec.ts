@@ -1621,6 +1621,23 @@ describe('BookPuzzleComponent anonymer Kurs — gedrosseltes Cache-Schreiben', (
     expect(c.loadError).toBeFalse();
   });
 
+  it('ein stehengebliebener „vollständig"-Marker macht einen neuen, abgebrochenen Torso nicht zum ganzen Kurs (F1-009)', () => {
+    // Gemeldet im Codereview 2026-09-29 (F1-009): Abmelden / „Cache leeren" / Quota-Räumung löschten die
+    // Kursinhalte, ließen den Marker aber stehen. Die neue Kette schrieb nach Seite 1 den Cache, brach dann
+    // ab — und die 300 Linien galten dauerhaft als ganzer Kurs (nie mehr fortgesetzt, „Kurs abgeschlossen").
+    markBookCacheComplete(BOOK_ID, true);
+    const c = anonPagedCourse([pageOf(1, PAGE), 'error']);
+    (c as any).loadCourseNext();
+    expect(getBookOfflineByBookId(BOOK_ID)?.length).toBe(PAGE);   // Torso liegt (spielbar) ...
+    expect(isBookCacheComplete(BOOK_ID)).toBeFalse();             // ... gilt aber nicht als vollständig
+  });
+
+  it('meldet den Kurs am Ende der Kette weiterhin vollständig', () => {
+    const c = anonPagedCourse([pageOf(1, PAGE), pageOf(1 + PAGE, 5)]);
+    (c as any).loadCourseNext();
+    expect(isBookCacheComplete(BOOK_ID)).toBeTrue();
+  });
+
   it('zeigt „nicht verfügbar", wenn der Cache der ersten Seite nicht geschrieben werden kann', () => {
     spyOn(localStorage, 'setItem').and.throwError('QuotaExceededError');
     const c = anonPagedCourse([pageOf(1, 5)]);

@@ -1,4 +1,4 @@
-import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, BOOK_LANG_PREFIX, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
+import { BOOK_OFFLINE_PREFIX, BOOK_ID_MAP_KEY, BOOK_LANG_PREFIX, BOOK_COMPLETE_PREFIX, DAILY_CACHE_KEY, COURSES_CACHE_KEY } from '../../core/offline.service';
 import { BoundedMapStore, hasKey, keysWithPrefix, localStore, readJson, readRaw, removeKey, writeJson, writeRaw }
   from '../../core/local-json-store';
 import { BookPuzzleDto } from './puzzle.service';
@@ -102,13 +102,12 @@ export function removeBookOffline(fileName: string): void {
  */
 const COURSE_LOCAL_SOLVED_PREFIX = 'rookhub_course_local_solved_';
 
-/** Marker: der lokale Cache dieses Buchs ist VOLLSTÄNDIG (die Seiten-Kette lief bis zum Ende).
+/** Marker (Präfix `BOOK_COMPLETE_PREFIX`, in core/offline.service — „Cache leeren" und Abmelden
+ *  räumen ihn mit ab): der lokale Cache dieses Buchs ist VOLLSTÄNDIG (die Seiten-Kette lief bis zum Ende).
  *  Ohne ihn wäre ein Torso — erste Seite geladen, dann Netz weg — beim nächsten Besuch nicht von
  *  einem kompletten Kurs zu unterscheiden: der anonyme Modus zählte die 300 gecachten Linien als
  *  Gesamtzahl und meldete nach 300 Aufgaben „Kurs abgeschlossen", während der Rest für diesen
  *  Browser dauerhaft unerreichbar blieb. */
-const BOOK_COMPLETE_PREFIX = 'rookhub_book_complete_';
-
 export function markBookCacheComplete(bookId: number, complete: boolean): void {
   // Quota/Privatmodus → dann gilt der Cache als unvollständig (siehe unten).
   if (complete) writeRaw(localStore(), BOOK_COMPLETE_PREFIX + bookId, '1');

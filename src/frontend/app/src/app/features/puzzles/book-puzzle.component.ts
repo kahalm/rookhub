@@ -1141,8 +1141,10 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
           // eine halb neue Kopie mit dem alten „vollständig"-Marker meldete sonst nach 300 Linien „fertig".
           if ((first && !replace) || !hasMore) {
             const written = flushCache();
-            // Vollständig NUR melden, wenn der letzte Stand auch wirklich im Speicher liegt.
-            if (!hasMore) markBookCacheComplete(bookId, written);
+            // Vollständig NUR melden, wenn der letzte Stand auch wirklich im Speicher liegt — und ein
+            // Zwischenstand (es kommt noch mehr) nimmt einen alten Marker zurück: blieb der nach dem
+            // Räumen des Caches stehen, galt ein Abbruch nach Seite 1 sonst als ganzer Kurs (F1-009).
+            markBookCacheComplete(bookId, !hasMore && written);
             if (!hasMore && written) this.offlineLangStale = false;
             if (!hasMore && replace) this.anonRefreshBook = null;
           }

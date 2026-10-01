@@ -12,6 +12,10 @@ export const BOOK_ID_MAP_KEY = 'rookhub_book_idmap';
 /** Sprache einer offline gespeicherten Kurskopie (Kurs-Übersetzung, 0.549.0) je Dateiname —
  *  eigener Präfix aus demselben Grund wie beim Index: sonst zählte er als gecachtes Buch. */
 export const BOOK_LANG_PREFIX = 'rookhub_book_lang_';
+/** Marker „der lokale Cache dieses Buchs ist VOLLSTÄNDIG" je bookId (siehe `markBookCacheComplete`).
+ *  Gehört zu den Caches: bliebe er stehen, während die Kursinhalte geräumt werden, gälte ein späterer
+ *  Torso als vollständig. */
+export const BOOK_COMPLETE_PREFIX = 'rookhub_book_complete_';
 /** Tagespuzzle-Cache (Datum→Puzzle); auto-befüllt beim Online-Abruf eines Tagespuzzles. */
 export const DAILY_CACHE_KEY = 'rookhub_daily_offline';
 /** Heruntergeladene Repertoires (PGN + SR-Zustände + Intervalle) je Repertoire-Id. */
@@ -65,7 +69,8 @@ export class OfflineService {
     return allKeys(localStore()).filter(k =>
       k === ENDLESS_POOL_KEY || k === PUZZLE_POOL_KEY || k === BOOK_ID_MAP_KEY || k === DAILY_CACHE_KEY
       || k === COURSES_CACHE_KEY
-      || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(BOOK_LANG_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX));
+      || k.startsWith(BOOK_OFFLINE_PREFIX) || k.startsWith(BOOK_LANG_PREFIX) || k.startsWith(REPERTOIRE_OFFLINE_PREFIX)
+      || k.startsWith(BOOK_COMPLETE_PREFIX));
   }
 
   /** Geräte-lokale Nutzer-SPUREN, die beim Abmelden verschwinden müssen — mehr als die Caches oben.
