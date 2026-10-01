@@ -1,20 +1,14 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { getOrCreateAnonSessionId } from './anon-session';
 
 const SESSION_KEY = 'rookhub_puzzle_session';
 
 /** Stabile Besucher-/Anon-Session-Id aus dem localStorage (gleiche Id wie die anonymen
- *  Puzzle-/Endless-Calls). Wird angelegt, falls noch keine existiert. */
-export function getOrCreateVisitorId(): string | null {
-  try {
-    let id = localStorage.getItem(SESSION_KEY);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(SESSION_KEY, id);
-    }
-    return id;
-  } catch {
-    return null;
-  }
+ *  Puzzle-/Endless-Calls). Wird angelegt, falls noch keine existiert — über denselben Erzeuger wie
+ *  die Puzzle-Versuche ({@link getOrCreateAnonSessionId}): ohne `crypto.randomUUID` (HTTP-Dev-Stack)
+ *  und bei gesperrtem Speicher gibt es trotzdem eine Kennung, und es ist dieselbe. */
+export function getOrCreateVisitorId(): string {
+  return getOrCreateAnonSessionId(SESSION_KEY);
 }
 
 /**
