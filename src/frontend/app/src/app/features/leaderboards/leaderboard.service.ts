@@ -6,8 +6,6 @@ export type LeaderboardPeriod = 'weekly' | 'monthly' | 'alltime';
 
 export interface LeaderboardEntry {
   name: string;
-  discordId?: string | null;
-  discordUsername?: string | null;
   count: number;
   /** Echte 1-basierte Platzierung (die Liste zeigt nur Top-N + eigenes Fenster, kann also Lücken haben). */
   rank: number;

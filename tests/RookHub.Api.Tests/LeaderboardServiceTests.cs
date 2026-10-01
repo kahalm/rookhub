@@ -1,5 +1,11 @@
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Controllers;
 using RookHub.Api.Data;
+using RookHub.Api.DTOs;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Xunit;
@@ -65,7 +71,7 @@ public class LeaderboardServiceTests : IDisposable
         => _db.WeeklyPostAttempts.Add(new WeeklyPostAttempt { UserId = userId, WeeklyPostId = weeklyPostId, PuzzleIndex = puzzleIndex, Solved = solved, AttemptedAt = at });
 
     [Fact]
-    public async Task GetAsync_CountsUniquePuzzles_OrdersByCountDesc_WithDiscord()
+    public async Task GetAsync_CountsUniquePuzzles_OrdersByCountDesc()
     {
         var anna = await CreateUserAsync("anna", discordId: "111");
         var ben = await CreateUserAsync("ben");
@@ -87,9 +93,51 @@ public class LeaderboardServiceTests : IDisposable
         Assert.Equal(2, res.Puzzles.Count);
         Assert.Equal("anna", res.Puzzles[0].Name);
         Assert.Equal(3, res.Puzzles[0].Count);          // einzigartig, nicht 4
-        Assert.Equal("111", res.Puzzles[0].DiscordId);
         Assert.Equal("ben", res.Puzzles[1].Name);
         Assert.Equal(1, res.Puzzles[1].Count);
+    }
+
+    /// <summary>Die Bestenliste gibt nur den Anzeigenamen heraus, keine Discord-Kennung (Codereview 2026-09-29,
+    /// N9-007): die Oberfläche zeigt nur den Namen, sonst war jede Liste eine Zuordnung Name ↔ Discord-Konto.</summary>
+    [Fact]
+    public async Task GetAsync_Entries_CarryNoDiscordIdentity()
+    {
+        var anna = await CreateUserAsync("anna", discordId: "4711000");
+        AddPuzzleSolve(anna.Id, 10, true, DateTime.UtcNow);
+        await _db.SaveChangesAsync();
+
+        var res = await _service.GetAsync("alltime", viewerId: 0);
+
+        var json = JsonSerializer.Serialize(res, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Contains("\"name\":\"anna\"", json);
+        Assert.DoesNotContain("discord", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("4711000", json);
+    }
+
+    [Fact]
+    public async Task Controller_CapsTop_AtMaxTop()
+    {
+        var now = DateTime.UtcNow;
+        for (var i = 0; i < LeaderboardController.MaxTop + 10; i++)
+        {
+            var u = await CreateUserAsync($"spieler{i:D2}");
+            AddPuzzleSolve(u.Id, 10, true, now);
+        }
+        await _db.SaveChangesAsync();
+        var controller = new LeaderboardController(_service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "990001")], "Test")),
+                },
+            },
+        };
+
+        var ok = Assert.IsType<OkObjectResult>(await controller.Get("alltime", top: 500, around: 0));
+
+        Assert.Equal(LeaderboardController.MaxTop, Assert.IsType<LeaderboardsDto>(ok.Value).Puzzles.Count);
     }
 
     [Fact]

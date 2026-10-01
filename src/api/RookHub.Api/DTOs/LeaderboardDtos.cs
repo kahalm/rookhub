@@ -1,11 +1,11 @@
 namespace RookHub.Api.DTOs;
 
-/// <summary>Ein Eintrag einer Bestenliste (ein Nutzer + sein Zählwert in der gewählten Periode).</summary>
+/// <summary>Ein Eintrag einer Bestenliste (ein Nutzer + sein Zählwert in der gewählten Periode). Bewusst nur der
+/// Anzeigename, keine Discord-Kennung: die Oberfläche zeigt nur den Namen, und eine Liste je Kategorie gäbe sonst die
+/// Zuordnung RookHub-Name ↔ Discord-Konto der ganzen aktiven Nutzerschaft auf einen Schlag heraus (Datensparsamkeit).</summary>
 public class LeaderboardEntryDto
 {
     public string Name { get; set; } = string.Empty;
-    public string? DiscordId { get; set; }
-    public string? DiscordUsername { get; set; }
     /// <summary>Zählwert: einzigartige gelöste Puzzles, abgeschlossene Endlos-Läufe bzw. gelöste Kurs-Linien.</summary>
     public int Count { get; set; }
     /// <summary>Echte 1-basierte Platzierung in der vollständigen Kategorie (nicht der Listenindex —

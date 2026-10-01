@@ -162,8 +162,6 @@ public class LeaderboardService
                 return new LeaderboardEntryDto
                 {
                     Name = prof?.DisplayName ?? uname ?? $"#{kv.Key}",
-                    DiscordId = prof?.DiscordId,
-                    DiscordUsername = prof?.DiscordUsername,
                     Count = kv.Value,
                     IsMe = kv.Key == viewerId,
                 };
