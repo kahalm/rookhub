@@ -1139,6 +1139,7 @@
       "pairings": "Pairings"
     },
     "favoritesOnly": "Favorites only",
+    "favoritesOnlyHint": "Star players or teams first, then this shows only them.",
     "favorites": {
       "added": "{{name}} added to favorites",
       "removed": "{{name}} removed from favorites",
@@ -1165,7 +1166,11 @@
       "fillClubsHint": "Searches chess-results for the players without a club and takes the club from their most recent tournament. One request per player, takes a few minutes.",
       "clubsStarted": "Looking up clubs — {{count}} players, this takes a few minutes.",
       "clubsDone": "Club lookup finished.",
-      "clubsFailed": "Could not start the club lookup."
+      "clubsFailed": "Could not start the club lookup.",
+      "search": "Name or club",
+      "searchClear": "Clear search",
+      "searchNone": "No player matches “{{query}}”.",
+      "sortBy": "Sort by"
     },
     "teams": {
       "rank": "Rank",

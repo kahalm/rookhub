@@ -1139,6 +1139,7 @@
       "pairings": "Paarungen"
     },
     "favoritesOnly": "Nur Favoriten",
+    "favoritesOnlyHint": "Markiere zuerst Spieler oder Mannschaften mit dem Stern, dann zeigt dieser Schalter nur sie.",
     "favorites": {
       "added": "{{name}} zu Favoriten hinzugefügt",
       "removed": "{{name}} aus Favoriten entfernt",
@@ -1165,7 +1166,11 @@
       "fillClubsHint": "Sucht die Spieler ohne Verein in der chess-results-Spielersuche und übernimmt den Verein aus ihrem jüngsten Turnier. Ein Abruf je Spieler, dauert einige Minuten.",
       "clubsStarted": "Vereine werden nachgesehen — {{count}} Spieler, das dauert einige Minuten.",
       "clubsDone": "Vereinssuche fertig.",
-      "clubsFailed": "Vereinssuche konnte nicht gestartet werden."
+      "clubsFailed": "Vereinssuche konnte nicht gestartet werden.",
+      "search": "Name oder Verein",
+      "searchClear": "Suche leeren",
+      "searchNone": "Kein Spieler passt zu „{{query}}“.",
+      "sortBy": "Sortieren nach"
     },
     "teams": {
       "rank": "Rang",

@@ -1139,6 +1139,7 @@
       "pairings": "Parovi"
     },
     "favoritesOnly": "Samo favoriti",
+    "favoritesOnlyHint": "Najprije zvjezdicom označi igrače ili ekipe, a onda ovaj prekidač prikazuje samo njih.",
     "favorites": {
       "added": "{{name}} dodan u favorite",
       "removed": "{{name}} uklonjen iz favorita",
@@ -1165,7 +1166,11 @@
       "fillClubsHint": "Traži igrače bez kluba u pretrazi igrača na chess-results i preuzima klub s njihovog najnovijeg turnira. Jedan upit po igraču, traje nekoliko minuta.",
       "clubsStarted": "Traže se klubovi — {{count}} igrača, to traje nekoliko minuta.",
       "clubsDone": "Pretraga klubova završena.",
-      "clubsFailed": "Pretraga klubova nije se mogla pokrenuti."
+      "clubsFailed": "Pretraga klubova nije se mogla pokrenuti.",
+      "search": "Ime ili klub",
+      "searchClear": "Očisti pretragu",
+      "searchNone": "Nijedan igrač ne odgovara upitu „{{query}}“.",
+      "sortBy": "Poredaj po"
     },
     "teams": {
       "rank": "Mjesto",

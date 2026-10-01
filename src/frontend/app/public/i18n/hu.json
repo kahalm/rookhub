@@ -904,6 +904,7 @@
       "pairings": "Párosítások"
     },
     "favoritesOnly": "Csak kedvencek",
+    "favoritesOnlyHint": "Előbb jelölj meg csillaggal játékosokat vagy csapatokat, ez a kapcsoló aztán csak őket mutatja.",
     "favorites": {
       "added": "{{name}} hozzáadva a kedvencekhez",
       "removed": "{{name}} eltávolítva a kedvencekből",
@@ -930,7 +931,11 @@
       "fillClubsHint": "A klub nélküli játékosokat megkeresi a chess-results játékoskeresőjében, és átveszi a klubot a legutóbbi versenyükből. Játékosonként egy lekérés, néhány percig tart.",
       "clubsStarted": "Klubok keresése — {{count}} játékos, ez néhány percig tart.",
       "clubsDone": "A klubkeresés befejeződött.",
-      "clubsFailed": "A klubkeresést nem sikerült elindítani."
+      "clubsFailed": "A klubkeresést nem sikerült elindítani.",
+      "search": "Név vagy klub",
+      "searchClear": "Keresés törlése",
+      "searchNone": "Egy játékos sem felel meg ennek: „{{query}}”.",
+      "sortBy": "Rendezés"
     },
     "teams": {
       "rank": "Helyezés",

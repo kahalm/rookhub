@@ -38,6 +38,86 @@ describe('TournamentTablesComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // ----- Codereview UX-080: 178 Spieler einer Landesliga ohne Suche, am Handy ohne Sortierung -----
+
+  const field = () => fixture.nativeElement.querySelector('.player-search input') as HTMLInputElement | null;
+  const cardNames = () => [...fixture.nativeElement.querySelectorAll('.player-card .player-name')]
+    .map((n: Element) => n.textContent?.trim());
+
+  function liga(): void {
+    component.players = component.displayedPlayers = [
+      player({ id: 1, snr: 1, name: 'Oberschmid, Patrik', teamName: 'SK Schwaz', elo: 1900 }),
+      player({ id: 2, snr: 2, name: 'Muster, Anna', teamName: 'SK Dornbirn', elo: 2105 }),
+      player({ id: 3, snr: 3, name: 'Martinović, Saša', teamName: null, club: 'ŠK Zagreb', elo: 2300 }),
+      player({ id: 4, snr: 4, name: 'Huber, Franz', teamName: 'SK Schwaz', elo: 1700 }),
+    ];
+  }
+
+  async function type(text: string): Promise<void> {
+    const input = field()!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  }
+
+  it('findet Spieler über Namen oder Verein, ohne Groß-/Kleinschreibung und Akzente', async () => {
+    liga();
+    fixture.detectChanges();
+    expect(field()).withContext('Suchfeld über der Spielerliste').not.toBeNull();
+
+    await type('schwaz');
+    expect(cardNames()).toEqual(['Oberschmid, Patrik', 'Huber, Franz']);
+
+    await type('sasa zagreb');
+    expect(cardNames()).toEqual(['Martinović, Saša']);
+
+    // Die Desktop-Tabelle zeigt dieselbe Auswahl.
+    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row').length).toBe(1);
+  });
+
+  it('sagt, wenn kein Spieler zur Suche passt', async () => {
+    liga();
+    fixture.detectChanges();
+
+    await type('Carlsen');
+
+    expect(cardNames()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.search-none')).not.toBeNull();
+  });
+
+  it('bietet am Handy eine Sortierung an, Elo mit den Stärksten zuerst', () => {
+    liga();
+    const sorts: unknown[] = [];
+    component.playerSort.subscribe(s => sorts.push(s));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.player-sort mat-select'))
+      .withContext('Sortier-Menue fuer die Kartenliste').not.toBeNull();
+    component.pickMobileSort('elo');
+    component.pickMobileSort('team');
+
+    expect(sorts).toEqual([{ active: 'elo', direction: 'desc' }, { active: 'team', direction: 'asc' }]);
+    expect(component.mobileSortLabel('team')).toBe('tournaments.players.club');
+  });
+
+  it('zeigt „Nur Favoriten" auch ohne Stern — gesperrt und mit Hinweis', () => {
+    liga();
+    component.hasFavorites = false;
+    fixture.detectChanges();
+
+    const toggle = () => fixture.nativeElement.querySelector('.player-tools .favorites-only button') as HTMLButtonElement | null;
+    expect(toggle()).withContext('Schalter fehlt ohne Favoriten').not.toBeNull();
+    expect(toggle()!.disabled).toBeTrue();
+    expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).not.toBeNull();
+
+    component.hasFavorites = true;
+    fixture.detectChanges();
+    expect(toggle()!.disabled).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.player-tools .filter-hint')).toBeNull();
+  });
+
   /**
    * Startliste ohne Vereinsspalte: der uebernommene Verein steht kursiv da (Herkunft im Tooltip),
    * und fuer die, bei denen gar keiner steht, gibt es den Knopf „Vereine nachtragen".

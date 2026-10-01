@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -28,7 +29,7 @@ import { TournamentPlayer, TournamentTeam, DisplayPairing } from '@rh/core/model
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-tournament-tables',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatButtonModule, MatTooltipModule, MatSlideToggleModule, MatSortModule, TranslatePipe, LoadingSpinnerComponent],
   templateUrl: './tournament-tables.component.html',
   styleUrls: ['./tournament-tables.component.scss'],
 })
@@ -87,6 +88,47 @@ export class TournamentTablesComponent {
     return this.players.filter(p => !p.teamName && !p.club && !!p.fideId && p.fideId !== '0').length;
   }
 
+  // --- Spielersuche und Handy-Sortierung (Codereview UX-080) ---
+  // Eine Landesliga hat 178 Spieler: ohne Suche fand man den eigenen Namen (oder die Vereins-
+  // kollegen, die man mit Stern markieren will) nur durch Scrollen, am Handy — Karten statt
+  // Tabelle — auch ohne Sortierung. Reiner Anzeigezustand dieser Komponente: beide Container
+  // reichen die vollstaendige Liste herein, gefiltert wird hier, sortiert weiter dort.
+
+  /** Suchtext ueber Name, Mannschaft und Verein. */
+  playerQuery = '';
+
+  /** Gewaehlte Sortierung im Handy-Menue (die Desktop-Tabelle sortiert ueber ihre Spaltenkoepfe). */
+  mobileSort: MobileSortKey = 'snr';
+  readonly mobileSortKeys: readonly MobileSortKey[] = ['snr', 'name', 'elo', 'team'];
+
+  /** Gemerkt je Eingabe: ein neues Array je Durchlauf liesse mat-table jedes Mal neu zeichnen. */
+  private shownCache?: { source: TournamentPlayer[]; query: string; result: TournamentPlayer[] };
+
+  /** Die angezeigten Spieler nach der Suche; jedes Suchwort muss in Name, Mannschaft oder Verein stehen. */
+  get shownPlayers(): TournamentPlayer[] {
+    const cache = this.shownCache;
+    if (cache && cache.source === this.displayedPlayers && cache.query === this.playerQuery) return cache.result;
+    const words = fold(this.playerQuery).split(/[\s,]+/).filter(Boolean);
+    const result = words.length === 0 ? this.displayedPlayers : this.displayedPlayers.filter(p => {
+      const haystack = fold([p.name, p.teamName, p.club].filter(Boolean).join(' '));
+      return words.every(word => haystack.includes(word));
+    });
+    this.shownCache = { source: this.displayedPlayers, query: this.playerQuery, result };
+    return result;
+  }
+
+  /** Beschriftung einer Handy-Sortierung — die Vereinsspalte ist in Mannschaftsturnieren die Mannschaft. */
+  mobileSortLabel(key: MobileSortKey): string {
+    if (key === 'team') return this.hasTeamPairings ? 'tournaments.players.team' : 'tournaments.players.club';
+    return `tournaments.players.${key}`;
+  }
+
+  pickMobileSort(key: MobileSortKey): void {
+    this.mobileSort = key;
+    // Elo absteigend: wer nach Wertung sortiert, sucht die Staerksten oben.
+    this.playerSort.emit({ active: key, direction: key === 'elo' ? 'desc' : 'asc' });
+  }
+
   isFavorite(player: TournamentPlayer): boolean {
     return this.favoriteSnrs.has(player.snr);
   }
@@ -94,4 +136,11 @@ export class TournamentTablesComponent {
   isTeamFavorite(team: TournamentTeam): boolean {
     return this.favoriteTeamSnrs.has(team.snr);
   }
+}
+
+export type MobileSortKey = 'snr' | 'name' | 'elo' | 'team';
+
+/** Fuer die Suche: ohne Gross/klein und ohne Akzente — „sasa" findet „Saša", „sk" findet „ŠK". */
+function fold(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }

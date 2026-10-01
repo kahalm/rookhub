@@ -2,6 +2,10 @@
     .table-scroll { overflow-x: auto; }
     .round-selector { padding: 1rem 0; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .filter-bar { padding: 1rem 0 0; display: flex; align-items: center; gap: 1rem; }
+    .player-tools { flex-wrap: wrap; gap: 0.5rem 1rem; }
+    .player-search { flex: 1 1 16rem; max-width: 24rem; }
+    .player-sort { flex: 0 1 10rem; }
+    .filter-hint { flex: 1 1 12rem; font-size: 0.82rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .club-derived { font-style: italic; color: color-mix(in srgb, currentColor 70%, transparent); }
     .empty-hint { padding: 1rem 0; color: color-mix(in srgb, currentColor 65%, transparent); }
 
@@ -82,6 +86,9 @@
       :host ::ng-deep .mat-mdc-tab { min-width: 0 !important; padding: 0 8px !important; }
       :host ::ng-deep .mat-mdc-tab .mdc-tab__text-label { font-size: 0.75rem; }
       .player-details { padding-left: 1.5rem; }
+      .player-search { max-width: none; }
+      /* Ein Formularfeld ist inline-flex; das display:block von .mobile-only zerlegte sein Innenleben. */
+      .player-sort.mobile-only { display: inline-flex; flex-direction: column; }
       .pairing-team { white-space: normal; }
       /* Team-Links waren Inline-Text (~18-22 px hoch); Heim- und Gastlink standen mit nur der Ergebniszeile
          dazwischen uebereinander -> Tipp auf das falsche Team. Padding statt Zeilenabstand: ~34 px Ziel,
