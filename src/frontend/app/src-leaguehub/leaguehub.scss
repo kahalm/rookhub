@@ -318,6 +318,20 @@ button.pl:hover { text-decoration-color: var(--ink); }
 .scan-list li > span:first-child { font-weight: 600; }
 
 .club-table .anon { color: var(--muted); font-style: italic; }
+/* Vereinspartien am Handy (UX-035): unter 640 px Containerbreite stehen die Aktionen einer Partie in einer eigenen Zeile
+   darunter. In der Spalte (nowrap) lagen „Bearbeiten“ und „Löschen“ rechts außerhalb des Bilds, erreichbar nur durch
+   unsichtbares Querwischen. Container- statt Media-Query wie bei der Importübersicht: es zählt die Breite, die die
+   Tabelle wirklich hat (und der Test kann sie setzen). */
+.club-scroll { container-type: inline-size; }
+.club-table td.acts, .club-table th.acts { text-align: right; white-space: nowrap; }
+.club-table tr.acts-row { display: none; }
+.row-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+@container (max-width: 640px) {
+  .club-table .hide-s, .club-table td.acts, .club-table th.acts { display: none; }
+  .club-table tr.acts-row { display: table-row; }
+  .club-table tr.game > td { border-bottom: 0; padding-bottom: 2px; }
+  .club-table tr.acts-row > td { padding-top: 0; }
+}
 
 /* Formular-Korrektur: Foto | Brett | Zug + Zugliste — am PC nebeneinander, darunter die Partie-Daten */
 /* Formular prüfen: Foto | Brett | Prüfen + Zugliste. Am Handy zuerst „Prüfen" (Ausschnitt der Zeile, Lesarten, „Stimmt so"),

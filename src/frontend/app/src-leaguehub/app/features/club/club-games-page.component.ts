@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { PlayerSearchComponent } from './player-search.component';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -30,7 +31,7 @@ type Side = 'white' | 'black';
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent],
+  imports: [RouterLink, NgTemplateOutlet, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
       <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz." />
@@ -69,15 +70,17 @@ type Side = 'white' | 'black';
           }
         </section>
       } @else if (items().length) {
-        <div class="roster-scroll">
+        <!-- UX-035: am Handy (Container unter 640 px) stehen die Aktionen in einer eigenen Zeile unter der Partie — in der
+             Spalte lagen „Bearbeiten“ und „Löschen“ rechts außerhalb und waren nur durch unsichtbares Querwischen erreichbar. -->
+        <div class="roster-scroll club-scroll">
           <table class="rtable club-table">
             <thead><tr><th class="num">Jahr</th><th>Weiß</th><th>Schwarz</th><th class="num">Ergebnis</th>
               <th class="hide-s">Eröffnung</th><th class="num hide-s">Züge</th>
               <th class="num" title="Genauigkeit Weiß · Schwarz aus der Hintergrund-Analyse">Analyse</th>
-              <th><span class="sr">Aktionen</span></th></tr></thead>
+              <th class="acts"><span class="sr">Aktionen</span></th></tr></thead>
             <tbody>
               @for (g of items(); track g.id) {
-                <tr>
+                <tr class="game">
                   <td class="num">{{ g.year ?? '–' }}</td>
                   @for (k of sides; track k) {
                     <td>@if (fideOf(g, k); as f) { <button type="button" class="pl" (click)="openCard(f, k === 'white' ? 'w' : 's')">{{ nameOf(g, k) }}</button> }
@@ -94,19 +97,11 @@ type Side = 'white' | 'black';
                   <td class="hide-s small">{{ de(g.opening) }}</td>
                   <td class="num hide-s small">{{ moves(g) }}</td>
                   <td class="num small" [attr.title]="analysisTitle(g)">{{ analysisText(g) }}</td>
-                  <td class="num">
-                    <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
-                            [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' nachspielen'">Nachspielen</button>
-                    @if (rookHub && g.uci) {
-                      <a class="btn-link" [href]="analysisUrl(g)" target="_blank" rel="noopener"
-                         [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' im Analysebrett von RookHub öffnen'">Analyse</a>
-                    }
-                    @if (g.canDelete) {
-                    <button type="button" class="btn-link" (click)="edit(g)"
-                            [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
-                    <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
-                            [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }</td>
+                  <td class="acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></td>
                 </tr>
+                <tr class="acts-row"><td colspan="8">
+                  <div class="row-acts"><ng-container *ngTemplateOutlet="rowActs; context: { $implicit: g }" /></div>
+                </td></tr>
                 @if (viewing(); as v) {
                   @if (v.id === g.id) {
                     <tr class="edit-row"><td colspan="8">
@@ -160,6 +155,21 @@ type Side = 'white' | 'black';
       }
       <lh-player-card />
     }
+    <!-- Die Aktionen einer Partie — in der Spalte (breit) bzw. in der eigenen Zeile darunter (Handy); die jeweils andere
+         Stelle blendet das CSS aus (display: none, also weder sichtbar noch für Vorleser oder Tab erreichbar). -->
+    <ng-template #rowActs let-g>
+      <button type="button" class="btn-link" [attr.aria-expanded]="viewing()?.id === g.id" (click)="view(g)"
+              [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' nachspielen'">Nachspielen</button>
+      @if (rookHub && g.uci) {
+        <a class="btn-link" [href]="analysisUrl(g)" target="_blank" rel="noopener"
+           [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' im Analysebrett von RookHub öffnen'">Analyse</a>
+      }
+      @if (g.canDelete) {
+      <button type="button" class="btn-link" (click)="edit(g)"
+              [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' bearbeiten'">Bearbeiten</button>
+      <button type="button" class="btn-link" [disabled]="deleting() === g.id" (click)="remove(g)"
+              [attr.aria-label]="'Partie ' + g.white + ' – ' + g.black + ' löschen'">Löschen</button> }
+    </ng-template>
   `,
 })
 export class ClubGamesPageComponent implements OnInit {

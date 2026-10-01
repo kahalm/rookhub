@@ -67,7 +67,7 @@ describe('ClubGamesPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    const rows = el.querySelectorAll('tbody tr');
+    const rows = el.querySelectorAll('tbody tr.game');
     expect(rows[0].querySelector('.pl-nofide')?.textContent).toContain('ohne FIDE-ID');
     expect(rows[0].textContent).not.toContain('✎');
     expect(rows[1].querySelector('.pl.unknown')?.textContent).toContain('✎');
@@ -77,7 +77,7 @@ describe('ClubGamesPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    const rows = el.querySelectorAll('tbody tr');
+    const rows = el.querySelectorAll('tbody tr.game');
     expect(rows.length).toBe(2);
     expect(rows[0].textContent).toContain('2024');
     expect(rows[0].querySelector('.anon')?.textContent).toBe('Schwaz');
@@ -122,16 +122,44 @@ describe('ClubGamesPageComponent', () => {
     expect(el.querySelector('tr.edit-row')).toBeNull();
   }));
 
+  // UX-035: bei 390 px lag die Aktionsspalte (nowrap) 177 px rechts außerhalb — „Bearbeiten“/„Löschen“ nur durch
+  // unsichtbares Querwischen erreichbar. Unter 640 px Containerbreite stehen sie jetzt in einer eigenen Zeile darunter.
+  it('am Handy (390 px) stehen die Aktionen in einer eigenen Zeile, die Tabelle läuft nicht quer über (UX-035)', async () => {
+    api.list.and.resolveTo({ total: 1, page: 1, pageSize: 50, items: [
+      G(7, { white: 'Mustermann-Huber, Maximilian', whiteFide: '900', whiteElo: 1860, anonymized: false, canDelete: true,
+        analysis: { status: 'done', analyzed: 22, total: 22, accuracyWhite: 87.4, accuracyBlack: 71.6 } })] });
+    const el = create();
+    el.style.display = 'block';
+    el.style.width = '390px';
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const scroll = el.querySelector('.club-scroll') as HTMLElement;
+    void scroll.offsetWidth;                      // Layout anstoßen, damit Barlow angefordert wird …
+    await (document as unknown as { fonts: { ready: Promise<unknown> } }).fonts.ready;   // … und gemessen wird mit ihr
+    const visible = (e: Element | null) => !!e && getComputedStyle(e).display !== 'none';
+    const game = el.querySelector('tbody tr.game') as HTMLElement;
+    const acts = el.querySelector('tbody tr.acts-row') as HTMLElement;
+    expect(visible(game.querySelector('td.acts'))).toBeFalse();
+    expect(visible(acts)).toBeTrue();
+    const labels = Array.from(acts.querySelectorAll('.btn-link')).map(b => b.textContent?.trim());
+    expect(labels).toEqual(['Nachspielen', 'Bearbeiten', 'Löschen']);
+    expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
+    // breit wie bisher: Aktionen in der Spalte, keine eigene Zeile
+    el.style.width = '900px';
+    expect(visible(game.querySelector('td.acts'))).toBeTrue();
+    expect(visible(acts)).toBeFalse();
+  });
+
   it('Löschen fragt nach und nimmt die Zeile heraus', fakeAsync(() => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
     api.deleteGame.and.resolveTo({});
-    (Array.from(el.querySelectorAll('tbody tr')[1].querySelectorAll('.btn-link')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
+    (Array.from(el.querySelectorAll('tbody tr.game')[1].querySelectorAll('.btn-link')).find(b => b.textContent?.trim() === 'Löschen') as HTMLButtonElement).click();
     flushMicrotasks();
     fixture.detectChanges();
     expect(api.deleteGame).toHaveBeenCalledWith(2);
-    expect(el.querySelectorAll('tbody tr').length).toBe(1);
+    expect(el.querySelectorAll('tbody tr.game').length).toBe(1);
     expect(el.textContent).toContain('1 Partie');
   }));
 
@@ -166,7 +194,7 @@ describe('ClubGamesPageComponent', () => {
     fixture.detectChanges();
     expect(api.list).toHaveBeenCalledTimes(2);
     expect(el.querySelector('section.gate')).toBeNull();
-    expect(el.querySelectorAll('tbody tr').length).toBe(1);
+    expect(el.querySelectorAll('tbody tr.game').length).toBe(1);
     expect(el.textContent).toContain('1 Partie');
   }));
 
@@ -193,7 +221,7 @@ describe('ClubGamesPageComponent', () => {
     const el = create();
     flushMicrotasks();
     fixture.detectChanges();
-    const cell = (r: number) => el.querySelectorAll('tbody tr')[r].querySelectorAll('td')[6].textContent?.trim();
+    const cell = (r: number) => el.querySelectorAll('tbody tr.game')[r].querySelectorAll('td')[6].textContent?.trim();
     expect(cell(0)).toBe('87 · 72');
     expect(cell(1)).toBe('22 %');
     expect(cell(2)).toBe('–');
