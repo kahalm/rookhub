@@ -595,6 +595,7 @@
     "lichessUsername": "Lichess-Benutzername",
     "saving": "Wird gespeichert...",
     "saved": "Profil gespeichert",
+    "loadFailed": "Dein Profil konnte nicht geladen werden. Die Geräte-Einstellungen unten funktionieren auch ohne Verbindung.",
     "saveFailed": "Profil konnte nicht gespeichert werden",
     "searchFailed": "Suche fehlgeschlagen",
     "chessResultsApplied": "ChessResults-Daten übernommen",

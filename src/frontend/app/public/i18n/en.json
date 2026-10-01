@@ -595,6 +595,7 @@
     "lichessUsername": "Lichess username",
     "saving": "Saving...",
     "saved": "Profile saved",
+    "loadFailed": "Your profile could not be loaded. The device settings below work without a connection.",
     "saveFailed": "Failed to save profile",
     "searchFailed": "Search failed",
     "chessResultsApplied": "ChessResults data applied",

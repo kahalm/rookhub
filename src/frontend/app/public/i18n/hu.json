@@ -357,6 +357,7 @@
     "lichessUsername": "Lichess felhasználónév",
     "saving": "Mentés...",
     "saved": "Profil mentve",
+    "loadFailed": "Nem sikerült betölteni a profilodat. Az alábbi eszközbeállítások kapcsolat nélkül is működnek.",
     "saveFailed": "Nem sikerült menteni a profilt",
     "searchFailed": "Sikertelen keresés",
     "chessResultsApplied": "ChessResults adatok alkalmazva",

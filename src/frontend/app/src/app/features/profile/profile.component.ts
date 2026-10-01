@@ -122,6 +122,23 @@ interface Profile {
           </mat-card-content>
         </mat-card>
       </div>
+    } @else {
+      <!-- Profil nicht ladbar (z. B. offline): statt einer weissen Seite Meldung + Erneut-Knopf, und die
+           netzunabhaengigen Karten (Offline-Cache, Design) bleiben erreichbar. -->
+      <div class="profile-container">
+        <mat-card>
+          <mat-card-content>
+            <p class="load-failed">{{ 'profile.loadFailed' | translate }}</p>
+            <button mat-stroked-button type="button" class="retry-btn" (click)="load()">{{ 'common.retry' | translate }}</button>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <app-offline-settings-card></app-offline-settings-card>
+
+            <mat-divider class="discord-divider"></mat-divider>
+            <app-theme-card></app-theme-card>
+          </mat-card-content>
+        </mat-card>
+      </div>
     }
   `,
   styles: [`
@@ -157,6 +174,7 @@ interface Profile {
     .discord-name { font-weight: 500; }
     .discord-linked button { margin-left: auto; }
     .discord-hint { color: #bdbdbd; font-size: 0.85rem; margin: 0; }
+    .load-failed { margin: 1rem 0 0.75rem; }
     @media (max-width: 768px) {
       .profile-container { padding: 0.75rem; }
       .name-row mat-form-field { min-width: 0; flex-basis: 100%; }
@@ -199,6 +217,12 @@ export class ProfileComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  /** Profil holen; auch der Erneut-Knopf des Fehlerzustands. */
+  load(): void {
+    this.loading = true;
     this.profileService.getProfile<Profile>().subscribe({
       next: (p) => { this.profile = p; this.savedEmail = p?.email ?? null; this.loading = false; },
       error: () => { this.loading = false; }

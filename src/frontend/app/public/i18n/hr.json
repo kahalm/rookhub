@@ -595,6 +595,7 @@
     "lichessUsername": "Lichess korisničko ime",
     "saving": "Spremanje...",
     "saved": "Profil spremljen",
+    "loadFailed": "Profil nije moguće učitati. Postavke uređaja ispod rade i bez veze.",
     "saveFailed": "Spremanje profila nije uspjelo",
     "searchFailed": "Pretraga nije uspjela",
     "chessResultsApplied": "ChessResults podaci preuzeti",

@@ -1,7 +1,20 @@
-import { ElementRef } from '@angular/core';
+import { Component, ElementRef } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { convertToParamMap } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { ProfileComponent } from './profile.component';
+import { ProfileService } from '../../core/profile.service';
+import { SnackbarService } from '../../core/snackbar.service';
+import { DiscordLinkService } from '../../core/discord-link.service';
+import { AuthService } from '../../core/auth.service';
+import { ApiTokensComponent } from './api-tokens.component';
+import { EngineCardComponent } from './engine-card.component';
+import { OfflineSettingsCardComponent } from './offline-settings-card.component';
+import { ThemeCardComponent } from './theme-card.component';
+import { ChangePasswordCardComponent } from './change-password-card.component';
+import { DeleteAccountCardComponent } from './delete-account-card.component';
+import { ProfileIdentityFormComponent } from '../../shared/profile-identity-form/profile-identity-form.component';
 
 /** Direkt instanziiert (ohne TestBed/Template) — testet die Komponenten-Logik.
  *  Offline/Theme/Passwort/Konto-Löschen sind in eigene Kind-Komponenten ausgelagert
@@ -193,5 +206,53 @@ describe('ProfileComponent', () => {
         expect(x.scroll).not.toHaveBeenCalled();
       }
     });
+  });
+});
+
+// F5-007: scheitert GET /api/profile (z. B. offline), war die Seite weiss — jetzt Meldung + Erneut-Knopf, und die
+// netzunabhaengigen Karten (Offline, Design) bleiben erreichbar. Kind-Karten als Stubs mit gleichem Selektor.
+@Component({ selector: 'app-offline-settings-card', standalone: true, template: 'OFFLINE' })
+class OfflineStub {}
+@Component({ selector: 'app-theme-card', standalone: true, template: 'THEME' })
+class ThemeStub {}
+
+describe('ProfileComponent (Template bei Ladefehler)', () => {
+  function render(getProfile: jasmine.Spy) {
+    TestBed.configureTestingModule({
+      imports: [ProfileComponent],
+      providers: [
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ProfileService, useValue: { getProfile, updateProfile: () => of({}) } },
+        { provide: SnackbarService, useValue: { success: () => {}, info: () => {} } },
+        { provide: DiscordLinkService, useValue: { unlink: () => of({}) } },
+        { provide: AuthService, useValue: { isImpersonating: false } },
+      ],
+    });
+    TestBed.overrideComponent(ProfileComponent, {
+      remove: { imports: [ApiTokensComponent, EngineCardComponent, OfflineSettingsCardComponent, ThemeCardComponent,
+        ChangePasswordCardComponent, DeleteAccountCardComponent, ProfileIdentityFormComponent] },
+      add: { imports: [OfflineStub, ThemeStub] },
+    });
+    const fixture = TestBed.createComponent(ProfileComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('zeigt Meldung, Erneut-Knopf und die Offline-/Design-Karten statt einer leeren Seite', () => {
+    const fixture = render(jasmine.createSpy('getProfile').and.returnValue(throwError(() => ({ status: 0 }))));
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.load-failed')?.textContent).toContain('profile.loadFailed');
+    expect(el.querySelector('app-offline-settings-card')).not.toBeNull();
+    expect(el.querySelector('app-theme-card')).not.toBeNull();
+    expect(el.querySelector('.retry-btn')).not.toBeNull();
+  });
+
+  it('Erneut-Knopf laedt das Profil nochmal', () => {
+    const getProfile = jasmine.createSpy('getProfile').and.returnValues(
+      throwError(() => ({ status: 0 })), throwError(() => ({ status: 500 })));
+    const fixture = render(getProfile);
+    (fixture.nativeElement.querySelector('.retry-btn') as HTMLButtonElement).click();
+    expect(getProfile).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.loading).toBeFalse();
   });
 });
