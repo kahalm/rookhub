@@ -111,11 +111,22 @@ export class TournamentDirectoryComponent implements OnInit {
 
   readonly tilesFailed = signal(false);
   readonly profiles = signal<SearchProfile[]>([]);
+  /**
+   * Die Profile sind wirklich da. Ohne diese Marke stand bei einem gescheiterten Abruf der
+   * Erstnutzer-Hinweis „Noch kein Suchprofil" — auch bei Nutzern, die Profile haben (UX-040).
+   */
+  readonly profilesLoaded = signal(false);
 
   readonly entries = signal<DirectoryEntry[]>([]);
   readonly total = signal(0);
   readonly truncated = signal(false);
   readonly loading = signal(false);
+  /**
+   * Seite 1 der Liste ist gescheitert. Ohne diese Marke stand dort der Leer-Text „Zu diesen
+   * Filtern gibt es keine Turniere" — der Nutzer schaltete Filter durch, statt es erneut zu
+   * versuchen; der eigentliche Fehler stand nur fuenf Sekunden in einem Snackbar (UX-040).
+   */
+  readonly listFailed = signal(false);
   page = 1;
 
   /**
@@ -135,12 +146,16 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   readonly mapTruncated = signal(false);
   readonly mapLoading = signal(false);
+  /** Der letzte Kartenausschnitt kam nicht — sonst stuende dort „0 Turniere im Ausschnitt". */
+  readonly mapFailed = signal(false);
   private lastBounds: string | null = null;
 
   readonly calendarDays = signal<DirectoryCalendarDay[]>([]);
   calendarYear = new Date().getFullYear();
   calendarMonth = new Date().getMonth() + 1;
   readonly calendarLoading = signal(false);
+  /** Der Monat kam nicht — sonst stuende in der Handy-Agenda „In diesem Monat kein Turnier". */
+  readonly calendarFailed = signal(false);
 
   /**
    * Schluessel der gemerkten Ansicht. Ohne sie faellt der Weg „Turnier oeffnen → zurueck" auf die
@@ -188,6 +203,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: profiles => {
         this.profiles.set(profiles);
+        this.profilesLoaded.set(true);
         this.applyQueryParams();
       },
       error: () => this.applyQueryParams(),
@@ -488,6 +504,7 @@ export class TournamentDirectoryComponent implements OnInit {
 
   loadList(): void {
     this.loading.set(true);
+    this.listFailed.set(false);
     const generation = ++this.listGeneration;
     const requestedPage = this.page;
     this.directory.search(this.filter, requestedPage, this.pageSize).subscribe({
@@ -501,7 +518,16 @@ export class TournamentDirectoryComponent implements OnInit {
       error: () => {
         if (generation !== this.listGeneration) return;
         this.loading.set(false);
-        this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
+        if (requestedPage === 1) {
+          // Die alte Liste gehoert zu einem anderen Filter — stehen bleibt die Fehlerkarte.
+          this.entries.set([]);
+          this.total.set(0);
+          this.truncated.set(false);
+          this.listFailed.set(true);
+        } else {
+          // „Mehr anzeigen" gescheitert: die Liste bis hierher stimmt, nur der Rest fehlt.
+          this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
+        }
       },
     });
   }
@@ -524,6 +550,7 @@ export class TournamentDirectoryComponent implements OnInit {
     // fragt mit dem GEMERKTEN Ausschnitt, die frisch aufgebaute Karte meldet direkt danach ihren
     // eigenen. Ohne Zaehler gewinnt die zufaellig spaetere Antwort.
     const generation = ++this.pinsGeneration;
+    this.mapFailed.set(false);
     this.directory.map(this.filter, bounds).subscribe({
       next: res => {
         if (generation !== this.pinsGeneration) return;
@@ -531,7 +558,11 @@ export class TournamentDirectoryComponent implements OnInit {
         this.mapTruncated.set(res.truncated);
         this.mapLoading.set(false);
       },
-      error: () => { if (generation === this.pinsGeneration) this.mapLoading.set(false); },
+      error: () => {
+        if (generation !== this.pinsGeneration) return;
+        this.mapLoading.set(false);
+        this.mapFailed.set(true);
+      },
     });
   }
 
@@ -546,11 +577,14 @@ export class TournamentDirectoryComponent implements OnInit {
 
   private loadCalendar(): void {
     this.calendarLoading.set(true);
+    this.calendarFailed.set(false);
     this.directory.calendar(this.filter, this.calendarYear, this.calendarMonth).subscribe({
       next: days => { this.calendarDays.set(days); this.calendarLoading.set(false); },
       error: () => {
         this.calendarLoading.set(false);
-        this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
+        // Die Tage gehoeren zu einem anderen Monat oder Filter — die Fehlerzeile sagt, was los ist.
+        this.calendarDays.set([]);
+        this.calendarFailed.set(true);
       },
     });
   }

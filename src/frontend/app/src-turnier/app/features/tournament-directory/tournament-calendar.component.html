@@ -44,7 +44,7 @@
 
 <!-- Mobil: Agenda statt Raster; blendet beim Laden ab wie das Raster -->
 <div class="cal-agenda mobile-only" [class.loading]="loading">
-  @if (agenda.length === 0 && !loading) {
+  @if (agenda.length === 0 && !loading && !failed) {
     <p class="muted">{{ 'tournamentDirectory.calendar.empty' | translate }}</p>
   }
   @for (day of agenda; track day.date) {

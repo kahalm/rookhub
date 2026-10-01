@@ -41,6 +41,8 @@ export class TournamentCalendarComponent implements OnChanges {
   @Input() month!: number;
   @Input() locale = 'de';
   @Input() loading = false;
+  /** Der Monat kam nicht — dann steht darueber die Fehlerzeile, und „kein Turnier" waere falsch. */
+  @Input() failed = false;
 
   @Output() monthChanged = new EventEmitter<{ year: number; month: number }>();
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();

@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap, take, takeWhile, timer } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, take, takeWhile, timer } from 'rxjs';
 import { LoadingSpinnerComponent } from '@rh/shared/loading-spinner/loading-spinner.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
@@ -60,7 +61,16 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   readonly entry = signal<DirectoryEntry | null>(null);
   readonly loading = signal(true);
   readonly notFound = signal(false);
+  /**
+   * Der Abruf ist gescheitert, ohne dass der Server „gibt es nicht" gesagt hat (500, Netz weg).
+   * Getrennt von `notFound`: sonst stand bei jedem Aussetzer „steht (noch) nicht im Verzeichnis",
+   * und wer das glaubte, meldete ein Turnier nach, das laengst drinsteht (Codereview UX-040).
+   */
+  readonly loadFailed = signal(false);
   readonly tilesFailed = signal(false);
+
+  /** „Erneut versuchen" laedt dieselbe Id noch einmal — ohne Umweg ueber die Adresse. */
+  private readonly reload$ = new BehaviorSubject<void>(undefined);
 
   /** Das schon geholte Turnier, falls es eines gibt — dann fuehrt ein Knopf zu Ergebnissen. */
   readonly imported = signal<Tournament | null>(null);
@@ -71,21 +81,32 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   readonly busy = signal(false);
 
   ngOnInit(): void {
-    this.route.paramMap.pipe(
-      switchMap(params => {
+    combineLatest([this.route.paramMap, this.reload$]).pipe(
+      switchMap(([params]) => {
         this.loading.set(true);
         this.notFound.set(false);
+        this.loadFailed.set(false);
         this.entry.set(null);
         this.imported.set(null);
-        return this.directory.get(params.get('id') ?? '').pipe(catchError(() => of(null)));
+        return this.directory.get(params.get('id') ?? '').pipe(
+          map(entry => ({ entry: entry as DirectoryEntry | null, failed: false })),
+          // 404 (unbekannt) und 400 (keine gueltige Id) heissen wirklich „nicht im Verzeichnis";
+          // alles andere ist ein Ausfall und bekommt „Erneut versuchen".
+          catchError((err: unknown) => of({ entry: null, failed: !isMissing(err) })),
+        );
       }),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(entry => {
+    ).subscribe(({ entry, failed }) => {
       this.loading.set(false);
       this.entry.set(entry);
-      this.notFound.set(entry === null);
+      this.loadFailed.set(failed);
+      this.notFound.set(entry === null && !failed);
       if (entry) this.lookupImported(entry);
     });
+  }
+
+  retry(): void {
+    this.reload$.next();
   }
 
   /**
@@ -277,4 +298,9 @@ export class TournamentDirectoryDetailComponent implements OnInit {
       this.imported.set(t && t.chessResultsId === entry.chessResultsId ? t : null);
     });
   }
+}
+
+/** Sagt der Server ausdruecklich, dass es den Eintrag nicht gibt (bzw. die Id keine ist)? */
+function isMissing(err: unknown): boolean {
+  return err instanceof HttpErrorResponse && (err.status === 404 || err.status === 400);
 }

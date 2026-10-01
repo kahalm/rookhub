@@ -217,7 +217,8 @@
     </div>
   }
 
-  @if (profiles().length === 0) {
+  <!-- Nur nach einem geglueckten Abruf: ein gescheiterter hiesse sonst „du hast noch keins". -->
+  @if (profilesLoaded() && profiles().length === 0) {
     <p class="hint">
       {{ 'tournamentDirectory.noProfileHint' | translate }}
       <button mat-stroked-button (click)="newProfile()">
@@ -232,6 +233,8 @@
       <div class="tab-body">
         @if (loading() && entries().length === 0) {
           <app-loading-spinner />
+        } @else if (listFailed()) {
+          <ng-container *ngTemplateOutlet="loadFailed" />
         } @else if (entries().length === 0) {
           <p class="muted">{{ 'tournamentDirectory.empty' | translate }}</p>
         } @else {
@@ -290,10 +293,14 @@
           @if (mapTruncated()) {
             <p class="hint map-truncated">{{ 'tournamentDirectory.mapTruncated' | translate }}</p>
           }
-          <p class="muted count">
-            {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
-            @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
-          </p>
+          @if (mapFailed()) {
+            <ng-container *ngTemplateOutlet="loadFailed" />
+          } @else {
+            <p class="muted count">
+              {{ 'tournamentDirectory.pins' | translate: { count: pins().length } }}
+              @if (mapLoading()) { <span> · {{ 'common.loading' | translate }}</span> }
+            </p>
+          }
         }
       </div>
     </mat-tab>
@@ -301,8 +308,12 @@
     <mat-tab [label]="'tournamentDirectory.tabs.calendar' | translate">
       <div class="tab-body">
         @if (tab === 'calendar') {
+          @if (calendarFailed()) {
+            <ng-container *ngTemplateOutlet="loadFailed" />
+          }
           <app-tournament-calendar [days]="calendarDays()" [year]="calendarYear" [month]="calendarMonth"
                                    [locale]="calendarLocale" [loading]="calendarLoading()"
+                                   [failed]="calendarFailed()"
                                    (monthChanged)="onMonthChanged($event)"
                                    (entrySelected)="openFromCalendar($event)" />
         }
@@ -313,6 +324,18 @@
   <!-- Unter ALLEN drei Ansichten, weil die Luecke in jeder gleich unsichtbar ist: das
        Verzeichnis speist sich aus chess-results, und wer dort nicht ausschreibt, kommt hier
        nicht vor. Von innen kann das niemand sehen. -->
+  <!-- Ein gescheitertes Laden darf nicht wie „es gibt nichts" aussehen (UX-040): Satz und
+       „Erneut versuchen" statt des Leer-Textes, in Liste, Karte und Kalender gleich. -->
+  <ng-template #loadFailed>
+    <div class="load-failed" role="alert">
+      <span>{{ 'tournamentDirectory.loadError' | translate }}</span>
+      <button mat-stroked-button (click)="reload()">
+        <mat-icon>refresh</mat-icon>
+        {{ 'common.retry' | translate }}
+      </button>
+    </div>
+  </ng-template>
+
   <div class="missing-row">
     <button mat-stroked-button (click)="reportMissing()">
       <mat-icon>add_location_alt</mat-icon>

@@ -72,6 +72,42 @@ describe('TournamentDirectoryDetailComponent', () => {
     http.verify();
   });
 
+  it('wertet eine ungültige Id (400) ebenfalls als „nicht im Verzeichnis"', async () => {
+    await setup('kaputt');
+    http.expectOne('/api/tournament-directory/kaputt')
+      .flush('ungueltig', { status: 400, statusText: 'Bad Request' });
+
+    expect(component.notFound()).toBeTrue();
+    expect(component.loadFailed()).toBeFalse();
+    http.verify();
+  });
+
+  /**
+   * Ein Serverfehler hiess bisher „steht (noch) nicht im Verzeichnis" — wer das glaubte, meldete
+   * ein Turnier nach, das laengst drinsteht (Codereview UX-040).
+   */
+  it('sagt bei einem Serverfehler „konnte nicht geladen werden" und lädt auf Wunsch erneut', async () => {
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129')
+      .flush('kaputt', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(component.loadFailed()).toBeTrue();
+    expect(component.notFound()).toBeFalse();
+    expect(page.textContent).toContain('tournamentDirectory.detail.loadFailed');
+    expect(page.textContent).not.toContain('tournamentDirectory.unknownTournament');
+
+    page.querySelector<HTMLButtonElement>('.load-failed button')!.click();
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+
+    expect(component.loadFailed()).toBeFalse();
+    expect(component.entry()?.name).toBe('Open Braunau 2026');
+    http.verify();
+  });
+
   it('bietet den Sprung zu Teilnehmern und Ergebnissen, sobald das Turnier geholt ist', async () => {
     await setup('1457129');
     http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));

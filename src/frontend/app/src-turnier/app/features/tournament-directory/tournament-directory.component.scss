@@ -66,6 +66,19 @@
 
 .tab-body { padding-top: 1rem; }
 
+/* Ladefehler in Liste, Karte und Kalender: Satz + „Erneut versuchen" (UX-040). */
+.load-failed {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--rh-error) 18%, transparent);
+  font-size: 0.9rem;
+}
+
 .count { margin: 0 0 0.5rem; font-size: 0.85rem; }
 
 .entry-grid {

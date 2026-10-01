@@ -25,6 +25,10 @@ h2 {
 
 .detail-card.cancelled h1 { text-decoration: line-through; }
 
+/* Ladefehler: Satz + „Erneut versuchen", der Knopf nur so breit wie sein Text (mat-card streckt sonst). */
+.detail-card.load-failed { align-items: flex-start; gap: 8px; }
+.detail-card.load-failed p { margin: 0; }
+
 .badges {
   display: flex;
   flex-wrap: wrap;

@@ -3786,7 +3786,8 @@
       "calendarFailed": "Unos u kalendar nije se mogao stvoriti na ovom uređaju.",
       "playDates": "Dani igranja",
       "sources": "Nađeno na",
-      "notOnChessResults": "Nije objavljen na chess-resultsu — igrači, parovi i tablica ovdje ne postoje."
+      "notOnChessResults": "Nije objavljen na chess-resultsu — igrači, parovi i tablica ovdje ne postoje.",
+      "loadFailed": "Turnir se trenutno nije mogao učitati. Provjeri vezu i pokušaj ponovno."
     },
     "calendar": {
       "previousMonth": "Prethodni mjesec",

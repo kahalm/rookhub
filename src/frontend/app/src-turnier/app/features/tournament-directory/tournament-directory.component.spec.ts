@@ -522,6 +522,121 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  // ----- Fehler sehen nicht wie „leer" aus (Codereview UX-040) ---------------
+
+  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+  const serverError = { status: 500, statusText: 'Server Error' };
+
+  it('zeigt bei gescheiterter Liste „Erneut versuchen" statt „keine Turniere"', async () => {
+    await setup();
+    flushProfiles([profile(1, 'Zuhause')]);
+    http.expectOne(r => r.url === '/api/tournament-directory').flush('kaputt', serverError);
+    fixture.detectChanges();
+
+    expect(component.listFailed()).toBeTrue();
+    expect(text()).toContain('tournamentDirectory.loadError');
+    expect(text()).not.toContain('tournamentDirectory.empty');
+
+    const retry = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.load-failed button');
+    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+    retry!.click();
+    flushList([entry('1')]);
+    fixture.detectChanges();
+
+    expect(component.listFailed()).toBeFalse();
+    expect(component.entries().length).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.load-failed')).toBeNull();
+    http.verify();
+  });
+
+  it('räumt bei gescheitertem Filterwechsel die Liste des alten Filters ab', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')]);
+
+    component.searchText = 'Braunau';
+    component.reload();
+    http.expectOne(r => r.url === '/api/tournament-directory').flush('kaputt', serverError);
+
+    expect(component.entries()).toEqual([]);
+    expect(component.listFailed()).toBeTrue();
+    http.verify();
+  });
+
+  it('behält die Liste, wenn nur „Mehr anzeigen" scheitert', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([entry('1')], 100);
+
+    component.loadMore();
+    http.expectOne(r => r.url === '/api/tournament-directory').flush('kaputt', serverError);
+
+    expect(component.entries().map(e => e.id)).toEqual(['1']);
+    expect(component.listFailed()).toBeFalse();
+    http.verify();
+  });
+
+  it('zeigt „Noch kein Suchprofil" nur, wenn die Profile wirklich geladen wurden', async () => {
+    await setup();
+    http.expectOne('/api/tournament-search-profiles').flush('kaputt', serverError);
+    flushList([entry('1')]);
+    fixture.detectChanges();
+
+    expect(component.profilesLoaded()).toBeFalse();
+    expect(text()).not.toContain('tournamentDirectory.noProfileHint');
+    http.verify();
+  });
+
+  it('zeigt „Noch kein Suchprofil" bei geladener, leerer Profilliste', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    fixture.detectChanges();
+
+    expect(text()).toContain('tournamentDirectory.noProfileHint');
+    http.verify();
+  });
+
+  it('meldet einen gescheiterten Kalendermonat mit „Erneut versuchen"', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onTabChange(2);
+    http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush('kaputt', serverError);
+    fixture.detectChanges();
+
+    expect(component.calendarFailed()).toBeTrue();
+    const retry = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.load-failed button');
+    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+    expect(text()).not.toContain('tournamentDirectory.calendar.empty');
+
+    retry!.click();
+    http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({ tournaments: [], days: [] });
+    expect(component.calendarFailed()).toBeFalse();
+    http.verify();
+  });
+
+  it('meldet einen gescheiterten Kartenausschnitt statt „0 Turniere im Ausschnitt"', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+
+    component.onTabChange(1);
+    component.onBoundsChanged('47.0,12.0,48.0,14.0');
+    http.expectOne(r => r.url === '/api/tournament-directory/map').flush('kaputt', serverError);
+    fixture.detectChanges();
+
+    expect(component.mapFailed()).toBeTrue();
+    expect(text()).toContain('tournamentDirectory.loadError');
+    expect(text()).not.toContain('tournamentDirectory.pins');
+    http.verify();
+  });
+
   // ----- Ort, Umkreis und Standort ---------------------------------------
 
   it('nimmt einen Ort aus der Ortsliste als Suchmittelpunkt', async () => {

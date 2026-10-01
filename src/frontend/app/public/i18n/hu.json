@@ -3507,7 +3507,8 @@
       "calendarFailed": "A naptárbejegyzést nem sikerült létrehozni ezen az eszközön.",
       "playDates": "Játéknapok",
       "sources": "Megtalálva itt",
-      "notOnChessResults": "Nincs meghirdetve a chess-results oldalon — résztvevők, párosítások és tabella itt nem érhető el."
+      "notOnChessResults": "Nincs meghirdetve a chess-results oldalon — résztvevők, párosítások és tabella itt nem érhető el.",
+      "loadFailed": "A versenyt most nem sikerült betölteni. Ellenőrizd a kapcsolatot, és próbáld újra."
     },
     "calendar": {
       "previousMonth": "Előző hónap",

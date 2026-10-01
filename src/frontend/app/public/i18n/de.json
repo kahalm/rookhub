@@ -3786,7 +3786,8 @@
       "calendarFailed": "Der Kalendereintrag konnte auf diesem Gerät nicht erstellt werden.",
       "playDates": "Spieltermine",
       "sources": "Gefunden auf",
-      "notOnChessResults": "Nicht auf chess-results ausgeschrieben — Teilnehmer, Paarungen und Tabelle gibt es hier nicht."
+      "notOnChessResults": "Nicht auf chess-results ausgeschrieben — Teilnehmer, Paarungen und Tabelle gibt es hier nicht.",
+      "loadFailed": "Das Turnier konnte gerade nicht geladen werden. Prüfe die Verbindung und versuche es erneut."
     },
     "calendar": {
       "previousMonth": "Voriger Monat",
