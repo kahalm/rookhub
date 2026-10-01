@@ -4230,7 +4230,7 @@
     "spaceKey": "Space",
     "back": "Home",
     "loading": "Just a moment …",
-    "loadError": "Sorry, that didn't work. Please try again later.",
+    "loadError": "Oops, something got stuck. Let's try again!",
     "retry": "Try again",
     "language": "Language"
   },

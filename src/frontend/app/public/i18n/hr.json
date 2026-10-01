@@ -4230,7 +4230,7 @@
     "spaceKey": "Razmaknica",
     "back": "Početak",
     "loading": "Trenutak …",
-    "loadError": "Nažalost, nije uspjelo. Pokušaj ponovno kasnije.",
+    "loadError": "Ups, nešto je zapelo. Pokušaj odmah ponovno!",
     "retry": "Pokušaj ponovno",
     "language": "Jezik"
   },

@@ -25,6 +25,10 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
         <a class="go" [routerLink]="['/levels', level]">
           {{ (progress.completedLevels() === 0 ? 'kids.home.start' : 'kids.home.continue') | translate: { level } }} ▶
         </a>
+      } @else if (failed()) {
+        <!-- An der Stelle des Startknopfs, nicht klein unter dem Speicherhinweis: ohne Stufen fehlte der Knopf
+             sonst ersatzlos (Codereview 2026-09-29, UX-062). -->
+        <kid-error (retry)="load()" />
       }
     </section>
 
@@ -63,9 +67,6 @@ import { KidsErrorComponent } from '../../shared/kids-error.component';
       @if (user()) { ☁️ {{ 'kids.home.savedAccount' | translate }} } @else { 💾 {{ 'kids.home.savedDevice' | translate }} }
     </p>
 
-    @if (failed()) {
-      <kid-error (retry)="load()" />
-    }
   `,
   styles: [`
     :host { display: block; max-width: 900px; margin: 0 auto; padding: 16px; }

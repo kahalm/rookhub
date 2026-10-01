@@ -77,4 +77,19 @@ describe('KidsHomeComponent', () => {
     expect(el.querySelector('kid-error')).toBeNull();
     expect(el.querySelector('a.go')).not.toBeNull();
   }));
+
+  /** Codereview 2026-09-29, UX-062: ohne Stufen fehlte der Startknopf ersatzlos, der Fehlersatz stand klein als letzte
+   *  Zeile unter dem Speicherhinweis (am Handy bei y ≈ 680 px). */
+  it('das Fehlerbild steht an der Stelle des Startknopfs, nicht unter dem Speicherhinweis', fakeAsync(() => {
+    const f = TestBed.createComponent(KidsHomeComponent);
+    f.detectChanges();
+    http.expectOne(r => r.url === '/api/kids/courses').flush([]);
+    http.expectOne('/api/kids/levels').flush(null, { status: 500, statusText: 'Server Error' });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector('.hero kid-error')).withContext('Fehlerkachel im Kopfbereich').not.toBeNull();
+    expect(el.querySelectorAll('kid-error').length).toBe(1);
+    const saved = el.querySelector('.saved')!;
+    expect(saved.nextElementSibling).withContext('nichts mehr unter dem Speicherhinweis').toBeNull();
+  }));
 });

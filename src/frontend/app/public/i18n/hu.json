@@ -3907,7 +3907,7 @@
     "spaceKey": "Szóköz",
     "back": "Kezdőlap",
     "loading": "Egy pillanat …",
-    "loadError": "Ez most nem sikerült. Próbáld újra később.",
+    "loadError": "Hoppá, valami elakadt. Próbáld újra most!",
     "retry": "Újra",
     "language": "Nyelv"
   },

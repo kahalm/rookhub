@@ -4230,7 +4230,7 @@
     "spaceKey": "Leertaste",
     "back": "Start",
     "loading": "Einen Moment …",
-    "loadError": "Das hat leider nicht geklappt. Bitte später noch einmal versuchen.",
+    "loadError": "Hoppla, da klemmt etwas. Versuch es gleich noch einmal!",
     "retry": "Nochmal",
     "language": "Sprache"
   },
