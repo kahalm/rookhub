@@ -22,18 +22,23 @@ on:
     branches: [master]
   workflow_dispatch:
 
-permissions:
-  contents: read
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
 
 jobs:
   nuget:
     name: NuGet (dotnet list package --vulnerable)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       befund: ${{ steps.scan.outcome }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
       - name: Restore
@@ -61,11 +66,13 @@ jobs:
   npm:
     name: npm audit (Frontend)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       befund: ${{ steps.scan.outcome }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '24'
           cache: 'npm'
@@ -89,11 +96,13 @@ jobs:
   pip:
     name: pip-audit (Python-Skripte)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       befund: ${{ steps.scan.outcome }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.x'
       - name: pip-audit
@@ -138,8 +147,10 @@ jobs:
               || needs.npm.outputs.befund != 'success'
               || needs.pip.outputs.befund != 'success') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Discord
         env:
           WEBHOOK: ${{ secrets.DISCORD_CI_WEBHOOK }}

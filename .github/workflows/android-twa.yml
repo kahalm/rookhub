@@ -40,6 +40,12 @@ on:
           - prod
           - dev
 
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -120,9 +126,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Dieselbe Node-Version wie alle anderen Workflows (Node 20 ist seit April 2026 ohne Support);
+      # Bubblewrap 1.25 verlangt >=18 (engines im Lockfile).
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: '20'
+          node-version: '24'
 
       # Android SDK bereitstellen + Lizenzen akzeptieren.
       - name: Set up Android SDK

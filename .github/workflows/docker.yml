@@ -18,6 +18,12 @@ on:
   # `build-api: skipped` — auf Dev lief noch der Stand von 0.452.1.
   workflow_dispatch:
 
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
+
 env:
   REGISTRY: ghcr.io
 
@@ -39,7 +45,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # Jeder Tag-Lauf (auch ein Handstart auf einem Tag) muss hier durch: keine Release-Form oder
       # nicht auf master → der Job faellt rot, und damit laufen weder Vorbau noch Umhaengen (beide
       # haengen per `needs` an diesem Job). Der Checkout ist flach (Tiefe 1); `git fetch` von master
@@ -63,7 +69,7 @@ jobs:
       # Beim Handstart gibt es keinen Vorgaenger-Stand zum Vergleichen (dorny hielte master gegen
       # master und setzte alles auf `false`). Der Schritt bleibt deshalb aus, die Outputs sind
       # leer — und die Job-Bedingungen unten fangen den Fall ueber `github.event_name` ab.
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
         id: filter
         if: github.event_name != 'workflow_dispatch'
         with:
@@ -118,9 +124,9 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -128,7 +134,7 @@ jobs:
       # GIT_SHA/GIT_REF wie bei den Frontend-Images: das API-Image traegt damit seinen Commit
       # (ENV BUILD_GIT_SHA/BUILD_GIT_REF), und die Admin-CI-Seite markiert den Lauf, der die LAUFENDE
       # API gebaut hat — getrennt vom Frontend (Codereview I1-017).
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/api/RookHub.Api
           push: true
@@ -148,16 +154,16 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # GIT_SHA/GIT_REF muessen HIER stehen, nicht unten: unten wird nicht mehr gebaut. Sie
       # landen als /build-info.json im Image, damit die Admin-CI-Seite den Lauf markieren kann.
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/frontend
           push: true
@@ -177,14 +183,14 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/frontend
           push: true
@@ -205,14 +211,14 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/frontend
           push: true
@@ -233,14 +239,14 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/frontend
           push: true
@@ -261,14 +267,14 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: src/frontend
           push: true
@@ -295,13 +301,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-api
@@ -333,13 +339,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-frontend
@@ -374,13 +380,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-turnier
@@ -415,13 +421,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-kidhub
@@ -455,13 +461,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-leaguehub
@@ -495,13 +501,13 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v6
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         id: meta
         with:
           images: ${{ env.REGISTRY }}/kahalm/rookhub-clubhub

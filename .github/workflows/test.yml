@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [master]
 
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
+
 jobs:
   # Welche Bereiche hat dieser Push angefasst? Die Muster stehen in `.github/filters.yml` —
   # dieselbe Datei benutzt `docker.yml` fuer die Image-Builds.
@@ -27,12 +33,12 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # Beim Handstart von `docker.yml` (workflow_dispatch) gibt es keinen Vorgaenger-Stand zum
       # Vergleichen; der Schritt bleibt aus, und die Bedingungen unten lassen dann ALLES laufen.
       # Ohne das waeren bei einem Handstart alle Filter leer — es entstuende ein Image, das kein
       # einziger Test gesehen hat.
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
         id: filter
         if: github.event_name != 'workflow_dispatch'
         with:
@@ -45,12 +51,14 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # FALLE: Die Projekte targeten net10.0. Ein 9.0.x-Pin baut sie NICHT — dass es
       # trotzdem lief, lag nur am vorinstallierten SDK des Runner-Images. Beim naechsten
       # Framework-Bump muss diese Version hier mitwandern (Checkliste in TODO.md).
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test tests/RookHub.Api.Tests --verbosity normal
@@ -67,6 +75,8 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     services:
       mariadb:
         image: mariadb:11
@@ -86,8 +96,8 @@ jobs:
           --health-retries=20
           --health-start-period=5s
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
       # OHNE database= - jeder Test legt sein eigenes Wegwerf-Schema an und raeumt es weg.
@@ -112,10 +122,12 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.crawler == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       # Volle Historie, damit die Tags mitkommen.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           repository: ${{ github.repository_owner }}/chessresults_crawler
           path: _crawler
@@ -130,7 +142,7 @@ jobs:
           fi
           git checkout --quiet "$tag"
           echo "Vertrag gegen chessresults_crawler $tag"
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
       # CRAWLER_REPO gesetzt = der Abgleich gegen die Crawler-DTOs ueberspringt sich NICHT
@@ -151,8 +163,10 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.engine-provider == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: Gepinnten Provider holen (Prüfsumme wie im Dockerfile)
         working-directory: engine-provider
         run: |
@@ -197,8 +211,10 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - run: bash scripts/tests/test_backup_db.sh
       - run: bash scripts/tests/test_directory_runs.sh
       - run: bash scripts/tests/test_init_db.sh
@@ -215,9 +231,11 @@ jobs:
           || needs.changes.outputs.leaguehub == 'true'
           || needs.changes.outputs.clubhub == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '24'
           cache: 'npm'

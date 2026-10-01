@@ -21,11 +21,19 @@ on:
         required: false
         default: ''
 
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
+
 jobs:
   announce:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
       - name: Neue Changelog-Einträge posten

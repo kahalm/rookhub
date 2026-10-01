@@ -621,7 +621,7 @@ public class CiWorkflowTests
     public void OnAManualRun_ThePathFilterStepIsSkipped(string workflow)
     {
         var text = ReadRepoFile(workflow);
-        var step = Regex.Match(text, @"(?ms)^      - uses: dorny/paths-filter@v3\s*$(.*?)(?=^      - |^  \S|\z)")
+        var step = Regex.Match(text, @"(?ms)^      - uses: dorny/paths-filter@[^\n]*$(.*?)(?=^      - |^  \S|\z)")
             .Groups[1].Value;
 
         Assert.Contains("filters: .github/filters.yml", step);
@@ -809,5 +809,113 @@ public class CiWorkflowTests
                  })
             Assert.Contains(rule, config);
         Assert.DoesNotMatch(@"(?m)^\s*'[^']+':\s*\[?\s*(?:'error'|2\b)", config);
+    }
+
+    /// <summary>Alle Workflow-Dateien, als Repo-Pfad.</summary>
+    private static List<string> AllWorkflows()
+    {
+        var files = Directory.GetFiles(Path.Combine(RepoRoot(), ".github", "workflows"), "*.yml")
+            .Select(p => ".github/workflows/" + Path.GetFileName(p))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        Assert.NotEmpty(files);
+        return files;
+    }
+
+    /// <summary>Die Jobs eines Workflows: Name → Block bis zum naechsten Job (ohne Kommentarzeilen).</summary>
+    private static Dictionary<string, string> JobsOf(string workflow)
+    {
+        var text = ReadRepoFile(workflow);
+        var jobs = text[text.IndexOf("\njobs:", StringComparison.Ordinal)..];
+        return Regex.Matches(jobs, @"(?ms)^  (?<name>[a-z][a-z0-9-]*):\s*$(?<body>.*?)(?=^  [a-z]|\z)")
+            .ToDictionary(
+                m => m.Groups["name"].Value,
+                m => string.Join('\n', m.Groups["body"].Value.Split('\n').Where(l => !l.TrimStart().StartsWith('#'))));
+    }
+
+    /// <summary>
+    /// Gemeinsame Form aller Workflows, Teil 1 (Codereview I1-018): Rechte stehen NUR am Job, oben steht
+    /// <c>permissions: {}</c>. Vorher setzten 5 von 6 Dateien oben nichts, zwei ihrer Jobs auch nicht —
+    /// sie lebten von der Repo-Vorgabe <c>contents: read</c>. Stellt die jemand auf „read and write",
+    /// haette jeder dieser Jobs (npm-Baum, Fremd-Actions) still Schreibrecht bekommen. Mit <c>{}</c> oben
+    /// und einem Block je Job ist das Recht jedes Jobs in der Datei ablesbar und unabhaengig von der
+    /// Einstellung. Ein neuer Job ohne eigenen Block faellt hier auf (und liefe sonst ganz ohne Rechte).
+    /// </summary>
+    [Fact]
+    public void EveryWorkflow_GrantsRightsOnlyPerJob()
+    {
+        var problems = new List<string>();
+        foreach (var workflow in AllWorkflows())
+        {
+            var text = ReadRepoFile(workflow);
+            var topLevel = Regex.Matches(text, @"(?m)^permissions:.*$").Select(m => m.Value.TrimEnd()).ToList();
+            if (topLevel is not ["permissions: {}"])
+                problems.Add($"{workflow}: oben muss genau 'permissions: {{}}' stehen, gefunden: [{string.Join(" | ", topLevel)}]");
+
+            foreach (var (job, body) in JobsOf(workflow))
+            {
+                if (!Regex.IsMatch(body, @"(?m)^    permissions:"))
+                    problems.Add($"{workflow}: Job '{job}' nennt keine eigenen Rechte");
+                if (Regex.IsMatch(body, @"(?m)^    permissions:\s*(?:write-all|read-all)\s*$"))
+                    problems.Add($"{workflow}: Job '{job}' nimmt Pauschalrechte (write-all/read-all)");
+            }
+        }
+        Assert.True(problems.Count == 0, string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// Gemeinsame Form aller Workflows, Teil 2 (Codereview I1-018): jede Fremd-Action per Commit-SHA mit
+    /// der Version als Kommentar (ein Tag wie <c>@v7</c> kann umgehaengt werden, Muster tj-actions 2025 —
+    /// und docker.yml pusht mit <c>packages: write</c>), und dieselbe Action in ALLEN Dateien auf demselben
+    /// SHA. Vorher pinnte nur android-twa.yml per SHA, die uebrigen 51 Stellen per Tag, und
+    /// changelog-discord.yml lief noch auf checkout@v4 neben v6 ueberall sonst.
+    /// </summary>
+    [Fact]
+    public void EveryWorkflow_PinsEachActionToOneSha()
+    {
+        var problems = new List<string>();
+        var seen = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var workflow in AllWorkflows())
+            foreach (Match m in Regex.Matches(ReadRepoFile(workflow), @"(?m)^\s*(?:- )?uses:\s*(?<ref>\S+)(?<rest>[^\n]*)$"))
+            {
+                var reference = m.Groups["ref"].Value;
+                if (reference.StartsWith("./", StringComparison.Ordinal))
+                    continue;
+                var pinned = Regex.Match(reference, @"^(?<action>[\w.-]+/[\w.-]+(?:/[\w.-]+)*)@(?<sha>[0-9a-f]{40})$");
+                var version = Regex.Match(m.Groups["rest"].Value, @"^\s+#\s*(?<v>v\d+(?:\.\d+)*)\s*$");
+                if (!pinned.Success || !version.Success)
+                {
+                    problems.Add($"{workflow}: '{reference}{m.Groups["rest"].Value}' ist nicht 'owner/action@<40-stelliger SHA> # vX.Y.Z'");
+                    continue;
+                }
+                var action = pinned.Groups["action"].Value;
+                if (!seen.TryGetValue(action, out var pins))
+                    seen[action] = pins = new HashSet<string>(StringComparer.Ordinal);
+                pins.Add($"{pinned.Groups["sha"].Value} # {version.Groups["v"].Value}");
+            }
+
+        foreach (var (action, pins) in seen.Where(kv => kv.Value.Count > 1))
+            problems.Add($"{action} steht auf verschiedenen Staenden: {string.Join(" / ", pins)}");
+        Assert.True(problems.Count == 0, string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// Eine Node-Version fuer alle Workflows — dieselbe Hauptversion wie das Frontend-Image (Codereview
+    /// I1-018). android-twa.yml baute noch mit Node 20 (seit April 2026 ohne Support), alle anderen mit 24.
+    /// </summary>
+    [Fact]
+    public void EveryWorkflow_UsesTheNodeVersionOfTheFrontendImage()
+    {
+        var image = Regex.Match(ReadRepoFile("src/frontend/Dockerfile"), @"(?m)^FROM node:(?<major>\d+)\b");
+        Assert.True(image.Success, "src/frontend/Dockerfile: keine Zeile 'FROM node:<Version>'");
+
+        var versions = AllWorkflows()
+            .SelectMany(w => Regex.Matches(ReadRepoFile(w), @"(?m)^\s*node-version:\s*'?(?<v>[^'\s]+)'?\s*$")
+                .Select(m => $"{w}: {m.Groups["v"].Value}"))
+            .ToList();
+        Assert.NotEmpty(versions);
+        foreach (var entry in versions)
+            Assert.True(entry.EndsWith($": {image.Groups["major"].Value}", StringComparison.Ordinal),
+                $"node-version weicht vom Frontend-Image (node:{image.Groups["major"].Value}) ab — {entry}");
     }
 }

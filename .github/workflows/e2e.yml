@@ -18,13 +18,21 @@ on:
     # frontend selbst — die ghcr-Images, die Watchtower nachts zieht, sieht dieser Lauf NICHT.
     - cron: '30 3 * * *'
 
+# Gemeinsame Form aller Workflows (Codereview I1-018, CiWorkflowTests haelt sie fest): Rechte NUR je
+# Job — oben nichts, damit kein Job an der Repo-Vorgabe haengt (stellt die jemand auf „read and
+# write", bekommt trotzdem keiner mehr); jede Action per Commit-SHA mit der Version als Kommentar,
+# dieselbe Action in allen Dateien auf demselben SHA — beim Anheben alle Dateien gemeinsam aendern.
+permissions: {}
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '24'
           cache: 'npm'
@@ -37,7 +45,7 @@ jobs:
       - run: bash scripts/e2e.sh
       - name: Playwright-Bericht sichern
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: src/frontend/app/playwright-report
