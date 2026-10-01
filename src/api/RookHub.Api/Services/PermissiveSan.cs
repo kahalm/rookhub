@@ -196,7 +196,7 @@ public static partial class PermissiveSan
     private static string Clean(string token)
     {
         var t = token.Trim().TrimEnd('!', '?', '+', '#');
-        if (t is "--" or "*" or "1-0" or "0-1" or "1/2-1/2" or "1/2") return "";
+        if (t == "--" || PgnTokens.IsResultToken(t)) return "";
         return t;
     }
 

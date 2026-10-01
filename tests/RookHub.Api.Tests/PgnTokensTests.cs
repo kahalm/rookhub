@@ -67,4 +67,52 @@ public class PgnTokensTests
         Assert.Equal("b", game.Headers["Site"]);
         Assert.Equal(new[] { "e4" }, PgnParser.ExtractMainlineSans(game.MoveText));
     }
+
+    // ── Ergebnis-Token (N11-004) ──────────────────────────────────────────
+
+    [Theory]
+    [InlineData("1-0")]
+    [InlineData("0-1")]
+    [InlineData("1/2-1/2")]
+    [InlineData("1/2")]
+    [InlineData("*")]
+    [InlineData("½-½")]
+    public void IsResultToken_KnowsEveryResultForm(string token) => Assert.True(PgnTokens.IsResultToken(token));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("e4")]
+    [InlineData("1.")]
+    [InlineData("12.e4")]
+    [InlineData("1/2-")]
+    [InlineData("0-0")]
+    public void IsResultToken_RejectsMovesAndNumbers(string token) => Assert.False(PgnTokens.IsResultToken(token));
+
+    /// <summary>Spiegeltest über ALLE Zerleger mit denselben Ergebnis-Literalen. Bis 0.624.0 kannten
+    /// nur PgnParser und PermissiveSan das nackte „1/2": der Rohbestand zählte es als Halbzug
+    /// (PlyCount 5, anderer MovesHash — die Fassung mit „1/2-1/2" blieb als Dublette unerkannt),
+    /// die Rekonstruktion machte daraus einen Zug.</summary>
+    [Theory]
+    [InlineData("1-0")]
+    [InlineData("0-1")]
+    [InlineData("1/2-1/2")]
+    [InlineData("1/2")]
+    [InlineData("*")]
+    [InlineData("½-½")]
+    public void ResultToken_EveryParserDropsIt(string result)
+    {
+        var expected = new[] { "e4", "e5", "Nf3", "Nc6" };
+        var movetext = "1. e4 e5 2. Nf3 Nc6 " + result;
+        var pgn = Headers + movetext;
+
+        Assert.Equal(expected, PgnMoveTree.ParseSections(pgn).Single().Moves.Select(m => m.San));
+        Assert.Equal(expected, PgnParser.ExtractMainlineSans(PgnParser.SplitGames(pgn).Single().MoveText));
+        Assert.Equal(expected, ReconstructionChain.SplitMoves(movetext));
+
+        var stats = LibraryGameReader.Analyse(movetext);
+        var bare = LibraryGameReader.Analyse("1. e4 e5 2. Nf3 Nc6");
+        Assert.Equal(4, stats.PlyCount);
+        Assert.Equal(bare.MovesHash, stats.MovesHash);
+        Assert.Equal(bare.OpeningLine, stats.OpeningLine);
+    }
 }

@@ -52,7 +52,6 @@ public static partial class PgnParser
     [GeneratedRegex(@"[ \t]{2,}")]
     private static partial Regex SpaceRunRegex();
 
-    private static readonly string[] ResultTokens = { "1-0", "0-1", "1/2-1/2", "1/2", "*" };
 
     /// <summary>Standard-Grundstellung (für synthetische Info-Linien ohne eigene Züge).</summary>
     public const string StartPositionFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -459,7 +458,7 @@ public static partial class PgnParser
     private static string CleanSan(string token)
     {
         var t = token.Trim();
-        if (t.Length == 0 || ResultTokens.Contains(t)) return "";
+        if (t.Length == 0 || PgnTokens.IsResultToken(t)) return "";
         t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
         // Chessable/piratechess schreiben Umwandlungen ohne "=" (bzw. mit kleinem Figurbuchstaben),
         // z. B. "a1Q+"/"exd8n" → nach dem Suffix-Strip "a1Q"/"exd8n". Gera.Chess akzeptiert SAN aber
@@ -467,7 +466,7 @@ public static partial class PgnParser
         // Linie fällt in den zug-losen Info-Zweig (Puzzle wird still zu einer statischen Info-Seite).
         var pm = PromotionRegex().Match(t);
         if (pm.Success) t = pm.Groups[1].Value + "=" + char.ToUpperInvariant(pm.Groups[2].Value[0]);
-        return ResultTokens.Contains(t) ? "" : t;
+        return PgnTokens.IsResultToken(t) ? "" : t;
     }
 
     /// <summary>Hauptvariante als gereinigte SAN-Liste (Kommentare/Varianten/NAGs/Zugnummern/Ergebnis raus).</summary>
@@ -641,7 +640,7 @@ public static partial class PgnParser
         var t = MoveNumberRegex().Replace(token.Trim(), ""); // führende "12." / "12..." entfernen
         if (t.Length == 0 || t.StartsWith('$')) return false; // leer oder NAG
         t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
-        if (t.Length == 0 || ResultTokens.Contains(t)) return false;
+        if (t.Length == 0 || PgnTokens.IsResultToken(t)) return false;
         return true;
     }
 

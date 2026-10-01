@@ -61,7 +61,7 @@ public static class ReconstructionChain
             var token = raw.Trim();
             if (token.Length == 0) continue;
             if (System.Text.RegularExpressions.Regex.IsMatch(token, @"^\d+\.*$")) continue;   // Zugnummer
-            if (token is "1-0" or "0-1" or "1/2-1/2" or "*") continue;                        // Ergebnis
+            if (PgnTokens.IsResultToken(token)) continue;                                     // Ergebnis
             if (token.StartsWith('$')) continue;                                              // NAG
             var stuck = System.Text.RegularExpressions.Regex.Match(token, @"^\d+\.+(?<san>.+)$");
             if (stuck.Success) token = stuck.Groups["san"].Value;                             // „12.e4"

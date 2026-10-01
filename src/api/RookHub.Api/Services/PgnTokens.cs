@@ -33,4 +33,22 @@ public static class PgnTokens
         }
         return (line, braceDepth);
     }
+
+    /// <summary>
+    /// Ist das Token ein Partie-Ergebnis am Ende des Movetexts? EINE Liste fuer alle Zerleger
+    /// (<see cref="PgnParser"/>, <see cref="PgnMoveTree"/>, <see cref="PermissiveSan"/>,
+    /// <see cref="ReconstructionChain"/>, <see cref="LibraryGameReader"/>).
+    ///
+    /// <para>Bis 0.624.0 stand sie in fuenf eigenen Listen, und nur zwei kannten das nackte „1/2":
+    /// <see cref="LibraryGameReader"/> zaehlte es als Halbzug (fuehrende Ziffer = „12.e4") — PlyCount
+    /// eins zu hoch, anderer MovesHash, dieselbe Partie mit „1/2-1/2" blieb als Dublette unerkannt —,
+    /// und <see cref="ReconstructionChain"/> machte daraus einen Zug, an dem das Teil scheiterte
+    /// (Codereview 2026-09-29, N11-004). „½-½" schreibt Handschrift und manche Exporte.</para>
+    ///
+    /// <para>Bewusst NICHT hier: die Listen, die den <c>[Result]</c>-HEADER pruefen
+    /// (<c>SavedGameService.AllowedResults</c>, <c>LeagueClubService</c>) — dort ist „1/2" kein
+    /// gueltiger Wert, sondern wird auf „*" zurueckgesetzt.</para>
+    /// </summary>
+    public static bool IsResultToken(ReadOnlySpan<char> token)
+        => token is "1-0" or "0-1" or "1/2-1/2" or "1/2" or "*" or "½-½";
 }

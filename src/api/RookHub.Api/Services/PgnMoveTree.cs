@@ -21,7 +21,8 @@ public sealed record ParsedSection(string? White, string? Black, string? StartFe
 /// solche Fund wäre mit ziemlicher Sicherheit nur in EINER von beiden gelandet.</para>
 ///
 /// <para>Was NICHT hierher gehört, weil es eigene Semantik hat: <see cref="PgnParser"/>
-/// (<c>ExtractMainlineSans</c> behandelt u. a. „1/2" als Ergebnis-Token und kanonisiert die SAN),
+/// (<c>ExtractMainlineSans</c> kanonisiert die SAN; die Ergebnis-Tokens teilen sich alle Zerleger
+/// über <see cref="PgnTokens.IsResultToken"/>),
 /// <see cref="ChessableTrainedLineService.MainlineSans"/> (überspringt Varianten ganz und weist
 /// jedes Token MIT Punkt ab — wegen „e.p.") und <see cref="ReconstructionChain.SplitMoves"/>
 /// (behält Suffix-Annotationen, entfernt nur die innersten Klammerpaare).</para>
@@ -43,7 +44,6 @@ public static class PgnMoveTree
     // (Linie fehlt still im Positions-Set) oder zufällig legal — dann gelten FALSCHE Stellungen als
     // „im Repertoire". Gefunden und behoben in v0.340.0.
     private static readonly Regex FenHeaderRegex = new(@"^\[FEN\s+""([^""]*)""\]", RegexOptions.Compiled | RegexOptions.Multiline);
-    private static readonly HashSet<string> ResultTokens = new() { "1-0", "0-1", "1/2-1/2", "*" };
 
     /// <summary>
     /// Tiefste Varianten-Schachtelung, die der Parser aufbaut (echte Repertoires: unter 20). Tiefere
@@ -225,8 +225,9 @@ public static class PgnMoveTree
     /// <summary>Ein Token, das NUR aus einer Zugnummer besteht („1.", „12...").</summary>
     internal static bool IsMoveNumber(string token) => MoveNumberRegex.IsMatch(token);
 
-    /// <summary>Ein Partie-Ergebnis am Ende des Movetexts.</summary>
-    internal static bool IsResultToken(string token) => ResultTokens.Contains(token);
+    /// <summary>Ein Partie-Ergebnis am Ende des Movetexts — die gemeinsame Liste
+    /// <see cref="PgnTokens.IsResultToken"/>.</summary>
+    internal static bool IsResultToken(string token) => PgnTokens.IsResultToken(token);
 
     /// <summary>Start-FEN eines PGN-Abschnitts (<c>[FEN "…"]</c>), sonst <c>null</c> =
     /// Grundstellung. Ein leerer Header zählt als KEINE Startstellung — sonst stürbe der Walk an

@@ -207,7 +207,7 @@ public static class LibraryGameReader
     private static bool IsMove(ReadOnlySpan<char> token)
     {
         if (token.Length == 0) return false;
-        if (token is "1-0" or "0-1" or "1/2-1/2" or "*") return false;
+        if (PgnTokens.IsResultToken(token)) return false;
 
         // Zugnummer: nur Ziffern und Punkte. „12.e4" (ohne Leerzeichen) faellt hier NICHT
         // durch — dort steht hinter den Punkten noch ein Buchstabe.
