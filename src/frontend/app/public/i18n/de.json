@@ -705,8 +705,12 @@
     "accountDeletion": {
       "title": "Konto löschen",
       "intro": "Auf dieser Seite erfährst du, wie du dein RookHub-Konto löschst und was dabei mit deinen Daten passiert.",
+      "introPartner": "Dein Konto hier ist ein RookHub-Konto (dieselben Zugangsdaten). Auf dieser Seite erfährst du, wie du es löschst und was dabei mit deinen Daten passiert.",
       "inAppTitle": "So löschst du dein Konto",
-      "inApp": "Melde dich in der App an und gehe zu Profil → „Konto löschen“. Dort bestätigst du mit deinem Passwort. Das Konto wird sofort gelöscht.",
+      "inApp": "Der Knopf unten öffnet in deinem Profil die Karte „Konto löschen“ – bist du nicht angemeldet, meldest du dich zuerst an. Von Hand: ☰ → Konto → Profil, ganz unten. Dort bestätigst du mit deinem Passwort. Das Konto wird sofort gelöscht.",
+      "inPartner": "Löschen kannst du das Konto nur in RookHub: dort anmelden (dieselben Daten) und ☰ → Konto → Profil, ganz unten „Konto löschen“ – oder direkt über den Knopf. Du bestätigst mit deinem Passwort, das Konto wird sofort gelöscht, auch für diese Seite.",
+      "deleteNow": "Konto jetzt löschen",
+      "deleteOnRookHub": "Konto in RookHub löschen",
       "removedTitle": "Was entfernt wird",
       "removed1": "Deine Identität und persönlichen Daten (Benutzername, E-Mail, Anzeige-/Klarname, FIDE-/ChessResults-ID, Chess.com-/Lichess-Name, Discord-Verknüpfung) sowie der Login-Zugang.",
       "removed2": "Persönliche Inhalte und Verknüpfungen: Repertoires, Turnier-Abos/-Favoriten, Freundschaften und Gruppen-Mitgliedschaften.",

@@ -1,10 +1,12 @@
+import { ElementRef } from '@angular/core';
+import { convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { ProfileComponent } from './profile.component';
 
 /** Direkt instanziiert (ohne TestBed/Template) — testet die Komponenten-Logik.
  *  Offline/Theme/Passwort/Konto-Löschen sind in eigene Kind-Komponenten ausgelagert
  *  (siehe *-card.component.spec.ts). */
-function make(overrides: { profileService?: any; discord?: any; impersonating?: boolean } = {}) {
+function make(overrides: { profileService?: any; discord?: any; impersonating?: boolean; query?: Record<string, string> } = {}) {
   const profileService = overrides.profileService ?? {
     getProfile: jasmine.createSpy('getProfile').and.returnValue(of({ email: 'a@b.c' })),
     updateProfile: jasmine.createSpy('updateProfile').and.returnValue(of({ email: 'a@b.c' })),
@@ -17,8 +19,9 @@ function make(overrides: { profileService?: any; discord?: any; impersonating?: 
   const translate = { instant: (k: string) => k };
   const discord = overrides.discord ?? { unlink: jasmine.createSpy('unlink').and.returnValue(of({})) };
   const auth = { isImpersonating: overrides.impersonating ?? false };
+  const route = overrides.query ? { snapshot: { queryParamMap: convertToParamMap(overrides.query) } } : undefined;
   const c = new ProfileComponent(
-    profileService as any, snackbar as any, translate as any, discord as any, auth as any,
+    profileService as any, snackbar as any, translate as any, discord as any, auth as any, route as any,
   );
   return { c, profileService, snackbar, discord };
 }
@@ -157,6 +160,38 @@ describe('ProfileComponent', () => {
       const body = profileService.updateProfile.calls.mostRecent().args[0];
       expect('currentPassword' in body).toBeFalse();
       expect(snackbar.info).toHaveBeenCalledWith('profile.saveFailed');
+    });
+  });
+
+  // Der Knopf „Konto jetzt loeschen" auf /account-deletion fuehrt auf /profile?section=delete (UX-023): die Karte ist
+  // der letzte von elf Bloecken — ohne Sprung scrollte man am Handy an allen anderen vorbei.
+  describe('?section=delete', () => {
+    const card = () => {
+      const el = document.createElement('div');
+      const scroll = spyOn(el, 'scrollIntoView');
+      return { ref: new ElementRef<HTMLElement>(el), scroll };
+    };
+
+    it('klappt die Loesch-Karte auf und scrollt einmal zu ihr, sobald sie da ist', () => {
+      const { c } = make({ query: { section: 'delete' } });
+      expect(c.openDelete).toBeTrue();
+      c.deleteCard = undefined;                 // vor dem Laden: noch keine Karte
+      const first = card();
+      c.deleteCard = first.ref;
+      expect(first.scroll).toHaveBeenCalledTimes(1);
+      const again = card();
+      c.deleteCard = again.ref;                 // spaeteres Neuzeichnen springt nicht erneut
+      expect(again.scroll).not.toHaveBeenCalled();
+    });
+
+    it('ohne den Parameter bleibt alles wie gehabt', () => {
+      for (const query of [undefined, { section: 'other' }]) {
+        const { c } = make({ query });
+        expect(c.openDelete).toBeFalse();
+        const x = card();
+        c.deleteCard = x.ref;
+        expect(x.scroll).not.toHaveBeenCalled();
+      }
     });
   });
 });

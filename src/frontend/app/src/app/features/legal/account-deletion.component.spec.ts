@@ -1,14 +1,21 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
+import { HandoffService } from '../../core/handoff.service';
 import { AccountDeletionComponent } from './account-deletion.component';
 import { LEGAL_SITE } from './legal-site';
+
+/** Was jede Fassung braucht: Router, Uebersetzung und — fuer den Sprung nach RookHub — HTTP. */
+const base = () => [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideTranslateService({ fallbackLang: 'en' })];
 
 describe('AccountDeletionComponent', () => {
   it('renders (template compiles)', async () => {
     await TestBed.configureTestingModule({
       imports: [AccountDeletionComponent],
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      providers: base(),
     }).compileComponents();
     const f = TestBed.createComponent(AccountDeletionComponent);
     f.detectChanges();
@@ -18,8 +25,7 @@ describe('AccountDeletionComponent', () => {
   it('nennt den Kontakt der Oberflaeche (KidHub: eigene Adresse)', () => {
     TestBed.configureTestingModule({
       imports: [AccountDeletionComponent],
-      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
-        { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false } }],
+      providers: [...base(), { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false } }],
     });
     const f = TestBed.createComponent(AccountDeletionComponent);
     f.detectChanges();
@@ -31,8 +37,7 @@ describe('AccountDeletionComponent', () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         imports: [AccountDeletionComponent],
-        providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
-          ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+        providers: [...base(), ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
       });
       const f = TestBed.createComponent(AccountDeletionComponent);
       f.detectChanges();
@@ -42,5 +47,74 @@ describe('AccountDeletionComponent', () => {
     const kid = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
     expect(kid.querySelector('.back a')?.getAttribute('href')).toBe('/');
     expect(kid.textContent).toContain('legal.backHome');
+  });
+
+  describe('ein gangbarer Weg zur Loeschung (UX-023)', () => {
+    const render = (site?: object, homeUrl: string | null = null) => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [AccountDeletionComponent],
+        providers: [...base(), ...(site ? [{ provide: LEGAL_SITE, useValue: site }] : [])],
+      });
+      spyOnProperty(TestBed.inject(HandoffService), 'accountHomeUrl', 'get').and.returnValue(homeUrl);
+      const f = TestBed.createComponent(AccountDeletionComponent);
+      f.detectChanges();
+      return f.nativeElement as HTMLElement;
+    };
+
+    it('RookHub: genau ein Primaerknopf „Konto jetzt loeschen" ins Profil mit aufgeklappter Karte', () => {
+      // Vorher nur Fliesstext „Profil → Konto loeschen" — kein Link, der einzige Primaerknopf war „Registrieren".
+      const el = render();
+      const buttons = el.querySelectorAll('a.delete-now');
+      expect(buttons.length).toBe(1);
+      expect(buttons[0].getAttribute('href')).toBe('/profile?section=delete');
+      // Abgemeldet fuehrt der authGuard ueber die Anmeldung dorthin; die Routen-Specs lassen das zu.
+      expect(buttons[0].hasAttribute('data-login-required')).toBeTrue();
+      expect(el.textContent).toContain('legal.accountDeletion.deleteNow');
+      expect(el.textContent).toContain('legal.accountDeletion.inApp');
+      expect(el.textContent).not.toContain('legal.accountDeletion.inPartner');
+    });
+
+    it('KidHub/LeagueHub: sagt, dass es ein RookHub-Konto ist, und verlinkt RookHubs Profil', () => {
+      const el = render({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' },
+        'https://rookhub.example');
+      const a = el.querySelector('a.delete-now');
+      expect(a?.getAttribute('href')).toBe('https://rookhub.example/profile?section=delete');
+      expect(a?.hasAttribute('data-login-required')).toBeFalse();
+      expect(el.textContent).toContain('legal.accountDeletion.introPartner');
+      expect(el.textContent).toContain('legal.accountDeletion.inPartner');
+      expect(el.textContent).toContain('legal.accountDeletion.deleteOnRookHub');
+      // Kein Profil-Link auf die eigene Seite — dort gibt es keins (der Catch-all fuehrte still zur Startseite).
+      expect(el.querySelector('a[href="/profile?section=delete"]')).toBeNull();
+    });
+
+    it('der Klick springt mit Anmeldung (Einmal-Code) nach RookHub, Strg-Klick bleibt beim Link', () => {
+      render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub', accountHome: 'rookhub' }, 'https://rookhub.example');
+      const jump = spyOn(TestBed.inject(HandoffService), 'jumpToAccountHome').and.resolveTo();
+      const f = TestBed.createComponent(AccountDeletionComponent);
+      f.detectChanges();
+      const link = f.debugElement.query(By.css('a.delete-now'));
+      // Ueber den Angular-Listener, ohne echtes DOM-Ereignis: ein nicht abgefangener Klick verliesse die Testseite.
+      const click = (init: Partial<MouseEvent>) => {
+        const e = { button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
+          preventDefault: jasmine.createSpy('preventDefault'), ...init };
+        link.triggerEventHandler('click', e);
+        return e;
+      };
+
+      const ctrl = click({ ctrlKey: true });
+      expect(jump).not.toHaveBeenCalled();
+      expect(ctrl.preventDefault).not.toHaveBeenCalled();
+
+      const plain = click({});
+      expect(jump).toHaveBeenCalledOnceWith('profile?section=delete');
+      expect(plain.preventDefault).toHaveBeenCalled();
+    });
+
+    it('ohne bekannte RookHub-Adresse (localhost, IP) nur der Text, kein Knopf ins Leere', () => {
+      const el = render({ contactEmail: 'x@y.z', imprint: true, accountHome: 'rookhub' }, null);
+      expect(el.querySelector('a.delete-now')).toBeNull();
+      expect(el.textContent).toContain('legal.accountDeletion.inPartner');
+    });
   });
 });

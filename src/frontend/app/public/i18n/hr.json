@@ -705,8 +705,12 @@
     "accountDeletion": {
       "title": "Brisanje računa",
       "intro": "Na ovoj stranici saznaješ kako izbrisati svoj RookHub račun i što se događa s tvojim podacima.",
+      "introPartner": "Tvoj račun ovdje je RookHub račun (isti pristupni podaci). Na ovoj stranici saznaješ kako ga izbrisati i što se događa s tvojim podacima.",
       "inAppTitle": "Kako izbrisati račun",
-      "inApp": "Prijavi se u aplikaciju i idi na Profil → „Izbriši račun“. Potvrdi svojom lozinkom. Račun se odmah briše.",
+      "inApp": "Gumb ispod otvara u tvom profilu karticu „Izbriši račun“ – ako nisi prijavljen/a, najprije se prijaviš. Ručno: ☰ → Račun → Profil, sasvim dolje. Ondje potvrđuješ svojom lozinkom. Račun se odmah briše.",
+      "inPartner": "Račun možeš izbrisati samo u RookHubu: ondje se prijavi (isti podaci) i idi na ☰ → Račun → Profil, sasvim dolje „Izbriši račun“ – ili izravno preko gumba. Potvrđuješ svojom lozinkom; račun se odmah briše, i za ovu stranicu.",
+      "deleteNow": "Izbriši račun sada",
+      "deleteOnRookHub": "Izbriši račun u RookHubu",
       "removedTitle": "Što se uklanja",
       "removed1": "Tvoj identitet i osobni podaci (korisničko ime, e-pošta, prikazno/pravo ime, FIDE/ChessResults ID, Chess.com/Lichess ime, Discord poveznica) te pristup prijavi.",
       "removed2": "Osobni sadržaj i poveznice: repertoari, pretplate/favoriti turnira, prijateljstva i članstva u grupama.",

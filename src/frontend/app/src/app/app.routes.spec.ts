@@ -94,6 +94,8 @@ describe('app.routes — Links der Anmelde- und Rechtsseiten', () => {
   it('jeder Link der geteilten Anmelde- und Rechtsseiten trifft seinen eigenen Weg, nicht die Kurz-URL (UX-003)', async () => {
     const report = await checkSharedPageLinks(routes, appConfig);
     expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    // „Konto jetzt loeschen" fuehrt ins Profil — bewusst ueber die Anmeldung (data-login-required, UX-023).
+    expect(report.links).toContain('/account-deletion → /profile');
     expect(report.problems).toEqual([]);
   });
 });

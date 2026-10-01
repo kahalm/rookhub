@@ -705,8 +705,12 @@
     "accountDeletion": {
       "title": "Delete account",
       "intro": "This page explains how to delete your RookHub account and what happens to your data.",
+      "introPartner": "Your account here is a RookHub account (same sign-in details). This page explains how to delete it and what happens to your data.",
       "inAppTitle": "How to delete your account",
-      "inApp": "Sign in to the app and go to Profile → \"Delete account\". Confirm with your password. The account is deleted immediately.",
+      "inApp": "The button below opens the \"Delete account\" card in your profile – if you are not signed in, you sign in first. By hand: ☰ → Account → Profile, at the very bottom. Confirm with your password there. The account is deleted immediately.",
+      "inPartner": "You can delete the account only in RookHub: sign in there (same details) and go to ☰ → Account → Profile, at the very bottom \"Delete account\" – or use the button directly. Confirm with your password; the account is deleted immediately, for this site too.",
+      "deleteNow": "Delete account now",
+      "deleteOnRookHub": "Delete account in RookHub",
       "removedTitle": "What is removed",
       "removed1": "Your identity and personal data (username, email, display/real name, FIDE/ChessResults ID, Chess.com/Lichess name, Discord link) and login access.",
       "removed2": "Personal content and links: repertoires, tournament subscriptions/favourites, friendships and group memberships.",

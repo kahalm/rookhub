@@ -35,7 +35,8 @@ export const leaguehubConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub (Impressum, Kontakt aus OPERATOR), die Datenschutzerklaerung dazu mit dem
     // LeagueHub-Abschnitt: Ligaspieler ohne Konto, Online-Konten, Prognosen, Teilen-Links (Codereview F7-006).
-    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'leaguehub' }) },
+    // Konto loeschen geht nur in RookHub — die Loeschseite verweist dorthin (Codereview UX-023).
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), kind: 'leaguehub', accountHome: 'rookhub' }) },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

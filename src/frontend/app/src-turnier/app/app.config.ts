@@ -18,6 +18,7 @@ import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.intercept
 import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { resolveStartupLocale } from '@rh/core/locale.service';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 
 registerLocaleData(localeDe);
 registerLocaleData(localeHr);
@@ -41,6 +42,9 @@ export const turnierConfig: ApplicationConfig = {
     { provide: RouteReuseStrategy, useClass: ReloadOnParamChangeStrategy },
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
+    // Rechtsseiten wie in RookHub; das Profil hier hat aber keine Karte „Konto loeschen" — die Loeschseite verweist
+    // auf RookHubs Profil (Codereview UX-023).
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

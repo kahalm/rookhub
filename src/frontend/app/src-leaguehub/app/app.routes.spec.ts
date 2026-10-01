@@ -27,11 +27,11 @@ describe('LeagueHub-Routen', () => {
     }
   });
 
-  it('Datenschutz mit LeagueHub-Abschnitt, Impressum und Kontakt wie RookHub (F7-006)', () => {
+  it('Datenschutz mit LeagueHub-Abschnitt, Impressum und Kontakt wie RookHub (F7-006), Konto in RookHub (UX-023)', () => {
     expect(routes.map(r => r.path)).toContain('privacy');
     const legal = leaguehubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
       { useFactory: () => LegalSite } | undefined;
-    expect(legal?.useFactory()).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub' });
+    expect(legal?.useFactory()).toEqual({ contactEmail: OPERATOR.email, imprint: true, kind: 'leaguehub', accountHome: 'rookhub' });
   });
 
   it('kein Pfad, den der gemeinsame nginx an die Link-Vorschau schickt (/g, /t, /puzzles)', () => {
@@ -43,6 +43,7 @@ describe('LeagueHub-Routen', () => {
   it('jeder Link der geteilten Anmelde- und Rechtsseiten hat hier einen Weg (UX-003)', async () => {
     const report = await checkSharedPageLinks(routes, leaguehubConfig);
     expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.links).not.toContain('/account-deletion → /profile');   // kein Profil hier (UX-023)
     expect(report.problems).toEqual([]);
   });
 });

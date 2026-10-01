@@ -4272,7 +4272,11 @@ Kinderseite" unter REST API.
   Datenschutzerklärung verlinkt, deshalb auch in KidHub eine Route) nennt diese Adresse. RookHub und die Turnierseite
   nehmen die Vorgabe (`OPERATOR`). `LEGAL_SITE` trägt seit dem Codereview (F7-003) auch `kind` (`kidhub`: Fassung in
   einfacher Sprache mit Elternhinweis; `leaguehub`: Abschnitt über Ligaspieler ohne Konto) und `back` (Rücklink,
-  KidHub `/` statt `/login`). Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
+  KidHub `/` statt `/login`). `accountHome: 'rookhub'` (UX-023; KidHub, LeagueHub, ClubHub, Turnierseite): dort gibt es
+  keine Karte „Konto löschen" — `/account-deletion` sagt „dein Konto hier ist ein RookHub-Konto" und verlinkt RookHubs
+  `/profile?section=delete` (`accountHomeUrl()` in `partner-site.ts`, angemeldet per Einmal-Code
+  `HandoffService.jumpToAccountHome`). Ohne `accountHome` (RookHub) führt der Knopf „Konto jetzt löschen" direkt dorthin;
+  `?section=delete` klappt im Profil die Karte auf und scrollt zu ihr. Ohne Impressum nennt die Datenschutzerklärung beim Verantwortlichen NUR die
   Kontaktadresse der Oberfläche. **Rechtsseiten allgemein** (Betreiber-Entscheidung 2026-09-30, UX-001):
   `environments/operator.ts` (`OPERATOR`) enthält nur noch die Kontaktadresse `rookhub@oberschm.id` — kein
   Diensteanbieter-Block mit Name/Anschrift im Impressum, keine Platzhalter.

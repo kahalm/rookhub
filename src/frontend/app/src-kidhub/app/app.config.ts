@@ -36,8 +36,9 @@ export const kidhubConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
     // Kein Impressum auf der Kinderseite, eigene Adresse fuer Datenschutzfragen (Wunsch 2026-09-27); die
-    // Datenschutzerklaerung in der Kinder-Fassung, der Ruecklink fuehrt zur Startseite (Codereview F7-003).
-    { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' } },
+    // Datenschutzerklaerung in der Kinder-Fassung, der Ruecklink fuehrt zur Startseite (Codereview F7-003). Konto
+    // loeschen geht nur in RookHub — die Loeschseite verweist dorthin (Codereview UX-023).
+    { provide: LEGAL_SITE, useValue: { contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' } },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

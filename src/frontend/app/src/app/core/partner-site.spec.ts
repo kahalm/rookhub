@@ -1,4 +1,4 @@
-import { leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub, sharedCookieDomain, siteKindOf } from './partner-site';
+import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub, sharedCookieDomain, siteKindOf } from './partner-site';
 
 /**
  * Die Turnierseite heisst auf Prod `tournament`, auf Dev weiter `turnier-dev` — und ein alter
@@ -35,6 +35,25 @@ describe('partner-site', () => {
     expect(rookHubUrlForLeagueHub('leaguehub.oberschmid.homes', 'https:')).toBe('https://rookhub.oberschmid.homes');
     expect(rookHubUrlForLeagueHub('leaguehub-dev.oberschmid.homes', 'https:')).toBe('https://rookhub-dev.oberschmid.homes');
     expect(rookHubUrlForLeagueHub('rookhub.oberschmid.homes', 'https:')).toBeNull();
+  });
+
+  it('kennt zu jeder Oberfläche das RookHub derselben Umgebung — dort wird das Konto gelöscht (UX-023)', () => {
+    for (const [host, home] of [
+      ['kidhub.oberschmid.homes', 'https://rookhub.oberschmid.homes'],
+      ['kidhub-dev.oberschmid.homes', 'https://rookhub-dev.oberschmid.homes'],
+      ['leaguehub.oberschmid.homes', 'https://rookhub.oberschmid.homes'],
+      ['leaguehub-dev.oberschmid.homes', 'https://rookhub-dev.oberschmid.homes'],
+      ['clubhub.oberschmid.homes', 'https://rookhub.oberschmid.homes'],
+      ['clubhub-dev.oberschmid.homes', 'https://rookhub-dev.oberschmid.homes'],
+      ['tournament.oberschmid.homes', 'https://rookhub.oberschmid.homes'],
+      ['turnier-dev.oberschmid.homes', 'https://rookhub-dev.oberschmid.homes'],
+    ]) {
+      expect(accountHomeUrl(host, 'https:')).withContext(host).toBe(home);
+    }
+    // RookHub selbst und Adressen ohne Familie: kein Link statt einer geratenen Adresse.
+    expect(accountHomeUrl('rookhub.oberschmid.homes', 'https:')).toBeNull();
+    expect(accountHomeUrl('localhost', 'http:')).toBeNull();
+    expect(accountHomeUrl('10.24.13.6', 'http:')).toBeNull();
   });
 
   it('bietet ohne gemeinsame Elterndomaene keinen Sprung und kein Cookie', () => {

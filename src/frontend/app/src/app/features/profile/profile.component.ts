@@ -1,4 +1,5 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ElementRef, Optional, ViewChild } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProfileService } from '../../core/profile.service';
@@ -24,6 +25,7 @@ import { OfflineSettingsCardComponent } from './offline-settings-card.component'
 import { ThemeCardComponent } from './theme-card.component';
 import { ChangePasswordCardComponent } from './change-password-card.component';
 import { DeleteAccountCardComponent } from './delete-account-card.component';
+import { ACCOUNT_DELETE_SECTION, PROFILE_SECTION_PARAM } from '../legal/legal-site';
 
 interface Profile {
   userId: number;
@@ -116,7 +118,7 @@ interface Profile {
             <app-change-password-card></app-change-password-card>
 
             <mat-divider class="discord-divider"></mat-divider>
-            <app-delete-account-card></app-delete-account-card>
+            <app-delete-account-card [open]="openDelete"></app-delete-account-card>
           </mat-card-content>
         </mat-card>
       </div>
@@ -172,6 +174,18 @@ export class ProfileComponent implements OnInit {
   savedEmail: string | null = null;
   /** Aktuelles Passwort, nur fuer einen E-Mail-Wechsel (Feld im Identitaets-Formular). */
   currentPassword = '';
+  /** `?section=delete` (Knopf „Konto jetzt loeschen" auf /account-deletion, Codereview UX-023): die Karte „Konto
+   *  loeschen" — der letzte Block der Seite — aufgeklappt und angesprungen, statt an allen anderen vorbeizuscrollen. */
+  readonly openDelete: boolean;
+  private deleteShown = false;
+
+  /** Die Karte entsteht erst nach dem Laden des Profils; einmal hinscrollen, sobald sie da ist. */
+  @ViewChild(DeleteAccountCardComponent, { read: ElementRef })
+  set deleteCard(card: ElementRef<HTMLElement> | undefined) {
+    if (!card || !this.openDelete || this.deleteShown) return;
+    this.deleteShown = true;
+    card.nativeElement.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  }
 
   constructor(
     private profileService: ProfileService,
@@ -179,7 +193,10 @@ export class ProfileComponent implements OnInit {
     private translate: TranslateService,
     private discordLink: DiscordLinkService,
     private auth: AuthService,
-  ) {}
+    @Optional() route?: ActivatedRoute,
+  ) {
+    this.openDelete = route?.snapshot.queryParamMap.get(PROFILE_SECTION_PARAM) === ACCOUNT_DELETE_SECTION;
+  }
 
   ngOnInit(): void {
     this.profileService.getProfile<Profile>().subscribe({

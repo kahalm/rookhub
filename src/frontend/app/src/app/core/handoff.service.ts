@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, AuthResponse } from './auth.service';
-import { leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-site';
+import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } from './partner-site';
 
 /**
  * Der Sprung zwischen RookHub und der Turnierseite.
@@ -71,6 +71,16 @@ export class HandoffService {
   /** Springt von LeagueHub nach RookHub (Einmal-Code, drüben eingelöst — z. B. auf eine eben abgelegte Partie). */
   async jumpToRookHub(path = ''): Promise<void> {
     const base = this.rookHubUrl;
+    if (base) await this.jumpTo(base, path);
+  }
+
+  /** RookHub zu dieser Oberflaeche (dort liegt das Konto), oder `null` — auf RookHub selbst und ohne bekannte Adresse. */
+  get accountHomeUrl(): string | null { return accountHomeUrl(); }
+
+  /** Springt von KidHub, LeagueHub, ClubHub oder der Turnierseite nach RookHub (Einmal-Code wie oben) — z. B. zur
+   *  Karte „Konto loeschen", die es nur dort gibt (Codereview UX-023). */
+  async jumpToAccountHome(path = ''): Promise<void> {
+    const base = this.accountHomeUrl;
     if (base) await this.jumpTo(base, path);
   }
 

@@ -182,6 +182,32 @@ describe('HandoffService', () => {
     });
   });
 
+  describe('Sprung ins RookHub der Oberfläche (Konto löschen, UX-023)', () => {
+    it('hängt angemeldet einen Übergabe-Code an Pfad und Abfrage an', async () => {
+      spyOnProperty(svc, 'accountHomeUrl', 'get').and.returnValue('https://rookhub.example');
+      const go = spyOn(svc as unknown as { go: (url: string) => void }, 'go');
+      auth.adoptSession(session);
+
+      const done = svc.jumpToAccountHome('profile?section=delete');
+      http.expectOne({ method: 'POST', url: '/api/auth/handoff' }).flush({ code: 'C2' });
+      await done;
+
+      expect(go).toHaveBeenCalledWith('https://rookhub.example/profile?section=delete&h=C2');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('springt ohne bekannte Adresse gar nicht', async () => {
+      spyOnProperty(svc, 'accountHomeUrl', 'get').and.returnValue(null);
+      const go = spyOn(svc as unknown as { go: (url: string) => void }, 'go');
+
+      await svc.jumpToAccountHome('profile?section=delete');
+
+      expect(go).not.toHaveBeenCalled();
+      http.expectNone('/api/auth/handoff');
+    });
+  });
+
   describe('Abmelden über die Oberflächen hinweg', () => {
     // Gemeldet im Codereview 2026-09-29 (A1-005): Abmelden in RookHub löschte nur das Cookie. KidHub,
     // Turnierseite und LeagueHub, die es beim Start gegen ein eigenes 30-Tage-Token getauscht hatten,

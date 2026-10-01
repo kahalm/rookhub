@@ -13,10 +13,11 @@ describe('KidHub-Routen und Rechtsseiten', () => {
     expect(paths).not.toContain('impressum');
   });
 
-  it('Datenschutzfragen gehen an kidhub@oberschm.id, Kinder-Fassung, Ruecklink zur Startseite', () => {
+  it('Datenschutzfragen gehen an kidhub@oberschm.id, Kinder-Fassung, Ruecklink zur Startseite, Konto in RookHub', () => {
     const legal = kidhubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
       { useValue: LegalSite } | undefined;
-    expect(legal?.useValue).toEqual({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/' });
+    // accountHome: KidHub hat kein Profil — die Loeschseite verweist auf RookHubs Profil (UX-023).
+    expect(legal?.useValue).toEqual({ contactEmail: 'kidhub@oberschm.id', imprint: false, kind: 'kidhub', back: '/', accountHome: 'rookhub' });
   });
 
   it('jeder Link der geteilten Anmelde- und Rechtsseiten hat hier einen Weg — mit KidHubs LEGAL_SITE (UX-003)', async () => {
@@ -24,6 +25,7 @@ describe('KidHub-Routen und Rechtsseiten', () => {
     const report = await checkSharedPageLinks(routes, kidhubConfig);
     expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'account-deletion']));
     expect(report.links).toContain('/privacy → /');
+    expect(report.links).not.toContain('/account-deletion → /profile');   // kein Profil hier (UX-023)
     expect(report.problems).toEqual([]);
   });
 });

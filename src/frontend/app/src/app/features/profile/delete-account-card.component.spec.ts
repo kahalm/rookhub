@@ -40,4 +40,12 @@ describe('DeleteAccountCardComponent', () => {
     expect(c.showDelete).toBeFalse();
     expect(c.deletePassword).toBe('');
   });
+
+  it('[open] klappt die Bestaetigung gleich auf (Profil mit ?section=delete, UX-023)', () => {
+    const { c } = make();
+    c.open = false;
+    expect(c.showDelete).toBeFalse();
+    c.open = true;
+    expect(c.showDelete).toBeTrue();
+  });
 });

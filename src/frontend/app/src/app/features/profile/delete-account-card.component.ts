@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -61,6 +61,8 @@ import { AuthService } from '../../core/auth.service';
 })
 export class DeleteAccountCardComponent {
   showDelete = false;
+  /** Gleich aufgeklappt (Profil mit `?section=delete`, vom Knopf auf /account-deletion — Codereview UX-023). */
+  @Input() set open(value: boolean) { if (value) this.showDelete = true; }
   deletePassword = '';
   deleting = false;
 

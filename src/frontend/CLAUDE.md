@@ -38,7 +38,9 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - Jede App (RookHub, Turnierseite, KidHub, LeagueHub, ClubHub) prueft in ihrer `app.routes.spec.ts` mit
   `checkSharedPageLinks` (`src/app/testing/shared-page-links.ts`, UX-003), dass jeder GERENDERTE Link der geteilten
   Anmelde- und Rechtsseiten auf seinen eigenen Weg fuehrt (nicht in '**'/`:slug`). Neue App mit diesen Seiten: dort
-  aufrufen; neue geteilte Seite: in `SHARED_AUTH_LEGAL_PAGES` eintragen.
+  aufrufen; neue geteilte Seite: in `SHARED_AUTH_LEGAL_PAGES` eintragen. Ein Link, der BEWUSST ueber die Anmeldung
+  geht (authGuard mit returnUrl, z. B. „Konto jetzt loeschen" → `/profile?section=delete`, UX-023), traegt
+  `data-login-required` — er muss trotzdem seine eigene Route treffen.
 - Gemerkte Ansicht der Turnierseite (F6-002): der lokale Schlüssel der Kalender-Filterleiste ist NUTZERGEBUNDEN
   (`rh.turnier.directoryView.<userId>`), `'rh.turnier.'` steht in den Abmelde-Spuren (wird beim Abmelden geräumt), und
   beim Einstieg als ein Nutzer (Impersonation) geht kein View-State zum Server.
@@ -87,7 +89,7 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - **Rechtsseiten** (`features/legal/`, Betreiber-Entscheidung 2026-09-30, UX-001) – `environments/operator.ts`
   (`OPERATOR`) enthaelt NUR die Kontaktadresse (`rookhub@oberschm.id`); das Impressum zeigt nur den Kontakt, kein
   Diensteanbieter-Block mit Name/Anschrift. Je Oberflaeche steuert `LEGAL_SITE` (`legal-site.ts`) Impressum ja/nein,
-  Kontaktadresse, `kind` und Ruecklink (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum")
+  Kontaktadresse, `kind`, Ruecklink und `accountHome` (Details im Haupt-CLAUDE.md, KidHub „Kein Impressum")
 
 ## Lokalisierung (ngx-translate)
 

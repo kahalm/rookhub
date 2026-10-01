@@ -84,6 +84,26 @@ export function rookHubUrlForLeagueHub(host: string = location.hostname, protoco
   return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
 }
 
+/** Welches RookHub zu welcher Oberflaeche gehoert (Prod ↔ Prod, Dev ↔ Dev) — dort liegt das Konto (Profil, Konto loeschen). */
+const ROOKHUB_FOR: Record<string, string> = {
+  'tournament': 'rookhub', 'turnier': 'rookhub', 'tournament-dev': 'rookhub-dev', 'turnier-dev': 'rookhub-dev',
+  'kidhub': 'rookhub', 'kidhub-dev': 'rookhub-dev',
+  'leaguehub': 'rookhub', 'leaguehub-dev': 'rookhub-dev',
+  'clubhub': 'rookhub', 'clubhub-dev': 'rookhub-dev',
+};
+
+/**
+ * Basis-URL des RookHub zu dieser Oberflaeche (ohne abschliessenden Schraegstrich) — fuer den Weg zur Konto-Loeschung,
+ * die es nur in RookHubs Profil gibt (Codereview UX-023). `null` auf RookHub selbst und ausserhalb der Familie
+ * (localhost, IP): dann gibt es keinen Link, statt auf eine geratene Adresse zu zeigen.
+ */
+export function accountHomeUrl(host: string = location.hostname, protocol: string = location.protocol): string | null {
+  const parts = host.split('.');
+  const other = ROOKHUB_FOR[parts[0]];
+  if (!other || parts.length < 2) return null;
+  return `${protocol}//${[other, ...parts.slice(1)].join('.')}`;
+}
+
 /**
  * Domaene fuer Cookies, die sich die Oberflaechen teilen sollen (z. B. Design-Modus, Sprache — KidHub, LeagueHub und ClubHub eingeschlossen):
  * `.oberschmid.homes` fuer `rookhub-dev.oberschmid.homes`. `null`, wenn der Host keine der beiden

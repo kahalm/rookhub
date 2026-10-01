@@ -10,6 +10,7 @@ import { PrivacyComponent } from '@rh/features/legal/privacy.component';
 import { routes } from './app.routes';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 import { turnierConfig } from './app.config';
+import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
 
 /**
  * Die Turnierseite benutzt RookHubs Anmeldemaske und Rechtsseiten (`@rh/*`). Deren Links muessen
@@ -29,7 +30,14 @@ describe('Turnier-Routen', () => {
     // Die Liste oben ist von Hand; das hier liest die Links aus den Templates und faengt damit auch neue.
     const report = await checkSharedPageLinks(routes, turnierConfig);
     expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.links).not.toContain('/account-deletion → /profile');
     expect(report.problems).toEqual([]);
+  });
+
+  it('Konto loeschen verweist auf RookHub — das Profil hier hat keine Loesch-Karte (UX-023)', () => {
+    const legal = turnierConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
+      { useFactory: () => LegalSite } | undefined;
+    expect(legal?.useFactory()).toEqual(jasmine.objectContaining({ imprint: true, accountHome: 'rookhub' }));
   });
 
   it('laesst Passwort-Reset und Rechtsseiten ohne Anmeldung zu', () => {

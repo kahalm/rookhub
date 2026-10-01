@@ -2,6 +2,7 @@ import { authGuard } from '@rh/core/auth.guard';
 import { routes } from './app.routes';
 import { checkSharedPageLinks } from '@rh/testing/shared-page-links';
 import { clubhubConfig } from './app.config';
+import { LEGAL_SITE, LegalSite } from '@rh/features/legal/legal-site';
 
 describe('ClubHub-Routen', () => {
   it('Kartei, Karteiblatt, Gruppen und Anwesenheit gibt es nur angemeldet', () => {
@@ -24,6 +25,13 @@ describe('ClubHub-Routen', () => {
   it('jeder Link der geteilten Anmelde- und Rechtsseiten hat hier einen Weg (UX-003)', async () => {
     const report = await checkSharedPageLinks(routes, clubhubConfig);
     expect(report.mounted).toEqual(jasmine.arrayWithExactContents(['login', 'register', 'forgot-password', 'reset-password', 'privacy', 'impressum', 'account-deletion']));
+    expect(report.links).not.toContain('/account-deletion → /profile');   // kein Profil hier (UX-023)
     expect(report.problems).toEqual([]);
+  });
+
+  it('Konto loeschen verweist auf RookHub — ClubHub hat kein Profil (UX-023)', () => {
+    const legal = clubhubConfig.providers.find(p => (p as { provide?: unknown }).provide === LEGAL_SITE) as
+      { useFactory: () => LegalSite } | undefined;
+    expect(legal?.useFactory().accountHome).toBe('rookhub');
   });
 });

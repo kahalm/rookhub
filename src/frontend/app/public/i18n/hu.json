@@ -472,8 +472,12 @@
     "accountDeletion": {
       "title": "Fiók törlése",
       "intro": "Ez az oldal elmagyarázza, hogyan törölheted a RookHub-fiókodat és mi történik az adataiddal.",
+      "introPartner": "Az itteni fiókod egy RookHub-fiók (ugyanazok a belépési adatok). Ez az oldal elmagyarázza, hogyan törölheted, és mi történik az adataiddal.",
       "inAppTitle": "Hogyan törölheted a fiókodat",
-      "inApp": "Jelentkezz be az alkalmazásba és menj a Profil → \"Fiók törlése\" menüponthoz. Erősítsd meg a jelszavaddal. A fiók azonnal törlődik.",
+      "inApp": "Az alábbi gomb megnyitja a profilodban a \"Fiók törlése\" kártyát – ha nem vagy bejelentkezve, előbb bejelentkezel. Kézzel: ☰ → Fiók → Profil, legalul. Ott erősítsd meg a jelszavaddal. A fiók azonnal törlődik.",
+      "inPartner": "A fiókot csak a RookHubon törölheted: jelentkezz be ott (ugyanazokkal az adatokkal), és menj a ☰ → Fiók → Profil menüpontba, legalul \"Fiók törlése\" – vagy használd közvetlenül a gombot. Erősítsd meg a jelszavaddal; a fiók azonnal törlődik, ezen az oldalon is.",
+      "deleteNow": "Fiók törlése most",
+      "deleteOnRookHub": "Fiók törlése a RookHubon",
       "removedTitle": "Mi kerül törlésre",
       "removed1": "A személyazonosságod és személyes adataid (felhasználónév, e-mail, megjelenített/valódi név, FIDE/ChessResults azonosító, Chess.com/Lichess név, Discord kapcsolat) és a bejelentkezési hozzáférés.",
       "removed2": "Személyes tartalmak és kapcsolatok: repertoárok, verseny-feliratkozások/kedvencek, barátságok és csoporttagságok.",

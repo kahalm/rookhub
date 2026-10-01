@@ -13,6 +13,7 @@ import { renderAfterHttpInterceptor } from '@rh/core/render-after-http.intercept
 import { connectivityInterceptor } from '@rh/core/connectivity.interceptor';
 import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { authInterceptor } from '@rh/core/auth.interceptor';
+import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 
 registerLocaleData(localeDe);
 
@@ -32,6 +33,8 @@ export const clubhubConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'top' })),
     provideHttpClient(withInterceptors([connectivityInterceptor, retryInterceptor, authInterceptor, renderAfterHttpInterceptor])),
     provideAnimationsAsync(),
+    // Rechtsseiten wie in RookHub; Konto loeschen geht aber nur dort — die Loeschseite verweist dorthin (Codereview UX-023).
+    { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
     provideTranslateService({
       fallbackLang: 'en',
       loader: provideTranslateHttpLoader({ prefix: '/i18n/', suffix: '.json' }),

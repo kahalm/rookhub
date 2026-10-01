@@ -33,8 +33,11 @@ import { PrivacyComponent } from '../features/legal/privacy.component';
  *
  * Ein Link ist in Ordnung, wenn der echte Router ihn auf die Route mit GENAU diesem Pfad fuehrt (nicht
  * auf einen Catch-all, Parameter-Weg oder ueber eine Umleitung woandershin) und die Route keine
- * Anmeldung verlangt — die Seiten werden abgemeldet besucht. Geprueft wird gegen dieselbe Tabelle in
- * derselben Reihenfolge, nur ohne Guards und Lazy-Chunks (wie in src/app/app.routes.spec.ts).
+ * Anmeldung verlangt — die Seiten werden abgemeldet besucht. Ausnahme: ein Link mit dem Attribut
+ * `data-login-required` will bewusst ueber die Anmeldung (authGuard mit returnUrl) an sein Ziel, z. B.
+ * „Konto jetzt loeschen" ins Profil (UX-023); auch er muss aber seine eigene Route treffen. Geprueft
+ * wird gegen dieselbe Tabelle in derselben Reihenfolge, nur ohne Guards und Lazy-Chunks (wie in
+ * src/app/app.routes.spec.ts).
  */
 
 /** Die geteilten Anmelde- und Rechtsseiten. */
@@ -104,7 +107,7 @@ export async function checkSharedPageLinks(routes: Routes, config?: ApplicationC
   });
   const router = TestBed.inject(Router);
 
-  const links: { from: string; path: string }[] = [];
+  const links: { from: string; path: string; loginRequired: boolean }[] = [];
   for (const { path: from, page } of mounted) {
     const fixture = TestBed.createComponent(page);
     const collect = () => {
@@ -113,7 +116,8 @@ export async function checkSharedPageLinks(routes: Routes, config?: ApplicationC
         const tree = de.injector.get(RouterLink).urlTree;
         if (!tree) continue;
         const path = (tree.root.children['primary']?.segments ?? []).map(s => s.path).join('/');
-        if (!links.some(l => l.from === from && l.path === path)) links.push({ from, path });
+        const loginRequired = (de.nativeElement as Element).hasAttribute('data-login-required');
+        if (!links.some(l => l.from === from && l.path === path)) links.push({ from, path, loginRequired });
       }
     };
     collect();
@@ -124,14 +128,14 @@ export async function checkSharedPageLinks(routes: Routes, config?: ApplicationC
 
   const problems: string[] = [];
   if (mounted.length === 0) problems.push('die App bindet keine der geteilten Anmelde- und Rechtsseiten ein');
-  for (const { from, path } of links) {
+  for (const { from, path, loginRequired } of links) {
     await router.navigateByUrl('/' + path);
     // Der Router kopiert die Routen beim Einlesen; die Stelle in router.config fuehrt zur echten Route zurueck.
     const hit = router.routerState.snapshot.root.firstChild?.routeConfig;
     const target = hit ? routes[router.config.indexOf(hit)] : undefined;
     if (!target || target.path !== path) {
       problems.push(`/${from} verlinkt /${path}, der Router landet aber auf '${target?.path ?? '—'}' (Weg fehlt)`);
-    } else if (target.canActivate?.includes(authGuard)) {
+    } else if (target.canActivate?.includes(authGuard) && !loginRequired) {
       problems.push(`/${from} verlinkt /${path}, der Weg verlangt aber eine Anmeldung`);
     }
   }
