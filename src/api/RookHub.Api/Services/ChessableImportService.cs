@@ -170,7 +170,9 @@ public class ChessableImportService : ICourseReimporter
         // Ausnahme: trustOwnership (Admin-Massen-Reprocess) — Chessables getHomeData listet nur einen Teil
         // der Bibliothek, daher würde der Check eigene, längst importierte Kurse fälschlich abweisen; Admins
         // dürfen ohnehin jeden Kurs holen.
-        if (!trustOwnership && !await OwnerHasCourseAsync(cred!, bid, ct)) return null;
+        // Dieselbe Prüfung samt Drossel wie StartImport (CourseListRefreshCooldown) — ohne sie holte „Aktualisieren"
+        // über N Repertoires mit unbekannter bid die Kursliste N-mal live von Chessable (A3-014).
+        if (!trustOwnership && !await ChessableImportQueueService.OwnsCourseAsync(_db, _proxy, _encryption, cred!, bid, ct)) return null;
         // Dedup: läuft/pausiert für diesen (Owner, bid) bereits ein Import, KEINEN zweiten anlegen.
         // Verhindert, dass ein erneuter „Update all"-Klick (oder ein Resume/Retry) denselben Kurs ein
         // zweites Mal komplett von Chessable holt — genau die beobachtete N-fache Flut (bid 116242 4×).
@@ -200,37 +202,6 @@ public class ChessableImportService : ICourseReimporter
         if (import.FullyCached != true)
             await EnqueueNextAsync();
         return import.Id;
-    }
-
-    /// <summary>Prüft, ob <paramref name="bid"/> in der Chessable-Bibliothek zum Bearer von
-    /// <paramref name="cred"/> liegt (gecachte Kursliste zuerst, sonst einmal frisch laden + Cache
-    /// aktualisieren). Nicht verifizierbar (Bearer kaputt / Chessable-Fehler) ⇒ false (fail-closed).
-    /// Gegenstück zu <c>ChessableController.UserOwnsCourseAsync</c> für die Re-Fetch-Pfade.</summary>
-    private async Task<bool> OwnerHasCourseAsync(ChessableCredential cred, string bid, CancellationToken ct)
-    {
-        bool Has(string? json) =>
-            !string.IsNullOrEmpty(json)
-            && (System.Text.Json.JsonSerializer.Deserialize<List<DTOs.ChessableCourseDto>>(
-                    json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)) ?? new())
-               .Any(c => c.Bid == bid);
-
-        if (Has(cred.CachedCoursesJson)) return true;
-
-        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
-        if (bearer is null) return false;
-        try
-        {
-            var courses = await _proxy.GetCoursesAsync(bearer, ct);
-            cred.CachedCoursesJson = System.Text.Json.JsonSerializer.Serialize(
-                courses, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
-            cred.CoursesCachedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-            return courses.Any(c => c.Bid == bid);
-        }
-        catch (ChessableProxyException)
-        {
-            return false;
-        }
     }
 
     /// <summary>

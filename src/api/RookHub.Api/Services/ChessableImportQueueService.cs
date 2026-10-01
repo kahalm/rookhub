@@ -80,7 +80,16 @@ public class ChessableImportQueueService
     /// Frist importierbar — bzw. sofort, sobald die Kursliste anderswo aktualisiert wurde.</summary>
     public static readonly TimeSpan CourseListRefreshCooldown = TimeSpan.FromMinutes(5);
 
-    public async Task<bool> UserOwnsCourseAsync(ChessableCredential cred, string bid, CancellationToken ct)
+    public Task<bool> UserOwnsCourseAsync(ChessableCredential cred, string bid, CancellationToken ct) =>
+        OwnsCourseAsync(_db, _chessable, _encryption, cred, bid, ct);
+
+    /// <summary>Die EINE Eigentumsprüfung samt Drossel — auch für die Re-Fetch-Pfade
+    /// (<see cref="ChessableImportService.EnqueueReimportAsync"/>), die keinen eigenen Queue-Dienst haben. Vorher
+    /// stand dort eine Kopie OHNE Drossel: „Aktualisieren" über N Repertoires mit unbekannter bid holte die
+    /// Kursliste N-mal live von Chessable (Codereview 2026-09-29, A3-014).</summary>
+    internal static async Task<bool> OwnsCourseAsync(
+        AppDbContext db, ChessableProxyService chessable, EncryptionService encryption,
+        ChessableCredential cred, string bid, CancellationToken ct)
     {
         bool Has(string? json) =>
             !string.IsNullOrEmpty(json)
@@ -98,14 +107,14 @@ public class ChessableImportQueueService
         if (cred.CoursesCachedAt is { } cachedAt && DateTime.UtcNow - cachedAt < CourseListRefreshCooldown)
             return false;
 
-        var bearer = _encryption.TryDecrypt(cred.EncryptedBearer);
+        var bearer = encryption.TryDecrypt(cred.EncryptedBearer);
         if (bearer is null) return false;
         try
         {
-            var courses = await _chessable.GetCoursesAsync(bearer, ct);
+            var courses = await chessable.GetCoursesAsync(bearer, ct);
             cred.CachedCoursesJson = JsonSerializer.Serialize(courses, JsonOpts);
             cred.CoursesCachedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
             return courses.Any(c => c.Bid == bid);
         }
         catch (ChessableProxyException)

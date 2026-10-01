@@ -1722,6 +1722,73 @@ public class ChessableImportServiceTests : IDisposable
         Assert.False(await _db.ChessableImports.AnyAsync(i => i.Bid == "999"));
     }
 
+    [Fact]
+    public async Task EnqueueReimport_UnbekannteBids_FragtChessableHoechstensEinmalJeFrist()
+    {
+        // A3-014: „Aktualisieren" über N Repertoires mit unbekannter bid (EnqueueRefetchesAsync → je Kandidat
+        // EnqueueReimportAsync) holte die Kursliste vorher N-mal live über den geteilten VPN-Pool — die Drossel
+        // CourseListRefreshCooldown galt nur für StartImport. Jetzt dieselbe Prüfung samt Drossel.
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[{\"bid\":\"111\",\"name\":\"Mine\"}]",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var courseCalls = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses")
+            {
+                courseCalls++;
+                return JsonOk(new[] { new { bid = "111", name = "Mine" } });
+            }
+            return JsonOk(new { cached = false });
+        }));
+
+        foreach (var bid in new[] { "901", "902", "903", "904" })
+            Assert.Null(await svc.EnqueueReimportAsync(user.Id, bid, "repertoire", "Erfunden " + bid));
+
+        Assert.Equal(1, courseCalls);
+        Assert.False(await _db.ChessableImports.AnyAsync(i => i.UserId == user.Id));
+        // Ein Kurs aus der (frisch geholten) Liste geht weiter ohne Abruf durch.
+        Assert.NotNull(await svc.EnqueueReimportAsync(user.Id, "111", "repertoire", "Mine"));
+        Assert.Equal(1, courseCalls);
+    }
+
+    [Fact]
+    public async Task EnqueueReimport_KurslisteNachFristAbgelaufen_FragtWiederLive()
+    {
+        var user = new AppUser { Username = "u", PasswordHash = "h" };
+        _db.AppUsers.Add(user);
+        await _db.SaveChangesAsync();
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = user.Id, EncryptedBearer = _encryption.Encrypt("bearer"),
+            CachedCoursesJson = "[]",
+            CoursesCachedAt = DateTime.UtcNow - ChessableImportQueueService.CourseListRefreshCooldown - TimeSpan.FromMinutes(1),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var courseCalls = 0;
+        var svc = BuildSvc(new ScriptedHandler(req =>
+        {
+            if (req.RequestUri!.AbsolutePath == "/api/chessable/direct/courses")
+            {
+                courseCalls++;
+                return JsonOk(new[] { new { bid = "555", name = "Neu gekauft" } });
+            }
+            return JsonOk(new { cached = false });
+        }));
+
+        // Neu gekaufter Kurs: die alte Liste kennt ihn nicht, die Frist ist um → ein Live-Abruf findet ihn.
+        Assert.NotNull(await svc.EnqueueReimportAsync(user.Id, "555", "repertoire", "Neu gekauft"));
+        Assert.Equal(1, courseCalls);
+    }
+
     private static HttpResponseMessage JsonOk(object payload) =>
         new(HttpStatusCode.OK) { Content = JsonContent.Create(payload) };
 
