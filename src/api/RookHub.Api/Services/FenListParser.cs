@@ -38,12 +38,21 @@ public static class FenListParser
         var errors = new List<FenError>();
         if (string.IsNullOrWhiteSpace(text)) return new Result(positions, errors);
 
-        var rawLines = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
-        for (var i = 0; i < rawLines.Length; i++)
+        // Zeilenweise über den Text laufen (Umbrüche \r\n, \r oder \n — wie früher
+        // Replace(…).Split('\n')), OHNE vorher ein Array aller Zeilen zu bauen: der Deckel MaxLines
+        // greift sonst erst, nachdem ein Riesen-Text komplett zerlegt ist (N3-004).
+        var lineNumber = 0;
+        for (var pos = 0; pos <= text.Length;)
         {
-            var lineNumber = i + 1;
-            var raw = rawLines[i].Trim();
-            if (raw.Length == 0) continue;
+            var rest = text.AsSpan(pos);
+            var brk = rest.IndexOfAny('\r', '\n');
+            var line = brk < 0 ? rest : rest[..brk];
+            pos = brk < 0 ? text.Length + 1
+                : pos + brk + (rest[brk] == '\r' && brk + 1 < rest.Length && rest[brk + 1] == '\n' ? 2 : 1);
+            lineNumber++;
+            var trimmed = line.Trim();
+            if (trimmed.IsEmpty) continue;
+            var raw = trimmed.ToString();
 
             if (positions.Count + errors.Count >= MaxLines)
             {

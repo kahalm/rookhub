@@ -148,6 +148,59 @@ public class FenListParserTests
     }
 
     [Fact]
+    public void Parse_MixedLineEndings_KeepLineNumbersLikeBefore()
+    {
+        // \r\n, einzelnes \r und \n zählen je als EIN Umbruch; „\r\r\n" sind zwei (Altverhalten:
+        // Replace("\r\n", "\n").Replace('\r', '\n').Split('\n')).
+        var text = $"{Fen1}\r\n{Fen2}\r\rkaputt\r\r\n\n{Fen1} | x\r";
+        var result = FenListParser.Parse(text);
+        Assert.Equal(new[] { 1, 2, 7 }, result.Positions.Select(p => p.LineNumber));
+        Assert.Equal("x", result.Positions[2].Comment);
+        Assert.Equal(4, Assert.Single(result.Errors).LineNumber);
+
+        // Zufallsvergleich: jede Mischung aus \r/\n/\r\n ergibt dasselbe wie der auf \n normalisierte Text.
+        var rng = new Random(4711);
+        string[] tokens = { Fen1, Fen2, "kaputt", "\r", "\n", "\r\n", " ", "\t" };
+        for (var round = 0; round < 500; round++)
+        {
+            var mixed = string.Concat(Enumerable.Range(0, rng.Next(1, 30)).Select(_ => tokens[rng.Next(tokens.Length)]));
+            var normalized = mixed.Replace("\r\n", "\n").Replace('\r', '\n');
+            Assert.Equal(FenListParser.Describe(FenListParser.Parse(normalized)), FenListParser.Describe(FenListParser.Parse(mixed)));
+        }
+    }
+
+    [Fact]
+    public void Parse_HugeText_DoesNotAllocateAnArrayOfAllLines()
+    {
+        // N3-004: 2 Mio. Leerzeilen vor der einzigen Stellung. Früher baute Split('\n') ein string[]
+        // mit 2 Mio. Einträgen (≥ 16 MB), bevor eine Zeile geprüft war; jetzt läuft der Parser
+        // zeilenweise über den Text.
+        const int blank = 2_000_000;
+        var text = new string('\n', blank) + Fen1;
+        FenListParser.Parse(Fen1);                                   // JIT/statische Felder vorab
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var result = FenListParser.Parse(text);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(blank + 1, Assert.Single(result.Positions).LineNumber);
+        Assert.True(allocated < 1_000_000, $"{allocated:N0} Bytes alloziert");
+    }
+
+    [Fact]
+    public void Parse_HugeTextAfterTheLimit_StopsWithoutTouchingTheRest()
+    {
+        var head = string.Join('\n', Enumerable.Repeat(Fen1, FenListParser.MaxLines + 1));
+        var text = head + new string('\n', 2_000_000) + Fen2;
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var result = FenListParser.Parse(text);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(FenListParser.MaxLines, result.Positions.Count);
+        Assert.Equal(FenListParser.MaxLines + 1, Assert.Single(result.Errors).LineNumber);
+        Assert.True(allocated < 4_000_000, $"{allocated:N0} Bytes alloziert");
+    }
+
+    [Fact]
     public void Parse_EmptyInput_YieldsNothing()
     {
         foreach (var text in new[] { null, "", "   \n\n" })
