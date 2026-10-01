@@ -221,8 +221,8 @@ public class AnalysisJobService
             engineId = await PickBackgroundEngineAsync(userId, ct);
         }
         if (engineId.Length > 64) throw new ArgumentException("Invalid engine id");
-        // Dieselbe Prüfung wie beim Einzelauftrag (A4-003); verdrängt wird hier ohnehin nichts.
-        if (explicitEngine) await VerifyOwnersEngineAsync(userId, engineId, ct);
+        // Dieselbe Prüfung wie beim Einzelauftrag (A4-003) — und dieselbe Bedingung fürs Verdrängen unten.
+        var ownersEngine = !explicitEngine || await VerifyOwnersEngineAsync(userId, engineId, ct);
 
         var existing = await _db.AnalysisJobs.Where(j => j.UserId == userId && j.Status != AnalysisJobStatus.Failed)
             .Select(j => j.Fen).ToListAsync(ct);
@@ -255,6 +255,9 @@ public class AnalysisJobService
             EnsureRemembered(userId, fen, null, remembered);
         }
         if (created.Count > 0) { await TrimAsync(userId, created.Count, ct); await _db.SaveChangesAsync(ct); }
+        // Vorrang wie beim Einzelauftrag (A4-007): die Mehrfachauswahl legt NORMALE Aufträge an, und die sollen nicht
+        // warten, bis ein laufender Hintergrund-Auftrag (Vertiefung, Meisterpartien) auf dieser Engine fertig ist.
+        if (created.Count > 0 && ownersEngine) _control?.PreemptBackground(engineId);
         return new AnalysisJobBatchResult(created.Select(ToDto).ToList(), skipped);
     }
 

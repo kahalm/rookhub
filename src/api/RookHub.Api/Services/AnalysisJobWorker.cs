@@ -197,7 +197,7 @@ public class AnalysisJobWorker : BackgroundService, IAnalysisJobControl
     }
 
     /// <summary>Hintergrund-Auftrag AUF DIESER ENGINE unterbrechen: ein normaler Auftrag wurde fuer sie eingereiht
-    /// (<see cref="AnalysisJobService.CreateAsync"/>). Der Lauf endet wie bei Live-Vorrang auf Paused, ohne Fehlversuch,
+    /// (<see cref="AnalysisJobService.CreateAsync"/>, <see cref="AnalysisJobService.CreateManyAsync"/>). Der Lauf endet wie bei Live-Vorrang auf Paused, ohne Fehlversuch,
     /// und das Ende weckt die Schleife — die Engine nimmt sofort den normalen Auftrag (normal vor Hintergrund in
     /// <see cref="AnalysisJobService.PickNextForEngineAsync"/>). Ein normaler Lauf wird NIE unterbrochen.</summary>
     public void PreemptBackground(string engineId)

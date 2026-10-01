@@ -70,6 +70,25 @@ public class AnalysisJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateMany_normaleAuftraege_verdraengenDenHintergrundEinmal_wieDerEinzelauftrag()
+    {
+        // A4-007: die Mehrfachauswahl auf dem Analysebrett legte normale Aufträge an, ohne zu verdrängen — sie warteten,
+        // bis die laufende Vertiefung (Tiefe 30, fünf Linien) fertig war.
+        var u = await UserWithBackgroundEngineAsync();
+        var res = await _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest
+        {
+            Fens = [START, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"], TargetDepth = 20, MultiPv = 1,
+        });
+        Assert.Equal(2, res.Created.Count);
+        Assert.Equal(new[] { "eei_bg" }, _control.Preempted);
+
+        // Nichts angelegt (alles Dubletten) → nichts verdrängt.
+        _control.Preempted.Clear();
+        await _svc.CreateManyAsync(u, new CreateAnalysisJobsBatchRequest { Fens = [START], TargetDepth = 20, MultiPv = 1 });
+        Assert.Empty(_control.Preempted);
+    }
+
+    [Fact]
     public async Task Create_HintergrundAuftrag_verdraengtNichts()
     {
         var u = await UserWithBackgroundEngineAsync();
@@ -721,6 +740,19 @@ public class AnalysisJobServiceTests : IDisposable
             remember: false, engineOwnerUserId: house.Id);
 
         Assert.Equal(new[] { "eei_haus", "eei_haus" }, _control.Preempted);
+    }
+
+    [Fact]
+    public async Task CreateMany_LichessNichtErreichbar_legtAn_verdraengtAberNichts()
+    {
+        var u = await UserWithBackgroundEngineAsync();
+        _lichessStub.Fail = true;
+
+        var res = await WithRegistry().CreateManyAsync(u,
+            new CreateAnalysisJobsBatchRequest { Fens = [START], TargetDepth = 20, MultiPv = 1, EngineId = "eei_live" });
+
+        Assert.Single(res.Created);
+        Assert.Empty(_control.Preempted);
     }
 
     [Fact]
