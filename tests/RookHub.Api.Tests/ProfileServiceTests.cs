@@ -287,6 +287,42 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_PlatformUsernameChange_ResetsPlayTimeCursorAndCounts()
+    {
+        // Codereview F5-021: Cursor und Tageszählung liegen je (User, Plattform). Nach einem korrigierten
+        // Namen fragte der Sync das richtige Konto erst ab der letzten Partie des falschen ab, und dessen
+        // Partien blieben im Wochenziel „Partien" gezählt.
+        var userId = await CreateUserAsync();
+        await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { LichessUsername = "magnus_fan", ChessComUsername = "cc" });
+        const long Cursor = 1_700_000_000_000;
+        var syncedAt = DateTime.UtcNow.AddMinutes(-1);
+        var day = new DateOnly(2026, 9, 1);
+        _db.PlayTimeSyncs.AddRange(
+            new Models.PlayTimeSync { UserId = userId, Platform = PlayTimeService.Lichess, LastGameTimestamp = Cursor, LastSyncedAt = syncedAt, LastError = "alt" },
+            new Models.PlayTimeSync { UserId = userId, Platform = PlayTimeService.ChessCom, LastGameTimestamp = Cursor });
+        _db.PlayTimeDailies.AddRange(
+            new Models.PlayTimeDaily { UserId = userId, Platform = PlayTimeService.Lichess, Date = day, Games = 3 },
+            new Models.PlayTimeDaily { UserId = userId, Platform = PlayTimeService.ChessCom, Date = day, Games = 2 });
+        await _db.SaveChangesAsync();
+        Task<Models.PlayTimeSync> Sync(string platform) => _db.PlayTimeSyncs.SingleAsync(s => s.UserId == userId && s.Platform == platform);
+
+        // Gleicher Name in anderer Schreibweise oder reine Einstellungen: nichts zurücksetzen.
+        await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { LichessUsername = " Magnus_Fan ", BoardTheme = "blue" });
+        Assert.Equal(Cursor, (await Sync(PlayTimeService.Lichess)).LastGameTimestamp);
+        Assert.Equal(2, await _db.PlayTimeDailies.CountAsync(p => p.UserId == userId));
+
+        // Korrigierter Name: Lichess-Cursor 0 (der nächste Sync nimmt das Erst-Lookback), Lichess-Zählung weg.
+        await _profileService.UpdateProfileAsync(userId, new UpdateProfileDto { LichessUsername = "magnusfan" });
+        var lichess = await Sync(PlayTimeService.Lichess);
+        Assert.Equal(0, lichess.LastGameTimestamp);
+        Assert.Null(lichess.LastError);
+        Assert.Equal(syncedAt, lichess.LastSyncedAt);   // die Abruf-Sperre lässt sich per Namenswechsel nicht umgehen
+        Assert.Equal(Cursor, (await Sync(PlayTimeService.ChessCom)).LastGameTimestamp);
+        var left = Assert.Single(await _db.PlayTimeDailies.Where(p => p.UserId == userId).ToListAsync());
+        Assert.Equal(PlayTimeService.ChessCom, left.Platform);
+    }
+
+    [Fact]
     public async Task UpdateProfile_SetsFirstNameLastName()
     {
         var userId = await CreateUserAsync();

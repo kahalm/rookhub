@@ -61,6 +61,8 @@ public class ProfileService
         var oldLastName = profile.LastName;
         var oldFirstName = profile.FirstName;
         var oldFideId = profile.FideId;
+        var oldLichessUsername = profile.LichessUsername;
+        var oldChessComUsername = profile.ChessComUsername;
 
         // E-Mail: null = unverändert lassen; "" = entfernen; sonst validieren + auf Dublette prüfen.
         // Normalisierung (trim + lowercase) wie bei der Registrierung, damit der Unique-Index greift.
@@ -116,6 +118,9 @@ public class ProfileService
         if (dto.PuzzleDifficulty != null) profile.PuzzleDifficulty = dto.PuzzleDifficulty;
         if (dto.BookStockfishDepth != null) profile.BookStockfishDepth = Math.Clamp(dto.BookStockfishDepth.Value, 1, 24);
 
+        await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.Lichess, oldLichessUsername, profile.LichessUsername);
+        await ResetPlayTimeOnUsernameChangeAsync(userId, PlayTimeService.ChessCom, oldChessComUsername, profile.ChessComUsername);
+
         try
         {
             await _db.SaveChangesAsync();
@@ -163,6 +168,27 @@ public class ProfileService
     /// Opfer einer Übernahme nichts davon, alle weiteren Mails gehen ja an die neue Adresse.
     /// Best-effort: die Änderung ist gespeichert, ein Mail-Fehler wird nur geloggt.
     /// </summary>
+    /// <summary>Die Partienzählung fürs Wochenziel folgt dem VERKNÜPFTEN Konto: Cursor und Tageszählungen
+    /// liegen je (User, Plattform), nicht je Benutzername. Wechselt der Name (Tippfehler korrigiert, anderes
+    /// Konto), fragte der nächste Sync das neue Konto erst ab der letzten Partie des alten ab und dessen
+    /// Partien blieben gezählt (Codereview F5-021). Deshalb hier die Tageszählungen der Plattform verwerfen
+    /// und den Cursor auf 0 setzen — der nächste Sync baut sie über das Erst-Lookback neu auf.
+    /// <see cref="PlayTimeSync.LastSyncedAt"/> bleibt, damit ein Namenswechsel die Abruf-Sperre nicht umgeht.
+    /// Groß-/Kleinschreibung zählt nicht (Lichess und chess.com unterscheiden sie nicht). Wird im selben
+    /// SaveChanges wie die Profiländerung geschrieben.</summary>
+    private async Task ResetPlayTimeOnUsernameChangeAsync(int userId, string platform, string? oldName, string? newName)
+    {
+        if (string.Equals((oldName ?? "").Trim(), (newName ?? "").Trim(), StringComparison.OrdinalIgnoreCase)) return;
+        _db.PlayTimeDailies.RemoveRange(
+            await _db.PlayTimeDailies.Where(p => p.UserId == userId && p.Platform == platform).ToListAsync());
+        var sync = await _db.PlayTimeSyncs.FirstOrDefaultAsync(s => s.UserId == userId && s.Platform == platform);
+        if (sync != null)
+        {
+            sync.LastGameTimestamp = 0;
+            sync.LastError = null;
+        }
+    }
+
     private async Task NotifyPreviousEmailAsync(AppUser user, string? previousEmail)
     {
         _logger.LogInformation("Profile: email address changed for user {UserId}", user.Id);
