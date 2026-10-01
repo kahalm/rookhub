@@ -515,6 +515,11 @@ export class AuthService {
   }
 
   private claimAnonymousPuzzleSession(): void {
+    // Punktepartie: eigene Kennung (GuessService.AnonKey), unabhängig von der Puzzle-Sitzung — ein Besucher
+    // kann nur geraten und nie ein Puzzle gelöst haben (Codereview N11-003).
+    if (localStorage.getItem('rookhub_guess_session'))
+      import('../features/guess/guess.service').then(m =>
+        this.withService(() => this.injector.get(m.GuessService), guess => guess.claimAnonymous().subscribe()));
     const sessionId = localStorage.getItem('rookhub_puzzle_session');
     if (!sessionId) return;
     // Lazy import to avoid circular dependency

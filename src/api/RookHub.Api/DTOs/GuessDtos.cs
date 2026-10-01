@@ -45,6 +45,13 @@ public class CreateAnonymousGuessSessionRequest : CreateGuessSessionRequest
     public string SessionId { get; set; } = string.Empty;
 }
 
+/// <summary>Übernahme der anonymen Durchläufe eines Browsers ins Konto (nach dem Anmelden).</summary>
+public class ClaimGuessSessionsRequest
+{
+    [Required, MaxLength(36), RegularExpression(ValidationConstants.SessionIdPattern)]
+    public string SessionId { get; set; } = string.Empty;
+}
+
 /// <summary>Rateversuch ohne Anmeldung — siehe <see cref="CreateAnonymousGuessSessionRequest"/>.</summary>
 public class AnonymousGuessMoveRequest : GuessMoveRequest
 {

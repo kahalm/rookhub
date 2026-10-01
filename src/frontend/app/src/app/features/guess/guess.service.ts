@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, catchError, of, tap } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { getOrCreateAnonSessionId } from '../../core/anon-session';
 
@@ -122,7 +122,7 @@ export class GuessService {
   /** EIGENER Schlüssel, nicht der der anonymen Puzzle-Versuche: dort liegen bei Bestandsnutzern
    *  teils Kennungen aus einem älteren Generator, die das Muster des Servers nicht erfüllen —
    *  geteilt würde ein solcher Altwert hier jeden Aufruf mit 400 beenden. */
-  private static readonly AnonKey = 'rookhub_guess_session';
+  static readonly AnonKey = 'rookhub_guess_session';
 
   private get anonymous(): boolean { return !this.auth.isLoggedIn; }
 
@@ -189,5 +189,23 @@ export class GuessService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base()}/${id}`, this.params());
+  }
+
+  /**
+   * Nach dem Anmelden/Registrieren: die anonymen Durchläufe DIESES Browsers ins Konto übernehmen — wie
+   * Puzzle-, Buch-Puzzle- und Endless-Stand (Codereview N11-003). Sonst verschwand ein halber Durchlauf mit
+   * der Anmeldung aus der Liste, und seit das Abmelden die Kennung abräumt, war er danach ganz weg.
+   *
+   * <p>Nur mit vorhandener Kennung (eine neue anzulegen, um nichts zu übernehmen, wäre sinnlos). Nach der
+   * Übernahme fällt sie weg: unter ihr liegt nichts mehr. Ein Fehlschlag bleibt still — die Durchläufe
+   * stehen dann weiter unter der Kennung und gehen beim nächsten Anmelden mit.</p>
+   */
+  claimAnonymous(): Observable<{ claimed: number } | null> {
+    let sessionId: string | null = null;
+    try { sessionId = localStorage.getItem(GuessService.AnonKey); } catch { /* gesperrter Speicher */ }
+    if (!sessionId) return of(null);
+    return this.http.post<{ claimed: number }>('/api/guess-sessions/claim-session', { sessionId }).pipe(
+      tap(() => { try { localStorage.removeItem(GuessService.AnonKey); } catch { /* egal */ } }),
+      catchError(() => of(null)));
   }
 }

@@ -94,4 +94,44 @@ describe('GuessService', () => {
       second.flush([]);
     });
   });
+
+  describe('Übernahme nach dem Anmelden (N11-003)', () => {
+    const anon = '11111111-2222-3333-4444-555555555555';
+    afterEach(() => localStorage.removeItem(GuessService.AnonKey));
+
+    it('schickt die Kennung dieses Browsers und räumt sie nach der Übernahme ab', () => {
+      // Fund-Weg: anonym bis Halbzug 40 gespielt, dann registriert — ohne Übernahme verschwand der Durchlauf.
+      localStorage.setItem(GuessService.AnonKey, anon);
+      let res: { claimed: number } | null | undefined;
+
+      service.claimAnonymous().subscribe(r => res = r);
+      const req = http.expectOne('/api/guess-sessions/claim-session');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ sessionId: anon });
+      req.flush({ claimed: 1 });
+
+      expect(res).toEqual({ claimed: 1 });
+      expect(localStorage.getItem(GuessService.AnonKey)).toBeNull();
+    });
+
+    it('fragt ohne Kennung gar nicht erst — und legt auch keine an', () => {
+      let res: { claimed: number } | null | undefined;
+      service.claimAnonymous().subscribe(r => res = r);
+
+      http.expectNone('/api/guess-sessions/claim-session');
+      expect(res).toBeNull();
+      expect(localStorage.getItem(GuessService.AnonKey)).toBeNull();
+    });
+
+    it('behält die Kennung, wenn die Übernahme scheitert (nächstes Anmelden versucht es erneut)', () => {
+      localStorage.setItem(GuessService.AnonKey, anon);
+      let res: { claimed: number } | null | undefined;
+
+      service.claimAnonymous().subscribe(r => res = r);
+      http.expectOne('/api/guess-sessions/claim-session').flush('weg', { status: 503, statusText: 'Unavailable' });
+
+      expect(res).toBeNull();
+      expect(localStorage.getItem(GuessService.AnonKey)).toBe(anon);
+    });
+  });
 });

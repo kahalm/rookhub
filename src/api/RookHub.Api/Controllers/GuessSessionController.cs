@@ -58,4 +58,10 @@ public class GuessSessionController : BaseApiController
         => await _service.DeleteAsync(Owner, id, ct)
             ? NoContent()
             : NotFound(new { message = "Session not found." });
+
+    /// <summary>Die anonymen Durchläufe dieses Browsers ins Konto übernehmen — die Oberfläche ruft das nach dem
+    /// Anmelden/Registrieren, wie die claim-session-Wege von Puzzle, Buch-Puzzle und Endless (Codereview N11-003).</summary>
+    [HttpPost("claim-session")]
+    public async Task<ActionResult<object>> ClaimSession([FromBody] ClaimGuessSessionsRequest req, CancellationToken ct)
+        => Ok(new { claimed = await _service.ClaimAnonymousAsync(GetUserId(), req.SessionId, ct) });
 }

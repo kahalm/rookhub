@@ -471,6 +471,28 @@ describe('AuthService: Sitzungsende ohne Abmelden (Ablauf, Kontowechsel)', () =>
     expect(localStorage.getItem('rookhub_endless_history')).toBe('[]');
     expect(localStorage.getItem('rookhub_puzzle_session')).toBe('anon-1');
   });
+
+  it('übernimmt nach der Registrierung die anonymen Punktepartie-Durchläufe dieses Browsers (N11-003)', async () => {
+    // Eigene Kennung, auch ohne Puzzle-Sitzung: ein Besucher kann nur geraten haben.
+    const svc = TestBed.inject(AuthService);
+    const http = TestBed.inject(HttpTestingController);
+    const anon = '11111111-2222-3333-4444-555555555555';
+    localStorage.setItem('rookhub_guess_session', anon);
+
+    svc.register('neu', null, 'pw').subscribe();
+    http.expectOne('/api/auth/register').flush({ token: jwt(3600), username: 'neu', userId: 9, isAdmin: false });
+
+    // Der Dienst kommt per dynamischem Import (Zirkelbezug) — die Anfrage folgt erst danach.
+    let claim = http.match('/api/guess-sessions/claim-session');
+    for (let i = 0; i < 50 && claim.length === 0; i++) {
+      await new Promise<void>(r => setTimeout(r, 10));
+      claim = http.match('/api/guess-sessions/claim-session');
+    }
+    expect(claim.length).toBe(1);
+    expect(claim[0].request.body).toEqual({ sessionId: anon });
+    claim[0].flush({ claimed: 1 });
+    expect(localStorage.getItem('rookhub_guess_session')).toBeNull();
+  });
 });
 
 describe('AuthService: voller Browser-Speicher', () => {

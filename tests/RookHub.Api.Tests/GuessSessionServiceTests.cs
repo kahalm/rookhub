@@ -492,6 +492,75 @@ public class GuessSessionServiceTests : IDisposable
         Assert.Empty(await _svc.ListAsync(GuessOwner.ForUser(user.Id)));
     }
 
+    // ===== Übernahme nach der Anmeldung (Codereview N11-003) ===========================
+
+    /// <summary>Fund-Weg: anonym bis zur Hälfte gespielt, dann im selben Browser registriert — der Durchlauf
+    /// muss in der Kontoliste weiterlaufen, statt mit der Anmeldung zu verschwinden.</summary>
+    [Fact]
+    public async Task ClaimAnonymous_MovesTheBrowsersRunsIntoTheAccount_WithTheirProgress()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        await _db.SaveChangesAsync();
+        var anon = await _svc.StartAsync(GuessOwner.ForAnonymous(AnonA),
+            new CreateGuessSessionRequest { GameAnalysisId = analysis.Id, GuessWhite = true, StartPly = 0 });
+        await _svc.GuessAsync(GuessOwner.ForAnonymous(AnonA), anon.Id, new GuessMoveRequest { Uci = "e2e4" });
+
+        var claimed = await _svc.ClaimAnonymousAsync(user.Id, AnonA);
+
+        Assert.Equal(1, claimed);
+        var mine = Assert.Single(await _svc.ListAsync(GuessOwner.ForUser(user.Id)));
+        Assert.Equal(anon.Id, mine.Id);
+        var resumed = await _svc.GetAsync(GuessOwner.ForUser(user.Id), anon.Id);
+        Assert.Equal(2, resumed!.Position!.Ply);                   // weiter, wo der Besucher stand
+        Assert.Equal(8, resumed.Points);
+        Assert.Empty(await _svc.ListAsync(GuessOwner.ForAnonymous(AnonA)));
+        var row = await _db.GuessSessions.SingleAsync(s => s.Id == anon.Id);
+        Assert.Null(row.AnonymousSessionId);
+    }
+
+    /// <summary>Nur die Durchläufe DIESES Browsers — ein anderer bleibt bei seinem Besitzer; eine kaputte Kennung
+    /// übernimmt nichts.</summary>
+    [Fact]
+    public async Task ClaimAnonymous_TakesOnlyTheOwnBrowser_AndRejectsMalformedIds()
+    {
+        var (user, analysis) = await SeedAsync();
+        analysis.IsPublic = true;
+        await _db.SaveChangesAsync();
+        await _svc.StartAsync(GuessOwner.ForAnonymous(AnonB), new CreateGuessSessionRequest { GameAnalysisId = analysis.Id });
+
+        Assert.Equal(0, await _svc.ClaimAnonymousAsync(user.Id, AnonA));
+        Assert.Equal(0, await _svc.ClaimAnonymousAsync(user.Id, "kurz"));
+        Assert.Equal(0, await _svc.ClaimAnonymousAsync(user.Id, null));
+
+        Assert.Empty(await _svc.ListAsync(GuessOwner.ForUser(user.Id)));
+        Assert.Single(await _svc.ListAsync(GuessOwner.ForAnonymous(AnonB)));
+    }
+
+    /// <summary>Deckel je Konto: nach der Übernahme weichen BEENDETE Durchläufe, der älteste zuerst — der
+    /// übernommene laufende bleibt.</summary>
+    [Fact]
+    public async Task ClaimAnonymous_KeepsTheCap_ByDroppingTheOldestFinishedRuns()
+    {
+        var (user, analysis) = await SeedAsync();
+        var t0 = DateTime.UtcNow.AddDays(-100);
+        for (var i = 0; i < GuessSessionService.MaxSessionsPerOwner; i++)
+            _db.GuessSessions.Add(new GuessSession
+            {
+                UserId = user.Id, GameAnalysisId = analysis.Id, Status = GuessSessionStatus.Done, StartedAt = t0.AddDays(i),
+            });
+        var running = new GuessSession { AnonymousSessionId = AnonA, GameAnalysisId = analysis.Id, StartedAt = DateTime.UtcNow };
+        _db.GuessSessions.Add(running);
+        await _db.SaveChangesAsync();
+        var oldest = await _db.GuessSessions.Where(s => s.UserId == user.Id).OrderBy(s => s.StartedAt).Select(s => s.Id).FirstAsync();
+
+        Assert.Equal(1, await _svc.ClaimAnonymousAsync(user.Id, AnonA));
+
+        Assert.Equal(GuessSessionService.MaxSessionsPerOwner, await _db.GuessSessions.CountAsync(s => s.UserId == user.Id));
+        Assert.True(await _db.GuessSessions.AnyAsync(s => s.Id == running.Id && s.UserId == user.Id));
+        Assert.False(await _db.GuessSessions.AnyAsync(s => s.Id == oldest));
+    }
+
     // ===== Seitenwahl: der Gewinner =====================================================
 
     /// <summary>Ohne Angabe übernimmt der Nutzer die Seite des GEWINNERS — darum geht es im

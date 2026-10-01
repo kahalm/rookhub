@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Chess;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
@@ -320,6 +321,40 @@ public class GuessSessionService
         return true;
     }
 
+    // ===== Übernahme nach der Anmeldung =====================================
+
+    private static readonly Regex SessionIdPattern = new(ValidationConstants.SessionIdPattern, RegexOptions.Compiled);
+
+    /// <summary>
+    /// Übernimmt die anonymen Durchläufe einer Browser-Kennung ins Konto — beim Anmelden/Registrieren im selben
+    /// Browser, wie es Puzzle-, Buch-Puzzle- und Endless-Stand längst tun (Codereview N11-003). Ohne das verschwand
+    /// ein halber Durchlauf mit der Anmeldung aus der Liste (sie liest angemeldet nur <c>UserId</c>), und seit das
+    /// Abmelden die Kennung abräumt, war er danach ganz weg.
+    ///
+    /// <para>Gilt nur für Zeilen OHNE Konto; die Kennung muss das Muster erfüllen (wie bei den anonymen Routen —
+    /// ein kurzer, erratbarer Wert wäre der Weg in fremde Durchläufe). Der Deckel je Konto gilt danach wie beim
+    /// Start: es weichen nur BEENDETE Durchläufe, der älteste zuerst.</para>
+    /// </summary>
+    /// <returns>Anzahl der übernommenen Durchläufe.</returns>
+    public async Task<int> ClaimAnonymousAsync(int userId, string? anonymousSessionId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(anonymousSessionId) || !SessionIdPattern.IsMatch(anonymousSessionId)) return 0;
+
+        var anon = await _db.GuessSessions
+            .Where(s => s.UserId == null && s.AnonymousSessionId == anonymousSessionId)
+            .ToListAsync(ct);
+        if (anon.Count == 0) return 0;
+
+        foreach (var session in anon)
+        {
+            session.UserId = userId;
+            session.AnonymousSessionId = null;
+        }
+        await _db.SaveChangesAsync(ct);
+        await TrimSessionsAsync(GuessOwner.ForUser(userId), ct, room: 0);
+        return anon.Count;
+    }
+
     // ===== Innereien ========================================================
 
     private const int MaxSecondsPerMove = 3600;
@@ -355,15 +390,17 @@ public class GuessSessionService
         return suggested.Value;
     }
 
-    private async Task TrimSessionsAsync(GuessOwner owner, CancellationToken ct)
+    /// <param name="room">Wie viele Plätze unter dem Deckel frei bleiben sollen: 1 vor dem Anlegen eines neuen
+    /// Durchlaufs, 0 nach einer Übernahme (<see cref="ClaimAnonymousAsync"/>).</param>
+    private async Task TrimSessionsAsync(GuessOwner owner, CancellationToken ct, int room = 1)
     {
         var count = await OwnedBy(owner).CountAsync(ct);
-        if (count < MaxSessionsPerOwner) return;
+        if (count + room <= MaxSessionsPerOwner) return;
 
         var stale = await OwnedBy(owner)
             .Where(s => s.Status == GuessSessionStatus.Done)
             .OrderBy(s => s.StartedAt)
-            .Take(count - MaxSessionsPerOwner + 1)
+            .Take(count + room - MaxSessionsPerOwner)
             .Include(s => s.Moves)
             .ToListAsync(ct);
         if (stale.Count == 0) return;   // alles läuft noch → nichts wegräumen
