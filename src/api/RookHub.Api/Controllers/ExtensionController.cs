@@ -167,7 +167,8 @@ public class ExtensionController : BaseApiController
     /// Server-seitige Partie-Analyse: Client schickt die SAN-Zugliste der aktuellen Partie,
     /// Server vergleicht ply-weise gegen das (gecachte) Positions-Set des Users und liefert
     /// Abweichungs-Index, Zugumstellungen und FEN-vor-Abweichung zurueck. Vermeidet, dass das
-    /// ganze Repertoire-PGN zur Extension wandern muss. Je Konto gedrosselt (ein Neuaufbau des Sets ist teuer).
+    /// ganze Repertoire-PGN zur Extension wandern muss. Je Konto gedrosselt (ein Neuaufbau des Sets ist teuer); laufen
+    /// im Prozess schon zu viele Neuaufbauten, 429 mit <c>reason: busy</c> (siehe <see cref="PositionSetBuildGate"/>).
     /// </summary>
     [HttpPost("analyze-game")]
     [EnableRateLimiting(RateLimitPartitions.ExtensionAnalyzePolicy)]
@@ -177,7 +178,15 @@ public class ExtensionController : BaseApiController
         if (dto.Moves == null) dto.Moves = new();
         if (dto.Moves.Count > 600)
             return BadRequest(new { message = "Too many moves (max 600 plies)." });
-        return Ok(await _analyzeService.AnalyzeAsync(GetUserId(), dto));
+        try
+        {
+            return Ok(await _analyzeService.AnalyzeAsync(GetUserId(), dto));
+        }
+        catch (PositionSetBusyException)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests,
+                new { reason = "busy", message = "Too many repertoire checks are being prepared right now. Try again in a few seconds." });
+        }
     }
 
     /// <summary>

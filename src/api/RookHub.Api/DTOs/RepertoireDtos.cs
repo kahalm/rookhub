@@ -151,7 +151,8 @@ public class AnalyzeGameResponseDto
     public List<int> InRepertoire { get; set; } = new();
     /// <summary>FEN VOR dem Out-of-Rep-Zug (fuer Chessable-Suche). Null wenn keine Abweichung.</summary>
     public string? FenBeforeDeviation { get; set; }
-    /// <summary>Wie viele Repertoire-Dateien zur Position-Set-Berechnung beigetragen haben.</summary>
+    /// <summary>Wie viele markierte Repertoire-Dateien dieser Art das Konto hat — bei <see cref="RepertoireTruncated"/>
+    /// hat nur ein Teil davon zum Positions-Set beigetragen.</summary>
     public int RepertoireFileCount { get; set; }
     /// <summary>Ply, bei dem ein Zug nicht parsbar war (illegale SAN). Null = alle Zuege OK.</summary>
     public int? IllegalMoveAt { get; set; }
