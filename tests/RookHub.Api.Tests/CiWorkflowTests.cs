@@ -198,6 +198,35 @@ public class CiWorkflowTests
 
         Assert.Contains("tests/**", block);
         Assert.Contains("scripts/**", block);
+        // init-db.sh liegt im Repo-Root, sein Test in scripts/tests/ (Job test-scripts).
+        Assert.Contains("'init-db.sh'", block);
+    }
+
+    /// <summary>
+    /// Die Tests der Betriebs-Skripte (<c>scripts/tests/</c>) liefen in keinem Workflow (Codereview
+    /// I1-015) — darunter der, der „kein Passwort im argv" fuer das Backup festhaelt. Jede Datei dort
+    /// muss im Job <c>test-scripts</c> aufgerufen werden; ein neuer Test, den niemand eintraegt,
+    /// faellt hier auf statt still nie zu laufen. Und der Job folgt dem api-Filter, der scripts/** traegt.
+    /// </summary>
+    [Fact]
+    public void EveryScriptTest_RunsInTheTestWorkflow()
+    {
+        var job = TestJob("test-scripts");
+        Assert.Contains("needs.changes.outputs.api == 'true'", job);
+
+        var dir = Path.Combine(RepoRoot(), "scripts", "tests");
+        var files = Directory.GetFiles(dir, "test_*")
+            .Where(f => f.EndsWith(".sh", StringComparison.Ordinal) || f.EndsWith(".py", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .ToList();
+        Assert.NotEmpty(files);
+
+        foreach (var file in files)
+        {
+            var runner = file!.EndsWith(".py", StringComparison.Ordinal) ? "python3" : "bash";
+            Assert.True(job.Contains($"- run: {runner} scripts/tests/{file}", StringComparison.Ordinal),
+                $"scripts/tests/{file} laeuft in keinem CI-Job — in test.yml/test-scripts eintragen");
+        }
     }
 
     /// <summary>

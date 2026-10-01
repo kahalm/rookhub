@@ -13,15 +13,17 @@
 # dauert ~4-5 min). Eine reine Doku-Aenderung startet jetzt gar nichts mehr.
 
 # Backend: die API selbst und ihre beiden Test-Projekte — plus `scripts/`. Die Betriebs-Skripte
-# liegen nicht im API-Baum, aber die Tests, die sie festnageln (`DeploymentConfigTests`), gehoeren
-# zu diesem Job. Ohne diese Zeile startet eine Aenderung, die NUR ein Skript beruehrt, gar nichts
-# — und ausgerechnet ihr Test bliebe stehen.
+# liegen nicht im API-Baum, aber die Tests, die sie festnageln (`DeploymentConfigTests`, Job
+# `test-scripts`), gehoeren zu diesem Filter. Ohne diese Zeile startet eine Aenderung, die NUR ein
+# Skript beruehrt, gar nichts — und ausgerechnet ihr Test bliebe stehen. `init-db.sh` liegt im
+# Repo-Root, sein Test (`scripts/tests/test_init_db.sh`) aber hier.
 api:
   - '.github/workflows/**'
   - '.github/filters.yml'
   - 'src/api/**'
   - 'tests/**'
   - 'scripts/**'
+  - 'init-db.sh'
 
 # Der geteilte Teil der Angular-Projekte. `src-turnier/` importiert per Alias @rh/* aus
 # `src/app/` — eine Aenderung DORT trifft BEIDE Bundles, deshalb steht dieser Block auch im

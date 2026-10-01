@@ -184,6 +184,26 @@ jobs:
       - run: python3 test/provider.test.py /tmp/provider.py
         working-directory: engine-provider
 
+  # Die Tests der Betriebs-Skripte (scripts/tests/, Codereview I1-015). Sie liefen in KEINEM
+  # Workflow — die C#-Tests oben pruefen nur Zeichenketten in den Skripten. Bricht eine Aenderung
+  # an backup-db.sh das Quoting der defaults-extra-Datei oder gibt das Passwort wieder als Argument
+  # weiter, zeigt test_backup_db.sh (Fake-docker) das sofort; die CI war trotzdem gruen. Alle laufen
+  # ohne Container und Netz (Fake-docker/-curl/-urlopen), zusammen in wenigen Sekunden.
+  # CiWorkflowTests haelt fest, dass JEDE Datei aus scripts/tests/ hier aufgerufen wird.
+  test-scripts:
+    needs: changes
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+          || startsWith(github.ref, 'refs/tags/v')
+          || needs.changes.outputs.api == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: bash scripts/tests/test_backup_db.sh
+      - run: bash scripts/tests/test_directory_runs.sh
+      - run: bash scripts/tests/test_init_db.sh
+      - run: python3 scripts/tests/test_es_log_retention.py
+
   build-frontend:
     needs: changes
     if: >-
