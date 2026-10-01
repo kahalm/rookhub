@@ -25,8 +25,9 @@ import { TranslatePipe } from '@ngx-translate/core';
   `,
   styles: [`
     :host { display: contents; }
+    /* Akzent-Token statt des Hellthema-Blaus #1976d2 (im Standard-Dunkelmodus 3,7:1, UX-008). */
     .puzzle-tags-toggle {
-      font-size: 0.8em; color: #1976d2; cursor: pointer; user-select: none;
+      font-size: 0.8em; color: var(--rh-accent); cursor: pointer; user-select: none;
     }
     .puzzle-tags-toggle:hover { text-decoration: underline; }
     /* Grober Zeiger (Codereview UX-007): der 0.8em-Text allein ist kein Touch-Ziel — Innenabstand bis 44 px. */

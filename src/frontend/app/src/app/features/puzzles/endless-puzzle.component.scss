@@ -24,7 +24,7 @@
     .threshold-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
     .threshold-field-wrap { position: relative; }
     .auto-hint {
-      display: inline-block; font-size: 0.75em; color: #1976d2; cursor: pointer;
+      display: inline-block; font-size: 0.75em; color: var(--rh-accent); cursor: pointer;   /* war #1976d2 (UX-008) */
       margin-top: -0.75rem; margin-bottom: 0.25rem; padding: 2px 8px;
       border: 0; font-family: inherit;
       border-radius: 8px; background: rgba(25,118,210,0.08);
@@ -152,11 +152,12 @@
     .board-hint-show:active { background: color-mix(in srgb, currentColor 10%, transparent); }
     .board-hint-eye { display: inline-flex; align-items: center; padding: 0.15rem 0.5rem; }
     .board-hint-eye mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    /* Kernbedienung: volle Textfarbe statt der gedimmten 60 % der Hinweiszeile (sah aus wie deaktiviert, UX-008). */
     .board-hint-tip {
       display: inline-flex; align-items: center; gap: 0.25rem;
       padding: 0.2rem 0.7rem; border: 1px solid color-mix(in srgb, #e0a93a 55%, transparent);
       border-radius: 6px; background: color-mix(in srgb, #e0a93a 12%, transparent); cursor: pointer;
-      font-size: 0.9em; user-select: none; touch-action: manipulation; color: inherit;
+      font-size: 0.9em; user-select: none; touch-action: manipulation; color: var(--mat-sys-on-surface);
     }
     .board-hint-tip:active { background: color-mix(in srgb, #e0a93a 22%, transparent); }
     .board-hint-tip mat-icon { font-size: 18px; width: 18px; height: 18px; color: #c8881f; }
