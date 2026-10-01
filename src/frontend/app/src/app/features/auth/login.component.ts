@@ -29,6 +29,10 @@ import { LEGAL_SITE, LegalSite, defaultLegalSite } from '../legal/legal-site';
           @if (authRequired) {
             <p class="auth-required">{{ 'auth.login.required' | translate }}</p>
           }
+          <!-- LeagueHub (UX-033): wer hier ist, soll wissen, dass es nur für eine Gruppe ist und welches Konto gilt. -->
+          @if (leagueHub) {
+            <p class="auth-required site-note">{{ 'auth.login.leaguehubNote' | translate }}</p>
+          }
           <form (ngSubmit)="onSubmit()" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.usernameLabel' | translate }}</mat-label>
@@ -92,11 +96,14 @@ export class LoginComponent {
   authRequired = false;
   /** KidHub hat kein Impressum (siehe LEGAL_SITE). */
   readonly legal: LegalSite;
+  /** LeagueHub (LEGAL_SITE.kind): Hinweis auf die geschlossene Gruppe und das RookHub-Konto (UX-033). */
+  readonly leagueHub: boolean;
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private snackbar: SnackbarService, private translate: TranslateService,
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
               @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
     this.legal = legal ?? defaultLegalSite();
+    this.leagueHub = this.legal.kind === 'leaguehub';
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
     this.authRequired = this.route.snapshot.queryParams['authRequired'] === '1';

@@ -10,6 +10,7 @@ import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { de } from '../../core/league-format';
 import { PlayerCardComponent } from '../../shared/player-card.component';
 import { GameReplayComponent } from '../../shared/game-replay.component';
+import { AccessGateComponent } from '../../shared/access-gate.component';
 
 /**
  * Vereinspartien (`/verein`): was die Mitglieder hochgeladen haben, neueste Jahre zuerst. Lesen darf, wer LeagueHub
@@ -27,13 +28,10 @@ type Side = 'white' | 'black';
   selector: 'lh-club-games-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent],
+  imports: [RouterLink, PlayerCardComponent, PlayerSearchComponent, GameReplayComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate">
-        <h2>Nicht freigeschaltet</h2>
-        <p>Angemeldet als {{ username }}. Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz.</p>
-      </section>
+      <lh-access-gate text="Die Vereinspartien sehen Admins und die Vereinsgruppe von SK Schwaz." />
     } @else {
       <section class="club-intro">
         <h2>Vereinspartien</h2>
@@ -169,7 +167,6 @@ export class ClubGamesPageComponent implements OnInit {
 
   readonly allowed = this.auth.has('league.view');
   readonly canContribute = this.auth.has('league.contribute');
-  readonly username = this.auth.currentUser?.username ?? '';
   readonly anon = 'Schwaz';
   readonly de = de;
 

@@ -170,6 +170,10 @@ describe('ClubGamesPageComponent', () => {
     perms = new Set();
     const el = create();
     expect(el.textContent).toContain('Nicht freigeschaltet');
+    expect(el.textContent).toContain('Angemeldet als patrik.');
+    // UX-033: mit nächstem Schritt statt nur einem Satz.
+    expect(el.querySelector('lh-access-gate')?.textContent).toContain('Freischaltung anfragen');
+    expect(el.querySelector('lh-access-gate')?.textContent).toContain('Mit anderem Konto anmelden');
     expect(api.list).not.toHaveBeenCalled();
   });
   // Wunsch 2026-09-28: „die Partien sollen allen aus dem Verein zur Verfügung stehen" — auch wer nur lesen darf.

@@ -291,7 +291,8 @@
       "registerLink": "Noch kein Konto? Registrieren",
       "failed": "Anmeldung fehlgeschlagen",
       "required": "Bitte logge dich ein oder registriere dich, um fortzufahren.",
-      "forgotLink": "Passwort vergessen?"
+      "forgotLink": "Passwort vergessen?",
+      "leaguehubNote": "LeagueHub ist für Admins und die Vereinsgruppe von SK Schwaz. Melde dich mit deinem RookHub-Konto an."
     },
     "register": {
       "title": "Registrieren",
@@ -312,6 +313,7 @@
       "passwordRejected": "Dieses Passwort geht nicht. Nimm mindestens {{min}} Zeichen und kein allzu bekanntes Passwort wie „12345678“.",
       "invalid": "Bitte prüf deine Angaben – etwas stimmt noch nicht.",
       "privacyNote": "Für dein Konto gilt unsere Datenschutzerklärung.",
+      "leaguehubNote": "Damit legst du ein RookHub-Konto an. LeagueHub sehen nur Admins und die Vereinsgruppe von SK Schwaz – danach muss dich ein Admin freischalten.",
       "kids": {
         "parentsTitle": "Für Eltern",
         "parentsText": "Spielen geht auch ohne Konto. Ein Konto bitte gemeinsam mit einem Elternteil anlegen.",

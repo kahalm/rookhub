@@ -291,7 +291,8 @@
       "registerLink": "Don't have an account? Register",
       "failed": "Login failed",
       "required": "Please log in or register to continue.",
-      "forgotLink": "Forgot password?"
+      "forgotLink": "Forgot password?",
+      "leaguehubNote": "LeagueHub is for admins and the SK Schwaz club group. Sign in with your RookHub account."
     },
     "register": {
       "title": "Register",
@@ -312,6 +313,7 @@
       "passwordRejected": "That password can’t be used. Use at least {{min}} characters and nothing too common like “12345678”.",
       "invalid": "Please check your details – something isn’t right yet.",
       "privacyNote": "Your account is covered by our privacy policy.",
+      "leaguehubNote": "This creates a RookHub account. Only admins and the SK Schwaz club group can see LeagueHub – an admin has to unlock your account afterwards.",
       "kids": {
         "parentsTitle": "For parents",
         "parentsText": "You can play without an account. Please create an account together with a parent.",

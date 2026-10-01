@@ -39,8 +39,10 @@ describe('ClubScanPageComponent', () => {
   let params: Record<string, string>;
   let clubApi: { client: () => ClubClient; addToMyGames: jasmine.Spy };
   let loggedIn: boolean;
+  let perms: string[] | null;
 
   beforeEach(() => {
+    perms = null;   // null = alle Rechte
     params = { id: '7' };
     api = jasmine.createSpyObj<ClubClient>('ClubClient', ['scan', 'photo', 'match', 'players', 'resolve', 'addGame', 'discard']);
     api.scan.and.resolveTo(structuredClone(STATE));
@@ -59,7 +61,7 @@ describe('ClubScanPageComponent', () => {
         provideTranslateService({ fallbackLang: 'de' }),
         { provide: ClubApiService, useValue: clubApi },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap(params) } } },
-        { provide: AuthService, useValue: { has: () => true, currentUser: { username: 'patrik' }, get isLoggedIn() { return loggedIn; } } },
+        { provide: AuthService, useValue: { has: (p: string) => !perms || perms.includes(p), currentUser: { username: 'patrik' }, get isLoggedIn() { return loggedIn; } } },
       ],
     });
     fixture = TestBed.createComponent(ClubScanPageComponent);
@@ -297,4 +299,25 @@ describe('ClubScanPageComponent', () => {
     expect(el.querySelector('section.gate')).toBeNull();
     expect(el.textContent).toContain('Partieformular prüfen');
   }));
+
+  // UX-033: die Formular-Sperre hatte weder „Angemeldet als" noch einen Weg weiter.
+  it('ohne Beitragsrecht: „Angemeldet als", fehlendes Recht, Anfrage und zurück zu den Vereinspartien — kein Abruf', () => {
+    perms = ['league.view'];
+    const el = create();
+    const gate = el.querySelector('lh-access-gate')!;
+    expect(gate.textContent).toContain('Angemeldet als patrik.');
+    expect(gate.textContent).toContain('Zum Einlesen von Partieformularen fehlt dir noch die Freigabe');
+    expect(gate.textContent).toContain('Freischaltung anfragen');
+    expect(Array.from(gate.querySelectorAll('a')).find(a => a.textContent?.includes('Zu den Vereinspartien'))?.getAttribute('href')).toBe('/verein');
+    expect(api.scan).not.toHaveBeenCalled();
+  });
+
+  it('ganz ohne Recht: der allgemeine Satz, ohne Rückweg zu den Vereinspartien', () => {
+    perms = [];
+    const el = create();
+    const gate = el.querySelector('lh-access-gate')!;
+    expect(gate.textContent).toContain('Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(gate.textContent).toContain('Angemeldet als patrik.');
+    expect(gate.textContent).not.toContain('Zu den Vereinspartien');
+  });
 });

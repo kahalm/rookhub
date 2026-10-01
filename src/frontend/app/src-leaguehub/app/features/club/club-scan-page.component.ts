@@ -16,6 +16,7 @@ import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeRes
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { rememberAnonKey } from './club-add-page.component';
 import { PlayerSearchComponent } from './player-search.component';
+import { AccessGateComponent } from '../../shared/access-gate.component';
 import { de } from '../../core/league-format';
 
 type Side = 'white' | 'black';
@@ -36,11 +37,16 @@ const SILENT_FAILURES = 3;
   selector: 'lh-club-scan-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent],
+  imports: [RouterLink, NgClass, ChessBoardComponent, PlayerSearchComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate"><h2>Nicht freigeschaltet</h2>
-        <p>Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz.</p></section>
+      <!-- UX-033: jetzt mit „Angemeldet als" (falsches Konto?) und dem nächsten Schritt. -->
+      @if (canRead) {
+        <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Einlesen von Partieformularen fehlt dir noch die Freigabe — frag einen Verwalter."
+                        purpose="das Einlesen von Partieformularen" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
+      } @else {
+        <lh-access-gate text="Partieformulare einlesen dürfen Admins und die Vereinsgruppe von SK Schwaz." />
+      }
     } @else if (notFound()) {
       <section class="gate"><h2>Formular nicht gefunden</h2>
         <p>Es wurde schon übernommen oder verworfen. <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p></section>
@@ -286,6 +292,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly client: ClubClient = this.clubApi.client(this.share);
   private readonly api = this.client;
   readonly allowed = !!this.share || this.auth.has('league.contribute');
+  readonly canRead = this.auth.has('league.view');
   readonly backLink: unknown[] = this.share ? ['/s', this.share, 'hochladen'] : ['/verein/neu'];
   readonly results = ['1-0', '0-1', '1/2-1/2', '*'];
   readonly sides: Side[] = ['white', 'black'];

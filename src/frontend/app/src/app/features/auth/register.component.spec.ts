@@ -313,6 +313,21 @@ describe('RegisterComponent — KidHub-Variante (UX-032)', () => {
     expectUsualMask(await render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub' }));
   });
 
+  // UX-033: die Registrierung auf LeagueHub endete ohne Vorwarnung auf „Nicht freigeschaltet".
+  it('LeagueHub: vor dem Anlegen der Hinweis „RookHub-Konto, Freischaltung durch einen Admin"', async () => {
+    const el = await render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub' });
+    const note = el.querySelector('.site-note')!;
+    expect(note.getAttribute('role')).toBe('note');
+    expect(text(note)).toContain('auth.register.leaguehubNote');
+    expect(note.compareDocumentPosition(el.querySelector('form')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('RookHub und KidHub: kein LeagueHub-Hinweis', async () => {
+    expect((await render()).querySelector('.site-note')).toBeNull();
+    TestBed.resetTestingModule();
+    expect((await render(KIDHUB)).querySelector('.site-note')).toBeNull();
+  });
+
   it('ohne DI (Konstruktor mit new) gilt die Vorgabe — keine KidHub-Variante', () => {
     const c = new RegisterComponent({} as any, new AuthPrefillService(), {} as any, { snapshot: { queryParams: {} } } as any);
     expect(c.kids).toBeFalse();

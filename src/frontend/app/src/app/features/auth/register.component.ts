@@ -71,6 +71,11 @@ const ERROR_KEYS: Record<RegisterError, string> = {
               <p>{{ 'auth.register.kids.parentsText' | translate }}</p>
             </div>
           }
+          <!-- LeagueHub (UX-033): VOR dem Anlegen sagen, dass es ein RookHub-Konto wird und LeagueHub erst nach der
+               Freischaltung durch einen Admin sichtbar ist — sonst endet die Registrierung ohne Vorwarnung auf der Sperrkarte. -->
+          @if (leagueHub) {
+            <p class="site-note" role="note">{{ 'auth.register.leaguehubNote' | translate }}</p>
+          }
           <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
             <mat-form-field appearance="outline" [subscriptSizing]="kids ? 'dynamic' : 'fixed'">
               <mat-label>{{ 'auth.register.usernameLabel' | translate }}</mat-label>
@@ -148,6 +153,9 @@ const ERROR_KEYS: Record<RegisterError, string> = {
                     background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
                     border-left: 3px solid var(--mat-sys-primary); }
     .kids-parents p { margin: 0.25rem 0 0; }
+    .site-note { margin: 0.5rem 0 0; padding: 0.6rem 0.8rem; border-radius: 4px; font-size: 0.9rem;
+                 background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+                 border-left: 3px solid var(--mat-sys-primary); }
     .privacy-note { margin: 16px 0 0; font-size: 0.8rem; text-align: center; }
     /* Wie die Rechtslinks unter der Anmeldekarte: Theme-Farbe, Beruehrflaeche mindestens 44px (UX-017) ohne Layoutsprung. */
     .privacy-note a { color: var(--mat-sys-primary); display: inline-block; padding: 15px 4px; margin: -15px 0; }
@@ -172,6 +180,8 @@ export class RegisterComponent {
   readonly passwordMin = PASSWORD_MIN_LENGTH;
   /** Kinderseite (LEGAL_SITE.kind): Eltern-Hinweis, Eltern-E-Mail, Spitzname statt Klarname (UX-032). */
   readonly kids: boolean;
+  /** LeagueHub (LEGAL_SITE.kind): Hinweis „RookHub-Konto, Freischaltung durch einen Admin" vor dem Anlegen (UX-033). */
+  readonly leagueHub: boolean;
 
   returnUrl: string;
 
@@ -179,6 +189,7 @@ export class RegisterComponent {
               // Optional + Rueckfall: die Specs bauen die Komponente mit `new`, ausserhalb der DI.
               @Optional() @Inject(LEGAL_SITE) legal?: LegalSite) {
     this.kids = (legal ?? defaultLegalSite()).kind === 'kidhub';
+    this.leagueHub = (legal ?? defaultLegalSite()).kind === 'leaguehub';
     const raw = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
     this.returnUrl = sanitizeReturnUrl(raw);
   }

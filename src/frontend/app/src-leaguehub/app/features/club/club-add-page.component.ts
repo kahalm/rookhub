@@ -11,6 +11,7 @@ import { CHESSBASE_MAX_UPLOAD_BYTES, chessBaseErrorText, chessBaseNote, chessBas
 import { partLabel, pgnPortions, portionNote } from '../../core/pgn-portions';
 import { ClubImportReviewComponent } from './club-import-review.component';
 import { ImportReview } from './import-review';
+import { AccessGateComponent } from '../../shared/access-gate.component';
 
 const POLL_MS = 3000;
 /** Ohne Konto merkt sich der Browser die Schlüssel seiner Einlesungen — sonst fände er sie nach dem Neuladen nicht. */
@@ -48,13 +49,16 @@ const SAVE_DEBOUNCE_MS = 1500;
   selector: 'lh-club-add-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ClubImportReviewComponent],
+  imports: [RouterLink, ClubImportReviewComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate">
-        <h2>Nicht freigeschaltet</h2>
-        <p>Angemeldet als {{ username }}. Partien hinzufügen dürfen Admins und die Vereinsgruppe von SK Schwaz.</p>
-      </section>
+      <!-- UX-033: wer schon lesen darf, gehört zur Lesegruppe — ihm fehlt nur das Beitragsrecht. -->
+      @if (canRead) {
+        <lh-access-gate text="Du kannst die Vereinspartien lesen. Zum Hinzufügen fehlt dir noch die Freigabe — frag einen Verwalter."
+                        purpose="das Hinzufügen von Vereinspartien" [back]="{ link: '/verein', label: 'Zu den Vereinspartien' }" />
+      } @else {
+        <lh-access-gate text="Partien hinzufügen dürfen Admins und die Vereinsgruppe von SK Schwaz." />
+      }
     } @else {
       <section class="club-intro">
         @if (share) { <p><a [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
@@ -253,7 +257,8 @@ export class ClubAddPageComponent implements OnInit {
   private readonly clubApi = inject(ClubApiService);
   readonly client: ClubClient = this.clubApi.client(this.share);
   readonly allowed = !!this.share || this.auth.has('league.contribute');
-  readonly username = this.auth.currentUser?.username ?? '';
+  /** Ohne Beitragsrecht, aber mit Leserecht: die Sperrkarte nennt das fehlende Recht und führt zu den Vereinspartien. */
+  readonly canRead = this.auth.has('league.view');
   readonly anon = ANON_NAME;
 
   readonly kind = signal<Kind>('pgn');

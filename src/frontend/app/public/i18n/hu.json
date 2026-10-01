@@ -129,7 +129,8 @@
       "registerLink": "Még nincs fiókod? Regisztrálj",
       "failed": "Sikertelen bejelentkezés",
       "required": "Please log in or register to continue.",
-      "forgotLink": "Elfelejtette a jelszót?"
+      "forgotLink": "Elfelejtette a jelszót?",
+      "leaguehubNote": "A LeagueHub az adminoknak és az SK Schwaz klubcsoportjának szól. Jelentkezz be a RookHub-fiókoddal."
     },
     "register": {
       "title": "Regisztráció",
@@ -150,6 +151,7 @@
       "passwordRejected": "Ez a jelszó nem használható. Legalább {{min}} karakter legyen, és ne túl gyakori, mint a „12345678”.",
       "invalid": "Ellenőrizd az adataidat – valami még nem stimmel.",
       "privacyNote": "A fiókodra az adatvédelmi nyilatkozatunk vonatkozik.",
+      "leaguehubNote": "Ezzel RookHub-fiókot hozol létre. A LeagueHubot csak az adminok és az SK Schwaz klubcsoportja látják – utána egy adminnak kell feloldania a fiókodat.",
       "kids": {
         "parentsTitle": "Szülőknek",
         "parentsText": "Fiók nélkül is lehet játszani. Fiókot kérjük, egy szülővel együtt hozzatok létre.",

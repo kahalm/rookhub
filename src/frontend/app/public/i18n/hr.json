@@ -291,7 +291,8 @@
       "registerLink": "Nemaš račun? Registriraj se",
       "failed": "Prijava nije uspjela",
       "required": "Prijavi se ili registriraj se za nastavak.",
-      "forgotLink": "Zaboravljena lozinka?"
+      "forgotLink": "Zaboravljena lozinka?",
+      "leaguehubNote": "LeagueHub je za administratore i klupsku grupu SK Schwaz. Prijavi se svojim RookHub računom."
     },
     "register": {
       "title": "Registracija",
@@ -312,6 +313,7 @@
       "passwordRejected": "Ta lozinka ne može. Uzmi najmanje {{min}} znakova i ništa previše poznato poput „12345678“.",
       "invalid": "Provjeri svoje podatke – nešto još nije u redu.",
       "privacyNote": "Za tvoj račun vrijede naša pravila o privatnosti.",
+      "leaguehubNote": "Time stvaraš RookHub račun. LeagueHub vide samo administratori i klupska grupa SK Schwaz – nakon toga te administrator mora otključati.",
       "kids": {
         "parentsTitle": "Za roditelje",
         "parentsText": "Igrati se može i bez računa. Račun molimo otvorite zajedno s roditeljem.",

@@ -9,6 +9,7 @@ import { loadErrorText } from '../../core/club-format';
 import { GameSources, League, LeagueIndex } from '../../core/league.models';
 import { FixtureViewComponent } from '../../shared/fixture-view.component';
 import { GameSourcesComponent } from '../../shared/game-sources.component';
+import { AccessGateComponent } from '../../shared/access-gate.component';
 
 const PICK_KEY = 'leaguehub';
 const POLL_MS = 4000;
@@ -24,13 +25,10 @@ interface Pick { liga?: number; verein?: string }
   selector: 'lh-league-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FixtureViewComponent, GameSourcesComponent],
+  imports: [FixtureViewComponent, GameSourcesComponent, AccessGateComponent],
   template: `
     @if (!allowed) {
-      <section class="gate">
-        <h2>Nicht freigeschaltet</h2>
-        <p>Angemeldet als {{ username }}. LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz.</p>
-      </section>
+      <lh-access-gate text="LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz." />
     } @else if (loadError()) {
       <section class="gate">
         <h2>Daten nicht geladen</h2>
@@ -107,7 +105,6 @@ export class LeaguePageComponent implements OnInit {
 
   readonly allowed = this.auth.has('league.view');
   readonly canManage = this.auth.has('league.manage');
-  readonly username = this.auth.currentUser?.username ?? '';
 
   readonly index = signal<LeagueIndex | null>(null);
   /** Partien je Quelle (0.626.0, Wunsch: „x Spiele aus Lumbra, y aus ChessBase, z aus Lichess, w aus chess.com"). */

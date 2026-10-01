@@ -7,6 +7,7 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
+import { LEGAL_SITE } from '../legal/legal-site';
 
 function make(queryParams: Record<string, string> = {}, prefill = new AuthPrefillService()) {
   const auth: any = { login: jasmine.createSpy('login').and.returnValue(of({})) };
@@ -103,5 +104,36 @@ describe('LoginComponent Template (Mobil-Attribute)', () => {
     expect(user.getAttribute('autocorrect')).toBe('off');
     expect(user.getAttribute('spellcheck')).toBe('false');
     expect(el.querySelector('input[name="password"]')!.getAttribute('autocomplete')).toBe('current-password');
+  });
+});
+
+/** UX-033: auf LeagueHub sagt die Maske, dass die Seite nur für eine Gruppe ist und das RookHub-Konto gilt. */
+describe('LoginComponent — LeagueHub-Hinweis (UX-033)', () => {
+  async function render(legal?: object): Promise<HTMLElement> {
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: AuthService, useValue: {} },
+        { provide: SnackbarService, useValue: {} },
+        ...(legal ? [{ provide: LEGAL_SITE, useValue: legal }] : []),
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('LeagueHub: Hinweis auf Gruppe und RookHub-Konto', async () => {
+    const el = await render({ contactEmail: 'x@y.z', imprint: true, kind: 'leaguehub' });
+    expect(el.querySelector('.site-note')?.textContent).toContain('auth.login.leaguehubNote');
+  });
+
+  it('RookHub (Vorgabe) und KidHub: kein LeagueHub-Hinweis', async () => {
+    expect((await render()).querySelector('.site-note')).toBeNull();
+    TestBed.resetTestingModule();
+    expect((await render({ contactEmail: 'x@y.z', imprint: false, kind: 'kidhub' })).querySelector('.site-note')).toBeNull();
   });
 });

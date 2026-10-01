@@ -77,6 +77,11 @@ describe('LeaguePageComponent', () => {
     await settle();
     expect(el.textContent).toContain('Nicht freigeschaltet');
     expect(el.textContent).toContain('patrik');
+    // UX-033: früher eine Sackgasse (auch direkt nach der Registrierung) — jetzt Anfrage und Kontowechsel.
+    const gate = el.querySelector('lh-access-gate')!;
+    expect(gate.textContent).toContain('LeagueHub sehen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(gate.textContent).toContain('Freischaltung anfragen');
+    expect(gate.textContent).toContain('Mit anderem Konto anmelden');
     expect(api.index).not.toHaveBeenCalled();
   });
 

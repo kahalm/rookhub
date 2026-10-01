@@ -455,6 +455,20 @@ describe('ClubAddPageComponent', () => {
   }));
 
   it('angemeldet ohne Recht: nicht freigeschaltet', () => {
-    expect(create(false).textContent).toContain('Nicht freigeschaltet');
+    const el = create(false);
+    expect(el.textContent).toContain('Nicht freigeschaltet');
+    expect(el.textContent).toContain('Partien hinzufügen dürfen Admins und die Vereinsgruppe von SK Schwaz.');
+    expect(el.textContent).toContain('Freischaltung anfragen');
+  });
+
+  // UX-033: wer nur lesen darf, gehört zur Lesegruppe — der Satz „die Vereinsgruppe darf das" führte in die Irre.
+  it('nur Leserecht: nennt das fehlende Beitragsrecht und führt zu den Vereinspartien', () => {
+    const el = create(['league.view']);
+    expect(el.textContent).toContain('Du kannst die Vereinspartien lesen. Zum Hinzufügen fehlt dir noch die Freigabe');
+    expect(el.textContent).not.toContain('Partien hinzufügen dürfen Admins');
+    expect(el.textContent).toContain('Angemeldet als patrik.');
+    const back = Array.from(el.querySelectorAll('lh-access-gate a')).find(a => a.textContent?.includes('Zu den Vereinspartien'));
+    expect(back?.getAttribute('href')).toBe('/verein');
+    expect(api.scans).not.toHaveBeenCalled();
   });
 });
