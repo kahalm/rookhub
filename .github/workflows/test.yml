@@ -161,10 +161,10 @@ jobs:
           test -n "$sha" && test -n "$sum"
           curl -fsSL "https://raw.githubusercontent.com/lichess-org/external-engine/$sha/example-provider.py" -o /tmp/provider.py
           echo "$sum  /tmp/provider.py" | sha256sum -c -
-      # Dieselbe aiohttp-Fassung wie im Dockerfile — Provider UND Test-Broker brauchen sie.
-      - name: aiohttp wie im Dockerfile
+      # Dieselbe aiohttp-Fassung wie im Image (requirements.txt) — Provider UND Test-Broker brauchen sie.
+      - name: aiohttp wie im Image
         working-directory: engine-provider
-        run: pip install --quiet "$(grep -oP 'pip install --no-cache-dir "\K[^"]+' Dockerfile)"
+        run: pip install --quiet -r requirements.txt
       # Derselbe Eingriff wie im Dockerfile (frische Verbindung je Upload, upstream Issue #45) — der
       # Vertragstest unten prüft ihn mit und ist ungepatcht rot.
       - run: python3 patch_force_close.py /tmp/provider.py

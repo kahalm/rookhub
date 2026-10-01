@@ -271,8 +271,9 @@ public class DeploymentConfigTests
     /// Die Wege OHNE Docker (README Linux/macOS + Windows, <c>windows/run_provider.ps1</c>) holen dasselbe Skript wie
     /// das Image — und muessen dieselben drei Sicherungen tragen (Codereview A4-017): die aiohttp-Fassung, die
     /// Pruefsumme des gepinnten Provider-Skripts und <c>patch_force_close.py</c> (frische Verbindung je Upload; ohne
-    /// sie endet ein Teil der Suchen nach 15 s mit 503). Die Werte kommen aus dem Dockerfile, damit ein Pin-Wechsel
-    /// nur dort beginnt und hier sofort auffaellt.
+    /// sie endet ein Teil der Suchen nach 15 s mit 503). Die Werte kommen aus dem Dockerfile bzw. (aiohttp, seit
+    /// Codereview I1-011) aus <c>engine-provider/requirements.txt</c>, damit ein Pin-Wechsel nur dort beginnt und
+    /// hier sofort auffaellt.
     /// </summary>
     [Fact]
     public void EngineProvider_WegeOhneDocker_tragenDieselbenSicherungenWieDasImage()
@@ -280,7 +281,7 @@ public class DeploymentConfigTests
         var dockerfile = ReadRepoFile("engine-provider/Dockerfile");
         var sha = Regex.Match(dockerfile, @"ARG PROVIDER_SHA=(\S+)").Groups[1].Value;
         var sum = Regex.Match(dockerfile, @"ARG PROVIDER_SHA256=(\S+)").Groups[1].Value;
-        var aiohttp = Regex.Match(dockerfile, @"pip install --no-cache-dir ""(aiohttp==[^""]+)""").Groups[1].Value;
+        var aiohttp = Regex.Match(ReadRepoFile("engine-provider/requirements.txt"), @"(?m)^(aiohttp==\S+)\s*$").Groups[1].Value;
         Assert.Matches("^[0-9a-f]{40}$", sha);
         Assert.Matches("^[0-9a-f]{64}$", sum);
         Assert.StartsWith("aiohttp==", aiohttp);
@@ -302,6 +303,43 @@ public class DeploymentConfigTests
         var wrapper = ReadRepoFile("engine-provider/windows/run_provider.ps1");
         Assert.Contains("patch_force_close.py", wrapper);
         Assert.Contains("force_close=True", wrapper);
+    }
+
+    /// <summary>
+    /// pip-audit prueft nur requirements-Dateien — eine Fassung im Dockerfile oder ein „pip install …" im
+    /// Skript-Kommentar sieht es nicht. Vorher gab es keine einzige Datei, der Audit meldete still „nichts zu
+    /// pruefen", und 0 von 5 Fremdpaketen waren abgedeckt, darunter aiohttp im Provider-Image, das beim Nutzer mit
+    /// seinem RookHub-Token laeuft (Codereview I1-011). Die Fassung steht deshalb EINMAL in der requirements-Datei:
+    /// das Image, die CI und der Audit lesen dieselbe.
+    /// </summary>
+    [Fact]
+    public void PipAudit_SeesEveryPythonDependency()
+    {
+        foreach (var file in new[] { "engine-provider/requirements.txt", "scripts/requirements.txt" })
+        {
+            var reqs = Regex.Matches(ReadRepoFile(file), @"(?m)^[A-Za-z0-9][A-Za-z0-9._-]*").Select(m => m.Value).ToList();
+            Assert.True(reqs.Count > 0, $"{file} nennt kein Paket");
+        }
+
+        var scripts = ReadRepoFile("scripts/requirements.txt");
+        foreach (var pkg in new[] { "chess", "requests", "anthropic", "pymysql" })
+            Assert.Matches($@"(?m)^{pkg}\b", scripts);
+
+        // Das Image installiert aus der Datei und pinnt nichts daneben.
+        var dockerfile = ReadRepoFile("engine-provider/Dockerfile");
+        Assert.Contains("COPY requirements.txt /opt/requirements.txt", dockerfile);
+        Assert.Contains("pip install --no-cache-dir -r /opt/requirements.txt", dockerfile);
+        Assert.DoesNotMatch(@"pip install[^\n]*==", dockerfile);
+
+        // Die CI testet den Provider mit derselben Datei.
+        Assert.Contains("pip install --quiet -r requirements.txt", ReadRepoFile(".github/workflows/test.yml"));
+
+        // Der Audit sucht die Dateien und meldet es, wenn keine da ist, statt still „nichts zu pruefen".
+        var audit = ReadRepoFile(".github/workflows/audit.yml");
+        Assert.Contains("find . -name 'requirements*.txt'", audit);
+        Assert.DoesNotContain("nichts zu pruefen.' | tee", audit);
+        var empty = Regex.Match(audit, @"(?s)if \[ -z ""\$files"" \]; then(.*?)\bfi\b").Groups[1].Value;
+        Assert.Contains("exit 1", empty);
     }
 
     [Fact]

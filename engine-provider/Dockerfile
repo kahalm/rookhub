@@ -62,9 +62,11 @@ RUN set -eux; \
 # Alles in EINEM RUN: das 109-MB-Archiv soll keine eigene Image-Schicht hinterlassen.
 # Copying.txt + AUTHORS bleiben liegen — Stockfish ist GPL-3.0, der Lizenztext gehört dazu.
 
-# aiohttp: der Provider ist seit d0eeb242 asynchron (vorher `requests` in Threads). Die CI liest
-# die Fassung aus dieser Zeile — Anfuehrungszeichen und Form beibehalten.
-RUN pip install --no-cache-dir "aiohttp==3.14.3"
+# aiohttp: der Provider ist seit d0eeb242 asynchron (vorher `requests` in Threads). Die Fassung
+# steht in requirements.txt — dieselbe Datei installiert die CI und prueft der Dependency-Audit
+# (pip-audit kennt keine Dockerfiles; die Fassung stand hier und wurde deshalb nie geprueft).
+COPY requirements.txt /opt/requirements.txt
+RUN pip install --no-cache-dir -r /opt/requirements.txt
 
 # Der OFFIZIELLE Lichess-Provider (lichess-org/external-engine, GPL-3.0 wie RookHub selbst).
 # Bewusst zur Bauzeit geholt statt ins Repo kopiert: so ist die Herkunft eindeutig und ein

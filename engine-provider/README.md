@@ -357,7 +357,7 @@ LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
   --engine /usr/games/stockfish --name "RookHub Heim-Engine" --max-threads 6
 ```
 
-Das sind dieselben drei Sicherungen wie im Image: die aiohttp-Fassung aus dem Dockerfile, die
+Das sind dieselben drei Sicherungen wie im Image: die aiohttp-Fassung aus `requirements.txt`, die
 Prüfsumme des gepinnten Skripts (auf macOS `shasum -a 256 -c -` statt `sha256sum -c -`; stimmt sie
 nicht, das Skript NICHT starten — es bekäme den Token zu sehen) und die frische Verbindung je Upload
 (`patch_force_close.py`, Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen

@@ -101,14 +101,18 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          # Die Python-Anteile (scripts/*.py, .github/scripts/*.py) fahren heute rein
-          # auf der Standardbibliothek — ohne requirements-Datei gibt es nichts zu
-          # pruefen. Der Schritt bleibt trotzdem stehen, damit die Pruefung automatisch
-          # anspringt, sobald jemand Abhaengigkeiten einfuehrt.
+          # Geprueft wird jede requirements*.txt im Repo (Codereview I1-011): heute
+          # engine-provider/requirements.txt (aiohttp im Provider-Image, das beim Nutzer mit
+          # seinem RookHub-Token laeuft) und scripts/requirements.txt (Wartungs-Skripte).
+          # Eine Abhaengigkeit, die nur in einem Dockerfile oder einem Kommentar steht, sieht
+          # pip-audit NICHT — so blieben vorher 0 von 5 Fremdpaketen ungeprueft.
           files=$(find . -name 'requirements*.txt' -not -path './node_modules/*' -not -path '*/node_modules/*')
           if [ -z "$files" ]; then
-            echo 'Keine requirements*.txt gefunden — nichts zu pruefen.' | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
+            # Kein stilles „nichts zu pruefen" mehr: es GIBT Abhaengigkeiten, fehlt die Datei,
+            # ist etwas verschoben worden.
+            echo '::warning title=pip-audit::Keine requirements*.txt gefunden — die Python-Abhaengigkeiten sind ungeprueft'
+            echo 'Keine requirements*.txt gefunden — die Python-Abhaengigkeiten sind ungeprueft.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
           python -m pip install --quiet pip-audit
           # pip-audit kennt keine Schwere — JEDER Befund (Exit != 0) zaehlt.

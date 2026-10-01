@@ -1,0 +1,10 @@
+# Python-Abhaengigkeiten des Engine-Providers (Image UND CI).
+#
+# EINZIGE Quelle der Fassung: das Dockerfile und der Job test-engine-provider (test.yml)
+# installieren aus dieser Datei, der Dependency-Audit (audit.yml, pip-audit) prueft sie samt
+# allem, was sie nach sich zieht. Das Image laeuft beim Nutzer mit seinem RookHub-Token —
+# ein Advisory fuer aiohttp soll der Montags-Audit melden, nicht der Zufall.
+#
+# Wer hier anhebt, zieht die zwei pip-install-Zeilen in README.md nach (Wege ohne Docker);
+# DeploymentConfigTests prueft das.
+aiohttp==3.14.3

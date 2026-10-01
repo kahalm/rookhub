@@ -1,0 +1,14 @@
+# Fremdpakete der Wartungs-Skripte unter scripts/ — keines davon laeuft im Stack, sie werden
+# von Hand gestartet:
+#   chess     import_books.py, guess-games/seed_game_analyses.py, guess-games/books/*.py
+#   requests  import_books.py
+#   anthropic generate_hints.py
+#   pymysql   generate_hints.py
+#
+# Bewusst NICHT gepinnt: wer ein Skript startet, installiert in eine frische Umgebung
+# (pip install -r scripts/requirements.txt). Der Dependency-Audit (audit.yml, pip-audit) prueft
+# deshalb genau das, was eine frische Installation heute bekaeme, samt Abhaengigkeiten.
+chess
+requests
+anthropic
+pymysql
