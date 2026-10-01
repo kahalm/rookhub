@@ -722,12 +722,15 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
       this.setBoardTheme(result.boardTheme);
       this.setPieceSet(result.pieceSet);
       this.setThemeMode(result.themeMode);
-      this.setVisualizationLevel(result.visualizationMode);
+      // Nur eine GEÄNDERTE Stufe setzt neu auf — Brett/Figuren speichern darf den Versuch nicht neu starten.
+      if (result.visualizationMode !== this.visualizationMode) this.setVisualizationLevel(result.visualizationMode);
       this.setVizArrowEnabled(result.vizArrowEnabled);
       if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
       if (result.enPassantForced !== undefined) {
         this.prefs.setEnPassantForced(result.enPassantForced);
-        this.enPassantForced = this.themeMode === 'crazy' && result.enPassantForced;
+        // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in onSetupStart).
+        this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && result.enPassantForced);
+        if (this.isSolving) this.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
       }
     });
   }

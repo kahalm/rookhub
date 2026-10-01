@@ -976,3 +976,59 @@ describe('EndlessPuzzleComponent Spielweise', () => {
     c.ngOnDestroy();
   });
 });
+
+/** Einstellungsdialog-Doppel: `open()` liefert sofort das Ergebnis (Brett/Figuren geändert, Rest wie vorher). */
+function stubSettingsDialog(c: any, overrides: Record<string, unknown> = {}): void {
+  const p: any = c.prefs;
+  Object.assign(p, {
+    setBoardTheme: (t: string) => { p.boardTheme = t; }, setPieceSet: (s: string) => { p.pieceSet = s; },
+    setThemeMode: (m: string) => { p.themeMode = m; }, setVizArrow: () => {},
+    setOffPathWarnMoves: () => {}, setEnPassantForced: (v: boolean) => { p.enPassantForced = v; },
+  });
+  const result = {
+    boardTheme: 'blue', pieceSet: 'alpha', themeMode: c.themeMode, visualizationMode: c.visualizationMode,
+    vizArrowEnabled: c.vizArrowEnabled, enPassantForced: true, ...overrides,
+  };
+  c.dialog.open = () => ({ afterClosed: () => ({ subscribe: (h: any) => h(result) }) });
+}
+
+// Codereview F2-009: Speichern im Einstellungsdialog setzte das laufende Puzzle neu auf, auch wenn nur
+// Brett/Figuren wechselten; die e.p.-Zeile überschrieb den Link-Zwang (?anarchy=max).
+describe('EndlessPuzzleComponent Einstellungen speichern (F2-009)', () => {
+  it('nur Brett/Figuren geändert: der laufende Versuch bleibt stehen', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.state = 'AWAITING_USER_MOVE';
+    spyOn(c as any, 'setupPuzzle');
+    stubSettingsDialog(c);
+
+    c.openSettingsDialog();
+
+    expect((c as any).setupPuzzle).not.toHaveBeenCalled();
+    expect(c.boardTheme).toBe('blue');
+  });
+
+  it('geänderte Stufe während des Lösens setzt das Puzzle neu auf', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.state = 'AWAITING_USER_MOVE';
+    spyOn(c as any, 'setupPuzzle');
+    stubSettingsDialog(c, { visualizationMode: 2 });
+
+    c.openSettingsDialog();
+
+    expect(c.visualizationMode).toBe(2);
+    expect((c as any).setupPuzzle).toHaveBeenCalledWith(c.puzzle);
+  });
+
+  it('?anarchy=max erzwingt e.p. weiter, auch wenn es in den Einstellungen aus ist', () => {
+    const c = makeComponent();
+    (c as any).anarchyForcedByUrl = true;      // wie nach ngOnInit mit ?anarchy=max
+    c.enPassantForced = true;                  // wie nach onSetupStart
+    stubSettingsDialog(c, { enPassantForced: false });
+
+    c.openSettingsDialog();
+
+    expect(c.enPassantForced).toBeTrue();
+  });
+});

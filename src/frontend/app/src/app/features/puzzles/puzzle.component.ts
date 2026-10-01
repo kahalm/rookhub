@@ -865,7 +865,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (this.isLoggedIn) {
       this.puzzleService.getStats(level).subscribe(s => this.stats = s);
     }
-    if (this.puzzle) this.setupPuzzle(this.puzzle);  // Modus-Wechsel = Puzzle neu starten
+    // Modus-Wechsel = laufendes Puzzle neu starten; nach Gelöst/Gescheitert gilt die Stufe ab dem
+    // nächsten Puzzle (ein Neuaufsetzen spränge aus der Durchsicht zurück ins Setup).
+    if (this.puzzle && this.isSolving) this.setupPuzzle(this.puzzle);
   }
 
   setVizArrowEnabled(val: boolean): void {
@@ -923,7 +925,8 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       this.setBoardTheme(result.boardTheme);
       this.setPieceSet(result.pieceSet);
       this.setThemeMode(result.themeMode);
-      this.setVisualizationLevel(result.visualizationMode);
+      // Nur eine GEÄNDERTE Stufe setzt neu auf — Brett/Figuren speichern darf den Versuch nicht neu starten.
+      if (result.visualizationMode !== this.visualizationMode) this.setVisualizationLevel(result.visualizationMode);
       this.setVizArrowEnabled(result.vizArrowEnabled);
       if (result.stockfishDepth !== undefined) {
         this.stockfishDepth = result.stockfishDepth;
@@ -950,7 +953,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
       if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
       if (result.enPassantForced !== undefined) {
         this.prefs.setEnPassantForced(result.enPassantForced);
-        this.enPassantForced = this.themeMode === 'crazy' && result.enPassantForced;
+        // Der Link-Zwang (?anarchy=max) gilt unabhängig von der Einstellung (wie in onSetupStart).
+        this.enPassantForced = this.anarchyForcedByUrl || (this.themeMode === 'crazy' && result.enPassantForced);
+        if (this.isSolving) this.updateBoard();   // Zugziele des laufenden Versuchs nachziehen
       }
     });
   }
