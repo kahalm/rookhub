@@ -79,3 +79,28 @@ export function setDarkTheme(dark: boolean): boolean {
   html.classList.toggle('dark-theme', dark);
   return was;
 }
+
+let probeId = 0;
+
+/**
+ * Haengt `html` unter einen Wirt, auf den die gekapselten Stile der Komponente wirken (aus ihrer kompilierten
+ * Definition, `%COMP%` → eigene Kennung) — so wie Angular sie rendert, ohne den Zustand nachzubauen, in dem das
+ * Element erscheint (Puzzle geladen, Engine rechnet …). `surface` legt eine Flaeche darunter (z. B.
+ * `var(--mat-sys-surface-container-low)` fuer eine Karte), ohne sie steht der Wirt auf der Seite. Gibt das Aufraeumen
+ * zurueck.
+ */
+export function mountWithComponentStyles(cmp: unknown, html: string, surface?: string): () => void {
+  const scope = `rh-contrast-${probeId++}`;
+  const style = document.createElement('style');
+  style.textContent = ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%COMP%/g, scope);
+  document.head.appendChild(style);
+  const ground = document.createElement('div');
+  if (surface) ground.style.backgroundColor = surface;
+  const host = document.createElement('div');
+  host.setAttribute(`_nghost-${scope}`, '');
+  host.innerHTML = html;
+  host.querySelectorAll('*').forEach(e => e.setAttribute(`_ngcontent-${scope}`, ''));
+  ground.appendChild(host);
+  document.body.appendChild(ground);
+  return () => { ground.remove(); style.remove(); };
+}

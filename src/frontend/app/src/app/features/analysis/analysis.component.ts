@@ -383,8 +383,10 @@ const EVAL_SETTLE_DEPTH = 10;
     .line-row { display: flex; gap: 8px; font-size: .9rem; }
     .line-mark { flex: 0 0 auto; align-self: center; width: 10px; height: 10px; border-radius: 50%;
       box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
-    .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: #1b5e20; }
-    .line-eval.neg { color: #b71c1c; }
+    /* Bewertung aus den Zustands-Tokens (UX-015): die festen Hellthema-Toene #1b5e20/#b71c1c hatten auf der dunklen
+       Karte 2,2:1 bzw. 2,6:1. */
+    .line-eval { font-weight: 700; min-width: 48px; font-variant-numeric: tabular-nums; color: var(--rh-success); }
+    .line-eval.neg { color: var(--rh-error); }
     .line-san { font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .controls { display: flex; align-items: center; gap: 2px; }
     .page-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

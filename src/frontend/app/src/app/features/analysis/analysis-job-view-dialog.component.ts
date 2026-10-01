@@ -115,8 +115,9 @@ const JOB_REFRESH_TICKS = 5;
       background: rgba(46,125,50,.16); color: #2e7d32; }
     .lines { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
     .line-row { display: flex; gap: 10px; font-size: .9rem; }
-    .line-eval { flex: 0 0 auto; min-width: 52px; font-family: 'Roboto Mono', monospace; font-weight: 600; color: #2e7d32; }
-    .line-eval.neg { color: #c62828; }
+    /* Bewertung aus den Zustands-Tokens (UX-015), wie am Analysebrett. */
+    .line-eval { flex: 0 0 auto; min-width: 52px; font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--rh-success); }
+    .line-eval.neg { color: var(--rh-error); }
     .line-san { font-family: 'Roboto Mono', monospace; }
     @media (max-width: 600px) { .board, .board app-chess-board { width: 100%; max-width: 320px; } }
   `],

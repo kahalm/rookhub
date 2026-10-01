@@ -175,8 +175,9 @@ import type { EngineAnalyseLine } from './external-engine.service';
     .status.failed { background: rgba(198,40,40,.15); color: #c62828; }
     .now { margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: .72rem;
       background: rgba(46,125,50,.16); color: #2e7d32; }
-    .eval, .line-eval { font-family: 'Roboto Mono', monospace; font-weight: 600; color: #2e7d32; }
-    .eval.neg, .line-eval.neg { color: #c62828; }
+    /* Bewertung aus den Zustands-Tokens (UX-015), wie am Analysebrett. */
+    .eval, .line-eval { font-family: 'Roboto Mono', monospace; font-weight: 600; color: var(--rh-success); }
+    .eval.neg, .line-eval.neg { color: var(--rh-error); }
     .job-body { display: flex; gap: 16px; padding: 0 12px 12px 44px; align-items: flex-start; flex-wrap: wrap; }
     .board { width: 260px; flex: 0 0 auto; }
     .board app-chess-board { display: block; width: 260px; }

@@ -2,30 +2,9 @@ import { BookPuzzleComponent } from './book-puzzle.component';
 import { EndlessPuzzleComponent } from './endless-puzzle.component';
 import { PuzzleComponent } from './puzzle.component';
 import { PuzzleTagsComponent } from './puzzle-tags.component';
-import { parseColor, setDarkTheme, textContrast } from '../../testing/contrast';
+import { mountWithComponentStyles, parseColor, setDarkTheme, textContrast } from '../../testing/contrast';
 
-let probeId = 0;
-
-/**
- * Haengt `html` unter einen Wirt, auf den die gekapselten Stile der Komponente wirken (aus ihrer kompilierten
- * Definition, `%COMP%` → eigene Kennung) — so wie Angular sie rendert, ohne den Zustand nachzubauen, in dem z. B.
- * der Tipp-Knopf erscheint (Puzzle geladen, Tipps vorhanden, am Zug). `card` legt eine Karten-Flaeche darunter.
- */
-function mountStyled(cmp: unknown, html: string, card = false): () => void {
-  const scope = `rh-contrast-${probeId++}`;
-  const style = document.createElement('style');
-  style.textContent = ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%COMP%/g, scope);
-  document.head.appendChild(style);
-  const surface = document.createElement('div');
-  if (card) surface.style.backgroundColor = 'var(--mat-sys-surface-container-low)';
-  const host = document.createElement('div');
-  host.setAttribute(`_nghost-${scope}`, '');
-  host.innerHTML = html;
-  host.querySelectorAll('*').forEach(e => e.setAttribute(`_ngcontent-${scope}`, ''));
-  surface.appendChild(host);
-  document.body.appendChild(surface);
-  return () => { surface.remove(); style.remove(); };
-}
+const CARD = 'var(--mat-sys-surface-container-low)';
 
 /**
  * Kontrast auf den Puzzle-Seiten (Codereview 2026-09-29, UX-008): feste Hellthema-Farben und Deckkraft-Mischungen
@@ -55,7 +34,7 @@ describe('Puzzle-Seiten: Kontrast von Tipp-Knopf, „Tags anzeigen", „Auto: �
 
   for (const cmp of [PuzzleComponent, BookPuzzleComponent, EndlessPuzzleComponent]) {
     it(`${(cmp as { name: string }).name}: der Tipp-Knopf erbt nicht die gedimmte Farbe der Hinweiszeile`, () => {
-      dispose = mountStyled(cmp, TIP);
+      dispose = mountWithComponentStyles(cmp, TIP);
       expect(parseColor(getComputedStyle(document.querySelector('.board-hint-tip')!).color)[3]).toBe(1);
     });
   }
@@ -64,7 +43,7 @@ describe('Puzzle-Seiten: Kontrast von Tipp-Knopf, „Tags anzeigen", „Auto: �
     for (const c of cases) {
       it(`${c.name} erreicht 4,5:1 (${dark ? 'dunkel' : 'hell'})`, () => {
         setDarkTheme(dark);
-        dispose = mountStyled(c.cmp, c.html, c.card);
+        dispose = mountWithComponentStyles(c.cmp, c.html, c.card ? CARD : undefined);
         const ratio = textContrast(document.querySelector(c.target)!);
         expect(ratio).withContext(`${c.target}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
       });
