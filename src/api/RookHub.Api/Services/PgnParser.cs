@@ -162,15 +162,17 @@ public static partial class PgnParser
             }
             else if (!string.IsNullOrWhiteSpace(rawLine))
             {
-                moves.Append(rawLine).Append(' ');
-                inMoves = true;
-                hasContent = true;
+                // „;"-Zeilenkommentar zeilenweise abschneiden, solange es das Zeilenende noch gibt —
+                // gleiche Regel wie der Repertoire-Parser (PgnTokens.StripLineComment). Dabei die
                 // Klammertiefe fortschreiben ({…} nestet in PGN nicht; '}' darf laut Spez nicht im
                 // Kommentartext vorkommen) — nie unter 0 (verirrte '}' nicht verschleppen).
-                foreach (var ch in rawLine)
+                var (moveLine, depth) = PgnTokens.StripLineComment(rawLine, openComments);
+                openComments = depth;
+                if (!string.IsNullOrWhiteSpace(moveLine))
                 {
-                    if (ch == '{') openComments++;
-                    else if (ch == '}' && openComments > 0) openComments--;
+                    moves.Append(moveLine).Append(' ');
+                    inMoves = true;
+                    hasContent = true;
                 }
             }
             if (keepRaw) raw.Append(rawLine).Append('\n');

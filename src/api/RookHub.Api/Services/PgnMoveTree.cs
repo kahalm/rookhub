@@ -84,12 +84,15 @@ public static class PgnMoveTree
     }
 
     /// <summary>Der Movetext eines Abschnitts: Headers sind Zeilen, die mit '[' beginnen und mit ']'
-    /// enden; danach kommt der Rest.</summary>
+    /// enden; danach kommt der Rest. „;"-Zeilenkommentare fallen hier schon zeilenweise weg
+    /// (<see cref="PgnTokens.StripLineComment"/>), und die Zeilen bleiben durch Umbrüche getrennt —
+    /// sonst fräße <c>LineCommentRegex</c> in <see cref="Tokenize"/> alles bis zum Abschnittsende.</summary>
     internal static string ExtractMovetext(string section)
     {
         var lines = section.Split('\n');
         var sb = new System.Text.StringBuilder();
         bool pastHeaders = false;
+        int braceDepth = 0;
         foreach (var raw in lines)
         {
             var line = raw.Trim();
@@ -97,7 +100,8 @@ public static class PgnMoveTree
             if (line.Length == 0 && !pastHeaders) { pastHeaders = true; continue; }
             if (pastHeaders || !line.StartsWith('['))
             {
-                sb.Append(line).Append(' ');
+                (line, braceDepth) = PgnTokens.StripLineComment(line, braceDepth);
+                sb.Append(line).Append('\n');
                 pastHeaders = true;
             }
         }
