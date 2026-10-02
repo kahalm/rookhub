@@ -26,6 +26,9 @@ export type AppLang = (typeof SUPPORTED_LANGS)[number];
 const RTL_LANGS: readonly AppLang[] = ['ar', 'fa'];
 
 // Sprachen, für die wir Angular-Locale-Daten registrieren (für DatePipe/DecimalPipe etc.).
+// Die Daten selbst stehen in `core/locale-data.ts` (`FORMAT_LOCALE_DATA`, registriert über
+// `registerFormatLocaleData()` in den app.config.ts von RookHub, Turnierseite und KidHub): wer hier
+// eine Sprache einträgt, ergänzt sie dort — `locale-data.spec.ts` schlägt sonst fehl.
 // Zugleich die Liste der VOLLSTÄNDIG gepflegten Sprachen: `i18n-parity.spec.ts` verlangt für
 // genau diese dieselben Schlüssel wie in `en` — wer hier eine Sprache einträgt, verpflichtet sich
 // zur Vollständigkeit. Alle übrigen SUPPORTED_LANGS fallen Schlüssel für Schlüssel auf 'en'
