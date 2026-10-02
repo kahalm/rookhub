@@ -30,31 +30,41 @@ public class SharedChessHelpersTests
         Assert.Equal(uci, PgnParser.ToUci(board.ExecutedMoves[^1]));
     }
 
-    /// <summary>Kopien, die es nur an GENAU diesen Stellen geben darf (Datei relativ zu Services/).</summary>
+    /// <summary>
+    /// Kopien, die es nur an GENAU diesen Stellen geben darf (Datei relativ zur Repo-Wurzel). Die
+    /// Wache sucht im ganzen API-Projekt (Controller, Modelle, Dienste …) und in <c>tools/</c> —
+    /// nicht nur unter Services/, sonst wäre eine neue Kopie in einem Controller unbemerkt.
+    /// </summary>
     [Theory]
     // GameEvals behält seine Fassung bewusst (fehlendes Feld = Schwarz, gekoppelt mit BrokerCandidates).
-    [InlineData("static bool WhiteToMove(", "FenFields.cs,GameEvals.cs")]
+    [InlineData("static bool WhiteToMove(",
+        "src/api/RookHub.Api/Services/FenFields.cs,src/api/RookHub.Api/Services/GameEvals.cs")]
     // Die eine UCI-Schreibweise — Partie-Analyse und Linien-Abgleich MÜSSEN zeichengleich sein.
-    [InlineData("OriginalPosition.ToString() +", "PgnParser.cs")]
+    [InlineData("OriginalPosition.ToString() +", "src/api/RookHub.Api/Services/PgnParser.cs")]
     public void NoPrivateCopiesLeft(string needle, string allowedCsv)
     {
         var allowed = allowedCsv.Split(',').ToHashSet(StringComparer.Ordinal);
-        var services = Path.Combine(ApiRoot(), "Services");
-        var hits = Directory.EnumerateFiles(services, "*.cs", SearchOption.AllDirectories)
-            .Where(f => File.ReadAllText(f).Contains(needle, StringComparison.Ordinal))
-            .Select(f => Path.GetRelativePath(services, f).Replace('\\', '/'))
+        var repo = RepoRoot();
+        var roots = new[] { Path.Combine(repo, "src", "api", "RookHub.Api"), Path.Combine(repo, "tools") };
+        var hits = roots
+            .Where(Directory.Exists)
+            .SelectMany(r => Directory.EnumerateFiles(r, "*.cs", SearchOption.AllDirectories))
+            .Select(f => (Full: f, Rel: Path.GetRelativePath(repo, f).Replace('\\', '/')))
+            .Where(f => !f.Rel.Contains("/bin/", StringComparison.Ordinal) && !f.Rel.Contains("/obj/", StringComparison.Ordinal))
+            .Where(f => File.ReadAllText(f.Full).Contains(needle, StringComparison.Ordinal))
+            .Select(f => f.Rel)
             .Where(f => !allowed.Contains(f))
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
         Assert.True(hits.Count == 0, $"Kopie von „{needle}“ in: {string.Join(", ", hits)} — die gemeinsame Funktion benutzen.");
     }
 
-    private static string ApiRoot()
+    private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "compose.dev.yml")))
             dir = dir.Parent;
         Assert.NotNull(dir);
-        return Path.Combine(dir!.FullName, "src", "api", "RookHub.Api");
+        return dir!.FullName;
     }
 }
