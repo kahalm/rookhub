@@ -165,8 +165,10 @@ public class RepertoireController : BaseApiController
         return res is null ? RepertoireNotFound() : Ok(new { marked = false });
     }
 
-    /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
-    /// ermittelt daraus die fälligen Linien. 404 wenn nicht vorhanden/nicht eigenes Repertoire.</summary>
+    /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des Users für dieses Repertoire — das Frontend
+    /// ermittelt daraus die fälligen Linien. Erlaubt für Besitzer ODER Freigabe-Empfänger (jeder mit eigenem
+    /// Fortschritt, <see cref="RepertoireAccess.CanReadAsync"/>); 404 ohne Lesezugriff bzw. bei unbekanntem
+    /// Repertoire.</summary>
     [HttpGet("{id:int}/training/lines")]
     public async Task<ActionResult<List<LineStateDto>>> TrainingLines(int id, CancellationToken ct)
     {

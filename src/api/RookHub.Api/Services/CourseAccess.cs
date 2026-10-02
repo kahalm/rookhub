@@ -17,9 +17,11 @@ namespace RookHub.Api.Services;
 /// </summary>
 public static class CourseAccess
 {
-    /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?
-    /// Admin: immer. Sonst: öffentlicher Kurs, eigenes Buch, direkt geteilt, oder über eine
-    /// Gruppe (inkl. „Everyone") freigegeben. Unbekannte BookId → <c>false</c>.</summary>
+    /// <summary>Darf der User dieses (existierende) Buch als Kurs SEHEN (öffnen, lösen, exportieren)?
+    /// Admin: immer. Sonst: öffentlicher Kurs, eigenes Buch, direkt geteilt, im Verteiler einer
+    /// Kalkulations-Serie, oder über eine Gruppe (inkl. „Everyone") freigegeben. Unbekannte BookId →
+    /// <c>false</c>. Bearbeiten braucht zusätzlich Besitzer oder Admin (<see cref="LoadManageableAsync"/>);
+    /// die Kursliste ist nur eine Teilmenge (öffentlich nur, wenn angepinnt — <c>CourseService.ListedCourses</c>).</summary>
     public static Task<bool> CanAccessAsync(AppDbContext db, int userId, int bookId, bool isAdmin,
         CancellationToken ct = default)
     {

@@ -70,7 +70,8 @@ public class CourseService
         _db.CoursePuzzleResults.Where(cr => cr.UserId == userId
             && cr.BookPuzzle != null && !cr.BookPuzzle.IsInfoOnly);
 
-    /// <summary>Darf der User dieses (existierende) Buch als Kurs sehen/bearbeiten?</summary>
+    /// <summary>Darf der User dieses (existierende) Buch als Kurs SEHEN? Bearbeiten braucht zusätzlich
+    /// Besitzer oder Admin (<see cref="CourseAccess.LoadManageableAsync"/>).</summary>
     // Regel liegt in CourseAccess (geteilt mit CalculationService), damit es genau EINE Definition gibt.
     public Task<bool> CanAccessAsync(int userId, int bookId, bool isAdmin) =>
         CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin);

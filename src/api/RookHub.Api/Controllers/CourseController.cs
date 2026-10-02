@@ -9,10 +9,15 @@ namespace RookHub.Api.Controllers;
 /// „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Pro Buch gibt es einen
 /// (geteilten) Fortschritt = gelöste Puzzles / Gesamtzahl; der Modus (sequential/random) bestimmt
 /// nur die Reihenfolge. Fortschritt ist user-bezogen und liegt komplett in der DB.
-/// Sichtbarkeit: Admins sehen alle Bücher; Nicht-Admins öffentliche Kurse, eigene Bücher, direkt
-/// geteilte (<see cref="Models.CourseShare"/>), Bücher einer Kalkulations-Serie, in deren Verteiler sie
-/// stehen, und Bücher, die einer ihrer Gruppen (inkl. „Everyone") per <see cref="Models.BookGroupAccess"/>
-/// freigegeben wurden. Die Regel steht EINMAL in <see cref="CourseAccess.CanAccessAsync"/>; kein Zugriff → 404.
+/// Zugriff (Detail, Kapitel, Lösen, Export …): Admins alle Bücher; Nicht-Admins öffentliche Kurse, eigene
+/// Bücher, direkt geteilte (<see cref="Models.CourseShare"/>), Bücher einer Kalkulations-Serie, in deren
+/// Verteiler sie stehen, und Bücher, die einer ihrer Gruppen (inkl. „Everyone") per
+/// <see cref="Models.BookGroupAccess"/> freigegeben wurden. Die Regel steht EINMAL in
+/// <see cref="CourseAccess.CanAccessAsync"/>; kein Zugriff → 404. Bearbeiten (Inhalte, Themen,
+/// Kalkulations-Serie) verlangt mehr: Besitzer oder Admin (<see cref="CourseAccess.LoadManageableAsync"/>).
+/// Kursliste und Menüeintrag (<c>GET /api/courses</c>, <c>GET /api/courses/access</c>) sind dagegen bewusst
+/// nur eine TEILMENGE des Zugriffs (<c>CourseService.ListedCourses</c>): ein öffentlicher Kurs steht dort nur
+/// für den, der ihn angepinnt hat — NICHT für jeden (Codereview A7-006). Kein <c>IsPublic</c>-Zweig dort.
 /// Fehlerfälle werfen die Dienste als Domänen-Ausnahme (404/403/400), der globale DomainExceptionFilter
 /// macht daraus <c>{ message }</c> — hier wird nichts gefangen (Codereview A7-011).
 /// </summary>
