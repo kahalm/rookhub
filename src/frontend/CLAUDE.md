@@ -49,6 +49,10 @@ Frontend (dieses Projekt)  --/api/-->  RookHub API (.NET)  --proxy-->  Crawler A
 - LeagueHub genauso: `src-leaguehub/`, `public-leaguehub/`, `tsconfig.leaguehub.json`, `src-leaguehub/leaguehub.scss`
   (eigene Gestaltung, nach `src/styles.scss`); `npx ng build leaguehub` / `npx ng test leaguehub` (Details im
   Haupt-CLAUDE.md, Abschnitt „LeagueHub“ → Oberfläche).
+  Die Spielerkarte liegt seit 0.636.0 NICHT mehr dort, sondern geteilt in `src/app/shared/player-card/` (Specs in
+  `ng test app`); LeagueHubs Kern (`league-api.service`, `league.models`, `league-format`, `my-games.service`) bleibt in
+  `src-leaguehub` und ist von `src/` aus über den Alias **`@lh/*` → `src-leaguehub/app/*`** erreichbar — siehe
+  „Spielerkarte geteilt + Spielervorbereitung“.
 - ClubHub genauso: `src-clubhub/`, `public-clubhub/` (Symbol + Schriften Zilla Slab/Atkinson Hyperlegible),
   `tsconfig.clubhub.json`, `src-clubhub/clubhub.scss`; `npx ng build clubhub` / `npx ng test clubhub` (Details im
   Haupt-CLAUDE.md, Abschnitt „ClubHub“). Kein Service Worker — die Kartei (Daten von Kindern) soll nie aus einem
@@ -175,6 +179,28 @@ LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: oh
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
 `ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet
 `features/club/import-review.ts` (rein, Spiegel der Server-Regel `LeagueClubService.Build`).
+
+## Spielerkarte geteilt + Spielervorbereitung (`shared/player-card/`, `features/prep/`, 0.636.0–0.639.0)
+
+- `src/app/shared/player-card/`: player-card, opening-tree, tree-filter-bar, game-replay, online-accounts,
+  account-checks, account-suggestions (Komponenten) und tree-filter, account-format, account-checks (Logik). LeagueHub
+  bindet sie über `@rh/shared/player-card/…` ein; der Umzug (0.636.0) war ein reiner `git mv` mit Importpfaden.
+- Daten über das Token `PLAYER_CARD_API` (`player-card-api.ts`); Vorgabe ist der `LeagueApiService`, die
+  Spielervorbereitung stellt `PrepCardApi` bereit. `PlayerCard.key` ist der API-Schlüssel, wenn es nicht die FIDE-ID ist.
+  Eingaben der Karte: `inline` (Teil einer Seite) und `note` (eigener Quellen-Hinweis); `tree-filter-bar` hat `unsure`.
+- Prep-Oberfläche: `/prep` (Suche, `?q=`) und `/prep/:id` (`prep.view`, `permissionGuard`). Die Spielerseite stellt
+  `PrepCardApi` (als `PLAYER_CARD_API`) und `PrepLeagueApi` (als `LeagueApiService`, `useExisting`) bereit:
+  `PrepLeagueApi` lenkt Übernehmen/Verwerfen/(i) der geteilten Bausteine `lh-account-suggestions`/`lh-account-checks`
+  auf `/api/prep/*` und merkt sich in `checkNote`, warum eine (i)-Prüfung abgesagt wurde (409 `busy`, 503
+  `rateLimited`) — den Grund zeigt der Abschnitt „Online-Konten suchen“ (`prep-accounts.component.ts`), denn der
+  geteilte Baustein sagt nur „ließ sich gerade nicht laden“. Darunter „Eingetragene Konten“ mit Umstufen und Entfernen
+  nach einer Rückfrage im Abschnitt (0.639.0); bei einem Ligaspieler nur ansehen. Geteilte Komponenten bleiben dafür
+  unverändert.
+- Gestaltung: `features/prep/prep-card.scss` lädt `leaguehub.scss` per `meta.load-css`, begrenzt auf
+  `.prep-card-scope`, als nicht eingebundenes Style-Bündel `prep-card.css` (`angular.json`, `inject: false`), das die
+  Spielerseite nachlädt — sonst sprengte die LeagueHub-Gestaltung das Komponenten-Budget. Klassen in Prep-Komponenten
+  nicht wie LeagueHub-Klassen nennen (`.acc-list` gibt es dort schon → `prep-acc-list`). Am Handy (≤ 520 px) steht in
+  der Prep-Karte die Eröffnung der letzten Partien unter dem Gegner (nur `prep-card.scss`).
 
 ## Kurs-Kommentare mehrsprachig (Stufe C, 0.549.0)
 

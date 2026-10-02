@@ -2077,6 +2077,74 @@ Oberfläche (LeagueHub): Reiter „Prognosen · Vereinspartien · Partien hinzuf
 Aufforderung dazu ganz oben. Die Formular-Korrektur benutzt DIESELBE Sitzung wie RookHubs Korrekturseite
 (`features/games/sheet-edit-session.ts`, siehe `src/frontend/CLAUDE.md`).
 
+### Spielervorbereitung (Prep) — jeder Spieler des Partiebestands (0.631.0–0.639.0)
+
+Ein Gegner lässt sich aus dem ganzen Partiebestand vorbereiten (ChessBase-Megabase + Lumbras GigaBase), nicht nur aus
+den Tiroler Ligen. Rechte: `prep.view` (suchen, Karte lesen), `prep.manage` (einspielen, unsichere Konten, Konto-Suche
+und -Pflege) — Admin erfüllt alles. Menüpunkt „Analyse & Sammlung" → „Gegner vorbereiten" nur mit `prep.view`.
+Code: `Controllers/PrepController.cs`, `Services/Prep/*`, Oberfläche `features/prep/*` (siehe `src/frontend/CLAUDE.md`).
+
+**Partiebestand (0.631.0).** Tabellen `PrepPlayers` (Identität `KeyHash` aus „#FIDE" bzw. NameKey, eindeutig),
+`PrepEvents`, `PrepGames` (eine Zeile je Partie, `Sources` Bit 1 Mega / 2 Lumbra, `Moves` = SAN mit Leerzeichen,
+`PlayedOn` JJJJMMTT, keine Fremdschlüssel), `PrepImports` (Quelle + Paket eindeutig).
+`POST /api/prep/admin/games?source=Mega|Lumbra&chunk=N&first=M` (`prep.manage`, gzip, ≤ 15 MB, entpackt ≤ 64 MB,
+≤ 20 000 Partien) → `{ read, added, duplicates, discarded, reasons, millis, already }`; ein schon eingespieltes Paket
+liefert seine Zähler mit `already: true`, 409 `chunkMismatch` bei anderer erster Partie. `GET /api/prep/admin/imports?source=`
+→ Pakete + Summen. Dubletten: gleicher Zug-Hash + Halbzüge + je Seite FIDE-ID bzw. Nachname; die Dublette mit FIDE-ID
+holt die Partie zum FIDE-Spieler. Skript `scripts/prep-import.py` (7z über Docker-Named-Pipe, `--every/--offset`
+Stichprobe, Fortsetzen über den Server, `--rate`, `--timeout`, `--chunk-size`; Kommentare raus, `{` verschachtelt
+nicht). Messung 01.10.: 554 B/Partie, voller Bestand ≈ 15,2 Mio. Zeilen ≈ 8,4 GB (+ ≤ 1,4 GB Spieler/Turniere); bei
+128 MB Buffer-Pool nur ~20 Partien/s — vor dem vollen Import Pool/Redo vergrößern.
+
+**Lesen (0.633.0, 0.634.0)**, alles hinter `prep.view`:
+- `GET /api/prep/players?q=&take=` (FIDE-ID oder Namens-Präfix über `IX_PrepPlayers_NameKey_Games`; Umlaute beidseitig,
+  Rückschreibweise ae→a hinten gereiht) → `{ items[{ id, name, fide, games, firstYear, lastYear, maxElo }] }`.
+- `GET /api/prep/player/{id}` sowie `/profile`, `/tree`, `/recent`, `/pgn`: Form und Filter der Liga-Karte, dazu
+  `games`, `loaded`, `limited`, `limit`, `max`, `since`, `twin`, `twinIncluded`, `accountSearch`. Gemeinsame Schalter
+  `all` und `twin`.
+- Vorgabe die jüngsten 500 Partien (`Prep:CardLimit`), `all=true` bis 3 000 (`Prep:CardMax`). Kalt kostet jede Partie
+  einen Plattenzugriff (2–8 ms); gemessen 02.10. am vollen Lumbra-Bestand mit 128 MB Puffer: Karte 1–4,4 s, 3 000
+  Partien 21–24 s. Geladenes bleibt 15 min im IMemoryCache; Online-Partien fragt jede Anfrage neu.
+- Mit FIDE-ID kommen dazu: Liga-, chess-results- und Vereinspartien ohne Dubletten (`LeagueProfileStore.GamesAsync`),
+  Online-Partien über `LeagueProfileStore.OnlineGames` (gemeinsame Auswahl mit der Liga) und Konten über
+  `LeagueService.CardAsync(…, prep: true)` ohne `reveal` (Minderjährige auch für Admins verborgen).
+- Nur `prep.view` (0.634.0): Konten nur gesichert und ohne Kommentar, wie über einen Teilen-Link; `unsure=true` wirkt
+  nur mit `prep.manage`.
+- Namens-Zwilling: gleicher NameKey ohne FIDE-ID, nur wenn genau ein FIDE-Spieler so heißt; `twin=true`, Vorgabe aus.
+
+**Oberfläche (0.636.0).** `/prep` (Suche, `?q=`; Treffer ohne FIDE-ID tragen „ohne FIDE-ID") und `/prep/:id` (die
+Spielerkarte von LeagueHub inline, darüber der Umfang mit „Alle laden — höchstens N" und der Namens-Zwilling als
+Schalter). Die Karte liegt dafür in `src/app/shared/player-card/` und bekommt ihre Daten über `PLAYER_CARD_API`.
+
+**Online-Konten (0.637.0–0.639.0)** — nur `prep.manage` UND Schalter `Prep:AccountSearch` (Vorgabe aus → 404 `disabled`):
+- `GET /api/prep/player/{id}/suggestions` → `{ items, perHour, remaining, accounts, leagueHub }`;
+  `POST …/suggestions/scan` (nur Spieler mit FIDE-ID, nur auf Knopfdruck, kein Hintergrundlauf);
+  `POST /api/prep/suggestions/{id}/accept|reject`; `GET /api/prep/suggestions/{id}/checks` (die Prüfung (i));
+  `PUT /api/prep/accounts/{id}` `{ sure, comment }` und `DELETE /api/prep/accounts/{id}` (0.639.0).
+- Türsteher `PrepAccountSearchGate` (Singleton): EINE Suche oder Prüfung zur Zeit (409 `busy`), Suchen höchstens
+  `Prep:AccountSearchPerHour` (Vorgabe 20) je Verwalter und Stunde (429 `limit`; Prüfungen zählen nicht). Ein 429 der
+  Seiten beendet Suche bzw. Prüfung → 503 `rateLimited`, kein zweiter Versuch (die (i)-Prüfung erkennt es am Text
+  „bremst gerade"). Achtung: `GET …/checks` mit 503 wiederholt der `retryInterceptor` der App bis zu dreimal — die
+  Wiederholungen treffen das gedrosselte Ergebnis im 1-min-Cache von `LeagueAccountChecks`, rufen also nicht neu ab.
+- Gesucht und geprüft wird mit LeagueHubs `LeagueAccountFinder`/`LeagueAccountChecks`; Vorschläge und Konten liegen in
+  dessen Tabellen (ein Spieler, ein Kontenbestand). Ein Spieler ohne Liga-Bezug ist
+  `LeagueAccountFinder.Player.Local = false`: als Land zählt nur seine Föderation — über die vollständige Tabelle
+  `Services/Prep/PrepFederations.Iso` (alle FIDE-Föderationen → ISO; ENG/SCO/WLS → GB, FID/unbekannt → kein Land) —,
+  kein Österreich-Bonus, kein Tiroler Ort; Elo = die jüngste aus dem Bestand. Ligaspieler behalten `Fed2` (26 Einträge).
+- LeagueHub kennt einen Spieler, den nur die Spielervorbereitung kennt, NICHT (0.638.0): Regel
+  `LeagueOnlineAccountService.LeagueKnowsAsync` (Meldeliste `LeaguePlayers` oder Liga-Karte `LeaguePlayerProfiles`).
+  Für ihn antworten LeagueHubs Endpunkte wie vor 0.637.0 — Suchen/Anlegen/Übernehmen „unknownPlayer", Vorschläge,
+  Prüfung, Verwerfen, Karte, Baum, Profil, `accounts/{id}` (PUT/DELETE/sync/checks) 404, `sources` ohne seine Konten,
+  Übersicht und Zähler ohne ihn. Den Rückfall schaltet nur der Prep-Weg ausdrücklich ein: `prep: true` an
+  `CreateAsync`, `AcceptSuggestionAsync`, `RejectSuggestionAsync`, `SuggestionsAsync`, `UpdateAsync`, `DeleteAsync`,
+  `LeagueService.CardAsync`; `ForSuggestionAsync` mit mitgebrachtem Spieler. Rescan und Team-Suche greifen ihn nicht auf.
+- Pflegen (0.639.0): Prep stuft um und entfernt NUR Konten eines Spielers des Bestands, den LeagueHub nicht kennt —
+  steht er auch in LeagueHub, 409 `leagueHub` (Pflege dort, `league.manage`). Entfernen löscht die schon geholten
+  Online-Partien des Kontos (`ExecuteDelete`) und legt es als verworfenen Vorschlag ab — die Suche schlägt es nicht
+  wieder vor; Umstufen lässt die Partien stehen.
+- Minderjährige (bekannter Jahrgang unter 18, `LeagueHiddenAccounts`): über `/api/prep/*` nie ein Vorschlag, eine
+  Prüfung, ein Konto in der Liste oder eine Pflege — auch nicht für Admins (404); entscheiden kann nur ein Admin in LeagueHub.
+
 ### Gruppen (Admin + auth)
 | Methode | Endpoint | Auth | Zweck |
 |---------|----------|------|-------|
@@ -4159,6 +4227,10 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | LeagueAccountScans | Stand der Konto-Suche je Spieler (0.607.0) | FideId (PK), BirthYear? + Federation? (laut FIDE, über Lichess — unter 18 oder unbekannt = Konten verborgen, `LeagueHiddenAccounts`), ScannedAt, Note? („verborgen …", Fehler), Found, Version (Fassung der Regeln, 0.609.0) |
 | LeagueBroadcasts | Lichess-Übertragungen, deren Partien in die Karten kommen (0.608.0) | TourId (PK, ≤12), Name, Location?, StartsAt?/EndsAt?, Manual (per Link), FoundAt, ImportedAt?, Finished (Index), Games (mit Ligaspielern), Error? |
 | LeagueNameAliases | Gemerkte Namens-Zuordnungen der Vereins-Datenbank (0.579.0): PGN-Name → Spieler | NameKey (≤120, UNIQUE, klein ohne Akzente/Titel), Fide? (≤16), Name (≤120), UpdatedAt — kein Verweis auf Partie oder Nutzer |
+| PrepPlayers | Spieler des Partiebestands der Spielervorbereitung (0.631.0) | Name, NameKey, FideId? (Index), KeyHash (long, UNIQUE; aus „#FIDE" bzw. NameKey), Games, FirstYear?/LastYear?, MaxElo?; Index (NameKey, Games) (0.634.0) |
+| PrepEvents | Turniere des Partiebestands (0.631.0) | Name, Site?, KeyHash (long, UNIQUE) |
+| PrepGames | Eine Zeile je Partie aus Megabase und/oder Lumbra (0.631.0) | WhiteId?/BlackId? (keine Fremdschlüssel; Index je (Id, PlayedOn)), WhiteElo?/BlackElo?, Result (byte), PlayedOn? (JJJJMMTT), EventId?, Round?, Eco?, Plies, Moves (SAN mit Leerzeichen), MovesHash (Index), Sources (Bit 1 Mega / 2 Lumbra) |
+| PrepImports | Eingespielte Pakete (0.631.0) | Source + Chunk (UNIQUE), FirstGame, Read, Added, Duplicates, Discarded, DiscardReasons?, Millis, CreatedAt |
 | LeagueClubDrafts | Entwurf eines PGN-Imports (0.595.0) — liegt, bis alles importiert oder verworfen ist | UserId? (**kein FK**, Konto löschen räumt ab; null = Teilen-Link), AccessKey? (≤32, UNIQUE), AnonIpHash? (≤64), Source? (≤16), Label? (≤300), Pgn (LONGTEXT), StateJson? (LONGTEXT, opak), Imported? (CSV), GameCount, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt) |
 | LeagueMegaPlayers | Spielerverzeichnis der ganzen ChessBase-Megabase (0.575.0) für die Namenssuche in LeagueHub; wird beim Einspielen komplett ersetzt | Name (≤120), NameKey (≤120, klein ohne Akzente, Index), FideId? (≤16, Index), Games, LastYear?, MaxElo? |
 | GameReconstructions | Eine Partie, die aus Bruchstücken zusammengesetzt wird („Partie rekonstruieren") — Kopfdaten; die Teile hängen daran | UserId (Cascade), Title (≤200), White?/Black? (≤120), Event? (≤200), PlayedOn? (DateOnly), Result? (≤12), Note? (≤2000), **ShareToken? (≤32, UNIQUE — öffentlicher Link `/r/{token}`, NULL = nicht geteilt) + SharedAt?**, CreatedAt, UpdatedAt; Index (UserId, UpdatedAt). Deckel 50 je Konto |
