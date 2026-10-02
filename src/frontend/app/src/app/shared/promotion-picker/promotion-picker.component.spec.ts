@@ -61,7 +61,8 @@ describe('PromotionPickerComponent', () => {
 });
 
 // Codereview F8-018: Die vier Figuren waren <div (click)> ohne Beschriftung, Esc brach (außer im Puzzle-Brett) nicht ab —
-// ohne Zeigegerät ließ sich keine Umwandlungsfigur wählen. Gerendert, mit echtem Fokus.
+// per Tastatur ließ sich im offenen Wähler keine Figur wählen, ein Screenreader las keine vor. Den Umwandlungszug selbst
+// zieht weiterhin nur ein Zeigegerät (chessground hat keine Tastatur-Eingabe). Gerendert, mit echtem Fokus.
 describe('PromotionPickerComponent Tastatur (F8-018)', () => {
   let opener: HTMLButtonElement;
 

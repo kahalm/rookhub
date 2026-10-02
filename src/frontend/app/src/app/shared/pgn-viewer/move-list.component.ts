@@ -34,14 +34,14 @@ export interface MoveListCommentSegment { text?: string; move?: string; fen?: st
           @if (pair.white !== undefined) {
             <button type="button" class="move" [class.active]="pair.whiteIndex === currentMoveIndex"
                     [attr.aria-current]="pair.whiteIndex === currentMoveIndex ? 'true' : null"
-                    (click)="moveClicked.emit(pair.whiteIndex)">{{ pair.white }}</button>
+                    (click)="onMoveClick(pair.whiteIndex, $event)">{{ pair.white }}</button>
           } @else {
             <span class="move-empty"></span>
           }
           @if (pair.black) {
             <button type="button" class="move" [class.active]="pair.blackIndex === currentMoveIndex"
                     [attr.aria-current]="pair.blackIndex === currentMoveIndex ? 'true' : null"
-                    (click)="moveClicked.emit(pair.blackIndex!)">{{ pair.black }}</button>
+                    (click)="onMoveClick(pair.blackIndex!, $event)">{{ pair.black }}</button>
           } @else {
             <span class="move-empty"></span>
           }
@@ -149,6 +149,16 @@ export class MoveListComponent implements OnChanges {
     return this.commentSegments?.[index] ?? [{ text: this.comments[index] }];
   }
 
+  /** Klick auf einen Zug. Ein ZEIGER-Klick (Maus/Touch, `detail > 0`) lässt den Fokus nicht auf dem Knopf liegen —
+   *  sonst machte die nächste Pfeiltaste dort einen Fokusring sichtbar, der stehen bleibt, während die Markierung
+   *  weiterwandert, und Leertaste/Enter lösten den alten Zug erneut aus (das Brett spränge zurück). So bleibt die
+   *  Maus beim Verhalten des früheren <span>. Enter/Leertaste (`detail` 0) behalten den Fokus; er folgt dann dem
+   *  aktiven Zug (scrollToActive). Codereview F8-018, Nacharbeit. */
+  onMoveClick(index: number, event: MouseEvent): void {
+    if (event.detail > 0) (event.currentTarget as HTMLElement | null)?.blur();
+    this.moveClicked.emit(index);
+  }
+
   private buildPairs(): void {
     this.movePairs = [];
     let i = 0;
@@ -185,7 +195,16 @@ export class MoveListComponent implements OnChanges {
       const el = this.moveListEl?.nativeElement;
       if (!el) return;
       const active = el.querySelector('.move.active') as HTMLElement | null;
-      if (active) scrollIntoContainer(active);
+      if (!active) return;
+      scrollIntoContainer(active);
+      // Liegt der Fokus auf einem Zug DIESER Liste, folgt er dem aktiven Zug (F8-018, Nacharbeit) — sonst bliebe der
+      // Fokusring beim zuerst angesprungenen Zug stehen, während → die Markierung weiterschiebt, und Enter/Leertaste
+      // sprängen dorthin zurück. Fokus anderswo (Eingabefeld, Knopf außerhalb) bleibt unberührt; das Brett bewegt
+      // sich nicht (preventScroll).
+      const focused = document.activeElement;
+      if (focused !== active && focused instanceof HTMLElement && focused.classList.contains('move') && el.contains(focused)) {
+        active.focus({ preventScroll: true });
+      }
     });
   }
 }

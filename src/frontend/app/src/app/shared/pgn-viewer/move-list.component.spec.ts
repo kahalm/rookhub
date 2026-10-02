@@ -188,3 +188,68 @@ describe('MoveListComponent Tastatur (F8-018)', () => {
     expect(cs.backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
 });
+
+// Codereview F8-018, Nacharbeit: Ein Mausklick ließ den Fokus auf dem Zug-Knopf liegen; die nächste Pfeiltaste machte
+// dort einen Fokusring sichtbar, der stehen blieb, während die Markierung weiterwanderte — und Leertaste/Enter lösten
+// den alten Zug erneut aus. Jetzt folgt der Fokus dem aktiven Zug, ein Zeiger-Klick lässt ihn gar nicht liegen.
+describe('MoveListComponent Fokus folgt dem aktiven Zug (F8-018)', () => {
+  let outside: HTMLButtonElement | undefined;
+
+  function render(current: number) {
+    TestBed.configureTestingModule({ imports: [MoveListComponent] });
+    const fixture = TestBed.createComponent(MoveListComponent);
+    const chess = new Chess();
+    ['e4', 'e5', 'Nf3'].forEach(s => chess.move(s));
+    fixture.componentRef.setInput('moves', chess.history({ verbose: true }));
+    fixture.componentRef.setInput('currentMoveIndex', current);
+    fixture.detectChanges();
+    tick();
+    const el = fixture.nativeElement as HTMLElement;
+    const moves = () => Array.from(el.querySelectorAll('.move')) as HTMLButtonElement[];
+    const goTo = (i: number) => { fixture.componentRef.setInput('currentMoveIndex', i); fixture.detectChanges(); tick(); };
+    return { fixture, el, moves, goTo };
+  }
+
+  afterEach(() => outside?.remove());
+
+  it('blättert man mit fokussiertem Zug weiter, wandert der Fokus auf den neuen aktiven Zug', fakeAsync(() => {
+    const { el, moves, goTo } = render(0);
+    moves()[0].focus();
+    expect(document.activeElement).toBe(moves()[0]);
+
+    goTo(2);
+
+    const current = el.querySelector('.move[aria-current="true"]');
+    expect(current?.textContent?.trim()).toBe('Nf3');
+    expect(document.activeElement).toBe(current);
+  }));
+
+  it('Fokus außerhalb der Zugliste bleibt, wo er ist', fakeAsync(() => {
+    const { goTo } = render(0);
+    outside = document.createElement('button');
+    document.body.appendChild(outside);
+    outside.focus();
+
+    goTo(2);
+
+    expect(document.activeElement).toBe(outside);
+  }));
+
+  it('ein Zeiger-Klick lässt den Fokus nicht auf dem Zug liegen, Enter/Leertaste (detail 0) schon', fakeAsync(() => {
+    const { fixture, moves } = render(-1);
+    const clicked: number[] = [];
+    fixture.componentInstance.moveClicked.subscribe(i => clicked.push(i));
+
+    // Maus/Touch: der Browser fokussiert den Knopf beim Drücken, der Klick trägt detail ≥ 1.
+    moves()[1].focus();
+    moves()[1].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1 }));
+    expect(clicked).toEqual([1]);
+    expect(document.activeElement).not.toBe(moves()[1]);
+
+    // Tastatur: Enter/Leertaste auf einem Knopf lösen einen Klick mit detail 0 aus — der Fokus bleibt.
+    moves()[2].focus();
+    moves()[2].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 0 }));
+    expect(clicked).toEqual([1, 2]);
+    expect(document.activeElement).toBe(moves()[2]);
+  }));
+});
