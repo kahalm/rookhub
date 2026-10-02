@@ -380,6 +380,52 @@ describe('ClubScanPageComponent', () => {
     expect(el.textContent).toContain('Partieformular prüfen');
   }));
 
+  // Nacharbeit UX-034: „Neu laden" mitten in einem laufenden Abruf (der retryInterceptor hält einen 502 über 3 s offen)
+  // startete eine ZWEITE Nachfrage-Kette — doppelte Last, und nach dem Lesen liefen loadSheet/Namen/Foto zweimal.
+  it('„Neu laden" während eines laufenden Abrufs: danach genau ein Abruf je Takt, das fertige Formular kommt einmal an', fakeAsync(() => {
+    const pending: { res: (v: LeagueScanState) => void; rej: (e: unknown) => void }[] = [];
+    const bad = () => new HttpErrorResponse({ status: 502 });
+    api.scan.and.callFake(() => new Promise<LeagueScanState>((res, rej) => pending.push({ res, rej })));
+    const el = create();
+    const fail = (n: number) => { pending[n].rej(bad()); flushMicrotasks(); };
+    const clickReload = () => {
+      fixture.detectChanges();
+      const btn = Array.from(el.querySelectorAll('section.gate button')).find(b => b.textContent?.includes('Neu laden'));
+      (btn as HTMLButtonElement).click();
+      flushMicrotasks();
+    };
+    // drei Fehlversuche → Karte
+    fail(0); tick(3000); fail(1); tick(3000); fail(2);
+    fixture.detectChanges();
+    expect(el.querySelector('section.gate')?.textContent).toContain('im Hintergrund weiter');
+    tick(3000);                                                   // 4. Abruf hängt (Backoff des Interceptors)
+    expect(api.scan).toHaveBeenCalledTimes(4);
+    spyOnProperty(document, 'visibilityState', 'get').and.returnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));        // zurück auf der Seite: wartet auf den laufenden Abruf
+    flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledTimes(4);
+    clickReload();                                                // 5. Abruf — der 4. ist überholt
+    expect(api.scan).toHaveBeenCalledTimes(5);
+    fail(3);                                                      // der überholte scheitert: plant NICHTS
+    fail(4);                                                      // der aktuelle scheitert: plant den nächsten Takt
+    tick(3000); flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledTimes(6);                    // eine Kette, nicht zwei
+    fail(5); tick(3000); flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledTimes(7);
+    fail(6);                                                      // wieder drei in Folge → Karte
+    tick(3000);                                                   // 8. Abruf hängt
+    expect(api.scan).toHaveBeenCalledTimes(8);
+    clickReload();                                                // 9. Abruf
+    pending[8].res(structuredClone(STATE)); flushMicrotasks();    // der aktuelle liefert das fertige Formular
+    pending[7].res(structuredClone(STATE)); flushMicrotasks();    // der überholte auch — darf nichts mehr tun
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Partieformular prüfen');
+    expect(api.photo).toHaveBeenCalledTimes(1);
+    expect(api.match).toHaveBeenCalledTimes(1);
+    tick(9000); flushMicrotasks();
+    expect(api.scan).toHaveBeenCalledTimes(9);                    // fertig gelesen: kein Nachfragen mehr
+  }));
+
   // UX-033: die Formular-Sperre hatte weder „Angemeldet als" noch einen Weg weiter.
   it('ohne Beitragsrecht: „Angemeldet als", fehlendes Recht, Anfrage und zurück zu den Vereinspartien — kein Abruf', () => {
     perms = ['league.view'];

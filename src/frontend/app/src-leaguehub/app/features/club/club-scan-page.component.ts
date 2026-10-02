@@ -398,7 +398,12 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     return null;
   });
 
+  /** Wartendes Nachfragen — `null`, sobald der Takt abgelaufen ist (dann läuft der Abruf schon). */
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Nur der jüngste `load()` zählt: „Neu laden" mitten in einem laufenden Abruf (der retryInterceptor hält einen 502
+   * über 3 s offen) startete sonst eine zweite Nachfrage-Kette — doppelte Last, und nach dem Lesen liefen loadSheet,
+   * Namen und Foto zweimal (Korrekturen überschrieben). Ein überholter Abruf tut nichts mehr. */
+  private loadSeq = 0;
   private matchTimer: ReturnType<typeof setTimeout> | null = null;
   private matchSeq = 0;
   private destroyed = false;
@@ -426,7 +431,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     if (url) URL.revokeObjectURL(url);
   }
 
-  /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt. */
+  /** „Neu laden" auf der Fehlerkarte: gleich nachfragen, ein wartendes Nachfragen entfällt, ein laufender Abruf ist überholt. */
   reload(): void {
     if (this.pollTimer) clearTimeout(this.pollTimer);
     this.pollTimer = null;
@@ -435,29 +440,34 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     void this.load();
   }
 
+  private poll(): void {
+    this.pollTimer = setTimeout(() => { this.pollTimer = null; void this.load(); }, POLL_MS);
+  }
+
   private async load(): Promise<void> {
+    const my = ++this.loadSeq;
     let st: LeagueScanState;
     try {
       st = await this.api.scan(this.scanRef);
     } catch (err) {
-      if (this.destroyed) return;
+      if (this.destroyed || my !== this.loadSeq) return;
       if (err instanceof HttpErrorResponse && err.status === 404) { this.notFound.set(true); return; }
       // Nur was von selbst vorbeigeht (0/502/503/504), wird im Hintergrund weiter nachgefragt — nach ein paar stillen
       // Fehlversuchen mit Hinweis. Jeder andere Code (500, 403, …) sagt es gleich und wartet auf „Neu laden".
       const transient = isTransientError(err);
       if (!transient || ++this.failures >= SILENT_FAILURES)
         this.loadError.set(loadErrorText(err) + (transient ? ' LeagueHub versucht es im Hintergrund weiter.' : ''));
-      if (transient) this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
+      if (transient) this.poll();
       return;
     }
-    if (this.destroyed) return;
+    if (this.destroyed || my !== this.loadSeq) return;
     this.failures = 0;
     this.loadError.set(null);
     this.state.set(st);
     const reading = st.scan.status === 'pending' || st.scan.status === 'running';
     this.ticker.run(reading);
     if (reading) {
-      this.pollTimer = setTimeout(() => void this.load(), POLL_MS);
+      this.poll();
       return;
     }
     if (st.scan.status !== 'done') return;
@@ -471,7 +481,7 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     void this.runMatch();
     try {
       const blob = await this.api.photo(this.scanRef);
-      if (!this.destroyed) this.photoUrl.set(URL.createObjectURL(blob));
+      if (!this.destroyed && my === this.loadSeq) this.photoUrl.set(URL.createObjectURL(blob));
     } catch { /* ohne Foto geht die Korrektur trotzdem */ }
   }
 

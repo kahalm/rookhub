@@ -71,11 +71,13 @@ export function isTransientError(err: unknown): boolean {
 
 /**
  * Ein Abruf kam nicht durch — Klartext für alle LeagueHub-Seiten statt „Fehler 500." (UX-034). Den nächsten Schritt
- * („Erneut versuchen", Rückweg) setzt die Seite dazu; ein 403 erklärt jede Seite selbst.
+ * („Erneut versuchen", Rückweg) setzt die Seite dazu. Ein 403 heißt „Berechtigung fehlt" (das Recht prüft der Server live,
+ * eine entzogene Rolle gilt sofort) — Seiten mit eigenem 403-Text (Vereinspartien, Ligaseite) fangen ihn vorher ab.
  */
 export function loadErrorText(err: unknown): string {
   if (!(err instanceof HttpErrorResponse)) return 'Beim Laden ist etwas schiefgegangen.';
   if (isTransientError(err)) return 'Der Server ist gerade nicht erreichbar.';
+  if (err.status === 403) return 'Dafür fehlt dir die Berechtigung (Vereinsmitglieder).';
   if (err.status === 429) return 'Gerade kamen zu viele Anfragen – bitte in einer Minute noch einmal versuchen.';
   return `Der Server hatte ein Problem (${err.status}). Bitte gleich noch einmal versuchen.`;
 }

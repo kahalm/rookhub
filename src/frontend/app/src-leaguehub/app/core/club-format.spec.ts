@@ -81,6 +81,8 @@ describe('club-format', () => {
     expect(isTransientError(new Error('x'))).toBeFalse();
     expect(loadErrorText(new HttpErrorResponse({ status: 500 }))).toBe('Der Server hatte ein Problem (500). Bitte gleich noch einmal versuchen.');
     expect(loadErrorText(new HttpErrorResponse({ status: 429 }))).toContain('in einer Minute');
+    // Nacharbeit UX-034: 403 ist kein „Problem des Servers" — Status-Abruf und Formular-Korrektur sagten das sonst.
+    expect(loadErrorText(new HttpErrorResponse({ status: 403 }))).toBe('Dafür fehlt dir die Berechtigung (Vereinsmitglieder).');
     expect(loadErrorText(new Error('kaputt'))).toBe('Beim Laden ist etwas schiefgegangen.');
   });
 });
