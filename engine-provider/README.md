@@ -345,12 +345,12 @@ Alles, was UCI spricht, funktioniert — der Provider startet es einfach als Unt
 
 ## Ohne Docker (Linux/macOS)
 
-Es geht auch direkt, wenn Python 3 und eine Engine vorhanden sind:
+Es geht auch direkt, wenn Python 3.10–3.14 und eine Engine vorhanden sind:
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install "aiohttp==3.14.3"
 curl -O https://raw.githubusercontent.com/lichess-org/external-engine/d0eeb24229bae3cf5eb1e6696c0487ea05ef09ad/example-provider.py
-echo "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1  example-provider.py" | sha256sum -c -
+echo "aea0bb0258c7afbb4177eba91d1beaed5a9d102d1d46122aae7f6f00433c44a1  example-provider.py" | sha256sum -c - || rm -f example-provider.py
 curl -O https://raw.githubusercontent.com/kahalm/rookhub/master/engine-provider/patch_force_close.py
 .venv/bin/python patch_force_close.py example-provider.py
 LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
@@ -358,10 +358,13 @@ LICHESS_API_TOKEN=lip_dein_token .venv/bin/python example-provider.py \
 ```
 
 Das sind dieselben drei Sicherungen wie im Image: die aiohttp-Fassung aus `requirements.txt`, die
-Prüfsumme des gepinnten Skripts (auf macOS `shasum -a 256 -c -` statt `sha256sum -c -`; stimmt sie
-nicht, das Skript NICHT starten — es bekäme den Token zu sehen) und die frische Verbindung je Upload
-(`patch_force_close.py`, Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen
-nach 15 s mit 503). `patch_force_close.py` liegt im geklonten Repo schon in diesem Ordner.
+Prüfsumme des gepinnten Skripts und die frische Verbindung je Upload (`patch_force_close.py`,
+Abschnitt „Ein Eingriff bleibt" oben — ohne sie endet ein Teil der Suchen nach 15 s mit 503).
+Stimmt die Prüfsumme nicht, wird die Datei verworfen (`|| rm -f example-provider.py`): Patch und
+Start scheitern dann an der fehlenden Datei, statt einem veränderten Skript den Token zu zeigen —
+auch wenn der ganze Block auf einmal eingefügt wird. Auf macOS lautet die Zeile
+`shasum -a 256 -c - || rm -f example-provider.py` statt `sha256sum -c - || rm -f example-provider.py`.
+`patch_force_close.py` liegt im geklonten Repo schon in diesem Ordner.
 
 Die virtuelle Umgebung ist kein Zierrat: aktuelle Linux-Distributionen (Debian 12+, Ubuntu 23.04+)
 und Homebrew lehnen ein direktes `pip install` in die System-Python ab
@@ -378,7 +381,9 @@ gebraucht. Auf einem Einzelrechner ist der direkte Weg der einfachere.
 > verschwindet dann aus der Auswahl. Mit zwei verschiedenen Namen stehen beide nebeneinander.
 
 **1. Python** von [python.org](https://www.python.org/downloads/windows/) installieren, dabei
-„Add python.exe to PATH" ankreuzen. Dann in der PowerShell:
+„Add python.exe to PATH" ankreuzen — Python 3.10 bis 3.14: nur dafür gibt es die gepinnte
+aiohttp-Fassung als fertiges Paket, mit einer neueren Python müsste pip sie erst selbst bauen.
+Dann in der PowerShell:
 
 ```powershell
 pip install "aiohttp==3.14.3"

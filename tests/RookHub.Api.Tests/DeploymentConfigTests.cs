@@ -294,6 +294,16 @@ public class DeploymentConfigTests
         // … gefolgt von der Pruefsumme und dem Patch, je Weg einmal.
         Assert.Equal(2, Regex.Matches(readme, Regex.Escape(sum), RegexOptions.IgnoreCase).Count);
         Assert.Equal(2, Regex.Matches(readme, @"patch_force_close\.py example-provider\.py").Count);
+        // Die Pruefsumme muss etwas VERHINDERN, nicht nur melden: jede Pruefzeile verwirft die Datei bei Abweichung,
+        // sonst laufen beim Einfuegen des ganzen Blocks Patch und Start mit dem Token trotzdem (Nacharbeit A4-017).
+        var sumLines = readme.Split('\n').Where(l => l.Contains(sum, StringComparison.OrdinalIgnoreCase)).ToList();
+        Assert.Single(sumLines, l => l.Contains("sha256sum -c - || rm -f example-provider.py"));             // Linux
+        Assert.Single(sumLines, l => l.Contains(@"Remove-Item .\example-provider.py") && l.Contains("throw")); // Windows
+        Assert.Contains("`shasum -a 256 -c - || rm -f example-provider.py`", readme);                          // macOS-Hinweis
+        // … und steht vor Patch und Start: Pruefung, Patch, Pruefung, Patch (je Weg in dieser Reihenfolge).
+        var order = Regex.Matches(readme, Regex.Escape(sum) + @"|patch_force_close\.py example-provider\.py", RegexOptions.IgnoreCase)
+            .Select(m => m.Value.StartsWith("patch_") ? "patch" : "sum");
+        Assert.Equal(new[] { "sum", "patch", "sum", "patch" }, order);
         // Jedes pip install in einem Befehl pinnt aiohttp wie das Image (die Erwaehnung im Fliesstext steht in Backticks).
         var installs = Regex.Matches(readme, @"pip install(?!`)[^\r\n]*");
         Assert.Equal(2, installs.Count);
