@@ -230,6 +230,10 @@ export class CalculationComponent implements OnInit, OnDestroy {
   /** Ist der LETZTE Schreibversuch der Kapitel-Uhr gescheitert? Gemeldet wird nur der Übergang in den
    *  Fehlschlag (siehe {@link persistTimer}). */
   private timerPersistFailed = false;
+  /** Wessen Speicherstand gerade in {@link timerSeconds} steht: die Nutzer-Id beim Laden des
+   *  Kapitel-Topfs ({@link syncTimerChapter}), null = anonym. Meldet sich jemand ab oder wechselt das
+   *  Konto, während die Seite offen ist, schreibt {@link persistTimer} nicht mehr (siehe dort). */
+  private timerOwner: number | null = null;
   private timerHandle?: ReturnType<typeof setInterval>;
   readonly noDests = new Map<Key, Key[]>();
 
@@ -348,7 +352,14 @@ export class CalculationComponent implements OnInit, OnDestroy {
     if (key === this.timerChapterKey) return;
     if (this.timerChapterKey !== null) this.persistTimer();
     this.timerChapterKey = key;
+    // Besitzer VOR dem Lesen festhalten: die Abfrage kann einen Sitzungsablauf auslösen, der den
+    // Speicher räumt — gelesen wird dann schon der geräumte Stand.
+    this.timerOwner = this.timerUserId();
     this.timerSeconds = this.readTimerStore()[key] ?? 0;
+  }
+
+  private timerUserId(): number | null {
+    return this.auth?.currentUser?.userId ?? null;
   }
 
   private timerStorageKey(): string {
@@ -369,6 +380,13 @@ export class CalculationComponent implements OnInit, OnDestroy {
    */
   private persistTimer(): void {
     if (this.timerChapterKey === null) return;
+    // Die Zeit gehört dem, aus dessen Speicherstand sie geladen wurde. Abmelden auf offener Seite
+    // (die Navbar schwebt auch im Kalkulations-Modus): AuthService.logout() räumt den Speicher
+    // (OfflineService.clearOnLogout) und navigiert ERST DANACH — ngOnDestroy → stopTraining schrieb
+    // die Kapitelzeit des Vorgängers zurück, und der nächste Nutzer am Gerät zählte darauf weiter.
+    // Ebenso der Sekundentakt nach einem Sitzungsablauf (dort ohne Navigation) und ein Ab- oder
+    // Ummelden in einem anderen Tab. Die eigene Zeit geht damit beim Abmelden verloren — gewollt (F3-019).
+    if (this.timerUserId() !== this.timerOwner) return;
     const store = this.readTimerStore();
     store[this.timerChapterKey] = this.timerSeconds;
     const ok = writeJson(localStore(), this.timerStorageKey(), store);

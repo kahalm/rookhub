@@ -15,6 +15,7 @@ import { CALC_NOTICE_PREFIX } from './calc-local.util';
 import { CalcReviewPatch } from './calc-review.util';
 import { findNode, lines } from './calc-tree.util';
 import { VisibilityStopwatch } from '../../puzzles/visibility-stopwatch';
+import { OfflineService } from '../../../core/offline.service';
 
 const START = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
 
@@ -1048,6 +1049,65 @@ describe('CalculationComponent Kapitel-Training (Timer)', () => {
     expect(c.timerRunning).toBeFalse();
     jasmine.clock().tick(5000);
     expect(c.timerSeconds).toBe(2);
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 2 });
+  });
+
+  /** Angemeldeter Nutzer der Attrappe — der Stub aus `make()` kennt sonst nur `isLoggedIn`. */
+  function signIn(c: CalculationComponent, userId: number | null): void {
+    (c as unknown as { auth: { currentUser: { userId: number } | null } }).auth.currentUser =
+      userId === null ? null : { userId };
+  }
+
+  it('schreibt nach dem Abmelden auf offener Seite die Kapitelzeit des Vorgängers nicht zurück (F3-019)', () => {
+    // Codereview 2026-09-29 (F3-019, Nacharbeit): AuthService.logout() räumt den Speicher und navigiert
+    // ERST DANACH zu /login — ngOnDestroy → stopTraining schrieb {A: 5} zurück, und Nutzer B zählte auf
+    // dem Vereins-Tablet auf der Zeit von A weiter.
+    const c = makeForTimer();
+    signIn(c, 41);
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
+    jasmine.clock().tick(5000);
+    expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 5 });
+
+    // Reihenfolge wie in AuthService.logout(): Speicher räumen, Nutzer weg, dann erst navigieren.
+    new OfflineService().clearOnLogout();
+    signIn(c, null);
+    expect(localStorage.getItem('rookhub_calc_timer_1')).toBeNull();
+
+    // Sekundentakt vor dem Abbau — bzw. nach einem Sitzungsablauf, der gar nicht navigiert.
+    jasmine.clock().tick(2000);
+    expect(localStorage.getItem('rookhub_calc_timer_1')).toBeNull();
+
+    c.ngOnDestroy();                  // router.navigate(['/login']) baut die Seite ab
+    expect(localStorage.getItem('rookhub_calc_timer_1')).toBeNull();
+  });
+
+  it('schreibt nach einem Kontowechsel auf offener Seite nicht in den Topf des neuen Kontos (F3-019)', () => {
+    const c = makeForTimer();
+    signIn(c, 41);
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
+    jasmine.clock().tick(3000);
+
+    new OfflineService().clearOnLogout();
+    signIn(c, 42);                    // anderes Konto (Anmeldemaske ?switch=1, anderer Tab)
+    c.ngOnDestroy();
+
+    expect(localStorage.getItem('rookhub_calc_timer_1')).toBeNull();
+  });
+
+  it('sichert beim Verlassen der Seite weiter, solange dasselbe Konto angemeldet ist (Gegenprobe F3-019)', () => {
+    const c = makeForTimer();
+    signIn(c, 41);
+    load(c, position({ chapter: 'A' }));
+    c.startTraining();
+    jasmine.clock().tick(2000);
+
+    signIn(c, 41);                    // erneuerte Sitzung desselben Kontos: neues Objekt, gleiche Id
+    // Nur, damit sichtbar wird, dass der Abbau SELBST schreibt (und nicht bloß der Sekundentakt).
+    localStorage.removeItem('rookhub_calc_timer_1');
+    c.ngOnDestroy();
+
     expect(JSON.parse(localStorage.getItem('rookhub_calc_timer_1')!)).toEqual({ A: 2 });
   });
 });
