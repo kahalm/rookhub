@@ -96,10 +96,11 @@ const SAVE_DEBOUNCE_MS = 1500;
                   In der Übersicht lässt sich das je Partie ändern.</span></span>
             </label>
             <label class="field">PGN-Datei
-              <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" (change)="pickFile($event)" />
+              <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
+              @if (readingFile()) { <span class="small muted"><b>Lese die Datei …</b></span> }
             </label>
             <label class="field">… oder eine ChessBase-Datenbank
-              <input type="file" multiple [disabled]="readingDb()" (change)="pickChessBase($event)" />
+              <input type="file" multiple [disabled]="busy()" (change)="pickChessBase($event)" />
               <span class="small muted">Alle Dateien der Datenbank auswählen (z. B. MeineSpiele.2cbh, .2cbg, .2lid … bzw. .cbh,
                 .cbg, .cbp …) oder ein ZIP davon. Gelesen wird die Hauptvariante, ohne Kommentare.
                 @if (readingDb()) { <b>Lese die Datenbank …</b> }</span>
@@ -108,7 +109,7 @@ const SAVE_DEBOUNCE_MS = 1500;
               <div class="linkrow">
                 <input type="url" inputmode="url" placeholder="https://lichess.org/study/…" [value]="studyUrl()"
                        (input)="studyUrl.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); loadStudy()" />
-                <button type="button" class="btn-sec" [disabled]="loadingStudy() || !studyUrl().trim()" (click)="loadStudy()">
+                <button type="button" class="btn-sec" [disabled]="busy() || !studyUrl().trim()" (click)="loadStudy()">
                   {{ loadingStudy() ? 'Lade …' : 'Laden' }}</button>
               </div>
             </div>
@@ -117,7 +118,7 @@ const SAVE_DEBOUNCE_MS = 1500;
                         (input)="pgn.set($any($event.target).value)"></textarea>
             </label>
             <div class="actions">
-              <button type="button" class="btn-pri" [disabled]="previewing() || !pgn().trim()" (click)="startPreview()">
+              <button type="button" class="btn-pri" [disabled]="busy() || !pgn().trim()" (click)="startPreview()">
                 {{ previewing() ? 'Lese …' : 'Partien prüfen' }}</button>
               <span class="muted small">Erst kommt eine Übersicht — gespeichert wird erst mit „Importieren“. Mehr als 500 Partien kommen in Paketen.</span>
               <span class="update-msg" [class.err]="!!importError()" role="status">{{ importError() ?? '' }}</span>
@@ -276,6 +277,11 @@ export class ClubAddPageComponent implements OnInit {
   /** In Pakete geteilt: wie viele, und ob die übrigen als offene Listen liegen. */
   readonly portionNote = signal<string | null>(null);
   readonly readingDb = signal(false);
+  /** Eine PGN-Datei wird gelesen und in die Übersicht geführt (von der Wahl bis die Übersicht steht). */
+  readonly readingFile = signal(false);
+  /** Läuft schon eine Liste (Datei, Datenbank, Studie oder Übersicht)? Dann startet kein zweiter Weg daneben — sonst
+   *  liefen zwei Vorschauen parallel und legten Pakete doppelt bzw. einen verwaisten Entwurf ab (UX-037-Nacharbeit). */
+  readonly busy = computed(() => this.readingFile() || this.readingDb() || this.loadingStudy() || this.previewing());
   readonly review = signal<ImportReview | null>(null);
   readonly result = signal<ClubImportResult | null>(null);
 
@@ -494,19 +500,25 @@ export class ClubAddPageComponent implements OnInit {
     const input = ev.target as HTMLInputElement;
     const f = input.files?.[0];
     input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
-    if (!f) return;
-    this.dbNote.set(null);
-    this.portionNote.set(null);
-    this.importError.set(null);
+    // Läuft schon eine Liste, ist das Feld gesperrt — kommt trotzdem eine Wahl durch, keine zweite Vorschau daneben.
+    if (!f || this.busy()) return;
+    this.readingFile.set(true);
     try {
-      this.pgn.set(await f.text());
-    } catch {
-      this.importError.set('Die Datei ließ sich nicht lesen.');
-      return;
+      this.dbNote.set(null);
+      this.portionNote.set(null);
+      this.importError.set(null);
+      try {
+        this.pgn.set(await f.text());
+      } catch {
+        this.importError.set('Die Datei ließ sich nicht lesen.');
+        return;
+      }
+      this.loaded(this.pgn(), 'datei', f.name);
+      this.result.set(null);
+      await this.startPreview();                                       // teilt in Pakete wie jede andere Liste
+    } finally {
+      this.readingFile.set(false);
     }
-    this.loaded(this.pgn(), 'datei', f.name);
-    this.result.set(null);
-    await this.startPreview();                                         // teilt in Pakete wie jede andere Liste
   }
 
   /**
@@ -517,7 +529,7 @@ export class ClubAddPageComponent implements OnInit {
     const input = ev.target as HTMLInputElement;
     const picked = Array.from(input.files ?? []);
     input.value = '';                                                  // dieselbe Auswahl darf noch einmal kommen
-    if (!picked.length) return;
+    if (!picked.length || this.busy()) return;
     this.importError.set(null);
     this.dbNote.set(null);
     this.portionNote.set(null);
@@ -552,6 +564,7 @@ export class ClubAddPageComponent implements OnInit {
 
   /** Eine öffentliche Lichess-Studie holen (der Server ruft Lichess) — danach geht es weiter wie mit einer Datei. */
   async loadStudy(): Promise<void> {
+    if (this.busy()) return;                                           // Enter im Feld umgeht den gesperrten Knopf
     this.loadingStudy.set(true);
     this.importError.set(null);
     this.dbNote.set(null);

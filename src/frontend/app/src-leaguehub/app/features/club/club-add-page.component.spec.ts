@@ -344,6 +344,44 @@ describe('ClubAddPageComponent', () => {
     expect(api.importPgn).not.toHaveBeenCalled();                            // gespeichert wird erst mit „Importieren"
   });
 
+  // UX-037-Nacharbeit: seit die Wahl selbst die Vorschau startet, darf eine zweite Wahl (oder ein anderer Weg) während der
+  // laufenden Vorschau keine zweite daneben starten — sonst lagen Pakete doppelt als offene Listen da.
+  it('während die Datei gelesen wird, sind die Wege gesperrt und eine zweite Wahl startet keine zweite Vorschau (UX-037)', async () => {
+    const el = create();
+    const game = (i: number) => `[White "W${i}"]\n[Black "B${i}"]\n[Result "1-0"]\n\n1. e4 e5 1-0`;
+    const file = new File([Array.from({ length: 1001 }, (_, i) => game(i + 1)).join('\n\n')], 'Verein.pgn');
+    let answer!: (p: ClubPreview) => void;
+    api.preview.and.returnValue(new Promise<ClubPreview>(r => answer = r));
+    const first = fixture.componentInstance.pickFile({ target: { files: [file], value: 'C:\\fakepath\\Verein.pgn' } } as unknown as Event);
+    for (let i = 0; i < 50 && !api.preview.calls.count(); i++) await new Promise(r => setTimeout(r));
+    fixture.detectChanges();
+    expect(api.preview).toHaveBeenCalledTimes(1);                           // die Vorschau läuft noch
+    const pgnField = el.querySelector('input[type=file][accept^=".pgn"]') as HTMLInputElement;
+    expect(pgnField.disabled).toBeTrue();
+    expect(pgnField.closest('label')?.textContent).toContain('Lese die Datei …');   // am Feld, nicht nur am Knopf weiter unten
+    expect((el.querySelector('input[type=file][multiple]') as HTMLInputElement).disabled).toBeTrue();
+    expect((el.querySelector('.btn-pri') as HTMLButtonElement).disabled).toBeTrue();
+
+    const again = { files: [file], value: 'C:\\fakepath\\Verein.pgn' };
+    void fixture.componentInstance.pickFile({ target: again } as unknown as Event);    // kommt trotzdem eine Wahl durch …
+    fixture.componentInstance.studyUrl.set('https://lichess.org/study/AbCdEf12');
+    void fixture.componentInstance.loadStudy();                             // … oder Enter im Studien-Feld
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
+    expect(again.value).toBe('');
+    expect(api.lichess).not.toHaveBeenCalled();
+    expect(api.createDraft).toHaveBeenCalledTimes(1);
+
+    answer(PREVIEW);
+    await first;
+    for (let i = 0; i < 5; i++) await new Promise(r => setTimeout(r));
+    fixture.detectChanges();
+    expect(api.preview).toHaveBeenCalledTimes(1);
+    expect(api.createDraft.calls.allArgs().map(a => [a[1], a[2]])).toEqual([
+      ['datei', 'Verein.pgn (Teil 1 von 3)'], ['datei', 'Verein.pgn (Teil 2 von 3)'], ['datei', 'Verein.pgn (Teil 3 von 3)']]);
+    expect(fixture.componentInstance.busy()).toBeFalse();
+    expect(el.querySelector('.review-table')).not.toBeNull();
+  });
+
   it('nach dem Hochladen eines Fotos ist das Dateifeld wieder leer (UX-037)', fakeAsync(() => {
     query = { art: 'formular' };
     const el = create();
