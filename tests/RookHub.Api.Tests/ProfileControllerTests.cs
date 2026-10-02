@@ -25,11 +25,14 @@ public class ProfileControllerTests : IDisposable
             .Options;
         _db = new AppDbContext(options);
 
-        _profileService = TestServices.Profile(_db, new NoOpTaskQueue());
+        // Ein Discord-Dienst für Controller UND ProfileService: der eine merkt sich das Freiwerden einer ID,
+        // der andere prüft es beim Verknüpfen (A1-011) — wie das Singleton in Prod.
+        var discordLink = DiscordTokenTestHelper.Service();
+        _profileService = TestServices.Profile(_db, new NoOpTaskQueue(), discordLink: discordLink);
 
         // PlayerSearchService is needed but we test SearchPlayers validation separately
         // For controller tests, we pass a null-ish PlayerSearchService only for non-search tests
-        _controller = new ProfileController(_profileService, null!, DiscordTokenTestHelper.Service(),
+        _controller = new ProfileController(_profileService, null!, discordLink,
             new ApiTokenService(_db, NullLogger<ApiTokenService>.Instance));
     }
 
@@ -373,32 +376,79 @@ public class ProfileControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task LinkDiscord_TokenRedeemedByAnotherAccount_IsRejected_EvenAfterUnlink()
+    public async Task LinkDiscord_TokensIssuedBeforeUnlink_AreRejectedForAnotherAccount()
     {
-        // A1-011: A verknüpft per Bot-Link und trennt später; B hat denselben Link (weitergeleitete DM,
-        // geteiltes Gerät) — ohne Vermerk bekäme B die fremde Discord-ID.
+        // A1-011: A verknüpft mit T1 und trennt später. Inzwischen hat der Bot A weitere DM-Links mit NEUEN
+        // Tokens geschickt (T2 — angeklickt ohne POST, die ID war ja schon verknüpft). B bekommt einen davon
+        // weitergeleitet; ohne Vermerk je Discord-ID bekäme B mit T2 die fremde Discord-ID.
         var a = await CreateUserAsync("alice");
         var b = await CreateUserAsync("bob");
-        var token = DiscordTokenTestHelper.Make("4242", "AliceDisco", DiscordTokenTestHelper.FarFuture);
+        var t1 = DiscordTokenTestHelper.Make("4242", "AliceDisco", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(20)));
+        var t2 = DiscordTokenTestHelper.Make("4242", "AliceNewName", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30)));
 
         SetUser(a.Id);
-        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = t1 })).Result);
         Assert.IsType<OkObjectResult>((await _controller.UnlinkDiscord()).Result);
 
         SetUser(b.Id);
-        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = t2 })).Result);
+        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = t1 })).Result);
         Assert.Null((await _db.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == b.Id)).DiscordId);
 
-        // Der erste Einlöser selbst darf den Link erneut nutzen.
+        // Der bisherige Inhaber selbst darf mit jedem seiner Links wieder verknüpfen.
         SetUser(a.Id);
-        var again = Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = token })).Result);
+        var again = Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = t2 })).Result);
         Assert.Equal("4242", ((ProfileDto)again.Value!).DiscordId);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_TokenIssuedAfterUnlink_WorksForAnotherAccount()
+    {
+        // Derselbe Discord-Nutzer verknüpft nach der Trennung per frischem /link ein anderes eigenes Konto:
+        // ein Token, das erst nach dem Freiwerden ausgestellt wurde (exp > frei + 30 Tage), ist nicht gesperrt.
+        var a = await CreateUserAsync("alice");
+        var b = await CreateUserAsync("bob");
+        SetUser(a.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto
+            { Token = DiscordTokenTestHelper.Make("4343", "Disco", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30))) })).Result);
+        Assert.IsType<OkObjectResult>((await _controller.UnlinkDiscord()).Result);
+
+        SetUser(b.Id);
+        var fresh = DiscordTokenTestHelper.Make("4343", "Disco", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(31)));
+        var ok = Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = fresh })).Result);
+        Assert.Equal("4343", ((ProfileDto)ok.Value!).DiscordId);
+    }
+
+    [Fact]
+    public async Task LinkDiscord_IdFreedBySwitchOrAccountDeletion_OldTokensRejectedForOthers()
+    {
+        // Frei wird eine ID nicht nur beim Trennen: auch beim Wechsel auf eine andere Discord-ID und bei der
+        // Kontolöschung (Selbst- wie Admin-Löschung teilen EraseAsync).
+        var a = await CreateUserAsync("alice");
+        var b = await CreateUserAsync("bob");
+        var c = await CreateUserAsync("carol");
+        var oldX = DiscordTokenTestHelper.Make("5001", "X", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30)));
+        var y = DiscordTokenTestHelper.Make("5002", "Y", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30)));
+        var oldZ = DiscordTokenTestHelper.Make("5003", "Z", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(30)));
+
+        SetUser(a.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = oldX })).Result);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = y })).Result);
+        SetUser(b.Id);
+        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = oldX })).Result);
+
+        SetUser(c.Id);
+        Assert.IsType<OkObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = oldZ })).Result);
+        await _profileService.EraseUserAsync(c.Id);
+        SetUser(b.Id);
+        Assert.IsType<BadRequestObjectResult>((await _controller.LinkDiscord(new LinkDiscordDto { Token = oldZ })).Result);
+        Assert.Null((await _db.UserProfiles.AsNoTracking().SingleAsync(p => p.UserId == b.Id)).DiscordId);
     }
 
     [Fact]
     public async Task LinkDiscord_Conflict_DoesNotClaimTheToken()
     {
-        // Ein 409 (ID gehört gerade jemand anderem) bindet das Token nicht an den abgewiesenen Nutzer.
+        // Ein 409 (ID gehört gerade jemand anderem) hinterlässt keinen Vermerk für den abgewiesenen Nutzer.
         var owner = await CreateUserAsync("owner");
         owner.Profile!.DiscordId = "888";
         await _db.SaveChangesAsync();

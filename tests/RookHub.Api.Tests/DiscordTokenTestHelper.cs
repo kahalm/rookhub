@@ -20,10 +20,16 @@ internal static class DiscordTokenTestHelper
     /// <summary>In der Vergangenheit (Jahr 2001).</summary>
     public const long Past = 1000000000L;
 
-    public static DiscordLinkService Service(string? secret = Secret)
+    /// <summary>Ablauf wie ein Bot-Token, das jetzt mit dieser Restlaufzeit gilt (realistisch: höchstens
+    /// <see cref="DiscordLinkService.DefaultTokenMaxAgeDays"/>; mehr steht für „erst später ausgestellt").</summary>
+    public static long FromNow(TimeSpan remaining) => DateTimeOffset.UtcNow.Add(remaining).ToUnixTimeSeconds();
+
+    public static DiscordLinkService Service(string? secret = Secret, double? tokenMaxAgeDays = null)
     {
         var dict = new Dictionary<string, string?>();
         if (secret != null) dict["Discord:LinkSecret"] = secret;
+        if (tokenMaxAgeDays != null)
+            dict["Discord:LinkTokenMaxAgeDays"] = tokenMaxAgeDays.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var config = new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
         return new DiscordLinkService(config);
     }

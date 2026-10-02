@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
@@ -128,7 +129,8 @@ public class ChessableSinkSqlTests(ChessableSinkSqlFixture fixture)
         var recorder = new CommandTextRecorder();
         await using (var db = Recorded(recorder))
             await new ProfileService(db, new BackgroundTaskQueue(), NullLogger<ProfileService>.Instance,
-                new BookAdminService(db), new NoEmail()).DeleteAccountAsync(userId, "pw");
+                new BookAdminService(db), new NoEmail(), new DiscordLinkService(new ConfigurationBuilder().Build()))
+                .DeleteAccountAsync(userId, "pw");
 
         Assert.Empty(Reads(recorder, "ChessableReviewLines", "Json"));
         Assert.Empty(Reads(recorder, "ChessableSessionMoves", "MovesJson"));

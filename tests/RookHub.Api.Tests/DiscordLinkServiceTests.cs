@@ -116,24 +116,46 @@ public class DiscordLinkServiceTests
         Assert.False(svc.Enabled);
         Assert.Null(svc.Verify(token));
     }
+
     [Fact]
-    public void RedeemedToken_BelongsToTheFirstAccount_UntilItExpires()
+    public void ReleasedId_TokensIssuedBeforeRelease_BelongToThePreviousAccount()
     {
-        // A1-011: ohne Vermerk war ein Token 30 Tage lang für JEDES Konto einlösbar.
+        // A1-011: Der Bot hängt an JEDEN DM-Link ein neues Token (30 Tage gültig). Nach dem Freiwerden der ID
+        // galt jedes davon für jedes Konto — ein Vermerk nur für das zuerst eingelöste Token reichte nicht.
         var svc = DiscordTokenTestHelper.Service();
-        var token = DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FarFuture);
-        var identity = svc.Verify(token)!;
-        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(DiscordTokenTestHelper.FarFuture), identity.ExpiresAt);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(DiscordTokenTestHelper.FarFuture),
+            svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FarFuture))!.ExpiresAt);
+        DiscordLinkService.DiscordIdentity Identity(string id, string name, TimeSpan remaining)
+            => svc.Verify(DiscordTokenTestHelper.Make(id, name, DiscordTokenTestHelper.FromNow(remaining)))!;
+        var first = Identity("42", "x", TimeSpan.FromDays(20));     // eingelöst vor 10 Tagen
+        var later = Identity("42", "y", TimeSpan.FromDays(30));     // neuer Rätsellink, nie per POST eingelöst
+        var fresh = Identity("42", "x", TimeSpan.FromDays(31));     // erst NACH dem Freiwerden ausgestellt
+        var otherId = Identity("43", "z", TimeSpan.FromDays(30));
 
-        Assert.False(svc.IsRedeemedByOther(token, userId: 1));
-        svc.MarkRedeemed(token, identity, userId: 1);
+        Assert.False(svc.IsReservedForOther(later, userId: 2));     // ohne Freiwerden kein Vermerk
+        svc.MarkReleased("42", userId: 1);
 
-        Assert.True(svc.IsRedeemedByOther(token, userId: 2));
-        Assert.False(svc.IsRedeemedByOther(token, userId: 1));          // derselbe darf erneut
-        svc.MarkRedeemed(token, identity, userId: 2);                   // der erste Einlöser behält es
-        Assert.True(svc.IsRedeemedByOther(token, userId: 2));
-        // Ein anderes Token derselben Discord-ID (neuer Bot-Link) ist davon unberührt.
-        var other = DiscordTokenTestHelper.Make("42", "y", DiscordTokenTestHelper.FarFuture);
-        Assert.False(svc.IsRedeemedByOther(other, userId: 2));
+        Assert.True(svc.IsReservedForOther(first, userId: 2));
+        Assert.True(svc.IsReservedForOther(later, userId: 2));      // auch ein ANDERES Token derselben ID
+        Assert.False(svc.IsReservedForOther(later, userId: 1));     // der bisherige Inhaber darf wieder
+        Assert.False(svc.IsReservedForOther(fresh, userId: 2));     // frisches /link: für jedes Konto
+        Assert.False(svc.IsReservedForOther(otherId, userId: 2));
+
+        svc.MarkReleased("42", userId: 2);                          // ein neueres Freiwerden ersetzt den Vermerk
+        Assert.True(svc.IsReservedForOther(later, userId: 1));
+        Assert.False(svc.IsReservedForOther(later, userId: 2));
+    }
+
+    [Fact]
+    public void ReleasedId_TokenMaxAge_IsConfigurable()
+    {
+        // Discord:LinkTokenMaxAgeDays folgt der TTL im Bot (z. B. 1 nach dem Wechsel auf 24 h).
+        var svc = DiscordTokenTestHelper.Service(tokenMaxAgeDays: 1);
+        svc.MarkReleased("42", userId: 1);
+
+        var before = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromHours(23))))!;
+        var after = svc.Verify(DiscordTokenTestHelper.Make("42", "x", DiscordTokenTestHelper.FromNow(TimeSpan.FromDays(2))))!;
+        Assert.True(svc.IsReservedForOther(before, userId: 2));
+        Assert.False(svc.IsReservedForOther(after, userId: 2));
     }
 }

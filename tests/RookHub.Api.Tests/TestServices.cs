@@ -82,11 +82,13 @@ internal static class TestServices
     }
 
     /// <summary><paramref name="email"/> nur setzen, wenn der Test die verschickten Mails selbst prüft.</summary>
+    /// <param name="discordLink">Derselbe Dienst wie im Controller, wenn ein Test das Freiwerden einer
+    /// Discord-ID beobachten will (A1-011); sonst ein eigener.</param>
     public static ProfileService Profile(
         AppDbContext db, IBackgroundTaskQueue queue, ILogger<ProfileService>? logger = null,
-        IEmailSender? email = null)
+        IEmailSender? email = null, DiscordLinkService? discordLink = null)
         => new(db, queue, logger ?? NullLogger<ProfileService>.Instance, new BookAdminService(db),
-            email ?? new RecordingEmailSender());
+            email ?? new RecordingEmailSender(), discordLink ?? DiscordTokenTestHelper.Service());
 
     /// <summary>Admin-Dienst mit dem echten Löschkern (<see cref="ProfileService.EraseUserAsync"/>).</summary>
     public static AdminService Admin(AppDbContext db, IMemoryCache? authCache = null)

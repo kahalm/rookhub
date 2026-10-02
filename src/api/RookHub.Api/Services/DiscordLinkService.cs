@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,24 +12,42 @@ namespace RookHub.Api.Services;
 ///   body = base64url(utf8(JSON {"id","u","exp"}))   (ohne Padding)
 ///   sig  = base64url(HMAC_SHA256(secret, body))      (ohne Padding)
 ///
-/// Ein eingelöstes Token gehört danach dem Konto, das es eingelöst hat (<see cref="IsRedeemedByOther"/>,
-/// <see cref="MarkRedeemed"/>): der Bot hängt es an Links in DMs, und wer so einen Link weitergeleitet bekommt
-/// oder auf einem geteilten Gerät findet, verknüpfte sonst nach einer Trennung die fremde Discord-ID mit dem
-/// eigenen Konto (Codereview A1-011). Der Vermerk lebt im Speicher bis zum Ablauf des Tokens — wie die
-/// Login-Bremse überlebt er keinen Neustart; ohne eigene Tabelle (Migration) bewusst nur so.
+/// Freiwerden einer Discord-ID (Codereview A1-011): Der Bot hängt an JEDEN Link in einer DM ein neues Token,
+/// gültig bis exp (Bot-<c>DEFAULT_TTL</c>, 30 Tage). Wird die ID frei (Trennen, Wechsel auf eine andere ID,
+/// Kontolöschung — <see cref="MarkReleased"/>), merkt sich der Dienst das bisherige Konto und den Zeitpunkt.
+/// Tokens, die bis dahin ausgestellt wurden (<c>exp &lt;= freiAm + maxAlter</c>), löst danach nur noch dieses
+/// Konto ein (<see cref="IsReservedForOther"/>) — sonst verknüpfte, wer einen weitergeleiteten Rätsellink hat,
+/// die fremde Discord-ID mit dem eigenen Konto. Ein frisches <c>/link</c> danach ist für jedes Konto gültig.
+/// Der Vermerk lebt im Speicher bis <c>freiAm + maxAlter</c> und überlebt wie die Login-Bremse keinen Neustart;
+/// ohne eigene Tabelle (Migration) bewusst nur so. Eine NIE verknüpfte ID schützt er nicht (dagegen hilft nur
+/// eine kürzere Bot-TTL).
 /// </summary>
 public class DiscordLinkService
 {
+    /// <summary>Standard für <c>Discord:LinkTokenMaxAgeDays</c> = Bot-<c>DEFAULT_TTL</c> (30 Tage).</summary>
+    public const double DefaultTokenMaxAgeDays = 30;
+
     private readonly string? _secret;
-    /// <summary>SHA-256 des eingelösten Tokens → Konto, das es eingelöst hat. Eigener Cache, damit kein
+    /// <summary>Längste Gültigkeit, die der Bot einem Token gibt: ein Token mit <c>exp &lt;= t + maxAlter</c>
+    /// wurde spätestens zum Zeitpunkt t ausgestellt.</summary>
+    private readonly TimeSpan _tokenMaxAge;
+    /// <summary>Discord-ID → bisheriges Konto + Zeitpunkt des Freiwerdens. Eigener Cache, damit kein
     /// fremder <c>Compact</c>/Größendeckel die Vermerke vor dem Ablauf verdrängt.</summary>
-    private readonly MemoryCache _redeemed = new(new MemoryCacheOptions());
+    private readonly MemoryCache _released = new(new MemoryCacheOptions());
+
+    private sealed record Release(int UserId, DateTimeOffset At);
 
     public DiscordLinkService(IConfiguration config)
     {
         // Ein Platzhalter aus den Beispiel-Dateien zählt wie „leer" = Feature aus: mit dem öffentlich
         // bekannten Wert könnte sich jeder ein Link-Token für eine fremde Discord-ID signieren.
         _secret = SecretConfigCheck.Usable(config["Discord:LinkSecret"]);
+        // Muss mindestens so lang sein wie die TTL im Bot, sonst gelten alte Tokens wieder für jeden.
+        _tokenMaxAge = TimeSpan.FromDays(
+            double.TryParse(config["Discord:LinkTokenMaxAgeDays"], NumberStyles.Float, CultureInfo.InvariantCulture,
+                out var days) && days > 0 && days <= 3650
+                ? days
+                : DefaultTokenMaxAgeDays);
     }
 
     public bool Enabled => !string.IsNullOrEmpty(_secret);
@@ -73,22 +92,20 @@ public class DiscordLinkService
         }
     }
 
-    /// <summary>Hat ein ANDERES Konto dieses Token schon eingelöst? Dasselbe Konto darf es erneut (Name nachziehen,
-    /// Verknüpfung nach eigener Trennung wiederherstellen).</summary>
-    public bool IsRedeemedByOther(string token, int userId)
-        => _redeemed.TryGetValue(RedeemedKey(token), out int owner) && owner != userId;
+    /// <summary>Die Discord-ID <paramref name="discordId"/> war bis eben mit <paramref name="userId"/> verknüpft und ist
+    /// jetzt frei (erst NACH dem erfolgreichen Speichern aufrufen). Ein neueres Freiwerden ersetzt den Vermerk.</summary>
+    public void MarkReleased(string discordId, int userId)
+    {
+        var at = DateTimeOffset.UtcNow;
+        _released.Set(discordId, new Release(userId, at), at + _tokenMaxAge);
+    }
 
-    /// <summary>Nach erfolgreicher Verknüpfung: das Token gehört ab jetzt <paramref name="userId"/>, bis es abläuft.
-    /// Ein schon vorhandener Vermerk bleibt (der erste Einlöser behält es).</summary>
-    public void MarkRedeemed(string token, DiscordIdentity identity, int userId)
-        => _redeemed.GetOrCreate(RedeemedKey(token), entry =>
-        {
-            entry.AbsoluteExpiration = identity.ExpiresAt;
-            return userId;
-        });
-
-    private static string RedeemedKey(string token)
-        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+    /// <summary>Wurde das Token ausgestellt, als die Discord-ID noch einem ANDEREN Konto gehörte? Dann löst es nur
+    /// dieses Konto ein (Wiederverknüpfen nach eigener Trennung); für alle anderen gilt es wie ein ungültiges.</summary>
+    public bool IsReservedForOther(DiscordIdentity identity, int userId)
+        => _released.TryGetValue(identity.Id, out Release? release)
+           && release!.UserId != userId
+           && identity.ExpiresAt <= release.At + _tokenMaxAge;
 
     private static byte[] HmacSha256(string secret, string message)
     {

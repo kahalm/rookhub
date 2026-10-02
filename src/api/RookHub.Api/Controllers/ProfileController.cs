@@ -122,15 +122,14 @@ public class ProfileController : BaseApiController
     {
         var userId = GetUserId();
         var identity = _discordLink.Verify(dto.Token);
-        // Ein von einem anderen Konto schon eingelöstes Token gilt wie ein ungültiges (A1-011).
-        if (identity == null || _discordLink.IsRedeemedByOther(dto.Token, userId))
+        // Ein Token aus der Zeit, als die Discord-ID noch einem ANDEREN Konto gehörte (weitergeleiteter
+        // Rätsellink nach dessen Trennung), gilt wie ein ungültiges (A1-011).
+        if (identity == null || _discordLink.IsReservedForOther(identity, userId))
             return BadRequest(new { message = "Invalid or expired Discord link token." });
 
         try
         {
-            var profile = await _profileService.LinkDiscordAsync(userId, identity.Id, identity.Username);
-            _discordLink.MarkRedeemed(dto.Token, identity, userId);
-            return Ok(profile);
+            return Ok(await _profileService.LinkDiscordAsync(userId, identity.Id, identity.Username));
         }
         catch (KeyNotFoundException ex)
         {

@@ -13,17 +13,20 @@ public class ProfileService
     private readonly ILogger<ProfileService> _logger;
     private readonly BookAdminService _bookAdmin;
     private readonly IEmailSender _email;
+    private readonly DiscordLinkService _discordLink;
 
     // bookAdmin verpflichtend (siehe CourseService): sonst baut der Dienst an der DI vorbei.
     // email: Hinweis an die BISHERIGE Adresse, wenn der Reset-Anker wechselt.
+    // discordLink: merkt sich eine frei gewordene Discord-ID samt bisherigem Konto (A1-011).
     public ProfileService(AppDbContext db, IBackgroundTaskQueue taskQueue, ILogger<ProfileService> logger, BookAdminService bookAdmin,
-        IEmailSender email)
+        IEmailSender email, DiscordLinkService discordLink)
     {
         _db = db;
         _taskQueue = taskQueue;
         _logger = logger;
         _bookAdmin = bookAdmin;
         _email = email;
+        _discordLink = discordLink;
     }
 
     public async Task<ProfileDto> GetProfileAsync(int userId)
@@ -233,7 +236,8 @@ public class ProfileService
     /// <summary>
     /// Verknüpft das (bereits verifizierte) Discord-Konto mit dem User.
     /// Wirft <see cref="InvalidOperationException"/>, wenn die Discord-ID bereits an einen
-    /// anderen RookHub-User gebunden ist (Controller → 409).
+    /// anderen RookHub-User gebunden ist (Controller → 409). Ersetzt sie eine ANDERE bisherige ID,
+    /// wird diese frei (<see cref="DiscordLinkService.MarkReleased"/>).
     /// </summary>
     public async Task<ProfileDto> LinkDiscordAsync(int userId, string discordId, string? discordUsername)
     {
@@ -257,6 +261,7 @@ public class ProfileService
             _db.UserProfiles.Add(profile);
         }
 
+        var previousDiscordId = profile.DiscordId;
         profile.DiscordId = discordId;
         profile.DiscordUsername = discordUsername;
 
@@ -272,11 +277,14 @@ public class ProfileService
             // Duplikat, sonst hieße ein Timeout fälschlich „schon verknüpft".
             throw new InvalidOperationException("This Discord account is already linked to another RookHub user.");
         }
+        if (previousDiscordId != null && previousDiscordId != discordId)
+            _discordLink.MarkReleased(previousDiscordId, userId);
         _logger.LogInformation("Linked Discord account {DiscordId} to user {UserId}.", discordId, userId);
         return MapToDto(user);
     }
 
-    /// <summary>Hebt die Discord-Verknüpfung des Users auf (idempotent).</summary>
+    /// <summary>Hebt die Discord-Verknüpfung des Users auf (idempotent). Die ID wird frei: ihre bis jetzt
+    /// ausgestellten Bot-Tokens löst danach nur noch dieser User ein (<see cref="DiscordLinkService.MarkReleased"/>).</summary>
     public async Task<ProfileDto> UnlinkDiscordAsync(int userId)
     {
         var user = await _db.AppUsers
@@ -286,9 +294,11 @@ public class ProfileService
 
         if (user.Profile != null && (user.Profile.DiscordId != null || user.Profile.DiscordUsername != null))
         {
+            var releasedDiscordId = user.Profile.DiscordId;
             user.Profile.DiscordId = null;
             user.Profile.DiscordUsername = null;
             await _db.SaveChangesAsync();
+            if (releasedDiscordId != null) _discordLink.MarkReleased(releasedDiscordId, userId);
             _logger.LogInformation("Unlinked Discord account from user {UserId}.", userId);
         }
 
@@ -545,6 +555,8 @@ public class ProfileService
         // Den Namen tragen auch Benachrichtigungen ANDERER Nutzer (data.username: Freundschaft, Challenge, Teilen,
         // Neuanmeldung an alle Admins …) — sie bekommen unten, im selben Save, den anonymisierten Namen (A9-003).
         var mentions = await NotificationService.MentioningUsernameAsync(_db, user.Username, userId);
+        // Vor der Schleife: ein Wiederholungslauf sähe die schon geleerte ID nicht mehr.
+        var releasedDiscordId = user.Profile?.DiscordId;
 
         // 2) Identität anonymisieren (in-place) -> nicht re-identifizierbar, Login gesperrt.
         //    FALLE Username-Squatting: „deleted_{id}"/„deleted_{id}@deleted.invalid" sind normale,
@@ -585,6 +597,9 @@ public class ProfileService
                 // Race: der Name wurde ZWISCHEN Prüfung und Save registriert → mit neuem Suffix erneut.
             }
         }
+        // Die Discord-ID wird frei wie beim Trennen: alte Bot-Links bekommt kein anderes Konto (A1-011). Nur im
+        // Speicher und höchstens bis zum Ablauf der damals ausgestellten Tokens.
+        if (releasedDiscordId != null) _discordLink.MarkReleased(releasedDiscordId, userId);
         _logger.LogInformation("AccountDeleted: user {UserId} anonymized (stats retained).", userId);
     }
 
