@@ -48,5 +48,13 @@ describe('ActivityTimerStopDialogComponent', () => {
     const inputs = Array.from(fixture.nativeElement.querySelectorAll('input[maxlength]')) as HTMLInputElement[];
     expect(inputs.length).toBe(1);
     expect(inputs[0].getAttribute('maxlength')).toBe('97');
+
+    // Die Grenze steht sichtbar unter dem Feld, statt dass die Eingabe still abbricht.
+    const hint = fixture.nativeElement.querySelector('mat-hint.note-count') as HTMLElement;
+    expect(hint).toBeTruthy();
+    expect(hint.textContent!.trim()).toBe('0 / 97');
+    fixture.componentInstance.note = 'abcde';
+    fixture.detectChanges();
+    expect(hint.textContent!.trim()).toBe('5 / 97');
   });
 });

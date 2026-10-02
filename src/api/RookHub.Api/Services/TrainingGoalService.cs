@@ -962,7 +962,8 @@ public class TrainingGoalService
         return ToDto(manual);
     }
 
-    /// <summary>Spaltenbreite von <see cref="ManualActivity.Note"/> (AppDbContext: HasMaxLength(200)).</summary>
+    /// <summary>Spaltenbreite von <see cref="ManualActivity.Note"/> (Data/Configurations/TrainingConfigurations.cs,
+    /// ManualActivityConfiguration: HasMaxLength(200)).</summary>
     internal const int ManualNoteMaxLength = 200;
 
     /// <summary>Notiz des Timer-Eintrags: „{Label} — {Notiz}", gekürzt auf <see cref="ManualNoteMaxLength"/>.

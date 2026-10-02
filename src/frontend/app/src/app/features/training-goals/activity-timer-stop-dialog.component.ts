@@ -93,6 +93,7 @@ export interface StopDialogResult {
           <mat-label>{{ 'trainingGoals.timer.noteLabel' | translate }}</mat-label>
           <input matInput [(ngModel)]="note" [maxlength]="noteMaxLength"
                  [placeholder]="'trainingGoals.timer.notePlaceholder' | translate">
+          <mat-hint align="end" class="note-count">{{ note.length }} / {{ noteMaxLength }}</mat-hint>
         </mat-form-field>
       </div>
     </mat-dialog-content>
@@ -128,7 +129,7 @@ export class ActivityTimerStopDialogComponent {
 
   theme: ActivityTheme | null;
   note = '';
-  /** Platz, den „{Label} — {Notiz}" in der Notiz-Spalte für die Notiz lässt. */
+  /** Platz, den „{Label} — {Notiz}" in der Notiz-Spalte für die Notiz lässt (Zähler unter dem Feld). */
   readonly noteMaxLength: number;
 
   constructor(
@@ -203,7 +204,8 @@ export class ActivityTimerStopDialogComponent {
 const MANUAL_NOTE_MAX_LENGTH = 200;
 
 /** Der Server speichert beim Stoppen „{Label} — {Notiz}" in einer Spalte mit 200 Zeichen und kürzt,
- *  was nicht passt — das Eingabefeld zeigt die Grenze deshalb vorher an (Codereview N9-006). */
+ *  was nicht passt — das Eingabefeld begrenzt die Notiz deshalb vorher auf den Rest und zeigt
+ *  darunter „{Länge} / {Grenze}" an (Codereview N9-006). */
 export function timerNoteMaxLength(label: string): number {
   return Math.max(0, MANUAL_NOTE_MAX_LENGTH - label.length - ' — '.length);
 }
