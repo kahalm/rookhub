@@ -7,6 +7,13 @@ import { accountHomeUrl, leagueHubUrl, partnerSiteUrl, rookHubUrlForLeagueHub } 
 import { sanitizeReturnUrl } from './return-url.util';
 
 /**
+ * Wohin die Startadresse „/“ Gaeste schickt (app.routes.ts, UX-025) — Angemeldete landen auf dem Dashboard.
+ * Hier statt in der Routentabelle, weil auch {@link HandoffService} ihn kennen muss und die Schwesterseiten
+ * diesen Dienst mitbringen, die Routentabelle der Haupt-App aber nicht.
+ */
+export const GUEST_START_URL = '/puzzles';
+
+/**
  * Der Sprung zwischen RookHub und der Turnierseite.
  *
  * <p>Beide liegen auf verschiedenen Origins und teilen den `localStorage` NICHT — wer hier
@@ -124,6 +131,8 @@ export class HandoffService {
     this.watchAdoptedSession();
     const url = new URL(location.href);
     const code = url.searchParams.get(HandoffService.Param);
+    // Hier, vor der Startnavigation, steht noch die aufgerufene Adresse da — siehe leaveGuestStart.
+    const startedAtRoot = url.pathname === '/';
 
     if (code) {
       url.searchParams.delete(HandoffService.Param);
@@ -145,13 +154,14 @@ export class HandoffService {
         const shared = await this.fetchSharedSession();
         this.auth.adoptSession(shared?.userId === res.userId ? { ...res, adopted: true } : res);
         this.leaveLoginMask();
+        if (startedAtRoot) this.leaveGuestStart();
         return true;
       } catch {
         return false;                            // abgelaufen/verbraucht → Anmeldemaske
       }
     }
 
-    return this.adoptSharedSession();
+    return this.adoptSharedSession(startedAtRoot);
   }
 
   /**
@@ -165,8 +175,10 @@ export class HandoffService {
    * Pfad und geht nicht mehr an JEDEN `/api/auth/*`-Aufruf der uebrigen Hosts unter der Elterndomaene
    * (Cal.com, RCT, Lernkompass …). Eine API ohne den neuen Pfad antwortet 404 — endet hier ebenfalls
    * in `false`.</p>
+   *
+   * @param startedAtRoot die App startete auf „/“ (nur aus {@link consumeIncoming}) — siehe {@link leaveGuestStart}.
    */
-  async adoptSharedSession(): Promise<boolean> {
+  async adoptSharedSession(startedAtRoot = false): Promise<boolean> {
     if (this.auth.isLoggedIn) return false;
     // Ein Abmelden ohne Netz hat die geteilte Anmeldung noch nicht beendet: erst nachholen, NICHT
     // uebernehmen — sonst meldete dieser Start genau die Anmeldung wieder an, die eben beendet wurde,
@@ -180,6 +192,7 @@ export class HandoffService {
       if (!res) return false;
       this.auth.adoptSession({ ...res, adopted: true });
       this.leaveLoginMask();
+      if (startedAtRoot) this.leaveGuestStart();
       return true;
     } catch {
       return false;
@@ -269,5 +282,24 @@ export class HandoffService {
     const url = new URL(location.href);
     if (!url.pathname.endsWith('/login')) return;
     void this.router.navigateByUrl(sanitizeReturnUrl(url.searchParams.get('returnUrl'), '/'));
+  }
+
+  /**
+   * Loest die Startadresse neu auf, wenn sie den Nutzer eben noch als Gast auf {@link GUEST_START_URL}
+   * geschickt hat.
+   *
+   * <p>Dasselbe Rennen wie bei {@link leaveLoginMask}: „/“ fuehrt Angemeldete aufs Dashboard, Gaeste zu
+   * den Puzzles (UX-025), und die Umleitung fragt `isLoggedIn`, BEVOR die Uebernahme steht. Wer mit einer
+   * geteilten Anmeldung oder einem Einmal-Code auf „/“ kommt, saesse sonst angemeldet bei den Puzzles statt
+   * auf dem Dashboard (vorher fing ihn der authGuard des Dashboards ab und leaveLoginMask brachte ihn
+   * zurueck). Massgeblich ist das Ziel einer noch laufenden Navigation — der Menue-Guard der Puzzles fragt
+   * selbst den Server, die Uebernahme kann also mittendrin fertig werden —, sonst die aktuelle Adresse. Nur
+   * wenn das noch der Gast-Einstieg ist: wer inzwischen weitergeklickt hat, wird nicht weggerissen. Die
+   * Schwesterseiten haben keine /puzzles-Route (das Praefix gehoert dort der Link-Vorschau).</p>
+   */
+  private leaveGuestStart(): void {
+    const target = this.router.currentNavigation()?.finalUrl ?? this.router.parseUrl(this.router.url);
+    if (this.router.serializeUrl(target).split(/[?#]/)[0] !== GUEST_START_URL) return;
+    void this.router.navigateByUrl('/');
   }
 }

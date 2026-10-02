@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AuthService } from './core/auth.service';
+import { GUEST_START_URL } from './core/handoff.service';
 import { authGuard } from './core/auth.guard';
 import { guestGuard } from './core/guest.guard';
 import { adminGuard } from './core/admin.guard';
@@ -12,7 +13,9 @@ export const routes: Routes = [
   // Startadresse (UX-025): angemeldet das Dashboard, Gäste ein OFFENER Bereich. Vorher führte „/“ (und das Logo)
   // auch Gäste aufs Dashboard und damit vor die Anmeldesperre „… um fortzufahren“, obwohl Puzzles, Endless,
   // Punktepartie und Analyse ohne Konto laufen. Ein String-Ziel verhält sich wie das bisherige redirectTo.
-  { path: '', redirectTo: () => inject(AuthService).isLoggedIn ? '/dashboard' : '/puzzles', pathMatch: 'full' },
+  // Steht die übernommene Anmeldung (rh-session, Einmal-Code) erst nach dieser Umleitung, holt
+  // HandoffService.leaveGuestStart den Nutzer vom Gast-Einstieg aufs Dashboard.
+  { path: '', redirectTo: () => inject(AuthService).isLoggedIn ? '/dashboard' : GUEST_START_URL, pathMatch: 'full' },
   { path: 'login', loadComponent: () => import('./features/auth/login.component').then(m => m.LoginComponent), canActivate: [guestGuard] },
   { path: 'register', loadComponent: () => import('./features/auth/register.component').then(m => m.RegisterComponent), canActivate: [guestGuard] },
   { path: 'forgot-password', loadComponent: () => import('./features/auth/forgot-password.component').then(m => m.ForgotPasswordComponent) },

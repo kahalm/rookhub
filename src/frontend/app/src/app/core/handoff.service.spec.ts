@@ -2,8 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
+import { routes } from '../app.routes';
 import { AuthService } from './auth.service';
-import { HandoffService } from './handoff.service';
+import { GUEST_START_URL, HandoffService } from './handoff.service';
 
 /**
  * Der Sprung zwischen RookHub und der Turnierseite — und die geteilte Anmeldung, die ohne Sprung
@@ -174,6 +175,118 @@ describe('HandoffService', () => {
     expect(auth.sessionEndPending).toBeFalse();
     http.expectNone('/api/auth/rh-session');
     http.verify();
+  });
+
+  describe('Übernahme auf der Startadresse „/“ (UX-025)', () => {
+    // „/“ führt Gäste zu den Puzzles, Angemeldete aufs Dashboard. Die Umleitung läuft beim Start, BEVOR die
+    // Übernahme steht (consumeIncoming wird nicht abgewartet) — wer mit dem rh-session-Cookie einer
+    // Schwesterseite kam, saß danach angemeldet bei den Puzzles. Vorher fing ihn der authGuard des
+    // Dashboards ab, und leaveLoginMask brachte ihn zurück aufs Dashboard.
+    let router: Router;
+    /** Hält den Guard der Puzzles auf, solange gesetzt (wie menuGuard, der selbst /api/menu fragt). */
+    let hold: Promise<boolean> | null;
+
+    beforeEach(() => {
+      hold = null;
+      router = TestBed.inject(Router);
+      router.resetConfig([
+        routes.find(r => r.path === '')!,                                // die ECHTE Startumleitung
+        { path: GUEST_START_URL.slice(1), children: [], canActivate: [() => hold ?? true] },
+        { path: 'dashboard', children: [] },
+        { path: 'analysis', children: [] },
+      ]);
+    });
+
+    /** Start auf `path`: Adresse setzen, consumeIncoming wie AppComponent.ngOnInit (nicht abgewartet), dann die
+     *  Startnavigation auf die Adresse, die danach dasteht (ein Einmal-Code ist schon herausgeräumt). */
+    async function start(path: string): Promise<{ done: Promise<boolean> }> {
+      history.replaceState({}, '', path);
+      const done = svc.consumeIncoming();
+      await router.navigateByUrl(location.pathname + location.search);
+      return { done };
+    }
+
+    it('bringt eine geteilte Anmeldung von „/“ aufs Dashboard, obwohl die Umleitung schon bei den Puzzles war', async () => {
+      const { done } = await start('/');
+      expect(router.url).withContext('Startnavigation als Gast').toBe('/puzzles');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+
+      expect(nav).toHaveBeenCalledOnceWith('/');
+      await nav.calls.mostRecent().returnValue;
+      expect(router.url).toBe('/dashboard');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('ebenso einen eingelösten Einmal-Code (Sprung auf „/“)', async () => {
+      const { done } = await start('/?h=EINMAL');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      await settle();
+      http.expectOne('/api/auth/rh-session').flush(null, noContent);
+      expect(await done).toBeTrue();
+
+      expect(nav).toHaveBeenCalledOnceWith('/');
+      await nav.calls.mostRecent().returnValue;
+      expect(router.url).toBe('/dashboard');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('greift auch, wenn die Übernahme mitten in der Startnavigation fertig wird', async () => {
+      let release!: (ok: boolean) => void;
+      hold = new Promise<boolean>(r => release = r);
+      history.replaceState({}, '', '/');
+      const done = svc.consumeIncoming();
+      const first = router.navigateByUrl('/');
+      await settle();
+      expect(router.currentNavigation()?.finalUrl?.toString()).withContext('Guard der Puzzles hängt').toBe('/puzzles');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+      expect(nav).toHaveBeenCalledOnceWith('/');
+      release(true);
+
+      expect(await nav.calls.mostRecent().returnValue).toBeTrue();
+      expect(await first).withContext('die Gast-Navigation ist abgelöst').toBeFalse();
+      expect(router.url).toBe('/dashboard');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('lässt einen Start direkt auf /puzzles in Ruhe (Gegenprobe)', async () => {
+      const { done } = await start('/puzzles');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+      await settle();
+
+      expect(nav).not.toHaveBeenCalled();
+      expect(router.url).toBe('/puzzles');
+      drainPreferences();
+      http.verify();
+    });
+
+    it('reißt niemanden weg, der von den Puzzles schon weitergeklickt hat', async () => {
+      const { done } = await start('/');
+      await router.navigateByUrl('/analysis');
+      const nav = spyOn(router, 'navigateByUrl').and.callThrough();
+
+      http.expectOne('/api/auth/rh-session').flush(session);
+      expect(await done).toBeTrue();
+      await settle();
+
+      expect(nav).not.toHaveBeenCalled();
+      expect(router.url).toBe('/analysis');
+      drainPreferences();
+      http.verify();
+    });
   });
 
   describe('Sprung zur Schwesterseite', () => {
