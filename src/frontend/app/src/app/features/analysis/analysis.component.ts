@@ -901,9 +901,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). */
+  /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). Mit der Deckkraft des
+   *  Pinsels, wie chessground den Pfeil zeichnet: 'purple' deckt nur zu 65 %, voll deckend wirkte der Punkt dunkler als
+   *  sein Pfeil und läge nah am dunklen Rot der vierten Linie. */
   lineColor(i: number): string {
-    return BOARD_BRUSHES[arrowBrush(i)]?.color ?? 'transparent';
+    const brush = BOARD_BRUSHES[arrowBrush(i)];
+    if (!brush) return 'transparent';
+    const alpha = brush.opacity || 1; // wie chessground: 0/fehlend zählt als voll deckend
+    const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(brush.color);
+    return hex && alpha < 1
+      ? `rgba(${parseInt(hex[1], 16)}, ${parseInt(hex[2], 16)}, ${parseInt(hex[3], 16)}, ${alpha})`
+      : brush.color;
   }
 
   /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine

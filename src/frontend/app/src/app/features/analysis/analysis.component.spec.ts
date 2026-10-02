@@ -1675,10 +1675,20 @@ describe('AnalysisComponent Linienliste trägt die Pfeilfarbe (UX-049)', () => {
     const board = chessgroundDefaults().drawable.brushes;
     const probe = document.createElement('span');
     document.body.appendChild(probe);
-    const rgb = (color: string) => { probe.style.background = color; return getComputedStyle(probe).backgroundColor; };
+    // Berechnete Farbe als [r, g, b, a] — 'rgb(…)' hat kein Alpha, also 1.
+    const channels = (css: string) => {
+      const n = (css.match(/[\d.]+/g) ?? []).map(Number);
+      return { rgb: n.slice(0, 3).join(','), a: n.length > 3 ? n[3] : 1 };
+    };
+    const computed = (color: string) => { probe.style.background = color; return channels(getComputedStyle(probe).backgroundColor); };
     marks.forEach((m, i) => {
-      expect(getComputedStyle(m).backgroundColor).withContext(`Linie ${i + 1} (${brushes[i]})`).toBe(rgb(board[brushes[i]].color));
+      const brush = board[brushes[i]];
+      const got = channels(getComputedStyle(m).backgroundColor);
+      expect(got.rgb).withContext(`Linie ${i + 1} (${brushes[i]}) Farbe`).toBe(computed(brush.color).rgb);
+      // Deckkraft wie der Pfeil auf dem Brett (chessground: 'purple' 0.65, die anderen 1).
+      expect(got.a).withContext(`Linie ${i + 1} (${brushes[i]}) Deckkraft`).toBeCloseTo(brush.opacity || 1, 2);
     });
+    expect(board['purple'].opacity).withContext('fünfter Pinsel deckt in chessground nicht voll').toBeLessThan(1);
     probe.remove();
     fixture.destroy();
   });
