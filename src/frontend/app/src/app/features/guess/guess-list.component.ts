@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -21,6 +22,9 @@ import { GuessService, GuessSession } from './guess.service';
 import { GameAnalysis, GameAnalysisService, GuessUploadStatus } from '../analysis/game-analysis.service';
 import { AuthService } from '../../core/auth.service';
 import { ViewStateService } from '../../core/view-state.service';
+
+/** Reihenfolge des Bestands auf der Punktepartie-Seite. */
+export type GuessSort = 'title' | 'short' | 'long' | 'event';
 
 /**
  * Punktepartie-Übersicht (`/guess`): welche Partien lassen sich spielen, und welche Durchläufe gibt
@@ -43,8 +47,8 @@ import { ViewStateService } from '../../core/view-state.service';
   selector: 'app-guess-list',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule,
-    MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatProgressBarModule,
-    MatDialogModule, MatTabsModule,
+    MatTooltipModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatProgressBarModule, MatDialogModule, MatTabsModule,
     TranslatePipe, LoadingSpinnerComponent],
   template: `
     <div class="gl-container">
@@ -82,10 +86,10 @@ import { ViewStateService } from '../../core/view-state.service';
         <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
           <mat-label>{{ 'guess.search.label' | translate }}</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input matInput [(ngModel)]="query" name="guessSearch"
+          <input matInput [ngModel]="query" (ngModelChange)="setQuery($event)" name="guessSearch"
                  [placeholder]="'guess.search.placeholder' | translate">
           @if (query) {
-            <button matSuffix mat-icon-button (click)="query = ''"
+            <button matSuffix mat-icon-button (click)="setQuery('')"
                     [attr.aria-label]="'guess.search.clear' | translate">
               <mat-icon>close</mat-icon>
             </button>
@@ -98,34 +102,56 @@ import { ViewStateService } from '../../core/view-state.service';
           <mat-card-content>
             <div class="sec-head">
               @if (hasAnnotated) {
-                <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="saveFilter()"
+                <mat-button-toggle-group [(ngModel)]="annotatedOnly" (change)="onFilterChange()"
                                          aria-label="filter" class="small-toggle">
                   <mat-button-toggle [value]="false">{{ 'guess.filterAll' | translate }}</mat-button-toggle>
                   <mat-button-toggle [value]="true">{{ 'guess.filterAnnotated' | translate }}</mat-button-toggle>
                 </mat-button-toggle-group>
               }
+              <!-- Sortieren statt Scrollen: „eine kurze Partie" findet man ueber die Laenge, nicht
+                   ueber 655 Titel (Codereview W5 UX-016). Die Vorgabe bleibt die Reihenfolge des
+                   Servers (nach Titel). -->
+              <mat-form-field appearance="outline" class="sort" subscriptSizing="dynamic">
+                <mat-label>{{ 'guess.sort.label' | translate }}</mat-label>
+                <mat-select [value]="sort" (selectionChange)="setSort($event.value)" name="guessSort">
+                  @for (o of sortOptions; track o) {
+                    <mat-option [value]="o">{{ ('guess.sort.' + o) | translate }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
             </div>
             <p class="muted small">{{ 'guess.curatedHint' | translate }}</p>
             @if (curatedShown.length === 0) {
               <p class="muted">{{ (query ? 'guess.search.none' : 'guess.noCurated') | translate }}</p>
             } @else {
-              @for (g of curatedShown; track g.id) {
+              <!-- Seitenweise statt alle auf einmal: 655 Zeilen waren am Handy 85 000 px
+                   (Codereview W5 UX-016). Die Metazeile ist EIN Kasten, damit der Knopf am Handy
+                   immer rechts in der zweiten Zeile steht — mit losen Chips sprang er je nach
+                   Zeile nach links unten. -->
+              @for (g of curatedVisible; track g.id) {
                 <div class="game-row">
                   <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
-                  <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
-                  @if (g.guessWhite !== null && g.guessWhite !== undefined) {
-                    <span class="side" [class.side-black]="!g.guessWhite">
-                      {{ (g.guessWhite ? 'guess.white' : 'guess.black') | translate }}
-                    </span>
-                  }
-                  @if (g.annotated) {
-                    <span class="chip">{{ 'guess.annotatedBadge' | translate }}</span>
-                  }
+                  <span class="g-meta">
+                    <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
+                    @if (g.guessWhite !== null && g.guessWhite !== undefined) {
+                      <span class="side" [class.side-black]="!g.guessWhite">
+                        {{ (g.guessWhite ? 'guess.white' : 'guess.black') | translate }}
+                      </span>
+                    }
+                    @if (g.annotated) {
+                      <span class="chip">{{ 'guess.annotatedBadge' | translate }}</span>
+                    }
+                  </span>
                   <span class="spacer"></span>
-                  <button mat-stroked-button [disabled]="starting" (click)="start(g)">
+                  <button mat-stroked-button class="g-play" [disabled]="starting" (click)="start(g)">
                     <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
                   </button>
                 </div>
+              }
+              @if (curatedRemaining > 0) {
+                <button mat-stroked-button class="more" (click)="showMore()">
+                  {{ 'guess.showMore' | translate:{ count: nextPageSize } }}
+                </button>
               }
             }
           </mat-card-content>
@@ -183,20 +209,22 @@ import { ViewStateService } from '../../core/view-state.service';
                 @for (g of ownShown; track g.id) {
                   <div class="game-row">
                     <span class="g-title">{{ g.title || ('guess.untitled' | translate) }}</span>
-                    <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
-                    @if (g.status !== 'done' && g.status !== 'failed') {
-                      <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
-                    }
-                    @if (g.status === 'failed') {
-                      <span class="chip err">{{ 'guess.failedBadge' | translate }}</span>
-                    } @else if (g.status === 'pending') {
-                      <!-- Es wird immer nur EINE Partie je Nutzer gerechnet; die anderen warten. -->
-                      <span class="chip">{{ 'guess.waiting' | translate }}</span>
-                    } @else if (g.status !== 'done') {
-                      <span class="chip">{{ 'guess.computing' | translate }}</span>
-                    }
+                    <span class="g-meta">
+                      <span class="muted small">{{ 'guess.moves' | translate:{ moves: moveCount(g) } }}</span>
+                      @if (g.status !== 'done' && g.status !== 'failed') {
+                        <span class="muted small">{{ 'guess.analysed' | translate:{ done: g.analyzedPlies, total: g.plyCount } }}</span>
+                      }
+                      @if (g.status === 'failed') {
+                        <span class="chip err">{{ 'guess.failedBadge' | translate }}</span>
+                      } @else if (g.status === 'pending') {
+                        <!-- Es wird immer nur EINE Partie je Nutzer gerechnet; die anderen warten. -->
+                        <span class="chip">{{ 'guess.waiting' | translate }}</span>
+                      } @else if (g.status !== 'done') {
+                        <span class="chip">{{ 'guess.computing' | translate }}</span>
+                      }
+                    </span>
                     <span class="spacer"></span>
-                    <button mat-stroked-button [disabled]="starting || g.analyzedPlies === 0"
+                    <button mat-stroked-button class="g-play" [disabled]="starting || g.analyzedPlies === 0"
                             [matTooltip]="g.analyzedPlies === 0 ? ('guess.notReady' | translate) : ''"
                             (click)="start(g, guessWhite)">
                       <mat-icon>play_arrow</mat-icon> {{ 'guess.play' | translate }}
@@ -245,6 +273,8 @@ import { ViewStateService } from '../../core/view-state.service';
     .intro { margin: 4px 0 14px; }
     .start-card { margin-bottom: 8px; }
     .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .sort { width: 190px; margin-left: auto; }
+    .more { display: block; margin: 12px auto 4px; }
     .small-toggle { font-size: .8rem; }
     .side-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
     .full { width: 100%; }
@@ -264,6 +294,14 @@ import { ViewStateService } from '../../core/view-state.service';
     mat-progress-bar { margin: 0 0 8px; border-radius: 3px; }
     .game-row, .run-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; }
     .game-row + .game-row { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+    .g-meta { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    /* Am Handy ein festes Raster: Titel ueber die volle Breite, darunter Metazeile links und
+       Knopf rechts — in JEDER Zeile an derselben Stelle (Codereview W5 UX-016). */
+    @media (max-width: 600px) {
+      .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+      .game-row .g-title { grid-column: 1 / -1; }
+      .game-row .spacer { display: none; }
+    }
     .g-title { font-weight: 600; text-decoration: none; color: inherit; }
     a.g-title:hover { text-decoration: underline; }
     .spacer { flex: 1 1 auto; }
@@ -344,12 +382,85 @@ export class GuessListComponent implements OnInit, OnDestroy {
   get hasAnnotated(): boolean { return this.curated.some(g => g.annotated); }
 
   get curatedShown(): GameAnalysis[] {
+    const c = this.shownCache;
+    if (c && c.src === this.curated && c.annotatedOnly === this.annotatedOnly
+        && c.query === this.query && c.sort === this.sort) return c.out;
     const pool = this.annotatedOnly ? this.curated.filter(g => g.annotated) : this.curated;
-    return this.filtered(pool);
+    const out = GuessListComponent.sorted(this.filtered(pool), this.sort);
+    this.shownCache = { src: this.curated, annotatedOnly: this.annotatedOnly, query: this.query, sort: this.sort, out };
+    return out;
   }
 
   get ownShown(): GameAnalysis[] {
     return this.filtered(this.ownGames);
+  }
+
+  /** Wie viele Meisterpartien je Seite stehen — und um wie viele „mehr anzeigen" erweitert. */
+  static readonly PageSize = 50;
+  readonly sortOptions: readonly GuessSort[] = ['title', 'short', 'long', 'event'];
+  /** Reihenfolge des Bestands; `title` = wie der Server liefert. Bewusst nicht gemerkt. */
+  sort: GuessSort = 'title';
+  /** Wie viele Zeilen des Bestands gerade gerendert werden. */
+  curatedLimit = GuessListComponent.PageSize;
+
+  private shownCache?: { src: GameAnalysis[]; annotatedOnly: boolean; query: string; sort: GuessSort; out: GameAnalysis[] };
+  private visibleCache?: { src: GameAnalysis[]; limit: number; out: GameAnalysis[] };
+
+  /** Die gerade gerenderte Seite des Bestands. Zwischengespeichert, weil die Vorlage sie bei jeder
+   *  Aenderungserkennung liest (Default-CD, 655 Eintraege). */
+  get curatedVisible(): GameAnalysis[] {
+    const shown = this.curatedShown;
+    const c = this.visibleCache;
+    if (c && c.src === shown && c.limit === this.curatedLimit) return c.out;
+    const out = shown.slice(0, this.curatedLimit);
+    this.visibleCache = { src: shown, limit: this.curatedLimit, out };
+    return out;
+  }
+
+  /** Wie viele Partien hinter der aktuellen Seite noch kommen. */
+  get curatedRemaining(): number {
+    return Math.max(0, this.curatedShown.length - this.curatedLimit);
+  }
+
+  /** So viele kaemen mit dem naechsten Klick dazu. */
+  get nextPageSize(): number {
+    return Math.min(GuessListComponent.PageSize, this.curatedRemaining);
+  }
+
+  showMore(): void {
+    this.curatedLimit += GuessListComponent.PageSize;
+  }
+
+  /** Suche, Filter und Sortierung zeigen eine ANDERE Liste — die beginnt wieder auf Seite eins. */
+  private resetPaging(): void {
+    this.curatedLimit = GuessListComponent.PageSize;
+  }
+
+  setQuery(q: string): void {
+    this.query = q ?? '';
+    this.resetPaging();
+  }
+
+  setSort(sort: GuessSort): void {
+    this.sort = sort;
+    this.resetPaging();
+  }
+
+  /** Vom Umschalter „alle / nur kommentierte" aufgerufen. */
+  onFilterChange(): void {
+    this.resetPaging();
+    this.saveFilter();
+  }
+
+  private static sorted(games: GameAnalysis[], sort: GuessSort): GameAnalysis[] {
+    switch (sort) {
+      case 'short': return [...games].sort((a, b) => a.plyCount - b.plyCount);
+      case 'long': return [...games].sort((a, b) => b.plyCount - a.plyCount);
+      // Ohne Turnier ans Ende; innerhalb eines Turniers bleibt die Reihenfolge des Servers (stabil).
+      case 'event': return [...games].sort((a, b) =>
+        !a.event ? (!b.event ? 0 : 1) : !b.event ? -1 : a.event.localeCompare(b.event));
+      default: return games;
+    }
   }
 
   private filtered(games: GameAnalysis[]): GameAnalysis[] {

@@ -3708,6 +3708,14 @@
     "ownGames": "Your own analyses",
     "filterAll": "All",
     "filterAnnotated": "Annotated only",
+    "sort": {
+      "label": "Sort",
+      "title": "By title",
+      "short": "Shortest first",
+      "long": "Longest first",
+      "event": "By tournament"
+    },
+    "showMore": "Show {{count}} more",
     "annotatedBadge": "annotated",
     "anonHint": "You can play without an account. Your run stays with this browser.",
     "hasComment": "has a comment — click to read it",

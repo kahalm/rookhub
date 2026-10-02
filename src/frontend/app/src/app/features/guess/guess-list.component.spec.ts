@@ -119,6 +119,81 @@ describe('GuessListComponent', () => {
     http.expectNone('/api/game-analyses');
   });
 
+  /** 655 Meisterpartien auf einmal waren am Handy 85 000 px (Codereview W5 UX-016): die Liste kommt
+   *  seitenweise, und eine neue Suche beginnt wieder auf Seite eins. */
+  it('rendert den Bestand seitenweise und setzt die Seite bei neuer Suche zurueck', () => {
+    const fixture = setup(false);
+    const games = Array.from({ length: 120 }, (_, i) =>
+      analysis({ id: i + 1, title: `Partie ${i + 1}`, isPublic: true, analyzedPlies: 40, status: 'done' }));
+    http.expectOne('/api/game-analyses/public').flush(games);
+    http.expectOne(r => r.url === '/api/guess-sessions/anonymous').flush([]);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const rows = () => el.querySelectorAll('.start-card .game-row').length;
+    const more = () => el.querySelector<HTMLButtonElement>('button.more');
+
+    expect(rows()).toBe(GuessListComponent.PageSize);
+    expect(more()?.textContent).toContain('guess.showMore');
+    more()!.click();
+    fixture.detectChanges();
+    expect(rows()).toBe(100);
+    more()!.click();
+    fixture.detectChanges();
+    expect(rows()).toBe(120);
+    expect(more()).toBeNull();
+
+    // Andere Liste = wieder Seite eins (sonst stuenden nach einer Suche ploetzlich 120 Zeilen da).
+    fixture.componentInstance.setQuery('Partie');
+    fixture.detectChanges();
+    expect(rows()).toBe(GuessListComponent.PageSize);
+    // Der Reiter zaehlt weiterhin ALLE Treffer, nicht nur die gerenderten.
+    expect(fixture.componentInstance.curatedShown.length).toBe(120);
+  });
+
+  /** Am Handy sprang „Spielen" je nach Zeile zwischen rechts und links unten — die Chips standen lose
+   *  neben dem Knopf. Jetzt traegt jede Zeile genau Titel, EINE Metazeile und den Knopf. */
+  it('fasst Zugzahl, Seite und Chips in einer Metazeile zusammen — der Knopf steht daneben', () => {
+    const fixture = setup(false);
+    http.expectOne('/api/game-analyses/public').flush([
+      analysis({ id: 1, isPublic: true, annotated: true, guessWhite: true, analyzedPlies: 40, status: 'done' }),
+      analysis({ id: 2, isPublic: true, annotated: false, guessWhite: false, analyzedPlies: 40, status: 'done' }),
+    ]);
+    http.expectOne(r => r.url === '/api/guess-sessions/anonymous').flush([]);
+    fixture.detectChanges();
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.start-card .game-row'));
+    expect(rows.length).toBe(2);
+    for (const row of rows) {
+      const kinds = Array.from(row.children)
+        .filter(c => !c.classList.contains('spacer'))
+        .map(c => c.classList.contains('g-title') ? 'title' : c.classList.contains('g-meta') ? 'meta' : c.tagName.toLowerCase());
+      expect(kinds).toEqual(['title', 'meta', 'button']);
+      expect(row.querySelector('.g-meta button')).toBeNull();
+    }
+    expect(rows[0].querySelector('.g-meta .chip')).not.toBeNull();
+  });
+
+  it('sortiert den Bestand nach Laenge und Turnier — ohne Turnier ans Ende', () => {
+    const fixture = setup(false);
+    http.expectOne('/api/game-analyses/public').flush([
+      analysis({ id: 1, plyCount: 80, event: 'Wien 1873', isPublic: true }),
+      analysis({ id: 2, plyCount: 20, event: null, isPublic: true }),
+      analysis({ id: 3, plyCount: 50, event: 'Berlin 1881', isPublic: true }),
+    ]);
+    http.expectOne(r => r.url === '/api/guess-sessions/anonymous').flush([]);
+    const c = fixture.componentInstance;
+    const ids = () => c.curatedShown.map(g => g.id);
+
+    expect(ids()).toEqual([1, 2, 3]);           // Vorgabe: Reihenfolge des Servers
+    c.setSort('short');
+    expect(ids()).toEqual([2, 3, 1]);
+    c.setSort('long');
+    expect(ids()).toEqual([1, 3, 2]);
+    c.setSort('event');
+    expect(ids()).toEqual([3, 1, 2]);
+    c.setSort('title');
+    expect(ids()).toEqual([1, 2, 3]);
+  });
+
   /** Der Muelleimer an „Deine Durchlaeufe" loeschte einen Lauf samt Punkten mit einem Klick (Codereview
    *  W5 F4-013). Jetzt erst nach Ja — ueber den ConfirmService, nicht window.confirm. */
   it('loescht einen Durchlauf erst nach Rueckfrage — abgelehnt geht kein DELETE raus', () => {

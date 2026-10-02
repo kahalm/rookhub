@@ -3708,6 +3708,14 @@
     "ownGames": "Eigene Analysen",
     "filterAll": "Alle",
     "filterAnnotated": "Nur kommentierte",
+    "sort": {
+      "label": "Sortieren",
+      "title": "Nach Titel",
+      "short": "Kürzeste zuerst",
+      "long": "Längste zuerst",
+      "event": "Nach Turnier"
+    },
+    "showMore": "{{count}} weitere anzeigen",
     "annotatedBadge": "kommentiert",
     "anonHint": "Du kannst ohne Konto spielen. Dein Durchlauf bleibt an diesem Browser.",
     "hasComment": "hat einen Kommentar — zum Lesen anklicken",

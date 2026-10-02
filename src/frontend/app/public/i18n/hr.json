@@ -3708,6 +3708,14 @@
     "ownGames": "Vlastite analize",
     "filterAll": "Sve",
     "filterAnnotated": "Samo komentirane",
+    "sort": {
+      "label": "Poredaj",
+      "title": "Po naslovu",
+      "short": "Najkraće prvo",
+      "long": "Najduže prvo",
+      "event": "Po turniru"
+    },
+    "showMore": "Prikaži još {{count}}",
     "annotatedBadge": "komentirana",
     "anonHint": "Možeš igrati bez računa. Tvoj prolaz ostaje na ovom pregledniku.",
     "hasComment": "ima komentar — klikni za čitanje",

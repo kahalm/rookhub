@@ -3388,6 +3388,14 @@
     "ownGames": "Saját elemzések",
     "filterAll": "Mind",
     "filterAnnotated": "Csak kommentáltak",
+    "sort": {
+      "label": "Rendezés",
+      "title": "Cím szerint",
+      "short": "Legrövidebb elöl",
+      "long": "Leghosszabb elöl",
+      "event": "Verseny szerint"
+    },
+    "showMore": "További {{count}} megjelenítése",
     "annotatedBadge": "kommentált",
     "anonHint": "Bejelentkezés nélkül is játszhatsz. A játszmád ebben a böngészőben marad.",
     "hasComment": "van hozzá megjegyzés — kattints az elolvasásához",
