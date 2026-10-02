@@ -470,7 +470,9 @@ public class CourseTranslationJobServiceTests : IDisposable
         var hidden = await CourseAsync("Privat", isPublic: false);
         Assert.IsType<NotFoundObjectResult>((await Controller(null).GetTranslations(hidden.Id, default)).Result);
 
-        Assert.Equal(403, StatusOf(await Controller(Alice).SetCommentLanguage(book.Id, new() { Language = "de" }, default)));
+        // Dieselbe 403-Antwort wie die übrigen Besitzer-oder-Admin-Pfade (Codereview A7-011; vorher eigener Text).
+        DomainHttp.AssertError(await Controller(Alice).SetCommentLanguage(book.Id, new() { Language = "de" }, default),
+            403, CourseAccess.ManageForbiddenMessage);
         Assert.Equal(200, StatusOf(await Controller(Admin, admin: true).SetCommentLanguage(book.Id, new() { Language = "de" }, default)));
 
         _kit.Llm.IsConfigured = false;

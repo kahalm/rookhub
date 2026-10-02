@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -79,21 +80,21 @@ public class RepertoireExplorerService
         _time = time ?? TimeProvider.System;
     }
 
-    /// <exception cref="KeyNotFoundException">Repertoire fehlt oder ist für den Nutzer nicht lesbar.</exception>
-    /// <exception cref="ArgumentException">Ungültige Auswahl (Datenbank, Elo, Bedenkzeit, Schwelle, Farbe).</exception>
+    /// <exception cref="NotFoundException">Repertoire fehlt oder ist für den Nutzer nicht lesbar.</exception>
+    /// <exception cref="DomainValidationException">Ungültige Auswahl (Datenbank, Elo, Bedenkzeit, Schwelle, Farbe).</exception>
     public async Task<ExplorerAnalysisResultDto> AnalyzeAsync(
         int userId, int repertoireId, ExplorerAnalysisRequestDto req, CancellationToken ct)
     {
         var query = ExplorerQuery.Create(req.Database, req.Ratings, req.Speeds);
         var useLocal = UseLocal(req.Source);
         if (double.IsNaN(req.ThresholdPercent) || req.ThresholdPercent < 0.1 || req.ThresholdPercent > 50)
-            throw new ArgumentException("Die Schwelle muss zwischen 0,1 und 50 % liegen.");
+            throw new DomainValidationException("Die Schwelle muss zwischen 0,1 und 50 % liegen.");
         char? onlyColor = req.Color switch
         {
             null or "" => null,
             "w" => 'w',
             "b" => 'b',
-            _ => throw new ArgumentException("Farbe muss \"w\" oder \"b\" sein."),
+            _ => throw new DomainValidationException("Farbe muss \"w\" oder \"b\" sein."),
         };
 
         var pgn = await _repertoires.GetCombinedPgnAsync(repertoireId, userId);
@@ -163,10 +164,10 @@ public class RepertoireExplorerService
         {
             null or "" or "online" => false,
             "local" => true,
-            _ => throw new ArgumentException("Quelle muss \"online\" oder \"local\" sein."),
+            _ => throw new DomainValidationException("Quelle muss \"online\" oder \"local\" sein."),
         };
         if (local && !_local.IsConfigured)
-            throw new ArgumentException("Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
+            throw new DomainValidationException("Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
         return local;
     }
 
@@ -180,12 +181,12 @@ public class RepertoireExplorerService
     /// Token, Leitung und Datenbank-Speicher, lokal mit Arbeitsspeicher. Ein Speicher-Eintrag ohne
     /// Ergebnis-Aufteilung (vor 0.504.0 geschrieben) wird dabei neu geholt und überschrieben.
     /// </summary>
-    /// <exception cref="ArgumentException">Keine FEN, unbekannte Quelle oder Auswahl.</exception>
+    /// <exception cref="DomainValidationException">Keine FEN, unbekannte Quelle oder Auswahl.</exception>
     public async Task<ExplorerPositionResultDto> PositionAsync(
         int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct)
     {
         fen = (fen ?? "").Trim();
-        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new ArgumentException("Keine gültige FEN.");
+        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new DomainValidationException("Keine gültige FEN.");
         var useLocal = UseLocal(source);
         var key = RepertoireReach.Key(fen);
         var dto = new ExplorerPositionResultDto { Source = useLocal ? "local" : "online", Database = query.Database };
@@ -254,7 +255,7 @@ public class RepertoireExplorerService
         int userId, string? fen, string? source, ExplorerQuery query, CancellationToken ct)
     {
         fen = (fen ?? "").Trim();
-        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new ArgumentException("Keine gültige FEN.");
+        if (fen.Length > 100 || !FenPattern.IsMatch(fen)) throw new DomainValidationException("Keine gültige FEN.");
         var useLocal = UseLocal(source);
         var dto = new ExplorerGamesResultDto();
         var memoryKey = $"explorer:games:{(useLocal ? "local" : "online")}:{query.CachePrefix}{RepertoireReach.Key(fen)}";

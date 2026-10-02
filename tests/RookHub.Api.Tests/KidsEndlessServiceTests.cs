@@ -136,11 +136,13 @@ public class KidsEndlessServiceTests : IDisposable
             Windows = Enumerable.Range(0, KidsEndlessService.MaxWindows + 1).Select(_ => new KidsEndlessWindowDto { MinRating = 700, MaxRating = 720 }).ToList(),
         };
 
-        Assert.IsType<BadRequestObjectResult>((await controller.GetEndlessBatch(tooMany, CancellationToken.None)).Result);
-        Assert.IsType<BadRequestObjectResult>((await controller.GetEndlessBatch(new KidsEndlessBatchRequest
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () =>
+            (await controller.GetEndlessBatch(tooMany, CancellationToken.None)).Result),
+            400, $"At most {KidsEndlessService.MaxWindows} windows.");
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => (await controller.GetEndlessBatch(new KidsEndlessBatchRequest
         {
             Windows = new() { new() { MinRating = 700, MaxRating = 720 } },
             Exclude = Enumerable.Range(1, KidsEndlessService.MaxExclude + 1).ToList(),
-        }, CancellationToken.None)).Result);
+        }, CancellationToken.None)).Result), 400, $"At most {KidsEndlessService.MaxExclude} excluded puzzles.");
     }
 }

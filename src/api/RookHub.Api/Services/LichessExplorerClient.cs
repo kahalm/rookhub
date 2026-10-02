@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using RookHub.Api.Exceptions;
 
 namespace RookHub.Api.Services;
 
@@ -27,23 +28,23 @@ public sealed record ExplorerQuery(string Database, IReadOnlyList<int> Ratings, 
         ? "masters|"
         : $"lichess|{string.Join(',', Ratings)}|{string.Join(',', Speeds)}|";
 
-    /// <summary>Prüft und ordnet die Auswahl. Wirft <see cref="ArgumentException"/> bei unbekannten
+    /// <summary>Prüft und ordnet die Auswahl. Wirft <see cref="DomainValidationException"/> (→ 400) bei unbekannten
     /// Werten; für Lichess braucht es mindestens eine Elo-Stufe und eine Bedenkzeit.</summary>
     public static ExplorerQuery Create(string? database, IEnumerable<int>? ratings, IEnumerable<string>? speeds)
     {
         var db = string.IsNullOrWhiteSpace(database) ? Lichess : database.Trim().ToLowerInvariant();
         if (db == Masters) return new ExplorerQuery(Masters, Array.Empty<int>(), Array.Empty<string>());
-        if (db != Lichess) throw new ArgumentException($"Unbekannte Datenbank: {database}");
+        if (db != Lichess) throw new DomainValidationException($"Unbekannte Datenbank: {database}");
 
         var r = (ratings ?? Array.Empty<int>()).Distinct().OrderBy(x => x).ToList();
-        if (r.Count == 0) throw new ArgumentException("Mindestens eine Elo-Stufe wählen.");
-        if (r.Any(x => !AllowedRatings.Contains(x))) throw new ArgumentException("Unbekannte Elo-Stufe.");
+        if (r.Count == 0) throw new DomainValidationException("Mindestens eine Elo-Stufe wählen.");
+        if (r.Any(x => !AllowedRatings.Contains(x))) throw new DomainValidationException("Unbekannte Elo-Stufe.");
 
         // Reihenfolge = die des Explorers, nicht alphabetisch — so bleibt der Schlüssel lesbar.
         var wanted = (speeds ?? Array.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (wanted.Count == 0) throw new ArgumentException("Mindestens eine Bedenkzeit wählen.");
+        if (wanted.Count == 0) throw new DomainValidationException("Mindestens eine Bedenkzeit wählen.");
         var s = AllowedSpeeds.Where(wanted.Contains).ToList();
-        if (s.Count != wanted.Count) throw new ArgumentException("Unbekannte Bedenkzeit.");
+        if (s.Count != wanted.Count) throw new DomainValidationException("Unbekannte Bedenkzeit.");
 
         return new ExplorerQuery(Lichess, r, s);
     }

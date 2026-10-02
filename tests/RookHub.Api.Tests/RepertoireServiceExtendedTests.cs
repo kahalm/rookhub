@@ -67,7 +67,7 @@ public class RepertoireServiceExtendedTests : IDisposable
     {
         var userId = await CreateUserAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.GetByIdAsync(99999, userId));
     }
 
@@ -77,7 +77,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var (_, repId) = await CreateRepertoireWithFileAsync();
         var otherUser = await CreateUserAsync("other");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.GetByIdAsync(repId, otherUser));
     }
 
@@ -92,7 +92,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var otherUser = await CreateUserAsync("other");
         _db.ChangeTracker.Clear();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetByIdAsync(repId, otherUser));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetByIdAsync(repId, otherUser));
 
         Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
         Assert.Empty(_db.ChangeTracker.Entries<Repertoire>());
@@ -105,7 +105,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var otherUser = await CreateUserAsync("other");
         _db.ChangeTracker.Clear();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetCombinedPgnAsync(repId, otherUser));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetCombinedPgnAsync(repId, otherUser));
 
         Assert.Empty(_db.ChangeTracker.Entries<RepertoireFile>());
         Assert.Empty(_db.ChangeTracker.Entries<Repertoire>());
@@ -195,7 +195,7 @@ public class RepertoireServiceExtendedTests : IDisposable
     {
         var userId = await CreateUserAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.UpdateAsync(99999, userId, new UpdateRepertoireDto { Name = "X" }));
     }
 
@@ -221,7 +221,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var userId = await CreateUserAsync();
         var rep = await _service.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.DownloadFileAsync(rep.Id, 99999, userId));
     }
 
@@ -246,7 +246,7 @@ public class RepertoireServiceExtendedTests : IDisposable
         var userId = await CreateUserAsync();
         var rep = await _service.CreateAsync(userId, new CreateRepertoireDto { Name = "Test" });
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             _service.DeleteFileAsync(rep.Id, 99999, userId));
     }
 

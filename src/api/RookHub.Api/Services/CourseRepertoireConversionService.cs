@@ -93,14 +93,13 @@ public class CourseRepertoireConversionService
 
 /// <summary>
 /// Eine gescheiterte Umwandlung, deren Grund das Frontend UNTERSCHEIDEN können muss — der Text
-/// allein reicht dafür nicht (er ist übersetzbar und ändert sich). Erbt von
-/// <see cref="InvalidOperationException"/>, damit der bestehende 400-Zweig der Controller sie ohne
-/// Sonderbehandlung fängt; wer das <see cref="Code"/>-Feld ausliefern will, fängt sie VORHER.
+/// allein reicht dafür nicht (er ist übersetzbar und ändert sich). Eine
+/// <see cref="DomainValidationException"/> mit Pflicht-<see cref="DomainValidationException.Code"/>
+/// (heute nur <c>repertoire_empty</c>, Teil des HTTP-Vertrags): der globale <c>DomainExceptionFilter</c>
+/// liefert daraus 400 <c>{ message, code }</c> — vorher fing der Controller sie dafür eigens vor dem
+/// allgemeinen 400-Zweig (Codereview A7-011).
 /// </summary>
-public class CourseConversionException : InvalidOperationException
+public class CourseConversionException : DomainValidationException
 {
     public CourseConversionException(string message, string code) : base(message) => Code = code;
-
-    /// <summary>Maschinenlesbarer Grund (heute nur <c>repertoire_empty</c>) — Teil des HTTP-Vertrags.</summary>
-    public string Code { get; }
 }

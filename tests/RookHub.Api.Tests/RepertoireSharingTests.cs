@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -127,7 +128,7 @@ public class RepertoireSharingTests : IDisposable
         await MakeFriendsAsync(2, 3);
         var rep = await SeedRepertoireAsync(1);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+        await Assert.ThrowsAsync<ForbiddenException>(
             () => _svc.ShareAsync(userId: 2, rep.Id, new List<int> { 3 }, isAdmin: false));
         Assert.Empty(_db.RepertoireShares);
     }
@@ -190,7 +191,7 @@ public class RepertoireSharingTests : IDisposable
         await _svc.ShareAsync(1, rep.Id, new List<int> { 2 }, false);
 
         Assert.Equal(2, (await _svc.GetShareRecipientsAsync(userId: 1, rep.Id)).Single().UserId);
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _svc.GetShareRecipientsAsync(userId: 2, rep.Id));
+        await Assert.ThrowsAsync<ForbiddenException>(() => _svc.GetShareRecipientsAsync(userId: 2, rep.Id));
     }
 
     [Fact]

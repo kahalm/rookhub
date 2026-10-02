@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -30,12 +31,12 @@ public class SharedLineService
     /// liefert den bestehenden Link zurück (kein Duplikat).
     /// Gibt <c>null</c> zurück, wenn kein Zugriff / Repertoire nicht existiert.
     /// </summary>
-    /// <exception cref="ArgumentException">PGN größer als <see cref="MaxPgnChars"/> (→ 400).</exception>
+    /// <exception cref="DomainValidationException">PGN größer als <see cref="MaxPgnChars"/> (→ 400).</exception>
     public async Task<ShareLineResultDto?> CreateAsync(int userId, int repertoireId, ShareLineInputDto dto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Pgn)) return null;
         if (dto.Pgn.Length > MaxPgnChars)
-            throw new ArgumentException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
+            throw new DomainValidationException($"PGN exceeds the {MaxPgnChars / 1024} KB limit for shared lines.");
         if (!RepertoireService.LooksLikePgn(dto.Pgn)) return null;
 
         var rep = await _db.Repertoires.AsNoTracking()

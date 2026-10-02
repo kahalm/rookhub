@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -41,7 +42,7 @@ public class KidsProgressService
         (await LoadAsync(userId, ct)).Dto;
 
     /// <summary>Stand des Browsers mit dem im Konto zusammenführen, speichern, Ergebnis zurück.
-    /// <see cref="ArgumentException"/> bei einer Anfrage über den Deckeln.</summary>
+    /// <see cref="DomainValidationException"/> (→ 400) bei einer Anfrage über den Deckeln.</summary>
     public async Task<KidsProgressDto> SyncAsync(int userId, KidsProgressDto incoming, CancellationToken ct = default)
     {
         var clean = await KeepKnownCoursesAsync(Normalize(incoming), ct);
@@ -190,8 +191,8 @@ public class KidsProgressService
     /// <summary>Werte aus dem Browser in erlaubte Grenzen bringen — über den Deckeln: Fehler statt still kürzen.</summary>
     internal KidsProgressDto Normalize(KidsProgressDto incoming)
     {
-        if (incoming.Levels.Count > MaxLevels) throw new ArgumentException($"At most {MaxLevels} levels.");
-        if (incoming.Courses.Count > MaxCourses) throw new ArgumentException($"At most {MaxCourses} courses.");
+        if (incoming.Levels.Count > MaxLevels) throw new DomainValidationException($"At most {MaxLevels} levels.");
+        if (incoming.Courses.Count > MaxCourses) throw new DomainValidationException($"At most {MaxCourses} courses.");
         var maxAt = ToMs(_utcNow() + MaxClockAhead);
         long At(long ms) => Math.Clamp(ms, 0, maxAt);
 
@@ -208,7 +209,7 @@ public class KidsProgressService
         };
         foreach (var c in incoming.Courses.Where(c => c.BookId > 0))
         {
-            if (c.Solved.Count > MaxLinesPerCourse) throw new ArgumentException($"At most {MaxLinesPerCourse} lines per course.");
+            if (c.Solved.Count > MaxLinesPerCourse) throw new DomainValidationException($"At most {MaxLinesPerCourse} lines per course.");
             result.Courses.Add(new KidsCourseProgressDto
             {
                 BookId = c.BookId,

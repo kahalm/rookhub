@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -273,7 +274,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         _db.AppUsers.Add(other);
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             Service().AnalyzeAsync(other.Id, repId, Request(), CancellationToken.None));
     }
 
@@ -286,7 +287,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         var req = Request();
         req.ThresholdPercent = percent;
 
-        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
     }
 
     [Fact]
@@ -386,7 +387,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         _localConfigured = false;
         var (userId, repId) = await SeedAsync(BlackVsE4);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Service().AnalyzeAsync(userId, repId, LocalRequest(), CancellationToken.None));
         Assert.False(Service().Sources().Local);
     }
 
@@ -462,7 +463,7 @@ public class RepertoireExplorerServiceTests : IDisposable
         var (userId, repId) = await SeedAsync(BlackVsE4);
         var req = Request();
         req.Source = "chessbase";
-        await Assert.ThrowsAsync<ArgumentException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Service().AnalyzeAsync(userId, repId, req, CancellationToken.None));
     }
 
     // ---- Einzelne Stellung (Explorer auf dem Analysebrett) ----
@@ -568,7 +569,7 @@ public class RepertoireExplorerServiceTests : IDisposable
     public async Task Position_RejectsWhatIsNoFen(string fen)
     {
         var userId = await UserAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => Service().PositionAsync(userId, fen, null, Blitz, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Service().PositionAsync(userId, fen, null, Blitz, CancellationToken.None));
     }
 
     [Fact]
@@ -662,7 +663,7 @@ public class RepertoireExplorerServiceTests : IDisposable
     public async Task Games_RejectsWhatIsNoFen()
     {
         var userId = await UserAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => Service().GamesAsync(userId, "e4", null, Blitz, CancellationToken.None));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Service().GamesAsync(userId, "e4", null, Blitz, CancellationToken.None));
     }
 
     [Fact]
@@ -671,10 +672,10 @@ public class RepertoireExplorerServiceTests : IDisposable
         Assert.Equal("masters|", ExplorerQuery.Create("masters", new[] { 1234 }, new[] { "x" }).CachePrefix);
         Assert.Equal("lichess|1600,2200|bullet,classical|",
             ExplorerQuery.Create(null, new[] { 2200, 1600, 1600 }, new[] { "classical", "bullet" }).CachePrefix);
-        Assert.Throws<ArgumentException>(() => ExplorerQuery.Create("lichess", new[] { 1700 }, new[] { "blitz" }));
-        Assert.Throws<ArgumentException>(() => ExplorerQuery.Create("lichess", new[] { 1600 }, new[] { "hyper" }));
-        Assert.Throws<ArgumentException>(() => ExplorerQuery.Create("lichess", Array.Empty<int>(), new[] { "blitz" }));
-        Assert.Throws<ArgumentException>(() => ExplorerQuery.Create("chessbase", new[] { 1600 }, new[] { "blitz" }));
+        Assert.Throws<DomainValidationException>(() => ExplorerQuery.Create("lichess", new[] { 1700 }, new[] { "blitz" }));
+        Assert.Throws<DomainValidationException>(() => ExplorerQuery.Create("lichess", new[] { 1600 }, new[] { "hyper" }));
+        Assert.Throws<DomainValidationException>(() => ExplorerQuery.Create("lichess", Array.Empty<int>(), new[] { "blitz" }));
+        Assert.Throws<DomainValidationException>(() => ExplorerQuery.Create("chessbase", new[] { 1600 }, new[] { "blitz" }));
     }
 
     /// <summary>Uhr zum Vorstellen (Drossel-Pause, Speicherdauer).</summary>

@@ -11,6 +11,9 @@ namespace RookHub.Api.Controllers;
 /// Lösung — die gespeicherte Zugfolge einer Buchlinie wird von diesen Endpoints NICHT
 /// ausgeliefert (siehe <see cref="CalculationService"/>). Zugriff je Buch wie im Kurs
 /// (<see cref="CourseAccess"/>); kein Zugriff → 404.
+///
+/// <para>Fängt nichts selbst (Codereview A7-011): der Dienst wirft Domänen-Ausnahmen, der globale
+/// <c>DomainExceptionFilter</c> macht daraus <c>{ message }</c> mit 404/400.</para>
 /// </summary>
 [ApiController]
 [Route("api/calculations")]
@@ -32,13 +35,9 @@ public class CalculationController : BaseApiController
     [HttpGet("books/{bookId}")]
     public async Task<ActionResult<CalcBookDto>> GetBook(int bookId, CancellationToken ct, [FromQuery] string? lang = null)
     {
-        try
-        {
-            var book = await _service.GetBookAsync(GetUserId(), bookId, IsAdmin, ct);
-            if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
-            return Ok(book);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var book = await _service.GetBookAsync(GetUserId(), bookId, IsAdmin, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
+        return Ok(book);
     }
 
     /// <summary>
@@ -61,13 +60,9 @@ public class CalculationController : BaseApiController
     public async Task<ActionResult<CalcPublicBookDto>> GetPublicBook(int bookId, CancellationToken ct,
         [FromQuery] string? lang = null)
     {
-        try
-        {
-            var book = await _service.GetPublicBookAsync(bookId, ct);
-            if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
-            return Ok(book);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var book = await _service.GetPublicBookAsync(bookId, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(book, lang, ct);
+        return Ok(book);
     }
 
     /// <summary>Eine Stellung inkl. eigenem Analysebaum.</summary>
@@ -75,13 +70,9 @@ public class CalculationController : BaseApiController
     public async Task<ActionResult<CalcPositionDto>> GetPosition(int bookPuzzleId, CancellationToken ct,
         [FromQuery] string? lang = null)
     {
-        try
-        {
-            var position = await _service.GetPositionAsync(GetUserId(), bookPuzzleId, IsAdmin, ct);
-            if (_localizer is not null) await _localizer.ApplyAsync(position, lang, ct);
-            return Ok(position);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var position = await _service.GetPositionAsync(GetUserId(), bookPuzzleId, IsAdmin, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(position, lang, ct);
+        return Ok(position);
     }
 
     /// <summary>Eigenen Analysebaum zu einer Stellung speichern (Upsert); die drei Trainings-Werte
@@ -89,11 +80,7 @@ public class CalculationController : BaseApiController
     [HttpPut("positions/{bookPuzzleId}")]
     public async Task<ActionResult<CalcPositionStateDto>> SaveTree(int bookPuzzleId, [FromBody] SaveCalcTreeDto dto,
         CancellationToken ct)
-    {
-        try { return Ok(await _service.SaveTreeAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct)); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-    }
+        => Ok(await _service.SaveTreeAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct));
 
     /// <summary>
     /// Nur die drei Trainings-Werte einer Stellung ändern — ohne den (u. U. großen) Baum erneut zu
@@ -105,17 +92,13 @@ public class CalculationController : BaseApiController
     [HttpPatch("positions/{bookPuzzleId}")]
     public async Task<ActionResult<CalcPositionStateDto>> PatchMeta(int bookPuzzleId, [FromBody] PatchCalcMetaDto dto,
         CancellationToken ct)
-    {
-        try { return Ok(await _service.PatchMetaAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct)); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-    }
+        => Ok(await _service.PatchMetaAsync(GetUserId(), bookPuzzleId, dto, IsAdmin, ct));
 
     /// <summary>Eigenen Analysebaum zu einer Stellung verwerfen (idempotent).</summary>
     [HttpDelete("positions/{bookPuzzleId}")]
     public async Task<IActionResult> DeleteTree(int bookPuzzleId, CancellationToken ct)
     {
-        try { await _service.DeleteTreeAsync(GetUserId(), bookPuzzleId, IsAdmin, ct); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        await _service.DeleteTreeAsync(GetUserId(), bookPuzzleId, IsAdmin, ct);
+        return NoContent();
     }
 }

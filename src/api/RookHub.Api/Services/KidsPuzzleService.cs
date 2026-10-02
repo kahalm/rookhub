@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -169,7 +170,7 @@ public class KidsPuzzleService
     /// <summary>
     /// Die Aufgaben eines Kinderkurses in Lesereihenfolge — ohne reine Info-Linien (die Kinderseite
     /// fragt ab, sie erzaehlt nicht). Nicht freigegeben/Kalkulationsbuch/unbekannt →
-    /// <see cref="KeyNotFoundException"/>. Die Freigabe <see cref="Book.ForKids"/> setzt nur ein Admin;
+    /// <see cref="NotFoundException"/> (→ 404). Die Freigabe <see cref="Book.ForKids"/> setzt nur ein Admin;
     /// sie oeffnet den Kurs bewusst auch ohne <see cref="Book.IsPublic"/>.
     /// </summary>
     public async Task<List<BookPuzzleDto>> GetCoursePuzzlesAsync(int bookId, string? lang = null, CancellationToken ct = default)
@@ -178,7 +179,7 @@ public class KidsPuzzleService
             .Where(b => b.Id == bookId)
             .Select(b => new { b.DisplayName, b.KidsTitles })
             .FirstOrDefaultAsync(ct)
-            ?? throw new KeyNotFoundException("Course not found.");
+            ?? throw new NotFoundException("Course not found.");
 
         var puzzles = await CourseService.PuzzlesWithBookInReadingOrder(_db, bookId)
             .Where(bp => !bp.IsInfoOnly)

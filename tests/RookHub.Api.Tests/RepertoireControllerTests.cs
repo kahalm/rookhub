@@ -91,12 +91,11 @@ public class RepertoireControllerTests : IDisposable
         var rep = await CreateRepertoireAsync(owner.Id);
         SetUser(other.Id);
 
-        var result = await _controller.ExplorerAnalysis(rep.Id, new ExplorerAnalysisRequestDto
-        {
-            Ratings = new() { 1800 }, Speeds = new() { "blitz" },
-        }, Explorer(), CancellationToken.None);
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.ExplorerAnalysis(rep.Id,
+            new ExplorerAnalysisRequestDto { Ratings = new() { 1800 }, Speeds = new() { "blitz" } },
+            Explorer(), CancellationToken.None)).Result);
 
-        Assert.IsType<NotFoundResult>(result.Result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");   // vorher leerer 404 (A7-011)
     }
 
     [Fact]
@@ -106,12 +105,11 @@ public class RepertoireControllerTests : IDisposable
         var rep = await CreateRepertoireAsync(user.Id);
         SetUser(user.Id);
 
-        var result = await _controller.ExplorerAnalysis(rep.Id, new ExplorerAnalysisRequestDto
-        {
-            Ratings = new() { 1750 }, Speeds = new() { "blitz" },
-        }, Explorer(), CancellationToken.None);
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.ExplorerAnalysis(rep.Id,
+            new ExplorerAnalysisRequestDto { Ratings = new() { 1750 }, Speeds = new() { "blitz" } },
+            Explorer(), CancellationToken.None)).Result);
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        DomainHttp.AssertError(result, 400, "Unbekannte Elo-Stufe.");
     }
 
     // ---- GetAll ----
@@ -188,9 +186,9 @@ public class RepertoireControllerTests : IDisposable
         var rep = await CreateRepertoireAsync(user1.Id);
         SetUser(user2.Id);
 
-        var result = await _controller.GetById(rep.Id);
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.GetById(rep.Id)).Result);
 
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
     }
 
     // ---- Update ----
@@ -215,9 +213,10 @@ public class RepertoireControllerTests : IDisposable
         var user = await CreateUserAsync();
         SetUser(user.Id);
 
-        var result = await _controller.Update(99999, new UpdateRepertoireDto { Name = "x" });
+        var result = await DomainHttp.ResultAsync(async () =>
+            (await _controller.Update(99999, new UpdateRepertoireDto { Name = "x" })).Result);
 
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
     }
 
     // ---- Delete ----
@@ -240,9 +239,9 @@ public class RepertoireControllerTests : IDisposable
         var user = await CreateUserAsync();
         SetUser(user.Id);
 
-        var result = await _controller.Delete(99999);
+        var result = await DomainHttp.ResultAsync(async () => await _controller.Delete(99999));
 
-        Assert.IsType<NotFoundObjectResult>(result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
     }
 
     // ---- UploadFile ----
@@ -295,9 +294,9 @@ public class RepertoireControllerTests : IDisposable
 
         var file = CreateFormFile("game.pgn", "[Event \"Test\"] 1. e4 e5");
 
-        var result = await _controller.UploadFile(99999, file);
+        var result = await DomainHttp.ResultAsync(async () => (await _controller.UploadFile(99999, file)).Result);
 
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
     }
 
     // ---- DownloadFile ----
@@ -330,9 +329,9 @@ public class RepertoireControllerTests : IDisposable
         var rep = await CreateRepertoireAsync(user.Id);
         SetUser(user.Id);
 
-        var result = await _controller.DownloadFile(rep.Id, 99999);
+        var result = await DomainHttp.ResultAsync(async () => await _controller.DownloadFile(rep.Id, 99999));
 
-        Assert.IsType<NotFoundObjectResult>(result);
+        DomainHttp.AssertError(result, 404, "File not found.");
     }
 
     // ---- DeleteFile ----
@@ -386,9 +385,9 @@ public class RepertoireControllerTests : IDisposable
         var user = await CreateUserAsync();
         SetUser(user.Id);
 
-        var result = await _controller.GetCombinedPgn(99999);
+        var result = await DomainHttp.ResultAsync(async () => await _controller.GetCombinedPgn(99999));
 
-        Assert.IsType<NotFoundObjectResult>(result);
+        DomainHttp.AssertError(result, 404, "Repertoire not found.");
     }
 
     private static IFormFile CreateFormFile(string fileName, string content)
@@ -437,10 +436,10 @@ public class RepertoireControllerTests : IDisposable
         SetUser(user.Id);
         var rep = await _service.CreateFromPgnAsync(user.Id, "Opening", "o.pgn", PlainConvertPgn);
 
-        var result = await _controller.ConvertToCourse(rep.Id);
+        var result = await DomainHttp.ResultAsync(async () => await _controller.ConvertToCourse(rep.Id));
 
-        var bad = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Null(CodeOf(bad));                                              // NICHT der Leer-Fall
+        DomainHttp.AssertError(result, 400, "No playable lines found in the PGN.");
+        Assert.Null(CodeOf(result));                                              // NICHT der Leer-Fall
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt bei Fehlschlag
     }
 
@@ -454,15 +453,20 @@ public class RepertoireControllerTests : IDisposable
         SetUser(user.Id);
         var rep = await CreateRepertoireAsync(user.Id, "Nimzo");                // ohne Dateien
 
-        var result = await _controller.ConvertToCourse(rep.Id);
+        var result = await DomainHttp.ResultAsync(async () => await _controller.ConvertToCourse(rep.Id));
 
-        var bad = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal("repertoire_empty", CodeOf(bad));
+        Assert.Equal(400, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
+        Assert.Equal("repertoire_empty", CodeOf(result));
+        Assert.Equal("{\"message\":\"Repertoire is empty - import a PGN first.\",\"code\":\"repertoire_empty\"}",
+            System.Text.Json.JsonSerializer.Serialize(((ObjectResult)result).Value));   // HTTP-Vertrag unverändert
         Assert.True(await _db.Repertoires.AnyAsync(r => r.Id == rep.Id));       // bleibt erhalten
         Assert.False(await _db.Books.AnyAsync(b => b.OwnerUserId == user.Id));  // kein Kurs-Torso
     }
 
     /// <summary>Liest das optionale <c>code</c>-Feld aus dem anonymen Fehlerobjekt (null, wenn keins da).</summary>
-    private static string? CodeOf(BadRequestObjectResult bad) =>
-        bad.Value?.GetType().GetProperty("code")?.GetValue(bad.Value) as string;
+    private static string? CodeOf(IActionResult result)
+    {
+        var body = Assert.IsAssignableFrom<ObjectResult>(result).Value;
+        return body?.GetType().GetProperty("code")?.GetValue(body) as string;
+    }
 }

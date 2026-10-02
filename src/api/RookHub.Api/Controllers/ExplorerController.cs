@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
@@ -10,6 +11,9 @@ namespace RookHub.Api.Controllers;
 /// <see cref="RepertoireExplorerService"/> — dieselbe wie beim Lochfinder, damit Speicher, Token und
 /// Drossel nur EINMAL existieren. Nur angemeldet: die Online-Quelle verbraucht das gemeinsame
 /// Kontingent des Server-Tokens.
+///
+/// <para>Fängt nichts selbst (Codereview A7-011): eine ungültige Auswahl ist eine
+/// <c>DomainValidationException</c>, der globale <c>DomainExceptionFilter</c> macht daraus 400 <c>{ message }</c>.</para>
 /// </summary>
 [ApiController]
 [Route("api/explorer")]
@@ -26,15 +30,8 @@ public class ExplorerController : BaseApiController
         [FromQuery] string? fen, [FromQuery] string? source, [FromQuery] string? database,
         [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
     {
-        try
-        {
-            var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
-            return Ok(await _explorer.PositionAsync(GetUserId(), fen, source, query, ct));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
+        return Ok(await _explorer.PositionAsync(GetUserId(), fen, source, query, ct));
     }
 
     /// <summary>Eine Handvoll Partien, die die Stellung erreicht haben (Parameter wie oben).</summary>
@@ -43,20 +40,13 @@ public class ExplorerController : BaseApiController
         [FromQuery] string? fen, [FromQuery] string? source, [FromQuery] string? database,
         [FromQuery] string? ratings, [FromQuery] string? speeds, CancellationToken ct)
     {
-        try
-        {
-            var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
-            return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var query = ExplorerQuery.Create(database, ParseInts(ratings), Split(speeds));
+        return Ok(await _explorer.GamesAsync(GetUserId(), fen, source, query, ct));
     }
 
     private static IEnumerable<string> Split(string? csv) =>
         (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static IEnumerable<int> ParseInts(string? csv) =>
-        Split(csv).Select(x => int.TryParse(x, out var n) ? n : throw new ArgumentException("Unbekannte Elo-Stufe."));
+        Split(csv).Select(x => int.TryParse(x, out var n) ? n : throw new DomainValidationException("Unbekannte Elo-Stufe."));
 }

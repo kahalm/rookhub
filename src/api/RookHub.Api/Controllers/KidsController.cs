@@ -44,11 +44,7 @@ public class KidsController : BaseApiController
     public async Task<ActionResult<List<KidsEndlessPuzzleDto>>> GetEndlessBatch([FromBody] KidsEndlessBatchRequest request,
         CancellationToken ct)
     {
-        try
-        {
-            return Ok(await _endless!.BatchAsync(request, ct));
-        }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _endless!.BatchAsync(request, ct));
     }
 
     /// <summary>Den Stand des Browsers mit dem Konto zusammenfuehren (<see cref="KidsProgressMerge"/>) —
@@ -58,11 +54,7 @@ public class KidsController : BaseApiController
     [RequestSizeLimit(KidsProgressService.MaxRequestBytes)]
     public async Task<ActionResult<KidsProgressDto>> PutProgress([FromBody] KidsProgressDto body, CancellationToken ct)
     {
-        try
-        {
-            return Ok(await _progress!.SyncAsync(GetUserId(), body, ct));
-        }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        return Ok(await _progress!.SyncAsync(GetUserId(), body, ct));
     }
 
     /// <summary>
@@ -118,13 +110,9 @@ public class KidsController : BaseApiController
     public async Task<ActionResult<List<BookPuzzleDto>>> GetCoursePuzzles(int bookId, [FromQuery] string? lang,
         CancellationToken ct)
     {
-        try
-        {
-            var lines = await _service.GetCoursePuzzlesAsync(bookId, lang, ct);
-            if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
-            return Ok(lines);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        var lines = await _service.GetCoursePuzzlesAsync(bookId, lang, ct);
+        if (_localizer is not null) await _localizer.ApplyAsync(lines, lang, ct);
+        return Ok(lines);
     }
 
     /// <summary>So lange darf ein Browser (oder ein Schul-Proxy) Stufen und Kurse behalten, ohne nachzufragen.</summary>

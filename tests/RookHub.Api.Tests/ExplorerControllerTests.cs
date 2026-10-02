@@ -50,17 +50,19 @@ public class ExplorerControllerTests : IDisposable
     [InlineData("1800", "hyper")]
     public async Task Position_BadSelection_Is400(string ratings, string speeds)
     {
-        var r = await Controller().Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-            null, "lichess", ratings, speeds, CancellationToken.None);
-        Assert.IsType<BadRequestObjectResult>(r.Result);
+        var r = await DomainHttp.ResultAsync(async () => (await Controller().Position(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            null, "lichess", ratings, speeds, CancellationToken.None)).Result);
+        DomainHttp.AssertError(r, 400);
     }
 
     [Fact]
     public async Task Position_LocalWithoutLocalExplorer_Is400()
     {
-        var r = await Controller().Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-            "local", "masters", null, null, CancellationToken.None);
-        Assert.IsType<BadRequestObjectResult>(r.Result);
+        var r = await DomainHttp.ResultAsync(async () => (await Controller().Position(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "local", "masters", null, null, CancellationToken.None)).Result);
+        DomainHttp.AssertError(r, 400, "Der lokale Explorer ist auf diesem Server nicht eingerichtet.");
     }
 
     [Fact]
@@ -76,7 +78,8 @@ public class ExplorerControllerTests : IDisposable
     public async Task Games_BadSelection_Is400_AndNoToken_IsOkWithStatus()
     {
         const string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        Assert.IsType<BadRequestObjectResult>((await Controller().Games(fen, null, "lichess", "1750", "blitz", CancellationToken.None)).Result);
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () =>
+            (await Controller().Games(fen, null, "lichess", "1750", "blitz", CancellationToken.None)).Result), 400, "Unbekannte Elo-Stufe.");
         var dto = Assert.IsType<ExplorerGamesResultDto>(Assert.IsType<OkObjectResult>(
             (await Controller().Games(fen, null, "masters", null, null, CancellationToken.None)).Result).Value);
         Assert.Equal("tokenMissing", dto.Status);

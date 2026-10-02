@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 
 namespace RookHub.Api.Services;
 
@@ -44,11 +45,11 @@ public class KidsEndlessService
         int Popularity, int NbPlays, string? Themes);
 
     /// <summary>Je Fenster ein Puzzle, in Fensterreihenfolge; im Lauf keins doppelt. Fenster ohne passendes
-    /// Puzzle fallen weg. <see cref="ArgumentException"/> ueber den Deckeln.</summary>
+    /// Puzzle fallen weg. <see cref="DomainValidationException"/> (→ 400) ueber den Deckeln.</summary>
     public async Task<List<KidsEndlessPuzzleDto>> BatchAsync(KidsEndlessBatchRequest request, CancellationToken ct = default)
     {
-        if (request.Windows.Count > MaxWindows) throw new ArgumentException($"At most {MaxWindows} windows.");
-        if (request.Exclude.Count > MaxExclude) throw new ArgumentException($"At most {MaxExclude} excluded puzzles.");
+        if (request.Windows.Count > MaxWindows) throw new DomainValidationException($"At most {MaxWindows} windows.");
+        if (request.Exclude.Count > MaxExclude) throw new DomainValidationException($"At most {MaxExclude} excluded puzzles.");
         var result = new List<KidsEndlessPuzzleDto>();
         if (request.Windows.Count == 0) return result;
 

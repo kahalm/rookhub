@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 
 namespace RookHub.Api.Services;
@@ -14,7 +15,7 @@ namespace RookHub.Api.Services;
 /// Trainingsstart (<c>StartPly</c>), damit das Frontend die Aufgabenstellung nachstellen kann.
 ///
 /// <para>Zugriff wird je Buch über <see cref="CourseAccess"/> erzwungen (kein Zugriff → 404 via
-/// <see cref="KeyNotFoundException"/>). Der Modus ist bewusst nicht auf Bücher mit
+/// <see cref="NotFoundException"/>). Der Modus ist bewusst nicht auf Bücher mit
 /// <see cref="Book.IsCalculation"/> beschränkt — das Flag steuert nur, ob die Kursübersicht ihn
 /// anbietet; per Direkt-Link darf jede zugängliche Buchstellung durchgerechnet werden.</para>
 /// </summary>
@@ -50,7 +51,7 @@ public class CalculationService
     private async Task EnsureBookAccessAsync(int userId, int bookId, bool isAdmin, CancellationToken ct = default)
     {
         if (!await CourseAccess.CanAccessAsync(_db, userId, bookId, isAdmin, ct))
-            throw new KeyNotFoundException("Book not found.");
+            throw new NotFoundException("Book not found.");
     }
 
     /// <summary>Kalkulations-Serie „gesehen" (Phase 3): öffnet ein VERTEILER-MITGLIED eine Stellung
@@ -185,7 +186,7 @@ public class CalculationService
     /// <para><b>Gate</b>: <see cref="Book.IsPublic"/> — „ausdrücklich öffentlich freigegeben", und
     /// zwar exakt dieselbe Bedingung wie die Slug-Auflösung (<see cref="CourseService.ResolvePublicSlugAsync"/>),
     /// damit Einstieg (<c>/{slug}</c>) und Inhalt nicht auseinanderlaufen. Ein NICHT freigegebenes
-    /// Buch ist hier nicht existent (<see cref="KeyNotFoundException"/> → 404, kein Existenz-Orakel).</para>
+    /// Buch ist hier nicht existent (<see cref="NotFoundException"/> → 404, kein Existenz-Orakel).</para>
     ///
     /// <para>Bewusst NICHT <see cref="BookAccess.PubliclyExposed"/>: die Pool-Flags
     /// (<see cref="Book.ForDaily"/>/<see cref="Book.ForRandom"/>/<see cref="Book.ForBlind"/>) öffnen
@@ -207,7 +208,7 @@ public class CalculationService
             .Where(b => b.Id == bookId && b.IsPublic)
             .Select(b => new { b.Id, b.DisplayName, b.IsCalculation })
             .FirstOrDefaultAsync(ct)
-            ?? throw new KeyNotFoundException("Book not found.");
+            ?? throw new NotFoundException("Book not found.");
 
         // Moves/StartPly werden NUR geladen, um daraus den Vorlauf zu schneiden — sie landen nie im DTO.
         var rows = await _db.BookPuzzles
@@ -245,15 +246,15 @@ public class CalculationService
         CancellationToken ct = default)
     {
         var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == bookPuzzleId, ct)
-            ?? throw new KeyNotFoundException("Position not found.");
-        var bookId = puzzle.BookId ?? throw new KeyNotFoundException("Position not found.");
+            ?? throw new NotFoundException("Position not found.");
+        var bookId = puzzle.BookId ?? throw new NotFoundException("Position not found.");
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
 
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
         if (puzzle.Chapter is string gateCh
             && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
-            throw new KeyNotFoundException("Position not found.");
+            throw new NotFoundException("Position not found.");
 
         // „Gesehen": ein Verteiler-Mitglied hat diese Woche geöffnet (einmalig vermerkt; siehe Helper).
         if (puzzle.Chapter is string seenCh)
@@ -301,18 +302,18 @@ public class CalculationService
 
     /// <summary>Speichert (Upsert) den Analysebaum des Users zu einer Stellung; die drei
     /// Trainings-Werte dürfen im selben Aufruf mitkommen (siehe <see cref="ICalcMetaInput"/>).</summary>
-    /// <exception cref="ArgumentException">Baum ist kein gültiges JSON oder zu groß, oder die
+    /// <exception cref="DomainValidationException">Baum ist kein gültiges JSON oder zu groß, oder die
     /// Festlegung ist keine plausible Zugangabe (→ 400).</exception>
     public async Task<CalcPositionStateDto> SaveTreeAsync(int userId, int bookPuzzleId, SaveCalcTreeDto dto,
         bool isAdmin, CancellationToken ct = default)
     {
         var json = dto.TreeJson ?? string.Empty;
         if (json.Length > MaxTreeJsonLength)
-            throw new ArgumentException($"Tree too large (max {MaxTreeJsonLength} characters).");
+            throw new DomainValidationException($"Tree too large (max {MaxTreeJsonLength} characters).");
         if (string.IsNullOrWhiteSpace(json))
-            throw new ArgumentException("Tree must not be empty.");
+            throw new DomainValidationException("Tree must not be empty.");
         try { using var _ = JsonDocument.Parse(json); }
-        catch (JsonException) { throw new ArgumentException("Tree is not valid JSON."); }
+        catch (JsonException) { throw new DomainValidationException("Tree is not valid JSON."); }
         ValidateMeta(dto);
 
         var (tree, _) = await UpsertAsync(userId, bookPuzzleId, isAdmin, createIfMissing: true, ct);
@@ -330,7 +331,7 @@ public class CalculationService
     /// etwas zu ändern, und Zeit fällt auch an, bevor der erste Zug im Baum steht. Legt die Zeile
     /// bei Bedarf mit LEEREM Baum an (zählt dann nirgends als „bearbeitet").
     /// </summary>
-    /// <exception cref="ArgumentException">Unplausible Zugangabe (→ 400).</exception>
+    /// <exception cref="DomainValidationException">Unplausible Zugangabe (→ 400).</exception>
     public async Task<CalcPositionStateDto> PatchMetaAsync(int userId, int bookPuzzleId, PatchCalcMetaDto dto,
         bool isAdmin, CancellationToken ct = default)
     {
@@ -385,15 +386,15 @@ public class CalculationService
         bool isAdmin, bool createIfMissing, CancellationToken ct)
     {
         var puzzle = await _db.BookPuzzles.FirstOrDefaultAsync(bp => bp.Id == bookPuzzleId, ct)
-            ?? throw new KeyNotFoundException("Position not found.");
-        var bookId = puzzle.BookId ?? throw new KeyNotFoundException("Position not found.");
+            ?? throw new NotFoundException("Position not found.");
+        var bookId = puzzle.BookId ?? throw new NotFoundException("Position not found.");
         await EnsureBookAccessAsync(userId, bookId, isAdmin, ct);
 
         // Terminierte Ausgabe: eine noch nicht freigegebene Woche ist auch einzeln nicht zugänglich
         // (Besitzer/Admin ausgenommen). Wie „nicht gefunden" behandeln (kein Info-Leak).
         if (puzzle.Chapter is string gateCh
             && (await CalcVisibility.HiddenChaptersAsync(_db, bookId, userId, isAdmin, ct)).Contains(gateCh))
-            throw new KeyNotFoundException("Position not found.");
+            throw new NotFoundException("Position not found.");
 
         var tree = await _db.CalculationTrees
             .FirstOrDefaultAsync(t => t.UserId == userId && t.BookPuzzleId == bookPuzzleId, ct);
@@ -425,14 +426,14 @@ public class CalculationService
     private static void ValidateMeta(ICalcMetaInput dto)
     {
         if (!dto.ClearGrade && dto.Grade is int grade && !CalculationGrades.IsValid(grade))
-            throw new ArgumentException(
+            throw new DomainValidationException(
                 $"Unknown grade {grade} (expected {CalculationGrades.Min}..{CalculationGrades.Max}).");
         if (dto.ChosenSan is { Length: > MaxChosenSanLength })
-            throw new ArgumentException($"Chosen move (SAN) too long (max {MaxChosenSanLength} characters).");
+            throw new DomainValidationException($"Chosen move (SAN) too long (max {MaxChosenSanLength} characters).");
         if (dto.ChosenUci is { Length: > MaxChosenUciLength })
-            throw new ArgumentException($"Chosen move (UCI) too long (max {MaxChosenUciLength} characters).");
+            throw new DomainValidationException($"Chosen move (UCI) too long (max {MaxChosenUciLength} characters).");
         if (dto.SecondsToken is { Length: > MaxSecondsTokenLength })
-            throw new ArgumentException($"Seconds token too long (max {MaxSecondsTokenLength} characters).");
+            throw new DomainValidationException($"Seconds token too long (max {MaxSecondsTokenLength} characters).");
     }
 
     /// <summary>

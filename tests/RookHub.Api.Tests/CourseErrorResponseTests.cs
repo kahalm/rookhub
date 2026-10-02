@@ -16,6 +16,10 @@ namespace RookHub.Api.Tests;
 /// (<c>Forbid()</c>), und ein unbekanntes oder unlesbares Buch dort ebenfalls 403. Jetzt gilt EINE
 /// Besitzer-oder-Admin-Regel (<see cref="CourseAccess.LoadManageableAsync"/>) mit EINER Antwort, und die
 /// Controller fangen nichts mehr selbst (Domänen-Ausnahmen → DomainExceptionFilter).
+///
+/// <para>Zweiter Schritt (A7-011, Rest der Einheit): auch Repertoire-, Aufgabenblatt-, Kalkulations-, Kinder- und
+/// Explorer-Controller fangen nichts mehr selbst, und keine ihrer Fehlerantworten kommt mehr ohne
+/// <c>{ message }</c>.</para>
 /// </summary>
 public class CourseErrorResponseTests : IDisposable
 {
@@ -47,6 +51,19 @@ public class CourseErrorResponseTests : IDisposable
 
     private CalcSeriesController Series(int userId, bool isAdmin = false) =>
         new(new CalcEditionService(_db, TestServices.Friends(_db)), _db) { ControllerContext = As(userId, isAdmin) };
+
+    private RepertoireController Repertoires(int userId)
+    {
+        var cache = TestServices.Cache();
+        var service = TestServices.Repertoire(_db, cache);
+        return new RepertoireController(service, ReprocessTestHelper.Build(_db), new RecordingReprocessLauncher(),
+            new RepertoireTrainingService(_db), new SharedLineService(_db),
+            new RepertoirePositionLookupService(new RepertoireLineSource(_db, cache), cache), new FlashcardMarkService(_db),
+            new RepertoireSimilarityService(new RepertoireLineSource(_db, cache)), TestServices.Conversion(_db, repertoire: service))
+        { ControllerContext = As(userId) };
+    }
+
+    private WorksheetController Worksheets(int userId) => new(new WorksheetService(_db)) { ControllerContext = As(userId) };
 
     private async Task<int> SeedBookAsync(bool isPublic)
     {
@@ -95,6 +112,17 @@ public class CourseErrorResponseTests : IDisposable
         }
     }
 
+    /// <summary>Admin vor einem Buch, das es nicht gibt: 404 wie für jeden — nicht 403 und nicht leer.</summary>
+    [Fact]
+    public async Task Admin_UnbekanntesBuch_ist404_inDerKalkulationsSerie()
+    {
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () =>
+            (await Series(ViewerId, isAdmin: true).ListManage(UnknownBookId, default)).Result), 404, "Book not found.");
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => (await Series(ViewerId, isAdmin: true).Upsert(UnknownBookId,
+            new CalcEditionInputDto { Chapter = "Woche 1", PublishAt = DateTime.UtcNow }, default)).Result), 404, "Book not found.");
+        Assert.False(await _db.CalcEditions.AnyAsync());
+    }
+
     [Fact]
     public async Task BesitzerUndAdmin_duerfenVerwalten()
     {
@@ -116,6 +144,68 @@ public class CourseErrorResponseTests : IDisposable
         DomainHttp.AssertError(await Series(OwnerId).RemoveMember(bookId, ViewerId, default), 404, "Member not found.");
         DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await Series(ViewerId).ListVisible(bookId, default)).Result),
             404, "Book not found.");
+    }
+
+    /// <summary>Repertoire: Trainer, Flashcards, Teilen-Link und Stellungssuche antworteten mit leerem 404/400.</summary>
+    [Fact]
+    public async Task Repertoire_FehlerantwortenOhneRumpf_gibtEsNichtMehr()
+    {
+        const int unknownRepertoireId = 991197;
+        var c = Repertoires(ViewerId);
+
+        DomainHttp.AssertError(await c.GetFlashcardMarks(unknownRepertoireId, default), 404, "Repertoire not found.");
+        DomainHttp.AssertError(await c.MarkFlashcard(unknownRepertoireId, "k1", default), 404, "Repertoire not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.TrainingLines(unknownRepertoireId, default)).Result),
+            404, "Repertoire not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.TrainingConfig(unknownRepertoireId, default)).Result),
+            404, "Repertoire not found.");
+        DomainHttp.AssertError(await c.TrainingPause(unknownRepertoireId, new SetPausedRequest(), default), 404, "Repertoire not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.TrainingReset(unknownRepertoireId, default)).Result),
+            404, "Repertoire not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.ShareLine(unknownRepertoireId,
+            new ShareLineInputDto { Pgn = "1. e4 e5 *" }, default)).Result), 404, "Repertoire not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.GetSharedLine("a7-011-unbekannt", default)).Result),
+            404, "Shared line not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.PositionLookup(
+            new PositionLookupRequestDto { Fen = " " }, default)).Result), 400, "FEN is required.");
+        DomainHttp.AssertError(await c.SetUserSrConfig(new SetSrConfigRequest { Levels = new List<SrLevelDto>() }, default),
+            400, "Invalid SR levels.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.TrainingLineReview(unknownRepertoireId,
+            new LineReviewRequest { LineKey = " " }, default)).Result), 400, "Line key is required.");
+        // Die Dienst-Fehler kommen über den Filter mit derselben Form (vorher je Action von Hand gefangen).
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () => await c.GetCombinedPgn(unknownRepertoireId)),
+            404, "Repertoire not found.");
+    }
+
+    /// <summary>Aufgabenblätter: alle elf Null-Rückgaben waren ein leerer 404.</summary>
+    [Fact]
+    public async Task Aufgabenblatt_FehlerantwortenOhneRumpf_gibtEsNichtMehr()
+    {
+        const int unknownSheetId = 991196;
+        var c = Worksheets(ViewerId);
+
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.Get(unknownSheetId)).Result), 404, "Worksheet not found.");
+        DomainHttp.AssertError(await c.Delete(unknownSheetId), 404, "Worksheet not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.Share(unknownSheetId)).Result), 404, "Worksheet not found.");
+        DomainHttp.AssertError(await c.DeleteItem(unknownSheetId, 1), 404, "Item not found.");
+        DomainHttp.AssertError(Assert.IsAssignableFrom<IActionResult>((await c.Shared("a7-011-unbekannt")).Result),
+            404, "Shared worksheet not found.");
+    }
+
+    /// <summary>Repertoire-Upload und „→ Kurs umwandeln" fingen InvalidOperationException → 400 — damit auch einen
+    /// verworfenen DbContext, ohne Log. Jetzt läuft der echte Fehler durch (im Betrieb 500 + Error-Log).</summary>
+    [Fact]
+    public async Task EchterFehler_wirdAuchImRepertoireNichtMehrZu400()
+    {
+        var controller = Repertoires(ViewerId);
+        var bytes = System.Text.Encoding.UTF8.GetBytes("[Event \"x\"]\n\n1. e4 e5 *");
+        var file = new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", "a.pgn");
+        _db.Dispose();
+
+        await Assert.ThrowsAnyAsync<ObjectDisposedException>(() => DomainHttp.ResultAsync(async () =>
+            await controller.ConvertToCourse(991195)));
+        await Assert.ThrowsAnyAsync<ObjectDisposedException>(() => DomainHttp.ResultAsync(async () =>
+            (await controller.UploadFile(991195, file)).Result));
     }
 
     /// <summary>Vorher: catch (InvalidOperationException ex) → 400 „Cannot access a disposed context instance…",

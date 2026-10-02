@@ -155,10 +155,10 @@ public class RepertoireService
         // PgnContent-/ChessableOidsCache-LONGTEXTs (bis 1000 × 10 MB) in den Speicher, auch für eine FREMDE Id
         // vor dem 404, obwohl die Antwort nur Name, Größe und Datum braucht (Codereview N8-004).
         if (!await CanAccessAsync(id, userId))
-            throw new KeyNotFoundException("Repertoire not found.");
+            throw new NotFoundException("Repertoire not found.");
         var rep = await _db.Repertoires.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == id)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
+            ?? throw new NotFoundException("Repertoire not found.");
         var files = await _db.RepertoireFiles.AsNoTracking()
             .Where(f => f.RepertoireId == id)
             .OrderBy(f => f.Id)
@@ -244,7 +244,7 @@ public class RepertoireService
     {
         var rep = await _db.Repertoires
             .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
+            ?? throw new NotFoundException("Repertoire not found.");
 
         var nameChanged = dto.Name != null && dto.Name != rep.Name;
         if (dto.Name != null) rep.Name = dto.Name;
@@ -289,7 +289,7 @@ public class RepertoireService
     public async Task DeleteAsync(int id, int userId)
     {
         var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
+            ?? throw new NotFoundException("Repertoire not found.");
 
         // Empfänger VOR dem Entfernen der Shares merken (danach nicht mehr abfragbar).
         var recipientIds = await _db.RepertoireShares
@@ -307,9 +307,9 @@ public class RepertoireService
     private async Task<Repertoire> EnsureOwnedAsync(int userId, int repertoireId)
     {
         var rep = await _db.Repertoires.FirstOrDefaultAsync(r => r.Id == repertoireId)
-            ?? throw new KeyNotFoundException("Repertoire not found.");
+            ?? throw new NotFoundException("Repertoire not found.");
         if (rep.UserId != userId)
-            throw new UnauthorizedAccessException("Only the owner can share this repertoire.");
+            throw new ForbiddenException("Only the owner can share this repertoire.");
         return rep;
     }
 
@@ -458,7 +458,7 @@ public class RepertoireService
         var file = await _db.RepertoireFiles
             .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId);
         if (file == null || !await RepertoireAccess.CanReadAsync(_db, repertoireId, userId))
-            throw new KeyNotFoundException("File not found.");
+            throw new NotFoundException("File not found.");
 
         // Download: interne Marker raus, Info-Linien mit „Info | " im White-Header (wie der Gesamt-Download).
         return (file.FileName, PgnParser.ForDownload(RepertoirePgnCleanup.WithoutHidden(file.PgnContent)));
@@ -469,7 +469,7 @@ public class RepertoireService
         var file = await _db.RepertoireFiles
             .Include(f => f.Repertoire)
             .FirstOrDefaultAsync(f => f.Id == fileId && f.RepertoireId == repertoireId && f.Repertoire.UserId == userId)
-            ?? throw new KeyNotFoundException("File not found.");
+            ?? throw new NotFoundException("File not found.");
 
         _db.RepertoireFiles.Remove(file);
         file.Repertoire.UpdatedAt = DateTime.UtcNow;
@@ -484,7 +484,7 @@ public class RepertoireService
         // ZUERST prüfen, dann laden: sonst las jede Anfrage auf eine FREMDE Id den ganzen Dateibestand samt
         // ChessableOidsCache aus der DB, bevor 404 kam (Codereview N8-004). Geladen wird nur noch PgnContent.
         if (!await CanAccessAsync(repertoireId, userId))
-            throw new KeyNotFoundException("Repertoire not found.");
+            throw new NotFoundException("Repertoire not found.");
         var pgns = await _db.RepertoireFiles.AsNoTracking()
             .Where(f => f.RepertoireId == repertoireId)
             .OrderBy(f => f.Id)

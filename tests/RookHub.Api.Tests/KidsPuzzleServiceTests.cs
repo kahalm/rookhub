@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -273,12 +274,13 @@ public class KidsPuzzleServiceTests : IDisposable
         var calc = await AddBookAsync("Rechnen", forKids: true, isCalculation: true);
         await AddLineAsync(calc, "c1");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetCoursePuzzlesAsync(normal.Id));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetCoursePuzzlesAsync(calc.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetCoursePuzzlesAsync(normal.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => _service.GetCoursePuzzlesAsync(calc.Id));
 
         var controller = new KidsController(_service);
-        var result = await controller.GetCoursePuzzles(normal.Id, null, CancellationToken.None);
-        Assert.IsType<NotFoundObjectResult>(result.Result);
+        var result = await DomainHttp.ResultAsync(async () =>
+            (await controller.GetCoursePuzzles(normal.Id, null, CancellationToken.None)).Result);
+        DomainHttp.AssertError(result, 404, "Course not found.");
     }
 
     [Fact]
@@ -311,7 +313,7 @@ public class KidsPuzzleServiceTests : IDisposable
         var service = new KidsPuzzleService(_db, new[] { "de" });
 
         Assert.Equal(new[] { german.Id }, (await service.GetCoursesAsync()).Select(c => c.BookId));
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.GetCoursePuzzlesAsync(english.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetCoursePuzzlesAsync(english.Id));
 
         // Uebersetzung laeuft: weiter unsichtbar.
         _db.CourseTranslationJobs.Add(new CourseTranslationJob { BookId = english.Id, Language = "de", Status = CourseTranslationJobStatus.Running, CreatedAt = DateTime.UtcNow });

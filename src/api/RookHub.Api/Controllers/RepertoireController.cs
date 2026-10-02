@@ -6,6 +6,14 @@ using RookHub.Api.Services;
 
 namespace RookHub.Api.Controllers;
 
+/// <summary>
+/// Repertoires: Verwaltung, Dateien, Teilen, Trainer, Stellungssuche, Lochfinder.
+///
+/// <para>Fängt nichts selbst (Codereview A7-011): die Dienste werfen Domänen-Ausnahmen, der globale
+/// <c>DomainExceptionFilter</c> macht daraus <c>{ message }</c> (bzw. <c>{ message, code }</c>) mit
+/// 404/400/403. Null-/bool-Rückgaben der Trainer-, Flashcard- und Teilen-Dienste bekommen hier
+/// denselben Rumpf — eine Fehlerantwort ohne <c>{ message }</c> gibt es nicht mehr.</para>
+/// </summary>
 [ApiController]
 [Route("api/repertoires")]
 [Authorize]
@@ -35,6 +43,11 @@ public class RepertoireController : BaseApiController
         _positionLookup = positionLookup;
     }
 
+    // Fehlerantworten der Null-/bool-Rückgaben — dieselbe Form { message } wie die Domänen-Ausnahmen.
+    private NotFoundObjectResult RepertoireNotFound() => NotFound(new { message = "Repertoire not found." });
+    private BadRequestObjectResult FenRequired() => BadRequest(new { message = "FEN is required." });
+    private BadRequestObjectResult InvalidSrLevels() => BadRequest(new { message = "Invalid SR levels." });
+
     // ===== Stellungs-Rückwärtssuche: „In welchen Repertoire-Linien kommt diese Stellung vor?" =====
 
     /// <summary>Findet alle eigenen Repertoire-Linien (Repertoire → Kapitel → Linie), in denen die
@@ -42,7 +55,7 @@ public class RepertoireController : BaseApiController
     [HttpPost("position-lookup")]
     public async Task<ActionResult<PositionLookupResultDto>> PositionLookup([FromBody] PositionLookupRequestDto dto, CancellationToken ct)
     {
-        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return FenRequired();
         return Ok(await _positionLookup.LookupAsync(GetUserId(), dto.Fen, ct));
     }
 
@@ -54,7 +67,7 @@ public class RepertoireController : BaseApiController
     [EnableRateLimiting(RateLimitPartitions.RepertoireScanPolicy)]
     public async Task<ActionResult<PositionTreeResultDto>> PositionTree([FromBody] PositionTreeRequestDto dto, CancellationToken ct)
     {
-        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return FenRequired();
         return Ok(await _positionLookup.TreeAsync(GetUserId(), dto.Fen, dto.MaxDepth, ct));
     }
 
@@ -69,7 +82,7 @@ public class RepertoireController : BaseApiController
     [EnableRateLimiting(RateLimitPartitions.RepertoireScanPolicy)]
     public async Task<ActionResult<SimilarPositionsResultDto>> SimilarPositions([FromBody] SimilarPositionsRequestDto dto, CancellationToken ct)
     {
-        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return BadRequest();
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Fen)) return FenRequired();
         return Ok(await _similarity.FindAsync(GetUserId(), dto, ct));
     }
 
@@ -82,7 +95,7 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<SharedLineDto>> GetSharedLine(string token, CancellationToken ct)
     {
         var dto = await _sharedLines.GetByTokenAsync(token, ct);
-        return dto == null ? NotFound() : Ok(dto);
+        return dto == null ? NotFound(new { message = "Shared line not found." }) : Ok(dto);
     }
 
     /// <summary>Erzeugt einen öffentlichen Nur-Ansehen-Link für eine Linie des Repertoires.
@@ -91,15 +104,8 @@ public class RepertoireController : BaseApiController
     [HttpPost("{id:int}/share-line")]
     public async Task<ActionResult<ShareLineResultDto>> ShareLine(int id, [FromBody] ShareLineInputDto dto, CancellationToken ct)
     {
-        try
-        {
-            var res = await _sharedLines.CreateAsync(GetUserId(), id, dto, ct);
-            return res == null ? NotFound() : Ok(res);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var res = await _sharedLines.CreateAsync(GetUserId(), id, dto, ct);
+        return res == null ? RepertoireNotFound() : Ok(res);
     }
 
     // ===== Lochfinder + Linien-Häufigkeiten (Lichess-Explorer) =====
@@ -117,18 +123,7 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<ExplorerAnalysisResultDto>> ExplorerAnalysis(
         int id, [FromBody] ExplorerAnalysisRequestDto dto, [FromServices] RepertoireExplorerService explorer, CancellationToken ct)
     {
-        try
-        {
-            return Ok(await explorer.AnalyzeAsync(GetUserId(), id, dto, ct));
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(await explorer.AnalyzeAsync(GetUserId(), id, dto, ct));
     }
 
     // ===== Repertoire-Trainer (Spaced Repetition, 9-Stufen-Leiter) =====
@@ -144,14 +139,14 @@ public class RepertoireController : BaseApiController
     /// <summary>Setzt die globalen Nutzer-Intervalle (`levels`=null → auf Defaults zurücksetzen).</summary>
     [HttpPut("training/sr-config")]
     public async Task<IActionResult> SetUserSrConfig([FromBody] SetSrConfigRequest req, CancellationToken ct)
-        => await _training.SetUserConfigAsync(GetUserId(), req.Levels, ct) ? NoContent() : BadRequest();
+        => await _training.SetUserConfigAsync(GetUserId(), req.Levels, ct) ? NoContent() : InvalidSrLevels();
 
     /// <summary>Als Flashcard markierte Linien-Schlüssel des Users. 404 ohne Zugriff.</summary>
     [HttpGet("{id:int}/flashcards")]
     public async Task<IActionResult> GetFlashcardMarks(int id, CancellationToken ct)
     {
         var keys = await _flashcards.GetRepertoireMarksAsync(GetUserId(), id, ct);
-        return keys is null ? NotFound() : Ok(new { lineKeys = keys });
+        return keys is null ? RepertoireNotFound() : Ok(new { lineKeys = keys });
     }
 
     /// <summary>Markiert eine Repertoire-Linie (LineKey) als Flashcard (idempotent).</summary>
@@ -159,7 +154,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> MarkFlashcard(int id, string lineKey, CancellationToken ct)
     {
         var res = await _flashcards.SetRepertoireMarkAsync(GetUserId(), id, lineKey, marked: true, ct);
-        return res is null ? NotFound() : Ok(new { marked = true });
+        return res is null ? RepertoireNotFound() : Ok(new { marked = true });
     }
 
     /// <summary>Entfernt die Flashcard-Markierung einer Repertoire-Linie (idempotent).</summary>
@@ -167,7 +162,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> UnmarkFlashcard(int id, string lineKey, CancellationToken ct)
     {
         var res = await _flashcards.SetRepertoireMarkAsync(GetUserId(), id, lineKey, marked: false, ct);
-        return res is null ? NotFound() : Ok(new { marked = false });
+        return res is null ? RepertoireNotFound() : Ok(new { marked = false });
     }
 
     /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
@@ -176,16 +171,17 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<List<LineStateDto>>> TrainingLines(int id, CancellationToken ct)
     {
         var lines = await _training.GetLineStatesAsync(GetUserId(), id, ct);
-        return lines is null ? NotFound() : Ok(lines);
+        return lines is null ? RepertoireNotFound() : Ok(lines);
     }
 
     /// <summary>Bewertet eine geübte Linie (richtig → +1 Stufe, falsch → Stufe 1) und plant sie neu.</summary>
     [HttpPost("{id:int}/training/line-review")]
     public async Task<ActionResult<LineStateDto>> TrainingLineReview(int id, [FromBody] LineReviewRequest req, CancellationToken ct)
     {
-        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.LineKey)) return BadRequest();
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(req.LineKey))
+            return BadRequest(new { message = "Line key is required." });
         var dto = await _training.ReviewLineAsync(GetUserId(), id, req, ct);
-        return dto is null ? NotFound() : Ok(dto);
+        return dto is null ? RepertoireNotFound() : Ok(dto);
     }
 
     /// <summary>Effektive SR-Konfiguration dieses Repertoires (Override &gt; global &gt; Default) +
@@ -194,7 +190,7 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<SrConfigDto>> TrainingConfig(int id, CancellationToken ct)
     {
         var cfg = await _training.GetConfigAsync(GetUserId(), id, ct);
-        return cfg is null ? NotFound() : Ok(cfg);
+        return cfg is null ? RepertoireNotFound() : Ok(cfg);
     }
 
     /// <summary>Setzt den pro-Repertoire-Intervall-Override (`levels`=null → Override löschen =
@@ -203,7 +199,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> SetTrainingConfig(int id, [FromBody] SetSrConfigRequest req, CancellationToken ct)
     {
         var res = await _training.SetRepertoireConfigAsync(GetUserId(), id, req.Levels, ct);
-        return res is null ? NotFound() : res.Value ? NoContent() : BadRequest();
+        return res is null ? RepertoireNotFound() : res.Value ? NoContent() : InvalidSrLevels();
     }
 
     /// <summary>Pausiert/aktiviert Linien (Kapitel = alle seine Linien-Schlüssel) — pausierte Linien
@@ -212,7 +208,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> TrainingPause(int id, [FromBody] SetPausedRequest req, CancellationToken ct)
     {
         var n = await _training.SetPausedAsync(GetUserId(), id, req.LineKeys ?? new(), req.Paused, ct);
-        return n is null ? NotFound() : Ok(new { affected = n });
+        return n is null ? RepertoireNotFound() : Ok(new { affected = n });
     }
 
     /// <summary>Nimmt Linien in den Übungspool auf (Learn/manuell; Kapitel/Kurs = deren Linien-
@@ -221,7 +217,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> TrainingPromote(int id, [FromBody] PromoteLinesRequest req, CancellationToken ct)
     {
         var n = await _training.PromoteAsync(GetUserId(), id, req.LineKeys ?? new(), ct);
-        return n is null ? NotFound() : Ok(new { affected = n });
+        return n is null ? RepertoireNotFound() : Ok(new { affected = n });
     }
 
     /// <summary>Macht Pool-Linien sofort fällig + hebt Pause auf (leere Liste = ganzer Kurs). 404 nicht
@@ -230,7 +226,7 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> TrainingMakeDue(int id, [FromBody] MakeDueRequest req, CancellationToken ct)
     {
         var n = await _training.MakeDueAsync(GetUserId(), id, req.LineKeys ?? new(), ct);
-        return n is null ? NotFound() : Ok(new { affected = n });
+        return n is null ? RepertoireNotFound() : Ok(new { affected = n });
     }
 
     /// <summary>Löscht ALLE Linien-SR-Zustände des eigenen Users für dieses Repertoire — der Trainer
@@ -240,7 +236,7 @@ public class RepertoireController : BaseApiController
     public async Task<ActionResult<int>> TrainingReset(int id, CancellationToken ct)
     {
         var deleted = await _training.ResetAsync(GetUserId(), id, ct);
-        return deleted is null ? NotFound() : Ok(new { deleted });
+        return deleted is null ? RepertoireNotFound() : Ok(new { deleted });
     }
 
     [HttpGet]
@@ -278,41 +274,20 @@ public class RepertoireController : BaseApiController
     [HttpGet("{id}")]
     public async Task<ActionResult<RepertoireDetailDto>> GetById(int id)
     {
-        try
-        {
-            return Ok(await _repertoireService.GetByIdAsync(id, GetUserId()));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        return Ok(await _repertoireService.GetByIdAsync(id, GetUserId()));
     }
 
     [HttpPut("{id}")]
     public async Task<ActionResult<RepertoireDto>> Update(int id, [FromBody] UpdateRepertoireDto dto)
     {
-        try
-        {
-            return Ok(await _repertoireService.UpdateAsync(id, GetUserId(), dto));
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        return Ok(await _repertoireService.UpdateAsync(id, GetUserId(), dto));
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        try
-        {
-            await _repertoireService.DeleteAsync(id, GetUserId());
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _repertoireService.DeleteAsync(id, GetUserId());
+        return NoContent();
     }
 
     [HttpPost("{id}/files")]
@@ -328,56 +303,29 @@ public class RepertoireController : BaseApiController
         if (file.Length > RepertoireService.MaxFileSize)
             return BadRequest(new { message = $"File size exceeds maximum of {RepertoireService.MaxFileSize / 1024 / 1024} MB." });
 
-        try
-        {
-            using var stream = file.OpenReadStream();
-            var result = await _repertoireService.UploadFileAsync(id, GetUserId(), file.FileName, stream);
-            return Ok(result);
-        }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        using var stream = file.OpenReadStream();
+        return Ok(await _repertoireService.UploadFileAsync(id, GetUserId(), file.FileName, stream));
     }
 
     [HttpGet("{id}/files/{fileId}")]
     public async Task<IActionResult> DownloadFile(int id, int fileId)
     {
-        try
-        {
-            var (fileName, content) = await _repertoireService.DownloadFileAsync(id, fileId, GetUserId());
-            return File(System.Text.Encoding.UTF8.GetBytes(content), "application/x-chess-pgn", fileName);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var (fileName, content) = await _repertoireService.DownloadFileAsync(id, fileId, GetUserId());
+        return File(System.Text.Encoding.UTF8.GetBytes(content), "application/x-chess-pgn", fileName);
     }
 
     [HttpDelete("{id}/files/{fileId}")]
     public async Task<IActionResult> DeleteFile(int id, int fileId)
     {
-        try
-        {
-            await _repertoireService.DeleteFileAsync(id, fileId, GetUserId());
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _repertoireService.DeleteFileAsync(id, fileId, GetUserId());
+        return NoContent();
     }
 
     [HttpGet("{id}/pgn")]
     public async Task<IActionResult> GetCombinedPgn(int id)
     {
-        try
-        {
-            var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());
-            return Content(pgn, "text/plain");
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        var pgn = await _repertoireService.GetCombinedPgnAsync(id, GetUserId());
+        return Content(pgn, "text/plain");
     }
 
     /// <summary>„Repertoire → Kurs umwandeln" (Verschieben): legt aus dem Repertoire-PGN einen
@@ -386,44 +334,27 @@ public class RepertoireController : BaseApiController
     /// Repertoire ohne Puzzle-Marker liefert 400 (kein quiz-barer Inhalt) — dann bleibt das Repertoire
     /// erhalten (Löschung passiert erst NACH erfolgreicher Kurs-Erstellung). Ein noch leeres Repertoire
     /// (keine PGN importiert) liefert ebenfalls 400, aber mit <c>code = "repertoire_empty"</c>, damit das
-    /// Frontend den Unterschied zeigen kann.</summary>
+    /// Frontend den Unterschied zeigen kann (<see cref="CourseConversionException"/> → Filter).</summary>
     [HttpPost("{id}/convert-to-course")]
     public async Task<IActionResult> ConvertToCourse(int id)
-    {
-        try { return Ok(await _conversion.ConvertRepertoireToCourseAsync(GetUserId(), id)); }
-        // VOR dem allgemeinen 400-Zweig: nur dieser Fall trägt ein `code`-Feld (der Leer-Fall ist
-        // für den Nutzer ein anderer als „PGN ohne Puzzle-Linien"), und die übrigen 400er sollen
-        // ihre Antwortform behalten.
-        catch (CourseConversionException ex) { return BadRequest(new { message = ex.Message, code = ex.Code }); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
-    }
+        => Ok(await _conversion.ConvertRepertoireToCourseAsync(GetUserId(), id));
 
     /// <summary>Teilt ein eigenes Repertoire mit ausgewählten (befreundeten) Nutzern (Batch).
     /// Antwortet <c>{ shared, skipped[] }</c> (übersprungene Empfänger mit Grund).</summary>
     [HttpPost("{id}/share")]
     public async Task<ActionResult<RepertoireShareResultDto>> Share(int id, [FromBody] ShareRepertoireInputDto dto)
-    {
-        try { return Ok(await _repertoireService.ShareAsync(GetUserId(), id, dto.RecipientUserIds ?? new List<int>(), IsAdmin)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
-    }
+        => Ok(await _repertoireService.ShareAsync(GetUserId(), id, dto.RecipientUserIds ?? new List<int>(), IsAdmin));
 
     /// <summary>Mit welchen Nutzern ist dieses eigene Repertoire aktuell geteilt? (Für den Teilen-Dialog.)</summary>
     [HttpGet("{id}/shares")]
     public async Task<ActionResult<List<RepertoireShareRecipientDto>>> Shares(int id)
-    {
-        try { return Ok(await _repertoireService.GetShareRecipientsAsync(GetUserId(), id)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
-    }
+        => Ok(await _repertoireService.GetShareRecipientsAsync(GetUserId(), id));
 
     /// <summary>Nimmt die Freigabe des eigenen Repertoires für einen Empfänger zurück (idempotent).</summary>
     [HttpDelete("{id}/share/{recipientId}")]
     public async Task<IActionResult> Unshare(int id, int recipientId)
     {
-        try { await _repertoireService.UnshareAsync(GetUserId(), id, recipientId); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
-        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        await _repertoireService.UnshareAsync(GetUserId(), id, recipientId);
+        return NoContent();
     }
 }

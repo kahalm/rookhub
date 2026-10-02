@@ -85,8 +85,9 @@ public class CourseTranslationController : BaseApiController
             {
                 sourceLanguage = CourseCommentLocalizer.NormalizeLanguage(dto.Language),
             }),
+            // Dieselbe Antwort wie die übrigen Besitzer-oder-Admin-Pfade (CourseAccess.LoadManageableAsync, A7-011).
             CourseCommentLanguageStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden,
-                new { message = "Only the owner or an admin can change the course language." }),
+                new { message = CourseAccess.ManageForbiddenMessage }),
             CourseCommentLanguageStatus.Invalid => BadRequest(new
             {
                 reason = "invalid-language", message = "Not a language code.",

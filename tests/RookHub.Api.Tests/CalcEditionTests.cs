@@ -105,7 +105,7 @@ public class CalcEditionTests : IDisposable
         var bookId = await SeedBookAsync();
         await _editions.UpsertAsync(bookId, new CalcEditionInputDto { Chapter = "Woche B", PublishAt = DateTime.UtcNow.AddDays(2) });
         var wb = await _db.BookPuzzles.FirstAsync(p => p.Chapter == "Woche B");
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
         var owner = await _calc.GetPositionAsync(OwnerId, wb.Id, isAdmin: false);
         Assert.Equal(wb.Id, owner.Id);
     }
@@ -172,7 +172,7 @@ public class CalcEditionTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Nicht-Mitglied (kein Owner/Share/Gruppe): kein Zugriff → wie „nicht gefunden".
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetBookAsync(ViewerId, bookId, isAdmin: false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetBookAsync(ViewerId, bookId, isAdmin: false));
 
         // Verteiler-Mitglied: Zugriff.
         await _editions.UpsertMemberAsync(bookId, "viewer", isTester: false);
@@ -218,7 +218,7 @@ public class CalcEditionTests : IDisposable
         var wb = await _db.BookPuzzles.FirstAsync(p => p.Chapter == "Woche B");
 
         // Mitglied kann die noch nicht freigegebene Woche nicht öffnen → kein Vermerk.
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
+        await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetPositionAsync(ViewerId, wb.Id, isAdmin: false));
         Assert.Equal(0, await _db.CalcEditionViews.CountAsync());
     }
 

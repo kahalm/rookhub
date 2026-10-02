@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -75,7 +76,7 @@ public class CalculationServiceTests : IDisposable
     {
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: 999);   // fremdes persönliches Buch
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.GetBookAsync(user.Id, book.Id, isAdmin: false));
     }
 
@@ -96,7 +97,7 @@ public class CalculationServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: 999);
         var pos = await SeedPositionAsync(book);
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.GetPositionAsync(user.Id, pos.Id, isAdmin: false));
     }
 
@@ -106,7 +107,7 @@ public class CalculationServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: 999);
         var pos = await SeedPositionAsync(book);
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = "{\"v\":1}" }, isAdmin: false));
         Assert.Empty(_db.CalculationTrees);
     }
@@ -236,7 +237,7 @@ public class CalculationServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: user.Id);
         var pos = await SeedPositionAsync(book);
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = "{nope" }, isAdmin: false));
     }
 
@@ -246,7 +247,7 @@ public class CalculationServiceTests : IDisposable
         var user = await CreateUserAsync();
         var book = await SeedBookAsync(ownerUserId: user.Id);
         var pos = await SeedPositionAsync(book);
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = "  " }, isAdmin: false));
     }
 
@@ -257,7 +258,7 @@ public class CalculationServiceTests : IDisposable
         var book = await SeedBookAsync(ownerUserId: user.Id);
         var pos = await SeedPositionAsync(book);
         var huge = "\"" + new string('x', CalculationService.MaxTreeJsonLength) + "\"";
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.SaveTreeAsync(user.Id, pos.Id, new SaveCalcTreeDto { TreeJson = huge }, isAdmin: false));
     }
 
@@ -265,7 +266,7 @@ public class CalculationServiceTests : IDisposable
     public async Task SaveTree_UnknownPosition_Throws404()
     {
         var user = await CreateUserAsync();
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<NotFoundException>(
             () => _svc.SaveTreeAsync(user.Id, 12345, new SaveCalcTreeDto { TreeJson = "{}" }, isAdmin: true));
     }
 
@@ -465,7 +466,7 @@ public class CalculationServiceTests : IDisposable
     public async Task PatchMeta_SecondsToken_TooLong_Throws400()
     {
         var (user, _, pos) = await SeedOwnPositionAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto
             {
                 AddSeconds = 10,
@@ -542,9 +543,9 @@ public class CalculationServiceTests : IDisposable
         var (user, _, pos) = await SeedOwnPositionAsync();
 
         // Eine unbekannte Stufe ist ein Client-Fehler — NICHT still auf 0 („nicht gelöst") klemmen.
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto { Grade = grade }, isAdmin: false));
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.SaveTreeAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.SaveTreeAsync(user.Id, pos.Id,
             new SaveCalcTreeDto { TreeJson = "{\"v\":1}", Grade = grade }, isAdmin: false));
         Assert.Empty(_db.CalculationTrees);
     }
@@ -637,9 +638,9 @@ public class CalculationServiceTests : IDisposable
     public async Task PatchMeta_ChoiceTooLong_Throws400()
     {
         var (user, _, pos) = await SeedOwnPositionAsync();
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto { ChosenSan = new string('N', 21) }, isAdmin: false));
-        await Assert.ThrowsAsync<ArgumentException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<DomainValidationException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto { ChosenSan = "Nd5", ChosenUci = new string('a', 11) }, isAdmin: false));
         Assert.Empty(_db.CalculationTrees);
     }
@@ -717,7 +718,7 @@ public class CalculationServiceTests : IDisposable
         var book = await SeedBookAsync(ownerUserId: 999);   // fremdes persönliches Buch
         var pos = await SeedPositionAsync(book);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.PatchMetaAsync(user.Id, pos.Id,
             new PatchCalcMetaDto { Grade = (int)CalculationGrade.Solved, AddSeconds = 60 }, isAdmin: false));
         Assert.Empty(_db.CalculationTrees);
     }
@@ -726,7 +727,7 @@ public class CalculationServiceTests : IDisposable
     public async Task PatchMeta_UnknownPosition_Throws404()
     {
         var user = await CreateUserAsync();
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _svc.PatchMetaAsync(user.Id, 12345,
+        await Assert.ThrowsAsync<NotFoundException>(() => _svc.PatchMetaAsync(user.Id, 12345,
             new PatchCalcMetaDto { Grade = (int)CalculationGrade.MoveNoSideLines }, isAdmin: true));
     }
 

@@ -18,6 +18,10 @@ public class WorksheetController : BaseApiController
 
     public WorksheetController(WorksheetService worksheets) => _worksheets = worksheets;
 
+    // Jede Fehlerantwort trägt { message } wie in den übrigen Kurs-Controllern (Codereview A7-011; vorher leerer 404).
+    private NotFoundObjectResult SheetNotFound() => NotFound(new { message = "Worksheet not found." });
+    private NotFoundObjectResult ItemNotFound() => NotFound(new { message = "Item not found." });
+
     /// <summary>Übersicht: Zwischenablage zuerst, dann die benannten Blätter (zuletzt geändert zuerst).</summary>
     [HttpGet]
     public async Task<ActionResult<List<WorksheetSummaryDto>>> List()
@@ -33,7 +37,7 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<WorksheetDto>> Get(int id)
     {
         var sheet = await _worksheets.GetAsync(GetUserId(), id);
-        return sheet == null ? NotFound() : Ok(sheet);
+        return sheet == null ? SheetNotFound() : Ok(sheet);
     }
 
     /// <summary>Leeres benanntes Blatt anlegen.</summary>
@@ -55,20 +59,20 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<WorksheetDto>> Update(int id, [FromBody] UpdateWorksheetDto dto)
     {
         var sheet = await _worksheets.UpdateAsync(GetUserId(), id, dto);
-        return sheet == null ? NotFound() : Ok(sheet);
+        return sheet == null ? SheetNotFound() : Ok(sheet);
     }
 
     /// <summary>Blatt löschen; die Zwischenablage wird dabei nur geleert.</summary>
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
-        => await _worksheets.DeleteAsync(GetUserId(), id) ? NoContent() : NotFound();
+        => await _worksheets.DeleteAsync(GetUserId(), id) ? NoContent() : SheetNotFound();
 
     /// <summary>Alle Stellungen eines Blatts entfernen.</summary>
     [HttpDelete("{id:int}/items")]
     public async Task<ActionResult<WorksheetDto>> Clear(int id)
     {
         var sheet = await _worksheets.ClearAsync(GetUserId(), id);
-        return sheet == null ? NotFound() : Ok(sheet);
+        return sheet == null ? SheetNotFound() : Ok(sheet);
     }
 
     /// <summary>„An Aufgabenblatt senden": Stellungen anhängen (<c>worksheetId</c> leer = Zwischenablage).</summary>
@@ -76,7 +80,7 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<AddWorksheetItemsResultDto>> AddItems([FromBody] AddWorksheetItemsDto dto)
     {
         var result = await _worksheets.AddItemsAsync(GetUserId(), dto.WorksheetId, dto.Items ?? new());
-        return result == null ? NotFound() : Ok(result);
+        return result == null ? SheetNotFound() : Ok(result);
     }
 
     /// <summary>Überschrift/Begleittext/Ausrichtung einer Aufgabe ändern.</summary>
@@ -84,13 +88,13 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<WorksheetItemDto>> UpdateItem(int id, int itemId, [FromBody] UpdateWorksheetItemDto dto)
     {
         var item = await _worksheets.UpdateItemAsync(GetUserId(), id, itemId, dto);
-        return item == null ? NotFound() : Ok(item);
+        return item == null ? ItemNotFound() : Ok(item);
     }
 
     /// <summary>Eine Aufgabe vom Blatt nehmen.</summary>
     [HttpDelete("{id:int}/items/{itemId:int}")]
     public async Task<IActionResult> DeleteItem(int id, int itemId)
-        => await _worksheets.DeleteItemAsync(GetUserId(), id, itemId) ? NoContent() : NotFound();
+        => await _worksheets.DeleteItemAsync(GetUserId(), id, itemId) ? NoContent() : ItemNotFound();
 
     /// <summary>Öffentlichen Link einschalten (idempotent) → `{ shareToken }`. Die Zwischenablage
     /// lässt sich nicht teilen (404) — sie ist Arbeitsfläche, ihr Inhalt wechselt ständig.</summary>
@@ -98,13 +102,13 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<WorksheetShareDto>> Share(int id)
     {
         var token = await _worksheets.ShareAsync(GetUserId(), id);
-        return token == null ? NotFound() : Ok(new WorksheetShareDto { ShareToken = token });
+        return token == null ? SheetNotFound() : Ok(new WorksheetShareDto { ShareToken = token });
     }
 
     /// <summary>Öffentlichen Link abschalten (ein späteres Teilen erzeugt ein neues Token).</summary>
     [HttpDelete("{id:int}/share")]
     public async Task<IActionResult> Unshare(int id)
-        => await _worksheets.UnshareAsync(GetUserId(), id) ? NoContent() : NotFound();
+        => await _worksheets.UnshareAsync(GetUserId(), id) ? NoContent() : SheetNotFound();
 
     /// <summary>Das geteilte Blatt hinter dem Link — OHNE Anmeldung (QR-Code auf dem Ausdruck).</summary>
     [HttpGet("shared/{token}")]
@@ -112,7 +116,7 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<SharedWorksheetDto>> Shared(string token)
     {
         var sheet = await _worksheets.GetSharedAsync(token);
-        return sheet == null ? NotFound() : Ok(sheet);
+        return sheet == null ? NotFound(new { message = "Shared worksheet not found." }) : Ok(sheet);
     }
 
     /// <summary>Reihenfolge setzen (Item-IDs in Wunsch-Abfolge).</summary>
@@ -120,6 +124,6 @@ public class WorksheetController : BaseApiController
     public async Task<ActionResult<WorksheetDto>> Reorder(int id, [FromBody] ReorderWorksheetDto dto)
     {
         var sheet = await _worksheets.ReorderAsync(GetUserId(), id, dto.ItemIds ?? new());
-        return sheet == null ? NotFound() : Ok(sheet);
+        return sheet == null ? SheetNotFound() : Ok(sheet);
     }
 }

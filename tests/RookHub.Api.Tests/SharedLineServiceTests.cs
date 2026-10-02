@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -101,14 +102,14 @@ public class SharedLineServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Owner_PgnOverCap_ThrowsArgumentException_AndStoresNothing()
+    public async Task Owner_PgnOverCap_Throws400_AndStoresNothing()
     {
         var owner = await AddUserAsync("owner");
         var repId = await AddRepertoireAsync(owner);
         // Übergroßes „PGN": ohne Cap landete jeder beliebig große Text als öffentlicher LONGTEXT-Blob.
         var huge = "[Event \"x\"]\n\n1. e4 e5 " + new string('y', SharedLineService.MaxPgnChars) + " *";
 
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<DomainValidationException>(
             () => _svc.CreateAsync(owner, repId, new ShareLineInputDto { Pgn = huge }));
         Assert.Empty(_db.SharedLines);
     }

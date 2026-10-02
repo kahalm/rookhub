@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Controllers;
 using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Exceptions;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
 
@@ -170,7 +171,7 @@ public class KidsProgressTests : IDisposable
     public async Task ZuVieleStufen_SindEinFehler()
     {
         var huge = new KidsProgressDto { Levels = Enumerable.Range(1, KidsProgressService.MaxLevels + 1).Select(i => L(i, 1, 0, 0, 1)).ToList() };
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.SyncAsync(1, huge));
+        await Assert.ThrowsAsync<DomainValidationException>(() => _service.SyncAsync(1, huge));
     }
 
     [Fact]
@@ -195,7 +196,9 @@ public class KidsProgressTests : IDisposable
         };
         var huge = new KidsProgressDto { Courses = Enumerable.Range(1, KidsProgressService.MaxCourses + 1).Select(i => C(i, 1)).ToList() };
 
-        Assert.IsType<BadRequestObjectResult>((await controller.PutProgress(huge, CancellationToken.None)).Result);
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () =>
+            (await controller.PutProgress(huge, CancellationToken.None)).Result),
+            400, $"At most {KidsProgressService.MaxCourses} courses.");
         var ok = Assert.IsType<OkObjectResult>((await controller.PutProgress(new KidsProgressDto { Levels = { L(1, 2, 0, 0, 1) } }, CancellationToken.None)).Result);
         Assert.Equal("L1:2/0/0@1 | ", Show((KidsProgressDto)ok.Value!));
         Assert.Equal(7, (await _db.KidsLevelProgresses.SingleAsync()).UserId);

@@ -209,7 +209,7 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isPublic: false, isCalculation: true);
         await SeedLineAsync(book, "1", "KW46", infoOnly: true);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPublicBookAsync(book.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetPublicBookAsync(book.Id));
     }
 
     [Fact]
@@ -218,14 +218,15 @@ public class PublicCalculationAccessTests : IDisposable
         var book = await SeedBookAsync(isPublic: false, isCalculation: true);
         await SeedLineAsync(book, "1", "KW46", infoOnly: true);
 
-        var res = await _calcController.GetPublicBook(book.Id, CancellationToken.None);
+        var res = await DomainHttp.ResultAsync(async () =>
+            (await _calcController.GetPublicBook(book.Id, CancellationToken.None)).Result);
 
-        Assert.IsType<NotFoundObjectResult>(res.Result);
+        DomainHttp.AssertError(res, 404, "Book not found.");
     }
 
     [Fact]
     public async Task GetPublicBook_Throws_ForMissingBook()
-        => await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPublicBookAsync(9999));
+        => await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetPublicBookAsync(9999));
 
     [Fact]
     public async Task GetPublicBook_ReturnsPositions_ForPublicCalculationBook()
@@ -326,9 +327,9 @@ public class PublicCalculationAccessTests : IDisposable
             forDaily: forDaily, forRandom: forRandom, forBlind: forBlind);
         await SeedLineAsync(book, "1", "KW46", infoOnly: true, comment: "geheime Hausaufgabe");
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => _calc.GetPublicBookAsync(book.Id));
-        Assert.IsType<NotFoundObjectResult>(
-            (await _calcController.GetPublicBook(book.Id, CancellationToken.None)).Result);
+        await Assert.ThrowsAsync<NotFoundException>(() => _calc.GetPublicBookAsync(book.Id));
+        DomainHttp.AssertError(await DomainHttp.ResultAsync(async () =>
+            (await _calcController.GetPublicBook(book.Id, CancellationToken.None)).Result), 404, "Book not found.");
     }
 
     [Fact]
