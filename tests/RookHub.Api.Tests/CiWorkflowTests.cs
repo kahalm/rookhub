@@ -719,6 +719,68 @@ public class CiWorkflowTests
         Assert.DoesNotContain("} | tee", scan);
     }
 
+    /// <summary>
+    /// Echte Ausgabe von <c>dotnet list package --vulnerable --include-transitive</c> (SDK 10.0.301).
+    /// Das erste Advisory eines Pakets steht in der Zeile mit „&gt;“, jedes weitere als Folgezeile OHNE
+    /// „&gt;“ darunter — und NICHT nach Schwere sortiert.
+    /// </summary>
+    private static readonly string[] NuGetFollowUpHigh =
+    [
+        "Project `p` has the following vulnerable packages",
+        "   [net10.0]: ",
+        "   Top-level Package          Requested   Resolved   Severity   Advisory URL                                     ",
+        "   > System.Net.Security      4.0.0       4.0.0      Moderate   https://github.com/advisories/GHSA-ch6p-4jcm-h8vh",
+        "                                                     High       https://github.com/advisories/GHSA-6xh7-4v2w-36q6",
+        "                                                     High       https://github.com/advisories/GHSA-qhqf-ghgh-x2m4",
+        "                                                     Moderate   https://github.com/advisories/GHSA-j8f4-2w4p-mhjc",
+    ];
+
+    private static readonly string[] NuGetCritical =
+    [
+        "Project `p` has the following vulnerable packages",
+        "   [net10.0]: ",
+        "   Top-level Package                Requested   Resolved   Severity   Advisory URL                                     ",
+        "   > System.Text.Encodings.Web      4.5.0       4.5.0      Critical   https://github.com/advisories/GHSA-ghhp-997w-qr28",
+    ];
+
+    private static readonly string[] NuGetModerateOnly =
+    [
+        "Project `p` has the following vulnerable packages",
+        "   [net10.0]: ",
+        "   Top-level Package                      Requested   Resolved   Severity   Advisory URL                                     ",
+        "   > System.IdentityModel.Tokens.Jwt      6.24.0      6.24.0     Moderate   https://github.com/advisories/GHSA-59j7-ghrg-fj52",
+        "",
+        "   Transitive Package                           Resolved   Severity   Advisory URL                                     ",
+        "   > Microsoft.IdentityModel.JsonWebTokens      6.24.0     Moderate   https://github.com/advisories/GHSA-59j7-ghrg-fj52",
+    ];
+
+    private static readonly string[] NuGetClean =
+    [
+        "The given project `p` has no vulnerable packages given the current sources.",
+    ];
+
+    /// <summary>
+    /// Das Erkennungsmuster des NuGet-Scans fachlich, nicht nur strukturell (Codereview I1-014, Nacharbeit):
+    /// das erste Muster pruefte nur die „&gt;“-Zeile eines Pakets und uebersah ein High, das als Folgezeile
+    /// darunter stand — der Scan endete gruen, gemeldet wurde nichts. Das Muster wird aus audit.yml gelesen
+    /// und wie <c>grep -E</c> Zeile fuer Zeile auf echte Tabellen angewendet.
+    /// </summary>
+    [Fact]
+    public void NuGetScan_FindsHighOrCritical_InEveryAdvisoryRow()
+    {
+        var scan = Regex.Match(WorkflowJob(Audit, "nuget"), @"(?ms)^      - name: [^\n]*\n        id: scan\s*$(.*?)(?=^      - |^  \S|\z)").Groups[1].Value;
+        var patterns = Regex.Matches(scan, @"grep -Eq '([^']+)' <<<""\$out""").Select(m => m.Groups[1].Value).ToList();
+        Assert.True(patterns.Count == 1, $"audit.yml/nuget: genau ein Schwere-Muster erwartet, gefunden {patterns.Count}");
+        var severe = new Regex(patterns[0]);
+
+        bool Hits(string[] lines) => lines.Any(severe.IsMatch);
+
+        Assert.True(Hits(NuGetFollowUpHigh), "High als Folgezeile ohne „>“ muss den Scan rot machen");
+        Assert.True(Hits(NuGetCritical), "Critical muss den Scan rot machen");
+        Assert.False(Hits(NuGetModerateOnly), "nur Moderate darf den Scan nicht rot machen");
+        Assert.False(Hits(NuGetClean), "ohne Befund darf der Scan nicht rot werden");
+    }
+
     [Fact]
     public void AuditFinding_IsReportedOnTheWeeklyRun()
     {

@@ -53,12 +53,16 @@ jobs:
           out=$(dotnet list src/api/RookHub.Api/RookHub.Api.csproj package --vulnerable --include-transitive 2>&1) || rc=$?
           printf '%s\n' "$out"
           { echo '## NuGet'; echo '```'; printf '%s\n' "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          # `dotnet list` endet auch MIT Befund mit 0 — die Schwere steht in der Tabelle (Zeilen mit „>").
+          # `dotnet list` endet auch MIT Befund mit 0 — die Schwere steht in der Tabelle, und zwar in
+          # JEDER Advisory-Zeile: das erste Advisory eines Pakets steht in der Zeile mit „>", jedes
+          # weitere als Folgezeile OHNE „>" darunter, unsortiert (System.Net.Security 4.0.0:
+          # Moderate, High, High, Moderate). Gesucht wird darum die Schwere direkt vor der
+          # Advisory-URL, in jeder Zeile (CiWorkflowTests prueft das Muster an einer echten Tabelle).
           if [ "$rc" -ne 0 ]; then
             echo "::warning title=NuGet-Audit::dotnet list package konnte nicht pruefen (Exit $rc)"
             exit 1
           fi
-          if grep -Eq '^\s*>.*\s(High|Critical)\s' <<<"$out"; then
+          if grep -Eq '\s(High|Critical)\s+https?://' <<<"$out"; then
             echo '::warning title=NuGet-Audit::Paket mit Schwachstelle high/critical — siehe Job-Summary'
             exit 1
           fi
