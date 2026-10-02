@@ -173,7 +173,7 @@ describe('NotificationsComponent', () => {
   describe('Push-Schalter', () => {
     function withPush(push: any, snackbar: any = { warn: jasmine.createSpy('warn') }) {
       const c = new NotificationsComponent(makeService(), translate, { navigateByUrl: jasmine.createSpy() } as any,
-        { supported: true, permissionDenied: false, ...push } as any, { isAdmin: false } as any, snackbar as any);
+        { supported: true, permissionDenied: false, ...push } as any, { isAdmin: false, has: () => false } as any, snackbar as any);
       c.pushPublicKey = 'vapid';
       return { c, snackbar };
     }
