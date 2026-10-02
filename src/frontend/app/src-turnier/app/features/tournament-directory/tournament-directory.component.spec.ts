@@ -566,6 +566,36 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /**
+   * Der retryInterceptor haelt einen 502/503/504 bis zu ~3,5 s zurueck — ein scheiternder Monat
+   * kommt so oft NACH dem Weiterblaettern an, aber auch davor. Scheitert der ueberholte Monat
+   * ZUERST, darf ueber dem danach geladenen Monat kein Fehlerbalken stehen bleiben (UX-040).
+   */
+  it('lässt über einem geladenen Monat keinen Fehlerbalken einer überholten Anfrage stehen', async () => {
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    component.onTabChange(2);
+    http.expectOne(r => r.url === '/api/tournament-directory/calendar').flush({ tournaments: [], days: [] });
+    const calendarReq = () => http.expectOne(r => r.url === '/api/tournament-directory/calendar');
+
+    component.onMonthChanged({ year: 2026, month: 11 });
+    const stale = calendarReq();
+    component.onMonthChanged({ year: 2026, month: 12 });
+    const fresh = calendarReq();
+
+    // Erst scheitert die ÜBERHOLTE, dann kommt die aktuelle Antwort.
+    stale.flush('kaputt', { status: 503, statusText: 'Service Unavailable' });
+    expect(component.calendarFailed()).withContext('überholter Fehler zählt nicht').toBeFalse();
+    fresh.flush({ tournaments: [entry('dez')], days: [{ date: '2026-12-18', ids: ['dez'] }] });
+    fixture.detectChanges();
+
+    expect(component.calendarFailed()).toBeFalse();
+    expect(component.calendarDays().map(d => d.date)).toEqual(['2026-12-18']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.load-failed')).toBeNull();
+    http.verify();
+  });
+
   it('schränkt standardmäßig aufs kommende Quartal ein', async () => {
     // Ohne Vorgabe stehen über tausend Turniere bis weit ins nächste Jahr in der Liste.
     await setup();
@@ -783,6 +813,14 @@ describe('TournamentDirectoryComponent', () => {
 
     expect(component.entries().map(e => e.id)).toEqual(['1']);
     expect(component.listFailed()).toBeFalse();
+
+    // Der zweite Klick ist der Erholungsweg: er muss Seite 2 erneut anfragen, nicht still Seite 3.
+    expect(component.page).toBe(1);
+    component.loadMore();
+    const retry = http.expectOne(r => r.url === '/api/tournament-directory');
+    expect(retry.request.params.get('page')).toBe('2');
+    retry.flush({ items: [entry('2')], total: 100, truncated: false });
+    expect(component.entries().map(e => e.id)).toEqual(['1', '2']);
     http.verify();
   });
 
@@ -893,12 +931,21 @@ describe('TournamentDirectoryComponent', () => {
 
     component.onTabChange(1);
     component.onBoundsChanged('47.0,12.0,48.0,14.0');
+    http.expectOne(r => r.url === '/api/tournament-directory/map')
+      .flush({ items: [entry('1')], truncated: true });
+    expect(component.pins().length).toBe(1);
+
+    // Neuer Ausschnitt scheitert: die alten Punkte gehören zu einem anderen Ausschnitt.
+    component.onBoundsChanged('46.0,12.0,47.0,14.0');
     http.expectOne(r => r.url === '/api/tournament-directory/map').flush('kaputt', serverError);
     fixture.detectChanges();
 
     expect(component.mapFailed()).toBeTrue();
+    expect(component.pins()).toEqual([]);
+    expect(component.mapTruncated()).toBeFalse();
     expect(text()).toContain('tournamentDirectory.loadError');
     expect(text()).not.toContain('tournamentDirectory.pins');
+    expect(text()).not.toContain('tournamentDirectory.mapTruncated');
     http.verify();
   });
 

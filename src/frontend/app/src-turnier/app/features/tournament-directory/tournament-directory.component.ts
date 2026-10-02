@@ -561,6 +561,9 @@ export class TournamentDirectoryComponent implements OnInit {
           this.listFailed.set(true);
         } else {
           // „Mehr anzeigen" gescheitert: die Liste bis hierher stimmt, nur der Rest fehlt.
+          // `loadMore` hat `page` schon hochgezaehlt — ohne Ruecksetzen fragte der naechste Klick
+          // (der Erholungsweg) die Seite DANACH an und uebersprang still eine ganze Seite.
+          this.page = requestedPage - 1;
           this.snackbar.warn(this.translate.instant('tournamentDirectory.loadError'));
         }
       },
@@ -602,6 +605,10 @@ export class TournamentDirectoryComponent implements OnInit {
       error: () => {
         if (generation !== this.pinsGeneration) return;
         this.mapLoading.set(false);
+        // Wie Liste und Kalender: die alten Punkte (und „es fehlen die spaetesten") gehoeren zu
+        // einem anderen Ausschnitt oder Filter — stehen bleibt die Fehlerzeile.
+        this.pins.set([]);
+        this.mapTruncated.set(false);
         this.mapFailed.set(true);
       },
     });
@@ -625,6 +632,7 @@ export class TournamentDirectoryComponent implements OnInit {
         if (generation !== this.calendarGeneration) return;
         this.calendarDays.set(days);
         this.calendarLoading.set(false);
+        this.calendarFailed.set(false);
       },
       error: () => {
         if (generation !== this.calendarGeneration) return;
