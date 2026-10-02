@@ -72,7 +72,7 @@
   @if (loading()) {
     <app-loading-spinner />
   } @else if (failed()) {
-    <!-- Mit „Erneut versuchen": in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. -->
+    <!-- Mit Wiederholen-Knopf: in der installierten PWA gibt es keinen sichtbaren Neuladen-Knopf. -->
     <p class="hint warn" role="alert">
       {{ 'turnier.history.loadError' | translate }}
       @if (activeKey(); as key) {

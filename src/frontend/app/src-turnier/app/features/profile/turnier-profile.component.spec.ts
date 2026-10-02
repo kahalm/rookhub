@@ -202,8 +202,8 @@ describe('TurnierProfileComponent', () => {
     expect(component.profile()).not.toBeNull();
   });
 
-  /** Mit „Erneut versuchen" — ohne Knopf blieb nur Neuladen, in der PWA unsichtbar (UX-074). */
-  it('meldet einen Ladefehler mit „Erneut versuchen" statt eine leere Seite zu zeigen', () => {
+  /** Mit Wiederholen-Knopf (common.retry) — ohne Knopf blieb nur Neuladen, in der PWA unsichtbar (UX-074). */
+  it('meldet einen Ladefehler mit Wiederholen-Knopf statt eine leere Seite zu zeigen', () => {
     TestBed.configureTestingModule({
       imports: [TurnierProfileComponent],
       providers: [
@@ -226,7 +226,8 @@ describe('TurnierProfileComponent', () => {
     expect(card?.textContent).toContain('turnier.profile.loadError');
 
     const retry = card!.querySelector<HTMLButtonElement>('button');
-    expect(retry).withContext('Erneut-versuchen-Knopf fehlt').toBeTruthy();
+    expect(retry).withContext('Wiederholen-Knopf fehlt').toBeTruthy();
+    expect(retry!.textContent).toContain('common.retry');
     retry!.click();
     http.expectOne('/api/profile').flush(loaded());
     fixture.detectChanges();

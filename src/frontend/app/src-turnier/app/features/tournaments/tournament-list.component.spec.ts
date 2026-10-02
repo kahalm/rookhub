@@ -9,10 +9,16 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { Subscription } from '@rh/core/models';
 import { TournamentListComponent } from './tournament-list.component';
 
+/**
+ * Termin fest weit in der Zukunft: upcoming()/past() vergleichen mit dem heutigen Datum. Ein
+ * Termin wie '2026-12-01' rutschte am Tag danach still in „Vergangen" und machte Tests rot.
+ */
+const FUTURE = '2099-12-01';
+
 function sub(over: Partial<Subscription> = {}): Subscription {
   return {
     id: 1, crawlerTournamentId: '1107064', tournamentName: 'Schach Tirol Open',
-    subscribedAt: '2026-09-01T10:00:00Z', tournamentDbId: null, eventDate: '2026-12-01', ...over,
+    subscribedAt: '2026-09-01T10:00:00Z', tournamentDbId: null, eventDate: FUTURE, ...over,
   };
 }
 
@@ -48,7 +54,7 @@ describe('TournamentListComponent', () => {
    * Die Merkliste kommt aus der eigenen Datenbank. Der fruehere Satz „Stelle sicher, dass der
    * Crawler-Dienst laeuft" nannte die falsche Ursache und einen Schritt fuer Betreiber (UX-074).
    */
-  it('meldet einen Ladefehler ohne Crawler-Hinweis und mit „Erneut versuchen"', async () => {
+  it('meldet einen Ladefehler ohne Crawler-Hinweis und mit Wiederholen-Knopf', async () => {
     await TestBed.configureTestingModule({
       imports: [TournamentListComponent],
       providers: [
@@ -67,11 +73,15 @@ describe('TournamentListComponent', () => {
     expect(page.textContent).toContain('tournaments.list.loadFailed');
     expect(page.textContent).not.toContain('crawlerUnavailable');
 
-    page.querySelector<HTMLButtonElement>('.failed button')!.click();
+    const retry = page.querySelector<HTMLButtonElement>('.failed button');
+    expect(retry).withContext('Wiederholen-Knopf fehlt').toBeTruthy();
+    expect(retry!.textContent).toContain('common.retry');
+    retry!.click();
     http.expectOne('/api/subscriptions').flush([sub()]);
     fixture.detectChanges();
     expect(component.failed()).toBeFalse();
-    expect(component.upcoming().length).toBe(1);
+    expect(component.subscriptions().length).toBe(1);
+    expect(page.querySelector('.failed')).toBeNull();
     http.verify();
   });
 
@@ -98,8 +108,8 @@ describe('TournamentListComponent', () => {
    */
   it('sortiert kommende nach Termin und trennt die vergangenen ab', async () => {
     await setup([
-      sub({ id: 1, eventDate: '2026-12-01', tournamentName: 'Spaeter' }),
-      sub({ id: 2, eventDate: '2026-10-01', tournamentName: 'Frueher' }),
+      sub({ id: 1, eventDate: '2099-12-01', tournamentName: 'Spaeter' }),
+      sub({ id: 2, eventDate: '2099-10-01', tournamentName: 'Frueher' }),
       sub({ id: 3, eventDate: '2020-05-01', tournamentName: 'Vorbei' }),
     ]);
 
@@ -163,7 +173,7 @@ describe('TournamentListComponent', () => {
     post.flush(sub({ id: 8, eventDate: null }));
 
     expect(component.upcoming().map(s => s.id)).toEqual([8]);
-    expect(component.upcoming()[0].eventDate).toBe('2026-12-01');
+    expect(component.upcoming()[0].eventDate).toBe(FUTURE);
     http.verify();
   });
 
