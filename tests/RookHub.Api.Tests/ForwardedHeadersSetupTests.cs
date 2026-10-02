@@ -95,6 +95,29 @@ public class ForwardedHeadersSetupTests
         Assert.Equal(IPAddress.Parse("198.51.100.9"), ctx.Connection.RemoteIpAddress);
     }
 
+    /// <summary>GRENZE, kein Wunschverhalten (Nacharbeit A10-002): Was NPM als Client meldet, nimmt die API. Ein
+    /// LAN-/VPN-Client, der <c>X-Real-IP: 203.0.113.77</c> schickt, steht bei NPM (<c>set_real_ip_from</c> für alle
+    /// privaten Netze) als <c>$remote_addr</c> da und kommt so als vorletzter Eintrag an. Abhilfe nur in NPMs
+    /// <c>custom/server_proxy.conf</c> (siehe <see cref="ForwardedHeadersSetup"/>).</summary>
+    [Fact]
+    public async Task AddressNpmTookFromXRealIp_IsTakenAsClient()
+    {
+        var ctx = await RunAsync(FrontendNginx, $"203.0.113.77, {DockerGateway}");
+        Assert.Equal(IPAddress.Parse("203.0.113.77"), ctx.Connection.RemoteIpAddress);
+    }
+
+    /// <summary>GRENZE, kein Wunschverhalten (Nacharbeit A10-002): Ein Peer aus einem Docker-Netz (etwa hinter der
+    /// wg-easy-Masquerade) am veröffentlichten Oberflächen- bzw. API-Port gilt als vertrauter Hop und gibt EINEN
+    /// Eintrag vor. Nur Ops hilft (Ports binden bzw. NPM in die Stack-Netze).</summary>
+    [Theory]
+    [InlineData(FrontendNginx, "203.0.113.50, 172.21.0.2")] // Oberflächen-Port: frontend-nginx hängt den Docker-Peer an
+    [InlineData("172.21.0.2", "203.0.113.50")]              // API-Port direkt
+    public async Task DockerPeer_OnAPublishedPort_SetsOneEntry(string peer, string xff)
+    {
+        var ctx = await RunAsync(peer, xff);
+        Assert.Equal(IPAddress.Parse("203.0.113.50"), ctx.Connection.RemoteIpAddress);
+    }
+
     [Fact]
     public void Options_StopAfterTheTwoDocumentedHops()
     {
