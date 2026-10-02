@@ -207,4 +207,91 @@ public class LibraryGameReaderTests
         Assert.Contains("Bb5 axb5", stats.OpeningLine);
         Assert.DoesNotContain('+', stats.OpeningLine);
     }
+
+    // ===== Altbestand mit nacktem „1/2" nachrechnen (N11-004) ===================================
+    // Bis 0.624.0 zaehlte IsMove ein nacktes „1/2" als Halbzug. Der Import fasst bestehende Zeilen nie
+    // an — `LibraryImport rehash-results` rechnet sie an Ort und Stelle nach. Die Altwerte stehen hier
+    // LITERAL (die alte Zaehlung gibt es im Code nicht mehr): Halbzug „1/2" mitgezaehlt, mitgehasht.
+
+    private const string RemisZuege = "1. e4 {Koenigsbauer} e5 2. Nf3 Nc6 3. Bb5 a6 ";
+
+    private static string Sha256(string value) => Convert.ToHexStringLower(
+        System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)));
+
+    /// <summary>So stand eine Partie mit nacktem „1/2" bis 0.624.0 im Bestand.</summary>
+    private static LibraryGame AltzeileMitNacktemRemis(string? startFen = null) => new()
+    {
+        Id = 7,
+        Pgn = "[Event \"x\"]\n[Result \"1/2-1/2\"]\n\n" + RemisZuege + "1/2",
+        StartFen = startFen,
+        PlyCount = 7,
+        MovesHash = Sha256("e4 e5 Nf3 Nc6 Bb5 a6 1/2"),
+        OpeningLine = "e4 e5 Nf3 Nc6 Bb5 a6 1/2",
+        CommentedPlies = 1,
+        FirstCommentedPly = 1,
+    };
+
+    [Fact]
+    public void RehashBareResult_altzeile_stehtDannWieDieFassungMitRemisErgebnis()
+    {
+        var alt = AltzeileMitNacktemRemis();
+        // Dieselbe Partie aus einer Quelle, die „1/2-1/2" schreibt — frisch eingelesen.
+        const string normgerecht = RemisZuege + "1/2-1/2";
+        var frisch = LibraryGameReader.From("x", new Dictionary<string, string>(), normgerecht)!;
+        Assert.NotEqual(frisch.MovesHash, alt.MovesHash);   // vorher: zwei Hashes, dedupe fand nichts
+
+        Assert.Equal(LibraryGameReader.BareResultRehash.Rehashed, LibraryGameReader.RehashBareResult(alt));
+
+        Assert.Equal(6, alt.PlyCount);
+        Assert.Equal(frisch.MovesHash, alt.MovesHash);       // jetzt EINE Gruppe fuer dedupe
+        Assert.Equal(frisch.PlyCount, alt.PlyCount);
+        Assert.Equal(frisch.OpeningLine, alt.OpeningLine);
+        Assert.Equal("e4 e5 Nf3 Nc6 Bb5 a6", alt.OpeningLine);
+        Assert.Equal(frisch.CommentedPlies, alt.CommentedPlies);
+        Assert.Equal(frisch.FirstCommentedPly, alt.FirstCommentedPly);
+
+        // Wiederholbar: ein zweiter Lauf findet nichts mehr.
+        Assert.Equal(LibraryGameReader.BareResultRehash.Unchanged, LibraryGameReader.RehashBareResult(alt));
+    }
+
+    /// <summary>Eine Partie mit eigener Ausgangsstellung bekommt auch beim Nachrechnen keine
+    /// Eroeffnungszeile — wie beim Einlesen.</summary>
+    [Fact]
+    public void RehashBareResult_eigeneAusgangsstellung_ohneEroeffnungszeile()
+    {
+        var alt = AltzeileMitNacktemRemis(startFen: "4k3/8/8/8/8/8/8/4K3 w - - 0 1");
+        Assert.Equal(LibraryGameReader.BareResultRehash.Rehashed, LibraryGameReader.RehashBareResult(alt));
+        Assert.Null(alt.OpeningLine);
+    }
+
+    /// <summary>Was das „1/2" nicht erklaert, bleibt unangetastet — das Werkzeug ueberschreibt keine
+    /// fremde Abweichung still.</summary>
+    [Theory]
+    [InlineData("1/2-1/2", 6, "fremd", LibraryGameReader.BareResultRehash.Unchanged)]   // kein nacktes „1/2"
+    [InlineData("{1/2 angeboten} 1/2-1/2", 6, "fremd", LibraryGameReader.BareResultRehash.OtherDrift)]   // nur im Kommentar, Halbzuege stimmen
+    [InlineData("1/2", 6, "fremd", LibraryGameReader.BareResultRehash.OtherDrift)]       // Halbzahl stimmt schon, Hash nicht
+    public void RehashBareResult_fasstNurAn_wasDasRemisErklaert(string ende, int plyCount, string hash,
+        LibraryGameReader.BareResultRehash erwartet)
+    {
+        var row = new LibraryGame
+        {
+            Pgn = "[Event \"x\"]\n\n" + RemisZuege + ende,
+            PlyCount = plyCount, MovesHash = hash, OpeningLine = "alt", CommentedPlies = 9, FirstCommentedPly = 9,
+        };
+
+        Assert.Equal(erwartet, LibraryGameReader.RehashBareResult(row));
+
+        Assert.Equal<(int?, string?, string?, int?, int?)>((plyCount, hash, "alt", 9, 9),
+            (row.PlyCount, row.MovesHash, row.OpeningLine, row.CommentedPlies, row.FirstCommentedPly));
+    }
+
+    /// <summary>Bestand die „Partie" nur aus „1/2", haette ein frisches Einlesen sie gar nicht
+    /// aufgenommen — nachrechnen hiesse eine Zeile ohne Zuege; sie bleibt zum Ansehen stehen.</summary>
+    [Fact]
+    public void RehashBareResult_ohneZuegeNachDemRemis_bleibtStehen()
+    {
+        var row = new LibraryGame { Pgn = "[Event \"x\"]\n\n1/2", PlyCount = 1, MovesHash = Sha256("1/2") };
+        Assert.Equal(LibraryGameReader.BareResultRehash.NoMovesLeft, LibraryGameReader.RehashBareResult(row));
+        Assert.Equal(1, row.PlyCount);
+    }
 }

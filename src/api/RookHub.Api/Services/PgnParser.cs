@@ -52,7 +52,6 @@ public static partial class PgnParser
     [GeneratedRegex(@"[ \t]{2,}")]
     private static partial Regex SpaceRunRegex();
 
-
     /// <summary>Standard-Grundstellung (für synthetische Info-Linien ohne eigene Züge).</summary>
     public const string StartPositionFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 

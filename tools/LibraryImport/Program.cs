@@ -13,6 +13,7 @@ using RookHub.Tools.LibraryImport;
 //
 //   import <datei>   Partien einlesen (Kopfdaten, Kommentar-Merkmale, Zug-Hash)
 //   dedupe           gleiche Zugfolgen zusammenfassen (DuplicateOfId, Status)
+//   rehash-results   Altbestand mit nacktem „1/2" am Ende nachrechnen [--dry-run] — danach dedupe
 //   openings         Eroeffnungszeile + ersten kommentierten Halbzug nachtragen
 //   languages        Sprache der Kommentare bestimmen
 //   score            Eignungsnote fuer die Punktepartie berechnen
@@ -53,6 +54,7 @@ switch (command)
 {
     case "import": return await ImportAsync();
     case "dedupe": return await DedupeAsync();
+    case "rehash-results": return await RehashResultsAsync();
     case "openings": return await OpeningsAsync();
     case "languages": return await LanguagesAsync();
     case "score": return await ScoreAsync();
@@ -189,6 +191,13 @@ async Task<int> ImportAsync()
     // Wiederholbar: was aus DIESER Datei schon drinsteht, kommt nicht ein zweites Mal hinein.
     // Der Griff ist der Zug-Hash zusammen mit dem Kommentator — dieselbe Partie von zwei Leuten
     // kommentiert sind zwei Zeilen, dieselbe Partie zweimal eingelesen ist eine.
+    //
+    // ACHTUNG: der Griff ist der GESPEICHERTE Hash, und bestehende Zeilen fasst der Import nie an.
+    // Rechnet LibraryGameReader eine Partie heute anders als beim ersten Einlesen (z. B. das nackte
+    // „1/2" am Ende, bis 0.624.0 als Halbzug gezaehlt — Codereview 2026-09-29, N11-004), passt der
+    // neue Hash nicht zum alten: die Partie kaeme ein ZWEITES Mal hinein, und dedupe ordnete die alte
+    // Zeile nie zu. Eine Datei deshalb NIE zur Reparatur neu einlesen — erst `rehash-results`, dann
+    // `dedupe`; danach ist ein erneutes Einlesen wieder harmlos.
     HashSet<string> known;
     await using (var db = NewDb())
     {
@@ -298,6 +307,76 @@ async Task<int> DedupeAsync()
         await scope.SaveChangesAsync();
     }
     Console.WriteLine($"{marked:N0} Zeilen als Dublette markiert.");
+    return 0;
+}
+
+// ===== 2a. Altbestand mit nacktem „1/2" nachrechnen ===========================
+//
+//   rehash-results [--dry-run]      danach: dedupe
+//
+// Bis 0.624.0 zaehlte LibraryGameReader ein nacktes „1/2" am Partieende als Halbzug (Codereview
+// 2026-09-29, N11-004): PlyCount eins zu hoch, „1/2" im MovesHash — dieselbe Partie mit „1/2-1/2"
+// aus einer anderen Quelle blieb als Dublette unerkannt. Der Import repariert das NICHT (siehe
+// ImportAsync), deshalb hier an Ort und Stelle: PlyCount, MovesHash, OpeningLine, CommentedPlies und
+// FirstCommentedPly aus dem gespeicherten PGN neu (LibraryGameReader.RehashBareResult). Angefasst wird
+// nur, was das „1/2" erklaert; andere Abweichungen und Partien, die ohne „1/2" keinen Zug mehr haetten,
+// werden nur gezaehlt und mit Id ausgegeben. Wiederholbar: eine nachgerechnete Zeile ist beim naechsten
+// Lauf „unveraendert".
+//
+// Vorher nachsehen, ob es ueberhaupt etwas zu tun gibt (erst Dev, dann Prod; teurer Volltext):
+//   SELECT COUNT(*) FROM LibraryGames WHERE Pgn REGEXP '[[:space:]]1/2[[:space:]]*$';
+// Ist das 0, braucht es den Lauf nicht. Auf Prod nur auf ausdrueckliche Anweisung, und zuerst --dry-run.
+async Task<int> RehashResultsAsync()
+{
+    var dryRun = args.Contains("--dry-run");
+    var counts = new SortedDictionary<LibraryGameReader.BareResultRehash, int>();
+    var started = DateTime.UtcNow;
+    int examined = 0, lastId = 0;
+    while (true)
+    {
+        await using var db = NewDb();
+        // Grober Vorfilter in SQL (jede Partie mit „1/2" im Text, also auch alle „1/2-1/2"); ob das
+        // „1/2" als eigenes Wort dasteht und die Spalten verfaelscht hat, entscheidet das Nachrechnen.
+        // Ohne Verfolgung geholt: geschrieben wird nur die Handvoll geaenderter Zeilen, einzeln.
+        var rows = await db.LibraryGames.AsNoTracking()
+            .Where(g => g.Id > lastId && g.Pgn.Contains("1/2"))
+            .OrderBy(g => g.Id)
+            .Take(1000)
+            .Select(g => new LibraryGame
+            {
+                Id = g.Id, Pgn = g.Pgn, StartFen = g.StartFen, PlyCount = g.PlyCount, MovesHash = g.MovesHash,
+                OpeningLine = g.OpeningLine, CommentedPlies = g.CommentedPlies, FirstCommentedPly = g.FirstCommentedPly,
+            })
+            .ToListAsync();
+        if (rows.Count == 0) break;
+        lastId = rows[^1].Id;
+
+        foreach (var row in rows)
+        {
+            var before = row.PlyCount;
+            var outcome = LibraryGameReader.RehashBareResult(row);
+            counts[outcome] = counts.GetValueOrDefault(outcome) + 1;
+            examined++;
+            if (outcome == LibraryGameReader.BareResultRehash.Unchanged) continue;
+            Console.WriteLine($"  #{row.Id,-7} {outcome,-11} Halbzuege {before} -> {row.PlyCount}");
+            if (outcome != LibraryGameReader.BareResultRehash.Rehashed || dryRun) continue;
+            await db.LibraryGames.Where(g => g.Id == row.Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(g => g.PlyCount, row.PlyCount)
+                    .SetProperty(g => g.MovesHash, row.MovesHash)
+                    .SetProperty(g => g.OpeningLine, row.OpeningLine)
+                    .SetProperty(g => g.CommentedPlies, row.CommentedPlies)
+                    .SetProperty(g => g.FirstCommentedPly, row.FirstCommentedPly)
+                    .SetProperty(g => g.UpdatedAt, row.UpdatedAt));
+        }
+        if (examined % 20000 < rows.Count) Console.WriteLine($"  … {examined:N0} Partien mit 1/2 im Text geprueft");
+    }
+    var rehashed = counts.GetValueOrDefault(LibraryGameReader.BareResultRehash.Rehashed);
+    Console.WriteLine((dryRun ? "PROBELAUF, nichts geschrieben. " : "")
+        + $"Geprueft {examined:N0}: " + string.Join(" · ", counts.Select(k => $"{k.Key} {k.Value:N0}"))
+        + $" · Dauer {DateTime.UtcNow - started:hh\\:mm\\:ss}");
+    if (rehashed > 0 && !dryRun)
+        Console.WriteLine("Jetzt `dedupe` laufen lassen — erst dann finden die nachgerechneten Partien ihre Dubletten.");
     return 0;
 }
 

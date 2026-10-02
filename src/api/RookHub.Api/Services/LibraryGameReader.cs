@@ -203,6 +203,64 @@ public static class LibraryGameReader
             firstCommentedPly, opening.ToString());
     }
 
+    /// <summary>Was <see cref="RehashBareResult"/> mit einer gespeicherten Zeile gemacht hat.</summary>
+    public enum BareResultRehash
+    {
+        /// <summary>Kein nacktes „1/2" im Zugteil, oder das Nachrechnen ergibt dieselben Werte.</summary>
+        Unchanged,
+        /// <summary>Die Zugspalten stehen jetzt so da, wie ein frisches Einlesen sie schriebe.</summary>
+        Rehashed,
+        /// <summary>Ohne das „1/2" bliebe kein Zug — ein frisches Einlesen haette die Partie gar nicht
+        /// aufgenommen. Die Zeile bleibt unangetastet; von Hand ansehen.</summary>
+        NoMovesLeft,
+        /// <summary>Der Hash weicht ab, aber nicht so, wie das „1/2" es erklaert (die Halbzugzahl sinkt
+        /// nicht). Eine andere Abweichung — nicht angefasst; von Hand ansehen.</summary>
+        OtherDrift,
+    }
+
+    /// <summary>
+    /// Nachtrag fuer den Altbestand (Codereview 2026-09-29, N11-004): bis 0.624.0 zaehlte
+    /// <see cref="IsMove"/> ein nacktes „1/2" als Halbzug — PlyCount eins zu hoch, „1/2" im
+    /// <see cref="GameStats.MovesHash"/> (und bei Miniaturen in der <see cref="GameStats.OpeningLine"/>).
+    /// Der Import fasst bestehende Zeilen nie an, und ein erneutes Einlesen legte die Partie mit dem
+    /// neuen Hash DOPPELT an; diese Zeilen muessen deshalb an Ort und Stelle nachgerechnet werden.
+    ///
+    /// <para>Rechnet aus dem gespeicherten PGN, was <see cref="From"/> aus dem Zugteil ableitet und
+    /// was vom Halbzaehler abhaengt: PlyCount, MovesHash, OpeningLine, CommentedPlies,
+    /// FirstCommentedPly. Angefasst wird nur, was das „1/2" erklaert: ein nacktes „1/2"-Token im
+    /// Zugteil UND weniger Halbzuege als gespeichert. Alles andere bleibt, wie es ist — das Werkzeug
+    /// soll genau diesen einen Fehler heilen und keine fremde Abweichung still ueberschreiben.</para>
+    /// </summary>
+    /// <param name="row">Die gespeicherte Zeile; wird bei <see cref="BareResultRehash.Rehashed"/> geaendert
+    /// (inklusive <c>UpdatedAt</c>), sonst nicht.</param>
+    public static BareResultRehash RehashBareResult(LibraryGame row)
+    {
+        var moveText = GuessStartPly.MoveTextOf(row.Pgn ?? string.Empty);
+        if (!HasBareHalfToken(moveText)) return BareResultRehash.Unchanged;
+
+        var stats = Analyse(moveText);
+        if (stats.PlyCount == row.PlyCount && stats.MovesHash == row.MovesHash) return BareResultRehash.Unchanged;
+        if (stats.PlyCount == 0) return BareResultRehash.NoMovesLeft;
+        if (row.PlyCount is not int stored || stats.PlyCount >= stored) return BareResultRehash.OtherDrift;
+
+        row.PlyCount = stats.PlyCount;
+        row.MovesHash = stats.MovesHash;
+        row.OpeningLine = StartsFromInitialPosition(row.StartFen) ? Cut(stats.OpeningLine, 200) : null;
+        row.CommentedPlies = stats.CommentedPlies;
+        row.FirstCommentedPly = stats.FirstCommentedPly == 0 ? null : stats.FirstCommentedPly;
+        row.UpdatedAt = DateTime.UtcNow;
+        return BareResultRehash.Rehashed;
+    }
+
+    /// <summary>Die Zeichen, an denen <see cref="Analyse"/> ein Wort beendet.</summary>
+    private static readonly char[] TokenBreaks = [' ', '\t', '\r', '\n', '{', '}', '(', ')', ';', '$'];
+
+    /// <summary>Steht „1/2" irgendwo als eigenes Wort im Zugteil? Grob mit Absicht (auch in einem
+    /// Kommentar) — ob es die Zugspalten wirklich verfaelscht hat, entscheidet das Nachrechnen.</summary>
+    private static bool HasBareHalfToken(string moveText)
+        => moveText.Contains("1/2", StringComparison.Ordinal)
+           && moveText.Split(TokenBreaks, StringSplitOptions.RemoveEmptyEntries).Contains("1/2", StringComparer.Ordinal);
+
     /// <summary>Zugnummern („12.", „12…"), Ergebnisse und Reste sind keine Zuege.</summary>
     private static bool IsMove(ReadOnlySpan<char> token)
     {

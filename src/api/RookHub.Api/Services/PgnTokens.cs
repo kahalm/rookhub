@@ -45,9 +45,18 @@ public static class PgnTokens
     /// und <see cref="ReconstructionChain"/> machte daraus einen Zug, an dem das Teil scheiterte
     /// (Codereview 2026-09-29, N11-004). „½-½" schreibt Handschrift und manche Exporte.</para>
     ///
+    /// <para><b>Altbestand im Rohbestand:</b> Zeilen, die VOR dieser Korrektur eingelesen wurden,
+    /// behalten ihren alten MovesHash/PlyCount — der Import (<c>tools/LibraryImport import</c>)
+    /// fasst bestehende Zeilen nie an. Eine betroffene Quelldatei deshalb NICHT zur Reparatur neu
+    /// einlesen: der Griff „schon bekannt" ist der GESPEICHERTE alte Hash, die Partie kaeme mit dem
+    /// neuen Hash ein zweites Mal hinein, und <c>dedupe</c> ordnete die alte Zeile nie zu. Reparatur:
+    /// <c>rehash-results</c> (rechnet die Zugspalten nach, <see cref="LibraryGameReader.RehashBareResult"/>),
+    /// danach <c>dedupe</c>.</para>
+    ///
     /// <para>Bewusst NICHT hier: die Listen, die den <c>[Result]</c>-HEADER pruefen
-    /// (<c>SavedGameService.AllowedResults</c>, <c>LeagueClubService</c>) — dort ist „1/2" kein
-    /// gueltiger Wert, sondern wird auf „*" zurueckgesetzt.</para>
+    /// (<c>SavedGameService.AllowedResults</c>, <c>LeagueClubService.Results</c>) — dort ist „1/2"
+    /// kein gueltiger Wert: beim Einlesen setzen beide ihn auf „*" zurueck, eine Korrektur ueber
+    /// <c>LeagueClubService.UpdateAsync</c> wird mit „invalidResult" abgelehnt.</para>
     /// </summary>
     public static bool IsResultToken(ReadOnlySpan<char> token)
         => token is "1-0" or "0-1" or "1/2-1/2" or "1/2" or "*" or "½-½";
