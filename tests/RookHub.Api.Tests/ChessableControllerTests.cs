@@ -678,6 +678,38 @@ public class ChessableControllerTests : IDisposable
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
+    /// <summary>A3-013: Die Schaetzung prueft die bid wie der Admin-Import (<see cref="ChessableIds.IsValidBid"/>).
+    /// Vorher ging jede Zeichenkette mit dem Bearer des Users an piratechess. Der User HAT hier einen Bearer und
+    /// piratechess wuerde antworten, die 400 kommt also allein von der bid-Pruefung.</summary>
+    [Theory]
+    [InlineData("12a")]
+    [InlineData("1234567890123")]   // 13 Ziffern, eine mehr als MaxBidLength
+    [InlineData("-5")]
+    [InlineData("\u0661\u0662\u0663")]   // arabisch-indische Ziffern: char.IsDigit, aber kein ASCII
+    public async Task EstimateCourseAdmin_InvalidBid_Returns400_WithoutAskingPiratechess(string bid)
+    {
+        await SeedUserAsync(7);
+        _db.ChessableCredentials.Add(new ChessableCredential
+        {
+            UserId = 7, EncryptedBearer = _encryption.Encrypt("real-bearer-1234567890"),
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+        var calls = 0;
+        _handler.Reply = (_, _) =>
+        {
+            calls++;
+            return JsonResponse(HttpStatusCode.OK, new { bid, totalLines = 299, cached = false });
+        };
+
+        var result = await _admin.EstimateCourseAdmin(7, bid, CancellationToken.None);
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("bid must be numeric (max 12 digits)",
+            bad.Value!.GetType().GetProperty("message")!.GetValue(bad.Value));
+        Assert.Equal(0, calls);
+    }
+
     [Fact]
     public async Task GetUserCoursesAdmin_UnknownUser_Returns404_NotMisleading400()
     {

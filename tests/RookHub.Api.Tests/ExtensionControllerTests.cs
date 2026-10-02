@@ -1143,6 +1143,76 @@ public class ExtensionControllerTests : IDisposable
         Assert.Empty(_db.AnonymousChessableReviewLines);
     }
 
+    // ---- A3-013: line-trained nimmt die oid nach der piratechess-Regel und markiert kanonisch ----
+
+    /// <summary>Kurs-Linie (Buch) und Repertoire-Datei tragen die oid so, wie piratechess sie schreibt: kanonisch.</summary>
+    private async Task<BookPuzzle> SeedTrainedLineTargetsAsync(int userId, string bid, string oid)
+    {
+        var file = $"chessable-u{userId}-{bid}.pgn";
+        var book = new Book { FileName = file, DisplayName = "Kurs", OwnerUserId = userId,
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow, Source = new BookSource() };
+        _db.Books.Add(book);
+        await _db.SaveChangesAsync();
+        var bp = new BookPuzzle
+        {
+            LineId = $"{file}:1", BookFileName = file, BookId = book.Id, Round = "1",
+            Fen = "8/8/8/4k3/8/8/4K3/8 w - - 0 1", Moves = "e2e3", StartPly = -1,
+            ChessableOid = oid,
+        };
+        _db.BookPuzzles.Add(bp);
+        var rep = new Repertoire
+        {
+            UserId = userId, Name = "Rep", Kind = RepertoireKind.Opening,
+            ChessableCourseId = bid, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        _db.Repertoires.Add(rep);
+        await _db.SaveChangesAsync();
+        var pgn = $"[Event \"Kurs\"]\n[White \"Linie\"]\n[ChessableOid \"{oid}\"]\n\n1. e4 e5 2. Nf3 *\n";
+        _db.RepertoireFiles.Add(new RepertoireFile
+        {
+            RepertoireId = rep.Id, FileName = $"chessable-{bid}.pgn", PgnContent = pgn, FileSize = pgn.Length,
+        });
+        await _db.SaveChangesAsync();
+        return bp;
+    }
+
+    [Fact]
+    public async Task ChessableLineTrained_LeadingZeros_MarksTheCanonicalLine()
+    {
+        // Vorher ging „00123" unveraendert an MarkTrainedAsync: weder BookPuzzle.ChessableOid „123" noch der
+        // Marker [ChessableOid "123"] trafen, die trainierte Linie blieb in RookHub ungelernt.
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        var bp = await SeedTrainedLineTargetsAsync(user.Id, "228856", "123");
+
+        var res = await _controller.ChessableLineTrained(
+            new ChessableLineTrainedInputDto { Bid = "228856", Oid = "00123" }, default);
+
+        var dto = Assert.IsType<ChessableLineTrainedResultDto>(Assert.IsType<OkObjectResult>(res.Result).Value);
+        Assert.True(dto.CourseLineFound);
+        Assert.True(dto.CourseLineMarked);
+        Assert.Equal(1, dto.RepertoireLinesAdvanced);
+        Assert.Equal(bp.Id, Assert.Single(_db.CoursePuzzleResults.Where(r => r.UserId == user.Id)).BookPuzzleId);
+    }
+
+    [Theory]
+    [InlineData("0")]                      // keine positive Zahl
+    [InlineData("2147483648")]             // int.MaxValue + 1
+    [InlineData("12345678901234567890")]   // 20 Ziffern: vorher (≤32 Ziffern) angenommen
+    public async Task ChessableLineTrained_OidOutsideThePiratechessRule_Returns400(string oid)
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id, scope: "extension");
+        await SeedTrainedLineTargetsAsync(user.Id, "228856", oid);
+
+        var res = await _controller.ChessableLineTrained(
+            new ChessableLineTrainedInputDto { Bid = "228856", Oid = oid }, default);
+
+        Assert.IsType<BadRequestObjectResult>(res.Result);
+        Assert.Empty(_db.CoursePuzzleResults);
+        Assert.Empty(_db.RepertoireCardStates);
+    }
+
     // ---- Unerwartete Chessable-Antwort (RepCheck ≥ 1.60.0 stoppt „Kurs holen") ----
 
     private ChessableResponseAlertService Alerts() => new(_db,

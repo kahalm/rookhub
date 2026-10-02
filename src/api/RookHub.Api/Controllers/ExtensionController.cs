@@ -351,7 +351,8 @@ public class ExtensionController : BaseApiController
     /// „Linie auf Chessable trainiert": markiert die Linie (Kurs-bid + Varianten-oid) in den
     /// RookHub-Gegenstücken — Kurs-Linie gilt als gelöst, im Repertoire-Trainer wird eine neue
     /// Linie „gelernt" bzw. eine fällige eine SR-Stufe vorgerückt (Chessable ersetzt das Review).
-    /// Idempotent; unbekannte bid/oid sind kein Fehler (leeres Ergebnis).
+    /// Idempotent; unbekannte bid/oid sind kein Fehler (leeres Ergebnis). Eine oid ausserhalb der piratechess-Regel
+    /// (<see cref="ChessableIds.TryParseOid"/>, z. B. „0" oder mehr als <c>int.MaxValue</c>) ist dagegen 400.
     /// </summary>
     [HttpPost("chessable/line-trained")]
     public async Task<ActionResult<ChessableLineTrainedResultDto>> ChessableLineTrained(

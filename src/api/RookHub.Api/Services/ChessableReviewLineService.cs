@@ -93,10 +93,12 @@ public class ChessableReviewLineService
     }
 
     /// <summary>
-    /// Upsert je oid (letzter Stand im Batch gewinnt). Verworfen werden Einträge ohne gültige numerische
-    /// oid (≤32), mit leerem/übergroßem JSON (&gt; <see cref="MaxJsonLength"/>) und — ist das Byte-Kontingent des
-    /// Kontos (<see cref="ChessableSinkBytes.MaxUserBytes"/>) erschöpft — alles, was es wachsen ließe. Liefert die
-    /// Zahl der tatsächlich geschriebenen/aktualisierten Zeilen.
+    /// Upsert je oid (letzter Stand im Batch gewinnt). Die oid gilt nach der piratechess-Regel
+    /// (<see cref="ChessableIds.TryParseOid"/>: positive 32-Bit-Ganzzahl, Leerraum drumherum abgeschnitten) und wird
+    /// kanonisch ohne führende Nullen gespeichert (<see cref="ChessableIds.CanonicalOid"/>, „00123" = „123").
+    /// Verworfen werden Einträge mit ungültiger oid, mit leerem/übergroßem JSON (&gt; <see cref="MaxJsonLength"/>)
+    /// und — ist das Byte-Kontingent des Kontos (<see cref="ChessableSinkBytes.MaxUserBytes"/>) erschöpft — alles,
+    /// was es wachsen ließe. Liefert die Zahl der tatsächlich geschriebenen/aktualisierten Zeilen.
     /// </summary>
     public async Task<int> UpsertBatchAsync(int userId, string bid,
         List<ChessableReviewLineEntryDto> entries, CancellationToken ct = default)

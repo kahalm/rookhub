@@ -113,6 +113,30 @@ public class ChessableProxyServiceTests
         Assert.Contains("1. d4", truth["12"]);
     }
 
+    /// <summary>A3-013: oids gehen kanonisch an piratechess. Vorher wurden „011" und „11" zwei Eintraege, und
+    /// <c>{"id":011}</c> ist keine gueltige JSON-Zahl, piratechess lehnte die ganze Abfrage ab.</summary>
+    [Fact]
+    public async Task GetCachedLinePgns_LeadingZeros_AskOnceInCanonicalForm()
+    {
+        var pgn = "[Event \"x\"]\n[ChessableOid \"11\"]\n\n1. e4 *\n";
+        var handler = new CapturingHandler(System.Text.Json.JsonSerializer.Serialize(new
+        { bid = "1", name = "x", mode = "None", chapterCount = 1, lineCount = 1, pgn }));
+        var proxy = new ChessableProxyService(new HttpClient(handler) { BaseAddress = new Uri("http://pc:8080") });
+
+        var truth = await proxy.GetCachedLinePgnsAsync("424242", new[] { "011", "11" });
+
+        using var body = System.Text.Json.JsonDocument.Parse(handler.Body!);
+        var chapter = Assert.Single(body.RootElement.GetProperty("chapters").EnumerateArray());
+        Assert.Equal(new[] { "11" },
+            chapter.GetProperty("lineOids").EnumerateArray().Select(o => o.GetString()).ToArray());
+        // Das Kapitel-JSON ist gueltiges JSON (mit „011" scheiterte schon das Parsen) mit genau EINER Linie id 11.
+        using var list = System.Text.Json.JsonDocument.Parse(chapter.GetProperty("chapterJson").GetString()!);
+        var entry = Assert.Single(list.RootElement.GetProperty("list").GetProperty("data").EnumerateArray());
+        Assert.Equal(11, entry.GetProperty("id").GetInt32());
+        Assert.Equal("{\"id\":11,\"name\":\"x\"}", entry.GetRawText());
+        Assert.Contains("1. e4", truth["11"]);
+    }
+
     [Fact]
     public async Task GetCachedLineOids_PostsToLinesCached_AndReturnsTheAnswer()
     {
