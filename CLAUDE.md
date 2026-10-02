@@ -1394,8 +1394,9 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
 `clubhub(-dev).oberschmid.homes` (fünftes Angular-Projekt), dieselbe API/DB/Konten.
 
 - **Ein Kind ist ein KARTEIBLATT, kein Konto** (`Models/Club.cs`): `ClubMembers` (Name, Geburtsdatum ODER nur Jahrgang,
-  Stufe als freier Text, `Archived` — FIDE-/ÖSB-Nummer, Notiz und Foto-Einwilligung gab es bis 0.617.1, der User wollte
-  sie nicht: „weitere Angaben entfernen", Migration `ClubMemberWithoutExtras`), `ClubContacts` (beliebig viele je
+  Stufe als freier Text, `Archived`, seit 0.640.0 wieder `FideId` + `NationalId` — Notiz und Foto-Einwilligung gab es bis
+  0.617.1, der User wollte sie nicht: „weitere Angaben entfernen", Migration `ClubMemberWithoutExtras`; die beiden Nummern
+  fielen damals mit und kamen auf Wunsch zurück), `ClubContacts` (beliebig viele je
   Kind: `phone`/`email` + Wert + Hinweis, Reihenfolge wie eingegeben — der erste steht in der Liste), `ClubGroups`
   (+ `Weekday` 1 = Mo … 7 = So, `Schedule` Freitext), `ClubGroupMembers`, `ClubGroupTrainers` (Konto ↔ Gruppe),
   `ClubSessions` (eine Einheit je Gruppe und TAG, unique), `ClubAttendances` (Present/Absent), `ClubNotes`
@@ -1413,6 +1414,28 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   Objekt-Adressen werden beim Verlassen freigegeben. Hochladen auf der Abhak-Liste (speichert vorher die Einheit, wenn es sie
   noch nicht gibt), ansehen auch im Trainingstagebuch der Gruppe. Löschpfade (Einheit, Gruppe) entfernen Fotos über
   Stellvertreter mit Schlüssel — die Bytes werden nie geladen (`RemovePhotosWithoutLoading`).
+- **Bild am Blatt + Nummern** (0.640.0, Wunsch 2026-10-02 „beim Anlegen/Bearbeiten ein Bild hinterlegen", „ein Feld für
+  Personennummer/FIDE-Nr."): EIN Bild je Blatt in der eigenen Tabelle `ClubMemberPhotos` (PK = `MemberId`; JPEG ≤ 1200 px +
+  Vorschaubild ≤ 256 px über `ScoresheetImage.Prepare`) — eigene Tabelle, damit keine Listen-Abfrage die Bytes lädt; ersetzt
+  und gelöscht wird über Stellvertreter mit Schlüssel, ohne zu laden. Die Listen tragen nur die MARKE
+  `ClubMember.PhotoVersion` (Unix-ms des Hochladens, streng steigend, `null` = kein Bild): daran sieht die Kartei, wer ein
+  Bild hat, und die Oberfläche hängt sie als `?v=` an die Bildadresse (der Browser darf das Bild einen Tag behalten,
+  `Cache-Control: private, max-age=86400`; ein ersetztes hat eine neue Adresse). `POST …/members/{id}/photo` (multipart
+  `file`, 15 MB), `GET …/photo[?thumb=1]`, `DELETE …/photo` (idempotent) — wer das Blatt sieht, darf alle drei, auch bei
+  Trainern (Personen). Oberfläche: `core/member-photo.store.ts` (EIN Speicher der Seite: je Blatt und Marke ein Abruf als
+  Blob mit Anmeldung, höchstens 4 gleichzeitig — die Kartei zeigt viele auf einmal, und der globale Deckel ist 100
+  Anfragen/min je IP —, beim Abmelden geleert) und `shared/member-photo.component.ts` (`ch-member-photo`: Vorschaubild oder
+  Anfangsbuchstabe, mit `zoom` ein Tipp fürs große Bild). In der Kartei steht das Porträt vor dem Namen, sobald MINDESTENS
+  ein Blatt ein Bild hat; am Blatt als Passbild im Kopf; im Formular wählen/ersetzen/entfernen — hochgeladen wird NACH dem
+  Speichern des Blatts (es hängt an dessen Kennung). Scheitert nur das Bild, bleibt das Formular als „Blatt ändern" offen
+  (ein zweites Speichern legte sonst dasselbe Kind noch einmal an). `FideId` nur Ziffern (sonst 400, die Maske prüft es
+  vorher), `NationalId` = Personennummer beim ÖSB, freier Text; beide ≤ 16 Zeichen, am Blatt als „PNr. …" und Link aufs
+  FIDE-Profil. **Die Einwilligung der Eltern zum Bild ist Sache des Vereins** — ein Feld dafür gibt es (wieder) nicht.
+  Noch nicht: Porträts in der Abhak-Liste (`ClubGroupDto` trägt die Marke nicht).
+- **„Weiteres Kind anlegen"** (0.640.0, Wunsch „speichert altes Kind + gleich neue Maske"): zweiter Knopf in der klebenden
+  Leiste von `/kind/neu` (bei Trainern „Weiteren Trainer anlegen"). Speichert, bleibt auf `/kind/neu` und leert das
+  Formular — Gruppen und Kind/Trainer bleiben (man trägt meist eine ganze Gruppe hintereinander ein), der Cursor steht im
+  Vornamen, darüber „<Name> ist gespeichert" mit Link aufs Blatt; „Abbrechen" heißt danach „Fertig".
 - **Zwei Rechte**: `club.manage` (Leitung, Admin eingeschlossen — alles: alle Kinder, Gruppen anlegen, Trainer zuteilen,
   Blätter löschen) und `club.trainer` (nur die Gruppen, denen das Konto als Trainer zugeteilt ist, und deren Kinder). Die
   Zuteilung allein öffnet nichts — das Konto braucht eine Rolle mit `club.trainer`. Weil JEDE Action eines von beiden
@@ -1438,7 +1461,12 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   wer nicht abgehakt ist, hat gefehlt (sonst wäre die Quote immer 100 %). **Vor dem ersten Tipp fragt die Liste
   `GET …/sessions/by-date/{datum}`** (204 = keine): ein Speichern ersetzt, eine leer geöffnete Liste überschriebe sonst
   eine erfasste Einheit. Die Gruppenseite zeigt die letzten 12 Einheiten als Tabelle (älteste links), die Quote zählt über
-  alle.
+  alle. **Blättern** (0.640.0, Wunsch „eine Blätterfunktion, um zu alten Trainings zu kommen"): `GET
+  …/groups/{id}/sessions/dates` liefert ALLE Tage mit Einheit (älteste zuerst); zwei Knöpfe über dem Datumsfeld führen zur
+  Einheit davor/danach (`dateNeighbours` in `core/club-format.ts`: die Tage mit Einheit plus der Tag, für den die Liste
+  von selbst aufgeht — von der letzten Einheit führt „weiter" dorthin zurück). Der Tag steht als `?datum=` in der Adresse;
+  mit ungespeicherten Haken wird vor dem Wechsel gefragt (auch beim Datumsfeld). **Einen Knopf „Alle da" gibt es seit
+  0.640.0 nicht mehr** (Wunsch: „das gibt's eigentlich nie").
 - **Konto verknüpfen nur per Einwilligung**: der Trainer gibt einen Einmal-Code aus (10 Zeichen ohne 0/O/1/I, 14 Tage,
   `POST …/members/{id}/link-code`), EINLÖSEN muss ihn das Konto selbst (`POST /api/club/link`, „auth"-Limiter, nicht unter
   Impersonation). So hängt niemand fremde Konten an ein Blatt und liest deren Fortschritt. Ein Konto hängt an höchstens einem
@@ -1452,13 +1480,14 @@ klassisch ‚Mutter Daniela' oder ‚Vater Franz', auch E-Mail; am Freitag abhak
   und bleibt; Notizen bleiben ohne Autorennamen.
 - **Endpunkte** (`Controllers/ClubController.cs`, alle `[Authorize]`): `GET/POST /api/club/members`, `GET/PUT/DELETE
   …/members/{id}`, `POST …/members/{id}/notes`, `DELETE …/notes/{noteId}`, `POST …/link-code`, `DELETE …/link`, `GET
-  …/progress`; `GET/POST /api/club/groups`, `GET/PUT/DELETE …/groups/{id}`, `POST/DELETE …/groups/{id}/trainers[/{userId}]`
+  …/progress`, `POST/GET/DELETE …/members/{id}/photo`; `GET/POST /api/club/groups`, `GET/PUT/DELETE …/groups/{id}`, `POST/DELETE …/groups/{id}/trainers[/{userId}]`
   (Zuteilen über den Benutzernamen), `POST/DELETE …/groups/{id}/members/{memberId}`, `POST …/groups/{id}/sessions`, `PUT
-  …/sessions/{sessionId}` (auch Datum ändern; 409, wenn der Tag belegt ist), `GET …/sessions/by-date/{datum}`, `GET/DELETE
+  …/sessions/{sessionId}` (auch Datum ändern; 409, wenn der Tag belegt ist), `GET …/sessions/by-date/{datum}`, `GET …/groups/{id}/sessions/dates`, `GET/DELETE
   /api/club/sessions/{id}`; vom Konto aus `GET/POST/DELETE /api/club/link`.
 - **Oberfläche** (`src-clubhub/`, `public-clubhub/`, Image `ghcr.io/kahalm/rookhub-clubhub:{dev,latest}`, `APP_PROJECT=clubhub`,
   Host-Port Dev **8101** / Prod **8102**): `/` Kartei (Register nach Anfangsbuchstaben, erste Telefonnummer samt Hinweis als
-  `tel:`-Link, Suche/Gruppenfilter im Browser, Archiv; am Trainingstag oben der Streifen „Heute ist Freitag: … —
+  `tel:`-Link, Suche im Browser, Gruppenfilter als KNÖPFE mit Kinderzahl je Gruppe (0.640.0, Wunsch „Filter auf
+  Anfänger/Fortgeschrittene" — vorher eine Auswahlliste; ein zweiter Tipp auf dieselbe Gruppe zeigt wieder alle), Archiv; am Trainingstag oben der Streifen „Heute ist Freitag: … —
   Anwesenheit abhaken"), `/kind/neu` + `/kind/:id` (Blatt ansehen/ändern: Kontakte-Editor, Notizen, Anwesenheit, Konto +
   Lernstand), `/gruppen`, `/gruppen/:id` (Anwesenheitstabelle, Kinder dazunehmen, Leitung: Gruppe ändern + Trainer),
   `/gruppen/:id/anwesenheit[?datum=]` (die Abhak-Liste: geht für den jüngsten Trainingstag auf, der nicht in der Zukunft
@@ -4209,7 +4238,8 @@ Spielen-Tracking: `PlayTimeService` (typed HttpClient) holt Lichess exakt (creat
 | SavedGames | Von chess.com/lichess (über RepCheck) gespeicherte Partien — Bereich „Partien" | UserId (Cascade), Source (≤20: chess.com/lichess), ExternalId? (≤120, Dedup), Pgn (LONGTEXT, serverseitig gebaut), White?/Black? (≤120), Result? (≤12), PlayedAt?, SourceUrl? (≤1000), **WhiteElo?/BlackElo? + TimeControl? (≤32, „180+2“) + HeadersScanned (0.526.0 — die Partienliste zeigt Wertung und Bedenkzeit wie chess.coms Übersicht; das PGN dafür zu laden wäre derselbe Fehler, den `MoveCount` schon behoben hat. Der Altbestand bekommt seine Wertungen portionsweise aus dem PGN (`HeaderBackfillPerCall` = 50 je Listenaufruf), und die Marke `HeadersScanned` unterscheidet „noch nicht nachgesehen“ von „nennt keine Wertung“; die Bedenkzeit steht in keinem alten PGN und bleibt dort leer)**, ShareToken (≤32, UNIQUE; öffentlicher Link `/g/{token}`), **GameAnalysisId? (kein FK — die Analyse der Bewertungskurve; nur vom BESITZER gesetzt, kann ins Leere zeigen)**, **OwnerSide? (≤5, white/black — selbst festgelegte Seite, schlägt die Namenszuordnung; 0.531.0)**, **ReviewLanguage? (≤8 — Sprache der Seite beim „Partie analysieren“, darin entstehen Erklärungen und Roasts; 0.540.0)**, CreatedAt; Index (UserId, CreatedAt) + **UNIQUE (UserId, Source, ExternalId)** (Dedup hart erzwungen; NULL-ExternalId = mehrfach erlaubt) |
 | ScoresheetScans | Eine Formular-Einlesung: das FOTO (bleibt nach dem Einlesen liegen) + Stand + Ergebnis (0.529.0) | UserId (Cascade), SavedGameId? (Cascade — das Foto geht mit der Partie; `null`, solange gelesen wird oder wenn es scheiterte), Photo (LONGBLOB, über 12 MB verkleinert), ContentType (≤40), FileName? (≤200), **PageCount (Vorgabe 1; Seite 2+ in `ScoresheetScanPages`, 0.600.0)**, NotationLanguage (≤8, Code oder `auto`), Status (Pending/Running/Done/Failed), Error? (≤40, Grund-Code), TranscriptionJson? (LONGTEXT, letzte Antwort des Modells), ResolutionJson? (LONGTEXT, Stand je Halbzug), Model? (≤60), Attempts, Rounds, **InputTokens/OutputTokens/CostMicroUsd (Kostenbremse — nach jedem Aufruf verbucht)**, **Purpose? (≤16; `league` = Einlesung für die Vereins-Datenbank, ohne Partie in „Meine Partien")**, **UserId ist NULLBAR (ohne Konto über einen LeagueHub-Teilen-Link), dann AccessKey? (≤32, UNIQUE, geheimer Schlüssel) + AnonIpHash? (≤64, HMAC der IP, nach 2 Tagen geleert)**, CreatedAt, StartedAt?, FinishedAt?; Index (Status, CreatedAt), (UserId, CreatedAt), SavedGameId. Löschpfade laden das Foto nie: Konto löschen entfernt die Zeilen (`ScoresheetScanService.RemoveWithoutLoading`), Partie löschen leert nur Foto/JSON und setzt `SavedGameId` null — die Zeile zählt weiter fürs Tageskontingent (`DetachWithoutLoading`, 0.568.1) |
 | ScoresheetScanPages | Seite 2 und folgende eines Formulars über mehrere Fotos (0.600.0); Seite 1 bleibt `ScoresheetScans.Photo` | ScoresheetScanId (Cascade), Page (ab 2), Photo (LONGBLOB), ContentType (≤40), FileName? (≤200); **UNIQUE (ScoresheetScanId, Page)**. Partie löschen und Konto löschen räumen sie ohne Laden ab (`RemovePagesWithoutLoading`) |
-| ClubMembers | ClubHub (0.613.0): Karteiblatt eines Kindes/Jugendlichen — KEIN Konto | FirstName/LastName (≤80, Index (LastName, FirstName); **LastName darf LEER sein = nicht bekannt, nie null**), BirthDate? (DateOnly), BirthYear? (bei Datum dessen Jahr), Level? (≤60, Freitext), Archived, **IsTrainer (0.620.0: Trainer als Person — in jeder Anwesenheitsliste, keine Gruppe)**, **LinkedUserId? (FK SetNull, UNIQUE — ein Konto an höchstens einem Blatt)**, LinkCode? (≤16, UNIQUE, Einmal-Code) + LinkCodeExpires?, CreatedAt, CreatedByUserId? (kein FK), UpdatedAt |
+| ClubMembers | ClubHub (0.613.0): Karteiblatt eines Kindes/Jugendlichen — KEIN Konto | FirstName/LastName (≤80, Index (LastName, FirstName); **LastName darf LEER sein = nicht bekannt, nie null**), BirthDate? (DateOnly), BirthYear? (bei Datum dessen Jahr), Level? (≤60, Freitext), **FideId? (≤16, nur Ziffern) + NationalId? (≤16, Personennummer ÖSB) + PhotoVersion? (bigint, Marke des Bilds, `null` = keins) — 0.640.0**, Archived, **IsTrainer (0.620.0: Trainer als Person — in jeder Anwesenheitsliste, keine Gruppe)**, **LinkedUserId? (FK SetNull, UNIQUE — ein Konto an höchstens einem Blatt)**, LinkCode? (≤16, UNIQUE, Einmal-Code) + LinkCodeExpires?, CreatedAt, CreatedByUserId? (kein FK), UpdatedAt |
+| ClubMemberPhotos | Das Bild zum Karteiblatt (0.640.0), eines je Blatt — eigene Tabelle, damit Listen die Bytes nie laden | **MemberId (PK + FK, Cascade)**, Image (MEDIUMBLOB, JPEG ≤ 1200 px), Thumb (MEDIUMBLOB, JPEG ≤ 256 px), Width, Height, UpdatedByUserId? (kein FK), UpdatedAt. Blatt löschen entfernt es ohne Laden (`RemoveMemberPhotoWithoutLoading`) |
 | ClubContacts | Kontakte eines Kindes, beliebig viele | MemberId (Cascade), Kind (`phone`/`email`, ≤8), Value (≤200), Label? (≤80, „Mutter Daniela"), Position; Index (MemberId, Position) |
 | ClubGroups | Trainingsgruppe | Name (≤80), Schedule? (≤200, Freitext), **Weekday? (1 = Mo … 7 = So — schlägt am Trainingstag die Anwesenheitsliste vor)**, Archived, CreatedAt |
 | ClubGroupMembers | Kind ↔ Gruppe | PK (GroupId, MemberId), beide Cascade |

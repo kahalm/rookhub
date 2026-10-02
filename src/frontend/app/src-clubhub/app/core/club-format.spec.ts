@@ -1,6 +1,25 @@
-import { STATUS_LABEL, ageClass, attendanceText, byInitial, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
+import { STATUS_LABEL, ageClass, attendanceText, byInitial, dateNeighbours, emptyInput, firstPhone, formatBirth, formatLinkCode, fullName, isoDate, longDate, nameHead, nameTail, parseBirth, shortDate, sortName, telHref, trainingDate, trainsToday, weekdayName } from './club-format';
 
 describe('club-format', () => {
+  it('Blättern: die Einheit davor und danach — der Tag, für den die Liste aufgeht, zählt als letzter Halt mit', () => {
+    const dates = ['2026-09-11', '2026-09-18', '2026-09-25'];
+    // Auf dem heutigen Trainingstag (noch nichts erfasst): zurück zur letzten Einheit, weiter gibt es nichts.
+    expect(dateNeighbours(dates, '2026-10-02', '2026-10-02')).toEqual({ prev: '2026-09-25', next: null });
+    expect(dateNeighbours(dates, '2026-09-25', '2026-10-02')).toEqual({ prev: '2026-09-18', next: '2026-10-02' });
+    expect(dateNeighbours(dates, '2026-09-11', '2026-10-02')).toEqual({ prev: null, next: '2026-09-18' });
+    // Ein frei gewählter Tag ohne Einheit steht zwischen seinen Nachbarn.
+    expect(dateNeighbours(dates, '2026-09-20', '2026-10-02')).toEqual({ prev: '2026-09-18', next: '2026-09-25' });
+    // Reihenfolge und Doppelte der Eingabe sind egal; ohne jede Einheit gibt es nichts zu blättern.
+    expect(dateNeighbours(['2026-09-25', '2026-09-11', '2026-09-25'], '2026-09-25', '2026-09-25')).toEqual({ prev: '2026-09-11', next: null });
+    expect(dateNeighbours([], '2026-10-02', '2026-10-02')).toEqual({ prev: null, next: null });
+    expect(dateNeighbours(['kaputt'], '2026-10-02', '')).toEqual({ prev: null, next: null });
+  });
+
+  it('ein leeres Blatt hat weder Nummern noch Gruppen', () => {
+    expect(emptyInput()).toEqual({ firstName: '', lastName: '', birthDate: null, birthYear: null, level: null, fideId: null, nationalId: null,
+      archived: false, isTrainer: false, contacts: [], groupIds: [] });
+  });
+
   it('Altersklasse zählt nach Jahrgang: U10 spielt, wer heuer höchstens 10 wird', () => {
     expect(ageClass(2016, 2026)).toBe('U10');
     expect(ageClass(2015, 2026)).toBe('U12');

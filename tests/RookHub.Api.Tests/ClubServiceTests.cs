@@ -585,6 +585,93 @@ public class ClubServiceTests : IDisposable
         Assert.Empty(_db.ClubSessionPhotos);                                               // und mit der Gruppe
     }
 
+    // ---- Bild am Blatt ------------------------------------------------------------------------
+
+    [Fact]
+    public async Task MemberPhoto_IsShrunk_OnePerSheet_TheListOnlyCarriesItsMark_AndItGoesWithTheSheet()
+    {
+        var (tina, tom) = (await UserAsync("tina"), await UserAsync("tom"));
+        var g = await GroupAsync("Anfänger", tina);
+        var kid = await Svc().CreateMemberAsync(Trainer(tina), Kid("Daniel", "Huber", g));
+        Assert.Null(kid.PhotoVersion);
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().GetMemberPhotoAsync(Trainer(tina), kid.Id, thumb: true));   // noch kein Bild
+
+        await Assert.ThrowsAsync<DomainValidationException>(() => Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, [1, 2, 3]));
+        var first = await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Jpeg(3000, 4000));
+        Assert.NotNull(first.PhotoVersion);
+        var stored = await _db.ClubMemberPhotos.SingleAsync();
+        Assert.Equal((900, 1200), ScoresheetImage.Size(stored.Image)!.Value);                // längste Seite 1200
+        Assert.Equal((192, 256), ScoresheetImage.Size(stored.Thumb)!.Value);
+        Assert.Equal(stored.Thumb, await Svc().GetMemberPhotoAsync(Trainer(tina), kid.Id, thumb: true));
+        Assert.Equal(stored.Image, await Svc().GetMemberPhotoAsync(Manager(), kid.Id, thumb: false));
+
+        // Liste und Blatt tragen nur die Marke.
+        Assert.Equal(first.PhotoVersion, Assert.Single(await Svc().ListMembersAsync(Trainer(tina), null, false)).PhotoVersion);
+        Assert.Equal(first.PhotoVersion, (await Svc().GetMemberAsync(Trainer(tina), kid.Id)).PhotoVersion);
+
+        // Ersetzen: weiter EIN Bild, die Marke wechselt — auch bei stehender Uhr (sie steht in der Bild-Adresse).
+        _db.ChangeTracker.Clear();
+        var second = await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Jpeg(200, 100));
+        Assert.True(second.PhotoVersion > first.PhotoVersion);
+        Assert.Equal((200, 100), (Assert.Single(_db.ClubMemberPhotos.AsNoTracking()).Width, _db.ClubMemberPhotos.AsNoTracking().Single().Height));
+
+        // Wer das Blatt nicht sieht, sieht auch das Bild nicht — und kann keins setzen oder entfernen.
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().GetMemberPhotoAsync(Trainer(tom), kid.Id, thumb: true));
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().SetMemberPhotoAsync(Trainer(tom), kid.Id, Jpeg(10, 10)));
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().DeleteMemberPhotoAsync(Trainer(tom), kid.Id));
+        await Assert.ThrowsAsync<ForbiddenException>(() => Svc().GetMemberPhotoAsync(new ClubActor(tom, false, false), kid.Id, thumb: true));
+
+        // Entfernen: Bild und Marke weg; ein zweites Mal ist nichts zu tun.
+        await Svc().DeleteMemberPhotoAsync(Trainer(tina), kid.Id);
+        await Svc().DeleteMemberPhotoAsync(Trainer(tina), kid.Id);
+        Assert.Empty(_db.ClubMemberPhotos);
+        Assert.Null((await Svc().GetMemberAsync(Trainer(tina), kid.Id)).PhotoVersion);
+
+        // Das Bild geht mit dem Blatt.
+        await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Jpeg(100, 100));
+        _db.ChangeTracker.Clear();
+        await Svc().DeleteMemberAsync(Manager(), kid.Id);
+        Assert.Empty(_db.ClubMemberPhotos);
+        Assert.Empty(_db.ClubMembers);
+    }
+
+    // ---- Personennummer und FIDE-Nummer --------------------------------------------------------
+
+    [Fact]
+    public async Task Numbers_PersonNumberAndFideId_AreKeptOnTheSheet_TheFideIdIsDigitsOnly()
+    {
+        var input = Kid("Daniel", "Huber");
+        (input.NationalId, input.FideId) = (" 123456 ", " 1612345 ");
+        var kid = await Svc().CreateMemberAsync(Manager(), input);
+        Assert.Equal(("123456", "1612345"), (kid.NationalId, kid.FideId));
+        Assert.Equal(("123456", "1612345"), ((await Svc().GetMemberAsync(Manager(), kid.Id)).NationalId, (await Svc().GetMemberAsync(Manager(), kid.Id)).FideId));
+
+        input.FideId = "AUT 16";
+        await Assert.ThrowsAsync<DomainValidationException>(() => Svc().UpdateMemberAsync(Manager(), kid.Id, input));
+
+        (input.NationalId, input.FideId) = ("  ", null);                                      // leer = keine
+        var cleared = await Svc().UpdateMemberAsync(Manager(), kid.Id, input);
+        Assert.Null(cleared.NationalId);
+        Assert.Null(cleared.FideId);
+    }
+
+    // ---- Blättern in der Anwesenheitsliste ----------------------------------------------------
+
+    [Fact]
+    public async Task SessionDates_ListEveryTrainingOfTheGroup_OldestFirst_OnlyForWhoSeesTheGroup()
+    {
+        var (tina, tom) = (await UserAsync("tina"), await UserAsync("tom"));
+        var (g, other) = (await GroupAsync("Anfänger", tina), await GroupAsync("Turnier", tom));
+        Assert.Empty(await Svc().ListSessionDatesAsync(Trainer(tina), g));
+        foreach (var date in new[] { "2026-09-25", "2026-09-11", "2026-09-18" })
+            await Svc().SaveSessionAsync(Trainer(tina), g, new ClubSessionInputDto { Date = date });
+        await Svc().SaveSessionAsync(Trainer(tom), other, new ClubSessionInputDto { Date = "2026-09-22" });
+
+        Assert.Equal(["2026-09-11", "2026-09-18", "2026-09-25"], await Svc().ListSessionDatesAsync(Trainer(tina), g));
+        Assert.Equal(["2026-09-22"], await Svc().ListSessionDatesAsync(Manager(), other));
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().ListSessionDatesAsync(Trainer(tina), other));
+    }
+
     // ---- Lernstand aus dem Konto --------------------------------------------------------------
 
     [Fact]

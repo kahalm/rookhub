@@ -34,8 +34,17 @@ public class ClubMemberListDto
     /// <summary>Trainer statt Kind — steht in jeder Anwesenheitsliste unter den Kindern.</summary>
     public bool IsTrainer { get; set; }
     public bool Linked { get; set; }
+    /// <summary>Marke des hinterlegten Bilds (wechselt mit jedem Hochladen), <c>null</c> = kein Bild. Das Bild selbst holt
+    /// <c>GET …/members/{id}/photo</c>.</summary>
+    public long? PhotoVersion { get; set; }
     public List<ClubGroupRefDto> Groups { get; set; } = new();
     public List<ClubContactDto> Contacts { get; set; } = new();
+}
+
+/// <summary>Antwort auf das Hochladen eines Bilds zum Blatt.</summary>
+public class ClubMemberPhotoDto
+{
+    public long? PhotoVersion { get; set; }
 }
 
 public class ClubNoteDto
@@ -73,6 +82,9 @@ public class ClubMemberDto : ClubMemberListDto
 {
     /// <summary>yyyy-MM-dd, wenn das ganze Datum bekannt ist.</summary>
     public string? BirthDate { get; set; }
+    public string? FideId { get; set; }
+    /// <summary>Personennummer beim Landesverband (ÖSB).</summary>
+    public string? NationalId { get; set; }
     public string? LinkedUsername { get; set; }
     /// <summary>Offener Einmal-Code zum Verknüpfen (nicht abgelaufen), sonst <c>null</c>.</summary>
     public string? LinkCode { get; set; }
@@ -100,6 +112,11 @@ public class ClubMemberInputDto
     public int? BirthYear { get; set; }
     [MaxLength(60)]
     public string? Level { get; set; }
+    /// <summary>Nur Ziffern; leer = keine.</summary>
+    [MaxLength(16)]
+    public string? FideId { get; set; }
+    [MaxLength(16)]
+    public string? NationalId { get; set; }
     public bool Archived { get; set; }
     public bool IsTrainer { get; set; }
     [MaxLength(20)]

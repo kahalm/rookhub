@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Contact, ContactKind, GroupRow, Member, MemberInput, Progress } from '../../core/club.models';
+import { MemberPhotoComponent } from '../../shared/member-photo.component';
 import { STATUS_LABEL, ageClass, attendanceText, emptyInput, formatBirth, formatLinkCode, fullName, parseBirth, shortDate, telHref, toInput } from '../../core/club-format';
 
 /** „30.09.2026" aus einem Zeitstempel der API (Ortszeit des Betrachters). */
@@ -26,27 +27,34 @@ function orNull(value: string | null | undefined): string | null {
  * Das Karteiblatt eines Kindes (Wunsch 2026-09-30): anlegen, ansehen, ändern. Kontakte sind eine LISTE — beliebig viele
  * Telefonnummern und E-Mail-Adressen, jede mit einem Hinweis, wessen sie ist („Mutter Daniela", „Vater Franz"); in der
  * Ansicht ist jede Nummer ein Anruf-Link. Darunter Lernstand (Stufe + datierte Notizen), Anwesenheit, und das verknüpfte
- * Konto: den Code dafür gibt der Trainer aus, EINLÖSEN muss ihn das Konto selbst (`/verknuepfen`). Mehr Angaben gibt es
- * bewusst nicht (FIDE-/ÖSB-Nummer, Foto-Einwilligung, Notiz zum Kind waren drin und sind auf Wunsch wieder weg).
+ * Konto: den Code dafür gibt der Trainer aus, EINLÖSEN muss ihn das Konto selbst (`/verknuepfen`).
+ *
+ * Seit 2026-10-02 (Wunsch): ein BILD je Blatt (im Formular wählen, ersetzen, entfernen — hochgeladen wird es nach dem
+ * Speichern des Blatts, denn es hängt an dessen Kennung), Personennummer (ÖSB) und FIDE-Nummer, und beim Anlegen der
+ * Knopf „Weiteres Kind anlegen": speichert dieses Blatt und öffnet gleich ein leeres (Gruppen bleiben angehakt — man
+ * trägt meist eine ganze Gruppe hintereinander ein). Foto-Einwilligung und Notiz zum Kind gibt es weiter nicht.
  */
 @Component({
   selector: 'ch-member-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, MemberPhotoComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Karteiblätter sehen die Trainer und die Leitung des Vereins.</p></section>
     } @else if (editing()) {
       <form class="sheet form" (submit)="$event.preventDefault(); save()">
         <header class="sheet-head"><h1>{{ member() ? 'Blatt ändern' : (form().isTrainer ? 'Trainer anlegen' : 'Kind anlegen') }}</h1></header>
+        @if (lastSaved(); as s) {
+          <p class="ok saved-note" role="status"><a [routerLink]="['/kind', s.id]">{{ s.name }}</a> ist gespeichert — hier ist das nächste Blatt.</p>
+        }
         <div class="kind-pick" role="radiogroup" aria-label="Kind oder Trainer">
           <label class="check"><input type="radio" name="isTrainer" [checked]="!form().isTrainer" (change)="set('isTrainer', false)"> Kind</label>
           <label class="check"><input type="radio" name="isTrainer" [checked]="form().isTrainer" (change)="set('isTrainer', true)"> Trainer</label>
         </div>
         <div class="grid-2">
           <label class="field"><span>Vorname</span>
-            <input name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName" (input)="set('firstName', $any($event.target).value)"></label>
+            <input #firstName name="firstName" autocomplete="off" maxlength="80" [value]="form().firstName" (input)="set('firstName', $any($event.target).value)"></label>
           <label class="field"><span>Nachname (wenn bekannt)</span>
             <input name="lastName" autocomplete="off" maxlength="80" [value]="form().lastName" (input)="set('lastName', $any($event.target).value)"></label>
         </div>
@@ -57,6 +65,29 @@ function orNull(value: string | null | undefined): string | null {
             <label class="field"><span>Stufe oder Diplom</span>
               <input name="level" autocomplete="off" maxlength="60" placeholder="z. B. Bauerndiplom" [value]="form().level ?? ''" (input)="set('level', $any($event.target).value)"></label>
           }
+        </div>
+        <div class="grid-2">
+          <label class="field"><span>Personennummer (ÖSB)</span>
+            <input name="nationalId" autocomplete="off" maxlength="16" [value]="form().nationalId ?? ''" (input)="set('nationalId', $any($event.target).value)"></label>
+          <label class="field"><span>FIDE-Nummer</span>
+            <input name="fideId" inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().fideId ?? ''" (input)="set('fideId', $any($event.target).value)"></label>
+        </div>
+        <div class="photo-field">
+          @if (photoPreview(); as src) {
+            <span class="avatar portrait"><img [src]="src" alt="Das gewählte Bild"></span>
+          } @else if (keptPhoto(); as k) {
+            <ch-member-photo class="portrait" [memberId]="k.id" [version]="k.version" [name]="form().firstName" />
+          } @else {
+            <span class="avatar portrait"><span class="avatar-ph none">kein Bild</span></span>
+          }
+          <div class="photo-actions">
+            <span class="photo-label">Bild</span>
+            <label class="btn slim upload pick-photo" [class.disabled]="busy()">
+              {{ hasPicture() ? 'Anderes Bild wählen' : 'Bild wählen' }}
+              <input type="file" name="photo" accept="image/*" hidden [disabled]="busy()" (change)="pickPhoto($any($event.target))">
+            </label>
+            @if (hasPicture()) { <button type="button" class="btn-link danger drop-photo" [disabled]="busy()" (click)="dropPhoto()">Bild entfernen</button> }
+          </div>
         </div>
 
         <section>
@@ -103,19 +134,25 @@ function orNull(value: string | null | undefined): string | null {
         <!-- Klebt am unteren Rand, solange das Formular im Bild ist: Speichern soll immer erreichbar sein, egal wo man
              gerade schreibt (Wunsch 2026-09-30). -->
         <div class="actions form-save">
-          <button type="submit" class="btn primary" [disabled]="busy()">{{ member() ? 'Änderungen speichern' : 'Kind anlegen' }}</button>
-          <button type="button" class="btn" [disabled]="busy()" (click)="cancel()">Abbrechen</button>
+          <button type="submit" class="btn primary" [disabled]="busy()">{{ member() ? 'Änderungen speichern' : (form().isTrainer ? 'Trainer anlegen' : 'Kind anlegen') }}</button>
+          @if (!member()) {
+            <button type="button" class="btn save-next" [disabled]="busy()" title="Speichert dieses Blatt und öffnet gleich ein leeres" (click)="save(true)">{{ form().isTrainer ? 'Weiteren Trainer anlegen' : 'Weiteres Kind anlegen' }}</button>
+          }
+          <button type="button" class="btn" [disabled]="busy()" (click)="cancel()">{{ lastSaved() && !member() ? 'Fertig' : 'Abbrechen' }}</button>
         </div>
       </form>
     } @else if (member(); as m) {
       <article class="sheet">
-        <header class="sheet-head">
+        <header class="sheet-head" [class.has-photo]="m.photoVersion != null">
+          @if (m.photoVersion != null) { <ch-member-photo class="portrait" [memberId]="m.id" [version]="m.photoVersion" [name]="name()" [zoom]="true" /> }
           <h1>{{ name() }}</h1>
           <button type="button" class="btn slim edit" (click)="startEdit()">Bearbeiten</button>
           <p class="sub">
             @if (m.isTrainer) { <span class="chip">Trainer</span> }
             @if (m.birthYear) { <span>{{ m.birthDate ? 'Geboren ' + birth() : 'Jahrgang ' + m.birthYear }}@if (cls(); as c) {, {{ c }} }</span> }
             @if (m.level) { <span>{{ m.level }}</span> }
+            @if (m.nationalId) { <span class="pnr">PNr. {{ m.nationalId }}</span> }
+            @if (m.fideId) { <a class="fide" [href]="'https://ratings.fide.com/profile/' + m.fideId" target="_blank" rel="noopener">FIDE {{ m.fideId }}</a> }
             @for (g of m.groups; track g.id) { <a class="chip" [routerLink]="['/gruppen', g.id]">{{ g.name }}</a> }
             @if (m.archived) { <span class="chip">im Archiv</span> }
           </p>
@@ -222,6 +259,22 @@ export class MemberPageComponent implements OnInit {
   readonly noteText = signal('');
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** Nach „Weiteres Kind anlegen": wessen Blatt gerade gespeichert wurde (Zeile über dem leeren Formular). */
+  readonly lastSaved = signal<{ id: number; name: string } | null>(null);
+
+  /** Das im Formular GEWÄHLTE Bild — hochgeladen wird es erst nach dem Speichern des Blatts. */
+  private photoFile: File | null = null;
+  /** Objekt-Adresse der Vorschau des gewählten Bilds. */
+  readonly photoPreview = signal<string | null>(null);
+  /** „Bild entfernen" gedrückt: das vorhandene Bild geht beim Speichern. */
+  readonly photoRemove = signal(false);
+  /** Das Bild, das das Blatt schon hat und behält — `null` ohne Bild oder wenn es entfernt werden soll. */
+  readonly keptPhoto = computed(() => {
+    const m = this.member();
+    return m && m.photoVersion != null && !this.photoRemove() ? { id: m.id, version: m.photoVersion } : null;
+  });
+  readonly hasPicture = computed(() => !!this.photoPreview() || !!this.keptPhoto());
+  private readonly firstNameInput = viewChild<ElementRef<HTMLInputElement>>('firstName');
 
   readonly name = computed(() => { const m = this.member(); return m ? fullName(m) : ''; });
   /** Altersklasse nur für Kinder — bei einem Trainer sagt „U18" nichts. */
@@ -237,6 +290,10 @@ export class MemberPageComponent implements OnInit {
   readonly day = formatDay;
   readonly short = shortDate;
   readonly code = formatLinkCode;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.clearPhotoDraft());
+  }
 
   ngOnInit(): void {
     if (!this.allowed) return;
@@ -278,6 +335,7 @@ export class MemberPageComponent implements OnInit {
     if (!m) return;
     this.form.set(toInput(m));
     this.birthText.set(formatBirth(m));
+    this.clearPhotoDraft();
     this.error.set(null);
     this.editing.set(true);
     void this.loadGroups();
@@ -285,6 +343,7 @@ export class MemberPageComponent implements OnInit {
 
   cancel(): void {
     this.error.set(null);
+    this.clearPhotoDraft();
     if (this.member()) this.editing.set(false);
     else void this.router.navigateByUrl('/');
   }
@@ -309,7 +368,51 @@ export class MemberPageComponent implements OnInit {
     this.form.update(f => ({ ...f, groupIds: on ? [...new Set([...f.groupIds, id])] : f.groupIds.filter(g => g !== id) }));
   }
 
-  async save(): Promise<void> {
+  /** Ein Bild gewählt (Datei oder, am Handy, direkt die Kamera) — es ersetzt Auswahl und „entfernen" von vorher. */
+  pickPhoto(input: HTMLInputElement): void {
+    const file = input.files?.[0] ?? null;
+    input.value = '';                                                    // dieselbe Datei soll noch einmal gehen
+    if (!file) return;
+    this.clearPhotoDraft();
+    this.photoFile = file;
+    this.photoPreview.set(URL.createObjectURL(file));
+  }
+
+  /** Kein Bild: die Auswahl fällt weg, und ein vorhandenes Bild geht beim Speichern. */
+  dropPhoto(): void {
+    this.clearPhotoDraft();
+    this.photoRemove.set(true);
+  }
+
+  private clearPhotoDraft(): void {
+    const url = this.photoPreview();
+    if (url) URL.revokeObjectURL(url);
+    this.photoFile = null;
+    this.photoPreview.set(null);
+    this.photoRemove.set(false);
+  }
+
+  /** Das Bild nach dem Speichern des Blatts nachziehen: hochladen bzw. entfernen. Liefert das Blatt mit der neuen Marke. */
+  private async syncPhoto(saved: Member): Promise<Member> {
+    if (this.photoFile) {
+      const state = await this.api.uploadMemberPhoto(saved.id, this.photoFile);
+      this.clearPhotoDraft();
+      return { ...saved, photoVersion: state.photoVersion };
+    }
+    if (this.photoRemove() && saved.photoVersion != null) {
+      await this.api.deleteMemberPhoto(saved.id);
+      this.clearPhotoDraft();
+      return { ...saved, photoVersion: null };
+    }
+    return saved;
+  }
+
+  /**
+   * Speichern. `andNew` (nur beim Anlegen): danach kein Wechsel aufs Blatt, sondern gleich ein leeres Formular für das
+   * nächste Kind — Gruppen und „Kind/Trainer" bleiben, wie sie waren.
+   */
+  async save(andNew = false): Promise<void> {
+    if (this.busy()) return;
     const f = this.form();
     if (!f.firstName.trim()) {
       this.error.set('Der Vorname fehlt noch.');
@@ -320,9 +423,14 @@ export class MemberPageComponent implements OnInit {
       this.error.set('Das Geburtsdatum ist so nicht lesbar. Schreib es wie 12.3.2015 — oder nur den Jahrgang, 2015.');
       return;
     }
+    const fideId = orNull(f.fideId);
+    if (fideId && !/^\d+$/.test(fideId)) {
+      this.error.set('Die FIDE-Nummer besteht nur aus Ziffern.');
+      return;
+    }
     const input: MemberInput = {
       ...f, ...birth, firstName: f.firstName.trim(), lastName: f.lastName.trim(),
-      level: orNull(f.level),
+      level: orNull(f.level), fideId, nationalId: orNull(f.nationalId),
       // Leer gelassene Zeilen fallen weg; der Server prüft, ob der Rest Nummern bzw. Adressen sind.
       contacts: f.contacts.filter(c => c.value.trim()).map(c => ({ kind: c.kind, value: c.value.trim(), label: orNull(c.label) })),
     };
@@ -330,15 +438,43 @@ export class MemberPageComponent implements OnInit {
     this.error.set(null);
     try {
       const existing = this.member();
-      const saved = existing ? await this.api.updateMember(existing.id, input) : await this.api.createMember(input);
+      let saved = existing ? await this.api.updateMember(existing.id, input) : await this.api.createMember(input);
+      try {
+        saved = await this.syncPhoto(saved);
+      } catch (err) {
+        // Das Blatt IST gespeichert, nur das Bild nicht: das Formular bleibt als „Blatt ändern" offen (ein zweites
+        // Speichern legte sonst dasselbe Kind noch einmal an), die Bildauswahl bleibt für den nächsten Versuch.
+        this.show(saved);
+        this.form.set(toInput(saved));
+        this.birthText.set(formatBirth(saved));
+        this.error.set(`Das Blatt ist gespeichert, das Bild aber nicht: ${apiErrorText(err, 'es ließ sich nicht hochladen.')}`);
+        return;
+      }
+      if (andNew && !existing) {
+        this.startNext(saved, f);
+        return;
+      }
       this.show(saved);
       this.editing.set(false);
-      if (!existing) void this.router.navigate(['/kind', saved.id], { replaceUrl: true });
+      this.lastSaved.set(null);
+      // Von „/kind/neu" aus (auch nach einem ersten Versuch, bei dem nur das Bild scheiterte) weiter auf die Adresse des Blatts.
+      if (!this.route.snapshot.paramMap.get('id')) void this.router.navigate(['/kind', saved.id], { replaceUrl: true });
     } catch (err) {
       this.error.set(apiErrorText(err, 'Speichern hat nicht geklappt.'));
     } finally {
       this.busy.set(false);
     }
+  }
+
+  /** Nach „Weiteres Kind anlegen": leeres Formular, Gruppen und Art bleiben, der Cursor steht im Vornamen. */
+  private startNext(saved: Member, previous: MemberInput): void {
+    this.lastSaved.set({ id: saved.id, name: fullName(saved) });
+    this.member.set(null);
+    this.progress.set(null);
+    this.form.set({ ...emptyInput(), isTrainer: previous.isTrainer, groupIds: previous.isTrainer ? [] : [...previous.groupIds] });
+    this.birthText.set('');
+    this.clearPhotoDraft();
+    setTimeout(() => this.firstNameInput()?.nativeElement.focus());
   }
 
   async remove(): Promise<void> {

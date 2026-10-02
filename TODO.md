@@ -19,7 +19,10 @@ Anwesenheit abhaken, Lernstand (Stufe + Notizen), Konto-Verknüpfung per Einmal-
   NPM 44, seit v0.616.0) laufen, beide Stacks haben den Dienst `clubhub`. Offen beim User: Rolle „Trainer" mit
   `club.trainer` anlegen und zuteilen.
 - [ ] **Datenschutz-Text**: die geteilte Datenschutzseite beschreibt die Kartei nicht (Daten Minderjähriger, Kontakte der
-  Eltern, Foto-Einwilligung). Text liefert der Verein; bis dahin zeigt ClubHub die allgemeine Seite.
+  Eltern, Foto-Einwilligung — seit 0.640.0 liegen BILDER der Kinder am Blatt, seit 0.620.0 Fotos der Einheiten). Text
+  liefert der Verein; bis dahin zeigt ClubHub die allgemeine Seite.
+- [ ] **Porträts in der Abhak-Liste** („Wer ist da?"): die Bilder der Blätter (0.640.0) stehen in Kartei und Blatt, in der
+  Anwesenheitsliste noch nicht — `ClubGroupDto.Members` trägt die Marke `PhotoVersion` nicht.
 - [ ] **Elo-Verlauf je Kind** aus FIDE-/ÖSB-Nummer (steht im Blatt, wird noch nicht abgefragt) und Turniere/Termine
   (wer ist gemeldet, Ergebnisse über die chess-results-Anbindung).
 - [ ] **Eltern-/Kinder-Sicht** (eigener Stand, Termine) — bisher sieht das verknüpfte Konto nur, DASS es verknüpft ist.

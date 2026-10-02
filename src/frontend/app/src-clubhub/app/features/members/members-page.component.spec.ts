@@ -32,7 +32,8 @@ describe('MembersPageComponent (Kartei)', () => {
 
   beforeEach(() => {
     perms = new Set(['club.trainer']);
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['members', 'groups']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['members', 'groups', 'memberPhotoBlob']);
+    api.memberPhotoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.groups.and.resolveTo([GROUP(1, 'Anfänger', 5), GROUP(2, 'Turnier', 2)]);
     api.members.and.resolveTo([
       KID(1, 'Anna', 'Auer', { birthYear: 2016, level: 'Bauerndiplom', groups: [{ id: 1, name: 'Anfänger' }],
@@ -107,6 +108,59 @@ describe('MembersPageComponent (Kartei)', () => {
     expect(api.members).toHaveBeenCalledTimes(1);
     expect(matchesName({ firstName: 'Anna', lastName: 'Auer' }, 'auer an')).toBeTrue();   // „Nachname Vorname" geht auch
     expect(matchesName({ firstName: 'Anna', lastName: 'Auer' }, 'anna au')).toBeTrue();
+  });
+
+  it('Gruppenfilter als Knöpfe: je Gruppe mit der Zahl ihrer Kinder, ein Tipp filtert, ein zweiter zeigt wieder alle', async () => {
+    await create();
+    const chips = () => Array.from(el().querySelectorAll<HTMLButtonElement>('.chip-btn'));
+    expect(el().querySelector('.tools select')).toBeNull();                               // keine Auswahlliste mehr
+    expect(chips().map(c => c.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Alle', 'Anfänger 2', 'Turnier 1']);
+    expect(chips().map(c => c.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+
+    chips()[1].click();
+    fixture.detectChanges();
+    expect(names()).toEqual(['Auer Anna', 'Šarić Ivo']);
+    expect(chips().map(c => c.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    expect(el().querySelector('.count')!.textContent).toBe('2 von 3 Kindern');
+
+    chips()[2].click();
+    fixture.detectChanges();
+    expect(names()).toEqual(['Berger Ben']);
+    chips()[2].click();                                                                  // noch einmal dieselbe = alle
+    fixture.detectChanges();
+    expect(names()).toEqual(['Auer Anna', 'Berger Ben', 'Šarić Ivo']);
+    chips()[1].click();
+    chips()[0].click();                                                                  // „Alle"
+    fixture.detectChanges();
+    expect(fixture.componentInstance.groupId()).toBeNull();
+    expect(api.members).toHaveBeenCalledTimes(1);
+  });
+
+  it('eine archivierte Gruppe bekommt nur dann einen Knopf, wenn Blätter der Liste in ihr sind', async () => {
+    api.groups.and.resolveTo([GROUP(1, 'Anfänger', 5), { ...GROUP(3, 'Alt', null), archived: true }, { ...GROUP(4, 'Uralt', null), archived: true }]);
+    api.members.and.resolveTo([KID(1, 'Anna', 'Auer', { groups: [{ id: 3, name: 'Alt' }] })]);
+    await create();
+    expect(fixture.componentInstance.chips()).toEqual([{ id: 1, name: 'Anfänger', count: 0 }, { id: 3, name: 'Alt', count: 1 }]);
+  });
+
+  it('Bilder: ohne ein einziges Bild bleibt die Liste ohne Porträts; mit einem steht vor jedem Namen eines (sonst der Anfangsbuchstabe)', async () => {
+    await create();
+    expect(el().querySelector('ch-member-photo')).toBeNull();
+    expect(api.memberPhotoBlob).not.toHaveBeenCalled();
+
+    TestBed.resetTestingModule();
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:bild-1');
+    api.members.and.resolveTo([KID(1, 'Anna', 'Auer', { photoVersion: 1759400000000 }), KID(2, 'Ben', 'Berger'), KID(9, 'Georg', 'Auer', { isTrainer: true })]);
+    await create();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el().querySelectorAll('ch-member-photo').length).toBe(3);                      // Kinder UND Trainer
+    expect(api.memberPhotoBlob.calls.allArgs()).toEqual([[1, true, 1759400000000]]);      // nur wer ein Bild hat, nur das Vorschaubild
+    const kids = Array.from(el().querySelectorAll('.register:not(.coaches) .kid'));
+    expect(kids[0].querySelector('.avatar img')!.getAttribute('src')).toBe('blob:bild-1');
+    expect(kids[1].querySelector('.avatar img')).toBeNull();
+    expect(kids[1].querySelector('.avatar-ph')!.textContent).toBe('B');
+    expect(names()).toEqual(['Auer Anna', 'Berger Ben', 'Auer Georg']);                   // die Namen stehen wie vorher
   });
 
   it('am Trainingstag steht oben der Streifen zur Anwesenheitsliste — nur für die Gruppe, die heute trainiert', async () => {

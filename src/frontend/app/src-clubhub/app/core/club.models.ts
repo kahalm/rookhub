@@ -25,6 +25,8 @@ export interface MemberRow {
   /** Trainer statt Kind: steht in jeder Anwesenheitsliste unter den Kindern, gehört zu keiner Gruppe. */
   isTrainer: boolean;
   linked: boolean;
+  /** Marke des Bilds am Blatt (ändert sich mit jedem neuen Bild); leer = kein Bild. Das Bild holt `MemberPhotoStore`. */
+  photoVersion?: number | null;
   groups: GroupRef[];
   contacts: Contact[];
 }
@@ -57,6 +59,10 @@ export interface AttendanceSummary {
 
 export interface Member extends MemberRow {
   birthDate?: string | null;
+  /** FIDE-Nummer (nur Ziffern). */
+  fideId?: string | null;
+  /** Personennummer beim ÖSB. */
+  nationalId?: string | null;
   linkedUsername?: string | null;
   linkCode?: string | null;
   linkCodeExpires?: string | null;
@@ -73,10 +79,17 @@ export interface MemberInput {
   birthDate: string | null;
   birthYear: number | null;
   level: string | null;
+  fideId: string | null;
+  nationalId: string | null;
   archived: boolean;
   isTrainer: boolean;
   contacts: Contact[];
   groupIds: number[];
+}
+
+/** Antwort auf das Hochladen eines Bilds zum Blatt: die neue Marke. */
+export interface MemberPhotoState {
+  photoVersion: number | null;
 }
 
 export interface LinkCode {

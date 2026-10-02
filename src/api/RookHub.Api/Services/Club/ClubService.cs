@@ -42,9 +42,13 @@ public class ClubService
     public const int ThumbMaxEdge = 320;
     public const int MaxPhotosPerSession = 30;
     public const long MaxPhotoUploadBytes = 15 * 1024 * 1024;
+    /// <summary>Bild am Karteiblatt: längste Seite des gespeicherten Bilds bzw. des Vorschaubilds (Liste, Kopf des Blatts).</summary>
+    public const int MemberPhotoMaxEdge = 1200;
+    public const int MemberThumbMaxEdge = 256;
 
     private static readonly Regex PhonePattern = new(@"^[+0-9(][0-9 ()/\-.]*$", RegexOptions.Compiled);
     private static readonly Regex EmailPattern = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
+    private static readonly Regex DigitsPattern = new(@"^[0-9]+$", RegexOptions.Compiled);
 
     private readonly AppDbContext _db;
     private readonly Func<DateTime> _utcNow;
@@ -159,6 +163,7 @@ public class ClubService
         _db.ClubContacts.RemoveRange(m.Contacts);
         _db.ClubGroupMembers.RemoveRange(m.Groups);
         _db.ClubNotes.RemoveRange(m.NoteEntries);
+        if (await _db.ClubMemberPhotos.AnyAsync(p => p.MemberId == id, ct)) RemoveMemberPhotoWithoutLoading(id);
         _db.ClubMembers.Remove(m);
         await _db.SaveChangesAsync(ct);
     }
@@ -186,6 +191,10 @@ public class ClubService
         }
 
         m.Level = Clean(input.Level);
+        m.FideId = Clean(input.FideId);
+        if (m.FideId != null && !DigitsPattern.IsMatch(m.FideId))
+            throw new DomainValidationException("Die FIDE-Nummer besteht nur aus Ziffern.");
+        m.NationalId = Clean(input.NationalId);
         m.Archived = input.Archived;
         m.IsTrainer = input.IsTrainer;
         m.UpdatedAt = now;
@@ -266,6 +275,8 @@ public class ClubService
         var names = await GroupNamesAsync(m.Groups.Select(g => g.GroupId), ct);
         var dto = Fill(new ClubMemberDto(), m, names);
         dto.BirthDate = m.BirthDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        dto.FideId = m.FideId;
+        dto.NationalId = m.NationalId;
         dto.CreatedAt = m.CreatedAt;
         dto.UpdatedAt = m.UpdatedAt;
         dto.CanDelete = actor.Manager;
@@ -315,11 +326,78 @@ public class ClubService
         dto.Archived = m.Archived;
         dto.IsTrainer = m.IsTrainer;
         dto.Linked = m.LinkedUserId != null;
+        dto.PhotoVersion = m.PhotoVersion;
         dto.Groups = m.Groups.Select(g => new ClubGroupRefDto { Id = g.GroupId, Name = groupNames.GetValueOrDefault(g.GroupId, "") })
             .OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         dto.Contacts = m.Contacts.OrderBy(c => c.Position).ThenBy(c => c.Id)
             .Select(c => new ClubContactDto { Kind = c.Kind, Value = c.Value, Label = c.Label }).ToList();
         return dto;
+    }
+
+    // ---- Bild am Blatt ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Das Bild zum Blatt setzen oder ersetzen: aufrecht, auf <see cref="MemberPhotoMaxEdge"/> verkleinert, JPEG; dazu das
+    /// Vorschaubild. Darf, wer das Blatt sieht (und damit ändern darf). 400, wenn es kein lesbares Bild ist.
+    /// </summary>
+    public async Task<ClubMemberPhotoDto> SetMemberPhotoAsync(ClubActor actor, int memberId, byte[] upload, CancellationToken ct = default)
+    {
+        var m = await LoadVisibleAsync(actor, memberId, ct);
+        if (upload.Length == 0 || !ScoresheetImage.CanDecode(upload))
+            throw new DomainValidationException("Das ist kein Bild, das sich lesen lässt (JPEG, PNG oder WebP).");
+        var image = ScoresheetImage.Prepare(upload, MemberPhotoMaxEdge, 85) ?? throw new DomainValidationException("Das Bild ließ sich nicht verarbeiten.");
+        var thumb = ScoresheetImage.Prepare(image, MemberThumbMaxEdge, 82) ?? image;
+        var size = ScoresheetImage.Size(image) ?? (0, 0);
+        var now = _utcNow();
+
+        // Ersetzen, ohne das alte Bild zu laden: eine schon verfolgte Zeile nehmen, sonst einen Stellvertreter mit Schlüssel.
+        var photo = _db.ChangeTracker.Entries<ClubMemberPhoto>().FirstOrDefault(e => e.Entity.MemberId == memberId)?.Entity;
+        var exists = photo != null || await _db.ClubMemberPhotos.AnyAsync(p => p.MemberId == memberId, ct);
+        photo ??= new ClubMemberPhoto { MemberId = memberId };
+        photo.Image = image;
+        photo.Thumb = thumb;
+        photo.Width = size.Width;
+        photo.Height = size.Height;
+        photo.UpdatedByUserId = actor.UserId;
+        photo.UpdatedAt = now;
+        if (exists) _db.ClubMemberPhotos.Update(photo);
+        else _db.ClubMemberPhotos.Add(photo);
+
+        // Die Marke muss mit JEDEM Hochladen wechseln (sie steht in der Bild-Adresse) — auch zweimal in derselben Millisekunde.
+        m.PhotoVersion = Math.Max(new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Utc)).ToUnixTimeMilliseconds(), (m.PhotoVersion ?? 0) + 1);
+        m.UpdatedAt = now;
+        await _db.SaveChangesAsync(ct);
+        return new ClubMemberPhotoDto { PhotoVersion = m.PhotoVersion };
+    }
+
+    /// <summary>Das Bild (oder das Vorschaubild) — nur, wer das Blatt sieht; ein fremdes Blatt ist 404 wie eines ohne Bild.</summary>
+    public async Task<byte[]> GetMemberPhotoAsync(ClubActor actor, int memberId, bool thumb, CancellationToken ct = default)
+    {
+        Require(actor);
+        var own = actor.Manager ? [] : await OwnGroupIdsAsync(actor, ct);
+        if (!await Visible(actor, own).AnyAsync(m => m.Id == memberId, ct)) throw new NotFoundException("Dieses Kind gibt es nicht.");
+        var bytes = thumb
+            ? await _db.ClubMemberPhotos.Where(p => p.MemberId == memberId).Select(p => p.Thumb).FirstOrDefaultAsync(ct)
+            : await _db.ClubMemberPhotos.Where(p => p.MemberId == memberId).Select(p => p.Image).FirstOrDefaultAsync(ct);
+        return bytes ?? throw new NotFoundException("Zu diesem Blatt gibt es kein Bild.");
+    }
+
+    /// <summary>Das Bild vom Blatt nehmen (ohne Bild: nichts zu tun).</summary>
+    public async Task DeleteMemberPhotoAsync(ClubActor actor, int memberId, CancellationToken ct = default)
+    {
+        var m = await LoadVisibleAsync(actor, memberId, ct);
+        if (await _db.ClubMemberPhotos.AnyAsync(p => p.MemberId == memberId, ct)) RemoveMemberPhotoWithoutLoading(memberId);
+        else if (m.PhotoVersion == null) return;
+        m.PhotoVersion = null;
+        m.UpdatedAt = _utcNow();
+        await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Löschen über einen Stellvertreter mit Schlüssel — die Bytes werden dafür nicht geladen.</summary>
+    private void RemoveMemberPhotoWithoutLoading(int memberId)
+    {
+        var tracked = _db.ChangeTracker.Entries<ClubMemberPhoto>().FirstOrDefault(e => e.Entity.MemberId == memberId)?.Entity;
+        _db.ClubMemberPhotos.Remove(tracked ?? new ClubMemberPhoto { MemberId = memberId });
     }
 
     // ---- Notizen ------------------------------------------------------------------------------
@@ -691,6 +769,15 @@ public class ClubService
         var session = await _db.ClubSessions.Include(s => s.Attendance).AsNoTracking()
             .FirstOrDefaultAsync(s => s.GroupId == groupId && s.Date == day, ct);
         return session == null ? null : SessionDetail(session);
+    }
+
+    /// <summary>Die Tage ALLER Einheiten der Gruppe (yyyy-MM-dd, älteste zuerst) — damit blättert die Anwesenheitsliste
+    /// zu früheren Trainings, auch über das Fenster der Gruppenseite hinaus.</summary>
+    public async Task<List<string>> ListSessionDatesAsync(ClubActor actor, int groupId, CancellationToken ct = default)
+    {
+        await LoadGroupAsync(actor, groupId, ct);
+        var dates = await _db.ClubSessions.Where(s => s.GroupId == groupId).OrderBy(s => s.Date).Select(s => s.Date).ToListAsync(ct);
+        return dates.Select(Iso).ToList();
     }
 
     public async Task DeleteSessionAsync(ClubActor actor, int sessionId, CancellationToken ct = default)

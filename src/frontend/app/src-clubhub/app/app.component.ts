@@ -8,6 +8,7 @@ import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { environment } from '../../src/environments/environment';
 import { hasClubAccess } from './core/club-access';
+import { MemberPhotoStore } from './core/member-photo.store';
 
 /** Der Reiter „Kartei" gilt für die Liste UND für jedes Karteiblatt (`/kind/…`). */
 export function isCardIndexUrl(url: string): boolean {
@@ -62,6 +63,7 @@ export class ClubHubAppComponent implements OnInit {
   private readonly locale = inject(LocaleService);
   /** Nur injizieren genügt: hell/dunkel wie in RookHub (geteilter Design-Modus, setzt html.dark-theme). */
   private readonly theme = inject(ThemeService);
+  private readonly photos = inject(MemberPhotoStore);
   readonly user = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   readonly version = environment.version;
   /** Reiter nur für freigeschaltete Konten; neu gerechnet, wenn sich die Anmeldung ändert. */
@@ -83,6 +85,7 @@ export class ClubHubAppComponent implements OnInit {
   }
 
   logout(): void {
+    this.photos.clear();                           // Bilder der Kinder bleiben nicht im Speicher der Seite liegen
     this.auth.logout();
     void this.router.navigateByUrl('/login');
   }

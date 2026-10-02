@@ -160,13 +160,37 @@ export function byInitial<T extends Named>(rows: T[]): Register<T>[] {
 }
 
 export function emptyInput(): MemberInput {
-  return { firstName: '', lastName: '', birthDate: null, birthYear: null, level: null, archived: false, isTrainer: false, contacts: [], groupIds: [] };
+  return { firstName: '', lastName: '', birthDate: null, birthYear: null, level: null, fideId: null, nationalId: null,
+    archived: false, isTrainer: false, contacts: [], groupIds: [] };
 }
 
 export function toInput(m: Member): MemberInput {
   return { firstName: m.firstName, lastName: m.lastName, birthDate: m.birthDate ?? null, birthYear: m.birthYear ?? null,
-    level: m.level ?? null, archived: m.archived, isTrainer: m.isTrainer, contacts: m.contacts.map(c => ({ ...c })),
-    groupIds: m.groups.map(g => g.id) };
+    level: m.level ?? null, fideId: m.fideId ?? null, nationalId: m.nationalId ?? null, archived: m.archived,
+    isTrainer: m.isTrainer, contacts: m.contacts.map(c => ({ ...c })), groupIds: m.groups.map(g => g.id) };
+}
+
+export interface DateNeighbours {
+  /** Die Einheit davor (älter) — `null`, wenn es keine gibt. */
+  prev: string | null;
+  /** Die Einheit danach (jünger) — `null`, wenn es keine gibt. */
+  next: string | null;
+}
+
+/**
+ * Blättern in „Wer ist da?": die Nachbarn eines Tages unter den Tagen, an denen es eine Einheit gibt — plus dem Tag, für
+ * den die Liste von selbst aufgeht (`today`, der jüngste Trainingstag): von der letzten Einheit führt „weiter" dorthin
+ * zurück, auch wenn dort noch nichts erfasst ist. Der Tag selbst muss nicht in der Liste stehen (frei gewähltes Datum).
+ */
+export function dateNeighbours(dates: string[], current: string, today: string): DateNeighbours {
+  const all = [...new Set([...dates, today])].filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  let prev: string | null = null;
+  let next: string | null = null;
+  for (const d of all) {
+    if (d < current) prev = d;
+    else if (d > current) { next = d; break; }
+  }
+  return { prev, next };
 }
 
 export function fullName(m: Pick<MemberRow, 'firstName' | 'lastName'>): string {

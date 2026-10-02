@@ -17,6 +17,17 @@ internal sealed class ClubMemberConfiguration : IEntityTypeConfiguration<ClubMem
     }
 }
 
+internal sealed class ClubMemberPhotoConfiguration : IEntityTypeConfiguration<ClubMemberPhoto>
+{
+    public void Configure(EntityTypeBuilder<ClubMemberPhoto> e)
+    {
+        e.HasKey(p => p.MemberId);
+        e.Property(p => p.Image).HasColumnType("MEDIUMBLOB");
+        e.Property(p => p.Thumb).HasColumnType("MEDIUMBLOB");
+        e.HasOne(p => p.Member).WithOne().HasForeignKey<ClubMemberPhoto>(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class ClubContactConfiguration : IEntityTypeConfiguration<ClubContact>
 {
     public void Configure(EntityTypeBuilder<ClubContact> e)

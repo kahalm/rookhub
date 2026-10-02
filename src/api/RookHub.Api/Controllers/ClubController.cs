@@ -72,6 +72,37 @@ public class ClubController : BaseApiController
         return NoContent();
     }
 
+    // ---- Bild am Blatt ------------------------------------------------------------------------
+
+    /// <summary>Das Bild zum Blatt setzen oder ersetzen (ein Bild je Blatt; der nginx lässt 15 MB je Anfrage durch).</summary>
+    [HttpPost("members/{id:int}/photo")]
+    [RequestSizeLimit(ClubService.MaxPhotoUploadBytes)]
+    public async Task<ActionResult<ClubMemberPhotoDto>> SetMemberPhoto(int id, IFormFile? file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0) return BadRequest(new { message = "Kein Bild mitgeschickt." });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        return Ok(await _club.SetMemberPhotoAsync(await ActorAsync(), id, ms.ToArray(), ct));
+    }
+
+    /// <summary>Das Bild als JPEG; <c>?thumb=true</c> das Vorschaubild. Privat: kein Cache über den Browser des Betrachters
+    /// hinaus. Die Oberfläche hängt die Marke des Bilds (<c>photoVersion</c>) als <c>v</c> an — hier ohne Bedeutung, sie
+    /// sorgt nur dafür, dass ein ersetztes Bild eine neue Adresse hat.</summary>
+    [HttpGet("members/{id:int}/photo")]
+    public async Task<IActionResult> MemberPhoto(int id, [FromQuery] bool thumb = false, CancellationToken ct = default)
+    {
+        var bytes = await _club.GetMemberPhotoAsync(await ActorAsync(), id, thumb, ct);
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return File(bytes, "image/jpeg");
+    }
+
+    [HttpDelete("members/{id:int}/photo")]
+    public async Task<IActionResult> DeleteMemberPhoto(int id, CancellationToken ct)
+    {
+        await _club.DeleteMemberPhotoAsync(await ActorAsync(), id, ct);
+        return NoContent();
+    }
+
     [HttpPost("members/{id:int}/notes")]
     public async Task<ActionResult<ClubMemberDto>> AddNote(int id, [FromBody] ClubNoteInputDto input, CancellationToken ct) =>
         Ok(await _club.AddNoteAsync(await ActorAsync(), id, input.Text, ct));
@@ -144,6 +175,11 @@ public class ClubController : BaseApiController
     [HttpPost("groups/{id:int}/sessions")]
     public async Task<ActionResult<ClubSessionDetailDto>> SaveSession(int id, [FromBody] ClubSessionInputDto input, CancellationToken ct) =>
         Ok(await _club.SaveSessionAsync(await ActorAsync(), id, input, null, ct));
+
+    /// <summary>Die Tage aller Einheiten der Gruppe (yyyy-MM-dd, älteste zuerst) — zum Blättern in der Anwesenheitsliste.</summary>
+    [HttpGet("groups/{id:int}/sessions/dates")]
+    public async Task<ActionResult<List<string>>> SessionDates(int id, CancellationToken ct) =>
+        Ok(await _club.ListSessionDatesAsync(await ActorAsync(), id, ct));
 
     /// <summary>Die Einheit eines Tages (yyyy-MM-dd); 204, wenn es an dem Tag keine gibt.</summary>
     [HttpGet("groups/{id:int}/sessions/by-date/{date}")]

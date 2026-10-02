@@ -5,6 +5,14 @@ import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService } from '../../core/club-api.service';
 import { GroupRow, MemberRow } from '../../core/club.models';
 import { ageClass, byInitial, firstPhone, nameHead, nameTail, telHref, trainsToday, weekdayName } from '../../core/club-format';
+import { MemberPhotoComponent } from '../../shared/member-photo.component';
+
+/** Ein Knopf des Gruppenfilters: die Gruppe und wie viele Kinder der geladenen Kartei darin sind. */
+export interface GroupChip {
+  id: number;
+  name: string;
+  count: number;
+}
 
 /** Namenssuche über Vor- und Nachname, ohne Groß/klein und ohne Akzente („saric" findet „Šarić"). */
 export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: string): boolean {
@@ -18,12 +26,17 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
  * Hinweis („Mutter Daniela") zum Antippen — die Liste ist zugleich die Telefonliste. Oben der Textmarker-Streifen, wenn
  * heute eine Gruppe trainiert: ein Tipp zur Anwesenheitsliste. Gesucht und gefiltert wird im Browser; die Kartei eines
  * Vereins ist klein genug, um sie ganz zu laden.
+ *
+ * Der Gruppenfilter sind KNÖPFE (Wunsch 2026-10-02: „Filter auf Anfänger/Fortgeschrittene") — ein Tipp statt einer
+ * Auswahlliste, je Gruppe mit der Zahl ihrer Kinder. Hat mindestens ein Blatt ein Bild, steht vor jedem Namen ein
+ * kleines Porträt (ohne Bild der Anfangsbuchstabe, damit die Zeilen gleich beginnen); ohne ein einziges Bild bleibt
+ * die Liste, wie sie war.
  */
 @Component({
   selector: 'ch-members-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, MemberPhotoComponent],
   template: `
     @if (!allowed) {
       <section class="gate">
@@ -48,13 +61,16 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
       <div class="tools">
         <label class="field search"><span>Suchen</span>
           <input type="search" placeholder="Name" [value]="q()" (input)="q.set($any($event.target).value)"></label>
-        <label class="field"><span>Gruppe</span>
-          <select (change)="groupId.set(+$any($event.target).value || null)">
-            <option value="">alle</option>
-            @for (g of groups(); track g.id) { <option [value]="g.id" [selected]="g.id === groupId()">{{ g.name }}</option> }
-          </select></label>
         <label class="check"><input type="checkbox" [checked]="archived()" (change)="toggleArchived($any($event.target).checked)"> Archiv</label>
       </div>
+      @if (chips().length) {
+        <div class="filter-chips" role="group" aria-label="Nach Gruppe filtern">
+          <button type="button" class="chip-btn all" [attr.aria-pressed]="groupId() === null" (click)="groupId.set(null)">Alle</button>
+          @for (g of chips(); track g.id) {
+            <button type="button" class="chip-btn" [attr.aria-pressed]="groupId() === g.id" (click)="pickGroup(g.id)">{{ g.name }} <span class="n">{{ g.count }}</span></button>
+          }
+        </div>
+      }
       @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
       @if (loading() && !rows().length) { <p class="muted">Lade …</p> }
       @if (!loading() && !error() && !rows().length) {
@@ -75,11 +91,14 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
               @for (m of r.items; track m.id) {
                 <li class="kid">
                   <a class="kid-main" [routerLink]="['/kind', m.id]">
-                    <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
-                    <span class="kid-meta">
-                      @if (m.birthYear) { <span>Jg. {{ m.birthYear }}@if (cls(m); as c) { ({{ c }}) }</span> }
-                      @if (m.level) { <span>{{ m.level }}</span> }
-                      @for (g of m.groups; track g.id) { <span class="chip">{{ g.name }}</span> }
+                    @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
+                    <span class="kid-text">
+                      <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                      <span class="kid-meta">
+                        @if (m.birthYear) { <span>Jg. {{ m.birthYear }}@if (cls(m); as c) { ({{ c }}) }</span> }
+                        @if (m.level) { <span>{{ m.level }}</span> }
+                        @for (g of m.groups; track g.id) { <span class="chip">{{ g.name }}</span> }
+                      </span>
                     </span>
                   </a>
                   @if (phone(m); as p) {
@@ -101,7 +120,8 @@ export function matchesName(m: Pick<MemberRow, 'firstName' | 'lastName'>, q: str
               @for (m of coaches(); track m.id) {
                 <li class="kid">
                   <a class="kid-main" [routerLink]="['/kind', m.id]">
-                    <span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                    @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
+                    <span class="kid-text"><span class="kid-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span></span>
                   </a>
                   @if (phone(m); as p) {
                     <div class="kid-call">
@@ -143,6 +163,17 @@ export class MembersPageComponent implements OnInit {
   /** Die Trainer — eigener Block unter den Registern; der Gruppenfilter gilt für sie nicht (sie stehen in jeder Gruppe). */
   readonly coaches = computed(() => this.rows().filter(m => m.isTrainer && matchesName(m, this.q())));
   readonly today = computed(() => this.groups().filter(g => !g.archived && trainsToday(g.weekday, this.now())));
+  /**
+   * Die Knöpfe des Gruppenfilters: jede laufende Gruppe mit der Zahl ihrer Kinder in der geladenen Kartei (die Suche
+   * zählt dabei nicht mit). Eine archivierte Gruppe steht nur da, wenn Blätter der Liste in ihr sind (Archiv-Ansicht).
+   */
+  readonly chips = computed<GroupChip[]>(() => {
+    const counts = new Map<number, number>();
+    for (const m of this.rows()) if (!m.isTrainer) for (const g of m.groups) counts.set(g.id, (counts.get(g.id) ?? 0) + 1);
+    return this.groups().filter(g => !g.archived || counts.has(g.id)).map(g => ({ id: g.id, name: g.name, count: counts.get(g.id) ?? 0 }));
+  });
+  /** Porträts nur, wenn es überhaupt ein Bild gibt — sonst stünde vor jeder Zeile bloß ein Buchstabe. */
+  readonly hasPhotos = computed(() => this.rows().some(m => m.photoVersion != null));
   readonly countText = computed(() => {
     const kids = this.rows().filter(m => !m.isTrainer).length;
     const n = this.shown().length;
@@ -172,6 +203,11 @@ export class MembersPageComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /** Ein Tipp auf die Gruppe filtert; ein zweiter auf dieselbe zeigt wieder alle. */
+  pickGroup(id: number): void {
+    this.groupId.set(this.groupId() === id ? null : id);
   }
 
   toggleArchived(on: boolean): void {

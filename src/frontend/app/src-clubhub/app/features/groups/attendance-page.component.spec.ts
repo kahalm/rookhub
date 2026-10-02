@@ -60,7 +60,8 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
 
   beforeEach(() => {
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'sessionDates', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto']);
+    api.sessionDates.and.resolveTo([]);
     api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.group.and.resolveTo(GROUP());
     api.sessionByDate.and.resolveTo(null);
@@ -148,10 +149,12 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
     expect(ticks().every(t => !t.disabled)).toBeTrue();
   });
 
-  it('„Alle da" hakt alle ab; scheitert das Speichern, steht es da und nichts gilt als gesichert', async () => {
+  it('einen Knopf „Alle da" gibt es nicht; scheitert das Speichern, steht es da und nichts gilt als gesichert', async () => {
     api.saveSession.and.rejectWith(new HttpErrorResponse({ status: 500 }));
     await create(new Date(2026, 8, 25, 17, 5));
-    el().querySelector<HTMLButtonElement>('.all-present')!.click();
+    expect(el().querySelector('.all-present')).toBeNull();
+    expect(el().textContent).not.toContain('Alle da');
+    ticks().forEach(t => t.click());
     fixture.detectChanges();
     expect(el().querySelector('.tally strong')!.textContent).toBe('3 von 3 da');
     el().querySelector<HTMLButtonElement>('.save')!.click();
@@ -193,9 +196,86 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
       { memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' },
       { memberId: 91, status: 'absent' }, { memberId: 92, status: 'present' }]);
     expect(el().querySelector('[role=status]')!.textContent).toBe('Gespeichert: 2 von 5 da.');
-    el().querySelector<HTMLButtonElement>('.all-present')!.click();
+  });
+
+  it('Blättern: „‹" und „›" führen zur Einheit davor und danach — am Ende zurück auf den Tag, für den die Liste aufgeht', async () => {
+    api.sessionDates.and.resolveTo(['2026-09-11', '2026-09-18']);
+    await create(new Date(2026, 8, 25, 17, 5));                                          // Freitag, noch nichts erfasst
+    expect(api.sessionDates).toHaveBeenCalledWith(1);
+    const prev = () => el().querySelector<HTMLButtonElement>('.pager .prev')!;
+    const next = () => el().querySelector<HTMLButtonElement>('.pager .next')!;
+    const label = (b: HTMLButtonElement) => b.textContent!.trim().replace(/\s+/g, ' ');
+    expect(label(prev())).toBe('‹ Fr 18.09.');
+    expect(next().disabled).toBeTrue();
+    expect(label(next())).toBe('keine spätere ›');
+
+    api.sessionByDate.and.resolveTo(SESSION({ date: '2026-09-18', topic: 'Spieß' }));
+    prev().click();
+    await settle();
+    expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-18');
+    expect(fixture.componentInstance.date()).toBe('2026-09-18');
+    expect(el().querySelector<HTMLInputElement>('input[name=topic]')!.value).toBe('Spieß');
+    expect(pressed()).toEqual(['true', 'false', 'false']);
+    expect([label(prev()), label(next())]).toEqual(['‹ Fr 11.09.', 'Fr 25.09. ›']);
+    // Der Tag steht in der Adresse — Neuladen bleibt auf ihm.
+    expect((router.navigate as jasmine.Spy).calls.mostRecent().args[1].queryParams).toEqual({ datum: '2026-09-18' });
+
+    api.sessionByDate.and.resolveTo(null);
+    prev().click();
+    await settle();
+    expect(prev().disabled).toBeTrue();
+    expect(label(prev())).toBe('‹ keine frühere');
+    next().click();
+    await settle();
+    next().click();
+    await settle();
+    expect(fixture.componentInstance.date()).toBe('2026-09-25');                         // wieder „heute"
+    expect((router.navigate as jasmine.Spy).calls.mostRecent().args[1].queryParams).toEqual({ datum: null });
+  });
+
+  it('Blättern mit ungespeicherten Haken fragt nach — „nein" bleibt auf dem Tag, die Haken bleiben', async () => {
+    api.sessionDates.and.resolveTo(['2026-09-18']);
+    await create(new Date(2026, 8, 25, 17, 5));
+    api.sessionByDate.calls.reset();
+    ticks()[0].click();
     fixture.detectChanges();
-    expect(el().querySelector('.tally strong')!.textContent).toBe('5 von 5 da');
+    const ask = confirmAsk.and.returnValue(of(false));
+    el().querySelector<HTMLButtonElement>('.pager .prev')!.click();
+    await settle();
+    expect(ask).toHaveBeenCalledTimes(1);
+    expect(api.sessionByDate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.date()).toBe('2026-09-25');
+    expect(pressed()).toEqual(['true', 'false', 'false']);
+
+    // Auch das Datumsfeld fragt — und zeigt bei „nein" wieder den Tag, auf dem man steht.
+    const input = el().querySelector<HTMLInputElement>('input[name=date]')!;
+    input.value = '2026-09-18';
+    input.dispatchEvent(new Event('change'));
+    await settle();
+    expect(input.value).toBe('2026-09-25');
+
+    ask.and.returnValue(of(true));
+    el().querySelector<HTMLButtonElement>('.pager .prev')!.click();
+    await settle();
+    expect(api.sessionByDate).toHaveBeenCalledWith(1, '2026-09-18');
+    expect(pressed()).toEqual(['false', 'false', 'false']);
+  });
+
+  it('nach dem Speichern zählt die neue Einheit beim Blättern mit; ohne die Liste der Tage bleibt die Seite benutzbar', async () => {
+    api.sessionDates.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+    api.saveSession.and.resolveTo(SESSION({ date: '2026-09-18' }));
+    await create(new Date(2026, 8, 25, 17, 5), { datum: '2026-09-18' });
+    expect(ticks().length).toBe(3);
+    expect(el().querySelector<HTMLButtonElement>('.pager .prev')!.disabled).toBeTrue();
+    expect(fixture.componentInstance.around()).toEqual({ prev: null, next: '2026-09-25' });
+    el().querySelector<HTMLButtonElement>('.save')!.click();
+    await settle();
+    expect(fixture.componentInstance.sessionDates()).toEqual(['2026-09-18']);
+    api.sessionByDate.and.resolveTo(null);
+    el().querySelector<HTMLButtonElement>('.pager .next')!.click();                      // gespeichert = keine Rückfrage
+    await settle();
+    expect(confirmAsk).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.around()).toEqual({ prev: '2026-09-18', next: null });
   });
 
   it('Fotos: mehrere auf einmal, eines nach dem anderen hochgeladen — vorher wird die Einheit gespeichert, wenn es sie noch nicht gibt', async () => {

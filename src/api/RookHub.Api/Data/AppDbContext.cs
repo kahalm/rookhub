@@ -73,6 +73,7 @@ public partial class AppDbContext : DbContext
     public DbSet<PrepImport> PrepImports => Set<PrepImport>();
     // ClubHub (Kartei der Kinder und Jugendlichen)
     public DbSet<ClubMember> ClubMembers => Set<ClubMember>();
+    public DbSet<ClubMemberPhoto> ClubMemberPhotos => Set<ClubMemberPhoto>();
     public DbSet<ClubContact> ClubContacts => Set<ClubContact>();
     public DbSet<ClubGroup> ClubGroups => Set<ClubGroup>();
     public DbSet<ClubGroupMember> ClubGroupMembers => Set<ClubGroupMember>();

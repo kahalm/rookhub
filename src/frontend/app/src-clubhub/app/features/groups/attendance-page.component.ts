@@ -7,7 +7,7 @@ import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Group, SessionDetail, Status } from '../../core/club.models';
-import { longDate, nameHead, nameTail, trainingDate } from '../../core/club-format';
+import { dateNeighbours, longDate, nameHead, nameTail, shortDate, trainingDate } from '../../core/club-format';
 
 /** „7 von 12 da" */
 export function tallyText(present: number, total: number): string {
@@ -23,6 +23,11 @@ export function tallyText(present: number, total: number): string {
  *
  * Je Gruppe und Tag gibt es eine Einheit, ein Speichern ersetzt sie. Deshalb holt die Seite vor dem ersten Tipp, was für
  * den Tag schon erfasst ist (`sessionByDate`) — eine leer geöffnete Liste überschriebe sonst die erfasste.
+ *
+ * BLÄTTERN (Wunsch 2026-10-02): zwei Knöpfe führen zur Einheit davor und danach — über die Tage, an denen die Gruppe
+ * eine Einheit hat (`sessionDates`), plus den Tag, für den die Liste von selbst aufgeht. Wer mit ungespeicherten Haken
+ * blättert (oder das Datum ändert), wird vorher gefragt. Einen Knopf „Alle da" gibt es nicht mehr (Wunsch: „das gibt's
+ * eigentlich nie").
  */
 @Component({
   selector: 'ch-attendance-page',
@@ -35,9 +40,15 @@ export function tallyText(present: number, total: number): string {
     } @else if (group(); as g) {
       <h1>Wer ist da?</h1>
       <p class="kid-meta"><a [routerLink]="['/gruppen', g.id]">{{ g.name }}</a><span>{{ long(date()) }}</span></p>
+      <nav class="pager" aria-label="Einheiten blättern">
+        <button type="button" class="btn slim prev" [disabled]="!around().prev || busy()" (click)="changeDate(around().prev ?? '')">
+          <span aria-hidden="true">‹</span> {{ around().prev ? short(around().prev!) : 'keine frühere' }}</button>
+        <button type="button" class="btn slim next" [disabled]="!around().next || busy()" (click)="changeDate(around().next ?? '')">
+          {{ around().next ? short(around().next!) : 'keine spätere' }} <span aria-hidden="true">›</span></button>
+      </nav>
       <div class="roll-head">
         <label class="field"><span>Tag der Einheit</span>
-          <input type="date" name="date" [value]="date()" (change)="changeDate($any($event.target).value)"></label>
+          <input type="date" name="date" [value]="date()" (change)="changeDate($any($event.target).value, $any($event.target))"></label>
         <label class="field"><span>Thema</span>
           <input name="topic" autocomplete="off" maxlength="200" placeholder="z. B. Gabel und Spieß" [value]="topic()" (input)="edit(topic, $any($event.target).value)"></label>
       </div>
@@ -54,7 +65,6 @@ export function tallyText(present: number, total: number): string {
       } @else {
         <div class="tally">
           <strong aria-live="polite">{{ tally() }}</strong>
-          <button type="button" class="btn slim all-present" [disabled]="loading()" (click)="allPresent()">Alle da</button>
         </div>
         <ul class="roll">
           @for (m of g.members; track m.id) {
@@ -130,12 +140,20 @@ export class AttendancePageComponent implements OnInit {
   now: () => Date = () => new Date();
   /** Zählt die Tageswechsel — eine Antwort für einen inzwischen verlassenen Tag wird verworfen. */
   private epoch = 0;
+  /** Die Tage, an denen die Gruppe eine Einheit hat — zum Blättern. */
+  readonly sessionDates = signal<string[]>([]);
+  /** Der Tag, für den die Liste von selbst aufgeht (jüngster Trainingstag) — das Ende des Blätterns nach vorn. */
+  readonly home = signal('');
+  /** Haken, Thema oder Text geändert und noch nicht gespeichert — vor dem Blättern wird dann gefragt. */
+  readonly dirty = signal(false);
+  readonly around = computed(() => dateNeighbours(this.sessionDates(), this.date(), this.home()));
 
   /** Alle auf der Liste: die Kinder der Gruppe und darunter die Trainer. */
   readonly listed = computed(() => { const g = this.group(); return g ? [...g.members, ...g.coaches] : []; });
   readonly present = computed(() => this.listed().filter(m => this.marks()[m.id] === 'present').length);
   readonly tally = computed(() => tallyText(this.present(), this.listed().length));
   readonly long = longDate;
+  readonly short = shortDate;
   readonly head = nameHead;
   readonly tail = nameTail;
 
@@ -148,14 +166,42 @@ export class AttendancePageComponent implements OnInit {
     try {
       const g = await this.api.group(groupId);
       this.group.set(g);
-      await this.loadDate(wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) ? wanted : trainingDate(g.weekday, this.now()));
+      this.home.set(trainingDate(g.weekday, this.now()));
+      void this.loadDates(g.id);
+      await this.loadDate(wanted && /^\d{4}-\d{2}-\d{2}$/.test(wanted) ? wanted : this.home());
     } catch (err) {
       this.error.set(apiErrorText(err, 'Die Gruppe konnte nicht geladen werden.'));
     }
   }
 
-  changeDate(value: string): void {
-    if (value && value !== this.date()) void this.loadDate(value);
+  /** Ohne die Tage gibt es nur kein Blättern — die Liste selbst bleibt benutzbar. */
+  private async loadDates(groupId: number): Promise<void> {
+    try {
+      this.sessionDates.set(await this.api.sessionDates(groupId));
+    } catch { /* still */ }
+  }
+
+  /**
+   * Auf einen anderen Tag wechseln — über die Blätter-Knöpfe oder das Datumsfeld. Mit ungespeicherten Änderungen erst
+   * nach Rückfrage; bei „nein" zeigt das Datumsfeld wieder den Tag, auf dem man steht.
+   */
+  changeDate(value: string, input?: HTMLInputElement): void {
+    if (!value || value === this.date()) return;
+    if (!this.dirty()) {
+      this.open(value);
+      return;
+    }
+    void firstValueFrom(this.confirm.ask('Die Änderungen an dieser Einheit sind noch nicht gespeichert. Trotzdem zu einem anderen Tag wechseln?'))
+      .then(ok => {
+        if (ok) this.open(value);
+        else if (input) input.value = this.date();
+      });
+  }
+
+  /** Den Tag öffnen und in die Adresse schreiben (`?datum=`), damit Neuladen und „Zurück" auf ihm bleiben. */
+  private open(date: string): void {
+    void this.loadDate(date);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { datum: date === this.home() ? null : date }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   /** Was für diesen Tag schon erfasst ist — solange das lädt, ist die Liste gesperrt. */
@@ -187,6 +233,7 @@ export class AttendancePageComponent implements OnInit {
     const marks: Record<number, Status> = {};
     for (const a of s?.attendance ?? []) if (a.status === 'present' || a.status === 'absent') marks[a.memberId] = a.status;
     this.marks.set(marks);
+    this.dirty.set(false);
   }
 
   /** Ein Tipp auf die Zeile: da ↔ nicht da. */
@@ -198,18 +245,13 @@ export class AttendancePageComponent implements OnInit {
   edit(field: WritableSignal<string>, value: string): void {
     field.set(value);
     this.saved.set(null);
+    this.dirty.set(true);
   }
 
   private mark(memberId: number, status: Status): void {
     this.marks.update(m => ({ ...m, [memberId]: status }));
     this.saved.set(null);
-  }
-
-  allPresent(): void {
-    const marks: Record<number, Status> = {};
-    for (const m of this.listed()) marks[m.id] = 'present';
-    this.marks.set(marks);
-    this.saved.set(null);
+    this.dirty.set(true);
   }
 
   /**
@@ -258,6 +300,7 @@ export class AttendancePageComponent implements OnInit {
         attendance: this.listed().map(m => ({ memberId: m.id, status: this.marks()[m.id] ?? 'absent' })),
       });
       this.apply(s);
+      this.sessionDates.update(d => d.includes(s.date) ? d : [...d, s.date]);
       this.saved.set(`Gespeichert: ${tallyText(s.present, this.listed().length)}.`);
     } catch (err) {
       this.error.set(apiErrorText(err, 'Speichern hat nicht geklappt — die Liste ist noch nicht gesichert.'));

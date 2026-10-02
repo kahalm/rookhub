@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { Group, GroupInput, GroupRow, LinkCode, LinkState, Member, MemberInput, MemberRow, Photo, Progress, SessionDetail, SessionInput } from './club.models';
+import { Group, GroupInput, GroupRow, LinkCode, LinkState, Member, MemberInput, MemberPhotoState, MemberRow, Photo, Progress, SessionDetail, SessionInput } from './club.models';
 
 /**
  * Der Text, den die API für einen abgelehnten Aufruf mitschickt (`{ message }` — für Nutzer geschrieben, z. B. „‚abc‘ ist
@@ -57,6 +57,27 @@ export class ClubApiService {
     return firstValueFrom(this.http.delete<Member>(`${this.base}/members/${id}/link`));
   }
 
+  /** Das Bild zum Blatt setzen oder ersetzen — eines je Blatt (der nginx lässt 15 MB je Anfrage durch). */
+  uploadMemberPhoto(id: number, file: File): Promise<MemberPhotoState> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return firstValueFrom(this.http.post<MemberPhotoState>(`${this.base}/members/${id}/photo`, form));
+  }
+
+  /**
+   * Das Bild als Blob (mit Anmeldung) — `thumb` = das Vorschaubild. `version` (die Marke aus der Liste) hängt nur an der
+   * Adresse: der Browser darf das Bild einen Tag behalten, ein ersetztes hat eine neue Adresse.
+   */
+  memberPhotoBlob(id: number, thumb: boolean, version: number): Promise<Blob> {
+    const params: Record<string, string | number | boolean> = { v: version };
+    if (thumb) params['thumb'] = true;
+    return firstValueFrom(this.http.get(`${this.base}/members/${id}/photo`, { params, responseType: 'blob' }));
+  }
+
+  deleteMemberPhoto(id: number): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/members/${id}/photo`));
+  }
+
   /** Lernstand aus dem verknüpften Konto; `null` ohne Verknüpfung (204). */
   progress(id: number): Promise<Progress | null> {
     return firstValueFrom(this.http.get<Progress | null>(`${this.base}/members/${id}/progress`));
@@ -106,6 +127,11 @@ export class ClubApiService {
   /** Die Einheit eines Tages; `null`, wenn es an dem Tag keine gibt (204). */
   sessionByDate(groupId: number, date: string): Promise<SessionDetail | null> {
     return firstValueFrom(this.http.get<SessionDetail | null>(`${this.base}/groups/${groupId}/sessions/by-date/${encodeURIComponent(date)}`));
+  }
+
+  /** Alle Tage, an denen die Gruppe eine Einheit hat (älteste zuerst) — zum Blättern in „Wer ist da?". */
+  sessionDates(groupId: number): Promise<string[]> {
+    return firstValueFrom(this.http.get<string[]>(`${this.base}/groups/${groupId}/sessions/dates`));
   }
 
   session(sessionId: number): Promise<SessionDetail> {

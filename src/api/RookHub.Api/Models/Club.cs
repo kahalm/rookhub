@@ -34,8 +34,25 @@ public class ClubMember
     [MaxLength(60)]
     public string? Level { get; set; }
 
-    // FIDE-ID, ÖSB-Nummer, Notiz und Foto-Einwilligung gab es in 0.613.0–0.617.1; der User wollte sie nicht
-    // („weitere Angaben entfernen", 2026-09-30) — Migration ClubMemberWithoutExtras hat die Spalten entfernt.
+    // Notiz und Foto-Einwilligung gab es in 0.613.0–0.617.1; der User wollte sie nicht („weitere Angaben entfernen",
+    // 2026-09-30) — Migration ClubMemberWithoutExtras hat die Spalten entfernt. Die beiden Nummern gingen damals mit und
+    // sind seit 0.640.0 wieder da (Wunsch 2026-10-02: „ein Feld für Personennummer/FIDE-Nr.").
+
+    /// <summary>FIDE-Nummer (nur Ziffern).</summary>
+    [MaxLength(16)]
+    public string? FideId { get; set; }
+
+    /// <summary>Personennummer beim Landesverband (ÖSB).</summary>
+    [MaxLength(16)]
+    public string? NationalId { get; set; }
+
+    /// <summary>
+    /// Marke des hinterlegten Bilds (<see cref="ClubMemberPhoto"/>): Zeitpunkt des Hochladens in Unix-Millisekunden,
+    /// <c>null</c> = kein Bild. Steht am Blatt, damit Listen wissen, OB es ein Bild gibt, ohne die Bild-Tabelle
+    /// anzufassen — und die Oberfläche hängt sie an die Bild-Adresse, damit ein ersetztes Bild nicht aus dem
+    /// Zwischenspeicher des Browsers kommt.
+    /// </summary>
+    public long? PhotoVersion { get; set; }
 
     /// <summary>Nicht mehr im Training (ausgetreten, pausiert) — bleibt in der Kartei, fällt aus den Listen.</summary>
     public bool Archived { get; set; }
@@ -65,6 +82,29 @@ public class ClubMember
     public List<ClubContact> Contacts { get; set; } = new();
     public List<ClubGroupMember> Groups { get; set; } = new();
     public List<ClubNote> NoteEntries { get; set; } = new();
+}
+
+/// <summary>
+/// Das Bild zu einem Karteiblatt (Wunsch 2026-10-02: „bei der Anlage/Bearbeiten von Kindern ein Bild hinterlegen") —
+/// höchstens eines je Blatt, in einer EIGENEN Tabelle: die Kartei-Liste lädt die Blätter am Stück, die Bytes dürfen dabei
+/// nie mitkommen. Aufrecht gedreht und verkleinert (<see cref="ClubService.MemberPhotoMaxEdge"/>), dazu ein Vorschaubild
+/// für Liste und Blatt. Bilder von Kindern: nur angemeldet und nur, wer das Blatt sieht.
+/// </summary>
+public class ClubMemberPhoto
+{
+    /// <summary>Schlüssel UND Fremdschlüssel — ein Bild je Blatt (Cascade).</summary>
+    public int MemberId { get; set; }
+    public ClubMember? Member { get; set; }
+
+    /// <summary>JPEG, längste Seite höchstens <see cref="ClubService.MemberPhotoMaxEdge"/>.</summary>
+    public byte[] Image { get; set; } = [];
+    /// <summary>JPEG, längste Seite höchstens <see cref="ClubService.MemberThumbMaxEdge"/>.</summary>
+    public byte[] Thumb { get; set; } = [];
+    public int Width { get; set; }
+    public int Height { get; set; }
+
+    public int? UpdatedByUserId { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 /// <summary>

@@ -963,6 +963,38 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Assert.False(await Db.ClubSessionPhotos.AnyAsync());
         }
 
+        // Blättern: die Tage aller Einheiten, in SQL nach dem DATUM geordnet.
+        Assert.Equal(["2026-09-18", "2026-09-25"], (await club.ListSessionDatesAsync(trainer, mine.Id)).Take(2));
+
+        // Bild am Blatt: MEDIUMBLOB schreiben, ERSETZEN ohne das alte zu laden (Stellvertreter mit Schlüssel), nur die Marke in
+        // der Liste, Löschen ohne Laden — und mit dem Blatt geht das Bild (Stellvertreter + Blatt in EINEM SaveChanges).
+        using (var bmp = new SkiaSharp.SKBitmap(600, 900))
+        {
+            using var img = SkiaSharp.SKImage.FromBitmap(bmp);
+            using var data = img.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 80);
+            var one = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray());
+            Db.ChangeTracker.Clear();
+            var two = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray());
+            Db.ChangeTracker.Clear();
+            Assert.True(two.PhotoVersion > one.PhotoVersion);
+            Assert.Equal(1, await Db.ClubMemberPhotos.CountAsync());
+            Assert.Equal(two.PhotoVersion, (await club.ListMembersAsync(trainer, null, false)).Single(m => m.Id == daniel.Id).PhotoVersion);
+            Assert.True((await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true)).Length > 100);
+            Assert.True((await club.GetMemberPhotoAsync(manager, daniel.Id, thumb: false)).Length > 100);
+            await club.DeleteMemberPhotoAsync(trainer, daniel.Id);
+            Db.ChangeTracker.Clear();
+            Assert.False(await Db.ClubMemberPhotos.AnyAsync());
+            Assert.Null((await club.GetMemberAsync(trainer, daniel.Id)).PhotoVersion);
+
+            var gone = await club.CreateMemberAsync(manager, new RookHub.Api.DTOs.ClubMemberInputDto { FirstName = "Foto", FideId = "1612345", NationalId = "123456" });
+            await club.SetMemberPhotoAsync(manager, gone.Id, data.ToArray());
+            Db.ChangeTracker.Clear();
+            Assert.Equal(("1612345", "123456"), ((await club.GetMemberAsync(manager, gone.Id)).FideId, (await club.GetMemberAsync(manager, gone.Id)).NationalId));
+            await club.DeleteMemberAsync(manager, gone.Id);
+            Db.ChangeTracker.Clear();
+            Assert.False(await Db.ClubMemberPhotos.AnyAsync());
+        }
+
         // Verknüpfung + Notiz, dann das Konto HART löschen: SetNull und Cascade feuern, Blatt und Notiz bleiben.
         await club.RedeemAsync(kind, (await club.CreateLinkCodeAsync(trainer, daniel.Id)).Code);
         await club.AddNoteAsync(trainer, daniel.Id, "kann die Gabel");
