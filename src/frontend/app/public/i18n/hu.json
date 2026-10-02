@@ -2211,6 +2211,7 @@
       "errorFailed": "Maiát nem sikerült betölteni.",
       "retry": "Újrapróbálás",
       "moveFailed": "Maia nem tudott lépést adni.",
+      "saveFailed": "A játszmát nem sikerült menteni a „Saját játszmák” közé.",
       "enginePaused": "A motor szünetel az edzőjátszma alatt",
       "hint": "A Maia-3 a Torontói Egyetem neurális hálózata. Több millió játszmából tanulta meg, milyen lépéseket választanak egy adott játékerősségű emberek — jellegzetes hibáikkal együtt.\n\nAz erősség egy Lichess villám-értékszámnak felel meg; ökölszabályként nagyjából 200 ponttal a FIDE-Élő fölött van.\n\nMaia nem számol előre, hanem érzésből játszik. A motor közben kikapcsolva marad, hogy te magad számolj."
     }

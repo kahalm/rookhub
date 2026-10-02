@@ -2949,6 +2949,7 @@
       "errorFailed": "Maia konnte nicht geladen werden.",
       "retry": "Erneut versuchen",
       "moveFailed": "Maia konnte keinen Zug liefern.",
+      "saveFailed": "Die Partie konnte nicht in „Meine Partien“ gespeichert werden.",
       "enginePaused": "Engine pausiert während des Sparrings",
       "hint": "Maia-3 ist ein neuronales Netz der Universität Toronto. Es hat aus Millionen Partien gelernt, welche Züge Menschen einer bestimmten Spielstärke wählen — samt ihrer typischen Fehler.\n\nDie Stärke entspricht einer Lichess-Blitz-Wertung; als Faustregel liegt sie rund 200 Punkte über der FIDE-Elo.\n\nMaia rechnet nicht voraus, sondern spielt nach Gefühl. Die Engine bleibt währenddessen aus, damit du selbst rechnest."
     }

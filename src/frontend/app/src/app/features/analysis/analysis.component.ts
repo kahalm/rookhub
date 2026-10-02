@@ -41,6 +41,10 @@ import { MaiaEngineService } from './maia/maia-engine.service';
 import { MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS } from './maia/maia-model';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
+import { buildSparringPgn } from './maia/sparring-pgn';
+import { GamesService } from '../games/games.service';
+import { AnalyzeGameService } from '../games/analyze-game.service';
+import { GuessUploadStatus } from './game-analysis.service';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const LINES_KEY = ANALYSIS_LINES_KEY;
@@ -255,8 +259,11 @@ const EVAL_SETTLE_DEPTH = 10;
             <app-maia-sparring-card
               [active]="!!sparring" [userColor]="sparring?.userColor ?? turnColor" [thinking]="maiaThinking"
               [maiaToMove]="maiaToMove" [elo]="maiaElo"
+              [showAnalyze]="sparringAnalyzeVisible" [analyzing]="analyzingSparring"
+              [analyzeBlocked]="analyzeStatus?.engineAvailable === false"
               (start)="startSparring()" (stop)="stopSparring()" (switchSides)="switchSparringSides()"
-              (restart)="restartSparring()" (maiaMove)="requestMaiaMove()" (eloChange)="onMaiaEloChange($event)" />
+              (restart)="restartSparring()" (maiaMove)="requestMaiaMove()" (eloChange)="onMaiaEloChange($event)"
+              (analyze)="analyzeSparring()" />
           }
 
           <mat-card class="moves-card">
@@ -458,8 +465,18 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   editing = false;
 
   // ---- Sparring gegen Maia (0.632.0) — einfache Felder + markForCheck nach allem Asynchronen ----
-  /** Läuft ein Sparring: ab welcher Stellung, welche Seite der Nutzer spielt, und ob die Engine vorher an war. */
-  sparring: { start: AnalysisNode; userColor: Color; engineWasOn: boolean } | null = null;
+  /** Läuft ein Sparring: ab welcher Stellung, welche Seite der Nutzer spielt, und ob die Engine vorher an war. `tip` = der
+   *  zuletzt gespielte Zug im Teilbaum von `start` — die Partie fürs Analysieren ist die Linie `start` → `tip` (nicht die
+   *  Fortsetzung von `start`: mitten in einer geladenen Partie stehen dort deren Züge). */
+  sparring: { start: AnalysisNode; tip: AnalysisNode; userColor: Color; engineWasOn: boolean } | null = null;
+  /** Die zuletzt beendete Sparring-Partie mit mindestens zwei Halbzügen — „Partie analysieren" nimmt sie. Verfällt mit
+   *  jedem neuen Baum und wenn ihre Züge aus dem Baum gelöscht werden. */
+  lastSparring: { start: AnalysisNode; tip: AnalysisNode; userColor: Color; elo: number } | null = null;
+  /** „Partie analysieren" läuft (speichern + einreihen) — Doppelklick-Schutz. */
+  analyzingSparring = false;
+  /** Steht eine Engine bereit? Einmal gefragt, sobald der Knopf zum ersten Mal sichtbar würde; `null` = unbekannt. */
+  analyzeStatus: GuessUploadStatus | null = null;
+  private analyzeStatusAsked = false;
   maiaThinking = false;
   /** Gewählte Stärke (je Gerät gemerkt, nur Werte aus MAIA_ELO_OPTIONS). */
   maiaElo: number = MAIA_DEFAULT_ELO;
@@ -544,7 +561,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
               private router: Router, public auth: AuthService, private externalEngines: ExternalEngineService,
               private cdr: ChangeDetectorRef, private translate: TranslateService,
               @Inject(LOCALE_ID) private locale: string, private history: AnalysisHistoryService, private dialog: MatDialog,
-              private maia: MaiaEngineService) {
+              private maia: MaiaEngineService, private games: GamesService, private analyzeGame: AnalyzeGameService) {
     try {
       const l = parseInt(localStorage.getItem(LINES_KEY) || '', 10);
       if (l >= 1 && l <= 5) this.linesCount = l;
@@ -730,8 +747,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   /** Einen neuen Baum aufs Brett (Laden, Zurücksetzen) und dort auf `current` stehen. */
   private setTree(root: AnalysisNode, current: AnalysisNode = root): void {
-    // Ein neuer Baum beendet ein Sparring (Maia-Regel 9) — die Engine kommt zurück wie beim „Beenden".
+    // Ein neuer Baum beendet ein Sparring (Maia-Regel 9) — die Engine kommt zurück wie beim „Beenden". Die alte Partie
+    // gehört nicht mehr aufs Brett, „Partie analysieren" verfällt mit ihr.
     if (this.sparring) this.endSparring();
+    this.lastSparring = null;
     this.root = root;
     this.treeVersion++;
     this.goToNode(current);
@@ -768,6 +787,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
     this.treeVersion++;
     this.goToNode(node);
+    this.noteSparringMove(node);
     // Sparring: auf den EIGENEN Zug antwortet Maia. Zieht der Nutzer für Maias Seite, kommt keine Antwort.
     if (this.sparring && mover === this.sparring.userColor) this.requestMaiaMove();
   }
@@ -786,6 +806,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     if (node === this.currentNode) return;
     this.treeVersion++;
     this.goToNode(node);
+    this.noteSparringMove(node);
     // Sparring: ein Zug aus Explorer/Repertoire zählt wie ein eigener — steht danach Maia am Zug, antwortet sie. Zog die
     // Folge für Maias Seite, ist danach der Nutzer dran, und es kommt (wie in onMove) keine Anfrage.
     if (this.maiaToMove) this.requestMaiaMove();
@@ -1254,6 +1275,10 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         const parent = removeNode(e.node);
         if (!parent) return;
         if (endsSparring) this.endSparring();
+        // Fiel nur ein Teil der laufenden Partie weg, ist ihr letzter Zug jetzt der Zug davor (er liegt noch unter `start`).
+        if (this.sparring && !this.isAttached(this.sparring.tip)) this.sparring.tip = parent;
+        // Hängt die zuletzt gespielte Partie nicht mehr am Baum, gibt es sie nicht mehr zu analysieren.
+        if (this.lastSparring && !this.isAttached(this.lastSparring.tip)) this.lastSparring = null;
         this.treeVersion++;
         // Stand man in dem, was wegfällt, geht es beim Zug davor weiter.
         if (within) { this.goToNode(parent); return; }
@@ -1286,7 +1311,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  (ihr Zustand wird gemerkt, aber NICHT in localStorage — die Dauereinstellung des Nutzers bleibt). */
   startSparring(): void {
     if (this.sparring || this.editing || this.dests.size === 0) return;   // zu Ende: es gibt nichts zu spielen
-    this.sparring = { start: this.currentNode, userColor: this.turnColor, engineWasOn: this.engineOn };
+    this.sparring = { start: this.currentNode, tip: this.currentNode, userColor: this.turnColor, engineWasOn: this.engineOn };
     this.engineOn = false;
     this.orientation = this.sparring.userColor;
     this.refresh();
@@ -1297,6 +1322,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   stopSparring(): void {
     if (!this.sparring) return;
     this.endSparring();
+    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
     this.refresh();
     this.cdr.markForCheck();
   }
@@ -1340,6 +1366,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
           if (next) {
             this.treeVersion++;
             this.goToNode(next);   // zählt maiaEpoch selbst hoch — die Antwort ist da schon verbucht
+            this.noteSparringMove(next);
           } else {
             this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));
           }
@@ -1374,13 +1401,90 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.maiaThinking = false;
   }
 
-  /** Sparring beenden, ohne neu zu zeichnen — die Aufrufer tun es selbst (refresh bzw. goToNode). */
+  /** Sparring beenden, ohne neu zu zeichnen — die Aufrufer tun es selbst (refresh bzw. goToNode). Die gespielte Partie
+   *  bleibt für „Partie analysieren" stehen, wenn sie mindestens zwei Halbzüge hat. */
   private endSparring(): void {
     const sparring = this.sparring;
     if (!sparring) return;
     this.abortMaia();
     this.engineOn = sparring.engineWasOn;
     this.sparring = null;
+    this.lastSparring = this.sparringPlies(sparring.start, sparring.tip) >= 2
+      ? { start: sparring.start, tip: sparring.tip, userColor: sparring.userColor, elo: this.maiaElo }
+      : null;
+  }
+
+  // ---- „Partie analysieren" nach dem Sparring ----
+  //
+  // Derselbe Weg wie in „Meine Partien": die Sparring-Partie wird eine gewöhnliche Partie (`POST /api/games/import`, mit
+  // der eigenen Seite) und läuft dann durch `AnalyzeGameService.submit` — keine eigene Analyse, keine eigene Engine-Wahl.
+
+  /** Ein Zug kam während des Sparrings aufs Brett (eigener, Maias, aus Explorer/Repertoire): liegt er unter `start`, ist
+   *  er der neue letzte Zug der Partie — auch nach Zurückgehen und anders Weiterspielen. */
+  private noteSparringMove(node: AnalysisNode): void {
+    if (!this.sparring || !isWithin(node, this.sparring.start)) return;
+    this.sparring.tip = node;
+    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
+  }
+
+  /** Den Knopf zeigen: angemeldet, eine Partie mit mindestens zwei Halbzügen, und entweder ist das Sparring vorbei oder
+   *  seine Stellung zu Ende (mitten in der Partie hat die Karte schon vier Symbole). */
+  get sparringAnalyzeVisible(): boolean {
+    if (!this.auth.isLoggedIn) return false;
+    const s = this.sparring;
+    if (s) return this.sparringPlies(s.start, s.tip) >= 2 && this.currentNode === s.tip && this.dests.size === 0;
+    return !!this.lastSparring;
+  }
+
+  analyzeSparring(): void {
+    if (this.analyzingSparring || !this.sparringAnalyzeVisible) return;
+    if (this.sparring) this.stopSparring();   // läuft es noch (Stellung zu Ende), endet es wie mit „Beenden"
+    const game = this.lastSparring;
+    if (!game) return;
+    const startDepth = pathTo(game.start).length;
+    const pgn = buildSparringPgn({
+      startFen: game.start.fen,
+      sans: pathTo(game.tip).slice(startDepth).map(n => n.san),
+      userColor: game.userColor,
+      userName: this.auth.currentUser?.username ?? '',
+      elo: game.elo,
+      date: new Date(),
+    });
+    if (!pgn) { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); return; }
+    this.analyzingSparring = true;
+    this.cdr.markForCheck();
+    const done = () => { this.analyzingSparring = false; this.cdr.markForCheck(); };
+    this.games.importPgn(pgn, game.userColor).subscribe({
+      next: res => {
+        const id = res?.ids?.[0];
+        if (!id) { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); done(); return; }
+        // Absage (keine Engine, Deckel): die Snackbar nennt den Grund, die Partie liegt trotzdem in „Meine Partien".
+        this.analyzeGame.submit(this.games.analyzeUrl(id), this.analyzeStatus).subscribe(ok => {
+          done();
+          if (ok) void this.router.navigate(['/games', id]);
+        });
+      },
+      error: () => { this.snackbar.warn(this.translate.instant('analysis.maia.saveFailed')); done(); },
+    });
+  }
+
+  /** Halbzüge von `start` bis `tip` (`tip` liegt im Teilbaum von `start`). */
+  private sparringPlies(start: AnalysisNode, tip: AnalysisNode): number {
+    return pathTo(tip).length - pathTo(start).length;
+  }
+
+  /** Hängt der Knoten noch am aktuellen Baum? (Gelöschte Zweige verlieren ihren Elternknoten.) */
+  private isAttached(node: AnalysisNode): boolean {
+    let n: AnalysisNode | null = node;
+    while (n?.parent) n = n.parent;
+    return n === this.root;
+  }
+
+  /** Die Engine-Auskunft höchstens einmal holen — nur angemeldet. */
+  private ensureAnalyzeStatus(): void {
+    if (this.analyzeStatusAsked || !this.auth.isLoggedIn) return;
+    this.analyzeStatusAsked = true;
+    this.analyzeGame.status().subscribe(status => { this.analyzeStatus = status; this.cdr.markForCheck(); });
   }
 
   // ---- Analyse-Verlauf ----

@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, OnDestroy, Output, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -6,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HelpHintComponent } from '../../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
@@ -28,6 +30,10 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
  *    eines abgebrochenen (oder nach dem Verlassen der Seite) Ablaufs startet nichts mehr.
  * 2. **Kein Versprechen, das der Browser nicht hält**: ohne nutzbare Cache API (Dev über HTTP, Privatmodus)
  *    sagt die Rückfrage, dass das Modell bei jedem Besuch neu kommt (`canStore`).
+ *
+ * „Partie analysieren" (`showAnalyze`) zeigt die Karte nur an — ob es eine Partie gibt, ob eine Engine bereitsteht
+ * und was der Klick tut, entscheidet das Analysebrett. Ein gesperrter Knopf zeigt keinen Tooltip; der Grund steht
+ * deshalb als Zeile darunter (auch am Handy lesbar). Für Vorleser hängt `matTooltip` ihn als Beschreibung an.
  */
 @Component({
   selector: 'app-maia-sparring-card',
@@ -35,7 +41,8 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatProgressBarModule,
-    MatProgressSpinnerModule, MatSelectModule, TranslatePipe, HelpHintComponent, IconLabelDirective,
+    MatProgressSpinnerModule, MatSelectModule, MatTooltipModule, NgTemplateOutlet, TranslatePipe, HelpHintComponent,
+    IconLabelDirective,
   ],
   template: `
     <mat-card class="maia-card">
@@ -76,6 +83,10 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
               <mat-icon>stop</mat-icon>
             </button>
           </div>
+          @if (showAnalyze) {
+            <div class="maia-buttons"><ng-container [ngTemplateOutlet]="analyzeButton" /></div>
+            <ng-container [ngTemplateOutlet]="analyzeHint" />
+          }
         } @else {
           @switch (phase()) {
             @case ('confirm') {
@@ -106,12 +117,26 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
             @default {
               <div class="maia-buttons">
                 <button mat-flat-button color="primary" class="maia-start" [disabled]="disabled" (click)="onStart()">{{ 'analysis.maia.start' | translate }}</button>
+                @if (showAnalyze) { <ng-container [ngTemplateOutlet]="analyzeButton" /> }
               </div>
+              @if (showAnalyze) { <ng-container [ngTemplateOutlet]="analyzeHint" /> }
             }
           }
         }
       </mat-card-content>
     </mat-card>
+
+    <ng-template #analyzeButton>
+      <button mat-stroked-button class="maia-analyze" [disabled]="analyzing || analyzeBlocked" (click)="onAnalyze()"
+              [matTooltip]="analyzeBlocked ? ('guess.upload.noEngine' | translate) : ''"
+              [attr.title]="analyzeBlocked ? ('guess.upload.noEngine' | translate) : null">
+        @if (analyzing) { <mat-spinner diameter="16" class="maia-analyze-spinner" /> } @else { <mat-icon>insights</mat-icon> }
+        {{ 'games.analyze' | translate }}
+      </button>
+    </ng-template>
+    <ng-template #analyzeHint>
+      @if (analyzeBlocked) { <p class="maia-line maia-analyze-hint">{{ 'guess.upload.noEngine' | translate }}</p> }
+    </ng-template>
   `,
   styles: [`
     :host { display: block; }
@@ -127,6 +152,9 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
     .maia-actions { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-top: 4px; }
     .maia-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     mat-progress-bar { margin-top: 10px; }
+    .maia-analyze { max-width: 100%; }
+    .maia-analyze-spinner { display: inline-block; margin-right: 8px; vertical-align: middle; }
+    .maia-analyze-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
   `],
 })
 export class MaiaSparringCardComponent implements OnDestroy {
@@ -140,6 +168,12 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Input() elo = 1600;
   /** „Starten" gesperrt (etwa während der Stellungs-Editor offen ist). */
   @Input() disabled = false;
+  /** „Partie analysieren" zeigen (Ruhe: neben „Starten", aktiv: unter den Symbolen). */
+  @Input() showAnalyze = false;
+  /** Der Klick läuft gerade (speichern + einreihen) — Knopf gesperrt, Kreisel statt Symbol. */
+  @Input() analyzing = false;
+  /** Keine Engine bereit — Knopf gesperrt, Grund als Zeile darunter. */
+  @Input() analyzeBlocked = false;
 
   /** Das Modell ist bereit — das Analysebrett beginnt das Sparring. */
   @Output() readonly start = new EventEmitter<void>();
@@ -148,10 +182,13 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Output() readonly restart = new EventEmitter<void>();
   @Output() readonly maiaMove = new EventEmitter<void>();
   @Output() readonly eloChange = new EventEmitter<number>();
+  /** „Partie analysieren" geklickt. */
+  @Output() readonly analyze = new EventEmitter<void>();
 
   readonly maia = inject(MaiaEngineService);
   readonly eloOptions = MAIA_ELO_OPTIONS;
   readonly phase = signal<CardPhase>('rest');
+
   readonly errorKey = computed(() => this.maia.error() === 'unavailable'
     ? 'analysis.maia.errorUnavailable' : 'analysis.maia.errorFailed');
 
@@ -169,6 +206,11 @@ export class MaiaSparringCardComponent implements OnDestroy {
   onDownload(): void { void this.run(true); }
 
   onRetry(): void { void this.run(this.lastWasDownload); }
+
+  onAnalyze(): void {
+    if (this.analyzing || this.analyzeBlocked) return;
+    this.analyze.emit();
+  }
 
   /** Rückfrage verwerfen bzw. das Warten aufgeben. Ein laufender Download lädt im Hintergrund zu Ende (er liegt
    *  danach im Cache, der nächste Start ist sofort da) — nur das Sparring beginnt nicht von selbst. */

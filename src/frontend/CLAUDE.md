@@ -158,7 +158,12 @@ Sparringsgegner im Analysebrett (Entscheidungen, Fallen, Pin und Regeln: Haupt-C
   `prepare()`/`download()`, Antworten über die `id`, Init-Frist `initTimeoutMs` (60 s), `release()`. Seams: `createWorker`,
   `store`, `rng`.
 - `maia-sparring-card.component.ts` — die Karte (OnPush, Signale): führt den Lade-Ablauf selbst (Rückfrage mit 46 MB, Fortschritt,
-  Fehler + „Erneut versuchen") und meldet `start` erst mit fertigem Modell; die aktive Ansicht schickt nur Ereignisse.
+  Fehler + „Erneut versuchen") und meldet `start` erst mit fertigem Modell; die aktive Ansicht schickt nur Ereignisse. Seit 0.x.0
+  dazu „Partie analysieren" (`showAnalyze`/`analyzing`/`analyzeBlocked` → `analyze`; ein gesperrter Knopf zeigt keinen Tooltip,
+  der Grund steht deshalb als Zeile darunter).
+- `sparring-pgn.ts` — rein, ohne Angular (0.644.0): `buildSparringPgn` macht aus Ausgangsstellung + SAN-Zügen das PGN für
+  „Partie analysieren" (chess.js schreibt SetUp/FEN und die Nummern; im Zugtext die kompakte Form „4... Bc5", Ergebnis aus der
+  Endstellung). Spec mit LITERALEN PGN-Texten.
 
 **Regel: onnxruntime-web wird NIE in TypeScript importiert.** Die drei Laufzeit-Dateien kommen als Assets (`angular.json`, nur
 Projekt `app`) nach `/assets/ort/` und werden im Worker per `importScripts` geladen — ein Import zöge die Laufzeit in ein Bundle

@@ -240,6 +240,107 @@ describe('MaiaSparringCardComponent', () => {
     expect(values).toEqual([1200]);
   });
 
+  // ----- „Partie analysieren" -----
+
+  it('„Partie analysieren" only with showAnalyze — at rest next to Start, while sparring under the icons', () => {
+    expect(button('maia-analyze')).toBeNull();
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.detectChanges();
+    const b = button('maia-analyze')!;
+    expect(b).not.toBeNull();
+    expect(b.textContent).toContain('games.analyze');
+    expect(b.querySelector('mat-icon')!.textContent).toContain('insights');
+    expect(b.classList).toContain('mat-mdc-outlined-button');          // nicht die farbige Hauptaktion
+    expect(b.disabled).toBeFalse();
+    expect(b.parentElement).toBe(button('maia-start')!.parentElement);  // in derselben Zeile wie „Starten"
+
+    fixture.componentRef.setInput('active', true);
+    fixture.detectChanges();
+    expect(button('maia-start')).toBeNull();
+    expect(button('maia-analyze')).not.toBeNull();
+    expect(button('maia-stop')).not.toBeNull();
+    // Unter den Symbolen, nicht zwischen ihnen.
+    expect(button('maia-analyze')!.parentElement).not.toBe(button('maia-stop')!.parentElement);
+
+    fixture.componentRef.setInput('showAnalyze', false);
+    fixture.detectChanges();
+    expect(button('maia-analyze')).toBeNull();
+  });
+
+  it('not in the confirmation, loading and error views', async () => {
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.detectChanges();
+    await click('maia-start');
+    expect(button('maia-analyze')).withContext('lädt').toBeNull();
+    maia.status.set('missing');
+    maia.prepareCalls[0].resolve(false);
+    await flush();
+    fixture.detectChanges();
+    expect(button('maia-download')).not.toBeNull();
+    expect(button('maia-analyze')).withContext('Rückfrage').toBeNull();
+    await click('maia-download');
+    maia.status.set('error');
+    maia.error.set('failed');
+    maia.downloadCalls[0].resolve(false);
+    await flush();
+    fixture.detectChanges();
+    expect(button('maia-retry')).not.toBeNull();
+    expect(button('maia-analyze')).withContext('Fehler').toBeNull();
+  });
+
+  it('a click emits analyze', () => {
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.detectChanges();
+    let seen = 0;
+    card.analyze.subscribe(() => seen++);
+    button('maia-analyze')!.click();
+    expect(seen).toBe(1);
+  });
+
+  it('analyzing: disabled with a small spinner instead of the icon, no second click', () => {
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.componentRef.setInput('analyzing', true);
+    fixture.detectChanges();
+    const b = button('maia-analyze')!;
+    expect(b.disabled).toBeTrue();
+    expect(b.querySelector('mat-spinner')).not.toBeNull();
+    expect(b.querySelector('mat-icon')).toBeNull();
+    let seen = 0;
+    card.analyze.subscribe(() => seen++);
+    card.onAnalyze();
+    expect(seen).toBe(0);
+    expect(text()).not.toContain('guess.upload.noEngine');
+  });
+
+  it('no engine: disabled, the reason as a line below (a disabled button shows no tooltip) — at rest and active', () => {
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.componentRef.setInput('analyzeBlocked', true);
+    fixture.detectChanges();
+    const check = (where: string) => {
+      const b = button('maia-analyze')!;
+      expect(b.disabled).withContext(where).toBeTrue();
+      expect(b.getAttribute('title')).withContext(where).toBe('guess.upload.noEngine');
+      const hint = (fixture.nativeElement as HTMLElement).querySelector('.maia-analyze-hint');
+      expect(hint?.textContent).withContext(where).toContain('guess.upload.noEngine');
+      expect(b.getAttribute('aria-describedby')).withContext(where).toBeTruthy();   // matTooltip beschreibt ihn
+    };
+    check('Ruhe');
+    let seen = 0;
+    card.analyze.subscribe(() => seen++);
+    card.onAnalyze();
+    expect(seen).toBe(0);
+
+    fixture.componentRef.setInput('active', true);
+    fixture.detectChanges();
+    check('aktiv');
+
+    fixture.componentRef.setInput('analyzeBlocked', false);
+    fixture.detectChanges();
+    expect(button('maia-analyze')!.disabled).toBeFalse();
+    expect(button('maia-analyze')!.getAttribute('title')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.maia-analyze-hint')).toBeNull();
+  });
+
   it('läuft am Handy (360 px) nicht horizontal über — Ruhe, Rückfrage und aktive Ansicht', async () => {
     const host = fixture.nativeElement as HTMLElement;
     host.style.display = 'block';
@@ -249,8 +350,21 @@ describe('MaiaSparringCardComponent', () => {
       const cardEl = host.querySelector('mat-card') as HTMLElement;
       return cardEl.scrollWidth <= cardEl.clientWidth && host.scrollWidth <= 360;
     };
+    // Mit den echten (deutschen, längsten) Texten des Analyse-Knopfs und des Hinweises.
+    TestBed.inject(TranslateService).setTranslation('en', {
+      games: { analyze: 'Partie analysieren' },
+      guess: { upload: { noEngine: 'Gerade steht keine Engine bereit, die eingeworfene Partien rechnen könnte.' } },
+    }, true);
     fixture.detectChanges();
     expect(fits()).withContext('Ruhe').toBeTrue();
+
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.componentRef.setInput('analyzeBlocked', true);
+    fixture.detectChanges();
+    expect(fits()).withContext('Ruhe mit „Partie analysieren"').toBeTrue();
+    fixture.componentRef.setInput('analyzeBlocked', false);
+    fixture.componentRef.setInput('showAnalyze', false);
+    fixture.detectChanges();
 
     await click('maia-start');
     maia.canStore.set(false);
@@ -265,6 +379,15 @@ describe('MaiaSparringCardComponent', () => {
     fixture.componentRef.setInput('elo', 2600);
     fixture.detectChanges();
     expect(fits()).withContext('aktiv').toBeTrue();
+
+    fixture.componentRef.setInput('showAnalyze', true);
+    fixture.componentRef.setInput('analyzing', true);
+    fixture.detectChanges();
+    expect(fits()).withContext('aktiv mit „Partie analysieren"').toBeTrue();
+    fixture.componentRef.setInput('analyzing', false);
+    fixture.componentRef.setInput('analyzeBlocked', true);
+    fixture.detectChanges();
+    expect(fits()).withContext('aktiv, keine Engine').toBeTrue();
     host.remove();
   });
 

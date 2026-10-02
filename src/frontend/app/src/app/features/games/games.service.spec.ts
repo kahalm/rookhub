@@ -45,6 +45,19 @@ describe('GamesService', () => {
     req.flush({});
   });
 
+  it('importPgn schickt ownerSide nur, wenn es gesetzt ist', () => {
+    service.importPgn('1. e4 *').subscribe();
+    const plain = httpMock.expectOne('/api/games/import');
+    expect(plain.request.method).toBe('POST');
+    expect(plain.request.body).toEqual({ pgn: '1. e4 *' });
+    plain.flush({});
+
+    service.importPgn('1. e4 *', 'black').subscribe();
+    const side = httpMock.expectOne('/api/games/import');
+    expect(side.request.body).toEqual({ pgn: '1. e4 *', ownerSide: 'black' });
+    side.flush({});
+  });
+
   it('shareUrl baut die absolute /g/-Teilen-URL', () => {
     expect(service.shareUrl('tok123')).toBe(`${window.location.origin}/g/tok123`);
   });

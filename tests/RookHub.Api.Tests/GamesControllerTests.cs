@@ -631,6 +631,102 @@ public class GamesControllerTests : IDisposable
         Assert.Equal(2, Assert.IsType<PgnImportResultDto>(ok.Value).Imported);   // Dublette gilt nur je Nutzer
     }
 
+    // ── Eigene Seite beim Import + Partien aus einer Stellung (Sparring gegen Maia) ─────
+
+    /// <summary>Zweispringerspiel nach 4.O-O — Schwarz am Zug.</summary>
+    private const string FenBlackToMove = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 5 4";
+    /// <summary>Dieselbe Partie nach 4...Bc5 — Weiß am Zug.</summary>
+    private const string FenWhiteToMove = "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 6 5";
+
+    private static string SparringPgn(string fen, string moveText, bool setUp = true)
+        => "[Event \"Sparring vs Maia\"]\n[Site \"RookHub\"]\n[Date \"2026.10.02\"]\n[Round \"-\"]\n"
+           + "[White \"anna\"]\n[Black \"Maia 1600\"]\n[Result \"*\"]\n"
+           + (setUp ? "[SetUp \"1\"]\n" : "") + $"[FEN \"{fen}\"]\n\n{moveText}\n";
+
+    /// <summary>chess.js schreibt eine Partie, die mit Schwarz am Zug beginnt, als „4. ... Bc5" (Nummer, Leerzeichen,
+    /// drei Punkte als eigenes Token). Vorher blieben die drei Punkte als „Zug" übrig, und der Import meldete die
+    /// Partie als illegal — gegen die Dev-API gemessen (2026-10-02). Die kompakte Form und die ohne Nummer gingen schon vorher,
+    /// ebenso eine Stellung mit Weiß am Zug, mit und ohne <c>[SetUp]</c>.</summary>
+    [Theory]
+    [InlineData(FenBlackToMove, true, "4. ... Bc5 5. c3 d6 6. d4 exd4 7. cxd4 Bb6 *", 7)]
+    [InlineData(FenBlackToMove, true, "4... Bc5 5. c3 d6 6. d4 exd4 7. cxd4 Bb6 *", 7)]
+    [InlineData(FenBlackToMove, true, "Bc5 5. c3 d6 6. d4 exd4 7. cxd4 Bb6 *", 7)]
+    [InlineData(FenWhiteToMove, true, "5. c3 d6 6. d4 exd4 7. cxd4 Bb6 *", 6)]
+    [InlineData(FenWhiteToMove, false, "5. c3 d6 6. d4 exd4 7. cxd4 Bb6 *", 6)]
+    public async Task ImportPgn_FromAPosition_AllMoveNumberForms_AreAccepted(string fen, bool setUp, string moveText, int plies)
+    {
+        var user = await CreateUserAsync();
+
+        var res = await _service.ImportPgnAsync(user.Id, SparringPgn(fen, moveText, setUp));
+
+        Assert.Empty(res.Failed);
+        Assert.Equal(1, res.Imported);
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == res.Ids[0]);
+        Assert.Equal(plies, game.MoveCount);
+        Assert.Contains($"[FEN \"{fen}\"]", game.Pgn);
+        var (header, parsed) = GamePlies.Parse(game.Pgn)!.Value;
+        Assert.Equal(fen, header.StartFen);
+        Assert.Equal(plies, parsed.Count);
+        Assert.Equal(fen == FenBlackToMove ? "Bc5" : "c3", parsed[0].San);
+        Assert.Equal("Bb6", parsed[^1].San);
+        if (fen == FenBlackToMove) Assert.Contains("4... Bc5 5. c3 d6", game.Pgn);
+    }
+
+    [Fact]
+    public async Task Import_WithOwnerSideBlack_SetsTheSide_AndDetermineOwnerSideReturnsIt()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var res = await ImportAsync(new PgnImportRequestDto
+        {
+            Pgn = SparringPgn(FenBlackToMove, "4... Bc5 5. c3 d6 *"), OwnerSide = "black",
+        });
+
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == Assert.Single(res.Ids));
+        Assert.Equal("black", game.OwnerSide);
+        Assert.Equal("black", SavedGameService.DetermineOwnerSide(game, null));
+        Assert.Equal("black", (await _service.GetAsync(user.Id, game.Id))!.OwnerSide);
+    }
+
+    [Theory]
+    [InlineData("both")]
+    [InlineData("Black")]
+    [InlineData("")]
+    [InlineData(null)]
+    public async Task Import_WithoutOrWithInvalidOwnerSide_LeavesItUnset(string? ownerSide)
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+
+        var res = await ImportAsync(new PgnImportRequestDto { Pgn = TwoGames, OwnerSide = ownerSide });
+
+        Assert.Equal(2, res.Imported);
+        Assert.All(await _db.SavedGames.ToListAsync(), g => Assert.Null(g.OwnerSide));
+    }
+
+    /// <summary>Eine Dublette bleibt, wie sie ist — auch ihre Seite. Zweimal auf „Partie analysieren" klicken legt
+    /// nichts doppelt an und dreht nichts um.</summary>
+    [Fact]
+    public async Task Import_Duplicate_KeepsItsOwnerSide()
+    {
+        var user = await CreateUserAsync();
+        SetUser(user.Id);
+        var pgn = SparringPgn(FenBlackToMove, "4... Bc5 5. c3 d6 *");
+        var first = await ImportAsync(new PgnImportRequestDto { Pgn = pgn, OwnerSide = "black" });
+
+        var again = await ImportAsync(new PgnImportRequestDto { Pgn = pgn, OwnerSide = "white" });
+        var unset = await ImportAsync(new PgnImportRequestDto { Pgn = pgn });
+
+        Assert.Equal((0, 1), (again.Imported, again.Duplicates));
+        Assert.Equal(first.Ids, again.Ids);
+        Assert.Equal(first.Ids, unset.Ids);
+        Assert.Equal("black", (await _db.SavedGames.SingleAsync()).OwnerSide);
+    }
+
+    private async Task<PgnImportResultDto> ImportAsync(PgnImportRequestDto body)
+        => Assert.IsType<PgnImportResultDto>(Assert.IsType<OkObjectResult>((await _controller.Import(body)).Result).Value);
+
     // ── Deckel je Konto (A6-007) ─────
 
     private const string ThirdGame = "[White \"Eva\"]\n[Black \"Fritz\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0\n";

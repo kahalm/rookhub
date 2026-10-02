@@ -8,6 +8,10 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.644.0", date: "2026-10-03", changes: [
+    { en: "Sparring against Maia: after a sparring game there is now a button “Analyze game” — the same as in “My games”. The played line (from the start of the sparring to the last move) is saved to “My games” with your side, analyzed by the engine, and you land on the game page with the evaluation graph, accuracy and mistake training.", de: "Sparring gegen Maia: Nach einem Sparring gibt es jetzt den Knopf „Partie analysieren“ — derselbe wie in „Meine Partien“. Die gespielte Linie (vom Start des Sparrings bis zum letzten Zug) wird mit deiner Seite in „Meine Partien“ abgelegt, von der Engine gerechnet, und du landest auf der Partieseite mit Bewertungskurve, Genauigkeit und Fehler-Training." },
+    { en: "PGN upload: a game that starts from a position with Black to move was rejected as illegal when written as “4. ... Bc5” (the way chess.js and other tools write it). It is now accepted.", de: "PGN-Upload: Eine Partie, die aus einer Stellung mit Schwarz am Zug beginnt und als „4. ... Bc5“ geschrieben ist (so schreiben es chess.js und andere Werkzeuge), wurde als illegal abgelehnt. Sie wird jetzt angenommen." },
+  ] },
   { version: "0.643.1", date: "2026-10-03", changes: [
     { en: "Documentation: the developer notes now describe which tournament endpoints and pages work without an account and how guests are rate-limited.", de: "Dokumentation: Die Entwicklernotizen beschreiben jetzt, welche Turnier-Endpunkte und -Seiten ohne Konto funktionieren und wie Gäste gedrosselt werden." },
   ] },

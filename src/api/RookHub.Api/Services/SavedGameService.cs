@@ -621,9 +621,13 @@ public class SavedGameService
     /// <para><b>Zweimal hochgeladen = einmal da:</b> die Kennung ist ein Hash über Kopfdaten und Züge
     /// (<c>ExternalId</c>, eindeutig je Nutzer und Quelle) — wer dieselbe Datei nach einer Ergänzung noch einmal
     /// hochlädt, bekommt nur die neuen Partien.</para>
+    ///
+    /// <para><paramref name="ownerSide"/> (<c>white</c>/<c>black</c>, sonst ignoriert) wird als festgelegte Seite an
+    /// jede NEU angelegte Partie geschrieben — eine schon vorhandene (Dublette) bleibt, wie sie ist.</para>
     /// </summary>
-    public async Task<PgnImportResultDto> ImportPgnAsync(int userId, string pgn, CancellationToken ct = default)
+    public async Task<PgnImportResultDto> ImportPgnAsync(int userId, string pgn, string? ownerSide = null, CancellationToken ct = default)
     {
+        var side = ownerSide is "white" or "black" ? ownerSide : null;
         var result = new PgnImportResultDto();
         var games = PgnParser.SplitGames(pgn).Where(g => !string.IsNullOrWhiteSpace(g.MoveText)).ToList();
         if (games.Count > MaxImportGames) { result.Truncated = true; games = games.Take(MaxImportGames).ToList(); }
@@ -689,6 +693,7 @@ public class SavedGameService
                 BlackElo = PlausibleElo(int.TryParse(H("BlackElo"), out var be) ? be : null),
                 TimeControl = CleanTimeControl(H("TimeControl")),
                 HeadersScanned = true,
+                OwnerSide = side,
                 ShareToken = await GenerateUniqueTokenAsync(),
                 CreatedAt = DateTime.UtcNow,
             };

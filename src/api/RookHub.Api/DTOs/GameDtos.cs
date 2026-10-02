@@ -373,6 +373,11 @@ public class GameRecapDto
 public class PgnImportRequestDto
 {
     public string? Pgn { get; set; }
+
+    /// <summary>Optional die eigene Seite (<c>white</c>/<c>black</c>, alles andere = nicht angegeben) — gilt für jede
+    /// NEU angelegte Partie des Textes. Das Analysebrett schickt sie beim Sparring gegen Maia mit: für Quelle
+    /// <c>pgn</c> rät der Server die Seite sonst über den Plattform-Namen, und der trifft dort nie.</summary>
+    public string? OwnerSide { get; set; }
 }
 
 /// <summary>Ergebnis des PGN-Uploads: was angelegt wurde, was schon da war, was nicht ging.</summary>

@@ -457,7 +457,7 @@ public static partial class PgnParser
     private static string CleanSan(string token)
     {
         var t = token.Trim();
-        if (t.Length == 0 || PgnTokens.IsResultToken(t)) return "";
+        if (t.Length == 0 || PgnTokens.IsResultToken(t) || IsDotsOnly(t)) return "";
         t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
         // Chessable/piratechess schreiben Umwandlungen ohne "=" (bzw. mit kleinem Figurbuchstaben),
         // z. B. "a1Q+"/"exd8n" → nach dem Suffix-Strip "a1Q"/"exd8n". Gera.Chess akzeptiert SAN aber
@@ -637,10 +637,23 @@ public static partial class PgnParser
     private static bool IsSanMove(string token)
     {
         var t = MoveNumberRegex().Replace(token.Trim(), ""); // führende "12." / "12..." entfernen
-        if (t.Length == 0 || t.StartsWith('$')) return false; // leer oder NAG
+        if (t.Length == 0 || t.StartsWith('$') || IsDotsOnly(t)) return false; // leer, NAG oder Zugnummern-Rest
         t = t.Replace("0-0-0", "O-O-O").Replace("0-0", "O-O").TrimEnd('!', '?', '+', '#');
         if (t.Length == 0 || PgnTokens.IsResultToken(t)) return false;
         return true;
     }
 
+    /// <summary>
+    /// Ein Token nur aus Punkten („...", „..", „…") ist der Rest einer Zugnummer, kein Zug. chess.js schreibt eine
+    /// Partie, die mit Schwarz am Zug beginnt, als „4. ... Bc5" — die Nummer fällt über <see cref="MoveNumberRegex"/>
+    /// weg, die drei Punkte standen danach als eigener „Zug" da: der Import meldete die Partie als illegal, und die
+    /// Kommentar-/Marker-Zähler (<see cref="IsSanMove"/>) liefen einen Halbzug vor. Gilt für <see cref="CleanSan"/>
+    /// UND <see cref="IsSanMove"/>, damit SAN-Liste und Kommentar-Schlüssel dieselben Halbzüge zählen.
+    /// </summary>
+    private static bool IsDotsOnly(string t)
+    {
+        foreach (var ch in t)
+            if (ch != '.' && ch != '…') return false;
+        return t.Length > 0;
+    }
 }

@@ -187,9 +187,11 @@ export interface SimilarGames {
 export class GamesService {
   constructor(private http: HttpClient) {}
 
-  /** PGN hochladen (Datei oder eingefügt) — jede Partie des Textes wird eine eigene Partie (Quelle „pgn"). */
-  importPgn(pgn: string): Observable<PgnImportResult> {
-    return this.http.post<PgnImportResult>('/api/games/import', { pgn });
+  /** PGN hochladen (Datei oder eingefügt) — jede Partie des Textes wird eine eigene Partie (Quelle „pgn").
+   *  `ownerSide` (Sparring gegen Maia) legt die eigene Seite der neu angelegten Partien fest; ohne bleibt das Feld
+   *  weg und der Server rät wie bisher. */
+  importPgn(pgn: string, ownerSide?: 'white' | 'black'): Observable<PgnImportResult> {
+    return this.http.post<PgnImportResult>('/api/games/import', ownerSide ? { pgn, ownerSide } : { pgn });
   }
 
   list(take = 200): Observable<SavedGame[]> {

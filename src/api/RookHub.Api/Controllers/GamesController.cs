@@ -42,6 +42,7 @@ public class GamesController : BaseApiController
     /// 400 <c>{ reason }</c> mit <c>empty</c> (kein Text) bzw. <c>tooLarge</c> (über
     /// <see cref="SavedGameService.MaxImportChars"/> Zeichen); einzelne kaputte Partien stehen in <c>failed</c>,
     /// ebenso (Grund <c>quota</c>) jede neue Partie, die das Konto über seinen Deckel brächte (A6-007).
+    /// Optional <c>ownerSide</c> (<c>white</c>/<c>black</c>): die eigene Seite jeder neu angelegten Partie.
     /// </summary>
     [HttpPost("import")]
     [RequestSizeLimit(12_000_000)]
@@ -50,7 +51,7 @@ public class GamesController : BaseApiController
         var pgn = body?.Pgn ?? "";
         if (string.IsNullOrWhiteSpace(pgn)) return BadRequest(new { reason = "empty" });
         if (pgn.Length > SavedGameService.MaxImportChars) return BadRequest(new { reason = "tooLarge" });
-        return Ok(await _service.ImportPgnAsync(GetUserId(), pgn, ct));
+        return Ok(await _service.ImportPgnAsync(GetUserId(), pgn, body?.OwnerSide, ct));
     }
 
     /// <summary>Stand des Fehler-Trainings einer eigenen Partie (der Trainer markiert damit Gefundenes).</summary>

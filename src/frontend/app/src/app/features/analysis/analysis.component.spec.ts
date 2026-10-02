@@ -7,7 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { AnalysisComponent, DEPTH_OPTIONS } from './analysis.component';
 import { AnalysisEngineService } from './analysis-engine.service';
 import { AnalysisBoardComponent } from './analysis-board.component';
@@ -24,6 +24,8 @@ import { AuthService } from '../../core/auth.service';
 import { MaiaEngineService } from './maia/maia-engine.service';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { defaults as chessgroundDefaults } from 'chessground/state';
+import { GamesService } from '../games/games.service';
+import { AnalyzeGameService } from '../games/analyze-game.service';
 
 /**
  * Fokussierter Test des Vorladens aus Query-Params (genutzt vom „Analysieren"-Button
@@ -48,9 +50,12 @@ function makeComponent(params: Record<string, string | null>, opts: {
   };
   const route: any = { snapshot: { queryParamMap: { get: (k: string) => params[k] ?? null } } };
   const snackBar: any = { open: () => {}, show: jasmine.createSpy('show'), warn: jasmine.createSpy('warn') };
-  const router: any = { navigateByUrl: jasmine.createSpy('navigateByUrl') };
+  const router: any = {
+    navigateByUrl: jasmine.createSpy('navigateByUrl'),
+    navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)),
+  };
   // auth: die „Stellung in meinen Repertoires"-Karte wird nur eingeloggt gerendert.
-  const auth: any = { isLoggedIn: opts.loggedIn ?? false };
+  const auth: any = { isLoggedIn: opts.loggedIn ?? false, currentUser: opts.loggedIn ? { username: 'anna' } : null };
   const externalEngines: any = {
     listEngines: () => new Subject(),   // Default: Liste kommt nie → bleibt bei WASM
     analyse: jasmine.createSpy('analyse'),
@@ -82,8 +87,21 @@ function makeComponent(params: Record<string, string | null>, opts: {
   maia.status = () => maia.statusValue;
   maia.chooseMove = jasmine.createSpy('chooseMove').and.callFake((fen: string, elo: number) =>
     new Promise((resolve, reject) => maia.calls.push({ fen, elo, resolve, reject })));
-  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog, maia);
+  // „Partie analysieren" nach dem Sparring: der ECHTE GamesService über ein gefälschtes HttpClient — so prüfen die Specs
+  // den Rumpf von POST /api/games/import und die Adresse für submit, nicht eine Attrappe davon.
+  const http: any = { reply: () => of({ imported: 1, duplicates: 0, truncated: false, ids: [7], failed: [] }) };
+  http.post = jasmine.createSpy('post').and.callFake((url: string, body: unknown) => http.reply(url, body));
+  const games = new GamesService(http);
+  const analyzeGame: any = {
+    status: jasmine.createSpy('status').and.returnValue(of({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 })),
+    submit: jasmine.createSpy('submit').and.returnValue(of(true)),
+  };
+  const c: any = new AnalysisComponent(engine, route, snackBar, router, auth, externalEngines, cdr, translate, opts.locale ?? 'de', history, dialog, maia,
+    games, analyzeGame);
   c.maiaDelayMs = 0;
+  c.__http = http;
+  c.__analyzeGame = analyzeGame;
+  c.__router = router;
   c.__maia = maia;
   c.__snackbar = snackBar;
   c.__history = history;
@@ -1178,6 +1196,8 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
         { provide: MatDialog, useValue: { open: () => {} } },
         // Kein echter Maia-Dienst: der baute beim ersten Start einen Worker samt 45-MB-Modell.
         { provide: MaiaEngineService, useValue: { chooseMove: () => Promise.resolve(null), release: () => {}, status: () => 'idle', prepare: () => Promise.resolve(false) } },
+        { provide: GamesService, useValue: { importPgn: () => of({ ids: [] }), analyzeUrl: (id: number) => `/api/games/${id}/analyze` } },
+        { provide: AnalyzeGameService, useValue: { status: () => of(null), submit: () => of(false) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(AnalysisComponent);
@@ -1200,7 +1220,7 @@ describe('AnalysisComponent Brett-Steuerknöpfe (zugänglicher Name)', () => {
 
   it('während des Sparrings: Engine-Schalter gesperrt, „Engine pausiert" statt „Engine aus"', async () => {
     const c: any = fixture.componentInstance;
-    c.sparring = { start: c.root, userColor: 'white', engineWasOn: true };
+    c.sparring = { start: c.root, tip: c.root, userColor: 'white', engineWasOn: true };
     c.engineOn = false;
     fixture.detectChanges();
     await new Promise(r => setTimeout(r));   // ngModel reicht disabled asynchron an den Schalter
@@ -1232,7 +1252,7 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
     const stop = spyOn(c.__engine, 'stop').and.callThrough();
     const setItem = spyOn(Storage.prototype, 'setItem').and.callThrough();
     c.startSparring();
-    expect(c.sparring).toEqual({ start: c.root, userColor: 'white', engineWasOn: true });
+    expect(c.sparring).toEqual({ start: c.root, tip: c.root, userColor: 'white', engineWasOn: true });
     expect(c.engineOn).toBeFalse();
     expect(c.orientation).toBe('white');
     expect(stop).toHaveBeenCalled();
@@ -1536,6 +1556,10 @@ async function renderAnalysis(params: Record<string, string> = {}, lang?: string
       { provide: ExternalEngineService, useValue: { listEngines: () => new Subject(), analyse: () => {} } },
       { provide: AnalysisHistoryService, useValue: { save: () => of({}), get: () => of({}), list: () => of([]) } },
       { provide: MatDialog, useValue: { open: () => {} } },
+      // Sparring gegen Maia + „Partie analysieren": ohne diese Fakes zöge der echte GamesService ein HttpClient, das es hier nicht gibt.
+      { provide: MaiaEngineService, useValue: { chooseMove: () => Promise.resolve(null), release: () => {}, status: () => 'idle', prepare: () => Promise.resolve(false) } },
+      { provide: GamesService, useValue: { importPgn: () => of({ ids: [] }), analyzeUrl: (id: number) => `/api/games/${id}/analyze` } },
+      { provide: AnalyzeGameService, useValue: { status: () => of(null), submit: () => of(false) } },
     ],
   }).compileComponents();
   if (lang) {
@@ -1691,5 +1715,246 @@ describe('AnalysisComponent Linienliste trägt die Pfeilfarbe (UX-049)', () => {
     expect(board['purple'].opacity).withContext('fünfter Pinsel deckt in chessground nicht voll').toBeLessThan(1);
     probe.remove();
     fixture.destroy();
+  });
+});
+
+describe('AnalysisComponent „Partie analysieren" nach dem Sparring', () => {
+  /** Stellung nach 1.f3 — Schwarz am Zug. */
+  const AFTER_F3 = 'rnbqkbnr/pppppppp/8/8/8/5P2/PPPPP1PP/RNBQKBNR b KQkq - 0 1';
+
+  beforeEach(() => { jasmine.clock().install(); jasmine.clock().mockDate(new Date(2026, 9, 2, 12, 0)); });
+  afterEach(() => jasmine.clock().uninstall());
+
+  /** Angemeldet, Engine an, Sparring ab der aktuellen Stellung. */
+  function sparring(params: Record<string, string | null> = { fen: START }, loggedIn = true) {
+    const c = makeComponent(params, { loggedIn });
+    c.ngOnInit();
+    c.engineOn = true;
+    c.startSparring();
+    return c;
+  }
+  /** Maias offene Anfrage auflösen (setTimeout(0) läuft mit installierter Uhr erst nach tick). */
+  async function maiaPlays(c: any, uci: string) {
+    c.__maia.calls[c.__maia.calls.length - 1].resolve(uci);
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+  const sansOf = (c: any) => c.lastSparring
+    ? (() => { const out: string[] = []; for (let n = c.lastSparring.tip; n !== c.lastSparring.start; n = n.parent) out.unshift(n.san); return out; })()
+    : null;
+  const importBody = (c: any) => c.__http.post.calls.mostRecent().args[1];
+
+  it('tip folgt eigenen Zügen und Maias Zügen', async () => {
+    const c = sparring();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    expect(c.sparring.tip.san).toBe('e4');
+    await maiaPlays(c, 'e7e5');
+    expect(c.sparring.tip.san).toBe('e5');
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    expect(c.sparring.tip.san).toBe('Nf3');
+    c.stopSparring();
+    expect(sansOf(c)).toEqual(['e4', 'e5', 'Nf3']);
+    expect(c.lastSparring.userColor).toBe('white');
+    c.ngOnDestroy();
+  });
+
+  it('nach Zurückgehen und anders Weiterspielen ist die NEUE Linie die Partie (auch über Explorer/Repertoire)', async () => {
+    const c = sparring();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    await maiaPlays(c, 'e7e5');
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    await maiaPlays(c, 'b8c6');
+    c.goTo(2);                                    // zurück nach 1...e5
+    expect(c.sparring.tip.san).toBe('Nc6');       // Navigieren allein ändert nichts
+    c.playRepertoireMoves(['Bc4']);               // anders weiter — als Variante
+    expect(c.sparring.tip.san).toBe('Bc4');
+    c.stopSparring();
+    expect(sansOf(c)).toEqual(['e4', 'e5', 'Bc4']);
+    c.ngOnDestroy();
+  });
+
+  it('ein Start mitten in einer geladenen Partie nimmt NICHT deren Fortsetzung', async () => {
+    const c = makeComponent({ fen: START, moves: 'e2e4,e7e5,g1f3,b8c6,f1b5' }, { loggedIn: true });
+    c.ngOnInit();
+    c.goTo(2);                                    // nach 1.e4 e5, Weiß am Zug
+    c.startSparring();
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.onMove({ orig: 'd2', dest: 'd4' });
+    await maiaPlays(c, 'e5d4');
+    c.stopSparring();
+    expect(sansOf(c)).toEqual(['d4', 'exd4']);
+    c.analyzeSparring();
+    expect(importBody(c)).toEqual({
+      pgn: '[Event "Sparring vs Maia"]\n[Site "RookHub"]\n[Date "2026.10.02"]\n[Round "-"]\n'
+        + '[White "anna"]\n[Black "Maia 1600"]\n[Result "*"]\n[SetUp "1"]\n'
+        + `[FEN "${c.lastSparring.start.fen}"]\n\n2. d4 exd4 *`,
+      ownerSide: 'white',
+    });
+    c.ngOnDestroy();
+  });
+
+  it('unter zwei Halbzügen gibt es keinen Knopf', () => {
+    const c = sparring();
+    c.onMove({ orig: 'e2', dest: 'e4' });         // Maias Antwort bleibt aus
+    c.stopSparring();
+    expect(c.lastSparring).toBeNull();
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    expect(c.__analyzeGame.status).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('abgemeldet: kein Knopf, keine Auskunft, kein Import', async () => {
+    const c = sparring({ fen: START }, false);
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    await maiaPlays(c, 'e7e5');
+    c.stopSparring();
+    expect(c.lastSparring).not.toBeNull();
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.analyzeSparring();
+    expect(c.__http.post).not.toHaveBeenCalled();
+    expect(c.__analyzeGame.status).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('während des Sparrings nur am Partie-Ende — dann: beenden, speichern mit der eigenen Seite, einreihen, zur Partie', async () => {
+    const c = sparring({ fen: START, moves: 'f2f3' });   // Nutzer = Schwarz
+    expect(c.sparring.userColor).toBe('black');
+    c.onMove({ orig: 'e7', dest: 'e5' });
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    await maiaPlays(c, 'g2g4');
+    expect(c.sparringAnalyzeVisible).toBeFalse();        // zwei Halbzüge, aber mitten in der Partie
+    expect(c.__analyzeGame.status).not.toHaveBeenCalled();
+    c.onMove({ orig: 'd8', dest: 'h4' });                 // Qh4#
+    expect(c.sparringAnalyzeVisible).toBeTrue();
+    expect(c.__analyzeGame.status).toHaveBeenCalledTimes(1);
+    expect(c.analyzeStatus).toEqual({ engineAvailable: true, ownEngine: false, openGames: 0, maxGames: 5 });
+
+    c.analyzeSparring();
+    expect(c.sparring).toBeNull();                       // beendet wie mit „Beenden"
+    expect(c.engineOn).toBeTrue();                       // Engine-Zustand von vorher
+    expect(c.__http.post).toHaveBeenCalledOnceWith('/api/games/import', {
+      pgn: '[Event "Sparring vs Maia"]\n[Site "RookHub"]\n[Date "2026.10.02"]\n[Round "-"]\n'
+        + '[White "Maia 1600"]\n[Black "anna"]\n[Result "0-1"]\n[SetUp "1"]\n'
+        + `[FEN "${AFTER_F3}"]\n\n1... e5 2. g4 Qh4# 0-1`,
+      ownerSide: 'black',
+    });
+    expect(c.__analyzeGame.submit).toHaveBeenCalledOnceWith('/api/games/7/analyze', c.analyzeStatus);
+    expect(c.__router.navigate).toHaveBeenCalledOnceWith(['/games', 7]);
+    expect(c.analyzingSparring).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  /** Fertig gespielt (e4 e5) und beendet — der Knopf ist da. */
+  async function finished() {
+    const c = sparring();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    await maiaPlays(c, 'e7e5');
+    c.stopSparring();
+    expect(c.sparringAnalyzeVisible).toBeTrue();
+    return c;
+  }
+
+  it('Absage der Analyse: keine Navigation (die Partie liegt trotzdem in „Meine Partien")', async () => {
+    const c = await finished();
+    c.__analyzeGame.submit.and.returnValue(of(false));
+    c.analyzeSparring();
+    expect(c.__http.post).toHaveBeenCalledTimes(1);
+    expect(c.__analyzeGame.submit).toHaveBeenCalledTimes(1);
+    expect(c.__router.navigate).not.toHaveBeenCalled();
+    expect(c.__snackbar.warn).not.toHaveBeenCalled();     // den Grund nennt submit selbst
+    expect(c.analyzingSparring).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('keine Id aus dem Import (Deckel) oder ein Fehler: Snackbar, kein Einreihen, hierbleiben', async () => {
+    const c = await finished();
+    c.__http.reply = () => of({ imported: 0, duplicates: 0, truncated: false, ids: [], failed: [{ index: 1, reason: 'quota' }] });
+    c.analyzeSparring();
+    expect(c.__snackbar.warn).toHaveBeenCalledOnceWith('analysis.maia.saveFailed');
+    expect(c.analyzingSparring).toBeFalse();
+
+    c.__http.reply = () => throwError(() => new Error('offline'));
+    c.analyzeSparring();
+    expect(c.__snackbar.warn).toHaveBeenCalledTimes(2);
+    expect(c.__analyzeGame.submit).not.toHaveBeenCalled();
+    expect(c.__router.navigate).not.toHaveBeenCalled();
+    expect(c.analyzingSparring).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('Doppelklick legt nichts doppelt an', async () => {
+    const c = await finished();
+    const pending = new Subject<any>();
+    c.__http.reply = () => pending;
+    c.analyzeSparring();
+    expect(c.analyzingSparring).toBeTrue();
+    c.analyzeSparring();
+    expect(c.__http.post).toHaveBeenCalledTimes(1);
+    pending.next({ imported: 1, duplicates: 0, truncated: false, ids: [9], failed: [] });
+    pending.complete();
+    expect(c.__router.navigate).toHaveBeenCalledOnceWith(['/games', 9]);
+    expect(c.analyzingSparring).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('ein neuer Baum räumt die Partie weg', async () => {
+    const c = await finished();
+    c.reset();
+    expect(c.lastSparring).toBeNull();
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('Löschen eines ihrer Züge räumt die Partie weg, Löschen woanders nicht', async () => {
+    const c = await finished();
+    c.goTo(0);
+    c.onMove({ orig: 'd2', dest: 'd4' });          // Variante neben der Partie
+    c.onTreeAction({ kind: 'delete', node: c.root.children[1] });
+    expect(c.lastSparring).not.toBeNull();
+    c.onTreeAction({ kind: 'delete', node: c.root.children[0].children[0] });   // 1...e5
+    expect(c.lastSparring).toBeNull();
+    expect(c.sparringAnalyzeVisible).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('löscht man mitten im Sparring dessen letzte Züge, ist der Zug davor der neue letzte', async () => {
+    const c = sparring();
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    await maiaPlays(c, 'e7e5');
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    await maiaPlays(c, 'b8c6');
+    const nf3 = c.sparring.tip.parent;
+    c.onTreeAction({ kind: 'delete', node: c.sparring.tip });
+    expect(c.sparring.tip).toBe(nf3);
+    c.stopSparring();
+    expect(sansOf(c)).toEqual(['e4', 'e5', 'Nf3']);
+    c.ngOnDestroy();
+  });
+
+  it('ein neues Sparring lässt die alte Partie stehen, bis es selbst endet', async () => {
+    const c = await finished();
+    const first = c.lastSparring;
+    c.startSparring();
+    expect(c.lastSparring).toBe(first);
+    expect(c.sparringAnalyzeVisible).toBeFalse();   // während es läuft (mitten in der Partie) kein Knopf
+    c.stopSparring();                               // ohne Zug beendet → nichts mehr zu analysieren
+    expect(c.lastSparring).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('die Engine-Auskunft wird höchstens einmal geholt; ohne Engine bleibt sie stehen', async () => {
+    const c = sparring();
+    c.__analyzeGame.status.and.returnValue(of({ engineAvailable: false, ownEngine: false, openGames: 0, maxGames: 5 }));
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    await maiaPlays(c, 'e7e5');
+    c.stopSparring();
+    expect(c.analyzeStatus.engineAvailable).toBeFalse();
+    c.startSparring();
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    await maiaPlays(c, 'b8c6');
+    c.stopSparring();
+    expect(c.sparringAnalyzeVisible).toBeTrue();
+    expect(c.__analyzeGame.status).toHaveBeenCalledTimes(1);
+    c.ngOnDestroy();
   });
 });

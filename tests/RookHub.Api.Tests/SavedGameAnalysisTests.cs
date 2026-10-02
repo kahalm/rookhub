@@ -301,6 +301,41 @@ public class SavedGameAnalysisTests : IDisposable
         Assert.Equal(GuessUploadReason.TooManyOpen, refused!.Reason);
     }
 
+    // ===== Partie aus einer eigenen Stellung (Sparring gegen Maia) ==========
+
+    /// <summary>Eine Partie, die aus einer Stellung mit Schwarz am Zug beginnt (Sparring mitten in einer Partie,
+    /// hochgeladen über <c>POST /api/games/import</c>): die Analyse beginnt GENAU bei der FEN aus dem Kopf, rechnet je
+    /// Halbzug eine Stellung, und der erste Halbzug gehört Schwarz. Ein Versatz hier verschöbe Kurve, Zug-Klassen und
+    /// Fehler-Training um einen Halbzug.</summary>
+    [Fact]
+    public async Task Analyze_PartieAusEinerStellung_SchwarzAmZug_beginntBeiDerFenAusDemKopf()
+    {
+        const string fen = "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 4 4";
+        var owner = await UserAsync("owner");
+        var import = await _svc.ImportPgnAsync(owner.Id,
+            "[Event \"Sparring vs Maia\"]\n[Site \"RookHub\"]\n[Date \"2026.10.02\"]\n[Round \"-\"]\n"
+            + "[White \"Maia 1600\"]\n[Black \"owner\"]\n[Result \"*\"]\n[SetUp \"1\"]\n"
+            + $"[FEN \"{fen}\"]\n\n4... Bc5 5. c3 d6 *\n", "black");
+        var gameId = Assert.Single(import.Ids);
+
+        var result = await _svc.AnalyzeAsync(owner.Id, gameId);
+
+        Assert.Null(result!.Reason);
+        var analysis = await _db.GameAnalyses.AsNoTracking().SingleAsync();
+        Assert.Equal(fen, analysis.StartFen);
+        Assert.Equal(3, analysis.PlyCount);
+        var positions = await _db.GameAnalysisPositions.AsNoTracking()
+            .Where(p => p.GameAnalysisId == analysis.Id).OrderBy(p => p.Ply).ToListAsync();
+        Assert.Equal(new[] { 0, 1, 2 }, positions.Select(p => p.Ply));
+        Assert.Equal(fen, positions[0].Fen);
+        Assert.Equal(("f8c5", "Bc5"), (positions[0].GameMoveUci, positions[0].GameMoveSan));
+        Assert.Equal("r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 5 5", positions[1].Fen);
+        Assert.Equal(("c2c3", "c3"), (positions[1].GameMoveUci, positions[1].GameMoveSan));
+        Assert.Equal("r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R b KQkq - 0 5", positions[2].Fen);
+        Assert.Equal(("d7d6", "d6"), (positions[2].GameMoveUci, positions[2].GameMoveSan));
+        Assert.Equal("black", (await RowAsync(gameId)).OwnerSide);
+    }
+
     // ===== Längerer Re-Save aus der Erweiterung (N8-002) =====================
 
     private Task<SavedGameDetailDto> ResaveAsync(int userId, List<string> moves, int? whiteElo = null)

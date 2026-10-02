@@ -2949,6 +2949,7 @@
       "errorFailed": "Maia could not be loaded.",
       "retry": "Try again",
       "moveFailed": "Maia could not provide a move.",
+      "saveFailed": "The game could not be saved to “My games”.",
       "enginePaused": "Engine paused during sparring",
       "hint": "Maia-3 is a neural network from the University of Toronto. It has learned from millions of games which moves people of a given playing strength choose — including their typical mistakes.\n\nThe strength corresponds to a Lichess blitz rating; as a rule of thumb it is about 200 points above FIDE Elo.\n\nMaia does not calculate ahead but plays by feel. The engine stays off meanwhile so that you do the calculating yourself."
     }
