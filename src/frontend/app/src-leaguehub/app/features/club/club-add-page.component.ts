@@ -69,11 +69,11 @@ const SAVE_DEBOUNCE_MS = 1500;
           sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>
       </section>
 
-      <div class="seg club-kind" role="tablist" aria-label="Art">
-        <button type="button" role="tab" [attr.aria-selected]="kind() === 'pgn'" [attr.aria-pressed]="kind() === 'pgn'"
-                (click)="setKind('pgn')">PGN-Datei</button>
-        <button type="button" role="tab" [attr.aria-selected]="kind() === 'formular'" [attr.aria-pressed]="kind() === 'formular'"
-                (click)="setKind('formular')">Partieformular</button>
+      <!-- UX-071: ein Umschalter wie die übrigen von LeagueHub (role=group + aria-pressed). Vorher role=tab MIT aria-pressed
+           (axe: aria-allowed-attr, critical), ohne tabpanel und ohne Pfeiltasten. -->
+      <div class="seg club-kind" role="group" aria-label="Art">
+        <button type="button" [attr.aria-pressed]="kind() === 'pgn'" (click)="setKind('pgn')">PGN-Datei</button>
+        <button type="button" [attr.aria-pressed]="kind() === 'formular'" (click)="setKind('formular')">Partieformular</button>
       </div>
 
       @if (kind() === 'pgn') {
