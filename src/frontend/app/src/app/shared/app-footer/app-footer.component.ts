@@ -28,11 +28,15 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
   imports: [RouterLink, MatIconModule, A11yModule, TranslatePipe],
   template: `
     <footer class="app-footer" [class.hide-on-mobile]="hideOnMobile">
-      <span class="version-link" role="button" tabindex="0"
-            [attr.aria-label]="'app.changelogTitle' | translate"
-            (click)="toggleChangelog()"
-            (keydown.enter)="toggleChangelog()"
-            (keydown.space)="$event.preventDefault(); toggleChangelog()">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      @if (changelogLink) {
+        <span class="version-link" role="button" tabindex="0"
+              [attr.aria-label]="'app.changelogTitle' | translate"
+              (click)="toggleChangelog()"
+              (keydown.enter)="toggleChangelog()"
+              (keydown.space)="$event.preventDefault(); toggleChangelog()">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      } @else {
+        <span class="version-text">v{{ version }}@if (!production) { <span class="dev-badge">dev</span>}</span>
+      }
       @if (helpRoute) {
         <span class="footer-sep">·</span>
         <a class="feedback-link" routerLink="/help">{{ 'nav.help' | translate }}</a>
@@ -97,9 +101,16 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
          zu Version, Hilfe und Rueckmeldung — als 14 px hoher Fliesstext waren sie kaum zu
          treffen. Padding statt groesserer Schrift: die Zeile bleibt eine Fusszeile. Auf RookHub
          ist sie hier ohnehin ausgeblendet, die Regel wirkt dort nicht. */
-      .app-footer a, .app-footer .version-link { display: inline-block; padding: 10px 4px; }
-      /* Rechtslinks mit vollem Beruehrziel (44 px, UX-017). */
-      .app-footer a.legal-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; vertical-align: middle; }
+      /* Volle Beruehrziele (44 px, UX-017/UX-072) fuer JEDEN Link — 10 px Padding auf 12-px-Text ergaben ~34 px, und
+         „v0.596.2" lag dicht neben „Feedback". inline-flex + center setzt nebenbei das Discord-/Ko-fi-Symbol auf die
+         Hoehe seines Textes (vorher sass es sichtbar hoeher). */
+      .app-footer a, .app-footer .version-link, .app-footer .version-text {
+        display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; vertical-align: middle;
+      }
+      /* Umbruch nur ZWISCHEN den Eintraegen, Abstand statt Trennpunkt: als eigenes Span blieb der Punkt am Zeilenende
+         haengen („Discord-Community ·", darunter „Entwickler unterstuetzen" allein). */
+      .app-footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: 14px; }
+      .app-footer .footer-sep { display: none; }
     }
     .version-link { cursor: pointer; }
     .version-link:hover { color: color-mix(in srgb, currentColor 65%, transparent); text-decoration: underline; }
@@ -163,6 +174,13 @@ export class AppFooterComponent {
    * einzige, aber unsichtbare Weg zu Version, Hilfe und Rueckmeldung gewesen.
    */
   @Input() hideOnMobile = true;
+
+  /**
+   * Oeffnet die Versionsnummer das Changelog? Vorgabe ja (RookHub). Die Turnierseite setzt false: das Changelog ist
+   * RookHubs (Puzzles, Kurse, Chessable) und fuer ihre Nutzer fast nur Fremdes — dort steht die Version als Text, und
+   * am Handy liegt neben „Feedback / Bug melden" kein Ziel mehr, das man versehentlich trifft (UX-072).
+   */
+  @Input() changelogLink = true;
 
   /** Hat DIESE App eine eigene Hilfeseite? (RookHub ja, die Turnierseite nein.) */
   readonly helpRoute = this.router.config.some(r => r.path === 'help');

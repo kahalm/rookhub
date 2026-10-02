@@ -21,7 +21,8 @@ import { AppUpdateService } from '@rh/core/app-update.service';
     <main><router-outlet /></main>
     <!-- Anders als in RookHub bleibt die Fusszeile auch am Handy stehen: hier ist sie der
          einzige Weg zu Version, Hilfe und Rueckmeldung — RookHubs Menue traegt diese Wege selbst. -->
-    <app-footer [hideOnMobile]="false" />
+    <!-- Version als Text: das Changelog ist RookHubs und fuer die Turnierseite fast nur Fremdes (UX-072). -->
+    <app-footer [hideOnMobile]="false" [changelogLink]="false" />
   `,
   styles: [`
     /* 100vh ist am Handy HOEHER als der sichtbare Bereich (die Adressleiste zaehlt mit) —

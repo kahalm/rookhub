@@ -146,3 +146,70 @@ describe('AppFooterComponent', () => {
     });
   });
 });
+
+/**
+ * Codereview W5 UX-072: am Handy (nur die Turnierseite zeigt die Fusszeile dort) waren die Links ~34 px hoch, der
+ * Trennpunkt blieb am Zeilenende haengen, das Discord-Symbol sass hoeher als sein Text, und der Versionslink oeffnete
+ * RookHubs ganzes Changelog. Die Handy-Regeln stehen in einer Media-Query — Karma laeuft breiter als 768 px, deshalb
+ * wird die Regel im CSSOM gelesen (die Komponentenstyles haengen nach dem Erzeugen im Dokument).
+ */
+describe('AppFooterComponent am Handy (UX-072)', () => {
+  function render(changelogLink?: boolean) {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(AppFooterComponent);
+    fixture.componentRef.setInput('hideOnMobile', false);
+    if (changelogLink !== undefined) fixture.componentRef.setInput('changelogLink', changelogLink);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  /** Alle Regeln aller `@media (max-width: 768px)`-Bloecke im Dokument, deren Selektor `part` enthaelt. */
+  function mobileRules(part: string): CSSStyleRule[] {
+    const out: CSSStyleRule[] = [];
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules: CSSRuleList;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const r of Array.from(rules)) {
+        if (r instanceof CSSMediaRule && r.conditionText.replace(/\s/g, '') === '(max-width:768px)') {
+          for (const inner of Array.from(r.cssRules)) {
+            if (inner instanceof CSSStyleRule && inner.selectorText.includes(part)) out.push(inner);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  it('gibt am Handy JEDEM Link ein 44-px-Ziel, mittig ausgerichtet (auch Discord und Ko-fi)', () => {
+    render();
+    // Gekapselte Selektoren tragen Attribute (`.app-footer[_ngcontent-…] a[_ngcontent-…]`) — gesucht wird die Regel,
+    // die Links UND die Versionsnummer gemeinsam auf 44 px setzt (die Rechtslinks hatten das schon allein).
+    const linkRule = mobileRules('.version-link').find(r => r.style.minHeight === '44px');
+    expect(linkRule).withContext('44-px-Regel fuer alle Links').toBeDefined();
+    expect(linkRule!.selectorText).toMatch(/\.app-footer\S*\s+a\b/);
+    expect(linkRule!.selectorText).toContain('.version-text');
+    expect(linkRule!.style.display).toBe('inline-flex');
+    expect(linkRule!.style.alignItems).toBe('center');
+  });
+
+  it('bricht am Handy nur zwischen den Eintraegen um — ohne haengenden Trennpunkt', () => {
+    render();
+    expect(mobileRules('.footer-sep').some(r => r.style.display === 'none')).toBeTrue();
+    expect(mobileRules('.app-footer').some(r => r.style.flexWrap === 'wrap')).toBeTrue();
+  });
+
+  it('zeigt die Version ohne Changelog-Knopf, wenn changelogLink aus ist (Turnierseite)', () => {
+    const el = render(false);
+    expect(el.querySelector('.version-link')).toBeNull();
+    expect(el.querySelector('.version-text')?.textContent).toContain('v');
+  });
+
+  it('behaelt in RookHub den Versionslink zum Changelog', () => {
+    const el = render();
+    expect(el.querySelector('.version-link[role="button"]')).not.toBeNull();
+  });
+});

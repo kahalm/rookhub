@@ -59,6 +59,16 @@ describe('TurnierAppComponent', () => {
     expect(value).withContext('Fusszeile wuerde am Handy verschwinden').toBeFalse();
   });
 
+  /** Das Changelog ist RookHubs (Puzzles, Kurse, Chessable) — auf der Turnierseite steht die Version als Text (UX-072). */
+  it('zeigt die Version ohne Changelog-Knopf', () => {
+    const fixture = TestBed.createComponent(TurnierAppComponent);
+    fixture.detectChanges();
+
+    const footer = fixture.debugElement.query(By.directive(AppFooterComponent)).componentInstance as AppFooterComponent;
+    expect(footer.changelogLink).toBeFalse();
+    expect(fixture.nativeElement.querySelector('.app-footer .version-link')).toBeNull();
+  });
+
   it('nennt die Version und haelt das Changelog bis zum Oeffnen leer', () => {
     const fixture = TestBed.createComponent(TurnierAppComponent);
     fixture.detectChanges();
