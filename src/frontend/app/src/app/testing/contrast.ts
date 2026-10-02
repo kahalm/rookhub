@@ -88,11 +88,21 @@ let probeId = 0;
  * Element erscheint (Puzzle geladen, Engine rechnet …). `surface` legt eine Flaeche darunter (z. B.
  * `var(--mat-sys-surface-container-low)` fuer eine Karte), ohne sie steht der Wirt auf der Seite. Gibt das Aufraeumen
  * zurueck.
+ *
+ * `%NS%`: Seit Angular 22 setzt der Compiler vor jede Custom Property der Komponentenstile diesen Platzhalter
+ * (`var(--%NS%rh-accent)`); der Renderer ersetzt ihn durch `CSS_VAR_NAMESPACE` — ohne `provideCssVarNamespacing`
+ * (so die App) ist das ''. Bliebe er stehen, waere jede `var()`-Deklaration ungueltig und fiele weg, gemessen
+ * wuerde dann die Browser-Vorgabe (`buttontext`, geerbte Textfarbe) — ein Kontrast-Spec waere nur zufaellig gruen
+ * (Nacharbeit UX-008). Darum bricht der Helfer ab, wenn nach dem Ersetzen noch ein `%NAME%` im Stiltext steht.
  */
 export function mountWithComponentStyles(cmp: unknown, html: string, surface?: string): () => void {
   const scope = `rh-contrast-${probeId++}`;
   const style = document.createElement('style');
-  style.textContent = ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n').replace(/%COMP%/g, scope);
+  const css = ((cmp as { ɵcmp: { styles: string[] } }).ɵcmp.styles).join('\n')
+    .replace(/%COMP%/g, scope).replace(/%NS%/g, '');
+  const leftover = /%[A-Z_]+%/.exec(css);
+  if (leftover) throw new Error(`mountWithComponentStyles: Platzhalter ${leftover[0]} im Stiltext nicht aufgeloest`);
+  style.textContent = css;
   document.head.appendChild(style);
   const ground = document.createElement('div');
   if (surface) ground.style.backgroundColor = surface;
