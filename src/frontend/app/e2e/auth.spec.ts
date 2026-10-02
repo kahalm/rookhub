@@ -32,8 +32,10 @@ test.describe('Auth', () => {
 
     await form.getByRole('button', { name: /login|anmelden/i }).click();
 
-    // Snackbar error message
-    await expect(page.locator('.mat-mdc-snack-bar-container')).toBeVisible({ timeout: 10_000 });
+    // Meldung im Formular (role=alert) statt Snackbar (UX-019); beim falschen Passwort mit dem Weg „Passwort vergessen?“.
+    const alert = form.getByRole('alert');
+    await expect(alert).toBeVisible({ timeout: 10_000 });
+    await expect(alert.getByRole('link', { name: /forgot|vergessen/i })).toHaveAttribute('href', '/forgot-password');
   });
 
   test('register redirects to dashboard', async ({ page }) => {
@@ -62,7 +64,10 @@ test.describe('Auth', () => {
 
     await form.getByRole('button', { name: /register|registrieren/i }).click();
 
-    await expect(page.locator('.mat-mdc-snack-bar-container')).toBeVisible({ timeout: 10_000 });
+    // Meldung im Formular (role=alert) statt Snackbar (8fc16963); beim vergebenen Namen mit dem Weg zur Anmeldung.
+    const alert = form.getByRole('alert');
+    await expect(alert).toBeVisible({ timeout: 10_000 });
+    await expect(alert.getByRole('link', { name: /login|anmeldung/i })).toHaveAttribute('href', /^\/login/);
   });
 
   test('unauthorized access to /dashboard redirects to /login', async ({ page }) => {

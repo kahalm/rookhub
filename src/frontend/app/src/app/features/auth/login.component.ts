@@ -47,7 +47,10 @@ export type LoginError = 'credentials' | 'rateLimited' | 'offline' | 'failed';
 export function loginErrorOf(err: any): LoginError {
   if (err?.status === 401 || err?.status === 400) return 'credentials';
   if (err?.status === 429) return 'rateLimited';
-  if (err?.status === 0) return 'offline';
+  // 504 gehoert dazu: mit aktivem Service Worker (Prod/PWA/TWA) kommt ein Netzfehler nie als Status 0 an, der ngsw
+  // macht daraus ein synthetisches 504 (wie im connectivity-/retryInterceptor). Ein echtes 504 des Proxys heisst
+  // ebenso „Server nicht erreicht“.
+  if (err?.status === 0 || err?.status === 504) return 'offline';
   return 'failed';
 }
 

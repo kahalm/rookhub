@@ -134,6 +134,12 @@ describe('LoginComponent', () => {
         .toEqual({ kind: 'offline', text: 'auth.login.offline' });
     });
 
+    it('ohne Verbindung mit Service Worker (synthetisches 504): derselbe Hinweis statt „Anmeldung fehlgeschlagen“', () => {
+      expect(failWith({ status: 504, error: null }))
+        .toEqual({ kind: 'offline', text: 'auth.login.offline' });
+      expect(loginErrorOf({ status: 502 })).toBe('failed');
+    });
+
     it('ein neuer Versuch räumt die alte Meldung ab', () => {
       const { c, auth } = make();
       auth.login.and.returnValue(throwError(() => ({ status: 401 })));
