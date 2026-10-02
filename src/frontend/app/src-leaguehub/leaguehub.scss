@@ -241,7 +241,9 @@ button.pl:hover { text-decoration-color: var(--ink); }
   border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink);
 }
 .card::backdrop { background: rgb(10 14 20 / .55); }
-.card-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px 8px; position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+/* z-index: der klebende Kopf liegt über positionierten Inhalten der Karte (am Handy Spielernamen im Eröffnungsbaum mit ihrer
+   Trefferfläche, UX-069; Brett-Figuren) — ohne malten sie beim Scrollen über Kopf und ✕ und fingen dort die Tipps ab. */
+.card-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px 8px; position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
 .card-head h2 { margin: 0; font: 600 24px/1.15 var(--cond); }
 .card-meta { margin: 4px 0 6px; color: var(--muted); font-size: 15px; }
 .card-meta a { color: inherit; }
@@ -655,8 +657,20 @@ lh-online-accounts { display: block; }
   .seg button, .ply { min-height: 44px; }
   .foot a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
   .back-link { display: inline-block; padding: 12px 0; }
-  /* Spielernamen öffnen die Karte, stehen aber im Fließtext der Bretter: die Trefferfläche wächst unsichtbar um 11 px nach
-     oben und unten, ohne die Zeilen zu verschieben. */
+  /* Spielernamen öffnen die Karte, stehen aber im Fließtext der Bretter: die Trefferfläche wächst unsichtbar nach oben und
+     unten, ohne die Zeilen zu verschieben — aber nur bis zur Mitte des Abstands zum nächsten Ziel. Wo sich zwei Flächen
+     überlappen, gewinnt das spätere Element: mit ±11 px öffnete ein Tipp 3 px unter einem Kandidaten (14 px bis zum
+     nächsten Namen) bzw. einem Gemeldeten die Karte des NÄCHSTEN Spielers. */
   button.pl { position: relative; }
-  button.pl::after { content: ""; position: absolute; left: 0; right: 0; top: -11px; bottom: -11px; }
+  button.pl::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
+  /* In Tabellen nur im Zellpolster (6 px): sonst Nachbarzeile, und der letzte Name ragte unter die Tabelle — die Meldeliste
+     (.roster-scroll, overflow-x: auto) wurde dadurch senkrecht scrollbar. */
+  .rtable button.pl::after { top: -6px; bottom: -6px; }
+  /* Echte Knöpfe malen über eine fremde unsichtbare Fläche (zusätzlich zur Begrenzung in der Vereinstabelle unten). */
+  .row-acts .btn-link { position: relative; }
+}
+/* Vereinstabelle am Handy (UX-035): die Aktionszeile beginnt 2 px unter dem Namen — die Fläche reicht nur bis dorthin,
+   sonst öffneten die oberen 9 px von „Nachspielen“/„Bearbeiten“ die Spielerkarte. */
+@container (max-width: 640px) {
+  .club-table tr.game button.pl::after { bottom: -2px; }
 }
