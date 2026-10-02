@@ -86,7 +86,7 @@ const ERROR_KEYS: Record<RegisterError, string> = {
               <mat-label>{{ 'auth.register.usernameLabel' | translate }}</mat-label>
               <!-- Handy-Tastatur: ohne autocapitalize="none" wurde der Benutzername als 'Kahalm' statt 'kahalm'
                    eingegeben und so gespeichert; new-password laesst den Passwort-Manager ein starkes Passwort vorschlagen. -->
-              <input matInput [(ngModel)]="username" name="username" required [minlength]="usernameMin"
+              <input matInput [(ngModel)]="username" name="username" required [minlength]="usernameMin" autofocus
                      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
               @if (kids) {
                 <!-- Der Benutzername steht fuer andere sichtbar (Bestenliste ohne Anzeigenamen, Freundessuche) — ein

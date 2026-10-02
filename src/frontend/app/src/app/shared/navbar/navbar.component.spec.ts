@@ -272,14 +272,27 @@ describe('NavbarComponent Anmelden/Registrieren behalten das Ziel (UX-020)', () 
     const fixture = TestBed.createComponent(NavbarComponent);
     fixture.detectChanges();
     const link = (path: string) =>
-      fixture.debugElement.query(By.css(`mat-toolbar [routerLink="${path}"]`)).injector.get(RouterLink).urlTree!.toString();
-    return { login: link('/login'), register: link('/register') };
+      fixture.debugElement.query(By.css(`mat-toolbar [routerLink="${path}"]`))?.injector.get(RouterLink).urlTree!.toString();
+    return { login: link('/login'), register: link('/register'), el: fixture.nativeElement as HTMLElement };
   }
 
-  it('auf der Maske mit Ziel: „Registrieren“ oben behält es (wie der Link in der Karte)', async () => {
-    const { register, login } = await renderAt('/login?returnUrl=%2Ffriends%2F7%2Frevenge&authRequired=1');
-    expect(register).toBe('/register?returnUrl=%2Ffriends%2F7%2Frevenge');
-    expect(login).toBe('/login?returnUrl=%2Ffriends%2F7%2Frevenge');
+  /** Codereview W5 UX-052: auf den Auth-Seiten standen „Anmelden“/„Registrieren“ doppelt (Kopfzeile + Karte) — auf
+   *  /register zwei gleiche Knöpfe, von denen der obere scheinbar nichts tat —, dazu ein nutzloses Vollbild-Symbol.
+   *  Die Karte trägt die Links samt Ziel selbst (login/register.component). */
+  it('auf den Auth-Seiten: keine Kopie von „Anmelden“/„Registrieren“ und kein Vollbild in der Kopfzeile', async () => {
+    for (const url of ['/login?returnUrl=%2Ffriends%2F7%2Frevenge&authRequired=1', '/register', '/forgot-password', '/reset-password?token=x']) {
+      const { register, login, el } = await renderAt(url);
+      expect(register).withContext(url).toBeUndefined();
+      expect(login).withContext(url).toBeUndefined();
+      expect(el.querySelector('mat-toolbar button[aria-label="nav.fullscreen"]')).withContext(url).toBeNull();
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('auf offenen Seiten: „Registrieren“ ist die (gefüllte) Primäraktion der Leiste', async () => {
+    const { el } = await renderAt('/puzzles');
+    expect(el.querySelector('mat-toolbar [routerLink="/register"]')!.classList).toContain('mat-primary');
+    expect(el.querySelector('mat-toolbar button[aria-label="nav.fullscreen"]')).not.toBeNull();
   });
 
   it('auf einer offenen Seite: zurück zu genau dieser Seite', async () => {

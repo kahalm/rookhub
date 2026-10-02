@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, Inject, OnDestroy, Optional, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute, ParamMap } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
@@ -93,17 +93,19 @@ export function loginRetryAfterSeconds(err: any): number {
           @if (intro.login; as introKey) {
             <p class="auth-required site-note">{{ introKey | translate }}</p>
           }
-          <form (ngSubmit)="onSubmit()" class="auth-form">
+          <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.usernameLabel' | translate }}</mat-label>
               <!-- Handy-Tastatur: iOS setzte den ersten Buchstaben gross und die Autokorrektur machte aus dem
                    Benutzernamen ein Woerterbuchwort; autocomplete gibt dem Passwort-Manager den Fuell-Hinweis. -->
               <input matInput [(ngModel)]="username" name="username" required autofocus
                      autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+              <mat-error>{{ 'auth.login.fieldRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>{{ 'auth.login.passwordLabel' | translate }}</mat-label>
               <input matInput type="password" [(ngModel)]="password" name="password" required autocomplete="current-password">
+              <mat-error>{{ 'auth.login.fieldRequired' | translate }}</mat-error>
             </mat-form-field>
             <mat-checkbox [(ngModel)]="rememberMe" name="rememberMe">{{ 'auth.login.rememberMe' | translate }}</mat-checkbox>
             <button mat-raised-button color="primary" type="submit" [disabled]="loading">
@@ -213,7 +215,15 @@ export class LoginComponent implements OnDestroy {
   }
 
 
-  onSubmit(): void {
+  /**
+   * Ein Verhalten fuer alle vier Auth-Formulare (UX-052): der Knopf ist immer aktiv (nur waehrend des Sendens
+   * gesperrt), ein unvollstaendiges Formular wird nicht gesendet, die Felder zeigen selbst, was fehlt.
+   */
+  onSubmit(form?: NgForm): void {
+    if (form?.invalid) {
+      form.control.markAllAsTouched();
+      return;
+    }
     this.loading = true;
     this.error.set(null);
     this.auth.login(this.username, this.password, this.rememberMe).subscribe({

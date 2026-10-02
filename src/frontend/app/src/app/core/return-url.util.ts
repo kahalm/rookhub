@@ -15,6 +15,11 @@ export function sanitizeReturnUrl(url: string | null | undefined, fallback = '/d
 /** Anmelde-, Registrier- und Passwortseiten: dorthin zurückzuspringen ergäbe nach der Anmeldung keinen Sinn. */
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
 
+/** Steht `url` auf einer dieser Seiten? Query und Fragment zählen nicht. */
+export function isAuthPage(url: string): boolean {
+  return AUTH_PAGES.includes(url.split('#')[0].split('?')[0]);
+}
+
 /**
  * Query der Anmelde-/Registrier-Links in der Kopfzeile (UX-020): `returnUrl` ist die Seite, auf der man gerade steht —
  * auf den Auth-Seiten selbst deren eigenes `returnUrl`. Bisher verlinkten RookHub und die Turnierseite nackt, LeagueHub

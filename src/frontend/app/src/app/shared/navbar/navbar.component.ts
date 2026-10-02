@@ -23,7 +23,7 @@ import { LocaleService } from '../../core/locale.service';
 import { ThemeService, AppTheme } from '../../core/theme.service';
 import { DISCORD_INVITE_URL, DISCORD_SVG, KOFI_URL } from '../../core/community';
 import { LEGAL_SITE } from '../../features/legal/legal-site';
-import { authLinkQuery } from '../../core/return-url.util';
+import { authLinkQuery, isAuthPage } from '../../core/return-url.util';
 import {
   fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen,
 } from '../fullscreen/fullscreen.util';
@@ -183,7 +183,9 @@ import {
              Sprache) liegt IMMER im ☰-Menü statt als Icon-Reihe in der Leiste. -->
         @if (can('puzzles')) { <button mat-button class="nav-anon" routerLink="/puzzles">{{ 'nav.puzzles' | translate }}</button> }
         @if (can('analysis')) { <button mat-button class="nav-anon" routerLink="/analysis">{{ 'nav.analysis' | translate }}</button> }
-        @if (fsSupported) {
+        <!-- Auf den Anmelde-/Passwortseiten kein Vollbild (nutzt dort nichts) und unten keine Kopie der Karten-Links
+             „Anmelden"/„Registrieren" — auf /register standen sonst zwei gleiche Knoepfe (Codereview W5 UX-052). -->
+        @if (fsSupported && !onAuthPage) {
           <button mat-icon-button (click)="toggleAppFullscreen()"
                   [matTooltip]="fsLabel" [attr.aria-label]="fsLabel">
             <mat-icon>{{ fsActive ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
@@ -223,8 +225,11 @@ import {
             <span>{{ 'nav.language' | translate }}</span>
           </button>
         </mat-menu>
-        <button mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</button>
-        <button mat-raised-button routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</button>
+        @if (!onAuthPage) {
+          <button mat-button routerLink="/login" [queryParams]="authQuery">{{ 'nav.login' | translate }}</button>
+          <!-- color="primary": die Einladung an Gaeste ist die Primaeraktion der Leiste (gefuellt, styles.scss). -->
+          <button mat-raised-button color="primary" routerLink="/register" [queryParams]="authQuery">{{ 'nav.register' | translate }}</button>
+        }
       }
       <mat-menu #langMenu="matMenu">
         <div class="lang-menu-label">{{ 'nav.language' | translate }}</div>
@@ -288,6 +293,8 @@ export class NavbarComponent implements OnInit {
 
   /** „Anmelden“/„Registrieren“ fuehren hierher zurueck — auf der Maske selbst zu deren Ziel (UX-020). */
   get authQuery(): { returnUrl?: string } { return authLinkQuery(this.router.url); }
+  /** Auf den Auth-Seiten blendet die Gast-Leiste Vollbild und „Anmelden“/„Registrieren“ aus (UX-052). */
+  get onAuthPage(): boolean { return isAuthPage(this.router.url); }
 
   @Output() changelogClick = new EventEmitter<void>();
   @Output() quickstartClick = new EventEmitter<void>();

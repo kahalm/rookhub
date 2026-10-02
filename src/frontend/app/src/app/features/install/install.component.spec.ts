@@ -100,3 +100,48 @@ describe('install-Texte (Codereview W5 UX-051)', () => {
     });
   }
 });
+
+/** Codereview W5 UX-052: eine Primäraktion je Seite, und das Info-Symbol wird im Zeilenumbruch nicht gestaucht. */
+describe('InstallComponent — Primäraktion und Symbole (UX-052)', () => {
+  function render(canInstall: boolean, android = true) {
+    TestBed.configureTestingModule({
+      imports: [InstallComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: PwaInstallService, useValue: {
+          isAndroid: android, isIOS: false, canInstallPwa: signal(canInstall), isInstalled: signal(false),
+          promptInstall: () => Promise.resolve(true),
+        } },
+      ],
+    });
+    const fixture = TestBed.createComponent(InstallComponent);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('bietet der Browser die Web-App an, ist sie die Primäraktion und die APK nur Alternative', () => {
+    const el = render(true);
+    expect(el.querySelectorAll('.mat-primary').length).toBe(1);
+    expect(el.querySelector('.pwa-section .mat-primary')).not.toBeNull();
+    expect(el.querySelector('.apk-section a[mat-stroked-button]')).not.toBeNull();
+  });
+
+  it('ohne Installieren-Knopf ist „APK herunterladen“ die einzige Primäraktion', () => {
+    const el = render(false);
+    expect(el.querySelectorAll('.mat-primary').length).toBe(1);
+    expect(el.querySelector('.apk-section a.mat-primary')).not.toBeNull();
+  });
+
+  it('lässt das Info-Symbol vor einem Hinweis in voller Breite stehen', () => {
+    const el = render(false, false);
+    document.body.appendChild(el);
+    try {
+      const icon = el.querySelector('.unavailable mat-icon')!;
+      expect(getComputedStyle(icon).flexShrink).toBe('0');
+    } finally {
+      el.remove();
+    }
+  });
+});

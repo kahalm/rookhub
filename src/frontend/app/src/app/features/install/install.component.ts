@@ -82,9 +82,16 @@ export const APK_DOWNLOAD_URL =
               <li>{{ 'install.apk.step2' | translate }}</li>
               <li>{{ 'install.apk.step3' | translate }}</li>
             </ol>
-            <a mat-raised-button color="primary" [href]="apkUrl" target="_blank" rel="noopener noreferrer" download>
-              <mat-icon>download</mat-icon>{{ 'install.apk.download' | translate }}
-            </a>
+            <!-- EINE Primaeraktion (UX-052): bietet der Browser die Web-App an, ist die APK nur die Alternative. -->
+            @if (pwa.canInstallPwa()) {
+              <a mat-stroked-button [href]="apkUrl" target="_blank" rel="noopener noreferrer" download>
+                <mat-icon>download</mat-icon>{{ 'install.apk.download' | translate }}
+              </a>
+            } @else {
+              <a mat-raised-button color="primary" [href]="apkUrl" target="_blank" rel="noopener noreferrer" download>
+                <mat-icon>download</mat-icon>{{ 'install.apk.download' | translate }}
+              </a>
+            }
           } @else {
             <p class="unavailable"><mat-icon>info</mat-icon>{{ 'install.apk.unavailable' | translate }}</p>
             @if (!pwa.isIOS) {
@@ -114,6 +121,8 @@ export const APK_DOWNLOAD_URL =
     .ios-title { font-weight: 500; margin-bottom: 0.5rem; }
     .unavailable, .installed { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
     .unavailable { color: color-mix(in srgb, currentColor 55%, transparent); }
+    /* Ohne das staucht der Flex-Zeilenumbruch das Symbol zu einem halben „i“ bzw. am Handy zu „(“ (UX-052). */
+    .unavailable mat-icon, .installed mat-icon, .recommended mat-icon { flex-shrink: 0; }
     .installed { color: #4caf50; }
     .recommended { display: flex; align-items: center; gap: 6px; font-weight: 500; margin: 0 0 0.5rem; }
     .qr { display: flex; align-items: center; gap: 12px; margin: 0 0 1rem; flex-wrap: wrap; }

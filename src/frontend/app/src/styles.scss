@@ -31,6 +31,30 @@ html.dark-theme {
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
+/* Primaerknoepfe (Codereview W5 UX-052): im M3-Thema ist mat-raised-button der „protected"-Knopf — Flaeche
+   = surface, Schrift = primary, und `color` wirkt dort nicht mehr. Im Dunkelthema war „APK herunterladen",
+   „Registrieren" oder „Anmelden" damit eine Pille kaum dunkler als die Karte (1,08:1), und ein DEAKTIVIERTER
+   Knopf (grau gefuellt) wirkte kraeftiger als jeder aktive. Im Bestand heisst `mat-raised-button
+   color="primary"` aber „Primaeraktion" (UI-Dichte-Regel: mat-flat/raised, farbig) — genau diese Kombination
+   bekommt deshalb die gefuellte Primaerfarbe wie mat-flat-button, `color="warn"` die Fehlerfarbe. Raised OHNE
+   Farbe bleibt der M3-Knopf, und der deaktivierte Zustand bleibt unveraendert (grau, schwaecher als aktiv). */
+.mat-mdc-raised-button.mat-primary {
+  @include mat.button-overrides((
+    protected-container-color: var(--mat-sys-primary),
+    protected-label-text-color: var(--mat-sys-on-primary),
+    protected-state-layer-color: var(--mat-sys-on-primary),
+    protected-ripple-color: color-mix(in srgb, var(--mat-sys-on-primary) 12%, transparent),
+  ));
+}
+.mat-mdc-raised-button.mat-warn {
+  @include mat.button-overrides((
+    protected-container-color: var(--mat-sys-error),
+    protected-label-text-color: var(--mat-sys-on-error),
+    protected-state-layer-color: var(--mat-sys-on-error),
+    protected-ripple-color: color-mix(in srgb, var(--mat-sys-on-error) 12%, transparent),
+  ));
+}
+
 /* Chessground board styles */
 @import 'chessground/assets/chessground.base.css';
 @import 'chessground/assets/chessground.brown.css';

@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -49,19 +49,22 @@ const ERROR_KEYS: Record<ResetError, string> = {
           @if (!token) {
             <p class="auth-info">{{ 'auth.reset.missingToken' | translate }}</p>
           } @else {
-            <form (ngSubmit)="onSubmit()" class="auth-form">
+            <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.reset.passwordLabel' | translate }}</mat-label>
                 <!-- Mindestlaenge wie der Server (UX-018): hier stand 4, die API verlangt 8 — der Knopf liess ein kurzes
                      Passwort zu, das dann am Server scheiterte. -->
                 <input matInput type="password" [(ngModel)]="password" name="password" required [minlength]="passwordMin" autofocus autocomplete="new-password">
                 <mat-hint>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-hint>
+                <mat-error>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.reset.confirmLabel' | translate }}</mat-label>
                 <input matInput type="password" [(ngModel)]="confirm" name="confirm" required [minlength]="passwordMin" autocomplete="new-password">
+                <mat-error>{{ 'auth.reset.passwordHint' | translate:{ min: passwordMin } }}</mat-error>
               </mat-form-field>
-              <button mat-raised-button color="primary" type="submit" [disabled]="loading() || !canSubmit">
+              <!-- Knopf immer aktiv wie bei Anmelden/Registrieren (UX-052); geprueft wird beim Absenden. -->
+              <button mat-raised-button color="primary" type="submit" [disabled]="loading()">
                 {{ loading() ? ('auth.reset.submitting' | translate) : ('auth.reset.submit' | translate) }}
               </button>
             </form>
@@ -121,7 +124,11 @@ export class ResetPasswordComponent {
     return ERROR_KEYS[e];
   }
 
-  onSubmit(): void {
+  onSubmit(form?: NgForm): void {
+    if (form?.invalid) {
+      form.control.markAllAsTouched();
+      return;
+    }
     if (this.password !== this.confirm) {
       this.error.set('mismatch');
       return;

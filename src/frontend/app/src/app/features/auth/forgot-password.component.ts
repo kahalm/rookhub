@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, Inject, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -44,12 +44,15 @@ export function resetMailSite(legal: LegalSite, host: string = location.hostname
             <p class="auth-info">{{ 'auth.forgot.sent' | translate }}</p>
           } @else {
             <p class="auth-hint">{{ 'auth.forgot.intro' | translate }}</p>
-            <form (ngSubmit)="onSubmit()" class="auth-form">
+            <!-- Knopf immer aktiv (UX-052): grau gefuellt bis zur Gueltigkeit wirkte er kraeftiger als jeder aktive
+                 Knopf; geprueft wird beim Absenden, die Rueckmeldung steht am Feld. -->
+            <form #f="ngForm" (ngSubmit)="onSubmit(f)" class="auth-form">
               <mat-form-field appearance="outline">
                 <mat-label>{{ 'auth.forgot.emailLabel' | translate }}</mat-label>
                 <input matInput type="email" [(ngModel)]="email" name="email" required email autofocus autocomplete="email">
+                <mat-error>{{ 'auth.forgot.emailInvalid' | translate }}</mat-error>
               </mat-form-field>
-              <button mat-raised-button color="primary" type="submit" [disabled]="loading || !email">
+              <button mat-raised-button color="primary" type="submit" [disabled]="loading">
                 {{ loading ? ('auth.forgot.submitting' | translate) : ('auth.forgot.submit' | translate) }}
               </button>
             </form>
@@ -102,7 +105,11 @@ export class ForgotPasswordComponent {
     this.site = resetMailSite(this.legal);
   }
 
-  onSubmit(): void {
+  onSubmit(form?: NgForm): void {
+    if (form?.invalid) {
+      form.control.markAllAsTouched();
+      return;
+    }
     this.loading = true;
     // Sprache der Oberflaeche fuer die Mail (die API kennt de und en, alles andere bekommt Englisch).
     this.auth.forgotPassword(this.email.trim(), this.site, this.translate.currentLang()).subscribe({
