@@ -637,6 +637,28 @@ public class ProfileServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateProfile_ExistingCollision_UnchangedEmail_StillSaves()
+    {
+        // A1-010 Nacharbeit: Bestandskollision (A heißt wie B's Adresse, vor dem Fix angelegt). Die UI
+        // schickt B's unveränderte E-Mail bei jedem Speichern mit — das darf kein 409 werfen, sonst
+        // könnte gerade das Opfer weder Vorname noch FIDE-ID mehr speichern (auch nicht impersoniert).
+        await CreateUserAsync("taken@example.com");
+        var bobId = await CreateUserAsync("bob");
+        var bob = await _db.AppUsers.FindAsync(bobId);
+        bob!.Email = "taken@example.com";
+        await _db.SaveChangesAsync();
+
+        var result = await _profileService.UpdateProfileAsync(bobId,
+            new UpdateProfileDto { Email = "taken@example.com", FirstName = "Bob", FideId = "777" });
+        Assert.Equal("Bob", result.FirstName);
+        Assert.Equal("taken@example.com", result.Email);
+
+        var impersonated = await _profileService.UpdateProfileAsync(bobId,
+            new UpdateProfileDto { Email = "taken@example.com", ChessResultsId = "4711" }, allowEmailChange: false);
+        Assert.Equal("4711", impersonated.ChessResultsId);
+    }
+
+    [Fact]
     public async Task UpdateProfile_EmailEqualToOwnUsername_Succeeds()
     {
         var userId = await CreateUserWithPasswordAsync("dave@example.org", "Secret123!");
