@@ -63,7 +63,7 @@ const SAVE_DEBOUNCE_MS = 1500;
       }
     } @else {
       <section class="club-intro">
-        @if (share) { <p><a [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
+        @if (share) { <p><a class="back-link" [routerLink]="['/s', share]">← Zur Begegnung</a></p> }
         <h2>Partien hinzufügen</h2>
         <p class="muted">Angenommen wird jede Partie mit einem bekannten Gegner — geprüft an den Meldelisten aller Saisonen,
           sonst am Spielerverzeichnis der Megabase. Vom Datum bleibt nur das Jahr.@if (share) { Ohne Anmeldung — gespeichert wird nicht, wer hochgeladen hat. }</p>

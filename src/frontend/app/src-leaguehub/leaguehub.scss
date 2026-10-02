@@ -634,3 +634,19 @@ lh-online-accounts { display: block; }
 .bc-list .tag { font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--muted); }
 .acc-hidden { font-weight: 600; color: var(--muted); font-style: italic; }
 .tag.tag-minor { font-size: 12px; border: 1px solid currentColor; border-radius: 4px; padding: 1px 5px; margin-left: 0; color: var(--warn); white-space: nowrap; }
+
+/* Bedienziele am Handy mindestens 44 px hoch (UX-069, Projektregel). Steht AM ENDE der Datei: die Grundregeln von .btn-pri,
+   .btn-link, .seg und .ply kommen weiter oben NACH dem ersten Handy-Block und würden eine frühere Regel überschreiben.
+   Höher wird es über Polster (Links haben keine senkrecht zentrierten Inhalte), Knöpfe mit min-height. Spezielle kleinere
+   Knöpfe (Filter der Spielerkarte, Vorschlags-Aktionen) behalten ihre eigenen, spezifischeren Regeln. */
+@media (max-width: 640px) {
+  .btn-sec, .btn-pri { padding-top: 14px; padding-bottom: 14px; }      /* 15 px Schrift + 28 + Rand (1,5 px, je nach Gerät gerundet) ≥ 44 */
+  .btn-link { padding-top: 11px; padding-bottom: 11px; }               /* 22,5 px Zeile + 22 = 44,5 */
+  .seg button, .ply { min-height: 44px; }
+  .foot a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; }
+  .back-link { display: inline-block; padding: 12px 0; }
+  /* Spielernamen öffnen die Karte, stehen aber im Fließtext der Bretter: die Trefferfläche wächst unsichtbar um 11 px nach
+     oben und unten, ohne die Zeilen zu verschieben. */
+  button.pl { position: relative; }
+  button.pl::after { content: ""; position: absolute; left: 0; right: 0; top: -11px; bottom: -11px; }
+}

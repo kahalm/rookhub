@@ -58,11 +58,11 @@ const SILENT_FAILURES = 3;
         <p>{{ e }} Dein Formular geht dadurch nicht verloren.</p>
         <div class="actions">
           <button type="button" class="btn-sec" (click)="reload()">Neu laden</button>
-          <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
+          <a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a>
         </div></section>
     } @else if (state(); as st) {
       <section class="club-intro">
-        <p><a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
+        <p><a class="back-link" [routerLink]="backLink" [queryParams]="{ art: 'formular' }">← Deine Formulare</a></p>
         <h2>Partieformular prüfen</h2>
         @if (st.scan.status !== 'done') {
           @if (st.scan.status === 'failed') { <p class="muted" role="status">Das Formular ließ sich nicht lesen.</p> }
