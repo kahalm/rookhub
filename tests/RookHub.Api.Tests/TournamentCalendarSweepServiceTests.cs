@@ -203,6 +203,31 @@ public class TournamentCalendarSweepServiceTests : IDisposable
         Assert.Equal(TournamentKind.Unknown, entry.Kind);
     }
 
+    /// <summary>
+    /// Basisname und Gruppenschluessel wie bei allen anderen Quellen — sofort beim Anlegen und
+    /// nach einer Verlegung nachgezogen. Vorher setzte erst der Start-Backfill den Schluessel
+    /// (nur bei GroupKey == null) und fror ihn damit auf den damaligen Termin ein.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_OwnEntry_GetsAGroupKey_AndFollowsADateChange()
+    {
+        await CreateService($"[{Row("Dekron Cup 2026 Gruppe A", Soon)}]").RunAsync();
+
+        var entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Equal("Dekron Cup 2026", entry.BaseName);
+        Assert.NotNull(entry.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(entry), entry.GroupKey);
+        var before = entry.GroupKey;
+
+        // Der Veranstalter verlegt das Turnier um eine Woche.
+        await CreateService($"[{Row("Dekron Cup 2026 Gruppe A", Soon.AddDays(7))}]").RunAsync();
+
+        entry = Assert.Single(_db.TournamentDirectoryEntries.ToList());
+        Assert.Equal(Soon.AddDays(7), entry.StartDate);
+        Assert.NotEqual(before, entry.GroupKey);
+        Assert.Equal(TournamentDirectoryService.ComputeGroupKey(entry), entry.GroupKey);
+    }
+
     [Fact]
     public async Task RunAsync_CrawlerError_Throws()
     {

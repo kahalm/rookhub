@@ -581,6 +581,7 @@ public static class ExternalDirectorySource
     /// <para>Setzt auch Basisname und Gruppenschluessel neu
     /// (<see cref="TournamentDirectoryService.ApplyGrouping"/>), deshalb erst NACH Name, Termin und
     /// Ort aufrufen. Vorher pflegten nur chess-results und FIDE den Schluessel: ein Verbandseintrag
+    /// (ebenso ein eigener Eintrag aus dem Ankuendigungskalender, <see cref="TournamentCalendarSweepService"/>)
     /// stand bis zum naechsten API-Neustart ungruppiert und danach mit einem Schluessel aus dem
     /// damaligen Termin/Ort, den spaetere Laeufe nicht mehr nachzogen
     /// (<see cref="TournamentGroupingBackfillService"/> fuellt nur leere).</para>

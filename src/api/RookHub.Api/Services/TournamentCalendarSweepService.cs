@@ -108,6 +108,9 @@ public class TournamentCalendarSweepService
                 own.StartDate = start;
                 own.EndDate = row.End ?? start;
                 own.StartsOnWeekend = start.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                // Name und Termin gehen in Klassifizierung und Gruppenschluessel ein — sonst bliebe
+                // eine verlegte Gruppe unter dem alten Schluessel am alten Termin stehen.
+                ExternalDirectorySource.ApplyClassification(own);
                 own.LastSeenAt = now;
                 own.MissedSweeps = 0;
                 own.RemovedAt = null;
@@ -139,12 +142,10 @@ public class TournamentCalendarSweepService
             };
 
             // Publikum und Format stehen auch hier nur im Namen — dieselbe Ableitung wie beim
-            // Sweep. Die Turnierart bleibt `Unknown`: der Kalender sagt nichts darueber, und
-            // Raten waere schlechter als Schweigen.
-            entry.AgeGroups = TournamentClassifier.AgeGroupsOf(entry.Name);
-            entry.Gender = TournamentClassifier.GenderOf(entry.Name);
-            entry.IsLeague = TournamentClassifier.LooksLikeLeague(
-                entry.Name, entry.Kind, entry.StartDate, entry.EndDate);
+            // Sweep, samt Basisname und Gruppenschluessel (sonst stuende der Eintrag bis zum
+            // naechsten Neustart ungruppiert). Die Turnierart bleibt `Unknown`: der Kalender sagt
+            // nichts darueber, und Raten waere schlechter als Schweigen.
+            ExternalDirectorySource.ApplyClassification(entry);
 
             _db.TournamentDirectoryEntries.Add(entry);
             await NoteSourceAsync(entry, row, now, ct);
