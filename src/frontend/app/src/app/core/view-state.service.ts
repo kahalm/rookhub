@@ -8,7 +8,7 @@ import { Observable, catchError, map, of } from 'rxjs';
  * <p>Die Filterleiste des Turnierkalenders lag nur im `localStorage`: der Umkreis, den man am
  * Rechner eingestellt hat, war am Handy weg. Es ist die Einstellung eines Nutzers.</p>
  *
- * <p>Fehler sind hier bewusst STILL (`null` bzw. „nicht gespeichert"): der Zustand ist eine
+ * <p>Fehler sind hier bewusst STILL (`undefined` bzw. „nicht gespeichert"): der Zustand ist eine
  * Bequemlichkeit, kein Inhalt. Faellt der Server aus, traegt die geraetelokale Kopie weiter —
  * eine Fehlermeldung „deine Filtereinstellung konnte nicht gespeichert werden" waere die Sorte
  * Meldung, die man wegklickt.</p>

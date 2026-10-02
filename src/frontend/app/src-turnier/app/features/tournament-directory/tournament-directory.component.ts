@@ -197,10 +197,17 @@ export class TournamentDirectoryComponent implements OnInit {
    * Stand des Abgleichs mit dem Server (`syncStoredView`). Solange er aussteht, geht nichts hinauf:
    * der Server-Stand kann juenger sein (am anderen Geraet eingestellt), und schon der erste Aufbau
    * speichert die Ansicht. Scheitert der Abruf, geht nur hinauf, was der Nutzer DANACH geaendert hat —
-   * der unveraenderte, womoeglich alte lokale Stand ueberschreibt den Server nicht.
+   * der unveraenderte, womoeglich alte lokale Stand ueberschreibt den Server nicht (`mayPersist`).
    */
   private remoteSync: 'pending' | 'done' | 'failed' = 'pending';
-  private stateAtSyncFailure = '';
+
+  /**
+   * Nach gescheitertem Abruf: der Zustand des FERTIGEN ersten Aufbaus, gegen den eine Aenderung des
+   * Nutzers erkannt wird. `null`, solange der Aufbau noch laeuft — kommt der Fehler vor den
+   * Suchprofilen, setzt `applyQueryParams` danach noch Profil, Ort und Umkreis, und das ist keine
+   * Aenderung des Nutzers.
+   */
+  private stateAtSyncFailure: string | null = null;
 
   /**
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
@@ -861,6 +868,11 @@ export class TournamentDirectoryComponent implements OnInit {
     }
 
     this.ready.set(true);
+    // Scheiterte der Abruf schon vorher, ist erst JETZT der Stand da, an dem eine Aenderung des
+    // Nutzers zu messen ist (siehe `stateAtSyncFailure`).
+    if (this.remoteSync === 'failed' && this.stateAtSyncFailure === null) {
+      this.stateAtSyncFailure = JSON.stringify(this.viewState());
+    }
 
     const tournamentId = params.get('t');
     if (tournamentId) {
@@ -878,8 +890,7 @@ export class TournamentDirectoryComponent implements OnInit {
   private watchPersist(): void {
     this.persist.pipe(
       debounceTime(TournamentDirectoryComponent.PersistDebounceMs),
-      filter(state => this.remoteSync === 'done'
-        || (this.remoteSync === 'failed' && JSON.stringify(state) !== this.stateAtSyncFailure)),
+      filter(state => this.mayPersist(state)),
       // Nichts schicken, was schon oben steht — das Umschalten zwischen zwei Reitern und zurueck
       // ist kein neuer Zustand.
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
@@ -891,6 +902,22 @@ export class TournamentDirectoryComponent implements OnInit {
     // wer die Karte verschob und gleich ein Turnier oeffnete, fand beim Zurueckkommen den
     // aelteren Server-Stand vor, und der ueberschrieb den lokalen (Codereview 2026-09-29, F6-018).
     this.destroyRef.onDestroy(() => this.persist.complete());
+  }
+
+  /**
+   * Darf dieser (gedrosselte) Zustand zum Server? Ja, wenn der Abgleich fertig ist. Nach gescheitertem
+   * Abruf nur, wenn er vom fertigen ersten Aufbau abweicht — dann hat der Nutzer etwas geaendert, und
+   * das ist juenger als jeder Server-Stand. Ab dieser ersten Aenderung gilt der Normalfall: sonst
+   * ginge das Zuruecknehmen einer schon gesendeten Aenderung nie hinauf (es gliche ja wieder dem
+   * Aufbau), und der Server bliebe auf dem verworfenen Zwischenstand stehen.
+   */
+  private mayPersist(state: Record<string, unknown>): boolean {
+    if (this.remoteSync === 'done') return true;
+    if (this.remoteSync === 'pending' || this.stateAtSyncFailure === null) return false;
+    if (JSON.stringify(state) === this.stateAtSyncFailure) return false;
+    this.remoteSync = 'done';
+    this.stateAtSyncFailure = null;
+    return true;
   }
 
   /** Was die Filterleiste zeigt — genug, um nach einem Seitenwechsel dasselbe Bild aufzubauen. */
@@ -991,7 +1018,8 @@ export class TournamentDirectoryComponent implements OnInit {
         // Stand kann juenger sein. Spaetere Aenderungen des Nutzers gehen trotzdem hinauf (remoteSync).
         if (remote === undefined) {
           this.remoteSync = 'failed';
-          this.stateAtSyncFailure = JSON.stringify(this.viewState());
+          // Vor dem fertigen Aufbau zieht `applyQueryParams` die Basis nach.
+          this.stateAtSyncFailure = this.ready() ? JSON.stringify(this.viewState()) : null;
           return;
         }
         this.remoteSync = 'done';

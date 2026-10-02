@@ -1590,4 +1590,71 @@ describe('TournamentDirectoryComponent', () => {
     }
     http.verify();
   });
+
+  /**
+   * W5 F6-015 Nacharbeit: Kommt der Fehler VOR den Suchprofilen, setzt der erste Aufbau danach noch
+   * Profil, Ort und Umkreis — das ist keine Aenderung des Nutzers und darf den Server nicht
+   * ueberschreiben. Eine echte Aenderung geht hinauf, und ihr Zuruecknehmen ebenso: sonst bliebe der
+   * Server auf dem verworfenen Zwischenstand stehen.
+   */
+  it('zaehlt nach Abruffehler vor den Suchprofilen den Profil-Aufbau nicht als Aenderung, das Zuruecknehmen schon', async () => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    const isPut = (r: { method: string; url: string }) => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory';
+    try {
+      await setup({}, { id: ME }, 'fail');
+      flushProfiles([profile(3, 'Zuhause')]);
+      flushList([]);
+      expect(component.filter.profileId).toBe(3);
+      jasmine.clock().tick(1300);
+      http.expectNone(isPut);
+
+      component.onColourByChange('kind');
+      jasmine.clock().tick(1300);
+      const put = http.expectOne(isPut);
+      expect(put.request.body).toEqual(jasmine.objectContaining({ mapColourBy: 'kind', profileId: 3 }));
+      put.flush(null, { status: 204, statusText: 'No Content' });
+
+      component.onColourByChange('speed');
+      jasmine.clock().tick(1300);
+      const back = http.expectOne(isPut);
+      expect(back.request.body).toEqual(jasmine.objectContaining({ mapColourBy: 'speed', profileId: 3 }));
+      back.flush(null, { status: 204, statusText: 'No Content' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
+
+  /**
+   * Dasselbe in der anderen Reihenfolge (erst der Aufbau mit Profil, dann der Fehler). Das
+   * Zuruecknehmen einer schon gesendeten Aenderung gleicht wieder dem Aufbau — es muss trotzdem
+   * hinauf, sonst bliebe der Server auf dem verworfenen Zwischenstand.
+   */
+  it('schiebt bei Abruffehler nach dem Aufbau mit Suchprofil nichts hinauf, eine Aenderung und ihr Zuruecknehmen schon', async () => {
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    const isPut = (r: { method: string; url: string }) => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory';
+    try {
+      await setup({}, { id: ME }, 'hold');
+      flushProfiles([profile(3, 'Zuhause')]);
+      flushList([]);
+      http.expectOne('/api/view-state/turnier.directory').flush('x', { status: 500, statusText: 'Server Error' });
+      jasmine.clock().tick(1300);
+      http.expectNone(isPut);
+
+      component.onColourByChange('kind');
+      jasmine.clock().tick(1300);
+      const put = http.expectOne(isPut);
+      expect(put.request.body).toEqual(jasmine.objectContaining({ mapColourBy: 'kind', profileId: 3 }));
+      put.flush(null, { status: 204, statusText: 'No Content' });
+
+      component.onColourByChange('speed');
+      jasmine.clock().tick(1300);
+      http.expectOne(isPut).flush(null, { status: 204, statusText: 'No Content' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
+  });
 });
