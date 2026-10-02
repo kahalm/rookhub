@@ -15,8 +15,9 @@ namespace RookHub.Api.Services;
 /// Default 3). Jeder Drain läuft in einem eigenen DI-Scope (eigener <see cref="AppDbContext"/>) und
 /// übernimmt seinen Job ATOMAR (<c>ExecuteUpdate</c> queued→claimed in <c>ChessableImportService</c>),
 /// sodass parallele Drains garantiert verschiedene Jobs greifen (keine Doppelverarbeitung).
-/// Eigener kontinuierlicher Loop statt Queue-Ticket → immun gegen den bounded-DropOldest-Ticketverlust,
-/// der die Importe schon einmal „einschlafen" ließ.
+/// Eigener kontinuierlicher Loop statt Queue-Ticket → kein Ticket, das ein Neustart verwerfen oder ein
+/// fertiger Job nicht nachreihen könnte (früher kam der Verlust durch die bounded-DropOldest-Queue dazu,
+/// der die Importe schon einmal „einschlafen" ließ; die Queue wartet heute statt zu verwerfen).
 ///
 /// Klassifiziert wird beim Anlegen (<c>IsCourseCachedAsync</c>); unklassifizierte (null) Jobs gelten
 /// als Download und werden hier NICHT angefasst → nichts kann hängen bleiben.

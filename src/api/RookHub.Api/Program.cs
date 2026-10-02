@@ -486,7 +486,7 @@ try
     // ohne Schalterpruefung, und der Kurs wird dabei echt von Chessable geholt. Der Weg ueber die
     // RepCheck-EXTENSION (`/api/extension/*`) ist davon UNBERUEHRT — genau darum geht es beim
     // Abschalten: alle sollen vorerst die Extension benutzen (Entscheidung 2026-09-09).
-    // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (bounded-DropOldest-Ticketverlust /
+    // Der Watchdog laeuft IMMER: neben dem Lane-Sicherheitsnetz (beim Neustart verworfene Tickets /
     // fehlende Nachreihung nach Abschluss) erledigt er die Pflichten des EXTENSION-Wegs — abgelaufene
     // Browser-Sitzungen und verwaiste Browser-Importe schliessen. Genau die fielen aus, solange er hinter
     // `Chessable:Enabled` stand: auf PROD (Flag seit 2026-09-09 aus) blieb jeder abgebrochene Browser-Import

@@ -10,9 +10,9 @@ public interface IBackgroundTaskQueue
     /// <summary>Wartende, noch nicht abgeholte Arbeiten. Wird beim Herunterfahren protokolliert: die
     /// Queue ist reiner Arbeitsspeicher, ein Neustart (nächtlich per Watchtower!) verwirft ihren Inhalt —
     /// vorher lautlos. Wer den Verlust nicht verkraftet, braucht einen DB-gestützten Zustand wie die
-    /// Chessable-Importe (Status + Watchdog) statt dieser Queue.</summary>
-    /// Standard-Implementierung „leer": die Test-Doubles (No-Op/Counting/Immediate) halten gar keine
-    /// Queue und sollen nicht jedes Mal mitwachsen, wenn hier ein Diagnose-Glied dazukommt.</summary>
+    /// Chessable-Importe (Status + Watchdog) statt dieser Queue.
+    /// <para>Standard-Implementierung „leer": die Test-Doubles (No-Op/Counting/Immediate) halten gar keine
+    /// Queue und sollen nicht jedes Mal mitwachsen, wenn hier ein Diagnose-Glied dazukommt.</para></summary>
     int PendingCount => 0;
 
     /// <summary>Eine wartende Arbeit sofort abholen, ohne zu blocken (Rest-Drain beim Herunterfahren);
@@ -77,9 +77,11 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
 /// <summary>
 /// Eigene Queue NUR für die (kurzen, latenz-sensiblen) schach-bot-Webhook-Pushes (Solver-Updates
 /// Tagespuzzle/Wochenpost). Bewusst GETRENNT von der allgemeinen <see cref="IBackgroundTaskQueue"/>:
-/// die teilt sich der Chessable-Import, und ein großer Import-Schwung (ResumeService re-enqueued
-/// dutzende minutenlange Jobs in die bounded/DropOldest-Queue) verdrängte sonst das Webhook-Ticket,
-/// bevor es lief → Daily-Solver erschien nicht in Discord. Mit eigener Queue + eigenem Consumer
+/// die teilt sich der Chessable-Import, und ein großer Import-Schwung (ResumeService reiht dutzende
+/// minutenlange Jobs ein) stellt das Webhook-Ticket hinten an — ihr einziger Consumer arbeitet der Reihe
+/// nach ab, der Daily-Solver erschiene erst nach den Importen in Discord. (Solange die Queue noch
+/// bounded/DropOldest war, wurde das Ticket sogar verdrängt, bevor es lief; seit FullMode.Wait geht
+/// nichts mehr verloren, siehe <see cref="BackgroundTaskQueue"/>.) Mit eigener Queue + eigenem Consumer
 /// feuert der Webhook unabhängig von der Import-Last.
 /// </summary>
 public interface IWebhookTaskQueue : IBackgroundTaskQueue { }

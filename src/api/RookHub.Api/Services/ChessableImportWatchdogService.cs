@@ -6,18 +6,20 @@ namespace RookHub.Api.Services;
 
 /// <summary>
 /// Sicherheitsnetz für den Chessable-Import-Drain. Der normale Antrieb ist ein Ticket je Import in der
-/// IN-MEMORY <see cref="IBackgroundTaskQueue"/> — und der kann Jobs liegen lassen: die Queue ist
-/// bounded (<c>BoundedChannelFullMode.DropOldest</c>), ein großer Schwung Importe auf einmal verwirft
-/// also die ältesten Tickets; zudem reiht ein FERTIGER Job den nächsten nicht automatisch nach (nur
-/// das Anlegen und ein Stillstand reihen nach). Folge: Importe bleiben auf <c>Status=ChessableImportStatus.Running</c> /
+/// IN-MEMORY <see cref="IBackgroundTaskQueue"/> — und der kann Jobs liegen lassen: ein FERTIGER Job
+/// reiht den nächsten nicht automatisch nach (nur das Anlegen und ein Stillstand reihen nach), und ein
+/// Neustart (nächtlich per Watchtower) verwirft die wartenden Tickets, weil die Queue reiner
+/// Arbeitsspeicher ist. (Früher kam der Ticketverlust bei vollem Puffer dazu — bounded/<c>DropOldest</c>;
+/// seit <c>BoundedChannelFullMode.Wait</c> verwirft die Queue nichts mehr, siehe
+/// <see cref="BackgroundTaskQueue"/>.) Folge: Importe bleiben auf <c>Status=ChessableImportStatus.Running</c> /
 /// <c>Phase=ChessableImportPhase.Queued</c> liegen, obwohl gar nichts mehr läuft (Vorfall 2026-06-29: 82 wartende, kein
 /// aktiver — Drain erst nach API-Neustart via <see cref="ChessableImportResumeService"/> wieder an).
 ///
 /// Dieser Watchdog prüft periodisch: gibt es wartende Importe (Phase "queued") UND ist KEINER aktiv
 /// (Phase "claimed"/"fetching"/"importing")? Dann stößt er den nächsten Job DIREKT an
-/// (<see cref="ChessableImportService.RunNextAsync"/>) — bewusst OHNE die bounded Queue, damit das
-/// Nachfüllen nicht selbst wieder verworfen werden kann und auch ein hängender Queue-Consumer den
-/// Drain nicht blockiert. Solange etwas läuft, hält er sich raus (kein Über-Parallelisieren).
+/// (<see cref="ChessableImportService.RunNextAsync"/>) — bewusst OHNE die Queue, damit das Nachfüllen
+/// nicht hinter einem Ticket-Stau wartet und auch ein hängender Queue-Consumer den Drain nicht blockiert.
+/// Solange etwas läuft, hält er sich raus (kein Über-Parallelisieren).
 /// </summary>
 public class ChessableImportWatchdogService : BackgroundService
 {
@@ -156,21 +158,6 @@ public class ChessableImportWatchdogService : BackgroundService
         return expired.Count;
     }
 
-    /// <summary>Holt VERWAISTE Inflight-Importe zurück in die Warteschlange: Sätze, die laut DB in einer
-    /// Inflight-Phase stehen ("claimed"/"fetching"/"importing"), zu denen es in diesem Prozess aber KEINEN
-    /// Treiber (mehr) gibt (<see cref="ChessableImportService.IsDrivenLocally"/>).
-    ///
-    /// FALLE, gegen die das schützt: verliert ein Job seinen treibenden Task, ohne einen Terminal-Status zu
-    /// schreiben (z. B. DB-Ausfall &gt; 30 s — dann scheitert auch das Fehler-Update in <c>FailAsync</c>),
-    /// bleibt er als Zombie inflight. <see cref="IsDrainStalledAsync"/> wertet ihn als „Drain läuft" und die
-    /// Fast-Lane zählt ihn als belegten Slot (<c>FreeSlotsAsync</c>) — die Lane steht dann DAUERHAFT, bisher
-    /// bis zum API-Neustart (<see cref="ChessableImportResumeService"/>). Genau die Vorfallsklasse 2026-06-29,
-    /// nur eine Ebene tiefer.
-    ///
-    /// Zwei Sichtungen im Abstand von <see cref="OrphanGrace"/> sind nötig, damit ein gerade erst geclaimter
-    /// Job (Registrierungs-Fenster) nicht fälschlich zurückgeholt wird. <see cref="ChessableImport.Attempts"/>
-    /// bleibt stehen → der Job zählt weiter gegen <see cref="ChessableImportService.MaxAttempts"/> statt
-    /// endlos zu kreisen. Setzt EINE API-Instanz voraus (Treiberliste ist prozesslokal).</summary>
     /// <summary>
     /// Schließt die Import-Datensätze abgelaufener Browser-Import-Sitzungen (kein Chunk seit der TTL des
     /// <see cref="ChessableIngestSessionStore"/>): Status „fehlgeschlagen" mit der Bilanz des Erreichten. Die
@@ -191,6 +178,21 @@ public class ChessableImportWatchdogService : BackgroundService
         return closed;
     }
 
+    /// <summary>Holt VERWAISTE Inflight-Importe zurück in die Warteschlange: Sätze, die laut DB in einer
+    /// Inflight-Phase stehen ("claimed"/"fetching"/"importing"), zu denen es in diesem Prozess aber KEINEN
+    /// Treiber (mehr) gibt (<see cref="ChessableImportService.IsDrivenLocally"/>).
+    ///
+    /// FALLE, gegen die das schützt: verliert ein Job seinen treibenden Task, ohne einen Terminal-Status zu
+    /// schreiben (z. B. DB-Ausfall &gt; 30 s — dann scheitert auch das Fehler-Update in <c>FailAsync</c>),
+    /// bleibt er als Zombie inflight. <see cref="IsDrainStalledAsync"/> wertet ihn als „Drain läuft" und die
+    /// Fast-Lane zählt ihn als belegten Slot (<c>FreeSlotsAsync</c>) — die Lane steht dann DAUERHAFT, bisher
+    /// bis zum API-Neustart (<see cref="ChessableImportResumeService"/>). Genau die Vorfallsklasse 2026-06-29,
+    /// nur eine Ebene tiefer.
+    ///
+    /// Zwei Sichtungen im Abstand von <see cref="OrphanGrace"/> sind nötig, damit ein gerade erst geclaimter
+    /// Job (Registrierungs-Fenster) nicht fälschlich zurückgeholt wird. <see cref="ChessableImport.Attempts"/>
+    /// bleibt stehen → der Job zählt weiter gegen <see cref="ChessableImportService.MaxAttempts"/> statt
+    /// endlos zu kreisen. Setzt EINE API-Instanz voraus (Treiberliste ist prozesslokal).</summary>
     internal async Task<int> ReclaimOrphanedInflightAsync(AppDbContext db, ChessableImportService? imports = null, CancellationToken ct = default)
     {
         var inflight = await db.ChessableImports
