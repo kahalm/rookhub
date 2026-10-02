@@ -110,8 +110,9 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
     private async Task<string?> FideAsync(int prepId, CancellationToken ct) =>
         await db.PrepPlayers.AsNoTracking().Where(p => p.Id == prepId).Select(p => p.FideId).FirstOrDefaultAsync(ct);
 
-    /// <summary>Offene Vorschläge des Spielers — ohne die eines Minderjährigen — und wie viele Suchen der Verwalter noch hat.
-    /// <c>(null, Grund)</c>: <c>notFound</c>, <c>noFide</c>.</summary>
+    /// <summary>Offene Vorschläge des Spielers — ohne die eines Minderjährigen —, wie viele Suchen der Verwalter noch hat und seine
+    /// eingetragenen Konten (<c>accounts</c>, <c>leagueHub</c> = Ligaspieler, gepflegt in LeagueHub). <c>(null, Grund)</c>:
+    /// <c>notFound</c>, <c>noFide</c>.</summary>
     public async Task<(JsonObject? Result, string? Reason)> SuggestionsAsync(int prepId, int userId, CancellationToken ct)
     {
         if (!await db.PrepPlayers.AnyAsync(p => p.Id == prepId, ct)) return (null, "notFound");
@@ -123,9 +124,16 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
         var all = await accounts.SuggestionsAsync(fide, ct, reveal: false, prep: true);
         var items = (all["items"] as JsonArray ?? new JsonArray())
             .Where(i => i?["hidden"]?.GetValue<bool>() != true).Select(i => i!.DeepClone()).ToArray();
+        // Die eingetragenen Konten zum Pflegen (0.639.0) — die eines Minderjährigen nie; die eines Ligaspielers nur zum Ansehen
+        // (leagueHub: true — gepflegt wird dort).
+        var minor = (await LeagueHiddenAccounts.FidesAsync(db, new[] { fide }, ct)).Contains(fide);
+        var own = minor ? new List<LeagueOnlineAccount>()
+            : await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).OrderBy(a => a.Id).ToListAsync(ct);
         return new JsonObject
         {
             ["items"] = new JsonArray(items), ["perHour"] = PerHour, ["remaining"] = gate.Remaining(userId, PerHour, Now()),
+            ["accounts"] = new JsonArray(own.Select(a => (JsonNode)LeagueOnlineAccountService.ToJson(a, full: true)).ToArray()),
+            ["leagueHub"] = await LeagueOnlineAccountService.LeagueKnowsAsync(db, fide, ct),
         };
     }
 
@@ -185,6 +193,38 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
 
     public async Task<bool> RejectAsync(int suggestionId, CancellationToken ct) =>
         await OwnAsync(suggestionId, ct) is not null && await accounts.RejectSuggestionAsync(suggestionId, ct, prep: true);
+
+    // ── Eingetragene Konten pflegen (0.639.0) ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Ein Konto, das die Spielervorbereitung pflegen darf: das eines Spielers des Bestands, der nicht minderjährig ist und den
+    /// LeagueHub NICHT kennt — die Konten eines Ligaspielers pflegt LeagueHub (<c>league.manage</c>, Regeln für von Hand gepflegte
+    /// Konten). → <c>null</c> (darf) oder der Grund: <c>notFound</c> (fremd, unbekannt oder verborgen), <c>leagueHub</c>.
+    /// </summary>
+    private async Task<string?> AccountRefusalAsync(int accountId, CancellationToken ct)
+    {
+        var fide = await db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.Id == accountId).Select(a => a.FideId).FirstOrDefaultAsync(ct);
+        if (fide is null || !await db.PrepPlayers.AnyAsync(p => p.FideId == fide, ct)) return "notFound";
+        if ((await LeagueHiddenAccounts.FidesAsync(db, new[] { fide }, ct)).Contains(fide)) return "notFound";
+        return await LeagueOnlineAccountService.LeagueKnowsAsync(db, fide, ct) ? "leagueHub" : null;
+    }
+
+    /// <summary>Umstufen (gesichert/unsicher) und Kommentar — fehlende Felder bleiben → das Konto; <c>(null, Grund)</c> wie
+    /// <see cref="AccountRefusalAsync"/>.</summary>
+    public async Task<(JsonObject? Account, string? Reason)> UpdateAccountAsync(int accountId, bool? sure, string? comment, CancellationToken ct)
+    {
+        if (await AccountRefusalAsync(accountId, ct) is { } why) return (null, why);
+        var (acc, reason) = await accounts.UpdateAsync(accountId, new LeagueOnlineAccountService.Input(null, null, sure, comment), ct, prep: true);
+        return acc is null ? (null, reason) : (await accounts.JsonAsync(acc, ct, reveal: false), null);
+    }
+
+    /// <summary>Entfernen (<see cref="LeagueOnlineAccountService.DeleteAsync"/>: mit den geholten Online-Partien; die Suche schlägt
+    /// es nicht wieder vor) → <c>null</c> oder der Grund wie <see cref="AccountRefusalAsync"/>.</summary>
+    public async Task<string?> DeleteAccountAsync(int accountId, CancellationToken ct)
+    {
+        if (await AccountRefusalAsync(accountId, ct) is { } why) return why;
+        return await accounts.DeleteAsync(accountId, ct, prep: true) ? null : "notFound";
+    }
 
     /// <summary>
     /// Die Prüfung (i) eines Vorschlags — nie mit <c>reveal</c>, mit dem Spieler aus dem Bestand. Sie holt Profil und bis zu 100 Partien,

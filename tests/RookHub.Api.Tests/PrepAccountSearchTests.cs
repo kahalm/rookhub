@@ -533,5 +533,121 @@ public class PrepAccountSearchTests : IDisposable
         _gate.Exit();
         Assert.Equal(503, Assert.IsType<ObjectResult>(await c.SuggestionChecks(sid, Search(slow), default)).StatusCode);
     }
+
+    // ── Eingetragene Konten pflegen (0.639.0) ──────────────────────────────────────────────────
+
+    /// <summary>Ein Konto mit <paramref name="games"/> geholten Partien.</summary>
+    private async Task<LeagueOnlineAccount> AccountAsync(string user, bool sure = false, int games = 2, string fide = Fide)
+    {
+        var a = new LeagueOnlineAccount { FideId = fide, Site = "lichess", UserName = user, Url = "https://lichess.org/@/" + user,
+            Confidence = sure ? LeagueOnlineAccountService.Sure : LeagueOnlineAccountService.Unsure, Evidence = "Vorschlag der Konto-Suche: 2 Punkte",
+            Manual = true, GameCount = games };
+        _db.LeagueOnlineAccounts.Add(a);
+        await _db.SaveChangesAsync();
+        for (var i = 0; i < games; i++)
+            _db.LeagueOnlineGames.Add(new LeagueOnlineGame { AccountId = a.Id, FideId = fide, ExternalId = $"{user}-{i}", PlayedAt = DateTime.UtcNow,
+                Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4" });
+        await _db.SaveChangesAsync();
+        return a;
+    }
+
+    [Fact]
+    public async Task Accounts_PrepOnlyPlayer_Reclassify_AndRemove_WithItsGames_NotSuggestedAgain()
+    {
+        await SeedPrepAsync();
+        var wrong = await AccountAsync("PaulPrepmann");                               // ein Fehlgriff: schwacher Treffer, übernommen
+        var other = await AccountAsync("PaulOnline", sure: true, games: 3);
+        var search = Search(World());
+        var id = await PrepIdAsync();
+        var list = (await search.SuggestionsAsync(id, 1, default)).Result!;
+        Assert.False(list["leagueHub"]!.GetValue<bool>());
+        Assert.Equal(new[] { "PaulPrepmann", "PaulOnline" }, list["accounts"]!.AsArray().Select(a => a!["user"]!.GetValue<string>()));
+
+        // Umstufen: gesichert, Kommentar — die Partien bleiben.
+        var (json, why) = await search.UpdateAccountAsync(wrong.Id, true, "Profil passt doch", default);
+        Assert.Null(why);
+        Assert.Equal(LeagueOnlineAccountService.Sure, json!["conf"]!.GetValue<string>());
+        Assert.Equal("Profil passt doch", json["comment"]!.GetValue<string>());
+        Assert.Equal(2, await _db.LeagueOnlineGames.CountAsync(g => g.AccountId == wrong.Id));
+        Assert.Null((await search.UpdateAccountAsync(wrong.Id, false, null, default)).Reason);
+        Assert.Equal("Profil passt doch", (await _db.LeagueOnlineAccounts.AsNoTracking().SingleAsync(a => a.Id == wrong.Id)).Evidence);
+
+        // Über LeagueHub geht weiter nichts (0.638.0).
+        var league = new LeagueOnlineAccountService(_db);
+        Assert.Equal("notFound", (await league.UpdateAsync(wrong.Id, new LeagueOnlineAccountService.Input(null, null, true, null), default)).Reason);
+        Assert.False(await league.DeleteAsync(wrong.Id, default));
+
+        // Entfernen: das Konto und SEINE geholten Partien gehen, die des anderen bleiben; die Suche schlägt es nicht wieder vor.
+        Assert.Null(await search.DeleteAccountAsync(wrong.Id, default));
+        Assert.Equal(new[] { "PaulOnline" }, (await _db.LeagueOnlineAccounts.ToListAsync()).Select(a => a.UserName));
+        Assert.Equal(0, await _db.LeagueOnlineGames.CountAsync(g => g.AccountId == wrong.Id));
+        Assert.Equal(3, await _db.LeagueOnlineGames.CountAsync(g => g.AccountId == other.Id));
+        var gone = await _db.LeagueAccountSuggestions.SingleAsync(x => x.UserName == "PaulPrepmann");
+        Assert.Equal(LeagueSuggestionStatus.Rejected, gone.Status);
+        var (scan, _) = await search.ScanAsync(id, 1, default);
+        Assert.DoesNotContain(scan!["items"]!.AsArray(), i => i!["user"]!.GetValue<string>() == "PaulPrepmann");
+        Assert.Equal("notFound", await search.DeleteAccountAsync(wrong.Id, default));             // schon weg
+    }
+
+    [Fact]
+    public async Task Accounts_AlsoLeaguePlayer_PrepRefuses_LeagueHubKeepsCaring()
+    {
+        await SeedPrepAsync();
+        await SeedLeagueAsync();
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Prepmann, Paul", NameKey = "prepmann, paul", FideId = Fide, Fed = "GER" });
+        await _db.SaveChangesAsync();
+        var acc = await AccountAsync("PaulPrepmann");
+        var search = Search(World());
+        var list = (await search.SuggestionsAsync(await PrepIdAsync(), 1, default)).Result!;
+        Assert.True(list["leagueHub"]!.GetValue<bool>());                                // ansehen ja, pflegen in LeagueHub
+        Assert.Single(list["accounts"]!.AsArray());
+        Assert.Equal("leagueHub", (await search.UpdateAccountAsync(acc.Id, true, null, default)).Reason);
+        Assert.Equal("leagueHub", await search.DeleteAccountAsync(acc.Id, default));
+        var kept = await _db.LeagueOnlineAccounts.AsNoTracking().SingleAsync();
+        Assert.Equal(LeagueOnlineAccountService.Unsure, kept.Confidence);
+        Assert.Equal(2, await _db.LeagueOnlineGames.CountAsync());
+        // LeagueHub pflegt es wie bisher.
+        var league = new LeagueOnlineAccountService(_db);
+        Assert.Null((await league.UpdateAsync(acc.Id, new LeagueOnlineAccountService.Input(null, null, true, null), default)).Reason);
+        Assert.True(await league.DeleteAsync(acc.Id, default));
+    }
+
+    [Fact]
+    public async Task Accounts_Minor_NeverThroughPrep()
+    {
+        await SeedPrepAsync();
+        _db.LeagueAccountScans.Add(new LeagueAccountScan { FideId = Fide, BirthYear = DateTime.UtcNow.Year - 12, ScannedAt = DateTime.UtcNow, Version = 7 });
+        await _db.SaveChangesAsync();
+        var acc = await AccountAsync("PaulPrepmann");
+        var search = Search(World());
+        var list = (await search.SuggestionsAsync(await PrepIdAsync(), 1, default)).Result!;
+        Assert.Empty(list["accounts"]!.AsArray());
+        Assert.DoesNotContain("PaulPrepmann", list.ToJsonString());
+        Assert.Equal("notFound", (await search.UpdateAccountAsync(acc.Id, true, null, default)).Reason);
+        Assert.Equal("notFound", await search.DeleteAccountAsync(acc.Id, default));
+        Assert.Single(await _db.LeagueOnlineAccounts.ToListAsync());
+        Assert.Equal(2, await _db.LeagueOnlineGames.CountAsync());
+    }
+
+    [Fact]
+    public async Task Accounts_Controller_StatusCodes_AndSwitch()
+    {
+        await SeedPrepAsync();
+        var acc = await AccountAsync("PaulPrepmann");
+        var c = Controller();
+        var off = Search(World(), new ConfigurationBuilder().Build());
+        Assert.IsType<NotFoundObjectResult>(await c.UpdateAccount(acc.Id, new(true, null), off, default));
+        Assert.IsType<NotFoundObjectResult>(await c.DeleteAccount(acc.Id, off, default));
+        Assert.IsType<OkObjectResult>(await c.UpdateAccount(acc.Id, new(true, null), Search(World()), default));
+        Assert.IsType<NotFoundObjectResult>(await c.UpdateAccount(acc.Id + 1000, new(true, null), Search(World()), default));
+        Assert.IsType<NoContentResult>(await c.DeleteAccount(acc.Id, Search(World()), default));
+        Assert.IsType<NotFoundObjectResult>(await c.DeleteAccount(acc.Id, Search(World()), default));
+        await SeedLeagueAsync();
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Prepmann, Paul", NameKey = "prepmann, paul", FideId = Fide, Fed = "GER" });
+        await _db.SaveChangesAsync();
+        var leagueAcc = await AccountAsync("PaulOnline");
+        Assert.IsType<ConflictObjectResult>(await c.UpdateAccount(leagueAcc.Id, new(true, null), Search(World()), default));
+        Assert.IsType<ConflictObjectResult>(await c.DeleteAccount(leagueAcc.Id, Search(World()), default));
+    }
 }
 

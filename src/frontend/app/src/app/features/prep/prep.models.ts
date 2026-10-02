@@ -1,4 +1,4 @@
-import { AccountSuggestion, PlayerCard } from '@lh/core/league.models';
+import { Account, AccountSuggestion, PlayerCard } from '@lh/core/league.models';
 
 /** Ein Treffer der Spielersuche (`GET /api/prep/players`). */
 export interface PrepHit {
@@ -43,6 +43,10 @@ export interface PrepSuggestionList {
   remaining: number;
   /** Nur nach einer Suche: neue Vorschläge. */
   found?: number;
+  /** Seine eingetragenen Konten (0.639.0) — die eines Minderjährigen nie. */
+  accounts?: Account[];
+  /** Er steht auch in LeagueHub: seine Konten pflegt man dort, hier nur ansehen. */
+  leagueHub?: boolean;
 }
 
 /** Die Karte, wie die API sie schickt: Form der Liga-Karte, `fide` darf fehlen. */

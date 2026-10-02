@@ -152,11 +152,12 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     }
 
     /// <summary>Ändern — fehlende Felder bleiben. Ein anderer Name oder eine andere Seite ist ein anderes Konto: die schon
-    /// geholten Partien gehen, der Abruf beginnt von vorn.</summary>
-    public async Task<(LeagueOnlineAccount? Account, string? Reason)> UpdateAsync(int id, Input req, CancellationToken ct)
+    /// geholten Partien gehen, der Abruf beginnt von vorn. <paramref name="prep"/>: die Spielervorbereitung pflegt das Konto eines
+    /// Spielers, den LeagueHub nicht kennt (0.639.0) — welches sie darf, prüft sie selbst.</summary>
+    public async Task<(LeagueOnlineAccount? Account, string? Reason)> UpdateAsync(int id, Input req, CancellationToken ct, bool prep = false)
     {
         var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (acc is null || !await LeagueKnowsAsync(db, acc.FideId, ct)) return (null, "notFound");
+        if (acc is null || !prep && !await LeagueKnowsAsync(db, acc.FideId, ct)) return (null, "notFound");
         if (req.Site is not null || req.User is not null)
         {
             if (LeagueOnlineSites.Parse(req.Site ?? acc.Site, req.User ?? acc.UserName) is not { } parsed) return (null, "invalidUser");
@@ -186,10 +187,12 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         return (acc, null);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
+    /// <summary>Entfernen — samt der schon geholten Online-Partien; das Konto steht danach als verworfener Vorschlag da, die Konto-Suche
+    /// schlägt es nicht wieder vor. <paramref name="prep"/> wie bei <see cref="UpdateAsync"/>.</summary>
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct, bool prep = false)
     {
         var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (acc is null || !await LeagueKnowsAsync(db, acc.FideId, ct)) return false;
+        if (acc is null || !prep && !await LeagueKnowsAsync(db, acc.FideId, ct)) return false;
         await DeleteGamesAsync(acc.Id, ct);                                  // InMemory kaskadiert nicht
         db.LeagueOnlineAccounts.Remove(acc);
         // Entfernt = gehört nicht zu diesem Spieler: die Konto-Suche (0.607.0) soll es nicht wieder vorschlagen.

@@ -65,6 +65,16 @@ export class PrepApiService {
   suggestionChecks(id: number): Promise<AccountChecks> {
     return firstValueFrom(this.http.get<AccountChecks>(`/api/prep/suggestions/${id}/checks`));
   }
+
+  /** Ein eingetragenes Konto umstufen (0.639.0) — nur das eines Spielers, den LeagueHub nicht kennt (sonst 409 `leagueHub`). */
+  updateAccount(id: number, body: { sure?: boolean; comment?: string }): Promise<Account> {
+    return firstValueFrom(this.http.put<Account>(`/api/prep/accounts/${id}`, body));
+  }
+
+  /** Entfernen — samt der geholten Online-Partien; die Suche schlägt es nicht wieder vor. */
+  deleteAccount(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`/api/prep/accounts/${id}`));
+  }
 }
 
 function opts(params: HttpParams, o: PrepOptions): HttpParams {

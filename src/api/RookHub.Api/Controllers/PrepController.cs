@@ -125,7 +125,8 @@ public class PrepController : BaseApiController
     // Nur mit prep.manage UND dem Schalter Prep:AccountSearch (Vorgabe aus) — ohne Schalter 404 „disabled". Gesucht wird mit der
     // Konto-Suche von LeagueHub; Vorschläge eines Minderjährigen kommen hier nie heraus.
 
-    /// <summary>Offene Vorschläge des Spielers → <c>{ items, perHour, remaining }</c>.</summary>
+    /// <summary>Offene Vorschläge des Spielers → <c>{ items, perHour, remaining, accounts, leagueHub }</c> (<c>accounts</c>: seine
+    /// eingetragenen Konten, die eines Minderjährigen nie; <c>leagueHub</c>: Ligaspieler — seine Konten pflegt LeagueHub).</summary>
     [HttpGet("player/{id:int}/suggestions")]
     [HasPermission(Permissions.PrepManage)]
     public async Task<IActionResult> Suggestions(int id, [FromServices] PrepAccountSearch search, CancellationToken ct)
@@ -188,6 +189,41 @@ public class PrepController : BaseApiController
             "busy" => Conflict(new { reason }),
             "rateLimited" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason }),
             _ => NotFound(new { reason }),
+        };
+    }
+
+    public sealed record AccountUpdateRequest(bool? Sure, string? Comment);
+
+    /// <summary>Ein eingetragenes Konto umstufen <c>{ sure, comment }</c> (fehlende Felder bleiben) → das Konto. Nur das eines Spielers,
+    /// den LeagueHub nicht kennt: 409 <c>leagueHub</c> (die Pflege gehört dorthin), 404 fremd/verborgen (minderjährig), 400 wie bei
+    /// LeagueHub (0.639.0).</summary>
+    [HttpPut("accounts/{accountId:int}")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> UpdateAccount(int accountId, [FromBody] AccountUpdateRequest? req, [FromServices] PrepAccountSearch search,
+        CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        var (acc, reason) = await search.UpdateAccountAsync(accountId, req?.Sure, req?.Comment, ct);
+        return acc is not null ? Ok(acc) : reason switch
+        {
+            "leagueHub" => Conflict(new { reason }),
+            "notFound" => NotFound(new { reason }),
+            _ => BadRequest(new { reason }),
+        };
+    }
+
+    /// <summary>Ein eingetragenes Konto entfernen — samt seiner geholten Online-Partien; die Suche schlägt es nicht wieder vor. 409
+    /// <c>leagueHub</c>, 404 wie beim Umstufen (0.639.0).</summary>
+    [HttpDelete("accounts/{accountId:int}")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> DeleteAccount(int accountId, [FromServices] PrepAccountSearch search, CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        return await search.DeleteAccountAsync(accountId, ct) switch
+        {
+            null => NoContent(),
+            "leagueHub" => Conflict(new { reason = "leagueHub" }),
+            var reason => NotFound(new { reason }),
         };
     }
 

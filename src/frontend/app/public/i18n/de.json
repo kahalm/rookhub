@@ -4454,6 +4454,22 @@
       "loadError": "Die Vorschläge konnten nicht geladen werden.",
       "checksBusy": "Gerade läuft schon eine Suche oder Prüfung — die (i)-Prüfung bitte gleich noch einmal öffnen.",
       "checksRateLimited": "Lichess oder chess.com bremst gerade — die (i)-Prüfung bitte später noch einmal öffnen.",
+      "listTitle": "Eingetragene Konten",
+      "leagueHub": "Dieser Spieler steht auch in LeagueHub — seine Konten pflegt man dort.",
+      "sure": "gesichert",
+      "unsure": "unsicher",
+      "games": "Partien geholt: {{n}}",
+      "makeSure": "als gesichert einstufen",
+      "makeUnsure": "als unsicher einstufen",
+      "remove": "entfernen",
+      "removeAsk": "Wirklich entfernen? Die geholten Partien ({{n}}) gehen mit, und die Suche schlägt das Konto nicht wieder vor.",
+      "removeYes": "Ja, entfernen",
+      "madeSure": "Als gesichert eingestuft.",
+      "madeUnsure": "Als unsicher eingestuft.",
+      "removed": "Konto entfernt.",
+      "leagueHubOnly": "Dieses Konto gehört einem Spieler von LeagueHub — bitte dort pflegen.",
+      "accountGone": "Dieses Konto gibt es nicht mehr.",
+      "actionFailed": "Das hat gerade nicht geklappt — bitte noch einmal.",
       "after": "Übernommene Konten holt RookHub danach im Hintergrund ab (Partien der letzten fünf Jahre); im Eröffnungsbaum sind sie dann unter „Brett + online“ wählbar."
     }
   }

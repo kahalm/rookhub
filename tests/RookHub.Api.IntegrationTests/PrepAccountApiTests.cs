@@ -140,6 +140,77 @@ public class PrepAccountApiTests(PrepAccountFixture fixture) : IAsyncLifetime, I
         Assert.Equal(0, calls);
     }
 
+    [MySqlFact]
+    public async Task Accounts_MaintainedThroughPrep_LeaguePlayersInLeagueHub_MinorsNever()
+    {
+        var (adult, minor, _, _) = await SeedAsync();
+        int league, adultAcc, minorAcc, leagueAcc;
+        await using (var db = fixture.Schema.NewContext())
+        {
+            // Lena Liga steht auch im Bestand — ihre Konten pflegt trotzdem LeagueHub.
+            await new PrepImportService(db).ImportChunkAsync(PrepSources.Mega, 1, 2, Game("Liga, Lena", "990803"), default);
+            league = db.PrepPlayers.Single(p => p.FideId == "990803").Id;
+            LeagueOnlineAccount A(string fide, string user) => new()
+            {
+                FideId = fide, Site = "lichess", UserName = user, Url = "https://lichess.org/@/" + user, Confidence = LeagueOnlineAccountService.Unsure,
+                Evidence = "Vorschlag der Konto-Suche: 2 Punkte", Manual = true, GameCount = 1,
+            };
+            var accs = new[] { A("990801", "AntonFalsch"), A("990802", "KlaraKind2014"), A("990803", "LenaLiga") };
+            db.LeagueOnlineAccounts.AddRange(accs);
+            await db.SaveChangesAsync();
+            foreach (var a in accs)
+                db.LeagueOnlineGames.Add(new LeagueOnlineGame { AccountId = a.Id, FideId = a.FideId, ExternalId = a.UserName + "-1", PlayedAt = DateTime.UtcNow,
+                    Speed = "blitz", Result = "1-0", Line = "e4", Moves = "e4" });
+            await db.SaveChangesAsync();
+            (adultAcc, minorAcc, leagueAcc) = (accs[0].Id, accs[1].Id, accs[2].Id);
+        }
+        using var viewer = Client(await UserAsync("kontenleser", false, Permissions.PrepView));
+        using var manager = Client(await UserAsync("kontenpfleger", false, Permissions.PrepView, Permissions.PrepManage));
+        using var leagueAdmin = Client(await UserAsync("ligapfleger", admin: true));
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PutAsJsonAsync($"/api/prep/accounts/{adultAcc}", new { sure = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.DeleteAsync($"/api/prep/accounts/{adultAcc}")).StatusCode);
+
+        // Spieler nur im Bestand: die Liste zeigt das Konto, umstufen und entfernen gehen — mit seinen Partien.
+        var list = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{adult}/suggestions"))!;
+        Assert.False(list["leagueHub"]!.GetValue<bool>());
+        Assert.Equal("AntonFalsch", Assert.Single(list["accounts"]!.AsArray())!["user"]!.GetValue<string>());
+        var put = await manager.PutAsJsonAsync($"/api/prep/accounts/{adultAcc}", new { sure = true, comment = "doch er" });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        Assert.Equal(LeagueOnlineAccountService.Sure, JsonNode.Parse(await put.Content.ReadAsStringAsync())!["conf"]!.GetValue<string>());
+        Assert.Equal(HttpStatusCode.NotFound, (await leagueAdmin.DeleteAsync($"/api/league/accounts/{adultAcc}")).StatusCode);   // LeagueHub nicht
+        Assert.Equal(HttpStatusCode.NoContent, (await manager.DeleteAsync($"/api/prep/accounts/{adultAcc}")).StatusCode);
+        await using (var db = fixture.Schema.NewContext())
+        {
+            Assert.False(db.LeagueOnlineAccounts.Any(a => a.Id == adultAcc));
+            Assert.False(db.LeagueOnlineGames.Any(g => g.FideId == "990801"));                     // seine geholten Partien sind weg
+            Assert.Equal(LeagueSuggestionStatus.Rejected, db.LeagueAccountSuggestions.Single(x => x.UserName == "AntonFalsch").Status);
+        }
+
+        // Minderjährig: nichts — weder in der Liste noch zum Pflegen, auch nicht für einen Admin.
+        var minorList = await leagueAdmin.GetStringAsync($"/api/prep/player/{minor}/suggestions");
+        Assert.Empty(JsonNode.Parse(minorList)!["accounts"]!.AsArray());
+        Assert.DoesNotContain("KlaraKind2014", minorList);
+        Assert.Equal(HttpStatusCode.NotFound, (await leagueAdmin.PutAsJsonAsync($"/api/prep/accounts/{minorAcc}", new { sure = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await leagueAdmin.DeleteAsync($"/api/prep/accounts/{minorAcc}")).StatusCode);
+
+        // Auch Ligaspieler: ansehen ja, pflegen nein (409 leagueHub) — LeagueHub pflegt wie bisher.
+        var leagueList = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{league}/suggestions"))!;
+        Assert.True(leagueList["leagueHub"]!.GetValue<bool>());
+        Assert.Single(leagueList["accounts"]!.AsArray());
+        var refused = await manager.DeleteAsync($"/api/prep/accounts/{leagueAcc}");
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+        Assert.Contains("leagueHub", await refused.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.Conflict, (await manager.PutAsJsonAsync($"/api/prep/accounts/{leagueAcc}", new { sure = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await leagueAdmin.PutAsJsonAsync($"/api/league/accounts/{leagueAcc}", new { sure = true })).StatusCode);
+        await using (var db = fixture.Schema.NewContext())
+        {
+            Assert.True(db.LeagueOnlineAccounts.Any(a => a.Id == minorAcc));
+            Assert.Equal(1, db.LeagueOnlineGames.Count(g => g.FideId == "990802"));
+            Assert.Equal(LeagueOnlineAccountService.Sure, db.LeagueOnlineAccounts.Single(a => a.Id == leagueAcc).Confidence);
+        }
+    }
+
     /// <summary>Statt Lichess/chess.com: zählt und verweigert.</summary>
     private sealed class NoNetwork(Action seen) : HttpMessageHandler
     {

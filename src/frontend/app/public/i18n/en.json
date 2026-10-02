@@ -4454,6 +4454,22 @@
       "loadError": "The suggestions could not be loaded.",
       "checksBusy": "Another search or check is running right now — please open the (i) check again in a moment.",
       "checksRateLimited": "Lichess or chess.com is slowing us down — please open the (i) check again later.",
+      "listTitle": "Linked accounts",
+      "leagueHub": "This player is also in LeagueHub — his accounts are maintained there.",
+      "sure": "confirmed",
+      "unsure": "unconfirmed",
+      "games": "Games fetched: {{n}}",
+      "makeSure": "mark as confirmed",
+      "makeUnsure": "mark as unconfirmed",
+      "remove": "remove",
+      "removeAsk": "Really remove? The fetched games ({{n}}) go with it, and the search will not suggest this account again.",
+      "removeYes": "Yes, remove",
+      "madeSure": "Marked as confirmed.",
+      "madeUnsure": "Marked as unconfirmed.",
+      "removed": "Account removed.",
+      "leagueHubOnly": "This account belongs to a LeagueHub player — please maintain it there.",
+      "accountGone": "This account no longer exists.",
+      "actionFailed": "That did not work just now — please try again.",
       "after": "Accepted accounts are then fetched in the background (games of the last five years); in the opening tree they can be chosen under “Brett + online”."
     }
   }

@@ -4454,6 +4454,22 @@
       "loadError": "Prijedlozi se nisu mogli učitati.",
       "checksBusy": "Upravo traje druga pretraga ili provjera — otvorite provjeru (i) ponovno za trenutak.",
       "checksRateLimited": "Lichess ili chess.com upravo usporava — otvorite provjeru (i) ponovno kasnije.",
+      "listTitle": "Upisani računi",
+      "leagueHub": "Ovaj igrač je i u LeagueHubu — njegovi se računi tamo održavaju.",
+      "sure": "potvrđen",
+      "unsure": "nepotvrđen",
+      "games": "Preuzete partije: {{n}}",
+      "makeSure": "označi kao potvrđen",
+      "makeUnsure": "označi kao nepotvrđen",
+      "remove": "ukloni",
+      "removeAsk": "Stvarno ukloniti? Preuzete partije ({{n}}) idu s njim, a pretraga taj račun više neće predlagati.",
+      "removeYes": "Da, ukloni",
+      "madeSure": "Označen kao potvrđen.",
+      "madeUnsure": "Označen kao nepotvrđen.",
+      "removed": "Račun uklonjen.",
+      "leagueHubOnly": "Ovaj račun pripada igraču iz LeagueHuba — molimo održavajte ga tamo.",
+      "accountGone": "Ovaj račun više ne postoji.",
+      "actionFailed": "To trenutno nije uspjelo — pokušajte ponovno.",
       "after": "Preuzete račune RookHub zatim dohvaća u pozadini (partije posljednjih pet godina); u stablu otvaranja mogu se odabrati pod „Brett + online“."
     }
   }

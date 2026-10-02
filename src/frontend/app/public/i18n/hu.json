@@ -4454,6 +4454,22 @@
       "loadError": "A javaslatokat nem sikerült betölteni.",
       "checksBusy": "Éppen fut egy másik keresés vagy ellenőrzés — kérjük, nyissa meg újra az (i) ellenőrzést egy pillanat múlva.",
       "checksRateLimited": "A Lichess vagy a chess.com éppen lassít — kérjük, nyissa meg újra az (i) ellenőrzést később.",
+      "listTitle": "Bejegyzett fiókok",
+      "leagueHub": "Ez a játékos a LeagueHubban is szerepel — a fiókjait ott kezelik.",
+      "sure": "megerősített",
+      "unsure": "nem megerősített",
+      "games": "Letöltött játszmák: {{n}}",
+      "makeSure": "megerősítettnek jelöl",
+      "makeUnsure": "nem megerősítettnek jelöl",
+      "remove": "eltávolítás",
+      "removeAsk": "Biztosan eltávolítja? A letöltött játszmák ({{n}}) is törlődnek, és a keresés nem ajánlja újra ezt a fiókot.",
+      "removeYes": "Igen, eltávolítás",
+      "madeSure": "Megerősítettnek jelölve.",
+      "madeUnsure": "Nem megerősítettnek jelölve.",
+      "removed": "Fiók eltávolítva.",
+      "leagueHubOnly": "Ez a fiók egy LeagueHub-játékosé — kérjük, ott kezelje.",
+      "accountGone": "Ez a fiók már nem létezik.",
+      "actionFailed": "Ez most nem sikerült — kérjük, próbálja újra.",
       "after": "Az átvett fiókokat a RookHub ezután a háttérben tölti le (az elmúlt öt év játszmái); a megnyitásfában a „Brett + online” alatt választhatók."
     }
   }
