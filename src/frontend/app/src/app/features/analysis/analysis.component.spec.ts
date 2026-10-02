@@ -1623,6 +1623,34 @@ describe('AnalysisComponent Seitenleiste: Beschriftungen passen (UX-048)', () =>
       fixture.destroy();
     });
   }
+
+  // Nacharbeit: am Desktop (Seite 1100 px, Brett 560 px) ist die Seitenleiste 520 px breit. Mit 120 px breiten Feldern
+  // rutschte „Lines" allein in Zeile 2 an den linken Rand, „Depth" blieb oben rechts — das Paar gehört zusammen, und in
+  // en/de/hr neben Schalter und Zähler (wie vor UX-048). Der 366-px-Spec oben sieht das nicht: dort brechen beide gemeinsam um.
+  for (const lang of ['en', 'de', 'hr', 'hu']) {
+    const besideToggle = lang !== 'hu';   // „Mélység"/„Vonalak" sind zu lang für Zeile 1 — dann rückt das Paar gemeinsam
+    it(`${lang}: am Desktop (Seitenleiste 520 px) bleiben Tiefe- und Linien-Feld auf einer Höhe${besideToggle ? ' neben dem Schalter' : ''}`, async () => {
+      const fixture = await renderAnalysis({}, lang);
+      const el = fixture.nativeElement as HTMLElement;
+      const side = el.querySelector('.side-col') as HTMLElement;
+      side.style.flex = '0 0 520px';
+      side.style.width = '520px';
+      const c = fixture.componentInstance as any;
+      c.engineOn = true; c.depth = 18; c.depthSetting = 22; c.searchElapsedSec = 12;   // Zähler wie im Betrieb: „Depth 18/22 · 0:12"
+      fixture.detectChanges();
+      await new Promise(r => setTimeout(r, 30));
+
+      expect(el.querySelector('.engine-head .depth')!.textContent).toContain('18/22');
+      const [depthField, linesField] = (Array.from(el.querySelectorAll('.num-field')) as HTMLElement[]).map(f => f.getBoundingClientRect());
+      expect(Math.abs(linesField.top - depthField.top)).withContext('Linien-Feld in eine eigene Zeile gerutscht').toBeLessThanOrEqual(1);
+      if (besideToggle) {
+        const toggle = el.querySelector('.engine-head mat-slide-toggle')!.getBoundingClientRect();
+        const mid = (r: DOMRect) => r.top + r.height / 2;
+        expect(Math.abs(mid(depthField) - mid(toggle))).withContext('Felder nicht mehr neben dem Schalter').toBeLessThanOrEqual(1);
+      }
+      fixture.destroy();
+    });
+  }
 });
 
 // Codereview UX-049: die Pfeile hatten Farben, die Linienliste nicht — welcher Pfeil zu welcher Linie gehört, musste man

@@ -136,18 +136,20 @@ const EVAL_SETTLE_DEPTH = 10;
                 <mat-slide-toggle [(ngModel)]="engineOn" [disabled]="!!sparring" (change)="onEngineToggle()">{{ 'analysis.engine' | translate }}</mat-slide-toggle>
                 <span class="depth" *ngIf="engineOn">{{ 'analysis.depth' | translate }} {{ depth }}/{{ depthSetting }} · <span class="search-time" [title]="'analysis.searchTime' | translate">{{ searchTime }}</span></span>
                 <span class="he-spacer"></span>
-                <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
-                  <mat-label>{{ 'analysis.depth' | translate }}</mat-label>
-                  <mat-select [(ngModel)]="depthSetting" (selectionChange)="onDepthChange()">
-                    @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
-                  </mat-select>
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
-                  <mat-label>{{ 'analysis.lines' | translate }}</mat-label>
-                  <mat-select [(ngModel)]="linesCount" (selectionChange)="onLinesChange()">
-                    @for (n of [1,2,3,4,5]; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
-                  </mat-select>
-                </mat-form-field>
+                <span class="num-pair">
+                  <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
+                    <mat-label>{{ 'analysis.depth' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="depthSetting" (selectionChange)="onDepthChange()">
+                      @for (d of depthOptions; track d) { <mat-option [value]="d">{{ d }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="num-field" subscriptSizing="dynamic">
+                    <mat-label>{{ 'analysis.lines' | translate }}</mat-label>
+                    <mat-select [(ngModel)]="linesCount" (selectionChange)="onLinesChange()">
+                      @for (n of [1,2,3,4,5]; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
+                    </mat-select>
+                  </mat-form-field>
+                </span>
                 @if (externalEnginesList.length > 0) {
                   <mat-form-field appearance="outline" class="engine-field" subscriptSizing="dynamic">
                     <mat-label>{{ 'analysis.engineProvider' | translate }}</mat-label>
@@ -356,7 +358,11 @@ const EVAL_SETTLE_DEPTH = 10;
     .depth { font-size: .8rem; color: color-mix(in srgb, currentColor 60%, transparent); }
     .search-time { font-variant-numeric: tabular-nums; }
     .he-spacer { flex: 1 1 auto; }
-    .num-field { width: 120px; }
+    /* Tiefe + Linien als Paar (Nacharbeit UX-048): fehlt der Platz, rücken beide gemeinsam in die nächste Zeile, statt
+       „Linien" allein an den linken Rand zu schieben. 116 px: „Tiefe"/„Dubina"/„Mélység" passen ungekürzt, und bei der
+       520 px breiten Desktop-Seitenleiste bleibt das Paar in en/de/hr neben Schalter und Zähler (8 px Abstand = Reserve). */
+    .num-pair { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .num-field { width: 116px; }
     .engine-field { width: 190px; }
     .engine-tag { opacity: 0.65; font-size: 0.85em; }
     .remote-fallback { display: flex; align-items: center; gap: 6px; color: #ffb74d; font-size: .85rem; margin: 6px 0 0; }
