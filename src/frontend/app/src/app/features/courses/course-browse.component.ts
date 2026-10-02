@@ -233,7 +233,7 @@ interface ChapterGroup {
   styles: [`
     /* App-Vollbild (Host-Klasse auf app-root): Seitenkopf weg — das Brett bekommt den Platz. */
     :host-context(.app-fullscreen) .browse-head { display: none; }
-    .browse-container { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
+    .browse-container { max-width: min(var(--page-max-width), 96vw); margin: 16px auto; padding: 0 16px; }
     .browse-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
     .head-spacer { flex: 1; }
     .line-pick { margin: 0 2px 0 6px; cursor: pointer; accent-color: var(--mat-sys-primary, #3f51b5); }

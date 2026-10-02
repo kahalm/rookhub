@@ -207,7 +207,7 @@ import { CourseCardComponent } from './course-card.component';
   `,
   styles: [`
     .header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .courses-container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .courses-container { max-width: min(var(--page-max-width), 96vw); margin: 24px auto; padding: 0 16px; }
     .header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .header h1 { margin: 0; }
     .intro { color: color-mix(in srgb, currentColor 60%, transparent); margin: 8px 0 16px; }

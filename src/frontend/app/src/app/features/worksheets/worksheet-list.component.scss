@@ -1,4 +1,4 @@
-.wl-page { max-width: 900px; margin: 0 auto; padding: 16px; }
+.wl-page { max-width: min(var(--page-max-width), 96vw); margin: 0 auto; padding: 16px; }
 .wl-head h1 { margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
 .wl-hint { color: color-mix(in srgb, currentColor 60%, transparent); margin: 0 0 16px; font-size: 0.9rem; }
 .wl-center { display: flex; justify-content: center; padding: 40px; }

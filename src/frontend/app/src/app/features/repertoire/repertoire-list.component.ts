@@ -202,7 +202,7 @@ import { repertoireDownloadPgn } from '../../shared/pgn-export.util';
     </ng-template>
   `,
   styles: [`
-    .repertoire-container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .repertoire-container { padding: 16px; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: center; }
     .ext-hint { display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1.25rem;
                 padding: 10px 12px; border-radius: 8px; font-size: 0.9rem;

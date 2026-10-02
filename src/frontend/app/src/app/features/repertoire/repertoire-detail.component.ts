@@ -181,7 +181,7 @@ type ViewMode = 'lines' | 'tree' | 'holes' | 'edit';
     }
   `,
   styles: [`
-    .detail-container { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .detail-container { padding: 1rem; max-width: min(var(--page-max-width), 96vw); margin: 0 auto; }
     .detail-header {
       display: flex;
       justify-content: space-between;

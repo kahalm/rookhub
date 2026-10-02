@@ -1,3 +1,5 @@
+/* Bewusste Ausnahme von --page-max-width (Codereview W5 F3-017): Brett, Analysebaum und Stellungsliste stehen
+   nebeneinander und brauchen die Breite. */
 .calc-page {
   padding: 0.75rem;
   max-width: 1400px;
