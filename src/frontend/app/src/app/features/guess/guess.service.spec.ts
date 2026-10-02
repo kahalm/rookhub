@@ -97,6 +97,9 @@ describe('GuessService', () => {
 
   describe('Übernahme nach dem Anmelden (N11-003)', () => {
     const anon = '11111111-2222-3333-4444-555555555555';
+    // Auch VORHER abräumen: 'ohne Anmeldung' (und guess-list.component.spec) legen den Schlüssel über
+    // getOrCreateAnonSessionId an und lassen ihn liegen — bei gemischter Jasmine-Reihenfolge sonst ein Flake.
+    beforeEach(() => localStorage.removeItem(GuessService.AnonKey));
     afterEach(() => localStorage.removeItem(GuessService.AnonKey));
 
     it('schickt die Kennung dieses Browsers und räumt sie nach der Übernahme ab', () => {
