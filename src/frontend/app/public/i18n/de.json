@@ -4436,6 +4436,23 @@
     "twin": "{{games}} Partien unter demselben Namen ohne FIDE-ID mitnehmen",
     "twinHint": "Gleicher Name, aber ohne FIDE-ID — vermutlich derselbe Spieler, sicher ist es nicht. Nur dazunehmen, wenn es passt.",
     "sources": "Quellen: die ChessBase-Megabase und Lumbras GigaBase (eine Partie, die beide führen, zählt einmal); mit FIDE-ID dazu die Partien, die LeagueHub kennt (chess-results, Lichess-Übertragungen, Vereinspartien), und Online-Partien gesicherter Konten. Blitz- und Schnellschach sind mitgezählt.",
-    "noFide": "ohne FIDE-ID"
+    "noFide": "ohne FIDE-ID",
+    "accounts": {
+      "title": "Online-Konten suchen",
+      "intro": "Sucht auf Lichess und chess.com nach Konten, deren Name zu diesem Spieler passt. Du entscheidest: übernehmen oder verwerfen. Eine Suche zur Zeit, höchstens {{perHour}} je Stunde.",
+      "scan": "Online-Konten suchen",
+      "scanning": "Sucht …",
+      "remaining": "Noch {{n}} Suchen in dieser Stunde.",
+      "none": "Keine offenen Vorschläge.",
+      "found": "{{n}} neue Vorschläge.",
+      "foundNone": "Nichts Neues gefunden.",
+      "busy": "Gerade läuft schon eine Suche — bitte gleich noch einmal.",
+      "limit": "Deine Suchen für diese Stunde sind aufgebraucht.",
+      "rateLimited": "Lichess oder chess.com bremst gerade — die Suche ist beendet. Bitte später noch einmal.",
+      "unreachable": "Lichess oder chess.com ist gerade nicht erreichbar.",
+      "disabled": "Die Konto-Suche ist nicht eingeschaltet.",
+      "loadError": "Die Vorschläge konnten nicht geladen werden.",
+      "after": "Übernommene Konten holt RookHub danach im Hintergrund ab (Partien der letzten fünf Jahre); im Eröffnungsbaum sind sie dann unter „Brett + online“ wählbar."
+    }
   }
 }

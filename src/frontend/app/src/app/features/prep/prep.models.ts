@@ -1,4 +1,4 @@
-import { PlayerCard } from '@lh/core/league.models';
+import { AccountSuggestion, PlayerCard } from '@lh/core/league.models';
 
 /** Ein Treffer der Spielersuche (`GET /api/prep/players`). */
 export interface PrepHit {
@@ -31,6 +31,18 @@ export interface PrepScope {
   since: string | null;
   twin: PrepTwin | null;
   twinIncluded: boolean;
+  /** Knopf „Online-Konten suchen" anbieten: Verwalter (`prep.manage`), Schalter `Prep:AccountSearch` an, FIDE-ID da (Phase 4). */
+  accountSearch?: boolean;
+}
+
+/** Offene Vorschläge der Konto-Suche für einen Spieler — ohne die eines Minderjährigen (`GET …/suggestions`). */
+export interface PrepSuggestionList {
+  items: AccountSuggestion[];
+  perHour: number;
+  /** Suchen, die der Verwalter in dieser Stunde noch hat. */
+  remaining: number;
+  /** Nur nach einer Suche: neue Vorschläge. */
+  found?: number;
 }
 
 /** Die Karte, wie die API sie schickt: Form der Liga-Karte, `fide` darf fehlen. */

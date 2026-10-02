@@ -119,7 +119,7 @@ public sealed class LeagueAccountChecks
         if (prof is not null)
         {
             items.Add(FideRatingCheck(prof, player.Elo));
-            items.Add(TirolCheck(prof));
+            if (player.Local) items.Add(TirolCheck(prof));                // ohne Liga-Bezug zählt Tirol nicht
         }
         items.Add(TeamsCheck(scout, playerTeams));
         if (prof is not null)
@@ -341,11 +341,11 @@ public sealed class LeagueAccountChecks
         var flag = (prof.Flag ?? "").Trim();
         if (flag.Length < 2) return new Item(key, label, None, "kein Land im Profil");
         var code = flag[..2].ToUpperInvariant();
-        if (code == "AT") return new Item(key, label, Ok, "Österreich");
-        if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed).Contains(code))
+        if (code == "AT" && player.Local) return new Item(key, label, Ok, "Österreich");
+        if (LeagueAccountFinder.AllowedCountries(player.Fed, fideFed, player.Local).Contains(code))
             return new Item(key, label, Ok, $"{code} — seine Föderation ({fideFed ?? player.Fed})");
         var fed = fideFed ?? player.Fed;
-        return new Item(key, label, Fail, $"{code} — weder Österreich noch seine Föderation" + (fed is null ? "" : $" ({fed})"));
+        return new Item(key, label, Fail, $"{code} — {(player.Local ? "weder Österreich noch seine Föderation" : "nicht seine Föderation")}" + (fed is null ? "" : $" ({fed})"));
     }
 
     /// <summary>

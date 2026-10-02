@@ -80,7 +80,9 @@ public sealed partial class LeagueAccountFinder
             : (ScoreRatingWeak, $"{text} (Treffer, aber schwächer — optimal wären {FitMin}–{FitMax} darüber)");
     }
 
-    public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team);
+    /// <param name="Local">Spieler einer Tiroler Liga (Vorgabe): Österreich ist als Land immer erlaubt, ein Tiroler Ort zählt. <c>false</c> =
+    /// ein Spieler nur aus dem Partiebestand der Spielervorbereitung (0.637.0) — dann gilt nur seine Föderation, Tirol zählt nicht.</param>
+    public sealed record Player(string Fide, string Name, string? Fed, int? Elo, string? Team, bool Local = true);
 
     /// <summary>Ein Profil auf einer Seite, so weit es für die Entscheidung zählt.</summary>
     /// <param name="Rating">Beste belastbare Online-Wertung (<see cref="MinRatedGames"/>, nicht vorläufig) — <c>null</c> = keine.</param>
@@ -171,9 +173,10 @@ public sealed partial class LeagueAccountFinder
     public static string? TirolPlace(string? text) => TirolRe.Match(text ?? "") is { Success: true } m ? m.Value : null;
 
     /// <summary>Die Länder, die ein Profil nennen darf: Österreich, dazu die Föderation laut Meldeliste und laut FIDE.</summary>
-    public static HashSet<string> AllowedCountries(string? fed, string? fideFed)
+    public static HashSet<string> AllowedCountries(string? fed, string? fideFed, bool local = true)
     {
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "AT" };
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (local) allowed.Add("AT");                                // Tiroler Liga; sonst nur die Föderation
         if (fed is { } f1 && Fed2.TryGetValue(f1, out var c1)) allowed.Add(c1);
         if (fideFed is { } f2 && Fed2.TryGetValue(f2, out var c2)) allowed.Add(c2);
         return allowed;
@@ -216,7 +219,7 @@ public sealed partial class LeagueAccountFinder
                 default: return null;                                  // anderer Vorname — ein anderer Mensch (0.611.0)
             }
         }
-        var allowed = AllowedCountries(p.Fed, fideFed);
+        var allowed = AllowedCountries(p.Fed, fideFed, p.Local);
         var flag = (prof.Flag ?? "").Trim();
         if (flag.Length >= 2)
         {
@@ -236,7 +239,7 @@ public sealed partial class LeagueAccountFinder
             score += ScoreFide;
             ev.Add($"FIDE-Wertung im Profil {fr} (Liste {elo})");
         }
-        if (TirolPlace($"{prof.Location} {prof.Bio}") is not null)
+        if (p.Local && TirolPlace($"{prof.Location} {prof.Bio}") is not null)
         {
             score += ScoreTirol;
             ev.Add("Tiroler Ort im Profil");
@@ -438,7 +441,7 @@ public sealed partial class LeagueAccountFinder
                          select new { p.Name, p.Fed, p.EloI, p.EloN, p.Team }).FirstOrDefaultAsync(ct);
         if (row is not null) return new Player(fide, row.Name, row.Fed, row.EloI is > 0 ? row.EloI : row.EloN, row.Team);
         var name = await db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Name).FirstOrDefaultAsync(ct);
-        return name is null ? null : new Player(fide, name, null, null, null);
+        return name is null ? await Prep.PrepAccountSearch.PlayerAsync(db, fide, ct) : new Player(fide, name, null, null, null);
     }
 
     /// <summary>

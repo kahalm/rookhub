@@ -27,7 +27,9 @@ describe('PrepPlayerComponent', () => {
 
   async function create(c: PrepCardJson): Promise<void> {
     perms = new Set(['prep.view']);
-    api = jasmine.createSpyObj<PrepApiService>('PrepApiService', ['card', 'profile', 'recent', 'tree', 'pgn', 'search']);
+    api = jasmine.createSpyObj<PrepApiService>('PrepApiService', ['card', 'profile', 'recent', 'tree', 'pgn', 'search', 'suggestions',
+      'scanSuggestions', 'acceptSuggestion', 'rejectSuggestion', 'suggestionChecks']);
+    api.suggestions.and.resolveTo({ items: [], perHour: 20, remaining: 20 });
     (api as unknown as { lastQuery: () => string }).lastQuery = () => 'Carlsen';
     api.card.and.resolveTo(c);
     TestBed.configureTestingModule({
@@ -67,6 +69,15 @@ describe('PrepPlayerComponent', () => {
     expect(el().querySelector('.check')).toBeNull();                                       // ohne prep.manage kein „unsichere"
     expect(el().querySelector('a.back')?.getAttribute('href')).toBe('/prep?q=Carlsen');
     expect(document.head.querySelector('link[data-prep-card]')?.getAttribute('href')).toBe('prep-card.css');
+    expect(el().querySelector('app-prep-accounts')).toBeNull();                        // ohne accountSearch kein Knopf
+    expect(api.suggestions).not.toHaveBeenCalled();
+  });
+
+  it('Online-Konten suchen nur, wenn die Karte es anbietet (Verwalter, Schalter, FIDE-ID)', async () => {
+    await create(card({ accountSearch: true }));
+    expect(el().querySelector('app-prep-accounts')).not.toBeNull();
+    expect(api.suggestions).toHaveBeenCalledWith(31252);
+    expect(el().querySelector('app-prep-accounts button')?.textContent).toContain('prep.accounts.scan');
   });
 
   it('„alle laden" fragt mit all=true neu und sagt danach, dass mehr nicht geht', async () => {

@@ -490,7 +490,7 @@ public class PrepCardTests : IDisposable
         string? Policy(string name) => actions.Single(a => a.Name == name).GetCustomAttribute<HasPermissionAttribute>()?.Policy;
         foreach (var read in new[] { "Players", "Player", "Profile", "Tree", "Recent", "Pgn" })
             Assert.Equal(PermissionPolicyProvider.Prefix + Permissions.PrepView, Policy(read));
-        foreach (var admin in new[] { "ImportGames", "Imports" })
+        foreach (var admin in new[] { "ImportGames", "Imports", "Suggestions", "ScanSuggestions", "AcceptSuggestion", "RejectSuggestion", "SuggestionChecks" })
             Assert.Equal(PermissionPolicyProvider.Prefix + Permissions.PrepManage, Policy(admin));
         Assert.All(actions, a => Assert.NotNull(a.GetCustomAttribute<HasPermissionAttribute>()));
     }

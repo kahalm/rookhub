@@ -16,7 +16,7 @@ export function toPlayerCard(c: PrepCardJson): PlayerCard {
 
 export function scopeOf(c: PrepCardJson): PrepScope {
   return { id: c.id, games: c.games, loaded: c.loaded, limited: c.limited, limit: c.limit, max: c.max, since: c.since, twin: c.twin,
-    twinIncluded: c.twinIncluded };
+    twinIncluded: c.twinIncluded, accountSearch: c.accountSearch === true };
 }
 
 /**

@@ -4436,6 +4436,23 @@
     "twin": "Include {{games}} games under the same name without a FIDE ID",
     "twinHint": "Same name, but no FIDE ID — probably the same player, but that is not certain. Only include them if they fit.",
     "sources": "Sources: ChessBase Megabase and Lumbra’s GigaBase (a game in both counts once); with a FIDE ID also the games LeagueHub knows (chess-results, Lichess broadcasts, club games) and online games of confirmed accounts. Blitz and rapid games are included.",
-    "noFide": "no FIDE ID"
+    "noFide": "no FIDE ID",
+    "accounts": {
+      "title": "Find online accounts",
+      "intro": "Searches Lichess and chess.com for accounts whose name fits this player. You decide: accept or reject. One search at a time, at most {{perHour}} per hour.",
+      "scan": "Find online accounts",
+      "scanning": "Searching …",
+      "remaining": "{{n}} searches left this hour.",
+      "none": "No open suggestions.",
+      "found": "{{n}} new suggestions.",
+      "foundNone": "Nothing new found.",
+      "busy": "Another search is running right now — please try again in a moment.",
+      "limit": "Your searches for this hour are used up.",
+      "rateLimited": "Lichess or chess.com is slowing us down — the search has ended. Please try again later.",
+      "unreachable": "Lichess or chess.com cannot be reached right now.",
+      "disabled": "The account search is not switched on.",
+      "loadError": "The suggestions could not be loaded.",
+      "after": "Accepted accounts are then fetched in the background (games of the last five years); in the opening tree they can be chosen under “Brett + online”."
+    }
   }
 }

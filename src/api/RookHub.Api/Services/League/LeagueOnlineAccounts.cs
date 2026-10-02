@@ -255,6 +255,8 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     {
         var q = db.LeagueAccountSuggestions.AsNoTracking().Where(x => x.Status == LeagueSuggestionStatus.Open);
         if (!string.IsNullOrEmpty(fide)) q = q.Where(x => x.FideId == fide);
+        // Die Übersicht zeigt nur Spieler von LeagueHub — Vorschläge der Spielervorbereitung für andere bleiben dort (0.637.0).
+        else q = q.Where(x => db.LeaguePlayers.Any(p => p.FideId == x.FideId) || db.LeaguePlayerProfiles.Any(p => p.FideId == x.FideId));
         var list = await q.OrderByDescending(x => x.Score).ThenBy(x => x.FideId).ThenBy(x => x.Id).ToListAsync(ct);
         var fides = list.Select(x => x.FideId).Distinct().ToList();
         var taken = (await db.LeagueOnlineAccounts.AsNoTracking().Where(a => fides.Contains(a.FideId))
@@ -349,7 +351,8 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 
     private async Task<bool> KnownPlayerAsync(string fide, CancellationToken ct) =>
         fide.Length is > 0 and <= 16 && (await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct)
-                                         || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct));
+                                         || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct)
+                                         || await db.PrepPlayers.AnyAsync(p => p.FideId == fide, ct));   // Spielervorbereitung (0.637.0)
 
     private static bool Same(LeagueOnlineAccount a, string site, string user) =>
         a.Site == site && string.Equals(a.UserName, user, StringComparison.OrdinalIgnoreCase);

@@ -74,8 +74,15 @@ public class PrepController : BaseApiController
     [HttpGet("player/{id:int}")]
     [HasPermission(Permissions.PrepView)]
     public async Task<IActionResult> Player(int id, [FromQuery] bool? all, [FromQuery] bool? twin, [FromServices] PrepCardService cards,
-        CancellationToken ct) =>
-        await cards.LoadAsync(id, all == true, twin == true, ct) is { } l ? Ok(await cards.CardAsync(l, await CanManageAsync(), ct)) : NotFound();
+        [FromServices] IConfiguration config, CancellationToken ct)
+    {
+        if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
+        var manage = await CanManageAsync();
+        var card = await cards.CardAsync(l, manage, ct);
+        // Phase 4: den Knopf „Online-Konten suchen" gibt es nur für Verwalter, mit Schalter und FIDE-ID.
+        card["accountSearch"] = manage && PrepAccountSearch.IsEnabled(config) && l.Player.FideId is not null;
+        return Ok(card);
+    }
 
     /// <summary>Eröffnungsprofil über gefilterte Partien — Filter wie bei der Liga (<c>source</c>, <c>speeds</c>, <c>years</c>,
     /// Online nur gesicherter Konten außer <c>unsure=true</c>, das nur mit <c>prep.manage</c> wirkt).</summary>
@@ -112,6 +119,69 @@ public class PrepController : BaseApiController
     {
         if (await cards.LoadAsync(id, all == true, twin == true, ct) is not { } l) return NotFound();
         return LeagueController.PgnFile(l.Player.FideId ?? $"p{l.Player.Id}", l.Player.Name, await cards.PgnAsync(l, ct));
+    }
+
+    // ---- Online-Konten suchen (Phase 4) -------------------------------------------------------------
+    // Nur mit prep.manage UND dem Schalter Prep:AccountSearch (Vorgabe aus) — ohne Schalter 404 „disabled". Gesucht wird mit der
+    // Konto-Suche von LeagueHub; Vorschläge eines Minderjährigen kommen hier nie heraus.
+
+    /// <summary>Offene Vorschläge des Spielers → <c>{ items, perHour, remaining }</c>.</summary>
+    [HttpGet("player/{id:int}/suggestions")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> Suggestions(int id, [FromServices] PrepAccountSearch search, CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        var (r, reason) = await search.SuggestionsAsync(id, GetUserId(), ct);
+        return r is not null ? Ok(r) : reason == "noFide" ? BadRequest(new { reason }) : NotFound(new { reason });
+    }
+
+    /// <summary>Jetzt suchen → <c>{ items, found, perHour, remaining }</c>; 409 <c>busy</c> (eine Suche zur Zeit), 429 <c>limit</c>
+    /// (Stunde aufgebraucht), 503 <c>rateLimited</c> (eine Seite bremst — die Suche endet ohne zweiten Versuch) / <c>unreachable</c>.</summary>
+    [HttpPost("player/{id:int}/suggestions/scan")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> ScanSuggestions(int id, [FromServices] PrepAccountSearch search, CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        var (r, reason) = await search.ScanAsync(id, GetUserId(), ct);
+        if (r is not null) return Ok(r);
+        return reason switch
+        {
+            "notFound" => NotFound(new { reason }),
+            "noFide" => BadRequest(new { reason }),
+            "busy" => Conflict(new { reason }),
+            "limit" => StatusCode(StatusCodes.Status429TooManyRequests, new { reason, perHour = search.PerHour }),
+            _ => StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason }),
+        };
+    }
+
+    public sealed record AcceptRequest(bool Sure);
+
+    /// <summary>Übernehmen <c>{ sure }</c> → das Konto; 404 fremd/erledigt/verborgen, 400 wie bei LeagueHub.</summary>
+    [HttpPost("suggestions/{suggestionId:int}/accept")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> AcceptSuggestion(int suggestionId, [FromBody] AcceptRequest? req, [FromServices] PrepAccountSearch search,
+        CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        var (acc, reason) = await search.AcceptAsync(suggestionId, req?.Sure == true, User.Identity?.Name, ct);
+        return acc is not null ? Ok(acc) : reason is "notFound" or "unknownPlayer" ? NotFound(new { reason }) : BadRequest(new { reason });
+    }
+
+    [HttpPost("suggestions/{suggestionId:int}/reject")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> RejectSuggestion(int suggestionId, [FromServices] PrepAccountSearch search, CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        return await search.RejectAsync(suggestionId, ct) ? NoContent() : NotFound();
+    }
+
+    /// <summary>Prüfung (i) eines Vorschlags — wie bei LeagueHub, nie für Minderjährige.</summary>
+    [HttpGet("suggestions/{suggestionId:int}/checks")]
+    [HasPermission(Permissions.PrepManage)]
+    public async Task<IActionResult> SuggestionChecks(int suggestionId, [FromServices] PrepAccountSearch search, CancellationToken ct)
+    {
+        if (!search.Enabled) return NotFound(new { reason = "disabled" });
+        return await search.ChecksAsync(suggestionId, ct) is { } r ? Ok(r) : NotFound();
     }
 
     // ---- Einspielen (Phase 1) ------------------------------------------------------------------------

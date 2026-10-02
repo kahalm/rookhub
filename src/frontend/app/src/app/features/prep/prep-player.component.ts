@@ -5,10 +5,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { LeagueApiService } from '@lh/core/league-api.service';
 import { PLAYER_CARD_API } from '@rh/shared/player-card/player-card-api';
 import { PlayerCardComponent } from '@rh/shared/player-card/player-card.component';
+import { PrepAccountsComponent } from './prep-accounts.component';
 import { PrepApiService } from './prep-api.service';
 import { PrepCardApi } from './prep-card-api';
+import { PrepLeagueApi } from './prep-league-api';
 import { PrepOptions } from './prep.models';
 
 /** Die Gestaltung der Karte als eigenes Style-Bündel (angular.json: bundleName prep-card, inject: false, Quelle
@@ -33,8 +36,9 @@ export function loadCardStyles(doc: Document): void {
   selector: 'app-prep-player',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [PrepCardApi, { provide: PLAYER_CARD_API, useExisting: PrepCardApi }],
-  imports: [RouterLink, TranslatePipe, MatButtonModule, MatCheckboxModule, PlayerCardComponent],
+  // PrepLeagueApi: die geteilten Bausteine der Konto-Suche übernehmen/verwerfen/prüfen über /api/prep (Phase 4).
+  providers: [PrepCardApi, { provide: PLAYER_CARD_API, useExisting: PrepCardApi }, { provide: LeagueApiService, useClass: PrepLeagueApi }],
+  imports: [RouterLink, TranslatePipe, MatButtonModule, MatCheckboxModule, PlayerCardComponent, PrepAccountsComponent],
   styleUrl: './prep-player.component.scss',
   template: `
     <div class="prep prep-player">
@@ -69,6 +73,9 @@ export function loadCardStyles(doc: Document): void {
       @if (loading() && options().all) { <p class="hint" role="status">{{ 'prep.loadingAll' | translate: { max: fmt(scope()?.max ?? 0) } }}</p> }
       <div class="prep-card-scope">
         <lh-player-card [inline]="true" [note]="'prep.sources' | translate" />
+        @if (scope(); as s) {
+          @if (s.accountSearch) { <app-prep-accounts [playerId]="s.id" (changed)="reloadCard()" /> }
+        }
       </div>
     </div>
   `,
@@ -101,6 +108,11 @@ export class PrepPlayerComponent {
       this.cardApi.scope.set(null);
       if (rendered) this.open();
     });
+  }
+
+  /** Nach dem Übernehmen eines Kontos: die Karte frisch (das Konto steht dann dort). */
+  reloadCard(): void {
+    void this.card().reloadCard();
   }
 
   loadAll(): void {

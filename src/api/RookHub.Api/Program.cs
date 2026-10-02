@@ -275,6 +275,9 @@ try
     // Spielervorbereitung (Prep): Partiebestand aus Megabase + Lumbra paketweise einspielen, suchen, Karte.
     builder.Services.AddScoped<RookHub.Api.Services.Prep.PrepImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.Prep.PrepPlayerSearch>();
+    // Online-Konto-Suche der Spielervorbereitung: eine Suche zur Zeit, Obergrenze je Verwalter und Stunde (Phase 4).
+    builder.Services.AddSingleton<RookHub.Api.Services.Prep.PrepAccountSearchGate>();
+    builder.Services.AddScoped<RookHub.Api.Services.Prep.PrepAccountSearch>();
     // Grenzen der Karte (jüngste N Partien, „alle“ höchstens M) einstellbar — siehe PrepCardService.
     builder.Services.AddScoped(sp => new RookHub.Api.Services.Prep.PrepCardService(sp.GetRequiredService<RookHub.Api.Data.AppDbContext>(),
         sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(), sp.GetRequiredService<RookHub.Api.Services.League.LeagueService>(),

@@ -4436,6 +4436,23 @@
     "twin": "{{games}} azonos nevű, FIDE-azonosító nélküli játszma hozzávétele",
     "twinHint": "Azonos név, de FIDE-azonosító nélkül — valószínűleg ugyanaz a játékos, de ez nem biztos. Csak akkor vegye hozzá, ha illik.",
     "sources": "Források: ChessBase Megabase és Lumbra GigaBase (a mindkettőben szereplő játszma egyszer számít); FIDE-azonosítóval a LeagueHub által ismert játszmák is (chess-results, Lichess-közvetítések, klubjátszmák), valamint a megerősített fiókok online játszmái. A villám- és rapidjátszmák is beleszámítanak.",
-    "noFide": "FIDE-azonosító nélkül"
+    "noFide": "FIDE-azonosító nélkül",
+    "accounts": {
+      "title": "Online fiókok keresése",
+      "intro": "Olyan fiókokat keres a Lichessen és a chess.comon, amelyek neve illik ehhez a játékoshoz. Ön dönt: átveszi vagy elveti. Egyszerre egy keresés, óránként legfeljebb {{perHour}}.",
+      "scan": "Online fiókok keresése",
+      "scanning": "Keresés …",
+      "remaining": "Ebben az órában még {{n}} keresés.",
+      "none": "Nincs nyitott javaslat.",
+      "found": "{{n}} új javaslat.",
+      "foundNone": "Nincs új találat.",
+      "busy": "Éppen fut egy másik keresés — kérjük, próbálja újra egy pillanat múlva.",
+      "limit": "Az erre az órára jutó keresései elfogytak.",
+      "rateLimited": "A Lichess vagy a chess.com éppen lassít — a keresés véget ért. Kérjük, próbálja később.",
+      "unreachable": "A Lichess vagy a chess.com jelenleg nem érhető el.",
+      "disabled": "A fiókkeresés nincs bekapcsolva.",
+      "loadError": "A javaslatokat nem sikerült betölteni.",
+      "after": "Az átvett fiókokat a RookHub ezután a háttérben tölti le (az elmúlt öt év játszmái); a megnyitásfában a „Brett + online” alatt választhatók."
+    }
   }
 }

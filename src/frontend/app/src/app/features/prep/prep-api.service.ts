@@ -2,8 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
 import { filterParams } from '@lh/core/league-api.service';
-import { OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
-import { PrepCardJson, PrepHit, PrepOptions } from './prep.models';
+import { Account, AccountChecks, OpeningTree, ProfileView, RecentGames, TreeFilter } from '@lh/core/league.models';
+import { PrepCardJson, PrepHit, PrepOptions, PrepSuggestionList } from './prep.models';
 
 /**
  * Die Spielervorbereitung (`/api/prep/*`, Recht `prep.view`): Spieler suchen und seine Karte lesen. Die Filter des
@@ -41,6 +41,29 @@ export class PrepApiService {
 
   pgn(id: number, o: PrepOptions): Promise<Blob> {
     return firstValueFrom(this.http.get(`/api/prep/player/${id}/pgn`, { params: opts(new HttpParams(), o), responseType: 'blob' }));
+  }
+
+  // ── Online-Konten suchen (Phase 4, prep.manage + Schalter Prep:AccountSearch) ──
+
+  suggestions(id: number): Promise<PrepSuggestionList> {
+    return firstValueFrom(this.http.get<PrepSuggestionList>(`/api/prep/player/${id}/suggestions`));
+  }
+
+  /** Jetzt suchen — dauert einige Sekunden (Lichess und chess.com werden einzeln gefragt). */
+  scanSuggestions(id: number): Promise<PrepSuggestionList> {
+    return firstValueFrom(this.http.post<PrepSuggestionList>(`/api/prep/player/${id}/suggestions/scan`, {}));
+  }
+
+  acceptSuggestion(id: number, sure: boolean): Promise<Account> {
+    return firstValueFrom(this.http.post<Account>(`/api/prep/suggestions/${id}/accept`, { sure }));
+  }
+
+  rejectSuggestion(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.post(`/api/prep/suggestions/${id}/reject`, {}));
+  }
+
+  suggestionChecks(id: number): Promise<AccountChecks> {
+    return firstValueFrom(this.http.get<AccountChecks>(`/api/prep/suggestions/${id}/checks`));
   }
 }
 

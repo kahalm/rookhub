@@ -4436,6 +4436,23 @@
     "twin": "Uključi {{games}} partija pod istim imenom bez FIDE ID-a",
     "twinHint": "Isto ime, ali bez FIDE ID-a — vjerojatno isti igrač, ali to nije sigurno. Uključite ih samo ako odgovaraju.",
     "sources": "Izvori: ChessBase Megabase i Lumbrina GigaBase (partija koja je u obje računa se jednom); uz FIDE ID i partije koje poznaje LeagueHub (chess-results, Lichess prijenosi, klupske partije) te online partije potvrđenih računa. Ubrojene su i brzopotezne i ubrzane partije.",
-    "noFide": "bez FIDE ID-a"
+    "noFide": "bez FIDE ID-a",
+    "accounts": {
+      "title": "Pronađi online račune",
+      "intro": "Traži na Lichessu i chess.comu račune čije ime odgovara ovom igraču. Vi odlučujete: preuzeti ili odbaciti. Jedna pretraga istodobno, najviše {{perHour}} na sat.",
+      "scan": "Pronađi online račune",
+      "scanning": "Traži se …",
+      "remaining": "Preostalo pretraga ovaj sat: {{n}}.",
+      "none": "Nema otvorenih prijedloga.",
+      "found": "Novi prijedlozi: {{n}}.",
+      "foundNone": "Ništa novo nije pronađeno.",
+      "busy": "Upravo traje druga pretraga — pokušajte ponovno za trenutak.",
+      "limit": "Vaše pretrage za ovaj sat su potrošene.",
+      "rateLimited": "Lichess ili chess.com upravo usporava — pretraga je završena. Pokušajte kasnije.",
+      "unreachable": "Lichess ili chess.com trenutno nije dostupan.",
+      "disabled": "Pretraga računa nije uključena.",
+      "loadError": "Prijedlozi se nisu mogli učitati.",
+      "after": "Preuzete račune RookHub zatim dohvaća u pozadini (partije posljednjih pet godina); u stablu otvaranja mogu se odabrati pod „Brett + online“."
+    }
   }
 }

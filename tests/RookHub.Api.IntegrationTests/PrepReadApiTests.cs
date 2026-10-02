@@ -97,6 +97,24 @@ public class PrepReadApiTests(PrepReadFixture fixture) : IAsyncLifetime, IClassF
     }
 
     [MySqlFact]
+    public async Task AccountSearch_SwitchOff_404Disabled_NoButton()
+    {
+        await ImportAsync(Game("Huber, Franz", "Mair, Josef", "1. e4 c5 2. Nf3 d6", "2024.05.17", "990001"));
+        var id = await PlayerIdAsync("990001");
+        using var manager = Client(await UserAsync("verwalter-aus", false, Permissions.PrepView, Permissions.PrepManage));
+        Assert.False(JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{id}"))!["accountSearch"]!.GetValue<bool>());
+        foreach (var res in new[]
+                 {
+                     await manager.GetAsync($"/api/prep/player/{id}/suggestions"), await manager.PostAsync($"/api/prep/player/{id}/suggestions/scan", null),
+                     await manager.PostAsync("/api/prep/suggestions/1/reject", null),
+                 })
+        {
+            Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+            Assert.Contains("disabled", await res.Content.ReadAsStringAsync());
+        }
+    }
+
+    [MySqlFact]
     public async Task Card_MinorsAccount_NotInAnyResponse_EvenForAdmin()
     {
         await ImportAsync(Game("Kind, Klara", "Mair, Josef", "1. e4 c5 2. Nf3 d6", "2025.05.17", "990050"));
