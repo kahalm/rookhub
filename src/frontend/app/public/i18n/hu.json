@@ -705,7 +705,7 @@
       "convertToCourseNoPuzzles": "Ez a repertoár nem tartalmaz feladvány-változatokat (Chessable-stílus: FEN + edzésjelölők), ezért nem alakítható tanfolyammá.",
       "convertToCourseEmpty": "Ez a repertoár még üres - nincs importált PGN. Tölts fel egy PGN-fájlt, vagy hozd le a Chessable-tanfolyamot a RepCheck bővítménnyel, utána alakíthatod tanfolyammá.",
       "convertToCourseFailed": "A repertoárt nem sikerült tanfolyammá alakítani",
-      "extHint": "Tipp: a megfelelő böngészőbővítménnyel (Chrome-hoz és Firefoxhoz) vagy a Tampermonkey-userscripttel közvetlenül a chess.com és a lichess.org oldalán látod a repertoártól való eltéréseket — de csak elemző módban (az elemzőtáblán).",
+      "extHint": "Tipp: a RepCheck böngészőbővítménnyel (Chrome-hoz és Firefoxhoz) közvetlenül a chess.com és a lichess.org oldalán látod a repertoártól való eltéréseket — de csak elemző módban (az elemzőtáblán).",
       "extHintLink": "Tudj meg többet a súgóban",
       "sectionExtension": "A RepCheckben",
       "sectionExtensionHint": "Repertoárok, amelyeket a RepCheck bővítmény a chess.com / lichess oldalon összevet.",
@@ -738,7 +738,7 @@
       "editTitle": "Repertoár szerkesztése",
       "save": "Mentés",
       "useForExtension": "Használat a bővítményhez",
-      "useForExtensionHint": "Ha be van kapcsolva, a böngészőbővítmény/userscript ezt a repertoárt használja az eltérések felismerésére, amíg egy játszmát elemzel.",
+      "useForExtensionHint": "Ha be van kapcsolva, a böngészőbővítmény ezt a repertoárt használja az eltérések felismerésére, amíg egy játszmát elemzel.",
       "chessableCourseId": "Chessable-tanfolyam azonosítója",
       "chessableCourseIdHint": "A tanfolyam számazonosítója a Chessable-URL-ből (pl. 12345). Ez köti össze a repertoárt egy Chessable-tanfolyammal."
     },
@@ -4018,7 +4018,7 @@
         "t": "Repertoárok",
         "p": [
           "A repertoárok PGN-fájlok gyűjteményei (megnyitás/középjáték/végjáték), amelyeket feltöltesz és kezelsz. Fájlokat fogd és vidd módszerrel adhatsz hozzá, letöltheted őket, és lekérheted az egyesített PGN-t (fájlonként max. 10 MB).",
-          "Az opcionális böngészőbővítménnyel, illetve a userscripttel a megnyitási repertoárjaidat közvetlenül játék közben ellenőrizheted a chess.comon és a lichess.orgon (lásd „Böngészőbővítmény és userscript”)."
+          "Az opcionális RepCheck böngészőbővítménnyel a megnyitási repertoárjaidat közvetlenül a chess.com és a lichess.org elemzőoldalain ellenőrizheted (lásd „Böngészőbővítmény (RepCheck)”)."
         ]
       },
       "offline": {
@@ -4035,19 +4035,19 @@
         ]
       },
       "tokens": {
-        "t": "API-tokenek és chess.com-bővítmény",
+        "t": "API-tokenek",
         "p": [
-          "A profilodban személyes API-tokeneket hozhatsz létre, pl. a chess.com-böngészőbővítményhez, amely közvetlenül a táblánál mutatja a repertoárjaidat. A nyers tokent csak egyszer, a létrehozáskor mutatjuk meg – másold ki azonnal.",
+          "A profilodban az „API-tokenek” alatt személyes tokeneket hozhatsz létre olyan eszközökhöz, amelyek a nevedben érik el a RookHubot. A RepCheck a tokenjét általában maga szerzi meg a „Connect to RookHub” paranccsal; a kézzel létrehozott token („extension” hatókörrel) a tartalék. A nyers tokent csak egyszer, a létrehozáskor mutatjuk meg – másold ki azonnal.",
           "A tokeneknek van hatókörük (scope) és opcionális lejárati dátumuk, és bármikor visszavonhatók."
         ]
       },
       "extension": {
-        "t": "Böngészőbővítmény és userscript (RepCheck)",
+        "t": "Böngészőbővítmény (RepCheck)",
         "p": [
           "A RepCheck a chess.com és a lichess.org elemzőoldalain kiemeli, melyik lépéstől lép ki a játszmád a tárolt megnyitási repertoárodból. A repertoár közben a szerveren marad – a bővítmény csak az aktuális játszma lépéslistáját küldi el, és az eltérést kapja vissza.",
-          "Két, azonos működésű változat létezik: egy böngészőbővítmény (elérhető a Chrome Web Store-ban, valamint aláírt változatként Firefoxhoz) és egy Tampermonkey-userscript, amely minden olyan böngészőben fut, amelyen van Tampermonkey/Greasemonkey.",
-          "Beállítás: hozz létre a profilodban a „API-tokenek” alatt egy tokent („extension” hatókörrel), nyisd meg a chess.comon vagy a lichess.orgon a repertoársávban a fogaskerék-panelt, add meg a RookHub-URL-edet és a tokent, majd kattints a „Csatlakozás” gombra.",
-          "Telepítés, automatikus frissítés és részletek: https://github.com/kahalm/repcheck — a bővítmény a Chrome Web Store-ban a https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn címen, aláírt Firefox-változatként pedig a https://addons.mozilla.org/en-US/firefox/addon/repcheck/ címen érhető el, a Tampermonkey-userscript pedig közvetlenül a https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js címről importálható."
+          "A RepCheck böngészőbővítmény Chrome-hoz (Chrome Web Store: {{chromeUrl}}) és Firefoxhoz (aláírt kiegészítő: {{firefoxUrl}}). A repertoár-ellenőrzés mellett játszmákat ment a RookHubba, áthozza a Chessable-tanfolyamaidat, és a „Remember line” gombbal állásokat tesz el.",
+          "Beállítás: a bővítmény felugró ablakában válaszd a „Settings” → „Connect to RookHub” pontot – a RepCheck megnyitja a RookHubot, megvárja a bejelentkezésedet, és maga hozza létre a hozzáférési tokenjét. Tartalékként megmarad a token kézi megadása (a profilodban az „API-tokenek” alatt létrehozva, „extension” hatókörrel).",
+          "Forráskód, verziótörténet és részletek: https://github.com/kahalm/repcheck"
         ]
       },
       "privacy": {

@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL } from '../../core/community';
 
 /**
  * Ausführliche Hilfe-/Anleitungsseite. Route: /help (offen, kein Login nötig).
@@ -82,7 +83,7 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            @for (p of asParagraphs('help.s.' + s.id + '.p' | translate); track $index) {
+            @for (p of asParagraphs('help.s.' + s.id + '.p' | translate: textParams); track $index) {
               <p [innerHTML]="linkify(p)"></p>
             }
             <a class="back-top" (click)="scrollTop()">
@@ -165,6 +166,12 @@ export class HelpComponent implements AfterViewInit {
     { id: 'privacy', icon: '\u{1F512}' },
     { id: 'feedback', icon: '\u{1F41E}' },
   ];
+
+  /**
+   * Platzhalter in den Absätzen: die Store-Adressen der Erweiterung stehen EINMAL im Code statt als
+   * Literal in vier Sprachdateien (dort stand Firefox mit festem Sprachkürzel, Codereview F5-015).
+   */
+  readonly textParams = { chromeUrl: REPCHECK_CHROME_URL, firefoxUrl: REPCHECK_FIREFOX_URL };
 
   /** Der `translate`-Pipe liefert für ein JSON-Array das Array zurück; defensiv normalisieren. */
   asParagraphs(value: unknown): string[] {

@@ -949,7 +949,7 @@
       "convertToCourseEmpty": "Ovaj repertoar je još prazan - nijedna PGN datoteka još nije uvezena. Učitaj PGN datoteku ili dohvati Chessable tečaj pomoću RepCheck proširenja, pa ga zatim možeš pretvoriti u tečaj.",
       "convertToCourseFailed": "Pretvaranje repertoara u tečaj nije uspjelo",
       "updateFailed": "Repertoar nije mogao biti ažuriran",
-      "extHint": "Savjet: uz odgovarajuću ekstenziju preglednika (za Chrome i Firefox) ili Tampermonkey userscript odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
+      "extHint": "Savjet: uz RepCheck proširenje preglednika (za Chrome i Firefox) odstupanja od tvojeg repertoara vidiš izravno na chess.com i lichess.org — ali samo u analiznom načinu (ploča za analizu).",
       "extHintLink": "Saznaj više u pomoći",
       "sectionExtension": "U RepCheck-u",
       "sectionExtensionHint": "Repertoari koje RepCheck ekstenzija provjerava na chess.com / lichess.",
@@ -982,7 +982,7 @@
       "editTitle": "Uredi repertoar",
       "save": "Spremi",
       "useForExtension": "Koristi za ekstenziju",
-      "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika/userscript koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu.",
+      "useForExtensionHint": "Kada je uključeno, ekstenzija preglednika koristi ovaj repertoar za otkrivanje odstupanja u analiznom načinu.",
       "chessableCourseId": "ID Chessable tečaja",
       "chessableCourseIdHint": "Numerički ID tečaja iz Chessable URL-a (npr. 12345). Povezuje ovaj repertoar s Chessable tečajem."
     },
@@ -3330,7 +3330,7 @@
         "t": "Repertoari",
         "p": [
           "Repertoari su zbirke PGN datoteka (otvaranje/sredina/završnica) koje učitavaš i njima upravljaš. Datoteke možeš dodati povlačenjem, preuzeti ih i dohvatiti kombinirani PGN (najviše 10 MB po datoteci).",
-          "Putem neobavezne ekstenzije preglednika ili userscripta tvoji se repertoari otvaranja mogu provjeriti izravno tijekom igre na chess.com i lichess.org (vidi »Ekstenzija preglednika i userscript«)."
+          "Neobaveznim proširenjem preglednika RepCheck tvoji se repertoari otvaranja provjeravaju izravno na stranicama za analizu na chess.com i lichess.org (vidi »Proširenje preglednika (RepCheck)«)."
         ]
       },
       "offline": {
@@ -3347,19 +3347,19 @@
         ]
       },
       "tokens": {
-        "t": "API tokeni i chess.com ekstenzija",
+        "t": "API tokeni",
         "p": [
-          "U profilu možeš stvoriti osobne API tokene, npr. za chess.com ekstenziju preglednika koja prikazuje tvoje repertoare izravno na ploči. Sirovi token prikazuje se samo jednom pri stvaranju – kopiraj ga odmah.",
+          "U profilu pod »API tokeni« stvaraš osobne tokene za alate koji u tvoje ime pristupaju RookHubu. RepCheck svoj token obično dohvaća sam putem »Poveži s RookHubom«; ručno stvoreni token (opseg „extension“) je rezervna mogućnost. Sirovi token prikazuje se samo jednom pri stvaranju – kopiraj ga odmah.",
           "Tokeni imaju opseg (scope) i neobavezni datum isteka te se mogu opozvati bilo kada."
         ]
       },
       "extension": {
-        "t": "Ekstenzija preglednika i userscript (RepCheck)",
+        "t": "Proširenje preglednika (RepCheck)",
         "p": [
           "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
-          "Postoje dvije inačice s istom funkcijom: ekstenzija preglednika (dostupna u Chrome Web Storeu te kao potpisana verzija za Firefox) i Tampermonkey userscript koji radi u svakom pregledniku s Tampermonkeyjem/Greasemonkeyjem.",
-          "Postavljanje: u profilu pod »API tokeni« stvori token (opseg „extension“), na chess.com ili lichess.org otvori ploču sa zupčanikom u baneru repertoara, upiši svoj RookHub URL i token te klikni »Poveži«.",
-          "Instalacija, automatsko ažuriranje i pojedinosti: https://github.com/kahalm/repcheck — ekstenzija je dostupna u Chrome Web Storeu na https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn i kao potpisana Firefox verzija na https://addons.mozilla.org/hr/firefox/addon/repcheck/, a Tampermonkey userscript može se uvesti izravno s https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "RepCheck je proširenje preglednika za Chrome (Chrome Web Store: {{chromeUrl}}) i Firefox (potpisani dodatak: {{firefoxUrl}}). Uz provjeru repertoara sprema partije u RookHub, prenosi tvoje Chessable tečajeve i pamti pozicije putem »Remember line«.",
+          "Postavljanje: u skočnom prozoru proširenja odaberi »Postavke« → »Poveži s RookHubom« – RepCheck otvara RookHub, čeka tvoju prijavu i sam izrađuje pristupni token. Ručni unos tokena (stvorenog u profilu pod »API tokeni«, opseg „extension“) ostaje kao rezervna mogućnost.",
+          "Izvorni kod, povijest verzija i pojedinosti: https://github.com/kahalm/repcheck"
         ]
       },
       "privacy": {

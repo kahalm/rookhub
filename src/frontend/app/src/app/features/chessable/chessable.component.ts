@@ -2,11 +2,10 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslatePipe } from '@ngx-translate/core';
+import { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL } from '../../core/community';
 
-/** Store-Seiten der RepCheck-Erweiterung. Firefox bewusst ohne Sprachkürzel im Pfad — AMO leitet
- *  auf die Sprache des Browsers um (ein festes `/de/` zeigte auch englischen Nutzern Deutsch). */
-export const REPCHECK_CHROME_URL = 'https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn';
-export const REPCHECK_FIREFOX_URL = 'https://addons.mozilla.org/firefox/addon/repcheck/';
+/** Store-Seiten der RepCheck-Erweiterung — liegen in `core/community.ts`, weil auch die Hilfe sie nennt. */
+export { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL };
 
 /**
  * `/chessable`: der Import über RookHub (Bearer hinterlegen, Kurse serverseitig holen) ist

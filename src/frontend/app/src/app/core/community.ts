@@ -1,6 +1,11 @@
 /** Einladungslink zum öffentlichen RookHub-Discord (Community-Server). */
 export const DISCORD_INVITE_URL = 'https://discord.gg/wczc4BJtMf';
 
+/** Store-Seiten der RepCheck-Erweiterung (Chessable-Seite und Hilfe). Firefox bewusst ohne Sprachkürzel
+ *  im Pfad — AMO leitet auf die Sprache des Browsers um (ein festes `/de/` zeigte auch englischen Nutzern Deutsch). */
+export const REPCHECK_CHROME_URL = 'https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn';
+export const REPCHECK_FIREFOX_URL = 'https://addons.mozilla.org/firefox/addon/repcheck/';
+
 /**
  * Ko-fi-Seite für freiwillige Trinkgelder. Bewusst ein reiner Link ohne
  * Ko-fi-Widget/iframe: kein Fremd-Script, keine Drittanbieter-Cookies, also

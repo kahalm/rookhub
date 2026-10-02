@@ -949,7 +949,7 @@
       "convertToCourseEmpty": "Dieses Repertoire ist noch leer - es wurde noch keine PGN importiert. Lade eine PGN-Datei hoch oder hole den Chessable-Kurs mit der RepCheck-Erweiterung, dann kannst du es in einen Kurs umwandeln.",
       "convertToCourseFailed": "Repertoire konnte nicht in einen Kurs umgewandelt werden",
       "updateFailed": "Repertoire konnte nicht aktualisiert werden",
-      "extHint": "Tipp: Mit der passenden Browser-Erweiterung (für Chrome und Firefox) oder dem Tampermonkey-Userscript siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
+      "extHint": "Tipp: Mit der Browser-Erweiterung RepCheck (für Chrome und Firefox) siehst du Abweichungen von deinem Repertoire direkt auf chess.com und lichess.org — allerdings nur im Analysemodus (Analysebrett).",
       "extHintLink": "Mehr dazu in der Hilfe",
       "sectionExtension": "In RepCheck",
       "sectionExtensionHint": "Repertoires, die die RepCheck-Extension auf chess.com / lichess abgleicht.",
@@ -982,7 +982,7 @@
       "editTitle": "Repertoire bearbeiten",
       "save": "Speichern",
       "useForExtension": "Für die Extension verwenden",
-      "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung/das Userscript dieses Repertoire zur Abweichungserkennung im Analysemodus.",
+      "useForExtensionHint": "Wenn aktiviert, nutzt die Browser-Erweiterung dieses Repertoire zur Abweichungserkennung im Analysemodus.",
       "chessableCourseId": "Chessable-Kurs-ID",
       "chessableCourseIdHint": "Numerische Kurs-ID aus der Chessable-URL (z. B. 12345). Verknüpft dieses Repertoire mit einem Chessable-Kurs."
     },
@@ -3330,7 +3330,7 @@
         "t": "Repertoires",
         "p": [
           "Repertoires sind Sammlungen von PGN-Dateien (Eröffnung/Mittelspiel/Endspiel), die du hochlädst und verwaltest. Du kannst Dateien per Drag & Drop hinzufügen, herunterladen und den kombinierten PGN abrufen (max. 10 MB pro Datei).",
-          "Über die optionale Browser-Erweiterung bzw. das Userscript lassen sich deine Eröffnungsrepertoires direkt beim Spielen auf chess.com und lichess.org abgleichen (siehe »Browser-Erweiterung & Userscript«)."
+          "Mit der optionalen Browser-Erweiterung RepCheck werden deine Eröffnungsrepertoires direkt auf den Analyseseiten von chess.com und lichess.org abgeglichen (siehe »Browser-Erweiterung (RepCheck)«)."
         ]
       },
       "offline": {
@@ -3347,19 +3347,19 @@
         ]
       },
       "tokens": {
-        "t": "API-Tokens & chess.com-Erweiterung",
+        "t": "API-Tokens",
         "p": [
-          "Im Profil kannst du persönliche API-Tokens anlegen, z. B. für die chess.com-Browser-Erweiterung, die deine Repertoires direkt am Brett anzeigt. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
+          "Im Profil legst du unter »API-Tokens« persönliche Tokens für Werkzeuge an, die in deinem Namen auf RookHub zugreifen. RepCheck holt sich seinen Token meist selbst über »Mit RookHub verbinden«; ein von Hand angelegter Token (Scope „extension“) ist der Rückfall. Das Roh-Token wird nur einmalig beim Erstellen angezeigt – kopiere es sofort.",
           "Tokens haben einen Geltungsbereich (Scope) und ein optionales Ablaufdatum und lassen sich jederzeit widerrufen."
         ]
       },
       "extension": {
-        "t": "Browser-Erweiterung & Userscript (RepCheck)",
+        "t": "Browser-Erweiterung (RepCheck)",
         "p": [
           "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
-          "Es gibt zwei Varianten mit identischer Funktion: eine Browser-Erweiterung (im Chrome Web Store sowie als signierte Version für Firefox verfügbar) und ein Tampermonkey-Userscript, das in jedem Browser mit Tampermonkey/Greasemonkey läuft.",
-          "Einrichtung: Lege im Profil unter »API-Tokens« ein Token an (Scope „extension“), öffne auf chess.com oder lichess.org das Zahnrad-Panel im Repertoire-Banner, trage deine RookHub-URL und das Token ein und klicke »Verbinden«.",
-          "Installation, Auto-Update und Details: https://github.com/kahalm/repcheck — die Erweiterung gibt es im Chrome Web Store unter https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn und als signierte Firefox-Version unter https://addons.mozilla.org/de/firefox/addon/repcheck/, das Tampermonkey-Userscript lässt sich direkt über https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js importieren."
+          "RepCheck ist eine Browser-Erweiterung für Chrome (Chrome Web Store: {{chromeUrl}}) und Firefox (signiertes Add-on: {{firefoxUrl}}). Neben dem Repertoire-Abgleich speichert sie Partien in RookHub, bringt deine Chessable-Kurse herüber und merkt Stellungen per »Remember line«.",
+          "Einrichtung: Wähle im Popup der Erweiterung »Einstellungen« → »Mit RookHub verbinden« – RepCheck öffnet RookHub, wartet auf deine Anmeldung und legt seinen Zugangs-Token selbst an. Einen Token von Hand einzutragen (angelegt im Profil unter »API-Tokens«, Scope „extension“) bleibt als Rückfall.",
+          "Quellcode, Versionsverlauf und Details: https://github.com/kahalm/repcheck"
         ]
       },
       "privacy": {

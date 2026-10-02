@@ -949,7 +949,7 @@
       "convertToCourseEmpty": "This repertoire is still empty - no PGN has been imported yet. Upload a PGN file or fetch the Chessable course with the RepCheck extension, then you can convert it to a course.",
       "convertToCourseFailed": "Could not convert the repertoire to a course",
       "updateFailed": "Repertoire could not be updated",
-      "extHint": "Tip: with the matching browser extension (for Chrome and Firefox) or the Tampermonkey userscript you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
+      "extHint": "Tip: with the RepCheck browser extension (for Chrome and Firefox) you can see deviations from your repertoire right on chess.com and lichess.org — but only in analysis mode (the analysis board).",
       "extHintLink": "Learn more in the help",
       "sectionExtension": "In RepCheck",
       "sectionExtensionHint": "Repertoires that the RepCheck extension checks against on chess.com / lichess.",
@@ -982,7 +982,7 @@
       "editTitle": "Edit Repertoire",
       "save": "Save",
       "useForExtension": "Use for the extension",
-      "useForExtensionHint": "When enabled, the browser extension/userscript uses this repertoire for deviation detection while you analyze a game.",
+      "useForExtensionHint": "When enabled, the browser extension uses this repertoire for deviation detection while you analyze a game.",
       "chessableCourseId": "Chessable Course ID",
       "chessableCourseIdHint": "Numeric course ID from the Chessable URL (e.g. 12345). Links this repertoire to a Chessable course."
     },
@@ -3330,7 +3330,7 @@
         "t": "Repertoires",
         "p": [
           "Repertoires are collections of PGN files (opening/middlegame/endgame) you upload and manage. You can add files via drag & drop, download them and fetch the combined PGN (max 10 MB per file).",
-          "Via the optional browser extension or userscript, your opening repertoires can be checked right while playing on chess.com and lichess.org (see »Browser extension & userscript«)."
+          "With the optional RepCheck browser extension, your opening repertoires are checked right on chess.com and lichess.org analysis pages (see »Browser extension (RepCheck)«)."
         ]
       },
       "offline": {
@@ -3347,19 +3347,19 @@
         ]
       },
       "tokens": {
-        "t": "API tokens & chess.com extension",
+        "t": "API tokens",
         "p": [
-          "In your profile you can create personal API tokens, e.g. for the chess.com browser extension that shows your repertoires right on the board. The raw token is shown only once at creation – copy it immediately.",
+          "In your profile under »API tokens« you create personal tokens for tools that access RookHub on your behalf. RepCheck usually fetches its token itself via »Connect to RookHub«; a manually created token (scope “extension”) is the fallback. The raw token is shown only once at creation – copy it immediately.",
           "Tokens have a scope and an optional expiry date and can be revoked at any time."
         ]
       },
       "extension": {
-        "t": "Browser extension & userscript (RepCheck)",
+        "t": "Browser extension (RepCheck)",
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
-          "Two variants with identical functionality exist: a browser extension (available from the Chrome Web Store and, as a signed build, for Firefox) and a Tampermonkey userscript that runs in any browser with Tampermonkey/Greasemonkey.",
-          "Setup: create a token under »API tokens« in your profile (scope “extension”), open the gear panel in the repertoire banner on chess.com or lichess.org, enter your RookHub URL and the token, and click »Connect«.",
-          "Installation, auto-update and details: https://github.com/kahalm/repcheck — the extension is on the Chrome Web Store at https://chromewebstore.google.com/detail/mhddbldcaancdahlochjanpkkboaccpn and as a signed Firefox build at https://addons.mozilla.org/en-US/firefox/addon/repcheck/, and the Tampermonkey userscript can be imported directly from https://raw.githubusercontent.com/kahalm/repcheck/master/repcheck.user.js."
+          "RepCheck is a browser extension for Chrome (Chrome Web Store: {{chromeUrl}}) and Firefox (signed add-on: {{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via »Remember line«.",
+          "Setup: in the extension popup choose »Settings« → »Connect to RookHub« – RepCheck opens RookHub, waits for your sign-in and creates its access token itself. Entering a token by hand (created under »API tokens« in your profile, scope “extension”) remains as a fallback.",
+          "Source code, version history and details: https://github.com/kahalm/repcheck"
         ]
       },
       "privacy": {

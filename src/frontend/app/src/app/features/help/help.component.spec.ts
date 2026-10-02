@@ -1,5 +1,8 @@
-import { ActivatedRoute } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, provideRouter } from '@angular/router';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { HelpComponent, MENU_HELP } from './help.component';
+import { REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL } from '../../core/community';
 
 describe('HelpComponent', () => {
   function build(fragment: string | null = null): HelpComponent {
@@ -72,6 +75,37 @@ describe('HelpComponent', () => {
         }
       }
     }
+  });
+
+  it('bewirbt kein Userscript mehr und nennt die Store-Seiten über die Konstanten (F5-015)', async () => {
+    for (const lang of ['en', 'de', 'hr', 'hu']) {
+      let raw = '';
+      for (const url of [`/i18n/${lang}.json`, `/base/i18n/${lang}.json`]) {
+        const res = await fetch(url);
+        if (res.ok) { raw = await res.text(); break; }
+      }
+      // Das Tampermonkey-Userscript ist seit 2026-09-20 entfernt; der raw.githubusercontent-Link lieferte 404.
+      expect(raw).withContext(lang).not.toMatch(/userscript|tampermonkey|raw\.githubusercontent|\.user\.js/i);
+      const ext = (await helpTexts(lang))['extension'].p.join(' ');
+      expect(ext).withContext(lang).toContain('{{chromeUrl}}');
+      expect(ext).withContext(lang).toContain('{{firefoxUrl}}');
+      expect(ext).withContext(lang).not.toMatch(/chromewebstore|addons\.mozilla/);
+    }
+  });
+
+  it('setzt die Store-Adressen in die Absätze ein (F5-015)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [HelpComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', { help: { s: { extension: { t: 'RepCheck', p: ['Chrome: {{chromeUrl}} · Firefox: {{firefoxUrl}}'] } } } });
+    translate.use('en');
+    const fixture = TestBed.createComponent(HelpComponent);
+    fixture.detectChanges();
+    const hrefs = [...(fixture.nativeElement as HTMLElement).querySelectorAll('#extension mat-card-content p a')]
+      .map(a => a.getAttribute('href'));
+    expect(hrefs).toEqual([REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL]);
   });
 
   it('asParagraphs() normalisiert Array, String und Leerwert', () => {
