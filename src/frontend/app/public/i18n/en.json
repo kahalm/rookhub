@@ -3357,9 +3357,9 @@
         "t": "Browser extension (RepCheck)",
         "p": [
           "RepCheck highlights, on chess.com and lichess.org analysis pages, the move at which your game leaves your stored opening repertoire. The repertoire stays on the server – the extension only sends the current game’s move list and gets the deviation back.",
-          "RepCheck is a browser extension for Chrome (Chrome Web Store: {{chromeUrl}}) and Firefox (signed add-on: {{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via »Remember line«.",
+          "RepCheck is a browser extension, available in the [Chrome Web Store]({{chromeUrl}}) and as a [signed Firefox add-on]({{firefoxUrl}}). Besides the repertoire check it saves games to RookHub, brings your Chessable courses over and keeps positions via »Remember line«.",
           "Setup: in the extension popup choose »Settings« → »Connect to RookHub« – RepCheck opens RookHub, waits for your sign-in and creates its access token itself. Entering a token by hand (created under »API tokens« in your profile, scope “extension”) remains as a fallback.",
-          "Source code, version history and details: https://github.com/kahalm/repcheck"
+          "Source code, version history and details on [GitHub](https://github.com/kahalm/repcheck)."
         ]
       },
       "privacy": {

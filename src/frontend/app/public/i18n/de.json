@@ -3357,9 +3357,9 @@
         "t": "Browser-Erweiterung (RepCheck)",
         "p": [
           "RepCheck markiert auf chess.com- und lichess.org-Analyseseiten, ab welchem Zug deine Partie aus deinem hinterlegten Eröffnungsrepertoire herausläuft. Das Repertoire bleibt dabei auf dem Server – die Erweiterung schickt nur die Zugliste der aktuellen Partie und bekommt die Abweichung zurück.",
-          "RepCheck ist eine Browser-Erweiterung für Chrome (Chrome Web Store: {{chromeUrl}}) und Firefox (signiertes Add-on: {{firefoxUrl}}). Neben dem Repertoire-Abgleich speichert sie Partien in RookHub, bringt deine Chessable-Kurse herüber und merkt Stellungen per »Remember line«.",
+          "RepCheck ist eine Browser-Erweiterung – erhältlich im [Chrome Web Store]({{chromeUrl}}) und als [signiertes Firefox-Add-on]({{firefoxUrl}}). Neben dem Repertoire-Abgleich speichert sie Partien in RookHub, bringt deine Chessable-Kurse herüber und merkt Stellungen per »Remember line«.",
           "Einrichtung: Wähle im Popup der Erweiterung »Einstellungen« → »Mit RookHub verbinden« – RepCheck öffnet RookHub, wartet auf deine Anmeldung und legt seinen Zugangs-Token selbst an. Einen Token von Hand einzutragen (angelegt im Profil unter »API-Tokens«, Scope „extension“) bleibt als Rückfall.",
-          "Quellcode, Versionsverlauf und Details: https://github.com/kahalm/repcheck"
+          "Quellcode, Versionsverlauf und Details auf [GitHub](https://github.com/kahalm/repcheck)."
         ]
       },
       "privacy": {

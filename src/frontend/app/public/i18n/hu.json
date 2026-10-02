@@ -4045,9 +4045,9 @@
         "t": "Böngészőbővítmény (RepCheck)",
         "p": [
           "A RepCheck a chess.com és a lichess.org elemzőoldalain kiemeli, melyik lépéstől lép ki a játszmád a tárolt megnyitási repertoárodból. A repertoár közben a szerveren marad – a bővítmény csak az aktuális játszma lépéslistáját küldi el, és az eltérést kapja vissza.",
-          "A RepCheck böngészőbővítmény Chrome-hoz (Chrome Web Store: {{chromeUrl}}) és Firefoxhoz (aláírt kiegészítő: {{firefoxUrl}}). A repertoár-ellenőrzés mellett játszmákat ment a RookHubba, áthozza a Chessable-tanfolyamaidat, és a „Remember line” gombbal állásokat tesz el.",
+          "A RepCheck böngészőbővítmény – elérhető a [Chrome Web Store-ban]({{chromeUrl}}) és [aláírt Firefox-kiegészítőként]({{firefoxUrl}}). A repertoár-ellenőrzés mellett játszmákat ment a RookHubba, áthozza a Chessable-tanfolyamaidat, és a „Remember line” gombbal állásokat tesz el.",
           "Beállítás: a bővítmény felugró ablakában válaszd a „Settings” → „Connect to RookHub” pontot – a RepCheck megnyitja a RookHubot, megvárja a bejelentkezésedet, és maga hozza létre a hozzáférési tokenjét. Tartalékként megmarad a token kézi megadása (a profilodban az „API-tokenek” alatt létrehozva, „extension” hatókörrel).",
-          "Forráskód, verziótörténet és részletek: https://github.com/kahalm/repcheck"
+          "Forráskód, verziótörténet és részletek a [GitHubon](https://github.com/kahalm/repcheck)."
         ]
       },
       "privacy": {

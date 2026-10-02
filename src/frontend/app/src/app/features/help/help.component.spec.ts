@@ -108,6 +108,44 @@ describe('HelpComponent', () => {
     expect(hrefs).toEqual([REPCHECK_CHROME_URL, REPCHECK_FIREFOX_URL]);
   });
 
+  it('linkify() macht aus [Text](url) einen Link mit sprechendem Text (UX-013)', () => {
+    const html = component.linkify('Im [Chrome Web Store](https://chromewebstore.google.com/detail/abc) und [<b>x</b>](https://a.example/p).');
+    expect(html).toContain('<a href="https://chromewebstore.google.com/detail/abc" target="_blank" rel="noopener noreferrer">Chrome Web Store</a>');
+    expect(html).not.toContain('>https://chromewebstore');
+    // Markup im Linktext bleibt escaped, der Satzpunkt hinter der Klammer außerhalb.
+    expect(html).toContain('>&lt;b&gt;x&lt;/b&gt;</a>.');
+  });
+
+  it('keine lange Roh-Adresse als Linktext in den Hilfetexten (UX-013)', async () => {
+    for (const lang of ['en', 'de', 'hr', 'hu']) {
+      for (const [id, sec] of Object.entries(await helpTexts(lang))) {
+        for (const p of sec.p ?? []) {
+          const outsideLinks = p.replace(/\[[^\]]+\]\([^)]+\)/g, '');
+          expect(outsideLinks).withContext(`${lang}: help.s.${id}`).not.toMatch(/https?:\/\/\S{33,}|\{\{\w+Url\}\}/);
+        }
+      }
+    }
+  });
+
+  it('eine lange Adresse macht die Seite am Handy nicht breiter (UX-013)', async () => {
+    await TestBed.configureTestingModule({
+      imports: [HelpComponent],
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const translate = TestBed.inject(TranslateService);
+    const longUrl = 'https://raw.githubusercontent.com/example/' + 'a'.repeat(120) + '/file.js';
+    translate.setTranslation('en', { help: { s: { extension: { t: 'RepCheck', p: [`Siehe ${longUrl} danach.`] } } } });
+    translate.use('en');
+    const fixture = TestBed.createComponent(HelpComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '390px';
+    fixture.detectChanges();
+    const p = host.querySelector('#extension mat-card-content p') as HTMLElement;
+    expect(getComputedStyle(p).overflowWrap).toBe('anywhere');
+    expect(p.scrollWidth).toBeLessThanOrEqual(p.clientWidth + 1);
+  });
+
   it('asParagraphs() normalisiert Array, String und Leerwert', () => {
     expect(component.asParagraphs(['a', 'b'])).toEqual(['a', 'b']);
     expect(component.asParagraphs('einzeln')).toEqual(['einzeln']);

@@ -112,7 +112,9 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
 
     .help-section { margin-bottom: 1rem; scroll-margin-top: 80px; }
     .sec-icon { margin-right: 0.5rem; }
-    mat-card-content p { line-height: 1.55; margin: 0 0 0.75rem; }
+    /* Lange Adressen (Linktext) dürfen umbrechen — sonst machte EINE URL die ganze Seite am Handy
+       breiter als den Bildschirm (Codereview UX-013: 222 px seitlicher Überlauf). */
+    mat-card-content p { line-height: 1.55; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
 
     .back-top { display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
                 font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);
@@ -179,12 +181,14 @@ export class HelpComponent implements AfterViewInit {
     return value ? [String(value)] : [];
   }
 
-  private static readonly URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g;
+  /** `[Linktext](https://…)` ODER eine nackte http(s)-Adresse (abschließende Satzzeichen bleiben draußen). */
+  private static readonly LINK_RE = /\[([^\]\n]+)\]\((https?:\/\/[^\s<)]+)\)|(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g;
 
   /**
-   * Wandelt http(s)-URLs in einem Absatz in klickbare Links. Der Text wird zuerst
-   * HTML-escaped (kein Markup aus i18n durchlassen), dann werden URLs durch Anker
-   * ersetzt; das Ergebnis bindet das Template per [innerHTML] (Angular sanitisiert,
+   * Wandelt Links in einem Absatz in klickbare Anker: `[Linktext](https://…)` mit sprechendem Text
+   * (lange Store-Adressen sind als Linktext unlesbar, UX-013) und nackte http(s)-URLs wie bisher.
+   * Der Text wird zuerst HTML-escaped (kein Markup aus i18n durchlassen), dann werden die Links
+   * durch Anker ersetzt; das Ergebnis bindet das Template per [innerHTML] (Angular sanitisiert,
    * behält aber a[href][target]). Daher kein DomSanitizer/bypass nötig.
    */
   linkify(text: string): string {
@@ -193,8 +197,11 @@ export class HelpComponent implements AfterViewInit {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     return escaped.replace(
-      HelpComponent.URL_RE,
-      (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
+      HelpComponent.LINK_RE,
+      (_match, label: string | undefined, labelUrl: string | undefined, bareUrl: string | undefined) => {
+        const url = labelUrl ?? bareUrl ?? '';
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label ?? url}</a>`;
+      },
     );
   }
 

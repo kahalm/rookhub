@@ -3357,9 +3357,9 @@
         "t": "Proširenje preglednika (RepCheck)",
         "p": [
           "RepCheck na stranicama za analizu na chess.com i lichess.org označava od kojeg poteza tvoja partija izlazi iz pohranjenog repertoara otvaranja. Repertoar pritom ostaje na poslužitelju – ekstenzija šalje samo popis poteza trenutačne partije i dobiva natrag odstupanje.",
-          "RepCheck je proširenje preglednika za Chrome (Chrome Web Store: {{chromeUrl}}) i Firefox (potpisani dodatak: {{firefoxUrl}}). Uz provjeru repertoara sprema partije u RookHub, prenosi tvoje Chessable tečajeve i pamti pozicije putem »Remember line«.",
+          "RepCheck je proširenje preglednika – dostupno u [Chrome Web Storeu]({{chromeUrl}}) i kao [potpisani dodatak za Firefox]({{firefoxUrl}}). Uz provjeru repertoara sprema partije u RookHub, prenosi tvoje Chessable tečajeve i pamti pozicije putem »Remember line«.",
           "Postavljanje: u skočnom prozoru proširenja odaberi »Postavke« → »Poveži s RookHubom« – RepCheck otvara RookHub, čeka tvoju prijavu i sam izrađuje pristupni token. Ručni unos tokena (stvorenog u profilu pod »API tokeni«, opseg „extension“) ostaje kao rezervna mogućnost.",
-          "Izvorni kod, povijest verzija i pojedinosti: https://github.com/kahalm/repcheck"
+          "Izvorni kod, povijest verzija i pojedinosti na [GitHubu](https://github.com/kahalm/repcheck)."
         ]
       },
       "privacy": {
