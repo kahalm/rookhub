@@ -211,6 +211,10 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
+    # Die vier Tests brauchen zusammen Sekunden. Ohne Deckel liefe ein kuenftig kaputter
+    # MAX_ROUNDS-Deckel in directory-runs.sh bis zum 6-h-Standard und hielte so lange das
+    # Image-Gate (docker.yml tests:) an.
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:

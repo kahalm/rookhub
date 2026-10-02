@@ -46,7 +46,8 @@ Eigenschaften, die beim Selbstbau gern fehlen und hier drin sind:
   `mktemp`-Datei (`chmod 600`) mit `[client]`-Sektion, kopiert sie per `docker cp`
   in den Container und räumt beide Kopien per `trap` wieder weg — auch bei Abbruch.
 - Test dazu: `scripts/tests/test_backup_db.sh` (läuft gegen ein Fake-`docker`,
-  kein Container nötig).
+  kein Container nötig). In der CI läuft er im Job `test-scripts`
+  (`.github/workflows/test.yml`) bei jeder Änderung unter `scripts/`.
 
 ## Einrichtung (Zeitplan)
 

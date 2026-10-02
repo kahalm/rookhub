@@ -213,6 +213,8 @@ public class CiWorkflowTests
     {
         var job = TestJob("test-scripts");
         Assert.Contains("needs.changes.outputs.api == 'true'", job);
+        // Ein haengender Skript-Test darf das Image-Gate nicht bis zum 6-h-Standard aufhalten.
+        Assert.Matches(@"(?m)^    timeout-minutes: \d+\s*$", job);
 
         var dir = Path.Combine(RepoRoot(), "scripts", "tests");
         var files = Directory.GetFiles(dir, "test_*")
@@ -224,7 +226,9 @@ public class CiWorkflowTests
         foreach (var file in files)
         {
             var runner = file!.EndsWith(".py", StringComparison.Ordinal) ? "python3" : "bash";
-            Assert.True(job.Contains($"- run: {runner} scripts/tests/{file}", StringComparison.Ordinal),
+            // Zeilengenau: ein auskommentiertes "# - run: ..." zaehlt NICHT als eingetragen.
+            var step = $@"(?m)^      - run: {Regex.Escape(runner)} {Regex.Escape($"scripts/tests/{file}")}\s*$";
+            Assert.True(Regex.IsMatch(job, step),
                 $"scripts/tests/{file} laeuft in keinem CI-Job — in test.yml/test-scripts eintragen");
         }
     }

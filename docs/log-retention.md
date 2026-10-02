@@ -28,7 +28,8 @@ alle Backing-Indices tragen `index.lifecycle.name`). Erst dann erscheint
 `… (zurückgelesen)`; jeder Fehlschlag führt zu **Exit-Code != 0** — im
 Timer-Betrieb steht die Unit dann in `systemctl --failed` (siehe unten). Tests
 (gegen ein Fake-`urlopen`, kein ES nötig):
-`python3 scripts/tests/test_es_log_retention.py`.
+`python3 scripts/tests/test_es_log_retention.py` — in der CI im Job `test-scripts`
+(`.github/workflows/test.yml`).
 
 ## Regelmäßig ausführen
 
