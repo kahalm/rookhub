@@ -146,6 +146,54 @@ describe('HelpComponent', () => {
     expect(p.scrollWidth).toBeLessThanOrEqual(p.clientWidth + 1);
   });
 
+  describe('Inhaltsverzeichnis und „Nach oben“ (UX-012)', () => {
+    async function render() {
+      await TestBed.configureTestingModule({
+        imports: [HelpComponent],
+        providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+      }).compileComponents();
+      const fixture = TestBed.createComponent(HelpComponent);
+      fixture.detectChanges();
+      return { fixture, el: fixture.nativeElement as HTMLElement, cmp: fixture.componentInstance };
+    }
+
+    it('jeder Eintrag ist ein echter Link mit Adresse #abschnitt und ≥ 44 px hoch', async () => {
+      const { el, cmp } = await render();
+      const links = [...el.querySelectorAll<HTMLAnchorElement>('.help-toc a')];
+      expect(links.length).toBe(cmp.sections.length);
+      links.forEach((a, i) => {
+        // Mit href ist der Eintrag ein Tab-Stopp, wird als Link angesagt und lässt sich kopieren.
+        expect(a.getAttribute('href')).toMatch(new RegExp(`#${cmp.sections[i].id}$`));
+        expect(a.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      });
+    });
+
+    it('„Nach oben“ ist ein Knopf (Tastatur) mit ≥ 44 px Trefferfläche', async () => {
+      const { el, cmp } = await render();
+      const backs = [...el.querySelectorAll<HTMLElement>('.back-top')];
+      expect(backs.length).toBe(cmp.sections.length);
+      for (const b of backs) {
+        expect(b.tagName).toBe('BUTTON');
+        expect(b.getAttribute('type')).toBe('button');
+        expect(b.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      }
+    });
+
+    it('Klick scrollt zum Abschnitt und gibt ihm den Fokus; Strg-Klick (neuer Tab) nicht', async () => {
+      const { el, cmp } = await render();
+      const spy = spyOn(cmp, 'scrollTo').and.callThrough();
+      const link = el.querySelector<HTMLAnchorElement>('.help-toc a[href$="#extension"]')!;
+      link.addEventListener('click', e => e.preventDefault());   // der Testlauf soll nirgendwohin navigieren
+      link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ctrlKey: true }));
+      expect(spy).not.toHaveBeenCalled();
+      link.click();
+      expect(spy).toHaveBeenCalledWith('extension');
+      expect(document.activeElement).toBe(el.querySelector('#extension'));
+      el.querySelector<HTMLButtonElement>('#extension .back-top')!.click();
+      expect(document.activeElement).toBe(el.querySelector('#help-toc'));
+    });
+  });
+
   it('asParagraphs() normalisiert Array, String und Leerwert', () => {
     expect(component.asParagraphs(['a', 'b'])).toEqual(['a', 'b']);
     expect(component.asParagraphs('einzeln')).toEqual(['einzeln']);

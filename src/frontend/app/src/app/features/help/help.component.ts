@@ -62,11 +62,12 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
       </header>
 
       <nav class="help-toc" [attr.aria-label]="'help.tocTitle' | translate">
-        <h2>{{ 'help.tocTitle' | translate }}</h2>
+        <h2 id="help-toc" tabindex="-1">{{ 'help.tocTitle' | translate }}</h2>
         <ul>
           @for (s of sections; track s.id) {
             <li>
-              <a (click)="scrollTo(s.id)">
+              <!-- Echter Link (href = /help#id): per Tab erreichbar, als Link angesagt, kopierbar (UX-012). -->
+              <a [routerLink]="[]" [fragment]="s.id" (click)="onTocClick($event, s.id)">
                 <span class="toc-icon">{{ s.icon }}</span>
                 <span>{{ 'help.s.' + s.id + '.t' | translate }}</span>
               </a>
@@ -76,7 +77,7 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
       </nav>
 
       @for (s of sections; track s.id) {
-        <mat-card [id]="s.id" class="help-section">
+        <mat-card [id]="s.id" class="help-section" tabindex="-1">
           <mat-card-header>
             <mat-card-title>
               <span class="sec-icon">{{ s.icon }}</span>{{ 'help.s.' + s.id + '.t' | translate }}
@@ -86,9 +87,9 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
             @for (p of asParagraphs('help.s.' + s.id + '.p' | translate: textParams); track $index) {
               <p [innerHTML]="linkify(p)"></p>
             }
-            <a class="back-top" (click)="scrollTop()">
+            <button type="button" class="back-top" (click)="scrollTop()">
               <mat-icon>arrow_upward</mat-icon>{{ 'help.backToTop' | translate }}
-            </a>
+            </button>
           </mat-card-content>
         </mat-card>
       }
@@ -105,8 +106,9 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
                    color: color-mix(in srgb, currentColor 55%, transparent); margin: 0 0 0.5rem; }
     .help-toc ul { list-style: none; padding: 0; margin: 0;
                    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px; }
-    .help-toc a { display: flex; align-items: center; gap: 8px; padding: 6px 8px;
-                  border-radius: 6px; cursor: pointer; color: inherit; text-decoration: none; }
+    .help-toc a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; min-height: 44px;
+                  box-sizing: border-box; border-radius: 6px; cursor: pointer; color: inherit;
+                  text-decoration: none; }
     .help-toc a:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
     .toc-icon { width: 1.4em; text-align: center; }
 
@@ -116,10 +118,12 @@ export const MENU_HELP: Readonly<Record<string, string>> = {
        breiter als den Bildschirm (Codereview UX-013: 222 px seitlicher Überlauf). */
     mat-card-content p { line-height: 1.55; margin: 0 0 0.75rem; overflow-wrap: anywhere; }
 
+    /* Trefferfläche ≥ 44 px (UX-012); der Text bleibt bündig mit den Absätzen (negativer Rand). */
     .back-top { display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
-                font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent);
-                margin-top: 0.25rem; }
-    .back-top:hover { color: inherit; }
+                min-height: 44px; padding: 0 12px 0 8px; margin: 0.25rem 0 0 -8px;
+                border: 0; border-radius: 6px; background: none; font: inherit;
+                font-size: 0.8rem; color: color-mix(in srgb, currentColor 55%, transparent); }
+    .back-top:hover { color: inherit; background: color-mix(in srgb, currentColor 10%, transparent); }
     .back-top mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
   `]
 })
@@ -205,11 +209,24 @@ export class HelpComponent implements AfterViewInit {
     );
   }
 
-  scrollTo(id: string): void {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /** Klick im Inhaltsverzeichnis: der RouterLink setzt die Adresse (/help#id), gescrollt wird hier. Mit
+   *  Strg/Umschalt/Mittelklick öffnet der Browser den Link in einem neuen Tab — dann bleibt diese Seite stehen. */
+  onTocClick(event: MouseEvent, id: string): void {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    this.scrollTo(id);
   }
 
+  /** Zum Abschnitt scrollen und den Fokus mitnehmen — sonst ginge Tab nach dem Sprung im
+   *  Inhaltsverzeichnis weiter statt im Abschnitt (die Karte trägt dafür tabindex="-1"). */
+  scrollTo(id: string): void {
+    const el = document.getElementById(id);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el?.focus({ preventScroll: true });
+  }
+
+  /** Nach oben — und der Fokus zurück vors Inhaltsverzeichnis, damit Tab dort weitergeht. */
   scrollTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('help-toc')?.focus({ preventScroll: true });
   }
 }
