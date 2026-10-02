@@ -1,14 +1,26 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Observable, TimeoutError, of, throwError } from 'rxjs';
 import { PublicSlugComponent } from './public-slug.component';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
 interface Nav { commands: unknown[]; queryParams?: Record<string, unknown> }
+
+/** Ausgang einer Auflösung: Ziel, HTTP-Status des Fehlers (0 = offline) oder ein Timeout ohne HTTP-Antwort. */
+type Outcome<T> = T | number | 'timeout';
+
+function answer<T>(res: Outcome<T> | undefined): Observable<T> {
+  if (res === 'timeout') return throwError(() => new TimeoutError());
+  if (res === undefined) return answer<T>(404);
+  if (typeof res === 'number') {
+    return throwError(() => new HttpErrorResponse({ status: res, url: '/api/courses/by-slug/x' }));
+  }
+  return of(res);
+}
 
 /**
  * Der Slug-Auflöser ist reine Weiterleitungs-Logik — geprüft wird ausschließlich, WOHIN er
@@ -17,22 +29,23 @@ interface Nav { commands: unknown[]; queryParams?: Record<string, unknown> }
  */
 function run(
   params: { slug?: string; chapter?: string },
-  resolve: { book?: PublicSlugTarget | 'error'; chapter?: PublicSlugChapterTarget | 'error' } = {},
+  resolve: { book?: Outcome<PublicSlugTarget>; chapter?: Outcome<PublicSlugChapterTarget> } = {},
 ) {
   const navigations: Nav[] = [];
   const asked: { slug?: string; chapter?: string } = {};
+  let calls = 0;
 
   const courses = {
     resolvePublicSlug: (slug: string) => {
       asked.slug = slug;
-      const res = resolve.book;
-      return res && res !== 'error' ? of(res) : throwError(() => new Error('404'));
+      calls++;
+      return answer(resolve.book);
     },
     resolvePublicSlugChapter: (slug: string, chapter: string) => {
       asked.slug = slug;
       asked.chapter = chapter;
-      const res = resolve.chapter;
-      return res && res !== 'error' ? of(res) : throwError(() => new Error('404'));
+      calls++;
+      return answer(resolve.chapter);
     },
   };
   const route = {
@@ -56,7 +69,7 @@ function run(
   });
   const component = TestBed.runInInjectionContext(() => new PublicSlugComponent());
   component.ngOnInit();
-  return { component, navigations, asked };
+  return { component, navigations, asked, resolve, calls: () => calls };
 }
 
 describe('PublicSlugComponent', () => {
@@ -85,12 +98,31 @@ describe('PublicSlugComponent', () => {
         provideNoopAnimations(),
         provideTranslateService({ fallbackLang: 'en' }),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => (k === 'slug' ? 'profil' : null) } } } },
-        { provide: CourseService, useValue: { resolvePublicSlug: () => throwError(() => new Error('404')) } },
+        { provide: CourseService, useValue: { resolvePublicSlug: () => answer(404) } },
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(PublicSlugComponent);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found h1')?.textContent).toContain('app.notFound.title');
+  });
+
+  it('rendert offline den Ladefehler mit „Wiederholen“, NICHT „Seite nicht gefunden“', async () => {
+    await TestBed.configureTestingModule({
+      imports: [PublicSlugComponent],
+      providers: [
+        provideRouter([]),
+        provideNoopAnimations(),
+        provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: (k: string) => (k === 'slug' ? 'mate1' : null) } } } },
+        { provide: CourseService, useValue: { resolvePublicSlug: () => answer(0) } },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(PublicSlugComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-not-found')).toBeNull();
+    expect(el.querySelector('app-load-error [role="alert"]')?.textContent).toContain('common.loadFailed');
+    expect(el.querySelector('app-load-error button')?.textContent).toContain('common.retry');
   });
 });
 
@@ -118,10 +150,31 @@ describe('PublicSlugComponent /{slug}', () => {
   });
 
   // UX-026: vorher still aufs Dashboard (Gäste: Anmeldemaske) — niemand erkannte den veralteten oder vertippten Link.
-  it('zeigt bei unbekannten Aliassen „Seite nicht gefunden“ und bleibt auf der Adresse', () => {
-    const { component, navigations } = run({ slug: 'gibtsnicht' }, { book: 'error' });
+  it('zeigt bei unbekannten Aliassen (404) „Seite nicht gefunden“ und bleibt auf der Adresse', () => {
+    const { component, navigations } = run({ slug: 'gibtsnicht' }, { book: 404 });
     expect(navigations).toEqual([]);
     expect(component.notFound()).toBeTrue();
+    expect(component.loadFailed()).toBeFalse();
+  });
+
+  // Nacharbeit UX-026: offline, 502/503 im nächtlichen Deploy oder ein Timeout sagen nichts über den Link —
+  // „Link veraltet oder vertippt“ widerspräche dem Verbindungsbanner und ließe einen gültigen Kurslink tot wirken.
+  for (const [what, outcome] of [['offline (Status 0)', 0], ['503 im Deploy', 503], ['502', 502], ['Timeout', 'timeout']] as const) {
+    it(`meldet bei ${what} einen Ladefehler statt „Seite nicht gefunden“`, () => {
+      const { component, navigations } = run({ slug: 'mate1' }, { book: outcome });
+      expect(component.notFound()).toBeFalse();
+      expect(component.loadFailed()).toBeTrue();
+      expect(navigations).toEqual([]);
+    });
+  }
+
+  it('„Wiederholen“ fragt erneut und springt, sobald der Server wieder antwortet', () => {
+    const { component, navigations, resolve, calls } = run({ slug: 'mate1' }, { book: 503 });
+    resolve.book = { bookId: 5, isCalculation: false };
+    component.retry();
+    expect(calls()).toBe(2);
+    expect(component.loadFailed()).toBeFalse();
+    expect(navigations[0].commands).toEqual(['/courses', 5, 'random']);
   });
 
   it('zeigt bei einem leeren Slug die Hinweisseite, ohne zu fragen', () => {
@@ -176,8 +229,14 @@ describe('PublicSlugComponent /{slug}/{kapitel}', () => {
   });
 
   it('zeigt bei einem unbekannten (z. B. umbenannten) Kapitel „Seite nicht gefunden“ statt des Dashboards', () => {
-    const { component, navigations } = run({ slug: 'noel', chapter: 'KW99' }, { chapter: 'error' });
+    const { component, navigations } = run({ slug: 'noel', chapter: 'KW99' }, { chapter: 404 });
     expect(navigations).toEqual([]);
     expect(component.notFound()).toBeTrue();
+  });
+
+  it('meldet beim Kapitel-Link offline einen Ladefehler, nicht „veraltet“', () => {
+    const { component } = run({ slug: 'noel', chapter: 'KW46' }, { chapter: 0 });
+    expect(component.notFound()).toBeFalse();
+    expect(component.loadFailed()).toBeTrue();
   });
 });

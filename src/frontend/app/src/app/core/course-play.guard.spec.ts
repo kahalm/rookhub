@@ -18,7 +18,7 @@ function run(loggedIn: boolean, menuCheck?: any) {
       { provide: MenuService, useValue: menu },
       { provide: Router, useValue: router },
       { provide: SnackbarService, useValue: { info: snack } },
-      { provide: TranslateService, useValue: { instant: (k: string) => k } },
+      { provide: TranslateService, useValue: { get: (k: string) => of(k) } },
     ],
   });
   const res = TestBed.runInInjectionContext(() => coursePlayGuard({} as any, {} as any));

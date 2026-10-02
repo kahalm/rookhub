@@ -19,7 +19,7 @@ describe('menuGuard', () => {
         { provide: AuthService, useValue: { isLoggedIn: loggedIn } },
         { provide: MenuService, useValue: { check: () => check$, isVisible: (k: string) => visible.includes(k) } },
         { provide: SnackbarService, useValue: { info: snack } },
-        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: TranslateService, useValue: { get: (k: string) => of(k) } },
       ],
     });
   }

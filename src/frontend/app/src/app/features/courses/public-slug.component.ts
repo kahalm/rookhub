@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NotFoundComponent } from '../../shared/not-found/not-found.component';
+import { LoadErrorComponent } from '../../shared/load-error/load-error.component';
 import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './course.service';
 
 /**
@@ -9,6 +11,8 @@ import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './cour
  * Buch gehört. Unbekannter Alias oder Kapitel → „Seite nicht gefunden“ an Ort und Stelle, die Adresse bleibt
  * stehen (wie der Catch-all, UX-026) — vorher sprang er still aufs Dashboard, und niemand erkannte, dass etwa eine
  * Kapitel-Kurz-URL nach dem Umbenennen veraltet war. Auch jeder einteilige Tippfehler (/profil) landet hier.
+ * NUR bei 404: offline (Status 0), 502/503 im nächtlichen Deploy oder ein Timeout sagen nichts über den Link — dort
+ * „Konnte nicht geladen werden“ + „Wiederholen“, sonst hielte man einen gültigen Kurslink für tot.
  *
  * **Die Verzweigung ist kein Kosmetik-Detail**: die Stellungen eines Kalkulationsbuchs sind
  * `IsInfoOnly` und damit aus allen Solver-Pools ausgeschlossen — der Solver meldete dort sofort
@@ -28,18 +32,37 @@ import { CourseService, PublicSlugChapterTarget, PublicSlugTarget } from './cour
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-public-slug',
   standalone: true,
-  imports: [NotFoundComponent],
-  template: `@if (notFound()) { <app-not-found /> }`,
+  imports: [NotFoundComponent, LoadErrorComponent],
+  template: `
+    @if (notFound()) {
+      <app-not-found />
+    } @else if (loadFailed()) {
+      <section class="slug-load-error"><app-load-error (retry)="retry()" /></section>
+    }
+  `,
+  styles: [`.slug-load-error { max-width: 560px; margin: 48px auto; padding: 0 16px; }`],
 })
 export class PublicSlugComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private courses = inject(CourseService);
 
-  /** Auflösung gescheitert: Hinweisseite statt Weiterleitung. */
+  /** Alias/Kapitel gibt es nicht (404, leerer Slug): Hinweisseite statt Weiterleitung. */
   readonly notFound = signal(false);
+  /** Auflösung aus einem ANDEREN Grund gescheitert (offline, 5xx, Timeout): Ladefehler mit „Wiederholen“. */
+  readonly loadFailed = signal(false);
 
   ngOnInit(): void {
+    this.resolve();
+  }
+
+  /** „Wiederholen“ nach einem Ladefehler. */
+  retry(): void {
+    this.resolve();
+  }
+
+  private resolve(): void {
+    this.loadFailed.set(false);
     const slug = (this.route.snapshot.paramMap.get('slug') || '').trim();
     const chapter = (this.route.snapshot.paramMap.get('chapter') || '').trim();
     if (!slug) { this.showNotFound(); return; }
@@ -47,14 +70,20 @@ export class PublicSlugComponent implements OnInit {
     if (chapter) {
       this.courses.resolvePublicSlugChapter(slug, chapter).subscribe({
         next: res => this.goChapter(res),
-        error: () => this.showNotFound(),
+        error: (e: unknown) => this.onError(e),
       });
       return;
     }
     this.courses.resolvePublicSlug(slug).subscribe({
       next: res => this.goBook(res),
-      error: () => this.showNotFound(),
+      error: (e: unknown) => this.onError(e),
     });
+  }
+
+  /** Nur ein 404 heißt „Link veraltet oder vertippt“ — alles andere ist ein Lade-, kein Adressproblem. */
+  private onError(e: unknown): void {
+    if (e instanceof HttpErrorResponse && e.status === 404) this.showNotFound();
+    else this.loadFailed.set(true);
   }
 
   /** Ganzes Buch: Kalkulations-Modus oder (wie bisher) der Solver im Zufallsmodus. */

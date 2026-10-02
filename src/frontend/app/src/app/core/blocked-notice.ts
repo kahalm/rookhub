@@ -1,5 +1,6 @@
 import { Injector, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { catchError, of, take } from 'rxjs';
 import { SnackbarService } from './snackbar.service';
 
 /**
@@ -9,10 +10,19 @@ import { SnackbarService } from './snackbar.service';
  *
  * Im Guard-Rumpf aufrufen (Injektionskontext); die Dienste werden erst beim Melden geholt — der Rückgabewert darf
  * also auch später in einem `map()` laufen, und ein Guard, der durchlässt, braucht keinen Snackbar.
+ *
+ * FALLE Kaltstart: `get()`, nicht `instant()`. Bei einem Deep-Link in einem neuen Tab läuft die erste Navigation
+ * direkt nach `translate.use()` an, bevor `/i18n/<lang>.json` da ist — `instant()` lieferte dann den rohen Key
+ * „app.blocked“ (adminGuard ist synchron, also sicher; menu-/coursePlayGuard im Wettlauf mit `/api/menu`).
+ * `get()` wartet auf die laufende Sprachdatei. Scheitert deren Laden, bleibt `instant()` als Rückfall (Fallback-Sprache).
  */
 export function blockedNotice(): () => void {
   const injector = inject(Injector);
   return () => {
-    injector.get(SnackbarService).info(injector.get(TranslateService).instant('app.blocked'));
+    const translate = injector.get(TranslateService);
+    translate.get('app.blocked').pipe(
+      take(1),
+      catchError(() => of(translate.instant('app.blocked'))),
+    ).subscribe(msg => injector.get(SnackbarService).info(msg));
   };
 }

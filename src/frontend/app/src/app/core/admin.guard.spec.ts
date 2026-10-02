@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, UrlTree } from '@angular/router';
+import { of } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService } from './auth.service';
 import { SnackbarService } from './snackbar.service';
@@ -15,7 +16,7 @@ describe('adminGuard', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { isLoggedIn: loggedIn, isAdmin } },
         { provide: SnackbarService, useValue: { info: snack } },
-        { provide: TranslateService, useValue: { instant: (k: string) => k } },
+        { provide: TranslateService, useValue: { get: (k: string) => of(k) } },
       ],
     });
   }
