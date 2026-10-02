@@ -105,10 +105,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     /// <summary>Konto anlegen. <paramref name="addedBy"/> = wer (Nutzername bzw. <see cref="Anonymous"/>), <paramref name="shareHash"/> = über
     /// welchen Teilen-Link (0.630.0).</summary>
     public async Task<(LeagueOnlineAccount? Account, string? Reason)> CreateAsync(string fide, Input req, CancellationToken ct,
-        string? addedBy = null, string? shareHash = null)
+        string? addedBy = null, string? shareHash = null, bool prep = false)
     {
         fide = (fide ?? "").Trim();
-        if (!await KnownPlayerAsync(fide, ct)) return (null, "unknownPlayer");
+        if (!await KnownPlayerAsync(fide, ct, prep)) return (null, "unknownPlayer");
         if (LeagueOnlineSites.Parse(req.Site, req.User) is not { } parsed)
             return (null, LeagueOnlineSites.Normalize(req.Site) is null && !LooksLikeUrl(req.User) ? "invalidSite" : "invalidUser");
         var mine = await db.LeagueOnlineAccounts.Where(a => a.FideId == fide).ToListAsync(ct);
@@ -156,7 +156,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     public async Task<(LeagueOnlineAccount? Account, string? Reason)> UpdateAsync(int id, Input req, CancellationToken ct)
     {
         var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (acc is null) return (null, "notFound");
+        if (acc is null || !await LeagueKnowsAsync(db, acc.FideId, ct)) return (null, "notFound");
         if (req.Site is not null || req.User is not null)
         {
             if (LeagueOnlineSites.Parse(req.Site ?? acc.Site, req.User ?? acc.UserName) is not { } parsed) return (null, "invalidUser");
@@ -189,7 +189,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     public async Task<bool> DeleteAsync(int id, CancellationToken ct)
     {
         var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (acc is null) return false;
+        if (acc is null || !await LeagueKnowsAsync(db, acc.FideId, ct)) return false;
         await DeleteGamesAsync(acc.Id, ct);                                  // InMemory kaskadiert nicht
         db.LeagueOnlineAccounts.Remove(acc);
         // Entfernt = gehört nicht zu diesem Spieler: die Konto-Suche (0.607.0) soll es nicht wieder vorschlagen.
@@ -213,7 +213,7 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     public async Task<LeagueOnlineAccount?> RequestSyncAsync(int id, CancellationToken ct)
     {
         var acc = await db.LeagueOnlineAccounts.FirstOrDefaultAsync(a => a.Id == id, ct);
-        if (acc is null) return null;
+        if (acc is null || !await LeagueKnowsAsync(db, acc.FideId, ct)) return null;
         acc.SyncedAt = null;
         acc.SyncError = null;
         await db.SaveChangesAsync(ct);
@@ -251,12 +251,12 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     /// das Konto inzwischen gibt. Für die Übersicht dazu der Stand der Suche: abgesucht / Spieler der laufenden Saison.
     /// <paramref name="reveal"/> = ein Admin fragt: auch die Vorschläge Minderjähriger vollständig.
     /// </summary>
-    public async Task<JsonObject> SuggestionsAsync(string? fide, CancellationToken ct, bool reveal = false)
+    public async Task<JsonObject> SuggestionsAsync(string? fide, CancellationToken ct, bool reveal = false, bool prep = false)
     {
         var q = db.LeagueAccountSuggestions.AsNoTracking().Where(x => x.Status == LeagueSuggestionStatus.Open);
         if (!string.IsNullOrEmpty(fide)) q = q.Where(x => x.FideId == fide);
-        // Die Übersicht zeigt nur Spieler von LeagueHub — Vorschläge der Spielervorbereitung für andere bleiben dort (0.637.0).
-        else q = q.Where(x => db.LeaguePlayers.Any(p => p.FideId == x.FideId) || db.LeaguePlayerProfiles.Any(p => p.FideId == x.FideId));
+        // LeagueHub sieht nur Vorschläge seiner Spieler — die der Spielervorbereitung für andere bleiben dort (0.637.0, 0.638.0).
+        if (!prep) q = q.Where(x => db.LeaguePlayers.Any(p => p.FideId == x.FideId) || db.LeaguePlayerProfiles.Any(p => p.FideId == x.FideId));
         var list = await q.OrderByDescending(x => x.Score).ThenBy(x => x.FideId).ThenBy(x => x.Id).ToListAsync(ct);
         var fides = list.Select(x => x.FideId).Distinct().ToList();
         var taken = (await db.LeagueOnlineAccounts.AsNoTracking().Where(a => fides.Contains(a.FideId))
@@ -288,11 +288,11 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
 
     /// <summary>Vorschlag übernehmen → ein Konto („gesichert" oder „unsicher"), die Hinweise werden der Kommentar.</summary>
     public async Task<(LeagueOnlineAccount? Account, string? Reason)> AcceptSuggestionAsync(int id, bool sure, CancellationToken ct,
-        string? addedBy = null)
+        string? addedBy = null, bool prep = false)
     {
         var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
         if (x is null) return (null, "notFound");
-        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct, addedBy);
+        var r = await CreateAsync(x.FideId, new Input(x.Site, x.UserName, sure, "Vorschlag der Konto-Suche: " + x.Evidence), ct, addedBy, prep: prep);
         if (r.Reason == "duplicate")
         {
             db.LeagueAccountSuggestions.Remove(x);                           // das Konto gibt es schon — Vorschlag erledigt
@@ -302,10 +302,10 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
     }
 
     /// <summary>Vorschlag verwerfen — er bleibt als verworfen stehen und kommt bei der nächsten Suche nicht wieder.</summary>
-    public async Task<bool> RejectSuggestionAsync(int id, CancellationToken ct)
+    public async Task<bool> RejectSuggestionAsync(int id, CancellationToken ct, bool prep = false)
     {
         var x = await db.LeagueAccountSuggestions.FirstOrDefaultAsync(s => s.Id == id && s.Status == LeagueSuggestionStatus.Open, ct);
-        if (x is null) return false;
+        if (x is null || !prep && !await LeagueKnowsAsync(db, x.FideId, ct)) return false;
         x.Status = LeagueSuggestionStatus.Rejected;
         x.DecidedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -349,10 +349,14 @@ public sealed class LeagueOnlineAccountService(AppDbContext db, LeagueOnlineSync
         else db.LeagueOnlineGames.RemoveRange(await db.LeagueOnlineGames.Where(g => g.AccountId == accountId).ToListAsync(ct));
     }
 
-    private async Task<bool> KnownPlayerAsync(string fide, CancellationToken ct) =>
-        fide.Length is > 0 and <= 16 && (await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct)
-                                         || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct)
-                                         || await db.PrepPlayers.AnyAsync(p => p.FideId == fide, ct));   // Spielervorbereitung (0.637.0)
+    /// <param name="prep">Nur der Weg der Spielervorbereitung (0.637.0): dann zählt auch ein Spieler, der nur im Partiebestand steht.</param>
+    private async Task<bool> KnownPlayerAsync(string fide, CancellationToken ct, bool prep = false) =>
+        fide.Length is > 0 and <= 16 && (await LeagueKnowsAsync(db, fide, ct) || prep && await db.PrepPlayers.AnyAsync(p => p.FideId == fide, ct));
+
+    /// <summary>Kennt LeagueHub den Spieler (Meldeliste oder Liga-Karte)? Konten und Vorschläge eines Spielers, den nur die
+    /// Spielervorbereitung kennt (0.637.0), sieht LeagueHub nicht: für ihn antworten seine Endpunkte wie vorher (0.638.0).</summary>
+    public static async Task<bool> LeagueKnowsAsync(AppDbContext db, string fide, CancellationToken ct) =>
+        await db.LeaguePlayers.AnyAsync(p => p.FideId == fide, ct) || await db.LeaguePlayerProfiles.AnyAsync(p => p.FideId == fide, ct);
 
     private static bool Same(LeagueOnlineAccount a, string site, string user) =>
         a.Site == site && string.Equals(a.UserName, user, StringComparison.OrdinalIgnoreCase);

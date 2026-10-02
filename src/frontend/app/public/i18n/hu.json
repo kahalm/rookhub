@@ -4446,12 +4446,14 @@
       "none": "Nincs nyitott javaslat.",
       "found": "{{n}} új javaslat.",
       "foundNone": "Nincs új találat.",
-      "busy": "Éppen fut egy másik keresés — kérjük, próbálja újra egy pillanat múlva.",
+      "busy": "Éppen fut egy másik keresés vagy ellenőrzés — kérjük, próbálja újra egy pillanat múlva.",
       "limit": "Az erre az órára jutó keresései elfogytak.",
       "rateLimited": "A Lichess vagy a chess.com éppen lassít — a keresés véget ért. Kérjük, próbálja később.",
       "unreachable": "A Lichess vagy a chess.com jelenleg nem érhető el.",
       "disabled": "A fiókkeresés nincs bekapcsolva.",
       "loadError": "A javaslatokat nem sikerült betölteni.",
+      "checksBusy": "Éppen fut egy másik keresés vagy ellenőrzés — kérjük, nyissa meg újra az (i) ellenőrzést egy pillanat múlva.",
+      "checksRateLimited": "A Lichess vagy a chess.com éppen lassít — kérjük, nyissa meg újra az (i) ellenőrzést később.",
       "after": "Az átvett fiókokat a RookHub ezután a háttérben tölti le (az elmúlt öt év játszmái); a megnyitásfában a „Brett + online” alatt választhatók."
     }
   }

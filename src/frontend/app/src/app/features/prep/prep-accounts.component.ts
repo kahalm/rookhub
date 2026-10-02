@@ -4,12 +4,14 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AccountSuggestion } from '@lh/core/league.models';
 import { AccountSuggestionsComponent } from '@rh/shared/player-card/account-suggestions.component';
 import { PrepApiService } from './prep-api.service';
+import { PrepLeagueApi } from './prep-league-api';
 
 /**
  * „Online-Konten suchen" auf der Spielerseite (Phase 4) — nur, wenn die Karte es anbietet (`accountSearch`: `prep.manage`, Schalter
  * an, FIDE-ID). Ein Knopf startet EINE Suche (die Konto-Suche von LeagueHub, einige Sekunden); die offenen Vorschläge zeigt der
  * geteilte Baustein `lh-account-suggestions` samt (i)-Prüfung — seine Aufrufe lenkt `PrepLeagueApi` auf `/api/prep/*`. Nach dem
- * Übernehmen meldet der Abschnitt `changed`, die Seite lädt die Karte neu (das Konto steht dann dort).
+ * Übernehmen meldet der Abschnitt `changed`, die Seite lädt die Karte neu (das Konto steht dann dort). Sagt der Server eine
+ * (i)-Prüfung ab (Suche läuft, Seite bremst), steht der Grund hier (`PrepLeagueApi.checkNote`).
  */
 @Component({
   selector: 'app-prep-accounts',
@@ -26,6 +28,7 @@ import { PrepApiService } from './prep-api.service';
         @if (remaining() !== null) { <span class="muted small">{{ 'prep.accounts.remaining' | translate: { n: remaining() } }}</span> }
       </div>
       @if (note(); as n) { <p class="small" [class.err]="n.err" role="status">{{ n.key | translate: { n: n.n } }}</p> }
+      @if (league.checkNote(); as k) { <p class="small err check-note" role="status">{{ k | translate }}</p> }
       @if (items().length) {
         <lh-account-suggestions [items]="items()" (decided)="onDecided($event.accepted)" />
       } @else if (loaded() && !scanning()) {
@@ -44,6 +47,8 @@ import { PrepApiService } from './prep-api.service';
 })
 export class PrepAccountsComponent {
   private readonly api = inject(PrepApiService);
+  /** Dieselbe Instanz, über die der eingebundene Baustein prüft (Spielerseite: `useExisting`). */
+  protected readonly league = inject(PrepLeagueApi);
 
   readonly playerId = input.required<number>();
   /** Ein Vorschlag wurde übernommen — die Karte soll neu laden. */
@@ -87,6 +92,7 @@ export class PrepAccountsComponent {
     const id = this.playerId();
     this.scanning.set(true);
     this.note.set(null);
+    this.league.checkNote.set(null);
     try {
       const r = await this.api.scanSuggestions(id);
       if (id !== this.playerId()) return;

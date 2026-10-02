@@ -44,6 +44,9 @@ public sealed class PrepAccountSearchGate
         }
     }
 
+    /// <summary>Eine Prüfung (i) beginnen: dieselbe „eine zur Zeit"-Sperre wie die Suche, aber ohne Stunden-Grenze → frei?</summary>
+    public bool TryEnterOne() => _one.Wait(0);
+
     public void Exit() => _one.Release();
 }
 
@@ -70,10 +73,19 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
     /// <summary>Uhr für die Stunden-Grenze (Tests stellen sie).</summary>
     public Func<DateTime> Now { get; init; } = () => DateTime.UtcNow;
 
+    /// <summary>So schreibt die Prüfung (i), dass eine Seite gedrosselt hat (<see cref="LeagueAccountChecks"/>: Profil, Partien) — ein
+    /// solches Ergebnis gibt die Spielervorbereitung nicht weiter, sondern meldet <c>rateLimited</c>.</summary>
+    public const string ThrottledText = "bremst gerade";
+
+    /// <summary>Der Spieler für Suche und Prüfung: ein Ligaspieler bleibt Ligaspieler (Meldeliste, Tirol), sonst der aus dem Bestand.</summary>
+    private async Task<LeagueAccountFinder.Player?> SearchPlayerAsync(string fide, CancellationToken ct) =>
+        await LeagueAccountFinder.PlayerAsync(db, fide, ct) ?? await PlayerAsync(db, fide, ct);
+
     /// <summary>
     /// Ein Spieler des Bestands als Spieler der Konto-Suche — ohne Liga-Bezug (<c>Local = false</c>), Elo = die jüngste aus seinen
     /// Partien (die höchste je, <see cref="PrepPlayer.MaxElo"/>, läge für den Vergleich mit Online-Wertungen meist zu hoch), sonst
-    /// <c>MaxElo</c>. <c>null</c> = keiner mit dieser FIDE-ID. Auch der Rückfall von <see cref="LeagueAccountFinder.PlayerAsync(AppDbContext, string, CancellationToken)"/>.
+    /// <c>MaxElo</c>. <c>null</c> = keiner mit dieser FIDE-ID. Nur der Weg der Spielervorbereitung nimmt ihn — LeagueHubs eigene
+    /// Endpunkte kennen weiterhin nur Meldeliste und Liga-Karte.
     /// </summary>
     public static async Task<LeagueAccountFinder.Player?> PlayerAsync(AppDbContext db, string fide, CancellationToken ct)
     {
@@ -108,7 +120,7 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
 
     private async Task<JsonObject> ListAsync(string fide, int userId, CancellationToken ct)
     {
-        var all = await accounts.SuggestionsAsync(fide, ct, reveal: false);
+        var all = await accounts.SuggestionsAsync(fide, ct, reveal: false, prep: true);
         var items = (all["items"] as JsonArray ?? new JsonArray())
             .Where(i => i?["hidden"]?.GetValue<bool>() != true).Select(i => i!.DeepClone()).ToArray();
         return new JsonObject
@@ -126,8 +138,7 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
     {
         if (!await db.PrepPlayers.AnyAsync(p => p.Id == prepId, ct)) return (null, "notFound");
         if (await FideAsync(prepId, ct) is not { } fide) return (null, "noFide");
-        // Liga-Spieler bleiben Liga-Spieler (Meldeliste, Tirol); sonst der Spieler aus dem Bestand.
-        if (await LeagueAccountFinder.PlayerAsync(db, fide, ct) is not { } player) return (null, "notFound");
+        if (await SearchPlayerAsync(fide, ct) is not { } player) return (null, "notFound");
         if (gate.TryEnter(userId, PerHour, Now()) is { } why) return (null, why);
         LeagueAccountFinder.ScanResult r;
         try
@@ -168,14 +179,31 @@ public sealed class PrepAccountSearch(AppDbContext db, LeagueAccountFinder finde
     public async Task<(JsonObject? Account, string? Reason)> AcceptAsync(int suggestionId, bool sure, string? by, CancellationToken ct)
     {
         if (await OwnAsync(suggestionId, ct) is null) return (null, "notFound");
-        var (acc, reason) = await accounts.AcceptSuggestionAsync(suggestionId, sure, ct, by);
+        var (acc, reason) = await accounts.AcceptSuggestionAsync(suggestionId, sure, ct, by, prep: true);
         return acc is null ? (null, reason) : (await accounts.JsonAsync(acc, ct, reveal: false), null);
     }
 
     public async Task<bool> RejectAsync(int suggestionId, CancellationToken ct) =>
-        await OwnAsync(suggestionId, ct) is not null && await accounts.RejectSuggestionAsync(suggestionId, ct);
+        await OwnAsync(suggestionId, ct) is not null && await accounts.RejectSuggestionAsync(suggestionId, ct, prep: true);
 
-    /// <summary>Die Prüfung (i) eines Vorschlags — nie mit <c>reveal</c>.</summary>
-    public async Task<LeagueAccountChecks.Result?> ChecksAsync(int suggestionId, CancellationToken ct) =>
-        await OwnAsync(suggestionId, ct) is null ? null : await checks.ForSuggestionAsync(suggestionId, ct, reveal: false);
+    /// <summary>
+    /// Die Prüfung (i) eines Vorschlags — nie mit <c>reveal</c>, mit dem Spieler aus dem Bestand. Sie holt Profil und bis zu 100 Partien,
+    /// deshalb durch denselben Türsteher wie die Suche (eine zur Zeit, ohne Stunden-Grenze). <c>(null, Grund)</c>: <c>notFound</c>,
+    /// <c>busy</c>, <c>rateLimited</c> (eine Seite hat gedrosselt — kein halbes Ergebnis).
+    /// </summary>
+    public async Task<(LeagueAccountChecks.Result? Result, string? Reason)> ChecksAsync(int suggestionId, CancellationToken ct)
+    {
+        if (await OwnAsync(suggestionId, ct) is not { } s) return (null, "notFound");
+        if (!gate.TryEnterOne()) return (null, "busy");
+        try
+        {
+            var player = await SearchPlayerAsync(s.FideId, ct);
+            if (await checks.ForSuggestionAsync(suggestionId, ct, reveal: false, player) is not { } r) return (null, "notFound");
+            return r.Items.Any(i => i.Text.Contains(ThrottledText, StringComparison.Ordinal)) ? (null, "rateLimited") : (r, null);
+        }
+        finally
+        {
+            gate.Exit();
+        }
+    }
 }

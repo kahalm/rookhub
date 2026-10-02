@@ -4446,12 +4446,14 @@
       "none": "Nema otvorenih prijedloga.",
       "found": "Novi prijedlozi: {{n}}.",
       "foundNone": "Ništa novo nije pronađeno.",
-      "busy": "Upravo traje druga pretraga — pokušajte ponovno za trenutak.",
+      "busy": "Upravo traje druga pretraga ili provjera — pokušajte ponovno za trenutak.",
       "limit": "Vaše pretrage za ovaj sat su potrošene.",
       "rateLimited": "Lichess ili chess.com upravo usporava — pretraga je završena. Pokušajte kasnije.",
       "unreachable": "Lichess ili chess.com trenutno nije dostupan.",
       "disabled": "Pretraga računa nije uključena.",
       "loadError": "Prijedlozi se nisu mogli učitati.",
+      "checksBusy": "Upravo traje druga pretraga ili provjera — otvorite provjeru (i) ponovno za trenutak.",
+      "checksRateLimited": "Lichess ili chess.com upravo usporava — otvorite provjeru (i) ponovno kasnije.",
       "after": "Preuzete račune RookHub zatim dohvaća u pozadini (partije posljednjih pet godina); u stablu otvaranja mogu se odabrati pod „Brett + online“."
     }
   }

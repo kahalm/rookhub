@@ -70,15 +70,19 @@ public sealed class LeagueAccountChecks
     {
         var a = await _db.LeagueOnlineAccounts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (a is null || !reveal && await HiddenAsync(a.FideId, ct)) return null;
+        if (!await LeagueOnlineAccountService.LeagueKnowsAsync(_db, a.FideId, ct)) return null;          // nur Spieler von LeagueHub (0.638.0)
         return await CachedAsync($"league-checks:a:{id}", () => BuildAsync(a.FideId, a.Site, a.UserName, a, null, ct));
     }
 
-    /// <summary>Prüfung eines Vorschlags; <c>null</c> = unbekannt oder verborgen (außer für einen Admin).</summary>
-    public async Task<Result?> ForSuggestionAsync(int id, CancellationToken ct, bool reveal = false)
+    /// <summary>Prüfung eines Vorschlags; <c>null</c> = unbekannt oder verborgen (außer für einen Admin). <paramref name="player"/>: den
+    /// Spieler bringt der Aufrufer mit (Spielervorbereitung, 0.637.0 — einer, den LeagueHub nicht kennt), sonst kommt er aus der Meldeliste
+    /// und ein Spieler, den LeagueHub nicht kennt, ist „nicht gefunden" wie vor 0.637.0.</summary>
+    public async Task<Result?> ForSuggestionAsync(int id, CancellationToken ct, bool reveal = false, LeagueAccountFinder.Player? player = null)
     {
         var s = await _db.LeagueAccountSuggestions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (s is null || !reveal && await HiddenAsync(s.FideId, ct)) return null;
-        return await CachedAsync($"league-checks:s:{id}", () => BuildAsync(s.FideId, s.Site, s.UserName, null, s, ct));
+        if (player is null && !await LeagueOnlineAccountService.LeagueKnowsAsync(_db, s.FideId, ct)) return null;   // LeagueHub: nur seine Spieler (0.638.0)
+        return await CachedAsync($"league-checks:s:{id}{(player is null ? "" : ":p")}", () => BuildAsync(s.FideId, s.Site, s.UserName, null, s, ct, player));
     }
 
     private async Task<bool> HiddenAsync(string fide, CancellationToken ct) =>
@@ -95,9 +99,9 @@ public sealed class LeagueAccountChecks
     }
 
     private async Task<Result> BuildAsync(string fide, string site, string user, LeagueOnlineAccount? account, LeagueAccountSuggestion? sugg,
-        CancellationToken ct)
+        CancellationToken ct, LeagueAccountFinder.Player? given = null)
     {
-        var player = await LeagueAccountFinder.PlayerAsync(_db, fide, ct) ?? new LeagueAccountFinder.Player(fide, fide, null, null, null);
+        var player = given ?? await LeagueAccountFinder.PlayerAsync(_db, fide, ct) ?? new LeagueAccountFinder.Player(fide, fide, null, null, null);
         var fideFed = await _db.LeagueAccountScans.AsNoTracking().Where(x => x.FideId == fide).Select(x => x.Federation).FirstOrDefaultAsync(ct);
         var (prof, profError) = await ProfileAsync(site, user, ct);
         var items = new List<Item>

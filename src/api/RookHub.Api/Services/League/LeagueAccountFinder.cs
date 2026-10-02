@@ -177,8 +177,9 @@ public sealed partial class LeagueAccountFinder
     {
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (local) allowed.Add("AT");                                // Tiroler Liga; sonst nur die Föderation
-        if (fed is { } f1 && Fed2.TryGetValue(f1, out var c1)) allowed.Add(c1);
-        if (fideFed is { } f2 && Fed2.TryGetValue(f2, out var c2)) allowed.Add(c2);
+        IReadOnlyDictionary<string, string> map = local ? Fed2 : Prep.PrepFederations.Iso;   // ohne Liga alle Föderationen (0.637.0)
+        if (fed is { } f1 && map.TryGetValue(f1, out var c1)) allowed.Add(c1);
+        if (fideFed is { } f2 && map.TryGetValue(f2, out var c2)) allowed.Add(c2);
         return allowed;
     }
 
@@ -441,7 +442,7 @@ public sealed partial class LeagueAccountFinder
                          select new { p.Name, p.Fed, p.EloI, p.EloN, p.Team }).FirstOrDefaultAsync(ct);
         if (row is not null) return new Player(fide, row.Name, row.Fed, row.EloI is > 0 ? row.EloI : row.EloN, row.Team);
         var name = await db.LeaguePlayerProfiles.AsNoTracking().Where(p => p.FideId == fide).Select(p => p.Name).FirstOrDefaultAsync(ct);
-        return name is null ? await Prep.PrepAccountSearch.PlayerAsync(db, fide, ct) : new Player(fide, name, null, null, null);
+        return name is null ? null : new Player(fide, name, null, null, null);
     }
 
     /// <summary>

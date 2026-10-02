@@ -36,8 +36,10 @@ export function loadCardStyles(doc: Document): void {
   selector: 'app-prep-player',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // PrepLeagueApi: die geteilten Bausteine der Konto-Suche übernehmen/verwerfen/prüfen über /api/prep (Phase 4).
-  providers: [PrepCardApi, { provide: PLAYER_CARD_API, useExisting: PrepCardApi }, { provide: LeagueApiService, useClass: PrepLeagueApi }],
+  // PrepLeagueApi: die geteilten Bausteine der Konto-Suche übernehmen/verwerfen/prüfen über /api/prep (Phase 4); eine Instanz,
+  // damit der Abschnitt „Online-Konten suchen“ die Absage einer (i)-Prüfung zeigen kann.
+  providers: [PrepCardApi, { provide: PLAYER_CARD_API, useExisting: PrepCardApi },
+    PrepLeagueApi, { provide: LeagueApiService, useExisting: PrepLeagueApi }],
   imports: [RouterLink, TranslatePipe, MatButtonModule, MatCheckboxModule, PlayerCardComponent, PrepAccountsComponent],
   styleUrl: './prep-player.component.scss',
   template: `

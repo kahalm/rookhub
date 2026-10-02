@@ -83,6 +83,8 @@ public sealed class LeagueGameSources(AppDbContext db, IMemoryCache? cache = nul
         if (club > 0) board[LeagueProfileStore.ClubSource] = club;
         var accounts = await db.LeagueOnlineAccounts.AsNoTracking()
             .Where(a => fides.Contains(a.FideId) && (!onlySure || a.Confidence == LeagueOnlineAccountService.Sure))
+            // nur Spieler von LeagueHub — Konten aus der Spielervorbereitung zählen hier nicht mit (0.638.0)
+            .Where(a => db.LeaguePlayers.Any(p => p.FideId == a.FideId) || db.LeaguePlayerProfiles.Any(p => p.FideId == a.FideId))
             .Select(a => new { a.Id, a.Site }).ToListAsync(ct);
         var ids = accounts.Select(a => a.Id).ToList();
         var games = ids.Count == 0 ? new Dictionary<string, int>() : (await db.LeagueOnlineGames.AsNoTracking()

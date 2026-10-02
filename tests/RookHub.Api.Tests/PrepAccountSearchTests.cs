@@ -133,9 +133,107 @@ public class PrepAccountSearchTests : IDisposable
     public async Task Player_FromTheDatabase_LatestElo_NotLocal()
     {
         await SeedPrepAsync();
-        var p = (await LeagueAccountFinder.PlayerAsync(_db, Fide, default))!;
+        var p = (await PrepAccountSearch.PlayerAsync(_db, Fide, default))!;
         Assert.Equal(("Prepmann, Paul", (int?)2210, false, (string?)null), (p.Name, p.Elo, p.Local, p.Fed));   // nicht MaxElo 2300
-        Assert.Null(await LeagueAccountFinder.PlayerAsync(_db, "990999", default));
+        Assert.Null(await PrepAccountSearch.PlayerAsync(_db, "990999", default));
+    }
+
+    // ── LeagueHubs eigene Wege kennen Prep-Spieler nicht (wie vor 0.637.0) ─────────────────────
+
+    [Fact]
+    public async Task LeagueHub_PrepOnlyFide_UnknownLikeBefore_PrepPathWorks()
+    {
+        await SeedPrepAsync();
+        // Ohne Meldeliste und Liga-Karte: LeagueHub findet ihn nicht — der Scan-Endpunkt antwortet damit „unknownPlayer".
+        Assert.Null(await LeagueAccountFinder.PlayerAsync(_db, Fide, default));
+        var accounts = new LeagueOnlineAccountService(_db);
+        Assert.Equal("unknownPlayer", (await accounts.CreateAsync(Fide, new LeagueOnlineAccountService.Input("lichess", "PaulPrepmann", true, null), default)).Reason);
+        await Search(World()).ScanAsync(await PrepIdAsync(), 1, default);
+        var s = await _db.LeagueAccountSuggestions.SingleAsync();
+        Assert.Equal("unknownPlayer", (await accounts.AcceptSuggestionAsync(s.Id, true, default)).Reason);    // LeagueHubs Übernehmen
+        Assert.Empty(await _db.LeagueOnlineAccounts.ToListAsync());
+        // Auch lesen, prüfen und verwerfen über LeagueHub: den Vorschlag gibt es dort nicht — wie vor 0.637.0.
+        Assert.Empty((await accounts.SuggestionsAsync(Fide, default))["items"]!.AsArray());
+        var leagueChecks = new LeagueAccountChecks(_db, new HttpClient(World()), null);
+        Assert.Null(await leagueChecks.ForSuggestionAsync(s.Id, default));
+        Assert.False(await accounts.RejectSuggestionAsync(s.Id, default));
+        // Der Weg der Spielervorbereitung schaltet ihn ausdrücklich ein: Liste, Prüfung (mit Namen), Übernehmen.
+        Assert.Single((await accounts.SuggestionsAsync(Fide, default, prep: true))["items"]!.AsArray());
+        Assert.Equal("Prepmann, Paul", (await Search(World()).ChecksAsync(s.Id, default)).Result!.Player);
+        Assert.Null((await Search(World()).AcceptAsync(s.Id, true, "verwalter", default)).Reason);
+        var acc = Assert.Single(await _db.LeagueOnlineAccounts.ToListAsync());
+        // Das übernommene Konto kann LeagueHub weder ändern, löschen, abholen lassen noch prüfen.
+        Assert.Equal("notFound", (await accounts.UpdateAsync(acc.Id, new LeagueOnlineAccountService.Input(null, null, false, "x"), default)).Reason);
+        Assert.False(await accounts.DeleteAsync(acc.Id, default));
+        Assert.Null(await accounts.RequestSyncAsync(acc.Id, default));
+        Assert.Null(await leagueChecks.ForAccountAsync(acc.Id, default));
+        Assert.Single(await _db.LeagueOnlineAccounts.ToListAsync());
+    }
+
+    [Fact]
+    public async Task LeagueHub_SamePlayerInTheLeague_EverythingAsBefore()
+    {
+        // Gegenrichtung: steht derselbe Spieler in einer Meldeliste, ist alles beim Alten — LeagueHub sieht, prüft, verwirft, ändert.
+        await SeedPrepAsync();
+        await SeedLeagueAsync();
+        _db.LeaguePlayers.Add(new LeaguePlayer { Tnr = 1, Team = "Kufstein 1", Name = "Prepmann, Paul", NameKey = "prepmann, paul", FideId = Fide, Fed = "GER" });
+        await _db.SaveChangesAsync();
+        var accounts = new LeagueOnlineAccountService(_db);
+        await Search(World()).ScanAsync(await PrepIdAsync(), 1, default);
+        var s = await _db.LeagueAccountSuggestions.OrderBy(x => x.Id).FirstAsync();
+        Assert.NotEmpty((await accounts.SuggestionsAsync(Fide, default))["items"]!.AsArray());
+        var leagueChecks = new LeagueAccountChecks(_db, new HttpClient(World()), null);
+        Assert.Equal("Prepmann, Paul", (await leagueChecks.ForSuggestionAsync(s.Id, default))!.Player);
+        var (acc, why) = await accounts.AcceptSuggestionAsync(s.Id, true, default);
+        Assert.Null(why);
+        Assert.Equal("notFound", (await accounts.UpdateAsync(acc!.Id + 1000, new LeagueOnlineAccountService.Input(null, null, false, "x"), default)).Reason);
+        Assert.Null((await accounts.UpdateAsync(acc.Id, new LeagueOnlineAccountService.Input(null, null, false, "x"), default)).Reason);
+        Assert.NotNull(await accounts.RequestSyncAsync(acc.Id, default));
+        Assert.NotNull(await leagueChecks.ForAccountAsync(acc.Id, default));
+        Assert.True(await accounts.DeleteAsync(acc.Id, default));
+    }
+
+    // ── Föderationen ohne Liga-Bezug ───────────────────────────────────────────────────────────
+
+    /// <summary>Die 26 Föderationen der LeagueHub-Tabelle (LeagueAccountFinder.Fed2).</summary>
+    private static readonly string[] LeagueFeds =
+    {
+        "AUT", "GER", "ITA", "SUI", "CZE", "UKR", "HUN", "SLO", "CRO", "BIH", "TUR", "FRA", "BUL", "MAR", "POL", "SVK", "SRB", "ROU",
+        "RUS", "NED", "ESP", "ENG", "USA", "IRI", "SYR", "AFG",
+    };
+
+    [Fact]
+    public void Federations_FullTableOnlyWithoutLeague_SameForTheKnown26()
+    {
+        foreach (var fed in LeagueFeds)
+        {
+            var league = LeagueAccountFinder.AllowedCountries(fed, null);                 // Liga: Österreich + Föderation
+            league.Remove("AT");
+            if (fed == "AUT") league.Add("AT");
+            Assert.Equal(league.OrderBy(x => x), LeagueAccountFinder.AllowedCountries(null, fed, local: false).OrderBy(x => x));
+        }
+        static string One(string fed) => Assert.Single(LeagueAccountFinder.AllowedCountries(null, fed, local: false));
+        Assert.Equal(("GB", "GB", "GB"), (One("ENG"), One("SCO"), One("WLS")));
+        Assert.Equal(("NL", "CH", "DE", "NO", "IN", "CN", "AM", "XK"), (One("NED"), One("SUI"), One("GER"), One("NOR"), One("IND"), One("CHN"), One("ARM"), One("KOS")));
+        Assert.Empty(LeagueAccountFinder.AllowedCountries(null, "FID", local: false));      // unter FIDE-Flagge: kein Land
+        Assert.Empty(LeagueAccountFinder.AllowedCountries(null, "XYZ", local: false));      // unbekannt: streng
+        Assert.Empty(LeagueAccountFinder.AllowedCountries(null, null, local: false));
+        // LeagueHub bleibt, wie es war: NOR kennt seine Tabelle nicht.
+        Assert.Equal(new[] { "AT" }, LeagueAccountFinder.AllowedCountries("NOR", "NOR").ToArray());
+        Assert.True(PrepFederations.Iso.Count >= 190);
+        Assert.All(PrepFederations.Iso, kv => Assert.Matches("^[A-Z]{3}$", kv.Key));
+        Assert.All(PrepFederations.Iso, kv => Assert.Matches("^[A-Z]{2}$", kv.Value));
+    }
+
+    [Fact]
+    public void Judge_NorwegianWithoutLeague_NorwegianProfileFits()
+    {
+        var p = new LeagueAccountFinder.Player("990333", "Hansen, Ola", null, 2400, null, Local: false);
+        var prof = new LeagueAccountFinder.Profile("lichess", "OlaHansen", "u", "Ola Hansen", "NO", null, null, null, null, false);
+        var v = LeagueAccountFinder.Judge(p, prof, derived: true, fideFed: "NOR");
+        Assert.NotNull(v);
+        Assert.Contains("Land NO", v!.Evidence);
+        Assert.Null(LeagueAccountFinder.Judge(p, prof with { Flag = "SE" }, derived: true, fideFed: "NOR"));   // fremdes Land: nein
     }
 
     // ── Suchen ─────────────────────────────────────────────────────────────────────────────────
@@ -230,7 +328,7 @@ public class PrepAccountSearchTests : IDisposable
         Assert.Empty((await search.SuggestionsAsync(await PrepIdAsync(), 1, default)).Result!["items"]!.AsArray());
         Assert.Equal("notFound", (await search.AcceptAsync(s.Id, true, "verwalter", default)).Reason);
         Assert.False(await search.RejectAsync(s.Id, default));
-        Assert.Null(await search.ChecksAsync(s.Id, default));
+        Assert.Equal("notFound", (await search.ChecksAsync(s.Id, default)).Reason);
         Assert.Empty(await _db.LeagueOnlineAccounts.ToListAsync());
     }
 
@@ -251,9 +349,10 @@ public class PrepAccountSearchTests : IDisposable
         await _db.SaveChangesAsync();
 
         Assert.Equal("notFound", (await search.AcceptAsync(leagues.Id, true, "verwalter", default)).Reason);   // kein Spieler des Bestands
-        Assert.Null(await search.ChecksAsync(leagues.Id, default));
+        Assert.Equal("notFound", (await search.ChecksAsync(leagues.Id, default)).Reason);
 
-        var checks = await search.ChecksAsync(s.Id, default);
+        var (checks, why) = await search.ChecksAsync(s.Id, default);
+        Assert.Null(why);
         Assert.NotNull(checks);
         Assert.Equal("Prepmann, Paul", checks!.Player);                                   // der Spieler aus dem Bestand, nicht die FIDE-ID
         Assert.DoesNotContain(checks.Items, i => i.Key == "tirol");                       // ohne Liga-Bezug keine Tirol-Prüfung
@@ -265,6 +364,31 @@ public class PrepAccountSearchTests : IDisposable
         var row = await _db.LeagueOnlineAccounts.SingleAsync();
         Assert.Equal((Fide, "verwalter"), (row.FideId, row.AddedBy));
         Assert.Empty(await _db.LeagueAccountSuggestions.Where(x => x.FideId == Fide).ToListAsync());     // der Vorschlag ist erledigt
+    }
+
+    // ── Prüfung (i) durch den Türsteher ────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Checks_OneAtATime_AndThrottledIsRateLimited()
+    {
+        await SeedPrepAsync();
+        await Search(World()).ScanAsync(await PrepIdAsync(), 1, default);
+        var s = await _db.LeagueAccountSuggestions.SingleAsync();
+
+        var quiet = new FakeHttp(_ => Status(HttpStatusCode.InternalServerError));
+        Assert.True(_gate.TryEnterOne());                                              // es sucht oder prüft gerade jemand
+        Assert.Equal("busy", (await Search(quiet).ChecksAsync(s.Id, default)).Reason);
+        Assert.Empty(quiet.Urls);                                                     // ohne einen Abruf
+        _gate.Exit();
+
+        var world = World();
+        var slow = new FakeHttp(r => r.RequestUri!.ToString().EndsWith("/api/users") ? Status(HttpStatusCode.TooManyRequests) : world.Answer(r));
+        var (res, reason) = await Search(slow).ChecksAsync(s.Id, default);
+        Assert.Null(res);
+        Assert.Equal("rateLimited", reason);                                          // kein halbes Ergebnis
+        Assert.True(_gate.TryEnterOne());                                             // die Sperre ist wieder frei
+        _gate.Exit();
+        Assert.Equal(1, _gate.Remaining(1, 2, DateTime.UtcNow));                       // gezählt hat nur die eine Suche, keine der Prüfungen
     }
 
     [Fact]
@@ -302,9 +426,13 @@ public class PrepAccountSearchTests : IDisposable
 
         var all = await new LeagueOnlineAccountService(_db).SuggestionsAsync(null, default);
         Assert.Equal(new[] { "990222" }, all["items"]!.AsArray().Select(i => i!["fide"]!.GetValue<string>()));
-        Assert.Single((await new LeagueOnlineAccountService(_db).SuggestionsAsync(Fide, default))["items"]!.AsArray());   // je Spieler weiter da
-        var sources = await new LeagueGameSources(_db, null).GetAsync(default);
+        // Auch je Spieler sieht LeagueHub ihn nicht (0.638.0) — die Spielervorbereitung schon.
+        Assert.Empty((await new LeagueOnlineAccountService(_db).SuggestionsAsync(Fide, default))["items"]!.AsArray());
+        Assert.Single((await new LeagueOnlineAccountService(_db).SuggestionsAsync(Fide, default, prep: true))["items"]!.AsArray());
+        var sources = await new LeagueGameSources(_db, null).GetAsync(default, new[] { Fide, "990222" });
         Assert.Equal(1, sources["onlineTotal"]!.GetValue<int>());                      // nur die Partie des Ligaspielers
+        Assert.Equal(1, sources["opponent"]!["onlineTotal"]!.GetValue<int>());         // auch mit seiner FIDE-ID in der Gegner-Liste
+        Assert.Equal(1, sources["opponent"]!["onlineAccounts"]!.GetValue<int>());
     }
 
     [Fact]
@@ -394,6 +522,16 @@ public class PrepAccountSearchTests : IDisposable
         Assert.Equal(503, Assert.IsType<ObjectResult>(await c.ScanSuggestions(id, Search(slow), default)).StatusCode);
         var limited = Search(World(), Config(perHour: 1));
         Assert.Equal(429, Assert.IsType<ObjectResult>(await c.ScanSuggestions(id, limited, default)).StatusCode);   // die 503 zählte schon
+
+        // Prüfung (i): belegt → 409, gedrosselt → 503.
+        _db.LeagueAccountSuggestions.Add(new LeagueAccountSuggestion { FideId = Fide, Site = "lichess", UserName = "PaulPrepmann", Url = "u", Score = 5,
+            Evidence = "e", Status = LeagueSuggestionStatus.Open, CreatedAt = DateTime.UtcNow });
+        await _db.SaveChangesAsync();
+        var sid = (await _db.LeagueAccountSuggestions.SingleAsync()).Id;
+        Assert.True(_gate.TryEnterOne());
+        Assert.IsType<ConflictObjectResult>(await c.SuggestionChecks(sid, Search(World()), default));
+        _gate.Exit();
+        Assert.Equal(503, Assert.IsType<ObjectResult>(await c.SuggestionChecks(sid, Search(slow), default)).StatusCode);
     }
 }
 

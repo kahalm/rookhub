@@ -4446,12 +4446,14 @@
       "none": "Keine offenen Vorschläge.",
       "found": "{{n}} neue Vorschläge.",
       "foundNone": "Nichts Neues gefunden.",
-      "busy": "Gerade läuft schon eine Suche — bitte gleich noch einmal.",
+      "busy": "Gerade läuft schon eine Suche oder Prüfung — bitte gleich noch einmal.",
       "limit": "Deine Suchen für diese Stunde sind aufgebraucht.",
       "rateLimited": "Lichess oder chess.com bremst gerade — die Suche ist beendet. Bitte später noch einmal.",
       "unreachable": "Lichess oder chess.com ist gerade nicht erreichbar.",
       "disabled": "Die Konto-Suche ist nicht eingeschaltet.",
       "loadError": "Die Vorschläge konnten nicht geladen werden.",
+      "checksBusy": "Gerade läuft schon eine Suche oder Prüfung — die (i)-Prüfung bitte gleich noch einmal öffnen.",
+      "checksRateLimited": "Lichess oder chess.com bremst gerade — die (i)-Prüfung bitte später noch einmal öffnen.",
       "after": "Übernommene Konten holt RookHub danach im Hintergrund ab (Partien der letzten fünf Jahre); im Eröffnungsbaum sind sie dann unter „Brett + online“ wählbar."
     }
   }

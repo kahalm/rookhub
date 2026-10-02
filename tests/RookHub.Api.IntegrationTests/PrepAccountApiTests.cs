@@ -2,10 +2,12 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using RookHub.Api.Data;
 using RookHub.Api.Models;
 using RookHub.Api.Services;
+using RookHub.Api.Services.League;
 using RookHub.Api.Services.Prep;
 using Xunit;
 
@@ -88,6 +90,64 @@ public class PrepAccountApiTests(PrepAccountFixture fixture) : IAsyncLifetime, I
         var list = JsonNode.Parse(await manager.GetStringAsync($"/api/prep/player/{adult}/suggestions"))!;
         Assert.Equal("AntonErwachsen", Assert.Single(list["items"]!.AsArray())!["user"]!.GetValue<string>());
         Assert.Equal(PrepAccountSearch.DefaultPerHour, list["remaining"]!.GetValue<int>());
+    }
+
+    [MySqlFact]
+    public async Task LeagueHubEndpoints_PrepOnlyFide_UnknownLikeBefore_EvenWithSwitchOn()
+    {
+        // Ein Netz ohne Netz: fragte ein Endpunkt doch bei Lichess/chess.com nach, schlüge der Test fehl statt abzurufen.
+        var calls = 0;
+        using var guarded = fixture.Factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            s.AddHttpClient(LeagueOnlineSync.ClientName).ConfigurePrimaryHttpMessageHandler(() => new NoNetwork(() => calls++))));
+        var (adult, _, adultSugg, _) = await SeedAsync();
+        using var admin = guarded.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await UserAsync("ligaverwalter", admin: true));
+        async Task NotFound(Task<HttpResponseMessage> call, string? reason = null)
+        {
+            using var r = await call;
+            Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
+            if (reason is not null) Assert.Contains(reason, await r.Content.ReadAsStringAsync());
+        }
+
+        // Anlegen, suchen, übernehmen, prüfen, verwerfen, auflisten über LeagueHub: der Spieler ist unbekannt — wie vor 0.637.0.
+        await NotFound(admin.PostAsync("/api/league/player/990801/suggestions/scan", null), "unknownPlayer");
+        await NotFound(admin.PostAsJsonAsync("/api/league/player/990801/accounts", new { site = "lichess", user = "AntonErwachsen", sure = true }), "unknownPlayer");
+        await NotFound(admin.PostAsJsonAsync($"/api/league/suggestions/{adultSugg}/accept", new { sure = true }));
+        await NotFound(admin.GetAsync($"/api/league/suggestions/{adultSugg}/checks"));
+        await NotFound(admin.PostAsync($"/api/league/suggestions/{adultSugg}/reject", null));
+        Assert.Empty(JsonNode.Parse(await admin.GetStringAsync("/api/league/player/990801/suggestions"))!["items"]!.AsArray());
+
+        // Der Weg der Spielervorbereitung geht — danach steht das Konto auf ihrer Karte, LeagueHub sieht es weiter nicht.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync($"/api/prep/suggestions/{adultSugg}/accept", new { sure = true })).StatusCode);
+        Assert.Contains("AntonErwachsen", await admin.GetStringAsync($"/api/prep/player/{adult}"));
+        int accountId;
+        await using (var db = fixture.Schema.NewContext()) accountId = db.LeagueOnlineAccounts.Single(a => a.FideId == "990801").Id;
+        await NotFound(admin.GetAsync("/api/league/player/990801"));
+        await NotFound(admin.GetAsync("/api/league/player/990801/tree?source=both"));
+        await NotFound(admin.GetAsync("/api/league/player/990801/profile?source=both"));
+        await NotFound(admin.PutAsJsonAsync($"/api/league/accounts/{accountId}", new { comment = "x" }));
+        await NotFound(admin.PostAsync($"/api/league/accounts/{accountId}/sync", null));
+        await NotFound(admin.GetAsync($"/api/league/accounts/{accountId}/checks"));
+        await NotFound(admin.DeleteAsync($"/api/league/accounts/{accountId}"));
+        var sources = JsonNode.Parse(await admin.GetStringAsync("/api/league/sources?fides=990801"))!;
+        Assert.Equal(0, sources["opponent"]!["onlineAccounts"]!.GetValue<int>());
+        await using (var db = fixture.Schema.NewContext()) Assert.Single(db.LeagueOnlineAccounts.Where(a => a.FideId == "990801").ToList());
+
+        // Gegenrichtung: für den Ligaspieler 990803 bleibt alles beim Alten.
+        var lena = Assert.Single(JsonNode.Parse(await admin.GetStringAsync("/api/league/player/990803/suggestions"))!["items"]!.AsArray())!;
+        Assert.Equal("LenaLiga", lena["user"]!.GetValue<string>());
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/league/suggestions/{lena["id"]!.GetValue<int>()}/reject", null)).StatusCode);
+        Assert.Equal(0, calls);
+    }
+
+    /// <summary>Statt Lichess/chess.com: zählt und verweigert.</summary>
+    private sealed class NoNetwork(Action seen) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            seen();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        }
     }
 
     [MySqlFact]

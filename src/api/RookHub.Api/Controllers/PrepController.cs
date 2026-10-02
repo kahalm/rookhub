@@ -175,13 +175,20 @@ public class PrepController : BaseApiController
         return await search.RejectAsync(suggestionId, ct) ? NoContent() : NotFound();
     }
 
-    /// <summary>Prüfung (i) eines Vorschlags — wie bei LeagueHub, nie für Minderjährige.</summary>
+    /// <summary>Prüfung (i) eines Vorschlags — wie bei LeagueHub, nie für Minderjährige; 409 <c>busy</c> (es läuft schon eine Suche oder
+    /// Prüfung), 503 <c>rateLimited</c> (eine Seite hat gedrosselt).</summary>
     [HttpGet("suggestions/{suggestionId:int}/checks")]
     [HasPermission(Permissions.PrepManage)]
     public async Task<IActionResult> SuggestionChecks(int suggestionId, [FromServices] PrepAccountSearch search, CancellationToken ct)
     {
         if (!search.Enabled) return NotFound(new { reason = "disabled" });
-        return await search.ChecksAsync(suggestionId, ct) is { } r ? Ok(r) : NotFound();
+        var (r, reason) = await search.ChecksAsync(suggestionId, ct);
+        return r is not null ? Ok(r) : reason switch
+        {
+            "busy" => Conflict(new { reason }),
+            "rateLimited" => StatusCode(StatusCodes.Status503ServiceUnavailable, new { reason }),
+            _ => NotFound(new { reason }),
+        };
     }
 
     // ---- Einspielen (Phase 1) ------------------------------------------------------------------------

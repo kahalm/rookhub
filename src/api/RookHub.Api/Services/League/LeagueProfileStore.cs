@@ -317,7 +317,9 @@ public sealed class LeagueProfileStore
         filter ??= TreeFilter.Default;
         var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
-        if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
+        // Online-Konten zählen nur für Spieler von LeagueHub — die eines Spielers der Spielervorbereitung nicht (0.638.0).
+        var league = p is not null || await LeagueOnlineAccountService.LeagueKnowsAsync(_db, fide, ct);
+        if (p is null && club.Count == 0 && !(league && await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct))) return null;
         var name = await NameAsync(fide, p?.Name, ct);
         var prefix = (line ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(TreeMaxPlies).ToList();
         var cutoff = filter.Years is { } y ? DateTime.UtcNow.AddYears(-y) : (DateTime?)null;
@@ -349,7 +351,7 @@ public sealed class LeagueProfileStore
                 Count(sans, LeagueProfileBuilder.Points(g, color), year);
             }
 
-        if (filter.Online)
+        if (filter.Online && league)
         {
             var white = color == "w";
             var q = OnlineGames(_db, fide, filter, cutoff).Where(g => g.White == white);
@@ -400,7 +402,9 @@ public sealed class LeagueProfileStore
         filter ??= TreeFilter.Default;
         var p = await CardAsync(fide, ct);
         var club = await ClubGamesAsync(fide, ct);
-        if (p is null && club.Count == 0 && !await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct)) return null;
+        // Online-Konten zählen nur für Spieler von LeagueHub — die eines Spielers der Spielervorbereitung nicht (0.638.0).
+        var league = p is not null || await LeagueOnlineAccountService.LeagueKnowsAsync(_db, fide, ct);
+        if (p is null && club.Count == 0 && !(league && await _db.LeagueOnlineAccounts.AnyAsync(a => a.FideId == fide, ct))) return null;
         var name = await NameAsync(fide, p?.Name, ct);
         var cutoff = filter.Years is { } y ? DateTime.UtcNow.AddYears(-y) : (DateTime?)null;
         var games = new List<LeagueProfileBuilder.ProfileGame>();
@@ -421,7 +425,7 @@ public sealed class LeagueProfileStore
                 games.Add(new(b.Sans.Take(8).ToList(), color, LeagueProfileBuilder.Points(g, color)));
             }
 
-        if (filter.Online)
+        if (filter.Online && league)
         {
             var q = OnlineGames(_db, fide, filter, cutoff);
             foreach (var g in await q.Select(g => new { g.Line, g.Result, g.White, g.PlayedAt }).ToListAsync(ct))

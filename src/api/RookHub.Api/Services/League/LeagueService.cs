@@ -151,13 +151,15 @@ public sealed class LeagueService
         (await _db.LeagueViews.AsNoTracking().FirstOrDefaultAsync(v => v.Tnr == tnr, ct))?.Json;
 
     /// <summary>Spielerkarte: Eröffnungsprofil + Online-Konten (<paramref name="onlySure"/>: nur „sicher" — für Teilen-Links).
-    /// <paramref name="reveal"/> = ein Admin fragt: Konten Minderjähriger vollständig (0.625.0) — nie zusammen mit <paramref name="onlySure"/>.</summary>
-    public async Task<JsonObject?> CardAsync(string fide, bool onlySure, CancellationToken ct, bool reveal = false)
+    /// <paramref name="reveal"/> = ein Admin fragt: Konten Minderjähriger vollständig (0.625.0) — nie zusammen mit <paramref name="onlySure"/>.
+    /// <paramref name="prep"/>: die Spielervorbereitung fragt (0.638.0) — nur dann trägt ein Spieler ohne Meldeliste und Liga-Karte allein
+    /// mit seinen Konten eine Karte; LeagueHub kennt ihn nicht, wie vor 0.637.0.</summary>
+    public async Task<JsonObject?> CardAsync(string fide, bool onlySure, CancellationToken ct, bool reveal = false, bool prep = false)
     {
         var p = await _db.LeaguePlayerProfiles.AsNoTracking().Where(x => x.FideId == fide)
             .Select(x => new { x.ProfileJson, x.Name, x.GameCount }).FirstOrDefaultAsync(ct);
         var acc = await _db.LeagueOnlineAccounts.AsNoTracking().Where(a => a.FideId == fide).ToListAsync(ct);
-        if (p is null && acc.Count == 0) return null;
+        if (p is null && (acc.Count == 0 || !prep && !await LeagueOnlineAccountService.LeagueKnowsAsync(_db, fide, ct))) return null;
         var card = p is null ? new JsonObject { ["fide"] = fide, ["n"] = 0 } : JsonNode.Parse(p.ProfileJson)!.AsObject();
         var shown = acc.Where(a => !onlySure || a.Confidence == LeagueOnlineAccountService.Sure).OrderBy(a => a.Id).ToList();
         // Minderjährige (0.610.0): angemeldet steht nur DASS es ein Konto gibt, über einen Teilen-Link gar nichts.
