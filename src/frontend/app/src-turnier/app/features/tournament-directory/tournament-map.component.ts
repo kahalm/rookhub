@@ -358,7 +358,9 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
    * `@if` und wird bei jedem Reiterwechsel und nach „Turnier oeffnen -> zurueck" neu gebaut —
    * der verschobene Ausschnitt war dann jedes Mal weg (Codereview 2026-09-29, F6-018). Gilt der
    * Ausschnitt fuer denselben Umkreis wie jetzt, wird nicht neu eingepasst; bei einem anderen
-   * Umkreis gewinnt das Einpassen. Nur beim Aufbau gelesen.
+   * Umkreis gewinnt das Einpassen. Nur beim Aufbau gelesen — der Umkreis (`centre`) muss dann
+   * also schon feststehen. Kaeme er erst danach, passte `applyCentre` ein; der Kalender baut die
+   * Karte deshalb erst, wenn die Suchprofile angewandt sind.
    */
   @Input() initialView: MapView | null = null;
 
@@ -371,7 +373,10 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
   @Output() entryIgnored = new EventEmitter<{ entry: DirectoryEntry; ignored: boolean }>();
   /** Der Betrachter hat ein anderes Merkmal zum Einfaerben gewaehlt. */
   @Output() colourByChange = new EventEmitter<PinColourBy>();
-  /** Feuert mit `boundsChanged`: der Ausschnitt zum Wiederherstellen (siehe `initialView`). */
+  /**
+   * Feuert mit `boundsChanged` — einen Mikrotask spaeter (siehe `emitBounds`): der Ausschnitt
+   * zum Wiederherstellen (siehe `initialView`).
+   */
   @Output() viewChanged = new EventEmitter<MapView>();
 
   @ViewChild('chromeEl', { static: true }) chromeEl!: ElementRef<HTMLDivElement>;
@@ -825,10 +830,15 @@ export class TournamentMapComponent implements AfterViewInit, OnChanges, OnDestr
     this.boundsChanged.emit(
       `${b.getSouth().toFixed(5)},${b.getWest().toFixed(5)},${b.getNorth().toFixed(5)},${b.getEast().toFixed(5)}`);
     const c = this.map.getCenter();
-    this.viewChanged.emit({
+    const view: MapView = {
       lat: Number(c.lat.toFixed(5)), lon: Number(c.lng.toFixed(5)), zoom: this.map.getZoom(),
       centre: this.centreKey(),
-    });
+    };
+    // Nicht synchron: der Elternteil legt den Ausschnitt in das Feld, das er selbst an
+    // `initialView` bindet. Ein neuer Umkreis laeuft aber IN seiner Aenderungserkennung hierher
+    // (ngOnChanges 'centre' -> fitBounds ohne Animation -> sofortiges moveend) — die Bindung
+    // aenderte sich nach der Pruefung, im Dev-Build ein NG0100.
+    queueMicrotask(() => this.viewChanged.emit(view));
   }
 }
 

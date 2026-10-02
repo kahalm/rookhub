@@ -285,7 +285,12 @@
 
     <mat-tab [label]="'tournamentDirectory.tabs.map' | translate">
       <div class="tab-body">
-        @if (tab === 'map') {
+        <!-- Die Karte erst, wenn der Umkreis aus dem Suchprofil feststeht: vorher gebaut, hielt sie
+             den gemerkten Ausschnitt fuer einen „ohne Umkreis" und passte beim Eintreffen des
+             Profils auf den ganzen Kreis ein (Codereview 2026-09-29, F6-018). -->
+        @if (tab === 'map' && !ready()) {
+          <app-loading-spinner />
+        } @else if (tab === 'map') {
           @if (tilesFailed()) {
             <p class="hint warn">{{ 'tournamentDirectory.tilesFailed' | translate }}</p>
           }

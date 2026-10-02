@@ -197,8 +197,15 @@ export class TournamentDirectoryComponent implements OnInit {
    * Bis die Suchprofile da sind und die Deep-Links ausgewertet sind, wird NICHT geladen: der
    * mat-tab-group meldet seinen Startindex sofort, und ohne diese Sperre liefe die erste
    * Abfrage zweimal — einmal mit dem halb aufgebauten Filter.
+   *
+   * <p>Auch die Karte wartet darauf (Template): gebaut, bevor die Profile da waren, stand ihr
+   * Umkreis noch nicht fest. Der gemerkte Ausschnitt galt dann als „ohne Umkreis", und als das
+   * Profil eintraf, passte die Karte auf den ganzen Kreis ein — gerade bei Nutzern MIT Suchprofil
+   * war der Ausschnitt nach „Turnier oeffnen -> zurueck" weg (Codereview 2026-09-29, F6-018).
+   * Deshalb ein Signal: es kippt in einer HTTP-Antwort, und ein schlichtes Feld zeichnet die
+   * Karte unter Angular 22 nicht verlaesslich herbei.</p>
    */
-  private ready = false;
+  readonly ready = signal(false);
 
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
@@ -517,7 +524,7 @@ export class TournamentDirectoryComponent implements OnInit {
   }
 
   reload(): void {
-    if (!this.ready) return;
+    if (!this.ready()) return;
     this.page = 1;
     this.storeView();
     if (this.tab === 'list') this.loadList();
@@ -844,7 +851,7 @@ export class TournamentDirectoryComponent implements OnInit {
       this.filter.lon = null;
     }
 
-    this.ready = true;
+    this.ready.set(true);
 
     const tournamentId = params.get('t');
     if (tournamentId) {
@@ -866,8 +873,13 @@ export class TournamentDirectoryComponent implements OnInit {
       // ist kein neuer Zustand.
       distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
       switchMap(state => this.viewStates.save(TournamentDirectoryComponent.StateKey, state)),
-      takeUntilDestroyed(this.destroyRef),
     ).subscribe();
+    // Beim Verlassen der Seite den gedrosselten Stand NICHT verwerfen: `debounceTime` gibt beim
+    // Abschluss seinen letzten Wert sofort heraus, und ein laufender Schreibvorgang darf zu Ende
+    // laufen (danach ist die Kette von selbst fertig). Vorher kappte takeUntilDestroyed beides —
+    // wer die Karte verschob und gleich ein Turnier oeffnete, fand beim Zurueckkommen den
+    // aelteren Server-Stand vor, und der ueberschrieb den lokalen (Codereview 2026-09-29, F6-018).
+    this.destroyRef.onDestroy(() => this.persist.complete());
   }
 
   /** Was die Filterleiste zeigt — genug, um nach einem Seitenwechsel dasselbe Bild aufzubauen. */
@@ -971,7 +983,7 @@ export class TournamentDirectoryComponent implements OnInit {
         if (JSON.stringify(remote) === JSON.stringify(this.viewState())) return;
 
         this.applyStoredView(remote);
-        if (this.ready) this.reload();
+        if (this.ready()) this.reload();
       });
   }
 

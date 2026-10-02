@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
-import { TournamentMapComponent } from './tournament-map.component';
+import { MapView, TournamentMapComponent } from './tournament-map.component';
 import { DirectoryEntry } from './tournament-directory.model';
 
 function entry(id: string, lat: number | null, lon: number | null,
@@ -39,6 +39,12 @@ describe('TournamentMapComponent', () => {
 
   afterEach(() => fixture.destroy());
 
+  /**
+   * Alle Mikrotasks abarbeiten. Der erste Bericht kommt einen Mikrotask nach dem Aufbau,
+   * `viewChanged` noch einen dahinter (siehe `emitBounds`) — ein einzelnes `await` reichte nicht.
+   */
+  const settle = () => new Promise<void>(resolve => setTimeout(resolve));
+
   it('meldet den sichtbaren Ausschnitt im Serverformat', async () => {
     let bounds: string | null = null;
     component.boundsChanged.subscribe(b => (bounds = b));
@@ -69,7 +75,7 @@ describe('TournamentMapComponent', () => {
     component.initialView = { lat: 48.5, lon: 11.5, zoom: 9, centre: null };
 
     fixture.detectChanges();
-    await Promise.resolve();
+    await settle();
     const map = (component as any).map;
 
     expect(map.getZoom()).toBe(9);
@@ -91,6 +97,31 @@ describe('TournamentMapComponent', () => {
 
     expect(map.getZoom()).toBe(13);
     expect(map.getCenter().lat).toBeCloseTo(47.95, 3);
+  });
+
+  /**
+   * Nachtrag F6-018: ein neuer Umkreis laeuft IN der Aenderungserkennung des Elternteils hierher
+   * (ngOnChanges). Springt Leaflet dabei ohne Animation (mehr als vier Stufen), kommt moveend
+   * sofort — meldete die Karte `viewChanged` dann synchron, aenderte der Elternteil das Feld, das
+   * er an `initialView` bindet, nach der Pruefung: NG0100 im Dev-Build.
+   */
+  it('meldet den Ausschnitt nach einem neuen Umkreis erst nach dem laufenden Durchlauf', async () => {
+    const views: MapView[] = [];
+    component.viewChanged.subscribe(v => views.push(v));
+    component.initialView = { lat: 47.95, lon: 13.3, zoom: 13, centre: null };
+    fixture.detectChanges();
+    await settle();
+    const before = views.length;
+
+    fixture.componentRef.setInput('centre', { lat: 47.8, lon: 13.04, radiusKm: 100 });
+    fixture.detectChanges();
+    expect(views.length).withContext('viewChanged mitten in der Aenderungserkennung').toBe(before);
+
+    await settle();
+    expect(views.length).toBeGreaterThan(before);
+    const last = views[views.length - 1];
+    expect(last.centre).toBe('47.8|13.04|100');
+    expect(last.zoom).withContext('auf den Umkreis eingepasst').toBeLessThan(13);
   });
 
   it('passt auf einen ANDEREN Umkreis neu ein, statt den alten Ausschnitt zu zeigen', async () => {

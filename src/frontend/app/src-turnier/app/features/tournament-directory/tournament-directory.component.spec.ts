@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideHttpClient } from '@angular/common/http';
@@ -40,7 +40,7 @@ function entry(id: string, name = 'Open Braunau'): DirectoryEntry {
  * Markerliste wird wie in `groupByPoint` durchlaufen — ein Objekt statt einer Liste fiele hier auf.
  */
 @Component({ selector: 'app-tournament-map', template: '' })
-class MapStubComponent {
+class MapStubComponent implements OnInit {
   private _entries: DirectoryEntry[] = [];
   @Input() set entries(value: DirectoryEntry[]) { this._entries = [...value]; }
   get entries(): DirectoryEntry[] { return this._entries; }
@@ -53,6 +53,12 @@ class MapStubComponent {
   @Output() tilesFailed = new EventEmitter<void>();
   @Output() entryIgnored = new EventEmitter<void>();
   @Output() entrySelected = new EventEmitter<DirectoryEntry>();
+  /**
+   * Der Umkreis beim AUFBAU. Die echte Karte liest `initialView` nur dann und vergleicht ihn mit
+   * diesem Umkreis — kommt der Umkreis erst danach, passt sie ein (F6-018).
+   */
+  centreAtInit: unknown = 'nie gebaut';
+  ngOnInit(): void { this.centreAtInit = this.centre; }
 }
 
 describe('TournamentDirectoryComponent', () => {
@@ -908,6 +914,71 @@ describe('TournamentDirectoryComponent', () => {
     expect(component.mapView).toEqual(bayern);
     const again = fixture.debugElement.query(By.directive(MapStubComponent)).componentInstance as MapStubComponent;
     expect(again.initialView).toEqual(bayern);
+  });
+
+  /**
+   * Nachtrag F6-018, der Normalfall: Nutzer MIT Suchprofil. Die Karte entstand im ersten Durchlauf,
+   * also bevor die Profile da waren — ohne Umkreis. Der gemerkte Ausschnitt (zum Profil-Umkreis)
+   * galt dann nicht als eingepasst, und als das Profil eintraf, passte die Karte auf den ganzen
+   * Kreis ein: nach „Turnier öffnen → zurück" war der Ausschnitt doch wieder weg.
+   */
+  it('baut die Karte nach der Rückkehr erst, wenn der Umkreis des Suchprofils feststeht', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    const view = { lat: 47.95, lon: 13.3, zoom: 13, centre: '47.8|13.04|100' };
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({ tab: 'map', profileId: 3, mapView: view }));
+    await setup();
+    const stub = () => fixture.debugElement.query(By.directive(MapStubComponent))?.componentInstance as
+      MapStubComponent | undefined;
+
+    expect(stub()).withContext('Karte vor den Suchprofilen gebaut').toBeUndefined();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-loading-spinner')).toBeTruthy();
+
+    flushProfiles([profile(3, 'Zuhause')]);
+    fixture.detectChanges();
+
+    expect(stub()?.centreAtInit).toEqual({ lat: 47.8, lon: 13.04, radiusKm: 100 });
+    expect(stub()?.initialView).toEqual(view);
+    // Und nur EINE Pins-Abfrage beim Einstieg: die kommt mit dem ersten Ausschnitt der Karte,
+    // nicht schon vorher aus einer Karte, die gleich darauf neu einpasst.
+    http.verify();
+  });
+
+  /**
+   * Nachtrag F6-018: Karte verschoben und gleich ein Turnier geöffnet — der Server-Stand ist
+   * gedrosselt, und das Verlassen der Seite verwarf ihn. Beim Zurückkommen war der Server-Stand
+   * dann der ÄLTERE, wich vom lokalen ab und überschrieb ihn.
+   */
+  it('schickt einen noch gedrosselten Ausschnitt beim Verlassen der Seite ab', async () => {
+    TestBed.overrideComponent(TournamentDirectoryComponent, {
+      remove: { imports: [TournamentMapComponent] },
+      add: { imports: [MapStubComponent] },
+    });
+    // Uhr wie beim Drossel-Test: ohne sie liefe die Drossel in Echtzeit ab.
+    jasmine.clock().install();
+    jasmine.clock().mockDate(new Date(2026, 8, 30, 12, 0, 0));
+    try {
+      await setup();
+      flushProfiles([]);
+      flushList([]);
+      component.onTabChange(1);
+      fixture.detectChanges();
+      const bayern = { lat: 48.5, lon: 11.5, zoom: 9, centre: null };
+      component.onMapViewChanged(bayern);
+      component.select(entry('42'));
+      http.expectNone(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+
+      fixture.destroy();
+
+      const put = http.expectOne(r => r.method === 'PUT' && r.url === '/api/view-state/turnier.directory');
+      expect(put.request.body).toEqual(jasmine.objectContaining({ tab: 'map', mapView: bayern }));
+      put.flush(null, { status: 204, statusText: 'No Content' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
+    http.verify();
   });
 
   it('startet ohne gemerkten Ausschnitt wie bisher und verwirft unbrauchbare Werte', async () => {
