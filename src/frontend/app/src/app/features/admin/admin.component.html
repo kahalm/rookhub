@@ -506,10 +506,11 @@
         </mat-tab>
 
         <!-- Menü und Rollen NICHT als matTabContent (F5-020): ihr Formular wird erst per Knopf gespeichert, ein
-             Tabwechsel zerstörte es samt ungespeicherter Änderungen. Erst beim ersten Öffnen gerendert, dann behalten. -->
+             Tabwechsel zerstörte es samt ungespeicherter Änderungen. Erst beim ersten Öffnen gerendert, dann behalten.
+             Die Gruppenliste kommt deshalb von hier (nach Anlegen/Löschen im Gruppen-Tab frisch), nicht aus dem Tab. -->
         <mat-tab [label]="'admin.tabs.menu' | translate">
           @if (keptTabs.has('menu')) {
-            <app-admin-menu-visibility />
+            <app-admin-menu-visibility [groups]="keptTabGroups" />
           }
         </mat-tab>
 
@@ -533,7 +534,7 @@
 
         <mat-tab [label]="'admin.tabs.roles' | translate">
           @if (keptTabs.has('roles')) {
-            <app-admin-roles />
+            <app-admin-roles [groups]="keptTabGroups" />
           }
         </mat-tab>
 

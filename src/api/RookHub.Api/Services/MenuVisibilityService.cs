@@ -32,9 +32,15 @@ public class MenuVisibilityService
         }).ToList();
     }
 
-    /// <summary>Konfiguration speichern (nur bekannte Keys; Gruppen nur bei Level=Groups).</summary>
+    /// <summary>
+    /// Konfiguration speichern (nur bekannte Keys; Gruppen nur bei Level=Groups, nur vorhandene Gruppen).
+    /// Unbekannte Gruppen-Ids werden übergangen statt eingefügt: eine inzwischen gelöschte Gruppe
+    /// (z. B. aus einem länger offenen Admin-Formular) verletzte sonst den Fremdschlüssel auf Groups,
+    /// und das ganze Speichern scheiterte mit 500 (F5-020).
+    /// </summary>
     public async Task SaveConfigAsync(IEnumerable<MenuItemConfigDto> items)
     {
+        var knownGroupIds = (await _db.Groups.Select(g => g.Id).ToListAsync()).ToHashSet();
         foreach (var item in items.Where(i => MenuRegistry.Keys.Contains(i.Key)))
         {
             var setting = await _db.MenuItemSettings.Include(s => s.Groups)
@@ -48,7 +54,7 @@ public class MenuVisibilityService
             setting.Groups.Clear();
             if (item.Level == MenuVisibilityLevel.Groups)
             {
-                foreach (var gid in item.GroupIds.Distinct())
+                foreach (var gid in item.GroupIds.Distinct().Where(knownGroupIds.Contains))
                     setting.Groups.Add(new MenuItemGroupAccess { ItemKey = item.Key, GroupId = gid });
             }
         }

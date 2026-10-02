@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -70,7 +70,25 @@ export class AdminRolesComponent implements OnInit {
   savingUserRoles = false;
 
   // Gruppen-Rollen (0.589.0)
-  groups: Group[] = [];
+  /**
+   * Gruppenliste der Admin-Seite (`AdminComponent.keptTabGroups`, F5-020): der Tab bleibt nach dem ersten Öffnen
+   * bestehen, eine einmal selbst geladene Liste veraltete, sobald im Gruppen-Tab Gruppen angelegt oder gelöscht
+   * wurden (neue nicht zuweisbar, gelöschte noch wählbar → 404). `null` = noch nie geladen. Verschwindet die gewählte
+   * Gruppe, wird die Auswahl aufgehoben; bei einer Änderung kommen auch die Rollen neu (die Karten nennen ihre Gruppen).
+   */
+  @Input() set groups(value: Group[] | null) {
+    const changed = this.groupList !== null && value !== null;
+    this.groupList = value;
+    if (!value) return;
+    if (this.selectedGroup) {
+      const current = value.find(g => g.id === this.selectedGroup!.id);
+      if (current) this.selectedGroup = current;
+      else this.clearSelectedGroup();
+    }
+    if (changed) this.refreshRolesQuietly();
+  }
+  get groups(): Group[] { return this.groupList ?? []; }
+  private groupList: Group[] | null = null;
   selectedGroup: Group | null = null;
   groupRoleIds = new Set<number>();
   /** Wie {@link userRolesLoaded}: Speichern erst, wenn der Ist-Stand der gewählten Gruppe geladen ist. */
@@ -87,7 +105,6 @@ export class AdminRolesComponent implements OnInit {
   ngOnInit(): void {
     this.loadRoles();
     this.admin.getPermissions().subscribe({ next: p => this.allPermissions = p, error: () => {} });
-    this.admin.getGroups().subscribe({ next: g => this.groups = g, error: () => {} });
     this.searchInput.pipe(
       debounceTime(300),
       distinctUntilChanged(),
@@ -104,6 +121,11 @@ export class AdminRolesComponent implements OnInit {
       next: r => { this.roles = r; this.loading = false; },
       error: () => { this.snackbar.info(this.translate.instant('admin.roles.loadError')); this.loading = false; },
     });
+  }
+
+  /** Rollen ohne Lade-Spinner neu holen — das Formular (Entwurf, Bearbeitung) bleibt stehen. */
+  private refreshRolesQuietly(): void {
+    this.admin.getRoles().subscribe({ next: r => this.roles = r, error: () => {} });
   }
 
   /** Nur-lesbar: die admin-Rolle trägt implizit alle Permissions und wird nicht editiert. */
@@ -206,6 +228,12 @@ export class AdminRolesComponent implements OnInit {
         this.snackbar.info(this.translate.instant('admin.roles.loadError'));
       },
     });
+  }
+
+  private clearSelectedGroup(): void {
+    this.selectedGroup = null;
+    this.groupRoleIds = new Set();
+    this.groupRolesLoaded = false;
   }
 
   toggleGroupRole(roleId: number): void {

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnDestroy } from '@angular/core';
+import { Component, DestroyRef, Input, OnDestroy } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -7,9 +7,10 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { of, Subject, throwError } from 'rxjs';
 import { AdminComponent } from './admin.component';
 import { ADMIN_TAB_KEYS } from './admin-tabs';
-import { AdminService } from '../../core/admin.service';
+import { AdminService, Group, MenuItemConfig } from '../../core/admin.service';
 import { MenuService } from '../../core/menu.service';
 import { AuthService } from '../../core/auth.service';
+import { SnackbarService } from '../../core/snackbar.service';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
@@ -488,6 +489,7 @@ describe('AdminComponent', () => {
 class MenuTabStub implements OnDestroy {
   static created = 0;
   static destroyed = 0;
+  @Input() groups: Group[] | null = null;
   draft = '';
   constructor() { MenuTabStub.created++; }
   ngOnDestroy(): void { MenuTabStub.destroyed++; }
@@ -496,6 +498,7 @@ class MenuTabStub implements OnDestroy {
 class RolesTabStub implements OnDestroy {
   static created = 0;
   static destroyed = 0;
+  @Input() groups: Group[] | null = null;
   constructor() { RolesTabStub.created++; }
   ngOnDestroy(): void { RolesTabStub.destroyed++; }
 }
@@ -571,5 +574,98 @@ describe('AdminComponent – Tabs mit eigenem Formular (F5-020)', () => {
     await render({ tab: 'roles' });
     expect(RolesTabStub.created).toBe(1);
     expect(MenuTabStub.created).toBe(0);
+  });
+});
+
+/**
+ * F5-020 (Nacharbeit): Die behaltenen Tabs bekommen ihre Gruppenliste von der Admin-Seite. Vorher lud jeder Tab sie
+ * einmal selbst — nach Anlegen/Löschen im Gruppen-Tab blieb sie veraltet: die neue Gruppe war nicht wählbar, die
+ * gelöschte ging im Menü-Payload mit (Fremdschlüssel → 500) bzw. blieb im Rollen-Tab wählbar (→ 404).
+ * Mit den ECHTEN Menü- und Rollen-Komponenten; Gruppen-Bestand wie auf dem Server (anlegen/löschen ändern ihn).
+ */
+describe('AdminComponent – Gruppenliste der behaltenen Tabs (F5-020)', () => {
+  async function render() {
+    let groups = [{ id: 1, name: 'Alpha', memberCount: 2 }, { id: 2, name: 'Beta', memberCount: 3 }] as Group[];
+    let nextId = 3;
+    const adminService = {
+      getUsers: () => of({ items: [], totalCount: 0 }),
+      getBooks: () => of([]),
+      getConfig: () => of({ kibanaUrl: '' }),
+      getGroups: () => of(groups.map(g => ({ ...g }))),
+      createGroup: (name: string) => {
+        const g = { id: nextId++, name, memberCount: 0 } as Group;
+        groups = [...groups, g];
+        return of(g);
+      },
+      deleteGroup: (id: number) => { groups = groups.filter(g => g.id !== id); return of(void 0); },
+      getMenuConfig: () => of([{ key: 'courses', level: 'Groups', groupIds: [1, 2] }] as MenuItemConfig[]),
+      saveMenuConfig: jasmine.createSpy('saveMenuConfig').and.callFake((items: MenuItemConfig[]) => of(items)),
+      getRoles: () => of([]),
+      getPermissions: () => of([]),
+      getGroupRoles: (id: number) => of({ groupId: id, roleIds: [] }),
+    };
+    TestBed.configureTestingModule({
+      imports: [AdminComponent],
+      providers: [
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }), provideRouter([]),
+        { provide: AdminService, useValue: adminService },
+        { provide: MenuService, useValue: { refresh: () => {} } },
+        { provide: SnackbarService, useValue: { info: () => {} } },
+        { provide: ConfirmService, useValue: { ask: () => of(true) } },
+        { provide: AuthService, useValue: { currentUser: { userId: 1, isAdmin: true } } },
+        { provide: ActivatedRoute, useValue: { queryParamMap: of(convertToParamMap({})) } },
+      ],
+    });
+    TestBed.overrideComponent(AdminComponent, {
+      remove: { imports: [AdminMessagesComponent, AdminDailyPuzzleComponent, AdminPuzzleTagsComponent,
+        AdminChessableDownloadComponent, AdminGithubActionsComponent] },
+      add: { imports: [MessagesTabStub, DailyTabStub, TagsTabStub, DownloadTabStub, CiTabStub] },
+    });
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    const fixture = TestBed.createComponent(AdminComponent);
+    const settle = async () => { fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges(); };
+    await settle();
+    const c = fixture.componentInstance;
+    const go = async (key: string) => { c.onTabChange(ADMIN_TAB_KEYS.indexOf(key as any)); await settle(); };
+    /** Im Gruppen-Tab „Gamma" anlegen und „Beta" löschen, dann zurück in `back`. */
+    const changeGroupsAndReturn = async (back: string) => {
+      await go('groups');
+      c.newGroupName = 'Gamma';
+      c.createGroup();
+      c.deleteGroup(c.groups.find(g => g.name === 'Beta')!);
+      await go(back);
+    };
+    return { fixture, c, go, changeGroupsAndReturn, adminService };
+  }
+
+  it('Menü: neu angelegte Gruppe ist wählbar, die gelöschte geht beim Speichern nicht mehr mit', async () => {
+    const { fixture, go, changeGroupsAndReturn, adminService } = await render();
+    await go('menu');
+    const menu = fixture.debugElement.query(By.directive(AdminMenuVisibilityComponent)).componentInstance as AdminMenuVisibilityComponent;
+    expect(menu.groups!.map(g => g.name)).toEqual(['Alpha', 'Beta']);
+
+    await changeGroupsAndReturn('menu');
+
+    expect(fixture.debugElement.query(By.directive(AdminMenuVisibilityComponent)).componentInstance).toBe(menu);
+    expect(menu.groups!.map(g => g.name)).toEqual(['Alpha', 'Gamma']);
+    menu.saveMenuConfig();
+    expect(adminService.saveMenuConfig).toHaveBeenCalledWith([{ key: 'courses', level: 'Groups', groupIds: [1] }]);
+  });
+
+  it('Rollen: neue Gruppe erscheint, die gelöschte verschwindet samt Auswahl', async () => {
+    const { fixture, go, changeGroupsAndReturn } = await render();
+    await go('roles');
+    const roles = fixture.debugElement.query(By.directive(AdminRolesComponent)).componentInstance as AdminRolesComponent;
+    roles.selectGroup(roles.assignableGroups.find(g => g.name === 'Beta')!);
+    expect(roles.groupRolesLoaded).toBeTrue();
+
+    await changeGroupsAndReturn('roles');
+
+    expect(fixture.debugElement.query(By.directive(AdminRolesComponent)).componentInstance).toBe(roles);
+    const chips = Array.from(fixture.nativeElement.querySelectorAll('.group-roles .user-chip') as NodeListOf<HTMLElement>)
+      .map(e => e.textContent!.replace(/\s+/g, ' ').trim());
+    expect(chips).toEqual(['Alpha (2)', 'Gamma (0)']);
+    expect(roles.selectedGroup).toBeNull();
+    expect(roles.groupRolesLoaded).toBeFalse();
   });
 });

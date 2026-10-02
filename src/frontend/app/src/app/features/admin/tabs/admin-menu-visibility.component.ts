@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,8 +13,8 @@ import { MenuService } from '../../../core/menu.service';
 
 /**
  * Admin-Tab „Menü-Sichtbarkeit": pro Menüeintrag die Sichtbarkeitsstufe (All/Registered/Groups/Admin)
- * + bei „Groups" die freigegebenen Gruppen. Aus <c>AdminComponent</c> ausgegliedert; lädt Config +
- * Gruppenliste selbst (self-contained).
+ * + bei „Groups" die freigegebenen Gruppen. Aus <c>AdminComponent</c> ausgegliedert; lädt die Config
+ * selbst, die Gruppenliste reicht die Admin-Seite herein (siehe {@link groups}).
  */
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -32,7 +32,12 @@ export class AdminMenuVisibilityComponent implements OnInit {
   menuLoading = false;
   menuSaving = false;
   readonly menuLevels: MenuVisibilityLevel[] = ['All', 'Registered', 'Groups', 'Admin'];
-  groups: Group[] = [];
+  /**
+   * Gruppenliste der Admin-Seite (`AdminComponent.keptTabGroups`, F5-020). Der Tab bleibt nach dem ersten Öffnen
+   * bestehen; eine einmal selbst geladene Liste veraltete, sobald im Gruppen-Tab Gruppen angelegt oder gelöscht
+   * wurden. `null` = noch nie geladen.
+   */
+  @Input() groups: Group[] | null = null;
 
   constructor(
     private adminService: AdminService,
@@ -43,7 +48,6 @@ export class AdminMenuVisibilityComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadMenuConfig();
-    this.adminService.getGroups().subscribe({ next: g => this.groups = g, error: () => {} });
   }
 
   loadMenuConfig(): void {
@@ -56,8 +60,14 @@ export class AdminMenuVisibilityComponent implements OnInit {
 
   saveMenuConfig(): void {
     this.menuSaving = true;
-    // Gruppen nur bei Level=Groups mitschicken (sonst leeren).
-    const payload = this.menuConfig.map(i => ({ ...i, groupIds: i.level === 'Groups' ? i.groupIds : [] }));
+    // Gruppen nur bei Level=Groups mitschicken (sonst leeren) und nur noch vorhandene: eine im Gruppen-Tab gelöschte
+    // Gruppe bliebe sonst in groupIds stehen (F5-020). Ist die Liste nie geladen, bleibt die Auswahl unangetastet —
+    // der Server übergeht unbekannte Gruppen ohnehin.
+    const known = this.groups ? new Set(this.groups.map(g => g.id)) : null;
+    const payload = this.menuConfig.map(i => ({
+      ...i,
+      groupIds: i.level !== 'Groups' ? [] : known ? i.groupIds.filter(id => known.has(id)) : i.groupIds,
+    }));
     this.adminService.saveMenuConfig(payload).subscribe({
       next: cfg => {
         this.menuConfig = cfg;

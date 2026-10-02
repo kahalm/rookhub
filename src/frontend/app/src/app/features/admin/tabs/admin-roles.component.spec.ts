@@ -1,6 +1,10 @@
 import { of, throwError, Subject } from 'rxjs';
 import { AdminRolesComponent } from './admin-roles.component';
-import { Role } from '../../../core/admin.service';
+import { Group, Role } from '../../../core/admin.service';
+
+/** Die Gruppenliste kommt von der Admin-Seite herein (F5-020), der Tab lädt sie nicht selbst. */
+const GROUPS = [
+  { id: 4, name: 'Everyone', isEveryone: true, memberCount: 99 }, { id: 1, name: 'Schwaz', memberCount: 10 }] as Group[];
 
 function make(overrides: any = {}) {
   const admin = {
@@ -12,8 +16,6 @@ function make(overrides: any = {}) {
     deleteRole: jasmine.createSpy('deleteRole').and.returnValue(of(void 0)),
     getUserRoles: jasmine.createSpy('getUserRoles').and.returnValue(of({ userId: 1, roleIds: [2] })),
     setUserRoles: jasmine.createSpy('setUserRoles').and.returnValue(of(void 0)),
-    getGroups: jasmine.createSpy('getGroups').and.returnValue(of([
-      { id: 4, name: 'Everyone', isEveryone: true, memberCount: 99 }, { id: 1, name: 'Schwaz', memberCount: 10 }])),
     getGroupRoles: jasmine.createSpy('getGroupRoles').and.returnValue(of({ groupId: 1, roleIds: [3] })),
     setGroupRoles: jasmine.createSpy('setGroupRoles').and.returnValue(of(void 0)),
     ...overrides,
@@ -66,6 +68,7 @@ describe('AdminRolesComponent', () => {
 
   it('Gruppenrollen (0.589.0): ohne „Everyone", laden, umschalten, speichern, danach Rollen neu laden', () => {
     const { c, admin } = make();
+    c.groups = GROUPS;
     c.ngOnInit();
     expect(c.assignableGroups.map(g => g.name)).toEqual(['Schwaz']);
     c.selectGroup(c.assignableGroups[0]);
@@ -128,5 +131,39 @@ describe('AdminRolesComponent', () => {
     c.toggleGroupRole(3);
     c.saveGroupRoles();
     expect(admin.setGroupRoles).not.toHaveBeenCalled();
+  });
+
+  // F5-020: Der Tab bleibt nach dem ersten Öffnen bestehen — die Gruppenliste muss Änderungen im Gruppen-Tab folgen.
+  it('Gruppenliste von der Admin-Seite: neue Gruppe zuweisbar, gelöschte gewählte Gruppe abgewählt, Rollen neu', () => {
+    const { c, admin } = make();
+    expect(c.groups).toEqual([]);                    // noch nie geladen
+    c.groups = GROUPS;
+    c.ngOnInit();
+    c.selectGroup(c.assignableGroups[0]);            // Schwaz
+    expect(c.groupRolesLoaded).toBeTrue();
+    admin.getRoles.calls.reset();
+    admin.getRoles.and.returnValue(new Subject<Role[]>());   // offen: ein loadRoles() hinge jetzt im Spinner
+
+    c.groups = [GROUPS[0], { id: 7, name: 'Kufstein', memberCount: 0 } as Group];   // Schwaz gelöscht, Kufstein neu
+
+    expect(c.assignableGroups.map(g => g.name)).toEqual(['Kufstein']);
+    expect(c.selectedGroup).toBeNull();
+    expect(c.groupRolesLoaded).toBeFalse();
+    c.saveGroupRoles();
+    expect(admin.setGroupRoles).not.toHaveBeenCalled();
+    expect(admin.getRoles).toHaveBeenCalledTimes(1);  // die Rollenkarten nennen ihre Gruppen
+    expect(c.loading).toBeFalse();                    // ohne Spinner: Entwurf/Bearbeitung bleiben sichtbar
+  });
+
+  it('Gruppenliste: gewählte Gruppe bleibt gewählt (mit frischer Mitgliederzahl), ihr Ladestand bleibt', () => {
+    const { c, admin } = make();
+    c.groups = GROUPS;
+    c.selectGroup(GROUPS[1]);
+    c.toggleGroupRole(5);
+    c.groups = [GROUPS[0], { ...GROUPS[1], memberCount: 11 }];
+    expect(c.selectedGroup?.memberCount).toBe(11);
+    expect(c.groupRolesLoaded).toBeTrue();
+    c.saveGroupRoles();
+    expect(admin.setGroupRoles).toHaveBeenCalledWith(1, [3, 5]);
   });
 });

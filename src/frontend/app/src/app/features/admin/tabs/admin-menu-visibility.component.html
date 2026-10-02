@@ -20,7 +20,7 @@
             <mat-form-field appearance="outline" class="menu-groups">
               <mat-label>{{ 'admin.menu.groups' | translate }}</mat-label>
               <mat-select multiple [(ngModel)]="item.groupIds">
-                @for (g of groups; track g.id) {
+                @for (g of groups ?? []; track g.id) {
                   <mat-option [value]="g.id">{{ g.name }}</mat-option>
                 }
               </mat-select>

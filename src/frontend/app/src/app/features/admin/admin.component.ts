@@ -73,6 +73,8 @@ export class AdminComponent implements OnInit {
 
   groups: Group[] = [];
   groupsLoading = false;
+  /** Gruppenliste mindestens einmal erfolgreich geladen — siehe {@link keptTabGroups}. */
+  groupsLoaded = false;
   groupColumns = ['name', 'memberCount', 'actions'];
   newGroupName = '';
   newGroupDescription = '';
@@ -115,6 +117,14 @@ export class AdminComponent implements OnInit {
    */
   readonly keptTabs = new Set<AdminTabKey>();
   private static readonly KeptTabKeys: readonly AdminTabKey[] = ['menu', 'roles'];
+  /**
+   * Gruppenliste für die behaltenen Tabs Menü und Rollen (F5-020): EINE Quelle, die {@link loadGroups} nach jedem
+   * Anlegen/Löschen im Gruppen-Tab erneuert. Eine eigene, einmal beim Öffnen geladene Liste veraltete, weil die Tabs
+   * nicht mehr neu entstehen — eine neue Gruppe war nicht wählbar, eine gelöschte blieb auswählbar bzw. in den
+   * `groupIds` stehen. `null`, solange die Liste nie geladen wurde: dann kürzt der Menü-Tab beim Speichern nichts
+   * (eine leere Liste hieße sonst „alle Gruppen gelöscht").
+   */
+  get keptTabGroups(): Group[] | null { return this.groupsLoaded ? this.groups : null; }
   private destroyRef = inject(DestroyRef);
   private confirm = inject(ConfirmService);
   private prompts = inject(PromptService);
@@ -472,6 +482,7 @@ export class AdminComponent implements OnInit {
     this.adminService.getGroups().subscribe({
       next: groups => {
         this.groups = groups;
+        this.groupsLoaded = true;
         this.groupsLoading = false;
         // Auswahl aktualisieren, falls die gewählte Gruppe noch existiert
         if (this.selectedGroup) {

@@ -74,6 +74,26 @@ public class MenuVisibilityServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveConfig_UnknownGroupIds_AreIgnored_NotInserted()
+    {
+        // F5-020: ein länger offenes Admin-Formular schickt die Id einer inzwischen gelöschten Gruppe mit.
+        // Auf MySQL verletzte die Zeile den Fremdschlüssel (500, nichts gespeichert); jetzt wird sie übergangen.
+        var gid = await CreateGroupAsync("Coaches");
+        const int deletedGroupId = 999_001;
+
+        await _svc.SaveConfigAsync(new List<MenuItemConfigDto>
+        {
+            new() { Key = "courses", Level = MenuVisibilityLevel.Groups, GroupIds = new() { gid, deletedGroupId } },
+            new() { Key = "analysis", Level = MenuVisibilityLevel.Admin },
+        });
+
+        var config = await _svc.GetConfigAsync();
+        Assert.Equal(new[] { gid }, config.First(c => c.Key == "courses").GroupIds);
+        Assert.Equal(MenuVisibilityLevel.Admin, config.First(c => c.Key == "analysis").Level);
+        Assert.DoesNotContain(await _db.MenuItemGroupAccesses.ToListAsync(), a => a.GroupId == deletedGroupId);
+    }
+
+    [Fact]
     public async Task SaveConfig_ChangingAwayFromGroups_ClearsGroupRows()
     {
         var gid = await CreateGroupAsync("Coaches");
