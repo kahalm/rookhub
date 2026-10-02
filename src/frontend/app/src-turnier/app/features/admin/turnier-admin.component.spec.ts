@@ -5,6 +5,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { Router, provideRouter } from '@angular/router';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '@rh/core/auth.service';
+import { MenuService } from '@rh/core/menu.service';
+import { SnackbarService } from '@rh/core/snackbar.service';
 import { TurnierAdminComponent } from './turnier-admin.component';
 
 /**
@@ -136,6 +138,34 @@ describe('TurnierAdminComponent', () => {
     expect(li).withContext('Kontozeile gerendert').toBeTruthy();
     expect(li!.textContent).toContain(name);
     expect(li!.scrollWidth).toBeLessThanOrEqual(li!.clientWidth + 1);
+  });
+
+  /**
+   * Codereview F1-013 (Nacharbeit): kann AuthService die Admin-Anmeldung nicht sichern (Speicher gesperrt/voll),
+   * steigt er nicht ein und liefert false. Die Seite darf dann weder „Eingestiegen als X" melden noch in den
+   * Kalender wechseln — die Sitzung ist weiter die des Admins, und was er dort „als Nutzer" anlegte (Suchprofile,
+   * Favoriten), landete in seinem eigenen Konto.
+   */
+  it('meldet einen gescheiterten Einstieg, wenn die Admin-Anmeldung nicht gesichert werden kann', () => {
+    flushUsers();
+    const navigate = spyOn(TestBed.inject(Router), 'navigate');
+    const impersonate = spyOn(auth, 'impersonate').and.returnValue(false);
+    const snackbar = TestBed.inject(SnackbarService);
+    const warn = spyOn(snackbar, 'warn');
+    const info = spyOn(snackbar, 'info');
+    const refresh = spyOn(TestBed.inject(MenuService), 'refresh');
+
+    component.impersonate(component.users()[0]);
+    http.expectOne('/api/admin/users/7/impersonate')
+      .flush({ token: jwt(), userId: 7, username: 'spieler', isAdmin: false });
+
+    expect(impersonate).toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith('admin.users.impersonateFailed');
+    expect(info).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(auth.currentUser?.username).toBe('chef');
+    expect(component.busyId()).toBeNull();
   });
 
   /** Scheitert der Einstieg, bleibt der Admin angemeldet — kein halber Zustand. */

@@ -700,6 +700,26 @@ describe('AuthService: gesperrter Browser-Speicher (F1-013)', () => {
     expect(svc.isImpersonating).toBeFalse();
   });
 
+  it('Speicher voll: räumt für die Admin-Sicherung erst die Offline-Caches, dann gelingt der Einstieg (F1-013)', () => {
+    svc.adoptSession({ token: jwt(3600), username: 'admin', userId: 1, isAdmin: true });
+    const realSetItem = Storage.prototype.setItem;
+    let quotaFull = true;
+    spyOn(Storage.prototype, 'setItem').and.callFake(function (this: Storage, key: string, value: string) {
+      if (quotaFull && key === 'rookhub_admin_user') {
+        const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e;
+      }
+      realSetItem.call(this, key, value);
+    });
+    const clearAll = spyOn(TestBed.inject(OfflineService), 'clearAll').and.callFake(() => { quotaFull = false; });
+
+    expect(svc.impersonate({ token: jwt(3600), username: 'opfer', userId: 2, isAdmin: false })).toBeTrue();
+
+    expect(clearAll).toHaveBeenCalledTimes(1);
+    expect(svc.currentUser?.username).toBe('opfer');
+    expect(svc.isImpersonating).toBeTrue();
+    expect(JSON.parse(localStorage.getItem('rookhub_admin_user')!).username).toBe('admin');
+  });
+
   it('übernimmt beim Anmelden die anonymen Puzzle-Versuche, die unter der Speicher-Kennung liefen (F2-018)', async () => {
     blockStorage();
     const anon = getOrCreateAnonSessionId(ANON_PUZZLE_SESSION_KEY);   // wie PuzzleService bei jedem anonymen Versuch

@@ -193,20 +193,31 @@ export class AuthService {
    * „Als Nutzer einsteigen": sichert die aktuelle (Admin-)Session und übernimmt das
    * vom Server gelieferte Impersonation-Token. Rücksprung via {@link stopImpersonation}.
    *
-   * @returns `false`, wenn die Admin-Sicherung nicht geschrieben werden konnte (Speicher voll/gesperrt) —
-   *          dann bleibt alles beim Alten: ohne Sicherung gäbe es keinen Rücksprung, der Ausstieg meldete ab.
+   * @returns `false`, wenn die Admin-Sicherung auch nach dem Räumen der Offline-Caches nicht geschrieben werden
+   *          konnte (Speicher gesperrt/voll) — dann bleibt alles beim Alten: ohne Sicherung gäbe es keinen
+   *          Rücksprung, der Ausstieg meldete ab. Jeder Aufrufer MUSS das auswerten (sonst „Eingestiegen als X",
+   *          obwohl die Sitzung die des Admins bleibt).
    */
   impersonate(target: AuthResponse): boolean {
     const admin = this.currentUserSubject.value;
     // Nur sichern, wenn wir nicht ohnehin schon in einer Impersonation stecken.
-    if (admin && !admin.impersonating) {
-      if (!writeJson(localStore(), this.adminBackupKey, admin)) return false;
-    }
+    if (admin && !admin.impersonating && !this.writeAdminBackup(admin)) return false;
     const user: AuthResponse = { ...target, impersonating: true };
     this.persistSession(user);
     this.currentUserSubject.next(user);
     this.loadPreferences();
     return true;
+  }
+
+  /**
+   * Die Admin-Sitzung für den Rücksprung sichern — bei vollem Speicher wie {@link persistSession}: erst die
+   * Offline-Caches räumen (jederzeit wieder ladbar), dann noch einmal. Der häufige Grund für ein gescheitertes
+   * `setItem` ist nicht der gesperrte Speicher, sondern die Quota, die genau diese Caches füllen.
+   */
+  private writeAdminBackup(admin: AuthResponse): boolean {
+    if (writeJson(localStore(), this.adminBackupKey, admin)) return true;
+    try { this.injector.get(OfflineService).clearAll(); } catch { /* Storage/DI nicht verfügbar */ }
+    return writeJson(localStore(), this.adminBackupKey, admin);
   }
 
   /** Impersonation beenden und zur gesicherten Admin-Session zurückkehren. */

@@ -153,7 +153,14 @@ export class TurnierAdminComponent implements OnInit {
     this.admin.impersonate(u.id).subscribe({
       next: res => {
         this.busyId.set(null);
-        this.auth.impersonate(res);
+        // Admin-Sicherung nicht schreibbar (Speicher voll/gesperrt): AuthService steigt dann NICHT ein —
+        // ohne Sicherung gaebe es keinen Ruecksprung. Ohne diese Pruefung stuende hier „Eingestiegen als X"
+        // samt Kalender, die Sitzung waere aber weiter die des Admins: Suchprofile und Favoriten, die er
+        // „als Nutzer" anlegt, landeten in seinem eigenen Konto.
+        if (!this.auth.impersonate(res)) {
+          this.snackbar.warn(this.translate.instant('admin.users.impersonateFailed'));
+          return;
+        }
         this.menu.refresh();
         this.snackbar.info(this.translate.instant(
           'admin.users.impersonateStarted', { name: u.username }));

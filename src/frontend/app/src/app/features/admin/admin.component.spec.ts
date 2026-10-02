@@ -41,11 +41,12 @@ function make(adminOverrides: any = {}, auth: any = {}) {
   const translate = { instant: (k: string) => k };
   const router = { navigate: jasmine.createSpy('navigate').and.returnValue(Promise.resolve(true)) };
   const route = {};
+  const menu = { refresh: jasmine.createSpy('refresh') };
   const c = TestBed.runInInjectionContext(() => new AdminComponent(
-    adminService as any, {} as any, auth,
+    adminService as any, menu as any, auth,
     router as any, route as any, snackbar as any, translate as any,
   ));
-  return { c, adminService, snackbar, router };
+  return { c, adminService, snackbar, router, menu };
 }
 
 describe('AdminComponent', () => {
@@ -134,6 +135,36 @@ describe('AdminComponent', () => {
     c.selectedGroup = null;
     c.addMember({ id: 5, username: 'x' } as any);
     expect(adminService.addGroupMember).not.toHaveBeenCalled();
+  });
+
+  // F1-013: AuthService.impersonate liefert false, wenn die Admin-Sicherung nicht geschrieben werden kann
+  // (Speicher gesperrt/voll) — dann kein „Eingestiegen als …", kein Menü-Auffrischen, kein Sprung ins Dashboard.
+  it('impersonate meldet den Fehlschlag und bleibt, wenn die Admin-Sicherung nicht geschrieben werden kann', () => {
+    const auth = { impersonate: jasmine.createSpy('impersonate').and.returnValue(false) };
+    const token = { token: 't', userId: 7, username: 'spieler', isAdmin: false };
+    const { c, snackbar, router, menu } = make({ impersonate: jasmine.createSpy('impersonate').and.returnValue(of(token)) }, auth);
+
+    c.impersonate({ id: 7, username: 'spieler' } as any);
+
+    expect(auth.impersonate).toHaveBeenCalledWith(token as any);
+    expect(snackbar.info).toHaveBeenCalledWith('admin.users.impersonateFailed');
+    expect(snackbar.info).not.toHaveBeenCalledWith('admin.users.impersonateStarted');
+    expect(menu.refresh).not.toHaveBeenCalled();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(c.impersonatingId).toBeNull();
+  });
+
+  it('impersonate steigt ein, frischt das Menü auf und geht ins Dashboard', () => {
+    const auth = { impersonate: jasmine.createSpy('impersonate').and.returnValue(true) };
+    const token = { token: 't', userId: 7, username: 'spieler', isAdmin: false };
+    const { c, snackbar, router, menu } = make({ impersonate: jasmine.createSpy('impersonate').and.returnValue(of(token)) }, auth);
+
+    c.impersonate({ id: 7, username: 'spieler' } as any);
+
+    expect(menu.refresh).toHaveBeenCalled();
+    expect(snackbar.info).toHaveBeenCalledWith('admin.users.impersonateStarted');
+    expect(snackbar.info).not.toHaveBeenCalledWith('admin.users.impersonateFailed');
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
   });
 
   // F5-016: das ✕ am Chip nimmt ein Mitglied erst nach Rückfrage heraus.
