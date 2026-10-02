@@ -1430,6 +1430,41 @@ describe('BookPuzzleComponent Spielweise (Kurs/Tagespuzzle/Buch)', () => {
     expect(c.setupSolver).toHaveBeenCalled();
   });
 
+  // Nacharbeit UX-045: Kommt der Dialog nach einer Info-Linie (Kurs-Einführung, „Weiter im Buch"), blieben deren
+  // INFO-Karte, Pfeile, Kommentar und Varianten-Vorschau über der neuen Aufgabe stehen.
+  it('verlässt hinter dem Dialog den Review-/INFO-Zustand der vorigen Info-Linie', () => {
+    const c = makeCourse();
+    c.solveMode.defer = true;
+    const info = { ...P, id: 4, moves: 'e2e4 e7e5 g1f3', isInfoOnly: true };
+    c.puzzle = info;
+    c.setupPuzzle(info);
+    expect(c.state).toBe('INFO');
+    expect(c.solveMode.asked.length).toBe(0);
+    c.reviewShapes = [{ orig: 'e2', dest: 'e4', brush: 'green' }];
+    c.moveComment = 'Erklärung der Info-Linie';
+    c.variationPreview = { fen: FEN, lastMove: ['e2', 'e4'] };
+
+    const AUFGABE = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+    const quiz = { ...P, id: 5, fen: AUFGABE, moves: 'f1b5 a7a6' };
+    c.puzzle = quiz;
+    c.setupPuzzle(quiz);
+
+    expect(c.solveMode.asked.length).toBe(1);
+    expect(c.awaitingSolveMode).toBeTrue();
+    expect(c.state).toBe('LOADING');           // Status-Karte bittet um die Wahl statt der INFO-Karte
+    expect(c.reviewMode).toBeFalse();
+    expect(c.solutionReview).toBeFalse();
+    expect(c.reviewShapes).toEqual([]);
+    expect(c.moveComment).toBeNull();
+    expect(c.variationPreview).toBeNull();
+    expect(c.boardFen).toBe(AUFGABE);
+    expect(c.setupSolver).not.toHaveBeenCalled();
+
+    c.solveMode.pending('training');
+    expect(c.awaitingSolveMode).toBeFalse();
+    expect(c.setupSolver).toHaveBeenCalledWith(AUFGABE, 'f1b5 a7a6', 0);
+  });
+
   it('Tagespuzzle nutzt den Bereich „daily", das Einzel-Buch-Puzzle „book"', () => {
     const daily = makeSolver();
     daily.dailyDate = '20260808';

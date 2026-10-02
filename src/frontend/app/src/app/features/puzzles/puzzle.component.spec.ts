@@ -711,11 +711,14 @@ describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
   }
 
   it('zeigt das angekommene Puzzle nur (keine Uhr, kein Setup-Zug) und setzt es erst nach der Wahl auf', () => {
+    // Bewusst NICHT die Grundstellung (= Default-boardFen), sonst bewiese die FEN-Prüfung nichts.
+    const AUFGABE = { ...PUZZLE, fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3', moves: 'f1b5 a7a6 b5a4' };
     const { sm, antworten } = offenerDialog();
     const c = makeComponent({}, sm);
     c.ngOnInit();
     expect(c.awaitingSolveMode).toBeTrue();
-    c.puzzleService.getRandom = () => of({ ...PUZZLE });
+    expect(c.boardFen).not.toBe(AUFGABE.fen);
+    c.puzzleService.getRandom = () => of({ ...AUFGABE });
     spyOn(c as any, 'prefetchNext');
     spyOn(c as any, 'prefetchOfflinePool');
     spyOn(c as any, 'setupPuzzle');
@@ -724,7 +727,7 @@ describe('PuzzleComponent hinter dem Spielweise-Dialog (UX-045)', () => {
 
     expect((c as any).setupPuzzle).not.toHaveBeenCalled();
     expect(c.state).toBe('LOADING');
-    expect(c.boardFen).toBe(PUZZLE.fen);       // Aufgabe steht schon auf dem Brett
+    expect(c.boardFen).toBe(AUFGABE.fen);      // Aufgabe steht schon auf dem Brett
     expect(c.orientation).toBe('black');
     expect(c.elapsedSeconds).toBe(0);
 

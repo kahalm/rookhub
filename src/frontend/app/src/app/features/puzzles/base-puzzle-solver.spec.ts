@@ -530,8 +530,11 @@ describe('BasePuzzleSolver auf dem gemeinsamen Kern (shared/chess/line-solver)',
 describe('BasePuzzleSolver previewSetup (Aufgabe zeigen, nichts starten)', () => {
   it('klassisch (startPly 0): Stellung VOR dem Setup-Zug, Blick des Lösers, keine Zugziele, Zustand bleibt', () => {
     const s = new TestSolver({} as StockfishService);
-    (s as any).previewSetup(START, 'e2e4 e7e5 g1f3', 0);
-    expect(s.boardFen).toBe(START);
+    // Bewusst NICHT die Grundstellung (= Default-boardFen), sonst bewiese die FEN-Prüfung nichts.
+    const AUFGABE = 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3';
+    expect(s.boardFen).not.toBe(AUFGABE);
+    (s as any).previewSetup(AUFGABE, 'f1b5 a7a6 b5a4', 0);
+    expect(s.boardFen).toBe(AUFGABE);
     expect(s.orientation).toBe('black');      // Weiß spielt den Setup-Zug → Schwarz löst
     expect(s.dests.size).toBe(0);
     expect(s.lastMove).toBeUndefined();

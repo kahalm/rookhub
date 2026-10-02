@@ -1647,6 +1647,17 @@ export class BookPuzzleComponent extends BasePuzzleSolver implements OnInit, OnD
     const scope = this.solveModeScope;
     if (!scope || this.solveModeSuppressed || this.solveModeScopeAsked === scope) return false;
     this.solveModeScopeAsked = scope;
+    // Kommt der Dialog nach einer Info-Linie (Kurs-Einführung, „Weiter im Buch"), steht noch deren
+    // Review-/INFO-Zustand: Pfeile, Kommentar, Varianten-Vorschau und die INFO-Karte würden über bzw.
+    // statt der neuen Aufgabe stehen. Darum hier verlassen; LOADING lässt die Karte um die Wahl bitten.
+    if (this.autoAdvanceTimer) clearTimeout(this.autoAdvanceTimer);
+    this.stopTimer();
+    this.reviewMode = false;
+    this.solutionReview = false;
+    this.reviewShapes = [];
+    this.variationPreview = null;
+    this.moveComment = null;
+    this.state = 'LOADING';
     // Bis zur Antwort die Aufgabe schon zeigen (ohne Uhr/Setup-Zug) statt Grundstellung + „lädt…".
     this.awaitingSolveMode = true;
     this.previewSetup(puzzle.fen, puzzle.moves, puzzle.startPly ?? 0);
