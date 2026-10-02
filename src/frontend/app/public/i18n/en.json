@@ -3226,15 +3226,15 @@
       "welcome": {
         "t": "Welcome to RookHub",
         "p": [
-          "RookHub is your central chess portal: live tournament data from chess-results.com, daily and endless puzzle training, book courses, the Weekly Post, personal training goals, a local engine analysis, plus profile and friend features – all in one place.",
-          "Much of it works without an account (puzzles, analysis, daily puzzle). For personal progress, tournament subscriptions, friends and training goals, sign in. This page explains every area – use the table of contents to jump directly."
+          "RookHub is your central chess portal: puzzle training (standard, endless, daily puzzle), book courses and repertoires, the point game, your own games with engine review, worksheets, personal training goals, plus profile and friend features – all in one place. Tournaments have their own tournament site.",
+          "Much of it works without an account (puzzles, analysis, daily puzzle, point game). Sign in for personal progress, your games, friends and training goals – you then start on the dashboard, whose tiles you choose via »Customize«. Every area is reachable through the ☰ menu (grouped into Training, Analysis & collection, Community and Account); this page explains them – use the table of contents to jump directly."
         ]
       },
       "account": {
         "t": "Account & sign-in",
         "p": [
           "You can register with a username and password; an email address is optional. Use »Register« in the top bar to create an account, then sign in with the same credentials.",
-          "Tick »Stay signed in« at login to remain logged in for 90 days instead of 30. You can sign out any time via the account menu (person icon) at the top right."
+          "Tick »Stay logged in« at login to remain logged in for 90 days instead of 30. You can sign out any time via ☰ → Account → Logout."
         ]
       },
       "profile": {
@@ -3264,23 +3264,22 @@
       "tournaments": {
         "t": "Tournaments",
         "p": [
-          "RookHub pulls tournament data live from chess-results.com. In the tournament list you search tournaments and open details with players, teams, pairings and individual results – pick the round from the selector.",
-          "Use »Subscribe« to pin a tournament for quick access. The round monitor automatically detects new rounds and crawls them. You can mark players or teams as favorites to highlight them in the view.",
-          "For each tournament you can save personal settings such as highlights and notes."
+          "Tournaments – live data from chess-results.com, subscriptions, favorites and the round monitor – have their own tournament site. Signed in, you open it via ☰ → Community → Tournaments; your login is carried over."
         ]
       },
       "puzzles": {
         "t": "Puzzles",
         "p": [
           "The standard puzzle mode gives you tactical problems from a large pool. You play the solution right on the board; correct and wrong moves are reported instantly.",
-          "Puzzles can be filtered by theme. When logged in, your progress including puzzle Elo is saved – without login you can still practice, but progress stays local on the device."
+          "Puzzles can be filtered by theme. When logged in, your progress including puzzle Elo is saved – without login you can still practice, but progress stays local on the device.",
+          "After solving (or giving up) a puzzle, tap the heart to keep it; your collection is under ☰ → Training → Favorites, ready to replay or analyse."
         ]
       },
       "endless": {
         "t": "Endless mode",
         "p": [
           "In endless mode you solve a continuous series of increasingly harder puzzles until you make too many mistakes. You set the starting Elo, themes, fast-track thresholds and Stockfish depth yourself.",
-          "Your high score and finished sessions are saved; see the history under »Puzzle history« in the account menu and archive old sessions."
+          "Your high score and finished sessions are saved; see the history under ☰ → Account → Puzzle History and archive old sessions."
         ]
       },
       "daily": {
@@ -3295,13 +3294,14 @@
         "p": [
           "Courses are imported chess books you work through puzzle by puzzle. Which books you see depends on your group access; administrators see all of them.",
           "You choose between book order (sequential) and random order. Your progress is saved per book and shared across both modes; you can reset a course's progress.",
-          "The »Courses« menu item only appears once at least one book has been granted to you."
+          "The »Courses« menu item only appears once at least one book has been granted to you.",
+          "Under ☰ → Analysis & collection → Catalog you see the courses and repertoires others have made available to you, and can »Request« individual ones."
         ]
       },
       "weekly": {
         "t": "Weekly Post",
         "p": [
-          "The Weekly Post mirrors the weekly chess-bot posts: a game or study with a date that you play through puzzle by puzzle. Reading works without login, playing through requires sign-in.",
+          "The Weekly Post mirrors the weekly chess-bot posts: a game or study with a date that you play through puzzle by puzzle. Via a post's link, reading and playing through also work without login; progress and the leaderboard only count signed-in attempts.",
           "»Done« means you have played all puzzles (solved or not). Giving up or resetting after a move counts as a failed attempt. A live leaderboard shows all participants."
         ]
       },
@@ -3316,14 +3316,14 @@
       "stats": {
         "t": "Statistics",
         "p": [
-          "Under »Statistics« (account menu) you see your puzzle Elo curve and further analysis of your solved puzzles over time."
+          "Under ☰ → Account → Statistics you see your puzzle Elo curve and further analysis of your solved puzzles over time."
         ]
       },
       "analysis": {
         "t": "Analysis",
         "p": [
-          "By default, analysis runs locally in your browser via Stockfish (WebAssembly) – no server, even offline. Optionally you can connect an external engine registered on your Lichess account and compare two engines. You get several main lines (MultiPV) and evaluations for any position.",
-          "Analysis works without login. On first start the browser engine downloads about 7 MB once; afterwards it is available offline too."
+          "By default, analysis runs in your browser via Stockfish (WebAssembly) – also offline. You get several main lines (MultiPV), evaluations for any position and an opening explorer. Analysis works without login; on first start the browser engine downloads about 7 MB once.",
+          "Signed in, you can add a stronger engine in your profile under »External engine« (e.g. one registered on your Lichess account) and compare two engines. With »Analyse in the background« (clock icon) you queue a position for the background engine; the results are listed under »Analysis jobs«."
         ]
       },
       "repertoires": {
@@ -3337,13 +3337,13 @@
         "t": "Offline & app install",
         "p": [
           "RookHub is a Progressive Web App: you can install it as an app and use much of it offline. Puzzles, the endless pool, whole books and the Stockfish engine are pre-cached.",
-          "Puzzles solved offline are queued and synced automatically once you are back online. An Android install guide including the APK is in the account menu under »Install app«."
+          "Puzzles solved offline are queued and synced automatically once you are back online. An Android install guide including the APK is under ☰ → Account → Install app."
         ]
       },
       "settings": {
         "t": "Theme & language",
         "p": [
-          "Use the sun/moon icon to switch between light, dark and system theme. The globe icon switches the language – RookHub speaks 25 languages and your choice is saved."
+          "Theme: without an account you switch between light, dark and system theme directly in the ☰ menu; signed in, you choose it in your profile under »Appearance«. Language: ☰ → Language (signed in: ☰ → Account → Language) – RookHub speaks 25 languages and your choice is saved."
         ]
       },
       "tokens": {
@@ -3371,7 +3371,48 @@
       "feedback": {
         "t": "Feedback & help",
         "p": [
-          "Found a bug or have a wish? Via »Feedback / report bug« in the footer you reach the issue tracker on GitHub directly. You can open the quick-start overview any time via the info icon in the bar."
+          "Found a bug or have a wish? »Feedback / Report a bug« in the footer takes you straight to the issue tracker on GitHub; questions are also welcome in our Discord community (☰ → Community). Without an account, ☰ → Info opens the quick-start overview."
+        ]
+      },
+      "guess": {
+        "t": "Point game",
+        "p": [
+          "In the point game you guess an analysed game move by move: you take one side, play your move and get points at once – measured against the move that was actually played, rated by the engine.",
+          "The »Master games« are open to everyone, even without an account; there you play the winner's side. Signed in, you can also play your own games under »Your own analyses« and choose the side – add a game as PGN and it is analysed in the background."
+        ]
+      },
+      "games": {
+        "t": "Games & scoresheets",
+        "p": [
+          "Under ☰ → Analysis & collection → Games you find your games: saved with the RepCheck extension on chess.com or lichess, added via »Upload PGN« or read from a scoresheet photo. »Analyse game« computes it in the background – afterwards the evaluation curve with accuracy and move classes appears under the board. You can also share a game via link or download its PGN.",
+          "»Read a scoresheet«: take a photo of your scoresheet; an AI model (Claude by Anthropic, USA) reads the moves, RookHub checks every move on the board and stores the game in your games. You fix uncertain moves via »Review and correct«. The number of scans per day is limited."
+        ]
+      },
+      "reconstruct": {
+        "t": "Reconstruct game",
+        "p": [
+          "Write down what you still remember of a game – the first moves, single positions, short move sequences – and close the gaps step by step. »Close the gap« searches for move sequences leading from one part to the next; a suggestion only becomes part of the game once you confirm it.",
+          "»Share whole game« creates a link to the game including its open gaps; whoever opens it needs no account."
+        ]
+      },
+      "worksheets": {
+        "t": "Worksheets",
+        "p": [
+          "With »Send to worksheet« you collect positions from a course, a chapter or after a solved puzzle; they land on the clipboard. From there you print a sheet with several diagrams per page and room for the solution – or save it as a PDF.",
+          "Once shared (»Share this sheet (link + QR code)«), a sheet gets a link that is also printed as a QR code: whoever opens it can play the sheet through on the board without an account. Note: the solutions are behind the link too."
+        ]
+      },
+      "leaderboards": {
+        "t": "Leaderboards",
+        "p": [
+          "Under ☰ → Community → Leaderboards you see who solved the most puzzles, endless runs, course lines and daily puzzles this week, this month or overall."
+        ]
+      },
+      "chessable": {
+        "t": "Chessable",
+        "p": [
+          "Chessable courses come to RookHub via the RepCheck browser extension (see the RepCheck section) – it runs in your own, signed-in browser. Importing through RookHub itself is switched off: Chessable blocks data-centre IPs, and that pattern can get your Chessable account locked.",
+          "With »Remember line« in RepCheck you keep a position from chessable.com; you find it under ☰ → Analysis & collection → Remembered, where you can analyse it or queue it for background analysis. Your active training time on chessable.com counts towards your training goals."
         ]
       }
     }

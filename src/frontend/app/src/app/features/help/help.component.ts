@@ -15,6 +15,39 @@ import { TranslatePipe } from '@ngx-translate/core';
  */
 interface HelpSection { id: string; icon: string; }
 
+/**
+ * Welcher Hilfe-Abschnitt erklärt welchen Menüeintrag — je Schlüssel aus `MenuRegistry.Items`
+ * (Backend, `Services/MenuRegistry.cs`). Ohne diese Zuordnung erschienen neue Menüpunkte
+ * (Punktepartie, Partien, Rekonstruieren, Aufgabenblätter …) ohne ein Wort auf /help
+ * (Codereview UX-011). `MenuRegistryTests.EveryMenuItem_HasHelpSection` verlangt für JEDEN
+ * Registry-Schlüssel einen Eintrag hier; das Spec prüft, dass jedes Ziel ein Abschnitt ist.
+ */
+export const MENU_HELP: Readonly<Record<string, string>> = {
+  'dashboard': 'welcome',
+  'repertoires': 'repertoires',
+  'tournaments': 'tournaments',
+  'tournament-calendar': 'tournaments',
+  'friends': 'friends',
+  'puzzles': 'puzzles',
+  'favorites': 'puzzles',
+  'worksheets': 'worksheets',
+  'training-goals': 'trainingGoals',
+  'analysis': 'analysis',
+  'guess': 'guess',
+  'games': 'games',
+  'reconstruct': 'reconstruct',
+  'scoresheet': 'games',
+  'remembered': 'chessable',
+  'weekly': 'weekly',
+  'courses': 'courses',
+  'catalog': 'courses',
+  'leaderboards': 'leaderboards',
+  'stats': 'stats',
+  'chessable': 'chessable',
+  'install': 'offline',
+  'help': 'welcome',
+};
+
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
   selector: 'app-help',
@@ -98,22 +131,33 @@ export class HelpComponent implements AfterViewInit {
     }
   }
 
+  /** Reihenfolge = die Gruppen des ☰-Menüs (Training, Analyse & Sammlung, Community, Konto). */
   readonly sections: HelpSection[] = [
     { id: 'welcome', icon: '\u{1F44B}' },
     { id: 'account', icon: '\u{1F511}' },
-    { id: 'profile', icon: '\u{1F464}' },
-    { id: 'discord', icon: '\u{1F4AC}' },
-    { id: 'friends', icon: '\u{1F91D}' },
-    { id: 'tournaments', icon: '\u{1F3C6}' },
+    // Training
     { id: 'puzzles', icon: '\u{265F}' },
     { id: 'endless', icon: '\u{267E}' },
     { id: 'daily', icon: '\u{1F4C5}' },
     { id: 'courses', icon: '\u{1F4DA}' },
     { id: 'weekly', icon: '\u{1F4F0}' },
     { id: 'trainingGoals', icon: '\u{1F3AF}' },
-    { id: 'stats', icon: '\u{1F4C8}' },
-    { id: 'analysis', icon: '\u{1F52C}' },
     { id: 'repertoires', icon: '\u{1F5C2}' },
+    { id: 'guess', icon: '\u{1F914}' },
+    { id: 'worksheets', icon: '\u{1F5A8}' },
+    // Analyse & Sammlung
+    { id: 'analysis', icon: '\u{1F52C}' },
+    { id: 'games', icon: '\u{1F4DD}' },
+    { id: 'reconstruct', icon: '\u{1F9E0}' },
+    // Community
+    { id: 'friends', icon: '\u{1F91D}' },
+    { id: 'tournaments', icon: '\u{1F3C6}' },
+    { id: 'leaderboards', icon: '\u{1F947}' },
+    { id: 'discord', icon: '\u{1F4AC}' },
+    // Konto
+    { id: 'profile', icon: '\u{1F464}' },
+    { id: 'stats', icon: '\u{1F4C8}' },
+    { id: 'chessable', icon: '\u{1F4D6}' },
     { id: 'offline', icon: '\u{1F4F2}' },
     { id: 'settings', icon: '\u{1F3A8}' },
     { id: 'tokens', icon: '\u{1F50C}' },

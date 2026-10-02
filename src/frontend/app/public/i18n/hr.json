@@ -3226,15 +3226,15 @@
       "welcome": {
         "t": "Dobro došli u RookHub",
         "p": [
-          "RookHub je tvoj središnji šahovski portal: podaci o turnirima uživo s chess-results.com, dnevni i beskonačni trening zagonetki, tečajevi iz knjiga, Tjedna objava, osobni ciljevi treninga, lokalna analiza motorom te funkcije profila i prijatelja – sve na jednom mjestu.",
-          "Mnogo toga radi bez računa (zagonetke, analiza, dnevna zagonetka). Za osobni napredak, pretplate na turnire, prijatelje i ciljeve treninga prijavi se. Ova stranica objašnjava sva područja – koristi sadržaj za izravni skok."
+          "RookHub je tvoj središnji šahovski portal: trening zagonetki (standardne, beskonačne, dnevna zagonetka), tečajevi iz knjiga i repertoari, bodovna partija, tvoje partije s analizom motora, radni listovi, osobni ciljevi treninga te funkcije profila i prijatelja – sve na jednom mjestu. Turniri imaju vlastitu stranicu za turnire.",
+          "Mnogo toga radi bez računa (zagonetke, analiza, dnevna zagonetka, bodovna partija). Za osobni napredak, svoje partije, prijatelje i ciljeve treninga prijavi se – zatim počinješ na nadzornoj ploči čije pločice biraš putem »Prilagodi«. Sva područja dostupna su putem izbornika ☰ (grupirano u Trening, Analiza i zbirka, Zajednica i Račun); ova ih stranica objašnjava – koristi sadržaj za izravni skok."
         ]
       },
       "account": {
         "t": "Račun i prijava",
         "p": [
           "Registrirati se možeš korisničkim imenom i lozinkom; e-adresa nije obavezna. Putem »Registracija« u gornjoj traci stvaraš račun i zatim se prijaviš istim podacima.",
-          "Pri prijavi označi »Ostani prijavljen« da ostaneš prijavljen 30 dana umjesto samo jedan. Odjaviti se možeš bilo kada putem izbornika računa (ikona osobe) gore desno."
+          "Pri prijavi označi »Ostani prijavljen« da ostaneš prijavljen 90 dana umjesto 30. Odjaviti se možeš bilo kada putem ☰ → Račun → Odjava."
         ]
       },
       "profile": {
@@ -3264,23 +3264,22 @@
       "tournaments": {
         "t": "Turniri",
         "p": [
-          "RookHub dohvaća podatke o turnirima uživo s chess-results.com. Na popisu turnira pretražuješ turnire i otvaraš detalje s igračima, ekipama, parovima i pojedinačnim rezultatima – kolo biraš odabirnikom.",
-          "Putem »Pretplati se« prikvačiš turnir za brzi pristup. Nadzor kola automatski prepoznaje nova kola i dohvaća ih. Igrače ili ekipe možeš označiti kao favorite kako bi se istaknuli u prikazu.",
-          "Za svaki turnir možeš spremiti osobne postavke poput isticanja i bilješki."
+          "Turniri – podaci uživo s chess-results.com, pretplate, favoriti i nadzor kola – imaju vlastitu stranicu za turnire. Kad si prijavljen, otvaraš je putem ☰ → Zajednica → Turniri; tvoja se prijava pritom prenosi."
         ]
       },
       "puzzles": {
         "t": "Zagonetke",
         "p": [
           "Standardni način zagonetki daje ti taktičke zadatke iz velikog skupa. Rješenje povlačiš izravno na ploči; ispravni i pogrešni potezi javljaju se odmah.",
-          "Zagonetke se mogu filtrirati po temama. Kad si prijavljen, tvoj napredak uključujući Elo zagonetki sprema se – bez prijave svejedno možeš vježbati, no napredak ostaje lokalno na uređaju."
+          "Zagonetke se mogu filtrirati po temama. Kad si prijavljen, tvoj napredak uključujući Elo zagonetki sprema se – bez prijave svejedno možeš vježbati, no napredak ostaje lokalno na uređaju.",
+          "Nakon rješavanja (ili predaje) zagonetku spremaš srcem; svoju zbirku nalaziš pod ☰ → Trening → Favoriti – za ponovno igranje ili analizu."
         ]
       },
       "endless": {
         "t": "Beskonačni način",
         "p": [
           "U beskonačnom načinu rješavaš neprekinuti niz sve težih zagonetki dok ne napraviš previše pogrešaka. Početni Elo, teme, pragove brzog napretka i dubinu Stockfisha postavljaš sam.",
-          "Tvoj najbolji rezultat i završene sesije se spremaju; povijest vidiš pod »Povijest zagonetki« u izborniku računa i možeš arhivirati stare sesije."
+          "Tvoj najbolji rezultat i završene sesije se spremaju; povijest vidiš pod ☰ → Račun → Povijest zagonetki i možeš arhivirati stare sesije."
         ]
       },
       "daily": {
@@ -3295,35 +3294,36 @@
         "p": [
           "Tečajevi su uvezene šahovske knjige koje prolaziš zagonetku po zagonetku. Koje knjige vidiš ovisi o pristupu tvoje grupe; administratori vide sve.",
           "Biraš između redoslijeda knjige (slijedno) i nasumičnog redoslijeda. Napredak se sprema po knjizi i dijeli između oba načina; napredak tečaja možeš resetirati.",
-          "Stavka izbornika »Tečajevi« pojavljuje se tek kad ti je odobrena barem jedna knjiga."
+          "Stavka izbornika »Tečajevi« pojavljuje se tek kad ti je odobrena barem jedna knjiga.",
+          "Pod ☰ → Analiza i zbirka → Katalog vidiš tečajeve i repertoare koje su ti drugi stavili na raspolaganje i pojedine možeš zatražiti (»Zatraži«)."
         ]
       },
       "weekly": {
         "t": "Tjedna objava",
         "p": [
-          "Tjedna objava preslikava tjedne objave šahovskog bota: partiju ili studiju s terminom koju prolaziš zagonetku po zagonetku. Čitanje ide bez prijave, prolazak zahtijeva prijavu.",
+          "Tjedna objava preslikava tjedne objave šahovskog bota: partiju ili studiju s terminom koju prolaziš zagonetku po zagonetku. Putem poveznice objave čitanje i prolazak rade i bez prijave; za napredak i ljestvicu broje se samo pokušaji prijavljenih korisnika.",
           "»Gotovo« znači da si odigrao sve zagonetke (riješene ili ne). Predaja ili resetiranje nakon poteza računa se kao neuspjeli pokušaj. Ljestvica uživo prikazuje sve sudionike."
         ]
       },
       "trainingGoals": {
         "t": "Ciljevi treninga",
         "p": [
-          "Postavi dnevne ciljeve za trening zagonetki i knjiga (u minutama) te tjedni cilj za odigrane partije (rapid/classical) i pune dane treninga. Treneri mogu zadati predloške po grupi; tvoj osobni cilj ima prednost.",
-          "Praćenje ciljeva boji svaki dan prema ostvarenju cilja (ništa/djelomično/potpuno) – dnevni status proizlazi samo iz vremena za zagonetke i knjige, dok je igranje tjedni cilj.",
-          "Odigrane rapid/classical partije RookHub dohvaća automatski s Lichessa i chess.com (javno, bez prijave ondje). Putem »Sinkroniziraj sada« to pokrećeš odmah. Bullet, blitz i dopisni se ne broje."
+          "Postavi dnevni cilj vremena treninga (u minutama) te tjedne ciljeve za odigrane partije (rapid/classical) i pune dane treninga. Treneri mogu zadati predloške po grupi; tvoj osobni cilj ima prednost.",
+          "Praćenje ciljeva boji svaki dan prema ostvarenju cilja (ništa/djelomično/potpuno) – dnevni status proizlazi iz tvog vremena treninga (zagonetke, tečajevi, Chessable i upisane izvanmrežne aktivnosti), dok je igranje tjedni cilj.",
+          "Odigrane rapid/classical partije RookHub dohvaća automatski s Lichessa i chess.com (javno, bez prijave ondje). Putem »Ažuriraj vrijeme igranja« to pokrećeš odmah. Bullet, blitz i dopisni se ne broje."
         ]
       },
       "stats": {
         "t": "Statistika",
         "p": [
-          "Pod »Statistika« (izbornik računa) vidiš svoju krivulju Ela zagonetki i daljnje analize riješenih zagonetki tijekom vremena."
+          "Pod ☰ → Račun → Statistika vidiš svoju krivulju Ela zagonetki i daljnje analize riješenih zagonetki tijekom vremena."
         ]
       },
       "analysis": {
         "t": "Analiza",
         "p": [
-          "Analiza radi potpuno lokalno u tvom pregledniku putem Stockfisha (WebAssembly) – bez poslužitelja, čak i izvanmrežno. Dobivaš nekoliko glavnih varijanti (MultiPV) i procjene za svaku poziciju.",
-          "Analiza radi bez prijave. Pri prvom pokretanju motor jednokratno preuzme oko 7 MB; nakon toga dostupan je i izvanmrežno."
+          "Analiza prema zadanim postavkama radi u tvom pregledniku putem Stockfisha (WebAssembly) – i izvanmrežno. Dobivaš nekoliko glavnih varijanti (MultiPV), procjene za svaku poziciju i explorer otvaranja. Analiza radi bez prijave; pri prvom pokretanju motor u pregledniku jednokratno preuzme oko 7 MB.",
+          "Kad si prijavljen, u profilu pod »Vanjski motor« možeš povezati jači motor (npr. onaj registriran na tvom Lichess računu) i usporediti dva motora. Putem »Analiziraj u pozadini« (ikona sata) poziciju predaješ motoru u pozadini; rezultati su pod »Analize u pozadini«."
         ]
       },
       "repertoires": {
@@ -3337,13 +3337,13 @@
         "t": "Izvanmrežno i instalacija aplikacije",
         "p": [
           "RookHub je progresivna web-aplikacija: možeš ga instalirati kao aplikaciju i mnogo toga koristiti izvanmrežno. Zagonetke, beskonačni skup, cijele knjige i Stockfish motor unaprijed se spremaju.",
-          "Izvanmrežno riješene zagonetke pamte se u redu i sinkroniziraju automatski čim se vratiš na mrežu. Upute za instalaciju na Androidu s APK-om nalaze se u izborniku računa pod »Instaliraj aplikaciju«."
+          "Izvanmrežno riješene zagonetke pamte se u redu i sinkroniziraju automatski čim se vratiš na mrežu. Upute za instalaciju na Androidu s APK-om nalaze se pod ☰ → Račun → Instaliraj aplikaciju."
         ]
       },
       "settings": {
         "t": "Tema i jezik",
         "p": [
-          "Putem ikone sunca/mjeseca prebacuješ između svijetle, tamne i sistemske teme. Ikona globusa mijenja jezik – RookHub govori 25 jezika, a tvoj izbor se sprema."
+          "Tema: bez računa izravno u izborniku ☰ prebacuješ između svijetle, tamne i sistemske teme; kad si prijavljen, biraš je u profilu pod »Izgled«. Jezik: ☰ → Jezik (prijavljen: ☰ → Račun → Jezik) – RookHub govori 25 jezika, a tvoj izbor se sprema."
         ]
       },
       "tokens": {
@@ -3371,7 +3371,48 @@
       "feedback": {
         "t": "Povratne informacije i pomoć",
         "p": [
-          "Pronašao si grešku ili imaš želju? Putem »Povratne informacije / prijavi grešku« u podnožju dolaziš izravno na issue tracker na GitHubu. Pregled brzog početka otvaraš bilo kada putem ikone informacija u traci."
+          "Pronašao si grešku ili imaš želju? Putem »Povratne informacije / Prijavi grešku« u podnožju dolaziš izravno na issue tracker na GitHubu; pitanja su dobrodošla i u našoj Discord zajednici (☰ → Zajednica). Bez računa ☰ → Informacije otvara pregled brzog početka."
+        ]
+      },
+      "guess": {
+        "t": "Bodovna partija",
+        "p": [
+          "U bodovnoj partiji pogađaš analiziranu partiju potez po potez: preuzimaš jednu stranu, igraš svoj potez i odmah dobivaš bodove – mjereno prema potezu koji je stvarno odigran, a ocjenjuje ga motor.",
+          "»Majstorske partije« otvorene su svima, i bez računa; ondje igraš stranu pobjednika. Kad si prijavljen, pod »Vlastite analize« igraš i svoje partije i biraš stranu – dodaj partiju kao PGN i ona se analizira u pozadini."
+        ]
+      },
+      "games": {
+        "t": "Partije i zapisnici",
+        "p": [
+          "Pod ☰ → Analiza i zbirka → Partije nalaze se tvoje partije: spremljene RepCheck proširenjem na chess.com ili lichessu, preuzete putem »Učitaj PGN« ili učitane s fotografije zapisnika. »Analiziraj partiju« računa je u pozadini – zatim se ispod ploče pojavljuje krivulja procjene s točnošću i klasama poteza. Partiju možeš i podijeliti poveznicom ili preuzeti kao PGN.",
+          "»Učitaj zapisnik partije«: fotografiraj svoj zapisnik; model umjetne inteligencije (Claude tvrtke Anthropic, SAD) čita poteze, RookHub provjerava svaki potez na ploči i sprema partiju među tvoje partije. Nesigurne poteze ispravljaš putem »Provjeri i ispravi«. Broj učitavanja po danu je ograničen."
+        ]
+      },
+      "reconstruct": {
+        "t": "Rekonstrukcija partije",
+        "p": [
+          "Zabilježi čega se još sjećaš iz partije – prve poteze, pojedine pozicije, kratke nizove poteza – i postupno zatvaraj praznine. »Zatvori prazninu« traži nizove poteza koji vode od jednog dijela do sljedećeg; prijedlog postaje dio partije tek kad ga potvrdiš.",
+          "»Podijeli cijelu partiju« stvara poveznicu na partiju zajedno s otvorenim prazninama; tko je otvori, ne treba račun."
+        ]
+      },
+      "worksheets": {
+        "t": "Radni listovi",
+        "p": [
+          "Putem »Pošalji na radni list« skupljaš pozicije iz tečaja, poglavlja ili nakon riješene zagonetke; one završavaju u međuspremniku. Od toga ispisuješ list s više dijagrama po stranici i mjestom za rješenje – ili ga spremaš kao PDF.",
+          "Kad je podijeljen (»Podijeli list (poveznica + QR kod)«), list dobiva poveznicu koja je na ispisu i kao QR kod: tko je otvori, prolazi list na ploči bez računa. Pazi: iza poveznice su i rješenja."
+        ]
+      },
+      "leaderboards": {
+        "t": "Ljestvice",
+        "p": [
+          "Pod ☰ → Zajednica → Ljestvice vidiš tko je ovaj tjedan, ovaj mjesec ili ukupno riješio najviše zagonetki, beskonačnih nizova, linija tečajeva i dnevnih zagonetki."
+        ]
+      },
+      "chessable": {
+        "t": "Chessable",
+        "p": [
+          "Chessable tečajevi dolaze u RookHub putem RepCheck proširenja za preglednik (vidi odjeljak RepCheck) – ono radi u tvom vlastitom, prijavljenom pregledniku. Uvoz preko samog RookHuba je isključen: Chessable blokira IP adrese podatkovnih centara, a takav obrazac može dovesti do blokade tvog Chessable računa.",
+          "Putem »Remember line« u RepChecku spremaš poziciju s chessable.com; nalaziš je pod ☰ → Analiza i zbirka → Zapamćeno i ondje je možeš analizirati ili predati analizi u pozadini. Tvoje aktivno vrijeme treninga na chessable.com broji se u tvoje ciljeve treninga."
         ]
       }
     }

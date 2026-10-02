@@ -3226,15 +3226,15 @@
       "welcome": {
         "t": "Willkommen bei RookHub",
         "p": [
-          "RookHub ist dein zentrales Schach-Portal: Live-Turnierdaten von chess-results.com, tägliches und endloses Puzzle-Training, Buch-Kurse, die Wochenpost, persönliche Trainingsziele, eine lokale Engine-Analyse sowie Profil- und Freundesfunktionen – alles an einem Ort.",
-          "Vieles funktioniert ohne Konto (Puzzles, Analyse, Tagespuzzle). Für persönlichen Fortschritt, Turnier-Abos, Freunde und Trainingsziele meldest du dich an. Diese Seite erklärt alle Bereiche – nutze das Inhaltsverzeichnis, um direkt zu springen."
+          "RookHub ist dein zentrales Schach-Portal: Puzzle-Training (Standard, Endlos, Tagespuzzle), Buch-Kurse und Repertoires, die Punktepartie, deine eigenen Partien samt Engine-Auswertung, Aufgabenblätter, persönliche Trainingsziele sowie Profil- und Freundesfunktionen – alles an einem Ort. Turniere haben eine eigene Turnierseite.",
+          "Vieles funktioniert ohne Konto (Puzzles, Analyse, Tagespuzzle, Punktepartie). Für persönlichen Fortschritt, deine Partien, Freunde und Trainingsziele meldest du dich an – danach startest du auf dem Dashboard, dessen Kacheln du über »Anpassen« auswählst. Alle Bereiche erreichst du über das Menü ☰ (gruppiert in Training, Analyse & Sammlung, Community und Konto); diese Seite erklärt sie – nutze das Inhaltsverzeichnis, um direkt zu springen."
         ]
       },
       "account": {
         "t": "Konto & Anmeldung",
         "p": [
           "Registrieren kannst du dich mit Benutzername und Passwort; eine E-Mail-Adresse ist optional. Über »Registrieren« in der oberen Leiste legst du ein Konto an und meldest dich danach mit denselben Daten an.",
-          "Setze beim Login das Häkchen »Angemeldet bleiben«, um 30 Tage statt nur einen Tag eingeloggt zu bleiben. Abmelden kannst du jederzeit über das Konto-Menü (Personen-Symbol) oben rechts."
+          "Setze beim Login das Häkchen »Eingeloggt bleiben«, um 90 statt 30 Tage eingeloggt zu bleiben. Abmelden kannst du jederzeit über ☰ → Konto → Abmelden."
         ]
       },
       "profile": {
@@ -3264,23 +3264,22 @@
       "tournaments": {
         "t": "Turniere",
         "p": [
-          "RookHub holt Turnierdaten live von chess-results.com. In der Turnierliste durchsuchst du Turniere und öffnest Details mit Spielern, Teams, Paarungen und Einzelergebnissen – die Runde wählst du per Auswahlfeld.",
-          "Mit »Abonnieren« heftest du ein Turnier an für schnellen Zugriff. Der Runden-Monitor erkennt automatisch neue Runden und crawlt sie nach. Spieler oder Teams kannst du als Favorit markieren, um sie in der Ansicht hervorzuheben.",
-          "Pro Turnier kannst du persönliche Einstellungen wie Hervorhebungen und Notizen speichern."
+          "Turniere – Live-Daten von chess-results.com, Abos, Favoriten und der Runden-Monitor – haben eine eigene Turnierseite. Angemeldet erreichst du sie über ☰ → Community → Turniere; deine Anmeldung wird dabei mitgenommen."
         ]
       },
       "puzzles": {
         "t": "Puzzles",
         "p": [
           "Der Standard-Puzzle-Modus stellt dir taktische Aufgaben aus einem großen Pool. Du ziehst die Lösung direkt auf dem Brett; richtige und falsche Züge werden sofort zurückgemeldet.",
-          "Puzzles lassen sich nach Themen filtern. Eingeloggt wird dein Fortschritt samt Puzzle-Elo gespeichert – ohne Login kannst du trotzdem üben, der Fortschritt bleibt dann lokal auf dem Gerät."
+          "Puzzles lassen sich nach Themen filtern. Eingeloggt wird dein Fortschritt samt Puzzle-Elo gespeichert – ohne Login kannst du trotzdem üben, der Fortschritt bleibt dann lokal auf dem Gerät.",
+          "Nach dem Lösen (oder Aufgeben) merkst du dir ein Puzzle mit dem Herz; deine Sammlung findest du unter ☰ → Training → Favoriten – zum Nachspielen oder Analysieren."
         ]
       },
       "endless": {
         "t": "Endlos-Modus",
         "p": [
           "Im Endlos-Modus löst du eine fortlaufende Serie immer schwieriger werdender Puzzles, bis du zu viele Fehler machst. Start-Elo, Themen, Fast-Track-Schwellen und Stockfish-Tiefe stellst du selbst ein.",
-          "Dein Highscore und abgeschlossene Sessions werden gespeichert; den Verlauf siehst du unter »Puzzle-Verlauf« im Konto-Menü und kannst alte Sessions archivieren."
+          "Dein Highscore und abgeschlossene Sessions werden gespeichert; den Verlauf siehst du unter ☰ → Konto → Puzzle-Verlauf und kannst alte Sessions archivieren."
         ]
       },
       "daily": {
@@ -3295,35 +3294,36 @@
         "p": [
           "Kurse sind importierte Schachbücher, die du puzzleweise durcharbeitest. Welche Bücher du siehst, hängt von deinen Gruppen-Freigaben ab; Administratoren sehen alle.",
           "Du wählst zwischen der Buchreihenfolge (sequenziell) und zufälliger Reihenfolge. Dein Fortschritt wird pro Buch gespeichert und über beide Modi geteilt; den Fortschritt eines Kurses kannst du zurücksetzen.",
-          "Der Menüpunkt »Kurse« erscheint nur, wenn dir mindestens ein Buch freigegeben wurde."
+          "Der Menüpunkt »Kurse« erscheint nur, wenn dir mindestens ein Buch freigegeben wurde.",
+          "Unter ☰ → Analyse & Sammlung → Katalog siehst du Kurse und Repertoires, die andere dir zur Auswahl freigegeben haben, und kannst einzelne »Anfordern«."
         ]
       },
       "weekly": {
         "t": "Wochenpost",
         "p": [
-          "Die Wochenpost bildet die wöchentlichen Schach-Bot-Posts ab: eine Partie oder Studie mit Termin, die du puzzleweise durchspielst. Lesen geht ohne Login, Durchspielen mit Anmeldung.",
+          "Die Wochenpost bildet die wöchentlichen Schach-Bot-Posts ab: eine Partie oder Studie mit Termin, die du puzzleweise durchspielst. Über den Link eines Posts gehen Lesen und Durchspielen auch ohne Login; für Fortschritt und Bestenliste zählen nur angemeldete Versuche.",
           "»Erledigt« bedeutet, dass du alle Puzzles gespielt hast (ob gelöst oder nicht). Aufgeben oder Zurücksetzen nach einem Zug zählt als Fehlversuch. Eine Live-Bestenliste zeigt alle Teilnehmer."
         ]
       },
       "trainingGoals": {
         "t": "Trainingsziele",
         "p": [
-          "Setze dir Tagesziele für Puzzle- und Buch-Training (in Minuten) sowie ein Wochenziel für gespielte Partien (Rapid/Classical) und volle Trainingstage. Trainer können Vorlagen je Gruppe vorgeben; dein persönliches Ziel hat Vorrang.",
-          "Der Tracker färbt jeden Tag nach Zielerreichung (keins/teilweise/voll) – der Tagesstatus ergibt sich nur aus Puzzle- und Buch-Zeit, das Spielen ist ein Wochenziel.",
-          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit »Jetzt synchronisieren« stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
+          "Setze dir ein tägliches Trainingszeit-Ziel (in Minuten) sowie Wochenziele für gespielte Partien (Rapid/Classical) und volle Trainingstage. Trainer können Vorlagen je Gruppe vorgeben; dein persönliches Ziel hat Vorrang.",
+          "Der Tracker färbt jeden Tag nach Zielerreichung (keins/teilweise/voll) – der Tagesstatus ergibt sich aus deiner Trainingszeit (Puzzles, Kurse, Chessable und eingetragene Offline-Aktivitäten), das Spielen ist ein Wochenziel.",
+          "Gespielte Rapid-/Classical-Partien holt RookHub automatisch von Lichess und chess.com (öffentlich, ohne Login dort). Mit »Spielzeit aktualisieren« stößt du das sofort an. Bullet, Blitz und Korrespondenz zählen nicht."
         ]
       },
       "stats": {
         "t": "Statistik",
         "p": [
-          "Unter »Statistik« (Konto-Menü) siehst du deine Puzzle-Elo-Kurve und weitere Auswertungen deiner gelösten Puzzles über die Zeit."
+          "Unter ☰ → Konto → Statistik siehst du deine Puzzle-Elo-Kurve und weitere Auswertungen deiner gelösten Puzzles über die Zeit."
         ]
       },
       "analysis": {
         "t": "Analyse",
         "p": [
-          "Die Analyse läuft komplett lokal in deinem Browser über Stockfish (WebAssembly) – ohne Server, auch offline. Du erhältst mehrere Hauptvarianten (MultiPV) und Bewertungen zu jeder Stellung.",
-          "Die Analyse ist ohne Login nutzbar. Beim ersten Start lädt die Engine einmalig rund 7 MB; danach steht sie auch offline bereit."
+          "Die Analyse läuft standardmäßig in deinem Browser über Stockfish (WebAssembly) – auch offline. Du erhältst mehrere Hauptvarianten (MultiPV), Bewertungen zu jeder Stellung und einen Eröffnungs-Explorer. Die Analyse ist ohne Login nutzbar; beim ersten Start lädt die Browser-Engine einmalig rund 7 MB.",
+          "Angemeldet kannst du im Profil unter »Externe Engine« eine stärkere Engine anbinden (z. B. eine in deinem Lichess-Konto registrierte) und zwei Engines vergleichen. Mit »Im Hintergrund analysieren« (Uhr-Symbol) merkst du eine Stellung für die Hintergrund-Engine vor; die Ergebnisse stehen unter »Analyse-Aufträge«."
         ]
       },
       "repertoires": {
@@ -3337,13 +3337,13 @@
         "t": "Offline & App-Installation",
         "p": [
           "RookHub ist eine Progressive Web App: Du kannst sie als App installieren und vieles offline nutzen. Puzzles, Endlos-Pool, ganze Bücher und die Stockfish-Engine werden vorab zwischengespeichert.",
-          "Offline gelöste Puzzles werden in einer Warteschlange gemerkt und automatisch synchronisiert, sobald du wieder online bist. Eine Android-Installationsanleitung samt APK findest du im Konto-Menü unter »App installieren«."
+          "Offline gelöste Puzzles werden in einer Warteschlange gemerkt und automatisch synchronisiert, sobald du wieder online bist. Eine Android-Installationsanleitung samt APK findest du unter ☰ → Konto → App installieren."
         ]
       },
       "settings": {
         "t": "Design & Sprache",
         "p": [
-          "Über das Sonne/Mond-Symbol wechselst du zwischen hellem, dunklem und System-Design. Das Globus-Symbol schaltet die Sprache um – RookHub spricht 25 Sprachen, und deine Auswahl wird gespeichert."
+          "Design: Ohne Konto wechselst du direkt im Menü ☰ zwischen hellem, dunklem und System-Design; angemeldet wählst du es im Profil unter »Erscheinungsbild«. Sprache: ☰ → Sprache (angemeldet: ☰ → Konto → Sprache) – RookHub spricht 25 Sprachen, und deine Auswahl wird gespeichert."
         ]
       },
       "tokens": {
@@ -3371,7 +3371,48 @@
       "feedback": {
         "t": "Feedback & Hilfe",
         "p": [
-          "Einen Fehler gefunden oder einen Wunsch? Über »Feedback / Bug melden« im Footer gelangst du direkt zum Issue-Tracker auf GitHub. Den Schnellstart-Überblick öffnest du jederzeit über das Info-Symbol in der Leiste."
+          "Einen Fehler gefunden oder einen Wunsch? Über »Feedback / Bug melden« in der Fußzeile gelangst du direkt zum Issue-Tracker auf GitHub; Fragen beantworten wir auch in der Discord-Community (☰ → Community). Ohne Konto öffnet ☰ → Info den Schnellstart-Überblick."
+        ]
+      },
+      "guess": {
+        "t": "Punktepartie",
+        "p": [
+          "In der Punktepartie errätst du eine analysierte Partie Zug für Zug: Du übernimmst eine Seite, setzt deinen Zug und bekommst sofort Punkte – gemessen am Zug, der wirklich gespielt wurde, bewertet von der Engine.",
+          "Die »Meisterpartien« stehen allen offen, auch ohne Konto; dort spielst du die Seite des Gewinners. Angemeldet spielst du unter »Eigene Analysen« auch deine eigenen Partien und wählst die Seite – wirf eine Partie als PGN ein, sie wird im Hintergrund analysiert."
+        ]
+      },
+      "games": {
+        "t": "Partien & Partieformulare",
+        "p": [
+          "Unter ☰ → Analyse & Sammlung → Partien liegen deine Partien: mit der RepCheck-Erweiterung auf chess.com oder lichess gespeichert, per »PGN hochladen« übernommen oder von einem Partieformular-Foto eingelesen. »Partie analysieren« rechnet sie im Hintergrund – danach steht unter dem Brett die Bewertungskurve mit Genauigkeit und Zug-Klassen. Teilen per Link und PGN-Download gibt es auch.",
+          "»Partieformular einlesen«: Fotografiere dein Partieformular; ein KI-Modell (Claude von Anthropic, USA) liest die Züge, RookHub prüft jeden Zug am Brett und legt die Partie in deinen Partien ab. Unsichere Züge korrigierst du über »Prüfen und korrigieren«. Die Zahl der Einlesungen pro Tag ist begrenzt."
+        ]
+      },
+      "reconstruct": {
+        "t": "Partie rekonstruieren",
+        "p": [
+          "Halte fest, was du von einer Partie noch weißt – die ersten Züge, einzelne Stellungen, kurze Zugfolgen – und schließe die Lücken nach und nach. »Lücke schließen« sucht Zugfolgen, die von einem Teil zum nächsten führen; ein Vorschlag gehört erst zur Partie, wenn du ihn bestätigst.",
+          "»Ganze Partie teilen« erzeugt einen Link auf die Partie samt offenen Lücken; wer ihn öffnet, braucht kein Konto."
+        ]
+      },
+      "worksheets": {
+        "t": "Aufgabenblätter",
+        "p": [
+          "Mit »An Aufgabenblatt senden« sammelst du Stellungen aus einem Kurs, einem Kapitel oder nach einem gelösten Puzzle; sie landen in der Zwischenablage. Daraus druckst du ein Blatt mit mehreren Diagrammen je Seite und Platz für die Lösung – oder speicherst es als PDF.",
+          "Geteilt (»Blatt teilen (Link + QR-Code)«) bekommt das Blatt einen Link, der auf dem Ausdruck auch als QR-Code steht: Wer ihn öffnet, spielt das Blatt ohne Konto am Brett durch. Achtung: Hinter dem Link stehen auch die Lösungen."
+        ]
+      },
+      "leaderboards": {
+        "t": "Bestenlisten",
+        "p": [
+          "Unter ☰ → Community → Bestenlisten siehst du, wer diese Woche, diesen Monat oder insgesamt die meisten Puzzles, Endlos-Läufe, Kurs-Linien und Tagespuzzles gelöst hat."
+        ]
+      },
+      "chessable": {
+        "t": "Chessable",
+        "p": [
+          "Chessable-Kurse kommen über die RepCheck-Browser-Erweiterung zu RookHub (siehe Abschnitt RepCheck) – sie läuft in deinem eigenen, eingeloggten Browser. Der Import über RookHub selbst ist abgeschaltet: Chessable blockt Rechenzentrums-IPs, und dieses Muster kann dein Chessable-Konto sperren lassen.",
+          "Mit »Remember line« in RepCheck merkst du dir eine Stellung auf chessable.com; du findest sie unter ☰ → Analyse & Sammlung → Gemerkt und kannst sie dort analysieren oder im Hintergrund durchrechnen lassen. Deine aktive Trainingszeit auf chessable.com zählt auf deine Trainingsziele."
         ]
       }
     }

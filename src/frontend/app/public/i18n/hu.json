@@ -3907,22 +3907,22 @@
     "s": {
       "feedback": {
         "p": [
-          "Hibát találtál, vagy van egy kívánságod? A láblécben a „Visszajelzés / hiba jelentése” ponton keresztül közvetlenül a GitHub hibakövetőjéhez jutsz. A gyorsindító áttekintést bármikor megnyithatod a sávban lévő info-ikonnal."
+          "Hibát találtál, vagy van egy kívánságod? A láblécben a „Visszajelzés / Hiba bejelentése” ponton keresztül közvetlenül a GitHub hibakövetőjéhez jutsz; kérdéseket a Discord-közösségünkben is szívesen fogadunk (☰ → Közösség). Fiók nélkül a ☰ → Infó nyitja meg a gyorsindító áttekintést."
         ],
         "t": "Visszajelzés és segítség"
       },
       "welcome": {
         "t": "Üdvözlünk a RookHubban",
         "p": [
-          "A RookHub a központi sakkportálod: élő versenyadatok a chess-results.com oldalról, napi és végtelen feladványedzés, könyvtanfolyamok, a Heti Posta, személyes edzéscélok, helyben futó motoros elemzés, valamint profil- és ismerősfunkciók – mindez egy helyen.",
-          "Sok minden fiók nélkül is működik (feladványok, elemzés, napi feladvány). A személyes fejlődéshez, a verseny-feliratkozásokhoz, az ismerősökhöz és az edzéscélokhoz jelentkezz be. Ez az oldal minden területet elmagyaráz – a tartalomjegyzékkel közvetlenül a kívánt részre ugorhatsz."
+          "A RookHub a központi sakkportálod: feladványedzés (standard, végtelen, napi feladvány), könyvtanfolyamok és repertoárok, a pontjátszma, a saját játszmáid motoros kiértékeléssel, feladatlapok, személyes edzéscélok, valamint profil- és ismerősfunkciók – mindez egy helyen. A versenyeknek saját versenyoldaluk van.",
+          "Sok minden fiók nélkül is működik (feladványok, elemzés, napi feladvány, pontjátszma). A személyes fejlődéshez, a játszmáidhoz, az ismerősökhöz és az edzéscélokhoz jelentkezz be – utána a dashboardon kezdesz, amelynek csempéit a „Testreszabás” gombbal választod ki. Minden terület a ☰ menüből érhető el (Edzés, Elemzés és gyűjtemény, Közösség és Fiók csoportokban); ez az oldal elmagyarázza őket – a tartalomjegyzékkel közvetlenül a kívánt részre ugorhatsz."
         ]
       },
       "account": {
         "t": "Fiók és bejelentkezés",
         "p": [
           "Felhasználónévvel és jelszóval regisztrálhatsz; az e-mail-cím megadása nem kötelező. A felső sávban a „Regisztráció” gombbal hozol létre fiókot, majd ugyanezekkel az adatokkal jelentkezel be.",
-          "Bejelentkezéskor jelöld be a „Maradjak bejelentkezve” lehetőséget, hogy 30 nap helyett 90 napig maradj bejelentkezve. Kijelentkezni bármikor tudsz a jobb felül lévő fiókmenüben (személy ikon)."
+          "Bejelentkezéskor jelöld be a „Maradj bejelentkezve” lehetőséget, hogy 30 nap helyett 90 napig maradj bejelentkezve. Kijelentkezni bármikor tudsz a ☰ → Fiók → Kijelentkezés menüponttal."
         ]
       },
       "profile": {
@@ -3952,23 +3952,22 @@
       "tournaments": {
         "t": "Versenyek",
         "p": [
-          "A RookHub élőben tölti le a versenyadatokat a chess-results.com oldalról. A versenylistában versenyekre kereshetsz, és megnyithatod a részleteket játékosokkal, csapatokkal, párosításokkal és egyéni eredményekkel – a fordulót a választómezőben állítod be.",
-          "A „Feliratkozás” gombbal kitűzöl egy versenyt a gyors eléréshez. A fordulófigyelő automatikusan felismeri az új fordulókat, és letölti őket. Játékosokat vagy csapatokat kedvencnek jelölhetsz, hogy kiemelve jelenjenek meg a nézetben.",
-          "Versenyenként személyes beállításokat is menthetsz, például kiemeléseket és jegyzeteket."
+          "A versenyeknek – élő adatok a chess-results.com oldalról, feliratkozások, kedvencek és a fordulófigyelő – saját versenyoldaluk van. Bejelentkezve a ☰ → Közösség → Versenyek menüponttal nyitod meg; a bejelentkezésed közben átkerül."
         ]
       },
       "puzzles": {
         "t": "Feladványok",
         "p": [
           "A standard feladványmód taktikai feladatokat ad neked egy nagy készletből. A megoldást közvetlenül a táblán lépheted le; a helyes és a hibás lépésekről azonnal visszajelzést kapsz.",
-          "A feladványok téma szerint szűrhetők. Bejelentkezve a fejlődésed a feladvány-Elo értékeddel együtt mentésre kerül – bejelentkezés nélkül is gyakorolhatsz, de a fejlődés akkor csak helyben, az eszközön marad."
+          "A feladványok téma szerint szűrhetők. Bejelentkezve a fejlődésed a feladvány-Elo értékeddel együtt mentésre kerül – bejelentkezés nélkül is gyakorolhatsz, de a fejlődés akkor csak helyben, az eszközön marad.",
+          "Megoldás (vagy feladás) után a szívvel elteheted a feladványt; a gyűjteményedet a ☰ → Edzés → Kedvencek alatt találod – újrajátszáshoz vagy elemzéshez."
         ]
       },
       "endless": {
         "t": "Végtelen mód",
         "p": [
           "A végtelen módban egyre nehezebb feladványok folyamatos sorozatát oldod meg, amíg túl sok hibát nem vétesz. A kezdő Elo értéket, a témákat, a fast-track küszöböket és a Stockfish-mélységet magad állítod be.",
-          "A rekordodat és a befejezett munkameneteket elmentjük; az előzményeket a fiókmenü „Feladvány-előzmények” pontja alatt látod, és a régi munkameneteket archiválhatod."
+          "A rekordodat és a befejezett munkameneteket elmentjük; az előzményeket a ☰ → Fiók → Feladványelőzmények alatt látod, és a régi munkameneteket archiválhatod."
         ]
       },
       "daily": {
@@ -3983,13 +3982,14 @@
         "p": [
           "A tanfolyamok importált sakk-könyvek, amelyeket feladványról feladványra dolgozol át. Hogy mely könyveket látod, a csoportos engedélyeidtől függ; az adminisztrátorok mindegyiket látják.",
           "Választhatsz a könyv sorrendje (sorban haladva) és a véletlen sorrend között. A fejlődésed könyvenként mentődik, és mindkét mód között közös; egy tanfolyam fejlődését vissza is állíthatod.",
-          "A „Tanfolyamok” menüpont csak akkor jelenik meg, ha legalább egy könyvet engedélyeztek neked."
+          "A „Tanfolyamok” menüpont csak akkor jelenik meg, ha legalább egy könyvet engedélyeztek neked.",
+          "A ☰ → Elemzés és gyűjtemény → Katalógus alatt látod azokat a tanfolyamokat és repertoárokat, amelyeket mások elérhetővé tettek számodra, és egyenként kérheted őket („Kérés”)."
         ]
       },
       "weekly": {
         "t": "Heti Posta",
         "p": [
-          "A Heti Posta a sakkbot heti bejegyzéseit képezi le: egy játszma vagy tanulmány határidővel, amelyet feladványról feladványra játszol végig. Az olvasás bejelentkezés nélkül megy, a végigjátszáshoz be kell jelentkezned.",
+          "A Heti Posta a sakkbot heti bejegyzéseit képezi le: egy játszma vagy tanulmány határidővel, amelyet feladványról feladványra játszol végig. A bejegyzés linkjén keresztül az olvasás és a végigjátszás bejelentkezés nélkül is megy; a fejlődésbe és a ranglistába csak a bejelentkezett próbálkozások számítanak.",
           "A „Kész” azt jelenti, hogy minden feladványt lejátszottál (akár megoldottad, akár nem). A feladás vagy az egy lépés utáni visszaállítás hibás próbálkozásnak számít. Élő ranglista mutatja az összes résztvevőt."
         ]
       },
@@ -4004,14 +4004,14 @@
       "stats": {
         "t": "Statisztika",
         "p": [
-          "A fiókmenü „Statisztika” pontja alatt látod a feladvány-Elo görbédet és a megoldott feladványaid további, időbeli kiértékeléseit."
+          "A ☰ → Fiók → Statisztikák alatt látod a feladvány-Elo görbédet és a megoldott feladványaid további, időbeli kiértékeléseit."
         ]
       },
       "analysis": {
         "t": "Elemzés",
         "p": [
-          "Az elemzés alapértelmezés szerint helyben, a böngésződben fut Stockfishsel (WebAssembly) – szerver nélkül, offline is. Emellett összekapcsolhatsz egy, a Lichess-fiókodban regisztrált külső motort, és két motort össze is hasonlíthatsz. Több fő változatot (MultiPV) és kiértékelést kapsz minden állásra.",
-          "Az elemzés bejelentkezés nélkül is használható. Az első indításkor a böngészőmotor egyszer letölt kb. 7 MB-ot; utána offline is rendelkezésre áll."
+          "Az elemzés alapértelmezés szerint a böngésződben fut Stockfishsel (WebAssembly) – offline is. Több fő változatot (MultiPV) és kiértékelést kapsz minden állásra, és van megnyitás-explorer is. Az elemzés bejelentkezés nélkül is használható; az első indításkor a böngészőmotor egyszer letölt kb. 7 MB-ot.",
+          "Bejelentkezve a profilodban a „Külső motor” alatt erősebb motort kapcsolhatsz be (pl. egy, a Lichess-fiókodban regisztráltat), és két motort össze is hasonlíthatsz. Az „Elemzés a háttérben” gombbal (óra ikon) egy állást a háttérmotornak adsz át; az eredményeket az „Elemzési feladatok” alatt találod."
         ]
       },
       "repertoires": {
@@ -4025,13 +4025,13 @@
         "t": "Offline és app-telepítés",
         "p": [
           "A RookHub egy Progressive Web App: appként telepítheted, és sok mindent offline is használhatsz. A feladványok, a végtelen készlet, egész könyvek és a Stockfish-motor előre gyorsítótárba kerülnek.",
-          "Az offline megoldott feladványok sorba kerülnek, és automatikusan szinkronizálódnak, amint újra online vagy. Android-telepítési útmutatót az APK-val együtt a fiókmenü „App telepítése” pontja alatt találsz."
+          "Az offline megoldott feladványok sorba kerülnek, és automatikusan szinkronizálódnak, amint újra online vagy. Android-telepítési útmutatót az APK-val együtt a ☰ → Fiók → „Install app (Android)” alatt találsz."
         ]
       },
       "settings": {
         "t": "Megjelenés és nyelv",
         "p": [
-          "A nap/hold ikonnal válthatsz a világos, a sötét és a rendszer szerinti megjelenés között. A földgömb ikon a nyelvet állítja át – a RookHub 25 nyelvet beszél, és a választásodat elmentjük."
+          "Megjelenés: fiók nélkül közvetlenül a ☰ menüben válthatsz a világos, a sötét és a rendszer szerinti megjelenés között; bejelentkezve a profilodban választod ki. Nyelv: ☰ → Nyelv (bejelentkezve: ☰ → Fiók → Nyelv) – a RookHub 25 nyelvet beszél, és a választásodat elmentjük."
         ]
       },
       "tokens": {
@@ -4054,6 +4054,47 @@
         "t": "Adatvédelem és fiók törlése",
         "p": [
           "Az impresszumot és az adatvédelmi tájékoztatót a megfelelő oldalakon éred el. A fiókodat magad is törölheted: ilyenkor az identitásod és a személyes adataid anonimizálódnak, az anonimizált statisztika pedig megmarad (GDPR)."
+        ]
+      },
+      "guess": {
+        "t": "Pontjátszma",
+        "p": [
+          "A pontjátszmában egy elemzett játszmát lépésről lépésre találsz ki: átveszed az egyik oldalt, megteszed a lépésedet, és azonnal pontot kapsz – ahhoz a lépéshez mérve, amelyet valóban megtettek, a motor értékelése alapján.",
+          "A „Mesterjátszmák” mindenki számára nyitottak, fiók nélkül is; ott a győztes oldalát játszod. Bejelentkezve a „Saját elemzések” alatt a saját játszmáidat is játszhatod, és választhatsz oldalt – adj hozzá egy játszmát PGN-ként, és a háttérben elemezzük."
+        ]
+      },
+      "games": {
+        "t": "Játszmák és játszmalapok",
+        "p": [
+          "A ☰ → Elemzés és gyűjtemény → Játszmák alatt vannak a játszmáid: a RepCheck-bővítménnyel a chess.comon vagy a lichessen mentve, a „PGN feltöltése” gombbal átvéve vagy egy játszmalap fotójáról beolvasva. A „Játszma elemzése” a háttérben számolja ki – utána a tábla alatt megjelenik az értékelési görbe pontossággal és lépésosztályokkal. A játszmát linkkel meg is oszthatod, vagy PGN-ként letöltheted.",
+          "„Játszmalap beolvasása”: fényképezd le a játszmalapodat; egy MI-modell (Claude, az amerikai Anthropic cégtől) kiolvassa a lépéseket, a RookHub minden lépést ellenőriz a táblán, és a játszmát a játszmáid közé menti. A bizonytalan lépéseket az „Ellenőrzés és javítás” alatt javíthatod. A napi beolvasások száma korlátozott."
+        ]
+      },
+      "reconstruct": {
+        "t": "Játszma rekonstruálása",
+        "p": [
+          "Jegyezd fel, mire emlékszel még egy játszmából – az első lépésekre, egyes állásokra, rövid lépéssorokra –, és fokozatosan töltsd ki a hézagokat. A „Hézag kitöltése” olyan lépéssorokat keres, amelyek az egyik részből a következőbe vezetnek; egy javaslat csak akkor lesz a játszma része, ha megerősíted.",
+          "A „Teljes játszma megosztása” linket hoz létre a játszmára a nyitott hézagokkal együtt; aki megnyitja, annak nem kell fiók."
+        ]
+      },
+      "worksheets": {
+        "t": "Feladatlapok",
+        "p": [
+          "A „Küldés feladatlapra” paranccsal állásokat gyűjthetsz egy tanfolyamból, egy fejezetből vagy egy megoldott feladvány után; ezek a vágólapra kerülnek. Ebből oldalanként több diagramot tartalmazó lapot nyomtathatsz, helyet hagyva a megoldásnak – vagy PDF-ként mentheted.",
+          "Megosztva („Lap megosztása (link + QR-kód)”) a lap linket kap, amely a nyomtatványon QR-kódként is szerepel: aki megnyitja, fiók nélkül végigjátszhatja a lapot a táblán. Figyelem: a link mögött a megoldások is ott vannak."
+        ]
+      },
+      "leaderboards": {
+        "t": "Ranglisták",
+        "p": [
+          "A ☰ → Közösség → Ranglisták alatt látod, ki oldotta meg a legtöbb feladványt, végtelen futamot, tanfolyamvonalat és napi feladványt ezen a héten, ebben a hónapban vagy összesen."
+        ]
+      },
+      "chessable": {
+        "t": "Chessable",
+        "p": [
+          "A Chessable-tanfolyamok a RepCheck böngészőbővítményen keresztül kerülnek a RookHubba (lásd a RepCheck részt) – a bővítmény a saját, bejelentkezett böngésződben fut. A RookHubon keresztüli importálás ki van kapcsolva: a Chessable blokkolja az adatközponti IP-címeket, és ez a minta a Chessable-fiókod letiltásához vezethet.",
+          "A RepCheck „Remember line” gombjával elteszel egy állást a chessable.comról; a ☰ → Elemzés és gyűjtemény → Megjelöltek alatt találod, ahol elemezheted, vagy háttérelemzésre küldheted. A chessable.comon töltött aktív edzésidőd beleszámít az edzéscéljaidba."
         ]
       }
     },
