@@ -465,6 +465,7 @@ export class PlayerCardComponent {
       this.error.set('Die PGN-Datei konnte nicht geladen werden.');
       return;
     }
-    downloadBlob(blob, `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide}.pgn`);
+    const name = `${(c.name || c.fide).split(',').map(x => x.trim()).join('_').replace(/[^\w\-äöüÄÖÜß]+/g, '')}_${c.fide}.pgn`;
+    if (!downloadBlob(blob, name)) this.error.set('Die PGN-Datei konnte nicht geladen werden.');
   }
 }

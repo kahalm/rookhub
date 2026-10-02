@@ -198,6 +198,18 @@ describe('ClubGamesPageComponent', () => {
     expect(el.textContent).toContain('1 Partie');
   }));
 
+  it('PGN-Download, den der Browser nicht annimmt, sagt es — nicht stumm nichts (F8-006)', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    api.pgn.and.resolveTo(new Blob(['1. e4 *'], { type: 'application/x-chess-pgn' }));
+    spyOn(URL, 'createObjectURL').and.throwError('gesperrt');
+    void fixture.componentInstance.download();
+    flushMicrotasks();
+    expect(api.pgn).toHaveBeenCalledWith(null, null);
+    expect(fixture.componentInstance.error()).toBe('Die PGN-Datei konnte nicht geladen werden.');
+    expect(fixture.componentInstance.downloading()).toBeFalse();
+  }));
+
   it('ohne Freischaltung kein Abruf', () => {
     perms = new Set();
     const el = create();

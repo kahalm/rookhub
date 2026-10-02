@@ -236,6 +236,15 @@ describe('PlayerCardComponent', () => {
     expect(el().textContent).toContain('Keine Partien gefunden.');
   });
 
+  it('PGN-Download, den der Browser nicht annimmt, sagt es — nicht stumm nichts (F8-006)', async () => {
+    api.pgn.and.resolveTo(new Blob(['1. e4 *'], { type: 'application/x-chess-pgn' }));
+    spyOn(URL, 'createObjectURL').and.throwError('gesperrt');
+    await fixture.componentInstance.download(CARD);
+    fixture.detectChanges();
+    expect(api.pgn).toHaveBeenCalledWith('1606921', null);
+    expect(fixture.componentInstance.error()).toBe('Die PGN-Datei konnte nicht geladen werden.');
+  });
+
   it('Filter auf der Karte: das Eröffnungsprofil kommt gefiltert vom Server, ohne Filter die gespeicherte Karte (0.617.0)', async () => {
     const view: ProfileView = { fide: '1606921', n: 31, board: 20, online: 11, years: ['2019', '2026'],
       white: { n: 14, first: [['d4', 10, 55], ['e4', 4, 50]], lines: [] },

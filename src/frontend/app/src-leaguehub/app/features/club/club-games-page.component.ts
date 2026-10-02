@@ -373,7 +373,8 @@ export class ClubGamesPageComponent implements OnInit {
     this.downloading.set(true);
     try {
       const blob = await this.api.pgn(null, this.query() || null);
-      downloadBlob(blob, 'vereinspartien.pgn');
+      // downloadBlob wirft nicht, sondern meldet false (Codereview F8-006) — sonst passierte hier stumm nichts.
+      if (!downloadBlob(blob, 'vereinspartien.pgn')) this.error.set('Die PGN-Datei konnte nicht geladen werden.');
     } catch {
       this.error.set('Die PGN-Datei konnte nicht geladen werden.');
     } finally {
