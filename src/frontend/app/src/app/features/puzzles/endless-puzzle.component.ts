@@ -982,6 +982,10 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     ++this.runGeneration;   // laufenden Hintergrund-Prefetch entwerten
     this.askSolveMode();    // fortgesetzter Lauf ist derselbe Bereich → nach der ersten Wahl stumm
     const g = this.activeGameState;
+    // Fortgesetzten Stand lokal festschreiben: Der Konstruktor gibt dem Server-Stand Vorrang, ohne ihn
+    // lokal abzulegen. saveConfig (Tiefen-Regler) schickt den lokalen Stand mit — ohne das hier wäre
+    // das bis zum ersten Ergebnis ein älterer Stand dieses Geräts (Gerätewechsel-Ping-Pong).
+    this.storage.saveActiveGameLocal(g);
     this.lives = g.lives ?? 3;
     this.solved = g.solved ?? 0;
     this.chainIndex = g.chainIndex ?? 0;
@@ -1602,7 +1606,8 @@ export class EndlessPuzzleComponent extends BasePuzzleSolver implements OnDestro
     // Während eines Laufs (Tiefen-Regler im Spielbildschirm) den zuletzt gesicherten Spielstand
     // mitschicken: null heißt für den Server „kein offener Lauf" und löschte das geräteübergreifende
     // Fortsetzen — über den Debounce sogar einen gerade geplanten Spielstand. Der lokale Stand ist der,
-    // den syncActiveGameToServer zuletzt geschrieben hat (samt richtiger Fortsetz-Position).
+    // den syncActiveGameToServer zuletzt geschrieben hat (samt richtiger Fortsetz-Position) bzw. den
+    // resumeGame beim Fortsetzen festgeschrieben hat (auch einen neueren Server-Stand).
     const runInProgress = this.screen === 'play' && !this.historyView && this.lives > 0;
     this.storage.saveProgressToServer(this.config, this.highscore,
       runInProgress ? this.storage.loadActiveGameLocal() : null);

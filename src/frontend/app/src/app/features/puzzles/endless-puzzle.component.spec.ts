@@ -1086,6 +1086,30 @@ describe('EndlessPuzzleComponent Tiefen-Regler im Lauf (F2-011)', () => {
 
     expect(save.calls.mostRecent().args[2]).toBeNull();
   });
+
+  it('nach Fortsetzen mit neuerem Server-Stand schickt der Regler den Server-Stand, nicht den alten lokalen', () => {
+    // Gerät A hat lokal noch chainIndex 3, Gerät B hat den Lauf bis 10 weitergespielt (Server-Stand).
+    let local: any = { lives: 3, solved: 3, level: 3, chainIndex: 3, seed: 'S' };
+    const c = makeComponent({}, makeSolveMode(), {
+      loadActiveGameLocal: () => (local ? { ...local } : null),
+      saveActiveGameLocal: (s: any) => { local = s ? { ...s } : null; },
+      loadChainSeed: () => 'S',
+    });
+    c['offlinePool'] = Array.from({ length: 30 }, (_, i) => ({
+      id: 200 + i, lichessId: 'p' + i, fen: PUZZLE.fen, moves: PUZZLE.moves, rating: 700 + i * 10,
+    }));
+    c.activeGameState = { lives: 1, solved: 9, level: 10, chainIndex: 10, seed: 'S', maxRatingReached: 1100 };
+    const save = spyOn(c.storage, 'saveProgressToServer');
+
+    c.resumeGame();
+    expect(c.chainIndex).toBe(10);
+    c.onDepthChange();
+
+    const sent: any = save.calls.mostRecent().args[2];
+    expect(sent.chainIndex).toBe(10);
+    expect(sent.lives).toBe(1);
+    c.ngOnDestroy();
+  });
 });
 
 // Codereview F2-013: Phasenanzeige und Hilfe stammten aus einem älteren linearen Modell — „Phase 3 (Schritt 20)"
