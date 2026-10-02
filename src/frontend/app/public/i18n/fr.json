@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Actualiser",
-      "subscribe": "S'abonner",
-      "unsubscribe": "Se désabonner",
       "monitor": "Surveiller",
       "monitoringUntil": "Surveillance jusqu'à {{time}}",
-      "share": "Partager",
-      "subscribed": "Abonné !",
-      "unsubscribed": "Désabonné",
-      "failed": "Échec",
-      "unsubscribeFailed": "Impossible de se désabonner"
+      "share": "Partager"
     },
     "tabs": {
       "players": "Joueurs ({{count}})",

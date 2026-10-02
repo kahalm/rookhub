@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Perbarui",
-      "subscribe": "Langganan",
-      "unsubscribe": "Berhenti langganan",
       "monitor": "Pantau",
       "monitoringUntil": "Memantau hingga {{time}}",
-      "share": "Bagikan",
-      "subscribed": "Dilanggani!",
-      "unsubscribed": "Langganan dibatalkan",
-      "failed": "Gagal",
-      "unsubscribeFailed": "Gagal berhenti langganan"
+      "share": "Bagikan"
     },
     "tabs": {
       "players": "Pemain ({{count}})",

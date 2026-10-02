@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Обновить",
-      "subscribe": "Подписаться",
-      "unsubscribe": "Отписаться",
       "monitor": "Мониторинг",
       "monitoringUntil": "Мониторинг до {{time}}",
-      "share": "Поделиться",
-      "subscribed": "Подписан!",
-      "unsubscribed": "Отписан",
-      "failed": "Ошибка",
-      "unsubscribeFailed": "Не удалось отписаться"
+      "share": "Поделиться"
     },
     "tabs": {
       "players": "Игроки ({{count}})",

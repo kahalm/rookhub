@@ -225,7 +225,7 @@ describe('HandoffService', () => {
       const { done } = await start('/?h=EINMAL');
       const nav = spyOn(router, 'navigateByUrl').and.callThrough();
 
-      http.expectOne('/api/auth/handoff/exchange').flush(session);
+      http.expectOne(HandoffService.ExchangeUrl).flush(session);
       await settle();
       http.expectOne('/api/auth/rh-session').flush(null, noContent);
       expect(await done).toBeTrue();

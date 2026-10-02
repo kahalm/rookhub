@@ -1125,15 +1125,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Osvježi",
-      "subscribe": "Pretplati se",
-      "unsubscribe": "Otkaži pretplatu",
       "monitor": "Prati",
       "monitoringUntil": "Praćenje do {{time}}",
-      "share": "Podijeli",
-      "subscribed": "Pretplaćeno!",
-      "unsubscribed": "Pretplata otkazana",
-      "failed": "Neuspješno",
-      "unsubscribeFailed": "Otkazivanje pretplate nije uspjelo"
+      "share": "Podijeli"
     },
     "tabs": {
       "players": "Igrači ({{count}})",

@@ -1125,15 +1125,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Aktualisieren",
-      "subscribe": "Abonnieren",
-      "unsubscribe": "Abo beenden",
       "monitor": "Beobachten",
       "monitoringUntil": "Beobachtung bis {{time}}",
-      "share": "Teilen",
-      "subscribed": "Abonniert!",
-      "unsubscribed": "Abo beendet",
-      "failed": "Fehlgeschlagen",
-      "unsubscribeFailed": "Abo konnte nicht beendet werden"
+      "share": "Teilen"
     },
     "tabs": {
       "players": "Spieler ({{count}})",

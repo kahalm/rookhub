@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Actualizar",
-      "subscribe": "Suscribirse",
-      "unsubscribe": "Cancelar suscripción",
       "monitor": "Monitor",
       "monitoringUntil": "Monitoreando hasta {{time}}",
-      "share": "Compartir",
-      "subscribed": "¡Suscrito!",
-      "unsubscribed": "Suscripción cancelada",
-      "failed": "Error",
-      "unsubscribeFailed": "Error al cancelar la suscripción"
+      "share": "Compartir"
     },
     "tabs": {
       "players": "Jugadores ({{count}})",

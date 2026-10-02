@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "تحديث",
-      "subscribe": "اشتراك",
-      "unsubscribe": "إلغاء الاشتراك",
       "monitor": "مراقبة",
       "monitoringUntil": "مراقبة حتى {{time}}",
-      "share": "مشاركة",
-      "subscribed": "تم الاشتراك!",
-      "unsubscribed": "تم إلغاء الاشتراك",
-      "failed": "فشل",
-      "unsubscribeFailed": "فشل إلغاء الاشتراك"
+      "share": "مشاركة"
     },
     "tabs": {
       "players": "اللاعبون ({{count}})",

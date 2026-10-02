@@ -211,7 +211,7 @@ jobs:
           || startsWith(github.ref, 'refs/tags/v')
           || needs.changes.outputs.api == 'true' }}
     runs-on: ubuntu-latest
-    # Die vier Tests brauchen zusammen Sekunden. Ohne Deckel liefe ein kuenftig kaputter
+    # Die fuenf Tests brauchen zusammen Sekunden. Ohne Deckel liefe ein kuenftig kaputter
     # MAX_ROUNDS-Deckel in directory-runs.sh bis zum 6-h-Standard und hielte so lange das
     # Image-Gate (docker.yml tests:) an.
     timeout-minutes: 5
@@ -223,6 +223,7 @@ jobs:
       - run: bash scripts/tests/test_directory_runs.sh
       - run: bash scripts/tests/test_init_db.sh
       - run: python3 scripts/tests/test_es_log_retention.py
+      - run: python3 scripts/tests/test_prep_import.py
 
   build-frontend:
     needs: changes

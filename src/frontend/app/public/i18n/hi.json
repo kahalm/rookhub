@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "रीफ्रेश करें",
-      "subscribe": "सदस्यता लें",
-      "unsubscribe": "सदस्यता रद्द करें",
       "monitor": "मॉनिटर",
       "monitoringUntil": "{{time}} तक मॉनिटरिंग",
-      "share": "साझा करें",
-      "subscribed": "सदस्यता ली!",
-      "unsubscribed": "सदस्यता रद्द की",
-      "failed": "विफल",
-      "unsubscribeFailed": "सदस्यता रद्द करने में विफल"
+      "share": "साझा करें"
     },
     "tabs": {
       "players": "खिलाड़ी ({{count}})",

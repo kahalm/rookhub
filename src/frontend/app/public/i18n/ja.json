@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "更新",
-      "subscribe": "サブスクライブ",
-      "unsubscribe": "サブスクライブ解除",
       "monitor": "モニター",
       "monitoringUntil": "{{time}} までモニター中",
-      "share": "共有",
-      "subscribed": "サブスクライブしました！",
-      "unsubscribed": "サブスクライブを解除しました",
-      "failed": "失敗",
-      "unsubscribeFailed": "サブスクライブの解除に失敗しました"
+      "share": "共有"
     },
     "tabs": {
       "players": "選手 ({{count}})",

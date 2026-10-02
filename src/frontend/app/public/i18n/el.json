@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Ανανέωση",
-      "subscribe": "Εγγραφή",
-      "unsubscribe": "Διαγραφή εγγραφής",
       "monitor": "Παρακολούθηση",
       "monitoringUntil": "Παρακολούθηση έως {{time}}",
-      "share": "Κοινοποίηση",
-      "subscribed": "Εγγεγραμμένος!",
-      "unsubscribed": "Η εγγραφή ακυρώθηκε",
-      "failed": "Αποτυχία",
-      "unsubscribeFailed": "Αποτυχία ακύρωσης εγγραφής"
+      "share": "Κοινοποίηση"
     },
     "tabs": {
       "players": "Παίκτες ({{count}})",

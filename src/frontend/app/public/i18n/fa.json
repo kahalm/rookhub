@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "بازآوری",
-      "subscribe": "عضویت",
-      "unsubscribe": "لغو عضویت",
       "monitor": "پایش",
       "monitoringUntil": "پایش تا {{time}}",
-      "share": "اشتراک‌گذاری",
-      "subscribed": "عضو شدید!",
-      "unsubscribed": "عضویت لغو شد",
-      "failed": "ناموفق",
-      "unsubscribeFailed": "لغو عضویت ناموفق بود"
+      "share": "اشتراک‌گذاری"
     },
     "tabs": {
       "players": "بازیکنان ({{count}})",

@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Obnovit",
-      "subscribe": "Přihlásit se k odběru",
-      "unsubscribe": "Odhlásit se z odběru",
       "monitor": "Monitor",
       "monitoringUntil": "Monitorováno do {{time}}",
-      "share": "Sdílet",
-      "subscribed": "Přihlášeno!",
-      "unsubscribed": "Odhlášeno",
-      "failed": "Selhalo",
-      "unsubscribeFailed": "Odhlášení se nezdařilo"
+      "share": "Sdílet"
     },
     "tabs": {
       "players": "Hráči ({{count}})",

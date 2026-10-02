@@ -890,15 +890,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Frissítés",
-      "subscribe": "Feliratkozás",
-      "unsubscribe": "Leiratkozás",
       "monitor": "Figyelés",
       "monitoringUntil": "Figyelés eddig: {{time}}",
-      "share": "Megosztás",
-      "subscribed": "Feliratkozva!",
-      "unsubscribed": "Leiratkozva",
-      "failed": "Sikertelen",
-      "unsubscribeFailed": "Sikertelen leiratkozás"
+      "share": "Megosztás"
     },
     "tabs": {
       "players": "Játékosok ({{count}})",

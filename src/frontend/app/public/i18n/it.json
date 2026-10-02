@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Aggiorna",
-      "subscribe": "Iscriviti",
-      "unsubscribe": "Annulla iscrizione",
       "monitor": "Monitora",
       "monitoringUntil": "Monitoraggio fino alle {{time}}",
-      "share": "Condividi",
-      "subscribed": "Iscritto!",
-      "unsubscribed": "Iscrizione annullata",
-      "failed": "Operazione non riuscita",
-      "unsubscribeFailed": "Impossibile annullare l'iscrizione"
+      "share": "Condividi"
     },
     "tabs": {
       "players": "Giocatori ({{count}})",

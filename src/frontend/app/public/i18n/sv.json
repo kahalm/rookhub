@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Uppdatera",
-      "subscribe": "Prenumerera",
-      "unsubscribe": "Avprenumerera",
       "monitor": "Övervaka",
       "monitoringUntil": "Övervakar till {{time}}",
-      "share": "Dela",
-      "subscribed": "Prenumererad!",
-      "unsubscribed": "Avprenumererad",
-      "failed": "Misslyckades",
-      "unsubscribeFailed": "Det gick inte att avprenumerera"
+      "share": "Dela"
     },
     "tabs": {
       "players": "Spelare ({{count}})",

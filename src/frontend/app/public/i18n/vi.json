@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Làm mới",
-      "subscribe": "Đăng ký",
-      "unsubscribe": "Hủy đăng ký",
       "monitor": "Theo dõi",
       "monitoringUntil": "Đang theo dõi đến {{time}}",
-      "share": "Chia sẻ",
-      "subscribed": "Đã đăng ký!",
-      "unsubscribed": "Đã hủy đăng ký",
-      "failed": "Thất bại",
-      "unsubscribeFailed": "Hủy đăng ký thất bại"
+      "share": "Chia sẻ"
     },
     "tabs": {
       "players": "Người chơi ({{count}})",

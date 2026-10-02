@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Оновити",
-      "subscribe": "Підписатися",
-      "unsubscribe": "Відписатися",
       "monitor": "Моніторинг",
       "monitoringUntil": "Моніторинг до {{time}}",
-      "share": "Поділитися",
-      "subscribed": "Підписано!",
-      "unsubscribed": "Відписано",
-      "failed": "Помилка",
-      "unsubscribeFailed": "Не вдалося відписатися"
+      "share": "Поділитися"
     },
     "tabs": {
       "players": "Гравці ({{count}})",

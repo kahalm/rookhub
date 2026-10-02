@@ -93,7 +93,7 @@ describe('CatalogComponent', () => {
       providers: [
         provideNoopAnimations(), provideRouter([]), provideTranslateService({ fallbackLang: 'en' }),
         { provide: CatalogService, useValue: { list } },
-        { provide: AuthService, useValue: { isAdmin: false } },
+        { provide: AuthService, useValue: { isAdmin: false, has: () => false } },
         { provide: AdminService, useValue: {} },
         { provide: SnackbarService, useValue: { info: () => {} } },
       ],

@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Yenile",
-      "subscribe": "Abone Ol",
-      "unsubscribe": "Aboneliği İptal Et",
       "monitor": "İzle",
       "monitoringUntil": "{{time}} saatine kadar izleniyor",
-      "share": "Paylaş",
-      "subscribed": "Abone olundu!",
-      "unsubscribed": "Abonelik iptal edildi",
-      "failed": "Başarısız",
-      "unsubscribeFailed": "Abonelik iptal edilemedi"
+      "share": "Paylaş"
     },
     "tabs": {
       "players": "Oyuncular ({{count}})",

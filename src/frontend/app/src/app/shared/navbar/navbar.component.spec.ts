@@ -177,7 +177,8 @@ describe('NavbarComponent entrümpelte Toolbar (UI-Welle Navbar)', () => {
     const fixture = render({ loggedIn: false, keys: ['puzzles', 'analysis'] });
     const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar a[mat-button], mat-toolbar a[mat-raised-button]'))
       .map(a => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/puzzles', '/analysis', '/login', '/register']);
+    // Anmelden/Registrieren tragen den Rücksprung als Query (UX-020, eigener Test unten) — hier zählt nur, dass es Links sind.
+    expect(hrefs.map(h => h?.split('?')[0])).toEqual(['/puzzles', '/analysis', '/login', '/register']);
     expect((fixture.nativeElement as HTMLElement).querySelectorAll('mat-toolbar button[mat-button], mat-toolbar button[mat-raised-button]').length).toBe(0);
   });
 

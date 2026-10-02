@@ -74,7 +74,7 @@ describe('NotificationsComponent', () => {
   it('a failing first page sets the error state, the retry clears it', () => {
     const svc = makeService({ history: jasmine.createSpy('history').and.returnValues(
       throwError(() => ({ status: 500 })), of({ items: [notif(1)], total: 1 })) });
-    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, {} as any);
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, {} as any);
 
     c.loadMore();
     expect(c.loadError).toBeTrue();
@@ -88,7 +88,7 @@ describe('NotificationsComponent', () => {
     const snackbar = { warn: jasmine.createSpy('warn') };
     const svc = makeService({ history: jasmine.createSpy('history').and.returnValues(
       of({ items: [notif(1)], total: 2 }), throwError(() => ({ status: 500 }))) });
-    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false } as any, snackbar as any);
+    const c = new NotificationsComponent(svc, translate, { navigateByUrl: jasmine.createSpy() } as any, { supported: false, permissionDenied: false } as any, { isAdmin: false, has: () => false } as any, snackbar as any);
 
     c.loadMore();
     c.loadMore();

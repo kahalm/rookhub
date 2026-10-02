@@ -1125,15 +1125,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Refresh",
-      "subscribe": "Subscribe",
-      "unsubscribe": "Unsubscribe",
       "monitor": "Monitor",
       "monitoringUntil": "Monitoring until {{time}}",
-      "share": "Share",
-      "subscribed": "Subscribed!",
-      "unsubscribed": "Unsubscribed",
-      "failed": "Failed",
-      "unsubscribeFailed": "Failed to unsubscribe"
+      "share": "Share"
     },
     "tabs": {
       "players": "Players ({{count}})",

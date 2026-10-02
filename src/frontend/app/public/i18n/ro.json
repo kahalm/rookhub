@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "Reîmprospătează",
-      "subscribe": "Abonează-te",
-      "unsubscribe": "Dezabonează-te",
       "monitor": "Monitorizare",
       "monitoringUntil": "Monitorizare până la {{time}}",
-      "share": "Distribuie",
-      "subscribed": "Abonat!",
-      "unsubscribed": "Dezabonat",
-      "failed": "Eșuat",
-      "unsubscribeFailed": "Dezabonarea a eșuat"
+      "share": "Distribuie"
     },
     "tabs": {
       "players": "Jucători ({{count}})",

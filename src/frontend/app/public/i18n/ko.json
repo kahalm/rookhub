@@ -360,15 +360,9 @@
     "actions": {
       "chessResults": "Chess-Results",
       "refresh": "새로고침",
-      "subscribe": "구독",
-      "unsubscribe": "구독 취소",
       "monitor": "모니터",
       "monitoringUntil": "{{time}}까지 모니터링",
-      "share": "공유",
-      "subscribed": "구독됨!",
-      "unsubscribed": "구독 취소됨",
-      "failed": "실패",
-      "unsubscribeFailed": "구독 취소 실패"
+      "share": "공유"
     },
     "tabs": {
       "players": "선수 ({{count}})",
