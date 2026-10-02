@@ -395,6 +395,25 @@ public class ChessBaseReaderTests
         Assert.Equal("Müßig, Jürgen", game.White);
     }
 
+    [Fact]
+    public void Cb2_LidShorterThanOneBlock_IsStillRead()
+    {
+        // Echte .2lid enden direkt nach dem letzten Satz. Mit höchstens einer Entität je Art ist die Datei kürzer als ein
+        // Block (hier 1355 statt 4234 Byte). Das ist gültig und darf nicht als „Block größer als Datei" abgewiesen werden.
+        var files = Cb2Database().Select(f =>
+        {
+            if (!f.Item1.EndsWith(".2lid")) return f;
+            var tour = 184 + 1024;                                                  // Turnier 0 in Block 0
+            var lid = f.Item2.Take(tour + 4 + BitConverter.ToInt32(f.Item2, tour)).ToArray();
+            lid[0x13] = 1;                                                          // nur noch ein Spieler
+            return (f.Item1, lid);
+        }).ToList();
+        var game = Assert.Single(ChessBaseConverter.Convert(ChessBaseFiles.FromFiles(files), 100).Games);
+        Assert.Null(game.Error);
+        Assert.Equal(("Müßig, Jürgen", "Landesliga 2025/26", "Innsbruck"), (game.White, game.Event, game.Site));
+        Assert.Equal(new[] { "e4", "e5", "Nf3" }, game.Moves);
+    }
+
     // ── Dateien ─────────────────────────────────────────────────────────────────────────────────
 
     [Fact]

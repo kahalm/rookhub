@@ -187,7 +187,9 @@ internal static class Cb2Reader
             // Kopf, Container und id stehen alle in der Datei (BE32 vorzeichenbehaftet, id ein freier I64 aus .2cbh). Erst
             // deckeln, dann rechnen: sonst lief id * _block über, ein negatives Ergebnis kam am Vergleich darunter vorbei,
             // und (int)at warf eine ArgumentOutOfRangeException, die die ganze Datenbank als unlesbar abwies (D1-005).
-            if (_head < 0 || _block > _b.Length || id > (_b.Length - _head) / _block) return -1;
+            // Die Division allein hält id * _block unter der Dateilänge. Ein Block größer als die Datei ist dabei gültig:
+            // die .2lid endet direkt nach dem letzten Satz, mit höchstens einer Entität je Art ist sie kürzer als ein Block.
+            if (_head < 0 || id > (_b.Length - _head) / _block) return -1;
             var at = _head + id * _block + _start[type];
             if (at < 0 || at + 4 > _b.Length) return -1;
             var length = BitConverter.ToInt32(_b, (int)at);
