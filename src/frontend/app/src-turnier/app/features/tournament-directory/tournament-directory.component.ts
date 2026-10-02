@@ -335,6 +335,9 @@ export class TournamentDirectoryComponent implements OnInit {
         const fallback = `${fix.lat.toFixed(3)}, ${fix.lon.toFixed(3)}`;
         this.placeLabel = fallback;
         this.chosenPlaceLabel = fallback;
+        // Ein stehengebliebenes „Kein Ort gefunden" widerspraeche dem Ort, der jetzt im Feld steht.
+        this.placeSuggestions.set([]);
+        this.resetPlaceSearchState();
         this.reload();
 
         // Der Name ist Beiwerk: die Suche laeuft schon mit den Koordinaten, und ein Fehlschlag
@@ -434,6 +437,8 @@ export class TournamentDirectoryComponent implements OnInit {
     this.placeLabel = profile?.placeQuery ?? profile?.name ?? '';
     this.chosenPlaceLabel = this.placeLabel || null;
     this.filter.radiusKm = profile?.radiusKm ?? null;
+    this.placeSuggestions.set([]);
+    this.resetPlaceSearchState();
 
     this.reload();
   }
@@ -501,6 +506,7 @@ export class TournamentDirectoryComponent implements OnInit {
     this.placeLabel = '';
     this.chosenPlaceLabel = null;
     this.placeSuggestions.set([]);
+    this.resetPlaceSearchState();
     this.locationError.set(null);
     this.applyRangePreset('quarter');
   }

@@ -973,10 +973,6 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
-  /**
-   * Ein selbst gewaehlter Ort ERSETZT das Profil. Liefe beides mit, gewaenne serverseitig das
-   * Profil — das Ortsfeld behauptete dann etwas anderes, als die Liste darunter zeigt.
-   */
   // ----- Ortssuche ohne Treffer bzw. mit Fehler (Codereview F6-007) -----------
 
   it('sagt „kein Ort gefunden", statt nach der Sanduhr nichts zu zeigen', async () => {
@@ -1021,6 +1017,66 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /** Stellt „Kein Ort gefunden" her — Ausgangslage der drei folgenden Tests. */
+  async function produceNoMatch() {
+    component.onPlaceInput('Kleinstdorf');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    http.expectOne(r => r.url === '/api/tournament-directory/places').flush([]);
+    expect(component.placeNoMatch()).toBeTrue();
+  }
+
+  it('räumt „Kein Ort gefunden" ab, sobald der Standort im Feld steht', async () => {
+    // Der Hinweis empfiehlt selbst den Standort-Knopf — danach darf er nicht weiter behaupten,
+    // es sei kein Ort gefunden, waehrend im Feld schon einer steht.
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    await produceNoMatch();
+
+    const geolocation = TestBed.inject(GeolocationService);
+    spyOnProperty(geolocation, 'supported').and.returnValue(true);
+    spyOn(geolocation, 'current').and.returnValue(of({ lat: 47.27, lon: 11.39, accuracyM: 30 }));
+
+    component.useCurrentLocation();
+    flushList([]);
+    http.expectOne(r => r.url === '/api/tournament-directory/places/nearest')
+      .flush({ label: '6020 Innsbruck (AT)', country: 'AT', postalCode: '6020', lat: 47.27, lon: 11.39 });
+
+    expect(component.placeNoMatch()).toBeFalse();
+    expect(component.placeSearchFailed()).toBeFalse();
+    expect(component.placeSuggestions()).toEqual([]);
+    http.verify();
+  });
+
+  it('räumt „Kein Ort gefunden" beim Zurücksetzen ab', async () => {
+    // Sonst zeigt der naechste Fokus auf das leere Feld wieder „Kein Ort gefunden".
+    await setup();
+    flushProfiles([]);
+    flushList([]);
+    await produceNoMatch();
+
+    component.resetFilter();
+    flushList([]);
+
+    expect(component.placeNoMatch()).toBeFalse();
+    expect(component.placeSearchFailed()).toBeFalse();
+    http.verify();
+  });
+
+  it('räumt „Kein Ort gefunden" beim Wechsel des Suchprofils ab', async () => {
+    await setup();
+    flushProfiles([profile(3, 'Zuhause')]);
+    flushList([]);
+    await produceNoMatch();
+
+    component.onProfileChange(3);
+    flushList([]);
+
+    expect(component.placeLabel).toBe('Zuhause');
+    expect(component.placeNoMatch()).toBeFalse();
+    http.verify();
+  });
+
   it('sagt unter der Karte, dass dort nur verortete Turniere stehen', async () => {
     TestBed.overrideComponent(TournamentDirectoryComponent, {
       remove: { imports: [TournamentMapComponent] },
@@ -1040,6 +1096,10 @@ describe('TournamentDirectoryComponent', () => {
     http.verify();
   });
 
+  /**
+   * Ein selbst gewaehlter Ort ERSETZT das Profil. Liefe beides mit, gewaenne serverseitig das
+   * Profil — das Ortsfeld behauptete dann etwas anderes, als die Liste darunter zeigt.
+   */
   it('legt bei eigener Ortswahl das Suchprofil ab', async () => {
     await setup();
     flushProfiles([profile(3, 'Zuhause')]);
