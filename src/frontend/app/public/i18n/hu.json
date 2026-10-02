@@ -4208,7 +4208,7 @@
   },
   "install": {
     "pageTitle": "RookHub telepítése",
-    "pageIntro": "Telepítsd a RookHubot appként az eszközödre. Válaszd azt a változatot, amelyik a rendszeredhez illik.",
+    "pageIntro": "Telepítsd a RookHubot appként az eszközödre. A legegyszerűbb webappként, közvetlenül a böngészőből – letöltés és biztonsági figyelmeztetés nélkül.",
     "apk": {
       "title": "Android-app (APK)",
       "desc": "Töltsd le a natív Android-appot APK-fájlként, és telepítsd kézzel.",
@@ -4217,18 +4217,20 @@
       "step3": "Erősítsd meg a telepítést – kész. A RookHub appként jelenik meg az indítóban.",
       "download": "APK letöltése",
       "downloadAnyway": "APK letöltése mégis",
-      "unavailable": "Az APK közvetlen telepítése csak Androidon lehetséges – a jelenlegi rendszereden nem. A fájlt ettől függetlenül letöltheted, és átmásolhatod egy Android-eszközre."
+      "unavailable": "Az APK csak Androidon telepíthető – a jelenlegi rendszereden nem.",
+      "qrHint": "Olvasd be a kódot az Android-telefonoddal: ott megnyílik ez az oldal, és közvetlenül a telefonra telepítheted a RookHubot."
     },
     "pwa": {
       "title": "Telepítés appként (PWA)",
       "desc": "A RookHubot közvetlenül a böngészőből telepíti – Androidon, Windowson, macOS-en és Linuxon. Utána saját ablakban és offline is fut.",
+      "recommended": "Ajánlott: nincs letöltés, nincs biztonsági figyelmeztetés",
       "button": "Telepítés most",
       "installed": "A RookHub ezen az eszközön már appként telepítve van.",
       "iosTitle": "iPhone / iPad (Safari)",
       "ios1": "Nyisd meg ezt az oldalt Safariban.",
       "ios2": "Koppints lent a Megosztás ikonra.",
       "ios3": "Válaszd a „Hozzáadás a kezdőképernyőhöz” lehetőséget, és erősítsd meg a „Hozzáadás” gombbal.",
-      "unavailable": "Az appként való közvetlen telepítés a jelenlegi böngésződben/rendszereden nem lehetséges. Nyisd meg a RookHubot Chrome-ban vagy Edge-ben, hogy telepíthesd az appot."
+      "unavailable": "A böngésződ most nem mutat telepítés gombot. Általában a böngésző menüjén (⋮) keresztül mégis működik: válaszd az „Alkalmazás telepítése” vagy a „Hozzáadás a kezdőképernyőhöz” lehetőséget. Ha ez hiányzik, nyisd meg a RookHubot Chrome-ban vagy Edge-ben."
     }
   },
   "reconstruct": {

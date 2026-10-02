@@ -3194,7 +3194,7 @@
   },
   "install": {
     "pageTitle": "Install RookHub",
-    "pageIntro": "Install RookHub as an app on your device. Pick the option that matches your system.",
+    "pageIntro": "Install RookHub as an app on your device. The easiest way is the web app straight from your browser — no download and no security warning.",
     "apk": {
       "title": "Android app (APK)",
       "desc": "Download the native Android app as an APK file and install it manually.",
@@ -3203,18 +3203,20 @@
       "step3": "Confirm the installation — done. RookHub appears as an app in your launcher.",
       "download": "Download APK",
       "downloadAnyway": "Download APK anyway",
-      "unavailable": "Direct APK installation is only possible on Android — not on your current system. You can still download the file and transfer it to an Android device."
+      "unavailable": "The APK can only be installed on Android — not on your current system.",
+      "qrHint": "Scan the code with your Android phone: this page opens there and you can install RookHub right on the phone."
     },
     "pwa": {
       "title": "Install as an app (PWA)",
       "desc": "Installs RookHub straight from the browser — on Android, Windows, macOS and Linux. Runs in its own window and offline afterwards.",
+      "recommended": "Recommended: no download, no security warning",
       "button": "Install now",
       "installed": "RookHub is already installed as an app on this device.",
       "iosTitle": "iPhone / iPad (Safari)",
       "ios1": "Open this page in Safari.",
       "ios2": "Tap the Share icon at the bottom.",
       "ios3": "Choose “Add to Home Screen” and confirm with “Add”.",
-      "unavailable": "Installing as an app isn’t available in your current browser/system. Open RookHub in Chrome or Edge to install the app."
+      "unavailable": "Your browser isn’t showing an install button right now. Usually it still works from the browser menu (⋮): choose “Install app” or “Add to Home screen”. If that entry is missing, open RookHub in Chrome or Edge."
     }
   },
   "help": {

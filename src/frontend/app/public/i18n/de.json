@@ -3194,7 +3194,7 @@
   },
   "install": {
     "pageTitle": "RookHub installieren",
-    "pageIntro": "Installiere RookHub als App auf deinem Gerät. Wähle die Variante, die zu deinem System passt.",
+    "pageIntro": "Installiere RookHub als App auf deinem Gerät. Am einfachsten geht es als Web-App direkt aus dem Browser – ohne Download und ohne Sicherheitswarnung.",
     "apk": {
       "title": "Android-App (APK)",
       "desc": "Lade die native Android-App als APK-Datei herunter und installiere sie manuell.",
@@ -3203,18 +3203,20 @@
       "step3": "Bestätige die Installation – fertig. RookHub erscheint als App im Launcher.",
       "download": "APK herunterladen",
       "downloadAnyway": "APK trotzdem herunterladen",
-      "unavailable": "Die direkte Installation der APK ist nur unter Android möglich – auf deinem aktuellen System nicht. Du kannst die Datei trotzdem herunterladen und auf ein Android-Gerät übertragen."
+      "unavailable": "Die APK lässt sich nur unter Android installieren – auf deinem aktuellen System nicht.",
+      "qrHint": "Scanne den Code mit deinem Android-Handy: Dort öffnet sich diese Seite, und du installierst RookHub direkt auf dem Handy."
     },
     "pwa": {
       "title": "Als App installieren (PWA)",
       "desc": "Installiert RookHub direkt aus dem Browser – auf Android, Windows, macOS und Linux. Läuft danach im eigenen Fenster und offline.",
+      "recommended": "Empfohlen: kein Download, keine Sicherheitswarnung",
       "button": "Jetzt installieren",
       "installed": "RookHub ist auf diesem Gerät bereits als App installiert.",
       "iosTitle": "iPhone / iPad (Safari)",
       "ios1": "Öffne diese Seite in Safari.",
       "ios2": "Tippe unten auf das Teilen-Symbol.",
       "ios3": "Wähle „Zum Home-Bildschirm“ und bestätige mit „Hinzufügen“.",
-      "unavailable": "Die direkte Installation als App ist in deinem aktuellen Browser/System nicht möglich. Öffne RookHub in Chrome oder Edge, um die App zu installieren."
+      "unavailable": "Dein Browser zeigt gerade keinen Installieren-Knopf an. Meist geht es trotzdem über das Browsermenü (⋮): „App installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen. Fehlt der Eintrag dort, öffne RookHub in Chrome oder Edge."
     }
   },
   "help": {

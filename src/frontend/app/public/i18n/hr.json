@@ -3194,7 +3194,7 @@
   },
   "install": {
     "pageTitle": "Instaliraj RookHub",
-    "pageIntro": "Instaliraj RookHub kao aplikaciju na svoj uređaj. Odaberi opciju koja odgovara tvom sustavu.",
+    "pageIntro": "Instaliraj RookHub kao aplikaciju na svoj uređaj. Najjednostavnije je kao web-aplikacija izravno iz preglednika – bez preuzimanja i bez sigurnosnog upozorenja.",
     "apk": {
       "title": "Android aplikacija (APK)",
       "desc": "Preuzmi nativnu Android aplikaciju kao APK datoteku i instaliraj je ručno.",
@@ -3203,18 +3203,20 @@
       "step3": "Potvrdi instalaciju – gotovo. RookHub se pojavljuje kao aplikacija na uređaju.",
       "download": "Preuzmi APK",
       "downloadAnyway": "Ipak preuzmi APK",
-      "unavailable": "Izravna instalacija APK-a moguća je samo na Androidu – ne na tvom trenutnom sustavu. Datoteku ipak možeš preuzeti i prenijeti na Android uređaj."
+      "unavailable": "APK se može instalirati samo na Androidu – ne na tvom trenutnom sustavu.",
+      "qrHint": "Skeniraj kôd svojim Android mobitelom: ondje se otvara ova stranica i RookHub instaliraš izravno na mobitel."
     },
     "pwa": {
       "title": "Instaliraj kao aplikaciju (PWA)",
       "desc": "Instalira RookHub izravno iz preglednika – na Androidu, Windowsu, macOS-u i Linuxu. Nakon toga radi u vlastitom prozoru i izvanmrežno.",
+      "recommended": "Preporučeno: bez preuzimanja, bez sigurnosnog upozorenja",
       "button": "Instaliraj sada",
       "installed": "RookHub je već instaliran kao aplikacija na ovom uređaju.",
       "iosTitle": "iPhone / iPad (Safari)",
       "ios1": "Otvori ovu stranicu u Safariju.",
       "ios2": "Dolje dodirni ikonu za dijeljenje.",
       "ios3": "Odaberi „Dodaj na početni zaslon“ i potvrdi s „Dodaj“.",
-      "unavailable": "Instalacija kao aplikacija nije dostupna u tvom trenutnom pregledniku/sustavu. Otvori RookHub u Chromeu ili Edgeu za instalaciju aplikacije."
+      "unavailable": "Tvoj preglednik trenutačno ne prikazuje gumb za instalaciju. Obično ipak ide preko izbornika preglednika (⋮): odaberi „Instaliraj aplikaciju“ ili „Dodaj na početni zaslon“. Ako te stavke nema, otvori RookHub u Chromeu ili Edgeu."
     }
   },
   "help": {
