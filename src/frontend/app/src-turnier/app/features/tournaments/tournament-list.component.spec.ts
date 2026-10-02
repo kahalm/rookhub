@@ -10,10 +10,19 @@ import { Subscription } from '@rh/core/models';
 import { TournamentListComponent } from './tournament-list.component';
 
 /**
- * Termin fest weit in der Zukunft: upcoming()/past() vergleichen mit dem heutigen Datum. Ein
- * Termin wie '2026-12-01' rutschte am Tag danach still in „Vergangen" und machte Tests rot.
+ * Termine relativ zum Tagesdatum: upcoming()/past() vergleichen mit dem heutigen Datum. Ein fester
+ * Termin wie '2026-12-01' rutschte am Tag danach still in „Vergangen" und machte Tests rot — und
+ * ein fester Termin weit in der Zukunft verdeckt nur dieselbe Falle.
+ * Ortszeit wie `TournamentListComponent.today()`, sonst kippt der Vergleich um Mitternacht.
  */
-const FUTURE = '2099-12-01';
+function daysFromToday(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const FUTURE = daysFromToday(60);
 
 function sub(over: Partial<Subscription> = {}): Subscription {
   return {
@@ -108,9 +117,9 @@ describe('TournamentListComponent', () => {
    */
   it('sortiert kommende nach Termin und trennt die vergangenen ab', async () => {
     await setup([
-      sub({ id: 1, eventDate: '2099-12-01', tournamentName: 'Spaeter' }),
-      sub({ id: 2, eventDate: '2099-10-01', tournamentName: 'Frueher' }),
-      sub({ id: 3, eventDate: '2020-05-01', tournamentName: 'Vorbei' }),
+      sub({ id: 1, eventDate: daysFromToday(60), tournamentName: 'Spaeter' }),
+      sub({ id: 2, eventDate: daysFromToday(30), tournamentName: 'Frueher' }),
+      sub({ id: 3, eventDate: daysFromToday(-30), tournamentName: 'Vorbei' }),
     ]);
 
     expect(component.upcoming().map(s => s.tournamentName)).toEqual(['Frueher', 'Spaeter']);
