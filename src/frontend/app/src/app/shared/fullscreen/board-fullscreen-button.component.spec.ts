@@ -107,15 +107,25 @@ describe('BoardFullscreenButtonComponent', () => {
 
     const coarse = coarsePointerRules().filter(r =>
       r.selectorText.includes('.board-fs-btn') && !r.selectorText.includes('app-fullscreen'));
-    const after = coarse.find(r => r.selectorText.includes('::after'));
+    const after = coarse.find(r => r.selectorText.includes('::after') && !r.selectorText.includes('calc-rail'));
     expect(after).toBeDefined();
     const width = 22 - parseFloat(after!.style.left) - parseFloat(after!.style.right);
     const height = 22 - parseFloat(after!.style.top) - parseFloat(after!.style.bottom);
     expect(width).toBeGreaterThanOrEqual(44);
     expect(height).toBeGreaterThan(22);
     expect(parseFloat(after!.style.bottom)).toBeGreaterThanOrEqual(-2);   // endet an der Brettkante (margin-bottom 2 px)
+    // Rechtsbündig am Zeilenende: ein Überstand nach rechts machte Seiten mit randlosem Brett (Teilen-Seiten
+    // am Handy) breiter als das Fenster — waagerechter Überlauf.
+    expect(parseFloat(after!.style.right)).toBeGreaterThanOrEqual(0);
     const btn = coarse.find(r => !r.selectorText.includes('::after'));
     expect(btn?.style.position).toBe('relative');
+
+    // Leiste neben dem Kalkulationsbrett: Knopf mittig in schmaler Spalte → symmetrisch, sonst ragte die
+    // Fläche links übers Brett.
+    const rail = coarse.find(r => r.selectorText.includes('::after') && r.selectorText.includes('calc-rail'));
+    expect(rail).toBeDefined();
+    expect(parseFloat(rail!.style.left)).toBe(parseFloat(rail!.style.right));
+    expect(22 - parseFloat(rail!.style.left) - parseFloat(rail!.style.right)).toBeGreaterThanOrEqual(44);
   });
 
   // Codereview UX-046: Brett- und App-Vollbild zeigten beide „fullscreen“, wenige Zentimeter auseinander.

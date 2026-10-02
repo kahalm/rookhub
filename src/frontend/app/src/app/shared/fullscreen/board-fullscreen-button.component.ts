@@ -117,12 +117,18 @@ import { fullscreenSupported, isFullscreen, onFullscreenChange, toggleFullscreen
        per ::after auf 44 px Breite und nach oben (44 × 35 px), OHNE die Zeile über dem Brett zu
        vergrößern und ohne aufs Eckfeld zu ragen (unten endet sie an der Brettkante). Dazu kräftiger —
        ein Touchgerät kennt kein Hover, das den blassen Knopf aufhellt. Im App-Vollbild nicht: dort liegt
-       er 6 px neben dem Beenden-Knopf. */
+       er 6 px neben dem Beenden-Knopf.
+       Die Fläche wächst NUR nach links: der Knopf sitzt rechtsbündig am Zeilenende, und bei Brettern bis
+       an den Bildschirmrand (Teilen-Seiten /l/, /g/, /r/ am Handy) machte ein Überstand nach rechts die
+       Seite breiter als das Fenster — sie wackelte seitlich. Ausnahme ist die Leiste neben dem
+       Kalkulationsbrett (.calc-rail): dort steht der Knopf mittig in einer 30-px-Spalte, links liegt das
+       Brett nur ~10 px entfernt — also symmetrisch, wie die Spalte selbst. */
     @media (pointer: coarse) {
       .board-fs-btn:not(.board-fs-btn--on) { position: relative; opacity: 0.7; }
       .board-fs-btn:not(.board-fs-btn--on)::after {
-        content: ''; position: absolute; top: -11px; bottom: -2px; left: -11px; right: -11px;
+        content: ''; position: absolute; top: -11px; bottom: -2px; left: -22px; right: 0;
       }
+      :host-context(.calc-rail) .board-fs-btn:not(.board-fs-btn--on)::after { left: -11px; right: -11px; }
       :host-context(.app-fullscreen) .board-fs-btn:not(.board-fs-btn--on)::after { content: none; }
     }
   `],
