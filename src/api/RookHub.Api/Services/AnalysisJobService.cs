@@ -37,7 +37,7 @@ public class AnalysisJobService
     /// <para>150 seit 0.475.9: der Deckel muss ueber
     /// <see cref="Models.GameAnalysisDefaults.MaxOpenJobsPerGame"/> liegen, sonst bindet ER und die
     /// Blockgroesse der Partie waere wirkungslos. Eingefuehrt mit dem Block von 96 (0.475.9); seit der Block
-    /// wieder 32 ist (0.475.10), bleibt der Abstand fuer von Hand eingereihte Stellungen entsprechend groesser.</para></summary>
+    /// in 0.475.10 wieder kleiner wurde, bleibt der Abstand fuer von Hand eingereihte Stellungen entsprechend groesser.</para></summary>
     public const int MaxOpenJobsPerUser = 150;
 
     private readonly AppDbContext _db;
