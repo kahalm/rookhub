@@ -98,6 +98,7 @@
   },
   "app": {
     "changelogTitle": "Változásnapló",
+    "changelogMore": "Régebbi verziók megjelenítése",
     "quickstartTitle": "Gyorsindítás",
     "feedback": "Visszajelzés / Hiba bejelentése",
     "updateAvailable": "Új verzió érhető el.",

@@ -260,6 +260,7 @@
   },
   "app": {
     "changelogTitle": "Changelog",
+    "changelogMore": "Ältere Versionen anzeigen",
     "quickstartTitle": "Schnellstart",
     "qs": {
       "randomTitle": "Zufalls-Puzzle",

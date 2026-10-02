@@ -260,6 +260,7 @@
   },
   "app": {
     "changelogTitle": "Dnevnik promjena",
+    "changelogMore": "Prikaži starije verzije",
     "quickstartTitle": "Brzi početak",
     "qs": {
       "randomTitle": "Nasumične zagonetke",

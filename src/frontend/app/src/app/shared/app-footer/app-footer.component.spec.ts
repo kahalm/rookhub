@@ -213,3 +213,38 @@ describe('AppFooterComponent am Handy (UX-072)', () => {
     expect(el.querySelector('.version-link[role="button"]')).not.toBeNull();
   });
 });
+
+/** Codereview W5 F8-008 (Teil): das Overlay renderte alle ~1500 Versionen auf einmal — jetzt die neuesten 30. */
+describe('AppFooterComponent Changelog seitenweise (F8-008)', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  it('zeigt die neuesten 30 Versionen und auf Wunsch die naechsten 30', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideTranslateService({ fallbackLang: 'en' })],
+    });
+    const fixture = TestBed.createComponent(AppFooterComponent);
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.version-link') as HTMLElement).click();
+    await fixture.componentInstance.changelogLoad;
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const total = fixture.componentInstance.changelog.length;
+    expect(total).toBeGreaterThan(60);   // Prüfung trägt nur mit genug Einträgen
+
+    expect(el.querySelectorAll('.changelog-entry').length).toBe(AppFooterComponent.ChangelogPage);
+    expect(el.querySelector('.changelog-entry strong')?.textContent).toContain(fixture.componentInstance.changelog[0].version);
+
+    (el.querySelector('.changelog-more') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.changelog-entry').length).toBe(2 * AppFooterComponent.ChangelogPage);
+
+    // Schliessen und wieder oeffnen beginnt wieder bei den neuesten 30 (ueber Klicks — ein direkter Methodenaufruf
+    // markiert die Ansicht in Angular 22 nicht als geaendert).
+    (el.querySelector('.changelog-header button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (el.querySelector('.version-link') as HTMLElement).click();
+    await fixture.componentInstance.changelogLoad;
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.changelog-entry').length).toBe(AppFooterComponent.ChangelogPage);
+  });
+});

@@ -76,7 +76,9 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
             <h3>{{ 'app.changelogTitle' | translate }}</h3>
             <button (click)="showChangelog = false" [attr.aria-label]="'common.close' | translate" cdkFocusInitial>&times;</button>
           </div>
-          @for (entry of changelog; track entry.version) {
+          <!-- Seitenweise (Codereview W5 F8-008): alle ~1500 Versionen mit ~2100 Zeilen auf einmal zu rendern kostete
+               beim Oeffnen spuerbar Zeit, gelesen werden fast immer nur die neuesten. -->
+          @for (entry of visibleChangelog; track entry.version) {
             <div class="changelog-entry">
               <strong>v{{ entry.version }}</strong> <span class="changelog-date">{{ entry.date }}</span>
               <ul>
@@ -85,6 +87,11 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
                 }
               </ul>
             </div>
+          }
+          @if (changelog.length > changelogShown) {
+            <button type="button" class="changelog-more" (click)="showOlderChangelog()">
+              {{ 'app.changelogMore' | translate }}
+            </button>
           }
         </div>
       </div>
@@ -157,6 +164,11 @@ import { LEGAL_SITE } from '../../features/legal/legal-site';
     .changelog-date { color: color-mix(in srgb, currentColor 60%, transparent); font-size: 0.85rem; margin-left: 8px; }
     .changelog-entry ul { margin: 4px 0 0 20px; padding: 0; }
     .changelog-entry li { font-size: 0.85rem; margin-bottom: 2px; }
+    .changelog-more {
+      display: block; margin: 8px auto 0; min-height: 44px; padding: 0 16px; border-radius: 6px; cursor: pointer;
+      background: none; color: inherit; border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+    }
+    .changelog-more:hover { border-color: currentColor; }
   `],
 })
 export class AppFooterComponent {
@@ -192,11 +204,29 @@ export class AppFooterComponent {
   readonly helpHref = this.helpRoute ? null : partnerSiteUrl() && `${partnerSiteUrl()}/help`;
 
   /**
-   * Changelog-Eintraege — LEER bis zum ersten Oeffnen: das Array (~0,9 MB Prosa,
+   * Changelog-Eintraege — LEER bis zum ersten Oeffnen: das Array (~1,7 MB Prosa, Stand Oktober 2026,
    * changelog-data.ts) kommt per dynamic import() und darf nicht im Initial-Bundle liegen.
+   *
+   * <p>Bekannt und offen (Codereview W5 F8-008): der Service Worker legt den Lazy-Chunk trotzdem in seine
+   * prefetch-Gruppe `app` (`/*.js`) und laedt ihn nach jedem Release auf jedem installierten Geraet neu, weil
+   * sich sein Hash mit jedem Eintrag aendert. Beheben laesst sich das erst mit einem anderen Ablageformat
+   * (Daten statt Code, eigene lazy-Assetgruppe) — das betrifft die Pflege des Changelogs und das Discord-Skript.</p>
    */
   changelog: ChangelogEntry[] = [];
   showChangelog = false;
+
+  /** Wie viele Versionen das Overlay je Schritt zeigt. */
+  static readonly ChangelogPage = 30;
+  /** Gerade gezeigte Versionen (die neuesten zuerst). */
+  changelogShown = AppFooterComponent.ChangelogPage;
+
+  get visibleChangelog(): ChangelogEntry[] {
+    return this.changelog.slice(0, this.changelogShown);
+  }
+
+  showOlderChangelog(): void {
+    this.changelogShown += AppFooterComponent.ChangelogPage;
+  }
 
   /** Laufender Nachlade-Vorgang — als Feld, damit Tests den async-Ablauf awaiten koennen. */
   changelogLoad?: Promise<void>;
@@ -204,13 +234,17 @@ export class AppFooterComponent {
   /** Overlay oeffnen (Navbar-Menue) — laedt die Eintraege beim ersten Oeffnen nach. */
   openChangelog(): void {
     this.showChangelog = true;
+    this.changelogShown = AppFooterComponent.ChangelogPage;
     this.changelogLoad = this.loadChangelog();
   }
 
   /** Overlay per Versionslink auf-/zuklappen. */
   toggleChangelog(): void {
     this.showChangelog = !this.showChangelog;
-    if (this.showChangelog) this.changelogLoad = this.loadChangelog();
+    if (this.showChangelog) {
+      this.changelogShown = AppFooterComponent.ChangelogPage;
+      this.changelogLoad = this.loadChangelog();
+    }
   }
 
   /** Escape schliesst das Overlay — dieselbe Tastatur-Bedienbarkeit wie vorher in der App-Hülle. */
