@@ -162,33 +162,45 @@ public class GapSearchLimitTests : IDisposable
     }
 
     /// <summary>Das Fehlerszenario: ein Ziel, das die Schranke für nah hält, das aber in zwölf Halbzügen NICHT
-    /// erreichbar ist — die Suche läuft bis zum Budget. Vorher 12 s je Aufruf, jetzt das neue Budget (4 s) plus
-    /// ein Uhr-Intervall von 1024 Knoten; die Grenze lässt 2 s Luft für einen langsamen CI-Rechner.</summary>
+    /// erreichbar ist — die Suche läuft bis zum Budget (vorher 12 s je Aufruf). Ohne Stoppuhr: vorher maß der Test
+    /// das 4-s-Standardbudget an der Wanduhr (Grenze 6 s), und auf einem vollen CI-Runner riss das. Beweis ist jetzt
+    /// der Ausgang: mit kleinem Zeitbudget meldet sie „budget" lange vor dem Knoten-Deckel (die Uhr hat gestoppt,
+    /// nicht die Knoten), und mit kleinem Knoten-Budget unter dem Standard-Zeitbudget endet sie auf den Knoten genau
+    /// an diesem Deckel. Dass die Standardwerte klein sind, prüft <see cref="DefaultBudget_IsSmall"/>.</summary>
     [Fact]
     public void Solve_ImpossibleButNearTarget_GivesUpWithinTheDefaultBudget()
     {
-        var sw = Stopwatch.StartNew();
-        var result = GapSolver.Solve(Start, ImpossibleButNear, maxPlies: GapSolver.MaxSearchPlies);
-        sw.Stop();
+        var byClock = GapSolver.Solve(Start, ImpossibleButNear, maxPlies: GapSolver.MaxSearchPlies,
+            timeBudget: TimeSpan.FromMilliseconds(50));
 
-        Assert.True(result.BudgetExhausted);
-        Assert.Equal("budget", result.Reason);
-        Assert.Empty(result.Solutions);
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(6), $"{sw.Elapsed.TotalSeconds:0.0} s bei {result.Nodes} Knoten");
+        Assert.True(byClock.BudgetExhausted);
+        Assert.Equal("budget", byClock.Reason);
+        Assert.Empty(byClock.Solutions);
+        Assert.InRange(byClock.Nodes, 1, GapSolver.DefaultNodeBudget - 1);
+
+        const int nodeBudget = 2_000;
+        var byNodes = GapSolver.Solve(Start, ImpossibleButNear, maxPlies: GapSolver.MaxSearchPlies, nodeBudget: nodeBudget);
+
+        Assert.True(byNodes.BudgetExhausted);
+        Assert.Equal("budget", byNodes.Reason);
+        Assert.Empty(byNodes.Solutions);
+        Assert.Equal(nodeBudget, byNodes.Nodes);
     }
 
+    /// <summary>Ein schon abgebrochener Token wirkt wie ein erschöpftes Budget — und zwar vor dem ersten Knoten
+    /// (die Suche prüft ihn beim Knoten 0). Ohne Stoppuhr: vorher die Grenze „&lt; 1 s", in die auf einem vollen
+    /// Runner auch das erste Laden der Schachbibliothek fiel. Kein einziger Knoten heißt: der Token hat sie beendet.</summary>
     [Fact]
     public void Solve_CancelledToken_StopsLikeAnExhaustedBudget()
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var sw = Stopwatch.StartNew();
         var result = GapSolver.Solve(Start, ImpossibleButNear, maxPlies: GapSolver.MaxSearchPlies, ct: cts.Token);
-        sw.Stop();
 
         Assert.True(result.BudgetExhausted);
         Assert.Equal("budget", result.Reason);
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(1), $"{sw.Elapsed.TotalMilliseconds:0} ms");
+        Assert.Empty(result.Solutions);
+        Assert.Equal(0, result.Nodes);
     }
 
     /// <summary>Die Anfrage bricht ab, sobald die Suche ihren Platz hat — also nach dem Laden (ein schon abgebrochener
