@@ -85,6 +85,9 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
    *  (schnelle Navigation: Auto-Advance + „Weiter" + Prefetch) darf ein neueres Puzzle
    *  nicht überschreiben → veraltete Antworten werden anhand der Epoche verworfen. */
   private loadEpoch = 0;
+  /** Epoche der Puzzle-Filter (Schwierigkeit, Gelöste ausschließen, schwächste Themen): steigt bei jeder
+   *  Filteränderung → Vorab-/Pool-Antworten, die noch mit den alten Filtern angefragt wurden, werden verworfen. */
+  private filterEpoch = 0;
   lastEloChange: number | null = null;
 
   // Eval
@@ -192,8 +195,13 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     if (n <= 0 || !navigator.onLine || this.offlinePuzzlePool.length >= n) return;   // nur auffüllen
     const r = this.ratingRange();
     const windows = Array.from({ length: n }, () => ({ minRating: r.min, maxRating: r.max }));
+    const filterEpoch = this.filterEpoch;   // Filter geändert, während die Anfrage lief → verwerfen
     this.puzzleService.getRandomBatch(windows, undefined, this.excludeSolved, this.worstThemesParam).subscribe({
-      next: pool => { this.offlinePuzzlePool = pool || []; this.saveOfflinePool(); },
+      next: pool => {
+        if (filterEpoch !== this.filterEpoch) return;
+        this.offlinePuzzlePool = pool || [];
+        this.saveOfflinePool();
+      },
       error: () => { /* offline/Fehler: bestehenden Pool behalten */ }
     });
   }
@@ -544,10 +552,10 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
 
   private prefetchNext(): void {
     const epoch = this.loadEpoch;
-    const excludeSolved = this.excludeSolved;   // Filter umgeschaltet, während die Anfrage lief → verwerfen
+    const filterEpoch = this.filterEpoch;   // Filter geändert, während die Anfrage lief → verwerfen
     const r = this.ratingRange();
-    this.puzzleService.getRandom(r.min, r.max, undefined, excludeSolved, this.worstThemesParam)
-      .subscribe({ next: p => { if (epoch === this.loadEpoch && excludeSolved === this.excludeSolved) this.nextPuzzle = p; }, error: () => {} });
+    this.puzzleService.getRandom(r.min, r.max, undefined, this.excludeSolved, this.worstThemesParam)
+      .subscribe({ next: p => { if (epoch === this.loadEpoch && filterEpoch === this.filterEpoch) this.nextPuzzle = p; }, error: () => {} });
   }
 
   /** Rating-Fenster aus aktueller Elo + Schwierigkeits-Offset (±RATING_WINDOW). */
@@ -555,12 +563,18 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     return puzzleWindow(this.stats?.puzzleElo ?? 1500, this.difficulty, this.ratingRangeBounds);
   }
 
-  onDifficultyChange(): void {
-    this.nextPuzzle = null;  // vorab geladenes Puzzle hatte die alte Schwierigkeit
-    this.offlinePuzzlePool = [];   // Offline-Pool galt für die alte Schwierigkeit → neu füllen
+  /** Puzzle-Filter geändert: vorab geladenes Puzzle + Offline-Pool galten für die alten Filter → verwerfen
+   *  (auch noch laufende Anfragen) und den Pool mit den neuen Filtern füllen. `loadNow` = gleich ein neues
+   *  Puzzle laden (Schwierigkeit/Themen); sonst bleibt das laufende stehen und erst das nächste kommt gefiltert. */
+  private onPuzzleFilterChange(loadNow: boolean): void {
+    ++this.filterEpoch;
+    this.nextPuzzle = null;
+    this.offlinePuzzlePool = [];
     this.saveOfflinePool();
-    this.prefetchOfflinePool();
-    this.saveConfig();
+    this.ensureWorstThemes(() => {
+      this.prefetchOfflinePool();
+      if (loadNow) this.loadNext();
+    });
   }
 
   /** On-the-fly klassifizierter erster Löserzug (Schach/Schlag/ruhig) — Basis der gestuften Tipps. */
@@ -887,11 +901,6 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
     this.prefs.setVizArrow(val);
   }
 
-  saveConfig(): void {
-    this.prefs.setStockfishDepth(this.stockfishDepth);
-    this.prefs.setPuzzleDifficulty(this.difficulty);
-  }
-
   setBoardTheme(theme: string): void {
     this.boardTheme = theme;
     this.prefs.setBoardTheme(theme);
@@ -943,30 +952,26 @@ export class PuzzleComponent extends BasePuzzleSolver implements OnInit, OnDestr
         this.stockfishDepth = result.stockfishDepth;
         this.prefs.setStockfishDepth(this.stockfishDepth);
       }
-      if (result.difficulty !== undefined && result.difficulty !== this.difficulty) {
+      // Puzzle-Filter: erst ALLE neuen Werte setzen und merken, dann EIN gemeinsamer Neuaufbau — sonst fragt
+      // ein früherer Block (z. B. Schwierigkeit) Puzzle/Offline-Pool noch mit dem alten Wert eines späteren an.
+      const difficultyChanged = result.difficulty !== undefined && result.difficulty !== this.difficulty;
+      const excludeSolvedChanged = result.excludeSolved !== undefined && result.excludeSolved !== this.excludeSolved;
+      const worstTagsChanged = result.worstTags !== undefined && result.worstTags !== this.worstTagsEnabled;
+      if (difficultyChanged) {
         this.difficulty = result.difficulty as typeof this.difficulty;
         this.prefs.setPuzzleDifficulty(this.difficulty);
-        this.onDifficultyChange();
-        this.loadNext();
       }
-      if (result.excludeSolved !== undefined && result.excludeSolved !== this.excludeSolved) {
-        this.excludeSolved = result.excludeSolved;
+      if (excludeSolvedChanged) {
+        this.excludeSolved = !!result.excludeSolved;
         this.prefs.setPuzzleExcludeSolved(this.excludeSolved);
-        // Vorab geladenes Puzzle + Offline-Pool galten für den alten Filter → verwerfen und neu füllen.
-        // Das laufende Puzzle bleibt; erst das nächste kommt mit dem neuen Filter.
-        this.nextPuzzle = null;
-        this.offlinePuzzlePool = [];
-        this.saveOfflinePool();
-        this.prefetchOfflinePool();
       }
-      if (result.worstTags !== undefined && result.worstTags !== this.worstTagsEnabled) {
-        this.worstTagsEnabled = result.worstTags;
+      if (worstTagsChanged) {
+        this.worstTagsEnabled = !!result.worstTags;
         this.prefs.setPuzzleWorstTags(this.worstTagsEnabled);
-        // Vorab geladenes Puzzle + Offline-Pool galten für den alten Filter → neu aufbauen.
-        this.nextPuzzle = null;
-        this.offlinePuzzlePool = [];
-        this.saveOfflinePool();
-        this.ensureWorstThemes(() => { this.prefetchOfflinePool(); this.loadNext(); });
+      }
+      // Neue Schwierigkeit/Themen laden sofort ein neues Puzzle; „Gelöste ausschließen" allein lässt das laufende stehen.
+      if (difficultyChanged || excludeSolvedChanged || worstTagsChanged) {
+        this.onPuzzleFilterChange(difficultyChanged || worstTagsChanged);
       }
       if (result.offPathWarnMoves !== undefined) this.prefs.setOffPathWarnMoves(result.offPathWarnMoves);
       if (result.enPassantForced !== undefined) {

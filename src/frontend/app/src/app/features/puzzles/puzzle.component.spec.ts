@@ -630,6 +630,70 @@ describe('PuzzleComponent „Gelöste ausschließen" (F2-016)', () => {
     expect((c as any).nextPuzzle).toBeNull();
     c.ngOnDestroy();
   });
+
+  // Nacharbeit: Der Schwierigkeits-Block lief VOR dem excludeSolved-Block — sein loadNext fragte noch ungefiltert an.
+  it('zusammen mit der Schwierigkeit geändert: das sofort geladene Puzzle kommt schon gefiltert', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.state = 'AWAITING_USER_MOVE';
+    stubSettingsDialog(c, { difficulty: 'schwer', excludeSolved: true });
+    c.prefs.setPuzzleExcludeSolved = jasmine.createSpy('setPuzzleExcludeSolved');
+    c.prefs.setPuzzleDifficulty = jasmine.createSpy('setPuzzleDifficulty');
+    const getRandom = jasmine.createSpy('getRandom').and.returnValue({ subscribe: () => ({ unsubscribe() {} }) });
+    c.puzzleService.getRandom = getRandom;
+
+    c.openSettingsDialog();
+
+    expect(c.difficulty).toBe('schwer');
+    expect(c.prefs.setPuzzleDifficulty).toHaveBeenCalledWith('schwer');
+    expect(c.prefs.setPuzzleExcludeSolved).toHaveBeenCalledWith(true);
+    expect(getRandom).toHaveBeenCalledTimes(1);
+    expect(getRandom.calls.mostRecent().args[3]).toBeTrue();   // excludeSolved
+    c.ngOnDestroy();
+  });
+
+  it('mehrere Filter auf einmal geändert: genau EINE Offline-Pool-Anfrage, mit allen neuen Filtern', () => {
+    const c = makeComponent();
+    c.puzzle = { ...PUZZLE };
+    c.state = 'AWAITING_USER_MOVE';
+    (c as any).offline.puzzleCount = 3;
+    (c as any).worstThemes = ['fork'];
+    stubSettingsDialog(c, { difficulty: 'schwer', excludeSolved: true, worstTags: true });
+    c.prefs.setPuzzleExcludeSolved = () => {};
+    c.prefs.setPuzzleWorstTags = () => {};
+    const getRandom = jasmine.createSpy('getRandom').and.returnValue({ subscribe: () => ({ unsubscribe() {} }) });
+    const getRandomBatch = jasmine.createSpy('getRandomBatch').and.returnValue({ subscribe: () => ({ unsubscribe() {} }) });
+    c.puzzleService.getRandom = getRandom;
+    c.puzzleService.getRandomBatch = getRandomBatch;
+
+    c.openSettingsDialog();
+
+    expect(getRandomBatch).toHaveBeenCalledTimes(1);
+    expect(getRandomBatch.calls.mostRecent().args[2]).toBeTrue();      // excludeSolved
+    expect(getRandomBatch.calls.mostRecent().args[3]).toBe('fork');    // schwächste Themen
+    expect(getRandom).toHaveBeenCalledTimes(1);                        // ein einziges loadNext
+    expect(getRandom.calls.mostRecent().args[3]).toBeTrue();
+    expect(getRandom.calls.mostRecent().args[4]).toBe('fork');
+    c.ngOnDestroy();
+  });
+
+  it('eine noch laufende Offline-Pool-Anfrage mit dem alten Filter überschreibt den neuen Pool nicht', () => {
+    const c = makeComponent();
+    (c as any).offline.puzzleCount = 3;
+    const antworten: Array<(pool: any[]) => void> = [];
+    c.puzzleService.getRandomBatch = () => ({ subscribe: (h: any) => { antworten.push(h.next); return { unsubscribe() {} }; } });
+    (c as any).prefetchOfflinePool();                          // läuft noch mit excludeSolved=false
+    stubSettingsDialog(c, { excludeSolved: true });
+    c.prefs.setPuzzleExcludeSolved = () => {};
+
+    c.openSettingsDialog();
+    expect(antworten.length).toBe(2);
+    antworten[1]([{ ...PUZZLE, id: 81 }]);                     // neue Anfrage (gefiltert) zuerst zurück
+    antworten[0]([{ ...PUZZLE, id: 80 }]);                     // alte Anfrage kommt zu spät
+
+    expect((c as any).offlinePuzzlePool.map((p: any) => p.id)).toEqual([81]);
+    c.ngOnDestroy();
+  });
 });
 
 // Codereview UX-045: Das erste Puzzle wurde parallel zum Spielweise-Dialog aufgesetzt — hinter dem Dialog lief die
