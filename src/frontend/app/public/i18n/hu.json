@@ -3733,6 +3733,11 @@
       "Manual": "Kézzel felvéve"
     }
   },
+  "clubhub": {
+    "authIntro": {
+      "login": "A ClubHub a klubvezetés és az edzők taglistája – a hozzáférést a klubod adja meg. Jelentkezz be a RookHub-fiókoddal. Kódot kaptál az edződtől? Bármelyik fiókkal beválthatod – egy új fiók ingyenes."
+    }
+  },
   "turnier": {
     "brand": "Versenyek",
     "toRookHub": "A RookHubra",

@@ -2,14 +2,13 @@ import { of, throwError } from 'rxjs';
 import { LoginComponent, loginAreaKey, loginErrorOf, loginRetryAfterSeconds } from './login.component';
 import { AuthPrefillService } from '../../core/auth-prefill.service';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth.service';
 import { SnackbarService } from '../../core/snackbar.service';
 import { LEGAL_SITE } from '../legal/legal-site';
 import { AUTH_INTRO } from './auth-intro';
-import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { Component } from '@angular/core';
 
@@ -284,8 +283,9 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('en', {
       auth: { login: { required: 'GENERIC', requiredFor: 'Then on to {{area}}.', freeNote: 'FREE' } },
-      nav: { friends: 'Friends' },
+      nav: { friends: 'Friends', tournaments: 'Tournaments' },
       turnier: { authIntro: { login: 'TOURNAMENT INTRO' } },
+      clubhub: { authIntro: { login: 'CLUB INTRO' } },
     }, true);
     translate.use('en');
     const fixture = TestBed.createComponent(LoginComponent);
@@ -316,6 +316,30 @@ describe('LoginComponent — Hinweis mit Ziel und Einleitung (UX-027)', () => {
     const el = await render({}, [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login' } }]);
     const notes = Array.from(el.querySelectorAll('.site-note')).map(n => n.textContent);
     expect(notes.join('|')).toContain('TOURNAMENT INTRO');
+  });
+
+  it('Turnierseite nach Umleitung: Ziel im Satz, aber kein zweites „kostenlos“ — die Einleitung sagt es selbst', async () => {
+    const el = await render({ returnUrl: '/tournaments/calendar', authRequired: '1' },
+      [{ provide: AUTH_INTRO, useValue: { login: 'turnier.authIntro.login' } }]);
+    expect(el.querySelector('.auth-required')!.textContent).toContain('Then on to Tournaments.');
+    expect(el.querySelector('.auth-sub')).toBeNull();
+    expect(el.textContent).not.toContain('FREE');
+    expect(el.querySelector('.site-note')?.textContent).toContain('TOURNAMENT INTRO');
+  });
+
+  it('ClubHub: auf jeder geschützten Seite die Einleitung statt „kostenlos“ (die Kartei schaltet der Verein frei)', async () => {
+    // Ein neues Konto allein sieht in der Kartei nur „Nicht freigeschaltet“ (club.manage/club.trainer) — der
+    // Kostenlos-Satz versprach dort etwas, das die Seite nicht hält. Auch /verknuepfen (Code des Trainers): die
+    // Einleitung sagt dort selbst, dass jedes Konto reicht und ein neues kostenlos ist.
+    for (const returnUrl of ['/', '/gruppen', '/kind/5', '/verknuepfen?code=ABCDE-FGHJK']) {
+      TestBed.resetTestingModule();
+      const el = await render({ returnUrl, authRequired: '1' },
+        [{ provide: AUTH_INTRO, useValue: { login: 'clubhub.authIntro.login' } }]);
+      expect(el.querySelector('.auth-required')!.textContent).withContext(returnUrl).toContain('GENERIC');
+      expect(el.querySelector('.auth-sub')).withContext(returnUrl).toBeNull();
+      expect(el.textContent).withContext(returnUrl).not.toContain('FREE');
+      expect(el.querySelector('.site-note')?.textContent).withContext(returnUrl).toContain('CLUB INTRO');
+    }
   });
 
   it('RookHub (Vorgabe): keine Einleitung', async () => {

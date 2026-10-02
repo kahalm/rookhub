@@ -4055,6 +4055,11 @@
       "Manual": "Ručno unesen"
     }
   },
+  "clubhub": {
+    "authIntro": {
+      "login": "ClubHub je kartoteka članova za vodstvo kluba i trenere – pristup odobrava tvoj klub. Prijavi se svojim RookHub računom. Dobio si kod od trenera? Možeš ga iskoristiti s bilo kojim računom – novi je besplatan."
+    }
+  },
   "turnier": {
     "brand": "Turniri",
     "toRookHub": "Na RookHub",

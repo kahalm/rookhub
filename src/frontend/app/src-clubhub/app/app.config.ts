@@ -15,6 +15,7 @@ import { retryInterceptor } from '@rh/core/retry.interceptor';
 import { authInterceptor } from '@rh/core/auth.interceptor';
 import { LEGAL_SITE, LegalSite, defaultLegalSite } from '@rh/features/legal/legal-site';
 import { CONFIRM_LABELS } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { AUTH_INTRO } from '@rh/features/auth/auth-intro';
 
 registerLocaleData(localeDe);
 
@@ -36,6 +37,10 @@ export const clubhubConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     // Rechtsseiten wie in RookHub; Konto loeschen geht aber nur dort — die Loeschseite verweist dorthin (Codereview UX-023).
     { provide: LEGAL_SITE, useFactory: (): LegalSite => ({ ...defaultLegalSite(), accountHome: 'rookhub' }) },
+    // Anmeldemaske: für wen die Kartei ist und dass der Verein freischaltet — statt RookHubs „Ein Konto ist kostenlos“,
+    // nach dem ein neues Konto hier nur „Nicht freigeschaltet“ sähe. Den Code des Trainers (/verknuepfen) löst dagegen
+    // jedes Konto ein; auch das sagt der Satz (Codereview UX-027).
+    { provide: AUTH_INTRO, useValue: { login: 'clubhub.authIntro.login' } },
     // Rueckfragen (ConfirmService) mit deutschen Knoepfen — die Seite stellt keine Sprache ein, sonst kaeme „Cancel“.
     { provide: CONFIRM_LABELS, useValue: { confirm: 'OK', cancel: 'Abbrechen' } },
     provideTranslateService({

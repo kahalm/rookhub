@@ -4055,6 +4055,11 @@
       "Manual": "Entered by hand"
     }
   },
+  "clubhub": {
+    "authIntro": {
+      "login": "ClubHub is the member register for club officials and coaches – access is granted by your club. Sign in with your RookHub account. Got a code from your coach? You can redeem it with any account – a new one is free."
+    }
+  },
   "turnier": {
     "brand": "Tournaments",
     "toRookHub": "To RookHub",

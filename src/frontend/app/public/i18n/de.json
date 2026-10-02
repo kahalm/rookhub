@@ -4055,6 +4055,11 @@
       "Manual": "Von Hand eingetragen"
     }
   },
+  "clubhub": {
+    "authIntro": {
+      "login": "ClubHub ist die Mitgliederkartei für Vereinsleitung und Trainer – freischalten muss dich dein Verein. Melde dich mit deinem RookHub-Konto an. Du hast einen Code von deinem Trainer? Den löst du mit jedem Konto ein – ein neues ist kostenlos."
+    }
+  },
   "turnier": {
     "brand": "Turniere",
     "toRookHub": "Zu RookHub",

@@ -92,7 +92,8 @@ export function loginRetryAfterSeconds(err: any): number {
           @if (leagueHub) {
             <p class="auth-required site-note">{{ 'auth.login.leaguehubNote' | translate }}</p>
           }
-          <!-- Turnierseite (UX-027): die Maske ist dort die Startseite — was die Seite bietet und welches Konto gilt. -->
+          <!-- Turnierseite, ClubHub (UX-027): was die Seite bietet und welches Konto gilt — auf der Turnierseite ist die
+               Maske die Startseite, auf ClubHub sagt sie, dass der Verein freischaltet. -->
           @if (intro.login; as introKey) {
             <p class="auth-required site-note">{{ introKey | translate }}</p>
           }
@@ -192,10 +193,11 @@ export class LoginComponent implements OnDestroy {
   readonly legal: LegalSite;
   /** LeagueHub (LEGAL_SITE.kind): Hinweis auf die geschlossene Gruppe und das RookHub-Konto (UX-033). */
   readonly leagueHub: boolean;
-  /** App-eigene Einleitung (Turnierseite, UX-027); RookHub: leer. */
+  /** App-eigene Einleitung (Turnierseite, ClubHub, UX-027); RookHub: leer. */
   readonly intro: AuthIntro;
   /** „Konto kostenlos, E-Mail freiwillig“ — nicht auf LeagueHub (Konto allein öffnet dort nichts) und nicht, wo die
-   *  Einleitung der Oberfläche das schon sagt. */
+   *  Oberfläche eine Einleitung setzt: die Turnierseite sagt „kostenlos“ selbst, ClubHub sagt, dass der Verein
+   *  freischaltet (ein neues Konto allein sähe dort nur „Nicht freigeschaltet“). */
   readonly showFreeNote: boolean;
 
   constructor(private auth: AuthService, private prefill: AuthPrefillService, private router: Router, private route: ActivatedRoute, private translate: TranslateService,
