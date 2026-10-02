@@ -163,11 +163,6 @@ public class ProfileService
         return MapToDto(user);
     }
 
-    /// <summary>
-    /// Hinweis an die BISHERIGE Adresse, dass der Reset-Anker gewechselt hat — sonst erführe das
-    /// Opfer einer Übernahme nichts davon, alle weiteren Mails gehen ja an die neue Adresse.
-    /// Best-effort: die Änderung ist gespeichert, ein Mail-Fehler wird nur geloggt.
-    /// </summary>
     /// <summary>Die Partienzählung fürs Wochenziel folgt dem VERKNÜPFTEN Konto: Cursor und Tageszählungen
     /// liegen je (User, Plattform), nicht je Benutzername. Wechselt der Name (Tippfehler korrigiert, anderes
     /// Konto), fragte der nächste Sync das neue Konto erst ab der letzten Partie des alten ab und dessen
@@ -189,6 +184,11 @@ public class ProfileService
         }
     }
 
+    /// <summary>
+    /// Hinweis an die BISHERIGE Adresse, dass der Reset-Anker gewechselt hat — sonst erführe das
+    /// Opfer einer Übernahme nichts davon, alle weiteren Mails gehen ja an die neue Adresse.
+    /// Best-effort: die Änderung ist gespeichert, ein Mail-Fehler wird nur geloggt.
+    /// </summary>
     private async Task NotifyPreviousEmailAsync(AppUser user, string? previousEmail)
     {
         _logger.LogInformation("Profile: email address changed for user {UserId}", user.Id);
