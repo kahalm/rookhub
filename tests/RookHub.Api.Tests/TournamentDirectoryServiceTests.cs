@@ -596,6 +596,54 @@ public class TournamentDirectoryServiceTests : IDisposable
         Assert.Contains(entry.GeoSource, new[] { GeoSource.City, GeoSource.Ambiguous });
     }
 
+    /// <summary>
+    /// Derselbe Fall an einem NEBEN-Spielort — der Ausgangsfall des Dienstes: „Mayrhofen, St.Veit",
+    /// der Vereinsname beweist St. Veit an der Glan fuer den ZWEITEN Abschnitt. `ApplyPick`
+    /// vermerkt das nur am Spielort, `entry.GeoSource` bleibt City. Kommt in der Saison ein
+    /// Spielort dazu, verortet der Sweep wieder auf das gleichnamige St. Veit in Tirol — und ohne
+    /// Zuruecksetzen von `TeamHintCheckedAt` naehme die Aufloesung den Eintrag nie wieder vor.
+    /// </summary>
+    [Fact]
+    public async Task SweepFederationAsync_SecondaryVenueTeamHint_LocationChanged_RearmsTheClubNameResolution()
+    {
+        foreach (var (name, lat, lon, population) in new[]
+                 {
+                     ("Mayrhofen", 47.17, 11.87, 3900),
+                     ("St. Veit", 47.3167, 11.0667, 1500),
+                     ("Zell am Ziller", 47.23, 11.88, 1900),
+                 })
+        {
+            _db.GeoPlaces.Add(new GeoPlace
+            {
+                Country = "AT", Name = name, NameNormalized = GeoTextNormalizer.Normalize(name),
+                Lat = lat, Lon = lon, Kind = GeoPlaceKind.City, Population = population,
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Liga", "2026-12-18", "2027-03-20", "Mayrhofen, St.Veit")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        // Was VenueDisambiguationService.ApplyPick bei Ordinal > 0 hinterlaesst.
+        var entry = await _db.TournamentDirectoryEntries.Include(e => e.Venues).SingleAsync();
+        Assert.Equal(GeoSource.City, entry.GeoSource);
+        var second = entry.Venues.Single(v => v.Ordinal == 1);
+        second.Lat = 46.7681;
+        second.Lon = 14.3603;
+        second.GeoSource = GeoSource.TeamHint;
+        entry.TeamHintCheckedAt = DateTime.UtcNow.AddDays(-1);
+        entry.TeamHintVersion = VenueDisambiguationService.CurrentVersion;
+        await _db.SaveChangesAsync();
+
+        await CreateService($"[{Row("111", "Liga", "2026-12-18", "2027-03-20", "Mayrhofen, St.Veit, Zell am Ziller")}]")
+            .SweepFederationAsync("AUT", Today);
+
+        entry = await _db.TournamentDirectoryEntries.Include(e => e.Venues).SingleAsync();
+        Assert.Equal(3, entry.Venues.Count);
+        Assert.Null(entry.TeamHintCheckedAt);
+        Assert.Equal(GeoSource.City, entry.GeoSource);
+    }
+
     /// <summary>Ohne geaenderten Ortstext bleibt ein TeamHint-Pin unangetastet — samt Vermerk.</summary>
     [Fact]
     public async Task SweepFederationAsync_TeamHintPin_SameLocation_StaysUntouched()

@@ -768,7 +768,12 @@ public class TournamentDirectoryService
         // die Vereinsnamen-Aufloesung muss danach WIEDER laufen duerfen: `TeamHintCheckedAt` haelt
         // sie sonst fuer immer fern, und ein „St.Veit" -> „St.Veit, Mehrzweckhalle", das das
         // Ortslexikon wieder mehrdeutig findet, kostete den Pin endgueltig (Karte, Umkreissuche).
-        if (entry.GeoSource == GeoSource.TeamHint) entry.TeamHintCheckedAt = null;
+        // Ebenso ein Beweis an einem NEBEN-Spielort: `ApplyPick` vermerkt ihn dann nur am Spielort,
+        // `entry.GeoSource` bleibt City — genau der Ausgangsfall „Mayrhofen, St.Veit", und bei
+        // Ligen kommen im Lauf der Saison Spielorte dazu, der Ortstext aendert sich dort am haeufigsten.
+        if (entry.GeoSource == GeoSource.TeamHint
+            || entry.Venues.Any(v => v.GeoSource == GeoSource.TeamHint))
+            entry.TeamHintCheckedAt = null;
 
         var results = await _geocoding.ResolveManyAsync(
             entry.LocationText, entry.State, entry.Federation, ct);
