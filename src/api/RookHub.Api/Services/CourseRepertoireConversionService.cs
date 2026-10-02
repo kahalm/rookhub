@@ -14,10 +14,12 @@ namespace RookHub.Api.Services;
 /// jeden anderen Aufrufer unerreichbar und für einen Service-Test unsichtbar.
 /// </summary>
 /// <remarks>
-/// <para><b>DI-Falle:</b> <see cref="CourseService"/> hängt bereits an <see cref="RepertoireService"/>.
-/// Deshalb darf der Repertoire-Dienst NICHT umgekehrt den Kurs-Dienst bekommen (Zyklus, den der
-/// Container erst beim ersten Auflösen meldet). Dieser Dienst hängt an beiden und wird nur von den
-/// Controllern gerufen — er ist die einzige Stelle, an der sich die zwei Seiten begegnen.</para>
+/// <para><b>Abhängigkeiten:</b> Dieser Dienst hängt an <see cref="CourseService"/> UND
+/// <see cref="RepertoireService"/> und wird nur von den Controllern gerufen — er ist die einzige Stelle,
+/// an der sich die zwei Seiten begegnen. Die beiden Fachdienste kennen einander NICHT (der
+/// <see cref="CourseService"/> nutzt nur das statische <see cref="RepertoireService.LooksLikePgn"/>);
+/// so bleibt es: bekäme einer den anderen injiziert und später umgekehrt, entstünde ein Zyklus, den der
+/// Container erst beim ersten Auflösen meldet.</para>
 /// <para><b>Beides VERSCHIEBT.</b> Das Original wird erst NACH erfolgreichem Anlegen des Ziels
 /// entfernt: scheitert die Umwandlung, steht der Nutzer wieder da, wo er war. Eine Ausnahme ist
 /// deshalb hier kein Schönheitsfehler, sondern das, was die Quelle rettet.</para>

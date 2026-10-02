@@ -146,8 +146,6 @@ public class RepertoireController : BaseApiController
     public async Task<IActionResult> SetUserSrConfig([FromBody] SetSrConfigRequest req, CancellationToken ct)
         => await _training.SetUserConfigAsync(GetUserId(), req.Levels, ct) ? NoContent() : BadRequest();
 
-    /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
-    /// ermittelt daraus die fälligen Linien. 404 wenn nicht vorhanden/nicht eigenes Repertoire.</summary>
     /// <summary>Als Flashcard markierte Linien-Schlüssel des Users. 404 ohne Zugriff.</summary>
     [HttpGet("{id:int}/flashcards")]
     public async Task<IActionResult> GetFlashcardMarks(int id, CancellationToken ct)
@@ -172,6 +170,8 @@ public class RepertoireController : BaseApiController
         return res is null ? NotFound() : Ok(new { marked = false });
     }
 
+    /// <summary>Alle Linien-SR-Zustände (Stufe/Fälligkeit) des eigenen Repertoires — das Frontend
+    /// ermittelt daraus die fälligen Linien. 404 wenn nicht vorhanden/nicht eigenes Repertoire.</summary>
     [HttpGet("{id:int}/training/lines")]
     public async Task<ActionResult<List<LineStateDto>>> TrainingLines(int id, CancellationToken ct)
     {

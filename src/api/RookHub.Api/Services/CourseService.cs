@@ -807,8 +807,6 @@ public class CourseService
         };
     }
 
-    /// <summary>Die Merkmale, die ein Buch zum persönlichen Kurs EINES Users machen — an beiden
-    /// Entstehungswegen (PGN-Upload und leerer Kurs) identisch.</summary>
     /// <summary>
     /// Trägt den fehlenden Trainingsstart Chessable-stämmiger Linien nach (siehe
     /// <see cref="ChessableTrainingStart"/>): für Linien MIT <c>[ChessableOid]</c>, aber ohne
@@ -857,6 +855,8 @@ public class CourseService
         }
     }
 
+    /// <summary>Die Merkmale, die ein Buch zum persönlichen Kurs EINES Users machen — an beiden
+    /// Entstehungswegen (PGN-Upload und leerer Kurs) identisch.</summary>
     private static void ApplyPersonalCourseMetadata(Book book, int userId, string name, DateTime nowUtc)
     {
         book.OwnerUserId = userId;

@@ -9,9 +9,10 @@ namespace RookHub.Api.Controllers;
 /// „Kurse" = importierte Bücher, die ein User puzzleweise durcharbeitet. Pro Buch gibt es einen
 /// (geteilten) Fortschritt = gelöste Puzzles / Gesamtzahl; der Modus (sequential/random) bestimmt
 /// nur die Reihenfolge. Fortschritt ist user-bezogen und liegt komplett in der DB.
-/// Sichtbarkeit: Admins sehen alle Bücher; Nicht-Admins nur Bücher, die einer ihrer Gruppen
-/// per <see cref="Models.BookGroupAccess"/> freigegeben wurden. Die Logik liegt im
-/// <see cref="CourseService"/>; kein Zugriff → 404.
+/// Sichtbarkeit: Admins sehen alle Bücher; Nicht-Admins öffentliche Kurse, eigene Bücher, direkt
+/// geteilte (<see cref="Models.CourseShare"/>), Bücher einer Kalkulations-Serie, in deren Verteiler sie
+/// stehen, und Bücher, die einer ihrer Gruppen (inkl. „Everyone") per <see cref="Models.BookGroupAccess"/>
+/// freigegeben wurden. Die Regel steht EINMAL in <see cref="CourseAccess.CanAccessAsync"/>; kein Zugriff → 404.
 /// Fehlerfälle werfen die Dienste als Domänen-Ausnahme (404/403/400), der globale DomainExceptionFilter
 /// macht daraus <c>{ message }</c> — hier wird nichts gefangen (Codereview A7-011).
 /// </summary>
@@ -443,9 +444,11 @@ public class CourseController : BaseApiController
         return Ok(new { deleted = await _authoring.DeleteChapterAsync(GetUserId(), bookId, dto.Chapter, IsAdmin, ct) });
     }
 
-    /// <summary>Setzt den EIGENEN Fortschritt eines Kapitels zurück (gelöste Linien, Zeit-/Versuchs-Log,
-    /// gesehene Info-Linien). Braucht nur Lese-Zugriff auf den Kurs; das buchweite `ResetAt` und die
-    /// eigenen Analysebäume bleiben unberührt.</summary>
+    /// <summary>Setzt den EIGENEN Fortschritt eines Kapitels zurück (gelöste Linien, gesehene Info-Linien).
+    /// Das Zeit-/Versuchs-Log (<c>CourseAttempts</c>) bleibt ausdrücklich stehen — es ist die Historie des
+    /// Trainingsziel-Trackers (Begründung in <see cref="CourseAuthoringService.ResetChapterProgressAsync"/>).
+    /// Braucht nur Lese-Zugriff auf den Kurs; das buchweite `ResetAt` und die eigenen Analysebäume bleiben
+    /// unberührt.</summary>
     [HttpPost("{bookId:int}/chapters/reset")]
     public async Task<IActionResult> ResetChapter(int bookId, [FromBody] CourseChapterRefDto dto,
         CancellationToken ct)
