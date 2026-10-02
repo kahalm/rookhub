@@ -895,15 +895,15 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
-   *  Nebeneinander-Ansicht, die dieselbe Bewertung links anders einfaerbt als rechts, waere
-   *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
-   *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
   /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). */
   lineColor(i: number): string {
     return BOARD_BRUSHES[arrowBrush(i)]?.color ?? 'transparent';
   }
 
+  /** Engine-Linien in Anzeigezeilen. Beide Engine-Seiten MUESSEN hier durch: eine
+   *  Nebeneinander-Ansicht, die dieselbe Bewertung links anders einfaerbt als rechts, waere
+   *  schlimmer als gar kein Vergleich. Frueher lag die Abbildung zweimal im Code, inklusive der
+   *  feinen Unterscheidung `score > 0` (Matt) gegen `score >= 0` (Zentibauern). */
   private toDisplayLines(fen: string, lines: AnalysisLine[]): EngineDisplayLine[] {
     return toDisplayLinesUtil(fen, lines, 12);
   }
