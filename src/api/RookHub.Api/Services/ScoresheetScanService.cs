@@ -31,6 +31,7 @@ public class ScoresheetScanService
     private readonly string _ipSecret;
     private readonly ScoresheetBudget _budget;
     private readonly ScoresheetReader _reader;
+    private readonly IScoresheetEngine? _engine;
     private readonly ScoresheetReadMode _startMode;
 
     /// <summary>Größter angenommener Upload (je Foto).</summary>
@@ -82,7 +83,8 @@ public class ScoresheetScanService
     public const int AnonDailyLimit = 100;
 
     public ScoresheetScanService(AppDbContext db, IScoresheetVisionClient vision, SavedGameService games,
-        NotificationService notifications, ILogger<ScoresheetScanService> logger, IConfiguration? config = null)
+        NotificationService notifications, ILogger<ScoresheetScanService> logger, IConfiguration? config = null,
+        IScoresheetEngine? engine = null)
     {
         _db = db;
         _vision = vision;
@@ -100,6 +102,8 @@ public class ScoresheetScanService
             ? ScoresheetReadMode.Full : ScoresheetReadMode.Transcribe;
         _budget = new ScoresheetBudget(config);
         _reader = new ScoresheetReader(vision);
+        // Scoresheet:Plausibility — Engine-Prüfung nach dem Lesen (0.646.0, ScoresheetPlausibility), Vorgabe an.
+        _engine = bool.TryParse(config?["Scoresheet:Plausibility"], out var plausible) && !plausible ? null : engine;
     }
 
     /// <summary>Die Kostenbremse (für Tests und die Statusanzeige).</summary>
@@ -432,6 +436,7 @@ public class ScoresheetScanService
         var t = outcome.Transcription!;
         var r = outcome.Resolution!;
         if (r.Plies.Count == 0) { await FailAsync(scan, "noMoves", ct, outcome.Json); return; }
+        r = await CheckWithEngineAsync(scan.Id, t, r, outcome.Language, ct);
 
         if (scan.Purpose == ScoresheetScan.PurposeLeague)
         {
@@ -485,6 +490,33 @@ public class ScoresheetScanService
             ["uncertain"] = r.Plies.Count(p => p.Uncertain).ToString(),
             ["unresolved"] = r.Unresolved.Count.ToString(),
         }, $"/games/{game.Id}/edit");
+    }
+
+    /// <summary>
+    /// Engine-Prüfung der Lesung (<see cref="ScoresheetPlausibility"/>): ein Zickzack in der Bewertung — ein Halbzug nach
+    /// dem anderen verliert Gewinnchance — ist meist ein falsch gelesener legaler Zug. Ohne Engine, mit abgeschalteter
+    /// Prüfung oder bei einem Fehler bleibt die Lesung, wie sie ist: die Prüfung ist eine Zugabe, kein Teil des Lesens.
+    /// </summary>
+    private async Task<ScoresheetResolution> CheckWithEngineAsync(int scanId, ScoresheetTranscription t, ScoresheetResolution r,
+        string? language, CancellationToken ct)
+    {
+        if (_engine == null) return r;
+        try
+        {
+            var options = new ScoresheetResolver.Options(ScoresheetNotation.Find(language));
+            var o = await ScoresheetPlausibility.ImproveAsync(t.Scanned(), options, r, _engine, ct: ct);
+            if (o.Replaced.Count > 0 || o.Flagged.Count > 0)
+                _logger.LogInformation(
+                    "Formular-Einlesung {ScanId}: Engine-Prüfung ersetzte {Replaced} Zug/Züge, zweifelt an {Flagged} (Halbzüge {ReplacedPlies} / {FlaggedPlies})",
+                    scanId, o.Replaced.Count, o.Flagged.Count, string.Join(",", o.Replaced), string.Join(",", o.Flagged));
+            return o.Resolution;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Formular-Einlesung {ScanId}: Engine-Prüfung gescheitert, Lesung bleibt unverändert", scanId);
+            return r;
+        }
     }
 
     /// <summary>

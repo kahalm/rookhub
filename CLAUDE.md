@@ -3935,6 +3935,37 @@ Solche Zeilen stehen nicht in `GET /api/scoresheets`. Das UPDATE läuft im selbe
 Upload-Seite zeigt den Verbrauch in Prozent (`budgetUsedPercent`, das knappere Budget) und bei erreichter Tageszahl,
 ab wann die nächste geht (`nextAllowedAt`).
 
+**Engine-Prüfung der Lesung** (0.646.0, `Services/ScoresheetPlausibility.cs`, gemeldet 2026-10-03 an Gruber–Schöler,
+LeagueHub-Vereinspartie 153: „viele Zickzack in der Bewertung — meist ein Zeichen, dass ein Zug nicht richtig erkannt wurde").
+Das Modell hatte „Tc1" als „Te1" und „Ke4" als „Kc4" gelesen — beides legal, also nahm der Auflöser es, und ab dort ließ
+Schwarz zehn Züge lang `fxe1=D+` liegen. Der Auflöser kennt nur Schrift und Legalität; nach dem Lesen (`ProcessAsync`, BEIDE
+Wege — „Meine Partien" und Liga) bewertet deshalb Stockfish die Partie (`IScoresheetEngine`, Singleton
+`StockfishScoresheetEngine`: EIN Prozess je Prüfung, `go depth 10`, ~7 ms je Stellung). Regeln, die nicht kippen dürfen:
+* **Zickzack** = ein Halbzug verliert ≥ `SwingPct` (15) Prozentpunkte GEWINNCHANCE (Lichess-Formel `GameAccuracy.WinPercent`,
+  nicht Centibauern — ein verpasstes Matt in entschiedener Stellung zählt sonst), und der nächste ebenso. Gesucht wird an den
+  `Window` (4) Halbzügen bis einschließlich des ersten Patzers (bei „Kc4" kam er zwei Halbzüge später).
+* **Ersatz-Lesarten nur um EIN leicht verwechselbares Zeichen** (`MaxExtraCost` 2,0 über der gewählten — c/e, 1/7, 5/6 aus
+  `ScoresheetNotation.IsConfusable`; ein beliebiges Zeichen 2,5 nur, wenn das Modell den Eintrag selbst „low" las). Gemessen am
+  10er-Testsatz (perfekte Lesung und Abschrift, 20 Durchläufe): mit 2,5 standen 13 richtige Züge als unsicher da (echte
+  Amateur-Patzer, die eine beliebige Ein-Zeichen-Lesart „glättet"), mit 2,0 drei. Der Rest wird je Lesart über ein Fenster neu
+  gelesen (`ScoresheetResolver.Resolve(…, writtenTo:)`, neu: liest nur bis zu einem Eintrag) und neu bewertet.
+* **Zwei Stufen**: ERSETZT (`ScoresheetPly.Check = "replaced"`, unsicher, alte Lesung als zweite Option) nur, wenn das Zickzack
+  ≥ `PersistentPlies` (4) Halbzüge anhält, genau EINE Stelle es am besten beseitigt (Gleichstand an mehreren Halbzügen = die
+  Engine kann nicht unterscheiden — „Ra6" statt „Ra5+" glättet „Kc4" genauso wie „Ke4"), es ≥ `MinReplaceGain` (2) Zickzacks
+  beseitigt UND die volle Neuauflösung nicht mehr zurechtgebogene Züge und nicht mehr Unaufgelöstes hat (am Testsatz, Beleg 04,
+  glättete „Lf3+" statt „Lxf5" das Zickzack und bog dafür elf Züge zurecht). Sonst nur ANGEBOTEN (`Check = "suggested"`: der
+  gelesene Zug bleibt, unsicher, die Lesart ohne Zickzack als zweite Option; bei Gleichstand bis zu drei Stellen).
+* **Messung** (Prüfwerkzeug im Scratchpad, nicht im Repo): Gruber nachgestellt (Soll-Partie + „Te1"/„Kc4" eingestreut) → Te1
+  ersetzt, Ke4 angeboten, 3 s; 10er-Testsatz → 0 Ersetzungen, 3 Markierungen an richtigen Zügen; 80 zufällig eingestreute
+  Ein-Zeichen-Fehllesungen → 0 Schäden, 3 richtig angeboten — die meisten Fehllesungen fängt schon der Auflöser ab, und von den
+  übrigen sind die meisten „leise" (kein Bewertungssprung): die sieht keine Engine.
+* **Ausfallsicher**: keine Engine, Fehler, `Budget` (90 s) überschritten → die Lesung bleibt, wie sie ist (Warnung im Log).
+  Schalter `Scoresheet:Plausibility=false`; Pfad `Scoresheet:EnginePath` (sonst `/usr/games/stockfish` aus dem Debian-Paket
+  im API-Image — NICHT im PATH —, sonst `stockfish`), Tiefe `Scoresheet:EngineDepth`.
+* **Oberfläche**: Chip „von der Engine korrigiert" / „Engine zweifelt" mit Erklärung als Tooltip (`games.edit.engine*`, RookHub
+  `game-edit.component.ts`; LeagueHub `club-scan-page.component.ts`), `check` reist in `ScoresheetPly`/`EditPly` mit. Das
+  Neu-Aufbereiten auf der Korrekturseite (`…/scoresheet/resolve`) prüft NICHT erneut — es läuft im Request.
+
 **Testwerkzeug** `tools/ScoresheetBench` (Konsole, wie `tools/LibraryImport` kein Teil des Images, OHNE Datenbank
 und ohne zweite API-Instanz — es benutzt nur `ScoresheetReader` + Auflöser): misst einen Ordner mit `NN.png|jpg`
 (Formular), `NN.pgn` (Soll), `NN.formular.txt` (Abschrift) und `belege.json`. `--resolver-only` nimmt die Abschrift

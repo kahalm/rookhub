@@ -180,6 +180,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
                   @if (p.written) { <span class="written">{{ 'games.edit.written' | translate: { text: p.written } }}</span> }
                   @if (p.match === 'inserted') { <span class="chip warn">{{ 'games.edit.notOnSheet' | translate }}</span> }
                   @if (p.uncertain && !p.confirmed) { <span class="chip warn">{{ 'games.edit.uncertain' | translate }}</span> }
+                  @if (p.check && !p.confirmed) {
+                    <span class="chip warn" [title]="'games.edit.engineCheckHint' | translate">{{ (p.check === 'replaced' ? 'games.edit.engineReplaced' : 'games.edit.engineSuggested') | translate }}</span>
+                  }
                   @if (p.confirmed) { <span class="chip ok">{{ 'games.edit.confirmed' | translate }}</span> }
                   @if (p.illegal) { <span class="chip bad">{{ 'games.edit.illegal' | translate }}</span> }
                 </div>

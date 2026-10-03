@@ -17,6 +17,9 @@ export interface EditPly {
   confirmed: boolean;
   options: ScoresheetOption[] | null;
   comment: string | null;
+  /** Befund der Engine-Prüfung beim Einlesen (0.646.0): `replaced` = die Lesung ergab ein anhaltendes Zickzack in der
+   *  Bewertung und wurde ersetzt (die alte steht als Lesart da), `suggested` = eine andere Lesart passt besser. */
+  check?: string | null;
   /** Nicht legal in der Stellung davor — entsteht, wenn ein früherer Zug geändert wurde und der Rest nicht
    *  neu aufbereitet werden kann (gewöhnliche Partie). Wird beim Speichern verworfen. */
   illegal: boolean;
@@ -94,6 +97,7 @@ export function fromServer(plies: readonly ScoresheetPly[], comments: readonly (
     confirmed: !!p.confirmed,
     options: p.options ?? null,
     comment: comments[i] ?? null,
+    check: p.check ?? null,
     illegal: false,
   }));
 }
@@ -102,7 +106,7 @@ export function fromServer(plies: readonly ScoresheetPly[], comments: readonly (
 export function toServer(plies: readonly EditPly[]): ScoresheetPly[] {
   return plies.filter(p => !p.illegal).map(p => ({
     w: p.w, written: p.written, san: p.san, uci: p.uci, match: p.match,
-    uncertain: p.uncertain && !p.confirmed, confirmed: p.confirmed, options: p.options,
+    uncertain: p.uncertain && !p.confirmed, confirmed: p.confirmed, options: p.options, check: p.check ?? null,
   }));
 }
 

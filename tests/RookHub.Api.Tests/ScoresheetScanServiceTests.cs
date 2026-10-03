@@ -1234,4 +1234,57 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(ScoresheetScanService.MaxOpenPerUser, reasons.Count(r => r == null));
         Assert.All(reasons.Where(r => r != null), r => Assert.Equal("tooManyOpen", r));
     }
+
+    /// <summary>10.Tc1 als „Te1" gelesen (siehe <see cref="ScoresheetPlausibilityTests"/>): legal, also nimmt der Auflöser
+    /// ihn — die Engine-Attrappe sieht ab dort ein Zickzack (Turm auf e1 = Schwarz am Zug gewinnt ihn).</summary>
+    private static readonly string[] MisreadRookSheet =
+    {
+        "e4", "e5", "Sf3", "Sc6", "Lc4", "Lc5", "Sc3", "Sf6", "d3", "d6", "Lg5", "h6", "Lh4", "g5", "Lg3", "Lg4",
+        "0-0", "Dd7", "Te1", "0-0-0", "a3", "a6", "b4", "La7", "Sd5", "Sxd5", "Lxd5", "Thg8", "h3", "Le6", "c4", "f6",
+        "Da4", "Kb8",
+    };
+
+    private static int RookOnE1Loses(string fen)
+        => ScoresheetResolver.Squares(fen)[60] == 'R' && fen.Split(' ')[1] == "b" ? -900 : 0;
+
+    [Fact]
+    public async Task Process_WithEngine_CorrectsAMisreadMove_AndMarksIt()
+    {
+        var u = await UserAsync();
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, engine: new FakeScoresheetEngine(RookOnE1Loses));
+        _vision.Answers.Enqueue(new(Answer(MisreadRookSheet), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        Assert.Equal("done", scan.Status);
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Contains("10. Rc1", game.Pgn);
+        Assert.Contains("{sheet: Te1}", game.Pgn);
+        var row = await _db.ScoresheetScans.SingleAsync(s => s.Id == scan.Id);
+        var ply = JsonNode.Parse(row.ResolutionJson!)!["plies"]![18]!;
+        Assert.Equal("Rc1", (string?)ply["san"]);
+        Assert.Equal("replaced", (string?)ply["check"]);
+        Assert.True((bool)ply["uncertain"]!);
+    }
+
+    [Fact]
+    public async Task Process_EngineCheckSwitchedOff_KeepsTheReading()
+    {
+        var u = await UserAsync();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Scoresheet:Plausibility"] = "false",
+        }).Build();
+        var engine = new FakeScoresheetEngine(RookOnE1Loses);
+        _service = new ScoresheetScanService(_db, _vision, _games, new NotificationService(_db),
+            NullLogger<ScoresheetScanService>.Instance, config, engine);
+        _vision.Answers.Enqueue(new(Answer(MisreadRookSheet), null));
+
+        var scan = await UploadAndProcessAsync(u.Id);
+
+        var game = await _db.SavedGames.SingleAsync(g => g.Id == scan.SavedGameId);
+        Assert.Contains("10. Re1", game.Pgn);
+        Assert.Equal(0, engine.Lines);
+    }
 }

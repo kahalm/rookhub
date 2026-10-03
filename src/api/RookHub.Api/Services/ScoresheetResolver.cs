@@ -38,6 +38,10 @@ public sealed class ScoresheetPly
     public bool Confirmed { get; set; }
     /// <summary>Die wahrscheinlichsten Lesarten (die gewählte zuerst), nur an unsicheren Stellen.</summary>
     public List<ScoresheetOption>? Options { get; set; }
+    /// <summary>Befund der Engine-Prüfung (<see cref="ScoresheetPlausibility"/>): <c>replaced</c> = die Lesung ergab ein
+    /// anhaltendes Zickzack und wurde durch eine fast gleich gut lesbare ersetzt (die alte steht als zweite Lesart da),
+    /// <c>suggested</c> = eine andere Lesart wäre plausibler (steht als zweite Lesart da), sonst <c>null</c>.</summary>
+    public string? Check { get; set; }
 }
 
 /// <summary>Ergebnis einer Auflösung.</summary>
@@ -177,8 +181,11 @@ public static class ScoresheetResolver
     /// Löst die Einträge ab <paramref name="writtenFrom"/> auf, nachdem <paramref name="prefix"/> (SAN, schon
     /// festgelegt — vom Nutzer bestätigt oder gerade gewählt) gespielt ist.
     /// </summary>
+    /// <param name="writtenTo">Nur bis zu diesem Eintrag (ausschließlich) lesen — für die Engine-Prüfung, die eine Lesart
+    /// nur über ein Fenster vergleicht. <c>null</c> = bis zum Ende.</param>
     public static ScoresheetResolution Resolve(IReadOnlyList<ScannedPly> scanned, Options options,
-        IReadOnlyList<string>? prefix = null, int writtenFrom = 0, string? startFen = null, bool withBranches = true)
+        IReadOnlyList<string>? prefix = null, int writtenFrom = 0, string? startFen = null, bool withBranches = true,
+        int? writtenTo = null)
     {
         var fen = startFen ?? GamePlies.StartFen();
         var board = ChessBoard.LoadFromFen(fen);
@@ -189,7 +196,8 @@ public static class ScoresheetResolver
         var startFenAfterPrefix = board.ToFen();
 
         var cache = new Dictionary<(string Fen, int W, bool Guess), List<(Move Move, string San, string Uci, string Match, double Cost, string After)>>();
-        var (best, stuckAt, stuckFen, _) = Search(scanned, options, startFenAfterPrefix, writtenFrom, scanned.Count, BeamWidth, cache);
+        var to = Math.Clamp(writtenTo ?? scanned.Count, writtenFrom, scanned.Count);
+        var (best, stuckAt, stuckFen, _) = Search(scanned, options, startFenAfterPrefix, writtenFrom, to, BeamWidth, cache);
 
         var steps = Unwind(best?.Last);
         var result = new ScoresheetResolution

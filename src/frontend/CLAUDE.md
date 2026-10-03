@@ -186,6 +186,11 @@ Formular-Korrektur der Vereins-Datenbank in LeagueHub (`src-leaguehub/app/featur
 Die Seite gibt nur mit, woher der Rest kommt (`resolve`), und hängt das Abonnement an ihre Lebensdauer (`bind`). Wer an
 der Korrektur etwas ändert, ändert es hier — sonst laufen die beiden Seiten auseinander.
 
+Seit 0.646.0 trägt ein Halbzug den Befund der Engine-Prüfung beim Einlesen (`EditPly.check`/`ScoresheetPly.check`:
+`replaced` | `suggested`, Server: „Engine-Prüfung der Lesung" im Haupt-CLAUDE.md). Beide Seiten zeigen ihn als Chip neben
+„unsicher" („von der Engine korrigiert" / „Engine zweifelt", Erklärung im `title`), solange der Zug nicht bestätigt ist;
+ein vom Nutzer gesetzter Zug (`userPly`) hat keinen. `fromServer`/`toServer` reichen ihn durch.
+
 LeagueHub spricht die Vereins-Datenbank über `ClubApiService.client(share)`: ohne `share` angemeldet
 (`/api/league/club`), mit dem Token eines Teilen-Links ohne Konto (`/api/league/s/{token}/club`). Einlesungen heißen dort
 `ref` — angemeldet die Nummer, ohne Konto der geheime Schlüssel. Die Übersicht vor dem PGN-Import rechnet

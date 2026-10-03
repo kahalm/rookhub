@@ -71,6 +71,8 @@ export interface ScoresheetPly {
   uncertain: boolean;
   confirmed?: boolean;
   options?: ScoresheetOption[] | null;
+  /** Befund der Engine-Prüfung: `replaced` | `suggested` | fehlt (0.646.0). */
+  check?: string | null;
 }
 
 export interface ScoresheetEditState {

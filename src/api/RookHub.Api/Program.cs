@@ -420,6 +420,8 @@ try
     // Partieformular einlesen (0.529.0): Foto → Claude → legale Partie; eigener DB-gestützter Worker.
     builder.Services.AddSingleton<IScoresheetVisionClient, ClaudeScoresheetVisionClient>();
     builder.Services.AddScoped<ScoresheetScanService>();
+    // Engine-Prüfung der Lesung (0.646.0): Stockfish aus dem API-Image (/usr/games/stockfish), ein Prozess je Prüfung.
+    builder.Services.AddSingleton<IScoresheetEngine, StockfishScoresheetEngine>();
     builder.Services.AddSingleton<ScoresheetScanSignal>();
     builder.Services.AddHostedService<ScoresheetScanWorker>();
     builder.Services.AddScoped<GameMistakeProgressService>();

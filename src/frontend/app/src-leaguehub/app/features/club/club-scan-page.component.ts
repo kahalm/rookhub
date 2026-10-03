@@ -146,6 +146,9 @@ const SILENT_FAILURES = 3;
                   @if (p.written) { <span class="muted small">auf dem Formular: {{ p.written }}</span> }
                   @if (p.match === 'inserted') { <span class="chip warn">nicht auf dem Formular</span> }
                   @if (p.uncertain && !p.confirmed) { <span class="chip warn">unsicher</span> }
+                  @if (p.check && !p.confirmed) {
+                    <span class="chip warn" title="Nach diesem Zug sprang die Bewertung hin und her — meist ein falsch gelesener Zug. Die Lesart ohne das Zickzack steht bei den Lesarten.">{{ p.check === 'replaced' ? 'von der Engine korrigiert' : 'Engine zweifelt' }}</span>
+                  }
                   @if (p.confirmed) { <span class="chip ok">bestätigt</span> }
                   @if (p.illegal) { <span class="chip bad">nicht legal</span> }
                 </p>

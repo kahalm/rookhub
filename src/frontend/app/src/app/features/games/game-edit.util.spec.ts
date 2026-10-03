@@ -62,6 +62,17 @@ describe('game-edit.util', () => {
     expect(back[1]).toEqual(jasmine.objectContaining({ w: 1, written: 'Qxd4', confirmed: true, uncertain: false }));
   });
 
+  it('fromServer/toServer: the engine check travels with the move, a typed-in move has none', () => {
+    const plies = fromServer([
+      { w: 54, written: 'Te1', san: 'Rc1', uci: 'a1c1', match: 'fuzzy', uncertain: true, check: 'replaced' },
+      { w: 55, written: 'Ld7', san: 'Bd7', uci: 'c8d7', match: 'written', uncertain: false },
+    ]);
+    expect(plies[0].check).toBe('replaced');
+    expect(plies[1].check).toBeNull();
+    expect(toServer(plies)[0]).toEqual(jasmine.objectContaining({ check: 'replaced' }));
+    expect(userPly('Rc1', 'a1c1', 54, 'Te1').check).toBeUndefined();
+  });
+
   it('userPly: typed-in moves are confirmed', () => {
     expect(userPly('e4', 'e2e4', 0, 'e4')).toEqual(jasmine.objectContaining({ match: 'user', confirmed: true, uncertain: false }));
   });
