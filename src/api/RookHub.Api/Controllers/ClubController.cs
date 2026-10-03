@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -74,16 +75,34 @@ public class ClubController : BaseApiController
 
     // ---- Bild am Blatt ------------------------------------------------------------------------
 
-    /// <summary>Das Bild zum Blatt setzen oder ersetzen (ein Bild je Blatt; der nginx lässt 15 MB je Anfrage durch).</summary>
+    /// <summary>
+    /// Das Bild zum Blatt setzen oder ersetzen (ein Bild je Blatt; der nginx lässt 15 MB je Anfrage durch). Das Formularfeld
+    /// <c>face</c> trägt wahlweise den Kreis ums Gesicht als JSON (<c>{"x":0.5,"y":0.4,"r":0.28}</c>) — als TEXT und nicht
+    /// als drei Zahlenfelder, weil Formularwerte nach der Sprache des Servers gelesen würden („0,5" gegen „0.5").
+    /// </summary>
     [HttpPost("members/{id:int}/photo")]
     [RequestSizeLimit(ClubService.MaxPhotoUploadBytes)]
-    public async Task<ActionResult<ClubMemberPhotoDto>> SetMemberPhoto(int id, IFormFile? file, CancellationToken ct)
+    public async Task<ActionResult<ClubMemberPhotoDto>> SetMemberPhoto(int id, IFormFile? file, [FromForm] string? face, CancellationToken ct)
     {
         if (file == null || file.Length == 0) return BadRequest(new { message = "Kein Bild mitgeschickt." });
+        ClubPhotoFaceDto? circle = null;
+        if (!string.IsNullOrWhiteSpace(face))
+        {
+            try { circle = JsonSerializer.Deserialize<ClubPhotoFaceDto>(face, FaceJson); }
+            catch (JsonException) { /* unten */ }
+            if (circle == null) return BadRequest(new { message = "Der Kreis ums Gesicht ist so nicht lesbar." });
+        }
         using var ms = new MemoryStream();
         await file.CopyToAsync(ms, ct);
-        return Ok(await _club.SetMemberPhotoAsync(await ActorAsync(), id, ms.ToArray(), ct));
+        return Ok(await _club.SetMemberPhotoAsync(await ActorAsync(), id, ms.ToArray(), circle, ct));
     }
+
+    private static readonly JsonSerializerOptions FaceJson = new(JsonSerializerDefaults.Web);
+
+    /// <summary>Den Kreis ums Gesicht im vorhandenen Bild setzen — das Vorschaubild wird daraus neu geschnitten.</summary>
+    [HttpPut("members/{id:int}/photo/face")]
+    public async Task<ActionResult<ClubMemberPhotoDto>> SetMemberPhotoFace(int id, [FromBody] ClubPhotoFaceDto face, CancellationToken ct) =>
+        Ok(await _club.SetMemberPhotoFaceAsync(await ActorAsync(), id, face, ct));
 
     /// <summary>Das Bild als JPEG; <c>?thumb=true</c> das Vorschaubild. Privat: kein Cache über den Browser des Betrachters
     /// hinaus. Die Oberfläche hängt die Marke des Bilds (<c>photoVersion</c>) als <c>v</c> an — hier ohne Bedeutung, sie

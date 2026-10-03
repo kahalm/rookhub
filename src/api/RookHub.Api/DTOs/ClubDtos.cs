@@ -41,10 +41,23 @@ public class ClubMemberListDto
     public List<ClubContactDto> Contacts { get; set; } = new();
 }
 
-/// <summary>Antwort auf das Hochladen eines Bilds zum Blatt.</summary>
+/// <summary>
+/// Der Kreis ums Gesicht im Bild eines Blatts: Mittelpunkt als Anteil von Breite (<see cref="X"/>) und Höhe
+/// (<see cref="Y"/>), Radius als Anteil der KÜRZEREN Seite. Der Dienst holt den Kreis ins Bild (<c>ClubFace.Normalize</c>).
+/// </summary>
+public class ClubPhotoFaceDto
+{
+    [Range(0, 1)] public double X { get; set; }
+    [Range(0, 1)] public double Y { get; set; }
+    [Range(0, 1)] public double R { get; set; }
+}
+
+/// <summary>Antwort auf das Hochladen eines Bilds zum Blatt bzw. auf das Setzen des Kreises ums Gesicht.</summary>
 public class ClubMemberPhotoDto
 {
     public long? PhotoVersion { get; set; }
+    /// <summary>Der Kreis, wie er gespeichert ist (ins Bild geholt); <c>null</c> = keiner gewählt.</summary>
+    public ClubPhotoFaceDto? Face { get; set; }
 }
 
 public class ClubNoteDto
@@ -85,6 +98,8 @@ public class ClubMemberDto : ClubMemberListDto
     public string? FideId { get; set; }
     /// <summary>Personennummer beim Landesverband (ÖSB).</summary>
     public string? NationalId { get; set; }
+    /// <summary>Der Kreis ums Gesicht im Bild des Blatts — für den Kreis im Formular; <c>null</c> ohne Bild oder ohne Kreis.</summary>
+    public ClubPhotoFaceDto? PhotoFace { get; set; }
     public string? LinkedUsername { get; set; }
     /// <summary>Offener Einmal-Code zum Verknüpfen (nicht abgelaufen), sonst <c>null</c>.</summary>
     public string? LinkCode { get; set; }
@@ -199,6 +214,8 @@ public class ClubGroupMemberRowDto
     public string LastName { get; set; } = string.Empty;
     public int? BirthYear { get; set; }
     public string? Level { get; set; }
+    /// <summary>Marke des Bilds am Blatt (<c>null</c> = keins) — die Abhak-Liste zeigt damit das Gesicht vor dem Namen.</summary>
+    public long? PhotoVersion { get; set; }
     /// <summary>Status je Einheit in der Reihenfolge von <see cref="ClubGroupDto.Sessions"/>; <c>null</c> = nicht erfasst.</summary>
     public List<string?> Statuses { get; set; } = new();
     public int Present { get; set; }

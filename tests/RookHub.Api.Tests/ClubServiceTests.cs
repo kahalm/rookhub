@@ -587,6 +587,88 @@ public class ClubServiceTests : IDisposable
 
     // ---- Bild am Blatt ------------------------------------------------------------------------
 
+    /// <summary>Ein Bild aus vier Farbfeldern: links oben rot, rechts oben grün, links unten blau, rechts unten weiß.</summary>
+    private static byte[] Quadrants(int width, int height)
+    {
+        using var bmp = new SKBitmap(width, height);
+        using (var c = new SKCanvas(bmp))
+        {
+            c.Clear(SKColors.White);
+            using var p = new SKPaint();
+            p.Color = SKColors.Red; c.DrawRect(0, 0, width / 2f, height / 2f, p);
+            p.Color = SKColors.Lime; c.DrawRect(width / 2f, 0, width / 2f, height / 2f, p);
+            p.Color = SKColors.Blue; c.DrawRect(0, height / 2f, width / 2f, height / 2f, p);
+        }
+        using var img = SKImage.FromBitmap(bmp);
+        using var data = img.Encode(SKEncodedImageFormat.Jpeg, 90);
+        return data.ToArray();
+    }
+
+    /// <summary>Die Farbe in der Mitte eines JPEG, grob: „r", „g", „b" oder „w" (JPEG ist verlustbehaftet).</summary>
+    private static string CentreColour(byte[] jpeg)
+    {
+        using var bmp = SKBitmap.Decode(jpeg);
+        var c = bmp.GetPixel(bmp.Width / 2, bmp.Height / 2);
+        if (c.Red > 200 && c.Green > 200 && c.Blue > 200) return "w";
+        return c.Red > 150 ? "r" : c.Green > 150 ? "g" : c.Blue > 150 ? "b" : "?";
+    }
+
+    [Fact]
+    public async Task MemberPhotoFace_TheCircleBecomesTheThumbnail_IsKeptForTheForm_AndTheRollCarriesTheMark()
+    {
+        var (tina, tom) = (await UserAsync("tina"), await UserAsync("tom"));
+        var g = await GroupAsync("Anfänger", tina);
+        var kid = await Svc().CreateMemberAsync(Trainer(tina), Kid("Daniel", "Huber", g));
+        var other = await Svc().CreateMemberAsync(Trainer(tina), Kid("Anna", "Auer", g));
+        var face = new ClubPhotoFaceDto { X = 0.75, Y = 0.25, R = 0.2 };
+
+        // Ohne Bild gibt es nichts, worin man einen Kreis setzen könnte.
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().SetMemberPhotoFaceAsync(Trainer(tina), kid.Id, face));
+
+        // Hochladen MIT Kreis: das Vorschaubild ist das Quadrat um den Kreis (hier: ganz im grünen Feld), nicht das ganze Bild.
+        var first = await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Quadrants(1200, 800), face);
+        Assert.Equal((0.75, 0.25, 0.2), (first.Face!.X, first.Face.Y, first.Face.R));
+        var stored = await _db.ClubMemberPhotos.AsNoTracking().SingleAsync();
+        Assert.Equal((256, 256), ScoresheetImage.Size(stored.Thumb)!.Value);                 // 320 px Kante, verkleinert
+        Assert.Equal("g", CentreColour(stored.Thumb));
+        Assert.Equal((1200, 800), ScoresheetImage.Size(stored.Image)!.Value);                // das Bild selbst bleibt ganz
+        var detail = await Svc().GetMemberAsync(Trainer(tina), kid.Id);
+        Assert.Equal((0.75, 0.25, 0.2), (detail.PhotoFace!.X, detail.PhotoFace.Y, detail.PhotoFace.R));
+
+        // Den Kreis im vorhandenen Bild versetzen: neues Vorschaubild (blaues Feld, 160 px — nicht hochgerechnet), neue Marke,
+        // das Bild selbst unverändert.
+        _db.ChangeTracker.Clear();
+        var moved = await Svc().SetMemberPhotoFaceAsync(Trainer(tina), kid.Id, new ClubPhotoFaceDto { X = 0.25, Y = 0.75, R = 0.1 });
+        Assert.True(moved.PhotoVersion > first.PhotoVersion);
+        var after = await _db.ClubMemberPhotos.AsNoTracking().SingleAsync();
+        Assert.Equal((160, 160), ScoresheetImage.Size(after.Thumb)!.Value);
+        Assert.Equal("b", CentreColour(after.Thumb));
+        Assert.Equal(stored.Image, after.Image);
+        Assert.Equal((0.25, 0.75, 0.1), (after.FaceX, after.FaceY, after.FaceR));
+
+        // Ein Kreis, der übers Bild hinausragt, wird hineingeholt — gespeichert ist, was geschnitten wurde.
+        _db.ChangeTracker.Clear();
+        var pulled = await Svc().SetMemberPhotoFaceAsync(Manager(), kid.Id, new ClubPhotoFaceDto { X = 0, Y = 0, R = 0.5 });
+        Assert.Equal((0.3333, 0.5, 0.5), (pulled.Face!.X, pulled.Face.Y, pulled.Face.R));
+        await Assert.ThrowsAsync<DomainValidationException>(() => Svc().SetMemberPhotoFaceAsync(Manager(), kid.Id, new ClubPhotoFaceDto { X = double.NaN, Y = 0, R = 0.2 }));
+
+        // Die Abhak-Liste (Gruppe) trägt die Marke je Kind — damit steht das Gesicht vor dem Namen.
+        _db.ChangeTracker.Clear();
+        var rows = (await Svc().GetGroupAsync(Trainer(tina), g)).Members;
+        Assert.Equal(pulled.PhotoVersion, rows.Single(r => r.Id == kid.Id).PhotoVersion);
+        Assert.Null(rows.Single(r => r.Id == other.Id).PhotoVersion);
+
+        // Wer das Blatt nicht sieht, setzt auch keinen Kreis.
+        await Assert.ThrowsAsync<NotFoundException>(() => Svc().SetMemberPhotoFaceAsync(Trainer(tom), kid.Id, face));
+
+        // Ein NEUES Bild ohne Kreis: der alte Kreis gilt nicht mehr, das Vorschaubild ist wieder das ganze Bild.
+        _db.ChangeTracker.Clear();
+        var replaced = await Svc().SetMemberPhotoAsync(Trainer(tina), kid.Id, Jpeg(200, 100));
+        Assert.Null(replaced.Face);
+        Assert.Null((await Svc().GetMemberAsync(Trainer(tina), kid.Id)).PhotoFace);
+        Assert.Equal((200, 100), ScoresheetImage.Size((await _db.ClubMemberPhotos.AsNoTracking().SingleAsync()).Thumb)!.Value);
+    }
+
     [Fact]
     public async Task MemberPhoto_IsShrunk_OnePerSheet_TheListOnlyCarriesItsMark_AndItGoesWithTheSheet()
     {

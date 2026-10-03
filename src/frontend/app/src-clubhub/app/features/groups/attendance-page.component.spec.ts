@@ -60,7 +60,8 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
 
   beforeEach(() => {
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
-    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'sessionDates', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto']);
+    api = jasmine.createSpyObj<ClubApiService>('ClubApiService', ['group', 'sessionByDate', 'sessionDates', 'saveSession', 'deleteSession', 'uploadPhoto', 'photoBlob', 'deletePhoto', 'memberPhotoBlob']);
+    api.memberPhotoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.sessionDates.and.resolveTo([]);
     api.photoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.group.and.resolveTo(GROUP());
@@ -196,6 +197,35 @@ describe('AttendancePageComponent (am Freitag abhaken, wer da ist)', () => {
       { memberId: 11, status: 'present' }, { memberId: 12, status: 'absent' }, { memberId: 13, status: 'absent' },
       { memberId: 91, status: 'absent' }, { memberId: 92, status: 'present' }]);
     expect(el().querySelector('[role=status]')!.textContent).toBe('Gespeichert: 2 von 5 da.');
+  });
+
+  it('Gesichter: hat einer auf der Liste ein Bild, steht in jeder Zeile zwischen Kästchen und Namen das Porträt — sonst der Anfangsbuchstabe', async () => {
+    await create(new Date(2026, 8, 25, 17, 5));
+    expect(el().querySelector('.roll ch-member-photo')).toBeNull();                       // niemand hat ein Bild: die Liste bleibt, wie sie war
+    expect(api.memberPhotoBlob).not.toHaveBeenCalled();
+
+    TestBed.resetTestingModule();
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:gesicht');
+    const g = GROUP({ coaches: [{ id: 91, firstName: 'Bernhard', lastName: '', photoVersion: 7, statuses: [], present: 0, recorded: 0 }] });
+    g.members[1] = { ...g.members[1], photoVersion: 1759400000000 };                      // Ben hat ein Bild
+    api.group.and.resolveTo(g);
+    await create(new Date(2026, 8, 25, 17, 5));
+    await settle();
+    expect(api.memberPhotoBlob.calls.allArgs()).toEqual([[12, true, 1759400000000], [91, true, 7]]);   // nur wer eins hat, nur das Vorschaubild
+    const rows = ticks();
+    expect(rows.map(t => Array.from(t.children).map(c => c.className.split(' ')[0] || c.tagName.toLowerCase())))
+      .toEqual(Array(4).fill(['box', 'avatar', 'tick-name']));                              // Kästchen, Gesicht, Name
+    expect(rows[1].querySelector('.avatar img')!.getAttribute('src')).toBe('blob:gesicht');
+    expect(rows[0].querySelector('.avatar-ph')!.textContent).toBe('A');
+    expect(rows[3].querySelector('.avatar img')).not.toBeNull();                          // auch der Trainer
+    expect(rows.map(t => t.querySelector('.tick-name')!.textContent!.trim().replace(/\s+/g, ' '))).toEqual(['Auer Anna', 'Berger Ben', 'Carla', 'Bernhard']);
+    rows[1].click();                                                                      // ein Tipp aufs Gesicht hakt ab wie einer auf den Namen
+    rows[1].querySelector<HTMLElement>('.avatar img')!.click();
+    fixture.detectChanges();
+    expect(pressed()).toEqual(['false', 'false', 'false', 'false']);                      // zweimal getippt = wieder ohne Haken
+    rows[1].querySelector<HTMLElement>('.avatar img')!.click();
+    fixture.detectChanges();
+    expect(pressed()).toEqual(['false', 'true', 'false', 'false']);
   });
 
   it('Blättern: „‹" und „›" führen zur Einheit davor und danach — am Ende zurück auf den Tag, für den die Liste aufgeht', async () => {

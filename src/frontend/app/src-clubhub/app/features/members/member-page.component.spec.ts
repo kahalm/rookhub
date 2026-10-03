@@ -7,6 +7,8 @@ import { GroupRow, Member, MemberInput } from '../../core/club.models';
 import { MemberPageComponent, formatDay } from './member-page.component';
 import { of } from 'rxjs';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
+import { By } from '@angular/platform-browser';
+import { FacePickerComponent } from '../../shared/face-picker.component';
 
 const MEMBER = (extra: Partial<Member> = {}): Member => ({
   id: 7, firstName: 'Daniel', lastName: 'Huber', birthYear: 2015, birthDate: '2015-03-12', level: 'Bauerndiplom', archived: false, isTrainer: false,
@@ -63,7 +65,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     confirmAsk = jasmine.createSpy('ask').and.returnValue(of(true));
     api = jasmine.createSpyObj<ClubApiService>('ClubApiService',
       ['member', 'groups', 'createMember', 'updateMember', 'deleteMember', 'addNote', 'deleteNote', 'createLinkCode', 'unlink', 'progress',
-       'uploadMemberPhoto', 'deleteMemberPhoto', 'memberPhotoBlob']);
+       'uploadMemberPhoto', 'deleteMemberPhoto', 'memberPhotoBlob', 'setMemberPhotoFace']);
     api.memberPhotoBlob.and.resolveTo(new Blob(['x'], { type: 'image/jpeg' }));
     api.groups.and.resolveTo(GROUPS);
     api.member.and.resolveTo(MEMBER());
@@ -271,7 +273,11 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(el().querySelector('.drop-photo')).toBeNull();
 
     const file = pick();
-    expect(el().querySelector('.photo-field img')!.getAttribute('src')).toBe('blob:vorschau');
+    expect(el().querySelector('.photo-field ch-face-picker img')!.getAttribute('src')).toBe('blob:vorschau');   // groß, mit dem Kreis darüber
+    expect(el().textContent).toContain('Zieh den Kreis aufs Gesicht.');
+    expect(fixture.componentInstance.face()).toEqual({ x: 0.5, y: 0.4, r: 0.28 });        // ein neues Bild beginnt mit dem Anfangskreis
+    // Der Kreis-Wähler meldet den gezogenen Kreis — der geht mit dem Hochladen mit.
+    fixture.debugElement.query(By.directive(FacePickerComponent)).componentInstance.faceChange.emit({ x: 0.3, y: 0.35, r: 0.2 });
     expect(el().querySelector('.pick-photo')!.textContent!.trim()).toBe('Anderes Bild wählen');
     expect(el().querySelector<HTMLInputElement>('input[name=photo]')!.value).toBe('');
     expect(api.uploadMemberPhoto).not.toHaveBeenCalled();                                // noch gibt es kein Blatt
@@ -279,7 +285,7 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     type('input[name=firstName]', 'Anna');
     el().querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
-    expect(api.uploadMemberPhoto).toHaveBeenCalledOnceWith(12, file);
+    expect(api.uploadMemberPhoto).toHaveBeenCalledOnceWith(12, file, { x: 0.3, y: 0.35, r: 0.2 });
     expect(api.createMember).toHaveBeenCalledBefore(api.uploadMemberPhoto);
     expect(revoke).toHaveBeenCalledWith('blob:vorschau');
     expect(fixture.componentInstance.member()!.photoVersion).toBe(1759400000000);
@@ -313,35 +319,45 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(api.createMember).toHaveBeenCalledTimes(1);
     expect(api.updateMember).toHaveBeenCalledTimes(1);
     expect(api.uploadMemberPhoto).toHaveBeenCalledTimes(2);
+    expect(api.uploadMemberPhoto.calls.mostRecent().args[2]).toEqual({ x: 0.5, y: 0.4, r: 0.28 });   // unangefasst: der Anfangskreis
     expect(el().querySelector('form')).toBeNull();
     expect(router.navigate).toHaveBeenCalledWith(['/kind', 12], { replaceUrl: true });   // von /kind/neu weiter aufs Blatt
   });
 
-  it('Bild beim Ändern: das vorhandene steht im Formular; „Bild entfernen" löscht es beim Speichern — ohne Änderung passiert am Bild nichts', async () => {
-    api.member.and.resolveTo(MEMBER({ photoVersion: 5 }));
-    api.updateMember.and.callFake(async () => MEMBER({ photoVersion: 5 }));
+  it('Bild beim Ändern: das vorhandene steht groß mit seinem Kreis im Formular; „Bild entfernen" löscht es beim Speichern — ohne Änderung passiert am Bild nichts', async () => {
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:gross');
+    const revoke = spyOn(URL, 'revokeObjectURL');
+    api.member.and.resolveTo(MEMBER({ photoVersion: 5, photoFace: { x: 0.4, y: 0.3, r: 0.2 } }));
+    api.updateMember.and.callFake(async () => MEMBER({ photoVersion: 5, photoFace: { x: 0.4, y: 0.3, r: 0.2 } }));
     api.deleteMemberPhoto.and.resolveTo();
     await create('7');
     await settle();                                                                      // das Vorschaubild kommt als Blob nach
     expect(el().querySelector('.sheet-head ch-member-photo .avatar-open')).not.toBeNull(); // am Blatt lässt es sich groß zeigen
     fixture.componentInstance.startEdit();
     await settle();
-    expect(el().querySelector('.photo-field ch-member-photo')).not.toBeNull();
+    await settle();
+    expect(api.memberPhotoBlob).toHaveBeenCalledWith(7, false, 5);                       // das GROSSE Bild für den Kreis
+    expect(el().querySelector('.photo-field ch-face-picker img')!.getAttribute('src')).toBe('blob:gross');
+    expect(fixture.componentInstance.face()).toEqual({ x: 0.4, y: 0.3, r: 0.2 });
     await fixture.componentInstance.save();
     await settle();
     expect(api.uploadMemberPhoto).not.toHaveBeenCalled();
     expect(api.deleteMemberPhoto).not.toHaveBeenCalled();
+    expect(api.setMemberPhotoFace).not.toHaveBeenCalled();                               // der Kreis wurde nicht angefasst
+    expect(revoke).toHaveBeenCalledWith('blob:gross');                                   // das große Bild bleibt nicht im Speicher
 
     fixture.componentInstance.startEdit();
     await settle();
+    await settle();
     el().querySelector<HTMLButtonElement>('.drop-photo')!.click();
     fixture.detectChanges();
-    expect(el().querySelector('.photo-field ch-member-photo')).toBeNull();
+    expect(el().querySelector('.photo-field ch-face-picker')).toBeNull();
     expect(el().querySelector('.photo-field .avatar-ph')!.textContent).toBe('kein Bild');
     fixture.componentInstance.cancel();                                                  // abgebrochen = das Bild bleibt
     fixture.componentInstance.startEdit();
     await settle();
-    expect(el().querySelector('.photo-field ch-member-photo')).not.toBeNull();
+    await settle();
+    expect(el().querySelector('.photo-field ch-face-picker')).not.toBeNull();
 
     el().querySelector<HTMLButtonElement>('.drop-photo')!.click();
     await fixture.componentInstance.save();
@@ -349,6 +365,43 @@ describe('MemberPageComponent (Karteiblatt)', () => {
     expect(api.deleteMemberPhoto).toHaveBeenCalledOnceWith(7);
     expect(fixture.componentInstance.member()!.photoVersion).toBeNull();
     expect(el().querySelector('.sheet-head ch-member-photo')).toBeNull();
+  });
+
+  it('Kreis ums Gesicht bei einem vorhandenen Bild: gespeichert wird nur der Kreis — das Bild wird nicht noch einmal hochgeladen', async () => {
+    api.member.and.resolveTo(MEMBER({ photoVersion: 5 }));                               // Bild von früher, noch ohne Kreis
+    api.updateMember.and.callFake(async () => MEMBER({ photoVersion: 5 }));
+    api.setMemberPhotoFace.and.resolveTo({ photoVersion: 6, face: { x: 0.6, y: 0.35, r: 0.25 } });
+    await create('7');
+    fixture.componentInstance.startEdit();
+    await settle();
+    await settle();
+    expect(fixture.componentInstance.face()).toBeNull();                                 // der Wähler zeigt seinen Anfangskreis
+    fixture.debugElement.query(By.directive(FacePickerComponent)).componentInstance.faceChange.emit({ x: 0.6, y: 0.35, r: 0.25 });
+    await fixture.componentInstance.save();
+    await settle();
+
+    expect(api.setMemberPhotoFace).toHaveBeenCalledOnceWith(7, { x: 0.6, y: 0.35, r: 0.25 });
+    expect(api.updateMember).toHaveBeenCalledBefore(api.setMemberPhotoFace);
+    expect(api.uploadMemberPhoto).not.toHaveBeenCalled();
+    const m = fixture.componentInstance.member()!;
+    expect([m.photoVersion, m.photoFace]).toEqual([6, { x: 0.6, y: 0.35, r: 0.25 }]);    // neue Marke → neues Porträt
+    expect(el().querySelector('form')).toBeNull();
+  });
+
+  it('kommt das große Bild nicht, bleibt im Formular das kleine Porträt stehen — speichern geht trotzdem', async () => {
+    api.member.and.resolveTo(MEMBER({ photoVersion: 5 }));
+    api.updateMember.and.callFake(async () => MEMBER({ photoVersion: 5 }));
+    await create('7');
+    await settle();
+    api.memberPhotoBlob.and.rejectWith(new HttpErrorResponse({ status: 500 }));
+    fixture.componentInstance.startEdit();
+    await settle();
+    await settle();
+    expect(el().querySelector('.photo-field ch-face-picker')).toBeNull();
+    expect(el().querySelector('.photo-field ch-member-photo')).not.toBeNull();
+    await fixture.componentInstance.save();
+    expect(api.setMemberPhotoFace).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.error()).toBeNull();
   });
 
   it('Ansehen: jede Nummer ist ein Anruf-Link mit dem Hinweis, wessen sie ist; die E-Mail ein mailto', async () => {

@@ -1,4 +1,5 @@
 /** ClubHub — Formen der API (`/api/club`, DTOs in `ClubDtos.cs`). */
+import { Face } from './face';
 
 export type ContactKind = 'phone' | 'email';
 
@@ -63,6 +64,8 @@ export interface Member extends MemberRow {
   fideId?: string | null;
   /** Personennummer beim ÖSB. */
   nationalId?: string | null;
+  /** Der Kreis ums Gesicht im Bild des Blatts (für den Kreis im Formular); leer ohne Bild oder ohne Kreis. */
+  photoFace?: Face | null;
   linkedUsername?: string | null;
   linkCode?: string | null;
   linkCodeExpires?: string | null;
@@ -87,9 +90,10 @@ export interface MemberInput {
   groupIds: number[];
 }
 
-/** Antwort auf das Hochladen eines Bilds zum Blatt: die neue Marke. */
+/** Antwort auf das Hochladen eines Bilds bzw. das Setzen des Kreises: die neue Marke und der Kreis, wie er gespeichert ist. */
 export interface MemberPhotoState {
   photoVersion: number | null;
+  face?: Face | null;
 }
 
 export interface LinkCode {
@@ -145,6 +149,8 @@ export interface GroupMemberRow {
   lastName: string;
   birthYear?: number | null;
   level?: string | null;
+  /** Marke des Bilds am Blatt — die Abhak-Liste zeigt damit das Gesicht vor dem Namen; leer = kein Bild. */
+  photoVersion?: number | null;
   /** Status je Einheit in der Reihenfolge von `Group.sessions`; `null` = nicht erfasst. */
   statuses: (Status | null)[];
   present: number;

@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@rh/core/auth.service';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
+import { MemberPhotoComponent } from '../../shared/member-photo.component';
 import { SessionPhotosComponent } from '../../shared/session-photos.component';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
@@ -28,12 +29,15 @@ export function tallyText(present: number, total: number): string {
  * eine Einheit hat (`sessionDates`), plus den Tag, für den die Liste von selbst aufgeht. Wer mit ungespeicherten Haken
  * blättert (oder das Datum ändert), wird vorher gefragt. Einen Knopf „Alle da" gibt es nicht mehr (Wunsch: „das gibt's
  * eigentlich nie").
+ *
+ * GESICHTER (Wunsch 2026-10-03): hat mindestens einer auf der Liste ein Bild am Blatt, steht in jeder Zeile zwischen
+ * Kästchen und Namen das Porträt — der Kreis, der im Formular ums Gesicht gezogen wurde; ohne Bild der Anfangsbuchstabe.
  */
 @Component({
   selector: 'ch-attendance-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, SessionPhotosComponent],
+  imports: [RouterLink, SessionPhotosComponent, MemberPhotoComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Die Anwesenheit erfassen die Trainer und die Leitung des Vereins.</p></section>
@@ -71,7 +75,8 @@ export function tallyText(present: number, total: number): string {
             <li [class.present]="marks()[m.id] === 'present'">
               <button type="button" class="tick" [attr.aria-pressed]="marks()[m.id] === 'present'" [disabled]="loading()" (click)="toggle(m.id)">
                 <span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
-                <span><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
+                <span class="tick-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
               </button>
             </li>
           } @empty { <li class="roll-note muted">In dieser Gruppe ist noch kein Kind.</li> }
@@ -81,7 +86,8 @@ export function tallyText(present: number, total: number): string {
               <li class="coach" [class.present]="marks()[m.id] === 'present'">
                 <button type="button" class="tick" [attr.aria-pressed]="marks()[m.id] === 'present'" [disabled]="loading()" (click)="toggle(m.id)">
                   <span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
-                  <span><b>{{ head(m) }}</b>{{ tail(m) }}</span>
+                  @if (hasPhotos()) { <ch-member-photo [memberId]="m.id" [version]="m.photoVersion" [name]="m.firstName" /> }
+                  <span class="tick-name"><b>{{ head(m) }}</b>{{ tail(m) }}</span>
                 </button>
               </li>
             }
@@ -150,6 +156,8 @@ export class AttendancePageComponent implements OnInit {
 
   /** Alle auf der Liste: die Kinder der Gruppe und darunter die Trainer. */
   readonly listed = computed(() => { const g = this.group(); return g ? [...g.members, ...g.coaches] : []; });
+  /** Porträts nur, wenn es auf der Liste überhaupt ein Bild gibt — sonst stünde in jeder Zeile bloß ein Buchstabe. */
+  readonly hasPhotos = computed(() => this.listed().some(m => m.photoVersion != null));
   readonly present = computed(() => this.listed().filter(m => this.marks()[m.id] === 'present').length);
   readonly tally = computed(() => tallyText(this.present(), this.listed().length));
   readonly long = longDate;

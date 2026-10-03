@@ -277,6 +277,9 @@ public class ClubService
         dto.BirthDate = m.BirthDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         dto.FideId = m.FideId;
         dto.NationalId = m.NationalId;
+        if (m.PhotoVersion != null)
+            dto.PhotoFace = FaceDto(await _db.ClubMemberPhotos.Where(p => p.MemberId == m.Id)
+                .Select(p => new FaceValues(p.FaceX, p.FaceY, p.FaceR)).FirstOrDefaultAsync(ct));
         dto.CreatedAt = m.CreatedAt;
         dto.UpdatedAt = m.UpdatedAt;
         dto.CanDelete = actor.Manager;
@@ -336,18 +339,47 @@ public class ClubService
 
     // ---- Bild am Blatt ------------------------------------------------------------------------
 
+    /// <summary>Die drei Spalten des Kreises, ohne die Bytes des Bilds zu laden.</summary>
+    private sealed record FaceValues(double? X, double? Y, double? R);
+
+    private static ClubPhotoFaceDto? FaceDto(FaceValues? f) =>
+        f is { X: { } x, Y: { } y, R: { } r } ? new ClubPhotoFaceDto { X = x, Y = y, R = r } : null;
+
+    /// <summary>
+    /// Der Kreis ins Bild geholt und das Vorschaubild dazu: das Quadrat um den Kreis, höchstens
+    /// <see cref="MemberThumbMaxEdge"/> groß. 400, wenn die Angaben keine Zahlen sind.
+    /// </summary>
+    private static ((double X, double Y, double R) Face, byte[] Thumb) FaceThumb(byte[] image, int width, int height, ClubPhotoFaceDto face)
+    {
+        var f = ClubFace.Normalize(face.X, face.Y, face.R, width, height)
+            ?? throw new DomainValidationException("Der Kreis ums Gesicht ist so nicht lesbar.");
+        var (left, top, size) = ClubFace.Square(f.X, f.Y, f.R, width, height);
+        var thumb = ScoresheetImage.CropSquare(image, left, top, size, MemberThumbMaxEdge, 85)
+            ?? throw new DomainValidationException("Das Bild ließ sich nicht verarbeiten.");
+        return (f, thumb);
+    }
+
+    /// <summary>Die Marke muss mit JEDER Änderung am Bild wechseln (sie steht in der Bild-Adresse) — auch zweimal in derselben Millisekunde.</summary>
+    private static long NextPhotoVersion(ClubMember m, DateTime now) =>
+        Math.Max(new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Utc)).ToUnixTimeMilliseconds(), (m.PhotoVersion ?? 0) + 1);
+
     /// <summary>
     /// Das Bild zum Blatt setzen oder ersetzen: aufrecht, auf <see cref="MemberPhotoMaxEdge"/> verkleinert, JPEG; dazu das
-    /// Vorschaubild. Darf, wer das Blatt sieht (und damit ändern darf). 400, wenn es kein lesbares Bild ist.
+    /// Vorschaubild — mit <paramref name="face"/> das Quadrat um den Kreis ums Gesicht, sonst das ganze Bild verkleinert.
+    /// Darf, wer das Blatt sieht (und damit ändern darf). 400, wenn es kein lesbares Bild ist.
     /// </summary>
-    public async Task<ClubMemberPhotoDto> SetMemberPhotoAsync(ClubActor actor, int memberId, byte[] upload, CancellationToken ct = default)
+    public async Task<ClubMemberPhotoDto> SetMemberPhotoAsync(ClubActor actor, int memberId, byte[] upload,
+        ClubPhotoFaceDto? face = null, CancellationToken ct = default)
     {
         var m = await LoadVisibleAsync(actor, memberId, ct);
         if (upload.Length == 0 || !ScoresheetImage.CanDecode(upload))
             throw new DomainValidationException("Das ist kein Bild, das sich lesen lässt (JPEG, PNG oder WebP).");
         var image = ScoresheetImage.Prepare(upload, MemberPhotoMaxEdge, 85) ?? throw new DomainValidationException("Das Bild ließ sich nicht verarbeiten.");
-        var thumb = ScoresheetImage.Prepare(image, MemberThumbMaxEdge, 82) ?? image;
         var size = ScoresheetImage.Size(image) ?? (0, 0);
+        (double X, double Y, double R)? circle = null;
+        byte[] thumb;
+        if (face != null) (circle, thumb) = FaceThumb(image, size.Width, size.Height, face);
+        else thumb = ScoresheetImage.Prepare(image, MemberThumbMaxEdge, 82) ?? image;
         var now = _utcNow();
 
         // Ersetzen, ohne das alte Bild zu laden: eine schon verfolgte Zeile nehmen, sonst einen Stellvertreter mit Schlüssel.
@@ -358,16 +390,44 @@ public class ClubService
         photo.Thumb = thumb;
         photo.Width = size.Width;
         photo.Height = size.Height;
+        photo.FaceX = circle?.X;                                             // ein neues Bild ohne Kreis: der alte gilt nicht mehr
+        photo.FaceY = circle?.Y;
+        photo.FaceR = circle?.R;
         photo.UpdatedByUserId = actor.UserId;
         photo.UpdatedAt = now;
         if (exists) _db.ClubMemberPhotos.Update(photo);
         else _db.ClubMemberPhotos.Add(photo);
 
-        // Die Marke muss mit JEDEM Hochladen wechseln (sie steht in der Bild-Adresse) — auch zweimal in derselben Millisekunde.
-        m.PhotoVersion = Math.Max(new DateTimeOffset(DateTime.SpecifyKind(now, DateTimeKind.Utc)).ToUnixTimeMilliseconds(), (m.PhotoVersion ?? 0) + 1);
+        m.PhotoVersion = NextPhotoVersion(m, now);
         m.UpdatedAt = now;
         await _db.SaveChangesAsync(ct);
-        return new ClubMemberPhotoDto { PhotoVersion = m.PhotoVersion };
+        return new ClubMemberPhotoDto { PhotoVersion = m.PhotoVersion, Face = FaceDto(new FaceValues(photo.FaceX, photo.FaceY, photo.FaceR)) };
+    }
+
+    /// <summary>
+    /// Den Kreis ums Gesicht im VORHANDENEN Bild setzen: das Vorschaubild wird neu geschnitten, das Bild selbst bleibt.
+    /// Die Marke wechselt (das Vorschaubild hat dieselbe Adresse). 404 ohne Bild.
+    /// </summary>
+    public async Task<ClubMemberPhotoDto> SetMemberPhotoFaceAsync(ClubActor actor, int memberId, ClubPhotoFaceDto face, CancellationToken ct = default)
+    {
+        var m = await LoadVisibleAsync(actor, memberId, ct);
+        // Hier wird die Zeile GELADEN: das Bild braucht es zum Schneiden ohnehin, und geschrieben werden so nur die
+        // geänderten Spalten (Vorschaubild, Kreis) — nicht noch einmal das ganze Bild.
+        var photo = await _db.ClubMemberPhotos.FirstOrDefaultAsync(p => p.MemberId == memberId, ct)
+            ?? throw new NotFoundException("Zu diesem Blatt gibt es kein Bild.");
+        var size = ScoresheetImage.Size(photo.Image) ?? (photo.Width, photo.Height);
+        var (circle, thumb) = FaceThumb(photo.Image, size.Width, size.Height, face);
+        var now = _utcNow();
+        photo.Thumb = thumb;
+        photo.FaceX = circle.X;
+        photo.FaceY = circle.Y;
+        photo.FaceR = circle.R;
+        photo.UpdatedByUserId = actor.UserId;
+        photo.UpdatedAt = now;
+        m.PhotoVersion = NextPhotoVersion(m, now);
+        m.UpdatedAt = now;
+        await _db.SaveChangesAsync(ct);
+        return new ClubMemberPhotoDto { PhotoVersion = m.PhotoVersion, Face = FaceDto(new FaceValues(circle.X, circle.Y, circle.R)) };
     }
 
     /// <summary>Das Bild (oder das Vorschaubild) — nur, wer das Blatt sieht; ein fremdes Blatt ist 404 wie eines ohne Bild.</summary>
@@ -562,6 +622,7 @@ public class ClubService
             return new ClubGroupMemberRowDto
             {
                 Id = m.Id, FirstName = m.FirstName, LastName = m.LastName, BirthYear = m.BirthYear, Level = m.Level,
+                PhotoVersion = m.PhotoVersion,
                 Statuses = sessions.Select(s => mine.TryGetValue(s.Id, out var st) ? StatusKey(st) : null).ToList(),
                 Present = mine.Values.Count(s => s == ClubAttendanceStatus.Present),
                 Recorded = mine.Count,

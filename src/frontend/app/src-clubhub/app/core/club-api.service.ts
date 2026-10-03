@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { Face } from './face';
 import { Group, GroupInput, GroupRow, LinkCode, LinkState, Member, MemberInput, MemberPhotoState, MemberRow, Photo, Progress, SessionDetail, SessionInput } from './club.models';
 
 /**
@@ -57,11 +58,20 @@ export class ClubApiService {
     return firstValueFrom(this.http.delete<Member>(`${this.base}/members/${id}/link`));
   }
 
-  /** Das Bild zum Blatt setzen oder ersetzen — eines je Blatt (der nginx lässt 15 MB je Anfrage durch). */
-  uploadMemberPhoto(id: number, file: File): Promise<MemberPhotoState> {
+  /**
+   * Das Bild zum Blatt setzen oder ersetzen — eines je Blatt (der nginx lässt 15 MB je Anfrage durch). `face` = der Kreis
+   * ums Gesicht: aus ihm schneidet der Server das Vorschaubild (als JSON-Text im Formular, nicht als Zahlenfelder).
+   */
+  uploadMemberPhoto(id: number, file: File, face?: Face | null): Promise<MemberPhotoState> {
     const form = new FormData();
     form.append('file', file, file.name);
+    if (face) form.append('face', JSON.stringify({ x: face.x, y: face.y, r: face.r }));
     return firstValueFrom(this.http.post<MemberPhotoState>(`${this.base}/members/${id}/photo`, form));
+  }
+
+  /** Den Kreis ums Gesicht im VORHANDENEN Bild setzen — das Vorschaubild wird neu geschnitten, die Marke wechselt. */
+  setMemberPhotoFace(id: number, face: Face): Promise<MemberPhotoState> {
+    return firstValueFrom(this.http.put<MemberPhotoState>(`${this.base}/members/${id}/photo/face`, { x: face.x, y: face.y, r: face.r }));
   }
 
   /**

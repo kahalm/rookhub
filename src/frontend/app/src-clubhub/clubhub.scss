@@ -206,7 +206,7 @@ a.chip:hover { border-color: var(--ink); }
 .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 4px 4px 10px 10px; padding: 18px 18px 8px; }
 .sheet-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; padding-bottom: 10px; border-bottom: 2px solid var(--rule); }
 .sheet-head .sub { flex-basis: 100%; margin: 0; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
-/* Mit Bild: das Porträt links wie ein aufgeklebtes Passbild, Name und Angaben daneben. */
+/* Mit Bild: das Porträt (der Kreis ums Gesicht) links, Name und Angaben daneben. */
 .sheet-head.has-photo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto 1fr; gap: 6px 16px; align-items: start; }
 .sheet-head.has-photo > .avatar { grid-row: 1 / span 2; }
 .sheet-head.has-photo > h1 { align-self: end; overflow-wrap: anywhere; }
@@ -248,9 +248,29 @@ a.chip:hover { border-color: var(--ink); }
   flex-wrap: nowrap;
 }
 .form-save .btn.primary { flex: 1 1 auto; }
-.photo-field { display: flex; align-items: center; gap: 14px; }
+.photo-field { display: grid; gap: 8px; justify-items: start; }
 .photo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
-.photo-label { flex-basis: 100%; font-size: 15px; color: var(--muted); }
+.photo-label { font-size: 15px; color: var(--muted); }
+.face-hint { margin: 0; max-width: 46ch; }
+/* Das Gesicht wählen: das Bild groß, darüber der Kreis. Außerhalb ist das Bild abgedunkelt (Schatten des Kreises, vom
+   Rahmen abgeschnitten); der Kreis lässt sich ziehen, der Griff am Rand und der Regler ändern die Größe. */
+.face-picker { display: grid; gap: 8px; justify-items: start; max-width: 100%; }
+.face-stage { position: relative; display: inline-block; max-width: 100%; overflow: hidden; border-radius: 8px; line-height: 0; background: var(--paper); cursor: crosshair; }
+.face-stage.disabled { cursor: default; opacity: .7; }
+.face-stage img { display: block; max-width: 100%; max-height: 420px; width: auto; height: auto; user-select: none; -webkit-user-drag: none; }
+.face-ring {
+  position: absolute; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  cursor: grab; touch-action: none;
+}
+.face-ring:active { cursor: grabbing; }
+.face-ring:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Der Griff sitzt AUF dem Kreis, rechts unten (45°): 50 % + 50 % · cos 45° = 85,36 %. */
+.face-grip {
+  position: absolute; right: 14.64%; bottom: 14.64%; transform: translate(50%, 50%); width: 28px; height: 28px;
+  border-radius: 50%; background: #fff; border: 3px solid var(--primary); cursor: nwse-resize; touch-action: none;
+}
+.face-size { display: flex; align-items: center; gap: 10px; width: min(100%, 360px); font-size: 15px; color: var(--muted); }
+.face-size input { flex: 1 1 auto; min-width: 0; accent-color: var(--primary); height: 32px; }
 .contact-edit { display: grid; grid-template-columns: 8.5rem minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
 .contact-edit + .contact-edit { margin-top: 8px; }
 .group-picks { display: flex; flex-wrap: wrap; gap: 4px 22px; }
@@ -312,10 +332,12 @@ h3.inline { display: inline; }
 .roll .roll-note { font: 400 15px/1.4 var(--body); }
 .roll li.present { background: var(--ok-soft); }
 .tick {
-  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; align-items: center; text-align: left;
+  display: flex; gap: 14px; align-items: center; text-align: left;
   font: inherit; font-size: 19px; color: inherit; background: none; border: 0; padding: 10px 14px; min-height: 58px; cursor: pointer;
 }
-.tick .box { width: 34px; height: 34px; border: 2px solid var(--muted); border-radius: 7px; background: var(--card); display: grid; place-items: center; }
+.tick .tick-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.tick .avatar { width: 48px; height: 48px; }                 /* das Gesicht vor dem Namen — etwas größer als in der Kartei */
+.tick .box { flex: none; width: 34px; height: 34px; border: 2px solid var(--muted); border-radius: 7px; background: var(--card); display: grid; place-items: center; }
 .tick[aria-pressed="true"] .box { border-color: var(--ok); background: var(--ok); }
 .tick .box svg { width: 24px; height: 24px; stroke: #fff; stroke-width: 3.4; fill: none; stroke-linecap: round; stroke-linejoin: round;
   stroke-dasharray: 30; stroke-dashoffset: 30; }
@@ -345,10 +367,11 @@ h1, h2, h3, .brand, .tabs a, .today strong, .tally strong, .stats dd, .code, .re
 label.upload { position: relative; }
 label.upload.disabled { opacity: .5; }
 /* ---- Bild am Karteiblatt ------------------------------------------------------------------
-   Klein in der Kartei-Zeile, als Porträt (Passbild-Format) am Kopf des Blatts und im Formular. */
+   Das Porträt ist RUND — der Kreis, der im Formular ums Gesicht gezogen wurde: klein in Kartei-Zeile und Abhak-Liste,
+   größer am Kopf des Blatts. */
 .avatar { display: inline-grid; flex: none; width: 44px; height: 44px; }
-.avatar.portrait { width: 84px; height: 108px; }
-.avatar > img, .avatar-open, .avatar-ph { width: 100%; height: 100%; min-width: 0; min-height: 0; border-radius: 8px; }
+.avatar.portrait { width: 96px; height: 96px; }
+.avatar > img, .avatar-open, .avatar-ph { width: 100%; height: 100%; min-width: 0; min-height: 0; border-radius: 50%; }
 .avatar > img, .avatar-open img { display: block; object-fit: cover; }
 .avatar-open { padding: 0; border: 0; background: none; cursor: zoom-in; overflow: hidden; }
 .avatar-open img { width: 100%; height: 100%; }
@@ -389,6 +412,7 @@ label.upload.disabled { opacity: .5; }
   /* Beim Anlegen stehen drei Knöpfe in der Leiste: Speichern + Abbrechen oben, „Weiteres Kind anlegen" darunter. */
   .form-save { margin: 0 -14px; padding: 10px 14px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; }
   .form-save .save-next { grid-column: 1 / -1; grid-row: 2; }
-  .avatar.portrait { width: 66px; height: 85px; }
+  .avatar.portrait { width: 76px; height: 76px; }
+  .face-stage img { max-height: 360px; }
   .sheet-head.has-photo { gap: 4px 12px; }
 }

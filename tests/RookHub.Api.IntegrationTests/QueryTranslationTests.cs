@@ -981,6 +981,22 @@ public class QueryTranslationTests(QueryTranslationFixture fixture)
             Assert.Equal(two.PhotoVersion, (await club.ListMembersAsync(trainer, null, false)).Single(m => m.Id == daniel.Id).PhotoVersion);
             Assert.True((await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true)).Length > 100);
             Assert.True((await club.GetMemberPhotoAsync(manager, daniel.Id, thumb: false)).Length > 100);
+
+            // Kreis ums Gesicht: drei double-Spalten; gesetzt wird in der GELADENEN Zeile (nur Vorschaubild + Kreis gehen in
+            // das UPDATE), gelesen ohne die Bytes; die Gruppe trägt die Marke je Kind.
+            Assert.Null((await club.GetMemberAsync(trainer, daniel.Id)).PhotoFace);
+            var faced = await club.SetMemberPhotoFaceAsync(trainer, daniel.Id, new RookHub.Api.DTOs.ClubPhotoFaceDto { X = 0.5, Y = 0.4, R = 0.28 });
+            Db.ChangeTracker.Clear();
+            Assert.True(faced.PhotoVersion > two.PhotoVersion);
+            var readBack = (await club.GetMemberAsync(trainer, daniel.Id)).PhotoFace!;
+            Assert.Equal((0.5, 0.4, 0.28), (readBack.X, readBack.Y, readBack.R));
+            Assert.Equal((256, 256), RookHub.Api.Services.ScoresheetImage.Size(await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: true))!.Value);   // Quadrat um den Kreis
+            Assert.True((await club.GetMemberPhotoAsync(trainer, daniel.Id, thumb: false)).Length > 100);          // das Bild blieb
+            Assert.Equal(faced.PhotoVersion, (await club.GetGroupAsync(trainer, mine.Id)).Members.Single(m => m.Id == daniel.Id).PhotoVersion);
+            var withFace = await club.SetMemberPhotoAsync(trainer, daniel.Id, data.ToArray(), new RookHub.Api.DTOs.ClubPhotoFaceDto { X = 0.5, Y = 0.5, R = 0.5 });
+            Db.ChangeTracker.Clear();
+            Assert.Equal(0.5, withFace.Face!.R);
+
             await club.DeleteMemberPhotoAsync(trainer, daniel.Id);
             Db.ChangeTracker.Clear();
             Assert.False(await Db.ClubMemberPhotos.AnyAsync());

@@ -6,6 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { hasClubAccess } from '../../core/club-access';
 import { ClubApiService, apiErrorText } from '../../core/club-api.service';
 import { Contact, ContactKind, GroupRow, Member, MemberInput, Progress } from '../../core/club.models';
+import { DEFAULT_FACE, Face } from '../../core/face';
+import { FacePickerComponent } from '../../shared/face-picker.component';
 import { MemberPhotoComponent } from '../../shared/member-photo.component';
 import { STATUS_LABEL, ageClass, attendanceText, emptyInput, formatBirth, formatLinkCode, fullName, parseBirth, shortDate, telHref, toInput } from '../../core/club-format';
 
@@ -33,12 +35,17 @@ function orNull(value: string | null | undefined): string | null {
  * Speichern des Blatts, denn es hängt an dessen Kennung), Personennummer (ÖSB) und FIDE-Nummer, und beim Anlegen der
  * Knopf „Weiteres Kind anlegen": speichert dieses Blatt und öffnet gleich ein leeres (Gruppen bleiben angehakt — man
  * trägt meist eine ganze Gruppe hintereinander ein). Foto-Einwilligung und Notiz zum Kind gibt es weiter nicht.
+ *
+ * Seit 2026-10-03 (Wunsch „mit einem Kreis sein Gesicht auswählen"): im Formular steht das Bild groß mit einem KREIS
+ * darüber (`ch-face-picker`) — verschieben, Größe ändern. Der Ausschnitt ist das Porträt in Kartei, Abhak-Liste und am
+ * Kopf des Blatts. Bei einem neuen Bild geht der Kreis mit dem Hochladen mit; bei einem vorhandenen wird nur der Kreis
+ * gespeichert (und nur, wenn er angefasst wurde). Das vorhandene Bild holt das Formular dafür groß als Blob.
  */
 @Component({
   selector: 'ch-member-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, MemberPhotoComponent],
+  imports: [RouterLink, MemberPhotoComponent, FacePickerComponent],
   template: `
     @if (!allowed) {
       <section class="gate"><h1>Nicht freigeschaltet</h1><p>Karteiblätter sehen die Trainer und die Leitung des Vereins.</p></section>
@@ -73,15 +80,16 @@ function orNull(value: string | null | undefined): string | null {
             <input name="fideId" inputmode="numeric" autocomplete="off" maxlength="16" [value]="form().fideId ?? ''" (input)="set('fideId', $any($event.target).value)"></label>
         </div>
         <div class="photo-field">
-          @if (photoPreview(); as src) {
-            <span class="avatar portrait"><img [src]="src" alt="Das gewählte Bild"></span>
+          <span class="photo-label">Bild</span>
+          @if (pickerSrc(); as src) {
+            <ch-face-picker [src]="src" [face]="face()" [disabled]="busy()" (faceChange)="setFace($event)" />
+            <p class="muted small face-hint">Zieh den Kreis aufs Gesicht. Dieser Ausschnitt steht in der Kartei und beim Abhaken vor dem Namen.</p>
           } @else if (keptPhoto(); as k) {
             <ch-member-photo class="portrait" [memberId]="k.id" [version]="k.version" [name]="form().firstName" />
           } @else {
             <span class="avatar portrait"><span class="avatar-ph none">kein Bild</span></span>
           }
           <div class="photo-actions">
-            <span class="photo-label">Bild</span>
             <label class="btn slim upload pick-photo" [class.disabled]="busy()">
               {{ hasPicture() ? 'Anderes Bild wählen' : 'Bild wählen' }}
               <input type="file" name="photo" accept="image/*" hidden [disabled]="busy()" (change)="pickPhoto($any($event.target))">
@@ -274,6 +282,16 @@ export class MemberPageComponent implements OnInit {
     return m && m.photoVersion != null && !this.photoRemove() ? { id: m.id, version: m.photoVersion } : null;
   });
   readonly hasPicture = computed(() => !!this.photoPreview() || !!this.keptPhoto());
+  /** Das VORHANDENE Bild groß (Objekt-Adresse des Blobs) — für den Kreis im Formular; `null`, solange es lädt. */
+  readonly existingPhoto = signal<string | null>(null);
+  /** Worüber der Kreis liegt: die Vorschau des gewählten Bilds, sonst das vorhandene Bild. */
+  readonly pickerSrc = computed(() => this.photoPreview() ?? (this.keptPhoto() ? this.existingPhoto() : null));
+  /** Der Kreis ums Gesicht im Formular; `null` = noch keiner gewählt (der Kreis-Wähler zeigt dann seinen Anfangskreis). */
+  readonly face = signal<Face | null>(null);
+  /** Der Kreis wurde im Formular angefasst — nur dann wird er bei einem VORHANDENEN Bild gespeichert. */
+  private faceTouched = false;
+  /** Zählt die Bearbeitungen — ein großes Bild, das für eine frühere geladen wurde, kommt nicht mehr ins Formular. */
+  private photoEpoch = 0;
   private readonly firstNameInput = viewChild<ElementRef<HTMLInputElement>>('firstName');
 
   readonly name = computed(() => { const m = this.member(); return m ? fullName(m) : ''; });
@@ -336,9 +354,28 @@ export class MemberPageComponent implements OnInit {
     this.form.set(toInput(m));
     this.birthText.set(formatBirth(m));
     this.clearPhotoDraft();
+    this.face.set(m.photoFace ?? null);
     this.error.set(null);
     this.editing.set(true);
     void this.loadGroups();
+    void this.loadExistingPhoto(m);
+  }
+
+  /** Das vorhandene Bild groß holen (hinter der Anmeldung, also als Blob) — darüber liegt im Formular der Kreis. */
+  private async loadExistingPhoto(m: Member): Promise<void> {
+    if (m.photoVersion == null) return;
+    const mine = this.photoEpoch;
+    try {
+      const blob = await this.api.memberPhotoBlob(m.id, false, m.photoVersion);
+      if (mine !== this.photoEpoch) return;                              // inzwischen abgebrochen oder neu begonnen
+      this.existingPhoto.set(URL.createObjectURL(blob));
+    } catch { /* ohne das große Bild bleibt das kleine Porträt stehen — der Kreis lässt sich dann gerade nicht ändern */ }
+  }
+
+  /** Der Kreis wurde verschoben oder in der Größe geändert. */
+  setFace(face: Face): void {
+    this.face.set(face);
+    this.faceTouched = true;
   }
 
   cancel(): void {
@@ -376,6 +413,7 @@ export class MemberPageComponent implements OnInit {
     this.clearPhotoDraft();
     this.photoFile = file;
     this.photoPreview.set(URL.createObjectURL(file));
+    this.face.set(DEFAULT_FACE);                                         // ein neues Bild beginnt mit dem Anfangskreis
   }
 
   /** Kein Bild: die Auswahl fällt weg, und ein vorhandenes Bild geht beim Speichern. */
@@ -385,24 +423,36 @@ export class MemberPageComponent implements OnInit {
   }
 
   private clearPhotoDraft(): void {
-    const url = this.photoPreview();
-    if (url) URL.revokeObjectURL(url);
+    this.photoEpoch++;
+    for (const url of [this.photoPreview(), this.existingPhoto()]) if (url) URL.revokeObjectURL(url);
     this.photoFile = null;
     this.photoPreview.set(null);
+    this.existingPhoto.set(null);
     this.photoRemove.set(false);
+    this.face.set(null);
+    this.faceTouched = false;
   }
 
-  /** Das Bild nach dem Speichern des Blatts nachziehen: hochladen bzw. entfernen. Liefert das Blatt mit der neuen Marke. */
+  /**
+   * Das Bild nach dem Speichern des Blatts nachziehen: hochladen (samt Kreis ums Gesicht), entfernen — oder bei einem
+   * vorhandenen Bild nur den angefassten Kreis speichern. Liefert das Blatt mit der neuen Marke.
+   */
   private async syncPhoto(saved: Member): Promise<Member> {
     if (this.photoFile) {
-      const state = await this.api.uploadMemberPhoto(saved.id, this.photoFile);
+      const state = await this.api.uploadMemberPhoto(saved.id, this.photoFile, this.face() ?? DEFAULT_FACE);
       this.clearPhotoDraft();
-      return { ...saved, photoVersion: state.photoVersion };
+      return { ...saved, photoVersion: state.photoVersion, photoFace: state.face ?? null };
     }
     if (this.photoRemove() && saved.photoVersion != null) {
       await this.api.deleteMemberPhoto(saved.id);
       this.clearPhotoDraft();
-      return { ...saved, photoVersion: null };
+      return { ...saved, photoVersion: null, photoFace: null };
+    }
+    const face = this.face();
+    if (this.faceTouched && face && saved.photoVersion != null) {
+      const state = await this.api.setMemberPhotoFace(saved.id, face);
+      this.clearPhotoDraft();
+      return { ...saved, photoVersion: state.photoVersion, photoFace: state.face ?? face };
     }
     return saved;
   }
@@ -456,6 +506,7 @@ export class MemberPageComponent implements OnInit {
       }
       this.show(saved);
       this.editing.set(false);
+      this.clearPhotoDraft();                                            // auch das große Bild fürs Formular wieder freigeben
       this.lastSaved.set(null);
       // Von „/kind/neu" aus (auch nach einem ersten Versuch, bei dem nur das Bild scheiterte) weiter auf die Adresse des Blatts.
       if (!this.route.snapshot.paramMap.get('id')) void this.router.navigate(['/kind', saved.id], { replaceUrl: true });

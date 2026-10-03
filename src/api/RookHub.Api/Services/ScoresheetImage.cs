@@ -112,6 +112,34 @@ public static class ScoresheetImage
         }
     }
 
+    /// <summary>
+    /// Ein QUADRAT aus einem (schon aufrechten) Bild schneiden, auf höchstens <paramref name="maxEdge"/> verkleinern, JPEG.
+    /// Das Quadrat wird ins Bild geholt, falls es übersteht. <c>null</c>, wenn sich das Bild nicht lesen lässt.
+    /// Gedacht für das von <see cref="Prepare"/> erzeugte JPEG — die EXIF-Drehung wird hier NICHT noch einmal angewandt.
+    /// </summary>
+    public static byte[]? CropSquare(byte[] data, int left, int top, int size, int maxEdge, int quality = 88)
+    {
+        try
+        {
+            using var bmp = SKBitmap.Decode(data);
+            if (bmp == null || bmp.Width <= 0 || bmp.Height <= 0) return null;
+            size = Math.Clamp(size, 1, Math.Min(bmp.Width, bmp.Height));
+            left = Math.Clamp(left, 0, bmp.Width - size);
+            top = Math.Clamp(top, 0, bmp.Height - size);
+            using var cut = new SKBitmap(size, size);
+            using (var canvas = new SKCanvas(cut))
+                canvas.DrawBitmap(bmp, SKRect.Create(left, top, size, size), SKRect.Create(0, 0, size, size));
+            using var resized = size > maxEdge ? cut.Resize(new SKImageInfo(maxEdge, maxEdge), SKFilterQuality.High) : null;
+            using var image = SKImage.FromBitmap(resized ?? cut);
+            using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+            return encoded?.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     /// <summary>Wie <see cref="SKBitmap.Decode(SKCodec)"/> (premultipliziert, ohne Farbraum), nur in der verkleinerten
     /// Größe, die <see cref="DecodeInfo"/> gewählt hat.</summary>
     private static SKBitmap? DecodeScaled(SKCodec codec, SKImageInfo target)

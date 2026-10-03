@@ -103,6 +103,15 @@ public class ClubMemberPhoto
     public int Width { get; set; }
     public int Height { get; set; }
 
+    /// <summary>
+    /// Der Kreis ums Gesicht (seit 0.641.0, <see cref="ClubFace"/>): Mittelpunkt als Anteil von Breite/Höhe, Radius als
+    /// Anteil der kürzeren Seite. Mit Kreis ist <see cref="Thumb"/> das Quadrat um ihn, ohne (alle drei <c>null</c>) das
+    /// ganze Bild verkleinert.
+    /// </summary>
+    public double? FaceX { get; set; }
+    public double? FaceY { get; set; }
+    public double? FaceR { get; set; }
+
     public int? UpdatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
