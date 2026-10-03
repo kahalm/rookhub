@@ -723,18 +723,25 @@ Akzeptiert sowohl JWT (User-Login) als auch ApiToken (`Authorization: Bearer rkh
 
 CORS (`ExtensionPolicy`, nur für `ExtensionController`): erlaubt `https://www.chess.com`, `https://lichess.org`, `https://www.chessable.com`, `https://chessable.com` mit `GET`+`POST`, ohne `AllowCredentials` (Auth strikt über Bearer-Header). Gilt für den Userscript-`fetch`-Pfad; die Extension-Variante geht ohnehin CORS-frei über ihren Background-Worker. Die Default-CORS-Policy (Frontend) erlaubt `http://localhost:4200` + `http://localhost:8085`.
 
-### Turnier-Proxy (auth, leitet an Crawler weiter)
-| Methode | Endpoint | Crawler-Route |
-|---------|----------|---------------|
-| GET | `/api/tournaments` | `/api/tournaments` |
-| GET | `/api/tournaments/{id}` | `/api/tournaments/{id}` |
-| GET | `/api/tournaments/{id}/players?team=&sortBy=` | `/api/tournaments/{id}/players` |
-| GET | `/api/tournaments/{id}/teams` | `/api/tournaments/{id}/teams` |
-| GET | `/api/tournaments/{id}/pairings?round=` | `/api/tournaments/{id}/pairings` |
-| GET | `/api/tournaments/{id}/players/{snr}/results` | `/api/tournaments/{id}/players/{snr}/results` |
-| GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` |
-| POST | `/api/tournaments/crawl` | `/api/crawl` |
-| POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` |
+### Turnier-Proxy (leitet an Crawler weiter; lesen und Turnier holen ohne Anmeldung)
+| Methode | Endpoint | Crawler-Route | Auth |
+|---------|----------|---------------|------|
+| GET | `/api/tournaments` | `/api/tournaments` | Auth |
+| GET | `/api/tournaments/{id}` | `/api/tournaments/{id}` | AllowAnonymous (`anonymous-tournament`) |
+| GET | `/api/tournaments/{id}/players?team=&sortBy=` | `/api/tournaments/{id}/players` | AllowAnonymous (`anonymous-tournament`) |
+| GET | `/api/tournaments/{id}/teams[/{snr}]` | `/api/tournaments/{id}/teams` | AllowAnonymous (`anonymous-tournament`) |
+| GET | `/api/tournaments/{id}/pairings?round=` | `/api/tournaments/{id}/pairings` | AllowAnonymous (`anonymous-tournament`) |
+| GET | `/api/tournaments/{id}/players/{snr}/results` | `/api/tournaments/{id}/players/{snr}/results` | AllowAnonymous (`anonymous-tournament`) |
+| GET | `/api/tournaments/{id}/rounds/check` | `/api/tournaments/{id}/rounds/check` | Auth |
+| GET/POST | `/api/tournaments/{id}/clubs` | Vereine nachtragen | Auth (POST `user-crawl`) |
+| POST | `/api/tournaments/crawl` | `/api/crawl` | **AllowAnonymous** (`user-crawl`, seit 0.643.0) |
+| GET | `/api/tournaments/crawl/{jobId}` | Stand eines Holen-Auftrags | **AllowAnonymous** (`directory-read`, seit 0.643.0) |
+| POST | `/api/tournaments/crawl/player-details` | `/api/crawl/player-details` | Auth |
+
+**Turnier holen ohne Konto** (0.643.0, Wunsch „Turnierseite voll ohne Anmeldung benutzbar"): ein Gast kann ein noch
+nicht geholtes Turnier über „Teilnehmer und Ergebnisse" bzw. „Aktualisieren" anfordern. `user-crawl` zählt dann je IP
+(`RateLimitPartitions.UserOrIp`), dieselben 10/min wie je Konto; die Zuordnung hält `AnonymousRateLimitTests` fest,
+die Liste der anonymen Endpunkte `EndpointAuthInventoryTests`.
 
 **Crawler-Aufträge je Konto gedrosselt** (Codereview 2026-09-29, A5-004): Policy `user-crawl` (10/min je Konto,
 `RateLimitPartitions.CrawlerRequest`, ein gemeinsames Fenster) auf `POST /api/tournaments/crawl`,
@@ -963,10 +970,18 @@ Runden-Monitor und Abo-Refresh lösen die Kennung vor jedem Crawl über `CrawlQu
 meldet nur Runden über `LastKnownRounds` hinaus — jede Runde genau einmal. Crawl-Aufträge der Hintergrunddienste
 laufen über `CrawlQueueClient.RequestAsync`; 409 vom Crawler heißt „läuft schon", kein Fehler.
 
-### Turnierverzeichnis / Turnierkalender (auth)
+### Turnierverzeichnis / Turnierkalender (lesen ohne Anmeldung, schreiben mit Konto)
 Gefuellt vom naechtlichen Sweep der chess-results-Turniersuche (`TournamentDirectoryScheduler`,
 03:00 UTC; Nachbarlaender taeglich, uebrige Foederationen rotierend). Rein lesend — hier wird
 nichts gecrawlt.
+
+**Ohne Anmeldung** (seit 0.643.0): Suche, Karte, Kalender, Einzelturnier und die beiden Orts-Endpunkte sind
+`[AllowAnonymous]` mit der Policy `directory-read` (`RateLimitPartitions.DirectoryRead`, 120/min je Konto bzw. IP,
+mal `RateLimitScale`). Was am NUTZER haengt, faellt fuer Gaeste still weg statt zu scheitern: keine ausgeblendeten und
+keine gemerkten Turniere (`IgnoredIdsAsync`/`SubscribedIdsAsync` liefern leer — `GetUserId()` wirft ohne Anmeldung und
+waere ein 500), kein `ForUserId`. Ein `profileId` ohne Anmeldung ist ein **400**, nie das Profil eines anderen.
+Ausblenden, Melden, „Mein Turnier fehlt" und die Suchprofile bleiben `[Authorize]`
+(`PersonalActions_StillRequireAnAccount_ReadsDoNot` prueft die Attribute).
 
 > **Abschaltbar: `TournamentDirectory:Enabled=false`** (`TOURNAMENT_DIRECTORY_ENABLED=false`,
 > Vorgabe an). Dann laeuft weder der naechtliche Durchgang noch der Aufhol-Lauf nach einem
@@ -4391,6 +4406,17 @@ Turniere laufen seit v0.409.0 als **eigene Seite** unter `turnier.oberschmid.hom
   `X-Og-Site` (aus `$host` abgeleitet), welche SPA-Shell sie anreichern soll und welche Domain in
   `og:url` gehört (`App:TurnierBaseUrl`) — sonst bekäme der Besucher die RookHub-Shell serviert
   und landete auf dem Dashboard.
+- **Ohne Konto benutzbar** (0.643.0, Wunsch „vor allem Turniersuche und Turnier-Detailseiten; Speichern von Filtern und
+  Turnieren braucht natuerlich einen Account"): `tournaments/calendar`, `tournaments/calendar/:id` und `tournaments/:id`
+  tragen keinen `authGuard` mehr; `/tournaments` (Gemerkt), `/tournaments/history`, `/profile` und `/admin` schon. Jede
+  speichernde Aktion (Suchprofil, Merken, Beobachten, Ausblenden, Melden, Vereine nachtragen) geht durch
+  `src-turnier/app/core/require-account.ts` (`requireAccount`: angemeldet → weiter, sonst Anmeldung mit `returnUrl`);
+  „Ausblenden" und der Schalter „ausgeblendete zeigen" erscheinen fuer Gaeste gar nicht. Gaeste behalten Filter im
+  localStorage `rh.turnier.directoryView.guest` (kein Server-Abgleich) und Sterne/„Nur Favoriten" unter denselben
+  Schluesseln wie die Teilen-Ansicht `/t/:id` (`public_fav_players_{id}`, `public_fav_teams_{id}`,
+  `public_fav_filter_{id}`). Weil `HandoffService.consumeIncoming()` eine geteilte Anmeldung ERST NACH dem Start
+  uebernimmt, laedt die Seite danach neu (`AppComponent.afterAdoption`) — sonst stuende sie als Gast da.
+  Specs der betroffenen Komponenten stellen `isLoggedIn` ausdruecklich per `spyOnProperty` (Getter) ein.
 - **Netz**: der Turnier-Container muss im selben Compose-Netz liegen wie die API, weil sein nginx
   `/api/` an den Servicenamen `api` weiterreicht.
 - **Kachel-Proxy `/tiles/`** (Codereview 2026-09-29, F8-002): nur auf der Turnierseite (rookhub*/kidhub*/leaguehub*-Hosts

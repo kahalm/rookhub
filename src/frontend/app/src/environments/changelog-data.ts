@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.643.1", date: "2026-10-03", changes: [
+    { en: "Documentation: the developer notes now describe which tournament endpoints and pages work without an account and how guests are rate-limited.", de: "Dokumentation: Die Entwicklernotizen beschreiben jetzt, welche Turnier-Endpunkte und -Seiten ohne Konto funktionieren und wie Gäste gedrosselt werden." },
+  ] },
   { version: "0.643.0", date: "2026-10-03", changes: [
     { en: "Tournament site without an account: the calendar (list, map, month view and search), calendar entries and tournament pages with entrants, pairings and standings are now open to everyone — no more login page as the start page. A tournament that hasn’t been fetched yet can be fetched by anyone via “Entrants and results”, and “Refresh” works too. Stars and “favourites only” are kept on the device for guests (the same as on a shared /t/ link). Saving still needs an account: search profiles, bookmarking, watching for new rounds, hiding and reporting entries and looking up clubs lead to the login page and back to the same page afterwards.", de: "Turnierseite ohne Konto: Der Kalender (Liste, Karte, Monat und Suche), die Kalendereinträge und die Turnierseiten mit Teilnehmern, Paarungen und Tabelle sind jetzt für alle offen — die Anmeldemaske ist nicht mehr die Startseite. Ein noch nicht geholtes Turnier holt jeder über „Teilnehmer und Ergebnisse“, und „Aktualisieren“ geht auch. Sterne und „Nur Favoriten“ merkt sich bei Gästen das Gerät (wie beim geteilten /t/-Link). Speichern braucht weiter ein Konto: Suchprofile, Merken, Beobachten, Ausblenden, Melden und Vereine nachtragen führen zur Anmeldung und danach zurück auf dieselbe Seite." },
   ] },
