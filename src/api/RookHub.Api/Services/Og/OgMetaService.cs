@@ -1,6 +1,11 @@
+using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Chess;
+using Microsoft.EntityFrameworkCore;
+using RookHub.Api.Data;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
 using RookHub.Api.Validation;
 
 namespace RookHub.Api.Services.Og;
@@ -24,19 +29,24 @@ public class OgMetaService
     private readonly PuzzleService _puzzles;
     private readonly BookPuzzleService _bookPuzzles;
     private readonly CrawlerProxyService _crawler;
+    private readonly AppDbContext _db;
     private readonly ILogger<OgMetaService> _logger;
 
     private const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public OgMetaService(SavedGameService games, PuzzleService puzzles, BookPuzzleService bookPuzzles,
-        CrawlerProxyService crawler, ILogger<OgMetaService> logger)
+        CrawlerProxyService crawler, AppDbContext db, ILogger<OgMetaService> logger)
     {
         _games = games;
         _puzzles = puzzles;
         _bookPuzzles = bookPuzzles;
         _crawler = crawler;
+        _db = db;
         _logger = logger;
     }
+
+    /// <summary>Die öffentliche Kennung eines Kalendereintrags: chess-results-Nummer oder <c>f&lt;FIDE-Nr.&gt;</c> usw.</summary>
+    private static readonly Regex CalendarId = new("^[A-Za-z0-9_-]{1,24}$", RegexOptions.Compiled);
 
     /// <summary>Zerlegt einen Original-Pfad in (kind, id), oder null wenn keine vorschaubare Route.</summary>
     public static (string Kind, string Id)? ParsePath(string? path)
@@ -44,9 +54,20 @@ public class OgMetaService
         if (string.IsNullOrWhiteSpace(path)) return null;
         // Query abschneiden, führenden Slash entfernen.
         var q = path.IndexOf('?');
+        var query = q >= 0 ? path[(q + 1)..] : string.Empty;
         if (q >= 0) path = path[..q];
         var segments = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0) return null;
+
+        // Kalendereintrag der Turnierseite: /tournaments/calendar/{id} — oder die ältere Form ?t={id}, wie sie in den
+        // Benachrichtigungen steht (TournamentDirectoryService.DetailLink).
+        if (segments is ["tournaments", "calendar", ..])
+        {
+            if (segments.Length >= 3) return ("calendar", segments[2]);
+            var t = query.Split('&').Select(p => p.Split('=', 2))
+                .FirstOrDefault(p => p.Length == 2 && p[0] == "t")?[1];
+            return string.IsNullOrWhiteSpace(t) ? null : ("calendar", Uri.UnescapeDataString(t));
+        }
 
         switch (segments[0])
         {
@@ -126,6 +147,16 @@ public class OgMetaService
                     var title = name ?? "Schachturnier";
                     return new OgPage(title, "Turnierdaten live auf RookHub", img, canonical);
                 }
+                case "calendar":
+                {
+                    // Ein geteilter Kalender-Link soll im Vorschaufenster die ECKDATEN zeigen (Termin, Ort, Bedenkzeit,
+                    // Runden …) — vorher bekam er nur die allgemeine Seitenvorschau der Turnierseite.
+                    if (!CalendarId.IsMatch(id)) return null;
+                    var entry = await _db.TournamentDirectoryEntries.AsNoTracking()
+                        .FirstOrDefaultAsync(e => e.PublicId == id, ct);
+                    if (entry is null) return null;
+                    return new OgPage(entry.Name, CalendarDescription(entry), img, canonical, "article");
+                }
             }
         }
         catch (Exception ex)
@@ -172,6 +203,8 @@ public class OgMetaService
                 case "tournament":
                     // Turniere haben keine einzelne Stellung → generisches Schach-Motiv (Grundstellung).
                     return TournamentIdValidator.IsValid(id) ? new OgBoard(StartFen, Flip: false) : null;
+                case "calendar":
+                    return CalendarId.IsMatch(id) ? new OgBoard(StartFen, Flip: false) : null;
             }
         }
         catch (Exception ex)
@@ -240,6 +273,54 @@ public class OgMetaService
         return DateOnly.TryParseExact(s, "yyyyMMdd", null,
             System.Globalization.DateTimeStyles.None, out date);
     }
+
+    /// <summary>
+    /// Die Eckdaten eines Kalendereintrags als EINE Zeile fürs Vorschaufenster — nur was bekannt ist, in fester
+    /// Reihenfolge: Termin · Ort · Tempo (Bedenkzeit) · Runden · Teilnehmer · Mannschaft · Veranstalter. Ein aus dem
+    /// Kalender genommenes Turnier sagt das vorn.
+    /// </summary>
+    internal static string CalendarDescription(TournamentDirectoryEntry e)
+    {
+        var parts = new List<string>();
+        if (DateRange(e.StartDate, e.EndDate) is { } dates) parts.Add(dates);
+
+        var place = !string.IsNullOrWhiteSpace(e.GeoPlaceName) ? e.GeoPlaceName : e.LocationText;
+        if (!string.IsNullOrWhiteSpace(place)) parts.Add(Shorten(place.Trim(), 60));
+
+        var speed = e.Speed switch
+        {
+            TournamentSpeed.Standard => "Turnierschach",
+            TournamentSpeed.Rapid => "Schnellschach",
+            TournamentSpeed.Blitz => "Blitz",
+            _ => null,
+        };
+        var tc = string.IsNullOrWhiteSpace(e.TimeControlText) ? null : Shorten(e.TimeControlText.Trim(), 40);
+        if (speed is not null || tc is not null)
+            parts.Add(speed is not null && tc is not null ? $"{speed} ({tc})" : speed ?? tc!);
+
+        if (e.Rounds is > 0) parts.Add(e.Rounds == 1 ? "1 Runde" : $"{e.Rounds} Runden");
+        if (e.PlayerCount is > 0) parts.Add($"{e.PlayerCount} Teilnehmer");
+        if (e.Kind == TournamentKind.Team) parts.Add("Mannschaftsturnier");
+        if (!string.IsNullOrWhiteSpace(e.Organizer)) parts.Add($"Veranstalter: {Shorten(e.Organizer.Trim(), 50)}");
+
+        var line = parts.Count == 0 ? "Turnier im Kalender der Turnierseite" : string.Join(" · ", parts);
+        return e.RemovedAt is null ? line : $"Nicht mehr ausgeschrieben · {line}";
+    }
+
+    /// <summary>„27.09.2026", „27.–29.09.2026", „30.09.–02.10.2026", „30.12.2026–02.01.2027".</summary>
+    internal static string? DateRange(DateOnly? start, DateOnly? end)
+    {
+        if (start is null && end is null) return null;
+        var inv = CultureInfo.InvariantCulture;
+        var a = start ?? end!.Value;
+        var b = end ?? a;
+        if (b <= a) return a.ToString("dd.MM.yyyy", inv);
+        if (a.Year != b.Year) return $"{a.ToString("dd.MM.yyyy", inv)}–{b.ToString("dd.MM.yyyy", inv)}";
+        if (a.Month != b.Month) return $"{a.ToString("dd.MM.", inv)}–{b.ToString("dd.MM.yyyy", inv)}";
+        return $"{a.ToString("dd.", inv)}–{b.ToString("dd.MM.yyyy", inv)}";
+    }
+
+    private static string Shorten(string s, int max) => s.Length <= max ? s : s[..(max - 1)].TrimEnd() + "…";
 
     private async Task<string?> TryTournamentNameAsync(string id, CancellationToken ct)
     {

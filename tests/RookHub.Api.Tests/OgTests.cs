@@ -1,5 +1,7 @@
 using RookHub.Api.Controllers;
 using RookHub.Api.DTOs;
+using RookHub.Api.Models;
+using Microsoft.EntityFrameworkCore;
 using RookHub.Api.Services.Og;
 
 namespace RookHub.Api.Tests;
@@ -18,6 +20,9 @@ public class OgTests
     [InlineData("/puzzles/daily/20260707", "daily", "20260707")]
     [InlineData("/puzzles/daily/today", "daily", "today")]
     [InlineData("/g/tok?utm=x", "game", "tok")]
+    [InlineData("/tournaments/calendar/1447402", "calendar", "1447402")]
+    [InlineData("/tournaments/calendar?t=f12345", "calendar", "f12345")]
+    [InlineData("/tournaments/calendar/1447402?utm=x", "calendar", "1447402")]
     public void ParsePath_KnownRoutes_ReturnsKindAndId(string path, string kind, string id)
     {
         var result = OgMetaService.ParsePath(path);
@@ -31,6 +36,8 @@ public class OgTests
     [InlineData("/puzzles")]          // Modus-Auswahl, keine konkrete Stellung
     [InlineData("/puzzles/endless")]  // keine feste Stellung
     [InlineData("/friends/5/stats")]
+    [InlineData("/tournaments/calendar")]        // die Liste, kein einzelner Eintrag
+    [InlineData("/tournaments/26")]
     [InlineData("")]
     [InlineData(null)]
     public void ParsePath_NonPreviewRoutes_ReturnsNull(string? path)
@@ -179,5 +186,79 @@ public class OgTests
     {
         var candidates = OgIndexHtmlProvider.BuildCandidates(null, "http://frontend:8080", "http://rookhub-frontend:8080");
         Assert.Equal(new[] { "http://frontend:8080/index.html", "http://rookhub-frontend:8080/index.html" }, candidates);
+    }
+
+    // ----- Kalendereintrag der Turnierseite -----------------------------------
+
+    private static TournamentDirectoryEntry CalendarEntry() => new()
+    {
+        PublicId = "1447402",
+        ChessResultsId = "1447402",
+        Name = "Innsbrucker Herbstopen 2026",
+        StartDate = new DateOnly(2026, 10, 23),
+        EndDate = new DateOnly(2026, 10, 25),
+        LocationText = "Gasthof Sonne, Hauptstraße 1, 6020 Innsbruck",
+        GeoPlaceName = "Innsbruck",
+        Speed = TournamentSpeed.Standard,
+        TimeControlText = "90 min + 30 s",
+        Rounds = 7,
+        PlayerCount = 84,
+        Organizer = "SK Innsbruck",
+    };
+
+    /// <summary>Die Eckdaten in fester Reihenfolge, nur was bekannt ist.</summary>
+    [Fact]
+    public void CalendarDescription_ListsTheKeyFacts()
+    {
+        Assert.Equal(
+            "23.–25.10.2026 · Innsbruck · Turnierschach (90 min + 30 s) · 7 Runden · 84 Teilnehmer · Veranstalter: SK Innsbruck",
+            OgMetaService.CalendarDescription(CalendarEntry()));
+
+        var sparse = new TournamentDirectoryEntry { PublicId = "1", Name = "X", Kind = TournamentKind.Team,
+            LocationText = "Wien", Speed = TournamentSpeed.Rapid };
+        Assert.Equal("Wien · Schnellschach · Mannschaftsturnier", OgMetaService.CalendarDescription(sparse));
+
+        var removed = CalendarEntry();
+        removed.RemovedAt = DateTime.UtcNow;
+        Assert.StartsWith("Nicht mehr ausgeschrieben · 23.–25.10.2026", OgMetaService.CalendarDescription(removed));
+    }
+
+    [Theory]
+    [InlineData("2026-09-27", "2026-09-27", "27.09.2026")]
+    [InlineData("2026-09-27", "2026-09-29", "27.–29.09.2026")]
+    [InlineData("2026-09-30", "2026-10-02", "30.09.–02.10.2026")]
+    [InlineData("2026-12-30", "2027-01-02", "30.12.2026–02.01.2027")]
+    [InlineData("2026-09-27", null, "27.09.2026")]
+    public void DateRange_ShortGermanForms(string start, string? end, string expected)
+    {
+        Assert.Equal(expected, OgMetaService.DateRange(DateOnly.Parse(start), end is null ? null : DateOnly.Parse(end)));
+    }
+
+    /// <summary>
+    /// Ein geteilter Kalender-Link (gemeldet 03.10.2026: …/tournaments/calendar/1447402) bekommt Titel, Eckdaten,
+    /// Bild und die eigene Adresse — vorher zeigte das Vorschaufenster nur die allgemeine Seitenvorschau.
+    /// </summary>
+    [Fact]
+    public async Task ResolvePage_CalendarEntry_HasNameAndKeyFacts()
+    {
+        using var db = new RookHub.Api.Data.AppDbContext(
+            new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<RookHub.Api.Data.AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.TournamentDirectoryEntries.Add(CalendarEntry());
+        await db.SaveChangesAsync();
+        var meta = new OgMetaService(null!, null!, null!, null!, db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<OgMetaService>.Instance);
+
+        var page = await meta.ResolvePageAsync("/tournaments/calendar/1447402", "https://tournament.oberschmid.homes");
+
+        Assert.NotNull(page);
+        Assert.Equal("Innsbrucker Herbstopen 2026", page!.Title);
+        Assert.Contains("23.–25.10.2026 · Innsbruck", page.Description);
+        Assert.Equal("https://tournament.oberschmid.homes/tournaments/calendar/1447402", page.CanonicalUrl);
+        Assert.Equal("https://tournament.oberschmid.homes/api/og/img/calendar/1447402.png", page.ImageUrl);
+        Assert.NotNull(await meta.ResolveBoardAsync("calendar", "1447402"));
+
+        Assert.Null(await meta.ResolvePageAsync("/tournaments/calendar/999", "https://x"));        // gibt es nicht
+        Assert.Null(await meta.ResolvePageAsync("/tournaments/calendar/a%27b", "https://x"));       // keine Kennung
     }
 }
