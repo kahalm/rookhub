@@ -7,12 +7,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HelpHintComponent } from '../../../shared/help-hint/help-hint.component';
 import { IconLabelDirective } from '../../../shared/icon-label/icon-label.directive';
 import { MaiaEngineService } from './maia-engine.service';
 import { MAIA_ELO_OPTIONS } from './maia-model';
+import { SparringWarning } from './sparring-check';
 
 /** Was die Karte zeigt, solange kein Sparring läuft. */
 type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
@@ -34,6 +36,9 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
  * „Partie analysieren" (`showAnalyze`) zeigt die Karte nur an — ob es eine Partie gibt, ob eine Engine bereitsteht
  * und was der Klick tut, entscheidet das Analysebrett. Ein gesperrter Knopf zeigt keinen Tooltip; der Grund steht
  * deshalb als Zeile darunter (auch am Handy lesbar). Für Vorleser hängt `matTooltip` ihn als Beschreibung an.
+ *
+ * Die zwei Schalter („Schlechte Züge melden", „Bewertungsleiste anlassen") und die Warnung zum letzten eigenen Zug sind
+ * ebenfalls nur Anzeige: gemerkt, geprüft und gesprungen wird im Analysebrett.
  */
 @Component({
   selector: 'app-maia-sparring-card',
@@ -41,8 +46,8 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatProgressBarModule,
-    MatProgressSpinnerModule, MatSelectModule, MatTooltipModule, NgTemplateOutlet, TranslatePipe, HelpHintComponent,
-    IconLabelDirective,
+    MatProgressSpinnerModule, MatSelectModule, MatSlideToggleModule, MatTooltipModule, NgTemplateOutlet, TranslatePipe,
+    HelpHintComponent, IconLabelDirective,
   ],
   template: `
     <mat-card class="maia-card">
@@ -60,10 +65,26 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
           </mat-form-field>
         </div>
 
+        @if (active || phase() === 'rest') {
+          <div class="maia-options">
+            <mat-slide-toggle class="maia-warn-toggle" [checked]="warnBadMoves"
+                              (change)="warnBadMovesChange.emit($event.checked)">{{ 'analysis.maia.warnBadMoves' | translate }}</mat-slide-toggle>
+            <mat-slide-toggle class="maia-evalbar-toggle" [checked]="keepEvalBar"
+                              (change)="keepEvalBarChange.emit($event.checked)">{{ 'analysis.maia.keepEvalBar' | translate }}</mat-slide-toggle>
+          </div>
+        }
+
         @if (active) {
           <p class="maia-line">
             {{ 'analysis.maia.status' | translate:{ elo: elo, side: ((userColor === 'white' ? 'analysis.maia.youWhite' : 'analysis.maia.youBlack') | translate) } }}
           </p>
+          @if (warning) {
+            <div class="maia-warning" role="status">
+              <mat-icon class="maia-warning-icon">warning</mat-icon>
+              <span class="maia-warning-text">{{ 'analysis.maia.badMove' | translate:{ move: warning.san, before: warning.beforeText, after: warning.afterText } }}</span>
+              <button mat-stroked-button class="maia-analyze-move" (click)="analyzeWarning.emit()">{{ 'analysis.maia.analyzeMove' | translate }}</button>
+            </div>
+          }
           @if (thinking) {
             <p class="maia-thinking"><mat-spinner diameter="16" /> {{ 'analysis.maia.thinking' | translate }}</p>
           }
@@ -155,6 +176,13 @@ type CardPhase = 'rest' | 'confirm' | 'loading' | 'error';
     .maia-analyze { max-width: 100%; }
     .maia-analyze-spinner { display: inline-block; margin-right: 8px; vertical-align: middle; }
     .maia-analyze-hint { font-size: .85rem; color: color-mix(in srgb, currentColor 70%, transparent); }
+    .maia-options { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: .85rem; }
+    .maia-options mat-slide-toggle { max-width: 100%; }
+    .maia-warning { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: 8px; padding: 6px 8px;
+      border-radius: 6px; border: 1px solid color-mix(in srgb, var(--rh-warn) 45%, transparent);
+      background: color-mix(in srgb, var(--rh-warn) 10%, transparent); }
+    .maia-warning-icon { color: var(--rh-warn); flex: 0 0 auto; }
+    .maia-warning-text { flex: 1 1 160px; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
   `],
 })
 export class MaiaSparringCardComponent implements OnDestroy {
@@ -174,6 +202,12 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Input() analyzing = false;
   /** Keine Engine bereit — Knopf gesperrt, Grund als Zeile darunter. */
   @Input() analyzeBlocked = false;
+  /** Schalter „Schlechte Züge melden" (Ruhe- und aktive Ansicht). */
+  @Input() warnBadMoves = false;
+  /** Schalter „Bewertungsleiste anlassen". */
+  @Input() keepEvalBar = false;
+  /** Warnung zum zuletzt geprüften eigenen Zug — nur in der aktiven Ansicht. */
+  @Input() warning: SparringWarning | null = null;
 
   /** Das Modell ist bereit — das Analysebrett beginnt das Sparring. */
   @Output() readonly start = new EventEmitter<void>();
@@ -184,6 +218,10 @@ export class MaiaSparringCardComponent implements OnDestroy {
   @Output() readonly eloChange = new EventEmitter<number>();
   /** „Partie analysieren" geklickt. */
   @Output() readonly analyze = new EventEmitter<void>();
+  @Output() readonly warnBadMovesChange = new EventEmitter<boolean>();
+  @Output() readonly keepEvalBarChange = new EventEmitter<boolean>();
+  /** „Analysieren" an der Warnung. */
+  @Output() readonly analyzeWarning = new EventEmitter<void>();
 
   readonly maia = inject(MaiaEngineService);
   readonly eloOptions = MAIA_ELO_OPTIONS;

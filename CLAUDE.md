@@ -525,7 +525,7 @@ Bereich „Partien" (`/games`): zeigt die über die RepCheck-Extension von chess
 | GET | `/api/games/{id}/mistakes` | Auth | Stand des Fehler-Trainings dieser Partie (`total`/`solved`/`open`/`solvedPlies`); 404, solange nie trainiert |
 | POST | `/api/games/{id}/mistakes` | Auth | Fortschritt melden `{ total, solved[] }` — die in DIESEM Durchlauf SELBST gefundenen Halbzüge. **Additiv und idempotent**: der Server vereinigt sie mit dem Stand, ein zweiter Durchlauf nimmt nichts weg, dieselbe Meldung zweimal ändert nichts. `total` wird auf ≥ gefundene und ≤ 600 geklemmt, Halbzüge außerhalb der Partie fallen weg (`GameMistakeProgressService`). `/api/games` trägt den Stand je Partie als `mistakes` mit; die Übersicht zeigt seit 0.526.3 nur „Fehler nachgespielt" (die Zahlen im Tooltip) |
 | DELETE | `/api/games/{id}` | Auth | Eigene Partie löschen |
-| POST | `/api/games/import` | Auth | **PGN hochladen** (0.553.0, Knopf „PGN hochladen" auf `/games`: Datei wählen ODER einfügen) `{ pgn, ownerSide? }` → `{ imported, duplicates, truncated, ids[], failed[{ index, white, black, reason }] }`. `ownerSide` (`white`/`black`, sonst ignoriert; 0.x.0, „Partie analysieren" nach dem Maia-Sparring) wird die festgelegte Seite jeder NEU angelegten Partie — eine Dublette bleibt, wie sie ist. Ein alleinstehendes Punkte-Token (chess.js schreibt „4. ... Bc5") ist ein Zugnummern-Rest, kein Zug (`PgnParser.IsDotsOnly`, 0.x.0 — vorher `illegal`). Jede Partie des Textes wird eine eigene Partie mit Quelle `pgn`: HAUPTVARIANTE samt Kommentaren und allen Kopfdaten (Elo, Bedenkzeit, FEN …), Varianten fallen weg (Analyse/Kurve/Fehler-Training arbeiten auf einer Zugfolge). Eine Partie, deren Hauptvariante nicht bis zum Ende legal ist, wird NICHT gekürzt angelegt (`reason` `illegal`/`noMoves`/`tooLong`/`badFen`). Zweimal hochgeladen = einmal da: `ExternalId` = Hash über Seven-Tag-Kopfdaten, FEN und Züge (`SavedGameService.ImportKey`, eindeutig je Nutzer). Deckel `MaxImportGames` 200 (`truncated`), `MaxImportChars` 5 Mio. (400 `tooLarge`; leer → 400 `empty`). Der Dialog schließt bei vollem Erfolg (genau eine neue Partie → gleich geöffnet) und bleibt sonst offen mit der Liste der nicht übernommenen |
+| POST | `/api/games/import` | Auth | **PGN hochladen** (0.553.0, Knopf „PGN hochladen" auf `/games`: Datei wählen ODER einfügen) `{ pgn, ownerSide? }` → `{ imported, duplicates, truncated, ids[], failed[{ index, white, black, reason }] }`. `ownerSide` (`white`/`black`, sonst ignoriert; 0.644.0, „Partie analysieren" nach dem Maia-Sparring) wird die festgelegte Seite jeder NEU angelegten Partie — eine Dublette bleibt, wie sie ist. Ein alleinstehendes Punkte-Token (chess.js schreibt „4. ... Bc5") ist ein Zugnummern-Rest, kein Zug (`PgnParser.IsDotsOnly`, 0.644.0 — vorher `illegal`). Jede Partie des Textes wird eine eigene Partie mit Quelle `pgn`: HAUPTVARIANTE samt Kommentaren und allen Kopfdaten (Elo, Bedenkzeit, FEN …), Varianten fallen weg (Analyse/Kurve/Fehler-Training arbeiten auf einer Zugfolge). Eine Partie, deren Hauptvariante nicht bis zum Ende legal ist, wird NICHT gekürzt angelegt (`reason` `illegal`/`noMoves`/`tooLong`/`badFen`). Zweimal hochgeladen = einmal da: `ExternalId` = Hash über Seven-Tag-Kopfdaten, FEN und Züge (`SavedGameService.ImportKey`, eindeutig je Nutzer). Deckel `MaxImportGames` 200 (`truncated`), `MaxImportChars` 5 Mio. (400 `tooLarge`; leer → 400 `empty`). Der Dialog schließt bei vollem Erfolg (genau eine neue Partie → gleich geöffnet) und bleibt sonst offen mit der Liste der nicht übernommenen |
 | GET | `/api/games/{id}/explanations?lang=` | Auth | „Warum war das ein Fehler?" (0.534.0): gespeicherte Erklärungen der verknüpften Analyse in der Sprache (`{ available, canGenerate, running, language, items[{ ply, class, text, master? }] }`; `master` = der mitgegebene Meisterkommentar, 0.542.0: `{ libraryGameId, white, black, event, year, annotator, text }`) |
 | POST | `/api/games/{id}/explanations?lang=` | Auth | Erzeugen anstoßen (Hintergrund, nur Besitzer). 503 `notConfigured` ohne Modell auf eigener Hardware, 404 fremde Partie, 409 ohne fertige verknüpfte Analyse, 429 `{ reason: "tooManyRunning", maxRunning: 2 }` bei zwei laufenden Aufträgen des Kontos (dasselbe Paar Analyse/Sprache noch einmal = „läuft schon", kein 429; Codereview A6-005) |
 | GET | `/api/games/shared/{token}/explanations?lang=` | AllowAnonymous | Dasselbe lesend für den Teilen-Link (`canGenerate` immer false) |
@@ -2856,7 +2856,8 @@ Migration. Code: `features/analysis/maia/` (siehe `src/frontend/CLAUDE.md`). Ent
    (`rookhub_analysis_maia_elo`).
 7. **Gewürfelt, nicht der wahrscheinlichste Zug** (Temperatur 1, Nucleus `topP` 0,95) — dieselbe Stellung soll verschiedene
    Antworten bekommen.
-8. **Engine während des Sparrings AUS** (sonst Bewertung + Pfeile), Schalter gesperrt; danach kommt der vorige Zustand.
+8. **Engine während des Sparrings AUS** (sonst Bewertung + Pfeile), Schalter gesperrt; danach kommt der vorige Zustand. Ausnahme:
+   die zwei Maia-Schalter lassen sie STILL mitlaufen (unten, „Schlechte Züge melden + Bewertungsleiste“).
 
 **Zwei Fallen, live nachgestellt:** (1) `nginx:alpine` kennt `.mjs` nicht und liefert `application/octet-stream` — ORT scheitert
 mit „Failed to fetch dynamically imported module"; `nginx.conf` hat dafür `location ~* \.mjs$` (ohne `add_header`, das ersetzte
@@ -2890,6 +2891,29 @@ ersten Mal sichtbar würde. Das PGN baut `maia/sparring-pgn.ts` (chess.js, „Ma
 Zugtext die kompakte Form „4... Bc5", damit es auch gegen eine API ohne die Parser-Reparatur geht). **`ownerSide` geht mit**:
 für Quelle `pgn` rät `DetermineOwnerSide` die Seite über den Plattform-Namen, und der trifft hier nie — ohne Seite schrieben
 die Fehler-Erklärungen neutral, das Fehler-Training nähme die Seite mit den meisten Fehlern, und das Brett drehte nicht.
+
+**Schlechte Züge melden + Bewertungsleiste (0.645.0):** zwei Schalter in der Maia-Karte, je Gerät gemerkt
+(`rookhub_analysis_maia_warn`, `rookhub_analysis_maia_evalbar`, Vorgabe aus), jederzeit umschaltbar — auch mitten im Sparring,
+wirkt sofort (`refresh()`). Regeln, die nicht kippen dürfen:
+* **Stille Engine** (`sparringEngineQuiet` = Sparring UND einer der Schalter): nur die HAUPT-Engine rechnet (auch nach Tiefen-/
+  Linienwechsel, `restartSearches`), nie die Vergleichs-Engine; Linien, Pfeile und Kandidaten bleiben LEER — sie verrieten den
+  besten Zug. Leiste und `node.evalText` nur mit „Bewertungsleiste anlassen"; ohne sie ist die Leiste neutral. Die Vorlage
+  bleibt: der Engine-Schalter ist gesperrt, „Engine pausiert während des Sparrings" stimmt für das, was man SIEHT.
+* **Tiefen-Spur** (`evalTrack`): je Stellung die Bewertung der besten Linie je Tiefe (Weiß-Sicht), bei `refresh()` für die neue
+  Stellung geleert. Ein EIGENER Zug am Brett (`onMove`, nicht Explorer/Repertoire, nie einer für Maias Seite) nimmt die Spur der
+  Stellung davor mit (`pendingBefore`).
+* **Vergleich bei GLEICHER Tiefe** (`maia/sparring-check.ts`, rein): Nachher-Wert = die Stellung nach dem Zug bei
+  `min(MAIA_CHECK_DEPTH 14, Tiefe)` oder früher, wenn die Suche endet (Matt); Vorher-Wert = die größte Tiefe ≤ der des
+  Nachher-Werts (`matchingBefore`) — eine flache gegen eine tiefe Bewertung meldete sonst Schwankungen der Suche als Fehler.
+  Warnung ab `MAIA_BAD_MOVE_PAWNS` 0,2 Bauern Verlust aus Sicht des Ziehenden (in Centibauern gerechnet, Matt = ±(1000 − n)
+  Bauern). Spätestens nach `maiaCheckTimeoutMs` (4 s) mit dem tiefsten Wert ab `EVAL_SETTLE_DEPTH`, sonst kein Urteil.
+* **Maias Antwort wartet auf das Urteil** (dritte Zusage im `Promise.all` von `requestMaiaMove`): so steht die Warnung schon da,
+  wenn ihr Zug aufs Brett kommt, und ihr Zug würgt die Suche der Stellung nach dem eigenen Zug nicht ab. Maias eigene Züge
+  werden nie geprüft. Navigation, „Seite wechseln", Beenden und Schalter-aus lösen eine offene Prüfung ohne Urteil auf.
+* **Die Warnung** („12.Nf3 war nicht gut: +0.40 → −0.30") ersetzt bzw. löscht jede neue Prüfung; sie geht bei Beenden/Ende,
+  „Nochmal", „Seite wechseln", neuem Baum und „Analysieren" weg, NICHT bei Navigation. **„Analysieren"** beendet das Sparring
+  wie „Beenden" (die Partie bleibt für „Partie analysieren"), schaltet die Engine EIN — nur für diese Sitzung, nicht in
+  localStorage — und springt auf die Stellung VOR dem Zug; der Zug steht dort als Fortsetzung, die Linien zeigen, was besser war.
 
 ### Züge vergleichen (0.602.0, auth) — „warum ist Zug 1 besser als Zug 2?"
 Wunsch 2026-09-29: „soll diese durchrechnen und schaun, warum Zug 1 besser ist als Zug 2 — vor allem im Vergleich: was

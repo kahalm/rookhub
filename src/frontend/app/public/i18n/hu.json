@@ -2212,8 +2212,12 @@
       "retry": "Újrapróbálás",
       "moveFailed": "Maia nem tudott lépést adni.",
       "saveFailed": "A játszmát nem sikerült menteni a „Saját játszmák” közé.",
+      "warnBadMoves": "Rossz lépések jelzése (−0,2-től)",
+      "keepEvalBar": "Értékelősáv bekapcsolva marad",
+      "badMove": "{{move}} nem volt jó: {{before}} → {{after}}",
+      "analyzeMove": "Elemzés",
       "enginePaused": "A motor szünetel az edzőjátszma alatt",
-      "hint": "A Maia-3 a Torontói Egyetem neurális hálózata. Több millió játszmából tanulta meg, milyen lépéseket választanak egy adott játékerősségű emberek — jellegzetes hibáikkal együtt.\n\nAz erősség egy Lichess villám-értékszámnak felel meg; ökölszabályként nagyjából 200 ponttal a FIDE-Élő fölött van.\n\nMaia nem számol előre, hanem érzésből játszik. A motor közben kikapcsolva marad, hogy te magad számolj."
+      "hint": "A Maia-3 a Torontói Egyetem neurális hálózata. Több millió játszmából tanulta meg, milyen lépéseket választanak egy adott játékerősségű emberek — jellegzetes hibáikkal együtt.\n\nAz erősség egy Lichess villám-értékszámnak felel meg; ökölszabályként nagyjából 200 ponttal a FIDE-Élő fölött van.\n\nMaia nem számol előre, hanem érzésből játszik. A motor közben kikapcsolva marad, hogy te magad számolj.\n\n„Rossz lépések jelzése”: minden saját lépésed után a motor a háttérben ellenőrzi, hogy az értékelés legalább 0,2 gyaloggal romlott-e — ilyenkor megjelenik egy figyelmeztetés, és az „Elemzés” megmutatja, mi lett volna jobb. „Értékelősáv bekapcsolva marad”: a tábla melletti sáv a sparring alatt is mutatja az értékelést; a vonalak és nyilak rejtve maradnak."
     }
   },
   "stats": {

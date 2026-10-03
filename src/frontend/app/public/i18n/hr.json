@@ -2950,8 +2950,12 @@
       "retry": "Pokušaj ponovno",
       "moveFailed": "Maia nije mogla odigrati potez.",
       "saveFailed": "Partija se nije mogla spremiti u „Moje partije”.",
+      "warnBadMoves": "Prijavi loše poteze (od −0,2)",
+      "keepEvalBar": "Ostavi traku procjene",
+      "badMove": "{{move}} nije bio dobar: {{before}} → {{after}}",
+      "analyzeMove": "Analiziraj",
       "enginePaused": "Motor je pauziran tijekom sparinga",
-      "hint": "Maia-3 je neuronska mreža Sveučilišta u Torontu. Iz milijuna partija naučila je koje poteze biraju ljudi određene jačine igre — zajedno s njihovim tipičnim pogreškama.\n\nJačina odgovara Lichess blitz rejtingu; okvirno je oko 200 bodova iznad FIDE Elo rejtinga.\n\nMaia ne računa unaprijed, nego igra po osjećaju. Motor za to vrijeme ostaje isključen, kako bi ti sam računao."
+      "hint": "Maia-3 je neuronska mreža Sveučilišta u Torontu. Iz milijuna partija naučila je koje poteze biraju ljudi određene jačine igre — zajedno s njihovim tipičnim pogreškama.\n\nJačina odgovara Lichess blitz rejtingu; okvirno je oko 200 bodova iznad FIDE Elo rejtinga.\n\nMaia ne računa unaprijed, nego igra po osjećaju. Motor za to vrijeme ostaje isključen, kako bi ti sam računao.\n\n„Prijavi loše poteze”: nakon svakog tvog poteza motor u pozadini provjerava je li procjena pala za barem 0,2 pješaka — tada se pojavi napomena, a „Analiziraj” ti pokazuje što je bilo bolje. „Ostavi traku procjene”: traka pokraj ploče i tijekom sparinga pokazuje procjenu; linije i strelice ostaju skrivene."
     }
   },
   "stats": {

@@ -22,3 +22,13 @@ export const MAIA_ELO_KEY = 'rookhub_analysis_maia_elo';
 /** Nucleus-Schwelle der Zugwahl: gewürfelt wird nur unter den Zügen, die zusammen bis hierher reichen —
  *  der seltene Rest (Fehlgriffe im Promillebereich) fällt weg, menschliche Vielfalt bleibt. */
 export const MAIA_TOP_P = 0.95;
+
+/** „Schlechte Züge melden": ab diesem Verlust (Bauern, aus Sicht des Ziehenden) gilt ein eigener Zug als nicht gut. */
+export const MAIA_BAD_MOVE_PAWNS = 0.2;
+/** Bis zu dieser Tiefe (höchstens die eingestellte) rechnet die stille Engine die Stellung nach dem eigenen Zug, bevor
+ *  geurteilt wird — Vorher- und Nachher-Wert werden bei GLEICHER Tiefe verglichen. */
+export const MAIA_CHECK_DEPTH = 14;
+/** localStorage: „Schlechte Züge melden" an/aus, je Gerät (Vorgabe aus). */
+export const MAIA_WARN_KEY = 'rookhub_analysis_maia_warn';
+/** localStorage: „Bewertungsleiste anlassen" an/aus, je Gerät (Vorgabe aus). */
+export const MAIA_EVALBAR_KEY = 'rookhub_analysis_maia_evalbar';

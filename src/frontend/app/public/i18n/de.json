@@ -2950,8 +2950,12 @@
       "retry": "Erneut versuchen",
       "moveFailed": "Maia konnte keinen Zug liefern.",
       "saveFailed": "Die Partie konnte nicht in „Meine Partien“ gespeichert werden.",
+      "warnBadMoves": "Schlechte Züge melden (ab −0,2)",
+      "keepEvalBar": "Bewertungsleiste anlassen",
+      "badMove": "{{move}} war nicht gut: {{before}} → {{after}}",
+      "analyzeMove": "Analysieren",
       "enginePaused": "Engine pausiert während des Sparrings",
-      "hint": "Maia-3 ist ein neuronales Netz der Universität Toronto. Es hat aus Millionen Partien gelernt, welche Züge Menschen einer bestimmten Spielstärke wählen — samt ihrer typischen Fehler.\n\nDie Stärke entspricht einer Lichess-Blitz-Wertung; als Faustregel liegt sie rund 200 Punkte über der FIDE-Elo.\n\nMaia rechnet nicht voraus, sondern spielt nach Gefühl. Die Engine bleibt währenddessen aus, damit du selbst rechnest."
+      "hint": "Maia-3 ist ein neuronales Netz der Universität Toronto. Es hat aus Millionen Partien gelernt, welche Züge Menschen einer bestimmten Spielstärke wählen — samt ihrer typischen Fehler.\n\nDie Stärke entspricht einer Lichess-Blitz-Wertung; als Faustregel liegt sie rund 200 Punkte über der FIDE-Elo.\n\nMaia rechnet nicht voraus, sondern spielt nach Gefühl. Die Engine bleibt währenddessen aus, damit du selbst rechnest.\n\n„Schlechte Züge melden“: Nach jedem eigenen Zug prüft die Engine im Hintergrund, ob die Bewertung um mindestens 0,2 Bauern gefallen ist — dann erscheint ein Hinweis, und „Analysieren“ zeigt dir, was besser war. „Bewertungsleiste anlassen“: Die Leiste neben dem Brett zeigt während des Sparrings weiter die Bewertung; Linien und Pfeile bleiben verborgen."
     }
   },
   "stats": {

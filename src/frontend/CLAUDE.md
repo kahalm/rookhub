@@ -158,12 +158,18 @@ Sparringsgegner im Analysebrett (Entscheidungen, Fallen, Pin und Regeln: Haupt-C
   `prepare()`/`download()`, Antworten über die `id`, Init-Frist `initTimeoutMs` (60 s), `release()`. Seams: `createWorker`,
   `store`, `rng`.
 - `maia-sparring-card.component.ts` — die Karte (OnPush, Signale): führt den Lade-Ablauf selbst (Rückfrage mit 46 MB, Fortschritt,
-  Fehler + „Erneut versuchen") und meldet `start` erst mit fertigem Modell; die aktive Ansicht schickt nur Ereignisse. Seit 0.x.0
+  Fehler + „Erneut versuchen") und meldet `start` erst mit fertigem Modell; die aktive Ansicht schickt nur Ereignisse. Seit 0.644.0
   dazu „Partie analysieren" (`showAnalyze`/`analyzing`/`analyzeBlocked` → `analyze`; ein gesperrter Knopf zeigt keinen Tooltip,
-  der Grund steht deshalb als Zeile darunter).
+  der Grund steht deshalb als Zeile darunter) und die zwei Schalter „Schlechte Züge melden"/„Bewertungsleiste anlassen"
+  (`warnBadMoves`/`keepEvalBar` → `…Change`, in Ruhe- und aktiver Ansicht) samt Warnung zum letzten eigenen Zug (`warning`, nur
+  aktiv; „Analysieren" → `analyzeWarning`). Gemerkt, geprüft und gesprungen wird im Analysebrett.
 - `sparring-pgn.ts` — rein, ohne Angular (0.644.0): `buildSparringPgn` macht aus Ausgangsstellung + SAN-Zügen das PGN für
   „Partie analysieren" (chess.js schreibt SetUp/FEN und die Nummern; im Zugtext die kompakte Form „4... Bc5", Ergebnis aus der
   Endstellung). Spec mit LITERALEN PGN-Texten.
+- `sparring-check.ts` — rein, ohne Angular (0.645.0): „Schlechte Züge melden" — `pawnsOf` (Matt = ±(1000 − n) Bauern),
+  `matchingBefore` (Vorher-Wert bei gleicher Tiefe), `evalDrop` (Sicht des Ziehenden), `badMoveVerdict` (ab
+  `MAIA_BAD_MOVE_PAWNS` 0,2, in Centibauern verglichen), dazu der Typ `SparringWarning` für die Karte. Spec mit LITERALEN Werten;
+  Ablauf (stille Engine, Tiefen-Spur, Maias Zug wartet aufs Urteil) im Haupt-CLAUDE.md.
 
 **Regel: onnxruntime-web wird NIE in TypeScript importiert.** Die drei Laufzeit-Dateien kommen als Assets (`angular.json`, nur
 Projekt `app`) nach `/assets/ort/` und werden im Worker per `importScripts` geladen — ein Import zöge die Laufzeit in ein Bundle

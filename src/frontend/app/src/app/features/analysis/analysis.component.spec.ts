@@ -1530,6 +1530,364 @@ describe('AnalysisComponent Sparring gegen Maia', () => {
   });
 });
 
+describe('AnalysisComponent Maia: schlechte Züge melden + Bewertungsleiste anlassen (0.645.0)', () => {
+  const WARN_KEY = 'rookhub_analysis_maia_warn';
+  const BAR_KEY = 'rookhub_analysis_maia_evalbar';
+  const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1';
+  const flush = () => new Promise<void>(r => setTimeout(r));
+  const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+  const clearKeys = () => { try { localStorage.removeItem(WARN_KEY); localStorage.removeItem(BAR_KEY); } catch {} };
+  beforeEach(clearKeys);
+  afterEach(clearKeys);
+
+  /** Eine Engine-Zeile (Weiß-Sicht) — evalText wie der Dienst ihn schreibt. */
+  const line = (depth: number, score: number, scoreType: 'cp' | 'mate' = 'cp') => ({
+    multipv: 1, depth, scoreType, score,
+    evalText: scoreType === 'mate' ? `#${score}` : `${score >= 0 ? '+' : ''}${(score / 100).toFixed(2)}`,
+    pvUci: ['e7e5', 'g1f3'],
+  });
+  /** Ein Stand der Fake-Engine für `fen` (Vorgabe: die Stellung auf dem Brett). */
+  const emit = (c: any, depth: number, score: number, opts: { fen?: string; type?: 'cp' | 'mate'; running?: boolean } = {}) =>
+    c.__engine.analysis$.next({
+      fen: opts.fen ?? c.currentFen, depth, lines: [line(depth, score, opts.type ?? 'cp')], nodes: 5000, nps: 1000,
+      running: opts.running ?? true,
+    });
+
+  /** Schalter vor dem Bau setzen (der Konstruktor liest sie), Engine an, Sparring ab der Grundstellung (Nutzer = Weiß). */
+  function sparring(o: { warn?: boolean; bar?: boolean; engineOn?: boolean; params?: Record<string, string | null> } = {}) {
+    try {
+      if (o.warn) localStorage.setItem(WARN_KEY, '1');
+      if (o.bar) localStorage.setItem(BAR_KEY, '1');
+    } catch {}
+    const c = makeComponent(o.params ?? { fen: START });
+    c.ngOnInit();
+    c.engineOn = o.engineOn ?? true;
+    c.startSparring();
+    return c;
+  }
+  const quietOutput = (c: any) => ({ lines: c.displayLines, shapes: c.shapes, candidates: c.engineCandidates });
+  const NOTHING = { lines: [], shapes: [], candidates: [] };
+
+  it('beide Schalter aus: die Engine wird im Sparring gestoppt wie bisher', () => {
+    const c = makeComponent({ fen: START });
+    c.ngOnInit();
+    c.engineOn = true;
+    const stop = spyOn(c.__engine, 'stop').and.callThrough();
+    c.__engine.analyze.calls.reset();
+    c.startSparring();
+    expect(c.warnBadMoves).toBeFalse();
+    expect(c.keepEvalBar).toBeFalse();
+    expect(c.sparringEngineQuiet).toBeFalse();
+    expect(stop).toHaveBeenCalled();
+    expect(c.__engine.analyze).not.toHaveBeenCalled();
+    emit(c, 14, 80);                              // ein Nachzügler der alten Suche ändert nichts
+    expect(quietOutput(c)).toEqual(NOTHING);
+    expect(c.evalText).toBe('0.00');
+    c.ngOnDestroy();
+  });
+
+  it('„Bewertungsleiste anlassen": die Engine rechnet still, die Leiste folgt ab der Settle-Tiefe, der Zug bekommt seine Bewertung', async () => {
+    const c = sparring({ bar: true });
+    expect(c.sparringEngineQuiet).toBeTrue();
+    expect(c.__engine.analyze).toHaveBeenCalledWith(START);
+    emit(c, 5, 35);                               // zu flach für die Leiste
+    expect(c.evalText).toBe('0.00');
+    expect(quietOutput(c)).toEqual(NOTHING);
+    emit(c, 12, 35);
+    expect(c.evalText).toBe('+0.35');
+    expect(c.whiteHeight).toBeGreaterThan(50);
+    expect(quietOutput(c)).toEqual(NOTHING);      // keine Linien, Pfeile, Kandidaten
+
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    expect(c.__engine.analyze).toHaveBeenCalledWith(AFTER_E4);
+    expect(c.evalText).toBe('+0.35');             // die Leiste hält ihren Wert bis zur nächsten belastbaren Tiefe
+    emit(c, 12, 30);
+    expect(c.evalText).toBe('+0.30');
+    expect(c.currentNode.evalText).toBe('+0.30');
+    expect(quietOutput(c)).toEqual(NOTHING);
+    // Ohne „Schlechte Züge melden" wartet Maia auf nichts.
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.currentNode.san).toBe('e5');
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('nur „Schlechte Züge melden": die Engine läuft, die Leiste bleibt neutral, kein node.evalText', async () => {
+    const c = sparring({ warn: true });
+    expect(c.__engine.analyze).toHaveBeenCalledWith(START);
+    emit(c, 14, 40);
+    expect(c.evalText).toBe('0.00');
+    expect(c.whiteHeight).toBe(50);
+    expect(quietOutput(c)).toEqual(NOTHING);
+    c.onMove({ orig: 'e2', dest: 'e4' });
+    emit(c, 14, 30);                              // −0,10: keine Warnung
+    expect(c.currentNode.evalText).toBeUndefined();
+    expect(c.evalText).toBe('0.00');
+    expect(quietOutput(c)).toEqual(NOTHING);
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.currentNode.san).toBe('e5');
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('Warnung: Vorher +0.40 (Tiefe 14), eigener Zug, Nachher −0.30 bei Tiefe 14 → Warnung, Maias Zug erst danach', async () => {
+    const c = sparring({ warn: true });
+    emit(c, 10, 20);
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    const g4 = c.currentNode;
+    expect(c.maiaThinking).toBeTrue();
+    c.__maia.calls[0].resolve('e7e5');            // Maia hat ihren Zug — er wartet auf das Urteil
+    await flush();
+    expect(c.currentNode).toBe(g4);
+    expect(c.maiaThinking).toBeTrue();
+    emit(c, 10, -10);                             // noch nicht tief genug
+    await flush();
+    expect(c.currentNode).toBe(g4);
+
+    const goToNode = c.goToNode.bind(c);
+    let warningWhenMaiaMoved: any = 'nicht gezogen';
+    spyOn(c, 'goToNode').and.callFake((n: any) => { warningWhenMaiaMoved = c.sparringWarning; goToNode(n); });
+    emit(c, 14, -30);
+    await flush();
+    expect(c.sparringWarning).toEqual({ san: '1.g4', before: c.root, beforeText: '+0.40', afterText: '-0.30', drop: 0.7 });
+    expect(warningWhenMaiaMoved).toBe(c.sparringWarning);   // die Warnung stand schon, als Maias Zug kam
+    expect(c.currentNode.san).toBe('e5');
+    expect(c.currentNode.parent).toBe(g4);
+    expect(c.maiaThinking).toBeFalse();
+
+    c.goTo(0);                                    // Navigation lässt die Warnung stehen
+    expect(c.sparringWarning).not.toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('die nächste Prüfung ersetzt die Warnung — 0,10 Verlust löscht sie', async () => {
+    const c = sparring({ warn: true });
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    emit(c, 14, -30);
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.sparringWarning?.san).toBe('1.g4');
+
+    emit(c, 14, -20);                             // Stellung nach 1...e5 (Nutzer überlegt)
+    c.onMove({ orig: 'g1', dest: 'f3' });
+    c.__maia.calls[1].resolve('b8c6');
+    emit(c, 16, -30);                             // −0,10 bei Tiefe 16 (Vorher-Wert: Tiefe 14)
+    await flush();
+    expect(c.sparringWarning).toBeNull();
+    expect(c.currentNode.san).toBe('Nc6');
+    c.ngOnDestroy();
+  });
+
+  it('Schwarz: ein Anstieg aus Weiß-Sicht ist sein Verlust; ein gefundenes Matt beendet die Prüfung vor Tiefe 14', async () => {
+    try { localStorage.setItem(WARN_KEY, '1'); } catch {}
+    const d = makeComponent({ fen: START, moves: 'e2e4' });
+    d.ngOnInit();
+    d.startSparring();                            // Nutzer = Schwarz
+    expect(d.sparring.userColor).toBe('black');
+    emit(d, 10, 30);
+    emit(d, 14, 30);
+    d.onMove({ orig: 'f7', dest: 'f6' });
+    d.__maia.calls[0].resolve('d2d4');
+    emit(d, 6, 3, { type: 'mate', running: false });   // Weiß setzt in 3 matt — die Suche endet flach
+    await flush();
+    expect(d.sparringWarning).toEqual(jasmine.objectContaining({ san: '1...f6', beforeText: '+0.30', afterText: '#3' }));
+    expect(d.sparringWarning.drop).toBeGreaterThan(900);
+    expect(d.currentNode.san).toBe('d4');
+    d.ngOnDestroy();
+  });
+
+  it('Maias eigener Zug wird nie geprüft — sie zieht sofort, ohne auf die Engine zu warten', async () => {
+    const c = sparring({ warn: true });
+    c.maiaCheckTimeoutMs = 60_000;                // würde geprüft, hinge der Test hier
+    c.switchSparringSides();                      // Maia = Weiß, am Zug
+    expect(c.__maia.chooseMove).toHaveBeenCalledTimes(1);
+    c.__maia.calls[0].resolve('g2g4');
+    await flush();
+    expect(c.currentNode.san).toBe('g4');
+    expect(c.sparringWarning).toBeNull();
+    expect(c.pendingCheck).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('ein Zug für Maias Seite wird nie geprüft', () => {
+    try { localStorage.setItem(WARN_KEY, '1'); } catch {}
+    const c = makeComponent({ fen: START, moves: 'e2e4' });
+    c.ngOnInit();
+    c.startSparring();                            // Nutzer = Schwarz
+    c.goTo(0);                                    // Weiß (= Maia) am Zug
+    emit(c, 14, 40);
+    c.onMove({ orig: 'd2', dest: 'd4' });         // der Nutzer zieht für Maia
+    expect(c.pendingBefore).toBeNull();
+    expect(c.pendingCheck).toBeNull();
+    expect(c.__maia.chooseMove).not.toHaveBeenCalled();
+    c.ngOnDestroy();
+  });
+
+  it('Zeitüberschreitung ohne belastbaren Nachher-Wert: keine Warnung, Maia zieht trotzdem', async () => {
+    const c = sparring({ warn: true });
+    c.maiaCheckTimeoutMs = 20;
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    c.__maia.calls[0].resolve('e7e5');
+    emit(c, 6, -300);                             // nur flach — zählt nicht
+    await flush();
+    expect(c.currentNode.san).toBe('g4');
+    await wait(60);
+    expect(c.currentNode.san).toBe('e5');
+    expect(c.sparringWarning).toBeNull();
+    expect(c.maiaThinking).toBeFalse();
+    c.ngOnDestroy();
+  });
+
+  it('Zeitüberschreitung mit einem Wert ab der Settle-Tiefe: geurteilt wird mit ihm', async () => {
+    const c = sparring({ warn: true });
+    c.maiaCheckTimeoutMs = 20;
+    emit(c, 10, 40);
+    emit(c, 12, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    c.__maia.calls[0].resolve('e7e5');
+    emit(c, 11, -50);                             // Tiefe 11 < 14, die Suche läuft noch
+    await wait(60);
+    expect(c.sparringWarning).toEqual(jasmine.objectContaining({ san: '1.g4', beforeText: '+0.40', afterText: '-0.50' }));
+    expect(c.currentNode.san).toBe('e5');
+    c.ngOnDestroy();
+  });
+
+  it('„Analysieren": Sparring beendet, Engine an (nicht gemerkt), Brett auf der Stellung davor, Warnung weg, Partie bleibt', async () => {
+    const c = sparring({ warn: true, engineOn: false });
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    emit(c, 14, -30);
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.sparringWarning).not.toBeNull();
+    const setItem = spyOn(Storage.prototype, 'setItem').and.callThrough();
+    c.__engine.analyze.calls.reset();
+    c.analyzeWarning();
+    expect(c.sparring).toBeNull();
+    expect(c.engineOn).toBeTrue();
+    expect(setItem.calls.allArgs().filter(a => a[0] === 'rookhub_analysis_engine')).toEqual([]);
+    expect(c.currentNode).toBe(c.root);
+    expect(c.root.children[0].san).toBe('g4');    // der schlechte Zug steht als Fortsetzung da
+    expect(c.line.map((n: any) => n.san)).toEqual(['g4', 'e5']);
+    expect(c.sparringWarning).toBeNull();
+    expect(c.lastSparring).not.toBeNull();
+    expect(c.__engine.analyze).toHaveBeenCalledWith(START);
+    emit(c, 14, 40);                              // jetzt wieder mit Linien
+    expect(c.displayLines.length).toBe(1);
+    c.ngOnDestroy();
+  });
+
+  it('Seite wechseln, Nochmal und Beenden löschen die Warnung', async () => {
+    const warned = async () => {
+      const c = sparring({ warn: true });
+      emit(c, 14, 40);
+      c.onMove({ orig: 'g2', dest: 'g4' });
+      emit(c, 14, -30);
+      c.__maia.calls[0].resolve('e7e5');
+      await flush();
+      expect(c.sparringWarning).not.toBeNull();
+      return c;
+    };
+    let c = await warned();
+    c.switchSparringSides();
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+    c = await warned();
+    c.restartSparring();
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+    c = await warned();
+    c.stopSparring();
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('die Schalter werden je Gerät gemerkt und beim Bau gelesen', () => {
+    const c = makeComponent({ fen: START });
+    expect(c.warnBadMoves).toBeFalse();
+    expect(c.keepEvalBar).toBeFalse();
+    c.onWarnBadMovesChange(true);
+    c.onKeepEvalBarChange(true);
+    expect(localStorage.getItem(WARN_KEY)).toBe('1');
+    expect(localStorage.getItem(BAR_KEY)).toBe('1');
+    const d = makeComponent({ fen: START });
+    expect(d.warnBadMoves).toBeTrue();
+    expect(d.keepEvalBar).toBeTrue();
+    d.onWarnBadMovesChange(false);
+    expect(localStorage.getItem(WARN_KEY)).toBe('0');
+    expect(makeComponent({ fen: START }).warnBadMoves).toBeFalse();
+  });
+
+  it('Umschalten während des Sparrings startet bzw. stoppt die stille Engine sofort', () => {
+    const c = sparring();
+    const stop = spyOn(c.__engine, 'stop').and.callThrough();
+    c.__engine.analyze.calls.reset();
+    c.onKeepEvalBarChange(true);
+    expect(c.__engine.analyze).toHaveBeenCalledWith(START);
+    emit(c, 12, 35);
+    expect(c.evalText).toBe('+0.35');
+    c.onKeepEvalBarChange(false);                 // Leiste aus → neutral, Engine aus
+    expect(c.evalText).toBe('0.00');
+    expect(stop).toHaveBeenCalled();
+    c.__engine.analyze.calls.reset();
+    c.onWarnBadMovesChange(true);                 // nur prüfen: Engine wieder an, Leiste bleibt neutral
+    expect(c.__engine.analyze).toHaveBeenCalledWith(START);
+    emit(c, 12, 35);
+    expect(c.evalText).toBe('0.00');
+    c.ngOnDestroy();
+  });
+
+  it('Tiefe/Linien ändern im Sparring: die stille Engine rechnet neu, die Vergleichs-Engine bleibt aus', () => {
+    const c = sparring({ bar: true });
+    c.__engine.analyze.calls.reset();
+    c.depthSetting = 16;
+    c.onDepthChange();
+    expect(c.__engine.analyze).toHaveBeenCalledOnceWith(START);
+    c.__engine.analyze.calls.reset();
+    c.linesCount = 2;
+    c.onLinesChange();
+    expect(c.__engine.analyze).toHaveBeenCalledOnceWith(START);
+    expect(c.__compareEngines.length).toBe(0);
+    try { localStorage.removeItem('rookhub_analysis_depth'); localStorage.removeItem('rookhub_analysis_lines'); } catch {}
+    c.ngOnDestroy();
+  });
+
+  it('„Schlechte Züge melden" aus während der Prüfung: Maia zieht sofort, keine Warnung', async () => {
+    const c = sparring({ warn: true });
+    c.maiaCheckTimeoutMs = 60_000;
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    c.__maia.calls[0].resolve('e7e5');
+    await flush();
+    expect(c.currentNode.san).toBe('g4');
+    c.onWarnBadMovesChange(false);
+    await flush();
+    expect(c.currentNode.san).toBe('e5');
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+  });
+
+  it('Beenden während der Prüfung: die offene Prüfung wird aufgelöst, Maias Zug verfällt', async () => {
+    const c = sparring({ warn: true });
+    c.maiaCheckTimeoutMs = 60_000;
+    emit(c, 14, 40);
+    c.onMove({ orig: 'g2', dest: 'g4' });
+    c.__maia.calls[0].resolve('e7e5');
+    c.stopSparring();
+    expect(c.pendingCheck).toBeNull();
+    await flush();
+    expect(c.currentNode.san).toBe('g4');
+    expect(c.root.children[0].children).toEqual([]);
+    expect(c.sparringWarning).toBeNull();
+    c.ngOnDestroy();
+  });
+});
+
 /** Die echte Vorlage mit Query-Parametern; die schweren Kind-Komponenten fallen weg (wie oben). Mit `lang` gelten die
  *  echten Texte aus `public/i18n` (Karma serviert sie), sonst stehen die Schlüssel da. */
 async function renderAnalysis(params: Record<string, string> = {}, lang?: string): Promise<ComponentFixture<AnalysisComponent>> {

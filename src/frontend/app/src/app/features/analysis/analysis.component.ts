@@ -38,7 +38,10 @@ import {
 } from './analysis-tree';
 import { AnalysisMoveTreeComponent, MoveTreeAction } from './analysis-move-tree.component';
 import { MaiaEngineService } from './maia/maia-engine.service';
-import { MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS } from './maia/maia-model';
+import {
+  MAIA_CHECK_DEPTH, MAIA_DEFAULT_ELO, MAIA_ELO_KEY, MAIA_ELO_OPTIONS, MAIA_EVALBAR_KEY, MAIA_WARN_KEY,
+} from './maia/maia-model';
+import { BadMoveVerdict, EvalPoint, SparringWarning, badMoveVerdict } from './maia/sparring-check';
 import { MaiaSparringCardComponent } from './maia/maia-sparring-card.component';
 import { isBoardHotkey } from '../../shared/keyboard.util';
 import { buildSparringPgn } from './maia/sparring-pgn';
@@ -261,9 +264,11 @@ const EVAL_SETTLE_DEPTH = 10;
               [maiaToMove]="maiaToMove" [elo]="maiaElo"
               [showAnalyze]="sparringAnalyzeVisible" [analyzing]="analyzingSparring"
               [analyzeBlocked]="analyzeStatus?.engineAvailable === false"
+              [warnBadMoves]="warnBadMoves" [keepEvalBar]="keepEvalBar" [warning]="sparringWarning"
               (start)="startSparring()" (stop)="stopSparring()" (switchSides)="switchSparringSides()"
               (restart)="restartSparring()" (maiaMove)="requestMaiaMove()" (eloChange)="onMaiaEloChange($event)"
-              (analyze)="analyzeSparring()" />
+              (analyze)="analyzeSparring()" (warnBadMovesChange)="onWarnBadMovesChange($event)"
+              (keepEvalBarChange)="onKeepEvalBarChange($event)" (analyzeWarning)="analyzeWarning()" />
           }
 
           <mat-card class="moves-card">
@@ -484,6 +489,23 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private maiaEpoch = 0;
   /** Mindest-Bedenkzeit, damit Maias Zug nicht im selben Augenblick wie der eigene aufs Brett knallt (Specs: 0). */
   protected maiaDelayMs = 500;
+  /** Schalter der Maia-Karte, je Gerät gemerkt (Vorgabe aus): eigene schlechte Züge melden / die Bewertungsleiste
+   *  während des Sparrings anlassen. Beide lassen die Analyse-Engine STILL mitlaufen (`sparringEngineQuiet`). */
+  warnBadMoves = false;
+  keepEvalBar = false;
+  /** Warnung zum zuletzt geprüften eigenen Zug — `before` = Stellung VOR dem Zug („Analysieren" springt dorthin). */
+  sparringWarning: (SparringWarning & { before: AnalysisNode; drop: number }) | null = null;
+  /** Spur der Bewertungen der aktuellen Stellung je Tiefe (Weiß-Sicht) — die Vorher-Werte der Zug-Prüfung. */
+  private evalTrack: { fen: string; points: EvalPoint[] } = { fen: '', points: [] };
+  /** Ein eigener Zug am Brett: die Stellung davor und ihre Spur — `requestMaiaMove` übernimmt sie. */
+  private pendingBefore: { node: AnalysisNode; points: EvalPoint[] } | null = null;
+  /** Die laufende Prüfung der Stellung NACH dem eigenen Zug, bedient aus onEngineUpdate. */
+  private pendingCheck: {
+    fen: string; mover: Color; before: EvalPoint[]; epoch: number;
+    resolve: (v: BadMoveVerdict | null) => void; timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+  /** Spätestens so lange wartet Maias Antwort auf das Urteil (Specs: klein). */
+  protected maiaCheckTimeoutMs = 4000;
 
   // ---- Analyse-Verlauf + Sterne (0.603.0; Sterne seit 0.604.0 am Knoten des Zugbaums) ----
   /** Kennung des Verlauf-Eintrags dieser Analyse (null = neue Analyse, der Server vergibt sie beim ersten Speichern). */
@@ -572,6 +594,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
       this.compareEngineId = localStorage.getItem(COMPARE_ENGINE_KEY) || 'wasm';
       const elo = parseInt(localStorage.getItem(MAIA_ELO_KEY) || '', 10);
       if ((MAIA_ELO_OPTIONS as readonly number[]).includes(elo)) this.maiaElo = elo;
+      this.warnBadMoves = localStorage.getItem(MAIA_WARN_KEY) === '1';
+      this.keepEvalBar = localStorage.getItem(MAIA_EVALBAR_KEY) === '1';
     } catch {}
   }
 
@@ -722,6 +746,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.engine.destroy();
     // Maia freigeben (~150 MB: Modell + Sitzung im Worker) — beim nächsten Besuch kommt es in ~1 s aus dem Cache.
     this.maiaEpoch++;
+    this.cancelMoveCheck();
     this.maia.release();
   }
 
@@ -783,6 +808,12 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     } catch { this.refresh(); return; }   // illegaler Zug -> Brett zurücksetzen
     if (!mv) { this.refresh(); return; }
 
+    // „Schlechte Züge melden": die Stellung davor samt ihrer Bewertungs-Spur merken, BEVOR goToNode sie verlässt — nur für
+    // eigene Züge am Brett (Explorer/Repertoire-Züge werden nicht geprüft).
+    if (this.sparring && this.warnBadMoves && mover === this.sparring.userColor) {
+      const before = this.currentNode;
+      this.pendingBefore = { node: before, points: this.evalTrack.fen === before.fen ? [...this.evalTrack.points] : [] };
+    }
     // Zugbaum (0.604.0): ein anderer Zug als die Fortsetzung wird eine VARIANTE, derselbe Zug geht in die vorhandene.
     const node = addMove(this.currentNode, { san: mv.san, uci: mv.from + mv.to + (mv.promotion ?? ''), fen: c.fen() });
     this.treeVersion++;
@@ -843,14 +874,27 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // zurueck, die Suche kann also problemlos gelingen — die Karte behauptete trotzdem weiter,
     // die Engine sei abgestuerzt, statt „Berechne…" zu zeigen.
     this.compareCrashed = false;
+    // Die Bewertungs-Spur gehört zur Stellung — die der alten hat ein eigener Zug vorher übernommen (pendingBefore).
+    this.evalTrack = { fen, points: [] };
     if (this.engineOn && this.dests.size > 0) {
       this.runAnalysis(this.engine, fen);
       this.runAnalysis(this.compareEngine, fen);
+    } else if (this.sparringEngineQuiet && this.dests.size > 0) {
+      // Sparring mit „Schlechte Züge melden"/„Bewertungsleiste anlassen": nur die Haupt-Engine rechnet, still.
+      this.compareEngine?.stop();
+      this.runAnalysis(this.engine, fen);
+      if (!this.keepEvalBar) this.updateEval(null);
     } else {
       this.engine.stop();
       this.compareEngine?.stop();
       this.updateEval(null);
     }
+  }
+
+  /** Während des Sparrings rechnet die Engine still mit (keine Linien, Pfeile, Kandidaten), wenn einer der beiden
+   *  Maia-Schalter an ist — für die Zug-Prüfung bzw. die Bewertungsleiste. */
+  get sparringEngineQuiet(): boolean {
+    return !!this.sparring && (this.warnBadMoves || this.keepEvalBar);
   }
 
   /** Matt oder Patt? Nur aufrufen, wenn es keine legalen Züge gibt. Wirft nicht: bei einer
@@ -887,7 +931,8 @@ export class AnalysisComponent implements OnInit, OnDestroy {
 
   // ---- Engine updates ----
   private onEngineUpdate(fen: string, depth: number, lines: AnalysisLine[], nodes = 0, nps = 0): void {
-    if (!this.engineOn || fen !== this.currentFen) return;
+    const quiet = !this.engineOn && this.sparringEngineQuiet;
+    if (!(this.engineOn || quiet) || fen !== this.currentFen) return;
     this.nodes = nodes;
     this.nps = nps;
     // Angular 22 refresht eine unmarkierte View nach async/HTTP NICHT mehr von selbst (siehe
@@ -896,12 +941,17 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Linienliste stehen, obwohl der Zustand längst stimmt.
     this.cdr.markForCheck();
     this.depth = depth;
-    this.displayLines = this.toDisplayLines(fen, lines);
-    this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
-    this.shapes = lines.map((l, i) => {
-      const u = l.pvUci[0];
-      return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i) } as DrawShape : null;
-    }).filter((s): s is DrawShape => !!s);
+    const best = lines[0];
+    if (best) this.trackEval(fen, best);
+    // Stille Engine im Sparring: Linien, Kandidaten und Pfeile verrieten den besten Zug — sie bleiben leer.
+    if (!quiet) {
+      this.displayLines = this.toDisplayLines(fen, lines);
+      this.engineCandidates = lines.filter(l => !!l.pvUci[0]).map(l => ({ uci: l.pvUci[0], evalText: l.evalText }));
+      this.shapes = lines.map((l, i) => {
+        const u = l.pvUci[0];
+        return u ? { orig: u.substring(0, 2) as Key, dest: u.substring(2, 4) as Key, brush: arrowBrush(i) } as DrawShape : null;
+      }).filter((s): s is DrawShape => !!s);
+    }
     // Bewertungsleiste HALTEN, bis die neue Suche etwas Belastbares liefert. Jede Suche beginnt mit
     // einem Zwischenstand ohne Linien; früher sprang die Leiste darauf auf 0.00 und erst Sekunden
     // später (externe Engine: Netzweg + Anlauf) auf den echten Wert — bei jedem Zug ein Ausschlag
@@ -909,8 +959,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // meist nah am neuen. Übernommen wird ab EVAL_SETTLE_DEPTH, bei Matt sofort (ein gefundenes
     // Matt ist auch flach verlässlich) und sobald die Suche endet, egal wie tief sie kam.
     // Engine aus / Partie-Ende setzen die Leiste weiterhin direkt über refresh() → updateEval(null).
-    const best = lines[0];
-    if (best && (best.depth >= EVAL_SETTLE_DEPTH || best.scoreType === 'mate' || !this.running)) {
+    // Im Sparring bekommen Leiste und Zugliste die Bewertung nur mit „Bewertungsleiste anlassen".
+    if (best && (!quiet || this.keepEvalBar)
+        && (best.depth >= EVAL_SETTLE_DEPTH || best.scoreType === 'mate' || !this.running)) {
       this.updateEval(best);
       // Die Bewertung wandert an den Zug in der Zugliste (wie auf Lichess) und mit dem Baum in den Verlauf.
       const node = this.currentNode;
@@ -920,6 +971,22 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         this.scheduleHistorySave();
       }
     }
+    this.serveMoveCheck(fen);
+  }
+
+  /** Die Bewertung der besten Linie je Tiefe merken (nur die erste Zeile einer Tiefe zählt). */
+  private trackEval(fen: string, best: AnalysisLine): void {
+    if (this.evalTrack.fen !== fen) this.evalTrack = { fen, points: [] };
+    if (this.evalTrack.points.some(p => p.depth === best.depth)) return;
+    this.evalTrack.points.push({ depth: best.depth, score: best.score, scoreType: best.scoreType, evalText: best.evalText });
+  }
+
+  /** Der tiefste Punkt der Spur für `fen` (ab `minDepth`), sonst null. */
+  private deepestPoint(fen: string, minDepth = 0): EvalPoint | null {
+    if (this.evalTrack.fen !== fen) return null;
+    let deepest: EvalPoint | null = null;
+    for (const p of this.evalTrack.points) if (p.depth >= minDepth && (!deepest || p.depth > deepest.depth)) deepest = p;
+    return deepest;
   }
 
   /** Farbe des Pfeils der i-ten Engine-Linie — der Punkt davor in der Linienliste (UX-049). Mit der Deckkraft des
@@ -1040,9 +1107,13 @@ export class AnalysisComponent implements OnInit, OnDestroy {
    *  Stellung (Matt/Patt) bekommt keine Engine ein `go`. Ohne diesen gemeinsamen Weg setzten
    *  Tiefen-/Linienwechsel den Matt-Fall wieder außer Kraft. */
   private restartSearches(): void {
-    if (!this.engineOn || this.dests.size === 0) return;
-    this.runAnalysis(this.engine, this.currentFen);
-    this.runAnalysis(this.compareEngine, this.currentFen);
+    if (this.dests.size === 0) return;
+    if (this.engineOn) {
+      this.runAnalysis(this.engine, this.currentFen);
+      this.runAnalysis(this.compareEngine, this.currentFen);
+    } else if (this.sparringEngineQuiet) {
+      this.runAnalysis(this.engine, this.currentFen);   // stille Engine im Sparring: nur die Haupt-Engine
+    }
   }
 
   /** analyze() lehnt ab, wenn init() scheitert oder die Engine waehrend des Handshakes zerstoert
@@ -1192,7 +1263,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     // Schritt ohnehin. Zwei Aufrufstellen fuer dieselbe Invariante lesen sich, als sicherten sie
     // Verschiedenes ab, und laden dazu ein, nur eine davon zu „reparieren".
     if (this.compareOn && this.compareEngineId === this.selectedEngineId) this.startCompare();
-    if (this.engineOn && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
+    if ((this.engineOn || this.sparringEngineQuiet) && this.dests.size > 0) this.runAnalysis(this.engine, this.currentFen);
   }
 
   backToPuzzle(): void {
@@ -1333,6 +1404,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.abortMaia();
     const userColor: Color = this.sparring.userColor === 'white' ? 'black' : 'white';
     this.sparring = { ...this.sparring, userColor };
+    this.sparringWarning = null;
     this.orientation = userColor;
     if (this.maiaToMove) this.requestMaiaMove();
     this.cdr.markForCheck();
@@ -1341,6 +1413,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** „Nochmal ab der Ausgangsstellung": zurück zum Start; ist dort Maia am Zug, zieht sie. */
   restartSparring(): void {
     if (!this.sparring) return;
+    this.sparringWarning = null;
     this.goToNode(this.sparring.start);
     if (this.maiaToMove) this.requestMaiaMove();
     this.cdr.markForCheck();
@@ -1349,6 +1422,9 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   /** Maia nach ihrem Zug in der aktuellen Stellung fragen und ihn — wenn er noch gefragt ist — wie einen eigenen Zug
    *  in den Baum spielen. Eine Navigation, ein Abbruch oder das Ende des Sparrings dazwischen lassen ihn verfallen. */
   requestMaiaMove(): void {
+    // Der eigene Zug davor (aus onMove) — nur dieser Aufruf darf ihn prüfen.
+    const before = this.pendingBefore;
+    this.pendingBefore = null;
     if (!this.maiaToMove) return;
     const epoch = ++this.maiaEpoch;
     const node = this.currentNode;
@@ -1357,10 +1433,21 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     const pause = this.maiaDelayMs > 0
       ? new Promise<void>(resolve => setTimeout(resolve, this.maiaDelayMs))
       : Promise.resolve();
-    Promise.all([this.maia.chooseMove(node.fen, this.maiaElo), pause]).then(
-      ([uci]) => {
+    // „Schlechte Züge melden": Maias Antwort wartet auf das Urteil. So steht die Warnung schon da, wenn ihr Zug aufs Brett
+    // kommt, und die Suche der Stellung nach dem eigenen Zug wird nicht von Maias Zug abgewürgt.
+    const check = before && this.warnBadMoves && this.sparring
+      ? this.awaitMoveCheck(node.fen, this.sparring.userColor, before.points, epoch)
+      : Promise.resolve(null);
+    Promise.all([this.maia.chooseMove(node.fen, this.maiaElo), pause, check]).then(
+      ([uci, , verdict]) => {
         if (!this.maiaStillWanted(epoch, node)) return;
         this.maiaThinking = false;
+        if (before) {
+          this.sparringWarning = verdict
+            ? { san: numberedSan(node), before: before.node, beforeText: verdict.before.evalText,
+                afterText: verdict.after.evalText, drop: verdict.drop }
+            : null;
+        }
         if (uci) {
           const next = playUci(node, uci);
           if (next) {
@@ -1374,6 +1461,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
       () => {
+        this.cancelMoveCheck(epoch);   // Maias Zug kam nicht — die Prüfung dieses Aufrufs braucht niemand mehr
         if (!this.maiaStillWanted(epoch, node)) return;
         this.maiaThinking = false;
         this.snackbar.warn(this.translate.instant('analysis.maia.moveFailed'));   // das Sparring bleibt aktiv
@@ -1399,6 +1487,7 @@ export class AnalysisComponent implements OnInit, OnDestroy {
   private abortMaia(): void {
     this.maiaEpoch++;
     this.maiaThinking = false;
+    this.cancelMoveCheck();
   }
 
   /** Sparring beenden, ohne neu zu zeichnen — die Aufrufer tun es selbst (refresh bzw. goToNode). Die gespielte Partie
@@ -1409,9 +1498,81 @@ export class AnalysisComponent implements OnInit, OnDestroy {
     this.abortMaia();
     this.engineOn = sparring.engineWasOn;
     this.sparring = null;
+    this.pendingBefore = null;
+    this.sparringWarning = null;
     this.lastSparring = this.sparringPlies(sparring.start, sparring.tip) >= 2
       ? { start: sparring.start, tip: sparring.tip, userColor: sparring.userColor, elo: this.maiaElo }
       : null;
+  }
+
+  // ---- „Schlechte Züge melden" + „Bewertungsleiste anlassen" (0.645.0) ----
+
+  onWarnBadMovesChange(on: boolean): void {
+    this.warnBadMoves = on;
+    try { localStorage.setItem(MAIA_WARN_KEY, on ? '1' : '0'); } catch {}
+    if (!on) { this.pendingBefore = null; this.cancelMoveCheck(); this.sparringWarning = null; }
+    if (this.sparring) this.refresh();   // die stille Engine startet bzw. stoppt sofort
+    this.cdr.markForCheck();
+  }
+
+  onKeepEvalBarChange(on: boolean): void {
+    this.keepEvalBar = on;
+    try { localStorage.setItem(MAIA_EVALBAR_KEY, on ? '1' : '0'); } catch {}
+    if (this.sparring) this.refresh();   // aus → Leiste neutral; an → sie folgt ab der nächsten belastbaren Tiefe
+    this.cdr.markForCheck();
+  }
+
+  /** „Analysieren" an der Warnung: Sparring beenden (die Partie bleibt für „Partie analysieren"), Engine EIN — nur für
+   *  diese Sitzung, nicht in localStorage — und auf die Stellung VOR dem schlechten Zug; er steht dort als Fortsetzung im
+   *  Zugbaum, die Linien zeigen, was besser war. */
+  analyzeWarning(): void {
+    const w = this.sparringWarning;
+    if (!w || !this.sparring) return;
+    this.endSparring();
+    this.sparringWarning = null;
+    if (this.sparringAnalyzeVisible) this.ensureAnalyzeStatus();
+    this.engineOn = true;
+    if (this.isAttached(w.before)) this.goToNode(w.before);
+    else this.refresh();
+    this.cdr.markForCheck();
+  }
+
+  /** Urteil über den eigenen Zug: sobald die Suche der Stellung nach dem Zug `min(MAIA_CHECK_DEPTH, Tiefe)` erreicht oder
+   *  vorher endet; spätestens nach `maiaCheckTimeoutMs` mit dem besten Wert ab EVAL_SETTLE_DEPTH, sonst `null`. */
+  private awaitMoveCheck(fen: string, mover: Color, before: EvalPoint[], epoch: number): Promise<BadMoveVerdict | null> {
+    this.cancelMoveCheck();
+    return new Promise(resolve => {
+      const timer = setTimeout(() => this.finishMoveCheck(this.deepestPoint(fen, EVAL_SETTLE_DEPTH)), this.maiaCheckTimeoutMs);
+      this.pendingCheck = { fen, mover, before, epoch, resolve, timer };
+      this.serveMoveCheck(fen);   // die Spur der Stellung kann schon tief genug sein
+    });
+  }
+
+  /** Aus onEngineUpdate: ist die Prüfung dieser Stellung so weit? */
+  private serveMoveCheck(fen: string): void {
+    const check = this.pendingCheck;
+    if (!check || check.fen !== fen) return;
+    const after = this.deepestPoint(fen);
+    if (!after) return;
+    if (after.depth >= Math.min(MAIA_CHECK_DEPTH, this.depthSetting) || !this.running) this.finishMoveCheck(after);
+  }
+
+  private finishMoveCheck(after: EvalPoint | null): void {
+    const check = this.pendingCheck;
+    if (!check) return;
+    clearTimeout(check.timer);
+    this.pendingCheck = null;
+    check.resolve(after ? badMoveVerdict(check.before, after, check.mover) : null);
+  }
+
+  /** Eine offene Prüfung ohne Urteil beenden (Navigation, Abbruch, Ende) — nur die eines bestimmten Aufrufs, wenn
+   *  `epoch` angegeben ist. */
+  private cancelMoveCheck(epoch?: number): void {
+    const check = this.pendingCheck;
+    if (!check || (epoch !== undefined && check.epoch !== epoch)) return;
+    clearTimeout(check.timer);
+    this.pendingCheck = null;
+    check.resolve(null);
   }
 
   // ---- „Partie analysieren" nach dem Sparring ----

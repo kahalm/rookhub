@@ -2950,8 +2950,12 @@
       "retry": "Try again",
       "moveFailed": "Maia could not provide a move.",
       "saveFailed": "The game could not be saved to “My games”.",
+      "warnBadMoves": "Report bad moves (from −0.2)",
+      "keepEvalBar": "Keep the evaluation bar",
+      "badMove": "{{move}} was not good: {{before}} → {{after}}",
+      "analyzeMove": "Analyse",
       "enginePaused": "Engine paused during sparring",
-      "hint": "Maia-3 is a neural network from the University of Toronto. It has learned from millions of games which moves people of a given playing strength choose — including their typical mistakes.\n\nThe strength corresponds to a Lichess blitz rating; as a rule of thumb it is about 200 points above FIDE Elo.\n\nMaia does not calculate ahead but plays by feel. The engine stays off meanwhile so that you do the calculating yourself."
+      "hint": "Maia-3 is a neural network from the University of Toronto. It has learned from millions of games which moves people of a given playing strength choose — including their typical mistakes.\n\nThe strength corresponds to a Lichess blitz rating; as a rule of thumb it is about 200 points above FIDE Elo.\n\nMaia does not calculate ahead but plays by feel. The engine stays off meanwhile so that you do the calculating yourself.\n\n“Report bad moves”: after each of your moves the engine checks in the background whether the evaluation dropped by at least 0.2 pawns — then a note appears, and “Analyse” shows you what was better. “Keep the evaluation bar”: the bar next to the board keeps showing the evaluation during the sparring; lines and arrows stay hidden."
     }
   },
   "stats": {

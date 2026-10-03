@@ -341,6 +341,94 @@ describe('MaiaSparringCardComponent', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.maia-analyze-hint')).toBeNull();
   });
 
+  // ----- Schalter + Warnung zum eigenen Zug -----
+
+  const toggle = (cls: string) => (fixture.nativeElement as HTMLElement)
+    .querySelector<HTMLButtonElement>(`mat-slide-toggle.${cls} button[role="switch"]`);
+  const warningEl = () => (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.maia-warning');
+  const WARNING = { san: '12...Nxe4', beforeText: '+0.40', afterText: '-0.30' };
+
+  it('the two switches: at rest and while sparring, showing the inputs, a click emits the new value', () => {
+    expect(toggle('maia-warn-toggle')).withContext('Ruhe').not.toBeNull();
+    expect(toggle('maia-evalbar-toggle')).withContext('Ruhe').not.toBeNull();
+    expect(toggle('maia-warn-toggle')!.getAttribute('aria-checked')).toBe('false');
+    expect(text()).toContain('analysis.maia.warnBadMoves');
+    expect(text()).toContain('analysis.maia.keepEvalBar');
+
+    const warn: boolean[] = [];
+    const bar: boolean[] = [];
+    card.warnBadMovesChange.subscribe(v => warn.push(v));
+    card.keepEvalBarChange.subscribe(v => bar.push(v));
+    toggle('maia-warn-toggle')!.click();
+    fixture.detectChanges();
+    expect(warn).toEqual([true]);
+    expect(bar).toEqual([]);
+
+    fixture.componentRef.setInput('active', true);
+    fixture.componentRef.setInput('warnBadMoves', true);
+    fixture.componentRef.setInput('keepEvalBar', true);
+    fixture.detectChanges();
+    expect(toggle('maia-warn-toggle')!.getAttribute('aria-checked')).withContext('aktiv').toBe('true');
+    expect(toggle('maia-evalbar-toggle')!.getAttribute('aria-checked')).withContext('aktiv').toBe('true');
+    toggle('maia-evalbar-toggle')!.click();
+    fixture.detectChanges();
+    expect(bar).toEqual([false]);
+    expect(warn).toEqual([true]);
+  });
+
+  it('the switches are not part of the confirmation, loading and error views', async () => {
+    await click('maia-start');
+    expect(toggle('maia-warn-toggle')).withContext('lädt').toBeNull();
+    maia.status.set('missing');
+    maia.prepareCalls[0].resolve(false);
+    await flush();
+    fixture.detectChanges();
+    expect(button('maia-download')).not.toBeNull();
+    expect(toggle('maia-warn-toggle')).withContext('Rückfrage').toBeNull();
+    await click('maia-download');
+    maia.status.set('error');
+    maia.error.set('failed');
+    maia.downloadCalls[0].resolve(false);
+    await flush();
+    fixture.detectChanges();
+    expect(button('maia-retry')).not.toBeNull();
+    expect(toggle('maia-evalbar-toggle')).withContext('Fehler').toBeNull();
+  });
+
+  it('the warning only with `warning` and only while sparring; „Analysieren" emits analyzeWarning', () => {
+    fixture.componentRef.setInput('warning', WARNING);
+    fixture.detectChanges();
+    expect(warningEl()).withContext('Ruhe').toBeNull();
+
+    fixture.componentRef.setInput('active', true);
+    fixture.componentRef.setInput('warning', null);
+    fixture.detectChanges();
+    expect(warningEl()).withContext('aktiv ohne Warnung').toBeNull();
+
+    TestBed.inject(TranslateService).setTranslation('en', { analysis: { maia: {
+      badMove: '{{move}} was not good: {{before}} → {{after}}', analyzeMove: 'Analyse',
+    } } }, true);
+    fixture.componentRef.setInput('warning', WARNING);
+    fixture.detectChanges();
+    const w = warningEl()!;
+    expect(w).not.toBeNull();
+    expect(w.getAttribute('role')).toBe('status');
+    expect(w.querySelector('mat-icon')!.textContent).toContain('warning');
+    expect(w.querySelector('.maia-warning-text')!.textContent).toContain('12...Nxe4 was not good: +0.40 → -0.30');
+    const b = w.querySelector<HTMLButtonElement>('button.maia-analyze-move')!;
+    expect(b.textContent).toContain('Analyse');
+    expect(b.classList).toContain('mat-mdc-outlined-button');
+
+    let seen = 0;
+    card.analyzeWarning.subscribe(() => seen++);
+    b.click();
+    expect(seen).toBe(1);
+
+    fixture.componentRef.setInput('active', false);
+    fixture.detectChanges();
+    expect(warningEl()).withContext('nach dem Ende').toBeNull();
+  });
+
   it('läuft am Handy (360 px) nicht horizontal über — Ruhe, Rückfrage und aktive Ansicht', async () => {
     const host = fixture.nativeElement as HTMLElement;
     host.style.display = 'block';
@@ -354,6 +442,10 @@ describe('MaiaSparringCardComponent', () => {
     TestBed.inject(TranslateService).setTranslation('en', {
       games: { analyze: 'Partie analysieren' },
       guess: { upload: { noEngine: 'Gerade steht keine Engine bereit, die eingeworfene Partien rechnen könnte.' } },
+      analysis: { maia: {
+        warnBadMoves: 'Schlechte Züge melden (ab −0,2)', keepEvalBar: 'Bewertungsleiste anlassen',
+        badMove: '{{move}} war nicht gut: {{before}} → {{after}}', analyzeMove: 'Analysieren',
+      } },
     }, true);
     fixture.detectChanges();
     expect(fits()).withContext('Ruhe').toBeTrue();
@@ -388,6 +480,15 @@ describe('MaiaSparringCardComponent', () => {
     fixture.componentRef.setInput('analyzeBlocked', true);
     fixture.detectChanges();
     expect(fits()).withContext('aktiv, keine Engine').toBeTrue();
+
+    fixture.componentRef.setInput('warnBadMoves', true);
+    fixture.componentRef.setInput('keepEvalBar', true);
+    fixture.componentRef.setInput('warning', { san: '128...Qxe4', beforeText: '+12.40', afterText: '#-12' });
+    fixture.detectChanges();
+    expect(host.querySelector('.maia-warning')).not.toBeNull();
+    expect(fits()).withContext('aktiv mit Warnung und beiden Schaltern').toBeTrue();
+    const warn = host.querySelector('.maia-warning') as HTMLElement;
+    expect(warn.scrollWidth).withContext('Warnung selbst').toBeLessThanOrEqual(warn.clientWidth);
     host.remove();
   });
 
