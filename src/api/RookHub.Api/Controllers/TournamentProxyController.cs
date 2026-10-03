@@ -143,7 +143,14 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
+    /// <remarks>
+    /// Seit 0.643.0 auch OHNE Anmeldung: die Turnierseite ist ohne Konto voll benutzbar, und ein Turnier, das noch
+    /// nicht geholt ist (eine Gruppe derselben Veranstaltung, „Aktualisieren"), muss sich auch für Gäste holen lassen.
+    /// Die Crawl-Drossel gilt dann je Adresse — dieselben 10 je Minute wie für ein Konto, das man sich ohnehin frei
+    /// anlegen kann; die Crawler-Warteschlange und der chess-results-Takt schützen dahinter.
+    /// </remarks>
     [HttpPost("crawl")]
+    [AllowAnonymous]
     [EnableRateLimiting(RateLimitPartitions.CrawlerRequestPolicy)]
     public async Task<IActionResult> Crawl([FromBody] JsonElement body)
     {
@@ -193,7 +200,10 @@ public class TournamentProxyController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Stand eines Holen-Auftrags — auch ohne Anmeldung (siehe <see cref="Crawl"/>), die Seite fragt alle 2 s.</summary>
     [HttpGet("crawl/{jobId}")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<IActionResult> GetCrawlStatus(int jobId)
     {
         var result = await _proxy.GetAsync($"/api/crawl/{jobId}", RequestCt);

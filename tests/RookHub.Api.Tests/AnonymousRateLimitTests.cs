@@ -73,6 +73,12 @@ public class AnonymousRateLimitTests
                      "LibraryGame.Search", "LibraryGame.Semantic",
                  })
             Assert.Equal("anonymous-puzzle", p[key]);
+
+        // Turnierkalender ohne Konto (0.643.0): eigener Lese-Topf je Konto bzw. Adresse, Holen-Aufträge im Crawl-Topf.
+        foreach (var a in new[] { "Search", "Map", "Calendar", "Get", "Places", "NearestPlace" })
+            Assert.Equal("directory-read", p["TournamentDirectory." + a]);
+        Assert.Equal("directory-read", p["TournamentProxy.GetCrawlStatus"]);
+        Assert.Equal("user-crawl", p["TournamentProxy.Crawl"]);
     }
 
     private static HttpContext Context(string? visitor = null, int? userId = null, string? policy = null)

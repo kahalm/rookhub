@@ -15,6 +15,9 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { CrawlJob, Tournament } from '@rh/core/models';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { TournamentListService } from '../../core/tournament-list.service';
+import { OpenTournamentService } from '../../core/open-tournament.service';
+import { requireAccount } from '../../core/require-account';
+import { AuthService } from '@rh/core/auth.service';
 import { TournamentDatePipe } from '../../core/tournament-date';
 import { ReportEntryDialogComponent, ReportEntryDialogData } from './report-entry-dialog.component';
 import { TournamentDirectoryService } from './tournament-directory.service';
@@ -59,6 +62,23 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
+  private readonly opener = inject(OpenTournamentService);
+
+  /** Angemeldet? Ohne Konto (seit 0.643.0 erlaubt) gibt es kein Merken — das Turnier holt dann „Teilnehmer und Ergebnisse". */
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
+
+  /** Welches Turnier gerade geholt wird (der Dienst fuehrt das, siehe {@link OpenTournamentService}). */
+  readonly opening = this.opener.opening;
+
+  /**
+   * Teilnehmer und Ergebnisse eines noch nicht geholten Turniers — ohne es zu merken. Fuer Gaeste der einzige Weg
+   * dorthin (Merken braucht ein Konto); der Dienst holt das Turnier und oeffnet es, sobald es da ist.
+   */
+  openResults(): void {
+    const id = this.entry()?.chessResultsId;
+    if (id) this.opener.open(id);
+  }
 
   readonly entry = signal<DirectoryEntry | null>(null);
   readonly loading = signal(true);
@@ -136,6 +156,8 @@ export class TournamentDirectoryDetailComponent implements OnInit {
   reportEntry(): void {
     const entry = this.entry();
     if (!entry) return;
+    // Die Meldung geht als Nachricht an das Admin-Team und braucht einen Absender.
+    if (!requireAccount(this.auth, this.router)) return;
     const data: ReportEntryDialogData = { entry };
     this.dialog.open(ReportEntryDialogComponent, { data, width: '560px', maxHeight: '90vh' });
   }
@@ -190,6 +212,8 @@ export class TournamentDirectoryDetailComponent implements OnInit {
     const entry = this.entry();
     if (!entry || this.busy()) return;
     if (entry.chessResultsId === null) return;
+    // Die Merkliste gehoert einem Konto — ohne Anmeldung zur Maske, danach zurueck hierher.
+    if (!requireAccount(this.auth, this.router)) return;
     this.busy.set(true);
     this.tournaments.bookmarkAndImport(entry.chessResultsId, entry.name).subscribe({
       next: ({ job }) => {

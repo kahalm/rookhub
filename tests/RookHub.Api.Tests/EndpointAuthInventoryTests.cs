@@ -121,6 +121,16 @@ public class EndpointAuthInventoryTests
         "GET /api/tournaments/{id}/teams/{snr}",                     // TournamentProxyController.GetTeamDetail
         "GET /api/tournaments/{id}/teams",                           // TournamentProxyController.GetTeams
         "GET /api/tournaments/{id}",                                 // TournamentProxyController.GetById
+        // Seit 0.643.0 ist die Turnierseite ohne Konto voll benutzbar: Kalender lesen (gedrosselt je Adresse,
+        // directory-read) und ein Turnier holen lassen (user-crawl, je Adresse). Schreiben bleibt beim Konto.
+        "POST /api/tournaments/crawl",                               // TournamentProxyController.Crawl
+        "GET /api/tournaments/crawl/{jobId}",                        // TournamentProxyController.GetCrawlStatus
+        "GET /api/tournament-directory",                             // TournamentDirectoryController.Search
+        "GET /api/tournament-directory/map",                         // TournamentDirectoryController.Map
+        "GET /api/tournament-directory/calendar",                    // TournamentDirectoryController.Calendar
+        "GET /api/tournament-directory/{id}",                        // TournamentDirectoryController.Get
+        "GET /api/tournament-directory/places",                      // TournamentDirectoryController.Places
+        "GET /api/tournament-directory/places/nearest",              // TournamentDirectoryController.NearestPlace
         // Das TOKEN ist der Nachweis (wie beim Partie-/Linien-Link): Es steht als QR-Code auf dem
         // gedruckten Aufgabenblatt und soll ohne Konto loesbar sein — genau dafuer teilt man es.
         "GET /api/worksheets/shared/{token}",                        // WorksheetController.Shared

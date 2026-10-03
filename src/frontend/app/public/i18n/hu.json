@@ -3451,6 +3451,7 @@
     "openChessResults": "Megnyitás a chess-results oldalon",
     "unknownTournament": "Ez a verseny (még) nem szerepel a jegyzékben.",
     "noProfileHint": "Még nincs keresési profil. Ezzel körzeti keresést és értesítést kapsz a közeli új versenyekről.",
+    "guestHint": "Keresni és böngészni fiók nélkül is lehet. A szűrők keresési profilként való mentéséhez, a versenyek megjegyzéséhez és a játékosok kedvencnek jelöléséhez fiók kell — ingyenes.",
     "tabs": {
       "list": "Lista",
       "map": "Térkép",
@@ -3475,6 +3476,7 @@
       "director": "Versenyvezetés",
       "results": "Résztvevők és eredmények",
       "notImportedHint": "A résztvevők, a párosítások és a tabella még nincsenek fenn a RookHubon. Jelöld meg a versenyt, és rögtön lehívjuk őket.",
+      "notImportedHintGuest": "A résztvevők, a párosítások és a tabella még nincsenek a RookHubon. A „Résztvevők és eredmények“ letölti őket — ez legfeljebb két percig tart.",
       "venueMap": "Rendezés helye",
       "importing": "A verseny lehívása folyik…",
       "importDone": "A verseny lehívva — a résztvevők és az eredmények elérhetők.",

@@ -130,6 +130,18 @@ public static class RateLimitPartitions
     public static RateLimitPartition<string> UserMessage(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), UserMessagePermitPerMinute * scale);
 
+    /// <summary>
+    /// Turnierkalender lesen (Suche, Karte, Monat, Eintrag, Orte) — seit 0.643.0 auch OHNE Anmeldung. Je Konto, ohne
+    /// Anmeldung je Adresse; 120 je Minute trägt ein zügiges Verschieben der Karte (jede Bewegung eine Abfrage), hält
+    /// aber ein Abgrasen des ganzen Kalenders von einer Adresse aus klein.
+    /// </summary>
+    public const int DirectoryReadPermitPerMinute = 120;
+
+    public const string DirectoryReadPolicy = "directory-read";
+
+    public static RateLimitPartition<string> DirectoryRead(HttpContext ctx, int scale) =>
+        FixedWindow(UserOrIp(ctx), DirectoryReadPermitPerMinute * scale);
+
     public static RateLimitPartition<string> SyncPlay(HttpContext ctx, int scale) =>
         FixedWindow(UserOrIp(ctx), SyncPlayPermitPerMinute * scale);
 

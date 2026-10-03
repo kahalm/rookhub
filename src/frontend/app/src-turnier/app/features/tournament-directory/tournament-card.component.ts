@@ -8,6 +8,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SnackbarService } from '@rh/core/snackbar.service';
+import { Router } from '@angular/router';
+import { AuthService } from '@rh/core/auth.service';
+import { requireAccount } from '../../core/require-account';
 import { CalendarEvent, buildIcs, downloadIcs, icsFileName } from '@rh/core/ics';
 import { directoryCalendarEvent } from './directory-calendar-event';
 import { TournamentListService } from '../../core/tournament-list.service';
@@ -137,12 +140,14 @@ import { DirectoryEntry } from './tournament-directory.model';
           </button>
         }
 
-        @let ignoreText = (ignored() ? 'tournamentDirectory.card.show' : 'tournamentDirectory.card.hide') | translate;
-        <button mat-icon-button (click)="toggleIgnore()" [disabled]="busy()"
-                [matTooltip]="ignoreText"
-                [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ignoreText, name: entry.name }">
-          <mat-icon>{{ ignored() ? 'visibility' : 'visibility_off' }}</mat-icon>
-        </button>
+        @if (loggedIn) {
+          @let ignoreText = (ignored() ? 'tournamentDirectory.card.show' : 'tournamentDirectory.card.hide') | translate;
+          <button mat-icon-button (click)="toggleIgnore()" [disabled]="busy()"
+                  [matTooltip]="ignoreText"
+                  [attr.aria-label]="'tournamentDirectory.card.actionAria' | translate: { action: ignoreText, name: entry.name }">
+            <mat-icon>{{ ignored() ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+        }
 
         <button mat-icon-button (click)="report()"
                 [matTooltip]="'tournamentDirectory.report.cta' | translate"
@@ -244,6 +249,11 @@ export class TournamentCardComponent {
   private readonly dialog = inject(MatDialog);
   private readonly snackbar = inject(SnackbarService);
   private readonly translate = inject(TranslateService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  /** Ohne Anmeldung (Kalender seit 0.643.0 offen) gibt es nichts auszublenden — der Knopf faellt weg. */
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
 
   @Input({ required: true }) entry!: DirectoryEntry;
 
@@ -330,6 +340,8 @@ export class TournamentCardComponent {
   bookmark(): void {
     const chessResultsId = this.entry.chessResultsId;
     if (chessResultsId === null || this.busy()) return;
+    // Die Merkliste gehoert einem Konto — ohne Anmeldung zur Maske, danach zurueck hierher.
+    if (!requireAccount(this.auth, this.router)) return;
     if (this.subscribed()) {
       this.removeBookmark(chessResultsId);
       return;
@@ -403,6 +415,8 @@ export class TournamentCardComponent {
   }
 
   report(): void {
+    // Die Meldung geht als Nachricht an das Admin-Team und braucht einen Absender.
+    if (!requireAccount(this.auth, this.router)) return;
     const data: ReportEntryDialogData = { entry: this.entry };
     this.dialog.open(ReportEntryDialogComponent, { data, width: '560px', maxHeight: '90vh' });
   }

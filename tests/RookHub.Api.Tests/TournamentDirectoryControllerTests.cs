@@ -26,6 +26,15 @@ public class TournamentDirectoryControllerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    /// <summary>Ohne Anmeldung: kein Nutzer im HttpContext (die Turnierseite ist seit 0.643.0 ohne Konto benutzbar).</summary>
+    private TournamentDirectoryController CreateAnonymousController()
+    {
+        var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db,
+            new AdminMessageService(_db, new NotificationService(_db)));
+        controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+        return controller;
+    }
+
     private TournamentDirectoryController CreateController(int userId)
     {
         var controller = new TournamentDirectoryController(new TournamentDirectoryQueryService(_db), _db,
@@ -201,6 +210,74 @@ public class TournamentDirectoryControllerTests : IDisposable
         var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(result.Result).Value);
 
         Assert.False(page.Items.Single().Subscribed);
+    }
+
+    // ----- Ohne Anmeldung (seit 0.643.0) -------------------------------------
+
+    /// <summary>
+    /// Suche, Karte, Monat und Eintrag funktionieren ohne Konto — vorher warf GetUserId() und die Antwort war 500.
+    /// Gemerkt und ausgeblendet sind dann einfach falsch, auch wenn ANDERE Konten das Turnier gemerkt haben.
+    /// </summary>
+    [Fact]
+    public async Task Anonymous_CanSearchBrowseAndOpen_WithNothingPersonal()
+    {
+        var someone = await CreateUserAsync("someone");
+        await AddEntryAsync("1", "Innsbrucker Open", new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 12), 47.26, 11.39);
+        _db.TournamentSubscriptions.Add(new TournamentSubscription
+        {
+            UserId = someone, CrawlerTournamentId = "1", TournamentName = "Innsbrucker Open"
+        });
+        _db.TournamentDirectoryIgnores.Add(new TournamentDirectoryIgnore { UserId = someone, PublicId = "1" });
+        await _db.SaveChangesAsync();
+        var anon = CreateAnonymousController();
+
+        var page = Assert.IsType<DirectoryPageDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Search(null, null, null, null, null, null, null, null)).Result).Value);
+        var item = Assert.Single(page.Items);
+        Assert.False(item.Subscribed);
+
+        var map = Assert.IsType<DirectoryMapDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Map("47.0,11.0,48.0,12.0", from: "2026-10-01", to: "2026-12-31")).Result).Value);
+        Assert.NotNull(map);
+        Assert.IsType<OkObjectResult>((await anon.Calendar(2026, 10)).Result);
+
+        var detail = Assert.IsType<DirectoryEntryDto>(Assert.IsType<OkObjectResult>(
+            (await anon.Get("1", CancellationToken.None)).Result).Value);
+        Assert.Equal("Innsbrucker Open", detail.Name);
+        Assert.False(detail.Subscribed);
+    }
+
+    /// <summary>Ein Suchprofil gehört einem Konto — ohne Anmeldung gibt es keines.</summary>
+    [Fact]
+    public async Task Anonymous_WithAProfileId_IsRejectedInsteadOfLeakingSomeonesProfile()
+    {
+        var someone = await CreateUserAsync("someone");
+        _db.TournamentSearchProfiles.Add(new TournamentSearchProfile
+        {
+            UserId = someone, Name = "Daheim", Lat = 47.26, Lon = 11.39, RadiusKm = 50,
+        });
+        await _db.SaveChangesAsync();
+        var profileId = (await _db.TournamentSearchProfiles.SingleAsync()).Id;
+
+        var result = await CreateAnonymousController().Search(profileId: profileId);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    /// <summary>Was dem Nutzer gehört (ausblenden, melden, Quelle vorschlagen), verlangt weiter ein Konto.</summary>
+    [Fact]
+    public void PersonalActions_StillRequireAnAccount_ReadsDoNot()
+    {
+        var type = typeof(TournamentDirectoryController);
+        bool Anonymous(string name) => type.GetMethods().Where(m => m.Name == name).All(m =>
+            m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), false).Length > 0);
+        bool Authorized(string name) => type.GetMethods().Where(m => m.Name == name).All(m =>
+            m.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false).Length > 0);
+
+        foreach (var read in new[] { "Search", "Map", "Calendar", "Get", "Places", "NearestPlace" })
+            Assert.True(Anonymous(read), read);
+        foreach (var write in new[] { "Ignore", "Unignore", "Report", "SuggestSource" })
+            Assert.True(Authorized(write), write);
     }
 
     // ----- Gruppen eines Turniers -------------------------------------------

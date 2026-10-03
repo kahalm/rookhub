@@ -139,6 +139,12 @@
             <mat-icon>table_chart</mat-icon>
             {{ 'tournamentDirectory.detail.results' | translate }}
           </a>
+        } @else if (!loggedIn && entry.chessResultsId) {
+          <!-- Ohne Konto gibt es kein Merken, das holen wuerde: derselbe Knopf holt das Turnier und oeffnet es. -->
+          <button mat-stroked-button (click)="openResults()" [disabled]="opening() !== null">
+            <mat-icon>table_chart</mat-icon>
+            {{ 'tournamentDirectory.detail.results' | translate }}
+          </button>
         }
         @if (entry.startDate) {
           <button mat-stroked-button (click)="addToCalendar()">
@@ -164,7 +170,8 @@
       @if (importing()) {
         <p class="muted hint">{{ 'tournamentDirectory.detail.importing' | translate }}</p>
       } @else if (!imported() && entry.chessResultsId !== null) {
-        <p class="muted hint">{{ 'tournamentDirectory.detail.notImportedHint' | translate }}</p>
+        <p class="muted hint">{{ (loggedIn ? 'tournamentDirectory.detail.notImportedHint'
+                                         : 'tournamentDirectory.detail.notImportedHintGuest') | translate }}</p>
       }
     </mat-card>
 

@@ -24,6 +24,7 @@ import { HelpHintComponent } from '@rh/shared/help-hint/help-hint.component';
 import { SnackbarService } from '@rh/core/snackbar.service';
 import { ViewStateService } from '@rh/core/view-state.service';
 import { AuthService } from '@rh/core/auth.service';
+import { requireAccount } from '../../core/require-account';
 import { GeolocationFailure, GeolocationService } from '../../core/geolocation.service';
 import { MissingTournamentDialogComponent } from './missing-tournament-dialog.component';
 import { SearchProfileDialogComponent, SearchProfileDialogData } from './search-profile-dialog.component';
@@ -175,9 +176,13 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   static readonly ViewKey = 'rh.turnier.directoryView';
 
-  /** Der geraetelokale Schluessel dieses Nutzers; ohne Anmeldung `null` (dann nichts lokal). */
-  static viewKeyFor(userId: number | null | undefined): string | null {
-    return userId == null ? null : `${TournamentDirectoryComponent.ViewKey}.${userId}`;
+  /**
+   * Der geraetelokale Schluessel dieses Nutzers; ohne Anmeldung ein eigener Gast-Schluessel. Seit 0.643.0 ist der
+   * Kalender ohne Konto offen, und ein Gast soll „Turnier oeffnen → zurueck" ebenso ohne neu Filtern schaffen. Der
+   * Gast-Stand geht nie zum Server (`queuePersist`) und nie in ein Konto — angemeldet gilt der eigene Schluessel.
+   */
+  static viewKeyFor(userId: number | null | undefined): string {
+    return `${TournamentDirectoryComponent.ViewKey}.${userId == null ? 'guest' : userId}`;
   }
 
   /** Dieselbe Ansicht beim NUTZER (Server) — die Kennung muss in `ViewStateService.AllowedKeys` stehen. */
@@ -223,11 +228,21 @@ export class TournamentDirectoryComponent implements OnInit {
    */
   readonly ready = signal(false);
 
+  /** Angemeldet? Ohne Konto ist der Kalender lesbar, aber Suchprofile, Ausblenden und Melden gibt es nicht. */
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
+
   ngOnInit(): void {
     this.applyRangePreset('quarter', false);
     this.restoreView();
     this.watchPlaceInput();
     this.watchPersist();
+
+    // Ohne Anmeldung (seit 0.643.0): kein Server-Stand und keine Suchprofile — beide gehoeren einem Konto, und die
+    // Abrufe endeten nur in 401. Der Gast-Stand liegt geraetelokal (viewKeyFor).
+    if (!this.auth.isLoggedIn) {
+      this.applyQueryParams();
+      return;
+    }
     this.syncStoredView();
 
     this.profileService.list().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -761,12 +776,15 @@ export class TournamentDirectoryComponent implements OnInit {
    * ausschreibt, kommt hier nicht vor — von innen ist das nicht zu sehen.
    */
   reportMissing(): void {
+    // Die Meldung geht als Nachricht an das Admin-Team und braucht einen Absender.
+    if (!requireAccount(this.auth, this.router)) return;
     this.dialog.open(MissingTournamentDialogComponent, { width: '520px' });
   }
 
   // ----- Suchprofile -------------------------------------------------------
 
   newProfile(): void {
+    if (!requireAccount(this.auth, this.router)) return;
     this.openProfileDialog(null);
   }
 
@@ -965,7 +983,7 @@ export class TournamentDirectoryComponent implements OnInit {
     const state = this.viewState();
     const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
     try {
-      if (key) localStorage.setItem(key, JSON.stringify(state));
+      localStorage.setItem(key, JSON.stringify(state));
     } catch {
       // Gesperrter oder voller Speicher (Privatmodus) ist kein Grund, die Seite scheitern zu
       // lassen — dann faengt man eben wieder bei der Vorgabe an.
@@ -979,7 +997,8 @@ export class TournamentDirectoryComponent implements OnInit {
    * Konto. Der Nutzer saehe sonst beim naechsten Besuch einen Umkreis, den er nie eingestellt hat.
    */
   private queuePersist(state: Record<string, unknown>): void {
-    if (this.auth.isImpersonating) return;
+    // Gaeste haben keinen Server-Stand; Admins beim Einstieg als Nutzer schreiben nicht ins fremde Konto.
+    if (!this.auth.isLoggedIn || this.auth.isImpersonating) return;
     this.persist.next(state);
   }
 
@@ -989,7 +1008,7 @@ export class TournamentDirectoryComponent implements OnInit {
       // Der alte, nutzerlose Eintrag gehoert irgendwem, der hier einmal angemeldet war — weg damit.
       localStorage.removeItem(TournamentDirectoryComponent.ViewKey);
       const key = TournamentDirectoryComponent.viewKeyFor(this.auth.currentUser?.userId);
-      const raw = key ? localStorage.getItem(key) : null;
+      const raw = localStorage.getItem(key);
       stored = raw ? JSON.parse(raw) : null;
     } catch {
       stored = null;                       // unlesbar/kaputt: Vorgabe bleibt stehen

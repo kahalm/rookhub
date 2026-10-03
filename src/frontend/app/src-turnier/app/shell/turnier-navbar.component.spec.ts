@@ -74,10 +74,11 @@ describe('TurnierNavbarComponent', () => {
       expect(toolbar.scrollWidth).toBeLessThanOrEqual(toolbar.clientWidth);
 
       // Das ☰ ist da, die Textlinks sind weg; Anmelden bleibt als die eine Aktion in der Zeile.
-      // (Ausgeloggt gibt es die Textlinks gar nicht — UX-038; die angemeldete Fassung prueft der Test danach.)
+      // (Gaeste haben seit 0.643.0 den Kalender-Link — am Handy steht er wie alle Textlinks nur im ☰.)
       const menuBtn = host.querySelector('button[aria-label="nav.menu"]') as HTMLElement;
       expect(getComputedStyle(menuBtn).display).not.toBe('none');
-      expect(host.querySelector('.links')).toBeNull();
+      const links = host.querySelector('.links') as HTMLElement | null;
+      expect(links === null || getComputedStyle(links).display === 'none').toBeTrue();
       const login = host.querySelector('a[href^="/login"]') as HTMLElement;   // mit returnUrl (UX-020)
       expect(getComputedStyle(login).display).not.toBe('none');
     } finally {
@@ -183,20 +184,21 @@ describe('TurnierNavbarComponent', () => {
   });
 
   /**
-   * UX-038: Logo und alle drei Menuepunkte standen auch fuer Gaeste da, alle Ziele haben einen authGuard — auf der
-   * Anmeldemaske fuehrte jeder Klick ohne sichtbare Reaktion auf dieselbe Maske zurueck.
+   * UX-038: Links, die fuer Gaeste nur auf die Anmeldemaske fuehren, wirken tot — „Gemerkt" und „Meine Turniere"
+   * bleiben deshalb angemeldet. Der KALENDER ist seit 0.643.0 ohne Anmeldung offen und steht auch fuer Gaeste da.
    */
-  it('Gaeste sehen keine geschuetzten Wege, weder in der Zeile noch im ☰; die Marke bleibt (UX-038)', () => {
+  it('Gaeste sehen den Kalender, aber keine Wege, die ein Konto brauchen — in der Zeile und im ☰ (UX-038)', () => {
     const fixture = setup(PARTNER);
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.links')).withContext('Textlinks fuer Gaeste').toBeNull();
+    const lineLinks = Array.from(host.querySelectorAll('.links a')).map(a => a.getAttribute('href'));
+    expect(lineLinks).withContext('Textlinks fuer Gaeste').toEqual(['/tournaments/calendar']);
     expect(host.querySelector('a.brand')!.getAttribute('href')).toBe('/');
 
     const trigger = host.querySelector('button[aria-label="nav.menu"]') as HTMLButtonElement;
     trigger.click();
     fixture.detectChanges();
     const hrefs = overlayItems().map(i => i.getAttribute('href')).filter(Boolean);
-    expect(hrefs.filter(h => h!.startsWith('/tournaments'))).toEqual([]);
+    expect(hrefs.filter(h => h!.startsWith('/tournaments'))).toEqual(['/tournaments/calendar']);
     // Design und Sprache bleiben auch fuer Gaeste erreichbar.
     expect(overlayItems().some(i => i.textContent?.includes('nav.language'))).toBeTrue();
     trigger.click();

@@ -54,6 +54,21 @@ export class TurnierAppComponent implements OnInit {
     this.appUpdate.start(this.destroyRef);
     // Kommt der Aufrufer per Sprung von RookHub, bringt er einen Einmal-Code mit — den gegen eine
     // eigene Anmeldung tauschen, BEVOR die erste Seite ihre Daten holt.
-    void this.handoff.consumeIncoming();
+    void this.handoff.consumeIncoming().then(adopted => this.afterAdoption(adopted));
   }
+
+  /**
+   * Kalender und Turnierseiten sind seit 0.643.0 ohne Anmeldung offen — die erste Seite laedt deshalb schon als
+   * GAST, waehrend die Uebernahme (Einmal-Code oder geteilte Anmeldung) noch laeuft; vorher stand der Gast dafuer
+   * auf der Anmeldemaske, und `leaveLoginMask` brachte ihn zurueck. Steht die Anmeldung, einmal neu laden: sonst
+   * fehlen Suchprofile, Merkliste und Favoriten, bis der Nutzer selbst neu laedt. Auf der Maske selbst nicht —
+   * dort navigiert `leaveLoginMask` schon. Keine Schleife: danach ist er angemeldet, und `consumeIncoming` meldet
+   * `false`.
+   */
+  private afterAdoption(adopted: boolean): void {
+    if (adopted && !location.pathname.endsWith('/login')) this.reloadPage();
+  }
+
+  /** Eigene Methode, damit die Specs das Neuladen abfangen koennen. */
+  protected reloadPage(): void { location.reload(); }
 }

@@ -837,6 +837,8 @@ try
         // Nutzer-ausgeloeste Crawler-Auftraege (crawl, crawl/player-details, {id}/clubs, Monitor einschalten): je KONTO,
         // zusaetzlich zum globalen Deckel je IP — die Crawler-Warteschlange teilen sich alle (RateLimitPartitions).
         options.AddPolicy("user-crawl", ctx => RookHub.Api.Services.RateLimitPartitions.CrawlerRequest(ctx, permitScale));
+        // Turnierkalender lesen — auch ohne Anmeldung (Turnierseite voll benutzbar ohne Konto): je Konto bzw. Adresse.
+        options.AddPolicy("directory-read", ctx => RookHub.Api.Services.RateLimitPartitions.DirectoryRead(ctx, permitScale));
         // Lückensuche einer Rekonstruktion (gap, gap/propose): reine CPU im Request-Thread — je KONTO gedrosselt, die
         // Gleichzeitigkeit über alle Konten deckelt GapSearchGate (RateLimitPartitions, Codereview N5-001).
         options.AddPolicy("reconstruction-gap", ctx => RookHub.Api.Services.RateLimitPartitions.ReconstructionGap(ctx, permitScale));

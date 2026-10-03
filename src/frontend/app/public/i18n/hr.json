@@ -3772,6 +3772,7 @@
     "openChessResults": "Otvori na chess-resultsu",
     "unknownTournament": "Ovaj turnir (još) nije u imeniku.",
     "noProfileHint": "Još nema profila pretrage. S njim dobivaš pretragu po polumjeru i obavijest o novim turnirima u blizini.",
+    "guestHint": "Pretraživanje i pregled rade bez računa. Za spremanje filtara kao profila pretrage, pamćenje turnira i označavanje igrača treba račun — besplatan je.",
     "tabs": {
       "list": "Popis",
       "map": "Karta",
@@ -3796,6 +3797,7 @@
       "director": "Vodstvo turnira",
       "results": "Sudionici i rezultati",
       "notImportedHint": "Sudionici, parovi i tablica još nisu na RookHubu. Označi turnir i bit će odmah dohvaćeni.",
+      "notImportedHintGuest": "Sudionici, parovi i tablica još nisu na RookHubu. „Sudionici i rezultati“ ih preuzima — to traje do dvije minute.",
       "venueMap": "Mjesto održavanja",
       "importing": "Turnir se dohvaća…",
       "importDone": "Turnir dohvaćen — sudionici i rezultati su tu.",

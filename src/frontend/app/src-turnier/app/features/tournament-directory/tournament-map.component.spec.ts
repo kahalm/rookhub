@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AuthService } from '@rh/core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -20,6 +21,10 @@ function entry(id: string, lat: number | null, lon: number | null,
 }
 
 describe('TournamentMapComponent', () => {
+  /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
+  let signedIn = true;
+  beforeEach(() => { signedIn = true; });
+
   let fixture: ComponentFixture<TournamentMapComponent>;
   let component: TournamentMapComponent;
 
@@ -33,6 +38,8 @@ describe('TournamentMapComponent', () => {
         provideHttpClient(), provideHttpClientTesting(), provideNoopAnimations(),
       ],
     }).compileComponents();
+    // Das Popup zeigt angemeldet vier Aktionen; Gaeste haben kein „Ausblenden“ (seit 0.643.0, eigener Test der Kurzansicht).
+    if (!Object.getOwnPropertyDescriptor(TestBed.inject(AuthService), 'isLoggedIn')) spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentMapComponent);
     component = fixture.componentInstance;
   });
@@ -417,6 +424,8 @@ describe('TournamentMapComponent', () => {
     const engSpan = Number(eng!.split(',')[2]) - Number(eng!.split(',')[0]);
 
     fixture.destroy();
+    // Das Popup zeigt angemeldet vier Aktionen; Gaeste haben kein „Ausblenden“ (seit 0.643.0, eigener Test der Kurzansicht).
+    if (!Object.getOwnPropertyDescriptor(TestBed.inject(AuthService), 'isLoggedIn')) spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentMapComponent);
     component = fixture.componentInstance;
     let weit: string | null = null;

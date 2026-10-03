@@ -62,6 +62,10 @@ class MapStubComponent implements OnInit {
 }
 
 describe('TournamentDirectoryComponent', () => {
+  /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
+  let signedIn = true;
+  beforeEach(() => { signedIn = true; });
+
   let fixture: ComponentFixture<TournamentDirectoryComponent>;
   let component: TournamentDirectoryComponent;
   let http: HttpTestingController;
@@ -100,6 +104,8 @@ describe('TournamentDirectoryComponent', () => {
     });
     spyOnProperty(auth, 'isImpersonating', 'get').and.returnValue(!!user.impersonating);
 
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentDirectoryComponent);
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
@@ -108,6 +114,43 @@ describe('TournamentDirectoryComponent', () => {
     if (viewState === 'fail') http.expectOne('/api/view-state/turnier.directory').flush('x', { status: 500, statusText: 'Server Error' });
     else if (viewState === 'none') flushViewState();
   }
+
+  /**
+   * Ohne Konto (seit 0.643.0): der Kalender laedt, aber kein Server-Stand und keine Suchprofile (beide gehoeren
+   * einem Konto, die Abrufe endeten nur in 401). Die Filter merkt sich das Geraet unter dem Gast-Schluessel; „Neues
+   * Suchprofil" fuehrt zur Anmeldung, und ein Hinweis sagt einmal, was ein Konto dazu bringt.
+   */
+  it('laesst Gaeste ohne Server-Stand und Suchprofile suchen und merkt die Filter auf dem Geraet', async () => {
+    signedIn = false;
+    await TestBed.configureTestingModule({
+      imports: [TournamentDirectoryComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+      ],
+    }).compileComponents();
+    const auth = TestBed.inject(AuthService);
+    spyOnProperty(auth, 'currentUser', 'get').and.returnValue(null);
+    spyOnProperty(auth, 'isLoggedIn', 'get').and.callFake(() => signedIn);
+    fixture = TestBed.createComponent(TournamentDirectoryComponent);
+    component = fixture.componentInstance;
+    http = TestBed.inject(HttpTestingController);
+    const navigateByUrl = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    fixture.detectChanges();
+
+    http.expectNone('/api/view-state/turnier.directory');
+    http.expectNone('/api/tournament-search-profiles');
+    flushList([]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.guestHint');
+    expect(localStorage.getItem(TournamentDirectoryComponent.viewKeyFor(null))).withContext('Gast-Stand').not.toBeNull();
+    component.newProfile();
+    expect(String(navigateByUrl.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
+    http.verify();
+  });
 
   /**
    * Die Filterleiste fragt beim Start den beim NUTZER gespeicherten Zustand ab. In den Tests
@@ -1426,6 +1469,8 @@ describe('TournamentDirectoryComponent', () => {
       ],
     }).compileComponents();
 
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentDirectoryComponent);
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);

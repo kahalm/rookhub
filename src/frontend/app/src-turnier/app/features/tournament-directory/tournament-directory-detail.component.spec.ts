@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { OpenTournamentService } from '../../core/open-tournament.service';
+import { AuthService } from '@rh/core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
@@ -23,6 +25,10 @@ function entry(id: string, over: Partial<DirectoryEntry> = {}): DirectoryEntry {
 }
 
 describe('TournamentDirectoryDetailComponent', () => {
+  /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
+  let signedIn = true;
+  beforeEach(() => { signedIn = true; });
+
   let fixture: ComponentFixture<TournamentDirectoryDetailComponent>;
   let component: TournamentDirectoryDetailComponent;
   let http: HttpTestingController;
@@ -37,6 +43,8 @@ describe('TournamentDirectoryDetailComponent', () => {
       ],
     }).compileComponents();
 
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentDirectoryDetailComponent);
     component = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
@@ -114,6 +122,31 @@ describe('TournamentDirectoryDetailComponent', () => {
     flushImportLookup('1457129', { id: 12, chessResultsId: '1457129', name: 'Open Braunau 2026' });
 
     expect(component.imported()?.id).toBe(12);
+  });
+
+  /**
+   * Ohne Konto (seit 0.643.0): ein noch nicht geholtes Turnier bekommt trotzdem „Teilnehmer und Ergebnisse" — der
+   * Knopf holt es und oeffnet es (Merken, das sonst holt, braucht ein Konto und fuehrt zur Anmeldung).
+   */
+  it('holt fuer Gaeste ein noch nicht geholtes Turnier ueber „Teilnehmer und Ergebnisse"', async () => {
+    signedIn = false;
+    await setup('1457129');
+    http.expectOne('/api/tournament-directory/1457129').flush(entry('1457129'));
+    flushImportLookup('1457129');
+    fixture.detectChanges();
+    const open = spyOn(TestBed.inject(OpenTournamentService), 'open');
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('.detail-actions button')) as HTMLButtonElement[];
+    const results = buttons.find(b => b.textContent?.includes('tournamentDirectory.detail.results'));
+    expect(results).withContext('Ergebnis-Knopf fuer Gaeste').toBeTruthy();
+    results!.click();
+    expect(open).toHaveBeenCalledWith('1457129');
+
+    component.bookmark();
+    expect(String(navigate.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
+    expect(fixture.nativeElement.textContent).toContain('tournamentDirectory.detail.notImportedHintGuest');
+    http.verify();
   });
 
   it('nimmt kein fremdes Turnier, das nur zufällig auf die interne Nummer passt', async () => {

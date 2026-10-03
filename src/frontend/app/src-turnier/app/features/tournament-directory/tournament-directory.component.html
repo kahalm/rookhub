@@ -79,6 +79,7 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #profileMenu="matMenu">
+      <!-- Ohne Anmeldung fuehrt „Neues Suchprofil" zur Anmeldung (requireAccount) — Filter speichern braucht ein Konto. -->
       @if (profiles().length > 0) {
         <button mat-menu-item [matMenuTriggerFor]="profilePick">
           <mat-icon>bookmarks</mat-icon>
@@ -187,9 +188,12 @@
         {{ 'tournamentDirectory.hideLeagues' | translate }}
       </mat-slide-toggle>
 
-      <mat-slide-toggle [ngModel]="filter.includeIgnored" (ngModelChange)="onIncludeIgnoredChange($event)">
-        {{ 'tournamentDirectory.card.showIgnored' | translate }}
-      </mat-slide-toggle>
+      <!-- Ausgeblendet hat nur ein Konto etwas. -->
+      @if (loggedIn) {
+        <mat-slide-toggle [ngModel]="filter.includeIgnored" (ngModelChange)="onIncludeIgnoredChange($event)">
+          {{ 'tournamentDirectory.card.showIgnored' | translate }}
+        </mat-slide-toggle>
+      }
 
       <!-- Unplausible Laufzeiten („2007 bis 2026") blendet der Server standardmaessig aus; der
            Schalter holt sie zurueck — sie koennen echte Langzeitwettbewerbe sein. -->
@@ -221,6 +225,14 @@
 
       <button mat-button (click)="resetFilter()">{{ 'tournamentDirectory.reset' | translate }}</button>
     </div>
+  }
+
+  <!-- Ohne Konto: lesen geht alles, speichern nicht — einmal sagen, was ein Konto dazu bringt (0.643.0). -->
+  @if (!loggedIn) {
+    <p class="hint guest-hint">
+      {{ 'tournamentDirectory.guestHint' | translate }}
+      <button mat-stroked-button (click)="newProfile()">{{ 'nav.login' | translate }}</button>
+    </p>
   }
 
   <!-- Nur nach einem geglueckten Abruf: ein gescheiterter hiesse sonst „du hast noch keins". -->

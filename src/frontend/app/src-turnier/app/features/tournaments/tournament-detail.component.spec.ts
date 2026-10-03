@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { AuthService } from '@rh/core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideTranslateService } from '@ngx-translate/core';
 import { TournamentDetailComponent } from './tournament-detail.component';
@@ -10,6 +11,10 @@ import { SnackbarService } from '@rh/core/snackbar.service';
 import { OpenTournamentService } from '../../core/open-tournament.service';
 
 describe('TournamentDetailComponent', () => {
+  /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
+  let signedIn = true;
+  beforeEach(() => { signedIn = true; });
+
   it('creates (template AOT-compiles + DI resolves)', async () => {
     await TestBed.configureTestingModule({
       imports: [TournamentDetailComponent],
@@ -21,8 +26,49 @@ describe('TournamentDetailComponent', () => {
         provideTranslateService({ fallbackLang: 'en' }),
       ],
     }).compileComponents();
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     const fixture = TestBed.createComponent(TournamentDetailComponent);
     expect(fixture.componentInstance).toBeTruthy();
+  });
+
+  /**
+   * Ohne Konto (seit 0.643.0): Teilnehmer, Teams und Paarungen laden wie sonst, aber KEIN persoenlicher Abruf
+   * (Favoriten, Merkliste, Beobachtung — die endeten nur in 401 und „Abo-Status konnte nicht geladen werden").
+   * Sterne liegen auf dem Geraet, mit denselben Schluesseln wie die oeffentliche Ansicht /t/{id}; Merken fuehrt zur
+   * Anmeldung.
+   */
+  it('laesst Gaeste ohne persoenliche Abrufe hinein, Sterne auf dem Geraet, Merken zur Anmeldung', async () => {
+    signedIn = false;
+    localStorage.removeItem('public_fav_players_4711');
+    await TestBed.configureTestingModule({
+      imports: [TournamentDetailComponent],
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
+        provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' }),
+        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
+      ],
+    }).compileComponents();
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
+    const fixture = TestBed.createComponent(TournamentDetailComponent);
+    const http = TestBed.inject(HttpTestingController);
+    fixture.detectChanges();
+    http.expectOne('/api/tournaments/4711').flush({
+      id: 1, name: 'Schach Tirol Open', chessResultsId: '4711', location: null, date: null, totalRounds: 0, knownRounds: 0, createdAt: '', updatedAt: '',
+    });
+    http.expectOne('/api/tournaments/4711/players').flush([{ id: 1, snr: 7, title: null, name: 'Anna', fideId: null, elo: 1900, country: 'AUT', teamName: null, boardNumber: null }]);
+    http.expectOne('/api/tournaments/4711/teams').flush([]);
+    http.verify();   // keine Favoriten, keine Merkliste, keine Beobachtung
+
+    const component = fixture.componentInstance;
+    component.toggleFavorite(component.players[0]);
+    expect(JSON.parse(localStorage.getItem('public_fav_players_4711')!)).toEqual([7]);
+
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+    component.subscribe();
+    expect(String(navigate.calls.mostRecent().args[0])).toContain('/login?returnUrl=');
+    http.verify();
+    localStorage.removeItem('public_fav_players_4711');
   });
 
   /** Rendert die Detailseite bis zur Aktionsleiste; alle Start-Requests werden mit Leerdaten beantwortet. */
@@ -39,6 +85,8 @@ describe('TournamentDetailComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
       ],
     }).compileComponents();
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     const fixture = TestBed.createComponent(TournamentDetailComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges(); // ngOnInit
@@ -415,6 +463,8 @@ describe('TournamentDetailComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
       ],
     }).compileComponents();
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     const fixture = TestBed.createComponent(TournamentDetailComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges(); // ngOnInit
@@ -479,6 +529,8 @@ describe('TournamentDetailComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '4711' }), queryParams: {} } } },
       ],
     }).compileComponents();
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     const fixture = TestBed.createComponent(TournamentDetailComponent);
     const http = TestBed.inject(HttpTestingController);
     const c = fixture.componentInstance;

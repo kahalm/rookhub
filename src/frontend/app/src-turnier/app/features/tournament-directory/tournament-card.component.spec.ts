@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { AuthService } from '@rh/core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -27,6 +29,10 @@ function entry(over: Partial<DirectoryEntry> = {}): DirectoryEntry {
  * der Karte fand, musste erst auf die Detailseite, um es zu merken.
  */
 describe('TournamentCardComponent', () => {
+  /** Angemeldet? Gast-Tests setzen das vor dem Aufbau auf false (Turnierseite seit 0.643.0 ohne Konto offen). */
+  let signedIn = true;
+  beforeEach(() => { signedIn = true; });
+
   let fixture: ComponentFixture<TournamentCardComponent>;
   let component: TournamentCardComponent;
   let http: HttpTestingController;
@@ -39,6 +45,8 @@ describe('TournamentCardComponent', () => {
         provideTranslateService({ fallbackLang: 'en' }),
       ],
     });
+    // Diese Specs pruefen das ANGEMELDETE Verhalten (Gaeste: eigene Tests, seit 0.643.0 ohne Anmeldung offen).
+    spyOnProperty(TestBed.inject(AuthService), 'isLoggedIn', 'get').and.callFake(() => signedIn);
     fixture = TestBed.createComponent(TournamentCardComponent);
     component = fixture.componentInstance;
     fixture.componentRef.setInput('entry', entry(over));
@@ -52,6 +60,24 @@ describe('TournamentCardComponent', () => {
   }
 
   afterEach(() => TestBed.resetTestingModule());
+
+  /**
+   * Ohne Konto (Kalender seit 0.643.0 offen): kein „Ausblenden" (gehoert einem Konto), und Merken bzw. Melden
+   * fuehren zur Anmeldung mit Ruecksprung — ohne einen einzigen Abruf, der nur in 401 enden wuerde.
+   */
+  it('fuehrt Gaeste zum Merken und Melden zur Anmeldung und bietet kein Ausblenden an', () => {
+    signedIn = false;
+    setup();
+    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl').and.resolveTo(true);
+
+    expect(fixture.nativeElement.querySelectorAll('.tc-actions button').length).toBe(3);
+    component.bookmark();
+    component.report();
+
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(String(navigate.calls.first().args[0])).toContain('/login?returnUrl=');
+    http.verify();
+  });
 
   it('bietet vier Aktionen an', () => {
     setup();

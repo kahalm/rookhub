@@ -20,6 +20,8 @@ import { TeamPlayersDialogComponent } from './team-players-dialog.component';
 import { TournamentTablesComponent } from './tournament-tables.component';
 import { Tournament, TournamentGroup, TournamentPlayer, TournamentTeam, DisplayPairing, Subscription } from '@rh/core/models';
 import { OpenTournamentService } from '../../core/open-tournament.service';
+import { requireAccount } from '../../core/require-account';
+import { AuthService } from '@rh/core/auth.service';
 import { PLAYER_COLUMNS, TEAM_COLUMNS, PAIRING_COLUMNS, toDisplayPairings } from './tournament-table.util';
 import { TournamentDetailService } from './tournament-detail.service';
 import { displayedTables } from './tournament-favorites.util';
@@ -87,6 +89,15 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   constructor(private route: ActivatedRoute, private router: Router, private api: TournamentDetailService, private snackbar: SnackbarService, private dialog: MatDialog, private notificationService: NotificationService, private translate: TranslateService) {}
 
   private readonly opener = inject(OpenTournamentService);
+  private readonly auth = inject(AuthService);
+
+  /**
+   * Angemeldet? Seit 0.643.0 ist die Seite ohne Konto offen: Teilnehmer, Paarungen, Tabelle, Aktualisieren und
+   * Teilen gehen für alle; Merken, Beobachten und Vereine nachtragen führen ohne Konto zur Anmeldung. Sterne und
+   * „Nur Favoriten" liegen bei Gästen auf dem Gerät — wie in der öffentlichen Ansicht /t/{id}, mit denselben
+   * Schlüsseln, damit beide Ansichten dieselben Sterne zeigen.
+   */
+  get loggedIn(): boolean { return this.auth.isLoggedIn; }
   /** Welche Gruppe gerade geoeffnet wird — sperrt die Leiste, bis die Seite wechselt. */
   readonly opening = this.opener.opening;
 
@@ -117,8 +128,14 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const tab = this.route.snapshot.queryParams['tab'];
     const tabIndex = TournamentDetailComponent.TAB_NAMES.indexOf(tab);
     if (tabIndex >= 0) this.selectedTabIndex = tabIndex;
-    this.loadFavorites();
     this.loadTournament();
+    if (!this.loggedIn) {
+      // Merkliste, Beobachtung und Server-Favoriten gehören einem Konto — die Abrufe endeten nur in 401
+      // (und „Abo-Status konnte nicht geladen werden" bei jedem Aufruf).
+      this.loadLocalFavorites();
+      return;
+    }
+    this.loadFavorites();
     this.loadSubscription();
     this.loadMonitorStatus();
   }
@@ -175,6 +192,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   subscribe(): void {
+    if (!requireAccount(this.auth, this.router)) return;
     this.toggling = true;
     this.api.subscribe(this.id, this.tournament?.name ?? '').subscribe({
       next: (sub) => {
@@ -223,6 +241,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   }
 
   toggleMonitor(): void {
+    // Beobachten meldet neue Runden in die Glocke — dafür braucht es ein Konto.
+    if (!requireAccount(this.auth, this.router)) return;
     this.monitorToggling = true;
     if (this.monitoring) {
       this.api.stopMonitor(this.id).subscribe({
@@ -405,6 +425,8 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
    */
   fillClubs(): void {
     if (this.clubsBusy) return;
+    // Bis zu 150 Abrufe bei chess-results je Druck — das bleibt angemeldeten Nutzern vorbehalten.
+    if (!requireAccount(this.auth, this.router)) return;
     this.clubsBusy = true;
     this.api.fillClubs(this.id).subscribe({
       next: (res) => {
@@ -475,6 +497,34 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
 
   // --- Sorting ---
 
+  // --- Favorites für Gäste (gerätelokal, dieselben Schlüssel wie die öffentliche Ansicht /t/{id}) ---
+
+  private get playerFavKey(): string { return `public_fav_players_${this.id}`; }
+  private get teamFavKey(): string { return `public_fav_teams_${this.id}`; }
+  private get filterKey(): string { return `public_fav_filter_${this.id}`; }
+
+  private loadLocalFavorites(): void {
+    try {
+      const players = localStorage.getItem(this.playerFavKey);
+      if (players) this.favoriteSnrs = new Set(JSON.parse(players));
+      const teams = localStorage.getItem(this.teamFavKey);
+      if (teams) this.favoriteTeamSnrs = new Set(JSON.parse(teams));
+      const filter = localStorage.getItem(this.filterKey);
+      if (filter) this.showFavoritesOnly = JSON.parse(filter);
+    } catch {
+      // Gesperrter Speicher (Privatmodus): dann eben ohne Sterne vom letzten Mal.
+    }
+    this.refreshDisplayed();
+  }
+
+  private saveLocal(key: string, value: unknown): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Voller/gesperrter Speicher: der Stern gilt bis zum Neuladen.
+    }
+  }
+
   // --- Favorites (server-side) ---
 
   private loadFavorites(): void {
@@ -499,6 +549,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
   onFavoritesToggle(checked: boolean): void {
     this.showFavoritesOnly = checked;
     this.refreshDisplayed();
+    if (!this.loggedIn) { this.saveLocal(this.filterKey, checked); return; }
     this.api.saveFavoriteSettings(this.id, checked).subscribe({
       error: () => this.snackbar.warn(this.translate.instant('tournaments.favorites.filterSaveFailed'))
     });
@@ -543,6 +594,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const add = !this.favoriteSnrs.has(player.snr);
     this.favoriteSnrs = withSnr(this.favoriteSnrs, player.snr, add);
     this.refreshDisplayed();
+    if (!this.loggedIn) { this.saveLocal(this.playerFavKey, [...this.favoriteSnrs]); return; }
     this.saveFavorite(
       add ? this.api.addPlayerFavorite(this.id, player.snr) : this.api.removePlayerFavorite(this.id, player.snr),
       add, player.name,
@@ -557,6 +609,7 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     const add = !this.favoriteTeamSnrs.has(team.snr);
     this.favoriteTeamSnrs = withSnr(this.favoriteTeamSnrs, team.snr, add);
     this.refreshDisplayed();
+    if (!this.loggedIn) { this.saveLocal(this.teamFavKey, [...this.favoriteTeamSnrs]); return; }
     this.saveFavorite(
       add ? this.api.addTeamFavorite(this.id, team.snr) : this.api.removeTeamFavorite(this.id, team.snr),
       add, team.name,

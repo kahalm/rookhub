@@ -90,4 +90,21 @@ describe('TurnierAppComponent', () => {
 
     expect(start).toHaveBeenCalled();
   });
+
+  /**
+   * Seit 0.643.0 laedt die erste Seite schon als Gast, waehrend die Uebernahme der RookHub-Anmeldung laeuft. Bringt
+   * sie eine Anmeldung, wird einmal neu geladen — nicht ohne Anmeldung und nicht auf der Maske (dort navigiert
+   * leaveLoginMask).
+   */
+  it('laedt nach einer uebernommenen Anmeldung einmal neu, sonst nicht', () => {
+    const fixture = TestBed.createComponent(TurnierAppComponent);
+    const app = fixture.componentInstance as unknown as { afterAdoption(a: boolean): void; reloadPage(): void };
+    const reload = spyOn(app, 'reloadPage');
+
+    app.afterAdoption(false);
+    expect(reload).not.toHaveBeenCalled();
+
+    app.afterAdoption(true);
+    expect(reload).withContext(location.pathname).toHaveBeenCalledTimes(location.pathname.endsWith('/login') ? 0 : 1);
+  });
 });

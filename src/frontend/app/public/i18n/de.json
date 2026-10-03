@@ -3772,6 +3772,7 @@
     "openChessResults": "Auf chess-results öffnen",
     "unknownTournament": "Dieses Turnier steht (noch) nicht im Verzeichnis.",
     "noProfileHint": "Noch kein Suchprofil. Damit bekommst du eine Umkreissuche und eine Meldung über neue Turniere in der Nähe.",
+    "guestHint": "Suchen und Ansehen geht ohne Konto. Filter als Suchprofil speichern, Turniere merken und Spieler favorisieren braucht eins — es ist kostenlos.",
     "tabs": {
       "list": "Liste",
       "map": "Karte",
@@ -3796,6 +3797,7 @@
       "director": "Turnierleitung",
       "results": "Teilnehmer und Ergebnisse",
       "notImportedHint": "Teilnehmer, Paarungen und Tabelle liegen noch nicht auf RookHub. Merke das Turnier, dann werden sie gleich geholt.",
+      "notImportedHintGuest": "Teilnehmer, Paarungen und Tabelle liegen noch nicht auf RookHub. „Teilnehmer und Ergebnisse“ holt sie — das dauert bis zu zwei Minuten.",
       "venueMap": "Austragungsort",
       "importing": "Turnier wird geholt…",
       "importDone": "Turnier geholt — Teilnehmer und Ergebnisse sind da.",

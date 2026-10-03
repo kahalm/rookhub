@@ -15,9 +15,14 @@ namespace RookHub.Api.Controllers;
 /// Lesezugriff aufs Turnierverzeichnis: Liste, Karte, Kalender, Detail. Gefuellt wird es vom
 /// naechtlichen Sweep (<see cref="TournamentDirectoryService"/>); hier wird nichts gecrawlt.
 /// </summary>
+/// <remarks>
+/// Seit 0.643.0 OHNE Anmeldung lesbar (Suche, Karte, Monat, Eintrag, Orte) — die Turnierseite soll ohne Konto voll
+/// benutzbar sein. Was dem NUTZER gehört (ausblenden, melden, Quelle vorschlagen), verlangt weiter ein Konto; ohne
+/// Anmeldung sind „gemerkt" und „ausgeblendet" schlicht falsch. Gedrosselt je Konto bzw. Adresse
+/// (<see cref="RateLimitPartitions.DirectoryReadPolicy"/>).
+/// </remarks>
 [ApiController]
 [Route("api/tournament-directory")]
-[Authorize]
 public class TournamentDirectoryController : BaseApiController
 {
     private const int MaxWindowDays = 3 * 366;
@@ -59,6 +64,8 @@ public class TournamentDirectoryController : BaseApiController
     /// ein Profil soll reproduzierbar dasselbe liefern wie die naechtliche Benachrichtigung).
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<DirectoryPageDto>> Search(
         [FromQuery] string? from = null, [FromQuery] string? to = null,
         [FromQuery] double? lat = null, [FromQuery] double? lon = null, [FromQuery] int? radiusKm = null,
@@ -97,6 +104,8 @@ public class TournamentDirectoryController : BaseApiController
     /// <c>limit</c> Zeilen hat (dann fehlen die spaetesten Turniere).
     /// </summary>
     [HttpGet("map")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<DirectoryMapDto>> Map(
         [FromQuery] string bbox,
         [FromQuery] string? from = null, [FromQuery] string? to = null,
@@ -140,6 +149,8 @@ public class TournamentDirectoryController : BaseApiController
     /// deshalb an jedem seiner Tage - genau so, wie ein Kalender es zeigen soll.
     /// </summary>
     [HttpGet("calendar")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<DirectoryCalendarDto>> Calendar(
         [FromQuery] int year, [FromQuery] int month,
         [FromQuery] double? lat = null, [FromQuery] double? lon = null, [FromQuery] int? radiusKm = null,
@@ -201,6 +212,8 @@ public class TournamentDirectoryController : BaseApiController
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<DirectoryEntryDto>> Get(string id, CancellationToken ct)
     {
         if (!DirectoryPublicId.IsValid(id))
@@ -217,6 +230,8 @@ public class TournamentDirectoryController : BaseApiController
 
     /// <summary>Ortsvorschlaege (PLZ oder Name) fuer das Suchprofil-Formular.</summary>
     [HttpGet("places")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<List<GeoPlaceSuggestionDto>>> Places(
         [FromQuery] string q, CancellationToken ct)
     {
@@ -242,6 +257,7 @@ public class TournamentDirectoryController : BaseApiController
     /// <para>Idempotent: zweimal ausblenden ist dasselbe wie einmal.</para>
     /// </summary>
     [HttpPost("{id}/ignore")]
+    [Authorize]
     public async Task<IActionResult> Ignore(string id, CancellationToken ct)
     {
         id = (id ?? "").Trim();
@@ -274,6 +290,7 @@ public class TournamentDirectoryController : BaseApiController
 
     /// <summary>Ein ausgeblendetes Turnier wieder zeigen (idempotent).</summary>
     [HttpDelete("{id}/ignore")]
+    [Authorize]
     public async Task<IActionResult> Unignore(string id, CancellationToken ct)
     {
         id = (id ?? "").Trim();
@@ -307,6 +324,7 @@ public class TournamentDirectoryController : BaseApiController
     /// gemeinsamer Topf): jede Meldung ist eine Admin-Nachricht bis 4000 Zeichen.</para>
     /// </summary>
     [HttpPost("{id}/report")]
+    [Authorize]
     [EnableRateLimiting("user-message")]
     public async Task<IActionResult> Report(
         string id, [FromBody] DirectoryReportDto dto, CancellationToken ct)
@@ -335,6 +353,7 @@ public class TournamentDirectoryController : BaseApiController
     /// Rueckfragen moeglich sind — und teilt deshalb auch deren Drossel je Konto („user-message").</para>
     /// </summary>
     [HttpPost("suggest-source")]
+    [Authorize]
     [EnableRateLimiting("user-message")]
     public async Task<IActionResult> SuggestSource([FromBody] DirectorySourceSuggestionDto dto)
     {
@@ -418,6 +437,8 @@ public class TournamentDirectoryController : BaseApiController
     /// Feld leer, aber die Koordinaten gelten trotzdem).
     /// </summary>
     [HttpGet("places/nearest")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPartitions.DirectoryReadPolicy)]
     public async Task<ActionResult<GeoPlaceSuggestionDto>> NearestPlace(
         [FromQuery] double lat, [FromQuery] double lon, CancellationToken ct)
     {
@@ -521,7 +542,8 @@ public class TournamentDirectoryController : BaseApiController
         var list = ids.Where(id => id is not null).Select(id => id!).Distinct().ToList();
         if (list.Count == 0) return [];
 
-        var userId = GetUserId();
+        // Ohne Anmeldung gibt es nichts Ausgeblendetes.
+        if (GetUserIdOrNull() is not { } userId) return [];
         return (await _db.TournamentDirectoryIgnores
                 .Where(i => i.UserId == userId && list.Contains(i.PublicId))
                 .Select(i => i.PublicId)
@@ -539,7 +561,8 @@ public class TournamentDirectoryController : BaseApiController
         var list = ids.Distinct().ToList();
         if (list.Count == 0) return [];
 
-        var userId = GetUserId();
+        // Ohne Anmeldung ist nichts gemerkt.
+        if (GetUserIdOrNull() is not { } userId) return [];
         var found = await _db.TournamentSubscriptions.AsNoTracking()
             .Where(s => s.UserId == userId && list.Contains(s.CrawlerTournamentId))
             .Select(s => s.CrawlerTournamentId)
@@ -591,8 +614,10 @@ public class TournamentDirectoryController : BaseApiController
 
         if (profileId is { } id)
         {
-            var profile = await _db.TournamentSearchProfiles.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == GetUserId(), ct);
+            // Suchprofile gehören einem Konto — ohne Anmeldung gibt es keines (→ 400 „Unknown search profile.").
+            var owner = GetUserIdOrNull();
+            var profile = owner is null ? null : await _db.TournamentSearchProfiles.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == owner, ct);
             if (profile is null) return (null, "Unknown search profile.");
 
             lat = profile.Lat;
@@ -633,7 +658,7 @@ public class TournamentDirectoryController : BaseApiController
             MinPlayers = minPlayers,
             // Ausgeblendete Turniere gehoeren dem NUTZER, nicht dem Filter — deshalb wandert die
             // Kennung mit in die Abfrage und nicht eine fertige Liste von Nummern.
-            ForUserId = GetUserId(),
+            ForUserId = GetUserIdOrNull(),
             IncludeIgnored = audience?.IncludeIgnored ?? false,
             Kinds = kinds.Count > 0 ? kinds : null,
             Genders = genders.Count > 0 ? genders : null,
