@@ -732,6 +732,17 @@ Seit 0.525.2 zusätzlich `-webkit-tap-highlight-color: transparent` für `.board
 `cg-board` (ebenfalls global in `styles.scss`): mobile Browser färbten angetippte klickbare Flächen kurz blau ein —
 gemeldet als „beim Tippen aufs Brett blinkt etwas blau auf".
 
+**Partieseite: Tipp oder Zug** (0.654.0, Wunsch 2026-10-04: „erkennst du den Unterschied zwischen Tippen und Ziehen?"):
+in `shared-game` gibt es KEINE `.board-tap`-Zonen mehr — sie lagen über dem Brett und schluckten jede Berührung, eine
+Figur ließ sich dort nie ziehen. Das Brett ist jetzt immer `playable`; `onBoardTap` wertet `pointerdown`/`pointerup`
+(nur Touch, nur primärer Finger) als TIPP, wenn sich der Finger höchstens 10 px bewegt und höchstens 500 ms liegt
+(`TAP_SLOP_PX`/`TAP_MAX_MS`) — linke 40 % zurück, rechte 40 % vor, Mitte nichts. Alles andere ist Ziehen und gehört
+Chessground; ein gezogener Zug (`onBoardMove`) schaltet die Live-Engine ein und spielt ihn als eigene Variante. Auf groben
+Zeigern (`(pointer: coarse)`) ist Antippen-und-Zielfeld aus (`ChessBoardComponent.clickToMove = false`), sonst wäre ein
+Tipp auf eine Figur „auswählen" statt „blättern". Pointer-Ereignisse kommen trotz Chessgrounds `preventDefault` auf
+`touchstart` an (deshalb vorher die Overlays: ein `click` entsteht dort nicht). pgn-viewer, shared-line und das
+Analysebrett behalten ihre Zonen (dort liegen sie neben dem Brett bzw. das Brett ist nicht spielbar).
+
 ## API-Aufrufe (alle relativ, nginx proxied zu API)
 
 | Component | Endpoints |

@@ -153,8 +153,9 @@ describe('SharedGameComponent', () => {
     expect(game.mistakeTotal()).toBe(1);
   });
 
-  // Live-Engine (0.525.0): das Brett wird spielbar, die Tippzonen fallen weg, die Leiste zeigt die Linien.
-  it('live engine: the board becomes playable, tap zones go, the panel appears — and all of it goes away again', async () => {
+  // Live-Engine (0.525.0): die eigene Variante, die Leiste zeigt die Linien. Seit 0.654.0 ist das Partie-Brett immer
+  // spielbar (Tipp = blättern, Ziehen = Variante), die Tippzonen über dem Brett gibt es nicht mehr.
+  it('live engine: the board stays playable, the tap navigation moves to the live board — and back again', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
     http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
@@ -171,20 +172,21 @@ describe('SharedGameComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     const board = () => fixture.debugElement.query(By.directive(ChessBoardComponent)).componentInstance as ChessBoardComponent;
 
-    expect(board().playable).toBeFalse();
-    expect(el.querySelector('.board-tap')).not.toBeNull();
+    expect(board().playable).toBeTrue();
+    expect(el.querySelector('.board-tap')).toBeNull();
+    expect(el.querySelector('app-chess-board.board-tapnav')).not.toBeNull();
 
     (el.querySelector('button.live-toggle') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(board().playable).toBeTrue();
-    expect(el.querySelector('.board-tap')).toBeNull();
+    expect(el.querySelector('app-chess-board.board-tapnav')).toBeNull();
     expect(el.querySelector('app-live-engine-panel')).not.toBeNull();
     expect(analyzed.length).toBeGreaterThan(0);
 
     (el.querySelector('button.live-toggle') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(engine.destroy).toHaveBeenCalled();
-    expect(board().playable).toBeFalse();
+    expect(el.querySelector('app-chess-board.board-tapnav')).not.toBeNull();
     expect(el.querySelector('app-live-engine-panel')).toBeNull();
   });
 
@@ -393,19 +395,46 @@ describe('SharedGameComponent', () => {
   // Gemeldet 2026-09-23: schnelles Doppeltippen auf den Brettrand markierte Text (und Safari zoomte). Die
   // Tippzonen sind nackte divs; die Regel dafür steht EINMAL in styles.scss (vier Komponenten teilen sie) —
   // Karma lädt das globale Stylesheet, also ist sie hier am gerenderten Element prüfbar.
-  it('tap zones beside the board are excluded from text selection and double-tap zoom', async () => {
+  // Wunsch 2026-10-04: „erkennst du den Unterschied zwischen Tippen und Ziehen? Wenn jemand eine Figur zieht, nicht als
+  // Tipp für vor/zurück nehmen, sondern die Figur fahren."
+  it('a short touch on the left/right of the board pages back/forward; a moving touch does not', async () => {
     const { fixture, http } = await setup();
     fixture.detectChanges();
     http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
     fixture.detectChanges();
+    const page = fixture.componentInstance;
+    const host = (fixture.nativeElement as HTMLElement).querySelector('app-chess-board.board-tapnav') as HTMLElement;
+    const r = host.getBoundingClientRect();
+    const back = spyOn(page.service, 'goBack');
+    const forward = spyOn(page.service, 'goForward');
+    const touch = (type: string, x: number, y = r.top + 10) =>
+      host.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y }));
 
-    const zones = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.board-tap')) as HTMLElement[];
-    expect(zones.length).toBe(2);
-    for (const z of zones) {
-      const cs = getComputedStyle(z);
-      expect(cs.userSelect).toBe('none');
-      expect(cs.touchAction).toBe('manipulation');
-    }
+    touch('pointerdown', r.left + r.width * 0.1); touch('pointerup', r.left + r.width * 0.1);
+    expect(back).toHaveBeenCalledTimes(1);
+    touch('pointerdown', r.left + r.width * 0.9); touch('pointerup', r.left + r.width * 0.9 + 3);
+    expect(forward).toHaveBeenCalledTimes(1);
+    // Ziehen: der Finger wandert ein Feld weiter — das gehört dem Brett
+    touch('pointerdown', r.left + r.width * 0.1); touch('pointerup', r.left + r.width * 0.1, r.top + 10 + r.height / 8);
+    // Mitte: weder vor noch zurück
+    touch('pointerdown', r.left + r.width * 0.5); touch('pointerup', r.left + r.width * 0.5);
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(forward).toHaveBeenCalledTimes(1);
+    expect(getComputedStyle(host).userSelect).toBe('none');
+  });
+
+  it('a piece moved on the game board starts the own variation with the live engine', async () => {
+    const { fixture, http } = await setup();
+    fixture.detectChanges();
+    http.expectOne(req => req.url.startsWith('/api/games/shared/')).flush(sharedGame('white'));
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+    const play = jasmine.createSpy('play');
+    spyOn(page, 'toggleLive').and.callFake(() => page.live.set({ play } as never));
+    page.onBoardMove({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'x' });
+    expect(page.toggleLive).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledWith({ from: 'g1', to: 'f3', san: 'Nf3', fen: 'x' }, page.service.currentFen);
+    page.live.set(null);
   });
 
   it('analyze without login: no request, goes to the login page and comes back here afterwards', async () => {
@@ -631,7 +660,7 @@ describe('SharedGameComponent', () => {
     } as never;
     game.mistakes.set({ white: [mistake], black: [] });
     fixture.detectChanges();
-    expect(el.querySelectorAll('.board-tap').length).toBe(2);
+    expect(el.querySelectorAll('.board-tapnav').length).toBe(1);
 
     game.trainMistakes();
     fixture.detectChanges();
@@ -639,7 +668,7 @@ describe('SharedGameComponent', () => {
     expect(document.querySelector('mat-dialog-container')).toBeNull();
     expect(el.querySelector('app-mistakes-trainer')).not.toBeNull();
     expect(el.querySelectorAll('app-chess-board').length).toBe(1);
-    expect(el.querySelectorAll('.board-tap').length).toBe(0);   // die Tippzonen schluckten sonst jeden Zug
+    expect(el.querySelectorAll('.board-tapnav').length).toBe(0);   // im Training gehört jeder Tipp dem Trainer-Brett
     expect(el.querySelector('button.mistakes')).toBeNull();
     expect(game.training()!.boardFen()).toBe(fenBefore);
     expect(game.training()!.playable()).toBeTrue();
@@ -651,7 +680,7 @@ describe('SharedGameComponent', () => {
     game.endTraining();
     fixture.detectChanges();
     expect(el.querySelector('app-mistakes-trainer')).toBeNull();
-    expect(el.querySelectorAll('.board-tap').length).toBe(2);
+    expect(el.querySelectorAll('.board-tapnav').length).toBe(1);
   });
 
   it('arrow keys do not page through the game while training', async () => {

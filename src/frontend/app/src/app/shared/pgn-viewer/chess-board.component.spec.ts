@@ -345,6 +345,26 @@ describe('ChessBoardComponent Umwandlung mit Auswahl', () => {
     host.remove();
   });
 
+  // 0.654.0: „nur ziehen" — auf der Partieseite am Handy ist ein Tipp aufs Brett zum Blättern da.
+  it('clickToMove=false: ziehen ja, antippen-und-Zielfeld nein; ändern wirkt sofort', async () => {
+    await TestBed.configureTestingModule({
+      imports: [ChessBoardComponent],
+      providers: [provideNoopAnimations(), provideTranslateService({ fallbackLang: 'en' })],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(ChessBoardComponent);
+    fixture.componentRef.setInput('playable', true);
+    fixture.componentRef.setInput('clickToMove', false);
+    fixture.detectChanges();
+    const cfg = () => (fixture.componentInstance as any).interactionConfig();
+    expect(cfg().draggable.enabled).toBeTrue();
+    expect(cfg().selectable.enabled).toBeFalse();
+    const set = spyOn((fixture.componentInstance as any).ground, 'set').and.callThrough();
+    fixture.componentRef.setInput('clickToMove', true);
+    fixture.detectChanges();
+    expect(set).toHaveBeenCalled();
+    expect(cfg().selectable.enabled).toBeTrue();
+  });
+
   it('zeigt den geteilten Umwandlungs-Wähler über dem Brett', async () => {
     await TestBed.configureTestingModule({
       imports: [ChessBoardComponent],

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.654.0", date: "2026-10-04", changes: [
+    { en: "Game page on the phone: a short tap on the left or right of the board still pages back and forward, but dragging a piece now moves it — the move starts your own variation with the live engine. Before, invisible tap zones over the board swallowed every touch, so no piece could be moved there.", de: "Partieseite am Handy: Ein kurzer Tipp links oder rechts aufs Brett blättert weiterhin zurück bzw. vor, aber eine gezogene Figur fährt jetzt — der Zug beginnt deine eigene Variante mit der Live-Engine. Vorher lagen unsichtbare Tippzonen über dem Brett und schluckten jede Berührung, dort ließ sich keine Figur ziehen." },
+  ] },
   { version: "0.653.0", date: "2026-10-04", changes: [
     { en: "LeagueHub: “Analyse” on a club game now opens it in RookHub like a game from “My games” — board, move list, evaluation curve, move classes and computer lines from the club’s background analysis, ready to click through. Before, it opened the empty analysis board.", de: "LeagueHub: „Analyse“ bei einer Vereinspartie öffnet sie jetzt in RookHub wie eine Partie aus „Meine Partien“ — Brett, Zugliste, Bewertungskurve, Zug-Klassen und Computer-Linien aus der Hintergrund-Analyse des Vereins, gleich zum Durchklicken. Vorher öffnete sich das leere Analysebrett." },
     { en: "A club game copied into “My games” (via “To my games” or as a downloaded and re-uploaded PGN) takes over the club’s analysis instead of being calculated a second time — the curve is there right away.", de: "Eine in „Meine Partien“ kopierte Vereinspartie (über „Zu meinen Partien“ oder als heruntergeladenes und wieder hochgeladenes PGN) übernimmt die Analyse des Vereins, statt ein zweites Mal gerechnet zu werden — die Kurve steht sofort da." },

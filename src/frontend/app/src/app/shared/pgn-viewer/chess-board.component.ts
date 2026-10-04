@@ -77,6 +77,9 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
    * Der Aufrufer MUSS auf (userMove) reagieren und die neue FEN zurückbinden — das Brett
    * selbst bleibt zustandslos (Anzeige der [fen]-Bindung). */
   @Input() playable = false;
+  /** Auf einem `playable`-Brett auch per Antippen ziehen (Figur antippen, dann Zielfeld). Aus = nur Ziehen (Drag) — so
+   *  bleibt ein Tipp aufs Brett frei für etwas anderes (Partieseite am Handy: Tipp = Zug vor/zurück, 0.654.0). */
+  @Input() clickToMove = true;
   /** Umwandlung ohne Rückfrage in eine Dame (für Stellen, die das bewusst wollen). */
   @Input() autoQueen = false;
   /**
@@ -211,7 +214,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
     // Neue Stellung oder gesperrt, während die Umwandlungs-Auswahl offen ist: sie gehört zur alten.
     if (changes['fen'] || changes['playable']) this.pendingPromotion.set(null);
     if (!this.ground) return;
-    if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable']) {
+    if (changes['fen'] || changes['lastMove'] || changes['flipped'] || changes['playable'] || changes['clickToMove']) {
       this.ground.set({
         fen: this.fen,
         // MUSS mitgegeben werden: Chessground dreht `turnColor` nach jedem Nutzerzug selbst um und
@@ -271,7 +274,7 @@ export class ChessBoardComponent implements AfterViewInit, OnChanges, OnDestroy 
         events: { after: (orig, dest) => this.onBoardMove(orig, dest) },
       },
       draggable: { enabled: true },
-      selectable: { enabled: true },
+      selectable: { enabled: this.clickToMove },
     };
   }
 

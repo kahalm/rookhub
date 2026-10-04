@@ -46,6 +46,9 @@ import { isBoardHotkey } from '../../shared/keyboard.util';
 /** „Kurz erzählt" entsteht nach der Analyse in ein paar Sekunden — so oft und so lange fragt die eigene Seite nach. */
 const RECAP_TRIES = 8;
 const RECAP_RETRY_MS = 15_000;
+/** Ab so viel Bewegung (px) bzw. Dauer (ms) ist eine Berührung des Bretts kein Tipp mehr, sondern Ziehen/Halten. */
+const TAP_SLOP_PX = 10;
+const TAP_MAX_MS = 500;
 
 /**
  * Nachspiel-Seite einer Partie — in ZWEI Rollen, dieselbe Ansicht:
@@ -204,12 +207,17 @@ const RECAP_RETRY_MS = 15_000;
                                    [arrows]="l.arrows()"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
                 } @else {
-                  <app-chess-board [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
-                                   [arrows]="bestArrows()" [badge]="moveBadge()"
+                  <!-- Tipp oder Zug (0.654.0, Wunsch 2026-10-04: „erkennst du den Unterschied zwischen Tippen und Ziehen?"):
+                       vorher lagen links/rechts unsichtbare Tippzonen ÜBER dem Brett und schluckten jede Berührung. Jetzt
+                       ist das Brett spielbar; ein kurzer Tipp ohne Bewegung auf das linke/rechte Fünftel-Paar blättert
+                       (onBoardTap), ein gezogener Zug startet die eigene Variante mit der Live-Engine (onBoardMove). Am
+                       Handy nur Ziehen — sonst wäre ein Tipp auf eine Figur „auswählen" statt „blättern". -->
+                  <app-chess-board class="board-tapnav" [fen]="service.currentFen" [lastMove]="service.lastMove" [flipped]="flipped"
+                                   [arrows]="bestArrows()" [badge]="moveBadge()" [playable]="true" [clickToMove]="!coarsePointer"
+                                   (userMove)="onBoardMove($event)"
+                                   (pointerdown)="onBoardPointerDown($event)" (pointerup)="onBoardTap($event)"
+                                   (pointercancel)="tapStart = null"
                                    [boardTheme]="preferences.boardTheme" [pieceSet]="preferences.pieceSet" />
-                  <!-- Die Tippzonen blieben im Training über dem Brett liegen und schluckten jeden Zug. -->
-                  <div class="board-tap board-tap-prev" (click)="service.goBack()"></div>
-                  <div class="board-tap board-tap-next" (click)="service.goForward()"></div>
                 }
               </div>
               @if (training(); as t) {
@@ -295,16 +303,7 @@ const RECAP_RETRY_MS = 15_000;
     .board-section { width: var(--board-size); display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
     .board-wrap { position: relative; width: var(--board-size); }
     .board-wrap app-chess-board { display: block; width: var(--board-size); }
-    .board-tap {
-      display: none;
-      position: absolute;
-      top: 0; bottom: 0;
-      width: 40%;
-      z-index: 10;
-      cursor: pointer;
-    }
-    .board-tap-prev { left: 0; }
-    .board-tap-next { right: 0; }
+    .board-tapnav { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
     .nav { display: flex; gap: 4px; }
     .pr-slot, .review-slot, .trainer-slot, .live-slot, .similar-slot { display: block; width: 100%; }
     .live-toggle.on { color: #42a5f5; }
@@ -325,7 +324,6 @@ const RECAP_RETRY_MS = 15_000;
       .board-section { width: 100%; max-width: 100%; align-items: center; }
       .board-wrap { width: 100%; }
       .board-wrap app-chess-board { width: 100%; }
-      .board-tap { display: block; }
       /* Reihenfolge am Handy: Drehen · Anfang ‖ ◀ ▶ ‖ Ende · Live — die häufigen Knöpfe groß in der Mitte, die
          Sprünge an den Rand mit Abstand, damit ein daneben getroffener Tipp nicht die ganze Partie überspringt. */
       .nav { width: 100%; box-sizing: border-box; align-items: center; gap: 4px; padding: 6px 8px; }
@@ -477,6 +475,36 @@ export class SharedGameComponent implements OnInit, DoCheck {
   /** Live-Engine + eigene Züge (0.525.0) — im Fehler-Training aus, dort verriete sie die Lösung. */
   readonly live = signal<LiveEngineSession | null>(null);
   private readonly stopLiveOnDestroy = inject(DestroyRef).onDestroy(() => { this.stopLive(); this.stopTrainingAnalysis(); });
+
+  /** Grobe Zeiger (Handy, Tablet): dort heißt ein Tipp aufs Brett „blättern", gezogen wird per Drag. */
+  readonly coarsePointer = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  /** Beginn einer Berührung auf dem Brett — ob daraus ein Tipp wird, entscheidet das Loslassen. */
+  tapStart: { x: number; y: number; t: number } | null = null;
+
+  onBoardPointerDown(e: PointerEvent): void {
+    this.tapStart = e.pointerType === 'touch' && e.isPrimary ? { x: e.clientX, y: e.clientY, t: Date.now() } : null;
+  }
+
+  /** Ein TIPP (kurz, ohne Bewegung) auf die linken bzw. rechten 40 % des Bretts = Zug zurück bzw. vor — wie vorher die
+   *  Tippzonen. Alles mit Bewegung ist ein Ziehen und gehört dem Brett. Nur Touch: mit der Maus gibt es die Pfeile. */
+  onBoardTap(e: PointerEvent): void {
+    const s = this.tapStart;
+    this.tapStart = null;
+    if (!s || e.pointerType !== 'touch') return;
+    if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > TAP_SLOP_PX || Date.now() - s.t > TAP_MAX_MS) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (r.width <= 0) return;
+    const rel = (e.clientX - r.left) / r.width;
+    if (rel < 0.4) this.service.goBack();
+    else if (rel > 0.6) this.service.goForward();
+  }
+
+  /** Eine Figur auf dem Partie-Brett gezogen: wie auf Lichess eine eigene Variante ab hier — dafür gibt es die Live-Engine
+   *  (sie führt die Nebenvariante und rechnet sie gleich). Ist sie aus, wird sie dafür eingeschaltet. */
+  onBoardMove(move: UserBoardMove): void {
+    if (!this.live()) this.toggleLive();
+    this.live()?.play(move, this.service.currentFen);
+  }
 
   toggleLive(): void {
     if (this.live()) { this.stopLive(); return; }
