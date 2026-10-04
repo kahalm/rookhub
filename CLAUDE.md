@@ -1600,6 +1600,17 @@ Rollenverwaltung an).
   der Backtest `Hits`), `boards` = erster Vorschlag genau am Brett (= „gespielt" auf Platz 1), `of` = besetzte Bretter. Ältere
   Ansichten haben kein `eval` → zählen erst nach „Daten aktualisieren". Gemerkt je Saison + Stand der Ansichten (6 h).
   Hinter jedem Prognose-Vorschlag seit 0.649.0 „(n)" = Partien im Bestand (`cand[].g`, nachgezogen wie `roster[].g`).
+- **Stapel-Upload von Formular-Bildern (0.651.0**, Wunsch 2026-10-04: „beliebig viele Partien uploaden — nicht direkt
+  verarbeiten, nur am Server ablegen und eine Admin-Message darüber verfassen"): `Services/League/LeagueBatchUploadService.cs`,
+  Tabellen `LeagueBatchUploads` (Key 32 Hex, UserId? | ShareHash + AnonIpHash, Comment ≤1000, FileCount, TotalBytes,
+  FinishedAt) + `LeagueBatchUploadFiles` (LONGBLOB, Cascade). Ablage in der DB (Entscheidung des Users 04.10., kein Volume).
+  Endpunkte je unter `/api/league/club` (league.contribute) und `/api/league/s/{token}/club` (anonym): `POST batches`
+  `{comment}` → `{key}`, `POST batches/{key}/files` (ein Bild/PDF je Anfrage, ≤30 MB, über 12 MB auf 3000 px verkleinert —
+  nginx-Location wie `scans` 32M), `POST batches/{key}/finish` → angemeldet `AdminMessageService.SendFromUserAsync`
+  (Text mit `/admin?tab=uploads`), anonym Glocke `league_batch_uploaded` an messages.admin. Deckel: 1000 Bilder / 2 GB je
+  Stapel, anonym 1 GB je IP und 3 GB gesamt je Tag. Admin: `GET/DELETE /api/admin/league-uploads[/{id}]`,
+  `GET …/{id}/zip` (über Zwischendatei, DeleteOnClose), Tab „Uploads" (`admin-league-uploads.component.ts`, Key `uploads`).
+  Oberfläche: `shared/batch-upload.component.ts` im Bereich „Partieformular" der Upload-Seite.
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

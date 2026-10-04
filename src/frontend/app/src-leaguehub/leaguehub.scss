@@ -684,3 +684,10 @@ lh-online-accounts { display: block; }
 @container (max-width: 640px) {
   .club-table tr.game button.pl::after { bottom: -2px; }
 }
+
+/* Stapel-Upload (0.651.0) */
+lh-batch-upload { display: block; margin-top: 18px; }
+.batch { border-top: 1px solid var(--line); padding-top: 12px; }
+.batch summary { cursor: pointer; font-weight: 600; }
+.batch textarea { width: 100%; max-width: 560px; font: inherit; }
+.batch-done { color: var(--ok); font-weight: 600; }

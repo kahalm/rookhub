@@ -151,7 +151,8 @@
       "tournament_changed": "“{{tournamentName}}” has changed: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "“{{tournamentName}}” ({{date}}) has disappeared from chess-results — probably cancelled",
       "scoresheet_read": "Scoresheet read: {{white}} – {{black}}, {{moves}} half-moves, {{uncertain}} uncertain",
-      "scoresheet_failed": "Scoresheet could not be read: {{reason}}"
+      "scoresheet_failed": "Scoresheet could not be read: {{reason}}",
+      "league_batch_uploaded": "{{count}} scoresheet images were uploaded via a LeagueHub share link"
     },
     "chessableDuration": "fetched in {{fetchTime}}, queued {{queueTime}}",
     "viewAll": "View all",
@@ -2175,7 +2176,8 @@
       "messages": "Messages",
       "courseDl": "Course download",
       "ci": "CI / Actions",
-      "roles": "Roles"
+      "roles": "Roles",
+      "uploads": "Uploads"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2483,6 +2485,21 @@
       "rolesForGroup": "Roles of the group {{name}}",
       "groups": "Groups: {{names}}",
       "groupRolesSaved": "Group roles saved — they apply immediately."
+    },
+    "uploads": {
+      "intro": "LeagueHub batch uploads: scoresheet images that were only stored, not read. Download, process, then delete.",
+      "empty": "No batch uploads.",
+      "when": "When",
+      "who": "From",
+      "files": "Images",
+      "size": "Size",
+      "comment": "Comment",
+      "viaShare": "anonymous (share link)",
+      "open": "not finished",
+      "download": "Download ZIP",
+      "deleteConfirm": "Delete batch #{{id}} with {{count}} images for good?",
+      "deleted": "Batch deleted",
+      "downloadError": "Download failed"
     }
   },
   "favorites": {

@@ -247,6 +247,32 @@ internal sealed class LeagueClubDraftConfiguration : IEntityTypeConfiguration<Le
     }
 }
 
+internal sealed class LeagueBatchUploadConfiguration : IEntityTypeConfiguration<LeagueBatchUpload>
+{
+    public void Configure(EntityTypeBuilder<LeagueBatchUpload> e)
+    {
+        e.Property(b => b.Key).HasMaxLength(32);
+        e.HasIndex(b => b.Key).IsUnique();
+        e.Property(b => b.ShareHash).HasMaxLength(64);
+        e.Property(b => b.AnonIpHash).HasMaxLength(64);
+        e.Property(b => b.Comment).HasMaxLength(1000);
+        e.HasIndex(b => new { b.AnonIpHash, b.CreatedAt });
+        e.HasIndex(b => b.CreatedAt);
+        e.HasMany(b => b.Files).WithOne(f => f.Batch).HasForeignKey(f => f.BatchId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class LeagueBatchUploadFileConfiguration : IEntityTypeConfiguration<LeagueBatchUploadFile>
+{
+    public void Configure(EntityTypeBuilder<LeagueBatchUploadFile> e)
+    {
+        e.Property(f => f.FileName).HasMaxLength(200);
+        e.Property(f => f.ContentType).HasMaxLength(60);
+        e.Property(f => f.Data).HasColumnType("LONGBLOB");
+        e.HasIndex(f => f.BatchId);
+    }
+}
+
 internal sealed class LeagueNameAliasConfiguration : IEntityTypeConfiguration<LeagueNameAlias>
 {
     public void Configure(EntityTypeBuilder<LeagueNameAlias> e)

@@ -66,6 +66,8 @@ public partial class AppDbContext : DbContext
     public DbSet<LeagueMegaPlayer> LeagueMegaPlayers => Set<LeagueMegaPlayer>();
     public DbSet<LeagueNameAlias> LeagueNameAliases => Set<LeagueNameAlias>();
     public DbSet<LeagueClubDraft> LeagueClubDrafts => Set<LeagueClubDraft>();
+    public DbSet<LeagueBatchUpload> LeagueBatchUploads => Set<LeagueBatchUpload>();
+    public DbSet<LeagueBatchUploadFile> LeagueBatchUploadFiles => Set<LeagueBatchUploadFile>();
     // Spielervorbereitung (Prep): Partiebestand aus Megabase + Lumbra
     public DbSet<PrepPlayer> PrepPlayers => Set<PrepPlayer>();
     public DbSet<PrepEvent> PrepEvents => Set<PrepEvent>();

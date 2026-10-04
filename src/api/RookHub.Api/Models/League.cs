@@ -444,3 +444,44 @@ public class LeagueClubDraft
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
+
+/// <summary>
+/// Stapel-Upload von Partieformular-Bildern (0.651.0, Wunsch 2026-10-04: „beliebig viele Partien uploaden — nicht direkt
+/// verarbeiten, nur am Server ablegen und eine Admin-Nachricht darüber verfassen"). Ein Stapel sammelt die Bilder eines
+/// Hochladens; mit dem Abschluss (<see cref="FinishedAt"/>) geht die Meldung an die Admins. Gelesen wird nichts — ein Admin
+/// lädt den Stapel als ZIP herunter und löscht ihn danach. Regeln: <c>Services/League/LeagueBatchUploadService.cs</c>.
+/// </summary>
+public class LeagueBatchUpload
+{
+    public int Id { get; set; }
+    /// <summary>Geheimer Schlüssel des Stapels (32 Hex) — damit lädt die Seite weitere Bilder dazu.</summary>
+    public string Key { get; set; } = string.Empty;
+    /// <summary>Wer hochgeladen hat; <c>null</c> = über einen Teilen-Link ohne Konto.</summary>
+    public int? UserId { get; set; }
+    /// <summary>Ohne Konto: SHA-256 des Teilen-Links (<c>LeagueClubService.ShareHashOf</c>) — der Verwalter mit dem Link erkennt
+    /// ihn wieder, der Link selbst steht nirgends.</summary>
+    public string? ShareHash { get; set; }
+    /// <summary>Ohne Konto: HMAC der IP — für den Tagesdeckel je Adresse.</summary>
+    public string? AnonIpHash { get; set; }
+    /// <summary>Was der Hochladende dazuschreibt (≤ 1000).</summary>
+    public string? Comment { get; set; }
+    public int FileCount { get; set; }
+    public long TotalBytes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    /// <summary>Abgeschlossen = die Admins sind benachrichtigt; danach nimmt der Stapel nichts mehr an.</summary>
+    public DateTime? FinishedAt { get; set; }
+    public List<LeagueBatchUploadFile> Files { get; set; } = new();
+}
+
+/// <summary>Ein Bild eines <see cref="LeagueBatchUpload"/>, so wie es kam (größer als 12 MB: verkleinert, sonst unverändert).</summary>
+public class LeagueBatchUploadFile
+{
+    public int Id { get; set; }
+    public int BatchId { get; set; }
+    public LeagueBatchUpload Batch { get; set; } = null!;
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public byte[] Data { get; set; } = Array.Empty<byte>();
+    public int Size { get; set; }
+    public DateTime CreatedAt { get; set; }
+}

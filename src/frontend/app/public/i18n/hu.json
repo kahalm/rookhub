@@ -1787,7 +1787,8 @@
       "messages": "Üzenetek",
       "courseDl": "Tanfolyamok letöltése",
       "ci": "CI / Actions",
-      "roles": "Szerepek"
+      "roles": "Szerepek",
+      "uploads": "Feltöltések"
     },
     "users": {
       "searchLabel": "Felhasználók keresése",
@@ -2095,6 +2096,21 @@
       "rolesForGroup": "A(z) {{name}} csoport szerepkörei",
       "groups": "Csoportok: {{names}}",
       "groupRolesSaved": "A csoport szerepkörei elmentve — azonnal érvényesek."
+    },
+    "uploads": {
+      "intro": "LeagueHub csomagos feltöltések: lapképek, amelyeket csak eltároltunk, nem olvastunk be. Töltsd le, dolgozd fel, aztán töröld.",
+      "empty": "Nincs csomagos feltöltés.",
+      "when": "Mikor",
+      "who": "Kitől",
+      "files": "Képek",
+      "size": "Méret",
+      "comment": "Megjegyzés",
+      "viaShare": "névtelen (megosztási link)",
+      "open": "nincs lezárva",
+      "download": "ZIP letöltése",
+      "deleteConfirm": "Véglegesen törlöd a(z) #{{id}} csomagot ({{count}} kép)?",
+      "deleted": "Csomag törölve",
+      "downloadError": "A letöltés nem sikerült"
     }
   },
   "analysis": {
@@ -2448,7 +2464,8 @@
       "tournament_changed": "„{{tournamentName}}” megváltozott: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}” ({{date}}) eltűnt a chess-resultsról — valószínűleg elmarad",
       "scoresheet_read": "Játszmalap beolvasva: {{white}} – {{black}}, {{moves}} féllépés, {{uncertain}} bizonytalan",
-      "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}"
+      "scoresheet_failed": "A játszmalapot nem sikerült beolvasni: {{reason}}",
+      "league_batch_uploaded": "Egy LeagueHub megosztási linken {{count}} lapkép lett feltöltve"
     },
     "markAllRead": "Mind megjelölése olvasottként",
     "filter": {

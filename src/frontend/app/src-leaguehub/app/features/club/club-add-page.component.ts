@@ -1,3 +1,4 @@
+import { BatchUploadComponent } from '../../shared/batch-upload.component';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -51,7 +52,7 @@ const SAVE_DEBOUNCE_MS = 1500;
   selector: 'lh-club-add-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, ClubImportReviewComponent, AccessGateComponent],
+  imports: [RouterLink, ClubImportReviewComponent, AccessGateComponent, BatchUploadComponent],
   template: `
     @if (!allowed) {
       <!-- UX-033: wer schon lesen darf, gehört zur Lesegruppe — ihm fehlt nur das Beitragsrecht. -->
@@ -245,6 +246,7 @@ const SAVE_DEBOUNCE_MS = 1500;
               }
             </ul>
           }
+          <lh-batch-upload [client]="client" />
         </section>
       }
     }

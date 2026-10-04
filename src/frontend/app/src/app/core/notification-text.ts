@@ -63,6 +63,7 @@ export function notificationCategory(type: string): NotificationCategory {
     case 'tournament_cancelled':
       return 'tournaments';
     case 'new_user_registered':
+    case 'league_batch_uploaded':
       return 'admin';
     default:
       return 'other';
@@ -86,6 +87,7 @@ export function notificationIcon(n: AppNotification): string {
     case 'tournament_changed': return 'edit_calendar';
     case 'tournament_cancelled': return 'event_busy';
     case 'new_user_registered': return 'group_add';
+    case 'league_batch_uploaded': return 'photo_library';
     case 'chessable_token_added': return 'vpn_key';
     case 'chessable_new_course': return 'library_add';
     case 'course_shared': return 'group_add';

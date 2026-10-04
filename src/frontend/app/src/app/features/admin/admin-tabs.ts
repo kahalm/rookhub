@@ -15,6 +15,7 @@ export const ADMIN_TAB_KEYS = [
   'courseDl',  // 7
   'ci',        // 8
   'roles',     // 9
+  'uploads',   // 10 — LeagueHub-Stapel-Uploads (0.651.0)
 ] as const;
 
 export type AdminTabKey = typeof ADMIN_TAB_KEYS[number];

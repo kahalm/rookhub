@@ -538,5 +538,11 @@
           }
         </mat-tab>
 
+        <mat-tab [label]="'admin.tabs.uploads' | translate">
+          <ng-template matTabContent>
+            <app-admin-league-uploads />
+          </ng-template>
+        </mat-tab>
+
       </mat-tab-group>
     </div>

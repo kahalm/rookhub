@@ -249,6 +249,31 @@ public class LeagueClubController : BaseApiController
         return Accepted(scan);
     }
 
+    // ── Stapel-Upload (0.651.0): Bilder nur ablegen, nicht einlesen — die Admins bekommen eine Nachricht ──
+
+    public sealed record BatchStartRequest(string? Comment);
+
+    [HttpPost("batches")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<IActionResult> BatchStart([FromBody] BatchStartRequest? req, [FromServices] LeagueBatchUploadService batches,
+        CancellationToken ct) => Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), req?.Comment, ct));
+
+    [HttpPost("batches/{key}/files")]
+    [HasPermission(Permissions.LeagueContribute)]
+    [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
+    public async Task<IActionResult> BatchFile(string key, IFormFile? file, [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
+    {
+        if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
+        return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), key, data,
+            file!.ContentType, file.FileName, ct));
+    }
+
+    [HttpPost("batches/{key}/finish")]
+    [HasPermission(Permissions.LeagueContribute)]
+    public async Task<IActionResult> BatchFinish(string key, [FromServices] LeagueBatchUploadService batches, CancellationToken ct) =>
+        ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.User(GetUserId()), key, ct));
+
     /// <summary>Alle offenen Liga-Einlesungen, auch fremde und über Teilen-Links (Verwalter).</summary>
     [HttpGet("admin/scans")]
     [HasPermission(Permissions.LeagueManage)]
@@ -449,6 +474,33 @@ public class LeagueShareClubController : ControllerBase
         return Accepted(new { key, scan });
     }
 
+    [HttpPost("batches")]
+    public async Task<IActionResult> BatchStart(string token, [FromBody] LeagueClubController.BatchStartRequest? req,
+        [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return Ok(await batches.StartAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), req?.Comment, ct));
+    }
+
+    [HttpPost("batches/{key}/files")]
+    [RequestSizeLimit(ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ScoresheetScanService.MaxUploadBytes + 1024 * 1024)]
+    public async Task<IActionResult> BatchFile(string token, string key, IFormFile? file, [FromServices] LeagueBatchUploadService batches,
+        CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        if (await ClubUpload.ReadAsync(file) is not { } data) return BadRequest(ClubUpload.FileError(file));
+        return ClubUpload.BatchResult(this, await batches.AddFileAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), key, data,
+            file!.ContentType, file.FileName, ct));
+    }
+
+    [HttpPost("batches/{key}/finish")]
+    public async Task<IActionResult> BatchFinish(string token, string key, [FromServices] LeagueBatchUploadService batches, CancellationToken ct)
+    {
+        if (!await ValidAsync(token, ct)) return NotFound();
+        return ClubUpload.BatchResult(this, await batches.FinishAsync(LeagueBatchUploadService.Uploader.Share(token, IpHash), key, ct));
+    }
+
     [HttpGet("scans/{key}")]
     public async Task<ActionResult<LeagueScanStateDto>> Scan(string token, string key, CancellationToken ct)
     {
@@ -505,6 +557,12 @@ internal static class ClubUpload
         r.Result != null ? c.Ok(r.Result)
         : r.Reason == "busy" ? new ObjectResult(new { reason = r.Reason, message = r.Message }) { StatusCode = StatusCodes.Status429TooManyRequests }
         : c.BadRequest(new { reason = r.Reason, message = r.Message });
+
+    /// <summary>Antwort eines Stapel-Schritts: Stand, 404 (Stapel fremd/unbekannt) oder 400 mit Grund.</summary>
+    public static IActionResult BatchResult(ControllerBase c, (LeagueBatchUploadService.BatchState? State, string? Reason) r) =>
+        r.State is { } s ? c.Ok(s)
+        : r.Reason == "notFound" ? c.NotFound()
+        : c.BadRequest(new { reason = r.Reason, message = "Not accepted." });
 
     public static object FileError(IFormFile? file) => file == null || file.Length == 0
         ? new { reason = "noFile", message = "No file." } : new { reason = "tooLarge", message = "File too large." };

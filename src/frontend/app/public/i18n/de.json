@@ -151,7 +151,8 @@
       "tournament_changed": "„{{tournamentName}}“ hat sich geändert: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) ist von chess-results verschwunden — vermutlich abgesagt",
       "scoresheet_read": "Partieformular gelesen: {{white}} – {{black}}, {{moves}} Halbzüge, {{uncertain}} unsicher",
-      "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}"
+      "scoresheet_failed": "Partieformular konnte nicht gelesen werden: {{reason}}",
+      "league_batch_uploaded": "Über einen LeagueHub-Teilen-Link wurden {{count}} Formular-Bilder abgelegt"
     },
     "chessableDuration": "Holzeit {{fetchTime}}, Wartezeit {{queueTime}}",
     "viewAll": "Alle anzeigen",
@@ -2175,7 +2176,8 @@
       "messages": "Nachrichten",
       "courseDl": "Kurse holen",
       "ci": "CI / Actions",
-      "roles": "Rollen"
+      "roles": "Rollen",
+      "uploads": "Uploads"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2483,6 +2485,21 @@
       "rolesForGroup": "Rollen der Gruppe {{name}}",
       "groups": "Gruppen: {{names}}",
       "groupRolesSaved": "Gruppenrollen gespeichert — sie gelten sofort."
+    },
+    "uploads": {
+      "intro": "LeagueHub-Stapel-Uploads: Formular-Bilder, die nur abgelegt und nicht eingelesen wurden. Herunterladen, bearbeiten, danach löschen.",
+      "empty": "Keine Stapel-Uploads.",
+      "when": "Wann",
+      "who": "Von",
+      "files": "Bilder",
+      "size": "Größe",
+      "comment": "Kommentar",
+      "viaShare": "anonym (Teilen-Link)",
+      "open": "nicht abgeschlossen",
+      "download": "ZIP herunterladen",
+      "deleteConfirm": "Stapel #{{id}} mit {{count}} Bildern endgültig löschen?",
+      "deleted": "Stapel gelöscht",
+      "downloadError": "Download fehlgeschlagen"
     }
   },
   "favorites": {

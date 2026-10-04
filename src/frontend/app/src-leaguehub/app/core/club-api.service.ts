@@ -4,6 +4,9 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
 import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
+/** Stand eines Stapel-Uploads (0.651.0). */
+export interface BatchState { key: string; files: number; bytes: number; finished: boolean }
+
 /**
  * Die Vereins-Datenbank über EINE Oberfläche, zwei Wege: angemeldet (`/api/league/club`, Vereinsgruppe) oder OHNE Konto
  * über einen Teilen-Link (`/api/league/s/{token}/club`). Einlesungen heißen angemeldet nach ihrer Nummer, ohne Konto nach
@@ -147,6 +150,22 @@ export class ClubClient {
     }
     const list = await firstValueFrom(this.http.get<ScoresheetScan[]>(`${this.base}/scans`));
     return list.map(scan => ({ ref: String(scan.id), scan }));
+  }
+
+  // ── Stapel-Upload (0.651.0): nur ablegen, nicht einlesen ──
+
+  batchStart(comment: string): Promise<BatchState> {
+    return firstValueFrom(this.http.post<BatchState>(`${this.base}/batches`, { comment: comment.trim() || null }));
+  }
+
+  batchFile(key: string, file: File): Promise<BatchState> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return firstValueFrom(this.http.post<BatchState>(`${this.base}/batches/${encodeURIComponent(key)}/files`, form));
+  }
+
+  batchFinish(key: string): Promise<BatchState> {
+    return firstValueFrom(this.http.post<BatchState>(`${this.base}/batches/${encodeURIComponent(key)}/finish`, {}));
   }
 
   async upload(file: File, language: string, side: 'white' | 'black' | 'auto'): Promise<ScanRef> {

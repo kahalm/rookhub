@@ -263,6 +263,7 @@ try
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueImportService>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueRefresh>();
     builder.Services.AddScoped<RookHub.Api.Services.League.LeagueClubService>();
+    builder.Services.AddScoped<RookHub.Api.Services.League.LeagueBatchUploadService>();
     // ClubHub (Kartei der Kinder und Jugendlichen): Regeln + Sichtbarkeit, Lernstand aus dem verknüpften Konto
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubService>();
     builder.Services.AddScoped<RookHub.Api.Services.Club.ClubProgressService>();

@@ -34,6 +34,7 @@ import { AdminPuzzleTagsComponent } from './tabs/admin-puzzle-tags.component';
 import { AdminMenuVisibilityComponent } from './tabs/admin-menu-visibility.component';
 import { AdminMessagesComponent } from './tabs/admin-messages.component';
 import { AdminRolesComponent } from './tabs/admin-roles.component';
+import { AdminLeagueUploadsComponent } from './tabs/admin-league-uploads.component';
 import { adminTabIndex, ADMIN_TAB_KEYS, AdminTabKey } from './admin-tabs';
 import { clampGoal } from '../training-goals/goal.util';
 import { apiErrorText } from '../../core/api-error';
@@ -48,7 +49,8 @@ import { apiErrorText } from '../../core/api-error';
     MatChipsModule, MatSelectModule, MatTooltipModule, MatSlideToggleModule, MatCheckboxModule, MatProgressSpinnerModule, TranslatePipe, LoadingSpinnerComponent,
     AdminGithubActionsComponent, AdminChessableDownloadComponent,
     AdminDailyPuzzleComponent, AdminPuzzleTagsComponent, AdminMenuVisibilityComponent, AdminMessagesComponent,
-    AdminRolesComponent
+    AdminRolesComponent,
+    AdminLeagueUploadsComponent,
   ],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.scss'],

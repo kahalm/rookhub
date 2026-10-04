@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.651.0", date: "2026-10-04", changes: [
+    { en: "LeagueHub upload page (also on share links): new batch upload for scoresheets — any number of images or PDFs at once. They are only stored, not read; the admins get a message (anonymously via a share link: a notification) and find the batches in the new admin tab “Uploads” to download as ZIP and delete.", de: "LeagueHub-Upload-Seite (auch über den Teilen-Link): neuer Stapel-Upload für Partieformulare — beliebig viele Bilder oder PDFs auf einmal. Sie werden nur abgelegt, nicht eingelesen; die Admins bekommen eine Nachricht (anonym über einen Teilen-Link: eine Benachrichtigung) und finden die Stapel im neuen Admin-Tab „Uploads“ zum Herunterladen als ZIP und Löschen." },
+  ] },
   { version: "0.650.0", date: "2026-10-04", changes: [
     { en: "LeagueHub match view (also on share links): the text at the top is now behind two (i) — “Games” shows the number of games of the opponent’s roster, its (i) the table per source; “Forecast” shows how often the forecast has been right so far, its (i) the explanation and the hit rate per round, per league and in total, over all matches of all leagues.", de: "LeagueHub-Begegnung (auch über den Teilen-Link): Der Text am Anfang steht jetzt hinter zwei (i) — „Partien“ zeigt, wie viele Partien der Meldeliste des Gegners im Bestand sind, das (i) die Tabelle je Quelle; „Prognose“ zeigt, wie oft die Prognose bisher richtig lag, das (i) die Erklärung und die Treffer je Runde, je Liga und gesamt, über alle Begegnungen aller Ligen." },
   ] },

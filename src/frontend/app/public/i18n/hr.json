@@ -151,7 +151,8 @@
       "tournament_changed": "„{{tournamentName}}“ se promijenio: {{oldDate}} → {{newDate}}, {{oldLocation}} → {{newLocation}}",
       "tournament_cancelled": "„{{tournamentName}}“ ({{date}}) je nestao s chess-resultsa — vjerojatno otkazan",
       "scoresheet_read": "Zapisnik učitan: {{white}} – {{black}}, {{moves}} polupoteza, nesigurno: {{uncertain}}",
-      "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}"
+      "scoresheet_failed": "Zapisnik nije bilo moguće učitati: {{reason}}",
+      "league_batch_uploaded": "Putem LeagueHub poveznice za dijeljenje preneseno je {{count}} slika obrazaca"
     },
     "chessableDuration": "dohvat {{fetchTime}}, čekanje {{queueTime}}",
     "viewAll": "Prikaži sve",
@@ -2175,7 +2176,8 @@
       "messages": "Poruke",
       "courseDl": "Preuzimanje tečajeva",
       "ci": "CI / Actions",
-      "roles": "Uloge"
+      "roles": "Uloge",
+      "uploads": "Prijenosi"
     },
     "ci": {
       "title": "GitHub Actions",
@@ -2483,6 +2485,21 @@
       "rolesForGroup": "Uloge grupe {{name}}",
       "groups": "Grupe: {{names}}",
       "groupRolesSaved": "Uloge grupe spremljene — vrijede odmah."
+    },
+    "uploads": {
+      "intro": "LeagueHub skupni prijenosi: slike obrazaca koje su samo pohranjene, nisu očitane. Preuzmite, obradite, zatim izbrišite.",
+      "empty": "Nema skupnih prijenosa.",
+      "when": "Kada",
+      "who": "Od",
+      "files": "Slike",
+      "size": "Veličina",
+      "comment": "Komentar",
+      "viaShare": "anonimno (poveznica)",
+      "open": "nije završeno",
+      "download": "Preuzmi ZIP",
+      "deleteConfirm": "Trajno izbrisati skup #{{id}} s {{count}} slika?",
+      "deleted": "Skup izbrisan",
+      "downloadError": "Preuzimanje nije uspjelo"
     }
   },
   "favorites": {

@@ -917,10 +917,12 @@ public class DeploymentConfigTests
         var loc = Regex.Match(api.Groups["body"].Value, @"location ~ (?<re>\S+) \{(?<body>.*?)\n        \}", RegexOptions.Singleline);
         Assert.True(loc.Success, "verschachtelte Location für den LeagueHub-Formular-Upload fehlt in location ^~ /api/");
         var path = new Regex(loc.Groups["re"].Value);
-        foreach (var upload in new[] { "/api/league/club/scans", "/api/league/s/AbC-12_xyz/club/scans" })
+        foreach (var upload in new[] { "/api/league/club/scans", "/api/league/s/AbC-12_xyz/club/scans",
+                     "/api/league/club/batches/0123456789abcdef0123456789abcdef/files", "/api/league/s/AbC-12_xyz/club/batches/0a1b/files" })
             Assert.True(path.IsMatch(upload), $"Upload-Pfad nicht getroffen: {upload}");
         foreach (var other in new[] { "/api/league/club/scans/5", "/api/league/club/scans/lookup", "/api/league/s/x/club/scans/lookup",
-                     "/api/league/s/x/club/games/preview", "/api/league/club/games/chessbase", "/api/scoresheets" })
+                     "/api/league/s/x/club/games/preview", "/api/league/club/games/chessbase", "/api/scoresheets",
+                     "/api/league/club/batches", "/api/league/club/batches/0a1b/finish", "/api/league/s/x/club/batches/0a1b/files/x" })
             Assert.False(path.IsMatch(other), $"Location träfe auch {other}");
 
         var body = loc.Groups["body"].Value;
@@ -932,14 +934,17 @@ public class DeploymentConfigTests
 
         foreach (var controller in new[] { typeof(RookHub.Api.Controllers.LeagueClubController), typeof(RookHub.Api.Controllers.LeagueShareClubController) })
         {
-            var upload = controller.GetMethod("Upload")!;
-            var post = upload.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.HttpPostAttribute), false)
-                .Cast<Microsoft.AspNetCore.Mvc.HttpPostAttribute>().Single();
-            Assert.Equal("scans", post.Template);
-            var limit = upload.GetCustomAttributesData()
-                .Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute));
-            var apiBytes = Convert.ToInt64(limit.ConstructorArguments[0].Value);
-            Assert.True(nginxBytes >= apiBytes, $"nginx erlaubt {nginxBytes} Bytes, {controller.Name}.Upload bis {apiBytes}");
+            foreach (var (method, template) in new[] { ("Upload", "scans"), ("BatchFile", "batches/{key}/files") })
+            {
+                var upload = controller.GetMethod(method)!;
+                var post = upload.GetCustomAttributes(typeof(Microsoft.AspNetCore.Mvc.HttpPostAttribute), false)
+                    .Cast<Microsoft.AspNetCore.Mvc.HttpPostAttribute>().Single();
+                Assert.Equal(template, post.Template);
+                var limit = upload.GetCustomAttributesData()
+                    .Single(a => a.AttributeType == typeof(Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute));
+                var apiBytes = Convert.ToInt64(limit.ConstructorArguments[0].Value);
+                Assert.True(nginxBytes >= apiBytes, $"nginx erlaubt {nginxBytes} Bytes, {controller.Name}.{method} bis {apiBytes}");
+            }
         }
         Assert.True(nginxBytes >= RookHub.Api.Services.ScoresheetScanService.MaxUploadBytes);
     }

@@ -392,6 +392,8 @@ public class ProfileService
             g.UploadedByUserId = null;
         // Offene Entwürfe von PGN-Importen (0.595.0) gehen ganz — sie tragen den Rohtext samt Klarnamen.
         _db.LeagueClubDrafts.RemoveRange(await _db.LeagueClubDrafts.Where(d => d.UserId == userId).ToListAsync());
+        // Stapel-Uploads (0.651.0): die Bilder gehören dem Hochladenden — mit dem Konto weg (Bilder per Cascade).
+        _db.LeagueBatchUploads.RemoveRange(await _db.LeagueBatchUploads.Where(b => b.UserId == userId).ToListAsync());
         // ClubHub: die Verknüpfung mit dem Karteiblatt lösen (das Blatt gehört dem Verein und bleibt) und Trainer-
         // Zuteilungen entfernen — das Konto wird IN PLACE anonymisiert, weder SetNull noch Cascade feuern.
         foreach (var m in await _db.ClubMembers.Where(m => m.LinkedUserId == userId).ToListAsync())

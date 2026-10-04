@@ -65,6 +65,9 @@ public static class NotificationType
     /// <summary>Ein neuer Benutzer hat sich registriert (→ Glocke aller Admins, Link „/admin").
     /// Daten: username.</summary>
     public const string NewUserRegistered = "new_user_registered";
+    /// <summary>LeagueHub-Stapel-Upload über einen Teilen-Link ohne Konto abgeschlossen (0.651.0) → Glocke aller Admins
+    /// (messages.admin), Link „/admin?tab=uploads". Daten: count (Bilder). Mit Konto kommt stattdessen eine Admin-Nachricht.</summary>
+    public const string LeagueBatchUploaded = "league_batch_uploaded";
     /// <summary>Ein User hat (erstmals) einen Chessable-Bearer hinterlegt (→ Glocke aller Admins,
     /// Link „/admin"). Daten: username.</summary>
     public const string ChessableTokenAdded = "chessable_token_added";
