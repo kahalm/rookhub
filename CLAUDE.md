@@ -1611,6 +1611,9 @@ Rollenverwaltung an).
   Stapel, anonym 1 GB je IP und 3 GB gesamt je Tag. Admin: `GET/DELETE /api/admin/league-uploads[/{id}]`,
   `GET …/{id}/zip` (über Zwischendatei, DeleteOnClose), Tab „Uploads" (`admin-league-uploads.component.ts`, Key `uploads`).
   Oberfläche: `shared/batch-upload.component.ts` im Bereich „Partieformular" der Upload-Seite.
+- **Lasche „Meine Partien" (0.652.0)**: Route `verein/meine` (Daten `mine: true`, dieselbe `club-games-page.component.ts`,
+  braucht nur league.contribute) → `GET /api/league/club/games?mine=true` = `UploadedByUserId == ich`; Bearbeiten (Namen,
+  Ergebnis) und Löschen wie in der Vereinsliste. Als „Schwaz" hochgeladene fehlen absichtlich (kein Hochladender gespeichert).
 - **Endpunkte** (`Controllers/LeagueController.cs`): `GET /api/league/index`, `GET /api/league/sources`, `GET /api/league/{tnr}`,
   `GET /api/league/player/{fide}` (+`/pgn`), `POST/GET/DELETE /api/league/share`, `POST /api/league/update`
   (+`/status`; Knopf, KEIN Zeitplan — ein Lauf auf einmal, neuer Start frühestens nach 2 min),

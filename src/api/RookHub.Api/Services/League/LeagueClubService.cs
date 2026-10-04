@@ -680,9 +680,13 @@ public sealed class LeagueClubService
         return query;
     }
 
-    public async Task<LeagueClubListDto> ListAsync(int userId, bool canManage, string? fide, string? q, int page, CancellationToken ct)
+    /// <param name="mine">Nur die eigenen (0.652.0, Lasche „Meine Partien"): mit Konto hochgeladen. Mit „Schwaz" hochgeladene
+    /// stehen nicht dabei — bei denen ist absichtlich nicht gespeichert, von wem sie stammen.</param>
+    public async Task<LeagueClubListDto> ListAsync(int userId, bool canManage, string? fide, string? q, int page, CancellationToken ct,
+        bool mine = false)
     {
         var query = Filter(fide, q);
+        if (mine) query = query.Where(g => g.UploadedByUserId == userId);
         var total = await query.CountAsync(ct);
         (page, _) = Paging.Normalize(page, PageSize, PageSize);
         var rows = await query.OrderByDescending(g => g.Year ?? 0).ThenByDescending(g => g.Id)

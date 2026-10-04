@@ -284,6 +284,25 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Contains("[BlackFideId \"222\"]", g.Pgn);
     }
 
+    /// <summary>Lasche „Meine Partien" (0.652.0): nur mit dem eigenen Konto hochgeladene — fremde und anonyme („Schwaz",
+    /// ohne Hochladenden) nicht; dort darf man bearbeiten und löschen.</summary>
+    [Fact]
+    public async Task List_Mine_OnlyOwnUploads()
+    {
+        var me = await SeedAsync();
+        _db.LeagueClubGames.AddRange(
+            new LeagueClubGame { White = "A", Black = "B", Pgn = "1. e4 *", MovesHash = "h1", UploadedByUserId = me },
+            new LeagueClubGame { White = "C", Black = "D", Pgn = "1. d4 *", MovesHash = "h2", UploadedByUserId = me + 1 },
+            new LeagueClubGame { White = "Schwaz", Black = "E", Pgn = "1. c4 *", MovesHash = "h3", Anonymized = true });
+        await _db.SaveChangesAsync();
+
+        var mine = await Club().ListAsync(me, false, null, null, 1, default, mine: true);
+        var g = Assert.Single(mine.Items);
+        Assert.Equal("A", g.White);
+        Assert.True(g.CanDelete);
+        Assert.Equal(3, (await Club().ListAsync(me, false, null, null, 1, default)).Total);
+    }
+
     /// <summary>Wunsch 2026-10-04: „merk dir im Hintergrund den echten Namen der Schwazer Spieler, damit ich später
     /// Auswertungen fahren kann — niemals in der GUI ausgeben". Gespeichert in eigenen Spalten, in KEINER Ausgabe.</summary>
     [Fact]

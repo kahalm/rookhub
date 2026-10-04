@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, flush, flushMicrotasks } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideTranslateService } from '@ngx-translate/core';
@@ -32,7 +32,7 @@ describe('ClubGamesPageComponent', () => {
     api.list.and.resolveTo({ total: 2, page: 1, pageSize: 50, items: [G(1), G(2, { white: 'Oberschmid, Patrik', whiteFide: '900', anonymized: false, canDelete: true })] });
   });
 
-  function create(): HTMLElement {
+  function create(routeData: Record<string, unknown> = {}): HTMLElement {
     TestBed.configureTestingModule({
       imports: [ClubGamesPageComponent],
       providers: [{ provide: ConfirmService, useValue: { ask: (...a: unknown[]) => confirmAsk(...a) } }, 
@@ -41,12 +41,30 @@ describe('ClubGamesPageComponent', () => {
         { provide: ClubApiService, useValue: { client: () => api } },
         { provide: LeagueApiService, useValue: jasmine.createSpyObj('LeagueApiService', ['card', 'pgn']) },
         { provide: AuthService, useValue: { has: (p: string) => perms.has(p), currentUser: { username: 'patrik' } } },
+        { provide: ActivatedRoute, useValue: { snapshot: { data: routeData } } },
       ],
     });
     fixture = TestBed.createComponent(ClubGamesPageComponent);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  it('„Meine Partien" (0.652.0): fragt nur die eigenen ab, eigener Titel; dafür reicht beitragen', fakeAsync(() => {
+    perms = new Set(['league.contribute']);
+    const el = create({ mine: true });
+    flushMicrotasks();
+    fixture.detectChanges();
+    expect(api.list).toHaveBeenCalledWith(null, null, 1, true);
+    expect(el.querySelector('.club-intro h2')?.textContent).toBe('Meine Partien');
+    expect(el.textContent).toContain('jederzeit bearbeiten');
+    expect(el.querySelector('lh-access-gate')).toBeNull();
+  }));
+
+  it('die Vereinspartien fragen alle ab', fakeAsync(() => {
+    create();
+    flushMicrotasks();
+    expect(api.list).toHaveBeenCalledWith(null, null, 1, false);
+  }));
 
   it('„Analyse" gibt das ganze PGN mit (?pgn=), eine überlange Partie nur die Züge (0.592.0)', fakeAsync(() => {
     create();
@@ -170,7 +188,7 @@ describe('ClubGamesPageComponent', () => {
     fixture.componentInstance.search(' Hengl ');
     flushMicrotasks();
     fixture.detectChanges();
-    expect(api.list).toHaveBeenCalledWith(null, 'Hengl', 1);
+    expect(api.list).toHaveBeenCalledWith(null, 'Hengl', 1, false);
     expect(el.textContent).toContain('Nichts gefunden');
   }));
 

@@ -8,6 +8,9 @@
 import { ChangelogEntry } from './changelog';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: "0.652.0", date: "2026-10-04", changes: [
+    { en: "LeagueHub: new tab “My games” for members who upload — the games you uploaded with your account, to edit (names, result) or delete at any time. Games uploaded as “Schwaz” are not listed there, since it is deliberately not stored who uploaded them.", de: "LeagueHub: neue Lasche „Meine Partien“ für Mitglieder, die hochladen — die Partien, die du mit deinem Konto hochgeladen hast, jederzeit zum Bearbeiten (Namen, Ergebnis) oder Löschen. Als „Schwaz“ hochgeladene stehen dort nicht, weil absichtlich nicht gespeichert ist, von wem sie stammen." },
+  ] },
   { version: "0.651.0", date: "2026-10-04", changes: [
     { en: "LeagueHub upload page (also on share links): new batch upload for scoresheets — any number of images or PDFs at once. They are only stored, not read; the admins get a message (anonymously via a share link: a notification) and find the batches in the new admin tab “Uploads” to download as ZIP and delete.", de: "LeagueHub-Upload-Seite (auch über den Teilen-Link): neuer Stapel-Upload für Partieformulare — beliebig viele Bilder oder PDFs auf einmal. Sie werden nur abgelegt, nicht eingelesen; die Admins bekommen eine Nachricht (anonym über einen Teilen-Link: eine Benachrichtigung) und finden die Stapel im neuen Admin-Tab „Uploads“ zum Herunterladen als ZIP und Löschen." },
   ] },

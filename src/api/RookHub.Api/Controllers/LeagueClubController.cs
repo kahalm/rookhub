@@ -48,8 +48,8 @@ public class LeagueClubController : BaseApiController
     [HttpGet("games")]
     [HasPermission(Permissions.LeagueView)]
     public async Task<ActionResult<LeagueClubListDto>> List([FromQuery] string? fide, [FromQuery] string? q,
-        [FromQuery] int page = 1, CancellationToken ct = default) =>
-        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct));
+        [FromQuery] int page = 1, [FromQuery] bool mine = false, CancellationToken ct = default) =>
+        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct, mine));
 
     /// <summary>Eine Vereinspartie zum Nachspielen (PGN + Stand der Analyse); 404 unbekannt.</summary>
     [HttpGet("games/{id:int}")]

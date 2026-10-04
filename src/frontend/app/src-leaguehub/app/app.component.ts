@@ -37,7 +37,10 @@ import { environment } from '../../src/environments/environment';
         <nav class="wrap tabs" aria-label="Bereiche">
           <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
           <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
-          @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
+          @if (nav().contribute) {
+            <a routerLink="/verein/meine" routerLinkActive="on">Meine Partien</a>
+            <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a>
+          }
           @if (nav().manage) {
             <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a>
             <a routerLink="/uebertragungen" routerLinkActive="on">Übertragungen</a>

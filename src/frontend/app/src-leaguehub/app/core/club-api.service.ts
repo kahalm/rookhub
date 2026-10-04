@@ -31,8 +31,10 @@ export class ClubClient {
     return p;
   }
 
-  list(fide: string | null, q: string | null, page: number): Promise<ClubList> {
-    return firstValueFrom(this.http.get<ClubList>(`${this.base}/games`, { params: this.params(fide, q, page) }));
+  /** `mine` (0.652.0): nur die selbst hochgeladenen — Lasche „Meine Partien". */
+  list(fide: string | null, q: string | null, page: number, mine = false): Promise<ClubList> {
+    const params = mine ? this.params(fide, q, page).set('mine', 'true') : this.params(fide, q, page);
+    return firstValueFrom(this.http.get<ClubList>(`${this.base}/games`, { params }));
   }
 
   /** Eine Partie mit PGN und Stand der Analyse (angemeldet, `league.view`). */
