@@ -305,5 +305,7 @@ internal sealed class LeagueClubGameConfiguration : IEntityTypeConfiguration<Lea
         e.HasIndex(g => g.WhiteFide);
         e.HasIndex(g => g.BlackFide);
         e.HasIndex(g => g.UploadShareHash);
+        e.Property(g => g.ClaimKeyHash).HasMaxLength(64);   // 0.656.0: Zuordnen nach dem Anmelden
+        e.HasIndex(g => g.ClaimKeyHash);
     }
 }

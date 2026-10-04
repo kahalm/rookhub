@@ -163,6 +163,7 @@ public partial class AppDbContext : DbContext
     public DbSet<CiBuildReport> CiBuildReports => Set<CiBuildReport>();
     public DbSet<SavedGame> SavedGames => Set<SavedGame>();
     public DbSet<ScoresheetScan> ScoresheetScans => Set<ScoresheetScan>();
+    public DbSet<ScoresheetScanArchive> ScoresheetScanArchives => Set<ScoresheetScanArchive>();
     public DbSet<ScoresheetScanPage> ScoresheetScanPages => Set<ScoresheetScanPage>();
     public DbSet<GameMistakeProgress> GameMistakeProgresses => Set<GameMistakeProgress>();
     public DbSet<SharedLine> SharedLines => Set<SharedLine>();

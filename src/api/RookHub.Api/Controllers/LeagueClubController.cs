@@ -51,6 +51,32 @@ public class LeagueClubController : BaseApiController
         [FromQuery] int page = 1, [FromQuery] bool mine = false, CancellationToken ct = default) =>
         Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), fide, q, page, ct, mine));
 
+    /// <summary>„Meine Partien" (0.656.0): die eigenen — dafür reicht die Anmeldung (auch wer nur über einen Teilen-Link
+    /// hochgeladen und sie sich nach dem Anmelden zugeordnet hat).</summary>
+    [HttpGet("games/mine")]
+    public async Task<ActionResult<LeagueClubListDto>> Mine([FromQuery] string? q, [FromQuery] int page = 1, CancellationToken ct = default) =>
+        Ok(await _club.ListAsync(GetUserId(), await CanManageAsync(), null, q, page, ct, mine: true));
+
+    public sealed record ClaimRequest(List<string>? Keys);
+
+    /// <summary>Was die Zuordnungs-Schlüssel dieses Browsers zuordnen würden → <c>{ games, anonymized }</c> (für die Rückfrage).</summary>
+    [HttpPost("games/claims/preview")]
+    public async Task<IActionResult> ClaimPreview([FromBody] ClaimRequest? req, CancellationToken ct)
+    {
+        var (games, anonymized) = await _club.ClaimPreviewAsync(req?.Keys, ct);
+        return Ok(new { games, anonymized });
+    }
+
+    /// <summary>JA: die anonym hochgeladenen Partien dieser Schlüssel gehören ab jetzt dem Angemeldeten → <c>{ claimed }</c>.</summary>
+    [HttpPost("games/claims")]
+    public async Task<IActionResult> Claim([FromBody] ClaimRequest? req, CancellationToken ct) =>
+        Ok(new { claimed = await _club.ClaimAsync(GetUserId(), req?.Keys, ct) });
+
+    /// <summary>NEIN: die Schlüssel verfallen, die Partien bleiben ohne Hochladenden.</summary>
+    [HttpPost("games/claims/forget")]
+    public async Task<IActionResult> ForgetClaims([FromBody] ClaimRequest? req, CancellationToken ct) =>
+        Ok(new { forgotten = await _club.ForgetClaimsAsync(req?.Keys, ct) });
+
     /// <summary>Eine Vereinspartie zum Nachspielen (PGN + Stand der Analyse); 404 unbekannt.</summary>
     [HttpGet("games/{id:int}")]
     [HasPermission(Permissions.LeagueView)]
@@ -148,12 +174,12 @@ public class LeagueClubController : BaseApiController
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         var (game, reason, message) = await _club.AddGameAsync(GetUserId(), req, ct);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId);
+        if (req.ScanId is { } scanId) await _scans.CloseLeagueScanAsync(await MeAsync(), scanId, game.Pgn);
         return Ok(new { id = game.Id, anonymized = game.Anonymized });
     }
 
+    /// <summary>Löschen: eigene (seit 0.656.0 nur mit Anmeldung — die Regel steht im Dienst) oder als Verwalter jede.</summary>
     [HttpDelete("games/{id:int}")]
-    [HasPermission(Permissions.LeagueContribute)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) =>
         await _club.DeleteAsync(GetUserId(), await CanManageAsync(), id, ct) switch
         {
@@ -215,8 +241,7 @@ public class LeagueClubController : BaseApiController
 
     /// <summary>Namen und Ergebnis korrigieren → die Partie; 400 <c>reason</c> (<c>anonymous</c>, <c>noLeaguePlayer</c>,
     /// <c>onlyOwnClub</c>, <c>invalidResult</c>), 403 fremde, 404 unbekannt.</summary>
-    [HttpPut("games/{id:int}")]
-    [HasPermission(Permissions.LeagueContribute)]
+    [HttpPut("games/{id:int}")]   // eigene oder als Verwalter (Regel im Dienst) — seit 0.656.0 ohne league.contribute
     public async Task<ActionResult<LeagueClubGameDto>> Update(int id, [FromBody] LeagueClubGameUpdateRequest req, CancellationToken ct)
     {
         var manage = await CanManageAsync();
@@ -357,10 +382,11 @@ public class LeagueShareClubController : ControllerBase
         if (await _league.ValidShareTokenAsync(token, ct) is not { } link) return NotFound();   // wie beim Import
         if (req is null) return BadRequest(new { reason = "empty", message = "Body required." });
         req.ScanId = null;
-        var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct);
+        var claimKey = LeagueClubService.NewClaimKey();
+        var (game, reason, message) = await _club.AddGameViaShareAsync(link, req, ct, claimKey);
         if (game == null) return BadRequest(new { reason, message = message ?? "Game not accepted." });
-        if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null);
-        return Ok(new { id = game.Id, anonymized = game.Anonymized });
+        if (!string.IsNullOrWhiteSpace(scanKey)) await _scans.CloseLeagueScanAsync(Actor.Anonymous(scanKey), null, game.Pgn);
+        return Ok(new { id = game.Id, anonymized = game.Anonymized, claimKey });
     }
 
     [HttpGet("players")]

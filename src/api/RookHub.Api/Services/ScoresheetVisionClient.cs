@@ -298,12 +298,14 @@ public static class ScoresheetPrompt
 
     /// <summary>Wie oben, für ein Formular über mehrere Fotos (<paramref name="pageCount"/> &gt; 1): eine Partie, Seite 2
     /// macht weiter, wo Seite 1 aufhört, und jeder Zug nennt seine Seite. Mit einer Seite wörtlich der bisherige Auftrag.</summary>
-    public static string FirstRead(string languageHint, IReadOnlyList<(int Width, int Height)> pageSizes, int pageCount)
+    public static string FirstRead(string languageHint, IReadOnlyList<(int Width, int Height)> pageSizes, int pageCount,
+        DateOnly? today = null)
     {
         var lang = ScoresheetNotation.Find(languageHint);
-        var hint = lang == null
+        var hint = (lang == null
             ? "The notation language is unknown; determine it from the sheet."
-            : $"The user says the sheet is written in {lang.Name} notation (pieces: K={lang.King} Q={lang.Queen} R={lang.Rook} B={lang.Bishop} N={lang.Knight}).";
+            : $"The user says the sheet is written in {lang.Name} notation (pieces: K={lang.King} Q={lang.Queen} R={lang.Rook} B={lang.Bishop} N={lang.Knight}).")
+            + " " + DateHint(today ?? DateOnly.FromDateTime(DateTime.UtcNow));
         if (pageCount <= 1)
         {
             var size = pageSizes.Count > 0
@@ -322,6 +324,15 @@ public static class ScoresheetPrompt
             + sizes + " Give every move its \"page\" (the number of the photo it is written on) and its \"box\" in pixels"
             + " of that photo.";
     }
+
+    /// <summary>
+    /// Starker Hang zu heuer beim Datum (Wunsch 2026-10-04: „kaum jemand scannt 10 Jahre alte Scoresheets — und wenn, soll er
+    /// das anpassen"): Partie 158 kam mit „2016" aus der Erkennung. Gehört zum Auftrag jeder Lesung.
+    /// </summary>
+    public static string DateHint(DateOnly today) =>
+        $"Today is {today:yyyy-MM-dd}. Scoresheets are scanned shortly after the game: the date is almost always from {today.Year}"
+        + $" (or late {today.Year - 1}, never in the future). When the year is unclear, abbreviated, smudged or missing, assume"
+        + $" {today.Year}; give an older year in \"dateIso\" only if it is written clearly and in full.";
 
     /// <summary>Nachfrage, wenn die Züge ab einer Stelle nicht mehr legal aufgehen.</summary>
     public static string Repair(string languageHint, string previousJson, IReadOnlyList<string> acceptedSans,

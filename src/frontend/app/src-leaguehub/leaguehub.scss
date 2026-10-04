@@ -691,3 +691,9 @@ lh-batch-upload { display: block; margin-top: 18px; }
 .batch summary { cursor: pointer; font-weight: 600; }
 .batch textarea { width: 100%; max-width: 560px; font: inherit; }
 .batch-done { color: var(--ok); font-weight: 600; }
+
+/* Rückfrage „Partien zuordnen" nach dem Anmelden (0.656.0) */
+lh-claim-prompt { display: block; }
+.claim { margin: 12px 0 0; padding: 12px 14px; border: 1.5px solid var(--ink); border-radius: 8px; }
+.claim p { margin: 0 0 10px; }
+.claim-done { margin: 12px 0 0; color: var(--ok); }

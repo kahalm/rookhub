@@ -13,7 +13,7 @@ import { SheetEditSession } from '@rh/features/games/sheet-edit-session';
 import { SECONDS_PER_MOVE, SecondsTicker, formatClock, readingSeconds } from '@rh/features/games/scoresheet-timing';
 import { ClubApiService, ClubClient } from '../../core/club-api.service';
 import { LeagueScanState, RosterPerson, SideMatch } from '../../core/club.models';
-import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, reasonText, sheetPgn, sheetPgnFileName, yearOf } from '../../core/club-format';
+import { ANON_NAME, SheetPgnInput, isTransientError, loadErrorText, normalizeResult, presetYear, reasonText, sheetPgn, sheetPgnFileName } from '../../core/club-format';
 import { rookHubUrlForLeagueHub } from '@rh/core/partner-site';
 import { ConfirmService } from '@rh/shared/confirm-dialog/confirm-dialog.component';
 import { firstValueFrom } from 'rxjs';
@@ -223,7 +223,9 @@ const SILENT_FAILURES = 3;
                                                (input)="elo(k).set(num($any($event.target).value))" [disabled]="replace(k)()" /></label>
             }
             <label class="field narrow">Jahr<input type="number" inputmode="numeric" min="1900" [max]="maxYear" [value]="year() ?? ''"
-                                              (input)="year.set(num($any($event.target).value))" /></label>
+                                              (input)="year.set(num($any($event.target).value)); yearRead.set(null)" />
+              @if (yearRead(); as r) { <span class="small muted year-hint">gelesen {{ r }} — auf heuer gesetzt, bitte prüfen</span> }
+            </label>
             <label class="field narrow">Ergebnis
               <select (change)="result.set($any($event.target).value)">
                 @for (r of results; track r) { <option [value]="r" [selected]="result() === r">{{ r === '*' ? 'unbekannt' : r }}</option> }
@@ -248,7 +250,7 @@ const SILENT_FAILURES = 3;
           @if (problem(); as pr) { <p class="err small">{{ pr }}</p> }
 
           @if (saved()) {
-            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Das Foto ist gelöscht.
+            <p class="ok-text" role="status"><b>In die Vereins-Datenbank übernommen.</b> Das Foto ist aus der Einlesung entfernt; eine Kopie samt Erkennung behalten wir 365 Tage, um das Einlesen zu verbessern.
               <a [routerLink]="backLink" [queryParams]="{ art: 'formular' }">Zu deinen Formularen</a></p>
           } @else {
             <div class="actions">
@@ -371,6 +373,8 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
   readonly match = (k: Side) => this.sideState[k].match;
   readonly replace = (k: Side) => this.sideState[k].replace;
   readonly year = signal<number | null>(null);
+  /** Die Erkennung las ein älteres Jahr, vorbelegt ist heuer (0.655.0) — Hinweis unter dem Feld, bis man es ändert. */
+  readonly yearRead = signal<number | null>(null);
   readonly result = signal('*');
   readonly event = signal('');
   readonly ownerSide = signal<Side | null>(null);
@@ -479,7 +483,9 @@ export class ClubScanPageComponent implements OnInit, OnDestroy {
     this.s.loadSheet({ plies: st.plies, unresolved: st.unresolved, unresolvedFrom: st.unresolvedFrom, boxes: st.boxes, written: st.written });
     this.name('white').set(st.white ?? '');
     this.name('black').set(st.black ?? '');
-    this.year.set(yearOf(st.date));
+    const preset = presetYear(st.date);
+    this.year.set(preset.year);
+    this.yearRead.set(preset.read);
     this.result.set(normalizeResult(st.result));
     this.event.set(st.event ?? '');
     this.ownerSide.set(st.ownerSide);

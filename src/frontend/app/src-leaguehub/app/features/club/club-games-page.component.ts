@@ -41,9 +41,9 @@ type Side = 'white' | 'black';
       <section class="club-intro">
         @if (mine) {
           <h2>Meine Partien</h2>
-          <p class="muted">Die Partien, die du mit deinem Konto hochgeladen hast — du kannst sie jederzeit bearbeiten (Namen,
-            Ergebnis) oder löschen. Partien, die du als „Schwaz" hochgeladen hast, stehen nicht hier: bei denen ist absichtlich
-            nicht gespeichert, von wem sie stammen.</p>
+          <p class="muted">Die Partien, die du mit deinem Konto hochgeladen oder dir nach dem Anmelden zugeordnet hast — du kannst
+            sie jederzeit bearbeiten (Namen, Ergebnis) oder löschen. Partien, die du angemeldet als „Schwaz" hochgeladen hast,
+            stehen nicht hier: bei denen ist absichtlich nicht gespeichert, von wem sie stammen.</p>
         } @else {
           <h2>Vereinspartien</h2>
           <p class="muted">Partien, die Mitglieder von SK Schwaz hochgeladen haben — sie stehen auch auf den Spielerkarten der
@@ -189,7 +189,7 @@ export class ClubGamesPageComponent implements OnInit {
 
   /** Lasche „Meine Partien" (Route `verein/meine`, 0.652.0): nur die eigenen; dafür reicht beitragen. */
   readonly mine = inject(ActivatedRoute).snapshot.data['mine'] === true;
-  readonly allowed = this.mine ? this.auth.has('league.contribute') : this.auth.has('league.view');
+  readonly allowed = this.mine || this.auth.has('league.view');   // „Meine Partien": angemeldet reicht (0.656.0)
   readonly canContribute = this.auth.has('league.contribute');
   readonly anon = 'Schwaz';
   readonly de = de;

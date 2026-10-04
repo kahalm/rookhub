@@ -4,6 +4,8 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { ScoresheetResolveResult } from '@rh/features/games/scoresheet.service';
 import { ChessBaseResult, ClubDraft, ClubDraftDetail, ClubGame, ClubGameDetail, ClubGameRequest, ClubGameUpdate, ClubImportResult, ClubList, ClubMatch, ClubPreview, ImportGameDecision, LeagueScanState, OpenScan, RosterPerson, ScanRef, ScoresheetScan, ScoresheetStatus } from './club.models';
 
+import { rememberClaimKey } from './claim-keys';
+
 /** Stand eines Stapel-Uploads (0.651.0). */
 export interface BatchState { key: string; files: number; bytes: number; finished: boolean }
 
@@ -31,10 +33,23 @@ export class ClubClient {
     return p;
   }
 
-  /** `mine` (0.652.0): nur die selbst hochgeladenen — Lasche „Meine Partien". */
+  /** `mine` (0.652.0): nur die selbst hochgeladenen — Lasche „Meine Partien" (seit 0.656.0 `games/mine`, reicht die Anmeldung). */
   list(fide: string | null, q: string | null, page: number, mine = false): Promise<ClubList> {
-    const params = mine ? this.params(fide, q, page).set('mine', 'true') : this.params(fide, q, page);
-    return firstValueFrom(this.http.get<ClubList>(`${this.base}/games`, { params }));
+    return firstValueFrom(this.http.get<ClubList>(`${this.base}/games${mine ? '/mine' : ''}`, { params: this.params(mine ? null : fide, q, page) }));
+  }
+
+  // ── Zuordnen nach dem Anmelden (0.656.0) — nur angemeldet ──
+
+  claimPreview(keys: string[]): Promise<{ games: number; anonymized: number }> {
+    return firstValueFrom(this.http.post<{ games: number; anonymized: number }>(`${this.base}/games/claims/preview`, { keys }));
+  }
+
+  claim(keys: string[]): Promise<{ claimed: number }> {
+    return firstValueFrom(this.http.post<{ claimed: number }>(`${this.base}/games/claims`, { keys }));
+  }
+
+  forgetClaims(keys: string[]): Promise<unknown> {
+    return firstValueFrom(this.http.post(`${this.base}/games/claims/forget`, { keys }));
   }
 
   /** Eine Partie mit PGN und Stand der Analyse (angemeldet, `league.view`). */
@@ -57,8 +72,10 @@ export class ClubClient {
   }
 
   /** `draftId` (angemeldet): die Partien tragen dann den Einreicher als Hochladenden, nicht den Verwalter. */
-  importPgn(pgn: string, games: ImportGameDecision[], draftId?: number | null): Promise<ClubImportResult> {
-    return firstValueFrom(this.http.post<ClubImportResult>(`${this.base}/games/import`, this.withDraft({ pgn, games }, draftId)));
+  async importPgn(pgn: string, games: ImportGameDecision[], draftId?: number | null): Promise<ClubImportResult> {
+    const r = await firstValueFrom(this.http.post<ClubImportResult>(`${this.base}/games/import`, this.withDraft({ pgn, games }, draftId)));
+    if (this.anonymous) rememberClaimKey(r.claimKey);   // für eine Zuordnung nach dem Anmelden (0.656.0)
+    return r;
   }
 
   private withDraft<T extends object>(body: T, draftId?: number | null): T & { draftId?: number } {
@@ -98,10 +115,13 @@ export class ClubClient {
   }
 
   /** Eine Partie aus einem Partieformular; `scanRef` wird danach geschlossen. */
-  addGame(body: ClubGameRequest, scanRef: string | null): Promise<{ id: number; anonymized: boolean }> {
+  async addGame(body: ClubGameRequest, scanRef: string | null): Promise<{ id: number; anonymized: boolean }> {
     if (this.anonymous) {
       const params = scanRef ? new HttpParams().set('scanKey', scanRef) : undefined;
-      return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${this.base}/games`, { ...body, scanId: null }, { params }));
+      const r = await firstValueFrom(this.http.post<{ id: number; anonymized: boolean; claimKey?: string }>(`${this.base}/games`,
+        { ...body, scanId: null }, { params }));
+      rememberClaimKey(r.claimKey);   // für eine Zuordnung nach dem Anmelden (0.656.0)
+      return r;
     }
     return firstValueFrom(this.http.post<{ id: number; anonymized: boolean }>(`${this.base}/games`,
       { ...body, scanId: scanRef ? Number(scanRef) : null }));

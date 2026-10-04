@@ -130,3 +130,34 @@ public class ScoresheetScanPage
     public string ContentType { get; set; } = "image/jpeg";
     public string? FileName { get; set; }
 }
+
+/// <summary>
+/// Aufbewahrte Liga-Einlesung (0.655.0, Wunsch 2026-10-04: „merk dir in Zukunft das Bild und die Erkennung für
+/// Optimierungen, vorerst für 365 Tage"). Beim Abschließen (übernommen ODER verworfen) kopiert
+/// <c>ScoresheetScanService.CloseLeagueScanAsync</c> je Seite das Foto hierher, auf Seite 1 dazu die Antwort des Modells, den
+/// Stand der Auflösung und — wenn übernommen — die gespeicherte PGN (= was der Mensch daraus gemacht hat). Nur für die
+/// Auswertung durch die Betreiber, nirgends in der Oberfläche. Nach <see cref="ExpiresAt"/> gelöscht; mit der Einlesung
+/// (Konto gelöscht) per Cascade ebenso.
+/// </summary>
+public class ScoresheetScanArchive
+{
+    public int Id { get; set; }
+    public int ScoresheetScanId { get; set; }
+    public ScoresheetScan? Scan { get; set; }
+    /// <summary>Seite, ab 1.</summary>
+    public int Page { get; set; }
+    public byte[] Photo { get; set; } = Array.Empty<byte>();
+    public string ContentType { get; set; } = "image/jpeg";
+    /// <summary>Nur Seite 1: Antwort des Modells (wie <see cref="ScoresheetScan.TranscriptionJson"/>).</summary>
+    public string? TranscriptionJson { get; set; }
+    /// <summary>Nur Seite 1: Stand der Auflösung (wie <see cref="ScoresheetScan.ResolutionJson"/>).</summary>
+    public string? ResolutionJson { get; set; }
+    /// <summary>Nur Seite 1 und nur übernommen: die PGN, wie sie in die Vereins-Datenbank ging.</summary>
+    public string? FinalPgn { get; set; }
+    /// <summary><c>saved</c> oder <c>discarded</c>.</summary>
+    public string Outcome { get; set; } = "saved";
+    public string? Model { get; set; }
+    public string? NotationLanguage { get; set; }
+    public DateTime ArchivedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+}

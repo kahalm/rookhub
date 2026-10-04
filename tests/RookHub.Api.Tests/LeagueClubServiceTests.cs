@@ -284,6 +284,45 @@ public class LeagueClubServiceTests : IDisposable
         Assert.Contains("[BlackFideId \"222\"]", g.Pgn);
     }
 
+    /// <summary>Wunsch 2026-10-04: über den Teilen-Link hochgeladen → der Browser merkt sich einen Schlüssel; nach dem Anmelden
+    /// und einem JA gehören die Partien dem Konto (auch „Schwaz", nur mit dieser Zustimmung) und sind bearbeitbar.</summary>
+    [Fact]
+    public async Task Claim_AfterLogin_AssignsAnonymousShareUploads_OnlyWithTheBrowsersKey()
+    {
+        var me = await SeedAsync();
+        var r = await Club().ImportViaShareAsync("TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        Assert.Single(r.Ids);
+        Assert.Equal(32, r.ClaimKey!.Length);
+        var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
+        Assert.Null(g.UploadedByUserId);                                                 // erst einmal niemandem
+        Assert.Equal(LeagueClubService.ClaimHashOf(r.ClaimKey), g.ClaimKeyHash);
+
+        Assert.Equal((0, 0), await Club().ClaimPreviewAsync(new[] { LeagueClubService.NewClaimKey() }));   // fremder Schlüssel
+        var preview = await Club().ClaimPreviewAsync(new[] { r.ClaimKey, "kaputt" });
+        Assert.Equal(1, preview.Games);
+        Assert.Equal(g.Anonymized ? 1 : 0, preview.Anonymized);
+
+        Assert.Equal(1, await Club().ClaimAsync(me, new[] { r.ClaimKey }));
+        var claimed = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
+        Assert.Equal(me, claimed.UploadedByUserId);
+        Assert.Null(claimed.ClaimKeyHash);                                                // Schlüssel verfällt
+        Assert.Equal(0, await Club().ClaimAsync(me + 1, new[] { r.ClaimKey }));          // kein zweites Mal
+        var mine = Assert.Single((await Club().ListAsync(me, false, null, null, 1, default, mine: true)).Items);
+        Assert.True(mine.CanDelete);                                                      // bearbeitbar, auch als „Schwaz"
+    }
+
+    [Fact]
+    public async Task Claim_No_ForgetsTheKey_GameStaysWithoutUploader()
+    {
+        await SeedAsync();
+        var r = await Club().ImportViaShareAsync("TOKEN-1", Pgn("Oberschmid, Patrik", "Hengl, Philip"), null);
+        Assert.Equal(1, await Club().ForgetClaimsAsync(new[] { r.ClaimKey! }));
+        var g = await _db.LeagueClubGames.AsNoTracking().SingleAsync();
+        Assert.Null(g.ClaimKeyHash);
+        Assert.Null(g.UploadedByUserId);
+        Assert.Equal((0, 0), await Club().ClaimPreviewAsync(new[] { r.ClaimKey! }));
+    }
+
     /// <summary>Lasche „Meine Partien" (0.652.0): nur mit dem eigenen Konto hochgeladene — fremde und anonyme („Schwaz",
     /// ohne Hochladenden) nicht; dort darf man bearbeiten und löschen.</summary>
     [Fact]

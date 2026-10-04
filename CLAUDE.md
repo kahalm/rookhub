@@ -1611,6 +1611,23 @@ Rollenverwaltung an).
   Stapel, anonym 1 GB je IP und 3 GB gesamt je Tag. Admin: `GET/DELETE /api/admin/league-uploads[/{id}]`,
   `GET …/{id}/zip` (über Zwischendatei, DeleteOnClose), Tab „Uploads" (`admin-league-uploads.component.ts`, Key `uploads`).
   Oberfläche: `shared/batch-upload.component.ts` im Bereich „Partieformular" der Upload-Seite.
+- **Formular-Archiv + Datums-Bias (0.655.0**, Wunsch 2026-10-04: „merk dir Bild und Erkennung für Optimierungen, vorerst
+  365 Tage" / „beim Datum heavily bias zu heuer"): `ScoresheetScanService.CloseLeagueScanAsync(actor, id, finalPgn)` kopiert
+  vor dem Leeren je Seite Foto + (Seite 1) TranscriptionJson/ResolutionJson/FinalPgn in `ScoresheetScanArchives`
+  (Outcome saved/discarded, ExpiresAt = +`ArchiveRetention` 365 d, Cascade an der Einlesung, Konto-Löschung räumt mit);
+  Abgelaufenes geht beim nächsten Abschluss (`PurgeExpiredArchiveAsync`). Keine Oberfläche — Auswertung per DB.
+  Datum: `ScoresheetPrompt.DateHint(today)` in jedem `FirstRead` (heute + „assume {Jahr}"), Prüfseite `presetYear()`
+  (`club-format.ts`): gelesen heuer/Vorjahr → so, sonst heuer + Hinweis „gelesen 2016 — auf heuer gesetzt".
+- **Anonyme Uploads nach dem Anmelden zuordnen (0.656.0**, Wunsch 2026-10-04; Entscheidung des Users: bei „Schwaz" BEIM
+  ANMELDEN FRAGEN): jede Speicherung über einen Teilen-Link (`ImportViaShareAsync` → `ClaimKey` im Ergebnis,
+  `POST …/s/{token}/club/games` → `claimKey`) setzt `LeagueClubGames.ClaimKeyHash` = SHA-256 eines Zufalls-Schlüssels, den
+  nur der Browser kennt (`core/claim-keys.ts`, localStorage `lh-claim-keys`, ≤ 200; `ClubClient` merkt ihn selbst). Nach
+  dem Anmelden fragt `shared/claim-prompt.component.ts` (nicht beim Einstieg als Nutzer): `POST /api/league/club/games/
+  claims/preview` `{keys}` → `{games, anonymized}`; JA → `…/claims` setzt `UploadedByUserId` (auch bei „Schwaz" — nur mit
+  dieser Zustimmung), NEIN → `…/claims/forget`; beides leert den Hash und die Schlüssel im Browser. `CanDelete` = Verwalter
+  ODER `UploadedByUserId == ich` (ohne die frühere Schwaz-Sperre — einen Hochladenden trägt eine Schwaz-Partie nur nach
+  Zuordnung). „Meine Partien" (`GET …/club/games/mine`), Bearbeiten und Löschen brauchen seit 0.656.0 nur die Anmeldung
+  (Regel im Dienst); der Reiter steht für jeden Angemeldeten.
 - **Lasche „Meine Partien" (0.652.0)**: Route `verein/meine` (Daten `mine: true`, dieselbe `club-games-page.component.ts`,
   braucht nur league.contribute) → `GET /api/league/club/games?mine=true` = `UploadedByUserId == ich`; Bearbeiten (Namen,
   Ergebnis) und Löschen wie in der Vereinsliste. Als „Schwaz" hochgeladene fehlen absichtlich (kein Hochladender gespeichert).

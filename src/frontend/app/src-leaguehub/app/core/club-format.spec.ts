@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf } from './club-format';
+import { importSummary, isTransientError, loadErrorText, normalizeResult, reasonText, scanAvailability, sheetPgn, sheetPgnFileName, shortDateTime, uploadErrorText, yearOf, presetYear } from './club-format';
 import { ScoresheetStatus } from './club.models';
 
 describe('club-format', () => {
@@ -47,6 +47,11 @@ describe('club-format', () => {
     expect(yearOf('Juni 2019', now)).toBe(2019);
     expect(yearOf('2099', now)).toBeNull();
     expect(yearOf(null, now)).toBeNull();
+    // Vorbelegung mit starkem Hang zu heuer (0.655.0): heuer/Vorjahr bleiben, älter oder fehlt → heuer + was gelesen wurde
+    expect(presetYear('2026-06-05', now)).toEqual({ year: 2026, read: null });
+    expect(presetYear('12.12.2025', now)).toEqual({ year: 2025, read: null });
+    expect(presetYear('2016', now)).toEqual({ year: 2026, read: 2016 });
+    expect(presetYear(null, now)).toEqual({ year: 2026, read: null });
     expect(normalizeResult('½-½')).toBe('1/2-1/2');
     expect(normalizeResult('1 - 0')).toBe('1-0');
     expect(normalizeResult('?')).toBe('*');

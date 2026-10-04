@@ -46,6 +46,24 @@ internal sealed class SavedGameConfiguration : IEntityTypeConfiguration<SavedGam
     }
 }
 
+internal sealed class ScoresheetScanArchiveConfiguration : IEntityTypeConfiguration<ScoresheetScanArchive>
+{
+    public void Configure(EntityTypeBuilder<ScoresheetScanArchive> e)
+    {
+        e.HasOne(a => a.Scan).WithMany().HasForeignKey(a => a.ScoresheetScanId).OnDelete(DeleteBehavior.Cascade);
+        e.Property(a => a.Photo).HasColumnType("LONGBLOB");
+        e.Property(a => a.ContentType).HasMaxLength(40);
+        e.Property(a => a.TranscriptionJson).HasColumnType("LONGTEXT");
+        e.Property(a => a.ResolutionJson).HasColumnType("LONGTEXT");
+        e.Property(a => a.FinalPgn).HasColumnType("LONGTEXT");
+        e.Property(a => a.Outcome).HasMaxLength(16);
+        e.Property(a => a.Model).HasMaxLength(60);
+        e.Property(a => a.NotationLanguage).HasMaxLength(8);
+        e.HasIndex(a => a.ExpiresAt);
+        e.HasIndex(a => new { a.ScoresheetScanId, a.Page }).IsUnique();
+    }
+}
+
 internal sealed class ScoresheetScanConfiguration : IEntityTypeConfiguration<ScoresheetScan>
 {
     public void Configure(EntityTypeBuilder<ScoresheetScan> e)

@@ -898,12 +898,13 @@ public class ScoresheetScanService
     /// Danach verbindet nichts mehr die Einlesung mit der Partie, die daraus wurde (auch der Schlüssel geht).
     /// <c>false</c> = fremd/unbekannt.
     /// </summary>
-    public async Task<bool> CloseLeagueScanAsync(ScanActor actor, int? scanId)
+    public async Task<bool> CloseLeagueScanAsync(ScanActor actor, int? scanId, string? finalPgn = null)
     {
         var q = LeagueOwned(_db.ScoresheetScans, actor);
         if (scanId is int id) q = q.Where(s => s.Id == id);
         var key = await q.Select(s => new { s.Id, s.UserId, s.SavedGameId }).FirstOrDefaultAsync();
         if (key == null) return false;
+        await ArchiveAsync(key.Id, finalPgn);
         DetachWithoutLoading(_db, new[] { (key.Id, key.UserId, key.SavedGameId) });
         RemovePagesWithoutLoading(_db, await PageKeysAsync(_db, new[] { key.Id }));
         var scan = _db.ScoresheetScans.Local.First(s => s.Id == key.Id);
@@ -912,6 +913,52 @@ public class ScoresheetScanService
         _db.Entry(scan).Property(nameof(ScoresheetScan.AccessKey)).IsModified = true;
         await _db.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>Wie lange <see cref="ScoresheetScanArchive"/> Foto und Erkennung aufbewahrt (Wunsch 2026-10-04: „vorerst 365 Tage").</summary>
+    public static readonly TimeSpan ArchiveRetention = TimeSpan.FromDays(365);
+
+    /// <summary>
+    /// Foto(s), Antwort des Modells und Auflösung einer Liga-Einlesung ins Archiv kopieren, bevor
+    /// <see cref="CloseLeagueScanAsync"/> sie an der Einlesung leert (0.655.0) — einmal je Einlesung (ein zweiter Abschluss
+    /// findet nichts mehr). Räumt dabei Abgelaufenes weg. Speichert nicht selbst.
+    /// </summary>
+    private async Task ArchiveAsync(int scanId, string? finalPgn)
+    {
+        var now = DateTime.UtcNow;
+        await PurgeExpiredArchiveAsync(now);
+        if (await _db.ScoresheetScanArchives.AnyAsync(a => a.ScoresheetScanId == scanId)) return;
+        var s = await _db.ScoresheetScans.AsNoTracking().Where(x => x.Id == scanId)
+            .Select(x => new { x.Photo, x.ContentType, x.TranscriptionJson, x.ResolutionJson, x.Model, x.NotationLanguage })
+            .FirstOrDefaultAsync();
+        if (s == null || (s.Photo.Length == 0 && s.TranscriptionJson == null)) return;
+        var outcome = finalPgn != null ? "saved" : "discarded";
+        _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive
+        {
+            ScoresheetScanId = scanId, Page = 1, Photo = s.Photo, ContentType = s.ContentType,
+            TranscriptionJson = s.TranscriptionJson, ResolutionJson = s.ResolutionJson, FinalPgn = finalPgn, Outcome = outcome,
+            Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
+        });
+        var pages = await _db.ScoresheetScanPages.AsNoTracking().Where(p => p.ScoresheetScanId == scanId)
+            .Select(p => new { p.Page, p.Photo, p.ContentType }).ToListAsync();
+        foreach (var p in pages)
+            _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive
+            {
+                ScoresheetScanId = scanId, Page = p.Page, Photo = p.Photo, ContentType = p.ContentType, Outcome = outcome,
+                Model = s.Model, NotationLanguage = s.NotationLanguage, ArchivedAt = now, ExpiresAt = now + ArchiveRetention,
+            });
+    }
+
+    /// <summary>Abgelaufene Archiv-Einträge löschen (ohne die Fotos zu laden).</summary>
+    private async Task PurgeExpiredArchiveAsync(DateTime now)
+    {
+        var expired = await _db.ScoresheetScanArchives.Where(a => a.ExpiresAt < now).Select(a => a.Id).Take(500).ToListAsync();
+        foreach (var id in expired)
+        {
+            var stub = _db.ScoresheetScanArchives.Local.FirstOrDefault(a => a.Id == id) ?? new ScoresheetScanArchive { Id = id };
+            if (_db.Entry(stub).State == EntityState.Detached) _db.ScoresheetScanArchives.Attach(stub);
+            _db.ScoresheetScanArchives.Remove(stub);
+        }
     }
 
     /// <summary>Nach dem Speichern der Korrekturseite: deren Stand je Halbzug ablegen (Anzeige-Zustand).</summary>

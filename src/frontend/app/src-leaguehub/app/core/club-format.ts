@@ -120,6 +120,17 @@ export function yearOf(date: string | null | undefined, now = new Date()): numbe
   return y >= 1900 && y <= now.getFullYear() + 1 ? y : null;
 }
 
+/**
+ * Das Jahr zum Vorbelegen mit starkem Hang zu heuer (0.655.0, Wunsch 2026-10-04: „kaum jemand scannt 10 Jahre alte
+ * Scoresheets — und wenn, soll er das anpassen"): gelesen heuer oder voriges Jahr → so; älter, unlesbar oder fehlt → heuer.
+ * `read` = was die Erkennung lieferte, wenn es überstimmt wurde (für den Hinweis unter dem Feld).
+ */
+export function presetYear(date: string | null | undefined, now = new Date()): { year: number; read: number | null } {
+  const thisYear = now.getFullYear();
+  const y = yearOf(date, now);
+  return y !== null && y >= thisYear - 1 && y <= thisYear ? { year: y, read: null } : { year: thisYear, read: y };
+}
+
 /** Ergebnis wie auf dem Formular gelesen → PGN-Ergebnis. */
 export function normalizeResult(r: string | null | undefined): string {
   const s = String(r ?? '').replace(/\s/g, '').replace(/½/g, '1/2');

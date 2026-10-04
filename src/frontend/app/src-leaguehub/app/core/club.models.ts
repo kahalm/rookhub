@@ -55,6 +55,8 @@ export interface ClubImportResult {
   truncated: boolean;
   ids: number[];
   failed: ClubFailure[];
+  /** Nur über einen Teilen-Link (0.656.0): Schlüssel für eine Zuordnung nach dem Anmelden. */
+  claimKey?: string | null;
 }
 
 /** Ein Spieler zum Auswählen: aus den Meldelisten (`source: 'liga'`) oder dem Spielerverzeichnis der Megabase. */

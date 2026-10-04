@@ -123,6 +123,8 @@ public class LeagueClubImportResultDto
     public bool Truncated { get; set; }
     public List<int> Ids { get; set; } = new();
     public List<LeagueClubFailureDto> Failed { get; set; } = new();
+    /// <summary>Nur über einen Teilen-Link (0.656.0): der Zuordnungs-Schlüssel, den der Browser für ein späteres Anmelden aufhebt.</summary>
+    public string? ClaimKey { get; set; }
 }
 
 public class LeagueClubGameDto

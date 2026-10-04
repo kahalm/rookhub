@@ -369,6 +369,10 @@ public class LeagueClubGame
     /// <summary>Über welchen Teilen-Link hochgeladen (SHA-256 hex des Tokens, <c>LeagueClubService.ShareHashOf</c>) —
     /// <c>null</c> = angemeldet hochgeladen. Der Link selbst steht nirgends.</summary>
     public string? UploadShareHash { get; set; }
+    /// <summary>Über einen Teilen-Link ohne Konto (0.656.0): SHA-256 des Zuordnungs-Schlüssels, den nur der Browser des
+    /// Hochladenden kennt. Meldet er sich später an und sagt JA zur Rückfrage, wird die Partie seinem Konto zugeordnet
+    /// (<c>LeagueClubService.ClaimAsync</c>) — auch eine „Schwaz"-Partie, aber nur mit dieser Zustimmung. Danach leer.</summary>
+    public string? ClaimKeyHash { get; set; }
 
     /// <summary>Wer hinter „Schwaz" auf Weiß spielt — NUR intern für Auswertungen, nie ausgeben (Klassenkommentar).
     /// <c>null</c> = Seite nicht ersetzt oder vor 0.648.0 ersetzt.</summary>

@@ -432,6 +432,14 @@ public class ProfileService
         var scanKeys = await ScoresheetScanService.KeysAsync(_db.ScoresheetScans.Where(s => s.UserId == userId));
         ScoresheetScanService.RemovePagesWithoutLoading(_db,
             await ScoresheetScanService.PageKeysAsync(_db, scanKeys.Select(k => k.Id).ToList()));
+        // Aufbewahrte Liga-Einlesungen (0.655.0) gehen mit — ohne die Fotos zu laden (MariaDB cascadet ohnehin, InMemory nicht).
+        var scanIds = scanKeys.Select(k => k.Id).ToList();
+        foreach (var archiveId in await _db.ScoresheetScanArchives.Where(a => scanIds.Contains(a.ScoresheetScanId)).Select(a => a.Id).ToListAsync())
+        {
+            var stub = new ScoresheetScanArchive { Id = archiveId };
+            _db.ScoresheetScanArchives.Attach(stub);
+            _db.ScoresheetScanArchives.Remove(stub);
+        }
         ScoresheetScanService.RemoveWithoutLoading(_db, scanKeys);
         _db.SavedGames.RemoveRange(await _db.SavedGames.Where(g => g.UserId == userId).ToListAsync());
         // „Partie rekonstruieren": erst die Teile, dann die Kopfzeilen — die Löschung anonymisiert

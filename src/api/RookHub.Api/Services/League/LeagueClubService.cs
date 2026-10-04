@@ -467,12 +467,17 @@ public sealed class LeagueClubService
     /// <param name="shareToken">Das Token der Link-ZEILE (<see cref="LeagueService.ValidShareTokenAsync"/>), nicht der Wert
     /// aus der Route: MariaDB findet den Link auch in anderer Groß/Kleinschreibung, und jede Schreibweise bekäme sonst
     /// ihren eigenen Hash und Deckel.</param>
-    public Task<LeagueClubImportResultDto> ImportViaShareAsync(string shareToken, string pgn,
-        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default) =>
-        ImportAsync(null, ShareHashOf(shareToken), pgn, decisions, ct);
+    public async Task<LeagueClubImportResultDto> ImportViaShareAsync(string shareToken, string pgn,
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct = default)
+    {
+        var claimKey = NewClaimKey();
+        var r = await ImportAsync(null, ShareHashOf(shareToken), pgn, decisions, ct, ClaimHashOf(claimKey));
+        if (r.Ids.Count > 0) r.ClaimKey = claimKey;
+        return r;
+    }
 
     private async Task<LeagueClubImportResultDto> ImportAsync(int? userId, string? shareHash, string pgn,
-        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct)
+        IReadOnlyList<LeagueClubImportGameDecision>? decisions, CancellationToken ct, string? claimHash = null)
     {
         var result = new LeagueClubImportResultDto();
         var split = SplitAll(pgn, out var truncated);
@@ -531,7 +536,7 @@ public sealed class LeagueClubService
             if (game == null) { result.Failed.Add(FailureOf(index, p, reason!)); continue; }
             if (IsDuplicate(game, pending, stored)) { result.Duplicates++; continue; }
             if (pending.Count >= budget) { result.Failed.Add(FailureOf(index, p, ShareLimitReason)); continue; }
-            Stamp(game, userId, now, shareHash);
+            Stamp(game, userId, now, shareHash, claimHash);
             pending.Add(game);
         }
         if (lease != null) lease.Kept = pending.Count;
@@ -598,11 +603,14 @@ public sealed class LeagueClubService
     /// <summary>Dasselbe ohne Konto über den Teilen-Link <paramref name="shareToken"/> (das Token der Link-Zeile, wie bei
     /// <see cref="ImportViaShareAsync"/>) — zählt gegen denselben Deckel wie der PGN-Import (dieser Weg braucht kein Foto),
     /// darüber <c>shareLimit</c>.</summary>
+    /// <param name="claimKey">Zuordnungs-Schlüssel für den Browser (0.656.0, <see cref="NewClaimKey"/>) — die Partie trägt
+    /// seinen Hash.</param>
     public Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddGameViaShareAsync(string shareToken,
-        LeagueClubGameRequest req, CancellationToken ct = default) => AddAsync(null, ShareHashOf(shareToken), req, ct);
+        LeagueClubGameRequest req, CancellationToken ct = default, string? claimKey = null) =>
+        AddAsync(null, ShareHashOf(shareToken), req, ct, claimKey is null ? null : ClaimHashOf(claimKey));
 
     private async Task<(LeagueClubGame? Game, string? Reason, string? Message)> AddAsync(int? userId, string? shareHash,
-        LeagueClubGameRequest req, CancellationToken ct)
+        LeagueClubGameRequest req, CancellationToken ct, string? claimHash = null)
     {
         var moves = (req.Moves ?? new()).Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList();
         if (moves.Count == 0) return (null, "noMoves", null);
@@ -625,7 +633,7 @@ public sealed class LeagueClubService
             return (null, ShareLimitReason, null);
         }
         if (lease != null) lease.Kept = 1;
-        Stamp(game, userId, now, shareHash);
+        Stamp(game, userId, now, shareHash, claimHash);
         await SaveAsync(new List<LeagueClubGame> { game }, ct);
         _log.LogInformation("Vereins-Datenbank: eine Partie aus einem Partieformular ({Anon}{Via})",
             game.Anonymized ? "mit „Schwaz“" : "mit Namen", userId == null ? ", Teilen-Link" : "");
@@ -638,9 +646,10 @@ public sealed class LeagueClubService
     /// <summary>Herkunft: der Teilen-Link (als Hash) IMMER, auch bei „Schwaz" — sonst entfernte der Rückbau
     /// (<see cref="DeleteByShareAsync"/>) genau diese Partien nicht. Zeitpunkt und Hochladender NUR bei Partien ohne
     /// „Schwaz" (siehe Klassenkommentar), der Hochladende nur mit Konto — ein Teilen-Link speichert nie, wer es war.</summary>
-    private static void Stamp(LeagueClubGame g, int? userId, DateTime now, string? shareHash)
+    private static void Stamp(LeagueClubGame g, int? userId, DateTime now, string? shareHash, string? claimHash = null)
     {
         g.UploadShareHash = shareHash;
+        if (userId is null) g.ClaimKeyHash = claimHash;   // auch bei „Schwaz": zugeordnet wird nur nach Zustimmung
         if (g.Anonymized) return;
         g.UploadedByUserId = userId;
         g.CreatedAt = now;
@@ -837,8 +846,59 @@ public sealed class LeagueClubService
         return (g, null);
     }
 
+    /// <summary>Eigene Partien darf man bearbeiten und löschen — seit 0.656.0 auch eine „Schwaz"-Partie, wenn sie einem selbst
+    /// gehört: einen Hochladenden trägt eine solche nur nach der Zuordnung mit Zustimmung (<see cref="ClaimAsync"/>).</summary>
     private static bool CanDelete(LeagueClubGame g, int userId, bool canManage) =>
-        canManage || (!g.Anonymized && g.UploadedByUserId == userId);
+        canManage || g.UploadedByUserId == userId;
+
+    // ── Zuordnen nach dem Anmelden (0.656.0, Wunsch 2026-10-04: „wenn ein Spieler über den anonymen Link hochlädt, merk dir
+    //    das im Browser, damit du ihm — wenn er sich irgendwann einloggt — zum Bearbeiten zuordnen kannst") ──
+
+    public const int MaxClaimKeys = 200;
+
+    /// <summary>Ein neuer Zuordnungs-Schlüssel (128 Bit, 32 Hex) — nur der Browser kennt ihn, gespeichert wird sein Hash.</summary>
+    public static string NewClaimKey() => Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+
+    public static string ClaimHashOf(string key) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key.Trim().ToLowerInvariant()))).ToLowerInvariant();
+
+    private IQueryable<LeagueClubGame> Claimable(IEnumerable<string>? keys)
+    {
+        var hashes = (keys ?? Array.Empty<string>()).Where(k => !string.IsNullOrWhiteSpace(k) && k.Trim().Length == 32)
+            .Take(MaxClaimKeys).Select(ClaimHashOf).Distinct().ToList();
+        return _db.LeagueClubGames.Where(g => g.ClaimKeyHash != null && hashes.Contains(g.ClaimKeyHash) && g.UploadedByUserId == null);
+    }
+
+    /// <summary>Was mit diesen Schlüsseln zuzuordnen wäre → (Partien, davon „Schwaz") — für die Rückfrage.</summary>
+    public async Task<(int Games, int Anonymized)> ClaimPreviewAsync(IEnumerable<string>? keys, CancellationToken ct = default)
+    {
+        var rows = await Claimable(keys).AsNoTracking().Select(g => g.Anonymized).ToListAsync(ct);
+        return (rows.Count, rows.Count(a => a));
+    }
+
+    /// <summary>Nach dem JA: die Partien dieser Schlüssel gehören ab jetzt <paramref name="userId"/>; die Schlüssel verfallen.
+    /// → Zahl der zugeordneten.</summary>
+    public async Task<int> ClaimAsync(int userId, IEnumerable<string>? keys, CancellationToken ct = default)
+    {
+        var games = await Claimable(keys).ToListAsync(ct);
+        foreach (var g in games)
+        {
+            g.UploadedByUserId = userId;
+            g.ClaimKeyHash = null;
+        }
+        await _db.SaveChangesAsync(ct);
+        if (games.Count > 0) _log.LogInformation("Vereins-Datenbank: {Count} anonym hochgeladene Partien einem Konto zugeordnet", games.Count);
+        return games.Count;
+    }
+
+    /// <summary>Nach dem NEIN: die Schlüssel verfallen, die Partien bleiben ohne Hochladenden.</summary>
+    public async Task<int> ForgetClaimsAsync(IEnumerable<string>? keys, CancellationToken ct = default)
+    {
+        var games = await Claimable(keys).ToListAsync(ct);
+        foreach (var g in games) g.ClaimKeyHash = null;
+        await _db.SaveChangesAsync(ct);
+        return games.Count;
+    }
 
     internal static string OpeningOf(string pgn)
     {

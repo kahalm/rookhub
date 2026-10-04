@@ -8,6 +8,7 @@ import { authLinkQuery } from '@rh/core/return-url.util';
 import { LocaleService } from '@rh/core/locale.service';
 import { ThemeService } from '@rh/core/theme.service';
 import { environment } from '../../src/environments/environment';
+import { ClaimPromptComponent } from './shared/claim-prompt.component';
 
 /**
  * Hülle von LeagueHub: Wortmarke, rechts Anmelden bzw. Name + Abmelden, unten Version und Datenschutz.
@@ -18,7 +19,7 @@ import { environment } from '../../src/environments/environment';
   selector: 'lh-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ClaimPromptComponent],
   template: `
     <header class="top">
       <div class="wrap top-row">
@@ -33,14 +34,15 @@ import { environment } from '../../src/environments/environment';
         </nav>
       </div>
       <p class="wrap lede" [class.work]="work()">Wer sitzt euch gegenüber? Aufstellungs-Prognosen für die Tiroler Mannschaftsmeisterschaft.</p>
-      @if (nav().view) {
+      @if (user()) {
         <nav class="wrap tabs" aria-label="Bereiche">
-          <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
-          <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
-          @if (nav().contribute) {
-            <a routerLink="/verein/meine" routerLinkActive="on">Meine Partien</a>
-            <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a>
+          @if (nav().view) {
+            <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Prognosen</a>
+            <a routerLink="/verein" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">Vereinspartien</a>
           }
+          <!-- „Meine Partien" für jeden Angemeldeten (0.656.0) — auch wer nur über einen Teilen-Link hochgeladen hat. -->
+          <a routerLink="/verein/meine" routerLinkActive="on">Meine Partien</a>
+          @if (nav().contribute) { <a routerLink="/verein/neu" routerLinkActive="on">Partien hinzufügen</a> }
           @if (nav().manage) {
             <a routerLink="/konten" routerLinkActive="on">Konto-Vorschläge</a>
             <a routerLink="/uebertragungen" routerLinkActive="on">Übertragungen</a>
@@ -49,6 +51,8 @@ import { environment } from '../../src/environments/environment';
       }
     </header>
     <!-- Die Formular-Korrektur braucht Foto, Brett und Zugliste nebeneinander — dort ist die Seite breiter. -->
+    <!-- nicht beim Einstieg als ein Nutzer: die Schlüssel dieses Browsers gehören dem Admin, nicht dem Nutzer -->
+    <lh-claim-prompt class="wrap" [userId]="user()?.impersonating ? null : user()?.userId ?? null" />
     <main class="wrap" [class.wide]="wide()"><router-outlet /></main>
     <footer class="wrap foot">
       <span>v{{ version }}</span>

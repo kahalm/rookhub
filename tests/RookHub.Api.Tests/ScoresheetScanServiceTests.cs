@@ -472,6 +472,11 @@ public class ScoresheetScanServiceTests : IDisposable
     public void Prompts_NameThePhotoSize_ForThePixelBoxes()
     {
         Assert.Contains("1500 × 2000 pixels", ScoresheetPrompt.FirstRead("de", (1500, 2000)));
+        // Datum mit starkem Hang zu heuer (0.655.0) — auf jeder Lesung, ein- und mehrseitig
+        var dated = ScoresheetPrompt.FirstRead("de", new[] { (1500, 2000), (1500, 1900) }, 2, new DateOnly(2026, 10, 4));
+        Assert.Contains("Today is 2026-10-04", dated);
+        Assert.Contains("assume 2026", dated);
+        Assert.Contains("Today is", ScoresheetPrompt.FirstRead("de"));
         Assert.DoesNotContain("pixels", ScoresheetPrompt.FirstRead("de"));
         var repair = ScoresheetPrompt.Repair("de", "{}", new[] { "e4" }, 1, new ScannedPly("e5", "e5"),
             "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", new[] { "e5" }, (1500, 2000));
@@ -1051,13 +1056,31 @@ public class ScoresheetScanServiceTests : IDisposable
         Assert.Equal(Written.Length, rest!.Plies.Count + 2);
 
         Assert.NotNull(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
-        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id));
+        // ein längst abgelaufener Archiv-Eintrag einer anderen Einlesung — geht beim nächsten Abschluss mit
+        var old = new ScoresheetScan { UserId = u.Id, Purpose = ScoresheetScan.PurposeLeague, ContentType = "image/jpeg", FileName = ScoresheetScanService.DiscardedMark, CreatedAt = DateTime.UtcNow.AddDays(-400) };
+        _db.ScoresheetScans.Add(old);
+        await _db.SaveChangesAsync();
+        _db.ScoresheetScanArchives.Add(new ScoresheetScanArchive { ScoresheetScanId = old.Id, Page = 1, ExpiresAt = DateTime.UtcNow.AddDays(-1) });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _service.CloseLeagueScanAsync(As(u.Id), scan.Id, "[White \"Didi\"]\n\n1. Nf3 d5 0-1"));
         Assert.Null(await _service.LeagueScanPhotoAsync(As(u.Id), scan.Id));
         Assert.Null(await _service.LeagueScanStateAsync(As(u.Id), scan.Id));
         Assert.Empty(await _service.LeagueScansAsync(u.Id));
-        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync();
+        var row = await _db.ScoresheetScans.AsNoTracking().SingleAsync(x => x.Id == scan.Id);
         Assert.Null(row.TranscriptionJson);
         Assert.Equal(1, (await _service.StatusAsync(u.Id, ScoresheetScan.PurposeLeague)).UsedToday);   // zählt weiter
+
+        // Wunsch 2026-10-04: Bild und Erkennung 365 Tage aufbewahren (0.655.0) — samt der PGN, die daraus wurde
+        var kept = await _db.ScoresheetScanArchives.AsNoTracking().SingleAsync();
+        Assert.Equal((scan.Id, 1, "saved"), (kept.ScoresheetScanId, kept.Page, kept.Outcome));
+        Assert.NotEmpty(kept.Photo);
+        Assert.NotNull(kept.TranscriptionJson);
+        Assert.Contains("1. Nf3 d5", kept.FinalPgn);
+        Assert.InRange(kept.ExpiresAt - kept.ArchivedAt, TimeSpan.FromDays(364.9), TimeSpan.FromDays(365.1));
+        // ein zweiter Abschluss legt nichts doppelt ab
+        await _service.CloseLeagueScanAsync(As(u.Id), scan.Id);
+        Assert.Equal(1, await _db.ScoresheetScanArchives.CountAsync());
     }
 
     [Fact]
