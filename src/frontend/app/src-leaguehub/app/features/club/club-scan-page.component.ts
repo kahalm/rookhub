@@ -216,7 +216,8 @@ const SILENT_FAILURES = 3;
                     }
                   </span>
                 }
-                <label class="replace-row"><input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
+                <label class="replace-row" title="Nach außen steht dann „Schwaz“. Nur im Kurs „Taktiken aus Vereinspartien“ (sieht nur der Verein) steht der Name aus der öffentlichen Paarung der Ligarunde.">
+                  <input type="checkbox" [checked]="replace(k)()" (change)="setReplace(k, $any($event.target).checked)" />
                   durch „{{ anon }}“ ersetzen</label>
               </div>
               <label class="field narrow">Elo<input type="number" inputmode="numeric" min="500" max="3000" [value]="elo(k)() ?? ''"

@@ -159,11 +159,17 @@ public class TacticHarvestTests : IDisposable
         Assert.Equal(9, (await _db.BookGroupAccesses.SingleAsync()).GroupId);
         var p = await _db.BookPuzzles.SingleAsync();
         Assert.Equal("2026/27 · Landesliga · Runde 1", p.Chapter);
-        Assert.Equal("Moser, Axel – Schwaz (2026), Zug 21", p.Title);
+        Assert.Equal("Moser, Axel – Streiter, Gerhard (2026), Zug 21", p.Title);   // Schwazer Spieler aus der Ligapaarung
         Assert.Equal(("g8h8 b2b7 h8g8 a1a8", 0, "6k1/8/8/8/8/8/1R6/R5K1 b - - 0 1"), (p.Moves, p.StartPly, p.Fen));
         Assert.StartsWith("In der Partie verpasst — gespielt wurde Kg2.", p.Comment);
         Assert.Contains("verpasst", p.Tags);
         Assert.Equal(TacticCandidateStatus.Published, (await _db.TacticCandidates.SingleAsync()).Status);
+
+        // schon veröffentlicht mit „Schwaz" (vor 0.657.2) → beim nächsten Lauf umbenannt
+        p.Title = "Moser, Axel – Schwaz (2026), Zug 21";
+        await _db.SaveChangesAsync();
+        await Svc().PublishAsync(default);
+        Assert.Equal("Moser, Axel – Streiter, Gerhard (2026), Zug 21", (await _db.BookPuzzles.SingleAsync()).Title);
 
         // Partie weg → Analyse weg → Taktik weg → Aufgabe stillgelegt
         _db.TacticCandidates.Remove(await _db.TacticCandidates.SingleAsync());

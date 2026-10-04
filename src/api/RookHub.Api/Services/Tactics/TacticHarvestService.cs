@@ -231,6 +231,7 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
     public async Task<int> PublishAsync(CancellationToken ct)
     {
         await RetireOrphansAsync(ct);
+        await RetitleClubAsync(ct);
         var done = await db.TacticCandidates.Include(c => c.GameAnalysis)
             .Where(c => c.Status == TacticCandidateStatus.Done).OrderBy(c => c.Id).Take(200).ToListAsync(ct);
         if (done.Count == 0) return 0;
@@ -311,19 +312,35 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         if (a.Origin == GameAnalysisOrigin.Club && a.LeagueClubGameId is { } gid
             && await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gid, ct) is { } g)
         {
-            var title = $"{g.White} – {g.Black}{(g.Year is { } y ? $" ({y})" : "")}{tail}";
-            return (title, await LeagueRoundChapterAsync(db, g, ct) ?? OtherGamesChapter);
+            var round = await LeagueRoundAsync(db, g, ct);
+            return (ClubTitle(g, round) + tail, round?.Chapter ?? OtherGamesChapter);
         }
         return ($"{a.White ?? "?"} – {a.Black ?? "?"}{tail}", c.Found ? "Gefunden" : "Verpasst");
     }
+
+    /// <summary>„Weiß – Schwarz (Jahr)". Eine „Schwaz"-Seite heißt im Vereinskurs wie in der Paarung der Ligarunde (Wunsch
+    /// 2026-10-04, Variante 2: „den Schwazer Gegner nennen") — aus den ÖFFENTLICHEN Paarungen, nie aus den internen
+    /// <c>*RealName</c>-Spalten; der Kurs ist nur für die Vereinsgruppe sichtbar. Ohne Ligarunde bleibt „Schwaz".</summary>
+    internal static string ClubTitle(LeagueClubGame g, LeagueRound? round)
+    {
+        string Name(string name, string? fide, string? league) =>
+            fide == null && name == LeagueClubService.AnonymousName && !string.IsNullOrWhiteSpace(league) ? league! : name;
+        return $"{Name(g.White, g.WhiteFide, round?.WhitePlayer)} – {Name(g.Black, g.BlackFide, round?.BlackPlayer)}"
+            + (g.Year is { } y ? $" ({y})" : "");
+    }
+
+    public sealed record LeagueRound(string Chapter, string? WhitePlayer, string? BlackPlayer);
+
+    internal static async Task<string?> LeagueRoundChapterAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct) =>
+        (await LeagueRoundAsync(db, g, ct))?.Chapter;
 
     /// <summary>
     /// Die Ligarunde einer Vereinspartie (Wunsch 2026-10-04: „pro Liga-Runde ein Kapitel"): eine Liga-Partie mit denselben
     /// Spielern in denselben Farben — die „Schwaz"-Seite einer anonymisierten Partie passt zu jedem Spieler des eigenen
     /// Vereins —, in der Saison des Jahres; bei mehreren gewinnt die mit gleichem Ergebnis. → „2026/27 · Landesliga ·
-    /// Runde 1", sonst <c>null</c>.
+    /// Runde 1" samt den Spielern der Paarung, sonst <c>null</c>.
     /// </summary>
-    internal static async Task<string?> LeagueRoundChapterAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct)
+    internal static async Task<LeagueRound?> LeagueRoundAsync(AppDbContext db, LeagueClubGame g, CancellationToken ct)
     {
         var fides = new[] { g.WhiteFide, g.BlackFide }.Where(f => !string.IsNullOrEmpty(f)).ToList();
         if (fides.Count == 0) return null;
@@ -346,7 +363,35 @@ public sealed class TacticHarvestService(AppDbContext db, AnalysisJobService job
         string Norm(string r) => r.Replace(" ", "").Replace("½", "1/2");
         var best = hits.OrderByDescending(r => Norm(r.lg.Result) == Norm(g.Result) ? 1 : 0).ThenByDescending(r => r.Season).First();
         var league = string.IsNullOrEmpty(best.Grp) ? best.League : $"{best.League} {best.Grp}";
-        return $"{best.Season} · {league} · Runde {best.lg.Round}";
+        var homeWhite = best.lg.HomeColor == "w";
+        return new LeagueRound($"{best.Season} · {league} · Runde {best.lg.Round}",
+            homeWhite ? best.lg.HomePlayer : best.lg.AwayPlayer, homeWhite ? best.lg.AwayPlayer : best.lg.HomePlayer);
+    }
+
+    /// <summary>Schon veröffentlichte Aufgaben des Vereinskurses, die noch „Schwaz" im Titel tragen, nach der Regel von
+    /// <see cref="ClubTitle"/> umbenennen (0.657.2) — einmal je Aufgabe, solange eine Ligarunde passt.</summary>
+    private async Task RetitleClubAsync(CancellationToken ct)
+    {
+        var anon = LeagueClubService.AnonymousName;
+        var puzzles = await db.BookPuzzles.Where(p => p.BookFileName == ClubBook && p.Source == "tactic-harvest" && !p.Retired
+                && p.Title != null && (p.Title.StartsWith(anon + " –") || p.Title.Contains("– " + anon)))
+            .Take(100).ToListAsync(ct);
+        if (puzzles.Count == 0) return;
+        var lineIds = puzzles.Select(p => p.LineId).ToList();
+        var cands = await db.TacticCandidates.AsNoTracking().Include(c => c.GameAnalysis)
+            .Where(c => c.LineId != null && lineIds.Contains(c.LineId)).ToDictionaryAsync(c => c.LineId!, ct);
+        var changed = 0;
+        foreach (var p in puzzles)
+        {
+            if (!cands.TryGetValue(p.LineId, out var c) || c.GameAnalysis?.LeagueClubGameId is not { } gid) continue;
+            var g = await db.LeagueClubGames.AsNoTracking().FirstOrDefaultAsync(x => x.Id == gid, ct);
+            if (g is null || await LeagueRoundAsync(db, g, ct) is not { } round) continue;
+            var title = ClubTitle(g, round) + $", Zug {c.Ply / 2 + 1}";
+            if (title == p.Title) continue;
+            p.Title = title;
+            changed++;
+        }
+        if (changed > 0) await db.SaveChangesAsync(ct);
     }
 
     /// <summary>Aufgaben, deren Taktik es nicht mehr gibt (Partie gelöscht → Analyse → Taktik per Cascade), still legen.</summary>

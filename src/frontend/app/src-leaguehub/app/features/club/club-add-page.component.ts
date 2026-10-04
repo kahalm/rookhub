@@ -93,9 +93,10 @@ const SAVE_DEBOUNCE_MS = 1500;
               <input type="checkbox" [checked]="replaceClub()" (change)="replaceClub.set($any($event.target).checked)" />
               <span><b>Spieler von Schwaz durch „{{ anon }}“ ersetzen</b>
                 <span class="muted">Jeder, der in seiner jüngsten Saison für Schwaz gemeldet ist@if (!share) {, und du selbst}. Dann zeigt
-                  LeagueHub nirgends, wer dahinter steht (der echte Name bleibt nur intern für Auswertungen des Vereins), und es wird
-                  nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten.
-                  In der Übersicht lässt sich das je Partie ändern.</span></span>
+                  LeagueHub nach außen nirgends, wer dahinter steht (der echte Name bleibt nur intern für Auswertungen des Vereins), und es
+                  wird nicht gespeichert, wer hochgeladen hat — so kann niemand gezielt gegen uns vorbereiten. Nur im Kurs „Taktiken aus
+                  Vereinspartien“ (sieht nur der Verein) steht der Schwazer Spieler mit Namen, wenn die Partie einer Ligarunde zugeordnet
+                  ist — der Name kommt dann aus der öffentlichen Paarung. In der Übersicht lässt sich das je Partie ändern.</span></span>
             </label>
             <label class="field">PGN-Datei
               <input type="file" accept=".pgn,application/x-chess-pgn,text/plain" [disabled]="busy()" (change)="pickFile($event)" />
