@@ -19,7 +19,8 @@ internal static class GameAnalysisTurnRules
     /// in denen 15 Engines nichts taten — bei Partien von drei Minuten ein Fuenftel der Zeit.
     ///
     /// <para>Dieselbe Schwelle gilt fuer die Vertiefung: sie wartet, solange der erste Durchgang des Nutzers
-    /// mindestens so viele offene Stellungen hat, wie Engines da sind.</para>
+    /// mindestens so viele offene Stellungen hat, wie Engines da sind — und seit 0.647.0 auch unter den Vertiefungen
+    /// selbst: die naechste Partie beginnt, sobald die aelteren zusammen weniger unvertiefte Stellungen haben.</para>
     /// </summary>
     internal static bool TailMayAdvance(int openPliesAhead, int engineSlots) =>
         openPliesAhead == 0 || openPliesAhead < engineSlots;
@@ -29,8 +30,8 @@ internal static class GameAnalysisTurnRules
     /// Engine-Besitzer Hintergrund-Engines hat — mindestens <see cref="GameAnalysisDefaults.MaxOpenRefineJobsPerGame"/>,
     /// hoechstens <see cref="GameAnalysisDefaults.MaxOpenJobsPerGame"/>.
     ///
-    /// <para>Vorher galt fest 8. Vertieft wird immer nur EINE Partie zur Zeit (<c>GameAnalysisService.IsOwnersRefineTurnAsync</c>),
-    /// also hatte der ganze Engine-Park genau 8 Auftraege: am 27.09. auf Prod rechneten Hintergrund 1–8, waehrend
+    /// <para>Vorher galt fest 8. Vertieft wurde damals immer nur EINE Partie zur Zeit (<c>GameAnalysisService.IsOwnersRefineTurnAsync</c>,
+    /// erst 0.647.0 laesst am Schwanz die naechste anfangen), also hatte der ganze Engine-Park genau 8 Auftraege: am 27.09. auf Prod rechneten Hintergrund 1–8, waehrend
     /// Hintergrund 9–12 und die vier Server-Engines online in der Liste standen und nichts taten. Die Sorge hinter
     /// der kleinen Zahl — den Deckel je Nutzer (<see cref="AnalysisJobService.MaxOpenJobsPerUser"/>, 150) fuer den
     /// ersten Durchgang einer neuen Partie frei zu halten — traegt bei 16 oder 32 genauso: der erste Durchgang hat

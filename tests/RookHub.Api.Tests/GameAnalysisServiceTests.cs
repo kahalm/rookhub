@@ -1235,6 +1235,157 @@ public class GameAnalysisServiceTests : IDisposable
         Assert.All(await OpenJobsOfAsync(a), j => Assert.True(j.Background));
     }
 
+    // ── Vertiefung: Schwanz und Zeitgrenze (0.647.0) ──────────────────────────────────────────────────────────
+    // Anlass 04.10.2026 auf Prod: Analyse 5540 hing eine Stunde an ihrer LETZTEN Stellung (Tiefe 26 von 30, zweimal
+    // verdraengt, jedes Mal von vorn), die geteilte Partie dahinter bekam keinen einzigen Vertiefungs-Auftrag.
+
+    /// <summary>„Partie analysieren" anlegen und den ersten Durchgang durchrechnen — die Vertiefung steht dann an.</summary>
+    private async Task<int> SavedGameFirstPassDoneAsync(AppUser user, string pgn)
+    {
+        var id = (await _svc.CreateForGuessAsync(user.Id, new CreateGuessGameRequest { Pgn = pgn },
+            origin: GameAnalysisOrigin.SavedGame)).Analysis!.Id;
+        await FinishOpenJobsOfAsync(id, cp: 35, depth: 20);
+        await _svc.PumpOneAsync(id);
+        _db.ChangeTracker.Clear();
+        Assert.Equal(GameAnalysisStatus.Done, (await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == id)).Status);
+        return id;
+    }
+
+    private const string OtherGame = """
+[Event "Testpartie"]
+[White "XAnderssen"]
+[Black "Kieseritzky"]
+[Result "1-0"]
+
+1. e4 e5 2. f4 exf4 3. Bc4 Qh4+ 4. Kf1 b5 5. Bxb5 Nf6 6. Nf3 Qh6 7. d3 Nh5 1-0
+""";
+
+    [Fact]
+    public async Task Vertiefung_naechstePartieBeginntAmSchwanzDerAelteren_nichtErstNachIhremEnde()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        var b = await SavedGameFirstPassDoneAsync(user, OtherGame);
+
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        var refineA = await OpenJobsOfAsync(a);
+        Assert.Equal(14, refineA.Count);                         // die ganze Partie auf einmal (16 Engines)
+
+        // A hat nur noch 14 unvertiefte Stellungen, 16 Engines sind da: B faengt schon an.
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        var refineB = await OpenJobsOfAsync(b);
+        Assert.NotEmpty(refineB);
+        Assert.All(refineB, j => { Assert.True(j.Background); Assert.Equal(30, j.TargetDepth); });
+        // A bleibt vorn in der Schlange (FIFO im Worker) — sie wird trotzdem zuerst fertig.
+        Assert.True(refineA.Max(j => j.CreatedAt) <= refineB.Min(j => j.CreatedAt));
+    }
+
+    [Fact]
+    public async Task Vertiefung_mitEinerEngine_wartetDieNaechsteBisDieAeltereFertigIst()
+    {
+        var user = await CreateUserWithEnginesAsync(1);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        var b = await SavedGameFirstPassDoneAsync(user, OtherGame);
+
+        await _svc.PumpOneAsync(a);
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(a));
+        Assert.Empty(await OpenJobsOfAsync(b));                 // 14 Stellungen vor ihr, eine Engine
+
+        for (var round = 0; round < 5 && (await OpenJobsOfAsync(a)).Count > 0; round++)
+        {
+            await FinishOpenJobsOfAsync(a, cp: 77, depth: 30);
+            await _svc.PumpOneAsync(a);
+            _db.ChangeTracker.Clear();
+        }
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+
+        await _svc.PumpOneAsync(b);
+        _db.ChangeTracker.Clear();
+        Assert.NotEmpty(await OpenJobsOfAsync(b));
+    }
+
+    /// <summary>Alle Vertiefungs-Auftraege fertig rechnen bis auf den letzten; der bekommt Tiefe, Ergebnis und
+    /// verbrauchte Sekunden. Liefert ihn samt Halbzug.</summary>
+    private async Task<(AnalysisJob Slow, int Ply)> RefineAllButOneAsync(int analysisId, int reached, int seconds, int cp)
+    {
+        var jobs = await OpenJobsOfAsync(analysisId);
+        var slow = jobs.OrderBy(j => j.Id).Last();
+        var slowPos = await _db.GameAnalysisPositions.FirstAsync(p => p.AnalysisJobId == slow.Id);
+        foreach (var pos in await _db.GameAnalysisPositions
+                     .Where(p => p.GameAnalysisId == analysisId && p.AnalysisJobId != null && p.AnalysisJobId != slow.Id).ToListAsync())
+        {
+            var job = jobs.First(j => j.Id == pos.AnalysisJobId);
+            job.Status = AnalysisJobStatus.Done;
+            job.ReachedDepth = 30;
+            job.ResultJson = "{\"depth\":30,\"pvs\":[{\"depth\":30,\"cp\":77,\"moves\":[\"" + pos.GameMoveUci + "\"]}]}";
+        }
+        slow.Status = AnalysisJobStatus.Running;
+        slow.ReachedDepth = reached;
+        slow.SecondsSpent = seconds;
+        slow.ResultJson = "{\"depth\":" + reached + ",\"pvs\":[{\"depth\":" + reached + ",\"cp\":" + cp
+            + ",\"moves\":[\"" + slowPos.GameMoveUci + "\"]}]}";
+        await _db.SaveChangesAsync();
+        return (slow, slowPos.Ply);
+    }
+
+    [Fact]
+    public async Task Vertiefung_nachDerZeitgrenze_giltDasErreichte_undDerAuftragVerschwindet()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        // Knapp unter der Grenze: die Stellung rechnet weiter.
+        var (slow, ply) = await RefineAllButOneAsync(a, reached: 26,
+            seconds: GameAnalysisDefaults.RefineMaxSecondsPerPosition - 1, cp: 123);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+        Assert.Equal([slow.Id], (await OpenJobsOfAsync(a)).Select(j => j.Id));
+        Assert.Null((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+
+        // Grenze erreicht: Tiefe 26 ersetzt die 20 des ersten Durchgangs, der Auftrag ist weg, die Partie fertig.
+        var job = await _db.AnalysisJobs.FirstAsync(j => j.Id == slow.Id);
+        job.SecondsSpent = GameAnalysisDefaults.RefineMaxSecondsPerPosition;
+        await _db.SaveChangesAsync();
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var pos = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        Assert.True(pos.Refined);
+        Assert.Null(pos.AnalysisJobId);
+        Assert.Equal(26, pos.Depth);
+        Assert.Contains("123", pos.CandidatesJson);
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == slow.Id));
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+    }
+
+    [Fact]
+    public async Task Vertiefung_nachDerZeitgrenze_nichtTieferAlsDerErsteDurchgang_dasErsteErgebnisBleibt()
+    {
+        var user = await CreateUserWithEnginesAsync(16);
+        var a = await SavedGameFirstPassDoneAsync(user, Game);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var (slow, ply) = await RefineAllButOneAsync(a, reached: 18,
+            seconds: GameAnalysisDefaults.RefineMaxSecondsPerPosition, cp: 123);
+        var before = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        await _svc.PumpOneAsync(a);
+        _db.ChangeTracker.Clear();
+
+        var pos = await _db.GameAnalysisPositions.AsNoTracking().FirstAsync(p => p.GameAnalysisId == a && p.Ply == ply);
+        Assert.True(pos.Refined);
+        Assert.Equal(20, pos.Depth);
+        Assert.Equal(before.CandidatesJson, pos.CandidatesJson);
+        Assert.False(await _db.AnalysisJobs.AnyAsync(j => j.Id == slow.Id));
+        Assert.NotNull((await _db.GameAnalyses.AsNoTracking().FirstAsync(g => g.Id == a)).RefinedAt);
+    }
+
     [Fact]
     public async Task Punktepartie_bleibtBeiEinemDurchgang()
     {

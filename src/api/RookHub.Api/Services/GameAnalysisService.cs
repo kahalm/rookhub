@@ -833,6 +833,27 @@ public class GameAnalysisService
                     if (pos.FailedAttempts >= GameAnalysisDefaults.MaxPositionAttempts) pos.Refined = true;
                     changed = true;
                 }
+                else if (job.SecondsSpent >= GameAnalysisDefaults.RefineMaxSecondsPerPosition)
+                {
+                    // Zeitgrenze (0.647.0): was erreicht ist, gilt — tiefer als der erste Durchgang ersetzt es ihn, sonst
+                    // bleibt der erste stehen. Der Lauf wird angehalten und der Auftrag entfernt (wie beim Loeschen).
+                    var partial = job.ReachedDepth > pos.Depth ? BrokerCandidates.Parse(job.ResultJson, pos.Fen) : null;
+                    if (partial is { Count: > 0 })
+                    {
+                        pos.CandidatesJson = BrokerCandidates.ToJson(partial);
+                        pos.EvalText = BrokerCandidates.EvalTextOf(partial);
+                        pos.Depth = job.ReachedDepth;
+                        pos.AnalyzedAt = DateTime.UtcNow;
+                    }
+                    pos.Refined = true;
+                    pos.AnalysisJobId = null;
+                    _jobs.Interrupt(job.Id);
+                    consumed.Add(job);
+                    changed = true;
+                    _logger.LogInformation(
+                        "GameAnalysis {Id}: Vertiefung von Stellung {Ply} nach {Seconds} s bei Tiefe {Depth}/{Target} beendet",
+                        analysis.Id, pos.Ply, job.SecondsSpent, job.ReachedDepth, job.TargetDepth);
+                }
                 continue;
             }
 
@@ -920,7 +941,7 @@ public class GameAnalysisService
     /// <summary>
     /// Ist diese Partie mit der Vertiefung dran? Erst wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt —
     /// der schnelle Durchgang einer neuen Partie geht immer vor —, und dann die aelteste, die noch vertieft wird
-    /// (dieselbe Regel „eine nach der anderen" wie bei <see cref="IsOwnersTurnAsync"/>).
+    /// (dieselbe Regel „eine nach der anderen" wie bei <see cref="IsOwnersTurnAsync"/>), MIT demselben Schwanz.
     /// </summary>
     private async Task<bool> IsOwnersRefineTurnAsync(GameAnalysis analysis, CancellationToken ct)
     {
@@ -930,14 +951,22 @@ public class GameAnalysisService
         var firstPassOpen = await OpenFirstPassPliesAsync(analysis.UserId, ct);
         if (firstPassOpen > 0 && !GameAnalysisTurnRules.TailMayAdvance(firstPassOpen, await EngineSlotsAsync(analysis, ct)))
             return false;
-        var current = await _db.GameAnalyses
-            .Where(g => g.UserId == analysis.UserId && g.Status == GameAnalysisStatus.Done
-                && g.RefineDepth != null && g.RefinedAt == null)
-            .OrderBy(g => g.CreatedAt).ThenBy(g => g.Id)
-            .Select(g => (int?)g.Id)
-            .FirstOrDefaultAsync(ct);
-        return current == analysis.Id;
+        // Und der Schwanz unter den Vertiefungen selbst (0.647.0). Bis dahin war nur die aelteste dran — am 04.10.2026
+        // hing Analyse 5540 eine Stunde an ihrer LETZTEN Stellung (Tiefe 30, fuenf Linien), und die geteilte Partie
+        // dahinter bekam keinen einzigen Auftrag, waehrend 15 der 16 Engines Meisterpartien rechneten.
+        var olderUnrefined = await UnrefinedPliesOfOlderGamesAsync(analysis, ct);
+        return olderUnrefined == 0
+            || GameAnalysisTurnRules.TailMayAdvance(olderUnrefined, await EngineSlotsAsync(analysis, ct));
     }
+
+    /// <summary>Noch nicht vertiefte Stellungen der AELTEREN Partien des Nutzers, die gerade vertieft werden —
+    /// dieselbe Reihenfolge (<c>CreatedAt</c>, dann <c>Id</c>) wie <see cref="OpenPliesOfOlderGamesAsync"/>.</summary>
+    private Task<int> UnrefinedPliesOfOlderGamesAsync(GameAnalysis analysis, CancellationToken ct)
+        => _db.GameAnalyses
+            .Where(g => g.UserId == analysis.UserId && g.Id != analysis.Id
+                && g.Status == GameAnalysisStatus.Done && g.RefineDepth != null && g.RefinedAt == null
+                && (g.CreatedAt < analysis.CreatedAt || (g.CreatedAt == analysis.CreatedAt && g.Id < analysis.Id)))
+            .SumAsync(g => g.Positions.Count(p => !p.Refined), ct);
 
     /// <summary>Vertiefungs-Auftraege nachlegen — hoechstens <see cref="GameAnalysisTurnRules.RefineJobCap"/> offen, als
     /// Hintergrundarbeit (<see cref="AnalysisJob.Background"/>): erst die Stellungen um Fehler und Patzer

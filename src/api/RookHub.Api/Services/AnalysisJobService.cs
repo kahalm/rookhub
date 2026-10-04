@@ -441,6 +441,10 @@ public class AnalysisJobService
         return ToDto(job);
     }
 
+    /// <summary>Einen laufenden Auftrag anhalten; entfernen muss ihn der Aufrufer selbst (die Vertiefung nach ihrer
+    /// Zeitgrenze, 0.647.0). Ohne Worker (Tests, Werkzeuge) passiert nichts.</summary>
+    public void Interrupt(int jobId) => _control?.Interrupt(jobId);
+
     public async Task<bool> DeleteAsync(int userId, int id, CancellationToken ct = default)
     {
         var job = await _db.AnalysisJobs.FirstOrDefaultAsync(j => j.Id == id && j.UserId == userId, ct);

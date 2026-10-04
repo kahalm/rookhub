@@ -307,4 +307,11 @@ public static class GameAnalysisDefaults
     /// (<c>GameAnalysisTurnRules.RefineJobCap</c>) — bis 0.567.2 galt fest diese 8, und bei 16 Engines lag die Haelfte brach.
     /// Die Untergrenze haelt kleinen Konten (eine Engine) den bisherigen Vorrat.</summary>
     public const int MaxOpenRefineJobsPerGame = 8;
+
+    /// <summary>Rechenzeit-Grenze je Stellung in der Vertiefung (0.647.0): so viele Sekunden darf ein Vertiefungs-Auftrag
+    /// auf den Engines verbringen (<see cref="AnalysisJob.SecondsSpent"/>, ueber alle Laeufe — Warten zaehlt nicht). Danach
+    /// gilt das Erreichte, wenn es tiefer ist als der erste Durchgang, sonst bleibt der erste stehen. Anlass 04.10.2026: die
+    /// letzte Stellung von Analyse 5540 stand nach elf Minuten auf Tiefe 26 von 30, wurde zweimal von einem schnellen
+    /// Durchgang verdraengt und rechnete jedes Mal von vorn — eine Stunde lang war die Partie „gleich fertig".</summary>
+    public const int RefineMaxSecondsPerPosition = 900;
 }

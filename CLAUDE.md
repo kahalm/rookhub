@@ -690,7 +690,15 @@ flachere), aber mit eigenem Ursprung
   normaler wartet (die warme Hashtabelle zählt nur innerhalb derselben Stufe); (2) je Partie höchstens
   so viele Aufträge offen, wie der Engine-Besitzer Hintergrund-Engines hat (`RefineJobCap`: mindestens `MaxOpenRefineJobsPerGame` = 8, höchstens `MaxOpenJobsPerGame` = 32; bis 0.567.2 fest 8 — bei 16 Engines lag die Hälfte brach);
   (3) vertieft wird erst, wenn KEINE Partie des Nutzers mehr im ersten Durchgang steckt, dann die älteste
-  (`IsOwnersRefineTurnAsync`); (4) scheitert die Vertiefung einer Stellung, bleibt das erste Ergebnis. `GameEvalsDto`
+  (`IsOwnersRefineTurnAsync`) — seit 0.647.0 mit Schwanz: haben die älteren Vertiefungen ZUSAMMEN weniger unvertiefte
+  Stellungen als Engines da sind (`UnrefinedPliesOfOlderGamesAsync`, `TailMayAdvance`), fängt die nächste schon an
+  (Anlass 04.10.2026: Analyse 5540 hing eine Stunde an ihrer letzten Stellung, die geteilte Partie dahinter bekam
+  keinen Auftrag, 15 von 16 Engines rechneten Meisterpartien); (4) scheitert die Vertiefung einer Stellung, bleibt das
+  erste Ergebnis; (5) Zeitgrenze je Stellung (0.647.0, `RefineMaxSecondsPerPosition` = 900 s `AnalysisJob.SecondsSpent`
+  über alle Läufe, Warten zählt nicht): danach übernimmt `IngestFinishedAsync` das Erreichte (`ResultJson` bei
+  `ReachedDepth`), wenn es tiefer ist als der erste Durchgang, sonst bleibt der erste — der Lauf wird angehalten
+  (`AnalysisJobService.Interrupt`) und der Auftrag entfernt. Anlass derselbe: Tiefe 26 nach elf Minuten, zweimal
+  von einem schnellen Durchgang verdrängt, jedes Mal von vorn. `GameEvalsDto`
   meldet `Refining`/`Refined`, der Client fragt dann einmal je Minute nach. Punktepartie und von Hand eingereihte Partien
   bleiben bei einem Durchgang (`RefineDepth` null), Altbestand ebenso.
 * **Buchzüge** (0.522.0): `GameEvalsDto.BookPlies` = die Halbzüge, deren Stellung DANACH in einem für die Erweiterung
@@ -3226,7 +3234,8 @@ Engines still: gemessen am 2026-09-26 auf Prod mit 16 Engines endete jede Partie
 15 Engines nichts taten — bei Partien von drei Minuten ein Fuenftel der Zeit. Die aeltere Partie wird
 trotzdem ZUERST fertig, ihre Auftraege stehen vorn (FIFO nach `CreatedAt` in `PickNextForEngineAsync`).
 Dieselbe Schwelle gilt fuer die Vertiefung (`IsOwnersRefineTurnAsync`): sie wartet, solange der erste
-Durchgang mindestens so viele offene Stellungen hat wie Engines. Zweite Haelfte derselben Messung: der
+Durchgang mindestens so viele offene Stellungen hat wie Engines — und seit 0.647.0 auch unter den Vertiefungen
+selbst (die naechste beginnt am Schwanz der aelteren, siehe „Zwei Durchgänge"). Zweite Haelfte derselben Messung: der
 Worker holte den naechsten Auftrag fuer eine frei gewordene Engine erst beim naechsten Tick (5 s) —
 seit 0.543.0 weckt ein beendeter Lauf die Schleife (`WakeSignal`), und `GET
 /api/game-analyses/throughput` traegt die SPITZE der letzten 24 h (`MaxRunningEngines24h`,
