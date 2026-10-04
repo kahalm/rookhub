@@ -256,6 +256,7 @@ public class ScoresheetResolverTests
     {
         Assert.True(ScoresheetNotation.IsConfusable("Rf8", "Rf6"));
         Assert.False(ScoresheetNotation.IsConfusable("Rf8", "Ra8"));
+        Assert.True(ScoresheetNotation.IsConfusable("Qf5", "Qg5"));
         Assert.Equal(1.0, ScoresheetNotation.WeightedDistance("ba4", "bc4"));
         Assert.Equal(1.2, ScoresheetNotation.WeightedDistance("ba4", "a4"));
     }
@@ -418,5 +419,53 @@ public class ScoresheetResolverTests
         Assert.Empty(ScoresheetNotation.ShortCaptures("DxK", de));         // den König schlägt niemand
         // Englisch: B = Läufer, P = Bauer.
         Assert.Contains(ScoresheetNotation.ShortCaptures("BxP", null), c => c is { Mover: 'B', Target: 'P', Cost: 0 });
+    }
+
+    /// <summary>Gruber–Schöler (LeagueHub, Einlesung 11 vom 2026-10-03, nur die Züge): das Modell las „Dg5 Dxg5 hg5" als
+    /// „Df5 Df5 hf5". Mit f/g als verwechselbarem Paar findet der Auflöser die Partie wieder — vorher nahm er 25…Df6,
+    /// behielt die Damen, und ab dort war fast jeder Zug zurechtgebogen.</summary>
+    private static readonly (string Written, string San, string Confidence)[] Scan11 =
+    {
+        ("e4", "e4", "high"), ("c5", "c5", "high"), ("Sf3", "Nf3", "high"), ("Sc6", "Nc6", "high"),
+        ("d4", "d4", "high"), ("cd4", "cxd4", "high"), ("Sd4", "Nxd4", "high"), ("e5", "e5", "high"),
+        ("Sb5", "Nb5", "high"), ("Sf6", "Nf6", "high"), ("S1c3", "N1c3", "medium"), ("d6", "d6", "high"),
+        ("Lg5", "Bg5", "high"), ("a6", "a6", "high"), ("Sa3", "Na3", "high"), ("b5", "b5", "high"),
+        ("Sd5", "Nd5", "high"), ("Le7", "Be7", "high"), ("Lf6", "Bxf6", "high"), ("Lf6", "Bxf6", "high"),
+        ("c3", "c3", "high"), ("g6", "g6", "medium"), ("Sc2", "Nc2", "high"), ("Lg7", "Bg7", "high"),
+        ("a4", "a4", "high"), ("ba4", "bxa4", "high"), ("Ta4", "Rxa4", "high"), ("0-0", "O-O", "high"),
+        ("Sce3", "Nce3", "high"), ("f5", "f5", "high"), ("ef5", "exf5", "high"), ("gf5", "gxf5", "medium"),
+        ("Dh5", "Qh5", "high"), ("Se7", "Ne7", "high"), ("Lc4", "Bc4", "high"), ("Kh8", "Kh8", "high"),
+        ("0-0", "O-O", "high"), ("Sg6", "Ng6", "medium"), ("Tfa1", "Rfa1", "medium"), ("Tb8", "Rb8", "medium"),
+        ("b4", "b4", "high"), ("f4", "f4", "high"), ("Ld3", "Bd3", "high"), ("fe3", "fxe3", "high"),
+        ("Lg6", "Bxg6", "high"), ("ef2", "exf2+", "high"), ("Kf1", "Kf1", "medium"), ("h6", "hxg6", "medium"),
+        ("Ld3", "Bd3", "high"), ("Df5", "Qf5", "medium"), ("Df5", "Qxf5", "medium"), ("hf5", "hxf5", "low"),
+        ("La6", "Bxa6", "high"), ("d4", "d4", "medium"), ("Tc1", "Rc1", "high"), ("Ld7", "Bd7", "high"),
+        ("Ta5", "Ra5", "high"), ("Le5", "Be5", "medium"), ("h3", "h3", "high"), ("g4", "g4", "medium"),
+        ("hg4", "hxg4", "high"), ("Lg4", "Bxg4", "medium"), ("Le2", "Be2", "high"), ("Le6", "Be6", "medium"),
+        ("Sc7", "Nc7", "high"), ("Lg8", "Bg8", "medium"), ("Sd5", "Nd5", "high"), ("Tb7", "Rb7", "medium"),
+        ("Lg4", "Bg4", "high"), ("Th7", "Rh7", "medium"), ("Ke2", "Ke2", "medium"), ("Lc3", "Bc3", "high"),
+        ("Sc3", "Nxc3", "high"), ("Lc4", "Bc4+", "high"), ("Ke3", "Ke3", "high"), ("f1D", "f1Q", "medium"),
+        ("Tf1", "Rxf1", "medium"), ("Lf1", "Bxf1", "medium"), ("Se4", "Ne4", "medium"), ("d5", "d5", "medium"),
+        ("Td5", "Rd5", "medium"), ("Lg2", "Bg2", "medium"), ("Th5", "Rh5", "medium"), ("Th8", "Rh8", "low"),
+        ("Th8", "Rxh8", "medium"), ("Kh8", "Kxh8", "low"), ("Lf3", "Bf3", "medium"), ("Lf3", "Bxf3", "medium"),
+        ("Kf3", "Kxf3", "medium"), ("Th4", "Rh4", "low"), ("Kf4", "Kf4", "medium"), ("Ke6", "Ke6", "low"),
+        ("Ke5", "Ke5", "medium"), ("Kf7", "Kf7", "low"), ("Sd7", "Nd7", "medium"), ("Ke7", "Ke7", "medium"),
+        ("Sf5", "Nf5", "low"), ("Kd7", "Kd7", "medium"), ("Sd4", "Nd4", "medium"), ("Ta4", "Ra4", "medium"),
+        ("Kd5", "Kd5", "medium"), ("Ta5", "Ra5+", "low"), ("Ke4", "Ke4", "medium"), ("Kd6", "Kd6", "medium"),
+        ("Sf5", "Nf5+", "medium"), ("Ke6", "Ke6", "medium"), ("Sd4", "Nd4+", "medium"), ("Kf6", "Kf6", "medium"),
+        ("Sf3", "Nf3", "medium"), ("Th5", "Rh5", "medium"), ("Kf4", "Kf4", "medium"), ("Ta5", "Ra5", "medium"),
+        ("Ke4", "Ke4", "medium"), ("Ta3", "Ra3", "medium"), ("Sd4", "Nd4", "medium"),
+    };
+
+    [Fact]
+    public void Resolve_GsReadAsFs_FindsTheQueenTrade()
+    {
+        var scanned = Scan11.Select(e => new ScannedPly(e.Written, e.San, null, e.Confidence)).ToList();
+
+        var r = ScoresheetResolver.Resolve(scanned, German);
+
+        Assert.Equal(new[] { "Qg5", "Qxg5", "hxg5", "Bxa6" }, r.Plies.Skip(49).Take(4).Select(p => p.San));
+        Assert.Equal(new[] { "Rb8", "Rxh7+", "Kxh7" }, r.Plies.Skip(83).Take(3).Select(p => p.San));
+        Assert.Null(r.StuckAt);
     }
 }

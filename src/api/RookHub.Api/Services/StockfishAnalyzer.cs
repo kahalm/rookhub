@@ -13,7 +13,8 @@ public record EngineHint(string EvalText, int? MateIn, string? BestMoveUci);
 /// Ruft eine lokale Stockfish-CLI (UCI über stdin/stdout) auf, um eine Stellung zu bewerten.
 /// Wird NUR im Import-/Reprocess-Pfad als Zusatzsignal für die Tipp-Generierung genutzt — kein
 /// Laufzeit-Pfad beim Lösen. Engine-Binary kommt aus dem API-Image (siehe Dockerfile).
-/// Konfiguration: <c>Stockfish:Path</c> (Default <c>stockfish</c>), <c>Stockfish:Depth</c> (Default 20).
+/// Konfiguration: <c>Stockfish:Path</c> (Vorgabe <see cref="StockfishPath.Resolve"/>: <c>/usr/games/stockfish</c> aus dem
+/// Debian-Paket, sonst <c>stockfish</c> aus dem PATH), <c>Stockfish:Depth</c> (Default 20).
 /// </summary>
 public class StockfishAnalyzer
 {
@@ -26,7 +27,7 @@ public class StockfishAnalyzer
 
     public StockfishAnalyzer(IConfiguration config, ILogger<StockfishAnalyzer> logger)
     {
-        _path = config["Stockfish:Path"] ?? "stockfish";
+        _path = StockfishPath.Resolve(config["Stockfish:Path"]);
         _depth = int.TryParse(config["Stockfish:Depth"], out var d) && d is > 0 and <= 40 ? d : 20;
         _logger = logger;
     }

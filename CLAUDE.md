@@ -3968,9 +3968,13 @@ Wege — „Meine Partien" und Liga) bewertet deshalb Stockfish die Partie (`ISc
   ersetzt, Ke4 angeboten, 3 s; 10er-Testsatz → 0 Ersetzungen, 3 Markierungen an richtigen Zügen; 80 zufällig eingestreute
   Ein-Zeichen-Fehllesungen → 0 Schäden, 3 richtig angeboten — die meisten Fehllesungen fängt schon der Auflöser ab, und von den
   übrigen sind die meisten „leise" (kein Bewertungssprung): die sieht keine Engine.
+* **f/g verwechselbar** (0.647.1, `ScoresheetNotation.Confusable`): in Einlesung 11 derselben Partie las das Modell „Dg5 Dxg5
+  hg5" als „Df5 Df5 hf5" — mit dem Paar findet schon der Auflöser 113/115 Halbzüge (Test `Resolve_GsReadAsFs_FindsTheQueenTrade`
+  mit den echten Einträgen); am Testsatz unverändert.
 * **Ausfallsicher**: keine Engine, Fehler, `Budget` (90 s) überschritten → die Lesung bleibt, wie sie ist (Warnung im Log).
-  Schalter `Scoresheet:Plausibility=false`; Pfad `Scoresheet:EnginePath` (sonst `/usr/games/stockfish` aus dem Debian-Paket
-  im API-Image — NICHT im PATH —, sonst `stockfish`), Tiefe `Scoresheet:EngineDepth`.
+  Schalter `Scoresheet:Plausibility=false`; Pfad `Scoresheet:EnginePath` (sonst `StockfishPath.Resolve`: `/usr/games/stockfish`
+  aus dem Debian-Paket im API-Image — NICHT im PATH —, sonst `stockfish`), Tiefe `Scoresheet:EngineDepth`. Dieselbe Regel
+  gilt seit 0.647.1 für den Tipp-Generator (`StockfishAnalyzer`, `Stockfish:Path`) — bis dahin fand er im Container keine Engine.
 * **Oberfläche**: Chip „von der Engine korrigiert" / „Engine zweifelt" mit Erklärung als Tooltip (`games.edit.engine*`, RookHub
   `game-edit.component.ts`; LeagueHub `club-scan-page.component.ts`), `check` reist in `ScoresheetPly`/`EditPly` mit. Das
   Neu-Aufbereiten auf der Korrekturseite (`…/scoresheet/resolve`) prüft NICHT erneut — es läuft im Request.

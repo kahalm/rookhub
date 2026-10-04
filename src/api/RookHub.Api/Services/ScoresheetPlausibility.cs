@@ -399,9 +399,7 @@ public sealed class StockfishScoresheetEngine : IScoresheetEngine
     public StockfishScoresheetEngine(IConfiguration config, ILogger<StockfishScoresheetEngine> logger)
     {
         _logger = logger;
-        var configured = config["Scoresheet:EnginePath"];
-        _path = !string.IsNullOrWhiteSpace(configured) ? configured
-            : File.Exists("/usr/games/stockfish") ? "/usr/games/stockfish" : "stockfish";
+        _path = StockfishPath.Resolve(config["Scoresheet:EnginePath"]);
         _depth = int.TryParse(config["Scoresheet:EngineDepth"], out var d) && d is >= 4 and <= 24 ? d : 10;
     }
 

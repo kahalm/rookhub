@@ -330,9 +330,11 @@ public static class ScoresheetNotation
         return code.ToUpperInvariant();
     }
 
-    /// <summary>Zeichenpaare, die in Handschrift leicht verwechselt werden (Ziffern der Reihen, Buchstaben der Linien).</summary>
+    /// <summary>Zeichenpaare, die in Handschrift leicht verwechselt werden (Ziffern der Reihen, Buchstaben der Linien).
+    /// <c>fg</c> seit 0.646.1: in der Gruber-Partie (LeagueHub, 2026-10-03) las das Modell „Dg5 Dxg5 hg5" als
+    /// „Df5 Df5 hf5" — ein g mit Unterlänge sieht in Schreibschrift wie ein f aus.</summary>
     private static readonly HashSet<(char, char)> Confusable = BuildConfusable(
-        "16", "17", "38", "68", "56", "49", "06", "08", "23", "27", "35", "ad", "bh", "ce", "gq", "ef", "hk", "bd");
+        "16", "17", "38", "68", "56", "49", "06", "08", "23", "27", "35", "ad", "bh", "ce", "gq", "ef", "hk", "bd", "fg");
 
     private static HashSet<(char, char)> BuildConfusable(params string[] pairs)
     {
